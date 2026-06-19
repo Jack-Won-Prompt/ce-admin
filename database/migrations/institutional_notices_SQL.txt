@@ -1,0 +1,23 @@
+-- phpMyAdmin 또는 MySQL 클라이언트에서 실행
+-- lcpoint DB에 연결 후 실행
+
+CREATE TABLE IF NOT EXISTS `institutional_notices` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `source_org` VARCHAR(10) NOT NULL COMMENT 'MOHW | HIRA | NHIS',
+  `notice_type` VARCHAR(50) DEFAULT NULL,
+  `title` VARCHAR(500) NOT NULL,
+  `notice_date` DATE DEFAULT NULL,
+  `content` LONGTEXT DEFAULT NULL,
+  `url` VARCHAR(1000) NOT NULL,
+  `content_hash` VARCHAR(64) DEFAULT NULL,
+  `attachments` JSON DEFAULT NULL,
+  `policy_impact` ENUM('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'LOW',
+  `fee_impact` TINYINT(1) NOT NULL DEFAULT 0,
+  `crawled_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT NULL,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `institutional_notices_url_unique` (url(768)),
+  KEY `institutional_notices_source_org_notice_date_index` (`source_org`, `notice_date`),
+  KEY `institutional_notices_content_hash_index` (`content_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

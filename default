@@ -1,0 +1,127 @@
+##
+# You should look at the following URL's in order to grasp a solid understanding
+# of Nginx configuration files in order to fully unleash the power of Nginx.
+# https://www.nginx.com/resources/wiki/start/
+# https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/
+# https://wiki.debian.org/Nginx/DirectoryStructure
+#
+# In most cases, administrators will remove this file from sites-enabled/ and
+# leave it as reference inside of sites-available where it will continue to be
+# updated by the nginx packaging team.
+#
+# This file will automatically load configuration files provided by other
+# applications, such as Drupal or Wordpress. These applications will be made
+# available underneath a path with that package name, such as /drupal8.
+#
+# Please see /usr/share/doc/nginx-doc/examples/ for more detailed examples.
+##
+
+# Default server configuration
+#
+
+#server {
+#  listen 80;
+#  listen [::]:80;
+#  server_name www.lcpoint.co.kr;
+#  return 301 https://www.lcpoint.co.kr$request_uri;
+#}
+
+#server {
+#  listen 80;
+#  listen [::]:80;
+#  server_name lcpoint.co.kr;
+#  return 301 https://www.lcpoint.co.kr$request_uri;
+#}
+
+
+server {
+    root /home/ubuntu/www/lcpoint/public;
+    index index.php;
+
+    server_name ceadmin.co.kr www.ceadmin.co.kr 43.203.246.90;
+    #server_name 43.203.246.90;
+
+    #Ban black ip
+    #if ($bad_ip) { return 444; }
+    
+    ssl_certificate /etc/nginx/ssl/supportworks.co.kr.crt;
+    ssl_certificate_key /etc/nginx/ssl/supportworks.co.kr.key;
+    ssl_trusted_certificate /etc/nginx/ssl/ca-bundle.crt;
+
+
+    # skip raw IP as host e.g. require at least one letter (same for Punycode)
+#    if ( $http_host !~* ^(.*[a-zA-Z]+.*)$ ) {
+#        return 301 https://www.lcpoint.co.kr$request_uri;
+#    }
+
+    location ~ \\.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+        gzip_static on;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    if ($http_user_agent = “”) {
+        return 403;
+    }
+    
+    if ($http_user_agent ~* (AhrefsBot|BLEXBot|DotBot|SemrushBot|Eyeotabot|PetalBot|MJ12bot|brands-bot|bbot|AhrefsBo|MegaIndex|UCBrowser|Mb2345Browser|MicroMessenger|LieBaoFast|Headless|netEstate|newspaper|Adsbot/3.1|WordPress/|ltx71) ) {
+	return 403;
+    }
+
+    listen [::]:443 ssl default_server;
+    listen 443 ssl default_server;
+    ssl_certificate /etc/nginx/ssl/supportworks.co.kr.crt;
+    ssl_certificate_key /etc/nginx/ssl/supportworks.co.kr.key;
+
+}
+
+# CE Admin API — 공인 IP 직접 접속 (Flutter 앱용)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name 43.203.246.90;
+
+    root /home/ubuntu/www/lcpoint/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+        gzip_static on;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+
+# Virtual Host configuration for example.com
+#
+# You can move that to a different file under sites-available/ and symlink that
+# to sites-enabled/ to enable it.
+#
+#server {
+#	listen 80;
+#	listen [::]:80;
+#
+#	server_name example.com;
+#
+#	root /var/www/example.com;
+#	index index.html;
+#
+#	location / {
+#		try_files $uri $uri/ =404;
+#	}
+#}

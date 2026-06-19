@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "739938611413",
+    "project_id": "ceadmin-2e5a2",
+    "storage_bucket": "ceadmin-2e5a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:739938611413:android:eac92404c46de2158c725c",
+        "android_client_info": {
+          "package_name": "com.coloplast.ceadmin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1ebGpGasR9eRfgZAauVh7-9swk8UKpY4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

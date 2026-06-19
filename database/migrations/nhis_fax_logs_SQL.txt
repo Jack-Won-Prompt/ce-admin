@@ -1,0 +1,42 @@
+-- ============================================================
+-- NHIS e-Fax 청구 관련 테이블 및 컬럼 추가
+-- phpMyAdmin에서 실행: ce_admin 데이터베이스 선택 후 SQL 탭에 붙여넣기
+-- ============================================================
+
+-- 1. nhis_fax_logs 테이블 생성
+CREATE TABLE IF NOT EXISTS `nhis_fax_logs` (
+  `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `order_id`         BIGINT UNSIGNED NOT NULL,
+  `sent_by`          BIGINT UNSIGNED NULL,
+  `fax_number`       VARCHAR(30)     NOT NULL COMMENT '수신 팩스번호(공단)',
+  `sender_number`    VARCHAR(30)     NULL     COMMENT '발신 팩스번호',
+  `document_title`   VARCHAR(200)    NULL     COMMENT '청구서 제목',
+  `claim_amount`     DECIMAL(10,2)   NOT NULL DEFAULT 0 COMMENT '청구 금액',
+  `nhis_amount`      DECIMAL(10,2)   NOT NULL DEFAULT 0 COMMENT '건보 부담금',
+  `patient_copay`    DECIMAL(10,2)   NOT NULL DEFAULT 0 COMMENT '환자 부담금',
+  `status`           ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued',
+  `reference_no`     VARCHAR(100)    NULL     COMMENT '팩스 전송 참조번호',
+  `error_message`    TEXT            NULL,
+  `retry_count`      INT             NOT NULL DEFAULT 0,
+  `sent_at`          TIMESTAMP       NULL,
+  `confirmed_at`     TIMESTAMP       NULL,
+  `nhis_result`      ENUM('pending','approved','rejected','partial') NOT NULL DEFAULT 'pending',
+  `approved_amount`  DECIMAL(10,2)   NULL     COMMENT '승인 금액',
+  `nhis_message`     TEXT            NULL     COMMENT '공단 회신 메시지',
+  `nhis_result_at`   TIMESTAMP       NULL,
+  `raw_payload`      TEXT            NULL     COMMENT 'API 요청/응답 원문(JSON)',
+  `created_at`       TIMESTAMP       NULL,
+  `updated_at`       TIMESTAMP       NULL,
+  PRIMARY KEY (`id`),
+  KEY `nhis_fax_logs_order_id_index` (`order_id`),
+  KEY `nhis_fax_logs_status_index` (`status`),
+  CONSTRAINT `nhis_fax_logs_order_id_foreign`
+    FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `nhis_fax_logs_sent_by_foreign`
+    FOREIGN KEY (`sent_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. orders 테이블에 컬럼 추가
+ALTER TABLE `orders`
+  ADD COLUMN `latest_fax_log_id`    BIGINT UNSIGNED NULL AFTER `nhis_reimbursement`,
+  ADD COLUMN `nhis_rejection_reason` VARCHAR(500)   NULL AFTER `latest_fax_log_id`;

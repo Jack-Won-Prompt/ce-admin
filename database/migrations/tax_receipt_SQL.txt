@@ -1,0 +1,25 @@
+-- ============================================================
+-- 세금계산서 / 현금영수증 컬럼 추가 (orders 테이블)
+-- phpMyAdmin > ce 데이터베이스 > SQL 탭에 붙여넣기
+-- ============================================================
+
+ALTER TABLE `orders`
+  -- 세금계산서
+  ADD COLUMN `tax_invoice_status`       ENUM('not_issued','issued','cancelled') NOT NULL DEFAULT 'not_issued' AFTER `note`,
+  ADD COLUMN `tax_invoice_no`           VARCHAR(50)  NULL AFTER `tax_invoice_status`,
+  ADD COLUMN `tax_invoice_type`         ENUM('electronic','manual') NOT NULL DEFAULT 'electronic' AFTER `tax_invoice_no`,
+  ADD COLUMN `tax_invoice_biz_name`     VARCHAR(100) NULL AFTER `tax_invoice_type`,
+  ADD COLUMN `tax_invoice_biz_no`       VARCHAR(20)  NULL AFTER `tax_invoice_biz_name`,
+  ADD COLUMN `tax_invoice_email`        VARCHAR(100) NULL AFTER `tax_invoice_biz_no`,
+  ADD COLUMN `tax_invoice_supply`       DECIMAL(10,2) NULL COMMENT '공급가액' AFTER `tax_invoice_email`,
+  ADD COLUMN `tax_invoice_vat`          DECIMAL(10,2) NULL COMMENT '부가세' AFTER `tax_invoice_supply`,
+  ADD COLUMN `tax_invoice_issued_at`    TIMESTAMP NULL AFTER `tax_invoice_vat`,
+  ADD COLUMN `tax_invoice_cancelled_at` TIMESTAMP NULL AFTER `tax_invoice_issued_at`,
+  -- 현금영수증
+  ADD COLUMN `cash_receipt_status`       ENUM('not_issued','issued','cancelled') NOT NULL DEFAULT 'not_issued' AFTER `tax_invoice_cancelled_at`,
+  ADD COLUMN `cash_receipt_no`           VARCHAR(50)  NULL AFTER `cash_receipt_status`,
+  ADD COLUMN `cash_receipt_type`         ENUM('income_deduction','business_expense') NOT NULL DEFAULT 'income_deduction' COMMENT '소득공제/지출증빙' AFTER `cash_receipt_no`,
+  ADD COLUMN `cash_receipt_identifier`   VARCHAR(30)  NULL COMMENT '휴대폰번호 또는 사업자번호' AFTER `cash_receipt_type`,
+  ADD COLUMN `cash_receipt_amount`       DECIMAL(10,2) NULL AFTER `cash_receipt_identifier`,
+  ADD COLUMN `cash_receipt_issued_at`    TIMESTAMP NULL AFTER `cash_receipt_amount`,
+  ADD COLUMN `cash_receipt_cancelled_at` TIMESTAMP NULL AFTER `cash_receipt_issued_at`;
