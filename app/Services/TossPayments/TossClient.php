@@ -161,14 +161,35 @@ class TossClient
         return $decoded ?? [];
     }
 
-    /** 웹훅 서명 검증 (HMAC-SHA256) */
-    public function verifyWebhookSignature(string $rawBody, string $signature): bool
+    /**
+     * 웹훅 서명 검증 — 서명이 포함된 웹훅(payout.changed / seller.changed 등)용.
+     * 가상계좌 입금 웹훅에는 서명이 없으므로 이 메서드 대신 API 재조회로 검증한다.
+     *
+     * 토스 검증 절차:
+     *  1) HMAC-SHA256("{rawBody}:{transmissionTime}", 보안키) → 원본(raw) 바이트
+     *  2) 헤더값 "v1:<base64>,<base64>" 에서 v1: 뒤 값들을 base64 디코딩
+     *  3) 1)의 해시가 2)의 디코딩 값 중 하나와 일치하면 정상 (보안키 교체 대비 2개)
+     *
+     * @param string $signature        tosspayments-webhook-signature 헤더 전체값
+     * @param string $transmissionTime tosspayments-webhook-transmission-time 헤더값
+     */
+    public function verifyWebhookSignature(string $rawBody, string $signature, string $transmissionTime): bool
     {
         $secret = config('toss.webhook_secret', '');
-        if (empty($secret)) {
+        if ($secret === '' || $signature === '' || $transmissionTime === '') {
             return false;
         }
-        $expected = hash_hmac('sha256', $rawBody, $secret);
-        return hash_equals($expected, $signature);
+
+        $computed = hash_hmac('sha256', $rawBody . ':' . $transmissionTime, $secret, true);
+        $values   = preg_replace('/^v1:/', '', trim($signature));
+
+        foreach (preg_split('/[:\s,]+/', $values, -1, PREG_SPLIT_NO_EMPTY) as $part) {
+            $decoded = base64_decode($part, true);
+            if ($decoded !== false && hash_equals($decoded, $computed)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

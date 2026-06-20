@@ -110,7 +110,6 @@ class VirtualAccountService extends TossClient
         }
 
         $paymentKey = $data['paymentKey'] ?? null;
-        $status     = $data['status']     ?? null;
 
         if (!$paymentKey) {
             Log::warning('[Toss] 웹훅 paymentKey 없음', $payload);
@@ -124,18 +123,26 @@ class VirtualAccountService extends TossClient
             return null;
         }
 
-        $tossPayment->update([
-            'status'       => $status,
-            'raw_response' => array_merge($tossPayment->raw_response ?? [], ['webhook_data' => $data]),
-            'deposited_at' => $status === 'DONE' ? now() : null,
-        ]);
+        // 보안: 가상계좌 입금 웹훅에는 서명이 없으므로 페이로드의 status 를 신뢰하지 않는다.
+        // paymentKey 로 토스 API 를 재조회해 실제 결제 상태로만 갱신한다. (위조 웹훅 방어)
+        try {
+            $verified = $this->fetchByPaymentKey($paymentKey);  // API 조회 + DB 갱신
+        } catch (TossApiException $e) {
+            Log::error('[Toss] 입금 웹훅 API 재검증 실패 — 상태 미변경', [
+                'payment_key' => $paymentKey,
+                'error'       => $e->getMessage(),
+            ]);
+            return null;
+        }
 
-        Log::info('[Toss] 입금 웹훅 처리 완료', [
+        $tossPayment->refresh();
+
+        Log::info('[Toss] 입금 웹훅 처리 완료 (API 재검증)', [
             'payment_key' => $paymentKey,
             'order_id'    => $tossPayment->order_id,
-            'status'      => $status,
+            'status'      => $verified['status'] ?? null,
         ]);
 
-        return $tossPayment->fresh();
+        return $tossPayment;
     }
 }

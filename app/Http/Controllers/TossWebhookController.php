@@ -25,11 +25,14 @@ class TossWebhookController extends Controller
     public function handle(Request $request): \Illuminate\Http\JsonResponse
     {
         $rawBody   = $request->getContent();
-        $signature = $request->header('Toss-Signature', '');
+        $signature = $request->header('tosspayments-webhook-signature', '');
+        $txTime    = $request->header('tosspayments-webhook-transmission-time', '');
 
-        // 서명 검증 (시크릿이 설정된 경우만)
-        if (config('toss.webhook_secret') && !$this->vaService->verifyWebhookSignature($rawBody, $signature)) {
-            Log::warning('[Toss] 웹훅 서명 불일치', ['sig' => substr($signature, 0, 20)]);
+        // 서명 검증: 서명 헤더가 포함된 웹훅(payout/seller 등)에 한해, 보안키가 설정된 경우에만 수행.
+        // 가상계좌 입금 웹훅은 서명이 없으므로 handleDepositWebhook 의 토스 API 재조회로 검증한다.
+        if (config('toss.webhook_secret') && $signature !== ''
+            && !$this->vaService->verifyWebhookSignature($rawBody, $signature, $txTime)) {
+            Log::warning('[Toss] 웹훅 서명 불일치', ['sig' => substr($signature, 0, 24)]);
             return response()->json(['message' => '서명 불일치'], 401);
         }
 
