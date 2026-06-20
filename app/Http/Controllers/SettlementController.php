@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\TossPayment;
+use App\Services\Popbill\MessageService;
 use App\Services\TossPayments\TossApiException;
 use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
@@ -238,6 +239,9 @@ class SettlementController extends Controller
 
     public function issueVirtualAccount(Request $request, Order $order): JsonResponse
     {
+        // 호출 측(처방전 화면)이 자체적으로 안내 SMS를 발송하는 경우 skip_sms=1 로 서버 발송을 생략한다.
+        $skipSms = $request->boolean('skip_sms');
+
         // 처방 아이템 기준으로 금액 동기화 (주문 생성 후 아이템이 수정된 경우 대비)
         $prescription = $order->prescription;
         if ($prescription) {
@@ -269,6 +273,9 @@ class SettlementController extends Controller
             activity()->causedBy(auth()->user())->performedOn($order)
                 ->log('가상계좌 발급 비활성화 상태 — SMS 발송만 처리');
 
+            $fallbackBank    = config('toss.virtual_account.fallback_bank', '');
+            $fallbackAccount = config('toss.virtual_account.fallback_account', '');
+
             TossPayment::updateOrCreate(
                 ['order_id' => $order->id],
                 [
@@ -277,19 +284,30 @@ class SettlementController extends Controller
                     'method'         => 'VIRTUAL_ACCOUNT',
                     'status'         => 'DISABLED',
                     'amount'         => (int) $order->patient_copay,
-                    'bank'           => config('toss.virtual_account.fallback_bank', ''),
-                    'account_number' => config('toss.virtual_account.fallback_account', ''),
+                    'bank'           => $fallbackBank,
+                    'account_number' => $fallbackAccount,
                     'customer_name'  => $order->patient?->name ?? '환자',
                     'due_date'       => now()->addHours($validHours),
                 ]
             );
 
+            $smsSent = $skipSms ? false : $this->sendVirtualAccountSms(
+                $order,
+                $fallbackBank,
+                $fallbackAccount,
+                (int) $order->patient_copay,
+                $dueDate
+            );
+
             return response()->json([
                 'success'        => true,
                 'disabled'       => true,
-                'message'        => '가상계좌 발급이 비활성화 상태입니다. SMS가 발송됩니다.',
-                'bank_name'      => config('toss.virtual_account.fallback_bank', ''),
-                'account_number' => config('toss.virtual_account.fallback_account', ''),
+                'sms_sent'       => $smsSent,
+                'message'        => $smsSent
+                    ? '가상계좌 발급이 비활성화 상태입니다. 안내 SMS를 발송했습니다.'
+                    : '가상계좌 발급이 비활성화 상태입니다. (SMS 발송 불가 — 연락처/대체계좌 확인 필요)',
+                'bank_name'      => $fallbackBank,
+                'account_number' => $fallbackAccount,
                 'due_date'       => $dueDate,
                 'amount'         => (int) $order->patient_copay,
                 'shipping_fee'   => (int) ($order->shipping_fee ?? 3000),
@@ -302,8 +320,17 @@ class SettlementController extends Controller
             activity()->causedBy(auth()->user())->performedOn($order)
                 ->log("가상계좌 발급: {$tp->bank_name} {$tp->account_number}");
 
+            $smsSent = $skipSms ? false : $this->sendVirtualAccountSms(
+                $order,
+                $tp->bank_name,
+                $tp->account_number,
+                (int) $tp->amount,
+                $tp->due_date?->format('Y-m-d H:i')
+            );
+
             return response()->json([
                 'success'        => true,
+                'sms_sent'       => $smsSent,
                 'bank_name'      => $tp->bank_name,
                 'account_number' => $tp->account_number,
                 'due_date'       => $tp->due_date?->format('Y-m-d H:i'),
@@ -339,6 +366,87 @@ class SettlementController extends Controller
             ]);
         } catch (TossApiException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 가상계좌 안내 SMS 재발송 (AJAX)
+    // ─────────────────────────────────────────────────────────────
+
+    public function resendVirtualAccountSms(Order $order): JsonResponse
+    {
+        $tp = $order->tossPayment;
+        if (!$tp || !$tp->account_number) {
+            return response()->json(['success' => false, 'message' => '발급된 가상계좌가 없습니다.'], 404);
+        }
+        if ($tp->status === 'DONE') {
+            return response()->json(['success' => false, 'message' => '이미 입금 완료된 주문입니다.'], 422);
+        }
+
+        $smsSent = $this->sendVirtualAccountSms(
+            $order,
+            $tp->bank_name,
+            $tp->account_number,
+            (int) $tp->amount,
+            $tp->due_date?->format('Y-m-d H:i')
+        );
+
+        return $smsSent
+            ? response()->json(['success' => true, 'message' => '안내 SMS를 재발송했습니다.'])
+            : response()->json(['success' => false, 'message' => 'SMS 발송에 실패했습니다. 환자 연락처를 확인하세요.'], 422);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 가상계좌 안내 SMS 발송 (공통 헬퍼)
+    // 발송 실패가 발급 자체를 막지 않도록 예외를 흡수하고 bool 반환.
+    // ─────────────────────────────────────────────────────────────
+
+    private function sendVirtualAccountSms(
+        Order $order,
+        ?string $bankName,
+        ?string $accountNumber,
+        int $amount,
+        ?string $dueDate
+    ): bool {
+        $accountNumber = trim((string) $accountNumber);
+        if ($accountNumber === '') {
+            Log::warning('[VA] SMS 발송 생략 — 계좌번호 없음', ['order' => $order->order_number]);
+            return false;
+        }
+
+        $mobile = $order->patient?->mobile
+               ?? $order->prescription?->mobile_ocr
+               ?? null;
+        if (!$mobile) {
+            Log::warning('[VA] SMS 발송 생략 — 환자 연락처 없음', ['order' => $order->order_number]);
+            return false;
+        }
+
+        $patientName = $order->patient?->name ?? '환자';
+        $bankName    = trim((string) $bankName);
+
+        try {
+            $amountFmt = number_format($amount);
+            $lines = [
+                "[콜로플라스트] {$patientName}님 본인부담금 입금 안내입니다.",
+                "- 주문번호: {$order->order_number}",
+                "- 입금계좌: " . trim("{$bankName} {$accountNumber}"),
+                "- 입금금액: {$amountFmt}원",
+            ];
+            if ($dueDate) {
+                $lines[] = "- 입금기한: {$dueDate}";
+            }
+            $lines[] = "기한 내 미입금 시 주문이 취소될 수 있습니다.";
+
+            app(MessageService::class)->send($mobile, implode("\n", $lines), $patientName);
+
+            activity()->causedBy(auth()->user())->performedOn($order)
+                ->log("가상계좌 안내 SMS 발송: {$mobile}");
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[VA] SMS 발송 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
+            return false;
         }
     }
 }

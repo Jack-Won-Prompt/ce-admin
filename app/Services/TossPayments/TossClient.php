@@ -94,7 +94,6 @@ class TossClient
             ]);
             curl_exec($ch);
             $err = curl_errno($ch);
-            curl_close($ch);
             return $err === 0;
         } catch (\Throwable) {
             return false;
@@ -143,7 +142,6 @@ class TossClient
         $raw      = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlErr  = curl_error($ch);
-        curl_close($ch);
 
         if ($curlErr) {
             throw new TossApiException('토스 API 연결 실패: ' . $curlErr);

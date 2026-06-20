@@ -369,6 +369,11 @@
                               data-url="{{ route('settlement.check-status', $order) }}">
                         <i class="fa-solid fa-rotate"></i> 확인
                       </button>
+                      <button class="btn btn-outline btn-sm btn-issue-va"
+                              onclick="resendVaSms({{ $order->id }}, this)"
+                              data-url="{{ route('settlement.resend-va-sms', $order) }}">
+                        <i class="fa-solid fa-comment-sms"></i> SMS
+                      </button>
                     @elseif(!$tossConfigured)
                       <span style="font-size:11px;color:var(--text-muted);">API 미설정</span>
                     @endif
@@ -655,8 +660,9 @@
       const data = await res.json();
       if (data.success) {
         BtnState.success(btn, '발급 완료');
-        showToast(`✅ ${data.bank_name} ${data.account_number} 발급 완료`, 'success');
-        setTimeout(() => location.reload(), 1200);
+        const smsNote = data.sms_sent ? ' · 안내 SMS 발송됨' : ' · ⚠️ SMS 미발송';
+        showToast(`✅ ${data.bank_name} ${data.account_number} 발급 완료${smsNote}`, data.sms_sent ? 'success' : 'warning');
+        setTimeout(() => location.reload(), 1400);
       } else {
         showToast(data.message || '발급 실패', 'danger');
         BtnState.error(btn, '발급 실패');
@@ -664,6 +670,24 @@
     } catch (e) {
       showToast('오류가 발생했습니다.', 'danger');
       BtnState.error(btn, '오류');
+    }
+  }
+
+  // 가상계좌 안내 SMS 재발송
+  async function resendVaSms(orderId, btn) {
+    if (!confirm('환자에게 가상계좌 안내 SMS를 재발송하시겠습니까?')) return;
+    BtnState.loading(btn, '발송 중...');
+    try {
+      const res = await fetch(btn.dataset.url, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content, 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      showToast(data.message || (data.success ? '발송 완료' : '발송 실패'), data.success ? 'success' : 'danger');
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+    } finally {
+      BtnState.reset(btn);
     }
   }
 

@@ -132,6 +132,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settlement/orders/{order}/detail',                  [SettlementController::class, 'orderDetail'])->name('settlement.order-detail');
     Route::post('/settlement/orders/{order}/virtual-account',        [SettlementController::class, 'issueVirtualAccount'])->name('settlement.issue-va');
     Route::get('/settlement/orders/{order}/payment-status',          [SettlementController::class, 'checkPaymentStatus'])->name('settlement.check-status');
+    Route::post('/settlement/orders/{order}/resend-va-sms',          [SettlementController::class, 'resendVirtualAccountSms'])->name('settlement.resend-va-sms');
 
     // 발송/발행 내역 관리
     Route::get('/dispatch',              [DispatchHistoryController::class, 'index'])->name('dispatch.index');

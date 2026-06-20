@@ -5275,7 +5275,8 @@ window.HELP_TOUR_STEPS = [
     const smsUrl = triggerBtn.dataset.smsUrl;
     if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 발급 중...'; }
     try {
-      const res = await fetch(url, {
+      // skip_sms=1: 이 화면은 발급 후 아래에서 자체적으로 안내 SMS를 발송하므로 서버 발송을 생략(이중 발송 방지)
+      const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'skip_sms=1', {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,

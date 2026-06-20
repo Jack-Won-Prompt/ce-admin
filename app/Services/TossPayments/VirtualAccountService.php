@@ -31,6 +31,8 @@ class VirtualAccountService extends TossClient
             throw new TossApiException('본인부담금이 0원인 주문에는 가상계좌를 발급할 수 없습니다.');
         }
 
+        // 주의: 토스 API는 validHours / dueDate 중 하나만 허용한다.
+        // (둘 다 보내면 INVALID_VALID_HOURS_WITH_DUE_DATE_AND_SINGLE 400 발생)
         $response = $this->post('/v1/virtual-accounts', [
             'amount'       => $amount,
             'orderId'      => $orderId,
@@ -38,7 +40,6 @@ class VirtualAccountService extends TossClient
             'customerName' => $order->patient?->name ?? '환자',
             'bank'         => $bank,
             'validHours'   => $validHours,
-            'dueDate'      => $dueDate,
         ]);
 
         return TossPayment::updateOrCreate(
