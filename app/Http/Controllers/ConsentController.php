@@ -246,6 +246,25 @@ class ConsentController extends Controller
     }
 
     /**
+     * TCPDF 나눔고딕 폰트를 vendor 폰트 디렉터리에 확보.
+     * 이미 있으면 아무것도 안 함(런타임 쓰기 없음). 없으면 커밋된 사전생성본을 복사 시도.
+     * (배포 시 composer post-autoload-dump 훅이 미리 복사하므로 평소엔 여기서 스킵됨)
+     */
+    private function ensureNanumGothicTcpdfFont(): void
+    {
+        $dir = defined('K_PATH_FONTS') ? K_PATH_FONTS : base_path('vendor/tecnickcom/tcpdf/fonts/');
+        if (is_file($dir . 'nanumgothic.php')) {
+            return;
+        }
+        $src = resource_path('fonts/tcpdf/');
+        foreach (['nanumgothic.php', 'nanumgothic.z', 'nanumgothic.ctg.z'] as $f) {
+            if (is_file($src . $f)) {
+                @copy($src . $f, $dir . $f);
+            }
+        }
+    }
+
+    /**
      * 원본 위임장 PDF 오버레이 생성 → PDF 바이너리 반환 (다운로드·자동첨부 공용).
      * 현재 DB 위임장 설정을 적용한다.
      */
@@ -274,7 +293,8 @@ class ConsentController extends Controller
         $pdf->SetAutoPageBreak(false);
         $pageCount = $pdf->setSourceFile($templatePath);
 
-        // 텍스트 필드용 한글 폰트 등록 (최초 1회 생성 후 캐시)
+        // 한글 폰트: 커밋된 사전생성 폰트 사용 (런타임 vendor 쓰기 없이). 없으면 복사 시도.
+        $this->ensureNanumGothicTcpdfFont();
         $fontName = \TCPDF_FONTS::addTTFfont(storage_path('fonts/NanumGothic.ttf'), 'TrueTypeUnicode', '', 32);
 
         $sigX = (float) config('delegation.signature.x', 164);
