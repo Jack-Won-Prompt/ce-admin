@@ -1028,6 +1028,13 @@
           </a>
         </div>
 
+        <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
+            <i class="menu-icon bx bx-check-shield"></i>
+            <span>개인정보동의</span>
+          </a>
+        </div>
+
         <div class="menu-header">지원</div>
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">

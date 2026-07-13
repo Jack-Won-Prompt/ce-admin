@@ -15,6 +15,8 @@ use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\PrivacyConsentController;
+use App\Http\Controllers\PrivacyConsentAdminController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RepurchaseController;
 use App\Http\Controllers\SettlementController;
@@ -260,6 +262,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{document}/download',                [PrescriptionDocumentController::class, 'download'])->name('download');
         Route::get('/{document}/preview',                 [PrescriptionDocumentController::class, 'preview'])->name('preview');
     });
+
+    // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
+    Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');
+    Route::get('/privacy-consents/export',   [PrivacyConsentAdminController::class, 'export'])->name('privacy-consents.export');
+    Route::get('/privacy-consents/{privacyConsent}', [PrivacyConsentAdminController::class, 'show'])->name('privacy-consents.show');
 });
 
 // 관리자 초대 수락 (로그인 불필요 — 이메일 링크)
@@ -270,6 +277,15 @@ Route::post('/admin/invite/{token}', [AdminInvitationController::class, 'confirm
 Route::prefix('consent')->name('consent.')->group(function () {
     Route::get( '/{token}', [ConsentController::class, 'show'])->name('show');
     Route::post('/{token}', [ConsentController::class, 'submit'])->name('submit');
+});
+
+// 개인정보 수집·이용 동의서 (mcoloplast) 공개 페이지 (로그인 불필요 — 환자 직접 작성)
+Route::prefix('privacy')->name('privacy.')->group(function () {
+    Route::get( '/',              [PrivacyConsentController::class, 'landing'])->name('landing');
+    Route::get( '/catheter',      [PrivacyConsentController::class, 'catheter'])->name('catheter');
+    Route::get( '/stoma',         [PrivacyConsentController::class, 'stoma'])->name('stoma');
+    Route::post('/{type}',        [PrivacyConsentController::class, 'submit'])->name('submit');
+    Route::get( '/{type}/done',   [PrivacyConsentController::class, 'done'])->name('done');
 });
 
 // e-Fax 콜백 (팩스 서비스에서 호출 — 인증 불필요)
