@@ -303,9 +303,9 @@ class ConsentController extends Controller
 
         // ③ 요양비 수령계좌
         $put(100, 156, $acct['receiver'] ?? '');
-        $put(122, 163, $acct['bank']     ?? '');
-        $put(122, 171, $acct['holder']   ?? '');
-        $put(122, 179, $acct['number']   ?? '');
+        $put(140, 163, $acct['bank']     ?? '');
+        $put(140, 171, $acct['holder']   ?? '');
+        $put(140, 179, $acct['number']   ?? '');
 
         // ④ 위임사항 — 4) 자가도뇨 소모성 재료 체크
         $put(63, 201, '✔', 9);
