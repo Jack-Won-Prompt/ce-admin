@@ -67,6 +67,12 @@ class ConsentController extends Controller
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
             $this->generateConsentPdf($consent);
+
+            // 요양비위임장(원본 오버레이)도 첨부문서에 자동 추가
+            $consent->loadMissing('prescription');
+            if ($consent->prescription) {
+                $this->saveDelegationDocument($consent->prescription);
+            }
         }
 
         // 관리자 전체에게 실시간 알림 브로드캐스트
@@ -200,17 +206,56 @@ class ConsentController extends Controller
      */
     public function downloadDelegationOverlayPdf(Prescription $prescription)
     {
-        \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
-
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')
             ->whereNotNull('signature_data')
             ->latest()
             ->firstOrFail();
 
+        $pdfData = $this->buildDelegationOverlayPdf($consent);
+
+        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
+        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+
+        return response($pdfData, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
+    /**
+     * 관리자: 현재 위임장 설정으로 요양비위임장을 재생성해 첨부문서 갱신 (설정 수시 반영 버튼).
+     */
+    public function regenerateDelegation(Prescription $prescription): JsonResponse
+    {
+        $doc = $this->saveDelegationDocument($prescription);
+
+        if (!$doc) {
+            return response()->json([
+                'success' => false,
+                'message' => '서명된 위임동의가 없어 요양비위임장을 생성할 수 없습니다.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success'  => true,
+            'message'  => '현재 설정으로 요양비위임장을 재생성해 첨부했습니다.',
+            'doc_id'   => $doc->id,
+            'filename' => $doc->original_filename,
+        ]);
+    }
+
+    /**
+     * 원본 위임장 PDF 오버레이 생성 → PDF 바이너리 반환 (다운로드·자동첨부 공용).
+     * 현재 DB 위임장 설정을 적용한다.
+     */
+    private function buildDelegationOverlayPdf(PrescriptionConsent $consent): string
+    {
+        \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
+
         $templatePath = resource_path('pdf/delegation_form.pdf');
         if (!is_file($templatePath)) {
-            abort(500, '위임장 원본 양식 파일을 찾을 수 없습니다.');
+            throw new \RuntimeException('위임장 원본 양식 파일을 찾을 수 없습니다.');
         }
 
         // 서명 data URL → 바이너리 PNG
@@ -220,7 +265,7 @@ class ConsentController extends Controller
         }
         $imgData = base64_decode($raw, true);
         if ($imgData === false) {
-            abort(422, '서명 이미지를 해석할 수 없습니다.');
+            throw new \RuntimeException('서명 이미지를 해석할 수 없습니다.');
         }
 
         $pdf = new \setasign\Fpdi\Tcpdf\Fpdi();
@@ -245,7 +290,6 @@ class ConsentController extends Controller
 
             // 1페이지에만 텍스트 필드 + 서명 오버레이
             if ($p === 1) {
-                // 텍스트 필드 자동채움 (서명 아래에 먼저)
                 $this->stampDelegationFields($pdf, $consent, $fontName);
 
                 // 서명 오버레이 ('@': 원본 이미지 데이터 직접 사용, 알파채널 PNG는 GD로 처리)
@@ -261,13 +305,57 @@ class ConsentController extends Controller
             }
         }
 
-        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+        return $pdf->Output('', 'S');
+    }
 
-        return response($pdf->Output($filename, 'S'), 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
-        ]);
+    /**
+     * 요양비위임장 PDF를 생성해 첨부문서(type=delegation)로 저장·갱신.
+     * 서명 완료 시 자동 호출 + 설정 변경 시 재생성 버튼에서 호출.
+     * 서명이 없으면 null 반환.
+     */
+    public function saveDelegationDocument(Prescription $prescription): ?PrescriptionDocument
+    {
+        try {
+            $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
+                ->where('status', 'agreed')
+                ->whereNotNull('signature_data')
+                ->latest()
+                ->first();
+
+            if (!$consent) {
+                return null;
+            }
+
+            $pdfData = $this->buildDelegationOverlayPdf($consent);
+
+            $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
+            $filename = '요양비위임장_' . $consent->patient_name . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
+            $path     = 'delegations/' . $prescription->id . '_' . now()->format('YmdHis') . '.pdf';
+
+            Storage::put($path, $pdfData);
+
+            // 기존 위임장 문서 교체 (파일·레코드 정리)
+            $olds = PrescriptionDocument::where('prescription_id', $prescription->id)
+                ->where('type', 'delegation')->get();
+            foreach ($olds as $old) {
+                if ($old->file_path && Storage::exists($old->file_path)) {
+                    Storage::delete($old->file_path);
+                }
+                $old->delete();
+            }
+
+            return PrescriptionDocument::create([
+                'prescription_id'   => $prescription->id,
+                'patient_id'        => $prescription->patient_id,
+                'created_by'        => Auth::id(),
+                'type'              => 'delegation',
+                'file_path'         => $path,
+                'original_filename' => $filename,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('요양비위임장 자동첨부 실패: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**

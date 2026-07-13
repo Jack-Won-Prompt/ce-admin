@@ -420,6 +420,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                style="display:none;padding:5px 13px;background:#6366f1;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
               <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>
+            <button id="csignRegenBtn" type="button" onclick="regenerateDelegation(this)"
+               data-url="{{ route('prescriptions.delegationRegenerate', $prescription) }}"
+               style="display:none;padding:5px 13px;background:#0ea5e9;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:5px;"
+               title="현재 위임장 설정(기관·계좌·서명위치)으로 첨부문서를 다시 생성합니다.">
+              <i class="fa-solid fa-rotate"></i> 설정 반영 재생성
+            </button>
             <button class="btn btn-outline btn-sm" onclick="closeConsentSignPopover()">닫기</button>
           </div>
         </div>
@@ -5832,17 +5838,43 @@ window.HELP_TOUR_STEPS = [
         pdfBtn.style.display = 'none';
       }
 
-      // 요양비 지급청구 위임장 PDF (서명이 있을 때만 — 서명란에 삽입됨)
+      // 요양비 지급청구 위임장 PDF + 재생성 (서명이 있을 때만)
       const delegBtn = document.getElementById('csignDelegationBtn');
-      if (delegBtn) {
-        delegBtn.style.display = data.signature_data ? 'inline-flex' : 'none';
-      }
+      const regenBtn = document.getElementById('csignRegenBtn');
+      const hasSig = !!data.signature_data;
+      if (delegBtn) delegBtn.style.display = hasSig ? 'inline-flex' : 'none';
+      if (regenBtn) regenBtn.style.display = hasSig ? 'inline-flex' : 'none';
 
       loading.style.display = 'none';
       content.style.display = 'block';
     } catch (_) {
       loading.style.display = 'none';
       errEl.style.display   = 'block';
+    }
+  }
+
+  // 현재 위임장 설정으로 요양비위임장 재생성 → 첨부문서 갱신
+  async function regenerateDelegation(btn) {
+    if (!confirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영할까요?')) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
+    try {
+      const res = await fetch(btn.dataset.url, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content, 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || '재생성 완료', 'success');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(data.message || '재생성 실패', 'danger');
+        btn.disabled = false; btn.innerHTML = orig;
+      }
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+      btn.disabled = false; btn.innerHTML = orig;
     }
   }
 
