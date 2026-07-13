@@ -37,6 +37,7 @@
 @php
   $types = [
     'consent'      => '위임동의서',
+    'delegation'   => '요양비위임장',
     'fax'          => '팩스통합본',
     'cash_receipt' => '현금영수증',
     'tax_invoice'  => '세금계산서',
@@ -112,7 +113,7 @@
       <tbody>
         @forelse($documents as $doc)
           @php
-            $typeColors = ['consent' => 'primary', 'fax' => 'warning', 'cash_receipt' => 'success'];
+            $typeColors = ['consent' => 'primary', 'delegation' => 'info', 'fax' => 'warning', 'cash_receipt' => 'success'];
             $color = $typeColors[$doc->type] ?? 'secondary';
           @endphp
           <tr>
@@ -156,7 +157,15 @@
                 <i class="bx bx-show"></i> 미리보기
               </button>
             </td>
-            <td style="text-align:center;">
+            <td style="text-align:center;white-space:nowrap;">
+              @if($doc->type === 'delegation' && $doc->prescription)
+                <button type="button"
+                        class="btn btn-outline btn-sm btn-regen"
+                        data-url="{{ route('prescriptions.delegationRegenerate', $doc->prescription) }}"
+                        title="현재 위임장 설정(기관·계좌·서명위치)으로 내용을 갱신합니다">
+                  <i class="bx bx-refresh"></i> 내용 갱신
+                </button>
+              @endif
               <a href="{{ route('documents.download', $doc) }}"
                  class="btn btn-outline btn-sm"
                  title="{{ $doc->original_filename }}">
@@ -241,6 +250,33 @@ document.getElementById('previewModal').addEventListener('hidden.bs.modal', func
     frame.src = '';
     frame.style.display = 'none';
     document.getElementById('previewLoading').style.display = 'flex';
+});
+
+// 요양비위임장 내용 갱신 (현재 위임장 설정으로 재생성)
+document.querySelectorAll('.btn-regen').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+        if (!confirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장 내용을 다시 생성해 갱신할까요?')) return;
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> 갱신 중...';
+        try {
+            const res = await fetch(btn.dataset.url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (typeof showToast === 'function') showToast(data.message || (data.success ? '갱신 완료' : '갱신 실패'), data.success ? 'success' : 'danger');
+            else alert(data.message || '');
+            if (data.success) { setTimeout(() => location.reload(), 900); }
+            else { btn.disabled = false; btn.innerHTML = orig; }
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('오류가 발생했습니다.', 'danger'); else alert('오류가 발생했습니다.');
+            btn.disabled = false; btn.innerHTML = orig;
+        }
+    });
 });
 </script>
 @endpush
