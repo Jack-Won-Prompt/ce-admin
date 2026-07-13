@@ -45,10 +45,15 @@
     .items td { border: 0.7px solid #000; }
     .items .cell { padding: 1px 0; }
     .legal { margin: 12px 2px 0; font-size: 10px; line-height: 1.6; }
-    .dateline { text-align: right; margin: 18px 40px 0 0; letter-spacing: 2px; }
-    .signline { text-align: right; margin: 6px 6px 0 0; }
-    .sig-img  { height: 46px; vertical-align: middle; }
-    .sig-box  { display: inline-block; width: 150px; height: 50px; vertical-align: middle; text-align: center; }
+    .dateline { text-align: right; margin: 12px 40px 0 0; letter-spacing: 2px; }
+    /* 서명란: 위임인 [서명] (서명 또는 인) 을 같은 기준선(baseline)에 정렬 */
+    .sign-tbl  { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    .sign-tbl td { border: 0; padding: 0; }
+    .sign-cell { text-align: right; white-space: nowrap; width: 1%; vertical-align: bottom; padding-right: 34px; }
+    .sign-name   { vertical-align: bottom; font-size: 11px; }
+    .sign-suffix { vertical-align: bottom; font-size: 11px; }
+    .sign-slot { display: inline-block; width: 160px; text-align: center; vertical-align: bottom; }
+    .sign-slot img { height: 42px; vertical-align: bottom; margin-bottom: -2px; }
     .footer-note { font-size: 8.5px; text-align: right; margin-top: 10px; }
 </style>
 </head>
@@ -216,15 +221,20 @@
 
     <div class="dateline">{{ $y }} 년 &nbsp; {{ $m }} 월 &nbsp; {{ $d }} 일</div>
 
-    <div class="signline">
-        위임인
-        <span class="sig-box">
-            @if($consent->signature_data)
-                <img class="sig-img" src="{{ $consent->signature_data }}" alt="서명">
-            @endif
-        </span>
-        (서명 또는 인)
-    </div>
+    <table class="sign-tbl">
+        <tr>
+            <td></td>
+            <td class="sign-cell">
+                <span class="sign-name">위임인</span>
+                <span class="sign-slot">
+                    @if($consent->signature_data)
+                        <img src="{{ $consent->signature_data }}" alt="서명">
+                    @endif
+                </span>
+                <span class="sign-suffix">(서명 또는 인)</span>
+            </td>
+        </tr>
+    </table>
 
     <div class="footer-note">210㎜×297㎜[백상지(80g/㎡) 또는 중질지(80g/㎡)]</div>
 
