@@ -416,7 +416,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                style="display:none;padding:5px 13px;background:var(--danger);color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
               <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
             </a>
-            <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdf', $prescription) }}" target="_blank"
+            <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdfOriginal', $prescription) }}" target="_blank"
                style="display:none;padding:5px 13px;background:#6366f1;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
               <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>

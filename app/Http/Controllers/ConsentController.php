@@ -193,6 +193,66 @@ class ConsentController extends Controller
     }
 
     /**
+     * 어드민: 원본 양식 PDF(별지 제19호의7)에 환자 서명을 오버레이해 다운로드
+     * — FPDI로 관공서 원본 PDF를 그대로 불러와 서명란 좌표에 서명 이미지를 스탬프.
+     */
+    public function downloadDelegationOverlayPdf(Prescription $prescription)
+    {
+        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('status', 'agreed')
+            ->whereNotNull('signature_data')
+            ->latest()
+            ->firstOrFail();
+
+        $templatePath = resource_path('pdf/delegation_form.pdf');
+        if (!is_file($templatePath)) {
+            abort(500, '위임장 원본 양식 파일을 찾을 수 없습니다.');
+        }
+
+        // 서명 data URL → 바이너리 PNG
+        $raw = $consent->signature_data;
+        if (preg_match('#^data:image/\w+;base64,(.+)$#s', $raw, $m)) {
+            $raw = $m[1];
+        }
+        $imgData = base64_decode($raw, true);
+        if ($imgData === false) {
+            abort(422, '서명 이미지를 해석할 수 없습니다.');
+        }
+
+        $pdf = new \setasign\Fpdi\Tcpdf\Fpdi();
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetAutoPageBreak(false);
+        $pageCount = $pdf->setSourceFile($templatePath);
+
+        $sigX = (float) config('delegation.signature.x', 150);
+        $sigY = (float) config('delegation.signature.y', 250);
+        $sigW = (float) config('delegation.signature.w', 28);
+
+        for ($p = 1; $p <= $pageCount; $p++) {
+            $tpl  = $pdf->importPage($p);
+            $size = $pdf->getTemplateSize($tpl);
+            $orientation = $size['width'] > $size['height'] ? 'L' : 'P';
+            $pdf->AddPage($orientation, [$size['width'], $size['height']]);
+            $pdf->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
+
+            // 서명은 1페이지 서명란에만 오버레이
+            if ($p === 1) {
+                // '@' 접두사: 원본 이미지 데이터를 직접 사용 (알파채널 PNG는 GD로 처리)
+                $pdf->Image('@' . $imgData, $sigX, $sigY, $sigW, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+            }
+        }
+
+        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
+        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+
+        return response($pdf->Output($filename, 'S'), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
+    /**
      * 동의 완료 시 PDF 생성 및 스토리지 저장
      */
     private function generateConsentPdf(PrescriptionConsent $consent): void

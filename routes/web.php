@@ -96,6 +96,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/consent-status', [ConsentController::class,     'statusCheck'])->name('consentStatus');
         Route::get( '/{prescription}/consent-pdf',    [ConsentController::class,     'downloadPdf'])->name('consentPdf');
         Route::get( '/{prescription}/delegation-pdf', [ConsentController::class,     'downloadDelegationPdf'])->name('delegationPdf');
+        Route::get( '/{prescription}/delegation-pdf-original', [ConsentController::class, 'downloadDelegationOverlayPdf'])->name('delegationPdfOriginal');
         Route::post('/{prescription}/counsel-no',     [PrescriptionController::class, 'generateCounselNo'])->name('counselNo');
         Route::post('/{prescription}/memos',                [PrescriptionController::class, 'storeMemo'])->name('memos.store');
         Route::patch('/{prescription}/memos/{memo}',        [PrescriptionController::class, 'updateMemo'])->name('memos.update');

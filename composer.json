@@ -13,7 +13,9 @@
         "laravel/tinker": "^2.10.1",
         "linkhub/popbill": "^1.14",
         "pusher/pusher-php-server": "^7.2",
-        "spatie/laravel-activitylog": "^4.12"
+        "setasign/fpdi": "^2.6",
+        "spatie/laravel-activitylog": "^4.12",
+        "tecnickcom/tcpdf": "^6.11"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
