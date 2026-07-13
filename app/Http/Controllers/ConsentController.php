@@ -308,7 +308,10 @@ class ConsentController extends Controller
         $put(140, 179, $acct['number']   ?? '');
 
         // ④ 위임사항 — 4) 자가도뇨 소모성 재료 체크
-        $put(63, 201, '✔', 9);
+        // 폰트 글리프(✔) 대신 벡터 선으로 직접 그려 깨짐 방지
+        $pdf->SetLineStyle(['width' => 0.5, 'cap' => 'round', 'join' => 'round', 'color' => [0, 0, 0]]);
+        $pdf->Line(63.8, 201.2, 65.3, 203.0);
+        $pdf->Line(65.3, 203.0, 68.8, 198.3);
 
         // ⑤ 위임기간 (서명일부터 N년)
         $put(55, 246,  $sd->format('Y'));
