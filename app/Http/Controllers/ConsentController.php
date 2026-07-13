@@ -250,10 +250,10 @@ class ConsentController extends Controller
                 // 서명일(년/월/일)은 서명 위에 얹어 가독성 확보
                 $sd = $consent->responded_at ?? now();
                 $pdf->SetTextColor(0, 0, 0);
-                $pdf->SetFont($fontName, '', 8);
-                $pdf->Text(150, 270, $sd->format('Y'));
-                $pdf->Text(166, 270, $sd->format('n'));
-                $pdf->Text(180, 270, $sd->format('j'));
+                $pdf->SetFont($fontName, '', 7);
+                $pdf->Text(151, 270, $sd->format('Y'));
+                $pdf->Text(167, 270, $sd->format('n'));
+                $pdf->Text(181, 270, $sd->format('j'));
             }
         }
 
@@ -313,13 +313,13 @@ class ConsentController extends Controller
         $pdf->Line(60.6, 200.9, 61.8, 202.2);
         $pdf->Line(61.8, 202.2, 64.1, 199.0);
 
-        // ⑤ 위임기간 (서명일부터 N년)
-        $put(55, 246,  $sd->format('Y'));
-        $put(74, 246,  $sd->format('n'));
-        $put(87, 246,  $sd->format('j'));
-        $put(108, 246, $ed->format('Y'));
-        $put(127, 246, $ed->format('n'));
-        $put(140, 246, $ed->format('j'));
+        // ⑤ 위임기간 (서명일부터 N년) — 인쇄된 년/월/일 글자와 겹치지 않게 작게·여백 배치
+        $put(54, 246,  $sd->format('Y'), 7);
+        $put(73, 246,  $sd->format('n'), 7);
+        $put(83, 246,  $sd->format('j'), 7);
+        $put(108, 246, $ed->format('Y'), 7);
+        $put(128, 246, $ed->format('n'), 7);
+        $put(139, 246, $ed->format('j'), 7);
     }
 
     /**
