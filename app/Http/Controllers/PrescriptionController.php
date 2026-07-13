@@ -720,7 +720,7 @@ class PrescriptionController extends Controller
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
-        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'order.tossPayment', 'items', 'memos.user', 'attachments']);
+        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator']);
         $patients = Patient::orderBy('name')->get();
 
         // 이전(ID 작은 쪽) / 다음(ID 큰 쪽) — rx_number 반환

@@ -159,6 +159,12 @@ class Prescription extends Model
         return $this->hasMany(PrescriptionAttachment::class)->orderBy('display_order');
     }
 
+    /** 생성 서류 (위임동의서·요양비위임장 등 시스템 생성 PDF) */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PrescriptionDocument::class)->latest();
+    }
+
     // ── 처방번호 자동 생성 ────────────────────────────────
     public static function generateRxNumber(): string
     {
