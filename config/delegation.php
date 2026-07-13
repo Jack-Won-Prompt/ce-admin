@@ -44,8 +44,8 @@ return [
     |─────────────────────────────────────────────────────────────
     */
     'signature' => [
-        'x' => (float) env('DELEGATION_SIG_X', 138),  // 좌상단 X (mm)
-        'y' => (float) env('DELEGATION_SIG_Y', 272),  // 좌상단 Y (mm)
+        'x' => (float) env('DELEGATION_SIG_X', 164),  // 좌상단 X (mm) — "(서명 또는 인)" 중심(x≈178)
+        'y' => (float) env('DELEGATION_SIG_Y', 266),  // 좌상단 Y (mm) — "(서명 또는 인)" 바로 위
         'w' => (float) env('DELEGATION_SIG_W', 28),   // 너비 (mm, 높이는 비율 자동)
     ],
 
