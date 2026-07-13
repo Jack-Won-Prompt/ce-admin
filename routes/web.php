@@ -9,6 +9,7 @@ use App\Http\Controllers\DispatchHistoryController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DelegationSettingController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NhisController;
 use App\Http\Controllers\NoticeController;
@@ -262,6 +263,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{document}/download',                [PrescriptionDocumentController::class, 'download'])->name('download');
         Route::get('/{document}/preview',                 [PrescriptionDocumentController::class, 'preview'])->name('preview');
     });
+
+    // 요양비 위임장 설정
+    Route::get('/settings/delegation',  [DelegationSettingController::class, 'edit'])->name('delegation-settings.edit');
+    Route::put('/settings/delegation',  [DelegationSettingController::class, 'update'])->name('delegation-settings.update');
 
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');

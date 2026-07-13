@@ -1035,6 +1035,13 @@
           </a>
         </div>
 
+        <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
+            <i class="menu-icon bx bx-cog"></i>
+            <span>위임장 설정</span>
+          </a>
+        </div>
+
         <div class="menu-header">지원</div>
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">

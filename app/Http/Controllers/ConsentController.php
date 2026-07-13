@@ -159,6 +159,8 @@ class ConsentController extends Controller
      */
     public function downloadDelegationPdf(Prescription $prescription)
     {
+        \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
+
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')
             ->latest()
@@ -198,6 +200,8 @@ class ConsentController extends Controller
      */
     public function downloadDelegationOverlayPdf(Prescription $prescription)
     {
+        \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
+
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')
             ->whereNotNull('signature_data')
