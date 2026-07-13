@@ -66,6 +66,15 @@
       transition:background .2s, box-shadow .2s;
     }
     .btn-nav-login:hover { background:var(--primary-dark); box-shadow:0 6px 24px rgba(27,102,245,.5); }
+    .btn-nav-consent {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:9px 18px; border-radius:8px;
+      background:transparent; border:1px solid var(--border-dark);
+      color:rgba(255,255,255,.75); font-size:13.5px; font-weight:700;
+      text-decoration:none; font-family:inherit;
+      transition:border-color .2s, color .2s, background .2s;
+    }
+    .btn-nav-consent:hover { border-color:rgba(27,102,245,.45); color:#93C5FD; background:rgba(27,102,245,.08); }
 
     /* ─── HERO ─── */
     .hero {
@@ -258,9 +267,14 @@
         <div class="nav-sub">Coloplast Korea</div>
       </div>
     </a>
-    <a class="btn-nav-login" href="{{ route('login') }}">
-      <i class="bx bx-log-in-circle"></i> 로그인
-    </a>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <a class="btn-nav-consent" href="{{ route('privacy.landing') }}">
+        <i class="bx bx-check-shield"></i> 개인정보 동의서
+      </a>
+      <a class="btn-nav-login" href="{{ route('login') }}">
+        <i class="bx bx-log-in-circle"></i> 로그인
+      </a>
+    </div>
   </nav>
 
   {{-- HERO --}}
@@ -274,6 +288,7 @@
       </p>
       <div class="hero-actions">
         <a class="btn-primary" href="{{ route('login') }}"><i class="bx bx-log-in-circle"></i> 지금 시작하기</a>
+        <a class="btn-ghost" href="{{ route('privacy.landing') }}"><i class="bx bx-check-shield"></i> 개인정보 동의서 작성</a>
         <a class="btn-ghost" href="#features"><i class="bx bx-info-circle"></i> 주요 기능 보기</a>
       </div>
       <div class="hero-stats">
