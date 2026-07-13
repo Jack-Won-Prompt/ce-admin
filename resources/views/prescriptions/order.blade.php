@@ -369,7 +369,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         {{-- 위임동의 서명 확인 팝오버 --}}
-        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:460px;background:var(--bg-card);border:1px solid var(--success);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
+        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:540px;background:var(--bg-card);border:1px solid var(--success);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
             <div style="width:10px;height:10px;background:var(--success);border:1px solid var(--success);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
@@ -411,22 +411,22 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-triangle-exclamation"></i> 서명 정보를 불러오지 못했습니다.
             </div>
           </div>
-          <div style="padding:12px 14px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);">
+          <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:nowrap;gap:6px;border-top:1px solid var(--border);">
             <a id="csignPdfBtn" href="#" target="_blank"
-               style="display:none;padding:5px 13px;background:var(--danger);color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
+               style="display:none;padding:5px 10px;background:var(--danger);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
             </a>
             <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdfOriginal', $prescription) }}" target="_blank"
-               style="display:none;padding:5px 13px;background:#6366f1;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
+               style="display:none;padding:5px 10px;background:#6366f1;color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>
             <button id="csignRegenBtn" type="button" onclick="regenerateDelegation(this)"
                data-url="{{ route('prescriptions.delegationRegenerate', $prescription) }}"
-               style="display:none;padding:5px 13px;background:#0ea5e9;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:5px;"
+               style="display:none;padding:5px 10px;background:#0ea5e9;color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:4px;"
                title="현재 위임장 설정(기관·계좌·서명위치)으로 첨부문서를 다시 생성합니다.">
               <i class="fa-solid fa-rotate"></i> 설정 반영 재생성
             </button>
-            <button class="btn btn-outline btn-sm" onclick="closeConsentSignPopover()">닫기</button>
+            <button class="btn btn-outline btn-sm" style="white-space:nowrap;padding:5px 10px;font-size:11px;" onclick="closeConsentSignPopover()">닫기</button>
           </div>
         </div>
       </div>
