@@ -414,7 +414,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <div style="padding:12px 14px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);">
             <a id="csignPdfBtn" href="#" target="_blank"
                style="display:none;padding:5px 13px;background:var(--danger);color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
-              <i class="fa-solid fa-file-pdf"></i> PDF 다운로드
+              <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
+            </a>
+            <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdf', $prescription) }}" target="_blank"
+               style="display:none;padding:5px 13px;background:#6366f1;color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius);text-decoration:none;align-items:center;gap:5px;">
+              <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>
             <button class="btn btn-outline btn-sm" onclick="closeConsentSignPopover()">닫기</button>
           </div>
@@ -5826,6 +5830,12 @@ window.HELP_TOUR_STEPS = [
         pdfBtn.style.display = 'inline-flex';
       } else {
         pdfBtn.style.display = 'none';
+      }
+
+      // 요양비 지급청구 위임장 PDF (서명이 있을 때만 — 서명란에 삽입됨)
+      const delegBtn = document.getElementById('csignDelegationBtn');
+      if (delegBtn) {
+        delegBtn.style.display = data.signature_data ? 'inline-flex' : 'none';
       }
 
       loading.style.display = 'none';

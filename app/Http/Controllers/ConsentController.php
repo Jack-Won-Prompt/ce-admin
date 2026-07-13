@@ -154,6 +154,45 @@ class ConsentController extends Controller
     }
 
     /**
+     * 어드민: 요양비 지급청구 위임장(별지 제19호의7서식) PDF 다운로드
+     * — 환자 SMS 서명을 서명란에 삽입. 준요양기관/수령계좌/위임기간은 추후 자동채움 예정.
+     */
+    public function downloadDelegationPdf(Prescription $prescription)
+    {
+        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('status', 'agreed')
+            ->latest()
+            ->firstOrFail();
+
+        $consent->loadMissing('prescription.patient');
+
+        $this->ensureNanumGothicVariantsRegistered();
+
+        $options = new \Dompdf\Options();
+        $options->setFontDir(storage_path('fonts'));
+        $options->setFontCache(storage_path('fonts'));
+        $options->setChroot(realpath(base_path()));
+        $options->setIsHtml5ParserEnabled(true);
+        $options->setIsRemoteEnabled(false);
+        $options->setIsFontSubsettingEnabled(false);
+        $options->setDefaultFont('NanumGothic');
+        $dompdf = new \Dompdf\Dompdf($options);
+
+        $html = view('consent.delegation_pdf', compact('consent'))->render();
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('a4', 'portrait');
+        $dompdf->render();
+
+        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
+        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
+    /**
      * 동의 완료 시 PDF 생성 및 스토리지 저장
      */
     private function generateConsentPdf(PrescriptionConsent $consent): void
