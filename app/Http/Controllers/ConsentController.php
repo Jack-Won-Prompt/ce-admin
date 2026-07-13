@@ -225,8 +225,11 @@ class ConsentController extends Controller
         $pdf->SetAutoPageBreak(false);
         $pageCount = $pdf->setSourceFile($templatePath);
 
-        $sigX = (float) config('delegation.signature.x', 150);
-        $sigY = (float) config('delegation.signature.y', 250);
+        // 텍스트 필드용 한글 폰트 등록 (최초 1회 생성 후 캐시)
+        $fontName = \TCPDF_FONTS::addTTFfont(storage_path('fonts/NanumGothic.ttf'), 'TrueTypeUnicode', '', 32);
+
+        $sigX = (float) config('delegation.signature.x', 164);
+        $sigY = (float) config('delegation.signature.y', 266);
         $sigW = (float) config('delegation.signature.w', 28);
 
         for ($p = 1; $p <= $pageCount; $p++) {
@@ -236,10 +239,21 @@ class ConsentController extends Controller
             $pdf->AddPage($orientation, [$size['width'], $size['height']]);
             $pdf->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
 
-            // 서명은 1페이지 서명란에만 오버레이
+            // 1페이지에만 텍스트 필드 + 서명 오버레이
             if ($p === 1) {
-                // '@' 접두사: 원본 이미지 데이터를 직접 사용 (알파채널 PNG는 GD로 처리)
+                // 텍스트 필드 자동채움 (서명 아래에 먼저)
+                $this->stampDelegationFields($pdf, $consent, $fontName);
+
+                // 서명 오버레이 ('@': 원본 이미지 데이터 직접 사용, 알파채널 PNG는 GD로 처리)
                 $pdf->Image('@' . $imgData, $sigX, $sigY, $sigW, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+
+                // 서명일(년/월/일)은 서명 위에 얹어 가독성 확보
+                $sd = $consent->responded_at ?? now();
+                $pdf->SetTextColor(0, 0, 0);
+                $pdf->SetFont($fontName, '', 8);
+                $pdf->Text(150, 270, $sd->format('Y'));
+                $pdf->Text(166, 270, $sd->format('n'));
+                $pdf->Text(180, 270, $sd->format('j'));
             }
         }
 
@@ -250,6 +264,59 @@ class ConsentController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
         ]);
+    }
+
+    /**
+     * 원본 위임장 PDF에 텍스트 필드 자동채움 (좌표는 A4 mm 기준).
+     * ①위임인(성명·주민번호·전화) ②준요양기관 ③수령계좌 ④자가도뇨 체크 ⑤위임기간.
+     * 준요양기관·수령계좌 값은 config/delegation.php(.env) 에서 온다.
+     */
+    private function stampDelegationFields(\setasign\Fpdi\Tcpdf\Fpdi $pdf, PrescriptionConsent $consent, string $fontName): void
+    {
+        $patient = $consent->prescription?->patient;
+        $prov    = config('delegation.provider', []);
+        $acct    = config('delegation.account', []);
+        $sd      = $consent->responded_at ?? now();
+        $py      = min(5, max(1, (int) config('delegation.period_years', 5)));
+        $ed      = $sd->copy()->addYears($py);
+
+        $pdf->SetTextColor(0, 0, 0);
+        $put = function (float $x, float $y, ?string $t, float $size = 8) use ($pdf, $fontName): void {
+            $t = trim((string) $t);
+            if ($t === '') {
+                return;
+            }
+            $pdf->SetFont($fontName, '', $size);
+            $pdf->Text($x, $y, $t);
+        };
+
+        // ① 위임인
+        $put(133, 52, $consent->patient_name ?: $patient?->name);
+        $put(133, 59, $patient?->resident_no);
+        $put(80, 90, $consent->patient_mobile ?: $patient?->mobile);
+
+        // ② 준요양기관
+        $put(78, 116, $prov['name']   ?? '');
+        $put(78, 125, $prov['biz_no'] ?? '');
+        $put(78, 135, $prov['ceo']    ?? '');
+        $put(78, 144, $prov['phone']  ?? '');
+
+        // ③ 요양비 수령계좌
+        $put(100, 156, $acct['receiver'] ?? '');
+        $put(108, 163, $acct['bank']     ?? '');
+        $put(108, 171, $acct['holder']   ?? '');
+        $put(108, 179, $acct['number']   ?? '');
+
+        // ④ 위임사항 — 4) 자가도뇨 소모성 재료 체크
+        $put(63, 201, '✔', 9);
+
+        // ⑤ 위임기간 (서명일부터 N년)
+        $put(55, 246,  $sd->format('Y'));
+        $put(74, 246,  $sd->format('n'));
+        $put(87, 246,  $sd->format('j'));
+        $put(108, 246, $ed->format('Y'));
+        $put(127, 246, $ed->format('n'));
+        $put(140, 246, $ed->format('j'));
     }
 
     /**
