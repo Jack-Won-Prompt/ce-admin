@@ -91,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/authorization', [PrescriptionController::class, 'authorization'])->name('authorization');
         Route::get( '/{prescription}/fax-pdf',      [PrescriptionController::class, 'downloadFaxPdf'])->name('faxPdf');
         Route::post('/{prescription}/fax-regenerate', [PrescriptionController::class, 'regenerateFax'])->name('faxRegenerate');
+        Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
         Route::patch('/{prescription}/assign',       [PrescriptionController::class, 'assignUser'])->name('assign');
         Route::post(  '/{prescription}/withworks-order', [PrescriptionController::class, 'createWithworksOrder'])->name('withworksOrder');
         Route::put(   '/{prescription}/withworks-order', [PrescriptionController::class, 'updateWithworksOrder'])->name('withworksOrderUpdate');

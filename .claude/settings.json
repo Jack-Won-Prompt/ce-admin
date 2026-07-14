@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -rniE 'authorization|purchase_history|prescription_doc|docs\\\\[|\\\\$docs|document types|위임장|처방전 pdf' app/Http/Controllers/PrescriptionController.php)"
+      "Bash(grep -rniE 'authorization|purchase_history|prescription_doc|docs\\\\[|\\\\$docs|document types|위임장|처방전 pdf' app/Http/Controllers/PrescriptionController.php)",
+      "Bash(php -l app/Http/Controllers/PrescriptionController.php)"
     ]
   }
 }

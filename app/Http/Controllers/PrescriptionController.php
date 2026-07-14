@@ -1591,6 +1591,15 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 생성 서류 목록 partial HTML 반환 (서명 완료 시 실시간 갱신용).
+     */
+    public function generatedDocs(Prescription $prescription): \Illuminate\Http\Response
+    {
+        $prescription->load('documents.creator');
+        return response(view('prescriptions._generated_docs', compact('prescription'))->render());
+    }
+
+    /**
      * 관리자: 팩스통합본을 현재 데이터로 재생성 (요양비위임장 포함). 기존 팩스통합본 교체.
      */
     public function regenerateFax(Prescription $prescription): \Illuminate\Http\JsonResponse
