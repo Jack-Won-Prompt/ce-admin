@@ -1402,7 +1402,7 @@ class PrescriptionController extends Controller
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'documents'       => 'nullable|array',
-            'documents.*'     => 'string|in:authorization,prescription,purchase_history,cash_receipt',
+            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
@@ -1413,6 +1413,7 @@ class PrescriptionController extends Controller
 
         $docLabels = [
             'authorization'    => '위임장',
+            'delegation'       => '요양비위임장',
             'prescription'     => '처방전',
             'purchase_history' => '제품 구매내역',
             'cash_receipt'     => '현금영수증',
@@ -1571,7 +1572,7 @@ class PrescriptionController extends Controller
     // ── 팩스 서류 PDF 다운로드 ────────────────────────────
     public function downloadFaxPdf(Request $request, Prescription $prescription): \Illuminate\Http\Response
     {
-        $allowed = ['authorization', 'prescription', 'purchase_history', 'cash_receipt'];
+        $allowed = ['authorization', 'delegation', 'prescription', 'purchase_history', 'cash_receipt'];
         $docs    = array_values(array_intersect(
             (array) $request->input('docs', ['authorization']),
             $allowed
@@ -1580,6 +1581,47 @@ class PrescriptionController extends Controller
             $docs = ['authorization'];
         }
 
+        [$pdfOutput, $filename] = $this->buildFaxCombinedPdf($prescription, $docs);
+        $this->storeFaxDocument($prescription, $pdfOutput, $filename);
+
+        return response($pdfOutput, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
+    /**
+     * 관리자: 팩스통합본을 현재 데이터로 재생성 (요양비위임장 포함). 기존 팩스통합본 교체.
+     */
+    public function regenerateFax(Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        // 적용 가능한 모든 문서로 재생성 (요양비위임장 포함) — 데이터 없는 섹션은 뷰에서 자동 제외
+        $docs = ['authorization', 'delegation', 'prescription', 'purchase_history', 'cash_receipt'];
+
+        try {
+            [$pdfOutput, $filename] = $this->buildFaxCombinedPdf($prescription, $docs);
+        } catch (\Throwable $e) {
+            Log::warning('팩스통합본 재생성 실패: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => '재생성 실패: ' . $e->getMessage()], 500);
+        }
+
+        // 기존 팩스통합본 교체
+        foreach (PrescriptionDocument::where('prescription_id', $prescription->id)->where('type', 'fax')->get() as $old) {
+            if ($old->file_path && Storage::exists($old->file_path)) {
+                Storage::delete($old->file_path);
+            }
+            $old->delete();
+        }
+        $this->storeFaxDocument($prescription, $pdfOutput, $filename);
+
+        return response()->json(['success' => true, 'message' => '팩스통합본을 재생성했습니다 (요양비위임장 포함).']);
+    }
+
+    /**
+     * 팩스통합본 PDF 생성 → [바이너리, 파일명]. 'delegation' 선택 시 요양비위임장 PDF를 FPDI로 병합.
+     */
+    private function buildFaxCombinedPdf(Prescription $prescription, array $docs): array
+    {
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')
             ->latest()
@@ -1611,20 +1653,32 @@ class PrescriptionController extends Controller
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
+        $pdfOutput = $dompdf->output();
+
+        // 요양비위임장(별지 제19호의7 원본 오버레이) 병합
+        if (in_array('delegation', $docs)) {
+            $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
+            if ($delegBytes) {
+                $pdfOutput = $this->mergePdfBytes([$pdfOutput, $delegBytes]);
+            }
+        }
 
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
         $filename = '팩스통합본_' . ($patient?->name ?? '') . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
-        $pdfOutput = $dompdf->output();
 
-        // 스토리지에 저장 + 서류 목록 기록
+        return [$pdfOutput, $filename];
+    }
+
+    /** 팩스통합본을 스토리지 저장 + 서류(type=fax) 기록 */
+    private function storeFaxDocument(Prescription $prescription, string $pdfOutput, string $filename): void
+    {
         try {
-            $dir      = 'fax/' . $prescription->id;
-            $filePath = $dir . '/' . $filename;
+            $filePath = 'fax/' . $prescription->id . '/' . $filename;
             Storage::put($filePath, $pdfOutput);
 
             PrescriptionDocument::create([
                 'prescription_id'   => $prescription->id,
-                'patient_id'        => $patient?->id,
+                'patient_id'        => $prescription->patient?->id,
                 'created_by'        => Auth::id(),
                 'type'              => 'fax',
                 'file_path'         => $filePath,
@@ -1633,11 +1687,31 @@ class PrescriptionController extends Controller
         } catch (\Throwable $e) {
             Log::warning('팩스 PDF 서류 저장 실패: ' . $e->getMessage());
         }
+    }
 
-        return response($pdfOutput, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
-        ]);
+    /** 여러 PDF 바이너리를 FPDI로 순서대로 병합해 하나의 PDF 바이너리 반환 */
+    private function mergePdfBytes(array $pdfList): string
+    {
+        $m = new \setasign\Fpdi\Tcpdf\Fpdi();
+        $m->setPrintHeader(false);
+        $m->setPrintFooter(false);
+        $m->SetAutoPageBreak(false);
+
+        foreach ($pdfList as $bytes) {
+            if (!$bytes) {
+                continue;
+            }
+            $stream = \setasign\Fpdi\PdfParser\StreamReader::createByString($bytes);
+            $count  = $m->setSourceFile($stream);
+            for ($i = 1; $i <= $count; $i++) {
+                $tpl  = $m->importPage($i);
+                $size = $m->getTemplateSize($tpl);
+                $m->AddPage($size['width'] > $size['height'] ? 'L' : 'P', [$size['width'], $size['height']]);
+                $m->useTemplate($tpl);
+            }
+        }
+
+        return $m->Output('', 'S');
     }
 
     // ── 팩스 합본 PDF 저장 ────────────────────────────────
@@ -1695,6 +1769,15 @@ class PrescriptionController extends Controller
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
+        $pdfOutput = $dompdf->output();
+
+        // 요양비위임장(별지 제19호의7 원본 오버레이) 병합
+        if (in_array('delegation', $documents)) {
+            $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
+            if ($delegBytes) {
+                $pdfOutput = $this->mergePdfBytes([$pdfOutput, $delegBytes]);
+            }
+        }
 
         $patient  = $prescription->patient;
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
@@ -1706,7 +1789,7 @@ class PrescriptionController extends Controller
             mkdir(dirname($fullPath), 0755, true);
         }
 
-        file_put_contents($fullPath, $dompdf->output());
+        file_put_contents($fullPath, $pdfOutput);
 
         $relativePath = $dir . '/' . $filename;
         $url          = rtrim(request()->root(), '/') . '/storage/' . $relativePath;

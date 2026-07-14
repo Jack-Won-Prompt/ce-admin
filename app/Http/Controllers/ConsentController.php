@@ -246,6 +246,30 @@ class ConsentController extends Controller
     }
 
     /**
+     * 요양비위임장 오버레이 PDF 바이트 반환 (서명 없으면 null).
+     * 팩스통합본 병합 등 외부 재사용용.
+     */
+    public function overlayPdfBytes(Prescription $prescription): ?string
+    {
+        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('status', 'agreed')
+            ->whereNotNull('signature_data')
+            ->latest()
+            ->first();
+
+        if (!$consent) {
+            return null;
+        }
+
+        try {
+            return $this->buildDelegationOverlayPdf($consent);
+        } catch (\Throwable $e) {
+            \Log::warning('요양비위임장 생성 실패(팩스통합): ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * TCPDF 나눔고딕 폰트를 vendor 폰트 디렉터리에 확보.
      * 이미 있으면 아무것도 안 함(런타임 쓰기 없음). 없으면 커밋된 사전생성본을 복사 시도.
      * (배포 시 composer post-autoload-dump 훅이 미리 복사하므로 평소엔 여기서 스킵됨)

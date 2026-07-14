@@ -849,6 +849,22 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
+                  <input type="checkbox" id="fax-doc-delegation" value="delegation" style="accent-color:var(--primary);" {{ $latestConsent?->signature_data ? 'checked' : 'disabled' }}>
+                  <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                      <span style="font-weight:600;">요양비위임장</span>
+                      @if($latestConsent?->signature_data)
+                        <span style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:3px;padding:1px 6px;">별지 제19호의7</span>
+                      @else
+                        <span style="font-size:10px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:3px;padding:1px 6px;">서명 필요</span>
+                      @endif
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
+                      {{ $latestConsent?->signature_data ? '환자 서명이 포함된 관공서 원본 위임장' : '전자서명 완료 후 포함 가능' }}
+                    </div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                   <input type="checkbox" id="fax-doc-rx" value="prescription" style="accent-color:var(--primary);" checked>
                   <div>
                     <div style="font-weight:600;">처방전</div>
@@ -1191,6 +1207,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     data-url="{{ route('prescriptions.delegationRegenerate', $prescription) }}"
                     class="btn btn-outline btn-sm" style="padding:3px 9px;font-size:11px;white-space:nowrap;"
                     title="현재 위임장 설정(기관·계좌·서명위치)으로 내용을 갱신합니다"><i class="fa-solid fa-rotate"></i> 갱신</button>
+            @endif
+            @if($gdoc->type === 'fax')
+            <button type="button" onclick="regenerateFax(this)"
+                    data-url="{{ route('prescriptions.faxRegenerate', $prescription) }}"
+                    class="btn btn-outline btn-sm" style="padding:3px 9px;font-size:11px;white-space:nowrap;"
+                    title="현재 데이터로 팩스통합본을 재생성합니다 (요양비위임장 포함)"><i class="fa-solid fa-rotate"></i> 갱신</button>
             @endif
           </div>
           @endforeach
@@ -5018,6 +5040,7 @@ window.HELP_TOUR_STEPS = [
 
     const docMap = {
       'fax-doc-auth':         { value: 'authorization',    label: '위임장' },
+      'fax-doc-delegation':   { value: 'delegation',       label: '요양비위임장' },
       'fax-doc-rx':           { value: 'prescription',     label: '처방전' },
       'fax-doc-purchase':     { value: 'purchase_history', label: '제품 구매내역' },
       'fax-doc-cash-receipt': { value: 'cash_receipt',     label: '현금영수증' },
@@ -5887,6 +5910,31 @@ window.HELP_TOUR_STEPS = [
   // 현재 위임장 설정으로 요양비위임장 재생성 → 첨부문서 갱신
   async function regenerateDelegation(btn) {
     if (!confirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영할까요?')) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
+    try {
+      const res = await fetch(btn.dataset.url, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content, 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || '재생성 완료', 'success');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(data.message || '재생성 실패', 'danger');
+        btn.disabled = false; btn.innerHTML = orig;
+      }
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+      btn.disabled = false; btn.innerHTML = orig;
+    }
+  }
+
+  // 팩스통합본 재생성 (현재 데이터로, 요양비위임장 포함)
+  async function regenerateFax(btn) {
+    if (!confirm('현재 데이터로 팩스통합본을 다시 생성할까요? (요양비위임장 포함)')) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
