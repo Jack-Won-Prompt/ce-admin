@@ -67,11 +67,12 @@ return [
         'lcpoint' => [
             'driver' => 'mysql',
             'url' => '',
-            'host' => '43.203.246.90',
-            'port' => '3306',
-            'database' => 'lcpoint',
-            'username' => 'lcpoint',
-            'password' => 'lcpoint3355!@^',
+            // DB 서버 이전(43.203.246.90 → 3.34.53.36): 운영은 .env의 LCPOINT_DB_HOST로 지정
+            'host' => env('LCPOINT_DB_HOST', '43.203.246.90'),
+            'port' => env('LCPOINT_DB_PORT', '3306'),
+            'database' => env('LCPOINT_DB_DATABASE', 'lcpoint'),
+            'username' => env('LCPOINT_DB_USERNAME', 'lcpoint'),
+            'password' => env('LCPOINT_DB_PASSWORD', 'lcpoint3355!@^'),
             'unix_socket' => '',
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
