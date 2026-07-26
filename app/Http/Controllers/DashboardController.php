@@ -44,7 +44,7 @@ class DashboardController extends Controller
         ])->values();
 
         // 최근 활동 로그
-        $activities = \Spatie\Activitylog\Models\Activity::latest()->take(5)->get();
+        $activities = \Spatie\Activitylog\Models\Activity::latest()->take(4)->get();
 
         return view('dashboard.index', compact(
             'stats', 'recentPrescriptions', 'recentRxGrid', 'activities'

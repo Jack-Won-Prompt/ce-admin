@@ -48,7 +48,7 @@
   const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
   const grid = new wwGrid({
     el: el,
-    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    height: 320, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
@@ -133,18 +133,34 @@ window.HELP_TOUR_STEPS = [
   .queue-box .q-num   { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
   .queue-box .q-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
-  /* ── Activity timeline ── */
+  /* ── Activity timeline (타이틀+시간 한 줄, 상세는 hover 팝오버) ── */
   .activity-item {
-    display: flex; gap: 12px; align-items: flex-start;
-    padding: 10px 0; border-bottom: 1px solid var(--border-light);
+    display: flex; gap: 10px; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border-light);
+    position: relative;
   }
   .activity-item:last-child { border-bottom: none; }
   .activity-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    margin-top: 6px; flex-shrink: 0;
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
   }
-  .activity-text { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
-  .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .activity-main { min-width: 0; flex: 1; }
+  .activity-title {
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; }
+  /* 팝오버(상세 전체 내용) — 사이드바 좌측으로 열림 */
+  .activity-pop {
+    display: none; position: absolute; right: calc(100% + 12px); top: -6px;
+    width: 320px; max-width: 320px; background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: var(--shadow-lg); padding: 12px 14px;
+    font-size: 12.5px; line-height: 1.65; color: var(--text-secondary);
+    white-space: normal; word-break: break-all; z-index: 200;
+  }
+  .activity-item:hover { background: var(--primary-light); border-radius: 6px; }
+  .activity-item:hover .activity-pop { display: block; }
+  /* 팝오버가 카드 밖으로 나올 수 있게 클리핑 방지 */
+  .recent-activity-body { overflow: visible; }
 
   /* ── Quick action buttons ── */
   .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -296,14 +312,15 @@ window.HELP_TOUR_STEPS = [
         <i class="bx bx-time-five" style="font-size:18px;color:var(--primary);"></i>
         <span class="card-header-title">최근 활동</span>
       </div>
-      <div class="card-body" style="padding:14px 18px;">
+      <div class="card-body recent-activity-body" style="padding:8px 18px;">
         @forelse($activities as $act)
         <div class="activity-item">
           <div class="activity-dot" style="background:var(--primary);"></div>
-          <div>
-            <div class="activity-text">{{ $act->description }}</div>
+          <div class="activity-main">
+            <div class="activity-title">{{ \Illuminate\Support\Str::before($act->description, ' | ') ?: $act->description }}</div>
             <div class="activity-time">{{ $act->created_at->format('H:i') }} · {{ $act->causer?->name ?? '시스템' }}</div>
           </div>
+          <div class="activity-pop">{{ $act->description }}</div>
         </div>
         @empty
         <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px 0;">
