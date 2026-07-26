@@ -27,7 +27,23 @@ class AdminUserController extends Controller
             ];
         })->values();
 
-        return view('admin.users.index', compact('users', 'usersData'));
+        // wwGrid 표시용 배열 (id 포함, 배지→텍스트, 날짜 포맷)
+        $meId = Auth::id();
+        $gridData = $users->map(function ($u) use ($meId) {
+            return [
+                'id'      => $u->id,
+                'name'    => $u->name . ($u->id === $meId ? ' (나)' : ''),
+                'email'   => $u->email,
+                'phone'   => $u->phone ?: '—',
+                'role'    => $u->role === 'admin' ? '관리자' : '매니저',
+                'status'  => $u->is_active ? '활성' : '비활성',
+                'created' => $u->created_at?->format('Y-m-d') ?? '',
+            ];
+        })->values();
+
+        $total = $gridData->count();
+
+        return view('admin.users.index', compact('users', 'usersData', 'gridData', 'total'));
     }
 
     public function store(Request $request): JsonResponse

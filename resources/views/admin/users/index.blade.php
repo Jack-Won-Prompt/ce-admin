@@ -24,59 +24,15 @@
       </div>
     </div>
 
-    <div style="overflow-x:auto;">
-      <table class="table" id="usersTable">
-        <thead>
-          <tr>
-            <th style="width:40px;">#</th>
-            <th>이름</th>
-            <th>이메일</th>
-            <th>휴대폰</th>
-            <th style="width:80px;">역할</th>
-            <th style="width:70px;">상태</th>
-            <th style="width:90px;">등록일</th>
-            <th style="width:60px;"></th>
-          </tr>
-        </thead>
-        <tbody id="usersBody">
-          @foreach($users as $user)
-          <tr id="user-row-{{ $user->id }}" data-id="{{ $user->id }}">
-            <td style="color:var(--text-muted);font-size:11px;">{{ $user->id }}</td>
-            <td>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">
-                  {{ mb_substr($user->name, 0, 1) }}
-                </div>
-                <span style="font-weight:600;">{{ $user->name }}</span>
-                @if($user->id === auth()->id())
-                  <span style="background:#E0F2FE;color:#0284C7;font-size:10px;padding:1px 6px;border-radius:4px;">나</span>
-                @endif
-              </div>
-            </td>
-            <td style="font-size:12px;">{{ $user->email }}</td>
-            <td style="font-size:12px;">{{ $user->phone ?: '—' }}</td>
-            <td>
-              <span class="role-badge role-{{ $user->role }}">
-                {{ $user->role === 'admin' ? '관리자' : '매니저' }}
-              </span>
-            </td>
-            <td>
-              <span class="status-badge {{ $user->is_active ? 'active' : 'inactive' }}">
-                {{ $user->is_active ? '활성' : '비활성' }}
-              </span>
-            </td>
-            <td style="font-size:11px;color:var(--text-muted);">{{ $user->created_at?->format('Y-m-d') }}</td>
-            <td>
-              <button class="btn btn-sm btn-outline" onclick="openModal({{ $user->id }})" title="수정"
-                      style="padding:3px 8px;font-size:11px;">
-                <i class="bx bx-edit"></i>
-              </button>
-            </td>
-          </tr>
-          @endforeach
-        </tbody>
-      </table>
+    {{-- ── 관리자 목록 (wwGrid) ── --}}
+    <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="usersEditSelected()">
+        <i class="bx bx-edit"></i> 선택 수정
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 수정</span>
+      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}명</span>
     </div>
+    <div style="padding:0 20px 20px;"><div id="usersGrid"></div></div>
   </div>
 </div>
 
@@ -94,28 +50,17 @@
       </button>
     </div>
 
-    <div style="overflow-x:auto;">
-      <table class="table" id="invitationsTable">
-        <thead>
-          <tr>
-            <th>이메일</th>
-            <th style="width:120px;">역할</th>
-            <th style="width:100px;">상태</th>
-            <th style="width:140px;">초대한 사람</th>
-            <th style="width:140px;">발송일시</th>
-            <th style="width:140px;">만료/수락일시</th>
-            <th style="width:100px;"></th>
-          </tr>
-        </thead>
-        <tbody id="invitationsBody">
-          <tr id="inviteLoadingRow">
-            <td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);font-size:13px;">
-              <i class="bx bx-loader-alt bx-spin"></i> 불러오는 중...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    {{-- ── 초대 현황 목록 (wwGrid) ── --}}
+    <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;flex-wrap:wrap;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="invResendSelected()">
+        <i class="bx bx-send"></i> 선택 재발송
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="invCancelSelected()">
+        <i class="bx bx-trash"></i> 선택 초대취소
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행 (수락된 초대는 불가)</span>
     </div>
+    <div style="padding:0 20px 20px;"><div id="invitationsGrid"></div></div>
   </div>
 </div>
 
@@ -244,22 +189,8 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
-/* ── 테이블 ── */
-.table { width:100%; border-collapse:collapse; }
-.table th { padding:10px 14px; font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid var(--border); background:var(--bg); }
-.table td { padding:12px 14px; font-size:13px; border-bottom:1px solid var(--border); vertical-align:middle; }
-.table tbody tr:hover { background:var(--bg); }
-.table tbody tr:last-child td { border-bottom:none; }
-
-/* ── 배지 ── */
-.role-badge  { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-.role-admin  { background:var(--primary-light); color:var(--primary); }
-.role-manager{ background:#F0FDF4; color:#16A34A; }
-.status-badge{ display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-.status-badge.active  { background:#DCFCE7; color:#16A34A; }
-.status-badge.inactive{ background:#FEE2E2; color:#DC2626; }
-
 /* ── 모달 ── */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; }
 .modal-backdrop.open { display:flex; }
@@ -274,12 +205,6 @@
 .form-group { margin-bottom:14px; }
 .form-group:last-child { margin-bottom:0; }
 
-/* ── 초대 상태 배지 ── */
-.inv-badge   { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-.inv-pending { background:#FFF7ED; color:#C2410C; }
-.inv-accepted{ background:#DCFCE7; color:#16A34A; }
-.inv-expired { background:#F3F4F6; color:#6B7280; }
-
 /* ── 토글 스위치 ── */
 .toggle-track { width:44px; height:24px; border-radius:12px; background:var(--border); position:relative; transition:background .2s; cursor:pointer; }
 .toggle-track.on { background:var(--success); }
@@ -289,8 +214,10 @@
 @endpush
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
 <script>
 const USERS_DATA          = @json($usersData);
+const USERS_GRID_DATA     = @json($gridData);
 const CSRF                = '{{ csrf_token() }}';
 const ME                  = {{ auth()->id() }};
 const USERS_BASE_URL      = '{{ url("admin/users") }}';
@@ -305,7 +232,6 @@ document.addEventListener('DOMContentLoaded', loadInvitations);
 // ── 초대 현황 ──────────────────────────────────────────
 async function loadInvitations() {
   const btn  = document.getElementById('refreshBtn');
-  const body = document.getElementById('invitationsBody');
   btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>';
   btn.disabled  = true;
 
@@ -314,7 +240,7 @@ async function loadInvitations() {
     const data = await res.json();
     renderInvitations(data.invitations || []);
   } catch {
-    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--danger);font-size:13px;">불러오기 실패</td></tr>';
+    showToast('초대 목록을 불러오지 못했습니다.', 'error');
   } finally {
     btn.innerHTML = '<i class="bx bx-refresh"></i>';
     btn.disabled  = false;
@@ -322,14 +248,7 @@ async function loadInvitations() {
 }
 
 function renderInvitations(list) {
-  const body  = document.getElementById('invitationsBody');
   const badge = document.getElementById('inviteBadge');
-
-  if (!list.length) {
-    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);font-size:13px;">초대 내역이 없습니다.</td></tr>';
-    badge.style.display = 'none';
-    return;
-  }
 
   const pending = list.filter(i => i.status === 'pending').length;
   if (pending > 0) {
@@ -339,39 +258,20 @@ function renderInvitations(list) {
     badge.style.display  = 'none';
   }
 
-  body.innerHTML = list.map(inv => {
-    const statusHtml = {
-      pending:  `<span class="inv-badge inv-pending">대기중</span>`,
-      accepted: `<span class="inv-badge inv-accepted">수락됨</span>`,
-      expired:  `<span class="inv-badge inv-expired">만료됨</span>`,
-    }[inv.status] ?? '';
+  const statusText = { pending: '대기중', accepted: '수락됨', expired: '만료됨' };
 
-    const roleHtml = inv.role === 'admin'
-      ? `<span class="role-badge role-admin">관리자</span>`
-      : `<span class="role-badge role-manager">매니저</span>`;
+  const rows = list.map(inv => ({
+    id:         inv.id,
+    email:      inv.email,
+    role:       inv.role === 'admin' ? '관리자' : '매니저',
+    status:     statusText[inv.status] ?? inv.status,
+    invited_by: inv.invited_by,
+    created:    inv.created_at,
+    date:       inv.status === 'accepted' ? inv.accepted_at : inv.expires_at,
+    accepted:   inv.status === 'accepted',
+  }));
 
-    const dateCol = inv.status === 'accepted'
-      ? `<span style="color:var(--success);">${inv.accepted_at}</span>`
-      : `<span style="color:${inv.status==='expired'?'var(--danger)':'var(--text-muted)'};">${inv.expires_at}</span>`;
-
-    const actions = inv.status !== 'accepted' ? `
-      <button class="btn btn-sm btn-outline" style="padding:2px 8px;font-size:11px;" onclick="resendInvitation(${inv.id})" title="재발송">
-        <i class="bx bx-send"></i>
-      </button>
-      <button class="btn btn-sm btn-outline" style="padding:2px 8px;font-size:11px;color:var(--danger);border-color:var(--danger);" onclick="cancelInvitation(${inv.id})" title="취소">
-        <i class="bx bx-trash"></i>
-      </button>` : `<span style="font-size:11px;color:var(--text-muted);">—</span>`;
-
-    return `<tr id="inv-row-${inv.id}">
-      <td style="font-size:13px;">${inv.email}</td>
-      <td>${roleHtml}</td>
-      <td>${statusHtml}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${inv.invited_by}</td>
-      <td style="font-size:11px;color:var(--text-muted);">${inv.created_at}</td>
-      <td style="font-size:11px;">${dateCol}</td>
-      <td><div style="display:flex;gap:4px;">${actions}</div></td>
-    </tr>`;
-  }).join('');
+  if (window.__invGrid) window.__invGrid.setData(rows);
 }
 
 async function resendInvitation(id) {
@@ -401,7 +301,6 @@ async function cancelInvitation(id) {
     });
     const data = await res.json();
     if (!data.success) { showToast(data.message || '취소 실패', 'error'); return; }
-    document.getElementById(`inv-row-${id}`)?.remove();
     showToast('초대가 취소되었습니다.', 'success');
     loadInvitations();
   } catch {
@@ -641,8 +540,7 @@ async function deleteUser() {
     if (!data.success) { alert(data.message || '삭제 실패'); return; }
 
     delete usersMap[userId];
-    const row = document.getElementById(`user-row-${userId}`);
-    row?.remove();
+    refreshUsersGrid();
     document.getElementById('userCount').textContent = Object.keys(usersMap).length;
     closeModal();
     showToast('삭제되었습니다.', 'success');
@@ -651,66 +549,93 @@ async function deleteUser() {
   }
 }
 
-// ── DOM 업데이트 ────────────────────────────────────────
-function roleBadge(role) {
-  return role === 'admin'
-    ? `<span class="role-badge role-admin">관리자</span>`
-    : `<span class="role-badge role-manager">매니저</span>`;
+// ── wwGrid 동기화 (CRUD 후 그리드 갱신) ──────────────────
+function userGridRow(u) {
+  return {
+    id:      u.id,
+    name:    u.name + (u.id === ME ? ' (나)' : ''),
+    email:   u.email,
+    phone:   u.phone ? u.phone : '—',
+    role:    u.role === 'admin' ? '관리자' : '매니저',
+    status:  u.is_active ? '활성' : '비활성',
+    created: u.created_at || '',
+  };
 }
-function statusBadge(active) {
-  return active
-    ? `<span class="status-badge active">활성</span>`
-    : `<span class="status-badge inactive">비활성</span>`;
+
+function refreshUsersGrid() {
+  if (!window.__usersGrid) return;
+  const rows = Object.values(usersMap)
+    .sort((a, b) => (a.role === b.role
+        ? (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+        : (a.role < b.role ? -1 : 1)))
+    .map(userGridRow);
+  window.__usersGrid.setData(rows);
 }
-function fmtPhone(p) {
-  const d = (p || '').replace(/\D/g, '');
-  if (!d) return '—';
-  if (d.startsWith('02')) {
-    if (d.length <= 9) return d.slice(0,2)+'-'+d.slice(2,5)+'-'+d.slice(5);
-    return d.slice(0,2)+'-'+d.slice(2,6)+'-'+d.slice(6,10);
+
+// submitForm 성공 시 호출되는 기존 훅 → 그리드 갱신으로 위임
+function addRowToTable(u) { refreshUsersGrid(); }
+function updateRow(u)     { refreshUsersGrid(); }
+</script>
+
+{{-- ── wwGrid 생성 + 외부 액션 버튼 ── --}}
+<script>
+(function () {
+  // 관리자 그리드
+  window.__usersGrid = new wwGrid({
+    el: document.getElementById('usersGrid'),
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: 'ID',     name: 'id',      width: 60,  align: 'center', sortable: true },
+      { header: '이름',   name: 'name',    width: 160, sortable: true },
+      { header: '이메일', name: 'email',   width: 220, sortable: true },
+      { header: '휴대폰', name: 'phone',   width: 140 },
+      { header: '역할',   name: 'role',    width: 90,  align: 'center', sortable: true },
+      { header: '상태',   name: 'status',  width: 80,  align: 'center', sortable: true },
+      { header: '등록일', name: 'created', width: 110, align: 'center', sortable: true },
+    ],
+    data: USERS_GRID_DATA,
+  });
+
+  window.usersEditSelected = function () {
+    const c = window.__usersGrid.getCheckedRows();
+    if (!c.length)    { showToast('수정할 관리자를 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    openModal(c[0].id);
+  };
+
+  // 초대 현황 그리드 (데이터는 loadInvitations()가 setData로 주입)
+  window.__invGrid = new wwGrid({
+    el: document.getElementById('invitationsGrid'),
+    height: 340, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '이메일',       name: 'email',      width: 220, sortable: true },
+      { header: '역할',         name: 'role',       width: 90,  align: 'center', sortable: true },
+      { header: '상태',         name: 'status',     width: 90,  align: 'center', sortable: true },
+      { header: '초대한 사람',  name: 'invited_by', width: 140 },
+      { header: '발송일시',     name: 'created',    width: 150, sortable: true },
+      { header: '만료/수락일시', name: 'date',      width: 150 },
+    ],
+    data: [],
+  });
+
+  function invPickSelected(actionLabel) {
+    const c = window.__invGrid.getCheckedRows();
+    if (!c.length)    { showToast(actionLabel + '할 초대를 체크하세요.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return null; }
+    if (c[0].accepted) { showToast('수락된 초대는 처리할 수 없습니다.', 'warning'); return null; }
+    return c[0];
   }
-  if (d.length <= 10) return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
-  return d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7,11);
-}
 
-function addRowToTable(u) {
-  const isSelf = u.id === ME;
-  const row = document.createElement('tr');
-  row.id = `user-row-${u.id}`;
-  row.dataset.id = u.id;
-  row.innerHTML = `
-    <td style="color:var(--text-muted);font-size:11px;">${u.id}</td>
-    <td>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${u.name.slice(0,1)}</div>
-        <span style="font-weight:600;">${u.name}</span>
-        ${isSelf ? '<span style="background:#E0F2FE;color:#0284C7;font-size:10px;padding:1px 6px;border-radius:4px;">나</span>' : ''}
-      </div>
-    </td>
-    <td style="font-size:12px;">${u.email}</td>
-    <td style="font-size:12px;">${fmtPhone(u.phone)}</td>
-    <td>${roleBadge(u.role)}</td>
-    <td>${statusBadge(u.is_active)}</td>
-    <td style="font-size:11px;color:var(--text-muted);">${u.created_at}</td>
-    <td><button class="btn btn-sm btn-outline" onclick="openModal(${u.id})" title="수정" style="padding:3px 8px;font-size:11px;"><i class="bx bx-edit"></i></button></td>
-  `;
-  document.getElementById('usersBody').appendChild(row);
-}
-
-function updateRow(u) {
-  const isSelf = u.id === ME;
-  const row = document.getElementById(`user-row-${u.id}`);
-  if (!row) return;
-  row.cells[1].innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${u.name.slice(0,1)}</div>
-      <span style="font-weight:600;">${u.name}</span>
-      ${isSelf ? '<span style="background:#E0F2FE;color:#0284C7;font-size:10px;padding:1px 6px;border-radius:4px;">나</span>' : ''}
-    </div>`;
-  row.cells[2].textContent = u.email;
-  row.cells[3].textContent = fmtPhone(u.phone);
-  row.cells[4].innerHTML   = roleBadge(u.role);
-  row.cells[5].innerHTML   = statusBadge(u.is_active);
-}
+  window.invResendSelected = function () {
+    const row = invPickSelected('재발송');
+    if (row) resendInvitation(row.id);
+  };
+  window.invCancelSelected = function () {
+    const row = invPickSelected('취소');
+    if (row) cancelInvitation(row.id);
+  };
+})();
 </script>
 @endpush

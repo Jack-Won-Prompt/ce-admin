@@ -6,6 +6,7 @@
 @section('breadcrumb', '홈 / 청구·회계 / 정산')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   /* Vuexy underline tabs */
   .settle-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 22px; }
@@ -154,99 +155,18 @@
       @endforeach
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <i class="fa-solid fa-table-list" style="color:var(--primary);"></i>
-        <span class="card-header-title">정산 목록</span>
-        <span class="card-header-sub">주문 기준</span>
-        <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">총 {{ number_format($orders->total()) }}건</span>
-      </div>
-      <div class="card-body" style="padding:0;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>주문번호</th><th>환자명</th><th>처방번호</th><th>제품명</th>
-                <th style="text-align:right;">총 주문금액</th>
-                <th style="text-align:right;">NHIS 청구</th>
-                <th style="text-align:right;">주문금액</th>
-                <th style="text-align:right;">본인부담</th>
-                <th style="text-align:right;">배송비</th>
-                <th style="text-align:center;">가상계좌</th>
-                <th style="text-align:right;">입금확인</th>
-                <th>주문상태</th><th>NHIS</th><th>접수일</th>
-              </tr>
-            </thead>
-            <tbody>
-              @forelse($orders as $order)
-              <tr>
-                <td><span class="order-num">{{ $order->order_number }}</span></td>
-                <td><b>{{ $order->patient?->name ?? '-' }}</b></td>
-                <td>
-                  @if($order->prescription)
-                    <span class="rx-popup-link" style="font-size:11px;font-family:monospace;color:var(--primary);cursor:pointer;text-decoration:underline dotted;"
-                          data-url="{{ route('settlement.prescription-detail', $order->prescription) }}">
-                      {{ $order->prescription->rx_number }}
-                    </span>
-                  @else <span style="color:var(--text-muted);font-size:11px;">-</span> @endif
-                </td>
-                <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">
-                  @if($order->product_name)
-                    <span class="order-popup-link" style="cursor:pointer;color:var(--text-primary);text-decoration:underline dotted;"
-                          data-url="{{ route('settlement.order-detail', $order) }}">
-                      {{ $order->product_name }}
-                    </span>
-                  @else <span style="color:var(--text-muted);">-</span> @endif
-                </td>
-                <td class="amount-cell primary">{{ number_format($order->total_amount ?? 0) }}</td>
-                <td class="amount-cell success">{{ number_format($order->nhis_amount ?? 0) }}</td>
-                <td class="amount-cell muted">{{ number_format($order->unit_price ?? 0) }}</td>
-                <td class="amount-cell {{ ($order->patient_copay??0)>0?'primary':'muted' }}">{{ number_format($order->patient_copay ?? 0) }}</td>
-                <td class="amount-cell muted">{{ number_format($order->shipping_fee ?? 0) }}</td>
-                <td style="text-align:center;">
-                  @if($order->tossPayment)
-                    @if($order->tossPayment->is_done)
-                      <span class="badge badge-success" style="font-size:10px;">입금완료</span>
-                    @elseif($order->tossPayment->is_expired)
-                      <span class="badge badge-secondary" style="font-size:10px;">만료</span>
-                    @else
-                      <span class="badge badge-warning" style="font-size:10px;">대기중</span>
-                    @endif
-                  @else
-                    <span style="font-size:11px;color:var(--text-muted);">미발급</span>
-                  @endif
-                </td>
-                <td class="amount-cell {{ ($order->tossPayment?->is_done) ? 'success' : 'muted' }}">
-                  @if($order->tossPayment?->is_done)
-                    {{ number_format($order->tossPayment->amount ?? 0) }}
-                  @else
-                    <span style="font-size:11px;">-</span>
-                  @endif
-                </td>
-                <td>
-                  @php $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary']; @endphp
-                  <span class="badge badge-{{ $sl['badge'] }}">{{ $sl['label'] }}</span>
-                </td>
-                <td>
-                  @php $nhisMap=['pending'=>['대기','secondary'],'submitted'=>['청구완료','info'],'approved'=>['승인','success'],'rejected'=>['반려','danger']]; [$nl,$nb]=$nhisMap[$order->nhis_claim_status??'pending']??['대기','secondary']; @endphp
-                  <span class="badge badge-{{ $nb }}">{{ $nl }}</span>
-                </td>
-                <td style="font-size:11px;color:var(--text-muted);">{{ $order->created_at->format('Y-m-d') }}</td>
-              </tr>
-              @empty
-              <tr><td colspan="14" style="text-align:center;color:var(--text-muted);padding:32px;">
-                <i class="fa-regular fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35;"></i>
-                해당 기간의 정산 데이터가 없습니다.
-              </td></tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-      </div>
-      @if($orders->hasPages())
-      <div class="card-footer" style="padding:12px 16px;border-top:1px solid var(--border);">{{ $orders->links() }}</div>
-      @endif
+    {{-- ── 정산 목록 (wwGrid) ── --}}
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="settlementViewRx()">
+        <i class="fa-solid fa-file-medical"></i> 처방 상세
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="settlementViewOrder()">
+        <i class="fa-solid fa-cart-shopping"></i> 주문 상세
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세 팝업</span>
+      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
     </div>
+    <div id="settlementGrid"></div>
 
   @elseif($tab === 'virtual_account')
   {{-- ══════════════ 가상계좌 매칭 (Toss Payments) ══════════════ --}}
@@ -288,116 +208,28 @@
       </select>
       <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
       <a href="{{ route('settlement.index', ['tab'=>'virtual_account']) }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-rotate-left"></i></a>
-      <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">총 {{ number_format($vaOrders->total()) }}건</span>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">총 {{ number_format($total) }}건</span>
     </form>
 
-    {{-- 가상계좌 목록 --}}
-    <div class="card">
-      <div class="card-header">
-        <i class="fa-solid fa-building-columns" style="color:var(--primary);"></i>
-        <span class="card-header-title">가상계좌 목록</span>
-        <span class="card-header-sub">토스페이먼츠 연동</span>
-      </div>
-      <div class="card-body" style="padding:0;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>주문번호</th>
-                <th>환자명</th>
-                <th>연락처</th>
-                <th style="text-align:right;">본인부담금</th>
-                <th>주문상태</th>
-                <th>가상계좌 발급</th>
-                <th>입금 상태</th>
-                <th>만료일시</th>
-                <th>입금확인일</th>
-                <th>액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              @forelse($vaOrders as $order)
-              @php $tp = $order->tossPayment; @endphp
-              <tr id="va-row-{{ $order->id }}">
-                <td><span class="order-num">{{ $order->order_number }}</span></td>
-                <td><b>{{ $order->patient?->name ?? '-' }}</b></td>
-                <td style="font-size:11px;color:var(--text-muted);">{{ $order->patient?->mobile ?? '-' }}</td>
-                <td class="amount-cell primary">{{ number_format($order->patient_copay) }}원</td>
-                <td>
-                  @php $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary']; @endphp
-                  <span class="badge badge-{{ $sl['badge'] }}">{{ $sl['label'] }}</span>
-                </td>
-                <td>
-                  @if($tp)
-                    <div style="font-size:11px;">
-                      <b>{{ $tp->bank_name }}</b> {{ $tp->account_number }}
-                    </div>
-                  @else
-                    <span style="font-size:11px;color:var(--text-muted);">미발급</span>
-                  @endif
-                </td>
-                <td id="va-status-{{ $order->id }}">
-                  @if(!$tp)
-                    <span class="va-badge none"><i class="fa-solid fa-minus"></i> 미발급</span>
-                  @elseif($tp->is_done)
-                    <span class="va-badge done"><i class="fa-solid fa-circle-check"></i> 입금완료</span>
-                  @elseif($tp->is_expired)
-                    <span class="va-badge expired"><i class="fa-solid fa-clock"></i> 만료</span>
-                  @elseif($tp->status === 'WAITING_FOR_DEPOSIT')
-                    <span class="va-badge waiting"><i class="fa-solid fa-hourglass-half"></i> 입금대기</span>
-                  @else
-                    <span class="va-badge ready"><i class="fa-solid fa-circle-dot"></i> {{ $tp->status_label }}</span>
-                  @endif
-                </td>
-                <td style="font-size:11px;color:var(--text-muted);">
-                  {{ $tp?->due_date?->format('Y-m-d H:i') ?? '-' }}
-                </td>
-                <td style="font-size:11px;color:var(--success);">
-                  {{ $tp?->deposited_at?->format('Y-m-d H:i') ?? '-' }}
-                </td>
-                <td>
-                  <div style="display:flex;gap:4px;">
-                    @if(!$tp && $tossConfigured)
-                      <button class="btn btn-primary btn-sm btn-issue-va"
-                              onclick="issueVA({{ $order->id }}, this)"
-                              data-url="{{ route('settlement.issue-va', $order) }}">
-                        <i class="fa-solid fa-plus"></i> 발급
-                      </button>
-                    @elseif($tp && !$tp->is_done && $tossConfigured)
-                      <button class="btn btn-outline btn-sm btn-issue-va"
-                              onclick="checkStatus({{ $order->id }}, this)"
-                              data-url="{{ route('settlement.check-status', $order) }}">
-                        <i class="fa-solid fa-rotate"></i> 확인
-                      </button>
-                      <button class="btn btn-outline btn-sm btn-issue-va"
-                              onclick="resendVaSms({{ $order->id }}, this)"
-                              data-url="{{ route('settlement.resend-va-sms', $order) }}">
-                        <i class="fa-solid fa-comment-sms"></i> SMS
-                      </button>
-                    @elseif(!$tossConfigured)
-                      <span style="font-size:11px;color:var(--text-muted);">API 미설정</span>
-                    @endif
-                  </div>
-                </td>
-              </tr>
-              @empty
-              <tr>
-                <td colspan="10" style="text-align:center;color:var(--text-muted);padding:32px;">
-                  <i class="fa-solid fa-building-columns" style="font-size:24px;display:block;margin-bottom:8px;opacity:.35;"></i>
-                  가상계좌 대상 주문이 없습니다.
-                </td>
-              </tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-      </div>
-      @if($vaOrders->hasPages())
-      <div class="card-footer" style="padding:12px 16px;border-top:1px solid var(--border);">
-        {{ $vaOrders->links() }}
-      </div>
+    {{-- ── 가상계좌 목록 (wwGrid) ── --}}
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+      @if($tossConfigured)
+        <button type="button" class="btn btn-primary btn-sm" onclick="vaIssueSelected(this)">
+          <i class="fa-solid fa-plus"></i> 선택 발급
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="vaCheckSelected(this)">
+          <i class="fa-solid fa-rotate"></i> 선택 입금확인
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="vaResendSelected(this)">
+          <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행</span>
+      @else
+        <span style="font-size:12px;color:var(--text-muted);"><i class="fa-solid fa-triangle-exclamation"></i> 토스 API 미설정 — 발급/입금확인/SMS 불가</span>
       @endif
+      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
     </div>
+    <div id="vaGrid"></div>
 
   @endif
 
@@ -438,6 +270,7 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
 <script>
   // ── 모달 공통 ──────────────────────────────────────────────
   function openModal(id)  { const m = document.getElementById(id); m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -711,11 +544,69 @@
     }
   }
 </script>
+
+{{-- ── wwGrid 마운트 + 외부 액션 버튼 (활성 탭 기준) ── --}}
+<script>
+(function () {
+  const TAB       = @json($tab);
+  const GRID_DATA = @json($gridData);
+  const GRID_COLS = @json($gridColumns);
+  const ORDERS_BASE = @json(url('settlement/orders'));   // + '/{id}/virtual-account' 등
+
+  const mountEl = document.getElementById(TAB === 'virtual_account' ? 'vaGrid' : 'settlementGrid');
+  if (!mountEl) return;
+
+  const grid = new wwGrid({
+    el: mountEl,
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: GRID_COLS,
+    data: GRID_DATA,
+  });
+
+  // 한 건만 체크됐는지 검증 후 해당 행 반환 (아니면 경고 후 null)
+  function oneChecked() {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('대상 행을 체크하세요.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return null; }
+    return c[0];
+  }
+
+  // ── 정산 탭: 상세 팝업(로직 보존 — openRxModal/openOrderModal 재사용) ──
+  window.settlementViewRx = function () {
+    const r = oneChecked(); if (!r) return;
+    if (!r.rx_url) { showToast('처방전이 없는 주문입니다.', 'warning'); return; }
+    openRxModal(r.rx_url);
+  };
+  window.settlementViewOrder = function () {
+    const r = oneChecked(); if (!r) return;
+    if (!r.order_url) { showToast('주문 상세를 열 수 없습니다.', 'warning'); return; }
+    openOrderModal(r.order_url);
+  };
+
+  // ── 가상계좌 탭: 기존 함수(issueVA/checkStatus/resendVaSms) 로직·URL·CSRF 보존, 트리거만 외부버튼+체크행 ──
+  // 기존 함수는 btn.dataset.url 로 fetch 하므로, 체크된 행 id 로 라우트 URL 을 구성해 주입 후 호출한다.
+  window.vaIssueSelected = function (btn) {
+    const r = oneChecked(); if (!r) return;
+    btn.dataset.url = ORDERS_BASE + '/' + r.id + '/virtual-account';   // settlement.issue-va (POST)
+    issueVA(r.id, btn);
+  };
+  window.vaCheckSelected = function (btn) {
+    const r = oneChecked(); if (!r) return;
+    btn.dataset.url = ORDERS_BASE + '/' + r.id + '/payment-status';    // settlement.check-status (GET)
+    checkStatus(r.id, btn);
+  };
+  window.vaResendSelected = function (btn) {
+    const r = oneChecked(); if (!r) return;
+    btn.dataset.url = ORDERS_BASE + '/' + r.id + '/resend-va-sms';     // settlement.resend-va-sms (POST)
+    resendVaSms(r.id, btn);
+  };
+})();
+</script>
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.filter-bar', title: '정산 조회 필터', body: '기간과 상태로 정산 대상 주문을 조회합니다. 엑셀 다운로드도 이 화면에서 가능합니다.' },
-  { selector: '.card-header', title: '정산 목록', body: '주문 기준 정산 현황입니다. 건강보험 환급금, 본인부담금, 세금계산서 발행 여부를 확인합니다.' },
-  { selector: '[id*="va"], .card:nth-of-type(2)', title: '가상계좌 목록', body: '토스페이먼츠로 발급된 가상계좌 현황입니다. 미입금 건을 확인하고 독촉 알림을 보낼 수 있습니다.' },
+  { selector: '#settlementGrid, #vaGrid', title: '정산/가상계좌 목록', body: '주문 기준 정산 현황과 토스페이먼츠 가상계좌 현황입니다. 행을 체크한 뒤 상단 버튼으로 상세·발급·입금확인·SMS를 실행합니다.' },
 ];
 </script>
 @endpush

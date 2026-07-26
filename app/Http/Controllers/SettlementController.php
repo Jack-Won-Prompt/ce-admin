@@ -65,8 +65,6 @@ class SettlementController extends Controller
             });
         }
 
-        $orders = $query->paginate(10)->withQueryString();
-
         // ── 토스 API 상태 ──────────────────────────────────────
         $tossConfigured = $this->vaService->isConfigured();
         $tossReachable  = $tossConfigured ? $this->vaService->ping() : false;
@@ -100,8 +98,6 @@ class SettlementController extends Controller
             };
         }
 
-        $vaOrders = $vaQuery->paginate(10, ['*'], 'va_page')->withQueryString();
-
         $vaStats = [
             'total'      => Order::whereIn('status', ['confirmed','shipping','delivered'])->where('patient_copay', '>', 0)->count(),
             'issued'     => TossPayment::count(),
@@ -113,12 +109,130 @@ class SettlementController extends Controller
             'pending_amount' => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')->sum('amount'),
         ];
 
+        // ── wwGrid: 활성 탭 데이터/컬럼 (클라이언트사이드, 배지→텍스트, 금액→정수) ──
+        if ($tab === 'virtual_account') {
+            [$gridData, $gridColumns] = $this->buildVaGrid($vaQuery->get());
+        } else {
+            [$gridData, $gridColumns] = $this->buildSettlementGrid($query->get());
+        }
+        $total = $gridData->count();
+
         return view('settlement.index', compact(
             'tab', 'dateFrom', 'dateTo',
-            'summary', 'statusCounts', 'orders',
-            'vaOrders', 'vaStats',
-            'tossConfigured', 'tossApiStatus'
+            'summary', 'statusCounts', 'vaStats',
+            'tossConfigured', 'tossApiStatus',
+            'gridData', 'gridColumns', 'total'
         ));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // wwGrid: 정산 목록 데이터/컬럼
+    // ─────────────────────────────────────────────────────────────
+
+    private function buildSettlementGrid($orders): array
+    {
+        $nhisMap = ['pending' => '대기', 'submitted' => '청구완료', 'approved' => '승인', 'rejected' => '반려'];
+
+        $data = $orders->map(function ($order) use ($nhisMap) {
+            $tp = $order->tossPayment;
+
+            $vaState = match (true) {
+                !$tp             => '미발급',
+                $tp->is_done     => '입금완료',
+                $tp->is_expired  => '만료',
+                default          => '대기중',
+            };
+
+            $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label' => $order->status, 'badge' => 'secondary'];
+
+            return [
+                'id'           => $order->id,
+                'order_no'     => $order->order_number,
+                'patient'      => $order->patient?->name ?? '-',
+                'rx_number'    => $order->prescription?->rx_number ?? '-',
+                'product'      => $order->product_name ?? '-',
+                'total_amount' => (int) ($order->total_amount ?? 0),
+                'nhis_amount'  => (int) ($order->nhis_amount ?? 0),
+                'unit_price'   => (int) ($order->unit_price ?? 0),
+                'copay'        => (int) ($order->patient_copay ?? 0),
+                'shipping'     => (int) ($order->shipping_fee ?? 0),
+                'va_state'     => $vaState,
+                'deposit'      => $tp?->is_done ? number_format($tp->amount ?? 0) : '-',
+                'status'       => $sl['label'],
+                'nhis_claim'   => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
+                'created'      => $order->created_at?->format('Y-m-d') ?? '-',
+                // 상세 팝오버 URL (컬럼 아님 — 외부 버튼에서 사용)
+                'rx_url'       => $order->prescription ? route('settlement.prescription-detail', $order->prescription) : null,
+                'order_url'    => $order->product_name ? route('settlement.order-detail', $order) : null,
+            ];
+        })->values();
+
+        $columns = [
+            ['header' => '주문번호',    'name' => 'order_no',     'width' => 120, 'sortable' => true],
+            ['header' => '환자명',      'name' => 'patient',      'width' => 90,  'sortable' => true],
+            ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
+            ['header' => '제품명',      'name' => 'product',      'width' => 160],
+            ['header' => '총 주문금액', 'name' => 'total_amount', 'width' => 110, 'editor' => 'number'],
+            ['header' => 'NHIS 청구',   'name' => 'nhis_amount',  'width' => 100, 'editor' => 'number'],
+            ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number'],
+            ['header' => '본인부담',    'name' => 'copay',        'width' => 100, 'editor' => 'number'],
+            ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
+            ['header' => '가상계좌',    'name' => 'va_state',     'width' => 90,  'align' => 'center', 'sortable' => true],
+            ['header' => '입금확인',    'name' => 'deposit',      'width' => 100, 'align' => 'right'],
+            ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
+            ['header' => 'NHIS',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
+            ['header' => '접수일',      'name' => 'created',      'width' => 100, 'sortable' => true],
+        ];
+
+        return [$data, $columns];
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // wwGrid: 가상계좌 목록 데이터/컬럼
+    // ─────────────────────────────────────────────────────────────
+
+    private function buildVaGrid($vaOrders): array
+    {
+        $data = $vaOrders->map(function ($order) {
+            $tp = $order->tossPayment;
+
+            $vaStatus = match (true) {
+                !$tp                                  => '미발급',
+                $tp->is_done                          => '입금완료',
+                $tp->is_expired                       => '만료',
+                $tp->status === 'WAITING_FOR_DEPOSIT' => '입금대기',
+                default                               => $tp->status_label,
+            };
+
+            $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label' => $order->status, 'badge' => 'secondary'];
+
+            return [
+                'id'         => $order->id,
+                'order_no'   => $order->order_number,
+                'patient'    => $order->patient?->name ?? '-',
+                'mobile'     => $order->patient?->mobile ?? '-',
+                'copay'      => (int) ($order->patient_copay ?? 0),
+                'status'     => $sl['label'],
+                'va_account' => $tp ? trim(($tp->bank_name ?? '') . ' ' . ($tp->account_number ?? '')) : '미발급',
+                'va_status'  => $vaStatus,
+                'due'        => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
+                'deposited'  => $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
+            ];
+        })->values();
+
+        $columns = [
+            ['header' => '주문번호',      'name' => 'order_no',   'width' => 120, 'sortable' => true],
+            ['header' => '환자명',        'name' => 'patient',    'width' => 90,  'sortable' => true],
+            ['header' => '연락처',        'name' => 'mobile',     'width' => 120],
+            ['header' => '본인부담금',    'name' => 'copay',      'width' => 110, 'editor' => 'number'],
+            ['header' => '주문상태',      'name' => 'status',     'width' => 90,  'align' => 'center', 'sortable' => true],
+            ['header' => '가상계좌 발급', 'name' => 'va_account', 'width' => 180],
+            ['header' => '입금 상태',     'name' => 'va_status',  'width' => 100, 'align' => 'center', 'sortable' => true],
+            ['header' => '만료일시',      'name' => 'due',        'width' => 140, 'align' => 'center'],
+            ['header' => '입금확인일',    'name' => 'deposited',  'width' => 140, 'align' => 'center'],
+        ];
+
+        return [$data, $columns];
     }
 
     // ─────────────────────────────────────────────────────────────
