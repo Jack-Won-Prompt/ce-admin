@@ -75,16 +75,13 @@
   .nhis-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
   .nhis-value { font-size: 13px; font-weight: 700; }
 
+  /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
   .action-footer {
-    position: fixed; left: 260px; right: 0; bottom: 40px; z-index: 100;
-    background: #fff; border-top: 1px solid var(--border);
-    padding: 10px 24px;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 -2px 8px rgba(0,0,0,.06);
-    transition: left .28s cubic-bezier(.4,0,.2,1);
+    margin-top: 16px;
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
   }
-  body.menu-collapsed .action-footer { left: 68px; }
-  .page-body-inner { padding-bottom: 70px; }
 
   .tracking-row { display: flex; gap: 8px; align-items: center; }
   .tracking-row .form-control { flex: 1; }
