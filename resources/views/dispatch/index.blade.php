@@ -6,6 +6,7 @@
 @section('breadcrumb', '홈 / 발송·발행 내역')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .type-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
   .type-tab {
@@ -93,251 +94,15 @@
     </div>
   </form>
 
-  <div class="card">
-    <div class="card-body" style="padding:0;">
-      <div class="table-wrap">
-
-        {{-- ══ 가상계좌 발행 ══ --}}
-        @if($type === 'virtual_account')
-        <table>
-          <thead>
-            <tr>
-              <th>발행일시</th>
-              <th>주문번호</th>
-              <th>환자명</th>
-              <th>은행</th>
-              <th>계좌번호</th>
-              <th>금액</th>
-              <th>만료일</th>
-              <th>상태</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($rows as $tp)
-            @php
-              $order   = $tp->order;
-              $patient = $order?->patient ?? $order?->prescription?->patient;
-            @endphp
-            <tr>
-              <td>
-                <div style="font-size:12px;">{{ $tp->created_at->format('Y-m-d') }}</div>
-                <div class="sub-text">{{ $tp->created_at->format('H:i') }}</div>
-              </td>
-              <td>
-                <span class="mono">{{ $order?->order_number ?? '-' }}</span>
-              </td>
-              <td><b>{{ $patient?->name ?? $tp->customer_name ?? '-' }}</b></td>
-              <td>{{ $tp->bank_name }}</td>
-              <td><span class="mono" style="letter-spacing:.5px;">{{ $tp->account_number ?? '-' }}</span></td>
-              <td><b>₩{{ number_format($tp->amount) }}</b></td>
-              <td>
-                @if($tp->due_date)
-                  <div style="font-size:12px;">{{ $tp->due_date->format('Y-m-d') }}</div>
-                  @if($tp->is_expired)
-                    <span class="badge badge-danger" style="font-size:10px;">만료</span>
-                  @endif
-                @else -
-                @endif
-              </td>
-              <td><span class="badge badge-{{ $tp->status_badge }}">{{ $tp->status_label }}</span></td>
-              <td>
-                <a href="{{ route('dispatch.show', ['type'=>'virtual_account','id'=>$tp->id]) }}"
-                   class="btn btn-sm btn-outline">상세</a>
-              </td>
-            </tr>
-            @empty
-            <tr><td colspan="9"><div class="empty-state">
-              <i class="bx bx-credit-card"></i>
-              <p>가상계좌 발행 내역이 없습니다.</p>
-            </div></td></tr>
-            @endforelse
-          </tbody>
-        </table>
-        @endif
-
-        {{-- ══ 세금계산서 발행 ══ --}}
-        @if($type === 'tax_invoice')
-        <table>
-          <thead>
-            <tr>
-              <th>발행일시</th>
-              <th>주문번호</th>
-              <th>환자명</th>
-              <th>사업자번호</th>
-              <th>상호</th>
-              <th>공급가액</th>
-              <th>부가세</th>
-              <th>계산서번호</th>
-              <th>상태</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($rows as $order)
-            @php
-              $patient = $order->patient ?? $order->prescription?->patient;
-            @endphp
-            <tr>
-              <td>
-                <div style="font-size:12px;">{{ $order->tax_invoice_issued_at?->format('Y-m-d') ?? '-' }}</div>
-                <div class="sub-text">{{ $order->tax_invoice_issued_at?->format('H:i') }}</div>
-              </td>
-              <td><span class="mono">{{ $order->order_number }}</span></td>
-              <td><b>{{ $patient?->name ?? '-' }}</b></td>
-              <td style="font-family:monospace;font-size:12px;">{{ $order->tax_invoice_biz_no ?? '-' }}</td>
-              <td>{{ $order->tax_invoice_biz_name ?? '-' }}</td>
-              <td>₩{{ number_format($order->tax_invoice_supply) }}</td>
-              <td>₩{{ number_format($order->tax_invoice_vat) }}</td>
-              <td><span class="mono">{{ $order->tax_invoice_no ?? '-' }}</span></td>
-              <td>
-                @php $si = \App\Models\Order::TAX_INVOICE_STATUS_LABELS[$order->tax_invoice_status] ?? ['미발행','secondary']; @endphp
-                <span class="badge badge-{{ $si[1] }}">{{ $si[0] }}</span>
-              </td>
-              <td>
-                <a href="{{ route('dispatch.show', ['type'=>'tax_invoice','id'=>$order->id]) }}"
-                   class="btn btn-sm btn-outline">상세</a>
-              </td>
-            </tr>
-            @empty
-            <tr><td colspan="10"><div class="empty-state">
-              <i class="bx bx-receipt"></i>
-              <p>세금계산서 발행 내역이 없습니다.</p>
-            </div></td></tr>
-            @endforelse
-          </tbody>
-        </table>
-        @endif
-
-        {{-- ══ 현금영수증 발행 ══ --}}
-        @if($type === 'cash_receipt')
-        <table>
-          <thead>
-            <tr>
-              <th>발행일시</th>
-              <th>주문번호</th>
-              <th>환자명</th>
-              <th>종류</th>
-              <th>식별번호</th>
-              <th>발행금액</th>
-              <th>영수증번호</th>
-              <th>상태</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($rows as $order)
-            @php
-              $patient = $order->patient ?? $order->prescription?->patient;
-              $crType  = \App\Models\Order::CASH_RECEIPT_TYPE_LABELS[$order->cash_receipt_type] ?? '-';
-            @endphp
-            <tr>
-              <td>
-                <div style="font-size:12px;">{{ $order->cash_receipt_issued_at?->format('Y-m-d') ?? '-' }}</div>
-                <div class="sub-text">{{ $order->cash_receipt_issued_at?->format('H:i') }}</div>
-              </td>
-              <td><span class="mono">{{ $order->order_number }}</span></td>
-              <td><b>{{ $patient?->name ?? '-' }}</b></td>
-              <td><span class="badge badge-info" style="font-size:11px;">{{ $crType }}</span></td>
-              <td style="font-family:monospace;font-size:12px;">{{ $order->cash_receipt_identifier ?? '-' }}</td>
-              <td>₩{{ number_format($order->cash_receipt_amount) }}</td>
-              <td><span class="mono">{{ $order->cash_receipt_no ?? '-' }}</span></td>
-              <td>
-                @php $ci = \App\Models\Order::CASH_RECEIPT_STATUS_LABELS[$order->cash_receipt_status] ?? ['미발행','secondary']; @endphp
-                <span class="badge badge-{{ $ci[1] }}">{{ $ci[0] }}</span>
-              </td>
-              <td>
-                <a href="{{ route('dispatch.show', ['type'=>'cash_receipt','id'=>$order->id]) }}"
-                   class="btn btn-sm btn-outline">상세</a>
-              </td>
-            </tr>
-            @empty
-            <tr><td colspan="9"><div class="empty-state">
-              <i class="bx bx-money"></i>
-              <p>현금영수증 발행 내역이 없습니다.</p>
-            </div></td></tr>
-            @endforelse
-          </tbody>
-        </table>
-        @endif
-
-        {{-- ══ NHIS 청구 발송 ══ --}}
-        @if($type === 'nhis')
-        <table>
-          <thead>
-            <tr>
-              <th>발송일시</th>
-              <th>주문번호</th>
-              <th>환자명</th>
-              <th>발송 팩스</th>
-              <th>청구금액</th>
-              <th>NHIS 부담</th>
-              <th>참조번호</th>
-              <th>전송상태</th>
-              <th>심사결과</th>
-              <th>발송자</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($rows as $log)
-            @php
-              $order   = $log->order;
-              $patient = $order?->patient ?? $order?->prescription?->patient;
-            @endphp
-            <tr>
-              <td>
-                <div style="font-size:12px;">{{ $log->created_at->format('Y-m-d') }}</div>
-                <div class="sub-text">{{ $log->created_at->format('H:i') }}</div>
-              </td>
-              <td>
-                <span class="mono">{{ $order?->order_number ?? '-' }}</span>
-              </td>
-              <td><b>{{ $patient?->name ?? '-' }}</b></td>
-              <td style="font-family:monospace;font-size:12px;">{{ $log->fax_number ?? '-' }}</td>
-              <td>₩{{ number_format($log->claim_amount) }}</td>
-              <td>₩{{ number_format($log->nhis_amount) }}</td>
-              <td><span class="mono">{{ $log->reference_no ?? '-' }}</span></td>
-              <td>
-                @php $sl = \App\Models\NhisFaxLog::STATUS_LABELS[$log->status] ?? ['label'=>$log->status,'badge'=>'secondary']; @endphp
-                <span class="badge badge-{{ $sl['badge'] }}">{{ $sl['label'] }}</span>
-              </td>
-              <td>
-                @if($log->nhis_result)
-                  @php $rl = \App\Models\NhisFaxLog::NHIS_RESULT_LABELS[$log->nhis_result] ?? ['label'=>$log->nhis_result,'badge'=>'secondary']; @endphp
-                  <span class="badge badge-{{ $rl['badge'] }}">{{ $rl['label'] }}</span>
-                  @if($log->approved_amount)
-                    <div class="sub-text">₩{{ number_format($log->approved_amount) }}</div>
-                  @endif
-                @else
-                  <span class="sub-text">-</span>
-                @endif
-              </td>
-              <td style="font-size:12px;">{{ $log->sender?->name ?? '-' }}</td>
-              <td>
-                <a href="{{ route('dispatch.show', ['type'=>'nhis','id'=>$log->id]) }}"
-                   class="btn btn-sm btn-outline">상세</a>
-              </td>
-            </tr>
-            @empty
-            <tr><td colspan="11"><div class="empty-state">
-              <i class="bx bx-paper-plane"></i>
-              <p>NHIS 청구 발송 내역이 없습니다.</p>
-            </div></td></tr>
-            @endforelse
-          </tbody>
-        </table>
-        @endif
-
-      </div>
-    </div>
-
-    @if($rows->hasPages())
-    <div class="card-footer" style="padding:12px 16px;border-top:1px solid var(--border);">
-      {{ $rows->links() }}
-    </div>
-    @endif
+  {{-- ── 발송 내역 (wwGrid) ── --}}
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="dispatchViewDetail()">
+      <i class="bx bx-detail"></i> 선택 상세
+    </button>
+    <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
   </div>
+  <div id="dispatchGrid"></div>
 
 @endsection
 
@@ -345,7 +110,27 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.filter-bar', title: '발송 내역 검색', body: '팩스·이메일·SMS 발송 내역을 날짜·수신자·상태로 조회합니다.' },
-  { selector: 'table, .card', title: '발송 목록', body: '청구서·영수증·알림 발송 이력 전체를 확인합니다. 실패 건은 빨간 배지로 표시됩니다.' },
+  { selector: '#dispatchGrid', title: '발송 목록', body: '청구서·영수증·알림 발송 이력 전체를 확인합니다.' },
 ];
+</script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('dispatch'));   // + '/{type}/{id}'
+  const TYPE = @json($type);
+  const grid = new wwGrid({
+    el: document.getElementById('dispatchGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: @json($gridColumns),
+    data: @json($gridData),
+  });
+  window.dispatchViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + TYPE + '/' + c[0].id;
+  };
+})();
 </script>
 @endpush
