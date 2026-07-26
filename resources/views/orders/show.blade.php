@@ -1,5 +1,5 @@
 {{-- resources/views/orders/show.blade.php --}}
-@extends('layouts.app')
+@extends($layout ?? 'layouts.app')
 
 @section('title', '주문 상세 — ' . $order->order_number)
 @section('page-title', '주문 상세')

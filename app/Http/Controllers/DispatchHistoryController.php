@@ -168,8 +168,10 @@ class DispatchHistoryController extends Controller
 
     public function show(string $type, int $id)
     {
-        // 상세보기 탭 iframe에서 열릴 때 사이드바/네비 숨김
-        view()->share('embed', request()->boolean('embed'));
+        // 다른 화면의 '상세내용' 탭에 주입될 때(?partial=1)는 크롬 없는 프래그먼트로 렌더
+        if (request()->boolean('partial')) {
+            view()->share('layout', 'layouts.partial');
+        }
 
         return match ($type) {
             'tax_invoice'   => $this->showTaxInvoice($id),

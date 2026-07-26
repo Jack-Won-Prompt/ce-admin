@@ -184,10 +184,10 @@
 </div>
 @endif
 
-{{-- 패널 탭: 목록 / 상세보기 --}}
+{{-- 패널 탭: 조회결과 / 상세내용 --}}
 <div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 목록</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-eye"></i> 상세보기</button>
+  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
+  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
 </div>
 
 <div id="pnlList">
@@ -251,7 +251,7 @@
 
 {{-- ── NHIS 청구 목록 (wwGrid) ── --}}
 <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세보기 탭에서 주문 상세를 확인합니다.</span>
+  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세를 확인합니다.</span>
   <span style="font-size:12px;color:var(--text-muted);margin-left:12px;">
     이번달 청구액: <strong style="color:var(--primary);">{{ number_format($monthlyTotal) }}원</strong>
   </span>
@@ -260,13 +260,13 @@
 <div id="nhisGrid"></div>
 </div>{{-- /pnlList --}}
 
-{{-- ── 상세보기 탭 (주문 상세 페이지를 iframe embed) ── --}}
+{{-- ── 상세내용 탭 (주문 상세 콘텐츠를 같은 페이지에 직접 주입) ── --}}
 <div id="pnlDetail" style="display:none;">
   <div style="margin-bottom:12px;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 목록으로</button>
+    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
   </div>
-  <div id="pnlEmpty" class="pnl-empty">목록에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
-  <iframe id="pnlFrame" title="주문 상세" style="display:none;width:100%;height:calc(100vh - 210px);border:1px solid var(--border);border-radius:8px;background:#fff;"></iframe>
+  <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
+  <div id="pnlDetailContent"></div>
 </div>
 
 {{-- ══════════ 결과 등록 모달 ══════════ --}}
@@ -356,7 +356,7 @@
   });
   window.__nhisGrid = grid;
 
-  // 패널 탭 전환(목록/상세보기)
+  // 패널 탭 전환(조회결과/상세내용)
   window.pnlShow = function (which) {
     document.getElementById('pnlList').style.display   = which === 'detail' ? 'none' : '';
     document.getElementById('pnlDetail').style.display = which === 'detail' ? '' : 'none';
@@ -364,17 +364,34 @@
     document.getElementById('pnlBtnDetail').classList.toggle('active', which === 'detail');
   };
 
-  // 행 더블클릭 → 상세보기 탭에서 주문 상세 페이지를 iframe(embed)으로 표시(페이지 이동 없음)
+  // 상세 콘텐츠(크롬 없는 프래그먼트)를 fetch로 가져와 같은 페이지에 직접 주입(iframe 미사용)
+  window.pnlLoadDetail = async function (url) {
+    const empty = document.getElementById('pnlEmpty');
+    const cont  = document.getElementById('pnlDetailContent');
+    empty.style.display = 'none';
+    cont.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-muted);"><i class="bx bx-loader-alt bx-spin" style="font-size:22px;"></i><div style="margin-top:8px;">불러오는 중...</div></div>';
+    window.pnlShow('detail');
+    try {
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      cont.innerHTML = await res.text();
+      cont.querySelectorAll('script').forEach(function (old) {
+        const s = document.createElement('script');
+        if (old.src) s.src = old.src; else s.textContent = old.textContent;
+        old.parentNode.replaceChild(s, old);
+      });
+    } catch (e) {
+      cont.innerHTML = '<div style="text-align:center;padding:48px;color:var(--danger);">상세를 불러오지 못했습니다.</div>';
+    }
+  };
+
+  // 행 더블클릭 → 상세내용 탭에 주문 상세를 인페이지로 표시(페이지 이동 없음)
   document.getElementById('nhisGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
     if (!row || !row.id) return;
-    const frame = document.getElementById('pnlFrame');
-    document.getElementById('pnlEmpty').style.display = 'none';
-    frame.style.display = 'block';
-    frame.src = DETAIL_BASE + '/' + row.id + '?embed=1';
-    window.pnlShow('detail');
+    window.pnlLoadDetail(DETAIL_BASE + '/' + row.id + '?partial=1');
   });
 })();
 </script>

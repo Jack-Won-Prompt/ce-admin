@@ -1,5 +1,5 @@
 {{-- resources/views/dispatch/show.blade.php --}}
-@extends('layouts.app')
+@extends($layout ?? 'layouts.app')
 
 @php
   $typeLabels = [
