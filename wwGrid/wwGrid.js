@@ -775,7 +775,8 @@ class wwGrid {
     // Wrap (scrollable)
     this._wrapEl = document.createElement('div');
     this._wrapEl.className = 'cg-wrap';
-    if (this.height) this._wrapEl.style.maxHeight = this.height + 'px';
+    // 고정 높이: 결과가 없어도 리스트 영역이 그대로 표시되도록 height 고정(내용 많으면 내부 스크롤)
+    if (this.height) this._wrapEl.style.height = this.height + 'px';
     this.el.appendChild(this._wrapEl);
 
     // Table

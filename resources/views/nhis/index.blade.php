@@ -38,7 +38,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
 <style>
   .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
@@ -309,7 +309,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));

@@ -5,7 +5,7 @@
 @section('breadcrumb', '홈 / 문의하기')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
 @endpush
 
 @section('content')
@@ -60,7 +60,7 @@ window.HELP_TOUR_STEPS = [
   { selector: '.btn-primary, [onclick*="Create"], [onclick*="create"]', title: '문의 작성', body: '<b>문의 작성</b> 버튼으로 새 문의를 등록합니다. 답변은 이메일 또는 이 화면에서 확인할 수 있습니다.' },
 ];
 </script>
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('inquiries'));
