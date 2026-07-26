@@ -32,6 +32,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
   /* ── 레이아웃 ── */
   /* 전송 내역 / 팩스 발송 탭 구성 */
@@ -412,22 +413,12 @@
       </div>
     </div>
 
-    <div class="hist-body">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th>전송일시</th>
-            <th>발신번호</th>
-            <th>수신번호</th>
-            <th>제목</th>
-            <th>상태</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="hist-tbody">
-          <tr><td colspan="6" class="hist-empty">조회 버튼을 눌러 내역을 불러오세요.</td></tr>
-        </tbody>
-      </table>
+    <div class="hist-body" style="padding:0 16px 12px;">
+      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
+      </div>
+      <div id="faxHistGrid"></div>
     </div>
 
     <div class="hist-pager" id="hist-pager" style="display:none;">
@@ -455,6 +446,43 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+// 전송 내역 wwGrid (조회 결과를 setData로 주입)
+(function () {
+  const el = document.getElementById('faxHistGrid');
+  if (!el) return;
+  window.__faxGrid = new wwGrid({
+    el: el,
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '전송일시', name: 'sentAt',     width: 150, sortable: true },
+      { header: '발신번호', name: 'sendNum',    width: 120 },
+      { header: '수신번호', name: 'receiveNum', width: 120 },
+      { header: '제목',     name: 'title',      width: 220 },
+      { header: '상태',     name: 'status',     width: 90, align: 'center', sortable: true },
+    ],
+    data: [],
+  });
+  function faxOpenRow(r) {
+    if (!r || !r.receiptNum) return;
+    openDetail(r.receiptNum);
+  }
+  el.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]'); if (!cell) return;
+    const r = window.__faxGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (r) faxOpenRow(r);
+  });
+  window.faxRowAction = function (action) {
+    const c = window.__faxGrid.getCheckedRows();
+    if (!c.length)    { showToast('행을 먼저 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    const r = c[0];
+    if (action === 'detail') { faxOpenRow(r); return; }
+  };
+})();
+</script>
 <script>
 // 탭 전환(전송 내역 / 팩스 발송) — 기본은 전송 내역
 function tiTab(name) {
@@ -692,9 +720,8 @@ async function loadHistory(page = 1) {
   const corpNum   = CORP_NUM.value.trim();
   const startDate = toApiDate(document.getElementById('f-start').value);
   const endDate   = toApiDate(document.getElementById('f-end').value);
-  const tbody     = document.getElementById('hist-tbody');
 
-  tbody.innerHTML = `<tr><td colspan="6" class="hist-empty"><i class="bx bx-loader-alt bx-spin" style="font-size:20px;"></i></td></tr>`;
+  window.__faxGrid && window.__faxGrid.setData([]);
 
   // 팝빌에서 해당 기간 내역 먼저 동기화 (신규 저장 + 상태 변경 반영)
   try {
@@ -716,33 +743,30 @@ async function loadHistory(page = 1) {
     const list = data.list ?? [];
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="hist-empty">전송 내역이 없습니다.</td></tr>`;
+      window.__faxGrid.setData([]);
       document.getElementById('hist-pager').style.display = 'none';
       return;
     }
 
-    tbody.innerHTML = list.map(row => {
-      const s        = String(row.state ?? 0);
-      const badgeCls = { '0':'wait','1':'send','2':'ok','3':'fail','4':'cancel' }[s] ?? 'wait';
-      const badgeTxt = { '0':'대기','1':'전송중','2':'성공','3':'실패','4':'취소' }[s] ?? '알수없음';
-      const sentAt   = row.sendDT ? row.sendDT.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5') : '—';
-      const resultTip = row.state == 3 ? ` title="${faxResultDesc(row.result)}"` : '';
-      const syncMark  = !row.syncedAt && row.state == 0
-        ? `<i class="bx bx-time-five" style="color:var(--warning);font-size:12px;vertical-align:middle;margin-left:4px;" title="동기화 전"></i>`
-        : '';
-      return `<tr>
-        <td>${sentAt}</td>
-        <td>${row.sendNum ?? '—'}</td>
-        <td>${row.receiveNum ?? '—'}</td>
-        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${row.title || '—'}</td>
-        <td><span class="fax-badge ${badgeCls}"${resultTip}>${badgeTxt}</span>${syncMark}</td>
-        <td><button class="btn-detail" onclick="openDetail('${row.receiptNum}')">상세</button></td>
-      </tr>`;
-    }).join('');
+    const rows = list.map(row => {
+      const s          = String(row.state ?? 0);
+      const statusTxt  = { '0':'대기','1':'전송중','2':'성공','3':'실패','4':'취소' }[s] ?? '알수없음';
+      const sentAt     = row.sendDT ? row.sendDT.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5') : '—';
+      return {
+        sentAt,
+        sendNum:    row.sendNum ?? '—',
+        receiveNum: row.receiveNum ?? '—',
+        title:      row.title || '—',
+        status:     statusTxt,
+        receiptNum: row.receiptNum,
+      };
+    });
+    window.__faxGrid.setData(rows);
 
     renderPager(data.total ?? 0, page, 15);
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="hist-empty" style="color:var(--danger);">조회 실패: ${e.message}</td></tr>`;
+    window.__faxGrid && window.__faxGrid.setData([]);
+    showToast('조회 실패: ' + e.message, 'error');
   }
 }
 

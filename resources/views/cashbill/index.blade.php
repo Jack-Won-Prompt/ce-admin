@@ -33,6 +33,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
   /* ── 레이아웃 ── */
   /* 발행 내역 / 즉시발행 탭 구성 */
@@ -385,25 +386,14 @@
         </button>
       </div>
     </div>
-    <div class="hist-body">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th>거래일시</th>
-            <th>번호</th>
-            <th>고객명</th>
-            <th>합계금액</th>
-            <th>유형</th>
-            <th>용도</th>
-            <th>국세청</th>
-            <th>출처</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="hist-tbody">
-          <tr><td colspan="9" class="hist-empty">조회 버튼을 눌러 내역을 불러오세요.</td></tr>
-        </tbody>
-      </table>
+    <div class="hist-body" style="padding:0 16px 12px;">
+      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="cbRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="cbRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="cbRowAction('cancel')"><i class="bx bx-x"></i> 선택 취소</button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
+      </div>
+      <div id="cbHistGrid"></div>
     </div>
     <div class="hist-pager" id="hist-pager" style="display:none;">
       <div class="pager-info" id="pager-info"></div>
@@ -464,6 +454,52 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+// 발행 내역 wwGrid (조회 결과를 setData로 주입)
+(function () {
+  const el = document.getElementById('cbHistGrid');
+  if (!el) return;
+  window.__cbGrid = new wwGrid({
+    el: el,
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '거래일시', name: 'tradeDt',   width: 150, sortable: true },
+      { header: '번호',     name: 'num',       width: 170 },
+      { header: '고객명',   name: 'customer',  width: 110, sortable: true },
+      { header: '합계금액', name: 'amount',    width: 110, editor: 'number' },
+      { header: '유형',     name: 'tradeType', width: 80,  align: 'center', sortable: true },
+      { header: '용도',     name: 'usage',     width: 90,  align: 'center', sortable: true },
+      { header: '국세청',   name: 'nts',       width: 80,  align: 'center' },
+      { header: '출처',     name: 'source',    width: 80,  align: 'center', sortable: true },
+    ],
+    data: [],
+  });
+  function cbOpenRow(r) {
+    if (r._source === 'order') window.open('/prescriptions/' + encodeURIComponent(r.rxNumber), '_blank');
+    else openDetail(r.mgtKey);
+  }
+  el.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]'); if (!cell) return;
+    const r = window.__cbGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (r) cbOpenRow(r);
+  });
+  window.cbRowAction = function (action) {
+    const c = window.__cbGrid.getCheckedRows();
+    if (!c.length)   { showToast('행을 먼저 체크하세요.', 'warning'); return; }
+    if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
+    const r = c[0];
+    if (action === 'detail') { cbOpenRow(r); return; }
+    if (r._source === 'order') { showToast('처방전 항목은 인쇄/취소 대상이 아닙니다.', 'warning'); return; }
+    if (action === 'print')  openPrint(r.mgtKey);
+    if (action === 'cancel') {
+      if (r.tradeType === '취소거래') { showToast('이미 취소된 건입니다.', 'warning'); return; }
+      openCancelModal(r.confirmNum, r.cancelDate);
+    }
+  };
+})();
+</script>
 <script>
 // 탭 전환(발행 내역 / 즉시발행) — 기본은 발행 내역
 function tiTab(name) {
@@ -648,9 +684,8 @@ async function loadHistory(page = 1) {
   const sd        = toApiDate(document.getElementById('f-start').value);
   const ed        = toApiDate(document.getElementById('f-end').value);
   const tradeType = document.getElementById('f-trade-type').value;
-  const tbody     = document.getElementById('hist-tbody');
 
-  tbody.innerHTML = `<tr><td colspan="9" class="hist-empty"><i class="bx bx-loader-alt bx-spin" style="font-size:20px;"></i></td></tr>`;
+  window.__cbGrid && window.__cbGrid.setData([]);
 
   try {
     // 팝빌 현금영수증 (DB 기반, 전체 조회 후 클라이언트 페이지네이션)
@@ -711,53 +746,40 @@ async function loadHistory(page = 1) {
       document.getElementById('last-sync-label').textContent = '마지막 동기화: ' + withSync.syncedAt.slice(0,16);
     }
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="9" class="hist-empty" style="color:var(--danger);">조회 실패: ${e.message}</td></tr>`;
+    window.__cbGrid && window.__cbGrid.setData([]);
+    showToast('조회 실패: ' + e.message, 'error');
   }
 }
 
 function renderHistPage(page) {
   const perPage = 15;
-  const tbody   = document.getElementById('hist-tbody');
   const start   = (page - 1) * perPage;
   const slice   = _allRows.slice(start, start + perPage);
 
   if (slice.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="hist-empty">발행 내역이 없습니다.</td></tr>`;
+    window.__cbGrid && window.__cbGrid.setData([]);
     document.getElementById('hist-pager').style.display = 'none';
     return;
   }
 
-  tbody.innerHTML = slice.map(r => {
+  const rows = slice.map(r => {
     const tradeDt = (r.tradeDT ?? r.issueDT ?? '').replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5');
-    const stCls   = r.tradeType === '취소거래' ? 'cancel' : 'issued';
-    const usageCls= r.tradeUsage === '소득공제용' ? 'income' : 'expense';
-    const ntsCls  = { '0':'draft','1':'nts-err','2':'nts-ok','3':'nts-err' }[String(r.ntsresult??'0')] ?? 'draft';
     const ntsTxt  = r._source === 'order' ? '바로빌' : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
-    const amt     = parseInt(r.totalAmount ?? 0).toLocaleString();
-    const numTxt  = r._source === 'order'
-      ? `<span style="font-size:10px;">${r.orderNumber ?? ''}<br><span style="color:var(--text-muted);">${r.rxNumber ?? ''}</span></span>`
-      : `<span style="font-size:11px;font-family:monospace;">${r.mgtKey ?? '—'}</span>`;
-    const srcBadge = r._source === 'order'
-      ? `<span class="cb-badge src-order"><i class="bx bx-file"></i> 처방전</span>`
-      : `<span class="cb-badge src-popbill"><i class="bx bx-cloud"></i> 팝빌</span>`;
-    const actions = r._source === 'order'
-      ? `<a class="btn-icon view" href="/prescriptions/${r.rxNumber}" target="_blank" title="처방전 보기"><i class="bx bx-link-external"></i></a>`
-      : `<button class="btn-icon view"  onclick="openDetail('${r.mgtKey}')"><i class="bx bx-show"></i></button>
-         <button class="btn-icon print" onclick="openPrint('${r.mgtKey}')" style="margin-left:3px;" title="인쇄"><i class="bx bx-printer"></i></button>
-         ${r.tradeType !== '취소거래' ? `<button class="btn-icon cancel" onclick="openCancelModal('${r.confirmNum}','${(r.tradeDT??r.issueDT??'').slice(0,8)}')" style="margin-left:3px;" title="취소"><i class="bx bx-x"></i></button>` : ''}`;
-
-    return `<tr>
-      <td style="white-space:nowrap;font-size:11.5px;">${tradeDt}</td>
-      <td>${numTxt}</td>
-      <td>${r.customerName ?? '—'}</td>
-      <td style="text-align:right;font-weight:600;">${amt}원</td>
-      <td><span class="cb-badge ${stCls}">${r.tradeType ?? '—'}</span></td>
-      <td><span class="cb-badge ${usageCls}">${r.tradeUsage ?? '—'}</span></td>
-      <td><span class="cb-badge ${ntsCls}">${ntsTxt}</span></td>
-      <td>${srcBadge}</td>
-      <td style="white-space:nowrap;">${actions}</td>
-    </tr>`;
-  }).join('');
+    const amount  = parseInt(r.totalAmount ?? 0);
+    const num     = r._source === 'order'
+      ? ((r.orderNumber ?? '') + (r.rxNumber ? ' / ' + r.rxNumber : ''))
+      : (r.mgtKey ?? '—');
+    const source  = r._source === 'order' ? '처방전' : '팝빌';
+    return {
+      // 표시 필드
+      tradeDt, num, customer: (r.customerName ?? '—'), amount,
+      tradeType: (r.tradeType ?? '—'), usage: (r.tradeUsage ?? '—'), nts: ntsTxt, source,
+      // 액션용 숨김 필드
+      _source: r._source, mgtKey: (r.mgtKey ?? ''), confirmNum: (r.confirmNum ?? ''),
+      rxNumber: (r.rxNumber ?? ''), cancelDate: (r.tradeDT ?? r.issueDT ?? '').slice(0,8),
+    };
+  });
+  window.__cbGrid && window.__cbGrid.setData(rows);
 
   renderPager(_allRows.length, page, perPage);
 }
