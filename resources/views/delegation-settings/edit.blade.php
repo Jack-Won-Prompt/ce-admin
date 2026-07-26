@@ -6,7 +6,7 @@
 
 @push('styles')
 <style>
-  .ds-form { max-width:1100px; }
+  .ds-form { max-width:100%; }
   /* 카드 2열 배치로 우측 공백 최소화(좁은 화면은 1열) */
   .ds-cards { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; align-items:start; }
   @media (max-width:820px) { .ds-cards { grid-template-columns:1fr; } }

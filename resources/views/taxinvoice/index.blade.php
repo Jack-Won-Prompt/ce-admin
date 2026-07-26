@@ -36,8 +36,8 @@
 @push('styles')
 <style>
 /* ── 레이아웃 ── */
-.ti-layout { display:grid; grid-template-columns:500px 1fr; gap:20px; align-items:start; }
-@media(max-width:1200px){ .ti-layout { grid-template-columns:1fr; } }
+/* 즉시발행(위) → 발행 내역(아래) 세로 구성 */
+.ti-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
 
 /* ── 요약 카드 ── */
 .ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }

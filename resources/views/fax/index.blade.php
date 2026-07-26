@@ -34,8 +34,8 @@
 @push('styles')
 <style>
   /* ── 레이아웃 ── */
-  .fax-layout { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: start; }
-  @media(max-width:1100px){ .fax-layout { grid-template-columns: 1fr; } }
+  /* 즉시발행(위) → 전송 내역(아래) 세로 구성 */
+  .fax-layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
 
   /* ── 요약 카드 ── */
   .fax-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
