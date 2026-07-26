@@ -20,8 +20,10 @@ class PrivacyConsentAdminController extends Controller
             'stoma'    => PrivacyConsent::where('type', 'stoma')->count(),
         ];
 
-        // wwGrid 파일럿: 필터된 전체 데이터를 그리드용 배열로 전달 (클라이언트사이드 그리드)
+        // wwGrid: 필터된 전체 데이터를 그리드용 배열로 전달 (클라이언트사이드 그리드)
+        // 표시 컬럼 + 상세보기 탭용 전체 필드를 함께 담는다(더블클릭 시 인페이지 상세 표시).
         $gridData = $this->filtered($request)->latest('submitted_at')->get()->map(fn ($r) => [
+            // ── 그리드 표시 컬럼 ──
             'id'        => $r->id,
             'type'      => $r->type_label,
             'name'      => $r->name,
@@ -31,6 +33,26 @@ class PrivacyConsentAdminController extends Controller
             'required'  => $r->required_agreed ? '완료' : '미완',
             'marketing' => $r->agree_marketing === '동의함' ? '동의' : '',
             'submitted' => $r->submitted_at?->format('Y-m-d H:i'),
+            // ── 상세보기 탭용 필드 ──
+            'type_raw'                 => $r->type,               // catheter | stoma
+            'phone2'                   => $r->phone2 ?: '',
+            'insurance'                => $r->insurance ?: '',
+            'support_qualify'          => $r->support_qualify ?: '',
+            'birth'                    => $r->birth ?: '',
+            'product'                  => $r->product ?: '',
+            'hospital'                 => $r->hospital ?: '',
+            'surgery_date'             => $r->surgery_date ?: '',
+            'stoma_type'               => $r->stoma_type ?: '',
+            'stoma_kind'               => $r->stoma_kind ?: '',
+            'agree_general'            => $r->agree_general ?: '',
+            'agree_sensitive'          => $r->agree_sensitive ?: '',
+            'agree_third_party'        => $r->agree_third_party ?: '',
+            'agree_marketing'          => $r->agree_marketing ?: '',
+            'agree_marketing_sensitive'=> $r->agree_marketing_sensitive ?: '',
+            'agree_third_sensitive'    => $r->agree_third_sensitive ?: '',
+            'submitted_full'           => $r->submitted_at?->format('Y-m-d H:i:s') ?: '',
+            'ip'                       => $r->ip ?: '',
+            'user_agent'               => $r->user_agent ?: '',
         ])->values();
 
         return view('privacy-consents.index', [
@@ -41,12 +63,6 @@ class PrivacyConsentAdminController extends Controller
             'from'     => $request->input('from'),
             'to'       => $request->input('to'),
         ]);
-    }
-
-    /** 상세 */
-    public function show(PrivacyConsent $privacyConsent): View
-    {
-        return view('privacy-consents.show', ['row' => $privacyConsent]);
     }
 
     /** CSV(엑셀) 다운로드 */
