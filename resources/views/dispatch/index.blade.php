@@ -89,7 +89,7 @@
         @endforeach
       </select>
       <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-        총 {{ number_format($rows->total()) }}건
+        총 {{ number_format($total) }}건
       </span>
     </div>
   </form>

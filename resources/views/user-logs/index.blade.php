@@ -49,7 +49,7 @@ window.HELP_TOUR_STEPS = [
 
 {{-- ── 통계 칩 ── --}}
 @php
-  $totalCount  = $logs->total();
+  $totalCount  = $total;
   $loginCount  = \App\Models\UserActivityLog::where('type','login')->count();
   $pageCount   = \App\Models\UserActivityLog::where('type','page')->count();
   $userCount   = \App\Models\UserActivityLog::distinct('user_id')->count('user_id');
