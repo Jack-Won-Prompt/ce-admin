@@ -6,7 +6,7 @@
 @section('breadcrumb', '홈 / 발송·발행 내역')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
   .type-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
   .type-tab {
@@ -113,7 +113,7 @@ window.HELP_TOUR_STEPS = [
   { selector: '#dispatchGrid', title: '발송 목록', body: '청구서·영수증·알림 발송 이력 전체를 확인합니다.' },
 ];
 </script>
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('dispatch'));   // + '/{type}/{id}'

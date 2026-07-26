@@ -103,7 +103,8 @@
   border-bottom: 1px solid var(--cg-row-border);
   transition: background 0.1s;
 }
-.cg-tbody tr:last-child { border-bottom: none; }
+/* 마지막 행도 하단 구분선 유지(고정/맞춤 높이로 아래 여백이 생겨도 라인이 보이도록) */
+.cg-tbody tr:last-child { border-bottom: 1px solid var(--cg-row-border); }
 .cg-tbody tr:hover { background: #f5f8fc; }
 
 .cg-tbody tr.cg-row-selected { background: var(--cg-selected-bg); }

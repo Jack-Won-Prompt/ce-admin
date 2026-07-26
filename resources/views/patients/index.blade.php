@@ -28,7 +28,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
   /* ── Patient table ── */
   .patient-table { width:100%; border-collapse:collapse; }
@@ -206,7 +206,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('patients'));

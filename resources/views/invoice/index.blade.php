@@ -6,7 +6,7 @@
 @section('breadcrumb', '홈 / 계산서 발행')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
 /* ── 요약 카드 (Vuexy icon stat card) ── */
 .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
@@ -869,7 +869,7 @@ window.HELP_TOUR_STEPS = [
 @endpush
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
 <script>
 (function () {
   const grid = new wwGrid({
