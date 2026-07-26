@@ -4,6 +4,10 @@
 @section('page-title', '재구매 관리')
 @section('breadcrumb', '홈 / 재구매 관리')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
+@endpush
+
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
@@ -11,6 +15,34 @@ window.HELP_TOUR_STEPS = [
   { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 예정 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 아래에 펼쳐집니다.' },
   { selector: '.cal-cell:not(.cal-empty)', title: '날짜 셀 클릭', body: '숫자가 표시된 날짜를 클릭하면 재구매 대상 환자 목록이 나타납니다. 목록에서 카카오 알림톡 또는 SMS를 바로 발송할 수 있습니다.' },
 ];
+</script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+(function () {
+  const el = document.getElementById('repurchaseGrid');
+  if (!el) return;   // 목록 뷰에서만 존재(캘린더 뷰엔 없음)
+  const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
+  const grid = new wwGrid({
+    el: el,
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: false, modified: false },
+    columns: [
+      { header: '재구매 예정일', name: 'repurchase', width: 130, sortable: true },
+      { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
+      { header: '환자명',        name: 'patient',    width: 110, sortable: true },
+      { header: '병원',          name: 'hospital',   width: 200 },
+      { header: '상태',          name: 'status',     width: 100, align: 'center', sortable: true },
+      { header: '등록일',        name: 'created',    width: 120, align: 'center', sortable: true },
+    ],
+    data: @json($listGrid ?? []),
+  });
+  el.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (row && row.rx_number) window.location.href = RX_BASE + '/' + encodeURIComponent(row.rx_number);
+  });
+})();
 </script>
 @endpush
 
@@ -429,72 +461,10 @@ function gotoYm(y, m) {
     </form>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>재구매 예정일</th>
-          <th>처방전 번호</th>
-          <th>환자명</th>
-          <th>병원</th>
-          <th>상태</th>
-          <th>등록일</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($listItems as $p)
-          <tr style="cursor:pointer;" onclick="window.location='{{ route('prescriptions.show', $p->rx_number) }}'">
-            <td>
-              <span style="font-weight:700;color:var(--primary);">
-                <i class="fa-regular fa-calendar-check" style="margin-right:4px;"></i>
-                {{ $p->repurchase_date->format('Y-m-d') }}
-              </span>
-            </td>
-            <td><span style="font-size:12px;font-weight:600;">{{ $p->rx_number }}</span></td>
-            <td>{{ $p->patient_name_ocr ?? $p->patient?->name ?? '-' }}</td>
-            <td style="color:var(--text-secondary);">{{ $p->hospital_name ?? '-' }}</td>
-            <td>
-              @php
-                $badgeMap = [
-                  'pending'        => 'secondary',
-                  'ocr_processing' => 'warning',
-                  'ocr_done'       => 'info',
-                  'review_needed'  => 'danger',
-                  'approved'       => 'success',
-                  'rejected'       => 'danger',
-                  'ordered'        => 'primary',
-                ];
-              @endphp
-              <span class="badge badge-{{ $badgeMap[$p->status] ?? 'secondary' }}">
-                {{ $p->status_label }}
-              </span>
-            </td>
-            <td style="color:var(--text-muted);font-size:12px;">{{ $p->created_at->format('Y-m-d') }}</td>
-            <td>
-              <a href="{{ route('prescriptions.show', $p->rx_number) }}"
-                 class="btn btn-outline btn-sm" onclick="event.stopPropagation()">
-                상세
-              </a>
-            </td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
-              <i class="fa-regular fa-calendar-xmark" style="font-size:32px;display:block;margin-bottom:10px;"></i>
-              {{ $year }}년 {{ $month }}월 재구매 예정 건이 없습니다.
-            </td>
-          </tr>
-        @endforelse
-      </tbody>
-    </table>
+  <div style="padding:8px 16px 4px;font-size:12px;color:var(--text-muted);">
+    <i class="fa-solid fa-circle-info"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.
   </div>
-
-  @if($listItems->hasPages())
-    <div style="padding:12px 16px;border-top:1px solid var(--border);">
-      {{ $listItems->links() }}
-    </div>
-  @endif
+  <div style="padding:0 16px 16px;"><div id="repurchaseGrid"></div></div>
 </div>
 @endif
 @endsection

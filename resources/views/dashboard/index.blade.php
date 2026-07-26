@@ -40,6 +40,36 @@
 @section('breadcrumb', '홈 / 대시보드 · ' . now()->format('Y-m-d'))
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+(function () {
+  const el = document.getElementById('recentRxGrid');
+  if (!el) return;
+  const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
+  const grid = new wwGrid({
+    el: el,
+    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    footer: { total: true, selected: false, modified: false },
+    columns: [
+      { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
+      { header: '환자명',    name: 'patient',   width: 100, sortable: true },
+      { header: '생년월일',  name: 'birth',     width: 110, align: 'center' },
+      { header: 'OCR 상태',  name: 'ocr',       width: 110, align: 'center', sortable: true },
+      { header: '주문',      name: 'order',     width: 90,  align: 'center' },
+      { header: '청구',      name: 'claim',     width: 90,  align: 'center' },
+      { header: '담당',      name: 'manager',   width: 90 },
+    ],
+    data: @json($recentRxGrid ?? []),
+  });
+  // 더블클릭 → 처방전 상세 이동
+  el.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (row && row.rx_number) window.location.href = RX_BASE + '/' + encodeURIComponent(row.rx_number);
+  });
+})();
+</script>
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.stat-grid', title: '현황 요약 카드', body: '오늘 접수·검수 대기·주문 미등록 등 핵심 수치를 한눈에 확인합니다. 카드를 클릭하면 해당 목록으로 바로 이동합니다.' },
@@ -51,6 +81,7 @@ window.HELP_TOUR_STEPS = [
 @endpush
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
   /* ── Stat Cards (Vuexy style) ── */
   .stat-card {
@@ -219,57 +250,11 @@ window.HELP_TOUR_STEPS = [
           <i class="bx bx-list-ul"></i> 전체보기
         </a>
       </div>
-      <div class="card-body" style="padding:0;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>처방번호</th>
-                <th>환자명</th>
-                <th>생년월일</th>
-                <th>OCR 상태</th>
-                <th>주문</th>
-                <th>청구</th>
-                <th>담당</th>
-                <th>액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              @forelse($recentPrescriptions as $rx)
-              <tr>
-                <td><a href="{{ route('prescriptions.show', $rx) }}" class="rx-id" style="text-decoration:none;">{{ $rx->rx_number }}</a></td>
-                <td><strong>{{ $rx->patient?->name ?? $rx->patient_name_ocr ?? '-' }}</strong></td>
-                <td style="font-size:12px;color:var(--text-muted);">{{ $rx->patient?->birth_date?->format('Y-m-d') ?? '-' }}</td>
-                <td><span class="badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span></td>
-                <td>
-                  <span class="badge {{ $rx->order ? 'badge-success' : 'badge-secondary' }}">
-                    {{ $rx->order ? '주문완료' : '주문대기' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge {{ $rx->order?->nhis_claim_status === 'approved' ? 'badge-success' : 'badge-secondary' }}">
-                    {{ $rx->order?->nhis_claim_status === 'approved' ? '청구완료' : '청구대기' }}
-                  </span>
-                </td>
-                <td style="font-size:12px;">{{ $rx->assignedUser?->name ?? '-' }}</td>
-                <td>
-                  <a href="{{ route('prescriptions.show', $rx) }}"
-                     class="btn btn-sm {{ in_array($rx->status, ['review_needed','ocr_done']) ? 'btn-warning' : 'btn-outline' }}">
-                    {{ in_array($rx->status, ['review_needed','ocr_done']) ? '검수' : '보기' }}
-                  </a>
-                </td>
-              </tr>
-              @empty
-              <tr>
-                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:36px;">
-                  <i class="bx bx-folder-open" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4;"></i>
-                  접수된 처방전이 없습니다.
-                </td>
-              </tr>
-              @endforelse
-            </tbody>
-          </table>
+      <div class="card-body" style="padding:12px 16px;">
+        <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
+          <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.
         </div>
+        <div id="recentRxGrid"></div>
       </div>
     </div>
   </div>

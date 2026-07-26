@@ -5,13 +5,8 @@
 @section('breadcrumb', '홈 / CE샵 모니터링')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
-  .role-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: var(--border-light); color: var(--text-secondary); }
-  .role-badge.super  { background: #F3EEFF; color: var(--purple); }
-  .role-badge.admin  { background: var(--primary-light); color: var(--primary); }
-  .log-row:hover td { background: #FAFBFD; }
-  .user-link { font-weight: 600; color: var(--text-primary); text-decoration: none; }
-  .user-link:hover { color: var(--primary); }
   .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
   .section-divider { height: 1px; background: var(--border); margin: 22px 0; }
 </style>
@@ -53,69 +48,8 @@
       <i class="bx bx-refresh"></i> 새로고침
     </a>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:90px;">상태</th>
-          <th>이름</th>
-          <th>이메일</th>
-          <th style="width:110px;">권한</th>
-          <th style="width:110px;">마지막 로그인</th>
-          <th style="width:130px;">마지막 활동</th>
-          <th style="width:110px;">로그아웃</th>
-          <th style="width:120px;">IP</th>
-        </tr>
-      </thead>
-      <tbody>
-        @php
-          $roleMap = [
-            'super_admin'     => ['label'=>'슈퍼관리자', 'class'=>'super'],
-            'operations_admin'=> ['label'=>'운영관리자', 'class'=>'admin'],
-            'company_admin'   => ['label'=>'회사관리자', 'class'=>'admin'],
-            'approver'        => ['label'=>'승인자',      'class'=>''],
-            'caregiver'       => ['label'=>'보호자',      'class'=>''],
-            'patient'         => ['label'=>'환자',        'class'=>''],
-          ];
-        @endphp
-        @forelse($sessions as $s)
-        <tr>
-          <td>
-            @if($s->online)
-              <span class="status-dot online">온라인</span>
-            @else
-              <span class="status-dot offline">오프라인</span>
-            @endif
-          </td>
-          <td><strong>{{ $s->shop_user_name ?: '-' }}</strong></td>
-          <td style="color:var(--text-muted);font-size:12.5px;">{{ $s->shop_user_email ?: '-' }}</td>
-          <td>
-            @php $rInfo = $roleMap[$s->shop_user_role] ?? ['label'=>($s->shop_user_role ?: '-'), 'class'=>'']; @endphp
-            <span class="role-badge {{ $rInfo['class'] }}">{{ $rInfo['label'] }}</span>
-          </td>
-          <td style="font-size:12px;color:var(--text-muted);">
-            {{ $s->last_login_at ? \Carbon\Carbon::parse($s->last_login_at,'UTC')->setTimezone('Asia/Seoul')->format('m/d H:i') : '-' }}
-          </td>
-          <td style="font-size:12px;color:var(--text-muted);">
-            {{ $s->last_activity_at ? \Carbon\Carbon::parse($s->last_activity_at,'UTC')->setTimezone('Asia/Seoul')->format('m/d H:i:s') : '-' }}
-          </td>
-          <td style="font-size:12px;color:var(--text-muted);">
-            {{ $s->last_logout_at ? \Carbon\Carbon::parse($s->last_logout_at,'UTC')->setTimezone('Asia/Seoul')->format('m/d H:i') : '-' }}
-          </td>
-          <td class="mono" style="color:var(--text-muted);">{{ $s->ip ?: '-' }}</td>
-        </tr>
-        @empty
-        <tr>
-          <td colspan="8">
-            <div class="empty-state">
-              <i class="bx bx-user-x"></i>
-              <p>접속 기록이 없습니다.</p>
-            </div>
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
+  <div class="card-body" style="padding:12px 16px;">
+    <div id="loginStatusGrid"></div>
   </div>
 </div>
 
@@ -137,44 +71,11 @@
       @endif
     </form>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:110px;">날짜</th>
-          <th>이름</th>
-          <th>이메일</th>
-          <th>상품명</th>
-          <th style="width:100px;">상품 ID</th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($logs as $log)
-        <tr class="log-row">
-          <td style="font-size:12px;color:var(--text-muted);">
-            {{ $log->log_date ?? \Carbon\Carbon::parse($log->created_at,'UTC')->setTimezone('Asia/Seoul')->format('Y-m-d') }}
-          </td>
-          <td>
-            <a href="{{ route('shop-monitoring.index', ['user_id' => $log->shop_user_id]) }}" class="user-link">
-              {{ $log->shop_user_name ?: '-' }}
-            </a>
-          </td>
-          <td style="font-size:12.5px;color:var(--text-muted);">{{ $log->shop_user_email ?: '-' }}</td>
-          <td style="font-weight:500;">{{ $log->product_name ?: '-' }}</td>
-          <td class="mono" style="color:var(--primary);">{{ $log->product_id }}</td>
-        </tr>
-        @empty
-        <tr>
-          <td colspan="5">
-            <div class="empty-state">
-              <i class="bx bx-data"></i>
-              <p>조회 로그가 없습니다.</p>
-            </div>
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
+  <div class="card-body" style="padding:12px 16px;">
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
+      <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 해당 사용자 로그만 필터링합니다.
+    </div>
+    <div id="productLogGrid"></div>
   </div>
   @if($logs->hasPages())
   <div class="card-footer" style="display:flex;justify-content:flex-end;">
@@ -184,3 +85,59 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+(function () {
+  // ── 사용자 로그인 현황 (읽기 전용) ──
+  const loginEl = document.getElementById('loginStatusGrid');
+  if (loginEl) {
+    new wwGrid({
+      el: loginEl,
+      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      footer: { total: true, selected: false, modified: false },
+      columns: [
+        { header: '상태',        name: 'status',        width: 80,  align: 'center', sortable: true },
+        { header: '이름',        name: 'name',          width: 110, sortable: true },
+        { header: '이메일',      name: 'email',         width: 200, sortable: true },
+        { header: '권한',        name: 'role',          width: 100, align: 'center', sortable: true },
+        { header: '마지막 로그인', name: 'last_login',    width: 110, align: 'center' },
+        { header: '마지막 활동',  name: 'last_activity', width: 130, align: 'center' },
+        { header: '로그아웃',     name: 'last_logout',   width: 110, align: 'center' },
+        { header: 'IP',          name: 'ip',            width: 120 },
+      ],
+      data: @json($loginStatusGrid ?? []),
+    });
+  }
+
+  // ── 상품 조회 로그 (읽기 전용, 더블클릭 시 사용자 필터) ──
+  const logEl = document.getElementById('productLogGrid');
+  if (logEl) {
+    const LOG_BASE = @json(route('shop-monitoring.index'));
+    const logGrid = new wwGrid({
+      el: logEl,
+      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      footer: { total: true, selected: false, modified: false },
+      columns: [
+        { header: '날짜',     name: 'log_date',     width: 110, align: 'center', sortable: true },
+        { header: '이름',     name: 'name',         width: 120, sortable: true },
+        { header: '이메일',   name: 'email',        width: 200, sortable: true },
+        { header: '상품명',   name: 'product_name', width: 220, sortable: true },
+        { header: '상품 ID',  name: 'product_id',   width: 100, align: 'center' },
+      ],
+      data: @json($productLogGrid ?? []),
+    });
+    // 더블클릭 → 해당 사용자 로그만 필터
+    logEl.addEventListener('dblclick', function (e) {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = logGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row && row.shop_user_id) {
+        window.location.href = LOG_BASE + '?user_id=' + encodeURIComponent(row.shop_user_id);
+      }
+    });
+  }
+})();
+</script>
+@endpush

@@ -27,16 +27,27 @@ class DashboardController extends Controller
         ];
 
         // 최근 처방전 목록
-        $recentPrescriptions = Prescription::with(['patient', 'assignedUser'])
+        $recentPrescriptions = Prescription::with(['patient', 'assignedUser', 'order'])
             ->latest()
             ->take(10)
             ->get();
+
+        // wwGrid용: 최근 처방전 현황(배지→텍스트, 더블클릭 시 상세 이동용 rx_number 포함)
+        $recentRxGrid = $recentPrescriptions->map(fn ($rx) => [
+            'rx_number' => $rx->rx_number,
+            'patient'   => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
+            'birth'     => $rx->patient?->birth_date?->format('Y-m-d') ?? '-',
+            'ocr'       => $rx->status_label,
+            'order'     => $rx->order ? '주문완료' : '주문대기',
+            'claim'     => $rx->order?->nhis_claim_status === 'approved' ? '청구완료' : '청구대기',
+            'manager'   => $rx->assignedUser?->name ?? '-',
+        ])->values();
 
         // 최근 활동 로그
         $activities = \Spatie\Activitylog\Models\Activity::latest()->take(5)->get();
 
         return view('dashboard.index', compact(
-            'stats', 'recentPrescriptions', 'activities'
+            'stats', 'recentPrescriptions', 'recentRxGrid', 'activities'
         ));
     }
 }

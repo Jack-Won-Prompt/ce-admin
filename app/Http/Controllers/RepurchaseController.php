@@ -29,8 +29,8 @@ class RepurchaseController extends Controller
             ->pluck('cnt', 'd')
             ->toArray();
 
-        // 목록 뷰 — 해당 월 전체 + 필터
-        $listItems = null;
+        // 목록 뷰 — 해당 월 전체 + 필터 (wwGrid: 클라이언트사이드 전체 로드, 배지→텍스트)
+        $listGrid = collect();
         if ($view === 'list') {
             $query = Prescription::with(['patient', 'creator'])
                 ->whereNotNull('repurchase_date')
@@ -46,15 +46,23 @@ class RepurchaseController extends Controller
                 });
             }
 
-            $listItems = $query->paginate(20)->withQueryString();
+            $listGrid = $query->get()->map(fn ($p) => [
+                'rx_number'  => $p->rx_number,
+                'repurchase' => $p->repurchase_date?->format('Y-m-d'),
+                'patient'    => $p->patient_name_ocr ?? $p->patient?->name ?? '-',
+                'hospital'   => $p->hospital_name ?? '-',
+                'status'     => $p->status_label,
+                'created'    => $p->created_at?->format('Y-m-d'),
+            ])->values();
         }
+        $listTotal = $listGrid->count();
 
         // 월 전체 합계
         $totalCount = array_sum($countsByDate);
 
         return view('repurchase.index', compact(
             'year', 'month', 'view',
-            'countsByDate', 'listItems', 'totalCount',
+            'countsByDate', 'listGrid', 'listTotal', 'totalCount',
             'startOfMonth', 'endOfMonth'
         ));
     }
