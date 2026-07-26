@@ -50,37 +50,38 @@
 @endpush
 
 @section('content')
-{{-- 뷰 전환 탭: 리스트 / 상세보기 --}}
+{{-- 유형 필터 탭 + 검색 필터 (항상 표시) --}}
+<div class="pc-tabs">
+  <a href="{{ route('privacy-consents.index') }}" class="pc-tab {{ (request('type','all')==='all')?'active':'' }}">전체 <span class="cnt">{{ $counts['all'] }}</span></a>
+  <a href="{{ route('privacy-consents.index',['type'=>'catheter']) }}" class="pc-tab {{ request('type')==='catheter'?'active':'' }}">카테터 <span class="cnt">{{ $counts['catheter'] }}</span></a>
+  <a href="{{ route('privacy-consents.index',['type'=>'stoma']) }}" class="pc-tab {{ request('type')==='stoma'?'active':'' }}">장루 <span class="cnt">{{ $counts['stoma'] }}</span></a>
+</div>
+
+<form method="GET" class="filter-bar">
+  <input type="hidden" name="type" value="{{ request('type','all') }}">
+  <div class="fg"><label>검색 (성명/연락처/이메일)</label><input type="text" name="search" value="{{ $search }}" placeholder="검색어"></div>
+  <div class="fg"><label>시작일</label><input type="date" name="from" value="{{ $from }}"></div>
+  <div class="fg"><label>종료일</label><input type="date" name="to" value="{{ $to }}"></div>
+  <button type="submit" class="btn btn-primary btn-sm">조회</button>
+  <a href="{{ route('privacy-consents.export', request()->query()) }}" class="btn btn-outline btn-sm">
+    <i class="bx bx-download"></i> 엑셀(CSV) 다운로드
+  </a>
+</form>
+
+{{-- 뷰 전환 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
 <div class="pc-vtabs">
   <button type="button" id="pcTabBtnList" class="pc-vtab active" onclick="pcShowTab('list')">
-    <i class="bx bx-list-ul"></i> 리스트
+    <i class="bx bx-list-ul"></i> 조회결과
   </button>
   <button type="button" id="pcTabBtnDetail" class="pc-vtab" onclick="pcShowTab('detail')">
-    <i class="bx bx-detail"></i> 상세보기
+    <i class="bx bx-detail"></i> 상세내용
   </button>
 </div>
 
-{{-- ── 리스트 탭 ── --}}
+{{-- ── 조회결과 탭 ── --}}
 <div id="pcTabList">
-  <div class="pc-tabs">
-    <a href="{{ route('privacy-consents.index') }}" class="pc-tab {{ (request('type','all')==='all')?'active':'' }}">전체 <span class="cnt">{{ $counts['all'] }}</span></a>
-    <a href="{{ route('privacy-consents.index',['type'=>'catheter']) }}" class="pc-tab {{ request('type')==='catheter'?'active':'' }}">카테터 <span class="cnt">{{ $counts['catheter'] }}</span></a>
-    <a href="{{ route('privacy-consents.index',['type'=>'stoma']) }}" class="pc-tab {{ request('type')==='stoma'?'active':'' }}">장루 <span class="cnt">{{ $counts['stoma'] }}</span></a>
-  </div>
-
-  <form method="GET" class="filter-bar">
-    <input type="hidden" name="type" value="{{ request('type','all') }}">
-    <div class="fg"><label>검색 (성명/연락처/이메일)</label><input type="text" name="search" value="{{ $search }}" placeholder="검색어"></div>
-    <div class="fg"><label>시작일</label><input type="date" name="from" value="{{ $from }}"></div>
-    <div class="fg"><label>종료일</label><input type="date" name="to" value="{{ $to }}"></div>
-    <button type="submit" class="btn btn-primary btn-sm">조회</button>
-    <a href="{{ route('privacy-consents.export', request()->query()) }}" class="btn btn-outline btn-sm">
-      <i class="bx bx-download"></i> 엑셀(CSV) 다운로드
-    </a>
-  </form>
-
   <div style="margin-bottom:10px;font-size:12px;color:var(--text-muted);">
-    <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세보기 탭으로 전환되어 상세 내용을 확인합니다.
+    <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭으로 전환되어 상세 내용을 확인합니다.
   </div>
   <div id="pcGrid"></div>
 </div>
@@ -88,7 +89,7 @@
 {{-- ── 상세보기 탭 ── --}}
 <div id="pcTabDetail" style="display:none;">
   <div style="margin-bottom:16px;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="pcShowTab('list')"><i class="bx bx-arrow-back"></i> 리스트로</button>
+    <button type="button" class="btn btn-outline btn-sm" onclick="pcShowTab('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
   </div>
   <div id="pcDetailBody">
     <div class="pc-detail-empty">리스트 탭에서 행을 더블클릭하면 상세 내용이 여기에 표시됩니다.</div>

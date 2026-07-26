@@ -100,13 +100,6 @@ window.HELP_TOUR_STEPS = [
   $curStatus = request('status');
 @endphp
 
-{{-- 패널 탭: 조회결과 / 상세내용 --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
-</div>
-
-<div id="pnlList">
 <div class="status-tabs">
   <a href="{{ route('orders.index', array_merge(request()->except('status','page'), [])) }}"
      class="status-tab {{ !$curStatus ? 'active' : '' }}">
@@ -146,6 +139,13 @@ window.HELP_TOUR_STEPS = [
   @endif
 </form>
 
+{{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
+<div class="pnl-tabs">
+  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
+  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
+</div>
+
+<div id="pnlList">
 {{-- ── 주문 목록 (wwGrid) ── --}}
 <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
   <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
