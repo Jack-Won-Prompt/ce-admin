@@ -9,6 +9,15 @@
 <style>
   .order-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
   @media(max-width:900px){ .order-grid { grid-template-columns:1fr; } }
+  /* 상세 내부 탭(스크립트로 카드 그룹핑) */
+  .od-tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+  .od-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .od-tab:hover { color:var(--primary); }
+  .od-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  /* 탭 사용 시 좌우 그리드를 단일 흐름으로(카드가 순서대로) */
+  .order-grid.od-flat { display:block !important; }
+  .order-grid.od-flat > div { display:contents; }
 
   .info-rows dt {
     font-size: 11px; font-weight: 600; color: var(--text-muted);
@@ -1012,5 +1021,63 @@ window.HELP_TOUR_STEPS = [
   { selector: '.card:nth-of-type(3)', title: '배송 정보', body: '운송장 번호를 입력하고 배송 상태를 관리합니다. 운송장 번호 입력 후 저장하면 배송 추적이 가능합니다.' },
   { selector: '.card:nth-of-type(4)', title: '세금계산서 / 현금영수증', body: '세금계산서 발행, 현금영수증 발행 및 취소를 여기서 처리합니다.' },
 ];
+</script>
+<script>
+/* 주문 상세 내부 탭: 카드를 제목 기준으로 그룹핑해 탭으로 표시(주입/직접 렌더 모두 동작) */
+(function initOrderDetailTabs() {
+  const root = document.querySelector('.page-body-inner');
+  if (!root || root.dataset.tabbed) return;
+  const grid = root.querySelector('.order-grid');
+  if (!grid) return;
+  root.dataset.tabbed = '1';
+
+  const TABS = [
+    { key: '기본', label: '기본 정보',  icon: 'bx-info-circle' },
+    { key: '배송', label: '배송/상태',  icon: 'bx-truck' },
+    { key: '청구', label: '청구/발행',  icon: 'bx-receipt' },
+    { key: '정보', label: '메모/정보',  icon: 'bx-note' },
+  ];
+  const MAP = {
+    '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본',
+    '배송 정보': '배송', 'Withworks 출고 현황': '배송', '상태 변경': '배송',
+    'NHIS 건강보험 청구': '청구', '세금계산서 / 현금영수증': '청구',
+    '메모': '정보',
+  };
+
+  const cards = [];
+  const statusCard = root.querySelector('.status-flow') ? root.querySelector('.status-flow').closest('.card') : null;
+  if (statusCard) cards.push(statusCard);
+  grid.querySelectorAll('.card').forEach(c => cards.push(c));
+
+  grid.classList.add('od-flat');
+
+  cards.forEach(c => {
+    const t = c.querySelector('.card-header-title');
+    c.dataset.otab = (c === statusCard) ? '기본' : (t ? (MAP[t.textContent.trim()] || '정보') : '정보');
+  });
+
+  const used = TABS.filter(t => cards.some(c => c.dataset.otab === t.key));
+  if (used.length < 2) return;   // 탭이 1개뿐이면 그대로
+
+  const bar = document.createElement('div');
+  bar.className = 'od-tabs';
+  used.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'od-tab' + (i === 0 ? ' active' : '');
+    b.dataset.tab = t.key;
+    b.innerHTML = '<i class="bx ' + t.icon + '"></i> ' + t.label;
+    b.addEventListener('click', () => showTab(t.key));
+    bar.appendChild(b);
+  });
+  const anchor = statusCard || grid;
+  anchor.parentNode.insertBefore(bar, anchor);
+
+  function showTab(key) {
+    cards.forEach(c => { c.style.display = (c.dataset.otab === key) ? '' : 'none'; });
+    bar.querySelectorAll('.od-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === key));
+  }
+  showTab(used[0].key);
+})();
 </script>
 @endpush
