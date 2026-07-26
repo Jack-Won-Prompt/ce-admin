@@ -34,6 +34,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
 /* ── 레이아웃 ── */
 /* 발행 내역 / 즉시발행 탭 구성 */
@@ -460,24 +461,14 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         <button class="btn-search" onclick="loadHistory(1)">조회</button>
       </div>
     </div>
-    <div class="hist-body">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th>작성일</th>
-            <th>관리번호 / 처방번호</th>
-            <th>공급받는자 / 환자명</th>
-            <th>공급가액</th>
-            <th>세액</th>
-            <th>유형</th>
-            <th>상태</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="hist-tbody">
-          <tr><td colspan="8" class="hist-empty">조회 버튼을 눌러 내역을 불러오세요.</td></tr>
-        </tbody>
-      </table>
+    <div class="hist-body" style="padding:0 16px 12px;">
+      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행취소</button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
+      </div>
+      <div id="taxHistGrid"></div>
     </div>
     <div class="hist-pager" id="hist-pager" style="display:none;">
       <div class="pager-info" id="pager-info"></div>
@@ -532,6 +523,48 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script>
+// 발행 내역 wwGrid (조회 결과를 setData로 주입)
+(function () {
+  const el = document.getElementById('taxHistGrid');
+  if (!el) return;
+  window.__taxGrid = new wwGrid({
+    el: el,
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '작성일',            name: 'date',   width: 100, sortable: true },
+      { header: '관리번호/처방번호', name: 'mgt',    width: 170 },
+      { header: '공급받는자/환자명', name: 'buyer',  width: 170, sortable: true },
+      { header: '공급가액',          name: 'supply', width: 110, editor: 'number' },
+      { header: '세액',              name: 'tax',    width: 90,  editor: 'number' },
+      { header: '유형',              name: 'type',   width: 70,  align: 'center', sortable: true },
+      { header: '상태',              name: 'status', width: 90,  align: 'center', sortable: true },
+    ],
+    data: [],
+  });
+  function taxOpenRow(r) {
+    if (r.record_type === 'prescription') window.open('/prescriptions/' + encodeURIComponent(r.rx_number), '_blank');
+    else openDetail('SELL', r.mgtKey);
+  }
+  el.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]'); if (!cell) return;
+    const r = window.__taxGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (r) taxOpenRow(r);
+  });
+  window.taxRowAction = function (action) {
+    const c = window.__taxGrid.getCheckedRows();
+    if (!c.length)   { showToast('행을 먼저 체크하세요.', 'warning'); return; }
+    if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
+    const r = c[0];
+    if (action === 'detail') { taxOpenRow(r); return; }
+    if (r.record_type === 'prescription') { showToast('처방전 항목은 인쇄/취소 대상이 아닙니다.', 'warning'); return; }
+    if (action === 'print')  openPrint('SELL', r.mgtKey);
+    if (action === 'cancel') { if (!r.canCancel) { showToast('이미 취소된 건입니다.', 'warning'); return; } openCancelModal(r.mgtKey); }
+  };
+})();
+</script>
 <script>
 // 탭 전환(발행 내역 / 즉시발행) — 기본은 발행 내역
 function tiTab(name) {
@@ -772,9 +805,7 @@ async function loadHistory(page = 1) {
   const sd      = toApiDate(document.getElementById('f-start').value);
   const ed      = toApiDate(document.getElementById('f-end').value);
   const taxType = document.getElementById('f-tax-type').value;
-  const tbody   = document.getElementById('hist-tbody');
-
-  tbody.innerHTML = `<tr><td colspan="8" class="hist-empty"><i class="bx bx-loader-alt bx-spin" style="font-size:20px;"></i></td></tr>`;
+  window.__taxGrid && window.__taxGrid.setData([]);
 
   let url = `${TI_BASE}/search?corp_num=${cn}&mgt_key_type=SELL&start_date=${sd}&end_date=${ed}&page=${page}&per_page=15&order=D`;
   if (taxType) url += `&tax_type_code[]=${encodeURIComponent(taxType)}`;
@@ -786,64 +817,39 @@ async function loadHistory(page = 1) {
 
     const list = data.list ?? [];
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="hist-empty">발행 내역이 없습니다.</td></tr>`;
+      window.__taxGrid.setData([]);
       document.getElementById('hist-pager').style.display = 'none';
       return;
     }
 
-    tbody.innerHTML = list.map(r => {
+    const rows = list.map(r => {
       const wDate  = (r.writeDate ?? '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
-      const supply = parseInt(r.supplyCostTotal ?? 0).toLocaleString();
-      const tax    = parseInt(r.taxTotal ?? 0).toLocaleString();
-
-      // ── 처방전 행 ──────────────────────────────────────────
+      const supply = parseInt(r.supplyCostTotal ?? 0);
+      const tax    = parseInt(r.taxTotal ?? 0);
       if (r.record_type === 'prescription') {
-        const rxSCls = r.rx_status === 'ordered' ? 'nts' : 'issued';
-        const rxSTxt = r.rx_status === 'ordered' ? '주문완료' : '검수완료';
-        const rxNum  = r.rx_number ?? '—';
-        return `<tr style="background:rgba(124,58,237,.03);border-left:3px solid #7c3aed;">
-          <td style="white-space:nowrap;">${wDate}</td>
-          <td style="font-size:10.5px;font-family:monospace;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${rxNum}">${rxNum}</td>
-          <td>${r.invoiceeCorpName ?? '—'}</td>
-          <td style="text-align:right;font-weight:600;">${supply}원</td>
-          <td style="text-align:right;">${tax}원</td>
-          <td><span class="ti-badge rx">처방전</span></td>
-          <td><span class="ti-badge ${rxSCls}">${rxSTxt}</span></td>
-          <td style="white-space:nowrap;">
-            <button class="btn-icon view" onclick="window.open('/prescriptions/${rxNum}','_blank')" title="처방전 보기"><i class="bx bx-file-find"></i></button>
-          </td>
-        </tr>`;
+        return {
+          date: wDate, mgt: (r.rx_number ?? '—'), buyer: (r.invoiceeCorpName ?? '—'),
+          supply, tax, type: '처방전',
+          status: (r.rx_status === 'ordered' ? '주문완료' : '검수완료'),
+          record_type: 'prescription', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
+        };
       }
-
-      // ── 세금계산서 행 ──────────────────────────────────────
-      const sc      = parseInt(r.stateCode ?? 0);
-      const sCls    = sc >= 500 ? 'cancel' : (sc >= 400 ? 'nts' : (sc >= 200 ? 'issued' : 'draft'));
-      const sTxt    = { 100:'임시저장', 200:'발행완료', 220:'발행완료', 300:'국세청대기', 400:'국세청완료', 500:'취소', 600:'국세청취소' }[sc] ?? String(sc);
-      const ttMap   = { ValueAdded:'taxvat', ZeroTax:'taxzero', FreeTax:'taxfree' };
-      const ttCls   = ttMap[r.taxType] ?? 'draft';
-      const ttTxt   = { ValueAdded:'과세', ZeroTax:'영세', FreeTax:'면세' }[r.taxType] ?? '—';
-      const mgtKey  = r.invoicerMgtKey ?? r.invoiceeMgtKey ?? r.trusteeMgtKey ?? '';
-      const canCancel = sc !== 500;
-
-      return `<tr>
-        <td style="white-space:nowrap;">${wDate}</td>
-        <td style="font-size:10.5px;font-family:monospace;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${mgtKey}">${mgtKey || '—'}</td>
-        <td>${r.invoiceeCorpName ?? '—'}</td>
-        <td style="text-align:right;font-weight:600;">${supply}원</td>
-        <td style="text-align:right;">${tax}원</td>
-        <td><span class="ti-badge ${ttCls}">${ttTxt}</span></td>
-        <td><span class="ti-badge ${sCls}">${sTxt}</span></td>
-        <td style="white-space:nowrap;">
-          <button class="btn-icon view"  onclick="openDetail('SELL','${mgtKey}')"><i class="bx bx-show"></i></button>
-          <button class="btn-icon print" onclick="openPrint('SELL','${mgtKey}')" title="인쇄"><i class="bx bx-printer"></i></button>
-          ${canCancel ? `<button class="btn-icon cancel" onclick="openCancelModal('${mgtKey}')" title="발행취소"><i class="bx bx-x"></i></button>` : ''}
-        </td>
-      </tr>`;
-    }).join('');
+      const sc = parseInt(r.stateCode ?? 0);
+      const sTxt = { 100:'임시저장', 200:'발행완료', 220:'발행완료', 300:'국세청대기', 400:'국세청완료', 500:'취소', 600:'국세청취소' }[sc] ?? String(sc);
+      const ttTxt = { ValueAdded:'과세', ZeroTax:'영세', FreeTax:'면세' }[r.taxType] ?? '—';
+      const mgtKey = r.invoicerMgtKey ?? r.invoiceeMgtKey ?? r.trusteeMgtKey ?? '';
+      return {
+        date: wDate, mgt: (mgtKey || '—'), buyer: (r.invoiceeCorpName ?? '—'),
+        supply, tax, type: ttTxt, status: sTxt,
+        record_type: 'tax', mgtKey, canCancel: sc !== 500,
+      };
+    });
+    window.__taxGrid.setData(rows);
 
     renderPager(data.total ?? 0, page, 15);
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="hist-empty" style="color:var(--danger);">조회 실패: ${e.message}</td></tr>`;
+    window.__taxGrid && window.__taxGrid.setData([]);
+    showToast('조회 실패: ' + e.message, 'error');
   }
 }
 
