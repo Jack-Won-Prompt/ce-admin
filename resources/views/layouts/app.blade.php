@@ -289,7 +289,7 @@
 
     /* ── Content ── */
     .content-wrapper { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; padding-top: var(--nav-h); }
-    .page-body { flex: 1; padding: 22px 24px 70px; min-width: 0; }
+    .page-body { flex: 1; padding: 14px 24px 20px; min-width: 0; }
 
 
     /* ── Mobile Overlay ── */
@@ -312,13 +312,13 @@
     }
     .card-header {
       display: flex; align-items: center; gap: 10px;
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
       background: transparent;
     }
     .card-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -.2px; }
     .card-header-sub   { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
-    .card-body { padding: 18px; }
-    .mt-4 { margin-top: 16px; } .mb-4 { margin-bottom: 16px; }
+    .card-body { padding: 14px 16px; }
+    .mt-4 { margin-top: 12px; } .mb-4 { margin-bottom: 12px; }
 
     /* ── Buttons ── */
     .btn {
@@ -374,7 +374,7 @@
     .badge.bg-info     { background: var(--info)    !important; color: #fff; }
 
     /* ── Forms ── */
-    .form-group { margin-bottom: 14px; }
+    .form-group { margin-bottom: 10px; }
     .form-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; letter-spacing: -.1px; }
     .form-label span { color: var(--danger); }
     .form-control {
