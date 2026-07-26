@@ -295,7 +295,7 @@
       <button type="button" class="btn btn-outline btn-sm" onclick="invoiceViewDetail()">
         <i class="bx bx-detail"></i> 선택 상세
       </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세보기로 이동</span>
+      <span style="font-size:12px;color:var(--text-muted);">← 행을 <b>더블클릭</b>하거나 체크 후 눌러 상세보기로 이동</span>
       <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
     </div>
     <div id="invoiceGrid" style="margin:0 16px 16px;"></div>
@@ -897,6 +897,14 @@ window.HELP_TOUR_STEPS = [
     if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
     selectOrder(c[0]);
   };
+
+  // 행 더블클릭 → 상세보기 탭으로 전환(selectOrder가 패널 채우고 switchPanel('detail'))
+  document.getElementById('invoiceGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (row) selectOrder(row);
+  });
 })();
 </script>
 @endpush

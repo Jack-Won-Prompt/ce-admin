@@ -6,8 +6,11 @@
 
 @push('styles')
 <style>
-  .ds-form { max-width:720px; }
-  .ds-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+  .ds-form { max-width:1100px; }
+  /* 카드 2열 배치로 우측 공백 최소화(좁은 화면은 1열) */
+  .ds-cards { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; align-items:start; }
+  @media (max-width:820px) { .ds-cards { grid-template-columns:1fr; } }
+  .ds-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:0; }
   .ds-card h3 { margin:0 0 16px; font-size:14px; font-weight:800; color:var(--primary);
     padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
   .ds-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -44,6 +47,7 @@
     @csrf
     @method('PUT')
 
+    <div class="ds-cards">
     <div class="ds-card">
       <h3><i class="bx bx-buildings"></i> ② 준요양기관</h3>
       <div class="ds-grid">
@@ -81,8 +85,9 @@
       </div>
       <div class="ds-hint" style="margin-top:8px;">기본값: X=164, Y=266, 너비=28 (A4 기준, "(서명 또는 인)" 위).</div>
     </div>
+    </div>{{-- /ds-cards --}}
 
-    <button type="submit" class="btn btn-primary"><i class="bx bx-save"></i> 설정 저장</button>
+    <button type="submit" class="btn btn-primary" style="margin-top:16px;"><i class="bx bx-save"></i> 설정 저장</button>
   </form>
 </div>
 @endsection
