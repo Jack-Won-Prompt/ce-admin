@@ -5,6 +5,7 @@
 @section('breadcrumb', '홈 / 개인정보동의')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .pc-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
   .pc-tab { padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
@@ -49,38 +50,50 @@
   </a>
 </form>
 
-<div class="card" style="overflow-x:auto;">
-  <table class="pc-table">
-    <thead>
-      <tr>
-        <th>유형</th><th>성명</th><th>연락처</th><th>이메일</th><th>주소</th>
-        <th style="text-align:center;">필수동의</th><th>마케팅</th><th>제출일시</th><th></th>
-      </tr>
-    </thead>
-    <tbody>
-      @forelse($rows as $r)
-        <tr>
-          <td><span class="badge-type {{ $r->type }}">{{ $r->type_label }}</span></td>
-          <td style="font-weight:700;">{{ $r->name }}</td>
-          <td style="font-family:monospace;">{{ $r->phone }}</td>
-          <td style="color:var(--text-muted);">{{ $r->email ?: '-' }}</td>
-          <td style="color:var(--text-muted);font-size:12px;">{{ \Illuminate\Support\Str::limit($r->full_address ?: '-', 24) }}</td>
-          <td style="text-align:center;">
-            @if($r->required_agreed)<span class="req-ok">완료</span>@else<span class="req-no">미완</span>@endif
-          </td>
-          <td>{{ $r->agree_marketing === '동의함' ? '동의' : '-' }}</td>
-          <td style="font-size:12px;color:var(--text-muted);">{{ $r->submitted_at?->format('Y-m-d H:i') }}</td>
-          <td><a href="{{ route('privacy-consents.show', $r) }}" class="btn btn-outline btn-sm">상세</a></td>
-        </tr>
-      @empty
-        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:36px;">
-          <i class="bx bx-file" style="font-size:26px;display:block;margin-bottom:8px;opacity:.4;"></i>
-          작성된 동의서가 없습니다.
-        </td></tr>
-      @endforelse
-    </tbody>
-  </table>
+{{-- ── wwGrid 파일럿 ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <button type="button" class="btn btn-outline btn-sm" onclick="pcViewDetail()">
+    <i class="bx bx-detail"></i> 선택 행 상세보기
+  </button>
+  <span style="font-size:12px;color:var(--text-muted);">← 행을 체크한 뒤 눌러 상세를 엽니다.</span>
 </div>
-
-<div style="margin-top:16px;">{{ $rows->links() }}</div>
+<div id="pcGrid"></div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('privacy-consents'));   // + '/{id}'
+  const grid = new wwGrid({
+    el: document.getElementById('pcGrid'),
+    height: 560,
+    editable: false,        // 읽기전용 표시
+    rowCheckbox: true,      // 상세보기 선택용
+    rowNumber: true,
+    toolbar: true,          // wwGrid 엑셀 버튼
+    summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '유형',     name: 'type',      width: 80,  sortable: true, align: 'center' },
+      { header: '성명',     name: 'name',      width: 100, sortable: true },
+      { header: '연락처',   name: 'phone',     width: 130 },
+      { header: '이메일',   name: 'email',     width: 190 },
+      { header: '주소',     name: 'address',   width: 260 },
+      { header: '필수동의', name: 'required',  width: 80,  sortable: true, align: 'center' },
+      { header: '마케팅',   name: 'marketing', width: 70,  align: 'center' },
+      { header: '제출일시', name: 'submitted', width: 130, sortable: true },
+    ],
+    data: @json($gridData),
+  });
+  window.__pcGrid = grid;
+
+  window.pcViewDetail = function () {
+    const checked = grid.getCheckedRows();
+    if (!checked.length)     { showToast('상세를 볼 행을 먼저 체크하세요.', 'warning'); return; }
+    if (checked.length > 1)  { showToast('한 행만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + checked[0].id;
+  };
+})();
+</script>
+@endpush

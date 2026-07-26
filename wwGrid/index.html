@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wwGrid 데모</title>
+  <link rel="stylesheet" href="wwGrid.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #edf1f6;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      color: #333;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px;
+      color: #1a3a5c;
+    }
+    p.desc {
+      margin: 0 0 16px;
+      color: #666;
+      font-size: 12px;
+    }
+    .section {
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .section h2 {
+      font-size: 14px;
+      margin: 0 0 12px;
+      color: #1a3a5c;
+      border-bottom: 2px solid #3c82c4;
+      padding-bottom: 6px;
+    }
+    .api-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .api-btns button {
+      padding: 6px 14px;
+      border-radius: 4px;
+      border: 1px solid #b0bcc8;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .api-btns button:hover { background: #eef4fb; }
+    .api-btns button.primary { background: #3c82c4; color: #fff; border-color: #3c82c4; }
+    .api-btns button.primary:hover { background: #2a6aad; }
+    .api-btns button.danger  { background: #e05050; color: #fff; border-color: #c03030; }
+    .api-btns button.danger:hover  { background: #c03030; }
+
+    #output {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow: auto;
+      white-space: pre;
+      margin-top: 12px;
+    }
+
+    /* 탭 */
+    .tabs { display: flex; gap: 0; margin-bottom: -1px; }
+    .tab-btn {
+      padding: 7px 18px;
+      border: 1px solid #c0c8d0;
+      border-bottom: none;
+      background: #e8ecf1;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      font-size: 13px;
+      color: #555;
+    }
+    .tab-btn.active { background: #fff; font-weight: 600; color: #1a3a5c; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-wrap {
+      border: 1px solid #c0c8d0;
+      border-radius: 0 6px 6px 6px;
+      padding: 16px;
+      background: #fff;
+    }
+
+    /* 코드 블록 */
+    pre.code-block {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 12px;
+      overflow: auto;
+      max-height: 400px;
+      margin: 0;
+    }
+
+    /* ── 메뉴얼 스타일 ── */
+    .man-wrap { max-width: 860px; }
+    #tab-manual {
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    #tab-manual::-webkit-scrollbar { width: 7px; }
+    #tab-manual::-webkit-scrollbar-track { background: #f0f3f7; border-radius: 4px; }
+    #tab-manual::-webkit-scrollbar-thumb { background: #b0bcc8; border-radius: 4px; }
+    #tab-manual::-webkit-scrollbar-thumb:hover { background: #8898aa; }
+    .man-section { margin-bottom: 32px; }
+    .man-section h2 {
+      font-size: 15px; font-weight: 700; color: #1a3a5c;
+      border-left: 4px solid #3c82c4; padding-left: 10px;
+      margin: 0 0 12px;
+    }
+    .man-section h3 {
+      font-size: 13px; font-weight: 700; color: #2a5a8c;
+      margin: 18px 0 8px; border-bottom: 1px dashed #d0d8e4; padding-bottom: 4px;
+    }
+    .man-section p { margin: 0 0 8px; line-height: 1.7; color: #444; }
+    .man-section ul { margin: 0 0 8px; padding-left: 20px; }
+    .man-section li { margin-bottom: 4px; line-height: 1.6; color: #444; }
+    .man-tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+    .man-tbl th {
+      background: #f0f3f7; color: #1a3a5c; font-weight: 700;
+      padding: 7px 10px; text-align: left;
+      border: 1px solid #d0d8e4;
+    }
+    .man-tbl td {
+      padding: 6px 10px; border: 1px solid #e4e8ed;
+      vertical-align: top; line-height: 1.6;
+    }
+    .man-tbl tr:nth-child(even) td { background: #fafbfc; }
+    .man-tbl td code, .man-section p code, .man-section li code {
+      background: #eef2f8; border: 1px solid #d0d8e4;
+      border-radius: 3px; padding: 1px 5px; font-family: Consolas, monospace;
+      font-size: 11px; color: #1a5c8c;
+    }
+    .man-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle;
+    }
+    .man-badge.req  { background: #fde8e8; color: #c03030; border: 1px solid #f0b0b0; }
+    .man-badge.opt  { background: #eef4fb; color: #2a6aad; border: 1px solid #b0cce8; }
+    .man-badge.def  { background: #f0fff4; color: #1a7a3c; border: 1px solid #a0d8b0; }
+    pre.man-code {
+      background: #1e1e2e; color: #cdd6f4; border-radius: 6px;
+      padding: 12px 14px; font-size: 12px; overflow: auto;
+      margin: 6px 0 10px; font-family: Consolas, monospace; line-height: 1.6;
+    }
+    .man-note {
+      background: #fffbe6; border-left: 3px solid #f0c040;
+      padding: 8px 12px; border-radius: 0 4px 4px 0;
+      font-size: 12px; color: #6b5000; margin: 8px 0;
+    }
+    .man-tip {
+      background: #eef8f0; border-left: 3px solid #4caf7d;
+      padding: 8px 12px; border-radius: 0 4px 4px 0;
+      font-size: 12px; color: #1a5c30; margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>wwGrid — Withworks Data Grid</h1>
+<p class="desc">컬럼 에디터: text · number · date · checkbox · combo · 헤더 그루핑 ...</p>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="demo">라이브 데모</button>
+  <button class="tab-btn" data-tab="api">API 테스트</button>
+  <button class="tab-btn" data-tab="code">샘플 코드</button>
+  <button class="tab-btn" data-tab="manual">개발 사용 메뉴얼</button>
+</div>
+<div class="tab-wrap">
+
+  <!-- ① 라이브 데모 -->
+  <div id="tab-demo" class="tab-content active">
+    <!-- 외부 툴바 버튼 (grid toolbar: ['excel'] 로 내부 버튼 숨긴 예시) -->
+    <div class="api-btns" style="margin-bottom:8px;">
+      <button class="primary" onclick="grid.addRow()">+ 행 추가</button>
+      <button class="danger"  onclick="grid.removeCheckedRows()">행 삭제</button>
+      <button onclick="grid.resetModified()">변경 취소</button>
+      <button class="primary" onclick="grid._showModifiedDialog()">수정 데이터 추출</button>
+    </div>
+    <div id="myGrid"></div>
+  </div>
+
+  <!-- ② API 테스트 -->
+  <div id="tab-api" class="tab-content">
+    <p style="margin:0 0 8px;font-size:12px;color:#666;">아래 버튼으로 그리드 API를 직접 호출합니다.</p>
+    <div class="api-btns">
+      <button class="primary" onclick="apiGetModified()">getModifiedRows()</button>
+      <button class="primary" onclick="apiGetChecked()">getCheckedRows()</button>
+      <button onclick="apiGetData()">getData()</button>
+      <button onclick="apiAddRow()">addRow({ name:'신규' })</button>
+      <button onclick="apiSetValue()">setValue(0, 'salary', 9999)</button>
+      <button onclick="apiSetData()">setData(새 데이터)</button>
+      <button onclick="apiReset()">resetModified()</button>
+      <button onclick="apiSendServer()">서버 전송 시뮬레이션</button>
+      <button onclick="grid.downloadExcel()" style="background:#217346;color:#fff;border-color:#1a5c38;font-weight:600">▼ 전체 엑셀 저장</button>
+      <button onclick="grid.downloadExcel({checkedOnly:true,filename:'checked_rows'})" style="background:#217346;color:#fff;border-color:#1a5c38;">▼ 선택 행만 저장</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #ddd;margin:14px 0;">
+    <p style="margin:0 0 8px;font-size:12px;color:#666;font-weight:600;">테마 색상 변경 (setTheme API)</p>
+    <div class="api-btns" style="flex-wrap:wrap;align-items:center;">
+
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        헤더 배경
+        <input type="color" value="#f0f3f7" oninput="grid.setTheme({headerBg:this.value,headerGroupBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        푸터 배경
+        <input type="color" value="#f0f3f7" oninput="grid.setTheme({footerBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        선택 행
+        <input type="color" value="#ddeeff" oninput="grid.setTheme({selectedBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        수정 행
+        <input type="color" value="#fff8e6" oninput="grid.setTheme({modifiedBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        신규 행
+        <input type="color" value="#f0fff4" oninput="grid.setTheme({newBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        Sum 행
+        <input type="color" value="#eef2f8" oninput="grid.setTheme({summaryBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        강조색
+        <input type="color" value="#3c82c4" oninput="grid.setTheme({accent:this.value})">
+      </label>
+
+      <span style="width:1px;height:24px;background:#ddd;margin:0 4px;"></span>
+
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        외곽선
+        <input type="color" value="#c0c8d0" oninput="grid.setTheme({border:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        행 구분선
+        <input type="color" value="#e4e8ed" oninput="grid.setTheme({rowBorder:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        보조선
+        <input type="color" value="#b0bcc8" oninput="grid.setTheme({borderSub:this.value})">
+      </label>
+      <button onclick="resetTheme()">테마 초기화</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #ddd;margin:14px 0;">
+    <p style="margin:0 0 8px;font-size:12px;color:#666;font-weight:600;">팝업 색상 변경 (popup 에디터 클릭 후 확인)</p>
+    <div class="api-btns" style="flex-wrap:wrap;align-items:center;">
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        헤더 배경
+        <input type="color" value="#3c82c4" oninput="grid.setTheme({popupHeaderBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        헤더 텍스트
+        <input type="color" value="#ffffff" oninput="grid.setTheme({popupHeaderText:this.value})">
+      </label>
+      <span style="width:1px;height:24px;background:#ddd;margin:0 4px;"></span>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        바디 배경
+        <input type="color" value="#ffffff" oninput="grid.setTheme({popupBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        바디 텍스트
+        <input type="color" value="#333333" oninput="grid.setTheme({popupText:this.value})">
+      </label>
+      <span style="width:1px;height:24px;background:#ddd;margin:0 4px;"></span>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        항목 hover
+        <input type="color" value="#f0f6ff" oninput="grid.setTheme({popupItemHoverBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        선택 배경
+        <input type="color" value="#ddeeff" oninput="grid.setTheme({popupItemSelBg:this.value})">
+      </label>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:4px;">
+        선택 텍스트
+        <input type="color" value="#1a3a5c" oninput="grid.setTheme({popupItemSelText:this.value})">
+      </label>
+      <button onclick="resetPopupTheme()">팝업 초기화</button>
+    </div>
+
+    <div id="output" style="margin-top:12px;">// 결과가 여기에 표시됩니다</div>
+  </div>
+
+  <!-- ③ 샘플 코드 -->
+  <div id="tab-code" class="tab-content">
+    <pre class="code-block" id="sampleCode"></pre>
+  </div>
+
+  <!-- ④ 개발 사용 메뉴얼 -->
+  <div id="tab-manual" class="tab-content">
+  <div class="man-wrap">
+
+    <!-- 1. 개요 -->
+    <div class="man-section">
+      <h2>1. 개요</h2>
+      <p>
+        <strong>wwGrid</strong>는 외부 라이브러리 없이 순수 JavaScript(ES6+)로 구현한 데이터 그리드입니다.
+        <code>wwGrid.js</code>와 <code>wwGrid.css</code> 두 파일만 포함하면 바로 사용할 수 있습니다.
+      </p>
+      <ul>
+        <li>컬럼 에디터: <code>text</code> · <code>number</code> · <code>date</code> · <code>checkbox</code> · <code>combo</code> · <code>popup</code></li>
+        <li>헤더 그루핑 (2단 헤더), 컬럼 정렬 / 드래그 순서 변경 / 너비 조절</li>
+        <li>행 추가 · 삭제 · 수정 추적 · 변경 취소</li>
+        <li>숫자 천단위 콤마 · Sum 행 · 엑셀(.xls) 다운로드</li>
+        <li>CSS 변수 기반 색상 테마 (인스턴스별 독립 적용)</li>
+        <li>하단 상태바 (전체 / 선택 / 수정 건수) 항목별 제어</li>
+      </ul>
+    </div>
+
+    <!-- 2. 설치 -->
+    <div class="man-section">
+      <h2>2. 설치</h2>
+      <p>별도 빌드 과정 없이 파일 두 개를 HTML에 포함합니다.</p>
+<pre class="man-code">&lt;link rel="stylesheet" href="wwGrid.css"&gt;
+&lt;script src="wwGrid.js"&gt;&lt;/script&gt;</pre>
+      <div class="man-note">CDN 미지원. <code>wwGrid.js</code> · <code>wwGrid.css</code>를 프로젝트에 직접 복사해 사용하세요.</div>
+    </div>
+
+    <!-- 3. 기본 사용법 -->
+    <div class="man-section">
+      <h2>3. 기본 사용법</h2>
+<pre class="man-code">&lt;div id="myGrid"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+const grid = new wwGrid({
+  el: document.getElementById('myGrid'),
+  height: 400,
+  columns: [
+    { header: '이름', name: 'name', width: 120, editor: 'text', sortable: true },
+    { header: '나이', name: 'age',  width: 80,  editor: 'number' },
+  ],
+  data: [
+    { name: '홍길동', age: 30 },
+    { name: '이순신', age: 45 },
+  ],
+});
+&lt;/script&gt;</pre>
+    </div>
+
+    <!-- 4. 그리드 옵션 -->
+    <div class="man-section">
+      <h2>4. 그리드 옵션</h2>
+      <table class="man-tbl">
+        <thead><tr><th>옵션</th><th>타입</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>el</code> <span class="man-badge req">필수</span></td><td>HTMLElement</td><td>—</td><td>그리드를 마운트할 DOM 요소</td></tr>
+          <tr><td><code>columns</code> <span class="man-badge req">필수</span></td><td>Array</td><td>—</td><td>컬럼 정의 배열 (§5 참고)</td></tr>
+          <tr><td><code>data</code></td><td>Array</td><td><code>[]</code></td><td>초기 데이터 배열 (객체 배열)</td></tr>
+          <tr><td><code>columnGroups</code></td><td>Array</td><td><code>[]</code></td><td>헤더 그루핑 정의 (§6 참고)</td></tr>
+          <tr><td><code>rowKey</code></td><td>string</td><td><code>null</code></td><td>고유 키 컬럼명 (현재 참고용)</td></tr>
+          <tr><td><code>height</code></td><td>number</td><td><code>null</code></td><td>스크롤 영역 최대 높이(px). 생략 시 자동</td></tr>
+          <tr><td><code>rowCheckbox</code></td><td>boolean</td><td><code>true</code></td><td>행 선택 체크박스 표시 여부</td></tr>
+          <tr><td><code>rowNumber</code></td><td>boolean</td><td><code>true</code></td><td>행 번호(No) 열 표시 여부</td></tr>
+          <tr><td><code>editable</code></td><td>boolean</td><td><code>true</code></td><td>전체 편집 가능 여부 (false 시 모든 셀 읽기 전용)</td></tr>
+          <tr><td><code>summary</code></td><td>boolean</td><td><code>false</code></td><td>숫자 컬럼 합계 행(Sum Row) 표시 여부</td></tr>
+          <tr><td><code>toolbar</code></td><td>boolean</td><td><code>true</code></td><td><code>true</code>: 엑셀 버튼 표시 / <code>false</code>: 툴바 숨김</td></tr>
+          <tr><td><code>footer</code></td><td>boolean | object</td><td><code>true</code></td><td>하단 상태바 제어 (§7 참고)</td></tr>
+          <tr><td><code>theme</code></td><td>object</td><td><code>{}</code></td><td>초기 색상 테마 (§8 참고)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5. 컬럼 옵션 -->
+    <div class="man-section">
+      <h2>5. 컬럼 옵션</h2>
+      <table class="man-tbl">
+        <thead><tr><th>옵션</th><th>타입</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>header</code> <span class="man-badge req">필수</span></td><td>string</td><td>—</td><td>헤더에 표시할 컬럼 제목</td></tr>
+          <tr><td><code>name</code> <span class="man-badge req">필수</span></td><td>string</td><td>—</td><td>데이터 객체의 키명 (고유해야 함)</td></tr>
+          <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>컬럼 너비(px)</td></tr>
+          <tr><td><code>editor</code></td><td>string</td><td><code>null</code></td><td>에디터 유형: <code>text</code> · <code>number</code> · <code>date</code> · <code>checkbox</code> · <code>combo</code> · <code>popup</code></td></tr>
+          <tr><td><code>sortable</code></td><td>boolean</td><td><code>true</code></td><td>헤더 클릭 정렬 활성화 여부</td></tr>
+          <tr><td><code>align</code></td><td>string</td><td>—</td><td>셀 정렬: <code>left</code> · <code>center</code> · <code>right</code> (<code>number</code> 에디터는 자동 우측 정렬)</td></tr>
+          <tr><td><code>defaultValue</code></td><td>any</td><td>—</td><td>행 추가 시 기본값</td></tr>
+          <tr><td><code>options</code></td><td>Array</td><td>—</td><td><code>combo</code> 에디터 전용. <code>[{value, label}]</code> 또는 문자열 배열</td></tr>
+          <tr><td><code>min</code> / <code>max</code> / <code>step</code></td><td>number</td><td>—</td><td><code>number</code> 에디터 전용. 입력 범위 및 증감 단위</td></tr>
+          <tr><td><code>popup</code></td><td>object</td><td>—</td><td><code>popup</code> 에디터 전용 설정 (§5-6 참고)</td></tr>
+          <tr><td><code>summary</code></td><td>boolean</td><td><code>true</code></td><td><code>false</code>로 설정 시 해당 숫자 컬럼을 Sum 행에서 제외</td></tr>
+          <tr><td><code>exportable</code></td><td>boolean</td><td><code>true</code></td><td><code>false</code>로 설정 시 엑셀 다운로드에서 해당 컬럼 제외</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5-1. text 에디터</h3>
+<pre class="man-code">{ header: '이름', name: 'name', width: 120, editor: 'text', sortable: true }</pre>
+
+      <h3>5-2. number 에디터</h3>
+      <p>숫자 입력. 표시 시 천단위 콤마 자동 적용, 우측 정렬. Sum 행 집계 대상.</p>
+<pre class="man-code">{ header: '연봉(만원)', name: 'salary', width: 110, editor: 'number',
+  min: 0, max: 99999, step: 100 }</pre>
+
+      <h3>5-3. date 에디터</h3>
+      <p>클릭 시 달력 팝업이 열립니다. 값 형식: <code>YYYY-MM-DD</code></p>
+<pre class="man-code">{ header: '입사일', name: 'joinDate', width: 120, editor: 'date', sortable: true }</pre>
+
+      <h3>5-4. checkbox 에디터</h3>
+      <p>불리언 값(<code>true</code>/<code>false</code>)을 체크박스로 표시·편집합니다.</p>
+<pre class="man-code">{ header: '재직중', name: 'active', width: 70, editor: 'checkbox' }</pre>
+
+      <h3>5-5. combo 에디터</h3>
+      <p>선택 목록에서 값을 선택합니다. <code>options</code>는 문자열 배열 또는 <code>{value, label}</code> 객체 배열.</p>
+<pre class="man-code">{ header: '부서', name: 'dept', width: 110, editor: 'combo',
+  options: [
+    { value: 'dev',    label: '개발팀' },
+    { value: 'design', label: '디자인팀' },
+    { value: 'pm',     label: 'PM팀' },
+  ]
+}</pre>
+
+      <h3>5-6. code 에디터 (코드 직접 입력 + API 조회)</h3>
+      <p>셀에 코드를 직접 입력하고 Enter/Tab/포커스 아웃 시 <code>onLookup</code> 함수를 호출합니다. 조회 성공 시 라벨을 표시하고, 실패 시 셀 안에 에러 메시지를 인라인으로 표시한 뒤 2.5초 후 이전 값으로 복원합니다.</p>
+<pre class="man-code">{ header: '팀코드', name: 'teamCode', width: 140,
+  editor: 'code',
+  placeholder:    'T001 ~ T006',           // 입력창 안내 텍스트 (선택)
+  errorMessage:   '존재하지 않는 팀코드', // 조회 실패 메시지 (선택, 기본: '코드를 찾을 수 없습니다')
+  onLookup: async (code) => {
+    // code: 사용자가 입력한 코드 문자열
+    // 반환: { value, label } 객체 또는 null(실패)
+    const res = await fetch(`/api/team/${encodeURIComponent(code)}`);
+    if (!res.ok) return null;           // null 반환 → 에러 메시지 표시
+    const data = await res.json();
+    return { value: data.teamCode, label: data.teamName };
+  },
+}</pre>
+      <div class="man-note">
+        <strong>동작 흐름:</strong>
+        Enter · Tab · 포커스 아웃 → 셀에 스피너 표시 → <code>onLookup(code)</code> 호출 →
+        성공 시 라벨 표시 · 값 저장 / 실패 시 에러 배지 표시(흔들림 애니메이션) → 2.5초 후 이전 값 복원
+      </div>
+
+      <h3>5-7. popup 에디터</h3>
+      <p>셀 클릭 시 모달 팝업이 열립니다. <code>popup</code> 객체에 아래 세 가지 방식 중 하나를 사용합니다.</p>
+      <table class="man-tbl">
+        <thead><tr><th>방식</th><th>옵션</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>내장 목록</td><td><code>popup.items</code></td><td>배열 데이터를 내장 검색 목록으로 표시. 클라이언트 필터링</td></tr>
+          <tr><td>외부 API 검색</td><td><code>popup.onSearch</code></td><td>입력할 때마다 비동기 함수 호출 (300ms 디바운스). 서버/API 검색에 적합</td></tr>
+          <tr><td>커스텀 렌더러</td><td><code>popup.render</code></td><td>모달 바디 DOM을 직접 렌더링하는 함수. 완전 자유 형태</td></tr>
+        </tbody>
+      </table>
+<pre class="man-code">// ① 내장 목록 (items)
+{ header: '담당자', name: 'manager', editor: 'popup',
+  popup: {
+    title: '담당자 선택', width: 420, height: 380,
+    items: [
+      { value: 'EMP001', label: '홍길동', sub: '개발팀 · 수석' },
+      { value: 'EMP002', label: '이영희', sub: '디자인팀 · 리드' },
+    ],
+  }
+}
+
+// ② 외부 API 검색 (onSearch)
+//    - async 함수로 정의, 반환값: [{ value, label, sub? }]
+//    - 입력 300ms 후 자동 호출 (디바운스), Enter 키로 즉시 검색
+//    - 응답 역전(race condition) 자동 방지
+{ header: '부서코드', name: 'deptCode', editor: 'popup',
+  popup: {
+    title: '부서 코드 검색', width: 440, height: 400,
+    onSearch: async (query) => {
+      const res = await fetch(`/api/dept/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      // 반환 형식: [{ value: 'D001', label: '개발1팀', sub: '기술본부' }, ...]
+      return data;
+    },
+  }
+}
+
+// ③ 커스텀 렌더러 (render)
+{ header: '첨부파일', name: 'file', editor: 'popup',
+  popup: {
+    title: '파일 선택', width: 500, height: 460,
+    render: (container, currentValue, done) => {
+      // container: 모달 바디 HTMLElement
+      // currentValue: 현재 셀 값
+      // done(value, label): 선택 완료 시 호출 → 셀에 값 반영
+      const btn = document.createElement('button');
+      btn.textContent = '파일 선택';
+      btn.onclick = () => done('file_001.pdf', 'file_001.pdf');
+      container.appendChild(btn);
+    },
+  }
+}</pre>
+    </div>
+
+    <!-- 6. 헤더 그루핑 -->
+    <div class="man-section">
+      <h2>6. 헤더 그루핑</h2>
+      <p><code>columnGroups</code> 옵션으로 컬럼을 묶어 2단 헤더를 표시합니다.</p>
+<pre class="man-code">const grid = new wwGrid({
+  columnGroups: [
+    { header: '기본 정보', children: ['name', 'dept', 'position'] },
+    { header: '근무 정보', children: ['salary', 'joinDate', 'active'] },
+  ],
+  columns: [
+    { header: '이름',   name: 'name',     ... },
+    { header: '부서',   name: 'dept',     ... },
+    { header: '직급',   name: 'position', ... },
+    { header: '연봉',   name: 'salary',   ... },
+    { header: '입사일', name: 'joinDate', ... },
+    { header: '재직중', name: 'active',   ... },
+  ],
+  ...
+});</pre>
+      <div class="man-note"><code>children</code>에 지정한 컬럼명은 <code>columns</code> 배열에서 연속해서 정의해야 합니다. 컬럼 드래그로 순서가 바뀌어 그룹이 끊기면 해당 그룹은 자동으로 해제됩니다.</div>
+    </div>
+
+    <!-- 7. footer 옵션 -->
+    <div class="man-section">
+      <h2>7. 하단 상태바 (footer)</h2>
+      <table class="man-tbl">
+        <thead><tr><th>값</th><th>동작</th></tr></thead>
+        <tbody>
+          <tr><td><code>footer: true</code> <span class="man-badge def">기본</span></td><td>전체건수 · 선택건수 · 수정건수 모두 표시</td></tr>
+          <tr><td><code>footer: false</code></td><td>상태바 완전 숨김</td></tr>
+          <tr><td><code>footer: { total: true, selected: false, modified: true }</code></td><td>항목별 개별 제어. <code>false</code>로 설정한 항목은 숨김</td></tr>
+        </tbody>
+      </table>
+<pre class="man-code">// 수정건수만 표시
+footer: { total: false, selected: false, modified: true }
+
+// 상태바 숨김
+footer: false</pre>
+    </div>
+
+    <!-- 8. 테마 -->
+    <div class="man-section">
+      <h2>8. 색상 테마</h2>
+      <p>생성 시 <code>theme</code> 옵션 또는 런타임에 <code>setTheme()</code>로 변경합니다. 변경은 해당 그리드 인스턴스에만 적용됩니다.</p>
+      <table class="man-tbl">
+        <thead><tr><th>키</th><th>CSS 변수</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>accent</code></td><td><code>--cg-accent</code></td><td><code>#3c82c4</code></td><td>강조색 (버튼·정렬 아이콘·편집 테두리)</td></tr>
+          <tr><td><code>accentDark</code></td><td><code>--cg-accent-dark</code></td><td><code>#2a6aad</code></td><td>강조색 hover 상태</td></tr>
+          <tr><td><code>headerBg</code></td><td><code>--cg-header-bg</code></td><td><code>#f0f3f7</code></td><td>헤더 배경</td></tr>
+          <tr><td><code>headerGroupBg</code></td><td><code>--cg-header-group-bg</code></td><td><code>#d8e3ef</code></td><td>그룹 헤더 배경</td></tr>
+          <tr><td><code>headerHoverBg</code></td><td><code>--cg-header-hover-bg</code></td><td><code>#dde6f0</code></td><td>헤더 hover 배경</td></tr>
+          <tr><td><code>footerBg</code></td><td><code>--cg-footer-bg</code></td><td><code>#f0f3f7</code></td><td>하단 상태바 배경</td></tr>
+          <tr><td><code>selectedBg</code></td><td><code>--cg-selected-bg</code></td><td><code>#ddeeff</code></td><td>선택 행 배경</td></tr>
+          <tr><td><code>modifiedBg</code></td><td><code>--cg-modified-bg</code></td><td><code>#fff8e6</code></td><td>수정 행 배경</td></tr>
+          <tr><td><code>newBg</code></td><td><code>--cg-new-bg</code></td><td><code>#f0fff4</code></td><td>신규 추가 행 배경</td></tr>
+          <tr><td><code>summaryBg</code></td><td><code>--cg-summary-bg</code></td><td><code>#eef2f8</code></td><td>합계(Sum) 행 배경</td></tr>
+          <tr><td><code>border</code></td><td><code>--cg-border</code></td><td><code>#c0c8d0</code></td><td>외곽·헤더·푸터·달력 테두리 색</td></tr>
+          <tr><td><code>rowBorder</code></td><td><code>--cg-row-border</code></td><td><code>#e4e8ed</code></td><td>행·셀 구분선 색</td></tr>
+          <tr><td><code>borderSub</code></td><td><code>--cg-border-sub</code></td><td><code>#b0bcc8</code></td><td>버튼·Sum 상단선 색</td></tr>
+        </tbody>
+      </table>
+<pre class="man-code">// 생성 시 테마 설정
+const grid = new wwGrid({
+  theme: {
+    accent:     '#e05050',
+    selectedBg: '#fde8e8',
+    headerBg:   '#fff0f0',
+  },
+  ...
+});
+
+// 런타임 변경 (기존 테마와 병합됨)
+grid.setTheme({ accent: '#4caf50', headerBg: '#f0fff4' });</pre>
+    </div>
+
+    <!-- 9. API 메소드 -->
+    <div class="man-section">
+      <h2>9. API 메소드</h2>
+
+      <h3>데이터 조회</h3>
+      <table class="man-tbl">
+        <thead><tr><th>메소드</th><th>반환</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>getData()</code></td><td>Array</td><td>현재 전체 데이터 스냅샷 반환 (깊은 복사)</td></tr>
+          <tr><td><code>getCheckedRows()</code></td><td>Array</td><td>체크된 행 데이터 배열 반환. 각 객체에 <code>_rowIndex</code> 포함</td></tr>
+          <tr><td><code>getModifiedRows()</code></td><td>object</td><td>수정 데이터 반환. <code>{ updated, added, deleted }</code> 형태</td></tr>
+          <tr><td><code>getModifiedJSON()</code></td><td>string</td><td><code>getModifiedRows()</code> 결과를 JSON 문자열로 반환</td></tr>
+        </tbody>
+      </table>
+
+      <h3>데이터 조작</h3>
+      <table class="man-tbl">
+        <thead><tr><th>메소드</th><th>파라미터</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>addRow(rowData?)</code></td><td>object (선택)</td><td>새 행 추가. <code>rowData</code> 생략 시 컬럼 기본값으로 빈 행 추가. 추가 후 첫 편집 가능 셀로 자동 포커스</td></tr>
+          <tr><td><code>removeCheckedRows()</code></td><td>—</td><td>체크된 행 삭제. 체크 행 없으면 알림. 삭제된 원본 행은 <code>getModifiedRows().deleted</code>에 포함</td></tr>
+          <tr><td><code>setValue(rowIndex, colName, value)</code></td><td>number, string, any</td><td>특정 셀 값 변경. 수정 추적 포함</td></tr>
+          <tr><td><code>setData(data)</code></td><td>Array</td><td>전체 데이터 교체. 수정·선택 상태 초기화</td></tr>
+          <tr><td><code>resetModified()</code></td><td>—</td><td>모든 변경사항 취소. 최초 로드 데이터(<code>_initialData</code>)로 복원</td></tr>
+        </tbody>
+      </table>
+
+      <h3>기타</h3>
+      <table class="man-tbl">
+        <thead><tr><th>메소드</th><th>파라미터</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>setTheme(theme)</code></td><td>object</td><td>테마 색상 런타임 변경. 기존 테마와 병합</td></tr>
+          <tr><td><code>downloadExcel(opts?)</code></td><td>object (선택)</td><td>엑셀(.xls) 파일 다운로드 (§10 참고)</td></tr>
+          <tr><td><code>_showModifiedDialog()</code></td><td>—</td><td>수정 데이터를 팝업으로 표시. 클립보드 복사 지원</td></tr>
+        </tbody>
+      </table>
+
+      <h3>getModifiedRows() 반환 형식</h3>
+<pre class="man-code">{
+  updated: [                        // 기존 행이 수정된 경우
+    {
+      original: { id: 1, name: '홍길동', salary: 5000, ... },  // 수정 전 원본
+      current:  { id: 1, name: '홍길동', salary: 5500, ... },  // 현재 값
+      changed:  { salary: 5500 }                               // 변경된 필드만
+    },
+    ...
+  ],
+  added: [                          // addRow()로 추가된 신규 행
+    { name: '신규직원', dept: 'dev', salary: 3000, ... },
+    ...
+  ],
+  deleted: [                        // removeCheckedRows()로 삭제된 원본 행
+    { id: 3, name: '박지호', ... },
+    ...
+  ]
+}</pre>
+    </div>
+
+    <!-- 10. 엑셀 다운로드 -->
+    <div class="man-section">
+      <h2>10. 엑셀 다운로드</h2>
+      <p><code>downloadExcel(opts)</code> 메소드로 현재 그리드 데이터를 <code>.xls</code> 파일로 내보냅니다. 외부 라이브러리 없이 XML Spreadsheet 2003 형식으로 생성합니다.</p>
+      <table class="man-tbl">
+        <thead><tr><th>옵션</th><th>타입</th><th>기본값</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><code>filename</code></td><td>string</td><td><code>'grid_export'</code></td><td>저장 파일명 (확장자 제외)</td></tr>
+          <tr><td><code>sheetName</code></td><td>string</td><td><code>'Sheet1'</code></td><td>워크시트 이름</td></tr>
+          <tr><td><code>checkedOnly</code></td><td>boolean</td><td><code>false</code></td><td><code>true</code> 시 체크된 행만 출력</td></tr>
+          <tr><td><code>includeSummary</code></td><td>boolean</td><td>그리드 <code>summary</code> 설정값</td><td>합계 행 포함 여부</td></tr>
+        </tbody>
+      </table>
+<pre class="man-code">// 전체 데이터 저장
+grid.downloadExcel({ filename: '직원목록', sheetName: '직원' });
+
+// 체크된 행만 저장
+grid.downloadExcel({ checkedOnly: true, filename: '선택_직원' });
+
+// 합계 행 포함
+grid.downloadExcel({ includeSummary: true });</pre>
+      <div class="man-tip">헤더 그루핑이 있으면 Excel에서도 2행 헤더로 출력됩니다. 숫자 컬럼은 Excel 숫자 형식으로 저장되어 합계·평균 등 수식을 바로 적용할 수 있습니다.</div>
+    </div>
+
+    <!-- 11. 외부 버튼 연동 -->
+    <div class="man-section">
+      <h2>11. 외부 버튼 연동</h2>
+      <p>그리드 내장 툴바(<code>toolbar</code>)는 엑셀 버튼만 제공합니다. 행 추가·삭제·변경 취소 등의 버튼은 외부에서 직접 API를 호출해 구성합니다.</p>
+<pre class="man-code">&lt;!-- HTML: 그리드 위에 버튼 배치 --&gt;
+&lt;div&gt;
+  &lt;button onclick="grid.addRow()"&gt;+ 행 추가&lt;/button&gt;
+  &lt;button onclick="grid.removeCheckedRows()"&gt;행 삭제&lt;/button&gt;
+  &lt;button onclick="grid.resetModified()"&gt;변경 취소&lt;/button&gt;
+  &lt;button onclick="grid._showModifiedDialog()"&gt;수정 데이터 추출&lt;/button&gt;
+&lt;/div&gt;
+&lt;div id="myGrid"&gt;&lt;/div&gt;
+
+&lt;!-- 툴바 완전 숨김 시 --&gt;
+&lt;script&gt;
+const grid = new wwGrid({
+  toolbar: false,   // 엑셀 버튼도 숨기려면 false
+  ...
+});
+&lt;/script&gt;</pre>
+    </div>
+
+    <!-- 12. 컬럼 인터랙션 -->
+    <div class="man-section">
+      <h2>12. 컬럼 인터랙션</h2>
+      <ul>
+        <li><strong>정렬</strong>: 헤더 클릭. 같은 컬럼 재클릭 시 오름차순 ↔ 내림차순 전환. 정렬 후 수정·선택 상태는 초기화됩니다.</li>
+        <li><strong>너비 조절</strong>: 헤더 오른쪽 끝 경계선을 드래그. 조절된 너비는 재렌더 후에도 유지됩니다.</li>
+        <li><strong>순서 변경</strong>: 헤더를 드래그해 원하는 위치에 드롭. 드롭 위치를 파란 선으로 미리보기. 그룹 컬럼이 끊기는 경우 해당 그룹이 자동 해제됩니다.</li>
+      </ul>
+    </div>
+
+  </div><!-- /.man-wrap -->
+  </div><!-- /#tab-manual -->
+
+</div>
+
+<script src="wwGrid.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════
+   샘플 데이터
+══════════════════════════════════════════════════════ */
+const sampleData = [
+  { id: 1, name: '김민준', dept: 'dev',    position: 'senior', salary: 5200, joinDate: '2019-03-15', active: true,  manager: 'EMP003', note: '풀스택 개발자' },
+  { id: 2, name: '이서연', dept: 'design', position: 'lead',   salary: 4800, joinDate: '2020-07-01', active: true,  manager: 'EMP001', note: 'UI/UX 리드' },
+  { id: 3, name: '박지호', dept: 'pm',     position: 'junior', salary: 3600, joinDate: '2022-01-10', active: false, manager: '',       note: '신입 PM' },
+  { id: 4, name: '최수아', dept: 'dev',    position: 'lead',   salary: 5800, joinDate: '2018-05-20', active: true,  manager: 'EMP002', note: '백엔드 리드' },
+  { id: 5, name: '정하은', dept: 'hr',     position: 'senior', salary: 4100, joinDate: '2021-09-08', active: true,  manager: 'EMP005', note: '인사팀 시니어' },
+  { id: 6, name: '윤성민', dept: 'dev',    position: 'junior', salary: 3200, joinDate: '2023-03-02', active: false, manager: '',       note: '프론트 신입' },
+  { id: 7, name: '한지우', dept: 'design', position: 'senior', salary: 4600, joinDate: '2020-11-15', active: true,  manager: 'EMP004', note: '그래픽 디자이너' },
+  { id: 8, name: '오태양', dept: 'pm',     position: 'lead',   salary: 5400, joinDate: '2017-08-30', active: true,  manager: 'EMP001', note: 'PM 팀장' },
+];
+
+// 팝업 선택 목록 — 담당자
+const managerItems = [
+  { value: 'EMP001', label: '홍길동', sub: '개발팀 · 수석' },
+  { value: 'EMP002', label: '이영희', sub: '디자인팀 · 리드' },
+  { value: 'EMP003', label: '박철수', sub: 'PM팀 · 팀장' },
+  { value: 'EMP004', label: '최지은', sub: '개발팀 · 시니어' },
+  { value: 'EMP005', label: '정민수', sub: '인사팀 · 팀장' },
+  { value: 'EMP006', label: '강수연', sub: '개발팀 · 주니어' },
+  { value: 'EMP007', label: '윤태호', sub: 'PM팀 · 시니어' },
+  { value: 'EMP008', label: '한소희', sub: '디자인팀 · 주니어' },
+];
+
+/* ══════════════════════════════════════════════════════
+   그리드 인스턴스 생성
+══════════════════════════════════════════════════════ */
+const grid = new wwGrid({
+  el: document.getElementById('myGrid'),
+  rowKey: 'id',
+  height: 380,
+  summary: true,
+  // 툴바: 엑셀 저장 버튼만 내장 (행 추가/삭제 등은 외부 버튼에서 직접 호출)
+  toolbar: true,
+  // 하단 상태바: 항목별 표시 제어 (true = 전체 표시, false = 숨김, 객체 = 항목별)
+  footer: { total: true, selected: true, modified: true },
+
+  /* 컬럼 그루핑 */
+  columnGroups: [
+    { header: '기본 정보',   children: ['name', 'dept', 'position'] },
+    { header: '근무 정보',   children: ['salary', 'joinDate', 'active'] },
+  ],
+
+  /* 컬럼 정의 */
+  columns: [
+    {
+      header: '이름', name: 'name', width: 100,
+      editor: 'text',
+      sortable: true
+    },
+    {
+      header: '부서', name: 'dept', width: 110,
+      editor: 'combo',
+      sortable: true,
+      options: [
+        { value: 'dev',    label: '개발팀' },
+        { value: 'design', label: '디자인팀' },
+        { value: 'pm',     label: 'PM팀' },
+        { value: 'hr',     label: '인사팀' },
+      ]
+    },
+    {
+      header: '직급', name: 'position', width: 100,
+      editor: 'combo',
+      sortable: true,
+      options: [
+        { value: 'junior', label: 'Junior' },
+        { value: 'senior', label: 'Senior' },
+        { value: 'lead',   label: 'Lead' },
+      ]
+    },
+    {
+      header: '연봉(만원)', name: 'salary', width: 110,
+      editor: 'number',
+      sortable: true,
+      min: 0, max: 99999, step: 100
+    },
+    {
+      header: '입사일', name: 'joinDate', width: 120,
+      editor: 'date',
+      sortable: true
+    },
+    {
+      header: '재직중', name: 'active', width: 70,
+      editor: 'checkbox'
+    },
+    {
+      header: '담당자', name: 'manager', width: 140,
+      editor: 'popup',
+      popup: {
+        title: '담당자 선택',
+        width: 420,
+        height: 380,
+        items: managerItems,
+      }
+    },
+    {
+      header: '부서코드', name: 'deptCode', width: 140,
+      editor: 'popup',
+      popup: {
+        title: '부서 코드 검색',
+        width: 440,
+        height: 400,
+        // onSearch: 외부 API 검색 — 코드/이름 입력 시 호출
+        onSearch: async (query) => {
+          // 실제 환경에서는 아래를 fetch 호출로 대체합니다.
+          // const res = await fetch(`/api/dept/search?q=${encodeURIComponent(query)}`);
+          // return await res.json(); // [{ value, label, sub }] 형식 반환
+          await new Promise(r => setTimeout(r, 450));   // 네트워크 지연 시뮬레이션
+          const DB = [
+            { value: 'D001', label: '개발1팀',    sub: '기술본부 · 서울' },
+            { value: 'D002', label: '개발2팀',    sub: '기술본부 · 서울' },
+            { value: 'D003', label: '디자인팀',   sub: '기획본부 · 서울' },
+            { value: 'D004', label: 'PM팀',       sub: '기획본부 · 서울' },
+            { value: 'D005', label: '인사팀',     sub: '경영지원본부 · 서울' },
+            { value: 'D006', label: '재무팀',     sub: '경영지원본부 · 서울' },
+            { value: 'D007', label: '마케팅팀',   sub: '영업본부 · 부산' },
+            { value: 'D008', label: '영업1팀',    sub: '영업본부 · 부산' },
+            { value: 'D009', label: '영업2팀',    sub: '영업본부 · 대구' },
+            { value: 'D010', label: '고객지원팀', sub: '서비스본부 · 서울' },
+          ];
+          const q = query.toLowerCase();
+          return DB.filter(d =>
+            d.value.toLowerCase().includes(q) ||
+            d.label.includes(query) ||
+            d.sub.includes(query)
+          );
+        },
+      }
+    },
+    {
+      // code 에디터: 직접 코드 입력 → API 조회 → 라벨 표시
+      // 유효하지 않으면 셀에 에러 메시지 인라인 표시
+      header: '팀코드', name: 'teamCode', width: 140,
+      editor: 'code',
+      placeholder: 'T001 ~ T006',
+      errorMessage: '존재하지 않는 팀코드',
+      onLookup: async (code) => {
+        // 실제 환경에서는 아래를 fetch 호출로 대체합니다.
+        // const res = await fetch(`/api/team/${encodeURIComponent(code)}`);
+        // if (!res.ok) return null;
+        // return await res.json(); // { value: 'T001', label: '개발1팀' }
+        await new Promise(r => setTimeout(r, 500));  // 네트워크 지연 시뮬레이션
+        const DB = {
+          'T001': '개발1팀', 'T002': '개발2팀',
+          'T003': '디자인팀', 'T004': 'PM팀',
+          'T005': '인사팀',  'T006': '재무팀',
+        };
+        const label = DB[code.toUpperCase()];
+        return label ? { value: code.toUpperCase(), label } : null;
+      },
+    },
+    {
+      header: '비고', name: 'note', width: 160,
+      editor: 'text'
+    },
+  ],
+
+  data: sampleData
+});
+
+/* ══════════════════════════════════════════════════════
+   API 테스트 함수
+══════════════════════════════════════════════════════ */
+const out = document.getElementById('output');
+function print(label, val) {
+  out.textContent = label + '\n' + JSON.stringify(val, null, 2);
+}
+
+function apiGetModified() {
+  print('getModifiedRows() →', grid.getModifiedRows());
+}
+function apiGetChecked() {
+  print('getCheckedRows() →', grid.getCheckedRows());
+}
+function apiGetData() {
+  print('getData() →', grid.getData());
+}
+function apiAddRow() {
+  grid.addRow({ name: '신규직원', dept: 'dev', position: 'junior', salary: 3000, active: false, note: '신규 추가' });
+  print('addRow() 완료 → 새 행이 추가되었습니다.', { totalRows: grid.getData().length });
+}
+function apiSetValue() {
+  grid.setValue(0, 'salary', 9999);
+  print('setValue(0, "salary", 9999) 완료', grid.getData()[0]);
+}
+function apiSetData() {
+  const newData = [
+    { id: 101, name: '테스트A', dept: 'dev',    position: 'senior', salary: 5000, joinDate: '2024-01-01', active: true,  note: '새 데이터' },
+    { id: 102, name: '테스트B', dept: 'design', position: 'junior', salary: 3500, joinDate: '2024-06-15', active: false, note: '새 데이터' },
+  ];
+  grid.setData(newData);
+  print('setData() 완료 → 데이터 교체됨', newData);
+}
+function apiReset() {
+  grid.resetModified();
+  print('resetModified() 완료 → 모든 변경사항 취소', { msg: '원본 데이터로 복원됨' });
+}
+function apiSendServer() {
+  const payload = grid.getModifiedRows();
+  if (payload.updated.length === 0 && payload.added.length === 0 && payload.deleted.length === 0) {
+    out.textContent = '변경된 데이터가 없습니다.\n그리드에서 셀을 수정한 후 다시 시도하세요.';
+    return;
+  }
+  // 실제 서버 전송 시뮬레이션
+  out.textContent = '[ 서버 전송 시뮬레이션 ]\nPOST /api/employees\nContent-Type: application/json\n\n' + JSON.stringify(payload, null, 2);
+}
+
+function resetTheme() {
+  const defaults = {
+    accent: '#3c82c4', accentDark: '#2a6aad',
+    headerBg: '#f0f3f7', headerGroupBg: '#d8e3ef', headerHoverBg: '#dde6f0',
+    footerBg: '#f0f3f7', selectedBg: '#ddeeff', selectedMixBg: '#bbdcff',
+    modifiedBg: '#fff8e6', newBg: '#f0fff4', summaryBg: '#eef2f8',
+    border: '#c0c8d0', rowBorder: '#e4e8ed', borderSub: '#b0bcc8',
+  };
+  grid.setTheme(defaults);
+  // color input 값도 초기화
+  document.querySelectorAll('#tab-api input[type=color]').forEach(el => {
+    const map = {
+      '헤더 배경': '#f0f3f7', '푸터 배경': '#f0f3f7',
+      '선택 행': '#ddeeff', '수정 행': '#fff8e6',
+      '신규 행': '#f0fff4', 'Sum 행': '#eef2f8', '강조색': '#3c82c4',
+    };
+    const label = el.closest('label')?.textContent.trim() || '';
+    if (map[label]) el.value = map[label];
+  });
+}
+
+function resetPopupTheme() {
+  grid.setTheme({
+    popupHeaderBg:    null,
+    popupHeaderText:  null,
+    popupBg:          null,
+    popupText:        null,
+    popupItemHoverBg: null,
+    popupItemSelBg:   null,
+    popupItemSelText: null,
+  });
+  const colorMap = {
+    '헤더 배경': '#3c82c4', '헤더 텍스트': '#ffffff',
+    '바디 배경': '#ffffff',  '바디 텍스트': '#333333',
+    '항목 hover': '#f0f6ff', '선택 배경': '#ddeeff', '선택 텍스트': '#1a3a5c',
+  };
+  document.querySelectorAll('#tab-api input[type=color]').forEach(el => {
+    const label = el.closest('label')?.textContent.trim() || '';
+    if (colorMap[label]) el.value = colorMap[label];
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   샘플 코드 표시
+══════════════════════════════════════════════════════ */
+document.getElementById('sampleCode').textContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="wwGrid.css">
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  외부 툴바 버튼 — 행 조작은 그리드 API를 직접 호출  ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div style="display:flex;gap:8px;margin-bottom:8px;">
+  <button onclick="grid.addRow()">+ 행 추가</button>
+  <button onclick="grid.removeCheckedRows()">행 삭제</button>
+  <button onclick="grid.resetModified()">변경 취소</button>
+  <button onclick="grid._showModifiedDialog()">수정 데이터 추출</button>
+</div>
+
+<div id="myGrid"></div>
+
+<script src="wwGrid.js"><\/script>
+<script>
+
+/* ── 팝업 검색용 목록 데이터 ── */
+const managerItems = [
+  { value: 'EMP001', label: '홍길동', sub: '개발팀 · 수석' },
+  { value: 'EMP002', label: '이영희', sub: '디자인팀 · 리드' },
+  { value: 'EMP003', label: '박철수', sub: 'PM팀 · 팀장' },
+];
+
+/* ── 그리드 인스턴스 생성 ── */
+const grid = new wwGrid({
+  el: document.getElementById('myGrid'),
+  rowKey: 'id',      // 고유 키 컬럼 (선택)
+  height: 400,       // 그리드 높이(px), 생략 시 자동
+  summary: true,     // 숫자 컬럼 하단 합계 행 표시
+
+  // toolbar: true(기본, 엑셀 버튼 표시) | false(툴바 숨김)
+  toolbar: true,
+
+  // footer: true(기본, 전체 표시) | false(숨김) | 항목별 제어 객체
+  footer: { total: true, selected: true, modified: true },
+
+  /* ── 헤더 그루핑 (2단 헤더) ── */
+  columnGroups: [
+    { header: '기본 정보', children: ['name', 'dept', 'position'] },
+    { header: '근무 정보', children: ['salary', 'joinDate', 'active'] },
+  ],
+
+  /* ── 컬럼 정의 ── */
+  columns: [
+
+    /* text — 일반 텍스트 입력 */
+    { header: '이름',       name: 'name',     width: 100,
+      editor: 'text', sortable: true },
+
+    /* combo — 드롭다운 선택 (value/label 객체 또는 문자열 배열) */
+    { header: '부서',       name: 'dept',     width: 110,
+      editor: 'combo', sortable: true,
+      options: [
+        { value: 'dev',    label: '개발팀' },
+        { value: 'design', label: '디자인팀' },
+        { value: 'pm',     label: 'PM팀' },
+        { value: 'hr',     label: '인사팀' },
+      ]
+    },
+
+    /* number — 숫자 입력 (천단위 콤마·우측 정렬 자동, summary 집계 대상) */
+    { header: '연봉(만원)', name: 'salary',   width: 110,
+      editor: 'number', sortable: true, min: 0, max: 99999, step: 100 },
+
+    /* date — 달력 팝업 (YYYY-MM-DD) */
+    { header: '입사일',     name: 'joinDate', width: 120,
+      editor: 'date', sortable: true },
+
+    /* checkbox — 불리언 값 체크박스 */
+    { header: '재직중',     name: 'active',   width: 70,
+      editor: 'checkbox' },
+
+    /* popup (items) — 내장 검색 목록 모달 */
+    { header: '담당자',     name: 'manager',  width: 140,
+      editor: 'popup',
+      popup: {
+        title: '담당자 선택', width: 420, height: 380,
+        items: managerItems,
+      }
+    },
+
+    /* popup (onSearch) — 외부 API 비동기 검색 모달
+       입력 300ms 후 onSearch 호출, Enter 키로 즉시 검색
+       반환: [{ value, label, sub? }]  */
+    { header: '부서코드',   name: 'deptCode', width: 140,
+      editor: 'popup',
+      popup: {
+        title: '부서 코드 검색', width: 440, height: 400,
+        onSearch: async (query) => {
+          const res = await fetch('/api/dept/search?q=' + encodeURIComponent(query));
+          return await res.json();   // [{ value, label, sub }]
+        },
+      }
+    },
+
+    /* code — 셀에 코드 직접 입력 → API 조회 → 라벨 표시
+       성공: 라벨 표시 + 값 저장
+       실패: 에러 배지 인라인 표시(흔들림) → 2.5초 후 이전 값 복원 */
+    { header: '팀코드',     name: 'teamCode', width: 140,
+      editor: 'code',
+      placeholder:  'T001 ~ T006',
+      errorMessage: '존재하지 않는 팀코드',
+      onLookup: async (code) => {
+        const res = await fetch('/api/team/' + encodeURIComponent(code));
+        if (!res.ok) return null;          // null 반환 → 에러 메시지 표시
+        const data = await res.json();
+        return { value: data.teamCode, label: data.teamName };
+      },
+    },
+
+    /* text — 정렬 없음 */
+    { header: '비고',       name: 'note',     width: 180,
+      editor: 'text' },
+  ],
+
+  data: [
+    { id: 1, name: '김민준', dept: 'dev',    position: 'senior',
+      salary: 5200, joinDate: '2019-03-15', active: true,
+      manager: 'EMP001', deptCode: '', teamCode: 'T001', note: '풀스택' },
+    // ... 추가 데이터
+  ],
+
+  // 색상 테마 (CSS 변수 오버라이드 · setTheme() API로 런타임 변경 가능)
+  theme: {
+    accent:        '#3c82c4',
+    headerBg:      '#f0f3f7',
+    headerGroupBg: '#d8e3ef',
+    selectedBg:    '#ddeeff',
+    modifiedBg:    '#fff8e6',
+    newBg:         '#f0fff4',
+    summaryBg:     '#eef2f8',
+  },
+});
+
+/* ════════════════════════════════════════════════════════
+   API 레퍼런스
+════════════════════════════════════════════════════════ */
+
+/* ── 행 조작 ── */
+grid.addRow({ name: '신규', dept: 'dev' }); // 행 추가 (초기값 지정 가능)
+grid.removeCheckedRows();                    // 체크된 행 삭제
+grid.resetModified();                        // 모든 변경 취소 (원본 복원)
+
+/* ── 값 변경 ── */
+grid.setValue(0, 'salary', 6000);            // 특정 셀 값 변경 (수정 추적 포함)
+grid.setData([...newData]);                  // 전체 데이터 교체 (상태 초기화)
+
+/* ── 데이터 조회 ── */
+const all      = grid.getData();             // 전체 데이터 스냅샷 (깊은 복사)
+const checked  = grid.getCheckedRows();      // 체크된 행 배열 (_rowIndex 포함)
+const modified = grid.getModifiedRows();
+// 반환 형식:
+// {
+//   updated: [{ original, current, changed }],  // 수정된 행
+//   added:   [{ ...newRowData }],               // 추가된 행
+//   deleted: [{ ...deletedRowData }]            // 삭제된 행
+// }
+
+/* ── 테마 런타임 변경 ── */
+grid.setTheme({ accent: '#e05050', selectedBg: '#fde8e8' });
+
+/* ── 엑셀 다운로드 ── */
+grid.downloadExcel({ filename: '직원목록', sheetName: '직원' });
+grid.downloadExcel({ checkedOnly: true, filename: '선택행' });
+grid.downloadExcel({ includeSummary: true });
+
+/* ── 서버 전송 예시 ── */
+fetch('/api/employees', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(grid.getModifiedRows()),
+});
+<\/script>
+</body>
+</html>`;
+
+/* ── 탭 전환 ── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

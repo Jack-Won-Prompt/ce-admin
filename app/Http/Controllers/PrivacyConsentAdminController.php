@@ -14,23 +14,32 @@ class PrivacyConsentAdminController extends Controller
     /** 리스트 */
     public function index(Request $request): View
     {
-        $query = $this->filtered($request);
-
-        $rows = $query->latest('submitted_at')->paginate(20)->withQueryString();
-
         $counts = [
             'all'      => PrivacyConsent::count(),
             'catheter' => PrivacyConsent::where('type', 'catheter')->count(),
             'stoma'    => PrivacyConsent::where('type', 'stoma')->count(),
         ];
 
+        // wwGrid 파일럿: 필터된 전체 데이터를 그리드용 배열로 전달 (클라이언트사이드 그리드)
+        $gridData = $this->filtered($request)->latest('submitted_at')->get()->map(fn ($r) => [
+            'id'        => $r->id,
+            'type'      => $r->type_label,
+            'name'      => $r->name,
+            'phone'     => $r->phone,
+            'email'     => $r->email ?: '',
+            'address'   => $r->full_address,
+            'required'  => $r->required_agreed ? '완료' : '미완',
+            'marketing' => $r->agree_marketing === '동의함' ? '동의' : '',
+            'submitted' => $r->submitted_at?->format('Y-m-d H:i'),
+        ])->values();
+
         return view('privacy-consents.index', [
-            'rows'   => $rows,
-            'counts' => $counts,
-            'type'   => $request->input('type', 'all'),
-            'search' => $request->input('search'),
-            'from'   => $request->input('from'),
-            'to'     => $request->input('to'),
+            'gridData' => $gridData,
+            'counts'   => $counts,
+            'type'     => $request->input('type', 'all'),
+            'search'   => $request->input('search'),
+            'from'     => $request->input('from'),
+            'to'       => $request->input('to'),
         ]);
     }
 
