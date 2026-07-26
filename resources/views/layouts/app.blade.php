@@ -63,7 +63,7 @@
     body {
       font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
                    'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
-      background: var(--bg);
+      background: #FFFFFF;
       color: var(--text-primary);
       font-size: 14px;
       line-height: 1.6;
