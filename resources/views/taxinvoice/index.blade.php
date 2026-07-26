@@ -36,8 +36,13 @@
 @push('styles')
 <style>
 /* ── 레이아웃 ── */
-/* 즉시발행(위) → 발행 내역(아래) 세로 구성 */
+/* 발행 내역 / 즉시발행 탭 구성 */
 .ti-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
+.titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+.titab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+  color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+.titab:hover { color:var(--primary); }
+.titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
 /* ── 요약 카드 ── */
 .ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
@@ -232,10 +237,16 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   </div>
 </div>
 
+{{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
+<div class="titab-bar">
+  <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
+  <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-file"></i> 전자세금계산서 즉시발행</button>
+</div>
+
 <div class="ti-layout">
 
-  {{-- ── 좌측: 발행 폼 ── --}}
-  <div class="ti-card">
+  {{-- ── 발행 폼 ── --}}
+  <div class="ti-card" data-titab="issue">
     <div class="ti-card-head"><i class="bx bx-file"></i><span>전자세금계산서 즉시발행</span></div>
     <div class="ti-card-body">
 
@@ -426,8 +437,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     </div>
   </div>
 
-  {{-- ── 우측: 발행 내역 ── --}}
-  <div class="hist-card">
+  {{-- ── 발행 내역 ── --}}
+  <div class="hist-card" data-titab="hist">
     <div class="hist-head">
       <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
       <div class="hist-filter">
@@ -514,6 +525,14 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 @endsection
 
 @push('scripts')
+<script>
+// 탭 전환(발행 내역 / 즉시발행) — 기본은 발행 내역
+function tiTab(name) {
+  document.querySelectorAll('[data-titab]').forEach(el => { el.style.display = (el.dataset.titab === name) ? '' : 'none'; });
+  document.querySelectorAll('.titab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+tiTab('hist');
+</script>
 <script>
 const CORP_NUM = document.getElementById('corp-num');
 const TI_BASE  = BASE_URL + '/api/popbill/taxinvoice';

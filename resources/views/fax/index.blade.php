@@ -34,8 +34,13 @@
 @push('styles')
 <style>
   /* ── 레이아웃 ── */
-  /* 즉시발행(위) → 전송 내역(아래) 세로 구성 */
+  /* 전송 내역 / 팩스 발송 탭 구성 */
   .fax-layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+  .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+  .titab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .titab:hover { color:var(--primary); }
+  .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
   /* ── 요약 카드 ── */
   .fax-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
@@ -295,10 +300,16 @@
 </div>
 
 {{-- 본문 --}}
+{{-- 탭: 전송 내역 / 팩스 발송 (전송 내역 먼저) --}}
+<div class="titab-bar">
+  <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-history"></i> 전송 내역</button>
+  <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-printer"></i> 팩스 발송</button>
+</div>
+
 <div class="fax-layout">
 
-  {{-- ── 좌측: 발송 폼 ── --}}
-  <div class="send-card">
+  {{-- ── 발송 폼 ── --}}
+  <div class="send-card" data-titab="issue">
     <div class="send-card-head">
       <i class="bx bx-printer"></i>
       <span>팩스 발송</span>
@@ -384,8 +395,8 @@
     </div>
   </div>
 
-  {{-- ── 우측: 전송 내역 ── --}}
-  <div class="hist-card">
+  {{-- ── 전송 내역 ── --}}
+  <div class="hist-card" data-titab="hist">
     <div class="hist-head">
       <div class="hist-head-title">
         <i class="bx bx-history"></i> 전송 내역
@@ -444,6 +455,14 @@
 @endsection
 
 @push('scripts')
+<script>
+// 탭 전환(전송 내역 / 팩스 발송) — 기본은 전송 내역
+function tiTab(name) {
+  document.querySelectorAll('[data-titab]').forEach(el => { el.style.display = (el.dataset.titab === name) ? '' : 'none'; });
+  document.querySelectorAll('.titab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+tiTab('hist');
+</script>
 <script>
 const CORP_NUM   = document.getElementById('corp-num');
 const FAX_BASE   = BASE_URL + '/api/popbill/fax';

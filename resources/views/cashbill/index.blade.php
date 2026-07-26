@@ -35,8 +35,13 @@
 @push('styles')
 <style>
   /* ── 레이아웃 ── */
-  /* 즉시발행(위) → 발행 내역(아래) 세로 구성 */
+  /* 발행 내역 / 즉시발행 탭 구성 */
   .cb-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
+  .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+  .titab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .titab:hover { color:var(--primary); }
+  .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
   /* ── 요약 카드 ── */
   .cb-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
@@ -233,10 +238,16 @@
 </div>
 
 {{-- 본문 --}}
+{{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
+<div class="titab-bar">
+  <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
+  <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-receipt"></i> 현금영수증 즉시발행</button>
+</div>
+
 <div class="cb-layout">
 
-  {{-- ── 좌측: 발행 폼 ── --}}
-  <div class="cb-card">
+  {{-- ── 발행 폼 ── --}}
+  <div class="cb-card" data-titab="issue">
     <div class="cb-card-head">
       <i class="bx bx-receipt"></i>
       <span>현금영수증 즉시발행</span>
@@ -353,8 +364,8 @@
     </div>
   </div>
 
-  {{-- ── 우측: 발행 내역 ── --}}
-  <div class="hist-card">
+  {{-- ── 발행 내역 ── --}}
+  <div class="hist-card" data-titab="hist">
     <div class="hist-head">
       <div class="hist-head-title">
         <i class="bx bx-list-ul"></i> 발행 내역
@@ -453,6 +464,14 @@
 @endsection
 
 @push('scripts')
+<script>
+// 탭 전환(발행 내역 / 즉시발행) — 기본은 발행 내역
+function tiTab(name) {
+  document.querySelectorAll('[data-titab]').forEach(el => { el.style.display = (el.dataset.titab === name) ? '' : 'none'; });
+  document.querySelectorAll('.titab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+tiTab('hist');
+</script>
 <script>
 const CORP_NUM  = document.getElementById('corp-num');
 const CB_BASE   = BASE_URL + '/api/popbill/cashbill';
