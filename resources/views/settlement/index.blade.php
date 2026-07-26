@@ -44,6 +44,14 @@
   .sum-card.red    .sum-card-val  { color: var(--danger); }
 
   /* 필터 바 */
+  /* 패널 탭(조회결과/상세내용) */
+  .pnl-tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:2px solid var(--border); }
+  .pnl-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tab:hover { color:var(--primary); }
+  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
+    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
   .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
   .filter-bar .form-control { height: 34px; font-size: 12px; }
   .filter-bar .btn { height: 34px; font-size: 12px; white-space: nowrap; }
@@ -155,18 +163,32 @@
       @endforeach
     </div>
 
+    {{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
+      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
+    </div>
+
+    <div id="pnlList">
     {{-- ── 정산 목록 (wwGrid) ── --}}
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
       <button type="button" class="btn btn-outline btn-sm" onclick="settlementViewRx()">
-        <i class="fa-solid fa-file-medical"></i> 처방 상세
+        <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
       </button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="settlementViewOrder()">
-        <i class="fa-solid fa-cart-shopping"></i> 주문 상세
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세 팝업</span>
+      <span style="font-size:12px;color:var(--text-muted);">← 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세 확인</span>
       <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
     </div>
     <div id="settlementGrid"></div>
+    </div>{{-- /pnlList --}}
+
+    {{-- ── 상세내용 탭 (주문 상세를 같은 페이지에 직접 주입) ── --}}
+    <div id="pnlDetail" style="display:none;">
+      <div style="margin-bottom:12px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>
+      </div>
+      <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
+      <div id="pnlDetailContent"></div>
+    </div>
 
   @elseif($tab === 'virtual_account')
   {{-- ══════════════ 가상계좌 매칭 (Toss Payments) ══════════════ --}}
@@ -562,6 +584,44 @@
     footer: { total: true, selected: true, modified: false },
     columns: GRID_COLS,
     data: GRID_DATA,
+  });
+
+  // ── 조회결과/상세내용 패널 탭 + 더블클릭 주문상세(iframe 없이 인페이지 주입) ──
+  const ORDER_SHOW_BASE = @json(url('orders'));
+  window.pnlShow = function (which) {
+    const list = document.getElementById('pnlList'), det = document.getElementById('pnlDetail');
+    if (!list || !det) return;
+    list.style.display = which === 'detail' ? 'none' : '';
+    det.style.display  = which === 'detail' ? '' : 'none';
+    const bl = document.getElementById('pnlBtnList'), bd = document.getElementById('pnlBtnDetail');
+    bl && bl.classList.toggle('active', which !== 'detail');
+    bd && bd.classList.toggle('active', which === 'detail');
+  };
+  window.pnlLoadDetail = async function (url) {
+    const cont = document.getElementById('pnlDetailContent');
+    if (!cont) return;
+    const empty = document.getElementById('pnlEmpty'); empty && (empty.style.display = 'none');
+    cont.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i><div style="margin-top:8px;">불러오는 중...</div></div>';
+    window.pnlShow('detail');
+    try {
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      cont.innerHTML = await res.text();
+      cont.querySelectorAll('script').forEach(function (old) {
+        const s = document.createElement('script');
+        if (old.src) s.src = old.src; else s.textContent = old.textContent;
+        old.parentNode.replaceChild(s, old);
+      });
+    } catch (e) {
+      cont.innerHTML = '<div style="text-align:center;padding:48px;color:var(--danger);">상세를 불러오지 못했습니다.</div>';
+    }
+  };
+  // 행 더블클릭 → 상세내용 탭에 주문 상세(내부 탭 포함) 인페이지 표시
+  mountEl.addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (row && row.id) window.pnlLoadDetail(ORDER_SHOW_BASE + '/' + row.id + '?partial=1');
   });
 
   // 한 건만 체크됐는지 검증 후 해당 행 반환 (아니면 경고 후 null)
