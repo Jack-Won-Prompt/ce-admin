@@ -189,7 +189,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
 /* ── 모달 ── */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; }
@@ -214,7 +214,7 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 const USERS_DATA          = @json($usersData);
 const USERS_GRID_DATA     = @json($gridData);
@@ -580,10 +580,17 @@ function updateRow(u)     { refreshUsersGrid(); }
 {{-- ── wwGrid 생성 + 외부 액션 버튼 ── --}}
 <script>
 (function () {
+  // 두 그리드가 한 화면(뷰포트)에 페이지 스크롤 없이 들어오도록 높이를 동적 배분.
+  // (제목·카드헤더·버튼·여백 등 그리드 외 요소를 CHROME으로 빼고 남은 높이를 나눔)
+  const CHROME = 320;
+  const budget = Math.max(320, window.innerHeight - CHROME);
+  const USERS_H = Math.max(220, Math.round(budget * 0.56));
+  const INV_H   = Math.max(150, Math.round(budget * 0.44));
+
   // 관리자 그리드
   window.__usersGrid = new wwGrid({
     el: document.getElementById('usersGrid'),
-    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: USERS_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: 'ID',     name: 'id',      width: 60,  align: 'center', sortable: true },
@@ -607,7 +614,7 @@ function updateRow(u)     { refreshUsersGrid(); }
   // 초대 현황 그리드 (데이터는 loadInvitations()가 setData로 주입)
   window.__invGrid = new wwGrid({
     el: document.getElementById('invitationsGrid'),
-    height: 340, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: INV_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '이메일',       name: 'email',      width: 220, sortable: true },
@@ -619,6 +626,28 @@ function updateRow(u)     { refreshUsersGrid(); }
     ],
     data: [],
   });
+
+  // 두 그리드가 한 화면에 페이지 스크롤 없이 들어오도록 높이 배분 + 반복 보정(리사이즈 대응)
+  function fitTwoGrids() {
+    const uw = window.__usersGrid && window.__usersGrid._wrapEl;
+    const iw = window.__invGrid && window.__invGrid._wrapEl;
+    if (!uw || !iw) return;
+    // 시작 배분(관리자 58% / 초대 42%)
+    const budget2 = Math.max(240, window.innerHeight - CHROME);
+    uw.style.height = Math.max(110, Math.round(budget2 * 0.58)) + 'px';
+    iw.style.height = Math.max(110, Math.round(budget2 * 0.42)) + 'px';
+    // 넘치면 두 그리드에서 분담(관리자 60%/초대 40%)해 줄임 — 수렴까지 반복
+    for (let i = 0; i < 4; i++) {
+      const overflow = document.documentElement.scrollHeight - window.innerHeight;
+      if (overflow <= 0) break;
+      const uh = uw.getBoundingClientRect().height;
+      const ih = iw.getBoundingClientRect().height;
+      uw.style.height = Math.max(90, Math.floor(uh - Math.ceil(overflow * 0.6))) + 'px';
+      iw.style.height = Math.max(90, Math.floor(ih - Math.ceil(overflow * 0.4))) + 'px';
+    }
+  }
+  requestAnimationFrame(fitTwoGrids);
+  window.addEventListener('resize', fitTwoGrids);
 
   function invPickSelected(actionLabel) {
     const c = window.__invGrid.getCheckedRows();

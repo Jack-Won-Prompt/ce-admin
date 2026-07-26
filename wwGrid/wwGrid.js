@@ -775,8 +775,9 @@ class wwGrid {
     // Wrap (scrollable)
     this._wrapEl = document.createElement('div');
     this._wrapEl.className = 'cg-wrap';
-    // 고정 높이: 결과가 없어도 리스트 영역이 그대로 표시되도록 height 고정(내용 많으면 내부 스크롤)
-    if (this.height) this._wrapEl.style.height = this.height + 'px';
+    // 고정 높이(숫자): 결과가 없어도 리스트 영역이 그대로 표시되도록 height 고정(내용 많으면 내부 스크롤)
+    // 'fit': 뷰포트 하단까지 자동으로 채움(_applyFitHeight, 아래 _build 끝에서 계산)
+    if (typeof this.height === 'number') this._wrapEl.style.height = this.height + 'px';
     this.el.appendChild(this._wrapEl);
 
     // Table
@@ -808,6 +809,28 @@ class wwGrid {
     this._renderSummary();
     this._updateFooter();
     this._bindEvents();
+
+    // height:'fit' — 뷰포트 하단까지 채워 페이지 스크롤 없이 그리드 내부 스크롤
+    this._applyFitHeight();
+    if (this.height === 'fit' && !this._fitBound) {
+      this._fitBound = true;
+      window.addEventListener('resize', () => this._applyFitHeight());
+    }
+  }
+
+  /* ── height:'fit' 계산: 페이지 스크롤이 없어지도록 래퍼 높이를 뷰포트에 맞춤 ── */
+  _applyFitHeight() {
+    if (this.height !== 'fit' || !this._wrapEl) return;
+    // 1차: 래퍼 상단부터 뷰포트 하단까지 대략 채움
+    const top = this._wrapEl.getBoundingClientRect().top; // 뷰포트 기준
+    let h = Math.max(160, Math.floor(window.innerHeight - top - 16));
+    this._wrapEl.style.height = h + 'px';
+    // 2차: 그래도 페이지가 넘치면(푸터·레이아웃 하단여백 등) 넘친 만큼 줄여 페이지 스크롤 제거
+    const overflow = document.documentElement.scrollHeight - window.innerHeight;
+    if (overflow > 0) {
+      h = Math.max(140, h - overflow - 2);
+      this._wrapEl.style.height = h + 'px';
+    }
   }
 
   /* ── 헤더 렌더링 ────────────────────────────── */

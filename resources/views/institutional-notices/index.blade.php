@@ -7,7 +7,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   .org-ext-link { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); text-decoration:none; opacity:0; transition:opacity .15s; z-index:2; }
   .nav-item:hover .org-ext-link { opacity:1; }
@@ -193,7 +193,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -213,7 +213,7 @@
   // ── wwGrid 초기화 ──
   const grid = new wwGrid({
     el: document.getElementById('noticeGrid'),
-    height: 560, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '영향도', name: 'policy_impact', width: 90,  align: 'center', sortable: true },

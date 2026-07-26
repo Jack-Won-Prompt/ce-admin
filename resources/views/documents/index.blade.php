@@ -6,7 +6,7 @@
 @section('breadcrumb', '홈 / 서류 관리')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   .type-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
   .type-tab {
@@ -99,12 +99,12 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const grid = new wwGrid({
     el: document.getElementById('documentGrid'),
-    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '유형',       name: 'type',      width: 110, sortable: true, align: 'center' },

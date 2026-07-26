@@ -38,7 +38,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
@@ -309,13 +309,13 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('nhisGrid'),
-    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },

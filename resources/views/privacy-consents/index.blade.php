@@ -5,7 +5,7 @@
 @section('breadcrumb', '홈 / 개인정보동의')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   .pc-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
   .pc-tab { padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
@@ -61,13 +61,13 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('privacy-consents'));   // + '/{id}'
   const grid = new wwGrid({
     el: document.getElementById('pcGrid'),
-    height: 560,
+    height: 'fit',
     editable: false,        // 읽기전용 표시
     rowCheckbox: true,      // 상세보기 선택용
     rowNumber: true,

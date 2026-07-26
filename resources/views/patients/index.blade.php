@@ -28,7 +28,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   /* ── Patient table ── */
   .patient-table { width:100%; border-collapse:collapse; }
@@ -206,13 +206,13 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('patients'));
   const grid = new wwGrid({
     el: document.getElementById('patientGrid'),
-    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '환자명',       name: 'name',            width: 110, sortable: true },

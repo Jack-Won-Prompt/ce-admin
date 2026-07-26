@@ -30,7 +30,7 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
   .log-table-wrap { overflow-x:auto; }
@@ -115,12 +115,12 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   new wwGrid({
     el: document.getElementById('logGrid'),
-    height: 620, editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '일시',      name: 'created', width: 150, sortable: true },

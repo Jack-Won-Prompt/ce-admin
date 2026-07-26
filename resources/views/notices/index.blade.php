@@ -5,7 +5,7 @@
 @section('breadcrumb', '홈 / 공지사항')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 @endpush
 
 @push('scripts')
@@ -53,13 +53,13 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('notices'));
   const grid = new wwGrid({
     el: document.getElementById('noticeGrid'),
-    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '구분',   name: 'gubun',   width: 70,  align: 'center', sortable: true },

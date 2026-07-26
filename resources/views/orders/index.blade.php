@@ -45,7 +45,7 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=3">
 <style>
   /* Vuexy pill tabs */
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -286,13 +286,13 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=2"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=3"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('orderGrid'),
-    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
