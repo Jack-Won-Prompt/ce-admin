@@ -65,6 +65,10 @@
 /* 섹션 */
 .form-section { padding:14px 0; border-bottom:1px solid var(--border); }
 .form-section:last-child { border-bottom:none; }
+/* 공급자(을)·공급받는자(갑) 좌우 배치 */
+.sb-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; border-bottom:1px solid var(--border); }
+.sb-grid > .form-section { border-bottom:none; }
+@media(max-width:820px){ .sb-grid { grid-template-columns:1fr; } }
 .section-title { font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:.5px; }
 .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
@@ -294,6 +298,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         </div>
       </div>
 
+      {{-- 공급자·공급받는자 좌우 배치 --}}
+      <div class="sb-grid">
       {{-- 공급자 --}}
       <div class="form-section">
         <div class="section-title"><i class="bx bx-building"></i> 공급자 (을)</div>
@@ -382,6 +388,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
         </div>
       </div>
+      </div>{{-- /sb-grid --}}
 
       {{-- 품목 목록 --}}
       <div class="form-section">
