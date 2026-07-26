@@ -52,7 +52,44 @@ class NhisController extends Controller
             $query->where('delivered_at', '<=', $request->date_to . ' 23:59:59');
         }
 
-        $orders = $query->paginate(25)->withQueryString();
+        // NHIS 청구 상태 라벨 (배지 → 텍스트)
+        $nhisStatusLabels = [
+            'pending'   => '미청구',
+            'submitted' => '청구완료',
+            'approved'  => '승인',
+            'rejected'  => '거부',
+        ];
+
+        // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
+        $gridData = $query->get()->map(function ($o) use ($hasFaxLogCol, $nhisStatusLabels) {
+            $faxLog = $hasFaxLogCol ? $o->latestFaxLog : null;
+            $efax   = $faxLog ? ($faxLog->status_label ?? $faxLog->status) : '-';
+
+            // 승인/거부 결과 텍스트
+            if ($o->nhis_claim_status === 'approved') {
+                $result = number_format((int) $o->nhis_reimbursement) . '원';
+            } elseif ($o->nhis_claim_status === 'rejected') {
+                $result = '거부';
+            } else {
+                $result = '-';
+            }
+
+            return [
+                'id'           => $o->id,
+                'order_no'     => $o->order_number ?? '',
+                'patient'      => $o->patient?->name ?? '',
+                'product'      => $o->product_name ?? '',
+                'nhis_amount'  => (int) $o->nhis_amount,
+                'patient_copay'=> (int) $o->patient_copay,
+                'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
+                'efax'         => $efax,
+                'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
+                'result'       => $result,
+            ];
+        })->values();
+
+        $total = $gridData->count();
 
         // 요약 카운트
         $counts = Order::whereIn('status', ['delivered', 'shipping', 'confirmed'])
@@ -71,7 +108,7 @@ class NhisController extends Controller
             ->whereYear('nhis_approved_at', now()->year)
             ->sum('nhis_reimbursement');
 
-        return view('nhis.index', compact('orders', 'counts', 'monthlyTotal', 'monthlyApproved', 'faxTableExists'));
+        return view('nhis.index', compact('gridData', 'total', 'counts', 'monthlyTotal', 'monthlyApproved', 'faxTableExists'));
     }
 
     // ── 단건 e-Fax 청구 ─────────────────────────────────────────

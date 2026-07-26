@@ -37,7 +37,6 @@ class InstitutionalNoticeController extends Controller
         $org     = strtoupper($request->get('org', 'MOHW'));
         $search  = $request->get('q', '');
         $impact  = $request->get('impact', '');
-        $perPage = 20;
 
         try {
             $query = InstitutionalNotice::byOrg($org)
@@ -51,16 +50,26 @@ class InstitutionalNoticeController extends Controller
                 $query->where('policy_impact', $impact);
             }
 
-            $paginator = $query->paginate($perPage);
+            // wwGrid 클라이언트사이드 그리드용 데이터 (배지→텍스트, 날짜→포맷)
+            $gridData = $query->get()->map(function (InstitutionalNotice $n) {
+                return [
+                    'id'            => $n->id,                                 // 상세 이동용 (화면 컬럼 아님)
+                    'policy_impact' => $n->policy_impact ?? '',                // 영향도
+                    'notice_type'   => $n->notice_type ?? '',                  // 유형
+                    'title'         => $n->title ?? '',                       // 제목
+                    'fee'           => $n->fee_impact ? '수가' : '',           // 수가 (배지→텍스트)
+                    'notice_date'   => $n->notice_date?->format('Y-m-d') ?? '', // 날짜
+                ];
+            })->values();
+
+            $total = $gridData->count();
 
             return response()->json([
-                'data'         => $paginator->items(),
-                'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'total'        => $paginator->total(),
+                'data'  => $gridData,
+                'total' => $total,
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['data' => [], 'error' => $e->getMessage()], 500);
+            return response()->json(['data' => [], 'total' => 0, 'error' => $e->getMessage()], 500);
         }
     }
 

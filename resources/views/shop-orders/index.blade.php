@@ -5,6 +5,7 @@
 @section('breadcrumb', '홈 / CE샵 주문')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .shop-status-badge {
     display:inline-flex; align-items:center; padding:2px 8px;
@@ -24,7 +25,7 @@
 {{-- 상태 탭 --}}
 @php
   $statuses = ['all'=>'전체','confirmed'=>'주문확인','processing'=>'처리중','shipped'=>'배송중','delivered'=>'배송완료','cancelled'=>'취소'];
-  $total = $statusCounts->sum();
+  $allCount = $statusCounts->sum();
   $cur = request('status', '');
 @endphp
 <div class="tab-pills" style="margin-bottom:16px;">
@@ -34,7 +35,7 @@
        class="tab-pill {{ $isActive ? 'active' : '' }}">
       {{ $label }}
       <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(27,102,245,.12);color:var(--primary);">
-        {{ $key==='all' ? $total : ($statusCounts[$key] ?? 0) }}
+        {{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}
       </span>
     </a>
   @endforeach
@@ -54,84 +55,47 @@
   @endif
 </form>
 
-{{-- 목록 --}}
-<div class="card">
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>주문번호</th>
-          <th style="width:130px;">주문일시</th>
-          <th>고객</th>
-          <th>상품</th>
-          <th style="text-align:right;width:110px;">결제금액</th>
-          <th style="text-align:center;width:60px;">배송</th>
-          <th style="text-align:center;width:90px;">상태</th>
-          <th style="text-align:center;width:120px;">Withworks</th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($orders as $order)
-        <tr style="cursor:pointer;" onclick="location.href='{{ route('shop-orders.show', $order) }}'">
-          <td><span class="order-num">{{ $order->order_number }}</span></td>
-          <td style="font-size:12px;color:var(--text-muted);">{{ $order->created_at->format('Y-m-d H:i') }}</td>
-          <td>
-            <div style="font-weight:600;">{{ $order->customer_name }}</div>
-            @if($order->customer_company)
-              <div style="font-size:11px;color:var(--text-muted);">{{ $order->customer_company }}</div>
-            @endif
-          </td>
-          <td style="font-size:12px;color:var(--text-muted);">
-            @php $items = $order->items; @endphp
-            {{ $items[0]['product_name'] ?? '' }}
-            @if(count($items) > 1)
-              <span style="color:var(--primary);font-weight:600;">+{{ count($items)-1 }}</span>
-            @endif
-          </td>
-          <td style="text-align:right;font-weight:700;">{{ number_format($order->total_amount) }}원</td>
-          <td style="text-align:center;font-size:12px;color:var(--text-muted);">{{ $order->delivery_method === 'quick' ? '퀵' : '택배' }}</td>
-          <td style="text-align:center;">
-            @php
-              $shopStatusCls = match($order->status) {
-                'confirmed'  => 'confirmed',
-                'processing' => 'processing',
-                'shipped'    => 'shipped',
-                'delivered'  => 'delivered',
-                default      => 'cancelled',
-              };
-            @endphp
-            <span class="shop-status-badge {{ $shopStatusCls }}">{{ $order->statusLabel() }}</span>
-          </td>
-          <td style="text-align:center;">
-            @if($order->withworks_so_no)
-              <span class="badge badge-success" style="font-size:11px;">{{ $order->withworks_so_no }}</span>
-            @else
-              <span style="color:var(--text-muted);font-size:12px;">-</span>
-            @endif
-          </td>
-        </tr>
-        @empty
-        <tr>
-          <td colspan="8">
-            <div class="empty-state">
-              <i class="bx bx-cart"></i>
-              <p>주문이 없습니다.</p>
-            </div>
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
-
-  @if($orders->hasPages())
-  <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;">
-    <span style="font-size:12px;color:var(--text-muted);">
-      총 {{ $orders->total() }}건 ({{ $orders->currentPage() }} / {{ $orders->lastPage() }} 페이지)
-    </span>
-    {{ $orders->links() }}
-  </div>
-  @endif
+{{-- ── 목록 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <button type="button" class="btn btn-outline btn-sm" onclick="shopOrderViewDetail()">
+    <i class="bx bx-detail"></i> 선택 상세
+  </button>
+  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
+<div id="shopOrderGrid"></div>
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('shop-orders'));
+  const grid = new wwGrid({
+    el: document.getElementById('shopOrderGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '주문번호',  name: 'order_no',  width: 130, sortable: true },
+      { header: '주문일시',  name: 'created',   width: 130, sortable: true },
+      { header: '고객',      name: 'customer',  width: 100, sortable: true },
+      { header: '회사명',    name: 'company',   width: 120 },
+      { header: '상품',      name: 'product',   width: 180 },
+      { header: '결제금액',  name: 'amount',    width: 110, editor: 'number' },
+      { header: '배송',      name: 'delivery',  width: 70,  align: 'center' },
+      { header: '상태',      name: 'status',    width: 90,  align: 'center', sortable: true },
+      { header: 'Withworks', name: 'withworks', width: 120, align: 'center' },
+    ],
+    data: @json($gridData),
+  });
+  window.__shopOrderGrid = grid;
+  window.shopOrderViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + c[0].id;
+  };
+})();
+</script>
+@endpush

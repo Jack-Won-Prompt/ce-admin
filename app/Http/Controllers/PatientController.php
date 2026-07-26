@@ -38,36 +38,52 @@ class PatientController extends Controller
             });
         }
 
-        $perPage  = in_array((int) $request->input('per_page'), [10, 15, 30]) ? (int) $request->input('per_page') : 10;
-        $patients = $query->paginate($perPage)->withQueryString();
+        // ── wwGrid 데이터 ──────────────────────────────────
+        $gridData = $query->get()->map(function ($p) {
+            // 생년월일 + 나이
+            $birth = $p->birth_date
+                ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
+                : '-';
 
-        // AJAX 더보기 요청
-        if ($request->wantsJson()) {
-            return response()->json([
-                'data'     => $patients->map(fn($p) => [
-                    'id'                        => $p->id,
-                    'name'                      => $p->name,
-                    'note'                      => $p->note,
-                    'masked_resident_no'        => $p->masked_resident_no,
-                    'birth_date'                => $p->birth_date?->format('Y-m-d'),
-                    'age'                       => $p->age,
-                    'gender'                    => $p->gender,
-                    'mobile'                    => $p->mobile ?? $p->phone,
-                    'is_nhis_eligible'          => $p->is_nhis_eligible,
-                    'nhis_coverage_rate'        => $p->nhis_coverage_rate,
-                    'prescriptions_count'       => $p->prescriptions_count,
-                    'prescriptions_max_repurchase_date' => $p->prescriptions_max_repurchase_date,
-                    'created_at'                => $p->created_at->format('Y-m-d'),
-                    'show_url'                  => route('patients.show', $p),
-                ]),
-                'has_more' => $patients->hasMorePages(),
-                'next_page'=> $patients->currentPage() + 1,
-                'total'    => $patients->total(),
-                'loaded'   => $patients->firstItem() + $patients->count() - 1,
-            ]);
-        }
+            // 성별 배지 → 텍스트
+            $gender = match ($p->gender) {
+                'male'   => '남',
+                'female' => '여',
+                default  => '-',
+            };
 
-        return view('patients.index', compact('patients'));
+            // 건보 배지 → 텍스트
+            $nhis = $p->is_nhis_eligible
+                ? '급여 ' . $p->nhis_coverage_rate . '%'
+                : '비급여';
+
+            // 재구매일 + D-day
+            $rd = $p->prescriptions_max_repurchase_date;
+            if ($rd) {
+                $rdDate = \Carbon\Carbon::parse($rd);
+                $diff   = (int) today()->diffInDays($rdDate, false);
+                $repurchase = $rdDate->format('Y-m-d') . ($diff >= 0 ? ' (D-' . $diff . ')' : ' (D+' . abs($diff) . ')');
+            } else {
+                $repurchase = '-';
+            }
+
+            return [
+                'id'              => $p->id,
+                'name'            => $p->name,
+                'resident_no'     => $p->masked_resident_no ?? '-',
+                'birth_date'      => $birth,
+                'gender'          => $gender,
+                'mobile'          => $p->mobile ?? $p->phone ?? '-',
+                'nhis'            => $nhis,
+                'rx_count'        => (int) $p->prescriptions_count,
+                'repurchase_date' => $repurchase,
+                'created'         => $p->created_at?->format('Y-m-d') ?? '',
+            ];
+        });
+
+        $total = $gridData->count();
+
+        return view('patients.index', compact('gridData', 'total'));
     }
 
     // ── 상세/편집 화면 ────────────────────────────────────

@@ -6,6 +6,7 @@
 @section('breadcrumb', '홈 / 서류 관리')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .type-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
   .type-tab {
@@ -87,198 +88,37 @@
   @endif
 </form>
 
-{{-- ── 서류 테이블 ── --}}
-<div class="card">
-  <div class="card-header">
-    <i class="bx bx-folder-open" style="font-size:18px;color:var(--primary);"></i>
-    <span class="card-header-title">서류 목록</span>
-    <span class="badge bg-label-primary ms-auto">전체 {{ $documents->total() }}건</span>
-  </div>
-  <div class="table-scroll-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>유형</th>
-          <th>생성유형</th>
-          <th>환자명</th>
-          <th>처방번호</th>
-          <th>파일명</th>
-          <th>생성자</th>
-          <th>생성일</th>
-          <th style="text-align:center;">미리보기</th>
-          <th style="text-align:center;">다운로드</th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($documents as $doc)
-          @php
-            $typeColors = ['consent' => 'primary', 'delegation' => 'info', 'fax' => 'warning', 'cash_receipt' => 'success'];
-            $color = $typeColors[$doc->type] ?? 'secondary';
-          @endphp
-          <tr>
-            <td style="color:var(--text-muted);font-size:12px;">{{ $doc->id }}</td>
-            <td>
-              <span class="badge badge-{{ $color }}">{{ $doc->typeLabel() }}</span>
-            </td>
-            <td style="font-size:11px;color:var(--text-muted);">
-              {{ $doc->sourceLabel() }}
-            </td>
-            <td style="font-weight:600;">
-              {{ $doc->prescription?->patient?->name ?? '-' }}
-            </td>
-            <td>
-              @if($doc->prescription)
-                <a href="{{ route('prescriptions.show', $doc->prescription) }}"
-                   style="color:var(--primary);font-size:12px;font-weight:600;">
-                  {{ $doc->prescription->rx_number }}
-                </a>
-              @else
-                -
-              @endif
-            </td>
-            <td>
-              <div class="filename-cell" title="{{ $doc->original_filename }}">
-                {{ $doc->original_filename }}
-              </div>
-            </td>
-            <td style="font-size:12px;color:var(--text-muted);">
-              {{ $doc->creator?->name ?? '-' }}
-            </td>
-            <td style="font-size:12px;color:var(--text-muted);">
-              {{ $doc->created_at->format('Y-m-d H:i') }}
-            </td>
-            <td style="text-align:center;">
-              <button type="button"
-                      class="btn btn-outline btn-sm btn-preview"
-                      data-url="{{ route('documents.preview', $doc) }}"
-                      data-name="{{ $doc->original_filename }}"
-                      title="{{ $doc->original_filename }}">
-                <i class="bx bx-show"></i> 미리보기
-              </button>
-            </td>
-            <td style="text-align:center;white-space:nowrap;">
-              @if($doc->type === 'delegation' && $doc->prescription)
-                <button type="button"
-                        class="btn btn-outline btn-sm btn-regen"
-                        data-url="{{ route('prescriptions.delegationRegenerate', $doc->prescription) }}"
-                        title="현재 위임장 설정(기관·계좌·서명위치)으로 내용을 갱신합니다">
-                  <i class="bx bx-refresh"></i> 내용 갱신
-                </button>
-              @endif
-              <a href="{{ route('documents.download', $doc) }}"
-                 class="btn btn-outline btn-sm"
-                 title="{{ $doc->original_filename }}">
-                <i class="bx bx-download"></i> 다운로드
-              </a>
-            </td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
-              <i class="bx bx-folder-open" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-              저장된 서류가 없습니다.
-            </td>
-          </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
-
-  @if($documents->hasPages())
-    <div style="padding:14px 18px;border-top:1px solid var(--border);">
-      {{ $documents->withQueryString()->links() }}
-    </div>
-  @endif
+{{-- ── 서류 목록 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <i class="bx bx-folder-open" style="font-size:18px;color:var(--primary);"></i>
+  <span class="card-header-title">서류 목록</span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
-
-{{-- ── PDF 미리보기 모달 ── --}}
-<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:860px;">
-    <div class="modal-content" style="border-radius:12px;overflow:hidden;">
-      <div class="modal-header" style="border-bottom:1px solid var(--border);padding:14px 20px;">
-        <h6 class="modal-title" id="previewModalLabel" style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:680px;"></h6>
-        <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-          <a id="previewDownloadBtn" href="#" class="btn btn-outline btn-sm" download>
-            <i class="bx bx-download"></i> 다운로드
-          </a>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-      </div>
-      <div class="modal-body" style="padding:0;background:#525659;min-height:580px;display:flex;align-items:center;justify-content:center;">
-        <div id="previewLoading" style="color:#fff;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:12px;">
-          <div class="spinner-border text-light" role="status" style="width:2rem;height:2rem;"></div>
-          <span>PDF 로딩 중...</span>
-        </div>
-        <iframe id="previewFrame" src="" style="width:100%;height:680px;border:none;display:none;"
-                allowfullscreen></iframe>
-      </div>
-    </div>
-  </div>
-</div>
-
-@push('scripts')
-<script>
-document.querySelectorAll('.btn-preview').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const url  = this.dataset.url;
-        const name = this.dataset.name;
-        const frame   = document.getElementById('previewFrame');
-        const loading = document.getElementById('previewLoading');
-        const label   = document.getElementById('previewModalLabel');
-        const dlBtn   = document.getElementById('previewDownloadBtn');
-
-        label.textContent = name;
-        dlBtn.href = url.replace('/preview', '/download');
-        frame.style.display  = 'none';
-        loading.style.display = 'flex';
-        frame.src = '';
-
-        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
-        modal.show();
-
-        frame.onload = function() {
-            loading.style.display = 'none';
-            frame.style.display   = 'block';
-        };
-        frame.src = url;
-    });
-});
-
-document.getElementById('previewModal').addEventListener('hidden.bs.modal', function() {
-    const frame = document.getElementById('previewFrame');
-    frame.src = '';
-    frame.style.display = 'none';
-    document.getElementById('previewLoading').style.display = 'flex';
-});
-
-// 요양비위임장 내용 갱신 (현재 위임장 설정으로 재생성)
-document.querySelectorAll('.btn-regen').forEach(function(btn) {
-    btn.addEventListener('click', async function() {
-        if (!confirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장 내용을 다시 생성해 갱신할까요?')) return;
-        const orig = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> 갱신 중...';
-        try {
-            const res = await fetch(btn.dataset.url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
-                    'Accept': 'application/json'
-                }
-            });
-            const data = await res.json();
-            if (typeof showToast === 'function') showToast(data.message || (data.success ? '갱신 완료' : '갱신 실패'), data.success ? 'success' : 'danger');
-            else alert(data.message || '');
-            if (data.success) { setTimeout(() => location.reload(), 900); }
-            else { btn.disabled = false; btn.innerHTML = orig; }
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('오류가 발생했습니다.', 'danger'); else alert('오류가 발생했습니다.');
-            btn.disabled = false; btn.innerHTML = orig;
-        }
-    });
-});
-</script>
-@endpush
+<div id="documentGrid"></div>
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const grid = new wwGrid({
+    el: document.getElementById('documentGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '유형',       name: 'type',      width: 110, sortable: true, align: 'center' },
+      { header: '생성유형',   name: 'source',    width: 120, sortable: true },
+      { header: '환자명',     name: 'patient',   width: 100, sortable: true },
+      { header: '처방번호',   name: 'rx_number', width: 150, sortable: true },
+      { header: '파일명',     name: 'filename',  width: 260 },
+      { header: '생성자',     name: 'creator',   width: 100, sortable: true },
+      { header: '생성일',     name: 'created',   width: 140, sortable: true },
+      { header: '다운로드경로', name: 'download',  width: 260 },
+    ],
+    data: @json($gridData),
+  });
+  window.__documentGrid = grid;
+})();
+</script>
+@endpush

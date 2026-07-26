@@ -34,17 +34,27 @@ class PrescriptionDocumentController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $perPage = in_array((int) $request->input('per_page', 20), [10, 20, 50, 100])
-            ? (int) $request->input('per_page', 20)
-            : 20;
+        $gridData = $query->get()->map(function ($doc) {
+            return [
+                'id'        => $doc->id,
+                'type'      => $doc->typeLabel(),
+                'source'    => $doc->sourceLabel(),
+                'patient'   => $doc->prescription?->patient?->name ?? '',
+                'rx_number' => $doc->prescription?->rx_number ?? '',
+                'filename'  => $doc->original_filename ?? '',
+                'creator'   => $doc->creator?->name ?? '',
+                'created'   => $doc->created_at?->format('Y-m-d H:i') ?? '',
+                'download'  => route('documents.download', $doc),
+            ];
+        });
 
-        $documents = $query->paginate($perPage)->withQueryString();
+        $total = $gridData->count();
 
         $typeCounts = PrescriptionDocument::selectRaw('type, count(*) as cnt')
             ->groupBy('type')
             ->pluck('cnt', 'type');
 
-        return view('documents.index', compact('documents', 'typeCounts'));
+        return view('documents.index', compact('gridData', 'total', 'typeCounts'));
     }
 
     public function download(PrescriptionDocument $document)

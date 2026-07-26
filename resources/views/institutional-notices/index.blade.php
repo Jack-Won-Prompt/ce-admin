@@ -7,6 +7,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .org-ext-link { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); text-decoration:none; opacity:0; transition:opacity .15s; z-index:2; }
   .nav-item:hover .org-ext-link { opacity:1; }
@@ -15,8 +16,6 @@
   .impact-high   { background:var(--danger-light); color:var(--danger); }
   .impact-medium { background:var(--warning-light); color:#B45309; }
   .impact-low    { background:var(--border-light); color:var(--text-muted); }
-  #paginationWrap { display:none; padding:10px 18px; border-top:1px solid var(--border); justify-content:space-between; align-items:center; }
-  #paginationWrap.visible { display:flex; }
   .nd-modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(13,27,42,.45); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px; }
   .nd-modal-overlay.open { display:flex; }
   .nd-modal-box { background:var(--bg-card); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:720px; max-height:90vh; display:flex; flex-direction:column; animation:fadeUp .18s ease; }
@@ -126,23 +125,16 @@
     <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">데이터를 불러오는 중...</div>
   </div>
 
-  {{-- 테이블 --}}
-  <div class="table-wrap" id="noticeTableWrap">
-    <table id="noticeTable">
-      <thead>
-        <tr>
-          <th style="width:80px;">영향도</th>
-          <th style="width:110px;">유형</th>
-          <th>제목</th>
-          <th style="width:70px;text-align:center;">수가</th>
-          <th style="width:110px;">날짜</th>
-          <th style="width:60px;"></th>
-        </tr>
-      </thead>
-      <tbody id="noticeTableBody">
-        <tr><td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted);">탭을 선택하면 목록이 표시됩니다.</td></tr>
-      </tbody>
-    </table>
+  {{-- 목록 (wwGrid) --}}
+  <div id="noticeGridWrap" style="padding:12px 18px;display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="institutionalNoticeViewDetail()">
+        <i class="bx bx-detail"></i> 선택 상세
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세 보기</span>
+      <span class="badge bg-label-primary" id="noticeTotalBadge" style="margin-left:auto;">전체 0건</span>
+    </div>
+    <div id="noticeGrid"></div>
   </div>
 
   {{-- 빈 상태 --}}
@@ -154,12 +146,6 @@
         <i class="bx bx-refresh"></i> 지금 수집 시작
       </button>
     </div>
-  </div>
-
-  {{-- 페이지네이션 --}}
-  <div id="paginationWrap">
-    <span style="font-size:12px;color:var(--text-muted);" id="paginationInfo"></span>
-    <div id="paginationBtns" style="display:flex;gap:4px;"></div>
   </div>
 </div>
 
@@ -207,6 +193,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
 <script>
 (function () {
   'use strict';
@@ -217,28 +204,49 @@
   const CHECK_URL  = '{{ route("institutional-notices.checkToday") }}';
 
   let currentOrg  = 'MOHW';
-  let currentPage = 1;
-  let totalPages  = 1;
 
   const ORG_LABELS = { MOHW: '보건복지부', HIRA: '심사평가원', NHIS: '건강보험공단' };
   const ORG_COLORS = { MOHW: 'danger', HIRA: 'warning', NHIS: 'info' };
   const IMPACT_COLORS = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'secondary' };
+  const IMPACT_CLASS  = { HIGH: 'impact-high', MEDIUM: 'impact-medium', LOW: 'impact-low' };
+
+  // ── wwGrid 초기화 ──
+  const grid = new wwGrid({
+    el: document.getElementById('noticeGrid'),
+    height: 560, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '영향도', name: 'policy_impact', width: 90,  align: 'center', sortable: true },
+      { header: '유형',   name: 'notice_type',  width: 130, sortable: true },
+      { header: '제목',   name: 'title',        width: 460 },
+      { header: '수가',   name: 'fee',          width: 80,  align: 'center', sortable: true },
+      { header: '날짜',   name: 'notice_date',  width: 120, align: 'center', sortable: true },
+    ],
+    data: [],
+  });
+  window.__noticeGrid = grid;
+
+  window.institutionalNoticeViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 공지를 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    openDetail(c[0].id);
+  };
 
   // ── 탭 클릭 ──
   document.querySelectorAll('#orgTabs .nav-link').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#orgTabs .nav-link').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentOrg  = btn.dataset.org;
-      currentPage = 1;
+      currentOrg = btn.dataset.org;
       loadList();
     });
   });
 
   // ── 검색 ──
-  document.getElementById('btnSearch').addEventListener('click', () => { currentPage = 1; loadList(); });
-  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') { currentPage = 1; loadList(); } });
-  document.getElementById('filterImpact').addEventListener('change', () => { currentPage = 1; loadList(); });
+  document.getElementById('btnSearch').addEventListener('click', loadList);
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadList(); });
+  document.getElementById('filterImpact').addEventListener('change', loadList);
 
   // ── 크롤링 ──
   function startCrawl() {
@@ -266,22 +274,20 @@
   document.getElementById('btnCrawl').addEventListener('click', startCrawl);
   document.getElementById('btnCrawlEmpty')?.addEventListener('click', startCrawl);
 
-  // ── 목록 로드 ──
+  // ── 목록 로드 (wwGrid) ──
   function loadList() {
-    const tbody   = document.getElementById('noticeTableBody');
-    const loading = document.getElementById('listLoading');
-    const empty   = document.getElementById('emptyState');
-    const pWrap   = document.getElementById('paginationWrap');
+    const loading  = document.getElementById('listLoading');
+    const empty    = document.getElementById('emptyState');
+    const gridWrap = document.getElementById('noticeGridWrap');
 
-    tbody.innerHTML = '';
     loading.classList.remove('d-none');
     empty.classList.add('d-none');
-    pWrap.style.display = 'none';
+    gridWrap.style.display = 'none';
 
     const q      = document.getElementById('searchInput').value.trim();
     const impact = document.getElementById('filterImpact').value;
 
-    const params = new URLSearchParams({ org: currentOrg, page: currentPage });
+    const params = new URLSearchParams({ org: currentOrg });
     if (q)      params.set('q', q);
     if (impact) params.set('impact', impact);
 
@@ -290,73 +296,22 @@
       .then(res => {
         loading.classList.add('d-none');
         const items = res.data ?? [];
-        totalPages = res.last_page ?? 1;
+        grid.setData(items);
+        document.getElementById('noticeTotalBadge').textContent = '전체 ' + (res.total ?? items.length) + '건';
 
         if (!items.length) {
           empty.classList.remove('d-none');
-          return;
+          gridWrap.style.display = 'none';
+        } else {
+          gridWrap.style.display = '';
         }
-
-        const IMPACT_CLASS = { HIGH: 'impact-high', MEDIUM: 'impact-medium', LOW: 'impact-low' };
-        items.forEach(item => {
-          const impactCls = IMPACT_CLASS[item.policy_impact] ?? '';
-          const date = item.notice_date ? item.notice_date.substr(0, 10) : '-';
-          const feeTag = item.fee_impact
-            ? '<span class="badge badge-warning" style="font-size:10px;">수가</span>'
-            : '';
-
-          const tr = document.createElement('tr');
-          tr.style.cursor = 'pointer';
-          tr.innerHTML = `
-            <td><span class="impact-badge ${impactCls}">${item.policy_impact}</span></td>
-            <td style="font-size:12px;color:var(--text-muted);">${escHtml(item.notice_type ?? '-')}</td>
-            <td style="font-weight:500;font-size:13px;">${escHtml(item.title)}</td>
-            <td style="text-align:center;">${feeTag}</td>
-            <td style="font-size:12px;color:var(--text-muted);">${date}</td>
-            <td><button class="btn btn-outline btn-sm" style="padding:2px 10px;font-size:12px;" data-id="${item.id}">보기</button></td>
-          `;
-          tr.addEventListener('click', () => openDetail(item.id));
-          tbody.appendChild(tr);
-        });
-
-        renderPagination(res.total, res.current_page, res.last_page);
       })
       .catch(err => {
         loading.classList.add('d-none');
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">오류: ${err.message}</td></tr>`;
+        grid.setData([]);
+        empty.classList.remove('d-none');
+        showToast('오류: ' + err.message, 'error');
       });
-  }
-
-  // ── 페이지네이션 ──
-  function renderPagination(total, cur, last) {
-    const wrap = document.getElementById('paginationWrap');
-    const info = document.getElementById('paginationInfo');
-    const btns = document.getElementById('paginationBtns');
-
-    info.textContent = `총 ${total}건`;
-    btns.innerHTML = '';
-
-    if (last <= 1) { wrap.style.display = 'none'; return; }
-    wrap.style.display = '';
-
-    const addBtn = (label, page, disabled, active) => {
-      const b = document.createElement('button');
-      b.className = `btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`;
-      b.textContent = label;
-      b.disabled = disabled;
-      if (!disabled) b.addEventListener('click', () => { currentPage = page; loadList(); });
-      btns.appendChild(b);
-    };
-
-    addBtn('«', 1, cur === 1, false);
-    addBtn('‹', cur - 1, cur === 1, false);
-
-    const start = Math.max(1, cur - 2);
-    const end   = Math.min(last, cur + 2);
-    for (let p = start; p <= end; p++) addBtn(p, p, false, p === cur);
-
-    addBtn('›', cur + 1, cur === last, false);
-    addBtn('»', last, cur === last, false);
   }
 
   // ── 상세 모달 ──

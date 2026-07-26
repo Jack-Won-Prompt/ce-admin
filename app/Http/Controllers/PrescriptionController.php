@@ -61,10 +61,27 @@ class PrescriptionController extends Controller
             });
         }
 
-        $perPage = in_array((int) $request->input('per_page', 10), [10, 20, 50, 100])
-            ? (int) $request->input('per_page', 10)
-            : 10;
-        $prescriptions = $query->paginate($perPage)->withQueryString();
+        $gridData = $query->get()->map(function (Prescription $rx) {
+            $order = $rx->order;
+            $soType = $order?->so_type;
+
+            return [
+                'id'         => $rx->id,
+                'rx_number'  => $rx->rx_number,
+                'source'     => $rx->upload_source === 'mobile' ? '모바일' : '웹',
+                'patient'    => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
+                'hospital'   => $rx->hospital_name ?? '-',
+                'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
+                'confidence' => $rx->ocr_confidence !== null ? (int) $rx->display_confidence : null,
+                'status'     => $rx->status_label,
+                'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
+                'order_no'   => $order?->order_number ?? '',
+                'so_no'      => $order?->withworks_so_no ?? '',
+                'assignee'   => $rx->assignedUser?->name ?? '미지정',
+                'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
+            ];
+        });
+        $total = $gridData->count();
 
         $statusCounts = [
             'all'            => Prescription::count(),
@@ -78,7 +95,7 @@ class PrescriptionController extends Controller
 
         $managers = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();
 
-        return view('prescriptions.list', compact('prescriptions', 'statusCounts', 'managers'));
+        return view('prescriptions.list', compact('gridData', 'total', 'statusCounts', 'managers'));
     }
 
     // ── 담당자 지정 (AJAX) ────────────────────────────────

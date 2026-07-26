@@ -59,7 +59,72 @@ class InvoiceController extends Controller
             });
         }
 
-        $orders = $query->paginate(25)->withQueryString();
+        // ── wwGrid용 데이터 ──
+        $crTypes = Order::CASH_RECEIPT_TYPE_LABELS;
+
+        $gridData = $query->get()->map(function ($order) use ($taxColExists, $crTypes) {
+            $tiStatus = $taxColExists ? ($order->tax_invoice_status ?? 'not_issued') : null;
+            $crStatus = $taxColExists ? ($order->cash_receipt_status ?? 'not_issued') : null;
+
+            $statusLabel = match($order->status) {
+                'confirmed' => '주문확정',
+                'shipping'  => '배송중',
+                'delivered' => '배송완료',
+                default     => $order->status,
+            };
+            $statusColor = match($order->status) {
+                'confirmed' => 'var(--primary)',
+                'shipping'  => 'var(--warning)',
+                'delivered' => 'var(--success)',
+                default     => 'var(--text-muted)',
+            };
+
+            $tiDisplay = !$taxColExists ? '-'
+                : ($tiStatus === 'issued' ? '발행완료'
+                : ($tiStatus === 'cancelled' ? '취소' : '미발행'));
+            $crDisplay = !$taxColExists ? '-'
+                : ($crStatus === 'issued' ? '발행완료'
+                : ($crStatus === 'cancelled' ? '취소' : '미발행'));
+
+            return [
+                'id'             => $order->id,
+                // ── 그리드 표시 컬럼 ──
+                'order_number'   => $order->order_number ?? '',
+                'patient_name'   => $order->patient?->name ?? '-',
+                'product_name'   => $order->product_name ?? '-',
+                'total_amount'   => (int) ($order->total_amount ?? 0),
+                'status_label'   => $statusLabel,
+                'created_at'     => $order->created_at?->format('Y-m-d') ?? '-',
+                'delivered_at'   => $order->delivered_at?->format('Y-m-d') ?? '-',
+                'ti_display'     => $tiDisplay,
+                'cr_display'     => $crDisplay,
+                // ── 상세 패널(selectOrder)용 추가 필드 (그리드 컬럼 아님) ──
+                'status'         => $order->status,
+                'status_color'   => $statusColor,
+                'patient_mobile' => $order->patient?->mobile ?? '',
+                'tax_col_exists' => $taxColExists,
+                'ti_status'      => $tiStatus,
+                'ti_no'          => $order->tax_invoice_no ?? '',
+                'ti_type'        => $order->tax_invoice_type ?? '',
+                'ti_biz_name'    => $order->tax_invoice_biz_name ?? '',
+                'ti_biz_no'      => $order->tax_invoice_biz_no ?? '',
+                'ti_email'       => $order->tax_invoice_email ?? '',
+                'ti_supply'      => (int) ($order->tax_invoice_supply ?? 0),
+                'ti_vat'         => (int) ($order->tax_invoice_vat ?? 0),
+                'ti_issued_at'   => $order->tax_invoice_issued_at?->format('Y-m-d H:i') ?? '',
+                'ti_cancelled_at'=> $order->tax_invoice_cancelled_at?->format('Y-m-d H:i') ?? '',
+                'cr_status'      => $crStatus,
+                'cr_no'          => $order->cash_receipt_no ?? '',
+                'cr_type'        => $order->cash_receipt_type ?? '',
+                'cr_type_label'  => isset($order->cash_receipt_type) ? ($crTypes[$order->cash_receipt_type] ?? '') : '',
+                'cr_identifier'  => $order->cash_receipt_identifier ?? '',
+                'cr_amount'      => (int) ($order->cash_receipt_amount ?? 0),
+                'cr_issued_at'   => $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '',
+                'cr_cancelled_at'=> $order->cash_receipt_cancelled_at?->format('Y-m-d H:i') ?? '',
+            ];
+        });
+
+        $total = $gridData->count();
 
         // 요약 카운트 (컬럼이 있을 때만)
         $counts = collect([
@@ -86,7 +151,7 @@ class InvoiceController extends Controller
             : 0;
 
         return view('invoice.index', compact(
-            'orders', 'counts', 'tab', 'taxColExists',
+            'gridData', 'total', 'counts', 'tab', 'taxColExists',
             'monthlyTaxAmount', 'monthlyCashAmount'
         ));
     }

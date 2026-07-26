@@ -38,6 +38,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
@@ -232,174 +233,18 @@
   @endif
 </form>
 
-{{-- ── 일괄 선택 바 ── --}}
-<div class="bulk-bar" id="bulkBar">
-  <i class="fa-solid fa-check-square" style="color:var(--primary);"></i>
-  <span id="bulkCount" style="font-size:13px;font-weight:700;"></span>건 선택됨
-  <button class="btn btn-primary btn-sm" onclick="sendBulkSelected()">
-    <i class="fa-solid fa-paper-plane"></i> 선택 일괄 청구
+{{-- ── NHIS 청구 목록 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+  <button type="button" class="btn btn-outline btn-sm" onclick="nhisViewDetail()">
+    <i class="fa-solid fa-eye"></i> 선택 주문 상세
   </button>
-  <button class="btn btn-outline btn-sm" onclick="clearSelection()">선택 해제</button>
+  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 주문 상세로 이동</span>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:12px;">
+    이번달 청구액: <strong style="color:var(--primary);">{{ number_format($monthlyTotal) }}원</strong>
+  </span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
-
-{{-- ── 주문 테이블 ── --}}
-<div class="card">
-  <div class="card-header">
-    <i class="fa-solid fa-hospital" style="color:var(--purple);"></i>
-    <span class="card-header-title">NHIS 청구 목록</span>
-    <span class="card-header-sub">전체 {{ $orders->total() }}건</span>
-    <div style="margin-left:auto;font-size:12px;color:var(--text-muted);">
-      이번달 청구액:
-      <strong style="color:var(--primary);">{{ number_format($monthlyTotal) }}원</strong>
-    </div>
-  </div>
-  <div class="table-scroll-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th class="check-col">
-            <input type="checkbox" id="checkAll" onchange="toggleAll(this)" title="전체선택">
-          </th>
-          <th>주문번호</th>
-          <th>환자명</th>
-          <th>제품명</th>
-          <th class="amount-cell">건보청구액</th>
-          <th class="amount-cell">환자부담</th>
-          <th>주문상태</th>
-          <th>NHIS상태</th>
-          <th>e-Fax 상태</th>
-          <th>청구일시</th>
-          <th>승인/거부</th>
-          <th>액션</th>
-        </tr>
-      </thead>
-      <tbody id="orderTableBody">
-        @forelse($orders as $order)
-          @php
-            $statusMeta   = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary'];
-            $nhisInfo     = $nhisStatusLabels[$order->nhis_claim_status] ?? [$order->nhis_claim_status,'secondary'];
-            $nhisLbl      = $nhisInfo[0];
-            $nhisBadge    = $nhisInfo[1];
-            $faxLog       = $faxTableExists ? $order->latestFaxLog : null;
-            $faxStatusMap = \App\Models\NhisFaxLog::STATUS_LABELS;
-            $faxMeta      = $faxLog ? ($faxStatusMap[$faxLog->status] ?? ['label'=>$faxLog->status,'badge'=>'secondary']) : null;
-            $rejReason    = $faxTableExists ? ($order->nhis_rejection_reason ?? null) : null;
-          @endphp
-          <tr id="row-{{ $order->id }}">
-            <td class="check-col">
-              @if($order->nhis_claim_status === 'pending')
-                <input type="checkbox" class="order-check" value="{{ $order->id }}" onchange="updateBulkBar()">
-              @endif
-            </td>
-            <td>
-              <a href="{{ route('orders.show', $order) }}" class="order-number">
-                {{ $order->order_number }}
-              </a>
-            </td>
-            <td style="font-weight:600;">{{ $order->patient?->name ?? '-' }}</td>
-            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;"
-                title="{{ $order->product_name }}">
-              {{ $order->product_name ?? '-' }}
-            </td>
-            <td class="amount-cell">{{ number_format($order->nhis_amount) }}원</td>
-            <td class="amount-cell">{{ number_format($order->patient_copay) }}원</td>
-            <td>
-              <span class="badge badge-{{ $statusMeta['badge'] }}">{{ $statusMeta['label'] }}</span>
-            </td>
-            <td>
-              <span class="badge badge-{{ $nhisBadge }}">{{ $nhisLbl }}</span>
-              @if($order->nhis_claim_status === 'rejected' && $rejReason)
-                <div style="font-size:10px;color:var(--danger);margin-top:2px;"
-                     title="{{ $rejReason }}">
-                  {{ mb_substr($rejReason, 0, 20) }}…
-                </div>
-              @endif
-            </td>
-            <td>
-              @if($faxLog)
-                <span class="efax-status-badge efax-{{ $faxLog->status }}">
-                  <i class="fa-solid {{ $faxLog->status === 'sent' ? 'fa-check' : ($faxLog->status === 'failed' ? 'fa-xmark' : 'fa-clock') }}"></i>
-                  {{ $faxMeta['label'] ?? $faxLog->status }}
-                </span>
-                @if($faxLog->reference_no)
-                  <div style="font-size:10px;color:var(--text-muted);">{{ $faxLog->reference_no }}</div>
-                @endif
-              @else
-                <span style="font-size:11px;color:var(--text-muted);">-</span>
-              @endif
-            </td>
-            <td style="font-size:12px;color:var(--text-muted);">
-              {{ $order->nhis_submitted_at?->format('m/d H:i') ?? '-' }}
-            </td>
-            <td>
-              @if($order->nhis_claim_status === 'approved')
-                <div style="font-size:12px;color:var(--success);font-weight:700;">
-                  <i class="fa-solid fa-circle-check"></i>
-                  {{ number_format($order->nhis_reimbursement) }}원
-                </div>
-              @elseif($order->nhis_claim_status === 'rejected')
-                <div style="font-size:12px;color:var(--danger);font-weight:700;">
-                  <i class="fa-solid fa-circle-xmark"></i> 거부
-                </div>
-              @else
-                -
-              @endif
-            </td>
-            <td>
-              <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                {{-- 청구 버튼 --}}
-                @if(in_array($order->nhis_claim_status, ['pending','rejected']))
-                  <button class="btn btn-primary btn-sm"
-                          onclick="sendFax({{ $order->id }}, '{{ $order->order_number }}')"
-                          title="e-Fax 청구 송신">
-                    <i class="fa-solid fa-fax"></i> 청구
-                  </button>
-                @endif
-                {{-- 결과등록 --}}
-                @if($order->nhis_claim_status === 'submitted')
-                  <button class="btn btn-outline btn-sm"
-                          onclick="openResultModal({{ $order->id }}, '{{ $order->order_number }}', {{ $order->nhis_amount }})"
-                          title="공단 처리 결과 등록">
-                    <i class="fa-solid fa-clipboard-check"></i> 결과
-                  </button>
-                @endif
-                {{-- 청구서 미리보기 --}}
-                <button class="btn btn-outline btn-sm"
-                        onclick="previewDoc({{ $order->id }}, '{{ $order->order_number }}')"
-                        title="청구서 미리보기">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
-                {{-- 팩스 이력 --}}
-                @if($order->nhis_claim_status !== 'pending')
-                  <button class="btn btn-outline btn-sm"
-                          onclick="toggleFaxLog({{ $order->id }})"
-                          title="팩스 발송 이력">
-                    <i class="fa-solid fa-list"></i>
-                  </button>
-                @endif
-              </div>
-              {{-- 팩스 로그 패널 --}}
-              <div class="log-panel" id="logPanel-{{ $order->id }}"></div>
-            </td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="12" style="text-align:center;padding:40px;color:var(--text-muted);">
-              <i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              청구 대상 주문이 없습니다.
-            </td>
-          </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
-
-  @if($orders->hasPages())
-    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:center;">
-      {{ $orders->links() }}
-    </div>
-  @endif
-</div>
+<div id="nhisGrid"></div>
 
 {{-- ══════════ 결과 등록 모달 ══════════ --}}
 <div class="modal-overlay" id="resultModal">
@@ -464,6 +309,37 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('orders'));
+  const grid = new wwGrid({
+    el: document.getElementById('nhisGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
+      { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
+      { header: '제품명',      name: 'product',       width: 170 },
+      { header: '건보청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
+      { header: '환자부담',    name: 'patient_copay', width: 100, editor: 'number' },
+      { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
+      { header: 'NHIS상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
+      { header: 'e-Fax 상태',  name: 'efax',          width: 100, align: 'center' },
+      { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
+      { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
+    ],
+    data: @json($gridData),
+  });
+  window.__nhisGrid = grid;
+  window.nhisViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 주문을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + c[0].id;
+  };
+})();
+</script>
 <script>
 // ── 선택 / 일괄 처리 ─────────────────────────────────────
 function getCheckedIds() {

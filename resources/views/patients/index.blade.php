@@ -28,6 +28,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   /* ── Patient table ── */
   .patient-table { width:100%; border-collapse:collapse; }
@@ -72,7 +73,7 @@
   <div>
     <h5 style="font-size:18px;font-weight:700;margin:0;color:var(--text-primary);">환자 정보</h5>
     <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">
-      총 <strong id="total-count">{{ $patients->total() }}</strong>명 등록
+      총 <strong id="total-count">{{ number_format($total) }}</strong>명 등록
     </p>
   </div>
   <button class="btn btn-primary" onclick="openAddModal()">
@@ -114,100 +115,15 @@
   </div>
 </form>
 
-{{-- 목록 --}}
-<div class="card" style="overflow:hidden;">
-  <div class="table-wrapper" id="table-wrapper">
-    <table class="patient-table">
-      <thead>
-        <tr>
-          <th>환자명</th>
-          <th>주민등록번호</th>
-          <th>생년월일</th>
-          <th>성별</th>
-          <th>휴대폰</th>
-          <th>건보</th>
-          <th>처방건수</th>
-          <th>재구매일</th>
-          <th>등록일</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="patient-tbody">
-        @forelse($patients as $p)
-        <tr onclick="location.href='{{ route('patients.show', $p) }}'">
-          <td>
-            <div style="font-weight:600;">{{ $p->name }}</div>
-            @if($p->note)
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">{{ Str::limit($p->note, 30) }}</div>
-            @endif
-          </td>
-          <td style="color:var(--text-muted);font-size:12px;">{{ $p->masked_resident_no ?? '-' }}</td>
-          <td style="font-size:12px;">
-            @if($p->birth_date)
-              {{ $p->birth_date->format('Y-m-d') }}
-              <span style="color:var(--text-muted);">(만 {{ $p->age }}세)</span>
-            @else -
-            @endif
-          </td>
-          <td>
-            @if($p->gender === 'male')
-              <span class="gender-badge gender-male">남</span>
-            @elseif($p->gender === 'female')
-              <span class="gender-badge gender-female">여</span>
-            @else <span style="color:var(--text-muted);">-</span>
-            @endif
-          </td>
-          <td style="font-size:12px;">{{ $p->mobile ?? $p->phone ?? '-' }}</td>
-          <td>
-            @if($p->is_nhis_eligible)
-              <span class="nhis-badge nhis-yes"><i class="fa-solid fa-check"></i> 급여 {{ $p->nhis_coverage_rate }}%</span>
-            @else
-              <span class="nhis-badge nhis-no">비급여</span>
-            @endif
-          </td>
-          <td><span class="rx-count-badge">{{ $p->prescriptions_count }}건</span></td>
-          <td style="font-size:12px;">
-            @php $rd = $p->prescriptions_max_repurchase_date; @endphp
-            @if($rd)
-              @php $rdDate = \Carbon\Carbon::parse($rd); $diff = today()->diffInDays($rdDate, false); @endphp
-              <span style="font-weight:600;color:{{ $diff < 0 ? 'var(--text-muted)' : ($diff <= 10 ? 'var(--danger)' : ($diff <= 15 ? 'var(--warning)' : 'var(--success)')) }};">
-                {{ $rdDate->format('Y-m-d') }}
-              </span>
-              @if($diff >= 0)
-                <span style="font-size:10px;color:var(--text-muted);margin-left:4px;">D-{{ $diff }}</span>
-              @else
-                <span style="font-size:10px;color:var(--text-muted);margin-left:4px;">D+{{ abs($diff) }}</span>
-              @endif
-            @else
-              <span style="color:var(--text-muted);">-</span>
-            @endif
-          </td>
-          <td style="font-size:11px;color:var(--text-muted);">{{ $p->created_at->format('Y-m-d') }}</td>
-          <td onclick="event.stopPropagation();">
-            <button class="btn btn-outline btn-sm" onclick="deletePatient({{ $p->id }}, '{{ addslashes($p->name) }}')"
-                    style="color:var(--danger);border-color:var(--danger);padding:2px 8px;">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-        @empty
-        <tr id="empty-row">
-          <td colspan="10" style="text-align:center;padding:60px;color:var(--text-muted);">
-            <i class="fa-solid fa-users" style="font-size:32px;margin-bottom:12px;display:block;opacity:.3;"></i>
-            등록된 환자가 없습니다.
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
-
-  @if($patients->hasPages())
-  <div class="card-footer" style="padding:12px 16px;border-top:1px solid var(--border);">
-    {{ $patients->links() }}
-  </div>
-  @endif
+{{-- ── 목록 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <button type="button" class="btn btn-outline btn-sm" onclick="patientViewDetail()">
+    <i class="bx bx-detail"></i> 선택 상세
+  </button>
+  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
+<div id="patientGrid"></div>
 
 {{-- 환자 추가 모달 --}}
 <div class="modal-overlay" id="addModal">
@@ -290,6 +206,36 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('patients'));
+  const grid = new wwGrid({
+    el: document.getElementById('patientGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '환자명',       name: 'name',            width: 110, sortable: true },
+      { header: '주민등록번호', name: 'resident_no',     width: 130 },
+      { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
+      { header: '성별',         name: 'gender',          width: 60,  align: 'center', sortable: true },
+      { header: '휴대폰',       name: 'mobile',          width: 130 },
+      { header: '건보',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
+      { header: '처방건수',     name: 'rx_count',        width: 80,  editor: 'number', align: 'center', sortable: true },
+      { header: '재구매일',     name: 'repurchase_date', width: 160, sortable: true },
+      { header: '등록일',       name: 'created',         width: 110, sortable: true },
+    ],
+    data: @json($gridData),
+  });
+  window.__patientGrid = grid;
+  window.patientViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 환자를 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + c[0].id;
+  };
+})();
+</script>
 <script>
   // ── 모달 ──────────────────────────────────────────────
   function openAddModal()  { document.getElementById('addModal').classList.add('show'); }
@@ -343,7 +289,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.filter-bar', title: '환자 검색', body: '이름, 전화번호, 주민번호 앞자리로 검색합니다. 엔터 또는 검색 버튼을 누르세요.' },
-  { selector: '#table-wrapper', title: '환자 목록 테이블', body: '등록된 환자 목록입니다. 환자 이름을 클릭하면 처방·주문 이력이 포함된 상세 화면으로 이동합니다.' },
+  { selector: '#patientGrid', title: '환자 목록', body: '등록된 환자 목록입니다. 행을 체크한 뒤 <b>선택 상세</b> 버튼을 누르면 처방·주문 이력이 포함된 상세 화면으로 이동합니다.' },
   { selector: '[onclick="openAddModal()"]', title: '환자 신규 등록', body: '<b>환자 추가</b> 버튼을 클릭하면 이름·연락처·주민번호 등을 입력하는 등록 폼이 열립니다.' },
 ];
 </script>

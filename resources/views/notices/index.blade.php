@@ -4,6 +4,10 @@
 @section('page-title', '공지사항')
 @section('breadcrumb', '홈 / 공지사항')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
+@endpush
+
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
@@ -35,67 +39,44 @@ window.HELP_TOUR_STEPS = [
     @endif
   </div>
 
-  {{-- 목록 --}}
-  <div class="card">
-    <div class="card-header">
-      <i class="bx bx-bell" style="font-size:18px;color:var(--primary);"></i>
-      <span class="card-header-title">공지사항 목록</span>
-      @if($notices->total())
-        <span class="badge bg-label-primary ms-auto">{{ $notices->total() }}건</span>
-      @endif
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:44px;">번호</th>
-            <th>제목</th>
-            <th style="width:90px;">작성자</th>
-            <th style="width:100px;">날짜</th>
-            <th style="width:60px;text-align:right;">조회</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse($notices as $notice)
-          <tr style="{{ $notice->is_pinned ? 'background:rgba(27,102,245,.04);' : '' }}">
-            <td style="color:var(--text-muted);font-size:12px;">
-              @if($notice->is_pinned)
-                <span style="color:var(--danger);font-weight:700;"><i class="bx bx-pin" style="font-size:14px;"></i></span>
-              @else
-                {{ $notice->id }}
-              @endif
-            </td>
-            <td>
-              <a href="{{ route('notices.show', $notice) }}" style="font-weight:600;color:var(--text-primary);text-decoration:none;">
-                @if($notice->is_pinned)
-                  <span class="badge badge-danger" style="margin-right:6px;font-size:10px;">공지</span>
-                @endif
-                {{ $notice->title }}
-              </a>
-            </td>
-            <td style="font-size:12px;color:var(--text-secondary);">{{ $notice->author->name ?? '-' }}</td>
-            <td style="font-size:12px;color:var(--text-muted);">{{ $notice->created_at->format('Y.m.d') }}</td>
-            <td style="font-size:12px;color:var(--text-muted);text-align:right;">{{ number_format($notice->views) }}</td>
-          </tr>
-          @empty
-          <tr>
-            <td colspan="5" style="text-align:center;padding:48px;color:var(--text-muted);">
-              <i class="bx bx-bell-off" style="font-size:36px;opacity:.3;display:block;margin-bottom:10px;"></i>
-              등록된 공지사항이 없습니다.
-            </td>
-          </tr>
-          @endforelse
-        </tbody>
-      </table>
-    </div>
+  {{-- ── 목록 (wwGrid) ── --}}
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="noticeViewDetail()">
+      <i class="bx bx-detail"></i> 선택 상세
+    </button>
+    <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
   </div>
-
-  {{-- 페이지네이션 --}}
-  @if($notices->hasPages())
-    <div style="margin-top:16px;display:flex;justify-content:center;">
-      {{ $notices->links() }}
-    </div>
-  @endif
+  <div id="noticeGrid"></div>
 
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('notices'));
+  const grid = new wwGrid({
+    el: document.getElementById('noticeGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '구분',   name: 'gubun',   width: 70,  align: 'center', sortable: true },
+      { header: '번호',   name: 'no',      width: 70,  align: 'center', sortable: true },
+      { header: '제목',   name: 'title',   width: 360, sortable: true },
+      { header: '작성자', name: 'author',  width: 100, align: 'center', sortable: true },
+      { header: '날짜',   name: 'created', width: 110, align: 'center', sortable: true },
+      { header: '조회',   name: 'views',   width: 80,  align: 'right', editor: 'number', sortable: true },
+    ],
+    data: @json($gridData),
+  });
+  window.noticeViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + c[0].id;
+  };
+})();
+</script>
+@endpush

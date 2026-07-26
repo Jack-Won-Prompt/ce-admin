@@ -6,6 +6,7 @@
 @section('breadcrumb', '홈 / 계산서 발행')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
 /* ── 요약 카드 (Vuexy icon stat card) ── */
 .summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
@@ -260,7 +261,7 @@
   <div class="panel-tabs">
     <button class="panel-tab-btn active" id="btn-list" onclick="switchPanel('list')">
       <i class="fa-solid fa-list"></i> 계산서 발행 현황
-      <span class="badge-cnt">{{ $orders->total() }}</span>
+      <span class="badge-cnt">{{ $total }}</span>
     </button>
     <button class="panel-tab-btn" id="btn-detail" onclick="switchPanel('detail')">
       <i class="fa-solid fa-file-magnifying-glass"></i> 상세보기
@@ -289,136 +290,15 @@
       @endif
     </form>
 
-    {{-- 테이블 --}}
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>주문번호</th>
-            <th>환자명</th>
-            <th>제품명</th>
-            <th class="amount-r">총금액</th>
-            <th>주문상태</th>
-            <th>주문일</th>
-            <th>배송완료일</th>
-            <th>세금계산서</th>
-            <th>현금영수증</th>
-            <th style="width:30px;text-align:center;">상세</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse($orders as $order)
-            @php
-              $tiStatus = $taxColExists ? ($order->tax_invoice_status ?? 'not_issued') : null;
-              $crStatus = $taxColExists ? ($order->cash_receipt_status ?? 'not_issued') : null;
-              $crTypes  = \App\Models\Order::CASH_RECEIPT_TYPE_LABELS;
-              $osBadge  = match($order->status) {
-                'confirmed' => ['주문확정','var(--primary)'],
-                'shipping'  => ['배송중','var(--warning)'],
-                'delivered' => ['배송완료','var(--success)'],
-                default     => [$order->status,'var(--text-muted)'],
-              };
-              // JS에서 사용할 데이터 직렬화
-              $jsData = json_encode([
-                'id'                    => $order->id,
-                'order_number'          => $order->order_number,
-                'status'                => $order->status,
-                'status_label'          => $osBadge[0],
-                'status_color'          => $osBadge[1],
-                'patient_name'          => $order->patient?->name ?? '-',
-                'patient_mobile'        => $order->patient?->mobile ?? '',
-                'product_name'          => $order->product_name ?? '-',
-                'total_amount'          => $order->total_amount ?? 0,
-                'delivered_at'          => $order->delivered_at?->format('Y-m-d') ?? '-',
-                'created_at'            => $order->created_at?->format('Y-m-d') ?? '-',
-                'tax_col_exists'        => $taxColExists,
-                'ti_status'             => $tiStatus,
-                'ti_no'                 => $order->tax_invoice_no ?? '',
-                'ti_type'               => $order->tax_invoice_type ?? '',
-                'ti_biz_name'           => $order->tax_invoice_biz_name ?? '',
-                'ti_biz_no'             => $order->tax_invoice_biz_no ?? '',
-                'ti_email'              => $order->tax_invoice_email ?? '',
-                'ti_supply'             => $order->tax_invoice_supply ?? 0,
-                'ti_vat'                => $order->tax_invoice_vat ?? 0,
-                'ti_issued_at'          => $order->tax_invoice_issued_at?->format('Y-m-d H:i') ?? '',
-                'ti_cancelled_at'       => $order->tax_invoice_cancelled_at?->format('Y-m-d H:i') ?? '',
-                'cr_status'             => $crStatus,
-                'cr_no'                 => $order->cash_receipt_no ?? '',
-                'cr_type'               => $order->cash_receipt_type ?? '',
-                'cr_type_label'         => isset($order->cash_receipt_type) ? ($crTypes[$order->cash_receipt_type] ?? '') : '',
-                'cr_identifier'         => $order->cash_receipt_identifier ?? '',
-                'cr_amount'             => $order->cash_receipt_amount ?? 0,
-                'cr_issued_at'          => $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '',
-                'cr_cancelled_at'       => $order->cash_receipt_cancelled_at?->format('Y-m-d H:i') ?? '',
-              ], JSON_UNESCAPED_UNICODE);
-            @endphp
-            <tr class="order-row" id="row-{{ $order->id }}"
-                onclick='selectOrder({{ $jsData }})'>
-              <td><span class="order-no">{{ $order->order_number }}</span></td>
-              <td style="font-weight:600;">{{ $order->patient?->name ?? '-' }}</td>
-              <td style="font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                  title="{{ $order->product_name }}">{{ $order->product_name ?? '-' }}</td>
-              <td class="amount-r fw-bold">{{ number_format($order->total_amount) }}원</td>
-              <td>
-                <span style="font-size:11px;font-weight:700;color:{{ $osBadge[1] }};">{{ $osBadge[0] }}</span>
-              </td>
-              <td style="font-size:12px;color:var(--text-muted);">
-                {{ $order->created_at->format('Y-m-d') }}
-              </td>
-              <td style="font-size:12px;color:var(--text-muted);">
-                {{ $order->delivered_at?->format('Y-m-d') ?? '-' }}
-              </td>
-
-              {{-- 세금계산서 상태 --}}
-              <td>
-                @if(!$taxColExists)
-                  <span class="type-badge type-none">-</span>
-                @elseif($tiStatus === 'issued')
-                  <span class="type-badge type-tax"><i class="fa-solid fa-check"></i> 발행완료</span>
-                @elseif($tiStatus === 'cancelled')
-                  <span class="inv-cancelled"><i class="fa-solid fa-ban"></i> 취소</span>
-                @else
-                  <span class="inv-none">미발행</span>
-                @endif
-              </td>
-
-              {{-- 현금영수증 상태 --}}
-              <td>
-                @if(!$taxColExists)
-                  <span class="type-badge type-none">-</span>
-                @elseif($crStatus === 'issued')
-                  <span class="type-badge type-cash"><i class="fa-solid fa-check"></i> 발행완료</span>
-                @elseif($crStatus === 'cancelled')
-                  <span class="inv-cancelled"><i class="fa-solid fa-ban"></i> 취소</span>
-                @else
-                  <span class="inv-none">미발행</span>
-                @endif
-              </td>
-
-              <td style="text-align:center;">
-                <button class="btn btn-outline btn-sm" style="padding:3px 8px;"
-                        onclick='event.stopPropagation(); selectOrder({{ $jsData }})'>
-                  <i class="fa-solid fa-chevron-right"></i>
-                </button>
-              </td>
-            </tr>
-          @empty
-            <tr>
-              <td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
-                <i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-                조회된 주문이 없습니다.
-              </td>
-            </tr>
-          @endforelse
-        </tbody>
-      </table>
+    {{-- ── 목록 (wwGrid) ── --}}
+    <div style="display:flex;gap:8px;margin:12px 16px;align-items:center;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="invoiceViewDetail()">
+        <i class="bx bx-detail"></i> 선택 상세
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세보기로 이동</span>
+      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
     </div>
-
-    @if($orders->hasPages())
-      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:center;">
-        {{ $orders->links() }}
-      </div>
-    @endif
+    <div id="invoiceGrid" style="margin:0 16px 16px;"></div>
   </div>{{-- /panel-list --}}
 
   {{-- ══ 패널 2: 상세보기 ══ --}}
@@ -985,5 +865,38 @@ window.HELP_TOUR_STEPS = [
   { selector: '#btn-detail', title: '계산서 발행 탭', body: '주문을 선택하면 이 탭에서 세금계산서·현금영수증을 발행하고 취소할 수 있습니다.' },
   { selector: '.filter-bar', title: '필터', body: '기간, 발행 상태, 환자명으로 조회 범위를 좁힙니다.' },
 ];
+</script>
+@endpush
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  const grid = new wwGrid({
+    el: document.getElementById('invoiceGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '주문번호',   name: 'order_number', width: 130, sortable: true },
+      { header: '환자명',     name: 'patient_name', width: 90,  sortable: true },
+      { header: '제품명',     name: 'product_name', width: 180, sortable: true },
+      { header: '총금액',     name: 'total_amount', width: 110, align: 'right', editor: 'number', sortable: true },
+      { header: '주문상태',   name: 'status_label', width: 90,  align: 'center', sortable: true },
+      { header: '주문일',     name: 'created_at',   width: 100, align: 'center', sortable: true },
+      { header: '배송완료일', name: 'delivered_at', width: 100, align: 'center', sortable: true },
+      { header: '세금계산서', name: 'ti_display',   width: 90,  align: 'center', sortable: true },
+      { header: '현금영수증', name: 'cr_display',   width: 90,  align: 'center', sortable: true },
+    ],
+    data: @json($gridData),
+  });
+
+  // 체크한 행 → 기존 상세보기 패널(selectOrder)로 이동
+  window.invoiceViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    selectOrder(c[0]);
+  };
+})();
 </script>
 @endpush

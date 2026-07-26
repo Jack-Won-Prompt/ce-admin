@@ -50,6 +50,7 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
   .filter-bar .form-control { height: 36px; font-size: 13px; }
@@ -177,137 +178,25 @@
         @endforeach
       </select>
       <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-        총 {{ number_format($prescriptions->total()) }}건
+        총 {{ number_format($total) }}건
       </span>
     </div>
   </form>
 
-  {{-- 목록 테이블 --}}
-  <div class="card">
-    <div class="card-body" style="padding:0;">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>처방번호</th>
-              <th>환자명</th>
-              <th>병원</th>
-              <th>발행일</th>
-              <th>OCR 신뢰도</th>
-              <th>상태</th>
-              <th>판매유형</th>
-              <th>주문 / Withworks SO</th>
-              <th>담당</th>
-              <th>접수일시</th>
-              <th>액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($prescriptions as $rx)
-            <tr>
-              <td>
-                <a href="{{ route('prescriptions.show', $rx) }}" class="rx-id" style="text-decoration:none;">{{ $rx->rx_number }}</a>
-                @if($rx->upload_source === 'mobile')
-                  <span class="badge badge-info" style="font-size:9px;padding:1px 5px;margin-left:3px;">모바일</span>
-                @endif
-              </td>
-              <td>
-                <b>{{ $rx->patient?->name ?? $rx->patient_name_ocr ?? '-' }}</b>
-                @if($rx->patient_name_ocr && $rx->patient?->name && $rx->patient->name !== $rx->patient_name_ocr)
-                  <div style="font-size:10px;color:var(--text-muted);">OCR: {{ $rx->patient_name_ocr }}</div>
-                @endif
-              </td>
-              <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                {{ $rx->hospital_name ?? '-' }}
-              </td>
-              <td>{{ $rx->issued_date?->format('Y-m-d') ?? '-' }}</td>
-              <td>
-                @if($rx->ocr_confidence !== null)
-                <div class="ocr-bar">
-                  <div class="ocr-bar-track">
-                    <div class="ocr-bar-fill" style="width:{{ min($rx->display_confidence, 100) }}%;background:{{ $rx->ocr_confidence >= 85 ? 'var(--success)' : ($rx->ocr_confidence >= 70 ? 'var(--warning)' : 'var(--danger)') }};"></div>
-                  </div>
-                  <span class="ocr-pct">{{ $rx->display_confidence }}%</span>
-                </div>
-                @else
-                  <span style="font-size:11px;color:var(--text-muted);">-</span>
-                @endif
-              </td>
-              <td><span class="badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span></td>
-              <td>
-                @if($rx->order?->so_type)
-                  @php $soLabel = \App\Models\Order::SO_TYPE_LABELS[$rx->order->so_type] ?? [$rx->order->so_type, 'secondary']; @endphp
-                  <span class="badge badge-{{ $soLabel[1] }}" style="font-size:11px;">{{ $soLabel[0] }}</span>
-                @else
-                  <span style="font-size:11px;color:var(--text-muted);">-</span>
-                @endif
-              </td>
-              <td>
-                @if($rx->order)
-                  <div style="font-size:11px;color:var(--text-secondary);font-weight:600;">
-                    {{ $rx->order->order_number }}
-                  </div>
-                  @if($rx->order->withworks_so_no)
-                    <div style="font-size:11px;font-family:monospace;color:var(--primary);font-weight:700;">
-                      {{ $rx->order->withworks_so_no }}
-                    </div>
-                  @else
-                    <div style="font-size:10px;color:var(--text-muted);">SO 미연계</div>
-                  @endif
-                @else
-                  <span class="badge badge-secondary" style="font-size:10px;">주문대기</span>
-                @endif
-              </td>
-              <td>
-                <select class="assign-select form-select {{ $rx->assigned_user_id ? 'assigned' : '' }}"
-                        data-rx="{{ $rx->id }}"
-                        data-url="{{ route('prescriptions.assign', $rx) }}"
-                        onchange="assignUser(this)">
-                  <option value="">— 미지정 —</option>
-                  @foreach($managers as $m)
-                    <option value="{{ $m->id }}" {{ $rx->assigned_user_id == $m->id ? 'selected' : '' }}>
-                      {{ $m->name }}
-                    </option>
-                  @endforeach
-                </select>
-              </td>
-              <td>
-                <div class="rx-date">{{ $rx->created_at->format('Y-m-d') }}</div>
-                <div class="rx-date">{{ $rx->created_at->format('H:i') }}</div>
-              </td>
-              <td>
-                <div class="table-actions">
-                  <a href="{{ route('prescriptions.show', $rx) }}"
-                     class="btn btn-sm {{ in_array($rx->status, ['review_needed', 'ocr_done']) ? 'btn-warning' : 'btn-outline' }}">
-                    {{ in_array($rx->status, ['review_needed', 'ocr_done']) ? '검수' : '보기' }}
-                  </a>
-                </div>
-              </td>
-            </tr>
-            @empty
-            <tr>
-              <td colspan="11">
-                <div class="empty-state">
-                  <i class="fa-regular fa-file-medical"></i>
-                  <p>처방전이 없습니다.</p>
-                </div>
-              </td>
-            </tr>
-            @endforelse
-          </tbody>
-        </table>
-      </div>
-    </div>
-    @if($prescriptions->hasPages())
-    <div class="card-footer" style="padding:12px 16px;border-top:1px solid var(--border);">
-      {{ $prescriptions->links() }}
-    </div>
-    @endif
+  {{-- ── 목록 (wwGrid) ── --}}
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="prescriptionViewDetail()">
+      <i class="bx bx-detail"></i> 선택 상세
+    </button>
+    <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
   </div>
+  <div id="rxGrid"></div>
 
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
 <script>
 window.HELP_TOUR_STEPS = [
   {
@@ -321,46 +210,47 @@ window.HELP_TOUR_STEPS = [
     body: '환자명, 처방번호, 병원명으로 검색하거나 날짜 범위를 지정해 조회할 수 있습니다.'
   },
   {
-    selector: 'table thead tr',
-    title: '목록 컬럼 안내',
-    body: '<b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있습니다.'
+    selector: '#rxGrid',
+    title: '목록 그리드',
+    body: '<b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있습니다. 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
   },
   {
-    selector: '.assign-select',
-    title: '담당자 지정',
-    body: '목록에서 바로 담당자를 변경할 수 있습니다. 변경 즉시 저장됩니다.'
-  },
-  {
-    selector: 'table tbody tr:first-child .table-actions',
-    title: '검수/보기 버튼',
-    body: '<b>검수 필요</b> 상태이면 주황색 검수 버튼이 표시됩니다. 클릭하면 처방전 상세 화면으로 이동합니다.'
+    selector: 'button[onclick="prescriptionViewDetail()"]',
+    title: '선택 상세',
+    body: '행을 체크한 뒤 <b>선택 상세</b> 버튼을 누르면 처방전 상세 화면으로 이동합니다.'
   },
 ];
 
-async function assignUser(sel) {
-  sel.classList.add('saving');
-  try {
-    const res = await fetch(sel.dataset.url, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ assigned_user_id: sel.value || null }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      sel.classList.toggle('assigned', !!sel.value);
-      showToast(data.name !== '-' ? `담당자: ${data.name}` : '담당자 해제', 'success');
-    } else {
-      showToast('저장 실패', 'danger');
-    }
-  } catch {
-    showToast('오류가 발생했습니다.', 'danger');
-  } finally {
-    sel.classList.remove('saving');
-  }
-}
+</script>
+<script>
+(function () {
+  const DETAIL_BASE = @json(url('prescriptions'));
+  const grid = new wwGrid({
+    el: document.getElementById('rxGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '처방번호',      name: 'rx_number',  width: 150, sortable: true },
+      { header: '출처',          name: 'source',     width: 70,  align: 'center', sortable: true },
+      { header: '환자명',        name: 'patient',    width: 100, sortable: true },
+      { header: '병원',          name: 'hospital',   width: 150, sortable: true },
+      { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
+      { header: 'OCR 신뢰도(%)', name: 'confidence', width: 110, editor: 'number', align: 'right' },
+      { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
+      { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
+      { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
+      { header: 'Withworks SO',  name: 'so_no',      width: 130, sortable: true },
+      { header: '담당',          name: 'assignee',   width: 90,  align: 'center', sortable: true },
+      { header: '접수일시',      name: 'created',    width: 130, align: 'center', sortable: true },
+    ],
+    data: @json($gridData),
+  });
+  window.prescriptionViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + encodeURIComponent(c[0].rx_number);
+  };
+})();
 </script>
 @endpush

@@ -39,10 +39,20 @@ class InquiryController extends Controller
             });
         }
 
-        $inquiries = $query->orderByDesc('created_at')->paginate(15);
         $pendingCount = (clone $query->getQuery())->where('status', 'pending')->count();
 
-        return view('inquiries.index', compact('inquiries', 'pendingCount'));
+        $gridData = $query->orderByDesc('created_at')->get()->map(fn($inquiry) => [
+            'id'       => $inquiry->id,
+            'category' => $inquiry->categoryLabel(),
+            'title'    => $inquiry->title,
+            'user'     => $inquiry->user->name ?? '-',
+            'status'   => $inquiry->isAnswered() ? '답변완료' : '대기중',
+            'date'     => $inquiry->created_at?->format('Y.m.d') ?? '',
+        ]);
+
+        $total = $gridData->count();
+
+        return view('inquiries.index', compact('gridData', 'total', 'pendingCount'));
     }
 
     public function create()

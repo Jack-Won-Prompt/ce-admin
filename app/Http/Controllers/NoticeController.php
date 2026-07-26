@@ -21,9 +21,21 @@ class NoticeController extends Controller
             });
         }
 
-        $notices = $query->orderByDesc('is_pinned')->orderByDesc('created_at')->paginate(15);
+        $notices = $query->orderByDesc('is_pinned')->orderByDesc('created_at')->get();
 
-        return view('notices.index', compact('notices'));
+        $gridData = $notices->map(fn ($n) => [
+            'id'      => $n->id,
+            'gubun'   => $n->is_pinned ? '공지' : '일반',
+            'no'      => $n->id,
+            'title'   => $n->title ?? '',
+            'author'  => $n->author->name ?? '-',
+            'created' => $n->created_at?->format('Y.m.d') ?? '',
+            'views'   => (int) $n->views,
+        ]);
+
+        $total = $gridData->count();
+
+        return view('notices.index', compact('notices', 'gridData', 'total'));
     }
 
     public function create()

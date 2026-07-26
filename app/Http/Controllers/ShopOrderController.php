@@ -25,12 +25,34 @@ class ShopOrderController extends Controller
             $query->where('status', $request->status);
         }
 
-        $orders = $query->paginate(10)->withQueryString();
+        $gridData = $query->get()->map(function (ShopOrder $o) {
+            $items       = is_array($o->items) ? $o->items : [];
+            $firstName   = $items[0]['product_name'] ?? '';
+            $product     = $firstName;
+            if (count($items) > 1) {
+                $product = trim($firstName . ' +' . (count($items) - 1));
+            }
+
+            return [
+                'id'        => $o->id,
+                'order_no'  => $o->order_number ?? '',
+                'created'   => $o->created_at?->format('Y-m-d H:i') ?? '',
+                'customer'  => $o->customer_name ?? '',
+                'company'   => $o->customer_company ?? '',
+                'product'   => $product,
+                'amount'    => (int) $o->total_amount,
+                'delivery'  => $o->delivery_method === 'quick' ? '퀵' : '택배',
+                'status'    => $o->statusLabel(),
+                'withworks' => $o->withworks_so_no ?? '-',
+            ];
+        });
+
+        $total = $gridData->count();
 
         $statusCounts = ShopOrder::selectRaw('status, count(*) as cnt')
             ->groupBy('status')->pluck('cnt', 'status');
 
-        return view('shop-orders.index', compact('orders', 'statusCounts'));
+        return view('shop-orders.index', compact('gridData', 'total', 'statusCounts'));
     }
 
     public function show(ShopOrder $shopOrder): View
