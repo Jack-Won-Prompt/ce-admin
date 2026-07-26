@@ -39,10 +39,23 @@ class UserActivityLogController extends Controller
             });
         }
 
-        $perPage = in_array((int) $request->input('per_page'), [20, 50, 100]) ? (int) $request->input('per_page') : 20;
-        $logs    = $query->paginate($perPage)->withQueryString();
-        $users   = User::orderBy('name')->get(['id', 'name', 'email']);
+        $users = User::orderBy('name')->get(['id', 'name', 'email']);
 
-        return view('user-logs.index', compact('logs', 'users'));
+        // wwGrid: 필터된 전체 로그를 그리드용 배열로 전달 (클라이언트사이드)
+        $gridData = $query->get()->map(fn ($log) => [
+            'id'        => $log->id,
+            'created'   => $log->created_at->format('Y-m-d H:i:s'),
+            'type'      => $log->type === 'login' ? '로그인' : '방문',
+            'user'      => $log->user?->name ?? '-',
+            'email'     => $log->user?->email ?? '',
+            'ip'        => $log->ip_address ?? '-',
+            'menu'      => $log->menu_name ?? '-',
+            'route'     => ($log->route_name && $log->route_name !== $log->menu_name) ? $log->route_name : '',
+            'url'       => $log->url ?? '-',
+            'ua'        => $log->user_agent ?? '-',
+        ])->values();
+        $total = $gridData->count();
+
+        return view('user-logs.index', compact('gridData', 'users', 'total'));
     }
 }

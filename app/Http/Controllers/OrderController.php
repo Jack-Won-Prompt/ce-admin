@@ -38,13 +38,32 @@ class OrderController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        $perPage = in_array((int) $request->input('per_page'), [10, 20, 50, 100])
-                    ? (int) $request->input('per_page') : 20;
-        $orders  = $query->paginate($perPage)->withQueryString();
         $statusCounts = Order::selectRaw('status, count(*) as cnt')->groupBy('status')
                             ->pluck('cnt', 'status');
 
-        return view('orders.index', compact('orders', 'statusCounts'));
+        // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
+        $gridData = $query->get()->map(function ($o) {
+            $ww = $o->withworks_so_no
+                ? trim($o->withworks_so_no . ($o->withworks_status_label ? ' · ' . $o->withworks_status_label : ''))
+                : '';
+            return [
+                'id'        => $o->id,
+                'order_no'  => $o->order_number,
+                'patient'   => $o->patient?->name ?? '',
+                'product'   => $o->product_name ?? '',
+                'qty'       => (int) ($o->quantity ?? 1),
+                'copay'     => (int) $o->patient_copay,
+                'shipping'  => (int) $o->shipping_fee,
+                'total'     => (int) $o->total_amount,
+                'address'   => $o->shipping_address ?? '',
+                'so_type'   => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
+                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'withworks' => $ww,
+                'created'   => $o->created_at->format('Y-m-d H:i'),
+            ];
+        })->values();
+
+        return view('orders.index', compact('gridData', 'statusCounts'));
     }
 
     // ── 상세 ──────────────────────────────────────────────

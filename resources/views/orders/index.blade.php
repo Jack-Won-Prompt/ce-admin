@@ -45,6 +45,7 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}">
 <style>
   /* Vuexy pill tabs */
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -129,12 +130,22 @@ window.HELP_TOUR_STEPS = [
   @endif
 </form>
 
-{{-- ── 주문 테이블 ── --}}
+{{-- ── 주문 목록 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <button type="button" class="btn btn-outline btn-sm" onclick="orderViewDetail()">
+    <i class="fa-solid fa-eye"></i> 선택 주문 상세
+  </button>
+  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ $statusCounts->sum() }}건</span>
+</div>
+<div id="orderGrid"></div>
+
+@php /* 이하 원본 테이블 마크업은 wwGrid로 대체되어 미사용 */ @endphp
+@if(false)
 <div class="card">
   <div class="card-header">
     <i class="bx bx-cart-alt" style="font-size:18px;color:var(--primary);"></i>
     <span class="card-header-title">주문 목록</span>
-    <span class="badge bg-label-primary ms-auto">전체 {{ $orders->total() }}건</span>
   </div>
   <div class="table-scroll-wrap">
     <table>
@@ -269,17 +280,47 @@ window.HELP_TOUR_STEPS = [
     </table>
   </div>
 
-  {{-- 페이지네이션 --}}
-  <div style="padding:12px 16px;border-top:1px solid var(--border);">
-    {{ $orders->links() }}
-  </div>
 </div>
+@endif
 
 @endsection
 
 @push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
 <script>
-async function fetchWwStatus(orderId, url) {
+(function () {
+  const DETAIL_BASE = @json(url('orders'));
+  const grid = new wwGrid({
+    el: document.getElementById('orderGrid'),
+    height: 620, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: true, modified: false },
+    columns: [
+      { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
+      { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
+      { header: '제품명',     name: 'product',   width: 160 },
+      { header: '수량',       name: 'qty',       width: 60,  editor: 'number', align: 'center' },
+      { header: '환자부담금', name: 'copay',     width: 100, editor: 'number' },
+      { header: '배송비',     name: 'shipping',  width: 80,  editor: 'number' },
+      { header: '총금액',     name: 'total',     width: 100, editor: 'number' },
+      { header: '배송지',     name: 'address',   width: 180 },
+      { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
+      { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
+      { header: 'Withworks',  name: 'withworks', width: 170 },
+      { header: '생성일',     name: 'created',   width: 130, sortable: true },
+    ],
+    data: @json($gridData),
+  });
+  window.__orderGrid = grid;
+  window.orderViewDetail = function () {
+    const c = grid.getCheckedRows();
+    if (!c.length)    { showToast('상세를 볼 주문을 체크하세요.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    window.location.href = DETAIL_BASE + '/' + c[0].id;
+  };
+})();
+</script>
+<script>
+async function fetchWwStatus(orderId, url) {  /* (미사용) */
   const cell = document.getElementById('ww-cell-' + orderId);
   const btn  = cell.querySelector('button');
   if (btn) { btn.textContent = '...'; btn.disabled = true; }

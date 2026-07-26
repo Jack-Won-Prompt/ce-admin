@@ -104,67 +104,36 @@ window.HELP_TOUR_STEPS = [
   @endif
 </form>
 
-{{-- ── 로그 테이블 ── --}}
-<div class="card">
-  <div class="card-header">
-    <i class="bx bx-list-check" style="font-size:18px;color:var(--primary);"></i>
-    <span class="card-header-title">활동 로그</span>
-    <span class="badge bg-label-primary ms-auto">{{ number_format($logs->total()) }}건</span>
-  </div>
-  <div class="log-table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:150px;">일시</th>
-          <th style="width:110px;">유형</th>
-          <th style="width:130px;">사용자</th>
-          <th style="width:120px;">IP 주소</th>
-          <th>실행 메뉴</th>
-          <th style="width:200px;">URL</th>
-          <th style="width:160px;">브라우저</th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($logs as $log)
-          <tr>
-            <td style="font-size:12px;white-space:nowrap;color:var(--text-secondary);">
-              {{ $log->created_at->format('Y-m-d H:i:s') }}
-            </td>
-            <td>
-              @if($log->type === 'login')
-                <span class="type-badge-login"><i class="bx bx-log-in-circle"></i>로그인</span>
-              @else
-                <span class="type-badge-page"><i class="bx bx-window-alt"></i>방문</span>
-              @endif
-            </td>
-            <td>
-              <div style="font-weight:600;font-size:13px;">{{ $log->user?->name ?? '-' }}</div>
-              <div style="font-size:11px;color:var(--text-muted);">{{ $log->user?->email ?? '' }}</div>
-            </td>
-            <td class="ip-cell">{{ $log->ip_address ?? '-' }}</td>
-            <td>
-              <span style="font-weight:600;font-size:13px;">{{ $log->menu_name ?? '-' }}</span>
-              @if($log->route_name && $log->route_name !== $log->menu_name)
-                <div style="font-size:10px;color:var(--text-muted);font-family:monospace;">{{ $log->route_name }}</div>
-              @endif
-            </td>
-            <td class="url-cell" title="{{ $log->url }}">{{ $log->url ?? '-' }}</td>
-            <td class="ua-cell" title="{{ $log->user_agent }}">{{ $log->user_agent ?? '-' }}</td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
-              <i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              로그가 없습니다.
-            </td>
-          </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
-  <div style="padding:12px 16px;border-top:1px solid var(--border);">
-    {{ $logs->links() }}
-  </div>
+{{-- ── 활동 로그 (wwGrid) ── --}}
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+  <span class="card-header-title">활동 로그</span>
+  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
+<div id="logGrid"></div>
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}"></script>
+<script>
+(function () {
+  new wwGrid({
+    el: document.getElementById('logGrid'),
+    height: 620, editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
+    footer: { total: true, selected: false, modified: false },
+    columns: [
+      { header: '일시',      name: 'created', width: 150, sortable: true },
+      { header: '유형',      name: 'type',    width: 80,  sortable: true, align: 'center' },
+      { header: '사용자',    name: 'user',    width: 110, sortable: true },
+      { header: '이메일',    name: 'email',   width: 180 },
+      { header: 'IP 주소',   name: 'ip',      width: 120 },
+      { header: '실행 메뉴', name: 'menu',    width: 160, sortable: true },
+      { header: '라우트',    name: 'route',   width: 140 },
+      { header: 'URL',       name: 'url',     width: 220 },
+      { header: '브라우저',  name: 'ua',      width: 200 },
+    ],
+    data: @json($gridData),
+  });
+})();
+</script>
+@endpush
