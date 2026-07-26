@@ -40,6 +40,15 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
 <style>
+  /* 패널 탭(목록/상세보기) */
+  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
+  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tab:hover { color:var(--primary); }
+  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
+    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
+
   .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
 
@@ -175,6 +184,13 @@
 </div>
 @endif
 
+{{-- 패널 탭: 목록 / 상세보기 --}}
+<div class="pnl-tabs">
+  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 목록</button>
+  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-eye"></i> 상세보기</button>
+</div>
+
+<div id="pnlList">
 {{-- ── 요약 카드 ── --}}
 <div class="summary-grid">
   <div class="summary-card gray">
@@ -235,16 +251,23 @@
 
 {{-- ── NHIS 청구 목록 (wwGrid) ── --}}
 <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-  <button type="button" class="btn btn-outline btn-sm" onclick="nhisViewDetail()">
-    <i class="fa-solid fa-eye"></i> 선택 주문 상세
-  </button>
-  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 주문 상세로 이동</span>
+  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세보기 탭에서 주문 상세를 확인합니다.</span>
   <span style="font-size:12px;color:var(--text-muted);margin-left:12px;">
     이번달 청구액: <strong style="color:var(--primary);">{{ number_format($monthlyTotal) }}원</strong>
   </span>
   <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
 <div id="nhisGrid"></div>
+</div>{{-- /pnlList --}}
+
+{{-- ── 상세보기 탭 (주문 상세 페이지를 iframe embed) ── --}}
+<div id="pnlDetail" style="display:none;">
+  <div style="margin-bottom:12px;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 목록으로</button>
+  </div>
+  <div id="pnlEmpty" class="pnl-empty">목록에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
+  <iframe id="pnlFrame" title="주문 상세" style="display:none;width:100%;height:calc(100vh - 210px);border:1px solid var(--border);border-radius:8px;background:#fff;"></iframe>
+</div>
 
 {{-- ══════════ 결과 등록 모달 ══════════ --}}
 <div class="modal-overlay" id="resultModal">
@@ -332,12 +355,27 @@
     data: @json($gridData),
   });
   window.__nhisGrid = grid;
-  window.nhisViewDetail = function () {
-    const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('상세를 볼 주문을 체크하세요.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
-    window.location.href = DETAIL_BASE + '/' + c[0].id;
+
+  // 패널 탭 전환(목록/상세보기)
+  window.pnlShow = function (which) {
+    document.getElementById('pnlList').style.display   = which === 'detail' ? 'none' : '';
+    document.getElementById('pnlDetail').style.display = which === 'detail' ? '' : 'none';
+    document.getElementById('pnlBtnList').classList.toggle('active', which !== 'detail');
+    document.getElementById('pnlBtnDetail').classList.toggle('active', which === 'detail');
   };
+
+  // 행 더블클릭 → 상세보기 탭에서 주문 상세 페이지를 iframe(embed)으로 표시(페이지 이동 없음)
+  document.getElementById('nhisGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row || !row.id) return;
+    const frame = document.getElementById('pnlFrame');
+    document.getElementById('pnlEmpty').style.display = 'none';
+    frame.style.display = 'block';
+    frame.src = DETAIL_BASE + '/' + row.id + '?embed=1';
+    window.pnlShow('detail');
+  });
 })();
 </script>
 <script>

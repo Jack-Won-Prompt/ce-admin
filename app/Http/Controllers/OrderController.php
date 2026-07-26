@@ -69,6 +69,9 @@ class OrderController extends Controller
     // ── 상세 ──────────────────────────────────────────────
     public function show(Order $order): View
     {
+        // 상세보기 탭 iframe에서 열릴 때 사이드바/네비 숨김
+        view()->share('embed', request()->boolean('embed'));
+
         $order->load(['patient', 'prescription.items', 'creator']);
 
         $withworksStatus = null;

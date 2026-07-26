@@ -168,6 +168,9 @@ class DispatchHistoryController extends Controller
 
     public function show(string $type, int $id)
     {
+        // 상세보기 탭 iframe에서 열릴 때 사이드바/네비 숨김
+        view()->share('embed', request()->boolean('embed'));
+
         return match ($type) {
             'tax_invoice'   => $this->showTaxInvoice($id),
             'cash_receipt'  => $this->showCashReceipt($id),

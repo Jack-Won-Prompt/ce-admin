@@ -851,9 +851,17 @@
     })();
   </script>
 
+  <style>
+    /* embed 모드: 다른 화면의 '상세보기' 탭 iframe 안에서 사이드바·네비 숨기고 전체폭 사용 */
+    body.embed-mode .layout-menu,
+    body.embed-mode .layout-navbar { display: none !important; }
+    body.embed-mode .layout-page { margin-left: 0 !important; }
+    body.embed-mode .content-wrapper { padding-top: 0 !important; }
+    body.embed-mode { background: #fff; }
+  </style>
   @stack('styles')
 </head>
-<body>
+<body class="{{ ($embed ?? false) ? 'embed-mode' : '' }}">
 
 {{-- ══════════════════════════════════════════════════════════
      VUEXY LAYOUT WRAPPER
