@@ -92,6 +92,27 @@
       margin-top: 4px;
     }
 
+    /* NICE 본인확인 */
+    .verify-box {
+      border: 1.5px solid #c7dcff;
+      background: #f4f8ff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .verify-box.verified { border-color: #a7f3d0; background: #ecfdf5; }
+    .verify-row { display: flex; align-items: center; gap: 12px; }
+    .verify-title { font-size: 13px; font-weight: 700; color: #1f2937; }
+    .verify-desc  { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.5; }
+    .verify-box.verified .verify-title { color: #047857; }
+    .btn-verify {
+      margin-left: auto; flex-shrink: 0;
+      padding: 9px 14px; border: none; border-radius: 8px;
+      background: #1B66F5; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn-verify:disabled { background: #9ec3fb; cursor: default; }
+    .verify-badge { margin-left: auto; flex-shrink: 0; font-size: 22px; }
+
     /* 동의 내용 */
     .consent-text {
       font-size: 13px;
@@ -229,6 +250,25 @@
       <div class="sub">위 이름이 본인과 다를 경우 동의하지 마세요.</div>
     </div>
 
+    @if($niceEnabled)
+    {{-- NICE 휴대폰 본인확인 --}}
+    <div class="verify-box {{ $verified ? 'verified' : '' }}" id="verifyBox">
+      <div class="verify-row">
+        <div>
+          <div class="verify-title" id="verifyTitle">{{ $verified ? '본인확인 완료' : '📱 휴대폰 본인확인' }}</div>
+          <div class="verify-desc" id="verifyDesc">
+            {{ $verified ? '본인확인이 완료되었습니다. 서명해 주세요.' : '서명 전 NICE 휴대폰 본인확인이 필요합니다.' }}
+          </div>
+        </div>
+        @if($verified)
+          <span class="verify-badge" id="verifyBadge">✅</span>
+        @else
+          <button type="button" class="btn-verify" id="btnVerify" onclick="startNice()">본인확인</button>
+        @endif
+      </div>
+    </div>
+    @endif
+
     {{-- 동의 내용 --}}
     <div class="consent-text">
       본인 <strong>{{ $consent->patient_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
@@ -273,9 +313,13 @@
 </div>
 
 <script>
-const TOKEN       = '{{ $consent->token }}';
-const EXPIRES_AT  = new Date('{{ $consent->expires_at->toIso8601String() }}');
-const SUBMIT_URL  = '{{ route('consent.submit', $consent->token) }}';
+const TOKEN         = '{{ $consent->token }}';
+const EXPIRES_AT    = new Date('{{ $consent->expires_at->toIso8601String() }}');
+const SUBMIT_URL    = '{{ route('consent.submit', $consent->token) }}';
+const NICE_ENABLED  = @json($niceEnabled);
+const NICE_ENFORCE  = @json($niceEnforce);
+const NICE_START_URL = '{{ route('consent.nice.start', $consent->token) }}';
+let   identityVerified = @json($verified);
 
 /* ── 카운트다운 ───────────────────────────────────────── */
 function tick() {
@@ -341,9 +385,15 @@ function onMove(e) {
   ctx.lineTo(p.x, p.y);
   ctx.stroke();
   hasSig = true;
-  document.getElementById('btnAgree').disabled = false;
+  refreshAgree();
 }
 function onEnd() { drawing = false; }
+
+/* 동의 버튼 활성화 조건: 서명 완료 + (본인확인 강제 시) 본인확인 완료 */
+function refreshAgree() {
+  const ok = hasSig && (!NICE_ENFORCE || identityVerified);
+  document.getElementById('btnAgree').disabled = !ok;
+}
 
 canvas.addEventListener('mousedown',  onStart);
 canvas.addEventListener('mousemove',  onMove);
@@ -358,8 +408,87 @@ function clearSignature() {
   hasSig = false;
   placeholder.style.opacity = '1';
   sigWrap.classList.remove('active');
-  document.getElementById('btnAgree').disabled = true;
+  refreshAgree();
 }
+
+/* ── NICE 휴대폰 본인확인 ─────────────────────────────────── */
+let nicePopup = null;
+
+async function startNice() {
+  const btn = document.getElementById('btnVerify');
+  if (btn) { btn.disabled = true; btn.textContent = '요청 중...'; }
+
+  // 팝업은 사용자 제스처 직후 먼저 연다(팝업 차단 회피)
+  nicePopup = window.open('', 'nicePopup', 'width=460,height=640,scrollbars=yes');
+
+  try {
+    const res = await fetch(NICE_START_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+        'Accept': 'application/json',
+      },
+      body: '{}',
+    });
+    const data = await res.json();
+    if (!data.success) {
+      if (nicePopup) nicePopup.close();
+      alert(data.message ?? '본인확인 요청에 실패했습니다.');
+      resetVerifyBtn();
+      return;
+    }
+
+    // 표준창으로 POST 하는 폼을 만들어 팝업에서 제출
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = data.standard_url;
+    form.target = 'nicePopup';
+    form.acceptCharset = 'utf-8';
+    [['m', 'service'], ['token_version_id', data.token_version_id],
+     ['enc_data', data.enc_data], ['integrity_value', data.integrity_value]]
+      .forEach(([k, v]) => {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = k; i.value = v;
+        form.appendChild(i);
+      });
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  } catch (e) {
+    if (nicePopup) nicePopup.close();
+    alert('본인확인 요청 중 네트워크 오류가 발생했습니다.');
+    resetVerifyBtn();
+  }
+}
+
+function resetVerifyBtn() {
+  const btn = document.getElementById('btnVerify');
+  if (btn) { btn.disabled = false; btn.textContent = '본인확인'; }
+}
+
+/* 팝업(콜백 뷰)에서 결과 수신 */
+window.addEventListener('message', function (e) {
+  if (e.origin !== window.location.origin) return;
+  const d = e.data;
+  if (!d || d.source !== 'nice-identity') return;
+
+  if (d.ok) {
+    identityVerified = true;
+    const box = document.getElementById('verifyBox');
+    if (box) box.classList.add('verified');
+    const t = document.getElementById('verifyTitle');
+    if (t) t.textContent = '본인확인 완료';
+    const desc = document.getElementById('verifyDesc');
+    if (desc) desc.textContent = '본인확인이 완료되었습니다. 서명해 주세요.';
+    const btn = document.getElementById('btnVerify');
+    if (btn) btn.outerHTML = '<span class="verify-badge">✅</span>';
+    refreshAgree();
+  } else {
+    alert(d.message || '본인확인에 실패했습니다.');
+    resetVerifyBtn();
+  }
+});
 
 /* ── 제출 ─────────────────────────────────────────────── */
 async function submitConsent(action) {

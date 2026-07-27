@@ -18,12 +18,31 @@ class PrescriptionConsent extends Model
         'expires_at',
         'responded_at',
         'pdf_path',
+        // NICE 본인확인 결과
+        'nice_verified_at',
+        'nice_name',
+        'nice_birthdate',
+        'nice_gender',
+        'nice_nation',
+        'nice_mobileco',
+        'nice_mobile',
+        'nice_authtype',
+        'nice_response_no',
+        'nice_ci',
+        'nice_di',
     ];
 
     protected $casts = [
-        'expires_at'    => 'datetime',
-        'responded_at'  => 'datetime',
+        'expires_at'       => 'datetime',
+        'responded_at'     => 'datetime',
+        'nice_verified_at' => 'datetime',
+        // CI/DI 는 민감식별정보 → 애플리케이션 레벨 암호화 저장
+        'nice_ci'          => 'encrypted',
+        'nice_di'          => 'encrypted',
     ];
+
+    // 직렬화(toArray/toJson) 시 민감식별정보 노출 방지
+    protected $hidden = ['nice_ci', 'nice_di'];
 
     public function prescription(): BelongsTo
     {
@@ -49,6 +68,12 @@ class PrescriptionConsent extends Model
             'expired'  => '만료',
             default    => $this->status,
         };
+    }
+
+    /** NICE 본인확인이 완료되었는가 */
+    public function isIdentityVerified(): bool
+    {
+        return $this->nice_verified_at !== null;
     }
 
     public function remainingMinutes(): int

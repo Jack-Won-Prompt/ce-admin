@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'nhis/fax-callback',
             'toss/webhook',
             'webhooks/shop-order',
+            'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
         ]);
         $middleware->appendToGroup('web', \App\Http\Middleware\LogUserActivity::class);
         $middleware->alias(['admin' => \App\Http\Middleware\AdminOnly::class]);

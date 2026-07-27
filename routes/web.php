@@ -288,6 +288,9 @@ Route::post('/admin/invite/{token}', [AdminInvitationController::class, 'confirm
 Route::prefix('consent')->name('consent.')->group(function () {
     Route::get( '/{token}', [ConsentController::class, 'show'])->name('show');
     Route::post('/{token}', [ConsentController::class, 'submit'])->name('submit');
+    // NICE 본인확인: 표준창 파라미터 발급(자기 페이지 fetch) / NICE returnurl 콜백(외부)
+    Route::post('/{token}/nice/start', [ConsentController::class, 'niceStart'])->name('nice.start');
+    Route::match(['get', 'post'], '/{token}/nice/callback', [ConsentController::class, 'niceCallback'])->name('nice.callback');
 });
 
 // 개인정보 수집·이용 동의서 (mcoloplast) 공개 페이지 (로그인 불필요 — 환자 직접 작성)

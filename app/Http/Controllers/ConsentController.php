@@ -36,7 +36,11 @@ class ConsentController extends Controller
             return view('consent.expired', compact('consent'));
         }
 
-        return view('consent.sign', compact('consent'));
+        $niceEnabled = (bool) config('nice.enabled');
+        $niceEnforce = (bool) config('nice.enforce');
+        $verified    = $consent->isIdentityVerified();
+
+        return view('consent.sign', compact('consent', 'niceEnabled', 'niceEnforce', 'verified'));
     }
 
     /**
@@ -57,6 +61,17 @@ class ConsentController extends Controller
             'action'    => 'required|in:agreed,declined',
             'signature' => 'nullable|string|max:500000',
         ]);
+
+        // NICE 본인확인 강제: 동의 서명은 본인확인 완료 후에만 허용
+        if ($request->action === 'agreed'
+            && config('nice.enforce')
+            && !$consent->isIdentityVerified()
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => '본인확인을 먼저 완료해 주세요.',
+            ], 422);
+        }
 
         $consent->update([
             'status'         => $request->action,
@@ -86,6 +101,130 @@ class ConsentController extends Controller
             'success' => true,
             'action'  => $request->action,
         ]);
+    }
+
+    /**
+     * 공개 POST: NICE 표준창 호출 파라미터 발급 (서명 페이지 fetch)
+     * 자격증명/암호화는 모두 서버에서 처리하고, 클라이언트에는 표준창 폼 값만 전달한다.
+     */
+    public function niceStart(string $token): JsonResponse
+    {
+        $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
+
+        if (!$consent->isPending()) {
+            return response()->json(['success' => false, 'message' => '이미 처리되었거나 만료된 요청입니다.'], 422);
+        }
+
+        $nice = app(\App\Services\Nice\NiceIdentityService::class);
+        if (!$nice->enabled()) {
+            return response()->json(['success' => false, 'message' => '본인확인 서비스가 아직 설정되지 않았습니다.'], 503);
+        }
+
+        try {
+            $returnUrl = route('consent.nice.callback', ['token' => $consent->token]);
+            $params    = $nice->startVerification($consent, $returnUrl);
+            return response()->json(['success' => true] + $params);
+        } catch (\Throwable $e) {
+            \Log::error('NICE startVerification 실패', ['token' => $token, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => '본인확인 요청 중 오류가 발생했습니다.'], 500);
+        }
+    }
+
+    /**
+     * 공개 GET/POST: NICE 표준창 returnurl 콜백.
+     * enc_data 복호화 → 처방전 환자(이름/생년월일) 매칭 → 결과 저장.
+     * 결과는 팝업 뷰에서 opener(서명 페이지)로 postMessage 후 창을 닫는다.
+     */
+    public function niceCallback(Request $request, string $token): View
+    {
+        $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
+        $nice    = app(\App\Services\Nice\NiceIdentityService::class);
+
+        try {
+            $result = $nice->handleCallback($consent, $request->all());
+        } catch (\Throwable $e) {
+            \Log::warning('NICE 콜백 처리 실패', ['token' => $token, 'error' => $e->getMessage()]);
+            return view('consent.nice_callback', ['ok' => false, 'message' => $e->getMessage()]);
+        }
+
+        // 처방전 환자 본인 매칭
+        $match = $this->matchesPatient($consent, $result);
+        if (!$match['ok']) {
+            return view('consent.nice_callback', ['ok' => false, 'message' => $match['message']]);
+        }
+
+        $consent->update([
+            'nice_verified_at' => now(),
+            'nice_name'        => $result['name'],
+            'nice_birthdate'   => $result['birthdate'] ?: null,
+            'nice_gender'      => $result['gender'] ?: null,
+            'nice_nation'      => $result['nation'] ?: null,
+            'nice_mobileco'    => $result['mobileco'] ?: null,
+            'nice_mobile'      => $result['mobile'] ?: null,
+            'nice_authtype'    => $result['authtype'] ?: null,
+            'nice_response_no' => $result['response_no'] ?: null,
+            'nice_ci'          => $result['ci'] ?: null,
+            'nice_di'          => $result['di'] ?: null,
+        ]);
+
+        return view('consent.nice_callback', ['ok' => true, 'name' => $result['name']]);
+    }
+
+    /**
+     * NICE 본인확인 결과가 처방전 환자 본인과 일치하는지 검증.
+     * 정책: 이름 일치 필수 + (환자 생년월일이 있으면) 생년월일 일치 필수.
+     *
+     * @return array{ok:bool, message:string}
+     */
+    private function matchesPatient(PrescriptionConsent $consent, array $result): array
+    {
+        $consent->loadMissing('prescription.patient');
+        $patient = $consent->prescription?->patient;
+
+        $expectedName  = $patient?->name ?? $consent->patient_name;
+        $expectedBirth = $this->patientBirthYmd($consent);   // YYYYMMDD or null
+
+        $norm = fn ($s) => preg_replace('/\s+/', '', (string) $s);
+
+        if (config('nice.match.require_name', true)) {
+            if ($norm($result['name']) === '' || $norm($result['name']) !== $norm($expectedName)) {
+                return ['ok' => false, 'message' => '본인확인 정보가 처방전 환자와 일치하지 않습니다. (이름)'];
+            }
+        }
+
+        if (config('nice.match.require_birth', true) && $expectedBirth) {
+            if ($result['birthdate'] === '' || $result['birthdate'] !== $expectedBirth) {
+                return ['ok' => false, 'message' => '본인확인 정보가 처방전 환자와 일치하지 않습니다. (생년월일)'];
+            }
+        }
+
+        return ['ok' => true, 'message' => ''];
+    }
+
+    /** 처방전 환자 생년월일을 YYYYMMDD 로 도출(환자 레코드 우선, 없으면 OCR 주민번호). */
+    private function patientBirthYmd(PrescriptionConsent $consent): ?string
+    {
+        $patient = $consent->prescription?->patient;
+        if ($patient?->birth_date) {
+            return $patient->birth_date->format('Ymd');
+        }
+
+        // 폴백: OCR 주민번호 앞 7자리에서 도출
+        $rrn = preg_replace('/\D/', '', (string) $consent->prescription?->resident_no_ocr);
+        if (strlen($rrn) >= 7) {
+            $yy = substr($rrn, 0, 2);
+            $md = substr($rrn, 2, 4);
+            $g  = $rrn[6];
+            $century = match ($g) {
+                '1', '2', '5', '6' => '19',
+                '3', '4', '7', '8' => '20',
+                '9', '0'           => '18',
+                default            => '19',
+            };
+            return $century.$yy.$md;
+        }
+
+        return null;
     }
 
     /**
