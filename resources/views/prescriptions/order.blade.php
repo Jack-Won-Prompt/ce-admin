@@ -7124,30 +7124,28 @@ window.HELP_TOUR_STEPS = [
     _memos.filter(m => m.is_pinned).forEach(m => renderPinnedWidget(m));
   });
 
-  // ── 환자 정보 바 스크롤 고정 ───────────────────────────
+  // ── 환자 정보 바: 상시 고정 헤더 ───────────────────────────
+  // 정보바는 margin-top(-)으로 네비 바로 아래에 풀블리드되는 '서브 헤더'라 애초에
+  // pin 경계 안에서 시작함. 스크롤에 따라 pin/unpin을 토글하면 참조 불일치로 매 이벤트마다
+  // 붙었다 떼며 여백이 흔들림 → 전환을 없애고 처음부터 끝까지 고정으로 유지한다.
   (function () {
     const bar = document.getElementById('patient-info-bar');
     const ph  = document.getElementById('patient-info-bar-ph');
-    if (!bar) return;
-    function onInfoScroll() {
-      const navEl = document.getElementById('layoutNavbar');
-      const navVisible = navEl && getComputedStyle(navEl).display !== 'none';
-      const navB = navVisible ? navEl.getBoundingClientRect().bottom : 0;
-      const pinned = bar.classList.contains('info-bar-pinned');
-      // rect 기준(스크롤러 무관) + 히스테리시스로 깜빡임 방지
-      const natTop = (pinned && ph ? ph : bar).getBoundingClientRect().top;
-      if (!pinned && natTop <= navB) {
-        const h = bar.offsetHeight;
-        bar.classList.add('info-bar-pinned');
-        if (ph) { ph.style.height = h + 'px'; ph.style.display = 'block'; }
-      } else if (pinned && natTop > navB + 2) {
-        bar.classList.remove('info-bar-pinned');
-        if (ph) ph.style.display = 'none';
-      }
+    if (!bar || !ph) return;
+    ph.style.display = 'block';
+    bar.classList.add('info-bar-pinned');           // 상시 고정
+    function sync() {
+      // 콘텐츠가 고정바 '바로 아래'에서 시작하도록 자리표시자 높이 확보(문서좌표 기준)
+      const docY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const phTop     = ph.getBoundingClientRect().top + docY;   // 흐름상 자리(자기 높이와 무관)
+      const barBottom = bar.getBoundingClientRect().bottom + docY;
+      ph.style.height = Math.max(0, Math.round(barBottom - phTop)) + 'px';
     }
-    window.addEventListener('scroll', onInfoScroll, true);   // capture: 모든 스크롤러 포착
-    window.addEventListener('resize', onInfoScroll);
-    onInfoScroll();
+    sync();
+    // 폰트/이미지 로드나 wrap 변화로 높이가 바뀔 수 있어 재동기화
+    window.addEventListener('resize', sync);
+    window.addEventListener('load', sync);
+    requestAnimationFrame(sync);
   })();
 </script>
 @endpush
