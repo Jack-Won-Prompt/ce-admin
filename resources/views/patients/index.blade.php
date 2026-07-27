@@ -63,6 +63,29 @@
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
   .filter-bar { display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap; }
+  /* 리스트(좌) + 이력 상세(우) 분할 */
+  .pt-split { display:flex; gap:16px; align-items:stretch; }
+  .pt-list { flex:1; min-width:0; }
+  .pt-detail { width:460px; flex-shrink:0; background:#fff; border:1px solid var(--border);
+    border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; align-self:flex-start; }
+  @media(max-width:1200px){ .pt-detail { width:380px; } }
+  @media(max-width:900px){ .pt-split { flex-direction:column; } .pt-detail { width:auto; } }
+  .pt-detail-head { display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border); }
+  .pt-detail .tab-bar { display:flex; border-bottom:1px solid var(--border); padding:0 6px; overflow-x:auto; }
+  .pt-detail .tab-btn { padding:10px 11px; font-size:12.5px; font-weight:700; color:var(--text-muted);
+    border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .pt-detail .tab-btn:hover { color:var(--primary); }
+  .pt-detail .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .pt-detail .tab-btn .cnt { background:var(--bg); color:var(--text-secondary); border-radius:10px; padding:0 6px; font-size:10.5px; }
+  .pt-pane { display:none; padding:8px 14px 14px; overflow-y:auto; max-height:calc(100vh - 300px); }
+  .pt-pane.active { display:block; }
+  .pt-hrow { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-light); font-size:12.5px; cursor:pointer; }
+  .pt-hrow:last-child { border-bottom:none; }
+  .pt-hrow:hover { background:var(--bg); border-radius:6px; }
+  .pt-hrow .pt-h-main { flex:1; min-width:0; }
+  .pt-hrow .pt-h-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12.5px; }
   .card-footer { padding:12px 18px;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 var(--radius-lg) var(--radius-lg); }
 </style>
 @endpush
@@ -115,15 +138,30 @@
   </div>
 </form>
 
-{{-- ── 목록 (wwGrid) ── --}}
+{{-- ── 목록(좌) + 이력 상세(우) ── --}}
 <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-  <button type="button" class="btn btn-outline btn-sm" onclick="patientViewDetail()">
-    <i class="bx bx-detail"></i> 선택 상세
-  </button>
-  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 환자 행을 <b>더블클릭</b>하면 오른쪽에 처방전·상담·구매 이력이 표시됩니다.</span>
   <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
 </div>
-<div id="patientGrid"></div>
+<div class="pt-split">
+  <div class="pt-list"><div id="patientGrid"></div></div>
+  <div class="pt-detail" id="patientDetail" style="display:none;">
+    <div class="pt-detail-head">
+      <i class="bx bx-user-pin" style="color:var(--primary);font-size:18px;"></i>
+      <span id="pdName" style="font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
+      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="margin-left:auto;white-space:nowrap;">전체 상세</a>
+      <button type="button" class="btn btn-outline btn-sm" onclick="ptCloseDetail()" title="닫기"><i class="bx bx-x"></i></button>
+    </div>
+    <div class="tab-bar">
+      <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
+      <button type="button" class="tab-btn"        data-tab="counsel"  onclick="ptTab('counsel')"><i class="fa-solid fa-comments"></i> 상담이력 <span class="cnt" id="pdCntCs">0</span></button>
+      <button type="button" class="tab-btn"        data-tab="purchase" onclick="ptTab('purchase')"><i class="fa-solid fa-cart-shopping"></i> 구매이력 <span class="cnt" id="pdCntPu">0</span></button>
+    </div>
+    <div class="pt-pane active" id="pd-rx"></div>
+    <div class="pt-pane" id="pd-counsel"></div>
+    <div class="pt-pane" id="pd-purchase"></div>
+  </div>
+</div>
 
 {{-- 환자 추가 모달 --}}
 <div class="modal-overlay" id="addModal">
@@ -228,12 +266,62 @@
     data: @json($gridData),
   });
   window.__patientGrid = grid;
-  window.patientViewDetail = function () {
-    const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('상세를 볼 환자를 체크하세요.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
-    window.location.href = DETAIL_BASE + '/' + c[0].id;
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const hrow = (main, sub, right, url) =>
+    '<div class="pt-hrow" ' + (url ? 'onclick="location.href=\'' + url + '\'"' : '') + '>' +
+      '<div class="pt-h-main"><div style="font-weight:600;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
+      (right ? '<div style="white-space:nowrap;text-align:right;">' + right + '</div>' : '') +
+    '</div>';
+  const emptyBox = t => '<div class="pt-empty">' + t + '</div>';
+
+  window.ptTab = function (name) {
+    document.querySelectorAll('.pt-detail .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
+  window.ptCloseDetail = function () { document.getElementById('patientDetail').style.display = 'none'; };
+
+  async function ptLoad(id) {
+    const panel = document.getElementById('patientDetail');
+    panel.style.display = 'flex';
+    document.getElementById('pdName').textContent = '불러오는 중...';
+    ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오는 중...'));
+    try {
+      const res = await fetch(DETAIL_BASE + '/' + id + '/histories', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      document.getElementById('pdName').textContent = d.name + ' 이력';
+      document.getElementById('pdMore').setAttribute('href', DETAIL_BASE + '/' + id);
+      document.getElementById('pdCntRx').textContent = d.prescriptions.length;
+      document.getElementById('pdCntCs').textContent = d.counseling.length;
+      document.getElementById('pdCntPu').textContent = d.purchases.length;
+
+      document.getElementById('pd-rx').innerHTML = d.prescriptions.length
+        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url)).join('')
+        : emptyBox('처방전 이력이 없습니다.');
+
+      document.getElementById('pd-counsel').innerHTML = d.counseling.length
+        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url)).join('')
+        : emptyBox('상담 이력이 없습니다.');
+
+      document.getElementById('pd-purchase').innerHTML = d.purchases.length
+        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url)).join('')
+        : emptyBox('구매 이력이 없습니다.');
+
+      window.ptTab('rx');
+    } catch (e) {
+      document.getElementById('pdName').textContent = '불러오기 실패';
+      ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오지 못했습니다.'));
+    }
+  }
+
+  // 행 더블클릭 → 우측에 이력 상세 표시
+  document.getElementById('patientGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (row && row.id) ptLoad(row.id);
+  });
 })();
 </script>
 <script>

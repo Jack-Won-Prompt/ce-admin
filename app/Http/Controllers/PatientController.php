@@ -93,6 +93,48 @@ class PatientController extends Controller
         return view('patients.show', compact('patient'));
     }
 
+    /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
+    public function histories(Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        $rx = $patient->prescriptions()->latest()->take(50)->get();
+
+        $prescriptions = $rx->map(fn ($p) => [
+            'rx_number' => $p->rx_number,
+            'hospital'  => $p->hospital_name ?? '-',
+            'date'      => $p->created_at->format('Y-m-d'),
+            'status'    => $p->status_label,
+            'url'       => route('prescriptions.show', $p),
+        ])->values();
+
+        $counseling = $rx->filter(fn ($p) => !empty($p->counseling_data))->map(function ($p) {
+            $c = $p->counseling;
+            return [
+                'counsel_no' => $c->counselling_no ?? $c->counsel_no ?? '-',
+                'rx_number'  => $p->rx_number,
+                'date'       => ($c->counselling_date ?? null) ?: $p->created_at->format('Y-m-d'),
+                'note'       => $c->memo ?? $c->note ?? $p->review_memo ?? '',
+                'url'        => route('prescriptions.show', $p),
+            ];
+        })->values();
+
+        $purchases = $patient->orders()->latest()->take(50)->get()->map(fn ($o) => [
+            'order_number' => $o->order_number,
+            'product'      => $o->product_name ?? '-',
+            'qty'          => (int) ($o->quantity ?? 1),
+            'amount'       => (int) $o->total_amount,
+            'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+            'date'         => $o->created_at->format('Y-m-d'),
+            'url'          => route('orders.show', $o),
+        ])->values();
+
+        return response()->json([
+            'name'          => $patient->name,
+            'prescriptions' => $prescriptions,
+            'counseling'    => $counseling,
+            'purchases'     => $purchases,
+        ]);
+    }
+
     // ── 등록 ──────────────────────────────────────────────
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {

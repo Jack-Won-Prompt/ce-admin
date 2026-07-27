@@ -128,6 +128,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('patients')->name('patients.')->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
+        Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');
         Route::put('/{patient}',     [PatientController::class, 'update'])->name('update');
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');
