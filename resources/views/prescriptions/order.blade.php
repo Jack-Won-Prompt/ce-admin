@@ -2912,73 +2912,66 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   })();
 
-  // ── 탭바 sticky — bar를 body로 reparent해서 transform/overflow 우회 ──
+  // ── 탭바 고정: body로 reparent해서 정보바 바로 아래에 fixed (transform/overflow 우회) ──
   (function () {
     if (window.matchMedia('(max-width: 768px)').matches) return;
     const bar = document.getElementById('tabBarInner');
     if (!bar) return;
     const barParent = bar.parentNode;   // #tabBarOuter
 
-    // 현재 고정된 헤더들의 bottom 합산 (navbar + 환자 정보 바)
+    // 정보바 바로 아래 y좌표(고정 헤더 겹침 방지). 정보바가 fixed면 그 bottom, 아니면 navbar bottom
     function getTop() {
       const navEl  = document.getElementById('layoutNavbar');
       const patBar = document.getElementById('patient-info-bar');
-      let bottom = navEl ? navEl.getBoundingClientRect().bottom : 60;
+      const navVisible = navEl && getComputedStyle(navEl).display !== 'none';
+      let bottom = navVisible ? navEl.getBoundingClientRect().bottom : 0;
       if (patBar && patBar.classList.contains('info-bar-pinned')) {
         bottom = patBar.getBoundingClientRect().bottom;
       }
-      return bottom + 4;
+      return bottom;   // 정보바와 붙도록 여백 0
     }
 
-    // bar가 body로 빠질 때 공간 확보용 placeholder
-    const ph = document.createElement('div');
+    const ph = document.createElement('div');   // 고정 시 자리 유지 placeholder
     ph.style.display = 'none';
     barParent.insertBefore(ph, bar);
 
-    let absTop = null, barLeft = 0, barW = 0, barH = 0;
-    let isFixed = false;
+    let absTop = null, barLeft = 0, barW = 0, isFixed = false;
 
     function measure() {
       const r = bar.getBoundingClientRect();
       absTop  = r.top + window.scrollY;
       barLeft = r.left;
       barW    = bar.offsetWidth;
-      barH    = bar.offsetHeight;
-      ph.style.height = barH + 'px';
+      ph.style.height = bar.offsetHeight + 'px';
     }
 
     function fix() {
       measure();
-      const top = getTop();
-      const bg  = getComputedStyle(document.body).backgroundColor;
       ph.style.display = 'block';
       document.body.appendChild(bar);
       bar.style.cssText =
-        `position:fixed;top:${top}px;left:${barLeft}px;width:${barW}px;` +
-        `z-index:200;background:${bg};box-shadow:0 2px 8px rgba(0,0,0,.14);margin-bottom:0;`;
+        `position:fixed;top:${getTop()}px;left:${barLeft}px;width:${barW}px;` +
+        `z-index:60;background:var(--bg-card);box-shadow:0 3px 8px rgba(0,0,0,.12);margin:0;`;
       isFixed = true;
     }
-
     function unfix() {
       barParent.insertBefore(bar, ph);
       bar.style.cssText = '';
       ph.style.display = 'none';
-      absTop  = null;
-      isFixed = false;
+      absTop = null; isFixed = false;
     }
 
     function onScroll() {
       if (absTop === null) measure();
-      const top       = getTop();
-      const shouldFix = window.scrollY > absTop - top;
+      const shouldFix = window.scrollY > absTop - getTop();
       if (shouldFix && !isFixed)      fix();
       else if (!shouldFix && isFixed) unfix();
-      // 이미 고정 중이면 top 값 갱신 (환자 바 pin/unpin 반응)
-      else if (isFixed) bar.style.top = getTop() + 'px';
+      else if (isFixed) { bar.style.top = getTop() + 'px'; bar.style.left = barLeft + 'px'; bar.style.width = barW + 'px'; }
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', () => { if (isFixed) unfix(); absTop = null; });
+    window.addEventListener('resize', () => { if (isFixed) unfix(); absTop = null; onScroll(); });
+    onScroll();
   })();
 });
 
