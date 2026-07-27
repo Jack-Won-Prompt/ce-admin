@@ -136,6 +136,8 @@
   .page-body-inner { padding-bottom: 40px; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,.10); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
+  /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
+  html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
   .tab-bar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
   .tab-bar-tabs { display: flex; }
   .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent; border-bottom: 2px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
