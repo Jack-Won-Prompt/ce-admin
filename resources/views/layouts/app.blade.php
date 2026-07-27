@@ -1060,6 +1060,13 @@
           </a>
         </div>
 
+        <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
+            <i class="menu-icon bx bx-scan"></i>
+            <span>OCR 설정</span>
+          </a>
+        </div>
+
         <div class="menu-header">지원</div>
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">

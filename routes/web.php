@@ -275,6 +275,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/delegation',  [DelegationSettingController::class, 'edit'])->name('delegation-settings.edit');
     Route::put('/settings/delegation',  [DelegationSettingController::class, 'update'])->name('delegation-settings.update');
 
+    // 처방전 OCR 공급자 설정
+    Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');
+    Route::put('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'update'])->name('ocr-settings.update');
+
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');
     Route::get('/privacy-consents/export',   [PrivacyConsentAdminController::class, 'export'])->name('privacy-consents.export');

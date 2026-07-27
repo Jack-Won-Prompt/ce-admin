@@ -23,8 +23,8 @@ class OcrService
             $imageContent = base64_encode(file_get_contents($absolutePath));
             $mimeType     = $this->detectMimeType($absolutePath);
 
-            // Claude 우선, 실패 시 OpenAI 폴백
-            $result = $this->callWithFallback($imageContent, $mimeType);
+            // 공급자 선택(관리자 설정 DB): textract | ai. Textract 미설정/미지원/실패 시 AI 폴백.
+            $result = $this->runProvider($absolutePath, $imageContent, $mimeType);
 
             $parsed = !empty($result['parsed'])
                 ? $this->mapOpenAiFields($result['parsed'])
@@ -116,6 +116,70 @@ class OcrService
         }
 
         return $response->json('content.0.text', '');
+    }
+
+    /**
+     * 관리자 설정(DB)에 따라 OCR 공급자 선택.
+     * textract: AWS Textract → raw text (구조화는 parsePrescriptionFields 정규식이 담당)
+     * ai:       Claude 우선 → OpenAI 폴백 (한글 필드 구조화 추출)
+     * Textract 를 골라도 자격증명 미설정·미지원 형식·호출 실패면 AI 로 안전 폴백.
+     */
+    private function runProvider(string $absolutePath, string $base64Image, string $mimeType): array
+    {
+        $provider = \App\Models\OcrSetting::provider();
+
+        if ($provider === 'textract') {
+            if ($this->textractUsable($mimeType)) {
+                try {
+                    return $this->callTextract($absolutePath);
+                } catch (\Throwable $e) {
+                    Log::warning('Textract OCR 실패, AI 폴백', ['error' => $e->getMessage()]);
+                }
+            } else {
+                Log::info('Textract 미사용(미설정/미지원 형식) → AI OCR 사용', ['mime' => $mimeType]);
+            }
+        }
+
+        return $this->callWithFallback($base64Image, $mimeType);
+    }
+
+    /** Textract 사용 가능 여부: 자격증명 설정 + SDK 설치 + 동기 지원 이미지 형식(PNG/JPEG) */
+    private function textractUsable(string $mimeType): bool
+    {
+        return config('ocr.textract.enabled')
+            && class_exists(\Aws\Textract\TextractClient::class)
+            && in_array($mimeType, ['image/png', 'image/jpeg'], true);
+    }
+
+    /**
+     * AWS Textract detectDocumentText 호출 → LINE 블록을 이어붙여 raw text 반환.
+     * (구조화 JSON 은 제공되지 않으므로 parsed 는 비움)
+     */
+    private function callTextract(string $absolutePath): array
+    {
+        $cfg  = config('ocr.textract');
+        $args = ['region' => $cfg['region'], 'version' => $cfg['version'] ?? 'latest'];
+        // 명시 키가 있으면 사용, 없으면 기본 자격증명 체인(EC2 IAM Role 등)
+        if (!empty($cfg['key']) && !empty($cfg['secret'])) {
+            $args['credentials'] = ['key' => $cfg['key'], 'secret' => $cfg['secret']];
+        }
+
+        $client = new \Aws\Textract\TextractClient($args);
+        $res    = $client->detectDocumentText([
+            'Document' => ['Bytes' => file_get_contents($absolutePath)],
+        ]);
+
+        $lines = [];
+        foreach ($res['Blocks'] ?? [] as $b) {
+            if (($b['BlockType'] ?? '') === 'LINE' && isset($b['Text'])) {
+                $lines[] = $b['Text'];
+            }
+        }
+        $text = implode("\n", $lines);
+
+        Log::info('Textract OCR 완료', ['lines' => count($lines), 'chars' => mb_strlen($text)]);
+
+        return ['text' => $text, 'confidence' => 0.0, 'parsed' => []];
     }
 
     private function callWithFallback(string $base64Image, string $mimeType): array
