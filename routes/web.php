@@ -40,19 +40,22 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// 루트 & 웰컴 페이지 (비로그인 → welcome, 로그인 → dashboard)
+// 루트 & 웰컴 페이지 (비로그인 → welcome, 로그인 → 워크스페이스)
 Route::get('/', function () {
-    if (\Illuminate\Support\Facades\Auth::check()) return redirect()->route('dashboard');
+    if (\Illuminate\Support\Facades\Auth::check()) return redirect()->route('workspace');
     return view('welcome');
 })->name('welcome');
 
 Route::get('/welcome', function () {
-    if (\Illuminate\Support\Facades\Auth::check()) return redirect()->route('dashboard');
+    if (\Illuminate\Support\Facades\Auth::check()) return redirect()->route('workspace');
     return view('welcome');
 });
 
 // 인증 미들웨어로 보호
 Route::middleware(['auth'])->group(function () {
+
+    // MDI 워크스페이스(메뉴 클릭 시 화면 내 탭으로 열림)
+    Route::view('/workspace', 'workspace')->name('workspace');
 
     // 대시보드
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

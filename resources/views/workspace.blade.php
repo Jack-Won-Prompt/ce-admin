@@ -1,0 +1,116 @@
+@extends('layouts.app')
+
+@section('title', '워크스페이스')
+@section('page-title', 'CE Admin')
+@section('breadcrumb', '홈')
+
+@push('styles')
+<style>
+  /* 탭 워크스페이스가 콘텐츠 영역(네비 아래)을 가득 채우도록 page-body 패딩 상쇄 */
+  #wsRoot { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h)); margin:-14px -24px -20px; background:var(--bg); }
+  .ws-tabs { display:flex; gap:3px; align-items:flex-end; background:#fff; border-bottom:1px solid var(--border);
+    padding:7px 12px 0; overflow-x:auto; flex-shrink:0; min-height:42px; }
+  .ws-tabs::-webkit-scrollbar { height:6px; }
+  .ws-tab { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; font-size:13px; font-weight:600;
+    color:var(--text-secondary); background:var(--bg); border:1px solid var(--border); border-bottom:none;
+    border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; max-width:220px; user-select:none; }
+  .ws-tab:hover { color:var(--primary); }
+  .ws-tab.active { color:var(--primary); background:#fff; border-color:var(--border); box-shadow:inset 0 -2px 0 var(--primary); }
+  .ws-tab .ws-tab-ico { font-size:15px; flex-shrink:0; opacity:.75; }
+  .ws-tab .ws-tab-label { overflow:hidden; text-overflow:ellipsis; }
+  .ws-tab .ws-tab-close { border:none; background:none; cursor:pointer; color:var(--text-muted); font-size:16px;
+    line-height:1; padding:0 3px; border-radius:5px; flex-shrink:0; }
+  .ws-tab .ws-tab-close:hover { background:var(--danger-light); color:var(--danger); }
+  .ws-frames { position:relative; flex:1; min-height:0; background:#fff; }
+  .ws-frames iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+</style>
+@endpush
+
+@section('content')
+<div id="wsRoot">
+  <div id="wsTabs" class="ws-tabs" role="tablist"></div>
+  <div id="wsFrames" class="ws-frames"></div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(function () {
+  const HOME  = { url: @json(url('dashboard')) + '?frame=1', title: '대시보드', icon: 'bx-home-smile' };
+  const tabsEl   = document.getElementById('wsTabs');
+  const framesEl = document.getElementById('wsFrames');
+  const tabs = [];        // { id, url, title, icon, home }
+  let active = null, seq = 0;
+
+  const base = u => u.split('#')[0];
+  const esc  = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const stripFrame = u => u.replace(/[?&]frame=1\b/, '').replace(/\?$/, '');
+
+  function render() {
+    tabsEl.innerHTML = '';
+    tabs.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'ws-tab' + (t.id === active ? ' active' : '');
+      el.setAttribute('role', 'tab');
+      el.innerHTML =
+        '<i class="ws-tab-ico bx ' + (t.icon || 'bx-window-alt') + '"></i>' +
+        '<span class="ws-tab-label">' + esc(t.title) + '</span>' +
+        (t.home ? '' : '<button class="ws-tab-close" title="닫기">&times;</button>');
+      el.addEventListener('click', e => { if (e.target.closest('.ws-tab-close')) return; activate(t.id); });
+      const cl = el.querySelector('.ws-tab-close');
+      if (cl) cl.addEventListener('click', e => { e.stopPropagation(); closeTab(t.id); });
+      tabsEl.appendChild(el);
+    });
+    tabs.forEach(t => { const f = document.getElementById('wsF-' + t.id); if (f) f.style.display = (t.id === active ? 'block' : 'none'); });
+    highlightMenu();
+  }
+
+  function openTab(url, title, icon, isHome) {
+    const hit = tabs.find(t => base(t.url) === base(url));
+    if (hit) { activate(hit.id); return; }
+    const id = ++seq;
+    tabs.push({ id, url, title, icon, home: !!isHome });
+    const f = document.createElement('iframe');
+    f.id = 'wsF-' + id; f.src = url; f.loading = 'lazy';
+    framesEl.appendChild(f);
+    active = id;
+    render();
+  }
+  function activate(id) { active = id; render(); }
+  function closeTab(id) {
+    const i = tabs.findIndex(t => t.id === id);
+    if (i < 0 || tabs[i].home) return;
+    const wasActive = active === id;
+    const f = document.getElementById('wsF-' + id); if (f) f.remove();
+    tabs.splice(i, 1);
+    if (wasActive && tabs.length) active = (tabs[Math.max(0, i - 1)] || tabs[0]).id;
+    render();
+  }
+  function highlightMenu() {
+    const t = tabs.find(x => x.id === active);
+    const cur = t ? stripFrame(base(t.url)) : '';
+    document.querySelectorAll('.layout-menu .menu-item').forEach(mi => {
+      const a = mi.querySelector('a.menu-link');
+      const href = a && a.getAttribute('href');
+      mi.classList.toggle('active', !!href && cur.endsWith(new URL(href, location.origin).pathname));
+    });
+  }
+
+  // 사이드바 메뉴 클릭 → 탭으로 열기(페이지 이동 대신)
+  document.addEventListener('click', function (e) {
+    const a = e.target.closest('.layout-menu a.menu-link');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('javascript')) return;
+    e.preventDefault();
+    const url = href + (href.indexOf('?') > -1 ? '&' : '?') + 'frame=1';
+    const icon = (a.querySelector('.menu-icon') || {}).className || '';
+    const ic = (icon.match(/bx-[\w-]+/) || [])[0] || 'bx-window-alt';
+    openTab(url, a.dataset.title || a.textContent.trim(), ic, false);
+  });
+
+  // 홈(대시보드) 탭
+  openTab(HOME.url, HOME.title, HOME.icon, true);
+})();
+</script>
+@endpush

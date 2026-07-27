@@ -851,6 +851,24 @@
     })();
   </script>
 
+  {{-- MDI 워크스페이스: iframe(탭) 안에서 열릴 때 사이드바·네비 숨기고 콘텐츠만 --}}
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(location.search);
+        if (window.self !== window.top || p.get('frame') === '1') {
+          document.documentElement.classList.add('is-framed');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    html.is-framed .layout-menu,
+    html.is-framed .layout-navbar { display: none !important; }
+    html.is-framed .layout-page { margin-left: 0 !important; }
+    html.is-framed .content-wrapper { padding-top: 0 !important; }
+    html.is-framed .page-body { padding-top: 14px; }
+  </style>
   @stack('styles')
 </head>
 <body>

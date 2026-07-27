@@ -57,7 +57,7 @@ class AuthController extends Controller
             Auth::loginUsingId($user->id, $request->boolean('remember'));
             $request->session()->regenerate();
             $this->dispatchCrawlIfNeeded();
-            return redirect()->intended(route('dashboard'));
+            return redirect()->intended(route('workspace'));
         }
 
         if (empty($user->phone)) {
@@ -157,7 +157,7 @@ class AuthController extends Controller
 
         $this->dispatchCrawlIfNeeded();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('workspace'));
     }
 
     /**
