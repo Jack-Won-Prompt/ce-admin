@@ -63,13 +63,17 @@
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
   .filter-bar { display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap; }
-  /* 리스트(좌) + 이력 상세(우) 분할 */
-  .pt-split { display:flex; gap:16px; align-items:stretch; }
-  .pt-list { flex:1; min-width:0; }
-  .pt-detail { width:460px; flex-shrink:0; background:#fff; border:1px solid var(--border);
-    border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; align-self:flex-start; }
-  @media(max-width:1200px){ .pt-detail { width:380px; } }
-  @media(max-width:900px){ .pt-split { flex-direction:column; } .pt-detail { width:auto; } }
+  /* 패널 탭(조회결과/상세내용) */
+  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
+  .pnl-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tab:hover { color:var(--primary); }
+  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
+    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
+  /* 상세내용 탭 안 이력 카드(전체폭) */
+  .pt-detail { background:#fff; border:1px solid var(--border);
+    border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; }
   .pt-detail-head { display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border); }
   .pt-detail .tab-bar { display:flex; border-bottom:1px solid var(--border); padding:0 6px; overflow-x:auto; }
   .pt-detail .tab-btn { padding:10px 11px; font-size:12.5px; font-weight:700; color:var(--text-muted);
@@ -138,19 +142,31 @@
   </div>
 </form>
 
-{{-- ── 목록(좌) + 이력 상세(우) ── --}}
-<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 환자 행을 <b>더블클릭</b>하면 오른쪽에 처방전·상담·구매 이력이 표시됩니다.</span>
-  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+{{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
+<div class="pnl-tabs">
+  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
+  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
 </div>
-<div class="pt-split">
-  <div class="pt-list"><div id="patientGrid"></div></div>
+
+<div id="pnlList">
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 처방전·상담·구매 이력을 확인합니다.</span>
+    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+  </div>
+  <div id="patientGrid"></div>
+</div>
+
+{{-- ── 상세내용 탭 ── --}}
+<div id="pnlDetail" style="display:none;">
+  <div style="margin-bottom:12px;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
+  </div>
+  <div id="pdEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 이력이 여기에 표시됩니다.</div>
   <div class="pt-detail" id="patientDetail" style="display:none;">
     <div class="pt-detail-head">
       <i class="bx bx-user-pin" style="color:var(--primary);font-size:18px;"></i>
       <span id="pdName" style="font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
       <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="margin-left:auto;white-space:nowrap;">전체 상세</a>
-      <button type="button" class="btn btn-outline btn-sm" onclick="ptCloseDetail()" title="닫기"><i class="bx bx-x"></i></button>
     </div>
     <div class="tab-bar">
       <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
@@ -279,11 +295,19 @@
     document.querySelectorAll('.pt-detail .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
-  window.ptCloseDetail = function () { document.getElementById('patientDetail').style.display = 'none'; };
+  // 패널 탭 전환(조회결과/상세내용)
+  window.pnlShow = function (which) {
+    document.getElementById('pnlList').style.display   = which === 'detail' ? 'none' : '';
+    document.getElementById('pnlDetail').style.display = which === 'detail' ? '' : 'none';
+    document.getElementById('pnlBtnList').classList.toggle('active', which !== 'detail');
+    document.getElementById('pnlBtnDetail').classList.toggle('active', which === 'detail');
+  };
 
   async function ptLoad(id) {
+    document.getElementById('pdEmpty').style.display = 'none';
     const panel = document.getElementById('patientDetail');
     panel.style.display = 'flex';
+    window.pnlShow('detail');
     document.getElementById('pdName').textContent = '불러오는 중...';
     ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오는 중...'));
     try {
