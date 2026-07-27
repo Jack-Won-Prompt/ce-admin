@@ -143,6 +143,16 @@
   .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent; border-bottom: 2px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
   .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
+  /* ── 처방전 검수 탭: 위=검수(고정높이·스크롤), 아래=처방 제품 ── */
+  .tab-pane.ocr-split-top {
+    height: var(--ocr-review-h, 46vh);   /* 검수 영역 고정 높이 */
+    overflow-y: auto;                    /* 내부 스크롤 */
+    overflow-x: hidden;
+    padding-right: 8px;                  /* 스크롤바 여백 */
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .tab-pane.ocr-split-bottom { padding-top: 2px; }
   /* ── 카드 / 테이블 뷰 토글 ── */
   .cv { display: block; } .tv { display: none; }
   .tab-view-table .cv { display: none; } .tab-view-table .tv { display: block; }
@@ -1316,7 +1326,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div></div>{{-- /tabBarInner /tabBarOuter --}}
 
       {{-- Tab: OCR Edit (처방전 검수) --}}
-      <div class="tab-pane active" id="tab-ocr">
+      <div class="tab-pane active ocr-split-top" id="tab-ocr">
       <div class="cv">
 
         {{-- OCR 신뢰도 경고 배너 --}}
@@ -1997,8 +2007,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div>
 
-      {{-- Tab: Product --}}
-      <div class="tab-pane" id="tab-product">
+      {{-- Tab: Product (처방전 검수 탭에서는 검수 영역 아래에 함께 표시) --}}
+      <div class="tab-pane active ocr-split-bottom" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
         <div class="card mb-3" style="border-color:var(--primary);">
@@ -3553,16 +3563,25 @@ window.HELP_TOUR_STEPS = [
   // ── 탭 전환 ────────────────────────────────────────────
   function _doSwitchTab(btn, tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      p.classList.remove('active', 'ocr-split-top', 'ocr-split-bottom');
+    });
     btn.classList.add('active');
+
+    const isTableView = () => document.getElementById('tabsCol')?.classList.contains('tab-view-table');
+
+    if (tabId === 'tab-ocr') {
+      // 처방전 검수 탭: 위=검수(고정높이·스크롤), 아래=처방 제품 함께 표시
+      document.getElementById('tab-ocr').classList.add('active', 'ocr-split-top');
+      document.getElementById('tab-product').classList.add('active', 'ocr-split-bottom');
+      if (isTableView()) renderItemsTable(); else renderItems();
+      return;
+    }
+
     document.getElementById(tabId).classList.add('active');
     if (tabId === 'tab-order')   { recalcAllItems(); renderOrderSummary(); }
     if (tabId === 'tab-product') {
-      if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
-        renderItemsTable();
-      } else {
-        renderItems();
-      }
+      if (isTableView()) renderItemsTable(); else renderItems();
     }
   }
 
