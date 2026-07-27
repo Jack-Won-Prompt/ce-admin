@@ -134,7 +134,7 @@
   .ws-label { font-size: 12px; font-weight: 600; } .ws-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .ws-arrow { margin-left: auto; color: var(--text-muted); font-size: 12px; }
   .page-body-inner { padding-bottom: 40px; }
-  .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,.10); }
+  .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
   html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
@@ -2897,15 +2897,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function onScroll() {
-      if (naturalTop === null) measure();
+      // rect 기반: 스크롤 컨테이너(window/body/content-wrapper) 무관하게 정확
       const top       = getViewerTop();
-      const shouldFix = window.scrollY > naturalTop - top;
+      const shouldFix = outer.getBoundingClientRect().top <= top; // outer는 흐름 유지(공간 확보)
       if (shouldFix && !isFixed)       { measure(); fix(); }
       else if (!shouldFix && isFixed)  unfix();
       else if (isFixed) inner.style.top = getViewerTop() + 'px';
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // capture:true → 어떤 스크롤러에서 발생한 scroll이든 포착
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', () => {
       naturalTop = null;
       if (isFixed) unfix();
@@ -2946,12 +2947,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function fix() {
-      measure();
-      ph.style.display = 'block';
+      measure();                       // ph.height 설정 + 자연 위치 기록(reparent 전)
+      ph.style.display = 'block';       // 자리 유지 → 아래 콘텐츠가 위로 튀지 않음
       document.body.appendChild(bar);
+      const r = ph.getBoundingClientRect();   // 자기 열(col2)의 실제 좌/폭
+      // 평면(그림자 X) + 하단 실선 → 정보바에 '붙은' 헤더로 보이게
       bar.style.cssText =
-        `position:fixed;top:${getTop()}px;left:${barLeft}px;width:${barW}px;` +
-        `z-index:60;background:var(--bg-card);box-shadow:0 3px 8px rgba(0,0,0,.12);margin:0;`;
+        `position:fixed;top:${getTop()}px;left:${r.left}px;width:${ph.offsetWidth}px;` +
+        `z-index:45;background:var(--bg-card);margin:0;padding-bottom:0;` +
+        `border-bottom:1px solid var(--border);`;
       isFixed = true;
     }
     function unfix() {
@@ -2962,14 +2966,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function onScroll() {
-      if (absTop === null) measure();
-      const shouldFix = window.scrollY > absTop - getTop();
-      if (shouldFix && !isFixed)      fix();
-      else if (!shouldFix && isFixed) unfix();
-      else if (isFixed) { bar.style.top = getTop() + 'px'; bar.style.left = barLeft + 'px'; bar.style.width = barW + 'px'; }
+      const top = getTop();
+      // 자연 위치: 고정 중이면 placeholder, 아니면 bar 자체(rect=뷰포트 기준, 스크롤러 무관)
+      const natTop = (isFixed ? ph : bar).getBoundingClientRect().top;
+      if (natTop <= top && !isFixed)      fix();
+      else if (natTop > top && isFixed)   unfix();
+      else if (isFixed) {
+        const r = ph.getBoundingClientRect();
+        bar.style.top = getTop() + 'px'; bar.style.left = r.left + 'px'; bar.style.width = ph.offsetWidth + 'px';
+      }
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // capture:true → 워크스페이스 iframe 등 어떤 스크롤러의 scroll도 포착
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', () => { if (isFixed) unfix(); absTop = null; onScroll(); });
     onScroll();
   })();
@@ -7120,17 +7129,25 @@ window.HELP_TOUR_STEPS = [
     const bar = document.getElementById('patient-info-bar');
     const ph  = document.getElementById('patient-info-bar-ph');
     if (!bar) return;
-    window.addEventListener('scroll', function () {
-      const shouldPin = window.scrollY > 10;
-      if (shouldPin && !bar.classList.contains('info-bar-pinned')) {
+    function onInfoScroll() {
+      const navEl = document.getElementById('layoutNavbar');
+      const navVisible = navEl && getComputedStyle(navEl).display !== 'none';
+      const navB = navVisible ? navEl.getBoundingClientRect().bottom : 0;
+      const pinned = bar.classList.contains('info-bar-pinned');
+      // rect 기준(스크롤러 무관) + 히스테리시스로 깜빡임 방지
+      const natTop = (pinned && ph ? ph : bar).getBoundingClientRect().top;
+      if (!pinned && natTop <= navB) {
         const h = bar.offsetHeight;
         bar.classList.add('info-bar-pinned');
         if (ph) { ph.style.height = h + 'px'; ph.style.display = 'block'; }
-      } else if (!shouldPin && bar.classList.contains('info-bar-pinned')) {
+      } else if (pinned && natTop > navB + 2) {
         bar.classList.remove('info-bar-pinned');
         if (ph) ph.style.display = 'none';
       }
-    }, { passive: true });
+    }
+    window.addEventListener('scroll', onInfoScroll, true);   // capture: 모든 스크롤러 포착
+    window.addEventListener('resize', onInfoScroll);
+    onInfoScroll();
   })();
 </script>
 @endpush
