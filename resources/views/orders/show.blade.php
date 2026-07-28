@@ -833,7 +833,8 @@ async function changeStatus(status) {
     delivered: '배송 완료 처리를 하시겠습니까?',
     cancelled: '정말 주문을 취소하시겠습니까?',
   };
-  if (!confirm(labels[status] || '상태를 변경하시겠습니까?')) return;
+  if (!await ceConfirm(labels[status] || '상태를 변경하시겠습니까?',
+                       { tone: status === 'cancelled' ? 'danger' : 'default' })) return;
 
   const res = await apiRequest(ORDER_URL + '/status', 'POST', { status });
   if (res.success) {
@@ -844,7 +845,7 @@ async function changeStatus(status) {
 
 // ── NHIS 청구 송신 ─────────────────────────────────────────
 async function submitNhis() {
-  if (!confirm('NHIS 청구를 송신하시겠습니까?')) return;
+  if (!await ceConfirm('NHIS 청구를 송신하시겠습니까?', { confirmText: '송신' })) return;
   const res = await apiRequest(ORDER_URL + '/nhis', 'POST');
   if (res.success) {
     showToast(res.message || 'NHIS 청구 송신 완료', 'success');
@@ -928,7 +929,7 @@ async function submitTaxInvoice() {
 }
 
 async function cancelTaxInvoice() {
-  if (!confirm('세금계산서를 취소하시겠습니까?')) return;
+  if (!await ceConfirm('세금계산서를 취소하시겠습니까?', { tone: 'danger', confirmText: '취소 처리' })) return;
   const res = await apiRequest(ORDER_URL + '/tax-invoice', 'DELETE');
   if (res.success) {
     showToast('세금계산서가 취소되었습니다.', 'success');
@@ -986,7 +987,7 @@ async function submitCashReceipt() {
 }
 
 async function cancelCashReceipt() {
-  if (!confirm('현금영수증을 취소하시겠습니까?')) return;
+  if (!await ceConfirm('현금영수증을 취소하시겠습니까?', { tone: 'danger', confirmText: '취소 처리' })) return;
   const res = await apiRequest(ORDER_URL + '/cash-receipt', 'DELETE');
   if (res.success) {
     showToast('현금영수증이 취소되었습니다.', 'success');

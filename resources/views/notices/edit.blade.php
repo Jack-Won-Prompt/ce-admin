@@ -45,7 +45,7 @@
     </div>
 
     <div style="display:flex;gap:8px;margin-top:14px;justify-content:space-between;">
-      <form method="POST" action="{{ route('notices.destroy', $notice) }}" onsubmit="return confirm('이 공지사항을 삭제하시겠습니까?')">
+      <form method="POST" action="{{ route('notices.destroy', $notice) }}" onsubmit="return ceConfirmSubmit(this, '이 공지사항을 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })">
         @csrf @method('DELETE')
         <button type="submit" class="btn btn-danger btn-sm">
           <i class="bx bx-trash"></i> 삭제

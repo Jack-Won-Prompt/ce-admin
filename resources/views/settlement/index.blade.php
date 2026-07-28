@@ -505,7 +505,7 @@
 
   // 가상계좌 발급
   async function issueVA(orderId, btn) {
-    if (!confirm('가상계좌를 발급하시겠습니까?')) return;
+    if (!await ceConfirm('가상계좌를 발급하시겠습니까?', { confirmText: '발급' })) return;
     BtnState.loading(btn, '발급 중...');
     try {
       const res = await fetch(btn.dataset.url, {
@@ -530,7 +530,7 @@
 
   // 가상계좌 안내 SMS 재발송
   async function resendVaSms(orderId, btn) {
-    if (!confirm('환자에게 가상계좌 안내 SMS를 재발송하시겠습니까?')) return;
+    if (!await ceConfirm('환자에게 가상계좌 안내 SMS를 재발송하시겠습니까?', { confirmText: '재발송' })) return;
     BtnState.loading(btn, '발송 중...');
     try {
       const res = await fetch(btn.dataset.url, {

@@ -275,7 +275,8 @@ function renderInvitations(list) {
 }
 
 async function resendInvitation(id) {
-  if (!confirm('초대 이메일을 재발송하시겠습니까?\n기존 링크는 만료되고 새 링크가 발송됩니다.')) return;
+  if (!await ceConfirm('초대 이메일을 재발송하시겠습니까?\n기존 링크는 만료되고 새 링크가 발송됩니다.',
+                       { confirmText: '재발송' })) return;
 
   try {
     const res  = await fetch(`${INVITATIONS_URL}/${id}/resend`, {
@@ -292,7 +293,7 @@ async function resendInvitation(id) {
 }
 
 async function cancelInvitation(id) {
-  if (!confirm('초대를 취소하시겠습니까?')) return;
+  if (!await ceConfirm('초대를 취소하시겠습니까?', { tone: 'danger', confirmText: '초대 취소' })) return;
 
   try {
     const res  = await fetch(`${INVITATIONS_URL}/${id}`, {
@@ -529,7 +530,7 @@ async function submitForm(e) {
 async function deleteUser() {
   const userId = document.getElementById('formUserId').value;
   if (!userId) return;
-  if (!confirm(`정말 삭제하시겠습니까?`)) return;
+  if (!await ceConfirm('정말 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })) return;
 
   try {
     const res = await fetch(`${USERS_BASE_URL}/${userId}`, {
@@ -537,7 +538,7 @@ async function deleteUser() {
       headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
     });
     const data = await res.json();
-    if (!data.success) { alert(data.message || '삭제 실패'); return; }
+    if (!data.success) { ceAlert(data.message || '삭제 실패', { tone: 'danger' }); return; }
 
     delete usersMap[userId];
     refreshUsersGrid();
@@ -545,7 +546,7 @@ async function deleteUser() {
     closeModal();
     showToast('삭제되었습니다.', 'success');
   } catch {
-    alert('서버 오류');
+    ceAlert('서버 오류', { tone: 'danger' });
   }
 }
 

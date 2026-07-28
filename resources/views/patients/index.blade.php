@@ -388,7 +388,7 @@
   }
 
   async function deletePatient(id, name) {
-    if (!confirm(`"${name}" 환자를 삭제하시겠습니까?`)) return;
+    if (!await ceConfirm(`"${name}" 환자를 삭제하시겠습니까?`, { tone: 'danger', confirmText: '삭제' })) return;
     const res = await apiRequest(`/patients/${id}`, 'DELETE');
     if (res.success) {
       showToast(res.message, 'success');

@@ -4085,14 +4085,18 @@ window.HELP_TOUR_STEPS = [
 
   /* 선택한 상담이력을 검수 화면 입력값으로 채운다.
      값이 있는 항목만 덮어써서, 이력에 없는 필드의 기존 입력은 보존한다. */
-  function plImportSelected() {
+  async function plImportSelected() {
     const d = _plCounselings[_plSelected];
     if (!d) { showToast('가져올 상담이력을 선택하세요.', 'warning'); return; }
 
     const withItems = document.getElementById('plWithItems').checked;
-    if (!confirm(`상담이력 ${d.counselling_no ?? ''} 의 내용을 검수 화면으로 가져옵니다.\n`
-                 + (withItems ? '처방 제품도 함께 교체됩니다.\n' : '')
-                 + '\n계속하시겠습니까?')) return;
+    const proceed = await ceConfirm(
+      `상담이력 ${d.counselling_no ?? ''} 의 내용을 검수 화면으로 가져옵니다.\n`
+      + (withItems ? '처방 제품도 함께 교체됩니다.\n' : '')
+      + '\n계속하시겠습니까?',
+      { title: '상담이력 가져오기', confirmText: '가져오기' }
+    );
+    if (!proceed) return;
 
     // 상담이력 필드 → 검수 화면 입력 필드 대응
     const MAP = {
@@ -4166,12 +4170,13 @@ window.HELP_TOUR_STEPS = [
   /* ── 신규 등록: 검수 화면 내용 전체 초기화 ─────────────────
      현재 처방전 레코드는 건드리지 않고 화면 입력값만 비운다.
      비운 뒤 저장하면 신규 레코드가 아니라 '현재 처방전'에 저장되므로 먼저 확인을 받는다. */
-  function resetReviewScreen() {
-    const ok = confirm(
+  async function resetReviewScreen() {
+    const ok = await ceConfirm(
       '검수 화면의 모든 입력 내용을 초기화합니다.\n\n'
       + '※ 초기화 후 저장하면 현재 처방전(' + RX_NUMBER + ')의 내용이\n'
-      + '   새로 입력한 값으로 덮어써집니다. 기존 내용을 남겨야 하면 취소하세요.\n\n'
-      + '계속하시겠습니까?'
+      + '새로 입력한 값으로 덮어써집니다. 기존 내용을 남겨야 하면 취소하세요.\n\n'
+      + '계속하시겠습니까?',
+      { title: '신규 등록 — 화면 초기화', tone: 'warning', confirmText: '초기화' }
     );
     if (!ok) return;
 
@@ -6288,7 +6293,8 @@ window.HELP_TOUR_STEPS = [
 
   // 현재 위임장 설정으로 요양비위임장 재생성 → 첨부문서 갱신
   async function regenerateDelegation(btn) {
-    if (!confirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영할까요?')) return;
+    if (!await ceConfirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영할까요?',
+                         { confirmText: '재생성' })) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
@@ -6313,7 +6319,8 @@ window.HELP_TOUR_STEPS = [
 
   // 팩스통합본 재생성 (현재 데이터로, 요양비위임장 포함)
   async function regenerateFax(btn) {
-    if (!confirm('현재 데이터로 팩스통합본을 다시 생성할까요? (요양비위임장 포함)')) return;
+    if (!await ceConfirm('현재 데이터로 팩스통합본을 다시 생성할까요? (요양비위임장 포함)',
+                         { confirmText: '재생성' })) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
@@ -6428,7 +6435,7 @@ window.HELP_TOUR_STEPS = [
 
   async function sendConsentSms() {
     const mobile = document.getElementById('consentMobile').value.trim();
-    if (!mobile) { alert('수신 번호를 입력해주세요.'); return; }
+    if (!mobile) { ceAlert('수신 번호를 입력해주세요.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('btnConsentSend');
     btn.disabled = true;
@@ -7358,7 +7365,7 @@ window.HELP_TOUR_STEPS = [
 
   // ── 메모 삭제 ────────────────────────────────────────────
   async function deleteMemo(id) {
-    if (!confirm('메모를 삭제하시겠습니까?')) return;
+    if (!await ceConfirm('메모를 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })) return;
     try {
       await fetch(`${_MEMO_UPDATE_BASE}/${id}`, {
         method: 'DELETE',

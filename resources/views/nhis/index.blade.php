@@ -437,7 +437,7 @@ function openBulkSend() {
 async function sendBulkSelected() {
   const ids = getCheckedIds();
   if (ids.length === 0) { showToast('선택된 주문이 없습니다.', 'warning'); return; }
-  if (!confirm(`${ids.length}건을 NHIS e-Fax로 일괄 청구하시겠습니까?`)) return;
+  if (!await ceConfirm(`${ids.length}건을 NHIS e-Fax로 일괄 청구하시겠습니까?`, { confirmText: '일괄 청구' })) return;
 
   const btn = event.currentTarget;
   BtnState.loading(btn, '전송 중...');
@@ -457,7 +457,7 @@ async function sendBulkSelected() {
 
 // ── 단건 e-Fax 청구 ─────────────────────────────────────
 async function sendFax(orderId, orderNumber) {
-  if (!confirm(`${orderNumber} 주문을 NHIS e-Fax로 청구하시겠습니까?`)) return;
+  if (!await ceConfirm(`${orderNumber} 주문을 NHIS e-Fax로 청구하시겠습니까?`, { confirmText: '청구' })) return;
 
   const btn = event.currentTarget;
   BtnState.loading(btn, '청구 중...');

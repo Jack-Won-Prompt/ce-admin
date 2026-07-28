@@ -772,7 +772,8 @@ async function submitTaxInvoice() {
 }
 
 async function cancelTax(orderId, orderNo) {
-  if (!confirm(`${orderNo} 주문의 세금계산서를 취소하시겠습니까?`)) return;
+  if (!await ceConfirm(`${orderNo} 주문의 세금계산서를 취소하시겠습니까?`,
+                       { tone: 'danger', confirmText: '취소 처리' })) return;
   const res = await apiRequest(`${BASE_URL}/orders/${orderId}/tax-invoice`, 'DELETE');
   if (res.success) {
     showToast('세금계산서가 취소되었습니다.', 'success');
@@ -844,7 +845,8 @@ async function submitCashReceipt() {
 }
 
 async function cancelCash(orderId, orderNo) {
-  if (!confirm(`${orderNo} 주문의 현금영수증을 취소하시겠습니까?`)) return;
+  if (!await ceConfirm(`${orderNo} 주문의 현금영수증을 취소하시겠습니까?`,
+                       { tone: 'danger', confirmText: '취소 처리' })) return;
   const res = await apiRequest(`${BASE_URL}/orders/${orderId}/cash-receipt`, 'DELETE');
   if (res.success) {
     showToast('현금영수증이 취소되었습니다.', 'success');

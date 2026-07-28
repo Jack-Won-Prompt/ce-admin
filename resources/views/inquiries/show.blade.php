@@ -30,7 +30,7 @@
         </div>
         @if(Auth::user()->role === 'admin' || $inquiry->user_id === Auth::id())
           <form method="POST" action="{{ route('inquiries.destroy', $inquiry) }}"
-                onsubmit="return confirm('이 문의를 삭제하시겠습니까?')">
+                onsubmit="return ceConfirmSubmit(this, '이 문의를 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);">
               <i class="bx bx-trash"></i> 삭제

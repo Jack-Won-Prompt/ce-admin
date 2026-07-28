@@ -107,10 +107,14 @@
           document.querySelector('[name=addr2]').focus();
         }}).open();
       } else {
-        alert('우편번호는 직접 입력해 주세요.');
+        ceAlert('우편번호는 직접 입력해 주세요.', { tone: 'warning' });
       }
     }
   </script>
+
+  {{-- 커스텀 알림/확인 다이얼로그 (브라우저 기본 alert/confirm 대체) --}}
+  @include('partials.dialog')
+
   @stack('scripts')
 </body>
 </html>

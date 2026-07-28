@@ -1447,6 +1447,97 @@ document.addEventListener('click', (e) => {
     setTimeout(() => toast.remove(), 300);
   }
 
+  /* ── 커스텀 알림 / 확인 다이얼로그 ────────────────────────
+     브라우저 기본 alert()/confirm() 대신 디자인 시스템 모달을 쓴다.
+     confirm 은 동기 반환이 불가하므로 Promise 를 반환한다:
+       if (!await ceConfirm('...')) return;
+       await ceAlert('...');
+     opts: { title, confirmText, cancelText, tone: 'default'|'danger'|'warning' } */
+  (function () {
+    const TONE = {
+      default: { icon: 'fa-circle-question',      color: 'var(--primary)', btn: 'btn-primary' },
+      danger:  { icon: 'fa-triangle-exclamation', color: 'var(--danger)',  btn: 'btn-danger'  },
+      warning: { icon: 'fa-circle-exclamation',   color: 'var(--warning)', btn: 'btn-primary' },
+      info:    { icon: 'fa-circle-info',          color: 'var(--primary)', btn: 'btn-primary' },
+    };
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // 메시지의 줄바꿈(\n)을 <br> 로 살린다 (기존 alert 문구를 그대로 옮기기 위해)
+    function body(msg) { return esc(msg).replace(/\n/g, '<br>'); }
+
+    function open(kind, msg, opts = {}) {
+      const tone = TONE[opts.tone] || TONE[kind === 'alert' ? 'info' : 'default'];
+      const ov   = document.createElement('div');
+      ov.className = 'modal-overlay open';
+      ov.style.zIndex = '20000';   // 화면 자체 모달(10000)·팝오버(10100) 위
+      ov.innerHTML = `
+        <div class="modal-box sm" role="dialog" aria-modal="true">
+          <div class="modal-hd">
+            <i class="fa-solid ${tone.icon}" style="color:${tone.color};font-size:17px;"></i>
+            <span class="modal-title">${esc(opts.title || (kind === 'alert' ? '알림' : '확인'))}</span>
+          </div>
+          <div class="modal-bd" style="font-size:13.5px;line-height:1.75;color:var(--text-primary);white-space:normal;">
+            ${body(msg)}
+          </div>
+          <div class="modal-ft">
+            ${kind === 'confirm'
+              ? `<button type="button" class="btn btn-outline btn-sm" data-ce="cancel">${esc(opts.cancelText || '취소')}</button>`
+              : ''}
+            <button type="button" class="btn ${tone.btn} btn-sm" data-ce="ok">
+              ${esc(opts.confirmText || (kind === 'alert' ? '확인' : '확인'))}
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+
+      const okBtn     = ov.querySelector('[data-ce="ok"]');
+      const cancelBtn = ov.querySelector('[data-ce="cancel"]');
+      const prevFocus = document.activeElement;
+
+      return new Promise(resolve => {
+        let settled = false;
+        function done(value) {
+          if (settled) return;
+          settled = true;
+          document.removeEventListener('keydown', onKey, true);
+          ov.remove();
+          if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
+          resolve(value);
+        }
+        function onKey(e) {
+          if (e.key === 'Escape') { e.preventDefault(); done(kind === 'alert' ? undefined : false); }
+          else if (e.key === 'Enter') { e.preventDefault(); done(kind === 'alert' ? undefined : true); }
+        }
+
+        okBtn.addEventListener('click', () => done(kind === 'alert' ? undefined : true));
+        cancelBtn?.addEventListener('click', () => done(kind === 'alert' ? undefined : false));
+        // 배경 클릭: 확인은 취소로, 알림은 닫기로 처리
+        ov.addEventListener('click', e => { if (e.target === ov) done(kind === 'alert' ? undefined : false); });
+        document.addEventListener('keydown', onKey, true);
+
+        okBtn.focus();
+      });
+    }
+
+    /** 알림. 닫힐 때까지 기다리려면 await. */
+    window.ceAlert = (msg, opts) => open('alert', msg, opts);
+
+    /** 확인. Promise<boolean> — 확인 true / 취소·Esc·배경클릭 false. */
+    window.ceConfirm = (msg, opts) => open('confirm', msg, opts);
+
+    /**
+     * 인라인 onsubmit 용 헬퍼: onsubmit="return ceConfirmSubmit(this, '메시지')"
+     * 항상 false 를 반환해 즉시 제출을 막고, 확인을 누르면 그때 폼을 제출한다.
+     */
+    window.ceConfirmSubmit = function (form, msg, opts) {
+      ceConfirm(msg, opts).then(ok => { if (ok) form.submit(); });
+      return false;
+    };
+  })();
+
   // ── 공통 AJAX fetch 래퍼 (에러 자동 Toast) ─────────────
   async function apiRequest(url, method = 'POST', data = {}) {
     try {
@@ -2235,7 +2326,7 @@ const MaintPanel = (() => {
   function run() {
     if (_running) return;
     const prompt = document.getElementById('maintPrompt').value.trim();
-    if (!prompt) { alert('프롬프트를 입력해주세요.'); return; }
+    if (!prompt) { ceAlert('프롬프트를 입력해주세요.', { tone: 'warning' }); return; }
 
     _running = true;
     _setStatus('running', '실행 중...');
@@ -4163,7 +4254,7 @@ const InquiryPanel = (() => {
   }
 
   async function doDelete(id) {
-    if (!confirm('이 문의를 삭제하시겠습니까?')) return;
+    if (!await ceConfirm('이 문의를 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })) return;
     const res = await apiRequest(BASE_URL + '/panel/inquiries/' + id, 'DELETE', {});
     if (res && res.success) {
       showToast('삭제되었습니다.', 'success');

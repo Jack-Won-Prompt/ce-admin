@@ -437,7 +437,7 @@ async function startNice() {
   // 브라우저가 팝업을 막았으면 여기서 중단하고 안내한다(빈 탭이 열리는 것을 방지).
   if (!nicePopup || nicePopup.closed || typeof nicePopup.closed === 'undefined') {
     nicePopup = null;
-    alert('브라우저가 팝업을 차단했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 시도해 주세요.');
+    ceAlert('브라우저가 팝업을 차단했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 시도해 주세요.', { tone: 'warning' });
     resetVerifyBtn();
     return;
   }
@@ -455,7 +455,7 @@ async function startNice() {
     const data = await res.json();
     if (!data.success) {
       if (nicePopup) nicePopup.close();
-      alert(data.message ?? '본인확인 요청에 실패했습니다.');
+      ceAlert(data.message ?? '본인확인 요청에 실패했습니다.', { tone: 'danger' });
       resetVerifyBtn();
       return;
     }
@@ -481,7 +481,7 @@ async function startNice() {
     watchNicePopup();
   } catch (e) {
     if (nicePopup) nicePopup.close();
-    alert('본인확인 요청 중 네트워크 오류가 발생했습니다.');
+    ceAlert('본인확인 요청 중 네트워크 오류가 발생했습니다.', { tone: 'danger' });
     resetVerifyBtn();
   }
 }
@@ -513,7 +513,7 @@ window.addEventListener('message', function (e) {
   } else {
     clearInterval(nicePopupWatch);
     nicePopupWatch = null;
-    alert(d.message || '본인확인에 실패했습니다.');
+    ceAlert(d.message || '본인확인에 실패했습니다.', { tone: 'danger' });
     resetVerifyBtn();
   }
 });
@@ -521,7 +521,7 @@ window.addEventListener('message', function (e) {
 /* ── 제출 ─────────────────────────────────────────────── */
 async function submitConsent(action) {
   if (action === 'agreed' && !hasSig) {
-    alert('서명을 먼저 해주세요.');
+    ceAlert('서명을 먼저 해주세요.', { tone: 'warning' });
     return;
   }
 
@@ -555,13 +555,13 @@ async function submitConsent(action) {
         showResult('❌', '거절 처리되었습니다', '위임동의를 거절하셨습니다.\n문의 사항은 담당자에게 연락주세요.', '#6b7280');
       }
     } else {
-      alert(data.message ?? '오류가 발생했습니다.');
+      ceAlert(data.message ?? '오류가 발생했습니다.', { tone: 'danger' });
       btnAgree.disabled = false;
       btnDecline.disabled = false;
       btnAgree.innerHTML = '동의 서명';
     }
   } catch (e) {
-    alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+    ceAlert('네트워크 오류가 발생했습니다. 다시 시도해주세요.', { tone: 'danger' });
     btnAgree.disabled = false;
     btnDecline.disabled = false;
     btnAgree.innerHTML = '동의 서명';
@@ -578,6 +578,10 @@ function showResult(icon, title, msg, color) {
   document.getElementById('resultScreen').style.display = 'block';
 }
 </script>
+
+{{-- 커스텀 알림/확인 다이얼로그 (브라우저 기본 alert/confirm 대체) --}}
+@include('partials.dialog')
+
 {{-- CSRF hidden for fetch --}}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 </body>
