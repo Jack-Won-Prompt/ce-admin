@@ -271,6 +271,9 @@ Route::middleware(['auth'])->group(function () {
     // 서류 관리
     Route::prefix('documents')->name('documents.')->group(function () {
         Route::get('/',                                   [PrescriptionDocumentController::class, 'index'])->name('index');
+        // 서류 등록 탭: 처방전별 전체 서류 조회 / 파일 업로드 등록
+        Route::get('/by-prescription/{prescription}',     [PrescriptionDocumentController::class, 'byPrescription'])->name('byPrescription');
+        Route::post('/',                                  [PrescriptionDocumentController::class, 'store'])->name('store');
         Route::get('/{document}/download',                [PrescriptionDocumentController::class, 'download'])->name('download');
         Route::get('/{document}/preview',                 [PrescriptionDocumentController::class, 'preview'])->name('preview');
     });

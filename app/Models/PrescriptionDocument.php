@@ -43,8 +43,18 @@ class PrescriptionDocument extends Model
         };
     }
 
+    /** 서류 관리 화면에서 직접 업로드한 건인가 (저장 경로로 판별 — 자동 생성본과 구분) */
+    public function isManuallyRegistered(): bool
+    {
+        return str_starts_with((string) $this->file_path, 'documents/manual/');
+    }
+
     public function sourceLabel(): string
     {
+        if ($this->isManuallyRegistered()) {
+            return '직접 등록';
+        }
+
         return match ($this->type) {
             'consent'      => '서명 완료',
             'delegation'   => '서명 완료(자동)',
