@@ -68,7 +68,7 @@ return [
             'driver' => 'mysql',
             'url' => '',
             // DB 서버 이전(43.203.246.90 → 3.34.53.36): 운영은 .env의 LCPOINT_DB_HOST로 지정
-            'host' => env('LCPOINT_DB_HOST', '43.203.246.90'),
+            'host' => env('LCPOINT_DB_HOST', '3.34.53.36'),
             'port' => env('LCPOINT_DB_PORT', '3306'),
             'database' => env('LCPOINT_DB_DATABASE', 'lcpoint'),
             'username' => env('LCPOINT_DB_USERNAME', 'lcpoint'),
