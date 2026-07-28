@@ -155,7 +155,10 @@
       <i class="fa-solid fa-file-prescription" style="color:var(--primary);"></i>
       <span class="rx" id="regRxNo"></span>
       <span class="meta" id="regMeta"></span>
-      <a id="regRxLink" class="btn btn-outline btn-sm" href="#" style="margin-left:auto;">
+      {{-- 워크스페이스 새 탭으로 연다(서류 관리 탭은 그대로 유지). href 를 유지해
+           가운데 클릭·새 탭으로 열기 같은 브라우저 기본 동작도 살린다. --}}
+      <a id="regRxLink" class="btn btn-outline btn-sm" href="#" style="margin-left:auto;"
+         onclick="return openRxTab(event)">
         <i class="bx bx-link-external"></i> 처방전 검수 화면
       </a>
       <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')">
@@ -318,6 +321,21 @@
         </div>`).join('')
       : '<div style="padding:12px 0;font-size:12px;color:var(--text-muted);">첨부된 서류가 없습니다.</div>';
   }
+
+  /* ── 처방전 검수 화면을 '새 탭'으로 열기 ───────────────────
+     워크스페이스 안에서는 서류 관리 탭을 그대로 두고 별도 탭이 열리고,
+     단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다. */
+  window.openRxTab = function (ev) {
+    ev.preventDefault();
+    const url = document.getElementById('regRxLink').getAttribute('href');
+    if (!url || url === '#') return false;
+    if (typeof window.ceOpenTab === 'function') {
+      window.ceOpenTab(url, (_regRxNo || '처방전') + ' 검수', 'bx-scan');
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+    return false;
+  };
 
   /* ── 서류 등록 ────────────────────────────────────────── */
   window.regSubmit = async function (ev) {
