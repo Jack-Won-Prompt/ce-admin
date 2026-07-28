@@ -188,7 +188,9 @@
     <button type="button" class="btn btn-outline btn-sm" onclick="prescriptionViewDetail()">
       <i class="bx bx-detail"></i> 선택 상세
     </button>
-    <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
+    <span style="font-size:12px;color:var(--text-muted);">
+      <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 <b>처방전 검수 화면이 새 탭</b>으로 열립니다. (체크 후 <b>선택 상세</b>도 동일)
+    </span>
     <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
   </div>
   <div id="rxGrid"></div>
@@ -212,12 +214,12 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '#rxGrid',
     title: '목록 그리드',
-    body: '<b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있습니다. 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
+    body: '행을 <b>더블클릭</b>하면 처방전 검수 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
   },
   {
     selector: 'button[onclick="prescriptionViewDetail()"]',
     title: '선택 상세',
-    body: '행을 체크한 뒤 <b>선택 상세</b> 버튼을 누르면 처방전 상세 화면으로 이동합니다.'
+    body: '행을 체크한 뒤 <b>선택 상세</b> 버튼을 눌러도 동일하게 검수 화면이 새 탭으로 열립니다.'
   },
 ];
 
@@ -245,11 +247,33 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+  /* 검수 화면을 '새 탭'으로 연다.
+     워크스페이스 안에서는 목록 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
+     단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다. */
+  function openReviewTab(rxNumber) {
+    const url = DETAIL_BASE + '/' + encodeURIComponent(rxNumber);
+    if (typeof window.ceOpenTab === 'function') {
+      window.ceOpenTab(url, rxNumber + ' 검수', 'bx-scan');
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
+  // 행 더블클릭 → 처방전 검수 화면을 새 탭으로 열기(목록은 그대로 유지)
+  document.getElementById('rxGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row || !row.rx_number) return;
+    window.getSelection()?.removeAllRanges();   // 더블클릭 텍스트 선택 해제
+    openReviewTab(row.rx_number);
+  });
+
   window.prescriptionViewDetail = function () {
     const c = grid.getCheckedRows();
     if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
     if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
-    window.location.href = DETAIL_BASE + '/' + encodeURIComponent(c[0].rx_number);
+    openReviewTab(c[0].rx_number);
   };
 })();
 </script>

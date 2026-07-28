@@ -1067,6 +1067,13 @@
           </a>
         </div>
 
+        <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
+            <i class="menu-icon bx bx-id-card"></i>
+            <span>본인확인 설정</span>
+          </a>
+        </div>
+
         <div class="menu-header">지원</div>
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
@@ -1352,6 +1359,24 @@ document.addEventListener('click', (e) => {
     window.CE_TOURED     = d.toured   || [];
     window.TOUR_PAGE_KEY = d.pageKey  || '';
   })();
+
+  /* ── 워크스페이스 탭 열기 ────────────────────────────────
+     프레임 안(워크스페이스 탭)에서는 부모에게 새 탭 요청을 보내 현재 탭이 전환되지 않게 하고,
+     워크스페이스 밖(단독 페이지)에서는 브라우저 새 탭으로 대체한다. */
+  window.ceOpenTab = function (url, title, icon) {
+    const framed = window.self !== window.top;
+    if (framed) {
+      try {
+        window.parent.postMessage(
+          { source: 'ce-workspace', action: 'open-tab', url: url, title: title, icon: icon },
+          window.location.origin
+        );
+        return true;
+      } catch (e) { /* 부모 접근 실패 시 아래 폴백 */ }
+    }
+    window.open(url, '_blank', 'noopener');
+    return false;
+  };
 
   // ── 버튼 프로세스 상태 유틸리티 ────────────────────────
   const BtnState = (() => {

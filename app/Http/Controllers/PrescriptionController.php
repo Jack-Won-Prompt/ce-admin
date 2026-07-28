@@ -14,6 +14,7 @@ use App\Services\Popbill\FaxService as PopbillFaxService;
 use App\Services\Popbill\MessageService as PopbillMessageService;
 use App\Services\OcrService;
 use App\Services\TossPayments\VirtualAccountService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Events\ChatMessageSent;
@@ -734,6 +735,156 @@ class PrescriptionController extends Controller
                          ->with('success', "처방전 {$prescription->rx_number} 등록 완료");
     }
 
+    /**
+     * 상담 이력 1건을 화면(검수 화면 이전상담 모달 · 환자 조회 모달)에서 쓰는 배열로 직렬화.
+     * counseling_data 원본 + 처방전/제품/주문/위임동의/팩스 요약을 합친다.
+     */
+    private function counselingPayload(Prescription $p): array
+    {
+        return array_merge($p->counseling_data ?? [], [
+            'rx_number'          => $p->rx_number,
+            'rx_status'          => $p->status,
+            'rx_status_label'    => $p->status_label,
+            'reg_date'           => $p->created_at->format('Y-m-d'),
+            'patient_name_ocr'   => $p->patient_name_ocr,
+            'mobile_ocr'         => $p->mobile_ocr,
+            'resident_no_masked' => $p->masked_resident_no_ocr,
+            'address_ocr'        => $p->address_ocr,
+            'postcode'           => $p->postcode,
+            'address_detail'     => $p->address_detail,
+            'hospital_name'      => $p->hospital_name,
+            'doctor_name'        => $p->doctor_name,
+            'issued_date'        => $p->issued_date?->format('Y-m-d'),
+            'repurchase_date'    => $p->repurchase_date?->format('Y-m-d'),
+            'items'              => $p->items->map(function ($i) {
+                return [
+                    'product_name'    => $i->product_name,
+                    'product_code'    => $i->product_code,
+                    'quantity'        => $i->quantity,
+                    'product_price'   => $i->product_price,
+                    'insurance_price' => $i->insurance_price,
+                    'nhis_status'     => $i->nhis_status,
+                    'nhis_amount'     => $i->nhis_amount,
+                    'patient_copay'   => $i->patient_copay,
+                ];
+            })->toArray(),
+            'order' => $p->order ? [
+                'order_number'      => $p->order->order_number,
+                'so_type'           => $p->order->so_type,
+                'status'            => $p->order->status,
+                'status_label'      => $p->order->status_label,
+                'total_amount'      => $p->order->total_amount,
+                'patient_copay'     => $p->order->patient_copay,
+                'shipping_fee'      => $p->order->shipping_fee,
+                'withworks_so_no'   => $p->order->withworks_so_no,
+                'created_at'        => $p->order->created_at->format('Y-m-d'),
+                // 현금영수증
+                'cash_receipt_status'     => $p->order->cash_receipt_status,
+                'cash_receipt_no'         => $p->order->cash_receipt_no,
+                'cash_receipt_type'       => $p->order->cash_receipt_type,
+                'cash_receipt_amount'     => $p->order->cash_receipt_amount,
+                'cash_receipt_issued_at'  => $p->order->cash_receipt_issued_at?->format('Y-m-d H:i'),
+                // 가상계좌
+                'toss' => $p->order->tossPayment ? [
+                    'method'         => $p->order->tossPayment->method,
+                    'status'         => $p->order->tossPayment->status,
+                    'status_label'   => $p->order->tossPayment->status_label,
+                    'bank'           => $p->order->tossPayment->bank_name,
+                    'account_number' => $p->order->tossPayment->account_number,
+                    'customer_name'  => $p->order->tossPayment->customer_name,
+                    'amount'         => $p->order->tossPayment->amount,
+                    'due_date'       => $p->order->tossPayment->due_date?->format('Y-m-d H:i'),
+                    'deposited_at'   => $p->order->tossPayment->deposited_at?->format('Y-m-d H:i'),
+                    'is_done'        => $p->order->tossPayment->is_done,
+                    'is_expired'     => $p->order->tossPayment->is_expired,
+                ] : null,
+            ] : null,
+            // 위임동의
+            'consents' => $p->consents->map(fn($c) => [
+                'status'       => $c->status,
+                'status_label' => $c->statusLabel(),
+                'responded_at' => $c->responded_at?->format('Y-m-d H:i'),
+                'expires_at'   => $c->expires_at?->format('Y-m-d H:i'),
+                'patient_name' => $c->patient_name,
+                'pdf_path'     => $c->pdf_path ? \Storage::disk('public')->url($c->pdf_path) : null,
+            ])->values()->toArray(),
+            // 팩스 이력
+            'fax_histories' => $p->faxHistories->map(fn($f) => [
+                'fax_no'          => $f->fax_no,
+                'recipient_type'  => $f->recipient_type,
+                'popbill_state'   => $f->popbill_state,
+                'popbill_result'  => $f->popbill_result,
+                'reserve_dt'      => $f->reserve_dt,
+                'synced_at'       => $f->synced_at?->format('Y-m-d H:i'),
+                'sent_by_name'    => $f->sentBy?->name,
+                'title'           => $f->title,
+            ])->values()->toArray(),
+        ]);
+    }
+
+    /**
+     * 검수 화면 '환자 조회': 이름/연락처로 환자 검색 (상담이력 건수 포함).
+     */
+    public function patientSearch(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => false, 'message' => '두 글자 이상 입력해 주세요.', 'patients' => []]);
+        }
+
+        $digits = preg_replace('/\D/', '', $q);
+
+        $patients = Patient::where(function ($sub) use ($q, $digits) {
+                $sub->where('name', 'like', "%{$q}%");
+                if ($digits !== '' && strlen($digits) >= 4) {
+                    $sub->orWhere('mobile', 'like', "%{$digits}%")
+                        ->orWhere('phone', 'like', "%{$digits}%");
+                }
+            })
+            ->withCount(['prescriptions as counseling_count' => fn ($sub) => $sub->whereNotNull('counseling_data')])
+            ->orderBy('name')
+            ->limit(30)
+            ->get();
+
+        return response()->json([
+            'success'  => true,
+            'patients' => $patients->map(fn (Patient $p) => [
+                'id'               => $p->id,
+                'name'             => $p->name,
+                'resident_no'      => $p->masked_resident_no ?? '-',
+                'mobile'           => $p->mobile ?? $p->phone ?? '-',
+                'counseling_count' => (int) $p->counseling_count,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * 검수 화면 '환자 조회': 선택한 환자의 과거 상담 이력 목록.
+     * 반환 형식은 검수 화면의 '이전 상담 이력' 모달과 동일해 그대로 재사용·가져오기가 된다.
+     */
+    public function patientCounselings(Patient $patient): JsonResponse
+    {
+        $rows = Prescription::where('patient_id', $patient->id)
+            ->whereNotNull('counseling_data')
+            ->orderByDesc('id')
+            ->limit(30)
+            ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
+            ->get([
+                'id', 'rx_number', 'counseling_data', 'created_at', 'status',
+                'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
+                'hospital_name', 'doctor_name', 'issued_date',
+                'postcode', 'address_detail', 'patient_id', 'repurchase_date',
+            ])
+            ->filter(fn ($p) => !empty($p->counseling_data['counselling_no']))
+            ->values();
+
+        return response()->json([
+            'success'     => true,
+            'patient'     => ['id' => $patient->id, 'name' => $patient->name],
+            'counselings' => $rows->map(fn ($p) => $this->counselingPayload($p))->values(),
+        ]);
+    }
+
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
@@ -781,87 +932,7 @@ class PrescriptionController extends Controller
         })->values();
 
         // Blade @json 파싱 오류 방지: 복잡한 클로저를 컨트롤러에서 직렬화
-        $prevCounselingsData = $prevCounselings->map(function ($p) {
-            return array_merge($p->counseling_data ?? [], [
-                'rx_number'          => $p->rx_number,
-                'rx_status'          => $p->status,
-                'rx_status_label'    => $p->status_label,
-                'reg_date'           => $p->created_at->format('Y-m-d'),
-                'patient_name_ocr'   => $p->patient_name_ocr,
-                'mobile_ocr'         => $p->mobile_ocr,
-                'resident_no_masked' => $p->masked_resident_no_ocr,
-                'address_ocr'        => $p->address_ocr,
-                'postcode'           => $p->postcode,
-                'address_detail'     => $p->address_detail,
-                'hospital_name'      => $p->hospital_name,
-                'doctor_name'        => $p->doctor_name,
-                'issued_date'        => $p->issued_date?->format('Y-m-d'),
-                'repurchase_date'    => $p->repurchase_date?->format('Y-m-d'),
-                'items'              => $p->items->map(function ($i) {
-                    return [
-                        'product_name'    => $i->product_name,
-                        'product_code'    => $i->product_code,
-                        'quantity'        => $i->quantity,
-                        'product_price'   => $i->product_price,
-                        'insurance_price' => $i->insurance_price,
-                        'nhis_status'     => $i->nhis_status,
-                        'nhis_amount'     => $i->nhis_amount,
-                        'patient_copay'   => $i->patient_copay,
-                    ];
-                })->toArray(),
-                'order' => $p->order ? [
-                    'order_number'      => $p->order->order_number,
-                    'so_type'           => $p->order->so_type,
-                    'status'            => $p->order->status,
-                    'status_label'      => $p->order->status_label,
-                    'total_amount'      => $p->order->total_amount,
-                    'patient_copay'     => $p->order->patient_copay,
-                    'shipping_fee'      => $p->order->shipping_fee,
-                    'withworks_so_no'   => $p->order->withworks_so_no,
-                    'created_at'        => $p->order->created_at->format('Y-m-d'),
-                    // 현금영수증
-                    'cash_receipt_status'     => $p->order->cash_receipt_status,
-                    'cash_receipt_no'         => $p->order->cash_receipt_no,
-                    'cash_receipt_type'       => $p->order->cash_receipt_type,
-                    'cash_receipt_amount'     => $p->order->cash_receipt_amount,
-                    'cash_receipt_issued_at'  => $p->order->cash_receipt_issued_at?->format('Y-m-d H:i'),
-                    // 가상계좌
-                    'toss' => $p->order->tossPayment ? [
-                        'method'         => $p->order->tossPayment->method,
-                        'status'         => $p->order->tossPayment->status,
-                        'status_label'   => $p->order->tossPayment->status_label,
-                        'bank'           => $p->order->tossPayment->bank_name,
-                        'account_number' => $p->order->tossPayment->account_number,
-                        'customer_name'  => $p->order->tossPayment->customer_name,
-                        'amount'         => $p->order->tossPayment->amount,
-                        'due_date'       => $p->order->tossPayment->due_date?->format('Y-m-d H:i'),
-                        'deposited_at'   => $p->order->tossPayment->deposited_at?->format('Y-m-d H:i'),
-                        'is_done'        => $p->order->tossPayment->is_done,
-                        'is_expired'     => $p->order->tossPayment->is_expired,
-                    ] : null,
-                ] : null,
-                // 위임동의
-                'consents' => $p->consents->map(fn($c) => [
-                    'status'       => $c->status,
-                    'status_label' => $c->statusLabel(),
-                    'responded_at' => $c->responded_at?->format('Y-m-d H:i'),
-                    'expires_at'   => $c->expires_at?->format('Y-m-d H:i'),
-                    'patient_name' => $c->patient_name,
-                    'pdf_path'     => $c->pdf_path ? \Storage::disk('public')->url($c->pdf_path) : null,
-                ])->values()->toArray(),
-                // 팩스 이력
-                'fax_histories' => $p->faxHistories->map(fn($f) => [
-                    'fax_no'          => $f->fax_no,
-                    'recipient_type'  => $f->recipient_type,
-                    'popbill_state'   => $f->popbill_state,
-                    'popbill_result'  => $f->popbill_result,
-                    'reserve_dt'      => $f->reserve_dt,
-                    'synced_at'       => $f->synced_at?->format('Y-m-d H:i'),
-                    'sent_by_name'    => $f->sentBy?->name,
-                    'title'           => $f->title,
-                ])->values()->toArray(),
-            ]);
-        })->values();
+        $prevCounselingsData = $prevCounselings->map(fn ($p) => $this->counselingPayload($p))->values();
 
         $lastFaxHistory = \App\Models\FaxHistory::where('prescription_id', $prescription->id)
             ->latest()

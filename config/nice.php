@@ -40,6 +40,9 @@ return [
     // 표준창(팝업) 호출 URL
     'standard_url' => env('NICE_STANDARD_URL', 'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb'),
 
+    // NICE API 호출 타임아웃(초) — 응답 지연이 서명 페이지를 붙잡지 않게 제한
+    'http_timeout' => (int) env('NICE_HTTP_TIMEOUT', 10),
+
     /*
     |──────────────────────────────────────────────────────────────
     | 본인확인 결과 ↔ 처방전 환자 매칭 정책

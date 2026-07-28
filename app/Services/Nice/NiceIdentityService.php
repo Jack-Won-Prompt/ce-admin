@@ -3,6 +3,7 @@
 
 namespace App\Services\Nice;
 
+use App\Models\NiceSetting;
 use App\Models\PrescriptionConsent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -20,12 +21,51 @@ use RuntimeException;
  *   4) 표준창 완료 후 returnurl 콜백의 enc_data 를 보관 키로 복호화 → 본인확인 결과
  *
  * 자격증명(client_id/secret/productID)이 없으면 enabled()=false 이며, 이 서비스는 호출되지 않는다.
+ * 자격증명은 관리자 설정(nice_settings 테이블)에 저장되며, 인스턴스 생성 시 config('nice.*')로 반영된다.
+ * DB 행이 없거나 접근 불가면 .env 설정이 그대로 쓰인다.
  */
 class NiceIdentityService
 {
+    public function __construct()
+    {
+        NiceSetting::applyToConfig();
+    }
+
     public function enabled(): bool
     {
         return (bool) config('nice.enabled');
+    }
+
+    /** 서명 전 본인확인을 강제하는가 (자격증명 미설정 시 항상 false). */
+    public function enforce(): bool
+    {
+        return $this->enabled() && (bool) config('nice.enforce');
+    }
+
+    /**
+     * 관리자 설정 화면의 '연결 테스트' — 자격증명으로 기관토큰·암호화토큰 발급까지 실제로 시도한다.
+     * 캐시를 건드리지 않고 새로 발급해(진행 중인 본인확인에 영향 없음) 자격증명 자체를 검증한다.
+     *
+     * @return array{ok:bool, message:string, detail:string}
+     */
+    public function testConnection(): array
+    {
+        if (!$this->enabled()) {
+            return ['ok' => false, 'message' => '자격증명(client_id / client_secret / productID)을 모두 입력해 주세요.', 'detail' => ''];
+        }
+
+        try {
+            [$access] = $this->fetchAccessToken();
+            $crypto   = $this->issueCryptoToken($access);
+
+            return [
+                'ok'      => true,
+                'message' => '연결 성공 — 기관토큰·암호화토큰 발급을 확인했습니다.',
+                'detail'  => 'site_code: '.$crypto['site_code'].' / token_version_id: '.$crypto['token_version_id'],
+            ];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage(), 'detail' => ''];
+        }
     }
 
     /**
@@ -112,6 +152,16 @@ class NiceIdentityService
             throw new RuntimeException('본인확인이 완료되지 않았습니다. (코드 '.$resultCode.')');
         }
 
+        // 요청 시 실어 보낸 식별자(에코)와 요청번호가 이 동의 건의 것인지 확인 — 응답 바꿔치기 방지
+        $echo = (string) ($r['receivedata'] ?? '');
+        if ($echo !== '' && !hash_equals($consent->token, $echo)) {
+            throw new RuntimeException('본인확인 응답이 요청과 일치하지 않습니다.');
+        }
+        $respReqNo = (string) ($r['requestno'] ?? $r['reqno'] ?? '');
+        if ($respReqNo !== '' && !hash_equals((string) $store['req_no'], $respReqNo)) {
+            throw new RuntimeException('본인확인 응답이 요청과 일치하지 않습니다.');
+        }
+
         // 필드 정규화(문서 버전에 따라 키 대소문자/명칭 차이가 있어 폭넓게 수용)
         return [
             'name'        => (string) ($r['utf8_name'] ?? $r['name'] ?? ''),
@@ -130,24 +180,55 @@ class NiceIdentityService
 
     // ──────────────────────────────────────────────────────────────
 
-    /** 기관 access_token (client_credentials) — expires_in 동안 캐시 */
+    /**
+     * 기관 access_token (client_credentials) — 응답의 expires_in 만큼 캐시.
+     * 캐시 키에 client_id 를 섞어, 자격증명을 바꾸면 이전 토큰이 재사용되지 않게 한다.
+     */
     private function accessToken(): string
     {
-        return Cache::remember('nice:access_token', now()->addMinutes(60), function () {
-            $res = Http::asForm()
-                ->withBasicAuth(config('nice.client_id'), config('nice.client_secret'))
-                ->post(config('nice.api_base').'/digital/niceid/oauth/oauth/token', [
-                    'grant_type' => 'client_credentials',
-                    'scope'      => 'default',
-                ]);
+        $cacheKey = $this->accessTokenCacheKey();
+        $cached   = Cache::get($cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
 
-            $token = data_get($res->json(), 'dataBody.access_token');
-            if (!$res->successful() || !$token) {
-                Log::error('NICE access_token 발급 실패', ['status' => $res->status(), 'body' => $res->body()]);
-                throw new RuntimeException('본인확인 서비스 연결에 실패했습니다. (토큰 발급)');
-            }
-            return $token;
-        });
+        [$token, $ttl] = $this->fetchAccessToken();
+        Cache::put($cacheKey, $token, now()->addSeconds($ttl));
+
+        return $token;
+    }
+
+    /**
+     * 기관 access_token 을 NICE 에서 새로 발급받는다 (캐시 미사용).
+     *
+     * @return array{0:string, 1:int}  [access_token, 캐시 TTL(초)]
+     */
+    private function fetchAccessToken(): array
+    {
+        $res = Http::asForm()
+            ->timeout((int) config('nice.http_timeout', 10))
+            ->withBasicAuth(config('nice.client_id'), config('nice.client_secret'))
+            ->post(config('nice.api_base').'/digital/niceid/oauth/oauth/token', [
+                'grant_type' => 'client_credentials',
+                'scope'      => 'default',
+            ]);
+
+        $token = data_get($res->json(), 'dataBody.access_token');
+        if (!$res->successful() || !$token) {
+            Log::error('NICE access_token 발급 실패', ['status' => $res->status(), 'body' => $res->body()]);
+            throw new RuntimeException('본인확인 서비스 연결에 실패했습니다. (토큰 발급)');
+        }
+
+        // expires_in(초) 이 오면 그대로 쓰되, 만료 직전 재사용을 피하려고 60초 여유를 둔다.
+        $expiresIn = (int) data_get($res->json(), 'dataBody.expires_in', 0);
+
+        return [$token, $expiresIn > 120 ? $expiresIn - 60 : 3600];
+    }
+
+    /** 자격증명을 바꾸면 이전 토큰이 재사용되지 않도록 client_id 를 키에 섞는다. (무효화는 NiceSetting) */
+    private function accessTokenCacheKey(): string
+    {
+        return 'nice:access_token:'.md5((string) config('nice.client_id'));
     }
 
     /**
@@ -168,6 +249,7 @@ class NiceIdentityService
                 'productID'     => config('nice.product_id'),
                 'Content-Type'  => 'application/json',
             ])
+            ->timeout((int) config('nice.http_timeout', 10))
             ->post(config('nice.api_base').'/digital/niceid/api/v1.0/common/crypto/token', [
                 'dataHeader' => ['CNTY_CD' => 'ko'],
                 'dataBody'   => [

@@ -76,6 +76,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/upload',        [PrescriptionController::class, 'uploadPage'])->name('upload');
         Route::post('/',             [PrescriptionController::class, 'store'])->name('store');
         Route::get('/memos/pinned',  [PrescriptionController::class, 'pinnedMemos'])->name('memos.pinned');
+        // 검수 화면 '환자 조회' — 이름/연락처 검색 + 선택 환자의 과거 상담이력
+        // ('/{prescription}' 보다 먼저 등록해야 고정 경로가 처방번호로 해석되지 않는다)
+        Route::get('/patient-search',                    [PrescriptionController::class, 'patientSearch'])->name('patientSearch');
+        Route::get('/patients/{patient}/counselings',     [PrescriptionController::class, 'patientCounselings'])->name('patientCounselings');
         Route::get('/{prescription}', [PrescriptionController::class, 'show'])->name('show');
 
         // OCR 미리보기 (임시 저장, DB 저장 없음)
@@ -278,6 +282,11 @@ Route::middleware(['auth'])->group(function () {
     // 처방전 OCR 공급자 설정
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');
     Route::put('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'update'])->name('ocr-settings.update');
+
+    // NICE 본인확인 설정 (자격증명 서버 저장 + 연결 테스트)
+    Route::get( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'edit'])->name('nice-settings.edit');
+    Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');
+    Route::post('/settings/nice/test', [\App\Http\Controllers\NiceSettingController::class, 'test'])->name('nice-settings.test');
 
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');

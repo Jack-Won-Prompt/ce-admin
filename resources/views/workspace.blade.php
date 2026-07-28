@@ -96,6 +96,23 @@
     });
   }
 
+  /* 프레임 안(각 탭)에서 '새 탭으로 열기' 요청 수신.
+     예: 처방전 목록에서 행을 더블클릭 → 검수 화면을 현재 탭에서 전환하지 않고 새 탭으로 띄운다.
+     window.ceOpenTab(url, title, icon) 이 layouts.app 에서 이 메시지를 보낸다. */
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin) return;                 // 동일 출처만 허용
+    const d = e.data;
+    if (!d || d.source !== 'ce-workspace' || d.action !== 'open-tab') return;
+
+    // 같은 출처의 절대경로로 정규화 (외부 URL 주입 방지)
+    let target;
+    try { target = new URL(String(d.url ?? ''), location.origin); } catch (_) { return; }
+    if (target.origin !== location.origin) return;
+    target.searchParams.set('frame', '1');
+
+    openTab(target.pathname + target.search, String(d.title || '새 탭'), String(d.icon || 'bx-window-alt'), false);
+  });
+
   // 사이드바 메뉴 클릭 → 탭으로 열기(페이지 이동 대신)
   document.addEventListener('click', function (e) {
     const a = e.target.closest('.layout-menu a.menu-link');

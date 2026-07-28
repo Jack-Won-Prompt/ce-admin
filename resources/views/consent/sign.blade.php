@@ -413,6 +413,19 @@ function clearSignature() {
 
 /* ── NICE 휴대폰 본인확인 ─────────────────────────────────── */
 let nicePopup = null;
+let nicePopupWatch = null;
+
+/* 팝업이 결과 없이 닫히면 버튼을 되살려 재시도할 수 있게 한다. */
+function watchNicePopup() {
+  clearInterval(nicePopupWatch);
+  nicePopupWatch = setInterval(function () {
+    if (!nicePopup || nicePopup.closed) {
+      clearInterval(nicePopupWatch);
+      nicePopupWatch = null;
+      if (!identityVerified) resetVerifyBtn();
+    }
+  }, 800);
+}
 
 async function startNice() {
   const btn = document.getElementById('btnVerify');
@@ -420,6 +433,14 @@ async function startNice() {
 
   // 팝업은 사용자 제스처 직후 먼저 연다(팝업 차단 회피)
   nicePopup = window.open('', 'nicePopup', 'width=460,height=640,scrollbars=yes');
+
+  // 브라우저가 팝업을 막았으면 여기서 중단하고 안내한다(빈 탭이 열리는 것을 방지).
+  if (!nicePopup || nicePopup.closed || typeof nicePopup.closed === 'undefined') {
+    nicePopup = null;
+    alert('브라우저가 팝업을 차단했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 시도해 주세요.');
+    resetVerifyBtn();
+    return;
+  }
 
   try {
     const res = await fetch(NICE_START_URL, {
@@ -455,6 +476,9 @@ async function startNice() {
     document.body.appendChild(form);
     form.submit();
     form.remove();
+
+    if (btn) btn.textContent = '인증 진행 중...';
+    watchNicePopup();
   } catch (e) {
     if (nicePopup) nicePopup.close();
     alert('본인확인 요청 중 네트워크 오류가 발생했습니다.');
@@ -475,6 +499,8 @@ window.addEventListener('message', function (e) {
 
   if (d.ok) {
     identityVerified = true;
+    clearInterval(nicePopupWatch);
+    nicePopupWatch = null;
     const box = document.getElementById('verifyBox');
     if (box) box.classList.add('verified');
     const t = document.getElementById('verifyTitle');
@@ -485,6 +511,8 @@ window.addEventListener('message', function (e) {
     if (btn) btn.outerHTML = '<span class="verify-badge">✅</span>';
     refreshAgree();
   } else {
+    clearInterval(nicePopupWatch);
+    nicePopupWatch = null;
     alert(d.message || '본인확인에 실패했습니다.');
     resetVerifyBtn();
   }

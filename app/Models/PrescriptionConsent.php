@@ -76,6 +76,21 @@ class PrescriptionConsent extends Model
         return $this->nice_verified_at !== null;
     }
 
+    /** NICE 인증수단 코드 → 표시용 라벨 */
+    public function niceAuthTypeLabel(): ?string
+    {
+        return match ($this->nice_authtype) {
+            'M'     => '휴대폰',
+            'C'     => '신용카드',
+            'X'     => '공동인증서',
+            'F'     => '금융인증서',
+            'S'     => 'PASS',
+            null,
+            ''      => null,
+            default => $this->nice_authtype,
+        };
+    }
+
     public function remainingMinutes(): int
     {
         if ($this->expires_at->isPast()) {

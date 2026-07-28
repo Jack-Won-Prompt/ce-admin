@@ -36,8 +36,10 @@ class ConsentController extends Controller
             return view('consent.expired', compact('consent'));
         }
 
-        $niceEnabled = (bool) config('nice.enabled');
-        $niceEnforce = (bool) config('nice.enforce');
+        // 자격증명·정책은 관리자 설정(DB)에서 오며, 서비스 생성 시 config('nice.*')에 반영된다.
+        $nice        = app(\App\Services\Nice\NiceIdentityService::class);
+        $niceEnabled = $nice->enabled();
+        $niceEnforce = $nice->enforce();
         $verified    = $consent->isIdentityVerified();
 
         return view('consent.sign', compact('consent', 'niceEnabled', 'niceEnforce', 'verified'));
@@ -64,7 +66,7 @@ class ConsentController extends Controller
 
         // NICE 본인확인 강제: 동의 서명은 본인확인 완료 후에만 허용
         if ($request->action === 'agreed'
-            && config('nice.enforce')
+            && app(\App\Services\Nice\NiceIdentityService::class)->enforce()
             && !$consent->isIdentityVerified()
         ) {
             return response()->json([
@@ -139,6 +141,14 @@ class ConsentController extends Controller
     {
         $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
         $nice    = app(\App\Services\Nice\NiceIdentityService::class);
+
+        // 이미 처리·만료된 건에는 본인확인 결과를 붙이지 않는다.
+        if (!$consent->isPending()) {
+            return view('consent.nice_callback', [
+                'ok'      => false,
+                'message' => '이미 처리되었거나 만료된 요청입니다.',
+            ]);
+        }
 
         try {
             $result = $nice->handleCallback($consent, $request->all());
@@ -255,6 +265,12 @@ class ConsentController extends Controller
             'has_signature'   => !empty($latest->signature_data),
             'patient_name'    => $latest->patient_name,
             'patient_mobile'  => $latest->patient_mobile,
+            // NICE 본인확인 (CI/DI 등 민감식별정보는 내려보내지 않는다)
+            'nice_verified'    => $latest->isIdentityVerified(),
+            'nice_verified_at' => $latest->nice_verified_at?->format('Y-m-d H:i'),
+            'nice_name'        => $latest->nice_name,
+            'nice_mobile'      => $latest->nice_mobile,
+            'nice_authtype'    => $latest->niceAuthTypeLabel(),
             'signature_data'  => $latest->status === 'agreed' ? $latest->signature_data : null,
             'pdf_url'         => ($latest->status === 'agreed' && $latest->pdf_path)
                                   ? route('prescriptions.consentPdf', $prescription)
