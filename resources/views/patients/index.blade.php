@@ -39,7 +39,7 @@
     border-bottom: 2px solid var(--border); text-align:left; white-space:nowrap;
   }
   .patient-table td { padding:11px 14px; border-bottom:1px solid var(--border-light); font-size:13px; vertical-align:middle; }
-  .patient-table tbody tr:hover td { background:rgba(27,102,245,.04); cursor:pointer; }
+  .patient-table tbody tr:hover td { background:rgba(0,176,202,.04); cursor:pointer; }
   .patient-table tbody tr:last-child td { border-bottom:none; }
 
   /* Vuexy-style soft badges */

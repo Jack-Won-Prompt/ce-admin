@@ -34,7 +34,7 @@
     <a href="{{ route('shop-orders.index', array_merge(request()->except('status','page'), $key !== 'all' ? ['status'=>$key] : [])) }}"
        class="tab-pill {{ $isActive ? 'active' : '' }}">
       {{ $label }}
-      <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(27,102,245,.12);color:var(--primary);">
+      <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(0,176,202,.12);color:var(--primary);">
         {{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}
       </span>
     </a>

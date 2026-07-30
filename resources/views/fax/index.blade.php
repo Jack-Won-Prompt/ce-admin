@@ -80,7 +80,7 @@
     padding:0 12px; font-size:13px; color:var(--text); background:#fff;
     transition:border-color .15s;
   }
-  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(27,102,245,.12); }
+  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,176,202,.12); }
   .form-input.error { border-color:var(--danger); }
   select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 
@@ -99,7 +99,7 @@
     background:var(--primary-light); border:none; cursor:pointer;
     transition:background .15s;
   }
-  .receiver-add-btn:hover { background:rgba(27,102,245,.12); }
+  .receiver-add-btn:hover { background:rgba(0,176,202,.12); }
   .receiver-del-btn {
     width:28px; height:28px; border-radius:6px; border:none;
     background:var(--danger-light); color:var(--danger); cursor:pointer;
@@ -185,14 +185,14 @@
     padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle;
   }
   .hist-table tr:last-child td { border-bottom:none; }
-  .hist-table tr:hover td { background:rgba(27,102,245,.03); }
+  .hist-table tr:hover td { background:rgba(0,176,202,.03); }
   .hist-table .mono { font-family:monospace; font-size:11px; }
   .btn-detail {
     height:26px; padding:0 10px; font-size:11px; font-weight:600;
     background:var(--primary-light); color:var(--primary); border:none;
     border-radius:5px; cursor:pointer; white-space:nowrap;
   }
-  .btn-detail:hover { background:rgba(27,102,245,.15); }
+  .btn-detail:hover { background:rgba(0,176,202,.15); }
   .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
 
   /* 상태 배지 */
@@ -253,10 +253,10 @@
   .fax-preview-btn {
     height:24px; line-height:24px; padding:0 10px;
     background:var(--primary-light); color:var(--primary);
-    border:1px solid rgba(27,102,245,.3); border-radius:4px;
+    border:1px solid rgba(0,176,202,.3); border-radius:4px;
     font-size:11px; font-weight:600; cursor:pointer;
   }
-  .fax-preview-btn:hover { background:rgba(27,102,245,.15); }
+  .fax-preview-btn:hover { background:rgba(0,176,202,.15); }
 
   /* 페이지네이션 */
   .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }

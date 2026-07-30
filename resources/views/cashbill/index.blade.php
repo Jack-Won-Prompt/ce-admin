@@ -71,7 +71,7 @@
     height:38px; border:1px solid var(--border); border-radius:var(--radius);
     padding:0 12px; font-size:13px; color:var(--text); background:#fff; transition:border-color .15s;
   }
-  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(27,102,245,.12); }
+  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,176,202,.12); }
   select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 
   /* 금액 행 */
@@ -128,7 +128,7 @@
   .hist-table th { padding:10px 12px; background:var(--bg); font-weight:600; font-size:11.5px; color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
   .hist-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
   .hist-table tr:last-child td { border-bottom:none; }
-  .hist-table tr:hover td { background:rgba(27,102,245,.03); }
+  .hist-table tr:hover td { background:rgba(0,176,202,.03); }
   .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
 
   /* 상태 배지 */
@@ -1015,7 +1015,7 @@ async function openPrint(mgtKey) {
   .r-footer p { margin: 0; }
   .no-print { text-align: right; padding: 14px 0 0; }
   .no-print button {
-    padding: 8px 20px; background: #1b66f5; color: #fff; border: none;
+    padding: 8px 20px; background: #00B0CA; color: #fff; border: none;
     border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   @media print {

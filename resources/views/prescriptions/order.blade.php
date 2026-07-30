@@ -669,7 +669,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @foreach($smsTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
                        class="sms-tpl-item" data-code="{{ $code }}" data-text="{{ addslashes($tpl['text']) }}"
-                       onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(27,102,245,.06)';"
+                       onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(0,176,202,.06)';"
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="sms_tpl" value="{{ $code }}" style="accent-color:var(--primary);" onchange="onSmsTplChange(this)">
                   <div>
@@ -5064,7 +5064,7 @@ window.HELP_TOUR_STEPS = [
     document.querySelectorAll('.sms-tpl-item').forEach(item => {
       const checked = item.querySelector('input').checked;
       item.style.borderColor = checked ? 'var(--primary)' : 'var(--border)';
-      item.style.background  = checked ? 'rgba(27,102,245,.06)' : '';
+      item.style.background  = checked ? 'rgba(0,176,202,.06)' : '';
     });
 
     const label = radio.closest('.sms-tpl-item');

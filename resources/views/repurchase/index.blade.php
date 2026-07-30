@@ -52,7 +52,7 @@ window.HELP_TOUR_STEPS = [
 .view-tabs {
   display:flex; gap:0;
   border:1.5px solid var(--primary); border-radius:8px; overflow:hidden;
-  box-shadow:0 2px 8px rgba(27,102,245,.15);
+  box-shadow:0 2px 8px rgba(0,176,202,.15);
 }
 .view-tab  {
   display:flex; align-items:center; gap:6px;
@@ -137,7 +137,7 @@ window.HELP_TOUR_STEPS = [
   color:var(--text-muted);
 }
 .cal-header-cell:first-child { color:#ef4444; }
-.cal-header-cell:last-child  { color:#3b82f6; }
+.cal-header-cell:last-child  { color:#00B0CA; }
 
 .cal-cell {
   min-height:88px; padding:6px 8px;
@@ -151,14 +151,14 @@ window.HELP_TOUR_STEPS = [
 .cal-cell.cal-today .cal-day { color:var(--primary); font-weight:700; }
 .cal-cell.cal-selected { background:var(--primary-light); outline:2px solid var(--primary-accent); outline-offset:-2px; }
 .cal-cell:first-child, .cal-cell:nth-child(7n+1) .cal-day { color:#ef4444; }
-.cal-cell:nth-child(7n) .cal-day { color:#3b82f6; }
+.cal-cell:nth-child(7n) .cal-day { color:#00B0CA; }
 
 .cal-day { font-size:13px; font-weight:600; line-height:1; }
 .cal-count {
   display:inline-flex; align-items:center; justify-content:center;
   margin-top:8px; width:28px; height:28px; border-radius:50%;
   background:var(--primary); color:#fff; font-size:12px; font-weight:700;
-  box-shadow:0 2px 6px rgba(27,102,245,.35);
+  box-shadow:0 2px 6px rgba(0,176,202,.35);
 }
 .cal-count-label {
   font-size:10px; color:var(--text-muted); margin-top:3px;

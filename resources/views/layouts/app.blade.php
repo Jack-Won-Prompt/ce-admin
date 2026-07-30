@@ -29,10 +29,11 @@
        SOLDOC DESIGN TOKENS
     ═══════════════════════════════════════════ */
     :root {
-      --primary:        #1B66F5;
-      --primary-light:  #EBF2FF;
-      --primary-dark:   #1250C4;
-      --primary-accent: #93C5FD;
+      /* 콜로플라스트 브랜드 시안(#00B0CA) 기준 팔레트 */
+      --primary:        #00B0CA;
+      --primary-light:  #E6F7FA;
+      --primary-dark:   #008EA4;
+      --primary-accent: #7FD8E4;
       --success:        #12B76A;  --success-light: #ECFDF5;
       --warning:        #F59E0B;  --warning-light: #FFFBEB;
       --danger:         #EF4444;  --danger-light:  #FEF2F2;
@@ -53,7 +54,7 @@
       --transition: all .18s ease;
       --menu-bg:     #FFFFFF;
       --menu-color:  #4B5563;
-      --menu-active: #1B66F5;
+      --menu-active: #00B0CA;
       --nav-h: 60px;
       --sidebar-w: 240px;
     }
@@ -411,7 +412,7 @@
     }
     .form-control:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(27,102,245,.12);
+      box-shadow: 0 0 0 3px rgba(0,176,202,.12);
     }
     .form-control::placeholder { color: var(--text-muted); }
     .form-select {
@@ -572,7 +573,7 @@
     .chat-toast-icon { font-size: 11px; color: #94A3B8; }
     @keyframes chatBtnPulse {
       0%   { background: transparent; transform: scale(1); }
-      50%  { background: rgba(27,102,245,.2); transform: scale(1.15); }
+      50%  { background: rgba(0,176,202,.2); transform: scale(1.15); }
       100% { background: transparent; transform: scale(1); }
     }
 
@@ -856,6 +857,7 @@
   <script>
     (function() {
       var THEMES = {
+        coloplast: ['#00b0ca','#e6f7fa','#008ea4','#7fd8e4'],   // 브랜드 기본
         blue:   ['#4d6b8c','#edf1f7','#3d5570','#9ab3cc'],
         purple: ['#7c3aed','#f5f3ff','#6d28d9','#c4b5fd'],
         green:  ['#16a34a','#f0fdf4','#15803d','#86efac'],
@@ -865,8 +867,8 @@
         mint:   ['#10b981','#ecfdf5','#059669','#6ee7b7'],
         gray:   ['#64748b','#f8fafc','#475569','#cbd5e1'],
       };
-      var name = localStorage.getItem('ce-admin-theme') || 'blue';
-      var t = THEMES[name] || THEMES.blue;
+      var name = localStorage.getItem('ce-admin-theme') || 'coloplast';
+      var t = THEMES[name] || THEMES.coloplast;
       var r = document.documentElement;
       r.style.setProperty('--primary', t[0]);
       r.style.setProperty('--primary-light', t[1]);
@@ -1323,6 +1325,7 @@
             <div class="theme-panel" id="themePanel">
               <div class="theme-panel-title">테마 컬러</div>
               <div class="theme-swatches">
+                <div class="theme-swatch" data-theme="coloplast" style="background:#00b0ca" title="콜로플라스트" onclick="ThemePicker.apply('coloplast')"></div>
                 <div class="theme-swatch" data-theme="blue"   style="background:#4d6b8c" title="스틸"   onclick="ThemePicker.apply('blue')"></div>
                 <div class="theme-swatch" data-theme="purple" style="background:#7c3aed" title="보라"   onclick="ThemePicker.apply('purple')"></div>
                 <div class="theme-swatch" data-theme="green"  style="background:#16a34a" title="초록"   onclick="ThemePicker.apply('green')"></div>
@@ -1332,7 +1335,7 @@
                 <div class="theme-swatch" data-theme="mint"   style="background:#10b981" title="민트"   onclick="ThemePicker.apply('mint')"></div>
                 <div class="theme-swatch" data-theme="gray"   style="background:#64748b" title="그레이" onclick="ThemePicker.apply('gray')"></div>
               </div>
-              <div class="theme-label" id="themeLabel">스틸</div>
+              <div class="theme-label" id="themeLabel">콜로플라스트</div>
             </div>
           </div>
           @yield('header-actions')
@@ -1841,6 +1844,7 @@ document.addEventListener('click', (e) => {
   // ── Theme Color Picker ─────────────────────────────────
   const ThemePicker = (function() {
     const THEMES = {
+      coloplast: { label: '콜로플라스트', primary: '#00b0ca', light: '#e6f7fa', dark: '#008ea4', accent: '#7fd8e4' },
       blue:   { label: '스틸',   primary: '#4d6b8c', light: '#edf1f7', dark: '#3d5570', accent: '#9ab3cc' },
       purple: { label: '보라',   primary: '#7c3aed', light: '#f5f3ff', dark: '#6d28d9', accent: '#c4b5fd' },
       green:  { label: '초록',   primary: '#16a34a', light: '#f0fdf4', dark: '#15803d', accent: '#86efac' },
@@ -1882,7 +1886,7 @@ document.addEventListener('click', (e) => {
 
     // 저장된 테마 즉시 적용 (DOM 준비 후)
     function init() {
-      apply(localStorage.getItem('ce-admin-theme') || 'blue');
+      apply(localStorage.getItem('ce-admin-theme') || 'coloplast');
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
@@ -3731,7 +3735,7 @@ function showPrescriptionNotif(data) {
   padding: 9px 12px; font-size: 13px; line-height: 1.6; font-family: inherit;
   min-height: 40px; max-height: 120px; outline: none; background: #fff;
 }
-#inqThreadInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,102,245,.12); }
+#inqThreadInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,176,202,.12); }
 
 /* ── 문의 작성 폼 ── */
 .sp-form { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
@@ -3760,7 +3764,7 @@ function showPrescriptionNotif(data) {
     <button class="sp-back" id="noticePanelBack" style="display:none;" onclick="NoticePanel.back()">
       <i class="fa-solid fa-chevron-left"></i> 목록
     </button>
-    <i class="fa-solid fa-bullhorn" style="font-size:14px;color:#60a5fa;"></i>
+    <i class="fa-solid fa-bullhorn" style="font-size:14px;color:#4FC8DA;"></i>
     <span class="sp-title" id="noticePanelTitle">공지사항</span>
     @if(Auth::user()->role === 'admin')
       <a href="{{ route('notices.create') }}" class="sp-back" title="공지 등록">

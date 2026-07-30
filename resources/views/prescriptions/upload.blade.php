@@ -26,7 +26,7 @@
   .step.active::after { background:linear-gradient(90deg,var(--primary) 60%,var(--border) 100%); }
   .step-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; border:2px solid var(--border); background:var(--bg); color:var(--text-muted); z-index:1; }
   .step.done .step-num   { background:var(--success); border-color:var(--success); color:#fff; }
-  .step.active .step-num { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 3px 10px rgba(27,102,245,.35); }
+  .step.active .step-num { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 3px 10px rgba(0,176,202,.35); }
   .step-label { font-size:12px; font-weight:600; color:var(--text-muted); }
   .step-sub   { font-size:10px; color:var(--text-muted); margin-top:2px; }
   .step.done .step-label, .step.active .step-label { color:var(--text-primary); }

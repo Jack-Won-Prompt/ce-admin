@@ -107,10 +107,10 @@
   .assign-select:hover {
     border-color: var(--primary); border-style: solid;
     background-color: var(--primary-light); color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(27,102,245,.12);
+    box-shadow: 0 0 0 3px rgba(0,176,202,.12);
   }
   .assign-select:focus { outline: none; border-color: var(--primary); border-style: solid;
-    box-shadow: 0 0 0 3px rgba(27,102,245,.2); }
+    box-shadow: 0 0 0 3px rgba(0,176,202,.2); }
   .assign-select.saving { opacity: .5; pointer-events: none; }
 </style>
 @endpush
