@@ -168,9 +168,11 @@
     /* Menu sections */
     .menu-inner { flex: 1; padding: 6px 0 10px; }
     .menu-header {
-      font-size: 10px; font-weight: 700; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 1px;
-      padding: 16px 18px 5px;
+      /* 그룹 라벨은 한글이라 uppercase 효과가 없고, 자간이 넓으면 커진 글자가 흐트러져
+         letter-spacing 을 줄였다 */
+      font-size: 12.5px; font-weight: 700; color: var(--text-secondary);
+      letter-spacing: -.1px;
+      padding: 16px 18px 6px;
       /* 그룹 접기 토글 버튼 */
       display: flex; align-items: center; gap: 6px;
       width: 100%; background: none; border: none;
