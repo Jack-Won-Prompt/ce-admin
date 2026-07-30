@@ -1225,18 +1225,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
       </div>
 
-      {{-- 등록자 / OCR 신뢰도 탭 카드 --}}
+      {{-- 등록자 카드 (OCR 신뢰도 표시는 제거, 재분석·초기화 동작만 유지) --}}
       <div class="card mt-4">
-        {{-- 탭 헤더 --}}
-        <div style="display:flex;border-bottom:1px solid var(--border);padding:0 4px;">
-          <button id="infoTab-uploader" onclick="switchInfoTab('uploader')"
-                  style="flex:1;padding:8px 4px;font-size:11px;font-weight:600;background:none;border:none;border-bottom:2px solid var(--primary);color:var(--primary);cursor:pointer;">
-            <i class="fa-solid fa-upload" style="font-size:10px;"></i> 등록자
-          </button>
-          <button id="infoTab-ocr" onclick="switchInfoTab('ocr')"
-                  style="flex:1;padding:8px 4px;font-size:11px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);cursor:pointer;">
-            <i class="fa-solid fa-brain" style="font-size:10px;"></i> OCR 신뢰도
-          </button>
+        <div class="card-header" style="padding:9px 14px;">
+          <i class="fa-solid fa-upload" style="font-size:11px;color:var(--primary);"></i>
+          <span class="card-header-title" style="font-size:12px;">등록자</span>
         </div>
 
         {{-- 등록자 패널 --}}
@@ -1267,23 +1260,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
           @endif
         </div>
 
-        {{-- OCR 신뢰도 패널 --}}
-        <div id="infoPanel-ocr" class="card-body" style="display:none;padding:14px;">
-          @if($prescription->ocr_confidence)
-          @php $dispConf = $prescription->display_confidence; @endphp
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
-              <div id="conf-bar" style="width:{{ $dispConf }}%;height:100%;background:{{ $dispConf >= 90 ? 'var(--success)' : ($dispConf >= 70 ? 'var(--warning)' : 'var(--danger)') }};border-radius:4px;transition:width .4s;"></div>
-            </div>
-            <span id="conf-label" style="font-size:14px;font-weight:700;color:{{ $dispConf >= 90 ? 'var(--success)' : 'var(--warning)' }};">{{ $dispConf }}%</span>
-          </div>
-          @else
-          <div id="conf-empty" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">분석 전</div>
-          @endif
+        {{-- 재분석 · 초기화 (신뢰도 수치·설명 없이 동작만) --}}
+        <div class="card-body" style="padding:0 14px 12px;">
           <div style="display:flex;gap:6px;">
             <button id="btn-reanalyze" class="btn btn-outline" onclick="reanalyzeOCR()"
                     style="flex:1;font-size:12px;justify-content:center;gap:6px;">
-              <i class="fa-solid fa-rotate"></i> OCR 재분석
+              <i class="fa-solid fa-rotate"></i> 재분석
             </button>
             <button class="btn btn-outline" onclick="resetOCR()" title="원본 데이터로 초기화"
                     style="font-size:12px;justify-content:center;gap:6px;color:var(--text-muted);">
@@ -1340,14 +1322,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- Tab: OCR Edit (처방전 검수) --}}
       <div class="tab-pane active ocr-split-top" id="tab-ocr">
       <div class="cv">
-
-        {{-- OCR 신뢰도 경고 배너 --}}
-        @if($prescription->ocr_confidence && $prescription->display_confidence < 85)
-        <div style="display:flex;align-items:center;gap:8px;background:var(--warning-light);border:1px solid #fde68a;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--warning);">
-          <i class="fa-solid fa-triangle-exclamation" style="font-size:15px;flex-shrink:0;"></i>
-          OCR 신뢰도 {{ $prescription->display_confidence }}% — 아래 항목을 수동으로 확인 후 저장해주세요.
-        </div>
-        @endif
 
         @php $displayRn = $prescription->masked_resident_no_ocr ?? $prescription->patient?->masked_resident_no; @endphp
 
@@ -5638,20 +5612,6 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 등록자 메모 팝업 ──────────────────────────────────
-  function switchInfoTab(tab) {
-    const tabs   = ['uploader', 'ocr'];
-    tabs.forEach(t => {
-      const btn   = document.getElementById('infoTab-' + t);
-      const panel = document.getElementById('infoPanel-' + t);
-      const active = t === tab;
-      if (btn) {
-        btn.style.borderBottomColor = active ? 'var(--primary)' : 'transparent';
-        btn.style.color             = active ? 'var(--primary)' : 'var(--text-muted)';
-      }
-      if (panel) panel.style.display = active ? '' : 'none';
-    });
-  }
-
   // ── 채팅방 열기 (우측 채팅 패널) ────────────────────
   async function openChatWith(userId, userName) {
     try {
@@ -5880,22 +5840,8 @@ window.HELP_TOUR_STEPS = [
       document.getElementById('f-total').value    = f.total_count      || '';
       calcRenewDate();
 
-      // 신뢰도 바 업데이트
-      const conf   = res.confidence;
-      const color  = conf >= 90 ? 'var(--success)' : (conf >= 70 ? 'var(--warning)' : 'var(--danger)');
-      const bar    = document.getElementById('conf-bar');
-      const label  = document.getElementById('conf-label');
-      const empty  = document.getElementById('conf-empty');
-      if (bar)   { bar.style.width = conf + '%'; bar.style.background = color; }
-      if (label) { label.textContent = conf + '%'; label.style.color = color; }
-      if (empty) { empty.style.display = 'none'; }
-      if (!bar) {
-        // 신뢰도 바가 없었던 경우(처음 분석) — 재로드로 UI 전체 갱신
-        location.reload();
-        return;
-      }
-
-      showToast(`처방전 OCR 재분석 완료 (신뢰도 ${conf}%)`, 'success');
+      // 신뢰도 수치·설명은 화면에서 제거되었으므로 결과만 알린다
+      showToast('처방전 재분석이 완료되었습니다.', 'success');
     }
 
     BtnState.reset(btn);

@@ -219,7 +219,9 @@
           <i class="bx bx-box" style="color:var(--primary);"></i>
           <span class="card-header-title">제품 정보</span>
           @if($order->prescription)
-            <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm" style="margin-left:auto;">
+            <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
+               style="margin-left:auto;" data-rx="{{ $order->prescription->rx_number }}"
+               onclick="return orderOpenRxTab(event, this)">
               <i class="bx bx-file-medical"></i> 처방전 보기
             </a>
           @endif
@@ -692,7 +694,8 @@
       <i class="bx bx-list-ul"></i> 목록
     </a>
     @if($order->prescription)
-      <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm">
+      <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
+         data-rx="{{ $order->prescription->rx_number }}" onclick="return orderOpenRxTab(event, this)">
         <i class="bx bx-file"></i> 처방전
       </a>
     @endif
@@ -824,6 +827,22 @@
 <script>
 const ORDER_ID   = {{ $order->id }};
 const ORDER_URL  = BASE_URL + '/orders/' + ORDER_ID;
+
+/* 처방전 버튼 → 처방전 검수 화면을 '새 탭'으로 연다(주문 화면은 그대로 유지).
+   워크스페이스 밖이면 브라우저 새 탭으로 폴백. href 는 남겨 두어 가운데 클릭 등
+   브라우저 기본 동작도 살린다. 상세내용 탭에 주입될 때도 부모 프레임의 헬퍼를 쓴다. */
+window.orderOpenRxTab = function (ev, el) {
+  ev.preventDefault();
+  const url = el.getAttribute('href');
+  if (!url) return false;
+  const rx = el.dataset.rx ? el.dataset.rx + ' 검수' : '처방전 검수';
+  if (typeof window.ceOpenTab === 'function') {
+    window.ceOpenTab(url, rx, 'bx-scan');
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+  return false;
+};
 
 // ── 상태 변경 ─────────────────────────────────────────────
 async function changeStatus(status) {
