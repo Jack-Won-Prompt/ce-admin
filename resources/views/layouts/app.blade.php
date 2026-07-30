@@ -867,7 +867,12 @@
         mint:   ['#10b981','#ecfdf5','#059669','#6ee7b7'],
         gray:   ['#64748b','#f8fafc','#475569','#cbd5e1'],
       };
-      var name = localStorage.getItem('ce-admin-theme') || 'coloplast';
+      /* 저장 키에 버전을 둔다.
+         구버전 키('ce-admin-theme')에는 과거 기본값 'blue'(스틸)가 이미 저장돼 있어서,
+         그대로 읽으면 :root 토큰을 인라인 스타일로 덮어써 브랜드 색이 적용되지 않는다.
+         키를 올려 낡은 값을 무시하고, 남아 있던 구버전 키는 정리한다. */
+      try { localStorage.removeItem('ce-admin-theme'); } catch (e) {}
+      var name = localStorage.getItem('ce-admin-theme-v2') || 'coloplast';
       var t = THEMES[name] || THEMES.coloplast;
       var r = document.documentElement;
       r.style.setProperty('--primary', t[0]);
@@ -1886,7 +1891,7 @@ document.addEventListener('click', (e) => {
       );
       const lbl = document.getElementById('themeLabel');
       if (lbl) lbl.textContent = t.label;
-      localStorage.setItem('ce-admin-theme', name);
+      localStorage.setItem('ce-admin-theme-v2', name);
     }
 
     function togglePanel() {
@@ -1904,7 +1909,7 @@ document.addEventListener('click', (e) => {
 
     // 저장된 테마 즉시 적용 (DOM 준비 후)
     function init() {
-      apply(localStorage.getItem('ce-admin-theme') || 'coloplast');
+      apply(localStorage.getItem('ce-admin-theme-v2') || 'coloplast');
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
