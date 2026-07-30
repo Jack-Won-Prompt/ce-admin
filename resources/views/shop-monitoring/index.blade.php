@@ -5,7 +5,7 @@
 @section('breadcrumb', '홈 / CE샵 모니터링')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=6">
 <style>
   .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
   .section-divider { height: 1px; background: var(--border); margin: 22px 0; }
@@ -87,7 +87,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
 <script>
 (function () {
   // ── 사용자 로그인 현황 (읽기 전용) ──

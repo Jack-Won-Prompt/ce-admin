@@ -38,7 +38,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=6">
 <style>
   /* 패널 탭(목록/상세보기) */
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
@@ -332,7 +332,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));

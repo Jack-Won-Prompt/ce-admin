@@ -40,7 +40,11 @@
   table-layout: fixed;
 }
 
-/* ── Header ── */
+/* ── Header ──
+   본문을 스크롤해도 헤더는 상단에 고정된다(.cg-wrap 이 스크롤 컨테이너).
+   sticky 도 절대배치 자식의 컨테이닝 블록이 되므로 .cg-resize-handle 은 그대로 동작한다.
+   border-collapse: collapse 에서는 셀 테두리가 sticky 셀을 따라오지 않아 스크롤 중
+   경계선이 사라진다 → inset box-shadow 로 같은 위치에 선을 한 번 더 그려 유지한다. */
 .cg-thead th {
   background: var(--cg-header-bg);
   color: #333;
@@ -48,13 +52,18 @@
   padding: 0;
   border-right: 1px solid var(--cg-border);
   border-bottom: 1px solid var(--cg-border);
+  box-shadow: inset -1px 0 0 var(--cg-border), inset 0 -1px 0 var(--cg-border);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   user-select: none;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
+/* 그룹 헤더(2행 헤더)를 쓰는 그리드가 생기면, 두 행 모두 top:0 이라 겹친다.
+   그때는 아래 행에 top: <그룹행 높이>px 를 지정해야 한다. (현재 사용하는 화면 없음) */
 .cg-thead th.cg-group-header {
   background: var(--cg-header-group-bg);
   font-size: 12px;

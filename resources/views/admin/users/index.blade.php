@@ -225,7 +225,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=6">
 <style>
 /* ── 모달 ── */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; }
@@ -261,7 +261,7 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
 <script>
 const USERS_DATA          = @json($usersData);
 const USERS_GRID_DATA     = @json($gridData);

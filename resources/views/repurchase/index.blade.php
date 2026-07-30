@@ -5,7 +5,7 @@
 @section('breadcrumb', '홈 / 재구매 관리')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=6">
 @endpush
 
 @push('scripts')
@@ -16,7 +16,7 @@ window.HELP_TOUR_STEPS = [
   { selector: '.cal-cell:not(.cal-empty)', title: '날짜 셀 클릭', body: '숫자가 표시된 날짜를 클릭하면 재구매 대상 환자 목록이 나타납니다. 목록에서 카카오 알림톡 또는 SMS를 바로 발송할 수 있습니다.' },
 ];
 </script>
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
 <script>
 (function () {
   const el = document.getElementById('repurchaseGrid');
