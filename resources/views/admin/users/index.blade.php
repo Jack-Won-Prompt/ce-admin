@@ -10,57 +10,79 @@
   <p class="content-sub">시스템 관리자 계정을 추가·수정·비활성화합니다.</p>
 </div>
 
-<div class="card">
-  <div class="card-body" style="padding:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
-      <span style="font-size:13px;color:var(--text-muted);">총 <b id="userCount">{{ $users->count() }}</b>명</span>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-sm" style="border:1.5px solid var(--primary);color:var(--primary);background:#fff;" onclick="openInviteModal()">
-          <i class="bx bx-envelope"></i> 이메일로 초대
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="openModal()">
-          <i class="bx bx-plus"></i> 관리자 추가
-        </button>
-      </div>
-    </div>
+{{-- ── 패널 탭: 관리자 목록 / 초대 현황 ── --}}
+<div class="pnl-tabs">
+  <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
+    <i class="bx bx-user-check"></i> 관리자 목록
+    <span class="pnl-cnt">{{ number_format($total) }}</span>
+  </button>
+  <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">
+    <i class="bx bx-envelope-open"></i> 초대 현황
+    <span class="pnl-cnt" id="pnlInvCnt" style="display:none;"></span>
+  </button>
+</div>
 
-    {{-- ── 관리자 목록 (wwGrid) ── --}}
-    <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="usersEditSelected()">
-        <i class="bx bx-edit"></i> 선택 수정
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 수정</span>
-      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}명</span>
+{{-- ── 관리자 목록 탭 ── --}}
+<div id="pnlUsers">
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
+        <span style="font-size:13px;color:var(--text-muted);">총 <b id="userCount">{{ $users->count() }}</b>명</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" style="border:1.5px solid var(--primary);color:var(--primary);background:#fff;" onclick="openInviteModal()">
+            <i class="bx bx-envelope"></i> 이메일로 초대
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openModal()">
+            <i class="bx bx-plus"></i> 관리자 추가
+          </button>
+        </div>
+      </div>
+
+      {{-- ── 관리자 목록 (wwGrid) ── --}}
+      <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="usersEditSelected()">
+          <i class="bx bx-edit"></i> 선택 수정
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 수정</span>
+        <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}명</span>
+      </div>
+      <div style="padding:0 20px 20px;"><div id="usersGrid"></div></div>
     </div>
-    <div style="padding:0 20px 20px;"><div id="usersGrid"></div></div>
   </div>
 </div>
 
-{{-- ── 초대 현황 카드 ── --}}
-<div class="card" style="margin-top:20px;">
-  <div class="card-body" style="padding:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <i class="bx bx-envelope-open" style="color:var(--primary);font-size:16px;"></i>
-        <span style="font-size:14px;font-weight:700;">초대 현황</span>
-        <span id="inviteBadge" style="display:none;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;"></span>
+{{-- ── 초대 현황 탭 ── --}}
+<div id="pnlInv" style="display:none;">
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <i class="bx bx-envelope-open" style="color:var(--primary);font-size:16px;"></i>
+          <span style="font-size:14px;font-weight:700;">초대 현황</span>
+          <span id="inviteBadge" style="display:none;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" style="border:1.5px solid var(--primary);color:var(--primary);background:#fff;" onclick="openInviteModal()">
+            <i class="bx bx-envelope"></i> 이메일로 초대
+          </button>
+          <button class="btn btn-sm btn-outline" onclick="loadInvitations()" id="refreshBtn" title="새로고침" style="padding:3px 10px;">
+            <i class="bx bx-refresh"></i>
+          </button>
+        </div>
       </div>
-      <button class="btn btn-sm btn-outline" onclick="loadInvitations()" id="refreshBtn" title="새로고침" style="padding:3px 10px;">
-        <i class="bx bx-refresh"></i>
-      </button>
-    </div>
 
-    {{-- ── 초대 현황 목록 (wwGrid) ── --}}
-    <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;flex-wrap:wrap;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="invResendSelected()">
-        <i class="bx bx-send"></i> 선택 재발송
-      </button>
-      <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="invCancelSelected()">
-        <i class="bx bx-trash"></i> 선택 초대취소
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행 (수락된 초대는 불가)</span>
+      {{-- ── 초대 현황 목록 (wwGrid) ── --}}
+      <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="invResendSelected()">
+          <i class="bx bx-send"></i> 선택 재발송
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="invCancelSelected()">
+          <i class="bx bx-trash"></i> 선택 초대취소
+        </button>
+        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행 (수락된 초대는 불가)</span>
+      </div>
+      <div style="padding:0 20px 20px;"><div id="invitationsGrid"></div></div>
     </div>
-    <div style="padding:0 20px 20px;"><div id="invitationsGrid"></div></div>
   </div>
 </div>
 
@@ -210,6 +232,17 @@
 .toggle-track.on { background:var(--success); }
 .toggle-thumb { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
 .toggle-track.on .toggle-thumb { transform:translateX(20px); }
+
+/* ── 패널 탭(관리자 목록 / 초대 현황) ── */
+.pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
+.pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
+  color:var(--text-secondary); border-bottom:3px solid transparent; margin-bottom:-2px;
+  display:inline-flex; align-items:center; gap:7px; }
+.pnl-tab:hover { color:var(--primary); }
+.pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.pnl-cnt { min-width:20px; padding:0 6px; height:18px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:20px; font-size:10.5px; font-weight:700; background:var(--border-light); color:var(--text-muted); }
+.pnl-tab.active .pnl-cnt { background:var(--primary); color:#fff; }
 </style>
 @endpush
 
@@ -256,6 +289,13 @@ function renderInvitations(list) {
     badge.style.display  = 'inline-block';
   } else {
     badge.style.display  = 'none';
+  }
+
+  // 탭에도 전체 건수를 표시해, 초대 현황 탭을 열지 않아도 상태가 보이게 한다
+  const tabCnt = document.getElementById('pnlInvCnt');
+  if (tabCnt) {
+    tabCnt.textContent   = String(list.length);
+    tabCnt.style.display = list.length ? 'inline-flex' : 'none';
   }
 
   const statusText = { pending: '대기중', accepted: '수락됨', expired: '만료됨' };
@@ -581,12 +621,12 @@ function updateRow(u)     { refreshUsersGrid(); }
 {{-- ── wwGrid 생성 + 외부 액션 버튼 ── --}}
 <script>
 (function () {
-  // 두 그리드가 한 화면(뷰포트)에 페이지 스크롤 없이 들어오도록 높이를 동적 배분.
-  // (제목·카드헤더·버튼·여백 등 그리드 외 요소를 CHROME으로 빼고 남은 높이를 나눔)
-  const CHROME = 320;
-  const budget = Math.max(320, window.innerHeight - CHROME);
-  const USERS_H = Math.max(220, Math.round(budget * 0.56));
-  const INV_H   = Math.max(150, Math.round(budget * 0.44));
+  // 탭으로 나뉘어 한 번에 한 그리드만 보이므로, 활성 그리드가 남은 높이를 모두 쓴다.
+  // (제목·탭·카드헤더·버튼·여백 등 그리드 외 요소를 CHROME 으로 뺀 나머지)
+  const CHROME  = 340;
+  const budget  = Math.max(240, window.innerHeight - CHROME);
+  const USERS_H = budget;
+  const INV_H   = budget;
 
   // 관리자 그리드
   window.__usersGrid = new wwGrid({
@@ -628,27 +668,43 @@ function updateRow(u)     { refreshUsersGrid(); }
     data: [],
   });
 
-  // 두 그리드가 한 화면에 페이지 스크롤 없이 들어오도록 높이 배분 + 반복 보정(리사이즈 대응)
-  function fitTwoGrids() {
-    const uw = window.__usersGrid && window.__usersGrid._wrapEl;
-    const iw = window.__invGrid && window.__invGrid._wrapEl;
-    if (!uw || !iw) return;
-    // 시작 배분(관리자 58% / 초대 42%)
-    const budget2 = Math.max(240, window.innerHeight - CHROME);
-    uw.style.height = Math.max(110, Math.round(budget2 * 0.58)) + 'px';
-    iw.style.height = Math.max(110, Math.round(budget2 * 0.42)) + 'px';
-    // 넘치면 두 그리드에서 분담(관리자 60%/초대 40%)해 줄임 — 수렴까지 반복
+  /* 활성 탭의 그리드가 페이지 스크롤 없이 한 화면에 들어오도록 높이 보정.
+     탭 전환으로 하나만 보이므로 배분 없이 남은 높이를 전부 준다. */
+  function fitActiveGrid() {
+    const g = _pnlActive === 'inv' ? window.__invGrid : window.__usersGrid;
+    const w = g && g._wrapEl;
+    if (!w) return;
+    w.style.height = Math.max(180, window.innerHeight - CHROME) + 'px';
+    // 넘치면 수렴할 때까지 줄임
     for (let i = 0; i < 4; i++) {
       const overflow = document.documentElement.scrollHeight - window.innerHeight;
       if (overflow <= 0) break;
-      const uh = uw.getBoundingClientRect().height;
-      const ih = iw.getBoundingClientRect().height;
-      uw.style.height = Math.max(90, Math.floor(uh - Math.ceil(overflow * 0.6))) + 'px';
-      iw.style.height = Math.max(90, Math.floor(ih - Math.ceil(overflow * 0.4))) + 'px';
+      w.style.height = Math.max(120, Math.floor(w.getBoundingClientRect().height - Math.ceil(overflow))) + 'px';
     }
   }
-  requestAnimationFrame(fitTwoGrids);
-  window.addEventListener('resize', fitTwoGrids);
+
+  /* ── 패널 탭 전환 ─────────────────────────────────────── */
+  let _pnlActive = 'users';
+  let _invShown  = false;
+
+  window.pnlShow = function (which) {
+    const inv = which === 'inv';
+    _pnlActive = inv ? 'inv' : 'users';
+    document.getElementById('pnlUsers').style.display = inv ? 'none' : '';
+    document.getElementById('pnlInv').style.display   = inv ? '' : 'none';
+    document.getElementById('pnlBtnUsers').classList.toggle('active', !inv);
+    document.getElementById('pnlBtnInv').classList.toggle('active', inv);
+
+    // 숨겨진 채 생성된 그리드는 처음 보일 때 다시 그려 레이아웃을 잡는다
+    if (inv && !_invShown) {
+      _invShown = true;
+      if (window.__invGrid) window.__invGrid.setData(window.__invGrid.getData());
+    }
+    requestAnimationFrame(fitActiveGrid);
+  };
+
+  requestAnimationFrame(fitActiveGrid);
+  window.addEventListener('resize', fitActiveGrid);
 
   function invPickSelected(actionLabel) {
     const c = window.__invGrid.getCheckedRows();
