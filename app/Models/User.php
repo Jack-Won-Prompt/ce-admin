@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'role',
+        'permission_group_id',
         'is_active',
         'toured_pages',
         'fcm_token',
@@ -53,6 +54,18 @@ class User extends Authenticatable
             'is_active'         => 'boolean',
             'toured_pages'      => 'array',
         ];
+    }
+
+    /** 부여된 권한 그룹 (사용자당 1개, 미지정 가능) */
+    public function permissionGroup(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(PermissionGroup::class, 'permission_group_id');
+    }
+
+    /** 권한 판정 단축 — 내부적으로 PermissionService 를 쓴다 */
+    public function canDo(string $page, string $action = 'view'): bool
+    {
+        return app(\App\Services\PermissionService::class)->allows($this, $page, $action);
     }
 
     public function markPageTouredIfNew(string $pageKey): void

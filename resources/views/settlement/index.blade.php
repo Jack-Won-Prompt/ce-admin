@@ -236,15 +236,20 @@
     {{-- ── 가상계좌 목록 (wwGrid) ── --}}
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
       @if($tossConfigured)
+        {{-- 가상계좌 발급·SMS 재전송은 외부로 나가는 동작이라 send 권한으로 통제 --}}
+        @perm('settlement', 'send')
         <button type="button" class="btn btn-primary btn-sm" onclick="vaIssueSelected(this)">
           <i class="fa-solid fa-plus"></i> 선택 발급
         </button>
+        @endperm
         <button type="button" class="btn btn-outline btn-sm" onclick="vaCheckSelected(this)">
           <i class="fa-solid fa-rotate"></i> 선택 입금확인
         </button>
+        @perm('settlement', 'send')
         <button type="button" class="btn btn-outline btn-sm" onclick="vaResendSelected(this)">
           <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
         </button>
+        @endperm
         <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행</span>
       @else
         <span style="font-size:12px;color:var(--text-muted);"><i class="fa-solid fa-triangle-exclamation"></i> 토스 API 미설정 — 발급/입금확인/SMS 불가</span>

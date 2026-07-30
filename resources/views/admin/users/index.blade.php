@@ -156,6 +156,20 @@
           </div>
         </div>
 
+        <div class="form-group" id="permGroupWrap">
+          <label class="form-label">권한 그룹</label>
+          <select class="form-control form-select" id="fPermGroup">
+            <option value="">미지정 (대시보드만)</option>
+            @foreach($permissionGroups as $pg)
+              <option value="{{ $pg->id }}">{{ $pg->name }}{{ $pg->is_full_access ? ' (기본)' : '' }}</option>
+            @endforeach
+          </select>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.6;">
+            그룹에 허용된 페이지·동작만 보입니다. <b>역할이 '관리자'면 그룹과 무관하게 전체 권한</b>입니다.
+            그룹은 <b>설정 &gt; 권한 그룹</b>에서 만듭니다.
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">이메일 <span style="color:var(--danger);">*</span></label>
           <input type="email" class="form-control" id="fEmail" placeholder="example@domain.com" required maxlength="200">
@@ -443,12 +457,15 @@ function openModal(userId = null) {
   document.getElementById('deleteBtn').style.display = (!isNew && userId !== ME) ? 'inline-flex' : 'none';
   document.getElementById('formError').style.display = 'none';
   document.getElementById('activeToggleWrap').style.display = (userId === ME) ? 'none' : 'block';
+  // 자기 자신의 권한 그룹은 바꿀 수 없다(스스로 잠기는 것 방지 — 서버에서도 무시한다)
+  document.getElementById('permGroupWrap').style.display = (userId === ME) ? 'none' : 'block';
 
   if (isNew) {
     document.getElementById('fName').value  = '';
     document.getElementById('fEmail').value = '';
     document.getElementById('fPhone').value = '';
     document.getElementById('fRole').value  = 'manager';
+    document.getElementById('fPermGroup').value = '';
     document.getElementById('fPassword').value = '';
     setActive(true);
   } else {
@@ -457,6 +474,7 @@ function openModal(userId = null) {
     document.getElementById('fEmail').value = u.email;
     document.getElementById('fPhone').value = u.phone;
     document.getElementById('fRole').value  = u.role;
+    document.getElementById('fPermGroup').value = u.permission_group_id ?? '';
     document.getElementById('fPassword').value = '';
     setActive(u.is_active);
     // role 변경 잠금 (자기 자신)
@@ -507,6 +525,7 @@ async function submitForm(e) {
     email:     document.getElementById('fEmail').value.trim(),
     phone:     document.getElementById('fPhone').value.replace(/\D/g, ''),
     role:      document.getElementById('fRole').value,
+    permission_group_id: document.getElementById('fPermGroup').value || null,
     is_active: document.getElementById('fIsActive').checked ? 1 : 0,
     password:  document.getElementById('fPassword').value,
   };
@@ -598,6 +617,8 @@ function userGridRow(u) {
     email:   u.email,
     phone:   u.phone ? u.phone : '—',
     role:    u.role === 'admin' ? '관리자' : '매니저',
+    // admin 은 그룹과 무관하게 전권
+    group:   u.role === 'admin' ? '전체 권한 (관리자)' : (u.group_name || '미지정'),
     status:  u.is_active ? '활성' : '비활성',
     created: u.created_at || '',
   };
@@ -639,6 +660,7 @@ function updateRow(u)     { refreshUsersGrid(); }
       { header: '이메일', name: 'email',   width: 220, sortable: true },
       { header: '휴대폰', name: 'phone',   width: 140 },
       { header: '역할',   name: 'role',    width: 90,  align: 'center', sortable: true },
+      { header: '권한 그룹', name: 'group', width: 150, sortable: true },
       { header: '상태',   name: 'status',  width: 80,  align: 'center', sortable: true },
       { header: '등록일', name: 'created', width: 110, align: 'center', sortable: true },
     ],

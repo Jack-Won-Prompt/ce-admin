@@ -286,6 +286,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');
     Route::put('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'update'])->name('ocr-settings.update');
 
+    // 권한 그룹 (관리자 전용 — CheckPagePermission 이 admin_only 로 차단)
+    Route::get(   '/settings/permission-groups',                  [\App\Http\Controllers\PermissionGroupController::class, 'index'])->name('permission-groups.index');
+    Route::get(   '/settings/permission-groups/{group}',          [\App\Http\Controllers\PermissionGroupController::class, 'show'])->name('permission-groups.show');
+    Route::post(  '/settings/permission-groups',                  [\App\Http\Controllers\PermissionGroupController::class, 'store'])->name('permission-groups.store');
+    Route::put(   '/settings/permission-groups/{group}',          [\App\Http\Controllers\PermissionGroupController::class, 'update'])->name('permission-groups.update');
+    Route::delete('/settings/permission-groups/{group}',          [\App\Http\Controllers\PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
+
     // NICE 본인확인 설정 (자격증명 서버 저장 + 연결 테스트)
     Route::get( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'edit'])->name('nice-settings.edit');
     Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');

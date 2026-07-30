@@ -923,7 +923,15 @@
       {{-- Menu --}}
       <div class="menu-inner">
 
+        @php
+          // 권한 그룹으로 필터링 — 볼 수 있는 페이지를 한 번만 계산해 재사용한다.
+          // $vis(...키) : 넘긴 페이지 중 하나라도 볼 수 있으면 true (그룹 헤더 판정에도 씀)
+          $vp  = perm_pages();
+          $vis = fn (...$keys) => count(array_intersect($keys, $vp)) > 0;
+        @endphp
+
         {{-- ══ 메인 ══ --}}
+        @if($vis('dashboard'))
         <div class="menu-group" data-menu-group="main">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>메인</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
@@ -935,23 +943,30 @@
           </a>
         </div>
         </div></div>
+        @endif
 
         {{-- ══ 환자 · 처방 ══ --}}
+        @if($vis('patients', 'prescription-upload', 'prescriptions'))
         <div class="menu-group" data-menu-group="patient">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>환자 · 처방</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('patients'))
         <div class="menu-item {{ request()->routeIs('patients*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('patients.index') }}" data-title="환자관리">
             <i class="menu-icon bx bx-user-pin"></i><span>환자관리</span>
           </a>
         </div>
+        @endif
+        @if($vis('prescription-upload'))
         <div class="menu-item {{ request()->routeIs('prescriptions.upload') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('prescriptions.upload') }}" data-title="처방전 업로드">
             <i class="menu-icon bx bx-upload"></i><span>처방전 업로드</span>
           </a>
         </div>
+        @endif
+        @if($vis('prescriptions'))
         <div class="menu-item {{ request()->routeIs('prescriptions.index') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
             <i class="menu-icon bx bx-file-blank"></i>
@@ -962,14 +977,18 @@
             @endif
           </a>
         </div>
+        @endif
         </div></div>
+        @endif
 
         {{-- ══ 주문 · 재구매 ══ --}}
+        @if($vis('orders', 'repurchase', 'shop-orders'))
         <div class="menu-group" data-menu-group="order">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>주문 · 재구매</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('orders'))
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('orders.index') }}" data-title="주문관리">
             <i class="menu-icon bx bx-cart-alt"></i>
@@ -980,6 +999,8 @@
             @endif
           </a>
         </div>
+        @endif
+        @if($vis('repurchase'))
         <div class="menu-item {{ request()->routeIs('repurchase*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('repurchase.index') }}" data-title="재구매 관리">
             <i class="menu-icon bx bx-refresh"></i>
@@ -995,7 +1016,8 @@
             @endif
           </a>
         </div>
-        @if(config('services.ce_shop.api_enabled'))
+        @endif
+        @if(config('services.ce_shop.api_enabled') && $vis('shop-orders'))
         <div class="menu-item {{ request()->routeIs('shop-orders*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('shop-orders.index') }}" data-title="CE샵 주문">
             <i class="menu-icon bx bx-store-alt"></i>
@@ -1012,33 +1034,42 @@
           </a>
         </div> --}}
         </div></div>
+        @endif
 
         {{-- ══ 서류 · 동의 ══ --}}
+        @if($vis('documents', 'privacy-consents'))
         <div class="menu-group" data-menu-group="docs">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>서류 · 동의</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('documents'))
         <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('documents.index') }}" data-title="서류 관리">
             <i class="menu-icon bx bx-folder-open"></i>
             <span>서류 관리</span>
           </a>
         </div>
+        @endif
+        @if($vis('privacy-consents'))
         <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
             <i class="menu-icon bx bx-check-shield"></i>
             <span>개인정보동의</span>
           </a>
         </div>
+        @endif
         </div></div>
+        @endif
 
         {{-- ══ 청구 · 회계 ══ --}}
+        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>청구 · 회계</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
             <i class="menu-icon bx bx-plus-medical"></i>
@@ -1049,6 +1080,8 @@
             @endif
           </a>
         </div>
+        @endif
+        @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('invoice.index') }}" data-title="계산서 발행">
             <i class="menu-icon bx bx-receipt"></i>
@@ -1067,6 +1100,8 @@
             @endif
           </a>
         </div>
+        @endif
+        @if($vis('settlement'))
         <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('settlement.index') }}" data-title="정산/회계">
             <i class="menu-icon bx bx-calculator"></i>
@@ -1077,52 +1112,68 @@
             @endif
           </a>
         </div>
+        @endif
+        @if($vis('taxinvoice'))
         <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
             <i class="menu-icon bx bx-file"></i>
             <span>전자세금계산서</span>
           </a>
         </div>
+        @endif
+        @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('cashbill.index') }}" data-title="현금영수증">
             <i class="menu-icon bx bx-receipt"></i>
             <span>현금영수증</span>
           </a>
         </div>
+        @endif
         </div></div>
+        @endif
 
         {{-- ══ 발송 · 내역 ══ --}}
+        @if($vis('fax', 'dispatch'))
         <div class="menu-group" data-menu-group="dispatch">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>발송 · 내역</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('fax'))
         <div class="menu-item {{ request()->routeIs('fax*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('fax.index') }}" data-title="팩스 발송">
             <i class="menu-icon bx bx-printer"></i>
             <span>팩스 발송</span>
           </a>
         </div>
+        @endif
+        @if($vis('dispatch'))
         <div class="menu-item {{ request()->routeIs('dispatch*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('dispatch.index') }}" data-title="발송/발행 내역">
             <i class="menu-icon bx bx-send"></i>
             <span>발송/발행 내역</span>
           </a>
         </div>
+        @endif
         </div></div>
+        @endif
 
         {{-- ══ 지원 ══ --}}
+        @if($vis('institutional-notices', 'notices', 'inquiries'))
         <div class="menu-group" data-menu-group="support">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>지원</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('institutional-notices'))
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
             <i class="menu-icon bx bx-buildings"></i>
             <span>기관 공지사항</span>
           </a>
         </div>
+        @endif
+        @if($vis('notices'))
         <div class="menu-item {{ request()->routeIs('notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('notices.index') }}" data-title="공지사항">
             <i class="menu-icon bx bx-bell"></i>
@@ -1130,6 +1181,8 @@
             <span class="menu-badge blue" id="noticNavBadge" style="display:none;"></span>
           </a>
         </div>
+        @endif
+        @if($vis('inquiries'))
         <div class="menu-item {{ request()->routeIs('inquiries*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('inquiries.index') }}" data-title="문의하기">
             <i class="menu-icon bx bx-support"></i>
@@ -1145,37 +1198,55 @@
             @endif
           </a>
         </div>
+        @endif
         </div></div>
+        @endif
 
         {{-- ══ 설정 ══ --}}
+        @if($vis('admin-users', 'permission-groups', 'delegation-settings', 'ocr-settings', 'nice-settings'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
         </button>
         <div class="menu-group-items">
+        @if($vis('admin-users'))
         <div class="menu-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
             <i class="menu-icon bx bx-shield-quarter"></i><span>관리자 관리</span>
           </a>
         </div>
+        @endif
+        @if($vis('permission-groups'))
+        <div class="menu-item {{ request()->routeIs('permission-groups*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('permission-groups.index') }}" data-title="권한 그룹">
+            <i class="menu-icon bx bx-lock-alt"></i><span>권한 그룹</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('delegation-settings'))
         <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
             <i class="menu-icon bx bx-cog"></i>
             <span>위임장 설정</span>
           </a>
         </div>
+        @endif
+        @if($vis('ocr-settings'))
         <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
             <i class="menu-icon bx bx-scan"></i>
             <span>OCR 설정</span>
           </a>
         </div>
+        @endif
+        @if($vis('nice-settings'))
         <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
             <i class="menu-icon bx bx-id-card"></i>
             <span>본인확인 설정</span>
           </a>
         </div>
+        @endif
 
         {{-- 사용자 로그 메뉴 비활성화 --}}
         {{-- <div class="menu-item {{ request()->routeIs('user-logs*') ? 'active' : '' }}">
@@ -1184,6 +1255,7 @@
           </a>
         </div> --}}
         </div></div>
+        @endif
       </div>{{-- /menu-inner --}}
 
       {{-- User Footer --}}

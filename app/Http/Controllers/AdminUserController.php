@@ -13,7 +13,12 @@ class AdminUserController extends Controller
 {
     public function index(): View
     {
-        $users = User::orderBy('role')->orderBy('name')->get();
+        $users = User::with('permissionGroup')->orderBy('role')->orderBy('name')->get();
+
+        // 권한 그룹 셀렉트 옵션 (전권 그룹을 위로)
+        $permissionGroups = \App\Models\PermissionGroup::orderByDesc('is_full_access')
+            ->orderBy('name')
+            ->get(['id', 'name', 'is_full_access']);
 
         $usersData = $users->map(function ($u) {
             return [
@@ -22,6 +27,7 @@ class AdminUserController extends Controller
                 'email'      => $u->email,
                 'phone'      => $u->phone ?? '',
                 'role'       => $u->role,
+                'permission_group_id' => $u->permission_group_id,
                 'is_active'  => (bool) $u->is_active,
                 'created_at' => $u->created_at?->format('Y-m-d') ?? '',
             ];
@@ -36,6 +42,10 @@ class AdminUserController extends Controller
                 'email'   => $u->email,
                 'phone'   => $u->phone ?: '—',
                 'role'    => $u->role === 'admin' ? '관리자' : '매니저',
+                // admin 은 그룹과 무관하게 항상 전권이므로 그렇게 표시한다
+                'group'   => $u->role === 'admin'
+                                ? '전체 권한 (관리자)'
+                                : ($u->permissionGroup?->name ?? '미지정'),
                 'status'  => $u->is_active ? '활성' : '비활성',
                 'created' => $u->created_at?->format('Y-m-d') ?? '',
             ];
@@ -43,7 +53,7 @@ class AdminUserController extends Controller
 
         $total = $gridData->count();
 
-        return view('admin.users.index', compact('users', 'usersData', 'gridData', 'total'));
+        return view('admin.users.index', compact('users', 'usersData', 'gridData', 'total', 'permissionGroups'));
     }
 
     public function store(Request $request): JsonResponse
@@ -53,6 +63,7 @@ class AdminUserController extends Controller
             'email'    => ['required', 'email', 'max:200', 'unique:users,email'],
             'phone'    => ['nullable', 'string', 'max:20'],
             'role'     => ['required', Rule::in(['admin', 'manager'])],
+            'permission_group_id' => ['nullable', 'exists:permission_groups,id'],
             'is_active'=> ['boolean'],
             'password' => ['required', 'string', 'min:8'],
         ]);
@@ -71,6 +82,7 @@ class AdminUserController extends Controller
             'email'    => ['required', 'email', 'max:200', Rule::unique('users', 'email')->ignore($user->id)],
             'phone'    => ['nullable', 'string', 'max:20'],
             'role'     => ['required', Rule::in(['admin', 'manager'])],
+            'permission_group_id' => ['nullable', 'exists:permission_groups,id'],
             'is_active'=> ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
@@ -81,9 +93,9 @@ class AdminUserController extends Controller
 
         $data['is_active'] = $request->boolean('is_active');
 
-        // 자기 자신의 role/is_active 변경 방지
+        // 자기 자신의 role/권한그룹/is_active 변경 방지 (스스로 권한을 낮춰 잠기는 것을 막는다)
         if ($user->id === Auth::id()) {
-            unset($data['role'], $data['is_active']);
+            unset($data['role'], $data['permission_group_id'], $data['is_active']);
         }
 
         $user->update($data);
@@ -110,6 +122,10 @@ class AdminUserController extends Controller
             'email'      => $user->email,
             'phone'      => $user->phone ?? '',
             'role'       => $user->role,
+            'permission_group_id' => $user->permission_group_id,
+            'group_name' => $user->role === 'admin'
+                                ? '전체 권한 (관리자)'
+                                : ($user->permissionGroup?->name ?? '미지정'),
             'is_active'  => (bool) $user->is_active,
             'created_at' => $user->created_at?->format('Y-m-d'),
         ];

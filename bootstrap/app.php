@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
         ]);
         $middleware->appendToGroup('web', \App\Http\Middleware\LogUserActivity::class);
+        // 권한 그룹 기반 페이지·액션 차단 (config/permissions.php 레지스트리 기준)
+        $middleware->appendToGroup('web', \App\Http\Middleware\CheckPagePermission::class);
         $middleware->alias(['admin' => \App\Http\Middleware\AdminOnly::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

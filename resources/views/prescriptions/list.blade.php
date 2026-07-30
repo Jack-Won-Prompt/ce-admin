@@ -44,9 +44,11 @@
 @endsection
 
 @section('header-actions')
+  @perm('prescription-upload', 'create')
   <a href="{{ route('prescriptions.upload') }}" class="btn btn-primary btn-sm">
     <i class="fa-solid fa-upload"></i> 처방전 업로드
   </a>
+  @endperm
 @endsection
 
 @push('styles')

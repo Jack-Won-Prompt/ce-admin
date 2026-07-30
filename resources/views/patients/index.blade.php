@@ -103,9 +103,11 @@
       총 <strong id="total-count">{{ number_format($total) }}</strong>명 등록
     </p>
   </div>
+  @perm('patients', 'create')
   <button class="btn btn-primary" onclick="openAddModal()">
     <i class="bx bx-user-plus"></i> 환자 추가
   </button>
+  @endperm
 </div>
 
 {{-- 필터 --}}

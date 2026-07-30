@@ -177,6 +177,7 @@
       </div>
 
       {{-- 우: 서류 등록 --}}
+      @perm('documents', 'create')
       <div class="reg-card">
         <h4><i class="bx bx-upload"></i> 서류 등록</h4>
         <form id="regForm" onsubmit="return regSubmit(event)">
@@ -202,6 +203,7 @@
           </div>
         </form>
       </div>
+      @endperm
     </div>
   </div>
 </div>

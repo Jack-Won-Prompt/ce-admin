@@ -32,6 +32,8 @@ window.HELP_TOUR_STEPS = [
         <a href="{{ route('notices.index') }}" class="btn btn-outline btn-sm">초기화</a>
       @endif
     </form>
+    {{-- NoticeController 가 서버측에서 admin 을 강제하므로 기존 role 게이트를 유지한다.
+         (권한 그룹으로 매니저에게 열어 주려면 컨트롤러의 admin 체크부터 걷어내야 함) --}}
     @if(Auth::user()->role === 'admin')
       <a href="{{ route('notices.create') }}" class="btn btn-primary btn-sm">
         <i class="bx bx-plus"></i> 공지 등록
