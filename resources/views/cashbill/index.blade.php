@@ -477,8 +477,13 @@
     data: [],
   });
   function cbOpenRow(r) {
-    if (r._source === 'order') window.open('/prescriptions/' + encodeURIComponent(r.rxNumber), '_blank');
-    else openDetail(r.mgtKey);
+    if (r._source === 'order') {
+      // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
+      ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rxNumber),
+                (r.rxNumber || '처방전') + ' 검수', 'bx-scan');
+    } else {
+      openDetail(r.mgtKey);
+    }
   }
   el.addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]'); if (!cell) return;

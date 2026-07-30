@@ -1447,6 +1447,21 @@ document.addEventListener('click', (e) => {
     setTimeout(() => toast.remove(), 300);
   }
 
+  /* ── [data-ce-tab] 링크는 워크스페이스 새 탭으로 ────────────
+     상세 화면으로 가는 링크에 속성만 붙이면 현재 탭이 전환되지 않고 새 탭이 열린다.
+       <a href="/prescriptions/RX-1" data-ce-tab="RX-1 검수" data-ce-icon="bx-scan">
+     동적으로 만든 마크업(알림 토스트·그리드 셀 등)에도 위임으로 적용된다.
+     Ctrl/Cmd/Shift/가운데 클릭은 브라우저 기본 동작(새 창·새 탭)을 그대로 둔다. */
+  document.addEventListener('click', function (e) {
+    const a = e.target.closest('a[data-ce-tab]');
+    if (!a) return;
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const href = a.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('javascript')) return;
+    e.preventDefault();
+    window.ceOpenTab(href, a.dataset.ceTab || a.textContent.trim(), a.dataset.ceIcon || 'bx-window-alt');
+  });
+
   /* ── 커스텀 알림 / 확인 다이얼로그 ────────────────────────
      브라우저 기본 alert()/confirm() 대신 디자인 시스템 모달을 쓴다.
      confirm 은 동기 반환이 불가하므로 Promise 를 반환한다:
@@ -3216,7 +3231,8 @@ const ChatPanel = (() => {
         <br><span style="color:var(--text-muted);font-size:11px;">${escHtml(data.rx_number ?? '')}${data.responded_at ? ' · ' + data.responded_at : ''}</span>
       </div>
       <div class="consent-notif-actions">
-        <a href="${rxUrl}" style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
+        <a href="${rxUrl}" data-ce-tab="${escHtml(data.rx_number ?? '처방전')} 검수" data-ce-icon="bx-scan"
+           style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
           <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
         </a>
         <button onclick="this.closest('.consent-notif').remove()"
@@ -3301,7 +3317,8 @@ function showPrescriptionNotif(data) {
       </span>
     </div>
     <div class="rx-notif-actions">
-      <a href="${rxUrl}" style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
+      <a href="${rxUrl}" data-ce-tab="${escHtml(data.rx_number ?? '처방전')} 검수" data-ce-icon="bx-scan"
+         style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
         <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
       </a>
       <button onclick="this.closest('.rx-notif').remove()"

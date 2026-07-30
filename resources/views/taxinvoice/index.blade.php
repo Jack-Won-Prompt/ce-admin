@@ -545,8 +545,13 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     data: [],
   });
   function taxOpenRow(r) {
-    if (r.record_type === 'prescription') window.open('/prescriptions/' + encodeURIComponent(r.rx_number), '_blank');
-    else openDetail('SELL', r.mgtKey);
+    if (r.record_type === 'prescription') {
+      // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
+      ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rx_number),
+                (r.rx_number || '처방전') + ' 검수', 'bx-scan');
+    } else {
+      openDetail('SELL', r.mgtKey);
+    }
   }
   el.addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]'); if (!cell) return;

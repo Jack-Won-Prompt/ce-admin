@@ -690,6 +690,7 @@
           <dt>처방번호</dt>
           <dd>
             <a href="{{ route('prescriptions.show', $prescription) }}"
+               data-ce-tab="{{ $prescription->rx_number }} 검수" data-ce-icon="bx-scan"
                style="color:var(--primary);font-family:monospace;font-size:13px;">
               {{ $prescription->rx_number }}
             </a>

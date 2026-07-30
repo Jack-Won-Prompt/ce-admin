@@ -5851,13 +5851,27 @@ window.HELP_TOUR_STEPS = [
   const PREV_RX = @json($prevId);   // 더 최근 처방전 rx_number
   const NEXT_RX = @json($nextId);   // 더 오래된 처방전 rx_number
 
+  /* 이전/다음은 새 탭이 아니라 현재 탭에서 넘기는 '페이징'이 맞다(클릭마다 탭이 늘면 안 됨).
+     다만 그대로 이동하면 미저장 입력이 사라지므로 탭 전환과 동일하게 확인을 받는다. */
+  async function _gotoRecord(rxNumber) {
+    if (isAnyDirty()) {
+      const ok = await ceConfirm(
+        `저장하지 않은 변경이 있습니다. (${_dirtyLabel()})\n이동하면 변경 내용이 사라집니다.\n\n계속하시겠습니까?`,
+        { tone: 'warning', confirmText: '이동' }
+      );
+      if (!ok) return;
+      clearAllDirty();
+    }
+    location.href = `${BASE_URL}/prescriptions/${encodeURIComponent(rxNumber)}`;
+  }
+
   function prevRecord() {
     if (!PREV_RX) { showToast('첫 번째 처방전입니다.', 'info'); return; }
-    location.href = `${BASE_URL}/prescriptions/${encodeURIComponent(PREV_RX)}`;
+    _gotoRecord(PREV_RX);
   }
   function nextRecord() {
     if (!NEXT_RX) { showToast('마지막 처방전입니다.', 'info'); return; }
-    location.href = `${BASE_URL}/prescriptions/${encodeURIComponent(NEXT_RX)}`;
+    _gotoRecord(NEXT_RX);
   }
 
   // 이전/다음 없을 때 버튼 비활성화
@@ -6141,7 +6155,10 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('pcStickyRx').innerHTML     = d.rx_number
       ? `<i class="fa-solid fa-file-prescription" style="font-size:9px;"></i> ${_pcEsc(d.rx_number)}${d.rx_status_label ? ` <span style="padding:0 5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;">${_pcEsc(d.rx_status_label)}</span>` : ''}`
       : '';
-    document.getElementById('pcStickyBtn').onclick = () => window.location.href = `${_RX_URL_BASE}/${_pcEsc(d.rx_number??'')}`;
+    // 다른 처방전으로 '이동'하지 않고 새 탭으로 열어, 현재 검수 화면의 입력을 잃지 않게 한다
+    document.getElementById('pcStickyBtn').onclick = () => ceOpenTab(
+      `${_RX_URL_BASE}/${encodeURIComponent(d.rx_number ?? '')}`,
+      `${d.rx_number ?? '처방전'} 검수`, 'bx-scan');
     stickyHeader.style.display = 'block';
 
     // ── 스크롤 바디 ────────────────────────────────────

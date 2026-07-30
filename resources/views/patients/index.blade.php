@@ -284,8 +284,11 @@
   window.__patientGrid = grid;
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
-  const hrow = (main, sub, right, url) =>
-    '<div class="pt-hrow" ' + (url ? 'onclick="location.href=\'' + url + '\'"' : '') + '>' +
+  // 이력 행 클릭 → 해당 상세(처방전 검수·주문)를 워크스페이스 새 탭으로 (환자 목록 유지)
+  const hrow = (main, sub, right, url, label) =>
+    '<div class="pt-hrow" '
+      + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + (label || '상세') + '\', \'bx-scan\')"' : '')
+      + '>' +
       '<div class="pt-h-main"><div style="font-weight:600;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
       (right ? '<div style="white-space:nowrap;text-align:right;">' + right + '</div>' : '') +
     '</div>';
@@ -321,15 +324,15 @@
       document.getElementById('pdCntPu').textContent = d.purchases.length;
 
       document.getElementById('pd-rx').innerHTML = d.prescriptions.length
-        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url)).join('')
+        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, esc(r.rx_number) + ' 검수')).join('')
         : emptyBox('처방전 이력이 없습니다.');
 
       document.getElementById('pd-counsel').innerHTML = d.counseling.length
-        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url)).join('')
+        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, esc(c.rx_number) + ' 검수')).join('')
         : emptyBox('상담 이력이 없습니다.');
 
       document.getElementById('pd-purchase').innerHTML = d.purchases.length
-        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url)).join('')
+        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, esc(o.order_number) + ' 주문')).join('')
         : emptyBox('구매 이력이 없습니다.');
 
       window.ptTab('rx');
