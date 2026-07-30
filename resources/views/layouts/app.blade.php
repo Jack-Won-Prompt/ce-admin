@@ -171,7 +171,30 @@
       font-size: 10px; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: 1px;
       padding: 16px 18px 5px;
+      /* 그룹 접기 토글 버튼 */
+      display: flex; align-items: center; gap: 6px;
+      width: 100%; background: none; border: none;
+      font-family: inherit; text-align: left; cursor: pointer;
     }
+    .menu-header:hover { color: var(--primary); }
+    .menu-caret {
+      margin-left: auto; font-size: 15px; opacity: .55;
+      transition: transform .18s ease;
+    }
+    .menu-group.is-collapsed .menu-caret { transform: rotate(-90deg); }
+    .menu-group.is-collapsed > .menu-group-items { display: none; }
+    /* 그룹 안에 현재 화면이 있으면 헤더를 강조 */
+    .menu-group.has-active > .menu-header { color: var(--primary); }
+    /* 접힌 그룹에 알림 건수가 있으면 헤더에 합계를 표시(숨겨져 놓치지 않도록) */
+    .menu-group-badge {
+      background: var(--danger); color: #fff;
+      font-size: 9.5px; font-weight: 700; padding: 1px 6px;
+      border-radius: 10px; letter-spacing: 0;
+    }
+    .menu-group:not(.is-collapsed) .menu-group-badge { display: none; }
+    /* 아이콘 모드에서는 헤더가 숨겨져 펼칠 수 없으므로 접힘을 무시한다 */
+    .layout-menu.collapsed .menu-group.is-collapsed > .menu-group-items { display: block; }
+
     .menu-item { position: relative; }
     .menu-link {
       display: flex; align-items: center; gap: 9px;
@@ -900,20 +923,25 @@
       {{-- Menu --}}
       <div class="menu-inner">
 
-        <div class="menu-header">메인</div>
+        {{-- ══ 메인 ══ --}}
+        <div class="menu-group" data-menu-group="main">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>메인</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('dashboard*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('dashboard') }}" data-title="대시보드">
             <i class="menu-icon bx bx-home-smile"></i><span>대시보드</span>
           </a>
         </div>
+        </div></div>
 
-        <div class="menu-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
-            <i class="menu-icon bx bx-shield-quarter"></i><span>관리자 관리</span>
-          </a>
-        </div>
-
-        <div class="menu-header">환자 · 처방</div>
+        {{-- ══ 환자 · 처방 ══ --}}
+        <div class="menu-group" data-menu-group="patient">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>환자 · 처방</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('patients*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('patients.index') }}" data-title="환자관리">
             <i class="menu-icon bx bx-user-pin"></i><span>환자관리</span>
@@ -934,6 +962,14 @@
             @endif
           </a>
         </div>
+        </div></div>
+
+        {{-- ══ 주문 · 재구매 ══ --}}
+        <div class="menu-group" data-menu-group="order">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>주문 · 재구매</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('orders.index') }}" data-title="주문관리">
             <i class="menu-icon bx bx-cart-alt"></i>
@@ -942,12 +978,6 @@
             @if($orderCount > 0)
               <span class="menu-badge blue">{{ $orderCount }}</span>
             @endif
-          </a>
-        </div>
-        <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('documents.index') }}" data-title="서류 관리">
-            <i class="menu-icon bx bx-folder-open"></i>
-            <span>서류 관리</span>
           </a>
         </div>
         <div class="menu-item {{ request()->routeIs('repurchase*') ? 'active' : '' }}">
@@ -981,8 +1011,34 @@
             <span>CE샵 모니터링</span>
           </a>
         </div> --}}
+        </div></div>
 
-        <div class="menu-header">청구 · 회계</div>
+        {{-- ══ 서류 · 동의 ══ --}}
+        <div class="menu-group" data-menu-group="docs">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>서류 · 동의</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
+        <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('documents.index') }}" data-title="서류 관리">
+            <i class="menu-icon bx bx-folder-open"></i>
+            <span>서류 관리</span>
+          </a>
+        </div>
+        <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
+            <i class="menu-icon bx bx-check-shield"></i>
+            <span>개인정보동의</span>
+          </a>
+        </div>
+        </div></div>
+
+        {{-- ══ 청구 · 회계 ══ --}}
+        <div class="menu-group" data-menu-group="billing">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>청구 · 회계</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
             <i class="menu-icon bx bx-plus-medical"></i>
@@ -1033,6 +1089,14 @@
             <span>현금영수증</span>
           </a>
         </div>
+        </div></div>
+
+        {{-- ══ 발송 · 내역 ══ --}}
+        <div class="menu-group" data-menu-group="dispatch">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>발송 · 내역</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('fax*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('fax.index') }}" data-title="팩스 발송">
             <i class="menu-icon bx bx-printer"></i>
@@ -1045,36 +1109,14 @@
             <span>발송/발행 내역</span>
           </a>
         </div>
+        </div></div>
 
-        <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
-            <i class="menu-icon bx bx-check-shield"></i>
-            <span>개인정보동의</span>
-          </a>
-        </div>
-
-        <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
-            <i class="menu-icon bx bx-cog"></i>
-            <span>위임장 설정</span>
-          </a>
-        </div>
-
-        <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
-            <i class="menu-icon bx bx-scan"></i>
-            <span>OCR 설정</span>
-          </a>
-        </div>
-
-        <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
-            <i class="menu-icon bx bx-id-card"></i>
-            <span>본인확인 설정</span>
-          </a>
-        </div>
-
-        <div class="menu-header">지원</div>
+        {{-- ══ 지원 ══ --}}
+        <div class="menu-group" data-menu-group="support">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>지원</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
             <i class="menu-icon bx bx-buildings"></i>
@@ -1103,16 +1145,45 @@
             @endif
           </a>
         </div>
+        </div></div>
+
+        {{-- ══ 설정 ══ --}}
+        <div class="menu-group" data-menu-group="settings">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>설정</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+        </button>
+        <div class="menu-group-items">
+        <div class="menu-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
+            <i class="menu-icon bx bx-shield-quarter"></i><span>관리자 관리</span>
+          </a>
+        </div>
+        <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
+            <i class="menu-icon bx bx-cog"></i>
+            <span>위임장 설정</span>
+          </a>
+        </div>
+        <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
+            <i class="menu-icon bx bx-scan"></i>
+            <span>OCR 설정</span>
+          </a>
+        </div>
+        <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
+            <i class="menu-icon bx bx-id-card"></i>
+            <span>본인확인 설정</span>
+          </a>
+        </div>
 
         {{-- 사용자 로그 메뉴 비활성화 --}}
-        {{-- @if(Auth::user()->email === 'admin@ce-admin.co.kr')
-        <div class="menu-header">시스템</div>
-        <div class="menu-item {{ request()->routeIs('user-logs*') ? 'active' : '' }}">
+        {{-- <div class="menu-item {{ request()->routeIs('user-logs*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('user-logs.index') }}" data-title="사용자 로그">
             <i class="menu-icon bx bx-list-check"></i><span>사용자 로그</span>
           </a>
-        </div>
-        @endif --}}
+        </div> --}}
+        </div></div>
       </div>{{-- /menu-inner --}}
 
       {{-- User Footer --}}
@@ -1446,6 +1517,75 @@ document.addEventListener('click', (e) => {
     toast.style.transition = 'opacity .3s, transform .3s';
     setTimeout(() => toast.remove(), 300);
   }
+
+  /* ── 사이드바 메뉴 그룹 펼침/접힘 ──────────────────────────
+     헤더를 누르면 그룹이 접히고, 상태는 localStorage 에 저장돼 새로고침·다른
+     화면에서도 유지된다. 현재 화면이 속한 그룹은 항상 펼친 상태로 시작한다.
+     접힌 그룹에 알림 건수가 있으면 헤더에 합계를 띄워 놓치지 않게 한다. */
+  (function () {
+    const KEY = 'ce_menu_collapsed_groups';
+
+    function load() {
+      try { return new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) { return new Set(); }
+    }
+    function save(set) {
+      try { localStorage.setItem(KEY, JSON.stringify(Array.from(set))); } catch (e) { /* noop */ }
+    }
+
+    // 그룹 내 알림 배지 합계를 헤더에 반영 (접혔을 때만 CSS 로 노출)
+    function syncGroupBadge(group) {
+      const el = group.querySelector('.menu-group-badge');
+      if (!el) return;
+      let sum = 0;
+      group.querySelectorAll('.menu-group-items .menu-badge').forEach(function (b) {
+        if (b.offsetParent === null && b.style.display === 'none') return;   // 비어 있는 동적 배지 제외
+        const n = parseInt((b.textContent || '').replace(/\D/g, ''), 10);
+        if (!isNaN(n)) sum += n;
+      });
+      el.textContent = sum > 0 ? String(sum) : '';
+      el.style.display = sum > 0 ? '' : 'none';
+    }
+
+    window.toggleMenuGroup = function (btn) {
+      const group = btn.closest('.menu-group');
+      if (!group) return;
+      const name = group.dataset.menuGroup;
+      const set  = load();
+      const collapsed = group.classList.toggle('is-collapsed');
+      if (collapsed) set.add(name); else set.delete(name);
+      save(set);
+      syncGroupBadge(group);
+    };
+
+    document.querySelectorAll('.menu-group').forEach(function (group) {
+      const hasActive = !!group.querySelector('.menu-item.active');
+      group.classList.toggle('has-active', hasActive);
+
+      if (hasActive) {
+        // 현재 화면이 있는 그룹은 펼쳐 두고, 저장된 접힘 상태도 해제한다
+        const set = load();
+        if (set.delete(group.dataset.menuGroup)) save(set);
+      } else if (load().has(group.dataset.menuGroup)) {
+        group.classList.add('is-collapsed');
+      }
+      syncGroupBadge(group);
+    });
+
+    // 동적으로 갱신되는 배지(공지·CE샵 주문)를 헤더 합계에 반영
+    window.refreshMenuGroupBadges = function () {
+      document.querySelectorAll('.menu-group').forEach(syncGroupBadge);
+    };
+
+    /* 워크스페이스는 탭을 바꿀 때 .menu-item.active 를 JS 로 옮긴다.
+       그때 활성 항목이 접힌 그룹에 가려지지 않도록 다시 펼쳐 준다. */
+    window.syncMenuGroupsActive = function () {
+      document.querySelectorAll('.menu-group').forEach(function (group) {
+        const hasActive = !!group.querySelector('.menu-item.active');
+        group.classList.toggle('has-active', hasActive);
+        if (hasActive) group.classList.remove('is-collapsed');
+      });
+    };
+  })();
 
   /* ── [data-ce-tab] 링크는 워크스페이스 새 탭으로 ────────────
      상세 화면으로 가는 링크에 속성만 붙이면 현재 탭이 전환되지 않고 새 탭이 열린다.

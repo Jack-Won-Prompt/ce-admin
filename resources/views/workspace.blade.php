@@ -94,6 +94,8 @@
       const href = a && a.getAttribute('href');
       mi.classList.toggle('active', !!href && cur.endsWith(new URL(href, location.origin).pathname));
     });
+    // 활성 항목이 접힌 메뉴 그룹에 가려지지 않도록 그룹 상태를 다시 맞춘다
+    if (typeof window.syncMenuGroupsActive === 'function') window.syncMenuGroupsActive();
   }
 
   /* 프레임 안(각 탭)에서 '새 탭으로 열기' 요청 수신.
