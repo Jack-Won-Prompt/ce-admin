@@ -7,7 +7,6 @@ use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\UserActivityLogController;
 use App\Http\Controllers\DispatchHistoryController;
 use App\Http\Controllers\InquiryController;
-use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DelegationSettingController;
 use App\Http\Controllers\InvoiceController;
@@ -227,8 +226,15 @@ Route::middleware(['auth'])->group(function () {
         return response()->json(['ok' => true]);
     })->name('tour.done');
 
-    // 유지보수 (Claude AI 화면 편집)
-    Route::post('/maintenance/stream', [MaintenanceController::class, 'stream'])->name('maintenance.stream');
+    // SR(Service Request) — 상단 패널 + 사이드바 전용 화면 공용
+    Route::prefix('sr')->name('sr.')->group(function () {
+        Route::get(   '/',                 [\App\Http\Controllers\ServiceRequestController::class, 'index'])->name('index');
+        Route::get(   '/list',             [\App\Http\Controllers\ServiceRequestController::class, 'list'])->name('list');
+        Route::post(  '/',                 [\App\Http\Controllers\ServiceRequestController::class, 'store'])->name('store');
+        Route::put(   '/{serviceRequest}/answer', [\App\Http\Controllers\ServiceRequestController::class, 'answer'])->name('answer');
+        Route::put(   '/{serviceRequest}/status', [\App\Http\Controllers\ServiceRequestController::class, 'updateStatus'])->name('status');
+        Route::delete('/{serviceRequest}',  [\App\Http\Controllers\ServiceRequestController::class, 'destroy'])->name('destroy');
+    });
 
     // 채팅
     Route::prefix('chat')->name('chat.')->group(function () {

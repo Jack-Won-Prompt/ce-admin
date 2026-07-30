@@ -1163,7 +1163,7 @@
         @endif
 
         {{-- ══ 지원 ══ --}}
-        @if($vis('institutional-notices', 'notices', 'inquiries'))
+        @if($vis('institutional-notices', 'notices', 'inquiries', 'service-requests'))
         <div class="menu-group" data-menu-group="support">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>지원</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
@@ -1199,6 +1199,21 @@
               @if($inquiryPending > 0)
                 <span class="menu-badge">{{ $inquiryPending }}</span>
               @endif
+            @endif
+          </a>
+        </div>
+        @endif
+        @if($vis('service-requests'))
+        <div class="menu-item {{ request()->routeIs('sr.*') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('sr.index') }}" data-title="SR 관리">
+            <i class="menu-icon bx bx-clipboard"></i>
+            <span>SR 관리</span>
+            @php
+              try { $srOpen = \App\Models\ServiceRequest::whereIn('status', ['open','in_progress'])->count(); }
+              catch(\Throwable $e) { $srOpen = 0; }
+            @endphp
+            @if($srOpen > 0)
+              <span class="menu-badge">{{ $srOpen }}</span>
             @endif
           </a>
         </div>
@@ -1313,10 +1328,13 @@
           <button class="btn-icon" id="helpToggleBtn" title="도움말" onclick="HelpPanel.toggle()">
             <i class="bx bx-help-circle"></i>
           </button>
-          {{-- AI Maintenance --}}
-          <button class="btn-icon" id="maintToggleBtn" title="AI 유지보수" onclick="MaintPanel.toggle()">
-            <i class="bx bx-wrench"></i>
+          {{-- SR 관리 --}}
+          @perm('service-requests')
+          <button class="btn-icon" id="srToggleBtn" title="SR 관리" onclick="SrPanel.toggle()">
+            <i class="bx bx-clipboard"></i>
+            <span class="btn-icon-badge" id="srBadge" style="display:none;"></span>
           </button>
+          @endperm
           {{-- Theme Picker --}}
           <div class="theme-picker-wrap">
             <button class="btn-icon" id="themePickerBtn" title="테마 컬러" onclick="ThemePicker.togglePanel()">
@@ -2264,99 +2282,78 @@ input#chatFileInput { display: none; }
 #chatOverlay.show { display: block; }
 
 /* ══════════════════════════════════════════════════════════
-   Maintenance Panel (AI 유지보수)
+   SR 관리 패널 (모든 화면에서 우측 슬라이드인)
 ══════════════════════════════════════════════════════════ */
-#maintPanel {
-  position: fixed; top: 0; right: -640px; width: 640px; height: 100vh;
-  background: #0f172a; border-left: 1px solid #1e293b;
-  box-shadow: -6px 0 40px rgba(0,0,0,.4);
+.btn-icon-badge {
+  position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px;
+  padding: 0 4px; border-radius: 10px; background: var(--danger); color: #fff;
+  font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+}
+#srOverlay { display: none; position: fixed; inset: 0; z-index: 1000; }
+#srOverlay.show { display: block; }
+
+#srPanel {
+  position: fixed; top: 0; right: -860px; width: 860px; max-width: 96vw; height: 100vh;
+  background: var(--bg-card); border-left: 1px solid var(--border);
+  box-shadow: -6px 0 40px rgba(0,0,0,.18);
   display: flex; flex-direction: column; z-index: 1001;
   transition: right .28s cubic-bezier(.4,0,.2,1);
-  font-family: 'Pretendard', monospace;
 }
-#maintPanel.open { right: 0; }
+#srPanel.open { right: 0; }
+.sr-header {
+  display: flex; align-items: center; gap: 9px;
+  padding: 15px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sr-header-title { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+.sr-header-sub { font-size: 11.5px; color: var(--text-muted); }
+.sr-header-close {
+  margin-left: auto; width: 28px; height: 28px; border: none; background: none;
+  color: var(--text-muted); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px;
+}
+.sr-header-close:hover { background: var(--bg); color: var(--text-primary); }
 
-.maint-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 18px; border-bottom: 1px solid #1e293b;
-  flex-shrink: 0;
-}
-.maint-header-icon { font-size: 15px; color: #60a5fa; }
-.maint-header-title { font-size: 14px; font-weight: 700; color: #e2e8f0; flex: 1; }
-.maint-header-file { font-size: 11px; color: #64748b; font-family: monospace; }
-.maint-header-close {
-  background: none; border: none; color: #64748b;
-  font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
-}
-.maint-header-close:hover { color: #e2e8f0; background: rgba(255,255,255,.08); }
-
-.maint-prompt-area {
-  padding: 14px 16px; border-bottom: 1px solid #1e293b; flex-shrink: 0;
-}
-#maintPrompt {
-  width: 100%; background: #1e293b; color: #e2e8f0;
-  border: 1.5px solid #334155; border-radius: 8px;
-  padding: 10px 14px; font-size: 13px; font-family: inherit;
-  resize: none; outline: none; line-height: 1.6;
-  min-height: 72px; max-height: 160px;
-}
-#maintPrompt:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(77,107,140,.15); }
-#maintPrompt::placeholder { color: #475569; }
-.maint-prompt-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.maint-run-btn {
+.sr-tabs { display: flex; gap: 4px; padding: 10px 18px 0; border-bottom: 2px solid var(--border); flex-shrink: 0; }
+.sr-tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 700; border: none; background: none;
+  color: var(--text-secondary); border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 18px; border-radius: 8px; border: none;
-  background: var(--primary); color: #fff; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: background .15s;
 }
-.maint-run-btn:hover:not(:disabled) { background: var(--primary-dark); }
-.maint-run-btn:disabled { opacity: .5; cursor: not-allowed; }
-.maint-clear-btn {
-  padding: 7px 12px; border-radius: 8px; border: 1px solid #334155;
-  background: transparent; color: #94a3b8; font-size: 12px; cursor: pointer;
+.sr-tab:hover { color: var(--primary); }
+.sr-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.sr-tab .cnt {
+  min-width: 18px; padding: 0 5px; height: 17px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; background: var(--border-light); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
 }
-.maint-clear-btn:hover { border-color: #475569; color: #e2e8f0; }
+.sr-tab.active .cnt { background: var(--primary); color: #fff; }
 
-.maint-log-area {
-  flex: 1; overflow-y: auto; padding: 14px 16px;
-  background: #020817;
+.sr-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; }
+.sr-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.sr-field label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.sr-field input[type=text], .sr-field select, .sr-field textarea {
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13.5px; font-family: inherit; background: #fff;
 }
-.maint-log-empty {
-  color: #334155; font-size: 12px; font-family: monospace;
-  padding-top: 20px; text-align: center;
+.sr-field textarea { min-height: 110px; resize: vertical; }
+.sr-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sr-hint { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+.sr-detail {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 14px; background: var(--bg);
 }
-.log-status {
-  font-size: 12px; color: #94a3b8; font-family: monospace;
-  padding: 3px 0; line-height: 1.6;
+.sr-detail h5 { margin: 0 0 4px; font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.sr-detail .meta { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; }
+.sr-detail .body { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); }
+.sr-answer-box {
+  margin-top: 12px; padding: 12px 14px; background: var(--primary-light);
+  border: 1px solid var(--primary-accent, var(--border)); border-radius: 8px;
 }
-.log-status.success { color: #4ade80; }
-.log-status.error   { color: #f87171; }
-.log-token {
-  font-size: 13px; color: #cbd5e1; font-family: monospace;
-  white-space: pre-wrap; word-break: break-all; line-height: 1.7;
-}
-.maint-footer {
-  padding: 10px 16px; border-top: 1px solid #1e293b; flex-shrink: 0;
-  display: flex; align-items: center; gap: 8px;
-}
-.maint-status-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #334155; flex-shrink: 0;
-}
-.maint-status-dot.running { background: var(--primary); animation: maintPulse 1s infinite; }
-.maint-status-dot.done    { background: #16a34a; }
-.maint-status-dot.error   { background: #dc2626; }
-.maint-status-text { font-size: 11px; color: #64748b; flex: 1; }
-.maint-reload-btn {
-  padding: 5px 12px; border-radius: 6px; border: 1px solid #334155;
-  background: transparent; color: #94a3b8; font-size: 11px; cursor: pointer;
-  display: none;
-}
-.maint-reload-btn.show { display: inline-flex; align-items: center; gap: 5px; }
-.maint-reload-btn:hover { border-color: #16a34a; color: #16a34a; }
-@keyframes maintPulse {
-  0%, 100% { opacity: 1; } 50% { opacity: .3; }
-}
+.sr-answer-box .lbl { font-size: 10.5px; font-weight: 800; color: var(--primary); margin-bottom: 5px; }
+.sr-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.sr-b-open        { background: var(--warning-light); color: var(--warning); }
+.sr-b-in_progress { background: var(--primary-light);  color: var(--primary); }
+.sr-b-answered    { background: var(--success-light);  color: var(--success); }
+.sr-b-closed      { background: var(--border-light);   color: var(--text-muted); }
 
 </style>
 
@@ -2487,219 +2484,297 @@ input#chatFileInput { display: none; }
   <img id="chatLightboxImg" src="" alt="">
 </div>
 
+@perm('service-requests')
 {{-- ═══════════════════════════════════════════════════════════
-     AI 유지보수 패널
+     SR 관리 패널 — 모든 화면에서 바로 등록·답변
 ════════════════════════════════════════════════════════════ --}}
-<div id="maintPanel">
-  {{-- 헤더 --}}
-  <div class="maint-header">
-    <i class="fa-solid fa-screwdriver-wrench maint-header-icon"></i>
-    <span class="maint-header-title">AI 유지보수</span>
-    <span class="maint-header-file" id="maintFileLabel">—</span>
-    <button class="maint-header-close" onclick="MaintPanel.close()">×</button>
-  </div>
-
-  {{-- 프롬프트 입력 --}}
-  <div class="maint-prompt-area">
-    <textarea id="maintPrompt" placeholder="수정할 내용을 입력하세요&#10;예) 테이블 헤더 배경색을 파란색으로 변경해줘&#10;예) 검색 버튼 오른쪽에 엑셀 다운로드 버튼 추가해줘"></textarea>
-    <div class="maint-prompt-actions">
-      <button class="maint-run-btn" id="maintRunBtn" onclick="MaintPanel.run()">
-        <i class="fa-solid fa-play" style="font-size:11px;"></i> 실행
-      </button>
-      <button class="maint-clear-btn" onclick="MaintPanel.clearLog()">로그 지우기</button>
+<div id="srOverlay" onclick="SrPanel.close()"></div>
+<div id="srPanel">
+  <div class="sr-header">
+    <i class="bx bx-clipboard" style="font-size:19px;color:var(--primary);"></i>
+    <div>
+      <div class="sr-header-title">SR 관리</div>
+      <div class="sr-header-sub">화면 개선·오류를 등록하고 답변을 남깁니다</div>
     </div>
+    <button class="sr-header-close" onclick="SrPanel.close()">×</button>
   </div>
 
-  {{-- 실시간 로그 --}}
-  <div class="maint-log-area" id="maintLog">
-    <div class="maint-log-empty" id="maintLogEmpty">
-      <i class="fa-solid fa-terminal" style="font-size:24px;display:block;margin-bottom:8px;opacity:.3;"></i>
-      프롬프트를 입력하고 실행하면 Claude가 현재 화면의 소스를 수정합니다.
-    </div>
-  </div>
-
-  {{-- 하단 상태바 --}}
-  <div class="maint-footer">
-    <div class="maint-status-dot" id="maintDot"></div>
-    <span class="maint-status-text" id="maintStatusText">대기 중</span>
-    <button class="maint-reload-btn" id="maintReloadBtn" onclick="location.reload()">
-      <i class="fa-solid fa-rotate-right" style="font-size:11px;"></i> 새로고침
+  <div class="sr-tabs">
+    <button type="button" class="sr-tab active" id="srTabList" onclick="SrPanel.show('list')">
+      <i class="bx bx-list-ul"></i> SR 목록 <span class="cnt" id="srCntAll">0</span>
     </button>
+    <button type="button" class="sr-tab" id="srTabNew" onclick="SrPanel.show('new')">
+      <i class="bx bx-plus"></i> 신규 등록
+    </button>
+    <button type="button" class="sr-tab" id="srTabDetail" onclick="SrPanel.show('detail')" style="display:none;">
+      <i class="bx bx-detail"></i> 상세 · 답변
+    </button>
+    <a href="{{ route('sr.index') }}" class="sr-tab" style="margin-left:auto;color:var(--text-muted);"
+       title="전용 화면에서 검색·필터로 보기">
+      <i class="bx bx-link-external"></i> 전체 화면
+    </a>
+  </div>
+
+  {{-- 목록 --}}
+  <div class="sr-body" id="srPaneList">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <select id="srFilterStatus" onchange="SrPanel.load()"
+              style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;">
+        <option value="">전체 상태</option>
+        @foreach($srStatuses ?? \App\Models\ServiceRequest::STATUSES as $k => $v)
+          <option value="{{ $k }}">{{ $v }}</option>
+        @endforeach
+      </select>
+      <button type="button" class="btn btn-outline btn-sm" onclick="SrPanel.load()">
+        <i class="bx bx-refresh"></i> 새로고침
+      </button>
+      <span class="sr-hint" style="margin-left:auto;">행을 <b>클릭</b>하면 상세·답변으로 이동합니다.</span>
+    </div>
+    <div id="srGrid"></div>
+  </div>
+
+  {{-- 신규 등록 --}}
+  <div class="sr-body" id="srPaneNew" style="display:none;">
+    @perm('service-requests', 'create')
+    <div class="sr-row2">
+      <div class="sr-field">
+        <label>구분</label>
+        <select id="srCategory">
+          @foreach(\App\Models\ServiceRequest::CATEGORIES as $k => $v)
+            <option value="{{ $k }}">{{ $v }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="sr-field">
+        <label>우선순위</label>
+        <select id="srPriority">
+          @foreach(\App\Models\ServiceRequest::PRIORITIES as $k => $v)
+            <option value="{{ $k }}" {{ $k === 'normal' ? 'selected' : '' }}>{{ $v }}</option>
+          @endforeach
+        </select>
+      </div>
+    </div>
+    <div class="sr-field">
+      <label>제목 <span style="color:var(--danger);">*</span></label>
+      <input type="text" id="srTitle" maxlength="200" placeholder="예) 처방전 목록에 발행일 필터 추가">
+    </div>
+    <div class="sr-field">
+      <label>내용 <span style="color:var(--danger);">*</span></label>
+      <textarea id="srContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 적어 주세요."></textarea>
+    </div>
+    <div class="sr-field">
+      <label>대상 화면</label>
+      <input type="text" id="srPageLabel" readonly style="background:var(--bg);color:var(--text-muted);">
+      <span class="sr-hint">패널을 연 화면이 자동으로 기록됩니다.</span>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" id="srSubmitBtn" onclick="SrPanel.submit()"
+            style="width:100%;height:40px;">
+      <i class="bx bx-send"></i> SR 등록
+    </button>
+    @else
+    <div class="sr-hint" style="padding:40px 0;text-align:center;">SR 등록 권한이 없습니다.</div>
+    @endperm
+  </div>
+
+  {{-- 상세 · 답변 --}}
+  <div class="sr-body" id="srPaneDetail" style="display:none;">
+    <div id="srDetailBox"></div>
+    @perm('service-requests', 'update')
+    <div class="sr-field">
+      <label>답변</label>
+      <textarea id="srAnswer" maxlength="5000" placeholder="처리 결과나 안내를 적어 주세요."></textarea>
+    </div>
+    <div class="sr-row2">
+      <div class="sr-field">
+        <label>상태</label>
+        <select id="srStatus">
+          @foreach(\App\Models\ServiceRequest::STATUSES as $k => $v)
+            <option value="{{ $k }}">{{ $v }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="sr-field" style="justify-content:flex-end;">
+        <button type="button" class="btn btn-primary btn-sm" id="srAnswerBtn" onclick="SrPanel.saveAnswer()"
+                style="height:38px;">
+          <i class="bx bx-save"></i> 답변 저장
+        </button>
+      </div>
+    </div>
+    @else
+    <div class="sr-hint">답변 권한이 없어 조회만 가능합니다.</div>
+    @endperm
   </div>
 </div>
 
-{{-- ══ AI 유지보수 패널 JS ══ --}}
+{{-- ══ SR 관리 패널 JS ══ --}}
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
 <script>
-const MaintPanel = (() => {
-  let _sse     = null;   // EventSource
-  let _running = false;
+const SrPanel = (() => {
+  const LIST_URL  = BASE_URL + '/sr/list';
+  const STORE_URL = BASE_URL + '/sr';
+  const STATUS_CLS = { open:'sr-b-open', in_progress:'sr-b-in_progress', answered:'sr-b-answered', closed:'sr-b-closed' };
 
-  // ── 패널 열기/닫기 ────────────────────────────────────────
-  function toggle() {
-    const p = document.getElementById('maintPanel');
-    if (p.classList.contains('open')) close();
-    else open();
-  }
+  let _grid = null, _rows = [], _sel = null, _loaded = false;
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function toggle() { document.getElementById('srPanel').classList.contains('open') ? close() : open(); }
+
   function open() {
-    document.getElementById('maintPanel').classList.add('open');
-    _updateFileLabel();
-    document.getElementById('maintPrompt').focus();
+    document.getElementById('srPanel').classList.add('open');
+    document.getElementById('srOverlay').classList.add('show');
+    const lbl = document.getElementById('srPageLabel');
+    if (lbl) lbl.value = document.title.replace(/\s*\|.*$/, '').trim() || location.pathname;
+    if (!_loaded) { buildGrid(); load(); _loaded = true; }
   }
   function close() {
-    document.getElementById('maintPanel').classList.remove('open');
+    document.getElementById('srPanel').classList.remove('open');
+    document.getElementById('srOverlay').classList.remove('show');
   }
 
-  // 현재 URL → 파일명 표시
-  function _updateFileLabel() {
-    const path = window.location.pathname;
-    document.getElementById('maintFileLabel').textContent = path;
+  function show(which) {
+    ['list', 'new', 'detail'].forEach(k => {
+      const pane = document.getElementById('srPane' + k[0].toUpperCase() + k.slice(1));
+      const tab  = document.getElementById('srTab'  + k[0].toUpperCase() + k.slice(1));
+      if (pane) pane.style.display = (k === which) ? '' : 'none';
+      if (tab)  tab.classList.toggle('active', k === which);
+    });
   }
 
-  // ── 실행 ──────────────────────────────────────────────────
-  function run() {
-    if (_running) return;
-    const prompt = document.getElementById('maintPrompt').value.trim();
-    if (!prompt) { ceAlert('프롬프트를 입력해주세요.', { tone: 'warning' }); return; }
-
-    _running = true;
-    _setStatus('running', '실행 중...');
-    document.getElementById('maintRunBtn').disabled = true;
-    document.getElementById('maintReloadBtn').classList.remove('show');
-
-    // 로그 초기화 후 스트리밍 시작
-    _clearLog();
-    _appendStatus('📤 요청 전송 중...');
-
-    // SSE는 GET만 지원하므로 fetch + ReadableStream 사용
-    const body = new URLSearchParams({
-      prompt: prompt,
-      url:    window.location.pathname,
-      _token: document.querySelector('meta[name="csrf-token"]').content,
+  function buildGrid() {
+    _grid = new wwGrid({
+      el: document.getElementById('srGrid'),
+      height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      footer: { total: true, selected: false, modified: false },
+      columns: [
+        { header: '상태',   name: 'statusLabel',   width: 80,  align: 'center', sortable: true },
+        { header: '구분',   name: 'categoryLabel', width: 90,  align: 'center', sortable: true },
+        { header: '우선',   name: 'priorityLabel', width: 70,  align: 'center', sortable: true },
+        { header: '제목',   name: 'title',         width: 260 },
+        { header: '대상 화면', name: 'page',       width: 130 },
+        { header: '등록자', name: 'writer',        width: 90,  sortable: true },
+        { header: '등록일', name: 'created',       width: 130, align: 'center', sortable: true },
+      ],
+      data: [],
     });
 
-    fetch(BASE_URL + '/maintenance/stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    })
-    .then(res => {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
+    document.getElementById('srGrid').addEventListener('click', e => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = _grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row) selectRow(row.id);
+    });
+  }
 
-      function pump() {
-        return reader.read().then(({ done, value }) => {
-          if (done) { _onStreamDone(); return; }
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop(); // 불완전한 마지막 줄 보관
-          lines.forEach(line => {
-            if (line.startsWith('data: ')) {
-              try { _handleEvent(JSON.parse(line.slice(6))); } catch {}
-            }
-          });
-          return pump();
-        });
+  async function load() {
+    const st = document.getElementById('srFilterStatus')?.value ?? '';
+    try {
+      const res = await fetch(LIST_URL + (st ? '?status=' + encodeURIComponent(st) : ''),
+                              { headers: { 'Accept': 'application/json' } });
+      const d = await res.json();
+      _rows = d.rows || [];
+      if (_grid) _grid.setData(_rows);
+
+      const open = (d.counts?.open ?? 0) + (d.counts?.in_progress ?? 0);
+      document.getElementById('srCntAll').textContent = d.counts?.all ?? 0;
+      const badge = document.getElementById('srBadge');
+      if (badge) {
+        badge.textContent = open;
+        badge.style.display = open > 0 ? '' : 'none';
       }
-      return pump();
-    })
-    .catch(err => {
-      _appendStatus('❌ 네트워크 오류: ' + err.message, 'error');
-      _onStreamDone(true);
-    });
+    } catch (e) { showToast('SR 목록을 불러오지 못했습니다.', 'danger'); }
   }
 
-  function _handleEvent(evt) {
-    switch (evt.type) {
-      case 'status':
-        _appendStatus(evt.message);
-        break;
-      case 'token':
-        _appendToken(evt.text);
-        break;
-      case 'done':
-        _appendStatus(evt.message, evt.applied ? 'success' : '');
-        if (evt.applied) {
-          _setStatus('done', '수정 완료 — 새로고침하면 변경사항이 적용됩니다.');
-          document.getElementById('maintReloadBtn').classList.add('show');
-        } else {
-          _setStatus('done', '완료 (미적용)');
-        }
-        _onStreamDone();
-        break;
-      case 'error':
-        _appendStatus('❌ ' + evt.message, 'error');
-        _setStatus('error', '오류 발생');
-        _onStreamDone(true);
-        break;
-    }
+  function selectRow(id) {
+    const r = _rows.find(x => x.id === id);
+    if (!r) return;
+    _sel = r;
+
+    document.getElementById('srDetailBox').innerHTML = `
+      <div class="sr-detail">
+        <h5>${esc(r.title)}</h5>
+        <div class="meta">
+          <span class="sr-badge ${STATUS_CLS[r.status] || ''}">${esc(r.statusLabel)}</span>
+          · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}
+          · ${esc(r.writer)} · ${esc(r.created)}
+          ${r.page ? ' · 대상: ' + esc(r.page) : ''}
+        </div>
+        <div class="body">${esc(r.content)}</div>
+        ${r.answer ? `<div class="sr-answer-box">
+          <div class="lbl">답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
+          <div class="body">${esc(r.answer)}</div>
+        </div>` : ''}
+      </div>`;
+
+    const a = document.getElementById('srAnswer');
+    if (a) a.value = r.answer || '';
+    const s = document.getElementById('srStatus');
+    if (s) s.value = r.status;
+
+    document.getElementById('srTabDetail').style.display = '';
+    show('detail');
   }
 
-  function _onStreamDone(isError = false) {
-    _running = false;
-    document.getElementById('maintRunBtn').disabled = false;
-    if (isError) _setStatus('error', '오류 발생');
-  }
+  async function submit() {
+    const title   = document.getElementById('srTitle').value.trim();
+    const content = document.getElementById('srContent').value.trim();
+    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주세요.', { tone: 'warning' }); return; }
 
-  // ── 로그 렌더링 ───────────────────────────────────────────
-  let _tokenEl = null; // 현재 토큰 누적 요소
-
-  function _clearLog() {
-    const log = document.getElementById('maintLog');
-    log.innerHTML = '';
-    _tokenEl = null;
-  }
-
-  function _appendStatus(msg, cls = '') {
-    _tokenEl = null; // 상태 메시지는 새 줄
-    const log = document.getElementById('maintLog');
-    const el  = document.createElement('div');
-    el.className = 'log-status' + (cls ? ' ' + cls : '');
-    el.textContent = msg;
-    log.appendChild(el);
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function _appendToken(text) {
-    const log = document.getElementById('maintLog');
-    if (!_tokenEl) {
-      _tokenEl = document.createElement('div');
-      _tokenEl.className = 'log-token';
-      log.appendChild(_tokenEl);
-    }
-    _tokenEl.textContent += text;
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function clearLog() {
-    _clearLog();
-    const log = document.getElementById('maintLog');
-    log.innerHTML = '<div class="maint-log-empty" id="maintLogEmpty">' +
-      '<i class="fa-solid fa-terminal" style="font-size:24px;display:block;margin-bottom:8px;opacity:.3;"></i>' +
-      '프롬프트를 입력하고 실행하면 Claude가 현재 화면의 소스를 수정합니다.</div>';
-    _setStatus('', '대기 중');
-    document.getElementById('maintReloadBtn').classList.remove('show');
-  }
-
-  function _setStatus(state, text) {
-    const dot = document.getElementById('maintDot');
-    dot.className = 'maint-status-dot' + (state ? ' ' + state : '');
-    document.getElementById('maintStatusText').textContent = text;
-  }
-
-  // Ctrl+Enter 단축키
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('maintPrompt').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        run();
+    const btn = document.getElementById('srSubmitBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(STORE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+        body: JSON.stringify({
+          title, content,
+          category:   document.getElementById('srCategory').value,
+          priority:   document.getElementById('srPriority').value,
+          page_label: document.getElementById('srPageLabel').value,
+          page_url:   location.pathname + location.search,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) {
+        ceAlert(d.message || Object.values(d.errors ?? {}).flat().join('\n') || '등록하지 못했습니다.', { tone: 'danger' });
+        return;
       }
-    });
-  });
+      showToast(d.message, 'success');
+      document.getElementById('srTitle').value = '';
+      document.getElementById('srContent').value = '';
+      await load();
+      show('list');
+    } catch (e) {
+      ceAlert('등록 중 오류가 발생했습니다.', { tone: 'danger' });
+    } finally { btn.disabled = false; }
+  }
 
-  return { toggle, open, close, run, clearLog };
+  async function saveAnswer() {
+    if (!_sel) return;
+    const answer = document.getElementById('srAnswer').value.trim();
+    if (!answer) { ceAlert('답변 내용을 입력해 주세요.', { tone: 'warning' }); return; }
+
+    const btn = document.getElementById('srAnswerBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${STORE_URL}/${_sel.id}/answer`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+        body: JSON.stringify({ answer, status: document.getElementById('srStatus').value }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) { ceAlert(d.message || '저장하지 못했습니다.', { tone: 'danger' }); return; }
+      showToast(d.message, 'success');
+      await load();
+      selectRow(_sel.id);
+    } catch (e) {
+      ceAlert('저장 중 오류가 발생했습니다.', { tone: 'danger' });
+    } finally { btn.disabled = false; }
+  }
+
+  return { toggle, open, close, show, load, submit, saveAnswer };
 })();
 </script>
+@endperm
 
 {{-- Pusher + Echo (CDN) --}}
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
@@ -4678,7 +4753,7 @@ const Tour = (() => {
     {
       selector: '.layout-navbar',
       title: '상단 네비게이션',
-      body: '알림, 채팅, 도움말(?), AI 유지보수 버튼이 있습니다. <b>?</b> 버튼을 누르면 현재 페이지 도움말을 볼 수 있습니다.'
+      body: '알림, 채팅, 도움말(?), SR 관리 버튼이 있습니다. <b>?</b> 버튼을 누르면 현재 페이지 도움말을 볼 수 있습니다.'
     },
     {
       selector: '#helpToggleBtn',

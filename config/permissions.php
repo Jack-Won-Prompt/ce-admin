@@ -181,6 +181,13 @@ return [
             'routes'  => ['inquiries'],
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
+        'service-requests' => [
+            'label'   => 'SR 관리',
+            'group'   => 'support',
+            'routes'  => ['sr'],
+            // update = 답변·상태 변경 권한
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
 
         // ── 설정 ────────────────────────────────────────────────
         'admin-users' => [
@@ -277,7 +284,7 @@ return [
     |   api.*, sso.*  외부/모바일 API (자체 인증)
     |   toss.*        결제 웹훅 (인증 없음)
     |   products.*    제품 검색 프록시 (검수·주문 화면 공용)
-    |   maintenance.*, database.* 운영 도구 (별도 제한)
+    |   database.*     운영 도구 (별도 제한)
     |   login.*, logout, privacy.*, consent.* 비로그인 공개 경로
     | 여기 나열은 문서용이며 코드가 이 목록을 읽지는 않는다(정책은 '매칭 안 되면 통과').
     */
@@ -287,7 +294,7 @@ return [
         // 외부/모바일 API·웹훅 (자체 인증)
         'api', 'sso', 'toss', 'sanctum',
         // 운영 도구 (별도 제한)
-        'maintenance', 'database', 'user-logs', 'shop-monitoring',
+        'database', 'user-logs', 'shop-monitoring',
         // 비로그인 공개 경로
         'login', 'logout', 'privacy', 'consent', 'welcome', 'admin.invite',
         // 프레임워크 제공

@@ -13,7 +13,7 @@ class LogUserActivity
 {
     // 기록하지 않을 라우트 패턴
     private const SKIP_ROUTES = [
-        'tour.done', 'chat.*', 'panel.*', 'maintenance.*',
+        'tour.done', 'chat.*', 'panel.*', 'sr.*',
         'nhis.faxCallback', 'toss.*', 'products.search',
         'repurchase.day',
     ];
