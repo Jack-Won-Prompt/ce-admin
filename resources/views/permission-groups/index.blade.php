@@ -6,7 +6,7 @@
 @section('breadcrumb', '홈 / 설정 / 권한 그룹')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
 <style>
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
@@ -151,7 +151,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
 <script>
 (function () {
   const PAGE_DEFS   = @json($pageDefs);

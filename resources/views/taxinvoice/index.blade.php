@@ -34,7 +34,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
 <style>
 /* ── 레이아웃 ── */
 /* 발행 내역 / 즉시발행 탭 구성 */
@@ -523,7 +523,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 @endsection
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
 <script>
 // 발행 내역 wwGrid (조회 결과를 setData로 주입)
 (function () {

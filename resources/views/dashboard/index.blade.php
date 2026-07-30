@@ -40,7 +40,7 @@
 @section('breadcrumb', '홈 / 대시보드 · ' . now()->format('Y-m-d'))
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=4"></script>
+<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=5"></script>
 <script>
 (function () {
   const el = document.getElementById('recentRxGrid');
@@ -81,7 +81,7 @@ window.HELP_TOUR_STEPS = [
 @endpush
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=5">
 <style>
   /* ── Stat Cards (Vuexy style) ── */
   .stat-card {
