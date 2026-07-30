@@ -253,7 +253,6 @@ class SettlementController extends Controller
             'upload_source'    => $prescription->upload_source === 'mobile' ? '모바일' : '웹',
             'issued_date'      => $prescription->issued_date?->format('Y-m-d'),
             'created_at'       => $prescription->created_at->format('Y-m-d H:i'),
-            'ocr_confidence'   => $prescription->display_confidence,
             // 환자
             'patient_name'     => $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-',
             'patient_birth'    => $prescription->patient?->birth_date?->format('Y-m-d') ?? '-',

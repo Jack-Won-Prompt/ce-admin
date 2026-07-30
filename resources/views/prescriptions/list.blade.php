@@ -237,7 +237,6 @@ window.HELP_TOUR_STEPS = [
       { header: '환자명',        name: 'patient',    width: 100, sortable: true },
       { header: '병원',          name: 'hospital',   width: 150, sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
-      { header: 'OCR 신뢰도(%)', name: 'confidence', width: 110, editor: 'number', align: 'right' },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },

@@ -350,7 +350,6 @@
             ${row('처방번호', `<span style="font-family:monospace;color:var(--primary);">${d.rx_number}</span>`)}
             ${row('상태', badge(d.status_label, d.status_badge))}
             ${row('발행일', d.issued_date)}
-            ${row('OCR 신뢰도', d.ocr_confidence != null ? d.ocr_confidence + '%' : '-')}
             ${row('접수경로', d.upload_source)}
             ${row('접수일시', d.created_at)}
           </div>

@@ -73,7 +73,6 @@ class PrescriptionController extends Controller
                 'patient'    => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
                 'hospital'   => $rx->hospital_name ?? '-',
                 'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
-                'confidence' => $rx->ocr_confidence !== null ? (int) $rx->display_confidence : null,
                 'status'     => $rx->status_label,
                 'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
                 'order_no'   => $order?->order_number ?? '',
