@@ -284,7 +284,6 @@ Route::middleware(['auth'])->group(function () {
 
     // 처방전 OCR 공급자 설정
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');
-    Route::put('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'update'])->name('ocr-settings.update');
 
     // 권한 그룹 (관리자 전용 — CheckPagePermission 이 admin_only 로 차단)
     Route::get(   '/settings/permission-groups',                  [\App\Http\Controllers\PermissionGroupController::class, 'index'])->name('permission-groups.index');

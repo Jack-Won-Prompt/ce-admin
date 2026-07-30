@@ -20,16 +20,12 @@ class OcrService
                 throw new \RuntimeException("이미지 파일을 찾을 수 없습니다: {$imagePath}");
             }
 
-            $imageContent = base64_encode(file_get_contents($absolutePath));
-            $mimeType     = $this->detectMimeType($absolutePath);
+            $mimeType = $this->detectMimeType($absolutePath);
 
-            // 공급자 선택(관리자 설정 DB): textract | ai. Textract 미설정/미지원/실패 시 AI 폴백.
-            $result = $this->runProvider($absolutePath, $imageContent, $mimeType);
+            // OCR 공급자는 AWS Textract 단일. 구조화는 정규식 파서가 담당한다.
+            $result = $this->runProvider($absolutePath, $mimeType);
 
-            $parsed = !empty($result['parsed'])
-                ? $this->mapOpenAiFields($result['parsed'])
-                : $this->parsePrescriptionFields($result['text']);
-
+            $parsed = $this->parsePrescriptionFields($result['text']);
             $parsed['raw_text'] = $result['text'];
 
             return [
@@ -58,26 +54,14 @@ class OcrService
                 throw new \RuntimeException("파일을 찾을 수 없습니다: {$imagePath}");
             }
 
-            $imageContent = base64_encode(file_get_contents($absolutePath));
-            $mimeType     = $this->detectMimeType($absolutePath);
+            $mimeType = $this->detectMimeType($absolutePath);
 
-            $anthropicKey = config('services.anthropic.key');
-            $openaiKey    = config('services.openai.api_key');
-
-            $rawText = '';
-
-            if (!empty($anthropicKey)) {
-                try {
-                    $rawText = $this->callClaudeTextOnly($imageContent, $mimeType);
-                } catch (\Throwable $e) {
-                    Log::warning('첨부 OCR Claude 실패', ['error' => $e->getMessage()]);
-                }
+            if (!$this->textractUsable($mimeType)) {
+                Log::info('첨부 OCR 건너뜀 — Textract 미설정 또는 미지원 형식', ['mime' => $mimeType]);
+                return ['raw_text' => '', 'confidence' => 0];
             }
 
-            if (empty($rawText) && !empty($openaiKey)) {
-                $result  = $this->callOpenAI($imageContent, $mimeType);
-                $rawText = $result['text'] ?? '';
-            }
+            $rawText = $this->callTextract($absolutePath)['text'] ?? '';
 
             return ['raw_text' => $rawText, 'confidence' => empty($rawText) ? 0 : 50];
 
@@ -87,60 +71,20 @@ class OcrService
         }
     }
 
-    private function callClaudeTextOnly(string $base64Image, string $mimeType): string
-    {
-        $apiKey   = config('services.anthropic.key');
-        $endpoint = 'https://api.anthropic.com/v1/messages';
-
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'x-api-key'         => $apiKey,
-            'anthropic-version' => '2023-06-01',
-            'content-type'      => 'application/json',
-        ])->timeout(60)->post($endpoint, [
-            'model'      => 'claude-haiku-4-5-20251001',
-            'max_tokens' => 1024,
-            'messages'   => [[
-                'role'    => 'user',
-                'content' => [[
-                    'type'       => 'image',
-                    'source'     => ['type' => 'base64', 'media_type' => $mimeType, 'data' => $base64Image],
-                ], [
-                    'type' => 'text',
-                    'text' => '이 문서 이미지에서 보이는 모든 텍스트를 그대로 추출해주세요. 구조와 형식을 최대한 유지하세요.',
-                ]],
-            ]],
-        ]);
-
-        if (!$response->successful()) {
-            throw new \RuntimeException('Claude API 오류: ' . $response->status());
-        }
-
-        return $response->json('content.0.text', '');
-    }
-
     /**
-     * 관리자 설정(DB)에 따라 OCR 공급자 선택.
-     * textract: AWS Textract → raw text (구조화는 parsePrescriptionFields 정규식이 담당)
-     * ai:       Claude 우선 → OpenAI 폴백 (한글 필드 구조화 추출)
-     * Textract 를 골라도 자격증명 미설정·미지원 형식·호출 실패면 AI 로 안전 폴백.
+     * OCR 공급자 실행. 공급자는 AWS Textract 단일이다.
+     * Textract 는 raw text 만 주므로 구조화는 parsePrescriptionFields 정규식이 담당한다.
+     * (한글 필드는 Textract 가 인식하지 못하므로 검수 화면에서 사람이 보정한다)
      */
-    private function runProvider(string $absolutePath, string $base64Image, string $mimeType): array
+    private function runProvider(string $absolutePath, string $mimeType): array
     {
-        $provider = \App\Models\OcrSetting::provider();
-
-        if ($provider === 'textract') {
-            if ($this->textractUsable($mimeType)) {
-                try {
-                    return $this->callTextract($absolutePath);
-                } catch (\Throwable $e) {
-                    Log::warning('Textract OCR 실패, AI 폴백', ['error' => $e->getMessage()]);
-                }
-            } else {
-                Log::info('Textract 미사용(미설정/미지원 형식) → AI OCR 사용', ['mime' => $mimeType]);
-            }
+        if (!$this->textractUsable($mimeType)) {
+            throw new \RuntimeException(
+                'OCR 을 사용할 수 없습니다. AWS Textract 자격증명과 지원 형식(PNG·JPEG)을 확인해 주세요.'
+            );
         }
 
-        return $this->callWithFallback($base64Image, $mimeType);
+        return $this->callTextract($absolutePath);
     }
 
     /** Textract 사용 가능 여부: 자격증명 설정 + SDK 설치 + 동기 지원 이미지 형식(PNG/JPEG) */
@@ -180,28 +124,6 @@ class OcrService
         Log::info('Textract OCR 완료', ['lines' => count($lines), 'chars' => mb_strlen($text)]);
 
         return ['text' => $text, 'confidence' => 0.0, 'parsed' => []];
-    }
-
-    private function callWithFallback(string $base64Image, string $mimeType): array
-    {
-        $anthropicKey = config('services.anthropic.key');
-        $openaiKey    = config('services.openai.api_key');
-
-        // 1) Claude (Anthropic) 시도
-        if (!empty($anthropicKey)) {
-            try {
-                return $this->callClaude($base64Image, $mimeType);
-            } catch (\Throwable $e) {
-                Log::warning('Claude OCR 실패, OpenAI 폴백 시도', ['error' => $e->getMessage()]);
-            }
-        }
-
-        // 2) OpenAI 폴백
-        if (!empty($openaiKey)) {
-            return $this->callOpenAI($base64Image, $mimeType);
-        }
-
-        throw new \RuntimeException('Claude API 키와 OpenAI API 키가 모두 설정되지 않았습니다.');
     }
 
     /**
@@ -247,237 +169,6 @@ class OcrService
     }
 
     /**
-     * OpenAI JSON → DB 저장용 필드명으로 매핑
-     */
-    private function mapOpenAiFields(array $p): array
-    {
-        return [
-            'prescription_type' => $p['prescription_type'] ?? null,
-            'registration_no'   => $p['registration_no']   ?? null,
-            'serial_no'         => $p['serial_no']         ?? null,
-            'is_reissue'        => $p['is_reissue']        ?? false,
-            'patient_name'      => $p['patient_name']      ?? null,
-            'resident_no'       => $p['resident_no']       ?? null,
-            'phone'             => $p['phone']             ?? null,
-            'mobile'            => $p['mobile']            ?? null,
-            'address'           => $p['address']           ?? null,
-            'department'        => $p['department']        ?? null,
-            'disease_name'      => $p['disease_name']      ?? null,
-            'disease_code'      => $p['disease_code']      ?? null,
-            'condition_type'    => $p['condition_type']    ?? null,
-            'daily_count'       => isset($p['daily_count'])  && $p['daily_count']  !== null ? (int)$p['daily_count']  : null,
-            'total_days'        => isset($p['total_days'])   && $p['total_days']   !== null ? (int)$p['total_days']   : null,
-            'total_count'       => isset($p['total_count'])  && $p['total_count']  !== null ? (int)$p['total_count']  : null,
-            'product_name'      => $p['product_name']      ?? null,
-            'hospital_name'     => $p['hospital_name']     ?? null,
-            'hospital_code'     => $p['hospital_code']     ?? null,
-            'doctor_name'       => $p['doctor_name']       ?? null,
-            'specialty'         => $p['specialty']         ?? null,
-            'license_no'        => $p['license_no']        ?? null,
-            'specialist_no'     => $p['specialist_no']     ?? null,
-            'issued_date'       => $p['issued_date']       ?? null,
-            'usage_period'      => $p['usage_period']      ?? '교부일로부터 처방기간까지',
-        ];
-    }
-
-    /**
-     * Claude Vision API 호출 (claude-opus-4-7 또는 claude-sonnet-4-6)
-     */
-    private function callClaude(string $base64Image, string $mimeType): array
-    {
-        $apiKey   = config('services.anthropic.key');
-        $endpoint = 'https://api.anthropic.com/v1/messages';
-        $model    = 'claude-opus-4-7';
-
-        $systemPrompt = $this->ocrSystemPrompt();
-
-        $payload = [
-            'model'      => $model,
-            'max_tokens' => 3000,
-            'system'     => $systemPrompt,
-            'messages'   => [
-                [
-                    'role'    => 'user',
-                    'content' => [
-                        [
-                            'type'   => 'image',
-                            'source' => [
-                                'type'       => 'base64',
-                                'media_type' => $mimeType,
-                                'data'       => $base64Image,
-                            ],
-                        ],
-                        [
-                            'type' => 'text',
-                            'text' => '이 처방전 이미지의 유형을 먼저 판단하고, 모든 텍스트를 정확히 추출하여 지정된 JSON 형식으로만 반환해주세요. 소모성재료 처방전인 경우 product_name과 다중 상병코드를 반드시 추출해주세요.',
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'x-api-key: ' . $apiKey,
-                'anthropic-version: 2023-06-01',
-            ],
-            CURLOPT_TIMEOUT        => 60,
-        ]);
-
-        $response  = curl_exec($ch);
-        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            throw new \RuntimeException('Claude API 네트워크 오류: ' . $curlError);
-        }
-
-        if ($httpCode !== 200) {
-            $errorData = json_decode($response, true);
-            $errorMsg  = $errorData['error']['message'] ?? 'HTTP ' . $httpCode;
-            throw new \RuntimeException('Claude API 오류: ' . $errorMsg);
-        }
-
-        $data    = json_decode($response, true);
-        $content = $data['content'][0]['text'] ?? '';
-
-        // 마크다운 코드블록 제거
-        $content = preg_replace('/^```json\s*/im', '', $content);
-        $content = preg_replace('/^```\s*$/im', '', $content);
-        $content = trim($content);
-
-        $parsed = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($parsed)) {
-            Log::warning('Claude OCR JSON 파싱 실패, 정규식 폴백', ['raw_response' => $content]);
-            return ['text' => $content, 'confidence' => 50.0, 'parsed' => []];
-        }
-
-        Log::info('Claude OCR 성공', [
-            'model'        => $model,
-            'type'         => $parsed['prescription_type'] ?? 'unknown',
-            'patient_name' => $parsed['patient_name']  ?? 'null',
-            'hospital'     => $parsed['hospital_name'] ?? 'null',
-            'disease_code' => $parsed['disease_code']  ?? 'null',
-            'confidence'   => $parsed['confidence']    ?? 'null',
-        ]);
-
-        return [
-            'text'       => $parsed['raw_text'] ?? $content,
-            'confidence' => is_numeric($parsed['confidence'] ?? null) ? (float)$parsed['confidence'] : 70.0,
-            'parsed'     => $parsed,
-        ];
-    }
-
-    /**
-     * OpenAI GPT-4o Vision API 호출
-     */
-    private function callOpenAI(string $base64Image, string $mimeType): array
-    {
-        $apiKey   = config('services.openai.api_key');
-        $endpoint = 'https://api.openai.com/v1/chat/completions';
-
-        if (empty($apiKey)) {
-            throw new \RuntimeException('OpenAI API 키가 설정되지 않았습니다. .env 파일의 OPENAI_API_KEY를 확인해주세요.');
-        }
-
-        $systemPrompt = $this->ocrSystemPrompt();
-
-        $payload = [
-            'model'      => 'gpt-4o',
-            'max_tokens' => 3000,
-            'messages'   => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                [
-                    'role'    => 'user',
-                    'content' => [
-                        [
-                            'type'      => 'image_url',
-                            'image_url' => [
-                                'url'    => "data:{$mimeType};base64,{$base64Image}",
-                                'detail' => 'high',
-                            ],
-                        ],
-                        [
-                            'type' => 'text',
-                            'text' => '이 처방전 이미지의 유형을 먼저 판단하고, 모든 텍스트를 정확히 추출하여 지정된 JSON 형식으로만 반환해주세요. 소모성재료 처방전인 경우 product_name과 다중 상병코드를 반드시 추출해주세요.',
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $apiKey,
-            ],
-            CURLOPT_TIMEOUT        => 60,
-        ]);
-
-        $response  = curl_exec($ch);
-        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError) {
-            throw new \RuntimeException('OpenAI API 네트워크 오류: ' . $curlError);
-        }
-
-        if ($httpCode !== 200) {
-            $errorData = json_decode($response, true);
-            $errorMsg  = $errorData['error']['message'] ?? 'HTTP ' . $httpCode;
-            throw new \RuntimeException('OpenAI API 오류: ' . $errorMsg);
-        }
-
-        $data    = json_decode($response, true);
-        $content = $data['choices'][0]['message']['content'] ?? '';
-
-        // 마크다운 코드블록 제거
-        $content = preg_replace('/^```json\s*/im', '', $content);
-        $content = preg_replace('/^```\s*$/im', '', $content);
-        $content = trim($content);
-
-        $parsed = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($parsed)) {
-            Log::warning('OpenAI OCR JSON 파싱 실패, 정규식 폴백', [
-                'raw_response' => $content,
-            ]);
-            return [
-                'text'       => $content,
-                'confidence' => 50.0,
-                'parsed'     => [],
-            ];
-        }
-
-        Log::info('OpenAI OCR 성공', [
-            'type'         => $parsed['prescription_type'] ?? 'unknown',
-            'patient_name' => $parsed['patient_name']  ?? 'null',
-            'hospital'     => $parsed['hospital_name'] ?? 'null',
-            'disease_code' => $parsed['disease_code']  ?? 'null',
-            'product_name' => $parsed['product_name']  ?? 'null',
-            'confidence'   => $parsed['confidence']    ?? 'null',
-        ]);
-
-        return [
-            'text'       => $parsed['raw_text'] ?? $content,
-            'confidence' => is_numeric($parsed['confidence'] ?? null) ? (float)$parsed['confidence'] : 70.0,
-            'parsed'     => $parsed,
-        ];
-    }
-
-    /**
      * 이미지 MIME 타입 감지
      */
     private function detectMimeType(string $path): string
@@ -492,7 +183,7 @@ class OcrService
     }
 
     /**
-     * 폴백용 정규식 파싱 (OpenAI JSON 파싱 실패 시)
+     * Textract raw text 에서 처방전 항목을 뽑아내는 정규식 파서
      * 소모성재료 처방전 + 일반 처방전 모두 지원
      */
     private function parsePrescriptionFields(string $text): array
@@ -608,110 +299,5 @@ class OcrService
         $result['usage_period'] = '교부일로부터 처방기간까지';
 
         return $result;
-    }
-
-    private function ocrSystemPrompt(): string
-    {
-        return <<<'PROMPT'
-당신은 한국 의료 처방전 및 의료기기 소모성재료 처방전 전문 OCR 분석 AI입니다.
-이미지의 모든 텍스트를 정확히 읽고, 아래 JSON 형식으로만 응답하세요.
-JSON 외 다른 내용(설명, 주석, 마크다운 코드블록 등)은 절대 포함하지 마세요.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[STEP 1] 처방전 유형 판단
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-처방전 제목/헤더를 가장 먼저 확인하여 유형을 결정하세요.
-
-● 소모성재료 처방전: 제목에 아래 키워드가 포함된 경우
-  - "자가도뇨", "요실금", "욕창예방", "인공호흡기", "기침유발기", "이동식 산소발생기"
-  - "소모성재료", "의료기기", "보조기기" 등
-  → prescription_type = "소모성재료"
-  → product_name: 제목에서 소모성재료 품목명 추출 (예: "자가도뇨", "욕창예방 매트리스")
-
-● 일반 의약품 처방전: 약품명, 용량, 투여방법이 표에 있는 경우
-  → prescription_type = "의약품"
-
-● 한방 처방전: 한약재, 첩수, 탕약 등이 있는 경우
-  → prescription_type = "한방"
-
-● 기타: 위에 해당하지 않으면
-  → prescription_type = "기타"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[STEP 2] 소모성재료 처방전 특별 추출 규칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-▶ 보장기관 정보
-  - "보장기관명(기호)" 또는 "요양기관명" 항목 → hospital_name
-  - 괄호 안 숫자 코드 → hospital_code
-
-▶ 상병코드 (여러 개일 수 있음)
-  - 상병코드 표에서 모든 코드를 쉼표로 연결 (예: "Q059, K319")
-
-▶ 상병구분 체크박스 (□ 중 ✓ 또는 ■ 표시된 항목)
-  - 신성상병, 후천성 취수성 상병, 후천성 질환 상병, 2차성 방광 기능이상 등
-  → condition_type 에 체크된 항목명 기입
-
-▶ 처방 수량 표
-  - "1일 처방개수" → daily_count (integer)
-  - "총 처방기간(일)" 또는 "총 처방기간" → total_days (integer)
-  - "총계(개)" 또는 "총계" → total_count (integer)
-
-▶ 담당의사 정보
-  - "담당의사성명(면번호)" → doctor_name + license_no
-  - "전문과목(전문의 자격번호)" → specialty + specialist_no
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[STEP 3] 반환할 JSON 구조
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "prescription_type": "소모성재료",
-  "raw_text": "이미지의 전체 텍스트 (모든 줄 포함, 줄바꿈은 \\n)",
-  "registration_no": "등록번호 또는 null",
-  "serial_no": "연번호 또는 null",
-  "is_reissue": false,
-  "patient_name": "환자 성명 또는 null",
-  "resident_no": "주민등록번호 XXXXXX-XXXXXXX 형식 또는 null",
-  "phone": "자택전화(지역번호 포함) 또는 null",
-  "mobile": "환자 연락처 전화번호(휴대전화·전화·연락처 등 010/011/016 등으로 시작하는 번호 우선, 없으면 기재된 전화번호) 또는 null",
-  "address": "주소 전체 또는 null",
-  "department": "진료과목(전문과목) 또는 null",
-  "disease_name": "상병명 전체 (여러 개면 쉼표 구분) 또는 null",
-  "disease_code": "상병코드 (여러 개면 쉼표 구분, 예: Q059, K319) 또는 null",
-  "condition_type": "상병구분 체크된 항목 또는 null",
-  "daily_count": 6,
-  "total_days": 90,
-  "total_count": 540,
-  "product_name": "소모성재료명 또는 처방 의약품명 또는 null",
-  "hospital_name": "요양기관명 또는 보장기관명 또는 null",
-  "hospital_code": "요양기관기호 또는 보장기관기호 또는 null",
-  "doctor_name": "담당의사 성명 또는 null",
-  "specialty": "전문과목 또는 null",
-  "license_no": "면허번호 숫자만 또는 null",
-  "specialist_no": "전문의자격번호 숫자만 또는 null",
-  "issued_date": "발행일 YYYY-MM-DD 형식 또는 null",
-  "usage_period": "사용기간 텍스트 또는 null",
-  "confidence": 85.0
-}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[STEP 4] 신뢰도(confidence) 채점 기준
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-① patient_name   판독 성공 → +20점
-② hospital_name  판독 성공 → +20점
-③ disease_code   판독 성공 → +20점
-④ daily_count + total_days + total_count 모두 판독 → +20점
-⑤ issued_date    판독 성공 → +20점
-이미지 품질(흐림·기울기·반사 등) 감점 최대 -15점. 최종 confidence: 0~100 소수점 1자리.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[공통 규칙]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- 날짜: 항상 YYYY-MM-DD 형식 (YYYY. MM. DD → YYYY-MM-DD 변환)
-- 주민등록번호: XXXXXX-XXXXXXX 형식 (하이픈 포함, 공백 제거)
-- 숫자 필드: 문자 제거 후 정수, 판독 불가 시 null
-- 값 확인 불가 시 반드시 null (빈 문자열 "" 사용 금지)
-- disease_code 여러 개: 이미지에 있는 그대로 모두 기입
-- license_no, specialist_no: 숫자만 추출 (제 65644 호 → "65644")
-PROMPT;
     }
 }

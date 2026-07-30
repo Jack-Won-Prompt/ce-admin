@@ -1,11 +1,11 @@
 <?php
 // app/Http/Controllers/OcrSettingController.php
-// 처방전 OCR 공급자 설정 관리 (관리자)
+// 처방전 OCR(AWS Textract) 연동 상태 확인 (관리자)
+// 공급자가 Textract 단일이므로 선택 UI 없이 상태만 보여준다.
 
 namespace App\Http\Controllers;
 
 use App\Models\OcrSetting;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class OcrSettingController extends Controller
@@ -19,19 +19,4 @@ class OcrSettingController extends Controller
         ]);
     }
 
-    public function update(Request $request)
-    {
-        $data = $request->validate([
-            'provider' => 'required|in:'.implode(',', OcrSetting::PROVIDERS),
-        ]);
-
-        $setting = OcrSetting::current();
-        $setting->update($data);
-
-        activity()->causedBy(auth()->user())
-            ->log('처방전 OCR 공급자 변경: '.$data['provider']);
-
-        return redirect()->route('ocr-settings.edit')
-            ->with('status', 'OCR 설정이 저장되었습니다.');
-    }
 }

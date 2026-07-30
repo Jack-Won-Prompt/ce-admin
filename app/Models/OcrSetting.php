@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class OcrSetting extends Model
 {
-    public const PROVIDERS = ['textract', 'ai'];
+    /** 공급자는 AWS Textract 단일 (과거 'ai' 공급자는 제거됨) */
+    public const PROVIDERS = ['textract'];
 
     protected $fillable = ['provider'];
 

@@ -35,16 +35,6 @@ return [
         ],
     ],
 
-    // ── OpenAI (OCR 처방전 인식) ──────────────────────────
-    'openai' => [
-        'api_key' => env('OPENAI_API_KEY'),
-    ],
-
-    // ── Anthropic (Claude) ────────────────────────────────
-    'anthropic' => [
-        'key' => env('ANTHROPIC_API_KEY'),
-    ],
-
     // ── Todoworks 제품 API ────────────────────────────────
     'todoworks' => [
         'api_url' => env('TODOWORKS_API_URL', 'https://todoworks.co.kr'),

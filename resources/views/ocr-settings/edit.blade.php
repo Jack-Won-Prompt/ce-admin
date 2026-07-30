@@ -43,70 +43,42 @@
   @endif
 
   <div class="ocr-note">
-    <i class="bx bx-info-circle"></i> 처방전 이미지의 문자 인식(OCR)에 사용할 공급자를 선택합니다.
-    설정은 <b>업로드·재분석 전체</b>에 즉시 적용됩니다.
+    <i class="bx bx-info-circle"></i> 처방전 이미지의 문자 인식(OCR)은 <b>AWS Textract</b> 로 처리합니다.
+    이 화면에서 현재 연동 상태를 확인할 수 있습니다.
   </div>
 
   @if(! $textractEnabled)
     <div class="ocr-warn">
-      <i class="bx bx-error-circle"></i> <b>AWS Textract 자격증명이 아직 설정되지 않았습니다.</b>
-      Textract 를 선택해도 자격증명이 없으면 실제로는 AI OCR 로 자동 폴백되어 처리됩니다.
+      <i class="bx bx-error-circle"></i> <b>AWS Textract 자격증명이 설정되지 않아 OCR 이 동작하지 않습니다.</b>
       서버 <code>.env</code> 에 <code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code> /
-      <code>AWS_DEFAULT_REGION</code>(현재 <code>{{ $textractRegion }}</code>) 를 채운 뒤 활성화됩니다.
+      <code>AWS_DEFAULT_REGION</code>(현재 <code>{{ $textractRegion }}</code>) 를 채워 주세요.
+      자격증명이 없으면 처방전 업로드 시 OCR 오류가 발생합니다.
     </div>
   @endif
 
-  <form method="POST" action="{{ route('ocr-settings.update') }}">
-    @csrf
-    @method('PUT')
+  <div class="ocr-card">
+    <h3><i class="bx bx-scan"></i> OCR 공급자</h3>
 
-    <div class="ocr-card">
-      <h3><i class="bx bx-scan"></i> OCR 공급자</h3>
-
-      @php $cur = old('provider', $setting->provider); @endphp
-
-      <label class="opt {{ $cur === 'textract' ? 'sel' : '' }}" id="opt-textract">
-        <input type="radio" name="provider" value="textract" {{ $cur === 'textract' ? 'checked' : '' }}>
-        <div>
-          <div class="t">
-            AWS Textract
-            <span class="badge badge-def">기본값</span>
-            <span class="badge {{ $textractEnabled ? 'badge-on' : 'badge-off' }}">
-              {{ $textractEnabled ? '자격증명 설정됨' : '미설정 → AI 폴백' }}
-            </span>
-          </div>
-          <div class="d">
-            AWS Textract 로 문자를 추출합니다. 숫자(주민번호·처방일·전화)·레이아웃 인식에 강하지만
-            <b>한글(환자명·병원명·상병명)은 미지원</b>이라 해당 필드는 비거나 부정확할 수 있어
-            검수 화면에서 보정합니다.
-          </div>
+    <div class="opt sel" style="cursor:default;">
+      <i class="bx bx-scan" style="font-size:20px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i>
+      <div>
+        <div class="t">
+          AWS Textract
+          <span class="badge {{ $textractEnabled ? 'badge-on' : 'badge-off' }}">
+            {{ $textractEnabled ? '자격증명 설정됨' : '자격증명 미설정 — OCR 불가' }}
+          </span>
         </div>
-      </label>
-
-      <label class="opt {{ $cur === 'ai' ? 'sel' : '' }}" id="opt-ai">
-        <input type="radio" name="provider" value="ai" {{ $cur === 'ai' ? 'checked' : '' }}>
-        <div>
-          <div class="t">AI OCR (Claude / OpenAI)</div>
-          <div class="d">
-            AI Vision 모델로 인식합니다. 한글 필드까지 구조화 추출이 가능해 정확도가 높지만
-            호출 비용이 발생합니다. (Claude 우선 → OpenAI 폴백)
-          </div>
+        <div class="d">
+          처방전 이미지에서 문자를 추출합니다. 숫자(주민번호·처방일·전화)·레이아웃 인식에 강하지만
+          <b>한글(환자명·병원명·상병명)은 미지원</b>이라 해당 필드는 비거나 부정확할 수 있어
+          <b>검수 화면에서 사람이 보정</b>합니다.
         </div>
-      </label>
-
-      <div class="ocr-actions">
-        <button type="submit" class="btn-save"><i class="bx bx-save"></i> 저장</button>
+        <div class="d" style="margin-top:8px;">
+          리전 <code>{{ $textractRegion }}</code> ·
+          지원 형식 <code>PNG</code> <code>JPEG</code>
+        </div>
       </div>
     </div>
-  </form>
+  </div>
 </div>
-
-<script>
-  document.querySelectorAll('.opt input[name=provider]').forEach(function (r) {
-    r.addEventListener('change', function () {
-      document.querySelectorAll('.opt').forEach(function (o) { o.classList.remove('sel'); });
-      this.closest('.opt').classList.add('sel');
-    });
-  });
-</script>
 @endsection
