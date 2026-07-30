@@ -23,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
+        /* 자산 URL에 파일 수정시각을 붙여 캐시를 자동으로 무효화한다.
+           사용:  <link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')"> */
+        Blade::directive('assetv', fn (string $expr) =>
+            "<?php echo \\App\\Support\\Asset::versioned({$expr}); ?>");
+
         $this->bootPermissions();
 
         // 로그인 이벤트 → 사용자 활동 로그 기록

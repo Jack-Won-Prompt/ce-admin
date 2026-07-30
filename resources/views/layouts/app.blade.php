@@ -2612,7 +2612,7 @@ input#chatFileInput { display: none; }
 </div>
 
 {{-- ══ SR 관리 패널 JS ══ --}}
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
+<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 const SrPanel = (() => {
   const LIST_URL  = BASE_URL + '/sr/list';

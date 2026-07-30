@@ -6,7 +6,7 @@
 @section('breadcrumb', '홈 / 청구·회계 / 정산')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('vendor/wwgrid/wwGrid.css') }}?v=6">
+<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   /* Vuexy underline tabs */
   .settle-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 22px; }
@@ -297,7 +297,7 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('vendor/wwgrid/wwGrid.js') }}?v=6"></script>
+<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
   // ── 모달 공통 ──────────────────────────────────────────────
   function openModal(id)  { const m = document.getElementById(id); m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
