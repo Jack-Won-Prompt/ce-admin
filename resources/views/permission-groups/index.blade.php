@@ -6,7 +6,6 @@
 @section('breadcrumb', '홈 / 설정 / 권한 그룹')
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
@@ -151,7 +150,6 @@
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   const PAGE_DEFS   = @json($pageDefs);

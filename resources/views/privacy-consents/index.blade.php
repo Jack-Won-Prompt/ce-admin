@@ -5,7 +5,6 @@
 @section('breadcrumb', '홈 / 개인정보동의')
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   .pc-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
   .pc-tab { padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
@@ -98,7 +97,6 @@
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   const grid = new wwGrid({

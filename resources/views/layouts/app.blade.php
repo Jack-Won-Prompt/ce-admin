@@ -1041,6 +1041,11 @@
     html.is-framed .content-wrapper { padding-top: 0 !important; }
     html.is-framed .page-body { padding-top: 14px; }
   </style>
+  {{-- wwGrid 자산은 레이아웃이 단 한 번만 싣는다.
+       화면마다 각자 싣던 때는 (1) 한 화면이라도 빠뜨리면 그 화면 그리드가 죽고
+       (2) 두 번 실리면 GridModal 재선언으로 두 번째 로드가 죽었다.
+       소유자를 한 곳으로 두면 두 문제가 함께 사라진다. --}}
+  <link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
   @stack('styles')
 </head>
 <body>
@@ -2014,6 +2019,9 @@ document.addEventListener('click', (e) => {
   })();
 </script>
 
+{{-- 화면의 인라인 스크립트가 wwGrid 를 바로 쓸 수 있도록 스택보다 먼저 싣는다 --}}
+<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
+
 @stack('scripts')
 
 {{-- ═══════════════════════════════════════════════════════════
@@ -2705,31 +2713,6 @@ input#chatFileInput { display: none; }
 {{-- ══ SR 관리 패널 JS ══ --}}
 <script>
 const SrPanel = (() => {
-  /* wwGrid 는 그리드가 있는 화면들이 각자 @push('scripts') 로 이미 싣는다.
-     레이아웃에서 <script src> 로 또 실으면 같은 문서에 두 번 로드되어
-     "Identifier 'GridModal' has already been declared" 가 난다.
-     그래서 패널을 처음 열 때, 아직 없을 때만 지연 로드한다. */
-  const WWGRID_JS  = "@assetv('vendor/wwgrid/wwGrid.js')";
-  const WWGRID_CSS = "@assetv('vendor/wwgrid/wwGrid.css')";
-
-  function ensureWwGrid() {
-    return new Promise((resolve) => {
-      if (!document.querySelector('link[href*="wwGrid.css"]')) {
-        const l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = WWGRID_CSS;
-        document.head.appendChild(l);
-      }
-      if (typeof window.wwGrid === 'function') return resolve(true);
-
-      const s = document.createElement('script');
-      s.src = WWGRID_JS;
-      s.onload  = () => resolve(true);
-      s.onerror = () => resolve(false);
-      document.head.appendChild(s);
-    });
-  }
-
   const LIST_URL  = BASE_URL + '/sr/list';
   const STORE_URL = BASE_URL + '/sr';
   const STATUS_CLS = { open:'sr-b-open', in_progress:'sr-b-in_progress', answered:'sr-b-answered', closed:'sr-b-closed' };
@@ -2747,13 +2730,6 @@ const SrPanel = (() => {
 
     if (!_loaded) {
       _loaded = true;
-      const ready = await ensureWwGrid();
-      if (!ready) {
-        document.getElementById('srGrid').innerHTML =
-          '<div style="padding:24px;text-align:center;color:var(--danger);font-size:12.5px;">'
-          + '목록 컴포넌트를 불러오지 못했습니다.</div>';
-        return;
-      }
       buildGrid();
       load();
     }

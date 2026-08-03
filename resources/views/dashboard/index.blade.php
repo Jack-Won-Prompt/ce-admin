@@ -40,7 +40,6 @@
 @section('breadcrumb', '홈 / 대시보드 · ' . now()->format('Y-m-d'))
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   const el = document.getElementById('recentRxGrid');
@@ -92,7 +91,6 @@ window.HELP_TOUR_STEPS = [
 @endpush
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   /* ── Stat Cards (Vuexy style) ── */
   .stat-card {

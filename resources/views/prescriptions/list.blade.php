@@ -52,7 +52,6 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
   .filter-bar .form-control { height: 36px; font-size: 13px; }
@@ -200,7 +199,6 @@
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 window.HELP_TOUR_STEPS = [
   {

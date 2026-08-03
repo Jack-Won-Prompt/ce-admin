@@ -225,7 +225,6 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
 /* ── 모달 ── */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; }
@@ -261,7 +260,6 @@
 @endpush
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 const USERS_DATA          = @json($usersData);
 const USERS_GRID_DATA     = @json($gridData);

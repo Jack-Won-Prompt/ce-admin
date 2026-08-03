@@ -30,7 +30,6 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
   .log-table-wrap { overflow-x:auto; }
@@ -115,7 +114,6 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   new wwGrid({

@@ -7,7 +7,6 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   .org-ext-link { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); text-decoration:none; opacity:0; transition:opacity .15s; z-index:2; }
   .nav-item:hover .org-ext-link { opacity:1; }
@@ -193,7 +192,6 @@
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   'use strict';

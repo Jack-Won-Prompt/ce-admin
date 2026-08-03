@@ -5,7 +5,6 @@
 @section('breadcrumb', '홈 / CE샵 주문')
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   .shop-status-badge {
     display:inline-flex; align-items:center; padding:2px 8px;
@@ -68,7 +67,6 @@
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('shop-orders'));

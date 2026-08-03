@@ -34,7 +34,6 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
 /* ── 레이아웃 ── */
 /* 발행 내역 / 즉시발행 탭 구성 */
@@ -523,7 +522,6 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 // 발행 내역 wwGrid (조회 결과를 setData로 주입)
 (function () {

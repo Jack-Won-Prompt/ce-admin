@@ -45,7 +45,6 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
 <style>
   /* 패널 탭(목록/상세보기) */
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
@@ -309,7 +308,6 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
-<script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
