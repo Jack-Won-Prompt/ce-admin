@@ -1605,73 +1605,6 @@ document.addEventListener('click', (e) => {
 });
 </script>
 
-{{-- ══ 퀵 메뉴 ══ --}}
-<style>
-#quickMenu {
-  position: fixed; right: 0; top: 72px;
-  z-index: 900; display: flex; flex-direction: column; align-items: flex-end;
-}
-#quickMenuToggle {
-  width: 44px; height: 44px; border-radius: 10px 0 0 10px;
-  background: var(--primary);
-  border: none; color: #fff; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; box-shadow: -2px 2px 14px rgba(37,99,235,.3);
-  transition: all .2s ease;
-}
-#quickMenuToggle:hover { background: var(--primary-dark); width: 48px; }
-#quickMenuToggle.active { background: #1e293b; }
-#quickMenuItems { display: none; flex-direction: column; align-items: flex-end; margin-top: 6px; gap: 4px; }
-#quickMenuItems.open { display: flex; }
-.quick-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px; border-radius: 10px 0 0 10px;
-  background: #fff; color: var(--text-primary);
-  font-size: 13px; font-weight: 600;
-  text-decoration: none; border: 1px solid var(--border); border-right: none;
-  box-shadow: -3px 2px 12px rgba(75,70,92,.12);
-  transition: all .18s; white-space: nowrap;
-  animation: quickSlideIn .18s ease;
-}
-.quick-item:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
-.quick-item .bx { font-size: 16px; color: var(--primary); }
-@keyframes quickSlideIn {
-  from { opacity:0; transform:translateX(20px); }
-  to   { opacity:1; transform:translateX(0); }
-}
-</style>
-
-<div id="quickMenu">
-  <button id="quickMenuToggle" title="퀵 메뉴" onclick="toggleQuickMenu()">
-    <i class="bx bx-menu" id="quickMenuIcon"></i>
-  </button>
-  <div id="quickMenuItems">
-    <button class="quick-item" onclick="toggleQuickMenu();NoticePanel.open();" style="animation-delay:.03s;border:none;cursor:pointer;width:100%;text-align:left;">
-      <i class="bx bx-bell"></i> 공지사항
-    </button>
-    <button class="quick-item" onclick="toggleQuickMenu();IS_ADMIN?InquiryPanel.open():InquiryPanel.openCreate();" style="animation-delay:.07s;border:none;cursor:pointer;width:100%;text-align:left;">
-      <i class="bx bx-support"></i> 문의하기
-    </button>
-  </div>
-</div>
-
-<script>
-function toggleQuickMenu() {
-  const items  = document.getElementById('quickMenuItems');
-  const toggle = document.getElementById('quickMenuToggle');
-  const icon   = document.getElementById('quickMenuIcon');
-  const open   = items.classList.toggle('open');
-  toggle.classList.toggle('active', open);
-  icon.className = open ? 'bx bx-x' : 'bx bx-menu';
-}
-document.addEventListener('click', (e) => {
-  if (!document.getElementById('quickMenu').contains(e.target)) {
-    document.getElementById('quickMenuItems').classList.remove('open');
-    document.getElementById('quickMenuToggle').classList.remove('active');
-    document.getElementById('quickMenuIcon').className = 'bx bx-menu';
-  }
-});
-</script>
 
 @php
   $_ceToured    = auth()->user()?->toured_pages ?? [];
@@ -2202,11 +2135,10 @@ document.addEventListener('click', (e) => {
 #chatPanel {
   position: fixed; top: 0; right: -780px; width: 780px; height: 100vh;
   background: #fff; border-left: 1px solid var(--border);
-  box-shadow: -4px 0 32px rgba(0,0,0,.15);
   display: flex; flex-direction: column; z-index: 1000;
   transition: right .28s cubic-bezier(.4,0,.2,1);
 }
-#chatPanel.open { right: 0; }
+#chatPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.15); }
 
 .chat-header {
   display: flex; align-items: center; gap: 10px;
@@ -2459,11 +2391,10 @@ input#chatFileInput { display: none; }
 #srPanel {
   position: fixed; top: 0; right: -860px; width: 860px; max-width: 96vw; height: 100vh;
   background: var(--bg-card); border-left: 1px solid var(--border);
-  box-shadow: -6px 0 40px rgba(0,0,0,.18);
   display: flex; flex-direction: column; z-index: 1001;
   transition: right .28s cubic-bezier(.4,0,.2,1);
 }
-#srPanel.open { right: 0; }
+#srPanel.open { right: 0; box-shadow: -6px 0 40px rgba(0,0,0,.18); }
 .sr-header {
   display: flex; align-items: center; gap: 9px;
   padding: 15px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -3849,11 +3780,10 @@ function showPrescriptionNotif(data) {
 .side-panel {
   position: fixed; top: 0; right: -500px; width: 500px; height: 100vh;
   background: #fff; border-left: 1px solid var(--border);
-  box-shadow: -4px 0 32px rgba(0,0,0,.15);
   display: flex; flex-direction: column; z-index: 1000;
   transition: right .28s cubic-bezier(.4,0,.2,1);
 }
-.side-panel.open { right: 0; }
+.side-panel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.15); }
 
 #sidePanelOverlay {
   display: none; position: fixed; inset: 0; z-index: 999;
@@ -4793,11 +4723,10 @@ document.addEventListener('keydown', e => {
 #helpPanel {
   position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
   background: #fff; border-left: 1px solid var(--border);
-  box-shadow: -4px 0 32px rgba(0,0,0,.12);
   display: flex; flex-direction: column; z-index: 999;
   transition: right .28s cubic-bezier(.4,0,.2,1);
 }
-#helpPanel.open { right: 0; }
+#helpPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.12); }
 .help-header {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 16px; border-bottom: 1px solid var(--border);
@@ -4959,11 +4888,6 @@ const Tour = (() => {
       selector: '#helpToggleBtn',
       title: '도움말 버튼',
       body: '이 버튼을 클릭하면 현재 페이지 설명과 투어를 다시 시작할 수 있습니다. 언제든지 활용하세요.'
-    },
-    {
-      selector: '#quickMenu',
-      title: '빠른 메뉴',
-      body: '우측 하단 버튼으로 처방전 업로드, 환자 추가, 문의 등을 빠르게 실행할 수 있습니다.'
     },
   ];
 
