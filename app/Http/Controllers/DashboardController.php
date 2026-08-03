@@ -46,8 +46,12 @@ class DashboardController extends Controller
         // 최근 활동 로그
         $activities = \Spatie\Activitylog\Models\Activity::latest()->take(4)->get();
 
+        // 푸터 회사 정보 — 위임장 설정과 같은 값을 쓴다.
+        // 따로 두면 한쪽만 고쳐져 서식과 화면이 어긋난다.
+        $company = \App\Models\DelegationSetting::first();
+
         return view('dashboard.index', compact(
-            'stats', 'recentPrescriptions', 'recentRxGrid', 'activities'
+            'stats', 'recentPrescriptions', 'recentRxGrid', 'activities', 'company'
         ));
     }
 }

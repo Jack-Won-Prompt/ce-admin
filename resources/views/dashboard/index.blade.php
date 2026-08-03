@@ -345,4 +345,56 @@ window.HELP_TOUR_STEPS = [
   </div>
 </div>
 
+{{-- ── 회사 정보 푸터 ──────────────────────────────────────
+     값은 위임장 설정(delegation_settings)에서 가져온다. 서식과 화면이
+     어긋나지 않도록 상호·사업자번호·대표자를 한 곳에서만 관리한다. --}}
+<footer class="app-footer">
+  <div class="app-footer-inner">
+    <div class="app-footer-company">
+      <span class="app-footer-name">{{ $company?->provider_name ?? '콜로플라스트 코리아 주식회사' }}</span>
+      @if($company?->provider_ceo)
+        <span class="app-footer-sep">|</span><span>대표이사 {{ $company->provider_ceo }}</span>
+      @endif
+      @if($company?->provider_biz_no)
+        <span class="app-footer-sep">|</span><span>사업자등록번호 {{ $company->provider_biz_no }}</span>
+      @endif
+      @if($company?->provider_phone)
+        <span class="app-footer-sep">|</span>
+        <span>대표전화 <a href="tel:{{ preg_replace('/[^0-9]/', '', $company->provider_phone) }}">{{ $company->provider_phone }}</a></span>
+      @endif
+    </div>
+    <div class="app-footer-copy">
+      &copy; {{ now()->year }} {{ $company?->provider_name ?? '콜로플라스트 코리아 주식회사' }}. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<style>
+  .app-footer {
+    margin-top: 28px;
+    padding: 18px 4px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .app-footer-inner {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 8px 20px;
+  }
+  .app-footer-company {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .app-footer-name { font-weight: 700; color: var(--text-primary); }
+  .app-footer-sep  { color: var(--border); }
+  .app-footer-company a { color: inherit; text-decoration: none; }
+  .app-footer-company a:hover { color: var(--primary); text-decoration: underline; }
+  .app-footer-copy { font-size: 11.5px; color: var(--text-muted); }
+
+  /* 좁은 화면에서는 구분선이 줄바꿈과 겹쳐 보이므로 감춘다 */
+  @media (max-width: 640px) {
+    .app-footer-inner { flex-direction: column; align-items: flex-start; }
+    .app-footer-sep { display: none; }
+    .app-footer-company { gap: 2px 10px; }
+  }
+</style>
+
 @endsection
