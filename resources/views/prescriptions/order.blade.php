@@ -4180,20 +4180,126 @@ window.HELP_TOUR_STEPS = [
     });
     if (isTable) { syncCardToTable(); syncOrderTabToTable(); }
 
-    // 4) 검수 탭으로 이동 (미저장 확인창 우회 — 방금 초기화 확인을 받았다)
+    // 4) 좌측 뷰어: 처방전 이미지·첨부 문서 비우기
+    _resetViewer();
+
+    // 5) 위임동의 · 가상계좌 · Withworks 연계 상태 비우기
+    _resetConsentUi();
+    _resetOrderLinkUi();
+
+    // 6) 검수 탭으로 이동 (미저장 확인창 우회 — 방금 초기화 확인을 받았다)
     const ocrBtn = document.querySelector(".tab-bar-tabs .tab-btn[onclick*='tab-ocr']");
     if (ocrBtn) _doSwitchTab(ocrBtn, 'tab-ocr');
 
-    // 5) 초기화된 화면은 저장된 내용과 다르므로 '미저장' 상태로 표시
+    // 7) 초기화된 화면은 저장된 내용과 다르므로 '미저장' 상태로 표시
     markOcrDirty(); markProductDirty(); markOrderDirty();
 
-    // 6) 첫 입력 필드로 포커스
+    // 8) 첫 입력 필드로 포커스
     const first = document.getElementById('f-name');
     if (first) { first.focus(); first.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
     if (typeof showToast === 'function') {
       showToast('검수 화면을 초기화했습니다. 새 내용을 입력하세요.', 'info');
     }
+  }
+
+  /* 좌측 뷰어 비우기 — 처방전 이미지·PDF·첨부 문서 스트립 */
+  function _resetViewer() {
+    // ALL_DOCS 는 const 라 재할당할 수 없다 → 배열 내용만 비운다
+    ALL_DOCS.length = 0;
+    currentDocIdx = 0;
+
+    const img = document.getElementById('prescCanvas');
+    if (img) { img.src = ''; img.style.display = 'none'; }
+
+    const pdf = document.getElementById('pdfCanvas');
+    if (pdf) { pdf.src = ''; pdf.style.display = 'none'; }
+
+    const badge = document.getElementById('viewerBadge');
+    if (badge) badge.style.display = 'none';
+
+    const openBtn = document.getElementById('viewerOpenBtn');
+    if (openBtn) { openBtn.href = '#'; openBtn.style.display = 'none'; }
+
+    // '이미지 없음' 자리표시자 노출 (없으면 만들어 넣는다)
+    const stage = img?.parentElement || pdf?.parentElement;
+    if (stage) {
+      let ph = stage.querySelector('.img-placeholder');
+      if (!ph) {
+        ph = document.createElement('div');
+        ph.className = 'img-placeholder';
+        ph.innerHTML = '<i class="fa-regular fa-file-image"></i><p>이미지 없음</p>';
+        stage.insertBefore(ph, stage.firstChild);
+      }
+      ph.style.display = '';
+    }
+
+    // 문서 스트립
+    const strip = document.getElementById('docStrip');
+    if (strip) strip.innerHTML = '';
+    const cnt = document.getElementById('docCount');
+    if (cnt) cnt.textContent = '0';
+    const stripWrap = document.getElementById('docStripWrap');
+    if (stripWrap) stripWrap.style.display = 'none';
+
+    // 확대/회전/이동 상태도 초기값으로 (기존 헬퍼 재사용)
+    if (typeof resetImg === 'function') resetImg();
+  }
+
+  /* 위임동의 표시 비우기 — 현황 배지·서명/본인확인 배지 */
+  function _resetConsentUi() {
+    const textEl  = document.getElementById('consentStatusText');
+    const badgeEl = document.getElementById('consentStatusBadge');
+    if (textEl)  textEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> 동의 현황 없음';
+    if (badgeEl) {
+      badgeEl.style.color = 'var(--text-muted)';
+      badgeEl.querySelectorAll('.sign-badge, .nice-badge').forEach(n => n.remove());
+    }
+
+    // 버튼을 '동의 요청' 초기 상태로 되돌린다
+    const bw = document.getElementById('consentBtnWrap');
+    const rb = document.getElementById('consentResultBadge');
+    if (bw) bw.style.display = '';
+    if (rb) { rb.style.display = 'none'; rb.innerHTML = ''; }
+  }
+
+  /* 주문 연계 상태 비우기 — 가상계좌 발급 / Withworks SO(미연계) / 워크플로우 스텝 */
+  function _resetOrderLinkUi() {
+    existingOrder  = null;
+    orderExists    = false;
+    _ORDER_ID      = 0;
+    _ORDER_TOTAL   = 0;
+    _PATIENT_COPAY = 0;
+
+    // 가상계좌: 주문이 없으므로 발급 버튼·결과 배지를 모두 제거
+    const vaWrap = document.getElementById('vaButtonWrap');
+    if (vaWrap) vaWrap.innerHTML = '';
+
+    // 주문 액션 영역 → '주문 생성 및 연계' 버튼으로 복원
+    const actionArea = document.getElementById('orderActionArea');
+    if (actionArea) {
+      actionArea.innerHTML =
+        '<button class="btn btn-primary w-full" id="btnCreateOrder" onclick="createOrder(event)">'
+        + '<i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계</button>';
+    }
+
+    // 환자 정보 바의 Withworks 판매번호 → 미연계
+    const card    = document.getElementById('wwSoCard');
+    const content = document.getElementById('wwSoContent');
+    if (card) { card.style.borderColor = 'var(--border)'; card.style.background = 'var(--bg-card)'; }
+    if (content) {
+      content.innerHTML = '<span id="wwSoBadge" style="color:var(--text-muted);font-size:11px;">미연계</span>';
+    }
+
+    // 워크플로우 스텝(사이드바 + 이력 탭) 대기 상태로
+    [['wsOrderIcon', 'wsOrderTime', 'wsOrderStep'], ['histOrderIcon', 'histOrderTime', 'histOrderStep']]
+      .forEach(([iconId, timeId, stepId]) => {
+        const ic = document.getElementById(iconId);
+        const tm = document.getElementById(timeId);
+        if (ic) ic.className = 'ws-icon pending';
+        if (tm) tm.textContent = '대기 중';
+        document.getElementById(stepId)?.querySelector('.ws-arrow')?.remove();
+      });
   }
 
   /* ── 전체 아이템 재계산 (각 아이템의 개별 급여 구분 사용) ── */
