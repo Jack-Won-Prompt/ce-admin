@@ -31,6 +31,10 @@
   overflow: auto;
   background: #fff;
   position: relative;
+  /* 그리드 끝까지 스크롤해도 페이지로 넘어가지 않게 한다(스크롤 체이닝 차단).
+     대시보드처럼 높이가 낮은 그리드는 내부 스크롤 여유가 몇십 px 뿐이라,
+     막지 않으면 휠 몇 번에 페이지가 밀려 헤더째 화면 밖으로 사라진다. */
+  overscroll-behavior: contain;
 }
 
 /* ── Table ── */

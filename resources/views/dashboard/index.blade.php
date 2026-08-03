@@ -48,7 +48,8 @@
   const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
   const grid = new wwGrid({
     el: el,
-    height: 320, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    // 최근 10건이 스크롤 없이 다 보이는 높이. 320 이면 25px 만 넘쳐 흔들리는 스크롤이 생긴다.
+    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
