@@ -43,6 +43,9 @@ class PrescriptionController extends Controller
     {
         $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order'])->latest();
 
+        // '처방전 관리' 로 화면만 열고 아무것도 입력하지 않은 초안은 목록에 띄우지 않는다
+        $query->whereNot(fn ($q) => $q->blankDraft());
+
         if ($request->input('status') === 'no_order') {
             $query->whereIn('status', ['approved', 'ocr_done'])
                   ->whereDoesntHave('order');
@@ -392,6 +395,29 @@ class PrescriptionController extends Controller
             ->latest()->take(5)->get();
 
         return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending', 'patientsJson'));
+    }
+
+    /**
+     * 빈 검수·등록 화면 (메뉴 '처방전 관리').
+     *
+     * 검수 화면은 저장된 처방전 1건 위에서 동작한다(승인·팩스·서류 URL 이 모두
+     * 레코드를 필요로 한다). 그래서 화면을 열 때 빈 초안을 한 건 잡아 두고
+     * 거기에 입력하게 한다. 저장하면 그 초안이 곧 새 처방전이 된다.
+     *
+     * 메뉴를 여러 번 눌러도 초안이 쌓이지 않도록, 아직 아무것도 입력하지 않은
+     * 내 초안이 있으면 그것을 재사용한다.
+     */
+    public function create(): RedirectResponse
+    {
+        $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first()
+            ?? Prescription::create([
+                'rx_number'     => Prescription::generateRxNumber(),
+                'created_by'    => Auth::id(),
+                'status'        => 'pending',
+                'upload_source' => 'web',
+            ]);
+
+        return redirect()->route('prescriptions.show', $draft);
     }
 
     // ── 웹에서 직접 업로드 ────────────────────────────────

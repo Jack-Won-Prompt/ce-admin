@@ -165,6 +165,27 @@ class Prescription extends Model
         return $this->hasMany(PrescriptionDocument::class)->latest();
     }
 
+    /**
+     * 아직 아무것도 입력하지 않은 '신규 등록' 초안.
+     *
+     * 메뉴 '처방전 관리' 로 화면을 열 때 만들어지는 껍데기 레코드다.
+     * image_path 가 비어 있으므로 실제 업로드 건(잠깐 pending 이더라도 파일은 있다)과
+     * 절대 겹치지 않는다. 목록·통계에서는 감춘다.
+     */
+    public function scopeBlankDraft($query)
+    {
+        return $query->where('status', 'pending')
+                     ->whereNull('image_path')
+                     ->whereNull('patient_name_ocr')
+                     ->whereDoesntHave('order');
+    }
+
+    /** 특정 사용자가 만든 빈 초안 */
+    public function scopeBlankDraftsOf($query, ?int $userId)
+    {
+        return $query->blankDraft()->where('created_by', $userId);
+    }
+
     // ── 처방번호 자동 생성 ────────────────────────────────
     public static function generateRxNumber(): string
     {

@@ -238,6 +238,8 @@ return [
         'orders.fetchWithworksStatus' => [null, 'view'],
 
         // POST 지만 기존 레코드를 고치는 것
+        // 빈 검수·등록 화면 열기 — GET 이지만 초안 레코드를 만드므로 등록 권한으로 본다
+        'prescriptions.create'        => [null, 'create'],
         'prescriptions.reanalyze'     => [null, 'update'],
         'prescriptions.approve'       => [null, 'update'],
         'prescriptions.reject'        => [null, 'update'],

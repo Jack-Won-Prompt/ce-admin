@@ -77,6 +77,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/memos/pinned',  [PrescriptionController::class, 'pinnedMemos'])->name('memos.pinned');
         // 검수 화면 '환자 조회' — 이름/연락처 검색 + 선택 환자의 과거 상담이력
         // ('/{prescription}' 보다 먼저 등록해야 고정 경로가 처방번호로 해석되지 않는다)
+        // 빈 검수·등록 화면 (메뉴 '처방전 관리') — 초안 1건을 잡아 검수 화면으로 보낸다
+        // ('/{prescription}' 보다 먼저 등록해야 'create' 가 처방번호로 해석되지 않는다)
+        Route::get('/create',                            [PrescriptionController::class, 'create'])->name('create');
         Route::get('/patient-search',                    [PrescriptionController::class, 'patientSearch'])->name('patientSearch');
         Route::get('/patients/{patient}/counselings',     [PrescriptionController::class, 'patientCounselings'])->name('patientCounselings');
         Route::get('/{prescription}', [PrescriptionController::class, 'show'])->name('show');

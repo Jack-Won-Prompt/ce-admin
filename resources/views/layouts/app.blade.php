@@ -976,6 +976,13 @@
         </div>
         @endif
         @if($vis('prescriptions'))
+        @perm('prescriptions', 'create')
+        <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
+          <a class="menu-link" href="{{ route('prescriptions.create') }}" data-title="처방전 관리">
+            <i class="menu-icon bx bx-edit-alt"></i><span>처방전 관리</span>
+          </a>
+        </div>
+        @endperm
         <div class="menu-item {{ request()->routeIs('prescriptions.index') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
             <i class="menu-icon bx bx-file-blank"></i>
