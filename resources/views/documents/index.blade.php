@@ -332,7 +332,7 @@
     const url = document.getElementById('regRxLink').getAttribute('href');
     if (!url || url === '#') return false;
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, (_regRxNo || '처방전') + ' 검수', 'bx-scan');
+      window.ceOpenTab(url, (_regRxNo || '처방전') + ' 검수', 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }

@@ -6151,7 +6151,7 @@ window.HELP_TOUR_STEPS = [
     // 다른 처방전으로 '이동'하지 않고 새 탭으로 열어, 현재 검수 화면의 입력을 잃지 않게 한다
     document.getElementById('pcStickyBtn').onclick = () => ceOpenTab(
       `${_RX_URL_BASE}/${encodeURIComponent(d.rx_number ?? '')}`,
-      `${d.rx_number ?? '처방전'} 검수`, 'bx-scan');
+      `${d.rx_number ?? '처방전'} 검수`, 'file-edit-02');
     stickyHeader.style.display = 'block';
 
     // ── 스크롤 바디 ────────────────────────────────────

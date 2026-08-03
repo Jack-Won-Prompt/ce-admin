@@ -16,7 +16,7 @@
     border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; max-width:220px; user-select:none; }
   .ws-tab:hover { color:var(--primary); }
   .ws-tab.active { color:var(--primary); background:#fff; border-color:var(--border); box-shadow:inset 0 -2px 0 var(--primary); }
-  .ws-tab .ws-tab-ico { font-size:15px; flex-shrink:0; opacity:.75; }
+  .ws-tab .ws-tab-ico { width:16px; height:16px; font-size:15px; flex-shrink:0; opacity:.75; }
   .ws-tab .ws-tab-label { overflow:hidden; text-overflow:ellipsis; }
   .ws-tab .ws-tab-close { border:none; background:none; cursor:pointer; color:var(--text-muted); font-size:16px;
     line-height:1; padding:0 3px; border-radius:5px; flex-shrink:0; }
@@ -36,7 +36,23 @@
 @push('scripts')
 <script>
 (function () {
-  const HOME  = { url: @json(url('dashboard')) + '?frame=1', title: '대시보드', icon: 'bx-home-smile' };
+  const HOME  = { url: @json(url('dashboard')) + '?frame=1', title: '대시보드', icon: 'home-04' };
+
+  /* 탭 아이콘은 사이드바에 이미 인라인돼 있는 같은 SVG 를 복제해 쓴다.
+     따로 정의하면 메뉴와 탭의 아이콘이 갈라지고, <img> 로 넣으면 currentColor 가 죽는다.
+     권한 때문에 해당 메뉴가 없는 경우엔 기본 아이콘으로 떨어진다. */
+  function iconMarkup(name) {
+    if (name) {
+      let src = null;
+      try { src = document.querySelector('.layout-menu .menu-link[data-icon="' + CSS.escape(name) + '"] svg'); } catch (_) {}
+      if (src) {
+        const c = src.cloneNode(true);
+        c.setAttribute('class', 'ws-tab-ico');
+        return c.outerHTML;
+      }
+    }
+    return '<i class="ws-tab-ico bx bx-window-alt"></i>';
+  }
   const tabsEl   = document.getElementById('wsTabs');
   const framesEl = document.getElementById('wsFrames');
   const tabs = [];        // { id, url, title, icon, home }
@@ -53,7 +69,7 @@
       el.className = 'ws-tab' + (t.id === active ? ' active' : '');
       el.setAttribute('role', 'tab');
       el.innerHTML =
-        '<i class="ws-tab-ico bx ' + (t.icon || 'bx-window-alt') + '"></i>' +
+        iconMarkup(t.icon) +
         '<span class="ws-tab-label">' + esc(t.title) + '</span>' +
         (t.home ? '' : '<button class="ws-tab-close" title="닫기">&times;</button>');
       el.addEventListener('click', e => { if (e.target.closest('.ws-tab-close')) return; activate(t.id); });
@@ -112,7 +128,7 @@
     if (target.origin !== location.origin) return;
     target.searchParams.set('frame', '1');
 
-    openTab(target.pathname + target.search, String(d.title || '새 탭'), String(d.icon || 'bx-window-alt'), false);
+    openTab(target.pathname + target.search, String(d.title || '새 탭'), String(d.icon || ''), false);
   });
 
   // 사이드바 메뉴 클릭 → 탭으로 열기(페이지 이동 대신)
@@ -123,9 +139,7 @@
     if (!href || href === '#' || href.startsWith('javascript')) return;
     e.preventDefault();
     const url = href + (href.indexOf('?') > -1 ? '&' : '?') + 'frame=1';
-    const icon = (a.querySelector('.menu-icon') || {}).className || '';
-    const ic = (icon.match(/bx-[\w-]+/) || [])[0] || 'bx-window-alt';
-    openTab(url, a.dataset.title || a.textContent.trim(), ic, false);
+    openTab(url, a.dataset.title || a.textContent.trim(), a.dataset.icon || '', false);
   });
 
   // 홈(대시보드) 탭

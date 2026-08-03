@@ -289,7 +289,7 @@
   // 이력 행 클릭 → 해당 상세(처방전 검수·주문)를 워크스페이스 새 탭으로 (환자 목록 유지)
   const hrow = (main, sub, right, url, label) =>
     '<div class="pt-hrow" '
-      + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + (label || '상세') + '\', \'bx-scan\')"' : '')
+      + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + (label || '상세') + '\', \'file-edit-02\')"' : '')
       + '>' +
       '<div class="pt-h-main"><div style="font-weight:600;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
       (right ? '<div style="white-space:nowrap;text-align:right;">' + right + '</div>' : '') +

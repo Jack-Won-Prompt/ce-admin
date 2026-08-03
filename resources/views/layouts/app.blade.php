@@ -1005,7 +1005,7 @@
         </button>
         <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('dashboard*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('dashboard') }}" data-title="대시보드">
+          <a class="menu-link" data-icon="home-04" href="{{ route('dashboard') }}" data-title="대시보드">
             @dsicon('home-04', 'ds-icon menu-icon')<span>대시보드</span>
           </a>
         </div>
@@ -1021,14 +1021,14 @@
         <div class="menu-group-items">
         @if($vis('patients'))
         <div class="menu-item {{ request()->routeIs('patients*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('patients.index') }}" data-title="거래처 관리">
+          <a class="menu-link" data-icon="id-verified" href="{{ route('patients.index') }}" data-title="거래처 관리">
             @dsicon('id-verified', 'ds-icon menu-icon')<span>거래처 관리</span>
           </a>
         </div>
         @endif
         @if($vis('prescription-upload'))
         <div class="menu-item {{ request()->routeIs('prescriptions.upload') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('prescriptions.upload') }}" data-title="처방자료 업로드">
+          <a class="menu-link" data-icon="file-down-02" href="{{ route('prescriptions.upload') }}" data-title="처방자료 업로드">
             @dsicon('file-down-02', 'ds-icon menu-icon')<span>처방자료 업로드</span>
           </a>
         </div>
@@ -1036,13 +1036,13 @@
         @if($vis('prescriptions'))
         @perm('prescriptions', 'create')
         <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('prescriptions.create') }}" data-title="처방전 관리">
+          <a class="menu-link" data-icon="file-edit-02" href="{{ route('prescriptions.create') }}" data-title="처방전 관리">
             @dsicon('file-edit-02', 'ds-icon menu-icon')<span>처방전 관리</span>
           </a>
         </div>
         @endperm
         <div class="menu-item {{ request()->routeIs('prescriptions.index') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
+          <a class="menu-link" data-icon="file-02" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
             @dsicon('file-02', 'ds-icon menu-icon')
             <span>처방전 목록</span>
             @php $pendingCount = \App\Models\Prescription::whereIn('status',['review_needed','ocr_done'])->count(); @endphp
@@ -1064,7 +1064,7 @@
         <div class="menu-group-items">
         @if($vis('orders'))
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('orders.index') }}" data-title="주문 관리">
+          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문 관리">
             @dsicon('handle-with-care', 'ds-icon menu-icon')
             <span>주문 관리</span>
             @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
@@ -1076,7 +1076,7 @@
         @endif
         @if($vis('repurchase'))
         <div class="menu-item {{ request()->routeIs('repurchase*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('repurchase.index') }}" data-title="재구매 관리">
+          <a class="menu-link" data-icon="add-package" href="{{ route('repurchase.index') }}" data-title="재구매 관리">
             @dsicon('add-package', 'ds-icon menu-icon')
             <span>재구매 관리</span>
             @php
@@ -1119,7 +1119,7 @@
         <div class="menu-group-items">
         @if($vis('documents'))
         <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('documents.index') }}" data-title="서류 관리">
+          <a class="menu-link" data-icon="briefcase" href="{{ route('documents.index') }}" data-title="서류 관리">
             @dsicon('briefcase', 'ds-icon menu-icon')
             <span>서류 관리</span>
           </a>
@@ -1127,7 +1127,7 @@
         @endif
         @if($vis('privacy-consents'))
         <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
+          <a class="menu-link" data-icon="check-user" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
             @dsicon('check-user', 'ds-icon menu-icon')
             <span>개인정보동의</span>
           </a>
@@ -1145,7 +1145,7 @@
         <div class="menu-group-items">
         @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
             @dsicon('coin-hand', 'ds-icon menu-icon')
             <span>NHIS 청구</span>
             @php $nhisCount = \App\Models\Order::where('nhis_claim_status','pending')->whereIn('status',['delivered','shipping','confirmed'])->count(); @endphp
@@ -1157,7 +1157,7 @@
         @endif
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('invoice.index') }}" data-title="계산서 발행">
+          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">
             @dsicon('receipt', 'ds-icon menu-icon')
             <span>계산서 발행</span>
             @php
@@ -1177,7 +1177,7 @@
         @endif
         @if($vis('settlement'))
         <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('settlement.index') }}" data-title="정산/회계">
+          <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
             @dsicon('calculator', 'ds-icon menu-icon')
             <span>정산/회계</span>
             @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
@@ -1189,7 +1189,7 @@
         @endif
         @if($vis('taxinvoice'))
         <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
+          <a class="menu-link" data-icon="presentation-03" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
             @dsicon('presentation-03', 'ds-icon menu-icon')
             <span>전자세금계산서</span>
           </a>
@@ -1197,7 +1197,7 @@
         @endif
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('cashbill.index') }}" data-title="현금영수증">
+          <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
             @dsicon('cash', 'ds-icon menu-icon')
             <span>현금영수증</span>
           </a>
@@ -1215,7 +1215,7 @@
         <div class="menu-group-items">
         @if($vis('fax'))
         <div class="menu-item {{ request()->routeIs('fax*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('fax.index') }}" data-title="팩스 발송">
+          <a class="menu-link" data-icon="printer" href="{{ route('fax.index') }}" data-title="팩스 발송">
             @dsicon('printer', 'ds-icon menu-icon')
             <span>팩스 발송</span>
           </a>
@@ -1223,7 +1223,7 @@
         @endif
         @if($vis('dispatch'))
         <div class="menu-item {{ request()->routeIs('dispatch*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('dispatch.index') }}" data-title="발송/발행 내역">
+          <a class="menu-link" data-icon="send-money" href="{{ route('dispatch.index') }}" data-title="발송/발행 내역">
             @dsicon('send-money', 'ds-icon menu-icon')
             <span>발송/발행 내역</span>
           </a>
@@ -1241,7 +1241,7 @@
         <div class="menu-group-items">
         @if($vis('institutional-notices'))
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
+          <a class="menu-link" data-icon="police-station" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
             @dsicon('police-station', 'ds-icon menu-icon')
             <span>기관 공지사항</span>
           </a>
@@ -1249,7 +1249,7 @@
         @endif
         @if($vis('notices'))
         <div class="menu-item {{ request()->routeIs('notices*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('notices.index') }}" data-title="공지사항">
+          <a class="menu-link" data-icon="notification-calendar" href="{{ route('notices.index') }}" data-title="공지사항">
             @dsicon('notification-calendar', 'ds-icon menu-icon')
             <span>공지사항</span>
             <span class="menu-badge blue" id="noticNavBadge" style="display:none;"></span>
@@ -1258,7 +1258,7 @@
         @endif
         @if($vis('inquiries'))
         <div class="menu-item {{ request()->routeIs('inquiries*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('inquiries.index') }}" data-title="문의하기">
+          <a class="menu-link" data-icon="bubble-chat-edit" href="{{ route('inquiries.index') }}" data-title="문의하기">
             @dsicon('bubble-chat-edit', 'ds-icon menu-icon')
             <span>문의하기</span>
             @if(Auth::user()->role === 'admin')
@@ -1275,7 +1275,7 @@
         @endif
         @if($vis('service-requests'))
         <div class="menu-item {{ request()->routeIs('sr.*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('sr.index') }}" data-title="SR 관리">
+          <a class="menu-link" data-icon="dialogue" href="{{ route('sr.index') }}" data-title="SR 관리">
             @dsicon('dialogue', 'ds-icon menu-icon')
             <span>SR 관리</span>
             @php
@@ -1300,21 +1300,21 @@
         <div class="menu-group-items">
         @if($vis('admin-users'))
         <div class="menu-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
+          <a class="menu-link" data-icon="user-shield" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
             @dsicon('user-shield', 'ds-icon menu-icon')<span>관리자 관리</span>
           </a>
         </div>
         @endif
         @if($vis('permission-groups'))
         <div class="menu-item {{ request()->routeIs('permission-groups*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('permission-groups.index') }}" data-title="권한 그룹">
+          <a class="menu-link" data-icon="lock-group" href="{{ route('permission-groups.index') }}" data-title="권한 그룹">
             @dsicon('lock-group', 'ds-icon menu-icon')<span>권한 그룹</span>
           </a>
         </div>
         @endif
         @if($vis('delegation-settings'))
         <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
             @dsicon('curricullum-vitae', 'ds-icon menu-icon')
             <span>위임장 설정</span>
           </a>
@@ -1322,7 +1322,7 @@
         @endif
         @if($vis('ocr-settings'))
         <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
+          <a class="menu-link" data-icon="scan-woman-user" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
             @dsicon('scan-woman-user', 'ds-icon menu-icon')
             <span>OCR 설정</span>
           </a>
@@ -1330,7 +1330,7 @@
         @endif
         @if($vis('nice-settings'))
         <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
+          <a class="menu-link" data-icon="story-user" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
             @dsicon('story-user', 'ds-icon menu-icon')
             <span>본인확인 설정</span>
           </a>
@@ -1774,7 +1774,7 @@ document.addEventListener('click', (e) => {
     const href = a.getAttribute('href');
     if (!href || href === '#' || href.startsWith('javascript')) return;
     e.preventDefault();
-    window.ceOpenTab(href, a.dataset.ceTab || a.textContent.trim(), a.dataset.ceIcon || 'bx-window-alt');
+    window.ceOpenTab(href, a.dataset.ceTab || a.textContent.trim(), a.dataset.ceIcon || '');
   });
 
   /* ── 커스텀 알림 / 확인 다이얼로그 ────────────────────────

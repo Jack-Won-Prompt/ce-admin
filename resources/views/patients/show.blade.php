@@ -220,7 +220,7 @@
 
         <div class="tab-pane active" id="tab-rx">
           @forelse($patient->prescriptions as $rx)
-          <div class="rx-row" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '{{ $rx->rx_number }} 검수', 'bx-scan')">
+          <div class="rx-row" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '{{ $rx->rx_number }} 검수', 'file-edit-02')">
             <div style="width:36px;height:36px;border-radius:var(--radius);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <i class="fa-solid fa-file-waveform" style="color:var(--primary);font-size:14px;"></i>
             </div>

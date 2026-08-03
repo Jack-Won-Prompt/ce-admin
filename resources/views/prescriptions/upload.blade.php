@@ -242,7 +242,7 @@
       </div>
       <div class="card-body" style="padding:10px;">
         @forelse($prescriptions as $rx)
-        <div class="history-item" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '{{ $rx->rx_number }} 검수', 'bx-scan')">
+        <div class="history-item" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '{{ $rx->rx_number }} 검수', 'file-edit-02')">
           <div style="font-size:18px;flex-shrink:0;">
             @if(strtolower(pathinfo($rx->image_original_name, PATHINFO_EXTENSION)) === 'pdf')
               <i class="fa-regular fa-file-pdf" style="color:var(--danger);"></i>

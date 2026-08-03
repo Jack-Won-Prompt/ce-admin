@@ -837,7 +837,7 @@ window.orderOpenRxTab = function (ev, el) {
   if (!url) return false;
   const rx = el.dataset.rx ? el.dataset.rx + ' 검수' : '처방전 검수';
   if (typeof window.ceOpenTab === 'function') {
-    window.ceOpenTab(url, rx, 'bx-scan');
+    window.ceOpenTab(url, rx, 'file-edit-02');
   } else {
     window.open(url, '_blank', 'noopener');
   }

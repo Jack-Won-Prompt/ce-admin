@@ -74,7 +74,7 @@
 
     const url = RX_BASE + '/' + encodeURIComponent(row.rx_number);
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, row.rx_number + ' 검수', 'bx-scan');
+      window.ceOpenTab(url, row.rx_number + ' 검수', 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }

@@ -548,7 +548,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     if (r.record_type === 'prescription') {
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
       ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rx_number),
-                (r.rx_number || '처방전') + ' 검수', 'bx-scan');
+                (r.rx_number || '처방전') + ' 검수', 'file-edit-02');
     } else {
       openDetail('SELL', r.mgtKey);
     }
