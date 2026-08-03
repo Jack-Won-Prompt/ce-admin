@@ -1276,7 +1276,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       @if($prescription->review_memo)
-      <div class="card mt-3">
+      <div class="card mt-3" id="reviewMemoCard">
         <div class="card-header"><i class="fa-solid fa-note-sticky" style="color:var(--warning);"></i><span class="card-header-title">검수 메모</span></div>
         <div class="card-body" style="font-size:12px;color:var(--text-secondary);">{{ $prescription->review_memo }}</div>
       </div>
@@ -4340,6 +4340,18 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('tiIssuedBadge')?.remove();
     const tiBadge = document.getElementById('tiResultBadge');
     if (tiBadge) tiBadge.style.display = 'none';
+
+    // 등록자 카드 — 새 건은 아직 등록자가 없다(저장 시점에 정해진다).
+    // 이름·아바타·등록일시·등록자 메모·채팅 버튼이 통째로 이전 건 것이므로 빈 상태로 되돌린다.
+    const uploader = document.getElementById('infoPanel-uploader');
+    if (uploader) {
+      uploader.innerHTML =
+        '<div style="font-size:11px;color:var(--text-muted);">'
+        + '<i class="fa-solid fa-circle-question"></i> 등록자 정보 없음</div>';
+    }
+
+    // 검수 메모 카드(이전 건의 메모)
+    document.getElementById('reviewMemoCard')?.remove();
 
     // 처방 제품 요약(환자명·1일 처방개수·처방일수·총개수)과 판매유형 배지
     set('rx-ref-name',  '-');
