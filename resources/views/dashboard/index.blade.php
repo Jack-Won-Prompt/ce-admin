@@ -73,7 +73,7 @@
 
     const url = RX_BASE + '/' + encodeURIComponent(row.rx_number);
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, row.rx_number + ' 검수', 'file-edit-02');
+      window.ceOpenTab(url, '처방전 관리 - ' + row.rx_number, 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }

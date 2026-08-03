@@ -252,7 +252,7 @@ window.HELP_TOUR_STEPS = [
   function openReviewTab(rxNumber) {
     const url = DETAIL_BASE + '/' + encodeURIComponent(rxNumber);
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, rxNumber + ' 검수', 'file-edit-02');
+      window.ceOpenTab(url, '처방전 관리 - ' + rxNumber, 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }

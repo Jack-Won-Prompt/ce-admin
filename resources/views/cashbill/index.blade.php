@@ -478,7 +478,7 @@
     if (r._source === 'order') {
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
       ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rxNumber),
-                (r.rxNumber || '처방전') + ' 검수', 'file-edit-02');
+                '처방전 관리 - ' + (r.rxNumber || '신규'), 'file-edit-02');
     } else {
       openDetail(r.mgtKey);
     }
