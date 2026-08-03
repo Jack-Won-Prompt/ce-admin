@@ -5,21 +5,27 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 /* ── CSS 변수 기본값 (인스턴스별 el.style.setProperty로 오버라이드) ── */
+/* 값은 호스트 페이지의 디자인 토큰(Figma DS)을 따라간다.
+   토큰이 없는 환경(그리드 단독 사용)에서도 깨지지 않도록 뒤에 원래 값을 fallback 으로 둔다.
+   예전 강조색 #3c82c4 는 브랜드와 무관한 범용 파랑이었다. */
 .cg-root {
-  --cg-accent:            #3c82c4;   /* 강조색 (버튼, 정렬 아이콘, 편집 테두리) */
-  --cg-accent-dark:       #2a6aad;   /* 강조색 어둡게 (hover) */
-  --cg-header-bg:         #ffffff;   /* 헤더·툴바 배경 (본문과 같은 흰색, 구분은 하단 테두리로) */
-  --cg-header-group-bg:   #d8e3ef;   /* 그룹 헤더 배경 */
-  --cg-header-hover-bg:   #dde6f0;   /* 정렬 헤더 hover */
-  --cg-footer-bg:         #f0f3f7;   /* 하단 상태바 배경 */
-  --cg-selected-bg:       #ddeeff;   /* 선택 행 배경 */
-  --cg-selected-mix-bg:   #bbdcff;   /* 선택 + 수정/신규 행 혼합 */
+  --cg-accent:            var(--primary-500, #28798B);  /* 강조색 (버튼, 정렬 아이콘, 편집 테두리) */
+  --cg-accent-dark:       var(--primary-600, #0B5C6E);  /* 강조색 어둡게 (hover) */
+  --cg-header-bg:         var(--gray-0,   #ffffff);     /* 헤더·툴바 배경 (본문과 같은 흰색, 구분은 하단 테두리로) */
+  --cg-header-group-bg:   var(--gray-100, #F3F5F7);     /* 그룹 헤더 배경 */
+  --cg-header-hover-bg:   var(--gray-50,  #F9FAFC);     /* 정렬 헤더 hover */
+  --cg-footer-bg:         var(--gray-50,  #F9FAFC);     /* 하단 상태바 배경 */
+  --cg-selected-bg:       var(--primary-50,  #E9F9FB);  /* 선택 행 배경 */
+  --cg-selected-mix-bg:   var(--primary-100, #D3F1F7);  /* 선택 + 수정/신규 행 혼합 */
+  --cg-summary-bg:        var(--gray-100, #F3F5F7);     /* Sum 행 배경 */
+  --cg-border:            var(--gray-200, #E8EAEC);     /* 헤더·외곽·푸터·달력 테두리 */
+  --cg-row-border:        var(--gray-100, #F3F5F7);     /* 행·셀 구분선 */
+  --cg-border-sub:        var(--gray-300, #C2C5C8);     /* 버튼·스크롤바·Sum 상단선 */
+
+  /* 수정/신규 행은 의미색이라 DS 확장 회신 전까지 기존 값을 유지한다
+     (docs/DS-extension-request_semantic-colors.md) */
   --cg-modified-bg:       #fff8e6;   /* 수정 행 배경 */
   --cg-new-bg:            #f0fff4;   /* 신규 행 배경 */
-  --cg-summary-bg:        #eef2f8;   /* Sum 행 배경 */
-  --cg-border:            #c0c8d0;   /* 헤더·외곽·푸터·달력 테두리 */
-  --cg-row-border:        #e4e8ed;   /* 행·셀 구분선 */
-  --cg-border-sub:        #b0bcc8;   /* 버튼·스크롤바·Sum 상단선 */
 }
 
 /* ── Wrap ── */

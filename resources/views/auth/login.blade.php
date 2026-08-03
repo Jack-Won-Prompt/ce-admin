@@ -12,9 +12,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:       #00B0CA;
-      --primary-dark:  #008EA4;
-      --primary-light: #E6F7FA;
+      --primary:       #28798B;
+      --primary-dark:  #0B5C6E;
+      --primary-light: #E9F9FB;
       --danger:        #EF4444;
       --text-primary:  #0D1B2A;
       --text-muted:    #8B95A1;
@@ -115,7 +115,7 @@
     }
     .left-headline h1 em {
       font-style: normal;
-      background: linear-gradient(90deg, #7FD8E4, #4FC8DA, #00B0CA);
+      background: linear-gradient(90deg, #72BCCC, #4898A9, #28798B);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
@@ -131,7 +131,7 @@
       width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 19px;
     }
-    .left-feature-icon.blue   { background: rgba(0,176,202,.2);  color: #7FD8E4; }
+    .left-feature-icon.blue   { background: rgba(0,176,202,.2);  color: #72BCCC; }
     .left-feature-icon.cyan   { background: rgba(6,182,212,.15);   color: #67E8F9; }
     .left-feature-icon.green  { background: rgba(16,185,129,.15);  color: #6EE7B7; }
     .left-feature-icon.amber  { background: rgba(245,158,11,.15);  color: #FCD34D; }

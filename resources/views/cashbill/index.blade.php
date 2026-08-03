@@ -1015,7 +1015,7 @@ async function openPrint(mgtKey) {
   .r-footer p { margin: 0; }
   .no-print { text-align: right; padding: 14px 0 0; }
   .no-print button {
-    padding: 8px 20px; background: #00B0CA; color: #fff; border: none;
+    padding: 8px 20px; background: #28798B; color: #fff; border: none;
     border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   @media print {

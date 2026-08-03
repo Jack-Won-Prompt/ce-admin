@@ -75,7 +75,7 @@
   .va-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   .va-badge.done      { background: var(--success-light); color: var(--success); }
   .va-badge.waiting   { background: var(--warning-light); color: var(--warning); }
-  .va-badge.ready     { background: var(--info-light,#e0f4fb); color: var(--info,#00B0CA); }
+  .va-badge.ready     { background: var(--info-light,#e0f4fb); color: var(--info,#0EA5E9); }
   .va-badge.expired   { background: var(--border); color: var(--text-muted); }
   .va-badge.none      { background: var(--border); color: var(--text-muted); }
 

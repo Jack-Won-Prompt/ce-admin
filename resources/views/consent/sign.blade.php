@@ -24,7 +24,7 @@
       overflow: hidden;
     }
     .card-header {
-      background: linear-gradient(135deg, #00B0CA, #008EA4);
+      background: linear-gradient(135deg, #28798B, #0B5C6E);
       color: #fff;
       padding: 24px 20px 20px;
       text-align: center;
@@ -83,7 +83,7 @@
     .patient-box .name {
       font-size: 22px;
       font-weight: 800;
-      color: #00B0CA;
+      color: #28798B;
       letter-spacing: -.3px;
     }
     .patient-box .sub {
@@ -108,7 +108,7 @@
     .btn-verify {
       margin-left: auto; flex-shrink: 0;
       padding: 9px 14px; border: none; border-radius: 8px;
-      background: #00B0CA; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      background: #28798B; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
     }
     .btn-verify:disabled { background: #9ec3fb; cursor: default; }
     .verify-badge { margin-left: auto; flex-shrink: 0; font-size: 22px; }
@@ -155,7 +155,7 @@
       background: #fff;
       transition: border-color .2s;
     }
-    .sig-wrap.active { border-color: #00B0CA; border-style: solid; }
+    .sig-wrap.active { border-color: #28798B; border-style: solid; }
     .sig-wrap canvas {
       display: block;
       width: 100%;
@@ -198,8 +198,8 @@
     }
     .btn:active { transform: scale(.97); }
     .btn-cancel { background: #f3f4f6; color: #4b5563; }
-    .btn-agree  { background: #00B0CA; color: #fff; box-shadow: 0 4px 12px rgba(0,176,202,.3); }
-    .btn-agree:disabled { background: #7FD8E4; box-shadow: none; cursor: not-allowed; }
+    .btn-agree  { background: #28798B; color: #fff; box-shadow: 0 4px 12px rgba(0,176,202,.3); }
+    .btn-agree:disabled { background: #72BCCC; box-shadow: none; cursor: not-allowed; }
 
     /* 결과 화면 */
     .result-screen {
@@ -355,7 +355,7 @@ function resizeCanvas() {
   canvas.height = 180 * devicePixelRatio;
   canvas.style.height = '180px';
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  ctx.strokeStyle = '#00B0CA';
+  ctx.strokeStyle = '#28798B';
   ctx.lineWidth   = 2.5;
   ctx.lineCap     = 'round';
   ctx.lineJoin    = 'round';

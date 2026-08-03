@@ -29,34 +29,72 @@
        SOLDOC DESIGN TOKENS
     ═══════════════════════════════════════════ */
     :root {
-      /* 콜로플라스트 브랜드 시안(#00B0CA) 기준 팔레트 */
-      --primary:        #00B0CA;
-      --primary-light:  #E6F7FA;
-      --primary-dark:   #008EA4;
-      --primary-accent: #7FD8E4;
+      /* ── Figma DS 원본 램프 ────────────────────────────────
+         파일: 콜로플라스트_CE Admin_pc · 🔒 Design System > colors
+         이 블록은 DS 정의값을 그대로 옮긴 것이다. 여기 값은 임의로 고치지 않는다.
+         화면에서 쓰는 토큰은 아래 '역할 토큰'에서 이 램프를 가리키게 한다. */
+      --primary-50:   #E9F9FB;
+      --primary-100:  #D3F1F7;
+      --primary-200:  #A9DCE7;
+      --primary-300:  #72BCCC;
+      --primary-400:  #4898A9;
+      --primary-500:  #28798B;   /* DS default */
+      --primary-600:  #0B5C6E;
+      --primary-700:  #044456;
+      --primary-800:  #003847;
+      --primary-900:  #022C3A;
+      --primary-1000: #02202A;
+
+      --gray-0:    #FFFFFF;
+      --gray-50:   #F9FAFC;
+      --gray-100:  #F3F5F7;
+      --gray-200:  #E8EAEC;
+      --gray-300:  #C2C5C8;
+      --gray-400:  #999EA4;
+      --gray-500:  #83888F;
+      --gray-600:  #656C74;
+      --gray-700:  #474D54;
+      --gray-800:  #333940;
+      --gray-900:  #25292F;
+      --gray-1000: #101317;
+
+      --alert-50:  #FBEEEF;
+      --alert-100: #FBE3E4;
+      --alert-500: #D73D3F;      /* DS 이름은 alert/500-warning 이나 값은 빨강이다 */
+
+      /* ── 역할 토큰 ─────────────────────────────────────────
+         화면 코드는 항상 이쪽을 쓴다. DS 값이 바뀌면 위 램프만 고치면 된다. */
+      --primary:        var(--primary-500);
+      --primary-light:  var(--primary-50);
+      --primary-dark:   var(--primary-600);
+      --primary-accent: var(--primary-300);
+
+      /* 의미색 — DS 미정의. 확장 요청서(docs/DS-extension-request_semantic-colors.md)
+         회신이 오면 이 네 줄만 새 램프로 교체한다. danger 는 DS 의 alert 를 이미 쓴다. */
       --success:        #12B76A;  --success-light: #ECFDF5;
       --warning:        #F59E0B;  --warning-light: #FFFBEB;
-      --danger:         #EF4444;  --danger-light:  #FEF2F2;
+      --danger:         var(--alert-500);  --danger-light:  var(--alert-50);
       --info:           #0EA5E9;  --info-light:    #F0F9FF;
       --purple:         #7C3AED;
-      --bg:             #F4F6FA;
-      --bg-card:        #FFFFFF;
-      --border:         #E5E9F0;
-      --border-light:   #F1F4F9;
-      --text-primary:   #0D1B2A;
-      --text-secondary: #2D3A4A;
-      --text-muted:     #8B95A1;
+
+      --bg:             var(--gray-100);
+      --bg-card:        var(--gray-0);
+      --border:         var(--gray-200);
+      --border-light:   var(--gray-100);
+      --text-primary:   var(--gray-1000);
+      --text-secondary: var(--gray-800);
+      --text-muted:     var(--gray-400);
       --shadow:    0 1px 3px rgba(13,27,42,.06), 0 1px 2px rgba(13,27,42,.04);
       --shadow-md: 0 4px 12px rgba(13,27,42,.08), 0 2px 6px rgba(13,27,42,.04);
       --shadow-lg: 0 16px 32px rgba(13,27,42,.10), 0 4px 8px rgba(13,27,42,.04);
       --radius:    8px;
       --radius-lg: 12px;
       --transition: all .18s ease;
-      --menu-bg:     #FFFFFF;
-      --menu-color:  #4B5563;
-      --menu-active: #00B0CA;
-      --nav-h: 60px;
-      --sidebar-w: 240px;
+      --menu-bg:     var(--gray-0);
+      --menu-color:  var(--gray-600);
+      --menu-active: var(--primary-500);
+      --nav-h: 68px;          /* Figma header/로고영역 높이 */
+      --sidebar-w: 320px;     /* Figma sidebar 폭 */
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -79,14 +117,16 @@
     .layout-container { display: flex; flex: 1; min-height: 0; }
 
     /* ── Sidebar ── */
+    /* Figma: 폭 320, padding 0 16 16, 페이지 배경 위에 흰 메뉴 패널이 얹힌 구조라
+       사이드바 자체는 배경·테두리가 없다 */
     .layout-menu {
       width: var(--sidebar-w);
       flex-shrink: 0;
-      background: var(--menu-bg);
+      background: transparent;
+      padding: 0 16px 16px;
       position: fixed; top: 0; left: 0; bottom: 0;
       z-index: 100;
       overflow-y: auto; overflow-x: hidden;
-      border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       transition: width .25s cubic-bezier(.4,0,.2,1), transform .25s cubic-bezier(.4,0,.2,1);
       scrollbar-width: none;
@@ -167,21 +207,28 @@
     .app-brand-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; letter-spacing: 0; }
 
     /* Menu sections */
-    .menu-inner { flex: 1; padding: 6px 0 10px; }
+    .menu-inner {
+      flex: 1;
+      background: var(--gray-0);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 16px;
+      backdrop-filter: blur(8px);
+    }
+    /* 그룹 안 항목은 간격 없이 붙는다(Figma) */
+    .menu-group-items { display: flex; flex-direction: column; }
+    /* 그룹 헤더 — Figma: Pretendard Medium 11 / lh 1.2 / grayscale-600, 우측 12px chevron */
     .menu-header {
-      /* 그룹 라벨은 한글이라 uppercase 효과가 없고, 자간이 넓으면 커진 글자가 흐트러져
-         letter-spacing 을 줄였다 */
-      font-size: 12.5px; font-weight: 700; color: var(--text-secondary);
-      letter-spacing: -.1px;
-      padding: 16px 18px 6px;
-      /* 그룹 접기 토글 버튼 */
-      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 500; line-height: 1.2;
+      color: var(--gray-600);
+      padding: 0 0 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
       width: 100%; background: none; border: none;
       font-family: inherit; text-align: left; cursor: pointer;
     }
     .menu-header:hover { color: var(--primary); }
     .menu-caret {
-      margin-left: auto; font-size: 15px; opacity: .55;
+      margin-left: auto; width: 12px; height: 12px; flex-shrink: 0;
       transition: transform .18s ease;
     }
     .menu-group.is-collapsed .menu-caret { transform: rotate(-90deg); }
@@ -198,33 +245,27 @@
     /* 아이콘 모드에서는 헤더가 숨겨져 펼칠 수 없으므로 접힘을 무시한다 */
     .layout-menu.collapsed .menu-group.is-collapsed > .menu-group-items { display: block; }
 
+    /* 메뉴 항목 — Figma: padding 6/8, gap 8, radius 8, 아이콘 16, 텍스트 Medium 13 / lh 1.6
+       활성: 배경 primary-50, 텍스트·아이콘 primary-500, Bold 700 */
     .menu-item { position: relative; }
     .menu-link {
-      display: flex; align-items: center; gap: 9px;
-      padding: 9px 12px; margin: 1px 8px; border-radius: 8px;
-      color: var(--menu-color); font-size: 13.5px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 8px;
+      color: var(--gray-800); font-size: 13px; font-weight: 500; line-height: 1.6;
       text-decoration: none; transition: var(--transition); position: relative;
-      letter-spacing: -.1px;
     }
-    .menu-link:hover { background: var(--bg); color: var(--primary); }
+    .menu-link:hover { background: var(--gray-50); color: var(--primary); }
     .menu-item.active > .menu-link {
-      background: var(--primary-light);
-      color: var(--primary);
-      font-weight: 600;
+      background: var(--primary-50);
+      color: var(--primary-500);
+      font-weight: 700;
     }
-    .menu-item.active > .menu-link::before {
-      content: '';
-      position: absolute; left: -8px; top: 50%;
-      transform: translateY(-50%);
-      width: 3px; height: 20px; border-radius: 0 3px 3px 0;
-      background: var(--primary);
-    }
-    .menu-item.active > .menu-link .menu-icon { color: var(--primary); }
     .menu-icon {
-      font-size: 17px; width: 20px; text-align: center; flex-shrink: 0;
-      color: var(--text-muted); transition: color .15s;
+      width: 16px; height: 16px; flex-shrink: 0;
+      color: inherit; transition: color .15s;
     }
-    .menu-link:hover .menu-icon { color: var(--primary); }
+    /* 인라인 SVG 아이콘 — 색은 currentColor 라 위 규칙이 그대로 먹는다 */
+    .ds-icon { width: 16px; height: 16px; flex-shrink: 0; display: block; }
     .menu-badge {
       margin-left: auto;
       background: var(--danger); color: #fff;
@@ -283,14 +324,25 @@
     .navbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
     /* Navbar icon buttons */
+    /* 헤더 아이콘 버튼 — Figma: 32×32, 흰 배경, radius 8, 아이콘 16 */
     .btn-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      border: none; background: transparent;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text-muted); cursor: pointer; position: relative;
-      transition: var(--transition); flex-shrink: 0; font-size: 17px;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: none; background: var(--gray-0);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      color: var(--gray-800); cursor: pointer; position: relative;
+      transition: var(--transition); flex-shrink: 0; font-size: 16px;
     }
-    .btn-icon:hover { background: var(--bg); color: var(--primary); }
+    .btn-icon:hover { background: var(--primary-50); color: var(--primary); }
+
+    /* 사용자 칩 — Figma: 흰 배경, radius 8, height 32, padding 0 12, gap 6 */
+    .nav-user-chip {
+      display: flex; align-items: center; gap: 6px;
+      height: 32px; padding: 0 12px; border-radius: 8px;
+      background: var(--gray-0); color: var(--gray-800);
+      font-size: 13px; font-weight: 500; line-height: 1.6;
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .nav-user-chip-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
     .notif-dot {
       position: absolute; top: 7px; right: 7px;
       width: 7px; height: 7px; border-radius: 50%;
@@ -857,7 +909,7 @@
   <script>
     (function() {
       var THEMES = {
-        coloplast: ['#00b0ca','#e6f7fa','#008ea4','#7fd8e4'],   // 브랜드 기본
+        coloplast: ['#28798B','#E9F9FB','#0B5C6E','#72BCCC'],   // Figma DS primary 500/50/600/300
         blue:   ['#4d6b8c','#edf1f7','#3d5570','#9ab3cc'],
         purple: ['#7c3aed','#f5f3ff','#6d28d9','#c4b5fd'],
         green:  ['#16a34a','#f0fdf4','#15803d','#86efac'],
@@ -943,12 +995,12 @@
         @if($vis('dashboard'))
         <div class="menu-group" data-menu-group="main">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>메인</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>메인</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('dashboard*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('dashboard') }}" data-title="대시보드">
-            <i class="menu-icon bx bx-home-smile"></i><span>대시보드</span>
+            @dsicon('home-04', 'ds-icon menu-icon')<span>대시보드</span>
           </a>
         </div>
         </div></div>
@@ -958,20 +1010,20 @@
         @if($vis('patients', 'prescription-upload', 'prescriptions'))
         <div class="menu-group" data-menu-group="patient">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>환자 · 처방</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>환자ㆍ처방</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('patients'))
         <div class="menu-item {{ request()->routeIs('patients*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('patients.index') }}" data-title="환자관리">
-            <i class="menu-icon bx bx-user-pin"></i><span>환자관리</span>
+          <a class="menu-link" href="{{ route('patients.index') }}" data-title="거래처 관리">
+            @dsicon('id-verified', 'ds-icon menu-icon')<span>거래처 관리</span>
           </a>
         </div>
         @endif
         @if($vis('prescription-upload'))
         <div class="menu-item {{ request()->routeIs('prescriptions.upload') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('prescriptions.upload') }}" data-title="처방전 업로드">
-            <i class="menu-icon bx bx-upload"></i><span>처방전 업로드</span>
+          <a class="menu-link" href="{{ route('prescriptions.upload') }}" data-title="처방자료 업로드">
+            @dsicon('file-down-02', 'ds-icon menu-icon')<span>처방자료 업로드</span>
           </a>
         </div>
         @endif
@@ -979,13 +1031,13 @@
         @perm('prescriptions', 'create')
         <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('prescriptions.create') }}" data-title="처방전 관리">
-            <i class="menu-icon bx bx-edit-alt"></i><span>처방전 관리</span>
+            @dsicon('file-edit-02', 'ds-icon menu-icon')<span>처방전 관리</span>
           </a>
         </div>
         @endperm
         <div class="menu-item {{ request()->routeIs('prescriptions.index') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
-            <i class="menu-icon bx bx-file-blank"></i>
+            @dsicon('file-02', 'ds-icon menu-icon')
             <span>처방전 목록</span>
             @php $pendingCount = \App\Models\Prescription::whereIn('status',['review_needed','ocr_done'])->count(); @endphp
             @if($pendingCount > 0)
@@ -1001,14 +1053,14 @@
         @if($vis('orders', 'repurchase', 'shop-orders'))
         <div class="menu-group" data-menu-group="order">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>주문 · 재구매</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>주문ㆍ재구매</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('orders'))
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" href="{{ route('orders.index') }}" data-title="주문관리">
-            <i class="menu-icon bx bx-cart-alt"></i>
-            <span>주문관리</span>
+          <a class="menu-link" href="{{ route('orders.index') }}" data-title="주문 관리">
+            @dsicon('handle-with-care', 'ds-icon menu-icon')
+            <span>주문 관리</span>
             @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
             @if($orderCount > 0)
               <span class="menu-badge blue">{{ $orderCount }}</span>
@@ -1019,7 +1071,7 @@
         @if($vis('repurchase'))
         <div class="menu-item {{ request()->routeIs('repurchase*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('repurchase.index') }}" data-title="재구매 관리">
-            <i class="menu-icon bx bx-refresh"></i>
+            @dsicon('add-package', 'ds-icon menu-icon')
             <span>재구매 관리</span>
             @php
               try {
@@ -1056,13 +1108,13 @@
         @if($vis('documents', 'privacy-consents'))
         <div class="menu-group" data-menu-group="docs">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>서류 · 동의</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>서류ㆍ동의</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('documents'))
         <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('documents.index') }}" data-title="서류 관리">
-            <i class="menu-icon bx bx-folder-open"></i>
+            @dsicon('briefcase', 'ds-icon menu-icon')
             <span>서류 관리</span>
           </a>
         </div>
@@ -1070,7 +1122,7 @@
         @if($vis('privacy-consents'))
         <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
-            <i class="menu-icon bx bx-check-shield"></i>
+            @dsicon('check-user', 'ds-icon menu-icon')
             <span>개인정보동의</span>
           </a>
         </div>
@@ -1082,13 +1134,13 @@
         @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>청구 · 회계</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
-            <i class="menu-icon bx bx-plus-medical"></i>
+            @dsicon('coin-hand', 'ds-icon menu-icon')
             <span>NHIS 청구</span>
             @php $nhisCount = \App\Models\Order::where('nhis_claim_status','pending')->whereIn('status',['delivered','shipping','confirmed'])->count(); @endphp
             @if($nhisCount > 0)
@@ -1100,7 +1152,7 @@
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('invoice.index') }}" data-title="계산서 발행">
-            <i class="menu-icon bx bx-receipt"></i>
+            @dsicon('receipt', 'ds-icon menu-icon')
             <span>계산서 발행</span>
             @php
               try {
@@ -1120,7 +1172,7 @@
         @if($vis('settlement'))
         <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('settlement.index') }}" data-title="정산/회계">
-            <i class="menu-icon bx bx-calculator"></i>
+            @dsicon('calculator', 'ds-icon menu-icon')
             <span>정산/회계</span>
             @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
             @if($unpaidCount > 0)
@@ -1132,7 +1184,7 @@
         @if($vis('taxinvoice'))
         <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
-            <i class="menu-icon bx bx-file"></i>
+            @dsicon('presentation-03', 'ds-icon menu-icon')
             <span>전자세금계산서</span>
           </a>
         </div>
@@ -1140,7 +1192,7 @@
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('cashbill.index') }}" data-title="현금영수증">
-            <i class="menu-icon bx bx-receipt"></i>
+            @dsicon('cash', 'ds-icon menu-icon')
             <span>현금영수증</span>
           </a>
         </div>
@@ -1152,13 +1204,13 @@
         @if($vis('fax', 'dispatch'))
         <div class="menu-group" data-menu-group="dispatch">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>발송 · 내역</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>발송ㆍ내역</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('fax'))
         <div class="menu-item {{ request()->routeIs('fax*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('fax.index') }}" data-title="팩스 발송">
-            <i class="menu-icon bx bx-printer"></i>
+            @dsicon('printer', 'ds-icon menu-icon')
             <span>팩스 발송</span>
           </a>
         </div>
@@ -1166,7 +1218,7 @@
         @if($vis('dispatch'))
         <div class="menu-item {{ request()->routeIs('dispatch*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('dispatch.index') }}" data-title="발송/발행 내역">
-            <i class="menu-icon bx bx-send"></i>
+            @dsicon('send-money', 'ds-icon menu-icon')
             <span>발송/발행 내역</span>
           </a>
         </div>
@@ -1178,13 +1230,13 @@
         @if($vis('institutional-notices', 'notices', 'inquiries', 'service-requests'))
         <div class="menu-group" data-menu-group="support">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>지원</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>지원</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('institutional-notices'))
         <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
-            <i class="menu-icon bx bx-buildings"></i>
+            @dsicon('police-station', 'ds-icon menu-icon')
             <span>기관 공지사항</span>
           </a>
         </div>
@@ -1192,7 +1244,7 @@
         @if($vis('notices'))
         <div class="menu-item {{ request()->routeIs('notices*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('notices.index') }}" data-title="공지사항">
-            <i class="menu-icon bx bx-bell"></i>
+            @dsicon('notification-calendar', 'ds-icon menu-icon')
             <span>공지사항</span>
             <span class="menu-badge blue" id="noticNavBadge" style="display:none;"></span>
           </a>
@@ -1201,7 +1253,7 @@
         @if($vis('inquiries'))
         <div class="menu-item {{ request()->routeIs('inquiries*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('inquiries.index') }}" data-title="문의하기">
-            <i class="menu-icon bx bx-support"></i>
+            @dsicon('bubble-chat-edit', 'ds-icon menu-icon')
             <span>문의하기</span>
             @if(Auth::user()->role === 'admin')
               @php
@@ -1218,7 +1270,7 @@
         @if($vis('service-requests'))
         <div class="menu-item {{ request()->routeIs('sr.*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('sr.index') }}" data-title="SR 관리">
-            <i class="menu-icon bx bx-clipboard"></i>
+            @dsicon('dialogue', 'ds-icon menu-icon')
             <span>SR 관리</span>
             @php
               try { $srOpen = \App\Models\ServiceRequest::whereIn('status', ['open','in_progress'])->count(); }
@@ -1237,27 +1289,27 @@
         @if($vis('admin-users', 'permission-groups', 'delegation-settings', 'ocr-settings', 'nice-settings'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>설정</span><span class="menu-group-badge"></span><i class="bx bx-chevron-down menu-caret"></i>
+          <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
         @if($vis('admin-users'))
         <div class="menu-item {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('admin.users.index') }}" data-title="관리자 관리">
-            <i class="menu-icon bx bx-shield-quarter"></i><span>관리자 관리</span>
+            @dsicon('user-shield', 'ds-icon menu-icon')<span>관리자 관리</span>
           </a>
         </div>
         @endif
         @if($vis('permission-groups'))
         <div class="menu-item {{ request()->routeIs('permission-groups*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('permission-groups.index') }}" data-title="권한 그룹">
-            <i class="menu-icon bx bx-lock-alt"></i><span>권한 그룹</span>
+            @dsicon('lock-group', 'ds-icon menu-icon')<span>권한 그룹</span>
           </a>
         </div>
         @endif
         @if($vis('delegation-settings'))
         <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
-            <i class="menu-icon bx bx-cog"></i>
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
             <span>위임장 설정</span>
           </a>
         </div>
@@ -1265,7 +1317,7 @@
         @if($vis('ocr-settings'))
         <div class="menu-item {{ request()->routeIs('ocr-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('ocr-settings.edit') }}" data-title="OCR 설정">
-            <i class="menu-icon bx bx-scan"></i>
+            @dsicon('scan-woman-user', 'ds-icon menu-icon')
             <span>OCR 설정</span>
           </a>
         </div>
@@ -1273,7 +1325,7 @@
         @if($vis('nice-settings'))
         <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
           <a class="menu-link" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
-            <i class="menu-icon bx bx-id-card"></i>
+            @dsicon('story-user', 'ds-icon menu-icon')
             <span>본인확인 설정</span>
           </a>
         </div>
@@ -1328,34 +1380,34 @@
         <div class="navbar-actions">
           {{-- Notifications --}}
           <button class="btn-icon" title="알림">
-            <i class="bx bx-bell"></i>
+            @dsicon('bell-02')
             <span class="notif-dot"></span>
           </button>
           {{-- Chat --}}
           <button class="btn-icon" id="chatToggleBtn" title="채팅" onclick="ChatPanel.toggle()">
-            <i class="bx bx-chat"></i>
+            @dsicon('message-typing')
             <span class="notif-dot" id="chatUnreadDot" style="display:none;"></span>
           </button>
           {{-- Help --}}
           <button class="btn-icon" id="helpToggleBtn" title="도움말" onclick="HelpPanel.toggle()">
-            <i class="bx bx-help-circle"></i>
+            @dsicon('help-circle-contained')
           </button>
           {{-- SR 관리 --}}
           @perm('service-requests')
           <button class="btn-icon" id="srToggleBtn" title="SR 관리" onclick="SrPanel.toggle()">
-            <i class="bx bx-clipboard"></i>
+            @dsicon('wrench')
             <span class="btn-icon-badge" id="srBadge" style="display:none;"></span>
           </button>
           @endperm
           {{-- Theme Picker --}}
           <div class="theme-picker-wrap">
             <button class="btn-icon" id="themePickerBtn" title="테마 컬러" onclick="ThemePicker.togglePanel()">
-              <i class="bx bx-palette"></i>
+              @dsicon('palette')
             </button>
             <div class="theme-panel" id="themePanel">
               <div class="theme-panel-title">테마 컬러</div>
               <div class="theme-swatches">
-                <div class="theme-swatch" data-theme="coloplast" style="background:#00b0ca" title="콜로플라스트" onclick="ThemePicker.apply('coloplast')"></div>
+                <div class="theme-swatch" data-theme="coloplast" style="background:#28798B" title="콜로플라스트" onclick="ThemePicker.apply('coloplast')"></div>
                 <div class="theme-swatch" data-theme="blue"   style="background:#4d6b8c" title="스틸"   onclick="ThemePicker.apply('blue')"></div>
                 <div class="theme-swatch" data-theme="purple" style="background:#7c3aed" title="보라"   onclick="ThemePicker.apply('purple')"></div>
                 <div class="theme-swatch" data-theme="green"  style="background:#16a34a" title="초록"   onclick="ThemePicker.apply('green')"></div>
@@ -1369,10 +1421,15 @@
             </div>
           </div>
           @yield('header-actions')
-          <div class="nav-divider"></div>
-          {{-- User avatar --}}
-          <div class="nav-user-avatar" title="{{ Auth::user()->name }}">
-            {{ mb_substr(Auth::user()->name, 0, 1) }}
+          {{-- 로그아웃 (Figma header 우측 6번째 아이콘) --}}
+          <form method="POST" action="{{ route('logout') }}" style="display:contents;">
+            @csrf
+            <button type="submit" class="btn-icon" title="로그아웃">@dsicon('logout-02')</button>
+          </form>
+          {{-- 사용자 칩 (Figma) --}}
+          <div class="nav-user-chip" title="{{ Auth::user()->name }}">
+            @dsicon('user')
+            <span class="nav-user-chip-name">{{ Auth::user()->name }}</span>
           </div>
         </div>
       </header>
@@ -1874,7 +1931,7 @@ document.addEventListener('click', (e) => {
   // ── Theme Color Picker ─────────────────────────────────
   const ThemePicker = (function() {
     const THEMES = {
-      coloplast: { label: '콜로플라스트', primary: '#00b0ca', light: '#e6f7fa', dark: '#008ea4', accent: '#7fd8e4' },
+      coloplast: { label: '콜로플라스트', primary: '#28798B', light: '#E9F9FB', dark: '#0B5C6E', accent: '#72BCCC' },
       blue:   { label: '스틸',   primary: '#4d6b8c', light: '#edf1f7', dark: '#3d5570', accent: '#9ab3cc' },
       purple: { label: '보라',   primary: '#7c3aed', light: '#f5f3ff', dark: '#6d28d9', accent: '#c4b5fd' },
       green:  { label: '초록',   primary: '#16a34a', light: '#f0fdf4', dark: '#15803d', accent: '#86efac' },
@@ -3887,7 +3944,7 @@ function showPrescriptionNotif(data) {
     <button class="sp-back" id="noticePanelBack" style="display:none;" onclick="NoticePanel.back()">
       <i class="fa-solid fa-chevron-left"></i> 목록
     </button>
-    <i class="fa-solid fa-bullhorn" style="font-size:14px;color:#4FC8DA;"></i>
+    <i class="fa-solid fa-bullhorn" style="font-size:14px;color:#4898A9;"></i>
     <span class="sp-title" id="noticePanelTitle">공지사항</span>
     @if(Auth::user()->role === 'admin')
       <a href="{{ route('notices.create') }}" class="sp-back" title="공지 등록">

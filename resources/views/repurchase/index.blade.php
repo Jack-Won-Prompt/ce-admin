@@ -137,7 +137,7 @@ window.HELP_TOUR_STEPS = [
   color:var(--text-muted);
 }
 .cal-header-cell:first-child { color:#ef4444; }
-.cal-header-cell:last-child  { color:#00B0CA; }
+.cal-header-cell:last-child  { color:#28798B; }
 
 .cal-cell {
   min-height:88px; padding:6px 8px;
@@ -151,7 +151,7 @@ window.HELP_TOUR_STEPS = [
 .cal-cell.cal-today .cal-day { color:var(--primary); font-weight:700; }
 .cal-cell.cal-selected { background:var(--primary-light); outline:2px solid var(--primary-accent); outline-offset:-2px; }
 .cal-cell:first-child, .cal-cell:nth-child(7n+1) .cal-day { color:#ef4444; }
-.cal-cell:nth-child(7n) .cal-day { color:#00B0CA; }
+.cal-cell:nth-child(7n) .cal-day { color:#28798B; }
 
 .cal-day { font-size:13px; font-weight:600; line-height:1; }
 .cal-count {

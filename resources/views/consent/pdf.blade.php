@@ -15,7 +15,7 @@
     /* ── 헤더 ── */
     .doc-header {
       text-align: center;
-      border-bottom: 2px solid #00B0CA;
+      border-bottom: 2px solid #28798B;
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
@@ -29,7 +29,7 @@
     .doc-header h1 {
       font-size: 16px;
       font-weight: 700;
-      color: #00B0CA;
+      color: #28798B;
     }
     .doc-header .sub {
       font-size: 9px;
@@ -76,7 +76,7 @@
     .consent-box .title {
       font-size: 10px;
       font-weight: 700;
-      color: #00B0CA;
+      color: #28798B;
       margin-bottom: 6px;
     }
 

@@ -12,8 +12,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:      #00B0CA;
-      --primary-dark: #008EA4;
+      --primary:      #28798B;
+      --primary-dark: #0B5C6E;
       --bg-dark:      #060E1C;
       --bg-card:      rgba(255,255,255,.04);
       --border-dark:  rgba(255,255,255,.08);
@@ -74,7 +74,7 @@
       text-decoration:none; font-family:inherit;
       transition:border-color .2s, color .2s, background .2s;
     }
-    .btn-nav-consent:hover { border-color:rgba(0,176,202,.45); color:#7FD8E4; background:rgba(0,176,202,.08); }
+    .btn-nav-consent:hover { border-color:rgba(0,176,202,.45); color:#72BCCC; background:rgba(0,176,202,.08); }
 
     /* ─── HERO ─── */
     .hero {
@@ -88,7 +88,7 @@
       display:inline-flex; align-items:center; gap:8px;
       background:rgba(0,176,202,.12); border:1px solid rgba(0,176,202,.25);
       border-radius:20px; padding:6px 16px;
-      font-size:12px; font-weight:700; color:#7FD8E4;
+      font-size:12px; font-weight:700; color:#72BCCC;
       letter-spacing:.4px; margin-bottom:28px;
     }
     .hero-title {
@@ -98,7 +98,7 @@
     }
     .hero-title em {
       font-style:normal;
-      background:linear-gradient(90deg,#7FD8E4,#4FC8DA,#00B0CA);
+      background:linear-gradient(90deg,#72BCCC,#4898A9,#28798B);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
     }
     .hero-desc { font-size:16px; color:var(--text-muted); line-height:1.8; max-width:560px; margin:0 auto 40px; }
@@ -121,14 +121,14 @@
       text-decoration:none; font-family:inherit;
       transition:border-color .2s, color .2s;
     }
-    .btn-ghost:hover { border-color:rgba(0,176,202,.4); color:#7FD8E4; }
+    .btn-ghost:hover { border-color:rgba(0,176,202,.4); color:#72BCCC; }
 
     .hero-stats {
       display:flex; align-items:center; justify-content:center; gap:40px;
       margin-top:56px; padding-top:48px;
       border-top:1px solid var(--border-dark); flex-wrap:wrap;
     }
-    .hero-stat-num   { font-size:2rem; font-weight:800; color:#7FD8E4; line-height:1; }
+    .hero-stat-num   { font-size:2rem; font-weight:800; color:#72BCCC; line-height:1; }
     .hero-stat-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
 
     /* ─── SECTION ─── */
@@ -137,7 +137,7 @@
     .section-tag {
       display:inline-flex; align-items:center; gap:6px;
       background:rgba(0,176,202,.1); border-radius:20px;
-      padding:4px 14px; font-size:12px; font-weight:700; color:#7FD8E4; margin-bottom:14px;
+      padding:4px 14px; font-size:12px; font-weight:700; color:#72BCCC; margin-bottom:14px;
     }
     .section-title { font-size:clamp(1.7rem,4vw,2.4rem); font-weight:800; letter-spacing:-.4px; margin-bottom:12px; }
     .section-desc  { font-size:15px; color:var(--text-muted); line-height:1.7; max-width:520px; }
@@ -158,7 +158,7 @@
       display:flex; align-items:center; justify-content:center;
       font-size:22px; margin-bottom:18px;
     }
-    .feature-icon.blue   { background:rgba(0,176,202,.18); color:#7FD8E4; }
+    .feature-icon.blue   { background:rgba(0,176,202,.18); color:#72BCCC; }
     .feature-icon.cyan   { background:rgba(6,182,212,.12);  color:#67E8F9; }
     .feature-icon.green  { background:rgba(16,185,129,.12); color:#6EE7B7; }
     .feature-icon.amber  { background:rgba(245,158,11,.12); color:#FCD34D; }
@@ -186,7 +186,7 @@
     .workflow-num {
       width:36px; height:36px; border-radius:50%;
       background:rgba(0,176,202,.15); border:1.5px solid rgba(0,176,202,.3);
-      color:#7FD8E4; font-size:14px; font-weight:800;
+      color:#72BCCC; font-size:14px; font-weight:800;
       display:flex; align-items:center; justify-content:center;
       margin:0 auto 14px;
     }
@@ -201,7 +201,7 @@
       border-radius:10px; padding:12px 18px;
       font-size:13px; color:rgba(255,255,255,.7);
     }
-    .org-badge i { font-size:20px; color:#7FD8E4; }
+    .org-badge i { font-size:20px; color:#72BCCC; }
 
     /* ─── CTA ─── */
     .cta-section { text-align:center; padding:100px 24px; position:relative; z-index:1; }
@@ -238,7 +238,7 @@
     }
     .footer-links { display:flex; gap:24px; }
     .footer-links a { color:var(--text-dim); text-decoration:none; transition:color .2s; }
-    .footer-links a:hover { color:#7FD8E4; }
+    .footer-links a:hover { color:#72BCCC; }
 
     @media (max-width:768px) {
       .navbar { padding:0 24px; }

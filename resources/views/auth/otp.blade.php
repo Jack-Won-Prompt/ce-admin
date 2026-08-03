@@ -12,9 +12,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:       #00B0CA;
-      --primary-dark:  #008EA4;
-      --primary-light: #E6F7FA;
+      --primary:       #28798B;
+      --primary-dark:  #0B5C6E;
+      --primary-light: #E9F9FB;
       --danger:        #EF4444;
       --success:       #10B981;
       --success-light: #ECFDF5;
@@ -107,7 +107,7 @@
       width: 72px; height: 72px; border-radius: 20px;
       background: rgba(0,176,202,.2); border: 1px solid rgba(0,176,202,.3);
       display: flex; align-items: center; justify-content: center;
-      font-size: 36px; color: #7FD8E4; margin-bottom: 28px;
+      font-size: 36px; color: #72BCCC; margin-bottom: 28px;
     }
     .left-otp-info h2 {
       font-size: 2rem; font-weight: 800; color: #fff;
@@ -115,7 +115,7 @@
     }
     .left-otp-info h2 em {
       font-style: normal;
-      background: linear-gradient(90deg, #7FD8E4, #4FC8DA);
+      background: linear-gradient(90deg, #72BCCC, #4898A9);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
@@ -128,7 +128,7 @@
     .otp-step-num {
       width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
       background: rgba(0,176,202,.25); border: 1px solid rgba(0,176,202,.4);
-      color: #7FD8E4; font-size: 12px; font-weight: 700;
+      color: #72BCCC; font-size: 12px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
     }
     .otp-step-text { font-size: 13px; color: rgba(255,255,255,.55); line-height: 1.6; padding-top: 3px; }

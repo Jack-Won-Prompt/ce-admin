@@ -32,7 +32,7 @@
     flex: 1; height: 42px; border-radius: 9px; border: none;
     font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
   }
-  .ce-dlg-ok     { background: #00B0CA; color: #fff; }
+  .ce-dlg-ok     { background: #28798B; color: #fff; }
   .ce-dlg-ok.danger  { background: #dc2626; }
   .ce-dlg-ok.warning { background: #d97706; }
   .ce-dlg-cancel { background: #f1f5f9; color: #475569; }

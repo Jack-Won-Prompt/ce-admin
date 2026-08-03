@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('assetv', fn (string $expr) =>
             "<?php echo \\App\\Support\\Asset::versioned({$expr}); ?>");
 
+        /* Figma DS 아이콘을 인라인 SVG 로 출력한다. 이름은 Figma 레이어 이름과 같다.
+           사용:  @dsicon('home-04')  ·  @dsicon('bell-02', 'ds-icon hdr-icon') */
+        Blade::directive('dsicon', fn (string $expr) =>
+            "<?php echo \\App\\Support\\DsIcon::svg({$expr}); ?>");
+
         $this->bootPermissions();
 
         // 로그인 이벤트 → 사용자 활동 로그 기록
