@@ -185,26 +185,29 @@
     .layout-menu.collapsed .menu-collapse-btn .ic-collapsed { display: flex; }
 
     /* Brand */
+    /* 브랜드 영역 — Figma: height 68, padding 0 16, space-between, 좌측 gap 8
+       (사이드바가 페이지 배경 위에 얹히는 구조라 하단 구분선은 없다) */
     .app-brand {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: 0 16px;
-      border-bottom: 1px solid var(--border);
       min-height: var(--nav-h);
       text-decoration: none;
       flex-shrink: 0;
     }
     .app-brand-logo {
-      width: 34px; height: 34px; border-radius: 9px;
-      background: var(--primary);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; flex-shrink: 0;
-      letter-spacing: -.5px;
+      width: 28px; height: 28px; flex-shrink: 0;
+      object-fit: cover; display: block;
     }
-    .app-brand-text {
-      font-size: 15px; font-weight: 700; color: var(--text-primary);
-      letter-spacing: -.3px; line-height: 1.2;
+    /* 워드마크가 이미지라 화면낭독기·검색에는 글자가 남아야 한다 */
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
     }
-    .app-brand-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; letter-spacing: 0; }
+    .app-brand-text { width: 64.7px; height: 10px; display: block; }
+    .app-brand-text svg { width: 100%; height: 100%; display: block; }
+    /* Figma: Pretendard Medium 10 / lh 1.2 / grayscale-500 */
+    .app-brand-sub { font-size: 10px; font-weight: 500; line-height: 1.2; color: var(--gray-500); }
+    .app-brand-names { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
 
     /* Menu sections */
     .menu-inner {
@@ -968,16 +971,16 @@
 
       {{-- Brand + Collapse toggle --}}
       <div class="app-brand">
-        <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:12px;text-decoration:none;flex:1;min-width:0;">
-          <div class="app-brand-logo">CE</div>
-          <div style="min-width:0;">
-            <div class="app-brand-text">CE Admin</div>
-            <div class="app-brand-sub">Coloplast Korea</div>
-          </div>
+        <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:8px;text-decoration:none;min-width:0;">
+          <img class="app-brand-logo" src="@assetv('vendor/ds-icons/brand-mark.png')" alt="" width="28" height="28">
+          <span class="app-brand-names">
+            <span class="app-brand-text">@dsicon('brand-wordmark', '')<span class="visually-hidden">CE Admin</span></span>
+            <span class="app-brand-sub">Coloplast Korea</span>
+          </span>
         </a>
         <button class="menu-collapse-btn" id="menuCollapseBtn" onclick="toggleCollapse()" title="메뉴 접기/펼치기">
-          <span class="ic-expanded"><i class="bx bx-sidebar"></i></span>
-          <span class="ic-collapsed"><i class="bx bx-sidebar"></i></span>
+          <span class="ic-expanded">@dsicon('chevron-double-right')</span>
+          <span class="ic-collapsed">@dsicon('chevron-double-right')</span>
         </button>
       </div>
 
