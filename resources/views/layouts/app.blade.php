@@ -102,7 +102,7 @@
     body {
       font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
                    'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
-      background: #FFFFFF;
+      background: var(--bg);   /* Figma 루트 프레임 = grayscale/100 */
       color: var(--text-primary);
       font-size: 14px;
       line-height: 1.6;
@@ -224,7 +224,7 @@
     .menu-header {
       font-size: 11px; font-weight: 500; line-height: 1.2;
       color: var(--gray-600);
-      padding: 0 0 8px;
+      padding: 0;
       display: flex; align-items: center; justify-content: space-between; gap: 6px;
       width: 100%; background: none; border: none;
       font-family: inherit; text-align: left; cursor: pointer;
@@ -250,6 +250,9 @@
 
     /* 메뉴 항목 — Figma: padding 6/8, gap 8, radius 8, 아이콘 16, 텍스트 Medium 13 / lh 1.6
        활성: 배경 primary-50, 텍스트·아이콘 primary-500, Bold 700 */
+    /* Figma: 그룹은 column · gap 8 */
+    .menu-group { display: flex; flex-direction: column; gap: 8px; }
+
     .menu-item { position: relative; }
     .menu-link {
       display: flex; align-items: center; gap: 8px;
@@ -972,7 +975,7 @@
       {{-- Brand + Collapse toggle --}}
       <div class="app-brand">
         <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:8px;text-decoration:none;min-width:0;">
-          <img class="app-brand-logo" src="@assetv('vendor/ds-icons/brand-mark.png')" alt="" width="28" height="28">
+          <img class="app-brand-logo" src="{{ \App\Support\Asset::dataUri('vendor/ds-icons/brand-mark.png') }}" alt="" width="28" height="28">
           <span class="app-brand-names">
             <span class="app-brand-text">@dsicon('brand-wordmark', '')<span class="visually-hidden">CE Admin</span></span>
             <span class="app-brand-sub">Coloplast Korea</span>
@@ -1344,7 +1347,11 @@
         @endif
       </div>{{-- /menu-inner --}}
 
-      {{-- User Footer --}}
+      {{-- Figma 사이드바의 자식은 브랜드 행과 메뉴 패널 둘뿐이다.
+           사용자 정보와 로그아웃은 헤더 우측(사용자 칩·logout-02)으로 옮겼으므로
+           여기에 두면 같은 기능이 두 곳에 생긴다. --}}
+      @php /* 사이드바 하단 사용자 블록 제거 — Figma 174:1510 에 해당 노드 없음 */ @endphp
+      @if(false)
       <div class="menu-footer">
         <div class="menu-user">
           <div class="menu-user-avatar">{{ mb_substr(Auth::user()->name, 0, 1) }}</div>
@@ -1360,6 +1367,7 @@
           </form>
         </div>
       </div>
+      @endif
     </aside>{{-- /layout-menu --}}
 
     {{-- ════ MAIN ════ --}}

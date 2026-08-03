@@ -33,4 +33,39 @@ class Asset
 
         return $v === null ? asset($path) : asset($path) . '?v=' . $v;
     }
+
+    /**
+     * 작은 이미지를 data URI 로 박아 넣는다.
+     *   Asset::dataUri('vendor/ds-icons/brand-mark.png')
+     *
+     * asset() 은 APP_URL 을 그대로 쓴다. 로컬 .env 의 APP_URL 이 운영 도메인이라
+     * 로컬에서 <img> 가 아직 배포되지 않은 운영 서버를 가리켜 깨진다.
+     * 로고처럼 작고 늘 필요한 이미지는 URL 을 거치지 않게 해 그 문제를 없앤다.
+     * 파일이 없으면 빈 문자열을 돌려주므로 화면이 죽지는 않는다.
+     */
+    public static function dataUri(string $path): string
+    {
+        $path = ltrim($path, '/');
+        $key  = 'data:' . $path;
+
+        if (array_key_exists($key, self::$cache)) {
+            return (string) self::$cache[$key];
+        }
+
+        $full = public_path($path);
+        if (!is_file($full)) {
+            return self::$cache[$key] = '';
+        }
+
+        $mime = match (strtolower(pathinfo($full, PATHINFO_EXTENSION))) {
+            'png'  => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+
+        return self::$cache[$key] = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($full));
+    }
 }
