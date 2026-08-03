@@ -220,8 +220,16 @@ class Prescription extends Model
      */
     public function scopeBlankDraft($query)
     {
+        // 초안에 딸린 것이 하나라도 있으면 더는 '빈' 초안이 아니다.
+        // is_blank_draft 는 처방전 자체가 저장될 때만 풀리는데, 위임동의·서류·첨부는
+        // 처방전을 건드리지 않고 따로 생긴다. 그것들을 안 보면 동의가 붙은 초안을
+        // 재사용해서 신규 등록 화면에 이전 동의 상태가 그대로 딸려온다.
         return $query->where('is_blank_draft', true)
-                     ->whereDoesntHave('order');
+                     ->whereDoesntHave('order')
+                     ->whereDoesntHave('consents')
+                     ->whereDoesntHave('documents')
+                     ->whereDoesntHave('attachments')
+                     ->whereDoesntHave('memos');
     }
 
     /** 평문 컬럼이 아직 남아 있는지 (요청당 1회만 확인) */
