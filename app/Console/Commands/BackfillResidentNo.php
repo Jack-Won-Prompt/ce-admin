@@ -7,6 +7,7 @@ use App\Models\Prescription;
 use App\Support\ResidentNo;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * 평문 주민등록번호를 암호화 컬럼으로 이관한다 — P0-1 3단계.
@@ -35,6 +36,15 @@ class BackfillResidentNo extends Command
         }
 
         $this->line(sprintf('DB=%s', DB::connection()->getDatabaseName()));
+
+        // 평문 컬럼이 이미 제거된 뒤라면 이관할 것이 없다.
+        // 없는 컬럼을 조회하면 죽으므로 여기서 갈라준다.
+        if (!Schema::hasColumn('patients', 'resident_no')
+            && !Schema::hasColumn('prescriptions', 'resident_no_ocr')) {
+            $this->info('평문 컬럼이 이미 제거되었습니다 — 이관은 끝난 상태입니다.');
+
+            return $this->option('verify') ? $this->verifyWithoutPlain() : self::SUCCESS;
+        }
 
         return $this->option('verify') ? $this->verify() : $this->backfill();
     }
@@ -149,6 +159,59 @@ class BackfillResidentNo extends Command
         }
 
         $this->error(sprintf('검증 실패 — 문제 %d건. 평문 컬럼을 제거하지 마세요.', $fail));
+
+        return self::FAILURE;
+    }
+
+    /**
+     * 평문 컬럼이 제거된 뒤의 검증.
+     *
+     * 대조할 원본이 없으므로 '평문과 같은가'는 물을 수 없다. 대신 저장된 것이
+     * 실제로 열리는지(키가 맞는지), 마스킹이 암호문과 일치하는지를 본다.
+     * 키를 잘못 바꿔 넣으면 여기서 걸린다.
+     */
+    private function verifyWithoutPlain(): int
+    {
+        $this->newLine();
+        $fail = 0;
+
+        foreach ([
+            ['patients', Patient::class, 'resident_no_enc', 'resident_no_masked', 'resident_no_hash'],
+            ['prescriptions', Prescription::class, 'resident_no_ocr_enc', 'resident_no_ocr_masked', null],
+        ] as [$label, $model, $encCol, $maskCol, $hashCol]) {
+
+            $checked = 0; $undecryptable = 0; $maskMismatch = 0; $hashMismatch = 0;
+
+            $model::withTrashed()->whereNotNull($encCol)->chunkById(200,
+                function ($rows) use (&$checked, &$undecryptable, &$maskMismatch, &$hashMismatch,
+                                      $encCol, $maskCol, $hashCol) {
+                    foreach ($rows as $row) {
+                        $checked++;
+                        try {
+                            $plain = ResidentNo::decrypt($row->getRawOriginal($encCol), 'backfill_verify');
+                        } catch (\Throwable $e) {
+                            $undecryptable++;
+                            continue;
+                        }
+                        if ($row->getRawOriginal($maskCol) !== ResidentNo::mask($plain)) { $maskMismatch++; }
+                        if ($hashCol && $row->getRawOriginal($hashCol) !== ResidentNo::hash($plain)) { $hashMismatch++; }
+                    }
+                });
+
+            $this->line(sprintf(
+                '%-14s 대조 %d건 · 복호화 실패 %d건 · 마스킹 불일치 %d건 · 해시 불일치 %d건',
+                $label, $checked, $undecryptable, $maskMismatch, $hashMismatch));
+            $fail += $undecryptable + $maskMismatch + $hashMismatch;
+        }
+
+        $this->newLine();
+        if ($fail === 0) {
+            $this->info('검증 통과 — 저장된 암호문이 모두 열리고 마스킹·해시가 일치합니다.');
+
+            return self::SUCCESS;
+        }
+
+        $this->error(sprintf('검증 실패 — 문제 %d건. 암호화 키(RRN_ENCRYPTION_KEY)를 확인하세요.', $fail));
 
         return self::FAILURE;
     }

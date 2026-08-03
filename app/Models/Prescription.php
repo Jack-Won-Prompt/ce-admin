@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Support\ResidentNo;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -71,7 +72,10 @@ class Prescription extends Model
      */
     public function setResidentNoOcrAttribute(?string $value): void
     {
-        $this->attributes['resident_no_ocr'] = $value;   // 평문 컬럼은 제거 마이그레이션 전까지만
+        // 평문 컬럼은 제거 마이그레이션 이후 존재하지 않는다. 없는데 쓰면 INSERT 가 죽는다.
+        if (self::hasPlainResidentNoOcrColumn()) {
+            $this->attributes['resident_no_ocr'] = $value;
+        }
 
         $this->attributes['resident_no_ocr_enc']    = ResidentNo::encrypt($value);
         $this->attributes['resident_no_ocr_masked'] = ResidentNo::mask($value);
@@ -218,6 +222,14 @@ class Prescription extends Model
     {
         return $query->where('is_blank_draft', true)
                      ->whereDoesntHave('order');
+    }
+
+    /** 평문 컬럼이 아직 남아 있는지 (요청당 1회만 확인) */
+    public static function hasPlainResidentNoOcrColumn(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= Schema::hasColumn('prescriptions', 'resident_no_ocr');
     }
 
     /** 특정 사용자가 만든 빈 초안 */

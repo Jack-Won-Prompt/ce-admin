@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Support\ResidentNo;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -39,7 +40,11 @@ class Patient extends Model
      */
     public function setResidentNoAttribute(?string $value): void
     {
-        $this->attributes['resident_no'] = $value;   // 평문 컬럼은 제거 마이그레이션 전까지만 유지
+        // 평문 컬럼은 제거 마이그레이션 이후 존재하지 않는다.
+        // 남아 있는 동안(이관 과도기)만 함께 쓴다 — 없는데 쓰면 INSERT 자체가 죽는다.
+        if (self::hasPlainResidentNoColumn()) {
+            $this->attributes['resident_no'] = $value;
+        }
 
         $this->attributes['resident_no_enc']    = ResidentNo::encrypt($value);
         $this->attributes['resident_no_hash']   = ResidentNo::hash($value);
@@ -81,6 +86,14 @@ class Patient extends Model
     public function scopeWhereResidentNo($query, ?string $value)
     {
         return $query->where('resident_no_hash', ResidentNo::hash($value));
+    }
+
+    /** 평문 컬럼이 아직 남아 있는지 (요청당 1회만 확인) */
+    public static function hasPlainResidentNoColumn(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= Schema::hasColumn('patients', 'resident_no');
     }
 
     public function prescriptions(): HasMany
