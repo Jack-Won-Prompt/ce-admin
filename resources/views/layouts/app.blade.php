@@ -95,6 +95,7 @@
       --menu-active: var(--primary);
       --nav-h: 68px;          /* Figma header/로고영역 높이 */
       --sidebar-w: 320px;     /* Figma sidebar 폭 */
+      --sidebar-collapsed-w: 64px;   /* 아이콘만 남기는 접힘 폭 */
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -135,21 +136,25 @@
     .layout-menu.hidden { transform: translateX(-100%); }
 
     /* Collapsed */
-    .layout-menu.collapsed { width: 64px; }
+    .layout-menu.collapsed { width: var(--sidebar-collapsed-w); }
     .layout-menu.collapsed .app-brand-text,
     .layout-menu.collapsed .app-brand-sub,
     .layout-menu.collapsed .menu-header,
     .layout-menu.collapsed .menu-link span,
     .layout-menu.collapsed .menu-badge,
     .layout-menu.collapsed .menu-user-info { display: none; }
+    /* 접힘 폭이 64px 이라 사이드바 좌우 16px 패딩을 그대로 두면 내용이 32px 밖에 못 쓴다 */
+    .layout-menu.collapsed { padding: 0 8px 8px; }
+    .layout-menu.collapsed .menu-inner { padding: 8px; gap: 8px; }
     .layout-menu.collapsed .app-brand { justify-content: center; padding: 0; height: var(--nav-h); }
     .layout-menu.collapsed .app-brand > a { flex: 0 0 auto; min-width: 0; }
-    .layout-menu.collapsed .menu-link { justify-content: center; padding: 10px 0; margin: 2px 8px; }
-    .layout-menu.collapsed .menu-icon { width: auto; }
+    .layout-menu.collapsed .app-brand-names { display: none; }
+    .layout-menu.collapsed .menu-link { justify-content: center; padding: 8px 0; }
+    .layout-menu.collapsed .menu-icon { width: 16px; }
     .layout-menu.collapsed .menu-user { justify-content: center; padding: 10px 0; }
     .layout-menu.collapsed .menu-footer { padding: 10px 6px; }
     .layout-menu.collapsed ~ .layout-page,
-    .layout-page.collapsed { margin-left: 64px; }
+    .layout-page.collapsed { margin-left: var(--sidebar-collapsed-w); }
 
     /* Tooltip on hover when collapsed */
     .layout-menu.collapsed .menu-item { position: relative; }
@@ -317,7 +322,7 @@
       min-height: var(--nav-h);
       transition: left .25s cubic-bezier(.4,0,.2,1);
     }
-    body.menu-collapsed .layout-navbar { left: 64px; }
+    body.menu-collapsed .layout-navbar { left: var(--sidebar-collapsed-w); }
     .navbar-brand-area { flex: 1; min-width: 0; overflow: hidden; }
     .page-title {
       font-size: 16px; font-weight: 700; line-height: 1.2; color: var(--gray-800);
@@ -1573,16 +1578,19 @@ function toggleMenu() {
   const menu = document.getElementById('layoutMenu');
   const page = document.getElementById('layoutPage');
 
+  /* 여백은 CSS 가 --sidebar-w / --sidebar-collapsed-w 로 정한다.
+     예전에는 여기서 인라인 style.marginLeft 로 덮어썼는데, 그 값이 옛 사이드바 폭(260px)
+     이라 폭을 바꾼 뒤로는 펼칠 때마다 본문이 사이드바 밑으로 들어갔다.
+     클래스만 토글하고 치수는 한 곳(토큰)에서만 관리한다. */
+
   // 저장된 상태 복원
   if (localStorage.getItem(STORAGE_KEY) === '1') {
     menu.classList.add('collapsed');
-    page.style.marginLeft = '68px';
     document.body.classList.add('menu-collapsed');
   }
 
   window.toggleCollapse = function() {
     const collapsed = menu.classList.toggle('collapsed');
-    page.style.marginLeft = collapsed ? '68px' : '260px';
     document.body.classList.toggle('menu-collapsed', collapsed);
     localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
   };
