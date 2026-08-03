@@ -307,11 +307,12 @@
     }
 
     /* ── Top Navbar ── */
+    /* Figma 174:1146 — 배경·구분선 없음(페이지 배경 위에 그대로 얹힌다), height 68, padding 0 16 */
     .layout-navbar {
       display: flex; align-items: center; gap: 8px;
-      padding: 0 24px;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      background: transparent;
+      border-bottom: none;
       position: fixed; top: 0; left: var(--sidebar-w); right: 0; z-index: 50;
       min-height: var(--nav-h);
       transition: left .25s cubic-bezier(.4,0,.2,1);
@@ -319,12 +320,12 @@
     body.menu-collapsed .layout-navbar { left: 64px; }
     .navbar-brand-area { flex: 1; min-width: 0; overflow: hidden; }
     .page-title {
-      font-size: 16px; font-weight: 700; color: var(--text-primary);
+      font-size: 16px; font-weight: 700; line-height: 1.2; color: var(--gray-800);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      letter-spacing: -.3px;
     }
     .page-breadcrumb {
-      font-size: 11.5px; color: var(--text-muted); margin-top: 1px;
+      font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--gray-600);
+      margin-top: 4px;   /* Figma: 제목과 gap 4 */
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .navbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
@@ -373,8 +374,83 @@
 
     /* ── Content ── */
     .content-wrapper { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; padding-top: var(--nav-h); }
-    .page-body { flex: 1; padding: 14px 24px 20px; min-width: 0; }
+    /* Figma 174:1184 container — padding 0 16 16, 블록 간 gap 16 */
+    .page-body {
+      flex: 1; min-width: 0;
+      padding: 0 16px 16px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
 
+
+    /* ══════════════════════════════════════════════════
+       Figma 표준 layout 본문 컴포넌트 (174:1184 하위)
+       화면마다 따로 스타일을 짜면 시안과 어긋나므로 여기 한 곳에 둔다.
+    ══════════════════════════════════════════════════ */
+
+    /* 상태 필터 칩 (174:1185) — row gap 8 */
+    .ds-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ds-chip {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 6px 12px; border-radius: 999px;
+      background: var(--gray-200); color: var(--gray-500);
+      font-size: 13px; font-weight: 700; line-height: 1.6;
+      border: none; cursor: pointer; text-decoration: none;
+      transition: var(--transition);
+    }
+    .ds-chip:hover { color: var(--primary); }
+    .ds-chip.active { background: var(--primary); color: var(--gray-0); }
+    /* 건수 배지 — 16×16 원, 칩 상태에 따라 색이 뒤집힌다 */
+    .ds-chip-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 999px;
+      background: var(--gray-500); color: var(--gray-0);
+      font-size: 10px; font-weight: 700; line-height: 1; flex-shrink: 0;
+    }
+    .ds-chip.active .ds-chip-count { background: var(--gray-0); color: var(--primary); }
+
+    /* 검색·필터 카드 (174:1210) — padding 12/16, gap 24, radius 12 */
+    .ds-filter-card {
+      display: flex; align-items: stretch; gap: 24px;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--gray-0);
+    }
+    /* 입력 영역은 9열 그리드 (174:1211) */
+    .ds-filter-fields {
+      flex: 1; min-width: 0;
+      display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px;
+    }
+    .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .ds-filter-field.span-2 { grid-column: span 2; }
+    /* 버튼은 우측 하단 정렬 (174:1236) */
+    .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+    .ds-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-width: 60px; height: 32px; padding: 0 12px;
+      border-radius: 8px; background: var(--gray-0);
+      border: 1px solid var(--gray-200); color: var(--gray-800);
+      font-size: 13px; font-weight: 500; line-height: 1.6;
+      cursor: pointer; transition: var(--transition); white-space: nowrap;
+    }
+    .ds-btn:hover { background: var(--gray-50); }
+    /* 주 동작(검색)은 테두리만 primary — Figma 174:1239 */
+    .ds-btn-primary { border-color: var(--primary); color: var(--primary); }
+    .ds-btn-primary:hover { background: var(--primary-light); }
+
+    /* 그리드 영역 (174:1241) — 상단바 + 카드, gap 12 */
+    .ds-grid-section { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+    .ds-grid-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 32px; flex-shrink: 0;
+    }
+    .ds-grid-card {
+      display: flex; flex-direction: column; flex: 1; min-height: 0;
+      background: var(--gray-0); border-radius: 12px; overflow: hidden;
+    }
+    /* 카드 하단 페이지네이션 줄 (174:1333) */
+    .ds-grid-foot {
+      display: flex; align-items: center; justify-content: flex-end; gap: 2px;
+      padding: 12px; border-top: 1px solid var(--gray-200);
+    }
 
     /* ── Mobile Overlay ── */
     .layout-overlay {
