@@ -9,6 +9,13 @@ class UserActivityLog extends Model
 {
     protected $fillable = [
         'user_id', 'type', 'menu_name', 'route_name', 'url', 'ip_address', 'user_agent',
+        // 감사 확장(P0-7) — 마스킹 해제·다운로드 등 '무엇을 왜' 했는지
+        'action', 'target_type', 'target_id', 'record_count',
+        'reason_code', 'reason_text', 'retention_until',
+    ];
+
+    protected $casts = [
+        'retention_until' => 'date',
     ];
 
     // 라우트명 → 한국어 메뉴명 매핑

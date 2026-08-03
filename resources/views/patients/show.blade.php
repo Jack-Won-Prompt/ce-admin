@@ -138,7 +138,12 @@
             </div>
             <div class="form-group">
               <label class="form-label">주민등록번호</label>
-              <input type="text" class="form-control" id="e-resident" value="{{ $patient->resident_no }}" placeholder="XXXXXX-XXXXXXX" />
+              {{-- 마스킹만 보여준다. 그대로 두면 기존 값이 유지되고, 바꿀 때만 전체를 새로 입력한다(P0-1) --}}
+              <input type="text" class="form-control" id="e-resident"
+                     value="{{ $patient->masked_resident_no }}"
+                     data-masked="{{ $patient->masked_resident_no }}"
+                     placeholder="XXXXXX-XXXXXXX" />
+              <small style="font-size:11px;color:var(--text-muted);">변경할 때만 전체 번호를 새로 입력하세요. 그대로 두면 기존 값이 유지됩니다.</small>
             </div>
           </div>
           <div class="form-grid-2">
@@ -268,7 +273,11 @@
 
     const payload = {
       name,
-      resident_no:         document.getElementById('e-resident').value.trim()    || null,
+      // 마스킹 그대로면 '변경 없음' — 보낸 값이 없으면 서버가 기존 값을 건드리지 않는다
+      resident_no:         (function (el) {
+                             const v = el.value.trim();
+                             return (v === '' || v === el.dataset.masked) ? undefined : v;
+                           })(document.getElementById('e-resident')),
       birth_date:          document.getElementById('e-birth').value               || null,
       gender:              document.getElementById('e-gender').value              || null,
       mobile:              document.getElementById('e-mobile').value.trim()       || null,

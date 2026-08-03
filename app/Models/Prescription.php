@@ -3,6 +3,7 @@
 
 namespace App\Models;
 
+use App\Support\ResidentNo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class Prescription extends Model
         // OCR fields
         'registration_no', 'serial_no', 'is_reissue',
         'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
+        'resident_no_ocr_enc', 'resident_no_ocr_masked',
         'hospital_name', 'hospital_code', 'doctor_name',
         'specialty', 'license_no', 'specialist_no',
         'department', 'disease_name', 'disease_code',
@@ -62,16 +64,36 @@ class Prescription extends Model
         return $data ? (object) $data : null;
     }
 
+    /**
+     * OCR 주민번호는 오인식 여부를 담당자가 판단해야 하므로 원문을 그대로 암호화한다
+     * (정규화하면 '잘못 읽힌 형태' 자체가 사라져 검수가 불가능해진다).
+     * 마스킹만 정규화해서 만든다.
+     */
+    public function setResidentNoOcrAttribute(?string $value): void
+    {
+        $this->attributes['resident_no_ocr'] = $value;   // 평문 컬럼은 제거 마이그레이션 전까지만
+
+        $this->attributes['resident_no_ocr_enc']    = ResidentNo::encrypt($value);
+        $this->attributes['resident_no_ocr_masked'] = ResidentNo::mask($value);
+    }
+
     // ── OCR 주민번호 마스킹 ───────────────────────────────
     public function getMaskedResidentNoOcrAttribute(): ?string
     {
-        if (!$this->resident_no_ocr) return null;
-        $v = preg_replace('/\s+/', '', $this->resident_no_ocr);
-        // XXXXXX-XXXXXXX 형식
-        if (preg_match('/^(\d{6})-?(\d)/', $v, $m)) {
-            return $m[1] . '-' . $m[2] . '******';
+        return $this->resident_no_ocr_masked
+            ?? ResidentNo::mask($this->attributes['resident_no_ocr'] ?? null);
+    }
+
+    /** 검수 화면에서 담당자가 원문을 확인할 때만. 호출 즉시 감사로그가 남는다. */
+    public function residentNoOcrFor(string $reason): ?string
+    {
+        if ($this->resident_no_ocr_enc) {
+            return ResidentNo::decrypt($this->resident_no_ocr_enc, $reason, [
+                'type' => self::class, 'id' => $this->id, 'menu' => '처방전 검수',
+            ]);
         }
-        return $v;
+
+        return $this->attributes['resident_no_ocr'] ?? null;
     }
 
     // ── 상태 라벨 매핑 ───────────────────────────────────

@@ -84,6 +84,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/patients/{patient}/counselings',     [PrescriptionController::class, 'patientCounselings'])->name('patientCounselings');
         Route::get('/{prescription}', [PrescriptionController::class, 'show'])->name('show');
 
+        // 검수 화면에서 담당자가 주민번호 원문을 확인 — 복호화 1회 = 감사로그 1행(P0-1)
+        Route::get('/{prescription}/resident-no', [PrescriptionController::class, 'revealResidentNo'])
+            ->name('revealResidentNo');
+
         // OCR 미리보기 (임시 저장, DB 저장 없음)
         Route::post('/analyze',          [PrescriptionController::class, 'analyze'])->name('analyze');
         // OCR 확인 후 최종 업로드

@@ -382,12 +382,13 @@ class PrescriptionController extends Controller
     {
         $prescriptions = Prescription::with(['patient', 'assignedUser'])->latest()->limit(5)->get();
         $managers      = User::where('role', 'manager')->get();
-        $patientsJson  = \App\Models\Patient::orderBy('name')->get(['id', 'name', 'mobile', 'resident_no'])
+        // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
+        $patientsJson  = \App\Models\Patient::orderBy('name')->get(['id', 'name', 'mobile', 'resident_no_masked'])
             ->map(fn ($p) => [
                 'id'     => $p->id,
                 'name'   => $p->name,
                 'mobile' => $p->mobile ? preg_replace('/(\d{3})(\d{3,4})(\d{4})/', '$1-$2-$3', $p->mobile) : '',
-                'rn'     => $p->resident_no ? substr($p->resident_no, 0, 6) . '-*' : '',
+                'rn'     => $p->resident_no_masked ? substr($p->resident_no_masked, 0, 6) . '-*' : '',
             ])->values();
 
         $mobilePending = Prescription::where('upload_source', 'mobile')
@@ -395,6 +396,21 @@ class PrescriptionController extends Controller
             ->latest()->take(5)->get();
 
         return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending', 'patientsJson'));
+    }
+
+    /**
+     * 검수 화면 '주민번호 표시' — 평문은 이 요청으로만 브라우저에 내려간다.
+     *
+     * 예전에는 화면을 열 때 hidden input 으로 평문을 항상 함께 내려보내고 잠금 아이콘으로
+     * 가리기만 했다. 실제로는 열어보지 않아도 평문이 이미 나가 있었고 기록도 남지 않았다.
+     * 이제 눌렀을 때만 서버가 복호화하며, 그 순간 사유 코드와 함께 감사로그가 남는다.
+     */
+    public function revealResidentNo(Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $value = $prescription->residentNoOcrFor('operator_view')
+            ?: $prescription->patient?->residentNoFor('operator_view');
+
+        return response()->json(['value' => $value ?? '']);
     }
 
     /**
@@ -1072,7 +1088,7 @@ class PrescriptionController extends Controller
             'five_110days'          => 'nullable|string|max:50',
         ]);
 
-        $prescription->update($request->only([
+        $payload = $request->only([
             'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
             'postcode', 'address_detail',
             'hospital_name', 'doctor_name',
@@ -1080,7 +1096,15 @@ class PrescriptionController extends Controller
             'daily_count', 'total_days', 'total_count', 'issued_date', 'repurchase_date',
             'product_name', 'product_code', 'quantity', 'nhis_status',
             'product_price', 'insurance_price', 'patient_id', 'admin_note',
-        ]));
+        ]);
+
+        // 주민번호는 화면에 마스킹으로만 보인다. 담당자가 '표시'를 눌러 원문을 불러오지 않았으면
+        // 값이 오지 않는데, 이때 null 을 그대로 쓰면 저장만으로 기존 값이 지워진다(P0-1).
+        if (!$request->filled('resident_no_ocr')) {
+            unset($payload['resident_no_ocr']);
+        }
+
+        $prescription->update($payload);
 
         // ── 상담 편집 필드 저장 (counseling_data JSON에 merge) ──────────
         $counselingEditable = array_filter([
@@ -1292,7 +1316,9 @@ class PrescriptionController extends Controller
             'confidence' => $prescription->display_confidence,
             'fields'     => [
                 'patient_name_ocr' => $prescription->patient_name_ocr,
-                'resident_no_ocr'  => $prescription->resident_no_ocr,
+                // 재분석 결과는 이미 서버에 저장됐다. 평문을 응답에 실을 이유가 없으므로
+                // 화면 표시에 필요한 마스킹만 내려보낸다 — 평문은 '표시' 경로로만 나간다(P0-1).
+                'resident_no_masked' => $prescription->masked_resident_no_ocr,
                 'mobile_ocr'       => $prescription->mobile_ocr,
                 'address_ocr'      => $prescription->address_ocr,
                 'postcode'         => $prescription->postcode,
@@ -2196,8 +2222,9 @@ HTML;
         $patient = null;
 
         // ① 주민등록번호로 기존 환자 검색 (가장 정확)
+        //    평문 비교가 아니라 조회용 해시로 찾는다 — 평문 컬럼은 곧 사라진다(P0-1)
         if ($residentNo) {
-            $patient = Patient::where('resident_no', $residentNo)->first();
+            $patient = Patient::whereResidentNo($residentNo)->first();
         }
 
         // ② 이름 + 휴대폰으로 검색

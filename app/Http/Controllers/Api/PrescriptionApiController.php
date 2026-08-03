@@ -197,8 +197,8 @@ class PrescriptionApiController extends Controller
                 'serial_no'          => $p->serial_no,
                 'is_reissue'         => $p->is_reissue,
                 'patient_name'       => $p->patient_name_ocr,
-                'resident_no'        => $p->resident_no_ocr
-                    ? substr($p->resident_no_ocr, 0, 7) . '******'
+                'resident_no'        => $p->masked_resident_no_ocr
+                    ? substr($p->masked_resident_no_ocr, 0, 7) . '******'
                     : null,
                 'phone'              => $p->patient?->phone,
                 'mobile'             => $p->patient?->mobile,

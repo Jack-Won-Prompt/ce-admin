@@ -220,7 +220,8 @@ class ConsentController extends Controller
         }
 
         // 폴백: OCR 주민번호 앞 7자리에서 도출
-        $rrn = preg_replace('/\D/', '', (string) $consent->prescription?->resident_no_ocr);
+        // 생년월일·성별은 마스킹에도 남아 있으므로 평문을 열 이유가 없다(P0-1)
+        $rrn = preg_replace('/\D/', '', (string) $consent->prescription?->masked_resident_no_ocr);
         if (strlen($rrn) >= 7) {
             $yy = substr($rrn, 0, 2);
             $md = substr($rrn, 2, 4);
@@ -583,7 +584,8 @@ class ConsentController extends Controller
 
         // ① 위임인
         $put(133, 52, $consent->patient_name ?: $patient?->name);
-        $put(133, 59, $patient?->resident_no);
+        // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1)
+        $put(133, 59, $patient?->residentNoFor('nhis_claim_form'));
         $put(80, 90, $consent->patient_mobile ?: $patient?->mobile);
 
         // ② 준요양기관

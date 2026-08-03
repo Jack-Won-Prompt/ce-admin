@@ -93,13 +93,13 @@ table.purchase-tbl td.center { text-align:center; }
         <td class="label">성 명</td>
         <td>{{ $patient->name ?? $prescription->patient_name_ocr ?? '—' }}</td>
         <td class="label">생년월일</td>
-        <td>{{ $prescription->resident_no_ocr ? substr(preg_replace('/[^0-9]/','',$prescription->resident_no_ocr),0,6) : '—' }}</td>
+        <td>{{ $prescription->masked_resident_no_ocr ? substr(preg_replace('/[^0-9]/','',$prescription->masked_resident_no_ocr),0,6) : '—' }}</td>
       </tr>
       <tr>
         <td class="label">주민등록번호</td>
         <td colspan="3">
           @php
-            $rn = preg_replace('/[^0-9]/', '', $prescription->resident_no_ocr ?? '');
+            $rn = preg_replace('/[^0-9]/', '', $prescription->masked_resident_no_ocr ?? '');
           @endphp
           {{ $rn ? substr($rn,0,6).' - '.substr($rn,6,1).'●●●●●●' : '—' }}
         </td>

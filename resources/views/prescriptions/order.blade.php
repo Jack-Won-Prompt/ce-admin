@@ -1474,7 +1474,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">주민등록번호</span>
                 <div style="display:flex;gap:4px;flex:1;">
-                  <input type="hidden" id="f-resident-real" value="{{ $prescription->resident_no_ocr ?? $prescription->patient?->resident_no ?? '' }}" />
+                  {{-- 평문은 여기에 실어 보내지 않는다. '표시'를 눌러야 서버가 복호화해 내려주고,
+                       그 순간 사유 코드(operator_view)와 함께 감사로그가 남는다(P0-1). --}}
+                  <input type="hidden" id="f-resident-real" value="" />
                   <input type="text" class="form-control" id="f-resident"
                          value="{{ $displayRn }}" placeholder="XXXXXX-XXXXXXX" readonly
                          style="flex:1;background:var(--bg-secondary,#f8f9fa);cursor:default;letter-spacing:1px;" />
@@ -3271,6 +3273,7 @@ window.HELP_TOUR_STEPS = [
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
   const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 새 처방번호 발급
+  const RESIDENT_REVEAL_URL = @json(route('prescriptions.revealResidentNo', $prescription)); // 주민번호 원문(감사 기록됨)
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -3343,12 +3346,31 @@ window.HELP_TOUR_STEPS = [
   }
 
   let _residentVisible = false;
-  function toggleResidentNo() {
+
+  /* 원문은 화면에 미리 실려 있지 않다. 처음 '표시'를 누를 때 서버에서 받아온다.
+     복호화가 서버에서 일어나므로 그 순간 감사로그가 남는다(P0-1). */
+  async function _fetchResidentNo() {
+    const hidden = document.getElementById('f-resident-real');
+    if (hidden.value) return hidden.value;          // 이번 화면에서 이미 열었다면 다시 묻지 않는다
+    try {
+      const res = await fetch(RESIDENT_REVEAL_URL, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json();
+      hidden.value = d.value || '';
+      return hidden.value;
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('주민등록번호를 불러오지 못했습니다.', 'error');
+      return '';
+    }
+  }
+
+  async function toggleResidentNo() {
     const inp    = document.getElementById('f-resident');
-    const real   = document.getElementById('f-resident-real').value;
     const icon   = document.getElementById('icon-resident-toggle');
     _residentVisible = !_residentVisible;
     if (_residentVisible) {
+      const real   = await _fetchResidentNo();
+      if (!real) { _residentVisible = false; return; }
       inp.value    = real;
       inp.readOnly = false;
       inp.style.background = '';
@@ -4470,7 +4492,9 @@ window.HELP_TOUR_STEPS = [
   // ── 원본 복원 ─────────────────────────────────────────
   function resetOCR() {
     document.getElementById('f-name').value         = @json($prescription->patient_name_ocr);
-    document.getElementById('f-resident-real').value = @json($prescription->resident_no_ocr ?? $prescription->patient?->resident_no ?? '');
+    // 원본 복원도 평문을 심지 않는다. 필요하면 '표시' 로 다시 불러온다(P0-1).
+    document.getElementById('f-resident-real').value = '';
+    _residentVisible = false;
     document.getElementById('f-resident').value      = @json($prescription->masked_resident_no_ocr ?? ($prescription->patient?->masked_resident_no ?? ''));
     document.getElementById('f-resident').readOnly   = true;
     document.getElementById('f-resident').style.background = 'var(--bg-secondary,#f8f9fa)';
@@ -5787,11 +5811,14 @@ window.HELP_TOUR_STEPS = [
       const f = res.fields;
       // 폼 필드 업데이트
       document.getElementById('f-name').value     = f.patient_name_ocr || '';
-      document.getElementById('f-resident-real').value = f.resident_no_ocr || '';
-      document.getElementById('f-resident').value      = maskResidentNo(f.resident_no_ocr || '');
+      // 재분석 결과는 서버에 이미 저장됐다. 화면엔 마스킹만 반영하고 원문은 비워 둔다 —
+      // 필요하면 '표시'로 다시 불러온다(그때 감사로그가 남는다).
+      document.getElementById('f-resident-real').value = '';
+      document.getElementById('f-resident').value      = f.resident_no_masked || '';
       document.getElementById('f-resident').readOnly   = true;
       document.getElementById('f-resident').style.background = 'var(--bg-secondary,#f8f9fa)';
       document.getElementById('icon-resident-toggle').className = 'fa-solid fa-lock';
+      _residentVisible = false;
       document.getElementById('f-mobile').value   = f.mobile_ocr       || '';
       document.getElementById('f-postcode').value       = f.postcode       || '';
       document.getElementById('f-address').value        = f.address_ocr   || '';

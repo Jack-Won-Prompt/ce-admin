@@ -2,7 +2,9 @@
 @php
     $patient = $consent->prescription?->patient;
     $name    = $consent->patient_name ?? $patient?->name ?? '';
-    $rrn     = $patient?->resident_no ?? '';
+    // 국민건강보험법 시행규칙 별지 서식이 주민등록번호 기재를 요구하는 지점.
+    // 평문이 필요한 유일한 화면 경로이며, 사유 코드와 함께 감사로그가 남는다(P0-1).
+    $rrn     = $patient?->residentNoFor('nhis_claim_form') ?? '';
     $phone   = $consent->patient_mobile ?? $patient?->mobile ?? '';
     $signDate = $consent->responded_at ?? now();
     $y = $signDate->format('Y');
