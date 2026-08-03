@@ -11,7 +11,7 @@
 .cg-root {
   --cg-accent:            var(--primary,       #28798B);  /* 강조색 (버튼, 정렬 아이콘, 편집 테두리) */
   --cg-accent-dark:       var(--primary-dark,  #0B5C6E);  /* 강조색 어둡게 (hover) */
-  --cg-header-bg:         var(--gray-0,   #ffffff);     /* 헤더·툴바 배경 (본문과 같은 흰색, 구분은 하단 테두리로) */
+  --cg-header-bg:         var(--gray-50,  #F9FAFC);     /* 헤더 배경 (Figma 174:1260) */
   --cg-header-group-bg:   var(--gray-100, #F3F5F7);     /* 그룹 헤더 배경 */
   --cg-header-hover-bg:   var(--gray-50,  #F9FAFC);     /* 정렬 헤더 hover */
   --cg-footer-bg:         var(--gray-50,  #F9FAFC);     /* 하단 상태바 배경 */
@@ -30,10 +30,10 @@
 
 /* ── Wrap ── */
 .cg-wrap {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: inherit;   /* 호스트의 Pretendard 를 그대로 쓴다 */
   font-size: 13px;
   border: 1px solid var(--cg-border);
-  border-radius: 3px;
+  border-radius: 12px;   /* Figma 그리드 카드 */
   overflow: auto;
   background: #fff;
   position: relative;
@@ -57,8 +57,10 @@
    경계선이 사라진다 → inset box-shadow 로 같은 위치에 선을 한 번 더 그려 유지한다. */
 .cg-thead th {
   background: var(--cg-header-bg);
-  color: #333;
-  font-weight: 600;
+  color: var(--gray-600, #656C74);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.6;
   padding: 0;
   border-right: 1px solid var(--cg-border);
   border-bottom: 1px solid var(--cg-border);
@@ -87,13 +89,13 @@
   letter-spacing: 0.3px;
 }
 
+/* Figma: padding 12 · gap 6. 정렬만 운영 요청에 따라 가운데로 둔다 */
 .cg-th-inner {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 8px;
-  min-height: 32px;
-  gap: 4px;
+  padding: 12px;
+  gap: 6px;
 }
 
 .cg-th-inner.sortable { cursor: pointer; }
@@ -147,11 +149,16 @@
 }
 
 /* ── Cell inner ── */
+/* 호스트 페이지가 일반 표에 주는 tbody td 규칙(13.5px 등)이 그리드까지 잡는다.
+   그리드 글자 크기는 여기서 못박아 시안값을 유지한다. */
 .cg-cell-inner {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  min-height: 30px;
+  padding: 10px 12px;   /* Figma 본문 셀 */
+  color: var(--gray-1000, #101317);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
   cursor: default;
   white-space: nowrap;
   overflow: hidden;
@@ -169,8 +176,8 @@
 
 /* ── Row number & checkbox columns ── */
 .cg-col-rownum {
-  width: 40px; min-width: 40px;
-  color: #999; text-align: right; font-size: 11px;
+  width: 60px; min-width: 60px;   /* Figma No 컬럼 */
+  color: var(--gray-1000, #101317); font-size: 13px;
 }
 .cg-col-check { width: 36px; min-width: 36px; text-align: center; }
 

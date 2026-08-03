@@ -913,8 +913,8 @@ class wwGrid {
       return col;
     };
 
-    if (this.rowCheckbox) addCol(36);
-    if (this.rowNumber)   addCol(40);
+    if (this.rowCheckbox) addCol(40);
+    if (this.rowNumber)   addCol(60);   // Figma No 컬럼 60px
     this.columns.forEach(c => {
       this._colMap[c.name] = addCol(c.width || null);
     });
@@ -935,6 +935,9 @@ class wwGrid {
     // 너비는 colgroup <col>이 관리 — th.style.width 미사용
 
     const inner = document.createElement('div');
+    // 헤더 제목은 컬럼 정렬과 무관하게 항상 가운데로 둔다(운영 요청).
+    // Figma 시안은 좌측이지만, 컬럼 수가 많은 목록에서 제목이 가운데인 쪽이
+    // 열 경계를 읽기 쉽다는 판단이다.
     inner.className = 'cg-th-inner' + (sortable ? ' sortable' : '');
     inner.innerHTML = `<span>${label}</span><span class="cg-sort-icon"></span>`;
 
