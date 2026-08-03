@@ -64,27 +64,6 @@ return [
             ]) : [],
         ],
 
-        'lcpoint' => [
-            'driver' => 'mysql',
-            'url' => '',
-            // DB 서버 이전(43.203.246.90 → 3.34.53.36): 운영은 .env의 LCPOINT_DB_HOST로 지정
-            'host' => env('LCPOINT_DB_HOST', '3.34.53.36'),
-            'port' => env('LCPOINT_DB_PORT', '3306'),
-            'database' => env('LCPOINT_DB_DATABASE', 'lcpoint'),
-            'username' => env('LCPOINT_DB_USERNAME', 'lcpoint'),
-            'password' => env('LCPOINT_DB_PASSWORD', 'lcpoint3355!@^'),
-            'unix_socket' => '',
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'strict' => false,
-            'engine' => 'InnoDB',
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
-        ],
-        
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

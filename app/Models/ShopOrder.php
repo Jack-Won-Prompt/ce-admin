@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ShopOrder extends Model
 {
-    protected $connection = 'lcpoint';
+    // shop_orders 는 create_shop_orders_table 마이그레이션이 기본 커넥션에 만든다.
+    // 별도 lcpoint 커넥션을 보던 설정이 오히려 어긋나 있었고, DB 통합으로 그 커넥션도 없어졌다.
 
     protected $fillable = [
         'shop_order_id', 'order_number', 'customer_name', 'customer_phone', 'customer_company',
