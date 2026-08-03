@@ -9,13 +9,13 @@
    토큰이 없는 환경(그리드 단독 사용)에서도 깨지지 않도록 뒤에 원래 값을 fallback 으로 둔다.
    예전 강조색 #3c82c4 는 브랜드와 무관한 범용 파랑이었다. */
 .cg-root {
-  --cg-accent:            var(--primary-500, #28798B);  /* 강조색 (버튼, 정렬 아이콘, 편집 테두리) */
-  --cg-accent-dark:       var(--primary-600, #0B5C6E);  /* 강조색 어둡게 (hover) */
+  --cg-accent:            var(--primary,       #28798B);  /* 강조색 (버튼, 정렬 아이콘, 편집 테두리) */
+  --cg-accent-dark:       var(--primary-dark,  #0B5C6E);  /* 강조색 어둡게 (hover) */
   --cg-header-bg:         var(--gray-0,   #ffffff);     /* 헤더·툴바 배경 (본문과 같은 흰색, 구분은 하단 테두리로) */
   --cg-header-group-bg:   var(--gray-100, #F3F5F7);     /* 그룹 헤더 배경 */
   --cg-header-hover-bg:   var(--gray-50,  #F9FAFC);     /* 정렬 헤더 hover */
   --cg-footer-bg:         var(--gray-50,  #F9FAFC);     /* 하단 상태바 배경 */
-  --cg-selected-bg:       var(--primary-50,  #E9F9FB);  /* 선택 행 배경 */
+  --cg-selected-bg:       var(--primary-light, #E9F9FB);  /* 선택 행 배경 */
   --cg-selected-mix-bg:   var(--primary-100, #D3F1F7);  /* 선택 + 수정/신규 행 혼합 */
   --cg-summary-bg:        var(--gray-100, #F3F5F7);     /* Sum 행 배경 */
   --cg-border:            var(--gray-200, #E8EAEC);     /* 헤더·외곽·푸터·달력 테두리 */

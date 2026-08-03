@@ -92,7 +92,7 @@
       --transition: all .18s ease;
       --menu-bg:     var(--gray-0);
       --menu-color:  var(--gray-600);
-      --menu-active: var(--primary-500);
+      --menu-active: var(--primary);
       --nav-h: 68px;          /* Figma header/로고영역 높이 */
       --sidebar-w: 320px;     /* Figma sidebar 폭 */
     }
@@ -256,8 +256,8 @@
     }
     .menu-link:hover { background: var(--gray-50); color: var(--primary); }
     .menu-item.active > .menu-link {
-      background: var(--primary-50);
-      color: var(--primary-500);
+      background: var(--primary-light);
+      color: var(--primary);
       font-weight: 700;
     }
     .menu-icon {
@@ -332,7 +332,7 @@
       color: var(--gray-800); cursor: pointer; position: relative;
       transition: var(--transition); flex-shrink: 0; font-size: 16px;
     }
-    .btn-icon:hover { background: var(--primary-50); color: var(--primary); }
+    .btn-icon:hover { background: var(--primary-light); color: var(--primary); }
 
     /* 사용자 칩 — Figma: 흰 배경, radius 8, height 32, padding 0 12, gap 6 */
     .nav-user-chip {
