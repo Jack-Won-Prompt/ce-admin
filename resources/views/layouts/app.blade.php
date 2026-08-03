@@ -96,6 +96,7 @@
       --nav-h: 68px;          /* Figma header/로고영역 높이 */
       --sidebar-w: 320px;     /* Figma sidebar 폭 */
       --sidebar-collapsed-w: 64px;   /* 아이콘만 남기는 접힘 폭 */
+      --content-pad: 16px;    /* Figma container padding — 본문 여백의 단일 출처 */
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -382,7 +383,7 @@
     /* Figma 174:1184 container — padding 0 16 16, 블록 간 gap 16 */
     .page-body {
       flex: 1; min-width: 0;
-      padding: 0 16px 16px;
+      padding: 0 var(--content-pad) var(--content-pad);
       display: flex; flex-direction: column; gap: 16px;
     }
 

@@ -6,8 +6,11 @@
 
 @push('styles')
 <style>
-  /* 탭 워크스페이스가 콘텐츠 영역(네비 아래)을 가득 채우도록 page-body 패딩 상쇄 */
-  #wsRoot { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h)); margin:-14px -24px -20px; background:var(--bg); }
+  /* 탭 워크스페이스가 콘텐츠 영역(네비 아래)을 가득 채우도록 page-body 패딩을 상쇄한다.
+     예전에는 -14px -24px -20px 로 값을 박아 뒀는데, 본문 패딩이 바뀌자 위로 14px 올라가
+     탭바가 고정 헤더에 가려졌다. 패딩과 같은 토큰에서 계산해 다시 어긋나지 않게 한다. */
+  #wsRoot { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h));
+            margin:0 calc(var(--content-pad) * -1) calc(var(--content-pad) * -1); background:var(--bg); }
   .ws-tabs { display:flex; gap:3px; align-items:flex-end; background:#fff; border-bottom:1px solid var(--border);
     padding:7px 12px 0; overflow-x:auto; flex-shrink:0; min-height:42px; }
   .ws-tabs::-webkit-scrollbar { height:6px; }
