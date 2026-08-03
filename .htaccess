@@ -8,7 +8,21 @@
         Deny from all
     </Files>
 
+    # 이 파일은 프로젝트 루트를 웹으로 서비스하는 환경(로컬 XAMPP 등)에서만 쓰인다.
+    # 운영은 docroot 가 public/ 이라 여기까지 오지 않는다.
+    # 루트를 서비스하면 소스·의존성·로그가 그대로 열리므로 명시적으로 막는다.
+    <FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml|\.env\..*|\.gitignore|\.gitattributes)$">
+        Order Allow,Deny
+        Deny from all
+    </FilesMatch>
+
     RewriteEngine On
+
+    # 애플리케이션 내부 디렉터리는 통째로 차단 (public/ 아래만 공개되어야 한다)
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|node_modules)/ - [F,L]
+    # 컴포저 의존성 차단 — 단, public/vendor 로 넘길 자산 요청은 아래에서 따로 처리한다
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^vendor/ - [F,L]
 
     RewriteCond %{REQUEST_URI} ^/storage/.*\.xml$ [NC]
     RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
@@ -29,8 +43,11 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 
+    # public/ 아래의 정적 자산으로 넘긴다.
+    # 목록을 일일이 적어 두면 새 폴더가 생길 때마다 빠뜨린다(vendor/ds-icons 가 그랬다).
+    # 루트에 실물 파일/폴더가 없을 때만 넘기므로 애플리케이션 소스와 겹치지 않는다.
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(css|assets|landing|storage|installer|js|custom)/(.*)$ public/$1/$2 [L,NC]
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
