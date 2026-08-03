@@ -971,7 +971,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 세금계산서 --}}
       @if($prescription->order?->tax_invoice_status === 'issued')
-      <div style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+      <div id="tiIssuedBadge" style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
         <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:10px;"></i>
         <span style="font-weight:700;color:var(--success);">세금계산서</span>
         <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:3px;cursor:pointer;margin-left:2px;">취소</button>
@@ -1050,13 +1050,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <i class="fa-solid fa-user"></i>
       </div>
       <div>
-        <div style="font-size:14px;font-weight:700;">
+        <div style="font-size:14px;font-weight:700;" id="hdrPatientName">
           {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
           @if(!$prescription->patient)
             <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">(OCR)</span>
           @endif
         </div>
-        <div style="font-size:11px;color:var(--text-muted);">
+        <div style="font-size:11px;color:var(--text-muted);" id="hdrPatientSub">
           @if($prescription->patient)
             {{ $prescription->patient->birth_date?->format('Y-m-d') }} · 만 {{ $prescription->patient->age }}세
           @else
@@ -1068,17 +1068,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div style="width:1px;height:32px;background:var(--border);"></div>
     <div style="font-size:12px;color:var(--text-secondary);">
       <i class="fa-solid fa-phone" style="color:var(--primary);"></i>
-      {{ $prescription->patient?->mobile ?? '-' }}
+      <span id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
     </div>
     <div style="font-size:12px;color:var(--text-secondary);">
       <i class="fa-solid fa-hospital" style="color:var(--primary);"></i>
-      {{ $prescription->hospital_name ?? '-' }}
+      <span id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
     </div>
     <div style="font-size:12px;color:var(--text-secondary);">
-      <i class="fa-solid fa-user-tie" style="color:var(--primary);"></i> 담당: {{ $prescription->assignedUser?->name ?? '-' }}
+      <i class="fa-solid fa-user-tie" style="color:var(--primary);"></i> 담당: <span id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
     </div>
       @if($prescription->patient?->is_nhis_eligible)
-      <span class="badge badge-success" style="order:8;"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
+      <span class="badge badge-success" id="hdrNhisBadge" style="order:8;"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
       @endif
   </div>
 
@@ -2032,7 +2032,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-boxes-stacked" style="color:var(--purple);"></i> 처방 제품 정보
               <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
                 <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px 10px;">
-                  <b style="color:var(--text-primary);">{{ $prescription->patient_name_ocr ?? '-' }}</b>
+                  <b style="color:var(--text-primary);" id="rx-ref-name">{{ $prescription->patient_name_ocr ?? '-' }}</b>
                   <span style="color:var(--border);">|</span>
                   <span>1일 <b id="rx-ref-daily">{{ $prescription->daily_count ?? '-' }}</b>개</span>
                   <span style="color:var(--border);">|</span>
@@ -4187,14 +4187,17 @@ window.HELP_TOUR_STEPS = [
     _resetConsentUi();
     _resetOrderLinkUi();
 
-    // 6) 검수 탭으로 이동 (미저장 확인창 우회 — 방금 초기화 확인을 받았다)
+    // 6) 상단 헤더 요약 · 생성 서류 · 발행 배지 비우기
+    _resetHeaderUi();
+
+    // 7) 검수 탭으로 이동 (미저장 확인창 우회 — 방금 초기화 확인을 받았다)
     const ocrBtn = document.querySelector(".tab-bar-tabs .tab-btn[onclick*='tab-ocr']");
     if (ocrBtn) _doSwitchTab(ocrBtn, 'tab-ocr');
 
-    // 7) 초기화된 화면은 저장된 내용과 다르므로 '미저장' 상태로 표시
+    // 8) 초기화된 화면은 저장된 내용과 다르므로 '미저장' 상태로 표시
     markOcrDirty(); markProductDirty(); markOrderDirty();
 
-    // 8) 첫 입력 필드로 포커스
+    // 9) 첫 입력 필드로 포커스
     const first = document.getElementById('f-name');
     if (first) { first.focus(); first.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
@@ -4300,6 +4303,51 @@ window.HELP_TOUR_STEPS = [
         if (tm) tm.textContent = '대기 중';
         document.getElementById(stepId)?.querySelector('.ws-arrow')?.remove();
       });
+  }
+
+  /* 상단 헤더 요약 · 생성 서류 · 발행 배지 비우기
+     — 이 영역들은 서버 렌더라 입력 필드만 비워서는 이전 건이 그대로 남는다 */
+  function _resetHeaderUi() {
+    // 환자 헤더(이름·생년·연락처·병원·담당)
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('hdrPatientName', '-');
+    set('hdrPatientSub',  '-');
+    set('hdrPatientPhone', '-');
+    set('hdrHospital',    '-');
+    set('hdrAssignee',    '-');
+    document.getElementById('hdrNhisBadge')?.remove();   // 급여 대상 배지는 환자 확정 후 다시 붙는다
+
+    // 생성 서류(위임장·팩스통합본·현금영수증 PDF 등) — 새 건에는 없다
+    const genDocs = document.getElementById('genDocsContainer');
+    if (genDocs) genDocs.innerHTML = '';
+
+    // 현금영수증: 발행 완료 배지 → 발행 버튼으로 되돌린다
+    const crArea = document.getElementById('cashReceiptArea');
+    if (crArea) {
+      crArea.innerHTML =
+        '<button class="btn btn-outline" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)"'
+        + ' style="padding:5px 10px;font-size:11px;white-space:nowrap;">'
+        + '<i class="fa-solid fa-receipt"></i> 현금영수증</button>';
+    }
+
+    // 팩스: 전송 완료 배지(보기·재전송) 숨기고 전송 버튼 노출
+    const faxWrap  = document.getElementById('faxTriggerWrap');
+    const faxBadge = document.getElementById('faxResultBadge');
+    if (faxWrap)  faxWrap.style.display  = 'block';
+    if (faxBadge) faxBadge.style.display = 'none';
+
+    // 세금계산서 발행 배지
+    document.getElementById('tiIssuedBadge')?.remove();
+    const tiBadge = document.getElementById('tiResultBadge');
+    if (tiBadge) tiBadge.style.display = 'none';
+
+    // 처방 제품 요약(환자명·1일 처방개수·처방일수·총개수)과 판매유형 배지
+    set('rx-ref-name',  '-');
+    set('rx-ref-daily', '-');
+    set('rx-ref-days',  '-');
+    set('rx-ref-total', '-');
+    const soBadge = document.getElementById('soTypeBadge');
+    if (soBadge) soBadge.innerHTML = '';
   }
 
   /* ── 전체 아이템 재계산 (각 아이템의 개별 급여 구분 사용) ── */
