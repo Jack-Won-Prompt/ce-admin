@@ -31,7 +31,7 @@ class Prescription extends Model
         'product_name', 'product_code', 'quantity',
         'nhis_status', 'product_price', 'insurance_price', 'nhis_amount', 'patient_copay',
         // Review
-        'status', 'reviewed_by', 'reviewed_at', 'review_memo', 'admin_note',
+        'status', 'is_blank_draft', 'reviewed_by', 'reviewed_at', 'review_memo', 'admin_note',
         'postcode', 'address_detail', 'repurchase_date',
         // Counseling (ERP sync + editable fields stored as JSON)
         'counseling_data',
@@ -40,6 +40,7 @@ class Prescription extends Model
 
     protected $casts = [
         'is_reissue'      => 'boolean',
+        'is_blank_draft'  => 'boolean',
         'ocr_raw_data'    => 'array',
         'counseling_data' => 'array',
         'issued_date'      => 'date',
@@ -166,17 +167,34 @@ class Prescription extends Model
     }
 
     /**
+     * 처음 저장되는 순간 빈 초안 표식을 스스로 뗀다.
+     *
+     * 이 표식 하나로 '메뉴를 열어만 둔 껍데기' 와 '입력이 들어간 처방전' 을 가른다.
+     * 저장 경로가 여러 곳(검수·제품·주문·메모…)이라 각 컨트롤러에서 지우게 하면
+     * 반드시 빠뜨리는 곳이 생기므로 모델에서 일괄 처리한다.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (self $rx) {
+            if (!$rx->is_blank_draft) {
+                return;
+            }
+            $changed = array_diff(array_keys($rx->getDirty()), ['is_blank_draft', 'updated_at']);
+            if ($changed) {
+                $rx->is_blank_draft = false;
+            }
+        });
+    }
+
+    /**
      * 아직 아무것도 입력하지 않은 '신규 등록' 초안.
      *
-     * 메뉴 '처방전 관리' 로 화면을 열 때 만들어지는 껍데기 레코드다.
-     * image_path 가 비어 있으므로 실제 업로드 건(잠깐 pending 이더라도 파일은 있다)과
-     * 절대 겹치지 않는다. 목록·통계에서는 감춘다.
+     * 메뉴 '처방전 관리' 와 검수 화면의 '신규 등록' 이 만드는 껍데기 레코드다.
+     * 목록에서는 감추고, 다시 눌렀을 때는 새로 만들지 않고 이것을 재사용한다.
      */
     public function scopeBlankDraft($query)
     {
-        return $query->where('status', 'pending')
-                     ->whereNull('image_path')
-                     ->whereNull('patient_name_ocr')
+        return $query->where('is_blank_draft', true)
                      ->whereDoesntHave('order');
     }
 

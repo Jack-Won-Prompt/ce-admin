@@ -62,12 +62,22 @@
     ],
     data: @json($recentRxGrid ?? []),
   });
-  // 더블클릭 → 처방전 상세 이동
+  /* 더블클릭 → 처방전 검수 화면을 '새 탭'으로 연다.
+     워크스페이스 안에서는 대시보드 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
+     단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다.
+     (처방전 목록·서류 관리·주문 상세와 같은 방식) */
   el.addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-    if (row && row.rx_number) window.location.href = RX_BASE + '/' + encodeURIComponent(row.rx_number);
+    if (!row || !row.rx_number) return;
+
+    const url = RX_BASE + '/' + encodeURIComponent(row.rx_number);
+    if (typeof window.ceOpenTab === 'function') {
+      window.ceOpenTab(url, row.rx_number + ' 검수', 'bx-scan');
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
   });
 })();
 </script>

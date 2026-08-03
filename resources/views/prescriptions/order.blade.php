@@ -3270,6 +3270,7 @@ window.HELP_TOUR_STEPS = [
 <script>
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
+  const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 새 처방번호 발급
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -4141,225 +4142,24 @@ window.HELP_TOUR_STEPS = [
     showToast(`상담이력을 가져왔습니다. (${filled}개 항목${withItems && d.items?.length ? ` · 제품 ${d.items.length}건` : ''})`, 'success');
   }
 
-  /* ── 신규 등록: 검수 화면 내용 전체 초기화 ─────────────────
-     현재 처방전 레코드는 건드리지 않고 화면 입력값만 비운다.
-     비운 뒤 저장하면 신규 레코드가 아니라 '현재 처방전'에 저장되므로 먼저 확인을 받는다. */
+  /* ── 신규 등록: 새 처방번호로 새 건 시작 ────────────────────
+     예전에는 현재 처방전 위에서 화면 입력만 비웠다. 그러면 저장할 때
+     현재 건이 덮어써져서, 사용자가 기대하는 '신규 등록' 과 어긋났다.
+     지금은 빈 초안을 새로 잡아 그 화면으로 이동한다 — 처방번호부터
+     새로 발급되고 보던 건은 손대지 않는다. */
   async function resetReviewScreen() {
     const ok = await ceConfirm(
-      '검수 화면의 모든 입력 내용을 초기화합니다.\n\n'
-      + '※ 초기화 후 저장하면 현재 처방전(' + RX_NUMBER + ')의 내용이\n'
-      + '새로 입력한 값으로 덮어써집니다. 기존 내용을 남겨야 하면 취소하세요.\n\n'
+      '새 처방전을 등록합니다. 새 처방번호가 발급되며,\n'
+      + '지금 보고 있는 처방전(' + RX_NUMBER + ')은 그대로 남습니다.\n\n'
+      + '※ 저장하지 않은 입력 내용은 사라집니다.\n\n'
       + '계속하시겠습니까?',
-      { title: '신규 등록 — 화면 초기화', tone: 'warning', confirmText: '초기화' }
+      { title: '신규 등록', tone: 'warning', confirmText: '신규 등록' }
     );
     if (!ok) return;
 
-    const isTable = !!document.getElementById('tabsCol')?.classList.contains('tab-view-table');
-
-    // 1) 검수·제품·주문 탭의 모든 입력 컨트롤 비우기 (이력 탭은 조회 전용이라 제외)
-    ['tab-ocr', 'tab-product', 'tab-order'].forEach(function (paneId) {
-      const pane = document.getElementById(paneId);
-      if (!pane) return;
-      pane.querySelectorAll('input, select, textarea').forEach(function (el) {
-        if (el.type === 'checkbox' || el.type === 'radio') { el.checked = false; return; }
-        if (el.tagName === 'SELECT') { el.selectedIndex = 0; return; }
-        el.value = '';
-      });
-    });
-
-    // 2) 처방 제품: 빈 1행으로 재구성
-    items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'',
-               nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
-    if (isTable) renderItemsTable(); else renderItems();
-    calcTotals();
-
-    // 3) 표시 전용(계산·미러) 영역 갱신
-    ['disp-issued-date', 'disp-renew-date'].forEach(function (id) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '-';
-    });
-    if (isTable) { syncCardToTable(); syncOrderTabToTable(); }
-
-    // 4) 좌측 뷰어: 처방전 이미지·첨부 문서 비우기
-    _resetViewer();
-
-    // 5) 위임동의 · 가상계좌 · Withworks 연계 상태 비우기
-    _resetConsentUi();
-    _resetOrderLinkUi();
-
-    // 6) 상단 헤더 요약 · 생성 서류 · 발행 배지 비우기
-    _resetHeaderUi();
-
-    // 7) 검수 탭으로 이동 (미저장 확인창 우회 — 방금 초기화 확인을 받았다)
-    const ocrBtn = document.querySelector(".tab-bar-tabs .tab-btn[onclick*='tab-ocr']");
-    if (ocrBtn) _doSwitchTab(ocrBtn, 'tab-ocr');
-
-    // 8) 초기화된 화면은 저장된 내용과 다르므로 '미저장' 상태로 표시
-    markOcrDirty(); markProductDirty(); markOrderDirty();
-
-    // 9) 첫 입력 필드로 포커스
-    const first = document.getElementById('f-name');
-    if (first) { first.focus(); first.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-
-    if (typeof showToast === 'function') {
-      showToast('검수 화면을 초기화했습니다. 새 내용을 입력하세요.', 'info');
-    }
-  }
-
-  /* 좌측 뷰어 비우기 — 처방전 이미지·PDF·첨부 문서 스트립 */
-  function _resetViewer() {
-    // ALL_DOCS 는 const 라 재할당할 수 없다 → 배열 내용만 비운다
-    ALL_DOCS.length = 0;
-    currentDocIdx = 0;
-
-    const img = document.getElementById('prescCanvas');
-    if (img) { img.src = ''; img.style.display = 'none'; }
-
-    const pdf = document.getElementById('pdfCanvas');
-    if (pdf) { pdf.src = ''; pdf.style.display = 'none'; }
-
-    const badge = document.getElementById('viewerBadge');
-    if (badge) badge.style.display = 'none';
-
-    const openBtn = document.getElementById('viewerOpenBtn');
-    if (openBtn) { openBtn.href = '#'; openBtn.style.display = 'none'; }
-
-    // '이미지 없음' 자리표시자 노출 (없으면 만들어 넣는다)
-    const stage = img?.parentElement || pdf?.parentElement;
-    if (stage) {
-      let ph = stage.querySelector('.img-placeholder');
-      if (!ph) {
-        ph = document.createElement('div');
-        ph.className = 'img-placeholder';
-        ph.innerHTML = '<i class="fa-regular fa-file-image"></i><p>이미지 없음</p>';
-        stage.insertBefore(ph, stage.firstChild);
-      }
-      ph.style.display = '';
-    }
-
-    // 문서 스트립
-    const strip = document.getElementById('docStrip');
-    if (strip) strip.innerHTML = '';
-    const cnt = document.getElementById('docCount');
-    if (cnt) cnt.textContent = '0';
-    const stripWrap = document.getElementById('docStripWrap');
-    if (stripWrap) stripWrap.style.display = 'none';
-
-    // 확대/회전/이동 상태도 초기값으로 (기존 헬퍼 재사용)
-    if (typeof resetImg === 'function') resetImg();
-  }
-
-  /* 위임동의 표시 비우기 — 현황 배지·서명/본인확인 배지 */
-  function _resetConsentUi() {
-    const textEl  = document.getElementById('consentStatusText');
-    const badgeEl = document.getElementById('consentStatusBadge');
-    if (textEl)  textEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> 동의 현황 없음';
-    if (badgeEl) {
-      badgeEl.style.color = 'var(--text-muted)';
-      badgeEl.querySelectorAll('.sign-badge, .nice-badge').forEach(n => n.remove());
-    }
-
-    // 버튼을 '동의 요청' 초기 상태로 되돌린다
-    const bw = document.getElementById('consentBtnWrap');
-    const rb = document.getElementById('consentResultBadge');
-    if (bw) bw.style.display = '';
-    if (rb) { rb.style.display = 'none'; rb.innerHTML = ''; }
-  }
-
-  /* 주문 연계 상태 비우기 — 가상계좌 발급 / Withworks SO(미연계) / 워크플로우 스텝 */
-  function _resetOrderLinkUi() {
-    existingOrder  = null;
-    orderExists    = false;
-    _ORDER_ID      = 0;
-    _ORDER_TOTAL   = 0;
-    _PATIENT_COPAY = 0;
-
-    // 가상계좌: 주문이 없으므로 발급 버튼·결과 배지를 모두 제거
-    const vaWrap = document.getElementById('vaButtonWrap');
-    if (vaWrap) vaWrap.innerHTML = '';
-
-    // 주문 액션 영역 → '주문 생성 및 연계' 버튼으로 복원
-    const actionArea = document.getElementById('orderActionArea');
-    if (actionArea) {
-      actionArea.innerHTML =
-        '<button class="btn btn-primary w-full" id="btnCreateOrder" onclick="createOrder(event)">'
-        + '<i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계</button>';
-    }
-
-    // 환자 정보 바의 Withworks 판매번호 → 미연계
-    const card    = document.getElementById('wwSoCard');
-    const content = document.getElementById('wwSoContent');
-    if (card) { card.style.borderColor = 'var(--border)'; card.style.background = 'var(--bg-card)'; }
-    if (content) {
-      content.innerHTML = '<span id="wwSoBadge" style="color:var(--text-muted);font-size:11px;">미연계</span>';
-    }
-
-    // 워크플로우 스텝(사이드바 + 이력 탭) 대기 상태로
-    [['wsOrderIcon', 'wsOrderTime', 'wsOrderStep'], ['histOrderIcon', 'histOrderTime', 'histOrderStep']]
-      .forEach(([iconId, timeId, stepId]) => {
-        const ic = document.getElementById(iconId);
-        const tm = document.getElementById(timeId);
-        if (ic) ic.className = 'ws-icon pending';
-        if (tm) tm.textContent = '대기 중';
-        document.getElementById(stepId)?.querySelector('.ws-arrow')?.remove();
-      });
-  }
-
-  /* 상단 헤더 요약 · 생성 서류 · 발행 배지 비우기
-     — 이 영역들은 서버 렌더라 입력 필드만 비워서는 이전 건이 그대로 남는다 */
-  function _resetHeaderUi() {
-    // 환자 헤더(이름·생년·연락처·병원·담당)
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-    set('hdrPatientName', '-');
-    set('hdrPatientSub',  '-');
-    set('hdrPatientPhone', '-');
-    set('hdrHospital',    '-');
-    set('hdrAssignee',    '-');
-    document.getElementById('hdrNhisBadge')?.remove();   // 급여 대상 배지는 환자 확정 후 다시 붙는다
-
-    // 생성 서류(위임장·팩스통합본·현금영수증 PDF 등) — 새 건에는 없다
-    const genDocs = document.getElementById('genDocsContainer');
-    if (genDocs) genDocs.innerHTML = '';
-
-    // 현금영수증: 발행 완료 배지 → 발행 버튼으로 되돌린다
-    const crArea = document.getElementById('cashReceiptArea');
-    if (crArea) {
-      crArea.innerHTML =
-        '<button class="btn btn-outline" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)"'
-        + ' style="padding:5px 10px;font-size:11px;white-space:nowrap;">'
-        + '<i class="fa-solid fa-receipt"></i> 현금영수증</button>';
-    }
-
-    // 팩스: 전송 완료 배지(보기·재전송) 숨기고 전송 버튼 노출
-    const faxWrap  = document.getElementById('faxTriggerWrap');
-    const faxBadge = document.getElementById('faxResultBadge');
-    if (faxWrap)  faxWrap.style.display  = 'block';
-    if (faxBadge) faxBadge.style.display = 'none';
-
-    // 세금계산서 발행 배지
-    document.getElementById('tiIssuedBadge')?.remove();
-    const tiBadge = document.getElementById('tiResultBadge');
-    if (tiBadge) tiBadge.style.display = 'none';
-
-    // 등록자 카드 — 새 건은 아직 등록자가 없다(저장 시점에 정해진다).
-    // 이름·아바타·등록일시·등록자 메모·채팅 버튼이 통째로 이전 건 것이므로 빈 상태로 되돌린다.
-    const uploader = document.getElementById('infoPanel-uploader');
-    if (uploader) {
-      uploader.innerHTML =
-        '<div style="font-size:11px;color:var(--text-muted);">'
-        + '<i class="fa-solid fa-circle-question"></i> 등록자 정보 없음</div>';
-    }
-
-    // 검수 메모 카드(이전 건의 메모)
-    document.getElementById('reviewMemoCard')?.remove();
-
-    // 처방 제품 요약(환자명·1일 처방개수·처방일수·총개수)과 판매유형 배지
-    set('rx-ref-name',  '-');
-    set('rx-ref-daily', '-');
-    set('rx-ref-days',  '-');
-    set('rx-ref-total', '-');
-    const soBadge = document.getElementById('soTypeBadge');
-    if (soBadge) soBadge.innerHTML = '';
+    // 이동 확인을 방금 받았으므로 '미저장' 경고(링크 가로채기 · beforeunload)는 끈다
+    clearAllDirty();
+    location.href = NEW_ENTRY_URL;
   }
 
   /* ── 전체 아이템 재계산 (각 아이템의 개별 급여 구분 사용) ── */

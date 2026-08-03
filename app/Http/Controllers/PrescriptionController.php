@@ -411,10 +411,11 @@ class PrescriptionController extends Controller
     {
         $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first()
             ?? Prescription::create([
-                'rx_number'     => Prescription::generateRxNumber(),
-                'created_by'    => Auth::id(),
-                'status'        => 'pending',
-                'upload_source' => 'web',
+                'rx_number'      => Prescription::generateRxNumber(),
+                'created_by'     => Auth::id(),
+                'status'         => 'pending',
+                'upload_source'  => 'web',
+                'is_blank_draft' => true,
             ]);
 
         return redirect()->route('prescriptions.show', $draft);
