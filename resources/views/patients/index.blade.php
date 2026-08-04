@@ -61,7 +61,6 @@
   .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
-  .filter-bar { display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap; }
   /* 패널 탭(조회결과/상세내용) */
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
   .pnl-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;

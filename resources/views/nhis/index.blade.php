@@ -83,7 +83,6 @@
   .nhis-tab:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
   .nhis-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
 
-  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 

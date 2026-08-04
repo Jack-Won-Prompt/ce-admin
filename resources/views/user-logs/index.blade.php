@@ -31,7 +31,6 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
   .log-table-wrap { overflow-x:auto; }
   .log-table-wrap thead th { position:sticky; top:0; z-index:5; background:var(--bg); }
   .type-badge-login { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:var(--success-light); color:var(--success); }

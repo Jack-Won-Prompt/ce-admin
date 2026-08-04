@@ -23,7 +23,6 @@
   }
   .status-tab:not(.active) .cnt { background:var(--border-light); color:var(--text-muted); }
 
-  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
 
   .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
   .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;

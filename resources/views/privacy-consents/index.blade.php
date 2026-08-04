@@ -13,8 +13,6 @@
   .pc-tab:hover { border-color:var(--primary); color:var(--primary); }
   .pc-tab.active { border-color:var(--primary); background:var(--primary); color:#fff; }
   .pc-tab .cnt { opacity:.75; margin-left:4px; font-weight:700; }
-  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:end; margin-bottom:16px;
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
   .filter-bar .fg { display:flex; flex-direction:column; gap:4px; }
   .filter-bar label { font-size:11px; font-weight:700; color:var(--text-muted); }
   .filter-bar input { padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; }

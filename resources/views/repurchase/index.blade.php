@@ -193,7 +193,6 @@ window.HELP_TOUR_STEPS = [
 .rx-row-badge { flex-shrink:0; }
 
 /* ── 목록 뷰 검색 ── */
-.search-bar { display:flex; gap:8px; }
 .search-bar .form-control { max-width:260px; }
 </style>
 

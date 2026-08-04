@@ -51,7 +51,6 @@
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
     background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
-  .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
   .filter-bar .form-control { height: 34px; font-size: 12px; }
   .filter-bar .btn { height: 34px; font-size: 12px; white-space: nowrap; }
   .filter-sep { color: var(--text-muted); font-size: 12px; }

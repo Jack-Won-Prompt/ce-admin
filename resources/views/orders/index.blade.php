@@ -73,7 +73,6 @@ window.HELP_TOUR_STEPS = [
   }
   .status-tab:not(.active) .cnt { background: var(--border-light); color: var(--text-muted); }
 
-  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
   .order-number { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .5px; font-family: monospace; }
   .patient-name-cell { font-weight: 600; }
   .product-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

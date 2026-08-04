@@ -70,8 +70,6 @@
 .panel-body.active { display:block; }
 
 /* ── 필터바 ── */
-.filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-  padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg); }
 
 /* ── 테이블 ── */
 .table-scroll { max-height:calc(100vh - 400px); overflow-y:auto; }

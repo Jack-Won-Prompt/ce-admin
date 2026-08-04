@@ -34,7 +34,6 @@
   }
   .type-tab:not(.active) .tab-count { background:var(--border-light); color:var(--text-muted); }
 
-  .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
   .filter-bar .form-control { height:36px; font-size:13px; }
   .filter-bar .btn { height:36px; white-space:nowrap; }
 

@@ -414,6 +414,18 @@
     }
     .ds-chip.active .ds-chip-count { background: var(--gray-0); color: var(--primary); }
 
+    /* 화면들이 각자 정의해 쓰던 검색 줄(.filter-bar / .search-bar).
+       내부 배치는 화면마다 입력 구성이 달라 그대로 두고, 바깥 껍데기만
+       Figma 표준 필터 카드(174:1210)에 맞춘다 — 흰 카드·radius 12·padding 12/16.
+       아래쪽 여백은 .page-body 의 gap 이 만든다. */
+    .filter-bar, .search-bar {
+      display: flex; align-items: flex-end; flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--gray-0);
+    }
+
     /* 검색·필터 카드 (174:1210) — padding 12/16, gap 24, radius 12 */
     .ds-filter-card {
       display: flex; align-items: stretch; gap: 24px;
@@ -843,13 +855,7 @@
     .tab-u:hover { color: var(--text-primary); }
     .tab-u.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    /* ── Filter bar ── */
-    .filter-bar {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 12px 16px; background: var(--bg-card);
-      border: 1px solid var(--border); border-radius: var(--radius-lg);
-      margin-bottom: 16px; box-shadow: var(--shadow);
-    }
+    /* ── Filter bar ── (표준 정의는 위 DS 컴포넌트 영역에 있다) */
     .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
     .filter-label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
 
