@@ -138,10 +138,24 @@
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
   html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
-  .tab-bar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-  .tab-bar-tabs { display: flex; }
+  /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
+     폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */
+  .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab-bar-tabs { display: flex; flex-shrink: 0; }
+  .tab-bar-acts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
   .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent; border-bottom: 2px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
   .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
+     .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
+  .tb-act { display:inline-flex; align-items:center; justify-content:center; gap:5px;
+            box-sizing:border-box; height:26px; min-width:98px; padding:0 12px;
+            border:1px solid var(--border); border-radius:6px; background:var(--bg);
+            color:var(--text-secondary); font-size:11px; font-weight:600; line-height:1;
+            white-space:nowrap; cursor:pointer; transition:var(--transition); }
+  .tb-act i    { font-size:11px; }
+  .tb-act-pri  { border-color:var(--primary); background:var(--primary-light); color:var(--primary); font-weight:700; }
+  .tb-act-warn { border-color:var(--warning); background:var(--warning); color:#fff; font-weight:700; }
+  .tb-act-ok   { border-color:var(--success); background:var(--success); color:#fff; font-weight:700; }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
   /* ── 처방전 검수 탭: 위=검수(고정높이·스크롤), 아래=처방 제품 ── */
   .tab-pane.ocr-split-top {
@@ -168,7 +182,6 @@
   .tab-view-table #tab-ocr .rx-acc-header { background:var(--primary-light) !important; pointer-events:none; padding:5px 12px; }
   .tab-view-table #tab-ocr .rx-acc-header > span:first-child { color:var(--primary) !important; font-size:11px; }
   .tab-view-table #tab-ocr .rx-acc-icon,
-  .tab-view-table #tab-ocr .acc-inline-btns { display:none !important; }
   .tab-view-table #tab-ocr .rx-acc-body { display:block !important; padding:10px 12px; }
   .tab-tbl { width:100%; border-collapse:collapse; font-size:12px; }
   .tab-tbl td, .tab-tbl th { padding:5px 9px; border:1px solid var(--border); vertical-align:middle; }
@@ -227,8 +240,6 @@
   .rx-acc-header > span:first-child { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--text-primary); }
   .rx-acc-meta { display:flex; align-items:center; gap:8px; }
   .rx-acc-meta-hint { font-size:11px; color:var(--text-muted); }
-  .acc-inline-btns { display:none; align-items:center; gap:4px; }
-  .rx-acc-item.is-open > .rx-acc-header .acc-inline-btns { display:flex; }
   .rx-acc-icon { font-size:11px; color:var(--text-muted); transition:transform .2s ease; }
   .rx-acc-icon.open { transform:rotate(180deg); }
   .rx-acc-body { padding:14px 16px; background:var(--bg-card); border-top:1px solid var(--border-light); }
@@ -1293,26 +1304,38 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button class="tab-btn" onclick="switchTab(this,'tab-order')"><i class="fa-solid fa-cart-shopping"></i> 주문 연계</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-history')"><i class="fa-solid fa-timeline"></i> 이력</button>
         </div>
-        <div style="display:flex;align-items:center;gap:5px;">
-          <button type="button" id="btnNewEntry" onclick="resetReviewScreen()"
-                  title="검수 화면의 모든 입력 내용을 비웁니다"
-                  style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border:1px solid var(--primary);border-radius:6px;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;transition:var(--transition);">
+        <div class="tab-bar-acts">
+          <button type="button" id="btnNewEntry" class="tb-act tb-act-pri" onclick="resetReviewScreen()"
+                  title="검수 화면의 모든 입력 내용을 비웁니다">
             <i class="fa-solid fa-plus"></i>
             <span>신규 등록</span>
           </button>
-          <button type="button" id="btnPatientLookup" onclick="openPatientLookup()"
-                  title="환자명으로 조회해 과거 상담이력을 가져옵니다"
-                  style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition);">
+          <button type="button" id="btnPatientLookup" class="tb-act" onclick="openPatientLookup()"
+                  title="환자명으로 조회해 과거 상담이력을 가져옵니다">
             <i class="fa-solid fa-magnifying-glass"></i>
             <span>환자 조회</span>
           </button>
-          <button type="button" id="btnAccToggleAll" onclick="toggleAllAcc()"
-                  style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition);">
+          {{-- 아코디언마다 흩어져 있던 저장 계열 버튼을 여기로 모았다 --}}
+          <button type="button" id="btnResetOcr" class="tb-act" onclick="resetOCR()"
+                  title="입력값을 원본 OCR 결과로 되돌립니다">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>원본 복원</span>
+          </button>
+          <button type="button" id="btnSaveOcr" class="tb-act tb-act-warn" onclick="saveOCR()"
+                  title="검수 내용을 저장합니다">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>저장</span>
+          </button>
+          <button type="button" id="btnApproveRx" class="tb-act tb-act-ok" onclick="approveRx()"
+                  title="검수 완료 후 승인을 요청합니다">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>승인요청</span>
+          </button>
+          <button type="button" id="btnAccToggleAll" class="tb-act" onclick="toggleAllAcc()">
             <i class="fa-solid fa-angles-down" id="btnAccToggleAllIcon"></i>
             <span id="btnAccToggleAllLabel">전체 열기</span>
           </button>
-          <button type="button" id="btnViewToggle" onclick="toggleTabView()"
-                  style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition);">
+          <button type="button" id="btnViewToggle" class="tb-act" onclick="toggleTabView()">
             <i class="fa-solid fa-table-list" id="btnViewToggleIcon"></i>
             <span id="btnViewToggleLabel">테이블뷰</span>
           </button>
@@ -1351,11 +1374,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">상담번호 · 환자명 · 연락처 · 주소</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon open"></i>
             </div>
           </div>
@@ -1545,11 +1563,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">병원명 · 의사 · 처방일 · 유효기간</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
@@ -1620,11 +1633,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">상병명 · 수량 · 기간 · 구분</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
@@ -1688,11 +1696,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <span><i class="fa-solid fa-shield-halved" style="color:var(--success);"></i> 급여 · 보험 정보</span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">급여구분 · 공단 · 위임동의</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
@@ -1762,11 +1765,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <span><i class="fa-solid fa-cart-shopping" style="color:var(--warning);"></i> 신/재구매 정보</span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">신/재구매 · 영수증 · 사유 · 담당</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
@@ -1864,11 +1862,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <span><i class="fa-solid fa-ellipsis" style="color:var(--text-muted);"></i> 추가 정보</span>
             <div class="rx-acc-meta">
               <span class="rx-acc-meta-hint">신환등록 · 기이카운트 병원 · Five</span>
-              <div class="acc-inline-btns" onclick="event.stopPropagation()">
-                <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 8px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-                <button class="btn btn-warning btn-sm" style="font-size:11px;padding:3px 8px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                <button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
