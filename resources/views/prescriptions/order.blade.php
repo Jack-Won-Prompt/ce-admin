@@ -80,11 +80,40 @@
   .order-layout.viewer-right > :first-child { order: 2; }
   @media (max-width: 1200px) { .order-layout.viewer-right { grid-template-columns: 1fr 280px; } }
   @media (max-width: 768px)  { .order-layout.viewer-right > :first-child { order: unset; } }
-  .img-viewer { background: #1e293b; border-radius: var(--radius-lg); aspect-ratio: 3/4; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-  .img-viewer-toolbar { padding: 8px 12px; background: #0f172a; display: flex; align-items: center; gap: 8px; }
-  .img-viewer-toolbar span { font-size: 12px; color: #94a3b8; flex: 1; text-align: center; }
-  .img-tool-btn { width: 28px; height: 28px; background: rgba(255,255,255,.1); border: none; border-radius: 6px; color: #94a3b8; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition); }
-  .img-tool-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+  /* ── 뷰어 카드 머리 (시안 137:883) — 높이 44, 아래 선 ── */
+  .vw-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
+             min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
+  .vw-nav  { display:flex; align-items:center; gap:8px; min-width:0; }
+  .vw-nav-btn { width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+                background:none; border:none; padding:0; font-size:13px; color:var(--gray-600); cursor:pointer; }
+  .vw-nav-btn:hover { color:var(--primary); }
+  .vw-rx   { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-1000);
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vw-acts { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-shrink:0; }
+  .vw-btn  { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+             height:28px; padding:0 12px; border-radius:8px;
+             background:var(--gray-0); border:1px solid var(--gray-200);
+             font-size:12px; font-weight:500; color:var(--gray-1000);
+             cursor:pointer; text-decoration:none; white-space:nowrap; }
+  .vw-btn:hover { background:var(--gray-50); }
+  .vw-btn-icon { width:28px; padding:0; }
+
+  /* ── 이미지 영역 (시안 137:839) — 높이 340 고정 ── */
+  .img-viewer { position:relative; height:340px; background:var(--gray-0);
+                display:flex; flex-direction:column; overflow:hidden; }
+
+  /* ── 이미지 위에 얹는 도구 패널 (시안 137:901) ──
+     예전에는 어두운 가로 툴바가 이미지 위아래를 차지했다. 시안은 이미지 왼쪽에
+     반투명 세로 띠를 얹어 이미지가 보이는 넓이를 잃지 않는다. */
+  .vw-tools { position:absolute; top:8px; left:8px; bottom:8px; z-index:2;
+              display:flex; flex-direction:column; justify-content:space-between; align-items:center;
+              gap:8px; padding:8px; border-radius:8px; background:rgba(255,255,255,.4); }
+  .vw-tool-group { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .vw-tool { width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+             border-radius:8px; background:var(--gray-0); border:none; padding:0;
+             font-size:13px; color:var(--gray-800); cursor:pointer; transition:var(--transition); }
+  .vw-tool:hover { color:var(--primary); }
+  .vw-zoom { font-size:12px; font-weight:500; line-height:1.2; color:var(--gray-1000); text-align:center; }
   .img-viewer-canvas { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
   .img-placeholder { text-align: center; color: #475569; }
   .img-placeholder i { font-size: 56px; margin-bottom: 10px; display: block; opacity: .4; }
@@ -1140,22 +1169,33 @@ $calcDeposit  = $calcCopay + $calcShipping;
     {{-- Col 1: Image Viewer --}}
     <div id="viewerCol">
     <div id="viewerInner">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
-        <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()"
-                class="btn btn-outline btn-sm" title="뷰어를 오른쪽으로"
-                style="font-size:11px;padding:3px 10px;display:flex;align-items:center;gap:5px;">
-          <i class="fa-solid fa-arrows-left-right" style="font-size:11px;"></i>
-          <span id="btnToggleViewerSideLabel">오른쪽으로</span>
-        </button>
+      {{-- 카드 머리 — 이전·다음과 처방번호, 오른쪽에 뷰어 조작 (시안 137:883) --}}
+      <div class="vw-head">
+        <div class="vw-nav">
+          <button type="button" class="vw-nav-btn" onclick="prevRecord()" title="이전 처방전"><i class="fa-solid fa-chevron-left"></i></button>
+          <span class="vw-rx">{{ $prescription->rx_number }}</span>
+          <button type="button" class="vw-nav-btn" onclick="nextRecord()" title="다음 처방전"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="vw-acts">
+          <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn" title="뷰어 위치 바꾸기">
+            <span id="btnToggleViewerSideLabel">오른쪽으로</span>
+          </button>
+          <a id="viewerOpenBtn" class="vw-btn vw-btn-icon" href="{{ $prescription->image_url ?? '#' }}" target="_blank" title="원본보기" @if(!$prescription->image_url) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
+        </div>
       </div>
+
       <div class="img-viewer">
-        <div class="img-viewer-toolbar">
-          <button class="img-tool-btn" onclick="zoomOut()" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-          <span id="zoomLabel">100%</span>
-          <button class="img-tool-btn" onclick="zoomIn()"  title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-          <button class="img-tool-btn" onclick="rotateImg()" title="회전"><i class="fa-solid fa-rotate-right"></i></button>
-          <button class="img-tool-btn" onclick="resetImg()" title="처음으로 복원"><i class="fa-solid fa-arrows-rotate"></i></button>
-          <a id="viewerOpenBtn" class="img-tool-btn" href="{{ $prescription->image_url ?? '#' }}" target="_blank" title="원본보기" @if(!$prescription->image_url) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
+        {{-- 이미지 위에 얹는 도구 — 위는 회전·복원, 아래는 확대·축소 (시안 137:901) --}}
+        <div class="vw-tools">
+          <div class="vw-tool-group">
+            <button type="button" class="vw-tool" onclick="rotateImg()" title="회전"><i class="fa-solid fa-rotate-left"></i></button>
+            <button type="button" class="vw-tool" onclick="resetImg()" title="처음으로 복원"><i class="fa-solid fa-arrows-rotate"></i></button>
+          </div>
+          <div class="vw-tool-group">
+            <button type="button" class="vw-tool" onclick="zoomOut()" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+            <span id="zoomLabel" class="vw-zoom">100%</span>
+            <button type="button" class="vw-tool" onclick="zoomIn()" title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+          </div>
         </div>
         <div class="img-viewer-canvas" id="imgCanvas">
           @php $isRxPdf = str_contains($prescription->image_mime_type ?? '', 'pdf'); @endphp
@@ -1164,9 +1204,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <iframe id="pdfCanvas" src="{{ $prescription->image_url }}" style="width:100%;height:100%;border:none;background:#fff;"></iframe>
           @elseif($prescription->image_url)
             <img id="prescCanvas" src="{{ $prescription->image_url }}" style="max-width:100%;max-height:100%;object-fit:contain;cursor:grab;user-select:none;" alt="처방전 이미지" draggable="false" />
-            <div id="viewerBadge" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;">
-              {{ $prescription->rx_number }}
-            </div>
             <iframe id="pdfCanvas" src="" style="display:none;width:100%;height:100%;border:none;background:#fff;"></iframe>
           @else
             <div class="img-placeholder">
@@ -1177,11 +1214,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <iframe id="pdfCanvas" src="" style="display:none;width:100%;height:100%;border:none;background:#fff;"></iframe>
           @endif
         </div>
-        <div style="padding:8px 12px;background:#0f172a;display:flex;align-items:center;justify-content:center;gap:12px;">
-          <button onclick="prevRecord()" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#94a3b8;cursor:pointer;"><i class="fa-solid fa-chevron-left" style="font-size:11px;"></i></button>
-          <span style="font-size:12px;color:#94a3b8;">{{ $prescription->rx_number }}</span>
-          <button onclick="nextRecord()" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#94a3b8;cursor:pointer;"><i class="fa-solid fa-chevron-right" style="font-size:11px;"></i></button>
-        </div>
+        {{-- 이전·다음과 처방번호는 카드 머리로 올라갔다 (시안 137:883) --}}
       </div>
 
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
