@@ -913,7 +913,7 @@ class PrescriptionController extends Controller
             ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
             ->get([
                 'id', 'rx_number', 'counseling_data', 'created_at', 'status',
-                'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
+                'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
                 'hospital_name', 'doctor_name', 'issued_date',
                 'postcode', 'address_detail', 'patient_id', 'repurchase_date',
             ])
@@ -948,7 +948,7 @@ class PrescriptionController extends Controller
                 ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
                 ->get([
                     'id', 'rx_number', 'counseling_data', 'created_at', 'status',
-                    'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
+                    'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
                     'hospital_name', 'doctor_name', 'issued_date',
                     'postcode', 'address_detail', 'patient_id', 'repurchase_date',
                 ])
