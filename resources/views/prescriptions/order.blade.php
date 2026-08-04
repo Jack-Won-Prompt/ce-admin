@@ -74,8 +74,9 @@
 
 @push('styles')
 <style>
-  .order-layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
-  .order-layout.viewer-right { grid-template-columns: 1fr 320px; }
+  /* 좌우 배치 — 시안 137:350. 뷰어 360 고정, 사이 간격 12 */
+  .order-layout { display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
+  .order-layout.viewer-right { grid-template-columns: 1fr 360px; }
   .order-layout.viewer-right > :first-child { order: 2; }
   @media (max-width: 1200px) { .order-layout.viewer-right { grid-template-columns: 1fr 280px; } }
   @media (max-width: 768px)  { .order-layout.viewer-right > :first-child { order: unset; } }
@@ -140,10 +141,19 @@
   html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
   /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
      폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */
-  .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  /* 좌우 두 영역 모두 흰 카드 (시안 137:441 · 137:517) */
+  #viewerCol, #tabsCol { background: var(--gray-0); border-radius: 12px; }
+  #viewerCol { overflow: hidden; }   /* 이미지가 모서리를 넘지 않게 */
+  .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
+             min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
+  #tabsCol > .tab-pane { padding: 16px; }
+  #tabsCol > .tab-pane.ocr-split-top { padding-right: 8px; }   /* 스크롤바 여백은 그대로 */
   .tab-bar-tabs { display: flex; flex-shrink: 0; }
   .tab-bar-acts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
-  .tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent; border-bottom: 2px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
+  /* 탭 — 시안 137:687: padding 0 8, 활성 표시는 1px 밑줄 */
+  .tab-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px;
+             font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent;
+             border-bottom: 1px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
   .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
   /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
      .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
@@ -163,8 +173,8 @@
     overflow-y: auto;                    /* 내부 스크롤 */
     overflow-x: hidden;
     padding-right: 8px;                  /* 스크롤바 여백 */
-    border-bottom: 2px solid var(--border);
-    margin-bottom: 14px;
+    border-bottom: 1px solid var(--gray-200);   /* 시안의 구획선은 1px */
+    margin-bottom: 12px;
   }
   .tab-pane.ocr-split-bottom { padding-top: 2px; }
   /* ── 카드 / 테이블 뷰 토글 ── */
@@ -231,9 +241,10 @@
   .so-type-opt input[type=radio]:checked + span { background:var(--primary); border-color:var(--primary); color:#fff; }
 
   /* ── RX Inspection Accordion ── */
-  .rx-acc-item { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; overflow:hidden; background:var(--bg-card); transition:border-color .18s; }
+  /* 아코디언 — 시안 137:544: radius 12, 헤더 44 높이에 padding 8 16 */
+  .rx-acc-item { border:1px solid var(--gray-200); border-radius:12px; margin-bottom:12px; overflow:hidden; background:var(--bg-card); transition:border-color .18s; }
   .rx-acc-item.is-open { border-color:var(--primary); }
-  .rx-acc-header { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; cursor:pointer; background:var(--bg-card); user-select:none; transition:var(--transition); gap:8px; }
+  .rx-acc-header { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:8px 16px; cursor:pointer; background:var(--bg-card); user-select:none; transition:var(--transition); gap:8px; }
   .rx-acc-header:hover { background:var(--bg); }
   .rx-acc-item.is-open > .rx-acc-header { background:var(--primary-light); }
   .rx-acc-item.is-open > .rx-acc-header > span:first-child { color:var(--primary); }
