@@ -427,6 +427,14 @@
     }
     .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .ds-filter-field.span-2 { grid-column: span 2; }
+    .ds-filter-field.span-3 { grid-column: span 3; }
+    .ds-filter-field.span-4 { grid-column: span 4; }
+    /* 항목 이름 — Figma 필터 라벨 */
+    .ds-field-label { font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--gray-600); }
+    /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
+    .ds-field-range { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ds-field-range .form-control { min-width: 0; flex: 1; }
+    .ds-field-sep { color: var(--gray-400); font-size: 13px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
     .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
     .ds-btn {
@@ -448,6 +456,10 @@
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
     }
+    .ds-grid-bar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 1.6; color: var(--gray-800); }
+    .ds-grid-total b { color: var(--primary); }
+    .ds-grid-hint { font-size: 13px; font-weight: 500; color: var(--gray-600); }
     .ds-grid-card {
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;

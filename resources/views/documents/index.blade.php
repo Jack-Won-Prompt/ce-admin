@@ -7,25 +7,8 @@
 
 @push('styles')
 <style>
-  .type-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-  .type-tab {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
-    border: 1.5px solid var(--border); background: #fff;
-    color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    transition: var(--transition);
-  }
-  .type-tab:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-  .type-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
-  .type-tab .cnt {
-    min-width: 20px; padding: 0 5px; height: 18px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 20px; font-size: 10.5px; font-weight: 700;
-    background: rgba(255,255,255,.25);
-  }
-  .type-tab:not(.active) .cnt { background: var(--border-light); color: var(--text-muted); }
 
-  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+  /* .type-tabs · .filter-bar 는 레이아웃의 ds-chip / ds-filter-card 로 대체됨 */
   .filename-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
@@ -78,44 +61,54 @@
 @endphp
 
 {{-- ── 유형 탭 ── --}}
-<div class="type-tabs">
+<div class="ds-chips">
   <a href="{{ route('documents.index', request()->except('type', 'page')) }}"
-     class="type-tab {{ !$curType ? 'active' : '' }}">
-    전체 <span class="cnt">{{ $totalAll }}</span>
+     class="ds-chip {{ !$curType ? 'active' : '' }}">
+    전체 <span class="ds-chip-count">{{ $totalAll }}</span>
   </a>
   @foreach($types as $key => $label)
     <a href="{{ route('documents.index', array_merge(request()->except('type','page'), ['type' => $key])) }}"
-       class="type-tab {{ $curType === $key ? 'active' : '' }}">
-      {{ $label }}
-      @if(($typeCounts[$key] ?? 0) > 0)
-        <span class="cnt">{{ $typeCounts[$key] }}</span>
-      @endif
+       class="ds-chip {{ $curType === $key ? 'active' : '' }}">
+      {{ $label }} <span class="ds-chip-count">{{ $typeCounts[$key] ?? 0 }}</span>
     </a>
   @endforeach
 </div>
 
 {{-- ── 검색 필터 ── --}}
-<form method="GET" action="{{ route('documents.index') }}" class="filter-bar mb-4">
+{{-- Figma 174:1210 — 흰 카드에 9열 그리드, 버튼은 우측 하단 --}}
+<form method="GET" action="{{ route('documents.index') }}" class="ds-filter-card">
   @if($curType)
     <input type="hidden" name="type" value="{{ $curType }}">
   @endif
-  <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-         placeholder="파일명 · 환자명" style="width:220px;">
-  <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" style="width:145px;">
-  <span style="color:var(--text-muted);font-size:13px;">~</span>
-  <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control" style="width:145px;">
-  <select name="per_page" class="form-control" style="width:90px;" onchange="this.form.submit()">
-    @foreach([10,20,50,100] as $n)
-      <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
-    @endforeach
-  </select>
-  <button type="submit" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-magnifying-glass"></i> 검색
-  </button>
-  @if(request('q') || request('date_from') || request('date_to'))
-    <a href="{{ route('documents.index', array_filter(['type' => $curType])) }}"
-       class="btn btn-outline btn-sm">초기화</a>
-  @endif
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="파일명 · 환자명">
+    </div>
+    <div class="ds-filter-field span-4">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
+      </div>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">표시 건수</label>
+      <select name="per_page" class="form-control" onchange="this.form.submit()">
+        @foreach([10,20,50,100] as $n)
+          <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('q') || request('date_from') || request('date_to'))
+      <a href="{{ route('documents.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
 </form>
 
 {{-- ── 패널 탭: 조회결과 / 서류 등록 ── --}}
@@ -129,15 +122,13 @@
   </button>
 </div>
 
-<div id="pnlList">
-  {{-- ── 서류 목록 (wwGrid) ── --}}
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-    <i class="bx bx-folder-open" style="font-size:18px;color:var(--primary);"></i>
-    <span class="card-header-title">서류 목록</span>
-    <span style="font-size:12px;color:var(--text-muted);">
-      <i class="bx bx-info-circle"></i> 행을 <b>클릭</b>하면 해당 처방전의 <b>모든 서류</b>를 확인하고 추가 등록할 수 있습니다.
-    </span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+<div id="pnlList" class="ds-grid-section">
+  {{-- Figma 174:1242 — 좌측 건수·안내, 우측 액션 --}}
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-hint">행을 <b>클릭</b>하면 해당 처방전의 모든 서류를 확인하고 추가 등록할 수 있습니다.</span>
+    </div>
   </div>
   <div id="documentGrid"></div>
 </div>
@@ -396,14 +387,14 @@
     }
 
     // 유형 탭 건수 +1 (전체 탭 포함)
-    document.querySelectorAll('.type-tab').forEach(function (tab) {
+    document.querySelectorAll('.ds-chip').forEach(function (tab) {
       const href = tab.getAttribute('href') || '';
       const isAll = !/[?&]type=/.test(href);
       if (!isAll && !href.includes('type=' + doc.type)) return;
-      let cnt = tab.querySelector('.cnt');
+      let cnt = tab.querySelector('.ds-chip-count');
       if (!cnt) {
         cnt = document.createElement('span');
-        cnt.className = 'cnt';
+        cnt.className = 'ds-chip-count';
         cnt.textContent = '0';
         tab.appendChild(cnt);
       }
