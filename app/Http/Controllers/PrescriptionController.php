@@ -665,7 +665,8 @@ class PrescriptionController extends Controller
             return response()->json([
                 'success'    => true,
                 'temp_path'  => $path,
-                'image_url'  => Storage::disk('public')->url($path),
+                // storage 직결 대신 로그인·소유자를 확인하는 경로로 내보낸다
+                'image_url'  => route('files.prescription-temp', basename($path)),
                 'confidence' => $ocrResult['confidence'],
                 'raw_text'   => $ocrResult['raw_text'] ?? null,
                 'fields'     => [

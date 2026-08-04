@@ -125,6 +125,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/attachments',                [PrescriptionController::class, 'storeAttachment'])->name('attachments.store');
         Route::delete('/{prescription}/attachments/{attachment}', [PrescriptionController::class, 'destroyAttachment'])->name('attachments.destroy');
     });
+    // 처방전 이미지·첨부 서류 — 로그인·권한을 확인하고 내보낸다.
+    // 예전에는 /storage/prescriptions/... 로 주소만 알면 로그인 없이 열렸다.
+    Route::get('/files/prescriptions/{prescription}/image',  [\App\Http\Controllers\SecureFileController::class, 'prescriptionImage'])->name('files.prescription-image');
+    Route::get('/files/prescriptions/attachments/{attachment}', [\App\Http\Controllers\SecureFileController::class, 'attachment'])->name('files.prescription-attachment');
+    Route::get('/files/prescriptions/temp/{name}',              [\App\Http\Controllers\SecureFileController::class, 'tempImage'])->name('files.prescription-temp');
+
     // 전역 메모 API (레이아웃에서 prescription 컨텍스트 없이 사용)
     Route::patch('/prescriptions/memos/{memo}/pin-global',    [PrescriptionController::class, 'pinMemoGlobal'])->name('prescriptions.memos.pin-global');
     Route::patch('/prescriptions/memos/{memo}/update-global', [PrescriptionController::class, 'updateMemoGlobal'])->name('prescriptions.memos.update-global');

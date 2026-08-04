@@ -241,6 +241,12 @@ return [
     | 페이지를 null 로 두면 라우트명으로 찾은 페이지를 그대로 쓰고 액션만 바꾼다.
     */
     'overrides' => [
+        // 처방전 이미지·첨부 파일 내보내기 — 라우트 이름이 files.* 라 페이지를 못 찾는다.
+        // 처방전을 볼 수 있는 사람만 그 파일도 볼 수 있게 명시한다.
+        'files.prescription-image'      => ['prescriptions', 'view'],
+        'files.prescription-attachment' => ['prescriptions', 'view'],
+        'files.prescription-temp'       => ['prescriptions', 'view'],
+
         // POST 지만 실제로는 조회/조립일 뿐인 것
         'nice-settings.test'          => [null, 'view'],
         'orders.fetchWithworksStatus' => [null, 'view'],

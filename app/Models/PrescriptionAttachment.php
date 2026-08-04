@@ -33,7 +33,10 @@ class PrescriptionAttachment extends Model
 
     public function getFileUrlAttribute(): ?string
     {
-        return $this->file_path ? Storage::disk('public')->url($this->file_path) : null;
+        // 신분증·위임장이 담긴다. storage 직결 대신 로그인·권한을 거치게 한다.
+        return $this->file_path && $this->exists
+            ? route('files.prescription-attachment', $this)
+            : null;
     }
 
     public function getDocTypeLabelAttribute(): string

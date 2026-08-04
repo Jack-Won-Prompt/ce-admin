@@ -124,8 +124,10 @@ class Prescription extends Model
     // ── 이미지 URL ────────────────────────────────────────
     public function getImageUrlAttribute(): ?string
     {
-        return $this->image_path
-            ? asset('storage/' . $this->image_path)
+        // 예전에는 storage 로 바로 열려 주소만 알면 로그인 없이 보였다.
+        // 로그인·권한을 확인하는 경로로 내보낸다(SecureFileController).
+        return $this->image_path && $this->exists
+            ? route('files.prescription-image', $this)
             : null;
     }
 

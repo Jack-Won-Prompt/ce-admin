@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # 처방전 이미지와 첨부 서류는 주소만 알면 로그인 없이 열렸다.
+    # storage 심볼릭 링크로 직접 닿는 길을 막는다. 화면에는 로그인·권한을
+    # 확인하는 /files/... 경로로만 내보낸다(SecureFileController).
+    # fax/ 는 팩스 업체가, consents/ 는 서명한 환자가 주소로 받아가므로 열어 둔다.
+    RewriteRule ^storage/prescriptions/ - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
