@@ -11,18 +11,23 @@
      탭바가 고정 헤더에 가려졌다. 패딩과 같은 토큰에서 계산해 다시 어긋나지 않게 한다. */
   #wsRoot { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h));
             margin:0 calc(var(--content-pad) * -1) calc(var(--content-pad) * -1); background:var(--bg); }
-  .ws-tabs { display:flex; gap:3px; align-items:flex-end; background:#fff; border-bottom:1px solid var(--border);
-    padding:7px 12px 0; overflow-x:auto; flex-shrink:0; min-height:42px; }
+  /* 화면 탭 — 시안 207:1222.
+     탭바는 흰 바탕에 radius 8, 위쪽만 2px 띄운다. 탭끼리는 붙어 있고 아래 선은 없다.
+     고른 탭은 테두리나 밑줄 대신 바탕색(회색)으로 표시해, 아래 본문과 이어져 보인다. */
+  .ws-tabs { display:flex; gap:0; align-items:flex-end; background:var(--gray-0); border-radius:8px;
+    padding:2px 0 0; overflow-x:auto; flex-shrink:0; }
   .ws-tabs::-webkit-scrollbar { height:6px; }
-  .ws-tab { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; font-size:13px; font-weight:600;
-    color:var(--text-secondary); background:var(--bg); border:1px solid var(--border); border-bottom:none;
-    border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; max-width:220px; user-select:none; }
+  .ws-tab { display:inline-flex; align-items:center; justify-content:center; gap:4px; padding:6px 12px;
+    font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-600);
+    background:transparent; border:none; border-radius:8px 8px 0 0;
+    cursor:pointer; white-space:nowrap; max-width:220px; user-select:none; }
   .ws-tab:hover { color:var(--primary); }
-  .ws-tab.active { color:var(--primary); background:#fff; border-color:var(--border); box-shadow:inset 0 -2px 0 var(--primary); }
+  .ws-tab.active { color:var(--primary); font-weight:700; background:var(--gray-100); }
   .ws-tab .ws-tab-ico { width:16px; height:16px; font-size:15px; flex-shrink:0; opacity:.75; }
   .ws-tab .ws-tab-label { overflow:hidden; text-overflow:ellipsis; }
-  .ws-tab .ws-tab-close { border:none; background:none; cursor:pointer; color:var(--text-muted); font-size:16px;
-    line-height:1; padding:0 3px; border-radius:5px; flex-shrink:0; }
+  .ws-tab .ws-tab-close { display:inline-flex; align-items:center; justify-content:center;
+    width:12px; height:12px; border:none; background:none; cursor:pointer; color:var(--gray-500); font-size:12px;
+    line-height:1; padding:0; border-radius:5px; flex-shrink:0; }
   .ws-tab .ws-tab-close:hover { background:var(--danger-light); color:var(--danger); }
   .ws-frames { position:relative; flex:1; min-height:0; background:#fff; }
   .ws-frames iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
