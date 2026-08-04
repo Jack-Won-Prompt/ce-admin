@@ -1441,6 +1441,14 @@
           </a>
         </div>
         @endif
+        @if($vis('service-settings'))
+        <div class="menu-item {{ request()->routeIs('service-settings*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="wrench" href="{{ route('service-settings.index') }}" data-title="서비스 연동 설정">
+            @dsicon('wrench', 'ds-icon menu-icon')
+            <span>서비스 연동 설정</span>
+          </a>
+        </div>
+        @endif
 
         {{-- 사용자 로그 메뉴 비활성화 --}}
         {{-- <div class="menu-item {{ request()->routeIs('user-logs*') ? 'active' : '' }}">

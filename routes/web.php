@@ -305,6 +305,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put(   '/settings/permission-groups/{group}',          [\App\Http\Controllers\PermissionGroupController::class, 'update'])->name('permission-groups.update');
     Route::delete('/settings/permission-groups/{group}',          [\App\Http\Controllers\PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
 
+    // 외부 서비스 키·설정 (팝빌·토스·알림톡·건보공단·AWS·메일·NICE)
+    // 항목 목록은 config/settings-schema.php 가 쥔다.
+    Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
+    Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
+
     // NICE 본인확인 설정 (자격증명 서버 저장 + 연결 테스트)
     Route::get( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'edit'])->name('nice-settings.edit');
     Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');

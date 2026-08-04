@@ -23,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
+        /* 관리자 화면에서 저장한 외부 서비스 키·설정을 런타임 config() 에 얹는다.
+           저장한 항목만 덮어쓰므로, 손대지 않은 값은 .env 그대로다.
+           DB 를 아직 못 쓰는 상황이면 조용히 넘어간다. */
+        \App\Support\ServiceSettings::applyToConfig();
+
         /* 자산 URL에 파일 수정시각을 붙여 캐시를 자동으로 무효화한다.
            사용:  <link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')"> */
         Blade::directive('assetv', fn (string $expr) =>

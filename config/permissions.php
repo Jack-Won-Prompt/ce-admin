@@ -222,6 +222,14 @@ return [
             'routes'  => ['nice-settings'],
             'actions' => ['view', 'update'],
         ],
+        // 외부 서비스 키를 다루는 화면이라 관리자만 연다.
+        'service-settings' => [
+            'label'      => '서비스 연동 설정',
+            'group'      => 'settings',
+            'routes'     => ['service-settings'],
+            'actions'    => ['view', 'update'],
+            'admin_only' => true,
+        ],
     ],
 
     /*
