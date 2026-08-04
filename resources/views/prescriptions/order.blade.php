@@ -168,6 +168,31 @@
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
   html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
+
+  /* ── 환자 정보 바 (시안 137:290) ──
+     액션 버튼이 저마다 다른 색으로 채워져 있어 무엇이 더 중요한 동작인지 알기 어려웠다.
+     시안은 모두 같은 흰 버튼으로 두고 글자색으로만 성격을 나눈다. */
+  .pib-avatar { width:54px; height:54px; border-radius:12px; background:var(--gray-100);
+                display:flex; align-items:flex-end; justify-content:center; flex-shrink:0;
+                color:var(--gray-400); font-size:30px; overflow:hidden; }
+  .pib-name { font-size:16px; font-weight:700; line-height:1.6; color:var(--gray-1000); }
+  .pib-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px;
+              background:var(--gray-100); border:1px solid var(--gray-200);
+              font-size:11px; font-weight:500; line-height:1.6; color:var(--gray-800); white-space:nowrap; }
+  .pib-tag { display:inline-flex; align-items:center; justify-content:center; padding:0 6px; border-radius:6px;
+             background:var(--primary-light); color:var(--primary);
+             font-size:11px; font-weight:500; line-height:1.6; white-space:nowrap; }
+  .pib-val { font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000); }
+  .pib-dot { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+  .pib-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+             height:32px; padding:0 12px; border-radius:8px;
+             background:var(--gray-0); border:1px solid var(--gray-200);
+             font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+             cursor:pointer; white-space:nowrap; }
+  .pib-btn:hover { background:var(--gray-50); }
+  .pib-btn i { font-size:14px; }
+  .pib-btn-primary { color:var(--primary); }
+  .pib-btn-off { background:var(--gray-50); color:var(--gray-400); cursor:default; }
   /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
      폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */
   /* 좌우 두 영역 모두 흰 카드 (시안 137:441 · 137:517) */
@@ -362,7 +387,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
   {{-- Patient Info Bar --}}
   <div id="patient-info-bar-ph" style="display:none;"></div>
-  <div id="patient-info-bar" style="background:var(--primary-light);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-20px -24px 20px;padding:10px 24px;position:relative;z-index:50;">
+  <div id="patient-info-bar" style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;position:relative;z-index:50;">
 
     {{-- ── 오른쪽 액션 버튼 그룹 ── --}}
     <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;order:10;">
@@ -370,8 +395,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- 위임동의 SMS 발송 --}}
       <div style="position:relative;">
         <div id="consentBtnWrap">
-          <button type="button" id="consentActionBtn" onclick="toggleConsentPopover(event)"
-                  style="padding:5px 11px;background:#6366f1;color:#fff;border:none;font-weight:700;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:var(--radius);white-space:nowrap;cursor:pointer;">
+          <button class="pib-btn pib-btn-primary" type="button" id="consentActionBtn" onclick="toggleConsentPopover(event)">
             <i class="fa-solid fa-file-signature" style="font-size:11px;"></i> 위임동의
           </button>
         </div>
@@ -525,7 +549,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         @else
           {{-- 미발급 --}}
           <div id="vaNotIssuedWrap" style="position:relative;">
-            <button type="button" id="btnVaTrigger"
+            <button class="pib-btn pib-btn-primary" type="button" id="btnVaTrigger"
                     data-url="{{ route('settlement.issue-va', $prescription->order) }}"
                     data-sms-url="{{ route('prescriptions.smsSend', $prescription) }}"
                     onclick="toggleVaPopover(event)"
@@ -621,9 +645,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- 카카오 알림톡 --}}
       @php $kakaoSent = (bool)$prescription->kakao_sent_at; @endphp
       <div id="kakaoTriggerWrap" style="position:relative;">
-        <button class="btn" id="btnKakaoTrigger" onclick="toggleKakaoPopover(event)"
-                style="padding:5px 11px;font-weight:700;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:var(--radius);white-space:nowrap;cursor:pointer;
-                       {{ $kakaoSent ? 'background:var(--success-light);color:var(--success);border:1px solid #86efac;' : 'background:#FEE500;color:#191919;border:none;' }}">
+        <button class="pib-btn pib-btn-primary" id="btnKakaoTrigger" onclick="toggleKakaoPopover(event)">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:13px;height:13px;fill:{{ $kakaoSent ? 'var(--success)' : '#191919' }};flex-shrink:0;"><path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.548 5.082 3.9 6.498l-.97 3.6a.3.3 0 0 0 .462.328l4.326-2.88A11.4 11.4 0 0 0 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/></svg>
           알림톡
         </button>
@@ -701,9 +723,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- SMS 알림 --}}
       @php $smsSent = (bool)$prescription->sms_sent_at; @endphp
       <div id="smsTriggerWrap" style="position:relative;">
-        <button class="btn" id="btnSmsTrigger" onclick="toggleSmsPopover(event)"
-                style="padding:5px 11px;font-weight:700;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:var(--radius);white-space:nowrap;cursor:pointer;
-                       {{ $smsSent ? 'background:var(--success-light);color:var(--success);border:1px solid #86efac;' : 'background:var(--primary);color:#fff;border:none;' }}">
+        <button class="pib-btn pib-btn-primary" id="btnSmsTrigger" onclick="toggleSmsPopover(event)">
           <i class="fa-solid fa-comment-sms" style="font-size:12px;"></i> SMS
         </button>
         {{-- SMS 팝오버 --}}
@@ -784,7 +804,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button onclick="cancelCashReceipt()" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:3px;cursor:pointer;">취소</button>
         </div>
         @else
-        <button class="btn btn-outline" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)" style="padding:5px 10px;font-size:11px;white-space:nowrap;">
+        <button class="pib-btn" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)">
           <i class="fa-solid fa-receipt"></i> 현금영수증
         </button>
         @endif
@@ -792,8 +812,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 팩스 전송 --}}
       <div id="faxTriggerWrap" style="display:{{ $lastFaxHistory ? 'none' : 'block' }};position:relative;">
-        <button class="btn btn-outline" id="btnFaxTrigger" onclick="toggleFaxPopover(event)"
-                style="padding:5px 11px;font-size:11px;white-space:nowrap;display:flex;align-items:center;gap:4px;position:relative;">
+        <button class="pib-btn" id="btnFaxTrigger" onclick="toggleFaxPopover(event)">
           <i class="fa-solid fa-fax" style="font-size:12px;"></i> 팩스
           <span id="faxSentBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--success);border:2px solid var(--bg-card);align-items:center;justify-content:center;">
             <i class="fa-solid fa-check" style="font-size:7px;color:#fff;"></i>
@@ -1032,7 +1051,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
       @else
       <div id="tiNotIssuedWrap" style="position:relative;">
-        <button class="btn btn-outline" id="btnTiTrigger" onclick="toggleTaxInvoicePopover(event)" style="padding:5px 10px;font-size:11px;white-space:nowrap;">
+        <button class="pib-btn" id="btnTiTrigger" onclick="toggleTaxInvoicePopover(event)">
           <i class="fa-solid fa-file-invoice"></i> 세금계산서
         </button>
         <div id="taxInvoicePopover" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:400px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:501;">
@@ -1100,17 +1119,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
     {{-- 환자명 + 메모 버튼 묶음 --}}
     <div style="display:flex;align-items:center;gap:8px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;">
+      <div class="pib-avatar">
         <i class="fa-solid fa-user"></i>
       </div>
       <div>
-        <div style="font-size:14px;font-weight:700;" id="hdrPatientName">
+        <div class="pib-name" id="hdrPatientName">
           {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
           @if(!$prescription->patient)
             <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">(OCR)</span>
           @endif
         </div>
-        <div style="font-size:11px;color:var(--text-muted);" id="hdrPatientSub">
+        <div class="pib-chip" id="hdrPatientSub">
           @if($prescription->patient)
             {{ $prescription->patient->birth_date?->format('Y-m-d') }} · 만 {{ $prescription->patient->age }}세
           @else
@@ -1119,17 +1138,22 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div>
     </div>
-    <div style="width:1px;height:32px;background:var(--border);"></div>
-    <div style="font-size:12px;color:var(--text-secondary);">
-      <i class="fa-solid fa-phone" style="color:var(--primary);"></i>
-      <span id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-secondary);">
-      <i class="fa-solid fa-hospital" style="color:var(--primary);"></i>
-      <span id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-secondary);">
-      <i class="fa-solid fa-user-tie" style="color:var(--primary);"></i> 담당: <span id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
+    {{-- 아래 줄 — 라벨 칩 + 값, 사이는 4px 점 (시안 137:335) --}}
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="display:inline-flex;align-items:center;gap:6px;">
+        <span class="pib-tag">전화</span>
+        <span class="pib-val" id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
+      </span>
+      <span class="pib-dot"></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;">
+        <span class="pib-tag">병원</span>
+        <span class="pib-val" id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
+      </span>
+      <span class="pib-dot"></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;">
+        <span class="pib-tag">담당</span>
+        <span class="pib-val" id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
+      </span>
     </div>
       @if($prescription->patient?->is_nhis_eligible)
       <span class="badge badge-success" id="hdrNhisBadge" style="order:8;"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
