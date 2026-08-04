@@ -23,7 +23,6 @@
     cursor:pointer; white-space:nowrap; max-width:220px; user-select:none; }
   .ws-tab:hover { color:var(--primary); }
   .ws-tab.active { color:var(--primary); font-weight:700; background:var(--gray-100); }
-  .ws-tab .ws-tab-ico { width:16px; height:16px; font-size:15px; flex-shrink:0; opacity:.75; }
   .ws-tab .ws-tab-label { overflow:hidden; text-overflow:ellipsis; }
   .ws-tab .ws-tab-close { display:inline-flex; align-items:center; justify-content:center;
     width:12px; height:12px; border:none; background:none; cursor:pointer; color:var(--gray-500); font-size:12px;
@@ -46,21 +45,11 @@
 (function () {
   const HOME  = { url: @json(url('dashboard')) + '?frame=1', title: '대시보드', icon: 'home-04' };
 
-  /* 탭 아이콘은 사이드바에 이미 인라인돼 있는 같은 SVG 를 복제해 쓴다.
-     따로 정의하면 메뉴와 탭의 아이콘이 갈라지고, <img> 로 넣으면 currentColor 가 죽는다.
-     권한 때문에 해당 메뉴가 없는 경우엔 기본 아이콘으로 떨어진다. */
-  function iconMarkup(name) {
-    if (name) {
-      let src = null;
-      try { src = document.querySelector('.layout-menu .menu-link[data-icon="' + CSS.escape(name) + '"] svg'); } catch (_) {}
-      if (src) {
-        const c = src.cloneNode(true);
-        c.setAttribute('class', 'ws-tab-ico');
-        return c.outerHTML;
-      }
-    }
-    return '<i class="ws-tab-ico bx bx-window-alt"></i>';
-  }
+  /* 탭에는 아이콘을 넣지 않는다 — 시안(207:1222)은 이름과 닫기 x 만 둔다.
+     탭 이름이 '처방전 관리 - RX-…' 형태라 아이콘 없이도 무엇인지 알 수 있고,
+     아이콘을 붙이면 좁은 폭에서 이름이 먼저 잘린다.
+     openTab 은 icon 인자를 그대로 받아 둔다 — 부르는 쪽(layouts.app)이 넘기고 있고,
+     나중에 되살릴 때 호출부를 다시 손대지 않기 위해서다. */
   const tabsEl   = document.getElementById('wsTabs');
   const framesEl = document.getElementById('wsFrames');
   const tabs = [];        // { id, url, title, icon, home }
@@ -77,7 +66,6 @@
       el.className = 'ws-tab' + (t.id === active ? ' active' : '');
       el.setAttribute('role', 'tab');
       el.innerHTML =
-        iconMarkup(t.icon) +
         '<span class="ws-tab-label">' + esc(t.title) + '</span>' +
         (t.home ? '' : '<button class="ws-tab-close" title="닫기">&times;</button>');
       el.addEventListener('click', e => { if (e.target.closest('.ws-tab-close')) return; activate(t.id); });
