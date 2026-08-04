@@ -93,7 +93,7 @@
     if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
     if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
     // 목록 탭을 그대로 두고 상세를 새 탭으로 (워크스페이스 밖이면 브라우저 새 탭)
-    ceOpenTab(DETAIL_BASE + '/' + c[0].id, '샵주문 상세', 'handle-with-care');
+    ceOpenTab(DETAIL_BASE + '/' + c[0].id, 'CE샵 주문 - ' + c[0].id, 'handle-with-care');
   };
 })();
 </script>

@@ -284,9 +284,10 @@
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   // 이력 행 클릭 → 해당 상세(처방전 검수·주문)를 워크스페이스 새 탭으로 (환자 목록 유지)
-  const hrow = (main, sub, right, url, label) =>
+  // 탭 제목은 '여는 화면' 이름으로 짓는다 — 출발 화면(거래처 관리)이 아니라 도착 화면 기준.
+  const hrow = (main, sub, right, url, tabTitle) =>
     '<div class="pt-hrow" '
-      + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + ('거래처 관리 - ' + (label || '상세')) + '\', \'file-edit-02\')"' : '')
+      + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + (tabTitle || '상세') + '\', \'file-edit-02\')"' : '')
       + '>' +
       '<div class="pt-h-main"><div style="font-weight:600;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
       (right ? '<div style="white-space:nowrap;text-align:right;">' + right + '</div>' : '') +
@@ -323,15 +324,15 @@
       document.getElementById('pdCntPu').textContent = d.purchases.length;
 
       document.getElementById('pd-rx').innerHTML = d.prescriptions.length
-        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, esc(r.rx_number) + ' 검수')).join('')
+        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, '처방전 관리 - ' + esc(r.rx_number))).join('')
         : emptyBox('처방전 이력이 없습니다.');
 
       document.getElementById('pd-counsel').innerHTML = d.counseling.length
-        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, esc(c.rx_number) + ' 검수')).join('')
+        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, '처방전 관리 - ' + esc(c.rx_number))).join('')
         : emptyBox('상담 이력이 없습니다.');
 
       document.getElementById('pd-purchase').innerHTML = d.purchases.length
-        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, esc(o.order_number) + ' 주문')).join('')
+        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, '주문 관리 - ' + esc(o.order_number))).join('')
         : emptyBox('구매 이력이 없습니다.');
 
       window.ptTab('rx');
