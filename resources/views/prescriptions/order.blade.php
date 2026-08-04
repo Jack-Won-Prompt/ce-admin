@@ -248,8 +248,11 @@
   .rx-grid-4      { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px 12px; }
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
   .rx-field-row.full { grid-column:1 / -1; }
-  .rx-field-label { font-size:11px; font-weight:600; color:var(--text-secondary); white-space:nowrap; min-width:88px; flex-shrink:0; }
-  .rx-grid-3 .rx-field-label, .rx-grid-4 .rx-field-label { min-width:70px; }
+  /* 라벨 폭을 고정해 어느 줄에서든 입력이 같은 자리에서 시작하게 한다.
+     min-width 였을 때는 '신환master등록일'(84px)처럼 긴 이름이 입력을 오른쪽으로
+     밀어, 같은 아코디언 안에서도 시작 위치가 78·79·81·91 로 흩어졌다.
+     88 은 가장 긴 이름(84)이 잘리지 않는 값이다. */
+  .rx-field-label { font-size:11px; font-weight:600; color:var(--text-secondary); white-space:nowrap; width:88px; flex-shrink:0; }
   .rx-ocr-badge { display:inline-flex; align-items:center; gap:3px; background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-accent); border-radius:4px; font-size:10px; font-weight:700; padding:1px 5px; }
   .rx-ocr-badge i { font-size:9px; }
   @media(max-width:1100px){ .rx-grid-4 { grid-template-columns:1fr 1fr; } }
