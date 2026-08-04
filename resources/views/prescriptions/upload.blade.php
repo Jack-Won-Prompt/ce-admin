@@ -66,34 +66,70 @@
   .up-btn-primary { flex:1; background:var(--primary); border:1px solid var(--primary); color:var(--gray-0); }
   .up-btn-primary:disabled { opacity:.45; cursor:not-allowed; }
 
-  /* ── Drop Zone ── */
-  .drop-zone { border:2px dashed var(--border); border-radius:var(--radius-lg); padding:48px 24px; text-align:center; cursor:pointer; transition:var(--transition); background:var(--bg); position:relative; }
-  .drop-zone:hover, .drop-zone.dragover { border-color:var(--primary); background:var(--primary-light); }
-  .drop-zone.has-file { border-color:var(--success); background:var(--success-light); }
-  .drop-zone.uploading { border-color:var(--primary); background:var(--primary-light); cursor:not-allowed; }
-  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-  .drop-icon { font-size:48px; margin-bottom:14px; display:block; color:var(--primary); }
-  .drop-zone.has-file .drop-icon { color:var(--success); }
-  .drop-zone.uploading .drop-icon { color:var(--primary); animation:spin .8s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  .drop-title { font-size:15px; font-weight:700; color:var(--text-primary); }
-  .drop-desc  { font-size:12px; color:var(--text-muted); margin-top:6px; }
-  .fmt-tags   { display:inline-flex; gap:5px; margin-top:12px; flex-wrap:wrap; justify-content:center; }
-  .fmt-tag    { padding:2px 9px; border-radius:20px; background:var(--bg); border:1px solid var(--border); font-size:10.5px; color:var(--text-secondary); font-weight:600; }
 
-  /* ── File list ── */
-  .file-list { margin-top:12px; display:flex; flex-direction:column; gap:6px; }
-  .file-item { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); }
-  .file-item-name { flex:1; font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .file-item-size { font-size:11px; color:var(--text-muted); flex-shrink:0; }
-  .file-item-remove { background:none; border:none; cursor:pointer; color:var(--danger); padding:2px 4px; line-height:1; }
+  /* ── 라벨 100 + 입력 (Figma 128:789) ── */
+  .fu-row   { display:flex; align-self:stretch; gap:8px; }
+  .fu-label { width:100px; min-height:32px; flex-shrink:0; display:flex; align-items:center;
+              font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-700); }
+  .fu-field { flex:1; min-width:0; }
+  /* 한 줄 입력·셀렉트 — 높이 32, radius 8 */
+  .fu-input { width:100%; height:32px; padding:0 12px; border-radius:8px;
+              background:var(--gray-0); border:1px solid var(--gray-200);
+              font-size:13px; font-weight:400; line-height:1.6; color:var(--gray-1000); }
+  .fu-input::placeholder { color:var(--gray-500); }
+  .fu-input:focus { outline:none; border-color:var(--primary); }
+  textarea.fu-input { height:80px; padding:12px; resize:vertical; }
+  /* 환자 검색칸 위에 얹히는 안내 배지 (Figma 128:793) */
+  .fu-hint-badge { position:absolute; right:0; top:-9px; padding:1px 6px; border-radius:999px;
+                   background:var(--primary); color:var(--gray-0);
+                   font-size:10px; font-weight:500; line-height:1.6; white-space:nowrap; }
 
-  /* ── Doc type selector ── */
-  .doc-type-sel { font-size:11px; font-weight:600; border:1px solid var(--border); border-radius:var(--radius); padding:3px 8px; background:var(--bg-card); color:var(--text-primary); cursor:pointer; flex-shrink:0; min-width:90px; }
-  .doc-type-sel.type-prescription { border-color:var(--primary); background:var(--primary-light); color:var(--primary); }
-  .doc-type-sel.type-id_card      { border-color:var(--info);    background:#e0f7fa;               color:#0284c7; }
-  .doc-type-sel.type-delegation   { border-color:var(--warning); background:#fef3c7;               color:#b45309; }
-  .doc-type-sel.type-other        { border-color:var(--border);  background:var(--bg);             color:var(--text-secondary); }
+  /* ── 파일 타일 그리드 (Figma 128:798) — 6열, gap 8 ── */
+  .fu-grid { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
+  @media(max-width:1400px){ .fu-grid { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+  @media(max-width:1100px){ .fu-grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media(max-width:700px) { .fu-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+  /* 추가 타일 (Figma 128:799) — 높이 140, primary 테두리 */
+  .fu-add { position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center;
+            gap:8px; height:140px; padding:0 12px; border-radius:8px;
+            background:var(--gray-0); border:1px solid var(--primary); cursor:pointer;
+            transition:var(--transition); text-align:center; }
+  .fu-add:hover, .fu-add.dragover { background:var(--primary-light); }
+  .fu-add input[type=file] { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+  .fu-add-icon  { font-size:20px; color:var(--primary); line-height:1; }
+  .fu-add-title { font-size:13px; font-weight:500; line-height:1.4; color:var(--primary); }
+  .fu-add-sub   { font-size:11px; font-weight:500; line-height:1.2; color:var(--gray-500); }
+  .fu-add-text  { display:flex; flex-direction:column; align-items:center; gap:6px; }
+
+  /* 선택된 파일 타일 (Figma 128:3202) — 미리보기 위에 어두운 겹판 */
+  .fu-tile { display:flex; flex-direction:column; gap:6px; }
+  .fu-card { position:relative; height:140px; border-radius:8px; overflow:hidden;
+             background:var(--gray-0); border:1px solid var(--gray-200); }
+  .fu-card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .fu-card-veil { position:absolute; inset:0; background:rgba(0,0,0,.4); }
+  .fu-card-doc  { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                  font-size:34px; color:rgba(255,255,255,.7); }
+  /* 삭제 — 16×16 원 (Figma 128:3205) */
+  .fu-del { position:absolute; top:8px; right:8px; width:16px; height:16px; border-radius:999px;
+            background:var(--primary); border:none; color:var(--gray-0); cursor:pointer;
+            display:flex; align-items:center; justify-content:center; font-size:9px; line-height:1; padding:0; }
+  /* 유형 선택 — 좌상단, 흰 글씨 + 화살표 (Figma 128:3211) */
+  .fu-type { position:absolute; top:8px; left:8px; display:flex; align-items:center; gap:4px; }
+  .fu-type select { appearance:none; -webkit-appearance:none; background:transparent; border:none;
+                    color:var(--gray-0); font-size:12px; font-weight:400; line-height:1.6;
+                    padding:0; cursor:pointer; }
+  .fu-type select option { color:var(--gray-1000); }
+  .fu-type i { font-size:9px; color:var(--gray-0); }
+  /* 파일명 띠 — 아래 가득, 반투명 검정 (Figma 128:3208) */
+  .fu-name { position:absolute; left:0; right:0; bottom:0; padding:6px;
+             background:rgba(0,0,0,.4); color:var(--gray-0);
+             font-size:11px; font-weight:500; line-height:1.2;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* 크기 — 파일명 띠 바로 위 오른쪽 (Figma 128:3210) */
+  .fu-size { position:absolute; right:8px; bottom:31px; color:var(--gray-0); opacity:.4;
+             font-size:10px; font-weight:400; line-height:1.2; }
 
   /* ── Patient search ── */
   .patient-search-wrap { position:relative; }
@@ -193,47 +229,81 @@
           <input type="hidden" name="admin_note"       id="h_admin_note">
           <input type="hidden" name="patient_id"       id="h_patient_id">
 
-          {{-- ── 파일 업로드 (Figma 128:3175) ── --}}
+          {{-- ── 파일 업로드 (Figma 128:781 / 128:3175) ── --}}
           <div class="up-sec">
             <div class="up-sec-head">
               <span class="up-sec-title">파일 업로드</span>
-              <span style="font-size:12px;font-weight:500;color:var(--gray-500);">최대 50MB · JPG / PNG / PDF / HEIC · 최대 10개</span>
+              {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
+                <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
+                각 파일의 <b style="font-weight:500;color:#044456;">유형</b>을 선택해 주세요.
+                <b style="font-weight:500;color:#044456;">처방전</b>은 OCR 분석,
+                <b style="font-weight:500;color:#044456;">주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.
+              </span>
             </div>
-            <div>{{-- 기존 입력 흐름 그대로 --}}
 
-          {{-- ── 환자 선택 ── --}}
-          <div class="form-group" style="margin-bottom:16px;">
-            <label class="form-label" style="font-weight:700;">
-              <i class="fa-solid fa-user-check" style="color:var(--primary);margin-right:5px;"></i>환자 선택 <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(선택 시 OCR 자동 연결 건너뜀)</span>
-            </label>
-            <div class="patient-search-wrap">
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input type="text" id="patientSearchInput" class="form-control"
-                       placeholder="이름 또는 연락처로 검색..."
-                       autocomplete="off"
-                       style="flex:1;" />
-                <div id="patientSelectedBadge" style="display:none;align-items:center;gap:6px;padding:4px 10px;background:var(--primary-light);border:1px solid var(--primary);border-radius:var(--radius);font-size:12px;font-weight:700;color:var(--primary);white-space:nowrap;">
-                  <i class="fa-solid fa-user"></i>
-                  <span id="patientSelectedName"></span>
-                  <button type="button" onclick="clearPatient()" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:0;font-size:14px;line-height:1;" title="선택 해제">×</button>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+
+              {{-- 환자 선택 (128:789) --}}
+              <div class="fu-row">
+                <span class="fu-label">환자 선택</span>
+                <div class="fu-field patient-search-wrap">
+                  <div style="display:flex;gap:8px;align-items:center;position:relative;">
+                    <div style="flex:1;min-width:0;position:relative;">
+                      <input type="text" id="patientSearchInput" class="fu-input"
+                             placeholder="이름 또는 연락처로 검색" autocomplete="off" />
+                      <span class="fu-hint-badge">선택 시 OCR 자동 연결 건너뜀</span>
+                    </div>
+                    <div id="patientSelectedBadge" style="display:none;align-items:center;gap:8px;flex:1;min-width:0;">
+                      <span id="patientSelectedName" class="fu-input"
+                            style="display:flex;align-items:center;background:var(--gray-50);color:var(--gray-800);"></span>
+                      <button type="button" onclick="clearPatient()"
+                              style="height:32px;padding:0 12px;border-radius:8px;background:var(--gray-0);border:1px solid var(--gray-200);font-size:13px;color:var(--gray-1000);cursor:pointer;white-space:nowrap;">다시 선택</button>
+                    </div>
+                  </div>
+                  <div class="patient-search-drop" id="patientDrop"></div>
                 </div>
               </div>
-              <div class="patient-search-drop" id="patientDrop"></div>
+
+              {{-- 처방 서류 (128:796) --}}
+              <div class="fu-row">
+                <span class="fu-label">처방 서류</span>
+                <div class="fu-field">
+                  <div class="fu-grid" id="grid-rx">
+                    <label class="fu-add" data-group="rx">
+                      <input type="file" accept=".jpg,.jpeg,.png,.pdf,.heic" multiple>
+                      <i class="fa-solid fa-plus fu-add-icon"></i>
+                      <span class="fu-add-text">
+                        <span class="fu-add-title">파일을 드래그 하거나<br>클릭하여 선택</span>
+                        <span class="fu-add-sub">등록신청서ㆍ처방전ㆍ결과지 등</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {{-- 기타 자료 (165:1609) --}}
+              <div class="fu-row">
+                <span class="fu-label">기타 자료</span>
+                <div class="fu-field">
+                  <div class="fu-grid" id="grid-etc">
+                    <label class="fu-add" data-group="etc">
+                      <input type="file" accept=".jpg,.jpeg,.png,.pdf,.heic" multiple>
+                      <i class="fa-solid fa-plus fu-add-icon"></i>
+                      <span class="fu-add-text">
+                        <span class="fu-add-title">파일을 드래그 하거나<br>클릭하여 선택</span>
+                        <span class="fu-add-sub">신분증ㆍ위임장ㆍ기타 등</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          {{-- Drop Zone --}}
-          <div class="drop-zone" id="dropArea">
-            <input type="file" id="fileInput" name="prescription_images[]"
-                   accept=".jpg,.jpeg,.png,.pdf,.heic" multiple />
-            <i class="fa-regular fa-file-image drop-icon" id="dropIcon"></i>
-            <div class="drop-title" id="dropTitle">파일을 여기에 끌어다 놓거나 클릭하여 선택</div>
-            <div class="drop-desc" id="dropDesc">처방전 · 주민등록증 · 위임장 등 — 한 번에 최대 10개</div>
-            <div class="fmt-tags">
-              <span class="fmt-tag">JPG</span><span class="fmt-tag">PNG</span>
-              <span class="fmt-tag">PDF</span><span class="fmt-tag">HEIC</span>
-            </div>
-          </div>
+          {{-- 제출용 — 실제 전송은 여기에 담는다 --}}
+          <input type="file" id="fileInput" name="prescription_images[]" multiple style="display:none;">
 
           {{-- 파일 선택 중 프로그레스 바 --}}
           <div id="fileProgressWrap" style="display:none;margin-top:14px;">
@@ -249,36 +319,26 @@
             </div>
           </div>
 
-          {{-- 파일 목록 --}}
-          <div class="file-list" id="fileList"></div>
-
-          {{-- 파일 유형 안내 --}}
-          <div id="typeGuide" style="display:none;margin-top:10px;padding:10px 13px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-secondary);">
-            <i class="fa-solid fa-circle-info" style="color:var(--info);"></i>
-            각 파일의 <strong>유형</strong>을 선택해 주세요.
-            <span style="margin-left:6px;"><span style="color:var(--primary);font-weight:700;">처방전</span>은 OCR 분석,
-            <span style="color:#0284c7;font-weight:700;">주민등록증·위임장</span> 등은 이미지 그대로 첨부 문서로 저장됩니다.</span>
-          </div>
-
-            </div>{{-- /파일 업로드 흐름 --}}
-          </div>{{-- /up-sec 파일 업로드 --}}
-
-          {{-- ── 처방전 설정 (Figma 128:3341) — 시안에서 이 카드 안으로 들어왔다 ── --}}
+          {{-- ── 처방전 설정 (Figma 128:805) — 시안에서 이 카드 안으로 들어왔다 ── --}}
           <div class="up-sec">
             <span class="up-sec-title">처방전 설정</span>
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
-              <div class="form-group mb-0" style="flex:1; min-width:200px;">
-                <label class="form-label">담당자</label>
-                <select class="form-control form-select" id="sideAssignedUser">
-                  <option value="">담당자 선택</option>
-                  @foreach($managers as $m)
-                    <option value="{{ $m->id }}">{{ $m->name }}</option>
-                  @endforeach
-                </select>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="fu-row">
+                <span class="fu-label">담당자</span>
+                <div class="fu-field">
+                  <select class="fu-input" id="sideAssignedUser">
+                    <option value="">담당자 선택</option>
+                    @foreach($managers as $m)
+                      <option value="{{ $m->id }}">{{ $m->name }}</option>
+                    @endforeach
+                  </select>
+                </div>
               </div>
-              <div class="form-group mb-0" style="flex:2; min-width:240px;">
-                <label class="form-label">메모</label>
-                <textarea class="form-control" id="sideAdminNote" rows="2" placeholder="처방전 관련 메모..."></textarea>
+              <div class="fu-row">
+                <span class="fu-label" style="align-items:flex-start;padding-top:8px;">메모</span>
+                <div class="fu-field">
+                  <textarea class="fu-input" id="sideAdminNote" placeholder="처방전 관련 메모"></textarea>
+                </div>
               </div>
             </div>
           </div>
@@ -397,7 +457,9 @@ function clearPatient() {
 }
 
 // ── 파일 업로드 ─────────────────────────────────────────
-const dropArea  = document.getElementById('dropArea');
+// 시안(128:796 / 165:1609)은 문서 구분마다 업로드 영역을 따로 둔다.
+// 처방 서류에 넣으면 처방전, 기타 자료에 넣으면 신분증으로 시작하고,
+// 타일 왼쪽 위에서 유형을 바꿀 수 있다.
 const fileInput = document.getElementById('fileInput');
 const submitBtn = document.getElementById('submitBtn');
 const form      = document.getElementById('uploadForm');
@@ -409,16 +471,23 @@ const DOC_TYPES = {
   other:        { label: '기타',      cls: 'type-other',        icon: 'fa-file' },
 };
 
-let selectedFiles = []; // [{file, docType}]
+// 영역별 기본 유형 — 어느 쪽에 넣었는지가 첫 유형을 정한다
+const GROUP_DEFAULT = { rx: 'prescription', etc: 'id_card' };
 
-['dragenter','dragover'].forEach(e =>
-  dropArea.addEventListener(e, ev => { ev.preventDefault(); dropArea.classList.add('dragover'); }));
-['dragleave','drop'].forEach(e =>
-  dropArea.addEventListener(e, ev => { ev.preventDefault(); dropArea.classList.remove('dragover'); }));
-dropArea.addEventListener('drop', ev => addFiles(ev.dataTransfer.files));
-fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+let selectedFiles = []; // [{file, docType, group, url}]
 
-function addFiles(fileObjs) {
+document.querySelectorAll('.fu-add').forEach(box => {
+  const group = box.dataset.group;
+  ['dragenter','dragover'].forEach(e =>
+    box.addEventListener(e, ev => { ev.preventDefault(); box.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(e =>
+    box.addEventListener(e, ev => { ev.preventDefault(); box.classList.remove('dragover'); }));
+  box.addEventListener('drop', ev => addFiles(ev.dataTransfer.files, group));
+  const inp = box.querySelector('input[type=file]');
+  inp.addEventListener('change', () => { addFiles(inp.files, group); inp.value = ''; });
+});
+
+function addFiles(fileObjs, group) {
   const allowed = ['jpg','jpeg','png','pdf','heic'];
   const added = [];
   Array.from(fileObjs).forEach(f => {
@@ -427,7 +496,9 @@ function addFiles(fileObjs) {
     if (!allowed.includes(ext))  { showToast(f.name + ' — 지원하지 않는 형식', 'warning'); return; }
     if (f.size > 51200 * 1024)   { showToast(f.name + ' — 50MB 초과', 'warning'); return; }
     if (selectedFiles.find(s => s.file.name === f.name && s.file.size === f.size)) return;
-    added.push({ file: f, docType: 'prescription' });
+    // 이미지면 타일에 미리보기를 깔아 준다. PDF 는 아이콘으로 대신한다.
+    const url = /^(jpg|jpeg|png)$/.test(ext) ? URL.createObjectURL(f) : null;
+    added.push({ file: f, docType: GROUP_DEFAULT[group] || 'other', group, url });
   });
   if (!added.length) return;
   showFileProgress(added.map(a => a.file), () => {
@@ -468,63 +539,56 @@ function showFileProgress(files, onDone) {
 
 function changeDocType(idx, val) {
   selectedFiles[idx].docType = val;
-  const sel = document.querySelector(`[data-file-idx="${idx}"] .doc-type-sel`);
-  if (sel) {
-    sel.className = 'doc-type-sel type-' + val;
-    sel.value = val;
-  }
 }
 
 function removeFile(idx) {
+  // 미리보기로 잡아 둔 주소를 놓아 준다
+  if (selectedFiles[idx]?.url) URL.revokeObjectURL(selectedFiles[idx].url);
   selectedFiles.splice(idx, 1);
   renderFileList();
 }
 
 function renderFileList() {
-  const count    = selectedFiles.length;
-  const fileList = document.getElementById('fileList');
-  const guide    = document.getElementById('typeGuide');
+  submitBtn.disabled = selectedFiles.length === 0;
 
-  if (count === 0) {
-    dropArea.classList.remove('has-file');
-    document.getElementById('dropIcon').className   = 'fa-regular fa-file-image drop-icon';
-    document.getElementById('dropTitle').textContent = '파일을 여기에 끌어다 놓거나 클릭하여 선택';
-    document.getElementById('dropDesc').textContent  = '처방전 · 주민등록증 · 위임장 등 — 한 번에 최대 10개';
-    fileList.innerHTML = '';
-    guide.style.display = 'none';
-    submitBtn.disabled = true;
-    return;
-  }
+  ['rx', 'etc'].forEach(group => {
+    const grid = document.getElementById('grid-' + group);
+    const add  = grid.querySelector('.fu-add');
+    // 추가 타일만 남기고 지운 뒤 다시 그린다
+    grid.querySelectorAll('.fu-tile').forEach(el => el.remove());
 
-  dropArea.classList.add('has-file');
-  document.getElementById('dropIcon').className   = 'fa-solid fa-circle-check drop-icon';
-  document.getElementById('dropTitle').textContent = count + '개 파일 선택됨';
-  document.getElementById('dropDesc').textContent  = '추가하려면 다시 드래그하거나 클릭 · 최대 ' + (10 - count) + '개 더 가능';
-  guide.style.display = 'block';
-  submitBtn.disabled = false;
+    selectedFiles.forEach((item, i) => {
+      if (item.group !== group) return;
+      const f    = item.file;
+      const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
+      const ext  = f.name.split('.').pop().toLowerCase();
+      const opts = Object.entries(DOC_TYPES).map(([v, t]) =>
+        `<option value="${v}"${item.docType === v ? ' selected' : ''}>${t.label}</option>`).join('');
 
-  fileList.innerHTML = selectedFiles.map((item, i) => {
-    const f    = item.file;
-    const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
-    const ext  = f.name.split('.').pop().toLowerCase();
-    const icon = ext === 'pdf' ? 'fa-file-pdf' : 'fa-file-image';
-    const iclr = ext === 'pdf' ? 'var(--danger)' : 'var(--primary)';
-    const typeOpts = Object.entries(DOC_TYPES).map(([v, t]) =>
-      `<option value="${v}"${item.docType === v ? ' selected' : ''}>${t.label}</option>`
-    ).join('');
-    return `<div class="file-item" data-file-idx="${i}">
-      <i class="fa-regular ${icon}" style="color:${iclr};font-size:18px;flex-shrink:0;"></i>
-      <span class="file-item-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
-      <span class="file-item-size">${size}</span>
-      <select class="doc-type-sel type-${item.docType}" onchange="changeDocType(${i}, this.value)">${typeOpts}</select>
-      <button type="button" class="file-item-remove" onclick="removeFile(${i})" title="제거">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>`;
-  }).join('');
+      const tile = document.createElement('div');
+      tile.className = 'fu-tile';
+      tile.innerHTML =
+        `<div class="fu-card">
+           ${item.url ? `<img src="${item.url}" alt="">` : ''}
+           <div class="fu-card-veil"></div>
+           ${item.url ? '' : `<div class="fu-card-doc"><i class="fa-regular ${ext === 'pdf' ? 'fa-file-pdf' : 'fa-file-image'}"></i></div>`}
+           <span class="fu-type">
+             <select onchange="changeDocType(${i}, this.value)">${opts}</select>
+             <i class="fa-solid fa-chevron-right"></i>
+           </span>
+           <button type="button" class="fu-del" onclick="removeFile(${i})" title="제거">
+             <i class="fa-solid fa-xmark"></i>
+           </button>
+           <span class="fu-size">${size}</span>
+           <span class="fu-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
+         </div>`;
+      grid.appendChild(tile);   // 추가 타일이 맨 앞이라 그대로 뒤에 쌓으면 순서가 맞는다
+    });
+  });
 }
 
 function resetFiles() {
+  selectedFiles.forEach(s => { if (s.url) URL.revokeObjectURL(s.url); });
   selectedFiles = [];
   fileInput.value = '';
   renderFileList();
@@ -584,7 +648,8 @@ function setStep(num, state) {
 window.HELP_TOUR_STEPS = [
   { selector: '.steps-bar', title: '업로드 진행 단계', body: '파일 선택 → 등록 버튼 클릭 → OCR 분석 → 처방전 확인 및 주문 연결 순서로 진행됩니다.' },
   { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
-  { selector: '#dropArea', title: '파일 선택 영역', body: '처방전 외에 주민등록증·위임장 등도 함께 업로드할 수 있습니다. 각 파일의 유형을 선택하세요.' },
+  { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
+  { selector: '#grid-etc', title: '기타 자료', body: '신분증·위임장 등을 넣습니다. 이미지 그대로 첨부 문서로 저장됩니다. 타일 왼쪽 위에서 유형을 바꿀 수 있습니다.' },
   { selector: '#submitBtn', title: '등록 버튼', body: '버튼 클릭 시 OCR 분석이 시작되며, 완료 후 처방전 확인 화면으로 이동합니다.' },
 ];
 </script>
