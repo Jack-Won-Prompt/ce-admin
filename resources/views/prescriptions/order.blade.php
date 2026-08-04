@@ -1884,12 +1884,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
 
-        {{-- 저장 / 승인 버튼 --}}
-        <div style="display:flex;gap:6px;margin-top:14px;justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-          <button class="btn btn-warning btn-sm" style="font-size:11px;padding:4px 10px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-          <button class="btn btn-success btn-sm" style="font-size:11px;padding:4px 10px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-        </div>
       </div>{{-- /cv --}}
 
       {{-- ── 테이블뷰 ── --}}
@@ -1959,11 +1953,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </tr>
           </tbody>
         </table>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-          <button class="btn btn-warning btn-sm" style="font-size:11px;padding:4px 10px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-          <button class="btn btn-success btn-sm" style="font-size:11px;padding:4px 10px;" onclick="approveRx()"><i class="fa-solid fa-circle-check"></i> 승인요청</button>
-        </div>
       </div>{{-- /tv --}}
 
       </div>{{-- /tab-ocr --}}
@@ -2060,10 +2049,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <span style="margin-left:auto;">
                 총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
               </span>
-            </div>
-            <div style="display:flex;gap:6px;margin-top:12px;justify-content:flex-end;">
-              <button class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="resetOCR()"><i class="fa-solid fa-rotate-left"></i> 원본 복원</button>
-              <button class="btn btn-warning btn-sm" style="font-size:11px;padding:4px 10px;" onclick="saveOCR()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
             </div>
           </div>
         </div>
