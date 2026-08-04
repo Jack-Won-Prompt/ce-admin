@@ -7,33 +7,64 @@
 홈 / 처방전 / 업로드 &nbsp;·&nbsp; {{ now()->format('Y-m-d') }}
 @endsection
 
-@section('header-actions')
-  <a href="{{ route('prescriptions.index', ['status' => 'review_needed']) }}" class="btn btn-warning btn-sm">
-    <i class="fa-solid fa-triangle-exclamation"></i> 검수 대기 {{ $prescriptions->where('status','review_needed')->count() }}건
-  </a>
-  <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm">
-    <i class="fa-solid fa-list"></i> 처방전 목록
-  </a>
-@endsection
+{{-- 검수 대기·처방전 목록은 시안(128:3167)대로 업로드 카드 헤더로 옮겼다.
+     상단 헤더의 옛 건수는 화면에 뿌리는 최근 5건 안에서만 세어, 실제보다 적게 나왔다. --}}
 
 @push('styles')
 <style>
-  /* ── Step Bar ── */
-  .steps-bar { display:flex; align-items:center; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 24px; margin-bottom:20px; box-shadow:var(--shadow); }
-  .step { display:flex; align-items:center; gap:10px; flex:1; position:relative; }
-  .step:not(:last-child)::after { content:''; position:absolute; right:0; top:50%; transform:translateY(-50%); width:calc(100% - 120px); height:2px; background:var(--border); margin-left:120px; z-index:0; }
-  .step.done::after  { background:var(--success); }
-  .step.active::after { background:linear-gradient(90deg,var(--primary) 60%,var(--border) 100%); }
-  .step-num { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; border:2px solid var(--border); background:var(--bg); color:var(--text-muted); z-index:1; }
-  .step.done .step-num   { background:var(--success); border-color:var(--success); color:#fff; }
-  .step.active .step-num { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 3px 10px rgba(0,176,202,.35); }
-  .step-label { font-size:12px; font-weight:600; color:var(--text-muted); }
-  .step-sub   { font-size:10px; color:var(--text-muted); margin-top:2px; }
-  .step.done .step-label, .step.active .step-label { color:var(--text-primary); }
+  /* ── 단계 표시 (Figma 128:724) ──
+     번호 원과 좌우 선 대신, 아이콘·제목·부제를 세로로 쌓고 점선으로 잇는다.
+     흰 카드 radius 12, 테두리·그림자 없음. 지난 단계와 앞으로 올 단계는 회색. */
+  .steps-bar { display:flex; justify-content:center; align-items:center; gap:16px;
+               background:var(--gray-0); border-radius:12px; padding:16px; }
+  .step { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  /* 제목과 부제는 붙여 놓는다 — 아이콘과의 간격(8)만 벌린다 (Figma 128:731) */
+  .step-text { display:flex; flex-direction:column; align-items:center; }
+  .step-icon  { width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+                font-size:18px; color:var(--gray-400); }
+  .step-label { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-400); }
+  .step-sub   { font-size:11px; font-weight:500; line-height:1.6; color:var(--gray-400); }
+  .step.active .step-icon, .step.active .step-label, .step.active .step-sub { color:var(--primary); }
+  /* 단계 사이 연결자 — 점 4px · 선 1px, 폭 100 (Figma 128:734) */
+  .step-link { display:flex; align-items:center; justify-content:center; gap:2px; width:100px; height:4px; flex-shrink:0; }
+  .step-link i { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+  .step-link u { flex:1; height:1px; background:var(--gray-300); }
+  .step-link.done i { background:var(--primary); }
+  .step-link.done u { background:var(--primary); }
 
-  /* ── Layout ── */
-  .upload-layout { display:grid; grid-template-columns:1fr 320px; gap:18px; }
+  /* ── Layout (Figma 128:768) — 3 : 1, gap 12 ── */
+  .upload-layout { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,1fr); gap:12px; align-items:start; }
   @media(max-width:960px){ .upload-layout { grid-template-columns:1fr; } }
+
+  /* ── 카드 (Figma 128:769 / 128:827) — 흰 카드 radius 12, 테두리·그림자 없음 ── */
+  .up-card { display:flex; flex-direction:column; background:var(--gray-0); border-radius:12px; }
+  .up-card-head { display:flex; align-items:center; gap:24px; height:44px; padding:0 16px;
+                  border-bottom:1px solid var(--gray-200); flex-shrink:0; }
+  .up-card-title { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-1000); }
+  .up-card-body { padding:16px; display:flex; flex-direction:column; gap:24px; }
+  /* 헤더 우측 작은 버튼 — 높이 28, radius 8 */
+  .up-head-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+                 height:28px; padding:0 12px; border-radius:8px;
+                 background:var(--gray-0); border:1px solid var(--gray-200);
+                 font-size:12px; font-weight:500; color:var(--gray-1000);
+                 text-decoration:none; cursor:pointer; white-space:nowrap; }
+  .up-head-btn:hover { background:var(--gray-50); }
+  /* 검수 대기 알림 */
+  .up-head-alert { display:inline-flex; align-items:center; gap:4px;
+                   font-size:12px; font-weight:500; color:var(--alert-500, #D73D3F); white-space:nowrap; }
+  /* 본문 안 구획 제목 */
+  .up-sec { display:flex; flex-direction:column; gap:16px; }
+  .up-sec-head { display:flex; align-items:center; justify-content:space-between; }
+  .up-sec-title { font-size:14px; font-weight:700; line-height:1.6; color:var(--gray-800); }
+  /* 하단 버튼 — 초기화 80×36, 등록은 남은 폭 (Figma 128:822) */
+  .up-foot { display:flex; align-items:center; gap:8px; }
+  .up-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+            height:36px; padding:0 16px; border-radius:8px;
+            font-size:14px; font-weight:500; cursor:pointer; white-space:nowrap; }
+  .up-btn-ghost { width:80px; flex-shrink:0; background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000); }
+  .up-btn-ghost:hover { background:var(--gray-50); }
+  .up-btn-primary { flex:1; background:var(--primary); border:1px solid var(--primary); color:var(--gray-0); }
+  .up-btn-primary:disabled { opacity:.45; cursor:not-allowed; }
 
   /* ── Drop Zone ── */
   .drop-zone { border:2px dashed var(--border); border-radius:var(--radius-lg); padding:48px 24px; text-align:center; cursor:pointer; transition:var(--transition); background:var(--bg); position:relative; }
@@ -75,12 +106,20 @@
   .ps-item-meta { font-size:11px; color:var(--text-muted); }
   .ps-no-result { padding:12px; font-size:12px; color:var(--text-muted); text-align:center; }
 
-  /* ── History item ── */
-  .history-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:5px; cursor:pointer; transition:var(--transition); }
-  .history-item:hover { background:var(--bg); border-color:var(--primary); }
+  /* ── 최근 업로드 이력 항목 (Figma 128:834) ── */
+  .history-list { display:flex; flex-direction:column; gap:8px; }
+  .history-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px;
+                  background:var(--gray-0); border:1px solid var(--gray-200); cursor:pointer; transition:var(--transition); }
+  .history-item:hover { background:var(--gray-50); border-color:var(--primary); }
+  .history-thumb { width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+                   font-size:16px; flex-shrink:0; }
+  .history-body  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+  .history-name  { font-size:12px; font-weight:500; color:var(--gray-1000); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .history-meta  { font-size:11px; font-weight:500; color:var(--gray-500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .history-badge { padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; white-space:nowrap; flex-shrink:0; }
 
   /* mobile upload */
-  .mobile-upload-card { display:flex; align-items:center; gap:12px; padding:13px 16px; background:var(--primary-light); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; }
+  .mobile-upload-card { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--primary-light); border-radius:12px; margin-bottom:12px; }
 
   /* ── Progress overlay ── */
   .progress-overlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,.55); align-items:center; justify-content:center; }
@@ -94,19 +133,30 @@
 
 @section('content')
 
-{{-- ── Step Bar ── --}}
+{{-- ── 단계 표시 (Figma 128:724) ── --}}
 <div class="steps-bar">
   <div class="step active" id="step1">
-    <div class="step-num"><i class="fa-solid fa-upload" style="font-size:11px;"></i></div>
-    <div><div class="step-label">① 파일 선택</div><div class="step-sub">처방전 및 첨부 문서</div></div>
+    <div class="step-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+    <div class="step-text">
+      <div class="step-label">파일 선택</div>
+      <div class="step-sub">처방전 및 첨부 문서</div>
+    </div>
   </div>
+  <div class="step-link done"><i></i><u></u><i></i></div>
   <div class="step" id="step2">
-    <div class="step-num">2</div>
-    <div><div class="step-label">② OCR 분석</div><div class="step-sub">자동 텍스트 추출</div></div>
+    <div class="step-icon"><i class="fa-solid fa-expand"></i></div>
+    <div class="step-text">
+      <div class="step-label">OCR 분석</div>
+      <div class="step-sub">자동 텍스트 추출</div>
+    </div>
   </div>
+  <div class="step-link"><i></i><u></u><i></i></div>
   <div class="step" id="step3">
-    <div class="step-num">3</div>
-    <div><div class="step-label">③ 처방전 확인</div><div class="step-sub">내용 검토 및 주문 연결</div></div>
+    <div class="step-icon"><i class="fa-solid fa-file-prescription"></i></div>
+    <div class="step-text">
+      <div class="step-label">처방자료 확인</div>
+      <div class="step-sub">내용 검토 및 주문 연결</div>
+    </div>
   </div>
 </div>
 
@@ -125,18 +175,31 @@
     </div>
     @endif
 
-    <div class="card">
-      <div class="card-header">
-        <i class="fa-solid fa-cloud-arrow-up" style="color:var(--primary);"></i>
-        <span class="card-header-title">처방전 파일 업로드</span>
-        <span class="card-header-sub">최대 50MB · JPG / PNG / PDF / HEIC · 최대 10개</span>
+    <div class="up-card">
+      <div class="up-card-head">
+        <span class="up-card-title" style="flex:1;">처방자료 업로드</span>
+        @if($reviewPending > 0)
+        <span class="up-head-alert">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:12px;"></i>검수 대기 {{ $reviewPending }}건
+        </span>
+        @endif
+        <a href="{{ route('prescriptions.index') }}" class="up-head-btn">처방전 목록</a>
       </div>
-      <div class="card-body">
-        <form id="uploadForm" method="POST" action="{{ route('prescriptions.store') }}" enctype="multipart/form-data">
+      <div class="up-card-body">
+        <form id="uploadForm" method="POST" action="{{ route('prescriptions.store') }}" enctype="multipart/form-data"
+              style="display:flex; flex-direction:column; gap:24px;">
           @csrf
           <input type="hidden" name="assigned_user_id" id="h_assigned_user_id">
           <input type="hidden" name="admin_note"       id="h_admin_note">
           <input type="hidden" name="patient_id"       id="h_patient_id">
+
+          {{-- ── 파일 업로드 (Figma 128:3175) ── --}}
+          <div class="up-sec">
+            <div class="up-sec-head">
+              <span class="up-sec-title">파일 업로드</span>
+              <span style="font-size:12px;font-weight:500;color:var(--gray-500);">최대 50MB · JPG / PNG / PDF / HEIC · 최대 10개</span>
+            </div>
+            <div>{{-- 기존 입력 흐름 그대로 --}}
 
           {{-- ── 환자 선택 ── --}}
           <div class="form-group" style="margin-bottom:16px;">
@@ -197,67 +260,64 @@
             <span style="color:#0284c7;font-weight:700;">주민등록증·위임장</span> 등은 이미지 그대로 첨부 문서로 저장됩니다.</span>
           </div>
 
-          <div style="display:flex;gap:10px;margin-top:14px;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="resetFiles()">
-              <i class="fa-solid fa-xmark"></i> 초기화
-            </button>
-            <button type="submit" class="btn btn-primary flex-1" id="submitBtn" disabled>
-              <i class="fa-solid fa-wand-magic-sparkles"></i> 등록
-            </button>
+            </div>{{-- /파일 업로드 흐름 --}}
+          </div>{{-- /up-sec 파일 업로드 --}}
+
+          {{-- ── 처방전 설정 (Figma 128:3341) — 시안에서 이 카드 안으로 들어왔다 ── --}}
+          <div class="up-sec">
+            <span class="up-sec-title">처방전 설정</span>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+              <div class="form-group mb-0" style="flex:1; min-width:200px;">
+                <label class="form-label">담당자</label>
+                <select class="form-control form-select" id="sideAssignedUser">
+                  <option value="">담당자 선택</option>
+                  @foreach($managers as $m)
+                    <option value="{{ $m->id }}">{{ $m->name }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="form-group mb-0" style="flex:2; min-width:240px;">
+                <label class="form-label">메모</label>
+                <textarea class="form-control" id="sideAdminNote" rows="2" placeholder="처방전 관련 메모..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          {{-- ── 초기화 / 등록 (Figma 128:822) ── --}}
+          <div class="up-foot">
+            <button type="button" class="up-btn up-btn-ghost" onclick="resetFiles()">초기화</button>
+            <button type="submit" class="up-btn up-btn-primary" id="submitBtn" disabled>등록</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  {{-- Right: 담당자·메모·이력 --}}
-  <div>
-    <div class="card mb-4">
-      <div class="card-header">
-        <i class="fa-solid fa-user-pen" style="color:var(--primary);"></i>
-        <span class="card-header-title">처방전 설정</span>
-      </div>
-      <div class="card-body">
-        <div class="form-group">
-          <label class="form-label">담당자</label>
-          <select class="form-control form-select" id="sideAssignedUser">
-            <option value="">담당자 선택</option>
-            @foreach($managers as $m)
-              <option value="{{ $m->id }}">{{ $m->name }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div class="form-group mb-0">
-          <label class="form-label">메모</label>
-          <textarea class="form-control" id="sideAdminNote" rows="3" placeholder="처방전 관련 메모..."></textarea>
-        </div>
-      </div>
+  {{-- Right: 최근 업로드 이력 --}}
+  <div class="up-card">
+    <div class="up-card-head" style="padding:8px 16px; justify-content:space-between; gap:12px;">
+      <span class="up-card-title">최근 업로드 이력</span>
+      <a href="{{ route('prescriptions.index') }}" class="up-head-btn">전체</a>
     </div>
-
-    <div class="card">
-      <div class="card-header">
-        <i class="fa-solid fa-clock-rotate-left" style="color:var(--text-secondary);"></i>
-        <span class="card-header-title">최근 업로드 이력</span>
-        <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm" style="margin-left:auto;">전체</a>
-      </div>
-      <div class="card-body" style="padding:10px;">
+    <div style="padding:16px;">
+      <div class="history-list">
         @forelse($prescriptions as $rx)
         <div class="history-item" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '처방전 관리 - {{ $rx->rx_number }}', 'file-edit-02')">
-          <div style="font-size:18px;flex-shrink:0;">
+          <div class="history-thumb">
             @if(strtolower(pathinfo($rx->image_original_name, PATHINFO_EXTENSION)) === 'pdf')
               <i class="fa-regular fa-file-pdf" style="color:var(--danger);"></i>
             @else
               <i class="fa-regular fa-file-image" style="color:var(--primary);"></i>
             @endif
           </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $rx->image_original_name ?? $rx->rx_number }}</div>
-            <div style="font-size:11px;color:var(--text-muted);">{{ $rx->rx_number }} · {{ $rx->patient_name_ocr ?? '-' }} · {{ $rx->created_at->format('H:i') }}</div>
+          <div class="history-body">
+            <span class="history-name">{{ $rx->image_original_name ?? $rx->rx_number }}</span>
+            <span class="history-meta">{{ $rx->rx_number }} · {{ $rx->patient_name_ocr ?? '-' }} · {{ $rx->created_at->format('H:i') }}</span>
           </div>
-          <span class="badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span>
+          <span class="history-badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span>
         </div>
         @empty
-        <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">업로드 이력이 없습니다.</div>
+        <div style="text-align:center;color:var(--gray-500);font-size:12px;padding:12px;">업로드 이력이 없습니다.</div>
         @endforelse
       </div>
     </div>

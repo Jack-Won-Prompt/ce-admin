@@ -395,7 +395,10 @@ class PrescriptionController extends Controller
             ->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed'])
             ->latest()->take(5)->get();
 
-        return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending', 'patientsJson'));
+        // 화면 상단에 알리는 검수 대기 건수 (시안 128:3171)
+        $reviewPending = Prescription::where('status', 'review_needed')->count();
+
+        return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending', 'patientsJson', 'reviewPending'));
     }
 
     /**
