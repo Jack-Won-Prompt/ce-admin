@@ -81,8 +81,12 @@
   @media (max-width: 1200px) { .order-layout.viewer-right { grid-template-columns: 1fr 280px; } }
   @media (max-width: 768px)  { .order-layout.viewer-right > :first-child { order: unset; } }
   /* ── 뷰어 카드 머리 (시안 137:883) — 높이 44, 아래 선 ── */
-  .vw-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
-             min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
+  /* 뷰어가 화면보다 길면 그 안에서 스크롤된다. 그때 처방번호 줄까지 밀려 올라가면
+     지금 무엇을 보고 있는지 알 수 없다. 이 줄만 뷰어 맨 위에 붙여 둔다. */
+  .vw-head { position:sticky; top:0; z-index:3;
+             display:flex; align-items:center; justify-content:space-between; gap:8px;
+             min-height:44px; padding:8px 16px; background:var(--gray-0);
+             border-bottom:1px solid var(--gray-200); }
   .vw-nav  { display:flex; align-items:center; gap:8px; min-width:0; }
   .vw-nav-btn { width:20px; height:20px; display:flex; align-items:center; justify-content:center;
                 background:none; border:none; padding:0; font-size:13px; color:var(--gray-600); cursor:pointer; }
@@ -172,9 +176,6 @@
   /* ── 환자 정보 바 (시안 137:290) ──
      액션 버튼이 저마다 다른 색으로 채워져 있어 무엇이 더 중요한 동작인지 알기 어려웠다.
      시안은 모두 같은 흰 버튼으로 두고 글자색으로만 성격을 나눈다. */
-  .pib-avatar { width:54px; height:54px; border-radius:12px; background:var(--gray-100);
-                display:flex; align-items:flex-end; justify-content:center; flex-shrink:0;
-                color:var(--gray-400); font-size:30px; overflow:hidden; }
   .pib-name { font-size:16px; font-weight:700; line-height:1.6; color:var(--gray-1000); }
   .pib-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px;
               background:var(--gray-100); border:1px solid var(--gray-200);
@@ -193,44 +194,63 @@
   .pib-btn i { font-size:14px; }
   .pib-btn-primary { color:var(--primary); }
   .pib-btn-off { background:var(--gray-50); color:var(--gray-400); cursor:default; }
+  /* 아이콘 오른쪽은 두 단이다 — 윗단은 이름과 버튼이 양끝으로, 아랫단은 연락처들 */
+  /* 이름·연락처·액션을 한 줄에 둔다. 액션은 오른쪽 끝으로 민다. */
+  .pib-body     { flex:1; min-width:0; display:flex; flex-direction:row; align-items:center;
+                  gap:16px; flex-wrap:wrap; }
+  /* 마크업 순서는 이름 → 액션 → 연락처지만, 화면에서는 연락처가 이름 옆에 와야 한다.
+     액션 묶음에 팝오버가 잔뜩 붙어 있어 마크업을 옮기는 대신 순서만 바꾼다. */
+  .pib-body > .pib-row-meta { order:1; }
+  .pib-body > .pib-actions  { order:2; margin-left:auto; }
+  .pib-ident    { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+  .pib-actions  { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; }
+  .pib-row-meta { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
   /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
      폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */
   /* 좌우 두 영역 모두 흰 카드 (시안 137:441 · 137:517) */
   #viewerCol, #tabsCol { background: var(--gray-0); border-radius: 12px; }
-  #viewerCol { overflow: hidden; }   /* 이미지가 모서리를 넘지 않게 */
+  /* 뷰어는 스크롤해도 자리를 지킨다. 오른쪽 항목을 채우는 동안 처방전이 계속 보여야 한다.
+     예전에는 스크롤 위치를 재서 fixed 로 바꾸는 코드가 있었는데, 값이 어긋나면 화면이
+     튀었다. sticky 로 두면 브라우저가 알아서 맞춘다.
+     뷰어가 화면보다 길면 그 안에서만 스크롤된다. */
+  /* 붙는 위치는 고정 헤더 아래여야 한다. 12px 로 두면 헤더에 가려 처방번호 줄이 안 보인다. */
+  #viewerCol { position: sticky; top: calc(var(--nav-h, 60px) + 12px); align-self: start;
+               max-height: calc(100vh - var(--nav-h, 60px) - 24px);
+               overflow: hidden auto; }
+  /* 워크스페이스 안(iframe)에서는 고정 헤더가 없다 */
+  html.is-framed #viewerCol { top: 12px; max-height: calc(100vh - 24px); }
   .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
              min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
   #tabsCol > .tab-pane { padding: 16px; }
-  #tabsCol > .tab-pane.ocr-split-top { padding-right: 8px; }   /* 스크롤바 여백은 그대로 */
-  .tab-bar-tabs { display: flex; flex-shrink: 0; }
-  .tab-bar-acts { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
-  /* 탭 — 시안 137:687: padding 0 8, 활성 표시는 1px 밑줄 */
-  .tab-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px;
-             font-size: 13px; font-weight: 600; color: var(--text-muted); border: none; background: transparent;
+  .tab-bar-tabs { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+  /* 오른쪽은 두 묶음이다 (시안 137:695) — 글자 링크(gap 12)와 테두리 버튼(gap 6), 사이는 16 */
+  .tab-bar-acts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+  .tb-links { display: flex; align-items: center; gap: 12px; }
+  .tb-btns  { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  /* 전체 열기·테이블뷰는 테두리 없는 글자 링크 (시안 137:697·701) */
+  .tb-link { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none;
+             font-size: 12px; font-weight: 500; line-height: 1.6; color: var(--gray-700);
+             cursor: pointer; white-space: nowrap; }
+  .tb-link:hover { color: var(--primary); }
+  .tb-link i { font-size: 12px; }
+  /* 탭 — 시안 137:687: padding 0 8, 13/500, 고른 탭만 주색 + 1px 밑줄 */
+  .tab-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 8px;
+             font-size: 13px; font-weight: 500; line-height: 1.6; color: var(--gray-600); border: none; background: transparent;
              border-bottom: 1px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
   .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
   /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
      .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
-  .tb-act { display:inline-flex; align-items:center; justify-content:center; gap:5px;
-            box-sizing:border-box; height:26px; min-width:98px; padding:0 12px;
-            border:1px solid var(--border); border-radius:6px; background:var(--bg);
-            color:var(--text-secondary); font-size:11px; font-weight:600; line-height:1;
+  /* 테두리 버튼 — 시안 137:706: 높이 28, padding 0 12, radius 8, 12/500.
+     폭은 글자에 맞춘다(시안이 hug). */
+  .tb-act { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+            box-sizing:border-box; height:28px; padding:0 12px;
+            border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0);
+            color:var(--gray-1000); font-size:12px; font-weight:500; line-height:1.6;
             white-space:nowrap; cursor:pointer; transition:var(--transition); }
-  .tb-act i    { font-size:11px; }
-  .tb-act-pri  { border-color:var(--primary); background:var(--primary-light); color:var(--primary); font-weight:700; }
-  .tb-act-warn { border-color:var(--warning); background:var(--warning); color:#fff; font-weight:700; }
-  .tb-act-ok   { border-color:var(--success); background:var(--success); color:#fff; font-weight:700; }
+  .tb-act:hover { background:var(--gray-50); }
+  .tb-act i    { font-size:12px; }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
-  /* ── 처방전 검수 탭: 위=검수(고정높이·스크롤), 아래=처방 제품 ── */
-  .tab-pane.ocr-split-top {
-    height: var(--ocr-review-h, 46vh);   /* 검수 영역 고정 높이 */
-    overflow-y: auto;                    /* 내부 스크롤 */
-    overflow-x: hidden;
-    padding-right: 8px;                  /* 스크롤바 여백 */
-    border-bottom: 1px solid var(--gray-200);   /* 시안의 구획선은 1px */
-    margin-bottom: 12px;
-  }
-  .tab-pane.ocr-split-bottom { padding-top: 2px; }
+  /* 검수 탭은 이제 아코디언만 담는다. 처방 제품은 자기 탭으로 돌아갔다. */
   /* ── 카드 / 테이블 뷰 토글 ── */
   .cv { display: block; } .tv { display: none; }
   .tab-view-table .cv { display: none; } .tab-view-table .tv { display: block; }
@@ -244,6 +264,7 @@
   .tab-view-table #tab-ocr .rx-acc-item { border:none; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:0; }
   .tab-view-table #tab-ocr .rx-acc-item:last-child { border-bottom:none; }
   .tab-view-table #tab-ocr .rx-acc-header { background:var(--primary-light) !important; pointer-events:none; padding:5px 12px; }
+  .tab-view-table #tab-ocr .rx-acc-btns { display:none !important; }
   .tab-view-table #tab-ocr .rx-acc-header > span:first-child { color:var(--primary) !important; font-size:11px; }
   .tab-view-table #tab-ocr .rx-acc-icon,
   .tab-view-table #tab-ocr .rx-acc-body { display:block !important; padding:10px 12px; }
@@ -296,28 +317,87 @@
 
   /* ── RX Inspection Accordion ── */
   /* 아코디언 — 시안 137:544: radius 12, 헤더 44 높이에 padding 8 16 */
-  .rx-acc-item { border:1px solid var(--gray-200); border-radius:12px; margin-bottom:12px; overflow:hidden; background:var(--bg-card); transition:border-color .18s; }
-  .rx-acc-item.is-open { border-color:var(--primary); }
-  .rx-acc-header { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:8px 16px; cursor:pointer; background:var(--bg-card); user-select:none; transition:var(--transition); gap:8px; }
-  .rx-acc-header:hover { background:var(--bg); }
-  .rx-acc-item.is-open > .rx-acc-header { background:var(--primary-light); }
-  .rx-acc-item.is-open > .rx-acc-header > span:first-child { color:var(--primary); }
-  .rx-acc-header > span:first-child { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--text-primary); }
-  .rx-acc-meta { display:flex; align-items:center; gap:8px; }
-  .rx-acc-meta-hint { font-size:11px; color:var(--text-muted); }
-  .rx-acc-icon { font-size:11px; color:var(--text-muted); transition:transform .2s ease; }
+  /* 아코디언 — 시안 137:544 · 137:545.
+     열렸다고 테두리 색이나 머리 배경을 바꾸지 않는다. 시안은 닫힘·열림 모두
+     흰 바탕에 #E8EAEC 테두리 하나로 두고, 펼침 여부는 화살표 방향으로만 알린다. */
+  .rx-acc-item { border:1px solid var(--gray-200); border-radius:12px; margin-bottom:12px; overflow:hidden; background:var(--gray-0); }
+  .rx-acc-header { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:8px 16px; cursor:pointer; background:var(--gray-0); user-select:none; transition:var(--transition); gap:8px; }
+  .rx-acc-header:hover { background:var(--gray-50); }
+  /* 왼쪽 — 아이콘 20 + 제목 13/700 (시안 137:546) */
+  .rx-acc-header > span:first-child { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--gray-1000); }
+  .rx-acc-header > span:first-child > i,
+  .rx-acc-header > span:first-child > svg { width:20px; height:20px; font-size:16px; flex-shrink:0;
+                                            display:inline-flex; align-items:center; justify-content:center; }
+  /* 오른쪽 — 힌트 12/500 + 화살표 14 (시안 137:555) */
+  .rx-acc-meta { display:flex; align-items:center; gap:12px; }
+  /* 헤더 오른쪽 버튼 (시안 148:2642) — 펼쳤을 때만 보인다.
+     접힌 카드(137:545)에는 힌트와 화살표만 있다. */
+  .rx-acc-btns { display:none; align-items:center; gap:6px; }
+  .rx-acc-item.is-open > .rx-acc-header .rx-acc-btns { display:flex; }
+  .rx-acc-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+                height:28px; padding:0 12px; border-radius:8px;
+                background:var(--gray-0); border:1px solid var(--gray-200);
+                font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+                cursor:pointer; white-space:nowrap; }
+  .rx-acc-btn:hover { background:var(--gray-50); }
+  /* 저장만 주색으로 채운다 (시안 148:2647) */
+  .rx-acc-btn-fill { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
+  .rx-acc-btn-fill:hover { background:var(--primary); filter:brightness(1.06); }
+  .rx-acc-meta-hint { font-size:12px; font-weight:500; color:var(--gray-600); }
+  .rx-acc-icon { width:14px; height:14px; font-size:14px; color:var(--gray-600); flex-shrink:0;
+                 display:inline-flex; align-items:center; justify-content:center; transition:transform .2s ease; }
   .rx-acc-icon.open { transform:rotate(180deg); }
-  .rx-acc-body { padding:14px 16px; background:var(--bg-card); border-top:1px solid var(--border-light); }
-  .rx-field-grid  { display:grid; grid-template-columns:1fr 1fr;         gap:10px 18px; }
-  .rx-grid-3      { display:grid; grid-template-columns:1fr 1fr 1fr;     gap:10px 16px; }
-  .rx-grid-4      { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px 12px; }
+  /* 아코디언 본문 — 시안 148:2651: padding 12/16.
+     칸 사이는 세로 8, 가로 24 (시안 148:2660 이 열 사이 24, 열 안 8). */
+  .rx-acc-body { padding:12px 16px; background:var(--bg-card); border-top:1px solid var(--gray-200); }
+  .rx-field-grid  { display:grid; grid-template-columns:1fr 1fr;         gap:8px 24px; }
+  .rx-grid-3      { display:grid; grid-template-columns:1fr 1fr 1fr;     gap:8px 24px; }
+  .rx-grid-4      { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px 24px; }
+
+  /* 입력칸 — 시안 148:2665: 높이 32, 좌우 12, radius 8, 값 13/400 (#101317).
+     기본 .form-control 은 9/12 여백에 13.5px 이라 아코디언 안에서만 맞춘다. */
+  .rx-acc-body .form-control { height:32px; padding:0 12px; font-size:13px; font-weight:400; line-height:1.6;
+                               border-radius:8px; border-color:var(--gray-200); color:var(--gray-1000); }
+  .rx-acc-body .form-control::placeholder { color:var(--gray-500); }
+  .rx-acc-body .form-select  { background-position:right 12px center; padding-right:30px; }
+  .rx-acc-body textarea.form-control { height:auto; min-height:80px; padding:12px; }
+  /* 구획 — 시안 148:2652: 소제목과 입력 사이 12, 구획끼리 24 */
+  /* 구획 안은 2열이다 — 열 사이 24, 열 안의 줄 사이 8 (시안 148:2660) */
+  .rx-cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+  .rx-col  { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  @media (max-width:1100px) { .rx-cols { grid-template-columns:1fr; } }
+  /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
+  .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
+                 height:32px; padding:0 12px; border-radius:8px;
+                 background:var(--gray-0); border:1px solid var(--gray-200);
+                 font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+                 cursor:pointer; white-space:nowrap; }
+  .rx-side-btn:hover { background:var(--gray-50); }
+  .rx-sec      { display:flex; flex-direction:column; gap:12px; }
+  .rx-sec + .rx-sec { margin-top:24px; }
+  /* 소제목 — 시안 148:2654: 14/700 #333940, 줄 높이 28, 아이콘·밑줄 없음 */
+  .rx-sec-head  { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:28px; }
+  .rx-sec-title { font-size:14px; font-weight:700; line-height:1.6; color:var(--gray-800); }
+  /* 메모 버튼 — 시안 148:2655: 높이 28, 좌우 8, 검정 테두리, 12/500 */
+  .rx-sec-btn { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 8px;
+                border-radius:8px; background:var(--gray-0); border:1px solid var(--gray-1000);
+                font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+                cursor:pointer; position:relative; flex-shrink:0; }
+  .rx-sec-btn:hover { background:var(--gray-50); }
+  .rx-sec-btn i { font-size:12px; }
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
   .rx-field-row.full { grid-column:1 / -1; }
   /* 라벨 폭을 고정해 어느 줄에서든 입력이 같은 자리에서 시작하게 한다.
      min-width 였을 때는 '신환master등록일'(84px)처럼 긴 이름이 입력을 오른쪽으로
      밀어, 같은 아코디언 안에서도 시작 위치가 78·79·81·91 로 흩어졌다.
      88 은 가장 긴 이름(84)이 잘리지 않는 값이다. */
-  .rx-field-label { font-size:11px; font-weight:600; color:var(--text-secondary); white-space:nowrap; width:88px; flex-shrink:0; }
+  /* 항목 이름 — 시안 148:2663: 100×32, 13/500, 줄높이 1.2, #474D54, 세로 가운데 */
+  /* 항목 이름 — 시안 148:2663: 100×32, 13/500, 줄높이 1.2, #474D54, 세로 가운데.
+     폭이 100 으로 고정이라 '구입일 (모든 서류 발행일)' 같은 긴 이름은 줄을 바꿔야 한다.
+     nowrap 이면 입력칸 아래로 삐져나가 가려진다. 시안도 줄바꿈을 넣어 두 줄로 쓴다. */
+  .rx-field-label { display:flex; align-items:center; width:100px; min-height:32px; flex-shrink:0;
+                    font-size:13px; font-weight:500; line-height:1.2; color:var(--gray-700);
+                    white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
   .rx-ocr-badge { display:inline-flex; align-items:center; gap:3px; background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-accent); border-radius:4px; font-size:10px; font-weight:700; padding:1px 5px; }
   .rx-ocr-badge i { font-size:9px; }
   @media(max-width:1100px){ .rx-grid-4 { grid-template-columns:1fr 1fr; } }
@@ -347,17 +427,90 @@
   .pc-field-val { font-size:12px; font-weight:600; color:var(--text-primary); word-break:break-all; }
 
   /* ── 첨부 파일 썸네일 ── */
-  .attach-strip { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); margin-top:10px; }
-  .attach-thumb { position:relative; width:64px; cursor:pointer; flex-shrink:0; }
-  .attach-thumb-img { width:64px; height:64px; object-fit:cover; border-radius:6px; border:2px solid var(--border); display:block; transition:border-color .15s; }
-  .attach-thumb-img:hover { border-color:var(--primary); }
-  .attach-thumb-pdf { width:64px; height:64px; border-radius:6px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:24px; background:#fff1f0; color:var(--danger); transition:border-color .15s; }
-  .attach-thumb-pdf:hover { border-color:var(--danger); }
-  .attach-type-badge { position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:9px; font-weight:700; padding:2px 4px; border-radius:0 0 4px 4px; background:rgba(0,0,0,.6); color:#fff; line-height:1.3; }
-  .attach-del-btn { position:absolute; top:-4px; right:-4px; width:18px; height:18px; border-radius:50%; background:var(--danger); border:none; color:#fff; font-size:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
+  /* ── 뷰어 아래 카드 공통 (시안 137:792) ──
+     제목 줄은 44 높이에 아래 선 하나, 본문은 카드 안쪽에 따로 여백을 준다. */
+  .vw-card { border:1px solid var(--gray-200); border-radius:12px; background:var(--gray-0); }
+  .vw-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
+                  min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
+  .vw-card-title { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700;
+                   line-height:1.6; color:var(--gray-1000); }
+  .vw-card-title b { color:var(--primary); font-weight:700; }   /* 개수는 주색 (시안 137:796) */
+  .vw-card-acts { display:flex; align-items:center; gap:6px; }
+  /* 카드 머리에 놓이는 작은 버튼 — 높이 28 (시안 137:798 · 137:802) */
+  .vw-btn-sm { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 12px;
+               border-radius:8px; background:var(--gray-0); border:1px solid var(--gray-200);
+               font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+               cursor:pointer; white-space:nowrap; }
+  .vw-btn-sm:hover { background:var(--gray-50); }
+  .vw-btn-sm i { font-size:12px; }
+  .vw-btn-add { color:var(--primary); }
+
+  /* ── 생성 서류 (시안 137:961) ──
+     한 줄에 이름과 버튼을 나란히 두던 것을, 위는 파일 정보 아래는 버튼 세 개로 나눈다.
+     좁은 뷰어 폭에서 파일명이 잘리지 않게 하려는 배치다. */
+  .gd-list  { display:flex; flex-direction:column; gap:8px; padding:12px 16px; }
+  .gd-item  { display:flex; flex-direction:column; gap:8px; padding:8px 12px;
+              background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px; }
+  .gd-top   { display:flex; align-items:center; gap:8px; }
+  .gd-icon  { width:28px; height:28px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+              font-size:22px; color:var(--danger); }
+  .gd-info  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+  .gd-name  { font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gd-meta  { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:500; line-height:1.6;
+              color:var(--gray-500); min-width:0; }
+  .gd-dot   { width:2px; height:2px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+  .gd-state { color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gd-acts  { display:flex; gap:6px; }
+  .gd-btn   { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+              height:28px; border-radius:8px; background:var(--gray-0); border:1px solid var(--gray-200);
+              font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
+              cursor:pointer; text-decoration:none; white-space:nowrap; }
+  .gd-btn:hover { background:var(--gray-50); }
+  .gd-btn i { font-size:12px; }
+
+  /* ── 등록자 카드 (시안 137:652) ──
+     머리줄 없이 탭 스위처로 시작하고, 아래에 역할별 한 줄씩 쌓는다. */
+  .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .rg-tabs { display:flex; padding:2px; background:var(--gray-200); border-radius:8px; }
+  .rg-tab  { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 0;
+             border-radius:6px; font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-700); }
+  .rg-tab.active { background:var(--gray-0); color:var(--gray-1000); }
+  .rg-rows { display:flex; flex-direction:column; }
+  .rg-row  { display:flex; align-items:center; gap:8px; padding:8px; background:var(--gray-0);
+             border-bottom:1px solid var(--gray-200); }
+  .rg-row:last-child { border-bottom:none; }
+  /* 역할 배지 — 검수는 주색, 등록은 검정, 수정은 회색 (시안 137:660·667·674) */
+  .rg-badge { display:inline-flex; align-items:center; justify-content:center; padding:0 4px; border-radius:6px;
+              font-size:11px; font-weight:700; line-height:1.6; color:var(--gray-0); flex-shrink:0; }
+  .rg-badge-review { background:var(--primary); }
+  .rg-badge-create { background:var(--gray-1000); }
+  .rg-badge-update { background:var(--gray-500); }
+  .rg-name { flex:1; min-width:0; font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-1000);
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rg-when { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:500; line-height:1.6;
+             color:var(--gray-600); flex-shrink:0; white-space:nowrap; }
+  .rg-chat { width:24px; height:24px; border-radius:999px; border:none; background:var(--gray-100);
+             color:var(--gray-600); font-size:11px; cursor:pointer; flex-shrink:0;
+             display:inline-flex; align-items:center; justify-content:center; }
+  .rg-chat:hover { background:var(--primary-light); color:var(--primary); }
+
+  /* ── 문서 타일 (시안 137:806) — 3열, 타일 높이 80 ── */
+  .attach-strip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:12px 16px; }
+  .attach-thumb { position:relative; height:80px; border-radius:8px; overflow:hidden; cursor:pointer;
+                  border:1px solid var(--gray-200); background:var(--gray-100); }
+  /* 고른 문서는 테두리 2px 주색 — 안쪽 크기가 흔들리지 않게 여백으로 상쇄한다 */
+  .doc-thumb.active { border:2px solid var(--primary); }
+  .attach-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
+  .attach-thumb-pdf { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+                      font-size:24px; background:#fff1f0; color:var(--danger); }
+  .attach-type-badge { position:absolute; left:0; right:0; bottom:0; padding:4px; text-align:center;
+                       background:rgba(0,0,0,.4); color:var(--gray-0);
+                       font-size:11px; font-weight:500; line-height:1.2; }
+  .attach-del-btn { position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:999px;
+                    background:var(--danger); border:none; color:#fff; font-size:9px; cursor:pointer;
+                    display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
-  .doc-thumb.active .attach-thumb-img,
-  .doc-thumb.active .attach-thumb-pdf { border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-light); }
 </style>
 @endpush
 
@@ -387,10 +540,33 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
   {{-- Patient Info Bar --}}
   <div id="patient-info-bar-ph" style="display:none;"></div>
-  <div id="patient-info-bar" style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;position:relative;z-index:50;">
+  <div id="patient-info-bar" style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:12px 16px;position:relative;z-index:50;">
 
-    {{-- ── 오른쪽 액션 버튼 그룹 ── --}}
-    <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;order:10;">
+    {{-- 환자명·연락처·액션을 한 줄에 둔다. 아바타는 자리만 차지해 뺐다. --}}
+    <div class="pib-body">
+
+        {{-- 왼쪽 — 환자명과 배지 (시안 137:301) --}}
+        <div class="pib-ident">
+          <span class="pib-name" id="hdrPatientName">
+            {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
+            @if(!$prescription->patient)
+              <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">(OCR)</span>
+            @endif
+          </span>
+          <span class="pib-chip" id="hdrPatientSub">
+            @if($prescription->patient)
+              {{ $prescription->patient->birth_date?->format('Y-m-d') }} · 만 {{ $prescription->patient->age }}세
+            @else
+              {{ $prescription->masked_resident_no_ocr ?? '-' }}
+            @endif
+          </span>
+          @if($prescription->patient?->is_nhis_eligible)
+          <span class="badge badge-success" id="hdrNhisBadge"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
+          @endif
+        </div>
+
+        {{-- 오른쪽 — 액션 버튼 (시안 137:311) --}}
+        <div class="pib-actions">
 
       {{-- 위임동의 SMS 발송 --}}
       <div style="position:relative;">
@@ -1117,47 +1293,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
       @endif
     </div>
 
-    {{-- 환자명 + 메모 버튼 묶음 --}}
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="pib-avatar">
-        <i class="fa-solid fa-user"></i>
+      {{-- 라벨 칩 + 값, 사이는 4px 점 --}}
+      <div class="pib-row-meta">
+        <span style="display:inline-flex;align-items:center;gap:6px;">
+          <span class="pib-tag">전화</span>
+          <span class="pib-val" id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
+        </span>
+        <span class="pib-dot"></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;">
+          <span class="pib-tag">병원</span>
+          <span class="pib-val" id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
+        </span>
+        <span class="pib-dot"></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;">
+          <span class="pib-tag">담당</span>
+          <span class="pib-val" id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
+        </span>
       </div>
-      <div>
-        <div class="pib-name" id="hdrPatientName">
-          {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
-          @if(!$prescription->patient)
-            <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">(OCR)</span>
-          @endif
-        </div>
-        <div class="pib-chip" id="hdrPatientSub">
-          @if($prescription->patient)
-            {{ $prescription->patient->birth_date?->format('Y-m-d') }} · 만 {{ $prescription->patient->age }}세
-          @else
-            {{ $prescription->masked_resident_no_ocr ?? '-' }}
-          @endif
-        </div>
-      </div>
-    </div>
-    {{-- 아래 줄 — 라벨 칩 + 값, 사이는 4px 점 (시안 137:335) --}}
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <span class="pib-tag">전화</span>
-        <span class="pib-val" id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
-      </span>
-      <span class="pib-dot"></span>
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <span class="pib-tag">병원</span>
-        <span class="pib-val" id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
-      </span>
-      <span class="pib-dot"></span>
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <span class="pib-tag">담당</span>
-        <span class="pib-val" id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
-      </span>
-    </div>
-      @if($prescription->patient?->is_nhis_eligible)
-      <span class="badge badge-success" id="hdrNhisBadge" style="order:8;"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
-      @endif
+    </div>{{-- /pib-body --}}
   </div>
 
   {{-- ── 메모 패널 (JS로 위치 결정 — fixed) ─────────────── --}}
@@ -1242,9 +1395,31 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
-      <div class="mt-3" id="docStripWrap" @if(!$prescription->image_url && $prescription->attachments->isEmpty()) style="display:none;" @endif>
-        <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-          <i class="fa-solid fa-file-image"></i> 문서 (<span id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</span>건)
+      <div class="vw-card" id="docStripWrap" @if(!$prescription->image_url && $prescription->attachments->isEmpty()) style="display:none;" @endif>
+        {{-- 카드 머리 — 제목·개수와 유형 선택·첨부 추가 (시안 137:793) --}}
+        <div class="vw-card-head">
+          <span class="vw-card-title">문서 <b id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</b></span>
+          <div class="vw-card-acts">
+            <div style="position:relative;">
+              <input type="text" id="attachDocTypeSelect" value="주민등록증" autocomplete="off"
+                     class="vw-btn-sm" style="width:120px;padding-right:26px;font-weight:400;"
+                     oninput="_adtFilter(this.value)" onfocus="_adtOpen()" onblur="setTimeout(_adtClose,150)" />
+              <span onmousedown="event.preventDefault();_adtToggle()"
+                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--gray-600);font-size:12px;">
+                <i class="fa-solid fa-chevron-right"></i>
+              </span>
+              <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--gray-0);border:1px solid var(--gray-200);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">위임장</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('주민등록증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">주민등록증</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
+              </div>
+            </div>
+            <button type="button" class="vw-btn-sm vw-btn-add" onclick="document.getElementById('attachUploadInput').click()">
+              <i class="fa-solid fa-plus"></i> 첨부문서 추가
+            </button>
+            <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
+          </div>
         </div>
         <div class="attach-strip" id="docStrip">
           {{-- 처방전 (삭제 불가) --}}
@@ -1282,79 +1457,52 @@ $calcDeposit  = $calcCopay + $calcShipping;
         @include('prescriptions._generated_docs')
       </div>
 
-      {{-- ── 첨부 문서 추가 버튼 ── --}}
-      <div class="mt-2">
-        <div style="position:relative;display:inline-block;">
-          <input type="text" id="attachDocTypeSelect" value="주민등록증" autocomplete="off"
-                 style="font-size:11px;border:1px solid var(--border);border-radius:var(--radius);padding:5px 24px 5px 8px;background:var(--bg-card);color:var(--text-primary);width:110px;"
-                 oninput="_adtFilter(this.value)"
-                 onfocus="_adtOpen()"
-                 onblur="setTimeout(_adtClose,150)" />
-          <span onmousedown="event.preventDefault();_adtToggle()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted);font-size:20px;pointer-events:auto;">▾</span>
-          <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
-            <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:5px 10px;font-size:11px;cursor:pointer;">처방전</div>
-            <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:5px 10px;font-size:11px;cursor:pointer;">위임장</div>
-            <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('주민등록증')" style="padding:5px 10px;font-size:11px;cursor:pointer;">주민등록증</div>
-            <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:5px 10px;font-size:11px;cursor:pointer;">기타</div>
-          </div>
-        </div>
-        <button type="button" onclick="document.getElementById('attachUploadInput').click()"
-          style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:5px 12px;border-radius:var(--radius);border:1px dashed var(--border);background:var(--bg);color:var(--text-secondary);cursor:pointer;transition:all .15s;margin-left:6px;vertical-align:top;"
-          onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
-          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
-          <i class="fa-solid fa-plus"></i> 첨부 문서 추가
-        </button>
-        <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
-      </div>
+      {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
       {{-- 등록자 카드 (OCR 신뢰도 표시는 제거, 재분석·초기화 동작만 유지) --}}
-      <div class="card mt-4">
-        <div class="card-header" style="padding:9px 14px;">
-          <i class="fa-solid fa-upload" style="font-size:11px;color:var(--primary);"></i>
-          <span class="card-header-title" style="font-size:12px;">등록자</span>
+      <div class="vw-card rg-card">
+        {{-- 탭 스위처 (시안 137:653) — OCR 신뢰도 탭은 넣지 않는다 --}}
+        <div class="rg-tabs">
+          <span class="rg-tab active">등록자</span>
         </div>
 
-        {{-- 등록자 패널 --}}
-        <div id="infoPanel-uploader" class="card-body" style="padding:10px 14px;">
-          @if($prescription->creator)
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:var(--primary);">
-                {{ mb_substr($prescription->creator->name, 0, 1) }}
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:700;">{{ $prescription->creator->name }}</div>
-                <div style="font-size:10px;color:var(--text-muted);">{{ $prescription->created_at->format('Y-m-d H:i') }}</div>
-              </div>
-              <button onclick="openChatWith({{ $prescription->creator->id }}, '{{ $prescription->creator->name }}')"
-                      style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;"
-                      title="{{ $prescription->creator->name }}와 채팅">
-                <i class="fa-solid fa-comments"></i>
-              </button>
-            </div>
-            @if($prescription->admin_note)
-            <div style="margin-top:10px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);font-size:12px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap;">
-              <div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:4px;"><i class="fa-solid fa-note-sticky"></i> 등록자 메모</div>{{ $prescription->admin_note }}</div>
+        {{-- 역할별 한 줄 (시안 137:658) --}}
+        <div class="rg-rows" id="infoPanel-uploader">
+          @if($prescription->reviewer)
+          <div class="rg-row">
+            <span class="rg-badge rg-badge-review">검수</span>
+            <span class="rg-name">{{ $prescription->reviewer->name }}</span>
+            <span class="rg-when"><span>검수일자</span><span>{{ $prescription->reviewed_at?->format('Y-m-d H:i') ?? '-' }}</span></span>
+          </div>
+          @endif
+          <div class="rg-row">
+            <span class="rg-badge rg-badge-create">등록</span>
+            <span class="rg-name">{{ $prescription->creator?->name ?? '정보 없음' }}</span>
+            <span class="rg-when"><span>등록일자</span><span>{{ $prescription->created_at->format('Y-m-d H:i') }}</span></span>
+            @if($prescription->creator)
+            <button type="button" class="rg-chat" title="{{ $prescription->creator->name }}와 채팅"
+                    onclick="openChatWith({{ $prescription->creator->id }}, '{{ $prescription->creator->name }}')">
+              <i class="fa-solid fa-comments"></i>
+            </button>
             @endif
-          @else
-            <div style="font-size:11px;color:var(--text-muted);">
-              <i class="fa-solid fa-circle-question"></i> 등록자 정보 없음 · {{ $prescription->created_at->format('Y-m-d H:i') }}
-            </div>
+          </div>
+          {{-- 수정 기록이 붙기 전(2026-08-06 이전) 처방전은 값이 없어 줄을 그리지 않는다 --}}
+          @if($prescription->updater)
+          <div class="rg-row">
+            <span class="rg-badge rg-badge-update">수정</span>
+            <span class="rg-name">{{ $prescription->updater->name }}</span>
+            <span class="rg-when"><span>수정일자</span><span>{{ $prescription->updated_at->format('Y-m-d H:i') }}</span></span>
+          </div>
           @endif
         </div>
 
-        {{-- 재분석 · 초기화 (신뢰도 수치·설명 없이 동작만) --}}
-        <div class="card-body" style="padding:0 14px 12px;">
-          <div style="display:flex;gap:6px;">
-            <button id="btn-reanalyze" class="btn btn-outline" onclick="reanalyzeOCR()"
-                    style="flex:1;font-size:12px;justify-content:center;gap:6px;">
-              <i class="fa-solid fa-rotate"></i> 재분석
-            </button>
-            <button class="btn btn-outline" onclick="resetOCR()" title="원본 데이터로 초기화"
-                    style="font-size:12px;justify-content:center;gap:6px;color:var(--text-muted);">
-              <i class="fa-solid fa-arrow-rotate-left"></i> 초기화
-            </button>
-          </div>
+        @if($prescription->admin_note)
+        <div style="padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;line-height:1.7;color:var(--gray-1000);white-space:pre-wrap;">
+          <div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:4px;"><i class="fa-solid fa-note-sticky"></i> 등록자 메모</div>{{ $prescription->admin_note }}
         </div>
+        @endif
+
+        {{-- 재분석·초기화 버튼 줄은 뺐다. 원본 복원은 아코디언 머리에 있다. --}}
       </div>
 
       @if($prescription->review_memo)
@@ -1370,51 +1518,38 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div id="tabsCol">
       <div id="tabBarOuter"><div id="tabBarInner" class="tab-bar">
         <div class="tab-bar-tabs">
-          <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')"><i class="fa-solid fa-wand-magic-sparkles"></i> 처방전 검수</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-product')"><i class="fa-solid fa-boxes-stacked"></i> 처방 제품</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-order')"><i class="fa-solid fa-cart-shopping"></i> 주문 연계</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-history')"><i class="fa-solid fa-timeline"></i> 이력</button>
+          <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">처방전 검수</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-product')">처방 제품</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-order')">주문 연계</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-history')">이력</button>
         </div>
         <div class="tab-bar-acts">
-          <button type="button" id="btnNewEntry" class="tb-act tb-act-pri" onclick="resetReviewScreen()"
-                  title="검수 화면의 모든 입력 내용을 비웁니다">
-            <i class="fa-solid fa-plus"></i>
-            <span>신규 등록</span>
-          </button>
+          {{-- 글자 링크 묶음 — 시안은 이 둘만 테두리 없이 둔다 (137:696) --}}
+          <div class="tb-links">
+            <button type="button" id="btnAccToggleAll" class="tb-link" onclick="toggleAllAcc()">
+              <i class="fa-solid fa-angles-down" id="btnAccToggleAllIcon"></i>
+              <span id="btnAccToggleAllLabel">전체 열기</span>
+            </button>
+            <button type="button" id="btnViewToggle" class="tb-link" onclick="toggleTabView()">
+              <i class="fa-solid fa-table-list" id="btnViewToggleIcon"></i>
+              <span id="btnViewToggleLabel">테이블뷰</span>
+            </button>
+          </div>
+
+          {{-- 테두리 버튼 묶음 (137:705) --}}
+          <div class="tb-btns">
+          {{-- 시안 순서 그대로 — 환자 조회, 신규 등록 (137:706·708). 아이콘 없이 글자만. --}}
           <button type="button" id="btnPatientLookup" class="tb-act" onclick="openPatientLookup()"
-                  title="환자명으로 조회해 과거 상담이력을 가져옵니다">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <span>환자 조회</span>
-          </button>
-          {{-- 아코디언마다 흩어져 있던 저장 계열 버튼을 여기로 모았다 --}}
-          <button type="button" id="btnResetOcr" class="tb-act" onclick="resetOCR()"
-                  title="입력값을 원본 OCR 결과로 되돌립니다">
-            <i class="fa-solid fa-rotate-left"></i>
-            <span>원본 복원</span>
-          </button>
-          <button type="button" id="btnSaveOcr" class="tb-act tb-act-warn" onclick="saveOCR()"
-                  title="검수 내용을 저장합니다">
-            <i class="fa-solid fa-floppy-disk"></i>
-            <span>저장</span>
-          </button>
-          <button type="button" id="btnApproveRx" class="tb-act tb-act-ok" onclick="approveRx()"
-                  title="검수 완료 후 승인을 요청합니다">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>승인요청</span>
-          </button>
-          <button type="button" id="btnAccToggleAll" class="tb-act" onclick="toggleAllAcc()">
-            <i class="fa-solid fa-angles-down" id="btnAccToggleAllIcon"></i>
-            <span id="btnAccToggleAllLabel">전체 열기</span>
-          </button>
-          <button type="button" id="btnViewToggle" class="tb-act" onclick="toggleTabView()">
-            <i class="fa-solid fa-table-list" id="btnViewToggleIcon"></i>
-            <span id="btnViewToggleLabel">테이블뷰</span>
-          </button>
+                  title="환자명으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
+          <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
+                  title="검수 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
+          {{-- 원본 복원·승인 요청·저장은 시안(148:2639)대로 아코디언 헤더에 둔다 --}}
+          </div>{{-- /tb-btns --}}
         </div>
       </div></div>{{-- /tabBarInner /tabBarOuter --}}
 
       {{-- Tab: OCR Edit (처방전 검수) --}}
-      <div class="tab-pane active ocr-split-top" id="tab-ocr">
+      <div class="tab-pane active" id="tab-ocr">
       <div class="cv">
 
         @php $displayRn = $prescription->masked_resident_no_ocr ?? $prescription->patient?->masked_resident_no; @endphp
@@ -1436,7 +1571,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div class="rx-acc-item is-open">
           <div class="rx-acc-header" onclick="toggleAcc(this)">
             <span>
-              <i class="fa-solid fa-clipboard-user" style="color:var(--primary);"></i> 상담 · 환자 정보
+              <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> 상담ㆍ환자 정보
               @if($isReturningPatient)
                 <span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;">
                   <i class="fa-solid fa-rotate-right" style="font-size:9px;"></i> 재방문
@@ -1444,19 +1579,23 @@ $calcDeposit  = $calcCopay + $calcShipping;
               @endif
             </span>
             <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">상담번호 · 환자명 · 연락처 · 주소</span>
+              <span class="rx-acc-meta-hint">상담정보ㆍ환자정보</span>
+              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
+              <div class="rx-acc-btns" onclick="event.stopPropagation()">
+                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
+                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
+              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon open"></i>
             </div>
           </div>
           <div class="rx-acc-body">
 
             {{-- ▸ 상담 정보 소제목 + 메모 버튼 --}}
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-light);">
-              <span style="display:flex;align-items:center;gap:5px;">
-                <i class="fa-solid fa-clipboard-list" style="font-size:10px;"></i> 상담 정보
-              </span>
+            <div class="rx-sec-head">
+              <span class="rx-sec-title">상담 정보</span>
               <button id="memoPanelToggleBtn" onclick="toggleMemoPanel(event)"
-                      style="display:flex;align-items:center;gap:4px;padding:2px 9px;border-radius:5px;border:1px solid var(--primary);background:#fff;color:var(--primary);font-size:10px;font-weight:700;cursor:pointer;position:relative;flex-shrink:0;">
+                      class="rx-sec-btn">
                 <i class="fa-solid fa-note-sticky"></i> 메모
                 <span id="memoBadgeCount"
                       style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
@@ -1464,36 +1603,31 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </span>
               </button>
             </div>
-            {{-- 상담번호 (full) --}}
-            <div class="rx-field-row" style="margin-bottom:10px;">
-              <span class="rx-field-label">상담번호</span>
-              <div style="display:flex;gap:6px;flex:1;min-width:0;">
-                <input type="text" class="form-control" id="f-counselling-no"
-                       value="{{ $curCounselNo }}"
-                       placeholder="채번 버튼을 눌러 번호를 생성하세요"
-                       style="flex:1;" />
-                @if($isReturningPatient)
-                <button type="button" onclick="openPrevCounselModal()"
-                        title="이전 상담 이력 {{ $prevCounselings->count() }}건"
-                        style="flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;padding:0 11px;height:36px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:var(--radius);font-size:12px;font-weight:700;cursor:pointer;">
-                  <i class="fa-solid fa-clock-rotate-left"></i> 과거 상담
-                  <span style="font-size:10px;background:#f0d060;border-radius:10px;padding:1px 5px;">{{ $prevCounselings->count() }}</span>
-                </button>
-                @endif
-                <button type="button" id="btnCounselNo" onclick="generateCounselNo()"
-                        style="flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:36px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-size:12px;font-weight:700;cursor:pointer;">
-                  <i class="fa-solid fa-hashtag"></i> 추가상담(채번)
-                </button>
+            <div class="rx-cols">
+            <div class="rx-col">
+              {{-- 왼쪽 열 — 상담 번호 · 상담 일자 · 상담 유형 · 상담 상태 (시안 148:2661) --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">상담 번호</span>
+                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
+                  <input type="text" class="form-control" id="f-counselling-no"
+                         value="{{ $curCounselNo }}"
+                         placeholder="채번 버튼을 눌러 번호를 생성하세요"
+                         style="flex:1;" />
+                  @if($isReturningPatient)
+                  <button type="button" class="rx-side-btn" onclick="openPrevCounselModal()"
+                          title="이전 상담 이력 {{ $prevCounselings->count() }}건">
+                    과거 상담 {{ $prevCounselings->count() }}
+                  </button>
+                  @endif
+                  <button type="button" id="btnCounselNo" class="rx-side-btn" onclick="generateCounselNo()">추가상담(채번)</button>
+                </div>
               </div>
-            </div>
-            {{-- 4단: 상담일자 | 상담유형 | 처방전여부 | 상담상태 --}}
-            <div class="rx-grid-4" style="margin-bottom:10px;">
               <div class="rx-field-row">
                 <span class="rx-field-label">상담 일자</span>
-                <div style="display:flex;gap:4px;flex:1;align-items:center;">
+                <div style="display:flex;gap:8px;flex:1;align-items:center;min-width:0;">
                   <input type="date" class="form-control" id="f-counsel-date" value="{{ $curCounselDate }}" style="flex:1;min-width:0;" />
-                  <button type="button" onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'"
-                          style="flex-shrink:0;height:36px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;">오늘</button>
+                  <button type="button" class="rx-side-btn"
+                          onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'">오늘</button>
                 </div>
               </div>
               <div class="rx-field-row">
@@ -1508,15 +1642,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">처방전 여부</span>
-                <select class="form-control" id="f-acc-add-type" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="20"  @selected(($prescription->counseling?->acc_add_type ?? '') == '20')>처방외</option>
-                  <option value="10"  @selected(($prescription->counseling?->acc_add_type ?? '') == '10')>원외</option>
-                  <option value="30"  @selected(($prescription->counseling?->acc_add_type ?? '') == '30')>원내</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
                 <span class="rx-field-label">상담 상태</span>
                 <select class="form-control" id="f-counsel-status" onchange="onCounselStatusChange(this.value)" style="flex:1;">
                   <option value="">선택</option>
@@ -1527,63 +1652,97 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
             </div>
-            {{-- 재상담일자 --}}
-            <div style="margin-bottom:10px;">
+
+            <div class="rx-col">
+              {{-- 오른쪽 열 — 처방전 여부 · 메모 (시안 148:2692).
+                   재 상담 일자는 시안에 없지만, 상담 상태가 '재상담'일 때만 열리는
+                   입력이라 빼면 그 값을 넣을 자리가 사라진다. 여기 둔다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전 여부</span>
+                <select class="form-control" id="f-acc-add-type" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="20"  @selected(($prescription->counseling?->acc_add_type ?? '') == '20')>처방외</option>
+                  <option value="10"  @selected(($prescription->counseling?->acc_add_type ?? '') == '10')>원외</option>
+                  <option value="30"  @selected(($prescription->counseling?->acc_add_type ?? '') == '30')>원내</option>
+                </select>
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">재 상담 일자</span>
                 <input type="date" class="form-control" id="f-re-counsel-date"
                        value="{{ $prescription->counseling?->re_counsel_date ?? '' }}" style="flex:1;" />
               </div>
+              <div class="rx-field-row" style="align-items:flex-start;">
+                <span class="rx-field-label">메모</span>
+                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counseling?->contents ?? '' }}</textarea>
+              </div>
             </div>
-            {{-- 메모 (full) --}}
-            <div class="rx-field-row" style="margin-bottom:14px;">
-              <span class="rx-field-label">메모</span>
-              <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counseling?->contents ?? '' }}</textarea>
-            </div>
+            </div>{{-- /rx-cols --}}
 
             {{-- ▸ 환자 정보 소제목 --}}
-            <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-light);">
-              <i class="fa-solid fa-user" style="font-size:10px;color:var(--primary);"></i> 환자 정보
+            <div class="rx-sec-head" style="margin-top:24px;">
+              <span class="rx-sec-title">환자 정보</span>
             </div>
-            {{-- 3단: 환자명 | 연락처 | 주민등록번호 --}}
-            <div class="rx-grid-3" style="margin-bottom:10px;">
+            <div class="rx-cols">
+            <div class="rx-col">
+              {{-- 왼쪽 열 (시안 148:2709) --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">환자명 <span style="color:red;">*</span></span>
+                <span class="rx-field-label">환자명 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">연락처</span>
-                <input type="text" class="form-control" id="f-mobile"
-                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
                 <span class="rx-field-label">주민등록번호</span>
-                <div style="display:flex;gap:4px;flex:1;">
+                <div style="display:flex;gap:8px;flex:1;min-width:0;">
                   {{-- 평문은 여기에 실어 보내지 않는다. '표시'를 눌러야 서버가 복호화해 내려주고,
                        그 순간 사유 코드(operator_view)와 함께 감사로그가 남는다(P0-1). --}}
                   <input type="hidden" id="f-resident-real" value="" />
                   <input type="text" class="form-control" id="f-resident"
                          value="{{ $displayRn }}" placeholder="XXXXXX-XXXXXXX" readonly
-                         style="flex:1;background:var(--bg-secondary,#f8f9fa);cursor:default;letter-spacing:1px;" />
-                  <button type="button" id="btn-resident-toggle" onclick="toggleResidentNo()" title="주민등록번호 표시/숨김"
-                          style="flex-shrink:0;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;">
+                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;letter-spacing:1px;" />
+                  <button type="button" id="btn-resident-toggle" class="rx-side-btn" onclick="toggleResidentNo()"
+                          title="주민등록번호 표시/숨김" style="width:32px;padding:0;">
                     <i class="fa-solid fa-lock" id="icon-resident-toggle"></i>
                   </button>
                 </div>
               </div>
-            </div>
-            {{-- 2단: 보호자명 | 일일도뇨횟수 --}}
-            <div class="rx-field-grid" style="margin-bottom:10px;">
               <div class="rx-field-row">
-                <span class="rx-field-label">보호자명</span>
-                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->counseling?->udf24 ?? '' }}" placeholder="보호자명" style="flex:1;" />
+                <span class="rx-field-label">전화번호 1</span>
+                <input type="text" class="form-control" id="f-mobile"
+                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">일일 도뇨횟수</span>
+                <span class="rx-field-label">전화번호 2</span>
+                <input type="text" class="form-control" id="f-mobile2"
+                       value="{{ $prescription->counseling?->mobile2 ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+              </div>
+              <div class="rx-field-row" style="align-items:flex-start;">
+                <span class="rx-field-label">주소</span>
+                <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? '' }}"
+                           placeholder="우편번호" style="width:110px;flex:none;background:var(--gray-50);cursor:default;" />
+                    <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
+                    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gray-600);white-space:nowrap;cursor:pointer;margin:0;">
+                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:14px;height:14px;cursor:pointer;" />
+                      배송 주소 동일
+                    </label>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <input type="text" class="form-control" id="f-address"
+                           value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
+                           placeholder="도로명 주소" readonly style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                    <input type="text" class="form-control" id="f-address-detail"
+                           value="{{ $prescription->address_detail ?? '' }}"
+                           placeholder="상세 주소" style="flex:1;min-width:0;" />
+                  </div>
+                </div>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">일일 도뇨 횟수</span>
                 <select class="form-control" id="f-diverticulums" style="flex:1;">
                   <option value="">선택</option>
                   <option value="01" @selected(($prescription->counseling?->diverticulums ?? '') == '01')>1회 미만</option>
@@ -1594,32 +1753,63 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="06" @selected(($prescription->counseling?->diverticulums ?? '') == '06')>N/A</option>
                 </select>
               </div>
-            </div>
-            {{-- 주소 (full) --}}
-            <div class="rx-field-row">
-              <span class="rx-field-label">주소</span>
-              <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? '' }}"
-                         placeholder="우편번호" style="width:110px;background:var(--bg-secondary,#f8f9fa);cursor:default;" />
-                  <button type="button" class="btn btn-outline btn-sm" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')" style="white-space:nowrap;flex-shrink:0;">
-                    <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
-                  </button>
-                  <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);white-space:nowrap;cursor:pointer;margin:0;">
-                    <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:14px;height:14px;cursor:pointer;" />
-                    배송 주소 동일
-                  </label>
-                </div>
-                <div style="display:flex;gap:6px;">
-                  <input type="text" class="form-control" id="f-address"
-                         value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
-                         placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,#f8f9fa);cursor:default;" />
-                  <input type="text" class="form-control" id="f-address-detail"
-                         value="{{ $prescription->address_detail ?? '' }}"
-                         placeholder="상세 주소" style="flex:1;" />
-                </div>
+              {{-- 아래 둘은 시안대로 급여·보험 / 거래·주문 구획에서 옮겨 왔다 --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">Five(110days)</span>
+                <input type="text" class="form-control" id="f-five" value="{{ $prescription->counseling?->five ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">현금영수증</span>
+                <input type="text" class="form-control" id="f-cash-receipt" value="{{ $prescription->counseling?->udf23 ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;" />
               </div>
             </div>
+
+            <div class="rx-col">
+              {{-- 오른쪽 열 (시안 148:2774) --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">보호자명</span>
+                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->counseling?->udf24 ?? '' }}" placeholder="보호자명" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">Email</span>
+                <input type="email" class="form-control" id="f-email"
+                       value="{{ $prescription->counseling?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">건보 등록</span>
+                <select class="form-control" id="f-nhis-status" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="진행중"   @selected(($prescription->counseling?->udf19 ?? '') == '진행중')>진행중</option>
+                  <option value="완료"     @selected(($prescription->counseling?->udf19 ?? '') == '완료')>완료</option>
+                  <option value="필요없음" @selected(($prescription->counseling?->udf19 ?? '') == '필요없음')>필요없음</option>
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">건보 등록일</span>
+                <input type="date" class="form-control" id="f-nhis-reg-date"
+                       value="{{ $prescription->counseling?->nhis_reg_date ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">건보 재등록 대상자</span>
+                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->counseling?->udf4 ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">건보 재등록 기한</span>
+                <input type="date" class="form-control" id="f-nhis-renew-due"
+                       value="{{ $prescription->counseling?->nhis_renew_due ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
+                <input type="text" class="form-control" id="f-basic-reeval"
+                       value="{{ $prescription->counseling?->basic_reeval ?? '' }}" placeholder="대상 여부 또는 비고" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
+                <input type="date" class="form-control" id="f-basic-reeval-due"
+                       value="{{ $prescription->counseling?->basic_reeval_due ?? '' }}" style="flex:1;" />
+              </div>
+            </div>
+            </div>{{-- /rx-cols --}}
 
           </div>
         </div>
@@ -1627,97 +1817,57 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- ─────────────────────────────────────────────────
              아코디언 그룹 3: 병원 · 처방 정보 (기본 펼침, OCR)
         ───────────────────────────────────────────────── --}}
+                {{-- ── 병원ㆍ처방 정보 (시안 148:2827) ──
+             병원·처방 / 처방수량·상병 / 급여·보험 / 신재구매 / 추가정보 다섯 카드를
+             시안대로 하나로 합쳤다. 항목은 2열로 나눈다. --}}
         <div class="rx-acc-item">
           <div class="rx-acc-header" onclick="toggleAcc(this)">
             <span>
-              <i class="fa-solid fa-hospital" style="color:var(--info);"></i> 병원 · 처방 정보
+              <i class="fa-solid fa-hospital" style="color:var(--primary);"></i> 병원ㆍ처방 정보
             </span>
             <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">병원명 · 의사 · 처방일 · 유효기간</span>
+              <span class="rx-acc-meta-hint">병원 처방 정보ㆍ처방수량 상병ㆍ급여 보험 정보ㆍ신/재구매 정보</span>
+              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
+              <div class="rx-acc-btns" onclick="event.stopPropagation()">
+                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
+                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
+              </div>
               <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
             </div>
           </div>
           <div class="rx-acc-body" style="display:none;">
-            {{-- 3단: 병원명 | 요양병원코드 | 담당의사 --}}
-            <div class="rx-grid-3" style="margin-bottom:10px;">
+            @php
+              // 합치기 전에는 급여·보험 구획 안에 있던 정의다. 아래 입력과
+              // 테이블뷰가 함께 쓰므로 본문 맨 앞으로 옮겼다.
+              $agreeStart = ($prescription->counseling_data['udf42'] ?? null) ?: now()->format('Y-m-d');
+              $agreeEnd   = ($prescription->counseling_data['udf43'] ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
+            @endphp
+            <div class="rx-cols">
+            <div class="rx-col">
               <div class="rx-field-row">
-                <span class="rx-field-label">병원명 <span style="color:red;">*</span></span>
+                <span class="rx-field-label">요양병원 코드</span>
+                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->counseling?->erp_cd9 ?? '' }}" placeholder="요양병원코드" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">요양병원코드</span>
-                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->counseling?->erp_cd9 ?? '' }}" placeholder="요양병원코드" style="flex:1;" />
+                <span class="rx-field-label">판매 거래처 유형</span>
+                <input type="text" class="form-control" id="f-dealer-type" value="{{ $prescription->counseling?->dealer_type ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">담당의사</span>
-                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->counseling?->udf15 ?? '' }}" placeholder="의사 성명" style="flex:1;" />
-              </div>
-            </div>
-            {{-- 4단: 처방전발행일 | 처방기간 | 종료일 | 진단확인일 --}}
-            <div class="rx-grid-4" style="margin-bottom:10px;">
-              <div class="rx-field-row">
-                <span class="rx-field-label">처방전발행일</span>
-                <div class="field-group" style="flex:1;">
-                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->counseling?->udf12 ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
-                </div>
+                <span class="rx-field-label">추가정보 등록일</span>
+                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->counseling?->reg_date ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,#f8f9fa);" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">처방기간</span>
-                <div style="display:flex;align-items:center;gap:4px;flex:1;">
-                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->counseling?->udf13 ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
-                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">일</span>
-                </div>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">종료일</span>
-                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->counseling?->udf14 ?? '' }}" style="flex:1;min-width:0;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">진단확인일</span>
+                <span class="rx-field-label">진단 확인일</span>
                 <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->counseling?->udf2 ?? '' }}" style="flex:1;min-width:0;" />
               </div>
-            </div>
-            {{-- 재구매일 (full) --}}
-            <div class="rx-field-row">
-              <span class="rx-field-label">재구매일</span>
-              <div style="display:flex;align-items:center;gap:8px;flex:1;">
-                <span id="disp-issued-date" style="font-size:12px;color:var(--text-muted);">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
-                <i class="fa-solid fa-arrow-right" style="font-size:10px;color:var(--text-muted);"></i>
-                <span id="disp-renew-date" style="font-size:13px;font-weight:700;color:var(--primary);">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
-                <input type="hidden" id="f-repurchase-date" value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {{-- ─────────────────────────────────────────────────
-             아코디언 그룹 4: 처방 수량 · 상병 (기본 펼침, OCR)
-        ───────────────────────────────────────────────── --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span>
-              <i class="fa-solid fa-clipboard-list" style="color:var(--purple);"></i> 처방 수량 · 상병
-            </span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">상병명 · 수량 · 기간 · 구분</span>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
-            </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
-            {{-- 상병명/코드 (full) --}}
-            <div class="rx-field-row" style="margin-bottom:10px;">
-              <span class="rx-field-label">상병명 / 코드</span>
-              <div style="display:flex;gap:6px;flex:1;">
-                <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;" />
-                <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '' }}" placeholder="코드" style="flex:3;" />
-              </div>
-            </div>
-            {{-- 3단: 상병구분 | 구분(SB/SCI) | 요류역학검사일 --}}
-            <div class="rx-grid-3" style="margin-bottom:10px;">
               <div class="rx-field-row">
                 <span class="rx-field-label">상병 구분</span>
                 <select class="form-control" id="f-disease-class" style="flex:1;">
@@ -1728,6 +1878,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="3"   @selected(($prescription->counseling?->udf3 ?? '') == '3')>3</option>
                 </select>
               </div>
+              <div class="rx-field-row" style="margin-bottom:10px;">
+              <span class="rx-field-label">상병코드</span>
+              <div style="display:flex;gap:6px;flex:1;">
+                <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;" />
+                <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '' }}" placeholder="코드" style="flex:3;" />
+              </div>
+            </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구분(SB/SCI)</span>
                 <select class="form-control" id="f-sb-sci" style="flex:1;">
@@ -1740,41 +1897,40 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">요류역학검사일</span>
                 <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->counseling?->udf7 ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            {{-- 3단: 1일처방개수 | 총처방기간 | 총계 --}}
-            <div class="rx-grid-3">
               <div class="rx-field-row">
-                <span class="rx-field-label">1일 처방개수</span>
+                <span class="rx-field-label">1일 처방 개수</span>
                 <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->counseling?->udf8 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">처방기간(일)</span>
+                <span class="rx-field-label">총 처방 기간</span>
                 <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->counseling?->udf9 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">총계(개)</span>
+                <span class="rx-field-label">총계</span>
                 <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->counseling?->udf10 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
-            </div>
-          </div>
-        </div>
-
-        {{-- ─────────────────────────────────────────────────
-             아코디언 그룹 5: 급여 · 보험 정보 (collapsed)
-        ───────────────────────────────────────────────── --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span><i class="fa-solid fa-shield-halved" style="color:var(--success);"></i> 급여 · 보험 정보</span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">급여구분 · 공단 · 위임동의</span>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
-            </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
-            {{-- 3단: 급여구분 | 공단등록상태 | 2년후공단재등록 --}}
-            <div class="rx-grid-3" style="margin-bottom:10px;">
               <div class="rx-field-row">
-                <span class="rx-field-label">급여 구분</span>
+                <span class="rx-field-label">처방전 발행일</span>
+                <div class="field-group" style="flex:1;">
+                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->counseling?->udf12 ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
+                </div>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전 사용 기간 (교부일로부터)</span>
+                <div style="display:flex;align-items:center;gap:4px;flex:1;">
+                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->counseling?->udf13 ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">일</span>
+                </div>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">담당 의사명</span>
+                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->counseling?->udf15 ?? '' }}" placeholder="의사 성명" style="flex:1;" />
+              </div>
+            </div>
+            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">보험 유형</span>
                 <select class="form-control" id="f-benefit-class" style="flex:1;">
                   <option value="">선택</option>
                   <option value="일반"      @selected(($prescription->counseling?->udf11 ?? '') == '일반')>일반</option>
@@ -1785,65 +1941,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">공단등록 상태</span>
-                <select class="form-control" id="f-nhis-status" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="진행중"   @selected(($prescription->counseling?->udf19 ?? '') == '진행중')>진행중</option>
-                  <option value="완료"     @selected(($prescription->counseling?->udf19 ?? '') == '완료')>완료</option>
-                  <option value="필요없음" @selected(($prescription->counseling?->udf19 ?? '') == '필요없음')>필요없음</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">2년후공단재등록</span>
-                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->counseling?->udf4 ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
-              </div>
-            </div>
-            {{-- 2단: 위임동의 시작일 | 종료일 --}}
-            <div class="rx-field-grid" style="margin-bottom:10px;">
-              @php
-                $agreeStart = ($prescription->counseling_data['udf42'] ?? null) ?: now()->format('Y-m-d');
-                $agreeEnd   = ($prescription->counseling_data['udf43'] ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
-              @endphp
-              <div class="rx-field-row">
-                <span class="rx-field-label">위임동의 시작일</span>
-                <input type="date" class="form-control" id="f-nhis-agree-start"
-                       value="{{ $agreeStart }}"
-                       onchange="autoAgreeEnd(this.value)"
-                       style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">위임동의 종료일</span>
-                <input type="date" class="form-control" id="f-nhis-agree-end"
-                       value="{{ $agreeEnd }}"
-                       style="flex:1;" />
-              </div>
-            </div>
-
-            {{-- 위임동의 현황 배지 --}}
-            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light);">
-              <div id="consentStatusBadge" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;">
-                <i class="fa-solid fa-circle-info"></i> <span id="consentStatusText">동의 현황 없음</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {{-- ─────────────────────────────────────────────────
-             아코디언 그룹 6: 신/재구매 정보 (collapsed)
-        ───────────────────────────────────────────────── --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span><i class="fa-solid fa-cart-shopping" style="color:var(--warning);"></i> 신/재구매 정보</span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">신/재구매 · 영수증 · 사유 · 담당</span>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
-            </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
-            {{-- 4단: 신구매/재구매 | Five program | 소득공제 구분 | 현금영수증번호 --}}
-            <div class="rx-grid-4" style="margin-bottom:10px;">
-              <div class="rx-field-row">
-                <span class="rx-field-label">신/재구매</span>
+                <span class="rx-field-label">신구매/재구매</span>
                 <select class="form-control" id="f-purchase-type" style="flex:1;">
                   <option value="">선택</option>
                   <option value="신구매" @selected(($prescription->counseling?->udf17 ?? '') == '신구매')>신구매</option>
@@ -1851,58 +1949,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">Five program</span>
-                <select class="form-control" id="f-five-program" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="00" @selected(($prescription->counseling?->five_program ?? '') == '00')>N/A</option>
-                  <option value="05" @selected(($prescription->counseling?->five_program ?? '') == '05')>Five</option>
-                  <option value="06" @selected(($prescription->counseling?->five_program ?? '') == '06')>Six</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">소득공제</span>
-                <select class="form-control" id="f-deduction" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="소득공제" @selected(($prescription->counseling?->udf22 ?? '') == '소득공제')>소득공제</option>
-                  <option value="지출증빙" @selected(($prescription->counseling?->udf22 ?? '') == '지출증빙')>지출증빙</option>
-                  <option value="자진발급" @selected(($prescription->counseling?->udf22 ?? '') == '자진발급')>자진발급</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">현금영수증번호</span>
-                <input type="text" class="form-control" id="f-cash-receipt" value="{{ $prescription->counseling?->udf23 ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;" />
-              </div>
-            </div>
-            {{-- 3단: 주문담당자 | 다음재구매가능일 | 입원/산재/보훈 --}}
-            <div class="rx-grid-3" style="margin-bottom:10px;">
-              <div class="rx-field-row">
-                <span class="rx-field-label">주문 담당자</span>
-                <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->counseling_data['udf25'] ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">다음재구매일</span>
-                <div style="display:flex;gap:4px;flex:1;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->counseling?->udf30 ?? '' }}" style="flex:1;" />
-                  <button type="button" onclick="calcNextRepurchase(true)"
-                          title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;height:36px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">
-                    <i class="fa-solid fa-rotate"></i> 자동
-                  </button>
-                </div>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">입원/산재/보훈</span>
-                <select class="form-control" id="f-special-case" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="입원" @selected(($prescription->counseling?->udf18 ?? '') == '입원')>입원</option>
-                  <option value="산재" @selected(($prescription->counseling?->udf18 ?? '') == '산재')>산재</option>
-                  <option value="보훈" @selected(($prescription->counseling?->udf18 ?? '') == '보훈')>보훈</option>
-                  <option value="출국" @selected(($prescription->counseling?->udf18 ?? '') == '출국')>출국</option>
-                </select>
-              </div>
-            </div>
-            {{-- 사유 (full) --}}
-            <div class="rx-field-row">
               <span class="rx-field-label">사유</span>
               <select class="form-control" id="f-reason" style="flex:1;">
                   <option value="">선택</option>
@@ -1922,36 +1968,152 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   @endforeach
                 </select>
             </div>
-          </div>
-        </div>
-
-        {{-- ─────────────────────────────────────────────────
-             아코디언 그룹 7: 추가 정보 (collapsed)
-        ───────────────────────────────────────────────── --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span><i class="fa-solid fa-ellipsis" style="color:var(--text-muted);"></i> 추가 정보</span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">신환등록 · 기이카운트 병원 · Five</span>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
+              <div class="rx-field-row">
+                <span class="rx-field-label">주문 담당자</span>
+                <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->counseling_data['udf25'] ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">Five/Six program</span>
+                <select class="form-control" id="f-five-program" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="00" @selected(($prescription->counseling?->five_program ?? '') == '00')>N/A</option>
+                  <option value="05" @selected(($prescription->counseling?->five_program ?? '') == '05')>Five</option>
+                  <option value="06" @selected(($prescription->counseling?->five_program ?? '') == '06')>Six</option>
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">Five(110days)</span>
+                <input type="text" class="form-control" id="f-five-2" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">환급 해당 기관</span>
+                <select class="form-control" id="f-special-case" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="입원" @selected(($prescription->counseling?->udf18 ?? '') == '입원')>입원</option>
+                  <option value="산재" @selected(($prescription->counseling?->udf18 ?? '') == '산재')>산재</option>
+                  <option value="보훈" @selected(($prescription->counseling?->udf18 ?? '') == '보훈')>보훈</option>
+                  <option value="출국" @selected(($prescription->counseling?->udf18 ?? '') == '출국')>출국</option>
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">결제일</span>
+                <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->counseling?->pay_date ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">구입일 (모든 서류 발행일)</span>
+                <input type="date" class="form-control" id="f-buy-date" value="{{ $prescription->counseling?->buy_date ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
+                <input type="date" class="form-control" id="f-nhis-agree-start"
+                       value="{{ $agreeStart }}"
+                       onchange="autoAgreeEnd(this.value)"
+                       style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">급여 종료일 (사용 종료일)</span>
+                <input type="date" class="form-control" id="f-nhis-agree-end"
+                       value="{{ $agreeEnd }}"
+                       style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">다음 재구매 가능일</span>
+                <div style="display:flex;gap:4px;flex:1;align-items:center;">
+                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->counseling?->udf30 ?? '' }}" style="flex:1;" />
+                  <button type="button" onclick="calcNextRepurchase(true)"
+                          title="처방전발행일 + 처방기간(일) + 1일"
+                          style="flex-shrink:0;height:36px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                    <i class="fa-solid fa-rotate"></i> 자동
+                  </button>
+                </div>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">진단확인일</span>
+                <input type="date" class="form-control" id="f-diag-confirm-2" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+              <span class="rx-field-label">재구매일</span>
+              {{-- 시안(148:3034)은 다른 항목과 같은 입력칸이다. 예전에는 '발행일 → 재구매일'
+                   글자만 있어 칸이 없는 것처럼 보였다. 값은 발행일과 처방기간으로 자동 계산되므로
+                   읽기 전용으로 둔다. 계산 결과를 글자로 읽어가는 코드가 있어 span 은 감춰서 남긴다. --}}
+              <input type="text" class="form-control" id="f-repurchase-date" readonly
+                     value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
+                     placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
+                     style="flex:1;background:var(--gray-50);cursor:default;" />
+              <span id="disp-issued-date" style="display:none;">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
+              <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
             </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
-            {{-- 3단: 신환등록일 | Five(110days) | 추가정보 등록일 --}}
-            <div class="rx-grid-3">
+              <div class="rx-field-row">
+                <span class="rx-field-label">종료일</span>
+                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->counseling?->udf14 ?? '' }}" style="flex:1;min-width:0;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">소득공제</span>
+                <select class="form-control" id="f-deduction" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="소득공제" @selected(($prescription->counseling?->udf22 ?? '') == '소득공제')>소득공제</option>
+                  <option value="지출증빙" @selected(($prescription->counseling?->udf22 ?? '') == '지출증빙')>지출증빙</option>
+                  <option value="자진발급" @selected(($prescription->counseling?->udf22 ?? '') == '자진발급')>자진발급</option>
+                </select>
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">신환master등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->counseling?->udf32 ?? '' }}" style="flex:1;" />
               </div>
+            </div>
+            </div>{{-- /rx-cols --}}
+          </div>
+        </div>
+
+        {{-- ── 추가정보 (시안 148:3046) ── --}}
+        <div class="rx-acc-item">
+          <div class="rx-acc-header" onclick="toggleAcc(this)">
+            <span>
+              <i class="fa-solid fa-ellipsis" style="color:var(--primary);"></i> 추가정보
+            </span>
+            <div class="rx-acc-meta">
+              <span class="rx-acc-meta-hint">건보 위임동의ㆍ인마켓ㆍ수량</span>
+              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
+              <div class="rx-acc-btns" onclick="event.stopPropagation()">
+                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
+                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
+              </div>
+              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
+            </div>
+          </div>
+          <div class="rx-acc-body" style="display:none;">
+            <div class="rx-cols">
+            <div class="rx-col">
+              {{-- 위 둘은 병원ㆍ처방 카드의 '사용 시작일'·'급여 종료일'과 같은 값이다.
+                   시안이 양쪽에 그려 두어 서로 비추게 한다(아래 초기화 코드 참조). --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">Five(110days)</span>
-                <input type="text" class="form-control" id="f-five" value="{{ $prescription->counseling?->five ?? '' }}" style="flex:1;" />
+                <span class="rx-field-label">건보 위임동의 시작일</span>
+                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">추가정보 등록일</span>
-                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->counseling?->reg_date ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,#f8f9fa);" />
+                <span class="rx-field-label">건보 위임동의 종료일</span>
+                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">인마켓 마감일</span>
+                <input type="date" class="form-control" id="f-inmarket-due"
+                       value="{{ $prescription->counseling?->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
+            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">마지막 확정 수량</span>
+                <input type="number" min="0" class="form-control" id="f-last-qty"
+                       value="{{ $prescription->counseling?->last_confirmed_qty ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">하루 사용 수량</span>
+                <input type="number" min="0" class="form-control" id="f-daily-use-qty"
+                       value="{{ $prescription->counseling?->daily_use_qty ?? '' }}" style="flex:1;" />
+              </div>
+            </div>
+            </div>{{-- /rx-cols --}}
           </div>
         </div>
 
@@ -2049,7 +2211,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- Tab: Product (처방전 검수 탭에서는 검수 영역 아래에 함께 표시) --}}
-      <div class="tab-pane active ocr-split-bottom" id="tab-product">
+      <div class="tab-pane" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
         <div class="card mb-3" style="border-color:var(--primary);">
@@ -2928,13 +3090,6 @@ function handleAttachUpload(input) {
 function toggleViewerSide() {
   const layout = document.querySelector('.order-layout');
   if (!layout) return;
-  // fixed 상태라면 해제 후 위치 재측정
-  const inner = document.getElementById('viewerInner');
-  const outer = document.getElementById('viewerCol');
-  if (inner && inner.style.position === 'fixed') {
-    inner.style.position = inner.style.top = inner.style.left = inner.style.width = inner.style.zIndex = '';
-    if (outer) outer.style.minHeight = '';
-  }
   const isRight = layout.classList.toggle('viewer-right');
   localStorage.setItem('rx_viewer_side', isRight ? 'right' : 'left');
   _applyViewerSideBtn(isRight);
@@ -2958,73 +3113,8 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(() => { syncCardToTable(); renderItemsTable(); syncOrderTabToTable(); }, 250);
   }
 
-  // ── 뷰어 열 JS sticky ────────────────────────────────
-  // #viewerCol 은 그리드 흐름에 유지(공간 확보), #viewerInner 만 fixed 전환
-  (function () {
-    if (window.matchMedia('(max-width: 768px)').matches) return;
-    const outer = document.getElementById('viewerCol');
-    const inner = document.getElementById('viewerInner');
-    if (!outer || !inner) return;
-
-    const navEl = document.getElementById('layoutNavbar');
-
-    function getViewerTop() {
-      const patBar = document.getElementById('patient-info-bar');
-      let bottom = navEl ? navEl.getBoundingClientRect().bottom : 60;
-      if (patBar && patBar.classList.contains('info-bar-pinned')) {
-        bottom = patBar.getBoundingClientRect().bottom;
-      }
-      return bottom + 8;
-    }
-
-    let naturalTop  = null;
-    let naturalLeft = null;
-    let innerW      = null;
-    let innerH      = null;
-    let isFixed     = false;
-
-    function measure() {
-      const rect  = outer.getBoundingClientRect();
-      naturalTop  = rect.top + window.scrollY;
-      naturalLeft = rect.left;
-      innerW      = outer.offsetWidth;
-      innerH      = inner.offsetHeight;
-    }
-
-    function fix() {
-      const top = getViewerTop();
-      outer.style.minHeight = innerH + 'px';
-      inner.style.position  = 'fixed';
-      inner.style.top       = top + 'px';
-      inner.style.left      = naturalLeft + 'px';
-      inner.style.width     = innerW + 'px';
-      inner.style.zIndex    = '40';
-      isFixed = true;
-    }
-
-    function unfix() {
-      inner.style.position = inner.style.top = inner.style.left =
-      inner.style.width    = inner.style.zIndex = '';
-      outer.style.minHeight = '';
-      isFixed = false;
-    }
-
-    function onScroll() {
-      // rect 기반: 스크롤 컨테이너(window/body/content-wrapper) 무관하게 정확
-      const top       = getViewerTop();
-      const shouldFix = outer.getBoundingClientRect().top <= top; // outer는 흐름 유지(공간 확보)
-      if (shouldFix && !isFixed)       { measure(); fix(); }
-      else if (!shouldFix && isFixed)  unfix();
-      else if (isFixed) inner.style.top = getViewerTop() + 'px';
-    }
-
-    // capture:true → 어떤 스크롤러에서 발생한 scroll이든 포착
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', () => {
-      naturalTop = null;
-      if (isFixed) unfix();
-    });
-  })();
+  // 스크롤에 따라 뷰어를 화면에 붙이던 코드는 걷어냈다.
+  // 본문과 함께 흐르는 편이 시안에 맞고, 위치를 계산할 일도 없어진다.
 
   // ── 탭바 고정: body로 reparent해서 정보바 바로 아래에 fixed (transform/overflow 우회) ──
   (function () {
@@ -3121,11 +3211,8 @@ function _applyTableView(isTable) {
   const lbl = document.getElementById('btnViewToggleLabel');
   const col = document.getElementById('tabsCol');
   if (col) col.classList.toggle('tab-view-table', isTable);
-  if (btn) {
-    btn.style.background   = isTable ? 'var(--primary-light)' : 'var(--bg)';
-    btn.style.borderColor  = isTable ? 'var(--primary)'       : 'var(--border)';
-    btn.style.color        = isTable ? 'var(--primary)'       : 'var(--text-secondary)';
-  }
+  // 테두리 없는 글자 링크라 색만 바꾼다 (시안 137:701)
+  if (btn) btn.style.color = isTable ? 'var(--primary)' : 'var(--gray-700)';
   if (lbl) lbl.textContent = isTable ? '카드뷰' : '테이블뷰';
 }
 
@@ -3396,8 +3483,20 @@ window.HELP_TOUR_STEPS = [
 
   let _residentVisible = false;
 
+  /* 열려 있는 동안 친 값을 그대로 저장용 칸에 옮긴다.
+     예전에는 토글할 때마다 리스너를 새로 달아 누를수록 쌓였다. 한 번만 단다. */
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('f-resident');
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+      if (_residentVisible) document.getElementById('f-resident-real').value = inp.value;
+    });
+  });
+
   /* 원문은 화면에 미리 실려 있지 않다. 처음 '표시'를 누를 때 서버에서 받아온다.
      복호화가 서버에서 일어나므로 그 순간 감사로그가 남는다(P0-1). */
+  /* 저장된 값이 없으면 빈 문자열을, 불러오기가 실패하면 null 을 준다.
+     둘을 구분해야 '아직 없는 번호'와 '못 가져온 번호'를 다르게 다룰 수 있다. */
   async function _fetchResidentNo() {
     const hidden = document.getElementById('f-resident-real');
     if (hidden.value) return hidden.value;          // 이번 화면에서 이미 열었다면 다시 묻지 않는다
@@ -3409,7 +3508,7 @@ window.HELP_TOUR_STEPS = [
       return hidden.value;
     } catch (e) {
       if (typeof showToast === 'function') showToast('주민등록번호를 불러오지 못했습니다.', 'error');
-      return '';
+      return null;
     }
   }
 
@@ -3418,16 +3517,17 @@ window.HELP_TOUR_STEPS = [
     const icon   = document.getElementById('icon-resident-toggle');
     _residentVisible = !_residentVisible;
     if (_residentVisible) {
-      const real   = await _fetchResidentNo();
-      if (!real) { _residentVisible = false; return; }
+      const real = await _fetchResidentNo();
+      // 못 불러온 경우에만 되돌린다. 아직 번호가 없는 처방전은 빈 칸으로 열어
+      // 그 자리에서 입력할 수 있어야 한다.
+      if (real === null) { _residentVisible = false; return; }
       inp.value    = real;
       inp.readOnly = false;
       inp.style.background = '';
       inp.style.cursor     = '';
+      inp.placeholder = 'XXXXXX-XXXXXXX';
+      inp.focus();
       icon.className = 'fa-solid fa-lock-open';
-      inp.addEventListener('input', function () {
-        document.getElementById('f-resident-real').value = inp.value;
-      }, { once: false });
     } else {
       document.getElementById('f-resident-real').value = inp.value;
       inp.value    = maskResidentNo(inp.value);
@@ -3694,11 +3794,10 @@ window.HELP_TOUR_STEPS = [
 
     const isTableView = () => document.getElementById('tabsCol')?.classList.contains('tab-view-table');
 
+    // 시안(148:2628·2827·3046)의 검수 탭에는 아코디언 카드만 있다.
+    // 예전에는 처방 제품을 아래에 붙여 함께 보였는데, 시안에 없어 각자 탭으로 되돌린다.
     if (tabId === 'tab-ocr') {
-      // 처방전 검수 탭: 위=검수(고정높이·스크롤), 아래=처방 제품 함께 표시
-      document.getElementById('tab-ocr').classList.add('active', 'ocr-split-top');
-      document.getElementById('tab-product').classList.add('active', 'ocr-split-bottom');
-      if (isTableView()) renderItemsTable(); else renderItems();
+      document.getElementById('tab-ocr').classList.add('active');
       return;
     }
 
@@ -4457,6 +4556,21 @@ window.HELP_TOUR_STEPS = [
       postcode:         strOrNull('f-postcode'),
       address_detail:   strOrNull('f-address-detail'),
       guardian:         strOrNull('f-guardian'),
+      // 시안 148:2708 로 새로 생긴 항목들 — counseling_data 에 담는다
+      mobile2:          strOrNull('f-mobile2'),
+      email:            strOrNull('f-email'),
+      nhis_reg_date:    strOrNull('f-nhis-reg-date'),
+      nhis_renew_due:   strOrNull('f-nhis-renew-due'),
+      basic_reeval:     strOrNull('f-basic-reeval'),
+      basic_reeval_due: strOrNull('f-basic-reeval-due'),
+      // 시안 148:2827 로 새로 생긴 항목
+      dealer_type:      strOrNull('f-dealer-type'),
+      pay_date:         strOrNull('f-pay-date'),
+      buy_date:         strOrNull('f-buy-date'),
+      // 시안 148:3046 (추가정보 카드)
+      inmarket_due:       strOrNull('f-inmarket-due'),
+      last_confirmed_qty: strOrNull('f-last-qty'),
+      daily_use_qty:      strOrNull('f-daily-use-qty'),
       diverticulums:    strOrNull('f-diverticulums'),
       // ── 병원·처방 정보 ────────────────────────────────────
       hospital_name:    hosp,
@@ -5920,6 +6034,20 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('DOMContentLoaded', () => {
     if (!PREV_RX) document.querySelectorAll('[onclick="prevRecord()"]').forEach(b => b.disabled = true);
     if (!NEXT_RX) document.querySelectorAll('[onclick="nextRecord()"]').forEach(b => b.disabled = true);
+
+    /* 시안(148:2708 · 148:2827)이 같은 항목을 두 카드에 그려 두었다.
+       한쪽에 적고 다른 쪽에 다르게 적으면 어느 값을 저장할지 알 수 없으므로,
+       두 칸이 늘 같은 값을 보이게 서로 비춘다. 저장은 원래 칸 하나만 보낸다. */
+    [['f-five', 'f-five-2'], ['f-diagnosis-date', 'f-diag-confirm-2'],
+     ['f-nhis-agree-start', 'f-agree-start-2'], ['f-nhis-agree-end', 'f-agree-end-2']].forEach(([srcId, dupId]) => {
+      const src = document.getElementById(srcId), dup = document.getElementById(dupId);
+      if (!src || !dup) return;
+      dup.value = src.value;
+      src.addEventListener('input',  () => { dup.value = src.value; });
+      src.addEventListener('change', () => { dup.value = src.value; });
+      dup.addEventListener('input',  () => { src.value = dup.value; });
+      dup.addEventListener('change', () => { src.value = dup.value; });
+    });
   });
 
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }

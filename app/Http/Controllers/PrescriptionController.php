@@ -934,7 +934,7 @@ class PrescriptionController extends Controller
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
-        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator']);
+        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator']);
         $patients = Patient::orderBy('name')->get();
 
         // 이전(ID 작은 쪽) / 다음(ID 큰 쪽) — rx_number 반환
@@ -1062,6 +1062,21 @@ class PrescriptionController extends Controller
             'counsel_memo'          => 'nullable|string|max:2000',
             // 환자 정보 추가
             'guardian'              => 'nullable|string|max:50',
+            // 시안 148:2708 로 새로 생긴 항목 (counseling_data 저장)
+            'mobile2'               => 'nullable|string|max:30',
+            'email'                 => 'nullable|email|max:190',
+            'nhis_reg_date'         => 'nullable|date',
+            'nhis_renew_due'        => 'nullable|date',
+            'basic_reeval'          => 'nullable|string|max:100',
+            'basic_reeval_due'      => 'nullable|date',
+            // 시안 148:2827 로 새로 생긴 항목
+            'dealer_type'           => 'nullable|string|max:50',
+            'pay_date'              => 'nullable|date',
+            'buy_date'              => 'nullable|date',
+            // 시안 148:3046 (추가정보 카드)
+            'inmarket_due'          => 'nullable|date',
+            'last_confirmed_qty'    => 'nullable|integer|min:0',
+            'daily_use_qty'         => 'nullable|integer|min:0',
             'diverticulums'         => 'nullable|string|max:10',
             // 병원·처방 추가
             'hospital_code'         => 'nullable|string|max:50',
@@ -1125,6 +1140,18 @@ class PrescriptionController extends Controller
             'contents'        => $request->input('counsel_memo'),
             // 환자 정보
             'udf24'           => $request->input('guardian'),
+            'mobile2'         => $request->input('mobile2'),
+            'email'           => $request->input('email'),
+            'nhis_reg_date'   => $request->input('nhis_reg_date'),
+            'nhis_renew_due'  => $request->input('nhis_renew_due'),
+            'basic_reeval'    => $request->input('basic_reeval'),
+            'basic_reeval_due'=> $request->input('basic_reeval_due'),
+            'dealer_type'     => $request->input('dealer_type'),
+            'pay_date'        => $request->input('pay_date'),
+            'buy_date'        => $request->input('buy_date'),
+            'inmarket_due'      => $request->input('inmarket_due'),
+            'last_confirmed_qty'=> $request->input('last_confirmed_qty'),
+            'daily_use_qty'     => $request->input('daily_use_qty'),
             'diverticulums'   => $request->input('diverticulums'),
             // 병원·처방
             'erp_cd9'         => $request->input('hospital_code'),

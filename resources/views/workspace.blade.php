@@ -9,7 +9,8 @@
   /* 탭 워크스페이스가 콘텐츠 영역(네비 아래)을 가득 채우도록 page-body 패딩을 상쇄한다.
      예전에는 -14px -24px -20px 로 값을 박아 뒀는데, 본문 패딩이 바뀌자 위로 14px 올라가
      탭바가 고정 헤더에 가려졌다. 패딩과 같은 토큰에서 계산해 다시 어긋나지 않게 한다. */
-  #wsRoot { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h));
+  /* 탭바와 내용 사이는 12 — 시안 컨테이너(148:1475)의 gap 과 같다. */
+  #wsRoot { display:flex; flex-direction:column; gap:12px; height:calc(100vh - var(--nav-h));
             margin:0 calc(var(--content-pad) * -1) calc(var(--content-pad) * -1); background:var(--bg); }
   /* 화면 탭 — 시안 207:1222.
      탭바는 흰 바탕에 radius 8, 위쪽만 2px 띄운다. 탭끼리는 붙어 있고 아래 선은 없다.

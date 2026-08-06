@@ -4,6 +4,7 @@
 namespace App\Models;
 
 use App\Support\ResidentNo;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -158,6 +159,12 @@ class Prescription extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    /** 마지막으로 고친 사람. 기록이 붙기 전 처방전은 비어 있다. */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function order(): HasOne
     {
         return $this->hasOne(Order::class);
@@ -204,10 +211,19 @@ class Prescription extends Model
     protected static function booted(): void
     {
         static::updating(function (self $rx) {
+            /* 마지막으로 고친 사람을 남긴다.
+               로그인한 사람이 실제 값을 바꿀 때만 기록한다 — 배치·웹훅처럼
+               사람이 없는 변경과, 값이 그대로인 저장은 기록하지 않는다.
+               updated_by 자체만 바뀐 경우도 제외해야 무한히 되짚지 않는다. */
+            $touched = array_diff(array_keys($rx->getDirty()), ['updated_at', 'updated_by', 'is_blank_draft']);
+            if ($touched && Auth::check() && Schema::hasColumn('prescriptions', 'updated_by')) {
+                $rx->updated_by = Auth::id();
+            }
+
             if (!$rx->is_blank_draft) {
                 return;
             }
-            $changed = array_diff(array_keys($rx->getDirty()), ['is_blank_draft', 'updated_at']);
+            $changed = array_diff(array_keys($rx->getDirty()), ['is_blank_draft', 'updated_at', 'updated_by']);
             if ($changed) {
                 $rx->is_blank_draft = false;
             }

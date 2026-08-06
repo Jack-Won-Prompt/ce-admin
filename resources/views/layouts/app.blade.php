@@ -100,7 +100,9 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { overflow-x: hidden; }
+    /* hidden 을 쓰면 세로가 auto 가 되어 스크롤 컨테이너가 만들어지고,
+       안쪽의 position:sticky 가 제자리에 붙지 못한다. clip 은 가로만 잘라낸다. */
+    html { overflow-x: clip; }
     body {
       font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
                    'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
@@ -108,7 +110,7 @@
       color: var(--text-primary);
       font-size: 14px;
       line-height: 1.6;
-      overflow-x: hidden;
+      overflow-x: clip;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -379,7 +381,11 @@
     }
 
     /* ── Content ── */
-    .content-wrapper { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; padding-top: var(--nav-h); }
+    /* overflow-x:hidden 을 쓰면 세로도 auto 가 되어 이 요소가 스크롤 컨테이너가 된다.
+       그러면 안쪽의 position:sticky 가 이 요소를 기준으로 잡는데, 정작 여기는 스크롤되지
+       않아 붙어 있지 못하고 본문과 함께 밀려 올라간다(검수 화면 뷰어가 그랬다).
+       clip 은 가로만 잘라내고 스크롤 컨테이너를 만들지 않는다. */
+    .content-wrapper { flex: 1; display: flex; flex-direction: column; overflow-x: clip; padding-top: var(--nav-h); }
     /* Figma 174:1184 container — padding 0 16 16, 블록 간 gap 16 */
     .page-body {
       flex: 1; min-width: 0;
