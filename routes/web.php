@@ -321,6 +321,10 @@ Route::middleware(['auth'])->group(function () {
     Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');
     Route::post('/settings/nice/test', [\App\Http\Controllers\NiceSettingController::class, 'test'])->name('nice-settings.test');
 
+    // 위임장 서명 — 서명한 사람·번호를 한자리에서 보고 서류를 받는다
+    Route::get('/prescription-consents', [\App\Http\Controllers\PrescriptionConsentController::class, 'index'])
+        ->name('prescription-consents.index');
+
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');
     Route::get('/privacy-consents/export',   [PrivacyConsentAdminController::class, 'export'])->name('privacy-consents.export');

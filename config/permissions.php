@@ -109,6 +109,12 @@ return [
             'routes'  => ['documents'],
             'actions' => ['view', 'create'],
         ],
+        'prescription-consents' => [
+            'label'   => '위임장 서명',
+            'group'   => 'docs',
+            'routes'  => ['prescription-consents'],
+            'actions' => ['view'],
+        ],
         'privacy-consents' => [
             'label'   => '개인정보동의',
             'group'   => 'docs',

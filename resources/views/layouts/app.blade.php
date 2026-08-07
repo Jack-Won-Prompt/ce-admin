@@ -1222,7 +1222,7 @@
         @endif
 
         {{-- ══ 서류 · 동의 ══ --}}
-        @if($vis('documents', 'privacy-consents'))
+        @if($vis('documents', 'prescription-consents', 'privacy-consents'))
         <div class="menu-group" data-menu-group="docs">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>서류ㆍ동의</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1233,6 +1233,14 @@
           <a class="menu-link" data-icon="briefcase" href="{{ route('documents.index') }}" data-title="서류 관리">
             @dsicon('briefcase', 'ds-icon menu-icon')
             <span>서류 관리</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('prescription-consents'))
+        <div class="menu-item {{ request()->routeIs('prescription-consents*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('prescription-consents.index') }}" data-title="위임장 서명">
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
+            <span>위임장 서명</span>
           </a>
         </div>
         @endif
