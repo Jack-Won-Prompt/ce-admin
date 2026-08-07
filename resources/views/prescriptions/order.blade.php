@@ -1,4 +1,4 @@
-﻿{{-- resources/views/prescriptions/order.blade.php --}}
+{{-- resources/views/prescriptions/order.blade.php --}}
 @extends('layouts.app')
 
 @section('title', '처방전 확인 및 주문')
@@ -217,8 +217,23 @@
   #viewerCol { position: sticky; top: calc(var(--nav-h, 60px) + 12px); align-self: start;
                max-height: calc(100vh - var(--nav-h, 60px) - 24px);
                overflow: hidden auto; }
-  /* 워크스페이스 안(iframe)에서는 고정 헤더가 없다 */
-  html.is-framed #viewerCol { top: 12px; max-height: calc(100vh - 24px); }
+  /* 워크스페이스 안(iframe)에서는 높이만 조정한다.
+     top 을 따로 주면 붙지 않아, 기본값(nav + 12)을 그대로 쓴다. */
+  html.is-framed #viewerCol { max-height: calc(100vh - 24px); }
+
+  /* ── 좌우 분할 (넓은 화면) ────────────────────────────────
+     sticky 는 페이지가 스크롤될 때만 자리를 지킨다. 아코디언을 접어 페이지가
+     화면보다 짧아지면 붙을 자리가 없어져 뷰어가 제 위치로 내려온다.
+     좌우를 각각 스크롤시키면 페이지 자체가 스크롤되지 않으므로, 무엇을 여닫든
+     뷰어는 움직일 수 없다. 높이는 JS 가 재서 넣는다(sizeSplit).
+     좁은 화면(768 이하)에서는 한 열로 쌓이므로 걸지 않는다. */
+  .order-layout.is-split { align-items: stretch; }
+  .order-layout.is-split > #viewerCol { position: static; top: auto; max-height: none;
+                                        height: 100%; overflow: hidden auto; }
+  .order-layout.is-split > #tabsCol   { height: 100%; overflow: hidden auto; }
+  /* 열이 스크롤되면 탭 줄이 따라 올라가 버린다. 열 안에서 붙여 둔다. */
+  .order-layout.is-split > #tabsCol > #tabBarOuter { position: sticky; top: 0; z-index: 2;
+                                        background: var(--gray-0); border-radius: 12px 12px 0 0; }
   .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
              min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
   #tabsCol > .tab-pane { padding: 16px; }
@@ -2552,6 +2567,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
 @endsection
 
+@push('modals')
 {{-- 이전 상담 이력 조회 모달 --}}
 @if($isReturningPatient)
 <div class="modal-overlay" id="prevCounselModal" style="z-index:10000;" onclick="if(event.target===this)closePrevCounselModal()">
@@ -2924,6 +2940,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
     </div>
   </div>
 </div>
+@endpush
 
 @php
 $_itemsData = $prescription->items->map(fn($i) => [
@@ -3672,7 +3689,78 @@ window.HELP_TOUR_STEPS = [
   let currentSearchIdx = 0;
 
   // ── 처방전 검수 아코디언 토글 ───────────────────────────
+  /* 아코디언을 여닫으면 위쪽 높이가 달라져 화면 전체가 밀린다. 뷰어는 붙어 있어도
+     기준이 되는 스크롤 위치가 통째로 움직이니 같이 튄 것처럼 보인다.
+     기준 요소가 화면에서 제자리에 있도록, 달라진 만큼 스크롤을 되돌린다. */
+  /* 뷰어가 화면에 붙기 시작하는 스크롤 위치. 이보다 위로 올라가면 뷰어가 제자리에서
+     떨어져 같이 내려오므로, 보정할 때 이 아래로는 내려가지 않게 한다. */
+  function viewerStickY() {
+    const vc = document.getElementById('viewerCol');
+    if (!vc || !vc.parentElement) return 0;
+    const top = parseFloat(getComputedStyle(vc).top) || 0;
+    return Math.max(0, vc.parentElement.getBoundingClientRect().top + window.scrollY - top);
+  }
+
+  function keepInPlace(anchor, mutate) {
+    // 분할 상태에서는 오른쪽 열이 스크롤한다. 페이지는 움직이지 않는다.
+    const col = document.getElementById('tabsCol');
+    const inCol = col && col.parentElement.classList.contains('is-split') &&
+                  col.scrollHeight > col.clientHeight + 1;
+    const before = anchor.getBoundingClientRect().top;
+    mutate();
+    const delta = anchor.getBoundingClientRect().top - before;
+    if (!delta) return;
+    if (inCol) { col.scrollTop += delta; return; }
+    // 위쪽 패널이 접히면 줄어든 높이가 지금 스크롤보다 커서 맨 위까지 튕겨 올라간다.
+    // 그때는 뷰어가 붙어 있는 최소 위치까지만 올린다.
+    const target = Math.max(window.scrollY + delta, viewerStickY());
+    // html 에 scroll-behavior:smooth 가 걸려 있어, 보정까지 애니메이션으로 흐르면
+    // 화면이 미끄러지듯 움직여 보인다. 즉시 옮긴다.
+    window.scrollTo({ top: target, behavior: 'instant' });
+  }
+
+  /* 좌우 분할 — 페이지가 아니라 두 열이 각각 스크롤하게 만든다.
+     .order-layout 이 화면 아래끝까지만 차지하면 문서가 화면을 넘지 않아
+     페이지 스크롤이 사라지고, 뷰어는 어떤 조작에도 움직이지 않는다. */
+  function sizeSplit() {
+    const lay = document.querySelector('.order-layout');
+    if (!lay) return;
+    // 좁은 화면은 한 열로 쌓이므로 분할하지 않는다
+    if (window.innerWidth <= 768) {
+      lay.classList.remove('is-split');
+      lay.style.height = '';
+      return;
+    }
+    lay.classList.add('is-split');
+    lay.style.height = 'auto';                       // 재기 전 초기화
+    window.scrollTo({ top: 0, behavior: 'instant' }); // 분할하면 페이지는 스크롤되지 않는다
+
+    // 아래쪽에 남겨야 할 여백 — 조상들의 padding·margin 을 더한다.
+    // 좌표 차이로 재면 옆에 선 사이드바가 더 길 때 그 길이까지 딸려 들어온다.
+    let below = parseFloat(getComputedStyle(lay).marginBottom) || 0;
+    for (let p = lay.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      below += (parseFloat(s.paddingBottom)     || 0)
+             + (parseFloat(s.marginBottom)      || 0)
+             + (parseFloat(s.borderBottomWidth) || 0);
+    }
+    const top = lay.getBoundingClientRect().top;
+    lay.style.height = Math.max(320, window.innerHeight - top - below) + 'px';
+  }
+
+  window.addEventListener('resize', sizeSplit);
+  document.addEventListener('DOMContentLoaded', () => {
+    sizeSplit();
+    // 환자 정보 줄이 줄바꿈되면 위쪽 높이가 달라진다. 그때마다 다시 잰다.
+    const bar = document.querySelector('.patient-info-bar') || document.querySelector('.pib-body');
+    if (bar && window.ResizeObserver) new ResizeObserver(sizeSplit).observe(bar);
+  });
+
   function toggleAcc(header) {
+    keepInPlace(header, () => _toggleAcc(header));
+  }
+
+  function _toggleAcc(header) {
     const item   = header.closest('.rx-acc-item');
     const body   = header.nextElementSibling;
     const isOpen = body.style.display !== 'none';
@@ -3698,15 +3786,19 @@ window.HELP_TOUR_STEPS = [
 
   function toggleAllAcc() {
     const items   = document.querySelectorAll('#tab-ocr .rx-acc-item');
+    if (!items.length) return;
     const allOpen = Array.from(items).every(el => el.classList.contains('is-open'));
-    items.forEach(el => {
-      const body = el.querySelector('.rx-acc-body');
-      const icon = el.querySelector('.rx-acc-icon');
-      body.style.display = allOpen ? 'none' : 'block';
-      if (icon) icon.classList.toggle('open', !allOpen);
-      el.classList.toggle('is-open', !allOpen);
+    // 전체 닫기도 마찬가지다 — 첫 머리를 제자리에 붙들어 둔다
+    keepInPlace(items[0], () => {
+      items.forEach(el => {
+        const body = el.querySelector('.rx-acc-body');
+        const icon = el.querySelector('.rx-acc-icon');
+        body.style.display = allOpen ? 'none' : 'block';
+        if (icon) icon.classList.toggle('open', !allOpen);
+        el.classList.toggle('is-open', !allOpen);
+      });
+      syncToggleAllBtn();
     });
-    syncToggleAllBtn();
   }
 
   function syncToggleAllBtn() {

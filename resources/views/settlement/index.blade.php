@@ -260,6 +260,7 @@
 
 @endsection
 
+@push('modals')
 {{-- ══ 처방전 상세 팝업 ══ --}}
 <div id="rxModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
   <div style="background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:0 20px 60px rgba(0,0,0,.25);width:680px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
@@ -293,6 +294,7 @@
     </div>
   </div>
 </div>
+@endpush
 
 @push('scripts')
 <script>

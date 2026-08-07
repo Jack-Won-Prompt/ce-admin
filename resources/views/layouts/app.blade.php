@@ -2051,6 +2051,12 @@ document.addEventListener('click', (e) => {
   })();
 </script>
 
+{{-- 모달은 본문 바깥, body 끝에 둔다.
+     화면 파일이 @section('content') 밖에 모달을 두면 Blade 가 그 markup 을
+     레이아웃보다 먼저 뱉어 <!DOCTYPE> 앞에 붙는다. 그러면 브라우저가 quirks mode 로
+     들어가 sticky·스크롤 계산이 어긋난다. 그런 markup 은 이 스택으로 보낸다. --}}
+@stack('modals')
+
 {{-- 화면의 인라인 스크립트가 wwGrid 를 바로 쓸 수 있도록 스택보다 먼저 싣는다 --}}
 <script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 
