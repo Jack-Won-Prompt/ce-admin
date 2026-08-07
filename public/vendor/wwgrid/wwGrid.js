@@ -1044,7 +1044,20 @@ class wwGrid {
         dot.title = `원본: ${_cellMod.original[col.name]}`;
         inner.appendChild(dot);
       }
-      inner.appendChild(document.createTextNode(this._formatDisplay(cellValue, col)));
+      /* 셀을 직접 그리는 컬럼 — renderer(value, row, rowIndex, col) 가 노드를 준다.
+         셀은 원래 글자만 담는다. 행마다 버튼을 두어야 하는 목록이 생겨 열어 둔다.
+         값에서 만든 HTML 문자열을 붙이지 않고 호출한 쪽이 만든 노드만 받으므로,
+         데이터가 태그를 물고 있어도 그대로 그려지지 않는다. */
+      if (typeof col.renderer === 'function') {
+        const node = col.renderer(cellValue, row, rowIndex, col);
+        if (node instanceof Node) {
+          inner.appendChild(node);
+        } else if (node !== null && node !== undefined && node !== false) {
+          inner.appendChild(document.createTextNode(String(node)));
+        }
+      } else {
+        inner.appendChild(document.createTextNode(this._formatDisplay(cellValue, col)));
+      }
 
       // popup 셀 — 오른쪽 끝에 트리거 아이콘
       if (col.editor === 'popup' && isEditable) {

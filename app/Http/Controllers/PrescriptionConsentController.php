@@ -71,11 +71,15 @@ class PrescriptionConsentController extends Controller
                 'requested'  => $c->created_at?->format('Y-m-d H:i') ?? '',
                 'identity'   => $c->isIdentityVerified() ? ($c->niceAuthTypeLabel() ?: '확인') : '',
                 'signature'  => $hasSig ? '있음' : '',
+                'download'   => '',      // 버튼을 그리는 자리 (renderer 가 채운다)
+                'action'     => '',      // 위임동의 발송 자리
 
-                // 그리드에 세우지 않고 다운로드 버튼이 쓰는 값들
+                // 버튼이 쓰는 값들 — 컬럼으로 세우지 않는다
+                'status_key'     => $c->status,
                 'png_url'        => $hasSig && $rx ? route('prescriptions.consentSignature', $rx) : null,
                 'consent_pdf'    => $agreed && $rx && $c->pdf_path ? route('prescriptions.consentPdf', $rx) : null,
                 'delegation_pdf' => $agreed && $rx ? route('prescriptions.delegationPdfOriginal', $rx) : null,
+                'sms_url'        => $rx ? route('prescriptions.consentSms', $rx) : null,
             ];
         });
 
