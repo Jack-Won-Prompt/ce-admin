@@ -1496,6 +1496,19 @@ class PrescriptionController extends Controller
         // 보내지 않았거나 비웠으면 처방전에 적힌 이름을 쓴다.
         $patientName = trim((string) $request->input('name'))
             ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
+
+        return $this->issueConsent($prescription, $mobile, $patientName);
+    }
+
+    /**
+     * 동의 건을 만들고 서명 링크를 SMS 로 보낸다.
+     *
+     * 검수 화면과 위임장 서명 화면 두 곳에서 부른다. 토큰·유효시간·문구가 갈리면
+     * 환자가 받는 링크가 화면마다 달라지므로 한 곳에만 둔다.
+     * $mobile 은 숫자만, $patientName 은 이미 정해진 이름이 들어온다.
+     */
+    public function issueConsent(Prescription $prescription, string $mobile, string $patientName): \Illuminate\Http\JsonResponse
+    {
         $token       = \Illuminate\Support\Str::random(24);
         $expiresAt   = now()->addMinutes(30);
 

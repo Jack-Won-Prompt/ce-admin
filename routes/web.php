@@ -324,8 +324,8 @@ Route::middleware(['auth'])->group(function () {
     // 위임장 서명 — 서명한 사람·번호를 한자리에서 보고 서류를 받는다
     Route::get('/prescription-consents', [\App\Http\Controllers\PrescriptionConsentController::class, 'index'])
         ->name('prescription-consents.index');
-    Route::get('/prescription-consents/search', [\App\Http\Controllers\PrescriptionConsentController::class, 'search'])
-        ->name('prescription-consents.search');
+    Route::post('/prescription-consents', [\App\Http\Controllers\PrescriptionConsentController::class, 'store'])
+        ->name('prescription-consents.store');
 
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');

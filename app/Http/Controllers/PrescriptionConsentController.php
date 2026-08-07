@@ -98,55 +98,54 @@ class PrescriptionConsentController extends Controller
     }
 
     /**
-     * 신규 위임동의를 보낼 처방전 찾기.
+     * 신규 위임동의 — 이름과 전화번호만 받아 보낸다.
      *
-     * 위임동의는 처방전 한 건 위에서만 만들어진다. 목록에 아직 없는 건에 보내려면
-     * 어느 처방전인지부터 골라야 해서 검색을 따로 둔다.
+     * 동의 건은 처방전에 매달린다(prescription_consents.prescription_id 는 필수).
+     * 그래서 받은 이름·번호로 처방전을 한 건 만들고 그 위에 동의를 건다.
+     * 나중에 그 처방전을 열어 나머지를 채우면 된다.
+     *
+     * 발송 자체는 검수 화면과 같은 코드(PrescriptionController::issueConsent)를 쓴다.
+     * 토큰·유효시간·문구가 갈리면 환자가 받는 링크가 화면마다 달라진다.
      */
-    public function search(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $q = trim((string) $request->input('q', ''));
-        if (mb_strlen($q) < 2) {
-            return response()->json(['success' => false, 'message' => '두 글자 이상 입력해 주세요.', 'rows' => []]);
-        }
-        $digits = preg_replace('/\D/', '', $q);
-
-        $rows = Prescription::with(['patient', 'consents'])
-            // 메뉴만 눌러 생긴 빈 초안은 보낼 대상이 아니다
-            ->where(fn ($w) => $w->where('is_blank_draft', false)->orWhereNull('is_blank_draft'))
-            ->where(function ($w) use ($q, $digits) {
-                $w->where('rx_number', 'like', "%{$q}%")
-                  ->orWhere('patient_name_ocr', 'like', "%{$q}%")
-                  ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$q}%"));
-                if ($digits !== '' && strlen($digits) >= 4) {
-                    // 번호는 010-1234-5678 처럼 하이픈째 저장돼 있다.
-                    // 숫자만 친 검색어와 맞추려면 비교할 때 구분자를 떼야 한다.
-                    $bare = fn (string $col) => "REPLACE(REPLACE(REPLACE({$col}, '-', ''), ' ', ''), '.', '')";
-                    $w->orWhereRaw($bare('mobile_ocr') . ' LIKE ?', ["%{$digits}%"])
-                      ->orWhereHas('patient', fn ($p) => $p
-                          ->whereRaw($bare('mobile') . ' LIKE ?', ["%{$digits}%"])
-                          ->orWhereRaw($bare('phone')  . ' LIKE ?', ["%{$digits}%"]));
-                }
-            })
-            ->latest('id')
-            ->limit(30)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'rows'    => $rows->map(function (Prescription $p) {
-                $last = $p->consents->first();   // consents() 는 이미 latest() 다
-                return [
-                    'rx_number' => $p->rx_number,
-                    'name'      => $p->patient?->name ?? $p->patient_name_ocr ?? '',
-                    'mobile'    => $this->formatMobile($p->patient?->mobile ?? $p->mobile_ocr),
-                    'hospital'  => $p->hospital_name ?? '',
-                    'issued'    => $p->created_at?->format('Y-m-d') ?? '',
-                    'last'      => $last ? $last->statusLabel() : '',
-                    'sms_url'   => route('prescriptions.consentSms', $p),
-                ];
-            })->values(),
+        $request->validate([
+            'name'   => 'required|string|max:50',
+            'mobile' => 'required|string|max:20',
         ]);
+
+        $name   = trim($request->input('name'));
+        $mobile = preg_replace('/\D/', '', $request->input('mobile'));
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return response()->json(['success' => false, 'message' => '수신 번호 형식이 올바르지 않습니다.'], 422);
+        }
+
+        $prescription = Prescription::create([
+            'rx_number'        => Prescription::generateRxNumber(),
+            'created_by'       => auth()->id(),
+            'status'           => 'pending',
+            'upload_source'    => 'web',
+            'patient_name_ocr' => $name,
+            'mobile_ocr'       => $request->input('mobile'),
+            // 이름·번호가 들어 있으니 '아무것도 없는 초안' 은 아니다.
+            // true 로 두면 다음에 메뉴를 눌렀을 때 이 건이 재사용돼 덮어써진다.
+            'is_blank_draft'   => false,
+        ]);
+
+        activity()->causedBy(auth()->user())->performedOn($prescription)
+            ->log("위임동의용 처방전 생성 → {$name} {$mobile}");
+
+        $res  = app(PrescriptionController::class)->issueConsent($prescription, $mobile, $name);
+        $data = $res->getData(true);
+
+        // 발송이 실패하면 동의 건은 지워지지만 처방전은 남는다. 빈 껍데기를 남기지 않는다.
+        if (empty($data['success'])) {
+            $prescription->delete();
+            return $res;
+        }
+
+        $data['rx_number'] = $prescription->rx_number;
+        return response()->json($data);
     }
 
     /** 저장은 숫자만 되어 있다. 읽기 좋게 끊어 준다. */

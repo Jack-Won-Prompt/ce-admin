@@ -113,7 +113,7 @@ return [
             'label'   => '위임장 서명',
             'group'   => 'docs',
             'routes'  => ['prescription-consents'],
-            'actions' => ['view'],
+            'actions' => ['view', 'send'],   // send = 위임동의 SMS 발송
         ],
         'privacy-consents' => [
             'label'   => '개인정보동의',
@@ -274,6 +274,8 @@ return [
         'prescriptions.kakaoSend'             => [null, 'send'],
         'prescriptions.faxSend'               => [null, 'send'],
         'prescriptions.consentSms'            => [null, 'send'],
+        // 이름·번호만 받아 처방전을 만들고 곧바로 보낸다 — 발송 권한으로 본다
+        'prescription-consents.store'         => [null, 'send'],
         'prescriptions.faxRegenerate'         => [null, 'send'],
         'prescriptions.delegationRegenerate'  => [null, 'send'],
         'prescriptions.withworksOrder'        => [null, 'send'],
