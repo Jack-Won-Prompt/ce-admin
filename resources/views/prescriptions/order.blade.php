@@ -632,9 +632,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
-              <input type="text" class="form-control" id="consentPatientName"
+              {{-- OCR 이름이 틀리거나 비어 있는 경우가 있어 여기서 고쳐 보낼 수 있게 한다.
+                   비워 두면 서버가 처방전에 적힌 이름을 쓴다. --}}
+              <input type="text" class="form-control" id="consentPatientName" maxlength="50"
+                     placeholder="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자' }}"
                      value="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '' }}"
-                     readonly style="background:var(--bg-secondary,#f8f9fa);font-size:13px;" />
+                     style="font-size:13px;" oninput="updateConsentPreview()" />
             </div>
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
@@ -693,6 +696,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
           </div>
           <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:nowrap;gap:6px;border-top:1px solid var(--border);">
+            {{-- 서명 이미지만 따로 받아 가는 경우가 있다(서류 첨부·대조) --}}
+            <a id="csignPngBtn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
+               style="display:none;padding:5px 10px;background:var(--success);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
+              <i class="fa-solid fa-download"></i> 서명 PNG
+            </a>
             <a id="csignPdfBtn" href="#" target="_blank"
                style="display:none;padding:5px 10px;background:var(--danger);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
@@ -1709,18 +1717,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">주민등록번호</span>
-                <div style="display:flex;gap:8px;flex:1;min-width:0;">
-                  {{-- 평문은 여기에 실어 보내지 않는다. '표시'를 눌러야 서버가 복호화해 내려주고,
-                       그 순간 사유 코드(operator_view)와 함께 감사로그가 남는다(P0-1). --}}
-                  <input type="hidden" id="f-resident-real" value="" />
-                  <input type="text" class="form-control" id="f-resident"
-                         value="{{ $displayRn }}" placeholder="XXXXXX-XXXXXXX" readonly
-                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;letter-spacing:1px;" />
-                  <button type="button" id="btn-resident-toggle" class="rx-side-btn" onclick="toggleResidentNo()"
-                          title="주민등록번호 표시/숨김" style="width:32px;padding:0;">
-                    <i class="fa-solid fa-lock" id="icon-resident-toggle"></i>
-                  </button>
-                </div>
+                {{-- 쓰기 전용이다. 저장된 번호는 복호화해 내려보내지 않고, 있다는 사실만
+                     마스킹으로 알린다. 새로 치면 덮어쓰고, 비워 두면 있던 값을 그대로 둔다. --}}
+                <input type="text" class="form-control" id="f-resident" value="" maxlength="14"
+                       autocomplete="off" inputmode="numeric"
+                       placeholder="{{ $displayRn ?: 'XXXXXX-XXXXXXX' }}"
+                       title="저장된 번호는 다시 볼 수 없습니다. 새로 입력하면 덮어씁니다."
+                       style="flex:1;min-width:0;letter-spacing:1px;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 1</span>
@@ -3426,7 +3429,6 @@ window.HELP_TOUR_STEPS = [
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
   const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 새 처방번호 발급
-  const RESIDENT_REVEAL_URL = @json(route('prescriptions.revealResidentNo', $prescription)); // 주민번호 원문(감사 기록됨)
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -3490,70 +3492,9 @@ window.HELP_TOUR_STEPS = [
     });
   }
 
-  // ── 주민등록번호 마스킹/표시 토글 ────────────────────────────
-  function maskResidentNo(val) {
-    if (!val) return '';
-    const v = val.replace(/\s+/g, '');
-    const m = v.match(/^(\d{6})-?(\d)/);
-    return m ? m[1] + '-' + m[2] + '••••••' : val;
-  }
-
-  let _residentVisible = false;
-
-  /* 열려 있는 동안 친 값을 그대로 저장용 칸에 옮긴다.
-     예전에는 토글할 때마다 리스너를 새로 달아 누를수록 쌓였다. 한 번만 단다. */
-  document.addEventListener('DOMContentLoaded', () => {
-    const inp = document.getElementById('f-resident');
-    if (!inp) return;
-    inp.addEventListener('input', () => {
-      if (_residentVisible) document.getElementById('f-resident-real').value = inp.value;
-    });
-  });
-
-  /* 원문은 화면에 미리 실려 있지 않다. 처음 '표시'를 누를 때 서버에서 받아온다.
-     복호화가 서버에서 일어나므로 그 순간 감사로그가 남는다(P0-1). */
-  /* 저장된 값이 없으면 빈 문자열을, 불러오기가 실패하면 null 을 준다.
-     둘을 구분해야 '아직 없는 번호'와 '못 가져온 번호'를 다르게 다룰 수 있다. */
-  async function _fetchResidentNo() {
-    const hidden = document.getElementById('f-resident-real');
-    if (hidden.value) return hidden.value;          // 이번 화면에서 이미 열었다면 다시 묻지 않는다
-    try {
-      const res = await fetch(RESIDENT_REVEAL_URL, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) throw new Error(res.status);
-      const d = await res.json();
-      hidden.value = d.value || '';
-      return hidden.value;
-    } catch (e) {
-      if (typeof showToast === 'function') showToast('주민등록번호를 불러오지 못했습니다.', 'error');
-      return null;
-    }
-  }
-
-  async function toggleResidentNo() {
-    const inp    = document.getElementById('f-resident');
-    const icon   = document.getElementById('icon-resident-toggle');
-    _residentVisible = !_residentVisible;
-    if (_residentVisible) {
-      const real = await _fetchResidentNo();
-      // 못 불러온 경우에만 되돌린다. 아직 번호가 없는 처방전은 빈 칸으로 열어
-      // 그 자리에서 입력할 수 있어야 한다.
-      if (real === null) { _residentVisible = false; return; }
-      inp.value    = real;
-      inp.readOnly = false;
-      inp.style.background = '';
-      inp.style.cursor     = '';
-      inp.placeholder = 'XXXXXX-XXXXXXX';
-      inp.focus();
-      icon.className = 'fa-solid fa-lock-open';
-    } else {
-      document.getElementById('f-resident-real').value = inp.value;
-      inp.value    = maskResidentNo(inp.value);
-      inp.readOnly = true;
-      inp.style.background = 'var(--bg-secondary,#f8f9fa)';
-      inp.style.cursor     = 'default';
-      icon.className = 'fa-solid fa-lock';
-    }
-  }
+  /* 주민등록번호는 쓰기 전용이다. 저장된 값을 복호화해 화면에 되돌려 주던
+     '표시' 토글과 그것이 쓰던 코드는 걷어냈다. 있다는 사실은 placeholder 의
+     마스킹으로 알리고, 새로 친 값만 저장으로 넘어간다. */
 
   // ── 재구매일 계산 ────────────────────────────────────────
   function calcRenewDate() {
@@ -4339,7 +4280,6 @@ window.HELP_TOUR_STEPS = [
     const MAP = {
       'f-name':            d.patient_name_ocr,
       'f-mobile':          d.mobile_ocr || d.call_no,
-      'f-resident':        d.resident_no_masked,
       'f-guardian':        d.udf24,
       'f-diverticulums':   d.diverticulums,
       'f-postcode':        d.postcode,
@@ -4371,6 +4311,10 @@ window.HELP_TOUR_STEPS = [
       el.dispatchEvent(new Event('change', { bubbles: true }));
       filled++;
     }
+
+    // 주민번호는 마스킹뿐이라 값으로 넣으면 그대로 저장된다. 있다는 표시만 한다.
+    const _rn = document.getElementById('f-resident');
+    if (_rn && d.resident_no_masked) _rn.placeholder = d.resident_no_masked;
 
     // 처방 제품 교체
     if (withItems && d.items && d.items.length) {
@@ -4642,7 +4586,7 @@ window.HELP_TOUR_STEPS = [
     const payload = {
       // ── 환자 정보 ────────────────────────────────────────
       patient_name_ocr: name,
-      resident_no_ocr:  strOrNull('f-resident-real'),
+      resident_no_ocr:  strOrNull('f-resident'),   // 비우면 서버가 기존 값을 지키다
       mobile_ocr:       strOrNull('f-mobile'),
       address_ocr:      strOrNull('f-address'),
       postcode:         strOrNull('f-postcode'),
@@ -4747,14 +4691,9 @@ window.HELP_TOUR_STEPS = [
   // ── 원본 복원 ─────────────────────────────────────────
   function resetOCR() {
     document.getElementById('f-name').value         = @json($prescription->patient_name_ocr);
-    // 원본 복원도 평문을 심지 않는다. 필요하면 '표시' 로 다시 불러온다(P0-1).
-    document.getElementById('f-resident-real').value = '';
-    _residentVisible = false;
-    document.getElementById('f-resident').value      = @json($prescription->masked_resident_no_ocr ?? ($prescription->patient?->masked_resident_no ?? ''));
-    document.getElementById('f-resident').readOnly   = true;
-    document.getElementById('f-resident').style.background = 'var(--bg-secondary,#f8f9fa)';
-    document.getElementById('f-resident').style.cursor = 'default';
-    document.getElementById('icon-resident-toggle').className = 'fa-solid fa-lock';
+    // 주민번호는 되돌릴 원본을 화면이 들고 있지 않다. 친 값만 지운다 —
+    // 그러면 저장할 때 값이 비어 서버가 기존 값을 그대로 둔다.
+    document.getElementById('f-resident').value = '';
     document.getElementById('f-mobile').value       = @json($prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '');
     document.getElementById('f-postcode').value       = @json($prescription->postcode ?? '');
     document.getElementById('f-address').value        = @json($prescription->address_ocr ?? $prescription->patient?->address ?? '');
@@ -6066,14 +6005,12 @@ window.HELP_TOUR_STEPS = [
       const f = res.fields;
       // 폼 필드 업데이트
       document.getElementById('f-name').value     = f.patient_name_ocr || '';
-      // 재분석 결과는 서버에 이미 저장됐다. 화면엔 마스킹만 반영하고 원문은 비워 둔다 —
-      // 필요하면 '표시'로 다시 불러온다(그때 감사로그가 남는다).
-      document.getElementById('f-resident-real').value = '';
-      document.getElementById('f-resident').value      = f.resident_no_masked || '';
-      document.getElementById('f-resident').readOnly   = true;
-      document.getElementById('f-resident').style.background = 'var(--bg-secondary,#f8f9fa)';
-      document.getElementById('icon-resident-toggle').className = 'fa-solid fa-lock';
-      _residentVisible = false;
+      // 재분석 결과는 서버에 이미 저장됐다. 화면엔 마스킹만 알리고 입력칸은 비워 둔다.
+      {
+        const rn = document.getElementById('f-resident');
+        rn.value = '';
+        rn.placeholder = f.resident_no_masked || 'XXXXXX-XXXXXXX';
+      }
       document.getElementById('f-mobile').value   = f.mobile_ocr       || '';
       document.getElementById('f-postcode').value       = f.postcode       || '';
       document.getElementById('f-address').value        = f.address_ocr   || '';
@@ -6483,13 +6420,16 @@ window.HELP_TOUR_STEPS = [
       // 서명 이미지
       const imgWrap = document.getElementById('csignImgWrap');
       const noSig   = document.getElementById('csignNoSig');
+      const pngBtn  = document.getElementById('csignPngBtn');
       if (data.signature_data) {
         document.getElementById('csignImg').src = data.signature_data;
         imgWrap.style.display = 'block';
         noSig.style.display   = 'none';
+        if (pngBtn) pngBtn.style.display = 'inline-flex';
       } else {
         imgWrap.style.display = 'none';
         noSig.style.display   = 'block';
+        if (pngBtn) pngBtn.style.display = 'none';
       }
 
       // PDF 다운로드 버튼
@@ -6632,7 +6572,9 @@ window.HELP_TOUR_STEPS = [
   });
 
   function updateConsentPreview() {
-    const name    = (document.getElementById('consentPatientName')?.value ?? '').trim() || '환자';
+    // 비워 두면 서버가 처방전 이름을 쓴다. 미리보기도 같은 값(placeholder)을 보여준다.
+    const nameEl  = document.getElementById('consentPatientName');
+    const name    = (nameEl?.value ?? '').trim() || (nameEl?.placeholder ?? '').trim() || '환자';
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const mockUrl = baseUrl + '/consent/(링크)';
     const preview = `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n${mockUrl}`;
@@ -6661,6 +6603,11 @@ window.HELP_TOUR_STEPS = [
   async function sendConsentSms() {
     const mobile = document.getElementById('consentMobile').value.trim();
     if (!mobile) { ceAlert('수신 번호를 입력해주세요.', { tone: 'warning' }); return; }
+    if (mobile.replace(/\D/g, '').length < 9) {
+      ceAlert('수신 번호를 다시 확인해주세요.', { tone: 'warning' }); return;
+    }
+    // 비워 두면 서버가 처방전에 적힌 이름을 쓴다
+    const name = (document.getElementById('consentPatientName')?.value ?? '').trim();
 
     const btn = document.getElementById('btnConsentSend');
     btn.disabled = true;
@@ -6670,7 +6617,7 @@ window.HELP_TOUR_STEPS = [
       const res  = await fetch(CONSENT_SMS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
-        body: JSON.stringify({ mobile }),
+        body: JSON.stringify({ mobile, name }),
       });
       const data = await res.json();
       const box  = document.getElementById('consentSendResult');

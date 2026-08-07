@@ -402,21 +402,6 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * 검수 화면 '주민번호 표시' — 평문은 이 요청으로만 브라우저에 내려간다.
-     *
-     * 예전에는 화면을 열 때 hidden input 으로 평문을 항상 함께 내려보내고 잠금 아이콘으로
-     * 가리기만 했다. 실제로는 열어보지 않아도 평문이 이미 나가 있었고 기록도 남지 않았다.
-     * 이제 눌렀을 때만 서버가 복호화하며, 그 순간 사유 코드와 함께 감사로그가 남는다.
-     */
-    public function revealResidentNo(Prescription $prescription): \Illuminate\Http\JsonResponse
-    {
-        $value = $prescription->residentNoOcrFor('operator_view')
-            ?: $prescription->patient?->residentNoFor('operator_view');
-
-        return response()->json(['value' => $value ?? '']);
-    }
-
-    /**
      * 빈 검수·등록 화면 (메뉴 '처방전 관리').
      *
      * 검수 화면은 저장된 처방전 1건 위에서 동작한다(승인·팩스·서류 URL 이 모두
@@ -1495,10 +1480,22 @@ class PrescriptionController extends Controller
     // ── 위임동의 SMS 발송 ─────────────────────────────────
     public function sendConsentSms(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
-        $request->validate(['mobile' => 'required|string']);
+        $request->validate([
+            'mobile' => 'required|string|max:20',
+            'name'   => 'nullable|string|max:50',
+        ]);
 
-        $mobile      = preg_replace('/\D/', '', $request->mobile);
-        $patientName = $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자';
+        // 오타로 동의 건을 만들고 SMS 를 태우는 일만 막는다.
+        // 02-XXX-XXXX(9자리)까지 받아 들여 실제 번호를 거부하지 않는다.
+        $mobile = preg_replace('/\D/', '', $request->mobile);
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return response()->json(['success' => false, 'message' => '수신 번호 형식이 올바르지 않습니다.'], 422);
+        }
+
+        // OCR 이름이 틀리거나 비어 있는 경우가 있어 화면에서 고쳐 보낼 수 있다.
+        // 보내지 않았거나 비웠으면 처방전에 적힌 이름을 쓴다.
+        $patientName = trim((string) $request->input('name'))
+            ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
         $token       = \Illuminate\Support\Str::random(24);
         $expiresAt   = now()->addMinutes(30);
 
@@ -1525,7 +1522,7 @@ class PrescriptionController extends Controller
             $this->smsService->send($mobile, $message, $patientName);
 
             activity()->causedBy(auth()->user())->performedOn($prescription)
-                ->log("위임동의 SMS 발송 → {$mobile}");
+                ->log("위임동의 SMS 발송 → {$patientName} {$mobile}");
 
             return response()->json([
                 'success'    => true,

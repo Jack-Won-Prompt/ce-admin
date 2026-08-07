@@ -316,6 +316,47 @@ class ConsentController extends Controller
     }
 
     /**
+     * 어드민: 서명 이미지 PNG 다운로드
+     *
+     * 서명은 data URL 문자열로만 들고 있어 그대로는 파일로 쓸 수 없다.
+     * 앞머리를 떼고 디코드해 원본 바이트를 그대로 내려준다.
+     */
+    public function downloadSignature(Prescription $prescription)
+    {
+        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('status', 'agreed')
+            ->whereNotNull('signature_data')
+            ->latest()
+            ->firstOrFail();
+
+        $raw  = (string) $consent->signature_data;
+        $mime = 'image/png';
+        if (preg_match('#^data:(image/\w+);base64,(.+)$#s', $raw, $m)) {
+            $mime = $m[1];
+            $raw  = $m[2];
+        }
+        $bytes = base64_decode($raw, true);
+        if ($bytes === false || $bytes === '') {
+            abort(422, '서명 이미지를 해석할 수 없습니다.');
+        }
+
+        $ext      = $mime === 'image/jpeg' ? 'jpg' : 'png';
+        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
+        $filename = '서명_' . $consent->patient_name . '_' . $mobile . '_'
+                  . ($consent->responded_at?->format('Ymd') ?? date('Ymd')) . '.' . $ext;
+
+        // 서명도 개인정보다 — 누가 언제 받아 갔는지 남긴다
+        activity()->causedBy(auth()->user())->performedOn($prescription)
+            ->log("위임동의 서명 이미지 다운로드 → {$consent->patient_name}");
+
+        return response($bytes, 200, [
+            'Content-Type'        => $mime,
+            'Content-Length'      => strlen($bytes),
+            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
+    /**
      * 어드민: 요양비 지급청구 위임장(별지 제19호의7서식) PDF 다운로드
      * — 환자 SMS 서명을 서명란에 삽입. 준요양기관/수령계좌/위임기간은 추후 자동채움 예정.
      */

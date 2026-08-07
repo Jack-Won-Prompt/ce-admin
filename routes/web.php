@@ -84,9 +84,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/patients/{patient}/counselings',     [PrescriptionController::class, 'patientCounselings'])->name('patientCounselings');
         Route::get('/{prescription}', [PrescriptionController::class, 'show'])->name('show');
 
-        // 검수 화면에서 담당자가 주민번호 원문을 확인 — 복호화 1회 = 감사로그 1행(P0-1)
-        Route::get('/{prescription}/resident-no', [PrescriptionController::class, 'revealResidentNo'])
-            ->name('revealResidentNo');
+        // 주민번호는 쓰기 전용이다. 원문을 되돌려 주던 resident-no 조회는 없앴다 —
+        // 화면에서 읽을 방법이 없어야 복호화가 일어날 일도 없다.
 
         // OCR 미리보기 (임시 저장, DB 저장 없음)
         Route::post('/analyze',          [PrescriptionController::class, 'analyze'])->name('analyze');
@@ -113,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/consent-sms',    [PrescriptionController::class, 'sendConsentSms'])->name('consentSms');
         Route::get( '/{prescription}/consent-status', [ConsentController::class,     'statusCheck'])->name('consentStatus');
         Route::get( '/{prescription}/consent-pdf',    [ConsentController::class,     'downloadPdf'])->name('consentPdf');
+        Route::get( '/{prescription}/consent-signature', [ConsentController::class,  'downloadSignature'])->name('consentSignature');
         Route::get( '/{prescription}/delegation-pdf', [ConsentController::class,     'downloadDelegationPdf'])->name('delegationPdf');
         Route::get( '/{prescription}/delegation-pdf-original', [ConsentController::class, 'downloadDelegationOverlayPdf'])->name('delegationPdfOriginal');
         Route::post('/{prescription}/delegation-regenerate', [ConsentController::class, 'regenerateDelegation'])->name('delegationRegenerate');
