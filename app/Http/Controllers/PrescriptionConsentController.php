@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -92,6 +94,58 @@ class PrescriptionConsentController extends Controller
             'total'        => $gridData->count(),
             'statusCounts' => $statusCounts,
             'statuses'     => self::STATUSES,
+        ]);
+    }
+
+    /**
+     * 신규 위임동의를 보낼 처방전 찾기.
+     *
+     * 위임동의는 처방전 한 건 위에서만 만들어진다. 목록에 아직 없는 건에 보내려면
+     * 어느 처방전인지부터 골라야 해서 검색을 따로 둔다.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => false, 'message' => '두 글자 이상 입력해 주세요.', 'rows' => []]);
+        }
+        $digits = preg_replace('/\D/', '', $q);
+
+        $rows = Prescription::with(['patient', 'consents'])
+            // 메뉴만 눌러 생긴 빈 초안은 보낼 대상이 아니다
+            ->where(fn ($w) => $w->where('is_blank_draft', false)->orWhereNull('is_blank_draft'))
+            ->where(function ($w) use ($q, $digits) {
+                $w->where('rx_number', 'like', "%{$q}%")
+                  ->orWhere('patient_name_ocr', 'like', "%{$q}%")
+                  ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$q}%"));
+                if ($digits !== '' && strlen($digits) >= 4) {
+                    // 번호는 010-1234-5678 처럼 하이픈째 저장돼 있다.
+                    // 숫자만 친 검색어와 맞추려면 비교할 때 구분자를 떼야 한다.
+                    $bare = fn (string $col) => "REPLACE(REPLACE(REPLACE({$col}, '-', ''), ' ', ''), '.', '')";
+                    $w->orWhereRaw($bare('mobile_ocr') . ' LIKE ?', ["%{$digits}%"])
+                      ->orWhereHas('patient', fn ($p) => $p
+                          ->whereRaw($bare('mobile') . ' LIKE ?', ["%{$digits}%"])
+                          ->orWhereRaw($bare('phone')  . ' LIKE ?', ["%{$digits}%"]));
+                }
+            })
+            ->latest('id')
+            ->limit(30)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'rows'    => $rows->map(function (Prescription $p) {
+                $last = $p->consents->first();   // consents() 는 이미 latest() 다
+                return [
+                    'rx_number' => $p->rx_number,
+                    'name'      => $p->patient?->name ?? $p->patient_name_ocr ?? '',
+                    'mobile'    => $this->formatMobile($p->patient?->mobile ?? $p->mobile_ocr),
+                    'hospital'  => $p->hospital_name ?? '',
+                    'issued'    => $p->created_at?->format('Y-m-d') ?? '',
+                    'last'      => $last ? $last->statusLabel() : '',
+                    'sms_url'   => route('prescriptions.consentSms', $p),
+                ];
+            })->values(),
         ]);
     }
 

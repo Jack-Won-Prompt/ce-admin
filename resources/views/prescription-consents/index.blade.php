@@ -87,9 +87,47 @@
         서류는 그 처방전의 <b>가장 최근 동의 건</b>으로 발행됩니다. 행을 <b>더블클릭</b>하면 해당 처방전이 새 탭으로 열립니다.
       </span>
     </div>
+    <div class="ds-grid-bar-right">
+      <button type="button" class="ds-btn ds-btn-primary" onclick="pcOpenPick()">
+        <i class="fa-solid fa-paper-plane"></i> 신규 위임동의 전송
+      </button>
+    </div>
   </div>
 
   <div id="consentGrid"></div>
+</div>
+
+{{-- ── 신규 위임동의: 보낼 처방전 고르기 ── --}}
+<div id="pcPickBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1190;"
+     onclick="pcClosePick()"></div>
+<div id="pcPickModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+     width:600px;max-width:94vw;background:var(--bg-card);border:1px solid var(--primary);
+     border-radius:var(--radius-lg);box-shadow:0 12px 40px rgba(0,0,0,.22);z-index:1191;">
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
+       display:flex;align-items:center;gap:8px;">
+    <i class="fa-solid fa-magnifying-glass" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
+    <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">신규 위임동의 — 보낼 처방전 선택</span>
+    <button onclick="pcClosePick()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+  </div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+      위임동의는 <strong>처방전 한 건</strong> 위에서 만들어집니다. 보낼 처방전을 먼저 고르세요.
+    </p>
+    <div style="display:flex;gap:6px;">
+      <input type="text" class="form-control" id="pcPickQ" placeholder="처방번호 · 환자명 · 전화번호"
+             style="flex:1;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();pcSearch();}" />
+      <button class="btn btn-primary btn-sm" onclick="pcSearch()" style="white-space:nowrap;">검색</button>
+    </div>
+    <div id="pcPickList" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);
+         border-radius:8px;background:#fff;">
+      <div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">
+        처방번호나 환자명을 두 글자 이상 입력해 검색하세요.
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-outline btn-sm" onclick="pcClosePick()">닫기</button>
+    </div>
+  </div>
 </div>
 
 {{-- ── 위임동의 SMS 발송 (처방전 검수 화면과 같은 내용) ── --}}
@@ -230,6 +268,76 @@
   });
   window.__consentGrid = grid;
 
+  // ── 신규 위임동의: 보낼 처방전 고르기 ─────────────────
+  const PICK_URL = @json(route('prescription-consents.search'));
+
+  window.pcOpenPick = function () {
+    document.getElementById('pcPickQ').value = '';
+    document.getElementById('pcPickList').innerHTML =
+      '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">'
+      + '처방번호나 환자명을 두 글자 이상 입력해 검색하세요.</div>';
+    document.getElementById('pcPickBackdrop').style.display = 'block';
+    document.getElementById('pcPickModal').style.display    = 'block';
+    document.getElementById('pcPickQ').focus();
+  };
+
+  window.pcClosePick = function () {
+    document.getElementById('pcPickBackdrop').style.display = 'none';
+    document.getElementById('pcPickModal').style.display    = 'none';
+  };
+
+  const _esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let _pcFound = [];
+
+  window.pcSearch = async function () {
+    const q    = document.getElementById('pcPickQ').value.trim();
+    const list = document.getElementById('pcPickList');
+    const note = (msg) => list.innerHTML =
+      '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">' + _esc(msg) + '</div>';
+
+    if (q.length < 2) { note('두 글자 이상 입력해 주세요.'); return; }
+    note('찾는 중...');
+    try {
+      const res  = await fetch(PICK_URL + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      if (!data.success)     { note(data.message || '검색에 실패했습니다.'); return; }
+      _pcFound = data.rows || [];
+      if (!_pcFound.length)  { note('결과가 없습니다.'); return; }
+
+      list.innerHTML = _pcFound.map((r, i) => `
+        <div onclick="pcPick(${i})" style="padding:9px 12px;border-bottom:1px solid var(--border-light);cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--primary);">${_esc(r.rx_number)}</span>
+            <span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">${_esc(r.name || '-')}</span>
+            <span style="font-size:11.5px;color:var(--text-secondary);font-family:monospace;">${_esc(r.mobile || '-')}</span>
+            ${r.last ? `<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg-secondary,#f1f5f9);color:var(--text-secondary);">최근 ${_esc(r.last)}</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            ${_esc(r.hospital || '병원 미상')} · ${_esc(r.issued)}
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      note('네트워크 오류가 발생했습니다.');
+    }
+  };
+
+  /* 고른 처방전으로 발송 창을 연다. 행에서 누른 것과 같은 창을 그대로 쓴다. */
+  window.pcPick = function (i) {
+    const r = _pcFound[i];
+    if (!r) return;
+    pcClosePick();
+    pcOpenSms({
+      rx_number:  r.rx_number,
+      name:       r.name,
+      mobile:     r.mobile,
+      sms_url:    r.sms_url,
+      status_key: null,          // 이 화면에서 처음 보내는 건이다
+      status:     '',
+    });
+  };
+
   // ── 위임동의 SMS ───────────────────────────────────────
   let _pcRow = null;
 
@@ -250,8 +358,9 @@
     } else {
       notice.style.display = 'none';
     }
-    // 이 화면은 늘 이미 있는 동의 건 위에서 누른다. 새 링크를 보내는 것이므로 재발송이다.
-    document.getElementById('pcSmsTitle').textContent = '위임동의 SMS 재발송';
+    // 행에서 눌렀으면 이미 있는 동의 건 위이므로 재발송, 신규 선택이면 첫 발송이다.
+    document.getElementById('pcSmsTitle').textContent =
+      row.status_key ? '위임동의 SMS 재발송' : '위임동의 SMS 발송';
     const res = document.getElementById('pcSmsResult');
     res.style.display = 'none';
     const btn = document.getElementById('pcSmsSend');
@@ -328,7 +437,10 @@
   };
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('pcSmsModal').style.display === 'block') pcCloseSms();
+    if (e.key !== 'Escape') return;
+    // 발송 창이 선택 창 위에 뜨므로 위에 있는 것부터 닫는다
+    if (document.getElementById('pcSmsModal').style.display  === 'block') { pcCloseSms();  return; }
+    if (document.getElementById('pcPickModal').style.display === 'block') { pcClosePick(); }
   });
 
   // 행 더블클릭 → 해당 처방전을 새 탭으로 (셀 안의 버튼 클릭은 제외)

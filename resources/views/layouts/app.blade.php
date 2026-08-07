@@ -474,7 +474,9 @@
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
     }
-    .ds-grid-bar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .ds-grid-bar-left  { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    /* 오른쪽 액션 묶음 — 상단바는 space-between 이라 그대로 우측에 붙는다 */
+    .ds-grid-bar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 1.6; color: var(--gray-800); }
     .ds-grid-total b { color: var(--primary); }
     .ds-grid-hint { font-size: 13px; font-weight: 500; color: var(--gray-600); }
