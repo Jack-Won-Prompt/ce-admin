@@ -116,84 +116,96 @@
 @section('content')
 
   {{-- 상태 탭 --}}
-  <div class="status-tabs">
+  <div class="ds-chips">
     <a href="{{ route('prescriptions.index') }}"
-       class="status-tab {{ !request('status') ? 'active' : '' }}">
-      전체 <span class="tab-count">{{ $statusCounts['all'] }}</span>
+       class="ds-chip {{ !request('status') ? 'active' : '' }}">
+      전체 <span class="ds-chip-count">{{ $statusCounts['all'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'review_needed'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'review_needed' ? 'active' : '' }}"
+       class="ds-chip {{ request('status') === 'review_needed' ? 'active' : '' }}"
        style="{{ !request('status') || request('status') === 'review_needed' ? '' : '' }}">
-      검수 필요 <span class="tab-count">{{ $statusCounts['review_needed'] }}</span>
+      검수 필요 <span class="ds-chip-count">{{ $statusCounts['review_needed'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'ocr_processing' ? 'active' : '' }}">
-      OCR 처리중 <span class="tab-count">{{ $statusCounts['ocr_processing'] }}</span>
+       class="ds-chip {{ request('status') === 'ocr_processing' ? 'active' : '' }}">
+      OCR 처리중 <span class="ds-chip-count">{{ $statusCounts['ocr_processing'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'approved'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'approved' ? 'active' : '' }}">
-      검수 완료 <span class="tab-count">{{ $statusCounts['approved'] }}</span>
+       class="ds-chip {{ request('status') === 'approved' ? 'active' : '' }}">
+      검수 완료 <span class="ds-chip-count">{{ $statusCounts['approved'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'no_order'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'no_order' ? 'active' : ($statusCounts['no_order'] > 0 ? 'tab-warn' : '') }}">
-      주문 미등록 <span class="tab-count">{{ $statusCounts['no_order'] }}</span>
+       class="ds-chip {{ request('status') === 'no_order' ? 'active' : '' }}">
+      주문 미등록 <span class="ds-chip-count">{{ $statusCounts['no_order'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'ordered'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'ordered' ? 'active' : '' }}">
-      주문 완료 <span class="tab-count">{{ $statusCounts['ordered'] }}</span>
+       class="ds-chip {{ request('status') === 'ordered' ? 'active' : '' }}">
+      주문 완료 <span class="ds-chip-count">{{ $statusCounts['ordered'] }}</span>
     </a>
     <a href="{{ route('prescriptions.index', ['status' => 'rejected'] + request()->except('status', 'page')) }}"
-       class="status-tab {{ request('status') === 'rejected' ? 'active' : '' }}">
-      반려 <span class="tab-count">{{ $statusCounts['rejected'] }}</span>
+       class="ds-chip {{ request('status') === 'rejected' ? 'active' : '' }}">
+      반려 <span class="ds-chip-count">{{ $statusCounts['rejected'] }}</span>
     </a>
   </div>
 
-  {{-- 검색 / 필터 --}}
-  <form method="GET" action="{{ route('prescriptions.index') }}" class="filter-bar">
+  {{-- 검색 필터 — Figma 128:1744: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
+  <form method="GET" action="{{ route('prescriptions.index') }}" class="ds-filter-card">
     @if(request('status'))
       <input type="hidden" name="status" value="{{ request('status') }}">
     @endif
-    <input type="text" name="search" class="form-control" style="width:220px;"
-           placeholder="처방번호 · 환자명 · 병원명" value="{{ request('search') }}">
-    <input type="date" name="date_from" class="form-control" style="width:150px;"
-           value="{{ request('date_from', now()->subDays(60)->format('Y-m-d')) }}">
-    <span style="font-size:13px;color:var(--text-muted);flex-shrink:0;">~</span>
-    <input type="date" name="date_to" class="form-control" style="width:150px;"
-           value="{{ request('date_to', now()->format('Y-m-d')) }}">
-    <button type="submit" class="btn btn-primary btn-sm">
-      <i class="fa-solid fa-magnifying-glass"></i> 검색
-    </button>
-    @if(request()->hasAny(['search', 'date_from', 'date_to']))
-      <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="btn btn-outline btn-sm">
-        <i class="fa-solid fa-xmark"></i> 초기화
-      </a>
-    @endif
-    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-      <select name="per_page" class="form-control form-select" style="width:100px;height:32px;font-size:13px;"
-              onchange="this.form.submit()">
-        @foreach([10, 20, 50, 100] as $n)
-          <option value="{{ $n }}" {{ (int)request('per_page', 10) === $n ? 'selected' : '' }}>
-            {{ $n }}개씩
-          </option>
-        @endforeach
-      </select>
-      <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-        총 {{ number_format($total) }}건
-      </span>
+    <div class="ds-filter-fields">
+      {{-- 검색어 143px(1열) · 기간 298px(2열) — 시안 실측 --}}
+      <div class="ds-filter-field">
+        <label class="ds-field-label">검색어</label>
+        <input type="text" name="search" class="form-control"
+               placeholder="처방번호 · 환자명 · 병원명" value="{{ request('search') }}">
+      </div>
+      <div class="ds-filter-field span-2">
+        <label class="ds-field-label">기간</label>
+        <div class="ds-field-range">
+          <input type="date" name="date_from" class="form-control"
+                 value="{{ request('date_from', now()->subDays(60)->format('Y-m-d')) }}">
+          <span class="ds-field-sep">~</span>
+          <input type="date" name="date_to" class="form-control"
+                 value="{{ request('date_to', now()->format('Y-m-d')) }}">
+        </div>
+      </div>
+      <div class="ds-filter-field">
+        <label class="ds-field-label">표시 건수</label>
+        <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
+          @foreach([10, 20, 50, 100] as $n)
+            <option value="{{ $n }}" {{ (int)request('per_page', 10) === $n ? 'selected' : '' }}>
+              {{ $n }}개씩
+            </option>
+          @endforeach
+        </select>
+      </div>
+    </div>
+    <div class="ds-filter-actions">
+      @if(request()->hasAny(['search', 'date_from', 'date_to']))
+        <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
+      @endif
+      <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     </div>
   </form>
 
-  {{-- ── 목록 (wwGrid) ── --}}
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="prescriptionViewDetail()">
-      <i class="bx bx-detail"></i> 선택 상세
-    </button>
-    <span style="font-size:12px;color:var(--text-muted);">
-      <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 <b>처방전 검수 화면이 새 탭</b>으로 열립니다. (체크 후 <b>선택 상세</b>도 동일)
-    </span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+  {{-- Figma 128:1744 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 --}}
+  <div class="ds-grid-section">
+    <div class="ds-grid-bar">
+      <div class="ds-grid-bar-left">
+        <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+        <span class="ds-grid-sel">선택 <b id="rxSelCount">0</b>건</span>
+      </div>
+      <div class="ds-grid-bar-right">
+        <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 <b>처방전 검수 화면이 새 탭</b>으로 열립니다. (체크 후 <b>선택 상세</b>도 동일)</span>
+        <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
+      </div>
+    </div>
+    <div class="ds-grid-card">
+      <div id="rxGrid"></div>
+    </div>
   </div>
-  <div id="rxGrid"></div>
 
 @endsection
 
@@ -228,8 +240,10 @@ window.HELP_TOUR_STEPS = [
   const DETAIL_BASE = @json(url('prescriptions'));
   const grid = new wwGrid({
     el: document.getElementById('rxGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '처방번호',      name: 'rx_number',  width: 150, sortable: true },
       { header: '출처',          name: 'source',     width: 70,  align: 'center', sortable: true },
@@ -245,6 +259,9 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+  // 결과바의 '엑셀 저장' 버튼이 부를 수 있게 인스턴스를 노출한다(그리드 내장 툴바 대체).
+  window.__rxGrid = grid;
+
   /* 검수 화면을 '새 탭'으로 연다.
      워크스페이스 안에서는 목록 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
      단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다. */

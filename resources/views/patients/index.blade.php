@@ -41,8 +41,15 @@
   .patient-table tbody tr:hover td { background:rgba(40,121,139,.04); cursor:pointer; }
   .patient-table tbody tr:last-child td { border-bottom:none; }
 
-  /* .nhis-badge · .gender-badge · .rx-count-badge 는 마크업 사용처가 0건이라 제거했다.
-     (알약 radius 20 · weight 600~700 · DS 밖 분홍 #fce7f3 을 쓰고 있었다) */
+  /* Vuexy-style soft badges — 현재 마크업 사용처는 없으나 개발 자산이라 남겨 둔다.
+     쓰게 될 때 시안(h22 · radius 6 · 11px/500)에 맞춰야 한다. */
+  .nhis-badge   { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+  .nhis-yes     { background:var(--success-light);color:var(--success); }
+  .nhis-no      { background:var(--border-light);color:var(--text-muted); }
+  .gender-badge { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600; }
+  .gender-male  { background:var(--primary-light);color:var(--primary); }
+  .gender-female{ background:#fce7f3;color:#c026a0; }
+  .rx-count-badge { display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary); }
 
   /* ── Modal (Vuexy style) ── */
   .modal-overlay { display:none;position:fixed;inset:0;background:rgba(67,56,202,.3);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
@@ -56,11 +63,32 @@
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
   /* 패널 탭(조회결과/상세내용) */
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
     color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+  .ds-grid-sel b { color:var(--primary-400); }
+  /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
+     원 12×12(선택 primary-500 / 비선택 gray-300) 안에 6×6 흰 점, 라벨 13/400 */
+  .pt-radios { display:flex; gap:8px; }
+  .pt-radio {
+    display:inline-flex; align-items:center; gap:8px; flex:1; min-width:0;
+    height:32px; padding:0 12px; border-radius:8px;
+    background:var(--gray-0); border:1px solid var(--gray-200);
+    font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000);
+    text-decoration:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    transition:var(--transition);
+  }
+  .pt-radio:hover { border-color:var(--primary); }
+  .pt-radio-dot {
+    width:12px; height:12px; border-radius:999px; flex-shrink:0;
+    background:var(--gray-300);
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .pt-radio-dot::after { content:''; width:6px; height:6px; border-radius:999px; background:var(--gray-0); }
+  .pt-radio.on .pt-radio-dot { background:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
     background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
   /* 상세내용 탭 안 이력 카드(전체폭) */
@@ -82,22 +110,37 @@
   .pt-hrow .pt-h-main { flex:1; min-width:0; }
   .pt-hrow .pt-h-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
   .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12.5px; }
-  /* 전역 .card-footer 재정의를 제거했다 — 이 뷰에는 .card-footer 마크업이 없어
-     다른 화면의 카드 푸터에만 부작용을 주고 있었다 */
+  /* 주의 — 이 뷰에는 .card-footer 마크업이 없는데 전역 클래스명을 재정의하고 있다.
+     @stack('styles') 가 전역 <style> 뒤에 실려서, 이 화면이 열려 있는 동안
+     다른 화면의 카드 푸터 배경·글자색이 함께 바뀐다. 개발 자산이라 그대로 두되
+     정리 여부는 로직 담당과 상의가 필요하다. */
+  .card-footer { padding:12px 18px;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 var(--radius-lg) var(--radius-lg); }
 </style>
 @endpush
 
 @section('content')
 
+{{-- 화면 제목·등록 건수. 시안에는 없지만 개발에서 넣은 블록이라 유지한다.
+     '환자 추가' 버튼만 시안 위치인 결과바 우측으로 옮겼다. --}}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+  <div>
+    <h5 style="font-size:18px;font-weight:700;margin:0;color:var(--text-primary);">환자 정보</h5>
+    <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">
+      총 <strong>{{ number_format($total) }}</strong>명 등록
+    </p>
+  </div>
+</div>
+
 {{-- 검색 필터 — Figma 114:4778: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
 <form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">
+  {{-- 시안 114:4778 — 필드는 143px(9열 중 1열) 균일, 기간만 3열 --}}
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="이름 또는 전화번호">
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">건보</label>
       <select name="nhis" class="form-control form-select">
         <option value="">건보 전체</option>
@@ -105,7 +148,7 @@
         <option value="0" @selected(request('nhis')==='0')>비급여</option>
       </select>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">표시 건수</label>
       <select name="per_page" class="form-control form-select">
         <option value="10"  @selected(request('per_page','10')==='10')>10개씩</option>
@@ -114,13 +157,14 @@
       </select>
     </div>
     {{-- 기간 — 시안은 라디오 3개를 한 칸에 넣는다. 링크 이동 방식은 그대로 둔다. --}}
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">기간</label>
-      <div class="ds-field-range">
-        @foreach([10 => '10일', 15 => '15일', 30 => '30일'] as $days => $label)
+      <div class="pt-radios">
+        @foreach([10 => '재구매일 10일 이내', 15 => '재구매일 15일 이내', 30 => '재구매일 30일 이내'] as $days => $label)
           <a href="{{ route('patients.index', array_merge(request()->except('repurchase_within','page'), ['repurchase_within' => $days])) }}"
-             class="ds-btn {{ request('repurchase_within') == $days ? 'ds-btn-primary' : '' }}"
-             style="flex:1;min-width:0;">재구매 {{ $label }}</a>
+             class="pt-radio {{ request('repurchase_within') == $days ? 'on' : '' }}">
+            <span class="pt-radio-dot"></span>{{ $label }}
+          </a>
         @endforeach
       </div>
     </div>
@@ -133,32 +177,36 @@
   </div>
 </form>
 
-{{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 아이콘 없이 텍스트만 --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
-</div>
-
-<div id="pnlList" class="ds-grid-section">
-  {{-- Figma 114:4778 — 좌측 건수, 우측 안내·액션 --}}
+{{-- Figma 114:4778 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+<div class="ds-grid-section">
   <div class="ds-grid-bar">
     <div class="ds-grid-bar-left">
       <span class="ds-grid-total">전체 <b id="total-count">{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="sel-count">0</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
       <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 처방전·상담·구매 이력을 확인합니다.</span>
+      <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
       @perm('patients', 'create')
       <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
       @endperm
     </div>
   </div>
-  <div id="patientGrid"></div>
-</div>
 
-{{-- ── 상세내용 탭 ── --}}
-<div id="pnlDetail" style="display:none;">
+  <div class="ds-grid-card">
+    {{-- 탭바는 카드 안 상단. 시안은 아이콘 없이 텍스트만 --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
+    </div>
+    <div id="pnlList">
+      <div id="patientGrid"></div>
+    </div>
+
+{{-- ── 상세내용 탭 — 같은 카드 안 ── --}}
+<div id="pnlDetail" style="display:none;padding:16px;">
   <div style="margin-bottom:12px;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
+    <button type="button" class="ds-btn" onclick="pnlShow('list')">조회결과로</button>
   </div>
   <div id="pdEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 이력이 여기에 표시됩니다.</div>
   <div class="pt-detail" id="patientDetail" style="display:none;">
@@ -176,7 +224,9 @@
     <div class="pt-pane" id="pd-counsel"></div>
     <div class="pt-pane" id="pd-purchase"></div>
   </div>
-</div>
+</div>{{-- /#pnlDetail --}}
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 {{-- 환자 추가 모달 --}}
 <div class="modal-overlay" id="addModal">
@@ -264,8 +314,8 @@
   const DETAIL_BASE = @json(url('patients'));
   const grid = new wwGrid({
     el: document.getElementById('patientGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '환자명',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
