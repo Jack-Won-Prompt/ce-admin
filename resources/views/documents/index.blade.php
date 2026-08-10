@@ -26,27 +26,43 @@
   .reg-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
   .reg-head .rx { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000); }
   .reg-head .meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
-  /* 좌우 2단 — 시안 762+12+762 = 1:1, gap 12 */
-  .reg-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+  /* 좌우 2단 — 시안 762+12+762 = 1:1, gap 12.
+     시안은 두 카드가 같은 높이(762×346)라 stretch 로 늘린다 */
+  /* 1fr 의 기본 최소치는 auto(=min-content) 라, 파일명이 긴 서류 행이 들어가면
+     좌측 칸이 min-content 만큼 벌어져 1280 폭에서 510:374 로 갈렸다.
+     minmax(0,1fr) 로 잠가야 시안의 1:1 이 유지된다(파일명은 이미 ellipsis 다). */
+  .reg-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:stretch; }
   @media (max-width:900px) { .reg-grid { grid-template-columns:1fr; } }
   .reg-card { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px; padding:12px 16px; }
-  .reg-card h4 { margin:0 0 12px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000);
-    display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  /* 머리줄 — 시안 730×28 · gap 8 (글자는 14/700 lh22, 줄 자체는 28) */
+  .reg-card h4 { margin:0 0 12px; min-height:28px; font-size:14px; font-weight:700; line-height:22px;
+    color:var(--gray-1000);
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .reg-card h4 .n { font-size:14px; font-weight:700; color:var(--primary); }
-  /* 두 번째 절(첨부 서류) 위 구분선 — 시안 730×1px gray-200 */
-  .reg-card h4.reg-h4-2 { margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-200); }
+  /* 두 번째 절(첨부 서류) 위 구분선 — 시안 730×1px gray-200, 위아래 16 */
+  /* border-box 라 min-height 에 테두리 1 + 패딩 16 을 더한다 → 1+16+28 = 45 */
+  .reg-card h4.reg-h4-2 { margin-top:16px; padding-top:16px; min-height:45px;
+    border-top:1px solid var(--gray-200); }
 
   /* 서류 한 줄 — 시안 r8 · pad 12 · gap 8 · bg gray-100 */
   .doc-row { display:flex; align-items:center; gap:8px; padding:12px; border-radius:8px; background:var(--gray-100); }
   .doc-row + .doc-row { margin-top:8px; }
-  .doc-row .ic { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
+  .doc-row .ic { font-size:16px; flex-shrink:0; width:28px; text-align:center; }
   .doc-row .nm { flex:1; min-width:0; }
   .doc-row .nm b { display:block; font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .doc-row .nm span { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500); }
   /* 유형 라벨 — 시안은 알약이 아니라 primary 글자다 (주황은 이 디자인에 없다) */
   .doc-tag { font-size:11px; font-weight:500; line-height:18px; color:var(--primary); flex-shrink:0; white-space:nowrap; }
-  .doc-tag.att { color:var(--primary-400); }
+  /* 첨부 행도 같은 primary-500 을 쓴다 — primary-400 은 gray-100 바탕에서 3.03:1 로 AA(4.5:1) 미달,
+     primary-500 은 4.58:1 이다. 시안의 생성 서류 행 라벨과도 같은 색이 된다. */
+  .doc-tag.att { color:var(--primary); }
+  /* 목록이 비었을 때 — 시안 730×80 · 가운데 정렬 · alert-circle 12 + gap 4 · 12/500 lh19 gray-600 */
+  .doc-empty { display:flex; align-items:center; justify-content:center; gap:4px; min-height:80px;
+    font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  .doc-empty::before { content:''; flex-shrink:0; width:12px; height:12px; background:currentColor;
+    -webkit-mask:var(--icon-alert-circle) center / contain no-repeat;
+            mask:var(--icon-alert-circle) center / contain no-repeat; }
   /* 다운로드/열기 — 시안 작은 버튼 h28 · r8 · pad 0/12 · gap 6 · 12px/500 */
   .doc-dl { display:inline-flex; align-items:center; justify-content:center; gap:6px;
     height:28px; padding:0 12px; border-radius:8px;
@@ -65,16 +81,32 @@
     border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-50);
     font-size:13px; line-height:30px; color:var(--gray-800); font-family:inherit; }
   .reg-field input[type=file]::file-selector-button {
-    height:30px; margin:0 12px 0 0; padding:0 12px;
+    margin:0 12px 0 0; padding:5px 12px; line-height:20px;
     border:none; border-right:1px solid var(--gray-200); border-radius:8px 0 0 8px;
     background:var(--gray-0); color:var(--gray-1000);
     font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; }
-  /* 안내문 — 12px/500 gray-600 */
+  /* 마지막 필드와 하단 안내문 사이는 시안 12 다 (필드 아래 8 + 안내문 위 12 = 20 이 되지 않게) */
+  .reg-field:has(+ .reg-hint-foot) { margin-bottom:0; }
+  /* 안내문 — 12px/500 gray-600, 앞에 12×12 alert-circle + gap 4 (시안 483×19) */
   .reg-hint { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  /* 안내문은 <b> 강조가 섞인 한 문장이다. flex 로 두면 <b> 와 사이 글월이 각각
+     flex 아이템이 되어 문장이 세로 토막으로 갈라진다(1280 폭에서 5칸으로 쪼개짐).
+     블록 흐름을 그대로 두고 아이콘만 첫 줄 인라인으로 넣는다. */
   .reg-hint-foot { margin-top:12px; }
-  /* 허용 확장자·용량은 시안에서 제목 옆 알약 — r999 · pad 2/8 · 11px/500 */
+  .reg-hint-foot::before { content:''; display:inline-block; vertical-align:middle;
+    width:12px; height:12px; margin-right:4px;
+    background:currentColor;
+    -webkit-mask:var(--icon-alert-circle) center / contain no-repeat;
+            mask:var(--icon-alert-circle) center / contain no-repeat; }
+  /* 강조는 굵기가 아니라 색이다 — 시안 primary-700, 굵기는 본문과 같은 500 */
+  .reg-hint-foot b { font-weight:500; color:var(--primary-700); }
+  /* 허용 확장자·용량은 시안에서 제목 옆 알약 둘 — r999 · pad 2/8 · 11px/500, 사이 gap 8(h4 gap) */
   .reg-pill { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px;
     background:var(--gray-100); color:var(--gray-800); font-size:11px; font-weight:500; line-height:18px; }
+  /* 제출 버튼 — 시안 45×28 · r8 · pad 0/12 · gap 6 · 12/500 lh19.
+     전역 .btn(h32)을 그대로 쓰면 같은 카드의 .doc-dl(h28)과 높이가 갈린다. */
+  #regSubmitBtn { height:28px; padding:0 12px; border-radius:8px; gap:6px;
+    font-size:12px; font-weight:500; line-height:19px; }
 </style>
 @endpush
 
@@ -170,7 +202,7 @@
 {{-- ── 서류 등록 탭 — 같은 카드 안 ── --}}
 <div id="pnlReg" style="display:none;">
   <div id="regEmpty" class="pnl-empty">
-    <i class="bx bx-hand-pointer" style="font-size:26px;opacity:.35;display:block;margin-bottom:8px;"></i>
+    <i class="bx bx-hand-pointer" style="font-size:16px;opacity:.35;display:block;margin-bottom:8px;"></i>
     조회결과에서 서류 행을 <b>클릭</b>하면 해당 처방전의 서류 목록과 등록 폼이 여기에 표시됩니다.
   </div>
 
@@ -183,7 +215,7 @@
            가운데 클릭·새 탭으로 열기 같은 브라우저 기본 동작도 살린다. --}}
       <a id="regRxLink" class="ds-btn" href="#" style="margin-left:auto;"
          onclick="return openRxTab(event)">
-        <i class="bx bx-link-external"></i> 처방전 검수 화면
+        처방전 검수 화면 <i class="bx bx-link-external"></i>
       </a>
       <button type="button" class="ds-btn" onclick="pnlShow('list')">
         <i class="bx bx-arrow-back"></i> 조회결과로
@@ -208,7 +240,13 @@
         <form id="regForm" onsubmit="return regSubmit(event)">
           <h4>
             <i class="bx bx-upload"></i> 서류 등록
-            <span class="reg-hint reg-pill">PDF · JPG · PNG · HEIC, 최대 50MB</span>
+            {{-- 시안(248:3355)은 제한 표시가 알약 둘이다 — [확장자] 115×22 · [최대 50MB] 68×22.
+                 값은 컨트롤러 validate(mimes:pdf,jpg,jpeg,png,heic · max:51200KB)와 같게 유지한다. --}}
+            {{-- 구분자는 시안 248:3355 와 처방자료 업로드 화면(.up-limit)에 맞춰 '/' 를 쓴다.
+                 문구는 실제 제한과 같다 — PrescriptionDocumentController 의
+                 mimes:pdf,jpg,jpeg,png,heic · max:51200(KB). --}}
+            <span class="reg-hint reg-pill">PDF/JPG/PNG/HEIC</span>
+            <span class="reg-hint reg-pill">최대 50MB</span>
             <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-sm" style="margin-left:auto;">
               <i class="bx bx-upload"></i> 등록
             </button>
@@ -339,7 +377,7 @@
           </span>
           <a class="doc-dl" href="${esc(x.download)}"><i class="bx bx-download"></i> 다운로드</a>
         </div>`).join('')
-      : '<div style="padding:12px 0;font-size:12px;color:var(--text-muted);">등록된 생성 서류가 없습니다.</div>';
+      : '<div class="doc-empty">등록된 생성 서류가 없습니다.</div>';
   }
 
   function renderAtts(atts) {
@@ -355,7 +393,7 @@
           </span>
           <a class="doc-dl" href="${esc(x.url)}" target="_blank" rel="noopener"><i class="bx bx-link-external"></i> 열기</a>
         </div>`).join('')
-      : '<div style="padding:12px 0;font-size:12px;color:var(--text-muted);">첨부된 서류가 없습니다.</div>';
+      : '<div class="doc-empty">첨부된 서류가 없습니다.</div>';
   }
 
   /* ── 처방전 검수 화면을 '새 탭'으로 열기 ───────────────────

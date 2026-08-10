@@ -532,13 +532,16 @@
     /* 안내문 — 시안은 앞에 12×12 alert-circle 이 붙고 글자와 간격 4 다.
        마크업을 화면마다 고치지 않도록 아이콘은 mask 로 그린다. */
     .ds-grid-hint {
-      display: inline-flex; align-items: center; gap: 4px;
+      /* gap 을 두면 문장 안의 <b> 가 별개 flex 아이템이 되어 앞뒤로 4px 이 끼어든다.
+         "행을 <b>더블클릭</b>하면" 이 "행을 더블클릭 하면" 으로 갈라진다.
+         아이콘과의 간격은 ::before 의 바깥 여백으로 준다. */
+      display: inline-flex; align-items: center; gap: 0;
       min-width: 0; margin-right: 4px;
       font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .ds-grid-hint::before {
-      content: ''; flex-shrink: 0; width: 12px; height: 12px;
+      content: ''; flex-shrink: 0; width: 12px; height: 12px; margin-right: 4px;
       background: currentColor;
       -webkit-mask: var(--icon-alert-circle) center / contain no-repeat;
               mask: var(--icon-alert-circle) center / contain no-repeat;
@@ -569,7 +572,8 @@
     .pnl-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .pnl-empty {
       padding: 60px 20px; text-align: center;
-      font-size: 13px; font-weight: 400; line-height: 21px; color: var(--text-muted);
+      /* gray-400 은 흰 배경 대비 2.70:1 이라 읽기 어렵다. 시안 안내문 색인 gray-600 은 5.32:1. */
+      font-size: 13px; font-weight: 400; line-height: 21px; color: var(--gray-600);
     }
     /* 카드 하단 페이지네이션 줄 (174:1333) */
     .ds-grid-foot {
