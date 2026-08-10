@@ -8,48 +8,82 @@
 @push('styles')
 <style>
 
-  /* .type-tabs · .filter-bar 는 레이아웃의 ds-chip / ds-filter-card 로 대체됨 */
+  /* .type-tabs · .filter-bar 는 레이아웃의 ds-chip / ds-filter-card 로 대체됨.
+     아래 두 규칙은 wwGrid 이전 <table> 시절 자산이라 마크업 사용처는 없지만 남겨 둔다. */
   .filename-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 
-  /* ── 패널 탭(조회결과 / 서류 등록) ── */
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  /* 결과바 '선택 N건' — 전역(app.blade.php)에 규칙이 없어 화면에서 정의한다.
+     PATTERN 규격: 13px/500 · lh21 · gray-600, 숫자만 primary-400 */
+  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+  .ds-grid-sel b { color:var(--primary-400); }
+
+  /* ── 패널 탭(조회 결과 / 서류 등록) ──
+     Figma 248:2923 — 그리드 카드 안 상단 h44 · pad 0/16 · 활성 밑줄 1px primary */
+  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
+    color:var(--gray-600); border-bottom:1px solid transparent; margin-bottom:-1px;
     display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { text-align:center; padding:56px 24px; color:var(--text-muted); font-size:13px; }
+  .pnl-empty { text-align:center; padding:56px 24px; color:var(--gray-600); font-size:13px; }
 
-  /* ── 서류 등록 패널 ── */
-  .reg-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    background:var(--primary-light); border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:12px 16px; margin-bottom:16px; }
-  .reg-head .rx { font-family:monospace; font-size:13px; font-weight:800; color:var(--primary); }
-  .reg-head .meta { font-size:12px; color:var(--text-secondary); }
-  .reg-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  /* ── 서류 등록 패널 — Figma 248:3355 (카드 안쪽 pad 16 · gap 12) ── */
+  #pnlReg { padding:16px; overflow-y:auto; min-height:0; }
+  /* 머리줄: 처방번호 16/700 + 메타, 우측에 액션 버튼. 시안에 배경·테두리는 없다 */
+  .reg-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .reg-head .rx { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000); }
+  .reg-head .meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  /* 좌우 2단 — 시안 762+12+762 = 1:1, gap 12 */
+  .reg-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
   @media (max-width:900px) { .reg-grid { grid-template-columns:1fr; } }
-  .reg-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; }
-  .reg-card h4 { margin:0 0 12px; font-size:13px; font-weight:800; color:var(--primary);
-    padding-bottom:9px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
-  .reg-card h4 .n { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-muted); }
-  .doc-row { display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px dashed var(--border-light); }
-  .doc-row:last-child { border-bottom:none; }
-  .doc-row .ic { font-size:15px; flex-shrink:0; width:18px; text-align:center; }
+  .reg-card { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px; padding:12px 16px; }
+  .reg-card h4 { margin:0 0 12px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000);
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .reg-card h4 .n { font-size:14px; font-weight:700; color:var(--primary); }
+  /* 두 번째 절(첨부 서류) 위 구분선 — 시안 730×1px gray-200 */
+  .reg-card h4.reg-h4-2 { margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-200); }
+
+  /* 서류 한 줄 — 시안 r8 · pad 12 · gap 8 · bg gray-100 */
+  .doc-row { display:flex; align-items:center; gap:8px; padding:12px; border-radius:8px; background:var(--gray-100); }
+  .doc-row + .doc-row { margin-top:8px; }
+  .doc-row .ic { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
   .doc-row .nm { flex:1; min-width:0; }
-  .doc-row .nm b { display:block; font-size:12.5px; font-weight:700; color:var(--text-primary);
+  .doc-row .nm b { display:block; font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .doc-row .nm span { font-size:11px; color:var(--text-muted); }
-  .doc-tag { font-size:11px; font-weight:500; line-height:18px; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center;
-    background:var(--primary-light); color:var(--primary); flex-shrink:0; }
-  .doc-tag.att { background:var(--warning-light); color:var(--warning); }
-  .doc-dl { font-size:11px; color:var(--primary); text-decoration:none; flex-shrink:0; white-space:nowrap; }
-  .reg-field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-  .reg-field label { font-size:12px; font-weight:700; color:var(--text-secondary); }
-  .reg-field select, .reg-field input[type=file] {
-    padding:9px 11px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:#fff; }
-  .reg-hint { font-size:11px; color:var(--text-muted); line-height:1.6; }
+  .doc-row .nm span { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500); }
+  /* 유형 라벨 — 시안은 알약이 아니라 primary 글자다 (주황은 이 디자인에 없다) */
+  .doc-tag { font-size:11px; font-weight:500; line-height:18px; color:var(--primary); flex-shrink:0; white-space:nowrap; }
+  .doc-tag.att { color:var(--primary-400); }
+  /* 다운로드/열기 — 시안 작은 버튼 h28 · r8 · pad 0/12 · gap 6 · 12px/500 */
+  .doc-dl { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    height:28px; padding:0 12px; border-radius:8px;
+    background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000);
+    font-size:12px; font-weight:500; line-height:19px;
+    text-decoration:none; flex-shrink:0; white-space:nowrap; transition:var(--transition); }
+  .doc-dl:hover { border-color:var(--primary); color:var(--primary); }
+
+  /* 등록 폼 필드 — 시안 r8 · pad 12 · gap 8 · bg gray-100, 라벨 13/500 gray-700 */
+  .reg-field { display:flex; flex-direction:column; gap:8px; margin-bottom:8px;
+    padding:12px; border-radius:8px; background:var(--gray-100); }
+  .reg-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
+  /* 파일 입력은 네이티브 컨트롤을 그대로 두고 껍데기만 입력 규격(h32 · r8 · bd 1px gray-200)에 맞춘다 */
+  .reg-field input[type=file] {
+    width:100%; height:32px; padding:0 12px 0 0; box-sizing:border-box;
+    border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-50);
+    font-size:13px; line-height:30px; color:var(--gray-800); font-family:inherit; }
+  .reg-field input[type=file]::file-selector-button {
+    height:30px; margin:0 12px 0 0; padding:0 12px;
+    border:none; border-right:1px solid var(--gray-200); border-radius:8px 0 0 8px;
+    background:var(--gray-0); color:var(--gray-1000);
+    font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; }
+  /* 안내문 — 12px/500 gray-600 */
+  .reg-hint { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  .reg-hint-foot { margin-top:12px; }
+  /* 허용 확장자·용량은 시안에서 제목 옆 알약 — r999 · pad 2/8 · 11px/500 */
+  .reg-pill { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px;
+    background:var(--gray-100); color:var(--gray-800); font-size:11px; font-weight:500; line-height:18px; }
 </style>
 @endpush
 
@@ -75,18 +109,19 @@
 </div>
 
 {{-- ── 검색 필터 ── --}}
-{{-- Figma 174:1210 — 흰 카드에 9열 그리드, 버튼은 우측 하단 --}}
+{{-- Figma 248:2923 — 흰 카드(r12 · pad 12/16) 안 9열 그리드, 버튼은 우측 하단.
+     실측 폭: 검색어 295(2열) · 기간 295(2열 = 135+~+135) · 표시 건수 140(1열) --}}
 <form method="GET" action="{{ route('documents.index') }}" class="ds-filter-card">
   @if($curType)
     <input type="hidden" name="type" value="{{ $curType }}">
   @endif
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="파일명 · 환자명">
     </div>
-    <div class="ds-filter-field span-4">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control">
@@ -94,9 +129,9 @@
         <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
       </div>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">표시 건수</label>
-      <select name="per_page" class="form-control" onchange="this.form.submit()">
+      <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
         @foreach([10,20,50,100] as $n)
           <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
         @endforeach
@@ -111,29 +146,37 @@
   </div>
 </form>
 
-{{-- ── 패널 탭: 조회결과 / 서류 등록 ── --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-    <i class="fa-solid fa-list"></i> 조회결과
-  </button>
-  <button type="button" id="pnlBtnReg" class="pnl-tab" onclick="pnlShow('reg')">
-    <i class="fa-solid fa-folder-plus"></i> 서류 등록
-    <span id="pnlRegRx" style="font-family:monospace;font-size:11px;color:var(--text-muted);"></span>
-  </button>
-</div>
-
-<div id="pnlList" class="ds-grid-section">
-  {{-- Figma 174:1242 — 좌측 건수·안내, 우측 액션 --}}
+{{-- Figma 248:2923 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바·그리드·등록 패널 --}}
+<div class="ds-grid-section">
+  {{-- 좌: 전체·선택 건수 / 우: 안내문 + 액션(그리드 내장 툴바에서 옮긴 엑셀 저장) --}}
   <div class="ds-grid-bar">
     <div class="ds-grid-bar-left">
       <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="docSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
       <span class="ds-grid-hint">행을 <b>클릭</b>하면 해당 처방전의 모든 서류를 확인하고 추가 등록할 수 있습니다.</span>
+      <button type="button" class="ds-btn" onclick="window.__documentGrid?.downloadExcel()">엑셀 저장</button>
     </div>
   </div>
-  <div id="documentGrid"></div>
-</div>
 
-{{-- ── 서류 등록 탭 ── --}}
+  <div class="ds-grid-card">
+    {{-- ── 패널 탭: 조회 결과 / 서류 등록 — 시안은 카드 안 상단(h44) ── --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
+        <i class="fa-solid fa-list"></i> 조회 결과
+      </button>
+      <button type="button" id="pnlBtnReg" class="pnl-tab" onclick="pnlShow('reg')">
+        <i class="fa-solid fa-folder-plus"></i> 서류 등록
+        <span id="pnlRegRx" style="font-family:monospace;font-size:11px;color:var(--gray-500);"></span>
+      </button>
+    </div>
+
+    <div id="pnlList">
+      <div id="documentGrid"></div>
+    </div>
+
+{{-- ── 서류 등록 탭 — 같은 카드 안 ── --}}
 <div id="pnlReg" style="display:none;">
   <div id="regEmpty" class="pnl-empty">
     <i class="bx bx-hand-pointer" style="font-size:26px;opacity:.35;display:block;margin-bottom:8px;"></i>
@@ -147,11 +190,11 @@
       <span class="meta" id="regMeta"></span>
       {{-- 워크스페이스 새 탭으로 연다(서류 관리 탭은 그대로 유지). href 를 유지해
            가운데 클릭·새 탭으로 열기 같은 브라우저 기본 동작도 살린다. --}}
-      <a id="regRxLink" class="btn btn-outline btn-sm" href="#" style="margin-left:auto;"
+      <a id="regRxLink" class="ds-btn" href="#" style="margin-left:auto;"
          onclick="return openRxTab(event)">
         <i class="bx bx-link-external"></i> 처방전 검수 화면
       </a>
-      <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')">
+      <button type="button" class="ds-btn" onclick="pnlShow('list')">
         <i class="bx bx-arrow-back"></i> 조회결과로
       </button>
     </div>
@@ -162,18 +205,26 @@
         <h4><i class="bx bx-folder-open"></i> 이 처방전의 모든 서류 <span class="n" id="regDocCount"></span></h4>
         <div id="regDocList"></div>
 
-        <h4 style="margin-top:20px;"><i class="bx bx-paperclip"></i> 첨부 서류 <span class="n" id="regAttCount"></span></h4>
+        <h4 class="reg-h4-2"><i class="bx bx-paperclip"></i> 첨부 서류 <span class="n" id="regAttCount"></span></h4>
         <div id="regAttList"></div>
       </div>
 
       {{-- 우: 서류 등록 --}}
       @perm('documents', 'create')
       <div class="reg-card">
-        <h4><i class="bx bx-upload"></i> 서류 등록</h4>
+        {{-- 시안(248:3355)은 제목줄 오른쪽 끝에 '등록' 버튼이 붙는다.
+             submit 이 계속 동작하도록 <form> 을 제목줄까지 감싸고 버튼은 그 안에 둔다. --}}
         <form id="regForm" onsubmit="return regSubmit(event)">
+          <h4>
+            <i class="bx bx-upload"></i> 서류 등록
+            <span class="reg-hint reg-pill">PDF · JPG · PNG · HEIC, 최대 50MB</span>
+            <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-sm" style="margin-left:auto;">
+              <i class="bx bx-upload"></i> 등록
+            </button>
+          </h4>
           <div class="reg-field">
             <label>서류 유형</label>
-            <select id="regType" required>
+            <select id="regType" class="form-control form-select" required>
               @foreach($types as $key => $label)
                 <option value="{{ $key }}">{{ $label }}</option>
               @endforeach
@@ -182,12 +233,8 @@
           <div class="reg-field">
             <label>파일</label>
             <input type="file" id="regFile" accept=".pdf,.jpg,.jpeg,.png,.heic" required>
-            <span class="reg-hint">PDF · JPG · PNG · HEIC, 최대 50MB</span>
           </div>
-          <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-sm" style="width:100%;">
-            <i class="bx bx-upload"></i> 등록
-          </button>
-          <div class="reg-hint" style="margin-top:10px;">
+          <div class="reg-hint reg-hint-foot">
             등록한 서류는 <b>서류 관리 목록</b>과 유형별 건수에 즉시 반영되며,
             생성유형은 <b>직접 등록</b>으로 표시됩니다.
           </div>
@@ -196,7 +243,9 @@
       @endperm
     </div>
   </div>
-</div>
+</div>{{-- /#pnlReg --}}
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 @endsection
 
@@ -205,8 +254,10 @@
 (function () {
   const grid = new wwGrid({
     el: document.getElementById('documentGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '유형',       name: 'type',      width: 110, sortable: true, align: 'center' },
       { header: '생성유형',   name: 'source',    width: 120, sortable: true },
@@ -219,7 +270,10 @@
     ],
     data: @json($gridData),
   });
-  window.__documentGrid = grid;
+  // 결과바의 '엑셀 저장' 버튼이 부를 수 있게 인스턴스를 노출한다(그리드 내장 툴바 대체).
+  window.__documentGrid  = grid;
+  window.__documentsGrid = grid;   // 표준 이름(화면 slug) 별칭
+  window.dsBindSelCount(grid, 'docSelCount');
 
   const BY_RX_URL  = @json(url('documents/by-prescription'));
   const STORE_URL  = @json(route('documents.store'));

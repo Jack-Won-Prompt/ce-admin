@@ -39,30 +39,40 @@
 
 @push('styles')
 <style>
-  /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  /* 패널 탭(목록/상세보기) — 그리드 카드 안 상단.
+     Figma 282:2299: h44 · pad 0/16 · gap 16 · 하단 1px, 활성 밑줄 1px primary */
+  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
     color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
+    background:var(--gray-0); border:1px dashed var(--border); border-radius:var(--radius-lg); }
 
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  /* 결과바 보조 표기 — Figma 282:53 실측
+     선택 13/500 gray-600(숫자 primary-400) · 이번달 청구액 13/500 gray-600(숫자 gray-800) */
+  .ds-grid-sel    { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+  .ds-grid-sel b  { color:var(--primary-400); font-weight:500; }
+  .ds-grid-meta   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+  .ds-grid-meta b { color:var(--gray-800); font-weight:500; }
+
+  /* 요약 카드 — 시안(282:53)에는 없는 블록이다(칩 라벨로 흡수돼 있다).
+     개발이 넣은 정보라 남기고, 카드 규격(r12 · pad 12/16 · bd 1px gray-200)만 맞춘다.
+     아래 여백은 .page-body 의 gap 이 만든다. */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
 
   .summary-card {
-    background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
-    padding: 18px 20px; display: flex; align-items: center; gap: 16px;
-
+    background: var(--gray-0); border: 1px solid var(--gray-200); border-radius: 12px;
+    padding: 12px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
   }
   .summary-card .sc-icon {
     width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 22px;
   }
-  .summary-card .s-label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
-  .summary-card .s-value { font-size: 24px; font-weight: 800; line-height: 1; }
-  .summary-card .s-sub   { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .summary-card .s-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
+  .summary-card .s-value { font-size: 16px; font-weight: 700; line-height: 26px; }
+  .summary-card .s-sub   { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
   .summary-card.blue  .sc-icon { background: var(--primary-light); color: var(--primary); }
   .summary-card.green .sc-icon { background: var(--success-light); color: var(--success); }
   .summary-card.red   .sc-icon { background: var(--danger-light);  color: var(--danger); }
@@ -70,18 +80,6 @@
   .summary-card.blue  .s-value { color: var(--primary); }
   .summary-card.green .s-value { color: var(--success); }
   .summary-card.red   .s-value { color: var(--danger); }
-
-  /* Vuexy pill tabs */
-  .nhis-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-  .nhis-tab  {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
-    border: 1.5px solid var(--border); background: #fff;
-    color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    transition: var(--transition);
-  }
-  .nhis-tab:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-  .nhis-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
 
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
@@ -206,66 +204,89 @@
   </div>
 </div>
 
-{{-- ── NHIS 상태 탭 ── --}}
-<div class="nhis-tabs">
+{{-- ── NHIS 상태 칩 ── --}}
+{{-- Figma 282:53: h31 · r999 · pad 6/10 · 12px/700 · gap 4, 건수 배지 16×16 정원 10px/700 --}}
+<div class="ds-chips">
   <a href="{{ route('nhis.index', array_merge(request()->except('nhis_status','page'), [])) }}"
-     class="nhis-tab {{ !$curNhisStatus ? 'active' : '' }}">
-    전체 <span>{{ $counts->sum() }}</span>
+     class="ds-chip {{ !$curNhisStatus ? 'active' : '' }}">
+    전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
   </a>
   @foreach($nhisStatusLabels as $key => $statusInfo)
     <a href="{{ route('nhis.index', array_merge(request()->except('nhis_status','page'), ['nhis_status' => $key])) }}"
-       class="nhis-tab {{ $curNhisStatus === $key ? 'active' : '' }}">
+       class="ds-chip {{ $curNhisStatus === $key ? 'active' : '' }}">
       {{ $statusInfo[0] }}
       @if(($counts[$key] ?? 0) > 0)
-        <span>({{ $counts[$key] }})</span>
+        <span class="ds-chip-count">{{ $counts[$key] }}</span>
       @endif
     </a>
   @endforeach
 </div>
 
 {{-- ── 검색 필터 ── --}}
-<form method="GET" action="{{ route('nhis.index') }}" class="filter-bar">
+{{-- Figma 282:53: 흰 카드(r12 · pad 12/16), 검색어 2열(295px) · 기간 2열(295px),
+     버튼은 우측 하단에 초기화 → 검색 순서 --}}
+<form method="GET" action="{{ route('nhis.index') }}" class="ds-filter-card">
   @if($curNhisStatus)<input type="hidden" name="nhis_status" value="{{ $curNhisStatus }}">@endif
-  <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-         placeholder="주문번호 · 환자명" style="width:200px;">
-  <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" style="width:140px;" title="배송완료 시작일">
-  <span style="color:var(--text-muted);font-size:12px;">~</span>
-  <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" style="width:140px;" title="배송완료 종료일">
-  <button type="submit" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-magnifying-glass"></i> 검색
-  </button>
-  @if(request('q') || request('date_from') || request('date_to'))
-    <a href="{{ route('nhis.index', $curNhisStatus ? ['nhis_status'=>$curNhisStatus] : []) }}"
-       class="btn btn-outline btn-sm">초기화</a>
-  @endif
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="주문번호 · 환자명">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="배송완료 시작일">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="배송완료 종료일">
+      </div>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('q') || request('date_from') || request('date_to'))
+      <a href="{{ route('nhis.index', $curNhisStatus ? ['nhis_status'=>$curNhisStatus] : []) }}"
+         class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
 </form>
 
-{{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
-</div>
+{{-- Figma 282:53 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 패널 탭과 그리드 --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="nhisSelCount">0</b>건</span>
+      <span class="ds-grid-meta">이번달 청구액: <b>{{ number_format($monthlyTotal) }}</b>원</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세를 확인합니다.</span>
+      <button type="button" class="ds-btn" onclick="window.__nhisGrid?.downloadExcel()">엑셀 저장</button>
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+    {{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과</button>
+      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
+    </div>
 
 <div id="pnlList">
 {{-- ── NHIS 청구 목록 (wwGrid) ── --}}
-<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세를 확인합니다.</span>
-  <span style="font-size:12px;color:var(--text-muted);margin-left:12px;">
-    이번달 청구액: <strong style="color:var(--primary);">{{ number_format($monthlyTotal) }}원</strong>
-  </span>
-  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
-</div>
 <div id="nhisGrid"></div>
 </div>{{-- /pnlList --}}
 
-{{-- ── 상세내용 탭 (주문 상세 콘텐츠를 같은 페이지에 직접 주입) ── --}}
-<div id="pnlDetail" style="display:none;">
+{{-- ── 상세내용 탭 (주문 상세 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
+<div id="pnlDetail" style="display:none;padding:16px;">
   <div style="margin-bottom:12px;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
+    <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
   </div>
   <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
   <div id="pnlDetailContent"></div>
 </div>
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 {{-- ══════════ 결과 등록 모달 ══════════ --}}
 <div class="modal-overlay" id="resultModal">
@@ -335,8 +356,9 @@
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('nhisGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    toolbar: false,  // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
+    footer: false,   // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
@@ -351,7 +373,8 @@
     ],
     data: @json($gridData),
   });
-  window.__nhisGrid = grid;
+  window.__nhisGrid = grid;                    // 결과바 '엑셀 저장' 버튼이 이걸 부른다
+  window.dsBindSelCount(grid, 'nhisSelCount'); // 결과바 '선택 N건' 표시를 그리드 선택에 연결
 
   // 패널 탭 전환(조회결과/상세내용)
   window.pnlShow = function (which) {
@@ -583,8 +606,8 @@ async function toggleFaxLog(orderId) {
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.filter-bar, form.filter-bar', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 NHIS 청구 대상을 조회합니다.' },
-  { selector: 'table, .card', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 팩스로 청구하세요.' },
+  { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 NHIS 청구 대상을 조회합니다.' },
+  { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 팩스로 청구하세요.' },
   { selector: '.btn-primary, [onclick*="Bulk"], [onclick*="bulk"]', title: '일괄 청구 송신', body: '여러 건을 한 번에 e-Fax로 전송합니다. 전송 후 상태가 <b>팩스 전송됨</b>으로 변경됩니다.' },
 ];
 </script>

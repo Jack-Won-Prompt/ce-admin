@@ -5,13 +5,169 @@
 @section('breadcrumb', '홈 / 재구매 관리')
 
 @push('styles')
+<style>
+/* ═══════════════════════════════════════════════════════════
+   재구매 관리 — Figma 243:433(테이블뷰) · 243:53(캘린더뷰)
+   전역 컴포넌트(.ds-btn h32·r8·13px/500, 카드 r12, .ds-filter-card)를
+   그대로 쓰고, 이 화면에만 있는 캘린더·날짜 패널 규격만 여기 둔다.
+   옛 값(12.5px 글자, 1.5px 테두리, 그림자, 주황 today 배경)은 걷어냈다.
+═══════════════════════════════════════════════════════════ */
+
+/* ── 상단 컨트롤 줄 (243:433 Frame 48101583 — h32 · gap 10) ── */
+.rp-topbar      { display:flex; align-items:center; justify-content:space-between; gap:10px 12px; flex-wrap:wrap; min-height:32px; }
+.rp-topbar-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+/* ── 월 네비 — 시안 311×32, 버튼 사이 gap 8 ── */
+.month-nav { display:flex; align-items:center; gap:8px; }
+/* 월 라벨 — 시안 118×26 · pad 0/4 · gap 6 · 16px/700 · lh26 */
+.month-nav .month-label {
+  display:inline-flex; align-items:center; gap:6px;
+  height:26px; padding:0 4px; border-radius:8px;
+  font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000);
+  cursor:pointer; user-select:none; white-space:nowrap;
+  transition:var(--transition);
+}
+.month-nav .month-label:hover { background:var(--primary-light); color:var(--primary); }
+.month-nav .month-label i { font-size:12px; }
+/* 월 네비와 건수 사이 구분점 — 시안 4×4 정원 */
+.rp-sep { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+/* 이달 건수 — 시안 45×21 · 13px/500, 숫자만 primary-400 */
+.rp-month-count        { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); white-space:nowrap; }
+.rp-month-count strong { font-weight:500; color:var(--primary-400); }
+
+/* ── 뷰 전환 — 시안 91×32 버튼 두 개 · gap 8. 규격은 .ds-btn 을 그대로 쓴다 ── */
+.view-tabs { display:flex; align-items:center; gap:8px; }
+.view-tab.active,
+.view-tab.active:hover { border-color:var(--primary); background:var(--primary-light); color:var(--primary); }
+
+/* ── 년월 피커 팝오버 (시안에 없는 화면 전용 UI — DS 토큰으로만 정리) ── */
+#ymPicker {
+  display:none; position:absolute; z-index:200;
+  background:var(--gray-0); border:1px solid var(--gray-200);
+  border-radius:12px; box-shadow:var(--shadow-lg);
+  padding:12px; width:260px;
+}
+.ym-year-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.ym-year-label {
+  font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000);
+  cursor:pointer; padding:0 8px; border-radius:8px; transition:var(--transition);
+}
+.ym-year-label:hover { background:var(--primary-light); color:var(--primary); }
+.ym-year-btn {
+  width:28px; height:28px; border-radius:8px;
+  border:1px solid var(--gray-200); background:var(--gray-0);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:12px; color:var(--gray-800);
+  transition:var(--transition);
+}
+.ym-year-btn:hover { background:var(--primary-light); color:var(--primary); border-color:var(--primary); }
+.ym-months { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.ym-month {
+  height:32px; display:flex; align-items:center; justify-content:center;
+  border-radius:8px; font-size:13px; font-weight:500; line-height:21px;
+  color:var(--gray-800); border:1px solid transparent;
+  cursor:pointer; transition:var(--transition);
+}
+.ym-month:hover  { background:var(--primary-light); color:var(--primary); border-color:var(--primary-accent); }
+.ym-month.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
+.ym-month.today  { border-color:var(--primary-accent); color:var(--primary); }
+#ymOverlay { display:none; position:fixed; inset:0; z-index:199; }
+
+/* ── 캘린더 + 날짜 패널 (시안 243:53 — 좌 1169 / 우 390 · gap 12) ── */
+.rp-cal-layout { display:flex; align-items:stretch; gap:12px; }
+.rp-cal-card   { min-width:0; }
+
+/* 캘린더 — 요일 헤더 h44, 날짜 칸 min 144 (시안 167×144 · pad 8 · gap 8) */
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+.cal-header-cell {
+  display:flex; align-items:center; height:44px; padding:0 8px;
+  background:var(--gray-50); color:var(--gray-1000);
+  font-size:13px; font-weight:500; line-height:21px;
+  border-right:1px solid var(--gray-100); border-bottom:1px solid var(--gray-200);
+}
+.cal-header-cell:first-child   { color:var(--alert-500); }   /* 일요일 */
+.cal-header-cell:nth-child(7)  { border-right:none; }
+
+.cal-cell {
+  display:flex; flex-direction:column; gap:8px;
+  min-height:144px; padding:8px;
+  background:var(--gray-0); cursor:pointer;
+  border-right:1px solid var(--gray-100); border-bottom:1px solid var(--gray-100);
+  transition:background .12s;
+}
+.cal-cell:nth-child(7n) { border-right:none; }
+.cal-cell:hover:not(.cal-empty) { background:var(--gray-50); }
+.cal-cell.cal-empty     { background:var(--gray-200); cursor:default; }  /* 시안: 지난달·다음달 칸 */
+.cal-cell.cal-selected  { background:var(--primary-light); }
+.cal-day { font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000); }
+.cal-grid > .cal-cell:nth-child(7n+1) .cal-day { color:var(--alert-500); }   /* 일요일 */
+/* 오늘 — 시안은 배경 대신 날짜 옆 'Today' 알약(r999 · pad 0/6 · 11px/700) */
+.cal-cell.cal-today .cal-day::after {
+  content:'Today'; display:inline-flex; align-items:center;
+  margin-left:6px; height:18px; padding:0 6px; border-radius:999px;
+  background:var(--primary); color:var(--gray-0);
+  font-size:11px; font-weight:700; line-height:18px;
+}
+/* 건수 알약 — 시안 r6 · pad 2/8 · gap 2 · bd 1px gray-200, 숫자 13/700 primary */
+.cal-count-pill {
+  display:inline-flex; align-items:center; gap:2px; align-self:flex-start;
+  padding:2px 8px; border-radius:6px;
+  background:var(--gray-0); border:1px solid var(--gray-200);
+}
+.cal-count       { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
+.cal-count-label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); }
+
+/* ── 날짜 상세 패널 (시안 390×905 · r12 — 캘린더 오른쪽) ── */
+#dayPanel {
+  display:none; width:390px; flex-shrink:0; max-width:100%;
+  background:var(--gray-0); border-radius:12px; overflow:hidden;
+}
+/* 헤더 — 시안 h44 · pad 8/16 · 하단 1px gray-200 (옛 primary 배경 제거) */
+.day-panel-header {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200);
+}
+.day-panel-title { font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000);
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 닫기 — 시안 45×28 · r8 · pad 0/12 · 12px/500 (작은 버튼 규격) */
+.day-panel-close {
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  height:28px; padding:0 12px; border-radius:8px;
+  background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000);
+  font-size:12px; font-weight:500; line-height:19px;
+  cursor:pointer; transition:var(--transition); white-space:nowrap;
+}
+.day-panel-close:hover { background:var(--gray-50); }
+/* 본문 — 시안 pad 16 · 행 간격 8 */
+#dayPanelBody { display:flex; flex-direction:column; gap:8px; padding:16px; }
+
+/* ── 날짜 패널 목록 행 — 시안 358×53 · r8 · pad 8/12 · gap 8 · bd 1px gray-200 ── */
+.rx-row {
+  display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px;
+  padding:8px 12px; border:1px solid var(--gray-200); border-radius:8px;
+  background:var(--gray-0); color:var(--gray-1000); text-decoration:none;
+  transition:background .1s;
+}
+.rx-row:hover      { background:var(--gray-50); }
+.rx-row-num        { font-size:12px; font-weight:500; line-height:19px; color:var(--primary); flex-shrink:0; }
+.rx-row-patient    { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000); flex-shrink:0; }
+.rx-row-hospital   { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500);
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rx-row-badge      { flex-shrink:0; }
+
+@media (max-width: 1279px) {
+  .rp-cal-layout { flex-direction:column; }
+  #dayPanel      { width:100%; }
+  .cal-cell      { min-height:110px; }
+}
+</style>
 @endpush
 
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#ymTrigger', title: '월 선택', body: '조회할 연월을 선택합니다. 클릭하면 년/월 선택 팝업이 열립니다.' },
-  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 예정 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 아래에 펼쳐집니다.' },
+  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 예정 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 오른쪽에 펼쳐집니다.' },
   { selector: '.cal-cell:not(.cal-empty)', title: '날짜 셀 클릭', body: '숫자가 표시된 날짜를 클릭하면 재구매 대상 환자 목록이 나타납니다. 목록에서 카카오 알림톡 또는 SMS를 바로 발송할 수 있습니다.' },
 ];
 </script>
@@ -22,8 +178,10 @@ window.HELP_TOUR_STEPS = [
   const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
   const grid = new wwGrid({
     el: el,
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: false, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '재구매 예정일', name: 'repurchase', width: 130, sortable: true },
       { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
@@ -34,6 +192,7 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($listGrid ?? []),
   });
+  window.__repurchaseGrid = grid;   // 결과바의 '엑셀 저장' 버튼이 이걸 부른다
   el.addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
@@ -45,270 +204,121 @@ window.HELP_TOUR_STEPS = [
 @endpush
 
 @section('content')
-<style>
-/* ── 뷰 전환 탭 (Vuexy segmented control) ── */
-.view-tabs {
-  display:flex; gap:0;
-  border:1.5px solid var(--primary); border-radius:8px; overflow:hidden;
-  box-shadow:0 2px 8px rgba(40,121,139,.15);
-}
-.view-tab  {
-  display:flex; align-items:center; gap:6px;
-  padding:7px 18px; font-size:12.5px; font-weight:600;
-  background:var(--bg-card); color:var(--text-secondary);
-  cursor:pointer; border:none; transition:var(--transition);
-  text-decoration:none;
-}
-.view-tab:first-child { border-right:1.5px solid var(--primary); }
-.view-tab.active      { background:var(--primary); color:#fff; }
-.view-tab:not(.active):hover { background:var(--primary-light); color:var(--primary); }
 
-/* ── 월 네비 ── */
-.month-nav {
-  display:flex; align-items:center; gap:10px;
-}
-.month-nav .month-label {
-  font-size:16px; font-weight:700; color:var(--text-primary);
-  min-width:110px; text-align:center;
-  cursor:pointer; padding:4px 8px; border-radius:var(--radius);
-  transition:var(--transition); user-select:none;
-  display:flex; align-items:center; gap:5px;
-}
-.month-nav .month-label:hover { background:var(--primary-light); color:var(--primary); }
-.month-nav .month-label i { font-size:11px; opacity:.6; }
-.month-nav .btn-icon {
-  width:32px; height:32px; border-radius:var(--radius);
-  border:1px solid var(--border); background:var(--bg-card);
-  display:flex; align-items:center; justify-content:center;
-  color:var(--text-secondary); cursor:pointer; font-size:13px;
-  transition:var(--transition);
-}
-.month-nav .btn-icon:hover { background:var(--primary-light); color:var(--primary); border-color:var(--primary-accent); }
-
-/* ── 년월 피커 팝오버 ── */
-#ymPicker {
-  display:none; position:absolute; z-index:200;
-  background:var(--bg-card); border:1px solid var(--border);
-  border-radius:var(--radius-lg); box-shadow:var(--shadow-lg);
-  padding:14px; width:260px;
-}
-.ym-year-row {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:12px;
-}
-.ym-year-label {
-  font-size:15px; font-weight:700; color:var(--text-primary);
-  cursor:pointer; padding:2px 8px; border-radius:var(--radius);
-  transition:var(--transition);
-}
-.ym-year-label:hover { background:var(--primary-light); color:var(--primary); }
-.ym-year-btn {
-  width:28px; height:28px; border-radius:var(--radius);
-  border:1px solid var(--border); background:var(--bg-card);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:12px; color:var(--text-secondary);
-  transition:var(--transition);
-}
-.ym-year-btn:hover { background:var(--primary-light); color:var(--primary); border-color:var(--primary-accent); }
-.ym-months {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
-}
-.ym-month {
-  padding:7px 0; text-align:center; border-radius:var(--radius);
-  font-size:13px; font-weight:600; cursor:pointer;
-  border:1px solid transparent; transition:var(--transition);
-  color:var(--text-secondary);
-}
-.ym-month:hover  { background:var(--primary-light); color:var(--primary); border-color:var(--primary-accent); }
-.ym-month.active { background:var(--primary); color:#fff; border-color:var(--primary); }
-.ym-month.today  { border-color:var(--primary-accent); color:var(--primary); }
-#ymOverlay { display:none; position:fixed; inset:0; z-index:199; }
-
-/* ── 캘린더 ── */
-.cal-grid {
-  display:grid; grid-template-columns:repeat(7,1fr);
-  gap:0; border-left:1px solid var(--border); border-top:1px solid var(--border);
-}
-.cal-header-cell {
-  padding:8px 0; font-size:11px; font-weight:700; text-align:center;
-  background:var(--bg); border-right:1px solid var(--border); border-bottom:1px solid var(--border);
-  color:var(--text-muted);
-}
-.cal-header-cell:first-child { color:#ef4444; }
-.cal-header-cell:last-child  { color:#28798B; }
-
-.cal-cell {
-  min-height:88px; padding:6px 8px;
-  border-right:1px solid var(--border); border-bottom:1px solid var(--border);
-  position:relative; cursor:pointer; transition:background .12s;
-  background:var(--bg-card);
-}
-.cal-cell:hover:not(.cal-empty) { background:var(--primary-light); }
-.cal-cell.cal-empty { background:var(--bg); cursor:default; }
-.cal-cell.cal-today { background:var(--warning-light); }
-.cal-cell.cal-today .cal-day { color:var(--primary); font-weight:700; }
-.cal-cell.cal-selected { background:var(--primary-light); outline:2px solid var(--primary-accent); outline-offset:-2px; }
-.cal-cell:first-child, .cal-cell:nth-child(7n+1) .cal-day { color:#ef4444; }
-.cal-cell:nth-child(7n) .cal-day { color:#28798B; }
-
-.cal-day { font-size:13px; font-weight:600; line-height:1; }
-.cal-count {
-  display:inline-flex; align-items:center; justify-content:center;
-  margin-top:8px; width:28px; height:28px; border-radius:50%;
-  background:var(--primary); color:#fff; font-size:12px; font-weight:700;
-  box-shadow:0 2px 6px rgba(40,121,139,.35);
-}
-.cal-count-label {
-  font-size:10px; color:var(--text-muted); margin-top:3px;
-}
-
-/* ── 날짜 상세 패널 ── */
-#dayPanel {
-  display:none; margin-top:16px;
-  border:1px solid var(--border); border-radius:var(--radius-lg);
-  background:var(--bg-card);
-  overflow:hidden;
-}
-.day-panel-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px; background:var(--primary); color:#fff;
-}
-.day-panel-title { font-size:14px; font-weight:700; }
-.day-panel-close {
-  background:none; border:none; color:#fff; font-size:18px; cursor:pointer; line-height:1; padding:2px 6px;
-}
-#dayPanelBody { padding:0; }
-
-/* ── 목록 행 ── */
-.rx-row {
-  display:flex; align-items:center; gap:12px;
-  padding:10px 16px; border-bottom:1px solid var(--border-light);
-  transition:background .1s; text-decoration:none; color:inherit;
-}
-.rx-row:last-child { border-bottom:none; }
-.rx-row:hover { background:var(--bg); }
-.rx-row-num { font-size:12px; font-weight:700; color:var(--primary); min-width:120px; }
-.rx-row-patient { font-size:13px; font-weight:600; min-width:80px; }
-.rx-row-hospital { font-size:12px; color:var(--text-secondary); flex:1; }
-.rx-row-badge { flex-shrink:0; }
-
-/* ── 목록 뷰 검색 ── */
-.search-bar .form-control { max-width:260px; }
-</style>
-
-{{-- ── 상단 컨트롤 ── --}}
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-  {{-- 월 네비 --}}
-  <div class="month-nav">
-    @php
-      $prevYear  = $month === 1 ? $year - 1 : $year;
-      $prevMonth = $month === 1 ? 12 : $month - 1;
-      $nextYear  = $month === 12 ? $year + 1 : $year;
-      $nextMonth = $month === 12 ? 1 : $month + 1;
-    @endphp
-    <a class="btn-icon" href="{{ route('repurchase.index', ['year'=>$prevYear,'month'=>$prevMonth,'view'=>$view]) }}">
-      <i class="fa-solid fa-chevron-left"></i>
-    </a>
-    <div style="position:relative;">
-      <span class="month-label" id="ymTrigger" onclick="toggleYmPicker(this)">
-        {{ $year }}년 {{ $month }}월
-        <i class="fa-solid fa-caret-down"></i>
-      </span>
-      {{-- 년월 피커 --}}
-      <div id="ymPicker">
-        <div class="ym-year-row">
-          <button class="ym-year-btn" onclick="changePickerYear(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-          <span class="ym-year-label" id="ymYearLabel"></span>
-          <button class="ym-year-btn" onclick="changePickerYear(1)"><i class="fa-solid fa-chevron-right"></i></button>
+{{-- ── 상단 컨트롤 — Figma 243:433 Frame 48101583(h32): 좌 월 네비 + 이달 건수 / 우 뷰 전환 ── --}}
+<div class="rp-topbar">
+  <div class="rp-topbar-left">
+    {{-- 월 네비 --}}
+    <div class="month-nav">
+      @php
+        $prevYear  = $month === 1 ? $year - 1 : $year;
+        $prevMonth = $month === 1 ? 12 : $month - 1;
+        $nextYear  = $month === 12 ? $year + 1 : $year;
+        $nextMonth = $month === 12 ? 1 : $month + 1;
+      @endphp
+      <a class="ds-btn" href="{{ route('repurchase.index', ['year'=>$prevYear,'month'=>$prevMonth,'view'=>$view]) }}">
+        <i class="fa-solid fa-chevron-left"></i> 이전 월
+      </a>
+      <div style="position:relative;">
+        <span class="month-label" id="ymTrigger" onclick="toggleYmPicker(this)">
+          {{ $year }}년 {{ $month }}월
+          <i class="fa-solid fa-caret-down"></i>
+        </span>
+        {{-- 년월 피커 --}}
+        <div id="ymPicker">
+          <div class="ym-year-row">
+            <button class="ym-year-btn" onclick="changePickerYear(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="ym-year-label" id="ymYearLabel"></span>
+            <button class="ym-year-btn" onclick="changePickerYear(1)"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="ym-months" id="ymMonths"></div>
         </div>
-        <div class="ym-months" id="ymMonths"></div>
       </div>
+      <div id="ymOverlay" onclick="closeYmPicker()"></div>
+      <a class="ds-btn" href="{{ route('repurchase.index', ['year'=>$nextYear,'month'=>$nextMonth,'view'=>$view]) }}">
+        다음 월 <i class="fa-solid fa-chevron-right"></i>
+      </a>
+      @if($year !== now()->year || $month !== now()->month)
+        <a class="ds-btn ds-btn-primary" href="{{ route('repurchase.index') }}">오늘</a>
+      @endif
     </div>
-    <div id="ymOverlay" onclick="closeYmPicker()"></div>
-    <a class="btn-icon" href="{{ route('repurchase.index', ['year'=>$nextYear,'month'=>$nextMonth,'view'=>$view]) }}">
-      <i class="fa-solid fa-chevron-right"></i>
-    </a>
-    @if($year !== now()->year || $month !== now()->month)
-      <a class="btn btn-outline btn-sm" href="{{ route('repurchase.index') }}">오늘</a>
-    @endif
+    <span class="rp-sep"></span>
+    <span class="rp-month-count">이달 <strong>{{ $totalCount }}</strong>건</span>
   </div>
 
-  {{-- 우측: 건수 + 뷰 전환 --}}
-  <div style="display:flex;align-items:center;gap:12px;">
-    <span style="font-size:13px;color:var(--text-secondary);">
-      이 달 <strong style="color:var(--primary);">{{ $totalCount }}</strong>건
-    </span>
-    <div class="view-tabs">
-      <a class="view-tab {{ $view === 'calendar' ? 'active' : '' }}"
-         href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'calendar']) }}">
-        <i class="fa-regular fa-calendar"></i> 캘린더
-      </a>
-      <a class="view-tab {{ $view === 'list' ? 'active' : '' }}"
-         href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}">
-        <i class="fa-solid fa-list"></i> 목록
-      </a>
-    </div>
+  {{-- 뷰 전환 --}}
+  <div class="view-tabs">
+    <a class="ds-btn view-tab {{ $view === 'calendar' ? 'active' : '' }}"
+       href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'calendar']) }}">
+      <i class="fa-regular fa-calendar"></i> 캘린더
+    </a>
+    <a class="ds-btn view-tab {{ $view === 'list' ? 'active' : '' }}"
+       href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}">
+      <i class="fa-solid fa-list"></i> 목록
+    </a>
   </div>
 </div>
 
 {{-- ══════════════════════════════════ CALENDAR VIEW ══════════════════════════════════ --}}
 @if($view === 'calendar')
-<div class="card">
-  {{-- 요일 헤더 --}}
-  <div class="cal-grid" id="calGrid">
-    @foreach(['일','월','화','수','목','금','토'] as $dow)
-      <div class="cal-header-cell">{{ $dow }}</div>
-    @endforeach
+{{-- 시안 243:53 — 캘린더 카드(좌) 와 날짜 상세 패널(우) 이 나란히, gap 12 --}}
+<div class="rp-cal-layout">
+  <div class="ds-grid-card rp-cal-card">
+    {{-- 요일 헤더 --}}
+    <div class="cal-grid" id="calGrid">
+      @foreach(['일','월','화','수','목','금','토'] as $dow)
+        <div class="cal-header-cell">{{ $dow }}</div>
+      @endforeach
 
-    @php
-      $firstDow  = (int)$startOfMonth->dayOfWeek; // 0=Sun
-      $daysInMonth = (int)$endOfMonth->day;
-      $today = now()->toDateString();
-    @endphp
-
-    {{-- 앞 빈칸 --}}
-    @for($i = 0; $i < $firstDow; $i++)
-      <div class="cal-cell cal-empty"></div>
-    @endfor
-
-    {{-- 날짜 셀 --}}
-    @for($d = 1; $d <= $daysInMonth; $d++)
       @php
-        $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
-        $cnt     = $countsByDate[$dateStr] ?? 0;
-        $isToday = $dateStr === $today;
+        $firstDow  = (int)$startOfMonth->dayOfWeek; // 0=Sun
+        $daysInMonth = (int)$endOfMonth->day;
+        $today = now()->toDateString();
       @endphp
-      <div class="cal-cell {{ $isToday ? 'cal-today' : '' }}"
-           data-date="{{ $dateStr }}"
-           onclick="{{ $cnt > 0 ? 'loadDay(this)' : '' }}">
-        <div class="cal-day">{{ $d }}</div>
-        @if($cnt > 0)
-          <div><span class="cal-count">{{ $cnt }}</span></div>
-          <div class="cal-count-label">건</div>
-        @endif
+
+      {{-- 앞 빈칸 --}}
+      @for($i = 0; $i < $firstDow; $i++)
+        <div class="cal-cell cal-empty"></div>
+      @endfor
+
+      {{-- 날짜 셀 --}}
+      @for($d = 1; $d <= $daysInMonth; $d++)
+        @php
+          $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+          $cnt     = $countsByDate[$dateStr] ?? 0;
+          $isToday = $dateStr === $today;
+        @endphp
+        <div class="cal-cell {{ $isToday ? 'cal-today' : '' }}"
+             data-date="{{ $dateStr }}"
+             onclick="{{ $cnt > 0 ? 'loadDay(this)' : '' }}">
+          <div class="cal-day">{{ $d }}</div>
+          @if($cnt > 0)
+            <div class="cal-count-pill"><span class="cal-count">{{ $cnt }}</span><span class="cal-count-label">건</span></div>
+          @endif
+        </div>
+      @endfor
+
+      {{-- 뒤 빈칸 --}}
+      @php
+        $lastDow  = (int)$endOfMonth->dayOfWeek;
+        $trailing = $lastDow === 6 ? 0 : 6 - $lastDow;
+      @endphp
+      @for($i = 0; $i < $trailing; $i++)
+        <div class="cal-cell cal-empty"></div>
+      @endfor
+    </div>
+  </div>
+
+  {{-- 날짜 클릭 시 상세 패널 --}}
+  <div id="dayPanel">
+    <div class="day-panel-header">
+      <span class="day-panel-title" id="dayPanelTitle"></span>
+      <button class="day-panel-close" onclick="closeDay()">닫기</button>
+    </div>
+    <div id="dayPanelBody">
+      <div style="padding:24px;text-align:center;color:var(--text-muted);">
+        <i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중…
       </div>
-    @endfor
-
-    {{-- 뒤 빈칸 --}}
-    @php
-      $lastDow  = (int)$endOfMonth->dayOfWeek;
-      $trailing = $lastDow === 6 ? 0 : 6 - $lastDow;
-    @endphp
-    @for($i = 0; $i < $trailing; $i++)
-      <div class="cal-cell cal-empty"></div>
-    @endfor
-  </div>
-</div>
-
-{{-- 날짜 클릭 시 상세 패널 --}}
-<div id="dayPanel">
-  <div class="day-panel-header">
-    <span class="day-panel-title" id="dayPanelTitle"></span>
-    <button class="day-panel-close" onclick="closeDay()">×</button>
-  </div>
-  <div id="dayPanelBody">
-    <div style="padding:24px;text-align:center;color:var(--text-muted);">
-      <i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중…
     </div>
   </div>
 </div>
@@ -438,30 +448,44 @@ function gotoYm(y, m) {
 
 {{-- ══════════════════════════════════ LIST VIEW ══════════════════════════════════ --}}
 @if($view === 'list')
-<div class="card">
-  {{-- 검색 --}}
-  <div class="card-body" style="border-bottom:1px solid var(--border);padding:12px 16px;">
-    <form method="GET" action="{{ route('repurchase.index') }}" class="search-bar">
-      <input type="hidden" name="year"  value="{{ $year }}">
-      <input type="hidden" name="month" value="{{ $month }}">
-      <input type="hidden" name="view"  value="list">
+{{-- 검색 — Figma 243:433 Frame 48101549: 흰 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 --}}
+<form method="GET" action="{{ route('repurchase.index') }}" class="ds-filter-card">
+  <input type="hidden" name="year"  value="{{ $year }}">
+  <input type="hidden" name="month" value="{{ $month }}">
+  <input type="hidden" name="view"  value="list">
+  <div class="ds-filter-fields">
+    {{-- 시안 검색어 칸 295px = 9열 중 2열 --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
       <input type="text" name="search" class="form-control"
-             placeholder="처방전번호·환자명·병원명 검색"
+             placeholder="처방전 번호ㆍ환자명ㆍ병원명 검색"
              value="{{ request('search') }}">
-      <button type="submit" class="btn btn-primary btn-sm">
-        <i class="fa-solid fa-magnifying-glass"></i> 검색
-      </button>
-      @if(request('search'))
-        <a href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}"
-           class="btn btn-outline btn-sm">초기화</a>
-      @endif
-    </form>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('search'))
+      <a href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
+</form>
+
+{{-- 결과바(h32) + 그리드 카드(r12) — Figma 243:433 Frame 48101545 --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ $listTotal }}</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint"><i class="fa-solid fa-circle-info"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
+      {{-- 그리드 툴바에 있던 '엑셀 저장' 을 시안 위치(결과바 우측)로 옮겼다 --}}
+      <button type="button" class="ds-btn" onclick="window.__repurchaseGrid?.downloadExcel()">엑셀 저장</button>
+    </div>
   </div>
 
-  <div style="padding:8px 16px 4px;font-size:12px;color:var(--text-muted);">
-    <i class="fa-solid fa-circle-info"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.
+  <div class="ds-grid-card">
+    <div id="repurchaseGrid"></div>
   </div>
-  <div style="padding:0 16px 16px;"><div id="repurchaseGrid"></div></div>
 </div>
 @endif
 @endsection

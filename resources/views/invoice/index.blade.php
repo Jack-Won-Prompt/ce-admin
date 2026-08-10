@@ -7,71 +7,41 @@
 
 @push('styles')
 <style>
-/* ── 요약 카드 (Vuexy icon stat card) ── */
-.summary-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
-@media(max-width:1100px){ .summary-grid{grid-template-columns:repeat(3,1fr);} }
-@media(max-width:700px) { .summary-grid{grid-template-columns:repeat(2,1fr);} }
-.s-card {
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:18px 20px;
-  display:flex; align-items:center; gap:16px;
-}
-.s-card .sc-icon { width:48px;height:48px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px; }
-.s-card.blue  .sc-icon { background:var(--primary-light); color:var(--primary); }
-.s-card.green .sc-icon { background:var(--success-light); color:var(--success); }
-.s-card.teal  .sc-icon { background:var(--info-light);    color:var(--info); }
-.s-card.gray  .sc-icon { background:var(--border-light);  color:var(--text-muted); }
-.s-card .s-label { font-size:11.5px;font-weight:600;color:var(--text-muted);margin-bottom:3px; }
-.s-card .s-value { font-size:22px;font-weight:800;line-height:1;color:var(--text-primary); }
-.s-card .s-sub   { font-size:11px;color:var(--text-muted);margin-top:3px; }
-.s-card.blue  .s-value { color:var(--primary); }
-.s-card.green .s-value { color:var(--success); }
+/* ── 상태 칩 줄 끝 안내 ──
+   요약 카드(계산서 발행 대상 / 미발행 / 이번달 금액)에 달려 있던 설명 문구를
+   시안대로 카드가 사라진 자리 대신 칩 줄 끝으로 옮겼다. 12px/500 · gray-600. */
+.inv-chip-note { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
 
-/* ── Vuexy pill tabs ── */
-.inv-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
-.inv-tab {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
-  border:1.5px solid var(--border); background:#fff;
-  color:var(--text-secondary); text-decoration:none;
-  transition:var(--transition); cursor:pointer;
-}
-.inv-tab:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
-.inv-tab.active { border-color:var(--primary); background:var(--primary); color:#fff; }
-.inv-tab .cnt { font-size:10.5px;font-weight:700;padding:0 5px;border-radius:20px;background:rgba(255,255,255,.25); }
+/* ── 결과바 보조 표시 (Figma 282:934 — 전체 · 선택 · 이번달 금액) ── */
+.ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+.ds-grid-sel b { color:var(--primary-400); }
+.inv-stat { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); white-space:nowrap; }
+.inv-stat b { color:var(--gray-800); font-weight:500; }
+/* 항목 사이 점 — Figma 4×4 · r999 · gray-300 */
+.inv-sep { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+@media(max-width:1400px){ .ds-grid-bar { flex-wrap:wrap; height:auto; row-gap:8px; } }
 
-/* ── 패널 탭 (발행현황 / 상세보기) ── */
-.panel-tabs {
-  display:flex; border-bottom:2px solid var(--border);
-  margin-bottom:0; background:#fff;
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  overflow:hidden;
-}
-.panel-tab-btn {
-  display:inline-flex; align-items:center; gap:8px;
-  padding:11px 22px; font-size:13px; font-weight:600;
-  color:var(--text-secondary); border:none; background:none;
-  cursor:pointer; border-bottom:3px solid transparent;
-  margin-bottom:-2px; transition:var(--transition);
-  white-space:nowrap;
-}
-.panel-tab-btn:hover { color:var(--primary); background:var(--primary-light); }
-.panel-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); background:#fff; }
-.panel-tab-btn .badge-cnt {
+/* ── 패널 탭 (계산서 발행 현황 / 상세보기) — Figma 282:934: h44 · pad 0/16 · gap 16 ──
+   switchPanel() 이 '.panel-tab-btn' 으로 찾으므로 클래스는 함께 붙여 둔다. */
+.pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+  color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
+.pnl-tab:hover { color:var(--primary); }
+.pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+/* 탭 안 건수 — 시안에는 없으나 개발이 넣은 표시라 남긴다 (r999 · 10px/700) */
+.badge-cnt {
   display:inline-flex; align-items:center; justify-content:center;
-  min-width:18px; height:18px; padding:0 5px;
-  background:var(--primary); color:#fff;
-  border-radius:20px; font-size:10px; font-weight:700;
+  min-width:16px; height:16px; padding:0 4px; border-radius:999px;
+  background:var(--gray-100); color:var(--gray-600);
+  font-size:10px; font-weight:700; line-height:1;
 }
-.panel-tab-btn.active .badge-cnt { background:var(--primary); }
+.pnl-tab.active .badge-cnt { background:var(--primary-light); color:var(--primary); }
 
 /* ── 패널 콘텐츠 ── */
 .panel-body { display:none; }
 .panel-body.active { display:block; }
 
-/* ── 필터바 ── */
-
-/* ── 테이블 ── */
+/* ── 테이블 (레거시 잔여 — selectOrder() 가 .order-row 를 찾는다) ── */
 .table-scroll { max-height:calc(100vh - 400px); overflow-y:auto; }
 .table-scroll thead th { position:sticky;top:0;z-index:5;background:var(--bg); }
 .order-row { cursor:pointer; transition:background .12s; }
@@ -80,17 +50,18 @@
 .order-no { font-size:12px;font-weight:700;color:var(--primary); }
 .amount-r { text-align:right;font-variant-numeric:tabular-nums; }
 
-/* ── 상태 셀 ── */
+/* ── 상태 셀 (개발 자산 — 현재 마크업 사용처 없음. 배지 규격 r6 · pad 2/6 · 11/500 · lh18)
+   초록·하늘색은 이 디자인에 없어 DS 토큰으로 바꿨다. ── */
 .inv-cell { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
-.inv-issued    { color:var(--success);font-size:11px;font-weight:700; }
+.inv-issued    { color:var(--primary);font-size:11px;font-weight:700; }
 .inv-none      { color:var(--text-muted);font-size:11px; }
 .inv-cancelled { color:var(--danger);font-size:11px;font-weight:600; }
 .type-badge {
   display:inline-flex; align-items:center; gap:3px;
   padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
 }
-.type-tax  { background:var(--success-light); color:var(--success); }
-.type-cash { background:var(--info-light);    color:var(--info); }
+.type-tax  { background:var(--primary-light); color:var(--primary); }
+.type-cash { background:var(--primary-100);   color:var(--primary-600); }
 .type-none { background:var(--border-light);  color:var(--text-muted); }
 
 /* ── 상세보기 패널 ── */
@@ -101,77 +72,95 @@
 .detail-empty i { font-size:48px; opacity:.3; }
 .detail-empty p { font-size:13px; }
 
-.detail-wrap { padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-@media(max-width:900px){ .detail-wrap{grid-template-columns:1fr;} }
+/* Figma 282:3064 — 머리줄(주문번호 16/700 + 상태 배지), 그 아래 카드 3열 gap 12 */
+.inv-detail-head { display:flex; align-items:center; gap:12px; padding:16px 16px 0; flex-wrap:wrap; }
+.inv-detail-no { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000); }
+.inv-detail-col { display:flex; flex-direction:column; gap:12px; min-width:0; }
 
+.detail-wrap { padding:16px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:start; }
+@media(max-width:1200px){ .detail-wrap{grid-template-columns:1fr;} }
+
+/* 카드 — r12 · pad 12/16 · gap 12 · bd 1px gray-200, 그림자 없음 */
 .detail-section {
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  overflow:hidden;
+  display:flex; flex-direction:column; gap:12px; min-width:0;
+  background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px;
+  padding:12px 16px;
 }
 .detail-section-hd {
-  display:flex; align-items:center; gap:8px;
-  padding:11px 16px; background:var(--bg); border-bottom:1px solid var(--border);
-  font-size:13px; font-weight:700;
+  display:flex; align-items:center; gap:8px; min-height:28px;
+  font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000);
 }
-.detail-section-hd i { font-size:14px; }
-.detail-section-bd { padding:16px; }
+.detail-section-bd { display:flex; flex-direction:column; gap:8px; min-width:0; }
 
-.dl { display:grid; grid-template-columns:90px 1fr; gap:8px 12px; font-size:13px; }
-.dl dt { color:var(--text-muted); font-weight:600; font-size:12px; padding-top:1px; }
-.dl dd { margin:0; font-weight:500; }
+/* 항목 상자 — Figma: r8 · pad 12 · gap 8 · bg gray-100, 라벨 위 / 값 오른쪽 아래 (h74) */
+.dl { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0; }
+.dl-row { display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:8px; background:var(--gray-100); min-width:0; }
+.dl-row.wide { grid-column:span 2; }
+.dl dt { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+.dl dd { margin:0; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000);
+  text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .inv-status-box {
-  border-radius:var(--radius); padding:14px; margin-bottom:12px;
-  border:1.5px solid var(--border);
+  display:flex; flex-direction:column; gap:8px;
+  border-radius:8px; padding:12px; background:var(--gray-100);
+  border:1px solid transparent;
 }
-.inv-status-box.status-issued    { border-color:var(--success); background:var(--success-light); }
-.inv-status-box.status-cancelled { border-color:var(--danger);  background:var(--danger-light); }
-.inv-status-box.status-none      { border-color:var(--border);  background:var(--bg); }
+.inv-status-box.status-issued    { border-color:var(--primary-200); }
+.inv-status-box.status-cancelled { border-color:var(--alert-100); }
+.inv-status-box.status-none      { border-color:transparent; }
 
 .inv-status-row {
   display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
 }
 .inv-status-label {
-  display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700;
+  display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; line-height:21px;
 }
 .inv-status-meta {
-  font-size:11px; color:var(--text-muted); margin-top:6px;
+  font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600);
   display:flex; flex-wrap:wrap; gap:4px 14px;
 }
 .inv-status-meta span { display:inline-flex; align-items:center; gap:4px; }
 
+/* 발행·취소 버튼 묶음 — 시안은 섹션 머리줄 우측. JS 가 innerHTML 로 채운다. */
 .detail-action-bar {
   display:flex; gap:8px; flex-wrap:wrap;
-  padding:12px 16px; border-top:1px solid var(--border);
-  background:var(--bg); justify-content:flex-end;
+  margin-left:auto; justify-content:flex-end;
 }
+.detail-action-bar .btn { height:28px; padding:3px 10px; }
+/* JS 가 붙이는 btn-success 는 초록인데 시안에 초록이 없다. 이 자리에서만 primary 로 맞춘다. */
+.detail-action-bar .btn-success { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
+.detail-action-bar .btn-success:hover { background:var(--primary-dark); color:var(--gray-0); }
 
 /* ── 모달 ── */
 .modal-overlay {
   display:none; position:fixed; inset:0;
-  background:rgba(15,23,42,.55); z-index:1000;
+  background:rgba(13,27,42,.35); backdrop-filter:blur(3px); z-index:1000;
   align-items:center; justify-content:center;
 }
 .modal-overlay.open { display:flex; }
 .modal-box {
-  background:#fff; border-radius:var(--radius-lg);
+  background:var(--gray-0); border-radius:12px;
   box-shadow:var(--shadow-lg); width:480px; max-width:95vw; max-height:90vh;
   overflow-y:auto;
 }
 .modal-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 18px; border-bottom:1px solid var(--border);
+  padding:14px 16px; border-bottom:1px solid var(--border);
 }
 .modal-title  { font-size:14px;font-weight:700; }
-.modal-body   { padding:18px; }
-.modal-footer { padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+.modal-body   { padding:16px; }
+.modal-footer { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+/* 모달 하단 '발행' 버튼도 전역 .btn-success(초록)를 쓰고 있다. 시안에 초록이 없어
+   클래스는 그대로 두고 이 화면 안에서만 primary 로 덮는다 (.detail-action-bar 와 같은 처리). */
+.modal-footer .btn-success { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
+.modal-footer .btn-success:hover { background:var(--primary-dark); color:var(--gray-0); }
 .btn-close-modal { background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted); }
 .order-info-box {
   background:var(--primary-light); border:1px solid var(--primary-accent);
-  border-radius:var(--radius); padding:10px 14px; margin-bottom:14px; font-size:12px;
+  border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px;
 }
 .tax-calc-row {
-  background:var(--bg); border-radius:var(--radius);
+  background:var(--gray-100); border-radius:8px;
   padding:10px 12px; font-size:12px; margin-top:8px;
 }
 .tax-calc-row b { color:var(--primary); }
@@ -209,93 +198,83 @@
 </div>
 @endif
 
-{{-- ── 요약 카드 ── --}}
-<div class="summary-grid">
-  <div class="s-card gray">
-    <div class="s-label">계산서 발행 대상</div>
-    <div class="s-value">{{ $counts['total'] }}</div>
-    <div class="s-sub">주문확정 · 배송중 · 배송완료</div>
-  </div>
-  <div class="s-card blue">
-    <div class="s-label">세금계산서 미발행</div>
-    <div class="s-value" style="color:var(--primary);">{{ $counts['tax_pending'] }}</div>
-    <div class="s-sub">발행 대기 중</div>
-  </div>
-  <div class="s-card teal">
-    <div class="s-label">현금영수증 미발행</div>
-    <div class="s-value" style="color:var(--info);">{{ $counts['cash_pending'] }}</div>
-    <div class="s-sub">발행 대기 중</div>
-  </div>
-  <div class="s-card green">
-    <div class="s-label">이번달 세금계산서</div>
-    <div class="s-value" style="color:var(--success);font-size:16px;">{{ number_format($monthlyTaxAmount) }}원</div>
-    <div class="s-sub">{{ now()->format('m') }}월 공급가액 합계</div>
-  </div>
-  <div class="s-card green">
-    <div class="s-label">이번달 현금영수증</div>
-    <div class="s-value" style="color:var(--info);font-size:16px;">{{ number_format($monthlyCashAmount) }}원</div>
-    <div class="s-sub">{{ now()->format('m') }}월 발행금액 합계</div>
-  </div>
-</div>
-
-{{-- ── 상태 필터 탭 ── --}}
-<div class="inv-tabs">
+{{-- ── 상태 칩 — Figma 282:934: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 ──
+     요약 카드 5개는 시안에 없다. 건수는 칩·결과바로, 설명 문구는 칩 줄 끝 안내로 옮겼다. --}}
+<div class="ds-chips">
   @foreach($statusFilterTabs as $key => [$label, $count, $color])
     <a href="{{ route('invoice.index', array_merge(request()->except('tab','page'), ['tab'=>$key])) }}"
-       class="inv-tab {{ $tab === $key ? 'active' : '' }}">
+       class="ds-chip {{ $tab === $key ? 'active' : '' }}">
       {{ $label }}
-      @if($count > 0)<span class="cnt">{{ $count }}</span>@endif
+      @if($count > 0)<span class="ds-chip-count">{{ $count }}</span>@endif
     </a>
   @endforeach
+  <span class="inv-chip-note">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</span>
 </div>
 
-{{-- ══════════════════════════════════════════════════════════════
-     패널 탭: 계산서 발행 현황 | 상세보기
-══════════════════════════════════════════════════════════════ --}}
-<div class="card" style="overflow:visible;">
-
-  {{-- 패널 탭 헤더 --}}
-  <div class="panel-tabs">
-    <button class="panel-tab-btn active" id="btn-list" onclick="switchPanel('list')">
-      <i class="fa-solid fa-list"></i> 계산서 발행 현황
-      <span class="badge-cnt">{{ $total }}</span>
-    </button>
-    <button class="panel-tab-btn" id="btn-detail" onclick="switchPanel('detail')">
-      <i class="fa-solid fa-file-magnifying-glass"></i> 상세보기
-      <span id="detail-tab-label" style="font-size:11px;color:var(--text-muted);font-weight:500;"></span>
-    </button>
+{{-- ── 검색 필터 — Figma 282:934: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 ── --}}
+<form method="GET" action="{{ route('invoice.index') }}" class="ds-filter-card">
+  <input type="hidden" name="tab" value="{{ $tab }}">
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="주문번호 · 환자명">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="시작일">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control" title="종료일">
+      </div>
+    </div>
   </div>
+  <div class="ds-filter-actions">
+    @if(request('q') || request('date_from') || request('date_to'))
+      <a href="{{ route('invoice.index', ['tab'=>$tab]) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
+</form>
+
+{{-- ══════════════════════════════════════════════════════════════
+     결과바(h32) + 흰 카드(r12) — 카드 안 상단이 패널 탭(발행 현황 / 상세보기)
+══════════════════════════════════════════════════════════════ --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="inv-sep"></span>
+      <span class="ds-grid-sel">선택 <b id="invSelCount">0</b>건</span>
+      <span class="inv-sep"></span>
+      <span class="inv-stat">이번달 세금계산서 <b>{{ number_format($monthlyTaxAmount) }}</b>원</span>
+      <span class="inv-sep"></span>
+      <span class="inv-stat">이번달 현금영수증 <b>{{ number_format($monthlyCashAmount) }}</b>원</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">행을 <b>더블클릭</b>하거나 체크 후 눌러 상세보기로 이동</span>
+      <button type="button" class="ds-btn" onclick="window.__invoiceGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="invoiceViewDetail()">선택 상세</button>
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+
+    {{-- 패널 탭 헤더 — 시안은 아이콘 없이 텍스트만 --}}
+    <div class="pnl-tabs">
+      <button type="button" class="pnl-tab panel-tab-btn active" id="btn-list" onclick="switchPanel('list')">
+        계산서 발행 현황
+        <span class="badge-cnt">{{ $total }}</span>
+      </button>
+      <button type="button" class="pnl-tab panel-tab-btn" id="btn-detail" onclick="switchPanel('detail')">
+        상세보기
+        <span id="detail-tab-label" style="font-size:11px;color:var(--gray-600);font-weight:500;"></span>
+      </button>
+    </div>
 
   {{-- ══ 패널 1: 발행 현황 리스트 ══ --}}
   <div class="panel-body active" id="panel-list">
-
-    {{-- 검색 필터 --}}
-    <form method="GET" action="{{ route('invoice.index') }}" class="filter-bar">
-      <input type="hidden" name="tab" value="{{ $tab }}">
-      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호 · 환자명" style="width:200px;">
-      <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control"
-             style="width:140px;" title="시작일">
-      <span style="color:var(--text-muted);font-size:12px;">~</span>
-      <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control"
-             style="width:140px;" title="종료일">
-      <button type="submit" class="btn btn-primary btn-sm">
-        <i class="fa-solid fa-magnifying-glass"></i> 검색
-      </button>
-      @if(request('q') || request('date_from') || request('date_to'))
-        <a href="{{ route('invoice.index', ['tab'=>$tab]) }}" class="btn btn-outline btn-sm">초기화</a>
-      @endif
-    </form>
-
-    {{-- ── 목록 (wwGrid) ── --}}
-    <div style="display:flex;gap:8px;margin:12px 16px;align-items:center;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="invoiceViewDetail()">
-        <i class="bx bx-detail"></i> 선택 상세
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행을 <b>더블클릭</b>하거나 체크 후 눌러 상세보기로 이동</span>
-      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
-    </div>
-    <div id="invoiceGrid" style="margin:0 16px 16px;"></div>
+    <div id="invoiceGrid"></div>
   </div>{{-- /panel-list --}}
 
   {{-- ══ 패널 2: 상세보기 ══ --}}
@@ -305,57 +284,58 @@
     <div class="detail-empty" id="detail-empty">
       <i class="fa-solid fa-file-magnifying-glass"></i>
       <p>좌측 <strong>계산서 발행 현황</strong> 탭에서 항목을 클릭하면<br>상세 내용이 이곳에 표시됩니다.</p>
-      <button class="btn btn-outline btn-sm" onclick="switchPanel('list')">
-        <i class="fa-solid fa-list"></i> 목록으로 이동
-      </button>
+      <button class="ds-btn" onclick="switchPanel('list')">목록으로 이동</button>
     </div>
 
     {{-- 상세 내용 (선택 후 표시) --}}
     <div id="detail-content" style="display:none;">
 
-      {{-- 헤더바 --}}
-      <div style="display:flex;align-items:center;justify-content:space-between;
-                  padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg);">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <button class="btn btn-outline btn-sm" onclick="switchPanel('list')">
-            <i class="fa-solid fa-arrow-left"></i> 목록
-          </button>
-          <span id="d-order-no" style="font-size:14px;font-weight:800;color:var(--primary);"></span>
-          <span id="d-status-badge" style="font-size:11px;font-weight:700;padding:2px 8px;
-                border-radius:12px;background:var(--primary-light);"></span>
-        </div>
-        <a id="d-order-link" href="#" class="btn btn-outline btn-sm" target="_blank">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> 주문 상세
-        </a>
+      {{-- 헤더바 — Figma 282:3064: 주문번호 16/700 + 상태 배지, 우측 주문 상세 --}}
+      <div class="inv-detail-head">
+        <button class="ds-btn" onclick="switchPanel('list')">목록</button>
+        <span id="d-order-no" class="inv-detail-no"></span>
+        <span id="d-status-badge" class="badge badge-secondary"></span>
+        <a id="d-order-link" href="#" class="ds-btn" target="_blank" style="margin-left:auto;">주문 상세</a>
       </div>
 
-      {{-- 상세 그리드 --}}
+      {{-- 상세 그리드 — 시안은 3열(주문 기본 정보 / 금액 요약 / 세금계산서·현금영수증) --}}
       <div class="detail-wrap">
 
-        {{-- ── 좌측 컬럼 ── --}}
-        <div style="display:flex;flex-direction:column;gap:16px;">
-
-          {{-- 기본 정보 --}}
-          <div class="detail-section">
-            <div class="detail-section-hd">
-              <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> 주문 기본 정보
-            </div>
-            <div class="detail-section-bd">
-              <dl class="dl">
-                <dt>환자명</dt><dd id="d-patient-name" style="font-weight:700;"></dd>
-                <dt>연락처</dt><dd id="d-patient-mobile"></dd>
-                <dt>제품명</dt><dd id="d-product-name"></dd>
-                <dt>총금액</dt><dd id="d-total-amount" style="font-weight:700;color:var(--primary);font-size:15px;"></dd>
-                <dt>주문일</dt><dd id="d-created-at"></dd>
-                <dt>배송완료일</dt><dd id="d-delivered-at"></dd>
-              </dl>
-            </div>
+        {{-- 기본 정보 --}}
+        <div class="detail-section">
+          <div class="detail-section-hd">주문 기본 정보</div>
+          <div class="detail-section-bd">
+            <dl class="dl">
+              <div class="dl-row"><dt>환자명</dt><dd id="d-patient-name"></dd></div>
+              <div class="dl-row"><dt>연락처</dt><dd id="d-patient-mobile"></dd></div>
+              <div class="dl-row wide"><dt>제품명</dt><dd id="d-product-name"></dd></div>
+              <div class="dl-row wide"><dt>총금액</dt><dd id="d-total-amount"></dd></div>
+              <div class="dl-row"><dt>주문일</dt><dd id="d-created-at"></dd></div>
+              <div class="dl-row"><dt>배송완료일</dt><dd id="d-delivered-at"></dd></div>
+            </dl>
           </div>
+        </div>
+
+        {{-- 금액 요약 --}}
+        <div class="detail-section">
+          <div class="detail-section-hd">금액 요약</div>
+          <div class="detail-section-bd">
+            <dl class="dl" id="d-amount-dl">
+              <div class="dl-row wide"><dt>총 결제금액</dt><dd id="d-total-fmt"></dd></div>
+              <div class="dl-row wide"><dt>공급가액</dt><dd id="d-ti-supply-fmt"></dd></div>
+              <div class="dl-row wide"><dt>부가세(10%)</dt><dd id="d-ti-vat-fmt"></dd></div>
+            </dl>
+          </div>
+        </div>
+
+        {{-- 세금계산서 / 현금영수증 — 발행·취소 버튼은 각 카드 머리줄 우측 --}}
+        <div class="inv-detail-col">
 
           {{-- 세금계산서 --}}
           <div class="detail-section" id="d-ti-section">
             <div class="detail-section-hd">
-              <i class="fa-solid fa-file-invoice" style="color:var(--success);"></i> 세금계산서
+              세금계산서
+              <div class="detail-action-bar" id="d-ti-actions"></div>
             </div>
             <div class="detail-section-bd">
               <div id="d-ti-box" class="inv-status-box status-none">
@@ -365,32 +345,13 @@
                 <div class="inv-status-meta" id="d-ti-meta"></div>
               </div>
             </div>
-            <div class="detail-action-bar" id="d-ti-actions"></div>
-          </div>
-
-        </div>
-
-        {{-- ── 우측 컬럼 ── --}}
-        <div style="display:flex;flex-direction:column;gap:16px;">
-
-          {{-- 금액 요약 --}}
-          <div class="detail-section">
-            <div class="detail-section-hd">
-              <i class="fa-solid fa-calculator" style="color:var(--warning);"></i> 금액 요약
-            </div>
-            <div class="detail-section-bd">
-              <dl class="dl" id="d-amount-dl">
-                <dt>총 결제금액</dt><dd id="d-total-fmt" style="font-weight:700;"></dd>
-                <dt>공급가액</dt><dd id="d-ti-supply-fmt" style="color:var(--success);font-weight:600;"></dd>
-                <dt>부가세(10%)</dt><dd id="d-ti-vat-fmt"></dd>
-              </dl>
-            </div>
           </div>
 
           {{-- 현금영수증 --}}
           <div class="detail-section" id="d-cr-section">
             <div class="detail-section-hd">
-              <i class="fa-solid fa-receipt" style="color:var(--info);"></i> 현금영수증
+              현금영수증
+              <div class="detail-action-bar" id="d-cr-actions"></div>
             </div>
             <div class="detail-section-bd">
               <div id="d-cr-box" class="inv-status-box status-none">
@@ -400,7 +361,6 @@
                 <div class="inv-status-meta" id="d-cr-meta"></div>
               </div>
             </div>
-            <div class="detail-action-bar" id="d-cr-actions"></div>
           </div>
 
         </div>
@@ -408,14 +368,15 @@
     </div>{{-- /detail-content --}}
   </div>{{-- /panel-detail --}}
 
-</div>{{-- /card --}}
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 
 {{-- ══════════ 세금계산서 발행 모달 ══════════ --}}
 <div class="modal-overlay" id="taxModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title"><i class="fa-solid fa-file-invoice" style="color:var(--success);"></i> 세금계산서 발행</div>
+      <div class="modal-title"><i class="fa-solid fa-file-invoice" style="color:var(--primary);"></i> 세금계산서 발행</div>
       <button class="btn-close-modal" onclick="closeTaxModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -470,7 +431,7 @@
 <div class="modal-overlay" id="cashModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title"><i class="fa-solid fa-receipt" style="color:var(--info);"></i> 현금영수증 발행</div>
+      <div class="modal-title"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 현금영수증 발행</div>
       <button class="btn-close-modal" onclick="closeCashModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -862,7 +823,7 @@ async function cancelCash(orderId, orderNo) {
 window.HELP_TOUR_STEPS = [
   { selector: '#btn-list', title: '주문 목록 탭', body: '세금계산서 또는 현금영수증을 발행할 주문을 여기서 선택합니다.' },
   { selector: '#btn-detail', title: '계산서 발행 탭', body: '주문을 선택하면 이 탭에서 세금계산서·현금영수증을 발행하고 취소할 수 있습니다.' },
-  { selector: '.filter-bar', title: '필터', body: '기간, 발행 상태, 환자명으로 조회 범위를 좁힙니다.' },
+  { selector: '.ds-filter-card', title: '필터', body: '기간, 발행 상태, 환자명으로 조회 범위를 좁힙니다.' },
 ];
 </script>
 @endpush
@@ -872,8 +833,11 @@ window.HELP_TOUR_STEPS = [
 (function () {
   const grid = new wwGrid({
     el: document.getElementById('invoiceGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    toolbar: false,
+    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    footer: false,
     columns: [
       { header: '주문번호',   name: 'order_number', width: 130, sortable: true },
       { header: '환자명',     name: 'patient_name', width: 90,  sortable: true },
@@ -887,6 +851,8 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+  window.__invoiceGrid = grid;                    // 결과바의 '엑셀 저장' 이 이걸 부른다
+  window.dsBindSelCount(grid, 'invSelCount');     // 결과바의 '선택 N건' 표시를 연결한다
 
   // 체크한 행 → 기존 상세보기 패널(selectOrder)로 이동
   window.invoiceViewDetail = function () {
