@@ -10,9 +10,9 @@
   .order-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
   @media(max-width:900px){ .order-grid { grid-template-columns:1fr; } }
   /* 상세 내부 탭(스크립트로 카드 그룹핑) */
-  .od-tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
-  .od-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .od-tabs { display:flex; gap:16px; margin:0 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .od-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .od-tab:hover { color:var(--primary); }
   .od-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   /* 탭 사용 시 좌우 그리드를 단일 흐름으로(카드가 순서대로) */
@@ -78,7 +78,7 @@
   /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
   .action-footer {
     margin-top: 16px;
-    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 12px 20px;
     display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
   }
@@ -124,11 +124,11 @@
   .tax-calc-row { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; font-size: 12px; }
   .tax-calc-row b { color: var(--primary); }
 
-  .ww-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:6px; font-size:11.5px; font-weight:700; }
+  .ww-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .ww-02 { background:var(--primary-light); color:var(--primary); }
-  .ww-03,.ww-51 { background:var(--info-light); color:var(--info); }
+  .ww-03,.ww-51 { background:var(--primary-light); color:var(--primary); }
   .ww-04,.ww-52 { background:var(--warning-light); color:var(--warning); }
-  .ww-05 { background:var(--success-light); color:var(--success); }
+  .ww-05 { background:var(--primary-light); color:var(--primary); }
   .ww-06,.ww-99 { background:var(--border-light); color:var(--text-muted); }
 </style>
 @endpush
@@ -151,7 +151,7 @@
   {{-- 주문 번호 헤더 --}}
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <h2 style="font-size:20px;font-weight:800;letter-spacing:.5px;">{{ $order->order_number }}</h2>
-    <span class="badge badge-{{ $meta['badge'] }}" style="font-size:13px;padding:4px 12px;">{{ $meta['label'] }}</span>
+    <span class="badge badge-{{ $meta['badge'] }}">{{ $meta['label'] }}</span>
     @if($order->tracking_number)
       <span style="font-size:12px;color:var(--text-muted);">
         <i class="bx bx-truck"></i> 운송장: <strong>{{ $order->tracking_number }}</strong>

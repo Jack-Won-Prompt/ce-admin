@@ -265,17 +265,19 @@
   border-bottom: 1px solid var(--cg-border);
 }
 .cg-btn {
-  padding: 4px 12px; border-radius: 3px; border: 1px solid var(--cg-border-sub);
-  background: #fff; cursor: pointer; font-size: 12px; transition: background 0.15s;
+  /* Figma 174:1249 — 일반 버튼 규격: 높이 32 · radius 8 · padding 0/12 · 13px/500 */
+  height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--cg-border);
+  background: #fff; color: var(--gray-1000, #101317); cursor: pointer;
+  font-size: 13px; font-weight: 500; line-height: 20px; transition: background 0.15s;
 }
 .cg-btn:hover { background: #eef4fb; }
 .cg-btn.primary { background: var(--cg-accent); color: #fff; border-color: var(--cg-accent); }
 .cg-btn.primary:hover { background: var(--cg-accent-dark); }
 .cg-btn.danger  { background: #e05050; color: #fff; border-color: #c03030; }
 .cg-btn.danger:hover { background: #c03030; }
-/* 엑셀 저장: 흰 배경 + 엑셀 그린 글자·테두리 (배경만 흰색으로 두면 흰 글자가 보이지 않는다) */
-.cg-btn-excel   { background: #fff; color: #217346; border-color: #217346; font-weight: 600; }
-.cg-btn-excel:hover { background: #f0f9f4; }
+/* 엑셀 저장 — 시안(114:4778)은 다른 버튼과 같은 흰 버튼이다. 엑셀 브랜드색은 쓰지 않는다. */
+.cg-btn-excel   { background: #fff; color: var(--gray-1000, #101317); border-color: var(--cg-border); }
+.cg-btn-excel:hover { background: var(--cg-header-bg); }
 .cg-toolbar-sep { flex: 1; }   /* 왼쪽 버튼과 오른쪽 Excel 버튼 분리 */
 
 /* ── Scrollbar ── */

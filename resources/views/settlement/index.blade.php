@@ -8,11 +8,11 @@
 @push('styles')
 <style>
   /* Vuexy underline tabs */
-  .settle-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 22px; }
+  .settle-tabs { display: flex; gap: 0; border-bottom:1px solid var(--border); margin-bottom: 22px; }
   .settle-tab  {
     padding: 11px 22px; font-size: 13px; font-weight: 600;
     color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    border-bottom: 1px solid transparent; margin-bottom: -1px;
     transition: var(--transition);
   }
   .settle-tab:hover { color: var(--primary); }
@@ -23,7 +23,7 @@
   @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
   .sum-card {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow);
+    border-radius: var(--radius-lg); padding: 18px 20px;
     display: flex; align-items: center; gap: 16px;
   }
   .sum-card-icon {
@@ -44,19 +44,19 @@
 
   /* 필터 바 */
   /* 패널 탭(조회결과/상세내용) */
-  .pnl-tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tabs { display:flex; gap:16px; margin:0 0 16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
     background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
-  .filter-bar .form-control { height: 34px; font-size: 12px; }
-  .filter-bar .btn { height: 34px; font-size: 12px; white-space: nowrap; }
+  /* 전역 규격(h32 · 13px)을 그대로 쓴다 — 높이·글자를 다시 지정하면 이 화면만 어긋난다 */
+  .filter-bar .btn { white-space: nowrap; }
   .filter-sep { color: var(--text-muted); font-size: 12px; }
 
   /* API 상태 카드 */
-  .toss-api-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; box-shadow: var(--shadow); }
+  .toss-api-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
   .api-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .api-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .api-dot.connected    { background: var(--success); box-shadow: 0 0 0 3px var(--success-light); }
@@ -70,10 +70,10 @@
   .api-meta-val   { font-weight: 600; font-family: monospace; }
 
   /* VA 상태 */
-  .va-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .va-badge.done      { background: var(--success-light); color: var(--success); }
+  .va-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 500; line-height: 18px; }
+  .va-badge.done      { background: var(--primary-light); color: var(--primary); }
   .va-badge.waiting   { background: var(--warning-light); color: var(--warning); }
-  .va-badge.ready     { background: var(--info-light,#e0f4fb); color: var(--info,#0EA5E9); }
+  .va-badge.ready     { background: var(--primary-light); color: var(--primary); }
   .va-badge.expired   { background: var(--border); color: var(--text-muted); }
   .va-badge.none      { background: var(--border); color: var(--text-muted); }
 

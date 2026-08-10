@@ -7,13 +7,13 @@
 @push('styles')
 <style>
   .shop-status-badge {
-    display:inline-flex; align-items:center; padding:2px 8px;
-    border-radius:6px; font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; padding:2px 6px;
+    border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
   }
   .shop-status-badge.confirmed  { background:var(--primary-light); color:var(--primary); }
-  .shop-status-badge.processing { background:var(--info-light);    color:var(--info); }
+  .shop-status-badge.processing { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.shipped    { background:var(--warning-light); color:var(--warning); }
-  .shop-status-badge.delivered  { background:var(--success-light); color:var(--success); }
+  .shop-status-badge.delivered  { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.cancelled  { background:var(--border-light);  color:var(--text-muted); }
   .order-num { font-size:12px; font-weight:700; color:var(--primary); }
 </style>
@@ -33,7 +33,7 @@
     <a href="{{ route('shop-orders.index', array_merge(request()->except('status','page'), $key !== 'all' ? ['status'=>$key] : [])) }}"
        class="tab-pill {{ $isActive ? 'active' : '' }}">
       {{ $label }}
-      <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(0,176,202,.12);color:var(--primary);">
+      <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(40,121,139,.12);color:var(--primary);">
         {{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}
       </span>
     </a>

@@ -11,7 +11,7 @@
   .org-ext-link { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); text-decoration:none; opacity:0; transition:opacity .15s; z-index:2; }
   .nav-item:hover .org-ext-link { opacity:1; }
   .org-ext-link:hover { color:var(--primary); opacity:1 !important; }
-  .impact-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+  .impact-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .impact-high   { background:var(--danger-light); color:var(--danger); }
   .impact-medium { background:var(--warning-light); color:#B45309; }
   .impact-low    { background:var(--border-light); color:var(--text-muted); }
@@ -103,7 +103,7 @@
         </li>
       </ul>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-        <select id="filterImpact" class="form-control form-select" style="width:120px;padding:6px 28px 6px 10px;font-size:12.5px;">
+        <select id="filterImpact" class="form-control form-select" style="width:120px;">
           <option value="">영향도 전체</option>
           <option value="HIGH">HIGH</option>
           <option value="MEDIUM">MEDIUM</option>

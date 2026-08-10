@@ -40,9 +40,9 @@
 @push('styles')
 <style>
   /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
@@ -54,7 +54,7 @@
   .summary-card {
     background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 18px 20px; display: flex; align-items: center; gap: 16px;
-    box-shadow: var(--shadow);
+
   }
   .summary-card .sc-icon {
     width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
@@ -142,8 +142,8 @@
 
   .efax-status-badge {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; font-weight: 600;
-    padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; line-height: 18px;
+    padding: 2px 6px; border-radius: 6px;
   }
   .efax-sent     { background: var(--success-light); color: var(--success); }
   .efax-failed   { background: var(--danger-light);  color: var(--danger); }

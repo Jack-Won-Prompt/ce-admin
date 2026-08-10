@@ -14,9 +14,9 @@
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 
   /* ── 패널 탭(조회결과 / 서류 등록) ── */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-secondary); border-bottom:3px solid transparent; margin-bottom:-2px;
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
     display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
@@ -24,13 +24,13 @@
 
   /* ── 서류 등록 패널 ── */
   .reg-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    background:var(--primary-light); border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--primary-light); border:1px solid var(--border); border-radius:var(--radius-lg);
     padding:12px 16px; margin-bottom:16px; }
   .reg-head .rx { font-family:monospace; font-size:13px; font-weight:800; color:var(--primary); }
   .reg-head .meta { font-size:12px; color:var(--text-secondary); }
   .reg-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
   @media (max-width:900px) { .reg-grid { grid-template-columns:1fr; } }
-  .reg-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
+  .reg-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; }
   .reg-card h4 { margin:0 0 12px; font-size:13px; font-weight:800; color:var(--primary);
     padding-bottom:9px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
   .reg-card h4 .n { margin-left:auto; font-size:11px; font-weight:700; color:var(--text-muted); }
@@ -41,7 +41,7 @@
   .doc-row .nm b { display:block; font-size:12.5px; font-weight:700; color:var(--text-primary);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .doc-row .nm span { font-size:11px; color:var(--text-muted); }
-  .doc-tag { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
+  .doc-tag { font-size:11px; font-weight:500; line-height:18px; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center;
     background:var(--primary-light); color:var(--primary); flex-shrink:0; }
   .doc-tag.att { background:var(--warning-light); color:var(--warning); }
   .doc-dl { font-size:11px; color:var(--primary); text-decoration:none; flex-shrink:0; white-space:nowrap; }
@@ -184,7 +184,7 @@
             <input type="file" id="regFile" accept=".pdf,.jpg,.jpeg,.png,.heic" required>
             <span class="reg-hint">PDF · JPG · PNG · HEIC, 최대 50MB</span>
           </div>
-          <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-sm" style="width:100%;height:38px;">
+          <button type="submit" id="regSubmitBtn" class="btn btn-primary btn-sm" style="width:100%;">
             <i class="bx bx-upload"></i> 등록
           </button>
           <div class="reg-hint" style="margin-top:10px;">

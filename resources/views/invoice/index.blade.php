@@ -13,7 +13,7 @@
 @media(max-width:700px) { .summary-grid{grid-template-columns:repeat(2,1fr);} }
 .s-card {
   background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:18px 20px; box-shadow:var(--shadow);
+  padding:18px 20px;
   display:flex; align-items:center; gap:16px;
 }
 .s-card .sc-icon { width:48px;height:48px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px; }
@@ -87,7 +87,7 @@
 .inv-cancelled { color:var(--danger);font-size:11px;font-weight:600; }
 .type-badge {
   display:inline-flex; align-items:center; gap:3px;
-  padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;
+  padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
 }
 .type-tax  { background:var(--success-light); color:var(--success); }
 .type-cash { background:var(--info-light);    color:var(--info); }

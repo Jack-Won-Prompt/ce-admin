@@ -54,26 +54,26 @@
       content: '';
       position: absolute; top: -160px; right: -120px;
       width: 500px; height: 500px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,176,202,.18) 0%, transparent 65%);
+      background: radial-gradient(circle, rgba(40,121,139,.18) 0%, transparent 65%);
       pointer-events: none;
     }
     .auth-left::after {
       content: '';
       position: absolute; bottom: -120px; left: -60px;
       width: 400px; height: 400px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,176,202,.10) 0%, transparent 65%);
+      background: radial-gradient(circle, rgba(40,121,139,.10) 0%, transparent 65%);
       pointer-events: none;
     }
 
     .deco-ring {
       position: absolute; border-radius: 50%; pointer-events: none;
-      border: 1px solid rgba(0,176,202,.15);
+      border: 1px solid rgba(40,121,139,.15);
     }
     .deco-ring-1 { width: 280px; height: 280px; top: 10%; right: 6%; animation: floatY 8s ease-in-out infinite; }
     .deco-ring-2 { width: 160px; height: 160px; bottom: 18%; right: 22%; animation: floatY 11s ease-in-out infinite reverse; }
-    .deco-ring-3 { width: 80px;  height: 80px;  top: 55%;  right: 4%;  animation: floatY 6s ease-in-out infinite; border-color: rgba(0,176,202,.25); }
+    .deco-ring-3 { width: 80px;  height: 80px;  top: 55%;  right: 4%;  animation: floatY 6s ease-in-out infinite; border-color: rgba(40,121,139,.25); }
 
-    .deco-dot { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(0,176,202,.4); }
+    .deco-dot { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(40,121,139,.4); }
     .deco-dot-1 { width:8px; height:8px; top:25%; right:38%; }
     .deco-dot-2 { width:5px; height:5px; top:60%; right:45%; animation: pulse 3.5s ease-in-out infinite; }
     .deco-dot-3 { width:10px;height:10px;top:38%;right:10%; animation: pulse 4.5s ease-in-out infinite .5s; }
@@ -96,7 +96,7 @@
       background: var(--primary);
       color: #fff; display: flex; align-items: center; justify-content: center;
       font-size: 16px; font-weight: 800; letter-spacing: -1px;
-      box-shadow: 0 8px 24px rgba(0,176,202,.45);
+      box-shadow: 0 8px 24px rgba(40,121,139,.45);
     }
     .left-brand-text { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -.4px; }
     .left-brand-sub  { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
@@ -105,7 +105,7 @@
     .left-otp-info { position: relative; z-index: 2; }
     .left-otp-icon {
       width: 72px; height: 72px; border-radius: 20px;
-      background: rgba(0,176,202,.2); border: 1px solid rgba(0,176,202,.3);
+      background: rgba(40,121,139,.2); border: 1px solid rgba(40,121,139,.3);
       display: flex; align-items: center; justify-content: center;
       font-size: 36px; color: #72BCCC; margin-bottom: 28px;
     }
@@ -127,7 +127,7 @@
     .otp-step { display: flex; align-items: flex-start; gap: 14px; }
     .otp-step-num {
       width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-      background: rgba(0,176,202,.25); border: 1px solid rgba(0,176,202,.4);
+      background: rgba(40,121,139,.25); border: 1px solid rgba(40,121,139,.4);
       color: #72BCCC; font-size: 12px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
     }
@@ -158,7 +158,7 @@
       content: '';
       position: absolute; top: -100px; right: -100px;
       width: 300px; height: 300px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,176,202,.04) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(40,121,139,.04) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -222,7 +222,7 @@
     }
     .otp-digit:focus {
       border-color: var(--primary); background: #fff;
-      box-shadow: 0 0 0 3px rgba(0,176,202,.1);
+      box-shadow: 0 0 0 3px rgba(40,121,139,.1);
     }
     .otp-digit.filled {
       border-color: var(--primary);
@@ -256,10 +256,10 @@
       font-size: 15px; font-weight: 700; cursor: pointer;
       font-family: inherit; letter-spacing: -.1px;
       transition: background .2s, box-shadow .2s, transform .12s;
-      box-shadow: 0 4px 16px rgba(0,176,202,.35);
+      box-shadow: 0 4px 16px rgba(40,121,139,.35);
       margin-bottom: 16px;
     }
-    .btn-login:hover  { background: var(--primary-dark); box-shadow: 0 6px 22px rgba(0,176,202,.45); }
+    .btn-login:hover  { background: var(--primary-dark); box-shadow: 0 6px 22px rgba(40,121,139,.45); }
     .btn-login:active { transform: scale(.99); }
     .btn-login:disabled {
       background: #C0C7D0; box-shadow: none; cursor: not-allowed; transform: none;

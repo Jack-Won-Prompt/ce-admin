@@ -248,9 +248,11 @@
     .menu-group.has-active > .menu-header { color: var(--primary); }
     /* 접힌 그룹에 알림 건수가 있으면 헤더에 합계를 표시(숨겨져 놓치지 않도록) */
     .menu-group-badge {
-      background: var(--danger); color: #fff;
-      font-size: 9.5px; font-weight: 700; padding: 1px 6px;
-      border-radius: 10px; letter-spacing: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 20px; height: 20px; padding: 0 6px;
+      background: var(--alert-100); color: var(--alert-500);
+      font-size: 10px; font-weight: 700;
+      border-radius: 999px; letter-spacing: 0; line-height: 1;
     }
     .menu-group:not(.is-collapsed) .menu-group-badge { display: none; }
     /* 아이콘 모드에서는 헤더가 숨겨져 펼칠 수 없으므로 접힘을 무시한다 */
@@ -280,15 +282,19 @@
     }
     /* 인라인 SVG 아이콘 — 색은 currentColor 라 위 규칙이 그대로 먹는다 */
     .ds-icon { width: 16px; height: 16px; flex-shrink: 0; display: block; }
+    /* Figma: 20×20 원형 · 10px/700 · 연한 배경 + 진한 글자
+       (빨강 alert-100/alert-500, 파랑 primary-100/primary-600) */
     .menu-badge {
       margin-left: auto;
-      background: var(--danger); color: #fff;
-      font-size: 10px; font-weight: 700; padding: 1px 6px;
-      border-radius: 20px; min-width: 18px; text-align: center;
-      line-height: 1.6;
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 20px; height: 20px; padding: 0;
+      background: var(--alert-100); color: var(--alert-500);
+      font-size: 10px; font-weight: 700;
+      border-radius: 999px; text-align: center;
+      line-height: 1;
     }
-    .menu-badge.blue   { background: var(--primary); }
-    .menu-badge.orange { background: var(--warning); }
+    .menu-badge.blue   { background: var(--primary-100); color: var(--primary-600); }
+    .menu-badge.orange { background: var(--warning-light); color: #B45309; }
 
     /* Menu Footer */
     .menu-footer { padding: 10px 8px; border-top: 1px solid var(--border); }
@@ -403,9 +409,9 @@
     .ds-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .ds-chip {
       display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-      padding: 6px 12px; border-radius: 999px;
-      background: var(--gray-200); color: var(--gray-500);
-      font-size: 13px; font-weight: 700; line-height: 1.6;
+      padding: 6px 10px; border-radius: 999px;
+      background: var(--gray-100); color: var(--gray-500);
+      font-size: 12px; font-weight: 700; line-height: 19px;
       border: none; cursor: pointer; text-decoration: none;
       transition: var(--transition);
     }
@@ -441,14 +447,15 @@
     /* 입력 영역은 9열 그리드 (174:1211) */
     .ds-filter-fields {
       flex: 1; min-width: 0;
-      display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px;
+      display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px;
     }
     .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .ds-filter-field.span-2 { grid-column: span 2; }
     .ds-filter-field.span-3 { grid-column: span 3; }
     .ds-filter-field.span-4 { grid-column: span 4; }
     /* 항목 이름 — Figma 필터 라벨 */
-    .ds-field-label { font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--gray-600); }
+    /* Figma 114:4778 — 라벨 13/500 · lh21 · grayscale/700. 라벨 21 + gap 8 + 인풋 32 = 필드 61 */
+    .ds-field-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
     .ds-field-range { display: flex; align-items: center; gap: 6px; min-width: 0; }
     .ds-field-range .form-control { min-width: 0; flex: 1; }
@@ -462,6 +469,7 @@
       border: 1px solid var(--gray-200); color: var(--gray-800);
       font-size: 13px; font-weight: 500; line-height: 1.6;
       cursor: pointer; transition: var(--transition); white-space: nowrap;
+      text-decoration: none;   /* <a> 로 쓸 때 브라우저 기본 밑줄이 나온다 */
     }
     .ds-btn:hover { background: var(--gray-50); }
     /* 주 동작(검색)은 테두리만 primary — Figma 174:1239 */
@@ -479,7 +487,7 @@
     .ds-grid-bar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 1.6; color: var(--gray-800); }
     .ds-grid-total b { color: var(--primary); }
-    .ds-grid-hint { font-size: 13px; font-weight: 500; color: var(--gray-600); }
+    .ds-grid-hint { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
     .ds-grid-card {
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
@@ -502,11 +510,12 @@
     ═══════════════════════════════════════════ */
 
     /* ── Cards ── */
+    /* Figma 카드에는 그림자가 없다 (radius 12 · 흰 배경) */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
+      box-shadow: none;
     }
     .card-header {
       display: flex; align-items: center; gap: 10px;
@@ -519,10 +528,11 @@
     .mt-4 { margin-top: 12px; } .mb-4 { margin-bottom: 12px; }
 
     /* ── Buttons ── */
+    /* Figma: 높이 32 · 13px/500 · padding 좌우 12 · radius 8 — .ds-btn 과 같은 규격 */
     .btn {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 16px; border-radius: var(--radius);
-      font-size: 13.5px; font-weight: 600; cursor: pointer;
+      padding: 5px 12px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; line-height: 20px; cursor: pointer;
       text-decoration: none; border: 1px solid transparent;
       transition: var(--transition); white-space: nowrap;
       font-family: inherit; letter-spacing: -.1px;
@@ -543,7 +553,7 @@
     .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
     .btn-ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
     .btn-ghost:hover { background: var(--bg); color: var(--primary); }
-    .btn-sm  { padding: 5px 12px; font-size: 12.5px; }
+    .btn-sm  { padding: 5px 12px; font-size: 13px; }
     .btn-xs  { padding: 3px 9px; font-size: 11.5px; }
     .w-full  { width: 100%; justify-content: center; }
     .flex-1  { flex: 1; }
@@ -554,16 +564,22 @@
     .btn[data-state="error"]   { background: var(--danger)  !important; border-color: var(--danger)  !important; color: #fff !important; pointer-events: none; }
 
     /* ── Badges ── */
+    /* Figma: 높이 22 · radius 6 · padding 2/6 · 11px/500 — 알약이 아니라 사각 라운드 */
     .badge {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
-      letter-spacing: -.1px;
+      padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 500;
+      line-height: 18px; letter-spacing: -.1px;
     }
+    /* 상태 배지 색 — Figma 8개 프레임 실측 결과에 맞춘다.
+       시안은 정상 진행 상태를 전부 primary 연톤으로 그린다(OCR 완료·주문 대기·대기 중 13건),
+       주의만 alert 연톤(검수 필요 4건)이다. 시안 전체에 초록·주황은 0건이므로
+       success/info 를 primary 로 돌린다. 상태 구분은 배지 안 라벨 문구가 계속 담당한다.
+       warning 은 시안에 대응 표본이 없어 손대지 않았다. */
     .badge-primary,   .bg-label-primary   { background: var(--primary-light); color: var(--primary); }
-    .badge-success,   .bg-label-success   { background: var(--success-light); color: var(--success); }
+    .badge-success,   .bg-label-success   { background: var(--primary-light); color: var(--primary); }
     .badge-warning,   .bg-label-warning   { background: var(--warning-light); color: #B45309; }
     .badge-danger,    .bg-label-danger    { background: var(--danger-light);  color: var(--danger); }
-    .badge-info,      .bg-label-info      { background: var(--info-light);    color: var(--info); }
+    .badge-info,      .bg-label-info      { background: var(--primary-light); color: var(--primary); }
     .badge-secondary, .bg-label-secondary { background: var(--border-light);  color: var(--text-secondary); }
     .badge.bg-primary  { background: var(--primary) !important; color: #fff; }
     .badge.bg-success  { background: var(--success) !important; color: #fff; }
@@ -575,25 +591,30 @@
     .form-group { margin-bottom: 10px; }
     .form-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; letter-spacing: -.1px; }
     .form-label span { color: var(--danger); }
+    /* Figma: 높이 32 · 13px · padding 좌우 12 · radius 8 · border gray-200
+       (5 + 20 + 5 + 테두리 2 = 32) */
     .form-control {
-      width: 100%; padding: 9px 12px; font-size: 13.5px;
+      width: 100%; padding: 5px 12px; font-size: 13px;
       border: 1px solid var(--border); border-radius: var(--radius);
       background: var(--bg-card); color: var(--text-primary);
       transition: var(--transition); outline: none; font-family: inherit;
-      line-height: 1.5;
+      line-height: 20px;
     }
     .form-control:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0,176,202,.12);
+      box-shadow: 0 0 0 3px rgba(40,121,139,.12);
     }
-    .form-control::placeholder { color: var(--text-muted); }
+    /* Figma placeholder = grayscale/500 (--text-muted 는 gray-400 이라 한 단계 연하다) */
+    .form-control::placeholder { color: var(--gray-500); }
     .form-select {
       appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 10px center;
       padding-right: 30px;
     }
-    textarea.form-control { resize: vertical; }
+    /* textarea 는 시안에 규격이 없다. 한 줄 입력(32px)에 맞춘 패딩을 그대로 쓰면
+       여러 줄 입력이 위아래로 눌리므로 기존 여백을 유지한다. */
+    textarea.form-control { resize: vertical; padding: 9px 12px; line-height: 1.5; }
     .input-group { display: flex; }
     .input-group .form-control { border-radius: var(--radius) 0 0 var(--radius); }
     .input-group .btn { border-radius: 0 var(--radius) var(--radius) 0; }
@@ -666,15 +687,16 @@
 
     /* ── Pagination ── */
     .pagination { display: flex; gap: 4px; align-items: center; margin: 0; flex-wrap: wrap; }
+    /* Figma: 높이 28 · radius 6 · 13px/500 · 활성은 채움이 아니라 연톤 */
     .page-item .page-link {
       display: flex; align-items: center; justify-content: center;
-      min-width: 32px; height: 32px; padding: 0 8px;
-      border-radius: 6px; font-size: 13px; font-weight: 600;
+      min-width: 28px; height: 28px; padding: 0 8px;
+      border-radius: 6px; font-size: 13px; font-weight: 500;
       border: 1px solid var(--border); background: #fff; color: var(--text-secondary);
       text-decoration: none; transition: var(--transition);
     }
     .page-item .page-link:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-    .page-item.active .page-link { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .page-item.active .page-link { background: var(--primary-light); border-color: var(--primary-light); color: var(--primary); }
     .page-item.disabled .page-link { opacity: .4; pointer-events: none; }
 
     /* ── Utilities ── */
@@ -745,7 +767,7 @@
     .chat-toast-icon { font-size: 11px; color: #94A3B8; }
     @keyframes chatBtnPulse {
       0%   { background: transparent; transform: scale(1); }
-      50%  { background: rgba(0,176,202,.2); transform: scale(1.15); }
+      50%  { background: rgba(40,121,139,.2); transform: scale(1.15); }
       100% { background: transparent; transform: scale(1); }
     }
 
@@ -994,22 +1016,24 @@
     .table-hover tbody tr:hover td { background: #FAFBFD; }
     .align-middle td { vertical-align: middle; }
     .ps-4 { padding-left: 18px; }
-    .form-control-sm { padding: 6px 10px; font-size: 12.5px; }
-    .form-select-sm { padding: 6px 28px 6px 10px; font-size: 12.5px; }
+    /* 시안의 입력 규격은 32 하나뿐이라 sm 도 같은 높이로 맞춘다 */
+    .form-control-sm { padding: 5px 12px; font-size: 13px; }
+    .form-select-sm { padding: 5px 28px 5px 12px; font-size: 13px; }
+    /* .btn 을 거치지 않는 독립 정의라 기본 버튼 규격(32 · 13/500)을 여기에도 맞춘다 */
     .btn-outline-secondary {
       background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary);
-      border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 600;
+      border-radius: var(--radius); padding: 5px 12px; font-size: 13px; font-weight: 500; line-height: 20px;
       cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: var(--transition);
     }
     .btn-outline-secondary:hover { border-color: var(--primary); color: var(--primary); }
     .btn-outline-primary {
       background: transparent; border: 1px solid var(--primary); color: var(--primary);
-      border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 600;
+      border-radius: var(--radius); padding: 5px 12px; font-size: 13px; font-weight: 500; line-height: 20px;
       cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: var(--transition);
       text-decoration: none;
     }
     .btn-outline-primary:hover { background: var(--primary); color: #fff; }
-    .btn-secondary { background: var(--border-light); border: 1px solid var(--border); color: var(--text-secondary); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-secondary { background: var(--border-light); border: 1px solid var(--border); color: var(--text-secondary); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; font-weight: 500; line-height: 20px; cursor: pointer; }
     .input-group { display: flex; }
     .input-group .form-control { border-radius: var(--radius) 0 0 var(--radius) !important; }
     .input-group .btn-outline-secondary { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
@@ -3965,7 +3989,7 @@ function showPrescriptionNotif(data) {
   padding: 9px 12px; font-size: 13px; line-height: 1.6; font-family: inherit;
   min-height: 40px; max-height: 120px; outline: none; background: #fff;
 }
-#inqThreadInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,176,202,.12); }
+#inqThreadInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(40,121,139,.12); }
 
 /* ── 문의 작성 폼 ── */
 .sp-form { padding: 18px; display: flex; flex-direction: column; gap: 14px; }

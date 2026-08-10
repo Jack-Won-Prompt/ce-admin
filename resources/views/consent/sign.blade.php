@@ -18,7 +18,7 @@
     .card {
       background: #fff;
       border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,176,202,.10);
+      box-shadow: 0 4px 24px rgba(40,121,139,.10);
       width: 100%;
       max-width: 480px;
       overflow: hidden;
@@ -198,7 +198,7 @@
     }
     .btn:active { transform: scale(.97); }
     .btn-cancel { background: #f3f4f6; color: #4b5563; }
-    .btn-agree  { background: #28798B; color: #fff; box-shadow: 0 4px 12px rgba(0,176,202,.3); }
+    .btn-agree  { background: #28798B; color: #fff; box-shadow: 0 4px 12px rgba(40,121,139,.3); }
     .btn-agree:disabled { background: #72BCCC; box-shadow: none; cursor: not-allowed; }
 
     /* 결과 화면 */

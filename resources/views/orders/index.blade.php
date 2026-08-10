@@ -47,13 +47,13 @@ window.HELP_TOUR_STEPS = [
 @push('styles')
 <style>
   /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
+    background:#fff; border:1px dashed var(--border); border-radius:var(--radius-lg); }
   /* Vuexy pill tabs */
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
   .status-tab {

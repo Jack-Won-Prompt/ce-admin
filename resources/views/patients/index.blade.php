@@ -38,17 +38,11 @@
     border-bottom: 2px solid var(--border); text-align:left; white-space:nowrap;
   }
   .patient-table td { padding:11px 14px; border-bottom:1px solid var(--border-light); font-size:13px; vertical-align:middle; }
-  .patient-table tbody tr:hover td { background:rgba(0,176,202,.04); cursor:pointer; }
+  .patient-table tbody tr:hover td { background:rgba(40,121,139,.04); cursor:pointer; }
   .patient-table tbody tr:last-child td { border-bottom:none; }
 
-  /* Vuexy-style soft badges */
-  .nhis-badge   { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
-  .nhis-yes     { background:var(--success-light);color:var(--success); }
-  .nhis-no      { background:var(--border-light);color:var(--text-muted); }
-  .gender-badge { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600; }
-  .gender-male  { background:var(--primary-light);color:var(--primary); }
-  .gender-female{ background:#fce7f3;color:#c026a0; }
-  .rx-count-badge { display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary); }
+  /* .nhis-badge · .gender-badge · .rx-count-badge 는 마크업 사용처가 0건이라 제거했다.
+     (알약 radius 20 · weight 600~700 · DS 밖 분홍 #fce7f3 을 쓰고 있었다) */
 
   /* ── Modal (Vuexy style) ── */
   .modal-overlay { display:none;position:fixed;inset:0;background:rgba(67,56,202,.3);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
@@ -62,9 +56,9 @@
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
   /* 패널 탭(조회결과/상세내용) */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
@@ -88,70 +82,75 @@
   .pt-hrow .pt-h-main { flex:1; min-width:0; }
   .pt-hrow .pt-h-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
   .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12.5px; }
-  .card-footer { padding:12px 18px;border-top:1px solid var(--border);background:var(--bg);border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+  /* 전역 .card-footer 재정의를 제거했다 — 이 뷰에는 .card-footer 마크업이 없어
+     다른 화면의 카드 푸터에만 부작용을 주고 있었다 */
 </style>
 @endpush
 
 @section('content')
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-  <div>
-    <h5 style="font-size:18px;font-weight:700;margin:0;color:var(--text-primary);">환자 정보</h5>
-    <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">
-      총 <strong id="total-count">{{ number_format($total) }}</strong>명 등록
-    </p>
+{{-- 검색 필터 — Figma 114:4778: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
+<form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="이름 또는 전화번호">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">건보</label>
+      <select name="nhis" class="form-control form-select">
+        <option value="">건보 전체</option>
+        <option value="1" @selected(request('nhis')==='1')>급여 대상</option>
+        <option value="0" @selected(request('nhis')==='0')>비급여</option>
+      </select>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">표시 건수</label>
+      <select name="per_page" class="form-control form-select">
+        <option value="10"  @selected(request('per_page','10')==='10')>10개씩</option>
+        <option value="15"  @selected(request('per_page','10')==='15')>15개씩</option>
+        <option value="30"  @selected(request('per_page','10')==='30')>30개씩</option>
+      </select>
+    </div>
+    {{-- 기간 — 시안은 라디오 3개를 한 칸에 넣는다. 링크 이동 방식은 그대로 둔다. --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        @foreach([10 => '10일', 15 => '15일', 30 => '30일'] as $days => $label)
+          <a href="{{ route('patients.index', array_merge(request()->except('repurchase_within','page'), ['repurchase_within' => $days])) }}"
+             class="ds-btn {{ request('repurchase_within') == $days ? 'ds-btn-primary' : '' }}"
+             style="flex:1;min-width:0;">재구매 {{ $label }}</a>
+        @endforeach
+      </div>
+    </div>
   </div>
-  @perm('patients', 'create')
-  <button class="btn btn-primary" onclick="openAddModal()">
-    <i class="bx bx-user-plus"></i> 환자 추가
-  </button>
-  @endperm
-</div>
-
-{{-- 필터 --}}
-<form method="GET" action="{{ route('patients.index') }}" class="filter-bar">
-  <div style="position:relative;flex:1;min-width:200px;">
-    <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;"></i>
-    <input type="text" name="q" value="{{ request('q') }}" placeholder="이름 또는 전화번호"
-           class="form-control" style="padding-left:30px;" />
-  </div>
-  <select name="nhis" class="form-control" style="width:130px;">
-    <option value="">건보 전체</option>
-    <option value="1" @selected(request('nhis')==='1')>급여 대상</option>
-    <option value="0" @selected(request('nhis')==='0')>비급여</option>
-  </select>
-  <select name="per_page" class="form-control" style="width:100px;">
-    <option value="10"  @selected(request('per_page','10')==='10')>10개씩</option>
-    <option value="15"  @selected(request('per_page','10')==='15')>15개씩</option>
-    <option value="30"  @selected(request('per_page','10')==='30')>30개씩</option>
-  </select>
-  <button type="submit" class="btn btn-outline">검색</button>
-  @if(request()->hasAny(['q','nhis','repurchase_within']))
-    <a href="{{ route('patients.index') }}" class="btn btn-outline">초기화</a>
-  @endif
-
-  {{-- 재구매일 기간 필터 --}}
-  <div style="display:flex;gap:6px;margin-left:auto;">
-    @foreach([10 => '재구매일 10일 이내', 15 => '재구매일 15일 이내', 30 => '재구매일 30일 이내'] as $days => $label)
-      <a href="{{ route('patients.index', array_merge(request()->except('repurchase_within','page'), ['repurchase_within' => $days])) }}"
-         class="btn btn-sm {{ request('repurchase_within') == $days ? 'btn-primary' : 'btn-outline' }}"
-         style="white-space:nowrap;">
-        <i class="fa-solid fa-calendar-check"></i> {{ $label }}
-      </a>
-    @endforeach
+  <div class="ds-filter-actions">
+    @if(request()->hasAny(['q','nhis','repurchase_within']))
+      <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
   </div>
 </form>
 
-{{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
+{{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 아이콘 없이 텍스트만 --}}
 <div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
+  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
 </div>
 
-<div id="pnlList">
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-    <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 처방전·상담·구매 이력을 확인합니다.</span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+<div id="pnlList" class="ds-grid-section">
+  {{-- Figma 114:4778 — 좌측 건수, 우측 안내·액션 --}}
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b id="total-count">{{ number_format($total) }}</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 처방전·상담·구매 이력을 확인합니다.</span>
+      @perm('patients', 'create')
+      <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
+      @endperm
+    </div>
   </div>
   <div id="patientGrid"></div>
 </div>
@@ -403,7 +402,7 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.filter-bar', title: '환자 검색', body: '이름, 전화번호, 주민번호 앞자리로 검색합니다. 엔터 또는 검색 버튼을 누르세요.' },
+  { selector: '.ds-filter-card', title: '환자 검색', body: '이름, 전화번호, 주민번호 앞자리로 검색합니다. 엔터 또는 검색 버튼을 누르세요.' },
   { selector: '#patientGrid', title: '환자 목록', body: '등록된 환자 목록입니다. 행을 체크한 뒤 <b>선택 상세</b> 버튼을 누르면 처방·주문 이력이 포함된 상세 화면으로 이동합니다.' },
   { selector: '[onclick="openAddModal()"]', title: '환자 신규 등록', body: '<b>환자 추가</b> 버튼을 클릭하면 이름·연락처·주민번호 등을 입력하는 등록 폼이 열립니다.' },
 ];

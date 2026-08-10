@@ -37,8 +37,8 @@
   /* 전송 내역 / 팩스 발송 탭 구성 */
   .fax-layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
   .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
-  .titab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .titab:hover { color:var(--primary); }
   .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
@@ -47,7 +47,7 @@
   @media(max-width:700px){ .fax-summary { grid-template-columns: 1fr 1fr; } }
   .sum-card {
     background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:16px 18px; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow);
+    padding:16px 18px; display:flex; align-items:center; gap:14px;
   }
   .sum-card .sc-icon {
     width:44px; height:44px; border-radius:10px; flex-shrink:0;
@@ -62,7 +62,7 @@
   /* ── 발송 폼 카드 ── */
   .send-card {
     background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    box-shadow:var(--shadow); overflow:hidden;
+ overflow:hidden;
   }
   .send-card-head {
     padding:16px 20px; border-bottom:1px solid var(--border);
@@ -79,7 +79,7 @@
     padding:0 12px; font-size:13px; color:var(--text); background:#fff;
     transition:border-color .15s;
   }
-  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,176,202,.12); }
+  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(40,121,139,.12); }
   .form-input.error { border-color:var(--danger); }
   select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 
@@ -98,7 +98,7 @@
     background:var(--primary-light); border:none; cursor:pointer;
     transition:background .15s;
   }
-  .receiver-add-btn:hover { background:rgba(0,176,202,.12); }
+  .receiver-add-btn:hover { background:rgba(40,121,139,.12); }
   .receiver-del-btn {
     width:28px; height:28px; border-radius:6px; border:none;
     background:var(--danger-light); color:var(--danger); cursor:pointer;
@@ -144,7 +144,7 @@
   /* ── 전송 내역 패널 ── */
   .hist-card {
     background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    box-shadow:var(--shadow); overflow:hidden;
+ overflow:hidden;
   }
   .hist-head {
     padding:16px 20px; border-bottom:1px solid var(--border);
@@ -184,21 +184,21 @@
     padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle;
   }
   .hist-table tr:last-child td { border-bottom:none; }
-  .hist-table tr:hover td { background:rgba(0,176,202,.03); }
+  .hist-table tr:hover td { background:rgba(40,121,139,.03); }
   .hist-table .mono { font-family:monospace; font-size:11px; }
   .btn-detail {
     height:26px; padding:0 10px; font-size:11px; font-weight:600;
     background:var(--primary-light); color:var(--primary); border:none;
     border-radius:5px; cursor:pointer; white-space:nowrap;
   }
-  .btn-detail:hover { background:rgba(0,176,202,.15); }
+  .btn-detail:hover { background:rgba(40,121,139,.15); }
   .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
 
   /* 상태 배지 */
-  .fax-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .fax-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
   .fax-badge.wait   { background:var(--border-light); color:var(--text-muted); }
-  .fax-badge.send   { background:var(--info-light);   color:var(--info); }
-  .fax-badge.ok     { background:var(--success-light);color:var(--success); }
+  .fax-badge.send   { background:var(--primary-light); color:var(--primary); }
+  .fax-badge.ok     { background:var(--primary-light); color:var(--primary); }
   .fax-badge.fail   { background:var(--danger-light); color:var(--danger); }
   .fax-badge.cancel { background:#fff3e0; color:#e65100; }
 
@@ -252,10 +252,10 @@
   .fax-preview-btn {
     height:24px; line-height:24px; padding:0 10px;
     background:var(--primary-light); color:var(--primary);
-    border:1px solid rgba(0,176,202,.3); border-radius:4px;
+    border:1px solid rgba(40,121,139,.3); border-radius:4px;
     font-size:11px; font-weight:600; cursor:pointer;
   }
-  .fax-preview-btn:hover { background:rgba(0,176,202,.15); }
+  .fax-preview-btn:hover { background:rgba(40,121,139,.15); }
 
   /* 페이지네이션 */
   .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }

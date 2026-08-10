@@ -15,8 +15,8 @@
   .pc-tab .cnt { opacity:.75; margin-left:4px; font-weight:700; }
   .filter-bar .fg { display:flex; flex-direction:column; gap:4px; }
   .filter-bar label { font-size:11px; font-weight:700; color:var(--text-muted); }
-  .filter-bar input { padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
-  .badge-type { display:inline-block; padding:2px 9px; border-radius:12px; font-size:11px; font-weight:700; }
+  .filter-bar input { padding:5px 12px; line-height:20px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+  .badge-type { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .badge-type.catheter { background:#e0f2fe; color:#0369a1; }
   .badge-type.stoma { background:#f0fdf4; color:#15803d; }
   .pc-table { width:100%; border-collapse:collapse; background:#fff; }
@@ -26,13 +26,13 @@
   .req-ok { color:var(--success); font-weight:700; }
   .req-no { color:var(--danger); font-weight:700; }
   /* 뷰 전환 탭(리스트/상세보기) */
-  .pc-vtabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pc-vtab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pc-vtabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pc-vtab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pc-vtab:hover { color:var(--primary); }
   .pc-vtab.active { color:var(--primary); border-bottom-color:var(--primary); }
   /* 상세보기 카드 */
-  .detail-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+  .detail-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px; }
   .detail-card h3 { margin:0 0 14px; font-size:14px; font-weight:800; color:var(--primary);
     padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
   .drow { display:grid; grid-template-columns:140px 1fr; gap:10px; padding:9px 0; border-bottom:1px solid #f1f4f8; font-size:13.5px; }
@@ -42,7 +42,7 @@
   .agree-yes { color:var(--success); font-weight:700; }
   .agree-no { color:var(--danger); font-weight:700; }
   .pc-detail-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
+    background:#fff; border:1px dashed var(--border); border-radius:var(--radius-lg); }
 </style>
 @endpush
 

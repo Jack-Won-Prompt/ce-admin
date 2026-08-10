@@ -33,13 +33,13 @@ window.HELP_TOUR_STEPS = [
 <style>
   .log-table-wrap { overflow-x:auto; }
   .log-table-wrap thead th { position:sticky; top:0; z-index:5; background:var(--bg); }
-  .type-badge-login { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:var(--success-light); color:var(--success); }
-  .type-badge-page  { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:var(--primary-light); color:var(--primary); }
+  .type-badge-login { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; background:var(--primary-light); color:var(--primary); }
+  .type-badge-page  { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; background:var(--primary-light); color:var(--primary); }
   .ip-cell  { font-family:monospace; font-size:12px; color:var(--text-secondary); }
   .url-cell { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted); }
   .ua-cell  { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted); cursor:help; }
   .stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
-  .stat-chip { display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:var(--radius); background:#fff; border:1px solid var(--border); font-size:13px; }
+  .stat-chip { display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:var(--radius-lg); background:#fff; border:1px solid var(--border); font-size:13px; }
   .stat-chip strong { font-size:18px; font-weight:700; color:var(--primary); }
 </style>
 @endpush

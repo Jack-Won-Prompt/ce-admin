@@ -12,17 +12,17 @@
   @media(max-width:600px){ .info-grid-2{grid-template-columns:1fr;} }
   .info-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
   .info-val   { font-size:13px; font-weight:500; }
-  .ww-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:6px; font-size:11.5px; font-weight:700; }
+  .ww-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .ww-02 { background:var(--primary-light); color:var(--primary); }
-  .ww-03, .ww-51 { background:var(--info-light); color:var(--info); }
+  .ww-03, .ww-51 { background:var(--primary-light); color:var(--primary); }
   .ww-04, .ww-52 { background:var(--warning-light); color:var(--warning); }
-  .ww-05 { background:var(--success-light); color:var(--success); }
+  .ww-05 { background:var(--primary-light); color:var(--primary); }
   .ww-06, .ww-99 { background:var(--border-light); color:var(--text-muted); }
-  .shop-status-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:700; }
+  .shop-status-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .shop-status-badge.confirmed  { background:var(--primary-light); color:var(--primary); }
-  .shop-status-badge.processing { background:var(--info-light);    color:var(--info); }
+  .shop-status-badge.processing { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.shipped    { background:var(--warning-light); color:var(--warning); }
-  .shop-status-badge.delivered  { background:var(--success-light); color:var(--success); }
+  .shop-status-badge.delivered  { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.cancelled  { background:var(--border-light);  color:var(--text-muted); }
   .amount-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border-light); font-size:13px; }
   .amount-row:last-child { border-bottom:none; }

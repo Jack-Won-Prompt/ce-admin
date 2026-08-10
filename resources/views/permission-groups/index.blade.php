@@ -8,9 +8,9 @@
 @push('styles')
 <style>
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-secondary); border-bottom:3px solid transparent; margin-bottom:-2px;
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
     display:inline-flex; align-items:center; gap:7px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
@@ -22,11 +22,11 @@
   .pg-head input[type=text] { height:36px; padding:0 12px; border:1px solid var(--border); border-radius:8px; font-size:13.5px; }
   .pg-head #pgName { width:200px; font-weight:700; }
   .pg-head #pgDesc { flex:1; min-width:220px; }
-  .pg-lock { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;
+  .pg-lock { display:inline-flex; align-items:center; font-size:11px; font-weight:500; line-height:18px; padding:2px 6px; border-radius:6px;
     background:var(--warning-light); color:var(--warning); }
 
   /* 권한 매트릭스 */
-  .pg-sec { background:#fff; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
+  .pg-sec { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; overflow:hidden; }
   .pg-sec > h4 { margin:0; padding:10px 16px; font-size:12.5px; font-weight:800; color:var(--primary);
     background:var(--primary-light); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .pg-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }

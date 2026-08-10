@@ -24,7 +24,7 @@
   .rx-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .rx-row:last-child { border-bottom:none; }
   .rx-row:hover { background:var(--bg); border-radius:var(--radius); padding-left:8px; }
-  .rx-status { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .rx-status { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
 
   /* Vuexy underline tabs */
   .tab-bar {
@@ -33,7 +33,7 @@
   .tab-btn {
     padding:10px 20px; font-size:13px; font-weight:600;
     color:var(--text-muted); border:none; background:transparent;
-    border-bottom:2px solid transparent; margin-bottom:-2px;
+    border-bottom:1px solid transparent; margin-bottom:-1px;
     cursor:pointer; transition:var(--transition);
   }
   .tab-btn:hover { color:var(--primary); }

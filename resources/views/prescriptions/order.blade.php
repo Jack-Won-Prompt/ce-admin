@@ -128,10 +128,10 @@
   .field-group .field-status { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; }
   .field-group input.has-warn { border-color: var(--warning); background: #fffbeb; }
   .field-group input.has-ok   { border-color: var(--success); }
-  .benefit-box { padding: 12px 14px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius); margin-top: 4px; }
+  .benefit-box { padding: 12px 14px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius-lg); margin-top: 4px; }
   .benefit-title { font-size: 13px; font-weight: 700; color: var(--success); }
   .benefit-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.8; }
-  .product-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); margin-bottom: 8px; cursor: pointer; transition: var(--transition); }
+  .product-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); margin-bottom: 8px; cursor: pointer; transition: var(--transition); }
   .product-card.selected { border-color: var(--primary); background: var(--primary-light); }
   .product-card:hover { border-color: var(--primary); }
   .product-img { width: 44px; height: 44px; border-radius: 8px; background: #cce9f6; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
@@ -177,12 +177,13 @@
      액션 버튼이 저마다 다른 색으로 채워져 있어 무엇이 더 중요한 동작인지 알기 어려웠다.
      시안은 모두 같은 흰 버튼으로 두고 글자색으로만 성격을 나눈다. */
   .pib-name { font-size:16px; font-weight:700; line-height:1.6; color:var(--gray-1000); }
+  /* Figma: 나이 pill h22 (테두리 2 + 패딩 4 + 16), 전화·병원·담당 tag h18 (테두리 없음) */
   .pib-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px;
               background:var(--gray-100); border:1px solid var(--gray-200);
-              font-size:11px; font-weight:500; line-height:1.6; color:var(--gray-800); white-space:nowrap; }
+              font-size:11px; font-weight:500; line-height:16px; color:var(--gray-800); white-space:nowrap; }
   .pib-tag { display:inline-flex; align-items:center; justify-content:center; padding:0 6px; border-radius:6px;
              background:var(--primary-light); color:var(--primary);
-             font-size:11px; font-weight:500; line-height:1.6; white-space:nowrap; }
+             font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
   .pib-val { font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000); }
   .pib-dot { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
   .pib-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -304,7 +305,7 @@
   @media (max-width: 768px)  { .order-layout { grid-template-columns: 1fr; } .action-footer { left: 0; flex-wrap: wrap; bottom: 42px; } }
 
   .section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .item-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 6px; background: var(--bg-card); }
+  .item-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px 10px; margin-bottom: 6px; background: var(--bg-card); }
   .item-num { font-size: 12px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 4px; padding: 0 9px; flex-shrink: 0; align-self: flex-end; height: 34px; display: flex; align-items: center; }
   /* Inline row: name + qty + buttons */
   .item-row { display: flex; align-items: flex-start; gap: 6px; }
@@ -315,7 +316,7 @@
   /* 카드뷰 item-row 안에서는 다른 입력 항목과 높이 통일 */
   .item-row .item-nhis-sel { height:34px !important; padding:0 4px !important; }
   .tab-view-table .item-nhis-sel { width:100% !important; }
-  .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius); margin-top: 4px; }
+  .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius-lg); margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* 판매 유형 라디오 버튼 */
@@ -370,10 +371,7 @@
   .rx-grid-4      { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px 24px; }
 
   /* 입력칸 — 시안 148:2665: 높이 32, 좌우 12, radius 8, 값 13/400 (#101317).
-     기본 .form-control 은 9/12 여백에 13.5px 이라 아코디언 안에서만 맞춘다. */
-  .rx-acc-body .form-control { height:32px; padding:0 12px; font-size:13px; font-weight:400; line-height:1.6;
-                               border-radius:8px; border-color:var(--gray-200); color:var(--gray-1000); }
-  .rx-acc-body .form-control::placeholder { color:var(--gray-500); }
+     전역 .form-control 이 이미 같은 규격이라 여기서 다시 잠그지 않는다. */
   .rx-acc-body .form-select  { background-position:right 12px center; padding-right:30px; }
   .rx-acc-body textarea.form-control { height:auto; min-height:80px; padding:12px; }
   /* 구획 — 시안 148:2652: 소제목과 입력 사이 12, 구획끼리 24 */
@@ -424,7 +422,7 @@
   .pc-list-item:hover { background: var(--bg) !important; }
 
   /* 이전 상담 이력 아코디언 */
-  .hist-acc-item { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; overflow:hidden; }
+  .hist-acc-item { border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:6px; overflow:hidden; }
   .hist-acc-item.is-open { border-color:var(--primary-accent); }
   .hist-acc-header { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; cursor:pointer; background:var(--bg); font-size:12px; font-weight:700; color:var(--text-primary); user-select:none; transition:background .15s; }
   .hist-acc-header:hover { background:var(--primary-light); }
@@ -942,7 +940,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @foreach($smsTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
                        class="sms-tpl-item" data-code="{{ $code }}" data-text="{{ addslashes($tpl['text']) }}"
-                       onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(0,176,202,.06)';"
+                       onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(40,121,139,.06)';"
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="sms_tpl" value="{{ $code }}" style="accent-color:var(--primary);" onchange="onSmsTplChange(this)">
                   <div>
@@ -5248,7 +5246,7 @@ window.HELP_TOUR_STEPS = [
     document.querySelectorAll('.sms-tpl-item').forEach(item => {
       const checked = item.querySelector('input').checked;
       item.style.borderColor = checked ? 'var(--primary)' : 'var(--border)';
-      item.style.background  = checked ? 'rgba(0,176,202,.06)' : '';
+      item.style.background  = checked ? 'rgba(40,121,139,.06)' : '';
     });
 
     const label = radio.closest('.sms-tpl-item');

@@ -53,8 +53,8 @@
 
 @push('styles')
 <style>
-  .filter-bar .form-control { height: 36px; font-size: 13px; }
-  .filter-bar .btn { height: 36px; white-space: nowrap; }
+  .filter-bar .form-control { height: 32px; font-size: 13px; }
+  .filter-bar .btn { height: 32px; white-space: nowrap; }
 
   /* ── Vuexy pill status tabs ── */
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -69,9 +69,9 @@
   .status-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
   .status-tab .tab-count {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 20px; height: 18px; padding: 0 6px;
-    border-radius: 20px; font-size: 10.5px; font-weight: 700;
-    background: rgba(255,255,255,.25); color: inherit;
+    min-width: 16px; height: 16px; padding: 0;
+    border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1;
+    background: var(--gray-0); color: var(--primary);
   }
   .status-tab:not(.active) .tab-count { background: var(--border-light); color: var(--text-muted); }
 
@@ -105,10 +105,10 @@
   .assign-select:hover {
     border-color: var(--primary); border-style: solid;
     background-color: var(--primary-light); color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0,176,202,.12);
+    box-shadow: 0 0 0 3px rgba(40,121,139,.12);
   }
   .assign-select:focus { outline: none; border-color: var(--primary); border-style: solid;
-    box-shadow: 0 0 0 3px rgba(0,176,202,.2); }
+    box-shadow: 0 0 0 3px rgba(40,121,139,.2); }
   .assign-select.saving { opacity: .5; pointer-events: none; }
 </style>
 @endpush
@@ -169,7 +169,7 @@
       </a>
     @endif
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-      <select name="per_page" class="form-control form-select" style="width:100px;height:36px;font-size:13px;"
+      <select name="per_page" class="form-control form-select" style="width:100px;height:32px;font-size:13px;"
               onchange="this.form.submit()">
         @foreach([10, 20, 50, 100] as $n)
           <option value="{{ $n }}" {{ (int)request('per_page', 10) === $n ? 'selected' : '' }}>

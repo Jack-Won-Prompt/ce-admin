@@ -50,7 +50,7 @@ window.HELP_TOUR_STEPS = [
 .view-tabs {
   display:flex; gap:0;
   border:1.5px solid var(--primary); border-radius:8px; overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,176,202,.15);
+  box-shadow:0 2px 8px rgba(40,121,139,.15);
 }
 .view-tab  {
   display:flex; align-items:center; gap:6px;
@@ -156,7 +156,7 @@ window.HELP_TOUR_STEPS = [
   display:inline-flex; align-items:center; justify-content:center;
   margin-top:8px; width:28px; height:28px; border-radius:50%;
   background:var(--primary); color:#fff; font-size:12px; font-weight:700;
-  box-shadow:0 2px 6px rgba(0,176,202,.35);
+  box-shadow:0 2px 6px rgba(40,121,139,.35);
 }
 .cal-count-label {
   font-size:10px; color:var(--text-muted); margin-top:3px;
@@ -166,7 +166,7 @@ window.HELP_TOUR_STEPS = [
 #dayPanel {
   display:none; margin-top:16px;
   border:1px solid var(--border); border-radius:var(--radius-lg);
-  background:var(--bg-card); box-shadow:var(--shadow-md);
+  background:var(--bg-card);
   overflow:hidden;
 }
 .day-panel-header {

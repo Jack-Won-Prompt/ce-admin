@@ -10,16 +10,18 @@
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    /* 이 화면은 layouts/app.blade.php 를 쓰지 않아 팔레트를 여기서 선언한다.
+       템플릿 잔재인 보라 계열이 남아 있어 Figma DS 값으로 맞춘다. */
     :root {
-      --primary:       #7367F0;
-      --primary-dark:  #5A52C5;
-      --primary-light: #F5F3FF;
-      --danger:        #EF4444;
-      --success:       #22C55E;
-      --text-primary:  #1E1B4B;
-      --text-muted:    #6B7280;
-      --border:        #E5E7EB;
-      --bg:            #F5F3FF;
+      --primary:       #28798B;   /* primary/500 */
+      --primary-dark:  #0B5C6E;   /* primary/600 */
+      --primary-light: #E9F9FB;   /* primary/50  */
+      --danger:        #D73D3F;   /* alert/500   */
+      --success:       #28798B;   /* 시안에 success 계열이 없어 primary 를 쓴다 */
+      --text-primary:  #101317;   /* grayscale/1000 */
+      --text-muted:    #999EA4;   /* grayscale/400  */
+      --border:        #E8EAEC;   /* grayscale/200  */
+      --bg:            #F3F5F7;   /* grayscale/100  */
     }
     html, body { height:100%; }
     body {

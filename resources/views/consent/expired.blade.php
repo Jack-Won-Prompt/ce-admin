@@ -7,7 +7,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif; background: #f0f4ff; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,176,202,.10); width: 100%; max-width: 440px; padding: 48px 32px; text-align: center; }
+    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(40,121,139,.10); width: 100%; max-width: 440px; padding: 48px 32px; text-align: center; }
     .icon { font-size: 56px; margin-bottom: 18px; }
     h1 { font-size: 20px; font-weight: 800; color: #f59e0b; margin-bottom: 10px; }
     p  { font-size: 14px; color: #6b7280; line-height: 1.7; }

@@ -71,7 +71,7 @@
   }
   .amt-card {
     background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 12px 14px; text-align: center;
+    border-radius: var(--radius-lg); padding: 12px 14px; text-align: center;
   }
   .amt-card .alabel { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
   .amt-card .avalue { font-size: 15px; font-weight: 800; }
@@ -186,7 +186,7 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
-    <span class="badge badge-{{ $statusBadge[1] }}" style="font-size:13px;padding:6px 14px;">
+    <span class="badge badge-{{ $statusBadge[1] }}">
       {{ $statusBadge[0] }}
     </span>
   </div>
@@ -506,7 +506,7 @@
           $rl = $nhisResultLabels[$record->nhis_result] ?? ['label'=>'-','badge'=>'secondary'];
         @endphp
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-          <span class="badge badge-{{ $rl['badge'] }}" style="font-size:14px;padding:7px 18px;">{{ $rl['label'] }}</span>
+          <span class="badge badge-{{ $rl['badge'] }}">{{ $rl['label'] }}</span>
           @if($record->nhis_result_at)
             <span style="font-size:12px;color:var(--text-muted);">{{ $record->nhis_result_at->format('Y-m-d H:i') }}</span>
           @endif

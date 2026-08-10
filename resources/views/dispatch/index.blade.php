@@ -8,9 +8,9 @@
 @push('styles')
 <style>
   /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); }
-  .pnl-tab { padding:9px 20px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
@@ -34,8 +34,8 @@
   }
   .type-tab:not(.active) .tab-count { background:var(--border-light); color:var(--text-muted); }
 
-  .filter-bar .form-control { height:36px; font-size:13px; }
-  .filter-bar .btn { height:36px; white-space:nowrap; }
+  /* 전역 규격(h32 · 13px)을 그대로 쓴다 */
+  .filter-bar .btn { white-space:nowrap; }
 
   .empty-state { text-align:center; padding:56px 24px; color:var(--text-muted); }
   .empty-state i { font-size:44px; margin-bottom:12px; display:block; opacity:.3; }
@@ -89,7 +89,7 @@
       </a>
     @endif
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-      <select name="per_page" class="form-control form-select" style="width:100px;height:36px;font-size:13px;"
+      <select name="per_page" class="form-control form-select" style="width:100px;"
               onchange="this.form.submit()">
         @foreach([10, 20, 50, 100] as $n)
           <option value="{{ $n }}" {{ $perPage === $n ? 'selected' : '' }}>{{ $n }}개씩</option>

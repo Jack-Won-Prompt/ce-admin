@@ -39,15 +39,15 @@
 /* 발행 내역 / 즉시발행 탭 구성 */
 .ti-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
 .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
-.titab { padding:9px 18px; font-size:13.5px; font-weight:700; border:none; background:none; cursor:pointer;
-  color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; display:inline-flex; align-items:center; gap:6px; }
+.titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
+  color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
 .titab:hover { color:var(--primary); }
 .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
 /* ── 요약 카드 ── */
 .ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
 @media(max-width:900px){ .ti-summary { grid-template-columns:1fr 1fr; } }
-.sum-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); }
+.sum-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; align-items:center; gap:14px; }
 .sum-card .sc-icon { width:44px; height:44px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; }
 .sum-card .sc-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
 .sum-card .sc-val   { font-size:22px; font-weight:800; line-height:1; }
@@ -57,7 +57,7 @@
 .sum-card.gray  .sc-icon { background:var(--border-light);  color:var(--text-muted); }
 
 /* ── 발행 폼 카드 ── */
-.ti-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); overflow:hidden; }
+.ti-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
 .ti-card-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; font-weight:700; font-size:14px; }
 .ti-card-head i { font-size:18px; color:var(--primary); }
 .ti-card-body { padding:18px; display:flex; flex-direction:column; gap:0; }
@@ -79,7 +79,7 @@
   height:36px; border:1px solid var(--border); border-radius:var(--radius);
   padding:0 10px; font-size:12.5px; color:var(--text); background:#fff; transition:border-color .15s;
 }
-.form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(0,176,202,.12); }
+.form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(40,121,139,.12); }
 select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; }
 .form-input-full { grid-column:1/-1; }
 
@@ -90,7 +90,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 }
 .amount-box .ab-label { font-size:10.5px; font-weight:600; color:var(--primary); opacity:.8; margin-bottom:2px; }
 .amount-box .ab-val   { font-size:14px; font-weight:700; color:var(--primary); }
-.amount-box .ab-total { grid-column:1/-1; border-top:1px solid rgba(0,176,202,.2); padding-top:10px; display:flex; justify-content:space-between; align-items:center; }
+.amount-box .ab-total { grid-column:1/-1; border-top:1px solid rgba(40,121,139,.2); padding-top:10px; display:flex; justify-content:space-between; align-items:center; }
 .amount-box .ab-total-label { font-size:12px; font-weight:700; color:var(--primary); }
 .amount-box .ab-total-val   { font-size:20px; font-weight:900; color:var(--primary); }
 
@@ -107,7 +107,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   width:100%; height:30px; border:1px solid transparent; border-radius:4px;
   padding:0 6px; font-size:11.5px; text-align:right; background:transparent; color:var(--text);
 }
-.detail-table input:focus { outline:none; border-color:var(--primary); background:#fff; box-shadow:0 0 0 2px rgba(0,176,202,.1); }
+.detail-table input:focus { outline:none; border-color:var(--primary); background:#fff; box-shadow:0 0 0 2px rgba(40,121,139,.1); }
 .detail-table input.text-left { text-align:left; }
 .detail-del { width:26px; height:26px; background:var(--danger-light); color:var(--danger); border:none; border-radius:4px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; margin:auto; }
 .detail-del:hover { background:rgba(239,68,68,.15); }
@@ -128,7 +128,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 .issue-btn:disabled { opacity:.6; cursor:not-allowed; }
 
 /* ── 내역 패널 ── */
-.hist-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); overflow:hidden; }
+.hist-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
 .hist-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .hist-head-title { font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; flex:1; min-width:140px; }
 .hist-head-title i { font-size:18px; color:var(--primary); }
@@ -145,17 +145,17 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 .hist-table th { padding:9px 10px; background:var(--bg); font-weight:600; font-size:11px; color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
 .hist-table td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .hist-table tr:last-child td { border-bottom:none; }
-.hist-table tr:hover td { background:rgba(0,176,202,.03); }
+.hist-table tr:hover td { background:rgba(40,121,139,.03); }
 .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
 
 /* 상태 배지 */
-.ti-badge { display:inline-flex; align-items:center; padding:3px 8px; border-radius:20px; font-size:10.5px; font-weight:600; white-space:nowrap; }
+.ti-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
 .ti-badge.draft   { background:var(--border-light);  color:var(--text-muted); }
 .ti-badge.issued  { background:var(--primary-light); color:var(--primary); }
-.ti-badge.nts     { background:var(--success-light); color:var(--success); }
+.ti-badge.nts     { background:var(--primary-light); color:var(--primary); }
 .ti-badge.cancel  { background:var(--danger-light);  color:var(--danger); }
-.ti-badge.taxvat  { background:var(--info-light);    color:var(--info); }
-.ti-badge.taxzero { background:var(--success-light); color:var(--success); }
+.ti-badge.taxvat  { background:var(--primary-light); color:var(--primary); }
+.ti-badge.taxzero { background:var(--primary-light); color:var(--primary); }
 .ti-badge.taxfree { background:var(--border-light);  color:var(--text-muted); }
 .ti-badge.rx      { background:#ede9fe; color:#7c3aed; }
 

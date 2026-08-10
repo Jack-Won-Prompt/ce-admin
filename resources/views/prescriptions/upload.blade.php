@@ -152,7 +152,7 @@
   .history-body  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
   .history-name  { font-size:12px; font-weight:500; color:var(--gray-1000); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .history-meta  { font-size:11px; font-weight:500; color:var(--gray-500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .history-badge { padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; white-space:nowrap; flex-shrink:0; }
+  .history-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; flex-shrink:0; }
 
   /* mobile upload */
   .mobile-upload-card { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--primary-light); border-radius:12px; margin-bottom:12px; }

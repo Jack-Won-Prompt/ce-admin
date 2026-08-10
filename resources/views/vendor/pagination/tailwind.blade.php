@@ -63,7 +63,7 @@
     transition:all .18s ease; cursor:pointer;
   }
   .pg-btn:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
-  .pg-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 3px 10px rgba(0,176,202,.3); }
+  .pg-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 3px 10px rgba(40,121,139,.3); }
   .pg-btn.disabled { opacity:.45; cursor:not-allowed; pointer-events:none; }
   .pg-btn .bx { font-size:18px; line-height:1; }
 </style>

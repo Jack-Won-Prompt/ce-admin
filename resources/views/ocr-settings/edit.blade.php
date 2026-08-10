@@ -7,7 +7,7 @@
 @push('styles')
 <style>
   .ocr-form { max-width:720px; }
-  .ocr-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+  .ocr-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; }
   .ocr-card h3 { margin:0 0 16px; font-size:14px; font-weight:800; color:var(--primary);
     padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
   .ocr-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
@@ -23,9 +23,9 @@
   .opt.sel { border-color:var(--primary); background:var(--primary-light); }
   .opt .t { font-size:14px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
   .opt .d { font-size:12.5px; color:var(--text-secondary); margin-top:4px; line-height:1.6; }
-  .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
-  .badge-on  { background:#eafaf1; color:#15803d; }
-  .badge-off { background:#fdecea; color:#c0392b; }
+  /* 전역 .badge(h22 · radius 6 · 11px/500)를 그대로 쓴다 — 재정의하면 이 화면만 알약 모양으로 남는다 */
+  .badge-on  { background:var(--primary-light); color:var(--primary); }
+  .badge-off { background:var(--alert-50);      color:var(--alert-500); }
   .badge-def { background:var(--primary); color:#fff; }
   .ocr-actions { margin-top:18px; display:flex; gap:10px; }
   .btn-save { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:11px 22px;
