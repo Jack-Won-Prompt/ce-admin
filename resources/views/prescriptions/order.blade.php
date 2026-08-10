@@ -83,9 +83,11 @@
   /* ── 뷰어 카드 머리 (시안 137:883) — 높이 44, 아래 선 ── */
   /* 뷰어가 화면보다 길면 그 안에서 스크롤된다. 그때 처방번호 줄까지 밀려 올라가면
      지금 무엇을 보고 있는지 알 수 없다. 이 줄만 뷰어 맨 위에 붙여 둔다. */
+  /* 시안 148:1548 은 44 안에 1px 선을 포함한다(strokeAlign INSIDE).
+     아래 여백에서 그 1 을 빼야 머리 전체가 44 가 된다(빼지 않으면 45). */
   .vw-head { position:sticky; top:0; z-index:3;
-             display:flex; align-items:center; justify-content:space-between; gap:8px;
-             min-height:44px; padding:8px 16px; background:var(--gray-0);
+             display:flex; align-items:center; justify-content:space-between; gap:4px;
+             min-height:44px; padding:8px 16px 7px; background:var(--gray-0);
              border-bottom:1px solid var(--gray-200); }
   .vw-nav  { display:flex; align-items:center; gap:8px; min-width:0; }
   .vw-nav-btn { width:20px; height:20px; display:flex; align-items:center; justify-content:center;
@@ -207,17 +209,31 @@
   .pib-btn i { font-size:14px; }
   .pib-btn-primary { color:var(--primary); }
   .pib-btn-off { background:var(--gray-50); color:var(--gray-400); cursor:default; }
-  /* 아이콘 오른쪽은 두 단이다 — 윗단은 이름과 버튼이 양끝으로, 아랫단은 연락처들 */
-  /* 이름·연락처·액션을 한 줄에 둔다. 액션은 오른쪽 끝으로 민다. */
-  .pib-body     { flex:1; min-width:0; display:flex; flex-direction:row; align-items:center;
-                  gap:16px; flex-wrap:wrap; }
-  /* 마크업 순서는 이름 → 액션 → 연락처지만, 화면에서는 연락처가 이름 옆에 와야 한다.
-     액션 묶음에 팝오버가 잔뜩 붙어 있어 마크업을 옮기는 대신 순서만 바꾼다. */
-  .pib-body > .pib-row-meta { order:1; }
-  .pib-body > .pib-actions  { order:2; margin-left:auto; }
+  /* 시안 148:1304 실측 — 바 1568×78 · r12 · pad 12/16 · gap 16 · 가로
+       아바타 54×54 · r12 · bg gray-100
+       오른쪽 묶음(세로 gap 2)
+         윗줄 h32 : [이름 + 칩] ←→ [액션 버튼]   (가로 gap 8)
+         아랫줄 h19: 전화 · 병원 · 담당           (가로 gap 12)
+     마크업 순서는 이름 → 액션 → 연락처다. 액션 묶음에 팝오버가 잔뜩 붙어 있어
+     마크업을 옮기지 않고 격자 위치만 지정한다. */
+  .pib-avatar { width:54px; height:54px; flex-shrink:0; border-radius:12px;
+                background:var(--gray-100); display:flex; align-items:center; justify-content:center;
+                color:var(--gray-400); font-size:24px; }
+  .pib-body     { flex:1; min-width:0;
+                  display:grid; grid-template-columns:minmax(0,1fr) auto;
+                  align-items:center; row-gap:2px; column-gap:8px; }
+  .pib-body > .pib-ident    { grid-row:1; grid-column:1; }
+  .pib-body > .pib-actions  { grid-row:1; grid-column:2; }
+  .pib-body > .pib-row-meta { grid-row:2; grid-column:1 / -1; }
   .pib-ident    { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
   .pib-actions  { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; }
   .pib-row-meta { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  /* 좁은 폭에서는 버튼 줄이 아래로 내려가야 이름·연락처가 눌리지 않는다 */
+  @media (max-width: 1280px) {
+    .pib-body { grid-template-columns:minmax(0,1fr); }
+    .pib-body > .pib-actions  { grid-row:2; grid-column:1; justify-content:flex-start; }
+    .pib-body > .pib-row-meta { grid-row:3; }
+  }
   /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
      폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */
   /* 좌우 두 영역 모두 흰 카드 (시안 137:441 · 137:517) */
@@ -244,6 +260,14 @@
   .order-layout.is-split > #viewerCol { position: static; top: auto; max-height: none;
                                         height: 100%; overflow: hidden auto; }
   .order-layout.is-split > #tabsCol   { height: 100%; overflow: hidden auto; }
+  /* 시안(148:1304)은 오른쪽 열 1196 안에서 아코디언 카드가 1164(=1196-16-16)다.
+     구현은 세로 스크롤바가 안쪽 폭에서 15px 을 먹어 1149 가 된다.
+     스크롤바 자리를 없애면(scrollbar-width:none) 그 15px 을 되찾을 수 있지만,
+     이 열은 분할 보기에서 혼자 스크롤되는 유일한 곳이다 — 1920×1200 에서 안쪽
+     내용 1717 중 985 만 보이고 732(43%)가 아래에 숨는다. 1920×1080 이면 852(50%).
+     페이지 자체는 스크롤되지 않으므로 막대를 없애면 '얼마나 남았는지' 알릴 것이
+     화면에 하나도 남지 않는다. 15px(1.3%)보다 그 표시가 크다고 보고 막대를 살려 둔다.
+     시안 폭 1164 는 스크롤바가 보이는 한 퍼블리싱으로 맞출 수 없다 — 디자이너 확인 필요. */
   /* 열이 스크롤되면 탭 줄이 따라 올라가 버린다. 열 안에서 붙여 둔다. */
   .order-layout.is-split > #tabsCol > #tabBarOuter { position: sticky; top: 0; z-index: 2;
                                         background: var(--gray-0); border-radius: 12px 12px 0 0; }
@@ -392,7 +416,8 @@
   /* 입력칸 — 시안 148:2665: 높이 32, 좌우 12, radius 8, 값 13/400 (#101317).
      전역 .form-control 이 이미 같은 규격이라 여기서 다시 잠그지 않는다. */
   .rx-acc-body .form-select  { background-position:right 12px center; padding-right:30px; }
-  .rx-acc-body textarea.form-control { height:auto; min-height:80px; padding:12px; }
+  /* 메모 상자 — 시안 148:1304 Frame 48101493: 446×112 · r8 · pad 12 */
+  .rx-acc-body textarea.form-control { height:auto; min-height:112px; padding:12px; }
   /* 구획 — 시안 148:2652: 소제목과 입력 사이 12, 구획끼리 24 */
   /* 구획 안은 2열이다 — 열 사이 24, 열 안의 줄 사이 8 (시안 148:2660) */
   .rx-cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
@@ -409,6 +434,10 @@
   .rx-sec + .rx-sec { margin-top:24px; }
   /* 소제목 — 시안 148:2654: 14/700 #333940, 줄 높이 28, 아이콘·밑줄 없음 */
   .rx-sec-head  { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:28px; }
+  /* 소제목 줄(1132×28)과 필드 묶음(1132×152) 은 한 프레임 안에서 gap 12 다
+     (시안 148:1304 — Frame 48101488 · 48101489 둘 다 itemSpacing 12 · VERTICAL).
+     마크업이 .rx-sec 로 감싸여 있지 않아 붙은 형제에게 여백을 준다. */
+  .rx-sec-head + .rx-cols { margin-top:12px; }
   .rx-sec-title { font-size:14px; font-weight:700; line-height:1.6; color:var(--gray-800); }
   /* 메모 버튼 — 시안 148:2655: 높이 28, 좌우 8, 검정 테두리, 12/500 */
   .rx-sec-btn { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 8px;
@@ -430,6 +459,29 @@
   .rx-field-label { display:flex; align-items:center; width:100px; min-height:32px; flex-shrink:0;
                     font-size:13px; font-weight:500; line-height:1.2; color:var(--gray-700);
                     white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
+  /* '배송 주소 동일' 체크 묶음 — 시안 148:1304 Frame 48101499:
+     묶음 96×21 · gap 6, 상자 16×16 · r6 · 1px #28798B, 글자 74 · 13/500 · #28798B.
+     기본 체크박스는 모서리를 못 깎아 appearance 를 끄고 체크 표시를 직접 그린다. */
+  #sameShipping { appearance:none; -webkit-appearance:none; box-sizing:border-box; position:relative;
+                  width:16px; height:16px; margin:0; flex-shrink:0;
+                  border:1px solid var(--primary); border-radius:6px; background:var(--gray-0); }
+  /* 시안의 상자는 켠 상태에서도 흰 바탕이다 — Rectangle 5 fill #FFFFFF · stroke 1px #28798B,
+     그 위에 check-01(6×4 벡터)이 stroke 1.5px #28798B 로 얹힌다.
+     즉 '주색으로 찬 상자 + 흰 체크'가 아니라 '흰 상자 + 주색 체크'다. 뒤집지 않는다. */
+  #sameShipping:checked::after { content:''; position:absolute; left:5px; top:1px; width:5px; aspect-ratio:5/9;
+                  border:solid var(--primary); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+
+  /* '재구매일' 줄 — 시안 148:1304 Frame 48101499(재구매일):
+     [발행일 208 · bg #F9FAFC][arrow-right-sm 14][재구매일 208] 사이 8 (208+8+14+8+208=446).
+     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채우던 #disp-issued-date 라 상자 모양만 입혔다. */
+  .rx-date-flow { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+  .rx-date-flow > .rx-date-shown { display:flex; align-items:center; box-sizing:border-box;
+                  flex:1; min-width:0; height:32px; padding:0 12px;
+                  border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-50);
+                  font-size:13px; font-weight:400; line-height:20px; color:var(--gray-800);
+                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rx-date-flow > .rx-date-arrow { flex:0 0 14px; width:14px; text-align:center;
+                  font-size:12px; line-height:14px; color:var(--gray-1000); }
   .rx-ocr-badge { display:inline-flex; align-items:center; gap:3px; background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-accent); border-radius:4px; font-size:10px; font-weight:700; padding:1px 5px; }
   .rx-ocr-badge i { font-size:9px; }
   @media(max-width:1100px){ .rx-grid-4 { grid-template-columns:1fr 1fr; } }
@@ -458,12 +510,26 @@
   .pc-field-label { font-size:10px; font-weight:500; color:var(--text-muted); }
   .pc-field-val { font-size:12px; font-weight:500; color:var(--text-primary); word-break:break-all; }
 
+  /* ── 이미지 아래 카드 묶음 (시안 148:1585) ──
+     360×634 · pad 16 · gap 12 · 세로 · 위쪽에만 1px 선.
+     여백을 여기서 한 번 주면 카드 폭은 360-32=328 로 저절로 맞는다.
+     예전에는 이 상자가 없어 카드가 뷰어 폭을 그대로 채우고 카드 사이도 붙어 있었다. */
+  #viewerCards { display:flex; flex-direction:column; gap:12px;
+                 padding:16px; border-top:1px solid var(--gray-200); }
+  /* 생성 서류는 JS 가 통째로 갈아 끼우는 상자다(refreshGeneratedDocs).
+     상자를 그대로 두면 서류가 0건일 때도 칸을 차지해 빈 간격 12 가 생긴다.
+     display:contents 로 두면 안의 카드가 바로 이 묶음의 칸이 된다. */
+  #viewerCards > #genDocsContainer { display:contents; }
+  /* 카드 사이 간격은 gap 12 하나로만 잡는다 (검수 메모 카드의 .mt-3 상쇄) */
+  #viewerCards > .mt-3 { margin-top:0; }
+
   /* ── 첨부 파일 썸네일 ── */
   /* ── 뷰어 아래 카드 공통 (시안 137:792) ──
      제목 줄은 44 높이에 아래 선 하나, 본문은 카드 안쪽에 따로 여백을 준다. */
   .vw-card { border:1px solid var(--gray-200); border-radius:12px; background:var(--gray-0); }
-  .vw-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
-                  min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
+  /* 머리 44 는 아래 1px 선을 포함한 값이다 (시안 148:1587) — 아래 여백에서 1 을 뺀다 */
+  .vw-card-head { display:flex; align-items:center; justify-content:space-between; gap:4px;
+                  min-height:44px; padding:8px 16px 7px; border-bottom:1px solid var(--gray-200); }
   .vw-card-title { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700;
                    line-height:1.6; color:var(--gray-1000); }
   .vw-card-title b { color:var(--primary); font-weight:700; }   /* 개수는 주색 (시안 137:796) */
@@ -484,8 +550,11 @@
   .gd-item  { display:flex; flex-direction:column; gap:8px; padding:8px 12px;
               background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px; }
   .gd-top   { display:flex; align-items:center; gap:8px; }
+  /* 시안 148:1585 의 서류 아이콘은 회색이다 — 본체 #E8EAEC(gray-200), 줄 #C2C5C8(gray-300).
+     여기 아이콘은 한 가지 색만 쓰는 외곽선 글리프(fa-regular)라 줄 색으로 맞춘다.
+     빨강은 시안에 없고, 서류 유형과 무관하게 모두 같은 회색이다. */
   .gd-icon  { width:28px; height:28px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-              font-size:22px; color:var(--danger); }
+              font-size:22px; color:var(--gray-300); }
   .gd-info  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
   .gd-name  { font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -529,9 +598,11 @@
 
   /* ── 문서 타일 (시안 137:806) — 3열, 타일 높이 80 ── */
   .attach-strip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:12px 16px; }
+  /* 시안 148:1605 — 고르지 않은 타일에는 테두리가 없다. 고른 타일만 2px 주색이고,
+     선이 안쪽에 그려져(strokeAlign INSIDE) 타일 바깥 크기는 93×80 로 같다.
+     box-sizing:border-box 라 테두리가 굵어져도 자리가 밀리지 않는다. */
   .attach-thumb { position:relative; height:80px; border-radius:8px; overflow:hidden; cursor:pointer;
-                  border:1px solid var(--gray-200); background:var(--gray-100); }
-  /* 고른 문서는 테두리 2px 주색 — 안쪽 크기가 흔들리지 않게 여백으로 상쇄한다 */
+                  border:none; background:var(--gray-100); }
   .doc-thumb.active { border:2px solid var(--primary); }
   .attach-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
   .attach-thumb-pdf { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -574,7 +645,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
   <div id="patient-info-bar-ph" style="display:none;"></div>
   <div id="patient-info-bar" style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:12px 16px;position:relative;z-index:50;">
 
-    {{-- 환자명·연락처·액션을 한 줄에 둔다. 아바타는 자리만 차지해 뺐다. --}}
+    {{-- 시안 148:1304 — 왼쪽 아바타 54×54(r12 · gray-100), 오른쪽은 두 줄이다.
+         장식이라 누를 수 없고 데이터도 쓰지 않는다. --}}
+    <div class="pib-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></div>
+
     <div class="pib-body">
 
         {{-- 왼쪽 — 환자명과 배지 (시안 137:301) --}}
@@ -1434,6 +1508,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- 이전·다음과 처방번호는 카드 머리로 올라갔다 (시안 137:883) --}}
       </div>
 
+      {{-- 이미지 아래 카드들을 한 상자에 담는다 (시안 148:1585) —
+           여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
+      <div id="viewerCards">
+
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
       <div class="vw-card" id="docStripWrap" @if(!$prescription->image_url && $prescription->attachments->isEmpty()) style="display:none;" @endif>
         {{-- 카드 머리 — 제목·개수와 유형 선택·첨부 추가 (시안 137:793) --}}
@@ -1551,6 +1629,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div class="card-body" style="font-size:12px;color:var(--text-secondary);">{{ $prescription->review_memo }}</div>
       </div>
       @endif
+      </div>{{-- /viewerCards --}}
     </div>{{-- /viewerInner --}}
     </div>{{-- /viewerCol --}}
 
@@ -1757,22 +1836,25 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row" style="align-items:flex-start;">
                 <span class="rx-field-label">주소</span>
                 <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
+                  {{-- 1줄 — 시안 148:1304 Frame 48101496: [우편번호 179][도로명 주소 179][주소 검색 73], 사이 8.
+                       우편번호·도로명은 둘 다 읽기 전용이라 시안대로 바탕이 #F9FAFC(--gray-50) 다. --}}
                   <div style="display:flex;gap:8px;align-items:center;">
                     <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? '' }}"
-                           placeholder="우편번호" style="width:110px;flex:none;background:var(--gray-50);cursor:default;" />
-                    <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
-                    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gray-600);white-space:nowrap;cursor:pointer;margin:0;">
-                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
-                      배송 주소 동일
-                    </label>
-                  </div>
-                  <div style="display:flex;gap:8px;">
+                           placeholder="우편번호" style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
                     <input type="text" class="form-control" id="f-address"
                            value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
                            placeholder="도로명 주소" readonly style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                    <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
+                  </div>
+                  {{-- 2줄 — 시안 Frame 48101497: [상세 주소 342][배송 주소 동일 96], 사이 8 --}}
+                  <div style="display:flex;gap:8px;align-items:center;">
                     <input type="text" class="form-control" id="f-address-detail"
                            value="{{ $prescription->address_detail ?? '' }}"
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
+                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
+                      배송 주소 동일
+                    </label>
                   </div>
                 </div>
               </div>
@@ -1795,7 +1877,22 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">현금영수증</span>
-                <input type="text" class="form-control" id="f-cash-receipt" value="{{ $prescription->counseling?->udf23 ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;" />
+                {{-- 시안 148:1304 Frame 48101500 — 이 줄은 두 칸이다: [소득공제 219][현금영수증 번호 219], 사이 8.
+                     소득공제 select 은 병원ㆍ처방 아코디언 오른쪽 열에 따로 서 있던 것을
+                     통째로 옮겨 왔다(id·option·값 그대로). 저장 때 deduction 과
+                     cash_receipt_no 로 함께 넘어가던 짝이라 한 줄에 서는 것이 맞다.
+                     시안은 라벨 칸을 하나만 주고 첫 칸이 무엇인지는 '선택된 값'으로 알린다.
+                     값이 비면 무슨 칸인지 알 수 없으므로, 빈 선택지 문구를 '소득공제 선택'으로 둔다 —
+                     이러면 '소득공제' 라는 말이 화면에서 사라지지 않는다. value 는 그대로 빈 값이다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;">
+                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1;min-width:0;">
+                    <option value="">소득공제 선택</option>
+                    <option value="소득공제" @selected(($prescription->counseling?->udf22 ?? '') == '소득공제')>소득공제</option>
+                    <option value="지출증빙" @selected(($prescription->counseling?->udf22 ?? '') == '지출증빙')>지출증빙</option>
+                    <option value="자진발급" @selected(($prescription->counseling?->udf22 ?? '') == '자진발급')>자진발급</option>
+                  </select>
+                  <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->counseling?->udf23 ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
+                </div>
               </div>
             </div>
 
@@ -1913,13 +2010,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="3"   @selected(($prescription->counseling?->udf3 ?? '') == '3')>3</option>
                 </select>
               </div>
-              <div class="rx-field-row" style="margin-bottom:10px;">
-              <span class="rx-field-label">상병코드</span>
-              <div style="display:flex;gap:6px;flex:1;">
-                <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;" />
-                <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '' }}" placeholder="코드" style="flex:3;" />
+              {{-- 시안 148:1304 Frame 48101493 은 446 한 칸이고 위아래 간격이 다른 줄과 같은 8 이다.
+                   '상병명' 입력은 개발이 넣은 것이라 남기고, 붙어 있던 margin-bottom:10px(간격 18)만
+                   걷어 다른 줄과 같은 8 로 맞췄다. 두 칸 사이도 6 → 8 로 통일한다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">상병코드</span>
+                <div style="display:flex;gap:8px;flex:1;min-width:0;">
+                  <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;min-width:0;" />
+                  <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '' }}" placeholder="코드" style="flex:3;min-width:0;" />
+                </div>
               </div>
-            </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구분(SB/SCI)</span>
                 <select class="form-control" id="f-sb-sci" style="flex:1;">
@@ -2067,30 +2167,29 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-diag-confirm-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-              <span class="rx-field-label">재구매일</span>
-              {{-- 시안(148:3034)은 다른 항목과 같은 입력칸이다. 예전에는 '발행일 → 재구매일'
-                   글자만 있어 칸이 없는 것처럼 보였다. 값은 발행일과 처방기간으로 자동 계산되므로
-                   읽기 전용으로 둔다. 계산 결과를 글자로 읽어가는 코드가 있어 span 은 감춰서 남긴다. --}}
-              <input type="text" class="form-control" id="f-repurchase-date" readonly
-                     value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
-                     placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
-                     style="flex:1;background:var(--gray-50);cursor:default;" />
-              <span id="disp-issued-date" style="display:none;">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
-              <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
-            </div>
+                <span class="rx-field-label">재구매일</span>
+                {{-- 시안 148:1304 Frame 48101499 는 두 칸이다:
+                     [발행일 208 · bg #F9FAFC][arrow-right-sm 14][재구매일 208], 사이 8.
+                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
+                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
+                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
+                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
+                <div class="rx-date-flow">
+                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
+                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
+                  <input type="text" class="form-control" id="f-repurchase-date" readonly
+                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
+                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
+                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                </div>
+                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">종료일</span>
                 <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->counseling?->udf14 ?? '' }}" style="flex:1;min-width:0;" />
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">소득공제</span>
-                <select class="form-control" id="f-deduction" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="소득공제" @selected(($prescription->counseling?->udf22 ?? '') == '소득공제')>소득공제</option>
-                  <option value="지출증빙" @selected(($prescription->counseling?->udf22 ?? '') == '지출증빙')>지출증빙</option>
-                  <option value="자진발급" @selected(($prescription->counseling?->udf22 ?? '') == '자진발급')>자진발급</option>
-                </select>
-              </div>
+              {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
+                   (시안 148:1304 Frame 48101500 이 두 값을 한 줄에 둔다). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">신환master등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->counseling?->udf32 ?? '' }}" style="flex:1;" />
