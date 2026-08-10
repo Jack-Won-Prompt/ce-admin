@@ -97,6 +97,8 @@
       --sidebar-w: 320px;     /* Figma sidebar 폭 */
       --sidebar-collapsed-w: 64px;   /* 아이콘만 남기는 접힘 폭 */
       --content-pad: 16px;    /* Figma container padding — 본문 여백의 단일 출처 */
+      /* 시안 결과바 안내문 앞 12×12 alert-circle. 마크업을 안 건드리려고 mask 로 그린다. */
+      --icon-alert-circle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='9'/><path d='M12 7.5v5'/><path d='M12 16.2h.01'/></svg>");
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -393,10 +395,11 @@
        clip 은 가로만 잘라내고 스크롤 컨테이너를 만들지 않는다. */
     .content-wrapper { flex: 1; display: flex; flex-direction: column; overflow-x: clip; padding-top: var(--nav-h); }
     /* Figma 174:1184 container — padding 0 16 16, 블록 간 gap 16 */
+    /* Figma 148:5526 container — 본문 블록 사이 간격은 12 다 (16 이 아니다) */
     .page-body {
       flex: 1; min-width: 0;
       padding: 0 var(--content-pad) var(--content-pad);
-      display: flex; flex-direction: column; gap: 16px;
+      display: flex; flex-direction: column; gap: 12px;
     }
 
 
@@ -420,11 +423,30 @@
     /* 건수 배지 — 16×16 원, 칩 상태에 따라 색이 뒤집힌다 */
     .ds-chip-count {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 16px; height: 16px; border-radius: 999px;
+      /* 시안은 16×16 정원이다. 한두 자리는 그대로 정원이고,
+         세 자리부터는 숫자가 원 밖으로 튀지 않게 가로만 늘어난다. */
+      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
       background: var(--gray-500); color: var(--gray-0);
       font-size: 10px; font-weight: 700; line-height: 1; flex-shrink: 0;
     }
     .ds-chip.active .ds-chip-count { background: var(--gray-0); color: var(--primary); }
+
+    /* 칩은 시안에서 검색 카드 '안쪽 첫 줄'이다.
+       프레임 7개(114:4778 · 128:1744 · 148:5526 · 248:2923 · 266:66 · 282:53 · 282:934)가
+       모두 같은 구조다 — 카드 1568×140 = pad 12 + 칩줄 31 + gap 12 + 구분선 1px + gap 12
+       + 필드줄 61 + pad 12.
+       화면 8곳의 마크업을 옮기는 대신, 칩 묶음이 검색 카드 바로 앞에 오면
+       두 블록을 한 카드처럼 이어 붙인다. 칩만 있는 화면은 지금 모습 그대로다. */
+    .ds-chips:has(+ .ds-filter-card) {
+      padding: 12px 16px;
+      border-radius: 12px 12px 0 0;
+      background: var(--gray-0);
+      margin-bottom: -12px;          /* .page-body 의 gap 12 를 지운다 */
+    }
+    .ds-chips:has(+ .ds-filter-card) + .ds-filter-card {
+      border-radius: 0 0 12px 12px;
+      border-top: 1px solid var(--gray-100);
+    }
 
     /* 화면들이 각자 정의해 쓰던 검색 줄(.filter-bar / .search-bar).
        내부 배치는 화면마다 입력 구성이 달라 그대로 두고, 바깥 껍데기만
@@ -466,8 +488,8 @@
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       min-width: 60px; height: 32px; padding: 0 12px;
       border-radius: 8px; background: var(--gray-0);
-      border: 1px solid var(--gray-200); color: var(--gray-800);
-      font-size: 13px; font-weight: 500; line-height: 1.6;
+      border: 1px solid var(--gray-200); color: var(--gray-1000);
+      font-size: 13px; font-weight: 500; line-height: 21px;
       cursor: pointer; transition: var(--transition); white-space: nowrap;
       text-decoration: none;   /* <a> 로 쓸 때 브라우저 기본 밑줄이 나온다 */
     }
@@ -482,15 +504,59 @@
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
     }
-    .ds-grid-bar-left  { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    /* 오른쪽 액션 묶음 — 상단바는 space-between 이라 그대로 우측에 붙는다 */
-    .ds-grid-bar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 1.6; color: var(--gray-800); }
+    .ds-grid-bar-left  { display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0; }
+    /* 오른쪽 액션 묶음 — 상단바는 space-between 이라 그대로 우측에 붙는다.
+       시안 148:5526 은 안내문 묶음과 버튼 묶음 사이 12, 버튼끼리 8 이다. */
+    .ds-grid-bar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 26px; color: var(--gray-800); }
     .ds-grid-total b { color: var(--primary); }
-    .ds-grid-hint { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
+    /* '전체 N건' 과 '선택 N건' 사이 4×4 구분점 (148:5526 Rectangle 10 · r999 · gray-300) */
+    .ds-grid-sel { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
+    .ds-grid-sel b { color: var(--primary-400); }
+    .ds-grid-total + .ds-grid-sel::before {
+      content: ''; display: inline-block; vertical-align: middle;
+      width: 4px; height: 4px; border-radius: 999px;
+      background: var(--gray-300); margin-right: 12px;
+    }
+    /* 안내문 — 시안은 앞에 12×12 alert-circle 이 붙고 글자와 간격 4 다.
+       마크업을 화면마다 고치지 않도록 아이콘은 mask 로 그린다. */
+    .ds-grid-hint {
+      display: inline-flex; align-items: center; gap: 4px;
+      min-width: 0; margin-right: 4px;
+      font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ds-grid-hint::before {
+      content: ''; flex-shrink: 0; width: 12px; height: 12px;
+      background: currentColor;
+      -webkit-mask: var(--icon-alert-circle) center / contain no-repeat;
+              mask: var(--icon-alert-circle) center / contain no-repeat;
+    }
+    /* 결과바 버튼은 시안에서 테두리가 없다 (검색 카드의 초기화·검색과 다르다) */
+    .ds-grid-bar .ds-btn { border-color: transparent; flex-shrink: 0; }
+    .ds-grid-bar .ds-btn:hover { border-color: var(--gray-200); }
+    .ds-grid-bar .ds-btn-primary { border-color: var(--primary); }
     .ds-grid-card {
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
+    }
+    /* 카드가 overflow:hidden 이라, 안에 들어간 패널(조회 결과·상세 내용)이
+       카드보다 길면 잘리고 스크롤도 안 생긴다. 패널이 스스로 스크롤하게 한다. */
+    .ds-grid-card > [id^="pnl"] { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+    /* 카드 안 패널 탭 (114:4778) — h44 · pad 0/16 · gap 16 · 하단 1px */
+    .pnl-tabs { display: flex; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .pnl-tab {
+      height: 44px; padding: 0 8px; border: none; background: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 500; line-height: 21px; color: var(--text-muted);
+      border-bottom: 1px solid transparent; margin-bottom: -1px;
+    }
+    .pnl-tab:hover  { color: var(--primary); }
+    .pnl-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .pnl-empty {
+      padding: 60px 20px; text-align: center;
+      font-size: 13px; font-weight: 400; line-height: 21px; color: var(--text-muted);
     }
     /* 카드 하단 페이지네이션 줄 (174:1333) */
     .ds-grid-foot {

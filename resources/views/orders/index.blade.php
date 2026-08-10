@@ -46,37 +46,12 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-  .ds-grid-sel b { color:var(--primary-400); }
-  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius-lg); }
-  /* Vuexy pill tabs */
-  .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-  .status-tab {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
-    border: 1.5px solid var(--border); background: #fff;
-    color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    transition: var(--transition);
-  }
-  .status-tab:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-  .status-tab.active { border-color: var(--primary); background: var(--primary); color: #fff; }
-  .status-tab .cnt {
-    min-width: 20px; padding: 0 5px; height: 18px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 20px; font-size: 10.5px; font-weight: 700;
-    background: rgba(255,255,255,.25);
-  }
-  .status-tab:not(.active) .cnt { background: var(--border-light); color: var(--text-muted); }
+  /* .status-tabs / .status-tab 은 예전 선택자다. 칩은 전역 .ds-chip 이 그리고,
+     이 이름은 도움말 투어가 가리키는 앵커로만 남긴다 — 별도 스타일은 주지 않는다.
+     (스타일을 남겨 두면 gap 6·radius 20·12.5px/600 이 전역 규격을 덮어쓴다.) */
 
   .order-number { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .5px; font-family: monospace; }
-  .patient-name-cell { font-weight: 600; }
+  .patient-name-cell { font-weight: 500; }
   .product-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .amount-cell { text-align: right; font-variant-numeric: tabular-nums; }
   .btn-row { display: flex; gap: 6px; }

@@ -63,13 +63,6 @@
   .form-group   { display:flex;flex-direction:column;gap:5px; }
 
   /* 패널 탭(조회결과/상세내용) */
-  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-  .ds-grid-sel b { color:var(--primary-400); }
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
      원 12×12(선택 primary-500 / 비선택 gray-300) 안에 6×6 흰 점, 라벨 13/400 */
   .pt-radios { display:flex; gap:8px; }
@@ -89,8 +82,6 @@
   }
   .pt-radio-dot::after { content:''; width:6px; height:6px; border-radius:999px; background:var(--gray-0); }
   .pt-radio.on .pt-radio-dot { background:var(--primary); }
-  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
   /* 상세내용 탭 안 이력 카드(전체폭) */
   .pt-detail { background:#fff; border:1px solid var(--border);
     border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; }

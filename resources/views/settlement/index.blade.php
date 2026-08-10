@@ -7,101 +7,104 @@
 
 @push('styles')
 <style>
-  /* Vuexy underline tabs */
-  .settle-tabs { display: flex; gap: 0; border-bottom:1px solid var(--border); margin-bottom: 22px; }
-  .settle-tab  {
-    padding: 11px 22px; font-size: 13px; font-weight: 600;
-    color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    border-bottom: 1px solid transparent; margin-bottom: -1px;
-    transition: var(--transition);
-  }
-  .settle-tab:hover { color: var(--primary); }
-  .settle-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  /* 탭 칩(정산 현황·가상계좌 매칭)은 전역 .ds-chip 규격(h31 · r999 · pad 6/10 · 12/700)을 그대로 쓴다.
+     .settle-tabs/.settle-tab 은 예전 선택자라 앵커로만 남기고 별도 스타일은 주지 않는다. */
 
-  /* 요약 카드 */
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  /* 요약 카드 — 흰 카드(r12 · pad 12/16), 라벨 → 값 → 보조 세로 배치.
+     아래 여백은 .page-body 의 gap 16 이 만든다(margin 을 따로 주지 않는다). */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
   .sum-card {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 18px 20px;
-    display: flex; align-items: center; gap: 16px;
+    background: var(--gray-0); border: 1px solid var(--gray-200);
+    border-radius: 12px; padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 4px; min-width: 0;
   }
+  /* 아이콘 슬롯은 현재 마크업에 없지만 개발 자산이라 남긴다 (쓰게 되면 32×32 · r8) */
   .sum-card-icon {
-    width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    background: var(--gray-100); color: var(--gray-600);
   }
-  .sum-card-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
-  .sum-card-val   { font-size: 22px; font-weight: 800; line-height: 1; color: var(--text-primary); }
-  .sum-card-sub   { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-  .sum-card.blue   .sum-card-icon { background: var(--primary-light); color: var(--primary); }
+  .sum-card-label { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
+  .sum-card-val   { font-size: 16px; font-weight: 700; line-height: 26px; color: var(--gray-1000); }
+  .sum-card-sub   { font-size: 11px; font-weight: 500; line-height: 18px; color: var(--gray-500); }
+  /* 색 변형 — 이 디자인에 초록·주황이 없어 DS 램프(primary · gray · alert)로만 구분한다 */
+  .sum-card.blue   .sum-card-icon { background: var(--primary-50);  color: var(--primary); }
   .sum-card.blue   .sum-card-val  { color: var(--primary); }
-  .sum-card.green  .sum-card-icon { background: var(--success-light); color: var(--success); }
-  .sum-card.green  .sum-card-val  { color: var(--success); }
-  .sum-card.orange .sum-card-icon { background: var(--warning-light); color: var(--warning); }
-  .sum-card.orange .sum-card-val  { color: var(--warning); }
-  .sum-card.red    .sum-card-icon { background: var(--danger-light);  color: var(--danger); }
-  .sum-card.red    .sum-card-val  { color: var(--danger); }
+  .sum-card.green  .sum-card-icon { background: var(--primary-100); color: var(--primary-600); }
+  .sum-card.green  .sum-card-val  { color: var(--primary-600); }
+  .sum-card.orange .sum-card-icon { background: var(--gray-100);    color: var(--gray-700); }
+  .sum-card.orange .sum-card-val  { color: var(--gray-800); }
+  .sum-card.red    .sum-card-icon { background: var(--alert-100);   color: var(--alert-500); }
+  .sum-card.red    .sum-card-val  { color: var(--alert-500); }
 
-  /* 필터 바 */
-  /* 패널 탭(조회결과/상세내용) */
-  .pnl-tabs { display:flex; gap:16px; margin:0 0 16px; border-bottom:1px solid var(--border); }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:#fff; border:1px dashed var(--border); border-radius:var(--radius); }
-  /* 전역 규격(h32 · 13px)을 그대로 쓴다 — 높이·글자를 다시 지정하면 이 화면만 어긋난다 */
-  .filter-bar .btn { white-space: nowrap; }
-  .filter-sep { color: var(--text-muted); font-size: 12px; }
+  /* 보조 합계 줄 — 요약 카드와 같은 카드 규격, 라벨 좌 · 값 우 */
+  .sum-mini-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sum-mini {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    min-width: 160px; padding: 12px 16px; border-radius: 12px;
+    background: var(--gray-0); border: 1px solid var(--gray-200);
+  }
+  .sum-mini-label { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
+  .sum-mini-val   { font-size: 13px; font-weight: 700; line-height: 21px; }
 
+  /* 패널 탭(조회결과/상세내용) — 그리드 카드 안 상단 h44 */
+  /* 결과바 '선택 N건' — 13/500 · gray-600, 숫자만 primary-400 */
+  /* 기간 구분자 — 예전 선택자(.filter-sep)를 함께 남기되, 전역 .filter-sep 은
+     세로 구분선(1×20px · 회색 배경)이라 여기서 그 형태를 되돌려 놓는다.
+     되돌리지 않으면 '–' 글자가 1px 폭 회색 막대 밖으로 삐져나온다. 값은 전역 .ds-field-sep 과 같게. */
+  .filter-sep { width: auto; height: auto; background: none; margin: 0;
+    color: var(--gray-400); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
+
+  /* ── 아래 선택자들은 현재 마크업에 사용처가 없다(목록을 wwGrid 가 텍스트로 그린다).
+        개발 자산이라 남기되 값만 시안 규격에 맞춰 둔다. ── */
   /* API 상태 카드 */
-  .toss-api-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
+  .toss-api-card { background: var(--gray-0); border: 1px solid var(--gray-200); border-radius: 12px; padding: 12px 16px; }
   .api-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .api-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .api-dot.connected    { background: var(--success); box-shadow: 0 0 0 3px var(--success-light); }
-  .api-dot.disconnected { background: var(--danger);  box-shadow: 0 0 0 3px var(--danger-light); }
-  .api-dot.unknown      { background: var(--warning); box-shadow: 0 0 0 3px var(--warning-light); }
-  .api-name { font-size: 13px; font-weight: 700; }
-  .api-desc { font-size: 11px; color: var(--text-muted); }
+  .api-dot { width: 12px; height: 12px; border-radius: 999px; flex-shrink: 0; }
+  .api-dot.connected    { background: var(--primary);   box-shadow: 0 0 0 3px var(--primary-50); }
+  .api-dot.disconnected { background: var(--alert-500); box-shadow: 0 0 0 3px var(--alert-100); }
+  .api-dot.unknown      { background: var(--gray-400);  box-shadow: 0 0 0 3px var(--gray-100); }
+  .api-name { font-size: 13px; font-weight: 700; line-height: 21px; }
+  .api-desc { font-size: 11px; font-weight: 500; line-height: 18px; color: var(--gray-500); }
   .api-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-  .api-meta-item { font-size: 11px; display: flex; justify-content: space-between; padding: 5px 8px; background: var(--bg); border-radius: var(--radius); }
-  .api-meta-key   { color: var(--text-muted); }
-  .api-meta-val   { font-weight: 600; font-family: monospace; }
+  .api-meta-item { font-size: 11px; font-weight: 500; line-height: 18px; display: flex; justify-content: space-between; padding: 5px 8px; background: var(--gray-100); border-radius: 6px; }
+  .api-meta-key   { color: var(--gray-500); }
+  .api-meta-val   { font-weight: 700; font-family: monospace; }
 
-  /* VA 상태 */
+  /* VA 상태 배지 — r6 · pad 2/6 · 11/500 · lh18 */
   .va-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 500; line-height: 18px; }
-  .va-badge.done      { background: var(--primary-light); color: var(--primary); }
-  .va-badge.waiting   { background: var(--warning-light); color: var(--warning); }
-  .va-badge.ready     { background: var(--primary-light); color: var(--primary); }
-  .va-badge.expired   { background: var(--border); color: var(--text-muted); }
-  .va-badge.none      { background: var(--border); color: var(--text-muted); }
+  .va-badge.done      { background: var(--primary-50);  color: var(--primary-600); }
+  .va-badge.waiting   { background: var(--alert-100);   color: var(--alert-500); }
+  .va-badge.ready     { background: var(--primary-50);  color: var(--primary); }
+  .va-badge.expired   { background: var(--gray-100);    color: var(--gray-500); }
+  .va-badge.none      { background: var(--gray-100);    color: var(--gray-500); }
 
   /* 금액 셀 */
-  .amount-cell { font-family: monospace; font-size: 12px; text-align: right; }
-  .amount-cell.primary { color: var(--primary); font-weight: 600; }
-  .amount-cell.success { color: var(--success); }
-  .amount-cell.muted   { color: var(--text-muted); }
-  .order-num { font-family: monospace; font-size: 12px; color: var(--primary); font-weight: 600; }
+  .amount-cell { font-family: monospace; font-size: 12px; font-weight: 500; line-height: 19px; text-align: right; }
+  .amount-cell.primary { color: var(--primary); font-weight: 700; }
+  .amount-cell.success { color: var(--primary-600); }
+  .amount-cell.muted   { color: var(--gray-500); }
+  .order-num { font-family: monospace; font-size: 12px; font-weight: 700; line-height: 19px; color: var(--primary); }
 
-  /* 발급 버튼 */
-  .btn-issue-va { font-size: 11px; padding: 3px 10px; }
+  /* 발급 버튼 — 작은 버튼 h28 · r8 · pad 3/10 · 13/500 */
+  .btn-issue-va { height: 28px; padding: 3px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; line-height: 20px; }
 </style>
 @endpush
 
 @section('content')
 
-  {{-- 탭 --}}
-  <div class="settle-tabs">
+  {{-- 탭 — 표준 상태 칩(h31 · r999 · 12/700), 건수는 16×16 정원 배지 --}}
+  <div class="ds-chips settle-tabs">
     <a href="{{ route('settlement.index', ['tab' => 'settlement', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
-       class="settle-tab {{ $tab === 'settlement' ? 'active' : '' }}">
+       class="ds-chip settle-tab {{ $tab === 'settlement' ? 'active' : '' }}">
       <i class="fa-solid fa-calculator"></i> 정산 현황
     </a>
     <a href="{{ route('settlement.index', ['tab' => 'virtual_account']) }}"
-       class="settle-tab {{ $tab === 'virtual_account' ? 'active' : '' }}">
+       class="ds-chip settle-tab {{ $tab === 'virtual_account' ? 'active' : '' }}">
       <i class="fa-solid fa-building-columns"></i> 가상계좌 매칭
       @if(($vaStats['waiting'] ?? 0) > 0)
-        <span class="badge badge-warning" style="margin-left:6px;font-size:10px;">{{ $vaStats['waiting'] }}</span>
+        <span class="ds-chip-count">{{ $vaStats['waiting'] }}</span>
       @endif
     </a>
   </div>
@@ -109,24 +112,38 @@
   @if($tab === 'settlement')
   {{-- ══════════════ 정산 현황 ══════════════ --}}
 
-    <form method="GET" action="{{ route('settlement.index') }}" class="filter-bar">
+    {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 · 9열 그리드 --}}
+    <form method="GET" action="{{ route('settlement.index') }}" class="ds-filter-card">
       <input type="hidden" name="tab" value="settlement">
-      <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;">기간</label>
-      <input type="date" name="date_from" class="form-control" style="width:140px;" value="{{ $dateFrom }}">
-      <span class="filter-sep">–</span>
-      <input type="date" name="date_to"   class="form-control" style="width:140px;" value="{{ $dateTo }}">
-      <input type="text" name="search" class="form-control" style="width:180px;" placeholder="주문번호·환자명·제품명" value="{{ request('search') }}">
-      <select name="status" class="form-control form-select" style="width:120px;">
-        <option value="">전체 상태</option>
-        <option value="pending"   {{ request('status')==='pending'   ? 'selected':'' }}>주문 대기</option>
-        <option value="confirmed" {{ request('status')==='confirmed' ? 'selected':'' }}>주문 확정</option>
-        <option value="shipping"  {{ request('status')==='shipping'  ? 'selected':'' }}>배송 중</option>
-        <option value="delivered" {{ request('status')==='delivered' ? 'selected':'' }}>배송 완료</option>
-        <option value="cancelled" {{ request('status')==='cancelled' ? 'selected':'' }}>취소</option>
-      </select>
-      <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
-      <a href="{{ route('settlement.index', ['tab'=>'settlement']) }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-rotate-left"></i></a>
-      <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">{{ $dateFrom }} ~ {{ $dateTo }}</span>
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-3">
+          <label class="ds-field-label">기간</label>
+          <div class="ds-field-range">
+            <input type="date" name="date_from" class="form-control" value="{{ $dateFrom }}">
+            <span class="filter-sep ds-field-sep">–</span>
+            <input type="date" name="date_to"   class="form-control" value="{{ $dateTo }}">
+          </div>
+        </div>
+        <div class="ds-filter-field span-4">
+          <label class="ds-field-label">검색어</label>
+          <input type="text" name="search" class="form-control" placeholder="주문번호·환자명·제품명" value="{{ request('search') }}">
+        </div>
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">주문 상태</label>
+          <select name="status" class="form-control form-select">
+            <option value="">전체 상태</option>
+            <option value="pending"   {{ request('status')==='pending'   ? 'selected':'' }}>주문 대기</option>
+            <option value="confirmed" {{ request('status')==='confirmed' ? 'selected':'' }}>주문 확정</option>
+            <option value="shipping"  {{ request('status')==='shipping'  ? 'selected':'' }}>배송 중</option>
+            <option value="delivered" {{ request('status')==='delivered' ? 'selected':'' }}>배송 완료</option>
+            <option value="cancelled" {{ request('status')==='cancelled' ? 'selected':'' }}>취소</option>
+          </select>
+        </div>
+      </div>
+      <div class="ds-filter-actions">
+        <a href="{{ route('settlement.index', ['tab'=>'settlement']) }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
+        <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+      </div>
     </form>
 
     <div class="summary-grid">
@@ -152,47 +169,87 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    {{-- 보조 합계 줄 — 카드 규격은 요약 카드와 같게, 라벨 좌 · 값 우 --}}
+    <div class="sum-mini-row">
       @foreach([['NHIS 환급 확정', number_format($summary['nhis_reimb']).'원', 'var(--success)'], ['배송비 합계', number_format($summary['shipping_fee']).'원', 'var(--text-primary)'], ['대기 중 주문', $statusCounts['pending'].'건', 'var(--warning)'], ['배송 완료', $statusCounts['delivered'].'건', 'var(--success)']] as [$lbl, $val, $color])
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 16px;font-size:12px;min-width:160px;">
-        <span style="color:var(--text-muted);">{{ $lbl }}</span>
-        <span style="font-weight:700;color:{{ $color }};float:right;margin-left:16px;">{{ $val }}</span>
+      <div class="sum-mini">
+        <span class="sum-mini-label">{{ $lbl }}</span>
+        <span class="sum-mini-val" style="color:{{ $color }};">{{ $val }}</span>
       </div>
       @endforeach
     </div>
 
-    {{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
-    <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
-    </div>
-
-    <div id="pnlList">
-    {{-- ── 정산 목록 (wwGrid) ── --}}
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="settlementViewRx()">
-        <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세 확인</span>
-      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
-    </div>
-    <div id="settlementGrid"></div>
-    </div>{{-- /pnlList --}}
-
-    {{-- ── 상세내용 탭 (주문 상세를 같은 페이지에 직접 주입) ── --}}
-    <div id="pnlDetail" style="display:none;">
-      <div style="margin-bottom:12px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>
+    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 패널 탭과 그리드 --}}
+    <div class="ds-grid-section">
+      <div class="ds-grid-bar">
+        <div class="ds-grid-bar-left">
+          <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+          <span class="ds-grid-sel">선택 <b id="settleSelCount">0</b>건</span>
+        </div>
+        <div class="ds-grid-bar-right">
+          {{-- 조회 기간 표시는 검색 카드 오른쪽 끝에 있던 것을 결과바 안내문으로 합쳤다 --}}
+          <span class="ds-grid-hint">{{ $dateFrom }} ~ {{ $dateTo }} · 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세 확인</span>
+          {{-- 그리드 툴바에 있던 엑셀 저장을 결과바로 옮겼다(동작은 downloadExcel() 동일) --}}
+          <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
+          <button type="button" class="ds-btn" onclick="settlementViewRx()">
+            <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
+          </button>
+        </div>
       </div>
-      <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
-      <div id="pnlDetailContent"></div>
-    </div>
+
+      <div class="ds-grid-card">
+        {{-- 패널 탭: 조회결과 / 상세내용 --}}
+        <div class="pnl-tabs">
+          <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
+          <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
+        </div>
+
+        <div id="pnlList">
+          {{-- ── 정산 목록 (wwGrid) ── --}}
+          <div id="settlementGrid"></div>
+        </div>{{-- /pnlList --}}
+
+        {{-- ── 상세내용 탭 (주문 상세를 같은 페이지에 직접 주입) ── --}}
+        <div id="pnlDetail" style="display:none;padding:16px;">
+          <div style="margin-bottom:12px;">
+            <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>
+          </div>
+          <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
+          <div id="pnlDetailContent"></div>
+        </div>
+      </div>{{-- /.ds-grid-card --}}
+    </div>{{-- /.ds-grid-section --}}
 
   @elseif($tab === 'virtual_account')
   {{-- ══════════════ 가상계좌 매칭 (Toss Payments) ══════════════ --}}
 
+    {{-- 검색/필터 — 정산 현황 탭과 같은 표준 필터 카드(r12 · pad 12/16) --}}
+    <form method="GET" action="{{ route('settlement.index') }}" class="ds-filter-card">
+      <input type="hidden" name="tab" value="virtual_account">
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-4">
+          <label class="ds-field-label">검색어</label>
+          <input type="text" name="va_search" class="form-control" placeholder="주문번호·환자명·계좌번호" value="{{ request('va_search') }}">
+        </div>
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">입금 상태</label>
+          <select name="va_status" class="form-control form-select">
+            <option value="">전체</option>
+            <option value="not_issued" {{ request('va_status')==='not_issued' ? 'selected':'' }}>미발급</option>
+            <option value="issued"     {{ request('va_status')==='issued'     ? 'selected':'' }}>발급완료</option>
+            <option value="waiting"    {{ request('va_status')==='waiting'    ? 'selected':'' }}>입금대기</option>
+            <option value="done"       {{ request('va_status')==='done'       ? 'selected':'' }}>입금완료</option>
+          </select>
+        </div>
+      </div>
+      <div class="ds-filter-actions">
+        <a href="{{ route('settlement.index', ['tab'=>'virtual_account']) }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
+        <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
+      </div>
+    </form>
+
     {{-- VA 요약 카드 --}}
-    <div class="summary-grid" style="margin-bottom:16px;">
+    <div class="summary-grid">
       <div class="sum-card blue">
         <div class="sum-card-label">가상계좌 대상</div>
         <div class="sum-card-val">{{ number_format($vaStats['total']) }}<span style="font-size:13px;font-weight:500;">건</span></div>
@@ -210,51 +267,48 @@
       </div>
       <div class="sum-card red">
         <div class="sum-card-label"><i class="fa-solid fa-won-sign"></i> 대기 금액</div>
-        <div class="sum-card-val" style="font-size:18px;">{{ number_format($vaStats['pending_amount']) }}<span style="font-size:12px;font-weight:500;">원</span></div>
+        <div class="sum-card-val">{{ number_format($vaStats['pending_amount']) }}<span style="font-size:12px;font-weight:500;">원</span></div>
         <div class="sum-card-sub">미수 본인부담 합계</div>
       </div>
     </div>
 
-    {{-- 검색/필터 --}}
-    <form method="GET" action="{{ route('settlement.index') }}" class="filter-bar">
-      <input type="hidden" name="tab" value="virtual_account">
-      <input type="text" name="va_search" class="form-control" style="width:200px;" placeholder="주문번호·환자명·계좌번호" value="{{ request('va_search') }}">
-      <select name="va_status" class="form-control form-select" style="width:130px;">
-        <option value="">전체</option>
-        <option value="not_issued" {{ request('va_status')==='not_issued' ? 'selected':'' }}>미발급</option>
-        <option value="issued"     {{ request('va_status')==='issued'     ? 'selected':'' }}>발급완료</option>
-        <option value="waiting"    {{ request('va_status')==='waiting'    ? 'selected':'' }}>입금대기</option>
-        <option value="done"       {{ request('va_status')==='done'       ? 'selected':'' }}>입금완료</option>
-      </select>
-      <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
-      <a href="{{ route('settlement.index', ['tab'=>'virtual_account']) }}" class="btn btn-outline btn-sm"><i class="fa-solid fa-rotate-left"></i></a>
-      <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">총 {{ number_format($total) }}건</span>
-    </form>
+    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 --}}
+    <div class="ds-grid-section">
+      <div class="ds-grid-bar">
+        <div class="ds-grid-bar-left">
+          <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+          <span class="ds-grid-sel">선택 <b id="settleSelCount">0</b>건</span>
+        </div>
+        <div class="ds-grid-bar-right">
+          @if($tossConfigured)
+            <span class="ds-grid-hint">행 체크 후 실행</span>
+            {{-- 가상계좌 발급·SMS 재전송은 외부로 나가는 동작이라 send 권한으로 통제 --}}
+            @perm('settlement', 'send')
+            <button type="button" class="ds-btn ds-btn-primary" onclick="vaIssueSelected(this)">
+              <i class="fa-solid fa-plus"></i> 선택 발급
+            </button>
+            @endperm
+            <button type="button" class="ds-btn" onclick="vaCheckSelected(this)">
+              <i class="fa-solid fa-rotate"></i> 선택 입금확인
+            </button>
+            @perm('settlement', 'send')
+            <button type="button" class="ds-btn" onclick="vaResendSelected(this)">
+              <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
+            </button>
+            @endperm
+          @else
+            <span class="ds-grid-hint"><i class="fa-solid fa-triangle-exclamation"></i> 토스 API 미설정 — 발급/입금확인/SMS 불가</span>
+          @endif
+          {{-- 그리드 툴바에 있던 엑셀 저장을 결과바로 옮겼다(동작은 downloadExcel() 동일) --}}
+          <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
+        </div>
+      </div>
 
-    {{-- ── 가상계좌 목록 (wwGrid) ── --}}
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-      @if($tossConfigured)
-        {{-- 가상계좌 발급·SMS 재전송은 외부로 나가는 동작이라 send 권한으로 통제 --}}
-        @perm('settlement', 'send')
-        <button type="button" class="btn btn-primary btn-sm" onclick="vaIssueSelected(this)">
-          <i class="fa-solid fa-plus"></i> 선택 발급
-        </button>
-        @endperm
-        <button type="button" class="btn btn-outline btn-sm" onclick="vaCheckSelected(this)">
-          <i class="fa-solid fa-rotate"></i> 선택 입금확인
-        </button>
-        @perm('settlement', 'send')
-        <button type="button" class="btn btn-outline btn-sm" onclick="vaResendSelected(this)">
-          <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
-        </button>
-        @endperm
-        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행</span>
-      @else
-        <span style="font-size:12px;color:var(--text-muted);"><i class="fa-solid fa-triangle-exclamation"></i> 토스 API 미설정 — 발급/입금확인/SMS 불가</span>
-      @endif
-      <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
-    </div>
-    <div id="vaGrid"></div>
+      <div class="ds-grid-card">
+        {{-- ── 가상계좌 목록 (wwGrid) ── --}}
+        <div id="vaGrid"></div>
+      </div>{{-- /.ds-grid-card --}}
+    </div>{{-- /.ds-grid-section --}}
 
   @endif
 
@@ -266,8 +320,8 @@
   <div style="background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:0 20px 60px rgba(0,0,0,.25);width:680px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <i class="fa-solid fa-file-medical" style="color:var(--primary);font-size:16px;"></i>
-      <span style="font-size:15px;font-weight:700;" id="rxModalTitle">처방전 상세</span>
-      <button onclick="closeModal('rxModal')" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
+      <span style="font-size:14px;font-weight:700;line-height:22px;" id="rxModalTitle">처방전 상세</span>
+      <button onclick="closeModal('rxModal')" style="margin-left:auto;background:none;border:none;font-size:16px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
     </div>
     <div style="overflow-y:auto;padding:20px;" id="rxModalBody">
       <div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>
@@ -283,8 +337,8 @@
   <div style="background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:0 20px 60px rgba(0,0,0,.25);width:720px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <i class="fa-solid fa-cart-shopping" style="color:var(--primary);font-size:16px;"></i>
-      <span style="font-size:15px;font-weight:700;" id="orderModalTitle">주문 상세</span>
-      <button onclick="closeModal('orderModal')" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
+      <span style="font-size:14px;font-weight:700;line-height:22px;" id="orderModalTitle">주문 상세</span>
+      <button onclick="closeModal('orderModal')" style="margin-left:auto;background:none;border:none;font-size:16px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
     </div>
     <div style="overflow-y:auto;padding:20px;" id="orderModalBody">
       <div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>
@@ -320,8 +374,19 @@
       const d    = await res.json();
       document.getElementById('rxModalTitle').textContent = `처방전 상세 — ${d.rx_number}`;
 
-      const badgeColor = { success:'#16a34a', danger:'#dc2626', warning:'#d97706', info:'#0077b6', secondary:'#64748b' };
-      const badge = (label, type) => `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${badgeColor[type]||'#64748b'}20;color:${badgeColor[type]||'#64748b'};">${label}</span>`;
+      // 배지 — 시안 규격(r6 · pad 2/6 · 11/500 · lh18). 색은 DS 토큰만 쓴다(초록·주황은 이 디자인에 없다)
+      const badgeTone = {
+        success:   ['var(--primary-50)',  'var(--primary-600)'],
+        danger:    ['var(--alert-100)',   'var(--alert-500)'],
+        warning:   ['var(--alert-100)',   'var(--alert-500)'],
+        info:      ['var(--primary-50)',  'var(--primary)'],
+        primary:   ['var(--primary-50)',  'var(--primary)'],
+        secondary: ['var(--gray-100)',    'var(--gray-600)'],
+      };
+      const badge = (label, type) => {
+        const [bg, fg] = badgeTone[type] || badgeTone.secondary;
+        return `<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:500;line-height:18px;background:${bg};color:${fg};">${label}</span>`;
+      };
 
       const row = (label, value) => `<div style="display:flex;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:12px;">
         <span style="width:110px;flex-shrink:0;color:var(--text-muted);">${label}</span>
@@ -412,14 +477,25 @@
       const d   = await res.json();
       document.getElementById('orderModalTitle').textContent = `주문 상세 — ${d.order_number}`;
 
-      const badgeColor = { success:'#16a34a', danger:'#dc2626', warning:'#d97706', info:'#0077b6', secondary:'#64748b', primary:'#0077b6' };
-      const badge = (label, type) => `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${badgeColor[type]||'#64748b'}20;color:${badgeColor[type]||'#64748b'};">${label}</span>`;
+      // 배지 — 시안 규격(r6 · pad 2/6 · 11/500 · lh18). 색은 DS 토큰만 쓴다(초록·주황은 이 디자인에 없다)
+      const badgeTone = {
+        success:   ['var(--primary-50)',  'var(--primary-600)'],
+        danger:    ['var(--alert-100)',   'var(--alert-500)'],
+        warning:   ['var(--alert-100)',   'var(--alert-500)'],
+        info:      ['var(--primary-50)',  'var(--primary)'],
+        primary:   ['var(--primary-50)',  'var(--primary)'],
+        secondary: ['var(--gray-100)',    'var(--gray-600)'],
+      };
+      const badge = (label, type) => {
+        const [bg, fg] = badgeTone[type] || badgeTone.secondary;
+        return `<span style="display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:500;line-height:18px;background:${bg};color:${fg};">${label}</span>`;
+      };
       const row   = (label, value) => `<div style="display:flex;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:12px;">
         <span style="width:110px;flex-shrink:0;color:var(--text-muted);">${label}</span>
         <span style="flex:1;font-weight:500;">${value ?? '-'}</span></div>`;
       const amtRow = (label, val, color='var(--text-primary)') => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:12px;">
         <span style="color:var(--text-muted);">${label}</span>
-        <span style="font-family:monospace;font-weight:600;color:${color};">${fmt(val)}원</span></div>`;
+        <span style="font-family:monospace;font-weight:500;color:${color};">${fmt(val)}원</span></div>`;
 
       const itemsHtml = d.items?.length ? `
         <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;">
@@ -436,12 +512,12 @@
             <td style="padding:5px 8px;border:1px solid var(--border);font-family:monospace;">${i.product_code}</td>
             <td style="padding:5px 8px;border:1px solid var(--border);text-align:center;">${i.quantity}</td>
             <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;">${fmt(i.unit_price)}</td>
-            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--success);">${fmt(i.nhis_amount)}</td>
+            <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--primary-600);">${fmt(i.nhis_amount)}</td>
             <td style="padding:5px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--primary);">${fmt(i.patient_copay)}</td>
           </tr>`).join('')}
           <tr style="background:var(--bg);font-weight:700;">
             <td colspan="4" style="padding:6px 8px;border:1px solid var(--border);text-align:right;">합계</td>
-            <td style="padding:6px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--success);">${fmt(d.items.reduce((s,i)=>s+(i.nhis_amount||0),0))}</td>
+            <td style="padding:6px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--primary-600);">${fmt(d.items.reduce((s,i)=>s+(i.nhis_amount||0),0))}</td>
             <td style="padding:6px 8px;border:1px solid var(--border);text-align:right;font-family:monospace;color:var(--primary);">${fmt(d.items.reduce((s,i)=>s+(i.patient_copay||0),0))}</td>
           </tr></tbody>
         </table>` : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 품목 없음</div>';
@@ -455,7 +531,7 @@
             ${row('계좌번호', `<span style="font-family:monospace;font-weight:700;">${d.toss_payment.account_number}</span>`)}
             ${row('금액', `<span style="font-family:monospace;">${fmt(d.toss_payment.amount)}원</span>`)}
             ${row('만료일시', d.toss_payment.due_date || '-')}
-            ${row('입금확인', d.toss_payment.deposited_at ? `<span style="color:var(--success);">${d.toss_payment.deposited_at}</span>` : '-')}
+            ${row('입금확인', d.toss_payment.deposited_at ? `<span style="color:var(--primary-600);">${d.toss_payment.deposited_at}</span>` : '-')}
           </div>
         </div>` : '';
 
@@ -482,11 +558,11 @@
           <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">금액 정보</div>
           <div style="background:var(--bg);border-radius:var(--radius);padding:10px 14px;">
             ${amtRow('단가',        d.unit_price)}
-            ${amtRow('NHIS 청구액', d.nhis_amount,    'var(--success)')}
+            ${amtRow('NHIS 청구액', d.nhis_amount,    'var(--primary-600)')}
             ${amtRow('환자 본인부담', d.patient_copay, 'var(--primary)')}
             ${amtRow('배송비',      d.shipping_fee)}
-            ${amtRow('NHIS 환급',   d.nhis_reimb,    'var(--success)')}
-            <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:800;">
+            ${amtRow('NHIS 환급',   d.nhis_reimb,    'var(--primary-600)')}
+            <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:700;line-height:21px;">
               <span>총 주문금액</span>
               <span style="font-family:monospace;color:var(--primary);">${fmt(d.total_amount)}원</span>
             </div>
@@ -583,11 +659,15 @@
 
   const grid = new wwGrid({
     el: mountEl,
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바 버튼으로 옮겼다(동작은 downloadExcel() 동일).
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    footer: false,
     columns: GRID_COLS,
     data: GRID_DATA,
   });
+  window.__settlementGrid = grid;                  // 결과바의 엑셀 저장 버튼이 이걸 부른다
+  window.dsBindSelCount(grid, 'settleSelCount');   // 결과바 '선택 N건' 표시를 그리드 선택에 연결
 
   // ── 조회결과/상세내용 패널 탭 + 더블클릭 주문상세(iframe 없이 인페이지 주입) ──
   const ORDER_SHOW_BASE = @json(url('orders'));
@@ -668,7 +748,7 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.filter-bar', title: '정산 조회 필터', body: '기간과 상태로 정산 대상 주문을 조회합니다. 엑셀 다운로드도 이 화면에서 가능합니다.' },
+  { selector: '.ds-filter-card', title: '정산 조회 필터', body: '기간과 상태로 정산 대상 주문을 조회합니다. 엑셀 다운로드도 이 화면에서 가능합니다.' },
   { selector: '#settlementGrid, #vaGrid', title: '정산/가상계좌 목록', body: '주문 기준 정산 현황과 토스페이먼츠 가상계좌 현황입니다. 행을 체크한 뒤 상단 버튼으로 상세·발급·입금확인·SMS를 실행합니다.' },
 ];
 </script>

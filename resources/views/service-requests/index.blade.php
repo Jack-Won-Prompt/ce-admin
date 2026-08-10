@@ -24,13 +24,6 @@
   .status-tab:not(.active) .cnt { background:var(--border-light); color:var(--text-muted); }
 
 
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
-    display:inline-flex; align-items:center; gap:7px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { text-align:center; padding:56px 24px; color:var(--text-muted); font-size:13px; }
 
   .srx-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; }
   .srx-grid2 { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; align-items:start; }

@@ -247,12 +247,6 @@
 .toggle-track.on .toggle-thumb { transform:translateX(20px); }
 
 /* ── 패널 탭(관리자 목록 / 초대 현황) ── */
-.pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
-.pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-  color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
-  display:inline-flex; align-items:center; gap:7px; }
-.pnl-tab:hover { color:var(--primary); }
-.pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 .pnl-cnt { min-width:16px; padding:0; height:16px; display:inline-flex; align-items:center; justify-content:center;
   border-radius:999px; font-size:10px; font-weight:700; line-height:1; background:var(--gray-500); color:var(--gray-0); }
 .pnl-tab.active .pnl-cnt { background:var(--primary); color:#fff; }

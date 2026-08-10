@@ -6,63 +6,91 @@
 
 @push('styles')
 <style>
+  /* 상태 배지 — 시안 배지 규격: r6 · pad 2/6 · 11px/500 · lh18.
+     지금 그리드는 상태를 글자로만 그려 이 클래스를 쓰는 마크업이 없지만
+     개발 자산이라 남긴다. 색은 DS 토큰(primary 램프·grayscale)만 쓴다. */
   .shop-status-badge {
     display:inline-flex; align-items:center; padding:2px 6px;
     border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
   }
   .shop-status-badge.confirmed  { background:var(--primary-light); color:var(--primary); }
-  .shop-status-badge.processing { background:var(--primary-light); color:var(--primary); }
-  .shop-status-badge.shipped    { background:var(--warning-light); color:var(--warning); }
+  .shop-status-badge.processing { background:var(--primary-100);   color:var(--primary-600); }
+  /* 배송중은 주황(--warning)이었으나 시안 팔레트에 주황이 없다 → primary 램프로 옮겼다 */
+  .shop-status-badge.shipped    { background:var(--primary-200);   color:var(--primary-700); }
   .shop-status-badge.delivered  { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.cancelled  { background:var(--border-light);  color:var(--text-muted); }
+  /* 12/700 — 시안의 강조 셀 규격 */
   .order-num { font-size:12px; font-weight:700; color:var(--primary); }
+
+  /* 결과바 '선택 N건' — 13/500 · lh21 · gray-600, 숫자만 primary-400 */
+
+  /* 검색 아이콘(.search-wrap)을 살린 채 9열 그리드의 한 칸을 꽉 채운다 */
+  .ds-filter-field .search-wrap { display:flex; width:100%; }
+  .ds-filter-field .search-wrap .form-control { width:100%; min-width:0; }
 </style>
 @endpush
 
 @section('content')
 
-{{-- 상태 탭 --}}
+{{-- 상태 칩 — 표준 규격: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원.
+     아래 여백은 .page-body 의 gap 16 이 만든다. --}}
 @php
   $statuses = ['all'=>'전체','confirmed'=>'주문확인','processing'=>'처리중','shipped'=>'배송중','delivered'=>'배송완료','cancelled'=>'취소'];
   $allCount = $statusCounts->sum();
   $cur = request('status', '');
 @endphp
-<div class="tab-pills" style="margin-bottom:16px;">
+<div class="ds-chips">
   @foreach($statuses as $key => $label)
     @php $isActive = ($key === 'all') ? !$cur : ($cur === $key); @endphp
     <a href="{{ route('shop-orders.index', array_merge(request()->except('status','page'), $key !== 'all' ? ['status'=>$key] : [])) }}"
-       class="tab-pill {{ $isActive ? 'active' : '' }}">
+       class="ds-chip {{ $isActive ? 'active' : '' }}">
       {{ $label }}
-      <span style="font-size:10.5px;font-weight:700;margin-left:4px;padding:1px 5px;border-radius:20px;background:rgba(40,121,139,.12);color:var(--primary);">
-        {{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}
-      </span>
+      <span class="ds-chip-count">{{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}</span>
     </a>
   @endforeach
 </div>
 
-{{-- 검색 필터 --}}
-<form method="GET" class="filter-bar" style="margin-bottom:16px;">
+{{-- 검색 필터 — 흰 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래, 검색어 2열 --}}
+<form method="GET" action="{{ route('shop-orders.index') }}" class="ds-filter-card">
   @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
-  <div class="search-wrap">
-    <i class="bx bx-search"></i>
-    <input type="text" name="q" value="{{ request('q') }}" placeholder="주문번호, 고객명, 회사명"
-           class="form-control" style="width:240px;">
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <div class="search-wrap">
+        <i class="bx bx-search"></i>
+        <input type="text" name="q" value="{{ request('q') }}" placeholder="주문번호, 고객명, 회사명"
+               class="form-control">
+      </div>
+    </div>
   </div>
-  <button class="btn btn-primary btn-sm">검색</button>
-  @if(request('q'))
-    <a href="{{ route('shop-orders.index', $cur ? ['status'=>$cur] : []) }}" class="btn btn-outline btn-sm">초기화</a>
-  @endif
+  <div class="ds-filter-actions">
+    @if(request('q'))
+      <a href="{{ route('shop-orders.index', $cur ? ['status'=>$cur] : []) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
 </form>
 
-{{-- ── 목록 (wwGrid) ── --}}
-<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-  <button type="button" class="btn btn-outline btn-sm" onclick="shopOrderViewDetail()">
-    <i class="bx bx-detail"></i> 선택 상세
-  </button>
-  <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
-  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+{{-- ── 결과바(h32) + 목록 카드(r12) ── --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="shopOrderSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">행 체크 후 <b>선택 상세</b> 버튼을 누르면 상세로 이동</span>
+      <button type="button" class="ds-btn" onclick="window.__shopOrderGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="shopOrderViewDetail()">
+        <i class="bx bx-detail"></i> 선택 상세
+      </button>
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+    <div id="shopOrderGrid"></div>
+  </div>
 </div>
-<div id="shopOrderGrid"></div>
 
 @endsection
 
@@ -72,8 +100,11 @@
   const DETAIL_BASE = @json(url('shop-orders'));
   const grid = new wwGrid({
     el: document.getElementById('shopOrderGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    toolbar: false,
+    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    footer: false,
     columns: [
       { header: '주문번호',  name: 'order_no',  width: 130, sortable: true },
       { header: '주문일시',  name: 'created',   width: 130, sortable: true },
@@ -88,6 +119,7 @@
     data: @json($gridData),
   });
   window.__shopOrderGrid = grid;
+  window.dsBindSelCount(grid, 'shopOrderSelCount');
   window.shopOrderViewDetail = function () {
     const c = grid.getCheckedRows();
     if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }

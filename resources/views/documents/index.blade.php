@@ -16,18 +16,9 @@
 
   /* 결과바 '선택 N건' — 전역(app.blade.php)에 규칙이 없어 화면에서 정의한다.
      PATTERN 규격: 13px/500 · lh21 · gray-600, 숫자만 primary-400 */
-  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-  .ds-grid-sel b { color:var(--primary-400); }
 
   /* ── 패널 탭(조회 결과 / 서류 등록) ──
      Figma 248:2923 — 그리드 카드 안 상단 h44 · pad 0/16 · 활성 밑줄 1px primary */
-  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--gray-600); border-bottom:1px solid transparent; margin-bottom:-1px;
-    display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { text-align:center; padding:56px 24px; color:var(--gray-600); font-size:13px; }
 
   /* ── 서류 등록 패널 — Figma 248:3355 (카드 안쪽 pad 16 · gap 12) ── */
   #pnlReg { padding:16px; overflow-y:auto; min-height:0; }

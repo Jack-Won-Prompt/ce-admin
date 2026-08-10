@@ -8,15 +8,8 @@
 <style>
   /* 결과바 '선택 N건' — 전역에 없어 화면마다 정의한다.
      Figma 266:66: 13px/500 · lh21 · grayscale/600, 숫자만 primary/400 */
-  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-  .ds-grid-sel b { color:var(--primary-400); }
 
   /* 패널 탭(조회 결과 / 상세 내용) — Figma 266:66: 카드 안 상단 h44 · pad 0/16 · 하단 1px --border */
-  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
   /* 유형 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18).
      원래 하늘색/초록 하드코딩(#e0f2fe·#f0fdf4·#15803d)이었다. 초록은 이 디자인에 없어 DS 토큰으로 바꿨다. */

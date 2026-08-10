@@ -8,8 +8,8 @@
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.filter-bar', title: '검색 필터', body: '사용자, 활동유형, 날짜 범위로 로그를 조회합니다.' },
-  { selector: '.log-table-wrap', title: '활동 로그 목록', body: '로그인 시각, 사용자, IP 주소, 실행 메뉴명을 확인합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '사용자, 활동유형, 날짜 범위로 로그를 조회합니다.' },
+  { selector: '#logGrid', title: '활동 로그 목록', body: '로그인 시각, 사용자, IP 주소, 실행 메뉴명을 확인합니다.' },
 ];
 </script>
 @endpush
@@ -31,16 +31,22 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
+  /* .stat-row · .stat-chip · .filter-bar 는 레이아웃의
+     ds-chips / ds-chip / ds-chip-count / ds-filter-card 로 대체됨.
+     아래 규칙들은 wwGrid 이전 <table> 시절 자산이라 마크업 사용처는 없지만 남겨 둔다. */
   .log-table-wrap { overflow-x:auto; }
   .log-table-wrap thead th { position:sticky; top:0; z-index:5; background:var(--bg); }
+  /* 배지 규격 — r6 · pad 2/6 · 11px/500 · lh18 (그대로 규격에 맞아 손대지 않았다) */
   .type-badge-login { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; background:var(--primary-light); color:var(--primary); }
   .type-badge-page  { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; background:var(--primary-light); color:var(--primary); }
-  .ip-cell  { font-family:monospace; font-size:12px; color:var(--text-secondary); }
-  .url-cell { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted); }
-  .ua-cell  { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted); cursor:help; }
-  .stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
-  .stat-chip { display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:var(--radius-lg); background:#fff; border:1px solid var(--border); font-size:13px; }
-  .stat-chip strong { font-size:18px; font-weight:700; color:var(--primary); }
+  /* 서체는 Pretendard 하나다 — IP 자릿수 정렬은 monospace 대신 tabular-nums 로 낸다 */
+  .ip-cell  { font-variant-numeric:tabular-nums; font-size:12px; font-weight:500; line-height:19px; color:var(--text-secondary); }
+  .url-cell { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:500; line-height:18px; color:var(--text-muted); }
+  .ua-cell  { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:500; line-height:18px; color:var(--text-muted); cursor:help; }
+
+  /* 통계 칩은 링크가 아니라 표시 전용이다 — 커서와 hover 색만 죽인다 */
+  .ds-chip.is-static { cursor:default; }
+  .ds-chip.is-static:hover { color:var(--gray-500); }
 </style>
 @endpush
 
@@ -53,72 +59,109 @@ window.HELP_TOUR_STEPS = [
   $pageCount   = \App\Models\UserActivityLog::where('type','page')->count();
   $userCount   = \App\Models\UserActivityLog::distinct('user_id')->count('user_id');
 @endphp
-<div class="stat-row">
-  <div class="stat-chip">
-    <i class="bx bx-list-check" style="font-size:20px;color:var(--primary);"></i>
-    <div><div style="font-size:11px;color:var(--text-muted);">전체 로그</div><strong>{{ number_format($loginCount + $pageCount) }}</strong></div>
-  </div>
-  <div class="stat-chip">
-    <i class="bx bx-log-in-circle" style="font-size:20px;color:var(--success);"></i>
-    <div><div style="font-size:11px;color:var(--text-muted);">로그인</div><strong style="color:var(--success);">{{ number_format($loginCount) }}</strong></div>
-  </div>
-  <div class="stat-chip">
-    <i class="bx bx-window-alt" style="font-size:20px;color:var(--info);"></i>
-    <div><div style="font-size:11px;color:var(--text-muted);">페이지 방문</div><strong style="color:var(--info);">{{ number_format($pageCount) }}</strong></div>
-  </div>
-  <div class="stat-chip">
-    <i class="bx bx-group" style="font-size:20px;color:var(--warning);"></i>
-    <div><div style="font-size:11px;color:var(--text-muted);">활동 사용자</div><strong style="color:var(--warning);">{{ number_format($userCount) }}</strong></div>
-  </div>
+{{-- 칩 규격 — h31 · r999 · pad 6/10 · 12px/700, 건수 배지 16×16 정원 · 10px/700 --}}
+<div class="ds-chips">
+  <span class="ds-chip is-static">
+    <i class="bx bx-list-check" style="font-size:16px;"></i>
+    전체 로그 <span class="ds-chip-count">{{ number_format($loginCount + $pageCount) }}</span>
+  </span>
+  <span class="ds-chip is-static">
+    <i class="bx bx-log-in-circle" style="font-size:16px;"></i>
+    로그인 <span class="ds-chip-count">{{ number_format($loginCount) }}</span>
+  </span>
+  <span class="ds-chip is-static">
+    <i class="bx bx-window-alt" style="font-size:16px;"></i>
+    페이지 방문 <span class="ds-chip-count">{{ number_format($pageCount) }}</span>
+  </span>
+  <span class="ds-chip is-static">
+    <i class="bx bx-group" style="font-size:16px;"></i>
+    활동 사용자 <span class="ds-chip-count">{{ number_format($userCount) }}</span>
+  </span>
 </div>
 
-{{-- ── 검색 필터 ── --}}
-<form method="GET" action="{{ route('user-logs.index') }}" class="filter-bar">
-  <select name="user_id" class="form-control" style="width:160px;">
-    <option value="">전체 사용자</option>
-    @foreach($users as $u)
-      <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
-        {{ $u->name }} ({{ $u->email }})
-      </option>
-    @endforeach
-  </select>
-  <select name="type" class="form-control" style="width:110px;">
-    <option value="">전체 유형</option>
-    <option value="login" {{ request('type') === 'login' ? 'selected' : '' }}>로그인</option>
-    <option value="page"  {{ request('type') === 'page'  ? 'selected' : '' }}>페이지 방문</option>
-  </select>
-  <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" style="width:140px;" placeholder="시작일">
-  <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" style="width:140px;" placeholder="종료일">
-  <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="사용자명 · IP · 메뉴명" style="width:180px;">
-  <select name="per_page" class="form-control" style="width:80px;" onchange="this.form.submit()">
-    @foreach([20,50,100] as $n)
-      <option value="{{ $n }}" {{ request('per_page',20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
-    @endforeach
-  </select>
-  <button type="submit" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-magnifying-glass"></i> 검색
-  </button>
-  @if(request()->hasAny(['user_id','type','date_from','date_to','q']))
-    <a href="{{ route('user-logs.index') }}" class="btn btn-outline btn-sm">초기화</a>
-  @endif
+{{-- ── 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래, 9열 그리드 ── --}}
+<form method="GET" action="{{ route('user-logs.index') }}" class="ds-filter-card">
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">사용자</label>
+      <select name="user_id" class="form-control form-select">
+        <option value="">전체 사용자</option>
+        @foreach($users as $u)
+          <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
+            {{ $u->name }} ({{ $u->email }})
+          </option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">활동 유형</label>
+      <select name="type" class="form-control form-select">
+        <option value="">전체 유형</option>
+        <option value="login" {{ request('type') === 'login' ? 'selected' : '' }}>로그인</option>
+        <option value="page"  {{ request('type') === 'page'  ? 'selected' : '' }}>페이지 방문</option>
+      </select>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" placeholder="시작일">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" placeholder="종료일">
+      </div>
+    </div>
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="사용자명 · IP · 메뉴명">
+    </div>
+    {{-- 표시 건수는 컨트롤러가 아직 읽지 않지만 개발 자산이라 그대로 둔다 --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">표시 건수</label>
+      <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
+        @foreach([20,50,100] as $n)
+          <option value="{{ $n }}" {{ request('per_page',20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request()->hasAny(['user_id','type','date_from','date_to','q']))
+      <a href="{{ route('user-logs.index') }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">
+      <i class="fa-solid fa-magnifying-glass"></i> 검색
+    </button>
+  </div>
 </form>
 
-{{-- ── 활동 로그 (wwGrid) ── --}}
-<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-  <span class="card-header-title">활동 로그</span>
-  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+{{-- ── 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 ── --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="card-header-title">활동 로그</span>
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">열 머리글을 <b>클릭</b>하면 정렬됩니다.</span>
+      <button type="button" class="ds-btn" onclick="window.__userlogsGrid?.downloadExcel()">엑셀 저장</button>
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+    <div id="logGrid"></div>
+  </div>
 </div>
-<div id="logGrid"></div>
 
 @endsection
 
 @push('scripts')
 <script>
 (function () {
-  new wwGrid({
+  const grid = new wwGrid({
     el: document.getElementById('logGrid'),
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: false, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '일시',      name: 'created', width: 150, sortable: true },
       { header: '유형',      name: 'type',    width: 80,  sortable: true, align: 'center' },
@@ -132,6 +175,9 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+  // 결과바의 '엑셀 저장' 버튼이 이 인스턴스를 부른다.
+  // 체크박스가 없는 그리드라 '선택 N건'은 두지 않았고 dsBindSelCount 도 부르지 않는다.
+  window.__userlogsGrid = grid;
 })();
 </script>
 @endpush

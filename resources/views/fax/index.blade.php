@@ -13,7 +13,7 @@
 </div>
 <div class="help-section">
   <div class="help-section-title">지원 파일 형식</div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);"><i class="bx bx-file"></i></div><div class="help-item-text">PDF, TIFF, JPG, PNG, GIF — 건당 최대 10MB</div></div>
+  <div class="help-item"><div class="help-item-icon"><i class="bx bx-file"></i></div><div class="help-item-text">PDF, TIFF, JPG, PNG, GIF — 건당 최대 10MB</div></div>
 </div>
 <div class="help-section">
   <div class="help-section-title">전송 상태</div>
@@ -26,248 +26,250 @@
 </div>
 <div class="help-section">
   <div class="help-section-title">유의사항</div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--warning-light);color:var(--warning);"><i class="bx bx-error"></i></div><div class="help-item-text">발신번호는 팝빌 포털에서 사전 등록·인증 후 사용 가능합니다.</div></div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--warning-light);color:var(--warning);"><i class="bx bx-error"></i></div><div class="help-item-text">테스트 환경에서는 실제 팩스가 발송되지 않습니다.</div></div>
+  <div class="help-item"><div class="help-item-icon warn"><i class="bx bx-error"></i></div><div class="help-item-text">발신번호는 팝빌 포털에서 사전 등록·인증 후 사용 가능합니다.</div></div>
+  <div class="help-item"><div class="help-item-icon warn"><i class="bx bx-error"></i></div><div class="help-item-text">테스트 환경에서는 실제 팩스가 발송되지 않습니다.</div></div>
 </div>
 @endsection
 
 @push('styles')
 <style>
-  /* ── 레이아웃 ── */
-  /* 전송 내역 / 팩스 발송 탭 구성 */
-  .fax-layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
-  .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+  /* ── 레이아웃 ──
+     .page-body 가 flex column · gap 16 이라 최상위 블록 사이 여백은 gap 이 만든다.
+     탭(전송 내역 / 팩스 발송)이 두 판을 번갈아 보여 준다. */
+  .fax-pane { display:flex; flex-direction:column; gap:12px; }
+
+  /* 탭바 — Figma 탭 규격: h44 · pad 0/16 · gap 16 · 하단 1px border · 활성 밑줄 1px primary */
+  .titab-bar { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   .titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
+    color:var(--gray-600); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .titab:hover { color:var(--primary); }
   .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
 
+  /* 결과바 '선택 N건' — 전역(layouts/app.blade.php)에 .ds-grid-sel 이 없어 화면에서 정의한다.
+     patients/index.blade.php 도 같은 이유로 같은 값을 갖고 있다. 전역으로 올려야 한다. */
+
+  /* 동기화 문구(#sync-status) — 전역 .ds-grid-bar-right 는 flex-shrink:0 이고
+     .content-wrapper 는 overflow-x:clip 이라(가로 스크롤이 안 생긴다) 문구가 길어지면
+     '엑셀 저장' 버튼이 화면 밖으로 밀려 눌리지 않는다.
+     '동기화 완료: 총 N건 중 N건 갱신, 오류 N건' 이 약 300px 이므로 2열 폭(298px)으로 묶고
+     넘치면 말줄임한다. 전문은 syncPending() 이 띄우는 토스트가 그대로 보여 준다.
+     비어 있을 때는 결과바 gap 6px 만 남으므로 숨긴다. */
+  #sync-status { max-width:298px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #sync-status:empty { display:none; }
+
   /* ── 요약 카드 ── */
-  .fax-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
-  @media(max-width:700px){ .fax-summary { grid-template-columns: 1fr 1fr; } }
+  .fax-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media(max-width:700px){ .fax-summary { grid-template-columns:1fr 1fr; } }
   .sum-card {
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:16px 18px; display:flex; align-items:center; gap:14px;
+    background:var(--gray-0); border-radius:12px;
+    padding:12px 16px; display:flex; align-items:center; gap:12px;
   }
   .sum-card .sc-icon {
-    width:44px; height:44px; border-radius:10px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:20px;
+    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
   }
-  .sum-card .sc-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-  .sum-card .sc-val   { font-size:22px; font-weight:800; line-height:1; }
-  .sum-card.blue  .sc-icon { background:var(--primary-light); color:var(--primary); }
-  .sum-card.green .sc-icon { background:var(--success-light); color:var(--success); }
-  .sum-card.gray  .sc-icon { background:var(--border-light);  color:var(--text-muted); }
+  .sum-card .sc-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  .sum-card .sc-val   { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-800); }
+  /* 클래스 이름(blue/green/gray)은 개발 코드가 쓰던 그대로 두고 색만 DS 토큰으로 옮겼다.
+     시안에 초록이 없어 green 도 primary 계열을 쓴다. */
+  .sum-card.blue  .sc-icon { background:var(--primary-50);  color:var(--primary-500); }
+  .sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
+  .sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
 
   /* ── 발송 폼 카드 ── */
-  .send-card {
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
- overflow:hidden;
-  }
+  .send-card { background:var(--gray-0); border-radius:12px; overflow:hidden; }
   .send-card-head {
-    padding:16px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; gap:10px;
-    font-weight:700; font-size:14px;
+    padding:12px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+    font-size:14px; font-weight:700; line-height:22px; color:var(--text-primary);
   }
-  .send-card-head i { font-size:18px; color:var(--primary); }
-  .send-card-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .send-card-head i { font-size:16px; color:var(--primary); }
+  .send-card-body { padding:16px; display:flex; flex-direction:column; gap:12px; }
 
-  .form-row { display:flex; flex-direction:column; gap:4px; }
-  .form-label { font-size:11.5px; font-weight:600; color:var(--text-muted); }
+  .form-row { display:flex; flex-direction:column; gap:8px; }
+  /* 입력 — Figma: h32 · r8 · pad 5/12 · 13/400 · lh20 · bd 1px gray-200 (.form-control 과 같은 규격).
+     addReceiver() 가 만드는 행이 .form-input 을 쓰므로 클래스명은 그대로 둔다. */
   .form-input {
-    height:38px; border:1px solid var(--border); border-radius:var(--radius);
-    padding:0 12px; font-size:13px; color:var(--text); background:#fff;
-    transition:border-color .15s;
+    width:100%; height:32px; padding:5px 12px;
+    border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px;
+    color:var(--text-primary); background:var(--gray-0);
+    font-family:inherit; transition:var(--transition);
   }
+  .form-input::placeholder { color:var(--gray-500); }
   .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(40,121,139,.12); }
   .form-input.error { border-color:var(--danger); }
-  select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+  select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px; }
 
   /* 수신자 섹션 */
-  .receivers-box { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .receivers-box { border:1px solid var(--gray-200); border-radius:8px; overflow:hidden; }
   .receiver-row {
     display:grid; grid-template-columns:1fr auto;
-    gap:8px; padding:10px 12px; border-bottom:1px solid var(--border);
+    gap:8px; padding:8px 12px; border-bottom:1px solid var(--gray-200);
     align-items:center;
   }
   .receiver-inputs { display:flex; flex-direction:column; gap:6px; }
   .receiver-row:last-child { border-bottom:none; }
   .receiver-add-btn {
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    padding:9px; font-size:12px; font-weight:600; color:var(--primary);
-    background:var(--primary-light); border:none; cursor:pointer;
-    transition:background .15s;
+    align-self:flex-start;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    height:32px; padding:5px 12px; border-radius:8px;
+    font-size:13px; font-weight:500; line-height:20px; color:var(--primary);
+    background:var(--primary-light); border:1px solid var(--primary-200); cursor:pointer;
+    transition:var(--transition);
   }
-  .receiver-add-btn:hover { background:rgba(40,121,139,.12); }
+  .receiver-add-btn:hover { background:var(--primary-100); }
   .receiver-del-btn {
-    width:28px; height:28px; border-radius:6px; border:none;
+    width:28px; height:28px; border-radius:8px; border:none;
     background:var(--danger-light); color:var(--danger); cursor:pointer;
     display:flex; align-items:center; justify-content:center; font-size:16px;
-    transition:background .15s; flex-shrink:0;
+    transition:var(--transition); flex-shrink:0;
   }
-  .receiver-del-btn:hover { background:rgba(239,68,68,.15); }
+  .receiver-del-btn:hover { background:var(--alert-100); }
 
   /* 파일 드롭존 */
   .drop-zone {
-    border:2px dashed var(--border); border-radius:var(--radius-lg);
-    padding:24px 16px; text-align:center; cursor:pointer;
-    transition:border-color .2s, background .2s; background:var(--bg);
+    border:1px dashed var(--gray-300); border-radius:12px;
+    padding:16px; text-align:center; cursor:pointer;
+    transition:var(--transition); background:var(--gray-50);
   }
   .drop-zone.drag-over { border-color:var(--primary); background:var(--primary-light); }
-  .drop-zone .dz-icon { font-size:32px; color:var(--text-muted); margin-bottom:6px; }
-  .drop-zone .dz-text { font-size:13px; color:var(--text-muted); }
-  .drop-zone .dz-sub  { font-size:11px; color:var(--text-muted); margin-top:4px; }
-  .file-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .drop-zone .dz-icon { font-size:16px; line-height:26px; color:var(--gray-500); }
+  .drop-zone .dz-text { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
+  .drop-zone .dz-sub  { font-size:12px; font-weight:400; line-height:19px; color:var(--gray-500); margin-top:2px; }
+  .file-list { display:flex; flex-direction:column; gap:6px; }
   .file-item {
     display:flex; align-items:center; gap:8px;
-    padding:7px 10px; background:#fff; border:1px solid var(--border);
-    border-radius:var(--radius); font-size:12px;
+    padding:5px 12px; background:var(--gray-0); border:1px solid var(--gray-200);
+    border-radius:8px; font-size:13px; font-weight:400; line-height:20px;
   }
   .file-item i { color:var(--primary); font-size:16px; }
   .file-item .fi-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .file-item .fi-size { color:var(--text-muted); white-space:nowrap; }
+  .file-item .fi-size { color:var(--gray-500); white-space:nowrap; }
   .file-item .fi-del  { color:var(--danger); cursor:pointer; margin-left:4px; font-size:16px; }
 
   /* 예약 전송 토글 */
-  .reserve-toggle { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .reserve-toggle { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); cursor:pointer; }
   .reserve-toggle input[type=checkbox] { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; }
 
-  /* 전송 버튼 */
+  /* 전송 버튼 — Figma 버튼 규격 h32 · r8 · pad 5/12 · 13/500 · lh20 */
   .send-btn {
-    height:44px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius);
-    font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center;
-    justify-content:center; gap:8px; transition:background .15s;
+    height:32px; padding:5px 12px;
+    background:var(--primary); color:var(--gray-0);
+    border:1px solid var(--primary); border-radius:8px;
+    font-size:13px; font-weight:500; line-height:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition:var(--transition);
   }
-  .send-btn:hover:not(:disabled) { background:#1554d4; }
+  .send-btn:hover:not(:disabled) { background:var(--primary-dark); border-color:var(--primary-dark); }
   .send-btn:disabled { opacity:.6; cursor:not-allowed; }
 
-  /* ── 전송 내역 패널 ── */
-  .hist-card {
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
- overflow:hidden;
-  }
-  .hist-head {
-    padding:16px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  }
-  .hist-head-title { font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; flex:1; }
-  .hist-head-title i { font-size:18px; color:var(--primary); }
-  .hist-filter { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .hist-filter input[type=date], .hist-filter select {
-    height:34px; border:1px solid var(--border); border-radius:var(--radius);
-    padding:0 10px; font-size:12px; color:var(--text); background:#fff;
-  }
-  .hist-filter input[type=date]:focus, .hist-filter select:focus { outline:none; border-color:var(--primary); }
-  .btn-search {
-    height:34px; padding:0 14px; background:var(--primary); color:#fff; border:none;
-    border-radius:var(--radius); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;
-  }
-  .btn-search:hover { background:#1554d4; }
-  .btn-sync {
-    height:34px; padding:0 12px; background:#fff; color:var(--text-muted);
-    border:1px solid var(--border); border-radius:var(--radius);
-    font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;
-    display:inline-flex; align-items:center; gap:5px; transition:border-color .15s, color .15s;
-  }
-  .btn-sync:hover:not(:disabled) { border-color:var(--primary); color:var(--primary); }
+  /* ── 전송 내역 ──
+     껍데기(.hist-card/.hist-head/.hist-filter/.btn-search)는 표준 컴포넌트로 갈아탔다.
+     검색줄 → .ds-filter-card · 결과바 → .ds-grid-bar · 표 → .ds-grid-card.
+     '상태 동기화' 는 .ds-btn 위에 회전 애니메이션만 얹는다(syncPending() 이 .syncing 을 토글한다). */
   .btn-sync:disabled { opacity:.5; cursor:not-allowed; }
   .btn-sync.syncing i { animation:spin .8s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  .hist-body { overflow-x:auto; }
-  .hist-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  /* 아래 표 스타일은 지금 붙는 마크업이 없다(목록은 wwGrid 가 그린다).
+     개발 자산이라 지우지 않고 값만 시안 규격으로 맞춰 둔다. */
+  .hist-table { width:100%; border-collapse:collapse; font-size:13px; }
   .hist-table th {
-    padding:10px 14px; background:var(--bg); font-weight:600; font-size:11.5px;
-    color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;
+    padding:10px 14px; background:var(--gray-50); font-size:13px; font-weight:700; line-height:21px;
+    color:var(--gray-600); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;
   }
   .hist-table td {
     padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle;
+    font-size:13px; font-weight:400; line-height:21px;
   }
   .hist-table tr:last-child td { border-bottom:none; }
-  .hist-table tr:hover td { background:rgba(40,121,139,.03); }
+  .hist-table tr:hover td { background:var(--gray-50); }
   .hist-table .mono { font-family:monospace; font-size:11px; }
   .btn-detail {
-    height:26px; padding:0 10px; font-size:11px; font-weight:600;
+    height:28px; padding:3px 10px; font-size:13px; font-weight:500; line-height:20px;
     background:var(--primary-light); color:var(--primary); border:none;
-    border-radius:5px; cursor:pointer; white-space:nowrap;
+    border-radius:8px; cursor:pointer; white-space:nowrap;
   }
-  .btn-detail:hover { background:rgba(40,121,139,.15); }
-  .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+  .btn-detail:hover { background:var(--primary-100); }
+  .hist-empty { padding:40px; text-align:center; color:var(--gray-500); font-size:13px; }
 
-  /* 상태 배지 */
+  /* 상태 배지 — Figma: r6 · pad 2/6 · 11px/500 · lh18 */
   .fax-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
-  .fax-badge.wait   { background:var(--border-light); color:var(--text-muted); }
+  .fax-badge.wait   { background:var(--gray-100); color:var(--gray-600); }
   .fax-badge.send   { background:var(--primary-light); color:var(--primary); }
   .fax-badge.ok     { background:var(--primary-light); color:var(--primary); }
   .fax-badge.fail   { background:var(--danger-light); color:var(--danger); }
-  .fax-badge.cancel { background:#fff3e0; color:#e65100; }
+  .fax-badge.cancel { background:var(--gray-200); color:var(--gray-700); }
 
   /* 상세 모달 */
   .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; align-items:center; justify-content:center; }
   .nd-modal-overlay.open { display:flex; }
-  .nd-modal { background:#fff; border-radius:var(--radius-lg); box-shadow:0 20px 60px rgba(0,0,0,.18); width:560px; max-width:92vw; max-height:85vh; display:flex; flex-direction:column; }
-  .nd-modal-head { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
-  .nd-modal-head h3 { flex:1; font-size:15px; font-weight:700; margin:0; }
-  .nd-modal-close { background:none; border:none; font-size:20px; color:var(--text-muted); cursor:pointer; line-height:1; }
-  .nd-modal-body { padding:22px; overflow-y:auto; flex:1; }
+  .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:var(--shadow-lg); width:560px; max-width:92vw; max-height:85vh; display:flex; flex-direction:column; }
+  .nd-modal-head { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .nd-modal-head h3 { flex:1; font-size:14px; font-weight:700; line-height:22px; margin:0; }
+  .nd-modal-close { background:none; border:none; font-size:16px; color:var(--gray-500); cursor:pointer; line-height:1; }
+  .nd-modal-body { padding:16px; overflow-y:auto; flex:1; }
 
+  /* 아래는 openDetail() 이 만드는 마크업이 쓰는 클래스라 이름을 그대로 둔다. */
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .detail-item .di-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-  .detail-item .di-val   { font-size:13px; font-weight:500; }
+  .detail-item .di-label { font-size:11px; font-weight:700; line-height:18px; color:var(--gray-600); margin-bottom:4px; }
+  .detail-item .di-val   { font-size:13px; font-weight:500; line-height:21px; }
   .detail-item.full { grid-column:1/-1; }
-  .rcv-table { width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px; }
-  .rcv-table th { padding:7px 10px; background:var(--bg); font-size:11px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border); }
-  .rcv-table td { padding:7px 10px; border-bottom:1px solid var(--border); }
+  .rcv-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+  .rcv-table th { padding:6px 10px; background:var(--gray-50); font-size:13px; font-weight:700; line-height:21px; color:var(--gray-600); border-bottom:1px solid var(--border); }
+  .rcv-table td { padding:6px 10px; border-bottom:1px solid var(--border); font-size:13px; font-weight:400; line-height:21px; }
   .rcv-table tr:last-child td { border-bottom:none; }
 
   /* 상세 모달 - 정보 영역 */
   .fax-info-area {
-    background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--gray-50); border:1px solid var(--border); border-radius:8px;
     padding:12px 16px; margin-bottom:12px; display:flex; flex-direction:column; gap:8px;
   }
   .fax-info-area > div { display:flex; align-items:center; gap:8px; }
-  .fax-info-area p { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0; font-size:12.5px; }
+  .fax-info-area p { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; font-size:13px; font-weight:400; line-height:21px; }
   .fax-api-badge {
-    display:inline-flex; align-items:center; padding:2px 8px;
-    background:var(--primary); color:#fff; border-radius:4px;
-    font-size:11px; font-weight:700; flex-shrink:0;
+    display:inline-flex; align-items:center; padding:2px 6px;
+    background:var(--primary); color:var(--gray-0); border-radius:6px;
+    font-size:11px; font-weight:700; line-height:18px; flex-shrink:0;
   }
-  .fax-info-title { font-weight:600; color:var(--text-muted); font-size:12px; margin-right:4px; }
+  .fax-info-title { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-right:4px; }
   .fax-stat-blue { color:var(--primary); font-weight:700; }
   .fax-stat-red  { color:var(--danger);  font-weight:700; }
 
   /* 상세 모달 - 일반 테이블 */
-  .fax-normal-table { width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:14px; border:1px solid var(--border); }
+  .fax-normal-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:12px; border:1px solid var(--border); }
   .fax-normal-table th {
-    background:var(--bg); padding:0 14px; font-size:12px; font-weight:600;
-    color:var(--text-muted); text-align:center; border:1px solid var(--border); white-space:nowrap;
+    background:var(--gray-50); padding:0 14px; font-size:13px; font-weight:700; line-height:21px;
+    color:var(--gray-600); text-align:center; border:1px solid var(--border); white-space:nowrap;
   }
-  .fax-normal-table td { padding:0 14px; border:1px solid var(--border); color:var(--text); }
+  .fax-normal-table td { padding:0 14px; border:1px solid var(--border); font-size:13px; font-weight:400; line-height:21px; color:var(--text-primary); }
   .fax-conv-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .fax-dl-btn {
     height:20px; line-height:20px; padding:0 4px; background:none; border:none;
-    color:var(--primary); font-size:11px; cursor:pointer; text-decoration:underline;
-    display:inline-flex; align-items:center; gap:3px;
+    color:var(--primary); font-size:11px; font-weight:500; cursor:pointer; text-decoration:underline;
+    display:inline-flex; align-items:center; gap:4px;
   }
+  /* 작은 버튼 규격 — h28 · r8 · pad 3/10 · 13/500 */
   .fax-preview-btn {
-    height:24px; line-height:24px; padding:0 10px;
+    display:inline-flex; align-items:center; height:28px; padding:3px 10px;
     background:var(--primary-light); color:var(--primary);
-    border:1px solid rgba(40,121,139,.3); border-radius:4px;
-    font-size:11px; font-weight:600; cursor:pointer;
+    border:1px solid var(--primary-200); border-radius:8px;
+    font-size:13px; font-weight:500; line-height:20px; cursor:pointer;
   }
-  .fax-preview-btn:hover { background:rgba(40,121,139,.15); }
+  .fax-preview-btn:hover { background:var(--primary-100); }
 
-  /* 페이지네이션 */
-  .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
-  .pager-info { color:var(--text-muted); }
-  .pager-btns { display:flex; gap:4px; }
+  /* 페이지네이션 — 그리드 카드 하단 줄 */
+  .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  .pager-btns { display:flex; gap:2px; }
   .pager-btn {
-    height:30px; padding:0 10px; border:1px solid var(--border); border-radius:var(--radius);
-    background:#fff; font-size:12px; cursor:pointer; color:var(--text);
-    transition:border-color .15s, background .15s;
+    height:32px; min-width:32px; padding:0 10px; border:1px solid var(--gray-200); border-radius:8px;
+    background:var(--gray-0); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; color:var(--gray-800);
+    transition:var(--transition);
   }
   .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
-  .pager-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .pager-btn.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
   .pager-btn:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 @endpush
@@ -306,133 +308,149 @@
   <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-printer"></i> 팩스 발송</button>
 </div>
 
-<div class="fax-layout">
+{{-- ── 전송 내역 — 검색 필터 / 결과바 / 그리드 카드 ── --}}
+<div class="fax-pane" data-titab="hist">
 
-  {{-- ── 발송 폼 ── --}}
-  <div class="send-card" data-titab="issue">
-    <div class="send-card-head">
-      <i class="bx bx-printer"></i>
-      <span>팩스 발송</span>
-    </div>
-    <div class="send-card-body">
-
-      {{-- 사업자번호 --}}
-      <div class="form-row">
-        <label class="form-label">사업자번호</label>
-        <input id="corp-num" class="form-input" type="text" value="{{ $corpNum }}" placeholder="1234567890">
+  {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 --}}
+  <div class="ds-filter-card">
+    <div class="ds-filter-fields">
+      <div class="ds-filter-field span-2">
+        <label class="ds-field-label">전송 기간</label>
+        <div class="ds-field-range">
+          <input type="date" id="f-start" class="form-control" value="{{ date('Ymd', strtotime('-30 days')) }}">
+          <span class="ds-field-sep">~</span>
+          <input type="date" id="f-end"   class="form-control" value="{{ date('Ymd') }}">
+        </div>
       </div>
+    </div>
+    <div class="ds-filter-actions">
+      <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+    </div>
+  </div>
 
-      {{-- 발신번호 --}}
-      <div class="form-row">
-        <label class="form-label">발신 팩스번호 <span style="color:var(--danger)">*</span></label>
-        <div style="display:flex;gap:8px;">
-          <select id="sender-select" class="form-input" style="flex:1;">
-            <option value="">— 발신번호 선택 —</option>
-          </select>
-          <button type="button" onclick="loadSenderNumbers()" class="btn-search" style="white-space:nowrap;">
-            <i class="bx bx-refresh"></i>
+  {{-- 결과바(h32) — 좌: 전체·선택 건수, 우: 안내문 + 액션 버튼.
+       그리드 툴바의 '엑셀 저장'과 하단 상태바의 건수를 전부 여기로 옮겼다. --}}
+  <div class="ds-grid-section">
+    <div class="ds-grid-bar">
+      <div class="ds-grid-bar-left">
+        <span class="ds-grid-total">전체 <b id="fax-total-count">0</b>건</span>
+        <span class="ds-grid-sel">선택 <b id="fax-sel-count">0</b>건</span>
+      </div>
+      <div class="ds-grid-bar-right">
+        <span class="ds-grid-hint" id="sync-status"></span>
+        <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
+        <button type="button" class="ds-btn btn-sync" id="sync-btn" onclick="syncPending()" title="미완료 건 팝빌 상태 동기화">
+          <i class="bx bx-refresh"></i> 상태 동기화
+        </button>
+        <button type="button" class="ds-btn" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+        <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
+      </div>
+    </div>
+
+    <div class="ds-grid-card">
+      <div id="faxHistGrid"></div>
+
+      <div class="hist-pager" id="hist-pager" style="display:none;">
+        <div class="pager-info" id="pager-info"></div>
+        <div class="pager-btns" id="pager-btns"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{{-- ── 팩스 발송 폼 ── --}}
+<div class="send-card" data-titab="issue">
+  <div class="send-card-head">
+    <i class="bx bx-printer"></i>
+    <span>팩스 발송</span>
+  </div>
+  <div class="send-card-body">
+
+    {{-- 사업자번호 --}}
+    <div class="form-row">
+      <label class="ds-field-label">사업자번호</label>
+      <input id="corp-num" class="form-input" type="text" value="{{ $corpNum }}" placeholder="1234567890">
+    </div>
+
+    {{-- 발신번호 --}}
+    <div class="form-row">
+      <label class="ds-field-label">발신 팩스번호 <span style="color:var(--danger)">*</span></label>
+      <div class="ds-field-range">
+        <select id="sender-select" class="form-input" style="flex:1;">
+          <option value="">— 발신번호 선택 —</option>
+        </select>
+        <button type="button" onclick="loadSenderNumbers()" class="ds-btn" style="white-space:nowrap;">
+          <i class="bx bx-refresh"></i>
+        </button>
+      </div>
+    </div>
+
+    {{-- 발신자명 --}}
+    <div class="form-row">
+      <label class="ds-field-label">발신자명</label>
+      <input id="sender-name" class="form-input" type="text" placeholder="(선택) 발신자명">
+    </div>
+
+    {{-- 제목 --}}
+    <div class="form-row">
+      <label class="ds-field-label">팩스 제목</label>
+      <input id="fax-title" class="form-input" type="text" placeholder="(선택) 팩스 제목">
+    </div>
+
+    {{-- 수신자 --}}
+    <div class="form-row">
+      <label class="ds-field-label">수신자 <span style="color:var(--danger)">*</span></label>
+      <div class="receivers-box" id="receivers-box">
+        <div class="receiver-row" data-idx="0">
+          <div class="receiver-inputs">
+            <input class="form-input rcv-num"  type="text" placeholder="팩스번호 (숫자만)" value="{{ $receiverFax }}" data-phone>
+            <input class="form-input rcv-name" type="text" placeholder="수신자명 (선택)">
+          </div>
+          <button type="button" class="receiver-del-btn" onclick="removeReceiver(this)" style="visibility:hidden;">
+            <i class="bx bx-x"></i>
           </button>
         </div>
       </div>
-
-      {{-- 발신자명 --}}
-      <div class="form-row">
-        <label class="form-label">발신자명</label>
-        <input id="sender-name" class="form-input" type="text" placeholder="(선택) 발신자명">
-      </div>
-
-      {{-- 제목 --}}
-      <div class="form-row">
-        <label class="form-label">팩스 제목</label>
-        <input id="fax-title" class="form-input" type="text" placeholder="(선택) 팩스 제목">
-      </div>
-
-      {{-- 수신자 --}}
-      <div class="form-row">
-        <label class="form-label">수신자 <span style="color:var(--danger)">*</span></label>
-        <div class="receivers-box" id="receivers-box">
-          <div class="receiver-row" data-idx="0">
-            <div class="receiver-inputs">
-              <input class="form-input rcv-num"  type="text" placeholder="팩스번호 (숫자만)" value="{{ $receiverFax }}" data-phone>
-              <input class="form-input rcv-name" type="text" placeholder="수신자명 (선택)">
-            </div>
-            <button type="button" class="receiver-del-btn" onclick="removeReceiver(this)" style="visibility:hidden;">
-              <i class="bx bx-x"></i>
-            </button>
-          </div>
-        </div>
-        <button type="button" class="receiver-add-btn" onclick="addReceiver()">
-          <i class="bx bx-plus"></i> 수신자 추가
-        </button>
-      </div>
-
-      {{-- 파일 첨부 --}}
-      <div class="form-row">
-        <label class="form-label">첨부 파일 <span style="color:var(--danger)">*</span> <span style="font-weight:400;color:var(--text-muted)">(PDF·TIFF·JPG·PNG·GIF, 최대 10MB)</span></label>
-        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-          <input type="file" id="file-input" accept=".pdf,.tif,.tiff,.jpg,.jpeg,.gif,.png" multiple style="display:none">
-          <div class="dz-icon"><i class="bx bx-cloud-upload"></i></div>
-          <div class="dz-text">클릭하거나 파일을 드래그하세요</div>
-          <div class="dz-sub">PDF, TIFF, JPG, PNG, GIF</div>
-        </div>
-        <div class="file-list" id="file-list"></div>
-      </div>
-
-      {{-- 예약 전송 --}}
-      <div class="form-row">
-        <label class="reserve-toggle">
-          <input type="checkbox" id="reserve-chk" onchange="toggleReserve()">
-          예약 전송
-        </label>
-        <input id="reserve-dt" class="form-input" type="datetime-local" style="display:none;margin-top:6px;">
-      </div>
-
-      {{-- 전송 버튼 --}}
-      <button class="send-btn" id="send-btn" onclick="sendFax()">
-        <i class="bx bx-send"></i> 팩스 전송
+      <button type="button" class="receiver-add-btn" onclick="addReceiver()">
+        <i class="bx bx-plus"></i> 수신자 추가
       </button>
-
     </div>
+
+    {{-- 파일 첨부 --}}
+    <div class="form-row">
+      <label class="ds-field-label">첨부 파일 <span style="color:var(--danger)">*</span> <span style="font-weight:400;color:var(--gray-500)">(PDF·TIFF·JPG·PNG·GIF, 최대 10MB)</span></label>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept=".pdf,.tif,.tiff,.jpg,.jpeg,.gif,.png" multiple style="display:none">
+        <div class="dz-icon"><i class="bx bx-cloud-upload"></i></div>
+        <div class="dz-text">클릭하거나 파일을 드래그하세요</div>
+        <div class="dz-sub">PDF, TIFF, JPG, PNG, GIF</div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+    </div>
+
+    {{-- 예약 전송 --}}
+    <div class="form-row">
+      <label class="reserve-toggle">
+        <input type="checkbox" id="reserve-chk" onchange="toggleReserve()">
+        예약 전송
+      </label>
+      <input id="reserve-dt" class="form-input" type="datetime-local" style="display:none;">
+    </div>
+
+    {{-- 전송 버튼 --}}
+    <button class="send-btn" id="send-btn" onclick="sendFax()">
+      <i class="bx bx-send"></i> 팩스 전송
+    </button>
+
   </div>
-
-  {{-- ── 전송 내역 ── --}}
-  <div class="hist-card" data-titab="hist">
-    <div class="hist-head">
-      <div class="hist-head-title">
-        <i class="bx bx-history"></i> 전송 내역
-        <span id="sync-status" style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;"></span>
-      </div>
-      <div class="hist-filter">
-        <input type="date" id="f-start" value="{{ date('Ymd', strtotime('-30 days')) }}">
-        <input type="date" id="f-end"   value="{{ date('Ymd') }}">
-        <button class="btn-search" onclick="loadHistory(1)">조회</button>
-        <button class="btn-sync" id="sync-btn" onclick="syncPending()" title="미완료 건 팝빌 상태 동기화">
-          <i class="bx bx-refresh"></i> 상태 동기화
-        </button>
-      </div>
-    </div>
-
-    <div class="hist-body" style="padding:0 16px 12px;">
-      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
-      </div>
-      <div id="faxHistGrid"></div>
-    </div>
-
-    <div class="hist-pager" id="hist-pager" style="display:none;">
-      <div class="pager-info" id="pager-info"></div>
-      <div class="pager-btns" id="pager-btns"></div>
-    </div>
-  </div>
-
 </div>
 
 {{-- ── 상세 모달 ── --}}
 <div class="nd-modal-overlay" id="detail-modal">
   <div class="nd-modal">
     <div class="nd-modal-head">
-      <i class="bx bx-printer" style="color:var(--primary);font-size:20px;"></i>
+      <i class="bx bx-printer" style="color:var(--primary);font-size:16px;"></i>
       <h3>팩스 전송 상세</h3>
       <button class="nd-modal-close" onclick="closeModal()">&times;</button>
     </div>
@@ -452,8 +470,10 @@
   if (!el) return;
   window.__faxGrid = new wwGrid({
     el: el,
-    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '전송일시', name: 'sentAt',     width: 150, sortable: true },
       { header: '발신번호', name: 'sendNum',    width: 120 },
@@ -463,6 +483,16 @@
     ],
     data: [],
   });
+  // 하단 상태바에 있던 '선택 N건' 을 결과바로 잇는다(전역 헬퍼).
+  window.dsBindSelCount(window.__faxGrid, 'fax-sel-count');
+  // '전체 N건' 도 같은 상태바 표시였다. 같은 방식으로 결과바에 잇기만 한다.
+  (function (g) {
+    const t = document.getElementById('fax-total-count');
+    if (!g || !t || typeof g._updateFooter !== 'function') return;
+    const orig = g._updateFooter.bind(g);
+    g._updateFooter = function () { orig(); t.textContent = g.getData().length; };
+    g._updateFooter();
+  })(window.__faxGrid);
   function faxOpenRow(r) {
     if (!r || !r.receiptNum) return;
     openDetail(r.receiptNum);
@@ -914,7 +944,7 @@ async function openDetail(receiptNum) {
           </tr>
         </tbody>
       </table>
-      <div class="di-label" style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted);">수신자 목록</div>
+      <div class="di-label" style="margin-bottom:6px;font-size:11px;font-weight:700;color:var(--gray-600);">수신자 목록</div>
       <table class="rcv-table">
         <thead><tr><th>팩스번호</th><th>수신자명</th><th>상태 / 결과</th></tr></thead>
         <tbody>${rcvRows}</tbody>

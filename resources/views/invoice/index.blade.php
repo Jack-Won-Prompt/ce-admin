@@ -13,8 +13,6 @@
 .inv-chip-note { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
 
 /* ── 결과바 보조 표시 (Figma 282:934 — 전체 · 선택 · 이번달 금액) ── */
-.ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-.ds-grid-sel b { color:var(--primary-400); }
 .inv-stat { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); white-space:nowrap; }
 .inv-stat b { color:var(--gray-800); font-weight:500; }
 /* 항목 사이 점 — Figma 4×4 · r999 · gray-300 */
@@ -23,11 +21,6 @@
 
 /* ── 패널 탭 (계산서 발행 현황 / 상세보기) — Figma 282:934: h44 · pad 0/16 · gap 16 ──
    switchPanel() 이 '.panel-tab-btn' 으로 찾으므로 클래스는 함께 붙여 둔다. */
-.pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-.pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-  color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-.pnl-tab:hover { color:var(--primary); }
-.pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 /* 탭 안 건수 — 시안에는 없으나 개발이 넣은 표시라 남긴다 (r999 · 10px/700) */
 .badge-cnt {
   display:inline-flex; align-items:center; justify-content:center;

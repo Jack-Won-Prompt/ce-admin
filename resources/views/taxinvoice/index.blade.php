@@ -14,8 +14,8 @@
 <div class="help-section">
   <div class="help-section-title">세금종류</div>
   <div class="help-item"><div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);"><i class="bx bx-percent"></i></div><div class="help-item-text"><b>과세</b> — 공급가액의 10% 부가세</div></div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--success-light);color:var(--success);"><i class="bx bx-circle"></i></div><div class="help-item-text"><b>영세</b> — 영세율(0%) 적용</div></div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--border-light);color:var(--text-muted);"><i class="bx bx-minus-circle"></i></div><div class="help-item-text"><b>면세</b> — 부가세 없음</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--primary-100);color:var(--primary-600);"><i class="bx bx-circle"></i></div><div class="help-item-text"><b>영세</b> — 영세율(0%) 적용</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--gray-100);color:var(--gray-500);"><i class="bx bx-minus-circle"></i></div><div class="help-item-text"><b>면세</b> — 부가세 없음</div></div>
 </div>
 <div class="help-section">
   <div class="help-section-title">발행 상태</div>
@@ -28,200 +28,225 @@
 </div>
 <div class="help-section">
   <div class="help-section-title">유의사항</div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--warning-light);color:var(--warning);"><i class="bx bx-error"></i></div><div class="help-item-text">발행 후 취소하려면 "발행 취소" 버튼을 사용하세요. 국세청 신고 후에는 취소가 제한될 수 있습니다.</div></div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--warning-light);color:var(--warning);"><i class="bx bx-error"></i></div><div class="help-item-text">테스트 환경에서는 실제 국세청으로 전송되지 않습니다.</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-error"></i></div><div class="help-item-text">발행 후 취소하려면 "발행 취소" 버튼을 사용하세요. 국세청 신고 후에는 취소가 제한될 수 있습니다.</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-error"></i></div><div class="help-item-text">테스트 환경에서는 실제 국세청으로 전송되지 않습니다.</div></div>
 </div>
 @endsection
 
 @push('styles')
 <style>
 /* ── 레이아웃 ── */
-/* 발행 내역 / 즉시발행 탭 구성 */
-.ti-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
-.titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+/* 발행 내역 / 즉시발행 탭 구성. 화면 사이 간격은 .page-body 의 gap 16 이 만든다 */
+.ti-layout { display:flex; flex-direction:column; gap:12px; }
+/* 탭이 켠 쪽 한 묶음 — tiTab() 이 display 인라인 값을 지우면 이 flex 로 돌아온다 */
+.ti-panel  { display:flex; flex-direction:column; gap:12px; }
+/* 탭바 — 표준 패널 탭 규격(h44 · pad 0/16 · gap 16 · 하단 1px --border · 활성 밑줄 1px) */
+.titab-bar { display:flex; align-items:center; gap:16px; padding:0 16px; flex-wrap:wrap;
+  background:var(--gray-0); border-radius:12px; border-bottom:1px solid var(--border); }
 .titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
   color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
 .titab:hover { color:var(--primary); }
 .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
+/* 결과바 '선택 N건' — 전역(layouts/app.blade.php)에 .ds-grid-sel 이 없어 화면에서 정의한다.
+   다른 목록 화면들도 같은 값을 각자 들고 있다. 전역으로 올려야 할 항목. */
 
 /* ── 요약 카드 ── */
-.ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+.ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 @media(max-width:900px){ .ti-summary { grid-template-columns:1fr 1fr; } }
-.sum-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; align-items:center; gap:14px; }
-.sum-card .sc-icon { width:44px; height:44px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; }
-.sum-card .sc-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-.sum-card .sc-val   { font-size:22px; font-weight:800; line-height:1; }
-.sum-card.blue  .sc-icon { background:var(--primary-light); color:var(--primary); }
-.sum-card.green .sc-icon { background:var(--success-light); color:var(--success); }
-.sum-card.red   .sc-icon { background:var(--danger-light);  color:var(--danger); }
-.sum-card.gray  .sc-icon { background:var(--border-light);  color:var(--text-muted); }
+.sum-card { background:var(--gray-0); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.sum-card .sc-icon { width:36px; height:36px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.sum-card .sc-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
+.sum-card .sc-val   { font-size:16px; font-weight:700; line-height:22px; color:var(--gray-800); }
+/* 시안에 초록·주황이 없다. 네 칸을 primary 램프 두 단계 + alert + gray 로 나눈다 */
+.sum-card.blue  .sc-icon { background:var(--primary-50);  color:var(--primary-500); }
+.sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
+.sum-card.red   .sc-icon { background:var(--alert-50);    color:var(--alert-500); }
+.sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
 
 /* ── 발행 폼 카드 ── */
-.ti-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-.ti-card-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; font-weight:700; font-size:14px; }
-.ti-card-head i { font-size:18px; color:var(--primary); }
-.ti-card-body { padding:18px; display:flex; flex-direction:column; gap:0; }
+.ti-card { background:var(--gray-0); border-radius:12px; overflow:hidden; }
+.ti-card-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;
+  font-size:14px; font-weight:700; line-height:22px; color:var(--gray-800); }
+.ti-card-head i { font-size:16px; color:var(--primary); }
+.ti-card-body { padding:16px; display:flex; flex-direction:column; gap:0; }
 
 /* 섹션 */
-.form-section { padding:14px 0; border-bottom:1px solid var(--border); }
+.form-section { padding:12px 0; border-bottom:1px solid var(--border); }
 .form-section:last-child { border-bottom:none; }
 /* 공급자(을)·공급받는자(갑) 좌우 배치 */
 .sb-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; border-bottom:1px solid var(--border); }
 .sb-grid > .form-section { border-bottom:none; }
 @media(max-width:820px){ .sb-grid { grid-template-columns:1fr; } }
-.section-title { font-size:12px; font-weight:700; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:.5px; }
-.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+/* .section-title 은 전역 클래스다(11/700 · uppercase · letter-spacing .6).
+   여기서 선언하지 않은 속성은 전역 값이 그대로 살아남으므로 명시적으로 되돌린다. */
+.section-title { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; gap:6px;
+  text-transform:none; letter-spacing:0; }
+.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
 
-.form-row  { display:flex; flex-direction:column; gap:3px; }
-.form-label { font-size:11px; font-weight:600; color:var(--text-muted); }
+/* 라벨 위 · 컨트롤 아래 — 라벨 21 + gap 8 + 입력 32 = 필드 61 */
+.form-row  { display:flex; flex-direction:column; gap:8px; }
+/* .form-label 은 전역 클래스라 이 화면 안으로만 한정한다 */
+.ti-card-body .form-label, .nd-modal-body .form-label {
+  display:block; margin-bottom:0; letter-spacing:0;
+  font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700);
+}
 .form-input {
-  height:36px; border:1px solid var(--border); border-radius:var(--radius);
-  padding:0 10px; font-size:12.5px; color:var(--text); background:#fff; transition:border-color .15s;
+  width:100%; height:32px; border:1px solid var(--gray-200); border-radius:8px;
+  padding:5px 12px; font-size:13px; font-weight:400; line-height:20px;
+  color:var(--text-primary); background:var(--gray-0); transition:border-color .15s;
 }
 .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(40,121,139,.12); }
-select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; }
+.form-input::placeholder { color:var(--gray-500); }
+select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px; }
 .form-input-full { grid-column:1/-1; }
 
 /* 금액 행 */
 .amount-box {
-  background:var(--primary-light); border-radius:var(--radius); padding:12px 14px;
-  display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:10px;
+  background:var(--primary-50); border-radius:8px; padding:12px;
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px;
 }
-.amount-box .ab-label { font-size:10.5px; font-weight:600; color:var(--primary); opacity:.8; margin-bottom:2px; }
-.amount-box .ab-val   { font-size:14px; font-weight:700; color:var(--primary); }
-.amount-box .ab-total { grid-column:1/-1; border-top:1px solid rgba(40,121,139,.2); padding-top:10px; display:flex; justify-content:space-between; align-items:center; }
-.amount-box .ab-total-label { font-size:12px; font-weight:700; color:var(--primary); }
-.amount-box .ab-total-val   { font-size:20px; font-weight:900; color:var(--primary); }
+.amount-box .ab-label { font-size:12px; font-weight:500; line-height:19px; color:var(--primary); margin-bottom:4px; }
+.amount-box .ab-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
+/* .ab-total* 는 지금 마크업 사용처가 없다. 개발 자산이라 남기고 규격만 맞춘다 */
+.amount-box .ab-total { grid-column:1/-1; border-top:1px solid var(--primary-200); padding-top:12px; display:flex; justify-content:space-between; align-items:center; }
+.amount-box .ab-total-label { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
+.amount-box .ab-total-val   { font-size:16px; font-weight:700; line-height:26px; color:var(--primary); }
 
 /* 품목 테이블 */
-.detail-wrap { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-top:8px; }
-.detail-table { width:100%; border-collapse:collapse; font-size:11.5px; }
+.detail-wrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:8px; }
+.detail-table { width:100%; border-collapse:collapse; font-size:13px; }
 .detail-table th {
-  padding:7px 8px; background:var(--bg); font-size:10.5px; font-weight:600;
-  color:var(--text-muted); text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;
+  padding:6px 8px; background:var(--gray-100); font-size:12px; font-weight:700; line-height:19px;
+  color:var(--gray-600); text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;
 }
-.detail-table td { padding:5px 4px; border-bottom:1px solid var(--border); }
+.detail-table td { padding:4px; border-bottom:1px solid var(--border); }
 .detail-table tr:last-child td { border-bottom:none; }
 .detail-table input {
-  width:100%; height:30px; border:1px solid transparent; border-radius:4px;
-  padding:0 6px; font-size:11.5px; text-align:right; background:transparent; color:var(--text);
+  width:100%; height:28px; border:1px solid transparent; border-radius:6px;
+  padding:3px 8px; font-size:13px; font-weight:400; line-height:20px;
+  text-align:right; background:transparent; color:var(--text-primary);
 }
-.detail-table input:focus { outline:none; border-color:var(--primary); background:#fff; box-shadow:0 0 0 2px rgba(40,121,139,.1); }
+.detail-table input:focus { outline:none; border-color:var(--primary); background:var(--gray-0); box-shadow:0 0 0 2px rgba(40,121,139,.1); }
 .detail-table input.text-left { text-align:left; }
-.detail-del { width:26px; height:26px; background:var(--danger-light); color:var(--danger); border:none; border-radius:4px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; margin:auto; }
-.detail-del:hover { background:rgba(239,68,68,.15); }
+.detail-del { width:24px; height:24px; background:var(--alert-50); color:var(--alert-500); border:none; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; margin:auto; }
+.detail-del:hover { background:var(--alert-100); }
 .detail-add-btn {
-  width:100%; padding:8px; background:var(--bg); border:none; border-top:1px solid var(--border);
-  color:var(--primary); font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center;
-  justify-content:center; gap:5px; transition:background .15s;
+  width:100%; height:32px; padding:5px 12px; background:var(--gray-50); border:none; border-top:1px solid var(--border);
+  color:var(--primary); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; gap:6px; transition:background .15s;
 }
 .detail-add-btn:hover { background:var(--primary-light); }
 
-/* 발행 버튼 */
+/* 발행 버튼 — 표준 버튼 규격(h32 · r8 · pad 5/12 · 13/500), 카드 오른쪽 아래 정렬 */
+.ti-form-actions { display:flex; justify-content:flex-end; margin-top:16px; }
 .issue-btn {
-  height:44px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius);
-  font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center;
-  justify-content:center; gap:8px; transition:background .15s; margin-top:16px;
+  height:32px; padding:5px 12px; background:var(--primary); color:var(--gray-0);
+  border:1px solid transparent; border-radius:8px;
+  font-size:13px; font-weight:500; line-height:20px; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  white-space:nowrap; transition:background .15s;
 }
-.issue-btn:hover:not(:disabled) { background:#1554d4; }
+.issue-btn:hover:not(:disabled) { background:var(--primary-600); }
 .issue-btn:disabled { opacity:.6; cursor:not-allowed; }
 
 /* ── 내역 패널 ── */
-.hist-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-.hist-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.hist-head-title { font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; flex:1; min-width:140px; }
-.hist-head-title i { font-size:18px; color:var(--primary); }
-.hist-filter { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.hist-filter input[type=date], .hist-filter select {
-  height:34px; border:1px solid var(--border); border-radius:var(--radius);
-  padding:0 8px; font-size:12px; color:var(--text); background:#fff;
-}
-.btn-search { height:34px; padding:0 14px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.btn-search:hover { background:#1554d4; }
+/* 패널 제목 — 섹션 제목 14/700. 카드 껍데기(.hist-card/.hist-head/.hist-filter/.hist-body)는
+   표준 .ds-filter-card · .ds-grid-bar · .ds-grid-card 로 바뀌어 규칙이 남아 있을 자리가 없다. */
+.hist-head-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-800); }
+.hist-head-title i { font-size:16px; color:var(--primary); }
+/* 관리번호 자동생성 버튼이 계속 쓴다 */
+.btn-search { height:32px; padding:5px 12px; background:var(--primary); color:var(--gray-0); border:1px solid transparent; border-radius:8px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; white-space:nowrap; }
+.btn-search:hover { background:var(--primary-600); }
 
-.hist-body { overflow-x:auto; }
-.hist-table { width:100%; border-collapse:collapse; font-size:12px; }
-.hist-table th { padding:9px 10px; background:var(--bg); font-weight:600; font-size:11px; color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
-.hist-table td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+/* 아래 두 묶음은 지금 마크업 사용처가 없다. 개발 자산이라 남기고 규격만 맞춘다 */
+.hist-table { width:100%; border-collapse:collapse; font-size:13px; }
+.hist-table th { padding:8px 10px; background:var(--bg); font-size:12px; font-weight:700; line-height:19px; color:var(--gray-600); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+.hist-table td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
 .hist-table tr:last-child td { border-bottom:none; }
-.hist-table tr:hover td { background:rgba(40,121,139,.03); }
-.hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+.hist-table tr:hover td { background:var(--gray-50); }
+.hist-empty { padding:40px; text-align:center; color:var(--gray-500); font-size:13px; font-weight:400; line-height:21px; }
 
-/* 상태 배지 */
+/* 상태 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18) */
 .ti-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
-.ti-badge.draft   { background:var(--border-light);  color:var(--text-muted); }
+.ti-badge.draft   { background:var(--gray-100);      color:var(--gray-600); }
 .ti-badge.issued  { background:var(--primary-light); color:var(--primary); }
 .ti-badge.nts     { background:var(--primary-light); color:var(--primary); }
 .ti-badge.cancel  { background:var(--danger-light);  color:var(--danger); }
 .ti-badge.taxvat  { background:var(--primary-light); color:var(--primary); }
 .ti-badge.taxzero { background:var(--primary-light); color:var(--primary); }
-.ti-badge.taxfree { background:var(--border-light);  color:var(--text-muted); }
-.ti-badge.rx      { background:#ede9fe; color:#7c3aed; }
+.ti-badge.taxfree { background:var(--gray-100);      color:var(--gray-600); }
+/* 시안에 보라가 없다 — primary 연톤으로 돌린다 */
+.ti-badge.rx      { background:var(--primary-light); color:var(--primary); }
 
-.btn-icon { height:25px; padding:0 8px; font-size:11px; font-weight:600; border:none; border-radius:4px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:3px; }
-.btn-icon.view   { background:var(--primary-light); color:var(--primary); }
-.btn-icon.print  { background:var(--border-light);  color:var(--text-muted); }
-.btn-icon.cancel { background:var(--danger-light);  color:var(--danger); }
-.btn-icon:hover  { filter:brightness(.93); }
-.btn-icon + .btn-icon { margin-left:3px; }
+/* .btn-icon 은 전역(상단바 아이콘 버튼) 이름과 겹친다. 이 화면이 열린 동안
+   상단바까지 같이 바뀌므로 상세 모달 안으로만 한정한다. 작은 버튼 규격(h28 · r8 · pad 3/10 · 13/500) */
+.nd-modal-body .btn-icon { height:28px; padding:3px 10px; font-size:13px; font-weight:500; line-height:20px; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+.nd-modal-body .btn-icon.view   { background:var(--primary-light); color:var(--primary); }
+.nd-modal-body .btn-icon.print  { background:var(--gray-100);      color:var(--gray-600); }
+.nd-modal-body .btn-icon.cancel { background:var(--danger-light);  color:var(--danger); }
+.nd-modal-body .btn-icon:hover  { filter:brightness(.93); }
+.nd-modal-body .btn-icon + .btn-icon { margin-left:4px; }
 
-/* 페이지네이션 */
-.hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
-.pager-info { color:var(--text-muted); }
-.pager-btns { display:flex; gap:4px; }
-.pager-btn { height:30px; padding:0 10px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; font-size:12px; cursor:pointer; color:var(--text); transition:border-color .15s,background .15s; }
+/* 페이지네이션 — 그리드 카드 하단 줄(pad 12 · 상단 1px · gap 2) */
+.hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+.pager-btns { display:flex; gap:2px; }
+.pager-btn { height:32px; min-width:32px; padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; color:var(--gray-800); transition:border-color .15s,background .15s; }
 .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
-.pager-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.pager-btn.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
 
 /* ── 모달 ── */
 .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; align-items:center; justify-content:center; padding:8px; }
 .nd-modal-overlay.open { display:flex; }
-.nd-modal { background:#fff; border-radius:var(--radius-lg); box-shadow:0 24px 80px rgba(0,0,0,.22); width:640px; max-width:100%; max-height:calc(100vh - 16px); display:flex; flex-direction:column; }
+.nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.22); width:640px; max-width:100%; max-height:calc(100vh - 16px); display:flex; flex-direction:column; }
 .nd-modal.wide { width:min(1200px, calc(100vw - 16px)); max-height:calc(100vh - 16px); }
-.nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-shrink:0; }
-.nd-modal-head h3 { flex:1; font-size:16px; font-weight:700; margin:0; }
-.nd-modal-close { background:none; border:none; font-size:24px; color:var(--text-muted); cursor:pointer; line-height:1; padding:0 4px; }
-.nd-modal-body  { padding:28px 32px; overflow-y:auto; flex:1; }
+.nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.nd-modal-head h3 { flex:1; font-size:16px; font-weight:700; line-height:26px; margin:0; color:var(--gray-800); }
+.nd-modal-close { width:24px; height:24px; flex-shrink:0; background:none; border:none; border-radius:6px; font-size:16px; color:var(--gray-500); cursor:pointer; line-height:1; padding:0; }
+.nd-modal-close:hover { background:var(--gray-100); color:var(--gray-800); }
+.nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
 
 /* 취소 모달 */
-.cancel-note { background:var(--danger-light); border-radius:var(--radius); padding:10px 12px; font-size:12px; color:var(--danger); margin-bottom:12px; display:flex; gap:8px; align-items:flex-start; }
+.cancel-note { background:var(--danger-light); border-radius:8px; padding:10px 12px; font-size:12px; font-weight:400; line-height:19px; color:var(--danger); margin-bottom:12px; display:flex; gap:8px; align-items:flex-start; }
 
-/* ── 세금계산서 문서 양식 ── */
-.ti-doc { font-family:'Malgun Gothic','맑은 고딕',sans-serif; }
+/* ── 세금계산서 문서 양식 (상세 모달 안 미리보기) ──
+   서체는 Pretendard 하나로 통일하고, 색은 전부 DS 토큰으로 옮겼다.
+   공급자=primary 계열 / 공급받는자=alert 계열로 좌우 구분은 그대로 유지한다.
+   표 구조·colspan·행 수는 손대지 않았다. */
 .ti-doc table { width:100%; border-collapse:collapse; table-layout:fixed; }
-.ti-doc td { border:1px solid #bbb; padding:5px 6px; font-size:12px; vertical-align:middle; overflow:hidden; }
-.ti-doc .td-th { background:#efefef; font-weight:700; font-size:11.5px; text-align:center; color:#222; white-space:nowrap; }
+.ti-doc td { border:1px solid var(--gray-300); padding:5px 6px; font-size:12px; font-weight:400; line-height:19px; vertical-align:middle; overflow:hidden; }
+.ti-doc .td-th { background:var(--gray-100); font-weight:700; font-size:12px; text-align:center; color:var(--gray-800); white-space:nowrap; }
 .ti-main-title-cell { text-align:center; vertical-align:middle; }
-.ti-main-title-cell strong { font-size:22px; font-weight:800; letter-spacing:4px; }
-.ti-book-label { font-size:11px; color:#555; white-space:nowrap; }
+.ti-main-title-cell strong { font-size:16px; font-weight:700; line-height:26px; letter-spacing:4px; }
+.ti-book-label { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-700); white-space:nowrap; }
 .ti-book-sep { text-align:center; }
 .ti-book-num { font-family:monospace; font-size:11px; overflow:hidden; }
 .ti-book-unit { text-align:center; font-size:11px; white-space:nowrap; }
-.invoicer { background:#eef2ff; }
-.invoicer.td-th { background:#dbe4ff; font-size:11.5px; white-space:nowrap; }
+.invoicer { background:var(--primary-50); }
+.invoicer.td-th { background:var(--primary-100); color:var(--primary-700); font-size:12px; white-space:nowrap; }
 .invoicer.group-cell {
-  background:#c5d3ff; font-weight:900; text-align:center; vertical-align:middle;
-  font-size:11px; line-height:2.4; word-break:break-all; white-space:normal; overflow:visible;
+  background:var(--primary-500); color:var(--gray-0); font-weight:700; text-align:center; vertical-align:middle;
+  font-size:11px; line-height:22px; word-break:break-all; white-space:normal; overflow:visible;
 }
-.invoicee { background:#fff5f5; }
-.invoicee.td-th { background:#ffd6d6; font-size:11.5px; white-space:nowrap; }
+.invoicee { background:var(--alert-50); }
+.invoicee.td-th { background:var(--alert-100); color:var(--alert-500); font-size:12px; white-space:nowrap; }
 .invoicee.group-cell {
-  background:#ffbebe; font-weight:900; text-align:center; vertical-align:middle;
-  font-size:11px; line-height:2.4; word-break:break-all; white-space:normal; overflow:visible;
+  background:var(--alert-500); color:var(--gray-0); font-weight:700; text-align:center; vertical-align:middle;
+  font-size:11px; line-height:22px; word-break:break-all; white-space:normal; overflow:visible;
 }
 .ti-doc .center { text-align:center; white-space:nowrap; }
-.ti-doc .right  { text-align:right;  white-space:nowrap; font-weight:600; }
+.ti-doc .right  { text-align:right;  white-space:nowrap; font-weight:500; }
 .ti-doc .left   { text-align:left; }
 .ti-doc .ti-purpose { text-align:center; font-size:13px; font-weight:700; vertical-align:middle; white-space:normal; }
-.ti-doc .ti-cash { font-weight:700; text-align:right; background:#fafafa; white-space:nowrap; font-size:12px; }
-.ti-footer-note { font-size:11px; color:#666; margin-top:10px; line-height:1.6; }
+.ti-doc .ti-cash { font-weight:700; text-align:right; background:var(--gray-50); white-space:nowrap; font-size:12px; }
+.ti-footer-note { font-size:11px; font-weight:400; line-height:18px; color:var(--gray-600); margin-top:12px; }
 </style>
 @endpush
 
 @section('content')
 
-{{-- 요약 카드 --}}
+{{-- 요약 카드 — 시안에 없지만 개발에서 넣은 지표라 그대로 둔다 --}}
 <div class="ti-summary">
   <div class="sum-card blue">
     <div class="sc-icon"><i class="bx bx-wallet"></i></div>
@@ -237,7 +262,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   </div>
   <div class="sum-card gray">
     <div class="sc-icon"><i class="bx bx-won"></i></div>
-    <div><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val" style="font-size:15px;">—</div></div>
+    <div><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">—</div></div>
   </div>
 </div>
 
@@ -436,43 +461,74 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         <input id="remark1" class="form-input" type="text" placeholder="(선택) 비고란 1">
       </div>
 
-      {{-- 발행 버튼 --}}
-      <button class="issue-btn" id="issue-btn" onclick="issueInvoice()">
-        <i class="bx bx-check-circle"></i> 세금계산서 즉시발행
-      </button>
+      {{-- 발행 버튼 — 표준 버튼 규격에 맞춰 카드 오른쪽 아래로 --}}
+      <div class="ti-form-actions">
+        <button class="issue-btn" id="issue-btn" onclick="issueInvoice()">
+          <i class="bx bx-check-circle"></i> 세금계산서 즉시발행
+        </button>
+      </div>
 
     </div>
   </div>
 
   {{-- ── 발행 내역 ── --}}
-  <div class="hist-card" data-titab="hist">
-    <div class="hist-head">
-      <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
-      <div class="hist-filter">
-        <input type="date" id="f-start">
-        <input type="date" id="f-end">
-        <select id="f-tax-type" style="height:34px;border:1px solid var(--border);border-radius:var(--radius);padding:0 8px;font-size:12px;">
-          <option value="">전체</option>
-          <option value="ValueAdded">과세</option>
-          <option value="ZeroTax">영세</option>
-          <option value="FreeTax">면세</option>
-        </select>
-        <button class="btn-search" onclick="loadHistory(1)">조회</button>
+  <div class="ti-panel" data-titab="hist">
+
+    <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
+
+    {{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
+         GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
+    <div class="ds-filter-card">
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">기간</label>
+          <div class="ds-field-range">
+            <input type="date" id="f-start" class="form-control">
+            <span class="ds-field-sep">~</span>
+            <input type="date" id="f-end" class="form-control">
+          </div>
+        </div>
+        <div class="ds-filter-field">
+          <label class="ds-field-label">세금종류</label>
+          <select id="f-tax-type" class="form-control form-select">
+            <option value="">전체</option>
+            <option value="ValueAdded">과세</option>
+            <option value="ZeroTax">영세</option>
+            <option value="FreeTax">면세</option>
+          </select>
+        </div>
+      </div>
+      <div class="ds-filter-actions">
+        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
       </div>
     </div>
-    <div class="hist-body" style="padding:0 16px 12px;">
-      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
-        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행취소</button>
-        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
+
+    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드.
+         그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
+    <div class="ds-grid-section">
+      <div class="ds-grid-bar">
+        <div class="ds-grid-bar-left">
+          <span class="ds-grid-sel">선택 <b id="taxSelCount">0</b>건</span>
+        </div>
+        <div class="ds-grid-bar-right">
+          <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼 →</span>
+          <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
+          <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+          <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+          <button type="button" class="ds-btn" style="color:var(--danger);border-color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행취소</button>
+        </div>
       </div>
-      <div id="taxHistGrid"></div>
+
+      <div class="ds-grid-card">
+        <div id="taxHistGrid"></div>
+        {{-- 페이지네이션은 카드 하단 줄로. renderPager() 가 display 를 켜고 끈다 --}}
+        <div class="hist-pager" id="hist-pager" style="display:none;">
+          <div class="pager-info" id="pager-info"></div>
+          <div class="pager-btns" id="pager-btns"></div>
+        </div>
+      </div>
     </div>
-    <div class="hist-pager" id="hist-pager" style="display:none;">
-      <div class="pager-info" id="pager-info"></div>
-      <div class="pager-btns" id="pager-btns"></div>
-    </div>
+
   </div>
 
 </div>
@@ -481,7 +537,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 <div class="nd-modal-overlay" id="detail-modal">
   <div class="nd-modal wide">
     <div class="nd-modal-head">
-      <i class="bx bx-file" style="color:var(--primary);font-size:20px;"></i>
+      <i class="bx bx-file" style="color:var(--primary);font-size:16px;"></i>
       <h3>세금계산서 상세</h3>
       <button class="nd-modal-close" onclick="closeModal('detail-modal')">&times;</button>
     </div>
@@ -495,26 +551,28 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 <div class="nd-modal-overlay" id="cancel-modal">
   <div class="nd-modal" style="width:420px;">
     <div class="nd-modal-head">
-      <i class="bx bx-x-circle" style="color:var(--danger);font-size:20px;"></i>
+      <i class="bx bx-x-circle" style="color:var(--danger);font-size:16px;"></i>
       <h3>세금계산서 발행 취소</h3>
       <button class="nd-modal-close" onclick="closeModal('cancel-modal')">&times;</button>
     </div>
     <div class="nd-modal-body">
       <div class="cancel-note">
-        <i class="bx bx-error" style="font-size:18px;flex-shrink:0;margin-top:1px;"></i>
+        <i class="bx bx-error" style="font-size:16px;flex-shrink:0;margin-top:1px;"></i>
         <span>발행 취소 후에는 되돌릴 수 없습니다. 국세청 신고 완료 후에는 취소가 제한될 수 있습니다.</span>
       </div>
       <div class="form-row" style="margin-bottom:12px;">
         <label class="form-label">관리번호</label>
-        <input id="cancel-mgt-key" class="form-input" type="text" readonly style="background:var(--bg);">
+        <input id="cancel-mgt-key" class="form-input" type="text" readonly style="background:var(--gray-100);">
       </div>
       <div class="form-row" style="margin-bottom:16px;">
         <label class="form-label">취소 사유 (선택)</label>
         <input id="cancel-memo" class="form-input" type="text" placeholder="예: 거래 취소">
       </div>
-      <button class="issue-btn" style="background:var(--danger);" id="cancel-confirm-btn" onclick="confirmCancel()">
-        <i class="bx bx-x-circle"></i> 발행 취소 확정
-      </button>
+      <div class="ti-form-actions" style="margin-top:0;">
+        <button class="issue-btn" style="background:var(--danger);" id="cancel-confirm-btn" onclick="confirmCancel()">
+          <i class="bx bx-x-circle"></i> 발행 취소 확정
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -529,8 +587,10 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   if (!el) return;
   window.__taxGrid = new wwGrid({
     el: el,
-    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — '선택 N건' 은 상단 결과바에 있다.
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
       { header: '관리번호/처방번호', name: 'mgt',    width: 170 },
@@ -542,6 +602,9 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     ],
     data: [],
   });
+  // 결과바 버튼(엑셀 저장)이 부르는 이름 — 기존 __taxGrid 와 같은 인스턴스다
+  window.__taxinvoiceGrid = window.__taxGrid;
+  window.dsBindSelCount(window.__taxGrid, 'taxSelCount');   // 결과바 '선택 N건'
   function taxOpenRow(r) {
     if (r.record_type === 'prescription') {
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
@@ -939,7 +1002,7 @@ async function openDetail(mgtKeyType, mgtKey) {
       + '<tr>'
       + '<td colspan="6" class="ti-book-label td-th">일련번호</td>'
       + '<td colspan="1" class="ti-book-sep">:</td>'
-      + '<td colspan="17" class="ti-book-num" style="font-size:9px;">' + (r.ntsconfirmNum ?? '') + '</td>'
+      + '<td colspan="17" class="ti-book-num" style="font-size:10px;">' + (r.ntsconfirmNum ?? '') + '</td>'
       + '</tr>'
       + '</tbody>'
       // ── 공급자 / 공급받는자 ──
@@ -1055,9 +1118,9 @@ async function openDetail(mgtKeyType, mgtKey) {
       + '</table>'
       + '<div class="ti-footer-note">※ 본 전자세금계산서는 국세청고시에 따라 전자서명하여 팝빌에서 발행 되었습니다. (발행일자 : ' + issueDate + ')</div>'
       + '</div>'
-      + '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;align-items:center;">'
-      + '<span class="ti-badge ' + sCls + '" style="font-size:12px;padding:4px 12px;">' + sTxt + '</span>'
-      + '<button class="btn-icon print" style="height:32px;padding:0 14px;font-size:12px;" onclick="openPrint(\'' + mgtKeyType + '\',\'' + mgtKey + '\')">'
+      + '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;align-items:center;">'
+      + '<span class="ti-badge ' + sCls + '">' + sTxt + '</span>'
+      + '<button class="btn-icon print" onclick="openPrint(\'' + mgtKeyType + '\',\'' + mgtKey + '\')">'
       + '<i class="bx bx-printer"></i> 인쇄</button>'
       + '</div>';
   } catch(e) {

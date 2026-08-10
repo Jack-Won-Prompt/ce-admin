@@ -8,13 +8,6 @@
 @push('styles')
 <style>
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-secondary); border-bottom:1px solid transparent; margin-bottom:-1px;
-    display:inline-flex; align-items:center; gap:7px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { text-align:center; padding:56px 24px; color:var(--text-muted); font-size:13px; }
 
   .pg-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
     padding:11px 14px; font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.7; }

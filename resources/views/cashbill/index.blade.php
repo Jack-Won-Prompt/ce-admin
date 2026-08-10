@@ -13,13 +13,13 @@
 </div>
 <div class="help-section">
   <div class="help-section-title">거래 유형</div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--success-light);color:var(--success);"><i class="bx bx-check"></i></div><div class="help-item-text"><b>승인거래</b> — 일반 현금결제 시 발행</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--primary-100);color:var(--primary-600);"><i class="bx bx-check"></i></div><div class="help-item-text"><b>승인거래</b> — 일반 현금결제 시 발행</div></div>
   <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-x"></i></div><div class="help-item-text"><b>취소거래</b> — 기발행 현금영수증 취소</div></div>
 </div>
 <div class="help-section">
   <div class="help-section-title">사용 용도</div>
   <div class="help-item"><div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);"><i class="bx bx-user"></i></div><div class="help-item-text"><b>소득공제용</b> — 개인 소비자 (주민번호·휴대폰번호)</div></div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--warning-light);color:var(--warning);"><i class="bx bx-buildings"></i></div><div class="help-item-text"><b>지출증빙용</b> — 사업자 (사업자등록번호)</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--gray-100);color:var(--gray-700);"><i class="bx bx-buildings"></i></div><div class="help-item-text"><b>지출증빙용</b> — 사업자 (사업자등록번호)</div></div>
 </div>
 <div class="help-section">
   <div class="help-section-title">국세청 상태</div>
@@ -35,169 +35,176 @@
 @push('styles')
 <style>
   /* ── 레이아웃 ── */
-  /* 발행 내역 / 즉시발행 탭 구성 */
-  .cb-layout { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; }
-  .titab-bar { display:flex; gap:4px; margin-bottom:16px; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+  /* 발행 내역 / 즉시발행 탭 구성 — 탭 규격 h44 · pad 0/8 · 13/500 · lh21 · 활성 밑줄 1px primary, 탭 간격 16 */
+  .cb-layout { display:grid; grid-template-columns:1fr; gap:16px; align-items:start; }
+  /* 탭 하나가 감싸는 세로 묶음. .page-body 와 같은 16 간격 */
+  .cb-pane { display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .titab-bar { display:flex; gap:16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
   .titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
     color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .titab:hover { color:var(--primary); }
   .titab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .titab i { font-size:16px; }
+
+  /* 결과바로 옮긴 '팝빌 동기화' 는 처리 중 비활성이 된다.
+     전역 .ds-btn 에는 비활성 상태 규칙이 없어 이 화면에서 얹는다(전역에 필요). */
+  .ds-btn:disabled { opacity:.6; cursor:not-allowed; }
+  /* 결과바에 버튼이 5개라 좁은 폭에서는 한 줄에 들어가지 않는다 */
+  @media(max-width:1280px){ .ds-grid-bar { height:auto; flex-wrap:wrap; gap:8px; } }
+  /* 결과바 '선택 N건' — 전역에는 .ds-grid-total/.ds-grid-hint 만 있고 이 규칙이 없다(전역에 필요) */
 
   /* ── 요약 카드 ── */
-  .cb-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  /* 시안에 없는 개발 블록이라 그대로 두되 카드 규격(r12 · 테두리·그림자 없음)만 맞춘다 */
+  .cb-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
   @media(max-width:900px){ .cb-summary { grid-template-columns:1fr 1fr; } }
   .sum-card {
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    padding:16px 18px; display:flex; align-items:center; gap:14px;
+    background:var(--gray-0); border-radius:12px;
+    padding:12px 16px; display:flex; align-items:center; gap:12px;
   }
-  .sum-card .sc-icon { width:44px; height:44px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; }
-  .sum-card .sc-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-  .sum-card .sc-val   { font-size:22px; font-weight:800; line-height:1; }
+  .sum-card .sc-icon { width:36px; height:36px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .sum-card .sc-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
+  .sum-card .sc-val   { font-size:16px; font-weight:700; line-height:22px; color:var(--gray-800); }
   .sum-card.blue  .sc-icon { background:var(--primary-light); color:var(--primary); }
-  .sum-card.green .sc-icon { background:var(--success-light); color:var(--success); }
-  .sum-card.red   .sc-icon { background:var(--danger-light);  color:var(--danger); }
-  .sum-card.gray  .sc-icon { background:var(--border-light);  color:var(--text-muted); }
+  /* 초록·주황은 이 디자인에 없다 — 파랑 램프·회색·경고(빨강) 로만 구분한다 */
+  .sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
+  .sum-card.red   .sc-icon { background:var(--alert-100);   color:var(--alert-500); }
+  .sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
 
   /* ── 발행 폼 ── */
-  .cb-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-  .cb-card-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; font-weight:700; font-size:14px; }
-  .cb-card-head i { font-size:18px; color:var(--primary); }
-  .cb-card-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .cb-card { background:var(--gray-0); border-radius:12px; overflow:hidden; }
+  .cb-card-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; line-height:22px; }
+  .cb-card-head i { font-size:16px; color:var(--primary); }
+  .cb-card-body { padding:16px; display:flex; flex-direction:column; gap:12px; }
 
-  .form-row  { display:flex; flex-direction:column; gap:4px; }
-  .form-label { font-size:11.5px; font-weight:600; color:var(--text-muted); }
-  .form-input {
-    height:38px; border:1px solid var(--border); border-radius:var(--radius);
-    padding:0 12px; font-size:13px; color:var(--text); background:#fff; transition:border-color .15s;
-  }
-  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(40,121,139,.12); }
-  select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+  /* 라벨 21 + gap 8 + 입력 32 — 검색 카드의 필드 규격과 같게 맞춘다.
+     입력은 전역 .form-control(h32 · r8 · pad 5/12 · 13/400) 을 그대로 쓴다. */
+  .form-row { display:flex; flex-direction:column; gap:8px; }
 
   /* 금액 행 */
-  .amount-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .amount-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
   .amount-total-row {
     display:flex; align-items:center; justify-content:space-between;
-    padding:10px 12px; background:var(--primary-light); border-radius:var(--radius);
-    font-weight:700;
+    height:32px; padding:5px 12px; background:var(--primary-light); border-radius:8px;
   }
-  .amount-total-row .at-label { font-size:12px; color:var(--primary); }
-  .amount-total-row .at-val   { font-size:18px; color:var(--primary); }
+  .amount-total-row .at-label { font-size:13px; font-weight:500; line-height:20px; color:var(--primary); }
+  .amount-total-row .at-val   { font-size:16px; font-weight:700; line-height:20px; color:var(--primary); }
 
   /* 구분선 */
-  .form-divider { border:none; border-top:1px dashed var(--border); margin:2px 0; }
+  .form-divider { border:none; border-top:1px dashed var(--border); margin:0; }
 
-  /* 신분확인번호 타입 */
-  .id-type-tabs { display:flex; gap:6px; }
+  /* 신분확인번호 타입 — 버튼 규격 h32 · r8 · 13/500 */
+  .id-type-tabs { display:flex; gap:8px; }
   .id-type-tab {
-    flex:1; height:32px; border:1px solid var(--border); border-radius:var(--radius);
-    background:#fff; font-size:12px; font-weight:600; cursor:pointer; color:var(--text-muted);
-    transition:all .15s;
+    flex:1; height:32px; border:1px solid var(--gray-200); border-radius:8px;
+    background:var(--gray-0); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; color:var(--gray-600);
+    transition:var(--transition);
   }
-  .id-type-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .id-type-tab:hover { border-color:var(--primary); color:var(--primary); }
+  .id-type-tab.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
 
-  /* 발행 버튼 */
+  /* 발행 버튼 — 폼 하단 주 동작(모달 하단 버튼 글자 규격 14/500) */
   .issue-btn {
-    height:44px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius);
-    font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center;
-    justify-content:center; gap:8px; transition:background .15s;
+    height:44px; background:var(--primary); color:var(--gray-0); border:none; border-radius:8px;
+    font-size:14px; font-weight:500; line-height:22px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; gap:8px; transition:var(--transition);
   }
-  .issue-btn:hover:not(:disabled) { background:#1554d4; }
+  .issue-btn:hover:not(:disabled) { background:var(--primary-dark); }
   .issue-btn:disabled { opacity:.6; cursor:not-allowed; }
 
   /* ── 목록 패널 ── */
-  .hist-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-  .hist-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .hist-head-title { font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; flex:1; }
-  .hist-head-title i { font-size:18px; color:var(--primary); }
-  .hist-filter { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .hist-filter input[type=date], .hist-filter select {
-    height:34px; border:1px solid var(--border); border-radius:var(--radius);
-    padding:0 10px; font-size:12px; color:var(--text); background:#fff;
-  }
-  .hist-filter input[type=date]:focus, .hist-filter select:focus { outline:none; border-color:var(--primary); }
-  .btn-search { height:34px; padding:0 14px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
-  .btn-search:hover { background:#1554d4; }
-  .btn-sync { height:34px; padding:0 14px; background:#fff; color:var(--primary); border:1px solid var(--primary); border-radius:var(--radius); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  /* 카드 껍데기는 전역 .ds-grid-card 를 쓰고, 카드 머리(제목 · 마지막 동기화 시각)만 남긴다 */
+  .hist-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .hist-head-title { font-weight:700; font-size:14px; line-height:22px; display:flex; align-items:center; gap:8px; flex:1; }
+  .hist-head-title i { font-size:16px; color:var(--primary); }
+  .sync-badge { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+
+  /* 조회·동기화 버튼은 검색 카드와 결과바의 .ds-btn 으로 옮겼다.
+     아래 두 규칙은 개발 자산이라 남기되 버튼 규격(h32 · r8 · pad 5/12 · 13/500)에 맞춰 둔다. */
+  .btn-search { height:32px; padding:5px 12px; background:var(--primary); color:var(--gray-0); border:none; border-radius:8px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; white-space:nowrap; }
+  .btn-search:hover { background:var(--primary-dark); }
+  .btn-sync { height:32px; padding:5px 12px; background:var(--gray-0); color:var(--primary); border:1px solid var(--primary); border-radius:8px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
   .btn-sync:hover:not(:disabled) { background:var(--primary-light); }
   .btn-sync:disabled { opacity:.6; cursor:not-allowed; }
-  .sync-badge { font-size:10px; color:var(--text-muted); margin-left:4px; }
 
-  .hist-body { overflow-x:auto; }
-  .hist-table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  .hist-table th { padding:10px 12px; background:var(--bg); font-weight:600; font-size:11.5px; color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  /* 목록 표 — 지금 마크업은 wwGrid 를 쓴다. 개발 자산이라 규칙만 남기고 글자 규격을 맞춘다. */
+  .hist-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .hist-table th { padding:10px 12px; background:var(--gray-100); font-weight:700; font-size:13px; line-height:21px; color:var(--gray-700); text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
   .hist-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
   .hist-table tr:last-child td { border-bottom:none; }
   .hist-table tr:hover td { background:rgba(40,121,139,.03); }
-  .hist-empty { padding:40px; text-align:center; color:var(--text-muted); font-size:13px; }
+  .hist-empty { padding:40px; text-align:center; color:var(--gray-500); font-size:13px; line-height:21px; }
 
-  /* 상태 배지 */
-  .cb-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
+  /* 상태 배지 — r6 · pad 2/6 · 11px/500 · lh18 */
+  .cb-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
   .cb-badge.issued  { background:var(--primary-light); color:var(--primary); }
-  .cb-badge.cancel  { background:var(--danger-light);  color:var(--danger); }
-  .cb-badge.draft   { background:var(--border-light);  color:var(--text-muted); }
+  .cb-badge.cancel  { background:var(--alert-100);    color:var(--alert-500); }
+  .cb-badge.draft   { background:var(--gray-100);     color:var(--gray-500); }
   .cb-badge.nts-ok  { background:var(--primary-light); color:var(--primary); }
-  .cb-badge.nts-err { background:var(--warning-light); color:var(--warning); }
+  .cb-badge.nts-err { background:var(--alert-100);    color:var(--alert-500); }
   .cb-badge.income  { background:var(--primary-light); color:var(--primary); }
-  .cb-badge.expense { background:var(--warning-light); color:var(--warning); }
-  .cb-badge.src-popbill { background:#f0f4ff; color:#3b5bdb; }
-  .cb-badge.src-order   { background:#f0fdf4; color:#16a34a; }
+  .cb-badge.expense { background:var(--gray-100);     color:var(--gray-700); }
+  .cb-badge.src-popbill { background:var(--primary-100); color:var(--primary-600); }
+  .cb-badge.src-order   { background:var(--gray-100);    color:var(--gray-700); }
 
-  /* 액션 버튼 */
-  .btn-icon {
-    height:26px; padding:0 9px; font-size:11px; font-weight:600; border:none;
-    border-radius:5px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;
+  /* 액션 버튼 — 전역 헤더 아이콘 버튼(.btn-icon 32×32) 과 이름이 겹치므로
+     영수증 화면 안쪽으로 한정한다. 작은 버튼 규격 h28 · r8 · pad 3/10 · 13/500. */
+  .cbv-layout .btn-icon {
+    /* 전역 .btn-icon 은 32×32 정사각형이다. width 를 되돌리지 않으면
+       글자가 든 이 버튼(인쇄)이 32px 에 갇혀 내용이 삐져나온다. */
+    width:auto; height:28px; padding:3px 10px; font-size:13px; font-weight:500; line-height:20px; border:none;
+    border-radius:8px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:6px;
   }
-  .btn-icon.view    { background:var(--primary-light); color:var(--primary); }
-  .btn-icon.print   { background:var(--border-light);  color:var(--text-muted); }
-  .btn-icon.cancel  { background:var(--danger-light);  color:var(--danger); }
-  .btn-icon:hover   { filter:brightness(.93); }
+  .cbv-layout .btn-icon.view    { background:var(--primary-light); color:var(--primary); }
+  .cbv-layout .btn-icon.print   { background:var(--gray-100);  color:var(--gray-700); }
+  .cbv-layout .btn-icon.cancel  { background:var(--alert-100); color:var(--alert-500); }
+  .cbv-layout .btn-icon:hover   { filter:brightness(.93); }
 
-  /* 페이지네이션 */
-  .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
-  .pager-info { color:var(--text-muted); }
+  /* 페이지네이션 — 그리드 카드 하단 줄 */
+  .hist-pager { padding:12px 16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
   .pager-btns { display:flex; gap:4px; }
-  .pager-btn { height:30px; padding:0 10px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; font-size:12px; cursor:pointer; color:var(--text); transition:border-color .15s,background .15s; }
+  .pager-btn { height:32px; min-width:32px; padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; color:var(--gray-800); transition:var(--transition); }
   .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
-  .pager-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .pager-btn.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
   .pager-btn:disabled { opacity:.4; cursor:not-allowed; }
 
   /* ── 모달 ── */
   .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; align-items:center; justify-content:center; }
   .nd-modal-overlay.open { display:flex; }
-  .nd-modal { background:#fff; border-radius:var(--radius-lg); box-shadow:0 20px 60px rgba(0,0,0,.18); width:640px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; }
-  .nd-modal-head { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
-  .nd-modal-head h3 { flex:1; font-size:15px; font-weight:700; margin:0; }
-  .nd-modal-close { background:none; border:none; font-size:22px; color:var(--text-muted); cursor:pointer; line-height:1; }
-  .nd-modal-body  { padding:22px; overflow-y:auto; flex:1; }
+  .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.18); width:640px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; }
+  .nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .nd-modal-head h3 { flex:1; font-size:14px; font-weight:700; line-height:22px; margin:0; }
+  .nd-modal-close { background:none; border:none; font-size:16px; color:var(--gray-600); cursor:pointer; line-height:1; }
+  .nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
 
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; }
-  .detail-item .di-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-  .detail-item .di-val   { font-size:13px; font-weight:500; }
+  .detail-item .di-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
+  .detail-item .di-val   { font-size:13px; font-weight:500; line-height:21px; }
   .detail-item.full { grid-column:1/-1; }
   .detail-sep { grid-column:1/-1; border:none; border-top:1px dashed var(--border); }
-  .detail-amount { grid-column:1/-1; background:var(--primary-light); border-radius:var(--radius); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
-  .detail-amount .da-label { font-size:12px; font-weight:600; color:var(--primary); }
-  .detail-amount .da-val   { font-size:20px; font-weight:800; color:var(--primary); }
+  .detail-amount { grid-column:1/-1; background:var(--primary-light); border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
+  .detail-amount .da-label { font-size:13px; font-weight:500; line-height:21px; color:var(--primary); }
+  .detail-amount .da-val   { font-size:16px; font-weight:700; line-height:22px; color:var(--primary); }
 
   /* 취소 모달 */
-  .cancel-note { background:var(--danger-light); border-radius:var(--radius); padding:12px 14px; font-size:12.5px; color:var(--danger); margin-bottom:14px; display:flex; gap:8px; }
+  .cancel-note { background:var(--alert-50); border-radius:8px; padding:12px; font-size:12px; font-weight:400; line-height:19px; color:var(--alert-500); margin-bottom:12px; display:flex; gap:8px; }
 
   /* ── 현금영수증 영수증 뷰 ── */
-  .cbv-layout { font-size:12.5px; color:#222; }
-  .cbv-header { text-align:center; padding:14px 0 10px; border-bottom:2px solid #222; margin-bottom:0; }
-  .cbv-header p { font-size:17px; font-weight:800; margin:0; letter-spacing:1px; }
+  .cbv-layout { font-size:13px; color:var(--gray-1000); }
+  .cbv-header { text-align:center; padding:12px 0 10px; border-bottom:2px solid var(--gray-1000); margin-bottom:0; }
+  .cbv-header p { font-size:16px; font-weight:700; line-height:26px; margin:0; letter-spacing:1px; }
   .cbv-body { padding:0; }
   .cbv-body table { width:100%; border-collapse:collapse; margin-bottom:0; }
   .cbv-body table td {
-    padding:7px 10px; border:1px solid #ddd; vertical-align:middle; font-size:12px;
+    padding:7px 10px; border:1px solid var(--gray-200); vertical-align:middle; font-size:12px; line-height:19px;
   }
   .cbv-body table td:first-child,
-  .cbv-body table td:nth-child(3) { background:#f5f5f5; font-weight:600; color:#444; white-space:nowrap; }
-  .cbv-red { color:#c00; font-weight:700; }
-  .cbv-sub-row { display:flex; border-bottom:1px solid #ddd; border-top:1px solid #ddd; }
-  .cbv-sub-title { flex:1; padding:6px 10px; font-weight:700; font-size:12px; background:#f9f9f9; }
-  .cbv-sub-title + .cbv-sub-title { border-left:1px solid #ddd; }
-  .cbv-footer { border-top:1px solid #ddd; padding:10px 12px; font-size:11px; color:#666; line-height:1.7; }
+  .cbv-body table td:nth-child(3) { background:var(--gray-100); font-weight:700; color:var(--gray-700); white-space:nowrap; }
+  .cbv-red { color:var(--alert-500); font-weight:700; }
+  .cbv-sub-row { display:flex; border-bottom:1px solid var(--gray-200); border-top:1px solid var(--gray-200); }
+  .cbv-sub-title { flex:1; padding:6px 10px; font-weight:700; font-size:12px; line-height:19px; background:var(--gray-50); }
+  .cbv-sub-title + .cbv-sub-title { border-left:1px solid var(--gray-200); }
+  .cbv-footer { border-top:1px solid var(--gray-200); padding:10px 12px; font-size:11px; font-weight:400; line-height:18px; color:var(--gray-600); }
   .cbv-footer p { margin:0; }
   .cbv-print-row { padding:12px 0 0; display:flex; gap:8px; justify-content:flex-end; }
 </style>
@@ -232,7 +239,7 @@
     <div class="sc-icon"><i class="bx bx-won"></i></div>
     <div>
       <div class="sc-label">이번 달 합계금액</div>
-      <div class="sc-val" id="month-amount-val" style="font-size:16px;">—</div>
+      <div class="sc-val" id="month-amount-val">—</div>
     </div>
   </div>
 </div>
@@ -246,6 +253,69 @@
 
 <div class="cb-layout">
 
+  {{-- ── 발행 내역 ── --}}
+  <div class="cb-pane" data-titab="hist">
+
+    {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16). 라벨 위 · 컨트롤 아래, 9열 그리드.
+         조회는 AJAX 라서 <form> 이 아니다(엔터로 페이지가 새로 뜨면 안 된다). --}}
+    <div class="ds-filter-card">
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">조회 기간</label>
+          <div class="ds-field-range">
+            <input type="date" id="f-start" class="form-control">
+            <span class="ds-field-sep">~</span>
+            <input type="date" id="f-end" class="form-control">
+          </div>
+        </div>
+        <div class="ds-filter-field">
+          <label class="ds-field-label">거래 유형</label>
+          <select id="f-trade-type" class="form-control form-select">
+            <option value="">전체 유형</option>
+            <option value="승인거래">승인거래</option>
+            <option value="취소거래">취소거래</option>
+          </select>
+        </div>
+      </div>
+      <div class="ds-filter-actions">
+        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+      </div>
+    </div>
+
+    {{-- 결과바(h32) + 그리드 카드(r12). 그리드 툴바·하단 상태바는 껐고
+         엑셀 저장·선택 액션·팝빌 동기화를 전부 이 줄로 옮겼다. --}}
+    <div class="ds-grid-section">
+      <div class="ds-grid-bar">
+        <div class="ds-grid-bar-left">
+          <span class="ds-grid-total">전체 <b id="cb-total-count">0</b>건</span>
+          <span class="ds-grid-sel">선택 <b id="cb-sel-count">0</b>건</span>
+        </div>
+        <div class="ds-grid-bar-right">
+          <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
+          <button type="button" class="ds-btn" onclick="cbRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+          <button type="button" class="ds-btn" onclick="cbRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+          <button type="button" class="ds-btn" style="color:var(--danger);border-color:var(--danger);" onclick="cbRowAction('cancel')"><i class="bx bx-x"></i> 선택 취소</button>
+          <button type="button" class="ds-btn" id="sync-btn" onclick="syncFromPopbill()" title="팝빌에서 최신 데이터 가져오기"><i class="bx bx-refresh"></i> 팝빌 동기화</button>
+          <button type="button" class="ds-btn" onclick="window.__cashbillGrid?.downloadExcel()">엑셀 저장</button>
+        </div>
+      </div>
+
+      <div class="ds-grid-card">
+        <div class="hist-head">
+          <div class="hist-head-title">
+            <i class="bx bx-list-ul"></i> 발행 내역
+            <span class="sync-badge" id="last-sync-label"></span>
+          </div>
+        </div>
+        <div id="cbHistGrid"></div>
+        <div class="hist-pager" id="hist-pager" style="display:none;">
+          <div class="pager-info" id="pager-info"></div>
+          <div class="pager-btns" id="pager-btns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- ── 발행 폼 ── --}}
   <div class="cb-card" data-titab="issue">
     <div class="cb-card-head">
@@ -256,16 +326,16 @@
 
       {{-- 사업자번호 --}}
       <div class="form-row">
-        <label class="form-label">사업자번호</label>
-        <input id="corp-num" class="form-input" type="text" value="{{ $corpNum }}" placeholder="1234567890">
+        <label class="ds-field-label">사업자번호</label>
+        <input id="corp-num" class="form-control" type="text" value="{{ $corpNum }}" placeholder="1234567890">
       </div>
 
       {{-- 관리번호 --}}
       <div class="form-row">
-        <label class="form-label">관리번호 <span style="color:var(--danger)">*</span> <span style="font-weight:400;color:var(--text-muted)">(최대 24자, 영문·숫자·특수)</span></label>
+        <label class="ds-field-label">관리번호 <span style="color:var(--danger)">*</span> <span style="font-weight:400;color:var(--text-muted)">(최대 24자, 영문·숫자·특수)</span></label>
         <div style="display:flex;gap:8px;">
-          <input id="mgt-key" class="form-input" type="text" style="flex:1;" placeholder="CB-20260508-001">
-          <button type="button" onclick="genMgtKey()" class="btn-search" title="자동 생성">
+          <input id="mgt-key" class="form-control" type="text" style="flex:1;" placeholder="CB-20260508-001">
+          <button type="button" onclick="genMgtKey()" class="ds-btn" title="자동 생성">
             <i class="bx bx-refresh"></i>
           </button>
         </div>
@@ -274,17 +344,17 @@
       <hr class="form-divider">
 
       {{-- 거래 유형 / 사용 용도 --}}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="form-row">
-          <label class="form-label">거래 유형 <span style="color:var(--danger)">*</span></label>
-          <select id="trade-type" class="form-input">
+          <label class="ds-field-label">거래 유형 <span style="color:var(--danger)">*</span></label>
+          <select id="trade-type" class="form-control form-select">
             <option value="승인거래">승인거래</option>
             <option value="취소거래">취소거래</option>
           </select>
         </div>
         <div class="form-row">
-          <label class="form-label">사용 용도 <span style="color:var(--danger)">*</span></label>
-          <select id="trade-usage" class="form-input">
+          <label class="ds-field-label">사용 용도 <span style="color:var(--danger)">*</span></label>
+          <select id="trade-usage" class="form-control form-select">
             <option value="소득공제용">소득공제용</option>
             <option value="지출증빙용">지출증빙용</option>
           </select>
@@ -295,22 +365,22 @@
 
       {{-- 금액 --}}
       <div class="form-row">
-        <label class="form-label">금액 입력 <span style="color:var(--danger)">*</span></label>
+        <label class="ds-field-label">금액 입력 <span style="color:var(--danger)">*</span></label>
         <div class="amount-grid">
           <div class="form-row">
-            <label class="form-label" style="font-size:10.5px;">공급가액</label>
-            <input id="supply-cost" class="form-input" type="number" min="0" value="0" oninput="calcAmount()">
+            <label class="ds-field-label">공급가액</label>
+            <input id="supply-cost" class="form-control" type="number" min="0" value="0" oninput="calcAmount()">
           </div>
           <div class="form-row">
-            <label class="form-label" style="font-size:10.5px;">부가세</label>
-            <input id="tax" class="form-input" type="number" min="0" value="0" oninput="calcAmount()">
+            <label class="ds-field-label">부가세</label>
+            <input id="tax" class="form-control" type="number" min="0" value="0" oninput="calcAmount()">
           </div>
           <div class="form-row">
-            <label class="form-label" style="font-size:10.5px;">봉사료</label>
-            <input id="service-fee" class="form-input" type="number" min="0" value="0" oninput="calcAmount()">
+            <label class="ds-field-label">봉사료</label>
+            <input id="service-fee" class="form-control" type="number" min="0" value="0" oninput="calcAmount()">
           </div>
         </div>
-        <div class="amount-total-row" style="margin-top:6px;">
+        <div class="amount-total-row">
           <span class="at-label">합계금액</span>
           <span class="at-val" id="total-display">0 원</span>
           <input type="hidden" id="total-amount" value="0">
@@ -321,38 +391,38 @@
 
       {{-- 신분확인번호 --}}
       <div class="form-row">
-        <label class="form-label">신분확인번호 <span style="color:var(--danger)">*</span></label>
-        <div class="id-type-tabs" style="margin-bottom:6px;">
+        <label class="ds-field-label">신분확인번호 <span style="color:var(--danger)">*</span></label>
+        <div class="id-type-tabs">
           <button type="button" class="id-type-tab active" onclick="setIdType('phone', this)">휴대폰번호</button>
           <button type="button" class="id-type-tab" onclick="setIdType('rrn', this)">주민번호</button>
           <button type="button" class="id-type-tab" onclick="setIdType('biz', this)">사업자번호</button>
         </div>
-        <input id="identity-num" class="form-input" type="text" placeholder="- 없이 숫자만">
+        <input id="identity-num" class="form-control" type="text" placeholder="- 없이 숫자만">
       </div>
 
       {{-- 고객명 --}}
       <div class="form-row">
-        <label class="form-label">고객명</label>
-        <input id="customer-name" class="form-input" type="text" placeholder="(선택)">
+        <label class="ds-field-label">고객명</label>
+        <input id="customer-name" class="form-control" type="text" placeholder="(선택)">
       </div>
 
       {{-- 품목명 --}}
       <div class="form-row">
-        <label class="form-label">품목명</label>
-        <input id="item-name" class="form-input" type="text" placeholder="(선택) 예: 의료용품">
+        <label class="ds-field-label">품목명</label>
+        <input id="item-name" class="form-control" type="text" placeholder="(선택) 예: 의료용품">
       </div>
 
       <hr class="form-divider">
 
       {{-- 이메일 / 휴대폰 --}}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="form-row">
-          <label class="form-label">이메일</label>
-          <input id="email" class="form-input" type="email" placeholder="(선택)">
+          <label class="ds-field-label">이메일</label>
+          <input id="email" class="form-control" type="email" placeholder="(선택)">
         </div>
         <div class="form-row">
-          <label class="form-label">휴대폰</label>
-          <input id="hp" class="form-input" type="text" placeholder="010-XXXX-XXXX" data-phone>
+          <label class="ds-field-label">휴대폰</label>
+          <input id="hp" class="form-control" type="text" placeholder="010-XXXX-XXXX" data-phone>
         </div>
       </div>
 
@@ -364,49 +434,13 @@
     </div>
   </div>
 
-  {{-- ── 발행 내역 ── --}}
-  <div class="hist-card" data-titab="hist">
-    <div class="hist-head">
-      <div class="hist-head-title">
-        <i class="bx bx-list-ul"></i> 발행 내역
-        <span class="sync-badge" id="last-sync-label"></span>
-      </div>
-      <div class="hist-filter">
-        <input type="date" id="f-start">
-        <input type="date" id="f-end">
-        <select id="f-trade-type" style="height:34px;border:1px solid var(--border);border-radius:var(--radius);padding:0 8px;font-size:12px;">
-          <option value="">전체 유형</option>
-          <option value="승인거래">승인거래</option>
-          <option value="취소거래">취소거래</option>
-        </select>
-        <button class="btn-search" onclick="loadHistory(1)">조회</button>
-        <button class="btn-sync" id="sync-btn" onclick="syncFromPopbill()" title="팝빌에서 최신 데이터 가져오기">
-          <i class="bx bx-refresh"></i> 팝빌 동기화
-        </button>
-      </div>
-    </div>
-    <div class="hist-body" style="padding:0 16px 12px;">
-      <div style="display:flex;gap:8px;margin:10px 0;align-items:center;flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="cbRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="cbRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
-        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="cbRowAction('cancel')"><i class="bx bx-x"></i> 선택 취소</button>
-        <span style="font-size:12px;color:var(--text-muted);">← 행 더블클릭 또는 체크 후 버튼</span>
-      </div>
-      <div id="cbHistGrid"></div>
-    </div>
-    <div class="hist-pager" id="hist-pager" style="display:none;">
-      <div class="pager-info" id="pager-info"></div>
-      <div class="pager-btns" id="pager-btns"></div>
-    </div>
-  </div>
-
 </div>
 
 {{-- ── 상세 모달 ── --}}
 <div class="nd-modal-overlay" id="detail-modal">
   <div class="nd-modal">
     <div class="nd-modal-head">
-      <i class="bx bx-receipt" style="color:var(--primary);font-size:20px;"></i>
+      <i class="bx bx-receipt" style="color:var(--primary);font-size:16px;"></i>
       <h3>현금영수증 상세</h3>
       <button class="nd-modal-close" onclick="closeModal('detail-modal')">&times;</button>
     </div>
@@ -420,27 +454,27 @@
 <div class="nd-modal-overlay" id="cancel-modal">
   <div class="nd-modal" style="width:440px;">
     <div class="nd-modal-head">
-      <i class="bx bx-x-circle" style="color:var(--danger);font-size:20px;"></i>
+      <i class="bx bx-x-circle" style="color:var(--danger);font-size:16px;"></i>
       <h3>현금영수증 취소</h3>
       <button class="nd-modal-close" onclick="closeModal('cancel-modal')">&times;</button>
     </div>
     <div class="nd-modal-body">
       <div class="cancel-note">
-        <i class="bx bx-error" style="font-size:18px;flex-shrink:0;"></i>
+        <i class="bx bx-error" style="font-size:16px;flex-shrink:0;"></i>
         <span>취소 현금영수증이 발행됩니다. 취소 후에는 되돌릴 수 없습니다.</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="form-row">
-          <label class="form-label">취소 관리번호 <span style="color:var(--danger)">*</span></label>
-          <input id="cancel-mgt-key" class="form-input" type="text" placeholder="CB-REVOKE-001">
+          <label class="ds-field-label">취소 관리번호 <span style="color:var(--danger)">*</span></label>
+          <input id="cancel-mgt-key" class="form-control" type="text" placeholder="CB-REVOKE-001">
         </div>
         <div class="form-row">
-          <label class="form-label">원본 국세청승인번호 <span style="color:var(--danger)">*</span></label>
-          <input id="cancel-org-confirm" class="form-input" type="text" placeholder="confirmNum">
+          <label class="ds-field-label">원본 국세청승인번호 <span style="color:var(--danger)">*</span></label>
+          <input id="cancel-org-confirm" class="form-control" type="text" placeholder="confirmNum">
         </div>
         <div class="form-row">
-          <label class="form-label">원본 거래일자 <span style="color:var(--danger)">*</span></label>
-          <input id="cancel-org-date" class="form-input" type="date">
+          <label class="ds-field-label">원본 거래일자 <span style="color:var(--danger)">*</span></label>
+          <input id="cancel-org-date" class="form-control" type="date">
         </div>
         <button class="issue-btn" style="background:var(--danger);" id="cancel-confirm-btn" onclick="confirmRevoke()">
           <i class="bx bx-x-circle"></i> 취소 발행 확정
@@ -460,8 +494,10 @@
   if (!el) return;
   window.__cbGrid = new wwGrid({
     el: el,
-    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '거래일시', name: 'tradeDt',   width: 150, sortable: true },
       { header: '번호',     name: 'num',       width: 170 },
@@ -474,6 +510,8 @@
     ],
     data: [],
   });
+  window.__cashbillGrid = window.__cbGrid;                 // 결과바 '엑셀 저장' 버튼이 이걸 부른다
+  window.dsBindSelCount(window.__cbGrid, 'cb-sel-count');  // 결과바 '선택 N건' 표시를 연결한다
   function cbOpenRow(r) {
     if (r._source === 'order') {
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
@@ -840,6 +878,18 @@ function renderPager(total, page, perPage) {
   document.getElementById('pager-btns').innerHTML = btns.join('');
 }
 
+/* 결과바 '전체 N건' — 시안대로 그리드 하단 상태바를 껐다.
+   목록 렌더가 이미 계산해 둔 전체 건수(_allRows)를 표시만 얹는다. 조회 로직은 그대로다. */
+(function () {
+  const el = document.getElementById('cb-total-count');
+  if (!el) return;
+  const orig = renderHistPage;
+  renderHistPage = function (page) {
+    orig(page);
+    el.textContent = _allRows.length.toLocaleString();
+  };
+})();
+
 /* ── 상세 보기 ── */
 let _cbPrintData = null;   // 마지막 조회 데이터 캐시
 
@@ -943,7 +993,7 @@ async function openDetail(mgtKey) {
           <p>현금영수증 문의(국세청) : 126</p>
         </div>
         <div class="cbv-print-row">
-          <button class="btn-icon print" style="height:32px;padding:0 14px;font-size:12px;" onclick="closeModal('detail-modal');openPrint('${mgtKey}')">
+          <button class="btn-icon print" onclick="closeModal('detail-modal');openPrint('${mgtKey}')">
             <i class="bx bx-printer"></i> 인쇄
           </button>
         </div>
@@ -991,34 +1041,37 @@ async function openPrint(mgtKey) {
 <style>
   @page { margin: 12mm 15mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 인쇄 판형은 앱 밖(window.open)이라 CSS 변수가 실리지 않는다.
+     그래서 색은 변수 대신 DS 램프의 실제 값으로 적는다. */
   body {
     font-family: '맑은 고딕', 'Malgun Gothic', AppleGothic, sans-serif;
-    font-size: 13px; color: #111;
+    font-size: 13px; color: #101317;
     padding: 20px 24px;
   }
   .receipt { width: 100%; }
-  .r-header { text-align: center; padding: 14px 0 12px; border-bottom: 2px solid #111; margin-bottom: 0; }
-  .r-header p { font-size: 20px; font-weight: 800; letter-spacing: 3px; }
+  .r-header { text-align: center; padding: 14px 0 12px; border-bottom: 2px solid #101317; margin-bottom: 0; }
+  .r-header p { font-size: 16px; font-weight: 700; letter-spacing: 3px; }
   .r-body table { width: 100%; border-collapse: collapse; }
   .r-body table td {
-    padding: 8px 10px; border: 1px solid #bbb; font-size: 13px; vertical-align: middle;
+    padding: 8px 10px; border: 1px solid #C2C5C8; font-size: 13px; vertical-align: middle;
   }
   .r-body table td:first-child,
-  .r-body table td:nth-child(3) { background: #f0f0f0; font-weight: 700; color: #333; white-space: nowrap; }
-  .r-sub-row { display: flex; border: 1px solid #bbb; border-top: none; }
-  .r-sub-title { flex: 1; padding: 6px 10px; font-weight: 700; font-size: 13px; background: #f5f5f5; }
-  .r-sub-title + .r-sub-title { border-left: 1px solid #bbb; }
-  .r-red { color: #aa0000; font-weight: 700; }
-  .r-footer { border-top: 1px solid #bbb; padding: 10px 12px; font-size: 11.5px; color: #555; line-height: 1.8; }
+  .r-body table td:nth-child(3) { background: #F3F5F7; font-weight: 700; color: #474D54; white-space: nowrap; }
+  .r-sub-row { display: flex; border: 1px solid #C2C5C8; border-top: none; }
+  .r-sub-title { flex: 1; padding: 6px 10px; font-weight: 700; font-size: 13px; background: #F9FAFC; }
+  .r-sub-title + .r-sub-title { border-left: 1px solid #C2C5C8; }
+  .r-red { color: #D73D3F; font-weight: 700; }
+  .r-footer { border-top: 1px solid #C2C5C8; padding: 10px 12px; font-size: 11px; color: #656C74; line-height: 18px; }
   .r-footer p { margin: 0; }
   .no-print { text-align: right; padding: 14px 0 0; }
   .no-print button {
-    padding: 8px 20px; background: #28798B; color: #fff; border: none;
-    border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 5px 12px; height: 32px; background: #28798B; color: #FFFFFF; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
   }
   @media print {
     body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none !important; }
+    /* 같은 특정성에 뒤에 오는 규칙이라 우선순위 표시 없이도 이긴다 */
+    .no-print { display: none; }
   }
 </style>
 </head>

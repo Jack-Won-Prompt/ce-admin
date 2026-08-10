@@ -41,18 +41,9 @@
 <style>
   /* 패널 탭(목록/상세보기) — 그리드 카드 안 상단.
      Figma 282:2299: h44 · pad 0/16 · gap 16 · 하단 1px, 활성 밑줄 1px primary */
-  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .pnl-tab:hover { color:var(--primary); }
-  .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
-    background:var(--gray-0); border:1px dashed var(--border); border-radius:var(--radius-lg); }
 
   /* 결과바 보조 표기 — Figma 282:53 실측
      선택 13/500 gray-600(숫자 primary-400) · 이번달 청구액 13/500 gray-600(숫자 gray-800) */
-  .ds-grid-sel    { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
-  .ds-grid-sel b  { color:var(--primary-400); font-weight:500; }
   .ds-grid-meta   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
   .ds-grid-meta b { color:var(--gray-800); font-weight:500; }
 
