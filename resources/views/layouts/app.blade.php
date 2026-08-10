@@ -84,6 +84,11 @@
       --text-primary:   var(--gray-1000);
       --text-secondary: var(--gray-800);
       --text-muted:     var(--gray-400);
+      /* 아래 두 줄은 정의가 없는데 화면에서 이미 쓰이고 있었다.
+         정의가 없으면 color: var(--text) 는 무효가 되어 글자색이 상속으로 떨어진다
+         (처방전 검수 6곳 · 읽기전용 입력칸 4곳). 쓰이는 대로 값을 준다. */
+      --text:           var(--gray-1000);
+      --bg-secondary:   var(--gray-50);
       --shadow:    0 1px 3px rgba(13,27,42,.06), 0 1px 2px rgba(13,27,42,.04);
       --shadow-md: 0 4px 12px rgba(13,27,42,.08), 0 2px 6px rgba(13,27,42,.04);
       --shadow-lg: 0 16px 32px rgba(13,27,42,.10), 0 4px 8px rgba(13,27,42,.04);

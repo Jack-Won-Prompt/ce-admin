@@ -59,7 +59,7 @@
 @endsection
 @section('breadcrumb')
   홈 / 주문관리 / 처방전 확인 &nbsp;·&nbsp;
-  <span style="color:var(--primary);font-weight:600;">{{ $prescription->rx_number }}</span>
+  <span style="color:var(--primary);font-weight:500;">{{ $prescription->rx_number }}</span>
 @endsection
 
 @section('header-actions')
@@ -119,23 +119,23 @@
   .vw-tool:hover { color:var(--primary); }
   .vw-zoom { font-size:12px; font-weight:500; line-height:1.2; color:var(--gray-1000); text-align:center; }
   .img-viewer-canvas { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-  .img-placeholder { text-align: center; color: #475569; }
+  .img-placeholder { text-align: center; color: var(--gray-700); }
   .img-placeholder i { font-size: 56px; margin-bottom: 10px; display: block; opacity: .4; }
   .img-placeholder p { font-size: 13px; opacity: .6; }
   .ocr-edit-row { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .ocr-edit-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .ocr-edit-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
   .field-group { position: relative; }
   .field-group .field-status { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; }
-  .field-group input.has-warn { border-color: var(--warning); background: #fffbeb; }
-  .field-group input.has-ok   { border-color: var(--success); }
-  .benefit-box { padding: 12px 14px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius-lg); margin-top: 4px; }
-  .benefit-title { font-size: 13px; font-weight: 700; color: var(--success); }
+  .field-group input.has-warn { border-color: var(--alert-500); background: var(--alert-50); }
+  .field-group input.has-ok   { border-color: var(--primary); }
+  .benefit-box { padding: 12px 14px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
+  .benefit-title { font-size: 13px; font-weight: 700; color: var(--primary); }
   .benefit-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.8; }
   .product-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); margin-bottom: 8px; cursor: pointer; transition: var(--transition); }
   .product-card.selected { border-color: var(--primary); background: var(--primary-light); }
   .product-card:hover { border-color: var(--primary); }
-  .product-img { width: 44px; height: 44px; border-radius: 8px; background: #cce9f6; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .product-name { font-size: 13px; font-weight: 600; }
+  .product-img { width: 44px; height: 44px; border-radius: 8px; background: var(--primary-100); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .product-name { font-size: 13px; font-weight: 700; }
   .product-code { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .product-price { font-size: 13px; font-weight: 700; color: var(--primary); margin-left: auto; }
   /* ── 제품 자동완성 드롭다운 ── */
@@ -145,33 +145,45 @@
   .pac-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .1s; }
   .pac-item:last-child { border-bottom:none; }
   .pac-item:hover, .pac-item.ac-active { background:var(--primary-light); }
-  .pac-item-icon { width:34px; height:34px; border-radius:7px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .pac-item-icon { width:32px; height:32px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
   .pac-item-body { flex:1; min-width:0; }
   .pac-item-name { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pac-item-meta { font-size:10px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
   .pac-item-price { font-size:12px; font-weight:700; color:var(--primary); white-space:nowrap; flex-shrink:0; }
   .pac-status { padding:10px 14px; font-size:12px; color:var(--text-muted); text-align:center; }
   .qty-control { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-  .qty-btn { width: 26px; height: 26px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: var(--transition); }
+  .qty-btn { width: 28px; height: 28px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: var(--transition); }
   .qty-btn:hover { border-color: var(--primary); color: var(--primary); }
   .qty-input { width: 100px; text-align: center; font-size: 13px; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius); padding: 3px 6px; background: var(--bg-card); }
-  .cost-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
-  .cost-row:last-child { border-bottom: none; }
-  .cost-row.total { font-weight: 700; font-size: 14px; border-bottom: none; border-top: 2px solid var(--border); padding-top: 10px; margin-top: 4px; }
+  /* 비용 내역 (시안 148:3105 > 48101528) — 줄 h21 · 줄 사이 4 · 줄마다 선은 없다.
+     라벨 13/500 #474D54, 값 13/500 #101317. 합계만 위에 1px 선을 두고 양쪽 다 16/700 주색. */
+  .cost-row { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+              min-height: 21px; font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .cost-row + .cost-row { margin-top: 4px; }
+  .cost-row .cost-val { color: var(--gray-1000); }
+  .cost-row.total { font-weight: 700; font-size: 16px; line-height: 26px; min-height: 26px; color: var(--primary);
+                    border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
   .cost-row.total .cost-val { color: var(--primary); font-size: 16px; }
+  /* 제품 요약(JS renderOrderSummary)은 같은 클래스를 두 줄짜리 행에 쓴다 — 원래 모양을 지킨다 */
+  #order-items-summary .cost-row { padding: 7px 0; margin-top: 0; min-height: 0; line-height: 1.6;
+                                   font-weight: 400; color: var(--text-primary); border-bottom: 1px dashed var(--border); }
+  #order-items-summary .cost-row:last-child { border-bottom: none; }
   .workflow-step { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
   .workflow-step:last-child { border-bottom: none; }
-  .ws-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
-  .ws-icon.done   { background: var(--success-light); color: var(--success); }
+  .ws-icon { width: 28px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  /* --primary-light 는 --primary-50 과 같은 값이라, done 을 primary-50 으로 두면
+     active 와 배경·글자색이 완전히 같아져 '완료'와 '진행 중'을 구분할 수 없다.
+     done 은 한 단계 진한 primary-100/600 으로 눌러 둔다. */
+  .ws-icon.done   { background: var(--primary-100); color: var(--primary-600); }
   .ws-icon.active { background: var(--primary-light); color: var(--primary); }
   .ws-icon.pending{ background: var(--bg); color: var(--text-muted); }
-  .ws-label { font-size: 12px; font-weight: 600; } .ws-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .ws-label { font-size: 12px; font-weight: 500; } .ws-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .ws-arrow { margin-left: auto; color: var(--text-muted); font-size: 12px; }
   .page-body-inner { padding-bottom: 40px; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
-  html.is-framed .info-bar-pinned { top:0 !important; left:0 !important; }
+  html.is-framed .info-bar-pinned { top:0; left:0; }
 
   /* ── 환자 정보 바 (시안 137:290) ──
      액션 버튼이 저마다 다른 색으로 채워져 있어 무엇이 더 중요한 동작인지 알기 어려웠다.
@@ -272,21 +284,24 @@
   .tab-view-table .cv { display: none; } .tab-view-table .tv { display: block; }
   .tab-view-table #btnAccToggleAll { display: none; }
   /* OCR·주문 탭은 cv 유지 (입력 기능 보존) — 아코디언 크롬만 제거 */
-  .tab-view-table #tab-ocr   > .cv { display: block !important; }
-  .tab-view-table #tab-order > .cv { display: block !important; }
-  .tab-view-table #tab-ocr   > .tv { display: none  !important; }
-  .tab-view-table #tab-order > .tv { display: none  !important; }
+  .tab-view-table #tab-ocr   > .cv { display: block; }
+  .tab-view-table #tab-order > .cv { display: block; }
+  .tab-view-table #tab-ocr   > .tv { display: none; }
+  .tab-view-table #tab-order > .tv { display: none; }
   /* OCR 탭 table mode: 아코디언 → 플랫 섹션 */
   .tab-view-table #tab-ocr .rx-acc-item { border:none; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:0; }
   .tab-view-table #tab-ocr .rx-acc-item:last-child { border-bottom:none; }
-  .tab-view-table #tab-ocr .rx-acc-header { background:var(--primary-light) !important; pointer-events:none; padding:5px 12px; }
-  .tab-view-table #tab-ocr .rx-acc-btns { display:none !important; }
-  .tab-view-table #tab-ocr .rx-acc-header > span:first-child { color:var(--primary) !important; font-size:11px; }
+  .tab-view-table #tab-ocr .rx-acc-header { background:var(--primary-light); pointer-events:none; padding:5px 12px; }
+  .tab-view-table #tab-ocr .rx-acc-btns { display:none; }
+  .tab-view-table #tab-ocr .rx-acc-header > span:first-child { color:var(--primary); font-size:11px; }
   .tab-view-table #tab-ocr .rx-acc-icon,
   .tab-view-table #tab-ocr .rx-acc-body { display:block !important; padding:10px 12px; }
   .tab-tbl { width:100%; border-collapse:collapse; font-size:12px; }
   .tab-tbl td, .tab-tbl th { padding:5px 9px; border:1px solid var(--border); vertical-align:middle; }
   .tab-tbl th { background:var(--bg); font-size:10px; font-weight:700; color:var(--text-secondary); white-space:nowrap; width:1%; min-width:76px; }
+  /* 전역 thead th 가 대문자·자간 .5px·모서리 12px(첫·끝 칸)을 얹는다.
+     이 표는 칸마다 1px 테두리가 있어 모서리가 붙으면 한 칸만 둥글게 잘린다. */
+  .tab-tbl thead th { text-transform:none; letter-spacing:normal; border-radius:0; }
   .tab-tbl td { color:var(--text-primary); overflow:hidden; }
   .tab-tbl th { overflow:hidden; }
   .tab-tbl td.pac-cell { overflow:visible; position:relative; }
@@ -298,34 +313,38 @@
   .modal-box { background: var(--bg-card); border-radius: var(--radius-lg); width: 480px; max-width: 95vw; box-shadow: var(--shadow-lg); animation: slideUp .25s ease; }
   @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
   .modal-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-  .modal-title { font-size: 15px; font-weight: 700; flex: 1; }
+  .modal-title { font-size: 14px; font-weight: 700; flex: 1; }
   .modal-close { background: none; border: none; font-size: 16px; color: var(--text-muted); cursor: pointer; }
   .modal-body { padding: 20px; } .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
   @media (max-width: 1200px) { .order-layout { grid-template-columns: 280px 1fr; } }
   @media (max-width: 768px)  { .order-layout { grid-template-columns: 1fr; } .action-footer { left: 0; flex-wrap: wrap; bottom: 42px; } }
 
-  .section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  /* 전역 .section-title 은 11px 대문자 캡션용이라 text-transform/letter-spacing 과
+     오른쪽으로 뻗는 ::after 실선을 함께 준다. 여기서는 13/700 제목 + 아래 실선이라
+     ::after 가 남으면 선이 두 줄로 겹친다. 상속되는 세 가지를 명시적으로 끈다. */
+  .section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: normal; }
+  .section-title::after { content: none; }
   .item-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px 10px; margin-bottom: 6px; background: var(--bg-card); }
-  .item-num { font-size: 12px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 4px; padding: 0 9px; flex-shrink: 0; align-self: flex-end; height: 34px; display: flex; align-items: center; }
+  .item-num { font-size: 12px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 6px; padding: 0 9px; flex-shrink: 0; align-self: flex-end; height: 32px; display: flex; align-items: center; }
   /* Inline row: name + qty + buttons */
   .item-row { display: flex; align-items: flex-start; gap: 6px; }
 .item-inline-field { display: flex; flex-direction: column; flex-shrink: 0; }
   .item-field-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
   .item-summary { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 8px; background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); margin-top: 6px; }
-  .item-nhis-sel { font-size:11px !important; height:26px !important; padding:0 6px !important; width:110px !important; min-width:0 !important; flex-shrink:0; }
+  .item-nhis-sel { font-size:11px !important; height:32px !important; padding:0 6px !important; width:110px !important; min-width:0 !important; flex-shrink:0; }
   /* 카드뷰 item-row 안에서는 다른 입력 항목과 높이 통일 */
-  .item-row .item-nhis-sel { height:34px !important; padding:0 4px !important; }
+  .item-row .item-nhis-sel { height:32px !important; padding:0 4px !important; }
   .tab-view-table .item-nhis-sel { width:100% !important; }
-  .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--success-light); border: 1px solid #86efac; border-radius: var(--radius-lg); margin-top: 4px; }
+  .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* 판매 유형 라디오 버튼 */
   .so-type-opt { display:inline-flex; align-items:center; cursor:pointer; }
   .so-type-opt input[type=radio] { display:none; }
   .so-type-opt span {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
-    border:1.5px solid var(--border); background:#fff; color:var(--text-secondary);
+    display:inline-flex; align-items:center; gap:8px;
+    height:32px; padding:0 12px; border-radius:8px; font-size:13px; font-weight:400;
+    border:1px solid var(--border); background:#fff; color:var(--gray-1000);
     transition:var(--transition); user-select:none;
   }
   .so-type-opt span:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
@@ -435,9 +454,9 @@
   /* 필드 그리드 (이력 모달 내부) */
   .pc-field-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; }
   .pc-field-full { grid-column:1 / -1; }
-  .pc-field-row { display:flex; flex-direction:column; gap:2px; padding:7px 9px; background:var(--bg); border-radius:5px; border:1px solid var(--border-light); min-width:0; }
-  .pc-field-label { font-size:10px; font-weight:600; color:var(--text-muted); }
-  .pc-field-val { font-size:12px; font-weight:600; color:var(--text-primary); word-break:break-all; }
+  .pc-field-row { display:flex; flex-direction:column; gap:2px; padding:7px 9px; background:var(--bg); border-radius:6px; border:1px solid var(--border-light); min-width:0; }
+  .pc-field-label { font-size:10px; font-weight:500; color:var(--text-muted); }
+  .pc-field-val { font-size:12px; font-weight:500; color:var(--text-primary); word-break:break-all; }
 
   /* ── 첨부 파일 썸네일 ── */
   /* ── 뷰어 아래 카드 공통 (시안 137:792) ──
@@ -516,7 +535,7 @@
   .doc-thumb.active { border:2px solid var(--primary); }
   .attach-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
   .attach-thumb-pdf { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-                      font-size:24px; background:#fff1f0; color:var(--danger); }
+                      font-size:24px; background:var(--alert-50); color:var(--danger); }
   .attach-type-badge { position:absolute; left:0; right:0; bottom:0; padding:4px; text-align:center;
                        background:rgba(0,0,0,.4); color:var(--gray-0);
                        font-size:11px; font-weight:500; line-height:1.2; }
@@ -588,19 +607,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <i class="fa-solid fa-file-signature" style="font-size:11px;"></i> 위임동의
           </button>
         </div>
-        <div id="consentResultBadge" style="display:none;align-items:center;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
+        <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
         {{-- 위임동의 팝오버 --}}
-        <div id="consentPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid #6366f1;border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
+        <div id="consentPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:#6366f1;border:1px solid #6366f1;transform:rotate(45deg);margin:3px auto 0;"></div>
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
-          <div style="background:#6366f1;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i id="consentModalIcon" class="fa-solid fa-file-signature" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
             <span id="consentModalTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">위임동의 SMS 발송</span>
             <button onclick="closeConsentPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-            <div id="consentResendNotice" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:10px 12px;font-size:12px;color:#c2410c;line-height:1.6;">
+            <div id="consentResendNotice" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
               <i class="fa-solid fa-rotate-right"></i>
               <strong>이전 동의 링크가 만료되었습니다.</strong><br>
               새로운 동의 링크를 발송합니다. 이전 링크는 더 이상 사용할 수 없습니다.
@@ -610,7 +629,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               $isLocalUrl  = str_contains($consentBase, 'localhost') || str_contains($consentBase, '127.0.0.1');
             @endphp
             @if($isLocalUrl)
-            <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px 12px;font-size:12px;color:#dc2626;line-height:1.6;">
+            <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
               <i class="fa-solid fa-triangle-exclamation"></i>
               <strong>링크 클릭 불가 경고:</strong> CONSENT_PUBLIC_URL이 <code>{{ $consentBase }}</code>로 설정되어 있어 환자 휴대폰에서 링크가 클릭되지 않습니다.<br>
               <span style="opacity:.85;">.env에서 <code>CONSENT_PUBLIC_URL</code>을 실제 공인 도메인으로 변경하세요.</span>
@@ -622,14 +641,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
             </p>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
               <input type="text" class="form-control" id="consentMobile"
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
                      style="font-size:13px;" oninput="updateConsentPreview()" />
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
               {{-- OCR 이름이 틀리거나 비어 있는 경우가 있어 여기서 고쳐 보낼 수 있게 한다.
                    비워 두면 서버가 처방전에 적힌 이름을 쓴다. --}}
               <input type="text" class="form-control" id="consentPatientName" maxlength="50"
@@ -638,10 +657,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      style="font-size:13px;" oninput="updateConsentPreview()" />
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
-              <div id="consentMsgPreview" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:#374151;font-family:monospace;"></div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
+              <div id="consentMsgPreview" style="background:var(--gray-50);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:var(--gray-800);font-family:monospace;"></div>
             </div>
-            <div id="consentSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;"></div>
+            <div id="consentSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
               <button class="btn btn-outline btn-sm" onclick="closeConsentPopover()">취소</button>
               <button class="btn btn-primary btn-sm" id="btnConsentSend" onclick="sendConsentSms()">
@@ -651,14 +670,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         {{-- 위임동의 서명 확인 팝오버 --}}
-        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:540px;background:var(--bg-card);border:1px solid var(--success);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
+        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:540px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:var(--success);border:1px solid var(--success);transform:rotate(45deg);margin:3px auto 0;"></div>
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
-          <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #a7f3d0;">
-            <i class="fa-solid fa-signature" style="color:var(--success);font-size:15px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:#065f46;flex:1;">위임동의 서명 확인</span>
-            <button onclick="closeConsentSignPopover()" style="background:none;border:none;cursor:pointer;color:#065f46;font-size:16px;line-height:1;">&#215;</button>
+          <div style="background:linear-gradient(135deg,var(--primary-50),var(--primary-100));border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--primary-200);">
+            <i class="fa-solid fa-signature" style="color:var(--primary);font-size:15px;flex-shrink:0;"></i>
+            <span style="font-size:13px;font-weight:700;color:var(--primary-700);flex:1;">위임동의 서명 확인</span>
+            <button onclick="closeConsentSignPopover()" style="background:none;border:none;cursor:pointer;color:var(--primary-700);font-size:16px;line-height:1;">&#215;</button>
           </div>
           <div style="padding:0;">
             <div id="csignLoading" style="padding:40px;text-align:center;color:var(--text-muted);font-size:13px;">
@@ -668,18 +687,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--border);">
                 <div style="padding:14px 20px;border-right:1px solid var(--border);">
                   <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">서명자</div>
-                  <div id="csignName" style="font-size:15px;font-weight:700;color:var(--text-primary);"></div>
+                  <div id="csignName" style="font-size:14px;font-weight:700;color:var(--text-primary);"></div>
                 </div>
                 <div style="padding:14px 20px;">
                   <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">서명한 전화번호</div>
-                  <div id="csignMobile" style="font-size:15px;font-weight:700;color:var(--text-primary);font-family:monospace;"></div>
+                  <div id="csignMobile" style="font-size:14px;font-weight:700;color:var(--text-primary);font-family:monospace;"></div>
                 </div>
               </div>
               <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
                 <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">서명 일시</div>
                 <div id="csignTime" style="font-size:13px;color:var(--text-primary);font-family:monospace;"></div>
               </div>
-              <div id="csignImgWrap" style="padding:20px;background:#f8fafb;text-align:center;border-bottom:1px solid var(--border);">
+              <div id="csignImgWrap" style="padding:20px;background:var(--gray-50);text-align:center;border-bottom:1px solid var(--border);">
                 <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;text-align:left;">서명</div>
                 <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:inline-block;min-width:200px;">
                   <img id="csignImg" src="" alt="서명 이미지" style="max-width:100%;max-height:200px;display:block;margin:0 auto;" />
@@ -696,7 +715,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:nowrap;gap:6px;border-top:1px solid var(--border);">
             {{-- 서명 이미지만 따로 받아 가는 경우가 있다(서류 첨부·대조) --}}
             <a id="csignPngBtn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
-               style="display:none;padding:5px 10px;background:var(--success);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
+               style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-download"></i> 서명 PNG
             </a>
             <a id="csignPdfBtn" href="#" target="_blank"
@@ -704,12 +723,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
             </a>
             <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdfOriginal', $prescription) }}" target="_blank"
-               style="display:none;padding:5px 10px;background:#6366f1;color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
+               style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>
             <button id="csignRegenBtn" type="button" onclick="regenerateDelegation(this)"
                data-url="{{ route('prescriptions.delegationRegenerate', $prescription) }}"
-               style="display:none;padding:5px 10px;background:#0ea5e9;color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:4px;"
+               style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:4px;"
                title="현재 위임장 설정(기관·계좌·서명위치)으로 첨부문서를 다시 생성합니다.">
               <i class="fa-solid fa-rotate"></i> 설정 반영 재생성
             </button>
@@ -726,12 +745,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
         @endphp
         @if($tp && $tp->status === 'DONE')
           {{-- 입금완료 --}}
-          <div style="padding:5px 11px;background:var(--success-light);border:1px solid var(--success);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--success);display:flex;align-items:center;gap:4px;white-space:nowrap;">
+          <div style="height:32px;padding:5px 11px;background:var(--primary-50);border:1px solid var(--primary);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:4px;white-space:nowrap;">
             <i class="fa-solid fa-circle-check" style="font-size:11px;"></i> 입금완료
           </div>
         @elseif($tp && $tp->status === 'DISABLED')
           {{-- VA 비활성화 – SMS만 발송 완료 --}}
-          <div style="padding:5px 11px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--warning);display:flex;align-items:center;gap:4px;white-space:nowrap;">
+          <div style="height:32px;padding:5px 11px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--warning);display:flex;align-items:center;gap:4px;white-space:nowrap;">
             <i class="fa-solid fa-comment-sms" style="font-size:11px;"></i> SMS 발송 완료
           </div>
         @elseif($tp)
@@ -739,7 +758,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button type="button"
                   data-url="{{ route('settlement.check-status', $prescription->order) }}"
                   onclick="checkVaStatus(this)"
-                  style="padding:5px 11px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--warning);display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;">
+                  style="height:32px;padding:5px 11px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:11px;font-weight:700;color:var(--warning);display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;">
             <i class="fa-solid fa-building-columns" style="font-size:11px;"></i>
             {{ $tp->bank_name }} {{ $tp->account_number }}
           </button>
@@ -750,15 +769,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     data-url="{{ route('settlement.issue-va', $prescription->order) }}"
                     data-sms-url="{{ route('prescriptions.smsSend', $prescription) }}"
                     onclick="toggleVaPopover(event)"
-                    style="padding:5px 11px;background:#0ea5e9;color:#fff;border:none;font-weight:700;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:var(--radius);white-space:nowrap;cursor:pointer;">
+                    style="white-space:nowrap;cursor:pointer;">
               <i class="fa-solid fa-building-columns" style="font-size:11px;"></i> 가상계좌 발급
             </button>
             {{-- 가상계좌 발급 팝오버 --}}
-            <div id="vaPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:360px;background:var(--bg-card);border:1px solid #0ea5e9;border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:501;">
+            <div id="vaPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:360px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:501;">
               <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-                <div style="width:10px;height:10px;background:#0ea5e9;border:1px solid #0ea5e9;transform:rotate(45deg);margin:3px auto 0;"></div>
+                <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
               </div>
-              <div style="background:#0ea5e9;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+              <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
                 <i class="fa-solid fa-building-columns" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
                 <span id="vaPopoverTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">가상계좌 발급</span>
                 <button onclick="closeVaPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
@@ -766,7 +785,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 확인 view --}}
               <div id="vaPopoverConfirm" style="padding:14px;">
                 <div style="background:var(--primary-light);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
-                  <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:8px;">발급 정보 확인</div>
+                  <div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:8px;">발급 정보 확인</div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
                     <span style="color:var(--text-muted);">환자명</span>
                     <b>{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}</b>
@@ -784,7 +803,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <b>&#8361;{{ number_format($prescription->order?->shipping_fee ?? 3000) }}</b>
                   </div>
                 </div>
-                <div style="background:var(--warning-light);border:1px solid #fde68a;border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--warning);margin-bottom:12px;">
+                <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--primary-600);margin-bottom:12px;">
                   <i class="fa-solid fa-circle-info"></i>
                   토스페이먼츠 가상계좌가 발급되며, 환자에게 입금 안내가 이루어집니다.
                 </div>
@@ -797,12 +816,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               {{-- 결과 view --}}
               <div id="vaPopoverResult" style="display:none;padding:14px;">
-                <div id="vaDisabledNote" style="display:none;background:var(--warning-light);border:1px solid #fde68a;border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--warning);margin-bottom:10px;">
+                <div id="vaDisabledNote" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--alert-500);margin-bottom:10px;">
                   <i class="fa-solid fa-circle-info"></i>
                   가상계좌 발급이 비활성화 상태입니다 (<code>TOSS_VA_ENABLED=false</code>). SMS는 정상 발송되었습니다.
                 </div>
-                <div style="background:var(--primary-light,#e0f4fb);border:1px solid var(--primary-accent);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
-                  <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">입금 계좌 안내</div>
+                <div style="background:var(--primary-50);border:1px solid var(--primary-accent);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
+                  <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:500;">입금 계좌 안내</div>
                   <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:5px;">
                     <span style="color:var(--text-muted);">은행</span>
                     <b id="vaResultBank">-</b>
@@ -831,9 +850,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
           </div>
-          <div id="vaResultBadge" style="display:none;align-items:center;gap:4px;padding:4px 9px;background:var(--warning-light);border:1px solid #fcd34d;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-            <i class="fa-solid fa-building-columns" style="color:var(--warning);font-size:10px;"></i>
-            <span id="vaResultBadgeText" style="font-weight:700;color:var(--warning);">-</span>
+          <div id="vaResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+            <i class="fa-solid fa-building-columns" style="color:var(--gray-700);font-size:10px;"></i>
+            <span id="vaResultBadgeText" style="font-weight:700;color:var(--gray-700);">-</span>
           </div>
         @endif
       @endif
@@ -843,7 +862,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       @php $kakaoSent = (bool)$prescription->kakao_sent_at; @endphp
       <div id="kakaoTriggerWrap" style="position:relative;">
         <button class="pib-btn pib-btn-primary" id="btnKakaoTrigger" onclick="toggleKakaoPopover(event)">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:13px;height:13px;fill:{{ $kakaoSent ? 'var(--success)' : '#191919' }};flex-shrink:0;"><path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.548 5.082 3.9 6.498l-.97 3.6a.3.3 0 0 0 .462.328l4.326-2.88A11.4 11.4 0 0 0 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:13px;height:13px;fill:{{ $kakaoSent ? 'var(--primary)' : '#191919' }};flex-shrink:0;"><path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.548 5.082 3.9 6.498l-.97 3.6a.3.3 0 0 0 .462.328l4.326-2.88A11.4 11.4 0 0 0 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/></svg>
           알림톡
         </button>
         {{-- 알림톡 팝오버 --}}
@@ -861,7 +880,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="kakaoTemplateList">
                 @foreach($kakaoTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
@@ -870,7 +889,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="kakao_tpl" value="{{ $code }}" style="accent-color:#FEE500;" onchange="onTplChange(this)">
                   <div>
-                    <div style="font-weight:600;">{{ $tpl['label'] }}</div>
+                    <div style="font-weight:700;">{{ $tpl['label'] }}</div>
                     <div style="font-size:10px;color:var(--text-muted);">{{ $tpl['desc'] }}</div>
                   </div>
                 </label>
@@ -878,35 +897,35 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
             <div id="kakaoPreviewWrap" style="display:none;">
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">메시지 미리보기</div>
-              <div id="kakaoPreviewBox" style="background:#F9F0FF;border:1px solid #E6C9FF;border-radius:var(--radius);padding:10px 12px;font-size:11px;line-height:1.8;white-space:pre-wrap;color:#333;max-height:120px;overflow-y:auto;"></div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">메시지 미리보기</div>
+              <div id="kakaoPreviewBox" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;font-size:11px;line-height:1.8;white-space:pre-wrap;color:var(--gray-800);max-height:120px;overflow-y:auto;"></div>
             </div>
             @if($prescription->order)
             <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:11px;display:flex;flex-direction:column;gap:4px;">
               <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:600;">본인 부담금</span>
+                <span style="color:var(--text-muted);font-weight:500;">본인 부담금</span>
                 <span id="kakaoCopayAmt" style="font-weight:700;">{{ number_format($calcCopay) }}원</span>
               </div>
               @if($prescription->order->shipping_fee)
               <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:600;">배송비</span>
+                <span style="color:var(--text-muted);font-weight:500;">배송비</span>
                 <span style="font-weight:700;">{{ number_format($prescription->order->shipping_fee) }}원</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
-                <span style="color:var(--text-muted);font-weight:600;">합계</span>
+                <span style="color:var(--text-muted);font-weight:500;">합계</span>
                 <span id="kakaoDepositAmt" style="font-weight:700;color:var(--primary);">{{ number_format($calcDeposit) }}원</span>
               </div>
               @endif
             </div>
             @endif
             <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">수신 번호</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">수신 번호</div>
               <input type="text" id="kakaoMobile" class="form-control" style="font-size:12px;height:32px;"
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
             </div>
             @if(config('kakao.test_mode'))
-            <div style="background:var(--warning-light);border:1px solid #fde68a;border-radius:var(--radius);padding:6px 10px;font-size:10px;color:var(--warning);">
+            <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:6px 10px;font-size:10px;color:var(--alert-500);">
               <i class="fa-solid fa-flask"></i> 테스트 모드 — 실제 미전송
             </div>
             @endif
@@ -935,7 +954,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="smsTemplateList">
                 @foreach($smsTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
@@ -944,7 +963,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="sms_tpl" value="{{ $code }}" style="accent-color:var(--primary);" onchange="onSmsTplChange(this)">
                   <div>
-                    <div style="font-weight:600;">{{ $tpl['label'] }}</div>
+                    <div style="font-weight:700;">{{ $tpl['label'] }}</div>
                     <div style="font-size:10px;color:var(--text-muted);">{{ $tpl['desc'] }}</div>
                   </div>
                 </label>
@@ -952,7 +971,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">메시지 내용 <span id="smsMsgLen" style="color:var(--text-muted);">(0자)</span></div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">메시지 내용 <span id="smsMsgLen" style="color:var(--text-muted);">(0자)</span></div>
               <textarea id="smsMsgBody" rows="5"
                         style="width:100%;font-size:11px;line-height:1.7;border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;resize:vertical;background:var(--bg-card);color:var(--text);"
                         placeholder="메시지 유형을 선택하면 자동으로 채워집니다."
@@ -962,23 +981,23 @@ $calcDeposit  = $calcCopay + $calcShipping;
             @if($prescription->order)
             <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:11px;display:flex;flex-direction:column;gap:4px;">
               <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:600;">본인 부담금</span>
+                <span style="color:var(--text-muted);font-weight:500;">본인 부담금</span>
                 <span id="smsCopayAmt" style="font-weight:700;">{{ number_format($calcCopay) }}원</span>
               </div>
               @if($prescription->order->shipping_fee)
               <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:600;">배송비</span>
+                <span style="color:var(--text-muted);font-weight:500;">배송비</span>
                 <span style="font-weight:700;">{{ number_format($prescription->order->shipping_fee) }}원</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
-                <span style="color:var(--text-muted);font-weight:600;">합계</span>
+                <span style="color:var(--text-muted);font-weight:500;">합계</span>
                 <span id="smsDepositAmt" style="font-weight:700;color:var(--primary);">{{ number_format($calcDeposit) }}원</span>
               </div>
               @endif
             </div>
             @endif
             <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">수신 번호</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">수신 번호</div>
               <input type="text" id="smsMobile" class="form-control" style="font-size:12px;height:32px;"
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
@@ -994,11 +1013,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- 현금영수증 --}}
       <div id="cashReceiptArea">
         @if($prescription->order?->cash_receipt_status === 'issued')
-        <div style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-          <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:10px;"></i>
-          <span style="font-weight:700;color:var(--success);">현금영수증</span>
-          <button onclick="toggleCrDetailPopover(event)" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--success);color:var(--success);border-radius:3px;cursor:pointer;margin-left:2px;">상세</button>
-          <button onclick="cancelCashReceipt()" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:3px;cursor:pointer;">취소</button>
+        <div style="display:flex;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+          <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
+          <span style="font-weight:700;color:var(--primary);">현금영수증</span>
+          <button onclick="toggleCrDetailPopover(event)" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;margin-left:2px;">상세</button>
+          <button onclick="cancelCashReceipt()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;">취소</button>
         </div>
         @else
         <button class="pib-btn" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)">
@@ -1011,16 +1030,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div id="faxTriggerWrap" style="display:{{ $lastFaxHistory ? 'none' : 'block' }};position:relative;">
         <button class="pib-btn" id="btnFaxTrigger" onclick="toggleFaxPopover(event)">
           <i class="fa-solid fa-fax" style="font-size:12px;"></i> 팩스
-          <span id="faxSentBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--success);border:2px solid var(--bg-card);align-items:center;justify-content:center;">
+          <span id="faxSentBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--primary);border:2px solid var(--bg-card);align-items:center;justify-content:center;">
             <i class="fa-solid fa-check" style="font-size:7px;color:#fff;"></i>
           </span>
         </button>
         <div id="faxPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:580px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:#374151;border:1px solid #374151;transform:rotate(45deg);margin:3px auto 0;"></div>
+            <div style="width:10px;height:10px;background:var(--gray-800);border:1px solid var(--gray-800);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
           {{-- 헤더 --}}
-          <div style="background:#374151;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <div style="background:var(--gray-800);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-fax" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
             <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">팩스 전송</span>
             <button onclick="closeFaxPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
@@ -1036,13 +1055,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               ? (rtrim(request()->root(), '/') . '/storage/' . $lastFaxHistory->pdf_path)
               : null;
           @endphp
-          <div id="faxSentBanner" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};padding:8px 14px;background:#f0fdf4;border-bottom:1px solid #86efac;font-size:11px;align-items:center;gap:8px;">
-            <i class="fa-solid fa-circle-check" style="color:var(--success);flex-shrink:0;"></i>
+          <div id="faxSentBanner" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};padding:8px 14px;background:var(--primary-50);border-bottom:1px solid var(--primary-200);font-size:11px;align-items:center;gap:8px;">
+            <i class="fa-solid fa-circle-check" style="color:var(--primary);flex-shrink:0;"></i>
             <div style="flex:1;line-height:1.5;">
-              <span id="faxSentBannerText" style="font-weight:600;color:#166534;">{{ $lastFaxHistory ? "{$fhTimeStr} 전송 완료 — {$fhRecip} ({$fhFaxNo})" . ($fhLabels ? ' | ' . implode(', ', $fhLabels) : '') : '' }}</span>
+              <span id="faxSentBannerText" style="font-weight:500;color:var(--primary-600);">{{ $lastFaxHistory ? "{$fhTimeStr} 전송 완료 — {$fhRecip} ({$fhFaxNo})" . ($fhLabels ? ' | ' . implode(', ', $fhLabels) : '') : '' }}</span>
             </div>
             <a id="faxSentBannerPdf" href="{{ $fhPdfUrl ?? '#' }}" target="_blank"
-               style="font-size:10px;color:var(--primary);white-space:nowrap;text-decoration:none;font-weight:600;{{ $fhPdfUrl ? '' : 'display:none;' }}">
+               style="font-size:10px;color:var(--primary);white-space:nowrap;text-decoration:none;font-weight:500;{{ $fhPdfUrl ? '' : 'display:none;' }}">
               <i class="fa-solid fa-file-pdf"></i> PDF
             </a>
           </div>
@@ -1051,10 +1070,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- 왼쪽: 수신처 + 팩스번호 + 안내 --}}
             <div style="display:flex;flex-direction:column;gap:10px;">
               <div>
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">수신처</div>
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">수신처</div>
                 <div style="display:flex;flex-direction:column;gap:5px;">
                   <button type="button" class="fax-recipient-btn" data-fax="" data-recipient-type="nhis" onclick="selectFaxRecipient(this)"
-                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:2px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);cursor:pointer;text-align:left;">
+                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);cursor:pointer;text-align:left;">
                     <div>
                       <div style="font-size:12px;font-weight:700;color:var(--primary);">국민건강보험공단</div>
                       <div style="font-size:10px;color:var(--text-muted);">NHIS · 지사 검색</div>
@@ -1062,15 +1081,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <i class="fa-solid fa-magnifying-glass" style="font-size:12px;color:var(--primary);"></i>
                   </button>
                   <button type="button" class="fax-recipient-btn" data-fax="02-705-4000" data-recipient-type="hira" onclick="selectFaxRecipient(this)"
-                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:2px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
+                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
                     <div>
                       <div style="font-size:12px;font-weight:700;color:var(--text);">건강보험심사평가원</div>
                       <div style="font-size:10px;color:var(--text-muted);">HIRA</div>
                     </div>
-                    <span style="font-size:12px;font-weight:600;color:var(--text-muted);font-family:monospace;">02-705-4000</span>
+                    <span style="font-size:12px;font-weight:500;color:var(--text-muted);font-family:monospace;">02-705-4000</span>
                   </button>
                   <button type="button" class="fax-recipient-btn" data-fax="" data-recipient-type="custom" onclick="selectFaxRecipient(this)"
-                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:2px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
+                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
                     <div>
                       <div style="font-size:12px;font-weight:700;color:var(--text);">기타</div>
                       <div style="font-size:10px;color:var(--text-muted);">직접 입력</div>
@@ -1081,14 +1100,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- NHIS 지사 검색 패널 --}}
                 <div id="nhisSearchPanel" style="display:none;background:var(--bg);border:1px solid var(--primary);border-radius:var(--radius);padding:8px;margin-top:6px;">
                   <input type="text" id="nhisSearchInput" class="form-control"
-                         style="height:28px;font-size:11px;margin-bottom:6px;padding:3px 8px;"
+                         style="height:32px;font-size:11px;margin-bottom:6px;padding:3px 8px;"
                          placeholder="지역명 또는 지사명 검색..."
                          oninput="renderNhisOffices(this.value)">
                   <div id="nhisOfficeList" style="max-height:112px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;"></div>
                 </div>
               </div>
               <div>
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:5px;">수신 팩스번호</div>
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:5px;">수신 팩스번호</div>
                 <input type="text" id="fax-no" class="form-control" style="font-size:12px;height:32px;"
                        placeholder="지사 선택 또는 직접 입력"
                        oninput="onFaxNoInput()">
@@ -1100,20 +1119,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             {{-- 오른쪽: 전송 서류 --}}
             <div style="display:flex;flex-direction:column;">
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">전송 서류 선택</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">전송 서류 선택</div>
               <div style="display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;padding-right:2px;">
                 <label style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                   <input type="checkbox" id="fax-doc-auth" value="authorization" style="accent-color:var(--primary);margin-top:3px;" checked>
                   <div style="flex:1;">
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                      <span style="font-weight:600;">위임장</span>
+                      <span style="font-weight:500;">위임장</span>
                       @php
                         $latestConsent = $prescription->consents()->where('status','agreed')->latest()->first();
                       @endphp
                       @if($latestConsent?->signature_data)
-                        <span style="font-size:10px;background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:3px;padding:1px 6px;">전자서명 완료</span>
+                        <span style="font-size:10px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);border-radius:6px;padding:1px 6px;">전자서명 완료</span>
                       @else
-                        <span style="font-size:10px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:3px;padding:1px 6px;">자동 생성</span>
+                        <span style="font-size:10px;background:var(--alert-50);color:var(--alert-500);border:1px solid var(--alert-100);border-radius:6px;padding:1px 6px;">자동 생성</span>
                       @endif
                       <button type="button"
                               onclick="window.open('{{ route('prescriptions.authorization', $prescription) }}','auth_preview','width=860,height=1100,scrollbars=yes,resizable=yes')"
@@ -1134,11 +1153,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="checkbox" id="fax-doc-delegation" value="delegation" style="accent-color:var(--primary);" {{ $latestConsent?->signature_data ? 'checked' : 'disabled' }}>
                   <div style="flex:1;">
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                      <span style="font-weight:600;">요양비위임장</span>
+                      <span style="font-weight:500;">요양비위임장</span>
                       @if($latestConsent?->signature_data)
-                        <span style="font-size:10px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:3px;padding:1px 6px;">별지 제19호의7</span>
+                        <span style="font-size:10px;background:var(--primary-50);color:var(--primary-400);border:1px solid var(--primary-100);border-radius:6px;padding:1px 6px;">별지 제19호의7</span>
                       @else
-                        <span style="font-size:10px;background:#fffbeb;color:#b45309;border:1px solid #fcd34d;border-radius:3px;padding:1px 6px;">서명 필요</span>
+                        <span style="font-size:10px;background:var(--alert-50);color:var(--alert-500);border:1px solid var(--alert-100);border-radius:6px;padding:1px 6px;">서명 필요</span>
                       @endif
                     </div>
                     <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
@@ -1149,7 +1168,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                   <input type="checkbox" id="fax-doc-rx" value="prescription" style="accent-color:var(--primary);" checked>
                   <div>
-                    <div style="font-weight:600;">처방전</div>
+                    <div style="font-weight:500;">처방전</div>
                     <div style="font-size:10px;color:var(--text-muted);">
                       @if($prescription->image_path)
                         업로드된 처방전 이미지
@@ -1162,7 +1181,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                   <input type="checkbox" id="fax-doc-purchase" value="purchase_history" style="accent-color:var(--primary);" checked>
                   <div>
-                    <div style="font-weight:600;">제품 구매내역</div>
+                    <div style="font-weight:500;">제품 구매내역</div>
                     <div style="font-size:10px;color:var(--text-muted);">판매 제품 상세 내역서</div>
                   </div>
                 </label>
@@ -1171,8 +1190,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="checkbox" id="fax-doc-cash-receipt" value="cash_receipt" style="accent-color:var(--primary);" {{ $crIssued ? 'checked' : 'disabled' }}>
                   <div style="flex:1;">
                     <div style="display:flex;align-items:center;gap:6px;">
-                      <span style="font-weight:600;">현금영수증</span>
-                      <span id="fax-cr-badge" style="font-size:10px;border-radius:3px;padding:1px 6px;{{ $crIssued ? 'background:#f0fdf4;color:#166534;border:1px solid #86efac;' : 'background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;' }}">{{ $crIssued ? '발행완료' : '미발행' }}</span>
+                      <span style="font-weight:500;">현금영수증</span>
+                      <span id="fax-cr-badge" style="font-size:10px;border-radius:6px;padding:1px 6px;{{ $crIssued ? 'background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);' : 'background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-300);' }}">{{ $crIssued ? '발행완료' : '미발행' }}</span>
                     </div>
                     <div id="fax-cr-desc" style="font-size:10px;color:var(--text-muted);margin-top:2px;">
                       {{ $crIssued ? '승인번호: ' . $prescription->order->cash_receipt_no : '현금영수증 발행 후 선택 가능' }}
@@ -1183,7 +1202,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- ── 첨부 문서 (주민등록증·위임장 등) ── --}}
                 @if($prescription->attachments->isNotEmpty())
                 <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
-                  <div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">
+                  <div style="font-size:10px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">
                     <i class="fa-solid fa-paperclip"></i> 첨부 문서
                   </div>
                   @foreach($prescription->attachments as $att)
@@ -1192,13 +1211,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                            style="accent-color:var(--primary);" checked>
                     <div style="flex:1;min-width:0;">
                       <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="font-weight:600;">{{ $att->doc_type_label }}</span>
-                        <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:3px;padding:1px 5px;">첨부</span>
+                        <span style="font-weight:500;">{{ $att->doc_type_label }}</span>
+                        <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">첨부</span>
                       </div>
                       <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $att->file_original_name }}</div>
                     </div>
                     @if($att->is_image)
-                      <img src="{{ $att->file_url }}" style="width:28px;height:28px;object-fit:cover;border-radius:3px;border:1px solid var(--border);flex-shrink:0;" />
+                      <img src="{{ $att->file_url }}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;" />
                     @else
                       <i class="fa-regular fa-file-pdf" style="color:var(--danger);font-size:18px;flex-shrink:0;"></i>
                     @endif
@@ -1212,27 +1231,27 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 전송 버튼 (전체 너비) --}}
           <div style="padding:0 14px 14px;">
             <button id="btnFaxSend" onclick="sendFax()"
-                    style="width:100%;padding:8px;background:#374151;color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    style="width:100%;padding:8px;background:var(--gray-800);color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fa-solid fa-paper-plane"></i> 팩스 전송
             </button>
           </div>
         </div>
       </div>
-      <div id="faxResultBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-        <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:10px;"></i>
-        <span style="font-weight:700;color:var(--success);">팩스 전송</span>
+      <div id="faxResultBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+        <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
+        <span style="font-weight:700;color:var(--primary);">팩스 전송</span>
         <button id="faxPdfViewBtn" data-url="{{ $lastFaxHistory?->pdfUrl() }}"
                 onclick="openFaxPdfModal()"
-                style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid #6366f1;color:#6366f1;border-radius:3px;cursor:pointer;margin-left:2px;">보기</button>
-        <button onclick="reopenFaxPopover(event)" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--success);color:var(--success);border-radius:3px;cursor:pointer;">재전송</button>
+                style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;margin-left:2px;">보기</button>
+        <button onclick="reopenFaxPopover(event)" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;">재전송</button>
       </div>
 
       {{-- Withworks 판매번호 --}}
-      <div id="wwSoCard" style="display:flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid {{ $prescription->order?->withworks_so_no ? 'var(--primary)' : 'var(--border)' }};border-radius:var(--radius);background:{{ $prescription->order?->withworks_so_no ? 'var(--primary-light)' : 'var(--bg-card)' }};">
+      <div id="wwSoCard" style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid {{ $prescription->order?->withworks_so_no ? 'var(--primary)' : 'var(--border)' }};border-radius:var(--radius);background:{{ $prescription->order?->withworks_so_no ? 'var(--primary-light)' : 'var(--bg-card)' }};">
         <i class="fa-solid fa-link" style="color:var(--primary);font-size:10px;flex-shrink:0;"></i>
         <div id="wwSoContent" style="font-size:11px;line-height:1.2;">
           @if($prescription->order?->withworks_so_no)
-          <span style="font-family:monospace;font-weight:800;color:var(--primary);">{{ $prescription->order->withworks_so_no }}</span>
+          <span style="font-family:monospace;font-weight:700;color:var(--primary);">{{ $prescription->order->withworks_so_no }}</span>
           @else
           <span id="wwSoBadge" style="color:var(--text-muted);">미연계</span>
           @endif
@@ -1241,10 +1260,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 세금계산서 --}}
       @if($prescription->order?->tax_invoice_status === 'issued')
-      <div id="tiIssuedBadge" style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-        <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:10px;"></i>
-        <span style="font-weight:700;color:var(--success);">세금계산서</span>
-        <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:3px;cursor:pointer;margin-left:2px;">취소</button>
+      <div id="tiIssuedBadge" style="display:flex;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+        <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
+        <span style="font-weight:700;color:var(--primary);">세금계산서</span>
+        <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;margin-left:2px;">취소</button>
       </div>
       @else
       <div id="tiNotIssuedWrap" style="position:relative;">
@@ -1262,35 +1281,35 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">발행 유형</label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">발행 유형</label>
               <select id="ti-type" class="form-control" style="font-size:12px;">
                 <option value="electronic">전자세금계산서</option>
                 <option value="manual">수기</option>
               </select>
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">공급받는자 상호 <span style="color:var(--danger);">*</span></label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">공급받는자 상호 <span style="color:var(--danger);">*</span></label>
               <input type="text" id="ti-biz-name" class="form-control" style="font-size:12px;" placeholder="(주)예시">
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">대표자명 <span style="color:var(--danger);">*</span></label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">대표자명 <span style="color:var(--danger);">*</span></label>
               <input type="text" id="ti-ceo-name" class="form-control" style="font-size:12px;" placeholder="홍길동">
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">사업자등록번호 <span style="color:var(--danger);">*</span></label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">사업자등록번호 <span style="color:var(--danger);">*</span></label>
               <input type="text" id="ti-biz-no" class="form-control" style="font-size:12px;" placeholder="123-45-67890">
             </div>
             <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">이메일 (전자발송)</label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">이메일 (전자발송)</label>
               <input type="email" id="ti-email" class="form-control" style="font-size:12px;" placeholder="billing@example.com">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div>
-                <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">공급가액 <span style="color:var(--danger);">*</span></label>
+                <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">공급가액 <span style="color:var(--danger);">*</span></label>
                 <input type="text" id="ti-supply" class="form-control" style="font-size:12px;" inputmode="numeric" placeholder="0" oninput="formatCrAmount(this); autoCalcVat()">
               </div>
               <div>
-                <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">세액 <span style="color:var(--danger);">*</span></label>
+                <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">세액 <span style="color:var(--danger);">*</span></label>
                 <input type="text" id="ti-vat" class="form-control" style="font-size:12px;" inputmode="numeric" placeholder="0" oninput="formatCrAmount(this)">
               </div>
             </div>
@@ -1306,10 +1325,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
       </div>
-      <div id="tiResultBadge" style="display:none;align-items:center;gap:4px;padding:4px 9px;background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-        <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:10px;"></i>
-        <span style="font-weight:700;color:var(--success);">세금계산서</span>
-        <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:3px;cursor:pointer;margin-left:2px;">취소</button>
+      <div id="tiResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+        <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
+        <span style="font-weight:700;color:var(--primary);">세금계산서</span>
+        <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;margin-left:2px;">취소</button>
       </div>
       @endif
     </div>
@@ -1336,7 +1355,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
   {{-- ── 메모 패널 (JS로 위치 결정 — fixed) ─────────────── --}}
   <div id="memoPanelWrap" style="display:none;position:fixed;z-index:1200;width:340px;">
-    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.14);overflow:hidden;">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.14);overflow:hidden;">
       {{-- 헤더 --}}
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--primary);color:#fff;">
         <span style="font-size:13px;font-weight:700;"><i class="fa-solid fa-note-sticky"></i> 메모
@@ -1351,7 +1370,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   onkeydown="if(event.ctrlKey&&event.key==='Enter')saveMemo()"></textarea>
         <div style="display:flex;justify-content:flex-end;margin-top:4px;">
           <button onclick="saveMemo()"
-                  style="padding:4px 14px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">
+                  style="padding:4px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;">
             <i class="fa-solid fa-plus"></i> 저장
           </button>
         </div>
@@ -1518,8 +1537,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
 
         @if($prescription->admin_note)
-        <div style="padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;line-height:1.7;color:var(--gray-1000);white-space:pre-wrap;">
-          <div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:4px;"><i class="fa-solid fa-note-sticky"></i> 등록자 메모</div>{{ $prescription->admin_note }}
+        <div style="padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;line-height:1.7;color:var(--gray-1000);white-space:pre-wrap;">
+          <div style="font-size:10px;font-weight:700;color:var(--gray-600);margin-bottom:4px;"><i class="fa-solid fa-note-sticky"></i> 등록자 메모</div>{{ $prescription->admin_note }}
         </div>
         @endif
 
@@ -1594,7 +1613,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <span>
               <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> 상담ㆍ환자 정보
               @if($isReturningPatient)
-                <span style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;">
+                <span style="display:inline-flex;align-items:center;gap:3px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;">
                   <i class="fa-solid fa-rotate-right" style="font-size:9px;"></i> 재방문
                 </span>
               @endif
@@ -1619,7 +1638,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                       class="rx-sec-btn">
                 <i class="fa-solid fa-note-sticky"></i> 메모
                 <span id="memoBadgeCount"
-                      style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
+                      style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:10px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
                   {{ $prescription->memos->count() }}
                 </span>
               </button>
@@ -1710,7 +1729,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">환자명 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
@@ -1743,7 +1762,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                            placeholder="우편번호" style="width:110px;flex:none;background:var(--gray-50);cursor:default;" />
                     <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
                     <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gray-600);white-space:nowrap;cursor:pointer;margin:0;">
-                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:14px;height:14px;cursor:pointer;" />
+                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
                       배송 주소 동일
                     </label>
                   </div>
@@ -1869,7 +1888,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
@@ -1878,7 +1897,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">추가정보 등록일</span>
-                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->counseling?->reg_date ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,#f8f9fa);" />
+                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->counseling?->reg_date ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
@@ -1929,7 +1948,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">처방전 발행일</span>
                 <div class="field-group" style="flex:1;">
                   <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->counseling?->udf12 ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i></span>
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
@@ -2038,7 +2057,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->counseling?->udf30 ?? '' }}" style="flex:1;" />
                   <button type="button" onclick="calcNextRepurchase(true)"
                           title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;height:36px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                          style="flex-shrink:0;height:32px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">
                     <i class="fa-solid fa-rotate"></i> 자동
                   </button>
                 </div>
@@ -2210,18 +2229,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div id="unsavedDlg" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:16px;width:100%;max-width:380px;margin:16px;box-shadow:0 24px 64px rgba(0,0,0,.22);animation:modalIn .18s ease;overflow:hidden;">
           <div style="padding:24px 24px 0;display:flex;gap:14px;align-items:flex-start;">
-            <div style="width:40px;height:40px;border-radius:10px;background:#FFF7ED;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="fa-solid fa-triangle-exclamation" style="color:#F59E0B;font-size:18px;"></i>
+            <div style="width:40px;height:40px;border-radius:12px;background:var(--alert-50);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fa-solid fa-triangle-exclamation" style="color:var(--alert-500);font-size:18px;"></i>
             </div>
             <div>
-              <p style="font-size:15px;font-weight:700;color:#1E1B4B;margin:0 0 6px;">저장하지 않은 변경사항</p>
-              <p style="font-size:13px;color:#6B7280;line-height:1.6;margin:0;">처방전 검수 탭에 저장되지 않은 내용이 있습니다.<br>탭을 이동하기 전에 저장하시겠습니까?</p>
+              <p style="font-size:14px;font-weight:700;color:var(--gray-1000);margin:0 0 6px;">저장하지 않은 변경사항</p>
+              <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin:0;">처방전 검수 탭에 저장되지 않은 내용이 있습니다.<br>탭을 이동하기 전에 저장하시겠습니까?</p>
             </div>
           </div>
           <div style="padding:20px 24px 24px;display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-            <button id="unsavedDlgCancel" style="padding:8px 16px;border:1.5px solid #E5E7EB;border-radius:8px;background:#fff;color:#374151;font-size:13px;font-weight:600;cursor:pointer;">취소</button>
-            <button id="unsavedDlgDiscard" style="padding:8px 16px;border:1.5px solid #E5E7EB;border-radius:8px;background:#fff;color:#6B7280;font-size:13px;font-weight:600;cursor:pointer;">저장 없이 이동</button>
-            <button id="unsavedDlgSave" style="padding:8px 16px;border:none;border-radius:8px;background:#7367F0;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-floppy-disk"></i> 저장 후 이동</button>
+            <button id="unsavedDlgCancel" style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-800);font-size:13px;font-weight:500;cursor:pointer;">취소</button>
+            <button id="unsavedDlgDiscard" style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-600);font-size:13px;font-weight:500;cursor:pointer;">저장 없이 이동</button>
+            <button id="unsavedDlgSave" style="padding:8px 16px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-floppy-disk"></i> 저장 후 이동</button>
           </div>
         </div>
       </div>
@@ -2230,7 +2249,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div class="tab-pane" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
-        <div class="card mb-3" style="border-color:var(--primary);">
+        {{-- mb-3 은 부트스트랩 CDN 값(16px)이라 시안 카드 간격 12 와 어긋난다. 인라인으로 12 를 준다 --}}
+        <div class="card mb-3" style="border-color:var(--primary);margin-bottom:12px;">
           <div class="card-body" style="padding:12px 16px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;">
@@ -2262,7 +2282,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <div class="card-body">
             {{-- 처방 제품 헤더 (카드/테이블뷰 공통) --}}
             <div class="section-title">
-              <i class="fa-solid fa-boxes-stacked" style="color:var(--purple);"></i> 처방 제품 정보
+              <i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 처방 제품 정보
               <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
                 <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px 10px;">
                   <b style="color:var(--text-primary);" id="rx-ref-name">{{ $prescription->patient_name_ocr ?? '-' }}</b>
@@ -2292,8 +2312,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
             {{-- 합계 / 버튼 (카드/테이블뷰 공통) --}}
             <div class="items-total-bar">
-              <span><i class="fa-solid fa-circle-dollar-to-slot" style="color:var(--success);"></i>
-                총 NHIS 급여: <b style="color:var(--success);" id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+              <span><i class="fa-solid fa-circle-dollar-to-slot" style="color:var(--primary);"></i>
+                총 NHIS 급여: <b style="color:var(--primary);" id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
               </span>
               <span style="margin-left:auto;">
                 총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
@@ -2336,7 +2356,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 우편번호 + 주소 검색 --}}
                 <div style="display:flex;gap:6px;">
                   <input type="text" class="form-control" id="shippingPostcode" readonly
-                         placeholder="우편번호" style="width:110px;background:var(--bg-secondary,#f8f9fa);cursor:default;" />
+                         placeholder="우편번호" style="width:110px;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <button type="button" class="btn btn-outline btn-sm" onclick="openAddressSearch('shippingPostcode','shippingAddr','shippingAddrDetail')"
                           style="white-space:nowrap;flex-shrink:0;">
                     <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
@@ -2355,7 +2375,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 도로명 + 상세 --}}
                 <div style="display:flex;gap:6px;">
                   <input type="text" class="form-control" id="shippingAddr"
-                         placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,#f8f9fa);cursor:default;" />
+                         placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingAddrDetail"
                          placeholder="상세 주소" style="flex:1;" />
                 </div>
@@ -2367,10 +2387,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div id="orderActionArea" style="margin-top:12px;">
               @if($prescription->order)
               {{-- 이미 주문 있음: 수정 + 삭제 --}}
-              <div id="orderExistsInfo" style="background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
-                <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:15px;"></i>
+              <div id="orderExistsInfo" style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:15px;"></i>
                 <div>
-                  <b style="color:var(--success);">주문 생성 완료</b>
+                  <b style="color:var(--primary);">주문 생성 완료</b>
                   <span style="color:var(--text-muted);margin-left:8px;">{{ $prescription->order->order_number }}</span>
                   @if($prescription->order->withworks_so_no)
                     <span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">SO: {{ $prescription->order->withworks_so_no }}</span>
@@ -2378,7 +2398,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-warning flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
+                <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
                   <i class="fa-solid fa-pen-to-square"></i> 주문 수정
                 </button>
                 <button class="btn btn-danger" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
@@ -2406,7 +2426,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <tr><th>환자부담</th><td id="tv-costNhis">₩ {{ number_format($calcCopay) }}</td></tr>
                 <tr><th>배송비</th><td>₩ 3,000</td></tr>
                 <tr>
-                  <th style="font-weight:800;color:var(--primary);">환자 부담 합계</th>
+                  <th style="font-weight:700;color:var(--primary);">환자 부담 합계</th>
                   <td style="font-weight:700;color:var(--primary);" id="tv-costTotal">₩ {{ number_format($calcCopay + 3000) }}</td>
                 </tr>
                 <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-truck"></i> 배송 정보</td></tr>
@@ -2415,7 +2435,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @if($prescription->order)
                   <tr>
                     <th>주문번호</th>
-                    <td><span style="color:var(--success);font-weight:700;">{{ $prescription->order->order_number }}</span>
+                    <td><span style="color:var(--primary);font-weight:700;">{{ $prescription->order->order_number }}</span>
                     @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:8px;font-size:11px;">SO: {{ $prescription->order->withworks_so_no }}</span>@endif</td>
                   </tr>
                 @else
@@ -2426,7 +2446,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div id="order-items-summary-tv" style="margin-bottom:10px;"></div>
             @if($prescription->order)
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-warning flex-1" onclick="updateOrder(event)"><i class="fa-solid fa-pen-to-square"></i> 주문 수정</button>
+                <button class="btn btn-primary flex-1" onclick="updateOrder(event)"><i class="fa-solid fa-pen-to-square"></i> 주문 수정</button>
                 <button class="btn btn-danger" onclick="confirmDeleteOrder(event)" style="flex-shrink:0;padding:0 18px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
               </div>
             @else
@@ -2445,13 +2465,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div class="workflow-step">
               <div class="ws-icon done"><i class="fa-solid fa-mobile-screen"></i></div>
               <div><div class="ws-label">모바일/웹 업로드</div><div class="ws-time">{{ $prescription->created_at->format('H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</div></div>
-              <i class="fa-solid fa-check ws-arrow" style="color:var(--success);"></i>
+              <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
             </div>
             <div class="workflow-step">
               <div class="ws-icon {{ in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']) ? 'done' : 'active' }}"><i class="fa-solid fa-eye"></i></div>
               <div><div class="ws-label">OCR 처리</div><div class="ws-time">{{ $prescription->updated_at->format('H:i') }} · 자동</div></div>
               @if(in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']))
-                <i class="fa-solid fa-check ws-arrow" style="color:var(--success);"></i>
+                <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @else
                 <i class="fa-solid fa-spinner fa-spin ws-arrow" style="color:var(--primary);"></i>
               @endif
@@ -2460,7 +2480,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="ws-icon {{ in_array($prescription->status, ['approved','ordered']) ? 'done' : ($prescription->status === 'review_needed' ? 'active' : 'pending') }}"><i class="fa-solid fa-clipboard-check"></i></div>
               <div><div class="ws-label">검수 확인</div><div class="ws-time">{{ $prescription->reviewed_at ? $prescription->reviewed_at->format('H:i').' · '.$prescription->reviewer?->name : '대기 중' }}</div></div>
               @if(in_array($prescription->status, ['approved','ordered']))
-                <i class="fa-solid fa-check ws-arrow" style="color:var(--success);"></i>
+                <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @endif
             </div>
             <div class="workflow-step" id="histOrderStep">
@@ -2479,7 +2499,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               @if($prescription->order)
-                <i class="fa-solid fa-check ws-arrow" style="color:var(--success);"></i>
+                <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @endif
             </div>
             <div class="workflow-step">
@@ -2503,14 +2523,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <tbody>
                 <tr>
                   <td><i class="fa-solid fa-mobile-screen" style="color:var(--primary);margin-right:5px;"></i>모바일/웹 업로드</td>
-                  <td style="text-align:center;"><i class="fa-solid fa-check" style="color:var(--success);"></i></td>
+                  <td style="text-align:center;"><i class="fa-solid fa-check" style="color:var(--primary);"></i></td>
                   <td>{{ $prescription->created_at->format('Y-m-d H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</td>
                 </tr>
                 <tr>
                   <td><i class="fa-solid fa-eye" style="color:var(--info);margin-right:5px;"></i>OCR 처리</td>
                   <td style="text-align:center;">
                     @if(in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']))
-                      <i class="fa-solid fa-check" style="color:var(--success);"></i>
+                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
                     @else
                       <i class="fa-solid fa-spinner fa-spin" style="color:var(--primary);"></i>
                     @endif
@@ -2521,7 +2541,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <td><i class="fa-solid fa-clipboard-check" style="color:var(--warning);margin-right:5px;"></i>검수 확인</td>
                   <td style="text-align:center;">
                     @if(in_array($prescription->status, ['approved','ordered']))
-                      <i class="fa-solid fa-check" style="color:var(--success);"></i>
+                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
                     @else
                       <i class="fa-solid fa-clock" style="color:var(--text-muted);"></i>
                     @endif
@@ -2529,10 +2549,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <td>{{ $prescription->reviewed_at ? $prescription->reviewed_at->format('Y-m-d H:i').' · '.($prescription->reviewer?->name ?? '-') : '대기 중' }}</td>
                 </tr>
                 <tr>
-                  <td><i class="fa-solid fa-cart-shopping" style="color:var(--success);margin-right:5px;"></i>주문 생성</td>
+                  <td><i class="fa-solid fa-cart-shopping" style="color:var(--primary);margin-right:5px;"></i>주문 생성</td>
                   <td style="text-align:center;">
                     @if($prescription->order)
-                      <i class="fa-solid fa-check" style="color:var(--success);"></i>
+                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
                     @else
                       <i class="fa-solid fa-clock" style="color:var(--text-muted);"></i>
                     @endif
@@ -2545,10 +2565,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </td>
                 </tr>
                 <tr>
-                  <td><i class="fa-solid fa-hospital" style="color:var(--purple);margin-right:5px;"></i>NHIS 청구</td>
+                  <td><i class="fa-solid fa-hospital" style="color:var(--primary);margin-right:5px;"></i>NHIS 청구</td>
                   <td style="text-align:center;">
                     @if($prescription->order?->nhis_claim_status === 'approved')
-                      <i class="fa-solid fa-check" style="color:var(--success);"></i>
+                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
                     @else
                       <i class="fa-solid fa-clock" style="color:var(--text-muted);"></i>
                     @endif
@@ -2574,9 +2594,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
 <div class="modal-overlay" id="prevCounselModal" style="z-index:10000;" onclick="if(event.target===this)closePrevCounselModal()">
   <div class="modal-box" style="width:800px;max-width:96vw;height:82vh;display:flex;flex-direction:column;">
     <div class="modal-header">
-      <i class="fa-solid fa-clock-rotate-left" style="color:#d97706;font-size:17px;"></i>
+      <i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);font-size:17px;"></i>
       <span class="modal-title">이전 상담 이력</span>
-      <span style="font-size:11px;color:var(--text-muted);background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:1px 8px;margin-left:4px;">
+      <span style="font-size:11px;color:var(--text-muted);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;padding:1px 8px;margin-left:4px;">
         {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }} · {{ $prevCounselings->count() }}건
       </span>
       <button class="modal-close" onclick="closePrevCounselModal()"><i class="fa-solid fa-xmark"></i></button>
@@ -2604,7 +2624,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <i class="fa-regular fa-calendar" style="font-size:10px;"></i> {{ $pcDate }}
               </span>
               @if($pcSt)
-                <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;background:{{ $pcStatusColorMap[$pcSt] ?? '#ccc' }};color:#fff;flex-shrink:0;">
+                <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:{{ $pcStatusColorMap[$pcSt] ?? 'var(--gray-300)' }};color:#fff;flex-shrink:0;">
                   {{ $pcStatusLabelMap[$pcSt] ?? $pcSt }}
                 </span>
               @endif
@@ -2624,7 +2644,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div id="pcStickyRx" style="font-size:10px;color:var(--text-muted);margin-top:2px;"></div>
             </div>
             <button id="pcStickyBtn"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--primary);border-radius:6px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;background:var(--bg-card);white-space:nowrap;flex-shrink:0;">
+                    style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--primary);border-radius:6px;color:var(--primary);font-size:11px;font-weight:500;cursor:pointer;background:var(--bg-card);white-space:nowrap;flex-shrink:0;">
               <i class="fa-solid fa-arrow-right"></i> 처방전 상세
             </button>
           </div>
@@ -2660,9 +2680,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div style="flex-shrink:0;padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
       <input type="text" id="plQuery" placeholder="환자명 2글자 이상 (예: 홍길동) 또는 연락처 4자리 이상"
              autocomplete="off"
-             style="flex:1;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+             style="flex:1;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
       <button type="button" id="plSearchBtn" onclick="plSearch()"
-              style="height:36px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+              style="height:32px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
         <i class="fa-solid fa-magnifying-glass"></i> 검색
       </button>
     </div>
@@ -2670,7 +2690,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
       {{-- 1) 환자 목록 --}}
       <div style="width:250px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);">
-        <div style="flex-shrink:0;padding:7px 14px;font-size:10.5px;font-weight:700;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
+        <div style="flex-shrink:0;padding:7px 14px;font-size:11px;font-weight:500;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
           환자 <span id="plPatientCount"></span>
         </div>
         <div id="plPatientList" style="flex:1;overflow-y:auto;">
@@ -2680,7 +2700,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 2) 상담이력 목록 --}}
       <div style="width:240px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;">
-        <div style="flex-shrink:0;padding:7px 14px;font-size:10.5px;font-weight:700;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
+        <div style="flex-shrink:0;padding:7px 14px;font-size:11px;font-weight:500;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
           상담이력 <span id="plCounselCount"></span>
         </div>
         <div id="plCounselList" style="flex:1;overflow-y:auto;">
@@ -2697,12 +2717,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         <div style="flex-shrink:0;padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary);cursor:pointer;">
-            <input type="checkbox" id="plWithItems" checked style="width:15px;height:15px;">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+            <input type="checkbox" id="plWithItems" checked style="width:16px;height:16px;">
             처방 제품도 함께 가져오기
           </label>
           <button type="button" id="plImportBtn" onclick="plImportSelected()" disabled
-                  style="margin-left:auto;height:36px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                  style="margin-left:auto;height:32px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
             <i class="fa-solid fa-file-import"></i> 이 상담이력 가져오기
           </button>
         </div>
@@ -2716,20 +2736,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
 <div id="faxPdfPopover" style="display:none;position:fixed;z-index:10100;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.22);flex-direction:column;overflow:hidden;width:min(820px,90vw);height:min(88vh,88vh);">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;">
     <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fa-regular fa-file-pdf" style="color:#e53e3e;font-size:15px;"></i>
+      <i class="fa-regular fa-file-pdf" style="color:var(--alert-500);font-size:15px;"></i>
       <span style="font-size:12px;font-weight:700;">팩스 전송 서류</span>
       <span style="font-size:11px;color:var(--text-muted);">— {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '—' }}</span>
     </div>
     <div style="display:flex;align-items:center;gap:5px;">
       <a id="faxPdfDownloadBtn" href="#" download
-         style="padding:4px 10px;background:var(--primary);color:#fff;border-radius:var(--radius);font-size:11px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:4px;">
+         style="padding:4px 10px;background:var(--primary);color:#fff;border-radius:var(--radius);font-size:11px;font-weight:500;text-decoration:none;display:flex;align-items:center;gap:4px;">
         <i class="fa-solid fa-download" style="font-size:10px;"></i> 다운로드
       </a>
       <button onclick="closeFaxPdfModal()"
               style="background:none;border:none;font-size:18px;line-height:1;color:var(--text-muted);cursor:pointer;padding:2px 6px;">&times;</button>
     </div>
   </div>
-  <iframe id="faxPdfFrame" src="" style="flex:1;width:100%;border:none;background:#525659;"></iframe>
+  <iframe id="faxPdfFrame" src="" style="flex:1;width:100%;border:none;background:var(--gray-700);"></iframe>
 </div>
 
 <div id="deleteAttachPopover" style="display:none;position:fixed;width:220px;background:var(--bg-card);border:1px solid var(--danger);border-radius:var(--radius-lg);box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:1000;padding:14px 16px;">
@@ -2737,7 +2757,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <i class="fa-solid fa-triangle-exclamation"></i> 삭제 확인
   </div>
   <div style="font-size:11px;color:var(--text-primary);margin-bottom:12px;">
-    <span id="deleteAttachName" style="font-weight:600;word-break:break-all;"></span><br>
+    <span id="deleteAttachName" style="font-weight:700;word-break:break-all;"></span><br>
     <span style="color:var(--text-muted);">파일을 삭제합니다. 복구할 수 없습니다.</span>
   </div>
   <div style="display:flex;gap:6px;justify-content:flex-end;">
@@ -2775,13 +2795,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
 <div class="modal-overlay" id="orderModal">
   <div class="modal-box">
     <div class="modal-header">
-      <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:20px;"></i>
+      <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:20px;"></i>
       <span class="modal-title">주문 연계 완료</span>
       <button class="modal-close" onclick="closeModal('orderModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body" id="orderModalBody" style="text-align:center;padding:28px 20px;">
-      <div style="font-size:52px;color:var(--success);margin-bottom:12px;">✅</div>
-      <div style="font-size:18px;font-weight:700;margin-bottom:6px;">주문 연계 완료</div>
+      <div style="font-size:52px;color:var(--primary);margin-bottom:12px;">✅</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">주문 연계 완료</div>
       <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">주문이 생성되었습니다.</div>
     </div>
     <div class="modal-footer">
@@ -2794,13 +2814,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
 <div class="modal-overlay" id="approveModal">
   <div class="modal-box">
     <div class="modal-header">
-      <i class="fa-solid fa-shield-halved" style="color:var(--success);font-size:20px;"></i>
+      <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:20px;"></i>
       <span class="modal-title">처방전 승인요청</span>
       <button class="modal-close" onclick="closeModal('approveModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
-      <div style="background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);padding:14px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--success);">✅ 검수 승인 요청</div>
+      <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 승인 요청</div>
         <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
           처방전 {{ $prescription->rx_number }}의 OCR 검수를 완료하고 승인 요청합니다.
         </div>
@@ -2812,7 +2832,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('approveModal')">취소</button>
-      <button class="btn btn-success" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 승인 확정</button>
+      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 승인 확정</button>
     </div>
   </div>
 </div>
@@ -2828,9 +2848,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <button class="modal-close" onclick="closeDangerConfirm()"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
-      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:14px;">
-        <div style="font-size:13px;color:#b91c1c;font-weight:600;" id="dangerConfirmMsg"></div>
-        <div style="font-size:11px;color:#dc2626;margin-top:6px;">이 작업은 되돌릴 수 없습니다.</div>
+      <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:14px;">
+        <div style="font-size:13px;color:var(--alert-500);font-weight:700;" id="dangerConfirmMsg"></div>
+        <div style="font-size:11px;color:var(--alert-500);margin-top:6px;">이 작업은 되돌릴 수 없습니다.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2844,41 +2864,41 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
 
 {{-- 현금영수증 발행 팝오버 (position:fixed — cashReceiptArea 외부) --}}
-<div id="crIssuePopover" style="display:none;position:fixed;width:340px;background:var(--bg-card);border:1px solid var(--success);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:601;">
+<div id="crIssuePopover" style="display:none;position:fixed;width:340px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:601;">
   <div id="crIssuePopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-    <div style="width:10px;height:10px;background:var(--success);border:1px solid var(--success);transform:rotate(45deg);margin:3px auto 0;"></div>
+    <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
   </div>
-  <div style="background:var(--success);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
     <i class="fa-solid fa-receipt" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
     <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">현금영수증 발행</span>
     <button onclick="closeCrIssuePopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;display:block;">유형</label>
+      <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;display:block;">유형</label>
       <div style="display:flex;gap:16px;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
-          <input type="radio" name="cr-type" value="income_deduction" checked style="accent-color:var(--success);"> 소득공제 (개인)
+          <input type="radio" name="cr-type" value="income_deduction" checked style="accent-color:var(--primary);"> 소득공제 (개인)
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
-          <input type="radio" name="cr-type" value="business_expense" style="accent-color:var(--success);"> 지출증빙 (사업자)
+          <input type="radio" name="cr-type" value="business_expense" style="accent-color:var(--primary);"> 지출증빙 (사업자)
         </label>
       </div>
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">휴대폰번호 또는 사업자번호 <span style="color:var(--danger);">*</span></label>
+      <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">휴대폰번호 또는 사업자번호 <span style="color:var(--danger);">*</span></label>
       <input type="text" id="cr-identifier" class="form-control" style="font-size:12px;" placeholder="010-0000-0000" maxlength="13" inputmode="numeric" oninput="formatCrIdentifier(this)">
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;display:block;">금액 <span style="color:var(--danger);">*</span></label>
+      <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">금액 <span style="color:var(--danger);">*</span></label>
       <input type="text" id="cr-amount" class="form-control" style="font-size:12px;" inputmode="numeric" placeholder="0" oninput="formatCrAmount(this)">
     </div>
-    <div id="cr-no-order-notice" style="display:none;font-size:11px;color:#b91c1c;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;text-align:center;">
+    <div id="cr-no-order-notice" style="display:none;font-size:11px;color:var(--alert-500);background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:8px 10px;text-align:center;">
       <i class="fa-solid fa-circle-exclamation"></i> 주문을 먼저 생성한 후 현금영수증을 발행할 수 있습니다.
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-outline btn-sm" onclick="closeCrIssuePopover()">취소</button>
-      <button class="btn btn-success btn-sm" id="btnSubmitCashReceipt" onclick="submitCashReceipt()">
+      <button class="btn btn-primary btn-sm" id="btnSubmitCashReceipt" onclick="submitCashReceipt()">
         <i class="fa-solid fa-receipt"></i> 발행
       </button>
     </div>
@@ -2886,11 +2906,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
 </div>
 
 {{-- 현금영수증 상세 팝오버 (고정 위치) --}}
-<div id="crDetailPopover" style="display:none;position:fixed;width:300px;background:var(--bg-card);border:1px solid var(--success);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:600;">
+<div id="crDetailPopover" style="display:none;position:fixed;width:300px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:600;">
   <div id="crDetailPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-    <div style="width:10px;height:10px;background:var(--bg-card);border:1px solid var(--success);transform:rotate(45deg);margin:3px auto 0;"></div>
+    <div style="width:10px;height:10px;background:var(--bg-card);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
   </div>
-  <div style="background:var(--success);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
     <i class="fa-solid fa-receipt" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
     <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">현금영수증 상세</span>
     <button onclick="closeCrDetailPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">×</button>
@@ -2900,31 +2920,31 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <colgroup><col width="38%"><col width="62%"></colgroup>
       <tbody>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">승인번호</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">승인번호</th>
           <td id="cr-d-no" style="padding:7px 0;font-family:monospace;font-size:11px;"></td>
         </tr>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">유형</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">유형</th>
           <td id="cr-d-type" style="padding:7px 0;"></td>
         </tr>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">식별번호</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">식별번호</th>
           <td id="cr-d-identifier" style="padding:7px 0;font-family:monospace;font-size:11px;"></td>
         </tr>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">거래금액</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">거래금액</th>
           <td id="cr-d-amount" style="padding:7px 0;font-weight:700;"></td>
         </tr>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">발행일시</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">발행일시</th>
           <td id="cr-d-issued-at" style="padding:7px 0;font-size:11px;"></td>
         </tr>
         <tr style="border-bottom:1px solid var(--border);">
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">주문번호</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">주문번호</th>
           <td id="cr-d-order-no" style="padding:7px 0;font-family:monospace;font-size:11px;"></td>
         </tr>
         <tr>
-          <th style="padding:7px 0;font-weight:600;color:var(--text-muted);text-align:left;">환자명</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">환자명</th>
           <td id="cr-d-patient" style="padding:7px 0;"></td>
         </tr>
       </tbody>
@@ -3302,7 +3322,7 @@ function renderItemsTable() {
         <div class="pac-wrap" style="position:relative;width:100%;">
           <div style="display:flex;gap:4px;align-items:center;">
             <input type="text" class="form-control item-display" id="pac-input-${idx}"
-                   style="font-size:12px;min-width:0;flex:1;height:30px;padding:2px 7px;" autocomplete="off"
+                   style="font-size:12px;min-width:0;flex:1;height:32px;padding:2px 7px;" autocomplete="off"
                    placeholder="제품명 또는 코드 입력..."
                    value="${displayName}"
                    oninput="pacInput(${idx},this.value)"
@@ -3310,7 +3330,7 @@ function renderItemsTable() {
                    onfocus="if(this.value.trim())pacInput(${idx},this.value)"
                    onblur="pacBlur(${idx})" />
             <button type="button" class="btn btn-primary btn-sm" title="제품 검색"
-                    style="flex-shrink:0;padding:0 8px;height:30px;"
+                    style="flex-shrink:0;padding:0 8px;height:32px;"
                     onmousedown="event.preventDefault()"
                     onclick="pacSearchBtn(${idx})">
               <i class="fa-solid fa-magnifying-glass" style="font-size:11px;"></i>
@@ -3326,22 +3346,22 @@ function renderItemsTable() {
       </td>
       <td>
         <select class="form-control form-select item-nhis item-nhis-sel"
-                style="font-size:11px;padding:2px 4px;height:30px;width:100%;"
+                style="font-size:11px;padding:2px 4px;height:32px;width:100%;"
                 onchange="calcItem(${idx})">${nhisOpts(nhisSt)}</select>
       </td>
       <td>
         <input type="text" inputmode="numeric" class="form-control item-ins-price"
-               style="font-size:12px;text-align:right;padding:2px 7px;height:30px;width:100%;"
+               style="font-size:12px;text-align:right;padding:2px 7px;height:32px;width:100%;"
                value="${fmtPrice(item.insurance_price)}" placeholder="₩"
                oninput="calcItem(${idx})" />
       </td>
       <td>
         <input type="number" class="form-control item-qty"
-               style="font-size:12px;text-align:center;padding:2px 4px;height:30px;width:100%;"
+               style="font-size:12px;text-align:center;padding:2px 4px;height:32px;width:100%;"
                value="${item.quantity||1}" min="1"
                oninput="calcItem(${idx})" />
       </td>
-      <td style="text-align:right;color:var(--success);white-space:nowrap;" class="item-nhis-amt">₩ ${nhisAmt}</td>
+      <td style="text-align:right;color:var(--primary);white-space:nowrap;" class="item-nhis-amt">₩ ${nhisAmt}</td>
       <td style="text-align:right;white-space:nowrap;" class="item-copay">₩ ${copay}</td>
       <td style="text-align:center;">
         <button type="button" class="btn btn-sm"
@@ -3380,7 +3400,7 @@ function renderItemsTable() {
     <tbody>${rows}</tbody>
     <tfoot><tr>
       <th colspan="5" style="text-align:right;background:var(--bg);">합계</th>
-      <th style="text-align:right;color:var(--success);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
+      <th style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
       <th style="background:var(--bg);"></th>
     </tr></tfoot>
@@ -3535,7 +3555,7 @@ window.HELP_TOUR_STEPS = [
     if (!el) return;
     const isRecounsel = val === '50';
     el.disabled = !isRecounsel;
-    el.style.background = isRecounsel ? '' : 'var(--bg-secondary,#f8f9fa)';
+    el.style.background = isRecounsel ? '' : 'var(--bg-secondary,var(--gray-50))';
     el.style.opacity    = isRecounsel ? '' : '.55';
     if (!isRecounsel) el.value = '';
     // 상담 상태 select 색상 표시
@@ -3988,7 +4008,7 @@ window.HELP_TOUR_STEPS = [
           <div class="item-field-label">제품명</div>
           <div class="pac-wrap" style="position:relative;">
             <input type="text" class="form-control item-display" id="pac-input-${idx}"
-                   style="width:100%;font-size:12px;height:34px;" autocomplete="off"
+                   style="width:100%;font-size:12px;height:32px;" autocomplete="off"
                    placeholder="제품명 또는 코드 입력..."
                    value="${displayName}"
                    oninput="pacInput(${idx},this.value)"
@@ -4001,7 +4021,7 @@ window.HELP_TOUR_STEPS = [
         <div class="item-inline-field">
           <div class="item-field-label">&nbsp;</div>
           <button type="button" class="btn btn-primary btn-sm" title="제품 검색"
-                  style="flex-shrink:0;padding:0 10px;height:34px;"
+                  style="flex-shrink:0;padding:0 10px;height:32px;"
                   onmousedown="event.preventDefault()"
                   onclick="pacSearchBtn(${idx})">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -4019,40 +4039,40 @@ window.HELP_TOUR_STEPS = [
         <div class="item-inline-field">
           <div class="item-field-label">수량</div>
           <input type="number" class="form-control item-qty" value="${item.quantity||1}" min="1"
-                 oninput="calcItem(${idx})" style="font-size:12px;width:60px;text-align:center;height:34px;" />
+                 oninput="calcItem(${idx})" style="font-size:12px;width:60px;text-align:center;height:32px;" />
         </div>
         <div class="item-inline-field" id="item-rbox-field-${idx}" style="display:${item.r_box?'flex':'none'};">
           <div class="item-field-label">R-Box</div>
-          <div class="item-rbox-display" style="height:34px;display:flex;align-items:center;font-size:12px;font-weight:700;color:#7C3AED;white-space:nowrap;">${escHtml(item.r_box||'')}</div>
+          <div class="item-rbox-display" style="height:32px;display:flex;align-items:center;font-size:12px;font-weight:700;color:var(--primary);white-space:nowrap;">${escHtml(item.r_box||'')}</div>
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">소비자가</div>
           <input type="text" inputmode="numeric" class="form-control item-price" value="${fmtPrice(item.product_price)}"
-                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:34px;" />
+                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:32px;" />
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">보험가</div>
           <input type="text" inputmode="numeric" class="form-control item-ins-price" value="${fmtPrice(item.insurance_price)}"
-                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:34px;" />
+                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:32px;" />
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">총금액</div>
-          <div class="item-total-amt" style="font-size:12px;font-weight:700;color:var(--primary);height:34px;display:flex;align-items:center;white-space:nowrap;min-width:80px;">₩ ${totalAmt}</div>
+          <div class="item-total-amt" style="font-size:12px;font-weight:700;color:var(--primary);height:32px;display:flex;align-items:center;white-space:nowrap;min-width:80px;">₩ ${totalAmt}</div>
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">&nbsp;</div>
           <button type="button" class="btn btn-sm" onclick="removeItem(${idx})"
-                  style="flex-shrink:0;padding:0 8px;height:34px;background:none;border:1px solid var(--danger);color:var(--danger);" title="삭제">
+                  style="flex-shrink:0;padding:0 8px;height:32px;background:none;border:1px solid var(--danger);color:var(--danger);" title="삭제">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
       </div>
       <div class="item-meta" id="item-meta-${idx}" style="display:${item.stock?'flex':'none'};align-items:center;gap:6px;padding:4px 2px 2px;flex-wrap:wrap;">
-        ${item.stock  ? `<span style="background:var(--success-light);color:var(--success);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(item.stock).toLocaleString()}</span>` : ''}
+        ${item.stock  ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(item.stock).toLocaleString()}</span>` : ''}
       </div>
       <div class="item-summary">
         <span style="color:var(--text-muted);font-size:11px;">NHIS 급여:</span>
-        <b style="color:var(--success);" class="item-nhis-amt">₩ ${nhisAmt}</b>
+        <b style="color:var(--primary);" class="item-nhis-amt">₩ ${nhisAmt}</b>
         <span style="margin-left:auto;color:var(--text-muted);font-size:11px;">환자부담:</span>
         <b class="item-copay">₩ ${copay}</b>
       </div>
@@ -4141,7 +4161,7 @@ window.HELP_TOUR_STEPS = [
       list.innerHTML = rows.map((p, i) => `
         <div class="pl-patient-item" data-idx="${i}" onclick="plSelectPatient(${p.id}, this)"
              style="padding:10px 14px;border-bottom:1px solid var(--border-light);cursor:pointer;border-left:3px solid transparent;">
-          <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">${_pcEsc(p.name)}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);">${_pcEsc(p.name)}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
             ${_pcEsc(p.resident_no)} · ${_pcEsc(p.mobile)}
           </div>
@@ -4198,12 +4218,12 @@ window.HELP_TOUR_STEPS = [
         return `
         <div class="pl-counsel-item" data-idx="${i}" onclick="plSelectCounsel(${i})"
              style="padding:10px 13px;border-bottom:1px solid var(--border-light);cursor:pointer;border-left:3px solid transparent;">
-          <div style="font-size:11.5px;font-weight:700;color:var(--primary);word-break:break-all;">${_pcEsc(c.counselling_no ?? '-')}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--primary);word-break:break-all;">${_pcEsc(c.counselling_no ?? '-')}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:3px;">
-            <span style="font-size:10.5px;color:var(--text-muted);">
+            <span style="font-size:10px;color:var(--text-muted);">
               <i class="fa-regular fa-calendar" style="font-size:9px;"></i> ${_pcEsc(c.counsel_date || c.reg_date || '-')}
             </span>
-            ${st ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:${_PC_STAT_COLOR[st] ?? '#ccc'};color:#fff;flex-shrink:0;">${_pcEsc(_PC_STAT_MAP[st] ?? st)}</span>` : ''}
+            ${st ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:${_PC_STAT_COLOR[st] ?? 'var(--gray-300)'};color:#fff;flex-shrink:0;">${_pcEsc(_PC_STAT_MAP[st] ?? st)}</span>` : ''}
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${_pcEsc(c.rx_number ?? '')}</div>
         </div>`;
@@ -4225,14 +4245,14 @@ window.HELP_TOUR_STEPS = [
 
     const itemsHtml = (d.items && d.items.length)
       ? d.items.map(it => `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border-light);font-size:11.5px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border-light);font-size:12px;">
             <span>${_pcEsc(it.product_name ?? '-')}${it.product_code ? ` <span style="color:var(--text-muted);font-size:10px;">[${_pcEsc(it.product_code)}]</span>` : ''}</span>
             <span style="font-weight:700;color:var(--primary);flex-shrink:0;">×${it.quantity ?? 1}</span>
           </div>`).join('')
-      : '<div style="font-size:11.5px;color:var(--text-muted);padding:6px 0;">등록된 제품이 없습니다.</div>';
+      : '<div style="font-size:12px;color:var(--text-muted);padding:6px 0;">등록된 제품이 없습니다.</div>';
 
     document.getElementById('plDetailBody').innerHTML = `
-      <div style="font-size:13px;font-weight:800;color:var(--primary);margin-bottom:2px;">${_pcEsc(d.counselling_no ?? '-')}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:2px;">${_pcEsc(d.counselling_no ?? '-')}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">${_pcEsc(d.rx_number ?? '')} · ${_pcEsc(d.reg_date ?? '')}</div>
 
       <div class="pc-field-grid">
@@ -4248,12 +4268,12 @@ window.HELP_TOUR_STEPS = [
         ${_pcFR('주소', [d.postcode, d.address_ocr, d.address_detail].filter(Boolean).join(' '), true)}
       </div>
 
-      <div style="margin-top:14px;font-size:10.5px;font-weight:700;color:var(--text-muted);">처방 제품</div>
+      <div style="margin-top:14px;font-size:11px;font-weight:500;color:var(--text-muted);">처방 제품</div>
       <div style="margin-top:4px;">${itemsHtml}</div>
 
-      <div style="margin-top:14px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">
-        <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px;"><i class="fa-solid fa-note-sticky"></i> 상담 메모</div>
-        <div style="font-size:11.5px;line-height:1.8;white-space:pre-wrap;color:${d.contents ? 'var(--text-primary)' : 'var(--text-muted)'};">${d.contents ? _pcEsc(d.contents) : '(메모 없음)'}</div>
+      <div style="margin-top:14px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;">
+        <div style="font-size:10px;font-weight:700;color:var(--gray-600);margin-bottom:5px;"><i class="fa-solid fa-note-sticky"></i> 상담 메모</div>
+        <div style="font-size:12px;line-height:1.8;white-space:pre-wrap;color:${d.contents ? 'var(--text-primary)' : 'var(--text-muted)'};">${d.contents ? _pcEsc(d.contents) : '(메모 없음)'}</div>
       </div>`;
 
     document.getElementById('plImportBtn').disabled = false;
@@ -4467,7 +4487,7 @@ window.HELP_TOUR_STEPS = [
       const copay    = Math.round(item.patient_copay || 0);
       const nhisSt   = item.nhis_status || 'eligible';
       const nhisLabel = nhisSt === 'eligible' ? '급여(90%)' : (nhisSt === 'partial' ? '일부(50%)' : '비급여');
-      const nhisColor = nhisSt === 'ineligible' ? 'var(--text-muted)' : 'var(--success)';
+      const nhisColor = nhisSt === 'ineligible' ? 'var(--text-muted)' : 'var(--primary)';
       const nhisInfo  = nhisSt === 'ineligible'
           ? `<span style="font-size:11px;color:var(--text-muted);">${nhisLabel}</span>`
           : `<span style="font-size:11px;color:${nhisColor};">${nhisLabel} &minus;₩${nhisAmt.toLocaleString('ko-KR')}</span>
@@ -4804,12 +4824,12 @@ window.HELP_TOUR_STEPS = [
 
     // ③ 결과 모달
     const wwBadge = wwSuccess
-      ? `<span style="display:inline-block;background:var(--success-light,#e6f4ea);color:var(--success);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">연계 완료</span>`
-      : `<span style="display:inline-block;background:#fff3e0;color:var(--warning);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">연계 미완료</span>`;
+      ? `<span style="display:inline-block;background:var(--primary-50);color:var(--primary);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 완료</span>`
+      : `<span style="display:inline-block;background:var(--gray-100);color:var(--gray-600);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 미완료</span>`;
 
     document.getElementById('orderModalBody').innerHTML = `
-      <div style="font-size:52px;color:var(--success);margin-bottom:12px;">✅</div>
-      <div style="font-size:18px;font-weight:700;margin-bottom:4px;">주문 생성 완료</div>
+      <div style="font-size:52px;color:var(--primary);margin-bottom:12px;">✅</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">주문 생성 완료</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
         CE 주문번호: <b style="color:var(--primary);">${res.order_number}</b>
       </div>
@@ -4861,7 +4881,7 @@ window.HELP_TOUR_STEPS = [
       const typeLabels = { '1013': ['CE 판매','primary'], '1016': ['개인판매','info'], '1022': ['샘플판매','warning'] };
       const tl = typeLabels[soType] || [soType || '-', 'secondary'];
       if (soNo) {
-        content.innerHTML = `<span style="font-family:monospace;font-weight:800;color:var(--primary);font-size:11px;">${soNo}</span><span class="badge badge-${tl[1]}" style="font-size:9px;margin-left:4px;">${tl[0]}</span>`;
+        content.innerHTML = `<span style="font-family:monospace;font-weight:700;color:var(--primary);font-size:11px;">${soNo}</span><span class="badge badge-${tl[1]}" style="font-size:10px;margin-left:4px;">${tl[0]}</span>`;
       } else {
         content.innerHTML = `<span style="font-size:11px;color:var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> 연계 실패</span>`;
       }
@@ -4879,7 +4899,7 @@ window.HELP_TOUR_STEPS = [
     if (wsStep && !wsStep.querySelector('.ws-arrow')) {
       const chk = document.createElement('i');
       chk.className = 'fa-solid fa-check ws-arrow';
-      chk.style.color = 'var(--success)';
+      chk.style.color = 'var(--primary)';
       wsStep.appendChild(chk);
     }
 
@@ -4892,7 +4912,7 @@ window.HELP_TOUR_STEPS = [
     if (histStep && !histStep.querySelector('.ws-arrow')) {
       const chk2 = document.createElement('i');
       chk2.className = 'fa-solid fa-check ws-arrow';
-      chk2.style.color = 'var(--success)';
+      chk2.style.color = 'var(--primary)';
       histStep.appendChild(chk2);
     }
   }
@@ -4904,16 +4924,16 @@ window.HELP_TOUR_STEPS = [
     const vaUrl  = VA_ISSUE_URL_TPL.replace('__ID__', orderId);
     wrap.innerHTML = `
       <div id="vaNotIssuedWrap" style="position:relative;">
-        <button type="button" id="btnVaTrigger"
+        <button type="button" id="btnVaTrigger" class="pib-btn pib-btn-primary"
                 data-url="${vaUrl}"
                 data-sms-url="${SMS_SEND_URL}"
                 onclick="toggleVaPopover(event)"
-                style="padding:5px 11px;background:#0ea5e9;color:#fff;border:none;font-weight:700;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:var(--radius);white-space:nowrap;cursor:pointer;">
+                style="white-space:nowrap;cursor:pointer;">
           <i class="fa-solid fa-building-columns" style="font-size:11px;"></i> 가상계좌 발급
         </button>
-        <div id="vaResultBadge" style="display:none;align-items:center;gap:4px;padding:4px 9px;background:var(--warning-light);border:1px solid #fcd34d;border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-          <i class="fa-solid fa-building-columns" style="color:var(--warning);font-size:10px;"></i>
-          <span id="vaResultBadgeText" style="font-weight:700;color:var(--warning);">-</span>
+        <div id="vaResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
+          <i class="fa-solid fa-building-columns" style="color:var(--gray-700);font-size:10px;"></i>
+          <span id="vaResultBadgeText" style="font-weight:700;color:var(--gray-700);">-</span>
         </div>
       </div>`;
   }
@@ -4923,16 +4943,16 @@ window.HELP_TOUR_STEPS = [
     const area = document.getElementById('orderActionArea');
     if (!area) return;
     area.innerHTML = `
-      <div style="background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
-        <i class="fa-solid fa-circle-check" style="color:var(--success);font-size:15px;"></i>
+      <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:15px;"></i>
         <div>
-          <b style="color:var(--success);">주문 생성 완료</b>
+          <b style="color:var(--primary);">주문 생성 완료</b>
           <span style="color:var(--text-muted);margin-left:8px;">${orderNum}</span>
           ${soNo ? `<span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">SO: ${soNo}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-warning flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
+        <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
           <i class="fa-solid fa-pen-to-square"></i> 주문 수정
         </button>
         <button class="btn btn-danger" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
@@ -5116,10 +5136,10 @@ window.HELP_TOUR_STEPS = [
   function markKakaoSent() {
     const btn = document.getElementById('btnKakaoTrigger');
     if (!btn) return;
-    btn.style.background = 'var(--success-light)';
-    btn.style.color      = 'var(--success)';
-    btn.style.border     = '1px solid #86efac';
-    btn.querySelector('svg')?.setAttribute('fill', 'var(--success)');
+    btn.style.background = 'var(--primary-50)';
+    btn.style.color      = 'var(--primary)';
+    btn.style.border     = '1px solid var(--primary-200)';
+    btn.querySelector('svg')?.setAttribute('fill', 'var(--primary)');
   }
 
   // 팝오버 외부 클릭 시 닫기
@@ -5229,9 +5249,9 @@ window.HELP_TOUR_STEPS = [
   function markSmsSent() {
     const btn = document.getElementById('btnSmsTrigger');
     if (!btn) return;
-    btn.style.background = 'var(--success-light)';
-    btn.style.color      = 'var(--success)';
-    btn.style.border     = '1px solid #86efac';
+    btn.style.background = 'var(--primary-50)';
+    btn.style.color      = 'var(--primary)';
+    btn.style.border     = '1px solid var(--primary-200)';
   }
 
   document.addEventListener('click', e => {
@@ -5550,8 +5570,8 @@ window.HELP_TOUR_STEPS = [
       <button type="button" onclick="selectNhisOffice('${o.fax}','${o.region} ${o.name}')"
               style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);cursor:pointer;text-align:left;width:100%;">
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:9px;font-weight:700;color:var(--primary);background:var(--primary-light);border-radius:3px;padding:1px 5px;flex-shrink:0;">${o.region}</span>
-          <span style="font-size:11px;font-weight:600;color:var(--text);">${o.name}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--primary);background:var(--primary-light);border-radius:6px;padding:1px 5px;flex-shrink:0;">${o.region}</span>
+          <span style="font-size:11px;font-weight:500;color:var(--text);">${o.name}</span>
         </div>
         <span style="font-size:10px;font-family:monospace;color:var(--text-muted);flex-shrink:0;">${o.fax}</span>
       </button>
@@ -5721,10 +5741,10 @@ window.HELP_TOUR_STEPS = [
   function showFaxResultModal(data, docLabels) {
     markFaxSent(data, docLabels);
     const authNote = data.auth_info?.is_auto_generated
-      ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;font-size:11px;color:#b45309;">
+      ? `<div style="margin-top:6px;padding:6px 10px;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:4px;font-size:11px;color:var(--alert-500);">
            ⚠ 위임장: 환자 서명 없음 — 처방 정보로 자동 생성된 문서가 전송됩니다.
          </div>`
-      : (data.auth_info ? `<div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;font-size:11px;color:#166534;">
+      : (data.auth_info ? `<div style="margin-top:6px;padding:6px 10px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:4px;font-size:11px;color:var(--primary-600);">
            ✓ 위임장: 환자 전자서명이 포함된 문서가 전송됩니다.
          </div>` : '');
 
@@ -5746,21 +5766,21 @@ window.HELP_TOUR_STEPS = [
                   style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;line-height:1;color:var(--text-muted);cursor:pointer;padding:2px 6px;"
                   title="닫기">&times;</button>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-            <div style="width:40px;height:40px;border-radius:50%;background:#f0fdf4;border:2px solid #86efac;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📠</div>
+            <div style="width:40px;height:40px;border-radius:999px;background:var(--primary-50);border:1px solid var(--primary-200);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📠</div>
             <div>
-              <div style="font-size:15px;font-weight:700;">팩스 전송 완료</div>
+              <div style="font-size:14px;font-weight:700;">팩스 전송 완료</div>
               <div style="font-size:11px;color:var(--text-muted);">요청이 정상적으로 접수되었습니다.</div>
             </div>
           </div>
           <div style="border-top:1px solid var(--border);padding-top:14px;font-size:12px;display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;gap:10px;">
               <span style="color:var(--text-muted);width:60px;flex-shrink:0;">수신처</span>
-              <span style="font-weight:600;">${data.recipient} <span style="color:var(--text-muted);font-weight:400;">(${data.fax_no})</span></span>
+              <span style="font-weight:700;">${data.recipient} <span style="color:var(--text-muted);font-weight:400;">(${data.fax_no})</span></span>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <span style="color:var(--text-muted);width:60px;flex-shrink:0;">전송 서류</span>
               <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                ${docLabels.map(l => `<span style="padding:2px 8px;background:var(--primary-light);color:var(--primary);border-radius:3px;font-size:11px;font-weight:600;">${l}</span>`).join('')}
+                ${docLabels.map(l => `<span style="padding:2px 8px;background:var(--primary-light);color:var(--primary);border-radius:6px;font-size:11px;font-weight:500;">${l}</span>`).join('')}
               </div>
             </div>
             ${authNote}
@@ -5769,7 +5789,7 @@ window.HELP_TOUR_STEPS = [
 
           <a href="${pdfUrl}" target="_blank"
              style="margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;
-                    padding:10px;background:#1e293b;color:#fff;border-radius:var(--radius);
+                    padding:10px;background:var(--gray-900);color:#fff;border-radius:var(--radius);
                     font-weight:700;font-size:13px;text-decoration:none;cursor:pointer;">
             <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
@@ -5890,7 +5910,7 @@ window.HELP_TOUR_STEPS = [
         const disabledNote = document.getElementById('vaDisabledNote');
         if (disabledNote) disabledNote.style.display = isDisabled ? 'block' : 'none';
 
-        if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.style.background = '#64748b'; triggerBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> 발급 완료'; }
+        if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.style.background = 'var(--gray-600)'; triggerBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> 발급 완료'; }
         // 결과 배지 텍스트 미리 준비 (팝오버 닫을 때 배지로 전환)
         const vaRbTx = document.getElementById('vaResultBadgeText');
         if (vaRbTx) {
@@ -6181,8 +6201,8 @@ window.HELP_TOUR_STEPS = [
       ${_pcFR('재상담 일자', d.re_counsel_date)}
       ${_pcFR('재구매 가능일', d.repurchase_date)}
     </div>
-    <div style="margin-top:10px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">
-      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px;"><i class="fa-solid fa-note-sticky"></i> 상담 메모</div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;">
+      <div style="font-size:10px;font-weight:700;color:var(--gray-600);margin-bottom:5px;"><i class="fa-solid fa-note-sticky"></i> 상담 메모</div>
       <div style="font-size:12px;line-height:1.8;white-space:pre-wrap;color:${d.contents ? 'var(--text-primary)' : 'var(--text-muted)'};">${d.contents ? _pcEsc(d.contents) : '(메모 없음)'}</div>
     </div>`;
 
@@ -6222,7 +6242,7 @@ window.HELP_TOUR_STEPS = [
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
               <span style="font-size:11px;font-weight:700;color:var(--primary);">×${item.quantity ?? 1}</span>
-              ${item.nhis_status ? `<span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${item.nhis_status==='Y'?'var(--success-light)':'var(--bg)'};color:${item.nhis_status==='Y'?'var(--success)':'var(--text-muted)'};border:1px solid ${item.nhis_status==='Y'?'#86efac':'var(--border)'};">${nhisMap[item.nhis_status]??item.nhis_status}</span>` : ''}
+              ${item.nhis_status ? `<span style="font-size:10px;padding:1px 7px;border-radius:999px;background:${item.nhis_status==='Y'?'var(--primary-50)':'var(--bg)'};color:${item.nhis_status==='Y'?'var(--primary)':'var(--text-muted)'};border:1px solid ${item.nhis_status==='Y'?'var(--primary-200)':'var(--border)'};">${nhisMap[item.nhis_status]??item.nhis_status}</span>` : ''}
             </div>
           </div>
           <div style="display:flex;gap:10px;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;align-items:center;">
@@ -6255,7 +6275,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ── 위임동의 ─────────────────────────────────────
-    const _PC_CONSENT_COLOR = {'agreed':'var(--success)','pending':'var(--warning)','declined':'var(--danger)','expired':'var(--text-muted)'};
+    const _PC_CONSENT_COLOR = {'agreed':'var(--primary)','pending':'var(--warning)','declined':'var(--danger)','expired':'var(--text-muted)'};
     let consentBody = '';
     if (d.consents && d.consents.length) {
       consentBody = d.consents.map((c, ci) => {
@@ -6293,8 +6313,8 @@ window.HELP_TOUR_STEPS = [
         ${_pcFR('입금 완료', t.deposited_at)}
       </div>
       <div style="margin-top:8px;padding:6px 10px;border-radius:var(--radius);font-size:11px;font-weight:700;
-                  background:${isDone?'var(--success-light)':isExp?'#fef2f2':'#fffbeb'};
-                  color:${isDone?'var(--success)':isExp?'var(--danger)':'var(--warning)'};">
+                  background:${isDone?'var(--primary-50)':isExp?'var(--alert-50)':'var(--gray-100)'};
+                  color:${isDone?'var(--primary)':isExp?'var(--danger)':'var(--gray-700)'};">
         ${isDone ? '<i class="fa-solid fa-circle-check"></i> 입금 완료' : isExp ? '<i class="fa-solid fa-clock"></i> 기한 만료' : '<i class="fa-solid fa-hourglass-half"></i> 입금 대기 중'}
       </div>`;
     } else {
@@ -6319,7 +6339,7 @@ window.HELP_TOUR_STEPS = [
 
     // ── 팩스 이력 ─────────────────────────────────────
     const _FAX_STATE = {0:'대기',1:'전송 중',2:'전송 완료',3:'실패',4:'취소'};
-    const _FAX_COLOR = {0:'var(--text-muted)',1:'var(--info)',2:'var(--success)',3:'var(--danger)',4:'var(--text-muted)'};
+    const _FAX_COLOR = {0:'var(--text-muted)',1:'var(--info)',2:'var(--primary)',3:'var(--danger)',4:'var(--text-muted)'};
     let faxBody = '';
     if (d.fax_histories && d.fax_histories.length) {
       faxBody = d.fax_histories.map((f, fi) => {
@@ -6350,7 +6370,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('pcStickyNo').textContent   = d.counselling_no ?? '-';
     document.getElementById('pcStickyName').textContent = patientName ? `· ${patientName}` : '';
     document.getElementById('pcStickyRx').innerHTML     = d.rx_number
-      ? `<i class="fa-solid fa-file-prescription" style="font-size:9px;"></i> ${_pcEsc(d.rx_number)}${d.rx_status_label ? ` <span style="padding:0 5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;">${_pcEsc(d.rx_status_label)}</span>` : ''}`
+      ? `<i class="fa-solid fa-file-prescription" style="font-size:9px;"></i> ${_pcEsc(d.rx_number)}${d.rx_status_label ? ` <span style="padding:0 5px;background:var(--bg);border:1px solid var(--border);border-radius:999px;">${_pcEsc(d.rx_status_label)}</span>` : ''}`
       : '';
     // 다른 처방전으로 '이동'하지 않고 새 탭으로 열어, 현재 검수 화면의 입력을 잃지 않게 한다
     document.getElementById('pcStickyBtn').onclick = () => ceOpenTab(
@@ -6361,12 +6381,12 @@ window.HELP_TOUR_STEPS = [
     // ── 스크롤 바디 ────────────────────────────────────
     document.getElementById('prevCounselBody').innerHTML = `
       ${_pcAcc('clipboard-list','var(--primary)',   '상담 정보',        counselBody,  true)}
-      ${_pcAcc('user',          'var(--success)',   '환자 정보',        patientBody,  true)}
+      ${_pcAcc('user',          'var(--primary)',   '환자 정보',        patientBody,  true)}
       ${_pcAcc('hospital',      'var(--info)',      '병원 · 처방 정보', hospitalBody, false)}
       ${_pcAcc('box',           'var(--warning)',   '제품 구매 이력',   purchaseBody, true)}
-      ${_pcAcc('file-signature','#8b5cf6',          '위임동의',         consentBody,  false)}
+      ${_pcAcc('file-signature','var(--primary)',   '위임동의',         consentBody,  false)}
       ${_pcAcc('university',    'var(--info)',      '가상계좌',         vaBody,       false)}
-      ${_pcAcc('receipt',       'var(--success)',   '현금영수증',       crBody,       false)}
+      ${_pcAcc('receipt',       'var(--primary)',   '현금영수증',       crBody,       false)}
       ${_pcAcc('fax',           'var(--text-secondary)', '팩스 이력',   faxBody,      false)}
     `;
   }
@@ -6622,16 +6642,16 @@ window.HELP_TOUR_STEPS = [
       box.style.display = 'block';
 
       if (data.success) {
-        box.style.background = 'var(--success-light)';
-        box.style.color      = 'var(--success)';
-        box.style.border     = '1px solid #86efac';
+        box.style.background = 'var(--primary-50)';
+        box.style.color      = 'var(--primary)';
+        box.style.border     = '1px solid var(--primary-200)';
         box.innerHTML = `<i class="fa-solid fa-circle-check"></i> SMS 발송 완료 — 유효 시간: <b>${data.expires_at}</b>까지`;
         btn.innerHTML = '<i class="fa-solid fa-check"></i> 발송 완료';
         updateConsentStatus();
       } else {
         box.style.background = 'var(--danger-light)';
         box.style.color      = 'var(--danger)';
-        box.style.border     = '1px solid #fca5a5';
+        box.style.border     = '1px solid var(--alert-100)';
         box.textContent      = data.message ?? '발송 실패';
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
@@ -6641,7 +6661,7 @@ window.HELP_TOUR_STEPS = [
       box.style.display = 'block';
       box.style.background = 'var(--danger-light)';
       box.style.color = 'var(--danger)';
-      box.style.border = '1px solid #fca5a5';
+      box.style.border = '1px solid var(--alert-100)';
       box.textContent = '네트워크 오류가 발생했습니다.';
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
@@ -6654,10 +6674,11 @@ window.HELP_TOUR_STEPS = [
     const rb  = document.getElementById('consentResultBadge');
     if (!bw || !rb) return;
     const cfgMap = {
-      agreed:  { bg:'var(--success-light)', border:'#86efac', color:'var(--success)', icon:'fa-circle-check',  text:'위임동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--success)', btnColor:'var(--success)' },
-      declined:{ bg:'var(--danger-light)',  border:'#fca5a5', color:'var(--danger)',  icon:'fa-circle-xmark',  text:'동의 거절됨',    action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--danger)',  btnColor:'var(--danger)' },
-      pending: { bg:'#ede9fe',              border:'#a5b4fc', color:'#6366f1',        icon:'fa-clock',          text:'위임동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'#6366f1',        btnColor:'#6366f1' },
-      expired: { bg:'var(--bg)',            border:'var(--border)', color:'var(--text-muted)', icon:'fa-ban',   text:'위임동의 만료',  action:'openConsentModal(true)',btnLabel:'재발송',   btnBorder:'var(--text-muted)', btnColor:'var(--text-muted)' },
+      agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'위임동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)' },
+      declined:{ bg:'var(--danger-light)',  border:'var(--alert-100)', color:'var(--danger)',  icon:'fa-circle-xmark',  text:'동의 거절됨',    action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--danger)',  btnColor:'var(--danger)' },
+      pending: { bg:'var(--gray-100)',      border:'var(--gray-300)', color:'var(--gray-700)', icon:'fa-clock',        text:'위임동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--gray-700)',       btnColor:'var(--gray-700)' },
+      {{-- 만료는 시안의 '비활성' 조합(bg #F9FAFC · 글자 #999EA4). 대기중(gray-100)과 바탕이 겹치지 않게 한다 --}}
+      expired: { bg:'var(--gray-50)',       border:'var(--border)', color:'var(--text-muted)', icon:'fa-ban',   text:'위임동의 만료',  action:'openConsentModal(true)',btnLabel:'재발송',   btnBorder:'var(--text-muted)', btnColor:'var(--text-muted)' },
     };
     const cfg = cfgMap[status];
     if (!cfg) return;
@@ -6671,7 +6692,7 @@ window.HELP_TOUR_STEPS = [
     rb.style.borderRadius = 'var(--radius)';
     rb.style.fontSize = '11px';
     rb.style.whiteSpace = 'nowrap';
-    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:9px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:3px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
+    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
   }
 
   async function updateConsentStatus() {
@@ -6682,7 +6703,7 @@ window.HELP_TOUR_STEPS = [
 
       const textEl  = document.getElementById('consentStatusText');
       const badgeEl = document.getElementById('consentStatusBadge');
-      const colorMap = { agreed: 'var(--success)', declined: 'var(--danger)', pending: 'var(--warning)', expired: 'var(--text-muted)' };
+      const colorMap = { agreed: 'var(--primary)', declined: 'var(--danger)', pending: 'var(--warning)', expired: 'var(--text-muted)' };
       const iconMap  = { agreed: 'fa-circle-check', declined: 'fa-circle-xmark', pending: 'fa-clock', expired: 'fa-ban' };
       const color = colorMap[data.status] ?? 'var(--text-muted)';
       const icon  = iconMap[data.status]  ?? 'fa-circle-info';
@@ -6702,7 +6723,7 @@ window.HELP_TOUR_STEPS = [
         if (badgeArea && !badgeArea.querySelector('.sign-badge')) {
           const sb = document.createElement('span');
           sb.className = 'sign-badge';
-          sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--success-light);color:var(--success);border:1px solid #86efac;margin-left:6px;';
+          sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary);border:1px solid var(--primary-200);margin-left:6px;';
           sb.innerHTML = '<i class="fa-solid fa-signature"></i> 서명 있음';
           badgeArea.appendChild(sb);
         }
@@ -6712,7 +6733,7 @@ window.HELP_TOUR_STEPS = [
       if (data.nice_verified && badgeEl && !badgeEl.querySelector('.nice-badge')) {
         const nb = document.createElement('span');
         nb.className = 'nice-badge';
-        nb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;margin-left:6px;';
+        nb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary-400);border:1px solid var(--primary-100);margin-left:6px;';
         nb.innerHTML = '<i class="fa-solid fa-id-card"></i> 본인확인 완료';
         nb.title = [
           data.nice_name    ? `성명: ${data.nice_name}` : '',
@@ -6741,7 +6762,7 @@ window.HELP_TOUR_STEPS = [
     const badgeEl = document.getElementById('consentStatusBadge');
     if (textEl && badgeEl) {
       const isAgreed = data.status === 'agreed';
-      badgeEl.style.color = isAgreed ? 'var(--success)' : 'var(--danger)';
+      badgeEl.style.color = isAgreed ? 'var(--primary)' : 'var(--danger)';
       let label = `위임동의 ${isAgreed ? '서명 완료' : '거절됨'}`;
       if (data.responded_at) label += ` · ${data.responded_at}`;
       textEl.innerHTML = `<i class="fa-solid fa-${isAgreed ? 'circle-check' : 'circle-xmark'}"></i> ${label}`;
@@ -6749,7 +6770,7 @@ window.HELP_TOUR_STEPS = [
       if (isAgreed && data.has_signature && !badgeEl.querySelector('.sign-badge')) {
         const sb = document.createElement('span');
         sb.className = 'sign-badge';
-        sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--success-light);color:var(--success);border:1px solid #86efac;margin-left:6px;';
+        sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary);border:1px solid var(--primary-200);margin-left:6px;';
         sb.innerHTML = '<i class="fa-solid fa-signature"></i> 서명 있음';
         badgeEl.appendChild(sb);
       }
@@ -6831,8 +6852,8 @@ window.HELP_TOUR_STEPS = [
     drop.innerHTML = data.map((item) => {
       const qty        = item.stock ?? null;
       const hasStock   = qty !== null;
-      const stockColor = hasStock ? (qty > 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)';
-      const stockBg    = hasStock ? (qty > 0 ? 'var(--success-light)' : 'var(--danger-light)') : 'var(--bg)';
+      const stockColor = hasStock ? (qty > 0 ? 'var(--primary)' : 'var(--danger)') : 'var(--text-muted)';
+      const stockBg    = hasStock ? (qty > 0 ? 'var(--primary-50)' : 'var(--danger-light)') : 'var(--bg)';
       const stockBdr   = hasStock ? stockColor : 'var(--border)';
       const stockTxt   = hasStock ? `재고: <b>${Number(qty).toLocaleString()}</b>` : '재고: -';
       return `
@@ -6847,11 +6868,11 @@ window.HELP_TOUR_STEPS = [
         <div class="pac-item-body">
           <div class="pac-item-name">${escHtml(item.name)}</div>
           <div class="pac-item-meta">
-            ${item.code ? `<span style="background:var(--primary-light);color:var(--primary);padding:1px 5px;border-radius:3px;font-size:10px;">${escHtml(item.code)}</span>` : ''}
+            ${item.code ? `<span style="background:var(--primary-light);color:var(--primary);padding:1px 5px;border-radius:6px;font-size:10px;">${escHtml(item.code)}</span>` : ''}
             ${item.spec ? `<span>${escHtml(item.spec)}</span>` : ''}
             ${item.unit ? `<span>· ${escHtml(item.unit)}</span>` : ''}
-            ${item.r_box ? `<span style="background:#F3EEFF;color:#7C3AED;padding:1px 5px;border-radius:3px;">R-Box: ${escHtml(item.r_box)}</span>` : ''}
-            <span style="background:${stockBg};border:1px solid ${stockBdr};color:${stockColor};padding:1px 5px;border-radius:3px;">${stockTxt}</span>
+            ${item.r_box ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 5px;border-radius:6px;">R-Box: ${escHtml(item.r_box)}</span>` : ''}
+            <span style="background:${stockBg};border:1px solid ${stockBdr};color:${stockColor};padding:1px 5px;border-radius:6px;">${stockTxt}</span>
           </div>
         </div>
         ${item.price ? `<div class="pac-item-price">₩ ${Number(item.price).toLocaleString()}</div>` : ''}
@@ -6974,8 +6995,8 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/products/stock?code=${encodeURIComponent(itemCode)}`, 'GET');
       if (res.success && res.qty !== null) {
         const qty = Number(res.qty);
-        const color = qty > 0 ? 'var(--success)' : 'var(--danger)';
-        badge.style.background    = qty > 0 ? 'var(--success-light)' : 'var(--danger-light)';
+        const color = qty > 0 ? 'var(--primary)' : 'var(--danger)';
+        badge.style.background    = qty > 0 ? 'var(--primary-50)' : 'var(--danger-light)';
         badge.style.borderColor   = color;
         badge.style.color         = color;
         badge.innerHTML = `재고: <b>${qty.toLocaleString()}</b>`;
@@ -6999,7 +7020,7 @@ window.HELP_TOUR_STEPS = [
     }
     const meta = document.getElementById(`item-meta-${idx}`);
     if (!meta) return;
-    meta.innerHTML = stock ? `<span style="background:var(--success-light);color:var(--success);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(stock).toLocaleString()}</span>` : '';
+    meta.innerHTML = stock ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(stock).toLocaleString()}</span>` : '';
     meta.style.display = stock ? 'flex' : 'none';
   }
 
@@ -7033,11 +7054,11 @@ window.HELP_TOUR_STEPS = [
     if (!area) return;
     if (_cr.status === 'issued') {
       area.innerHTML = `
-        <div style="background:var(--success-light);border:1px solid #86efac;border-radius:var(--radius);padding:8px 10px;font-size:11px;">
+        <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:8px 10px;font-size:11px;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-            <i class="fa-solid fa-circle-check" style="color:var(--success);"></i>
-            <span style="font-weight:700;color:var(--success);flex:1;">현금영수증 발행완료</span>
-            <button onclick="toggleCrDetailPopover(event)" style="height:20px;padding:0 7px;font-size:10px;background:none;border:1px solid var(--success);color:var(--success);border-radius:4px;cursor:pointer;">상세</button>
+            <i class="fa-solid fa-circle-check" style="color:var(--primary);"></i>
+            <span style="font-weight:700;color:var(--primary);flex:1;">현금영수증 발행완료</span>
+            <button onclick="toggleCrDetailPopover(event)" style="height:20px;padding:0 7px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:4px;cursor:pointer;">상세</button>
             <button onclick="cancelCashReceipt()" style="height:20px;padding:0 7px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:4px;cursor:pointer;">취소</button>
           </div>
           <div style="color:var(--text-muted);">No: ${_cr.no} · ${_cr.issuedAt.substring(0, 10)}</div>
@@ -7373,7 +7394,7 @@ window.HELP_TOUR_STEPS = [
       chk.disabled        = false;
       chk.checked         = true;
       badge.textContent   = '발행완료';
-      badge.style.cssText = 'font-size:10px;border-radius:3px;padding:1px 6px;background:#f0fdf4;color:#166534;border:1px solid #86efac;';
+      badge.style.cssText = 'font-size:10px;border-radius:6px;padding:1px 6px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);';
       desc.textContent    = crNo ? `승인번호: ${crNo}` : '발행완료';
     } else {
       label.style.cursor  = 'default';
@@ -7381,7 +7402,7 @@ window.HELP_TOUR_STEPS = [
       chk.disabled        = true;
       chk.checked         = false;
       badge.textContent   = '미발행';
-      badge.style.cssText = 'font-size:10px;border-radius:3px;padding:1px 6px;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;';
+      badge.style.cssText = 'font-size:10px;border-radius:6px;padding:1px 6px;background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-300);';
       desc.textContent    = '현금영수증 발행 후 선택 가능';
     }
   }
@@ -7452,13 +7473,13 @@ window.HELP_TOUR_STEPS = [
     }
     list.innerHTML = _memos.map(m => `
       <div class="memo-card" id="mc-${m.id}"
-           style="margin:0 8px 6px;padding:9px 10px;background:#FAFAF5;border:1px solid #E8E4D0;border-radius:7px;position:relative;">
+           style="margin:0 8px 6px;padding:9px 10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;position:relative;">
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <div draggable="true" ondragstart="memoDragStart(event,${m.id})"
                title="드래그해서 화면에 고정"
-               style="flex-shrink:0;cursor:grab;padding:3px 5px;border-radius:4px;color:#bbb;font-size:13px;margin-top:0px;user-select:none;transition:background .15s,color .15s;"
-               onmouseover="this.style.background='#eee';this.style.color='#7C3AED'"
-               onmouseout="this.style.background='transparent';this.style.color='#bbb'">
+               style="flex-shrink:0;cursor:grab;padding:3px 5px;border-radius:4px;color:var(--gray-300);font-size:13px;margin-top:0px;user-select:none;transition:background .15s,color .15s;"
+               onmouseover="this.style.background='var(--gray-100)';this.style.color='var(--primary)'"
+               onmouseout="this.style.background='transparent';this.style.color='var(--gray-300)'">
             <i class="fa-solid fa-grip-vertical"></i>
           </div>
           <textarea class="memo-ta" data-id="${m.id}"
@@ -7466,16 +7487,16 @@ window.HELP_TOUR_STEPS = [
                     oninput="autoResizeTa(this)" onblur="updateMemoContent(${m.id},this.value)">${escHtmlMemo(m.content)}</textarea>
           <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
             <button onclick="togglePin(${m.id})" title="${m.is_pinned ? '고정 해제' : '화면 고정'}"
-                    style="width:22px;height:22px;border:none;border-radius:4px;cursor:pointer;background:${m.is_pinned ? '#7C3AED' : '#f1f1f1'};color:${m.is_pinned ? '#fff' : '#888'};font-size:11px;display:flex;align-items:center;justify-content:center;">
+                    style="width:22px;height:22px;border:none;border-radius:4px;cursor:pointer;background:${m.is_pinned ? 'var(--primary)' : 'var(--gray-100)'};color:${m.is_pinned ? '#fff' : 'var(--gray-500)'};font-size:11px;display:flex;align-items:center;justify-content:center;">
               <i class="fa-solid fa-thumbtack"></i>
             </button>
             <button onclick="deleteMemo(${m.id})" title="삭제"
-                    style="width:22px;height:22px;border:none;border-radius:4px;cursor:pointer;background:#fff0f0;color:var(--danger);font-size:11px;display:flex;align-items:center;justify-content:center;">
+                    style="width:22px;height:22px;border:none;border-radius:4px;cursor:pointer;background:var(--alert-50);color:var(--danger);font-size:11px;display:flex;align-items:center;justify-content:center;">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </div>
-        <div style="font-size:10px;color:#aaa;margin-top:4px;padding-left:17px;">${m.created_at} · ${escHtmlMemo(m.user_name)}</div>
+        <div style="font-size:10px;color:var(--gray-400);margin-top:4px;padding-left:17px;">${m.created_at} · ${escHtmlMemo(m.user_name)}</div>
       </div>
     `).join('');
     list.querySelectorAll('.memo-ta').forEach(autoResizeTa);
@@ -7620,31 +7641,31 @@ window.HELP_TOUR_STEPS = [
 
     const el = document.createElement('div');
     el.id = `pinned-memo-${m.id}`;
-    el.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${w}px;min-width:180px;min-height:90px;z-index:9000;background:#FFFDE7;border:1px solid #F0D060;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);display:flex;flex-direction:column;`;
+    el.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${w}px;min-width:180px;min-height:90px;z-index:9000;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);display:flex;flex-direction:column;`;
     el.innerHTML = `
-      <div class="pm-header" style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#F9C800;border-radius:8px 8px 0 0;cursor:move;user-select:none;flex-shrink:0;">
-        <span style="font-size:10px;font-weight:700;color:#555;"><i class="fa-solid fa-thumbtack"></i> 메모 고정
-          <span style="font-size:9px;font-weight:400;margin-left:4px;opacity:.7;">${escHtmlMemo(m.rx_number ?? '')}</span>
+      <div class="pm-header" style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--primary-100);border-radius:8px 8px 0 0;cursor:move;user-select:none;flex-shrink:0;">
+        <span style="font-size:10px;font-weight:700;color:var(--gray-700);"><i class="fa-solid fa-thumbtack"></i> 메모 고정
+          <span style="font-size:10px;font-weight:400;margin-left:4px;opacity:.7;">${escHtmlMemo(m.rx_number ?? '')}</span>
         </span>
         <div style="display:flex;gap:4px;">
           <button onclick="unpinWidget(${m.id})" title="고정 해제"
-                  style="width:18px;height:18px;border:none;border-radius:3px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:#555;">
+                  style="width:18px;height:18px;border:none;border-radius:6px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">
             <i class="fa-solid fa-thumbtack" style="transform:rotate(45deg);"></i>
           </button>
           <button onclick="closeWidget(${m.id})" title="닫기 (고정 유지)"
-                  style="width:18px;height:18px;border:none;border-radius:3px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:#555;">×</button>
+                  style="width:18px;height:18px;border:none;border-radius:6px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">×</button>
         </div>
       </div>
       <div style="padding:8px;flex:1;display:flex;flex-direction:column;min-height:0;">
         <textarea class="pinned-memo-ta" data-id="${m.id}"
                   style="flex:1;width:100%;border:none;background:transparent;resize:none;font-size:12px;line-height:1.5;outline:none;min-height:48px;"
                   onblur="updateMemoContent(${m.id},this.value)">${escHtmlMemo(m.content)}</textarea>
-        <div style="font-size:10px;color:#aaa;margin-top:2px;flex-shrink:0;">${m.created_at} · ${escHtmlMemo(m.user_name)}</div>
+        <div style="font-size:10px;color:var(--gray-400);margin-top:2px;flex-shrink:0;">${m.created_at} · ${escHtmlMemo(m.user_name)}</div>
       </div>
       <div class="pm-resize" title="크기 조절"
            style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:se-resize;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px;">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M2 8L8 2M5 8L8 5M8 8L8 8" stroke="#bbb" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M2 8L8 2M5 8L8 5M8 8L8 8" style="stroke:var(--gray-300);" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
       </div>
     `;
