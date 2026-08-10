@@ -450,7 +450,12 @@
     }
     .ds-chips:has(+ .ds-filter-card) + .ds-filter-card {
       border-radius: 0 0 12px 12px;
-      border-top: 1px solid var(--gray-100);
+      /* 시안 Vector 4 는 1536×0 — 카드 전폭(1568)이 아니라 좌우 16 안쪽에만 그어진다.
+         테두리 대신 배경으로 그으면 선이 카드 높이를 먹지 않아 140(시안값)이 그대로 나온다. */
+      background-image: linear-gradient(var(--gray-100), var(--gray-100));
+      background-repeat: no-repeat;
+      background-position: 16px 0;
+      background-size: calc(100% - 32px) 1px;
     }
 
     /* 화면들이 각자 정의해 쓰던 검색 줄(.filter-bar / .search-bar).
@@ -504,7 +509,8 @@
     .ds-btn-primary:hover { background: var(--primary-light); }
 
     /* 그리드 영역 (174:1241) — 상단바 + 카드, gap 12 */
-    .ds-grid-section { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+    .ds-grid-section { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0;
+                       padding-top: 4px; /* 시안 Frame 48101545 pad 4/0/0/0 */ }
     .ds-grid-bar {
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
@@ -548,9 +554,11 @@
     /* 카드가 overflow:hidden 이라, 안에 들어간 패널(조회 결과·상세 내용)이
        카드보다 길면 잘리고 스크롤도 안 생긴다. 패널이 스스로 스크롤하게 한다. */
     .ds-grid-card > [id^="pnl"] { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    /* 그리드는 이미 카드(r12) 안에 있다 — 자기 테두리·모서리를 또 갖지 않는다 */
+    .ds-grid-card .cg-wrap { border: 0; border-radius: 0; }
 
     /* 카드 안 패널 탭 (114:4778) — h44 · pad 0/16 · gap 16 · 하단 1px */
-    .pnl-tabs { display: flex; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .pnl-tabs { display: flex; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .pnl-tab {
       height: 44px; padding: 0 8px; border: none; background: none; cursor: pointer;
       display: inline-flex; align-items: center; gap: 6px;

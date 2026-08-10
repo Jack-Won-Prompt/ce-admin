@@ -2,8 +2,10 @@
 @extends('layouts.app')
 
 @section('title', '주문관리')
-@section('page-title', '주문관리')
-@section('breadcrumb', '홈 / 주문관리')
+@section('page-title', '주문 관리')
+{{-- 브레드크럼 — Figma 148:5526 Frame 48101452: 홈 · - · 주문 관리, gap 8 (12px/500 lh14)
+     @section 의 인자형(@section('x','...'))은 Laravel 이 e() 로 escape 한다 → 블록형으로 쓴다. --}}
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문 관리</span></span>@endsection
 
 @push('scripts')
 <script>
@@ -57,6 +59,17 @@ window.HELP_TOUR_STEPS = [
   .btn-row { display: flex; gap: 6px; }
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+
+  /* 브레드크럼 3항목 간격 — 시안 Frame 48101452 gap 8.
+     .bc-trail 은 이 화면에서만 쓰는 마크업이라 여기 둔다. */
+  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
+
+  /* 아래 규칙들은 전역으로 올렸다 —
+       구분선 안쪽 여백 · 결과바 위 4px · 패널 탭 gap 8 · 그리드 카드 테두리 제거
+         → resources/views/layouts/app.blade.php
+       머리행 세로선 제거·왼쪽 정렬 · 본문 셀 왼쪽 정렬 · 체크박스 16×16 r6
+         → public/vendor/wwgrid/wwGrid.css
+     한 화면에만 두면 목록 화면 열두 개의 그리드가 서로 달라 보인다. */
 </style>
 @endpush
 
@@ -102,7 +115,7 @@ window.HELP_TOUR_STEPS = [
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호 · 환자명 · 제품명">
+             placeholder="주문번호ㆍ환자명ㆍ제품명">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -133,7 +146,7 @@ window.HELP_TOUR_STEPS = [
       <span class="ds-grid-sel">선택 <b id="orderSelCount">0</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
+      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
       <button type="button" class="ds-btn" onclick="window.__orderGrid?.downloadExcel()">엑셀 저장</button>
     </div>
   </div>

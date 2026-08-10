@@ -9,58 +9,160 @@
 <style>
   .order-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
   @media(max-width:900px){ .order-grid { grid-template-columns:1fr; } }
-  /* 상세 내부 탭(스크립트로 카드 그룹핑) */
-  .od-tabs { display:flex; gap:16px; margin:0 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-  .od-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-    color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-  .od-tab:hover { color:var(--primary); }
-  .od-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
-  /* 탭 사용 시 좌우 그리드를 단일 흐름으로(카드가 순서대로) */
-  .order-grid.od-flat { display:block; }
+
+  /* 시안 148:6407 — 제목 줄(1536×33)과 세그먼트 컨트롤이 한 줄.
+     탭 바는 스크립트가 제목 줄 뒤에 끼워 넣으므로 흐름에서 빼 제목 줄 오른쪽 끝에 겹쳐 놓는다. */
+  .od-detail { position: relative; }
+  .od-title-row {
+    display:flex; align-items:center; gap:12px;
+    min-height:33px; margin:0 0 12px; padding-right:576px;
+  }
+
+  /* 상세 내부 탭(스크립트로 카드 그룹핑) — 시안 세그먼트 트랙 564×33 · r8 · pad 2 · bg gray-200 */
+  .od-tabs {
+    position:absolute; top:0; right:0; z-index:2;
+    display:flex; flex-wrap:nowrap; gap:0;
+    width:564px; max-width:100%; height:33px; padding:2px; margin:0;
+    border:none; border-radius:var(--radius); background:var(--gray-200);
+  }
+  /* 칸 140×29 · r6 · 13px/500 lh21 — 활성만 흰 배경 */
+  .od-tab {
+    flex:1 1 0; min-width:0; height:29px; padding:0 8px; margin:0;
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    border:none; background:none; cursor:pointer; border-radius:6px; white-space:nowrap;
+    font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700);
+  }
+  .od-tab:hover { color:var(--gray-1000); }
+  .od-tab.active { background:var(--gray-0); color:var(--gray-1000); border-bottom-color:transparent; }
+  @media(max-width:1200px){
+    .od-title-row { padding-right:0; }
+    .od-tabs { position:static; width:100%; margin:0 0 12px; }
+  }
+
+  /* 탭 사용 시 카드는 가로 1행 — 시안 3열(504×3) / 2열(762×2), gap 12 */
+  .order-grid.od-flat { display:flex; flex-wrap:wrap; align-items:stretch; gap:12px; }
   .order-grid.od-flat > div { display:contents; }
+  /* 한 탭에 카드가 1장뿐일 때(메모가 비면 메모/정보 탭이 그렇다) 카드가 1568 로 늘어나
+     라벨과 값이 1500px 떨어진다. 시안의 2열 폭(762 ≒ 50%-6)을 최대치로 둔다.
+     3열일 때의 자연폭 (100%-24)/3 은 이 값보다 작아 영향이 없다. */
+  .order-grid.od-flat > div > .card {
+    flex:1 1 0; min-width:280px; max-width:calc(50% - 6px); margin-bottom:0;
+    display:flex; flex-direction:column;
+  }
+  .order-grid.od-flat > div > .card > .card-body { flex:1 1 auto; }
 
   /* 카드 사이 간격 — 시안 카드 gap 12 (죽은 유틸리티 mb-4 를 대신한다) */
   .od-mb { margin-bottom: 12px; }
 
+  /* 시안 — 카드 pad 12/16/12/16 · 머리글 28 · 구분선 없음 · 머리글↔본문 12 */
+  /* 머리글 줄 자체가 28 (pad 12 포함 40) — 보조 버튼이 있든 없든 높이가 같다 */
+  .od-detail .card-header { padding:12px 16px 0; border-bottom:none; min-height:40px; gap:8px; }
+  .od-detail .card-header-title { font-size:14px; font-weight:700; line-height:22px; letter-spacing:0; color:var(--gray-1000); }
+  .od-detail .card-body { padding:12px 16px; }
+  /* 머리글 오른쪽 보조 버튼 — 시안 h28 · 12px/500 lh19 */
+  .od-detail .card-header .btn { height:28px; padding:0 10px; font-size:12px; font-weight:500; line-height:19px; }
+  .od-detail .card-header .btn.w-full { width:auto; }
+  /* 머리글 오른쪽 안내문 — 시안 12px/500 lh19 gray-600 */
+  .od-head-note { margin-left:auto; display:inline-flex; align-items:center; gap:4px;
+    font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); text-align:right; }
+
+  /* 시안 — 라벨/값 한 쌍이 회색 상자 하나(r8 · pad 12 · gap 8 · bg gray-100 · h74).
+     dt = 12 + 21, dd = 8 + 21 + 12 → 두 조각이 이어 붙어 74 가 된다. 값은 오른쪽 정렬. */
+  .info-rows { margin: 0; }
   .info-rows dt {
     font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
-    margin-bottom: 2px; margin-top: 10px;
+    background: var(--gray-100); border-radius: var(--radius) var(--radius) 0 0;
+    margin: 0; padding: 12px 12px 0;
   }
-  .info-rows dt:first-child { margin-top: 0; }
-  .info-rows dd { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin: 0; }
+  .info-rows dd {
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
+    background: var(--gray-100); border-radius: 0 0 var(--radius) var(--radius);
+    margin: 0 0 8px; padding: 8px 12px 12px; text-align: right;
+  }
+  .info-rows dd:last-child { margin-bottom: 0; }
+
+  /* 시안 회색 상자 — 라벨 위(왼쪽) · 값 아래(오른쪽) */
+  .od-box {
+    background: var(--gray-100); border-radius: var(--radius);
+    padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .od-boxes { display: flex; flex-direction: column; gap: 8px; }
+  .od-box-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .od-box-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  /* 제품 상자 — 1행 제품명, 2행 수량|보험가|본인부담 (사이 1px gray-300 세로선 h12) */
+  .od-prod-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; line-height: 21px; }
+  .od-prod-label { color: var(--gray-700); }
+  .od-prod-value { color: var(--gray-1000); }
+  .od-prod-metrics { gap: 0; flex-wrap: wrap; }
+  .od-prod-metrics > span { display: inline-flex; align-items: center; gap: 8px; }
+  .od-prod-metrics > span + span::before {
+    content: ''; display: inline-block; width: 1px; height: 12px;
+    background: var(--gray-300); margin: 0 6px;
+  }
+  .od-box-value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); text-align: right; }
+
+  /* 시안 148:6407 환자 정보 — 파란 카드가 아니라 회색 상자 3개(성명 전폭 · 주민등록번호/전화번호 2열).
+     전역 .patient-card / .patient-avatar / .patient-name / .patient-detail 값을 이 화면에서만 되돌린다. */
+  .od-detail .patient-card {
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+    padding: 0; margin: 0; border: none; border-radius: 0; background: none;
+  }
+  .od-detail .patient-avatar { width: 20px; height: 20px; font-size: 12px; }
+  .od-detail .patient-name {
+    display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+    font-size: 13px; font-weight: 500; line-height: 21px; letter-spacing: 0; color: var(--gray-1000);
+  }
+  .od-detail .patient-detail { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin-top: 0; }
 
   /* 전역 .section-title 이 uppercase · letter-spacing .6px · ::after 채움선을 걸어 둔다.
      여기서 값만 덮으면 그 셋이 살아남아 필드 라벨에 줄이 두 개 생긴다 — 함께 끈다. */
-  .section-title {
+  .od-detail .section-title {
     font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
     text-transform: none; letter-spacing: 0;
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
     margin-bottom: 12px;
   }
-  .section-title::after { content: none; }
+  .od-detail .section-title::after { content: none; }
+  /* 회색 상자 안에서는 라벨 줄이므로 구분선·여백을 없앤다 */
+  .od-detail .od-box .section-title { padding: 0; border-bottom: none; margin: 0; }
 
-  .amount-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .od-detail .amount-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   /* 시안 148:6407 — 금액 박스 r8 · pad 12 · gap 8 · bg gray-100 · 라벨/값 13px/500 */
-  .amount-box {
-    background: var(--gray-100); border: 1px solid var(--gray-100);
+  .od-detail .amount-box {
+    background: var(--gray-100); border: none;
     border-radius: var(--radius); padding: 12px; text-align: left;
   }
-  .amount-box .label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
-  .amount-box .value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin-top: 8px; }
-  .amount-box.highlight { border-color: var(--primary); background: var(--primary-light); }
-  .amount-box.highlight .label { color: var(--primary); }
-  .amount-box.highlight .value { color: var(--primary); }
+  .od-detail .amount-box .label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .od-detail .amount-box .value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin-top: 8px; text-align: right; }
+  /* 시안 — '총 결제금액' 도 배경은 같은 회색이고 글자만 primary */
+  .od-detail .amount-box.highlight { background: var(--gray-100); border: none; }
+  .od-detail .amount-box.highlight .label { color: var(--primary); }
+  .od-detail .amount-box.highlight .value { color: var(--primary); }
 
-  .status-flow { display: flex; align-items: center; gap: 0; margin: 12px 0; }
+  /* 시안 148:6407 — 단계 묶음은 가로 가운데로 뭉쳐 놓는다(주축 center).
+     단계 사이 = 16 + 연결선 100 + 16 = 132. 카드 높이 12+8+53+8+12 = 93 (시안 93). */
+  .status-flow { display: flex; align-items: flex-start; justify-content: center; gap: 0; margin: 8px 0; flex-wrap: wrap; }
   .status-step {
-    flex: 1; text-align: center; font-size: 13px; font-weight: 700; line-height: 21px;
+    flex: 0 0 auto; min-width: 48px; text-align: center;
+    font-size: 13px; font-weight: 700; line-height: 21px;
     color: var(--gray-400); position: relative;
+    --od-line: var(--gray-300);
   }
+  .status-step:not(:last-child) { margin-right: 132px; }
+  /* 연결선 100×4 — 4×4 원 + 88×1 선 + 4×4 원 */
   .status-step::after {
     content: '';
-    position: absolute; left: 50%; top: 12px;
-    width: 100%; border-top: 1px solid var(--gray-300); z-index: 0;
+    position: absolute; left: calc(100% + 16px); top: 10px;
+    width: 100px; height: 4px; z-index: 0;
+    background-image:
+      radial-gradient(circle closest-side, var(--od-line) 100%, transparent 100%),
+      radial-gradient(circle closest-side, var(--od-line) 100%, transparent 100%),
+      linear-gradient(var(--od-line), var(--od-line));
+    background-repeat: no-repeat;
+    background-size: 4px 4px, 4px 4px, 88px 1px;
+    background-position: left center, right center, center center;
   }
+  .status-step.done, .status-step.current { --od-line: var(--primary); }
   .status-step:last-child::after { display:none; }
   .status-step .dot {
     width: 24px; height: 24px; border-radius: 999px;
@@ -74,14 +176,43 @@
   .status-step.current     { color: var(--primary); }
   .status-step.cancelled .dot { background: var(--danger); }
 
-  .nhis-box {
-    border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 12px;
+  /* 시안 158:577 — 청구 항목은 테두리 없는 회색 상자(r8 · pad 12 · gap 8 · h74), 값은 오른쪽 정렬 평문 */
+  .nhis-box { border: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .nhis-row {
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 0;
+    background: var(--gray-100); border-radius: var(--radius); padding: 12px;
   }
-  .nhis-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .nhis-row:last-child { margin-bottom: 0; }
   .nhis-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
-  .nhis-value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); }
+  .nhis-value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); text-align: right; }
+  /* 시안에 초록이 없다 — 전역 .text-success(#12B76A) 를 이 화면에서만 되돌린다 */
+  .od-detail .nhis-value.text-success { color: var(--gray-1000) !important; }
+  /* 값 자리에 놓인 배지는 시안에서 평문 13px/500 오른쪽 정렬이다 */
+  .nhis-row .badge, .od-box .badge {
+    align-self: flex-end; background: none; padding: 0; border-radius: 0;
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
+  }
+  .nhis-row .badge-danger, .od-box .badge-danger { color: var(--alert-500); }
+
+  /* 시안 158:171 — 미연동 안내는 상자 없이 카드 본문 가운데 */
+  .ww-empty {
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    height: 100%; min-height: 120px; text-align: center;
+    font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
+  }
+
+  /* 시안 158:171 — 상태 변경 막대 2개, 각 h80 · r8 · pad 12 · 가운데 정렬 */
+  .od-status-actions .btn {
+    height: 80px; border: none; border-radius: var(--radius); padding: 12px;
+    justify-content: center; gap: 8px;
+    font-size: 13px; font-weight: 500; line-height: 21px;
+  }
+  .od-status-actions .btn-primary,
+  .od-status-actions .btn-primary:hover,
+  .od-status-actions .btn-outline,
+  .od-status-actions .btn-outline:hover { background: var(--primary-100); color: var(--primary); }
+  .od-status-actions .btn-danger,
+  .od-status-actions .btn-danger:hover { background: var(--alert-100); color: var(--alert-500); }
 
   /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
   .action-footer {
@@ -91,10 +222,41 @@
     display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
   }
 
-  .tracking-row { display: flex; gap: 8px; align-items: center; }
-  .tracking-row .form-control { flex: 1; }
+  /* 운송장 상자가 카드 폭의 절반(1920 에서 236)이라 좁은 폭에서 입력칸이 눌린다.
+     1440 에서 57px · 1280 에서 30px 까지 줄어 값이 보이지 않았다.
+     [저장] 이 옆에 못 들어가면 아래로 내려보내고 입력칸은 상자 폭을 다 쓴다.
+     1920(폭 236) 에서는 137px 한 줄 그대로다. */
+  .tracking-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tracking-row .form-control { flex: 1 1 120px; min-width: 0; }
+  /* 시안 158:171 — 상자 안 [저장] 은 흰 바탕 · 1px gray-200 · 글자 13px/500 gray-1000 */
+  .od-box-tracking .btn-primary,
+  .od-box-tracking .btn-primary:hover {
+    background: var(--gray-0); border: 1px solid var(--gray-200); color: var(--gray-1000);
+  }
 
   /* ── 세금계산서 / 현금영수증 ── */
+  /* 시안 158:577 — 절마다 회색 상자 하나(라벨 위 · 상태 값 아래 오른쪽), 상자 사이 8 · 구분선 없음 */
+  .od-receipt-group { display: flex; flex-direction: column; gap: 8px; }
+  .od-receipt-group > .btn { align-self: flex-end; }
+  /* 시안 158:577 발행 버튼 — 100×28 · r8 · 흰 바탕 · 1px gray-200 · 12px/500 lh19 gray-1000.
+     (시안은 카드 머리글에 두지만 마크업이 조건 분기 안에 있어 자리는 본문에 남긴다) */
+  .od-receipt-group .btn { height: 28px; padding: 0 10px; font-size: 12px; font-weight: 500; line-height: 19px; }
+  .od-receipt-group .btn-primary,
+  .od-receipt-group .btn-primary:hover {
+    background: var(--gray-0); border: 1px solid var(--gray-200); color: var(--gray-1000);
+  }
+  .od-receipt { gap: 8px; }
+  .od-receipt-title { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .od-receipt-sep { border: none; margin: 4px 0; height: 0; }
+
+  /* 시안 158:933 — 메모는 카드 높이를 채우는 회색 상자(r8 · pad 12 · 13px/500 lh21) */
+  .od-memo {
+    background: var(--gray-100); border-radius: var(--radius); padding: 12px; margin: 0;
+    height: 100%; box-sizing: border-box; min-height: 132px;
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
+    white-space: pre-wrap;
+  }
+
   .receipt-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 6px 0; border-bottom: 1px solid var(--border-light);
@@ -154,10 +316,11 @@
 @endphp
 
 @section('content')
-<div class="page-body-inner">
+{{-- od-detail — 이 조각이 다른 화면의 '상세내용' 탭으로 주입되므로 공용 클래스 덮어쓰기를 여기로 가둔다 --}}
+<div class="page-body-inner od-detail">
 
   {{-- 주문 번호 헤더 --}}
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="od-title-row">
     <h2 style="font-size:16px;font-weight:700;line-height:26px;color:var(--gray-1000);">{{ $order->order_number }}</h2>
     <span class="badge badge-{{ $meta['badge'] }}">{{ $meta['label'] }}</span>
     @if($order->tracking_number)
@@ -171,7 +334,7 @@
   @if($order->status !== 'cancelled')
   <div class="card od-mb" style="padding:12px 16px;">
     <div class="status-flow">
-      @foreach(['pending'=>'주문대기','confirmed'=>'주문확정','shipping'=>'배송중','delivered'=>'배송완료'] as $s => $lbl)
+      @foreach(['pending'=>'주문 대기','confirmed'=>'주문 확정','shipping'=>'배송중','delivered'=>'배송 완료'] as $s => $lbl)
         @php
           $isDone    = $curIdx !== false && array_search($s,$steps) < $curIdx;
           $isCurrent = $order->status === $s;
@@ -199,24 +362,33 @@
         <div class="card-header">
           <i class="bx bx-user" style="color:var(--primary);"></i>
           <span class="card-header-title">환자 정보</span>
-        </div>
-        <div class="card-body">
-          <div class="patient-card">
-            <div class="patient-avatar"><i class="bx bx-user"></i></div>
-            <div>
-              <div class="patient-name">{{ $order->patient?->name ?? '-' }}</div>
-              <div class="patient-detail">
-                {{ $order->patient?->masked_resident_no ?? '' }}
-                @if($order->patient?->mobile)
-                  &nbsp;·&nbsp; {{ $order->patient->mobile }}
-                @endif
-              </div>
-            </div>
             @if($order->patient)
               <a href="{{ route('patients.show', $order->patient) }}" class="btn btn-outline btn-sm" style="margin-left:auto;">
                 환자 상세
               </a>
             @endif
+        </div>
+        <div class="card-body">
+          <div class="patient-card">
+            <div class="od-box">
+              <div class="od-box-label">성명</div>
+              <div class="od-box-value patient-name">
+                <span class="patient-avatar"><i class="bx bx-user"></i></span>
+                {{ $order->patient?->name ?? '-' }}
+              </div>
+            </div>
+            <div class="od-box-pair">
+              <div class="od-box">
+                <div class="od-box-label">주민등록번호</div>
+                <div class="od-box-value patient-detail">{{ $order->patient?->masked_resident_no ?? '' }}</div>
+              </div>
+                @if($order->patient?->mobile)
+              <div class="od-box">
+                <div class="od-box-label">전화번호</div>
+                <div class="od-box-value">{{ $order->patient->mobile }}</div>
+              </div>
+                @endif
+            </div>
           </div>
         </div>
       </div>
@@ -236,35 +408,37 @@
         </div>
         <div class="card-body">
           @if($order->prescription?->items && $order->prescription->items->isNotEmpty())
-            {{-- 다중 제품 --}}
-            <table style="width:100%;border-collapse:collapse;">
-              <thead>
-                <tr style="background:var(--bg);">
-                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);">제품명</th>
-                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:center;">수량</th>
-                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:right;">보험가</th>
-                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:right;">본인부담</th>
-                </tr>
-              </thead>
-              <tbody>
+            {{-- 다중 제품 — 시안 148:6407: 제품 1건이 회색 상자 1개(1행 제품명 · 2행 수량|보험가|본인부담) --}}
+            <div class="od-boxes">
                 @foreach($order->prescription->items as $item)
-                <tr>
-                  <td style="padding:8px 10px;font-size:13px;">{{ $item->product_name }}</td>
-                  <td style="padding:8px 10px;font-size:13px;text-align:center;">{{ $item->quantity }}</td>
-                  <td style="padding:8px 10px;font-size:13px;text-align:right;">{{ number_format($item->insurance_price ?? 0) }}원</td>
-                  <td style="padding:8px 10px;font-size:13px;text-align:right;">{{ number_format($item->patient_copay ?? 0) }}원</td>
-                </tr>
+              <div class="od-box od-prod">
+                <div class="od-prod-row">
+                  <span class="od-prod-label">제품명</span>
+                  <span class="od-prod-value">{{ $item->product_name }}</span>
+                </div>
+                <div class="od-prod-row od-prod-metrics">
+                  <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $item->quantity }}</span></span>
+                  <span><span class="od-prod-label">보험가</span><span class="od-prod-value">{{ number_format($item->insurance_price ?? 0) }}원</span></span>
+                  <span><span class="od-prod-label">본인부담</span><span class="od-prod-value">{{ number_format($item->patient_copay ?? 0) }}원</span></span>
+                </div>
+              </div>
                 @endforeach
-              </tbody>
-            </table>
+            </div>
           @else
             {{-- 단일 제품 --}}
-            <dl class="info-rows">
-              <dt>제품명</dt><dd>{{ $order->product_name ?? '-' }}</dd>
-              <dt>제품코드</dt><dd>{{ $order->product_code ?? '-' }}</dd>
-              <dt>수량</dt><dd>{{ $order->quantity ?? 1 }}개</dd>
-              <dt>보험가 (단가)</dt><dd>{{ number_format($order->unit_price) }}원</dd>
-            </dl>
+            <div class="od-boxes">
+              <div class="od-box od-prod">
+                <div class="od-prod-row">
+                  <span class="od-prod-label">제품명</span>
+                  <span class="od-prod-value">{{ $order->product_name ?? '-' }}</span>
+                </div>
+                <div class="od-prod-row od-prod-metrics">
+                  <span><span class="od-prod-label">제품코드</span><span class="od-prod-value">{{ $order->product_code ?? '-' }}</span></span>
+                  <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $order->quantity ?? 1 }}개</span></span>
+                  <span><span class="od-prod-label">보험가 (단가)</span><span class="od-prod-value">{{ number_format($order->unit_price) }}원</span></span>
+                </div>
+              </div>
+            </div>
           @endif
         </div>
       </div>
@@ -276,26 +450,37 @@
           <span class="card-header-title">배송 정보</span>
         </div>
         <div class="card-body">
-          <dl class="info-rows">
-            <dt>배송지 주소</dt>
-            <dd>{{ $order->shipping_address ?? '-' }}</dd>
-            <dt>예상 배송일</dt>
-            <dd>{{ $order->estimated_delivery?->format('Y-m-d') ?? '-' }}</dd>
-            @if($order->delivered_at)
-              <dt>실제 배송 완료</dt>
-              <dd>{{ $order->delivered_at->format('Y-m-d H:i') }}</dd>
-            @endif
-          </dl>
+          {{-- 시안 158:171 — 배송지 주소 전폭 상자, 그 아래 [예상 배송일][운송장 번호] 2열 --}}
+          <div class="od-boxes">
+            <div class="od-box">
+              <div class="od-box-label">배송지 주소</div>
+              <div class="od-box-value">{{ $order->shipping_address ?? '-' }}</div>
+            </div>
+            <div class="od-box-pair">
+              <div class="od-box">
+                <div class="od-box-label">예상 배송일</div>
+                <div class="od-box-value">{{ $order->estimated_delivery?->format('Y-m-d') ?? '-' }}</div>
+              </div>
 
-          {{-- 운송장 입력 --}}
-          <div class="section-title" style="margin-top:16px;">운송장 번호</div>
-          <div class="tracking-row">
-            <input type="text" id="trackingInput" class="form-control"
-                   value="{{ $order->tracking_number }}"
-                   placeholder="운송장 번호 입력">
-            <button class="btn btn-primary btn-sm" onclick="saveTracking()">
-              <i class="bx bx-save"></i> 저장
-            </button>
+              {{-- 운송장 입력 --}}
+              <div class="od-box od-box-tracking">
+                <div class="section-title">운송장 번호</div>
+                <div class="tracking-row">
+                  <input type="text" id="trackingInput" class="form-control"
+                         value="{{ $order->tracking_number }}"
+                         placeholder="운송장 번호 입력">
+                  <button class="btn btn-primary btn-sm" onclick="saveTracking()">
+                    <i class="bx bx-save"></i> 저장
+                  </button>
+                </div>
+              </div>
+            </div>
+            @if($order->delivered_at)
+            <div class="od-box">
+              <div class="od-box-label">실제 배송 완료</div>
+              <div class="od-box-value">{{ $order->delivered_at->format('Y-m-d H:i') }}</div>
+            </div>
+            @endif
           </div>
         </div>
       </div>
@@ -321,10 +506,10 @@
             </div>
           @else
 
-          {{-- ── 세금계산서 ── --}}
-          <div style="margin-bottom:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <div style="font-size:12px;font-weight:700;color:var(--text-secondary);">
+          {{-- ── 세금계산서 ── 시안 158:577: 라벨 위 · 상태 값 아래 오른쪽인 회색 상자 --}}
+          <div class="od-receipt-group">
+            <div class="od-box od-receipt">
+              <div class="od-receipt-title">
                 <i class="bx bx-receipt"></i> 세금계산서
               </div>
               <span class="badge badge-{{ $tiInfo[1] }}">{{ $tiInfo[0] }}</span>
@@ -379,12 +564,12 @@
             @endif
           </div>
 
-          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+          <hr class="od-receipt-sep">
 
           {{-- ── 현금영수증 ── --}}
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <div style="font-size:12px;font-weight:700;color:var(--text-secondary);">
+          <div class="od-receipt-group">
+            <div class="od-box od-receipt">
+              <div class="od-receipt-title">
                 <i class="bx bx-money"></i> 현금영수증
               </div>
               <span class="badge badge-{{ $crInfo[1] }}">{{ $crInfo[0] }}</span>
@@ -447,7 +632,7 @@
           <span class="card-header-title">메모</span>
         </div>
         <div class="card-body">
-          <p style="font-size:13px;line-height:1.6;">{{ $order->note }}</p>
+          <p class="od-memo">{{ $order->note }}</p>
         </div>
       </div>
       @endif
@@ -490,6 +675,16 @@
         <div class="card-header">
           <i class="bx bx-hospital" style="color:var(--primary);"></i>
           <span class="card-header-title">NHIS 건강보험 청구</span>
+          {{-- 시안 158:577 — 청구 송신 버튼/안내문은 카드 머리글 오른쪽 --}}
+          @if($order->nhis_claim_status === 'pending' && $order->status === 'delivered')
+          <button class="btn btn-primary w-full" style="margin-left:auto;" onclick="submitNhis()">
+            <i class="bx bx-send"></i> NHIS 청구 송신
+          </button>
+          @elseif($order->nhis_claim_status === 'pending' && $order->status !== 'delivered')
+          <div class="od-head-note">
+            <i class="bx bx-info-circle"></i> 배송 완료 후 NHIS 청구가 가능합니다.
+          </div>
+          @endif
         </div>
         <div class="card-body">
           <div class="nhis-box">
@@ -520,16 +715,6 @@
             </div>
             @endif
           </div>
-
-          @if($order->nhis_claim_status === 'pending' && $order->status === 'delivered')
-          <button class="btn btn-primary w-full" style="margin-top:10px;" onclick="submitNhis()">
-            <i class="bx bx-send"></i> NHIS 청구 송신
-          </button>
-          @elseif($order->nhis_claim_status === 'pending' && $order->status !== 'delivered')
-          <div style="margin-top:10px;font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);text-align:center;">
-            배송 완료 후 NHIS 청구가 가능합니다.
-          </div>
-          @endif
         </div>
       </div>
 
@@ -625,8 +810,8 @@
               </div>
             @endif
           @else
-            {{-- 시안 158:171 — 미연동 안내는 12px/500 gray-600 (주황은 시안에 없다) --}}
-            <div style="padding:12px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
+            {{-- 시안 158:171 — 미연동 안내는 상자 없이 본문 가운데, 12px/500 gray-600 (주황은 시안에 없다) --}}
+            <div class="ww-empty">
               <i class="bx bx-time"></i> Withworks 미연동 상태입니다.
             </div>
           @endif
@@ -640,7 +825,8 @@
           <span class="card-header-title">상태 변경</span>
         </div>
         <div class="card-body">
-          <div style="display:flex;flex-direction:column;gap:8px;">
+          {{-- 시안 158:171 — 상태 변경 막대 h80 · r8 · pad 12 · 사이 8 --}}
+          <div class="od-status-actions" style="display:flex;flex-direction:column;gap:8px;">
             @if($order->status === 'pending')
               <button class="btn btn-primary w-full" onclick="changeStatus('confirmed')">
                 <i class="bx bx-check-circle"></i> 주문 확정
@@ -657,8 +843,7 @@
               </button>
             @endif
             @if(!in_array($order->status, ['delivered','cancelled']))
-              <button class="btn btn-danger w-full" onclick="changeStatus('cancelled')"
-                      style="margin-top:4px;">
+              <button class="btn btn-danger w-full" onclick="changeStatus('cancelled')">
                 <i class="bx bx-block"></i> 주문 취소
               </button>
             @endif
@@ -678,12 +863,27 @@
 
       {{-- 주문 메타 --}}
       <div class="card">
+        {{-- 시안 158:933 — 카드 제목 '정보' --}}
+        <div class="card-header">
+          <span class="card-header-title">정보</span>
+        </div>
         <div class="card-body">
-          <dl class="info-rows">
-            <dt>생성자</dt><dd>{{ $order->creator?->name ?? '-' }}</dd>
-            <dt>생성일시</dt><dd>{{ $order->created_at->format('Y-m-d H:i') }}</dd>
-            <dt>최종 수정</dt><dd>{{ $order->updated_at->format('Y-m-d H:i') }}</dd>
-          </dl>
+          <div class="od-boxes">
+            <div class="od-box">
+              <div class="od-box-label">생성자</div>
+              <div class="od-box-value">{{ $order->creator?->name ?? '-' }}</div>
+            </div>
+            <div class="od-box-pair">
+              <div class="od-box">
+                <div class="od-box-label">생성일시</div>
+                <div class="od-box-value">{{ $order->created_at->format('Y-m-d H:i') }}</div>
+              </div>
+              <div class="od-box">
+                <div class="od-box-label">최종 수정</div>
+                <div class="od-box-value">{{ $order->updated_at->format('Y-m-d H:i') }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

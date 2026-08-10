@@ -16,29 +16,51 @@
 /* ── 상단 컨트롤 줄 (243:433 Frame 48101583 — h32 · gap 10) ── */
 .rp-topbar      { display:flex; align-items:center; justify-content:space-between; gap:10px 12px; flex-wrap:wrap; min-height:32px; }
 .rp-topbar-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+/* 시안 상단바 버튼(icon-header-setting 61×32 · 47×32 · 91×32)은 전부 bg #FFFFFF · r8 이고
+   테두리(bd) 항목이 없다. 전역 .ds-btn 의 bd 1px gray-200 · min-width 60 을 이 영역에서만 걷어낸다.
+   결과바(.ds-grid-bar)·검색 카드에는 닿지 않는다. */
+.rp-topbar .ds-btn { border-color:transparent; min-width:0; }
+/* hover 배경은 전역 .ds-btn:hover(gray-50) · .ds-btn-primary:hover(primary-light) 를 그대로 쓴다.
+   여기서 .rp-topbar .ds-btn:hover 로 덮으면 '오늘'(ds-btn-primary) 의 primary hover 까지 회색이 된다. */
 
 /* ── 월 네비 — 시안 311×32, 버튼 사이 gap 8 ── */
 .month-nav { display:flex; align-items:center; gap:8px; }
-/* 월 라벨 — 시안 118×26 · pad 0/4 · gap 6 · 16px/700 · lh26 */
+/* 시안 '이전 월'·'다음 월' 은 61×32 로 텍스트(37×21) 하나뿐 — 화살표 아이콘이 없다.
+   아이콘은 보존 규칙상 지우지 않고 gap 8→4 · 12px→11px 로 줄여 79→약 74 로 좁힌다. */
+.month-nav .ds-btn   { gap:4px; }
+.month-nav .ds-btn i { font-size:11px; }
+/* 월 라벨 — 시안 118×26 · pad 0/4 · gap 8 (글자묶음 86 + chevron 16×16) · 16px/700 · lh26 */
 .month-nav .month-label {
-  display:inline-flex; align-items:center; gap:6px;
+  display:inline-flex; align-items:center; gap:8px;
   height:26px; padding:0 4px; border-radius:8px;
   font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000);
   cursor:pointer; user-select:none; white-space:nowrap;
   transition:var(--transition);
 }
 .month-nav .month-label:hover { background:var(--primary-light); color:var(--primary); }
-.month-nav .month-label i { font-size:12px; }
+/* 시안 글자묶음 86×26 = "2026년"(55) + gap 6 + "8월"(25) */
+.month-nav .month-label-text { display:inline-flex; align-items:center; gap:6px; }
+/* 시안 chevron 자리 16×16 */
+.month-nav .month-label i {
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:16px; height:16px; font-size:12px;
+}
 /* 월 네비와 건수 사이 구분점 — 시안 4×4 정원 */
 .rp-sep { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
 /* 이달 건수 — 시안 45×21 · 13px/500, 숫자만 primary-400 */
 .rp-month-count        { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); white-space:nowrap; }
 .rp-month-count strong { font-weight:500; color:var(--primary-400); }
 
-/* ── 뷰 전환 — 시안 91×32 버튼 두 개 · gap 8. 규격은 .ds-btn 을 그대로 쓴다 ── */
-.view-tabs { display:flex; align-items:center; gap:8px; }
+/* ── 뷰 전환 — 시안 91×32 버튼 두 개 · gap 8 (pad 0/12 · 아이콘 14×14 · 라벨 45×21) ── */
+.view-tabs  { display:flex; align-items:center; gap:8px; }
+.view-tab i { font-size:14px; }
+/* 시안은 두 탭이 똑같이 91×32 (묶음 190×32) 다. 라벨이 시안보다 짧아 80/70.5 로 어긋나던 것을
+   시안 실측값으로 고정한다. 위 .rp-topbar .ds-btn{min-width:0} 을 이기려면 같은 (0,2,0) 이어야 한다. */
+.rp-topbar .view-tab { min-width:91px; }
+/* 시안(243:53 · 243:433)에는 활성 뷰 구분이 없다 — 테두리는 시안대로 지우고(위 .rp-topbar 규칙),
+   어느 뷰인지 알 수 없어지지 않도록 배경·글자색만 남긴다. 디자이너 확인 대상. */
 .view-tab.active,
-.view-tab.active:hover { border-color:var(--primary); background:var(--primary-light); color:var(--primary); }
+.view-tab.active:hover { background:var(--primary-light); color:var(--primary); }
 
 /* ── 년월 피커 팝오버 (시안에 없는 화면 전용 UI — DS 토큰으로만 정리) ── */
 #ymPicker {
@@ -101,6 +123,8 @@
 .cal-cell.cal-selected  { background:var(--primary-light); }
 .cal-day { font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000); }
 .cal-grid > .cal-cell:nth-child(7n+1) .cal-day { color:var(--alert-500); }   /* 일요일 */
+/* 지난달·다음달 칸도 시안은 날짜 숫자를 13px/400 lh21 gray-400 으로 보여준다 (일요일 빨강보다 뒤) */
+.cal-grid > .cal-cell.cal-empty .cal-day { color:var(--gray-400); }
 /* 오늘 — 시안은 배경 대신 날짜 옆 'Today' 알약(r999 · pad 0/6 · 11px/700) */
 .cal-cell.cal-today .cal-day::after {
   content:'Today'; display:inline-flex; align-items:center;
@@ -108,10 +132,12 @@
   background:var(--primary); color:var(--gray-0);
   font-size:11px; font-weight:700; line-height:18px;
 }
-/* 건수 알약 — 시안 r6 · pad 2/8 · gap 2 · bd 1px gray-200, 숫자 13/700 primary */
+/* 건수 알약 — 시안 38×25 · r6 · pad 2/8 · gap 2 · bd 1px gray-200, 숫자 13/700 primary.
+   시안 25 는 테두리 포함 높이라 pad 2 를 1 로 낮춰 1+21+1+2 = 25 로 맞춘다. */
 .cal-count-pill {
   display:inline-flex; align-items:center; gap:2px; align-self:flex-start;
-  padding:2px 8px; border-radius:6px;
+  height:25px; box-sizing:border-box;
+  padding:1px 8px; border-radius:6px;
   background:var(--gray-0); border:1px solid var(--gray-200);
 }
 .cal-count       { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
@@ -141,19 +167,45 @@
 /* 본문 — 시안 pad 16 · 행 간격 8 */
 #dayPanelBody { display:flex; flex-direction:column; gap:8px; padding:16px; }
 
-/* ── 날짜 패널 목록 행 — 시안 358×53 · r8 · pad 8/12 · gap 8 · bd 1px gray-200 ── */
+/* ── 날짜 패널 목록 행 — 시안 358×53 · r8 · pad 8/12 · gap 8 · bd 1px gray-200 ──
+   시안은 가로 3단이다: 아바타 28×28 / 세로 스택 237×37 / 상태 배지 53×22.
+   세로 스택은 1줄 19(이름 · RX) + 2줄 18(병원 · 2×2 점 · 일시), 줄 사이 간격 0. */
 .rx-row {
-  display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px;
-  padding:8px 12px; border:1px solid var(--gray-200); border-radius:8px;
+  display:flex; align-items:center; gap:8px;
+  /* 시안 53 은 테두리 포함 높이다 — pad 8 을 7 로 낮춰 1+7+37+7+1 = 53 으로 맞춘다 */
+  padding:7px 12px; border:1px solid var(--gray-200); border-radius:8px;
   background:var(--gray-0); color:var(--gray-1000); text-decoration:none;
   transition:background .1s;
 }
 .rx-row:hover      { background:var(--gray-50); }
+/* 아바타 — 시안 28×28 · r6 · bg gray-100 · 안쪽 24×24 환자 아이콘 */
+.rx-row-avatar {
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:28px; height:28px; border-radius:6px;
+  background:var(--gray-100); color:var(--gray-500); font-size:14px;
+}
+.rx-row-main       { display:flex; flex-direction:column; flex:1; min-width:0; }
+.rx-row-line1      { display:flex; align-items:center; gap:4px; min-width:0; overflow:hidden; }
+.rx-row-line2      { display:flex; align-items:center; gap:4px; min-width:0; }
 .rx-row-num        { font-size:12px; font-weight:500; line-height:19px; color:var(--primary); flex-shrink:0; }
-.rx-row-patient    { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000); flex-shrink:0; }
+/* 환자명이 길면(OCR 값이라 길이가 들쭉날쭉하다) 스스로 줄인다 — 병원명과 같은 처리.
+   flex-shrink:0 이면 RX 번호와 상태 배지 위로 글자가 겹쳐 나온다. */
+.rx-row-patient    { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .rx-row-hospital   { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500);
-  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 병원과 일시 사이 구분점 — 시안 Rectangle 2×2 · r999 · gray-300 */
+.rx-row-dot        { width:2px; height:2px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
+/* 일시 — 시안 11px/500 · lh18 · gray-500 (옛 11px/400 gray-400 에서 교정) */
+.rx-row-date       { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500);
+  flex-shrink:0; white-space:nowrap; }
 .rx-row-badge      { flex-shrink:0; }
+/* 시안에 없는 이동 화살표 — 보존 규칙상 남기고 배지 오른쪽 끝으로 뺀다 */
+.rx-row-go         { flex-shrink:0; font-size:11px; color:var(--gray-400); }
+
+/* 결과바 '전체 N건' — 시안 16px/700. 부트스트랩 b{font-weight:bolder} 가 700 을 900 으로 올린다.
+   전역 .ds-grid-total b 는 색만 잡고 있어 이 화면에서만 굵기를 되돌린다(전역 보고 대상). */
+.ds-grid-total b { font-weight:700; }
 
 @media (max-width: 1279px) {
   .rp-cal-layout { flex-direction:column; }
@@ -221,8 +273,8 @@ window.HELP_TOUR_STEPS = [
       </a>
       <div style="position:relative;">
         <span class="month-label" id="ymTrigger" onclick="toggleYmPicker(this)">
-          {{ $year }}년 {{ $month }}월
-          <i class="fa-solid fa-caret-down"></i>
+          <span class="month-label-text"><span>{{ $year }}년</span><span>{{ $month }}월</span></span>
+          <i class="fa-solid fa-chevron-down"></i>
         </span>
         {{-- 년월 피커 --}}
         <div id="ymPicker">
@@ -250,10 +302,12 @@ window.HELP_TOUR_STEPS = [
   <div class="view-tabs">
     <a class="ds-btn view-tab {{ $view === 'calendar' ? 'active' : '' }}"
        href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'calendar']) }}">
+      {{-- 시안 라벨은 '캘린더뷰' 지만 화면 낱말 '캘린더' 를 잃지 않도록 그대로 둔다 --}}
       <i class="fa-regular fa-calendar"></i> 캘린더
     </a>
     <a class="ds-btn view-tab {{ $view === 'list' ? 'active' : '' }}"
        href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}">
+      {{-- 시안 라벨은 '테이블뷰' 지만 화면 낱말 '목록' 을 잃지 않도록 그대로 둔다 --}}
       <i class="fa-solid fa-list"></i> 목록
     </a>
   </div>
@@ -276,9 +330,10 @@ window.HELP_TOUR_STEPS = [
         $today = now()->toDateString();
       @endphp
 
-      {{-- 앞 빈칸 --}}
+      {{-- 앞 빈칸 — 시안은 지난달 날짜(26·27…31)를 gray-400 으로 보여준다 --}}
+      @php $prevMonthLastDay = (int) $startOfMonth->copy()->subDay()->day; @endphp
       @for($i = 0; $i < $firstDow; $i++)
-        <div class="cal-cell cal-empty"></div>
+        <div class="cal-cell cal-empty"><div class="cal-day">{{ $prevMonthLastDay - $firstDow + 1 + $i }}</div></div>
       @endfor
 
       {{-- 날짜 셀 --}}
@@ -298,13 +353,13 @@ window.HELP_TOUR_STEPS = [
         </div>
       @endfor
 
-      {{-- 뒤 빈칸 --}}
+      {{-- 뒤 빈칸 — 시안은 다음달 날짜(1·2…)를 gray-400 으로 보여준다 --}}
       @php
         $lastDow  = (int)$endOfMonth->dayOfWeek;
         $trailing = $lastDow === 6 ? 0 : 6 - $lastDow;
       @endphp
       @for($i = 0; $i < $trailing; $i++)
-        <div class="cal-cell cal-empty"></div>
+        <div class="cal-cell cal-empty"><div class="cal-day">{{ $i + 1 }}</div></div>
       @endfor
     </div>
   </div>
@@ -366,18 +421,28 @@ function loadDay(cell) {
       review_needed:'bg-label-danger', approved:'bg-label-primary', rejected:'bg-label-danger', ordered:'bg-label-primary'
     };
 
+    // 시안 358×53 3단 구조: 아바타 28×28 / 세로 스택(이름·RX / 병원·점·일시) / 상태 배지 53×22.
+    // 파일 아이콘과 이동 화살표는 시안에 없지만 지우지 않고 자리만 옮긴다.
     body.innerHTML = data.map(item => `
       <a class="rx-row" href="${item.url}">
-        <span class="rx-row-num"><i class="fa-solid fa-file-medical" style="color:var(--primary);margin-right:4px;"></i>${item.rx_number}</span>
-        <span class="rx-row-patient">${item.patient_name}</span>
-        <span class="rx-row-hospital">${item.hospital}</span>
+        <span class="rx-row-avatar"><i class="fa-solid fa-user"></i></span>
+        <span class="rx-row-main">
+          <span class="rx-row-line1">
+            <span class="rx-row-patient">${item.patient_name}</span>
+            <span class="rx-row-num"><i class="fa-solid fa-file-medical" style="color:var(--primary);margin-right:4px;"></i>${item.rx_number}</span>
+          </span>
+          <span class="rx-row-line2">
+            <span class="rx-row-hospital">${item.hospital}</span>
+            <span class="rx-row-dot"></span>
+            <span class="rx-row-date">${item.created_at}</span>
+          </span>
+        </span>
         <span class="rx-row-badge">
           <span class="badge ${statusBadge[item.status] ?? 'bg-label-secondary'}">
             ${item.status_label}
           </span>
         </span>
-        <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${item.created_at}</span>
-        <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:11px;flex-shrink:0;"></i>
+        <i class="fa-solid fa-chevron-right rx-row-go"></i>
       </a>
     `).join('');
   })
