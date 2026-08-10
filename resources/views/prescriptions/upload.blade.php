@@ -42,6 +42,15 @@
                   border-bottom:1px solid var(--gray-200); flex-shrink:0; }
   .up-card-title { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-1000); }
   .up-card-body { padding:16px; display:flex; flex-direction:column; gap:24px; }
+  /* 카드 머리 좌측 묶음 — Figma 128:2699: 제목과 제한 배지 사이 gap 12, 배지끼리 gap 6 */
+  .up-head-left  { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+  .up-head-right { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .up-head-limits { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  /* 업로드 제한 배지 — h22 · r999 · pad 2/8 · 11/500 · gray-100 바탕 */
+  .up-limit { display:inline-flex; align-items:center; height:22px; padding:2px 8px;
+              border-radius:999px; background:var(--gray-100);
+              font-size:11px; font-weight:500; line-height:18px; color:var(--gray-800);
+              white-space:nowrap; }
   /* 헤더 우측 작은 버튼 — 높이 28, radius 8 */
   .up-head-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
                  height:28px; padding:0 12px; border-radius:8px;
@@ -215,13 +224,25 @@
 
     <div class="up-card">
       <div class="up-card-head">
-        <span class="up-card-title" style="flex:1;">처방자료 업로드</span>
-        @if($reviewPending > 0)
-        <span class="up-head-alert">
-          <i class="fa-solid fa-triangle-exclamation" style="font-size:12px;"></i>검수 대기 {{ $reviewPending }}건
-        </span>
-        @endif
-        <a href="{{ route('prescriptions.index') }}" class="up-head-btn">처방전 목록</a>
+        <div class="up-head-left">
+          <span class="up-card-title">처방자료 업로드</span>
+          {{-- 업로드 제한 배지 — 시안 128:2699. 문구는 실제 제한과 같다:
+               컨트롤러 max:10 · max:50240(KB) · mimes:jpg,jpeg,png,pdf,heic,
+               화면 JS 도 10개 / 50MB 에서 막는다. --}}
+          <span class="up-head-limits">
+            <span class="up-limit">최대 50MB</span>
+            <span class="up-limit">JPG/PNG/PDF/HEIC</span>
+            <span class="up-limit">최대 10개</span>
+          </span>
+        </div>
+        <div class="up-head-right">
+          @if($reviewPending > 0)
+          <span class="up-head-alert">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:12px;"></i>검수 대기 {{ $reviewPending }}건
+          </span>
+          @endif
+          <a href="{{ route('prescriptions.index') }}" class="up-head-btn">처방전 목록</a>
+        </div>
       </div>
       <div class="up-card-body">
         <form id="uploadForm" method="POST" action="{{ route('prescriptions.store') }}" enctype="multipart/form-data"
