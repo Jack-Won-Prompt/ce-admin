@@ -16,52 +16,60 @@
   .od-tab:hover { color:var(--primary); }
   .od-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
   /* 탭 사용 시 좌우 그리드를 단일 흐름으로(카드가 순서대로) */
-  .order-grid.od-flat { display:block !important; }
+  .order-grid.od-flat { display:block; }
   .order-grid.od-flat > div { display:contents; }
 
+  /* 카드 사이 간격 — 시안 카드 gap 12 (죽은 유틸리티 mb-4 를 대신한다) */
+  .od-mb { margin-bottom: 12px; }
+
   .info-rows dt {
-    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
     margin-bottom: 2px; margin-top: 10px;
   }
   .info-rows dt:first-child { margin-top: 0; }
-  .info-rows dd { font-size: 13px; font-weight: 600; margin: 0; }
+  .info-rows dd { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin: 0; }
 
+  /* 전역 .section-title 이 uppercase · letter-spacing .6px · ::after 채움선을 걸어 둔다.
+     여기서 값만 덮으면 그 셋이 살아남아 필드 라벨에 줄이 두 개 생긴다 — 함께 끈다. */
   .section-title {
-    font-size: 12px; font-weight: 700; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: .5px;
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
+    text-transform: none; letter-spacing: 0;
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
     margin-bottom: 12px;
   }
+  .section-title::after { content: none; }
 
   .amount-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* 시안 148:6407 — 금액 박스 r8 · pad 12 · gap 8 · bg gray-100 · 라벨/값 13px/500 */
   .amount-box {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 10px 12px; text-align: center;
+    background: var(--gray-100); border: 1px solid var(--gray-100);
+    border-radius: var(--radius); padding: 12px; text-align: left;
   }
-  .amount-box .label { font-size: 10px; color: var(--text-muted); font-weight: 600; }
-  .amount-box .value { font-size: 15px; font-weight: 800; margin-top: 4px; }
+  .amount-box .label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .amount-box .value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin-top: 8px; }
   .amount-box.highlight { border-color: var(--primary); background: var(--primary-light); }
+  .amount-box.highlight .label { color: var(--primary); }
   .amount-box.highlight .value { color: var(--primary); }
 
-  .status-flow { display: flex; align-items: center; gap: 0; margin: 14px 0; }
+  .status-flow { display: flex; align-items: center; gap: 0; margin: 12px 0; }
   .status-step {
-    flex: 1; text-align: center; font-size: 11px; font-weight: 600;
-    color: var(--text-muted); position: relative;
+    flex: 1; text-align: center; font-size: 13px; font-weight: 700; line-height: 21px;
+    color: var(--gray-400); position: relative;
   }
   .status-step::after {
     content: '';
     position: absolute; left: 50%; top: 12px;
-    width: 100%; height: 2px; background: var(--border); z-index: 0;
+    width: 100%; border-top: 1px solid var(--gray-300); z-index: 0;
   }
   .status-step:last-child::after { display:none; }
   .status-step .dot {
-    width: 24px; height: 24px; border-radius: 50%;
-    background: var(--border); color: #fff; font-size: 10px;
+    width: 24px; height: 24px; border-radius: 999px;
+    background: var(--gray-300); color: #fff; font-size: 10px;
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 4px; position: relative; z-index: 1;
+    margin: 0 auto 8px; position: relative; z-index: 1;
   }
-  .status-step.done .dot   { background: var(--success); }
-  .status-step.done        { color: var(--success); }
+  .status-step.done .dot   { background: var(--primary); }
+  .status-step.done        { color: var(--primary); }
   .status-step.current .dot { background: var(--primary); }
   .status-step.current     { color: var(--primary); }
   .status-step.cancelled .dot { background: var(--danger); }
@@ -72,8 +80,8 @@
   }
   .nhis-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .nhis-row:last-child { margin-bottom: 0; }
-  .nhis-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
-  .nhis-value { font-size: 13px; font-weight: 700; }
+  .nhis-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .nhis-value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); }
 
   /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
   .action-footer {
@@ -93,9 +101,9 @@
     font-size: 13px;
   }
   .receipt-row:last-child { border-bottom: none; }
-  .receipt-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-  .receipt-value { font-weight: 700; }
-  .receipt-issued   { color: var(--success); }
+  .receipt-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
+  .receipt-value { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); }
+  .receipt-issued   { color: var(--primary); }
   .receipt-cancelled{ color: var(--danger); }
   .receipt-none     { color: var(--text-muted); }
 
@@ -118,16 +126,16 @@
   .modal-title  { font-size: 14px; font-weight: 700; }
   .modal-body   { padding: 18px; }
   .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-  .btn-close-modal { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-muted); }
+  .btn-close-modal { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
 
-  .amount-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .amount-hint { font-size: 12px; font-weight: 400; line-height: 19px; color: var(--gray-600); margin-top: 4px; }
   .tax-calc-row { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; font-size: 12px; }
   .tax-calc-row b { color: var(--primary); }
 
   .ww-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .ww-02 { background:var(--primary-light); color:var(--primary); }
   .ww-03,.ww-51 { background:var(--primary-light); color:var(--primary); }
-  .ww-04,.ww-52 { background:var(--warning-light); color:var(--warning); }
+  .ww-04,.ww-52 { background:var(--alert-100); color:var(--alert-500); }
   .ww-05 { background:var(--primary-light); color:var(--primary); }
   .ww-06,.ww-99 { background:var(--border-light); color:var(--text-muted); }
 </style>
@@ -150,10 +158,10 @@
 
   {{-- 주문 번호 헤더 --}}
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <h2 style="font-size:20px;font-weight:800;letter-spacing:.5px;">{{ $order->order_number }}</h2>
+    <h2 style="font-size:16px;font-weight:700;line-height:26px;color:var(--gray-1000);">{{ $order->order_number }}</h2>
     <span class="badge badge-{{ $meta['badge'] }}">{{ $meta['label'] }}</span>
     @if($order->tracking_number)
-      <span style="font-size:12px;color:var(--text-muted);">
+      <span style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
         <i class="bx bx-truck"></i> 운송장: <strong>{{ $order->tracking_number }}</strong>
       </span>
     @endif
@@ -161,7 +169,7 @@
 
   {{-- 진행 상태 표시 --}}
   @if($order->status !== 'cancelled')
-  <div class="card mb-4" style="padding:16px 24px;">
+  <div class="card od-mb" style="padding:12px 16px;">
     <div class="status-flow">
       @foreach(['pending'=>'주문대기','confirmed'=>'주문확정','shipping'=>'배송중','delivered'=>'배송완료'] as $s => $lbl)
         @php
@@ -171,8 +179,8 @@
         <div class="status-step {{ $isDone ? 'done' : ($isCurrent ? 'current' : '') }}">
           <div class="dot">
             @if($isDone) <i class="bx bx-check" style="font-size:11px;"></i>
-            @elseif($isCurrent) <i class="bx bxs-circle" style="font-size:7px;"></i>
-            @else <i class="bx bxs-circle" style="font-size:7px;opacity:.3;"></i>
+            @elseif($isCurrent) <i class="bx bxs-circle" style="font-size:10px;"></i>
+            @else <i class="bx bxs-circle" style="font-size:10px;opacity:.3;"></i>
             @endif
           </div>
           {{ $lbl }}
@@ -187,7 +195,7 @@
     <div>
 
       {{-- 환자 정보 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-user" style="color:var(--primary);"></i>
           <span class="card-header-title">환자 정보</span>
@@ -214,7 +222,7 @@
       </div>
 
       {{-- 제품 / 처방전 정보 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-box" style="color:var(--primary);"></i>
           <span class="card-header-title">제품 정보</span>
@@ -232,10 +240,10 @@
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="background:var(--bg);">
-                  <th style="padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);">제품명</th>
-                  <th style="padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:center;">수량</th>
-                  <th style="padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right;">보험가</th>
-                  <th style="padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);text-align:right;">본인부담</th>
+                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);">제품명</th>
+                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:center;">수량</th>
+                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:right;">보험가</th>
+                  <th style="padding:8px 10px;font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);border-bottom:1px solid var(--border);text-align:right;">본인부담</th>
                 </tr>
               </thead>
               <tbody>
@@ -262,7 +270,7 @@
       </div>
 
       {{-- 배송 정보 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-truck" style="color:var(--primary);"></i>
           <span class="card-header-title">배송 정보</span>
@@ -301,9 +309,9 @@
         $crInfo        = \App\Models\Order::CASH_RECEIPT_STATUS_LABELS[$crStatus] ?? ['미발행','secondary'];
         $crTypeLabel   = \App\Models\Order::CASH_RECEIPT_TYPE_LABELS[$order->cash_receipt_type ?? ''] ?? '';
       @endphp
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-receipt" style="color:var(--success);"></i>
+          <i class="bx bx-receipt" style="color:var(--primary);"></i>
           <span class="card-header-title">세금계산서 / 현금영수증</span>
         </div>
         <div class="card-body">
@@ -364,7 +372,7 @@
                 <i class="bx bx-revision"></i> 재발행
               </button>
             @else
-              <div style="font-size:12px;color:var(--text-muted);padding:6px 0;">세금계산서가 발행되지 않았습니다.</div>
+              <div style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);padding:6px 0;">세금계산서가 발행되지 않았습니다.</div>
               <button class="btn btn-primary btn-sm" style="margin-top:4px;" onclick="openTaxModal()">
                 <i class="bx bx-receipt"></i> 세금계산서 발행
               </button>
@@ -420,7 +428,7 @@
                 <i class="bx bx-revision"></i> 재발행
               </button>
             @else
-              <div style="font-size:12px;color:var(--text-muted);padding:6px 0;">현금영수증이 발행되지 않았습니다.</div>
+              <div style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);padding:6px 0;">현금영수증이 발행되지 않았습니다.</div>
               <button class="btn btn-primary btn-sm" style="margin-top:4px;" onclick="openCashModal()">
                 <i class="bx bx-money"></i> 현금영수증 발행
               </button>
@@ -433,9 +441,9 @@
 
       {{-- 메모 --}}
       @if($order->note)
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-note" style="color:var(--warning);"></i>
+          <i class="bx bx-note" style="color:var(--primary);"></i>
           <span class="card-header-title">메모</span>
         </div>
         <div class="card-body">
@@ -450,20 +458,20 @@
     <div>
 
       {{-- 금액 요약 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-won" style="color:var(--success);"></i>
+          <i class="bx bx-won" style="color:var(--primary);"></i>
           <span class="card-header-title">금액 정보</span>
         </div>
         <div class="card-body">
           <div class="amount-grid">
             <div class="amount-box">
               <div class="label">건보 청구액</div>
-              <div class="value" style="color:var(--info);">{{ number_format($order->nhis_amount) }}원</div>
+              <div class="value">{{ number_format($order->nhis_amount) }}원</div>
             </div>
             <div class="amount-box">
               <div class="label">환자 본인부담</div>
-              <div class="value" style="color:var(--warning);">{{ number_format($order->patient_copay) }}원</div>
+              <div class="value">{{ number_format($order->patient_copay) }}원</div>
             </div>
             <div class="amount-box">
               <div class="label">배송비</div>
@@ -478,9 +486,9 @@
       </div>
 
       {{-- NHIS 청구 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-hospital" style="color:var(--purple);"></i>
+          <i class="bx bx-hospital" style="color:var(--primary);"></i>
           <span class="card-header-title">NHIS 건강보험 청구</span>
         </div>
         <div class="card-body">
@@ -518,7 +526,7 @@
             <i class="bx bx-send"></i> NHIS 청구 송신
           </button>
           @elseif($order->nhis_claim_status === 'pending' && $order->status !== 'delivered')
-          <div style="margin-top:10px;font-size:12px;color:var(--text-muted);text-align:center;">
+          <div style="margin-top:10px;font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);text-align:center;">
             배송 완료 후 NHIS 청구가 가능합니다.
           </div>
           @endif
@@ -526,16 +534,16 @@
       </div>
 
       {{-- Withworks 연동 상태 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-link-alt" style="color:var(--purple);"></i>
+          <i class="bx bx-link-alt" style="color:var(--primary);"></i>
           <span class="card-header-title">Withworks 출고 현황</span>
         </div>
         <div class="card-body">
           @if($order->withworks_so_no)
             <div style="margin-bottom:10px;">
-              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">SO 번호</div>
-              <div style="font-size:14px;font-weight:800;color:var(--primary);">{{ $order->withworks_so_no }}</div>
+              <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">SO 번호</div>
+              <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $order->withworks_so_no }}</div>
             </div>
             @if($withworksStatus)
               @php
@@ -559,65 +567,66 @@
                 }
               @endphp
               <div style="margin-bottom:10px;">
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">SO 상태</div>
+                <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">SO 상태</div>
                 <span class="ww-badge {{ $wwCls }}">{{ $withworksStatus['status_label'] ?? '-' }}</span>
               </div>
               @if(!empty($withworksStatus['so_date']))
               <div style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">주문일</div>
+                <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">주문일</div>
                 <div style="font-size:13px;font-weight:500;">{{ $withworksStatus['so_date'] }}</div>
               </div>
               @endif
               @if(!empty($withworksStatus['delivery_date']))
               <div style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">희망 배송일</div>
+                <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">희망 배송일</div>
                 <div style="font-size:13px;font-weight:500;">{{ $withworksStatus['delivery_date'] }}</div>
               </div>
               @endif
               @if(!empty($withworksStatus['so_amount']))
               <div style="margin-bottom:10px;">
-                <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">SO 금액</div>
+                <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">SO 금액</div>
                 <div style="font-size:13px;font-weight:700;">{{ number_format($withworksStatus['so_amount']) }}원</div>
               </div>
               @endif
               @if($wwShip)
               <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
-                <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">출고 현황</div>
+                <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);margin-bottom:8px;">출고 현황</div>
                 <div style="margin-bottom:8px;">
-                  <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">출고번호</div>
+                  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">출고번호</div>
                   <div style="font-size:13px;font-weight:700;color:var(--primary);">{{ $wwShip['ship_no'] }}</div>
                 </div>
                 <div style="margin-bottom:8px;">
-                  <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">출고 상태</div>
+                  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">출고 상태</div>
                   <span class="badge badge-{{ $shipBadge }}">{{ $wwShip['ship_status_label'] }}</span>
                 </div>
                 @if(!empty($wwShip['schedule_date']))
                 <div style="margin-bottom:8px;">
-                  <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">출고 예정일</div>
+                  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">출고 예정일</div>
                   <div style="font-size:13px;font-weight:500;">{{ $wwShip['schedule_date'] }}</div>
                 </div>
                 @endif
                 @if(!empty($wwShip['ship_complete_date']))
                 <div style="margin-bottom:8px;">
-                  <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">출고 완료일</div>
+                  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">출고 완료일</div>
                   <div style="font-size:13px;font-weight:500;">{{ $wwShip['ship_complete_date'] }}</div>
                 </div>
                 @endif
                 @if(!empty($wwShip['tracking_no']))
                 <div>
-                  <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">운송장번호</div>
+                  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">운송장번호</div>
                   <div style="font-size:13px;font-weight:700;font-family:monospace;">{{ $wwShip['tracking_no'] }}</div>
                 </div>
                 @endif
               </div>
               @endif
             @else
-              <div style="padding:10px 12px;background:var(--border-light);border-radius:var(--radius);font-size:12px;color:var(--text-muted);">
+              <div style="padding:12px;background:var(--gray-100);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
                 <i class="bx bx-info-circle"></i> Withworks 상태를 불러올 수 없습니다.
               </div>
             @endif
           @else
-            <div style="padding:10px 12px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:12px;color:var(--warning);font-weight:600;">
+            {{-- 시안 158:171 — 미연동 안내는 12px/500 gray-600 (주황은 시안에 없다) --}}
+            <div style="padding:12px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
               <i class="bx bx-time"></i> Withworks 미연동 상태입니다.
             </div>
           @endif
@@ -625,9 +634,9 @@
       </div>
 
       {{-- 주문 상태 변경 --}}
-      <div class="card mb-4">
+      <div class="card od-mb">
         <div class="card-header">
-          <i class="bx bx-refresh" style="color:var(--warning);"></i>
+          <i class="bx bx-refresh" style="color:var(--primary);"></i>
           <span class="card-header-title">상태 변경</span>
         </div>
         <div class="card-body">
@@ -643,7 +652,7 @@
               </button>
             @endif
             @if($order->status === 'shipping')
-              <button class="btn btn-success w-full" onclick="changeStatus('delivered')">
+              <button class="btn btn-primary w-full" onclick="changeStatus('delivered')">
                 <i class="bx bx-package"></i> 배송 완료 처리
               </button>
             @endif
@@ -654,12 +663,12 @@
               </button>
             @endif
             @if($order->status === 'delivered')
-              <div style="text-align:center;color:var(--success);font-size:13px;font-weight:700;padding:8px;">
+              <div style="text-align:center;color:var(--primary);font-size:13px;font-weight:700;line-height:21px;padding:8px;">
                 <i class="bx bx-check-circle"></i> 배송 완료된 주문입니다.
               </div>
             @endif
             @if($order->status === 'cancelled')
-              <div style="text-align:center;color:var(--danger);font-size:13px;font-weight:700;padding:8px;">
+              <div style="text-align:center;color:var(--alert-500);font-size:13px;font-weight:700;line-height:21px;padding:8px;">
                 <i class="bx bx-block"></i> 취소된 주문입니다.
               </div>
             @endif
@@ -684,7 +693,7 @@
 
 {{-- ── 하단 고정 액션 바 ── --}}
 <div class="action-footer">
-  <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">
+  <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-800);">
     <span class="badge badge-{{ $meta['badge'] }}">{{ $meta['label'] }}</span>
     &nbsp; {{ $order->order_number }}
     &nbsp;&middot;&nbsp; {{ $order->patient?->name ?? '-' }}
@@ -706,7 +715,7 @@
 <div class="modal-overlay" id="taxModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title"><i class="bx bx-receipt" style="color:var(--success);"></i> 세금계산서 발행</div>
+      <div class="modal-title"><i class="bx bx-receipt" style="color:var(--primary);"></i> 세금계산서 발행</div>
       <button class="btn-close-modal" onclick="closeTaxModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -754,7 +763,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeTaxModal()">취소</button>
-      <button class="btn btn-success" onclick="submitTaxInvoice()">
+      <button class="btn btn-primary" onclick="submitTaxInvoice()">
         <i class="bx bx-receipt"></i> 발행
       </button>
     </div>
@@ -765,7 +774,7 @@
 <div class="modal-overlay" id="cashModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title"><i class="bx bx-money" style="color:var(--info);"></i> 현금영수증 발행</div>
+      <div class="modal-title"><i class="bx bx-money" style="color:var(--primary);"></i> 현금영수증 발행</div>
       <button class="btn-close-modal" onclick="closeCashModal()">&times;</button>
     </div>
     <div class="modal-body">

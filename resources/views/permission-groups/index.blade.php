@@ -10,26 +10,29 @@
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
 
   .pg-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:11px 14px; font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.7; }
-  .pg-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-  .pg-head input[type=text] { height:36px; padding:0 12px; border:1px solid var(--border); border-radius:8px; font-size:13.5px; }
+    padding:12px 16px; font-size:12px; font-weight:400; color:var(--text-secondary); margin-bottom:16px; line-height:18px; }
+  .pg-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  /* 입력 h32 = pad 5 + lh 20 + pad 5 + 테두리 2 */
+  .pg-head input[type=text] { height:32px; padding:0 12px; border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px; font-family:inherit; }
   .pg-head #pgName { width:200px; font-weight:700; }
   .pg-head #pgDesc { flex:1; min-width:220px; }
+  /* 읽기 전용 안내 배지 — 주의는 alert 램프로만 표현한다(시안에 주황이 없다) */
   .pg-lock { display:inline-flex; align-items:center; font-size:11px; font-weight:500; line-height:18px; padding:2px 6px; border-radius:6px;
-    background:var(--warning-light); color:var(--warning); }
+    background:var(--alert-50); color:var(--alert-500); }
 
   /* 권한 매트릭스 */
-  .pg-sec { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; overflow:hidden; }
-  .pg-sec > h4 { margin:0; padding:10px 16px; font-size:12.5px; font-weight:800; color:var(--primary);
+  .pg-sec { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:12px; overflow:hidden; }
+  .pg-sec > h4 { margin:0; padding:11px 16px; font-size:13px; font-weight:700; line-height:21px; color:var(--primary);
     background:var(--primary-light); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-  .pg-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .pg-tbl { width:100%; border-collapse:collapse; font-size:12px; }
   .pg-tbl th, .pg-tbl td { padding:8px 10px; border-bottom:1px solid var(--border-light); text-align:center; }
-  .pg-tbl th { font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg); white-space:nowrap; }
+  .pg-tbl th { font-size:11px; font-weight:700; line-height:18px; color:var(--text-muted); background:var(--bg); white-space:nowrap; }
   .pg-tbl th:first-child, .pg-tbl td:first-child { text-align:left; width:38%; }
   .pg-tbl tr:last-child td { border-bottom:none; }
-  .pg-tbl td.na { color:var(--border); }
+  .pg-tbl td.na { color:var(--gray-300); }
   .pg-tbl input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
-  .pg-rowall { font-size:10.5px; color:var(--primary); background:none; border:none; cursor:pointer; padding:0 0 0 6px; }
+  .pg-rowall { font-size:10px; font-weight:500; line-height:16px; color:var(--primary); background:none; border:none; cursor:pointer; padding:0 0 0 6px; font-family:inherit; }
   .pg-actions { display:flex; gap:8px; align-items:center; margin-top:4px; }
   .pg-actions .spacer { margin-left:auto; }
 </style>
@@ -43,7 +46,7 @@
   </button>
   <button type="button" id="pnlBtnEdit" class="pnl-tab" onclick="pnlShow('edit')">
     <i class="fa-solid fa-sliders"></i> 권한 편집
-    <span id="pnlEditName" style="font-size:11px;color:var(--text-muted);font-weight:600;"></span>
+    <span id="pnlEditName" style="font-size:11px;color:var(--text-muted);font-weight:500;"></span>
   </button>
 </div>
 
@@ -58,7 +61,7 @@
     권한 설정 실수로 시스템에서 잠기는 일을 막기 위한 안전장치입니다.
   </div>
 
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;">
     <button type="button" class="btn btn-primary btn-sm" onclick="openCreate()">
       <i class="bx bx-plus"></i> 그룹 추가
     </button>
@@ -80,7 +83,7 @@
 {{-- ══ 권한 편집 ══ --}}
 <div id="pnlEdit" style="display:none;">
   <div id="editEmpty" class="pnl-empty">
-    <i class="bx bx-hand-pointer" style="font-size:26px;opacity:.35;display:block;margin-bottom:8px;"></i>
+    <i class="bx bx-hand-pointer" style="font-size:16px;opacity:.35;display:block;margin-bottom:8px;"></i>
     그룹 목록에서 그룹을 <b>클릭</b>하면 권한 매트릭스가 여기에 표시됩니다.
   </div>
 
@@ -117,17 +120,17 @@
       <button class="modal-close" onclick="closeCreate()"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-bd">
-      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
-        <label style="font-size:12.5px;font-weight:700;color:var(--text-secondary);">그룹명 <span style="color:var(--danger);">*</span></label>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
+        <label style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);">그룹명 <span style="color:var(--danger);">*</span></label>
         <input type="text" id="newName" maxlength="60" placeholder="예: 검수 담당"
-               style="height:38px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;">
+               style="height:32px;padding:0 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:400;line-height:20px;font-family:inherit;">
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        <label style="font-size:12.5px;font-weight:700;color:var(--text-secondary);">설명</label>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);">설명</label>
         <input type="text" id="newDesc" maxlength="200" placeholder="이 그룹의 역할을 적어 두세요"
-               style="height:38px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;">
+               style="height:32px;padding:0 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:400;line-height:20px;font-family:inherit;">
       </div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-top:10px;line-height:1.6;">
+      <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:12px;line-height:18px;">
         만든 뒤 권한 편집 탭에서 페이지별 동작을 지정하세요. 처음에는 아무 권한도 없는 상태로 생성됩니다.
       </div>
     </div>
@@ -247,7 +250,7 @@
     document.getElementById('editEmpty').style.display = 'none';
     document.getElementById('editBody').style.display  = '';
     document.getElementById('pgMatrix').innerHTML =
-      '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">'
+      '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;line-height:21px;">'
       + '<i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>';
 
     try {
@@ -270,7 +273,7 @@
       renderMatrix(d.matrix, locked);
     } catch (e) {
       document.getElementById('pgMatrix').innerHTML =
-        '<div style="padding:24px;text-align:center;color:var(--danger);font-size:12.5px;">권한을 불러오지 못했습니다.</div>';
+        '<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px;line-height:21px;">권한을 불러오지 못했습니다.</div>';
     }
   }
 

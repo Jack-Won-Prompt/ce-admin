@@ -5,83 +5,72 @@
 @section('breadcrumb', '홈 / 관리자 관리')
 
 @section('content')
-<div class="content-header">
-  <h4 class="content-title"><i class="bx bx-shield-quarter" style="color:var(--primary);"></i> 관리자 관리</h4>
-  <p class="content-sub">시스템 관리자 계정을 추가·수정·비활성화합니다.</p>
+
+{{-- 화면 제목·설명. 시안에는 없지만 개발에서 넣은 블록이라 유지한다(제목 16/700 · 설명 12/400). --}}
+<div class="content-header" style="margin-bottom:12px;">
+  <h4 class="content-title" style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;line-height:26px;margin:0;color:var(--text-primary);">
+    <i class="bx bx-shield-quarter" style="color:var(--primary);font-size:16px;"></i> 관리자 관리
+  </h4>
+  <p class="content-sub" style="font-size:12px;font-weight:400;line-height:19px;color:var(--gray-600);margin:4px 0 0;">시스템 관리자 계정을 추가·수정·비활성화합니다.</p>
 </div>
 
-{{-- ── 패널 탭: 관리자 목록 / 초대 현황 ── --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
-    <i class="bx bx-user-check"></i> 관리자 목록
-    <span class="pnl-cnt">{{ number_format($total) }}</span>
-  </button>
-  <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">
-    <i class="bx bx-envelope-open"></i> 초대 현황
-    <span class="pnl-cnt" id="pnlInvCnt" style="display:none;"></span>
-  </button>
-</div>
-
-{{-- ── 관리자 목록 탭 ── --}}
-<div id="pnlUsers">
-  <div class="card">
-    <div class="card-body" style="padding:0;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
-        <span style="font-size:13px;color:var(--text-muted);">총 <b id="userCount">{{ $users->count() }}</b>명</span>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm" style="border:1.5px solid var(--primary);color:var(--primary);background:#fff;" onclick="openInviteModal()">
-            <i class="bx bx-envelope"></i> 이메일로 초대
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="openModal()">
-            <i class="bx bx-plus"></i> 관리자 추가
-          </button>
-        </div>
-      </div>
-
-      {{-- ── 관리자 목록 (wwGrid) ── --}}
-      <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="usersEditSelected()">
-          <i class="bx bx-edit"></i> 선택 수정
-        </button>
-        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 수정</span>
-        <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}명</span>
-      </div>
-      <div style="padding:0 20px 20px;"><div id="usersGrid"></div></div>
+{{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 — 표준 구조(114:4778) --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b id="userCount">{{ number_format($total) }}</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">행을 <b>체크</b>한 뒤 탭 안의 동작 버튼을 누릅니다.</span>
+      <button type="button" class="ds-btn" onclick="openInviteModal()">이메일로 초대</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="openModal()">관리자 추가</button>
     </div>
   </div>
-</div>
 
-{{-- ── 초대 현황 탭 ── --}}
-<div id="pnlInv" style="display:none;">
-  <div class="card">
-    <div class="card-body" style="padding:0;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <i class="bx bx-envelope-open" style="color:var(--primary);font-size:16px;"></i>
-          <span style="font-size:14px;font-weight:700;">초대 현황</span>
-          <span id="inviteBadge" style="display:none;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;"></span>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm" style="border:1.5px solid var(--primary);color:var(--primary);background:#fff;" onclick="openInviteModal()">
-            <i class="bx bx-envelope"></i> 이메일로 초대
-          </button>
-          <button class="btn btn-sm btn-outline" onclick="loadInvitations()" id="refreshBtn" title="새로고침" style="padding:3px 10px;">
-            <i class="bx bx-refresh"></i>
-          </button>
-        </div>
+  <div class="ds-grid-card">
+    {{-- ── 패널 탭: 관리자 목록 / 초대 현황 ── --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
+        <i class="bx bx-user-check"></i> 관리자 목록
+        <span class="pnl-cnt">{{ number_format($total) }}</span>
+      </button>
+      <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">
+        <i class="bx bx-envelope-open"></i> 초대 현황
+        <span class="pnl-cnt" id="pnlInvCnt" style="display:none;"></span>
+      </button>
+    </div>
+
+    {{-- ── 관리자 목록 탭 ── --}}
+    <div id="pnlUsers">
+      <div class="ds-panel-actions">
+        <span class="ds-grid-sel">선택 <b id="usersSelCount">0</b>건</span>
+        <button type="button" class="ds-btn" onclick="usersEditSelected()">
+          <i class="bx bx-edit"></i> 선택 수정
+        </button>
+        <span class="ds-panel-hint">행 체크 후 수정</span>
+        <button type="button" class="ds-btn" style="margin-left:auto;" onclick="window.__usersGrid?.downloadExcel()">엑셀 저장</button>
       </div>
+      <div style="padding:0 16px 16px;"><div id="usersGrid"></div></div>
+    </div>
 
-      {{-- ── 초대 현황 목록 (wwGrid) ── --}}
-      <div style="display:flex;gap:8px;margin:0 20px 12px;align-items:center;flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="invResendSelected()">
+    {{-- ── 초대 현황 탭 ── --}}
+    <div id="pnlInv" style="display:none;">
+      <div class="ds-panel-actions">
+        <span class="ds-grid-sel">선택 <b id="invSelCount">0</b>건</span>
+        <button type="button" class="ds-btn" onclick="invResendSelected()">
           <i class="bx bx-send"></i> 선택 재발송
         </button>
-        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="invCancelSelected()">
+        <button type="button" class="ds-btn ds-btn-danger" onclick="invCancelSelected()">
           <i class="bx bx-trash"></i> 선택 초대취소
         </button>
-        <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 실행 (수락된 초대는 불가)</span>
+        <span class="ds-panel-hint">행 체크 후 실행 (수락된 초대는 불가)</span>
+        <span id="inviteBadge" style="display:none;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;line-height:18px;padding:2px 6px;border-radius:6px;"></span>
+        <button type="button" class="ds-btn" style="margin-left:auto;" onclick="loadInvitations()" id="refreshBtn" title="새로고침">
+          <i class="bx bx-refresh"></i>
+        </button>
+        <button type="button" class="ds-btn" onclick="window.__invGrid?.downloadExcel()">엑셀 저장</button>
       </div>
-      <div style="padding:0 20px 20px;"><div id="invitationsGrid"></div></div>
+      <div style="padding:0 16px 16px;"><div id="invitationsGrid"></div></div>
     </div>
   </div>
 </div>
@@ -94,7 +83,7 @@
       <button class="modal-close" onclick="closeInviteModal()"><i class="bx bx-x"></i></button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">
+      <p style="font-size:13px;font-weight:400;line-height:21px;color:var(--text-muted);margin:0 0 16px;">
         초대 링크가 담긴 이메일이 발송됩니다. 수신자가 링크를 클릭하면 이름·비밀번호를 설정하고 계정이 활성화됩니다.
       </p>
       <div class="form-group">
@@ -113,12 +102,12 @@
         <textarea class="form-control" id="inviteMessage" rows="3"
           placeholder="함께하게 되어 반갑습니다. 궁금한 점이 있으면 언제든지 연락 주세요."
           maxlength="500" style="resize:vertical;min-height:72px;"></textarea>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;text-align:right;">
+        <div style="font-size:11px;font-weight:500;line-height:18px;color:var(--text-muted);margin-top:4px;text-align:right;">
           <span id="msgCount">0</span>/500
         </div>
       </div>
-      <div id="inviteError" style="display:none;background:#FEF2F2;color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;"></div>
-      <div id="inviteSuccess" style="display:none;background:#F0FDF4;color:#16A34A;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;"></div>
+      <div id="inviteError" style="display:none;background:var(--alert-50);color:var(--alert-500);padding:10px 12px;border-radius:8px;font-size:13px;line-height:21px;margin-top:12px;"></div>
+      <div id="inviteSuccess" style="display:none;background:var(--primary-light);color:var(--primary);padding:10px 12px;border-radius:8px;font-size:13px;line-height:21px;margin-top:12px;"></div>
     </div>
     <div class="modal-footer">
       <div style="margin-left:auto;display:flex;gap:8px;">
@@ -164,7 +153,7 @@
               <option value="{{ $pg->id }}">{{ $pg->name }}{{ $pg->is_full_access ? ' (기본)' : '' }}</option>
             @endforeach
           </select>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.6;">
+          <div style="font-size:11px;font-weight:500;line-height:18px;color:var(--text-muted);margin-top:4px;">
             그룹에 허용된 페이지·동작만 보입니다. <b>역할이 '관리자'면 그룹과 무관하게 전체 권한</b>입니다.
             그룹은 <b>설정 &gt; 권한 그룹</b>에서 만듭니다.
           </div>
@@ -188,7 +177,7 @@
               <i class="bx bx-show" id="pwEye"></i>
             </button>
           </div>
-          <div id="pwHint" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:none;">
+          <div id="pwHint" style="font-size:11px;font-weight:500;line-height:18px;color:var(--text-muted);margin-top:4px;display:none;">
             빈칸으로 두면 기존 비밀번호를 유지합니다.
           </div>
         </div>
@@ -202,11 +191,11 @@
                 <div class="toggle-thumb"></div>
               </div>
             </div>
-            <span id="activeLabel" style="font-size:13px;font-weight:600;color:var(--success);">활성</span>
+            <span id="activeLabel" style="font-size:13px;font-weight:500;line-height:21px;color:var(--primary);">활성</span>
           </label>
         </div>
 
-        <div id="formError" style="display:none;background:#FEF2F2;color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-top:8px;"></div>
+        <div id="formError" style="display:none;background:var(--alert-50);color:var(--alert-500);padding:10px 12px;border-radius:8px;font-size:13px;line-height:21px;margin-top:8px;"></div>
       </form>
     </div>
     <div class="modal-footer">
@@ -226,30 +215,48 @@
 
 @push('styles')
 <style>
-/* ── 모달 ── */
+/* ── 탭 안 동작 줄 — 카드 안쪽 여백은 시안 패널과 같은 16, 버튼 사이 8 ── */
+.ds-panel-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 16px; }
+.ds-panel-hint    { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+/* 되돌릴 수 없는 동작(초대취소)만 alert 램프. 나머지는 전역 .ds-btn 규격 그대로 */
+.ds-btn-danger       { border-color:var(--alert-500); color:var(--alert-500); }
+.ds-btn-danger:hover { background:var(--alert-50); }
+/* 새로고침은 아이콘만 있는 버튼이다. 전역 .ds-btn 의 min-width 60 을 쓰면 가로로 벌어지므로
+   32×32 정사각으로 되돌린다. loadInvitations() 가 fetch 동안 disabled 를 켜는데
+   전역에 :disabled 규칙이 없어 눌린 상태가 보이지 않던 것도 함께 채운다. */
+#refreshBtn           { min-width:32px; width:32px; padding:0; }
+#refreshBtn i         { font-size:16px; }
+.ds-btn:disabled      { opacity:.6; cursor:not-allowed; }
+
+/* ── 모달 — Figma 120:917 실측: r12 · 머리 pad 16/24 · 제목 14px/700 lh22
+      본문 pad 24 · 바닥 pad 16/24 gap 8 · 하단 버튼 14px/500 ── */
 .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; }
 .modal-backdrop.open { display:flex; }
-.modal-panel { background:#fff; border-radius:16px; width:100%; max-width:480px; margin:16px; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:modalIn .2s ease; overflow:hidden; }
+.modal-panel { background:var(--gray-0); border-radius:12px; width:100%; max-width:480px; margin:16px; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:modalIn .2s ease; overflow:hidden; }
 @keyframes modalIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-.modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 14px; border-bottom:1px solid var(--border); }
-.modal-title  { font-size:15px; font-weight:700; }
-.modal-close  { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:20px; line-height:1; padding:0; }
-.modal-body   { padding:20px; max-height:70vh; overflow-y:auto; }
-.modal-footer { display:flex; align-items:center; padding:14px 20px; border-top:1px solid var(--border); gap:8px; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); }
+.modal-title  { font-size:14px; font-weight:700; line-height:22px; }
+.modal-close  { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px; line-height:1; padding:0; }
+.modal-body   { padding:24px; max-height:70vh; overflow-y:auto; }
+.modal-footer { display:flex; align-items:center; padding:16px 24px; border-top:1px solid var(--border); gap:8px; }
+/* 시안 하단 버튼 글자는 14px/500. 줄높이는 전역 .btn 의 20px 을 그대로 둬 높이 32 를 지킨다 */
+.modal-footer .btn { font-size:14px; font-weight:500; }
 .form-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.form-group { margin-bottom:14px; }
+.form-group { margin-bottom:12px; }
 .form-group:last-child { margin-bottom:0; }
+/* 시안 필드는 라벨 21 + gap 8 + 입력 32 = 61 이다. 전역 .form-label 의 5px 을 8 로 올린다 */
+.modal-body .form-label { margin-bottom:8px; }
 
-/* ── 토글 스위치 ── */
-.toggle-track { width:44px; height:24px; border-radius:12px; background:var(--border); position:relative; transition:background .2s; cursor:pointer; }
-.toggle-track.on { background:var(--success); }
-.toggle-thumb { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+/* ── 토글 스위치 — 켜짐은 primary(시안에 초록이 없다) ── */
+.toggle-track { width:44px; height:24px; border-radius:999px; background:var(--border); position:relative; transition:background .2s; cursor:pointer; }
+.toggle-track.on { background:var(--primary); }
+.toggle-thumb { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:999px; background:var(--gray-0); transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
 .toggle-track.on .toggle-thumb { transform:translateX(20px); }
 
-/* ── 패널 탭(관리자 목록 / 초대 현황) ── */
-.pnl-cnt { min-width:16px; padding:0; height:16px; display:inline-flex; align-items:center; justify-content:center;
-  border-radius:999px; font-size:10px; font-weight:700; line-height:1; background:var(--gray-500); color:var(--gray-0); }
-.pnl-tab.active .pnl-cnt { background:var(--primary); color:#fff; }
+/* ── 패널 탭(관리자 목록 / 초대 현황) 건수 배지 — 시안 16×16 정원 · 10px/700 ── */
+.pnl-cnt { min-width:16px; padding:0 4px; height:16px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:999px; font-size:10px; font-weight:700; line-height:12px; background:var(--gray-500); color:var(--gray-0); }
+.pnl-tab.active .pnl-cnt { background:var(--primary); color:var(--gray-0); }
 </style>
 @endpush
 
@@ -488,8 +495,9 @@ function setActive(val) {
   const label = document.getElementById('activeLabel');
   const cb    = document.getElementById('fIsActive');
   cb.checked = val;
-  if (val) { track.classList.add('on'); label.textContent = '활성'; label.style.color = 'var(--success)'; }
-  else      { track.classList.remove('on'); label.textContent = '비활성'; label.style.color = 'var(--danger)'; }
+  // 색은 마크업과 같은 규칙 — 켜짐 primary, 꺼짐 alert(시안에 초록이 없다)
+  if (val) { track.classList.add('on'); label.textContent = '활성'; label.style.color = 'var(--primary)'; }
+  else      { track.classList.remove('on'); label.textContent = '비활성'; label.style.color = 'var(--alert-500)'; }
 }
 
 function toggleActive() {
@@ -644,8 +652,10 @@ function updateRow(u)     { refreshUsersGrid(); }
   // 관리자 그리드
   window.__usersGrid = new wwGrid({
     el: document.getElementById('usersGrid'),
-    height: USERS_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 탭 동작 줄로 옮겼다(동작은 downloadExcel() 그대로).
+    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바, 선택 건수는 탭 동작 줄에 있다.
+    height: USERS_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: 'ID',     name: 'id',      width: 60,  align: 'center', sortable: true },
       { header: '이름',   name: 'name',    width: 160, sortable: true },
@@ -658,6 +668,7 @@ function updateRow(u)     { refreshUsersGrid(); }
     ],
     data: USERS_GRID_DATA,
   });
+  window.dsBindSelCount(window.__usersGrid, 'usersSelCount');   // '선택 N건' 표시 연결
 
   window.usersEditSelected = function () {
     const c = window.__usersGrid.getCheckedRows();
@@ -669,8 +680,9 @@ function updateRow(u)     { refreshUsersGrid(); }
   // 초대 현황 그리드 (데이터는 loadInvitations()가 setData로 주입)
   window.__invGrid = new wwGrid({
     el: document.getElementById('invitationsGrid'),
-    height: INV_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 탭 동작 줄로 옮겼다. 하단 상태바는 시안에 없다.
+    height: INV_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '이메일',       name: 'email',      width: 220, sortable: true },
       { header: '역할',         name: 'role',       width: 90,  align: 'center', sortable: true },
@@ -681,6 +693,7 @@ function updateRow(u)     { refreshUsersGrid(); }
     ],
     data: [],
   });
+  window.dsBindSelCount(window.__invGrid, 'invSelCount');       // '선택 N건' 표시 연결
 
   /* 활성 탭의 그리드가 페이지 스크롤 없이 한 화면에 들어오도록 높이 보정.
      탭 전환으로 하나만 보이므로 배분 없이 남은 높이를 전부 준다. */

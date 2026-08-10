@@ -92,55 +92,64 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* ── Stat Cards (Vuexy style) ── */
+  /* ── Stat Cards ── 시안 카드 = radius 12 · 흰 배경 · 그림자 없음 */
+  /* 격자는 인라인 style= 이 아니라 여기에 둔다 — 그래야 미디어쿼리가 우선순위 강제 없이 이긴다 */
+  .stat-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; margin-bottom: 16px; }
   .stat-card {
-    background: #fff;
-    border-radius: 10px;
+    background: var(--gray-0);
+    border-radius: 12px;
     border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    padding: 20px 22px;
-    display: flex; align-items: center; gap: 18px;
+    padding: 16px;
+    display: flex; align-items: center; gap: 12px;
     cursor: pointer; transition: var(--transition);
     text-decoration: none; color: inherit;
+    /* 전역 .stat-card 가 box-shadow:var(--shadow) 를 준다 — 선언을 빼면 그게 그대로 남는다.
+       시안 카드는 평평하므로 여기서 명시적으로 꺼야 한다. */
+    box-shadow: none;
   }
-  .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: inherit; }
+  /* 전역 .stat-card:hover 의 그림자와 -2px 들림도 같은 이유로 명시적으로 끈다 */
+  .stat-card:hover { border-color: var(--primary); color: inherit; box-shadow: none; transform: none; }
+  /* 32×32 · r8 · 아이콘 16 — 헤더 아이콘 버튼과 같은 규격 */
   .stat-icon {
-    width: 52px; height: 52px; border-radius: 10px;
+    width: 32px; height: 32px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px; flex-shrink: 0;
+    font-size: 16px; flex-shrink: 0;
   }
-  .stat-icon.primary  { background: var(--primary-light);  color: var(--primary); }
-  .stat-icon.success  { background: var(--success-light);  color: var(--success); }
-  .stat-icon.warning  { background: var(--warning-light);  color: var(--warning); }
-  .stat-icon.danger   { background: var(--danger-light);   color: var(--danger); }
-  .stat-icon.info     { background: var(--info-light);     color: var(--info); }
-  .stat-icon.purple   { background: #f3eeff;               color: var(--purple); }
-  .stat-val   { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-primary); }
-  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+  /* 시안에는 초록·주황·남색이 없다. 강조는 primary 램프, 처리 대기는 alert 램프로만 나눈다.
+     구분은 램프 안의 명도로 준다(클래스 이름은 그대로 둔다 — 마크업이 이 이름으로 붙는다). */
+  .stat-icon.primary  { background: var(--primary-50);  color: var(--primary-500); }
+  .stat-icon.success  { background: var(--primary-50);  color: var(--primary-700); }
+  .stat-icon.warning  { background: var(--alert-50);    color: var(--alert-500); }
+  .stat-icon.danger   { background: var(--alert-50);    color: var(--alert-500); }
+  .stat-icon.info     { background: var(--primary-50);  color: var(--primary-400); }
+  .stat-icon.purple   { background: var(--primary-50);  color: var(--primary-600); }
+  .stat-val   { font-size: 16px; font-weight: 700; line-height: 19px; color: var(--gray-1000); }
+  .stat-label { font-size: 12px; line-height: 18px; color: var(--gray-600); margin-top: 2px; font-weight: 500; }
 
   /* ── Work Queue Boxes ── */
-  .queue-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
+  .queue-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
   .queue-box {
-    background: #fff; border: 1px solid var(--border); border-radius: 10px;
-    padding: 18px 16px; text-align: center; cursor: pointer;
-    box-shadow: var(--shadow); transition: var(--transition);
+    background: var(--gray-0); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; text-align: center; cursor: pointer;
+    transition: var(--transition);
     text-decoration: none; color: inherit; display: block;
     position: relative; overflow: hidden;
   }
+  /* 상단 색띠 — 개발자가 넣은 구분 표시라 남긴다. 두께만 4 로, 모서리는 카드와 같은 12 로 맞춘다 */
   .queue-box::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    border-radius: 10px 10px 0 0;
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    border-radius: 12px 12px 0 0;
   }
-  .queue-box:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: inherit; }
-  .queue-box.red::before   { background: var(--danger); }
-  .queue-box.blue::before  { background: var(--primary); }
-  .queue-box.green::before { background: var(--success); }
-  .queue-box .q-icon { font-size: 22px; margin-bottom: 6px; display: block; }
-  .queue-box.red   .q-icon, .queue-box.red   .q-num { color: var(--danger); }
-  .queue-box.blue  .q-icon, .queue-box.blue  .q-num { color: var(--primary); }
-  .queue-box.green .q-icon, .queue-box.green .q-num { color: var(--success); }
-  .queue-box .q-num   { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-  .queue-box .q-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .queue-box:hover { border-color: var(--primary); color: inherit; }
+  .queue-box.red::before   { background: var(--alert-500); }
+  .queue-box.blue::before  { background: var(--primary-500); }
+  .queue-box.green::before { background: var(--primary-700); }
+  .queue-box .q-icon { font-size: 16px; line-height: 16px; margin-bottom: 6px; display: block; }
+  .queue-box.red   .q-icon, .queue-box.red   .q-num { color: var(--alert-500); }
+  .queue-box.blue  .q-icon, .queue-box.blue  .q-num { color: var(--primary-500); }
+  .queue-box.green .q-icon, .queue-box.green .q-num { color: var(--primary-700); }
+  .queue-box .q-num   { font-size: 16px; font-weight: 700; line-height: 19px; margin-bottom: 2px; }
+  .queue-box .q-label { font-size: 12px; line-height: 18px; color: var(--gray-600); font-weight: 500; }
 
   /* ── Activity timeline (타이틀+시간 한 줄, 상세는 hover 팝오버) ── */
   .activity-item {
@@ -150,20 +159,20 @@ window.HELP_TOUR_STEPS = [
   }
   .activity-item:last-child { border-bottom: none; }
   .activity-dot {
-    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    width: 4px; height: 4px; border-radius: 999px; flex-shrink: 0;
   }
   .activity-main { min-width: 0; flex: 1; }
   .activity-title {
-    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; }
+  .activity-time { font-size: 11px; line-height: 18px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; }
   /* 팝오버(상세 전체 내용) — 사이드바 좌측으로 열림 */
   .activity-pop {
     display: none; position: absolute; right: calc(100% + 12px); top: -6px;
-    width: 320px; max-width: 320px; background: #fff; border: 1px solid var(--border);
-    border-radius: 10px; box-shadow: var(--shadow-lg); padding: 12px 14px;
-    font-size: 12.5px; line-height: 1.65; color: var(--text-secondary);
+    width: 320px; max-width: 320px; background: var(--gray-0); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: var(--shadow-lg); padding: 12px;
+    font-size: 12px; line-height: 19px; color: var(--gray-800);
     white-space: normal; word-break: break-all; z-index: 200;
   }
   .activity-item:hover { background: var(--primary-light); border-radius: 6px; }
@@ -172,29 +181,32 @@ window.HELP_TOUR_STEPS = [
   .recent-activity-body { overflow: visible; }
 
   /* ── Quick action buttons ── */
-  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .qa-btn {
     display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 14px 8px; border-radius: 10px; border: 1.5px solid var(--border);
-    background: var(--bg); cursor: pointer; transition: var(--transition);
+    padding: 12px 8px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--gray-50); cursor: pointer; transition: var(--transition);
     text-decoration: none; color: inherit;
   }
   .qa-btn:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
   .qa-btn:hover .qa-icon { color: var(--primary); }
-  .qa-icon { font-size: 22px; color: var(--text-muted); }
-  .qa-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-align: center; }
+  .qa-icon { font-size: 16px; line-height: 16px; color: var(--gray-500); }
+  .qa-label { font-size: 12px; line-height: 18px; font-weight: 500; color: var(--gray-800); text-align: center; }
 
   .rx-id { font-family: monospace; font-size: 12px; color: var(--primary); font-weight: 700; }
 
-  @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr !important; } }
-  @media (max-width: 640px)  { .queue-grid { grid-template-columns: 1fr 1fr; } .stat-grid { grid-template-columns: repeat(2,1fr) !important; } }
+  .dash-grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+
+  /* 격자를 CSS 로 옮겨서 인라인 style= 과 싸울 일이 없어졌다 — 우선순위 강제를 걷어냈다 */
+  @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 640px)  { .queue-grid { grid-template-columns: 1fr 1fr; } .stat-grid { grid-template-columns: repeat(2,1fr); } }
 </style>
 @endpush
 
 @section('content')
 
 {{-- ── Stat Strip (6 KPIs) ── --}}
-<div class="stat-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px;">
+<div class="stat-grid">
   <a href="{{ route('prescriptions.index') }}" class="stat-card">
     <div class="stat-icon primary"><i class="bx bx-file-blank"></i></div>
     <div>
@@ -244,7 +256,7 @@ window.HELP_TOUR_STEPS = [
 </div>
 
 {{-- ── Main Grid ── --}}
-<div class="dash-grid" style="display:grid;grid-template-columns:1fr 280px;gap:20px;">
+<div class="dash-grid">
 
   <div>
     {{-- Work Queue --}}
@@ -269,14 +281,14 @@ window.HELP_TOUR_STEPS = [
     {{-- Recent Prescriptions Table --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-file-medical" style="font-size:18px;color:var(--primary);"></i>
+        <i class="bx bx-file-medical" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 처방전 현황</span>
         <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm ms-auto">
           <i class="bx bx-list-ul"></i> 전체보기
         </a>
       </div>
       <div class="card-body" style="padding:12px 16px;">
-        <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
+        <div style="margin-bottom:8px;font-size:12px;font-weight:500;line-height:18px;color:var(--gray-600);">
           <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.
         </div>
         <div id="recentRxGrid"></div>
@@ -288,9 +300,9 @@ window.HELP_TOUR_STEPS = [
   <div>
 
     {{-- Quick Actions --}}
-    <div class="card mb-4">
+    <div class="card" style="margin-bottom:12px;">
       <div class="card-header">
-        <i class="bx bx-zap" style="font-size:18px;color:var(--warning);"></i>
+        <i class="bx bx-zap" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">빠른 실행</span>
       </div>
       <div class="card-body">
@@ -318,7 +330,7 @@ window.HELP_TOUR_STEPS = [
     {{-- Recent Activity --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-time-five" style="font-size:18px;color:var(--primary);"></i>
+        <i class="bx bx-time-five" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 활동</span>
       </div>
       <div class="card-body recent-activity-body" style="padding:8px 18px;">
@@ -332,8 +344,8 @@ window.HELP_TOUR_STEPS = [
           <div class="activity-pop">{{ $act->description }}</div>
         </div>
         @empty
-        <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px 0;">
-          <i class="bx bx-time" style="font-size:28px;display:block;margin-bottom:6px;opacity:.35;"></i>
+        <div style="text-align:center;color:var(--gray-500);font-size:13px;padding:16px 0;">
+          <i class="bx bx-time" style="font-size:16px;display:block;margin-bottom:6px;opacity:.35;"></i>
           활동 내역이 없습니다.
         </div>
         @endforelse

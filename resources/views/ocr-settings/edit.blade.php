@@ -7,29 +7,33 @@
 @push('styles')
 <style>
   .ocr-form { max-width:720px; }
-  .ocr-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; }
-  .ocr-card h3 { margin:0 0 16px; font-size:14px; font-weight:800; color:var(--primary);
-    padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
+  .ocr-card { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; }
+  /* 섹션 제목 = 14px/700 */
+  .ocr-card h3 { margin:0 0 16px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
+    padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .ocr-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:11px 14px; font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.6; }
-  .ocr-warn { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px;
-    padding:11px 14px; font-size:12.5px; margin-bottom:16px; line-height:1.6; }
-  .status-ok { background:#eafaf1; border:1px solid #a3e4c1; color:#15803d; border-radius:8px;
-    padding:11px 14px; font-size:13.5px; margin-bottom:16px; font-weight:600; }
-  .opt { display:flex; gap:12px; align-items:flex-start; border:1.5px solid var(--border); border-radius:10px;
-    padding:14px 16px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, background .15s; }
+    padding:12px 16px; font-size:12px; font-weight:400; color:var(--text-secondary); margin-bottom:16px; line-height:18px; }
+  /* 주의·오류는 alert 램프로만 표현한다(시안에 주황·초록이 없다) */
+  .ocr-warn { background:var(--alert-50); border:1px solid var(--alert-100); color:var(--alert-500); border-radius:8px;
+    padding:12px 16px; font-size:12px; font-weight:400; margin-bottom:16px; line-height:18px; }
+  .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
+    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
+  .opt { display:flex; gap:12px; align-items:flex-start; border:1px solid var(--border); border-radius:8px;
+    padding:12px 16px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, background .15s; }
   .opt:hover { border-color:var(--primary); }
-  .opt input { margin-top:3px; width:18px; height:18px; flex-shrink:0; }
+  .opt input { margin-top:2px; width:16px; height:16px; flex-shrink:0; }
   .opt.sel { border-color:var(--primary); background:var(--primary-light); }
-  .opt .t { font-size:14px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
-  .opt .d { font-size:12.5px; color:var(--text-secondary); margin-top:4px; line-height:1.6; }
+  .opt .t { font-size:14px; font-weight:700; line-height:22px; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+  .opt .d { font-size:12px; font-weight:400; color:var(--text-secondary); margin-top:4px; line-height:18px; }
   /* 전역 .badge(h22 · radius 6 · 11px/500)를 그대로 쓴다 — 재정의하면 이 화면만 알약 모양으로 남는다 */
   .badge-on  { background:var(--primary-light); color:var(--primary); }
   .badge-off { background:var(--alert-50);      color:var(--alert-500); }
-  .badge-def { background:var(--primary); color:#fff; }
-  .ocr-actions { margin-top:18px; display:flex; gap:10px; }
-  .btn-save { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:11px 22px;
-    font-size:14px; font-weight:700; cursor:pointer; }
+  .badge-def { background:var(--primary); color:var(--gray-0); }
+  .ocr-actions { margin-top:16px; display:flex; gap:8px; }
+  /* 전역 .btn 규격(h32 · pad 5/12 · r8 · 13px/500)에 맞춘다 */
+  .btn-save { display:inline-flex; align-items:center; gap:6px;
+    background:var(--primary); color:var(--gray-0); border:1px solid var(--primary); border-radius:8px;
+    padding:5px 12px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; font-family:inherit; }
 </style>
 @endpush
 
@@ -60,7 +64,7 @@
     <h3><i class="bx bx-scan"></i> OCR 공급자</h3>
 
     <div class="opt sel" style="cursor:default;">
-      <i class="bx bx-scan" style="font-size:20px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i>
+      <i class="bx bx-scan" style="font-size:16px;color:var(--primary);flex-shrink:0;margin-top:3px;"></i>
       <div>
         <div class="t">
           AWS Textract

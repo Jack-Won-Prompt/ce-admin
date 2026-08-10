@@ -34,12 +34,11 @@
   }
   @media(max-width:900px){ .dispatch-grid { grid-template-columns:1fr; } }
 
-  /* 섹션 타이틀 */
+  /* 섹션 타이틀 — 시안 카드 제목 14px/700 · lh22 */
   .sec-title {
-    font-size: 11px; font-weight: 700; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: .6px;
+    font-size: 14px; font-weight: 700; line-height: 22px; color: var(--gray-1000);
     padding-bottom: 8px; border-bottom: 1px solid var(--border);
-    margin-bottom: 14px; display:flex; align-items:center; gap:6px;
+    margin-bottom: 12px; display:flex; align-items:center; gap:6px;
   }
   .sec-title i { font-size:14px; color:var(--primary); }
 
@@ -48,89 +47,102 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 0;
   }
   .info-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  /* 전역 .info-cell 은 background:var(--bg)(=gray-100) + radius 를 건다.
+     구분선 색(--border-light)도 gray-100 이라 그대로 두면 줄이 통째로 사라진다. */
   .info-cell {
     padding: 10px 0;
+    background: transparent; border-radius: 0;
     border-bottom: 1px solid var(--border-light);
   }
   .info-cell:nth-last-child(-n+2) { border-bottom: none; }
+  /* 전역 .info-label 의 uppercase · letter-spacing .4px 가 살아남지 않도록 함께 끈다. */
   .info-label {
-    font-size: 11px; font-weight: 600; color: var(--text-muted);
-    margin-bottom: 4px;
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
+    text-transform: none; letter-spacing: 0;
+    margin-bottom: 8px;
   }
   .info-value {
-    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
     word-break: break-all;
   }
-  .info-value.mono { font-family: monospace; font-size: 12px; color: var(--primary); }
-  .info-value.large { font-size: 16px; font-weight: 800; }
+  .info-value.mono { font-family: monospace; font-size: 13px; color: var(--primary); }
+  .info-value.large { font-size: 16px; font-weight: 700; line-height: 26px; }
 
   /* 금액 카드 */
   .amount-row {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
     margin-bottom: 16px;
   }
+  /* 시안 148:6407 — 금액 박스 r8 · pad 12 · gap 8 · bg gray-100 · 라벨/값 13px/500 */
   .amt-card {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 12px 14px; text-align: center;
+    background: var(--gray-100); border: 1px solid var(--gray-100);
+    border-radius: var(--radius); padding: 12px; text-align: left;
   }
-  .amt-card .alabel { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
-  .amt-card .avalue { font-size: 15px; font-weight: 800; }
+  .amt-card .alabel { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); margin-bottom: 8px; }
+  .amt-card .avalue { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); }
   .amt-card.hl      { border-color: var(--primary); background: var(--primary-light); }
+  .amt-card.hl .alabel { color: var(--primary); }
   .amt-card.hl .avalue { color: var(--primary); }
-  .amt-card.success-hl { border-color: var(--success); background: var(--success-light); }
-  .amt-card.success-hl .avalue { color: var(--success); }
+  .amt-card.success-hl { border-color: var(--primary); background: var(--primary-light); }
+  .amt-card.success-hl .alabel { color: var(--primary); }
+  .amt-card.success-hl .avalue { color: var(--primary); }
 
   /* 헤더 배너 */
   .dispatch-header-card {
     display: flex; align-items: center; gap: 16px;
-    padding: 16px 20px; border-radius: var(--radius-lg);
-    margin-bottom: 16px;
-    border: 1.5px solid var(--border);
+    padding: 12px 16px; border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
     background: #fff;
   }
   .dispatch-header-icon {
-    width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
+    font-size: 16px;
   }
+  /* 시안에 초록·주황·하늘색은 없다. 발행 종류별 아이콘 색은 화면 위쪽 PHP 블록의
+     iconColor/bgColor 표에서 인라인 style 로 들어오는데, 그 블록은 퍼블리셔가
+     손대지 않는 영역이라 여기서 덮는 수밖에 없다.
+     표의 값이 primary 램프로 바뀌면 이 두 줄은 지운다. */
+  .dispatch-header-icon { background: var(--primary-light) !important; color: var(--primary) !important; }
   .dispatch-header-meta { flex: 1; min-width: 0; }
-  .dispatch-header-no   { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
-  .dispatch-header-sub  { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .dispatch-header-no   { font-size: 16px; font-weight: 700; line-height: 26px; color: var(--gray-1000); }
+  .dispatch-header-sub  { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); margin-top: 4px; }
 
   /* 사이드 정보 카드 */
   .side-info dt {
-    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
     margin-top: 10px; margin-bottom: 2px;
   }
   .side-info dt:first-child { margin-top: 0; }
-  .side-info dd { font-size: 13px; font-weight: 600; margin: 0; }
+  .side-info dd { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin: 0; }
 
   /* NHIS 타임라인 */
   .timeline { position: relative; padding-left: 24px; }
   .timeline::before {
     content: '';
     position: absolute; left: 7px; top: 6px; bottom: 6px;
-    width: 2px; background: var(--border);
+    width: 1px; background: var(--gray-300);
   }
   .tl-item { position: relative; padding: 0 0 20px 16px; }
   .tl-item:last-child { padding-bottom: 0; }
   .tl-dot {
-    position: absolute; left: -17px; top: 2px;
-    width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
-    box-shadow: 0 0 0 2px var(--border);
+    position: absolute; left: -16px; top: 2px;
+    width: 12px; height: 12px; border-radius: 999px; border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--gray-300);
   }
-  .tl-dot.sent    { background: var(--success); box-shadow: 0 0 0 2px var(--success); }
-  .tl-dot.failed  { background: var(--danger);  box-shadow: 0 0 0 2px var(--danger); }
-  .tl-dot.queued  { background: var(--text-muted); }
-  .tl-dot.current { background: var(--primary);  box-shadow: 0 0 0 2px var(--primary); }
-  .tl-time  { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
-  .tl-title { font-size: 13px; font-weight: 700; }
-  .tl-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .tl-dot.sent    { background: var(--primary-300); box-shadow: 0 0 0 2px var(--primary-300); }
+  .tl-dot.failed  { background: var(--alert-500);   box-shadow: 0 0 0 2px var(--alert-500); }
+  .tl-dot.queued  { background: var(--gray-400); }
+  .tl-dot.current { background: var(--primary);     box-shadow: 0 0 0 2px var(--primary); }
+  .tl-time  { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); margin-bottom: 4px; }
+  .tl-title { font-size: 13px; font-weight: 700; line-height: 21px; }
+  .tl-sub   { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); margin-top: 2px; }
 
   /* 처방 제품 테이블 */
   .mini-table { width:100%; border-collapse:collapse; font-size:12px; }
   .mini-table th {
-    padding:6px 10px; font-size:10px; font-weight:700; color:var(--text-muted);
+    padding:6px 10px; font-size:12px; font-weight:700; line-height:19px; color:var(--gray-700);
     background:var(--bg); border-bottom:1px solid var(--border); text-align:left;
   }
   .mini-table td { padding:8px 10px; border-bottom:1px solid var(--border-light); }
@@ -226,25 +238,25 @@
       <div class="card-body">
         <div class="sec-title"><i class="bx bx-bank"></i> 가상계좌 정보</div>
         {{-- 은행명 + 계좌번호 강조 블록 --}}
-        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;
-                    background:var(--primary-light);border:1.5px solid var(--primary);
-                    border-radius:var(--radius-lg);margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;
+                    background:var(--primary-light);border:1px solid var(--primary);
+                    border-radius:var(--radius);margin-bottom:12px;">
           <div style="width:44px;height:44px;border-radius:12px;background:var(--primary);
                       color:#fff;display:flex;align-items:center;justify-content:center;
-                      font-size:18px;flex-shrink:0;">
+                      font-size:16px;flex-shrink:0;">
             <i class="bx bx-bank"></i>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:3px;">
+            <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--primary);margin-bottom:4px;">
               {{ $record->bank_name }}
             </div>
-            <div style="font-size:20px;font-weight:800;font-family:monospace;letter-spacing:2px;color:var(--text-primary);">
+            <div style="font-size:16px;font-weight:700;line-height:26px;font-family:monospace;letter-spacing:2px;color:var(--gray-1000);">
               {{ $record->account_number ?? '-' }}
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">예금주</div>
-            <div style="font-size:14px;font-weight:700;">{{ $record->customer_name ?? '-' }}</div>
+            <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">예금주</div>
+            <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-1000);">{{ $record->customer_name ?? '-' }}</div>
           </div>
         </div>
 
@@ -255,7 +267,7 @@
           </div>
           <div class="info-cell" style="grid-column:span 2;">
             <div class="info-label">계좌번호</div>
-            <div class="info-value mono" style="font-size:15px;letter-spacing:1px;">
+            <div class="info-value mono" style="font-size:13px;letter-spacing:1px;">
               {{ $record->account_number ?? '-' }}
             </div>
           </div>
@@ -268,7 +280,7 @@
             <div class="info-value">
               {{ $record->due_date?->format('Y-m-d H:i') ?? '-' }}
               @if($record->is_expired)
-                <span class="badge badge-danger" style="font-size:10px;margin-left:4px;">만료</span>
+                <span class="badge badge-danger" style="margin-left:4px;">만료</span>
               @endif
             </div>
           </div>
@@ -329,7 +341,7 @@
         <div class="info-grid cols-3">
           <div class="info-cell" style="grid-column:span 2;">
             <div class="info-label">계산서 번호</div>
-            <div class="info-value mono" style="font-size:15px;">{{ $order->tax_invoice_no }}</div>
+            <div class="info-value mono" style="font-size:13px;">{{ $order->tax_invoice_no }}</div>
           </div>
           <div class="info-cell">
             <div class="info-label">발행 유형</div>
@@ -393,7 +405,7 @@
         <div class="info-grid cols-3">
           <div class="info-cell" style="grid-column:span 2;">
             <div class="info-label">영수증 번호</div>
-            <div class="info-value mono" style="font-size:15px;">{{ $order->cash_receipt_no }}</div>
+            <div class="info-value mono" style="font-size:13px;">{{ $order->cash_receipt_no }}</div>
           </div>
           <div class="info-cell">
             <div class="info-label">발급 유형</div>
@@ -402,7 +414,7 @@
           </div>
           <div class="info-cell" style="grid-column:span 2;">
             <div class="info-label">식별번호 (휴대폰 / 사업자번호)</div>
-            <div class="info-value mono" style="font-size:14px;letter-spacing:1px;">
+            <div class="info-value mono" style="font-size:13px;letter-spacing:1px;">
               {{ $order->cash_receipt_identifier ?? '-' }}
             </div>
           </div>
@@ -446,11 +458,11 @@
           </div>
         </div>
         @if($record->approved_amount !== null)
-        <div style="margin-top:8px;padding:10px 14px;background:var(--success-light);border-radius:var(--radius);border:1px solid var(--success);display:flex;align-items:center;gap:10px;">
-          <i class="bx bx-check-circle" style="color:var(--success);font-size:20px;flex-shrink:0;"></i>
+        <div style="margin-top:8px;padding:12px 16px;background:var(--primary-light);border-radius:var(--radius);border:1px solid var(--primary);display:flex;align-items:center;gap:10px;">
+          <i class="bx bx-check-circle" style="color:var(--primary);font-size:16px;flex-shrink:0;"></i>
           <div>
-            <div style="font-size:12px;font-weight:700;color:var(--success);">심사 승인금액</div>
-            <div style="font-size:16px;font-weight:800;color:var(--success);">₩{{ number_format($record->approved_amount) }}</div>
+            <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--primary);">심사 승인금액</div>
+            <div style="font-size:16px;font-weight:700;line-height:26px;color:var(--primary);">₩{{ number_format($record->approved_amount) }}</div>
           </div>
         </div>
         @endif
@@ -508,16 +520,16 @@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
           <span class="badge badge-{{ $rl['badge'] }}">{{ $rl['label'] }}</span>
           @if($record->nhis_result_at)
-            <span style="font-size:12px;color:var(--text-muted);">{{ $record->nhis_result_at->format('Y-m-d H:i') }}</span>
+            <span style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">{{ $record->nhis_result_at->format('Y-m-d H:i') }}</span>
           @endif
         </div>
         @if($record->nhis_message)
-          <div style="padding:10px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);font-size:13px;color:var(--text-secondary);">
+          <div style="padding:12px 16px;background:var(--gray-100);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:13px;font-weight:400;line-height:21px;color:var(--gray-800);">
             {{ $record->nhis_message }}
           </div>
         @endif
         @if(!$record->nhis_message && $record->nhis_result === 'pending')
-          <p style="font-size:13px;color:var(--text-muted);margin:0;">아직 심사 결과가 등록되지 않았습니다.</p>
+          <p style="font-size:13px;font-weight:400;line-height:21px;color:var(--gray-600);margin:0;">아직 심사 결과가 등록되지 않았습니다.</p>
         @endif
       </div>
     </div>
@@ -538,10 +550,10 @@
             <div class="tl-time">{{ $log->created_at->format('Y-m-d H:i:s') }}</div>
             <div class="tl-title" style="{{ $log->id === $record->id ? 'color:var(--primary)' : '' }}">
               @php $sl = \App\Models\NhisFaxLog::STATUS_LABELS[$log->status] ?? ['label'=>$log->status,'badge'=>'secondary']; @endphp
-              <span class="badge badge-{{ $sl['badge'] }}" style="font-size:11px;">{{ $sl['label'] }}</span>
+              <span class="badge badge-{{ $sl['badge'] }}">{{ $sl['label'] }}</span>
               {{ $log->document_title ?? '' }}
               @if($log->id === $record->id)
-                <span style="font-size:11px;color:var(--primary);font-weight:400;">(현재)</span>
+                <span style="font-size:11px;font-weight:500;line-height:18px;color:var(--primary);">(현재)</span>
               @endif
             </div>
             <div class="tl-sub">
@@ -582,8 +594,8 @@
           <tbody>
             @foreach($order->prescription->items as $item)
             <tr>
-              <td style="font-weight:600;">{{ $item->product_name ?? '-' }}</td>
-              <td style="font-family:monospace;font-size:11px;color:var(--text-muted);">{{ $item->product_code ?? '-' }}</td>
+              <td style="font-weight:500;">{{ $item->product_name ?? '-' }}</td>
+              <td style="font-family:monospace;font-size:11px;font-weight:500;color:var(--gray-600);">{{ $item->product_code ?? '-' }}</td>
               <td style="text-align:right;">{{ $item->quantity ?? '-' }}</td>
               <td style="text-align:right;">₩{{ number_format($item->product_price ?? 0) }}</td>
               <td style="text-align:right;">₩{{ number_format($item->nhis_amount ?? 0) }}</td>
@@ -605,7 +617,7 @@
     @if($order)
     <div class="card">
       <div class="card-header" style="padding:12px 16px;border-bottom:1px solid var(--border);">
-        <span style="font-size:13px;font-weight:700;">관련 주문</span>
+        <span style="font-size:14px;font-weight:700;line-height:22px;color:var(--gray-1000);">관련 주문</span>
       </div>
       <div class="card-body">
         <dl class="side-info">
@@ -644,7 +656,7 @@
     @if($patient)
     <div class="card">
       <div class="card-header" style="padding:12px 16px;border-bottom:1px solid var(--border);">
-        <span style="font-size:13px;font-weight:700;">환자 정보</span>
+        <span style="font-size:14px;font-weight:700;line-height:22px;color:var(--gray-1000);">환자 정보</span>
       </div>
       <div class="card-body">
         <dl class="side-info">
@@ -683,7 +695,7 @@
     @if($prescription)
     <div class="card">
       <div class="card-header" style="padding:12px 16px;border-bottom:1px solid var(--border);">
-        <span style="font-size:13px;font-weight:700;">처방전 정보</span>
+        <span style="font-size:14px;font-weight:700;line-height:22px;color:var(--gray-1000);">처방전 정보</span>
       </div>
       <div class="card-body">
         <dl class="side-info">

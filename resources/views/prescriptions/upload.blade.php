@@ -21,7 +21,7 @@
   /* 제목과 부제는 붙여 놓는다 — 아이콘과의 간격(8)만 벌린다 (Figma 128:731) */
   .step-text { display:flex; flex-direction:column; align-items:center; }
   .step-icon  { width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-                font-size:18px; color:var(--gray-400); }
+                font-size:16px; line-height:16px; color:var(--gray-400); }
   .step-label { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-400); }
   .step-sub   { font-size:11px; font-weight:500; line-height:1.6; color:var(--gray-400); }
   .step.active .step-icon, .step.active .step-label, .step.active .step-sub { color:var(--primary); }
@@ -98,7 +98,7 @@
             transition:var(--transition); text-align:center; }
   .fu-add:hover, .fu-add.dragover { background:var(--primary-light); }
   .fu-add input[type=file] { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
-  .fu-add-icon  { font-size:20px; color:var(--primary); line-height:1; }
+  .fu-add-icon  { font-size:16px; line-height:16px; color:var(--primary); }
   .fu-add-title { font-size:13px; font-weight:500; line-height:1.4; color:var(--primary); }
   .fu-add-sub   { font-size:11px; font-weight:500; line-height:1.2; color:var(--gray-500); }
   .fu-add-text  { display:flex; flex-direction:column; align-items:center; gap:6px; }
@@ -109,19 +109,20 @@
              background:var(--gray-0); border:1px solid var(--gray-200); }
   .fu-card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .fu-card-veil { position:absolute; inset:0; background:rgba(0,0,0,.4); }
+  /* 140 타일을 통째로 채우는 자리표시 아이콘이다. 16 으로 내리면 타일이 비어 보여 24 로 둔다 */
   .fu-card-doc  { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-                  font-size:34px; color:rgba(255,255,255,.7); }
+                  font-size:24px; color:rgba(255,255,255,.7); }
   /* 삭제 — 16×16 원 (Figma 128:3205) */
   .fu-del { position:absolute; top:8px; right:8px; width:16px; height:16px; border-radius:999px;
             background:var(--primary); border:none; color:var(--gray-0); cursor:pointer;
-            display:flex; align-items:center; justify-content:center; font-size:9px; line-height:1; padding:0; }
+            display:flex; align-items:center; justify-content:center; font-size:10px; line-height:12px; padding:0; }
   /* 유형 선택 — 좌상단, 흰 글씨 + 화살표 (Figma 128:3211) */
   .fu-type { position:absolute; top:8px; left:8px; display:flex; align-items:center; gap:4px; }
   .fu-type select { appearance:none; -webkit-appearance:none; background:transparent; border:none;
                     color:var(--gray-0); font-size:12px; font-weight:400; line-height:1.6;
                     padding:0; cursor:pointer; }
   .fu-type select option { color:var(--gray-1000); }
-  .fu-type i { font-size:9px; color:var(--gray-0); }
+  .fu-type i { font-size:10px; line-height:12px; color:var(--gray-0); }
   /* 파일명 띠 — 아래 가득, 반투명 검정 (Figma 128:3208) */
   .fu-name { position:absolute; left:0; right:0; bottom:0; padding:6px;
              background:rgba(0,0,0,.4); color:var(--gray-0);
@@ -133,14 +134,15 @@
 
   /* ── Patient search ── */
   .patient-search-wrap { position:relative; }
-  .patient-search-drop { position:absolute; top:calc(100%+4px); left:0; right:0; background:#fff; border:1px solid var(--primary); border-radius:var(--radius); box-shadow:0 6px 20px rgba(0,0,0,.13); z-index:500; max-height:240px; overflow-y:auto; display:none; }
+  /* calc 는 연산자 둘레에 공백이 없으면 통째로 무효가 된다 — 드롭다운이 제자리에 붙지 않았다 */
+  .patient-search-drop { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--gray-0); border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.13); z-index:500; max-height:240px; overflow-y:auto; display:none; }
   .patient-search-drop.open { display:block; }
-  .ps-item { padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); font-size:12px; display:flex; align-items:center; gap:8px; transition:background .1s; }
+  .ps-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border); font-size:12px; line-height:19px; display:flex; align-items:center; gap:8px; transition:background .1s; }
   .ps-item:last-child { border-bottom:none; }
   .ps-item:hover, .ps-item.active { background:var(--primary-light); }
   .ps-item-name { font-weight:700; }
-  .ps-item-meta { font-size:11px; color:var(--text-muted); }
-  .ps-no-result { padding:12px; font-size:12px; color:var(--text-muted); text-align:center; }
+  .ps-item-meta { font-size:11px; line-height:18px; color:var(--gray-500); }
+  .ps-no-result { padding:12px; font-size:12px; line-height:19px; color:var(--gray-500); text-align:center; }
 
   /* ── 최근 업로드 이력 항목 (Figma 128:834) ── */
   .history-list { display:flex; flex-direction:column; gap:8px; }
@@ -160,10 +162,10 @@
   /* ── Progress overlay ── */
   .progress-overlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,.55); align-items:center; justify-content:center; }
   .progress-overlay.active { display:flex; }
-  .progress-box { background:#fff; border-radius:var(--radius-lg); padding:36px 40px; text-align:center; min-width:300px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
-  .progress-spinner { width:56px; height:56px; border:5px solid var(--primary-light); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 18px; }
-  .progress-title { font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:6px; }
-  .progress-sub   { font-size:12px; color:var(--text-muted); }
+  .progress-box { background:var(--gray-0); border-radius:12px; padding:24px; text-align:center; min-width:300px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .progress-spinner { width:48px; height:48px; border:4px solid var(--primary-light); border-top-color:var(--primary); border-radius:999px; animation:spin .8s linear infinite; margin:0 auto 16px; }
+  .progress-title { font-size:16px; font-weight:700; line-height:19px; color:var(--gray-1000); margin-bottom:6px; }
+  .progress-sub   { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
 </style>
 @endpush
 
@@ -202,10 +204,10 @@
     {{-- 모바일 대기 알림 --}}
     @if($mobilePending->isNotEmpty())
     <div class="mobile-upload-card">
-      <div style="font-size:26px;color:var(--info);"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div style="font-size:16px;line-height:16px;color:var(--primary);"><i class="fa-solid fa-mobile-screen-button"></i></div>
       <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;">모바일 업로드 대기 {{ $mobilePending->count() }}건</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">최근: {{ $mobilePending->first()?->patient_name_ocr ?? '환자' }} — {{ $mobilePending->first()?->created_at->format('H:i') }}</div>
+        <div style="font-size:13px;font-weight:700;line-height:21px;">모바일 업로드 대기 {{ $mobilePending->count() }}건</div>
+        <div style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);margin-top:2px;">최근: {{ $mobilePending->first()?->patient_name_ocr ?? '환자' }} — {{ $mobilePending->first()?->created_at->format('H:i') }}</div>
       </div>
       <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> 대기</span>
     </div>
@@ -236,9 +238,9 @@
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
               <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
                 <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                각 파일의 <b style="font-weight:500;color:#044456;">유형</b>을 선택해 주세요.
-                <b style="font-weight:500;color:#044456;">처방전</b>은 OCR 분석,
-                <b style="font-weight:500;color:#044456;">주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.
+                각 파일의 <b style="font-weight:500;color:var(--primary-700);">유형</b>을 선택해 주세요.
+                <b style="font-weight:500;color:var(--primary-700);">처방전</b>은 OCR 분석,
+                <b style="font-weight:500;color:var(--primary-700);">주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.
               </span>
             </div>
 
@@ -307,15 +309,15 @@
 
           {{-- 파일 선택 중 프로그레스 바 --}}
           <div id="fileProgressWrap" style="display:none;margin-top:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:5px;">
-              <span id="fileProgressLabel" style="font-weight:600;display:flex;align-items:center;gap:5px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;line-height:18px;color:var(--gray-500);margin-bottom:4px;">
+              <span id="fileProgressLabel" style="font-weight:500;display:flex;align-items:center;gap:4px;">
                 <i class="fa-solid fa-spinner" style="animation:spin .7s linear infinite;"></i> 파일 확인 중...
               </span>
               <span id="fileProgressPct" style="font-weight:700;color:var(--primary);">0%</span>
             </div>
-            <div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div style="height:4px;background:var(--gray-200);border-radius:999px;overflow:hidden;">
               <div id="fileProgressBar"
-                   style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),#818cf8);border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1);"></div>
+                   style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--primary-300));border-radius:999px;transition:width .45s cubic-bezier(.4,0,.2,1);"></div>
             </div>
           </div>
 
@@ -390,7 +392,7 @@
     <div class="progress-spinner"></div>
     <div class="progress-title">OCR 분석 중...</div>
     <div class="progress-sub" id="progressSub">처방전 텍스트를 인식하고 있습니다</div>
-    <div style="margin-top:14px;font-size:11px;color:var(--text-muted);">10~30초 소요됩니다. 창을 닫지 마세요.</div>
+    <div style="margin-top:12px;font-size:11px;font-weight:500;line-height:18px;color:var(--gray-500);">10~30초 소요됩니다. 창을 닫지 마세요.</div>
   </div>
 </div>
 

@@ -41,26 +41,36 @@
   .patient-table tbody tr:hover td { background:rgba(40,121,139,.04); cursor:pointer; }
   .patient-table tbody tr:last-child td { border-bottom:none; }
 
-  /* Vuexy-style soft badges — 현재 마크업 사용처는 없으나 개발 자산이라 남겨 둔다.
-     쓰게 될 때 시안(h22 · radius 6 · 11px/500)에 맞춰야 한다. */
-  .nhis-badge   { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
-  .nhis-yes     { background:var(--success-light);color:var(--success); }
+  /* soft badges — 현재 마크업 사용처는 없으나 개발 자산이라 남겨 둔다.
+     시안 배지 규격(h22 · r6 · pad 2/6 · 11px/500 · lh18)과 DS 토큰으로 맞춰 뒀다.
+     초록(--success)과 분홍은 시안에 없어 primary/회색 램프로 접었다. */
+  .nhis-badge   { display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:500;line-height:18px; }
+  .nhis-yes     { background:var(--primary-light);color:var(--primary); }
   .nhis-no      { background:var(--border-light);color:var(--text-muted); }
-  .gender-badge { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600; }
+  .gender-badge { display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:500;line-height:18px; }
   .gender-male  { background:var(--primary-light);color:var(--primary); }
-  .gender-female{ background:#fce7f3;color:#c026a0; }
-  .rx-count-badge { display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary); }
+  .gender-female{ background:var(--gray-100);color:var(--gray-700); }
+  .rx-count-badge { display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;line-height:18px;background:var(--primary-light);color:var(--primary); }
 
   /* ── Modal (Vuexy style) ── */
   .modal-overlay { display:none;position:fixed;inset:0;background:rgba(67,56,202,.3);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
   .modal-overlay.show { display:flex; }
   .modal-box { background:var(--bg-card);border-radius:12px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
-  .modal-header { padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px; }
-  .modal-header h3 { font-size:15px;font-weight:700;margin:0;flex:1;color:var(--text-primary); }
-  .modal-body   { padding:22px; }
-  .modal-footer { padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:var(--bg);border-radius:0 0 12px 12px; }
-  .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
-  .form-group   { display:flex;flex-direction:column;gap:5px; }
+  /* 머리·본문·바닥 규격은 Figma 120:917(환자 추가 모달) 실측 —
+     머리 pad 16/24 · 제목 14px/700 lh22, 본문 pad 24, 바닥 pad 16/24 · gap 8 */
+  .modal-header { padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px; }
+  .modal-header h3 { font-size:14px;font-weight:700;line-height:22px;margin:0;flex:1;color:var(--text-primary); }
+  .modal-body   { padding:24px; }
+  .modal-footer { padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--gray-0);border-radius:0 0 12px 12px; }
+  /* 시안 하단 버튼 글자는 14px/500 (본문 버튼 13px/500 과 다른 유일한 자리).
+     줄높이는 전역 .btn 의 20px 을 그대로 둬 버튼 높이 32 를 지킨다. */
+  .modal-footer .btn { font-size:14px;font-weight:500; }
+  .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+  .form-group   { display:flex;flex-direction:column;gap:8px; }
+  /* 전역 .form-label 은 margin-bottom:5px 을 갖고 있다. 위 flex gap 8 과 더해지면
+     라벨↔입력 간격이 13px 이 되어 시안(라벨 21 + gap 8 + 입력 32)과 어긋난다.
+     gap 하나만 남긴다 — taxinvoice 의 .ti-card-body .form-label 과 같은 처리다. */
+  .form-group .form-label { margin-bottom:0; }
 
   /* 패널 탭(조회결과/상세내용) */
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
@@ -83,24 +93,29 @@
   .pt-radio-dot::after { content:''; width:6px; height:6px; border-radius:999px; background:var(--gray-0); }
   .pt-radio.on .pt-radio-dot { background:var(--primary); }
   /* 상세내용 탭 안 이력 카드(전체폭) */
-  .pt-detail { background:#fff; border:1px solid var(--border);
+  .pt-detail { background:var(--gray-0); border:1px solid var(--border);
     border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; }
-  .pt-detail-head { display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border); }
-  .pt-detail .tab-bar { display:flex; border-bottom:1px solid var(--border); padding:0 6px; overflow-x:auto; }
-  .pt-detail .tab-btn { padding:10px 11px; font-size:12.5px; font-weight:700; color:var(--text-muted);
-    border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
-    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  /* 좌우 여백은 카드 안 표준 16 — 아래 탭바(pad 0/16)·본문과 글자 시작선을 맞춘다 */
+  .pt-detail-head { display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--border); }
+  /* 상세 카드 안 탭바 — 전역 .pnl-tabs 와 같은 규격(h44 · pad 0/16 · gap 16 · 탭 13/500 lh21) */
+  .pt-detail .tab-bar { display:flex; gap:16px; border-bottom:1px solid var(--border); padding:0 16px; overflow-x:auto; }
+  .pt-detail .tab-btn { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; color:var(--text-muted);
+    border:none; background:none; cursor:pointer; border-bottom:1px solid transparent; margin-bottom:-1px;
+    display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
   .pt-detail .tab-btn:hover { color:var(--primary); }
   .pt-detail .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .pt-detail .tab-btn .cnt { background:var(--bg); color:var(--text-secondary); border-radius:10px; padding:0 6px; font-size:10.5px; }
-  .pt-pane { display:none; padding:8px 14px 14px; overflow-y:auto; max-height:calc(100vh - 300px); }
+  /* 건수 배지 — 시안 16×16 정원 · 10px/700 */
+  .pt-detail .tab-btn .cnt { display:inline-flex; align-items:center; justify-content:center;
+    min-width:16px; height:16px; padding:0 4px; border-radius:999px;
+    background:var(--bg); color:var(--text-secondary); font-size:10px; font-weight:700; line-height:12px; }
+  .pt-pane { display:none; padding:8px 16px 16px; overflow-y:auto; max-height:calc(100vh - 300px); }
   .pt-pane.active { display:block; }
-  .pt-hrow { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-light); font-size:12.5px; cursor:pointer; }
+  .pt-hrow { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-light); font-size:13px; line-height:21px; cursor:pointer; }
   .pt-hrow:last-child { border-bottom:none; }
   .pt-hrow:hover { background:var(--bg); border-radius:6px; }
   .pt-hrow .pt-h-main { flex:1; min-width:0; }
-  .pt-hrow .pt-h-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
-  .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12.5px; }
+  .pt-hrow .pt-h-sub { font-size:11px; font-weight:500; line-height:18px; color:var(--text-muted); margin-top:2px; }
+  .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12px; font-weight:400; line-height:19px; }
   /* 주의 — 이 뷰에는 .card-footer 마크업이 없는데 전역 클래스명을 재정의하고 있다.
      @stack('styles') 가 전역 <style> 뒤에 실려서, 이 화면이 열려 있는 동안
      다른 화면의 카드 푸터 배경·글자색이 함께 바뀐다. 개발 자산이라 그대로 두되
@@ -113,10 +128,10 @@
 
 {{-- 화면 제목·등록 건수. 시안에는 없지만 개발에서 넣은 블록이라 유지한다.
      '환자 추가' 버튼만 시안 위치인 결과바 우측으로 옮겼다. --}}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
   <div>
-    <h5 style="font-size:18px;font-weight:700;margin:0;color:var(--text-primary);">환자 정보</h5>
-    <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">
+    <h5 style="font-size:16px;font-weight:700;line-height:26px;margin:0;color:var(--text-primary);">환자 정보</h5>
+    <p style="font-size:12px;font-weight:400;line-height:19px;color:var(--text-muted);margin:4px 0 0;">
       총 <strong>{{ number_format($total) }}</strong>명 등록
     </p>
   </div>
@@ -202,8 +217,8 @@
   <div id="pdEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 이력이 여기에 표시됩니다.</div>
   <div class="pt-detail" id="patientDetail" style="display:none;">
     <div class="pt-detail-head">
-      <i class="bx bx-user-pin" style="color:var(--primary);font-size:18px;"></i>
-      <span id="pdName" style="font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
+      <i class="bx bx-user-pin" style="color:var(--primary);font-size:16px;"></i>
+      <span id="pdName" style="font-weight:700;font-size:14px;line-height:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
       <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="margin-left:auto;white-space:nowrap;">전체 상세</a>
     </div>
     <div class="tab-bar">
@@ -225,12 +240,14 @@
     <div class="modal-header">
       <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i>
       <h3>환자 추가</h3>
-      <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;">&times;</button>
+      <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-grid-2" style="margin-bottom:12px;">
         <div class="form-group">
-          <label class="form-label">환자명 <span style="color:red;">*</span></label>
+          {{-- 필수 표시는 전역 .form-label span 이 var(--danger) 로 그린다.
+               인라인 color:red 는 그 규칙을 덮어 DS 밖 빨강이 되므로 걷어냈다. --}}
+          <label class="form-label">환자명 <span>*</span></label>
           <input type="text" class="form-control" id="add-name" placeholder="홍길동" />
         </div>
         <div class="form-group">
@@ -330,7 +347,7 @@
     '<div class="pt-hrow" '
       + (url ? 'onclick="ceOpenTab(\'' + url + '\', \'' + (tabTitle || '상세') + '\', \'file-edit-02\')"' : '')
       + '>' +
-      '<div class="pt-h-main"><div style="font-weight:600;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
+      '<div class="pt-h-main"><div style="font-weight:500;">' + main + '</div><div class="pt-h-sub">' + sub + '</div></div>' +
       (right ? '<div style="white-space:nowrap;text-align:right;">' + right + '</div>' : '') +
     '</div>';
   const emptyBox = t => '<div class="pt-empty">' + t + '</div>';

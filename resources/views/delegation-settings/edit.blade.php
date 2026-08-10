@@ -10,20 +10,24 @@
   /* 카드 2열 배치로 우측 공백 최소화(좁은 화면은 1열) */
   .ds-cards { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; align-items:start; }
   @media (max-width:820px) { .ds-cards { grid-template-columns:1fr; } }
-  .ds-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:0; }
-  .ds-card h3 { margin:0 0 16px; font-size:14px; font-weight:800; color:var(--primary);
-    padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
-  .ds-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .ds-field { display:flex; flex-direction:column; gap:5px; }
+  .ds-card { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:0; }
+  /* 섹션 제목 = 14px/700 */
+  .ds-card h3 { margin:0 0 16px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
+    padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .ds-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .ds-field { display:flex; flex-direction:column; gap:4px; }
   .ds-field.full { grid-column:1 / -1; }
-  .ds-field label { font-size:12.5px; font-weight:700; color:var(--text-secondary); }
-  .ds-field input { padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  .ds-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
+  /* 입력 h32 = pad 5 + lh 20 + pad 5 + 테두리 2 */
+  .ds-field input { padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px; font-family:inherit; }
   .ds-field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
-  .ds-hint { font-size:11px; color:var(--text-muted); }
+  .ds-hint { font-size:12px; font-weight:400; line-height:18px; color:var(--text-muted); }
   .ds-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:11px 14px; font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; }
-  .status-ok { background:#eafaf1; border:1px solid #a3e4c1; color:#15803d; border-radius:8px;
-    padding:11px 14px; font-size:13.5px; margin-bottom:16px; font-weight:600; }
+    padding:12px 16px; font-size:12px; font-weight:400; line-height:18px; color:var(--text-secondary); margin-bottom:16px; }
+  /* 성공은 primary 램프로만 표현한다(시안에 초록이 없다) */
+  .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
+    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
 </style>
 @endpush
 
@@ -33,7 +37,7 @@
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
   @if($errors->any())
-    <div class="status-ok" style="background:#fdecea;border-color:#f5c6c0;color:#c0392b;">
+    <div class="status-ok" style="background:var(--alert-100);border-color:var(--alert-500);color:var(--alert-500);">
       입력값을 확인해 주세요: {{ implode(' / ', $errors->all()) }}
     </div>
   @endif

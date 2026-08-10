@@ -357,9 +357,13 @@ function loadDay(cell) {
       return;
     }
 
-    const statusColors = {
-      pending:'#9ca3af', ocr_processing:'#f57c00', ocr_done:'#0288d1',
-      review_needed:'#c62828', approved:'#2e7d32', rejected:'#b71c1c', ordered:'#1565c0'
+    // 상태색은 전역 배지 규칙(layouts/app.blade.php `.bg-label-*`)을 그대로 쓴다.
+    // 시안에 초록·주황·남색 상태색이 0건이므로 정상 진행은 primary 연톤,
+    // 주의(검수 필요·반려)만 alert 연톤, 대기·처리중은 중립 회색으로 그린다.
+    // 상태 구분은 배지 안 라벨 문구(status_label)가 계속 담당한다.
+    const statusBadge = {
+      pending:'bg-label-secondary', ocr_processing:'bg-label-secondary', ocr_done:'bg-label-primary',
+      review_needed:'bg-label-danger', approved:'bg-label-primary', rejected:'bg-label-danger', ordered:'bg-label-primary'
     };
 
     body.innerHTML = data.map(item => `
@@ -368,7 +372,7 @@ function loadDay(cell) {
         <span class="rx-row-patient">${item.patient_name}</span>
         <span class="rx-row-hospital">${item.hospital}</span>
         <span class="rx-row-badge">
-          <span class="badge" style="background:${statusColors[item.status] ?? '#9ca3af'}22;color:${statusColors[item.status] ?? '#9ca3af'};">
+          <span class="badge ${statusBadge[item.status] ?? 'bg-label-secondary'}">
             ${item.status_label}
           </span>
         </span>
@@ -477,7 +481,9 @@ function gotoYm(y, m) {
       <span class="ds-grid-total">전체 <b>{{ $listTotal }}</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint"><i class="fa-solid fa-circle-info"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
+      {{-- 안내 아이콘은 전역 .ds-grid-hint::before(12×12 alert-circle)가 그린다.
+           마크업의 <i> 를 그대로 두면 같은 아이콘이 두 개로 보여 CSS 쪽 하나만 남긴다. --}}
+      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
       {{-- 그리드 툴바에 있던 '엑셀 저장' 을 시안 위치(결과바 우측)로 옮겼다 --}}
       <button type="button" class="ds-btn" onclick="window.__repurchaseGrid?.downloadExcel()">엑셀 저장</button>
     </div>

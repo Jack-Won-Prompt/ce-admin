@@ -169,13 +169,19 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
 /* 상태 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18) */
 .ti-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
+/* 발행 단계는 임시저장 → 발행완료 → 국세청 완료 → 취소 네 칸이다.
+   초록(--success)을 primary 로 접으면서 '발행완료'와 '국세청 완료'가 같은 색이 됐다.
+   램프는 primary/alert 둘만 쓰되 국세청 완료만 한 단계 깊은 primary-100/600 을 준다
+   (이 화면이 .sum-card.blue/.green 과 도움말 범례에서 이미 쓰는 두 단계다). */
 .ti-badge.draft   { background:var(--gray-100);      color:var(--gray-600); }
 .ti-badge.issued  { background:var(--primary-light); color:var(--primary); }
-.ti-badge.nts     { background:var(--primary-light); color:var(--primary); }
+.ti-badge.nts     { background:var(--primary-100);   color:var(--primary-600); }
 .ti-badge.cancel  { background:var(--danger-light);  color:var(--danger); }
 .ti-badge.taxvat  { background:var(--primary-light); color:var(--primary); }
-.ti-badge.taxzero { background:var(--primary-light); color:var(--primary); }
+.ti-badge.taxzero { background:var(--primary-100);   color:var(--primary-600); }
 .ti-badge.taxfree { background:var(--gray-100);      color:var(--gray-600); }
+/* 도움말 범례의 '국세청 완료' 스와치도 같은 색으로 — 범례와 실제 배지가 어긋나지 않게 한다 */
+.help-badge-row .badge-success { background:var(--primary-100); color:var(--primary-600); }
 /* 시안에 보라가 없다 — primary 연톤으로 돌린다 */
 .ti-badge.rx      { background:var(--primary-light); color:var(--primary); }
 

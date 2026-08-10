@@ -8,13 +8,18 @@
 <style>
   .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
   .section-divider { height: 1px; background: var(--border); margin: 22px 0; }
+  /* 전역 .status-dot.online::before (app.blade.php:967) 가 --success 초록 점(7×7)과
+     초록 링을 이 span 위에 덧그린다. 아래 인라인 background 만 primary 로 바꾸면
+     화면에는 초록이 그대로 남는다 — pseudo 까지 같은 램프로 맞춘다.
+     링은 아래 span 이 이미 primary-light 로 그리고 있어 pseudo 쪽은 none 으로 지운다. */
+  .page-body .status-dot.online::before { background: var(--primary); box-shadow: none; }
 </style>
 @endpush
 
 @section('content')
 
-{{-- 요약 카드 --}}
-<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+{{-- 요약 카드 — 블록 사이 간격은 .page-body 의 gap 12 가 만든다(margin 중복 제거) --}}
+<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
   <div class="stat-card" style="cursor:default;">
     <div class="stat-icon primary"><i class="bx bx-group"></i></div>
     <div class="stat-info">
@@ -22,26 +27,28 @@
       <div class="stat-label">전체 접속자</div>
     </div>
   </div>
+  {{-- 초록(--success)·파랑(--info)은 시안에 없다. 강조는 primary 램프 하나로만 표현한다 --}}
   <div class="stat-card" style="cursor:default;">
-    <div class="stat-icon success"><i class="bx bx-wifi"></i></div>
+    <div class="stat-icon primary"><i class="bx bx-wifi"></i></div>
     <div class="stat-info">
-      <div class="stat-val" style="color:var(--success);">{{ $sessions->where('online', true)->count() }}</div>
-      <div class="stat-label">현재 온라인 <span style="font-size:10px;color:var(--text-muted);">(5분 이내)</span></div>
+      <div class="stat-val" style="color:var(--primary);">{{ $sessions->where('online', true)->count() }}</div>
+      <div class="stat-label">현재 온라인 <span style="font-size:10px;font-weight:500;color:var(--gray-600);">(5분 이내)</span></div>
     </div>
   </div>
   <div class="stat-card" style="cursor:default;">
-    <div class="stat-icon info"><i class="bx bx-show"></i></div>
+    <div class="stat-icon primary"><i class="bx bx-show"></i></div>
     <div class="stat-info">
-      <div class="stat-val" style="color:var(--info);">{{ $todayCount }}</div>
+      <div class="stat-val" style="color:var(--primary);">{{ $todayCount }}</div>
       <div class="stat-label">오늘 상품 조회</div>
     </div>
   </div>
 </div>
 
 {{-- 사용자 로그인 현황 --}}
-<div class="card" style="margin-bottom:20px;">
+<div class="card">
   <div class="card-header">
-    <span class="status-dot online" style="width:8px;height:8px;min-width:8px;flex-shrink:0;border-radius:50%;background:var(--success);box-shadow:0 0 0 2px var(--success-light);margin-right:6px;"></span>
+    {{-- 접속 표시 점 — 초록(--success)은 시안에 없어 primary 램프로 옮겼다. r999 --}}
+    <span class="status-dot online" style="width:8px;height:8px;min-width:8px;flex-shrink:0;border-radius:999px;background:var(--primary);box-shadow:0 0 0 2px var(--primary-light);margin-right:6px;"></span>
     <span class="card-header-title">사용자 로그인 현황</span>
     <a href="{{ route('shop-monitoring.index') }}" class="btn btn-outline btn-sm ms-auto">
       <i class="bx bx-refresh"></i> 새로고침
@@ -55,9 +62,9 @@
 {{-- 상품 조회 로그 --}}
 <div class="card">
   <div class="card-header">
-    <i class="bx bx-list-check" style="font-size:18px;color:var(--primary);"></i>
+    <i class="bx bx-list-check" style="font-size:16px;color:var(--primary);"></i>
     <span class="card-header-title">상품 조회 로그</span>
-    <span style="font-size:12px;color:var(--text-muted);margin-left:4px;">(최근 50건)</span>
+    <span class="card-header-sub">(최근 50건)</span>
     <form method="GET" action="{{ route('shop-monitoring.index') }}" style="display:flex;gap:8px;margin-left:auto;">
       <div class="search-wrap">
         <i class="bx bx-search"></i>
@@ -71,7 +78,8 @@
     </form>
   </div>
   <div class="card-body" style="padding:12px 16px;">
-    <div style="margin-bottom:8px;font-size:12px;color:var(--text-muted);">
+    {{-- 안내문 규격 — 12px/500 · gray-600 --}}
+    <div style="margin-bottom:8px;font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
       <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 해당 사용자 로그만 필터링합니다.
     </div>
     <div id="productLogGrid"></div>

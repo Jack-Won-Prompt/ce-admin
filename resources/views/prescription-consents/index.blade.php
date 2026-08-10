@@ -7,21 +7,24 @@
 
 @push('styles')
 <style>
-  /* 행 안의 작은 버튼 — 셀 높이를 넘지 않게 둔다 */
+  /* 행 안의 작은 버튼 — 셀 높이를 넘지 않게 둔다.
+     배지 규격(r6 · pad 2/6 · 11px · lh18)에 맞춘다. */
   .pc-cellbtns { display: flex; gap: 4px; align-items: center; }
   .pc-cellbtn {
     display: inline-flex; align-items: center; gap: 3px;
-    padding: 2px 7px; font-size: 11px; font-weight: 700; line-height: 1.5;
-    white-space: nowrap; border: 1px solid var(--border); border-radius: 5px;
-    background: #fff; color: var(--text-secondary); cursor: pointer; text-decoration: none;
+    padding: 2px 6px; font-size: 11px; font-weight: 700; line-height: 18px;
+    white-space: nowrap; border: 1px solid var(--gray-200); border-radius: 6px;
+    background: var(--gray-0); color: var(--gray-700); cursor: pointer; text-decoration: none;
   }
   .pc-cellbtn:hover  { border-color: var(--primary); color: var(--primary); }
-  .pc-cellbtn.is-png { color: var(--success); border-color: #a7f3d0; }
-  .pc-cellbtn.is-pdf { color: var(--danger);  border-color: #fecaca; }
-  .pc-cellbtn.is-sms { color: #6366f1; border-color: #c7d2fe; }
+  /* 원래 서명 PNG=초록 · PDF=빨강 · SMS=남색이었다. 시안 색은 primary/alert 두 램프뿐이라
+     '받기' 세 개는 중립(gray)으로 두고, 동작 버튼(발송)만 primary 로 남긴다. */
+  .pc-cellbtn.is-png { color: var(--gray-700); border-color: var(--gray-200); }
+  .pc-cellbtn.is-pdf { color: var(--gray-700); border-color: var(--gray-200); }
+  .pc-cellbtn.is-sms { color: var(--primary); border-color: var(--primary-200); }
   /* 받을 수 없는 서류는 눌리지 않게 두되, 왜 없는지 title 로 알린다 */
-  .pc-cellbtn[disabled] { opacity: .38; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
-  .pc-cellbtn[disabled]:hover { border-color: var(--border); color: var(--text-muted); }
+  .pc-cellbtn[disabled] { opacity: .38; cursor: not-allowed; border-color: var(--gray-200); color: var(--gray-500); }
+  .pc-cellbtn[disabled]:hover { border-color: var(--gray-200); color: var(--gray-500); }
 </style>
 @endpush
 
@@ -82,55 +85,65 @@
   <div class="ds-grid-bar">
     <div class="ds-grid-bar-left">
       <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      <span class="ds-grid-hint">
+      {{-- 그리드 하단 상태바(footer)를 껐다. '선택 N건'은 시안대로 결과바에 둔다. --}}
+      <span class="ds-grid-sel">선택 <b id="pcSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      {{-- 전역 .ds-grid-hint 는 한 줄(nowrap · ellipsis)이라 이 두 문장은 결과바에서 잘린다.
+           문장을 줄이지 않고 title 로 전문을 붙여 둔다(마우스를 올리면 다 보인다). --}}
+      <span class="ds-grid-hint"
+            title="각 행의 버튼으로 서류를 받고 위임동의를 다시 보냅니다. 서류는 그 처방전의 가장 최근 동의 건으로 발행됩니다. 행을 더블클릭하면 해당 처방전이 새 탭으로 열립니다.">
         각 행의 버튼으로 서류를 받고 위임동의를 다시 보냅니다.
         서류는 그 처방전의 <b>가장 최근 동의 건</b>으로 발행됩니다. 행을 <b>더블클릭</b>하면 해당 처방전이 새 탭으로 열립니다.
       </span>
-    </div>
-    <div class="ds-grid-bar-right">
+      {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다. 동작은 downloadExcel() 그대로. --}}
+      <button type="button" class="ds-btn" onclick="window.__consentGrid?.downloadExcel()">엑셀 저장</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="pcOpenNew()">
         <i class="fa-solid fa-paper-plane"></i> 신규 위임동의 전송
       </button>
     </div>
   </div>
 
-  <div id="consentGrid"></div>
+  {{-- 시안은 그리드가 흰 카드(r12) 안에 들어간다 --}}
+  <div class="ds-grid-card">
+    <div id="consentGrid"></div>
+  </div>
 </div>
 
 {{-- ── 신규 위임동의: 이름과 전화번호를 등록해 보낸다 ── --}}
 <div id="pcNewBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1190;"
      onclick="pcCloseNew()"></div>
 <div id="pcNewModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-     width:400px;max-width:94vw;background:var(--bg-card);border:1px solid #6366f1;
+     width:400px;max-width:94vw;background:var(--bg-card);border:1px solid var(--primary);
      border-radius:var(--radius-lg);box-shadow:0 12px 40px rgba(0,0,0,.22);z-index:1191;">
-  <div style="background:#6366f1;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
        display:flex;align-items:center;gap:8px;">
-    <i class="fa-solid fa-file-signature" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-    <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">신규 위임동의 SMS 발송</span>
-    <button onclick="pcCloseNew()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+    <i class="fa-solid fa-file-signature" style="color:var(--gray-0);font-size:14px;flex-shrink:0;"></i>
+    <span style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">신규 위임동의 SMS 발송</span>
+    <button onclick="pcCloseNew()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:19px;">
       환자에게 <strong>건강보험 급여 위임동의</strong> 링크를 SMS로 발송합니다.<br>
       입력한 이름과 번호로 <strong>처방전이 한 건 새로 만들어집니다.</strong><br>
-      <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+      <span style="color:var(--alert-500);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
     </p>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">수신 번호</label>
       <input type="text" class="form-control" id="pcNewMobile" placeholder="010-XXXX-XXXX"
-             style="font-size:13px;" oninput="pcNewPreview()" />
+             oninput="pcNewPreview()" />
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">환자명</label>
       <input type="text" class="form-control" id="pcNewName" maxlength="50" placeholder="환자명"
-             style="font-size:13px;" oninput="pcNewPreview()" />
+             oninput="pcNewPreview()" />
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
-      <div id="pcNewPreviewBox" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;
-           padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:#374151;font-family:monospace;"></div>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
+      <div id="pcNewPreviewBox" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;
+           padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:18px;color:var(--gray-700);font-family:monospace;"></div>
     </div>
-    <div id="pcNewResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;"></div>
+    <div id="pcNewResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-outline btn-sm" onclick="pcCloseNew()">취소</button>
       <button class="btn btn-primary btn-sm" id="pcNewSend" onclick="pcSendNew()">
@@ -144,42 +157,43 @@
 <div id="pcSmsBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1200;"
      onclick="pcCloseSms()"></div>
 <div id="pcSmsModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-     width:400px;max-width:94vw;background:var(--bg-card);border:1px solid #6366f1;
+     width:400px;max-width:94vw;background:var(--bg-card);border:1px solid var(--primary);
      border-radius:var(--radius-lg);box-shadow:0 12px 40px rgba(0,0,0,.22);z-index:1201;">
-  <div style="background:#6366f1;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
        display:flex;align-items:center;gap:8px;">
-    <i class="fa-solid fa-file-signature" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-    <span id="pcSmsTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">위임동의 SMS 발송</span>
-    <button onclick="pcCloseSms()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+    <i class="fa-solid fa-file-signature" style="color:var(--gray-0);font-size:14px;flex-shrink:0;"></i>
+    <span id="pcSmsTitle" style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">위임동의 SMS 발송</span>
+    <button onclick="pcCloseSms()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-    <div id="pcSmsNotice" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;
-         padding:10px 12px;font-size:12px;color:#c2410c;line-height:1.6;"></div>
-    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+    {{-- 원래 주황 계열 하드코딩 경고 박스였다. 시안 경고색은 alert 램프 하나뿐이라 그쪽으로 옮겼다. --}}
+    <div id="pcSmsNotice" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:8px;
+         padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:19px;"></div>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:19px;">
       환자에게 <strong>건강보험 급여 위임동의</strong> 링크를 SMS로 발송합니다.<br>
-      <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+      <span style="color:var(--alert-500);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
     </p>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">처방번호</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">처방번호</label>
       <input type="text" class="form-control" id="pcSmsRx" readonly
-             style="background:var(--bg-secondary,#f8f9fa);font-size:13px;font-family:monospace;" />
+             style="background:var(--gray-100);font-family:monospace;" />
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">수신 번호</label>
       <input type="text" class="form-control" id="pcSmsMobile" placeholder="010-XXXX-XXXX"
-             style="font-size:13px;" oninput="pcSmsPreview()" />
+             oninput="pcSmsPreview()" />
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">환자명</label>
       <input type="text" class="form-control" id="pcSmsName" maxlength="50"
-             style="font-size:13px;" oninput="pcSmsPreview()" />
+             oninput="pcSmsPreview()" />
     </div>
     <div>
-      <label style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
-      <div id="pcSmsPreviewBox" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;
-           padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:#374151;font-family:monospace;"></div>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
+      <div id="pcSmsPreviewBox" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;
+           padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:18px;color:var(--gray-700);font-family:monospace;"></div>
     </div>
-    <div id="pcSmsResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;"></div>
+    <div id="pcSmsResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="btn btn-outline btn-sm" onclick="pcCloseSms()">취소</button>
       <button class="btn btn-primary btn-sm" id="pcSmsSend" onclick="pcSendSms()">
@@ -228,8 +242,11 @@
 
   const grid = new wwGrid({
     el: document.getElementById('consentGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    toolbar: false,
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    footer: false,
     columns: [
       { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
       { header: '서명자',    name: 'name',      width: 90,  sortable: true },
@@ -277,6 +294,7 @@
     data: @json($gridData),
   });
   window.__consentGrid = grid;
+  window.dsBindSelCount(grid, 'pcSelCount');
 
   // ── 신규 위임동의: 이름과 번호를 등록해 보낸다 ─────────
   const NEW_URL = @json(route('prescription-consents.store'));
@@ -317,7 +335,7 @@
 
     const btn = document.getElementById('pcNewSend');
     btn.disabled  = true;
-    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;"></span> 발송 중...';
+    btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:999px;animation:spin .7s linear infinite;vertical-align:middle;"></span> 발송 중...';
 
     const box = document.getElementById('pcNewResult');
     box.style.display = 'block';
@@ -333,9 +351,10 @@
       });
       const data = await res.json();
       if (data.success) {
-        box.style.background = 'var(--success-light)';
-        box.style.color      = 'var(--success)';
-        box.style.border     = '1px solid #86efac';
+        // 초록(success)은 시안에 없다 — 성공 강조는 primary 램프로 표현한다.
+        box.style.background = 'var(--primary-50)';
+        box.style.color      = 'var(--primary-600)';
+        box.style.border     = '1px solid var(--primary-200)';
         box.innerHTML = `<i class="fa-solid fa-circle-check"></i> SMS 발송 완료 — 유효 시간: <b>${data.expires_at}</b>까지<br>`
           + `<span style="font-weight:500;">처방전 <b>${data.rx_number ?? ''}</b> 이(가) 만들어졌습니다. 잠시 후 목록을 새로 불러옵니다.</span>`;
         btn.innerHTML = '<i class="fa-solid fa-check"></i> 발송 완료';
@@ -343,7 +362,7 @@
       } else {
         box.style.background = 'var(--danger-light)';
         box.style.color      = 'var(--danger)';
-        box.style.border     = '1px solid #fca5a5';
+        box.style.border     = '1px solid var(--alert-100)';
         box.textContent      = data.message ?? '발송 실패';
         btn.disabled  = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
@@ -351,7 +370,7 @@
     } catch (e) {
       box.style.background = 'var(--danger-light)';
       box.style.color      = 'var(--danger)';
-      box.style.border     = '1px solid #fca5a5';
+      box.style.border     = '1px solid var(--alert-100)';
       box.textContent      = '네트워크 오류가 발생했습니다.';
       btn.disabled  = false;
       btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
@@ -414,7 +433,7 @@
 
     const btn = document.getElementById('pcSmsSend');
     btn.disabled  = true;
-    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;"></span> 발송 중...';
+    btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:999px;animation:spin .7s linear infinite;vertical-align:middle;"></span> 발송 중...';
 
     const box = document.getElementById('pcSmsResult');
     box.style.display = 'block';
@@ -430,9 +449,10 @@
       });
       const data = await res.json();
       if (data.success) {
-        box.style.background = 'var(--success-light)';
-        box.style.color      = 'var(--success)';
-        box.style.border     = '1px solid #86efac';
+        // 초록(success)은 시안에 없다 — 성공 강조는 primary 램프로 표현한다.
+        box.style.background = 'var(--primary-50)';
+        box.style.color      = 'var(--primary-600)';
+        box.style.border     = '1px solid var(--primary-200)';
         box.innerHTML = `<i class="fa-solid fa-circle-check"></i> SMS 발송 완료 — 유효 시간: <b>${data.expires_at}</b>까지<br>`
           + '<span style="font-weight:500;">잠시 후 목록을 새로 불러옵니다.</span>';
         btn.innerHTML = '<i class="fa-solid fa-check"></i> 발송 완료';
@@ -441,7 +461,7 @@
       } else {
         box.style.background = 'var(--danger-light)';
         box.style.color      = 'var(--danger)';
-        box.style.border     = '1px solid #fca5a5';
+        box.style.border     = '1px solid var(--alert-100)';
         box.textContent      = data.message ?? '발송 실패';
         btn.disabled  = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
@@ -449,7 +469,7 @@
     } catch (e) {
       box.style.background = 'var(--danger-light)';
       box.style.color      = 'var(--danger)';
-      box.style.border     = '1px solid #fca5a5';
+      box.style.border     = '1px solid var(--alert-100)';
       box.textContent      = '네트워크 오류가 발생했습니다.';
       btn.disabled  = false;
       btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';

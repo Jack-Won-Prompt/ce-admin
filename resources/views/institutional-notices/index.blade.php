@@ -10,11 +10,20 @@
 <style>
   .org-ext-link { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); text-decoration:none; opacity:0; transition:opacity .15s; z-index:2; }
   .nav-item:hover .org-ext-link { opacity:1; }
-  .org-ext-link:hover { color:var(--primary); opacity:1 !important; }
+  /* 바로 위 .nav-item:hover 규칙과 특정성이 같고 뒤에 있어 우선순위 표시 없이도 이긴다 */
+  .org-ext-link:hover { color:var(--primary); opacity:1; }
   .impact-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
-  .impact-high   { background:var(--danger-light); color:var(--danger); }
-  .impact-medium { background:var(--warning-light); color:#B45309; }
-  .impact-low    { background:var(--border-light); color:var(--text-muted); }
+  /* 영향도 3단계 — 시안은 상태색을 alert 램프와 primary 램프 둘로만 그린다.
+     HIGH=alert · MEDIUM=primary · LOW=회색. (기존 MEDIUM 의 주황 계열 글자색은 시안에 없다) */
+  .impact-high   { background:var(--alert-50);   color:var(--alert-500); }
+  .impact-medium { background:var(--primary-50); color:var(--primary-600); }
+  .impact-low    { background:var(--gray-100);   color:var(--gray-600); }
+  /* 기관 탭 — 부트스트랩 CDN 의 .nav-tabs .nav-link(0,2,0) · .nav-tabs .nav-link.active(0,3,0) 가
+     전역 .nav-link(0,1,0) · .nav-link.active(0,2,0) 를 이겨, 활성 탭이 회색 테두리 박스(r6)에
+     검정 글자 + 흰 밑줄로 그려진다. 시안 탭 활성 표시는 밑줄 1px primary 다. #orgTabs 로 이긴다. */
+  #orgTabs .nav-link { border:none; border-bottom:1px solid transparent; border-radius:0; background:transparent; color:var(--text-muted); margin-bottom:-1px; }
+  #orgTabs .nav-link:hover  { color:var(--primary); background:transparent; }
+  #orgTabs .nav-link.active { color:var(--primary); background:transparent; border-bottom-color:var(--primary); }
   .nd-modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(13,27,42,.45); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px; }
   .nd-modal-overlay.open { display:flex; }
   .nd-modal-box { background:var(--bg-card); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:720px; max-height:90vh; display:flex; flex-direction:column; animation:fadeUp .18s ease; }
@@ -23,8 +32,8 @@
 
 @section('content')
 
-{{-- 헤더 액션 --}}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+{{-- 헤더 액션 — 블록 사이 간격은 .page-body 의 gap 12 가 만든다(margin 중복 제거) --}}
+<div style="display:flex;align-items:center;justify-content:space-between;">
   <div>
     <div style="font-size:13px;color:var(--text-muted);">보건복지부 · 건강보험심사평가원 · 국민건강보험공단 정책 수집</div>
   </div>
@@ -37,7 +46,7 @@
 </div>
 
 {{-- 통계 카드 --}}
-<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
   @foreach([
     ['org'=>'MOHW', 'label'=>'보건복지부',        'icon'=>'bx-shield-quarter', 'cls'=>'danger',  'url'=>'https://www.mohw.go.kr/board.es?mid=a10503010100&bid=0027'],
     ['org'=>'HIRA', 'label'=>'건강보험심사평가원', 'icon'=>'bx-search-alt',     'cls'=>'warning', 'url'=>'https://www.hira.or.kr/bbsDummy.do?pgmid=HIRAA020002000100'],
@@ -56,7 +65,7 @@
         <span class="stat-val">{{ $counts[$card['org']] ?? 0 }}</span>
         <span style="font-size:12px;color:var(--text-muted);">건</span>
       </div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">
+      <div style="font-size:11px;font-weight:500;line-height:18px;color:var(--gray-500);margin-top:2px;">
         @if(!empty($latestDates[$card['org']]))
           최근: {{ \Carbon\Carbon::parse($latestDates[$card['org']])->format('Y-m-d') }}
         @else
@@ -68,14 +77,58 @@
   @endforeach
 </div>
 
-{{-- 공지 목록 카드 --}}
-<div class="card">
-  {{-- 탭 + 필터 --}}
-  <div class="card-header" style="padding:0;flex-direction:column;gap:0;">
-    <div style="display:flex;align-items:center;padding:0 18px 0 0;border-bottom:1px solid var(--border);">
+{{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16). 검색은 JS 가 처리해 form 이 아니다.
+     기존 카드 헤더 안에 있던 영향도·검색어·검색 버튼을 id 그대로 옮겨 왔다. --}}
+<div class="ds-filter-card">
+  <div class="ds-filter-fields">
+    {{-- 1열(1280 뷰포트에서 78.5px)이면 '영향도 전체'(약 63px)가 잘린다 — 2열로 준다 --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">영향도</label>
+      <select id="filterImpact" class="form-control form-select">
+        <option value="">영향도 전체</option>
+        <option value="HIGH">HIGH</option>
+        <option value="MEDIUM">MEDIUM</option>
+        <option value="LOW">LOW</option>
+      </select>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <div class="search-wrap">
+        <i class="bx bx-search"></i>
+        <input type="text" id="searchInput" class="form-control" placeholder="제목 검색...">
+      </div>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    <button type="button" class="ds-btn ds-btn-primary" id="btnSearch"><i class="bx bx-search"></i> 검색</button>
+  </div>
+</div>
+
+{{-- 결과바(h32) + 공지 목록 카드(r12) --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      {{-- JS 가 '전체 N건' 문구를 통째로 갈아 끼우므로 숫자만 굵게 나눌 수 없다 --}}
+      <span class="ds-grid-total" id="noticeTotalBadge">전체 0건</span>
+      <span class="ds-grid-sel">선택 <b id="noticeSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
+        <i class="bx bx-detail"></i> 선택 상세
+      </button>
+      {{-- 안내문의 화살표가 왼쪽 '선택 상세' 버튼을 가리키므로 버튼 뒤에 둔다 --}}
+      <span class="ds-grid-hint">← 행 체크 후 상세 보기</span>
+      {{-- 그리드 툴바(엑셀 저장)를 결과바로 옮겼다 --}}
+      <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 저장</button>
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+    {{-- 기관 탭 — 카드 안 상단, 탭 높이 44 --}}
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;">
       <ul class="nav-tabs" id="orgTabs" style="border:none;margin-bottom:0;">
         <li class="nav-item" style="position:relative;">
-          <button class="nav-link active" data-org="MOHW" type="button" style="padding:12px 34px 12px 16px;">
+          <button class="nav-link active" data-org="MOHW" type="button" style="height:44px;padding:0 34px 0 16px;">
             <i class="bx bx-shield-quarter" style="margin-right:5px;color:var(--danger);"></i>보건복지부
           </button>
           <a href="https://www.mohw.go.kr/board.es?mid=a10503010100&bid=0027" target="_blank"
@@ -84,7 +137,7 @@
           </a>
         </li>
         <li class="nav-item" style="position:relative;">
-          <button class="nav-link" data-org="HIRA" type="button" style="padding:12px 34px 12px 16px;">
+          <button class="nav-link" data-org="HIRA" type="button" style="height:44px;padding:0 34px 0 16px;">
             <i class="bx bx-search-alt" style="margin-right:5px;color:var(--warning);"></i>심사평가원
           </button>
           <a href="https://www.hira.or.kr/bbsDummy.do?pgmid=HIRAA020002000100" target="_blank"
@@ -93,7 +146,7 @@
           </a>
         </li>
         <li class="nav-item" style="position:relative;">
-          <button class="nav-link" data-org="NHIS" type="button" style="padding:12px 34px 12px 16px;">
+          <button class="nav-link" data-org="NHIS" type="button" style="height:44px;padding:0 34px 0 16px;">
             <i class="bx bx-health" style="margin-right:5px;color:var(--info);"></i>건강보험공단
           </button>
           <a href="https://www.nhis.or.kr/nhis/minwon/wbhace10210m01.do" target="_blank"
@@ -102,48 +155,28 @@
           </a>
         </li>
       </ul>
-      <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-        <select id="filterImpact" class="form-control form-select" style="width:120px;">
-          <option value="">영향도 전체</option>
-          <option value="HIGH">HIGH</option>
-          <option value="MEDIUM">MEDIUM</option>
-          <option value="LOW">LOW</option>
-        </select>
-        <div class="search-wrap">
-          <i class="bx bx-search"></i>
-          <input type="text" id="searchInput" class="form-control" placeholder="제목 검색..." style="width:180px;">
-        </div>
-        <button class="btn btn-primary btn-sm" id="btnSearch"><i class="bx bx-search"></i></button>
+    </div>
+
+    {{-- 로딩 --}}
+    <div id="listLoading" class="d-none" style="text-align:center;padding:48px;">
+      <div class="spinner-border text-primary" style="width:2rem;height:2rem;"></div>
+      <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">데이터를 불러오는 중...</div>
+    </div>
+
+    {{-- 목록 (wwGrid) --}}
+    <div id="noticeGridWrap" style="padding:12px 16px;display:none;">
+      <div id="noticeGrid"></div>
+    </div>
+
+    {{-- 빈 상태 --}}
+    <div id="emptyState" class="d-none">
+      <div class="empty-state">
+        <i class="bx bx-data"></i>
+        <p>수집된 공지사항이 없습니다.</p>
+        <button class="btn btn-primary btn-sm" id="btnCrawlEmpty">
+          <i class="bx bx-refresh"></i> 지금 수집 시작
+        </button>
       </div>
-    </div>
-  </div>
-
-  {{-- 로딩 --}}
-  <div id="listLoading" class="d-none" style="text-align:center;padding:48px;">
-    <div class="spinner-border text-primary" style="width:2rem;height:2rem;"></div>
-    <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">데이터를 불러오는 중...</div>
-  </div>
-
-  {{-- 목록 (wwGrid) --}}
-  <div id="noticeGridWrap" style="padding:12px 18px;display:none;">
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="institutionalNoticeViewDetail()">
-        <i class="bx bx-detail"></i> 선택 상세
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세 보기</span>
-      <span class="badge bg-label-primary" id="noticeTotalBadge" style="margin-left:auto;">전체 0건</span>
-    </div>
-    <div id="noticeGrid"></div>
-  </div>
-
-  {{-- 빈 상태 --}}
-  <div id="emptyState" class="d-none">
-    <div class="empty-state">
-      <i class="bx bx-data"></i>
-      <p>수집된 공지사항이 없습니다.</p>
-      <button class="btn btn-primary btn-sm" id="btnCrawlEmpty">
-        <i class="bx bx-refresh"></i> 지금 수집 시작
-      </button>
     </div>
   </div>
 </div>
@@ -172,7 +205,7 @@
         <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">내용 불러오는 중...</div>
       </div>
       <div id="modalContent" class="d-none">
-        <p id="modalContentText" style="font-size:13.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;max-height:380px;overflow-y:auto;color:var(--text-primary);"></p>
+        <p id="modalContentText" style="font-size:13px;line-height:22px;white-space:pre-wrap;word-break:break-word;max-height:380px;overflow-y:auto;color:var(--text-primary);"></p>
         <div id="modalAttachments" class="d-none" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
           <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">
             <i class="bx bx-paperclip"></i> 첨부파일
@@ -211,8 +244,10 @@
   // ── wwGrid 초기화 ──
   const grid = new wwGrid({
     el: document.getElementById('noticeGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '영향도', name: 'policy_impact', width: 90,  align: 'center', sortable: true },
       { header: '유형',   name: 'notice_type',  width: 130, sortable: true },
@@ -222,7 +257,8 @@
     ],
     data: [],
   });
-  window.__noticeGrid = grid;
+  window.__noticeGrid = grid;                      // 결과바의 엑셀 저장 버튼이 이걸 부른다
+  window.dsBindSelCount(grid, 'noticeSelCount');   // 결과바 '선택 N건' 표시를 연결한다
 
   window.institutionalNoticeViewDetail = function () {
     const c = grid.getCheckedRows();

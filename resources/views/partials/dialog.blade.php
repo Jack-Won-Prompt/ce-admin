@@ -11,31 +11,41 @@
     display: flex; align-items: center; justify-content: center; padding: 20px;
     -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   }
+  /* 이 조각은 layouts.app 바깥(동의서 서명·개인정보 판형)에서도 실린다.
+     그쪽에는 DS CSS 변수가 없으므로 색은 var() 가 아니라 DS 램프 값 그대로 적는다. */
   .ce-dlg {
-    background: #fff; border-radius: 14px; width: 100%; max-width: 360px;
+    background: #FFFFFF; border-radius: 12px; width: 100%; max-width: 360px;
     box-shadow: 0 18px 48px rgba(0, 0, 0, .22); overflow: hidden;
     animation: ceDlgIn .16s ease;
-    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
   }
   @keyframes ceDlgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  /* 섹션 제목 규격 = 14/700 */
   .ce-dlg-hd {
     display: flex; align-items: center; gap: 8px;
-    padding: 15px 18px 0; font-size: 14.5px; font-weight: 800; color: #1f2937;
+    padding: 16px 16px 0; font-size: 14px; font-weight: 700; line-height: 22px; color: #101317;
   }
-  .ce-dlg-ic { font-size: 18px; line-height: 1; }
+  .ce-dlg-ic { font-size: 16px; line-height: 16px; }
   .ce-dlg-bd {
-    padding: 9px 18px 16px; font-size: 13px; line-height: 1.75; color: #4b5563;
+    padding: 8px 16px 16px; font-size: 13px; line-height: 21px; color: #474D54;
     max-height: 52vh; overflow-y: auto; word-break: break-word;
   }
-  .ce-dlg-ft { display: flex; gap: 8px; padding: 0 14px 14px; }
+  .ce-dlg-ft { display: flex; gap: 8px; padding: 0 16px 16px; }
+  /* 모달 하단 버튼 규격 = h36 · r8 · 14/500 */
   .ce-dlg-btn {
-    flex: 1; height: 42px; border-radius: 9px; border: none;
-    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    flex: 1; height: 36px; border-radius: 8px; border: none;
+    font-size: 14px; font-weight: 500; line-height: 22px; cursor: pointer; font-family: inherit;
   }
-  .ce-dlg-ok     { background: #28798B; color: #fff; }
-  .ce-dlg-ok.danger  { background: #dc2626; }
-  .ce-dlg-ok.warning { background: #d97706; }
-  .ce-dlg-cancel { background: #f1f5f9; color: #475569; }
+  .ce-dlg-ok     { background: #28798B; color: #FFFFFF; }
+  /* 시안의 상태색은 primary 램프와 alert 램프 둘뿐이다.
+     둘의 배분은 layouts.app 의 같은 대화상자(TONE 표)를 그대로 따른다:
+       danger  → alert  (btn-danger)  · 되돌릴 수 없는 실패·차단
+       warning → primary(btn-primary) · 진행을 멈추는 주의
+     같은 ceAlert 호출이 관리자 판형과 단독 판형에서 다른 색으로 보이면 안 된다.
+     (consent/sign 한 화면에서 두 tone 이 함께 쓰인다 — 같은 색으로 모으면 구분이 사라진다) */
+  .ce-dlg-ok.danger  { background: #D73D3F; }
+  .ce-dlg-ok.warning { background: #28798B; }
+  .ce-dlg-cancel { background: #F3F5F7; color: #474D54; }
 </style>
 <script>
 (function () {

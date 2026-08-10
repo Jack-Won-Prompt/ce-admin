@@ -7,43 +7,51 @@
 @push('styles')
 <style>
   .ns-form { max-width:860px; }
-  .ns-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px; }
-  .ns-card h3 { margin:0 0 16px; font-size:14px; font-weight:800; color:var(--primary);
-    padding-bottom:10px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
-  .ns-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ns-card { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px; }
+  /* 섹션 제목 = 14px/700 (시안 '환자 추가 · 파일 업로드' 계열) */
+  .ns-card h3 { margin:0 0 16px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
+    padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .ns-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media (max-width:720px) { .ns-grid { grid-template-columns:1fr; } }
-  .ns-field { display:flex; flex-direction:column; gap:5px; }
+  .ns-field { display:flex; flex-direction:column; gap:4px; }
   .ns-field.full { grid-column:1 / -1; }
-  .ns-field label { font-size:12.5px; font-weight:700; color:var(--text-secondary); }
+  .ns-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
+  /* 입력 h32 = pad 5 + lh 20 + pad 5 + 테두리 2 */
   .ns-field input[type=text], .ns-field input[type=password], .ns-field input[type=url] {
-    padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+    padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px; font-family:inherit; }
   .ns-field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
-  .ns-hint { font-size:11px; color:var(--text-muted); line-height:1.6; }
+  .ns-hint { font-size:12px; font-weight:400; color:var(--text-muted); line-height:18px; }
   .ns-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:11px 14px; font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.6; }
-  .ns-warn { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px;
-    padding:11px 14px; font-size:12.5px; margin-bottom:16px; line-height:1.6; }
-  .status-ok { background:#eafaf1; border:1px solid #a3e4c1; color:#15803d; border-radius:8px;
-    padding:11px 14px; font-size:13.5px; margin-bottom:16px; font-weight:600; }
-  .status-err { background:#fdecea; border:1px solid #f5c6c0; color:#c0392b; border-radius:8px;
-    padding:11px 14px; font-size:13.5px; margin-bottom:16px; font-weight:600; }
+    padding:12px 16px; font-size:12px; font-weight:400; color:var(--text-secondary); margin-bottom:16px; line-height:18px; }
+  /* 주의·오류는 alert 램프 한 가지로만 표현한다(시안에 주황·초록이 없다).
+     주의는 연톤(50/100), 오류는 진톤(100/500)으로 세기를 나눈다. */
+  .ns-warn { background:var(--alert-50); border:1px solid var(--alert-100); color:var(--alert-500); border-radius:8px;
+    padding:12px 16px; font-size:12px; font-weight:400; margin-bottom:16px; line-height:18px; }
+  .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
+    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
+  .status-err { background:var(--alert-100); border:1px solid var(--alert-500); color:var(--alert-500); border-radius:8px;
+    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
   /* 전역 .badge(h22 · radius 6 · 11px/500)를 그대로 쓴다 — 재정의하면 이 화면만 알약 모양으로 남는다 */
   .badge-on  { background:var(--primary-light); color:var(--primary); }
   .badge-off { background:var(--alert-50);      color:var(--alert-500); }
-  .ns-check { display:flex; gap:10px; align-items:flex-start; border:1.5px solid var(--border);
-    border-radius:10px; padding:12px 14px; margin-bottom:10px; cursor:pointer; }
-  .ns-check input { margin-top:2px; width:17px; height:17px; flex-shrink:0; }
-  .ns-check .t { font-size:13.5px; font-weight:700; color:var(--text-primary); }
-  .ns-check .d { font-size:12px; color:var(--text-secondary); margin-top:3px; line-height:1.6; }
-  .ns-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .btn-save { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:11px 22px;
-    font-size:14px; font-weight:700; cursor:pointer; }
-  .btn-test { background:#fff; color:var(--primary); border:1.5px solid var(--primary); border-radius:8px;
-    padding:10px 18px; font-size:14px; font-weight:700; cursor:pointer; }
+  .ns-check { display:flex; gap:8px; align-items:flex-start; border:1px solid var(--border);
+    border-radius:8px; padding:12px 16px; margin-bottom:8px; cursor:pointer; }
+  .ns-check input { margin-top:2px; width:16px; height:16px; flex-shrink:0; }
+  .ns-check .t { font-size:13px; font-weight:700; line-height:21px; color:var(--text-primary); }
+  .ns-check .d { font-size:12px; font-weight:400; color:var(--text-secondary); margin-top:4px; line-height:18px; }
+  .ns-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  /* 전역 .btn 규격(h32 · pad 5/12 · r8 · 13px/500)에 맞춘다 */
+  .btn-save { display:inline-flex; align-items:center; gap:6px;
+    background:var(--primary); color:var(--gray-0); border:1px solid var(--primary); border-radius:8px;
+    padding:5px 12px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; font-family:inherit; }
+  .btn-test { display:inline-flex; align-items:center; gap:6px;
+    background:var(--gray-0); color:var(--primary); border:1px solid var(--primary); border-radius:8px;
+    padding:5px 12px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; font-family:inherit; }
   .btn-test:disabled { opacity:.6; cursor:default; }
-  #testResult { font-size:12.5px; font-weight:600; line-height:1.6; }
-  #testResult.ok  { color:#15803d; }
-  #testResult.err { color:#c0392b; }
+  #testResult { font-size:12px; font-weight:500; line-height:18px; }
+  #testResult.ok  { color:var(--primary); }
+  #testResult.err { color:var(--alert-500); }
 </style>
 @endpush
 
@@ -78,7 +86,7 @@
         <i class="bx bx-key"></i> 자격증명
         <span class="badge {{ $configured ? 'badge-on' : 'badge-off' }}">{{ $configured ? '활성' : '미설정' }}</span>
         @if($setting->tested_at)
-          <span class="ns-hint" style="margin-left:auto;font-weight:600;">
+          <span class="ns-hint" style="margin-left:auto;font-weight:500;">
             마지막 연결 테스트 성공: {{ $setting->tested_at->format('Y-m-d H:i') }}
           </span>
         @endif
@@ -141,7 +149,7 @@
     </div>
 
     <div class="ns-card">
-      <h3><i class="bx bx-link-alt"></i> 엔드포인트 <span class="ns-hint" style="font-weight:600;">(비워 두면 기본값 사용)</span></h3>
+      <h3><i class="bx bx-link-alt"></i> 엔드포인트 <span class="ns-hint" style="font-weight:500;">(비워 두면 기본값 사용)</span></h3>
       <div class="ns-grid">
         <div class="ns-field">
           <label>API 서버</label>
@@ -166,7 +174,7 @@
         </button>
         <span id="testResult"></span>
       </div>
-      <div class="ns-hint" style="margin-top:10px;">
+      <div class="ns-hint" style="margin-top:8px;">
         연결 테스트는 <b>저장된</b> 자격증명으로 기관토큰·암호화토큰 발급까지만 확인합니다.
         표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 바꿨다면 먼저 저장하세요.
       </div>

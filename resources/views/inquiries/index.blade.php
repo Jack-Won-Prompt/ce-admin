@@ -8,47 +8,69 @@
 @endpush
 
 @section('content')
-<div style="max-width:960px;">
 
-  {{-- 상단 액션 --}}
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;">
-    <form method="GET" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <select name="status" class="form-control form-select" style="width:120px;">
+{{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 13/500 위 · 입력 h32 아래 --}}
+<form method="GET" action="{{ route('inquiries.index') }}" class="ds-filter-card">
+  <div class="ds-filter-fields">
+    {{-- 1열(1280 뷰포트에서 78.5px · 안쪽 34.5px)이면 '답변 대기'(약 51px)가 잘린다 — 2열로 준다 --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select">
         <option value="">전체 상태</option>
         <option value="pending"  {{ request('status') === 'pending'  ? 'selected' : '' }}>답변 대기</option>
         <option value="answered" {{ request('status') === 'answered' ? 'selected' : '' }}>답변 완료</option>
       </select>
-      <select name="category" class="form-control form-select" style="width:130px;">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">분류</label>
+      <select name="category" class="form-control form-select">
         <option value="">전체 분류</option>
         <option value="general"   {{ request('category') === 'general'   ? 'selected' : '' }}>일반</option>
         <option value="technical" {{ request('category') === 'technical' ? 'selected' : '' }}>기술</option>
         <option value="billing"   {{ request('category') === 'billing'   ? 'selected' : '' }}>청구/결제</option>
         <option value="other"     {{ request('category') === 'other'     ? 'selected' : '' }}>기타</option>
       </select>
-      <div style="position:relative;">
-        <i class="bx bx-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:16px;"></i>
-        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목 검색..." style="padding-left:34px;max-width:220px;">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <div class="search-wrap">
+        <i class="bx bx-search"></i>
+        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목 검색...">
       </div>
-      <button type="submit" class="btn btn-outline btn-sm"><i class="bx bx-search"></i> 검색</button>
-      @if(request('status') || request('category') || request('search'))
-        <a href="{{ route('inquiries.index') }}" class="btn btn-outline btn-sm">초기화</a>
-      @endif
-    </form>
-    <a href="{{ route('inquiries.create') }}" class="btn btn-primary btn-sm">
-      <i class="bx bx-pencil"></i> 문의 작성
-    </a>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('status') || request('category') || request('search'))
+      <a href="{{ route('inquiries.index') }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-search"></i> 검색</button>
+  </div>
+</form>
+
+{{-- ── 목록 (wwGrid) — 결과바(h32) 위, 흰 카드(r12) 안에 그리드 ── --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="inquirySelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <button type="button" class="ds-btn" onclick="inquiryViewDetail()">
+        <i class="bx bx-detail"></i> 선택 상세
+      </button>
+      {{-- 안내문의 화살표가 왼쪽 '선택 상세' 버튼을 가리키므로 버튼 뒤에 둔다 --}}
+      <span class="ds-grid-hint">← 행 체크 후 상세로 이동</span>
+      {{-- 그리드 툴바(엑셀 저장)를 결과바로 옮겼다 --}}
+      <button type="button" class="ds-btn" onclick="window.__inquiryGrid?.downloadExcel()">엑셀 저장</button>
+      <a href="{{ route('inquiries.create') }}" class="btn btn-primary btn-sm">
+        <i class="bx bx-pencil"></i> 문의 작성
+      </a>
+    </div>
   </div>
 
-  {{-- ── 목록 (wwGrid) ── --}}
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="inquiryViewDetail()">
-      <i class="bx bx-detail"></i> 선택 상세
-    </button>
-    <span style="font-size:12px;color:var(--text-muted);">← 행 체크 후 상세로 이동</span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
+  <div class="ds-grid-card">
+    <div id="inquiryGrid"></div>
   </div>
-  <div id="inquiryGrid"></div>
-
 </div>
 @endsection
 
@@ -73,11 +95,15 @@ window.HELP_TOUR_STEPS = [
   ];
   const grid = new wwGrid({
     el: document.getElementById('inquiryGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: columns,
     data: @json($gridData),
   });
+  window.__inquiryGrid = grid;                      // 결과바의 엑셀 저장 버튼이 이걸 부른다
+  window.dsBindSelCount(grid, 'inquirySelCount');   // 결과바 '선택 N건' 표시를 연결한다
   window.inquiryViewDetail = function () {
     const c = grid.getCheckedRows();
     if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }

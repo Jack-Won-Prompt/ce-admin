@@ -7,46 +7,49 @@
 
 @push('styles')
 <style>
-  .status-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
-  .status-tab {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
-    border:1.5px solid var(--border); background:#fff;
-    color:var(--text-secondary); cursor:pointer; text-decoration:none; transition:var(--transition);
-  }
-  .status-tab:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
-  .status-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
-  .status-tab .cnt {
-    min-width:20px; padding:0 5px; height:18px; border-radius:20px;
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:10.5px; font-weight:700; background:rgba(255,255,255,.25);
-  }
-  .status-tab:not(.active) .cnt { background:var(--border-light); color:var(--text-muted); }
+  /* .status-tabs / .status-tab 은 예전 선택자다. 칩은 전역 .ds-chip 이 그리고,
+     이 이름은 앵커로만 남긴다 — 별도 스타일은 주지 않는다.
+     (스타일을 남겨 두면 gap 6 · radius 20 · 12.5px/600 이 전역 규격을 덮어쓴다.) */
 
-
-
-  .srx-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; }
-  .srx-grid2 { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; align-items:start; }
+  /* 상세 · 신규 등록 카드 — 흰 카드(r12 · pad 12/16 · bd 1px gray-200 · 그림자 없음) */
+  .srx-card { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px; padding:12px 16px; }
+  .srx-grid2 { display:grid; grid-template-columns:1.15fr .85fr; gap:12px; align-items:start; }
   @media (max-width:1000px) { .srx-grid2 { grid-template-columns:1fr; } }
-  .srx-card h4 { margin:0 0 14px; font-size:13px; font-weight:800; color:var(--primary);
-    padding-bottom:9px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:7px; }
-  .srx-field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-  .srx-field label { font-size:12px; font-weight:700; color:var(--text-secondary); }
+  /* 섹션 제목 — 14/700 · lh22 */
+  .srx-card h4 { margin:0 0 12px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000);
+    padding-bottom:8px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; gap:8px; }
+  /* 필드 — 라벨 21 + gap 8 + 인풋 32 (.ds-filter-field 와 같은 규격) */
+  .srx-field { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .srx-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   .srx-field input[type=text], .srx-field select, .srx-field textarea {
-    padding:9px 11px; border:1px solid var(--border); border-radius:8px; font-size:13.5px; font-family:inherit; }
-  .srx-field textarea { min-height:120px; resize:vertical; }
+    padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px; color:var(--gray-1000);
+    background:var(--gray-0); font-family:inherit; }
+  .srx-field input[type=text], .srx-field select { height:32px; }
+  /* 여러 줄 입력은 32px 규격을 그대로 쓰면 위아래가 눌린다 — 전역 textarea 와 같은 여백을 준다 */
+  .srx-field textarea { min-height:120px; resize:vertical; padding:9px 12px; line-height:21px; }
   .srx-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .srx-hint { font-size:11px; color:var(--text-muted); line-height:1.6; }
-  .srx-meta { font-size:11.5px; color:var(--text-muted); margin-bottom:10px; }
-  .srx-body { font-size:13px; line-height:1.85; white-space:pre-wrap; color:var(--text-primary); }
-  .srx-answer { margin-top:12px; padding:12px 14px; background:var(--primary-light);
-    border:1px solid var(--border); border-radius:8px; }
-  .srx-answer .lbl { font-size:10.5px; font-weight:800; color:var(--primary); margin-bottom:5px; }
-  .sr-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
-  .sr-b-open        { background:var(--warning-light); color:var(--warning); }
-  .sr-b-in_progress { background:var(--primary-light);  color:var(--primary); }
-  .sr-b-answered    { background:var(--success-light);  color:var(--success); }
-  .sr-b-closed      { background:var(--border-light);   color:var(--text-muted); }
+  .srx-hint { font-size:12px; font-weight:400; line-height:19px; color:var(--gray-600); }
+  .srx-meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:12px; }
+  .srx-body { font-size:13px; font-weight:400; line-height:21px; white-space:pre-wrap; color:var(--gray-1000); }
+  .srx-answer { margin-top:12px; padding:12px 16px; background:var(--primary-50);
+    border:1px solid var(--gray-200); border-radius:8px; }
+  .srx-answer .lbl { font-size:11px; font-weight:700; line-height:18px; color:var(--primary); margin-bottom:4px; }
+  /* 상태 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18).
+     원래 미처리=주황 · 답변완료=초록이었다. 시안에는 주황·초록이 없어
+     '손대야 하는 상태'는 alert, 진행·완료는 primary, 종료는 gray 로 옮겼다.
+
+     ★ 반드시 .srx-meta 로 한 단계 좁힌다.
+     layouts/app.blade.php 에도 같은 이름의 .sr-badge / .sr-b-*(10px/700 · pad 2/8 · r999 ·
+     주황·초록)가 있는데, 그 <style> 은 <body> 안(2296~2616줄)이고 @stack('styles') 는
+     <head>(1165줄)라서 특정성이 같으면 전역이 이긴다.
+     이름 그대로 두면 여기 값이 한 줄도 먹지 않는다(전역 SR 플로팅 패널 배지는 그대로 둔다). */
+  .srx-meta .sr-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:500; line-height:18px;
+    padding:2px 6px; border-radius:6px; }
+  .srx-meta .sr-b-open        { background:var(--alert-100);   color:var(--alert-500); }
+  .srx-meta .sr-b-in_progress { background:var(--primary-100); color:var(--primary-600); }
+  .srx-meta .sr-b-answered    { background:var(--primary);     color:var(--gray-0); }
+  .srx-meta .sr-b-closed      { background:var(--gray-100);    color:var(--gray-600); }
 </style>
 @endpush
 
@@ -54,75 +57,96 @@
 
 @php $curStatus = request('status'); @endphp
 
-{{-- 상태 탭 --}}
-<div class="status-tabs">
+{{-- 상태 칩 — h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
+<div class="ds-chips status-tabs">
   <a href="{{ route('sr.index', request()->except(['status','page'])) }}"
-     class="status-tab {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="cnt">{{ $counts['all'] }}</span>
+     class="ds-chip status-tab {{ !$curStatus ? 'active' : '' }}">
+    전체 <span class="ds-chip-count cnt">{{ $counts['all'] }}</span>
   </a>
   @foreach($statuses as $key => $label)
     <a href="{{ route('sr.index', array_merge(request()->except(['status','page']), ['status' => $key])) }}"
-       class="status-tab {{ $curStatus === $key ? 'active' : '' }}">
+       class="ds-chip status-tab {{ $curStatus === $key ? 'active' : '' }}">
       {{ $label }}
-      @if(($counts[$key] ?? 0) > 0)<span class="cnt">{{ $counts[$key] }}</span>@endif
+      @if(($counts[$key] ?? 0) > 0)<span class="ds-chip-count cnt">{{ $counts[$key] }}</span>@endif
     </a>
   @endforeach
 </div>
 
-{{-- 검색 --}}
-<form method="GET" action="{{ route('sr.index') }}" class="filter-bar">
+{{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
+     폭은 인라인 style 대신 9열 그리드(검색어 3열 · 구분 2열)로 잡는다. --}}
+<form method="GET" action="{{ route('sr.index') }}" class="ds-filter-card">
   @if($curStatus)<input type="hidden" name="status" value="{{ $curStatus }}">@endif
-  <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-         placeholder="제목 · 내용" style="width:240px;">
-  <select name="category" class="form-control" style="width:150px;">
-    <option value="">전체 구분</option>
-    @foreach($categories as $k => $v)
-      <option value="{{ $k }}" {{ request('category') === $k ? 'selected' : '' }}>{{ $v }}</option>
-    @endforeach
-  </select>
-  <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
-  @if(request('q') || request('category'))
-    <a href="{{ route('sr.index', array_filter(['status' => $curStatus])) }}" class="btn btn-outline btn-sm">초기화</a>
-  @endif
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="제목 · 내용">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">구분</label>
+      <select name="category" class="form-control form-select">
+        <option value="">전체 구분</option>
+        @foreach($categories as $k => $v)
+          <option value="{{ $k }}" {{ request('category') === $k ? 'selected' : '' }}>{{ $v }}</option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('q') || request('category'))
+      <a href="{{ route('sr.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
+  </div>
 </form>
 
-{{-- 패널 탭 --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-    <i class="fa-solid fa-list"></i> SR 목록
-  </button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">
-    <i class="fa-solid fa-comments"></i> 상세 · 답변
-    <span id="pnlDetailTitle" style="font-size:11px;color:var(--text-muted);font-weight:600;"></span>
-  </button>
-  @perm('service-requests', 'create')
-  <button type="button" id="pnlBtnNew" class="pnl-tab" onclick="pnlShow('new')">
-    <i class="fa-solid fa-plus"></i> 신규 등록
-  </button>
-  @endperm
-</div>
+{{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
+      {{-- 그리드 하단 상태바(footer)를 껐다. '선택 N건'은 시안대로 결과바에 둔다. --}}
+      <span class="ds-grid-sel">선택 <b id="srxSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">행을 <b>클릭</b>하면 상세 · 답변 탭이 열립니다.</span>
+      {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다. 동작은 downloadExcel() 그대로. --}}
+      <button type="button" class="ds-btn" onclick="window.__srxGrid?.downloadExcel()">엑셀 저장</button>
+      @perm('service-requests', 'delete')
+      <button type="button" class="ds-btn" style="color:var(--alert-500);"
+              onclick="srDeleteSelected()">
+        <i class="bx bx-trash"></i> 선택 삭제
+      </button>
+      @endperm
+    </div>
+  </div>
+
+  <div class="ds-grid-card">
+    {{-- 패널 탭은 카드 안 상단 (h44 · pad 0/16 · gap 16) --}}
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
+        <i class="fa-solid fa-list"></i> SR 목록
+      </button>
+      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">
+        <i class="fa-solid fa-comments"></i> 상세 · 답변
+        <span id="pnlDetailTitle" style="font-size:12px;font-weight:500;color:var(--gray-600);"></span>
+      </button>
+      @perm('service-requests', 'create')
+      <button type="button" id="pnlBtnNew" class="pnl-tab" onclick="pnlShow('new')">
+        <i class="fa-solid fa-plus"></i> 신규 등록
+      </button>
+      @endperm
+    </div>
 
 {{-- 목록 --}}
 <div id="pnlList">
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-    @perm('service-requests', 'delete')
-    <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);"
-            onclick="srDeleteSelected()">
-      <i class="bx bx-trash"></i> 선택 삭제
-    </button>
-    @endperm
-    <span style="font-size:12px;color:var(--text-muted);">
-      <i class="bx bx-info-circle"></i> 행을 <b>클릭</b>하면 상세 · 답변 탭이 열립니다.
-    </span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}건</span>
-  </div>
   <div id="srxGrid"></div>
 </div>
 
 {{-- 상세 · 답변 --}}
-<div id="pnlDetail" style="display:none;">
+<div id="pnlDetail" style="display:none;padding:16px;">
   <div id="srxEmpty" class="pnl-empty">
-    <i class="bx bx-hand-pointer" style="font-size:26px;opacity:.35;display:block;margin-bottom:8px;"></i>
+    <i class="bx bx-hand-pointer" style="font-size:16px;opacity:.35;display:block;margin-bottom:8px;"></i>
     목록에서 SR 을 <b>클릭</b>하면 내용과 답변이 여기에 표시됩니다.
   </div>
   <div id="srxBody" style="display:none;" class="srx-grid2">
@@ -145,7 +169,7 @@
           </select>
         </div>
         <div class="srx-field" style="justify-content:flex-end;">
-          <button type="button" class="btn btn-primary btn-sm" id="srxAnswerBtn" onclick="srxSaveAnswer()" style="height:38px;">
+          <button type="button" class="btn btn-primary btn-sm" id="srxAnswerBtn" onclick="srxSaveAnswer()" style="height:32px;">
             <i class="bx bx-save"></i> 답변 저장
           </button>
         </div>
@@ -159,7 +183,7 @@
 
 {{-- 신규 등록 --}}
 @perm('service-requests', 'create')
-<div id="pnlNew" style="display:none;">
+<div id="pnlNew" style="display:none;padding:16px;">
   <div class="srx-card" style="max-width:720px;">
     <h4><i class="bx bx-plus"></i> SR 신규 등록</h4>
     <div class="srx-row2">
@@ -192,12 +216,15 @@
       <span class="srx-hint">비워 두면 기록되지 않습니다. 상단 SR 패널로 등록하면 보고 있던 화면이 자동 기록됩니다.</span>
     </div>
     <button type="button" class="btn btn-primary btn-sm" id="srxSubmitBtn" onclick="srxSubmit()"
-            style="width:100%;height:40px;">
+            style="width:100%;height:32px;">
       <i class="bx bx-send"></i> 등록
     </button>
   </div>
 </div>
 @endperm
+
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 @endsection
 
@@ -214,8 +241,11 @@
 
   const grid = new wwGrid({
     el: document.getElementById('srxGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    toolbar: false,
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    footer: false,
     columns: [
       { header: '상태',      name: 'statusLabel',   width: 90,  align: 'center', sortable: true },
       { header: '구분',      name: 'categoryLabel', width: 100, align: 'center', sortable: true },
@@ -229,6 +259,7 @@
     data: _rows,
   });
   window.__srxGrid = grid;
+  window.dsBindSelCount(grid, 'srxSelCount');
 
   window.pnlShow = function (which) {
     [['list','pnlList','pnlBtnList'], ['detail','pnlDetail','pnlBtnDetail'], ['new','pnlNew','pnlBtnNew']]
@@ -256,7 +287,7 @@
     document.getElementById('pnlDetailTitle').textContent = r.title;
 
     document.getElementById('srxDetail').innerHTML = `
-      <div style="font-size:15px;font-weight:800;margin-bottom:4px;">${esc(r.title)}</div>
+      <div style="font-size:14px;font-weight:700;line-height:22px;margin-bottom:4px;">${esc(r.title)}</div>
       <div class="srx-meta">
         <span class="sr-badge ${CLS[r.status] || ''}">${esc(r.statusLabel)}</span>
         · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}

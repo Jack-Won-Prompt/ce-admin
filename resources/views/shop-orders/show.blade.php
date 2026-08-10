@@ -10,23 +10,24 @@
   @media(max-width:900px){ .show-grid{grid-template-columns:1fr;} }
   .info-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
   @media(max-width:600px){ .info-grid-2{grid-template-columns:1fr;} }
-  .info-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:3px; }
-  .info-val   { font-size:13px; font-weight:500; }
+  /* 전역 .info-label 의 uppercase · letter-spacing .4px 가 살아남지 않도록 함께 끈다. */
+  .info-label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); text-transform:none; letter-spacing:0; margin-bottom:4px; }
+  .info-val   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); }
   .ww-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .ww-02 { background:var(--primary-light); color:var(--primary); }
   .ww-03, .ww-51 { background:var(--primary-light); color:var(--primary); }
-  .ww-04, .ww-52 { background:var(--warning-light); color:var(--warning); }
+  .ww-04, .ww-52 { background:var(--alert-100); color:var(--alert-500); }
   .ww-05 { background:var(--primary-light); color:var(--primary); }
   .ww-06, .ww-99 { background:var(--border-light); color:var(--text-muted); }
   .shop-status-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .shop-status-badge.confirmed  { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.processing { background:var(--primary-light); color:var(--primary); }
-  .shop-status-badge.shipped    { background:var(--warning-light); color:var(--warning); }
+  .shop-status-badge.shipped    { background:var(--primary-100); color:var(--primary-600); }
   .shop-status-badge.delivered  { background:var(--primary-light); color:var(--primary); }
   .shop-status-badge.cancelled  { background:var(--border-light);  color:var(--text-muted); }
-  .amount-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border-light); font-size:13px; }
+  .amount-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border-light); font-size:13px; font-weight:500; line-height:21px; }
   .amount-row:last-child { border-bottom:none; }
-  .amount-total { font-size:15px; font-weight:800; color:var(--primary); }
+  .amount-total { font-size:16px; font-weight:700; line-height:26px; color:var(--primary); }
 </style>
 @endpush
 
@@ -55,11 +56,11 @@
     {{-- 주문 기본 정보 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-receipt" style="font-size:18px;color:var(--primary);"></i>
+        <i class="bx bx-receipt" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">주문 정보</span>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
           <span class="shop-status-badge {{ $statusCls }}">{{ $shopOrder->statusLabel() }}</span>
-          <select id="statusSelect" class="form-control form-select" style="width:auto;height:32px;font-size:12px;padding:4px 28px 4px 10px;">
+          <select id="statusSelect" class="form-control form-select" style="width:auto;height:32px;font-size:13px;line-height:20px;padding:5px 28px 5px 12px;">
             <option value="confirmed"  @selected($shopOrder->status==='confirmed')>주문확인</option>
             <option value="processing" @selected($shopOrder->status==='processing')>처리중</option>
             <option value="shipped"    @selected($shopOrder->status==='shipped')>배송중</option>
@@ -86,7 +87,7 @@
     {{-- 주문 상품 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-package" style="font-size:18px;color:var(--success);"></i>
+        <i class="bx bx-package" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">주문 상품</span>
       </div>
       <div class="table-wrap">
@@ -111,7 +112,7 @@
               </td>
               <td style="text-align:center;">{{ $item['quantity'] }}</td>
               <td style="text-align:right;font-size:13px;">{{ number_format($item['unit_price'] ?? 0) }}원</td>
-              <td style="text-align:right;font-weight:600;">{{ number_format($item['total_price'] ?? 0) }}원</td>
+              <td style="text-align:right;font-weight:700;">{{ number_format($item['total_price'] ?? 0) }}원</td>
             </tr>
             @endforeach
           </tbody>
@@ -126,14 +127,14 @@
           @if($shopOrder->discount_amount > 0)
           <div class="amount-row">
             <span style="color:var(--text-muted);">할인 ({{ $shopOrder->discount_rate }}%)</span>
-            <span style="color:var(--danger);">-{{ number_format($shopOrder->discount_amount) }}원</span>
+            <span style="color:var(--alert-500);">-{{ number_format($shopOrder->discount_amount) }}원</span>
           </div>
           @endif
           <div class="amount-row">
             <span style="color:var(--text-muted);">배송비</span>
             <span>{{ $shopOrder->shipping_fee > 0 ? number_format($shopOrder->shipping_fee).'원' : '무료' }}</span>
           </div>
-          <div class="amount-row" style="border-top:2px solid var(--border);padding-top:8px;margin-top:4px;">
+          <div class="amount-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
             <span style="font-weight:700;">최종 결제금액</span>
             <span class="amount-total">{{ number_format($shopOrder->total_amount) }}원</span>
           </div>
@@ -144,7 +145,7 @@
     {{-- 배송지 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-map-pin" style="font-size:18px;color:var(--warning);"></i>
+        <i class="bx bx-map-pin" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">배송지</span>
       </div>
       <div style="padding:18px;">
@@ -182,18 +183,18 @@
     {{-- Withworks 연동 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-link-alt" style="font-size:18px;color:var(--purple);"></i>
+        <i class="bx bx-link-alt" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">Withworks 연동</span>
         @if($shopOrder->withworks_so_no)
           <a href="{{ rtrim(config('services.todoworks.api_url'), '/') }}" target="_blank"
-             class="btn btn-outline btn-sm ms-auto" style="font-size:11px;">바로가기</a>
+             class="btn btn-outline btn-sm ms-auto">바로가기</a>
         @endif
       </div>
       <div style="padding:16px;">
         @if($shopOrder->withworks_so_no)
           <div style="margin-bottom:10px;">
             <div class="info-label">SO 번호</div>
-            <div style="font-size:14px;font-weight:800;color:var(--primary);">{{ $shopOrder->withworks_so_no }}</div>
+            <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $shopOrder->withworks_so_no }}</div>
           </div>
           @if($withworksStatus)
             <div style="margin-bottom:10px;">
@@ -221,12 +222,13 @@
             <div><div class="info-label">SO 금액</div><div class="info-val" style="font-weight:700;">{{ number_format($withworksStatus['so_amount']) }}원</div></div>
             @endif
           @else
-            <div style="padding:10px 12px;background:var(--border-light);border-radius:var(--radius);font-size:12px;color:var(--text-muted);">
+            <div style="padding:12px;background:var(--gray-100);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
               <i class="bx bx-info-circle"></i> Withworks 상태를 불러올 수 없습니다.
             </div>
           @endif
         @else
-          <div style="padding:12px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius);font-size:13px;color:var(--warning);font-weight:600;">
+          {{-- 시안 158:171 — 미연동 안내는 12px/500 gray-600 (주황은 시안에 없다) --}}
+          <div style="padding:12px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
             <i class="bx bx-time"></i> Withworks 미연동 상태입니다.
           </div>
         @endif
@@ -236,19 +238,19 @@
     {{-- CE샵 연동정보 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-store" style="font-size:18px;color:var(--info);"></i>
+        <i class="bx bx-store" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">CE샵 연동정보</span>
       </div>
       <div style="padding:16px;">
         <div class="info-label">CE샵 주문 ID</div>
-        <div style="font-size:14px;font-weight:700;font-family:monospace;">#{{ $shopOrder->shop_order_id }}</div>
+        <div style="font-size:13px;font-weight:700;line-height:21px;font-family:monospace;color:var(--gray-1000);">#{{ $shopOrder->shop_order_id }}</div>
       </div>
     </div>
 
     {{-- 관리자 메모 --}}
     <div class="card">
       <div class="card-header">
-        <i class="bx bx-edit-alt" style="font-size:18px;color:var(--text-muted);"></i>
+        <i class="bx bx-edit-alt" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">관리자 메모</span>
       </div>
       <div style="padding:16px;">
