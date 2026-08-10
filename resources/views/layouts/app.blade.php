@@ -2094,6 +2094,22 @@ document.addEventListener('click', (e) => {
 {{-- 화면의 인라인 스크립트가 wwGrid 를 바로 쓸 수 있도록 스택보다 먼저 싣는다 --}}
 <script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 
+{{-- 시안대로 그리드 하단 상태바(footer)를 끈 화면에서, 결과바의 ‘선택 N건’ 표시를
+     그리드 선택 상태에 맞춘다. 그리드가 선택이 바뀔 때마다 부르는 지점에
+     표시 갱신만 얹는다 — 선택 상태는 공개 API 로 읽기만 하고 바꾸지 않는다. --}}
+<script>
+window.dsBindSelCount = function (grid, elId) {
+  const el = document.getElementById(elId);
+  if (!grid || !el || typeof grid._updateFooter !== 'function') return;
+  const orig = grid._updateFooter.bind(grid);
+  grid._updateFooter = function () {
+    orig();
+    el.textContent = grid.getCheckedRows().length;
+  };
+  grid._updateFooter();
+};
+</script>
+
 @stack('scripts')
 
 {{-- ═══════════════════════════════════════════════════════════

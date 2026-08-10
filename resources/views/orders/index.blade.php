@@ -9,8 +9,8 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.status-tabs', title: '주문 상태 탭', body: '전체·대기·확정·배송중·배송완료·취소 탭으로 주문을 상태별 필터링합니다.' },
-  { selector: '.filter-bar', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 날짜 범위로 조회합니다.' },
-  { selector: '.table-scroll-wrap', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 날짜 범위로 조회합니다.' },
+  { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
 @endpush
@@ -47,11 +47,13 @@ window.HELP_TOUR_STEPS = [
 @push('styles')
 <style>
   /* 패널 탭(목록/상세보기) */
-  .pnl-tabs { display:flex; gap:16px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .pnl-tabs { display:flex; gap:16px; padding:0 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .pnl-tab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
     color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
   .pnl-tab:hover { color:var(--primary); }
   .pnl-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .ds-grid-sel { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+  .ds-grid-sel b { color:var(--primary-400); }
   .pnl-empty { color:var(--text-muted); font-size:13.5px; text-align:center; padding:60px 20px;
     background:#fff; border:1px dashed var(--border); border-radius:var(--radius-lg); }
   /* Vuexy pill tabs */
@@ -98,68 +100,88 @@ window.HELP_TOUR_STEPS = [
   $curStatus = request('status');
 @endphp
 
-<div class="status-tabs">
+{{-- 상태 칩 — Figma 148:5526: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
+<div class="ds-chips status-tabs">
   <a href="{{ route('orders.index', array_merge(request()->except('status','page'), [])) }}"
-     class="status-tab {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="cnt">{{ $totalAll }}</span>
+     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
+    전체 <span class="ds-chip-count">{{ $totalAll }}</span>
   </a>
   @foreach($statuses as $key => $meta)
     <a href="{{ route('orders.index', array_merge(request()->except('status','page'), ['status' => $key])) }}"
-       class="status-tab {{ $curStatus === $key ? 'active' : '' }}">
+       class="ds-chip {{ $curStatus === $key ? 'active' : '' }}">
       {{ $meta['label'] }}
       @if(($statusCounts[$key] ?? 0) > 0)
-        <span class="cnt">{{ $statusCounts[$key] }}</span>
+        <span class="ds-chip-count">{{ $statusCounts[$key] }}</span>
       @endif
     </a>
   @endforeach
 </div>
 
 {{-- ── 검색 필터 ── --}}
-<form method="GET" action="{{ route('orders.index') }}" class="filter-bar mb-4">
+{{-- 검색 필터 — Figma 148:5526: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 · 기준/정렬 1열 --}}
+<form method="GET" action="{{ route('orders.index') }}" class="ds-filter-card">
   @if($curStatus)
     <input type="hidden" name="status" value="{{ $curStatus }}">
   @endif
-  <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-         placeholder="주문번호 · 환자명 · 제품명" style="width:220px;">
-  <input type="date" name="date" value="{{ request('date') }}" class="form-control" style="width:150px;">
-  <select name="per_page" class="form-control" style="width:90px;"
-          onchange="this.form.submit()">
-    @foreach([10,20,50,100] as $n)
-      <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
-    @endforeach
-  </select>
-  <button type="submit" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-magnifying-glass"></i> 검색
-  </button>
-  @if(request('q') || request('date'))
-    <a href="{{ route('orders.index', array_filter(['status'=>$curStatus])) }}"
-       class="btn btn-outline btn-sm">초기화</a>
-  @endif
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
+             placeholder="주문번호 · 환자명 · 제품명">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <input type="date" name="date" value="{{ request('date') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">기준/정렬</label>
+      <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
+        @foreach([10,20,50,100] as $n)
+          <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    @if(request('q') || request('date'))
+      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus])) }}" class="ds-btn">초기화</a>
+    @endif
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
 </form>
 
-{{-- 패널 탭: 조회결과 / 상세내용 (검색 필터 아래) --}}
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-  <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
-</div>
+{{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단, 텍스트만 --}}
+<div class="ds-grid-section">
+  <div class="ds-grid-bar">
+    <div class="ds-grid-bar-left">
+      <span class="ds-grid-total">전체 <b>{{ $statusCounts->sum() }}</b>건</span>
+      <span class="ds-grid-sel">선택 <b id="orderSelCount">0</b>건</span>
+    </div>
+    <div class="ds-grid-bar-right">
+      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
+      <button type="button" class="ds-btn" onclick="window.__orderGrid?.downloadExcel()">엑셀 저장</button>
+    </div>
+  </div>
 
-<div id="pnlList">
-{{-- ── 주문 목록 (wwGrid) ── --}}
-<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-  <span style="font-size:12px;color:var(--text-muted);"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
-  <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ $statusCounts->sum() }}건</span>
-</div>
-<div id="orderGrid"></div>
+  <div class="ds-grid-card">
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
+    </div>
+    <div id="pnlList">
+      <div id="orderGrid"></div>
 </div>{{-- /pnlList --}}
 
-{{-- ── 상세내용 탭 (기존 상세 페이지 콘텐츠를 같은 페이지에 직접 주입) ── --}}
-<div id="pnlDetail" style="display:none;">
+{{-- ── 상세내용 탭 (기존 상세 페이지 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
+<div id="pnlDetail" style="display:none;padding:16px;">
   <div style="margin-bottom:12px;">
-    <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
+    <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
   </div>
   <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 상세 내용이 여기에 표시됩니다.</div>
   <div id="pnlDetailContent"></div>
 </div>
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 @php /* 이하 원본 테이블 마크업은 wwGrid로 대체되어 미사용 */ @endphp
 @if(false)
@@ -312,8 +334,10 @@ window.HELP_TOUR_STEPS = [
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('orderGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
-    footer: { total: true, selected: true, modified: false },
+    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    footer: false,
     columns: [
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
       { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
@@ -331,6 +355,7 @@ window.HELP_TOUR_STEPS = [
     data: @json($gridData),
   });
   window.__orderGrid = grid;
+  window.dsBindSelCount(grid, 'orderSelCount');
 
   // 패널 탭 전환(조회결과/상세내용)
   window.pnlShow = function (which) {

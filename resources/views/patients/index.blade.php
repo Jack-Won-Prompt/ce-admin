@@ -330,6 +330,7 @@
     data: @json($gridData),
   });
   window.__patientGrid = grid;
+  window.dsBindSelCount(grid, 'sel-count');
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   // 이력 행 클릭 → 해당 상세(처방전 검수·주문)를 워크스페이스 새 탭으로 (환자 목록 유지)

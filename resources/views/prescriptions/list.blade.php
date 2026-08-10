@@ -261,6 +261,7 @@ window.HELP_TOUR_STEPS = [
   });
   // 결과바의 '엑셀 저장' 버튼이 부를 수 있게 인스턴스를 노출한다(그리드 내장 툴바 대체).
   window.__rxGrid = grid;
+  window.dsBindSelCount(grid, 'rxSelCount');
 
   /* 검수 화면을 '새 탭'으로 연다.
      워크스페이스 안에서는 목록 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
