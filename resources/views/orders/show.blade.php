@@ -141,7 +141,8 @@
 
   /* 시안 148:6407 — 단계 묶음은 가로 가운데로 뭉쳐 놓는다(주축 center).
      단계 사이 = 16 + 연결선 100 + 16 = 132. 카드 높이 12+8+53+8+12 = 93 (시안 93). */
-  .status-flow { display: flex; align-items: flex-start; justify-content: center; gap: 0; margin: 8px 0; flex-wrap: wrap; }
+  /* 시안 148:6407 — 스테퍼 카드 1568×93 = pad 12/16 + 단계 69. 여백을 더 두면 카드가 커진다 */
+  .status-flow { display: flex; align-items: flex-start; justify-content: center; gap: 0; margin: 0; flex-wrap: wrap; }
   .status-step {
     flex: 0 0 auto; min-width: 48px; text-align: center;
     font-size: 13px; font-weight: 700; line-height: 21px;
@@ -152,7 +153,7 @@
   /* 연결선 100×4 — 4×4 원 + 88×1 선 + 4×4 원 */
   .status-step::after {
     content: '';
-    position: absolute; left: calc(100% + 16px); top: 10px;
+    position: absolute; left: calc(100% + 16px); top: 18px;   /* 그림 40px 의 세로 가운데 */
     width: 100px; height: 4px; z-index: 0;
     background-image:
       radial-gradient(circle closest-side, var(--od-line) 100%, transparent 100%),
@@ -164,17 +165,18 @@
   }
   .status-step.done, .status-step.current { --od-line: var(--primary); }
   .status-step:last-child::after { display:none; }
+  /* 시안 148:6407 Frame 48101629 — 단계 48×69 = 그림 40×40 + gap 8 + 라벨 21.
+     그림 자체가 상태를 색으로 나르므로 원형 배경은 두지 않는다. */
   .status-step .dot {
-    width: 24px; height: 24px; border-radius: 999px;
-    background: var(--gray-300); color: #fff; font-size: 10px;
+    width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 8px; position: relative; z-index: 1;
   }
-  .status-step.done .dot   { background: var(--primary); }
-  .status-step.done        { color: var(--primary); }
-  .status-step.current .dot { background: var(--primary); }
-  .status-step.current     { color: var(--primary); }
-  .status-step.cancelled .dot { background: var(--danger); }
+  .status-step .dot img { width: 40px; height: 40px; display: block; }
+  .status-step.done    { color: var(--primary); }
+  .status-step.current { color: var(--primary); }
+  /* 취소는 시안에 없는 상태다 — 그림이 없어 라벨 색으로만 알린다 */
+  .status-step.cancelled { color: var(--danger); }
 
   /* 시안 158:577 — 청구 항목은 테두리 없는 회색 상자(r8 · pad 12 · gap 8 · h74), 값은 오른쪽 정렬 평문 */
   .nhis-box { border: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -340,11 +342,11 @@
           $isCurrent = $order->status === $s;
         @endphp
         <div class="status-step {{ $isDone ? 'done' : ($isCurrent ? 'current' : '') }}">
+          {{-- 시안 148:6407 — 단계마다 40×40 그림이 붙는다. 지나온·현재 단계는 primary 톤,
+               앞으로 올 단계는 gray 톤. 시안에서 SVG 를 그대로 받아 두 벌로 두었다. --}}
           <div class="dot">
-            @if($isDone) <i class="bx bx-check" style="font-size:11px;"></i>
-            @elseif($isCurrent) <i class="bx bxs-circle" style="font-size:10px;"></i>
-            @else <i class="bx bxs-circle" style="font-size:10px;opacity:.3;"></i>
-            @endif
+            <img src="@assetv('images/order-steps/' . $s . ($isDone || $isCurrent ? '-on' : '-off') . '.svg')"
+                 width="40" height="40" alt="">
           </div>
           {{ $lbl }}
         </div>
