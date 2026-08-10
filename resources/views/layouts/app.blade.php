@@ -167,7 +167,7 @@
       content: attr(data-title);
       position: absolute; left: calc(100% + 8px); top: 50%;
       transform: translateY(-50%);
-      background: #0D1B2A; color: #F1F5F9;
+      background: var(--gray-1000); color: var(--gray-100);
       font-size: 12px; font-weight: 500; white-space: nowrap;
       padding: 5px 10px; border-radius: 6px;
       box-shadow: 0 4px 12px rgba(0,0,0,.15);
@@ -312,8 +312,8 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700; flex-shrink: 0;
     }
-    .menu-user-name { font-size: 12.5px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
-    .menu-user-role { font-size: 10.5px; color: var(--text-muted); }
+    .menu-user-name { font-size: 13px; font-weight: 500; color: var(--text-primary); line-height: 21px; }
+    .menu-user-role { font-size: 10px; color: var(--text-muted); }
 
     /* ── Layout Page ── */
     .layout-page {
@@ -620,7 +620,7 @@
     .btn-ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
     .btn-ghost:hover { background: var(--bg); color: var(--primary); }
     .btn-sm  { padding: 5px 12px; font-size: 13px; }
-    .btn-xs  { padding: 3px 9px; font-size: 11.5px; }
+    .btn-xs  { padding: 3px 10px; font-size: 13px; }
     .w-full  { width: 100%; justify-content: center; }
     .flex-1  { flex: 1; }
 
@@ -655,7 +655,7 @@
 
     /* ── Forms ── */
     .form-group { margin-bottom: 10px; }
-    .form-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; letter-spacing: -.1px; }
+    .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; letter-spacing: -.1px; }
     .form-label span { color: var(--danger); }
     /* Figma: 높이 32 · 13px · padding 좌우 12 · radius 8 · border gray-200
        (5 + 20 + 5 + 테두리 2 = 32) */
@@ -689,20 +689,20 @@
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     thead th {
-      padding: 11px 14px; font-size: 11.5px; font-weight: 700;
+      padding: 12px; font-size: 13px; font-weight: 700;
       color: var(--text-muted); text-align: left; text-transform: uppercase;
       letter-spacing: .5px; border-bottom: 1px solid var(--border);
-      white-space: nowrap; background: #F9FAFB;
+      white-space: nowrap; background: var(--gray-50);
     }
     thead th:first-child { border-radius: var(--radius-lg) 0 0 0; }
     thead th:last-child  { border-radius: 0 var(--radius-lg) 0 0; }
     tbody td {
-      padding: 11px 14px; font-size: 13.5px;
+      padding: 10px 12px; font-size: 13px;
       border-bottom: 1px solid var(--border-light);
       vertical-align: middle; color: var(--text-secondary);
     }
     tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: #FAFBFD; }
+    tbody tr:hover td { background: var(--gray-50); }
 
     /* ── Patient Card ── */
     .patient-card {
@@ -718,7 +718,7 @@
       font-size: 16px; flex-shrink: 0;
     }
     .patient-name   { font-size: 14px; font-weight: 700; letter-spacing: -.2px; }
-    .patient-detail { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+    .patient-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
     /* ── OCR Fields ── */
     .ocr-field {
@@ -728,7 +728,7 @@
       background: var(--bg);
     }
     .ocr-label { font-size: 11px; color: var(--text-muted); width: 80px; flex-shrink: 0; }
-    .ocr-value { font-size: 13px; font-weight: 600; flex: 1; }
+    .ocr-value { font-size: 13px; font-weight: 500; flex: 1; }
     .ocr-check { color: var(--success); font-size: 14px; }
     .ocr-warn  { color: var(--warning); font-size: 14px; }
 
@@ -736,7 +736,7 @@
     .alert {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 16px; border-radius: var(--radius-lg);
-      margin-bottom: 16px; font-size: 13.5px; font-weight: 500;
+      margin-bottom: 16px; font-size: 13px; font-weight: 500;
       border-left: 4px solid transparent;
     }
     .alert-success { background: var(--success-light); border-color: var(--success); color: #065F46; }
@@ -747,7 +747,7 @@
     /* ── Card Footer ── */
     .card-footer {
       padding: 12px 18px; border-top: 1px solid var(--border);
-      background: #FAFBFD; border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      background: var(--gray-50); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
       font-size: 13px; color: var(--text-muted);
     }
 
@@ -780,10 +780,10 @@
     }
     .toast {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 13px 16px; border-radius: 10px; color: #fff;
-      font-size: 13.5px; font-weight: 500; box-shadow: var(--shadow-lg);
+      padding: 13px 16px; border-radius: 8px; color: #fff;
+      font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg);
       animation: slideIn .25s ease; min-width: 260px;
-      word-break: keep-all; line-height: 1.5; background: #1a2436;
+      word-break: keep-all; line-height: 1.5; background: var(--gray-900);
       border-left: 3px solid transparent;
     }
     .toast .t-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
@@ -802,13 +802,13 @@
     .chat-toast {
       display: flex; align-items: flex-start; gap: 12px;
       padding: 14px 16px; border-radius: 12px;
-      background: #1a2436; color: #fff;
+      background: var(--gray-900); color: #fff;
       box-shadow: var(--shadow-lg);
       animation: slideIn .25s ease; min-width: 300px; max-width: 360px;
       cursor: pointer; border-left: 3px solid var(--primary);
       position: relative; pointer-events: auto;
     }
-    .chat-toast:hover { background: #0f1929; }
+    .chat-toast:hover { background: var(--gray-1000); }
     .chat-toast-avatar {
       width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
       background: var(--primary); color: #fff;
@@ -818,19 +818,19 @@
     .chat-toast-body { flex: 1; min-width: 0; }
     .chat-toast-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
     .chat-toast-name { font-size: 13px; font-weight: 700; color: #fff; }
-    .chat-toast-room { font-size: 11px; color: #94A3B8; }
+    .chat-toast-room { font-size: 11px; color: var(--gray-400); }
     .chat-toast-msg {
-      font-size: 13px; color: #CBD5E1; font-weight: 400;
+      font-size: 13px; color: var(--gray-300); font-weight: 400;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
     }
-    .chat-toast-time { font-size: 10px; color: #64748B; margin-top: 2px; }
+    .chat-toast-time { font-size: 10px; color: var(--gray-600); margin-top: 2px; }
     .chat-toast-close {
       position: absolute; top: 8px; right: 10px;
-      background: none; border: none; color: #64748B;
+      background: none; border: none; color: var(--gray-600);
       font-size: 14px; cursor: pointer; line-height: 1; padding: 2px;
     }
     .chat-toast-close:hover { color: #fff; }
-    .chat-toast-icon { font-size: 11px; color: #94A3B8; }
+    .chat-toast-icon { font-size: 11px; color: var(--gray-400); }
     @keyframes chatBtnPulse {
       0%   { background: transparent; transform: scale(1); }
       50%  { background: rgba(40,121,139,.2); transform: scale(1.15); }
@@ -849,14 +849,14 @@
     @media (max-width: 768px) {
       .layout-navbar { padding: 0 14px; min-height: 54px; left: 0 !important; }
       :root { --nav-h: 54px; }
-      .page-title { font-size: 14.5px; }
+      .page-title { font-size: 14px; }
       .page-breadcrumb { display: none; }
       .page-body { padding: 14px 14px 60px; }
       .card-body { padding: 14px; }
       .card-header { padding: 12px 14px; }
-      table { font-size: 12.5px; }
-      thead th { padding: 9px 10px; font-size: 10.5px; }
-      tbody td { padding: 10px 10px; font-size: 12.5px; }
+      table { font-size: 13px; }
+      thead th { padding: 12px; font-size: 13px; }
+      tbody td { padding: 10px 12px; font-size: 13px; }
     }
 
     /* ── Theme Picker ── */
@@ -888,7 +888,7 @@
     .theme-swatch.active::after {
       content: '✓'; position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 13px; font-weight: 800; line-height: 1;
+      color: #fff; font-size: 13px; font-weight: 700; line-height: 1;
     }
     .theme-label { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px; }
 
@@ -907,7 +907,7 @@
     }
     .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: inherit; }
     .stat-icon {
-      width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 22px;
     }
     .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
@@ -917,17 +917,17 @@
     .stat-icon.info    { background: var(--info-light);    color: var(--info); }
     .stat-icon.purple  { background: #F3EEFF;              color: var(--purple); }
     .stat-icon.gray    { background: var(--border-light);  color: var(--text-muted); }
-    .stat-val   { font-size: 24px; font-weight: 800; line-height: 1.1; color: var(--text-primary); }
+    .stat-val   { font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--text-primary); }
     .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
     .stat-info  { min-width: 0; }
 
     /* ── Pill tabs (status/type filter) ── */
     .tab-pills {
       display: flex; gap: 3px; padding: 4px; background: var(--bg);
-      border-radius: 10px; flex-wrap: wrap; border: 1px solid var(--border);
+      border-radius: 12px; flex-wrap: wrap; border: 1px solid var(--border);
     }
     .tab-pill {
-      padding: 6px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+      padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
       color: var(--text-muted); cursor: pointer; transition: var(--transition);
       border: none; background: transparent; white-space: nowrap;
       display: inline-flex; align-items: center; gap: 6px; line-height: 1;
@@ -936,14 +936,14 @@
     .tab-pill.active { background: #fff; color: var(--primary); box-shadow: var(--shadow); }
     .tab-count {
       background: var(--border); color: var(--text-muted);
-      font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; min-width: 18px; text-align: center;
+      font-size: 10px; padding: 1px 6px; border-radius: 999px; font-weight: 700; min-width: 18px; text-align: center;
     }
     .tab-pill.active .tab-count { background: var(--primary-light); color: var(--primary); }
 
     /* ── Underline tabs ── */
     .tab-underline { display: flex; border-bottom: 2px solid var(--border); gap: 0; margin-bottom: 18px; }
     .tab-u {
-      padding: 9px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+      padding: 9px 18px; font-size: 13px; font-weight: 500; color: var(--text-muted);
       cursor: pointer; border: none; background: transparent; margin-bottom: -2px;
       border-bottom: 2px solid transparent; transition: var(--transition);
       display: inline-flex; align-items: center; gap: 6px;
@@ -953,7 +953,7 @@
 
     /* ── Filter bar ── (표준 정의는 위 DS 컴포넌트 영역에 있다) */
     .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
-    .filter-label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .filter-label { font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 
     /* ── Search input with icon ── */
     .search-wrap { position: relative; display: inline-flex; align-items: center; }
@@ -961,17 +961,17 @@
     .search-wrap .form-control { padding-left: 34px; }
 
     /* ── Online/offline dot ── */
-    .status-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+    .status-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
     .status-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .status-dot.online  { color: var(--success); }
     .status-dot.online::before  { background: var(--success); box-shadow: 0 0 0 2px var(--success-light); }
     .status-dot.offline { color: var(--text-muted); }
-    .status-dot.offline::before { background: #9CA3AF; }
+    .status-dot.offline::before { background: var(--gray-400); }
 
     /* ── Empty state ── */
     .empty-state { text-align: center; padding: 52px 24px; }
     .empty-state i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
-    .empty-state p { font-size: 13.5px; color: var(--text-muted); margin: 0 0 14px; }
+    .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
 
     /* ── Modal overlay (design system) ── */
     .modal-overlay {
@@ -994,7 +994,7 @@
       display: flex; align-items: center; gap: 10px;
       padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
-    .modal-title { font-size: 15px; font-weight: 700; color: var(--text-primary); flex: 1; letter-spacing: -.2px; }
+    .modal-title { font-size: 14px; font-weight: 700; color: var(--text-primary); flex: 1; letter-spacing: -.2px; }
     .modal-close {
       width: 28px; height: 28px; border-radius: 6px; border: none;
       background: transparent; color: var(--text-muted); cursor: pointer;
@@ -1006,7 +1006,7 @@
     .modal-ft {
       padding: 12px 20px; border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-      flex-shrink: 0; background: #FAFBFD; border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      flex-shrink: 0; background: var(--gray-50); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     }
 
     /* ── Info grid (key-value pairs) ── */
@@ -1014,7 +1014,7 @@
     .info-grid-3 { grid-template-columns: repeat(3,1fr); }
     .info-cell { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; }
     .info-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
-    .info-value { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .info-value { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 
     /* ── Section card title ── */
     .section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
@@ -1055,7 +1055,7 @@
     .list-unstyled { list-style: none; padding-left: 0; margin: 0; }
     .text-break { word-break: break-word; }
     .rounded-circle { border-radius: 50%; }
-    .rounded-pill { border-radius: 20px; }
+    .rounded-pill { border-radius: 999px; }
     .spinner-border { display: inline-block; width: 2rem; height: 2rem; border: .25em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .75s linear infinite; }
     .spinner-border.spinner-border-sm { width: 1rem; height: 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -1072,14 +1072,14 @@
     .nav-item { position: relative; }
     .nav-link {
       display: flex; align-items: center; padding: 10px 16px;
-      font-size: 13px; font-weight: 600; color: var(--text-muted);
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
       background: transparent; border: none; cursor: pointer;
       border-bottom: 2px solid transparent; margin-bottom: -1px; transition: var(--transition);
     }
     .nav-link:hover { color: var(--text-primary); }
     .nav-link.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .table-light thead th { background: #F9FAFB; }
-    .table-hover tbody tr:hover td { background: #FAFBFD; }
+    .table-light thead th { background: var(--gray-50); }
+    .table-hover tbody tr:hover td { background: var(--gray-50); }
     .align-middle td { vertical-align: middle; }
     .ps-4 { padding-left: 18px; }
     /* 시안의 입력 규격은 32 하나뿐이라 sm 도 같은 높이로 맞춘다 */
@@ -1580,7 +1580,7 @@
           </div>
           <form method="POST" action="{{ route('logout') }}" class="ms-auto menu-user-info">
             @csrf
-            <button type="submit" class="btn-icon" title="로그아웃" style="width:32px;height:32px;font-size:15px;color:#64748b;">
+            <button type="submit" class="btn-icon" title="로그아웃" style="width:32px;height:32px;font-size:15px;color:var(--gray-600);">
               <i class="bx bx-log-out-circle"></i>
             </button>
           </form>
@@ -1964,7 +1964,7 @@ document.addEventListener('click', (e) => {
             <i class="fa-solid ${tone.icon}" style="color:${tone.color};font-size:17px;"></i>
             <span class="modal-title">${esc(opts.title || (kind === 'alert' ? '알림' : '확인'))}</span>
           </div>
-          <div class="modal-bd" style="font-size:13.5px;line-height:1.75;color:var(--text-primary);white-space:normal;">
+          <div class="modal-bd" style="font-size:13px;line-height:1.75;color:var(--text-primary);white-space:normal;">
             ${body(msg)}
           </div>
           <div class="modal-ft">
@@ -2237,17 +2237,17 @@ window.dsBindSelCount = function (grid, elId) {
       el.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:240px;z-index:9000;background:#FFFDE7;border:1px solid #F0D060;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);';
       el.innerHTML =
         '<div class="gpm-header" style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#F9C800;border-radius:8px 8px 0 0;cursor:move;user-select:none;">' +
-          '<span style="font-size:10px;font-weight:700;color:#555;"><i class="fa-solid fa-thumbtack"></i> 메모 고정' +
-            (m.rx_number ? '<span style="font-size:9px;font-weight:400;margin-left:4px;opacity:.7;">' + escH(m.rx_number) + '</span>' : '') +
+          '<span style="font-size:10px;font-weight:700;color:var(--gray-600);"><i class="fa-solid fa-thumbtack"></i> 메모 고정' +
+            (m.rx_number ? '<span style="font-size:10px;font-weight:400;margin-left:4px;opacity:.7;">' + escH(m.rx_number) + '</span>' : '') +
           '</span>' +
           '<div style="display:flex;gap:4px;">' +
-            '<button data-unpin="' + m.id + '" title="고정 해제" style="width:18px;height:18px;border:none;border-radius:3px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:#555;"><i class="fa-solid fa-thumbtack" style="transform:rotate(45deg);"></i></button>' +
-            '<button data-close="' + m.id + '" title="닫기" style="width:18px;height:18px;border:none;border-radius:3px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:#555;">×</button>' +
+            '<button data-unpin="' + m.id + '" title="고정 해제" style="width:18px;height:18px;border:none;border-radius:6px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--gray-600);"><i class="fa-solid fa-thumbtack" style="transform:rotate(45deg);"></i></button>' +
+            '<button data-close="' + m.id + '" title="닫기" style="width:18px;height:18px;border:none;border-radius:6px;background:rgba(0,0,0,.1);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--gray-600);">×</button>' +
           '</div>' +
         '</div>' +
         '<div style="padding:8px;">' +
           '<textarea data-id="' + m.id + '" style="width:100%;border:none;background:transparent;resize:none;font-size:12px;line-height:1.5;outline:none;min-height:60px;">' + escH(m.content) + '</textarea>' +
-          '<div style="font-size:10px;color:#aaa;margin-top:2px;">' + escH(m.created_at) + ' · ' + escH(m.user_name) + '</div>' +
+          '<div style="font-size:10px;color:var(--gray-400);margin-top:2px;">' + escH(m.created_at) + ' · ' + escH(m.user_name) + '</div>' +
         '</div>';
 
       // 내용 수정 blur
@@ -2306,11 +2306,11 @@ window.dsBindSelCount = function (grid, elId) {
 .chat-header {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px; border-bottom: 1px solid var(--border);
-  background: #0f172a; color: #fff; flex-shrink: 0;
+  background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .chat-header-title { font-size: 14px; font-weight: 700; flex: 1; }
 .chat-header-close {
-  background: none; border: none; color: #94a3b8;
+  background: none; border: none; color: var(--gray-400);
   font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
 }
 .chat-header-close:hover { color: #fff; background: rgba(255,255,255,.1); }
@@ -2320,7 +2320,7 @@ window.dsBindSelCount = function (grid, elId) {
 /* ── Room List ── */
 .chat-rooms {
   width: 240px; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; flex-shrink: 0; background: #f8fafc;
+  display: flex; flex-direction: column; flex-shrink: 0; background: var(--gray-50);
 }
 .chat-rooms-toolbar {
   display: flex; align-items: center; padding: 10px 10px 6px;
@@ -2331,7 +2331,7 @@ window.dsBindSelCount = function (grid, elId) {
   display: flex; gap: 6px;
   padding: 8px 10px 10px;
   border-bottom: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 .chat-room-tab {
   flex: 1;
@@ -2359,9 +2359,9 @@ window.dsBindSelCount = function (grid, elId) {
 .chat-room-item {
   display: flex; align-items: center; gap: 10px;
   padding: 11px 12px; cursor: pointer; transition: background .15s;
-  border-bottom: 1px solid #f1f5f9; position: relative;
+  border-bottom: 1px solid var(--gray-100); position: relative;
 }
-.chat-room-item:hover { background: #f1f5f9; }
+.chat-room-item:hover { background: var(--gray-100); }
 .chat-room-item.active { background: var(--primary-light); }
 .chat-room-avatar {
   width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
@@ -2371,14 +2371,14 @@ window.dsBindSelCount = function (grid, elId) {
 }
 .chat-room-avatar.group { background: var(--purple); }
 .chat-room-info { flex: 1; min-width: 0; }
-.chat-room-name { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-room-name { font-size: 12px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-room-preview { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-room-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
 .chat-room-time { font-size: 10px; color: var(--text-muted); }
 .chat-room-badge {
   background: var(--danger); color: #fff;
   font-size: 10px; font-weight: 700; padding: 1px 5px;
-  border-radius: 10px; min-width: 16px; text-align: center;
+  border-radius: 999px; min-width: 16px; text-align: center;
 }
 
 /* ── Chat Window ── */
@@ -2428,9 +2428,9 @@ window.dsBindSelCount = function (grid, elId) {
 .msg-name { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
 .msg-row.mine .msg-name { text-align: right; }
 .msg-bubble {
-  padding: 10px 14px; border-radius: 14px;
+  padding: 10px 14px; border-radius: 12px;
   font-size: 14px; line-height: 1.6; word-break: break-word;
-  background: #f1f5f9; color: var(--text-primary);
+  background: var(--gray-100); color: var(--text-primary);
   border-bottom-left-radius: 4px;
 }
 .msg-row.mine .msg-bubble {
@@ -2445,24 +2445,24 @@ window.dsBindSelCount = function (grid, elId) {
 /* 파일 첨부 */
 .msg-file {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 10px;
+  padding: 8px 12px; border-radius: 8px;
   background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.3);
 }
-.msg-row:not(.mine) .msg-file { background: #f8fafc; border-color: var(--border); }
+.msg-row:not(.mine) .msg-file { background: var(--gray-50); border-color: var(--border); }
 .msg-file i { font-size: 18px; }
 .msg-file-info { min-width: 0; }
-.msg-file-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.msg-file-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 .msg-file-size { font-size: 10px; opacity: .7; }
 
 /* ── 파일 붙여넣기 미리보기 ── */
 #chatPastePreview {
   display: none; flex-shrink: 0;
   padding: 8px 12px; border-top: 1px solid var(--border);
-  background: #f8fafc; gap: 8px; align-items: center;
+  background: var(--gray-50); gap: 8px; align-items: center;
 }
 #chatPastePreview.show { display: flex; }
 #chatPasteThumb { max-height: 60px; max-width: 80px; border-radius: 6px; object-fit: cover; }
-#chatPasteFileName { font-size: 12px; font-weight: 600; flex: 1; }
+#chatPasteFileName { font-size: 12px; font-weight: 500; flex: 1; }
 #chatPasteClear {
   background: none; border: none; color: var(--danger);
   font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
@@ -2473,7 +2473,7 @@ window.dsBindSelCount = function (grid, elId) {
 .chat-input-area {
   padding: 14px 16px; border-top: 2px solid var(--border);
   display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0;
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 #chatInput {
   flex: 1; resize: none; border: 1.5px solid var(--border); border-radius: 12px;
@@ -2482,7 +2482,7 @@ window.dsBindSelCount = function (grid, elId) {
   background: #fff;
 }
 #chatInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(77,107,140,.12); }
-#chatInput::placeholder { color: #b0bec5; }
+#chatInput::placeholder { color: var(--gray-400); }
 .chat-send-btn {
   width: 44px; height: 44px; border-radius: 12px;
   background: var(--primary); border: none; color: #fff;
@@ -2492,7 +2492,7 @@ window.dsBindSelCount = function (grid, elId) {
 .chat-send-btn:hover { background: var(--primary-dark); }
 .chat-send-btn i { font-size: 16px; }
 .chat-file-btn {
-  width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--border);
+  width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
   background: #fff; color: var(--text-secondary); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: var(--transition);
@@ -2507,10 +2507,10 @@ input#chatFileInput { display: none; }
 }
 #chatNewRoomModal.show { display: flex; }
 .chat-modal-box {
-  background: #fff; border-radius: 14px; padding: 24px;
+  background: #fff; border-radius: 12px; padding: 24px;
   width: 360px; box-shadow: var(--shadow-lg);
 }
-.chat-modal-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+.chat-modal-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
 .chat-user-check { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; }
 .chat-user-check input { width: 15px; height: 15px; cursor: pointer; }
 .chat-user-check label { font-size: 13px; cursor: pointer; }
@@ -2545,8 +2545,8 @@ input#chatFileInput { display: none; }
 ══════════════════════════════════════════════════════════ */
 .btn-icon-badge {
   position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px;
-  padding: 0 4px; border-radius: 10px; background: var(--danger); color: #fff;
-  font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+  padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 15px; text-align: center;
 }
 #srOverlay { display: none; position: fixed; inset: 0; z-index: 1000; }
 #srOverlay.show { display: block; }
@@ -2562,8 +2562,8 @@ input#chatFileInput { display: none; }
   display: flex; align-items: center; gap: 9px;
   padding: 15px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.sr-header-title { font-size: 15px; font-weight: 800; color: var(--text-primary); }
-.sr-header-sub { font-size: 11.5px; color: var(--text-muted); }
+.sr-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.sr-header-sub { font-size: 12px; color: var(--text-muted); }
 .sr-header-close {
   margin-left: auto; width: 28px; height: 28px; border: none; background: none;
   color: var(--text-muted); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px;
@@ -2579,7 +2579,7 @@ input#chatFileInput { display: none; }
 .sr-tab:hover { color: var(--primary); }
 .sr-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 .sr-tab .cnt {
-  min-width: 18px; padding: 0 5px; height: 17px; border-radius: 10px;
+  min-width: 18px; padding: 0 5px; height: 17px; border-radius: 999px;
   font-size: 10px; font-weight: 700; background: var(--border-light); color: var(--text-muted);
   display: inline-flex; align-items: center; justify-content: center;
 }
@@ -2590,7 +2590,7 @@ input#chatFileInput { display: none; }
 .sr-field label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
 .sr-field input[type=text], .sr-field select, .sr-field textarea {
   padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
-  font-size: 13.5px; font-family: inherit; background: #fff;
+  font-size: 13px; font-family: inherit; background: #fff;
 }
 .sr-field textarea { min-height: 110px; resize: vertical; }
 .sr-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -2599,15 +2599,15 @@ input#chatFileInput { display: none; }
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 14px 16px; margin-bottom: 14px; background: var(--bg);
 }
-.sr-detail h5 { margin: 0 0 4px; font-size: 14px; font-weight: 800; color: var(--text-primary); }
-.sr-detail .meta { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; }
+.sr-detail h5 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.sr-detail .meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 .sr-detail .body { font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); }
 .sr-answer-box {
   margin-top: 12px; padding: 12px 14px; background: var(--primary-light);
   border: 1px solid var(--primary-accent, var(--border)); border-radius: 8px;
 }
-.sr-answer-box .lbl { font-size: 10.5px; font-weight: 800; color: var(--primary); margin-bottom: 5px; }
-.sr-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.sr-answer-box .lbl { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
+.sr-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .sr-b-open        { background: var(--warning-light); color: var(--warning); }
 .sr-b-in_progress { background: var(--primary-light);  color: var(--primary); }
 .sr-b-answered    { background: var(--success-light);  color: var(--success); }
@@ -2621,7 +2621,7 @@ input#chatFileInput { display: none; }
 <div id="chatPanel">
   {{-- 패널 헤더 --}}
   <div class="chat-header">
-    <i class="fa-solid fa-comments" style="font-size:16px;color:#94a3b8;"></i>
+    <i class="fa-solid fa-comments" style="font-size:16px;color:var(--gray-400);"></i>
     <span class="chat-header-title">채팅</span>
     <button class="chat-header-close" onclick="ChatPanel.close()">×</button>
   </div>
@@ -2664,17 +2664,17 @@ input#chatFileInput { display: none; }
         </div>
 
         {{-- CE샵 고객 정보 배너 --}}
-        <div id="shopCustomerBar" style="display:none;background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:7px 14px;font-size:12px;color:#374151;flex-shrink:0;">
+        <div id="shopCustomerBar" style="display:none;background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:7px 14px;font-size:12px;color:#374151;flex-shrink:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <i class="fa-solid fa-user-circle" style="color:#64748b;"></i>
-            <span id="shopCustomerName" style="font-weight:600;"></span>
-            <span id="shopCustomerPhone" style="color:#64748b;"></span>
-            <span id="shopCustomerEmail" style="color:#94a3b8;font-size:11px;"></span>
+            <i class="fa-solid fa-user-circle" style="color:var(--gray-600);"></i>
+            <span id="shopCustomerName" style="font-weight:700;"></span>
+            <span id="shopCustomerPhone" style="color:var(--gray-600);"></span>
+            <span id="shopCustomerEmail" style="color:var(--gray-400);font-size:11px;"></span>
             <a id="shopCustomerPatientLink" href="#" target="_blank"
                style="margin-left:auto;font-size:11px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:4px;text-decoration:none;display:none;">
               환자 기록 보기
             </a>
-            <span id="shopCustomerNoPatient" style="margin-left:auto;font-size:11px;color:#94a3b8;display:none;">등록된 환자 없음</span>
+            <span id="shopCustomerNoPatient" style="margin-left:auto;font-size:11px;color:var(--gray-400);display:none;">등록된 환자 없음</span>
           </div>
         </div>
 
@@ -2713,7 +2713,7 @@ input#chatFileInput { display: none; }
   <div class="chat-modal-box">
     <div class="chat-modal-title"><i class="fa-solid fa-plus" style="color:var(--primary);margin-right:6px;"></i>새 채팅 시작</div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">유형</label>
+      <label style="font-size:12px;font-weight:500;color:var(--text-secondary);">유형</label>
       <div style="display:flex;gap:12px;margin-top:6px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
           <input type="radio" name="chatRoomType" value="direct" checked> 1:1 채팅
@@ -2724,10 +2724,10 @@ input#chatFileInput { display: none; }
       </div>
     </div>
     <div id="chatGroupNameWrap" style="display:none;margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">그룹 이름</label>
+      <label style="font-size:12px;font-weight:500;color:var(--text-secondary);">그룹 이름</label>
       <input type="text" id="chatGroupName" class="form-control" style="margin-top:4px;" placeholder="그룹 이름 입력">
     </div>
-    <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">대화 상대</label>
+    <label style="font-size:12px;font-weight:500;color:var(--text-secondary);">대화 상대</label>
     <div id="chatUserList" style="margin-top:6px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;"></div>
     <div class="chat-modal-actions">
       <button class="btn btn-outline btn-sm" onclick="ChatPanel.closeNewRoom()">취소</button>
@@ -2777,7 +2777,7 @@ input#chatFileInput { display: none; }
   <div class="sr-body" id="srPaneList">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
       <select id="srFilterStatus" onchange="SrPanel.load()"
-              style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;">
+              style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
         <option value="">전체 상태</option>
         @foreach($srStatuses ?? \App\Models\ServiceRequest::STATUSES as $k => $v)
           <option value="{{ $k }}">{{ $v }}</option>
@@ -3756,8 +3756,8 @@ const ChatPanel = (() => {
 .consent-notif-title { font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px; }
 .consent-notif-body  { font-size:12px; color:var(--text-secondary); line-height:1.5; }
 .consent-notif-actions { display:flex; align-items:center; justify-content:space-between; margin-top:2px; }
-.consent-notif-progress { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
-.consent-notif-progress-bar { height:100%; background:var(--success); border-radius:2px; width:100%; transition:width linear; }
+.consent-notif-progress { height:3px; background:var(--border); border-radius:999px; overflow:hidden; }
+.consent-notif-progress-bar { height:100%; background:var(--success); border-radius:999px; width:100%; transition:width linear; }
 .consent-notif.declined .consent-notif-progress-bar { background:var(--danger); }
 </style>
 <script>
@@ -3787,7 +3787,7 @@ const ChatPanel = (() => {
       </div>
       <div class="consent-notif-actions">
         <a href="${rxUrl}" data-ce-tab="처방전 관리 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
-           style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
+           style="font-size:12px;font-weight:500;color:var(--primary);text-decoration:none;">
           <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
         </a>
         <button onclick="this.closest('.consent-notif').remove()"
@@ -3844,8 +3844,8 @@ const ChatPanel = (() => {
 .rx-notif-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 .rx-notif-body  { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
 .rx-notif-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.rx-notif-progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.rx-notif-progress-bar { height: 100%; background: var(--primary); border-radius: 2px; width: 100%; }
+.rx-notif-progress { height: 3px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.rx-notif-progress-bar { height: 100%; background: var(--primary); border-radius: 999px; width: 100%; }
 </style>
 <div id="rxNotifContainer"></div>
 <script>
@@ -3873,7 +3873,7 @@ function showPrescriptionNotif(data) {
     </div>
     <div class="rx-notif-actions">
       <a href="${rxUrl}" data-ce-tab="처방전 관리 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
-         style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">
+         style="font-size:12px;font-weight:500;color:var(--primary);text-decoration:none;">
         <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
       </a>
       <button onclick="this.closest('.rx-notif').remove()"
@@ -3925,11 +3925,11 @@ function showPrescriptionNotif(data) {
 .sp-header {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px; border-bottom: 1px solid var(--border);
-  background: #0f172a; color: #fff; flex-shrink: 0;
+  background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .sp-title { font-size: 14px; font-weight: 700; flex: 1; }
 .sp-close, .sp-back {
-  background: none; border: none; color: #94a3b8;
+  background: none; border: none; color: var(--gray-400);
   font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 4px;
   display: flex; align-items: center; gap: 4px; line-height: 1;
 }
@@ -3956,7 +3956,7 @@ function showPrescriptionNotif(data) {
 .notice-item.pinned { background: #fffbf0; }
 .notice-item.pinned:hover { background: #fff3d6; }
 .ni-title {
-  font-size: 14px; font-weight: 600; color: var(--text-primary);
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-bottom: 5px; display: flex; align-items: center; gap: 5px;
 }
@@ -3996,13 +3996,13 @@ function showPrescriptionNotif(data) {
 }
 .inq-item-dot.answered { background: var(--success); }
 .inq-info { flex: 1; min-width: 0; }
-.inq-title { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inq-title { font-size: 13px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .inq-meta  { font-size: 11px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 8px; }
 
 /* ── 문의 스레드 ── */
 .inq-thread { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .inq-thread-info {
-  padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid var(--border);
+  padding: 12px 16px; background: var(--gray-50); border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .inq-thread-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4022,16 +4022,16 @@ function showPrescriptionNotif(data) {
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700; color: #fff; align-self: flex-end;
 }
-.inq-msg-av.admin-av  { background: #10b981; }
-.inq-msg-av.user-av   { background: #64748b; }
+.inq-msg-av.admin-av  { background: var(--primary); }
+.inq-msg-av.user-av   { background: var(--gray-600); }
 .inq-msg-av.mine-av   { background: var(--primary); }
 .inq-msg-body { max-width: 80%; }
 .inq-msg-name { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
 .inq-msg.mine .inq-msg-name { text-align: right; }
 .inq-msg-bubble {
-  padding: 10px 14px; border-radius: 14px;
+  padding: 10px 14px; border-radius: 12px;
   font-size: 13px; line-height: 1.7; word-break: break-word;
-  background: #f1f5f9; color: var(--text-primary);
+  background: var(--gray-100); color: var(--text-primary);
   border-bottom-left-radius: 4px; white-space: pre-wrap;
 }
 .inq-msg.mine .inq-msg-bubble {
@@ -4043,10 +4043,10 @@ function showPrescriptionNotif(data) {
 .inq-msg-img { max-width: 200px; max-height: 180px; border-radius: 8px; cursor: zoom-in; object-fit: cover; display: block; }
 .inq-msg-file {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  border-radius: 10px; background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.3);
+  border-radius: 8px; background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.3);
 }
-.inq-msg:not(.mine) .inq-msg-file { background: #f8fafc; border-color: var(--border); }
-.inq-msg-file-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.inq-msg:not(.mine) .inq-msg-file { background: var(--gray-50); border-color: var(--border); }
+.inq-msg-file-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
 
 /* 붙여넣기 미리보기 */
 .inq-paste-preview {
@@ -4056,18 +4056,18 @@ function showPrescriptionNotif(data) {
 }
 .inq-paste-preview.show { display: flex; }
 .inq-paste-img { max-height: 56px; max-width: 80px; border-radius: 6px; object-fit: cover; }
-.inq-paste-name { font-size: 12px; font-weight: 600; flex: 1; color: var(--text-primary); }
+.inq-paste-name { font-size: 12px; font-weight: 500; flex: 1; color: var(--text-primary); }
 .inq-paste-clear { background: none; border: none; color: var(--danger); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1; }
 .inq-paste-clear:hover { background: var(--danger-light); }
 
 /* 스레드 입력 영역 */
 .inq-thread-input {
   padding: 10px 14px; border-top: 2px solid var(--border);
-  background: #f8fafc; flex-shrink: 0;
+  background: var(--gray-50); flex-shrink: 0;
   display: flex; gap: 8px; align-items: flex-end;
 }
 #inqThreadInput {
-  flex: 1; resize: none; border: 1.5px solid var(--border); border-radius: 10px;
+  flex: 1; resize: none; border: 1px solid var(--border); border-radius: 8px;
   padding: 9px 12px; font-size: 13px; line-height: 1.6; font-family: inherit;
   min-height: 40px; max-height: 120px; outline: none; background: #fff;
 }
@@ -4082,7 +4082,7 @@ function showPrescriptionNotif(data) {
 .sp-toolbar {
   padding: 10px 14px; border-bottom: 1px solid var(--border);
   display: flex; gap: 8px; align-items: center; flex-shrink: 0;
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 .sp-toolbar .form-control { font-size: 12px; }
 
@@ -4120,7 +4120,7 @@ function showPrescriptionNotif(data) {
     <button class="sp-back" id="inquiryPanelBack" style="display:none;" onclick="InquiryPanel.back()">
       <i class="fa-solid fa-chevron-left"></i> 목록
     </button>
-    <i class="fa-solid fa-headset" style="font-size:14px;color:#34d399;"></i>
+    <i class="fa-solid fa-headset" style="font-size:14px;color:var(--primary-300);"></i>
     <span class="sp-title" id="inquiryPanelTitle">문의하기</span>
     @if(Auth::user()->role !== 'admin')
     <button class="sp-back" id="inquiryNewBtn" onclick="InquiryPanel.showCreate()" title="새 문의">
@@ -4236,14 +4236,14 @@ const NoticePanel = (() => {
         <div class="notice-item ${n.is_pinned ? 'pinned' : ''}" id="ni-${n.id}" style="display:flex;align-items:center;gap:8px;">
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="NoticePanel.showDetail(${n.id})">
             <div class="ni-title">
-              ${n.is_pinned ? '<span style="display:inline-block;background:var(--danger);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;vertical-align:middle;">공지</span>' : ''}
+              ${n.is_pinned ? '<span style="display:inline-block;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;margin-right:6px;vertical-align:middle;">공지</span>' : ''}
               ${!n.is_read ? '<span class="ni-unread-dot"></span>' : ''}
               ${_esc(n.title)}
             </div>
             <div class="ni-meta">
-              <span><i class="fa-solid fa-user" style="font-size:9px;margin-right:2px;"></i>${_esc(n.author)}</span>
+              <span><i class="fa-solid fa-user" style="font-size:10px;margin-right:2px;"></i>${_esc(n.author)}</span>
               <span>${n.date}</span>
-              <span><i class="fa-solid fa-eye" style="font-size:9px;margin-right:2px;"></i>${n.views}</span>
+              <span><i class="fa-solid fa-eye" style="font-size:10px;margin-right:2px;"></i>${n.views}</span>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
@@ -4411,7 +4411,7 @@ const InquiryPanel = (() => {
   function _renderList(data, filter) {
     const { inquiries, pending_count } = data;
     const pc = pending_count > 0
-      ? `<span style="background:var(--danger);color:#fff;border-radius:10px;padding:0 5px;font-size:10px;margin-left:4px;">${pending_count}</span>`
+      ? `<span style="background:var(--danger);color:#fff;border-radius:999px;padding:0 5px;font-size:10px;margin-left:4px;">${pending_count}</span>`
       : '';
     let html = `<div class="sp-toolbar" style="gap:6px;flex-wrap:wrap;">
       <button onclick="InquiryPanel.loadList('')" class="btn btn-sm ${!filter ? 'btn-primary' : 'btn-outline'}" style="font-size:11px;">전체</button>
@@ -4499,8 +4499,8 @@ const InquiryPanel = (() => {
         <span class="inq-paste-name" id="inqPasteName">이미지</span>
         <button type="button" onclick="InquiryPanel.clearPaste()" class="inq-paste-clear" title="제거">×</button>
       </div>
-      <div style="padding:10px 14px;border-top:2px solid var(--border);background:#f8fafc;flex-shrink:0;">
-        <textarea id="inqMsgBody" style="width:100%;resize:none;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;line-height:1.6;font-family:inherit;min-height:40px;max-height:120px;outline:none;background:#fff;box-sizing:border-box;" placeholder="답변 입력... (Ctrl+V 이미지 가능, Enter 전송, Shift+Enter 줄바꿈)" rows="2"></textarea>
+      <div style="padding:10px 14px;border-top:2px solid var(--border);background:var(--gray-50);flex-shrink:0;">
+        <textarea id="inqMsgBody" style="width:100%;resize:none;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;line-height:1.6;font-family:inherit;min-height:40px;max-height:120px;outline:none;background:#fff;box-sizing:border-box;" placeholder="답변 입력... (Ctrl+V 이미지 가능, Enter 전송, Shift+Enter 줄바꿈)" rows="2"></textarea>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
           <label class="btn btn-sm btn-outline" style="font-size:11px;cursor:pointer;padding:4px 8px;margin:0;">
             <i class="fa-solid fa-paperclip"></i> 파일
@@ -4510,7 +4510,7 @@ const InquiryPanel = (() => {
             <i class="fa-solid fa-paper-plane"></i> 답변 전송
           </button>
         </div>
-      </div>` : `<div style="padding:14px 16px;border-top:1px solid var(--border);background:#f8fafc;flex-shrink:0;font-size:12px;color:var(--text-muted);text-align:center;"><i class="fa-solid fa-clock" style="margin-right:5px;"></i>답변을 기다리는 중입니다.</div>`;
+      </div>` : `<div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--gray-50);flex-shrink:0;font-size:12px;color:var(--text-muted);text-align:center;"><i class="fa-solid fa-clock" style="margin-right:5px;"></i>답변을 기다리는 중입니다.</div>`;
 
     const msgsWrap = `<div class="inq-thread-msgs" id="inqThreadMessages">${msgHtml}</div>`;
 
@@ -4527,7 +4527,7 @@ const InquiryPanel = (() => {
   function _buildMsgEl(m) {
     const mine = (m.user_id === AUTH_USER_ID);
     const avClass = mine ? 'mine-av' : (m.is_admin ? 'admin-av' : 'user-av');
-    const adminMark = m.is_admin ? '<span style="font-size:9px;background:var(--primary);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">관리자</span>' : '';
+    const adminMark = m.is_admin ? '<span style="font-size:10px;background:var(--primary);color:#fff;border-radius:6px;padding:1px 4px;margin-left:4px;">관리자</span>' : '';
 
     let content = '';
     if (m.body) {
@@ -4646,11 +4646,11 @@ const InquiryPanel = (() => {
 
     _body().innerHTML = `
       <div class="sp-form" style="padding-top:18px;">
-        <div style="padding:10px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:flex-start;gap:10px;">
+        <div style="padding:10px 12px;background:var(--gray-50);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:flex-start;gap:10px;">
           <i class="fa-solid fa-location-dot" style="color:var(--primary);margin-top:2px;font-size:13px;flex-shrink:0;"></i>
           <div style="flex:1;min-width:0;">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">현재 페이지</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${_esc(pageTitle)}</div>
+            <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${_esc(pageTitle)}</div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:1px;word-break:break-all;">${_esc(pageUrl)}</div>
           </div>
           <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;flex-shrink:0;">
@@ -4875,7 +4875,7 @@ document.addEventListener('keydown', e => {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;
   background: var(--primary-light); color: var(--primary);
-  border: 1.5px solid var(--primary); font-size: 13px; font-weight: 600;
+  border: 1px solid var(--primary); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: var(--transition);
 }
 .help-tour-btn:hover { background: var(--primary); color: #fff; }
@@ -4896,7 +4896,7 @@ document.addEventListener('keydown', e => {
 .help-item-icon.info { background: var(--info-light); color: var(--info); }
 .help-item-icon.purple { background: var(--primary-light); color: var(--primary); }
 .help-item-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
-.help-item-text strong { color: var(--text-primary); display: block; margin-bottom: 1px; font-size: 12.5px; }
+.help-item-text strong { color: var(--text-primary); display: block; margin-bottom: 1px; font-size: 13px; }
 .help-tip {
   background: #eff6ff; border-left: 3px solid var(--primary);
   border-radius: 0 6px 6px 0; padding: 8px 12px; margin-bottom: 10px;
@@ -4924,8 +4924,8 @@ document.addEventListener('keydown', e => {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 1px; color: var(--primary); margin-bottom: 5px;
 }
-.tour-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.tour-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 16px; }
+.tour-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.tour-body { font-size: 13px; color: var(--text-secondary); line-height: 21px; margin-bottom: 16px; }
 .tour-footer { display: flex; align-items: center; gap: 6px; }
 .tour-progress {
   font-size: 11px; color: var(--text-muted); margin-right: auto;
@@ -4936,7 +4936,7 @@ document.addEventListener('keydown', e => {
   transition: background .2s;
 }
 .tour-dot.active { background: var(--primary); }
-.tour-btn { padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: var(--transition); }
+.tour-btn { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: var(--transition); }
 .tour-btn-skip { background: none; color: var(--text-muted); padding: 4px 8px; font-size: 11px; }
 .tour-btn-skip:hover { color: var(--danger); }
 .tour-btn-prev { background: var(--border-light); color: var(--text-secondary); }
