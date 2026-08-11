@@ -6800,49 +6800,18 @@ window.HELP_TOUR_STEPS = [
       const data = await res.json();
       if (!data.exists) return;
 
-      const textEl  = document.getElementById('consentStatusText');
-      const badgeEl = document.getElementById('consentStatusBadge');
-      const colorMap = { agreed: 'var(--primary)', declined: 'var(--danger)', pending: 'var(--warning)', expired: 'var(--text-muted)' };
-      const iconMap  = { agreed: 'fa-circle-check', declined: 'fa-circle-xmark', pending: 'fa-clock', expired: 'fa-ban' };
-      const color = colorMap[data.status] ?? 'var(--text-muted)';
-      const icon  = iconMap[data.status]  ?? 'fa-circle-info';
-
-      badgeEl.style.color = color;
-      let label = `위임동의 ${data.status_label}`;
-      if (data.status === 'pending' && data.remaining_min > 0) label += ` (${data.remaining_min}분 남음)`;
-      if (data.responded_at) label += ` · ${data.responded_at}`;
-      textEl.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
-
-      // 버튼도 동기화
+      // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
       _applyConsentBtn(data.status);
 
-      // 서명 이미지 배지 표시
-      if (data.status === 'agreed' && data.has_signature) {
-        const badgeArea = document.getElementById('consentStatusBadge');
-        if (badgeArea && !badgeArea.querySelector('.sign-badge')) {
-          const sb = document.createElement('span');
-          sb.className = 'sign-badge';
-          sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary);border:1px solid var(--primary-200);margin-left:6px;';
-          sb.innerHTML = '<i class="fa-solid fa-signature"></i> 서명 있음';
-          badgeArea.appendChild(sb);
-        }
-      }
-
-      // NICE 본인확인 배지 (완료된 건에만 표시)
-      if (data.nice_verified && badgeEl && !badgeEl.querySelector('.nice-badge')) {
-        const nb = document.createElement('span');
-        nb.className = 'nice-badge';
-        nb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary-400);border:1px solid var(--primary-100);margin-left:6px;';
-        nb.innerHTML = '<i class="fa-solid fa-id-card"></i> 본인확인 완료';
-        nb.title = [
-          data.nice_name    ? `성명: ${data.nice_name}` : '',
-          data.nice_mobile  ? `휴대폰: ${data.nice_mobile}` : '',
-          data.nice_authtype ? `수단: ${data.nice_authtype}` : '',
-          data.nice_verified_at ? `확인시각: ${data.nice_verified_at}` : '',
-        ].filter(Boolean).join('\n');
-        badgeEl.appendChild(nb);
-      }
-    } catch (_) {}
+      // 아코디언 안에 현황을 적던 자리(consentStatusText · consentStatusBadge)는
+      // 시안 개편 때 없어졌다. 서명 여부·본인확인은 '서명확인' 버튼이 여는 창에서 본다.
+      // 남아 있던 그 코드가 없는 요소를 가드 없이 만져 TypeError 를 냈고,
+      // 아래 catch 가 그것을 삼켜 위의 _applyConsentBtn() 까지 닿지 못했다.
+      // 그래서 서명이 끝난 처방전도 배지 없이 '위임동의' 버튼만 보였다.
+    } catch (e) {
+      // 조용히 삼키면 같은 일이 또 숨는다. 화면은 그대로 두되 흔적은 남긴다.
+      console.error('[위임동의] 현황 확인 실패', e);
+    }
   }
 
   // 페이지 로드 시 동의 현황 즉시 확인
@@ -6853,27 +6822,8 @@ window.HELP_TOUR_STEPS = [
     const data = e.detail;
     if (!data || data.rx_number !== @json($prescription->rx_number)) return;
 
-    // 버튼 즉시 업데이트
+    // 버튼 즉시 업데이트 (아코디언 안 현황 자리는 시안 개편 때 없어졌다)
     _applyConsentBtn(data.status);
-
-    // 아코디언 내 현황 배지 업데이트
-    const textEl  = document.getElementById('consentStatusText');
-    const badgeEl = document.getElementById('consentStatusBadge');
-    if (textEl && badgeEl) {
-      const isAgreed = data.status === 'agreed';
-      badgeEl.style.color = isAgreed ? 'var(--primary)' : 'var(--danger)';
-      let label = `위임동의 ${isAgreed ? '서명 완료' : '거절됨'}`;
-      if (data.responded_at) label += ` · ${data.responded_at}`;
-      textEl.innerHTML = `<i class="fa-solid fa-${isAgreed ? 'circle-check' : 'circle-xmark'}"></i> ${label}`;
-
-      if (isAgreed && data.has_signature && !badgeEl.querySelector('.sign-badge')) {
-        const sb = document.createElement('span');
-        sb.className = 'sign-badge';
-        sb.style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary);border:1px solid var(--primary-200);margin-left:6px;';
-        sb.innerHTML = '<i class="fa-solid fa-signature"></i> 서명 있음';
-        badgeEl.appendChild(sb);
-      }
-    }
 
     // 서명 완료 시 생성 서류(요양비위임장 등) 실시간 반영
     if (data.status === 'agreed') {
