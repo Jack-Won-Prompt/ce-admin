@@ -10,8 +10,6 @@
   <div class="help-section-title">저장 방식</div>
   <p>여기서 저장한 항목만 서버 설정을 덮어씁니다. 손대지 않은 항목은 서버의 <code>.env</code> 값을 그대로 씁니다.</p>
   <p>키·비밀번호는 암호화해서 보관하며, 화면에는 다시 내려보내지 않습니다. <b>바꿀 때만</b> 입력하고, 빈칸으로 저장하면 기존 값이 유지됩니다.</p>
-  <div class="help-section-title">주의</div>
-  <p>데이터베이스 접속 정보와 암호화 키는 이 화면에서 다루지 않습니다. 설정을 읽으려면 데이터베이스가 먼저 연결돼야 하고, 암호화 키를 데이터베이스에 두면 암호화가 의미를 잃기 때문입니다.</p>
 @endsection
 
 @section('content')
@@ -27,7 +25,6 @@
   .ss-help   { font-size: 11px; color: var(--gray-500); line-height: 1.5; }
   .ss-check  { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 13px; color: var(--gray-800); cursor: pointer; }
   .ss-actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .ss-note { font-size: 12px; color: var(--gray-500); line-height: 1.6; }
   .ss-flash { padding: 10px 14px; border-radius: 8px; background: var(--primary-light); color: var(--primary); font-size: 13px; font-weight: 600; }
 </style>
 
@@ -104,11 +101,6 @@
     </div>
   </form>
 @endforeach
-
-<div class="ss-note">
-  데이터베이스 접속 정보와 암호화 키(<code>APP_KEY</code>, 주민번호 전용 키)는 이 화면에서 다루지 않습니다.
-  설정을 읽으려면 데이터베이스가 먼저 연결돼야 하고, 데이터를 푸는 열쇠를 그 데이터 옆에 두면 암호화가 의미를 잃습니다.
-</div>
 
 <script>
   (function () {
