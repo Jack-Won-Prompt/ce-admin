@@ -161,6 +161,13 @@ return [
             'routes'  => ['fax'],
             'actions' => ['view'],
         ],
+        'messages' => [
+            'label'   => '메시지 관리',
+            'group'   => 'dispatch',
+            'routes'  => ['messages'],
+            // 유형을 고치는 것과 실제로 보내는 것은 다른 권한이다
+            'actions' => ['view', 'create', 'update', 'delete', 'send'],
+        ],
         'dispatch' => [
             'label'   => '발송/발행 내역',
             'group'   => 'dispatch',
@@ -276,6 +283,8 @@ return [
         'prescriptions.consentSms'            => [null, 'send'],
         // 이름·번호만 받아 처방전을 만들고 곧바로 보낸다 — 발송 권한으로 본다
         'prescription-consents.store'         => [null, 'send'],
+        // 거래처에 문자·알림톡을 보낸다 — POST 지만 등록이 아니라 발송이다
+        'messages.send'                       => [null, 'send'],
         'prescriptions.faxRegenerate'         => [null, 'send'],
         'prescriptions.delegationRegenerate'  => [null, 'send'],
         'prescriptions.withworksOrder'        => [null, 'send'],

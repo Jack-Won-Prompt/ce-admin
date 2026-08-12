@@ -614,6 +614,46 @@
                     background:var(--danger); border:none; color:#fff; font-size:9px; cursor:pointer;
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
+
+  /* 팝오버 안에서 메시지 유형을 손보는 작은 버튼 */
+  .rx-tpl-mini { flex-shrink:0; border:1px solid var(--gray-200); background:var(--gray-0); border-radius:6px;
+                 padding:1px 6px; font-size:10px; font-weight:700; line-height:18px;
+                 color:var(--gray-600); cursor:pointer; }
+  .rx-tpl-mini:hover { border-color:var(--primary); color:var(--primary); }
+
+  /* ── 크게 보기 창 ────────────────────────────────────────
+     덮개가 없다. 이 창 밖은 그대로 눌리고 입력된다.
+     z-index 900 — 모달(1000 이상)보다 아래라 모달이 뜨면 그 밑으로 들어간다. */
+  #bigViewer { position: fixed; z-index: 900; display: flex; flex-direction: column;
+               min-width: 320px; min-height: 240px;
+               background: var(--gray-0); border: 1px solid var(--gray-300); border-radius: 12px;
+               box-shadow: 0 16px 48px rgba(0,0,0,.24); overflow: hidden; }
+  #bigViewerHead { display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+                   height: 40px; padding: 0 8px 0 12px;
+                   background: var(--gray-50); border-bottom: 1px solid var(--gray-200);
+                   cursor: move; user-select: none; }
+  #bigViewerTitle { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: var(--gray-900);
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bv-acts { display: flex; align-items: center; gap: 2px; flex-shrink: 0; cursor: default; }
+  .bv-btn { display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; padding: 0; border: none; border-radius: 6px;
+            background: none; color: var(--gray-700); font-size: 12px; cursor: pointer; text-decoration: none; }
+  .bv-btn:hover { background: var(--gray-200); color: var(--primary); }
+  .bv-close:hover { background: var(--alert-100); color: var(--alert-500); }
+  .bv-zoom { min-width: 38px; text-align: center; font-size: 11px; font-weight: 700; color: var(--gray-600); }
+  #bigViewerBody { flex: 1; min-height: 0; overflow: auto; background: var(--gray-100);
+                   display: flex; align-items: center; justify-content: center; }
+  #bvImg { display: block; max-width: none; transform-origin: center center;
+           cursor: grab; user-select: none; }
+  #bvImg:active { cursor: grabbing; }
+  #bvFrame { width: 100%; height: 100%; border: none; background: #fff; }
+  /* 오른쪽 아래 모서리를 잡아 크기를 바꾼다 */
+  #bigViewerGrip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+                   cursor: nwse-resize;
+                   background: linear-gradient(135deg, transparent 50%, var(--gray-400) 50%, var(--gray-400) 60%,
+                               transparent 60%, transparent 72%, var(--gray-400) 72%, var(--gray-400) 82%, transparent 82%); }
+  /* 창을 옮기거나 크기를 바꾸는 동안 iframe 이 마우스를 삼키지 않게 한다 */
+  #bigViewer.is-moving #bvFrame { pointer-events: none; }
 </style>
 @endpush
 
@@ -954,7 +994,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
-              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">메시지 유형 선택</div>
+                @perm('messages', 'create')
+                <button type="button" class="rx-tpl-mini" onclick="rxTplNew('alimtalk')">+ 추가</button>
+                @endperm
+              </div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="kakaoTemplateList">
                 @foreach($kakaoTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
@@ -962,10 +1007,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        onmouseover="this.style.borderColor='#FEE500';this.style.background='#FFFDE7';"
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="kakao_tpl" value="{{ $code }}" style="accent-color:#FEE500;" onchange="onTplChange(this)">
-                  <div>
+                  <div style="min-width:0;flex:1;">
                     <div style="font-weight:700;">{{ $tpl['label'] }}</div>
                     <div style="font-size:10px;color:var(--text-muted);">{{ $tpl['desc'] }}</div>
                   </div>
+                  @perm('messages', 'update')
+                  <button type="button" class="rx-tpl-mini" onclick="event.preventDefault();event.stopPropagation();rxTplEdit('alimtalk','{{ $code }}')">수정</button>
+                  @endperm
                 </label>
                 @endforeach
               </div>
@@ -1028,7 +1076,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
-              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">메시지 유형 선택</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">메시지 유형 선택</div>
+                @perm('messages', 'create')
+                <button type="button" class="rx-tpl-mini" onclick="rxTplNew('sms')">+ 추가</button>
+                @endperm
+              </div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="smsTemplateList">
                 @foreach($smsTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
@@ -1036,10 +1089,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(40,121,139,.06)';"
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="sms_tpl" value="{{ $code }}" style="accent-color:var(--primary);" onchange="onSmsTplChange(this)">
-                  <div>
+                  <div style="min-width:0;flex:1;">
                     <div style="font-weight:700;">{{ $tpl['label'] }}</div>
                     <div style="font-size:10px;color:var(--text-muted);">{{ $tpl['desc'] }}</div>
                   </div>
+                  @perm('messages', 'update')
+                  <button type="button" class="rx-tpl-mini" onclick="event.preventDefault();event.stopPropagation();rxTplEdit('sms','{{ $code }}')">수정</button>
+                  @endperm
                 </label>
                 @endforeach
               </div>
@@ -1471,6 +1527,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn" title="뷰어 위치 바꾸기">
             <span id="btnToggleViewerSideLabel">오른쪽으로</span>
           </button>
+          {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다 --}}
+          <button type="button" id="btnBigViewer" class="vw-btn" onclick="openBigViewer()" title="파일을 큰 창으로 봅니다 (창을 옮길 수 있고, 그동안에도 입력할 수 있습니다)"
+                  @if(!$prescription->image_url) style="display:none;" @endif>크게 보기</button>
           <a id="viewerOpenBtn" class="vw-btn vw-btn-icon" href="{{ $prescription->image_url ?? '#' }}" target="_blank" title="원본보기" @if(!$prescription->image_url) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
         </div>
       </div>
@@ -3060,6 +3119,79 @@ $calcDeposit  = $calcCopay + $calcShipping;
     </div>
   </div>
 </div>
+
+{{-- ── 메시지 유형 편집 (메시지 관리 화면과 같은 것을 고친다) ── --}}
+<div id="rxTplBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10200;"
+     onclick="rxTplClose()"></div>
+<div id="rxTplModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+     width:520px;max-width:94vw;background:var(--bg-card);border:1px solid var(--primary);
+     border-radius:var(--radius-lg);box-shadow:0 12px 40px rgba(0,0,0,.22);z-index:10201;">
+  <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
+       display:flex;align-items:center;gap:8px;">
+    <span id="rxTplTitle" style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">메시지 유형</span>
+    <button onclick="rxTplClose()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
+  </div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+    <div id="rxTplAlimNote" style="display:none;font-size:11px;color:var(--alert-500);line-height:1.6;">
+      알림톡 코드는 <b>카카오에 등록한 템플릿코드</b>와 같아야 실제로 발송됩니다.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label class="ds-field-label" style="display:block;margin-bottom:4px;">발송 수단</label>
+        <input type="text" id="rxTplChannelLabel" class="form-control" readonly style="background:var(--gray-50);" />
+      </div>
+      <div>
+        <label class="ds-field-label" style="display:block;margin-bottom:4px;">코드</label>
+        <input type="text" id="rxTplCode" class="form-control" maxlength="60" placeholder="order_confirmed" />
+      </div>
+    </div>
+    <div>
+      <label class="ds-field-label" style="display:block;margin-bottom:4px;">이름</label>
+      <input type="text" id="rxTplLabel" class="form-control" maxlength="100" />
+    </div>
+    <div>
+      <label class="ds-field-label" style="display:block;margin-bottom:4px;">설명</label>
+      <input type="text" id="rxTplDesc" class="form-control" maxlength="200" />
+    </div>
+    <div id="rxTplBodyWrap">
+      <label class="ds-field-label" style="display:block;margin-bottom:4px;">본문</label>
+      <textarea id="rxTplBody" class="form-control" rows="6" style="font-size:13px;line-height:1.7;"></textarea>
+      <div style="font-size:11px;color:var(--gray-500);margin-top:4px;line-height:1.6;">
+        #{고객명} #{처방번호} #{주문번호} #{본인부담금} #{금액} #{운송장번호}
+      </div>
+    </div>
+    <div id="rxTplResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="rxTplClose()">취소</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="rxTplSave()">저장</button>
+    </div>
+  </div>
+</div>
+
+{{-- ── 크게 보기 — 떠 있는 창 ────────────────────────────────
+     덮개(backdrop)를 두지 않는다. 이 창이 떠 있는 동안에도 오른쪽 항목을 계속
+     입력해야 하므로, 화면을 막으면 안 된다. 그래서 모달이 아니라 창이다.
+     z-index 는 900 — 진짜 모달(1000 이상) 밑에 있어야 그것들이 이 창을 덮는다. --}}
+<div id="bigViewer" style="display:none;">
+  <div id="bigViewerHead">
+    <i class="fa-solid fa-up-right-and-down-left-from-center" style="font-size:11px;opacity:.7;"></i>
+    <span id="bigViewerTitle">처방전</span>
+    <div class="bv-acts">
+      <button type="button" class="bv-btn" onclick="bvRotate()" title="회전"><i class="fa-solid fa-rotate-left"></i></button>
+      <button type="button" class="bv-btn" onclick="bvZoom(-1)" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+      <span id="bvZoomLabel" class="bv-zoom">100%</span>
+      <button type="button" class="bv-btn" onclick="bvZoom(1)" title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+      <button type="button" class="bv-btn" onclick="bvFit()" title="맞춤"><i class="fa-solid fa-arrows-rotate"></i></button>
+      <a id="bvOpen" class="bv-btn" href="#" target="_blank" rel="noopener" title="새 탭에서 원본 열기"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      <button type="button" class="bv-btn bv-close" onclick="closeBigViewer()" title="닫기">&#215;</button>
+    </div>
+  </div>
+  <div id="bigViewerBody">
+    <img    id="bvImg"   src="" alt="" draggable="false" />
+    <iframe id="bvFrame" src="" style="display:none;"></iframe>
+  </div>
+  <div id="bigViewerGrip" title="크기 조절"></div>
+</div>
 @endpush
 
 @php
@@ -3080,6 +3212,230 @@ $_itemsData = $prescription->items->map(fn($i) => [
 // ── 통합 문서 뷰어 ─────────────────────────────────────
 const ALL_DOCS = @json($allDocsJson);
 let currentDocIdx = 0;
+
+/* ── 메시지 유형 편집 ──────────────────────────────────────
+   메시지 관리 화면과 같은 표를 고친다. 저장하면 화면을 다시 불러와 팝오버 목록에
+   반영한다 — 목록을 서버가 그리므로 다시 그리게 하는 편이 어긋날 일이 없다. */
+const RX_TPL_LIST_URL  = @json(route('messages.templates'));
+const RX_TPL_STORE_URL = @json(route('messages.templates.store'));
+const RX_TPL_BASE_URL  = @json(url('/messages/templates'));
+let _rxTplChannel = 'sms', _rxTplId = null;
+
+function rxTplNew(channel) {
+  _rxTplChannel = channel; _rxTplId = null;
+  document.getElementById('rxTplTitle').textContent = '메시지 유형 추가';
+  ['rxTplCode', 'rxTplLabel', 'rxTplDesc', 'rxTplBody'].forEach(id => document.getElementById(id).value = '');
+  _rxTplOpen();
+}
+
+async function rxTplEdit(channel, code) {
+  _rxTplChannel = channel;
+  document.getElementById('rxTplTitle').textContent = '메시지 유형 수정';
+  _rxTplOpen();
+  try {
+    const res = await fetch(RX_TPL_LIST_URL + '?channel=' + encodeURIComponent(channel), { headers: { 'Accept': 'application/json' } });
+    const d   = await res.json();
+    const t   = (d.templates ?? []).find(x => x.code === code);
+    if (!t) { _rxTplSay('유형을 찾지 못했습니다.', false); return; }
+    _rxTplId = t.id;
+    document.getElementById('rxTplCode').value  = t.code;
+    document.getElementById('rxTplLabel').value = t.label;
+    document.getElementById('rxTplDesc').value  = t.description ?? '';
+    document.getElementById('rxTplBody').value  = t.body ?? '';
+  } catch (e) { _rxTplSay('불러오지 못했습니다.', false); }
+}
+
+function _rxTplOpen() {
+  const isAlim = _rxTplChannel === 'alimtalk';
+  document.getElementById('rxTplChannelLabel').value = isAlim ? '카카오 알림톡' : '문자(SMS)';
+  document.getElementById('rxTplAlimNote').style.display = isAlim ? 'block' : 'none';
+  // 알림톡 본문은 카카오가 정한다 — 여기서 고쳐도 나가지 않으므로 칸을 감춘다
+  document.getElementById('rxTplBodyWrap').style.display = isAlim ? 'none' : '';
+  document.getElementById('rxTplResult').style.display = 'none';
+  document.getElementById('rxTplBackdrop').style.display = 'block';
+  document.getElementById('rxTplModal').style.display    = 'block';
+  document.getElementById('rxTplLabel').focus();
+}
+
+function rxTplClose() {
+  document.getElementById('rxTplBackdrop').style.display = 'none';
+  document.getElementById('rxTplModal').style.display    = 'none';
+}
+
+function _rxTplSay(msg, ok) {
+  const box = document.getElementById('rxTplResult');
+  box.style.display    = 'block';
+  box.style.background = ok ? 'var(--primary-50)' : 'var(--danger-light)';
+  box.style.color      = ok ? 'var(--primary)'    : 'var(--danger)';
+  box.style.border     = '1px solid ' + (ok ? 'var(--primary-200)' : '#fca5a5');
+  box.textContent = msg;
+}
+
+async function rxTplSave() {
+  const body = {
+    channel:     _rxTplChannel,
+    code:        document.getElementById('rxTplCode').value.trim(),
+    label:       document.getElementById('rxTplLabel').value.trim(),
+    description: document.getElementById('rxTplDesc').value.trim(),
+    body:        document.getElementById('rxTplBody').value,
+    is_active:   true,
+  };
+  if (!body.code || !body.label) { _rxTplSay('코드와 이름은 반드시 입력해야 합니다.', false); return; }
+
+  try {
+    const res = await fetch(_rxTplId ? `${RX_TPL_BASE_URL}/${_rxTplId}` : RX_TPL_STORE_URL, {
+      method: _rxTplId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+      body: JSON.stringify(body),
+    });
+    const d = await res.json();
+    if (d.success) {
+      _rxTplSay('저장했습니다. 화면을 다시 불러옵니다.', true);
+      setTimeout(() => location.reload(), 900);
+    } else {
+      _rxTplSay(d.message ?? (Object.values(d.errors ?? {})[0]?.[0]) ?? '저장 실패', false);
+    }
+  } catch (e) { _rxTplSay('네트워크 오류가 발생했습니다.', false); }
+}
+
+/* ── 크게 보기 창 ──────────────────────────────────────────
+   파일을 큰 창으로 띄우되 화면은 계속 쓸 수 있어야 한다. 덮개를 두지 않고
+   창만 띄운다 — 창 밖은 그대로 눌리고 입력된다. */
+let _bvZoom = 1, _bvRot = 0;
+let _bvBox  = null;   // 옮기거나 크기를 바꾼 위치를 기억해 다시 열 때 그대로 쓴다
+
+function _bvEl(id) { return document.getElementById(id); }
+
+function openBigViewer() {
+  const doc = ALL_DOCS[currentDocIdx];
+  const url = doc?.url || document.getElementById('viewerOpenBtn')?.getAttribute('href');
+  if (!url || url === '#') { showToast('열 파일이 없습니다.', 'warning'); return; }
+
+  const win   = _bvEl('bigViewer');
+  const img   = _bvEl('bvImg');
+  const frame = _bvEl('bvFrame');
+
+  _bvEl('bigViewerTitle').textContent = doc?.name || '처방전';
+  _bvEl('bvOpen').href = url;
+
+  if (doc?.isPdf) {
+    img.style.display = 'none'; img.src = '';
+    frame.src = url; frame.style.display = '';
+  } else {
+    frame.style.display = 'none'; frame.src = '';
+    img.src = url; img.style.display = '';
+  }
+
+  // 처음 열 때는 화면 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
+  const box = _bvBox ?? {
+    left: 12,
+    top:  Math.round((window.innerHeight - Math.round(window.innerHeight * 0.9)) / 2),
+    w:    Math.round(window.innerWidth * 0.5),
+    h:    Math.round(window.innerHeight * 0.9),
+  };
+  _bvApplyBox(box);
+
+  win.style.display = 'flex';
+  bvFit();
+}
+
+function closeBigViewer() {
+  const win = _bvEl('bigViewer');
+  win.style.display = 'none';
+  // 창을 닫으면 파일도 놓아 준다. src='' 로 두면 브라우저가 현재 주소를 다시 부르므로
+  // 속성 자체를 지운다.
+  _bvEl('bvFrame').removeAttribute('src');
+  _bvEl('bvImg').removeAttribute('src');
+}
+
+/* 창이 화면 밖으로 나가지 않게 붙들면서 자리와 크기를 준다 */
+function _bvApplyBox(box) {
+  const win = _bvEl('bigViewer');
+  const w = Math.max(320, Math.min(box.w, window.innerWidth  - 16));
+  const h = Math.max(240, Math.min(box.h, window.innerHeight - 16));
+  const left = Math.max(0, Math.min(box.left, window.innerWidth  - w));
+  const top  = Math.max(0, Math.min(box.top,  window.innerHeight - h));
+  win.style.left = left + 'px';
+  win.style.top  = top  + 'px';
+  win.style.width  = w + 'px';
+  win.style.height = h + 'px';
+  _bvBox = { left, top, w, h };
+}
+
+function _bvApplyImg() {
+  const img = _bvEl('bvImg');
+  if (!img) return;
+  img.style.transform = `rotate(${_bvRot}deg) scale(${_bvZoom})`;
+  _bvEl('bvZoomLabel').textContent = Math.round(_bvZoom * 100) + '%';
+}
+
+function bvZoom(dir) {
+  _bvZoom = Math.min(5, Math.max(0.2, _bvZoom + dir * 0.2));
+  _bvApplyImg();
+}
+
+function bvRotate() { _bvRot = (_bvRot + 90) % 360; _bvApplyImg(); }
+
+/* 창 크기에 맞춰 되돌린다 */
+function bvFit() {
+  _bvZoom = 1; _bvRot = 0;
+  const img  = _bvEl('bvImg');
+  const body = _bvEl('bigViewerBody');
+  if (img) {
+    img.style.maxWidth  = (body.clientWidth  - 16) + 'px';
+    img.style.maxHeight = (body.clientHeight - 16) + 'px';
+    img.style.width = 'auto'; img.style.height = 'auto';
+  }
+  _bvApplyImg();
+}
+
+/* 머리를 잡아 옮기고, 오른쪽 아래 모서리를 잡아 크기를 바꾼다.
+   pointer 이벤트를 쓰면 마우스가 창 밖으로 나가도 놓칠 때까지 따라온다. */
+(function () {
+  const win  = document.getElementById('bigViewer');
+  if (!win) return;
+  const head = document.getElementById('bigViewerHead');
+  const grip = document.getElementById('bigViewerGrip');
+  let mode = null, sx = 0, sy = 0, start = null;
+
+  function begin(e, which) {
+    // 머리 안의 버튼을 누른 것은 옮기려는 뜻이 아니다
+    if (which === 'move' && e.target.closest('.bv-acts')) return;
+    mode = which; sx = e.clientX; sy = e.clientY;
+    start = { ..._bvBox };
+    win.classList.add('is-moving');
+    win.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  head.addEventListener('pointerdown', (e) => begin(e, 'move'));
+  grip.addEventListener('pointerdown', (e) => begin(e, 'size'));
+
+  win.addEventListener('pointermove', (e) => {
+    if (!mode) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (mode === 'move') {
+      _bvApplyBox({ ...start, left: start.left + dx, top: start.top + dy });
+    } else {
+      _bvApplyBox({ ...start, w: start.w + dx, h: start.h + dy });
+    }
+  });
+
+  const end = (e) => {
+    if (!mode) return;
+    mode = null;
+    win.classList.remove('is-moving');
+    try { win.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  win.addEventListener('pointerup', end);
+  win.addEventListener('pointercancel', end);
+
+  // 화면 크기가 바뀌면 창이 밖으로 나가 있을 수 있다
+  window.addEventListener('resize', () => {
+    if (win.style.display !== 'none' && _bvBox) _bvApplyBox(_bvBox);
+  });
+})();
 
 function switchViewerDoc(el) {
   const thumbs = Array.from(document.querySelectorAll('#docStrip .doc-thumb'));
@@ -3109,6 +3465,10 @@ function switchViewerDoc(el) {
   }
 
   if (openBtn) { openBtn.href = doc.url || '#'; openBtn.style.display = ''; }
+
+  // 크게 보기 창이 떠 있으면 고른 문서를 따라간다
+  const bv = document.getElementById('bigViewer');
+  if (bv && bv.style.display !== 'none') openBigViewer();
 }
 
 function _closeAttachPopover() {

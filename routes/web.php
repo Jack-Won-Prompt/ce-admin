@@ -321,6 +321,17 @@ Route::middleware(['auth'])->group(function () {
     Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');
     Route::post('/settings/nice/test', [\App\Http\Controllers\NiceSettingController::class, 'test'])->name('nice-settings.test');
 
+    // 메시지 관리 — 거래처를 골라 문자·알림톡을 보낸다
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/',  [\App\Http\Controllers\MessageController::class, 'index'])->name('index');
+        Route::post('/send', [\App\Http\Controllers\MessageController::class, 'send'])->name('send');
+        // 메시지 유형 — 검수 화면 팝오버와 이 화면이 같은 것을 쓴다
+        Route::get(   '/templates',             [\App\Http\Controllers\MessageController::class, 'templates'])->name('templates');
+        Route::post(  '/templates',             [\App\Http\Controllers\MessageController::class, 'storeTemplate'])->name('templates.store');
+        Route::put(   '/templates/{template}',  [\App\Http\Controllers\MessageController::class, 'updateTemplate'])->name('templates.update');
+        Route::delete('/templates/{template}',  [\App\Http\Controllers\MessageController::class, 'destroyTemplate'])->name('templates.destroy');
+    });
+
     // 위임장 서명 — 서명한 사람·번호를 한자리에서 보고 서류를 받는다
     Route::get('/prescription-consents', [\App\Http\Controllers\PrescriptionConsentController::class, 'index'])
         ->name('prescription-consents.index');

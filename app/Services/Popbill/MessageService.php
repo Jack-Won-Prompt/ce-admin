@@ -196,6 +196,50 @@ class MessageService extends PopbillBaseService
     }
 
     /**
+     * 여러 사람에게 한 번에 (팝빌은 수신자 배열을 그대로 받는다 — 호출 한 번으로 나간다)
+     *
+     * @param  array $messages [['rcv'=>'01012345678','rcvnm'=>'홍길동'], ...]
+     * @return string 접수번호
+     */
+    public function sendManyXms(array $messages, string $content, string $subject = ''): string
+    {
+        if (config('popbill.sms_simulate', app()->isLocal())) {
+            $receipt = 'SIM-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
+            \Illuminate\Support\Facades\Log::info('[Popbill][SMS][시뮬레이션] 묶음 발송', [
+                'count' => count($messages), 'receipt' => $receipt, 'content' => $content,
+            ]);
+            return $receipt;
+        }
+
+        $sender = $this->resolveRegisteredSenderNum();
+
+        $rows = array_map(fn ($m) => [
+            'rcv'   => preg_replace('/\D/', '', (string) $m['rcv']),
+            'rcvnm' => $m['rcvnm'] ?? '',
+            'msg'   => $content,
+        ], $messages);
+
+        \Illuminate\Support\Facades\Log::info('[Popbill][SMS] 묶음 발송 요청', [
+            'count' => count($rows), 'sender' => $sender,
+        ]);
+
+        $receipt = $this->sendXms(
+            corpNum:  $this->corpNum,
+            sender:   $sender,
+            subject:  $subject,
+            content:  $content,
+            messages: $rows,
+            userId:   $this->userId,
+        );
+
+        \Illuminate\Support\Facades\Log::info('[Popbill][SMS] 묶음 발송 완료', [
+            'count' => count($rows), 'receipt' => $receipt,
+        ]);
+
+        return $receipt;
+    }
+
+    /**
      * 팝빌에 등록·활성화된 발신번호를 반환.
      * 설정값이 이미 등록되어 있으면 그대로, 아니면 목록 첫 번째 활성 번호를 사용.
      * 목록을 가져오지 못하면 설정값을 그대로 반환(원래 에러가 API에서 발생하도록 위임).

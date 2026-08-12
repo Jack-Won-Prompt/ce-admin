@@ -1435,7 +1435,7 @@
         @endif
 
         {{-- ══ 발송 · 내역 ══ --}}
-        @if($vis('fax', 'dispatch'))
+        @if($vis('fax', 'messages', 'dispatch'))
         <div class="menu-group" data-menu-group="dispatch">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>발송ㆍ내역</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1446,6 +1446,14 @@
           <a class="menu-link" data-icon="printer" href="{{ route('fax.index') }}" data-title="팩스 발송">
             @dsicon('printer', 'ds-icon menu-icon')
             <span>팩스 발송</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('messages'))
+        <div class="menu-item {{ request()->routeIs('messages*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="message-typing" href="{{ route('messages.index') }}" data-title="메시지 관리">
+            @dsicon('message-typing', 'ds-icon menu-icon')
+            <span>메시지 관리</span>
           </a>
         </div>
         @endif

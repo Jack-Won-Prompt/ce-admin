@@ -100,12 +100,7 @@ class KakaoService
      */
     public static function templates(): array
     {
-        return [
-            'order_confirm'   => ['label' => '주문 접수 안내',      'desc'  => '주문이 접수되었음을 환자에게 안내'],
-            'va_issued'       => ['label' => '가상계좌 발급 안내',   'desc'  => '가상계좌 정보(은행·계좌번호·금액·기한)'],
-            'shipping_start'  => ['label' => '배송 시작 안내',       'desc'  => '운송장 번호 포함 배송 출발 안내'],
-            'delivery_done'   => ['label' => '배송 완료 안내',       'desc'  => '배송 완료 및 복약 안내'],
-        ];
+        return \App\Models\MessageTemplate::resolve('alimtalk');
     }
 
     /**
