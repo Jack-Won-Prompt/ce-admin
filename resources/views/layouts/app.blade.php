@@ -1528,7 +1528,7 @@
         @endif
 
         {{-- ══ 설정 ══ --}}
-        @if($vis('admin-users', 'permission-groups', 'delegation-settings', 'ocr-settings', 'nice-settings'))
+        @if($vis('admin-users', 'permission-groups', 'masters', 'delegation-settings', 'ocr-settings', 'nice-settings'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1545,6 +1545,14 @@
         <div class="menu-item {{ request()->routeIs('permission-groups*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="lock-group" href="{{ route('permission-groups.index') }}" data-title="권한 그룹">
             @dsicon('lock-group', 'ds-icon menu-icon')<span>권한 그룹</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('masters'))
+        <div class="menu-item {{ request()->routeIs('masters*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="add-package" href="{{ route('masters.index') }}" data-title="마스터 관리">
+            @dsicon('add-package', 'ds-icon menu-icon')
+            <span>마스터 관리</span>
           </a>
         </div>
         @endif

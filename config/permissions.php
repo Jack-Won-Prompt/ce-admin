@@ -217,6 +217,12 @@ return [
             // 권한 설정을 잘못 저장해 아무도 되돌릴 수 없게 되는 사고를 막는다
             'admin_only' => true,
         ],
+        'masters' => [
+            'label'   => '마스터 관리',
+            'group'   => 'settings',
+            'routes'  => ['masters'],
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
         'delegation-settings' => [
             'label'   => '위임장 설정',
             'group'   => 'settings',
