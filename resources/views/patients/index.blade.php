@@ -75,6 +75,27 @@
   /* 패널 탭(조회결과/상세내용) */
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
      원 12×12(선택 primary-500 / 비선택 gray-300) 안에 6×6 흰 점, 라벨 13/400 */
+  /* 그리드 셀 안의 작은 표시·버튼 (서명여부·미성년·신분증) */
+  .pt-chip { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px;
+             font-size:11px; font-weight:700; line-height:18px; white-space:nowrap;
+             background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); }
+  .pt-chip.on   { background:var(--primary-50); color:var(--primary); border-color:var(--primary-200); }
+  .pt-chip.warn { background:var(--alert-50);   color:var(--alert-500); border-color:var(--alert-100); }
+  button.pt-chip.clickable { cursor:pointer; }
+  button.pt-chip.clickable:hover { border-color:var(--primary); color:var(--primary); }
+
+  /* 이미지 보기 — 서명·신분증 */
+  #ptImgBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10300; display:none; }
+  #ptImgModal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); display:none;
+                max-width:min(92vw,760px); background:var(--gray-0); border-radius:12px;
+                box-shadow:0 16px 48px rgba(0,0,0,.24); z-index:10301; overflow:hidden; }
+  #ptImgHead { display:flex; align-items:center; gap:8px; height:40px; padding:0 8px 0 14px;
+               background:var(--gray-50); border-bottom:1px solid var(--gray-200); }
+  #ptImgTitle { flex:1; min-width:0; font-size:13px; font-weight:700; color:var(--gray-900);
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #ptImgBody { padding:16px; background:var(--gray-100); text-align:center; max-height:74vh; overflow:auto; }
+  #ptImgBody img { max-width:100%; display:block; margin:0 auto; background:#fff; border-radius:8px; }
+
   .pt-radios { display:flex; gap:8px; }
   .pt-radio {
     display:inline-flex; align-items:center; gap:8px; flex:1; min-width:0;
@@ -314,10 +335,53 @@
   </div>
 </div>
 
+{{-- ── 서명ㆍ신분증 보기 ────────────────────────────────────
+     이미지는 목록에 실어 보내지 않는다(한 장에 수십 KB). 누를 때만 권한을 거쳐 불러온다. --}}
+<div id="ptImgBackdrop" onclick="ptCloseImage()"></div>
+<div id="ptImgModal">
+  <div id="ptImgHead">
+    <span id="ptImgTitle"></span>
+    <a id="ptImgOpen" href="#" target="_blank" rel="noopener"
+       style="font-size:11px;color:var(--primary);text-decoration:none;white-space:nowrap;">새 탭</a>
+    <button type="button" onclick="ptCloseImage()"
+            style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;color:var(--gray-700);">&#215;</button>
+  </div>
+  <div id="ptImgBody">
+    <div id="ptImgLoading" style="padding:40px;font-size:13px;color:var(--gray-500);">불러오는 중...</div>
+    <img id="ptImgEl" alt="" style="display:none;" />
+  </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+/* 서명ㆍ신분증 보기 — 셀 버튼이 부른다 */
+function ptShowImage(title, url) {
+  document.getElementById('ptImgTitle').textContent = title;
+  document.getElementById('ptImgOpen').href = url;
+  const img  = document.getElementById('ptImgEl');
+  const load = document.getElementById('ptImgLoading');
+  img.style.display = 'none';
+  load.style.display = '';
+  load.textContent = '불러오는 중...';
+  img.onload  = () => { load.style.display = 'none'; img.style.display = ''; };
+  img.onerror = () => { load.textContent = '이미지를 불러오지 못했습니다.'; };
+  img.src = url;
+  document.getElementById('ptImgBackdrop').style.display = 'block';
+  document.getElementById('ptImgModal').style.display    = 'block';
+}
+
+function ptCloseImage() {
+  document.getElementById('ptImgBackdrop').style.display = 'none';
+  document.getElementById('ptImgModal').style.display    = 'none';
+  document.getElementById('ptImgEl').removeAttribute('src');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('ptImgModal').style.display === 'block') ptCloseImage();
+});
+
 (function () {
   const DETAIL_BASE = @json(url('patients'));
   const grid = new wwGrid({
@@ -331,6 +395,44 @@
       { header: '성별',         name: 'gender',          width: 60,  align: 'center', sortable: true },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
       { header: '건보',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
+      // ── 위임 서명 ── 가장 최근 동의 건 기준
+      { header: '서명여부',   name: 'signed',   width: 90, align: 'center', sortable: true,
+        renderer: (v, row) => {
+          if (!v) return '';
+          const el = document.createElement(row.sign_url ? 'button' : 'span');
+          el.className = 'pt-chip' + (v === '동의 완료' ? ' on' : '');
+          el.textContent = v;
+          if (row.sign_url) {
+            el.type = 'button';
+            el.title = '서명 이미지 보기';
+            el.classList.add('clickable');
+            el.addEventListener('click', (e) => { e.stopPropagation();
+              ptShowImage('위임인 서명 — ' + row.name, row.sign_url); });
+          }
+          return el;
+        } },
+      { header: '미성년',     name: 'minor',     width: 80, align: 'center', sortable: true,
+        renderer: (v) => {
+          if (!v) return '';
+          const s = document.createElement('span');
+          s.className = 'pt-chip' + (v === '미성년' ? ' warn' : '');
+          s.textContent = v;
+          return s;
+        } },
+      { header: '보호자 관계', name: 'g_relation', width: 90,  align: 'center' },
+      { header: '보호자 이름', name: 'g_name',     width: 100 },
+      { header: '보호자 생년월일', name: 'g_birth', width: 120 },
+      { header: '보호자 신분증', name: 'g_id', width: 100, align: 'center', exportable: false,
+        renderer: (v, row) => {
+          if (!row.g_id_url) return '';
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'pt-chip clickable'; b.textContent = '보기';
+          b.title = '보호자 신분증 보기';
+          b.addEventListener('click', (e) => { e.stopPropagation();
+            ptShowImage('보호자 신분증 — ' + (row.g_name || row.name), row.g_id_url); });
+          return b;
+        } },
+
       { header: '처방건수',     name: 'rx_count',        width: 80,  editor: 'number', align: 'center', sortable: true },
       { header: '재구매일',     name: 'repurchase_date', width: 160, sortable: true },
       { header: '등록일',       name: 'created',         width: 110, sortable: true },

@@ -10,6 +10,30 @@ use Illuminate\View\View;
 class PatientController extends Controller
 {
     // ── 목록 ──────────────────────────────────────────────
+    /**
+     * 환자마다 '가장 최근 동의 건' 하나.
+     *
+     * 동의는 처방전에 매달려 있고 환자에게는 처방전이 여럿일 수 있다. 서류 발행과 같은
+     * 기준(최신 건)으로 맞춘다.
+     *
+     * 표가 아직 없을 수 있다(마이그레이션 전 배포) — 그때는 빈 것을 준다.
+     */
+    private function latestConsentByPatient(): \Illuminate\Support\Collection
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('prescription_consents', 'is_minor')) {
+            return collect();
+        }
+
+        return \App\Models\PrescriptionConsent::query()
+            ->with('prescription:id,rx_number,patient_id')
+            ->whereHas('prescription', fn ($q) => $q->whereNotNull('patient_id'))
+            ->orderByDesc('id')
+            ->get()
+            // 내림차순이라 환자별 첫 건이 곧 최신이다
+            ->unique(fn ($c) => $c->prescription?->patient_id)
+            ->keyBy(fn ($c) => $c->prescription?->patient_id);
+    }
+
     public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
         $query = Patient::withCount('prescriptions')
@@ -38,8 +62,10 @@ class PatientController extends Controller
             });
         }
 
+        $consents = $this->latestConsentByPatient();
+
         // ── wwGrid 데이터 ──────────────────────────────────
-        $gridData = $query->get()->map(function ($p) {
+        $gridData = $query->get()->map(function ($p) use ($consents) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -67,6 +93,11 @@ class PatientController extends Controller
                 $repurchase = '-';
             }
 
+            // 위임 서명 — 이 환자의 가장 최근 동의 건
+            $c       = $consents[$p->id] ?? null;
+            $agreed  = $c && $c->status === 'agreed';
+            $minorRx = $c && $c->is_minor;
+
             return [
                 'id'              => $p->id,
                 'name'            => $p->name,
@@ -75,6 +106,21 @@ class PatientController extends Controller
                 'gender'          => $gender,
                 'mobile'          => $p->mobile ?? $p->phone ?? '-',
                 'nhis'            => $nhis,
+
+                // ── 위임 서명 ──
+                'signed'      => $c ? $c->statusLabel() : '',
+                'minor'       => $minorRx ? '미성년' : ($c ? '성년' : ''),
+                'g_relation'  => $minorRx ? ($c->guardian_relation ?? '') : '',
+                'g_name'      => $minorRx ? ($c->guardian_name ?? '') : '',
+                'g_birth'     => $minorRx ? ($c->guardian_birth_date?->format('Y-m-d') ?? '') : '',
+                'g_id'        => $minorRx && $c->guardian_id_path ? '있음' : '',
+                // 이미지는 실을 수 없다(한 장에 수십 KB). 볼 때만 권한을 거쳐 부르는 주소를 준다.
+                'sign_url'    => $agreed && $c->signature_data && $c->prescription
+                                   ? route('prescriptions.consentSignature', $c->prescription) : null,
+                
+                'g_id_url'    => $minorRx && $c->guardian_id_path
+                                   ? route('files.consent-guardian-id', $c) : null,
+
                 'rx_count'        => (int) $p->prescriptions_count,
                 'repurchase_date' => $repurchase,
                 'created'         => $p->created_at?->format('Y-m-d') ?? '',
