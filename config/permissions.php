@@ -259,6 +259,7 @@ return [
         'files.prescription-image'      => ['prescriptions', 'view'],
         'files.prescription-attachment' => ['prescriptions', 'view'],
         'files.prescription-temp'       => ['prescriptions', 'view'],
+        'files.consent-guardian-id'     => ['prescriptions', 'view'],
 
         // POST 지만 실제로는 조회/조립일 뿐인 것
         'nice-settings.test'          => [null, 'view'],

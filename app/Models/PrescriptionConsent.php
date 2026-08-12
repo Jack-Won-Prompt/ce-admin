@@ -23,6 +23,7 @@ class PrescriptionConsent extends Model
         'patient_birth_date',
         'guardian_name',
         'guardian_relation',
+        'guardian_birth_date',
         'guardian_signature_data',
         'guardian_id_path',
         'guardian_id_mime',
@@ -44,7 +45,8 @@ class PrescriptionConsent extends Model
         'expires_at'         => 'datetime',
         'responded_at'       => 'datetime',
         'is_minor'           => 'boolean',
-        'patient_birth_date' => 'date',
+        'patient_birth_date'  => 'date',
+        'guardian_birth_date' => 'date',
         'nice_verified_at' => 'datetime',
         // CI/DI 는 민감식별정보 → 애플리케이션 레벨 암호화 저장
         'nice_ci'          => 'encrypted',

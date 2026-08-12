@@ -65,6 +65,7 @@ class ConsentController extends Controller
             // 미성년자 — 법정대리인
             'guardian_name'      => 'nullable|string|max:50',
             'guardian_relation'  => 'nullable|string|max:50',
+            'guardian_birth'     => 'nullable|date',
             'guardian_signature' => 'nullable|string|max:500000',
             'guardian_id'        => 'nullable|string|max:8000000',
         ]);
@@ -73,6 +74,7 @@ class ConsentController extends Controller
            요청이 있으므로 서버에서 다시 본다. */
         if ($request->action === 'agreed' && $consent->is_minor) {
             foreach (['guardian_name' => '보호자 성명', 'guardian_relation' => '보호자 관계',
+                      'guardian_birth' => '보호자 생년월일',
                       'guardian_signature' => '보호자 서명', 'guardian_id' => '보호자 신분증'] as $k => $label) {
                 if (!trim((string) $request->input($k))) {
                     return response()->json(['success' => false, 'message' => "{$label}이(가) 필요합니다."], 422);
@@ -100,6 +102,7 @@ class ConsentController extends Controller
         if ($request->action === 'agreed' && $consent->is_minor) {
             $payload['guardian_name']           = trim((string) $request->input('guardian_name'));
             $payload['guardian_relation']       = trim((string) $request->input('guardian_relation'));
+            $payload['guardian_birth_date']     = $request->input('guardian_birth') ?: null;
             $payload['guardian_signature_data'] = $request->input('guardian_signature');
             // 신분증은 본문에 담지 않고 파일로 둔다. 공개되지 않는 디스크에 쓴다.
             [$payload['guardian_id_path'], $payload['guardian_id_mime']] =
@@ -326,6 +329,16 @@ class ConsentController extends Controller
             'nice_mobile'      => $latest->nice_mobile,
             'nice_authtype'    => $latest->niceAuthTypeLabel(),
             'signature_data'  => $latest->status === 'agreed' ? $latest->signature_data : null,
+            // 미성년자 — 법정대리인
+            'is_minor'            => (bool) $latest->is_minor,
+            'patient_birth_date'  => $latest->patient_birth_date?->toDateString(),
+            'guardian_name'       => $latest->guardian_name,
+            'guardian_relation'   => $latest->guardian_relation,
+            'guardian_birth_date' => $latest->guardian_birth_date?->toDateString(),
+            'guardian_signature'  => $latest->status === 'agreed' ? $latest->guardian_signature_data : null,
+            // 신분증은 본문으로 내리지 않는다. 볼 때만 권한을 거쳐 나가는 주소를 준다.
+            'guardian_id_url'     => $latest->guardian_id_path
+                                      ? route('files.consent-guardian-id', $latest) : null,
             'pdf_url'         => ($latest->status === 'agreed' && $latest->pdf_path)
                                   ? route('prescriptions.consentPdf', $prescription)
                                   : null,

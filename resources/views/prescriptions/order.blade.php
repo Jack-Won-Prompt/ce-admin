@@ -615,6 +615,13 @@
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
 
+  /* 위임 서명 카드 — 서명과 신분증 미리보기 */
+  .sc-cap { font-size:10px; font-weight:700; color:var(--gray-500); letter-spacing:.5px;
+            text-transform:uppercase; margin-bottom:6px; }
+  .sc-box { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px;
+            padding:8px; text-align:center; }
+  .sc-box img { max-width:100%; max-height:150px; display:block; margin:0 auto; }
+
   /* 팝오버 안에서 메시지 유형을 손보는 작은 버튼 */
   .rx-tpl-mini { flex-shrink:0; border:1px solid var(--gray-200); background:var(--gray-0); border-radius:6px;
                  padding:1px 6px; font-size:10px; font-weight:700; line-height:18px;
@@ -1571,6 +1578,36 @@ $calcDeposit  = $calcCopay + $calcShipping;
            여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
       <div id="viewerCards">
 
+      {{-- ── 위임 서명 — 서명 이미지와 보호자 신분증 ──────────
+           서명이 끝난 뒤에만 나타난다. 값은 위임동의 현황 조회에서 함께 받는다. --}}
+      <div class="vw-card" id="signCard" style="display:none;">
+        <div class="vw-card-head">
+          <span class="vw-card-title">위임 서명</span>
+          <div class="vw-card-acts">
+            <a id="signCardPng" class="vw-btn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
+               title="서명 이미지를 파일로 받습니다">서명 PNG</a>
+          </div>
+        </div>
+        <div style="padding:12px;display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <div class="sc-cap">위임인 서명</div>
+            <div class="sc-box"><img id="signCardImg" alt="위임인 서명" /></div>
+          </div>
+          <div id="signCardGuardianWrap" style="display:none;">
+            <div class="sc-cap">보호자 서명 <span id="signCardGuardianWho"></span></div>
+            <div class="sc-box"><img id="signCardGuardianImg" alt="보호자 서명" /></div>
+          </div>
+          <div id="signCardIdWrap" style="display:none;">
+            <div class="sc-cap">
+              보호자 신분증
+              <a id="signCardIdOpen" href="#" target="_blank" rel="noopener"
+                 style="float:right;font-size:11px;color:var(--primary);text-decoration:none;">크게 보기</a>
+            </div>
+            <div class="sc-box"><img id="signCardIdImg" alt="보호자 신분증" /></div>
+          </div>
+        </div>
+      </div>
+
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
       <div class="vw-card" id="docStripWrap" @if(!$prescription->image_url && $prescription->attachments->isEmpty()) style="display:none;" @endif>
         {{-- 카드 머리 — 제목·개수와 유형 선택·첨부 추가 (시안 137:793) --}}
@@ -1878,8 +1915,53 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        autocomplete="off" inputmode="numeric"
                        placeholder="{{ $displayRn ?: 'XXXXXX-XXXXXXX' }}"
                        title="저장된 번호는 다시 볼 수 없습니다. 새로 입력하면 덮어씁니다."
-                       style="flex:1;min-width:0;letter-spacing:1px;" />
+                       style="flex:1;min-width:0;letter-spacing:1px;" oninput="rnRecalc()" />
               </div>
+              {{-- 주민번호 앞자리로 생년월일·만 나이를 즉시 계산해 보여준다.
+                   번호를 치는 중에도 바뀌고, 아직 안 쳤으면 저장된 마스킹으로 계산한다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">생년월일</span>
+                <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                  <input type="text" class="form-control" id="f-birth" readonly
+                         style="flex:1;min-width:0;background:var(--gray-50);" placeholder="주민번호를 입력하면 계산됩니다" />
+                  <span id="f-age-badge" style="display:none;flex-shrink:0;font-size:11px;font-weight:700;
+                        padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
+                </div>
+              </div>
+              {{-- ── 미성년자 — 법정대리인 ─────────────────────────
+                   만 나이가 기준보다 어릴 때만 나타난다. 여기 적어 두면 위임 서명 화면에
+                   그대로 보이고, 보호자는 서명과 신분증만 더하면 된다. --}}
+              <div id="guardianBox" style="display:none;flex-direction:column;gap:8px;
+                   border:1px solid var(--alert-100); background:var(--alert-50);
+                   border-radius:8px; padding:10px 12px; margin:4px 0;">
+                <div style="font-size:12px;font-weight:700;color:var(--alert-500);">
+                  미성년자 — 보호자(법정대리인) 정보
+                  <span style="font-weight:500;color:var(--gray-600);">위임 서명 화면에 함께 보입니다.</span>
+                </div>
+                <div class="rx-field-row">
+                  <span class="rx-field-label">보호자 이름</span>
+                  <input type="text" class="form-control" id="f-guardian-name" maxlength="50"
+                         value="{{ $prescription->counseling?->guardian_name ?? '' }}"
+                         placeholder="보호자 성명" style="flex:1;" />
+                </div>
+                <div class="rx-field-row">
+                  <span class="rx-field-label">관계</span>
+                  <select class="form-control" id="f-guardian-relation" style="flex:1;">
+                    @php $gRel = $prescription->counseling?->guardian_relation ?? ''; @endphp
+                    <option value="">선택</option>
+                    @foreach(['부','모','조부','조모','법정대리인','기타'] as $r)
+                      <option value="{{ $r }}" {{ $gRel === $r ? 'selected' : '' }}>{{ $r }}</option>
+                    @endforeach
+                  </select>
+                </div>
+                <div class="rx-field-row">
+                  <span class="rx-field-label">보호자 생년월일</span>
+                  <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
+                         value="{{ $prescription->counseling?->guardian_birth ?? '' }}"
+                         placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
+                </div>
+              </div>
+
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 1</span>
                 <input type="text" class="form-control" id="f-mobile"
@@ -3969,6 +4051,79 @@ window.HELP_TOUR_STEPS = [
     });
   }
 
+  /* ── 주민번호 → 생년월일·만 나이 (실시간) ────────────────
+     복호화하지 않는다. 앞 일곱 자리만으로 생년월일과 세기를 알 수 있고, 그 일곱 자리는
+     마스킹에도 남아 있다. 담당자가 번호를 치는 중에도 다시 계산한다. */
+  const MINOR_AGE = @json((int) config('delegation.minor_age', 19));
+
+  function birthFromRrn(v) {
+    const m = String(v ?? '').replace(/\s/g, '').match(/^(\d{2})(\d{2})(\d{2})-?(\d)/);
+    if (!m) return null;
+    const [, yy, mm, dd, g] = m;
+    const century = { 1:1900, 2:1900, 5:1900, 6:1900, 3:2000, 4:2000, 7:2000, 8:2000, 9:1800, 0:1800 }[+g];
+    if (!century) return null;
+    const y = century + +yy, mo = +mm, d = +dd;
+    const dt = new Date(y, mo - 1, d);
+    // 2003-02-29 처럼 없는 날은 Date 가 다음 달로 넘겨 버린다 — 되돌려 확인한다
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt;
+  }
+
+  function ageOf(dt) {
+    const now = new Date();
+    let a = now.getFullYear() - dt.getFullYear();
+    const before = now.getMonth() < dt.getMonth()
+                || (now.getMonth() === dt.getMonth() && now.getDate() < dt.getDate());
+    return before ? a - 1 : a;
+  }
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  function rnRecalc() {
+    const inp   = document.getElementById('f-resident');
+    // 아직 치지 않았으면 저장된 마스킹(placeholder)으로 계산한다
+    const src   = (inp?.value || '').trim() || (inp?.placeholder || '');
+    const birth = birthFromRrn(src);
+    const bEl   = document.getElementById('f-birth');
+    const badge = document.getElementById('f-age-badge');
+    const box   = document.getElementById('guardianBox');
+
+    if (!birth) {
+      if (bEl)  bEl.value = '';
+      if (badge) badge.style.display = 'none';
+      if (box)  box.style.display = 'none';
+      return;
+    }
+
+    const ymd = `${birth.getFullYear()}-${pad2(birth.getMonth() + 1)}-${pad2(birth.getDate())}`;
+    const age = ageOf(birth);
+    const minor = age < MINOR_AGE;
+
+    if (bEl) bEl.value = ymd;
+    if (badge) {
+      badge.textContent = `만 ${age}세` + (minor ? ' · 미성년' : '');
+      badge.style.display    = '';
+      badge.style.background = minor ? 'var(--alert-50)'  : 'var(--gray-100)';
+      badge.style.color      = minor ? 'var(--alert-500)' : 'var(--gray-600)';
+      badge.style.border     = '1px solid ' + (minor ? 'var(--alert-100)' : 'var(--gray-200)');
+    }
+    if (box) box.style.display = minor ? 'flex' : 'none';
+  }
+
+  /* 보호자 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다 */
+  function formatBirthInput(el) {
+    const d = el.value.replace(/\D/g, '').slice(0, 8);
+    el.value = d.length > 6 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`
+             : d.length > 4 ? `${d.slice(0,4)}-${d.slice(4)}`
+             : d;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    rnRecalc();
+    const gb = document.getElementById('f-guardian-birth');
+    if (gb) gb.addEventListener('input', () => formatBirthInput(gb));
+  });
+
   /* 주민등록번호는 쓰기 전용이다. 저장된 값을 복호화해 화면에 되돌려 주던
      '표시' 토글과 그것이 쓰던 코드는 걷어냈다. 있다는 사실은 placeholder 의
      마스킹으로 알리고, 새로 친 값만 저장으로 넘어간다. */
@@ -5069,6 +5224,10 @@ window.HELP_TOUR_STEPS = [
       postcode:         strOrNull('f-postcode'),
       address_detail:   strOrNull('f-address-detail'),
       guardian:         strOrNull('f-guardian'),
+      // 미성년자 — 법정대리인. 위임 서명 화면에 그대로 보인다.
+      guardian_name:     strOrNull('f-guardian-name'),
+      guardian_relation: strOrNull('f-guardian-relation'),
+      guardian_birth:    strOrNull('f-guardian-birth'),
       // 시안 148:2708 로 새로 생긴 항목들 — counseling_data 에 담는다
       mobile2:          strOrNull('f-mobile2'),
       email:            strOrNull('f-email'),
@@ -7154,6 +7313,39 @@ window.HELP_TOUR_STEPS = [
     rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
   }
 
+  /* 서명이 끝난 건에만 서명·신분증 카드를 세운다.
+     신분증은 본문으로 오지 않는다 — 볼 때만 권한을 거치는 주소로 불러온다. */
+  function _fillSignCard(data) {
+    const card = document.getElementById('signCard');
+    if (!card) return;
+
+    if (data.status !== 'agreed' || !data.signature_data) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    document.getElementById('signCardImg').src = data.signature_data;
+
+    const gWrap = document.getElementById('signCardGuardianWrap');
+    if (data.guardian_signature) {
+      document.getElementById('signCardGuardianImg').src = data.guardian_signature;
+      const who = [data.guardian_name, data.guardian_relation].filter(Boolean).join(' · ');
+      document.getElementById('signCardGuardianWho').textContent = who ? `(${who})` : '';
+      gWrap.style.display = '';
+    } else {
+      gWrap.style.display = 'none';
+    }
+
+    const iWrap = document.getElementById('signCardIdWrap');
+    if (data.guardian_id_url) {
+      document.getElementById('signCardIdImg').src   = data.guardian_id_url;
+      document.getElementById('signCardIdOpen').href = data.guardian_id_url;
+      iWrap.style.display = '';
+    } else {
+      iWrap.style.display = 'none';
+    }
+  }
+
   async function updateConsentStatus() {
     try {
       const res  = await fetch(CONSENT_STATUS_URL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content } });
@@ -7162,6 +7354,15 @@ window.HELP_TOUR_STEPS = [
 
       // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
       _applyConsentBtn(data.status);
+
+      _fillSignCard(data);
+      // 서명 화면에서 보호자가 적어 넣은 값이 있으면 화면에도 반영한다
+      if (data.is_minor) {
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v && !el.value) el.value = v; };
+        set('f-guardian-name',     data.guardian_name);
+        set('f-guardian-relation', data.guardian_relation);
+        set('f-guardian-birth',    data.guardian_birth_date);
+      }
 
       // 아코디언 안에 현황을 적던 자리(consentStatusText · consentStatusBadge)는
       // 시안 개편 때 없어졌다. 서명 여부·본인확인은 '서명확인' 버튼이 여는 창에서 본다.

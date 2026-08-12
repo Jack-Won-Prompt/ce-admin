@@ -1047,6 +1047,10 @@ class PrescriptionController extends Controller
             'counsel_memo'          => 'nullable|string|max:2000',
             // 환자 정보 추가
             'guardian'              => 'nullable|string|max:50',
+            // 미성년자 — 법정대리인 (counseling_data 저장)
+            'guardian_name'         => 'nullable|string|max:50',
+            'guardian_relation'     => 'nullable|string|max:50',
+            'guardian_birth'        => 'nullable|date',
             // 시안 148:2708 로 새로 생긴 항목 (counseling_data 저장)
             'mobile2'               => 'nullable|string|max:30',
             'email'                 => 'nullable|email|max:190',
@@ -1125,6 +1129,9 @@ class PrescriptionController extends Controller
             'contents'        => $request->input('counsel_memo'),
             // 환자 정보
             'udf24'           => $request->input('guardian'),
+            'guardian_name'     => $request->input('guardian_name'),
+            'guardian_relation' => $request->input('guardian_relation'),
+            'guardian_birth'    => $request->input('guardian_birth'),
             'mobile2'         => $request->input('mobile2'),
             'email'           => $request->input('email'),
             'nhis_reg_date'   => $request->input('nhis_reg_date'),
@@ -1527,6 +1534,11 @@ class PrescriptionController extends Controller
             'status'             => 'pending',
             'is_minor'           => $isMinor,
             'patient_birth_date' => $birth?->toDateString(),
+            // 검수 화면에서 미리 적어 둔 보호자 정보를 실어 보낸다.
+            // 서명 화면에 그대로 보이고, 보호자는 서명과 신분증만 더하면 된다.
+            'guardian_name'       => $isMinor ? ($prescription->counseling?->guardian_name ?: null) : null,
+            'guardian_relation'   => $isMinor ? ($prescription->counseling?->guardian_relation ?: null) : null,
+            'guardian_birth_date' => $isMinor ? ($prescription->counseling?->guardian_birth ?: null) : null,
         ]);
 
         $baseUrl = rtrim(config('app.consent_public_url', config('app.url')), '/');

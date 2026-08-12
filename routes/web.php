@@ -130,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/files/prescriptions/{prescription}/image',  [\App\Http\Controllers\SecureFileController::class, 'prescriptionImage'])->name('files.prescription-image');
     Route::get('/files/prescriptions/attachments/{attachment}', [\App\Http\Controllers\SecureFileController::class, 'attachment'])->name('files.prescription-attachment');
     Route::get('/files/prescriptions/temp/{name}',              [\App\Http\Controllers\SecureFileController::class, 'tempImage'])->name('files.prescription-temp');
+    Route::get('/files/consents/{consent}/guardian-id',         [\App\Http\Controllers\SecureFileController::class, 'consentGuardianId'])->name('files.consent-guardian-id');
 
     // 전역 메모 API (레이아웃에서 prescription 컨텍스트 없이 사용)
     Route::patch('/prescriptions/memos/{memo}/pin-global',    [PrescriptionController::class, 'pinMemoGlobal'])->name('prescriptions.memos.pin-global');

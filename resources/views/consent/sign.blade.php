@@ -334,21 +334,25 @@
         <label>환자 생년월일</label>
         <input type="text" id="gPatientBirth" value="{{ $consent->patient_birth_date?->format('Y-m-d') }}" readonly />
       </div>
-      <div class="g-field">
-        <label>보호자 성명 <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="gName" maxlength="50" placeholder="보호자 이름" oninput="refreshAgree()" />
-      </div>
+      {{-- 담당자가 검수 화면에서 미리 적어 둔 값이 있으면 채워져 나온다 --}}
       <div class="g-field">
         <label>환자와의 관계 <span style="color:#ef4444;">*</span></label>
         <select id="gRelation" onchange="refreshAgree()">
           <option value="">선택</option>
-          <option value="부">부</option>
-          <option value="모">모</option>
-          <option value="조부">조부</option>
-          <option value="조모">조모</option>
-          <option value="법정대리인">법정대리인</option>
-          <option value="기타">기타</option>
+          @foreach(['부','모','조부','조모','법정대리인','기타'] as $r)
+            <option value="{{ $r }}" {{ $consent->guardian_relation === $r ? 'selected' : '' }}>{{ $r }}</option>
+          @endforeach
         </select>
+      </div>
+      <div class="g-field">
+        <label>보호자 성명 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="gName" maxlength="50" placeholder="보호자 이름"
+               value="{{ $consent->guardian_name }}" oninput="refreshAgree()" />
+      </div>
+      <div class="g-field">
+        <label>보호자 생년월일 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="gBirth" maxlength="10" placeholder="YYYY-MM-DD" inputmode="numeric"
+               value="{{ $consent->guardian_birth_date?->format('Y-m-d') }}" oninput="onGuardianBirth(this)" />
       </div>
 
       <div class="sig-label" style="margin-top:14px;">
@@ -487,11 +491,31 @@ function onEnd() { drawing = false; }
 const IS_MINOR = @json((bool) $consent->is_minor);
 let gHasSig = false, gIdData = null;
 
+/* 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다.
+   휴대폰에서 하이픈을 찾아 누르는 일이 없어야 한다. */
+function onGuardianBirth(el) {
+  const d = el.value.replace(/\D/g, '').slice(0, 8);
+  el.value = d.length > 6 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`
+           : d.length > 4 ? `${d.slice(0,4)}-${d.slice(4)}`
+           : d;
+  refreshAgree();
+}
+
+function guardianBirthOk() {
+  const v = document.getElementById('gBirth')?.value ?? '';
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return false;
+  const [, y, mo, d] = m.map(Number);
+  const dt = new Date(y, mo - 1, d);
+  // 없는 날(2월 30일 등)은 Date 가 다음 달로 넘긴다 — 되돌려 확인한다
+  return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d && dt <= new Date();
+}
+
 function guardianReady() {
   if (!IS_MINOR) return true;
   const name = (document.getElementById('gName')?.value ?? '').trim();
   const rel  = document.getElementById('gRelation')?.value ?? '';
-  return !!(name && rel && gHasSig && gIdData);
+  return !!(name && rel && guardianBirthOk() && gHasSig && gIdData);
 }
 
 function refreshAgree() {
@@ -734,7 +758,7 @@ async function submitConsent(action) {
     return;
   }
   if (action === 'agreed' && IS_MINOR && !guardianReady()) {
-    ceAlert('보호자 성명ㆍ관계ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
+    ceAlert('보호자 관계ㆍ성명ㆍ생년월일ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
     return;
   }
 
@@ -749,6 +773,7 @@ async function submitConsent(action) {
     if (IS_MINOR) {
       body.guardian_name      = document.getElementById('gName').value.trim();
       body.guardian_relation  = document.getElementById('gRelation').value;
+      body.guardian_birth     = document.getElementById('gBirth').value;
       body.guardian_signature = gCanvas.toDataURL('image/png');
       body.guardian_id        = gIdData;
     }

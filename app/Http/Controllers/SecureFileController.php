@@ -54,6 +54,29 @@ class SecureFileController extends Controller
      * 캐시는 private 로 둔다. 공용 프록시에 남으면 로그인 검사를 우회해
      * 다른 사람에게 그대로 전달될 수 있다.
      */
+    /**
+     * 보호자 신분증.
+     *
+     * 신분증은 그 자체가 고유식별정보를 담아 공개 디스크에 두지 않는다. 기본 디스크
+     * (storage/app)에 있어 주소로는 아예 닿지 않고, 이 경로로만 로그인·권한을 거쳐 나간다.
+     */
+    public function consentGuardianId(Request $request, \App\Models\PrescriptionConsent $consent): StreamedResponse
+    {
+        abort_unless($consent->guardian_id_path, 404);
+
+        $disk = Storage::disk(config('filesystems.default'));
+        abort_unless($disk->exists($consent->guardian_id_path), 404);
+
+        activity()->causedBy(auth()->user())->performedOn($consent)
+            ->log('보호자 신분증 열람');
+
+        return $disk->response($consent->guardian_id_path, basename($consent->guardian_id_path), [
+            'Content-Disposition'    => 'inline; filename="guardian-id"',
+            'Cache-Control'          => 'private, max-age=300, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     private function stream(string $path, ?string $originalName = null): StreamedResponse
     {
         $disk = Storage::disk('public');
