@@ -28,7 +28,7 @@ class MasterItem extends Model
     public function scopeCategory($q, string $category) { return $q->where('category', $category); }
     public function scopeActive($q)                     { return $q->where('is_active', true); }
 
-    /** 정의된 카테고리 전부 [key => ['label','desc','fields']] */
+    /** 정의된 카테고리 전부 [key => ['label','fields']] */
     public static function categories(): array
     {
         return (array) config('masters.categories', []);

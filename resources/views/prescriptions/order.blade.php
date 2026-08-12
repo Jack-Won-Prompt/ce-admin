@@ -615,6 +615,12 @@
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
 
+  /* 보호자 영역의 진행 상태 — 받은 것과 아직 안 받은 것 */
+  .gb-state { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px;
+              font-size:11px; font-weight:700; line-height:18px; white-space:nowrap;
+              background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); }
+  .gb-state.done { background:var(--primary-50); color:var(--primary); border-color:var(--primary-200); }
+
   /* 위임 서명 카드 — 서명과 신분증 미리보기 */
   .sc-cap { font-size:10px; font-weight:700; color:var(--gray-500); letter-spacing:.5px;
             text-transform:uppercase; margin-bottom:6px; }
@@ -1959,6 +1965,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
                          value="{{ $prescription->counseling?->guardian_birth ?? '' }}"
                          placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
+                </div>
+                <div class="rx-field-row">
+                  <span class="rx-field-label">보호자 전화번호</span>
+                  <input type="text" class="form-control" id="f-guardian-phone"
+                         value="{{ $prescription->counseling?->guardian_phone ?? '' }}"
+                         placeholder="010-XXXX-XXXX" data-phone style="flex:1;" />
+                </div>
+
+                {{-- 받은 것과 아직 안 받은 것을 한눈에. 서명 화면에서 들어오면 채워진다. --}}
+                <div class="rx-field-row">
+                  <span class="rx-field-label">진행 상태</span>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;">
+                    <span id="gbSignState" class="gb-state">위임장 서명 미완료</span>
+                    <span id="gbIdState"   class="gb-state">신분증 업로드 미완료</span>
+                  </div>
                 </div>
               </div>
 
@@ -5228,6 +5249,7 @@ window.HELP_TOUR_STEPS = [
       guardian_name:     strOrNull('f-guardian-name'),
       guardian_relation: strOrNull('f-guardian-relation'),
       guardian_birth:    strOrNull('f-guardian-birth'),
+      guardian_phone:    strOrNull('f-guardian-phone'),
       // 시안 148:2708 로 새로 생긴 항목들 — counseling_data 에 담는다
       mobile2:          strOrNull('f-mobile2'),
       email:            strOrNull('f-email'),
@@ -7313,6 +7335,22 @@ window.HELP_TOUR_STEPS = [
     rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
   }
 
+  /* 보호자 영역의 진행 상태 — 서명과 신분증을 받았는지.
+     둘 다 서명 화면에서 들어오므로 여기서는 결과만 보여 준다. */
+  function _guardianState(data) {
+    const sign = document.getElementById('gbSignState');
+    const idc  = document.getElementById('gbIdState');
+    if (!sign || !idc) return;
+
+    const hasSign = !!data.guardian_signature;
+    const hasId   = !!data.guardian_id_url;
+
+    sign.textContent = hasSign ? '위임장 서명 완료' : '위임장 서명 미완료';
+    sign.className   = 'gb-state' + (hasSign ? ' done' : '');
+    idc.textContent  = hasId ? '신분증 업로드 완료' : '신분증 업로드 미완료';
+    idc.className    = 'gb-state' + (hasId ? ' done' : '');
+  }
+
   /* 서명이 끝난 건에만 서명·신분증 카드를 세운다.
      신분증은 본문으로 오지 않는다 — 볼 때만 권한을 거치는 주소로 불러온다. */
   function _fillSignCard(data) {
@@ -7362,7 +7400,9 @@ window.HELP_TOUR_STEPS = [
         set('f-guardian-name',     data.guardian_name);
         set('f-guardian-relation', data.guardian_relation);
         set('f-guardian-birth',    data.guardian_birth_date);
+        set('f-guardian-phone',    data.guardian_phone);
       }
+      _guardianState(data);
 
       // 아코디언 안에 현황을 적던 자리(consentStatusText · consentStatusBadge)는
       // 시안 개편 때 없어졌다. 서명 여부·본인확인은 '서명확인' 버튼이 여는 창에서 본다.

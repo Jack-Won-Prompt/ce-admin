@@ -19,7 +19,6 @@
   .ms-cat .cnt { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px;
                  background: var(--gray-100); color: var(--gray-600); }
   .ms-cat a.active .cnt { background: var(--primary-50); color: var(--primary); }
-  .ms-cat-desc { font-size: 12px; color: var(--gray-500); margin-top: 6px; }
 
   .ms-chip { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px;
              font-size:11px; font-weight:700; line-height:18px;
@@ -44,7 +43,6 @@
     </a>
   @endforeach
 </div>
-<div class="ms-cat-desc">{{ $cat['desc'] }}</div>
 
 {{-- ── 검색 필터 (탭 안) ── --}}
 <form method="GET" action="{{ route('masters.index') }}" class="ds-filter-card" style="margin-top:12px;">

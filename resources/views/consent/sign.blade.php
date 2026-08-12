@@ -350,6 +350,11 @@
                value="{{ $consent->guardian_name }}" oninput="refreshAgree()" />
       </div>
       <div class="g-field">
+        <label>보호자 전화번호</label>
+        <input type="text" id="gPhone" maxlength="20" placeholder="010-XXXX-XXXX"
+               value="{{ $consent->guardian_phone }}" />
+      </div>
+      <div class="g-field">
         <label>보호자 생년월일 <span style="color:#ef4444;">*</span></label>
         <input type="text" id="gBirth" maxlength="10" placeholder="YYYY-MM-DD" inputmode="numeric"
                value="{{ $consent->guardian_birth_date?->format('Y-m-d') }}" oninput="onGuardianBirth(this)" />
@@ -774,6 +779,7 @@ async function submitConsent(action) {
       body.guardian_name      = document.getElementById('gName').value.trim();
       body.guardian_relation  = document.getElementById('gRelation').value;
       body.guardian_birth     = document.getElementById('gBirth').value;
+      body.guardian_phone     = document.getElementById('gPhone').value.trim();
       body.guardian_signature = gCanvas.toDataURL('image/png');
       body.guardian_id        = gIdData;
     }

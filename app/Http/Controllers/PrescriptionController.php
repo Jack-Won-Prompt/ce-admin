@@ -991,7 +991,37 @@ class PrescriptionController extends Controller
             'isPdf'     => str_contains($prescription->image_mime_type ?? '', 'pdf'),
             'isRx'      => true,
         ]] : [];
-        $allDocsJson = array_merge($rxDoc, $attachmentsJson);
+        /* 위임 서명과 보호자 신분증도 문서로 함께 세운다.
+           첨부 파일과 같은 자리에 두면 썸네일ㆍ확대ㆍ크게 보기가 그대로 동작한다.
+           둘 다 본문으로 내려보내지 않고 권한을 거치는 주소만 준다. */
+        $signDocs = [];
+        $lastConsent = $prescription->consents()->where('status', 'agreed')->latest()->first();
+        if ($lastConsent) {
+            if ($lastConsent->signature_data) {
+                $signDocs[] = [
+                    'id'        => -1,
+                    'url'       => route('prescriptions.consentSignature', $prescription),
+                    'type'      => 'signature',
+                    'typeLabel' => '위임 서명',
+                    'name'      => '서명 ' . ($lastConsent->patient_name ?? ''),
+                    'isPdf'     => false,
+                    'isRx'      => false,
+                ];
+            }
+            if ($lastConsent->guardian_id_path) {
+                $signDocs[] = [
+                    'id'        => -2,
+                    'url'       => route('files.consent-guardian-id', $lastConsent),
+                    'type'      => 'guardian_id',
+                    'typeLabel' => '보호자 신분증',
+                    'name'      => '신분증 ' . ($lastConsent->guardian_name ?? ''),
+                    'isPdf'     => false,
+                    'isRx'      => false,
+                ];
+            }
+        }
+
+        $allDocsJson = array_merge($rxDoc, $attachmentsJson, $signDocs);
 
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId',
@@ -1051,6 +1081,7 @@ class PrescriptionController extends Controller
             'guardian_name'         => 'nullable|string|max:50',
             'guardian_relation'     => 'nullable|string|max:50',
             'guardian_birth'        => 'nullable|date',
+            'guardian_phone'        => 'nullable|string|max:40',
             // 시안 148:2708 로 새로 생긴 항목 (counseling_data 저장)
             'mobile2'               => 'nullable|string|max:30',
             'email'                 => 'nullable|email|max:190',
@@ -1132,6 +1163,7 @@ class PrescriptionController extends Controller
             'guardian_name'     => $request->input('guardian_name'),
             'guardian_relation' => $request->input('guardian_relation'),
             'guardian_birth'    => $request->input('guardian_birth'),
+            'guardian_phone'    => $request->input('guardian_phone'),
             'mobile2'         => $request->input('mobile2'),
             'email'           => $request->input('email'),
             'nhis_reg_date'   => $request->input('nhis_reg_date'),
@@ -1539,6 +1571,7 @@ class PrescriptionController extends Controller
             'guardian_name'       => $isMinor ? ($prescription->counseling?->guardian_name ?: null) : null,
             'guardian_relation'   => $isMinor ? ($prescription->counseling?->guardian_relation ?: null) : null,
             'guardian_birth_date' => $isMinor ? ($prescription->counseling?->guardian_birth ?: null) : null,
+            'guardian_phone'     => $isMinor ? ($prescription->counseling?->guardian_phone ?: null) : null,
         ]);
 
         $baseUrl = rtrim(config('app.consent_public_url', config('app.url')), '/');

@@ -61,14 +61,18 @@ return [
     |─────────────────────────────────────────────────────────────
     */
     'fields' => [
-        // ① 위임인
-        'patient_name'     => ['label' => '위임인 성명',        'x' => 133, 'y' => 52,  'size' => 8],
-        'patient_rrn'      => ['label' => '위임인 주민등록번호', 'x' => 133, 'y' => 59,  'size' => 8],
-        'patient_mobile'   => ['label' => '위임인 전화번호',     'x' => 80,  'y' => 90,  'size' => 8],
-        // 미성년자일 때만 찍는다
-        'patient_birth'    => ['label' => '위임인 생년월일(미성년)', 'x' => 133, 'y' => 66, 'size' => 8],
-        'guardian_name'    => ['label' => '보호자 성명(미성년)',     'x' => 133, 'y' => 73, 'size' => 8],
-        'guardian_relation'=> ['label' => '보호자 관계(미성년)',     'x' => 133, 'y' => 80, 'size' => 8],
+        /* ① 위임인 — 양식의 줄 순서를 그대로 따른다.
+             가입자ㆍ피부양자 : 성명 / 주민(외국인)등록번호
+             법정대리인ㆍ가족 : 성명 / 생년월일 / 가입자ㆍ피부양자와의 관계
+           양식에 '환자 생년월일' 줄은 없다. 생년월일 칸은 법정대리인의 것이다. */
+        'patient_name'     => ['label' => '위임인 성명',         'x' => 133, 'y' => 53,   'size' => 8],
+        'patient_rrn'      => ['label' => '위임인 주민등록번호',  'x' => 133, 'y' => 60.5, 'size' => 8],
+        // 아래 셋은 미성년자일 때만 찍는다
+        'guardian_name'    => ['label' => '법정대리인 성명',      'x' => 133, 'y' => 67.5, 'size' => 8],
+        'guardian_birth'   => ['label' => '법정대리인 생년월일',  'x' => 133, 'y' => 75,   'size' => 8],
+        'guardian_relation'=> ['label' => '가입자와의 관계',      'x' => 133, 'y' => 83,   'size' => 8],
+        // 전화번호 줄은 하나뿐이다(위임처리결과ㆍ지급내역 수신용)
+        'patient_mobile'   => ['label' => '전화번호',            'x' => 76,  'y' => 95,   'size' => 8],
         // ② 준요양기관
         'provider_name'    => ['label' => '준요양기관 상호',    'x' => 78,  'y' => 116, 'size' => 8],
         'provider_biz_no'  => ['label' => '준요양기관 사업자번호','x' => 78, 'y' => 125, 'size' => 8],
@@ -95,6 +99,15 @@ return [
         'x' => (float) env('DELEGATION_GSIG_X', 164),
         'y' => (float) env('DELEGATION_GSIG_Y', 280),
         'w' => (float) env('DELEGATION_GSIG_W', 28),
+    ],
+
+    /*
+    | ① 전화번호 줄의 '[ ] 문자메시지 수신동의' 체크.
+    | 글리프(✔)가 폰트마다 깨져 ④ 위임사항과 같이 선으로 직접 긋는다.
+    */
+    'sms_consent_check' => [
+        'x' => (float) env('DELEGATION_SMSCHK_X', 151.5),
+        'y' => (float) env('DELEGATION_SMSCHK_Y', 88),
     ],
 
     /*

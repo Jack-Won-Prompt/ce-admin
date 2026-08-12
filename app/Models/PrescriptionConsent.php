@@ -24,6 +24,7 @@ class PrescriptionConsent extends Model
         'guardian_name',
         'guardian_relation',
         'guardian_birth_date',
+        'guardian_phone',
         'guardian_signature_data',
         'guardian_id_path',
         'guardian_id_mime',

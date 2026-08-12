@@ -66,6 +66,7 @@ class ConsentController extends Controller
             'guardian_name'      => 'nullable|string|max:50',
             'guardian_relation'  => 'nullable|string|max:50',
             'guardian_birth'     => 'nullable|date',
+            'guardian_phone'     => 'nullable|string|max:40',
             'guardian_signature' => 'nullable|string|max:500000',
             'guardian_id'        => 'nullable|string|max:8000000',
         ]);
@@ -103,6 +104,7 @@ class ConsentController extends Controller
             $payload['guardian_name']           = trim((string) $request->input('guardian_name'));
             $payload['guardian_relation']       = trim((string) $request->input('guardian_relation'));
             $payload['guardian_birth_date']     = $request->input('guardian_birth') ?: null;
+            $payload['guardian_phone']          = trim((string) $request->input('guardian_phone')) ?: null;
             $payload['guardian_signature_data'] = $request->input('guardian_signature');
             // 신분증은 본문에 담지 않고 파일로 둔다. 공개되지 않는 디스크에 쓴다.
             [$payload['guardian_id_path'], $payload['guardian_id_mime']] =
@@ -335,6 +337,7 @@ class ConsentController extends Controller
             'guardian_name'       => $latest->guardian_name,
             'guardian_relation'   => $latest->guardian_relation,
             'guardian_birth_date' => $latest->guardian_birth_date?->toDateString(),
+            'guardian_phone'     => $latest->guardian_phone,
             'guardian_signature'  => $latest->status === 'agreed' ? $latest->guardian_signature_data : null,
             // 신분증은 본문으로 내리지 않는다. 볼 때만 권한을 거쳐 나가는 주소를 준다.
             'guardian_id_url'     => $latest->guardian_id_path
@@ -691,7 +694,10 @@ class ConsentController extends Controller
         $acct    = config('delegation.account', []);
         $sd      = $consent->responded_at ?? now();
         $py      = min(5, max(1, (int) config('delegation.period_years', 5)));
-        $ed      = $sd->copy()->addYears($py);
+        /* 종료일은 시작일 + N년에서 하루를 뺀다.
+           2026-08-11 부터 5년이면 2031-08-10 까지다 — 건보 사이트도 그렇게 잡는다.
+           하루를 빼지 않으면 5년 하고 하루가 되어 최장 기간을 넘긴다. */
+        $ed      = $sd->copy()->addYears($py)->subDay();
 
         $pdf->SetTextColor(0, 0, 0);
 
@@ -712,15 +718,31 @@ class ConsentController extends Controller
         $put('patient_name', $consent->patient_name ?: $patient?->name);
         // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
         // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
-        $put('patient_rrn', $consent->prescription?->residentNoOcrFor('nhis_claim_form')
-                            ?: $patient?->residentNoFor('nhis_claim_form'));
+        $rrn = $consent->prescription?->residentNoOcrFor('nhis_claim_form')
+               ?: $patient?->residentNoFor('nhis_claim_form');
+        // 서식에는 하이픈을 넣어 적는다. 저장은 숫자 열세 자리다.
+        if ($rrn && preg_match('/^(\d{6})-?(\d{7})$/', preg_replace('/\s/', '', $rrn), $rm)) {
+            $rrn = $rm[1] . '-' . $rm[2];
+        }
+        $put('patient_rrn', $rrn);
         $put('patient_mobile', $consent->patient_mobile ?: $patient?->mobile);
 
-        // 미성년자는 혼자 위임할 수 없다. 법정대리인의 이름·관계를 함께 적는다.
+        /* 미성년자는 혼자 위임할 수 없다. 양식의 '법정대리인 또는 가족' 세 줄을 채운다 —
+           성명 / 생년월일 / 가입자와의 관계. 생년월일 줄은 환자가 아니라 대리인의 것이다. */
         if ($consent->is_minor) {
-            $put('patient_birth',     $consent->patient_birth_date?->format('Y-m-d'));
             $put('guardian_name',     $consent->guardian_name);
+            $put('guardian_birth',    $consent->guardian_birth_date?->format('Y-m-d'));
             $put('guardian_relation', $consent->guardian_relation);
+        }
+
+        /* ① 전화번호 줄의 '[ ] 문자메시지 수신동의' — 번호를 받아 두었으니 동의로 표시한다.
+           글리프 대신 선으로 긋는다(④ 위임사항과 같은 방식). */
+        $chk = (array) config('delegation.sms_consent_check', []);
+        if (isset($chk['x'], $chk['y'])) {
+            $cx = (float) $chk['x']; $cy = (float) $chk['y'];
+            $pdf->SetLineStyle(['width' => 0.4, 'cap' => 'round', 'join' => 'round', 'color' => [0, 0, 0]]);
+            $pdf->Line($cx,       $cy + 0.9, $cx + 1.2, $cy + 2.2);
+            $pdf->Line($cx + 1.2, $cy + 2.2, $cx + 3.5, $cy - 1.0);
         }
 
         // ② 준요양기관

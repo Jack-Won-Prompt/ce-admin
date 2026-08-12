@@ -15,7 +15,6 @@ return [
 
         'hospital' => [
             'label'  => '병원',
-            'desc'   => '처방전을 발행하는 의료기관',
             // 화면에 보일 칸과 그 이름. 여기 없는 칸은 그 카테고리에서 아예 다루지 않는다.
             'fields' => [
                 'code'    => ['label' => '요양기관번호', 'width' => 130],
@@ -30,7 +29,6 @@ return [
 
         'dealer' => [
             'label'  => '대리점',
-            'desc'   => '제품을 공급받는 판매 거래처',
             'fields' => [
                 'code'    => ['label' => '거래처코드',   'width' => 120],
                 'name'    => ['label' => '상호',         'width' => 180, 'required' => true],
