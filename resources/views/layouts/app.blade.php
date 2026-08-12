@@ -1172,7 +1172,10 @@
     html.is-framed .layout-navbar { display: none !important; }
     html.is-framed .layout-page { margin-left: 0 !important; }
     html.is-framed .content-wrapper { padding-top: 0 !important; }
-    html.is-framed .page-body { padding-top: 14px; }
+    /* 탭 안에서는 위 여백을 두지 않는다. 탭줄과 본문 사이 간격은 워크스페이스 셸의
+       #wsRoot gap 12 가 이미 만든다(시안 148:5526 container gap 12).
+       여기서 14 를 더하면 탭으로 열었을 때만 26 이 되어 시안보다 14px 벌어진다. */
+    html.is-framed .page-body { padding-top: 0; }
   </style>
   {{-- wwGrid 자산은 레이아웃이 단 한 번만 싣는다.
        화면마다 각자 싣던 때는 (1) 한 화면이라도 빠뜨리면 그 화면 그리드가 죽고
