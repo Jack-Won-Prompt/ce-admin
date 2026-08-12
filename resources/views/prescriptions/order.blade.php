@@ -2679,9 +2679,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div class="tab-pane" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
-        {{-- mb-3 은 부트스트랩 CDN 값(16px)이라 시안 카드 간격 12 와 어긋난다. 인라인으로 12 를 준다 --}}
+        {{-- 카드 간격은 시안 12 다. 부트스트랩 CDN 의 .mb-3 은 16px 이고 !important 라
+             전역에서 못 이긴다 — 클래스를 떼고 인라인으로 12 를 준다. --}}
         {{-- 시안 Frame 48101493: 카드 테두리는 다른 카드와 같은 #E8EAEC 다(주색 강조 아님) --}}
-        <div class="card mb-3" style="margin-bottom:12px;">
+        <div class="card" style="margin-bottom:12px;">
           {{-- 머리띠 — h44 · pad 8/16 · 아래 1px --}}
           <div class="pt-card-head">
             <div class="pt-head-left">
