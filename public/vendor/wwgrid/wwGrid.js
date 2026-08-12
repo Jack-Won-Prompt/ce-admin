@@ -1407,6 +1407,11 @@ class wwGrid {
 
     if (colDef.editor === 'number') {
       value = value === '' ? '' : Number(value);
+    } else if (colDef.editor === 'combo' && Array.isArray(colDef.options)) {
+      // <select>.value 는 항상 문자열 → 옵션의 원래 타입(숫자 등) 값으로 복원.
+      // 그래야 셀 표시(라벨 해석)·변경 감지·저장이 원본 데이터 타입과 일치한다.
+      const opt = colDef.options.find(o => String(typeof o === 'object' ? o.value : o) === value);
+      if (opt) value = typeof opt === 'object' ? opt.value : opt;
     }
 
     this._calendar.close();
@@ -1561,7 +1566,18 @@ class wwGrid {
         dot.title = `원본: ${_rcMod.original[colName]}`;
         inner.appendChild(dot);
       }
-      inner.appendChild(document.createTextNode(this._formatDisplay(value, colDef)));
+      /* 셀을 직접 그리는 컬럼 — _makeCell 과 같은 규칙을 쓴다.
+         이 경로를 빠뜨리면 한 칸을 고쳤을 때 그 행의 버튼이 글자로 되돌아간다. */
+      if (typeof colDef.renderer === 'function') {
+        const node = colDef.renderer(value, this.data[rowIndex], rowIndex, colDef);
+        if (node instanceof Node) {
+          inner.appendChild(node);
+        } else if (node !== null && node !== undefined && node !== false) {
+          inner.appendChild(document.createTextNode(String(node)));
+        }
+      } else {
+        inner.appendChild(document.createTextNode(this._formatDisplay(value, colDef)));
+      }
 
       // popup 트리거 아이콘
       if (colDef.editor === 'popup' && isEditable) {

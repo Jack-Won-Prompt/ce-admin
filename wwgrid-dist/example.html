@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>wwGrid 예제</title>
+
+<!-- 넣을 것은 이 두 줄뿐이다 -->
+<link rel="stylesheet" href="wwGrid.css">
+
+<style>
+  body { margin: 0; padding: 24px; background: #F3F5F7;
+         font-family: -apple-system, 'Pretendard', 'Malgun Gothic', sans-serif; }
+  h1   { font-size: 18px; margin: 0 0 4px; }
+  p    { font-size: 13px; color: #656C74; margin: 0 0 16px; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .bar button { padding: 6px 12px; font-size: 13px; border: 1px solid #E8EAEC;
+                background: #fff; border-radius: 8px; cursor: pointer; }
+  .bar button:hover { border-color: #28798B; color: #28798B; }
+  .bar .note { font-size: 12px; color: #656C74; margin-left: auto; }
+  .card { background: #fff; border-radius: 12px; padding: 12px; }
+  .rowbtn { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
+            font-size: 11px; font-weight: 700; border: 1px solid #E8EAEC; border-radius: 6px;
+            background: #fff; color: #464C53; cursor: pointer; text-decoration: none; }
+  .rowbtn:hover { border-color: #28798B; color: #28798B; }
+</style>
+</head>
+<body>
+
+<h1>wwGrid 예제</h1>
+<p>파일 두 개만 넣으면 이렇게 동작한다. 행을 더블클릭해 보고, 셀 안 버튼도 눌러 보라.</p>
+
+<div class="bar">
+  <button onclick="showChecked()">체크한 행 보기</button>
+  <button onclick="showChanged()">고친 행 보기</button>
+  <button onclick="grid.downloadExcel()">엑셀 저장</button>
+  <span class="note">수량·비고 칸은 더블클릭하면 고칠 수 있다</span>
+</div>
+
+<div class="card">
+  <div id="demoGrid"></div>
+</div>
+
+<script src="wwGrid.js"></script>
+<script>
+const rows = [
+  { id: 1, name: '김철수', phone: '010-1111-2222', grade: 'A', qty: 3, memo: '',  file: '#a' },
+  { id: 2, name: '이영희', phone: '010-3333-4444', grade: 'B', qty: 1, memo: '',  file: '#b' },
+  { id: 3, name: '박민수', phone: '010-5555-6666', grade: 'A', qty: 7, memo: '재고 확인', file: '' },
+  { id: 4, name: '<b>태그가 든 이름</b>', phone: '010-7777-8888', grade: 'C', qty: 0, memo: '', file: '' },
+];
+
+const grid = new wwGrid({
+  el: document.getElementById('demoGrid'),
+  height: 360,
+  rowCheckbox: true,
+  rowNumber: true,
+  editable: true,
+  toolbar: false,                       // 위 버튼 줄을 직접 만들었으므로 끈다
+  footer: { total: true, selected: true, modified: true },
+  columns: [
+    { header: '이름',   name: 'name',  width: 170 },
+    { header: '전화번호', name: 'phone', width: 140 },
+    { header: '등급',   name: 'grade', width: 90, align: 'center',
+      editor: 'combo', options: ['A', 'B', 'C'] },
+    { header: '수량',   name: 'qty',   width: 80, align: 'right', editor: 'number' },
+    { header: '비고',   name: 'memo',  width: 160, editor: 'text' },
+    {
+      // 셀에 버튼을 넣는 자리 — 값이 아니라 '노드' 를 돌려준다
+      header: '서류', name: 'file', width: 120, sortable: false, exportable: false,
+      renderer: (value, row) => {
+        if (!value) {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'rowbtn'; b.disabled = true;
+          b.style.opacity = .4; b.textContent = '없음';
+          b.title = '이 행에는 서류가 없습니다';
+          return b;
+        }
+        const a = document.createElement('a');
+        a.className = 'rowbtn'; a.href = value; a.textContent = '내려받기';
+        a.addEventListener('click', (e) => { e.preventDefault(); alert(row.name + ' 서류'); });
+        return a;
+      },
+    },
+  ],
+  data: rows,
+});
+
+/* 행 더블클릭 — 셀 안 버튼을 누른 것은 제외한다 */
+document.getElementById('demoGrid').addEventListener('dblclick', function (e) {
+  if (e.target.closest('a, button, input, select')) return;
+  const cell = e.target.closest('[data-row-index]');
+  if (!cell) return;
+  const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+  if (!row) return;
+  window.getSelection()?.removeAllRanges();
+  alert('행 더블클릭: ' + row.name);
+});
+
+function showChecked() {
+  const c = grid.getCheckedRows();
+  alert(c.length ? c.map(r => r.name).join('\n') : '체크한 행이 없습니다.');
+}
+function showChanged() {
+  const m = grid.getModifiedRows();
+  alert(m.length ? JSON.stringify(m.map(r => r.changed), null, 2) : '고친 행이 없습니다.');
+}
+</script>
+</body>
+</html>

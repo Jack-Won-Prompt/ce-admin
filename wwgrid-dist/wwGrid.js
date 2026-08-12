@@ -913,8 +913,8 @@ class wwGrid {
       return col;
     };
 
-    if (this.rowCheckbox) addCol(36);
-    if (this.rowNumber)   addCol(40);
+    if (this.rowCheckbox) addCol(40);
+    if (this.rowNumber)   addCol(60);   // Figma No 컬럼 60px
     this.columns.forEach(c => {
       this._colMap[c.name] = addCol(c.width || null);
     });
@@ -935,6 +935,9 @@ class wwGrid {
     // 너비는 colgroup <col>이 관리 — th.style.width 미사용
 
     const inner = document.createElement('div');
+    // 헤더 제목은 컬럼 정렬과 무관하게 항상 가운데로 둔다(운영 요청).
+    // Figma 시안은 좌측이지만, 컬럼 수가 많은 목록에서 제목이 가운데인 쪽이
+    // 열 경계를 읽기 쉽다는 판단이다.
     inner.className = 'cg-th-inner' + (sortable ? ' sortable' : '');
     inner.innerHTML = `<span>${label}</span><span class="cg-sort-icon"></span>`;
 
@@ -1042,7 +1045,9 @@ class wwGrid {
         inner.appendChild(dot);
       }
       /* 셀을 직접 그리는 컬럼 — renderer(value, row, rowIndex, col) 가 노드를 준다.
-         값에서 만든 HTML 문자열이 아니라 호출한 쪽이 만든 노드만 받는다. */
+         셀은 원래 글자만 담는다. 행마다 버튼을 두어야 하는 목록이 생겨 열어 둔다.
+         값에서 만든 HTML 문자열을 붙이지 않고 호출한 쪽이 만든 노드만 받으므로,
+         데이터가 태그를 물고 있어도 그대로 그려지지 않는다. */
       if (typeof col.renderer === 'function') {
         const node = col.renderer(cellValue, row, rowIndex, col);
         if (node instanceof Node) {
@@ -1402,6 +1407,11 @@ class wwGrid {
 
     if (colDef.editor === 'number') {
       value = value === '' ? '' : Number(value);
+    } else if (colDef.editor === 'combo' && Array.isArray(colDef.options)) {
+      // <select>.value 는 항상 문자열 → 옵션의 원래 타입(숫자 등) 값으로 복원.
+      // 그래야 셀 표시(라벨 해석)·변경 감지·저장이 원본 데이터 타입과 일치한다.
+      const opt = colDef.options.find(o => String(typeof o === 'object' ? o.value : o) === value);
+      if (opt) value = typeof opt === 'object' ? opt.value : opt;
     }
 
     this._calendar.close();
@@ -1556,7 +1566,18 @@ class wwGrid {
         dot.title = `원본: ${_rcMod.original[colName]}`;
         inner.appendChild(dot);
       }
-      inner.appendChild(document.createTextNode(this._formatDisplay(value, colDef)));
+      /* 셀을 직접 그리는 컬럼 — _makeCell 과 같은 규칙을 쓴다.
+         이 경로를 빠뜨리면 한 칸을 고쳤을 때 그 행의 버튼이 글자로 되돌아간다. */
+      if (typeof colDef.renderer === 'function') {
+        const node = colDef.renderer(value, this.data[rowIndex], rowIndex, colDef);
+        if (node instanceof Node) {
+          inner.appendChild(node);
+        } else if (node !== null && node !== undefined && node !== false) {
+          inner.appendChild(document.createTextNode(String(node)));
+        }
+      } else {
+        inner.appendChild(document.createTextNode(this._formatDisplay(value, colDef)));
+      }
 
       // popup 트리거 아이콘
       if (colDef.editor === 'popup' && isEditable) {

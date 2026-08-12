@@ -1949,7 +1949,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <select class="form-control" id="f-guardian-relation" style="flex:1;">
                     @php $gRel = $prescription->counseling?->guardian_relation ?? ''; @endphp
                     <option value="">선택</option>
-                    @foreach(['부','모','조부','조모','법정대리인','기타'] as $r)
+                    @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
                       <option value="{{ $r }}" {{ $gRel === $r ? 'selected' : '' }}>{{ $r }}</option>
                     @endforeach
                   </select>

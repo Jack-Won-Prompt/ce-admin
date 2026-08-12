@@ -339,7 +339,7 @@
         <label>환자와의 관계 <span style="color:#ef4444;">*</span></label>
         <select id="gRelation" onchange="refreshAgree()">
           <option value="">선택</option>
-          @foreach(['부','모','조부','조모','법정대리인','기타'] as $r)
+          @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
             <option value="{{ $r }}" {{ $consent->guardian_relation === $r ? 'selected' : '' }}>{{ $r }}</option>
           @endforeach
         </select>
