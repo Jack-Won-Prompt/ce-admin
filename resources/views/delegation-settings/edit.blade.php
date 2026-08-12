@@ -89,7 +89,61 @@
       </div>
       <div class="ds-hint" style="margin-top:8px;">기본값: X=164, Y=266, 너비=28 (A4 기준, "(서명 또는 인)" 위).</div>
     </div>
+
+    <div class="ds-card">
+      <h3><i class="bx bx-user-check"></i> 보호자 서명 위치 (미성년자, 단위 mm)</h3>
+      <div class="ds-grid">
+        <div class="ds-field"><label>X (좌우)</label><input type="number" step="0.1" name="gsig_x" value="{{ old('gsig_x', $setting->gsig_x ?? config('delegation.guardian_signature.x')) }}"></div>
+        <div class="ds-field"><label>Y (상하)</label><input type="number" step="0.1" name="gsig_y" value="{{ old('gsig_y', $setting->gsig_y ?? config('delegation.guardian_signature.y')) }}"></div>
+        <div class="ds-field"><label>너비 (크기)</label><input type="number" step="0.1" name="gsig_w" value="{{ old('gsig_w', $setting->gsig_w ?? config('delegation.guardian_signature.w')) }}"></div>
+      </div>
+      <div class="ds-hint" style="margin-top:8px;">
+        위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만일 때만 찍힙니다.
+      </div>
+    </div>
     </div>{{-- /ds-cards --}}
+
+    {{-- ── 글자 항목 위치 ────────────────────────────────────
+         서명과 같은 방식으로 항목마다 위치를 정한다. 예전에는 이 값들이 코드에 박혀 있어
+         양식이 조금만 달라져도 배포를 해야 했다. --}}
+    <div class="ds-card" style="margin-top:16px;">
+      <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
+      <div class="ds-hint" style="margin-bottom:12px;">
+        X는 왼쪽에서, Y는 위에서 잰 거리입니다(A4 = 210 × 297). 값이 비면 기본값을 씁니다.
+        고친 뒤 <b>위임장 PDF</b>를 내려받아 자리를 확인하세요.
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:var(--gray-50);">
+              <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;">항목</th>
+              <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;width:110px;">X (좌우)</th>
+              <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;width:110px;">Y (상하)</th>
+              <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;width:110px;">글자 크기</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($fields as $key => $f)
+            <tr>
+              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">{{ $f['label'] }}</td>
+              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
+                <input type="number" step="0.1" min="0" max="210" style="width:100%;"
+                       name="fields[{{ $key }}][x]" value="{{ old("fields.$key.x", $f['x']) }}">
+              </td>
+              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
+                <input type="number" step="0.1" min="0" max="297" style="width:100%;"
+                       name="fields[{{ $key }}][y]" value="{{ old("fields.$key.y", $f['y']) }}">
+              </td>
+              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
+                <input type="number" step="0.5" min="4" max="20" style="width:100%;"
+                       name="fields[{{ $key }}][size]" value="{{ old("fields.$key.size", $f['size'] ?? 8) }}">
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <button type="submit" class="btn btn-primary" style="margin-top:16px;"><i class="bx bx-save"></i> 설정 저장</button>
   </form>

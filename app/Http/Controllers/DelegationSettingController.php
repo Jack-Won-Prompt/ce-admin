@@ -12,8 +12,12 @@ class DelegationSettingController extends Controller
 {
     public function edit(): View
     {
+        $setting = DelegationSetting::current();
+
         return view('delegation-settings.edit', [
-            'setting' => DelegationSetting::current(),
+            'setting' => $setting,
+            // config 기본값 위에 저장된 좌표를 덮은 것 — 화면은 이것 하나만 본다
+            'fields'  => $setting->fields(),
         ]);
     }
 
@@ -32,7 +36,31 @@ class DelegationSettingController extends Controller
             'sig_x'            => 'required|numeric|min:0|max:210',
             'sig_y'            => 'required|numeric|min:0|max:297',
             'sig_w'            => 'required|numeric|min:5|max:80',
+            'gsig_x'           => 'nullable|numeric|min:0|max:210',
+            'gsig_y'           => 'nullable|numeric|min:0|max:297',
+            'gsig_w'           => 'nullable|numeric|min:5|max:80',
+            // 글자 항목 좌표 — A4 밖으로 나가면 종이에 안 찍힌다
+            'fields'           => 'nullable|array',
+            'fields.*.x'       => 'nullable|numeric|min:0|max:210',
+            'fields.*.y'       => 'nullable|numeric|min:0|max:297',
+            'fields.*.size'    => 'nullable|numeric|min:4|max:20',
         ]);
+
+        /* config 에 있는 항목만 받아 둔다. 화면에서 온 이름을 그대로 믿고 저장하면
+           쓰이지 않는 값이 쌓이고, 나중에 어느 것이 진짜인지 알 수 없게 된다. */
+        $known  = array_keys(DelegationSetting::defaultFields());
+        $fields = [];
+        foreach ((array) ($data['fields'] ?? []) as $key => $v) {
+            if (!in_array($key, $known, true)) continue;
+            $row = array_filter([
+                'x'    => $v['x']    ?? null,
+                'y'    => $v['y']    ?? null,
+                'size' => $v['size'] ?? null,
+            ], fn ($n) => $n !== null && $n !== '');
+            if ($row) $fields[$key] = array_map('floatval', $row);
+        }
+        unset($data['fields']);
+        $data['field_positions'] = $fields ?: null;
 
         $setting = DelegationSetting::current();
         $setting->update($data);

@@ -30,6 +30,43 @@ final class ResidentNo
     }
 
     /** 화면·목록·엑셀에 쓰는 표기. 앞 7자리까지만 드러낸다. */
+    /**
+     * 마스킹된 값만으로 생년월일을 뽑는다 — '531019-2******' → 1953-10-19.
+     *
+     * 복호화하지 않는다. 앞 7자리는 마스킹에도 남아 있고, 나이를 알려고 원문을 여는 것은
+     * 과한 처리다(P0-1). 뒷자리 첫 숫자가 세기와 국적을 가른다.
+     *   1·2·5·6 → 1900년대   3·4·7·8 → 2000년대   9·0 → 1800년대
+     */
+    public static function birthDateFromMasked(?string $masked): ?\Carbon\Carbon
+    {
+        if (!preg_match('/^(\d{2})(\d{2})(\d{2})\s*-?\s*(\d)/', (string) $masked, $m)) {
+            return null;
+        }
+        [, $yy, $mm, $dd, $g] = $m;
+
+        $century = match ((int) $g) {
+            1, 2, 5, 6 => 1900,
+            3, 4, 7, 8 => 2000,
+            9, 0       => 1800,
+            default    => null,
+        };
+        if ($century === null) return null;
+
+        $y = $century + (int) $yy;
+        if (!checkdate((int) $mm, (int) $dd, $y)) return null;
+
+        return \Carbon\Carbon::createFromDate($y, (int) $mm, (int) $dd)->startOfDay();
+    }
+
+    /** 만 나이가 기준보다 어린가. 생년월일을 못 읽으면 null — '모른다'와 '아니다'는 다르다. */
+    public static function isMinorByMasked(?string $masked, ?int $age = null): ?bool
+    {
+        $birth = self::birthDateFromMasked($masked);
+        if (!$birth) return null;
+
+        return $birth->age < ($age ?? (int) config('delegation.minor_age', 19));
+    }
+
     public static function mask(?string $value): ?string
     {
         $d = self::normalize($value);

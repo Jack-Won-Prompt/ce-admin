@@ -1512,13 +1512,21 @@ class PrescriptionController extends Controller
         $token       = \Illuminate\Support\Str::random(24);
         $expiresAt   = now()->addMinutes(30);
 
+        /* 미성년자는 혼자 위임할 수 없다. 서명 화면에서 법정대리인의 이름과 서명을 함께 받는다.
+           나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
+        $masked = $prescription->resident_no_ocr_masked ?: $prescription->patient?->masked_resident_no;
+        $birth  = \App\Support\ResidentNo::birthDateFromMasked($masked);
+        $isMinor = $birth ? $birth->age < (int) config('delegation.minor_age', 19) : false;
+
         $consent = \App\Models\PrescriptionConsent::create([
-            'prescription_id' => $prescription->id,
-            'token'           => $token,
-            'patient_name'    => $patientName,
-            'patient_mobile'  => $mobile,
-            'expires_at'      => $expiresAt,
-            'status'          => 'pending',
+            'prescription_id'    => $prescription->id,
+            'token'              => $token,
+            'patient_name'       => $patientName,
+            'patient_mobile'     => $mobile,
+            'expires_at'         => $expiresAt,
+            'status'             => 'pending',
+            'is_minor'           => $isMinor,
+            'patient_birth_date' => $birth?->toDateString(),
         ]);
 
         $baseUrl = rtrim(config('app.consent_public_url', config('app.url')), '/');

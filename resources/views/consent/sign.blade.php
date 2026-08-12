@@ -156,6 +156,27 @@
       transition: border-color .2s;
     }
     .sig-wrap.active { border-color: #28798B; border-style: solid; }
+
+    /* ── 보호자(법정대리인) 칸 ── */
+    .g-field { margin-bottom: 10px; }
+    .g-field label { display: block; font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 4px; }
+    .g-field input, .g-field select {
+      width: 100%; padding: 11px 12px; font-size: 15px; line-height: 1.4;
+      border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: #111827;
+      -webkit-appearance: none; appearance: none;
+    }
+    .g-field input:focus, .g-field select:focus { outline: none; border-color: #28798B; }
+    .g-field input[readonly] { background: #f3f4f6; color: #6b7280; }
+    /* 신분증 올리기 — 손가락으로 누르기 쉬운 크기로 */
+    .g-upload {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 120px; padding: 14px;
+      border: 2px dashed #d1d5db; border-radius: 10px; background: #fff;
+      cursor: pointer; text-align: center; color: #9ca3af;
+    }
+    .g-upload:active { border-color: #28798B; }
+    .g-upload.has-file { border-style: solid; border-color: #28798B; padding: 8px; }
+    #gIdEmpty { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; }
     .sig-wrap canvas {
       display: block;
       width: 100%;
@@ -294,6 +315,78 @@
       </div>
     </div>
 
+    @if($consent->is_minor)
+    {{-- ── 미성년자 — 법정대리인 ──────────────────────────────
+         만 19세 미만은 혼자 위임할 수 없다. 보호자의 이름·관계·서명·신분증을 함께 받는다. --}}
+    <div class="sig-section" id="guardianBlock">
+      <div class="sig-label" style="display:block;margin-bottom:10px;">
+        보호자(법정대리인) 확인 <span style="color:#ef4444;font-size:11px;">* 필수</span>
+        <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
+          위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만이라 보호자 확인이 필요합니다.
+        </div>
+      </div>
+
+      <div class="g-field">
+        <label>환자 성명</label>
+        <input type="text" id="gPatientName" value="{{ $consent->patient_name }}" readonly />
+      </div>
+      <div class="g-field">
+        <label>환자 생년월일</label>
+        <input type="text" id="gPatientBirth" value="{{ $consent->patient_birth_date?->format('Y-m-d') }}" readonly />
+      </div>
+      <div class="g-field">
+        <label>보호자 성명 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="gName" maxlength="50" placeholder="보호자 이름" oninput="refreshAgree()" />
+      </div>
+      <div class="g-field">
+        <label>환자와의 관계 <span style="color:#ef4444;">*</span></label>
+        <select id="gRelation" onchange="refreshAgree()">
+          <option value="">선택</option>
+          <option value="부">부</option>
+          <option value="모">모</option>
+          <option value="조부">조부</option>
+          <option value="조모">조모</option>
+          <option value="법정대리인">법정대리인</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+
+      <div class="sig-label" style="margin-top:14px;">
+        보호자 서명 <span style="color:#ef4444;font-size:11px;">* 필수</span>
+        <button class="sig-clear" type="button" onclick="clearGuardianSignature()">지우기</button>
+      </div>
+      <div class="sig-wrap" id="gSigWrap">
+        <canvas id="gSigCanvas" height="180"></canvas>
+        <div class="sig-placeholder" id="gSigPlaceholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+          </svg>
+          <span>보호자가 이 곳에 서명하세요</span>
+        </div>
+      </div>
+
+      <div class="sig-label" style="margin-top:14px;display:block;">
+        보호자 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
+        <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
+          주민등록증ㆍ운전면허증 등. 사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)
+        </div>
+      </div>
+      <label class="g-upload" id="gIdDrop">
+        <input type="file" id="gIdFile" accept="image/jpeg,image/png,image/heic,image/heif"
+               capture="environment" style="display:none;" onchange="onGuardianIdPick(this)" />
+        <div id="gIdEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:26px;height:26px;">
+            <path d="M3 7a2 2 0 012-2h3l1.5-2h5L19 5h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+            <circle cx="12" cy="12.5" r="3.5"/>
+          </svg>
+          <span>신분증 사진 올리기</span>
+        </div>
+        <img id="gIdPreview" style="display:none;max-width:100%;max-height:220px;border-radius:8px;" alt="" />
+      </label>
+      <div id="gIdName" style="display:none;font-size:12px;color:#6b7280;margin-top:6px;text-align:center;"></div>
+    </div>
+    @endif
+
     {{-- 버튼 --}}
     <div class="btn-row">
       <button class="btn btn-cancel" type="button" id="btnDecline" onclick="submitConsent('declined')">거절</button>
@@ -390,9 +483,125 @@ function onMove(e) {
 function onEnd() { drawing = false; }
 
 /* 동의 버튼 활성화 조건: 서명 완료 + (본인확인 강제 시) 본인확인 완료 */
+/* ── 보호자(법정대리인) — 미성년자일 때만 화면에 있다 ────────── */
+const IS_MINOR = @json((bool) $consent->is_minor);
+let gHasSig = false, gIdData = null;
+
+function guardianReady() {
+  if (!IS_MINOR) return true;
+  const name = (document.getElementById('gName')?.value ?? '').trim();
+  const rel  = document.getElementById('gRelation')?.value ?? '';
+  return !!(name && rel && gHasSig && gIdData);
+}
+
 function refreshAgree() {
-  const ok = hasSig && (!NICE_ENFORCE || identityVerified);
+  const ok = hasSig && (!NICE_ENFORCE || identityVerified) && guardianReady();
   document.getElementById('btnAgree').disabled = !ok;
+}
+
+/* 보호자 서명판 — 위 서명판과 같은 방식이다. 캔버스만 다르다. */
+let gCanvas = null, gCtx = null, gDrawing = false;
+
+if (IS_MINOR) {
+  gCanvas = document.getElementById('gSigCanvas');
+  const gWrap = document.getElementById('gSigWrap');
+  const gPh   = document.getElementById('gSigPlaceholder');
+
+  const gResize = () => {
+    const r   = gCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    gCanvas.width  = r.width * dpr;
+    gCanvas.height = 180 * dpr;
+    gCtx = gCanvas.getContext('2d');
+    gCtx.scale(dpr, dpr);
+    gCtx.strokeStyle = '#28798B';
+    gCtx.lineWidth   = 2.5;
+    gCtx.lineCap     = 'round';
+    gCtx.lineJoin    = 'round';
+  };
+  gResize();
+  window.addEventListener('resize', gResize);
+
+  const gPos = (e) => {
+    const rect = gCanvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  };
+  const gStart = (e) => {
+    e.preventDefault();
+    gDrawing = true;
+    const p = gPos(e);
+    gCtx.beginPath(); gCtx.moveTo(p.x, p.y);
+    gWrap.classList.add('active');
+    gPh.style.opacity = '0';
+  };
+  const gMove = (e) => {
+    if (!gDrawing) return;
+    e.preventDefault();
+    const p = gPos(e);
+    gCtx.lineTo(p.x, p.y); gCtx.stroke();
+    gHasSig = true;
+    refreshAgree();
+  };
+  const gEnd = () => { gDrawing = false; };
+
+  gCanvas.addEventListener('mousedown',  gStart);
+  gCanvas.addEventListener('mousemove',  gMove);
+  gCanvas.addEventListener('mouseup',    gEnd);
+  gCanvas.addEventListener('mouseleave', gEnd);
+  gCanvas.addEventListener('touchstart', gStart, { passive: false });
+  gCanvas.addEventListener('touchmove',  gMove,  { passive: false });
+  gCanvas.addEventListener('touchend',   gEnd);
+}
+
+function clearGuardianSignature() {
+  if (!gCanvas) return;
+  gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+  gHasSig = false;
+  document.getElementById('gSigWrap').classList.remove('active');
+  document.getElementById('gSigPlaceholder').style.opacity = '1';
+  refreshAgree();
+}
+
+/* 신분증 — 파일을 그대로 올리지 않고 브라우저에서 줄여 보낸다.
+   요즘 휴대폰 사진은 한 장에 5MB 를 넘어 그대로 보내면 자주 실패한다. */
+function onGuardianIdPick(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려주세요.', { tone: 'warning' });
+    input.value = ''; return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width  = Math.round(img.width  * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      gIdData = c.toDataURL('image/jpeg', 0.82);
+
+      const prev = document.getElementById('gIdPreview');
+      prev.src = gIdData;
+      prev.style.display = '';
+      document.getElementById('gIdEmpty').style.display = 'none';
+      document.getElementById('gIdDrop').classList.add('has-file');
+      const nm = document.getElementById('gIdName');
+      nm.textContent = file.name + ' — 다시 누르면 바꿀 수 있습니다';
+      nm.style.display = '';
+      refreshAgree();
+    };
+    img.onerror = () => {
+      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해주세요.', { tone: 'warning' });
+      input.value = '';
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 canvas.addEventListener('mousedown',  onStart);
@@ -524,6 +733,10 @@ async function submitConsent(action) {
     ceAlert('서명을 먼저 해주세요.', { tone: 'warning' });
     return;
   }
+  if (action === 'agreed' && IS_MINOR && !guardianReady()) {
+    ceAlert('보호자 성명ㆍ관계ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
+    return;
+  }
 
   const btnAgree   = document.getElementById('btnAgree');
   const btnDecline = document.getElementById('btnDecline');
@@ -533,6 +746,12 @@ async function submitConsent(action) {
   const body = { action };
   if (action === 'agreed') {
     body.signature = canvas.toDataURL('image/png');
+    if (IS_MINOR) {
+      body.guardian_name      = document.getElementById('gName').value.trim();
+      body.guardian_relation  = document.getElementById('gRelation').value;
+      body.guardian_signature = gCanvas.toDataURL('image/png');
+      body.guardian_id        = gIdData;
+    }
   }
 
   try {

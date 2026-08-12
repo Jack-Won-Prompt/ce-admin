@@ -18,6 +18,14 @@ class PrescriptionConsent extends Model
         'expires_at',
         'responded_at',
         'pdf_path',
+        // 미성년자 — 법정대리인
+        'is_minor',
+        'patient_birth_date',
+        'guardian_name',
+        'guardian_relation',
+        'guardian_signature_data',
+        'guardian_id_path',
+        'guardian_id_mime',
         // NICE 본인확인 결과
         'nice_verified_at',
         'nice_name',
@@ -33,8 +41,10 @@ class PrescriptionConsent extends Model
     ];
 
     protected $casts = [
-        'expires_at'       => 'datetime',
-        'responded_at'     => 'datetime',
+        'expires_at'         => 'datetime',
+        'responded_at'       => 'datetime',
+        'is_minor'           => 'boolean',
+        'patient_birth_date' => 'date',
         'nice_verified_at' => 'datetime',
         // CI/DI 는 민감식별정보 → 애플리케이션 레벨 암호화 저장
         'nice_ci'          => 'encrypted',

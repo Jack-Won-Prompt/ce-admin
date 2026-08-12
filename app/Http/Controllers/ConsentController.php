@@ -60,9 +60,25 @@ class ConsentController extends Controller
         }
 
         $request->validate([
-            'action'    => 'required|in:agreed,declined',
-            'signature' => 'nullable|string|max:500000',
+            'action'             => 'required|in:agreed,declined',
+            'signature'          => 'nullable|string|max:500000',
+            // 미성년자 — 법정대리인
+            'guardian_name'      => 'nullable|string|max:50',
+            'guardian_relation'  => 'nullable|string|max:50',
+            'guardian_signature' => 'nullable|string|max:500000',
+            'guardian_id'        => 'nullable|string|max:8000000',
         ]);
+
+        /* 미성년자는 혼자 위임할 수 없다. 화면에서도 막지만, 화면을 거치지 않고 들어오는
+           요청이 있으므로 서버에서 다시 본다. */
+        if ($request->action === 'agreed' && $consent->is_minor) {
+            foreach (['guardian_name' => '보호자 성명', 'guardian_relation' => '보호자 관계',
+                      'guardian_signature' => '보호자 서명', 'guardian_id' => '보호자 신분증'] as $k => $label) {
+                if (!trim((string) $request->input($k))) {
+                    return response()->json(['success' => false, 'message' => "{$label}이(가) 필요합니다."], 422);
+                }
+            }
+        }
 
         // NICE 본인확인 강제: 동의 서명은 본인확인 완료 후에만 허용
         if ($request->action === 'agreed'
@@ -75,11 +91,22 @@ class ConsentController extends Controller
             ], 422);
         }
 
-        $consent->update([
+        $payload = [
             'status'         => $request->action,
             'signature_data' => $request->action === 'agreed' ? $request->input('signature') : null,
             'responded_at'   => now(),
-        ]);
+        ];
+
+        if ($request->action === 'agreed' && $consent->is_minor) {
+            $payload['guardian_name']           = trim((string) $request->input('guardian_name'));
+            $payload['guardian_relation']       = trim((string) $request->input('guardian_relation'));
+            $payload['guardian_signature_data'] = $request->input('guardian_signature');
+            // 신분증은 본문에 담지 않고 파일로 둔다. 공개되지 않는 디스크에 쓴다.
+            [$payload['guardian_id_path'], $payload['guardian_id_mime']] =
+                $this->storeGuardianId($consent, (string) $request->input('guardian_id'));
+        }
+
+        $consent->update($payload);
 
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
@@ -103,6 +130,32 @@ class ConsentController extends Controller
             'success' => true,
             'action'  => $request->action,
         ]);
+    }
+
+    /**
+     * 보호자 신분증을 파일로 저장한다.
+     *
+     * 신분증은 주민등록증·운전면허증이라 그 자체가 고유식별정보를 담는다. DB 본문에 두지 않고
+     * 공개되지 않는 디스크에 쓰고 경로만 남긴다(처방전 이미지와 같은 취급).
+     *
+     * @return array{0: ?string, 1: ?string} [경로, mime]
+     */
+    private function storeGuardianId(PrescriptionConsent $consent, string $dataUrl): array
+    {
+        if (!preg_match('#^data:(image/[\w.+-]+);base64,(.+)$#s', $dataUrl, $m)) {
+            return [null, null];
+        }
+        $bytes = base64_decode($m[2], true);
+        if ($bytes === false || $bytes === '') {
+            return [null, null];
+        }
+
+        $ext  = match ($m[1]) { 'image/png' => 'png', 'image/heic', 'image/heif' => 'heic', default => 'jpg' };
+        $path = 'consents/guardian-id/' . $consent->id . '_' . \Illuminate\Support\Str::random(16) . '.' . $ext;
+
+        \Illuminate\Support\Facades\Storage::put($path, $bytes);
+
+        return [$path, $m[1]];
     }
 
     /**
@@ -536,6 +589,20 @@ class ConsentController extends Controller
                 // 서명 오버레이 ('@': 원본 이미지 데이터 직접 사용, 알파채널 PNG는 GD로 처리)
                 $pdf->Image('@' . $imgData, $sigX, $sigY, $sigW, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
 
+                // 미성년자면 법정대리인 서명도 함께 찍는다
+                if ($consent->is_minor && $consent->guardian_signature_data) {
+                    $graw = $consent->guardian_signature_data;
+                    if (preg_match('#^data:image/\w+;base64,(.+)$#s', $graw, $gm)) $graw = $gm[1];
+                    $gimg = base64_decode($graw, true);
+                    if ($gimg !== false && $gimg !== '') {
+                        $pdf->Image('@' . $gimg,
+                            (float) config('delegation.guardian_signature.x', 164),
+                            (float) config('delegation.guardian_signature.y', 280),
+                            (float) config('delegation.guardian_signature.w', 28),
+                            0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+                    }
+                }
+
                 // 서명일(년/월/일)은 서명 위에 얹어 가독성 확보
                 $sd = $consent->responded_at ?? now();
                 $pdf->SetTextColor(0, 0, 0);
@@ -614,32 +681,46 @@ class ConsentController extends Controller
         $ed      = $sd->copy()->addYears($py);
 
         $pdf->SetTextColor(0, 0, 0);
-        $put = function (float $x, float $y, ?string $t, float $size = 8) use ($pdf, $fontName): void {
+
+        /* 좌표는 설정에서 온다. 예전에는 이 자리에 숫자가 박혀 있어 양식이 조금만 달라져도
+           배포를 해야 했다. 화면(위임장 설정)에서 항목마다 x·y·글자크기를 고친다. */
+        $fields = (array) config('delegation.fields', []);
+        $put = function (string $key, ?string $t) use ($pdf, $fontName, $fields): void {
             $t = trim((string) $t);
-            if ($t === '') {
+            $f = $fields[$key] ?? null;
+            if ($t === '' || !$f) {
                 return;
             }
-            $pdf->SetFont($fontName, '', $size);
-            $pdf->Text($x, $y, $t);
+            $pdf->SetFont($fontName, '', (float) ($f['size'] ?? 8));
+            $pdf->Text((float) $f['x'], (float) $f['y'], $t);
         };
 
         // ① 위임인
-        $put(133, 52, $consent->patient_name ?: $patient?->name);
-        // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1)
-        $put(133, 59, $patient?->residentNoFor('nhis_claim_form'));
-        $put(80, 90, $consent->patient_mobile ?: $patient?->mobile);
+        $put('patient_name', $consent->patient_name ?: $patient?->name);
+        // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
+        // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
+        $put('patient_rrn', $consent->prescription?->residentNoOcrFor('nhis_claim_form')
+                            ?: $patient?->residentNoFor('nhis_claim_form'));
+        $put('patient_mobile', $consent->patient_mobile ?: $patient?->mobile);
+
+        // 미성년자는 혼자 위임할 수 없다. 법정대리인의 이름·관계를 함께 적는다.
+        if ($consent->is_minor) {
+            $put('patient_birth',     $consent->patient_birth_date?->format('Y-m-d'));
+            $put('guardian_name',     $consent->guardian_name);
+            $put('guardian_relation', $consent->guardian_relation);
+        }
 
         // ② 준요양기관
-        $put(78, 116, $prov['name']   ?? '');
-        $put(78, 125, $prov['biz_no'] ?? '');
-        $put(78, 135, $prov['ceo']    ?? '');
-        $put(78, 144, $prov['phone']  ?? '');
+        $put('provider_name',   $prov['name']   ?? '');
+        $put('provider_biz_no', $prov['biz_no'] ?? '');
+        $put('provider_ceo',    $prov['ceo']    ?? '');
+        $put('provider_phone',  $prov['phone']  ?? '');
 
         // ③ 요양비 수령계좌
-        $put(100, 156, $acct['receiver'] ?? '');
-        $put(140, 163, $acct['bank']     ?? '');
-        $put(140, 171, $acct['holder']   ?? '');
-        $put(140, 179, $acct['number']   ?? '');
+        $put('account_receiver', $acct['receiver'] ?? '');
+        $put('account_bank',     $acct['bank']     ?? '');
+        $put('account_holder',   $acct['holder']   ?? '');
+        $put('account_number',   $acct['number']   ?? '');
 
         // ④ 위임사항 — 4) 자가도뇨 소모성 재료 체크
         // 폰트 글리프(✔) 대신 벡터 선으로 직접 그려 깨짐 방지 (작게, 왼쪽으로)
@@ -648,12 +729,12 @@ class ConsentController extends Controller
         $pdf->Line(61.8, 202.2, 64.1, 199.0);
 
         // ⑤ 위임기간 (서명일부터 N년) — 인쇄된 년/월/일 글자와 겹치지 않게 작게·여백 배치
-        $put(54, 246,  $sd->format('Y'), 7);
-        $put(73, 246,  $sd->format('n'), 7);
-        $put(83, 246,  $sd->format('j'), 7);
-        $put(108, 246, $ed->format('Y'), 7);
-        $put(128, 246, $ed->format('n'), 7);
-        $put(139, 246, $ed->format('j'), 7);
+        $put('period_from_y', $sd->format('Y'));
+        $put('period_from_m', $sd->format('n'));
+        $put('period_from_d', $sd->format('j'));
+        $put('period_to_y',   $ed->format('Y'));
+        $put('period_to_m',   $ed->format('n'));
+        $put('period_to_d',   $ed->format('j'));
     }
 
     /**
