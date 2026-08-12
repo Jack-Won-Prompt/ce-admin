@@ -156,7 +156,13 @@
     /* 접힘 폭이 64px 이라 사이드바 좌우 16px 패딩을 그대로 두면 내용이 32px 밖에 못 쓴다 */
     .layout-menu.collapsed { padding: 0 8px 8px; }
     .layout-menu.collapsed .menu-inner { padding: 8px; gap: 8px; }
-    .layout-menu.collapsed .app-brand { justify-content: center; padding: 0; height: var(--nav-h); }
+    /* 접힘 폭 64 - 좌우 패딩 16 = 내용 48px. 로고 28 + 버튼 28 을 가로로 두면 넘쳐서
+       justify-content:center 가 무력화되고 둘 다 사이드바 모서리에 붙는다.
+       세로로 쌓으면 28 + 4 + 28 = 60 이라 머리 높이 68 안에 들어가고 가운데 정렬이 살아난다 */
+    .layout-menu.collapsed .app-brand {
+      flex-direction: column; justify-content: center; gap: 4px;
+      padding: 0; height: var(--nav-h);
+    }
     .layout-menu.collapsed .app-brand > a { flex: 0 0 auto; min-width: 0; }
     .layout-menu.collapsed .app-brand-names { display: none; }
     .layout-menu.collapsed .menu-link { justify-content: center; padding: 8px 0; }
@@ -183,35 +189,45 @@
     .layout-menu.collapsed .menu-link:hover::after { opacity: 1; }
 
     /* Collapse toggle btn */
+    /* Figma 228:4332 은 16×16 chevron 만 있고 그 오른쪽 끝이 머리 padding 끝(16px 안쪽)에 붙는다.
+       28×28 조작 영역은 개발자가 넣은 것이라 남기되, margin-right -6px 로 통째로 6px 밀어
+       가운데 놓인 16px 아이콘의 오른쪽 끝이 시안 위치(16px 안쪽)에 오게 한다 */
     .menu-collapse-btn {
-      margin-left: auto; flex-shrink: 0;
+      margin-left: auto; margin-right: -6px; flex-shrink: 0;
       width: 28px; height: 28px; border-radius: 6px;
       background: transparent; border: none;
-      color: var(--text-muted); cursor: pointer;
+      color: var(--gray-500); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      font-size: 13px;
       transition: background .15s, color .15s;
     }
     .menu-collapse-btn:hover { background: var(--bg); color: var(--primary); }
-    .layout-menu.collapsed .menu-collapse-btn { margin-left: 0; }
+    .layout-menu.collapsed .menu-collapse-btn { margin-left: 0; margin-right: 0; }
     .menu-collapse-btn .ic-expanded { display: flex; }
     .menu-collapse-btn .ic-collapsed { display: none; }
+    /* 아이콘 파일이 « 하나뿐이라 접힘용은 좌우를 뒤집어 »(펼치기)로 읽히게 한다 */
+    .menu-collapse-btn .ic-collapsed { transform: scaleX(-1); }
     .layout-menu.collapsed .menu-collapse-btn .ic-expanded { display: none; }
     .layout-menu.collapsed .menu-collapse-btn .ic-collapsed { display: flex; }
 
     /* Brand */
-    /* 브랜드 영역 — Figma: height 68, padding 0 16, space-between, 좌측 gap 8
+    /* 브랜드 영역 — Figma 228:4332: 288×68, padding 0 16, space-between, itemSpacing 12
+       (로고묶음 안쪽 gap 8 · 이름묶음 gap 4 는 그대로)
        (사이드바가 페이지 배경 위에 얹히는 구조라 하단 구분선은 없다) */
     .app-brand {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 0 16px;
       min-height: var(--nav-h);
       text-decoration: none;
       flex-shrink: 0;
     }
+    /* 시안은 로고 이미지에 exposure -1 이 걸려 거의 검정(rgb 14,14,14)으로 나온다.
+       원본 PNG 는 불투명부가 전부 rgb 111 단색이라 brightness .127 이면 111×.127=14.1 → 14 로 떨어진다.
+       (에셋을 exposure 반영해 다시 내려받으면 이 filter 는 지운다) */
     .app-brand-logo {
       width: 28px; height: 28px; flex-shrink: 0;
       object-fit: cover; display: block;
+      filter: brightness(.127);
     }
     /* 워드마크가 이미지라 화면낭독기·검색에는 글자가 남아야 한다 */
     .visually-hidden {
