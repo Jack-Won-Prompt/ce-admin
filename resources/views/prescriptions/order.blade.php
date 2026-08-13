@@ -702,11 +702,27 @@
 
   /* ── 등록자 카드 (시안 137:652) ──
      머리줄 없이 탭 스위처로 시작하고, 아래에 역할별 한 줄씩 쌓는다. */
-  .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  /* 시안 148:279 — 카드 pad 12/16 · gap 12, 탭 스위처 h33 · r8 · pad 2 · bg gray-200 */
+  .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
   .rg-tabs { display:flex; padding:2px; background:var(--gray-200); border-radius:8px; }
   .rg-tab  { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 0;
-             border-radius:6px; font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-700); }
+             border:none; background:none; cursor:pointer;
+             border-radius:6px; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   .rg-tab.active { background:var(--gray-0); color:var(--gray-1000); }
+  /* OCR 신뢰도 탭 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
+  .rg-ocr      { display:flex; flex-direction:column; gap:12px; }
+  .rg-ocr-meter{ display:flex; align-items:center; gap:12px; }
+  .rg-ocr-bar  { flex:1; min-width:0; height:8px; border-radius:999px; background:var(--gray-200); overflow:hidden; }
+  .rg-ocr-bar span { display:block; height:100%; border-radius:999px; background:var(--primary); }
+  .rg-ocr-val  { flex-shrink:0; font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
+  .rg-ocr-acts { display:flex; gap:6px; }
+  .rg-ocr-btn  { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+                 height:28px; padding:0 12px; border-radius:8px;
+                 background:var(--gray-0); border:1px solid var(--gray-200);
+                 font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
+                 cursor:pointer; white-space:nowrap; }
+  .rg-ocr-btn:hover { background:var(--gray-50); }
+  .rg-ocr-btn i { font-size:12px; }
   .rg-rows { display:flex; flex-direction:column; }
   .rg-row  { display:flex; align-items:center; gap:8px; padding:8px; background:var(--gray-0);
              border-bottom:1px solid var(--gray-200); }
@@ -1809,11 +1825,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
-      {{-- 등록자 카드 (OCR 신뢰도 표시는 제거, 재분석·초기화 동작만 유지) --}}
+      {{-- 등록자 카드 — 탭 두 개(시안 137:653 등록자 · 148:279 OCR 신뢰도) --}}
       <div class="vw-card rg-card">
-        {{-- 탭 스위처 (시안 137:653) — OCR 신뢰도 탭은 넣지 않는다 --}}
-        <div class="rg-tabs">
-          <span class="rg-tab active">등록자</span>
+        {{-- 탭 스위처 — 시안 296×33 · r8 · pad 2 · bg gray-200, 탭 146×29 · r6 · 13/500 --}}
+        <div class="rg-tabs" role="tablist">
+          <button type="button" class="rg-tab active" id="rgTabUploader"
+                  role="tab" aria-selected="true" onclick="rgTab('uploader')">등록자</button>
+          <button type="button" class="rg-tab" id="rgTabOcr"
+                  role="tab" aria-selected="false" onclick="rgTab('ocr')">OCR 신뢰도</button>
         </div>
 
         {{-- 역할별 한 줄 (시안 137:658) --}}
@@ -1852,7 +1871,30 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
         @endif
 
-        {{-- 재분석·초기화 버튼 줄은 뺐다. 원본 복원은 아코디언 머리에 있다. --}}
+        {{-- OCR 신뢰도 탭 (시안 148:279)
+             막대 252×8 · r999 · 바탕 gray-200 · 채움 primary, 값 13/700 primary.
+             버튼 145×28 · r8 · bd 1px gray-200 · 아이콘 12 · 12/500.
+             값과 동작은 이미 있는 것을 쓴다 —
+               display_confidence 접근자(Prescription.php), reanalyzeOCR(), resetOCR(). --}}
+        <div class="rg-ocr" id="infoPanel-ocr" style="display:none;">
+          @php $conf = $prescription->display_confidence; @endphp
+          <div class="rg-ocr-meter">
+            <div class="rg-ocr-bar" role="img"
+                 aria-label="OCR 신뢰도 {{ $conf !== null ? $conf . '%' : '측정 전' }}">
+              <span style="width:{{ $conf !== null ? max(0, min(100, $conf)) : 0 }}%;"></span>
+            </div>
+            <span class="rg-ocr-val">{{ $conf !== null ? $conf . '%' : '-' }}</span>
+          </div>
+          <div class="rg-ocr-acts">
+            <button type="button" class="rg-ocr-btn" id="btn-reanalyze" onclick="reanalyzeOCR()">
+              <i class="fa-solid fa-rotate"></i>OCR 재분석
+            </button>
+            <button type="button" class="rg-ocr-btn" onclick="resetOCR()"
+                    title="입력값을 원본 OCR 결과로 되돌립니다">
+              <i class="fa-solid fa-rotate-left"></i>초기화
+            </button>
+          </div>
+        </div>
       </div>
 
       @if($prescription->review_memo)
@@ -6849,6 +6891,20 @@ window.HELP_TOUR_STEPS = [
     setTimeout(() => showToast(res.success ? '✅ NHIS 청구 송신 완료!' : res.message, res.success ? 'success' : 'danger'), 1500);
     @endif
   }
+
+  /* ── 등록자 카드 탭 (시안 148:279) ──────────────────────
+     보여 줄 판만 바꾼다. 값은 서버가 이미 그려 놓았다. */
+  window.rgTab = function (which) {
+    const isOcr = which === 'ocr';
+    document.getElementById('infoPanel-uploader').style.display = isOcr ? 'none' : '';
+    document.getElementById('infoPanel-ocr').style.display      = isOcr ? '' : 'none';
+    for (const [id, on] of [['rgTabUploader', !isOcr], ['rgTabOcr', isOcr]]) {
+      const t = document.getElementById(id);
+      if (!t) continue;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+  };
 
   // ── OCR 재분석 ────────────────────────────────────────
   async function reanalyzeOCR() {
