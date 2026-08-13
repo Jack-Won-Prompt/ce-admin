@@ -181,7 +181,12 @@
   .ws-icon.pending{ background: var(--bg); color: var(--text-muted); }
   .ws-label { font-size: 12px; font-weight: 500; } .ws-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .ws-arrow { margin-left: auto; color: var(--text-muted); font-size: 12px; }
-  .page-body-inner { padding-bottom: 40px; }
+  /* 아래 여백은 .page-body 의 16(=--content-pad)만 쓴다.
+     시안 315:58 의 container 는 pad 0/16/16/16 이고 마지막 블록에서 끝까지 16 이다.
+     여기서 40 을 더하면 56 이 되어 화면 아래가 그만큼 비어 보인다.
+     이 값은 분할 보기 높이 계산(sizeSplit)에도 그대로 들어가므로,
+     지우면 왼쪽·오른쪽 열이 그만큼 더 길어져 빈 칸도 함께 줄어든다. */
+  .page-body-inner { padding-bottom: 0; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */

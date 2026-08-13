@@ -240,7 +240,9 @@
     <div class="pt-detail-head">
       <i class="bx bx-user-pin" style="color:var(--primary);font-size:16px;"></i>
       <span id="pdName" style="font-weight:700;font-size:14px;line-height:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
-      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="margin-left:auto;white-space:nowrap;">전체 상세</a>
+      {{-- 요청서 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음' — 오른쪽 끝으로 밀지 않고
+           이름 바로 뒤에 붙인다(margin-left:auto 제거). --}}
+      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;">전체 상세</a>
     </div>
     <div class="tab-bar">
       <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
