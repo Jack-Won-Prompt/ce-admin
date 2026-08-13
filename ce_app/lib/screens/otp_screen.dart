@@ -431,40 +431,48 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
   }
 
   Widget _buildDigitBox(int index) {
-    return SizedBox(
-      width: 44,
-      height: 54,
-      child: TextFormField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
-        ],
-        style: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
+    return Flexible(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: index == 0 ? 0 : 3,
+          right: index == 5 ? 0 : 3,
         ),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white.withOpacity(0.12),
-          counterText: '',
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: Colors.white.withOpacity(0.2), width: 1.5),
+        child: SizedBox(
+          width: 44,
+          height: 54,
+          child: TextFormField(
+            controller: _controllers[index],
+            focusNode: _focusNodes[index],
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(1),
+            ],
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.12),
+              counterText: '',
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: Colors.white.withOpacity(0.2), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppTheme.secondary, width: 2.5),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (v) => _onDigitChanged(index, v),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                const BorderSide(color: AppTheme.secondary, width: 2.5),
-          ),
-          contentPadding: EdgeInsets.zero,
         ),
-        onChanged: (v) => _onDigitChanged(index, v),
       ),
     );
   }
