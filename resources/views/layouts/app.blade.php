@@ -444,9 +444,10 @@
     /* 건수 배지 — 16×16 원, 칩 상태에 따라 색이 뒤집힌다 */
     .ds-chip-count {
       display: inline-flex; align-items: center; justify-content: center;
-      /* 시안은 16×16 정원이다. 한두 자리는 그대로 정원이고,
-         세 자리부터는 숫자가 원 밖으로 튀지 않게 가로만 늘어난다. */
-      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+      /* 시안은 16×16 정원이다 — 두 자리(37·34)도 16 그대로다.
+         좌우 여백을 두면 두 자리가 20~21 로 벌어진다. 여백은 0 으로 두고,
+         min-width 만 남겨 세 자리부터 글자 폭만큼 늘어나게 한다. */
+      min-width: 16px; height: 16px; padding: 0; border-radius: 999px;
       background: var(--gray-500); color: var(--gray-0);
       font-size: 10px; font-weight: 700; line-height: 1; flex-shrink: 0;
     }
@@ -505,7 +506,7 @@
     /* Figma 114:4778 — 라벨 13/500 · lh21 · grayscale/700. 라벨 21 + gap 8 + 인풋 32 = 필드 61 */
     .ds-field-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
-    .ds-field-range { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
     .ds-field-sep { color: var(--gray-400); font-size: 13px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
@@ -565,7 +566,9 @@
     /* 결과바 버튼은 시안에서 테두리가 없다 (검색 카드의 초기화·검색과 다르다) */
     .ds-grid-bar .ds-btn { border-color: transparent; flex-shrink: 0; }
     .ds-grid-bar .ds-btn:hover { border-color: var(--gray-200); }
-    .ds-grid-bar .ds-btn-primary { border-color: var(--primary); }
+    /* 결과바 버튼은 primary 여도 테두리가 없다 — 시안 19개 전수 확인
+       (엑셀 저장 · 환자 추가 · 선택 상세 · 신규 위임동의 전송 · 캘린더뷰 …).
+       테두리가 있는 것은 카드 안 버튼뿐이다(처방전 검수 화면 · 주문 상세). */
     .ds-grid-card {
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
