@@ -11,6 +11,20 @@
      탭 자체는 pad 0/8 · 13/500 · lh21 · 활성 밑줄 1px primary.
      카드 안 상단에 들어가므로 바깥 여백(margin-bottom)은 두지 않는다. */
 
+  /* 비활성 탭 글자색 — 시안 352:3206 은 #656C74(gray-600)인데 전역 .pnl-tab 은
+     var(--text-muted)(gray-400 #999EA4)라 두 단계 연하다. 전역을 바꾸면 다른 화면까지
+     함께 번지므로 이 화면에서만 덮는다(globalCssNeeded 참고). 활성은 #28798B 로 이미 맞다. */
+  .ds-grid-card .pnl-tab { color: var(--gray-600); }
+  .ds-grid-card .pnl-tab:hover,
+  .ds-grid-card .pnl-tab.active { color: var(--primary); }
+
+  /* '조회결과로' 버튼은 시안에 없다. 상세 내용 패널 맨 위에 두면 본문이 44px(버튼 32 + 여백 12)
+     밀려 시안(탭줄 바로 아래 pad 16 에서 TB 머리줄 시작)과 어긋난다.
+     지우지 않고 탭줄 오른쪽 끝으로 옮기고, 상세 내용 탭이 활성일 때만 보이게 한다.
+     (활성 표시는 pnlShow() 가 붙이는 .active 클래스를 그대로 읽는다 — JS 는 건드리지 않는다) */
+  .pnl-tabs .pnl-back { margin-left: auto; align-self: center; display: none; }
+  .pnl-tabs #pnlBtnDetail.active ~ .pnl-back { display: inline-flex; }
+
   /* 결과바 '선택 N건' — 13/500 · lh21 · gray-600, 숫자만 primary-400 */
 
   /* 상세 내용 탭 안내 박스 — 13/400 · lh21 · 카드와 같은 radius 12 */
@@ -109,6 +123,9 @@
         <span class="ds-grid-sel">선택 <b id="dispatchSelCount">0</b>건</span>
       </div>
       <div class="ds-grid-bar-right">
+        {{-- 안내문 앞 아이콘은 개발이 넣은 info-circle 을 그대로 쓴다. 전역
+             .ds-grid-hint:has(> i:first-child)::before { content:none } 이 이 자리의
+             전역 alert-circle 을 접어 주므로 아이콘은 하나만 나온다(겹치지 않는다). --}}
         <span class="ds-grid-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
         {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다 — 동작은 downloadExcel() 그대로 --}}
         <button type="button" class="ds-btn" onclick="window.__dispatchGrid?.downloadExcel()">엑셀 저장</button>
@@ -118,8 +135,10 @@
     <div class="ds-grid-card">
       {{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
       <div class="pnl-tabs">
-        <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회결과</button>
-        <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세내용</button>
+        <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과</button>
+        <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
+        {{-- 상세 내용 패널 맨 위에 있던 '조회결과로' 버튼을 여기로 옮겼다(상세 내용 탭일 때만 보인다) --}}
+        <button type="button" class="ds-btn pnl-back" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
       </div>
 
       <div id="pnlList">
@@ -129,9 +148,7 @@
 
       {{-- ── 상세내용 탭 (상세 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
       <div id="pnlDetail" style="display:none;padding:16px;">
-        <div style="margin-bottom:12px;">
-          <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
-        </div>
+        {{-- '조회결과로' 버튼은 위 탭줄 오른쪽 끝으로 옮겼다 — 시안은 pad 16 바로 아래에서 본문이 시작한다 --}}
         <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 상세가 여기에 표시됩니다.</div>
         <div id="pnlDetailContent"></div>
       </div>

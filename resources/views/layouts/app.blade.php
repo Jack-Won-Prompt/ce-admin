@@ -531,6 +531,9 @@
     .ds-grid-bar {
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
+      /* 자리가 남을 때는 space-between 이 알아서 벌리고, 좁아져 두 묶음이 만나는 순간부터
+         이 12 가 버틴다. 없으면 건수 묶음과 안내문이 간격 0 으로 맞붙는다(1280 에서 확인). */
+      column-gap: 12px;
     }
     .ds-grid-bar-left  { display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0; }
     /* 오른쪽 액션 묶음 — 상단바는 space-between 이라 그대로 우측에 붙는다.
