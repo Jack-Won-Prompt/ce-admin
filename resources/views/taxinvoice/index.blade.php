@@ -36,56 +36,112 @@
 @push('styles')
 <style>
 /* ── 레이아웃 ── */
-/* 발행 내역 / 즉시발행 탭 구성. 화면 사이 간격은 .page-body 의 gap 16 이 만든다 */
+/* 발행 내역 / 즉시발행 탭 구성. 화면 사이 간격은 .page-body 의 gap 12 가 만든다(시안 container gap 12) */
 .ti-layout { display:flex; flex-direction:column; gap:12px; }
 /* 탭이 켠 쪽 한 묶음 — tiTab() 이 display 인라인 값을 지우면 이 flex 로 돌아온다 */
 .ti-panel  { display:flex; flex-direction:column; gap:12px; }
-/* 탭바 — 표준 패널 탭 규격(h44 · pad 0/16 · gap 16 · 하단 1px --border · 활성 밑줄 1px) */
-.titab-bar { display:flex; align-items:center; gap:16px; padding:0 16px; flex-wrap:wrap;
-  background:var(--gray-0); border-radius:12px; border-bottom:1px solid var(--border); }
-.titab { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; border:none; background:none; cursor:pointer;
-  color:var(--text-muted); border-bottom:1px solid transparent; margin-bottom:-1px; display:inline-flex; align-items:center; gap:6px; }
-.titab:hover { color:var(--primary); }
-.titab.active { color:var(--primary); border-bottom-color:var(--primary); }
-/* 결과바 '선택 N건' — 전역(layouts/app.blade.php)에 .ds-grid-sel 이 없어 화면에서 정의한다.
-   다른 목록 화면들도 같은 값을 각자 들고 있다. 전역으로 올려야 할 항목. */
+/* 탭바 — 시안 324:2797 Frame 48101484 는 탭바를 그리드 카드(흰 카드 r12) 안 맨 위에 둔다.
+   1568×44 · pad 0/16 · 탭 사이 gap 8 · 하단 1px #E8EAEC · 활성 밑줄 1px primary.
+   이 규격은 전역 .pnl-tabs / .pnl-tab 가 이미 그대로 갖고 있어 마크업에 함께 붙였다.
+   .titab-bar · .titab 이름은 tiTab() 이 잡는 앵커라 남긴다(선언은 전역에 맡긴다). */
+.titab-bar { flex-wrap:wrap; }
+/* 결과바 '선택 N건'(.ds-grid-sel)·'전체 N건'(.ds-grid-total)·안내문(.ds-grid-hint) 은
+   전역(layouts/app.blade.php 539~566)이 이미 갖고 있다. 이 화면은 아무것도 다시 정의하지 않는다. */
 
-/* ── 요약 카드 ── */
-.ti-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-@media(max-width:900px){ .ti-summary { grid-template-columns:1fr 1fr; } }
-.sum-card { background:var(--gray-0); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+/* ── 요약 카드 ──
+   시안 Frame 48101550 — 흰 카드 한 장 1568×75 · r12 · pad 12/0 · 가로.
+   안에 4칸이 각 392×51(pad 4/12 · gap 2)로 균등하게 들어가고 칸 사이에 세로 구분선 1px --gray-200.
+   칸 높이 51 = pad 4 + 43 + pad 4 이고, 43 은 라벨 19 + gap 2 + 값 22 이다(아이콘 36 이 그 안에 든다). */
+.ti-summary { display:flex; align-items:stretch; background:var(--gray-0); border-radius:12px; padding:12px 0; }
+.sum-card { flex:1 1 0; min-width:0; padding:4px 12px; display:flex; align-items:center; justify-content:center; gap:12px; }
+.sum-card + .sum-card { border-left:1px solid var(--gray-200); }
+/* 좁은 폭에서 2×2 로 접는다.
+   이 묶음은 반드시 .sum-card 뒤에 와야 한다 — 앞에 두면 뒤따르는 flex 단축값이
+   flex-basis 를 0 으로 되돌려 접기가 죽는다(860 폭에서 네 칸이 123px 까지 눌렸다). */
+@media(max-width:900px){
+  .ti-summary { flex-wrap:wrap; }
+  .sum-card { flex:1 1 40%; }
+  .sum-card + .sum-card       { border-left:none; }
+  .sum-card:nth-child(2n)     { border-left:1px solid var(--gray-200); }
+}
 .sum-card .sc-icon { width:36px; height:36px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.sum-card .sc-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
-.sum-card .sc-val   { font-size:16px; font-weight:700; line-height:22px; color:var(--gray-800); }
+.sum-card .sc-text  { min-width:0; text-align:center; }
+.sum-card .sc-label { font-size:12px; font-weight:700; line-height:19px; color:var(--gray-800); margin-bottom:2px; }
+.sum-card .sc-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
 /* 시안에 초록·주황이 없다. 네 칸을 primary 램프 두 단계 + alert + gray 로 나눈다 */
 .sum-card.blue  .sc-icon { background:var(--primary-50);  color:var(--primary-500); }
 .sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
 .sum-card.red   .sc-icon { background:var(--alert-50);    color:var(--alert-500); }
 .sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
 
-/* ── 발행 폼 카드 ── */
-.ti-card { background:var(--gray-0); border-radius:12px; overflow:hidden; }
+/* ── 발행 폼 카드 ──
+   시안 324:2797 은 폼을 탭바와 같은 흰 카드(.ds-grid-card) 안에 둔다.
+   .ti-card 는 그 카드 안에서 탭 묶음 노릇만 하므로 제 배경·모서리를 갖지 않는다. */
+.ti-card { display:flex; flex-direction:column; }
 .ti-card-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;
   font-size:14px; font-weight:700; line-height:22px; color:var(--gray-800); }
 .ti-card-head i { font-size:16px; color:var(--primary); }
-.ti-card-body { padding:16px; display:flex; flex-direction:column; gap:0; }
+/* 본문 pad 16 · 카드 사이 gap 12.
+   시안 윗줄은 504 짜리 셋(기본 정보 · 공급자(을) · 공급자(갑)), 아랫줄은 762 짜리 둘이다.
+   1536 을 6열(각 246)로 잡으면 2열=504, 3열=762 로 두 줄이 같은 격자에 떨어진다. */
+.ti-card-body { padding:16px; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+@media(max-width:1200px){ .ti-card-body { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:820px){  .ti-card-body { grid-template-columns:minmax(0,1fr); } }
 
-/* 섹션 */
-.form-section { padding:12px 0; border-bottom:1px solid var(--border); }
-.form-section:last-child { border-bottom:none; }
-/* 공급자(을)·공급받는자(갑) 좌우 배치 */
-.sb-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; border-bottom:1px solid var(--border); }
-.sb-grid > .form-section { border-bottom:none; }
-@media(max-width:820px){ .sb-grid { grid-template-columns:1fr; } }
+/* 섹션 = 시안의 카드 한 장 (r12 · pad 12/16 · bd 1px #E8EAEC · bg #FFFFFF) */
+.form-section { grid-column:span 2; border:1px solid var(--gray-200); border-radius:12px; padding:12px 16px; background:var(--gray-0); }
+/* 아랫줄 두 장 — 품목 목록·총 금액은 3열(762)씩 */
+.form-section.fs-items  { grid-column:span 3; padding:12px 0 0; overflow:hidden; }
+.form-section.fs-items > .section-title { padding:0 16px; }
+.form-section.fs-amount { grid-column:span 3; }
+@media(max-width:1200px){ .form-section, .form-section.fs-items, .form-section.fs-amount { grid-column:span 1; } }
+/* 위 두 @media 는 뷰포트를 재는데 카드 폭은 그것과 다르다.
+   단독 페이지(사이드바 320 + .page-body 좌우 16씩)는 본문이 뷰포트보다 384 좁고,
+   탭 모드(?frame=1 · 워크스페이스 iframe)는 64 만 좁다. 사이드바는 1200 이하에서 숨으므로
+   1201~1520 구간에서만 단독 페이지가 카드 817~1136 인데도 3열을 버틴다.
+   실측 1201: 섹션 264(시안 504) · 입력 122 · 관리번호 줄이 접혀 32 짜리 줄들 사이에 72 가 끼었다.
+   같은 1201 을 탭 모드로 열면 섹션 371 · 입력 229 · 접힘 없음이었다.
+   접히는 카드 폭을 두 모드에서 같게 맞춘다(1521→카드 1137 = 탭 모드 1201 과 같은 값). */
+@media(min-width:1201px) and (max-width:1520px){
+  html:not(.is-framed) .ti-card-body { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  html:not(.is-framed) .form-section,
+  html:not(.is-framed) .form-section.fs-items,
+  html:not(.is-framed) .form-section.fs-amount { grid-column:span 1; }
+}
+/* 공급자(을)·공급자(갑)을 감싼 묶음은 격자에서 사라지고 두 카드가 직접 칸을 차지한다 */
+.sb-grid { display:contents; }
 /* .section-title 은 전역 클래스다(11/700 · uppercase · letter-spacing .6).
-   여기서 선언하지 않은 속성은 전역 값이 그대로 살아남으므로 명시적으로 되돌린다. */
-.section-title { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; gap:6px;
+   여기서 선언하지 않은 속성은 전역 값이 그대로 살아남으므로 명시적으로 되돌린다.
+   시안 제목줄 — 높이 28 · 14px/700 · lh22 · #101317, 본문과 gap 12 */
+.section-title { min-height:28px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000); margin-bottom:12px; display:flex; align-items:center; gap:6px;
   text-transform:none; letter-spacing:0; }
+/* 전역 .section-title::after 는 flex:1 짜리 1px 밑줄이다(app.blade.php:1057).
+   선언을 지우기만 하면 그대로 살아남아 제목줄의 남은 폭을 전부 먹는다.
+   그러면 '품목 추가' 의 margin-left:auto 가 0 이 되어 버튼이 카드 오른쪽 끝이 아니라
+   제목 글자 바로 옆에 붙는다(실측 x=449, 붙어야 할 자리는 1097).
+   시안 섹션 제목에는 밑줄이 없다 — 카드 테두리가 그 몫을 한다. */
+.section-title::after { content:none; }
+/* 제목줄 아이콘만 16px primary — 제목 안에 든 '품목 추가' 버튼 아이콘까지
+   잡아 12/500 회색 버튼에 16px primary 글리프가 박히지 않게 직계로 한정한다 */
+.ti-card-body .section-title > i { font-size:16px; color:var(--primary); }
+/* 시안은 한 카드에 한 열씩만 쌓는다 — 줄 높이 32, 줄 사이 gap 8 */
 .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.ti-card-body .form-grid-2,
+.ti-card-body .form-grid-3 { display:flex; flex-direction:column; gap:8px; }
 
-/* 라벨 위 · 컨트롤 아래 — 라벨 21 + gap 8 + 입력 32 = 필드 61 */
+/* 라벨 위 · 컨트롤 아래 — 라벨 21 + gap 8 + 입력 32 = 필드 61 (취소 모달이 계속 쓴다) */
 .form-row  { display:flex; flex-direction:column; gap:8px; }
+/* 발행 폼은 시안대로 라벨 100 + gap 8 + 컨트롤 한 줄 배치 */
+.ti-card-body .form-row { flex-direction:row; align-items:center; gap:8px; }
+.ti-card-body .form-row > .form-label { flex:0 0 100px; width:100px; display:flex; align-items:center; gap:4px; line-height:16px; }
+.ti-card-body .form-row > .form-input,
+.ti-card-body .form-row > div { flex:1 1 auto; min-width:0; }
+/* 관리번호처럼 입력 + 버튼이 한 칸에 든 줄. 라벨 100 + 버튼 90 이 고정이라
+   좁은 폭에서 입력이 46px(1280)까지 눌려 글자가 안 보였다.
+   시안 폭(입력 371)에서는 그대로 한 줄이고, 자리가 모자랄 때만 버튼이 아래로 내려간다. */
+.ti-card-body .form-row > div { flex-wrap:wrap; }
+.ti-card-body .form-row > div > .form-input { min-width:120px; }
 /* .form-label 은 전역 클래스라 이 화면 안으로만 한정한다 */
 .ti-card-body .form-label, .nd-modal-body .form-label {
   display:block; margin-bottom:0; letter-spacing:0;
@@ -101,45 +157,63 @@
 select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px; }
 .form-input-full { grid-column:1/-1; }
 
-/* 금액 행 */
+/* 금액 행 — 시안 Frame 48101528: 730×156 두 줄.
+   윗줄 공급가액 361×74 + 세액 361×74(gap 8 · r8 · pad 12 · gap 8 · bg #F3F5F7),
+   아랫줄 합계 730×74(r8 · pad 12 · bg #E9F9FB). 라벨·값 모두 13/500 · lh21, 값은 오른쪽 끝. */
 .amount-box {
-  background:var(--primary-50); border-radius:8px; padding:12px;
-  display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px;
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:0;
 }
-.amount-box .ab-label { font-size:12px; font-weight:500; line-height:19px; color:var(--primary); margin-bottom:4px; }
-.amount-box .ab-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
+.amount-box > div { border-radius:8px; padding:12px; background:var(--gray-100); display:flex; flex-direction:column; gap:8px; }
+.amount-box > div:last-child { grid-column:1/-1; background:var(--primary-50); }
+.amount-box .ab-label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); margin-bottom:0; }
+.amount-box .ab-val   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); text-align:right; }
+.amount-box > div:last-child .ab-label,
+.amount-box > div:last-child .ab-val { color:var(--primary); }
 /* .ab-total* 는 지금 마크업 사용처가 없다. 개발 자산이라 남기고 규격만 맞춘다 */
 .amount-box .ab-total { grid-column:1/-1; border-top:1px solid var(--primary-200); padding-top:12px; display:flex; justify-content:space-between; align-items:center; }
 .amount-box .ab-total-label { font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
 .amount-box .ab-total-val   { font-size:16px; font-weight:700; line-height:26px; color:var(--primary); }
 
-/* 품목 테이블 */
-.detail-wrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:8px; }
-.detail-table { width:100%; border-collapse:collapse; font-size:13px; }
+/* 품목 테이블 — 시안 Frame 48101520.
+   머리행 45(pad 12/12 · 13/700 · lh21 · #656C74 · bg #F9FAFC · 왼쪽 정렬 · 하단 1px),
+   본문행 48(셀 pad 10/12), 셀 입력 28(r8 · pad 0/12 · bd 1px #E8EAEC · bg #FFFFFF · 12/400 · lh19).
+   품목 목록 카드는 pad 12/0/0/0 이라 표가 카드 좌우 끝까지 닿는다. */
+/* 표가 762 짜리 반쪽 카드로 들어가 화면이 좁아지면 열이 눌린다 —
+   1440 에서 셀 입력 45(내용폭 19), 1280 에서 27(내용폭 1)까지 줄어 숫자가 안 보였다.
+   시안 폭(760)에서는 그대로 두고 그 아래로만 가로 스크롤로 넘긴다.
+   고정열 86×5 + 52 = 482 에 품목 최소 118 을 더해 600 을 바닥으로 잡는다. */
+.detail-wrap { border:none; border-top:1px solid var(--gray-200); border-radius:0; margin-top:0; overflow-x:auto; }
+.detail-table { width:100%; min-width:600px; border-collapse:collapse; font-size:13px; }
 .detail-table th {
-  padding:6px 8px; background:var(--gray-100); font-size:12px; font-weight:700; line-height:19px;
-  color:var(--gray-600); text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;
+  padding:12px; background:var(--gray-50); font-size:13px; font-weight:700; line-height:21px;
+  color:var(--gray-600); text-align:left; border-bottom:1px solid var(--gray-200); white-space:nowrap;
 }
-.detail-table td { padding:4px; border-bottom:1px solid var(--border); }
+.detail-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); }
 .detail-table tr:last-child td { border-bottom:none; }
 .detail-table input {
-  width:100%; height:28px; border:1px solid transparent; border-radius:6px;
-  padding:3px 8px; font-size:13px; font-weight:400; line-height:20px;
-  text-align:right; background:transparent; color:var(--text-primary);
+  width:100%; height:28px; border:1px solid var(--gray-200); border-radius:8px;
+  padding:0 12px; font-size:12px; font-weight:400; line-height:19px;
+  text-align:right; background:var(--gray-0); color:var(--text-primary);
 }
 .detail-table input:focus { outline:none; border-color:var(--primary); background:var(--gray-0); box-shadow:0 0 0 2px rgba(40,121,139,.1); }
 .detail-table input.text-left { text-align:left; }
-.detail-del { width:24px; height:24px; background:var(--alert-50); color:var(--alert-500); border:none; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; margin:auto; }
-.detail-del:hover { background:var(--alert-100); }
+/* 삭제 버튼 28×28 · r8 · bd 1px #E8EAEC · bg #FFFFFF · 아이콘 12px.
+   시안 아이콘은 trash 지만 글리프(bx-x)는 addDetailRow() 안에서 찍는다 — 함수 본문이라 손대지 않았다. */
+.detail-del { width:28px; height:28px; background:var(--gray-0); color:var(--gray-1000); border:1px solid var(--gray-200); border-radius:8px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; margin:auto; padding:0; }
+.detail-del:hover { background:var(--gray-50); }
+/* '품목 추가' 는 표 아래가 아니라 카드 머리줄 오른쪽 끝(69×28 · r8 · pad 0/12 · gap 6 · 12/500) */
 .detail-add-btn {
-  width:100%; height:32px; padding:5px 12px; background:var(--gray-50); border:none; border-top:1px solid var(--border);
-  color:var(--primary); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; display:flex; align-items:center;
-  justify-content:center; gap:6px; transition:background .15s;
+  height:28px; padding:0 12px; background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px;
+  color:var(--gray-1000); font-size:12px; font-weight:500; line-height:19px; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+  margin-left:auto; flex-shrink:0; transition:background .15s;
 }
-.detail-add-btn:hover { background:var(--primary-light); }
+.detail-add-btn:hover { background:var(--gray-50); }
 
-/* 발행 버튼 — 표준 버튼 규격(h32 · r8 · pad 5/12 · 13/500), 카드 오른쪽 아래 정렬 */
-.ti-form-actions { display:flex; justify-content:flex-end; margin-top:16px; }
+/* 발행 버튼 — 취소 모달이 같은 이름을 쓰므로 폼 쪽만 시안 규격으로 따로 잡는다.
+   시안 액션줄 1536×36 · gap 8, 버튼 h36 · r8 · pad 0/16 · 14/500 · 남은 폭 전부. */
+.ti-form-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+.ti-card-body .ti-form-actions { grid-column:1/-1; margin-top:12px; }   /* 격자 gap 12 + 12 = 시안 24 */
 .issue-btn {
   height:32px; padding:5px 12px; background:var(--primary); color:var(--gray-0);
   border:1px solid transparent; border-radius:8px;
@@ -147,6 +221,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   white-space:nowrap; transition:background .15s;
 }
+.ti-card-body .issue-btn { flex:1 1 auto; height:36px; padding:0 16px; font-size:14px; line-height:22px; }
 .issue-btn:hover:not(:disabled) { background:var(--primary-600); }
 .issue-btn:disabled { opacity:.6; cursor:not-allowed; }
 
@@ -155,9 +230,9 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
    표준 .ds-filter-card · .ds-grid-bar · .ds-grid-card 로 바뀌어 규칙이 남아 있을 자리가 없다. */
 .hist-head-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-800); }
 .hist-head-title i { font-size:16px; color:var(--primary); }
-/* 관리번호 자동생성 버튼이 계속 쓴다 */
-.btn-search { height:32px; padding:5px 12px; background:var(--primary); color:var(--gray-0); border:1px solid transparent; border-radius:8px; font-size:13px; font-weight:500; line-height:20px; cursor:pointer; white-space:nowrap; }
-.btn-search:hover { background:var(--primary-600); }
+/* 관리번호 자동생성 버튼이 계속 쓴다 — 시안 69×32 · r8 · pad 0/12 · bd 1px #E8EAEC · bg #FFFFFF · 13/500 #101317 */
+.btn-search { height:32px; padding:0 12px; background:var(--gray-0); color:var(--gray-1000); border:1px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:500; line-height:21px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; flex-shrink:0; }
+.btn-search:hover { background:var(--gray-50); }
 
 /* 아래 두 묶음은 지금 마크업 사용처가 없다. 개발 자산이라 남기고 규격만 맞춘다 */
 .hist-table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -187,20 +262,26 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
 /* .btn-icon 은 전역(상단바 아이콘 버튼) 이름과 겹친다. 이 화면이 열린 동안
    상단바까지 같이 바뀌므로 상세 모달 안으로만 한정한다. 작은 버튼 규격(h28 · r8 · pad 3/10 · 13/500) */
-.nd-modal-body .btn-icon { height:28px; padding:3px 10px; font-size:13px; font-weight:500; line-height:20px; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+/* 전역 .btn-icon 은 32×32 정사각 아이콘 버튼이라 width:32px 를 갖는다(app.blade.php:373).
+   여기서 width 를 다시 쓰지 않으면 그 값이 그대로 살아남아, 글자가 든 상세 모달 버튼이
+   32px 상자에 갇힌다 — 실측: 필요 폭 50, 상자 32, 아이콘이 왼쪽으로 4 · '인쇄' 가
+   오른쪽으로 4 튀어나가 모달 안쪽 여백(16)을 넘어 글자가 버튼 배경 밖에 그려졌다. */
+.nd-modal-body .btn-icon { width:auto; height:28px; padding:3px 10px; font-size:13px; font-weight:500; line-height:20px; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
 .nd-modal-body .btn-icon.view   { background:var(--primary-light); color:var(--primary); }
 .nd-modal-body .btn-icon.print  { background:var(--gray-100);      color:var(--gray-600); }
 .nd-modal-body .btn-icon.cancel { background:var(--danger-light);  color:var(--danger); }
 .nd-modal-body .btn-icon:hover  { filter:brightness(.93); }
 .nd-modal-body .btn-icon + .btn-icon { margin-left:4px; }
 
-/* 페이지네이션 — 그리드 카드 하단 줄(pad 12 · 상단 1px · gap 2) */
+/* 페이지네이션 — 그리드 카드 하단 줄(1568×52 · pad 12 · 상단 1px).
+   버튼 28×28 · r6 · bd 1px #E8EAEC · bg #FFFFFF · 13/500 #101317 · 버튼 사이 gap 6.
+   활성은 bg #E9F9FB · 글자 primary 이고 테두리는 그대로 #E8EAEC 다. */
 .hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
-.pager-btns { display:flex; gap:2px; }
-.pager-btn { height:32px; min-width:32px; padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:20px; cursor:pointer; color:var(--gray-800); transition:border-color .15s,background .15s; }
+.pager-btns { display:flex; gap:6px; }
+.pager-btn { height:28px; min-width:28px; padding:0 6px; border:1px solid var(--gray-200); border-radius:6px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:21px; cursor:pointer; color:var(--gray-1000); transition:border-color .15s,background .15s; }
 .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
-.pager-btn.active { background:var(--primary); color:var(--gray-0); border-color:var(--primary); }
+.pager-btn.active { background:var(--primary-50); color:var(--primary); border-color:var(--gray-200); }
 
 /* ── 모달 ── */
 .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9000; align-items:center; justify-content:center; padding:8px; }
@@ -252,33 +333,91 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
 @section('content')
 
-{{-- 요약 카드 — 시안에 없지만 개발에서 넣은 지표라 그대로 둔다 --}}
+{{-- 요약 4칸 — 시안 Frame 48101550 은 흰 카드 한 장 안에 칸 넷을 세로 구분선으로 나눈다.
+     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다. --}}
 <div class="ti-summary">
   <div class="sum-card blue">
     <div class="sc-icon"><i class="bx bx-wallet"></i></div>
-    <div><div class="sc-label">잔여 포인트</div><div class="sc-val" id="balance-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">잔여 포인트</div><div class="sc-val" id="balance-val">—</div></div>
   </div>
   <div class="sum-card green">
     <div class="sc-icon"><i class="bx bx-file"></i></div>
-    <div><div class="sc-label">이번 달 발행</div><div class="sc-val" id="month-count-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 발행</div><div class="sc-val" id="month-count-val">—</div></div>
   </div>
   <div class="sum-card red">
     <div class="sc-icon"><i class="bx bx-x-circle"></i></div>
-    <div><div class="sc-label">이번 달 취소</div><div class="sc-val" id="month-cancel-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 취소</div><div class="sc-val" id="month-cancel-val">—</div></div>
   </div>
   <div class="sum-card gray">
     <div class="sc-icon"><i class="bx bx-won"></i></div>
-    <div><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">—</div></div>
   </div>
 </div>
 
-{{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
-<div class="titab-bar">
-  <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
-  <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-file"></i> 전자세금계산서 즉시발행</button>
-</div>
-
 <div class="ti-layout">
+
+  {{-- ── 발행 내역 — 검색 카드와 결과바는 그리드 카드 바깥·탭바 위다(시안 324:1720) ── --}}
+  <div class="ti-panel" data-titab="hist">
+
+    <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
+
+    {{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
+         GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
+    <div class="ds-filter-card">
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">기간</label>
+          <div class="ds-field-range">
+            <input type="date" id="f-start" class="form-control">
+            <span class="ds-field-sep">~</span>
+            <input type="date" id="f-end" class="form-control">
+          </div>
+        </div>
+        <div class="ds-filter-field">
+          <label class="ds-field-label">세금종류</label>
+          <select id="f-tax-type" class="form-control form-select">
+            <option value="">전체 상태</option>
+            <option value="ValueAdded">과세</option>
+            <option value="ZeroTax">영세</option>
+            <option value="FreeTax">면세</option>
+          </select>
+        </div>
+      </div>
+      <div class="ds-filter-actions">
+        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+      </div>
+    </div>
+
+    {{-- 결과바(h32) — 검색 카드와 4px 띄우는 몫은 .ds-grid-section 의 padding-top 이 맡는다.
+         그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
+    <div class="ds-grid-section">
+      <div class="ds-grid-bar">
+        <div class="ds-grid-bar-left">
+          {{-- 시안 Frame 48101582 왼쪽은 '전체 N건'(16/700) → 4×4 구분점 → '선택 N건' 순이다.
+               구분점은 전역 .ds-grid-total + .ds-grid-sel::before 가 그리므로 앞에 놓아야 나온다. --}}
+          <span class="ds-grid-total">전체 <b id="taxTotalCount">0</b>건</span>
+          <span class="ds-grid-sel">선택 <b id="taxSelCount">0</b>건</span>
+        </div>
+        <div class="ds-grid-bar-right">
+          <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
+          <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
+          <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+          <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+          <button type="button" class="ds-btn" style="color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행 취소</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {{-- ── 탭바와 두 탭 본문은 같은 흰 카드 안이다 (시안 324:1720 / 324:2797) ── --}}
+  <div class="ds-grid-card">
+
+    {{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
+    <div class="pnl-tabs titab-bar">
+      <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
+      <button type="button" class="pnl-tab titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-file"></i> 전자세금계산서 즉시발행</button>
+    </div>
 
   {{-- ── 발행 폼 ── --}}
   <div class="ti-card" data-titab="issue">
@@ -295,13 +434,13 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">관리번호 <span style="color:var(--danger)">*</span></label>
-            <div style="display:flex;gap:6px;">
+            <div style="display:flex;gap:8px;">
               <input id="mgt-key" class="form-input" type="text" style="flex:1;" placeholder="TI-20260508-001">
-              <button type="button" onclick="genMgtKey()" class="btn-search" title="자동생성"><i class="bx bx-refresh"></i></button>
+              <button type="button" onclick="genMgtKey()" class="btn-search" title="자동생성"><i class="bx bx-refresh"></i> 새로고침</button>
             </div>
           </div>
           <div class="form-row">
-            <label class="form-label">작성일자</label>
+            <label class="form-label">작성 일자</label>
             <input id="write-date" class="form-input" type="date">
           </div>
           <div class="form-row">
@@ -326,6 +465,12 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
               <option value="Blank">역발행</option>
             </select>
           </div>
+          {{-- 비고 — 시안은 기본 정보 카드의 일곱 번째 줄이다. 섹션 제목에 붙어 있던
+               bx-note 아이콘은 지우지 않고 라벨 앞으로 옮겼다. --}}
+          <div class="form-row">
+            <label class="form-label"><i class="bx bx-note"></i> 비고</label>
+            <input id="remark1" class="form-input" type="text" placeholder="비고란(선택)">
+          </div>
         </div>
       </div>
 
@@ -345,19 +490,19 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">대표자명</label>
-            <input id="er-ceo-name" class="form-input" type="text">
+            <input id="er-ceo-name" class="form-input" type="text" placeholder="대표자명">
           </div>
           <div class="form-row">
             <label class="form-label">담당자명</label>
-            <input id="er-contact" class="form-input" type="text">
+            <input id="er-contact" class="form-input" type="text" placeholder="담당자명">
           </div>
           <div class="form-row">
             <label class="form-label">업태</label>
-            <input id="er-biz-type" class="form-input" type="text">
+            <input id="er-biz-type" class="form-input" type="text" placeholder="업태">
           </div>
           <div class="form-row">
             <label class="form-label">종목</label>
-            <input id="er-biz-class" class="form-input" type="text">
+            <input id="er-biz-class" class="form-input" type="text" placeholder="종목">
           </div>
           <div class="form-row form-input-full" style="grid-column:1/-1;">
             <label class="form-label">주소</label>
@@ -365,11 +510,11 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">전화번호</label>
-            <input id="er-tel" class="form-input" type="text">
+            <input id="er-tel" class="form-input" type="text" placeholder="전화번호">
           </div>
           <div class="form-row">
             <label class="form-label">이메일</label>
-            <input id="er-email" class="form-input" type="email">
+            <input id="er-email" class="form-input" type="email" placeholder="이메일">
           </div>
         </div>
       </div>
@@ -387,23 +532,23 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">사업자번호 <span style="color:var(--danger)">*</span></label>
-            <input id="ee-corp-num" class="form-input" type="text" placeholder="- 없이 10자리">
+            <input id="ee-corp-num" class="form-input" type="text" placeholder="-없이 10자리">
           </div>
           <div class="form-row">
             <label class="form-label">상호 <span style="color:var(--danger)">*</span></label>
-            <input id="ee-corp-name" class="form-input" type="text">
+            <input id="ee-corp-name" class="form-input" type="text" placeholder="상호명">
           </div>
           <div class="form-row">
             <label class="form-label">대표자명</label>
-            <input id="ee-ceo-name" class="form-input" type="text">
+            <input id="ee-ceo-name" class="form-input" type="text" placeholder="대표자명">
           </div>
           <div class="form-row">
             <label class="form-label">업태</label>
-            <input id="ee-biz-type" class="form-input" type="text">
+            <input id="ee-biz-type" class="form-input" type="text" placeholder="업태">
           </div>
           <div class="form-row">
             <label class="form-label">종목</label>
-            <input id="ee-biz-class" class="form-input" type="text">
+            <input id="ee-biz-class" class="form-input" type="text" placeholder="종목">
           </div>
           <div class="form-row form-input-full" style="grid-column:1/-1;">
             <label class="form-label">주소</label>
@@ -411,40 +556,44 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">담당자명</label>
-            <input id="ee-contact" class="form-input" type="text">
+            <input id="ee-contact" class="form-input" type="text" placeholder="담당자명">
           </div>
           <div class="form-row">
             <label class="form-label">이메일</label>
-            <input id="ee-email" class="form-input" type="email">
+            <input id="ee-email" class="form-input" type="email" placeholder="이메일">
           </div>
         </div>
       </div>
       </div>{{-- /sb-grid --}}
 
-      {{-- 품목 목록 --}}
-      <div class="form-section">
-        <div class="section-title"><i class="bx bx-list-ul"></i> 품목 목록</div>
-        <div class="detail-wrap">
-          <table class="detail-table" id="detail-table">
-            <thead>
-              <tr>
-                <th style="width:48px;">월일</th>
-                <th>품목</th>
-                <th style="width:36px;">수량</th>
-                <th style="width:64px;">단가</th>
-                <th style="width:68px;">공급가액</th>
-                <th style="width:56px;">세액</th>
-                <th style="width:24px;"></th>
-              </tr>
-            </thead>
-            <tbody id="detail-tbody"></tbody>
-          </table>
+      {{-- 품목 목록 — 시안은 '품목 추가' 를 표 아래가 아니라 카드 머리줄 오른쪽 끝에 둔다 --}}
+      <div class="form-section fs-items">
+        <div class="section-title"><i class="bx bx-list-ul"></i> 품목 목록
           <button type="button" class="detail-add-btn" onclick="addDetailRow()">
             <i class="bx bx-plus"></i> 품목 추가
           </button>
         </div>
+        <div class="detail-wrap">
+          <table class="detail-table" id="detail-table">
+            <thead>
+              <tr>
+                <th style="width:86px;">월일</th>
+                <th>품목</th>
+                <th style="width:86px;">수량</th>
+                <th style="width:86px;">단가</th>
+                <th style="width:86px;">공급가액</th>
+                <th style="width:86px;">세액</th>
+                <th style="width:52px;"></th>
+              </tr>
+            </thead>
+            <tbody id="detail-tbody"></tbody>
+          </table>
+        </div>
+      </div>
 
-        {{-- 금액 합계 --}}
+      {{-- 금액 합계 — 시안은 품목 목록 옆 별도 카드다 --}}
+      <div class="form-section fs-amount">
+        <div class="section-title">총 금액(자동계산)</div>
         <div class="amount-box" id="amount-box">
           <div>
             <div class="ab-label">공급가액</div>
@@ -461,12 +610,6 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         </div>
       </div>
 
-      {{-- 비고 --}}
-      <div class="form-section">
-        <div class="section-title"><i class="bx bx-note"></i> 비고</div>
-        <input id="remark1" class="form-input" type="text" placeholder="(선택) 비고란 1">
-      </div>
-
       {{-- 발행 버튼 — 표준 버튼 규격에 맞춰 카드 오른쪽 아래로 --}}
       <div class="ti-form-actions">
         <button class="issue-btn" id="issue-btn" onclick="issueInvoice()">
@@ -477,65 +620,17 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     </div>
   </div>
 
-  {{-- ── 발행 내역 ── --}}
-  <div class="ti-panel" data-titab="hist">
-
-    <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
-
-    {{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
-         GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
-    <div class="ds-filter-card">
-      <div class="ds-filter-fields">
-        <div class="ds-filter-field span-2">
-          <label class="ds-field-label">기간</label>
-          <div class="ds-field-range">
-            <input type="date" id="f-start" class="form-control">
-            <span class="ds-field-sep">~</span>
-            <input type="date" id="f-end" class="form-control">
-          </div>
-        </div>
-        <div class="ds-filter-field">
-          <label class="ds-field-label">세금종류</label>
-          <select id="f-tax-type" class="form-control form-select">
-            <option value="">전체</option>
-            <option value="ValueAdded">과세</option>
-            <option value="ZeroTax">영세</option>
-            <option value="FreeTax">면세</option>
-          </select>
-        </div>
-      </div>
-      <div class="ds-filter-actions">
-        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+    {{-- ── 발행 내역 그리드 — 탭바와 같은 카드 안이다 ── --}}
+    <div class="ti-grid-pane" data-titab="hist">
+      <div id="taxHistGrid"></div>
+      {{-- 페이지네이션은 카드 하단 줄로. renderPager() 가 display 를 켜고 끈다 --}}
+      <div class="hist-pager" id="hist-pager" style="display:none;">
+        <div class="pager-info" id="pager-info"></div>
+        <div class="pager-btns" id="pager-btns"></div>
       </div>
     </div>
 
-    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드.
-         그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
-    <div class="ds-grid-section">
-      <div class="ds-grid-bar">
-        <div class="ds-grid-bar-left">
-          <span class="ds-grid-sel">선택 <b id="taxSelCount">0</b>건</span>
-        </div>
-        <div class="ds-grid-bar-right">
-          <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼 →</span>
-          <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
-          <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-          <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
-          <button type="button" class="ds-btn" style="color:var(--danger);border-color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행취소</button>
-        </div>
-      </div>
-
-      <div class="ds-grid-card">
-        <div id="taxHistGrid"></div>
-        {{-- 페이지네이션은 카드 하단 줄로. renderPager() 가 display 를 켜고 끈다 --}}
-        <div class="hist-pager" id="hist-pager" style="display:none;">
-          <div class="pager-info" id="pager-info"></div>
-          <div class="pager-btns" id="pager-btns"></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  </div>{{-- /.ds-grid-card --}}
 
 </div>
 
@@ -1365,6 +1460,23 @@ async function confirmCancel() {
     btn.innerHTML = '<i class="bx bx-x-circle"></i> 발행 취소 확정';
   }
 }
+
+/* ── 결과바 '전체 N건' — 표시 전용 ──
+   시안 324:1720 Frame 48101582 는 결과바 왼쪽에 '전체 N건'(16/700)을 둔다.
+   조회·페이징 로직은 그대로 두고 겉에서만 값을 얹는다(현금영수증 화면과 같은 방식).
+   loadHistory 가 시작될 때 0 으로 되돌리고(빈 결과·오류면 0 으로 남는다),
+   renderPager 가 받은 전체 건수를 그대로 찍는다. */
+(function () {
+  const el = document.getElementById('taxTotalCount');
+  if (!el) return;
+  const origLoad  = loadHistory;
+  loadHistory  = function (page) { el.textContent = '0'; return origLoad(page); };
+  const origPager = renderPager;
+  renderPager  = function (total, page, perPage) {
+    origPager(total, page, perPage);
+    el.textContent = (Number(total) || 0).toLocaleString();
+  };
+})();
 
 /* ── 모달 공통 ── */
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }

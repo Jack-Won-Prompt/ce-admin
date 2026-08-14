@@ -549,20 +549,31 @@
     /* 안내문 — 시안은 앞에 12×12 alert-circle 이 붙고 글자와 간격 4 다.
        마크업을 화면마다 고치지 않도록 아이콘은 mask 로 그린다. */
     .ds-grid-hint {
-      /* gap 을 두면 문장 안의 <b> 가 별개 flex 아이템이 되어 앞뒤로 4px 이 끼어든다.
-         "행을 <b>더블클릭</b>하면" 이 "행을 더블클릭 하면" 으로 갈라진다.
-         아이콘과의 간격은 ::before 의 바깥 여백으로 준다. */
-      display: inline-flex; align-items: center; gap: 0;
+      /* 문장을 flex 로 담으면 안 된다. flex 컨테이너는 자식 사이의 '공백만 있는 글자마디'를
+         아예 그리지 않아서 "행을 <b>더블클릭</b>하면" 이 "행을더블클릭하면" 으로 붙는다.
+         gap 을 주면 이번엔 <b> 앞뒤로 간격이 끼어들어 "행을 더블클릭 하면" 으로 갈라진다.
+         둘 다 문장을 망가뜨린다 — 안쪽은 보통 글줄(inline)로 두고 아이콘만 inline-block 으로
+         앞에 세운다. 이러면 낱말 사이 공백이 글자 그대로 살아난다. (.ds-grid-bar 의
+         flex 아이템이라 바깥 display 는 어차피 block 으로 굳는다.) */
+      display: inline-block;
       min-width: 0; margin-right: 4px;
       font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .ds-grid-hint::before {
-      content: ''; flex-shrink: 0; width: 12px; height: 12px; margin-right: 4px;
+      /* 상자를 글줄 높이(19)만큼 잡고 vertical-align:top 으로 글줄 꼭대기에 맞춘 뒤
+         12×12 아이콘을 그 안에서 가운데 그린다. 이러면 어림 보정값 없이 정확히 가운데 선다. */
+      content: ''; display: inline-block; vertical-align: top;
+      width: 12px; height: 19px; margin-right: 4px;
       background: currentColor;
-      -webkit-mask: var(--icon-alert-circle) center / contain no-repeat;
-              mask: var(--icon-alert-circle) center / contain no-repeat;
+      -webkit-mask: var(--icon-alert-circle) center / 12px 12px no-repeat;
+              mask: var(--icon-alert-circle) center / 12px 12px no-repeat;
     }
+    /* 개발자가 안내문 앞에 아이콘을 이미 넣어 둔 화면이 있다(NHIS 청구의 info-circle,
+       정산/회계 가상계좌 탭의 경고 삼각형). 그 자리에 전역 아이콘까지 그리면 두 개가 나란히 선다.
+       마크업에서 지우는 대신 — 개발자가 고른 아이콘이 뜻을 나르는 자리다 — 전역 쪽을 접는다. */
+    .ds-grid-hint:has(> i:first-child)::before,
+    .ds-grid-hint:has(> svg:first-child)::before { content: none; }
     /* 결과바 버튼은 시안에서 테두리가 없다 (검색 카드의 초기화·검색과 다르다) */
     .ds-grid-bar .ds-btn { border-color: transparent; flex-shrink: 0; }
     .ds-grid-bar .ds-btn:hover { border-color: var(--gray-200); }
