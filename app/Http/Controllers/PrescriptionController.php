@@ -1717,7 +1717,7 @@ class PrescriptionController extends Controller
         // Popbill 팩스 전송 (설정된 경우)
         $receiptNum = null;
         $corpNum    = config('popbill.test.corp_num');
-        $sender     = config('popbill.test.sender_num') ?: config('popbill.company.tel', '');
+        $sender     = config('popbill.test.fax_sender') ?: config('popbill.test.sender_num') ?: config('popbill.company.tel', '');
 
         if ($corpNum && !empty($filePaths)) {
             try {
