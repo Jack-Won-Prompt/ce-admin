@@ -317,6 +317,7 @@ window.HELP_TOUR_STEPS = [
 @endsection
 
 @push('scripts')
+@include('nhis.assist._button')
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
@@ -339,6 +340,11 @@ window.HELP_TOUR_STEPS = [
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },
       { header: '생성일',     name: 'created',   width: 130, sortable: true },
+      {
+        // 공단 사이트에 옮겨 적는 것을 돕는 창
+        header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        renderer: (v, row) => nhisAssistBtn(row.id),
+      },
     ],
     data: @json($gridData),
   });

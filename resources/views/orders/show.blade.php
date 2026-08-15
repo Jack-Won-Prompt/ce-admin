@@ -306,6 +306,12 @@
 @endpush
 
 @section('header-actions')
+{{-- 공단 사이트에 옮겨 적는 것을 돕는 창 --}}
+<button type="button" class="btn btn-outline btn-sm"
+        onclick="window.open('{{ route('nhis.assist.claim', $order) }}', 'nhis_claim_{{ $order->id }}', 'width=980,height=1000,scrollbars=yes,resizable=yes')"
+        title="공단 요양비지급청구서등록(2221) 화면에 붙여넣을 값을 순서대로 보여 줍니다.">
+  <i class="fa-solid fa-clipboard-list"></i> 공단 청구
+</button>
 <a href="{{ route('orders.index') }}" class="btn btn-outline btn-sm">
   <i class="bx bx-arrow-back"></i> 목록으로
 </a>

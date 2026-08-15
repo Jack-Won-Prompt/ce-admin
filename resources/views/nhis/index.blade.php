@@ -340,6 +340,7 @@
 @endsection
 
 @push('scripts')
+@include('nhis.assist._button')
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
@@ -358,6 +359,11 @@
       { header: 'NHIS상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
       { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
+      {
+        // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.
+        header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        renderer: (v, row) => nhisAssistBtn(row.id),
+      },
     ],
     data: @json($gridData),
   });

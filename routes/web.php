@@ -186,6 +186,8 @@ Route::middleware(['auth'])->group(function () {
 
         /* 공단 사이트에 옮겨 적는 것을 돕는 화면. 값을 늘어놓고 항목마다 복사 버튼을 둔다.
            공단 사이트에 자동으로 넣어 주지 않는다 — 최종 입력·제출은 담당자가 한다. */
+        Route::get('/assist/claim/{order}',
+            [\App\Http\Controllers\NhisAssistController::class, 'claim'])->name('assist.claim');
         Route::get('/assist/delegation/{prescription}',
             [\App\Http\Controllers\NhisAssistController::class, 'delegation'])->name('assist.delegation');
         Route::post('/assist/delegation/{prescription}/rrn',

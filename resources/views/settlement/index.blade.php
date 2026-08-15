@@ -351,6 +351,7 @@
 @endpush
 
 @push('scripts')
+@include('nhis.assist._button')
 <script>
   // ── 모달 공통 ──────────────────────────────────────────────
   function openModal(id)  { const m = document.getElementById(id); m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -652,6 +653,12 @@
   const TAB       = @json($tab);
   const GRID_DATA = @json($gridData);
   const GRID_COLS = @json($gridColumns);
+
+  // 공단 청구 지원 창을 여는 열. 컬럼이 서버에서 오므로 renderer 는 여기서 얹는다.
+  GRID_COLS.push({
+    header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+    renderer: (v, row) => nhisAssistBtn(row.id),
+  });
   const ORDERS_BASE = @json(url('settlement/orders'));   // + '/{id}/virtual-account' 등
 
   const mountEl = document.getElementById(TAB === 'virtual_account' ? 'vaGrid' : 'settlementGrid');
