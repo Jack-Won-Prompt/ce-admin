@@ -2047,6 +2047,64 @@ document.addEventListener('click', (e) => {
     window.ceConfirm = (msg, opts) => open('confirm', msg, opts);
 
     /**
+     * 입력. Promise<string|null> — 저장하면 입력값, 취소·Esc·배경클릭이면 null.
+     * opts: { value, multiline, placeholder, confirmText, cancelText }
+     */
+    window.cePrompt = function (title, opts = {}) {
+      const ov = document.createElement('div');
+      ov.className = 'modal-overlay open';
+      ov.style.zIndex = '20000';
+      const field = opts.multiline
+        ? `<textarea class="form-control" data-ce="input" rows="4" style="font-size:13px;resize:vertical;"
+                     placeholder="${esc(opts.placeholder || '')}"></textarea>`
+        : `<input type="text" class="form-control" data-ce="input" style="font-size:13px;"
+                  placeholder="${esc(opts.placeholder || '')}">`;
+      ov.innerHTML = `
+        <div class="modal-box sm" role="dialog" aria-modal="true">
+          <div class="modal-hd">
+            <i class="fa-solid fa-pen" style="color:var(--primary);font-size:17px;"></i>
+            <span class="modal-title">${esc(title || '입력')}</span>
+          </div>
+          <div class="modal-bd">${field}</div>
+          <div class="modal-ft">
+            <button type="button" class="btn btn-outline btn-sm" data-ce="cancel">${esc(opts.cancelText || '취소')}</button>
+            <button type="button" class="btn btn-primary btn-sm" data-ce="ok">${esc(opts.confirmText || '확인')}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+
+      const input = ov.querySelector('[data-ce="input"]');
+      input.value = opts.value ?? '';
+      const prevFocus = document.activeElement;
+
+      return new Promise(resolve => {
+        let settled = false;
+        function done(value) {
+          if (settled) return;
+          settled = true;
+          document.removeEventListener('keydown', onKey, true);
+          ov.remove();
+          if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
+          resolve(value);
+        }
+        function onKey(e) {
+          if (e.key === 'Escape') { e.preventDefault(); done(null); }
+          // 여러 줄 입력에서 Enter 는 줄바꿈이다. 저장은 Ctrl/⌘+Enter.
+          else if (e.key === 'Enter' && (!opts.multiline || e.ctrlKey || e.metaKey)) {
+            e.preventDefault(); done(input.value);
+          }
+        }
+        ov.querySelector('[data-ce="ok"]').addEventListener('click', () => done(input.value));
+        ov.querySelector('[data-ce="cancel"]').addEventListener('click', () => done(null));
+        ov.addEventListener('click', e => { if (e.target === ov) done(null); });
+        document.addEventListener('keydown', onKey, true);
+
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    };
+
+    /**
      * 인라인 onsubmit 용 헬퍼: onsubmit="return ceConfirmSubmit(this, '메시지')"
      * 항상 false 를 반환해 즉시 제출을 막고, 확인을 누르면 그때 폼을 제출한다.
      */
@@ -2487,6 +2545,70 @@ window.dsBindSelCount = function (grid, elId) {
 .msg-file-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 .msg-file-size { font-size: 10px; opacity: .7; }
 
+/* ── 답글 · 수정 · 삭제 ── */
+/* 답글은 원본 바로 아래에 한 단계만 들여쓴다. 더 깊이 들어가면 좁은 패널에서 읽기 어렵다. */
+.msg-row.is-reply { padding-left: 26px; }
+.msg-row.is-reply.mine { padding-left: 0; padding-right: 26px; }
+.msg-quote {
+  border-left: 3px solid var(--primary); background: var(--gray-50);
+  border-radius: 6px; padding: 4px 8px; margin-bottom: 4px;
+  font-size: 11px; line-height: 1.45; cursor: pointer; max-width: 100%;
+}
+.msg-row.mine .msg-quote { border-left: none; border-right: 3px solid var(--primary); text-align: right; }
+.msg-quote-name { font-weight: 700; color: var(--primary); display: block; }
+.msg-quote-body {
+  color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.msg-quote.gone .msg-quote-body { font-style: italic; color: var(--text-muted); }
+.msg-deleted {
+  font-size: 12px; color: var(--text-muted); font-style: italic;
+  border: 1px dashed var(--border); border-radius: 10px; padding: 7px 11px;
+}
+.msg-edited { font-size: 10px; color: var(--text-muted); margin-left: 4px; }
+
+/* 말풍선에 올렸을 때만 나오는 ⋯ */
+.msg-tools {
+  display: flex; gap: 2px; align-items: center;
+  opacity: 0; transition: opacity .12s; align-self: center;
+}
+.msg-row:hover .msg-tools { opacity: 1; }
+.msg-tool-btn {
+  background: none; border: none; cursor: pointer; padding: 3px 5px;
+  border-radius: 5px; color: var(--text-muted); font-size: 11px; line-height: 1;
+}
+.msg-tool-btn:hover { background: var(--gray-100); color: var(--text-primary); }
+
+/* 입력창 위 '답글 대상' 배너 */
+#chatReplyBar {
+  display: none; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 7px 14px; background: var(--primary-light);
+  border-top: 1px solid var(--primary-200); font-size: 12px;
+}
+#chatReplyBar.show { display: flex; }
+#chatReplyBarText { flex: 1; min-width: 0; color: var(--text-secondary); }
+#chatReplyBarText b { color: var(--primary); }
+#chatReplyBarText span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── 패널을 끌어 옮겼을 때 ── */
+/* 옮기기 전에는 오른쪽에서 밀려 나오는 서랍이고, 옮긴 뒤에는 떠 있는 창이 된다.
+   좌표를 직접 잡으므로 right 기준 애니메이션을 끈다. */
+#chatPanel.moved {
+  right: auto; transition: none;
+  height: min(760px, calc(100vh - 40px));
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,.24);
+}
+#chatPanel.moved:not(.open) { display: none; }
+#chatPanel.dragging { user-select: none; }
+.chat-header.movable { cursor: grab; }
+.chat-header.movable:active { cursor: grabbing; }
+.chat-header-btn {
+  background: none; border: none; color: var(--gray-400);
+  font-size: 12px; cursor: pointer; padding: 3px 6px; border-radius: 4px;
+}
+.chat-header-btn:hover { color: #fff; background: rgba(255,255,255,.1); }
+
 /* ── 파일 붙여넣기 미리보기 ── */
 #chatPastePreview {
   display: none; flex-shrink: 0;
@@ -2653,9 +2775,11 @@ input#chatFileInput { display: none; }
 
 <div id="chatPanel">
   {{-- 패널 헤더 --}}
-  <div class="chat-header">
+  <div class="chat-header movable" id="chatHeader">
     <i class="fa-solid fa-comments" style="font-size:16px;color:var(--gray-400);"></i>
     <span class="chat-header-title">채팅</span>
+    <button class="chat-header-btn" id="chatResetPosBtn" title="위치 초기화" style="display:none;"
+            onclick="ChatPanel.resetPosition()"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
     <button class="chat-header-close" onclick="ChatPanel.close()">×</button>
   </div>
 
@@ -2723,6 +2847,14 @@ input#chatFileInput { display: none; }
           <i class="fa-solid fa-file" id="chatPasteFileIcon" style="font-size:24px;color:var(--primary);display:none;"></i>
           <span id="chatPasteFileName">파일명</span>
           <button id="chatPasteClear" onclick="ChatPanel.clearPaste()">×</button>
+        </div>
+
+        {{-- 답글 대상 --}}
+        <div id="chatReplyBar">
+          <i class="fa-solid fa-reply" style="color:var(--primary);"></i>
+          <div id="chatReplyBarText"></div>
+          <button class="chat-tool-btn" onclick="ChatPanel.cancelReply()"
+                  style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;">×</button>
         </div>
 
         {{-- 입력창 --}}
@@ -3102,6 +3234,8 @@ const ChatPanel = (() => {
   let pasteFile      = null;
   let activeRoomCategory = 'company';
   let subscribedRooms = new Set();
+  let replyToId      = null;   // 지금 답글을 달고 있는 원본 메시지
+  const POS_KEY      = 'ce.chatPanel.pos';
 
   // ── 패널 열기/닫기 ──────────────────────────────────────────
   function toggle() {
@@ -3111,14 +3245,99 @@ const ChatPanel = (() => {
   }
 
   function open() {
-    document.getElementById('chatPanel').classList.add('open');
-    document.getElementById('chatOverlay').classList.add('show');
+    const panel = document.getElementById('chatPanel');
+    panel.classList.add('open');
+    // 떠 있는 창으로 옮겨 둔 상태면 뒤를 덮지 않는다 — 화면을 계속 쓰려고 옮긴 것이다.
+    if (!panel.classList.contains('moved')) {
+      document.getElementById('chatOverlay').classList.add('show');
+    }
     loadRooms();
   }
 
   function close() {
     document.getElementById('chatPanel').classList.remove('open');
     document.getElementById('chatOverlay').classList.remove('show');
+  }
+
+  // ── 패널 위치 옮기기 ─────────────────────────────────────────
+  /** 헤더를 잡고 끌면 떠 있는 창이 된다. 위치는 브라우저에 기억해 둔다. */
+  function initDrag() {
+    const panel  = document.getElementById('chatPanel');
+    const header = document.getElementById('chatHeader');
+    if (!panel || !header) return;
+
+    restorePosition();
+
+    let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+
+    header.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('button')) return;
+      const box = panel.getBoundingClientRect();
+      // 좌표 기준으로 바꾸는 순간부터 right 앵커를 버린다
+      moveTo(box.left, box.top);
+      sx = e.clientX; sy = e.clientY; ox = box.left; oy = box.top;
+      dragging = true;
+      panel.classList.add('dragging');
+      header.setPointerCapture(e.pointerId);
+    });
+
+    header.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      moveTo(ox + (e.clientX - sx), oy + (e.clientY - sy));
+    });
+
+    const stop = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      panel.classList.remove('dragging');
+      try { header.releasePointerCapture(e.pointerId); } catch (_) {}
+      const box = panel.getBoundingClientRect();
+      localStorage.setItem(POS_KEY, JSON.stringify({ left: box.left, top: box.top }));
+    };
+    header.addEventListener('pointerup', stop);
+    header.addEventListener('pointercancel', stop);
+
+    // 창 크기가 줄어 패널이 화면 밖으로 나가면 도로 끌어들인다
+    window.addEventListener('resize', () => {
+      if (!panel.classList.contains('moved')) return;
+      const box = panel.getBoundingClientRect();
+      moveTo(box.left, box.top);
+    });
+  }
+
+  /** 화면 안에 물려 둔다 — 헤더가 사라지면 다시 잡을 수 없다 */
+  function moveTo(left, top) {
+    const panel = document.getElementById('chatPanel');
+    panel.classList.add('moved');
+    const box = panel.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth  - box.width);
+    const maxTop  = Math.max(0, window.innerHeight - 48);
+    panel.style.left = Math.min(Math.max(0, left), maxLeft) + 'px';
+    panel.style.top  = Math.min(Math.max(0, top),  maxTop)  + 'px';
+    document.getElementById('chatResetPosBtn').style.display = '';
+    document.getElementById('chatOverlay').classList.remove('show');
+  }
+
+  function restorePosition() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+      if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+        moveTo(saved.left, saved.top);
+      }
+    } catch (_) {}
+  }
+
+  /** 오른쪽 서랍으로 되돌린다 */
+  function resetPosition() {
+    const panel = document.getElementById('chatPanel');
+    panel.classList.remove('moved');
+    panel.style.left = '';
+    panel.style.top  = '';
+    localStorage.removeItem(POS_KEY);
+    document.getElementById('chatResetPosBtn').style.display = 'none';
+    if (panel.classList.contains('open')) {
+      document.getElementById('chatOverlay').classList.add('show');
+    }
   }
 
   // ── 미읽음 배지 갱신 (캐시 기반) ────────────────────────────
@@ -3263,6 +3482,12 @@ const ChatPanel = (() => {
         loadRooms();
         showChatToast(data, roomId);
       }
+    });
+
+    // 상대가 고치거나 지운 것 — 이미 그려진 말풍선만 바꾼다. 알림은 띄우지 않는다.
+    ch.bind('message.changed', (data) => {
+      if (data.action === 'edited') applyEdited(data.id, data.body);
+      else if (data.action === 'deleted') applyDeleted(data.id);
     });
   }
 
@@ -3469,23 +3694,83 @@ const ChatPanel = (() => {
       bodyHtml = `<div class="msg-bubble" style="padding:6px;">${bodyHtml}</div>`;
     }
 
+    // 지운 메시지는 자리만 남긴다 — 답글이 매달려 있으면 지워 버릴 수 없다.
+    if (m.is_deleted) {
+      bodyHtml = `<div class="msg-deleted"><i class="fa-solid fa-ban"></i> 삭제된 메시지입니다</div>`;
+    }
+
+    // 답글이면 원본을 인용해 위에 얹는다
+    let quoteHtml = '';
+    if (m.reply_to) {
+      const q = m.reply_to;
+      const qBody = q.is_deleted ? '삭제된 메시지' : (q.body || '📎 첨부파일');
+      quoteHtml = `<div class="msg-quote ${q.is_deleted ? 'gone' : ''}" onclick="ChatPanel.jumpTo(${q.id})" title="원본으로 이동">
+        <span class="msg-quote-name">${escHtml(q.user_name)}</span>
+        <span class="msg-quote-body">${escHtml(qBody)}</span>
+      </div>`;
+    }
+
+    const editedHtml = (m.edited_at && !m.is_deleted) ? '<span class="msg-edited">(수정됨)</span>' : '';
+
+    // 남의 글엔 답글만, 내 글엔 수정·삭제까지
+    let toolsHtml = '';
+    if (!m.is_deleted) {
+      const reply = `<button class="msg-tool-btn" title="답글" onclick="ChatPanel.startReply(${m.id})"><i class="fa-solid fa-reply"></i></button>`;
+      const edit  = `<button class="msg-tool-btn" title="수정" onclick="ChatPanel.editMessage(${m.id})"><i class="fa-solid fa-pen"></i></button>`;
+      const del   = `<button class="msg-tool-btn" title="삭제" onclick="ChatPanel.deleteMessage(${m.id})"><i class="fa-solid fa-trash"></i></button>`;
+      toolsHtml = `<div class="msg-tools">${reply}${mine ? edit + del : ''}</div>`;
+    }
+
     const row = document.createElement('div');
-    row.className = 'msg-row' + (mine ? ' mine' : '');
+    row.className = 'msg-row' + (mine ? ' mine' : '') + (m.reply_to_id ? ' is-reply' : '');
     row.dataset.msgId = m.id;
+    row.dataset.threadRoot = m.reply_to_id ? '' : m.id;
     row.innerHTML = `
       <div class="msg-avatar ${mine ? 'mine-av' : ''}">${initials}</div>
       <div class="msg-content">
         ${!mine ? `<div class="msg-sender-label">보낸 사람</div><div class="msg-name">${escHtml(m.user_name)}</div>${m.screen_name ? `<div class="msg-screen-name">화면명: ${escHtml(m.screen_name)}</div>` : ''}` : ''}
+        ${quoteHtml}
         ${bodyHtml}
-        <div class="msg-time">${m.time_label}</div>
-      </div>`;
+        <div class="msg-time">${m.time_label}${editedHtml}</div>
+      </div>
+      ${toolsHtml}`;
     return row;
   }
 
   function appendMessage(m) {
-    const el  = buildMessageEl(m);
     const box = document.getElementById('chatMessages');
+    const el  = buildMessageEl(m);
+
+    /* 답글이면 그 대화 묶음을 통째로 맨 아래로 옮긴다 — 서버 정렬(thread_at)과 같은 규칙이다.
+       새로고침해야 순서가 맞는 일이 없도록 화면에서도 즉시 맞춘다. */
+    if (m.reply_to_id) {
+      const rootId = findThreadRoot(m.reply_to_id);
+      if (rootId) {
+        const group = [...box.querySelectorAll('.msg-row')].filter(r => threadRootOf(r) === rootId);
+        group.forEach(r => box.appendChild(r));
+      }
+    }
     box.appendChild(el);
+  }
+
+  /** 이 행이 속한 묶음의 대표 id */
+  function threadRootOf(rowEl) {
+    const id = Number(rowEl.dataset.msgId);
+    const quoted = rowEl.querySelector('.msg-quote');
+    if (!quoted) return id;
+    const m = quoted.getAttribute('onclick')?.match(/jumpTo\((\d+)\)/);
+    return m ? findThreadRoot(Number(m[1])) : id;
+  }
+
+  /** 인용을 따라 올라가 원본을 찾는다 (한 단계로 눕히는 서버 규칙과 같다) */
+  function findThreadRoot(msgId, depth = 0) {
+    if (depth > 20) return msgId;
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    if (!row) return msgId;
+    const quoted = row.querySelector('.msg-quote');
+    if (!quoted) return msgId;
+    const m = quoted.getAttribute('onclick')?.match(/jumpTo\((\d+)\)/);
+    return m ? findThreadRoot(Number(m[1]), depth + 1) : msgId;
   }
 
   function scrollBottom() {
@@ -3503,9 +3788,11 @@ const ChatPanel = (() => {
     const form = new FormData();
     if (body)      form.append('body', body);
     if (pasteFile) form.append('attachment', pasteFile);
+    if (replyToId) form.append('reply_to_id', replyToId);
 
     input.value = '';
     clearPaste();
+    cancelReply();
 
     // X-Socket-Id 포함 시 서버의 broadcast()->toOthers() 가 발신자 제외
     const socketId = pusherClient?.connection?.socket_id;
@@ -3529,6 +3816,120 @@ const ChatPanel = (() => {
     // 방 목록 프리뷰 업데이트
     const preview = document.querySelector(`#room-item-${currentRoomId} .chat-room-preview`);
     if (preview) preview.textContent = body || '📎 ' + (pasteFile?.name || '파일');
+  }
+
+  // ── 답글 ─────────────────────────────────────────────────────
+  function startReply(msgId) {
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    if (!row) return;
+    replyToId = msgId;
+
+    const name = row.querySelector('.msg-name')?.textContent?.trim() || '나';
+    const body = row.querySelector('.msg-bubble')?.textContent?.trim()
+              || row.querySelector('.msg-file-name')?.textContent?.trim()
+              || (row.querySelector('.msg-img') ? '🖼️ 이미지' : '');
+
+    document.getElementById('chatReplyBarText').innerHTML =
+      `<b>${escHtml(name)}</b> 에게 답글<span>${escHtml(body)}</span>`;
+    document.getElementById('chatReplyBar').classList.add('show');
+    document.getElementById('chatInput').focus();
+  }
+
+  function cancelReply() {
+    replyToId = null;
+    document.getElementById('chatReplyBar').classList.remove('show');
+  }
+
+  /** 인용을 눌렀을 때 원본으로 스크롤 + 잠깐 강조 */
+  function jumpTo(msgId) {
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const bubble = row.querySelector('.msg-bubble, .msg-deleted');
+    if (!bubble) return;
+    const before = bubble.style.boxShadow;
+    bubble.style.boxShadow = '0 0 0 3px var(--primary-200)';
+    setTimeout(() => { bubble.style.boxShadow = before; }, 1200);
+  }
+
+  // ── 수정 · 삭제 ──────────────────────────────────────────────
+  async function editMessage(msgId) {
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    const bubble = row?.querySelector('.msg-bubble');
+    if (!bubble) return;
+
+    const current = bubble.innerText.trim();
+    const next = await cePrompt('메시지 수정', { value: current, multiline: true, confirmText: '저장' });
+    if (next === null) return;
+    const body = String(next).trim();
+    if (!body || body === current) return;
+
+    const res = await fetch(`${BASE_URL}/chat/messages/${msgId}`, {
+      method: 'PUT',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast('수정 실패: ' + (err.message || `HTTP ${res.status}`), 'danger');
+      return;
+    }
+    const data = await res.json();
+    applyEdited(msgId, data.body);
+  }
+
+  async function deleteMessage(msgId) {
+    const ok = await ceConfirm('이 메시지를 지웁니다.\n답글이 달려 있으면 자리는 남고 내용만 사라집니다.',
+      { title: '메시지 삭제', confirmText: '삭제', tone: 'danger' });
+    if (!ok) return;
+
+    const res = await fetch(`${BASE_URL}/chat/messages/${msgId}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast('삭제 실패: ' + (err.message || `HTTP ${res.status}`), 'danger');
+      return;
+    }
+    applyDeleted(msgId);
+  }
+
+  /** 화면에 이미 그려진 말풍선을 제자리에서 바꾼다 (내가 했을 때도, 상대가 했을 때도) */
+  function applyEdited(msgId, body) {
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    if (!row) return;
+    const bubble = row.querySelector('.msg-bubble');
+    if (bubble) bubble.innerHTML = escHtml(body).replace(/\n/g, '<br>');
+    const time = row.querySelector('.msg-time');
+    if (time && !time.querySelector('.msg-edited')) {
+      time.insertAdjacentHTML('beforeend', '<span class="msg-edited">(수정됨)</span>');
+    }
+    // 이 메시지를 인용한 답글의 미리보기도 함께 고친다
+    document.querySelectorAll(`.msg-quote[onclick*="jumpTo(${msgId})"] .msg-quote-body`)
+      .forEach(el => { el.textContent = body; });
+  }
+
+  function applyDeleted(msgId) {
+    const row = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
+    if (!row) return;
+    const content = row.querySelector('.msg-content');
+    const quote   = content.querySelector('.msg-quote');
+    const time    = content.querySelector('.msg-time');
+    content.querySelectorAll('.msg-bubble').forEach(el => el.remove());
+    const holder = document.createElement('div');
+    holder.className = 'msg-deleted';
+    holder.innerHTML = '<i class="fa-solid fa-ban"></i> 삭제된 메시지입니다';
+    content.insertBefore(holder, time);
+    if (quote) quote.remove();
+    row.querySelector('.msg-tools')?.remove();
+    if (time) time.querySelector('.msg-edited')?.remove();
+
+    document.querySelectorAll(`.msg-quote[onclick*="jumpTo(${msgId})"]`).forEach(q => {
+      q.classList.add('gone');
+      q.querySelector('.msg-quote-body').textContent = '삭제된 메시지';
+    });
+    if (replyToId === msgId) cancelReply();
   }
 
   // ── 읽음 처리 ────────────────────────────────────────────────
@@ -3768,7 +4169,12 @@ const ChatPanel = (() => {
     });
   });
 
-  return { toggle, open, close, loadRooms, selectRoom, loadMore, send, clearPaste, openNewRoom, closeNewRoom, createRoom, lightbox, setCategory };
+  // 헤더 드래그는 패널이 DOM 에 있어야 걸 수 있다
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDrag);
+  else initDrag();
+
+  return { toggle, open, close, loadRooms, selectRoom, loadMore, send, clearPaste, openNewRoom, closeNewRoom, createRoom, lightbox, setCategory,
+           startReply, cancelReply, jumpTo, editMessage, deleteMessage, resetPosition };
 })();
 </script>
 

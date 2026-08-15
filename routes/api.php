@@ -101,6 +101,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/rooms/{room}/messages',  [ChatController::class, 'messages']);
         Route::post('/rooms/{room}/messages', [ChatController::class, 'sendMessage']);
         Route::post('/rooms/{room}/read',     [ChatController::class, 'markRead']);
+        Route::put('/messages/{message}',     [ChatController::class, 'updateMessage']);
+        Route::delete('/messages/{message}',  [ChatController::class, 'deleteMessage']);
     });
 
     // ── 팝빌 API ─────────────────────────────────────────────

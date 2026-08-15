@@ -257,6 +257,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/rooms/{room}/messages',         [ChatController::class, 'messages'])->name('messages');
         Route::post('/rooms/{room}/messages',        [ChatController::class, 'sendMessage'])->name('sendMessage');
         Route::post('/rooms/{room}/read',            [ChatController::class, 'markRead'])->name('markRead');
+        // 수정·삭제는 방이 아니라 메시지에 건다 — 본인 것만 허용하는 판단이 메시지에 있다.
+        Route::put('/messages/{message}',            [ChatController::class, 'updateMessage'])->name('updateMessage');
+        Route::delete('/messages/{message}',         [ChatController::class, 'deleteMessage'])->name('deleteMessage');
     });
 
     // CE샵 모니터링

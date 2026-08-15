@@ -112,27 +112,19 @@ class ChatController extends Controller
     {
         $this->authorizeRoom($room);
 
+        /* 지운 메시지도 함께 가져온다 — 답글이 매달려 있으면 원본이 사라질 때 대화가 끊긴다.
+           본문 대신 '삭제된 메시지입니다' 자리만 남긴다. */
         $messages = $room->messages()
-            ->with('user')
-            ->orderByDesc('id')
+            ->withTrashed()
+            ->with(['user', 'replyTo.user'])
+            ->threadOrdered('desc')
             ->paginate(40);
 
         // 읽음 처리
         $room->users()->updateExistingPivot(Auth::id(), ['last_read_at' => now()]);
 
-        $items = collect($messages->items())->reverse()->values()->map(fn(ChatMessage $m) => [
-            'id'              => $m->id,
-            'user_id'         => $m->user_id,
-            'screen_name'     => $this->resolveSenderScreenName($room, $m),
-            'user_name'       => $m->user?->name ?? 'CE샵 고객',
-            'body'            => $this->stripScreenTag($m->body),
-            'attachment_path' => $m->attachment_path,
-            'attachment_name' => $m->attachment_name,
-            'attachment_mime' => $m->attachment_mime,
-            'is_image'        => $m->isImage(),
-            'time_label'      => $m->created_at->format('H:i'),
-            'created_at'      => $m->created_at->format('Y-m-d H:i:s'),
-        ]);
+        $items = collect($messages->items())->reverse()->values()
+            ->map(fn (ChatMessage $m) => $this->presentMessage($room, $m));
 
         return response()->json([
             'messages'   => $items,
@@ -141,20 +133,121 @@ class ChatController extends Controller
         ]);
     }
 
+    /** PUT /chat/messages/{message} — 내가 보낸 메시지 고치기 */
+    public function updateMessage(ChatMessage $message, Request $request): JsonResponse
+    {
+        $room = $message->room;
+        $this->authorizeRoom($room);
+        $this->authorizeOwnMessage($message);
+
+        $request->validate(['body' => 'required|string|max:5000']);
+
+        $message->update([
+            'body'      => $request->body,
+            'edited_at' => now(),
+        ]);
+
+        $body = $this->stripScreenTag($message->body);
+
+        try {
+            broadcast(new ChatMessageChanged($message, 'edited', $body))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::error('[Chat] 수정 broadcast 실패', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'ok'          => true,
+            'id'          => $message->id,
+            'body'        => $body,
+            'edited_at'   => $message->edited_at->format('Y-m-d H:i:s'),
+            'edited_label'=> '수정됨',
+        ]);
+    }
+
+    /** DELETE /chat/messages/{message} — 내가 보낸 메시지 지우기 */
+    public function deleteMessage(ChatMessage $message): JsonResponse
+    {
+        $room = $message->room;
+        $this->authorizeRoom($room);
+        $this->authorizeOwnMessage($message);
+
+        // 소프트 삭제. 답글이 가리키는 원본이 통째로 사라지면 대화 맥락이 끊긴다.
+        $message->delete();
+
+        try {
+            broadcast(new ChatMessageChanged($message, 'deleted'))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::error('[Chat] 삭제 broadcast 실패', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json(['ok' => true, 'id' => $message->id]);
+    }
+
+    /** 화면에 내려보내는 메시지 한 건의 모양 — 목록·전송·답글이 모두 이 모양을 쓴다 */
+    private function presentMessage(ChatRoom $room, ChatMessage $m): array
+    {
+        $deleted = (bool) $m->deleted_at;
+        $parent  = $m->replyTo;
+
+        return [
+            'id'              => $m->id,
+            'user_id'         => $m->user_id,
+            'screen_name'     => $deleted ? null : $this->resolveSenderScreenName($room, $m),
+            'user_name'       => $m->user?->name ?? 'CE샵 고객',
+            'body'            => $deleted ? null : $this->stripScreenTag($m->body),
+            'attachment_path' => $deleted ? null : $m->attachment_path,
+            'attachment_name' => $deleted ? null : $m->attachment_name,
+            'attachment_mime' => $deleted ? null : $m->attachment_mime,
+            'attachment_size' => $deleted ? null : $m->attachment_size,
+            'is_image'        => $deleted ? false : $m->isImage(),
+            'is_deleted'      => $deleted,
+            'edited_at'       => $m->edited_at?->format('Y-m-d H:i:s'),
+            'reply_to_id'     => $m->reply_to_id,
+            'reply_to'        => $parent ? [
+                'id'        => $parent->id,
+                'user_name' => $parent->user?->name ?? 'CE샵 고객',
+                'body'      => $parent->deleted_at
+                    ? null
+                    : ($this->stripScreenTag($parent->body) ?: ($parent->attachment_name ? '📎 '.$parent->attachment_name : null)),
+                'is_deleted'=> (bool) $parent->deleted_at,
+            ] : null,
+            'time_label'      => $m->created_at->format('H:i'),
+            'created_at'      => $m->created_at->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /** 남의 메시지는 고치거나 지울 수 없다 */
+    private function authorizeOwnMessage(ChatMessage $message): void
+    {
+        abort_unless($message->user_id === Auth::id(), 403, '본인이 보낸 메시지만 수정·삭제할 수 있습니다.');
+    }
+
     /** POST /chat/rooms/{room}/messages — 메시지 전송 */
     public function sendMessage(ChatRoom $room, Request $request): JsonResponse
     {
         $this->authorizeRoom($room);
 
         $request->validate([
-            'body'       => 'nullable|string|max:5000',
-            'attachment' => 'nullable|file|max:20480', // 20MB
+            'body'        => 'nullable|string|max:5000',
+            'attachment'  => 'nullable|file|max:20480', // 20MB
+            'reply_to_id' => 'nullable|integer|exists:chat_messages,id',
         ]);
+
+        // 답글은 같은 방 안에서만. 다른 방 메시지 id 를 넣어 방을 넘나드는 것을 막는다.
+        $replyToId = null;
+        if ($request->filled('reply_to_id')) {
+            $parent = ChatMessage::withTrashed()->find($request->reply_to_id);
+            if (!$parent || $parent->chat_room_id !== $room->id) {
+                return response()->json(['error' => '답글 대상을 찾을 수 없습니다.'], 422);
+            }
+            $replyToId = $parent->id;
+        }
 
         $data = [
             'chat_room_id' => $room->id,
             'user_id'      => Auth::id(),
             'body'         => $request->body,
+            'reply_to_id'  => $replyToId,
         ];
 
         if ($request->hasFile('attachment')) {
@@ -173,6 +266,9 @@ class ChatController extends Controller
         }
 
         $message = ChatMessage::create($data);
+
+        // 묶음 정보를 정하고, 답글이면 그 대화 묶음을 통째로 최근 위치로 끌어올린다.
+        ChatMessage::attachToThread($message);
 
         // 읽음 처리 (발신자)
         $room->users()->updateExistingPivot(Auth::id(), ['last_read_at' => now()]);
@@ -206,20 +302,9 @@ class ChatController extends Controller
             \Log::warning('[Chat] FCM 전송 건너뜀', ['error' => $e->getMessage()]);
         }
 
-        $message->load('user');
-        return response()->json([
-            'id'              => $message->id,
-            'user_id'         => $message->user_id,
-            'user_name'       => $message->user->name,
-            'screen_name'     => $this->resolveSenderScreenName($room, $message),
-            'body'            => $this->stripScreenTag($message->body),
-            'attachment_path' => $message->attachment_path,
-            'attachment_name' => $message->attachment_name,
-            'attachment_mime' => $message->attachment_mime,
-            'is_image'        => $message->isImage(),
-            'time_label'      => $message->created_at->format('H:i'),
-            'created_at'      => $message->created_at->format('Y-m-d H:i:s'),
-        ]);
+        $message->load(['user', 'replyTo.user']);
+
+        return response()->json($this->presentMessage($room, $message));
     }
 
     /** POST /chat/rooms/{room}/read — 읽음 처리 */
