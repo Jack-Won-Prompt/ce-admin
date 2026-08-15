@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DelegationSetting;
+use App\Models\LocalClaimDispatch;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
@@ -10,9 +11,12 @@ use App\Models\PrescriptionDocument;
 use App\Support\ClaimAgency;
 use App\Support\ResidentNo;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * 공단 입력 지원 화면.
@@ -49,11 +53,13 @@ class NhisAssistController extends Controller
         // 옮겨 적게 되므로 여기서 멈추고 무엇을 해야 하는지 알린다.
         if (($prescription?->claim_agency ?? null) !== null
             && $prescription->claim_agency !== ClaimAgency::NHIS) {
-            return view('nhis.assist.claim_blocked', [
+            return view('nhis.assist.claim_local', [
                 'order'        => $order,
                 'prescription' => $prescription,
                 'agency'       => $prescription->claim_agency,
                 'agencyLabel'  => ClaimAgency::LABELS[$prescription->claim_agency] ?? $prescription->claim_agency,
+                'documents'    => $this->localDocuments($order, $prescription),
+                'dispatches'   => $order->localDispatches()->latest('id')->get(),
             ]);
         }
 
@@ -82,6 +88,59 @@ class NhisAssistController extends Controller
             'splitUrl'     => route('nhis.assist.claim', $order) . '?split=1',
             'portalUrl'    => self::PORTAL_URL,
         ]);
+    }
+
+    /**
+     * 지자체 등기 발송을 기록한다.
+     *
+     * 보냈다는 증거가 남아야 나중에 「안 왔다」는 말을 받았을 때 댈 것이 있다. 등기번호와
+     * 발송 영수증이 그것이라, 영수증은 파일로 함께 받아 둔다.
+     */
+    public function storeLocalDispatch(Request $request, Order $order): RedirectResponse
+    {
+        $data = $request->validate([
+            'registered_no' => 'nullable|string|max:50',
+            'sent_date'     => 'required|date',
+            'memo'          => 'nullable|string|max:500',
+            'receipt'       => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+        ]);
+
+        $path = $name = null;
+        if ($file = $request->file('receipt')) {
+            // 발송 영수증은 개인정보가 실린 서류가 아니라 우편 증빙이라 서류 표에 넣지 않는다
+            $path = $file->store('local_claims/' . $order->id);
+            $name = $file->getClientOriginalName();
+        }
+
+        LocalClaimDispatch::create([
+            'order_id'      => $order->id,
+            'local_gov'     => $order->prescription?->local_gov,
+            'registered_no' => $data['registered_no'] ?? null,
+            'sent_date'     => $data['sent_date'],
+            'receipt_path'  => $path,
+            'receipt_name'  => $name,
+            'memo'          => $data['memo'] ?? null,
+            'created_by'    => Auth::id(),
+        ]);
+
+        // 보냈으면 청구한 것이다. 공단 건과 같은 칸을 쓰되 지자체라는 것은 처방전이 안다.
+        $order->update([
+            'nhis_claim_status' => 'submitted',
+            'nhis_submitted_at' => $data['sent_date'],
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('지자체 등기 발송 기록: ' . ($data['registered_no'] ?: '등기번호 미기재'));
+
+        return back()->with('status', '등기 발송을 기록했습니다.');
+    }
+
+    /** 발송 영수증 내려받기 — 저장 경로를 그대로 노출하지 않는다 */
+    public function localReceipt(LocalClaimDispatch $dispatch): StreamedResponse
+    {
+        abort_unless($dispatch->receipt_path && Storage::exists($dispatch->receipt_path), 404);
+
+        return Storage::download($dispatch->receipt_path, $dispatch->receipt_name ?: '발송영수증');
     }
 
     /** 요양비청구위임내역등록(2225) 입력 지원 */
@@ -297,6 +356,34 @@ class NhisAssistController extends Controller
              'note' => $tax ? null : ($order->tax_invoice_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
             ['name' => '거래명세서', 'url' => null,
              'note' => '세금계산서·현금영수증으로 품목·수량·금액이 확인되지 않을 때만 필요합니다 — 만드는 기능이 없습니다'],
+        ];
+    }
+
+    /**
+     * 지자체에 등기로 보낼 서류.
+     *
+     * 공단과 목록이 다르다. 위임 절차가 없어 위임장이 빠지고, 대신 의료용품구입확인서
+     * (지자체용)가 들어간다. 현금영수증도 목록에 없다 — 지자체는 세금계산서로 본다.
+     */
+    private function localDocuments(Order $order, ?Prescription $prescription): array
+    {
+        $docs = $prescription
+            ? PrescriptionDocument::where('prescription_id', $prescription->id)->latest('id')->get()
+            : collect();
+
+        $tax = $docs->firstWhere('type', 'tax_invoice');
+
+        return [
+            ['name' => '처방전',
+             'url'  => $prescription?->image_path ? route('files.prescription-image', $prescription) : null,
+             'note' => $prescription?->image_path ? null : '처방전 이미지가 없습니다'],
+            ['name' => '거래명세서', 'url' => null,
+             'note' => '만드는 기능이 없습니다 — 따로 준비하십시오'],
+            ['name' => '전자세금계산서 (주민등록번호)',
+             'url'  => $tax ? route('documents.download', $tax) : null,
+             'note' => $tax ? null : ($order->tax_invoice_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
+            ['name' => '의료용품구입확인서 (지자체용)', 'url' => null,
+             'note' => '서식을 아직 받지 못해 만들지 못합니다'],
         ];
     }
 

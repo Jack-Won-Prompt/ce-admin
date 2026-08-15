@@ -148,6 +148,12 @@ class Order extends Model
         return $this->belongsTo(NhisFaxLog::class, 'latest_fax_log_id');
     }
 
+    /** 지자체 청구 등기 발송 — 반송·누락으로 다시 보내는 일이 있어 여러 건이 쌓인다 */
+    public function localDispatches(): HasMany
+    {
+        return $this->hasMany(LocalClaimDispatch::class);
+    }
+
     public function tossPayment(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(\App\Models\TossPayment::class);

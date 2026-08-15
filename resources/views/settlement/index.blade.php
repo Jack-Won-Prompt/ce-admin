@@ -139,6 +139,16 @@
             <option value="cancelled" {{ request('status')==='cancelled' ? 'selected':'' }}>취소</option>
           </select>
         </div>
+        {{-- 원내·원외·처방외는 정산에서 나눠 봐야 하는 값이다 --}}
+        <div class="ds-filter-field">
+          <label class="ds-field-label">유형</label>
+          <select name="acc_type" class="form-control form-select">
+            <option value="">전체 유형</option>
+            @foreach(\App\Http\Controllers\SettlementController::ACC_TYPES as $v => $label)
+              <option value="{{ $v }}" @selected(request('acc_type') === $v)>{{ $label }}</option>
+            @endforeach
+          </select>
+        </div>
       </div>
       <div class="ds-filter-actions">
         <a href="{{ route('settlement.index', ['tab'=>'settlement']) }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>

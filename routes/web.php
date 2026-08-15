@@ -188,6 +188,11 @@ Route::middleware(['auth'])->group(function () {
            공단 사이트에 자동으로 넣어 주지 않는다 — 최종 입력·제출은 담당자가 한다. */
         Route::get('/assist/claim/{order}',
             [\App\Http\Controllers\NhisAssistController::class, 'claim'])->name('assist.claim');
+        // 지자체는 등기로 보낸다. 보냈다는 증거(등기번호·영수증)를 여기 남긴다.
+        Route::post('/assist/claim/{order}/local-dispatch',
+            [\App\Http\Controllers\NhisAssistController::class, 'storeLocalDispatch'])->name('assist.localDispatch');
+        Route::get('/assist/local-receipt/{dispatch}',
+            [\App\Http\Controllers\NhisAssistController::class, 'localReceipt'])->name('assist.localReceipt');
         Route::get('/assist/delegation/{prescription}',
             [\App\Http\Controllers\NhisAssistController::class, 'delegation'])->name('assist.delegation');
         Route::post('/assist/delegation/{prescription}/rrn',

@@ -16,6 +16,17 @@ use Illuminate\View\View;
 
 class SettlementController extends Controller
 {
+    /**
+     * 처방 유형 — 상담에서 고른 값(counsel_acc_add_type)의 표기.
+     *
+     * 원내·원외·처방외는 정산에서 나눠 봐야 하는 값인데 화면에 나오지 않아 볼 수가 없었다.
+     */
+    public const ACC_TYPES = [
+        '30' => '처방전-원내',
+        '10' => '처방전-원외',
+        '20' => '처방외',
+    ];
+
     public function __construct(private readonly VirtualAccountService $vaService) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -55,6 +66,10 @@ class SettlementController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+        // 원내·원외·처방외를 나눠 본다
+        if ($request->filled('acc_type')) {
+            $query->whereHas('prescription', fn ($p) => $p->where('counsel_acc_add_type', $request->acc_type));
         }
         if ($request->filled('search')) {
             $kw = $request->search;
@@ -150,6 +165,8 @@ class SettlementController extends Controller
                 'order_no'     => $order->order_number,
                 'patient'      => $order->patient?->name ?? '-',
                 'rx_number'    => $order->prescription?->rx_number ?? '-',
+                // 원내·원외·처방외는 정산에서 나눠 봐야 하는 값이다
+                'acc_type'     => self::ACC_TYPES[$order->prescription?->counsel_acc_add_type] ?? '-',
                 'product'      => $order->product_name ?? '-',
                 'total_amount' => (int) ($order->total_amount ?? 0),
                 'nhis_amount'  => (int) ($order->nhis_amount ?? 0),
@@ -171,6 +188,7 @@ class SettlementController extends Controller
             ['header' => '주문번호',    'name' => 'order_no',     'width' => 120, 'sortable' => true],
             ['header' => '환자명',      'name' => 'patient',      'width' => 90,  'sortable' => true],
             ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
+            ['header' => '유형',        'name' => 'acc_type',     'width' => 100, 'align' => 'center', 'sortable' => true],
             ['header' => '제품명',      'name' => 'product',      'width' => 160],
             ['header' => '총 주문금액', 'name' => 'total_amount', 'width' => 110, 'editor' => 'number'],
             ['header' => '청구액',   'name' => 'nhis_amount',  'width' => 100, 'editor' => 'number'],
