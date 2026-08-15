@@ -76,6 +76,8 @@ class CashbillController extends Controller
             $query->where('trade_usage', $tradeUsage);
         }
 
+        $this->applyFilters($query, $request);
+
         $total   = $query->count();
         $records = $query->forPage($page, $perPage)->get();
 
@@ -258,6 +260,70 @@ class CashbillController extends Controller
 
     // ── private helpers ──────────────────────────────────────────────────────
 
+    /**
+     * 2차 요청(R2-03)의 검색조건을 건다.
+     *
+     * 이 표는 팝빌에서 받아 온 발행 내역이라 환자 자격·처방 유형 같은 우리 값이 없다.
+     * 다만 `order_number` 가 있어 주문을 타고 처방전까지 갈 수 있다. 그 값들이 JSON 안에
+     * 있던 동안에는 조인해도 걸러낼 수 없었는데, 컬럼으로 올라온 뒤로는 된다.
+     *
+     * 없는 조건(서류 담당자·메모)은 걸지 않는다. 빈 칸을 만들어 두면 담당자가 넣어 보고
+     * 아무것도 안 걸러지는 것을 겪는다.
+     */
+    private function applyFilters($query, Request $request): void
+    {
+        // 판매번호 — 주문번호가 그대로 들어 있다
+        if ($v = trim((string) $request->query('order_number'))) {
+            $query->where('order_number', 'like', "%{$v}%");
+        }
+
+        if ($v = trim((string) $request->query('customer_name'))) {
+            $query->where('customer_name', 'like', "%{$v}%");
+        }
+
+        // 주민번호 — 휴대폰번호가 들어간 건이 섞여 있어 부분검색으로 둔다
+        if ($v = preg_replace('/\D/', '', (string) $request->query('identity_num'))) {
+            $query->where('identity_num', 'like', "%{$v}%");
+        }
+
+        if ($v = trim((string) $request->query('confirm_num'))) {
+            $query->where('confirm_num', 'like', "%{$v}%");
+        }
+
+        // 금액 — 범위로 받는다. 정확히 일치하는 금액을 아는 경우는 드물다.
+        foreach ([['supply_cost', 'supply_min', 'supply_max'],
+                  ['tax',         'tax_min',    'tax_max'],
+                  ['total_amount','amount_min', 'amount_max']] as [$col, $min, $max]) {
+            if (($v = $request->query($min)) !== null && $v !== '') {
+                $query->where($col, '>=', (int) $v);
+            }
+            if (($v = $request->query($max)) !== null && $v !== '') {
+                $query->where($col, '<=', (int) $v);
+            }
+        }
+
+        // 발급일자 — 거래일시(trade_dt)와 다른 값이라 따로 받는다
+        if ($v = preg_replace('/\D/', '', (string) $request->query('issue_from'))) {
+            $query->where('issue_dt', '>=', $v . '000000');
+        }
+        if ($v = preg_replace('/\D/', '', (string) $request->query('issue_to'))) {
+            $query->where('issue_dt', '<=', $v . '235959');
+        }
+
+        /* 자격·유형은 우리 쪽 값이라 주문을 타고 처방전까지 가야 한다.
+           order_number 가 없는 발행 건(수기 발행 등)은 애초에 걸러질 값이 없다. */
+        foreach (['benefit_class' => 'benefit_class', 'acc_type' => 'counsel_acc_add_type'] as $param => $column) {
+            if ($v = trim((string) $request->query($param))) {
+                $query->whereIn('order_number', function ($sub) use ($column, $v) {
+                    $sub->select('orders.order_number')
+                        ->from('orders')
+                        ->join('prescriptions', 'prescriptions.id', '=', 'orders.prescription_id')
+                        ->where("prescriptions.{$column}", $v);
+                });
+            }
+        }
+    }
+
     private function toListItem(CashbillRecord $r): array
     {
         return [
@@ -274,6 +340,8 @@ class CashbillController extends Controller
             'customerName' => $r->customer_name,
             'itemName'     => $r->item_name,
             'confirmNum'   => $r->confirm_num,
+            'orderNumber'  => $r->order_number,
+            'identityNum'  => $r->identity_num,
             'stateCode'    => $r->state_code,
             'ntsresult'    => $r->nts_result,
             'ntsresultDT'  => $r->nts_result_dt,

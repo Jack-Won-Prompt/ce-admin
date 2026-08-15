@@ -35,6 +35,72 @@ class TaxinvoiceController extends Controller
      *  1) Popbill에서 해당 기간 전체 fetch → DB upsert
      *  2) DB에서 페이징하여 반환
      */
+    /**
+     * 2차 요청(R2-02)의 검색조건을 건다.
+     *
+     * 이 표에는 주문번호가 없다. 다만 발행할 때 관리번호를 `TI` + 발행일(Ymd) + 주문 id(6자리)
+     * 로 만들어 왔으므로 뒤 6자리로 주문을 되짚을 수 있다. 정식 조인키가 아니라 규칙에 기댄
+     * 것이라, 그 모양이 아닌 관리번호(수기 발행·옛 건)는 조인 대상에서 저절로 빠진다.
+     *
+     * 없는 조건(메모·서류 담당자)은 걸지 않는다. 빈 칸을 두면 담당자가 넣어 보고 아무것도
+     * 안 걸러지는 것을 겪는다.
+     */
+    private function applyFilters($query, Request $request): void
+    {
+        if ($v = trim((string) $request->query('invoicee_name'))) {
+            $query->where('invoicee_corp_name', 'like', "%{$v}%");
+        }
+
+        // 주민번호 — 마스킹으로 저장돼 부분검색만 된다
+        if ($v = preg_replace('/\D/', '', (string) $request->query('invoicee_num'))) {
+            $query->where('invoicee_corp_num', 'like', "%{$v}%");
+        }
+
+        foreach ([['total_amount', 'amount_min', 'amount_max'],
+                  ['supply_cost_total', 'supply_min', 'supply_max'],
+                  ['tax_total', 'tax_min', 'tax_max']] as [$col, $min, $max]) {
+            if (($v = $request->query($min)) !== null && $v !== '') {
+                $query->where($col, '>=', (int) $v);
+            }
+            if (($v = $request->query($max)) !== null && $v !== '') {
+                $query->where($col, '<=', (int) $v);
+            }
+        }
+
+        if ($v = preg_replace('/\D/', '', (string) $request->query('issue_from'))) {
+            $query->where('issue_dt', '>=', $v . '000000');
+        }
+        if ($v = preg_replace('/\D/', '', (string) $request->query('issue_to'))) {
+            $query->where('issue_dt', '<=', $v . '235959');
+        }
+
+        // 판매번호·자격·유형은 주문을 되짚어야 나온다
+        $orderNumber  = trim((string) $request->query('order_number'));
+        $benefitClass = trim((string) $request->query('benefit_class'));
+        $accType      = trim((string) $request->query('acc_type'));
+
+        if ($orderNumber === '' && $benefitClass === '' && $accType === '') {
+            return;
+        }
+
+        $ids = \App\Models\Order::query()
+            ->when($orderNumber !== '', fn ($q) => $q->where('order_number', 'like', "%{$orderNumber}%"))
+            ->when($benefitClass !== '' || $accType !== '', fn ($q) => $q->whereHas('prescription',
+                fn ($p) => $p->when($benefitClass !== '', fn ($x) => $x->where('benefit_class', $benefitClass))
+                             ->when($accType !== '',      fn ($x) => $x->where('counsel_acc_add_type', $accType))))
+            ->pluck('id');
+
+        // 관리번호 뒤 6자리가 주문 id 다
+        $query->where(function ($q) use ($ids) {
+            foreach ($ids as $id) {
+                $q->orWhere('mgt_key', 'like', 'TI%' . str_pad((string) $id, 6, '0', STR_PAD_LEFT));
+            }
+            if ($ids->isEmpty()) {
+                $q->whereRaw('1 = 0');   // 맞는 주문이 없으면 결과도 없어야 한다
+            }
+        });
+    }
+
     public function search(Request $request): JsonResponse
     {
         $request->validate([
@@ -90,6 +156,8 @@ class TaxinvoiceController extends Controller
         if (!empty($taxType)) {
             $tiQuery->whereIn('tax_type', (array) $taxType);
         }
+
+        $this->applyFilters($tiQuery, $request);
 
         $tiRecords = $tiQuery->orderByDesc('write_date')->orderByDesc('id')->get()
             ->map(fn($r) => [

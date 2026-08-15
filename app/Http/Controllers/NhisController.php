@@ -37,6 +37,27 @@ class NhisController extends Controller
             });
         }
 
+        /* 2차 요청(R2-09) — 주민번호로 찾기.
+           평문은 어디에도 내려보내지 않으므로 마스킹된 값에서 부분검색만 한다. 앞 6자리는
+           마스킹에 그대로 남아 있어 생년월일로 찾는 실제 쓰임은 이것으로 된다. */
+        if ($request->filled('rrn')) {
+            $rrn = preg_replace('/\D/', '', $request->rrn);
+            if ($rrn !== '') {
+                $query->where(fn ($sub) => $sub
+                    ->whereHas('patient', fn ($p) => $p->where('resident_no_masked', 'like', "%{$rrn}%"))
+                    ->orWhereHas('prescription', fn ($p) => $p->where('resident_no_ocr_masked', 'like', "%{$rrn}%")));
+            }
+        }
+
+        // 현금영수증 — 발행 여부와 번호 둘 다로 찾는다
+        if ($request->filled('cash_receipt')) {
+            match ($request->cash_receipt) {
+                'issued'     => $query->whereNotNull('cash_receipt_no')->where('cash_receipt_status', '!=', 'cancelled'),
+                'not_issued' => $query->where(fn ($s) => $s->whereNull('cash_receipt_no')->orWhere('cash_receipt_status', 'cancelled')),
+                default      => $query->where('cash_receipt_no', 'like', '%' . $request->cash_receipt . '%'),
+            };
+        }
+
         // 날짜 필터 (배송 완료일)
         if ($request->filled('date_from')) {
             $query->where('delivered_at', '>=', $request->date_from . ' 00:00:00');
