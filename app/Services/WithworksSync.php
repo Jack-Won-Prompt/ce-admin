@@ -60,7 +60,7 @@ class WithworksSync
         }
 
         $result = $res->json('result') ?? [];
-        $this->apply($order, $result);
+        $this->apply($order, $result, full: true);   // 조회는 그 순간의 전체 상태다
 
         return $result;
     }
@@ -70,25 +70,55 @@ class WithworksSync
      *
      * 콜백이 생기면 그쪽에서도 이 메서드를 부르면 된다.
      */
-    public function apply(Order $order, array $result): void
+    public function apply(Order $order, array $result, bool $full = false): void
     {
-        $ship = $result['ship'] ?? null;
+        /* 온 것만 덮는다. 웹훅 한 건은 그때 바뀐 것만 담을 수 있어서, 없는 값을 null 로 밀어
+           넣으면 확정 알림 하나에 앞서 받은 송장이 지워진다. 「값이 없다」와 「이번에 안
+           왔다」는 다르다.
 
-        $order->update([
-            'withworks_status'            => $result['status'] ?? null,
-            'withworks_status_label'      => $result['status_label'] ?? null,
-            'withworks_status_at'         => now(),
-            'withworks_ship_no'           => $ship['ship_no'] ?? null,
-            'withworks_ship_status'       => $ship['ship_status'] ?? null,
-            'withworks_ship_status_label' => $ship['ship_status_label'] ?? null,
-            'withworks_tracking_no'       => $ship['tracking_no'] ?? null,
-            'withworks_ship_at'           => $ship ? now() : null,
-        ]);
+           조회(so_show)는 그 순간의 전체 상태라 이야기가 다르다. 거기서 빠진 것은 정말로
+           없어진 것이므로 $full 로 알려 지우게 한다 — 그러지 않으면 취소된 배송 정보가 남는다. */
+        $update = ['withworks_status_at' => now()];
 
-        // 송장이 나오면 우리 주문에도 옮겨 둔다. 목록·청구가 이 컬럼을 본다.
-        if (($ship['tracking_no'] ?? null) && !$order->tracking_number) {
-            $order->update(['tracking_number' => $ship['tracking_no']]);
+        if ($full) {
+            $update += [
+                'withworks_status'            => null,
+                'withworks_status_label'      => null,
+                'withworks_ship_no'           => null,
+                'withworks_ship_status'       => null,
+                'withworks_ship_status_label' => null,
+                'withworks_tracking_no'       => null,
+                'withworks_ship_at'           => null,
+            ];
         }
+
+        foreach (['status' => 'withworks_status', 'status_label' => 'withworks_status_label'] as $from => $to) {
+            if (array_key_exists($from, $result)) {
+                $update[$to] = $result[$from];
+            }
+        }
+
+        if (array_key_exists('ship', $result) && is_array($result['ship'])) {
+            $ship = $result['ship'];
+            foreach ([
+                'ship_no'          => 'withworks_ship_no',
+                'ship_status'      => 'withworks_ship_status',
+                'ship_status_label' => 'withworks_ship_status_label',
+                'tracking_no'      => 'withworks_tracking_no',
+            ] as $from => $to) {
+                if (array_key_exists($from, $ship)) {
+                    $update[$to] = $ship[$from];
+                }
+            }
+            $update['withworks_ship_at'] = now();
+
+            // 송장이 나오면 우리 주문에도 옮겨 둔다. 목록·청구가 이 컬럼을 본다.
+            if (($ship['tracking_no'] ?? null) && !$order->tracking_number) {
+                $update['tracking_number'] = $ship['tracking_no'];
+            }
+        }
+
+        $order->update($update);
     }
 
     /**

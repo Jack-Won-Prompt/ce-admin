@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Route;
 // ── Webhook (인증 불필요, 시크릿 키로 검증) ──────────────
 Route::post('/webhook/shop-order', [ShopOrderWebhookController::class, 'receive']);
 
+/* Withworks 물류 사건 수신 — 확정·할당·피킹·송장·출고·배송.
+   인증은 컨트롤러에서 공유 비밀(X-Withworks-Secret)로 한다. */
+Route::post('/webhook/withworks', [\App\Http\Controllers\WithworksWebhookController::class, 'receive']);
+
 // ── CE샵 배지 카운트 (웹 관리자 사이드바용) ───────────────
 Route::get('/shop-badge', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) {
