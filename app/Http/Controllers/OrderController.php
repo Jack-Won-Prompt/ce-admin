@@ -170,6 +170,21 @@ class OrderController extends Controller
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : null,
         ]);
 
+        /* 품목을 줄 단위로 남긴다. orders 의 product_name·quantity 는 목록 화면이 쓰는 요약이고,
+           두 번째 제품부터는 여기에만 있다. 공단 제출용 구매내역 서류도 이 줄을 근거로 만든다. */
+        foreach ($items->values() as $i => $item) {
+            $order->items()->create([
+                'product_name'    => $item['product_name'],
+                'product_code'    => $item['product_code']    ?? null,
+                'quantity'        => max(1, (int) ($item['quantity'] ?? 1)),
+                'product_price'   => $item['product_price']   ?? null,
+                'insurance_price' => $item['insurance_price'] ?? null,
+                'nhis_amount'     => $item['nhis_amount']     ?? null,
+                'patient_copay'   => $item['patient_copay']   ?? null,
+                'sort_order'      => $i,
+            ]);
+        }
+
         // 처방전 상태 업데이트
         $prescription->update(['status' => 'ordered']);
 

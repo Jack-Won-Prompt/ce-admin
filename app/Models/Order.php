@@ -114,6 +114,15 @@ class Order extends Model
         return sprintf('ORD-%04d', $seq);
     }
 
+    /**
+     * 주문 품목. 공단 제출용 '제품 구매내역' 서류가 이 관계를 근거로 만들어진다.
+     * 예전에는 이 관계가 없어 그 서류가 늘 비어 나갔다.
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);

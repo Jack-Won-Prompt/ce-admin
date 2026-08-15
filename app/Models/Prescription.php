@@ -264,11 +264,23 @@ class Prescription extends Model
     }
 
     // ── 처방번호 자동 생성 ────────────────────────────────
+    /**
+     * 오늘 날짜 + 일련번호.
+     *
+     * '오늘 만들어진 행의 수 + 1' 로 세면 안 된다. 한 건을 지우면 수가 줄어 다음 건이 이미
+     * 나간 번호를 다시 받는다. 번호는 서류·팩스·공단 제출에 찍혀 나가므로 다시 내주면 안 된다.
+     * 이미 쓰인 번호 중 가장 큰 것에서 하나를 올린다 — 지운 건도 함께 센다.
+     */
     public static function generateRxNumber(): string
     {
-        $date = now()->format('Ymd');
-        $seq  = static::whereDate('created_at', today())->count() + 1;
-        return sprintf('RX-%s-%03d', $date, $seq);
+        $prefix = 'RX-' . now()->format('Ymd') . '-';
+
+        $max = static::withTrashed()
+            ->where('rx_number', 'like', "{$prefix}%")
+            ->selectRaw('MAX(CAST(SUBSTRING(rx_number, ?) AS UNSIGNED)) AS max_seq', [strlen($prefix) + 1])
+            ->value('max_seq');
+
+        return sprintf('%s%03d', $prefix, ((int) $max) + 1);
     }
 
     // ── 상담번호 자동 채번 ────────────────────────────────
@@ -277,7 +289,8 @@ class Prescription extends Model
         $date   = now()->format('Ymd');
         $prefix = "CS-{$date}-";
 
-        $last = static::whereNotNull('counsel_no')
+        $last = static::withTrashed()
+            ->whereNotNull('counsel_no')
             ->where('counsel_no', 'like', "{$prefix}%")
             ->selectRaw('MAX(CAST(SUBSTRING(counsel_no, ?) AS UNSIGNED)) AS max_seq', [strlen($prefix) + 1])
             ->value('max_seq');

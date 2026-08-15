@@ -414,14 +414,29 @@ class PrescriptionController extends Controller
      */
     public function create(): RedirectResponse
     {
-        $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first()
-            ?? Prescription::create([
+        $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first();
+
+        if ($draft) {
+            /* 아직 아무것도 안 적힌 초안은 다시 쓴다 — 누를 때마다 빈 행이 쌓이면 목록이 지저분해진다.
+               다만 며칠 전 것이라면 번호와 접수일을 오늘 것으로 새로 매긴다. 그대로 두면
+               처방번호에 박힌 날짜가 실제 접수일과 어긋난다(RX-20260807-001 을 8/15 에 접수).
+               빈 초안이라 되돌아볼 내용이 없으므로 접수일을 옮겨도 잃는 것이 없다.
+               saveQuietly — 저장 훅이 '내용이 생겼다'고 보고 초안 표시를 풀어 버린다. */
+            if (!$draft->created_at->isToday()) {
+                $draft->forceFill([
+                    'rx_number'  => Prescription::generateRxNumber(),
+                    'created_at' => now(),
+                ])->saveQuietly();
+            }
+        } else {
+            $draft = Prescription::create([
                 'rx_number'      => Prescription::generateRxNumber(),
                 'created_by'     => Auth::id(),
                 'status'         => 'pending',
                 'upload_source'  => 'web',
                 'is_blank_draft' => true,
             ]);
+        }
 
         return redirect()->route('prescriptions.show', $draft);
     }
@@ -2237,7 +2252,9 @@ class PrescriptionController extends Controller
 
                 case 'purchase_history':
                     // 구매내역 — Order items에서 생성
-                    if ($prescription->order?->items?->isNotEmpty()) {
+                    // 주문 품목이 없으면 처방 품목으로 만든다(품목 표 도입 전 주문)
+                    if ($prescription->order
+                        && ($prescription->order->items->isNotEmpty() || $prescription->items->isNotEmpty())) {
                         $html    = $this->buildPurchaseHistoryHtml($prescription);
                         $tmpPath = storage_path('app/temp/purchase_' . $prescription->rx_number . '_' . time() . '.html');
                         if (!is_dir(storage_path('app/temp'))) {
@@ -2294,7 +2311,11 @@ class PrescriptionController extends Controller
         $patient = $prescription->patient;
         $rows    = '';
 
-        foreach ($order->items ?? [] as $item) {
+        /* 주문 품목이 정본이다. 품목 표가 생기기 전에 만들어진 주문은 줄이 없으므로
+           처방 품목으로 대신 채운다 — 서류가 빈 채로 공단에 나가는 것보다 낫다. */
+        $lines = $order?->items->isNotEmpty() ? $order->items : $prescription->items;
+
+        foreach ($lines as $item) {
             $rows .= "<tr>
                 <td>{$item->product_name}</td>
                 <td>{$item->product_code}</td>
