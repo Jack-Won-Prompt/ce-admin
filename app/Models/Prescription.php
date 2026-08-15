@@ -37,8 +37,15 @@ class Prescription extends Model
         // Review
         'status', 'is_blank_draft', 'reviewed_by', 'reviewed_at', 'review_memo', 'admin_note',
         'postcode', 'address_detail', 'repurchase_date',
-        // Counseling (ERP sync + editable fields stored as JSON)
-        'counseling_data',
+        // 상담·처방 부가 항목 — 예전에는 counseling_data JSON 이었다. 모두 컬럼으로 옮겼다.
+        'counsel_no', 'counsel_date', 'counsel_type', 'counsel_acc_add_type',
+        'counsel_status', 'counsel_call_no', 'counsel_re_date', 'counsel_contents',
+        'dealer_type', 'caregiver_name',
+        'benefit_class', 'disease_class', 'uro_date', 'diagnosis_date',
+        'rx_use_period', 'rx_end_date', 'purchase_type',
+        'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
+        'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',
+        'inmarket_due', 'last_confirmed_qty', 'diverticulums',
         'kakao_sent_at', 'sms_sent_at',
     ];
 
@@ -46,7 +53,6 @@ class Prescription extends Model
         'is_reissue'      => 'boolean',
         'is_blank_draft'  => 'boolean',
         'ocr_raw_data'    => 'array',
-        'counseling_data' => 'array',
         'issued_date'      => 'date',
         'kakao_sent_at'   => 'datetime',
         'sms_sent_at'     => 'datetime',
@@ -58,13 +64,6 @@ class Prescription extends Model
         'nhis_amount'     => 'float',
         'patient_copay'   => 'float',
     ];
-
-    // ── 상담 데이터 accessor — blade에서 $prescription->counseling?->xxx 로 접근 ──
-    public function getCounselingAttribute(): ?object
-    {
-        $data = $this->counseling_data;
-        return $data ? (object) $data : null;
-    }
 
     /**
      * OCR 주민번호는 오인식 여부를 담당자가 판단해야 하므로 원문을 그대로 암호화한다
@@ -278,10 +277,9 @@ class Prescription extends Model
         $date   = now()->format('Ymd');
         $prefix = "CS-{$date}-";
 
-        $last = static::whereNotNull('counseling_data')
-            ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(counseling_data, '$.counselling_no')) LIKE ?", ["{$prefix}%"])
-            ->selectRaw("MAX(CAST(SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(counseling_data, '$.counselling_no')), ?) AS UNSIGNED)) AS max_seq",
-                [strlen($prefix) + 1])
+        $last = static::whereNotNull('counsel_no')
+            ->where('counsel_no', 'like', "{$prefix}%")
+            ->selectRaw('MAX(CAST(SUBSTRING(counsel_no, ?) AS UNSIGNED)) AS max_seq', [strlen($prefix) + 1])
             ->value('max_seq');
 
         $seq = str_pad(($last ?? 0) + 1, 3, '0', STR_PAD_LEFT);

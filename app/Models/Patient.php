@@ -14,6 +14,11 @@ class Patient extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        // 예전 counseling_data JSON 에 있던 환자 속성 (2026_08_15_000003)
+        'email', 'sb_sci', 'nhis_reg_status', 'nhis_reg_date', 'nhis_renew', 'nhis_renew_due',
+        'nhis_agree_start', 'nhis_agree_end', 'basic_reeval', 'basic_reeval_due',
+        'cash_receipt_no', 'deduction', 'new_patient_date',
+        'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
         'name', 'resident_no', 'birth_date', 'gender',
         'phone', 'mobile', 'address',
         'health_insurance_no', 'is_nhis_eligible', 'nhis_coverage_rate', 'note',

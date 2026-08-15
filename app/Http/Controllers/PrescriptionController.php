@@ -526,10 +526,8 @@ class PrescriptionController extends Controller
             }
 
             $prescription->update([
-                'counseling_data' => array_merge(
-                    $prescription->counseling_data ?? [],
-                    ['counselling_no' => Prescription::generateCounselNo(), 'counsel_date' => now()->format('Y-m-d')]
-                ),
+                'counsel_no'   => Prescription::generateCounselNo(),
+                'counsel_date' => now()->format('Y-m-d'),
             ]);
 
             $created[] = $prescription->rx_number;
@@ -756,7 +754,8 @@ class PrescriptionController extends Controller
 
         // 상담번호 자동 채번 (항상 생성)
         $prescription->update([
-            'counseling_data' => ['counselling_no' => Prescription::generateCounselNo(), 'counsel_date' => now()->format('Y-m-d')],
+            'counsel_no'   => Prescription::generateCounselNo(),
+            'counsel_date' => now()->format('Y-m-d'),
         ]);
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
@@ -768,11 +767,73 @@ class PrescriptionController extends Controller
 
     /**
      * 상담 이력 1건을 화면(검수 화면 이전상담 모달 · 환자 조회 모달)에서 쓰는 배열로 직렬화.
-     * counseling_data 원본 + 처방전/제품/주문/위임동의/팩스 요약을 합친다.
+     * 예전에는 counseling_data JSON 을 그대로 실었다. 지금은 컬럼에서 꺼낸다.
      */
+    /**
+     * 컬럼에 있는 상담·부가 항목을 화면이 쓰는 키 이름으로 내보낸다.
+     *
+     * 값은 모두 컬럼에서 나온다. 키 이름만 옛 것을 쓰는 이유는 검수 화면 JS 가 그 이름으로
+     * 받고 있어서다 — 이름까지 한꺼번에 바꾸면 화면 전체를 같이 고쳐야 한다.
+     */
+    private function counselingColumns(Prescription $p): array
+    {
+        $pt = $p->patient;
+
+        return array_filter([
+            'counselling_no'     => $p->counsel_no,
+            'counsel_date'       => $p->counsel_date,
+            'type'               => $p->counsel_type,
+            'acc_add_type'       => $p->counsel_acc_add_type,
+            'status'             => $p->counsel_status,
+            'call_no'            => $p->counsel_call_no,
+            're_counsel_date'    => $p->counsel_re_date,
+            'contents'           => $p->counsel_contents,
+            'erp_cd9'            => $p->hospital_code,
+            'udf13'              => $p->rx_use_period,
+            'udf14'              => $p->rx_end_date,
+            'udf2'               => $p->diagnosis_date,
+            'udf3'               => $p->disease_class,
+            'udf7'               => $p->uro_date,
+            'udf11'              => $p->benefit_class,
+            'udf17'              => $p->purchase_type,
+            'udf18'              => $p->special_case,
+            'udf20'              => $p->reason,
+            'udf24'              => $p->caregiver_name,
+            'udf25'              => $p->order_manager,
+            'udf30'              => $p->next_repurchase,
+            'five_program'       => $p->five_program,
+            'five'               => $p->five_110days,
+            'daily_use_qty'      => $p->daily_use_qty,
+            'diverticulums'      => $p->diverticulums,
+            'dealer_type'        => $p->dealer_type,
+            'pay_date'           => $p->pay_date,
+            'buy_date'           => $p->buy_date,
+            'inmarket_due'       => $p->inmarket_due,
+            'last_confirmed_qty' => $p->last_confirmed_qty,
+            // 환자에 붙은 값
+            'email'              => $pt?->email,
+            'mobile2'            => $pt?->phone,
+            'udf6'               => $pt?->sb_sci,
+            'udf19'              => $pt?->nhis_reg_status,
+            'udf4'               => $pt?->nhis_renew,
+            'udf22'              => $pt?->deduction,
+            'udf23'              => $pt?->cash_receipt_no,
+            'udf32'              => $pt?->new_patient_date,
+            'udf42'              => $pt?->nhis_agree_start,
+            'udf43'              => $pt?->nhis_agree_end,
+            'nhis_reg_date'      => $pt?->nhis_reg_date,
+            'nhis_renew_due'     => $pt?->nhis_renew_due,
+            'basic_reeval'       => $pt?->basic_reeval,
+            'basic_reeval_due'   => $pt?->basic_reeval_due,
+            'guardian_name'      => $pt?->guardian_name,
+            'guardian_relation'  => $pt?->guardian_relation,
+            'guardian_birth'     => $pt?->guardian_birth_date,
+            'guardian_phone'     => $pt?->guardian_phone,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
     private function counselingPayload(Prescription $p): array
     {
-        return array_merge($p->counseling_data ?? [], [
+        return array_merge($this->counselingColumns($p), [
             'rx_number'          => $p->rx_number,
             'rx_status'          => $p->status,
             'rx_status_label'    => $p->status_label,
@@ -872,7 +933,7 @@ class PrescriptionController extends Controller
                         ->orWhere('phone', 'like', "%{$digits}%");
                 }
             })
-            ->withCount(['prescriptions as counseling_count' => fn ($sub) => $sub->whereNotNull('counseling_data')])
+            ->withCount(['prescriptions as counseling_count' => fn ($sub) => $sub->whereNotNull('counsel_no')])
             ->orderBy('name')
             ->limit(30)
             ->get();
@@ -896,17 +957,17 @@ class PrescriptionController extends Controller
     public function patientCounselings(Patient $patient): JsonResponse
     {
         $rows = Prescription::where('patient_id', $patient->id)
-            ->whereNotNull('counseling_data')
+            ->whereNotNull('counsel_no')
             ->orderByDesc('id')
             ->limit(30)
             ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
             ->get([
-                'id', 'rx_number', 'counseling_data', 'created_at', 'status',
+                'id', 'rx_number', 'created_at', 'status',
                 'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
                 'hospital_name', 'doctor_name', 'issued_date',
                 'postcode', 'address_detail', 'patient_id', 'repurchase_date',
             ])
-            ->filter(fn ($p) => !empty($p->counseling_data['counselling_no']))
+            ->filter(fn ($p) => !empty($p->counsel_no))
             ->values();
 
         return response()->json([
@@ -931,17 +992,17 @@ class PrescriptionController extends Controller
         if ($prescription->patient_id) {
             $prevCounselings = Prescription::where('patient_id', $prescription->patient_id)
                 ->where('id', '!=', $prescription->id)
-                ->whereNotNull('counseling_data')
+                ->whereNotNull('counsel_no')
                 ->orderByDesc('id')
                 ->limit(10)
                 ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
                 ->get([
-                    'id', 'rx_number', 'counseling_data', 'created_at', 'status',
+                    'id', 'rx_number', 'created_at', 'status',
                     'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
                     'hospital_name', 'doctor_name', 'issued_date',
                     'postcode', 'address_detail', 'patient_id', 'repurchase_date',
                 ])
-                ->filter(fn($p) => !empty($p->counseling_data['counselling_no']))
+                ->filter(fn($p) => !empty($p->counsel_no))
                 ->values();
         }
 
@@ -1077,12 +1138,12 @@ class PrescriptionController extends Controller
             'counsel_memo'          => 'nullable|string|max:2000',
             // 환자 정보 추가
             'guardian'              => 'nullable|string|max:50',
-            // 미성년자 — 법정대리인 (counseling_data 저장)
+            // 미성년자 — 법정대리인
             'guardian_name'         => 'nullable|string|max:50',
             'guardian_relation'     => 'nullable|string|max:50',
             'guardian_birth'        => 'nullable|date',
             'guardian_phone'        => 'nullable|string|max:40',
-            // 시안 148:2708 로 새로 생긴 항목 (counseling_data 저장)
+            // 시안 148:2708 로 새로 생긴 항목
             'mobile2'               => 'nullable|string|max:30',
             'email'                 => 'nullable|email|max:190',
             'nhis_reg_date'         => 'nullable|date',
@@ -1145,71 +1206,72 @@ class PrescriptionController extends Controller
 
         $prescription->update($payload);
 
-        // ── 상담 편집 필드 저장 (counseling_data JSON에 merge) ──────────
-        $counselingEditable = array_filter([
-            // 상담 기본
-            'counselling_no'  => $request->input('counsel_no'),
-            'counsel_date'    => $request->input('counsel_date'),
-            'type'            => $request->input('counsel_type'),
-            'acc_add_type'    => $request->input('counsel_acc_add_type'),
-            'status'          => $request->input('counsel_status'),
-            'call_no'         => $request->input('counsel_call_no')
-                                     ? preg_replace('/\D/', '', $request->input('counsel_call_no'))
-                                     : null,
-            're_counsel_date' => $request->input('counsel_re_date'),
-            'contents'        => $request->input('counsel_memo'),
-            // 환자 정보
-            'udf24'           => $request->input('guardian'),
-            'guardian_name'     => $request->input('guardian_name'),
-            'guardian_relation' => $request->input('guardian_relation'),
-            'guardian_birth'    => $request->input('guardian_birth'),
-            'guardian_phone'    => $request->input('guardian_phone'),
-            'mobile2'         => $request->input('mobile2'),
-            'email'           => $request->input('email'),
-            'nhis_reg_date'   => $request->input('nhis_reg_date'),
-            'nhis_renew_due'  => $request->input('nhis_renew_due'),
-            'basic_reeval'    => $request->input('basic_reeval'),
-            'basic_reeval_due'=> $request->input('basic_reeval_due'),
-            'dealer_type'     => $request->input('dealer_type'),
-            'pay_date'        => $request->input('pay_date'),
-            'buy_date'        => $request->input('buy_date'),
-            'inmarket_due'      => $request->input('inmarket_due'),
-            'last_confirmed_qty'=> $request->input('last_confirmed_qty'),
-            'daily_use_qty'     => $request->input('daily_use_qty'),
-            'diverticulums'   => $request->input('diverticulums'),
+        /* ── 상담·부가 항목 저장 ─────────────────────────────────────────
+           예전에는 counseling_data JSON 한 칸에 뭉쳐 담았다. 값이 JSON 안에 있으면 인덱스를
+           걸 수 없어 검색·정렬이 되지 않아, 전부 각자 컬럼으로 옮겼다.
+           환자에 속한 값은 아래에서 환자를 이은 뒤에 쓴다 — 지금은 아직 patient_id 가 없을 수 있다. */
+        $rxCols = array_filter([
+            // 상담
+            'counsel_no'           => $request->input('counsel_no'),
+            'counsel_date'         => $request->input('counsel_date'),
+            'counsel_type'         => $request->input('counsel_type'),
+            'counsel_acc_add_type' => $request->input('counsel_acc_add_type'),
+            'counsel_status'       => $request->input('counsel_status'),
+            'counsel_call_no'      => $request->input('counsel_call_no')
+                                        ? preg_replace('/\D/', '', $request->input('counsel_call_no'))
+                                        : null,
+            'counsel_re_date'      => $request->input('counsel_re_date'),
+            'counsel_contents'     => $request->input('counsel_memo'),
             // 병원·처방
-            'erp_cd9'         => $request->input('hospital_code'),
-            'udf13'           => $request->input('rx_period') !== null ? (string)$request->input('rx_period') : null,
-            'udf14'           => $request->input('rx_end_date'),
-            'udf2'            => $request->input('diagnosis_date'),
-            // 처방 수량·상병
-            'udf3'            => $request->input('disease_class'),
-            'udf6'            => $request->input('sb_sci'),
-            'udf7'            => $request->input('uro_date'),
-            // 급여·보험
-            'udf11'           => $request->input('benefit_class'),
-            'udf19'           => $request->input('nhis_reg_status'),
-            'udf4'            => $request->input('nhis_renew'),
-            'udf42'           => $request->input('nhis_agree_start'),
-            'udf43'           => $request->input('nhis_agree_end'),
+            'hospital_code'        => $request->input('hospital_code'),
+            'rx_use_period'        => $request->input('rx_period'),
+            'rx_end_date'          => $request->input('rx_end_date'),
+            'diagnosis_date'       => $request->input('diagnosis_date'),
+            'disease_class'        => $request->input('disease_class'),
+            'uro_date'             => $request->input('uro_date'),
+            'benefit_class'        => $request->input('benefit_class'),
             // 거래·주문
-            'udf17'           => $request->input('purchase_type'),
-            'five_program'    => $request->input('five_program'),
-            'udf22'           => $request->input('deduction'),
-            'udf23'           => $request->input('cash_receipt_no'),
-            'udf25'           => $request->input('order_manager'),
-            'udf30'           => $request->input('next_repurchase'),
-            'udf18'           => $request->input('special_case'),
-            'udf20'           => $request->input('reason'),
-            // 추가 정보
-            'udf32'           => $request->input('new_patient_date'),
-            'five'            => $request->input('five_110days'),
-        ], fn($v) => $v !== null);
+            'purchase_type'        => $request->input('purchase_type'),
+            'five_program'         => $request->input('five_program'),
+            'five_110days'         => $request->input('five_110days'),
+            'order_manager'        => $request->input('order_manager'),
+            'next_repurchase'      => $request->input('next_repurchase'),
+            'special_case'         => $request->input('special_case'),
+            'reason'               => $request->input('reason'),
+            'dealer_type'          => $request->input('dealer_type'),
+            'pay_date'             => $request->input('pay_date'),
+            'buy_date'             => $request->input('buy_date'),
+            'inmarket_due'         => $request->input('inmarket_due'),
+            'last_confirmed_qty'   => $request->input('last_confirmed_qty'),
+            'daily_use_qty'        => $request->input('daily_use_qty'),
+            'diverticulums'        => $request->input('diverticulums'),
+            'caregiver_name'       => $request->input('guardian'),
+        ], fn ($v) => $v !== null);
 
-        if (!empty($counselingEditable)) {
-            $existing = $prescription->counseling_data ?? [];
-            $prescription->update(['counseling_data' => array_merge($existing, $counselingEditable)]);
+        if ($rxCols) {
+            $prescription->update($rxCols);
         }
+
+        $promotedPatientFields = array_filter([
+            'email'               => $request->input('email'),
+            'phone'               => $request->input('mobile2'),
+            'sb_sci'              => $request->input('sb_sci'),
+            'nhis_reg_status'     => $request->input('nhis_reg_status'),
+            'nhis_reg_date'       => $request->input('nhis_reg_date'),
+            'nhis_renew'          => $request->input('nhis_renew'),
+            'nhis_renew_due'      => $request->input('nhis_renew_due'),
+            'nhis_agree_start'    => $request->input('nhis_agree_start'),
+            'nhis_agree_end'      => $request->input('nhis_agree_end'),
+            'basic_reeval'        => $request->input('basic_reeval'),
+            'basic_reeval_due'    => $request->input('basic_reeval_due'),
+            'cash_receipt_no'     => $request->input('cash_receipt_no'),
+            'deduction'           => $request->input('deduction'),
+            'new_patient_date'    => $request->input('new_patient_date'),
+            'guardian_name'       => $request->input('guardian_name'),
+            'guardian_relation'   => $request->input('guardian_relation'),
+            'guardian_birth_date' => $request->input('guardian_birth'),
+            'guardian_phone'      => $request->input('guardian_phone'),
+        ], fn ($v) => $v !== null);
 
         // 환자 마스터 업데이트 또는 자동 등록/연결
         $prescription->refresh();
@@ -1231,6 +1293,12 @@ class PrescriptionController extends Controller
                 'mobile'       => $request->mobile_ocr,
                 'address'      => $request->address_ocr,
             ]);
+        }
+
+        // 환자로 승격된 항목은 환자를 이은 뒤에 쓴다(건보 등록·위임동의 기간·보호자 등).
+        if (!empty($promotedPatientFields)) {
+            $prescription->refresh();
+            $prescription->patient?->update($promotedPatientFields);
         }
 
         // ── 아이템 동기화 ────────────────────────────────────────
@@ -1568,10 +1636,10 @@ class PrescriptionController extends Controller
             'patient_birth_date' => $birth?->toDateString(),
             // 검수 화면에서 미리 적어 둔 보호자 정보를 실어 보낸다.
             // 서명 화면에 그대로 보이고, 보호자는 서명과 신분증만 더하면 된다.
-            'guardian_name'       => $isMinor ? ($prescription->counseling?->guardian_name ?: null) : null,
-            'guardian_relation'   => $isMinor ? ($prescription->counseling?->guardian_relation ?: null) : null,
-            'guardian_birth_date' => $isMinor ? ($prescription->counseling?->guardian_birth ?: null) : null,
-            'guardian_phone'     => $isMinor ? ($prescription->counseling?->guardian_phone ?: null) : null,
+            'guardian_name'       => $isMinor ? ($prescription->patient?->guardian_name ?: null) : null,
+            'guardian_relation'   => $isMinor ? ($prescription->patient?->guardian_relation ?: null) : null,
+            'guardian_birth_date' => $isMinor ? ($prescription->patient?->guardian_birth_date ?: null) : null,
+            'guardian_phone'      => $isMinor ? ($prescription->patient?->guardian_phone ?: null) : null,
         ]);
 
         $baseUrl = rtrim(config('app.consent_public_url', config('app.url')), '/');

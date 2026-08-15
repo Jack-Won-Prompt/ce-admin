@@ -1805,9 +1805,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
              아코디언 그룹 1: 상담 · 환자 정보 (통합)
         ───────────────────────────────────────────────── --}}
         @php
-          $curCounselNo   = $prescription->counseling?->counselling_no ?? '';
-          $curCounselDate = $prescription->counseling?->counsel_date ?? now()->format('Y-m-d');
-          $rawCallNo = $prescription->counseling?->call_no ?? '';
+          $curCounselNo   = $prescription->counsel_no ?? '';
+          $curCounselDate = $prescription->counsel_date ?? now()->format('Y-m-d');
+          $rawCallNo = $prescription->counsel_call_no ?? '';
           $digCallNo = preg_replace('/[^0-9]/', '', $rawCallNo);
           if (strlen($digCallNo) === 11)     $fmtCallNo = substr($digCallNo,0,3).'-'.substr($digCallNo,3,4).'-'.substr($digCallNo,7);
           elseif (strlen($digCallNo) >= 9)   $fmtCallNo = substr($digCallNo,0,3).'-'.substr($digCallNo,3,3).'-'.substr($digCallNo,6);
@@ -1880,21 +1880,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">상담 유형</span>
                 <select class="form-control" id="f-counsel-type" onchange="onCounselTypeChange(this.value)" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="1013" @selected(($prescription->counseling?->type ?? '') == '1013')>구매</option>
-                  <option value="1016" @selected(($prescription->counseling?->type ?? '') == '1016')>개인구매</option>
-                  <option value="1020" @selected(($prescription->counseling?->type ?? '') == '1020')>반품</option>
-                  <option value="1030" @selected(($prescription->counseling?->type ?? '') == '1030')>문의</option>
-                  <option value="1050" @selected(($prescription->counseling?->type ?? '') == '1050')>기타</option>
+                  <option value="1013" @selected(($prescription->counsel_type ?? '') == '1013')>구매</option>
+                  <option value="1016" @selected(($prescription->counsel_type ?? '') == '1016')>개인구매</option>
+                  <option value="1020" @selected(($prescription->counsel_type ?? '') == '1020')>반품</option>
+                  <option value="1030" @selected(($prescription->counsel_type ?? '') == '1030')>문의</option>
+                  <option value="1050" @selected(($prescription->counsel_type ?? '') == '1050')>기타</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">상담 상태</span>
                 <select class="form-control" id="f-counsel-status" onchange="onCounselStatusChange(this.value)" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="02" @selected(($prescription->counseling?->status ?? '') == '02')>등록</option>
-                  <option value="50" @selected(($prescription->counseling?->status ?? '') == '50')>재상담</option>
-                  <option value="95" @selected(($prescription->counseling?->status ?? '') == '95')>확정</option>
-                  <option value="99" @selected(($prescription->counseling?->status ?? '') == '99')>취소</option>
+                  <option value="02" @selected(($prescription->counsel_status ?? '') == '02')>등록</option>
+                  <option value="50" @selected(($prescription->counsel_status ?? '') == '50')>재상담</option>
+                  <option value="95" @selected(($prescription->counsel_status ?? '') == '95')>확정</option>
+                  <option value="99" @selected(($prescription->counsel_status ?? '') == '99')>취소</option>
                 </select>
               </div>
             </div>
@@ -1907,19 +1907,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">처방전 여부</span>
                 <select class="form-control" id="f-acc-add-type" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="20"  @selected(($prescription->counseling?->acc_add_type ?? '') == '20')>처방외</option>
-                  <option value="10"  @selected(($prescription->counseling?->acc_add_type ?? '') == '10')>원외</option>
-                  <option value="30"  @selected(($prescription->counseling?->acc_add_type ?? '') == '30')>원내</option>
+                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
+                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
+                  <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">재 상담 일자</span>
                 <input type="date" class="form-control" id="f-re-counsel-date"
-                       value="{{ $prescription->counseling?->re_counsel_date ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->counsel_re_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row" style="align-items:flex-start;">
                 <span class="rx-field-label">메모</span>
-                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counseling?->contents ?? '' }}</textarea>
+                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counsel_contents ?? '' }}</textarea>
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -1972,13 +1972,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div class="rx-field-row">
                   <span class="rx-field-label">보호자 이름</span>
                   <input type="text" class="form-control" id="f-guardian-name" maxlength="50"
-                         value="{{ $prescription->counseling?->guardian_name ?? '' }}"
+                         value="{{ $prescription->patient?->guardian_name ?? '' }}"
                          placeholder="보호자 성명" style="flex:1;" />
                 </div>
                 <div class="rx-field-row">
                   <span class="rx-field-label">관계</span>
                   <select class="form-control" id="f-guardian-relation" style="flex:1;">
-                    @php $gRel = $prescription->counseling?->guardian_relation ?? ''; @endphp
+                    @php $gRel = $prescription->patient?->guardian_relation ?? ''; @endphp
                     <option value="">선택</option>
                     @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
                       <option value="{{ $r }}" {{ $gRel === $r ? 'selected' : '' }}>{{ $r }}</option>
@@ -1988,13 +1988,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div class="rx-field-row">
                   <span class="rx-field-label">보호자 생년월일</span>
                   <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
-                         value="{{ $prescription->counseling?->guardian_birth ?? '' }}"
+                         value="{{ $prescription->patient?->guardian_birth_date ?? '' }}"
                          placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
                 </div>
                 <div class="rx-field-row">
                   <span class="rx-field-label">보호자 전화번호</span>
                   <input type="text" class="form-control" id="f-guardian-phone"
-                         value="{{ $prescription->counseling?->guardian_phone ?? '' }}"
+                         value="{{ $prescription->patient?->guardian_phone ?? '' }}"
                          placeholder="010-XXXX-XXXX" data-phone style="flex:1;" />
                 </div>
 
@@ -2017,7 +2017,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 2</span>
                 <input type="text" class="form-control" id="f-mobile2"
-                       value="{{ $prescription->counseling?->mobile2 ?? '' }}"
+                       value="{{ $prescription->patient?->phone ?? '' }}"
                        placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
               </div>
               <div class="rx-field-row" style="align-items:flex-start;">
@@ -2049,18 +2049,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">일일 도뇨 횟수</span>
                 <select class="form-control" id="f-diverticulums" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="01" @selected(($prescription->counseling?->diverticulums ?? '') == '01')>1회 미만</option>
-                  <option value="02" @selected(($prescription->counseling?->diverticulums ?? '') == '02')>1~2회</option>
-                  <option value="03" @selected(($prescription->counseling?->diverticulums ?? '') == '03')>3회 ~ 4회</option>
-                  <option value="04" @selected(($prescription->counseling?->diverticulums ?? '') == '04')>5회</option>
-                  <option value="05" @selected(($prescription->counseling?->diverticulums ?? '') == '05')>6회 이상</option>
-                  <option value="06" @selected(($prescription->counseling?->diverticulums ?? '') == '06')>N/A</option>
+                  <option value="01" @selected(($prescription->diverticulums ?? '') == '01')>1회 미만</option>
+                  <option value="02" @selected(($prescription->diverticulums ?? '') == '02')>1~2회</option>
+                  <option value="03" @selected(($prescription->diverticulums ?? '') == '03')>3회 ~ 4회</option>
+                  <option value="04" @selected(($prescription->diverticulums ?? '') == '04')>5회</option>
+                  <option value="05" @selected(($prescription->diverticulums ?? '') == '05')>6회 이상</option>
+                  <option value="06" @selected(($prescription->diverticulums ?? '') == '06')>N/A</option>
                 </select>
               </div>
               {{-- 아래 둘은 시안대로 급여·보험 / 거래·주문 구획에서 옮겨 왔다 --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">Five(110days)</span>
-                <input type="text" class="form-control" id="f-five" value="{{ $prescription->counseling?->five ?? '' }}" style="flex:1;" />
+                <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">현금영수증</span>
@@ -2074,11 +2074,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div style="display:flex;gap:8px;flex:1;min-width:0;">
                   <select class="form-control" id="f-deduction" title="소득공제" style="flex:1;min-width:0;">
                     <option value="">소득공제 선택</option>
-                    <option value="소득공제" @selected(($prescription->counseling?->udf22 ?? '') == '소득공제')>소득공제</option>
-                    <option value="지출증빙" @selected(($prescription->counseling?->udf22 ?? '') == '지출증빙')>지출증빙</option>
-                    <option value="자진발급" @selected(($prescription->counseling?->udf22 ?? '') == '자진발급')>자진발급</option>
+                    <option value="소득공제" @selected(($prescription->patient?->deduction ?? '') == '소득공제')>소득공제</option>
+                    <option value="지출증빙" @selected(($prescription->patient?->deduction ?? '') == '지출증빙')>지출증빙</option>
+                    <option value="자진발급" @selected(($prescription->patient?->deduction ?? '') == '자진발급')>자진발급</option>
                   </select>
-                  <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->counseling?->udf23 ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
+                  <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->patient?->cash_receipt_no ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
                 </div>
               </div>
             </div>
@@ -2087,45 +2087,45 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 오른쪽 열 (시안 148:2774) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">보호자명</span>
-                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->counseling?->udf24 ?? '' }}" placeholder="보호자명" style="flex:1;" />
+                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="보호자명" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Email</span>
                 <input type="email" class="form-control" id="f-email"
-                       value="{{ $prescription->counseling?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
+                       value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">건보 등록</span>
                 <select class="form-control" id="f-nhis-status" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="진행중"   @selected(($prescription->counseling?->udf19 ?? '') == '진행중')>진행중</option>
-                  <option value="완료"     @selected(($prescription->counseling?->udf19 ?? '') == '완료')>완료</option>
-                  <option value="필요없음" @selected(($prescription->counseling?->udf19 ?? '') == '필요없음')>필요없음</option>
+                  <option value="진행중"   @selected(($prescription->patient?->nhis_reg_status ?? '') == '진행중')>진행중</option>
+                  <option value="완료"     @selected(($prescription->patient?->nhis_reg_status ?? '') == '완료')>완료</option>
+                  <option value="필요없음" @selected(($prescription->patient?->nhis_reg_status ?? '') == '필요없음')>필요없음</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">건보 등록일</span>
                 <input type="date" class="form-control" id="f-nhis-reg-date"
-                       value="{{ $prescription->counseling?->nhis_reg_date ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->patient?->nhis_reg_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">건보 재등록 대상자</span>
-                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->counseling?->udf4 ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
+                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">건보 재등록 기한</span>
                 <input type="date" class="form-control" id="f-nhis-renew-due"
-                       value="{{ $prescription->counseling?->nhis_renew_due ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
                 <input type="text" class="form-control" id="f-basic-reeval"
-                       value="{{ $prescription->counseling?->basic_reeval ?? '' }}" placeholder="대상 여부 또는 비고" style="flex:1;" />
+                       value="{{ $prescription->patient?->basic_reeval ?? '' }}" placeholder="대상 여부 또는 비고" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
                 <input type="date" class="form-control" id="f-basic-reeval-due"
-                       value="{{ $prescription->counseling?->basic_reeval_due ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->patient?->basic_reeval_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -2159,14 +2159,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
             @php
               // 합치기 전에는 급여·보험 구획 안에 있던 정의다. 아래 입력과
               // 테이블뷰가 함께 쓰므로 본문 맨 앞으로 옮겼다.
-              $agreeStart = ($prescription->counseling_data['udf42'] ?? null) ?: now()->format('Y-m-d');
-              $agreeEnd   = ($prescription->counseling_data['udf43'] ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
+              $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
+              $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
             @endphp
             <div class="rx-cols">
             <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">요양병원 코드</span>
-                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->counseling?->erp_cd9 ?? '' }}" placeholder="요양병원코드" style="flex:1;" />
+                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원코드" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span></span>
@@ -2177,24 +2177,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">판매 거래처 유형</span>
-                <input type="text" class="form-control" id="f-dealer-type" value="{{ $prescription->counseling?->dealer_type ?? '' }}" style="flex:1;" />
+                <input type="text" class="form-control" id="f-dealer-type" value="{{ $prescription->dealer_type ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">추가정보 등록일</span>
-                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->counseling?->reg_date ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
+                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->created_at?->format('Y-m-d') ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
-                <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->counseling?->udf2 ?? '' }}" style="flex:1;min-width:0;" />
+                <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->diagnosis_date ?? '' }}" style="flex:1;min-width:0;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">상병 구분</span>
                 <select class="form-control" id="f-disease-class" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="1"   @selected(($prescription->counseling?->udf3 ?? '') == '1')>1</option>
-                  <option value="2-1" @selected(($prescription->counseling?->udf3 ?? '') == '2-1')>2-1</option>
-                  <option value="2-2" @selected(($prescription->counseling?->udf3 ?? '') == '2-2')>2-2</option>
-                  <option value="3"   @selected(($prescription->counseling?->udf3 ?? '') == '3')>3</option>
+                  <option value="1"   @selected(($prescription->disease_class ?? '') == '1')>1</option>
+                  <option value="2-1" @selected(($prescription->disease_class ?? '') == '2-1')>2-1</option>
+                  <option value="2-2" @selected(($prescription->disease_class ?? '') == '2-2')>2-2</option>
+                  <option value="3"   @selected(($prescription->disease_class ?? '') == '3')>3</option>
                 </select>
               </div>
               {{-- 시안 148:1304 Frame 48101493 은 446 한 칸이고 위아래 간격이 다른 줄과 같은 8 이다.
@@ -2204,50 +2204,50 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">상병코드</span>
                 <div style="display:flex;gap:8px;flex:1;min-width:0;">
                   <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;min-width:0;" />
-                  <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '' }}" placeholder="코드" style="flex:3;min-width:0;" />
+                  <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:3;min-width:0;" />
                 </div>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구분(SB/SCI)</span>
                 <select class="form-control" id="f-sb-sci" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="SB"  @selected(($prescription->counseling?->udf6 ?? '') == 'SB')>SB</option>
-                  <option value="SCI" @selected(($prescription->counseling?->udf6 ?? '') == 'SCI')>SCI</option>
+                  <option value="SB"  @selected(($prescription->patient?->sb_sci ?? '') == 'SB')>SB</option>
+                  <option value="SCI" @selected(($prescription->patient?->sb_sci ?? '') == 'SCI')>SCI</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">요류역학검사일</span>
-                <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->counseling?->udf7 ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->uro_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">1일 처방 개수</span>
-                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->counseling?->udf8 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방 기간</span>
-                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->counseling?->udf9 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
-                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->counseling?->udf10 ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->total_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">처방전 발행일</span>
                 <div class="field-group" style="flex:1;">
-                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->counseling?->udf12 ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
+                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->issued_date?->format('Y-m-d') ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">처방전 사용 기간 (교부일로부터)</span>
                 <div style="display:flex;align-items:center;gap:4px;flex:1;">
-                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->counseling?->udf13 ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
+                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
                   <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">일</span>
                 </div>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">담당 의사명</span>
-                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->counseling?->udf15 ?? '' }}" placeholder="의사 성명" style="flex:1;" />
+                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
               </div>
             </div>
             <div class="rx-col">
@@ -2255,19 +2255,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">보험 유형</span>
                 <select class="form-control" id="f-benefit-class" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="일반"      @selected(($prescription->counseling?->udf11 ?? '') == '일반')>일반</option>
-                  <option value="차상위경감" @selected(($prescription->counseling?->udf11 ?? '') == '차상위경감')>차상위경감</option>
-                  <option value="기초"      @selected(($prescription->counseling?->udf11 ?? '') == '기초')>기초</option>
-                  <option value="자동차보험" @selected(($prescription->counseling?->udf11 ?? '') == '자동차보험')>자동차보험</option>
-                  <option value="산재"      @selected(($prescription->counseling?->udf11 ?? '') == '산재')>산재</option>
+                  <option value="일반"      @selected(($prescription->benefit_class ?? '') == '일반')>일반</option>
+                  <option value="차상위경감" @selected(($prescription->benefit_class ?? '') == '차상위경감')>차상위경감</option>
+                  <option value="기초"      @selected(($prescription->benefit_class ?? '') == '기초')>기초</option>
+                  <option value="자동차보험" @selected(($prescription->benefit_class ?? '') == '자동차보험')>자동차보험</option>
+                  <option value="산재"      @selected(($prescription->benefit_class ?? '') == '산재')>산재</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">신구매/재구매</span>
                 <select class="form-control" id="f-purchase-type" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="신구매" @selected(($prescription->counseling?->udf17 ?? '') == '신구매')>신구매</option>
-                  <option value="재구매" @selected(($prescription->counseling?->udf17 ?? '') == '재구매')>재구매</option>
+                  <option value="신구매" @selected(($prescription->purchase_type ?? '') == '신구매')>신구매</option>
+                  <option value="재구매" @selected(($prescription->purchase_type ?? '') == '재구매')>재구매</option>
                 </select>
               </div>
               <div class="rx-field-row">
@@ -2286,21 +2286,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     '관리자 확인 -시스템 issue(판매 주문부터 시작/확정)',
                     '재고부족으로 발송지연','카카오구매-요양병원',
                   ] as $reason)
-                  <option value="{{ $reason }}" @selected(($prescription->counseling?->udf20 ?? '') == $reason)>{{ $reason }}</option>
+                  <option value="{{ $reason }}" @selected(($prescription->reason ?? '') == $reason)>{{ $reason }}</option>
                   @endforeach
                 </select>
             </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">주문 담당자</span>
-                <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->counseling_data['udf25'] ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
+                <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->order_manager ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Five/Six program</span>
                 <select class="form-control" id="f-five-program" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="00" @selected(($prescription->counseling?->five_program ?? '') == '00')>N/A</option>
-                  <option value="05" @selected(($prescription->counseling?->five_program ?? '') == '05')>Five</option>
-                  <option value="06" @selected(($prescription->counseling?->five_program ?? '') == '06')>Six</option>
+                  <option value="00" @selected(($prescription->five_program ?? '') == '00')>N/A</option>
+                  <option value="05" @selected(($prescription->five_program ?? '') == '05')>Five</option>
+                  <option value="06" @selected(($prescription->five_program ?? '') == '06')>Six</option>
                 </select>
               </div>
               <div class="rx-field-row">
@@ -2311,19 +2311,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">환급 해당 기관</span>
                 <select class="form-control" id="f-special-case" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="입원" @selected(($prescription->counseling?->udf18 ?? '') == '입원')>입원</option>
-                  <option value="산재" @selected(($prescription->counseling?->udf18 ?? '') == '산재')>산재</option>
-                  <option value="보훈" @selected(($prescription->counseling?->udf18 ?? '') == '보훈')>보훈</option>
-                  <option value="출국" @selected(($prescription->counseling?->udf18 ?? '') == '출국')>출국</option>
+                  <option value="입원" @selected(($prescription->special_case ?? '') == '입원')>입원</option>
+                  <option value="산재" @selected(($prescription->special_case ?? '') == '산재')>산재</option>
+                  <option value="보훈" @selected(($prescription->special_case ?? '') == '보훈')>보훈</option>
+                  <option value="출국" @selected(($prescription->special_case ?? '') == '출국')>출국</option>
                 </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">결제일</span>
-                <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->counseling?->pay_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구입일 (모든 서류 발행일)</span>
-                <input type="date" class="form-control" id="f-buy-date" value="{{ $prescription->counseling?->buy_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-buy-date" value="{{ $prescription->buy_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
@@ -2341,7 +2341,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">다음 재구매 가능일</span>
                 <div style="display:flex;gap:4px;flex:1;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->counseling?->udf30 ?? '' }}" style="flex:1;" />
+                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;" />
                   <button type="button" onclick="calcNextRepurchase(true)"
                           title="처방전발행일 + 처방기간(일) + 1일"
                           style="flex-shrink:0;height:32px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">
@@ -2373,13 +2373,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">종료일</span>
-                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->counseling?->udf14 ?? '' }}" style="flex:1;min-width:0;" />
+                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->rx_end_date ?? '' }}" style="flex:1;min-width:0;" />
               </div>
               {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
                    (시안 148:1304 Frame 48101500 이 두 값을 한 줄에 둔다). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">신환master등록일</span>
-                <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->counseling?->udf32 ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -2419,19 +2419,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">인마켓 마감일</span>
                 <input type="date" class="form-control" id="f-inmarket-due"
-                       value="{{ $prescription->counseling?->inmarket_due ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
             <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
-                       value="{{ $prescription->counseling?->last_confirmed_qty ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">하루 사용 수량</span>
                 <input type="number" min="0" class="form-control" id="f-daily-use-qty"
-                       value="{{ $prescription->counseling?->daily_use_qty ?? '' }}" style="flex:1;" />
+                       value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -2455,7 +2455,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </tr>
             <tr>
               <th>상담상태</th><td data-from="f-counsel-status">-</td>
-              <th>재상담일자</th><td data-from="f-re-counsel-date">{{ $prescription->counseling?->re_counsel_date ?? '-' }}</td>
+              <th>재상담일자</th><td data-from="f-re-counsel-date">{{ $prescription->counsel_re_date ?? '-' }}</td>
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-user"></i> 환자 정보</td></tr>
             <tr>
@@ -2463,7 +2463,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>연락처</th><td data-from="f-mobile">{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '-' }}</td>
             </tr>
             <tr>
-              <th>보호자명</th><td data-from="f-guardian">{{ $prescription->counseling?->udf24 ?? '-' }}</td>
+              <th>보호자명</th><td data-from="f-guardian">{{ $prescription->caregiver_name ?? '-' }}</td>
               <th>일일도뇨횟수</th><td data-from="f-diverticulums">-</td>
             </tr>
             <tr>
@@ -2473,10 +2473,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-hospital"></i> 병원 · 처방 정보</td></tr>
             <tr>
               <th>병원명</th><td data-from="f-hospital">{{ $prescription->hospital_name ?: '-' }}</td>
-              <th>요양병원코드</th><td data-from="f-hospital-code">{{ $prescription->counseling?->erp_cd9 ?? '-' }}</td>
+              <th>요양병원코드</th><td data-from="f-hospital-code">{{ $prescription->hospital_code ?? '-' }}</td>
             </tr>
             <tr>
-              <th>담당의사</th><td data-from="f-doctor">{{ $prescription->doctor_name ?? $prescription->counseling?->udf15 ?? '-' }}</td>
+              <th>담당의사</th><td data-from="f-doctor">{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '-' }}</td>
               <th>처방전발행일</th><td data-from="f-date">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</td>
             </tr>
             <tr>
@@ -2486,7 +2486,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-clipboard-list"></i> 처방 수량 · 상병</td></tr>
             <tr>
               <th>상병명</th><td data-from="f-disease">{{ $prescription->disease_name ?: '-' }}</td>
-              <th>상병코드</th><td data-from="f-disease-code">{{ $prescription->disease_code ?? $prescription->counseling?->udf5 ?? '-' }}</td>
+              <th>상병코드</th><td data-from="f-disease-code">{{ $prescription->disease_code ?? $prescription->disease_code ?? '-' }}</td>
             </tr>
             <tr>
               <th>상병구분</th><td data-from="f-disease-class">-</td>
@@ -2897,10 +2897,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
         @endphp
         @foreach($prevCounselings as $i => $pc)
           @php
-            $pcd    = $pc->counseling_data ?? [];
-            $pcSt   = $pcd['status'] ?? '';
-            $pcDate = $pcd['counsel_date'] ?? $pc->created_at->format('Y-m-d');
-            $pcNo   = $pcd['counselling_no'] ?? '-';
+            $pcSt   = $pc->counsel_status ?? '';
+            $pcDate = $pc->counsel_date ?: $pc->created_at->format('Y-m-d');
+            $pcNo   = $pc->counsel_no ?: '-';
           @endphp
           <div class="pc-list-item" data-idx="{{ $i }}" onclick="selectPrevCounsel({{ $i }})"
                style="padding:11px 14px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:background .15s;">
@@ -5275,7 +5274,7 @@ window.HELP_TOUR_STEPS = [
       guardian_relation: strOrNull('f-guardian-relation'),
       guardian_birth:    strOrNull('f-guardian-birth'),
       guardian_phone:    strOrNull('f-guardian-phone'),
-      // 시안 148:2708 로 새로 생긴 항목들 — counseling_data 에 담는다
+      // 시안 148:2708 로 새로 생긴 항목들
       mobile2:          strOrNull('f-mobile2'),
       email:            strOrNull('f-email'),
       nhis_reg_date:    strOrNull('f-nhis-reg-date'),

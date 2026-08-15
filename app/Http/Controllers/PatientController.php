@@ -152,16 +152,13 @@ class PatientController extends Controller
             'url'       => route('prescriptions.show', $p),
         ])->values();
 
-        $counseling = $rx->filter(fn ($p) => !empty($p->counseling_data))->map(function ($p) {
-            $c = $p->counseling;
-            return [
-                'counsel_no' => $c->counselling_no ?? $c->counsel_no ?? '-',
-                'rx_number'  => $p->rx_number,
-                'date'       => ($c->counselling_date ?? null) ?: $p->created_at->format('Y-m-d'),
-                'note'       => $c->memo ?? $c->note ?? $p->review_memo ?? '',
-                'url'        => route('prescriptions.show', $p),
-            ];
-        })->values();
+        $counseling = $rx->filter(fn ($p) => !empty($p->counsel_no))->map(fn ($p) => [
+            'counsel_no' => $p->counsel_no ?: '-',
+            'rx_number'  => $p->rx_number,
+            'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
+            'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
+            'url'        => route('prescriptions.show', $p),
+        ])->values();
 
         $purchases = $patient->orders()->latest()->take(50)->get()->map(fn ($o) => [
             'order_number' => $o->order_number,

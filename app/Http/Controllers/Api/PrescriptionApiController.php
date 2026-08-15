@@ -107,10 +107,8 @@ class PrescriptionApiController extends Controller
 
             // 상담번호 자동 채번
             $prescription->update([
-                'counseling_data' => array_merge(
-                    $prescription->counseling_data ?? [],
-                    ['counselling_no' => \App\Models\Prescription::generateCounselNo(), 'counsel_date' => now()->format('Y-m-d')]
-                ),
+                'counsel_no'   => \App\Models\Prescription::generateCounselNo(),
+                'counsel_date' => now()->format('Y-m-d'),
             ]);
 
             // 웹 관리자에게 실시간 알림
