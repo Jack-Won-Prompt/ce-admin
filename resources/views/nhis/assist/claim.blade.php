@@ -3,115 +3,116 @@
   공단 서식과 칸의 자리·이름·크기를 그대로 맞춘 화면이다. 담당자가 두 화면을 좌우로 놓고
   눈을 옮길 때 같은 자리를 보게 하려는 것이 전부다. 칸을 누르면 그 값이 복사된다.
 
-  공단 사이트를 이 페이지 안 프레임에 넣지 않는다. 넣어도 다른 출처라 우리가 값을 넣어 줄 수
-  없어 붙여넣기는 똑같이 사람이 하고, 그 화면은 WebSquare 위에 키보드보안·공동인증서가 얹혀
-  있어 프레임 안에서 깨지면 담당자가 청구를 못 한다. 그래서 창을 따로 열어 좌우로 세운다.
+  껍데기는 본 화면과 같은 디자인(layouts.popup)을 쓴다. 사이드바만 없을 뿐, 색·모서리·글꼴이
+  갈리면 우리 화면이 아닌 것처럼 보인다.
 --}}
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<title>요양비청구등록 — {{ $order->patient?->name ?? $prescription?->patient_name_ocr ?? $order->order_number }}</title>
+@extends('layouts.popup')
+
+@section('windowTitle', '요양비청구등록 — ' . ($order->patient?->name ?? $prescription?->patient_name_ocr ?? $order->order_number))
+
+@push('styles')
 <style>
-  :root {
-    --ink:#111827; --sub:#4b5563; --line:#b9c0c8; --lbl:#eef1f4; --bg:#fff;
-    --ok:#0f7b3e; --ok-bg:#eafaf0; --danger:#c02626; --danger-bg:#fdeeee;
-    --warn:#a35c00; --warn-bg:#fff7e8; --pri:#28798B;
+  /* ── 우리 도구 막대 — 공단 서식이 아니라 우리 것임이 한눈에 보여야 한다 ── */
+  .tools {
+    position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;
+    background:var(--primary-700, #1f5b68); color:var(--gray-0);
+    padding:8px 14px; flex-wrap:wrap;
   }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  html, body { overflow-x:hidden; }
-  body { font-family:'Malgun Gothic','맑은 고딕',sans-serif; background:var(--bg); color:var(--ink); font-size:12px; }
-
-  /* ── 우리 쪽 도구 막대. 공단 서식에는 없는 것이라 색으로 확실히 구분한다 ── */
-  .tools { position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;
-           background:#1f3d45; color:#fff; padding:7px 12px; flex-wrap:wrap; }
-  .tools b { font-size:12px; }
+  .tools b { font-size:12px; font-weight:700; }
   .tools .grow { flex:1; }
-  .tbtn { border:1px solid rgba(255,255,255,.45); background:transparent; color:#fff;
-          border-radius:5px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; }
+  .tools .miss { color:var(--alert-200, #ffb4b4); font-weight:700; font-size:11px; }
+  .tbtn {
+    border:1px solid rgba(255,255,255,.45); background:transparent; color:var(--gray-0);
+    border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;
+    font-family:inherit;
+  }
   .tbtn:hover { background:rgba(255,255,255,.15); }
-  .tbtn.on { background:#fff; color:#1f3d45; }
+  .tbtn.on { background:var(--gray-0); color:var(--primary-700, #1f5b68); }
   .pbar { width:150px; height:5px; background:rgba(255,255,255,.3); border-radius:99px; overflow:hidden; }
-  .pfill { height:100%; background:#7ed4a5; width:0; transition:width .2s; }
-  .tools .miss { color:#ffb4b4; font-weight:700; font-size:11px; }
+  .pfill { height:100%; background:var(--primary-200); width:0; transition:width .2s; }
 
-  /* ── 여기서부터 공단 서식과 같은 구조 ── */
-  /* 서식은 원래 넓다. 창을 좌우로 반씩 쓰면 그대로는 잘리므로 폭에 맞춰 통째로 줄인다.
+  /* ── 여기서부터 공단 서식과 같은 구조 ──
+     서식은 원래 넓다. 창을 좌우로 반씩 쓰면 그대로는 잘리므로 폭에 맞춰 통째로 줄인다.
      칸의 자리와 비율은 그대로라 공단 화면과 눈으로 대조하는 데는 지장이 없다. */
   .stage { overflow:hidden; }
-  .sheet { width:1180px; padding:8px 12px 40px; transform-origin:top left; }
+  .sheet { width:1180px; padding:12px 14px 40px; transform-origin:top left; background:var(--gray-0); }
 
-  .red { color:#d21414; }
-  .red-r { color:#d21414; font-size:11px; text-align:right; line-height:1.7; }
-  .sec { display:flex; align-items:center; gap:8px; margin:10px 0 3px; }
-  .sec-name { font-size:12px; font-weight:700; }
-  .sec-help { font-size:11px; color:#d21414; font-weight:700; }
-  .sec-right { margin-left:auto; font-size:11px; color:var(--sub); }
+  .sec { display:flex; align-items:center; gap:8px; margin:14px 0 5px; }
+  .sec:first-child { margin-top:4px; }
+  .sec-name { font-size:13px; font-weight:700; color:var(--gray-1000); }
+  .sec-help { font-size:11px; color:var(--alert-500); font-weight:500; }
+  .sec-right { margin-left:auto; font-size:11px; color:var(--text-muted); }
+  .red-r { color:var(--alert-500); font-size:11px; text-align:right; line-height:1.7; }
 
-  table.form { width:100%; border-collapse:collapse; table-layout:fixed; }
-  table.form th, table.form td { border:1px solid var(--line); padding:0; height:30px; }
-  table.form th { background:var(--lbl); font-weight:400; font-size:11px; text-align:left;
-                  padding:0 6px; color:#333; width:130px; }
-  table.form th small { display:block; font-size:10px; color:#666; }
-  table.form td { padding:3px 5px; }
+  table.form { width:100%; border-collapse:collapse; table-layout:fixed;
+               border:1px solid var(--gray-200); border-radius:8px; overflow:hidden; }
+  table.form th, table.form td { border:1px solid var(--gray-200); padding:0; height:34px; }
+  table.form th {
+    background:var(--gray-100); font-weight:500; font-size:12px; text-align:left;
+    padding:0 8px; color:var(--gray-700);
+  }
+  table.form th small { display:block; font-size:10px; color:var(--gray-500); font-weight:400; }
+  table.form td { padding:4px 6px; }
 
-  /* 값 칸 — 공단의 입력 상자처럼 보이되 누르면 복사된다 */
-  .fld { display:inline-flex; align-items:center; min-height:21px; padding:2px 6px;
-         border:1px solid #a9b2bb; background:#fff; border-radius:2px; font-size:12px;
-         cursor:pointer; user-select:none; max-width:100%; }
-  .fld:hover { border-color:var(--pri); box-shadow:0 0 0 2px rgba(40,121,139,.15); }
-  .fld.w-sm  { width:86px; }  .fld.w-md { width:140px; }
-  .fld.w-lg  { width:190px; } .fld.w-full { width:100%; }
-  .fld.done { border-color:#2f9e5e; background:var(--ok-bg); }
-  .fld.none { border-style:dashed; border-color:#e0a3a3; background:var(--danger-bg);
-              color:var(--danger); cursor:not-allowed; font-size:11px; }
-  .fld.ask  { border-style:dashed; border-color:#e2bc7a; background:var(--warn-bg);
-              color:var(--warn); cursor:not-allowed; font-size:11px; }
-  .fld.fixed { background:#f6f8fa; }
-  .fld.fixed.done { background:var(--ok-bg); }
-  .fld-v { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  /* 설명은 한 줄로 묶는다. 여러 줄이 되면 칸이 밀려 공단 서식과 행 높이가 어긋난다.
-     잘린 내용은 마우스를 올리면 다 보인다. */
-  .hint { font-size:10px; color:#6b7280; margin-top:1px; line-height:1.4;
+  /* 값 칸 — 본 화면 입력칸과 같은 규격(r8 · 1px --border)이되 누르면 복사된다 */
+  .fld {
+    display:inline-flex; align-items:center; min-height:26px; padding:3px 8px;
+    border:1px solid var(--border); background:var(--gray-0); border-radius:8px;
+    font-size:12px; font-weight:500; color:var(--gray-1000);
+    cursor:pointer; user-select:none; max-width:100%;
+  }
+  .fld:hover { border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-100); }
+  .fld.w-sm { width:92px; } .fld.w-md { width:148px; }
+  .fld.w-lg { width:200px; } .fld.w-full { width:100%; }
+  /* 칸은 상태와 상관없이 흰 바탕에 실선 하나로 통일한다. 점선·색 바탕을 섞으면 공단
+     서식의 빈칸과 모양이 달라지고, 화면이 값보다 상태를 먼저 말하게 된다.
+     복사한 칸만 테두리 색으로 표가 나는데, 어디까지 옮겼는지는 남아야 하기 때문이다. */
+  .fld.fixed { background:var(--gray-0); }
+  .fld.none, .fld.ask { cursor:not-allowed; }
+  .fld.done { border-color:var(--primary-400); }
+  .fld-v { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:16px; }
+
+  /* 설명은 한 줄로 묶는다. 여러 줄이 되면 칸이 밀려 공단 서식과 행 높이가 어긋난다. */
+  .hint { font-size:10px; color:var(--text-muted); margin-top:2px; line-height:1.4;
           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  /* 확인할 것은 이 표시에만 남는다. 마우스를 올리면 내용이 보인다. */
-  .wmark { color:var(--warn); font-weight:700; cursor:help; margin-left:3px; }
-  .unit { font-size:11px; color:#555; margin-left:3px; }
-  .btnish { display:inline-block; border:1px solid #a9b2bb; background:#f0f2f5; border-radius:2px;
-            padding:2px 8px; font-size:11px; color:#666; }
+  .wmark { color:var(--warning-500, #b45309); font-weight:700; cursor:help; margin-left:4px; }
+  .unit { font-size:11px; color:var(--gray-600); margin:0 3px; }
+  .btnish { display:inline-block; border:1px solid var(--border); background:var(--gray-50);
+            border-radius:6px; padding:3px 9px; font-size:11px; color:var(--gray-600); }
 
   /* 국세청자료 */
-  table.tax { width:100%; border-collapse:collapse; table-layout:fixed; }
-  table.tax th, table.tax td { border:1px solid var(--line); height:28px; padding:3px 6px; font-size:11px; }
-  table.tax th { background:var(--lbl); font-weight:400; text-align:center; }
+  table.tax { width:100%; border-collapse:collapse; table-layout:fixed;
+              border:1px solid var(--gray-200); border-radius:8px; overflow:hidden; }
+  table.tax th, table.tax td { border:1px solid var(--gray-200); height:32px; padding:4px 8px; font-size:11px; }
+  table.tax th { background:var(--gray-100); font-weight:500; text-align:center; color:var(--gray-700); }
   table.tax td { text-align:center; }
   table.tax td.l { text-align:left; }
-  .tax-empty { color:var(--danger); }
+  .tax-empty { color:var(--alert-500); }
 
   /* 제출서류 */
-  table.docs { width:100%; border-collapse:collapse; }
-  table.docs th, table.docs td { border:1px solid var(--line); padding:5px 8px; font-size:11px; vertical-align:top; }
-  table.docs th { background:var(--lbl); font-weight:400; text-align:center; }
-  .have { color:var(--ok); font-weight:700; }
-  .havent { color:var(--danger); font-weight:700; }
-  .dl { color:var(--pri); font-weight:700; text-decoration:none; }
+  table.docs { width:100%; border-collapse:collapse; border:1px solid var(--gray-200);
+               border-radius:8px; overflow:hidden; }
+  table.docs th, table.docs td { border:1px solid var(--gray-200); padding:7px 10px; font-size:11px; vertical-align:top; }
+  table.docs th { background:var(--gray-100); font-weight:500; text-align:center; color:var(--gray-700); }
+  .have { color:var(--primary-600); font-weight:700; }
+  .havent { color:var(--alert-500); font-weight:700; }
+  .dl { color:var(--primary); font-weight:700; text-decoration:none; }
   .dl:hover { text-decoration:underline; }
 
-  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
-           background:#111827; color:#fff; padding:8px 15px; border-radius:7px; font-size:12px;
-           opacity:0; transition:opacity .15s; pointer-events:none; z-index:99; }
-  .toast.on { opacity:1; }
+  .cautions { font-size:11px; color:var(--text-muted); line-height:1.9; padding:8px 2px; }
 </style>
-</head>
-<body>
+@endpush
 
+@section('body')
 @php
   /**
    * 칸 하나를 그린다. 공단 서식의 입력 상자와 같은 자리에 선다.
    *   $k  칸 이름(키) — 복사 기록도 이 이름으로 남는다
-   *   $w  너비 (sm 90 / md 150 / lg 230 / full)
+   *   $w  너비 (sm / md / lg / full)
+   *
+   * 값이 없으면 칸만 세운다. 「없음」·「계산식 미확인」 같은 말을 칸 안에 적으면 그것이
+   * 값처럼 보여 옮겨 적힐 수 있고, 공단 서식의 빈칸과 모양도 달라진다. 왜 비었는지는
+   * 마우스를 올리면 나온다.
    */
   $box = function (string $k, string $w = 'md') use ($f) {
     $r = $f[$k] ?? ['value' => null];
@@ -122,23 +123,24 @@
     if ($r['fixed'] ?? false) { $cls .= ' fixed'; }
     if ($v === null)          { $cls .= ($r['ask'] ?? false) ? ' ask' : ' none'; }
 
-    $html  = '<span class="' . $cls . '" data-key="' . $k . '" data-copy="' . ($can ? 1 : 0) . '"'
-           . (($r['reveal'] ?? false) ? ' data-reveal="1"' : '')
-           . ' title="' . e($can ? '누르면 복사됩니다' : ($r['note'] ?? '값이 없습니다')) . '"'
-           . ' onclick="copyBox(this)">'
-           . '<span class="fld-v" data-val>' . e($v ?? ($r['blank'] ?? '없음')) . '</span></span>';
+    // 비어 있는 까닭은 칸 안이 아니라 툴팁에 둔다
+    $tip = $can ? '누르면 복사됩니다' : trim(($r['blank'] ?? '') . ' ' . ($r['note'] ?? ''));
 
-    // 경고는 칸 옆에 표시만 남기고 내용은 위쪽 「확인할 것」에 모은다
+    $html = '<span class="' . $cls . '" data-key="' . $k . '" data-copy="' . ($can ? 1 : 0) . '"'
+          . (($r['reveal'] ?? false) ? ' data-reveal="1"' : '')
+          . ' title="' . e($tip ?: '값이 없습니다') . '" onclick="copyBox(this)">'
+          . '<span class="fld-v" data-val>' . e($v ?? '') . '</span></span>';
+
     if ($r['warn'] ?? null) {
       $html .= '<span class="wmark" title="' . e($r['warn']) . '">⚠</span>';
     }
-    if ($r['note'] ?? null) {
+    // 설명은 값이 있는 칸에만 붙인다 — 계산 근거처럼 실제로 도움이 되는 것들이다
+    if ($v !== null && ($r['note'] ?? null)) {
       $html .= '<div class="hint" title="' . e($r['note']) . '">' . e($r['note']) . '</div>';
     }
 
     return $html;
   };
-
 @endphp
 
 {{-- 우리 도구 막대 — 공단 서식이 아니라 우리 것임이 한눈에 보여야 한다 --}}
@@ -352,9 +354,9 @@
 
 </div>
 </div>
+@endsection
 
-<div class="toast" id="toast"></div>
-
+@push('scripts')
 <script>
 const CSRF   = document.querySelector('meta[name=csrf-token]').content;
 const REVEAL = @js($revealUrl);
@@ -503,5 +505,4 @@ document.querySelectorAll('.fld').forEach(el => {
 progress();
 applyFit();
 </script>
-</body>
-</html>
+@endpush
