@@ -37,21 +37,13 @@
   .pfill { height:100%; background:#7ed4a5; width:0; transition:width .2s; }
   .tools .miss { color:#ffb4b4; font-weight:700; font-size:11px; }
 
-  .note-bar { background:var(--warn-bg); border-bottom:1px solid #f0d9ae; color:var(--warn);
-              padding:6px 12px; font-size:11px; line-height:1.7; }
-  .note-bar.info { background:#eef6f8; border-color:#c6dde3; color:#1f5b68; }
-
   /* ── 여기서부터 공단 서식과 같은 구조 ── */
   /* 서식은 원래 넓다. 창을 좌우로 반씩 쓰면 그대로는 잘리므로 폭에 맞춰 통째로 줄인다.
      칸의 자리와 비율은 그대로라 공단 화면과 눈으로 대조하는 데는 지장이 없다. */
   .stage { overflow:hidden; }
   .sheet { width:1180px; padding:8px 12px 40px; transform-origin:top left; }
-  .sh-top { display:flex; align-items:flex-end; gap:8px; border-bottom:2px solid #333; padding-bottom:4px; }
-  .sh-title { font-size:15px; font-weight:700; }
-  .sh-right { margin-left:auto; font-size:11px; color:var(--sub); }
 
   .red { color:#d21414; }
-  .red-c { color:#d21414; text-align:center; font-size:11px; font-weight:700; line-height:1.9; padding:5px 0; }
   .red-r { color:#d21414; font-size:11px; text-align:right; line-height:1.7; }
   .sec { display:flex; align-items:center; gap:8px; margin:10px 0 3px; }
   .sec-name { font-size:12px; font-weight:700; }
@@ -84,12 +76,8 @@
      잘린 내용은 마우스를 올리면 다 보인다. */
   .hint { font-size:10px; color:#6b7280; margin-top:1px; line-height:1.4;
           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* 확인할 것은 이 표시에만 남는다. 마우스를 올리면 내용이 보인다. */
   .wmark { color:var(--warn); font-weight:700; cursor:help; margin-left:3px; }
-
-  /* 확인할 것 — 칸마다 흩어 놓으면 서식이 밀리므로 위에 모은다 */
-  .warns { background:var(--warn-bg); border-bottom:1px solid #f0d9ae; padding:6px 12px;
-           font-size:11px; color:var(--warn); line-height:1.8; }
-  .warns b { display:block; margin-bottom:2px; }
   .unit { font-size:11px; color:#555; margin-left:3px; }
   .btnish { display:inline-block; border:1px solid #a9b2bb; background:#f0f2f5; border-radius:2px;
             padding:2px 8px; font-size:11px; color:#666; }
@@ -151,17 +139,6 @@
     return $html;
   };
 
-  // 칸 이름 대신 공단 서식에 적힌 이름으로 보여 줘야 어느 칸인지 찾는다
-  $warnLabels = [
-    'rx_total' => '총계(처방총계)', 'buy_amount' => '구입금액',
-    'copay'    => '본인부담금',     'nhis_pay'   => '공단부담금',
-  ];
-  $warnings = [];
-  foreach ($f as $key => $r) {
-    if ($r['warn'] ?? null) {
-      $warnings[] = ($warnLabels[$key] ?? $key) . ' — ' . $r['warn'];
-    }
-  }
 @endphp
 
 {{-- 우리 도구 막대 — 공단 서식이 아니라 우리 것임이 한눈에 보여야 한다 --}}
@@ -179,51 +156,14 @@
   <button class="tbtn" onclick="openPortal()">공단을 새 창으로</button>
 </div>
 
-@unless($delegated)
-  <div class="note-bar">
-    <b>위임 등록이 확인되지 않습니다.</b> 공단에 위임 등록을 먼저 마쳐야 청구가 받아들여집니다 —
-    위임장 서명 화면의 「공단 위임 등록」에서 등록하십시오.
-  </div>
-@endunless
-@if($warnings)
-  <div class="warns">
-    <b>확인할 것 {{ count($warnings) }}건</b>
-    @foreach($warnings as $w)
-      <div>⚠ {{ $w }}</div>
-    @endforeach
-  </div>
-@endif
-<div class="note-bar info">
-  칸을 누르면 그 값이 복사됩니다. 복사한 칸은 초록으로 남습니다.
-  <span class="red">붉은 칸</span>은 값이 없는 것이고,
-  <span style="color:var(--warn)">주황 칸</span>은 공단 계산식·선택 문구가 확인되지 않아 값을 만들지 않은 것입니다 —
-  공단 화면을 보고 직접 넣으십시오.
-</div>
-
 {{-- ───────────────────────── 여기서부터 공단 2221 서식 구조 ───────────────────────── --}}
+{{--
+  공단 서식의 머리말(제목·빨간 안내·버튼 줄)과 우리 안내 배너는 두지 않는다. 오른쪽 공단
+  화면에 그대로 있어 두 번 읽을 것이 되고, 정작 옮겨 적을 칸이 아래로 밀린다.
+  확인해야 할 것은 칸 옆 ⚠ 에 남아 있다 — 마우스를 올리면 내용이 보인다.
+--}}
 <div class="stage" id="stage">
 <div class="sheet" id="sheet">
-
-  <div class="sh-top">
-    <div class="sh-title">2221 요양비청구등록</div>
-    <div class="sh-right">도움말 &nbsp; 화면메뉴로 고정</div>
-  </div>
-
-  <div style="display:flex;align-items:flex-start;gap:12px;">
-    <div style="flex:1">
-      <div class="red-c">
-        ※ '사전급여제한자'는 요양비 지급이 불가하므로, '수진자 자격확인(약국)' 또는 관할지사에 문의바랍니다.<br>
-        ※ 청구내용 입력란 비활성화 등 입력 오류 발생 시, 타 브라우저 활용 또는 쿠키삭제(인터넷사용기록삭제)를 해주시기 바랍니다.
-      </div>
-    </div>
-    <div style="width:280px;padding-top:4px;">
-      <div style="text-align:right;font-size:11px;color:var(--sub);">반송건재입력 &nbsp; 신규 &nbsp; 저장 &nbsp; 삭제 &nbsp; 최종제출</div>
-      <div class="red-r" style="margin-top:4px;">
-        ※ 데이터를 모두 입력하고 저장을 완료해야 제출서류 첨부가 가능합니다.<br>
-        ① 신청내용 입력 ② 저장 ③ 제출서류 파일 첨부 ④ 저장 ⑤ 최종제출
-      </div>
-    </div>
-  </div>
 
   {{-- 수진자 정보 --}}
   <div class="sec"><span class="sec-name">수진자 정보</span></div>
