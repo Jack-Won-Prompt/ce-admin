@@ -183,6 +183,13 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('nhis')->name('nhis.')->group(function () {
         // 공단 청구는 사이트에 직접 입력·업로드한다. 팩스로 보내던 경로는 걷어냈다.
         Route::get('/',                          [NhisController::class, 'index'])->name('index');
+
+        /* 공단 사이트에 옮겨 적는 것을 돕는 화면. 값을 늘어놓고 항목마다 복사 버튼을 둔다.
+           공단 사이트에 자동으로 넣어 주지 않는다 — 최종 입력·제출은 담당자가 한다. */
+        Route::get('/assist/delegation/{prescription}',
+            [\App\Http\Controllers\NhisAssistController::class, 'delegation'])->name('assist.delegation');
+        Route::post('/assist/delegation/{prescription}/rrn',
+            [\App\Http\Controllers\NhisAssistController::class, 'revealRrn'])->name('assist.rrn');
         Route::post('/{order}/record-result',    [NhisController::class, 'recordResult'])->name('recordResult');
         Route::get('/{order}/preview',           [NhisController::class, 'previewDocument'])->name('preview');
     });

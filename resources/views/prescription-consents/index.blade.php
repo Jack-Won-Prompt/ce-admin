@@ -270,6 +270,32 @@
         },
       },
       {
+        // 서명이 끝난 건은 공단에 위임 등록을 해야 한다. 그 입력을 돕는 창을 연다.
+        header: '공단 등록', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        renderer: (v, row) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pc-cellbtn is-pdf';
+          if (!row.rx_number || row.status_key !== 'agreed') {
+            btn.disabled = true;
+            btn.title = row.rx_number ? '서명이 끝난 뒤에 등록합니다' : '연결된 처방전이 없습니다';
+          } else {
+            btn.title = '공단 위임 등록 입력 지원 창을 엽니다';
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              window.open(`{{ url('/nhis/assist/delegation') }}/${row.rx_number}`,
+                          'nhis_delegation_' + row.rx_number,
+                          'width=980,height=1000,scrollbars=yes,resizable=yes');
+            });
+          }
+          const i = document.createElement('i');
+          i.className = 'fa-solid fa-clipboard-list';
+          btn.appendChild(i);
+          btn.appendChild(document.createTextNode(' 위임 등록'));
+          return btn;
+        },
+      },
+      {
         header: '위임동의', name: 'action', width: 95, sortable: false, exportable: false,
         renderer: (v, row) => {
           const btn = document.createElement('button');

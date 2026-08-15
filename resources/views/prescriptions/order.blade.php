@@ -853,6 +853,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
             </a>
+            {{-- 서명이 끝났으면 공단에 위임 등록을 해야 한다. 입력 지원 창을 연다. --}}
+            <button id="csignNhisBtn" type="button"
+               onclick="window.open('{{ route('nhis.assist.delegation', $prescription) }}', 'nhis_delegation_{{ $prescription->rx_number }}', 'width=980,height=1000,scrollbars=yes,resizable=yes')"
+               style="display:none;padding:5px 10px;background:var(--success,#28c76f);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:4px;"
+               title="공단 요양비청구위임내역등록(2225) 화면에 붙여넣을 값을 순서대로 보여 줍니다.">
+              <i class="fa-solid fa-clipboard-list"></i> 공단 위임 등록
+            </button>
             <button id="csignRegenBtn" type="button" onclick="regenerateDelegation(this)"
                data-url="{{ route('prescriptions.delegationRegenerate', $prescription) }}"
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);border:none;cursor:pointer;align-items:center;gap:4px;"
@@ -7038,6 +7045,8 @@ window.HELP_TOUR_STEPS = [
       const hasSig = !!data.signature_data;
       if (delegBtn) delegBtn.style.display = hasSig ? 'inline-flex' : 'none';
       if (regenBtn) regenBtn.style.display = hasSig ? 'inline-flex' : 'none';
+      const nhisBtn = document.getElementById('csignNhisBtn');
+      if (nhisBtn) nhisBtn.style.display = hasSig ? 'inline-flex' : 'none';
 
       loading.style.display = 'none';
       content.style.display = 'block';
