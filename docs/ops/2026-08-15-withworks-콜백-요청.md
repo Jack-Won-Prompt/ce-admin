@@ -19,7 +19,7 @@ CEAdmin 은 판매주문을 Withworks 에 넘긴 뒤의 진행을 알지 못한�
 | 형식 | `Content-Type: application/json` |
 | 응답 | `200 {"success":true}` · `401` 비밀 불일치 · `422` 형식 오류 · `503` 우리 쪽 미설정 |
 
-공유 비밀은 양쪽 `.env` 에 같은 값을 넣는다 (CEAdmin `TODOWORKS_WEBHOOK_SECRET`).
+공유 비밀은 양쪽 `.env` 에 같은 값을 넣는다 (CEAdmin `WITHWORKS_WEBHOOK_SECRET`).
 비밀이 설정돼 있지 않으면 CEAdmin 은 `503` 으로 거절한다 — 열어 두지 않는다.
 
 ### 보낼 것
