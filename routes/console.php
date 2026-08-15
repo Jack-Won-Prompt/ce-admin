@@ -18,3 +18,11 @@ Schedule::command('cashbill:sync --status')->everyFifteenMinutes()->withoutOverl
 // 접수는 바로 되지만 변환·발신은 몇 분 걸리고 실패도 그때 드러난다. 사람이 '대기건 동기화'를
 // 누르기 전까지 실패한 건이 접수 상태로 보이면, 공단 제출이 안 된 것을 늦게 알게 된다.
 Schedule::command('fax:sync-pending')->everyFiveMinutes()->withoutOverlapping();
+
+/* Withworks 는 아직 우리를 불러 주지 않는다. 상세를 열 때만 물어보면 아무도 안 연 주문은
+   상태가 옛것으로 남아, 배송이 끝났는데도 청구 대상에서 빠진다. 그래서 우리가 훑는다. */
+Schedule::command('withworks:sync')->everyTenMinutes()->withoutOverlapping();
+
+/* 청구 준비 여부는 발행·배송 때마다 그 자리에서 다시 따지지만, 주문을 건드리지 않는
+   변화(위임 등록일이 환자 쪽에서 바뀌는 것 같은)가 있어 주기적으로 다시 본다. */
+Schedule::command('claim:refresh')->hourly()->withoutOverlapping();

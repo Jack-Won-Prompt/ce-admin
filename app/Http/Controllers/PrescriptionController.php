@@ -1755,9 +1755,9 @@ class PrescriptionController extends Controller
             'purchase_history' => '제품 구매내역',
             'cash_receipt'     => '현금영수증',
         ];
+        // 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
         $recipientLabels = [
             'nhis'   => '국민건강보험공단',
-            'hira'   => '건강보험심사평가원',
             'custom' => '기타',
         ];
 

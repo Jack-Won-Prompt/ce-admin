@@ -8,7 +8,9 @@ use App\Models\Prescription;
 use App\Models\PrescriptionDocument;
 use App\Services\Popbill\CashbillService;
 use App\Services\Popbill\MessageService;
+use App\Services\ClaimReadiness;
 use App\Services\Popbill\TaxinvoiceService;
+use App\Services\WithworksSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -76,33 +78,8 @@ class OrderController extends Controller
 
         $order->load(['patient', 'prescription.items', 'creator']);
 
-        $withworksStatus = null;
-        if ($order->withworks_so_no) {
-            $baseUrl = rtrim(config('services.todoworks.api_url', ''), '/');
-            $token   = config('services.todoworks.token');
-            if ($baseUrl && $token) {
-                try {
-                    $res = Http::withToken($token)->timeout(5)
-                        ->get("{$baseUrl}/api/v1/ce-admin/so_show", [
-                            'ce_order_number' => $order->order_number,
-                        ]);
-                    if ($res->successful() && ($res->json('success') ?? false)) {
-                        $withworksStatus = $res->json('result');
-                        $ship = $withworksStatus['ship'] ?? null;
-                        $order->update([
-                            'withworks_status'            => $withworksStatus['status'] ?? null,
-                            'withworks_status_label'      => $withworksStatus['status_label'] ?? null,
-                            'withworks_status_at'         => now(),
-                            'withworks_ship_no'           => $ship['ship_no'] ?? null,
-                            'withworks_ship_status'       => $ship['ship_status'] ?? null,
-                            'withworks_ship_status_label' => $ship['ship_status_label'] ?? null,
-                            'withworks_tracking_no'       => $ship['tracking_no'] ?? null,
-                            'withworks_ship_at'           => $ship ? now() : null,
-                        ]);
-                    }
-                } catch (\Throwable) {}
-            }
-        }
+        // 상세를 열 때도 최신을 본다. 스케줄이 주기적으로 훑지만 그 사이에 바뀌었을 수 있다.
+        $withworksStatus = app(WithworksSync::class)->pull($order);
 
         return view('orders.show', compact('order', 'withworksStatus'));
     }
@@ -317,6 +294,9 @@ class OrderController extends Controller
             'delivered_at' => $request->status === 'delivered' ? now() : null,
         ]);
 
+        // 배송이 끝나야 청구할 수 있다 — 상태가 바뀌면 준비 여부도 달라진다
+        app(ClaimReadiness::class)->refresh($order);
+
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log('주문 상태 변경: ' . $request->status);
 
@@ -457,6 +437,8 @@ class OrderController extends Controller
                 Log::warning('[TaxInvoice] PDF 서류 저장 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
             }
 
+            app(ClaimReadiness::class)->refresh($order->refresh());
+
             return response()->json([
                 'success'        => true,
                 'message'        => '세금계산서가 발행되었습니다.',
@@ -490,6 +472,9 @@ class OrderController extends Controller
                 'tax_invoice_status'       => 'cancelled',
                 'tax_invoice_cancelled_at' => now(),
             ]);
+
+            // 취소하면 청구 자료가 다시 모자라진다
+            app(ClaimReadiness::class)->refresh($order);
 
             activity()->causedBy(Auth::user())->performedOn($order)
                 ->log("세금계산서 취소 ({$order->tax_invoice_no})");
@@ -561,6 +546,8 @@ class OrderController extends Controller
             } catch (\Throwable $e) {
                 Log::warning('[CashReceipt] 발행 후 동기화 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
             }
+
+            app(ClaimReadiness::class)->refresh($order->refresh());
 
             $typeLabel = Order::CASH_RECEIPT_TYPE_LABELS[$data['cash_receipt_type']] ?? '';
 
@@ -642,6 +629,8 @@ class OrderController extends Controller
                 'cash_receipt_status'       => 'cancelled',
                 'cash_receipt_cancelled_at' => now(),
             ]);
+
+            app(ClaimReadiness::class)->refresh($order);
 
             activity()->causedBy(Auth::user())->performedOn($order)
                 ->log("현금영수증 취소 ({$order->cash_receipt_no})");
@@ -829,45 +818,23 @@ HTML;
             return response()->json(['success' => false, 'message' => 'Withworks 미연동 주문입니다.'], 422);
         }
 
-        $baseUrl = rtrim(config('services.todoworks.api_url', ''), '/');
-        $token   = config('services.todoworks.token');
+        $sync = app(WithworksSync::class);
 
-        if (!$baseUrl || !$token) {
+        if (!$sync->configured()) {
             return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
         }
 
-        try {
-            $res = Http::withToken($token)->timeout(5)
-                ->get("{$baseUrl}/api/v1/ce-admin/so_show", [
-                    'ce_order_number' => $order->order_number,
-                ]);
+        $result = $sync->pull($order);
 
-            if ($res->successful() && ($res->json('success') ?? false)) {
-                $result = $res->json('result');
-                $ship   = $result['ship'] ?? null;
-
-                $order->update([
-                    'withworks_status'            => $result['status'] ?? null,
-                    'withworks_status_label'      => $result['status_label'] ?? null,
-                    'withworks_status_at'         => now(),
-                    'withworks_ship_no'           => $ship['ship_no'] ?? null,
-                    'withworks_ship_status'       => $ship['ship_status'] ?? null,
-                    'withworks_ship_status_label' => $ship['ship_status_label'] ?? null,
-                    'withworks_tracking_no'       => $ship['tracking_no'] ?? null,
-                    'withworks_ship_at'           => $ship ? now() : null,
-                ]);
-                return response()->json([
-                    'success'            => true,
-                    'status'             => $result['status'] ?? null,
-                    'status_label'       => $result['status_label'] ?? null,
-                    'ship'               => $ship,
-                ]);
-            }
-
-            return response()->json(['success' => false, 'message' => 'Withworks에서 주문을 찾을 수 없습니다.'], 404);
-
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => 'API 호출 실패: ' . $e->getMessage()], 500);
+        if ($result === null) {
+            return response()->json(['success' => false, 'message' => 'Withworks에서 주문 상태를 가져오지 못했습니다.'], 502);
         }
+
+        return response()->json([
+            'success'      => true,
+            'status'       => $result['status'] ?? null,
+            'status_label' => $result['status_label'] ?? null,
+            'ship'         => $result['ship'] ?? null,
+        ]);
     }
 }

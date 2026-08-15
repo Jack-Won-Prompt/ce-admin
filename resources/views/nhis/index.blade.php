@@ -174,7 +174,11 @@
   <div class="summary-card gray">
     <div class="s-label">미청구 건수</div>
     <div class="s-value" style="color:var(--text-secondary);">{{ $counts['pending'] ?? 0 }}</div>
-    <div class="s-sub">청구 대기 중인 주문</div>
+    {{-- 미청구 중에서도 지금 바로 할 수 있는 것이 몇 건인지가 실제로 궁금한 값이다 --}}
+    <div class="s-sub">
+      자료 완비 <b style="color:var(--success);">{{ $readyCount }}</b>건 ·
+      대기 {{ max(0, ($counts['pending'] ?? 0) - $readyCount) }}건
+    </div>
   </div>
   <div class="summary-card blue">
     <div class="s-label">청구 완료</div>
@@ -209,6 +213,16 @@
       @endif
     </a>
   @endforeach
+
+  {{-- 자료가 갖춰진 것만 따로 볼 수 있어야 청구를 몰아서 한다 --}}
+  <a href="{{ route('nhis.index', array_merge(request()->except('ready','page'), ['ready' => 'y'])) }}"
+     class="ds-chip {{ request('ready') === 'y' ? 'active' : '' }}" style="margin-left:8px;">
+    자료 완비 <span class="ds-chip-count">{{ $readyCount }}</span>
+  </a>
+  <a href="{{ route('nhis.index', array_merge(request()->except('ready','page'), ['ready' => 'n'])) }}"
+     class="ds-chip {{ request('ready') === 'n' ? 'active' : '' }}">
+    자료 부족
+  </a>
 </div>
 
 {{-- ── 검색 필터 ── --}}
@@ -358,6 +372,25 @@
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: 'NHIS상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
+      {
+        // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
+        header: '청구 자료', name: 'claim_missing', width: 200, sortable: true,
+        renderer: (v, row) => {
+          const s = document.createElement('span');
+          if (row.claim_na) {
+            s.textContent = v || '공단 청구 건 아님';
+            s.style.cssText = 'color:var(--text-muted);font-size:11px;';
+          } else if (row.claim_ready) {
+            s.textContent = '완비';
+            s.style.cssText = 'color:var(--success);font-weight:700;';
+          } else {
+            s.textContent = v || '확인 전';
+            s.style.cssText = 'color:var(--danger);font-size:11px;';
+            s.title = v || '';
+          }
+          return s;
+        },
+      },
       { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.

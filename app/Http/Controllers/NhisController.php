@@ -22,6 +22,12 @@ class NhisController extends Controller
             $query->where('nhis_claim_status', $request->nhis_status);
         }
 
+        /* 자료가 갖춰진 건만 추린다. 청구할 수 있는 것과 아직 못 하는 것이 목록에서 똑같아
+           보이면 담당자가 하나씩 열어 보고 닫기를 반복한다. */
+        if ($request->filled('ready')) {
+            $query->where('claim_ready', $request->ready === 'y');
+        }
+
         // 검색 (환자명, 주문번호)
         if ($request->filled('q')) {
             $q = $request->q;
@@ -69,10 +75,23 @@ class NhisController extends Controller
                 'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
                 'result'       => $result,
+                // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
+                'claim_ready'  => (bool) $o->claim_ready,
+                'claim_missing' => $o->claim_missing ?? '',
+                // 공단에 낼 건이 아니면 자료를 따질 것도 없다 — 색을 달리 쓴다
+                'claim_na'     => ($o->prescription?->claim_agency ?? \App\Support\ClaimAgency::NHIS)
+                                    !== \App\Support\ClaimAgency::NHIS,
+                'agency'       => \App\Support\ClaimAgency::LABELS[$o->prescription?->claim_agency] ?? '',
             ];
         })->values();
 
         $total = $gridData->count();
+
+        // 지금 바로 청구할 수 있는 건수 — 상단 카드에 쓴다
+        $readyCount = Order::whereIn('status', ['delivered', 'shipping', 'confirmed'])
+            ->where('nhis_claim_status', 'pending')
+            ->where('claim_ready', true)
+            ->count();
 
         // 요약 카운트
         $counts = Order::whereIn('status', ['delivered', 'shipping', 'confirmed'])
@@ -91,7 +110,7 @@ class NhisController extends Controller
             ->whereYear('nhis_approved_at', now()->year)
             ->sum('nhis_reimbursement');
 
-        return view('nhis.index', compact('gridData', 'total', 'counts', 'monthlyTotal', 'monthlyApproved'));
+        return view('nhis.index', compact('gridData', 'total', 'counts', 'monthlyTotal', 'monthlyApproved', 'readyCount'));
     }
 
     /* e-Fax 로 청구를 보내던 기능은 걷어냈다. 공단 요양비 청구는 팩스로 하지 않는다 —
