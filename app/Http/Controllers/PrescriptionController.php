@@ -1636,7 +1636,7 @@ class PrescriptionController extends Controller
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'documents'       => 'nullable|array',
-            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt',
+            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
@@ -1998,6 +1998,13 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* 세금계산서는 장표 이미지로 한 장 싣는다 — dompdf 는 외부 PDF 를 못 끼운다. */
+        $taxInvoiceDataUri = null;
+        if (in_array('tax_invoice', $documents) && $prescription->order?->tax_invoice_status === 'issued') {
+            $imgPath = \App\Support\TaxInvoiceImage::ensure($prescription->order);
+            $taxInvoiceDataUri = 'data:image/png;base64,' . base64_encode(Storage::get($imgPath));
+        }
+
         $html = view('prescriptions.fax-pdf', [
             'prescription'       => $prescription,
             'patient'            => $prescription->patient,
@@ -2006,6 +2013,7 @@ class PrescriptionController extends Controller
             'docs'               => $documents,
             'rxImageDataUri'     => $rxImageDataUri,
             'attachmentDataUris' => $attachmentDataUris,
+            'taxInvoiceDataUri'  => $taxInvoiceDataUri,
         ])->render();
 
         $dompdf = $this->makeFaxDompdf();
@@ -2167,6 +2175,14 @@ class PrescriptionController extends Controller
                         }
                         file_put_contents($tmpPath, $html);
                         $files[] = $tmpPath;
+                    }
+                    break;
+
+                case 'tax_invoice':
+                    // 발행된 건만. 장표 이미지가 아직 없으면(옛 건) 그 자리에서 그린다.
+                    $order = $prescription->order;
+                    if ($order?->tax_invoice_status === 'issued') {
+                        $files[] = Storage::path(\App\Support\TaxInvoiceImage::ensure($order));
                     }
                     break;
             }

@@ -77,12 +77,13 @@ table.purchase-tbl td.center { text-align:center; }
   $hasRx          = in_array('prescription', $docs) && $rxImageDataUri;
   $hasPurchase    = in_array('purchase_history', $docs) && $order;
   $hasCashReceipt = in_array('cash_receipt', $docs) && $order?->cash_receipt_status === 'issued';
+  $hasTaxInvoice  = !empty($taxInvoiceDataUri ?? null);
   $hasAttachments = !empty($attachmentDataUris);
 @endphp
 
 {{-- ① 위임장 --}}
 @if(in_array('authorization', $docs))
-<div @if($hasRx || $hasPurchase || $hasCashReceipt || $hasAttachments) class="page-break" @endif>
+<div @if($hasRx || $hasPurchase || $hasCashReceipt || $hasTaxInvoice || $hasAttachments) class="page-break" @endif>
   <div class="doc-title">건 강 보 험 요 양 급 여 청 구 위 임 장</div>
   <div class="doc-sub">건강보험법 시행규칙 제22조에 의거 요양급여비용의 청구 및 수령을 위임합니다.</div>
 
@@ -215,7 +216,7 @@ table.purchase-tbl td.center { text-align:center; }
 
 {{-- ② 처방전 이미지 --}}
 @if(in_array('prescription', $docs) && $rxImageDataUri)
-<div class="rx-section{{ ($hasPurchase || $hasCashReceipt || $hasAttachments) ? ' page-break' : '' }}">
+<div class="rx-section{{ ($hasPurchase || $hasCashReceipt || $hasTaxInvoice || $hasAttachments) ? ' page-break' : '' }}">
   <div class="rx-cover-title">처 방 전</div>
   <table class="info-tbl" style="margin-bottom:10px;">
     <tr>
@@ -235,7 +236,7 @@ table.purchase-tbl td.center { text-align:center; }
 
 {{-- ③ 제품 구매내역 --}}
 @if(in_array('purchase_history', $docs) && $order)
-<div @if($hasCashReceipt || $hasAttachments) class="page-break" @endif>
+<div @if($hasCashReceipt || $hasTaxInvoice || $hasAttachments) class="page-break" @endif>
   <div class="purchase-title">제 품 구 매 내 역 서</div>
   <div class="purchase-meta">
     주문번호: {{ $order->order_number ?? '—' }} &nbsp;|&nbsp;
@@ -364,7 +365,16 @@ table.purchase-tbl td.center { text-align:center; }
 </div>
 @endif
 
-{{-- ⑤ 첨부파일 이미지 --}}
+{{-- ⑤ 세금계산서 — 발행된 장표를 이미지 한 장으로 싣는다(dompdf 는 외부 PDF 를 못 끼운다) --}}
+@if($hasTaxInvoice)
+<div @if($hasAttachments) class="page-break" @endif>
+  <div class="rx-img-wrap" style="margin-top:0;padding:0;">
+    <img src="{{ $taxInvoiceDataUri }}" alt="전자세금계산서">
+  </div>
+</div>
+@endif
+
+{{-- ⑥ 첨부파일 이미지 --}}
 @if(!empty($attachmentDataUris))
 @foreach($attachmentDataUris as $att)
 <div @if(!$loop->last) class="page-break" @endif>

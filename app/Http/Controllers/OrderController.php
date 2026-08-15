@@ -344,13 +344,40 @@ class OrderController extends Controller
 
         $data = $request->validate([
             'tax_invoice_type'     => 'required|in:electronic,manual',
+            // 공급받는자가 개인이면 사업자번호 자리에 주민등록번호가 들어간다.
+            // 팝빌은 invoiceeType 으로 구분하며, '사업자' 로 두고 13자리를 보내면 거절한다.
+            'tax_invoice_invoicee' => 'nullable|in:사업자,개인',
             'tax_invoice_biz_name' => 'required|string|max:100',
             'tax_invoice_ceo_name' => 'required|string|max:50',
-            'tax_invoice_biz_no'   => 'required|string|max:20',
+            'tax_invoice_biz_no'   => 'nullable|string|max:20',
             'tax_invoice_email'    => 'nullable|email|max:100',
             'tax_invoice_supply'   => 'required|numeric|min:0',
             'tax_invoice_vat'      => 'required|numeric|min:0',
         ]);
+
+        $invoiceeType = $data['tax_invoice_invoicee'] ?? '사업자';
+        $invoiceeNum  = preg_replace('/\D/', '', (string) ($data['tax_invoice_biz_no'] ?? ''));
+
+        /* 개인 건에 번호를 적어 보내지 않았으면 처방전의 주민번호로 발행한다.
+           화면은 주민번호를 쓰기 전용으로 두므로 담당자가 번호를 볼 수 없다 —
+           본문으로 내려보내지 않고 여기서만 연다. 복호화는 감사로그가 남는다. */
+        if ($invoiceeType === '개인' && $invoiceeNum === '') {
+            $invoiceeNum = preg_replace('/\D/', '',
+                (string) $order->prescription?->residentNoOcrFor('tax_invoice'));
+        }
+
+        if ($invoiceeType === '개인' && strlen($invoiceeNum) !== 13) {
+            return response()->json([
+                'success' => false,
+                'message' => '개인 발행에는 주민등록번호 13자리가 필요합니다. 처방전에 주민등록번호를 먼저 저장해 주세요.',
+            ], 422);
+        }
+        if ($invoiceeType === '사업자' && strlen($invoiceeNum) !== 10) {
+            return response()->json([
+                'success' => false,
+                'message' => '사업자등록번호 10자리를 입력해 주세요.',
+            ], 422);
+        }
 
         try {
             $corpNum = config('popbill.test.corp_num');
@@ -376,8 +403,8 @@ class OrderController extends Controller
             $inv->invoicerBizType    = config('popbill.company.biz_type');
             $inv->invoicerEmail      = config('popbill.company.email');
             $inv->invoicerTEL        = config('popbill.company.tel');
-            $inv->invoiceeType       = '사업자';
-            $inv->invoiceeCorpNum    = preg_replace('/\D/', '', $data['tax_invoice_biz_no']);
+            $inv->invoiceeType       = $invoiceeType;
+            $inv->invoiceeCorpNum    = $invoiceeNum;
             $inv->invoiceeCorpName   = $data['tax_invoice_biz_name'];
             $inv->invoiceeCEOName    = $data['tax_invoice_ceo_name'];
             $inv->invoiceeEmail1     = $data['tax_invoice_email'] ?? '';
@@ -405,7 +432,11 @@ class OrderController extends Controller
                 'tax_invoice_type'      => $data['tax_invoice_type'],
                 'tax_invoice_biz_name'  => $data['tax_invoice_biz_name'],
                 'tax_invoice_ceo_name'  => $data['tax_invoice_ceo_name'],
-                'tax_invoice_biz_no'    => $data['tax_invoice_biz_no'],
+                // 개인 건은 주민번호다. 이 칸은 평문 컬럼이므로 마스킹해서 남긴다 —
+                // 원문은 처방전의 전용 암호화 칸에만 있어야 한다(P0-1).
+                'tax_invoice_biz_no'    => $invoiceeType === '개인'
+                    ? \App\Support\ResidentNo::mask($invoiceeNum)
+                    : $invoiceeNum,
                 'tax_invoice_email'     => $data['tax_invoice_email'] ?? null,
                 'tax_invoice_supply'    => $data['tax_invoice_supply'],
                 'tax_invoice_vat'       => $data['tax_invoice_vat'],
@@ -430,6 +461,10 @@ class OrderController extends Controller
                     'file_path'         => $pdfPath,
                     'original_filename' => $pdfName,
                 ]);
+
+                /* 장표 이미지도 함께 남긴다. 공단 팩스 합본은 dompdf 로 만드는데
+                   외부 PDF 는 페이지로 못 끼우므로, 팩스에 실리는 것은 이 이미지다. */
+                \App\Support\TaxInvoiceImage::ensure($order);
             } catch (\Throwable $e) {
                 Log::warning('[TaxInvoice] PDF 서류 저장 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
             }
