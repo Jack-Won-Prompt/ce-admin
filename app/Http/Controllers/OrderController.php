@@ -293,33 +293,6 @@ class OrderController extends Controller
         return response()->json(['success' => true, 'message' => '주문이 삭제되었습니다.']);
     }
 
-    // ── NHIS 청구 송신 (NhisController::sendFax 로 위임) ─
-    public function submitNhis(Order $order): \Illuminate\Http\JsonResponse
-    {
-        // 주문 상세 화면에서 호출 — NhisEFaxService 로 위임
-        $service = app(\App\Services\NhisEFaxService::class);
-
-        if ($order->nhis_claim_status === 'approved') {
-            return response()->json(['success' => false, 'message' => '이미 승인된 청구입니다.'], 409);
-        }
-
-        try {
-            $log = $service->send($order);
-            activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("NHIS e-Fax 청구 송신 ({$log->reference_no})");
-
-            return response()->json([
-                'success'      => true,
-                'message'      => 'NHIS 청구 전송 완료',
-                'reference_no' => $log->reference_no,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => '전송 실패: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
 
     // ── 운송장 번호 저장 ──────────────────────────────────
     public function updateTracking(Request $request, Order $order): \Illuminate\Http\JsonResponse

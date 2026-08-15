@@ -9,13 +9,12 @@
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
-  <div class="help-tip"><i class="bx bx-info-circle"></i>건강보험심사평가원(NHIS) 청구 현황을 관리하고 팩스 전송을 처리하는 화면입니다.</div>
+  <div class="help-tip"><i class="bx bx-info-circle"></i>건강보험공단 요양비 청구 현황을 관리하는 화면입니다. 청구 자체는 요양기관정보마당에 직접 입력·업로드합니다.</div>
 </div>
 <div class="help-section">
   <div class="help-section-title">청구 상태</div>
   <div class="help-badge-row">
     <span class="badge badge-secondary">청구 대기</span>
-    <span class="badge badge-info">팩스 전송됨</span>
     <span class="badge badge-success">승인 완료</span>
     <span class="badge badge-danger">반려</span>
   </div>
@@ -28,7 +27,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;">2</div>
-    <div class="help-item-text">처방전 팩스 전송 (e-Fax)</div>
+    <div class="help-item-text">요양기관정보마당에서 청구 입력·서류 업로드</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;">3</div>
@@ -142,8 +141,8 @@
 @endpush
 
 @section('header-actions')
-<button class="btn btn-primary btn-sm" onclick="openBulkSend()">
-  <i class="fa-solid fa-paper-plane"></i> 일괄 청구 송신
+<button class="btn btn-primary btn-sm" onclick="openNhisPortal()">
+  <i class="fa-solid fa-up-right-from-square"></i> 공단 사이트 열기
 </button>
 @endsection
 
@@ -159,17 +158,16 @@
 
 @section('content')
 
-{{-- DB 마이그레이션 미실행 안내 --}}
-@if(!$faxTableExists)
-<div class="alert alert-warning" style="display:flex;align-items:center;gap:10px;">
-  <i class="fa-solid fa-triangle-exclamation" style="font-size:18px;"></i>
-  <div>
-    <strong>DB 마이그레이션 필요</strong> — e-Fax 기능을 사용하려면 phpMyAdmin에서
-    <code>database/migrations/nhis_fax_logs_SQL.txt</code> 내용을 실행해주세요.
-    (현재는 기본 청구 상태만 표시됩니다.)
+{{-- 청구를 어디서 하는지 알려 둔다 — 이 화면에서 보내는 것이 아니다 --}}
+<div class="alert" style="display:flex;align-items:center;gap:10px;background:var(--primary-light);border:1px solid var(--primary-200);color:var(--text-secondary);">
+  <i class="fa-solid fa-circle-info" style="font-size:16px;color:var(--primary);"></i>
+  <div style="font-size:12px;line-height:1.6;">
+    <b style="color:var(--primary);">청구는 요양기관정보마당에 직접 입력·업로드합니다.</b>
+    이 화면은 청구 대상을 고르고 <b>결과를 기록</b>하는 자리입니다.
+    <a href="https://medicare.nhis.or.kr/portal/index.do" target="_blank" rel="noopener"
+       style="color:var(--primary);text-decoration:underline;">공단 사이트 열기</a>
   </div>
 </div>
-@endif
 
 {{-- ── 요약 카드 ── --}}
 <div class="summary-grid">
@@ -358,7 +356,6 @@
       { header: '환자부담',    name: 'patient_copay', width: 100, editor: 'number' },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: 'NHIS상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
-      { header: 'e-Fax 상태',  name: 'efax',          width: 100, align: 'center' },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
       { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
     ],
@@ -436,53 +433,10 @@ function clearSelection() {
   updateBulkBar();
 }
 
-function openBulkSend() {
-  const pending = document.querySelectorAll('.order-check');
-  if (pending.length === 0) { showToast('청구 대상 주문이 없습니다.', 'warning'); return; }
-  // 전체 미청구 선택
-  pending.forEach(c => c.checked = true);
-  updateBulkBar();
-  showToast(`${pending.length}건이 선택되었습니다. 일괄 청구 버튼을 클릭하세요.`, 'info', 3000);
-}
-
-async function sendBulkSelected() {
-  const ids = getCheckedIds();
-  if (ids.length === 0) { showToast('선택된 주문이 없습니다.', 'warning'); return; }
-  if (!await ceConfirm(`${ids.length}건을 NHIS e-Fax로 일괄 청구하시겠습니까?`, { confirmText: '일괄 청구' })) return;
-
-  const btn = event.currentTarget;
-  BtnState.loading(btn, '전송 중...');
-
-  const res = await apiRequest(BASE_URL + '/nhis/bulk-send', 'POST', { order_ids: ids });
-  if (res.success || res.success_count > 0) {
-    BtnState.success(btn, '전송 완료');
-    showToast(res.message, 'success');
-    setTimeout(() => location.reload(), 1200);
-  } else {
-    BtnState.error(btn, '전송 실패');
-  }
-  if (res.failed?.length > 0) {
-    res.failed.forEach(f => showToast(`${f.order_number}: ${f.error}`, 'danger', 7000));
-  }
-}
-
-// ── 단건 e-Fax 청구 ─────────────────────────────────────
-async function sendFax(orderId, orderNumber) {
-  if (!await ceConfirm(`${orderNumber} 주문을 NHIS e-Fax로 청구하시겠습니까?`, { confirmText: '청구' })) return;
-
-  const btn = event.currentTarget;
-  BtnState.loading(btn, '청구 중...');
-
-  const res = await apiRequest(`${BASE_URL}/nhis/${orderId}/send-fax`, 'POST');
-
-  if (res.success) {
-    BtnState.success(btn, '전송 완료');
-    showToast(`청구 전송 완료 (참조번호: ${res.reference_no})`, 'success', 5000);
-    setTimeout(() => location.reload(), 1500);
-  } else {
-    BtnState.error(btn, '전송 실패');
-    if (res.message) showToast(res.message, 'danger');
-  }
+/* 청구를 여기서 보내던 기능(단건·일괄 e-Fax)은 걷어냈다.
+   공단 요양비 청구는 요양기관정보마당에 직접 입력하고 서류를 업로드한다. */
+function openNhisPortal() {
+  window.open('https://medicare.nhis.or.kr/portal/index.do', '_blank', 'noopener');
 }
 
 // ── 결과 등록 모달 ────────────────────────────────────────
@@ -547,46 +501,6 @@ async function previewDoc(orderId, orderNumber) {
   }
 }
 
-// ── 팩스 이력 토글 ────────────────────────────────────────
-const _loadedLogs = new Set();
-
-async function toggleFaxLog(orderId) {
-  const panel = document.getElementById(`logPanel-${orderId}`);
-  const isOpen = panel.classList.contains('open');
-
-  if (isOpen) { panel.classList.remove('open'); return; }
-
-  if (!_loadedLogs.has(orderId)) {
-    panel.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">로딩 중...</div>';
-    panel.classList.add('open');
-    const res = await apiRequest(`${BASE_URL}/nhis/${orderId}/fax-logs`, 'GET');
-    if (res.success && res.logs.length > 0) {
-      const nhisResultBadgeMap = {
-        pending:  ['결과대기', 'secondary'],
-        approved: ['승인', 'success'],
-        rejected: ['거부', 'danger'],
-        partial:  ['부분승인', 'warning'],
-      };
-      panel.innerHTML = res.logs.map(log => {
-        const [rLbl, rBadge] = nhisResultBadgeMap[log.nhis_result] ?? [log.nhis_result, 'secondary'];
-        return `<div class="log-item">
-          <span class="efax-status-badge efax-${log.status}">${log.status_label}</span>
-          <span style="color:var(--text-muted);">${log.sent_at ?? '-'}</span>
-          <span style="font-size:11px;">${log.reference_no ?? ''}</span>
-          <span class="badge badge-${rBadge}">${rLbl}</span>
-          ${log.nhis_result_at ? `<span style="font-size:11px;color:var(--text-muted);">${log.nhis_result_at}</span>` : ''}
-          ${log.approved_amount ? `<span style="font-weight:700;color:var(--success);">${Number(log.approved_amount).toLocaleString('ko-KR')}원</span>` : ''}
-          ${log.error_message ? `<span style="font-size:11px;color:var(--danger);">${log.error_message}</span>` : ''}
-        </div>`;
-      }).join('');
-      _loadedLogs.add(orderId);
-    } else {
-      panel.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">팩스 발송 이력이 없습니다.</div>';
-    }
-  } else {
-    panel.classList.add('open');
-  }
-}
 
 // 모달 외부 클릭 시 닫기
 ['resultModal','previewModal'].forEach(id => {
@@ -598,8 +512,8 @@ async function toggleFaxLog(orderId) {
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 NHIS 청구 대상을 조회합니다.' },
-  { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 팩스로 청구하세요.' },
-  { selector: '.btn-primary, [onclick*="Bulk"], [onclick*="bulk"]', title: '일괄 청구 송신', body: '여러 건을 한 번에 e-Fax로 전송합니다. 전송 후 상태가 <b>팩스 전송됨</b>으로 변경됩니다.' },
+  { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 공단 사이트에서 청구하고, 결과를 여기에 기록합니다.' },
+  { selector: '.btn-primary', title: '공단 사이트 열기', body: '요양기관정보마당을 새 창으로 엽니다. 청구 입력과 서류 업로드는 그곳에서 합니다.' },
 ];
 </script>
 @endpush

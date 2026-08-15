@@ -6579,13 +6579,10 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
-  // ── NHIS 청구 ─────────────────────────────────────────
-  async function submitNhis() {
-    @if($prescription->order)
-    showToast('📡 NHIS 청구 데이터를 송신하고 있습니다...', 'info');
-    const res = await apiRequest('/orders/{{ $prescription->order->id }}/nhis', 'POST');
-    setTimeout(() => showToast(res.success ? '✅ NHIS 청구 송신 완료!' : res.message, res.success ? 'success' : 'danger'), 1500);
-    @endif
+  /* 공단 청구를 여기서 송신하던 기능은 걷어냈다 — 청구는 공단 사이트에 직접 입력·업로드한다.
+     남아 있던 호출부가 있으면 안내만 한다. */
+  function submitNhis() {
+    showToast('공단 청구는 요양기관정보마당에 직접 입력·업로드합니다.', 'info');
   }
 
   // ── OCR 재분석 ────────────────────────────────────────

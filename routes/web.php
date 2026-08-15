@@ -181,12 +181,10 @@ Route::middleware(['auth'])->group(function () {
 
     // NHIS 청구 관리
     Route::prefix('nhis')->name('nhis.')->group(function () {
+        // 공단 청구는 사이트에 직접 입력·업로드한다. 팩스로 보내던 경로는 걷어냈다.
         Route::get('/',                          [NhisController::class, 'index'])->name('index');
-        Route::post('/bulk-send',                [NhisController::class, 'bulkSendFax'])->name('bulkSend');
-        Route::post('/{order}/send-fax',         [NhisController::class, 'sendFax'])->name('sendFax');
         Route::post('/{order}/record-result',    [NhisController::class, 'recordResult'])->name('recordResult');
         Route::get('/{order}/preview',           [NhisController::class, 'previewDocument'])->name('preview');
-        Route::get('/{order}/fax-logs',          [NhisController::class, 'faxLogs'])->name('faxLogs');
     });
 
     // 기관 공지사항 (MOHW / HIRA / NHIS)
@@ -282,7 +280,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{order}',  [OrderController::class, 'destroy'])->name('destroy');
         Route::post('/{order}/status',          [OrderController::class, 'updateStatus'])->name('updateStatus');
         Route::post('/{order}/tracking',        [OrderController::class, 'updateTracking'])->name('updateTracking');
-        Route::post('/{order}/nhis',            [OrderController::class, 'submitNhis'])->name('submitNhis');
         Route::post('/{order}/tax-invoice',     [OrderController::class, 'issueTaxInvoice'])->name('issueTaxInvoice');
         Route::delete('/{order}/tax-invoice',   [OrderController::class, 'cancelTaxInvoice'])->name('cancelTaxInvoice');
         Route::post('/{order}/cash-receipt',        [OrderController::class, 'issueCashReceipt'])->name('issueCashReceipt');
@@ -377,7 +374,6 @@ Route::prefix('privacy')->name('privacy.')->group(function () {
 });
 
 // e-Fax 콜백 (팩스 서비스에서 호출 — 인증 불필요)
-Route::post('/nhis/fax-callback', [NhisController::class, 'faxCallback'])->name('nhis.faxCallback');
 
 // ── Dev: admin_invitations 테이블 마이그레이션 ──
 Route::get('/dev/migrate-admin-invitations', function () {

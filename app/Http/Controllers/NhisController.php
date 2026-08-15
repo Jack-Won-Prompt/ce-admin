@@ -3,30 +3,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\NhisFaxLog;
 use App\Models\Order;
-use App\Services\NhisEFaxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class NhisController extends Controller
 {
-    public function __construct(protected NhisEFaxService $faxService) {}
-
     // ── 목록 ─────────────────────────────────────────────────────
     public function index(Request $request): View
     {
-        // nhis_fax_logs 테이블 존재 여부 확인 (마이그레이션 미실행 대비)
-        $faxTableExists = \Illuminate\Support\Facades\Schema::hasTable('nhis_fax_logs');
-        $hasFaxLogCol   = $faxTableExists && \Illuminate\Support\Facades\Schema::hasColumn('orders', 'latest_fax_log_id');
-
-        $with = ['patient', 'prescription'];
-        if ($hasFaxLogCol) {
-            $with[] = 'latestFaxLog';
-        }
-
-        $query = Order::with($with)
+        $query = Order::with(['patient', 'prescription'])
             ->whereIn('status', ['delivered', 'shipping', 'confirmed'])
             ->latest();
 
@@ -61,10 +48,7 @@ class NhisController extends Controller
         ];
 
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
-        $gridData = $query->get()->map(function ($o) use ($hasFaxLogCol, $nhisStatusLabels) {
-            $faxLog = $hasFaxLogCol ? $o->latestFaxLog : null;
-            $efax   = $faxLog ? ($faxLog->status_label ?? $faxLog->status) : '-';
-
+        $gridData = $query->get()->map(function ($o) use ($nhisStatusLabels) {
             // 승인/거부 결과 텍스트
             if ($o->nhis_claim_status === 'approved') {
                 $result = number_format((int) $o->nhis_reimbursement) . '원';
@@ -83,7 +67,6 @@ class NhisController extends Controller
                 'patient_copay'=> (int) $o->patient_copay,
                 'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
-                'efax'         => $efax,
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
                 'result'       => $result,
             ];
@@ -108,192 +91,104 @@ class NhisController extends Controller
             ->whereYear('nhis_approved_at', now()->year)
             ->sum('nhis_reimbursement');
 
-        return view('nhis.index', compact('gridData', 'total', 'counts', 'monthlyTotal', 'monthlyApproved', 'faxTableExists'));
+        return view('nhis.index', compact('gridData', 'total', 'counts', 'monthlyTotal', 'monthlyApproved'));
     }
 
-    // ── 단건 e-Fax 청구 ─────────────────────────────────────────
-    public function sendFax(Request $request, Order $order): \Illuminate\Http\JsonResponse
-    {
-        if (!\Illuminate\Support\Facades\Schema::hasTable('nhis_fax_logs')) {
-            return response()->json(['success' => false, 'message' => 'DB 마이그레이션을 먼저 실행해주세요. (nhis_fax_logs_SQL.txt)'], 503);
-        }
+    /* e-Fax 로 청구를 보내던 기능은 걷어냈다. 공단 요양비 청구는 팩스로 하지 않는다 —
+       공단 사이트(요양기관정보마당)에 직접 입력하고 서류를 업로드한다. 지자체는 등기로 보낸다.
+       한 번도 쓰이지 않은 경로였다(nhis_fax_logs 0건).
+       청구 결과 등록과 서류 미리보기는 그대로 쓴다. */
 
-        if (!in_array($order->status, ['delivered', 'shipping', 'confirmed'])) {
-            return response()->json(['success' => false, 'message' => '배송 확정 후 청구 가능합니다.'], 422);
-        }
-
-        if ($order->nhis_claim_status === 'approved') {
-            return response()->json(['success' => false, 'message' => '이미 승인된 청구입니다.'], 409);
-        }
-
-        try {
-            $log = $this->faxService->send($order);
-
-            activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("NHIS e-Fax 청구 송신 ({$log->reference_no})");
-
-            return response()->json([
-                'success'      => true,
-                'message'      => 'e-Fax 청구가 전송되었습니다.',
-                'reference_no' => $log->reference_no,
-                'sent_at'      => $log->sent_at?->format('Y-m-d H:i:s'),
-            ]);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'e-Fax 전송 실패: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    // ── 일괄 e-Fax 청구 ─────────────────────────────────────────
-    public function bulkSendFax(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $request->validate(['order_ids' => 'required|array|min:1|max:50']);
-
-        $orders = Order::whereIn('id', $request->order_ids)
-            ->where('nhis_claim_status', 'pending')
-            ->whereIn('status', ['delivered', 'shipping', 'confirmed'])
-            ->get();
-
-        if ($orders->isEmpty()) {
-            return response()->json(['success' => false, 'message' => '청구 가능한 주문이 없습니다.'], 422);
-        }
-
-        $results = $this->faxService->sendBulk($orders);
-
-        $successCount = count($results['success']);
-        $failCount    = count($results['failed']);
-
-        if ($successCount > 0) {
-            activity()->causedBy(Auth::user())
-                ->log("NHIS e-Fax 일괄 청구 {$successCount}건 송신" . ($failCount ? ", {$failCount}건 실패" : ''));
-        }
-
-        return response()->json([
-            'success'       => $successCount > 0,
-            'message'       => "{$successCount}건 전송 완료" . ($failCount ? ", {$failCount}건 실패" : ''),
-            'success_count' => $successCount,
-            'fail_count'    => $failCount,
-            'failed'        => collect($results['failed'])->map(fn($f) => [
-                'order_number' => $f['order']->order_number,
-                'error'        => $f['error'],
-            ])->all(),
-        ]);
-    }
-
-    // ── 청구 결과 등록 (공단 회신 처리) ─────────────────────────
+    /**
+     * 청구 결과 등록 (공단 회신 처리).
+     *
+     * 담당자가 공단 사이트에서 결과를 확인하고 옮겨 적는다. 예전에는 팩스 발송 이력에
+     * 결과를 매달았는데, 청구를 팩스로 보내지 않으므로 주문에 바로 적는다.
+     */
     public function recordResult(Request $request, Order $order): \Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'nhis_result'     => 'required|in:approved,rejected,partial',
             'approved_amount' => 'nullable|numeric|min:0',
             'nhis_message'    => 'nullable|string|max:500',
-            'log_id'          => 'nullable|exists:nhis_fax_logs,id',
         ]);
 
-        // 최신 팩스 로그 또는 지정 로그
-        $log = $data['log_id']
-            ? NhisFaxLog::find($data['log_id'])
-            : NhisFaxLog::where('order_id', $order->id)->where('status', 'sent')->latest()->first();
-
-        if (!$log) {
-            return response()->json(['success' => false, 'message' => '팩스 발송 내역이 없습니다.'], 422);
-        }
-
-        $this->faxService->recordNhisResult(
-            $log,
-            $data['nhis_result'],
-            $data['approved_amount'] ?? null,
-            $data['nhis_message'] ?? null,
-        );
-
-        // 거부 사유 저장
-        if ($data['nhis_result'] === 'rejected' && !empty($data['nhis_message'])) {
-            $order->update(['nhis_rejection_reason' => $data['nhis_message']]);
-        }
+        $order->update([
+            'nhis_claim_status'     => $data['nhis_result'] === 'partial' ? 'approved' : $data['nhis_result'],
+            'nhis_approved_at'      => now(),
+            'nhis_reimbursement'    => $data['approved_amount'] ?? $order->nhis_amount,
+            // 거부 사유는 거부일 때만 남긴다 — 승인 건에 남아 있으면 나중에 읽는 사람이 헷갈린다
+            'nhis_rejection_reason' => $data['nhis_result'] === 'rejected' ? ($data['nhis_message'] ?? null) : null,
+        ]);
 
         activity()->causedBy(Auth::user())->performedOn($order)
-            ->log('NHIS 청구 결과 등록: ' . $data['nhis_result']);
+            ->log('공단 청구 결과 등록: ' . $data['nhis_result']
+                  . ($data['nhis_message'] ? ' — ' . $data['nhis_message'] : ''));
 
         return response()->json([
             'success' => true,
-            'message' => 'NHIS 청구 결과가 등록되었습니다.',
+            'message' => '청구 결과가 등록되었습니다.',
         ]);
     }
 
-    // ── 청구서 미리보기 ─────────────────────────────────────────
+    /** 청구서 미리보기 — 공단 사이트에 옮겨 적을 내용을 눈으로 확인한다 */
     public function previewDocument(Order $order): \Illuminate\Http\Response
     {
         $order->load(['patient', 'prescription']);
-        $document = $this->faxService->buildClaimDocument($order);
 
-        return response($document, 200)
+        return response($this->buildClaimDocument($order), 200)
             ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
-    // ── 팩스 발송 이력 ─────────────────────────────────────────
-    public function faxLogs(Order $order): \Illuminate\Http\JsonResponse
+    /** 공단에 옮겨 적을 값을 한 장으로 모은다. 예전에는 팩스 본문이었다. */
+    private function buildClaimDocument(Order $order): string
     {
-        $logs = NhisFaxLog::where('order_id', $order->id)
-            ->with('sender')
-            ->latest()
-            ->get()
-            ->map(fn($l) => [
-                'id'           => $l->id,
-                'status'       => $l->status,
-                'status_label' => $l->status_label,
-                'nhis_result'  => $l->nhis_result,
-                'nhis_result_label' => $l->nhis_result_label,
-                'reference_no' => $l->reference_no,
-                'fax_number'   => $l->fax_number,
-                'nhis_amount'  => $l->nhis_amount,
-                'sent_at'      => $l->sent_at?->format('Y-m-d H:i'),
-                'nhis_result_at' => $l->nhis_result_at?->format('Y-m-d H:i'),
-                'approved_amount'=> $l->approved_amount,
-                'nhis_message' => $l->nhis_message,
-                'error_message'=> $l->error_message,
-                'sender_name'  => $l->sender?->name,
-            ]);
+        $inst    = config('nhis.institution');
+        $patient = $order->patient;
+        $rx      = $order->prescription;
 
-        return response()->json(['success' => true, 'logs' => $logs]);
+        return implode("\n", [
+            '═══════════════════════════════════════════════',
+            '         건강보험 요양비 청구 내용',
+            '═══════════════════════════════════════════════',
+            '',
+            '■ 청구 기관 정보',
+            "  기관명      : {$inst['name']}",
+            "  요양기관기호: {$inst['code']}",
+            "  사업자번호  : {$inst['biz_no']}",
+            '',
+            '■ 환자 정보',
+            "  환자명      : {$patient?->name}",
+            "  주민번호    : {$patient?->masked_resident_no}",
+            "  건강보험번호: {$patient?->health_insurance_no}",
+            '',
+            '■ 처방 정보',
+            "  처방전번호  : {$rx?->rx_number}",
+            "  처방일      : {$rx?->issued_date?->format('Y-m-d')}",
+            "  병원명      : {$rx?->hospital_name}",
+            "  담당의사    : {$rx?->doctor_name}",
+            "  상병명      : {$rx?->disease_name}",
+            '',
+            '■ 급여 품목',
+            "  제품명      : {$order->product_name}",
+            "  제품코드    : {$order->product_code}",
+            "  수량        : {$order->quantity}",
+            '  단가        : ' . number_format((float) $order->unit_price) . '원',
+            '',
+            '■ 청구 금액',
+            '  기관 부담금  : ' . number_format((float) $order->nhis_amount) . '원',
+            '  본인 부담금  : ' . number_format((float) $order->patient_copay) . '원',
+            '  합계         : ' . number_format((float) $order->nhis_amount + (float) $order->patient_copay) . '원',
+            '',
+            '■ 주문 정보',
+            "  주문번호    : {$order->order_number}",
+            "  배송주소    : {$order->shipping_address}",
+            "  배송완료일  : {$order->delivered_at?->format('Y-m-d')}",
+            '',
+            '───────────────────────────────────────────────',
+            '  출력일시    : ' . now()->format('Y-m-d H:i'),
+            '═══════════════════════════════════════════════',
+        ]);
     }
 
-    // ── e-Fax 콜백 (팩스 서비스 → 시스템) ─────────────────────
-    public function faxCallback(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $refNo  = $request->input('faxId') ?? $request->input('reference_no');
-        $status = $request->input('status');   // 서비스별 상이
-
-        if (!$refNo) {
-            return response()->json(['ok' => false], 400);
-        }
-
-        $log = NhisFaxLog::where('reference_no', $refNo)->first();
-        if (!$log) {
-            return response()->json(['ok' => false, 'message' => 'not found'], 404);
-        }
-
-        // 전송 성공 여부 매핑 (HiFaxKorea 기준, 실제 연동 시 조정)
-        $isSent   = in_array($status, ['success', 'sent', 'delivered', 'OK', '0']);
-        $isFailed = in_array($status, ['failed', 'error', 'FAIL']);
-
-        if ($isSent && $log->status !== 'sent') {
-            $log->update([
-                'status'       => 'sent',
-                'confirmed_at' => now(),
-                'raw_payload'  => json_encode($request->all(), JSON_UNESCAPED_UNICODE),
-            ]);
-        } elseif ($isFailed) {
-            $log->update([
-                'status'        => 'failed',
-                'error_message' => $request->input('message') ?? '팩스 전송 실패',
-                'retry_count'   => $log->retry_count + 1,
-                'raw_payload'   => json_encode($request->all(), JSON_UNESCAPED_UNICODE),
-            ]);
-        }
-
-        return response()->json(['ok' => true]);
-    }
 }

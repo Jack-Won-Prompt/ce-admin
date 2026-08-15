@@ -676,15 +676,11 @@
       <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-hospital" style="color:var(--primary);"></i>
-          <span class="card-header-title">NHIS 건강보험 청구</span>
-          {{-- 시안 158:577 — 청구 송신 버튼/안내문은 카드 머리글 오른쪽 --}}
-          @if($order->nhis_claim_status === 'pending' && $order->status === 'delivered')
-          <button class="btn btn-primary w-full" style="margin-left:auto;" onclick="submitNhis()">
-            <i class="bx bx-send"></i> NHIS 청구 송신
-          </button>
-          @elseif($order->nhis_claim_status === 'pending' && $order->status !== 'delivered')
-          <div class="od-head-note">
-            <i class="bx bx-info-circle"></i> 배송 완료 후 NHIS 청구가 가능합니다.
+          <span class="card-header-title">건강보험 요양비 청구</span>
+          {{-- 청구는 여기서 보내지 않는다 — 공단 사이트에 직접 입력·업로드한다. --}}
+          @if($order->nhis_claim_status === 'pending')
+          <div class="od-head-note" style="margin-left:auto;">
+            <i class="bx bx-info-circle"></i> 청구는 요양기관정보마당에 직접 입력·업로드합니다.
           </div>
           @endif
         </div>
@@ -1073,15 +1069,6 @@ async function changeStatus(status) {
   }
 }
 
-// ── NHIS 청구 송신 ─────────────────────────────────────────
-async function submitNhis() {
-  if (!await ceConfirm('NHIS 청구를 송신하시겠습니까?', { confirmText: '송신' })) return;
-  const res = await apiRequest(ORDER_URL + '/nhis', 'POST');
-  if (res.success) {
-    showToast(res.message || 'NHIS 청구 송신 완료', 'success');
-    setTimeout(() => location.reload(), 800);
-  }
-}
 
 // ── 운송장 저장 ───────────────────────────────────────────
 async function saveTracking() {
