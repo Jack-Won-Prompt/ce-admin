@@ -1186,6 +1186,9 @@ class PrescriptionController extends Controller
             'uro_date'              => 'nullable|date',
             // 급여·보험 추가
             'benefit_class'         => 'nullable|string|max:20',
+            // 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다
+            'claim_agency'          => 'nullable|string|in:nhis,local,none',
+            'local_gov'             => 'nullable|string|max:60',
             'nhis_reg_status'       => 'nullable|string|max:20',
             'nhis_renew'            => 'nullable|string|max:100',
             'nhis_agree_start'      => 'nullable|date',
@@ -1246,6 +1249,8 @@ class PrescriptionController extends Controller
             'disease_class'        => $request->input('disease_class'),
             'uro_date'             => $request->input('uro_date'),
             'benefit_class'        => $request->input('benefit_class'),
+            'claim_agency'         => $request->input('claim_agency'),
+            'local_gov'            => $request->input('local_gov'),
             // 거래·주문
             'purchase_type'        => $request->input('purchase_type'),
             'five_program'         => $request->input('five_program'),

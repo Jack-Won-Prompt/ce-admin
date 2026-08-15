@@ -2183,6 +2183,23 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="산재"      @selected(($prescription->benefit_class ?? '') == '산재')>산재</option>
                 </select>
               </div>
+              {{-- 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다.
+                   급여구분을 고르면 따라오되, 확정은 담당자가 한다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">청구처</span>
+                <select class="form-control" id="f-claim-agency" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\ClaimAgency::LABELS as $v => $label)
+                    <option value="{{ $v }}" @selected(($prescription->claim_agency ?? '') === $v)>{{ $label }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="rx-field-row" id="row-local-gov" style="{{ ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL ? '' : 'display:none;' }}">
+                <span class="rx-field-label">관할 지자체</span>
+                <input type="text" class="form-control" id="f-local-gov"
+                       value="{{ $prescription->local_gov ?? '' }}"
+                       placeholder="예: 서울특별시 강남구" style="flex:1;" />
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">신구매/재구매</span>
                 <select class="form-control" id="f-purchase-type" style="flex:1;">
@@ -4198,6 +4215,61 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
+  /* ── 청구처 ────────────────────────────────────────────────
+     요양비를 공단에 내느냐 지자체에 내느냐에 따라 이후 절차가 통째로 갈린다. 급여구분과
+     주소로 짐작해 채워 주되 확정하지는 않는다 — 틀리면 엉뚱한 곳에 청구가 가므로 마지막
+     판단은 담당자가 한다. 이미 담당자가 골라 둔 값은 덮어쓰지 않는다. */
+  const CLAIM_BY_BENEFIT = {
+    '기초': 'local',
+    '일반': 'nhis', '차상위경감': 'nhis',
+    '자동차보험': 'none', '산재': 'none',
+  };
+
+  /** 주소에서 관할 지자체를 뽑는다 (서버의 ClaimAgency 와 같은 규칙) */
+  function localGovFromAddress(address) {
+    const addr = (address || '').replace(/\s+/g, ' ').trim();
+    const m = addr.match(/^(\S+?(?:특별자치시|특별자치도|특별시|광역시|도))\s*(.*)$/);
+    if (!m) return '';
+
+    const [, sido, rest] = m;
+    if (sido.includes('특별자치시')) return sido;      // 세종 — 아래에 시군구가 없다
+
+    // 특별시·광역시는 자치구(와 군)가 받고, 도는 시·군이 받는다.
+    // 도 아래 시의 구는 행정구라 자치권이 없어 시까지만 본다(경기도 성남시 분당구 → 성남시).
+    const isMetro = sido.endsWith('특별시') || sido.endsWith('광역시');
+    const g = rest.match(isMetro ? /^(\S+?[구군])(?:\s|$)/ : /^(\S+?[시군])(?:\s|$)/);
+    return g ? `${sido} ${g[1]}` : '';
+  }
+
+  function onClaimAgencyChange() {
+    const agency = document.getElementById('f-claim-agency')?.value ?? '';
+    const row    = document.getElementById('row-local-gov');
+    const input  = document.getElementById('f-local-gov');
+    if (!row || !input) return;
+
+    row.style.display = agency === 'local' ? '' : 'none';
+
+    // 지자체로 바뀌었는데 비어 있으면 주소에서 뽑아 제시한다
+    if (agency === 'local' && !input.value.trim()) {
+      input.value = localGovFromAddress(document.getElementById('f-address')?.value);
+    }
+  }
+
+  function suggestClaimAgency() {
+    const sel = document.getElementById('f-claim-agency');
+    if (!sel || sel.value) return;                 // 담당자가 이미 골랐으면 두지 않는다
+
+    const guess = CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
+    if (!guess) return;
+
+    sel.value = guess;
+    onClaimAgencyChange();
+  }
+
+  document.getElementById('f-benefit-class')?.addEventListener('change', suggestClaimAgency);
+  document.getElementById('f-claim-agency')?.addEventListener('change', onClaimAgencyChange);
+  suggestClaimAgency();
+
   // ── 처방전 주소 가져오기 ──────────────────────────────────
   function fillFromPrescriptionAddress() {
     const postcode = document.getElementById('f-postcode')?.value?.trim() ?? '';
@@ -5232,6 +5304,10 @@ window.HELP_TOUR_STEPS = [
       total_count:      intOrNull('f-total'),
       // ── 급여·보험 정보 ─────────────────────────────────────
       benefit_class:    strOrNull('f-benefit-class'),
+      claim_agency:     strOrNull('f-claim-agency'),
+      // 지자체가 아니면 관할 지자체는 값이 있을 이유가 없다
+      local_gov:        (document.getElementById('f-claim-agency')?.value === 'local')
+                          ? strOrNull('f-local-gov') : null,
       nhis_reg_status:  strOrNull('f-nhis-status'),
       nhis_renew:       strOrNull('f-nhis-renew'),
       nhis_agree_start: strOrNull('f-nhis-agree-start'),

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
 use App\Models\PrescriptionDocument;
+use App\Support\ClaimAgency;
 use App\Support\ResidentNo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,18 @@ class NhisAssistController extends Controller
 
         $order->load(['patient', 'prescription', 'items']);
         $prescription = $order->prescription;
+
+        // 지자체 청구 건은 공단 서식이 아니라 등기로 간다. 공단 화면을 열면 엉뚱한 곳에
+        // 옮겨 적게 되므로 여기서 멈추고 무엇을 해야 하는지 알린다.
+        if (($prescription?->claim_agency ?? null) !== null
+            && $prescription->claim_agency !== ClaimAgency::NHIS) {
+            return view('nhis.assist.claim_blocked', [
+                'order'        => $order,
+                'prescription' => $prescription,
+                'agency'       => $prescription->claim_agency,
+                'agencyLabel'  => ClaimAgency::LABELS[$prescription->claim_agency] ?? $prescription->claim_agency,
+            ]);
+        }
 
         // 좌우 프레임 — 왼쪽에 이 화면을, 오른쪽에 공단 사이트를 나란히 놓는다.
         // 값을 대신 넣어 주는 것이 아니라, 복사와 붙여넣기를 한 창에서 하게 하는 것이다.
