@@ -6,7 +6,7 @@
     'virtual_account' => ['가상계좌 발행', 'bx-credit-card',    'primary'],
     'tax_invoice'     => ['세금계산서 발행','bx-receipt',        'success'],
     'cash_receipt'    => ['현금영수증 발행','bx-money',          'info'],
-    'nhis'            => ['NHIS 청구 발송', 'bx-paper-plane',   'warning'],
+    'nhis'            => ['청구 발송', 'bx-paper-plane',   'warning'],
   ];
   $tl = $typeLabels[$type] ?? ['발행 상세', 'bx-file', 'secondary'];
 
@@ -117,7 +117,7 @@
   .side-info dt:first-child { margin-top: 0; }
   .side-info dd { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000); margin: 0; }
 
-  /* NHIS 타임라인 */
+  /* 청구 타임라인 */
   .timeline { position: relative; padding-left: 24px; }
   .timeline::before {
     content: '';
@@ -437,7 +437,7 @@
 
     @endif {{-- /cash_receipt --}}
 
-    {{-- ── NHIS 청구 발송 상세 ── --}}
+    {{-- ── 청구 발송 상세 ── --}}
     @if($type === 'nhis')
 
     <div class="card">
@@ -449,7 +449,7 @@
             <div class="avalue">₩{{ number_format($record->claim_amount) }}</div>
           </div>
           <div class="amt-card">
-            <div class="alabel">건보 부담금</div>
+            <div class="alabel">공단부담금</div>
             <div class="avalue">₩{{ number_format($record->nhis_amount) }}</div>
           </div>
           <div class="amt-card">
@@ -509,7 +509,7 @@
       </div>
     </div>
 
-    {{-- NHIS 심사 결과 --}}
+    {{-- 심사 결과 --}}
     <div class="card">
       <div class="card-body">
         <div class="sec-title"><i class="bx bx-check-shield"></i> 심사 결과</div>

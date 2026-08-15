@@ -158,7 +158,7 @@
         <div class="sum-card-sub">배송비 포함</div>
       </div>
       <div class="sum-card green">
-        <div class="sum-card-label"><i class="fa-solid fa-hospital"></i> NHIS 청구 금액</div>
+        <div class="sum-card-label"><i class="fa-solid fa-hospital"></i> 청구 금액</div>
         <div class="sum-card-val">{{ number_format($summary['nhis_amount']) }}<span style="font-size:13px;font-weight:500;">원</span></div>
         <div class="sum-card-sub">급여 청구분</div>
       </div>
@@ -171,7 +171,7 @@
 
     {{-- 보조 합계 줄 — 카드 규격은 요약 카드와 같게, 라벨 좌 · 값 우 --}}
     <div class="sum-mini-row">
-      @foreach([['NHIS 환급 확정', number_format($summary['nhis_reimb']).'원', 'var(--success)'], ['배송비 합계', number_format($summary['shipping_fee']).'원', 'var(--text-primary)'], ['대기 중 주문', $statusCounts['pending'].'건', 'var(--warning)'], ['배송 완료', $statusCounts['delivered'].'건', 'var(--success)']] as [$lbl, $val, $color])
+      @foreach([['환급 확정', number_format($summary['nhis_reimb']).'원', 'var(--success)'], ['배송비 합계', number_format($summary['shipping_fee']).'원', 'var(--text-primary)'], ['대기 중 주문', $statusCounts['pending'].'건', 'var(--warning)'], ['배송 완료', $statusCounts['delivered'].'건', 'var(--success)']] as [$lbl, $val, $color])
       <div class="sum-mini">
         <span class="sum-mini-label">{{ $lbl }}</span>
         <span class="sum-mini-val" style="color:{{ $color }};">{{ $val }}</span>
@@ -505,7 +505,7 @@
             <th style="padding:6px 8px;text-align:left;border:1px solid var(--border);">코드</th>
             <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);">수량</th>
             <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">단가</th>
-            <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">NHIS청구</th>
+            <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">청구</th>
             <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">본인부담</th>
           </tr></thead>
           <tbody>${d.items.map(i => `<tr>
@@ -542,7 +542,7 @@
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">주문 정보</div>
             ${row('주문번호', `<span style="font-family:monospace;color:var(--primary);">${d.order_number}</span>`)}
             ${row('주문상태', badge(d.status_label, d.status_badge))}
-            ${row('NHIS 청구', d.nhis_status)}
+            ${row('청구', d.nhis_status)}
             ${row('접수일시', d.created_at)}
             ${row('배송완료일', d.delivered_at || '-')}
             ${row('담당자', d.creator)}
@@ -559,10 +559,10 @@
           <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">금액 정보</div>
           <div style="background:var(--bg);border-radius:var(--radius);padding:10px 14px;">
             ${amtRow('단가',        d.unit_price)}
-            ${amtRow('NHIS 청구액', d.nhis_amount,    'var(--primary-600)')}
+            ${amtRow('청구액', d.nhis_amount,    'var(--primary-600)')}
             ${amtRow('환자 본인부담', d.patient_copay, 'var(--primary)')}
             ${amtRow('배송비',      d.shipping_fee)}
-            ${amtRow('NHIS 환급',   d.nhis_reimb,    'var(--primary-600)')}
+            ${amtRow('환급',   d.nhis_reimb,    'var(--primary-600)')}
             <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:700;line-height:21px;">
               <span>총 주문금액</span>
               <span style="font-family:monospace;color:var(--primary);">${fmt(d.total_amount)}원</span>

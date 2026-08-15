@@ -647,7 +647,7 @@
 
     </div>
 
-    {{-- ── 오른쪽: 금액 / NHIS / 상태변경 ── --}}
+    {{-- ── 오른쪽: 금액 / 청구 / 상태변경 ── --}}
     <div>
 
       {{-- 금액 요약 --}}
@@ -659,7 +659,7 @@
         <div class="card-body">
           <div class="amount-grid">
             <div class="amount-box">
-              <div class="label">건보 청구액</div>
+              <div class="label">청구액</div>
               <div class="value">{{ number_format($order->nhis_amount) }}원</div>
             </div>
             <div class="amount-box">
@@ -678,7 +678,7 @@
         </div>
       </div>
 
-      {{-- NHIS 청구 --}}
+      {{-- 청구 --}}
       <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-hospital" style="color:var(--primary);"></i>
@@ -1286,7 +1286,7 @@ window.HELP_TOUR_STEPS = [
   const MAP = {
     '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본',
     '배송 정보': '배송', 'Withworks 출고 현황': '배송', '상태 변경': '배송',
-    'NHIS 건강보험 청구': '청구', '세금계산서 / 현금영수증': '청구',
+    '국민건강보험공단 청구': '청구', '세금계산서 / 현금영수증': '청구',
     '메모': '정보',
   };
 

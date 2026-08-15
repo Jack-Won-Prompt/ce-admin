@@ -1226,7 +1226,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);cursor:pointer;text-align:left;">
                     <div>
                       <div style="font-size:12px;font-weight:700;color:var(--primary);">국민건강보험공단</div>
-                      <div style="font-size:10px;color:var(--text-muted);">NHIS · 지사 검색</div>
+                      <div style="font-size:10px;color:var(--text-muted);">공단 · 지사 검색</div>
                     </div>
                     <i class="fa-solid fa-magnifying-glass" style="font-size:12px;color:var(--primary);"></i>
                   </button>
@@ -1239,7 +1239,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <i class="fa-solid fa-pen" style="font-size:11px;color:var(--text-muted);"></i>
                   </button>
                 </div>
-                {{-- NHIS 지사 검색 패널 --}}
+                {{-- 공단 지사 검색 패널 --}}
                 <div id="nhisSearchPanel" style="display:none;background:var(--bg);border:1px solid var(--primary);border-radius:var(--radius);padding:8px;margin-top:6px;">
                   <input type="text" id="nhisSearchInput" class="form-control"
                          style="height:32px;font-size:11px;margin-bottom:6px;padding:3px 8px;"
@@ -1256,7 +1256,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:10px;color:var(--text-muted);line-height:1.6;">
                 <i class="fa-solid fa-circle-info" style="margin-right:3px;"></i>
-                NHIS는 지사를 검색하여 선택하세요. 팩스번호는 직접 수정 가능합니다.
+                공단은 지사를 검색하여 선택하세요. 팩스번호는 직접 수정 가능합니다.
               </div>
             </div>
             {{-- 오른쪽: 전송 서류 --}}
@@ -2016,7 +2016,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 등록</span>
+                <span class="rx-field-label">공단 등록</span>
                 <select class="form-control" id="f-nhis-status" style="flex:1;">
                   <option value="">선택</option>
                   <option value="진행중"   @selected(($prescription->patient?->nhis_reg_status ?? '') == '진행중')>진행중</option>
@@ -2025,16 +2025,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 등록일</span>
+                <span class="rx-field-label">공단 등록일</span>
                 <input type="date" class="form-control" id="f-nhis-reg-date"
                        value="{{ $prescription->patient?->nhis_reg_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 재등록 대상자</span>
+                <span class="rx-field-label">공단 재등록 대상자</span>
                 <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 재등록 기한</span>
+                <span class="rx-field-label">공단 재등록 기한</span>
                 <input type="date" class="form-control" id="f-nhis-renew-due"
                        value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
               </div>
@@ -2218,7 +2218,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     '진행중-대리점이 사유 확인중','진행중-출국','진행중-보류요청','진행중-환자정보 요청중',
                     '진행중-대리점 출고 대기','진행중-이질감','진행중-공단 등록 진행중',
                     '취소-타사제품','취소-재고여유','취소-복원','취소-입원중','취소-산재',
-                    '취소-보훈(건보적용불가)','취소-통화연결실패','취소-이질감','취소-처방전  error(이중발행 등)',
+                    '취소-보훈(급여적용불가)','취소-통화연결실패','취소-이질감','취소-처방전  error(이중발행 등)',
                     '취소-미입금','취소-비용부담','취소-단순변심','취소-유치도뇨','취소-처방전 사용기간만료',
                     '취소-CKL제품 의료기구매','취소-출국','취소-사망',
                     '관리자 확인 -시스템 issue(판매 주문부터 시작/확정)',
@@ -2331,7 +2331,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-ellipsis" style="color:var(--primary);"></i> 추가정보
             </span>
             <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">건보 위임동의ㆍ인마켓ㆍ수량</span>
+              <span class="rx-acc-meta-hint">공단 위임동의ㆍ인마켓ㆍ수량</span>
               {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
               <div class="rx-acc-btns" onclick="event.stopPropagation()">
                 <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
@@ -2347,11 +2347,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 위 둘은 병원ㆍ처방 카드의 '사용 시작일'·'급여 종료일'과 같은 값이다.
                    시안이 양쪽에 그려 두어 서로 비추게 한다(아래 초기화 코드 참조). --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 위임동의 시작일</span>
+                <span class="rx-field-label">공단 위임동의 시작일</span>
                 <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">건보 위임동의 종료일</span>
+                <span class="rx-field-label">공단 위임동의 종료일</span>
                 <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
@@ -2537,7 +2537,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- 합계 / 버튼 (카드/테이블뷰 공통) --}}
             <div class="items-total-bar">
               <span><i class="fa-solid fa-circle-dollar-to-slot" style="color:var(--primary);"></i>
-                총 NHIS 급여: <b style="color:var(--primary);" id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+                총 요양비: <b style="color:var(--primary);" id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
               </span>
               <span style="margin-left:auto;">
                 총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
@@ -2728,7 +2728,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="workflow-step">
               <div class="ws-icon {{ $prescription->order?->nhis_claim_status === 'approved' ? 'done' : 'pending' }}"><i class="fa-solid fa-hospital"></i></div>
-              <div><div class="ws-label">NHIS 청구</div><div class="ws-time">{{ $prescription->order?->nhis_reimbursement ? '환급: ₩'.number_format($prescription->order->nhis_reimbursement) : '대기 중' }}</div></div>
+              <div><div class="ws-label">청구</div><div class="ws-time">{{ $prescription->order?->nhis_reimbursement ? '환급: ₩'.number_format($prescription->order->nhis_reimbursement) : '대기 중' }}</div></div>
             </div>
           </div>
         </div>
@@ -2789,7 +2789,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </td>
                 </tr>
                 <tr>
-                  <td><i class="fa-solid fa-hospital" style="color:var(--primary);margin-right:5px;"></i>NHIS 청구</td>
+                  <td><i class="fa-solid fa-hospital" style="color:var(--primary);margin-right:5px;"></i>청구</td>
                   <td style="text-align:center;">
                     @if($prescription->order?->nhis_claim_status === 'approved')
                       <i class="fa-solid fa-check" style="color:var(--primary);"></i>
@@ -4724,7 +4724,7 @@ window.HELP_TOUR_STEPS = [
         ${item.stock  ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(item.stock).toLocaleString()}</span>` : ''}
       </div>
       <div class="item-summary">
-        <span style="color:var(--text-muted);font-size:11px;">NHIS 급여:</span>
+        <span style="color:var(--text-muted);font-size:11px;">요양비:</span>
         <b style="color:var(--primary);" class="item-nhis-amt">₩ ${nhisAmt}</b>
         <span style="margin-left:auto;color:var(--text-muted);font-size:11px;">환자부담:</span>
         <b class="item-copay">₩ ${copay}</b>
@@ -6243,7 +6243,7 @@ window.HELP_TOUR_STEPS = [
   function selectNhisOffice(fax, name) {
     document.getElementById('fax-no').value = fax;
     document.getElementById('nhisSearchPanel').style.display = 'none';
-    // update the NHIS button label to show selected branch
+    // 고른 지사를 공단 지사 버튼 라벨에 반영
     const nhisBtn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
     if (nhisBtn) {
       nhisBtn.dataset.fax = fax;

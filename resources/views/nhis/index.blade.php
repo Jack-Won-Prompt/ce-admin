@@ -1,11 +1,11 @@
 {{-- resources/views/nhis/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'NHIS 청구 관리')
-@section('page-title', 'NHIS 청구 관리')
-@section('breadcrumb', '홈 / NHIS 청구')
+@section('title', '청구 관리')
+@section('page-title', '청구 관리')
+@section('breadcrumb', '홈 / 청구')
 
-@section('help-title', 'NHIS 청구 도움말')
+@section('help-title', '청구 도움말')
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
@@ -197,7 +197,7 @@
   </div>
 </div>
 
-{{-- ── NHIS 상태 칩 ── --}}
+{{-- ── 청구 상태 칩 ── --}}
 {{-- Figma 282:53: h31 · r999 · pad 6/10 · 12px/700 · gap 4, 건수 배지 16×16 정원 10px/700 --}}
 <div class="ds-chips">
   <a href="{{ route('nhis.index', array_merge(request()->except('nhis_status','page'), [])) }}"
@@ -276,7 +276,7 @@
     </div>
 
 <div id="pnlList">
-{{-- ── NHIS 청구 목록 (wwGrid) ── --}}
+{{-- ── 청구 목록 (wwGrid) ── --}}
 <div id="nhisGrid"></div>
 </div>{{-- /pnlList --}}
 
@@ -295,7 +295,7 @@
 <div class="modal-overlay" id="resultModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title"><i class="fa-solid fa-clipboard-check" style="color:var(--success);"></i> NHIS 처리 결과 등록</div>
+      <div class="modal-title"><i class="fa-solid fa-clipboard-check" style="color:var(--success);"></i> 청구 처리 결과 등록</div>
       <button class="btn-close-modal" onclick="closeResultModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -317,7 +317,7 @@
         <label class="form-label">승인 금액 (원)</label>
         <input type="number" id="approvedAmount" class="form-control" placeholder="0" min="0">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-          청구 건보액: <span id="claimAmountRef" style="font-weight:700;"></span>원
+          청구 청구액: <span id="claimAmountRef" style="font-weight:700;"></span>원
         </div>
       </div>
       <div class="form-group">
@@ -367,10 +367,10 @@
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
       { header: '제품명',      name: 'product',       width: 170 },
-      { header: '건보청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
+      { header: '청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
       { header: '환자부담',    name: 'patient_copay', width: 100, editor: 'number' },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
-      { header: 'NHIS상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
+      { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
       {
         // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
@@ -550,7 +550,7 @@ async function previewDoc(orderId, orderNumber) {
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 NHIS 청구 대상을 조회합니다.' },
+  { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 청구 대상을 조회합니다.' },
   { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 공단 사이트에서 청구하고, 결과를 여기에 기록합니다.' },
   { selector: '.btn-primary', title: '공단 사이트 열기', body: '요양기관정보마당을 새 창으로 엽니다. 청구 입력과 서류 업로드는 그곳에서 합니다.' },
 ];

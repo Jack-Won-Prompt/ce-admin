@@ -112,7 +112,7 @@
             <span class="info-value">{{ $patient->health_insurance_no ?? '-' }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">건보 적용</span>
+            <span class="info-label">급여 적용</span>
             <span class="info-value">
               @if($patient->is_nhis_eligible)
                 <span style="color:var(--success);font-weight:700;"><i class="fa-solid fa-check-circle"></i> 급여 {{ $patient->nhis_coverage_rate }}%</span>
@@ -180,7 +180,7 @@
               <input type="text" class="form-control" id="e-insurance-no" value="{{ $patient->health_insurance_no }}" />
             </div>
             <div class="form-group">
-              <label class="form-label">건보 적용</label>
+              <label class="form-label">급여 적용</label>
               <select class="form-control" id="e-nhis">
                 <option value="0" @selected(!$patient->is_nhis_eligible)>비급여</option>
                 <option value="1" @selected($patient->is_nhis_eligible)>급여 대상</option>

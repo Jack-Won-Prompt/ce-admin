@@ -124,7 +124,7 @@ return [
 
         // ── 청구 · 회계 ──────────────────────────────────────────
         'nhis' => [
-            'label'   => 'NHIS 청구',
+            'label'   => '청구 관리',
             'group'   => 'billing',
             'routes'  => ['nhis'],
             'actions' => ['view', 'update', 'send'],

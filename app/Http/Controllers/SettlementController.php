@@ -173,14 +173,14 @@ class SettlementController extends Controller
             ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
             ['header' => '제품명',      'name' => 'product',      'width' => 160],
             ['header' => '총 주문금액', 'name' => 'total_amount', 'width' => 110, 'editor' => 'number'],
-            ['header' => 'NHIS 청구',   'name' => 'nhis_amount',  'width' => 100, 'editor' => 'number'],
+            ['header' => '청구액',   'name' => 'nhis_amount',  'width' => 100, 'editor' => 'number'],
             ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number'],
             ['header' => '본인부담',    'name' => 'copay',        'width' => 100, 'editor' => 'number'],
             ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
             ['header' => '가상계좌',    'name' => 'va_state',     'width' => 90,  'align' => 'center', 'sortable' => true],
             ['header' => '입금확인',    'name' => 'deposit',      'width' => 100, 'align' => 'right'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
-            ['header' => 'NHIS',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
+            ['header' => '청구',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
             ['header' => '접수일',      'name' => 'created',      'width' => 100, 'sortable' => true],
         ];
 

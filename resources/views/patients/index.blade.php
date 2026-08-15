@@ -168,9 +168,9 @@
              placeholder="이름 또는 전화번호">
     </div>
     <div class="ds-filter-field">
-      <label class="ds-field-label">건보</label>
+      <label class="ds-field-label">급여</label>
       <select name="nhis" class="form-control form-select">
-        <option value="">건보 전체</option>
+        <option value="">급여 전체</option>
         <option value="1" @selected(request('nhis')==='1')>급여 대상</option>
         <option value="0" @selected(request('nhis')==='0')>비급여</option>
       </select>
@@ -310,7 +310,7 @@
           <input type="text" class="form-control" id="add-insurance-no" placeholder="건강보험 번호" />
         </div>
         <div class="form-group">
-          <label class="form-label">건보 적용</label>
+          <label class="form-label">급여 적용</label>
           <select class="form-control" id="add-nhis">
             <option value="0">비급여</option>
             <option value="1">급여 대상</option>
@@ -394,7 +394,7 @@ document.addEventListener('keydown', (e) => {
       { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
       { header: '성별',         name: 'gender',          width: 60,  align: 'center', sortable: true },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
-      { header: '건보',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
+      { header: '급여',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
       { header: '서명여부',   name: 'signed',   width: 90, align: 'center', sortable: true,
         renderer: (v, row) => {

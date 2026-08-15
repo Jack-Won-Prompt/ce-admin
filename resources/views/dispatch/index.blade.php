@@ -54,7 +54,7 @@
     </a>
     <a href="{{ route('dispatch.index', ['type'=>'nhis'] + request()->except('type','page')) }}"
        class="ds-chip {{ $type==='nhis' ? 'active' : '' }}">
-      <i class="bx bx-paper-plane"></i> NHIS 청구 발송
+      <i class="bx bx-paper-plane"></i> 청구 발송
       <span class="ds-chip-count">{{ number_format($counts['nhis']) }}</span>
     </a>
   </div>

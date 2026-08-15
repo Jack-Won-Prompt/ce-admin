@@ -21,7 +21,7 @@ window.HELP_TOUR_STEPS = [
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
-  <div class="help-tip"><i class="bx bx-info-circle"></i>생성된 모든 주문을 조회하고 배송·NHIS·영수증 상태를 관리하는 화면입니다.</div>
+  <div class="help-tip"><i class="bx bx-info-circle"></i>생성된 모든 주문을 조회하고 배송·청구·영수증 상태를 관리하는 화면입니다.</div>
 </div>
 <div class="help-section">
   <div class="help-section-title">주문 상태</div>

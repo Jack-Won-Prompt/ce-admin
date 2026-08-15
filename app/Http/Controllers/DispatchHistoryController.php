@@ -128,7 +128,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '발송 팩스','name' => 'fax',      'width' => 120],
                 ['header' => '청구금액', 'name' => 'claim',    'width' => 100, 'editor' => 'number'],
-                ['header' => 'NHIS 부담','name' => 'nhis',     'width' => 100, 'editor' => 'number'],
+                ['header' => '공단부담금','name' => 'nhis',     'width' => 100, 'editor' => 'number'],
                 ['header' => '참조번호', 'name' => 'ref_no',   'width' => 120],
                 ['header' => '전송상태', 'name' => 'status',   'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '심사결과', 'name' => 'result',   'width' => 130, 'align' => 'center'],

@@ -283,7 +283,7 @@
       <div class="hero-tag"><i class="bx bx-star"></i> 처방전 통합 관리 플랫폼</div>
       <h1 class="hero-title">처방전 관리의<br><em>새로운 기준</em>을 만듭니다</h1>
       <p class="hero-desc">
-        OCR 자동화·NHIS 급여 청구·실시간 주문 연계·기관 정책 모니터링까지<br>
+        OCR 자동화·요양비 청구·실시간 주문 연계·기관 정책 모니터링까지<br>
         병원 행정 업무를 하나의 플랫폼에서 처리하세요.
       </p>
       <div class="hero-actions">
@@ -314,7 +314,7 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon cyan"><i class="bx bx-plus-medical"></i></div>
-          <div class="feature-title">NHIS 급여 청구 연동</div>
+          <div class="feature-title">요양비 청구 연동</div>
           <div class="feature-desc">건강보험심사평가원 팩스 자동 전송, 청구 상태 추적, 급여 승인·반려 내역을 통합 관리합니다.</div>
         </div>
         <div class="feature-card">
@@ -335,7 +335,7 @@
         <div class="feature-card">
           <div class="feature-icon rose"><i class="bx bx-bar-chart-alt-2"></i></div>
           <div class="feature-title">통합 대시보드</div>
-          <div class="feature-desc">처방·주문·정산·NHIS 청구 현황을 실시간 카드·차트로 표시하고 재구매 일정을 캘린더로 관리합니다.</div>
+          <div class="feature-desc">처방·주문·정산·청구 현황을 실시간 카드·차트로 표시하고 재구매 일정을 캘린더로 관리합니다.</div>
         </div>
       </div>
     </div>
@@ -365,7 +365,7 @@
         </div>
         <div class="workflow-step">
           <div class="workflow-num">4</div>
-          <div class="workflow-step-title">NHIS 청구</div>
+          <div class="workflow-step-title">청구</div>
           <div class="workflow-step-desc">급여 청구 팩스 전송, 결과 자동 수신</div>
         </div>
         <div class="workflow-step">
@@ -386,7 +386,7 @@
       <div class="org-grid">
         <div class="org-badge"><i class="bx bx-buildings"></i> 보건복지부 (MOHW)</div>
         <div class="org-badge"><i class="bx bx-buildings"></i> 건강보험심사평가원 (HIRA)</div>
-        <div class="org-badge"><i class="bx bx-buildings"></i> 국민건강보험공단 (NHIS)</div>
+        <div class="org-badge"><i class="bx bx-buildings"></i> 국민건강보험공단</div>
         <div class="org-badge"><i class="bx bx-store"></i> Withworks 유통 플랫폼</div>
         <div class="org-badge"><i class="bx bx-credit-card"></i> 토스페이먼츠</div>
         <div class="org-badge"><i class="bx bx-receipt"></i> 팝빌(전자세금계산서)</div>

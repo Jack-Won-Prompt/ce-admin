@@ -1373,9 +1373,9 @@
         <div class="menu-group-items">
         @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="NHIS 청구">
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="청구 관리">
             @dsicon('coin-hand', 'ds-icon menu-icon')
-            <span>NHIS 청구</span>
+            <span>청구 관리</span>
             @php $nhisCount = \App\Models\Order::where('nhis_claim_status','pending')->whereIn('status',['delivered','shipping','confirmed'])->count(); @endphp
             @if($nhisCount > 0)
               <span class="menu-badge">{{ $nhisCount }}</span>
@@ -5447,7 +5447,7 @@ const Tour = (() => {
     {
       selector: '.menu-inner',
       title: '사이드바 메뉴',
-      body: '<b>처방전·환자·주문·NHIS·정산</b> 등 주요 기능이 이 메뉴에 있습니다. 아이콘을 클릭하면 메뉴가 접힙니다.'
+      body: '<b>처방전·환자·주문·청구·정산</b> 등 주요 기능이 이 메뉴에 있습니다. 아이콘을 클릭하면 메뉴가 접힙니다.'
     },
     {
       selector: '.layout-navbar',

@@ -338,7 +338,7 @@
     {{-- Headline --}}
     <div class="left-headline">
       <h1>처방전 관리의<br><em>새로운 기준</em></h1>
-      <p>OCR 자동화, NHIS 급여 청구, 실시간 주문 연계까지<br>병원 업무를 하나의 플랫폼에서 처리하세요.</p>
+      <p>OCR 자동화, 요양비 청구, 실시간 주문 연계까지<br>병원 업무를 하나의 플랫폼에서 처리하세요.</p>
     </div>
 
     {{-- Features --}}
@@ -353,7 +353,7 @@
       <div class="left-feature">
         <div class="left-feature-icon cyan"><i class="bx bx-plus-medical"></i></div>
         <div>
-          <div class="left-feature-title">NHIS 급여 청구 연동</div>
+          <div class="left-feature-title">요양비 청구 연동</div>
           <div class="left-feature-desc">건강보험심사평가원과 실시간 급여 청구 처리</div>
         </div>
       </div>

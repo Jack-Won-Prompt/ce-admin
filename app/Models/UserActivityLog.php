@@ -31,7 +31,7 @@ class UserActivityLog extends Model
         'repurchase.day'           => '재구매 관리',
         'orders.index'             => '주문관리',
         'orders.show'              => '주문 상세',
-        'nhis.index'               => 'NHIS 청구',
+        'nhis.index'               => '청구 관리',
         'invoice.index'            => '계산서 발행',
         'settlement.index'         => '정산/회계',
         'dispatch.index'           => '발송/발행 내역',
