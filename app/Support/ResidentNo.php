@@ -58,6 +58,25 @@ final class ResidentNo
         return \Carbon\Carbon::createFromDate($y, (int) $mm, (int) $dd)->startOfDay();
     }
 
+    /**
+     * 성별. 생년월일과 같은 자리(뒷자리 첫 숫자)에서 읽으므로 복호화가 필요 없다.
+     * 홀수가 남자, 짝수가 여자다 — 1800·1900·2000년대와 내·외국인을 가리지 않는다.
+     * 못 읽으면 null. '모른다'를 '남자'로 적어 두면 나중에 고칠 수도 없다.
+     */
+    public static function genderFromMasked(?string $masked): ?string
+    {
+        if (!preg_match('/^\d{6}\s*-?\s*(\d)/', (string) $masked, $m)) {
+            return null;
+        }
+
+        $g = (int) $m[1];
+        if ($g < 1 || $g > 8) {
+            return null;   // 9·0 은 1800년대라 남녀가 갈리지만 실무에 없다. 억지로 넣지 않는다.
+        }
+
+        return $g % 2 === 1 ? 'male' : 'female';
+    }
+
     /** 만 나이가 기준보다 어린가. 생년월일을 못 읽으면 null — '모른다'와 '아니다'는 다르다. */
     public static function isMinorByMasked(?string $masked, ?int $age = null): ?bool
     {

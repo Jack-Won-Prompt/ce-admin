@@ -43,7 +43,7 @@ class CashbillController extends Controller
      *   trade_type  승인거래|취소거래 (선택)
      *   trade_usage 소득공제용|지출증빙용 (선택)
      *   page        (기본 1)
-     *   per_page    (기본 15, 최대 100)
+     *   per_page    (기본 15, 최대 1000)
      *   order       D(내림차순)|A(오름차순) - trade_dt 기준
      */
     public function search(Request $request): JsonResponse
@@ -52,7 +52,9 @@ class CashbillController extends Controller
             'start_date' => 'required|date_format:Ymd',
             'end_date'   => 'required|date_format:Ymd',
             'page'       => 'nullable|integer|min:1',
-            'per_page'   => 'nullable|integer|min:1|max:100',
+            // 화면은 한 해치를 한 번에 본다. 이 조회는 팝빌이 아니라 우리 표를 읽으므로
+            // 상한을 낮게 둘 이유가 없다 — 100 이면 화면이 보내는 값에 걸려 422 가 났다.
+            'per_page'   => 'nullable|integer|min:1|max:1000',
         ]);
 
         $corpNum   = $request->query('corp_num', config('popbill.test.corp_num'));

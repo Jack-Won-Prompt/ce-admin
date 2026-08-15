@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\Patient;
+use App\Support\ResidentNo;
 use App\Models\User;
 use App\Models\PrescriptionConsent;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -219,7 +220,8 @@ class PrescriptionController extends Controller
             $body = $response->json();
 
             if ($response->successful() && ($body['success'] ?? false)) {
-                $soNo = $body['result']['so_no'] ?? null;
+                $result = $body['result'] ?? [];
+                $soNo   = $result['so_no'] ?? null;
 
                 // 주문에 Withworks SO번호/ID 기록
                 if ($prescription->order) {
@@ -234,7 +236,6 @@ class PrescriptionController extends Controller
                 activity()->causedBy(Auth::user())->performedOn($prescription)
                     ->log("Withworks 판매주문 연계: {$soNo}");
 
-                $result      = $body['result'] ?? [];
                 $accountNew  = $result['patient_account_new'] ?? false;
                 $addressNew  = $result['patient_address_new'] ?? false;
 
@@ -1282,6 +1283,20 @@ class PrescriptionController extends Controller
             if ($request->filled('resident_no_ocr'))  $patientUpdates['resident_no'] = $request->resident_no_ocr;
             if ($request->filled('mobile_ocr'))       $patientUpdates['mobile']      = $request->mobile_ocr;
             if ($request->filled('address_ocr'))      $patientUpdates['address']     = $request->address_ocr;
+
+            /* 생년월일·성별은 주민번호 앞 7자리에서 나온다(P0-1 — 원문을 열지 않는다).
+               담당자가 따로 입력하는 칸이 아니라서, 채워 두지 않으면 거래처 관리 그리드의
+               두 칸이 늘 비어 있다. 이미 값이 있으면 건드리지 않는다. */
+            if ($request->filled('resident_no_ocr')) {
+                $masked = ResidentNo::mask($request->resident_no_ocr);
+                if (!$prescription->patient->birth_date && $b = ResidentNo::birthDateFromMasked($masked)) {
+                    $patientUpdates['birth_date'] = $b;
+                }
+                if (!$prescription->patient->gender && $g = ResidentNo::genderFromMasked($masked)) {
+                    $patientUpdates['gender'] = $g;
+                }
+            }
+
             if ($patientUpdates) {
                 $prescription->patient->update($patientUpdates);
             }
@@ -2401,12 +2416,20 @@ HTML;
             }
         }
 
+        /* 생년월일·성별은 주민번호 앞 7자리에서 나온다. 원문을 열 필요가 없다(P0-1).
+           이 값을 채우지 않아 거래처 관리 그리드의 두 칸이 늘 비어 있었다. */
+        $masked = ResidentNo::mask($residentNo);
+        $birth  = ResidentNo::birthDateFromMasked($masked);
+        $gender = ResidentNo::genderFromMasked($masked);
+
         if ($patient) {
             // 기존 환자 — 비어있는 필드만 OCR 값으로 채움
             $updates = [];
             if (!$patient->resident_no && $residentNo) $updates['resident_no'] = $residentNo;
             if (!$patient->mobile      && $mobile)     $updates['mobile']      = $mobile;
             if (!$patient->address     && $address)    $updates['address']     = $address;
+            if (!$patient->birth_date  && $birth)      $updates['birth_date']  = $birth;
+            if (!$patient->gender      && $gender)     $updates['gender']      = $gender;
             if ($updates) {
                 $patient->update($updates);
             }
@@ -2417,6 +2440,8 @@ HTML;
                 'resident_no' => $residentNo,
                 'mobile'      => $mobile,
                 'address'     => $address,
+                'birth_date'  => $birth,
+                'gender'      => $gender,
             ]);
 
             activity()

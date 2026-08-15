@@ -566,6 +566,14 @@ class OrderController extends Controller
                 'cash_receipt_issued_at'  => $issuedAt,
             ]);
 
+            /* 현금영수증 화면 목록은 우리 표(cashbill_records)를 읽는다. 발행만 하고 두면
+               그 화면에서 방금 발행한 건이 보이지 않아 담당자가 동기화를 눌러야 했다. */
+            try {
+                app(\App\Services\Popbill\CashbillSyncService::class)->refreshOne($corpNum, $mgtKey);
+            } catch (\Throwable $e) {
+                Log::warning('[CashReceipt] 발행 후 동기화 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
+            }
+
             $typeLabel = Order::CASH_RECEIPT_TYPE_LABELS[$data['cash_receipt_type']] ?? '';
 
             activity()->causedBy(Auth::user())->performedOn($order)
