@@ -91,6 +91,13 @@ return [
             'routes'  => ['orders'],
             'actions' => ['view', 'create', 'update', 'delete', 'send'],
         ],
+        'order-returns' => [
+            'label'   => '교환/반품/취소',
+            'group'   => 'order',
+            'routes'  => ['order-returns'],
+            // 단계를 옮기는 것은 POST 라 create 로 추론된다 — 아래 overrides 에서 바로잡는다
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
         'repurchase' => [
             'label'   => '재구매 관리',
             'group'   => 'order',
@@ -264,6 +271,8 @@ return [
     'overrides' => [
         // 처방전 이미지·첨부 파일 내보내기 — 라우트 이름이 files.* 라 페이지를 못 찾는다.
         // 처방전을 볼 수 있는 사람만 그 파일도 볼 수 있게 명시한다.
+        // 단계를 옮기는 것은 새로 만드는 일이 아니라 고치는 일이다
+        'order-returns.advance'         => ['order-returns', 'update'],
         'files.prescription-image'      => ['prescriptions', 'view'],
         'files.prescription-attachment' => ['prescriptions', 'view'],
         'files.prescription-temp'       => ['prescriptions', 'view'],

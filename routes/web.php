@@ -138,6 +138,16 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/prescriptions/memos/{memo}/unpin',         [PrescriptionController::class, 'unpinMemo'])->name('prescriptions.memos.unpin');
 
     // 재구매 관리
+    /* 교환·반품·취소 — 주문을 무르거나 바꾸는 일. 지금까지는 주문 상태만 cancelled 로
+       바뀌고 왜·무엇이 오갔는지는 남지 않았다. */
+    Route::prefix('order-returns')->name('order-returns.')->group(function () {
+        Route::get('/',                [\App\Http\Controllers\OrderReturnController::class, 'index'])->name('index');
+        Route::get('/create',          [\App\Http\Controllers\OrderReturnController::class, 'create'])->name('create');
+        Route::post('/',               [\App\Http\Controllers\OrderReturnController::class, 'store'])->name('store');
+        Route::get('/{orderReturn}',   [\App\Http\Controllers\OrderReturnController::class, 'show'])->name('show');
+        Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
+    });
+
     Route::get('/repurchase',      [RepurchaseController::class, 'index'])->name('repurchase.index');
     Route::get('/repurchase/day',  [RepurchaseController::class, 'dayItems'])->name('repurchase.day');
 

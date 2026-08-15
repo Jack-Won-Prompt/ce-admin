@@ -1300,6 +1300,21 @@
           </a>
         </div>
         @endif
+        {{-- 1차 요청 CR-MNU-04 --}}
+        @if($vis('order-returns'))
+        <div class="menu-item {{ request()->routeIs('order-returns*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="add-package" href="{{ route('order-returns.index') }}" data-title="교환/반품/취소">
+            @dsicon('add-package', 'ds-icon menu-icon')
+            <span>교환/반품/취소</span>
+            @php
+              try {
+                $rtnOpen = \App\Models\OrderReturn::whereNotIn('status', ['done','refunded','cancelled'])->count();
+              } catch (\Throwable $e) { $rtnOpen = 0; }
+            @endphp
+            @if($rtnOpen > 0)<span class="menu-badge blue">{{ $rtnOpen }}</span>@endif
+          </a>
+        </div>
+        @endif
         @if($vis('repurchase'))
         <div class="menu-item {{ request()->routeIs('repurchase*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="add-package" href="{{ route('repurchase.index') }}" data-title="재구매 관리">
