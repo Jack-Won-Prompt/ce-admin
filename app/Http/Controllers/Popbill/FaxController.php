@@ -153,72 +153,21 @@ class FaxController extends Controller
     }
 
     /**
-     * 미완료 건 팝빌 동기화 (state NOT IN 성공·취소)
+     * 미완료 건 팝빌 동기화 — 화면의 '대기건 동기화' 버튼.
+     * 실제 판단은 FaxSyncService 에 있다. 스케줄러(fax:sync-pending)와 같은 코드를 쓴다.
      */
     public function syncPending(Request $request): JsonResponse
     {
-        $corpNum = $request->input('corp_num', config('popbill.test.corp_num'));
-
-        $pending = FaxHistory::where('corp_num', $corpNum)->pending()->get();
-
-        $synced = 0;
-        $errors = 0;
-
-        foreach ($pending as $history) {
-            try {
-                $arr = $this->svc->getMessages($history->corp_num, $history->receipt_num, null);
-
-                if (empty($arr)) {
-                    continue;
-                }
-
-                // 전체 상태 결정
-                $states = array_map(fn($s) => (int)($s->state ?? 0), $arr);
-                if (in_array(FaxHistory::STATE_SENDING, $states)) {
-                    $overall = FaxHistory::STATE_SENDING;
-                } elseif (count(array_unique($states)) === 1 && $states[0] === FaxHistory::STATE_OK) {
-                    $overall = FaxHistory::STATE_OK;
-                } elseif (in_array(FaxHistory::STATE_FAIL, $states)) {
-                    $overall = FaxHistory::STATE_FAIL;
-                } elseif (count(array_unique($states)) === 1 && $states[0] === FaxHistory::STATE_CANCEL) {
-                    $overall = FaxHistory::STATE_CANCEL;
-                } else {
-                    $overall = FaxHistory::STATE_WAIT;
-                }
-
-                // 결과코드: 실패 수신자 우선, 없으면 첫 번째
-                $result = null;
-                foreach ($arr as $s) {
-                    if (isset($s->result) && $s->result !== null) {
-                        $result = (int) $s->result;
-                        if ((int)($s->state ?? 0) === FaxHistory::STATE_FAIL) {
-                            break; // 실패 건의 코드 우선
-                        }
-                    }
-                }
-
-                $history->update([
-                    'popbill_state'  => $overall,
-                    'popbill_result' => $result,
-                    'synced_at'      => now(),
-                ]);
-                $synced++;
-            } catch (\Throwable $e) {
-                Log::error('[Fax] syncPending 실패', [
-                    'receipt_num' => $history->receipt_num,
-                    'error'       => $e->getMessage(),
-                ]);
-                $errors++;
-            }
-        }
+        $result = app(\App\Services\Popbill\FaxSyncService::class)
+            ->syncPending($request->input('corp_num'));
 
         return response()->json([
-            'synced' => $synced,
-            'errors' => $errors,
-            'total'  => $pending->count(),
+            'message' => '동기화 완료',
+            'synced'  => $result['synced'],
+            'errors'  => $result['errors'],
+            'checked' => $result['checked'],
         ]);
     }
-
     /**
      * 전송내역 확인
      */
