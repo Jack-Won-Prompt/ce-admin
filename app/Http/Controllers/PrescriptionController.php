@@ -2187,7 +2187,9 @@ class PrescriptionController extends Controller
         $options->setChroot(realpath(base_path()));
         $options->setIsHtml5ParserEnabled(true);
         $options->setIsRemoteEnabled(false);
-        $options->setIsFontSubsettingEnabled(false);
+        // 쓰인 글자만 심는다. 나눔고딕 원본이 4.5MB 라 통째로 심으면 산출물이 2.7MB 가 되고
+        // 만드는 동안 메모리가 128MB 를 넘겨 위임장 내려받기가 500 으로 떨어졌다.
+        $options->setIsFontSubsettingEnabled(true);
         $options->setDefaultFont('NanumGothic');
         return new \Dompdf\Dompdf($options);
     }

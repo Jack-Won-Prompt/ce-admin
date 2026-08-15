@@ -6,6 +6,13 @@
     // 평문이 필요한 유일한 화면 경로이며, 사유 코드와 함께 감사로그가 남는다(P0-1).
     $rrn     = $patient?->residentNoFor('nhis_claim_form') ?? '';
     $phone   = $consent->patient_mobile ?? $patient?->mobile ?? '';
+    /* 법정대리인은 서명 화면에서 보호자가 직접 적고 서명한 값이다. 동의 건이 정본이며,
+       환자 마스터의 값과 다를 수 있다(다른 보호자가 서명하는 일이 있다).
+       미성년이 아닌 건은 이 줄이 비어 있는 것이 맞다. */
+    $gName  = $consent->is_minor ? ($consent->guardian_name ?? '') : '';
+    $gBirth = $consent->is_minor ? ($consent->guardian_birth_date?->format('Y-m-d') ?? '') : '';
+    $gRel   = $consent->is_minor ? ($consent->guardian_relation ?? '') : '';
+
     $signDate = $consent->responded_at ?? now();
     $y = $signDate->format('Y');
     $m = $signDate->format('n');
@@ -87,15 +94,15 @@
         <tr>
             <td class="sub" rowspan="3">법정대리인<br>또는 가족</td>
             <td class="lbl">성명</td>
-            <td class="val"></td>
+            <td class="val">{{ $gName }}</td>
         </tr>
         <tr>
             <td class="lbl">생년월일</td>
-            <td class="val"></td>
+            <td class="val">{{ $gBirth }}</td>
         </tr>
         <tr>
             <td class="lbl">가입자ㆍ피부양자와의 관계</td>
-            <td class="val"></td>
+            <td class="val">{{ $gRel }}</td>
         </tr>
         <tr>
             <td class="sub">전화번호<br><span style="font-size:8px;">(위임사항 및<br>지급내역 수신용)</span></td>
