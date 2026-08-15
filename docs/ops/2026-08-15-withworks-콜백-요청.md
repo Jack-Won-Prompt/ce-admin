@@ -50,7 +50,7 @@ CEAdmin 은 판매주문을 Withworks 에 넘긴 뒤의 진행을 알지 못한�
 | `event` | ✅ | 아래 목록 중 하나 |
 | `ce_order_number` | ✅ | CEAdmin 주문번호 (`so_store` 에 넘겼던 값) |
 | `so_no` | | Withworks 판매주문번호 |
-| `status` / `status_label` | | 그 시점의 판매주문 상태와 한글 표기 |
+| `status` / `status_label` | | 그 시점의 판매주문 상태와 한글 표기. 길이 제한 없음 — 우리 요약 칸(50·100자)에 안 들어가면 잘라 담고 원본은 사건 표에 통째로 남긴다 |
 | `occurred_at` | | 그쪽에서 일어난 시각 (ISO8601). 없으면 받은 시각을 쓴다 |
 | `ship` | | 배송 정보가 **생겼거나 바뀐 사건에만** 넣는다 |
 

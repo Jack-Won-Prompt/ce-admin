@@ -819,6 +819,31 @@
               <i class="bx bx-time"></i> Withworks 미연동 상태입니다.
             </div>
           @endif
+
+          {{-- 물류가 언제 어디까지 갔는지. 위 상태는 지금 값만 보여 주는데, 「왜 아직 출고가
+               안 됐지」를 볼 때 필요한 것은 지나온 자취다. Withworks 콜백으로 쌓인다. --}}
+          @php
+            $wwEvents = \App\Models\WithworksEvent::where('ce_order_number', $order->order_number)
+                ->orderByDesc('occurred_at')->orderByDesc('id')->limit(12)->get();
+          @endphp
+          @if($wwEvents->isNotEmpty())
+            <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
+              <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--gray-700);margin-bottom:8px;">
+                진행 이력 <span style="font-weight:400;color:var(--gray-500);">{{ $wwEvents->count() }}건</span>
+              </div>
+              @foreach($wwEvents as $e)
+                <div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--border-light);">
+                  <span style="font-size:12px;font-weight:700;color:var(--primary);min-width:96px;">
+                    {{ $e->status_label ?: $e->event }}
+                  </span>
+                  <span style="font-size:11px;color:var(--gray-500);white-space:nowrap;">
+                    {{ $e->occurred_at?->format('m-d H:i') ?? '-' }}
+                  </span>
+                  <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">{{ $e->event }}</span>
+                </div>
+              @endforeach
+            </div>
+          @endif
         </div>
       </div>
 

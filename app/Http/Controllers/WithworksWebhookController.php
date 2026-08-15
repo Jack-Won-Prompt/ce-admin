@@ -59,8 +59,11 @@ class WithworksWebhookController extends Controller
             'ce_order_number' => 'required|string|max:50',
             'so_no'           => 'nullable|string|max:50',
             'occurred_at'     => 'nullable|date',
-            'status'          => 'nullable|string|max:50',
-            'status_label'    => 'nullable|string|max:100',
+            /* 길이로 막지 않는다. 4xx 는 재시도하지 않는 것이 규격이라, 여기서 거절하면 그
+               사건은 영영 유실된다. 우리 칸에 안 들어가면 잘라서라도 받는다 — 원본은 payload
+               에 통째로 남으므로 잃는 것이 없다. */
+            'status'          => 'nullable|string',
+            'status_label'    => 'nullable|string',
             'ship'            => 'nullable|array',
         ]);
 
@@ -79,17 +82,25 @@ class WithworksWebhookController extends Controller
 
         $order = Order::where('order_number', $data['ce_order_number'])->first();
 
-        WithworksEvent::create([
-            'event_id'        => $data['event_id'],
-            'event'           => $data['event'],
-            'ce_order_number' => $data['ce_order_number'],
-            'so_no'           => $data['so_no'] ?? null,
-            'order_id'        => $order?->id,
-            'status'          => $data['status'] ?? null,
-            'status_label'    => $data['status_label'] ?? null,
-            'payload'         => $request->all(),
-            'occurred_at'     => $data['occurred_at'] ?? now(),
-        ]);
+        try {
+            WithworksEvent::create([
+                'event_id'        => $data['event_id'],
+                'event'           => $data['event'],
+                'ce_order_number' => $data['ce_order_number'],
+                'so_no'           => $data['so_no'] ?? null,
+                'order_id'        => $order?->id,
+                // 요약 칸은 잘라 담는다. 원본은 바로 아래 payload 에 통째로 남는다.
+                'status'          => isset($data['status']) ? mb_substr($data['status'], 0, 50) : null,
+                'status_label'    => isset($data['status_label']) ? mb_substr($data['status_label'], 0, 100) : null,
+                'payload'         => $request->all(),
+                'occurred_at'     => $data['occurred_at'] ?? now(),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            /* 같은 사건이 동시에 두 번 들어오면 위의 존재 확인을 둘 다 통과한다. 표의 유일
+               제약이 마지막 방어선이고, 여기까지 왔다는 것은 다른 요청이 이미 처리했다는
+               뜻이라 200 으로 답한다 — 500 을 주면 그쪽이 계속 다시 보낸다. */
+            return response()->json(['success' => true, 'message' => 'Already processed']);
+        }
 
         /* 우리가 모르는 주문이어도 사건은 남기고 200 으로 답한다. 404 를 주면 그쪽이 계속
            다시 보내는데, 다시 보낸다고 우리에게 그 주문이 생기지는 않는다. */

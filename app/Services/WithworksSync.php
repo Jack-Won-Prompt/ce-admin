@@ -23,6 +23,21 @@ class WithworksSync
     /** 아직 끝나지 않아 상태가 더 바뀔 주문 */
     public const OPEN_STATUSES = ['pending', 'confirmed', 'shipping'];
 
+    /**
+     * 컬럼이 담을 수 있는 길이.
+     *
+     * 남이 보내는 값이라 무엇이 올지 우리가 정하지 않는다. 넘치면 저장이 실패해 500 이 나가고,
+     * 500 을 받은 쪽은 계속 다시 보낸다. 요약 칸은 잘라서라도 받는다 — 원본은 사건 표에 남는다.
+     */
+    private const WIDTH = [
+        'withworks_status'            => 50,
+        'withworks_status_label'      => 50,
+        'withworks_ship_no'           => 50,
+        'withworks_ship_status'       => 50,
+        'withworks_ship_status_label' => 100,
+        'withworks_tracking_no'       => 100,
+    ];
+
     public function configured(): bool
     {
         return (bool) (config('services.todoworks.api_url') && config('services.todoworks.token'));
@@ -94,7 +109,7 @@ class WithworksSync
 
         foreach (['status' => 'withworks_status', 'status_label' => 'withworks_status_label'] as $from => $to) {
             if (array_key_exists($from, $result)) {
-                $update[$to] = $result[$from];
+                $update[$to] = $this->fit($result[$from], self::WIDTH[$to]);
             }
         }
 
@@ -107,7 +122,7 @@ class WithworksSync
                 'tracking_no'      => 'withworks_tracking_no',
             ] as $from => $to) {
                 if (array_key_exists($from, $ship)) {
-                    $update[$to] = $ship[$from];
+                    $update[$to] = $this->fit($ship[$from], self::WIDTH[$to]);
                 }
             }
             $update['withworks_ship_at'] = now();
@@ -119,6 +134,16 @@ class WithworksSync
         }
 
         $order->update($update);
+    }
+
+    /** 칸에 들어갈 만큼만 남긴다 */
+    private function fit($value, int $max): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return mb_substr((string) $value, 0, $max);
     }
 
     /**
