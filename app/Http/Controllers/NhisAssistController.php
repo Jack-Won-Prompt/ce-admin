@@ -43,16 +43,16 @@ class NhisAssistController extends Controller
         $order->load(['patient', 'prescription', 'items']);
         $prescription = $order->prescription;
 
-        $groups = $this->claimGroups($order, $prescription);
+        $fields = $this->claimFields($order, $prescription);
 
         return view('nhis.assist.claim', [
             'order'        => $order,
             'prescription' => $prescription,
-            'groups'       => $groups,
+            'f'            => $fields,
             'taxRows'      => $this->taxRows($order),
             'documents'    => $this->claimDocuments($order, $prescription),
             'delegated'    => $this->hasDelegation($prescription),
-            'missing'      => $this->countMissing($groups),
+            'missing'      => $this->countMissing([$fields]),
             'storeKey'     => 'nhis-claim:' . $order->order_number,
             'revealUrl'    => $prescription ? route('nhis.assist.rrn', $prescription) : null,
             'portalUrl'    => self::PORTAL_URL,
@@ -84,144 +84,128 @@ class NhisAssistController extends Controller
     }
 
     /**
-     * 공단 2221 화면 순서대로 묶는다 — 수진자 / 처방정보 / 구입정보 / 계좌정보.
+     * 공단 2221 화면의 칸마다 값을 하나씩 맞춰 놓는다.
      *
-     * 국세청자료는 행이 여럿이라 표로 따로 뺐다(taxRows).
+     * 화면이 공단 서식과 같은 자리에 같은 이름으로 칸을 그리므로, 여기서는 칸 이름(키)에
+     * 값을 붙이는 일만 한다. 국세청자료는 행이 여럿이라 따로 뺐다(taxRows).
+     *
+     * 각 칸의 모양
+     *   value  붙여넣을 값. null 이면 값이 없다는 뜻이라 붉게 서고 복사가 잠긴다
+     *   blank  값이 없을 때 칸에 대신 적을 말
+     *   note   칸 아래 작게 붙는 설명 (계산 근거·선택 안내)
+     *   warn   복사는 되지만 담당자가 확인해야 하는 것
+     *   ask    공단 규격·계산식을 몰라 우리가 값을 만들지 않은 칸
+     *   fixed  회사 고정값이라 건마다 바뀌지 않는 칸
+     *   reveal 누를 때 서버에서 열어 오는 칸 (주민번호 뒷자리)
      */
-    private function claimGroups(Order $order, ?Prescription $prescription): array
+    private function claimFields(Order $order, ?Prescription $p): array
     {
-        $patient = $order->patient ?? $prescription?->patient;
-
-        $rrnMasked = $patient?->resident_no_masked ?? $prescription?->resident_no_ocr_masked;
-        $rrnFront  = preg_match('/^(\d{6})/', (string) $rrnMasked, $m) ? $m[1] : null;
-
+        $patient = $order->patient ?? $p?->patient;
         $account = config('delegation.account');
 
-        return [
-            '1. 수진자 정보'   => [
-                ['label' => '요양비종류', 'value' => '자가도뇨카테터', 'fixed' => true],
-                ['label' => '주민등록번호 (앞 6자리)', 'value' => $rrnFront],
-                ['label' => '주민등록번호 (뒤 7자리)', 'value' => $rrnMasked ? '●●●●●●●' : null,
-                 'reveal' => (bool) $prescription, 'note' => '누르면 그때 열립니다 · 열람 기록이 남습니다'],
-                ['label' => '성명', 'value' => $patient?->name ?: $prescription?->patient_name_ocr],
-                ['label' => '처리지사', 'value' => null, 'copy' => false,
-                 'blank' => '공단이 자동으로 표시합니다', 'note' => '입력하지 않습니다'],
-                ['label' => '한시적', 'value' => null, 'copy' => false, 'ask' => true,
-                 'blank' => '체크 기준 미확인',
-                 'note'  => '어떤 경우에 체크하는지 공단·콜로 확인이 필요합니다 (C-Q-02)'],
-            ],
+        $rrnMasked = $patient?->resident_no_masked ?? $p?->resident_no_ocr_masked;
+        $rrnFront  = preg_match('/^(\d{6})/', (string) $rrnMasked, $m) ? $m[1] : null;
 
-            '2. 처방정보'      => $this->prescriptionRows($prescription),
-            '3. 구입정보'      => $this->purchaseRows($order, $prescription),
-
-            '4. 계좌정보'      => [
-                ['label' => '수령인', 'value' => $account['receiver'] ?? null, 'fixed' => true],
-                ['label' => '금융기관', 'value' => $account['bank'] ?? null, 'fixed' => true],
-                ['label' => '계좌번호', 'value' => $this->digits($account['number'] ?? null), 'fixed' => true],
-                ['label' => '예금주관계', 'value' => '기타', 'fixed' => true],
-                ['label' => '예금주 사업자번호', 'value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
-                ['label' => '예금주명', 'value' => $account['holder'] ?? null, 'fixed' => true],
-                ['label' => '압류방지통장', 'value' => '미체크', 'copy' => false, 'fixed' => true],
-                ['label' => '청구인관계', 'value' => null, 'copy' => false, 'ask' => true,
-                 'blank' => '선택 문구 미확인', 'note' => '공단 선택 목록 확인 필요 (C-Q-06)'],
-                ['label' => '청구인 사업자번호', 'value' => null, 'copy' => false, 'ask' => true,
-                 'blank' => '확인 필요', 'note' => '사업자번호와 같은 값인지 확인 필요 (C-Q-06)'],
-                ['label' => '청구인명', 'value' => null, 'copy' => false, 'ask' => true,
-                 'blank' => '확인 필요', 'note' => '업체명과 같은 값인지 확인 필요 (C-Q-06)'],
-                ['label' => 'SMS수신동의', 'value' => 'Y', 'fixed' => true],
-                ['label' => 'SMS송신번호', 'value' => $this->digits(config('delegation.provider.phone')), 'fixed' => true],
-                ['label' => '카드승인번호', 'value' => null, 'copy' => false,
-                 'blank' => '카드 결제 건이 없습니다',
-                 'note'  => '결제는 전부 가상계좌라 카드 승인번호가 생기지 않습니다'],
-            ],
-        ];
-    }
-
-    /** 처방정보 — 처방전 OCR·검수에서 들어온 값 */
-    private function prescriptionRows(?Prescription $p): array
-    {
-        // 총계는 계산이 원칙이나 검수에서 손으로 고친 값이 따로 있다. 어긋나면 둘 다 보여 준다.
-        $calcTotal  = ($p?->daily_count && $p?->total_days) ? $p->daily_count * $p->total_days : null;
-        $totalWarn  = ($calcTotal !== null && $p?->total_count && (int) $p->total_count !== $calcTotal)
+        // 처방총계는 계산이 원칙이나 검수에서 손으로 고친 값이 따로 있다. 어긋나면 알려 준다.
+        $rxTotal   = ($p?->daily_count && $p?->total_days) ? $p->daily_count * $p->total_days : null;
+        $rxTotWarn = ($rxTotal !== null && $p?->total_count && (int) $p->total_count !== $rxTotal)
             ? "저장된 총계 {$p->total_count} 와 다릅니다 — 어느 쪽이 맞는지 확인하십시오"
             : null;
 
-        return [
-            ['label' => '처방전등록번호', 'value' => $p?->registration_no ?: null,
-             'note' => '전자처방전에 한합니다'],
-            ['label' => '처방전발행일', 'value' => $this->date($p?->issued_date)],
-            ['label' => '상병구분', 'value' => $p?->disease_class ?: null,
-             'note' => '공단 선택 목록에서 같은 문구를 고르십시오'],
-            ['label' => '1일처방개수', 'value' => $this->num($p?->daily_count)],
-            ['label' => '총처방기간', 'value' => $this->num($p?->total_days)],
-            ['label' => '총계 (처방총계)', 'value' => $this->num($calcTotal),
-             'note' => '1일처방개수 × 총처방기간', 'warn' => $totalWarn],
-            ['label' => '의사면허번호', 'value' => $p?->license_no ?: null],
-            ['label' => '의사명', 'value' => $p?->doctor_name ?: null],
-            ['label' => '요양기관', 'value' => $p?->hospital_code ?: ($p?->hospital_name ?: null),
-             'note' => $p?->hospital_code && $p?->hospital_name ? $p->hospital_name : null],
-            ['label' => '전문의번호', 'value' => $p?->specialist_no ?: null],
-            ['label' => '전문과목', 'value' => $p?->specialty ?: null,
-             'note' => '공단 선택 목록에서 같은 문구를 고르십시오'],
-            ['label' => '상병', 'value' => $p?->disease_code ?: null],
-        ];
-    }
-
-    /**
-     * 구입정보 — 공단이 계산식을 명시한 두 항목이 여기 있다.
-     *
-     * 1일지급개수 = 구입총수량 ÷ 총처방기간 (소수점 첫째자리)
-     * 급여총수량 = min(처방총계, 구입총계)
-     * 이 둘이 오입력의 주된 원인이라 반드시 계산해서 내려 준다.
-     */
-    private function purchaseRows(Order $order, ?Prescription $p): array
-    {
-        $buyQty    = (int) $order->items->sum('quantity') ?: (int) $order->quantity;
-        $rxTotal   = ($p?->daily_count && $p?->total_days) ? $p->daily_count * $p->total_days : null;
-        $days      = (int) ($p?->total_days ?? 0);
-
-        $dailyPay  = ($buyQty && $days) ? number_format($buyQty / $days, 1, '.', '') : null;
-        $payTotal  = ($rxTotal !== null && $buyQty) ? min($rxTotal, $buyQty) : null;
+        // 공단이 계산식을 명시한 두 칸. 손으로 계산하다 틀리는 자리라 반드시 계산해 준다.
+        $buyQty   = (int) $order->items->sum('quantity') ?: (int) $order->quantity;
+        $days     = (int) ($p?->total_days ?? 0);
+        $dailyPay = ($buyQty && $days) ? number_format($buyQty / $days, 1, '.', '') : null;
+        $payTotal = ($rxTotal !== null && $buyQty) ? min($rxTotal, $buyQty) : null;
 
         // 구입금액과 부담금 합이 어긋난 채로 넣으면 공단이 반려한다. 고치지는 못해도 알려는 준다.
-        $amount   = (int) $order->total_amount;
-        $shares   = (int) $order->nhis_amount + (int) $order->patient_copay;
-        $sumWarn  = ($amount && $shares && $amount !== $shares)
+        $amount  = (int) $order->total_amount;
+        $shares  = (int) $order->nhis_amount + (int) $order->patient_copay;
+        $sumWarn = ($amount && $shares && $amount !== $shares)
             ? '본인부담금 + 공단부담금 = ' . number_format($shares) . ' 원으로 구입금액과 다릅니다 — 어느 쪽이 맞는지 확인하십시오'
             : null;
 
+        $phone = $this->digits(config('delegation.provider.phone'));
+
         return [
-            ['label' => '구입일', 'value' => $this->date($p?->buy_date)],
-            ['label' => '사용개시일', 'value' => null, 'copy' => false,
-             'blank' => '보관하지 않는 항목입니다',
-             'note'  => '처방전에는 있으나 저장하는 컬럼이 없습니다 — 처방전을 보고 입력하십시오'],
-            ['label' => '1일지급개수', 'value' => $dailyPay,
-             'note' => $dailyPay ? "구입수량 {$buyQty} ÷ 총처방기간 {$days} · 소수점 첫째자리" : null],
-            ['label' => '총계 (급여총수량)', 'value' => $this->num($payTotal),
-             'note' => $payTotal !== null ? "처방총계 {$rxTotal} 와 구입수량 {$buyQty} 중 작은 값" : null],
-            ['label' => '사업자등록번호', 'value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
-            ['label' => '업체명', 'value' => config('popbill.company.corp_name') ?: null, 'fixed' => true],
-            ['label' => '구입금액', 'value' => $this->num($order->total_amount), 'warn' => $sumWarn],
-            ['label' => '구입수량', 'value' => $this->num($buyQty ?: null)],
-            ['label' => '급여종료일', 'value' => null, 'copy' => false,
-             'blank' => '보관하지 않는 항목입니다',
-             'note'  => '처방전을 보고 입력하십시오'],
-            ['label' => '실지급일수', 'value' => null, 'copy' => false, 'ask' => true,
-             'blank' => '계산식 미확인', 'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
-            ['label' => '기준금액(일)', 'value' => null, 'copy' => false, 'ask' => true,
-             'blank' => '고시 기준표 없음', 'note' => '공단 고시 기준금액표가 있어야 합니다 (C-Q-05)'],
-            ['label' => '산정기준금액', 'value' => null, 'copy' => false, 'ask' => true,
-             'blank' => '계산식 미확인', 'note' => '기준금액(일) × 실지급일수로 추정되나 확인 전입니다'],
-            ['label' => '본인부담금', 'value' => $this->num($order->patient_copay),
-             'note' => '주문에 저장된 값입니다',
-             'warn' => '공단 자격별 부담 비율표가 아직 없어 자격이 바뀐 건은 다를 수 있습니다'],
-            ['label' => '실본인부담금', 'value' => null, 'copy' => false, 'ask' => true,
-             'blank' => '계산식 미확인', 'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
-            ['label' => '공단부담금', 'value' => $this->num($order->nhis_amount),
-             'note' => '주문에 저장된 값입니다',
-             'warn' => '본인부담금과 같은 제약이 있습니다'],
-            ['label' => '기준금액', 'value' => null, 'copy' => false, 'ask' => true,
-             'blank' => '계산식 미확인', 'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+            /* 수진자 정보 */
+            'kind'      => ['value' => '자가도뇨카테터', 'fixed' => true],
+            'rrn_front' => ['value' => $rrnFront],
+            'rrn_back'  => ['value' => $rrnMasked ? '●●●●●●●' : null, 'reveal' => (bool) $p,
+                            'note' => '누르면 그때 열립니다 · 열람 기록이 남습니다'],
+            'name'      => ['value' => $patient?->name ?: $p?->patient_name_ocr],
+            'branch'    => ['value' => null, 'copy' => false, 'blank' => '공단이 자동 표시',
+                            'note' => '입력하지 않습니다'],
+            'temporary' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '체크 기준 미확인',
+                            'note' => '어떤 경우에 체크하는지 확인이 필요합니다 (C-Q-02)'],
+            'state'     => ['value' => null, 'copy' => false, 'blank' => '공단이 자동 표시'],
+
+            /* 처방정보 */
+            'rx_reg_no'    => ['value' => $p?->registration_no ?: null, 'note' => '전자처방전에 한합니다'],
+            'rx_issued'    => ['value' => $this->date($p?->issued_date)],
+            'disease_cls'  => ['value' => $p?->disease_class ?: null, 'note' => '공단 목록에서 같은 문구를 고르십시오'],
+            'daily_count'  => ['value' => $this->num($p?->daily_count)],
+            'total_days'   => ['value' => $this->num($p?->total_days)],
+            'rx_total'     => ['value' => $this->num($rxTotal), 'note' => '1일처방개수 × 총처방기간',
+                               'warn' => $rxTotWarn],
+            'license_no'   => ['value' => $p?->license_no ?: null],
+            'doctor_name'  => ['value' => $p?->doctor_name ?: null],
+            'hospital'     => ['value' => $p?->hospital_code ?: ($p?->hospital_name ?: null),
+                               'note' => ($p?->hospital_code && $p?->hospital_name) ? $p->hospital_name : null],
+            'specialist_no' => ['value' => $p?->specialist_no ?: null],
+            'specialty'    => ['value' => $p?->specialty ?: null, 'note' => '공단 목록에서 같은 문구를 고르십시오'],
+            'disease_code' => ['value' => $p?->disease_code ?: null],
+
+            /* 구입정보 */
+            'buy_date'   => ['value' => $this->date($p?->buy_date)],
+            'use_start'  => ['value' => null, 'copy' => false, 'blank' => '보관하지 않는 항목',
+                             'note' => '처방전을 보고 입력하십시오'],
+            'daily_pay'  => ['value' => $dailyPay,
+                             'note' => $dailyPay ? "구입수량 {$buyQty} ÷ 총처방기간 {$days}" : null],
+            'pay_total'  => ['value' => $this->num($payTotal),
+                             'note' => $payTotal !== null ? "처방총계 {$rxTotal} 와 구입수량 {$buyQty} 중 작은 값" : null],
+            'biz_no'     => ['value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
+            'biz_name'   => ['value' => config('popbill.company.corp_name') ?: null, 'fixed' => true],
+            'buy_amount' => ['value' => $this->num($order->total_amount), 'warn' => $sumWarn],
+            'buy_qty'    => ['value' => $this->num($buyQty ?: null)],
+            'pay_end'    => ['value' => null, 'copy' => false, 'blank' => '보관하지 않는 항목',
+                             'note' => '처방전을 보고 입력하십시오'],
+            'pay_days'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
+                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+            'base_daily' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '고시 기준표 없음',
+                             'note' => '공단 고시 기준금액표가 있어야 합니다 (C-Q-05)'],
+            'base_calc'  => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
+                             'note' => '기준금액(일) × 실지급일수로 추정되나 확인 전입니다'],
+            'copay'      => ['value' => $this->num($order->patient_copay), 'note' => '주문에 저장된 값',
+                             'warn' => '공단 자격별 부담 비율표가 아직 없어 자격이 바뀐 건은 다를 수 있습니다'],
+            'copay_real' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
+                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+            'nhis_pay'   => ['value' => $this->num($order->nhis_amount), 'note' => '주문에 저장된 값',
+                             'warn' => '본인부담금과 같은 제약이 있습니다'],
+            'base_amt'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
+                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+
+            /* 계좌 정보 */
+            'acc_receiver' => ['value' => $account['receiver'] ?? null, 'fixed' => true],
+            'acc_bank'     => ['value' => $account['bank'] ?? null, 'fixed' => true],
+            'acc_no'       => ['value' => $this->digits($account['number'] ?? null), 'fixed' => true],
+            'acc_relation' => ['value' => '기타', 'fixed' => true,
+                               'note' => '수령인이 판매업자이므로 기타를 고릅니다'],
+            'acc_biz_no'   => ['value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
+            'acc_holder'   => ['value' => $account['holder'] ?? null, 'fixed' => true],
+            'acc_protect'  => ['value' => null, 'copy' => false, 'blank' => '체크하지 않습니다', 'fixed' => true],
+            'clm_relation' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '선택 문구 미확인',
+                               'note' => '공단 선택 목록 확인 필요 (C-Q-06)'],
+            'clm_biz_no'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '확인 필요',
+                               'note' => '사업자번호와 같은 값인지 확인 필요 (C-Q-06)'],
+            'clm_name'     => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '확인 필요',
+                               'note' => '업체명과 같은 값인지 확인 필요 (C-Q-06)'],
+            'sms_agree'    => ['value' => 'Y', 'fixed' => true],
+            'sms_no1'      => ['value' => $this->phonePart($phone, 0), 'fixed' => true],
+            'sms_no2'      => ['value' => $this->phonePart($phone, 1), 'fixed' => true],
+            'sms_no3'      => ['value' => $this->phonePart($phone, 2), 'fixed' => true],
+            'card_no'      => ['value' => null, 'copy' => false, 'blank' => '카드 결제 건 없음',
+                               'note' => '결제는 전부 가상계좌라 카드 승인번호가 생기지 않습니다'],
         ];
     }
 
