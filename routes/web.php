@@ -351,6 +351,7 @@ Route::middleware(['auth'])->group(function () {
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');
     Route::get('/privacy-consents/export',   [PrivacyConsentAdminController::class, 'export'])->name('privacy-consents.export');
+    Route::put('/privacy-consents/{consent}/memo', [PrivacyConsentAdminController::class, 'saveMemo'])->name('privacy-consents.memo');
 });
 
 // 관리자 초대 수락 (로그인 불필요 — 이메일 링크)

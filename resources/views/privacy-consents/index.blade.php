@@ -28,6 +28,13 @@
   /* ── 상세 내용 탭 — Figma 266:527 ──
      제목 줄(1536×26)은 전체 폭, 그 아래 카드 3장이 한 줄(504×384 균등 · gap 12).
      시안은 세 카드 아래끝이 맞는다 — align-items 를 stretch(기본)로 둬 가장 긴 카드에 높이를 맞춘다. */
+  .pc-memo-btn {
+    border:1px solid var(--gray-200); background:var(--gray-0); border-radius:6px;
+    padding:1px 8px; font-size:11px; font-weight:700; line-height:18px;
+    color:var(--text-secondary); cursor:pointer; flex-shrink:0;
+  }
+  .pc-memo-btn:hover { border-color:var(--primary); color:var(--primary); }
+
   #pcDetailBody { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
   #pcDetailBody > :first-child { grid-column:1 / -1; }
   @media (max-width:1200px) { #pcDetailBody { grid-template-columns:1fr; } }
@@ -171,20 +178,69 @@
     // 컬럼 폭·정렬은 Figma 266:66 실측 — 체크 40 · No 60 · 주소 400 · 나머지 153 (합 1571 ≒ 카드 1568).
     // 시안은 머리글·본문 모두 왼쪽 정렬이라 align:'center' 를 두지 않는다.
     columns: [
-      { header: '유형',     name: 'type',      width: 153, sortable: true },
-      { header: '성명',     name: 'name',      width: 153, sortable: true },
-      { header: '연락처',   name: 'phone',     width: 153 },
-      { header: '이메일',   name: 'email',     width: 153 },
-      { header: '주소',     name: 'address',   width: 400 },
-      { header: '필수동의', name: 'required',  width: 153, sortable: true },
-      { header: '마케팅',   name: 'marketing', width: 153 },
-      { header: '제출일시', name: 'submitted', width: 153, sortable: true },
+      { header: '구분',     name: 'source',    width: 120, sortable: true },
+      { header: '유형',     name: 'type',      width: 110, sortable: true },
+      { header: '성명',     name: 'name',      width: 130, sortable: true },
+      { header: '연락처',   name: 'phone',     width: 140 },
+      { header: '이메일',   name: 'email',     width: 170 },
+      { header: '주소',     name: 'address',   width: 320 },
+      { header: '보험',     name: 'insurance_col',       width: 120, sortable: true },
+      { header: '지원자격', name: 'support_qualify_col', width: 140, sortable: true },
+      { header: '필수동의', name: 'required',  width: 110, sortable: true },
+      { header: '마케팅',   name: 'marketing', width: 100 },
+      { header: '작성일',   name: 'submitted', width: 150, sortable: true },
+      // 메모는 그리드에서 바로 고친다 — 상세탭까지 들어갔다 나올 일이 아니다.
+      { header: '관리자메모', name: 'admin_memo', width: 220, sortable: false,
+        renderer: (v, row) => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';
+          const txt = document.createElement('span');
+          txt.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          txt.textContent = v || '';
+          if (!v) { txt.style.color = 'var(--text-muted)'; txt.textContent = '—'; }
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pc-memo-btn';
+          btn.textContent = v ? '수정' : '입력';
+          btn.addEventListener('click', (e) => { e.stopPropagation(); pcEditMemo(row); });
+          wrap.append(txt, btn);
+          return wrap;
+        } },
     ],
     data: @json($gridData),
   });
   window.__pcGrid = grid;
   window.__privacyconsentsGrid = grid;          // 결과바 버튼이 부르는 인스턴스
   window.dsBindSelCount(grid, 'pcSelCount');    // 결과바 '선택 N건' 표시 연결
+
+  // ── 관리자 메모 ──
+  window.pcEditMemo = async function (row) {
+    const next = await cePrompt('관리자 메모', {
+      value: row.admin_memo || '',
+      multiline: true,
+      placeholder: '이 동의 건에 남길 메모 (저장: Ctrl+Enter)',
+      confirmText: '저장',
+    });
+    if (next === null) return;
+
+    const res = await fetch(`{{ url('/privacy-consents') }}/${row.id}/memo`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+      body: JSON.stringify({ admin_memo: next }),
+    });
+    if (!res.ok) { showToast('메모 저장에 실패했습니다.', 'danger'); return; }
+
+    const data = await res.json();
+    // 그리드 데이터를 직접 고치고 그 행만 다시 그린다 — 화면을 새로 읽지 않는다.
+    const all = grid.getData();
+    const idx = all.findIndex(r => r.id === row.id);
+    if (idx >= 0) {
+      all[idx].admin_memo = data.admin_memo;
+      grid.setData ? grid.setData(all) : location.reload();
+    }
+    showToast('메모를 저장했습니다.', 'success');
+  };
 
   // ── 탭 전환 ──
   window.pcShowTab = function (which) {
@@ -269,7 +325,11 @@
 
     // 제출 정보
     const submit =
-      drow('제출일시', val(r.submitted_full || r.submitted)) +
+      drow('구분', val(r.source)) +
+      drow('작성일', val(r.submitted_full || r.submitted)) +
+      drow('관리자메모', (r.admin_memo ? esc(r.admin_memo).replace(/\n/g, '<br>') : '—')
+        + ` <button type="button" class="pc-memo-btn" onclick='pcEditMemo(${JSON.stringify(r).replace(/'/g, "&#39;")})'>`
+        + (r.admin_memo ? '수정' : '입력') + '</button>') +
       drow('IP', val(r.ip)) +
       // User-Agent 도 다른 값과 같은 규격(13/500 · lh21 · gray-1000 · 오른쪽 정렬)이다.
       // 공백 없는 긴 문자열이라 줄바꿈만 break-all 로 둔다(시안 상자 95 = 12+21+8+42+12).

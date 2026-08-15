@@ -12,12 +12,12 @@ class PrivacyConsent extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'type', 'name', 'phone', 'phone2', 'email', 'zip', 'addr1', 'addr2',
+        'type', 'source', 'name', 'phone', 'phone2', 'email', 'zip', 'addr1', 'addr2',
         'insurance', 'support_qualify',
         'birth', 'product', 'hospital', 'surgery_date', 'stoma_type', 'stoma_kind',
         'agree_general', 'agree_sensitive', 'agree_third_party',
         'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
-        'extra', 'ip', 'user_agent', 'submitted_at',
+        'extra', 'ip', 'user_agent', 'admin_memo', 'submitted_at',
     ];
 
     protected $casts = [
@@ -30,9 +30,21 @@ class PrivacyConsent extends Model
         'stoma'    => '장루',
     ];
 
+    /** 구분 — 동의를 어떻게 받았는지. '유형'(카테터·장루)과는 다른 축이다. */
+    public const SOURCE_LABELS = [
+        'mobile' => '모바일 동의',
+        'paper'  => '서면 동의',
+        'phone'  => '유선 동의',
+    ];
+
     public function getTypeLabelAttribute(): string
     {
         return self::TYPE_LABELS[$this->type] ?? $this->type;
+    }
+
+    public function getSourceLabelAttribute(): string
+    {
+        return self::SOURCE_LABELS[$this->source] ?? ($this->source ?: '모바일 동의');
     }
 
     /** 전체 주소 */
