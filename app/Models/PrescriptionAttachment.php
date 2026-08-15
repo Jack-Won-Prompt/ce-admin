@@ -14,11 +14,19 @@ class PrescriptionAttachment extends Model
         'display_order', 'uploaded_by',
     ];
 
+    /**
+     * 첨부 서류 종류.
+     *
+     * 등록신청서·결과지는 공단 환자 등록·재등록(Step1)을 e-Fax 로 보낼 때 쓴다.
+     * 병원에서 받아 오는 종이라 시스템이 만들 수 없고 첨부로 받는다.
+     */
     public const DOC_TYPE_LABELS = [
-        'prescription' => '처방전',
-        'id_card'      => '주민등록증',
-        'delegation'   => '위임장',
-        'other'        => '기타',
+        'prescription'      => '처방전',
+        'id_card'           => '주민등록증',
+        'registration_form' => '등록신청서',
+        'test_result'       => '결과지',
+        'delegation'        => '위임장',
+        'other'             => '기타',
     ];
 
     public function prescription(): BelongsTo

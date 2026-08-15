@@ -448,7 +448,7 @@ class PrescriptionController extends Controller
             'prescription_images'   => 'required|array|max:10',
             'prescription_images.*' => 'file|mimes:jpg,jpeg,png,pdf,heic|max:50240',
             'file_doc_types'        => 'nullable|array',
-            'file_doc_types.*'      => 'nullable|string|in:prescription,id_card,delegation,other',
+            'file_doc_types.*'      => 'nullable|string|in:prescription,id_card,registration_form,test_result,delegation,other',
             'patient_id'            => 'nullable|exists:patients,id',
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
@@ -594,7 +594,7 @@ class PrescriptionController extends Controller
     {
         $request->validate([
             'file'      => 'required|file|mimes:jpg,jpeg,png,pdf,heic|max:51200',
-            'doc_type'  => 'required|string|in:id_card,delegation,other,prescription',
+            'doc_type'  => 'required|string|in:prescription,id_card,registration_form,test_result,delegation,other',
             'doc_label' => 'nullable|string|max:50',
         ]);
 

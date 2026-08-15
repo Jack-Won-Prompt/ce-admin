@@ -1193,7 +1193,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             $fhLabels  = array_map(fn($d) => ['authorization'=>'위임장','prescription'=>'처방전','purchase_history'=>'제품 구매내역','cash_receipt'=>'현금영수증'][$d] ?? $d, $fhDocs);
             $fhTimeStr = $lastFaxHistory?->created_at?->format('Y-m-d H:i') ?? '';
             $fhFaxNo   = $lastFaxHistory?->fax_no ?? '';
-            $fhRecip   = ['nhis'=>'국민건강보험공단','hira'=>'건강보험심사평가원','custom'=>'기타'][$lastFaxHistory?->recipient_type ?? ''] ?? ($lastFaxHistory?->recipient_type ?? '');
+            $fhRecip   = ['nhis'=>'국민건강보험공단','custom'=>'기타'][$lastFaxHistory?->recipient_type ?? ''] ?? ($lastFaxHistory?->recipient_type ?? '');
             $fhPdfUrl  = $lastFaxHistory?->pdf_path
               ? (rtrim(request()->root(), '/') . '/storage/' . $lastFaxHistory->pdf_path)
               : null;
@@ -1222,14 +1222,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                       <div style="font-size:10px;color:var(--text-muted);">NHIS · 지사 검색</div>
                     </div>
                     <i class="fa-solid fa-magnifying-glass" style="font-size:12px;color:var(--primary);"></i>
-                  </button>
-                  <button type="button" class="fax-recipient-btn" data-fax="02-705-4000" data-recipient-type="hira" onclick="selectFaxRecipient(this)"
-                          style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
-                    <div>
-                      <div style="font-size:12px;font-weight:700;color:var(--text);">건강보험심사평가원</div>
-                      <div style="font-size:10px;color:var(--text-muted);">HIRA</div>
-                    </div>
-                    <span style="font-size:12px;font-weight:500;color:var(--text-muted);font-family:monospace;">02-705-4000</span>
                   </button>
                   <button type="button" class="fax-recipient-btn" data-fax="" data-recipient-type="custom" onclick="selectFaxRecipient(this)"
                           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);cursor:pointer;text-align:left;">
@@ -1264,98 +1256,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div style="display:flex;flex-direction:column;">
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">전송 서류 선택</div>
               <div style="display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;padding-right:2px;">
-                <label style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
-                  <input type="checkbox" id="fax-doc-auth" value="authorization" style="accent-color:var(--primary);margin-top:3px;" checked>
-                  <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                      <span style="font-weight:500;">위임장</span>
-                      @php
-                        $latestConsent = $prescription->consents()->where('status','agreed')->latest()->first();
-                      @endphp
-                      @if($latestConsent?->signature_data)
-                        <span style="font-size:10px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);border-radius:6px;padding:1px 6px;">전자서명 완료</span>
-                      @else
-                        <span style="font-size:10px;background:var(--alert-50);color:var(--alert-500);border:1px solid var(--alert-100);border-radius:6px;padding:1px 6px;">자동 생성</span>
-                      @endif
-                      <button type="button"
-                              onclick="window.open('{{ route('prescriptions.authorization', $prescription) }}','auth_preview','width=860,height=1100,scrollbars=yes,resizable=yes')"
-                              style="font-size:10px;color:var(--primary);background:none;border:none;padding:0;cursor:pointer;" title="위임장 미리보기">
-                        <i class="fa-solid fa-up-right-from-square"></i> 미리보기
-                      </button>
-                    </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
-                      @if($latestConsent?->signature_data)
-                        환자 전자서명이 포함된 위임장
-                      @else
-                        서명 없음 — 처방 정보로 자동 생성
-                      @endif
-                    </div>
-                  </div>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
-                  <input type="checkbox" id="fax-doc-delegation" value="delegation" style="accent-color:var(--primary);" {{ $latestConsent?->signature_data ? 'checked' : 'disabled' }}>
-                  <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                      <span style="font-weight:500;">요양비위임장</span>
-                      @if($latestConsent?->signature_data)
-                        <span style="font-size:10px;background:var(--primary-50);color:var(--primary-400);border:1px solid var(--primary-100);border-radius:6px;padding:1px 6px;">별지 제19호의7</span>
-                      @else
-                        <span style="font-size:10px;background:var(--alert-50);color:var(--alert-500);border:1px solid var(--alert-100);border-radius:6px;padding:1px 6px;">서명 필요</span>
-                      @endif
-                    </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
-                      {{ $latestConsent?->signature_data ? '환자 서명이 포함된 관공서 원본 위임장' : '전자서명 완료 후 포함 가능' }}
-                    </div>
-                  </div>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
-                  <input type="checkbox" id="fax-doc-rx" value="prescription" style="accent-color:var(--primary);" checked>
-                  <div>
-                    <div style="font-weight:500;">처방전</div>
-                    <div style="font-size:10px;color:var(--text-muted);">
-                      @if($prescription->image_path)
-                        업로드된 처방전 이미지
-                      @else
-                        <span style="color:var(--warning);">처방전 이미지 없음</span>
-                      @endif
-                    </div>
-                  </div>
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
-                  <input type="checkbox" id="fax-doc-purchase" value="purchase_history" style="accent-color:var(--primary);" checked>
-                  <div>
-                    <div style="font-weight:500;">제품 구매내역</div>
-                    <div style="font-size:10px;color:var(--text-muted);">판매 제품 상세 내역서</div>
-                  </div>
-                </label>
-                @php $crIssued = $prescription->order?->cash_receipt_status === 'issued'; @endphp
-                <label id="fax-cr-label" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:{{ $crIssued ? 'pointer' : 'default' }};font-size:12px;opacity:{{ $crIssued ? '1' : '0.5' }};">
-                  <input type="checkbox" id="fax-doc-cash-receipt" value="cash_receipt" style="accent-color:var(--primary);" {{ $crIssued ? 'checked' : 'disabled' }}>
-                  <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span style="font-weight:500;">현금영수증</span>
-                      <span id="fax-cr-badge" style="font-size:10px;border-radius:6px;padding:1px 6px;{{ $crIssued ? 'background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);' : 'background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-300);' }}">{{ $crIssued ? '발행완료' : '미발행' }}</span>
-                    </div>
-                    <div id="fax-cr-desc" style="font-size:10px;color:var(--text-muted);margin-top:2px;">
-                      {{ $crIssued ? '승인번호: ' . $prescription->order->cash_receipt_no : '현금영수증 발행 후 선택 가능' }}
-                    </div>
-                  </div>
-                </label>
-                @php $tiIssued = $prescription->order?->tax_invoice_status === 'issued'; @endphp
-                <label id="fax-ti-label" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:{{ $tiIssued ? 'pointer' : 'default' }};font-size:12px;opacity:{{ $tiIssued ? '1' : '0.5' }};">
-                  <input type="checkbox" id="fax-doc-tax-invoice" value="tax_invoice" style="accent-color:var(--primary);" {{ $tiIssued ? 'checked' : 'disabled' }}>
-                  <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span style="font-weight:500;">세금계산서</span>
-                      <span id="fax-ti-badge" style="font-size:10px;border-radius:6px;padding:1px 6px;{{ $tiIssued ? 'background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);' : 'background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-300);' }}">{{ $tiIssued ? '발행완료' : '미발행' }}</span>
-                    </div>
-                    <div id="fax-ti-desc" style="font-size:10px;color:var(--text-muted);margin-top:2px;">
-                      {{ $tiIssued ? '승인번호: ' . $prescription->order->tax_invoice_no : '세금계산서 발행 후 선택 가능' }}
-                    </div>
-                  </div>
-                </label>
+                @php
+                  $latestConsent = $prescription->consents()->where('status','agreed')->latest()->first();
+                @endphp
+                {{-- 팩스는 환자 등록·재등록(Step1) 전용이다. 위임 등록과 청구는 공단 사이트에
+                     직접 입력·업로드하므로 청구 서류를 팩스로 보내지 않는다. --}}
+                <div style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
+                  <b style="color:var(--primary);">팩스는 환자 등록·재등록용입니다.</b><br>
+                  등록신청서 · 결과지 · 신분증을 아래 첨부에서 골라 공단 관할지사로 보냅니다.<br>
+                  위임 등록과 청구 서류는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
+                </div>
 
-                {{-- ── 첨부 문서 (주민등록증·위임장 등) ── --}}
+                {{-- ── 첨부 문서 (등록신청서·결과지·신분증) ── --}}
                 @if($prescription->attachments->isNotEmpty())
                 <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
                   <div style="font-size:10px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">
@@ -1657,6 +1569,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">위임장</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('주민등록증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">주민등록증</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
               </div>
             </div>
@@ -3671,7 +3585,8 @@ function _adtFilter(q) {
 function handleAttachUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '주민등록증': 'id_card', '기타': 'other' };
+  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '주민등록증': 'id_card',
+                      '등록신청서': 'registration_form', '결과지': 'test_result', '기타': 'other' };
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';
   const docLabel  = (docType === 'other' && inputVal !== '기타') ? inputVal : '';
@@ -6259,12 +6174,8 @@ window.HELP_TOUR_STEPS = [
     if (!faxNo) { showToast('수신 팩스번호를 입력해주세요.', 'warning'); return; }
 
     const docMap = {
-      'fax-doc-auth':         { value: 'authorization',    label: '위임장' },
-      'fax-doc-delegation':   { value: 'delegation',       label: '요양비위임장' },
-      'fax-doc-rx':           { value: 'prescription',     label: '처방전' },
-      'fax-doc-purchase':     { value: 'purchase_history', label: '제품 구매내역' },
-      'fax-doc-cash-receipt': { value: 'cash_receipt',     label: '현금영수증' },
-      'fax-doc-tax-invoice':  { value: 'tax_invoice',      label: '세금계산서' },
+      /* 팩스는 환자 등록·재등록 전용이라 생성 서류를 싣지 않는다.
+         등록신청서·결과지·신분증은 첨부(attachment_ids)로 나간다. */
     };
     const selected = Object.entries(docMap)
       .filter(([id]) => document.getElementById(id)?.checked);
