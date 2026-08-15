@@ -1254,13 +1254,8 @@
         </div>
         @endif
         @if($vis('prescriptions'))
-        @perm('prescriptions', 'create')
-        <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="file-edit-02" href="{{ route('prescriptions.create') }}" data-title="처방전 관리">
-            @dsicon('file-edit-02', 'ds-icon menu-icon')<span>처방전 관리</span>
-          </a>
-        </div>
-        @endperm
+        {{-- 1차 요청 CR-MNU-01·02 — 「처방전 관리」는 이름이 「주문」으로 바뀌어
+             주문ㆍ재구매 그룹으로 옮겨 갔다. 아래 「처방전 목록」만 이 그룹에 남는다. --}}
         <div class="menu-item {{ request()->routeIs('prescriptions.index') ? 'active' : '' }}">
           <a class="menu-link" data-icon="file-02" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
             @dsicon('file-02', 'ds-icon menu-icon')
@@ -1276,12 +1271,23 @@
         @endif
 
         {{-- ══ 주문 · 재구매 ══ --}}
-        @if($vis('orders', 'repurchase', 'shop-orders'))
+        @if($vis('orders', 'repurchase', 'shop-orders', 'prescriptions'))
         <div class="menu-group" data-menu-group="order">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>주문ㆍ재구매</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
+        {{-- 1차 요청 CR-MNU-01·02 — 「처방전 관리」가 「주문」이 되어 이 그룹으로 왔다.
+             가는 곳은 그대로다(처방전을 열어 확인하고 주문을 만드는 화면). --}}
+        @if($vis('prescriptions'))
+        @perm('prescriptions', 'create')
+        <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="file-edit-02" href="{{ route('prescriptions.create') }}" data-title="주문">
+            @dsicon('file-edit-02', 'ds-icon menu-icon')<span>주문</span>
+          </a>
+        </div>
+        @endperm
+        @endif
         @if($vis('orders'))
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문 관리">
@@ -1952,7 +1958,7 @@ document.addEventListener('click', (e) => {
 
   /* ── [data-ce-tab] 링크는 워크스페이스 새 탭으로 ────────────
      상세 화면으로 가는 링크에 속성만 붙이면 현재 탭이 전환되지 않고 새 탭이 열린다.
-       <a href="/prescriptions/RX-1" data-ce-tab="처방전 관리 - RX-1" data-ce-icon="bx-scan">
+       <a href="/prescriptions/RX-1" data-ce-tab="주문 - RX-1" data-ce-icon="bx-scan">
      동적으로 만든 마크업(알림 토스트·그리드 셀 등)에도 위임으로 적용된다.
      Ctrl/Cmd/Shift/가운데 클릭은 브라우저 기본 동작(새 창·새 탭)을 그대로 둔다. */
   document.addEventListener('click', function (e) {
@@ -4225,7 +4231,7 @@ const ChatPanel = (() => {
         <br><span style="color:var(--text-muted);font-size:11px;">${escHtml(data.rx_number ?? '')}${data.responded_at ? ' · ' + data.responded_at : ''}</span>
       </div>
       <div class="consent-notif-actions">
-        <a href="${rxUrl}" data-ce-tab="처방전 관리 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
+        <a href="${rxUrl}" data-ce-tab="주문 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
            style="font-size:12px;font-weight:500;color:var(--primary);text-decoration:none;">
           <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
         </a>
@@ -4311,7 +4317,7 @@ function showPrescriptionNotif(data) {
       </span>
     </div>
     <div class="rx-notif-actions">
-      <a href="${rxUrl}" data-ce-tab="처방전 관리 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
+      <a href="${rxUrl}" data-ce-tab="주문 - ${escHtml(data.rx_number ?? '신규')}" data-ce-icon="bx-scan"
          style="font-size:12px;font-weight:500;color:var(--primary);text-decoration:none;">
         <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> 처방전 확인
       </a>

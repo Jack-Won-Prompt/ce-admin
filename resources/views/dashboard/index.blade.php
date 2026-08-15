@@ -29,7 +29,7 @@
   <div class="help-section-title">빠른 시작</div>
   <div class="help-item">
     <div class="help-item-icon info"><i class="bx bx-upload"></i></div>
-    <div class="help-item-text"><strong>처방전 업로드</strong>좌측 메뉴 <b>처방전 관리 → 업로드</b>에서 이미지를 업로드하면 OCR이 자동 처리됩니다.</div>
+    <div class="help-item-text"><strong>처방전 업로드</strong>좌측 메뉴 <b>환자ㆍ처방 → 처방자료 업로드</b>에서 이미지를 업로드하면 OCR이 자동 처리됩니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link"></i></div>
@@ -73,7 +73,7 @@
 
     const url = RX_BASE + '/' + encodeURIComponent(row.rx_number);
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, '처방전 관리 - ' + row.rx_number, 'file-edit-02');
+      window.ceOpenTab(url, '주문 - ' + row.rx_number, 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }

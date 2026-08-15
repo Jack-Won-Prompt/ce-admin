@@ -702,7 +702,7 @@
           <dt>처방번호</dt>
           <dd>
             <a href="{{ route('prescriptions.show', $prescription) }}"
-               data-ce-tab="처방전 관리 - {{ $prescription->rx_number }}" data-ce-icon="bx-scan"
+               data-ce-tab="주문 - {{ $prescription->rx_number }}" data-ce-icon="bx-scan"
                style="color:var(--primary);font-family:monospace;font-size:13px;">
               {{ $prescription->rx_number }}
             </a>

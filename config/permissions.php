@@ -76,7 +76,9 @@ return [
             'actions' => ['view', 'create'],
         ],
         'prescriptions' => [
-            'label'   => '처방전 목록 · 검수',
+            // 메뉴에서는 「주문」(처방전을 열어 주문을 만드는 화면)과 「처방전 목록」 두 자리로
+            // 나뉘어 있으나 같은 라우트 묶음이라 권한은 하나로 준다.
+            'label'   => '주문 · 처방전 목록',
             'group'   => 'patient',
             'routes'  => ['prescriptions'],
             'actions' => ['view', 'create', 'update', 'delete', 'send'],

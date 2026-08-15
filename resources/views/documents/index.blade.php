@@ -404,7 +404,7 @@
     const url = document.getElementById('regRxLink').getAttribute('href');
     if (!url || url === '#') return false;
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, '처방전 관리 - ' + (_regRxNo || '신규'), 'file-edit-02');
+      window.ceOpenTab(url, '주문 - ' + (_regRxNo || '신규'), 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }
