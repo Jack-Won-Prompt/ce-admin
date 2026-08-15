@@ -9,6 +9,7 @@ use App\Models\PrescriptionConsent;
 use App\Models\PrescriptionDocument;
 use App\Support\ResidentNo;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -36,12 +37,22 @@ class NhisAssistController extends Controller
      * 담당자가 그대로 옮겨 적어 오청구가 되므로, 값이 없는 항목은 「확인 필요」로 세워 두고
      * 무엇을 확인해야 하는지 함께 적는다. 채우는 것은 사람의 몫이다.
      */
-    public function claim(Order $order): View
+    public function claim(Order $order, Request $request): View
     {
         DelegationSetting::applyToConfig();
 
         $order->load(['patient', 'prescription', 'items']);
         $prescription = $order->prescription;
+
+        // 좌우 프레임 — 왼쪽에 이 화면을, 오른쪽에 공단 사이트를 나란히 놓는다.
+        // 값을 대신 넣어 주는 것이 아니라, 복사와 붙여넣기를 한 창에서 하게 하는 것이다.
+        if ($request->boolean('split')) {
+            return view('nhis.assist.claim_split', [
+                'order'     => $order,
+                'soloUrl'   => route('nhis.assist.claim', $order),
+                'portalUrl' => self::PORTAL_URL,
+            ]);
+        }
 
         $fields = $this->claimFields($order, $prescription);
 
@@ -55,6 +66,7 @@ class NhisAssistController extends Controller
             'missing'      => $this->countMissing([$fields]),
             'storeKey'     => 'nhis-claim:' . $order->order_number,
             'revealUrl'    => $prescription ? route('nhis.assist.rrn', $prescription) : null,
+            'splitUrl'     => route('nhis.assist.claim', $order) . '?split=1',
             'portalUrl'    => self::PORTAL_URL,
         ]);
     }

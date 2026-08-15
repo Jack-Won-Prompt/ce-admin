@@ -23,12 +23,13 @@ window.nhisAssistBtn = function (orderId, opts) {
     return btn;
   }
 
-  btn.title = '공단 요양비지급청구서등록(2221) 화면에 붙여넣을 값을 순서대로 보여 줍니다';
+  btn.title = '왼쪽에 우리 청구 원본, 오른쪽에 공단 사이트를 나란히 엽니다';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    window.open(@js(url('/nhis/assist/claim')) + '/' + orderId,
+    // 좌우로 나란히 봐야 하는 창이라 화면을 꽉 채워 연다
+    window.open(@js(url('/nhis/assist/claim')) + '/' + orderId + '?split=1',
                 'nhis_claim_' + orderId,
-                'width=980,height=1000,scrollbars=yes,resizable=yes');
+                `width=${screen.availWidth},height=${screen.availHeight},left=0,top=0,scrollbars=yes,resizable=yes`);
   });
   return btn;
 };

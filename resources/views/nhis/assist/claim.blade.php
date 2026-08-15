@@ -174,7 +174,9 @@
   <div class="grow"></div>
   <button class="tbtn" id="fitBtn" onclick="toggleFit()">폭 맞춤 <span id="fitPct"></span></button>
   <button class="tbtn" onclick="resetAll()">복사 기록 지우기</button>
-  <button class="tbtn on" onclick="openPortal()">공단 사이트 열기 (오른쪽)</button>
+  {{-- 프레임 안에서 열렸을 때는 다시 프레임을 열 이유가 없다 --}}
+  <button class="tbtn on" id="splitBtn" onclick="openSplit()">좌우 프레임으로 보기</button>
+  <button class="tbtn" onclick="openPortal()">공단을 새 창으로</button>
 </div>
 
 @unless($delegated)
@@ -454,8 +456,15 @@ async function copyBox(el) {
 
   // 주민번호 뒷자리는 미리 내려보내지 않는다. 누르는 이 순간에만 서버에서 열고 기록을 남긴다.
   if (el.dataset.reveal === '1' && !el.dataset.revealed) {
-    const res  = await fetch(REVEAL, { method:'POST', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } });
-    const data = await res.json();
+    let data;
+    try {
+      const res = await fetch(REVEAL, { method:'POST', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } });
+      data = await res.json();
+    } catch (_) {
+      // 로그인이 풀렸거나 통신이 끊기면 HTML 이 돌아온다. 값 없이 넘어가면 안 되므로 알린다.
+      toast('주민등록번호를 열지 못했습니다 — 로그인이 유지되고 있는지 확인하십시오.');
+      return;
+    }
     if (!data.ok) { toast(data.message || '주민등록번호를 열 수 없습니다.'); return; }
     el.querySelector('[data-val]').textContent = data.back;
     el.dataset.revealed = '1';
@@ -486,7 +495,19 @@ function resetAll() {
   toast('복사 기록을 지웠습니다');
 }
 
-/* 공단 사이트를 우리 페이지 안에 넣지 않는 대신, 창 둘을 좌우로 세워 준다.
+/* 좌우 프레임으로 전환. 공단 사이트가 프레임을 막지 않아 한 창에 나란히 놓을 수 있다.
+   값을 대신 넣어 주는 것은 아니고, 복사와 붙여넣기를 한 창에서 하게 하는 것이다. */
+function openSplit() {
+  location.href = @js($splitUrl);
+}
+
+// 이미 프레임 안이면 그 버튼은 쓸모가 없다
+if (window.self !== window.top) {
+  const b = document.getElementById('splitBtn');
+  if (b) { b.remove(); }
+}
+
+/* 프레임 안에서 공단 로그인이 풀릴 때의 퇴로 — 창을 따로 세워 준다.
    창 위치를 옮기는 것은 브라우저가 막을 수 있으므로 실패해도 창은 열리게 둔다. */
 function openPortal() {
   const w = screen.availWidth, h = screen.availHeight, half = Math.floor(w / 2);
@@ -513,12 +534,15 @@ function applyFit() {
   sheet.style.transform = 'none';
   const natural = Math.max(sheet.scrollWidth, sheet.offsetWidth);
   const avail   = Math.min(stage.clientWidth, document.documentElement.clientWidth) - 2;
-  const scale   = fit ? Math.min(1, avail / natural) : 1;
+  // 더 줄이면 글자를 못 읽는다. 하한 아래로는 줄이지 말고 가로로 밀어 보게 둔다.
+  const MIN     = 0.62;
+  const scale   = fit ? Math.max(MIN, Math.min(1, avail / natural)) : 1;
 
   sheet.style.transform = `scale(${scale})`;
   // 줄인 만큼 자리도 줄어야 아래쪽에 빈 공간이 남지 않는다
   stage.style.height = (sheet.offsetHeight * scale) + 'px';
-  stage.style.overflowX = scale < 1 ? 'hidden' : 'auto';
+  // 하한에 걸려 아직 넘치면 가로로 밀어 볼 수 있어야 한다
+  stage.style.overflowX = (natural * scale > avail) ? 'auto' : 'hidden';
 
   document.getElementById('fitBtn').classList.toggle('on', fit);
   document.getElementById('fitPct').textContent = fit ? Math.round(scale * 100) + '%' : '';
