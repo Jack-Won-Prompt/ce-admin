@@ -35,6 +35,32 @@
   }
   .pc-memo-btn:hover { border-color:var(--primary); color:var(--primary); }
 
+  /* 관리자 메모 팝오버 — 누른 자리 옆에서 바로 고친다.
+     화면을 덮는 모달은 어느 행을 고치는 중인지 가려서, 목록을 보며 적을 수가 없다. */
+  .pc-memo-pop {
+    display:none; position:absolute; z-index:900; width:340px;
+    background:var(--bg-card); border:1px solid var(--primary);
+    border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,.18);
+  }
+  .pc-memo-pop.open { display:block; }
+  .pc-memo-pop-hd {
+    background:var(--primary); border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+    padding:8px 12px; display:flex; align-items:center; gap:8px;
+  }
+  .pc-memo-pop-hd span { font-size:12px; font-weight:700; color:#fff; flex:1; }
+  .pc-memo-pop-hd button { background:none; border:none; color:#fff; font-size:15px; line-height:1; cursor:pointer; }
+  .pc-memo-pop-bd { padding:10px 12px; }
+  .pc-memo-pop-bd textarea {
+    width:100%; min-height:96px; resize:vertical; border:1px solid var(--border);
+    border-radius:6px; padding:8px 9px; font-size:12px; font-family:inherit; line-height:1.6;
+  }
+  .pc-memo-pop-bd textarea:focus { outline:none; border-color:var(--primary); }
+  .pc-memo-pop-ft {
+    padding:0 12px 10px; display:flex; align-items:center; gap:6px;
+  }
+  .pc-memo-pop-ft .hint { flex:1; font-size:10px; color:var(--text-muted); }
+  .pc-memo-pop-who { padding:0 12px 8px; font-size:10px; color:var(--text-muted); }
+
   #pcDetailBody { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
   #pcDetailBody > :first-child { grid-column:1 / -1; }
   @media (max-width:1200px) { #pcDetailBody { grid-template-columns:1fr; } }
@@ -202,7 +228,7 @@
           btn.type = 'button';
           btn.className = 'pc-memo-btn';
           btn.textContent = v ? '수정' : '입력';
-          btn.addEventListener('click', (e) => { e.stopPropagation(); pcEditMemo(row); });
+          btn.addEventListener('click', (e) => { e.stopPropagation(); pcEditMemo(row, btn); });
           wrap.append(txt, btn);
           return wrap;
         } },
@@ -213,15 +239,73 @@
   window.__privacyconsentsGrid = grid;          // 결과바 버튼이 부르는 인스턴스
   window.dsBindSelCount(grid, 'pcSelCount');    // 결과바 '선택 N건' 표시 연결
 
-  // ── 관리자 메모 ──
-  window.pcEditMemo = async function (row) {
-    const next = await cePrompt('관리자 메모', {
-      value: row.admin_memo || '',
-      multiline: true,
-      placeholder: '이 동의 건에 남길 메모 (저장: Ctrl+Enter)',
-      confirmText: '저장',
-    });
-    if (next === null) return;
+  /* ── 관리자 메모 ──────────────────────────────────────────────
+     누른 자리 옆에 붙는 팝오버로 고친다. 화면을 덮는 모달은 어느 행을 고치는 중인지 가려서,
+     옆 행의 이름·전화를 보며 적을 수가 없다. 메모는 그 목록을 보며 쓰는 글이다. */
+  let pcMemoRow = null;
+
+  const pcPop = (() => {
+    const el = document.createElement('div');
+    el.className = 'pc-memo-pop';
+    el.innerHTML = `
+      <div class="pc-memo-pop-hd">
+        <span>관리자 메모</span>
+        <button type="button" data-act="close" aria-label="닫기">×</button>
+      </div>
+      <div class="pc-memo-pop-who" data-who></div>
+      <div class="pc-memo-pop-bd">
+        <textarea data-input maxlength="1000" placeholder="이 동의 건에 남길 메모"></textarea>
+      </div>
+      <div class="pc-memo-pop-ft">
+        <span class="hint">Ctrl+Enter 저장 · Esc 닫기</span>
+        <button type="button" class="btn btn-outline btn-sm" data-act="close">취소</button>
+        <button type="button" class="btn btn-primary btn-sm" data-act="save">저장</button>
+      </div>`;
+    document.body.appendChild(el);
+    return el;
+  })();
+
+  const pcInput = pcPop.querySelector('[data-input]');
+
+  function pcCloseMemo() {
+    pcPop.classList.remove('open');
+    pcMemoRow = null;
+  }
+
+  /** 누른 버튼 아래에 붙이되, 화면 밖으로 나가면 안쪽으로 당긴다 */
+  function pcPlaceMemo(anchor) {
+    const r = anchor.getBoundingClientRect();
+    const w = 340, margin = 8;
+    let left = window.scrollX + r.left;
+    let top  = window.scrollY + r.bottom + 6;
+
+    if (left + w > window.scrollX + document.documentElement.clientWidth - margin) {
+      left = window.scrollX + document.documentElement.clientWidth - w - margin;
+    }
+    // 아래로 넘치면 버튼 위쪽에 세운다
+    if (r.bottom + pcPop.offsetHeight + margin > document.documentElement.clientHeight) {
+      top = window.scrollY + r.top - pcPop.offsetHeight - 6;
+    }
+    pcPop.style.left = Math.max(margin, left) + 'px';
+    pcPop.style.top  = Math.max(margin, top) + 'px';
+  }
+
+  window.pcEditMemo = function (row, anchor) {
+    pcMemoRow = row;
+    pcInput.value = row.admin_memo || '';
+    pcPop.querySelector('[data-who]').textContent =
+      [row.name, row.phone].filter(Boolean).join(' · ') || '';
+
+    pcPop.classList.add('open');
+    pcPlaceMemo(anchor || document.activeElement || document.body);
+    pcInput.focus();
+    pcInput.setSelectionRange(pcInput.value.length, pcInput.value.length);
+  };
+
+  async function pcSaveMemo() {
+    if (!pcMemoRow) return;
+    const row = pcMemoRow;
+    const next = pcInput.value;
 
     const res = await fetch(`{{ url('/privacy-consents') }}/${row.id}/memo`, {
       method: 'PUT',
@@ -239,8 +323,31 @@
       all[idx].admin_memo = data.admin_memo;
       grid.setData ? grid.setData(all) : location.reload();
     }
+    // 상세 탭을 보고 있었다면 그쪽 값도 같이 맞춘다
+    if (window.__pcDetailRow && window.__pcDetailRow.id === row.id) {
+      window.__pcDetailRow.admin_memo = data.admin_memo;
+      window.pcRenderDetail?.(window.__pcDetailRow);
+    }
+    pcCloseMemo();
     showToast('메모를 저장했습니다.', 'success');
-  };
+  }
+
+  pcPop.addEventListener('click', (e) => {
+    const act = e.target.dataset?.act;
+    if (act === 'close') pcCloseMemo();
+    if (act === 'save')  pcSaveMemo();
+  });
+  pcInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); pcCloseMemo(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); pcSaveMemo(); }
+  });
+  // 바깥을 누르면 닫는다. 팝오버를 연 버튼을 다시 누른 경우는 그 핸들러가 다시 연다.
+  document.addEventListener('mousedown', (e) => {
+    if (!pcPop.classList.contains('open')) return;
+    if (pcPop.contains(e.target) || e.target.closest?.('.pc-memo-btn')) return;
+    pcCloseMemo();
+  });
+  window.addEventListener('resize', () => pcCloseMemo());
 
   // ── 탭 전환 ──
   window.pcShowTab = function (which) {
@@ -250,6 +357,12 @@
     document.getElementById('pcTabBtnDetail').classList.toggle('active', which === 'detail');
   };
 
+  // 메모 팝오버가 저장 뒤 상세 탭을 다시 그릴 때 부른다
+  window.pcRenderDetail = (r) => {
+    const body = document.getElementById('pcDetailBody');
+    if (body) body.innerHTML = pcRenderDetail(r);
+  };
+
   // ── 더블클릭 → 상세보기 탭 전환 + 상세 렌더 (페이지 이동 없음) ──
   document.getElementById('pcGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
@@ -257,6 +370,8 @@
     const ri  = parseInt(cell.dataset.rowIndex, 10);
     const row = grid.getData()[ri];
     if (!row) return;
+    // 메모를 고치면 이 값도 같이 맞춰야 해서 지금 보고 있는 행을 남긴다
+    window.__pcDetailRow = row;
     document.getElementById('pcDetailBody').innerHTML = pcRenderDetail(row);
     window.pcShowTab('detail');
   });
@@ -281,6 +396,7 @@
 
   function pcRenderDetail(r) {
     const isStoma = r.type_raw === 'stoma';
+
 
     // 신청자 정보 — 시안 Frame 48101528(472×320): [성명|연락처] 한 줄, 이메일·주소 전폭,
     // [보험|지원 자격] 한 줄. 짝은 .dpair 로 감싼다(조건부 '연락처2' 가 끼어도 짝이 어긋나지 않는다).
@@ -328,7 +444,7 @@
       drow('구분', val(r.source)) +
       drow('작성일', val(r.submitted_full || r.submitted)) +
       drow('관리자메모', (r.admin_memo ? esc(r.admin_memo).replace(/\n/g, '<br>') : '—')
-        + ` <button type="button" class="pc-memo-btn" onclick='pcEditMemo(${JSON.stringify(r).replace(/'/g, "&#39;")})'>`
+        + ` <button type="button" class="pc-memo-btn" onclick='pcEditMemo(${JSON.stringify(r).replace(/'/g, "&#39;")}, this)'>`
         + (r.admin_memo ? '수정' : '입력') + '</button>') +
       drow('IP', val(r.ip)) +
       // User-Agent 도 다른 값과 같은 규격(13/500 · lh21 · gray-1000 · 오른쪽 정렬)이다.

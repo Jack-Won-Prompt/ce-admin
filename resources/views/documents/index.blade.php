@@ -287,15 +287,38 @@
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
+    /* 찾을 때 먼저 보는 것이 환자명이라 맨 앞에 둔다.
+       다운로드경로 컬럼은 뺐다 — 주소를 눈으로 읽을 일이 없는데 260px 를 차지해 오른쪽
+       컬럼을 밀어냈다. 내려받기는 파일명을 누르면 된다. */
     columns: [
-      { header: '유형',       name: 'type',      width: 110, sortable: true, align: 'center' },
-      { header: '생성유형',   name: 'source',    width: 120, sortable: true },
-      { header: '환자명',     name: 'patient',   width: 100, sortable: true },
-      { header: '처방번호',   name: 'rx_number', width: 150, sortable: true },
-      { header: '파일명',     name: 'filename',  width: 260 },
-      { header: '생성자',     name: 'creator',   width: 100, sortable: true },
-      { header: '생성일',     name: 'created',   width: 140, sortable: true },
-      { header: '다운로드경로', name: 'download',  width: 260 },
+      { header: '환자명',   name: 'patient',   width: 100, sortable: true },
+      { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
+      { header: '유형',     name: 'type',      width: 110, sortable: true, align: 'center' },
+      { header: '생성유형', name: 'source',    width: 120, sortable: true },
+      {
+        header: '파일명', name: 'filename', width: 320, sortable: true,
+        renderer: (v, row) => {
+          if (!v) { return document.createTextNode('—'); }
+          if (!row.download) {
+            const s = document.createElement('span');
+            s.textContent = v;
+            return s;
+          }
+          const a = document.createElement('a');
+          a.href = row.download;
+          a.textContent = v;
+          a.title = '누르면 내려받습니다';
+          a.style.cssText = 'color:var(--primary);text-decoration:none;overflow:hidden;'
+                          + 'text-overflow:ellipsis;white-space:nowrap;display:block;';
+          a.addEventListener('mouseenter', () => a.style.textDecoration = 'underline');
+          a.addEventListener('mouseleave', () => a.style.textDecoration = 'none');
+          // 행 클릭(서류 등록 탭 전환)까지 함께 일어나지 않게 막는다
+          a.addEventListener('click', (e) => e.stopPropagation());
+          return a;
+        },
+      },
+      { header: '생성자',   name: 'creator',   width: 100, sortable: true },
+      { header: '생성일',   name: 'created',   width: 140, sortable: true },
     ],
     data: @json($gridData),
   });
