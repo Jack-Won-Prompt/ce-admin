@@ -1175,7 +1175,7 @@ window.orderOpenRxTab = function (ev, el) {
   ev.preventDefault();
   const url = el.getAttribute('href');
   if (!url) return false;
-  const rx = el.dataset.rx ? '처방전 관리 - ' + el.dataset.rx : '처방전 관리';
+  const rx = el.dataset.rx ? '주문 - ' + el.dataset.rx : '주문';
   if (typeof window.ceOpenTab === 'function') {
     window.ceOpenTab(url, rx, 'file-edit-02');
   } else {

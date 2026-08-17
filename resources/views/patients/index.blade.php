@@ -484,11 +484,11 @@ document.addEventListener('keydown', (e) => {
       document.getElementById('pdCntPu').textContent = d.purchases.length;
 
       document.getElementById('pd-rx').innerHTML = d.prescriptions.length
-        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, '처방전 관리 - ' + esc(r.rx_number))).join('')
+        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, '주문 - ' + esc(r.rx_number))).join('')
         : emptyBox('처방전 이력이 없습니다.');
 
       document.getElementById('pd-counsel').innerHTML = d.counseling.length
-        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, '처방전 관리 - ' + esc(c.rx_number))).join('')
+        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, '주문 - ' + esc(c.rx_number))).join('')
         : emptyBox('상담 이력이 없습니다.');
 
       document.getElementById('pd-purchase').innerHTML = d.purchases.length

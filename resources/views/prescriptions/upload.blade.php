@@ -381,7 +381,7 @@
     <div style="padding:16px;">
       <div class="history-list">
         @forelse($prescriptions as $rx)
-        <div class="history-item" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '처방전 관리 - {{ $rx->rx_number }}', 'file-edit-02')">
+        <div class="history-item" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '주문 - {{ $rx->rx_number }}', 'file-edit-02')">
           <div class="history-thumb">
             @if(strtolower(pathinfo($rx->image_original_name, PATHINFO_EXTENSION)) === 'pdf')
               <i class="fa-regular fa-file-pdf" style="color:var(--danger);"></i>

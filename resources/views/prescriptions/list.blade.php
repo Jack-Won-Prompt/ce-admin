@@ -286,7 +286,9 @@ window.HELP_TOUR_STEPS = [
   function openReviewTab(rxNumber) {
     const url = DETAIL_BASE + '/' + encodeURIComponent(rxNumber);
     if (typeof window.ceOpenTab === 'function') {
-      window.ceOpenTab(url, '처방전 관리 - ' + rxNumber, 'file-edit-02');
+      {{-- 그 화면의 제목이 「처방전 확인 및 주문」이다. 탭 이름이 화면 이름과 다르면
+           어느 탭이 무엇인지 알 수 없다. --}}
+      window.ceOpenTab(url, '주문 - ' + rxNumber, 'file-edit-02');
     } else {
       window.open(url, '_blank', 'noopener');
     }
