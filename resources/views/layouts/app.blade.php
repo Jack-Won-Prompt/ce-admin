@@ -1203,28 +1203,23 @@
         @endif
 
         {{-- ══ 주문 · 재구매 ══ --}}
-        @if($vis('orders', 'repurchase', 'shop-orders', 'prescriptions'))
+        @if($vis('orders', 'repurchase', 'shop-orders', 'prescriptions', 'sample-orders'))
         <div class="menu-group" data-menu-group="order">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>주문ㆍ재구매</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
-        {{-- 1차 요청 CR-MNU-01·02 — 「처방전 관리」가 「주문」이 되어 이 그룹으로 왔다.
-             가는 곳은 그대로다(처방전을 열어 확인하고 주문을 만드는 화면). --}}
-        @if($vis('prescriptions'))
-        @perm('prescriptions', 'create')
-        <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="file-edit-02" href="{{ route('prescriptions.create') }}" data-title="주문">
-            @dsicon('file-edit-02', 'ds-icon menu-icon')<span>주문</span>
-          </a>
-        </div>
-        @endperm
-        @endif
+        {{-- 「주문」이 주문 목록을 연다.
+             예전에는 「주문」(처방전을 열어 주문을 만드는 화면)과 「주문 관리」(목록)가
+             나란히 있었다. 이름이 비슷해 어느 쪽이 목록인지 헷갈렸고, 주문을 보러
+             들어오는 일이 만들러 들어오는 일보다 훨씬 잦다.
+             만드는 화면은 처방전 목록에서 처방전을 열어 들어간다 — 어차피 처방전을
+             먼저 골라야 하는 일이라 그 길이 자연스럽다. --}}
         @if($vis('orders'))
-        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문 관리">
+        <div class="menu-item {{ request()->routeIs('orders*') || request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문">
             @dsicon('handle-with-care', 'ds-icon menu-icon')
-            <span>주문 관리</span>
+            <span>주문</span>
             @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
             @if($orderCount > 0)
               <span class="menu-badge blue">{{ $orderCount }}</span>
@@ -1244,6 +1239,14 @@
               } catch (\Throwable $e) { $rtnOpen = 0; }
             @endphp
             @if($rtnOpen > 0)<span class="menu-badge blue">{{ $rtnOpen }}</span>@endif
+          </a>
+        </div>
+        @endif
+        {{-- CE 샘플주문 — 처방 없이 나가는 물건이라 주문과 따로 둔다 --}}
+        @if($vis('sample-orders'))
+        <div class="menu-item {{ request()->routeIs('sample-orders*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="add-package" href="{{ route('sample-orders.index') }}" data-title="CE 샘플주문">
+            @dsicon('add-package', 'ds-icon menu-icon')<span>CE 샘플주문</span>
           </a>
         </div>
         @endif

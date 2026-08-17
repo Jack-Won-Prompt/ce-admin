@@ -150,6 +150,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReturn}/resend',  [\App\Http\Controllers\OrderReturnController::class, 'resend'])->name('resend');
     });
 
+    // CE 샘플판매주문 — 목록·상세·신규를 한 화면의 탭으로 둔다
+    Route::prefix('sample-orders')->name('sample-orders.')->group(function () {
+        Route::get('/',                [\App\Http\Controllers\SampleOrderController::class, 'index'])->name('index');
+        Route::post('/',               [\App\Http\Controllers\SampleOrderController::class, 'store'])->name('store');
+        Route::get('/{sampleOrder}',   [\App\Http\Controllers\SampleOrderController::class, 'show'])->name('show');
+    });
+
     Route::get('/repurchase',      [RepurchaseController::class, 'index'])->name('repurchase.index');
     Route::get('/repurchase/day',  [RepurchaseController::class, 'dayItems'])->name('repurchase.day');
 

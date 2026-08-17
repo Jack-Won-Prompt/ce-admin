@@ -98,6 +98,12 @@ return [
             // 단계를 옮기는 것은 POST 라 create 로 추론된다 — 아래 overrides 에서 바로잡는다
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
+        'sample-orders' => [
+            'label'   => 'CE 샘플주문',
+            'group'   => 'order',
+            'routes'  => ['sample-orders'],
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
         'repurchase' => [
             'label'   => '재구매 관리',
             'group'   => 'order',
