@@ -140,6 +140,42 @@ class OrderReturnController extends Controller
                 : "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스 전달은 실패했습니다.");
     }
 
+    /**
+     * 되돌릴 원 주문을 찾는다.
+     *
+     * 예전에는 최근 200건을 셀렉트에 통째로 부어 놓고 고르게 했다. 주문이 쌓이면
+     * 찾을 수 없고, 200건 밖의 주문은 아예 고를 수 없다. 찾아서 고르게 한다.
+     */
+    public function orderSearch(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $kw = trim((string) $request->q);
+
+        $orders = Order::with(['patient'])
+            ->when($kw !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('order_number', 'like', "%{$kw}%")
+                ->orWhere('withworks_so_no', 'like', "%{$kw}%")
+                ->orWhere('product_name', 'like', "%{$kw}%")
+                ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$kw}%"))))
+            ->latest('id')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'rows' => $orders->map(fn (Order $o) => [
+                'id'       => $o->id,
+                'order_no' => $o->order_number,
+                'patient'  => $o->patient?->name ?? '-',
+                'product'  => $o->product_name ?? '-',
+                'amount'   => (int) $o->total_amount,
+                'address'  => $o->shipping_address ?? '',
+                'so_no'    => $o->withworks_so_no ?? '',
+                'status'   => $o->status_label,
+                // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
+                'returns'  => $o->returns()->count(),
+            ])->values(),
+        ]);
+    }
+
     public function show(OrderReturn $orderReturn): View
     {
         $orderReturn->load(['order.patient', 'order.items', 'logs.creator', 'assignee', 'creator']);

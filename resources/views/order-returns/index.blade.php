@@ -18,12 +18,6 @@
 </div>
 @endsection
 
-@section('header-actions')
-<a href="{{ route('order-returns.create') }}" class="btn btn-primary btn-sm">
-  <i class="bx bx-plus"></i> 신규 접수
-</a>
-@endsection
-
 @section('content')
 
 @php $curType = request('type'); @endphp
@@ -64,6 +58,11 @@
       <a href="{{ route('order-returns.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 접수는 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌고,
+         찾다가 없으면 바로 접수하는 흐름과도 맞지 않았다. --}}
+    <button type="button" class="ds-btn ds-btn-primary" onclick="rtnPanel('new')">
+      <i class="bx bx-plus"></i> 신규 접수
+    </button>
   </div>
 </form>
 
@@ -73,12 +72,24 @@
       <span class="ds-grid-total">전체 <b>{{ $total }}</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 상세로 이동합니다.</span>
+      <span class="ds-grid-hint" id="rtnHint">행을 <b>더블클릭</b>하면 상세로 이동합니다.</span>
       <button type="button" class="ds-btn" onclick="window.__rtnGrid?.downloadExcel()">엑셀 저장</button>
     </div>
   </div>
-  <div class="ds-grid-card">
+
+  {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
+       방금 무엇을 보고 있었는지가 끊긴다. --}}
+  <div class="pnl-tabs">
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과</button>
+    <button type="button" id="rtnTabNew"  class="pnl-tab" onclick="rtnPanel('new')">신규 접수</button>
+  </div>
+
+  <div class="ds-grid-card" id="rtnPaneList">
     <div id="rtnGrid"></div>
+  </div>
+
+  <div class="ds-grid-card" id="rtnPaneNew" style="display:none;">
+    @include('order-returns._form')
   </div>
 </div>
 
@@ -117,6 +128,17 @@
     data: @json($gridData),
   });
   window.__rtnGrid = grid;
+
+  /* 목록 · 접수 탭. 접수 탭을 열면 원 주문 찾기에 바로 손이 가도록 커서를 옮긴다. */
+  window.rtnPanel = function (which) {
+    const isNew = which === 'new';
+    document.getElementById('rtnPaneList').style.display = isNew ? 'none' : '';
+    document.getElementById('rtnPaneNew').style.display  = isNew ? '' : 'none';
+    document.getElementById('rtnTabList').classList.toggle('active', !isNew);
+    document.getElementById('rtnTabNew').classList.toggle('active', isNew);
+    document.getElementById('rtnHint').style.visibility = isNew ? 'hidden' : '';
+    if (isNew) document.getElementById('rtoQ')?.focus();
+  };
   grid.on?.('dblclick', (ev) => {
     const row = grid.getRow?.(ev.rowKey);
     if (row?.id) location.href = SHOW_BASE + '/' + row.id;

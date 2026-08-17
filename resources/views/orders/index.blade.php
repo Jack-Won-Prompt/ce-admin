@@ -73,12 +73,6 @@ window.HELP_TOUR_STEPS = [
 </style>
 @endpush
 
-@section('header-actions')
-<a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm">
-  <i class="fa-solid fa-file-medical"></i> 처방전 목록
-</a>
-@endsection
-
 @section('content')
 
 {{-- ── 상태별 탭 ── --}}
@@ -166,6 +160,12 @@ window.HELP_TOUR_STEPS = [
       <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌다.
+         data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
+    <a href="{{ route('prescriptions.index') }}" class="ds-btn"
+       data-ce-tab="처방전 목록" data-ce-icon="bx-file">
+      <i class="fa-solid fa-file-medical"></i> 처방전 목록
+    </a>
   </div>
 </form>
 
