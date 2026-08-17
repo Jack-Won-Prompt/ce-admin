@@ -1502,14 +1502,6 @@
         </div>
         @endif
         @if($vis('delegation-settings'))
-        @if($vis('withworks-settings'))
-        <div class="menu-item {{ request()->routeIs('withworks-settings*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="add-package" href="{{ route('withworks-settings.edit') }}" data-title="위드웍스 연동">
-            @dsicon('add-package', 'ds-icon menu-icon')
-            <span>위드웍스 연동</span>
-          </a>
-        </div>
-        @endif
         <div class="menu-item {{ request()->routeIs('delegation-settings*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
             @dsicon('curricullum-vitae', 'ds-icon menu-icon')

@@ -57,6 +57,8 @@ class WithworksSettingController extends Controller
                 ->log("위드웍스 연동 전환: {$before} → {$s->mode}");
         }
 
+        /* 어느 화면에서 왔든 그 자리로 돌려보낸다. 서비스 연동 설정의 탭에서 저장했는데
+           단독 화면으로 튀면 담당자가 방금 보던 자리를 잃는다. */
         return back()->with('status', '저장했습니다. 지금은 ' . $s->modeLabel() . '에 붙어 있습니다.');
     }
 

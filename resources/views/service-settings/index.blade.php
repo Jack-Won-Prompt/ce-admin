@@ -38,6 +38,11 @@
       {{ $def['label'] }}
     </button>
   @endforeach
+  {{-- 위드웍스는 저장 위치가 스키마(settings 표)가 아니라 전용 표라 폼이 따로 나간다.
+       그래도 담당자에게는 같은 화면의 한 탭이어야 하므로 여기 나란히 세운다. --}}
+  <button type="button" class="ds-chip {{ $active === 'withworks' ? 'active' : '' }}" data-tab="withworks">
+    위드웍스 연동
+  </button>
 </div>
 
 @foreach ($schema as $group => $def)
@@ -101,6 +106,12 @@
     </div>
   </form>
 @endforeach
+
+{{-- iframe 을 쓰지 않는다. 프레임이면 높이를 따로 맞춰야 하고, 저장하고 돌아올 때
+     부모 화면의 탭 자리를 잃는다. 같은 문서에 그리면 그런 것이 없다. --}}
+<div class="ss-panel {{ $active === 'withworks' ? 'active' : '' }}" data-panel="withworks">
+  @include('withworks-settings._form', ['s' => \App\Models\WithworksSetting::current()])
+</div>
 
 <script>
   (function () {
