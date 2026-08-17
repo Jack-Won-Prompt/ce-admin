@@ -445,7 +445,12 @@
     syncSum();
   }
 
-  const popupOpts = { title: '제품 조회', width: 520, onSearch: searchProducts, onSelect: fillProduct };
+  /* 제품 조회는 팝오버로 연다 — 누른 칸 옆에 붙어, 어느 줄을 고치던 중이었는지
+     화면이 가려지지 않는다. */
+  const popupOpts = {
+    title: '제품 조회', width: 420, height: 320, mode: 'popover',
+    onSearch: searchProducts, onSelect: fillProduct,
+  };
 
   const itemGrid = new wwGrid({
     el: $('smpItemGrid'),

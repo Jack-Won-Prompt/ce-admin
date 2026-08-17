@@ -27,15 +27,17 @@ class GridModal {
   open(opts) {
     this.close();
     const { title, width = 480, height = 420, items, render, onSearch,
-            currentValue, onConfirm, popupTheme } = opts;
+            currentValue, onConfirm, popupTheme, anchor } = opts;
     this._onConfirm = onConfirm;
 
-    // ── 오버레이 & 모달 ──
+    /* anchor 를 주면 화면 한가운데가 아니라 그 자리 옆에 붙는다(팝오버).
+       고르려는 칸을 가리지 않아, 무엇을 고치던 중이었는지 놓치지 않는다.
+       바깥을 덮지 않으므로 어둡게 깔지도 않는다 — 다만 바깥을 눌러 닫는 길은 남긴다. */
     const overlay = document.createElement('div');
-    overlay.className = 'cg-modal-overlay';
+    overlay.className = 'cg-modal-overlay' + (anchor ? ' cg-modal-overlay-bare' : '');
 
     const modal = document.createElement('div');
-    modal.className = 'cg-modal';
+    modal.className = 'cg-modal' + (anchor ? ' cg-modal-popover' : '');
     modal.style.width    = width + 'px';
     modal.style.maxHeight = height + 'px';
 
@@ -55,6 +57,9 @@ class GridModal {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     this._overlay = overlay;
+
+    // 붙일 자리가 있으면 그 아래에 둔다. 화면 밖으로 나가면 위나 안쪽으로 접어 넣는다.
+    if (anchor) this._placeBy(modal, anchor, width, height);
 
     // ── 팝업 색상 테마 인라인 적용 ──
     this._applyPopupTheme(modal, hdr, body, popupTheme || {});
@@ -243,6 +248,39 @@ class GridModal {
     renderList();
     search.addEventListener('input', () => renderList(search.value));
     setTimeout(() => search.focus(), 50);
+  }
+
+  /**
+   * 팝오버를 기준 자리 옆에 놓는다.
+   *
+   * 아래에 자리가 모자라면 위로 올리고, 오른쪽으로 넘치면 왼쪽으로 당긴다.
+   * 창을 넘어가 잘리면 고를 수 없다.
+   */
+  _placeBy(modal, anchor, width, maxHeight) {
+    const r  = anchor.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const gap = 4;
+
+    let left = r.left;
+    if (left + width + 8 > vw) left = Math.max(8, vw - width - 8);
+
+    const below = vh - r.bottom - gap;
+    const above = r.top - gap;
+    let top, h;
+
+    if (below >= Math.min(maxHeight, 240) || below >= above) {
+      top = r.bottom + gap;
+      h   = Math.min(maxHeight, below - 8);
+    } else {
+      h   = Math.min(maxHeight, above - 8);
+      top = r.top - gap - h;
+    }
+
+    modal.style.position  = 'fixed';
+    modal.style.left      = Math.round(left) + 'px';
+    modal.style.top       = Math.round(Math.max(8, top)) + 'px';
+    modal.style.maxHeight = Math.round(Math.max(160, h)) + 'px';
   }
 
   /** popup 색상 테마 인라인 적용 */
@@ -1149,7 +1187,7 @@ class wwGrid {
       // popup 에디터 → 모달 직접 오픈 (인라인 편집 없음)
       if (colDef.editor === 'popup') {
         if (this._editingCell) this._commitEdit();
-        this._openPopup(ri, col, colDef);
+        this._openPopup(ri, col, colDef, inner.closest('td') || inner);
         return;
       }
 
@@ -1596,7 +1634,7 @@ class wwGrid {
   }
 
   /* ── Popup 에디터 ───────────────────────────── */
-  _openPopup(rowIndex, colName, colDef) {
+  _openPopup(rowIndex, colName, colDef, anchorEl) {
     const currentValue = this.data[rowIndex][colName];
     const opts         = colDef.popup || {};
 
@@ -1607,6 +1645,8 @@ class wwGrid {
       items:        opts.items    || null,
       render:       opts.render   || null,
       onSearch:     opts.onSearch || null,
+      // 팝오버로 열라고 했으면 누른 칸에 붙인다
+      anchor:       opts.mode === 'popover' ? (anchorEl || null) : null,
       currentValue,
       // 그리드 테마에서 popup 색상 추출하여 전달
       popupTheme: {

@@ -352,6 +352,26 @@
   justify-content: center;
 }
 
+/* 팝오버로 열 때 — 바깥을 덮지 않는다.
+   고르려는 칸이 그대로 보여야 무엇을 고치던 중이었는지 놓치지 않는다.
+   자리를 차지하되 어둡게 깔지 않고, 바깥을 눌러 닫는 길만 남긴다. */
+.cg-modal-overlay-bare {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: block;
+}
+.cg-modal-popover {
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(15, 25, 50, 0.08);
+  animation: cg-popover-in 0.12s ease-out;
+  max-width: none;
+}
+@keyframes cg-popover-in {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* ── Modal Box ── */
 .cg-modal {
   background: #fff;
