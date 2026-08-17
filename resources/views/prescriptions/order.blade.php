@@ -3988,7 +3988,7 @@ window.HELP_TOUR_STEPS = [
      두 벌로 두면 새 유형이 생길 때 한쪽만 늘어난다. */
   const SO_TYPE_LABELS = @json(collect(\App\Models\Order::SO_TYPE_LABELS)->map(fn($v) => $v[0]));
   /* 화면에 골라져 있는 것을 그대로 쓴다.
-     라디오는 @checked 로 5001 이 선택돼 보이는데, 사람이 손대지 않으면 onchange 가
+     라디오는 서버에서 5001 이 선택된 채로 그려지는데, 사람이 손대지 않으면 onchange 가
      불리지 않아 여기 박아 둔 옛 기본값 1013 이 그대로 나갔다. 고를 수 있는 유형이
      5001 하나로 좁혀진 뒤로는 그 값이 늘 거절되어 주문이 아예 만들어지지 않았다
      (「The selected so type is invalid.」). */
