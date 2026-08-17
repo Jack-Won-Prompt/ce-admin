@@ -168,4 +168,18 @@ return [
             'from_name'    => ['label' => '보내는 이름', 'config' => 'mail.from.name'],
         ],
     ],
+
+    'ce_shop' => [
+        'label' => 'CE샵',
+        'desc'  => 'CE샵에서 넘어오는 주문을 받고, 배지 건수를 물어볼 때 쓴다',
+        'fields' => [
+            'base_url'       => ['label' => 'CE샵 주소',  'config' => 'services.ce_shop.base_url', 'width' => 3,
+                                 'help' => '배지 건수를 물어볼 때 부르는 주소'],
+            // 이 값으로 들어오는 주문의 진위를 가린다 — 틀리면 401 로 거절한다
+            'webhook_secret' => ['label' => '웹훅 공유 비밀', 'config' => 'services.ce_shop.webhook_secret', 'type' => 'password',
+                                 'help' => 'CE샵 쪽에 같은 값이 들어가야 한다'],
+            'api_enabled'    => ['label' => 'CE샵 조회 사용', 'config' => 'services.ce_shop.api_enabled', 'type' => 'bool',
+                                 'help' => '끄면 배지 건수를 우리 표에서 센다'],
+        ],
+    ],
 ];

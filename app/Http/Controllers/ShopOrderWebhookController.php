@@ -18,9 +18,18 @@ class ShopOrderWebhookController extends Controller
     public function receive(Request $request): JsonResponse
     {
         // 시크릿 검증
-        $secret = config('services.ce_shop.webhook_secret', 'ce-shop-secret-2026');
-        $provided = $request->header('X-Shop-Secret') ?? $request->input('secret');
-        if ($provided !== $secret) {
+        $secret = config('services.ce_shop.webhook_secret');
+
+        /* 비밀을 정해 두지 않았으면 아무나 주문을 밀어 넣을 수 있다. 열어 두느니 막는다.
+           예전에는 코드에 적힌 기본값으로 떨어졌는데, 적혀 있는 비밀은 비밀이 아니다. */
+        if (!$secret) {
+            \Illuminate\Support\Facades\Log::error('[CE샵] 웹훅 공유 비밀 미설정 — 수신을 거부했다');
+
+            return response()->json(['message' => 'Webhook not configured'], 503);
+        }
+
+        $provided = (string) ($request->header('X-Shop-Secret') ?? $request->input('secret'));
+        if (!hash_equals($secret, $provided)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 

@@ -55,9 +55,19 @@ return [
         'mode'           => null,
     ],
 
-    // ── CE샵 Webhook & API ───────────────────────────────
+    /*
+    |──────────────────────────────────────────────────────
+    | CE샵 Webhook & API
+    |──────────────────────────────────────────────────────
+    | 설정 › 서비스 연동 설정 화면에서 관리한다(settings-schema 의 ce_shop 그룹).
+    | 아래는 화면에서 아직 저장하지 않았을 때의 기본값이다.
+    |
+    | 공유 비밀에는 기본값을 두지 않는다. 예전에는 'ce-shop-secret-2026' 이 박혀 있었는데,
+    | 코드에 적힌 비밀은 아는 사람이면 누구나 쓸 수 있어 비밀이 아니다. 정해지지 않았으면
+    | 없는 것이 맞고, 받는 쪽이 그때 거절한다.
+    */
     'ce_shop' => [
-        'webhook_secret' => env('CE_SHOP_WEBHOOK_SECRET', 'ce-shop-secret-2026'),
+        'webhook_secret' => env('CE_SHOP_WEBHOOK_SECRET'),
         'base_url'       => env('CE_SHOP_BASE_URL', 'http://localhost/ce-shop/public'),
         'api_enabled'    => env('CE_SHOP_API_ENABLED', false),
     ],
