@@ -93,7 +93,9 @@
   <div class="rt-bd">
     <div class="rt-kv"><span>주문번호</span><span>
       @if($r->order)
-        <a href="{{ route('orders.show', $r->order) }}" style="color:var(--primary);">{{ $r->order->order_number }}</a>
+        {{-- 원 주문은 다른 화면이라 새 탭으로 연다 — 보고 있던 접수가 사라지면 안 된다 --}}
+        <a href="{{ route('orders.show', $r->order) }}" style="color:var(--primary);"
+           data-ce-tab="주문 - {{ $r->order->order_number }}" data-ce-icon="bx-cart">{{ $r->order->order_number }}</a>
       @else — @endif
     </span></div>
     <div class="rt-kv"><span>환자명</span><span>{{ $r->order?->patient?->name ?? '—' }}</span></div>

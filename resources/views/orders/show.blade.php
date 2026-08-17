@@ -378,7 +378,8 @@
           <i class="bx bx-user" style="color:var(--primary);"></i>
           <span class="card-header-title">환자 정보</span>
             @if($order->patient)
-              <a href="{{ route('patients.show', $order->patient) }}" class="btn btn-outline btn-sm" style="margin-left:auto;">
+              <a href="{{ route('patients.show', $order->patient) }}" class="btn btn-outline btn-sm" style="margin-left:auto;"
+                 data-ce-tab="환자 - {{ $order->patient->name }}" data-ce-icon="bx-user">
                 환자 상세
               </a>
             @endif
@@ -749,8 +750,12 @@
         <div class="card-header">
           <i class="bx bx-undo" style="color:var(--primary);"></i>
           <span class="card-header-title">교환 · 반품 · 취소</span>
+          {{-- data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다.
+               상세 내용은 주문현황 안에 끼워 넣은 조각이라, 그대로 두면 보고 있던
+               목록까지 접수 화면으로 바뀐다. --}}
           <a href="{{ route('order-returns.create', ['order' => $order->id]) }}"
-             class="ds-btn ds-btn-sm" style="margin-left:auto;">
+             class="ds-btn ds-btn-sm" style="margin-left:auto;"
+             data-ce-tab="교환/반품/취소 접수" data-ce-icon="bx-package">
             <i class="bx bx-plus"></i> 신청 등록
           </a>
         </div>
@@ -762,7 +767,8 @@
             @endphp
             <div class="od-kv" style="align-items:flex-start;">
               <span>
-                <a href="{{ route('order-returns.show', $rt) }}">{{ $rt->receipt_no }}</a>
+                <a href="{{ route('order-returns.show', $rt) }}"
+                   data-ce-tab="접수 - {{ $rt->receipt_no }}" data-ce-icon="bx-package">{{ $rt->receipt_no }}</a>
               </span>
               <span>
                 <span class="badge badge-{{ $done ? 'success' : 'warning' }}">
