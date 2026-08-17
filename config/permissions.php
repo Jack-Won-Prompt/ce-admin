@@ -232,6 +232,13 @@ return [
             'routes'  => ['masters'],
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
+        'withworks-settings' => [
+            'label'   => '위드웍스 연동 설정',
+            'group'   => 'settings',
+            'routes'  => ['withworks-settings'],
+            // 연결 확인은 POST 라 create 로 추론된다 — 아래 overrides 에서 바로잡는다
+            'actions' => ['view', 'update'],
+        ],
         'delegation-settings' => [
             'label'   => '위임장 설정',
             'group'   => 'settings',
@@ -273,6 +280,8 @@ return [
         // 처방전을 볼 수 있는 사람만 그 파일도 볼 수 있게 명시한다.
         // 단계를 옮기는 것은 새로 만드는 일이 아니라 고치는 일이다
         'order-returns.advance'         => ['order-returns', 'update'],
+        // 연결 확인은 값을 만들지 않는다 — 설정을 쓰는 일이다
+        'withworks-settings.test'       => ['withworks-settings', 'update'],
         'files.prescription-image'      => ['prescriptions', 'view'],
         'files.prescription-attachment' => ['prescriptions', 'view'],
         'files.prescription-temp'       => ['prescriptions', 'view'],

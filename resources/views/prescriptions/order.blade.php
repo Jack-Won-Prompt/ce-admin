@@ -2490,7 +2490,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @foreach(\App\Models\Order::SO_TYPE_LABELS as $code => $meta)
                 <label class="so-type-opt">
                   <input type="radio" name="so_type_radio" value="{{ $code }}"
-                         @checked($soCur === $code) onchange="onSoTypeChange(this.value)">
+                         @checked($soCur === (string) $code) onchange="onSoTypeChange(this.value)">
                   <span><i class="fa-solid {{ $soIcons[$code] ?? 'fa-tag' }}"></i> {{ $meta[0] }}</span>
                 </label>
                 @endforeach

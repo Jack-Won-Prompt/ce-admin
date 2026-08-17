@@ -201,11 +201,13 @@ class PrescriptionController extends Controller
             'shipping_address_detail' => $shippingAddressDetail,
             // 기타
             'delivery_date'           => $request->delivery_date,
-            'ho_account_id'           => $request->ho_account_id ?? null,
+            // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
+            'ho_account_id'           => $request->ho_account_id ?? config('services.todoworks.account_id'),
             'remark'                  => $prescription->admin_note,
             'items'                   => $request->items,
-            // 판매 유형
-            'so_type'                 => $request->so_type ?? $prescription->order?->so_type ?? null,
+            /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
+               넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */
+            'so_type'                 => config('services.todoworks.so_type', '5001'),
             // 받는 사람
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
             // 청구전략
@@ -303,7 +305,8 @@ class PrescriptionController extends Controller
             'shipping_address_detail' => $shippingAddressDetail,
             'delivery_date'           => $request->delivery_date,
             'items'                   => $request->items,
-            'so_type'                 => $request->so_type ?? $prescription->order?->so_type ?? null,
+            // 등록과 같은 이유로 수정 때도 End User Direct 로 고정한다
+            'so_type'                 => config('services.todoworks.so_type', '5001'),
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
             'billing_strategy'        => 25,
         ];

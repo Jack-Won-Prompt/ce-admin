@@ -28,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
            DB 를 아직 못 쓰는 상황이면 조용히 넘어간다. */
         \App\Support\ServiceSettings::applyToConfig();
 
+        /* 위드웍스 연동 — 테스트(데모웍스)·운영(위드웍스) 중 어디에 붙을지가 화면 설정에
+           있다. 부르는 쪽·받는 쪽이 전부 config 를 보므로 여기서 한 번 올려 둔다.
+           설치 직후처럼 표가 아직 없을 수도 있어 조용히 넘어간다. */
+        try {
+            \App\Models\WithworksSetting::applyToConfig();
+        } catch (\Throwable) {
+        }
+
         /* 자산 URL에 파일 수정시각을 붙여 캐시를 자동으로 무효화한다.
            사용:  <link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')"> */
         Blade::directive('assetv', fn (string $expr) =>

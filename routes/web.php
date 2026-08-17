@@ -323,6 +323,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // 요양비 위임장 설정
+    /* 위드웍스 연동 — 테스트(데모웍스)·운영(위드웍스) 전환과 주소·토큰·거래처를 화면에서
+       관리한다. 예전에는 .env 라 서버에 들어가야 바꿀 수 있었다. */
+    Route::get('/settings/withworks',       [\App\Http\Controllers\WithworksSettingController::class, 'edit'])->name('withworks-settings.edit');
+    Route::put('/settings/withworks',       [\App\Http\Controllers\WithworksSettingController::class, 'update'])->name('withworks-settings.update');
+    Route::post('/settings/withworks/test', [\App\Http\Controllers\WithworksSettingController::class, 'test'])->name('withworks-settings.test');
+
     Route::get('/settings/delegation',  [DelegationSettingController::class, 'edit'])->name('delegation-settings.edit');
     Route::put('/settings/delegation',  [DelegationSettingController::class, 'update'])->name('delegation-settings.update');
 
