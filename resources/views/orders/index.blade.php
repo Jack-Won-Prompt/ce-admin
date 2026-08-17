@@ -99,29 +99,11 @@ window.HELP_TOUR_STEPS = [
   @endforeach
 </div>
 
-{{-- 거래 구분 칩 — 판매·교환·반품·취소.
-     되돌린 건을 따로 떼어 두면 한 주문에 무슨 일이 있었는지 두 화면을 오가야 알 수 있다. --}}
 @php $curDeal = request('deal'); @endphp
-<div class="ds-chips" style="margin-top:-4px;">
-  <a href="{{ route('orders.index', array_merge(request()->except('deal','page'), [])) }}"
-     class="ds-chip {{ !$curDeal ? 'active' : '' }}">거래 전체</a>
-  @foreach(['sale' => '판매'] + \App\Models\OrderReturn::TYPES as $key => $label)
-    <a href="{{ route('orders.index', array_merge(request()->except('deal','page'), ['deal' => $key])) }}"
-       class="ds-chip {{ $curDeal === $key ? 'active' : '' }}">
-      {{ $label }}
-      @if(($dealCounts[$key] ?? 0) > 0)
-        <span class="ds-chip-count">{{ $dealCounts[$key] }}</span>
-      @endif
-    </a>
-  @endforeach
-</div>
 
 {{-- ── 검색 필터 ── --}}
 {{-- 검색 필터 — Figma 148:5526: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 · 기준/정렬 1열 --}}
 <form method="GET" action="{{ route('orders.index') }}" class="ds-filter-card">
-  @if($curDeal)
-    <input type="hidden" name="deal" value="{{ $curDeal }}">
-  @endif
   @if($curStatus)
     <input type="hidden" name="status" value="{{ $curStatus }}">
   @endif
@@ -134,6 +116,20 @@ window.HELP_TOUR_STEPS = [
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      {{-- 거래 구분 — 판매·교환·반품·취소.
+           칩으로 한 줄을 더 쓰면 상태 칩과 섞여 무엇이 무엇인지 헷갈린다.
+           위쪽 칩은 진행 상태 하나만 두고, 나머지 갈래는 여기서 고른다. --}}
+      <label class="ds-field-label">거래</label>
+      <select name="deal" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach(['sale' => '판매'] + \App\Models\OrderReturn::TYPES as $key => $label)
+          <option value="{{ $key }}" {{ $curDeal === (string) $key ? 'selected' : '' }}>
+            {{ $label }}@if(($dealCounts[$key] ?? 0) > 0) ({{ $dealCounts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
     </div>
     <div class="ds-filter-field">
       {{-- 처방 유형 — 원내·원외·처방외 --}}

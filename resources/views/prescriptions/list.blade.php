@@ -140,31 +140,12 @@
     </a>
   </div>
 
-  {{-- 처방 유형 칩 — 원내·원외·처방외.
-       정산 방식과 필요한 서류가 갈리는 값이라 목록에서 나눠 볼 수 있어야 한다. --}}
   @php $curAcc = request('acc_type'); @endphp
-  <div class="ds-chips" style="margin-top:-4px;">
-    <a href="{{ route('prescriptions.index', request()->except('acc_type', 'page')) }}"
-       class="ds-chip {{ !$curAcc ? 'active' : '' }}">유형 전체</a>
-    @foreach(\App\Models\Prescription::ACC_TYPES as $code => $label)
-      {{-- $code 는 '30' 같은 숫자 문자열인데 PHP 가 배열 키를 정수로 바꾼다 — 문자열로 되돌려 견준다 --}}
-      <a href="{{ route('prescriptions.index', ['acc_type' => $code] + request()->except('acc_type', 'page')) }}"
-         class="ds-chip {{ $curAcc === (string) $code ? 'active' : '' }}">
-        {{ $label }}
-        @if(($accCounts[$code] ?? 0) > 0)
-          <span class="ds-chip-count">{{ $accCounts[$code] }}</span>
-        @endif
-      </a>
-    @endforeach
-  </div>
 
   {{-- 검색 필터 — Figma 128:1744: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
   <form method="GET" action="{{ route('prescriptions.index') }}" class="ds-filter-card">
     @if(request('status'))
       <input type="hidden" name="status" value="{{ request('status') }}">
-    @endif
-    @if($curAcc)
-      <input type="hidden" name="acc_type" value="{{ $curAcc }}">
     @endif
     <div class="ds-filter-fields">
       {{-- 검색어 143px(1열) · 기간 298px(2열) — 시안 실측 --}}
@@ -182,6 +163,20 @@
           <input type="date" name="date_to" class="form-control"
                  value="{{ request('date_to', now()->format('Y-m-d')) }}">
         </div>
+      </div>
+      <div class="ds-filter-field">
+        {{-- 처방 유형 — 원내·원외·처방외. 위쪽 칩은 진행 상태 하나만 두고,
+             나머지 갈래는 여기서 고른다. 칩이 두 줄이면 무엇이 무엇인지 헷갈린다. --}}
+        <label class="ds-field-label">처방유형</label>
+        <select name="acc_type" class="form-control form-select" onchange="this.form.submit()">
+          <option value="">전체</option>
+          @foreach(\App\Models\Prescription::ACC_TYPES as $code => $label)
+            {{-- 배열 키가 정수로 바뀌므로 문자열로 되돌려 견준다 --}}
+            <option value="{{ $code }}" {{ $curAcc === (string) $code ? 'selected' : '' }}>
+              {{ $label }}@if(($accCounts[$code] ?? 0) > 0) ({{ $accCounts[$code] }})@endif
+            </option>
+          @endforeach
+        </select>
       </div>
       <div class="ds-filter-field">
         <label class="ds-field-label">표시 건수</label>

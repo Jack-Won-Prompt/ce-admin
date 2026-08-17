@@ -214,30 +214,6 @@
     </a>
   @endforeach
 
-  {{-- 신환은 공단 등록이 먼저다. 섞어 두면 청구부터 하려다 반려된다. --}}
-  @foreach(\App\Models\Order::PATIENT_TYPE_LABELS as $v => $label)
-    <a href="{{ route('nhis.index', array_merge(request()->except(['patient_type','page']), ['patient_type' => $v])) }}"
-       class="ds-chip {{ request('patient_type') === $v ? 'active' : '' }}" style="{{ $loop->first ? 'margin-left:8px;' : '' }}">
-      {{ $label }}
-    </a>
-  @endforeach
-
-  @foreach([\App\Support\ClaimAgency::NHIS, \App\Support\ClaimAgency::LOCAL] as $v)
-    <a href="{{ route('nhis.index', array_merge(request()->except(['agency','page']), ['agency' => $v])) }}"
-       class="ds-chip {{ request('agency') === $v ? 'active' : '' }}" style="{{ $loop->first ? 'margin-left:8px;' : '' }}">
-      {{ \App\Support\ClaimAgency::LABELS[$v] }}
-    </a>
-  @endforeach
-
-  {{-- 자료가 갖춰진 것만 따로 볼 수 있어야 청구를 몰아서 한다 --}}
-  <a href="{{ route('nhis.index', array_merge(request()->except('ready','page'), ['ready' => 'y'])) }}"
-     class="ds-chip {{ request('ready') === 'y' ? 'active' : '' }}" style="margin-left:8px;">
-    자료 완비 <span class="ds-chip-count">{{ $readyCount }}</span>
-  </a>
-  <a href="{{ route('nhis.index', array_merge(request()->except('ready','page'), ['ready' => 'n'])) }}"
-     class="ds-chip {{ request('ready') === 'n' ? 'active' : '' }}">
-    자료 부족
-  </a>
 </div>
 
 {{-- ── 검색 필터 ── --}}
@@ -273,7 +249,41 @@
         <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
       </div>
     </div>
+    {{-- 위쪽 칩은 청구 진행 상태 하나만 둔다. 나머지 갈래를 칩으로 늘어놓으면
+         한 줄에 네 가지 기준이 섞여 무엇이 켜져 있는지 알 수 없었다.
+         한 묶음 안에 두어야 칸 너비가 고르게 나뉜다 — 묶음을 나누면 라벨이 눌린다. --}}
+    <div class="ds-filter-field">
+      {{-- 신환은 공단 등록이 먼저다. 섞어 두면 청구부터 하려다 반려된다. --}}
+      <label class="ds-field-label">신환/구환</label>
+      <select name="patient_type" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach(\App\Models\Order::PATIENT_TYPE_LABELS as $v => $label)
+          <option value="{{ $v }}" {{ request('patient_type') === (string) $v ? 'selected' : '' }}>{{ $label }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">청구처</label>
+      <select name="agency" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach([\App\Support\ClaimAgency::NHIS, \App\Support\ClaimAgency::LOCAL] as $v)
+          <option value="{{ $v }}" {{ request('agency') === (string) $v ? 'selected' : '' }}>
+            {{ \App\Support\ClaimAgency::LABELS[$v] }}
+          </option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      {{-- 자료가 갖춰진 것만 따로 볼 수 있어야 청구를 몰아서 한다 --}}
+      <label class="ds-field-label">자료</label>
+      <select name="ready" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        <option value="y" {{ request('ready') === 'y' ? 'selected' : '' }}>완비 ({{ $readyCount }})</option>
+        <option value="n" {{ request('ready') === 'n' ? 'selected' : '' }}>부족</option>
+      </select>
+    </div>
   </div>
+
   <div class="ds-filter-actions">
     @if(request('q') || request('date_from') || request('date_to'))
       <a href="{{ route('nhis.index', $curNhisStatus ? ['nhis_status'=>$curNhisStatus] : []) }}"
