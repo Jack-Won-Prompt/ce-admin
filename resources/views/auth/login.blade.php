@@ -2,6 +2,17 @@
 <html lang="ko" dir="ltr">
 <head>
   <meta charset="UTF-8">
+  {{-- 프레임 안에서 열리면 창 전체를 이 주소로 옮긴다.
+       화면 탭이 iframe 이라, 세션이 끊긴 뒤에는 이 화면이 워크스페이스 안에 조각처럼
+       박혀 보인다. 서버(BreakFrameOnGuest)가 대부분 막지만, 브라우저가 뒤로가기로
+       캐시에서 되살리는 경우처럼 서버를 거치지 않는 길도 있어 화면에도 한 겹 둔다. --}}
+  <script>
+    if (window.self !== window.top) {
+      try { window.top.location.replace(window.location.href); }
+      catch (e) { window.location.replace(window.location.href); }
+    }
+  </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CE Admin — 로그인</title>
   <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" />

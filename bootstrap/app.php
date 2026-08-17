@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/shop-order',
             'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
         ]);
+        /* 세션이 끊긴 뒤 화면 탭(iframe)이 /login 으로 넘어가면 워크스페이스 안에 로그인
+           화면이 조각처럼 박힌다. 창 전체를 옮기도록 가로챈다. 리다이렉트를 보고 판단하므로
+           다른 미들웨어보다 바깥에 서야 한다. */
+        $middleware->prependToGroup('web', \App\Http\Middleware\BreakFrameOnGuest::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\LogUserActivity::class);
         // 권한 그룹 기반 페이지·액션 차단 (config/permissions.php 레지스트리 기준)
         $middleware->appendToGroup('web', \App\Http\Middleware\CheckPagePermission::class);
