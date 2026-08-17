@@ -181,7 +181,12 @@
   .ws-icon.pending{ background: var(--bg); color: var(--text-muted); }
   .ws-label { font-size: 12px; font-weight: 500; } .ws-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .ws-arrow { margin-left: auto; color: var(--text-muted); font-size: 12px; }
-  .page-body-inner { padding-bottom: 40px; }
+  /* 아래 여백은 .page-body 의 16(=--content-pad)만 쓴다.
+     시안 315:58 의 container 는 pad 0/16/16/16 이고 마지막 블록에서 끝까지 16 이다.
+     여기서 40 을 더하면 56 이 되어 화면 아래가 그만큼 비어 보인다.
+     이 값은 분할 보기 높이 계산(sizeSplit)에도 그대로 들어가므로,
+     지우면 왼쪽·오른쪽 열이 그만큼 더 길어져 빈 칸도 함께 줄어든다. */
+  .page-body-inner { padding-bottom: 0; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
@@ -359,20 +364,119 @@
   /* 카드뷰 item-row 안에서는 다른 입력 항목과 높이 통일 */
   .item-row .item-nhis-sel { height:32px !important; padding:0 4px !important; }
   .tab-view-table .item-nhis-sel { width:100% !important; }
+  /* 쓰는 곳 없음 — 처방 제품 카드 아래 합계 띠는 시안 148:3105 대로 카드 머리 오른쪽
+     맨글자(.pt-head-total)로 옮겼다. 규칙만 남겨 둔다. */
   .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* 판매 유형 라디오 버튼 */
+  /* 판매 유형 라디오 버튼 — 시안 148:3105 Frame 48101489.
+     알약 143×32 · r8 · pad 0/12 · gap 8 · bd 1px #E8EAEC · bg #FFFFFF — 셋 다 같다.
+     선택 여부는 알약 배경이 아니라 왼쪽 12×12 도넛의 바깥 원 색으로만 알린다
+     (선택 #28798B / 미선택 #C2C5C8, 안쪽 6×6 흰 원). */
   .so-type-opt { display:inline-flex; align-items:center; cursor:pointer; }
   .so-type-opt input[type=radio] { display:none; }
   .so-type-opt span {
     display:inline-flex; align-items:center; gap:8px;
-    height:32px; padding:0 12px; border-radius:8px; font-size:13px; font-weight:400;
+    width:143px; height:32px; padding:0 12px; border-radius:8px; font-size:13px; font-weight:400;
     border:1px solid var(--border); background:#fff; color:var(--gray-1000);
     transition:var(--transition); user-select:none;
   }
-  .so-type-opt span:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
-  .so-type-opt input[type=radio]:checked + span { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .so-type-opt span::before {
+    content:''; width:12px; height:12px; border-radius:999px; flex-shrink:0;
+    background:var(--gray-0); box-shadow:inset 0 0 0 3px var(--gray-300);
+  }
+  .so-type-opt input[type=radio]:checked + span::before { box-shadow:inset 0 0 0 3px var(--primary); }
+  /* hover 는 시안에 없다. 선택 표시(도넛)와 헷갈리지 않도록 배경만 아주 옅게 준다. */
+  .so-type-opt span:hover { background:var(--gray-50); }
+
+  /* ── 처방 제품 탭 — 시안 148:3105 (2026-08-11 재작성판) ─────────────────────
+     카드마다 전폭 머리띠를 두고 본문을 그 아래로 내린다.
+     머리 h44 · pad 8/16 · 좌우 space-between · 아래 1px #E8EAEC (시안 Frame 48101479).
+     접기 화살표(chevron 14)는 이 탭 카드를 여닫는 동작이 없어 넣지 않았다. */
+  #tab-product .pt-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
+                               min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
+  #tab-product .pt-head-left  { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; }
+  #tab-product .pt-head-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+  /* 제목 — 아이콘 20 + 13/700 (시안 Frame 48101480) */
+  #tab-product .pt-card-title { display:flex; align-items:center; gap:8px;
+                                font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000); white-space:nowrap; }
+  #tab-product .pt-card-title > i { width:20px; height:20px; font-size:16px; color:var(--primary); flex-shrink:0;
+                                    display:inline-flex; align-items:center; justify-content:center; }
+  /* 머리 배지 — 낱개 알약 h22 · r999 · pad 2/8 · gap 6 · 11/500 (시안 Frame 48101522) */
+  #tab-product .pt-head-badges { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  #tab-product .pt-hb { display:inline-flex; align-items:center; height:22px; padding:2px 8px; border-radius:999px;
+                        background:var(--gray-100); font-size:11px; font-weight:500; line-height:18px;
+                        color:var(--gray-800); white-space:nowrap; }
+  #tab-product .pt-hb b { font-weight:500; color:inherit; }
+  /* 머리 오른쪽 합계 — 12/500 주색 맨글자 (시안 "총 NHIS 급여: ₩ 0") */
+  #tab-product .pt-head-total { display:inline-flex; align-items:center; gap:6px;
+                                font-size:12px; font-weight:500; line-height:19px; color:var(--primary); white-space:nowrap; }
+  #tab-product .pt-head-total b { font-weight:500; color:inherit; }
+  /* 판매 유형 머리 오른쪽 '1013 · CE 판매' — 시안은 배지가 아니라 12/500 #656C74 맨글자다.
+     onSoTypeChange() 가 같은 배지 마크업을 innerHTML 로 다시 써 넣으므로 JS 는 두고 CSS 로 누른다. */
+  #tab-product #soTypeBadge .badge { background:none; padding:0; border-radius:0;
+                                     font-size:12px !important; font-weight:500; line-height:19px; color:var(--gray-600); }
+  #tab-product .pt-head-btns { display:flex; align-items:center; gap:6px; }
+  /* 판매 유형 본문 — 라벨 100 + gap 8 + 라디오 묶음 446 (시안 Frame 48101481) */
+  #tab-product .pt-field-row   { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  #tab-product .pt-field-label { flex:0 0 100px; width:100px;
+                                 font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
+  #tab-product .pt-radio-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  /* ── 처방 제품 행 (카드뷰) — 시안 Frame 48101492: 1132×118 ────────────────
+     .item-card 는 테이블뷰에서 <tr> 로도 쓰인다. 카드뷰 컨테이너 안으로만 범위를 잡는다. */
+  #items-container .item-card { display:flex; align-items:stretch; padding:0; margin-bottom:12px; }
+  #items-container .item-card:last-child { margin-bottom:0; }
+  #items-container .item-card-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; padding:12px; }
+  #items-container .item-row { gap:12px; flex-wrap:wrap; }
+  /* 열 폭 — 시안 281 / 141×5 (전부 grow), 열 사이 12.
+     기준폭을 236/118 로 두고 grow 를 2:1 로 주면 시안 폭 1044 에서
+     281.1 / 140.6 으로 떨어진다(236+158×2/7, 118+158×1/7).
+     이 기준폭이면 오른쪽 패널이 890 까지 좁아져도 여섯 칸이 한 줄에 남고,
+     그보다 좁아지면 칸이 짓눌리는 대신 아랫줄로 내려간다 — 시안 프레임도 가로 WRAP 이다.
+     890 이라는 경계는 시안 근거가 없는 결정값이다. */
+  #items-container .item-row > .item-inline-field { flex:1 1 118px; min-width:0; }
+  #items-container .item-inline-field { gap:8px; }
+  /* 라벨 — 시안 13/500 · lh21 · #474D54 (구현은 10px #999EA4 였다) */
+  #items-container .item-field-label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); margin-bottom:0; }
+  /* 제품명 열 281 = 입력 226 + gap 8 + [검색] 47 */
+  #items-container .item-name-row { display:flex; align-items:center; gap:8px; }
+  #items-container .item-search-btn { flex-shrink:0; height:32px; padding:0 12px; border-radius:8px;
+                                      background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000);
+                                      font-size:13px; font-weight:500; line-height:20px; }
+  #items-container .item-search-btn:hover { background:var(--gray-50); }
+  /* 값 칸 + 바깥 '₩' — 시안 입력 121 + gap 8 + '₩' 12 = 141 */
+  #items-container .item-money-row { display:flex; align-items:center; gap:8px; }
+  #items-container .item-money-row .form-control { flex:1; min-width:0; }
+  #items-container .item-won { flex-shrink:0; font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000); }
+  /* 급여 구분 select — 시안 141 한 칸 · 13/400 · pad 0/12 (전역 !important 를 되받는다) */
+  #items-container .item-nhis-sel { width:100% !important; height:32px !important;
+                                    font-size:13px !important; padding:0 30px 0 12px !important; }
+  /* 총 금액 — 시안은 읽기전용 입력칸 모양(121×32 · bg #F9FAFC · bd 1px · 값 13/400 #333940) */
+  #items-container .item-total-amt { height:32px; padding:0 12px; border:1px solid var(--gray-200); border-radius:8px;
+                                     background:var(--gray-50); color:var(--gray-800);
+                                     font-size:13px; font-weight:400; line-height:20px;
+                                     display:flex; align-items:center; white-space:nowrap; }
+  /* 보조줄 — 시안 Frame 48101527: 상자 없이 배지 + 값, 묶음 사이 gap 12 */
+  #items-container .item-summary { background:none; border:none; border-radius:0; padding:0; margin-top:0;
+                                   gap:12px; flex-wrap:wrap; }
+  #items-container .item-sum-grp { display:inline-flex; align-items:center; gap:8px; }
+  #items-container .item-sum-badge { display:inline-flex; align-items:center; height:19px; padding:0 4px; border-radius:4px;
+                                     background:var(--gray-100); font-size:12px; font-weight:500; line-height:19px;
+                                     color:var(--gray-600); white-space:nowrap; }
+  #items-container .item-sum-badge.is-copay { background:var(--primary-50); color:var(--primary-400); }
+  #items-container .item-summary b { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); }
+  #items-container .item-summary b.item-copay { color:var(--primary); }
+  #items-container .item-sum-div { width:1px; height:8px; background:var(--gray-300); flex-shrink:0; }
+  /* 오른쪽 삭제칸 64 — 시안 Frame 48101658: pad 0/16 · bg #F9FAFC · 왼쪽 1px 경계.
+     행 카드에 overflow:hidden 을 걸면 제품 검색 드롭다운(.pac-drop)이 잘려 모서리만 둥글린다. */
+  #items-container .item-del-col { flex:0 0 64px; display:flex; align-items:center; justify-content:center;
+                                   padding:0 16px; background:var(--gray-50);
+                                   border-left:1px solid var(--gray-200); border-radius:0 12px 12px 0; }
+  #items-container .item-del-btn { width:32px; height:32px; padding:0; border-radius:8px; flex-shrink:0;
+                                   background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000);
+                                   display:inline-flex; align-items:center; justify-content:center; }
+  #items-container .item-del-btn:hover { background:var(--gray-50); }
 
   /* ── RX Inspection Accordion ── */
   /* 아코디언 — 시안 137:544: radius 12, 헤더 44 높이에 padding 8 16 */
@@ -416,12 +520,27 @@
   /* 입력칸 — 시안 148:2665: 높이 32, 좌우 12, radius 8, 값 13/400 (#101317).
      전역 .form-control 이 이미 같은 규격이라 여기서 다시 잠그지 않는다. */
   .rx-acc-body .form-select  { background-position:right 12px center; padding-right:30px; }
-  /* 메모 상자 — 시안 148:1304 Frame 48101493: 446×112 · r8 · pad 12 */
-  .rx-acc-body textarea.form-control { height:auto; min-height:112px; padding:12px; }
+  /* 메모 상자 — 시안 315:58 Frame 48101493: 253×32 한 줄 입력 · r8 · pad 0/12 · 값 13/400 lh21.
+     옛 시안(148:1304)의 446×112 여러 줄 상자는 없어졌다. 다른 입력과 같은 32 로 맞춘다.
+     태그는 textarea 그대로 둔다 — input 으로 바꾸면 이미 저장된 여러 줄 메모가
+     다음 저장 때 한 줄로 뭉개진다(로직 담당 확인 필요). resize:vertical 은 인라인으로
+     남아 있어, 여러 줄 값은 사용자가 늘려서 볼 수 있다. */
+  .rx-acc-body textarea.form-control { height:32px; min-height:32px; padding:5px 12px; line-height:20px; }
   /* 구획 — 시안 148:2652: 소제목과 입력 사이 12, 구획끼리 24 */
-  /* 구획 안은 2열이다 — 열 사이 24, 열 안의 줄 사이 8 (시안 148:2660) */
-  .rx-cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+  /* 구획 안은 3열이다 — 시안 315:58 의 Frame 48101577·48101578·48101512 가
+     모두 layoutMode GRID · gridColumnCount 3 · gridColumnGap 24 · gridRowGap 24 다.
+     1920 폭에서 본문 안쪽 1132 → 열 361 (361×3 + 24×2 = 1131),
+     라벨 100 + gap 8 을 빼면 입력영역 253 으로 시안 실측과 맞는다.
+     열 안의 줄 사이는 8, 줄 높이는 32 (.rx-col · .rx-field-row). */
+  .rx-cols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; align-items:start; }
   .rx-col  { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  /* 시안은 1920 한 폭만 그려져 있다. 아래 두 단계는 시안 근거가 없는 결정값이다.
+     입력영역 폭 = (뷰포트 − 788 − 열간격) / 열수 − 108.
+     3열: 1920→253 · 1728→189 · 1600→147 · 1512→117 (날짜값이 잘리기 시작한다)
+     2열: 1600→286 · 1440→206 · 1280→126
+     그래서 1600 까지만 3열로 두고, 그 아래는 2열로 접는다.
+     1100 아래 1열은 원래 있던 규칙 그대로다. */
+  @media (max-width:1599px) { .rx-cols { grid-template-columns:1fr 1fr; } }
   @media (max-width:1100px) { .rx-cols { grid-template-columns:1fr; } }
   /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
   .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
@@ -448,6 +567,12 @@
   .rx-sec-btn i { font-size:12px; }
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
   .rx-field-row.full { grid-column:1 / -1; }
+  /* 3열이 되면 입력영역이 253 까지 좁아진다. flex 항목의 기본 최소 폭은 '내용 폭'이라
+     선택지 글이 긴 select(사유·일일 도뇨 횟수)나 긴 placeholder 를 가진 입력이 줄지 않고
+     버티면 카드를 가로로 넘긴다. 아코디언 안 입력은 전부 0 까지 줄게 둔다.
+     폭을 따로 잠근 칸(우편번호 72 · 상담번호 144)은 인라인 style 이 이겨서 그대로다. */
+  .rx-acc-body .rx-field-row .form-control,
+  .rx-acc-body .rx-field-row .field-group { min-width:0; }
   /* 라벨 폭을 고정해 어느 줄에서든 입력이 같은 자리에서 시작하게 한다.
      min-width 였을 때는 '신환master등록일'(84px)처럼 긴 이름이 입력을 오른쪽으로
      밀어, 같은 아코디언 안에서도 시작 위치가 78·79·81·91 로 흩어졌다.
@@ -459,7 +584,7 @@
   .rx-field-label { display:flex; align-items:center; width:100px; min-height:32px; flex-shrink:0;
                     font-size:13px; font-weight:500; line-height:1.2; color:var(--gray-700);
                     white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
-  /* '배송 주소 동일' 체크 묶음 — 시안 148:1304 Frame 48101499:
+  /* '배송 주소 동일' 체크 묶음 — 시안 315:58 Frame 48101499:
      묶음 96×21 · gap 6, 상자 16×16 · r6 · 1px #28798B, 글자 74 · 13/500 · #28798B.
      기본 체크박스는 모서리를 못 깎아 appearance 를 끄고 체크 표시를 직접 그린다. */
   #sameShipping { appearance:none; -webkit-appearance:none; box-sizing:border-box; position:relative;
@@ -471,12 +596,17 @@
   #sameShipping:checked::after { content:''; position:absolute; left:5px; top:1px; width:5px; aspect-ratio:5/9;
                   border:solid var(--primary); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
 
-  /* '재구매일' 줄 — 시안 148:1304 Frame 48101499(재구매일):
-     [발행일 208 · bg #F9FAFC][arrow-right-sm 14][재구매일 208] 사이 8 (208+8+14+8+208=446).
-     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채우던 #disp-issued-date 라 상자 모양만 입혔다. */
+  /* '재구매일' 줄 — 시안 315:58 Frame 48101499(재구매일):
+     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL] 사이 8
+     (100+8+14+8+123 = 253). 옛 시안 148:1304 의 '208 · 208' 은 2열 시절 값이라 틀렸다.
+     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채우던 #disp-issued-date 라 상자 모양만 입혔다.
+     오른쪽 칸은 시안 배경이 #FFFFFF 지만 구현은 자동 계산 readonly 라 --gray-50 을 그대로 둔다.
+     기준 폭은 100 이지만 줄이지 못하게 잠그면(flex:0 0 100px) 3열 1600·2열 1280 에서
+     이 줄만 열 밖으로 15~39px 삐져나간다(실측). flex:0 1 100px 로 두면 1920 에서는
+     남는 자리가 오른쪽 입력으로 가서 100 그대로이고, 좁아지면 같이 줄어든다. */
   .rx-date-flow { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
   .rx-date-flow > .rx-date-shown { display:flex; align-items:center; box-sizing:border-box;
-                  flex:1; min-width:0; height:32px; padding:0 12px;
+                  flex:0 1 100px; min-width:0; height:32px; padding:0 12px;
                   border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-50);
                   font-size:13px; font-weight:400; line-height:20px; color:var(--gray-800);
                   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -572,11 +702,27 @@
 
   /* ── 등록자 카드 (시안 137:652) ──
      머리줄 없이 탭 스위처로 시작하고, 아래에 역할별 한 줄씩 쌓는다. */
-  .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  /* 시안 148:279 — 카드 pad 12/16 · gap 12, 탭 스위처 h33 · r8 · pad 2 · bg gray-200 */
+  .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
   .rg-tabs { display:flex; padding:2px; background:var(--gray-200); border-radius:8px; }
   .rg-tab  { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 0;
-             border-radius:6px; font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-700); }
+             border:none; background:none; cursor:pointer;
+             border-radius:6px; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   .rg-tab.active { background:var(--gray-0); color:var(--gray-1000); }
+  /* OCR 신뢰도 탭 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
+  .rg-ocr      { display:flex; flex-direction:column; gap:12px; }
+  .rg-ocr-meter{ display:flex; align-items:center; gap:12px; }
+  .rg-ocr-bar  { flex:1; min-width:0; height:8px; border-radius:999px; background:var(--gray-200); overflow:hidden; }
+  .rg-ocr-bar span { display:block; height:100%; border-radius:999px; background:var(--primary); }
+  .rg-ocr-val  { flex-shrink:0; font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
+  .rg-ocr-acts { display:flex; gap:6px; }
+  .rg-ocr-btn  { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+                 height:28px; padding:0 12px; border-radius:8px;
+                 background:var(--gray-0); border:1px solid var(--gray-200);
+                 font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
+                 cursor:pointer; white-space:nowrap; }
+  .rg-ocr-btn:hover { background:var(--gray-50); }
+  .rg-ocr-btn i { font-size:12px; }
   .rg-rows { display:flex; flex-direction:column; }
   .rg-row  { display:flex; align-items:center; gap:8px; padding:8px; background:var(--gray-0);
              border-bottom:1px solid var(--gray-200); }
@@ -1625,11 +1771,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
-      {{-- 등록자 카드 (OCR 신뢰도 표시는 제거, 재분석·초기화 동작만 유지) --}}
+      {{-- 등록자 카드 — 탭 두 개(시안 137:653 등록자 · 148:279 OCR 신뢰도) --}}
       <div class="vw-card rg-card">
-        {{-- 탭 스위처 (시안 137:653) — OCR 신뢰도 탭은 넣지 않는다 --}}
-        <div class="rg-tabs">
-          <span class="rg-tab active">등록자</span>
+        {{-- 탭 스위처 — 시안 296×33 · r8 · pad 2 · bg gray-200, 탭 146×29 · r6 · 13/500 --}}
+        <div class="rg-tabs" role="tablist">
+          <button type="button" class="rg-tab active" id="rgTabUploader"
+                  role="tab" aria-selected="true" onclick="rgTab('uploader')">등록자</button>
+          <button type="button" class="rg-tab" id="rgTabOcr"
+                  role="tab" aria-selected="false" onclick="rgTab('ocr')">OCR 신뢰도</button>
         </div>
 
         {{-- 역할별 한 줄 (시안 137:658) --}}
@@ -1668,7 +1817,30 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
         @endif
 
-        {{-- 재분석·초기화 버튼 줄은 뺐다. 원본 복원은 아코디언 머리에 있다. --}}
+        {{-- OCR 신뢰도 탭 (시안 148:279)
+             막대 252×8 · r999 · 바탕 gray-200 · 채움 primary, 값 13/700 primary.
+             버튼 145×28 · r8 · bd 1px gray-200 · 아이콘 12 · 12/500.
+             값과 동작은 이미 있는 것을 쓴다 —
+               display_confidence 접근자(Prescription.php), reanalyzeOCR(), resetOCR(). --}}
+        <div class="rg-ocr" id="infoPanel-ocr" style="display:none;">
+          @php $conf = $prescription->display_confidence; @endphp
+          <div class="rg-ocr-meter">
+            <div class="rg-ocr-bar" role="img"
+                 aria-label="OCR 신뢰도 {{ $conf !== null ? $conf . '%' : '측정 전' }}">
+              <span style="width:{{ $conf !== null ? max(0, min(100, $conf)) : 0 }}%;"></span>
+            </div>
+            <span class="rg-ocr-val">{{ $conf !== null ? $conf . '%' : '-' }}</span>
+          </div>
+          <div class="rg-ocr-acts">
+            <button type="button" class="rg-ocr-btn" id="btn-reanalyze" onclick="reanalyzeOCR()">
+              <i class="fa-solid fa-rotate"></i>OCR 재분석
+            </button>
+            <button type="button" class="rg-ocr-btn" onclick="resetOCR()"
+                    title="입력값을 원본 OCR 결과로 되돌립니다">
+              <i class="fa-solid fa-rotate-left"></i>초기화
+            </button>
+          </div>
+        </div>
       </div>
 
       @if($prescription->review_memo)
@@ -1772,14 +1944,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="rx-cols">
             <div class="rx-col">
-              {{-- 왼쪽 열 — 상담 번호 · 상담 일자 · 상담 유형 · 상담 상태 (시안 148:2661) --}}
-              <div class="rx-field-row">
+              {{-- 1열 — 상담 번호 · 상담 일자 (시안 315:58 Frame 48101490) --}}
+              <div class="rx-field-row" style="align-items:flex-start;">
                 <span class="rx-field-label">상담 번호</span>
-                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
+                {{-- 시안(Frame 48101481)은 두 칸이다: [입력 144 FILL][추가상담(채번) 101 HUG], 사이 8 = 253.
+                     '과거 상담 N' 은 재방문 환자에게만 붙는 세 번째 칸이라 253 에 다 서지 못한다.
+                     입력의 기준 폭을 시안값 144 로 두고 줄바꿈을 허용해, 자리가 모자라면
+                     버튼만 아랫줄로 내려가게 했다. 버튼은 하나도 지우지 않는다.
+                     min-width 로 144 를 '잠그면' 안 된다 — 3열 1600(입력영역 141)·2열 1280(117)에서
+                     입력이 줄지 못해 열 밖으로 3~27px 삐져나갔다. min-width:0 으로 두면
+                     좁을 때 입력이 열 폭까지 줄어들고 버튼만 아랫줄로 내려간다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;flex-wrap:wrap;row-gap:8px;">
                   <input type="text" class="form-control" id="f-counselling-no"
                          value="{{ $curCounselNo }}"
                          placeholder="채번 버튼을 눌러 번호를 생성하세요"
-                         style="flex:1;" />
+                         style="flex:1 1 144px;min-width:0;" />
                   @if($isReturningPatient)
                   <button type="button" class="rx-side-btn" onclick="openPrevCounselModal()"
                           title="이전 상담 이력 {{ $prevCounselings->count() }}건">
@@ -1797,6 +1976,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                           onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'">오늘</button>
                 </div>
               </div>
+            </div>
+
+            <div class="rx-col">
+              {{-- 2열 — 상담 유형 · 상담 상태 (시안 315:58 Frame 48101511) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">상담 유형</span>
                 <select class="form-control" id="f-counsel-type" onchange="onCounselTypeChange(this.value)" style="flex:1;">
@@ -1821,9 +2004,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
 
             <div class="rx-col">
-              {{-- 오른쪽 열 — 처방전 여부 · 메모 (시안 148:2692).
+              {{-- 3열 — 처방전 여부 · 메모 (시안 315:58 Frame 48101512).
                    재 상담 일자는 시안에 없지만, 상담 상태가 '재상담'일 때만 열리는
-                   입력이라 빼면 그 값을 넣을 자리가 사라진다. 여기 둔다. --}}
+                   입력이라 빼면 그 값을 넣을 자리가 사라진다. 시안 두 줄 뒤에 이어 둔다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">처방전 여부</span>
                 <select class="form-control" id="f-acc-add-type" style="flex:1;">
@@ -1833,14 +2016,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
                 </select>
               </div>
+              <div class="rx-field-row" style="align-items:flex-start;">
+                <span class="rx-field-label">메모</span>
+                {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
+                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counsel_contents ?? '' }}</textarea>
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">재 상담 일자</span>
                 <input type="date" class="form-control" id="f-re-counsel-date"
                        value="{{ $prescription->counsel_re_date ?? '' }}" style="flex:1;" />
-              </div>
-              <div class="rx-field-row" style="align-items:flex-start;">
-                <span class="rx-field-label">메모</span>
-                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counsel_contents ?? '' }}</textarea>
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -1851,9 +2035,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="rx-cols">
             <div class="rx-col">
-              {{-- 왼쪽 열 (시안 148:2709) --}}
+              {{-- 1열 — 환자명* · 주민등록번호 · 전화번호 1 · 전화번호 2 · 주소 (시안 315:58 Frame 48101490).
+                   생년월일과 보호자(guardianBox)는 시안에 없지만 주민번호로 계산되는 짝이라
+                   주민등록번호 바로 아래에 남긴다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">환자명 <span style="color:var(--primary);">*</span></span>
+                {{-- 시안 라벨 56개 중 '환자명 *' 하나만 13/700 이다(나머지는 전부 13/500).
+                     '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
+                <span class="rx-field-label" style="font-weight:700;">환자명 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
@@ -1944,18 +2132,25 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row" style="align-items:flex-start;">
                 <span class="rx-field-label">주소</span>
                 <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
-                  {{-- 1줄 — 시안 148:1304 Frame 48101496: [우편번호 179][도로명 주소 179][주소 검색 73], 사이 8.
-                       우편번호·도로명은 둘 다 읽기 전용이라 시안대로 바탕이 #F9FAFC(--gray-50) 다. --}}
-                  <div style="display:flex;gap:8px;align-items:center;">
+                  {{-- 1줄 — 시안 315:58 Frame 48101496: [우편번호 72 FIXED][도로명 주소 92 FILL][주소 검색 73 HUG],
+                       사이 8 (72+8+92+8+73 = 253). 옛 시안 148:1304 의 '179 · 179' 는 2열 시절 값이라 틀렸다.
+                       우편번호·도로명은 둘 다 읽기 전용이라 시안대로 바탕이 #F9FAFC(--gray-50) 다.
+                       1920 에서는 세 칸이 253 에 딱 맞고, 그보다 좁으면 우편번호 72 와 '주소 검색' 73 이
+                       줄지 않아 카드를 넘긴다(입력영역 147 기준 14 초과). 줄바꿈을 허용해
+                       모자랄 때만 '주소 검색' 이 아랫줄로 내려가게 했다. --}}
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;row-gap:8px;">
                     <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? '' }}"
-                           placeholder="우편번호" style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                           placeholder="우편번호" style="flex:0 0 72px;min-width:0;background:var(--gray-50);cursor:default;" />
                     <input type="text" class="form-control" id="f-address"
                            value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
                            placeholder="도로명 주소" readonly style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
                     <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
                   </div>
-                  {{-- 2줄 — 시안 Frame 48101497: [상세 주소 342][배송 주소 동일 96], 사이 8 --}}
-                  <div style="display:flex;gap:8px;align-items:center;">
+                  {{-- 2줄 — 시안 315:58 Frame 48101497: [상세 주소 149 FILL][배송 주소 동일 96 HUG], 사이 8.
+                       '배송 주소 동일' 묶음은 96 에서 줄지 않으므로, 입력영역이 좁아지면 이 줄이
+                       열 밖으로 12px 삐져나왔다(2열 1280 기준 실측). 1줄과 같이 줄바꿈을 허용해
+                       모자랄 때만 체크 묶음이 아랫줄로 내려가게 한다. --}}
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;row-gap:8px;">
                     <input type="text" class="form-control" id="f-address-detail"
                            value="{{ $prescription->address_detail ?? '' }}"
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
@@ -1966,6 +2161,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div class="rx-col">
+              {{-- 2열 — 일일 도뇨 횟수 · Five(110days) · 현금영수증 · 보호자명 · Email · 건보 등록
+                   (시안 315:58 Frame 48101514) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">일일 도뇨 횟수</span>
                 <select class="form-control" id="f-diverticulums" style="flex:1;">
@@ -1985,7 +2185,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">현금영수증</span>
-                {{-- 시안 148:1304 Frame 48101500 — 이 줄은 두 칸이다: [소득공제 219][현금영수증 번호 219], 사이 8.
+                {{-- 시안 315:58 Frame 48101500 — 이 줄은 두 칸이다: [소득공제 123][현금영수증 번호 123], 사이 8 (= 253).
                      소득공제 select 은 병원ㆍ처방 아코디언 오른쪽 열에 따로 서 있던 것을
                      통째로 옮겨 왔다(id·option·값 그대로). 저장 때 deduction 과
                      cash_receipt_no 로 함께 넘어가던 짝이라 한 줄에 서는 것이 맞다.
@@ -2002,10 +2202,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->patient?->cash_receipt_no ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
                 </div>
               </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 오른쪽 열 (시안 148:2774) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">보호자명</span>
                 <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="보호자명" style="flex:1;" />
@@ -2024,6 +2220,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="필요없음" @selected(($prescription->patient?->nhis_reg_status ?? '') == '필요없음')>필요없음</option>
                 </select>
               </div>
+            </div>
+
+            <div class="rx-col">
+              {{-- 3열 — 건보 등록일 · 건보 재등록 대상자/기한 · 기초(의료급여) 재평가 대상자/기한
+                   (시안 315:58 Frame 48101515) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">공단 등록일</span>
                 <input type="date" class="form-control" id="f-nhis-reg-date"
@@ -2085,12 +2286,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
             @endphp
             <div class="rx-cols">
             <div class="rx-col">
+              {{-- 1열 — 요양병원 코드 … 1일 처방 개수 10줄 (시안 315:58 Frame 48101490, 361×392) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">요양병원 코드</span>
-                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원코드" style="flex:1;" />
+                {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
+                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원 코드" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span></span>
+                <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
@@ -2118,9 +2321,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="3"   @selected(($prescription->disease_class ?? '') == '3')>3</option>
                 </select>
               </div>
-              {{-- 시안 148:1304 Frame 48101493 은 446 한 칸이고 위아래 간격이 다른 줄과 같은 8 이다.
-                   '상병명' 입력은 개발이 넣은 것이라 남기고, 붙어 있던 margin-bottom:10px(간격 18)만
-                   걷어 다른 줄과 같은 8 로 맞췄다. 두 칸 사이도 6 → 8 로 통일한다. --}}
+              {{-- 시안 315:58 Frame 48101493 은 253 한 칸이고(값 'N31.8, R30.0, N30.8, K21.0')
+                   위아래 간격이 다른 줄과 같은 8 이다. 한 칸으로 합치면 '상병명' 입력이 사라지므로
+                   개발이 넣은 두 칸을 그대로 둔다. 두 칸 사이는 8 로 통일했다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">상병코드</span>
                 <div style="display:flex;gap:8px;flex:1;min-width:0;">
@@ -2144,6 +2347,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">1일 처방 개수</span>
                 <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
+            </div>
+            <div class="rx-col">
+              {{-- 2열 — 총 처방 기간 … Five/Six program 10줄 (시안 315:58 Frame 48101492, 361×392) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방 기간</span>
                 <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
@@ -2161,17 +2367,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">처방전 사용 기간 (교부일로부터)</span>
-                <div style="display:flex;align-items:center;gap:4px;flex:1;">
+                {{-- 시안은 입력영역 안 부속 사이를 전부 8 로 둔다(상담 번호·상담 일자·주소·재구매일 모두 8).
+                     '일' 글자는 시안에 없지만 단위 안내라 남기고 간격만 4 → 8 로 맞췄다.
+                     값은 제 컬럼에서 읽는다. --}}
+                <div style="display:flex;align-items:center;gap:8px;flex:1;">
                   <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
-                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">일</span>
+                  <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-600);white-space:nowrap;">일</span>
                 </div>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">담당 의사명</span>
                 <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
               </div>
-            </div>
-            <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">보험 유형</span>
                 <select class="form-control" id="f-benefit-class" style="flex:1;">
@@ -2241,6 +2448,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="06" @selected(($prescription->five_program ?? '') == '06')>Six</option>
                 </select>
               </div>
+            </div>
+            <div class="rx-col">
+              {{-- 3열 — Five(110days) … 재구매일 9줄 (시안 315:58 Frame 48101491, 361×392).
+                   종료일·신환master등록일은 시안에 없지만 개발이 넣은 입력이라 끝에 이어 남긴다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">Five(110days)</span>
                 <input type="text" class="form-control" id="f-five-2" style="flex:1;" />
@@ -2278,11 +2489,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">다음 재구매 가능일</span>
-                <div style="display:flex;gap:4px;flex:1;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;" />
+                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
+                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
+                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
+                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
+                     값은 제 컬럼에서 읽는다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
+                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
                   <button type="button" onclick="calcNextRepurchase(true)"
                           title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;height:32px;padding:0 8px;border:1px solid var(--primary);border-radius:var(--radius);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">
+                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
                     <i class="fa-solid fa-rotate"></i> 자동
                   </button>
                 </div>
@@ -2293,8 +2509,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">재구매일</span>
-                {{-- 시안 148:1304 Frame 48101499 는 두 칸이다:
-                     [발행일 208 · bg #F9FAFC][arrow-right-sm 14][재구매일 208], 사이 8.
+                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
+                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
                      왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
                      그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
                      오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
@@ -2314,7 +2530,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->rx_end_date ?? '' }}" style="flex:1;min-width:0;" />
               </div>
               {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
-                   (시안 148:1304 Frame 48101500 이 두 값을 한 줄에 둔다). --}}
+                   (시안 315:58 Frame 48101500 이 두 값을 한 줄에 둔다). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">신환master등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
@@ -2331,7 +2547,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-ellipsis" style="color:var(--primary);"></i> 추가정보
             </span>
             <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">공단 위임동의ㆍ인마켓ㆍ수량</span>
+              {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「공단」으로 적는다 --}}
+              <span class="rx-acc-meta-hint">공단 위임동의ㆍ인마켓 마감일ㆍ수량</span>
               {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
               <div class="rx-acc-btns" onclick="event.stopPropagation()">
                 <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
@@ -2354,22 +2571,29 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">공단 위임동의 종료일</span>
                 <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">인마켓 마감일</span>
-                <input type="date" class="form-control" id="f-inmarket-due"
-                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
-              </div>
+
             </div>
             <div class="rx-col">
+              {{-- 2열 — 하루 사용 수량 · 마지막 확정 수량 (시안 315:58 Frame 48101492) --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">하루 사용 수량</span>
+                {{-- 값은 제 컬럼에서 읽는다 --}}
+                <input type="number" min="0" class="form-control" id="f-daily-use-qty"
+                       value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
               </div>
+            </div>
+            <div class="rx-col">
+              {{-- 3열 — 인마켓 마감일 (시안 315:58 Frame 48101491) --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">하루 사용 수량</span>
-                <input type="number" min="0" class="form-control" id="f-daily-use-qty"
-                       value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
+                <span class="rx-field-label">인마켓 마감일</span>
+                {{-- 값은 제 컬럼에서 읽는다 --}}
+                <input type="date" class="form-control" id="f-inmarket-due"
+                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
             </div>{{-- /rx-cols --}}
@@ -2473,15 +2697,35 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div class="tab-pane" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
-        {{-- mb-3 은 부트스트랩 CDN 값(16px)이라 시안 카드 간격 12 와 어긋난다. 인라인으로 12 를 준다 --}}
-        <div class="card mb-3" style="border-color:var(--primary);margin-bottom:12px;">
-          <div class="card-body" style="padding:12px 16px;">
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;">
-                <i class="fa-solid fa-tag" style="color:var(--primary);"></i> 판매 유형
-                <span style="color:var(--danger);font-size:11px;">*</span>
+        {{-- 카드 간격은 시안 12 다. 부트스트랩 CDN 의 .mb-3 은 16px 이고 !important 라
+             전역에서 못 이긴다 — 클래스를 떼고 인라인으로 12 를 준다. --}}
+        {{-- 시안 Frame 48101493: 카드 테두리는 다른 카드와 같은 #E8EAEC 다(주색 강조 아님) --}}
+        <div class="card" style="margin-bottom:12px;">
+          {{-- 머리띠 — h44 · pad 8/16 · 아래 1px --}}
+          <div class="pt-card-head">
+            <div class="pt-head-left">
+              <span class="pt-card-title"><i class="fa-solid fa-tag"></i> 판매 유형</span>
+            </div>
+            <div class="pt-head-right">
+              {{-- 시안에는 값이 박혀 있었다. 지금 골라진 유형을 보여야 한다 —
+                   보이는 것과 보내는 것이 갈리면 안 된다.
+                   $soCur 는 아래 라디오 블록에서 정하므로 여기서 먼저 셈해 둔다. --}}
+              @php
+                $soCur = $prescription->order?->so_type;
+                if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
+                    $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                }
+              @endphp
+              <div id="soTypeBadge">
+                <span class="badge badge-primary" style="font-size:11px;">{{ $soCur }} · {{ \App\Models\Order::SO_TYPE_LABELS[$soCur][0] ?? $soCur }}</span>
               </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            </div>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div class="pt-field-row">
+              {{-- 시안 "판매 유형 *" 100×32 · 13/500 · #474D54 — 별표도 라벨과 같은 색이다 --}}
+              <span class="pt-field-label">판매 유형 *</span>
+              <div class="pt-radio-group">
                 @php
                   $soIcons = ['1013' => 'fa-hospital', '1016' => 'fa-user',
                               '1022' => 'fa-gift',     '5001' => 'fa-truck-fast'];
@@ -2492,8 +2736,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                       $soCur = \App\Models\Order::SALE_SO_TYPES[0];
                   }
                 @endphp
-                {{-- 반품 유형(5004)은 여기 없다. 판매를 만들면서 고를 수 있게 두면
-                     반품 유형으로 판매가 나간다. --}}
+                {{-- 되돌림 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
+                     두면 되돌림 유형으로 판매가 나간다. --}}
                 @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
                 @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
                 <label class="so-type-opt">
@@ -2503,35 +2747,47 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </label>
                 @endforeach
               </div>
-              <div id="soTypeBadge" style="margin-left:auto;">
-                <span class="badge badge-primary" style="font-size:11px;">{{ $soCur }} · {{ \App\Models\Order::SO_TYPE_LABELS[$soCur][0] ?? $soCur }}</span>
-              </div>
+
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-body">
-            {{-- 처방 제품 헤더 (카드/테이블뷰 공통) --}}
-            <div class="section-title">
-              <i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 처방 제품 정보
-              <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-                <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:2px 10px;">
-                  <b style="color:var(--text-primary);" id="rx-ref-name">{{ $prescription->patient_name_ocr ?? '-' }}</b>
-                  <span style="color:var(--border);">|</span>
-                  <span>1일 <b id="rx-ref-daily">{{ $prescription->daily_count ?? '-' }}</b>개</span>
-                  <span style="color:var(--border);">|</span>
-                  <span>처방 <b id="rx-ref-days">{{ $prescription->total_days ?? '-' }}</b>일</span>
-                  <span style="color:var(--border);">|</span>
-                  <span>총 <b id="rx-ref-total">{{ $prescription->total_count ?? '-' }}</b>개</span>
-                </span>
-                <button type="button" class="btn btn-primary btn-sm" onclick="addItem()"
-                        style="padding:2px 10px;font-size:11px;">
-                  <i class="fa-solid fa-plus"></i> 제품 추가
-                </button>
+          {{-- 처방 제품 헤더 (카드/테이블뷰 공통) — 시안 Frame 48101494 의 머리띠 h44 --}}
+          <div class="pt-card-head">
+            <div class="pt-head-left">
+              <span class="pt-card-title"><i class="fa-solid fa-boxes-stacked"></i> 처방 제품 정보</span>
+              {{-- 낱개 알약 4개 — 시안 Frame 48101522: h22 · r999 · pad 2/8 · gap 6 · 11/500.
+                   시안에 없는 구분자 '|' 와 테두리를 빼고 알약을 넷으로 나눴다 --}}
+              <span class="pt-head-badges">
+                <span class="pt-hb"><b id="rx-ref-name">{{ $prescription->patient_name_ocr ?? '-' }}</b></span>
+                <span class="pt-hb">1일 <b id="rx-ref-daily">{{ $prescription->daily_count ?? '-' }}</b>개</span>
+                <span class="pt-hb">처방 <b id="rx-ref-days">{{ $prescription->total_days ?? '-' }}</b>일</span>
+                <span class="pt-hb">총 <b id="rx-ref-total">{{ $prescription->total_count ?? '-' }}</b>개</span>
+              </span>
+            </div>
+            <div class="pt-head-right">
+              {{-- 합계 — 시안은 카드 아래 띠가 아니라 머리 오른쪽 12/500 맨글자다.
+                   '총 환자부담' 은 시안 이 카드에 없지만 지우지 않고 같은 자리로 옮겼다. --}}
+              <span class="pt-head-total"><i class="fa-solid fa-circle-dollar-to-slot"></i>
+                총 급여: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+              </span>
+              <span class="pt-head-total">
+                총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
+              </span>
+              {{-- 버튼 3개 — 시안 Frame 48101503: [원본 복원 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
+                   원본 복원·저장은 검수 탭 아코디언 머리에 있던 resetOCR()·saveOCR() 를 그대로 쓴다
+                   (둘 다 items 를 읽고 쓴다). 저장 버튼은 onclick 문자열이 정확히 'saveOCR()' 여야
+                   saveOCR() 안 querySelectorAll('[onclick="saveOCR()"]') 이 로딩 상태를 함께 건다. --}}
+              <div class="pt-head-btns">
+                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
+                <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
               </div>
             </div>
-
+          </div>
+          {{-- 본문 — 시안 Frame 48101511: pad 12/16 · 행 사이 12 --}}
+          <div class="card-body" style="padding:12px 16px;">
             {{-- 카드뷰 --}}
             <div class="cv">
               <div id="items-container">{{-- JS renderItems() --}}</div>
@@ -2542,15 +2798,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div id="items-table-container"><div style="color:var(--text-muted);font-size:12px;text-align:center;padding:8px 0;">제품 없음</div></div>
             </div>
 
-            {{-- 합계 / 버튼 (카드/테이블뷰 공통) --}}
-            <div class="items-total-bar">
-              <span><i class="fa-solid fa-circle-dollar-to-slot" style="color:var(--primary);"></i>
-                총 요양비: <b style="color:var(--primary);" id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
-              </span>
-              <span style="margin-left:auto;">
-                총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
-              </span>
-            </div>
           </div>
         </div>
 
@@ -4671,44 +4918,46 @@ window.HELP_TOUR_STEPS = [
     const nhisOpts = [['eligible','급여(90%)'],['ineligible','비급여'],['partial','일부(50%)']].map(
         ([v,l]) => `<option value="${v}"${nhisSt===v?' selected':''}>${l}</option>`
     ).join('');
+    // 시안 148:3105 Frame 48101492 — 행 카드 1132×118.
+    // 가로 2칸: 내용(pad 12 · 세로 gap 12) + 오른쪽 삭제칸 64(#F9FAFC).
+    // 열 폭 281/141×5, 라벨 13/500 #474D54 와 입력 사이 8. 규격은 CSS(#items-container)에 있다.
     return `<div class="item-card" data-idx="${idx}">
+      <div class="item-card-main">
       <div class="item-row">
-        <div class="item-inline-field" style="flex:1;min-width:0;">
+        <div class="item-inline-field" style="flex:2 1 236px;min-width:0;">
           <div class="item-field-label">제품명</div>
-          <div class="pac-wrap" style="position:relative;">
-            <input type="text" class="form-control item-display" id="pac-input-${idx}"
-                   style="width:100%;font-size:12px;height:32px;" autocomplete="off"
-                   placeholder="제품명 또는 코드 입력..."
-                   value="${displayName}"
-                   oninput="pacInput(${idx},this.value)"
-                   onkeydown="pacKey(event,${idx})"
-                   onfocus="if(this.value.trim())pacInput(${idx},this.value)"
-                   onblur="pacBlur(${idx})" />
-            <div class="pac-drop" id="pac-drop-${idx}"></div>
+          <div class="item-name-row">
+            <div class="pac-wrap" style="position:relative;">
+              <input type="text" class="form-control item-display" id="pac-input-${idx}"
+                     style="width:100%;font-size:13px;height:32px;" autocomplete="off"
+                     placeholder="제품명 또는 코드 입력"
+                     value="${displayName}"
+                     oninput="pacInput(${idx},this.value)"
+                     onkeydown="pacKey(event,${idx})"
+                     onfocus="if(this.value.trim())pacInput(${idx},this.value)"
+                     onblur="pacBlur(${idx})" />
+              <div class="pac-drop" id="pac-drop-${idx}"></div>
+            </div>
+            <button type="button" class="btn btn-sm item-search-btn" title="제품 검색"
+                    onmousedown="event.preventDefault()"
+                    onclick="pacSearchBtn(${idx})">
+              <i class="fa-solid fa-magnifying-glass"></i> 검색
+            </button>
           </div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">&nbsp;</div>
-          <button type="button" class="btn btn-primary btn-sm" title="제품 검색"
-                  style="flex-shrink:0;padding:0 10px;height:32px;"
-                  onmousedown="event.preventDefault()"
-                  onclick="pacSearchBtn(${idx})">
-            <i class="fa-solid fa-magnifying-glass"></i>
-          </button>
         </div>
         <input type="hidden" class="item-name"  value="${escHtml(item.product_name||'')}" />
         <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
         <input type="hidden" class="item-rbox"  value="${escHtml(item.r_box||'')}" />
         <input type="hidden" class="item-stock" value="${escHtml(String(item.stock||''))}" />
         <div class="item-inline-field">
-          <div class="item-field-label">급여구분</div>
+          <div class="item-field-label">급여 구분</div>
           <select class="form-control form-select item-nhis item-nhis-sel"
                   onchange="calcItem(${idx})">${nhisOpts}</select>
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">수량</div>
           <input type="number" class="form-control item-qty" value="${item.quantity||1}" min="1"
-                 oninput="calcItem(${idx})" style="font-size:12px;width:60px;text-align:center;height:32px;" />
+                 oninput="calcItem(${idx})" style="font-size:13px;width:100%;height:32px;" />
         </div>
         <div class="item-inline-field" id="item-rbox-field-${idx}" style="display:${item.r_box?'flex':'none'};">
           <div class="item-field-label">R-Box</div>
@@ -4716,34 +4965,45 @@ window.HELP_TOUR_STEPS = [
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">소비자가</div>
-          <input type="text" inputmode="numeric" class="form-control item-price" value="${fmtPrice(item.product_price)}"
-                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:32px;" />
+          <div class="item-money-row">
+            <input type="text" inputmode="numeric" class="form-control item-price" value="${fmtPrice(item.product_price)}"
+                   placeholder="소비자가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
+            <span class="item-won">₩</span>
+          </div>
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">보험가</div>
-          <input type="text" inputmode="numeric" class="form-control item-ins-price" value="${fmtPrice(item.insurance_price)}"
-                 placeholder="₩" oninput="calcItem(${idx})" style="font-size:12px;width:88px;text-align:right;height:32px;" />
+          <div class="item-money-row">
+            <input type="text" inputmode="numeric" class="form-control item-ins-price" value="${fmtPrice(item.insurance_price)}"
+                   placeholder="보험가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
+            <span class="item-won">₩</span>
+          </div>
         </div>
         <div class="item-inline-field">
-          <div class="item-field-label">총금액</div>
-          <div class="item-total-amt" style="font-size:12px;font-weight:700;color:var(--primary);height:32px;display:flex;align-items:center;white-space:nowrap;min-width:80px;">₩ ${totalAmt}</div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">&nbsp;</div>
-          <button type="button" class="btn btn-sm" onclick="removeItem(${idx})"
-                  style="flex-shrink:0;padding:0 8px;height:32px;background:none;border:1px solid var(--danger);color:var(--danger);" title="삭제">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          <div class="item-field-label">총 금액</div>
+          <div class="item-total-amt">₩ ${totalAmt}</div>
         </div>
       </div>
       <div class="item-meta" id="item-meta-${idx}" style="display:${item.stock?'flex':'none'};align-items:center;gap:6px;padding:4px 2px 2px;flex-wrap:wrap;">
         ${item.stock  ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(item.stock).toLocaleString()}</span>` : ''}
       </div>
       <div class="item-summary">
-        <span style="color:var(--text-muted);font-size:11px;">요양비:</span>
-        <b style="color:var(--primary);" class="item-nhis-amt">₩ ${nhisAmt}</b>
-        <span style="margin-left:auto;color:var(--text-muted);font-size:11px;">환자부담:</span>
-        <b class="item-copay">₩ ${copay}</b>
+        <span class="item-sum-grp">
+          {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「급여」로 적는다 --}}
+          <span class="item-sum-badge">급여</span>
+          <b class="item-nhis-amt">₩ ${nhisAmt}</b>
+        </span>
+        <span class="item-sum-div"></span>
+        <span class="item-sum-grp">
+          <span class="item-sum-badge is-copay">환자부담</span>
+          <b class="item-copay">₩ ${copay}</b>
+        </span>
+      </div>
+      </div>
+      <div class="item-del-col">
+        <button type="button" class="btn btn-sm item-del-btn" onclick="removeItem(${idx})" title="삭제">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </div>
     </div>`;
   }
@@ -6697,6 +6957,20 @@ window.HELP_TOUR_STEPS = [
   function submitNhis() {
     showToast('공단 청구는 요양기관정보마당에 직접 입력·업로드합니다.', 'info');
   }
+
+  /* ── 등록자 카드 탭 (시안 148:279) ──────────────────────
+     보여 줄 판만 바꾼다. 값은 서버가 이미 그려 놓았다. */
+  window.rgTab = function (which) {
+    const isOcr = which === 'ocr';
+    document.getElementById('infoPanel-uploader').style.display = isOcr ? 'none' : '';
+    document.getElementById('infoPanel-ocr').style.display      = isOcr ? '' : 'none';
+    for (const [id, on] of [['rgTabUploader', !isOcr], ['rgTabOcr', isOcr]]) {
+      const t = document.getElementById(id);
+      if (!t) continue;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+  };
 
   // ── OCR 재분석 ────────────────────────────────────────
   async function reanalyzeOCR() {

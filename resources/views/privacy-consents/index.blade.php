@@ -7,25 +7,38 @@
 @push('styles')
 <style>
   /* 결과바 '선택 N건' — 전역에 없어 화면마다 정의한다.
-     Figma 266:66: 13px/500 · lh21 · grayscale/600, 숫자만 primary/400 */
+     Figma 342:4037: 13px/500 · lh21 · grayscale/600, 숫자만 primary/400 */
 
-  /* 패널 탭(조회 결과 / 상세 내용) — Figma 266:66: 카드 안 상단 h44 · pad 0/16 · 하단 1px --border */
+  /* 검색 카드 9열 그리드 — 이 시안(342:4037)의 필드 사이 간격은 16 이다.
+     전역 .ds-filter-fields 는 gap 12 라 열폭이 143.1(span-2 = 298.2)로 나온다.
+     16 으로 두면 열폭 (1384 - 16×8) / 9 = 139.6 → span-2 = 295.1 이 되어
+     시안 검색어 295, 기간 묶음 왼끝 311 · 오른끝 606(구현 311.1 ~ 606.2)이 소수점까지 맞는다.
+     전역을 바꾸면 다른 7개 화면에 함께 번지므로 이 화면에서만 덮는다(globalCssNeeded 참고). */
+  .ds-filter-card .ds-filter-fields { gap: 16px; }
 
-  /* 유형 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18).
-     원래 하늘색·초록 하드코딩이었다. 초록은 이 디자인에 없어 DS 토큰(primary-100/600 · gray-100/600)으로 바꿨다. */
-  .badge-type { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
-  .badge-type.catheter { background:var(--primary-100); color:var(--primary-600); }
-  .badge-type.stoma    { background:var(--gray-100);    color:var(--gray-600); }
+  /* 패널 탭(조회 결과 / 상세 내용) — Figma 342:4037: 카드 안 상단 h44 · pad 0/16 · 하단 1px --border.
+     비활성 탭 글자색은 시안이 #656C74(gray-600)인데 전역 .pnl-tab 은 var(--text-muted)(gray-400 #999EA4)라
+     두 단계 연하다. 전역을 바꾸면 다른 화면에 함께 번지므로 이 화면에서만 덮는다(globalCssNeeded 참고). */
+  .ds-grid-card .pnl-tab { color: var(--gray-600); }
+  .ds-grid-card .pnl-tab:hover,
+  .ds-grid-card .pnl-tab.active { color: var(--primary); }
+
+  /* 이름 옆 유형 — 시안 342:4519 Frame 48101480 은 배지가 아니라 14px/700 · lh22 · #83888F 평문이다
+     ('김스트' 16/700 gap 8 '카테터' 14/700). 낱말과 클래스명(JS 가 붙인다)은 그대로 두고 규격만 시안에 맞춘다.
+     원래 배지 규격(r6 · pad 2/6 · 11px/500 · lh18 · primary-100/gray-100 바탕)이었다. */
+  .badge-type { display:inline-flex; align-items:center; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-500); }
+  .badge-type.catheter,
+  .badge-type.stoma { background:none; padding:0; border-radius:0; color:var(--gray-500); }
 
   /* 상세 탭은 .ds-grid-card(overflow:hidden · 높이가 뷰포트에 묶임) 안으로 들어왔다.
      내용이 카드보다 길면 잘려서 볼 수가 없으므로 이 블록만 스스로 스크롤하게 한다.
      (카드 높이가 내용보다 넉넉하면 스크롤바는 나오지 않는다) */
-  /* 시안 266:527 상세 본문은 pad 16 안에서 제목 줄부터 바로 시작한다(Frame 48101520 1568×846 · pad 16 · gap 12).
+  /* 시안 342:4519 상세 본문은 pad 16 안에서 제목 줄부터 바로 시작한다(Frame 48101520 1568×705 · pad 16 · gap 12).
      '조회결과로' 버튼은 시안에 없지만 개발 기능이라 지우지 않고 같은 pad 16 줄의 오른쪽 끝으로 옮긴다. */
   #pcTabDetail { min-height:0; overflow-y:auto; position:relative; }
   .pc-detail-back { position:absolute; top:16px; right:16px; z-index:1; }
 
-  /* ── 상세 내용 탭 — Figma 266:527 ──
+  /* ── 상세 내용 탭 — Figma 342:4519 ──
      제목 줄(1536×26)은 전체 폭, 그 아래 카드 3장이 한 줄(504×384 균등 · gap 12).
      시안은 세 카드 아래끝이 맞는다 — align-items 를 stretch(기본)로 둬 가장 긴 카드에 높이를 맞춘다. */
   .pc-memo-btn {
@@ -80,9 +93,9 @@
   .drow .v { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); word-break:break-word; text-align:right; }
   /* 한 줄에 상자 두 개 — 시안 Frame 48101685 472×74 · gap 8 (칸마다 232) */
   .dpair { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; min-width:0; }
-  /* 제목 줄 — 시안 Frame 48101627: [이름 16/700 lh26 gray-1000] gap 8 [유형] 순서다.
-     유형은 시안에서 배지가 아니라 14/700 gray-500 글자지만, 배지는 개발 자산이라 지우지 않고
-     순서만 시안대로 이름 뒤로 옮겼다. */
+  /* 제목 줄 — 시안 342:4519 Frame 48101627/48101480(87×26):
+     [이름 42×26 · 16/700 lh26 gray-1000] gap 8 [유형 37×22 · 14/700 lh22 gray-500] 순서다.
+     유형 글자 규격은 위 .badge-type 에서 시안대로 맞췄다. */
   .pc-detail-name { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000); }
   /* 결과바 안내문 강조 — 시안은 굵기가 아니라 색(primary-700)으로 강조한다.
      전역 .ds-grid-hint b 규칙이 없어 이 화면에서만 맞춘다(globalCssNeeded 참고). */
@@ -104,16 +117,24 @@
 @endpush
 
 @section('content')
-{{-- 유형 칩 — Figma 266:66: h31 · r999 · pad 6/10 · 12px/700, 건수 배지 16×16 정원 --}}
+{{-- 유형 칩 — Figma 342:4037: h31 · r999 · pad 6/10 · 12px/700, 건수 배지 16×16 정원 --}}
 <div class="ds-chips">
   <a href="{{ route('privacy-consents.index') }}" class="ds-chip {{ (request('type','all')==='all')?'active':'' }}">전체 <span class="ds-chip-count">{{ $counts['all'] }}</span></a>
   <a href="{{ route('privacy-consents.index',['type'=>'catheter']) }}" class="ds-chip {{ request('type')==='catheter'?'active':'' }}">카테터 <span class="ds-chip-count">{{ $counts['catheter'] }}</span></a>
   <a href="{{ route('privacy-consents.index',['type'=>'stoma']) }}" class="ds-chip {{ request('type')==='stoma'?'active':'' }}">장루 <span class="ds-chip-count">{{ $counts['stoma'] }}</span></a>
 </div>
 
-{{-- 검색 필터 — Figma 266:66: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
-     시안은 검색어 2열(295px) + 기간 2열(135 ~ 135). 기간은 '시작일/종료일' 이름을 지우지 않으려고
-     9열 그리드에서 1열씩 두 칸으로 뒀다(143+12+143=298 ≒ 시안 295). --}}
+{{-- 검색 필터 — Figma 342:4037 Frame 48101549: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
+     9열 그리드 gap 16(위 스타일에서 덮음) → 열폭 139.6.
+     시안은 검색어 span-2 = 295.1(시안 295) · 기간 묶음 311.1~606.2(시안 311~606) 로 바깥선이 맞는다.
+
+     시안은 기간을 라벨 하나('기간') + [135] ~ [135] 한 칸으로 그렸지만, 그렇게 합치면
+     '시작일'·'종료일' 두 낱말이 화면에서 사라진다(keep.mjs 가 손실로 잡는다).
+     낱말 삭제 금지 규칙이 우선이라 1열씩 두 칸을 그대로 두고 바깥 폭만 시안에 맞췄다.
+     안쪽 나눔은 시안 135/8/'~'9/8/135, 구현 139.6/16/139.6 이다 — 디자이너 확인이 필요하다.
+
+     '검색어' 라벨도 같은 이유다. 시안 라벨은 '검색어'(34×21) 뿐이지만
+     '(성명/연락처/이메일)' 을 떼면 그 낱말이 화면에서 없어진다(플레이스홀더는 'ㆍ' 로 이어진 다른 문자열이다). --}}
 <form method="GET" action="{{ route('privacy-consents.index') }}" class="ds-filter-card">
   <input type="hidden" name="type" value="{{ request('type','all') }}">
   <div class="ds-filter-fields">
@@ -138,7 +159,7 @@
   </div>
 </form>
 
-{{-- Figma 266:66 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+{{-- Figma 342:4037 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
 <div class="ds-grid-section">
   <div class="ds-grid-bar">
     <div class="ds-grid-bar-left">
@@ -201,7 +222,12 @@
     toolbar: false,         // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     summary: false,
     footer: false,          // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바에 있다
-    // 컬럼 폭·정렬은 Figma 266:66 실측 — 체크 40 · No 60 · 주소 400 · 나머지 153 (합 1571 ≒ 카드 1568).
+    // 아래 폭은 옛 시안(266:66) 실측이다 — 체크 40 · No 60 · 주소 400 · 나머지 153 (합 1571 ≒ 카드 1568).
+    // 새 시안 342:4037 은 컬럼 구성과 폭이 다르다 —
+    //   체크 40 · No 60 · 구분 100 · 유형 62 · 성명 62 · 연락처 120 · 이메일 180 · 주소 360 ·
+    //   보험 80 · 지원 자격 80 · 필수동의 72 · 마케팅 72 · 제출일시 140 · 관리자 메모 140 (합 1568).
+    // width 는 엑셀 내려받기 열 폭으로도 나가고 '구분'·'관리자 메모' 는 데이터원 자체가 없어서
+    // (privacy_consents 에 대응 컬럼 0건) 퍼블리셔가 손대지 않았다. 로직 담당 확인이 필요하다.
     // 시안은 머리글·본문 모두 왼쪽 정렬이라 align:'center' 를 두지 않는다.
     columns: [
       { header: '구분',     name: 'source',    width: 120, sortable: true },
@@ -389,7 +415,7 @@
     return '<span style="color:var(--gray-400);">-</span>';
   }
   function drow(k, vHtml) { return '<div class="drow"><span class="k">' + k + '</span><span class="v">' + vHtml + '</span></div>'; }
-  // 시안 266:527 — '동의함 (필수)' 는 괄호까지 통째로 13/500 primary,
+  // 시안 342:4519 — '동의함 (필수)' 는 괄호까지 통째로 13/500 primary,
   // '동의함 (선택)' 은 '(선택)' 부분만 13/500 gray-500 이다(값 글자 규격과 같은 13px).
   const REQ = ' <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--primary);">(필수)</span>';
   const OPT = ' <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-500);">(선택)</span>';

@@ -7,24 +7,54 @@
 
 @push('styles')
 <style>
-  /* 행 안의 작은 버튼 — 셀 높이를 넘지 않게 둔다.
-     배지 규격(r6 · pad 2/6 · 11px · lh18)에 맞춘다. */
-  .pc-cellbtns { display: flex; gap: 4px; align-items: center; }
+  /* 검색 카드 3필드 — 이 시안(266:66)은 9열 균등 분배가 아니다.
+     Frame 48101591/48101593/48101592 실측: 검색어 295 · 기간(서명일) 295 · 서명 여부 140,
+     필드 간격 16, 세 필드가 왼쪽에 몰리고 필드 영역(1384)의 오른쪽은 빈칸으로 남는다.
+     전역 9열 그리드(span-3/4/2 · gap 12)로는 453/608/298 이 되어 시안보다 훨씬 넓다. */
+  .ds-filter-card .ds-filter-fields { display: flex; gap: 16px; }
+  .ds-filter-card .ds-filter-field.span-3 { flex: 0 1 295px; }
+  .ds-filter-card .ds-filter-field.span-4 { flex: 0 1 295px; }
+  .ds-filter-card .ds-filter-field.span-2 { flex: 0 1 140px; }
+
+  /* 행 안의 작은 버튼 — 시안 266:66 실측(Frame 74×28)에 맞춘다.
+     h28 · r8 · pad 0/12 · gap 6 · 12px/500 lh19 · 글자 gray-1000 · bd 1px gray-200 · bg 흰색.
+     버튼이 28 이 되면서 본문 행도 10+28+10 = 48(시안값)로 따라온다. */
+  .pc-cellbtns { display: flex; gap: 6px; align-items: center; }
+  /* 컬럼 폭이 시안보다 좁다 — 다운로드 275(시안 320) · 위임동의 95(시안 100).
+     내용폭이 약 1406 아래로 내려가면 컬럼이 정의폭까지 좁아지는데,
+     그 폭에서 시안 규격 버튼 묶음(275.2)은 셀 안쪽 250 을 25.2 넘고
+     '재발송'(75.1)은 셀 안쪽 70 을 5.1 넘는다. 셀은 overflow:hidden 이라 그대로 잘린다.
+     (1440·1600 노트북에서 사이드바를 펼치면 바로 이 폭이 된다.)
+     컬럼 정의는 퍼블리셔가 손대는 자리가 아니므로, 잘리는 대신 접히게만 둔다 —
+     묶음은 다음 줄로 넘기고, 홀버튼은 셀 안쪽까지만 차지한다.
+     내용폭 1568(시안값)에서는 여유 34.8 이라 아무 것도 달라지지 않는다.
+     제대로 고치려면 컬럼 폭 275 → 320 · 95 → 100 이 필요하다(로직 담당). */
+  .pc-cellbtns { flex-wrap: wrap; }
   .pc-cellbtn {
-    display: inline-flex; align-items: center; gap: 3px;
-    padding: 2px 6px; font-size: 11px; font-weight: 700; line-height: 18px;
-    white-space: nowrap; border: 1px solid var(--gray-200); border-radius: 6px;
-    background: var(--gray-0); color: var(--gray-700); cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    min-width: 0; max-width: 100%; overflow: hidden;
+    height: 28px; padding: 0 12px;
+    font-size: 12px; font-weight: 500; line-height: 19px;
+    white-space: nowrap; border: 1px solid var(--gray-200); border-radius: 8px;
+    background: var(--gray-0); color: var(--gray-1000); cursor: pointer; text-decoration: none;
   }
+  /* 아이콘 12×12 — 크기를 안 박으면 버튼 글자 크기를 그대로 물려받는다 */
+  .pc-cellbtn i { font-size: 12px; line-height: 1; flex-shrink: 0; }
   .pc-cellbtn:hover  { border-color: var(--primary); color: var(--primary); }
   /* 원래 서명 PNG=초록 · PDF=빨강 · SMS=남색이었다. 시안 색은 primary/alert 두 램프뿐이라
-     '받기' 세 개는 중립(gray)으로 두고, 동작 버튼(발송)만 primary 로 남긴다. */
-  .pc-cellbtn.is-png { color: var(--gray-700); border-color: var(--gray-200); }
-  .pc-cellbtn.is-pdf { color: var(--gray-700); border-color: var(--gray-200); }
-  .pc-cellbtn.is-sms { color: var(--primary); border-color: var(--primary-200); }
-  /* 받을 수 없는 서류는 눌리지 않게 두되, 왜 없는지 title 로 알린다 */
-  .pc-cellbtn[disabled] { opacity: .38; cursor: not-allowed; border-color: var(--gray-200); color: var(--gray-500); }
-  .pc-cellbtn[disabled]:hover { border-color: var(--gray-200); color: var(--gray-500); }
+     '받기' 세 개는 중립(gray-1000)으로 두고, 동작 버튼(발송)만 글자를 primary 로 남긴다.
+     테두리는 시안에서 다섯 개 모두 gray-200 으로 같다. */
+  .pc-cellbtn.is-png { color: var(--gray-1000); border-color: var(--gray-200); }
+  .pc-cellbtn.is-pdf { color: var(--gray-1000); border-color: var(--gray-200); }
+  .pc-cellbtn.is-sms { color: var(--primary); border-color: var(--gray-200); }
+  /* 받을 수 없는 서류는 눌리지 않게 두되, 왜 없는지 title 로 알린다.
+     시안 만료 행은 투명도를 쓰지 않는다 — 바탕만 gray-50, 글자·아이콘만 gray-300 이고
+     테두리는 gray-200 그대로다(opacity 를 주면 테두리까지 같이 흐려진다). */
+  .pc-cellbtn[disabled] {
+    background: var(--gray-50); border-color: var(--gray-200); color: var(--gray-300);
+    cursor: not-allowed;
+  }
+  .pc-cellbtn[disabled]:hover { background: var(--gray-50); border-color: var(--gray-200); color: var(--gray-300); }
 </style>
 @endpush
 
@@ -55,10 +85,10 @@
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="이름 · 전화번호 · 처방번호">
+             placeholder="이름ㆍ전화번호ㆍ처방번호">
     </div>
     <div class="ds-filter-field span-4">
-      <label class="ds-field-label">기간 (서명일)</label>
+      <label class="ds-field-label">기간(서명일)</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control">
         <span class="ds-field-sep">~</span>

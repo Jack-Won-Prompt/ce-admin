@@ -80,7 +80,13 @@
     /* 접힘 폭이 64px 이라 사이드바 좌우 16px 패딩을 그대로 두면 내용이 32px 밖에 못 쓴다 */
     .layout-menu.collapsed { padding: 0 8px 8px; }
     .layout-menu.collapsed .menu-inner { padding: 8px; gap: 8px; }
-    .layout-menu.collapsed .app-brand { justify-content: center; padding: 0; height: var(--nav-h); }
+    /* 접힘 폭 64 - 좌우 패딩 16 = 내용 48px. 로고 28 + 버튼 28 을 가로로 두면 넘쳐서
+       justify-content:center 가 무력화되고 둘 다 사이드바 모서리에 붙는다.
+       세로로 쌓으면 28 + 4 + 28 = 60 이라 머리 높이 68 안에 들어가고 가운데 정렬이 살아난다 */
+    .layout-menu.collapsed .app-brand {
+      flex-direction: column; justify-content: center; gap: 4px;
+      padding: 0; height: var(--nav-h);
+    }
     .layout-menu.collapsed .app-brand > a { flex: 0 0 auto; min-width: 0; }
     .layout-menu.collapsed .app-brand-names { display: none; }
     .layout-menu.collapsed .menu-link { justify-content: center; padding: 8px 0; }
@@ -107,35 +113,45 @@
     .layout-menu.collapsed .menu-link:hover::after { opacity: 1; }
 
     /* Collapse toggle btn */
+    /* Figma 228:4332 은 16×16 chevron 만 있고 그 오른쪽 끝이 머리 padding 끝(16px 안쪽)에 붙는다.
+       28×28 조작 영역은 개발자가 넣은 것이라 남기되, margin-right -6px 로 통째로 6px 밀어
+       가운데 놓인 16px 아이콘의 오른쪽 끝이 시안 위치(16px 안쪽)에 오게 한다 */
     .menu-collapse-btn {
-      margin-left: auto; flex-shrink: 0;
+      margin-left: auto; margin-right: -6px; flex-shrink: 0;
       width: 28px; height: 28px; border-radius: 6px;
       background: transparent; border: none;
-      color: var(--text-muted); cursor: pointer;
+      color: var(--gray-500); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      font-size: 13px;
       transition: background .15s, color .15s;
     }
     .menu-collapse-btn:hover { background: var(--bg); color: var(--primary); }
-    .layout-menu.collapsed .menu-collapse-btn { margin-left: 0; }
+    .layout-menu.collapsed .menu-collapse-btn { margin-left: 0; margin-right: 0; }
     .menu-collapse-btn .ic-expanded { display: flex; }
     .menu-collapse-btn .ic-collapsed { display: none; }
+    /* 아이콘 파일이 « 하나뿐이라 접힘용은 좌우를 뒤집어 »(펼치기)로 읽히게 한다 */
+    .menu-collapse-btn .ic-collapsed { transform: scaleX(-1); }
     .layout-menu.collapsed .menu-collapse-btn .ic-expanded { display: none; }
     .layout-menu.collapsed .menu-collapse-btn .ic-collapsed { display: flex; }
 
     /* Brand */
-    /* 브랜드 영역 — Figma: height 68, padding 0 16, space-between, 좌측 gap 8
+    /* 브랜드 영역 — Figma 228:4332: 288×68, padding 0 16, space-between, itemSpacing 12
+       (로고묶음 안쪽 gap 8 · 이름묶음 gap 4 는 그대로)
        (사이드바가 페이지 배경 위에 얹히는 구조라 하단 구분선은 없다) */
     .app-brand {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 0 16px;
       min-height: var(--nav-h);
       text-decoration: none;
       flex-shrink: 0;
     }
+    /* 시안은 로고 이미지에 exposure -1 이 걸려 거의 검정(rgb 14,14,14)으로 나온다.
+       원본 PNG 는 불투명부가 전부 rgb 111 단색이라 brightness .127 이면 111×.127=14.1 → 14 로 떨어진다.
+       (에셋을 exposure 반영해 다시 내려받으면 이 filter 는 지운다) */
     .app-brand-logo {
       width: 28px; height: 28px; flex-shrink: 0;
       object-fit: cover; display: block;
+      filter: brightness(.127);
     }
     /* 워드마크가 이미지라 화면낭독기·검색에는 글자가 남아야 한다 */
     .visually-hidden {
@@ -352,9 +368,10 @@
     /* 건수 배지 — 16×16 원, 칩 상태에 따라 색이 뒤집힌다 */
     .ds-chip-count {
       display: inline-flex; align-items: center; justify-content: center;
-      /* 시안은 16×16 정원이다. 한두 자리는 그대로 정원이고,
-         세 자리부터는 숫자가 원 밖으로 튀지 않게 가로만 늘어난다. */
-      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+      /* 시안은 16×16 정원이다 — 두 자리(37·34)도 16 그대로다.
+         좌우 여백을 두면 두 자리가 20~21 로 벌어진다. 여백은 0 으로 두고,
+         min-width 만 남겨 세 자리부터 글자 폭만큼 늘어나게 한다. */
+      min-width: 16px; height: 16px; padding: 0; border-radius: 999px;
       background: var(--gray-500); color: var(--gray-0);
       font-size: 10px; font-weight: 700; line-height: 1; flex-shrink: 0;
     }
@@ -413,7 +430,7 @@
     /* Figma 114:4778 — 라벨 13/500 · lh21 · grayscale/700. 라벨 21 + gap 8 + 인풋 32 = 필드 61 */
     .ds-field-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
-    .ds-field-range { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
     .ds-field-sep { color: var(--gray-400); font-size: 13px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
@@ -438,6 +455,9 @@
     .ds-grid-bar {
       display: flex; align-items: center; justify-content: space-between;
       height: 32px; flex-shrink: 0;
+      /* 자리가 남을 때는 space-between 이 알아서 벌리고, 좁아져 두 묶음이 만나는 순간부터
+         이 12 가 버틴다. 없으면 건수 묶음과 안내문이 간격 0 으로 맞붙는다(1280 에서 확인). */
+      column-gap: 12px;
     }
     .ds-grid-bar-left  { display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0; }
     /* 오른쪽 액션 묶음 — 상단바는 space-between 이라 그대로 우측에 붙는다.
@@ -456,24 +476,37 @@
     /* 안내문 — 시안은 앞에 12×12 alert-circle 이 붙고 글자와 간격 4 다.
        마크업을 화면마다 고치지 않도록 아이콘은 mask 로 그린다. */
     .ds-grid-hint {
-      /* gap 을 두면 문장 안의 <b> 가 별개 flex 아이템이 되어 앞뒤로 4px 이 끼어든다.
-         "행을 <b>더블클릭</b>하면" 이 "행을 더블클릭 하면" 으로 갈라진다.
-         아이콘과의 간격은 ::before 의 바깥 여백으로 준다. */
-      display: inline-flex; align-items: center; gap: 0;
+      /* 문장을 flex 로 담으면 안 된다. flex 컨테이너는 자식 사이의 '공백만 있는 글자마디'를
+         아예 그리지 않아서 "행을 <b>더블클릭</b>하면" 이 "행을더블클릭하면" 으로 붙는다.
+         gap 을 주면 이번엔 <b> 앞뒤로 간격이 끼어들어 "행을 더블클릭 하면" 으로 갈라진다.
+         둘 다 문장을 망가뜨린다 — 안쪽은 보통 글줄(inline)로 두고 아이콘만 inline-block 으로
+         앞에 세운다. 이러면 낱말 사이 공백이 글자 그대로 살아난다. (.ds-grid-bar 의
+         flex 아이템이라 바깥 display 는 어차피 block 으로 굳는다.) */
+      display: inline-block;
       min-width: 0; margin-right: 4px;
       font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .ds-grid-hint::before {
-      content: ''; flex-shrink: 0; width: 12px; height: 12px; margin-right: 4px;
+      /* 상자를 글줄 높이(19)만큼 잡고 vertical-align:top 으로 글줄 꼭대기에 맞춘 뒤
+         12×12 아이콘을 그 안에서 가운데 그린다. 이러면 어림 보정값 없이 정확히 가운데 선다. */
+      content: ''; display: inline-block; vertical-align: top;
+      width: 12px; height: 19px; margin-right: 4px;
       background: currentColor;
-      -webkit-mask: var(--icon-alert-circle) center / contain no-repeat;
-              mask: var(--icon-alert-circle) center / contain no-repeat;
+      -webkit-mask: var(--icon-alert-circle) center / 12px 12px no-repeat;
+              mask: var(--icon-alert-circle) center / 12px 12px no-repeat;
     }
+    /* 개발자가 안내문 앞에 아이콘을 이미 넣어 둔 화면이 있다(NHIS 청구의 info-circle,
+       정산/회계 가상계좌 탭의 경고 삼각형). 그 자리에 전역 아이콘까지 그리면 두 개가 나란히 선다.
+       마크업에서 지우는 대신 — 개발자가 고른 아이콘이 뜻을 나르는 자리다 — 전역 쪽을 접는다. */
+    .ds-grid-hint:has(> i:first-child)::before,
+    .ds-grid-hint:has(> svg:first-child)::before { content: none; }
     /* 결과바 버튼은 시안에서 테두리가 없다 (검색 카드의 초기화·검색과 다르다) */
     .ds-grid-bar .ds-btn { border-color: transparent; flex-shrink: 0; }
     .ds-grid-bar .ds-btn:hover { border-color: var(--gray-200); }
-    .ds-grid-bar .ds-btn-primary { border-color: var(--primary); }
+    /* 결과바 버튼은 primary 여도 테두리가 없다 — 시안 19개 전수 확인
+       (엑셀 저장 · 환자 추가 · 선택 상세 · 신규 위임동의 전송 · 캘린더뷰 …).
+       테두리가 있는 것은 카드 안 버튼뿐이다(처방전 검수 화면 · 주문 상세). */
     .ds-grid-card {
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
@@ -1096,7 +1129,10 @@
     html.is-framed .layout-navbar { display: none !important; }
     html.is-framed .layout-page { margin-left: 0 !important; }
     html.is-framed .content-wrapper { padding-top: 0 !important; }
-    html.is-framed .page-body { padding-top: 14px; }
+    /* 탭 안에서는 위 여백을 두지 않는다. 탭줄과 본문 사이 간격은 워크스페이스 셸의
+       #wsRoot gap 12 가 이미 만든다(시안 148:5526 container gap 12).
+       여기서 14 를 더하면 탭으로 열었을 때만 26 이 되어 시안보다 14px 벌어진다. */
+    html.is-framed .page-body { padding-top: 0; }
 
     /* 프레임 안에서만 보이는 화면 단추 줄. 비어 있으면 자리도 차지하지 않는다 —
        :empty 로는 공백 때문에 잡히지 않아 자식이 없을 때를 본다. */

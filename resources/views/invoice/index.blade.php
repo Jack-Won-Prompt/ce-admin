@@ -29,6 +29,16 @@
   font-size:10px; font-weight:700; line-height:1;
 }
 .pnl-tab.active .badge-cnt { background:var(--primary-light); color:var(--primary); }
+/* 행을 고르기 전에는 #detail-tab-label 이 비어 있는데, 빈 span 도 flex 아이템이라
+   탭 gap 6 이 남아 탭 상자가 5px 넓어진다. 비었을 때만 접는다(내용이 들어오면 다시 뜬다). */
+.pnl-tab #detail-tab-label:empty { display:none; }
+/* 비활성 탭 글자 — 시안 282:934 는 #656C74(gray-600)다. 전역 .pnl-tab 은
+   var(--text-muted)(#999EA4)라 이 화면에서만 맞춘다(전역 교정은 따로 올렸다).
+   전역 .pnl-tab:hover/.active 와 특정성이 같아 뒤에 실리면 이 규칙이 이기므로
+   활성·호버 색도 함께 다시 적는다. */
+.pnl-tabs .pnl-tab { color:var(--gray-600); }
+.pnl-tabs .pnl-tab:hover,
+.pnl-tabs .pnl-tab.active { color:var(--primary); }
 
 /* ── 패널 콘텐츠 ── */
 .panel-body { display:none; }
@@ -68,9 +78,13 @@
 /* Figma 282:3064 — 머리줄(주문번호 16/700 + 상태 배지), 그 아래 카드 3열 gap 12 */
 .inv-detail-head { display:flex; align-items:center; gap:12px; padding:16px 16px 0; flex-wrap:wrap; }
 .inv-detail-no { font-size:16px; font-weight:700; line-height:26px; color:var(--gray-1000); }
-.inv-detail-col { display:flex; flex-direction:column; gap:12px; min-width:0; }
+/* 머리줄 오른쪽 묶음 — 시안은 '주문 상세' 하나지만 개발이 넣은 '목록' 을 함께 둔다 */
+.inv-detail-head-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
 
-.detail-wrap { padding:16px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:start; }
+/* 패널 pad 16 → 머리줄 32 → gap 12 → 카드줄. 머리줄이 위·좌우 16 을 이미 냈으므로
+   카드줄은 위 12 만 준다(시안 282:3064 Frame 48101521 pad 16 · gap 12).
+   카드 3장은 같은 높이(384)로 늘어난다 — align-items 는 stretch. */
+.detail-wrap { padding:12px 16px 16px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:stretch; }
 @media(max-width:1200px){ .detail-wrap{grid-template-columns:1fr;} }
 
 /* 카드 — r12 · pad 12/16 · gap 12 · bd 1px gray-200, 그림자 없음 */
@@ -89,9 +103,12 @@
 .dl { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0; }
 .dl-row { display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:8px; background:var(--gray-100); min-width:0; }
 .dl-row.wide { grid-column:span 2; }
-.dl dt { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
+/* 항목 라벨은 검색 필드 라벨과 같은 gray-700 (시안 #474D54) */
+.dl dt { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
 .dl dd { margin:0; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000);
   text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 금액 요약 세 값 중 공급가액만 primary 로 강조한다 (시안 282:3064) */
+#d-ti-supply-fmt { color:var(--primary); }
 
 .inv-status-box {
   display:flex; flex-direction:column; gap:8px;
@@ -102,8 +119,10 @@
 .inv-status-box.status-cancelled { border-color:var(--alert-100); }
 .inv-status-box.status-none      { border-color:transparent; }
 
+/* 항목상자 안 라벨 — 시안은 왼쪽 위 라벨 13/500 gray-700, 값은 오른쪽 아래 */
+.inv-status-name { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
 .inv-status-row {
-  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px;
 }
 .inv-status-label {
   display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; line-height:21px;
@@ -114,15 +133,22 @@
 }
 .inv-status-meta span { display:inline-flex; align-items:center; gap:4px; }
 
-/* 발행·취소 버튼 묶음 — 시안은 섹션 머리줄 우측. JS 가 innerHTML 로 채운다. */
-.detail-action-bar {
-  display:flex; gap:8px; flex-wrap:wrap;
+/* 발행·취소 버튼 묶음 — 시안 282:3064 은 카드 머리줄 우측에 두 개가 나란히(사이 7).
+   JS 가 각 상자(#d-ti-actions · #d-cr-actions)를 innerHTML 로 채운다. */
+.inv-issue-actions {
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
   margin-left:auto; justify-content:flex-end;
 }
-.detail-action-bar .btn { height:28px; padding:3px 10px; }
-/* JS 가 붙이는 btn-success 는 초록인데 시안에 초록이 없다. 이 자리에서만 primary 로 맞춘다. */
-.detail-action-bar .btn-success { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
-.detail-action-bar .btn-success:hover { background:var(--primary-dark); color:var(--gray-0); }
+.detail-action-bar { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+/* 시안 버튼 — 100×28 · r8 · pad 0/12 · gap 6 · 흰 바탕 · bd 1px gray-200 · 12/500 lh19.
+   전역 .btn-success(초록)·.btn-primary(칠한 primary)는 시안에 없다.
+   특정성 (0,2,0) 으로 이 자리에서만 덮는다 — 클래스 이름은 JS 가 쓰므로 두었다. */
+.detail-action-bar .btn {
+  height:28px; padding:0 12px; gap:6px; border-radius:8px;
+  background:var(--gray-0); border:1px solid var(--gray-200); color:var(--gray-1000);
+  font-size:12px; font-weight:500; line-height:19px;
+}
+.detail-action-bar .btn:hover { background:var(--gray-50); }
 
 /* ── 모달 ── */
 .modal-overlay {
@@ -169,6 +195,13 @@
     'tax_issued'   => ['세금계산서 발행',   $counts['tax_issued'],   'green'],
     'cash_issued'  => ['현금영수증 발행',   $counts['cash_issued'],  'green'],
   ];
+  /* 칩 라벨 뒤 괄호 설명 — 시안 282:934 는 이 문구를 칩 안에 넣는다
+     ("세금계산서 미발행(주문확정 · 배송중 · 배송완료)" 268×31,
+      "현금영수증 미발행(발행 대기 중)" 193×31). 라벨 표만 늘리고 위 배열은 그대로 둔다. */
+  $statusChipNotes = [
+    'tax_pending'  => '(주문확정 · 배송중 · 배송완료)',
+    'cash_pending' => '(발행 대기 중)',
+  ];
 @endphp
 
 @section('content')
@@ -191,7 +224,7 @@
   @foreach($statusFilterTabs as $key => [$label, $count, $color])
     <a href="{{ route('invoice.index', array_merge(request()->except('tab','page'), ['tab'=>$key])) }}"
        class="ds-chip {{ $tab === $key ? 'active' : '' }}">
-      {{ $label }}
+      {{ $label }}{{ $statusChipNotes[$key] ?? '' }}
       @if($count > 0)<span class="ds-chip-count">{{ $count }}</span>@endif
     </a>
   @endforeach
@@ -205,7 +238,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호 · 환자명">
+             placeholder="주문번호ㆍ환자명">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -245,7 +278,10 @@
       <span class="inv-stat">이번달 현금영수증 <b>{{ number_format($monthlyCashAmount) }}</b>원</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하거나 체크 후 눌러 상세보기로 이동</span>
+      {{-- 탭 이름이 시안 282:934 대로 '상세 내용' 이 됐으니 안내문도 같은 이름을 부른다.
+           시안 문장('행을 더블클릭하면 상세내용 탭으로 전환되어…')으로 통째로 갈면
+           '체크 후 눌러'(= 옆 '선택 상세' 버튼 설명)가 화면에서 없어진다 — 그 절은 남긴다. --}}
+      <span class="ds-grid-hint">행을 <b>더블클릭</b>하거나 체크 후 눌러 상세 내용 탭으로 이동</span>
       <button type="button" class="ds-btn" onclick="window.__invoiceGrid?.downloadExcel()">엑셀 저장</button>
       <button type="button" class="ds-btn" onclick="invoiceViewDetail()">선택 상세</button>
     </div>
@@ -260,7 +296,7 @@
         <span class="badge-cnt">{{ $total }}</span>
       </button>
       <button type="button" class="pnl-tab panel-tab-btn" id="btn-detail" onclick="switchPanel('detail')">
-        상세보기
+        상세 내용
         <span id="detail-tab-label" style="font-size:11px;color:var(--gray-600);font-weight:500;"></span>
       </button>
     </div>
@@ -285,10 +321,14 @@
 
       {{-- 헤더바 — Figma 282:3064: 주문번호 16/700 + 상태 배지, 우측 주문 상세 --}}
       <div class="inv-detail-head">
-        <button class="ds-btn" onclick="switchPanel('list')">목록</button>
         <span id="d-order-no" class="inv-detail-no"></span>
         <span id="d-status-badge" class="badge badge-secondary"></span>
-        <a id="d-order-link" href="#" class="ds-btn" target="_blank" style="margin-left:auto;">주문 상세</a>
+        {{-- 시안 머리줄은 왼쪽이 주문번호, 오른쪽이 '주문 상세'(95×32 · 뒤에 chevron 14×14)뿐이다.
+             개발이 넣은 '목록' 버튼은 지우지 않고 오른쪽 묶음 앞으로 옮겼다. --}}
+        <div class="inv-detail-head-actions">
+          <button class="ds-btn" onclick="switchPanel('list')">목록</button>
+          <a id="d-order-link" href="#" class="ds-btn" target="_blank">주문 상세 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+        </div>
       </div>
 
       {{-- 상세 그리드 — 시안은 3열(주문 기본 정보 / 금액 요약 / 세금계산서·현금영수증) --}}
@@ -321,33 +361,29 @@
           </div>
         </div>
 
-        {{-- 세금계산서 / 현금영수증 — 발행·취소 버튼은 각 카드 머리줄 우측 --}}
-        <div class="inv-detail-col">
-
-          {{-- 세금계산서 --}}
-          <div class="detail-section" id="d-ti-section">
-            <div class="detail-section-hd">
-              세금계산서
+        {{-- 세금계산서 / 현금영수증 — 시안 282:3064 은 카드 두 장이 아니라 한 장(504×384)이다.
+             제목은 '세금계산서 / 현금영수증', 발행 버튼 둘은 머리줄 우측(사이 7),
+             본문은 항목상자 두 개(각 472×74 · 라벨 위 / 값 오른쪽 아래).
+             카드 제목이던 '세금계산서'·'현금영수증' 은 각 상자의 라벨로 옮겼다. --}}
+        <div class="detail-section" id="d-ti-section">
+          <div class="detail-section-hd">
+            세금계산서 / 현금영수증
+            <div class="inv-issue-actions">
               <div class="detail-action-bar" id="d-ti-actions"></div>
-            </div>
-            <div class="detail-section-bd">
-              <div id="d-ti-box" class="inv-status-box status-none">
-                <div class="inv-status-row">
-                  <div class="inv-status-label" id="d-ti-status-label"></div>
-                </div>
-                <div class="inv-status-meta" id="d-ti-meta"></div>
-              </div>
-            </div>
-          </div>
-
-          {{-- 현금영수증 --}}
-          <div class="detail-section" id="d-cr-section">
-            <div class="detail-section-hd">
-              현금영수증
               <div class="detail-action-bar" id="d-cr-actions"></div>
             </div>
-            <div class="detail-section-bd">
+          </div>
+          <div class="detail-section-bd">
+            <div id="d-ti-box" class="inv-status-box status-none">
+              <div class="inv-status-name">세금계산서</div>
+              <div class="inv-status-row">
+                <div class="inv-status-label" id="d-ti-status-label"></div>
+              </div>
+              <div class="inv-status-meta" id="d-ti-meta"></div>
+            </div>
+            <div id="d-cr-section">
               <div id="d-cr-box" class="inv-status-box status-none">
+                <div class="inv-status-name">현금영수증</div>
                 <div class="inv-status-row">
                   <div class="inv-status-label" id="d-cr-status-label"></div>
                 </div>
@@ -355,7 +391,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>{{-- /detail-content --}}
