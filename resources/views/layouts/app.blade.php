@@ -752,6 +752,12 @@
       position: fixed; bottom: 20px; right: 20px; z-index: 9999;
       display: flex; flex-direction: column; gap: 8px; max-width: 360px;
     }
+    /* 부트스트랩 5 는 .toast:not(.showing):not(.show) 로 토스트를 숨겨 둔다(0,3,0).
+       우리 .toast(0,1,0) 규칙이 눌려, showToast() 가 만든 것이 화면에 뜨지 않았다 —
+       이 화면의 창고 알림뿐 아니라 앱 전체의 토스트가 그랬다.
+       id 를 앞에 붙여(1,1,0) 되찾는다. 부트스트랩의 .show 를 붙이는 길도 있으나,
+       그러면 토스트를 만드는 곳마다 그 약속을 지켜야 한다. */
+    #toastContainer .toast { display: flex; }
     .toast {
       display: flex; align-items: flex-start; gap: 10px;
       padding: 13px 16px; border-radius: 8px; color: #fff;
@@ -4258,6 +4264,28 @@ const ChatPanel = (() => {
   });
   adminCh.bind('prescription.uploaded', function (data) {
     showPrescriptionNotif(data);
+  });
+
+  /* 창고에서 상태가 바뀌면 토스트로 알린다.
+     웹훅은 사람이 보고 있지 않을 때 들어온다 — 목록을 새로 불러야 알게 되면
+     출고나 취소처럼 곧 손을 써야 하는 일이 늦어진다.
+     같은 사건이 두 번 방송되어도 토스트가 겹치지 않게 잠깐 기억해 둔다. */
+  const wwSeen = new Map();
+  adminCh.bind('withworks.status', function (data) {
+    if (!data) return;
+
+    const key = (data.event || '') + '|' + (data.body || '');
+    const now = Date.now();
+    if (wwSeen.get(key) > now - 5000) return;
+    wwSeen.set(key, now);
+
+    const msg = data.url
+      ? `<b>${escHtml(data.title)}</b><br>` +
+        `<a href="${escHtml(data.url)}" style="color:inherit;text-decoration:underline;">` +
+        `${escHtml(data.body)}</a>`
+      : `<b>${escHtml(data.title)}</b><br>${escHtml(data.body)}`;
+
+    showToast(msg, data.tone || 'info', 8000);
   });
 })();
 </script>

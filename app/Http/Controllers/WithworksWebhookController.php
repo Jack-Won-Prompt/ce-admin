@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\WithworksStatusChanged;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnLog;
@@ -159,6 +160,8 @@ class WithworksWebhookController extends Controller
         // 배송이 끝나야 청구할 수 있다 — 상태가 움직였으면 준비 여부도 다시 따진다
         $readiness->refresh($order->refresh());
 
+        $this->announce($data, $order);
+
         return response()->json(['success' => true]);
     }
 
@@ -207,7 +210,74 @@ class WithworksWebhookController extends Controller
             $return->update(['status' => $to]);
         }
 
+        $this->announceReturn($data, $return->refresh());
+
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * 판매 사건을 화면에 알린다.
+     *
+     * 웹훅은 사람이 보고 있지 않을 때 들어온다. 표에만 남기면 담당자가 목록을 새로
+     * 불러야 알게 되고, 출고나 취소처럼 곧 손을 써야 하는 일이 늦어진다.
+     *
+     * 모든 단계를 알리지는 않는다. 할당·피킹은 창고 안의 일이라 우리가 할 일이 없다 —
+     * 알림이 잦으면 정작 볼 것을 놓친다.
+     */
+    private function announce(array $data, Order $order): void
+    {
+        $tell = [
+            'so.invoiced'  => ['송장이 붙었습니다',  'info'],
+            'so.shipped'   => ['출고되었습니다',      'success'],
+            'so.delivered' => ['배송이 끝났습니다',   'success'],
+            'so.cancelled' => ['주문이 취소되었습니다', 'danger'],
+        ];
+
+        [$what, $tone] = $tell[$data['event']] ?? [null, null];
+        if (!$what) {
+            return;
+        }
+
+        $who  = $order->patient?->name;
+        $body = $order->order_number . ($who ? ' · ' . $who : '')
+            . ($order->withworks_tracking_no ? ' · ' . $order->withworks_tracking_no : '');
+
+        $this->tell('창고 — ' . $what, $body, route('orders.show', $order), $tone, $data['event']);
+    }
+
+    /** 반품 사건을 화면에 알린다 */
+    private function announceReturn(array $data, OrderReturn $return): void
+    {
+        $tell = [
+            'ro.created'   => ['반품이 창고에 접수되었습니다', 'info'],
+            'ro.confirmed' => ['반품 실물이 입고되었습니다',   'success'],
+            'ro.cancelled' => ['반품이 취소되었습니다',        'danger'],
+        ];
+
+        [$what, $tone] = $tell[$data['event']] ?? [null, null];
+        if (!$what) {
+            return;
+        }
+
+        $body = $return->receipt_no . ' · ' . $return->typeLabel()
+            . ($return->order?->patient?->name ? ' · ' . $return->order->patient->name : '');
+
+        $this->tell('창고 — ' . $what, $body, route('order-returns.show', $return), $tone, $data['event']);
+    }
+
+    /**
+     * 알림을 띄운다.
+     *
+     * 방송이 실패해도 웹훅은 성공이다 — 알리지 못한 것과 받지 못한 것은 다른 일이다.
+     * 여기서 터지면 그쪽이 같은 사건을 다시 보내고, 우리 표에는 이미 남아 있다.
+     */
+    private function tell(string $title, string $body, string $url, string $tone, string $event): void
+    {
+        try {
+            broadcast(new WithworksStatusChanged($event, $title, $body, $url, $tone));
+        } catch (\Throwable $e) {
+            Log::warning('[Withworks] 알림 방송 실패', ['event' => $event, 'error' => $e->getMessage()]);
+        }
     }
 
     /** 흐름에서 뒤로 가는 것인지 본다 — 취소는 어디서든 갈 수 있다 */
