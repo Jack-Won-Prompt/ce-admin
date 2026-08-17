@@ -16,16 +16,8 @@ use Illuminate\View\View;
 
 class SettlementController extends Controller
 {
-    /**
-     * 처방 유형 — 상담에서 고른 값(counsel_acc_add_type)의 표기.
-     *
-     * 원내·원외·처방외는 정산에서 나눠 봐야 하는 값인데 화면에 나오지 않아 볼 수가 없었다.
-     */
-    public const ACC_TYPES = [
-        '30' => '처방전-원내',
-        '10' => '처방전-원외',
-        '20' => '처방외',
-    ];
+    /** 처방 유형 — 정의는 Prescription 에 있다. 여기서 쓰던 이름을 남겨 둔다. */
+    public const ACC_TYPES = \App\Models\Prescription::ACC_TYPES;
 
     public function __construct(private readonly VirtualAccountService $vaService) {}
 

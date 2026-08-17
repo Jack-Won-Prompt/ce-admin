@@ -38,6 +38,11 @@ class OrderController extends Controller
                 ? $query->whereDoesntHave('returns')
                 : $query->whereHas('returns', fn ($r) => $r->where('type', $request->deal));
         }
+        /* 처방 유형 — 원내·원외·처방외. 정산 방식과 필요한 서류가 달라
+           거래 이력에서도 나눠 봐야 한다. */
+        if ($request->filled('acc_type')) {
+            $query->whereHas('prescription', fn ($p) => $p->where('counsel_acc_add_type', $request->acc_type));
+        }
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
@@ -77,6 +82,7 @@ class OrderController extends Controller
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
                 'deal'      => $deal,
+                'acc_type'  => $o->prescription?->accTypeLabel() ?? '-',
                 'patient'   => $o->patient?->name ?? '',
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),

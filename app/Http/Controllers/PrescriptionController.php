@@ -54,6 +54,11 @@ class PrescriptionController extends Controller
         } elseif ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+        /* 처방 유형 — 원내·원외·처방외는 정산 방식과 필요한 서류가 달라 나눠 봐야 한다.
+           정산 화면에만 있던 구분을 처방전 목록에서도 고를 수 있게 한다. */
+        if ($request->filled('acc_type')) {
+            $query->where('counsel_acc_add_type', $request->acc_type);
+        }
         $dateFrom = $request->input('date_from') ?: now()->subDays(6)->format('Y-m-d');
         $dateTo   = $request->input('date_to')   ?: now()->format('Y-m-d');
         $query->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo]);
@@ -79,6 +84,7 @@ class PrescriptionController extends Controller
                 'hospital'   => $rx->hospital_name ?? '-',
                 'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
                 'status'     => $rx->status_label,
+                'acc_type'   => $rx->accTypeLabel(),
                 'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
                 'order_no'   => $order?->order_number ?? '',
                 'so_no'      => $order?->withworks_so_no ?? '',
@@ -98,9 +104,15 @@ class PrescriptionController extends Controller
             'rejected'       => Prescription::where('status', 'rejected')->count(),
         ];
 
+        // 유형별 건수 — 목록의 유형 칩에 붙는다
+        $accCounts = [];
+        foreach (Prescription::ACC_TYPES as $code => $label) {
+            $accCounts[$code] = Prescription::where('counsel_acc_add_type', $code)->count();
+        }
+
         $managers = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();
 
-        return view('prescriptions.list', compact('gridData', 'total', 'statusCounts', 'managers'));
+        return view('prescriptions.list', compact('gridData', 'total', 'statusCounts', 'managers', 'accCounts'));
     }
 
     // ── 담당자 지정 (AJAX) ────────────────────────────────

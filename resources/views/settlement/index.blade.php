@@ -145,7 +145,8 @@
           <select name="acc_type" class="form-control form-select">
             <option value="">전체 유형</option>
             @foreach(\App\Http\Controllers\SettlementController::ACC_TYPES as $v => $label)
-              <option value="{{ $v }}" @selected(request('acc_type') === $v)>{{ $label }}</option>
+              {{-- 배열 키가 정수로 바뀌므로 문자열로 되돌려 견준다 — 그냥 두면 고른 값이 표시되지 않는다 --}}
+              <option value="{{ $v }}" @selected(request('acc_type') === (string) $v)>{{ $label }}</option>
             @endforeach
           </select>
         </div>

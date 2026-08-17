@@ -142,6 +142,17 @@ window.HELP_TOUR_STEPS = [
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
+      {{-- 처방 유형 — 원내·원외·처방외 --}}
+      <label class="ds-field-label">처방유형</label>
+      <select name="acc_type" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach(\App\Models\Prescription::ACC_TYPES as $code => $label)
+          {{-- 배열 키가 정수로 바뀌므로 문자열로 되돌려 견준다 --}}
+          <option value="{{ $code }}" {{ request('acc_type') === (string) $code ? 'selected' : '' }}>{{ $label }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
       <label class="ds-field-label">기준/정렬</label>
       <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
         @foreach([10,20,50,100] as $n)
@@ -152,7 +163,7 @@ window.HELP_TOUR_STEPS = [
   </div>
   <div class="ds-filter-actions">
     @if(request('q') || request('date'))
-      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal])) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
   </div>
@@ -368,6 +379,7 @@ window.HELP_TOUR_STEPS = [
       { header: '배송비',     name: 'shipping',  width: 80,  editor: 'number' },
       { header: '총금액',     name: 'total',     width: 100, editor: 'number' },
       { header: '배송지',     name: 'address',   width: 180 },
+      { header: '처방유형',   name: 'acc_type',  width: 110, sortable: true, align: 'center' },
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },

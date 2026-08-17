@@ -17,6 +17,23 @@ class Prescription extends Model
 {
     use SoftDeletes;
 
+    /**
+     * 처방 유형 — 상담에서 고른 값(counsel_acc_add_type).
+     *
+     * 원내·원외·처방외는 정산 방식과 필요한 서류가 달라 나눠 봐야 하는 값이다.
+     * 코드는 상담 시스템이 정한 것이라 우리가 고를 수 없다.
+     */
+    public const ACC_TYPES = [
+        '30' => '처방전-원내',
+        '10' => '처방전-원외',
+        '20' => '처방외',
+    ];
+
+    public function accTypeLabel(): string
+    {
+        return self::ACC_TYPES[(string) $this->counsel_acc_add_type] ?? '-';
+    }
+
     protected $fillable = [
         'rx_number', 'patient_id', 'assigned_user_id', 'created_by',
         'image_path', 'image_original_name', 'image_mime_type',

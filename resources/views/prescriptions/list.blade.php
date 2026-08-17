@@ -148,10 +148,31 @@
     </a>
   </div>
 
+  {{-- 처방 유형 칩 — 원내·원외·처방외.
+       정산 방식과 필요한 서류가 갈리는 값이라 목록에서 나눠 볼 수 있어야 한다. --}}
+  @php $curAcc = request('acc_type'); @endphp
+  <div class="ds-chips" style="margin-top:-4px;">
+    <a href="{{ route('prescriptions.index', request()->except('acc_type', 'page')) }}"
+       class="ds-chip {{ !$curAcc ? 'active' : '' }}">유형 전체</a>
+    @foreach(\App\Models\Prescription::ACC_TYPES as $code => $label)
+      {{-- $code 는 '30' 같은 숫자 문자열인데 PHP 가 배열 키를 정수로 바꾼다 — 문자열로 되돌려 견준다 --}}
+      <a href="{{ route('prescriptions.index', ['acc_type' => $code] + request()->except('acc_type', 'page')) }}"
+         class="ds-chip {{ $curAcc === (string) $code ? 'active' : '' }}">
+        {{ $label }}
+        @if(($accCounts[$code] ?? 0) > 0)
+          <span class="ds-chip-count">{{ $accCounts[$code] }}</span>
+        @endif
+      </a>
+    @endforeach
+  </div>
+
   {{-- 검색 필터 — Figma 128:1744: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
   <form method="GET" action="{{ route('prescriptions.index') }}" class="ds-filter-card">
     @if(request('status'))
       <input type="hidden" name="status" value="{{ request('status') }}">
+    @endif
+    @if($curAcc)
+      <input type="hidden" name="acc_type" value="{{ $curAcc }}">
     @endif
     <div class="ds-filter-fields">
       {{-- 검색어 143px(1열) · 기간 298px(2열) — 시안 실측 --}}
@@ -251,6 +272,7 @@ window.HELP_TOUR_STEPS = [
       { header: '병원',          name: 'hospital',   width: 150, sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
+      { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
       { header: 'Withworks SO',  name: 'so_no',      width: 130, sortable: true },
