@@ -110,7 +110,7 @@
       { header: '원 판매주문', name: 'origin_so', width: 130, sortable: true },
       {
         // 창고에 알렸는가. 못 알린 건은 눈에 띄어야 다시 보낸다.
-        header: '되돌림 주문', name: 'return_so', width: 130, sortable: true,
+        header: '반품 주문', name: 'return_so', width: 130, sortable: true,
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';

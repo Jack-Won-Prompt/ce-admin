@@ -2736,8 +2736,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                       $soCur = \App\Models\Order::SALE_SO_TYPES[0];
                   }
                 @endphp
-                {{-- 되돌림 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
-                     두면 되돌림 유형으로 판매가 나간다. --}}
+                {{-- 반품 계열 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
+                     두면 반품 유형으로 판매가 나간다. --}}
                 @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
                 @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
                 <label class="so-type-opt">

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
  * 취소는 아무것도 움직이지 않는다. 그래서 판매유형도 셋으로 나뉜다
  * (취소 5004 · 반품 5005 · 교환 5006). 실제 코드값은 설정 화면이 정한다.
  *
- * 출고 전 취소만은 되돌림 주문을 세우지 않는다. 되돌릴 물건이 없는데 주문을 하나 더
+ * 출고 전 취소만은 반품 주문을 세우지 않는다. 되돌릴 물건이 없는데 주문을 하나 더
  * 만들면 창고에 「아무것도 하지 않는 주문」이 쌓이고, 원 주문은 살아 있어 그대로
  * 나갈 위험이 남는다. 원 판매주문 자체를 취소하는 것이 맞다.
  */
@@ -36,9 +36,9 @@ class WithworksReturns
     }
 
     /**
-     * 되돌림을 위드웍스에 알린다.
+     * 반품을 위드웍스에 알린다.
      *
-     * 출고 전 취소면 원 판매주문을 취소하고, 그 밖에는 되돌림 판매주문을 세운다.
+     * 출고 전 취소면 원 판매주문을 취소하고, 그 밖에는 반품 판매주문을 세운다.
      * 어느 쪽이든 결과를 접수 건에 적어 둔다 — 실패했을 때 왜인지 화면에서 보여야 한다.
      *
      * 되돌려주는 값은 성공 여부다. 실패해도 접수 자체는 살려 둔다. 창고에 알리지
@@ -74,7 +74,7 @@ class WithworksReturns
         return $return->type === OrderReturn::TYPE_CANCEL && !$order->withworks_ship_no;
     }
 
-    /** 원 판매주문을 취소한다 — 되돌림 주문을 만들지 않는다 */
+    /** 원 판매주문을 취소한다 — 반품 주문을 만들지 않는다 */
     private function cancelOrigin(OrderReturn $return, Order $order): bool
     {
         $res = $this->call('post', 'so_cancel', [
@@ -116,7 +116,7 @@ class WithworksReturns
         return true;
     }
 
-    /** 되돌림 판매주문을 세운다 (반품 · 교환 · 출고 후 취소) */
+    /** 반품 판매주문을 세운다 (반품 · 교환 · 출고 후 취소) */
     private function storeReturn(OrderReturn $return, Order $order): bool
     {
         $items = $this->items($return, $order);
@@ -134,7 +134,7 @@ class WithworksReturns
         ]);
 
         if ($res === null || !($res['success'] ?? false)) {
-            return $this->fail($return, $res['message'] ?? '되돌림 주문을 보내지 못했습니다');
+            return $this->fail($return, $res['message'] ?? '반품 주문을 보내지 못했습니다');
         }
 
         $r = $res['result'] ?? [];
@@ -156,7 +156,7 @@ class WithworksReturns
            있으므로 어긋나면 잘못 이어진 것이다 — 남겨서 사람이 보게 한다. */
         $origin = $r['origin_so_no'] ?? null;
         if ($origin && $order->withworks_so_no && $origin !== $order->withworks_so_no) {
-            Log::warning('Withworks 되돌림의 원 판매주문이 다릅니다', [
+            Log::warning('Withworks 반품의 원 판매주문이 다릅니다', [
                 'receipt' => $return->receipt_no,
                 'ours'    => $order->withworks_so_no,
                 'theirs'  => $origin,
@@ -175,7 +175,7 @@ class WithworksReturns
     /**
      * 진행 상태를 위드웍스에 알린다.
      *
-     * 우리가 되돌림을 접수 취소했을 때 창고도 멈춰야 한다. 되돌림 주문을 세우지 않은
+     * 우리가 반품을 접수 취소했을 때 창고도 멈춰야 한다. 반품 주문을 세우지 않은
      * 건(출고 전 취소)은 알릴 곳이 없다.
      */
     public function pushStatus(OrderReturn $return): bool
@@ -191,7 +191,7 @@ class WithworksReturns
         ]);
 
         if ($res === null || !($res['success'] ?? false)) {
-            Log::warning('Withworks 되돌림 상태 전달 실패', [
+            Log::warning('Withworks 반품 상태 전달 실패', [
                 'receipt' => $return->receipt_no,
                 'message' => $res['message'] ?? null,
             ]);
@@ -202,7 +202,7 @@ class WithworksReturns
         return true;
     }
 
-    /** 되돌림 현황을 물어와 적는다 */
+    /** 반품 현황을 물어와 적는다 */
     public function pull(OrderReturn $return): ?array
     {
         if (!$this->configured() || !$return->withworks_so_no || !$return->withworks_so_type) {
@@ -271,7 +271,7 @@ class WithworksReturns
             'withworks_sent_at' => now(),
         ])->save();
 
-        Log::warning('Withworks 되돌림 전달 실패', [
+        Log::warning('Withworks 반품 전달 실패', [
             'receipt' => $return->receipt_no, 'message' => $message,
         ]);
 

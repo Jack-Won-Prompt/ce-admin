@@ -127,7 +127,7 @@ class InquiryApiController extends Controller
             return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해주세요.'], 422);
         }
 
-        // 답변 완료된 경우 상태를 pending으로 되돌림 (재문의)
+        // 답변 완료된 경우 상태를 pending으로 반품 (재문의)
         if ($inquiry->status === 'answered') {
             $inquiry->update(['status' => 'pending']);
         }

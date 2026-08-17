@@ -128,7 +128,7 @@ class OrderReturnController extends Controller
         activity()->causedBy(Auth::user())->performedOn($return->order)
             ->log("{$return->typeLabel()} 접수 {$return->receipt_no}");
 
-        /* 창고에 알린다. 되돌림 판매주문을 세우거나(반품 5005 · 교환 5006 · 출고 후 취소),
+        /* 창고에 알린다. 반품 판매주문을 세우거나(반품 5005 · 교환 5006 · 출고 후 취소),
            출고 전 취소면 원 판매주문을 취소한다.
            실패해도 접수는 살려 둔다 — 창고에 알리지 못한 것과 고객의 신청을 받지 못한 것은
            다른 일이다. 대신 왜 못 갔는지를 화면에 띄워 다시 보낼 수 있게 한다. */
@@ -223,7 +223,7 @@ class OrderReturnController extends Controller
             }
         });
 
-        /* 창고에도 알린다. 되돌림 주문을 세우지 않은 건(출고 전 취소)은 알릴 곳이 없어
+        /* 창고에도 알린다. 반품 주문을 세우지 않은 건(출고 전 취소)은 알릴 곳이 없어
            그냥 지나간다. 실패해도 우리 쪽 단계는 이미 옮겼다 — 되돌리면 담당자가 한 일이
            사라진다. 로그에만 남긴다. */
         $this->withworks->pushStatus($orderReturn);

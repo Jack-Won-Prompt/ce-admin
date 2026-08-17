@@ -240,7 +240,7 @@
       // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
       if (r.returns > 0) {
         const w = document.createElement('span');
-        w.className = 'warn'; w.textContent = '되돌림 ' + r.returns + '건';
+        w.className = 'warn'; w.textContent = '접수 ' + r.returns + '건';
         el.appendChild(w);
       }
 

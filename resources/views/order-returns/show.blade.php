@@ -148,7 +148,7 @@
   <div class="rt-bd">
     <div class="rt-kv"><span>원 판매주문</span><span>{{ $r->order?->withworks_so_no ?: '—' }}</span></div>
     @if($r->hasReturnSo())
-      <div class="rt-kv"><span>되돌림 주문</span><span>
+      <div class="rt-kv"><span>반품 주문</span><span>
         {{ $r->withworks_so_no }}
         @php $meta = \App\Models\Order::SO_TYPE_LABELS[$r->withworks_so_type] ?? null; @endphp
         @if($meta) · {{ $r->withworks_so_type }} {{ $meta[0] }} @endif
@@ -157,7 +157,7 @@
         {{ $r->withworks_status_label ?: ($r->withworks_status ?: '—') }}
       </span></div>
     @elseif($r->sentToWithworks())
-      {{-- 출고 전 취소는 되돌림 주문을 세우지 않는다 — 원 주문을 취소한다 --}}
+      {{-- 출고 전 취소는 반품 주문을 세우지 않는다 — 원 주문을 취소한다 --}}
       <div class="rt-kv"><span>처리</span><span>
         원 판매주문을 취소했습니다 — 되돌릴 물건이 없어 새 주문을 세우지 않습니다
       </span></div>

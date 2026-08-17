@@ -41,9 +41,9 @@ class WithworksWebhookController extends Controller
     ];
 
     /**
-     * 되돌림 사건 → 우리 접수 단계.
+     * 반품 사건 → 우리 접수 단계.
      *
-     * 판매와 사건 이름을 가르는 까닭이 있다. 되돌림에 so.* 를 쓰면 같은 ce_order_number 를
+     * 판매와 사건 이름을 가르는 까닭이 있다. 반품에 so.* 를 쓰면 같은 ce_order_number 를
      * 싣기 때문에 원 주문이 다시 배송중으로 되돌아간다.
      *
      * 창고가 실물을 받아 확정하면(ro.confirmed) 우리 쪽은 검수 단계로 옮긴다 — 물건이
@@ -73,7 +73,7 @@ class WithworksWebhookController extends Controller
         $v = Validator::make($request->all(), [
             'event_id'        => 'required|string|max:100',
             'event'           => 'required|string|max:50',
-            /* 되돌림 사건은 원 주문번호가 비어 올 수 있다 — 창고에서 만든 반품이면
+            /* 반품 사건은 원 주문번호가 비어 올 수 있다 — 창고에서 만든 반품이면
                우리 주문과 이어지지 않는다. 없다고 거절하면 그 사건은 영영 유실된다. */
             'ce_order_number' => 'nullable|string|max:50',
             'ce_return_number'=> 'nullable|string|max:50',
@@ -128,7 +128,7 @@ class WithworksWebhookController extends Controller
             return response()->json(['success' => true, 'message' => 'Already processed']);
         }
 
-        /* 되돌림 사건은 접수 건을 찾아 옮긴다. 원 주문 상태에는 손대지 않는다 —
+        /* 반품 사건은 접수 건을 찾아 옮긴다. 원 주문 상태에는 손대지 않는다 —
            반품이 들어왔다고 판매가 배송중으로 돌아가서는 안 된다. */
         if ($isReturn) {
             return $this->applyReturn($data);
@@ -163,7 +163,7 @@ class WithworksWebhookController extends Controller
     }
 
     /**
-     * 되돌림 사건을 접수 건에 옮긴다.
+     * 반품 사건을 접수 건에 옮긴다.
      *
      * 접수번호(ce_return_number)로 짝짓는다. 우리가 보낸 것이 아니면 — 창고에서 직접
      * 만든 반품이면 — 짝이 없다. 그래도 200 으로 답한다. 다시 보낸다고 우리에게 그
@@ -176,7 +176,7 @@ class WithworksWebhookController extends Controller
         $return = $no ? OrderReturn::where('receipt_no', $no)->first() : null;
 
         if (!$return) {
-            Log::warning('[Withworks] 모르는 되돌림의 사건', [
+            Log::warning('[Withworks] 모르는 반품의 사건', [
                 'event' => $data['event'], 'receipt' => $no,
             ]);
 
