@@ -253,9 +253,9 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
-        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="배송완료 시작일">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">
         <span class="ds-field-sep">~</span>
-        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="배송완료 종료일">
+        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
       </div>
     </div>
   </div>

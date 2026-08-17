@@ -58,12 +58,17 @@ class NhisController extends Controller
             };
         }
 
-        // 날짜 필터 (배송 완료일)
+        /* 날짜 필터 — 출고일 기준.
+           예전에는 배송완료일(delivered_at)로 걸렀는데, 위드웍스가 배송 상태를 관리하지 않아
+           그 값이 채워지지 않는다. 기간을 넣으면 아무것도 안 나오는 필터였다.
+           출고 시각이 없으면 접수일로 떨어뜨려, 손으로 만든 주문도 걸리게 한다. */
+        $shipDate = 'COALESCE(delivered_at, withworks_ship_at, created_at)';
+
         if ($request->filled('date_from')) {
-            $query->where('delivered_at', '>=', $request->date_from . ' 00:00:00');
+            $query->whereRaw("{$shipDate} >= ?", [$request->date_from . ' 00:00:00']);
         }
         if ($request->filled('date_to')) {
-            $query->where('delivered_at', '<=', $request->date_to . ' 23:59:59');
+            $query->whereRaw("{$shipDate} <= ?", [$request->date_to . ' 23:59:59']);
         }
 
         // NHIS 청구 상태 라벨 (배지 → 텍스트)
