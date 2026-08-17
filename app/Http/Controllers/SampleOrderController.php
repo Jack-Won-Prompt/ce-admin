@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SampleOrder;
 use App\Models\SampleOrderItem;
+use App\Services\WithworksSampleOrders;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
  */
 class SampleOrderController extends Controller
 {
+    public function __construct(private readonly WithworksSampleOrders $withworks) {}
+
     public function index(Request $request): View
     {
         $query = SampleOrder::with(['creator', 'patient'])->latest('id');
@@ -142,6 +145,24 @@ class SampleOrderController extends Controller
         ]);
     }
 
+    /**
+     * 창고에 다시 알린다.
+     *
+     * 등록할 때 못 보냈으면 여기서 다시 보낸다. 사람이 눌러야 하는 이유는, 실패한
+     * 까닭을 먼저 읽고 고쳐야 하기 때문이다.
+     */
+    public function resend(SampleOrder $sampleOrder): JsonResponse
+    {
+        $sent = $this->withworks->push($sampleOrder->load('items'));
+
+        return response()->json([
+            'success' => $sent,
+            'message' => $sent
+                ? '위드웍스에 전달했습니다.'
+                : '전달하지 못했습니다: ' . ($sampleOrder->fresh()->withworks_error ?: '알 수 없는 까닭'),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -198,11 +219,17 @@ class SampleOrderController extends Controller
             return $sample;
         });
 
+        /* 창고에 알린다. 실패해도 등록은 살려 둔다 — 창고에 알리지 못한 것과 등록하지
+           못한 것은 다른 일이다. 못 간 까닭은 화면에 남아 다시 보낼 수 있다. */
+        $sent = $this->withworks->push($sample->load('items'));
+
         return response()->json([
             'success'   => true,
             'id'        => $sample->id,
             'sample_no' => $sample->sample_no,
-            'message'   => "등록했습니다. 번호 {$sample->sample_no}",
+            'message'   => $sent
+                ? "등록했습니다. 번호 {$sample->sample_no} — 위드웍스에 전달했습니다."
+                : "등록했습니다. 번호 {$sample->sample_no} — 위드웍스 전달은 실패했습니다.",
         ]);
     }
 }

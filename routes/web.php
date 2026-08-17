@@ -156,6 +156,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/',               [\App\Http\Controllers\SampleOrderController::class, 'store'])->name('store');
         Route::get('/customer-search', [\App\Http\Controllers\SampleOrderController::class, 'customerSearch'])->name('customerSearch');
         Route::get('/{sampleOrder}',   [\App\Http\Controllers\SampleOrderController::class, 'show'])->name('show');
+        Route::post('/{sampleOrder}/resend', [\App\Http\Controllers\SampleOrderController::class, 'resend'])->name('resend');
     });
 
     Route::get('/repurchase',      [RepurchaseController::class, 'index'])->name('repurchase.index');
