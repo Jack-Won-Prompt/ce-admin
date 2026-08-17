@@ -152,6 +152,12 @@ class WithworksReturns
             ]);
         }
 
+        /* 등록 응답에는 상태 코드만 있고 이름이 없다. 그대로 두면 화면에 '02' 가 뜬다.
+           바로 되짚어 이름을 받아 둔다 — 한 번 더 부르는 값이 있다. */
+        if (!$return->withworks_status_label) {
+            $this->pull($return);
+        }
+
         return true;
     }
 
