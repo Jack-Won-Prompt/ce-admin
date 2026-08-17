@@ -742,6 +742,44 @@
         </div>
       </div>
 
+      {{-- 교환 · 반품 · 취소 ────────────────────────────────
+           되돌아온 건은 별도 화면에만 있었다. 그러면 이 주문에 무슨 일이 있었는지
+           알려면 두 화면을 오가야 한다. 여기서 있었는지 없었는지부터 보이게 한다. --}}
+      <div class="card od-mb">
+        <div class="card-header">
+          <i class="bx bx-undo" style="color:var(--primary);"></i>
+          <span class="card-header-title">교환 · 반품 · 취소</span>
+          <a href="{{ route('order-returns.create', ['order' => $order->id]) }}"
+             class="ds-btn ds-btn-sm" style="margin-left:auto;">
+            <i class="bx bx-plus"></i> 신청 등록
+          </a>
+        </div>
+        <div class="card-body">
+          @forelse($order->returns as $rt)
+            @php
+              $reason = \App\Models\OrderReturn::REASONS[$rt->reason_code] ?? null;
+              $done   = in_array($rt->status, ['refunded', 'done'], true);
+            @endphp
+            <div class="od-kv" style="align-items:flex-start;">
+              <span>
+                <a href="{{ route('order-returns.show', $rt) }}">{{ $rt->receipt_no }}</a>
+              </span>
+              <span>
+                <span class="badge badge-{{ $done ? 'success' : 'warning' }}">
+                  {{ \App\Models\OrderReturn::TYPES[$rt->type] ?? $rt->type }}
+                  · {{ \App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status }}
+                </span>
+                @if($reason) · {{ $reason['label'] }} @endif
+                @if($rt->refund_amount) · 환불 {{ number_format($rt->refund_amount) }}원 @endif
+                @if($rt->refunded_at) · {{ $rt->refunded_at->format('Y-m-d') }} @endif
+              </span>
+            </div>
+          @empty
+            <div class="od-kv"><span>신청 내역</span><span>없습니다</span></div>
+          @endforelse
+        </div>
+      </div>
+
       {{-- 청구 --}}
       <div class="card od-mb">
         <div class="card-header">
@@ -1353,6 +1391,7 @@ window.HELP_TOUR_STEPS = [
   const MAP = {
     '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본', '결제 · 입금': '기본',
     '배송 정보': '배송', 'Withworks 출고 현황': '배송', '상태 변경': '배송',
+    '교환 · 반품 · 취소': '배송',
     '건강보험 요양비 청구': '청구', '세금계산서 / 현금영수증': '청구',
     '정보': '정보', '메모': '정보',
   };

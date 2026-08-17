@@ -213,6 +213,17 @@ class Order extends Model
         return $this->hasMany(LocalClaimDispatch::class);
     }
 
+    /**
+     * 교환 · 반품 · 취소 신청.
+     *
+     * 한 주문에 여러 건이 붙는다 — 교환한 물건을 다시 반품하는 일이 실제로 있다.
+     * 최근 것을 앞에 둔다. 목록에서 한 건만 보일 때 지금 상태를 보여야 하기 때문이다.
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class)->latest('id');
+    }
+
     public function tossPayment(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(\App\Models\TossPayment::class);

@@ -24,10 +24,19 @@ class OrderController extends Controller
     // ── 목록 ──────────────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Order::with(['patient', 'prescription', 'creator'])->latest();
+        $query = Order::with(['patient', 'prescription', 'creator', 'returns'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        /* 거래 구분 — 판매만 있던 목록에 교환·반품·취소를 함께 담는다.
+           별도 화면으로 갈라 두면 한 주문에 무슨 일이 있었는지 두 곳을 오가야 알 수 있다.
+           'sale' 은 되돌린 적이 없는 주문이다. */
+        if ($request->filled('deal')) {
+            $request->deal === 'sale'
+                ? $query->whereDoesntHave('returns')
+                : $query->whereHas('returns', fn ($r) => $r->where('type', $request->deal));
         }
         if ($request->filled('q')) {
             $q = $request->q;
@@ -44,14 +53,30 @@ class OrderController extends Controller
         $statusCounts = Order::selectRaw('status, count(*) as cnt')->groupBy('status')
                             ->pluck('cnt', 'status');
 
+        // 거래 구분별 건수 — 칩에 붙는다
+        $dealCounts = ['sale' => Order::whereDoesntHave('returns')->count()];
+        foreach (\App\Models\OrderReturn::TYPES as $type => $label) {
+            $dealCounts[$type] = Order::whereHas('returns', fn ($r) => $r->where('type', $type))->count();
+        }
+
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
         $gridData = $query->get()->map(function ($o) {
             $ww = $o->withworks_so_no
                 ? trim($o->withworks_so_no . ($o->withworks_status_label ? ' · ' . $o->withworks_status_label : ''))
                 : '';
+            /* 거래 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류와 상태.
+               여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다. */
+            $rt   = $o->returns->first();
+            $deal = $rt
+                ? \App\Models\OrderReturn::TYPES[$rt->type] . ' · '
+                    . (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status)
+                    . ($o->returns->count() > 1 ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
+                : '판매';
+
             return [
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
+                'deal'      => $deal,
                 'patient'   => $o->patient?->name ?? '',
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
@@ -66,7 +91,7 @@ class OrderController extends Controller
             ];
         })->values();
 
-        return view('orders.index', compact('gridData', 'statusCounts'));
+        return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));
     }
 
     // ── 상세 ──────────────────────────────────────────────
@@ -77,7 +102,7 @@ class OrderController extends Controller
             view()->share('layout', 'layouts.partial');
         }
 
-        $order->load(['patient', 'prescription.items', 'creator', 'tossPayment']);
+        $order->load(['patient', 'prescription.items', 'creator', 'tossPayment', 'returns']);
 
         // 상세를 열 때도 최신을 본다. 스케줄이 주기적으로 훑지만 그 사이에 바뀌었을 수 있다.
         $withworksStatus = app(WithworksSync::class)->pull($order);

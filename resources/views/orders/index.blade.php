@@ -105,9 +105,29 @@ window.HELP_TOUR_STEPS = [
   @endforeach
 </div>
 
+{{-- 거래 구분 칩 — 판매·교환·반품·취소.
+     되돌린 건을 따로 떼어 두면 한 주문에 무슨 일이 있었는지 두 화면을 오가야 알 수 있다. --}}
+@php $curDeal = request('deal'); @endphp
+<div class="ds-chips" style="margin-top:-4px;">
+  <a href="{{ route('orders.index', array_merge(request()->except('deal','page'), [])) }}"
+     class="ds-chip {{ !$curDeal ? 'active' : '' }}">거래 전체</a>
+  @foreach(['sale' => '판매'] + \App\Models\OrderReturn::TYPES as $key => $label)
+    <a href="{{ route('orders.index', array_merge(request()->except('deal','page'), ['deal' => $key])) }}"
+       class="ds-chip {{ $curDeal === $key ? 'active' : '' }}">
+      {{ $label }}
+      @if(($dealCounts[$key] ?? 0) > 0)
+        <span class="ds-chip-count">{{ $dealCounts[$key] }}</span>
+      @endif
+    </a>
+  @endforeach
+</div>
+
 {{-- ── 검색 필터 ── --}}
 {{-- 검색 필터 — Figma 148:5526: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 · 기준/정렬 1열 --}}
 <form method="GET" action="{{ route('orders.index') }}" class="ds-filter-card">
+  @if($curDeal)
+    <input type="hidden" name="deal" value="{{ $curDeal }}">
+  @endif
   @if($curStatus)
     <input type="hidden" name="status" value="{{ $curStatus }}">
   @endif
@@ -132,7 +152,7 @@ window.HELP_TOUR_STEPS = [
   </div>
   <div class="ds-filter-actions">
     @if(request('q') || request('date'))
-      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus])) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
   </div>
@@ -142,7 +162,8 @@ window.HELP_TOUR_STEPS = [
 <div class="ds-grid-section">
   <div class="ds-grid-bar">
     <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ $statusCounts->sum() }}</b>건</span>
+      {{-- 지금 그리드에 있는 건수. 전체 건수를 적어 두면 필터를 걸었을 때 화면과 어긋난다. --}}
+      <span class="ds-grid-total">전체 <b>{{ count($gridData) }}</b>건</span>
       <span class="ds-grid-sel">선택 <b id="orderSelCount">0</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
@@ -329,6 +350,17 @@ window.HELP_TOUR_STEPS = [
     footer: false,
     columns: [
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
+      {
+        // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
+        // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.
+        header: '거래', name: 'deal', width: 130, sortable: true, align: 'center',
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v ?? '';
+          if (v && v !== '판매') { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
       { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
       { header: '제품명',     name: 'product',   width: 160 },
       { header: '수량',       name: 'qty',       width: 60,  editor: 'number', align: 'center' },
