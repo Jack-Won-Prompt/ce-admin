@@ -2485,7 +2485,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @php
                   $soIcons = ['1013' => 'fa-hospital', '1016' => 'fa-user',
                               '1022' => 'fa-gift',     '5001' => 'fa-truck-fast'];
-                  $soCur = $prescription->order?->so_type ?? '1013';
+                  /* 저장된 값이 지금 고를 수 있는 목록에 없으면(옛 1013 등) 첫 번째로
+                     떨어뜨린다. 그러지 않으면 아무것도 선택되지 않은 채로 열린다. */
+                  $soCur = $prescription->order?->so_type;
+                  if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
+                      $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                  }
                 @endphp
                 {{-- 반품 유형(5004)은 여기 없다. 판매를 만들면서 고를 수 있게 두면
                      반품 유형으로 판매가 나간다. --}}

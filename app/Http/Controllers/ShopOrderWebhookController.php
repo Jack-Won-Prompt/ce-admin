@@ -170,7 +170,8 @@ class ShopOrderWebhookController extends Controller
             'recipient_name'   => $order->delivery_name,
             'remark'           => $order->buyer_note,
             'items'            => $items,
-            'so_type'          => '1016',
+            // 위드웍스와는 End User Direct 로만 주고받는다 — 채널이 달라도 같다
+            'so_type'          => config('services.demoworks.so_type', '5001'),
         ];
 
         try {
