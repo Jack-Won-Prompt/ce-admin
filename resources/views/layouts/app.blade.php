@@ -1097,6 +1097,14 @@
     html.is-framed .layout-page { margin-left: 0 !important; }
     html.is-framed .content-wrapper { padding-top: 0 !important; }
     html.is-framed .page-body { padding-top: 14px; }
+
+    /* 프레임 안에서만 보이는 화면 단추 줄. 비어 있으면 자리도 차지하지 않는다 —
+       :empty 로는 공백 때문에 잡히지 않아 자식이 없을 때를 본다. */
+    .framed-actions { display: none; }
+    html.is-framed .framed-actions:has(> *) {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+    }
   </style>
   {{-- wwGrid 자산은 레이아웃이 단 한 번만 싣는다.
        화면마다 각자 싣던 때는 (1) 한 화면이라도 빠뜨리면 그 화면 그리드가 죽고
@@ -1659,6 +1667,12 @@
 
         {{-- Page Content --}}
         <main class="page-body">
+          {{-- 화면 단추를 프레임 안에서도 쓸 수 있게 한다.
+               header-actions 는 상단 네비바에 붙는데, 탭(iframe) 안에서는 그 네비바를
+               숨긴다 — 바깥 워크스페이스의 것이 따로 있기 때문이다. 그러면 「신규 접수」
+               같은 단추가 통째로 사라져, 메뉴로 들어온 사람은 등록할 길이 없었다.
+               프레임일 때만 화면 위에 같은 단추를 한 벌 더 둔다. --}}
+          <div class="framed-actions">@yield('header-actions')</div>
           @yield('content')
         </main>
 
