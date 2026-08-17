@@ -172,20 +172,17 @@
     <form class="smp-pane" id="smpForm">
       <div class="smp-sec">
         <div class="smp-sec-hd"><span class="step">1</span> 받는 곳</div>
-        {{-- 고객을 먼저 찾는다. 이름만 적어 두면 같은 사람을 두 번 적을 때 갈리고,
-             이 사람에게 몇 번 보냈는지 셀 수 없다. 등록되지 않은 사람이면 그냥 적는다. --}}
-        <div class="smp-find">
-          <input type="text" id="smpCustQ" class="form-control" placeholder="고객(환자) 이름 또는 연락처">
-          <button type="button" class="ds-btn" onclick="smpFindCustomer()">고객 조회</button>
-          <span class="ds-grid-hint" id="smpCustNote"></span>
-        </div>
-        <div class="smp-hits" id="smpCustHits" style="display:none;"></div>
-
         <div class="smp-grid">
+          {{-- 고객을 고르면 배송지가 따라온다. 이름만 적어 두면 같은 사람을 두 번 적을 때
+               갈리고, 이 사람에게 몇 번 보냈는지 셀 수 없다.
+               등록되지 않은 사람에게 보내는 일이 있어 그냥 적는 길도 남긴다. --}}
           <div class="smp-f">
             <label>고객 *</label>
-            <input type="text" id="smpAccount" class="form-control" maxlength="100"
-                   placeholder="찾아서 고르거나 그대로 적으십시오">
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="smpAccount" class="form-control" maxlength="100"
+                     placeholder="조회해서 고르거나 그대로 적으십시오">
+              <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer()">조회</button>
+            </div>
             <input type="hidden" id="smpPatientId" value="">
             <span class="ds-grid-hint" id="smpCustKind"></span>
           </div>
@@ -231,33 +228,16 @@
       </div>
 
       <div class="smp-sec">
-        <div class="smp-sec-hd"><span class="step">2</span> 제품</div>
-        <div class="smp-find">
-          <input type="text" id="smpQ" class="form-control" placeholder="제품명 또는 코드">
-          <button type="button" class="ds-btn ds-btn-primary" onclick="smpFind()">조회</button>
-          <span class="ds-grid-hint" id="smpFindNote"></span>
+        <div class="smp-sec-hd">
+          <span class="step">2</span> 제품
+          {{-- 줄을 더하고 던다. 제품코드·제품명 칸을 누르면 조회 창이 열린다. --}}
+          <span style="margin-left:auto;display:flex;gap:6px;">
+            <span class="ds-grid-hint" id="smpSumNote">0줄 · 0개 · 0원</span>
+            <button type="button" class="ds-btn" onclick="smpDelRow()" title="고른 줄을 던다">−</button>
+            <button type="button" class="ds-btn" onclick="smpAddRow()" title="줄을 더한다">+</button>
+          </span>
         </div>
-        <div class="smp-hits" id="smpHits" style="display:none;"></div>
-        <table class="smp-items">
-          <thead>
-            <tr><th style="width:110px;">제품코드</th><th>제품명</th>
-                <th class="num" style="width:90px;">수량</th>
-                <th class="num" style="width:110px;">단가</th>
-                <th class="num" style="width:110px;">금액</th>
-                <th style="width:40px;"></th></tr>
-          </thead>
-          <tbody id="smpItems"></tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2" style="font-weight:700;">합계</td>
-              <td class="num" id="smpSumQty" style="font-weight:700;">0</td>
-              <td></td>
-              <td class="num" id="smpSumAmount" style="font-weight:700;">0</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-        <div class="smp-none" id="smpItemsNone">제품을 찾아서 담으십시오.</div>
+        <div id="smpItemGrid"></div>
       </div>
 
       <div class="smp-actions">
@@ -381,51 +361,41 @@
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // ── 고객 찾기 ────────────────────────────────────────
-  window.smpFindCustomer = async function () {
-    const q = $('smpCustQ').value.trim();
-    $('smpCustNote').textContent = '찾는 중…';
-    try {
-      const res = await fetch(CUST_URL + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
-      const { rows, message } = await res.json();
-      drawCustomers(rows ?? []);
-      $('smpCustNote').textContent = message || ((rows ?? []).length ? rows.length + '명' : '');
-    } catch (e) {
-      $('smpCustNote').textContent = '찾지 못했습니다';
-    }
-  };
+  // ── 고객 조회 (팝업) ──────────────────────────────────
+  const modal = new GridModal();
+  let custRows = {};   // 고른 뒤 이름 말고 나머지도 써야 해서 들고 있는다
 
-  function drawCustomers(rows) {
-    const box = $('smpCustHits');
-    box.innerHTML = '';
-    box.style.display = '';
-
-    if (!rows.length) {
-      box.innerHTML = '<div class="smp-empty">맞는 고객이 없습니다. 등록되지 않은 분이면 이름을 그대로 적으십시오.</div>';
-      return;
-    }
-
-    rows.forEach(r => {
-      const el = document.createElement('div');
-      el.className = 'smp-hit';
-      el.innerHTML = `<span class="code">${esc(r.name)}</span>`
-        + `<span class="name">${esc(r.address || '주소 없음')}</span>`
-        + `<span class="price">${esc(r.mobile || '')}</span>`;
-      el.addEventListener('click', () => pickCustomer(r));
-      box.appendChild(el);
+  window.smpPickCustomer = function () {
+    modal.open({
+      title: '고객 조회',
+      width: 520,
+      currentValue: $('smpPatientId').value || null,
+      onSearch: async (q) => {
+        const res = await fetch(CUST_URL + '?q=' + encodeURIComponent(q ?? ''), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const { rows } = await res.json();
+        custRows = {};
+        (rows ?? []).forEach(r => { custRows[r.id] = r; });
+        return (rows ?? []).map(r => ({
+          value: r.id,
+          label: r.name + (r.mobile ? ' · ' + r.mobile : ''),
+          sub:   r.address || '주소 없음',
+        }));
+      },
+      onConfirm: (value) => {
+        const r = custRows[value];
+        if (!r) return;
+        $('smpPatientId').value = r.id;
+        $('smpAccount').value   = r.name;
+        $('smpCustKind').textContent = '환자로 이어 둡니다';
+        // 배송지는 고객을 고르면 따라온다 — 옮겨 적게 두면 어긋난다
+        if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
+        $('smpMobile').value  = r.mobile  || $('smpMobile').value;
+        $('smpAddress').value = r.address || $('smpAddress').value;
+      },
     });
-  }
-
-  function pickCustomer(r) {
-    $('smpPatientId').value = r.id;
-    $('smpAccount').value   = r.name;
-    $('smpCustKind').textContent = '환자로 이어 둡니다';
-    if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
-    if (r.mobile && !$('smpMobile').value.trim())   $('smpMobile').value = r.mobile;
-    if (r.address && !$('smpAddress').value.trim()) $('smpAddress').value = r.address;
-    $('smpCustHits').style.display = 'none';
-    $('smpCustQ').value = '';
-  }
+  };
 
   // 고객 이름을 손으로 고치면 환자 연결을 끊는다 — 이름과 연결이 어긋나면 안 된다
   $('smpAccount').addEventListener('input', () => {
@@ -435,97 +405,103 @@
     }
   });
 
-  $('smpCustQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); smpFindCustomer(); } });
+  // ── 제품 그리드 ──────────────────────────────────────
+  let prodRows = {};   // 팝업에서 고른 제품의 나머지 정보
 
-  // ── 제품 담기 ────────────────────────────────────────
-  let items = [];
-
-  window.smpFind = async function () {
-    const q = $('smpQ').value.trim();
-    if (!q) { $('smpFindNote').textContent = '검색어를 넣으십시오'; return; }
-    $('smpFindNote').textContent = '찾는 중…';
-    try {
-      const res  = await fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
-      const body = await res.json();
-      const rows = body.data ?? [];
-      drawHits(rows);
-      $('smpFindNote').textContent = rows.length ? rows.length + '건' : '';
-    } catch (e) {
-      $('smpFindNote').textContent = '찾지 못했습니다';
-    }
-  };
-
-  function drawHits(rows) {
-    const box = $('smpHits');
-    box.innerHTML = '';
-    box.style.display = '';
-
-    if (!rows.length) {
-      box.innerHTML = '<div class="smp-empty">맞는 제품이 없습니다.</div>';
-      return;
-    }
-
+  async function searchProducts(q) {
+    const res  = await fetch(SEARCH_URL + '?q=' + encodeURIComponent(q ?? ''), {
+      headers: { 'Accept': 'application/json' },
+    });
+    const body = await res.json();
+    const rows = body.data ?? [];
+    prodRows = {};
     rows.forEach(r => {
-      const code  = r.item_code ?? r.product_code ?? '';
-      const name  = r.item_name ?? r.product_name ?? '';
-      const price = Number(r.price ?? r.insurance_price ?? r.product_price ?? 0);
-
-      const el = document.createElement('div');
-      el.className = 'smp-hit';
-      el.innerHTML = `<span class="code">${esc(code)}</span>`
-        + `<span class="name">${esc(name)}</span>`
-        + `<span class="price">${price.toLocaleString()}원</span>`;
-      el.addEventListener('click', () => addItem(code, name, price));
-      box.appendChild(el);
+      const code = r.item_code ?? r.product_code ?? '';
+      prodRows[code] = {
+        code,
+        name:  r.item_name ?? r.product_name ?? '',
+        price: Number(r.price ?? r.insurance_price ?? r.product_price ?? 0),
+      };
+    });
+    return rows.map(r => {
+      const code = r.item_code ?? r.product_code ?? '';
+      const p    = prodRows[code];
+      return { value: code, label: p.name || code, sub: code + ' · ' + p.price.toLocaleString() + '원' };
     });
   }
 
-  function addItem(code, name, price) {
-    // 같은 제품을 다시 담으면 수량만 올린다 — 같은 줄이 둘로 갈리면 세기 어렵다
-    const hit = items.find(i => i.product_code === code);
-    if (hit) { hit.quantity += 1; }
-    else { items.push({ product_code: code, product_name: name, quantity: 1, unit_price: price }); }
-    $('smpHits').style.display = 'none';
-    $('smpQ').value = '';
-    drawItems();
+  /* 제품을 고르면 코드·이름·단가가 함께 정해진다. 한 칸만 채우고 나머지를 사람이
+     옮겨 적게 두면 어긋난다 — 고른 것으로 줄 전체를 채운다. */
+  function fillProduct(rowIndex, code, _label, g) {
+    const p = prodRows[code];
+    if (!p) return;
+    const row = g.getData()[rowIndex];
+    const qty = Number(row.quantity) || 1;
+    g.setValue?.(rowIndex, 'product_code', p.code);
+    g.setValue?.(rowIndex, 'product_name', p.name);
+    g.setValue?.(rowIndex, 'unit_price', p.price);
+    g.setValue?.(rowIndex, 'quantity', qty);
+    g.setValue?.(rowIndex, 'amount', qty * p.price);
+    syncSum();
   }
 
-  function drawItems() {
-    const body = $('smpItems');
-    body.innerHTML = items.map((i, idx) => `<tr>
-        <td style="font-family:monospace;">${esc(i.product_code)}</td>
-        <td>${esc(i.product_name)}</td>
-        <td class="num"><input type="number" min="1" value="${i.quantity}" data-idx="${idx}" data-f="quantity"></td>
-        <td class="num"><input type="number" min="0" value="${i.unit_price}" data-idx="${idx}" data-f="unit_price"></td>
-        <td class="num">${(i.quantity * i.unit_price).toLocaleString()}</td>
-        <td><span class="del" data-del="${idx}">×</span></td>
-      </tr>`).join('');
+  const popupOpts = { title: '제품 조회', width: 520, onSearch: searchProducts, onSelect: fillProduct };
 
-    $('smpItemsNone').style.display = items.length ? 'none' : '';
-    $('smpSumQty').textContent    = items.reduce((s, i) => s + i.quantity, 0).toLocaleString();
-    $('smpSumAmount').textContent = items.reduce((s, i) => s + i.quantity * i.unit_price, 0).toLocaleString();
+  const itemGrid = new wwGrid({
+    el: $('smpItemGrid'),
+    height: 'auto', editable: true, rowCheckbox: true, rowNumber: true,
+    toolbar: false, summary: false, footer: false,
+    columns: [
+      { header: '제품코드', name: 'product_code', width: 130, editor: 'popup', popup: popupOpts },
+      { header: '제품명',   name: 'product_name', width: 280, editor: 'popup', popup: popupOpts },
+      { header: '수량',     name: 'quantity',     width: 90,  editor: 'number', align: 'right', defaultValue: 1 },
+      { header: '단가',     name: 'unit_price',   width: 110, editor: 'number', align: 'right', defaultValue: 0 },
+      { header: '금액',     name: 'amount',       width: 120, align: 'right' },
+    ],
+    data: [],
+  });
+  window.__smpItemGrid = itemGrid;
+
+  window.smpAddRow = function () { itemGrid.addRow({ quantity: 1, unit_price: 0, amount: 0 }); syncSum(); };
+  window.smpDelRow = function () { itemGrid.removeCheckedRows(); syncSum(); };
+
+  /* 수량·단가를 고치면 금액이 따라야 한다. 눈에 보이는 숫자끼리 어긋나면 어느 쪽이
+     맞는지 알 수 없다. */
+  $('smpItemGrid').addEventListener('change', recalc, true);
+  $('smpItemGrid').addEventListener('blur', recalc, true);
+
+  function recalc() {
+    setTimeout(() => {
+      itemGrid.getData().forEach((r, i) => {
+        const amt = (Number(r.quantity) || 0) * (Number(r.unit_price) || 0);
+        if (Number(r.amount) !== amt) itemGrid.setValue?.(i, 'amount', amt);
+      });
+      syncSum();
+    }, 0);
   }
 
-  $('smpItems').addEventListener('input', (e) => {
-    const t = e.target;
-    if (!t.dataset.f) return;
-    const v = Math.max(t.dataset.f === 'quantity' ? 1 : 0, parseInt(t.value || '0', 10));
-    items[parseInt(t.dataset.idx, 10)][t.dataset.f] = v;
-    drawItems();
-  });
+  function syncSum() {
+    const rows = itemGrid.getData().filter(r => r.product_code);
+    const qty  = rows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const amt  = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    $('smpSumNote').textContent =
+      rows.length + '줄 · ' + qty.toLocaleString() + '개 · ' + amt.toLocaleString() + '원';
+  }
 
-  $('smpItems').addEventListener('click', (e) => {
-    const idx = e.target.dataset?.del;
-    if (idx === undefined) return;
-    items.splice(parseInt(idx, 10), 1);
-    drawItems();
-  });
-
-  $('smpQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); smpFind(); } });
 
   // ── 저장 ─────────────────────────────────────────────
   $('smpForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    /* 코드가 없는 줄은 빈 줄이다 — 더하기만 누르고 두고 간 것이라 보낼 것이 아니다 */
+    const items = itemGrid.getData()
+      .filter(r => r.product_code)
+      .map(r => ({
+        product_code: String(r.product_code),
+        product_name: String(r.product_name || r.product_code),
+        quantity:     Math.max(1, Number(r.quantity) || 1),
+        unit_price:   Math.max(0, Number(r.unit_price) || 0),
+      }));
+
     if (!items.length)                 { alert('제품을 담으십시오.'); return; }
     if (!$('smpAccount').value.trim())   { alert('고객을 넣으십시오.'); return; }
     if (!$('smpRecipient').value.trim()) { $('smpRecipient').value = $('smpAccount').value.trim(); }
@@ -564,7 +540,7 @@
     }
   });
 
-  drawItems();
+  syncSum();
 })();
 </script>
 @endpush

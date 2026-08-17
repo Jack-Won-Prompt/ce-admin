@@ -140,12 +140,6 @@
 </style>
 @endpush
 
-@section('header-actions')
-<button class="btn btn-primary btn-sm" onclick="openNhisPortal()">
-  <i class="fa-solid fa-up-right-from-square"></i> 공단 사이트 열기
-</button>
-@endsection
-
 @php
   $nhisStatusLabels = [
     'pending'   => ['미청구',    'secondary'],
@@ -157,17 +151,6 @@
 @endphp
 
 @section('content')
-
-{{-- 청구를 어디서 하는지 알려 둔다 — 이 화면에서 보내는 것이 아니다 --}}
-<div class="alert" style="display:flex;align-items:center;gap:10px;background:var(--primary-light);border:1px solid var(--primary-200);color:var(--text-secondary);">
-  <i class="fa-solid fa-circle-info" style="font-size:16px;color:var(--primary);"></i>
-  <div style="font-size:12px;line-height:1.6;">
-    <b style="color:var(--primary);">청구는 요양기관정보마당에 직접 입력·업로드합니다.</b>
-    이 화면은 청구 대상을 고르고 <b>결과를 기록</b>하는 자리입니다.
-    <a href="https://medicare.nhis.or.kr/portal/index.do" target="_blank" rel="noopener"
-       style="color:var(--primary);text-decoration:underline;">공단 사이트 열기</a>
-  </div>
-</div>
 
 {{-- ── 요약 카드 ── --}}
 <div class="summary-grid">
@@ -524,9 +507,6 @@ function clearSelection() {
 
 /* 청구를 여기서 보내던 기능(단건·일괄 e-Fax)은 걷어냈다.
    공단 요양비 청구는 요양기관정보마당에 직접 입력하고 서류를 업로드한다. */
-function openNhisPortal() {
-  window.open('https://medicare.nhis.or.kr/portal/index.do', '_blank', 'noopener');
-}
 
 // ── 결과 등록 모달 ────────────────────────────────────────
 let _resultOrderId = null;
@@ -602,7 +582,6 @@ async function previewDoc(orderId, orderNumber) {
 window.HELP_TOUR_STEPS = [
   { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 청구 대상을 조회합니다.' },
   { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 공단 사이트에서 청구하고, 결과를 여기에 기록합니다.' },
-  { selector: '.btn-primary', title: '공단 사이트 열기', body: '요양기관정보마당을 새 창으로 엽니다. 청구 입력과 서류 업로드는 그곳에서 합니다.' },
 ];
 </script>
 @endpush

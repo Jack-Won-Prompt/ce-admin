@@ -1620,6 +1620,13 @@ class wwGrid {
       },
       onConfirm: (value, label) => {
         this._commitValue(rowIndex, colName, value);
+
+        /* 고른 것 하나로 옆 칸까지 채워야 할 때가 있다 — 제품을 고르면 코드·이름·단가가
+           함께 정해지는 식이다. 팝업이 값 하나만 넣고 끝내면 나머지는 사람이 옮겨 적어야
+           하고, 그러면 어긋난다. 부르는 쪽이 채우도록 자리를 열어 둔다. */
+        if (typeof opts.onSelect === 'function') {
+          opts.onSelect(rowIndex, value, label, this);
+        }
       }
     });
   }
@@ -1727,8 +1734,11 @@ class wwGrid {
     // 새 행이 보이도록 스크롤
     this._wrapEl.scrollTop = this._wrapEl.scrollHeight;
 
-    // 첫 편집 가능 컬럼으로 자동 포커스
-    const firstEditCol = this.columns.find(c => c.editor && c.editor !== 'checkbox');
+    /* 첫 편집 가능 컬럼으로 자동 포커스.
+       popup 칸은 건너뛴다 — 인라인 편집을 걸어 두면 셀이 편집 중으로 잠겨, 그다음
+       클릭이 「이미 편집 중」으로 되돌아가 조회 창이 영영 열리지 않는다. */
+    const firstEditCol = this.columns.find(c =>
+      c.editor && c.editor !== 'checkbox' && c.editor !== 'popup');
     if (firstEditCol) {
       const td = tr.querySelector(`td[data-col-name="${firstEditCol.name}"]`);
       if (td) setTimeout(() => this._startEdit(newIndex, firstEditCol.name, td), 0);
@@ -1975,3 +1985,5 @@ class wwGrid {
 
 // 전역 노출
 window.wwGrid = wwGrid;
+/* 그리드 밖에서도 같은 팝업을 쓴다 — 화면마다 조회 창을 새로 만들면 생김새가 갈린다 */
+window.GridModal = GridModal;
