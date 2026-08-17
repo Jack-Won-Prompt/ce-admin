@@ -96,6 +96,17 @@
       { header: '종류',     name: 'type',     width: 70,  align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       { header: '주문번호', name: 'order_no', width: 120, sortable: true },
+      { header: '원 판매주문', name: 'origin_so', width: 130, sortable: true },
+      {
+        // 창고에 알렸는가. 못 알린 건은 눈에 띄어야 다시 보낸다.
+        header: '되돌림 주문', name: 'return_so', width: 130, sortable: true,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v ?? '';
+          if (v === '실패' || v === '미전달') { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
       { header: '환자명',   name: 'patient',  width: 90 },
       { header: '사유',     name: 'reason',   width: 100 },
       { header: '배송비',   name: 'burden',   width: 100, align: 'center' },

@@ -23,8 +23,10 @@ class Order extends Model
         '1013' => ['CE 판매',                       'primary'],
         '1016' => ['개인판매',                      'info'],
         '1022' => ['샘플판매',                      'warning'],
-        '5001' => ['End User Direct',              'success'],
-        '5004' => ['End User Direct 반품·교환·취소', 'danger'],
+        '5001' => ['End User Direct',          'success'],
+        '5004' => ['End User Direct 취소',      'danger'],
+        '5005' => ['End User Direct 반품',      'danger'],
+        '5006' => ['End User Direct 교환',      'warning'],
     ];
 
     /**
@@ -39,11 +41,16 @@ class Order extends Model
      */
     public const SALE_SO_TYPES = ['5001'];
 
-    /** 교환·반품·취소를 위드웍스로 넘길 때 쓰는 유형 */
-    public const RETURN_SO_TYPES = ['5004'];
+    /**
+     * 되돌리는 주문의 유형 — 취소·반품·교환을 따로 둔다.
+     *
+     * 창고가 하는 일이 셋 다 다르다. 실제 코드값은 설정 화면에서 바꿀 수 있다 —
+     * 위드웍스 code_list 가 정하는 값이라 우리가 박아 두면 안 된다.
+     */
+    public const RETURN_SO_TYPES = ['5004', '5005', '5006'];
 
     /** 저장돼 있을 수 있는 값 — 옛 주문을 수정할 때 막히지 않게 넓게 둔다 */
-    public const SO_TYPES = ['1013', '1016', '1022', '5001', '5004'];
+    public const SO_TYPES = ['1013', '1016', '1022', '5001', '5004', '5005', '5006'];
 
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',

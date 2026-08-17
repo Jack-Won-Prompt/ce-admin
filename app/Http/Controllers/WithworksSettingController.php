@@ -35,7 +35,9 @@ class WithworksSettingController extends Controller
             'webhook_url'     => 'nullable|url|max:190',
             'webhook_secret'  => 'nullable|string|max:190',
             'so_type'         => 'required|string|max:20',
-            'return_so_type'  => 'required|string|max:20',
+            'return_so_type'   => 'required|string|max:20',
+            'cancel_so_type'   => 'required|string|max:20',
+            'exchange_so_type' => 'required|string|max:20',
         ]);
 
         $s = WithworksSetting::current();

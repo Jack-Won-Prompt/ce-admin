@@ -26,14 +26,23 @@ class WithworksSetting extends Model
     /** 위드웍스로 넘기는 판매 유형 */
     public const SO_TYPE_EUD = '5001';
 
-    /** 교환·반품·취소를 넘길 때 쓰는 유형 — 판매와 코드가 다르다 */
-    public const SO_TYPE_EUD_RETURN = '5004';
+    /**
+     * 되돌리는 주문의 판매유형 — 셋을 따로 둔다.
+     *
+     * 창고가 하는 일이 셋 다 다르다. 반품은 수거해서 넣고, 교환은 넣었다가 다시 내보내고,
+     * 취소는 아무것도 움직이지 않는다. 한 코드로 묶으면 창고 담당자가 비고를 읽어야
+     * 무엇을 할지 알 수 있다.
+     */
+    public const SO_TYPE_EUD_CANCEL   = '5004';
+    public const SO_TYPE_EUD_RETURN   = '5005';
+    public const SO_TYPE_EUD_EXCHANGE = '5006';
 
     protected $fillable = [
         'mode',
         'test_api_url', 'test_api_token', 'test_account_id',
         'prod_api_url', 'prod_api_token', 'prod_account_id',
-        'webhook_url', 'webhook_secret', 'so_type', 'return_so_type',
+        'webhook_url', 'webhook_secret', 'so_type',
+        'return_so_type', 'cancel_so_type', 'exchange_so_type',
     ];
 
     /** 처음 열었을 때 빈 화면을 보여 주지 않도록 아는 값으로 채워 둔다 */
@@ -53,8 +62,10 @@ class WithworksSetting extends Model
             'prod_api_token'  => null,
             'webhook_url'     => rtrim((string) config('app.url'), '/') . '/api/webhook/withworks',
             'webhook_secret'  => env('WITHWORKS_WEBHOOK_SECRET'),
-            'so_type'         => self::SO_TYPE_EUD,
-            'return_so_type'  => self::SO_TYPE_EUD_RETURN,
+            'so_type'          => self::SO_TYPE_EUD,
+            'cancel_so_type'   => self::SO_TYPE_EUD_CANCEL,
+            'return_so_type'   => self::SO_TYPE_EUD_RETURN,
+            'exchange_so_type' => self::SO_TYPE_EUD_EXCHANGE,
         ]);
     }
 
@@ -100,8 +111,10 @@ class WithworksSetting extends Model
             'services.demoworks.token'          => $s->apiToken(),
             'services.demoworks.webhook_secret' => $s->webhook_secret,
             'services.demoworks.account_id'     => $s->accountId(),
-            'services.demoworks.so_type'        => $s->so_type ?: self::SO_TYPE_EUD,
-            'services.demoworks.return_so_type' => $s->return_so_type ?: self::SO_TYPE_EUD_RETURN,
+            'services.demoworks.so_type'          => $s->so_type ?: self::SO_TYPE_EUD,
+            'services.demoworks.cancel_so_type'   => $s->cancel_so_type ?: self::SO_TYPE_EUD_CANCEL,
+            'services.demoworks.return_so_type'   => $s->return_so_type ?: self::SO_TYPE_EUD_RETURN,
+            'services.demoworks.exchange_so_type' => $s->exchange_so_type ?: self::SO_TYPE_EUD_EXCHANGE,
             'services.demoworks.mode'           => $s->mode,
         ]);
 

@@ -183,21 +183,29 @@
         대상에서 빠져 진행 상태를 받지 못합니다.
       </div>
 
-      {{-- 되돌리는 것은 판매와 코드가 다르다. 한 칸으로 두면 반품이 판매 유형으로 나간다. --}}
-      <div class="ws-row">
-        <label>교환·반품·취소</label>
-        <select name="return_so_type" class="form-control form-select" style="max-width:260px;">
-          @foreach(\App\Models\Order::RETURN_SO_TYPES as $code)
-            @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
-            <option value="{{ $code }}" @selected(old('return_so_type', $s->return_so_type) === (string) $code)>
-              {{ $code }} · {{ $meta[0] }}
-            </option>
-          @endforeach
-        </select>
-      </div>
+      {{-- 되돌리는 것은 판매와 코드가 다르고, 셋끼리도 다르다.
+           창고가 하는 일이 달라서다 — 반품은 넣고, 교환은 넣었다 내보내고, 취소는 안 움직인다.
+           한 칸으로 묶으면 창고 담당자가 비고를 읽어야 무엇을 할지 알 수 있다. --}}
+      @foreach([
+        ['cancel_so_type',   '취소', '출고 뒤 취소일 때만 씁니다. 출고 전이면 원 판매주문을 취소합니다.'],
+        ['return_so_type',   '반품', '수거해서 창고에 넣습니다.'],
+        ['exchange_so_type', '교환', '수거해 넣고 다시 내보냅니다.'],
+      ] as [$field, $label, $hint])
+        <div class="ws-row">
+          <label>{{ $label }}</label>
+          <select name="{{ $field }}" class="form-control form-select" style="max-width:260px;">
+            @foreach(\App\Models\Order::RETURN_SO_TYPES as $code)
+              @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
+              <option value="{{ $code }}" @selected(old($field, $s->$field) === (string) $code)>
+                {{ $code }} · {{ $meta[0] }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+        <div class="ws-hint" style="margin-bottom:12px;">{{ $hint }}</div>
+      @endforeach
       <div class="ws-hint">
-        교환·반품·취소를 위드웍스로 넘길 때 쓰는 유형입니다. 역물류 연계는 아직 붙지 않았고,
-        붙으면 이 값으로 나갑니다.
+        위드웍스 code_list 가 정하는 값입니다. 그쪽에서 코드가 바뀌면 여기서 맞춰 주십시오.
       </div>
     </div>
   </div>

@@ -26,9 +26,15 @@ class OrderReturn extends Model
         'refund_method', 'refund_bank', 'refund_account', 'refund_holder',
         'refund_amount', 'refunded_at',
         'assigned_user_id', 'created_by',
+        // 위드웍스 되돌림 주문 — 창고가 무엇을 하고 있는지
+        'withworks_so_no', 'withworks_so_id', 'withworks_so_type',
+        'withworks_status', 'withworks_status_label', 'withworks_sent_at', 'withworks_error',
     ];
 
-    protected $casts = ['refunded_at' => 'datetime'];
+    protected $casts = [
+        'refunded_at'       => 'datetime',
+        'withworks_sent_at' => 'datetime',
+    ];
 
     public const TYPE_EXCHANGE = 'exchange';
     public const TYPE_RETURN   = 'return';
@@ -91,6 +97,23 @@ class OrderReturn extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * 창고에 알렸는가.
+     *
+     * 출고 전 취소는 되돌림 주문을 세우지 않고 원 판매주문을 취소하므로, 번호는 원
+     * 판매주문의 것이고 유형은 비어 있다. 그래도 알린 것은 알린 것이다.
+     */
+    public function sentToWithworks(): bool
+    {
+        return (bool) $this->withworks_so_no;
+    }
+
+    /** 되돌림 주문을 따로 세웠는가 — 출고 전 취소는 세우지 않는다 */
+    public function hasReturnSo(): bool
+    {
+        return (bool) ($this->withworks_so_no && $this->withworks_so_type);
     }
 
     public function logs(): HasMany

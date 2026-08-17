@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnLog;
+use App\Services\WithworksReturns;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,8 @@ use Illuminate\View\View;
  */
 class OrderReturnController extends Controller
 {
+    public function __construct(private readonly WithworksReturns $withworks) {}
+
     public function index(Request $request): View
     {
         $query = OrderReturn::with(['order.patient', 'assignee'])->latest('id');
@@ -49,6 +52,9 @@ class OrderReturnController extends Controller
             'type'      => $r->typeLabel(),
             'status'    => $r->statusLabel(),
             'order_no'  => $r->order?->order_number ?? '-',
+            // 창고와 맞춰 볼 때 쓰는 번호 — 없으면 아직 알리지 못한 것이다
+            'origin_so' => $r->order?->withworks_so_no ?: '-',
+            'return_so' => $r->withworks_so_no ?: ($r->withworks_error ? '실패' : '미전달'),
             'patient'   => $r->order?->patient?->name ?? '-',
             'reason'    => OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code,
             'burden'    => OrderReturn::BURDENS[$r->shipping_burden] ?? '-',
@@ -122,8 +128,16 @@ class OrderReturnController extends Controller
         activity()->causedBy(Auth::user())->performedOn($return->order)
             ->log("{$return->typeLabel()} 접수 {$return->receipt_no}");
 
+        /* 창고에 알린다. 되돌림 판매주문을 세우거나(반품 5005 · 교환 5006 · 출고 후 취소),
+           출고 전 취소면 원 판매주문을 취소한다.
+           실패해도 접수는 살려 둔다 — 창고에 알리지 못한 것과 고객의 신청을 받지 못한 것은
+           다른 일이다. 대신 왜 못 갔는지를 화면에 띄워 다시 보낼 수 있게 한다. */
+        $sent = $this->withworks->push($return->load('order.items'));
+
         return redirect()->route('order-returns.show', $return)
-            ->with('status', "접수했습니다. 접수번호 {$return->receipt_no}");
+            ->with('status', $sent
+                ? "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스에 전달했습니다."
+                : "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스 전달은 실패했습니다.");
     }
 
     public function show(OrderReturn $orderReturn): View
@@ -173,6 +187,26 @@ class OrderReturnController extends Controller
             }
         });
 
+        /* 창고에도 알린다. 되돌림 주문을 세우지 않은 건(출고 전 취소)은 알릴 곳이 없어
+           그냥 지나간다. 실패해도 우리 쪽 단계는 이미 옮겼다 — 되돌리면 담당자가 한 일이
+           사라진다. 로그에만 남긴다. */
+        $this->withworks->pushStatus($orderReturn);
+
         return back()->with('status', '상태를 옮겼습니다.');
+    }
+
+    /**
+     * 창고에 다시 알린다.
+     *
+     * 접수할 때 못 보냈으면(연동이 꺼져 있었거나 창고가 거절했거나) 여기서 다시 보낸다.
+     * 사람이 눌러야 하는 이유는, 실패한 까닭을 먼저 읽고 고쳐야 하기 때문이다.
+     */
+    public function resend(OrderReturn $orderReturn): RedirectResponse
+    {
+        $sent = $this->withworks->push($orderReturn->load('order.items'));
+
+        return back()->with('status', $sent
+            ? '위드웍스에 전달했습니다.'
+            : '전달하지 못했습니다: ' . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 까닭'));
     }
 }
