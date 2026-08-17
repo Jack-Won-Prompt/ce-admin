@@ -139,8 +139,13 @@
     document.getElementById('rtnHint').style.visibility = isNew ? 'hidden' : '';
     if (isNew) document.getElementById('rtoQ')?.focus();
   };
-  grid.on?.('dblclick', (ev) => {
-    const row = grid.getRow?.(ev.rowKey);
+  /* wwGrid 에는 on() 이 없다. 그 자리에 optional chaining 을 써 두어 아무 일도
+     일어나지 않았고, 화면은 「더블클릭하면 상세로 이동합니다」라고 알리고 있었다.
+     다른 목록 화면과 같이 셀에서 행 번호를 읽는다. */
+  document.getElementById('rtnGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
     if (row?.id) location.href = SHOW_BASE + '/' + row.id;
   });
 })();
