@@ -257,7 +257,7 @@
     {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
          data-ce-tab 이 붙어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
     <a href="{{ route('orders.index') }}" class="ds-btn"
-       data-ce-tab="주문 관리" data-ce-icon="bx-cart">
+       data-ce-tab="주문현황" data-ce-icon="bx-cart">
       <i class="fa-solid fa-cart-shopping"></i> 주문 목록
     </a>
   </div>

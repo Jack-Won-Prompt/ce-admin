@@ -1,11 +1,11 @@
 {{-- resources/views/orders/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '주문관리')
-@section('page-title', '주문 관리')
+@section('title', '주문현황')
+@section('page-title', '주문현황')
 {{-- 브레드크럼 — Figma 148:5526 Frame 48101452: 홈 · - · 주문 관리, gap 8 (12px/500 lh14)
      @section 의 인자형(@section('x','...'))은 Laravel 이 e() 로 escape 한다 → 블록형으로 쓴다. --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문 관리</span></span>@endsection
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문현황</span></span>@endsection
 
 @push('scripts')
 <script>
@@ -17,7 +17,7 @@ window.HELP_TOUR_STEPS = [
 </script>
 @endpush
 
-@section('help-title', '주문 관리 도움말')
+@section('help-title', '주문현황 도움말')
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>

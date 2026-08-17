@@ -1263,13 +1263,13 @@
         </div>
         @endperm
         @endif
-        {{-- 「주문」은 주문 목록이다. 보러 들어오는 일이 만들러 들어오는 일보다 훨씬 잦아
-             짧은 이름을 목록에 준다. --}}
+        {{-- 주문이 지금 어디까지 왔는지 보는 자리. 「주문 등록」과 이름이 겹치지 않게
+             「주문현황」으로 둔다 — 앞의 것은 만드는 자리, 이것은 보는 자리다. --}}
         @if($vis('orders'))
         <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문">
+          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문현황">
             @dsicon('handle-with-care', 'ds-icon menu-icon')
-            <span>주문</span>
+            <span>주문현황</span>
             @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
             @if($orderCount > 0)
               <span class="menu-badge blue">{{ $orderCount }}</span>
