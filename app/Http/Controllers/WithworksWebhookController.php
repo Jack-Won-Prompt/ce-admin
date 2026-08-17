@@ -40,7 +40,7 @@ class WithworksWebhookController extends Controller
 
     public function receive(Request $request, WithworksSync $sync, ClaimReadiness $readiness): JsonResponse
     {
-        $secret = config('services.todoworks.webhook_secret');
+        $secret = config('services.demoworks.webhook_secret');
 
         // 비밀을 정해 두지 않았으면 아무나 주문 상태를 바꿀 수 있다. 열어 두느니 막는다.
         if (!$secret) {

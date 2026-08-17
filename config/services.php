@@ -35,10 +35,10 @@ return [
         ],
     ],
 
-    // ── Todoworks 제품 API ────────────────────────────────
-    'todoworks' => [
-        'api_url' => env('TODOWORKS_API_URL', 'https://todoworks.co.kr'),
-        'token'   => env('TODOWORKS_API_TOKEN'),
+    // ── Demoworks 제품 API ────────────────────────────────
+    'demoworks' => [
+        'api_url' => env('DEMOWORKS_API_URL', 'https://demoworks.co.kr'),
+        'token'   => env('DEMOWORKS_API_TOKEN'),
         // Withworks 가 물류 상태를 알려 올 때 쓰는 공유 비밀
         'webhook_secret' => env('WITHWORKS_WEBHOOK_SECRET'),
     ],

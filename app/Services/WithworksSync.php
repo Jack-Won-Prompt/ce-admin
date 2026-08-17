@@ -40,7 +40,7 @@ class WithworksSync
 
     public function configured(): bool
     {
-        return (bool) (config('services.todoworks.api_url') && config('services.todoworks.token'));
+        return (bool) (config('services.demoworks.api_url') && config('services.demoworks.token'));
     }
 
     /**
@@ -55,10 +55,10 @@ class WithworksSync
             return null;
         }
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
 
         try {
-            $res = Http::withToken(config('services.todoworks.token'))->timeout(8)
+            $res = Http::withToken(config('services.demoworks.token'))->timeout(8)
                 ->get("{$baseUrl}/api/v1/ce-admin/so_show", [
                     'ce_order_number' => $order->order_number,
                 ]);

@@ -167,11 +167,11 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
+            'so_type'          => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
         ]);
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
             return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
@@ -202,12 +202,12 @@ class PrescriptionController extends Controller
             // 기타
             'delivery_date'           => $request->delivery_date,
             // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
-            'ho_account_id'           => $request->ho_account_id ?? config('services.todoworks.account_id'),
+            'ho_account_id'           => $request->ho_account_id ?? config('services.demoworks.account_id'),
             'remark'                  => $prescription->admin_note,
             'items'                   => $request->items,
             /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
                넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */
-            'so_type'                 => config('services.todoworks.so_type', '5001'),
+            'so_type'                 => config('services.demoworks.so_type', '5001'),
             // 받는 사람
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
             // 청구전략
@@ -282,11 +282,11 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
+            'so_type'          => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
         ]);
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
             return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
@@ -306,7 +306,7 @@ class PrescriptionController extends Controller
             'delivery_date'           => $request->delivery_date,
             'items'                   => $request->items,
             // 등록과 같은 이유로 수정 때도 End User Direct 로 고정한다
-            'so_type'                 => config('services.todoworks.so_type', '5001'),
+            'so_type'                 => config('services.demoworks.so_type', '5001'),
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
             'billing_strategy'        => 25,
         ];
@@ -348,8 +348,8 @@ class PrescriptionController extends Controller
             'order_number' => 'required|string',
         ]);
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
             return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);

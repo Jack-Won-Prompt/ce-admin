@@ -2487,7 +2487,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                               '1022' => 'fa-gift',     '5001' => 'fa-truck-fast'];
                   $soCur = $prescription->order?->so_type ?? '1013';
                 @endphp
-                @foreach(\App\Models\Order::SO_TYPE_LABELS as $code => $meta)
+                {{-- 반품 유형(5004)은 여기 없다. 판매를 만들면서 고를 수 있게 두면
+                     반품 유형으로 판매가 나간다. --}}
+                @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
+                @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
                 <label class="so-type-opt">
                   <input type="radio" name="so_type_radio" value="{{ $code }}"
                          @checked($soCur === (string) $code) onchange="onSoTypeChange(this.value)">

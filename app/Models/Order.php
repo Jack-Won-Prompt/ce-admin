@@ -20,14 +20,26 @@ class Order extends Model
      * 정하는 것이라, 새 유형이 생기면 여기와 검증 목록을 함께 늘려야 한다.
      */
     public const SO_TYPE_LABELS = [
-        '1013' => ['CE 판매',          'primary'],
-        '1016' => ['개인판매',         'info'],
-        '1022' => ['샘플판매',         'warning'],
-        '5001' => ['End User Direct', 'success'],
+        '1013' => ['CE 판매',                       'primary'],
+        '1016' => ['개인판매',                      'info'],
+        '1022' => ['샘플판매',                      'warning'],
+        '5001' => ['End User Direct',              'success'],
+        '5004' => ['End User Direct 반품·교환·취소', 'danger'],
     ];
 
+    /**
+     * 주문에 고를 수 있는 유형.
+     *
+     * 5004 는 물건을 되돌리는 유형이라 여기 없다. 판매를 만들면서 고를 수 있게 두면
+     * 반품 유형으로 판매가 나가고, 위드웍스에서도 엉뚱한 흐름을 타게 된다.
+     */
+    public const SALE_SO_TYPES = ['1013', '1016', '1022', '5001'];
+
+    /** 교환·반품·취소를 위드웍스로 넘길 때 쓰는 유형 */
+    public const RETURN_SO_TYPES = ['5004'];
+
     /** 검증에 쓸 코드 목록 — 라벨과 어긋나지 않게 여기서 뽑는다 */
-    public const SO_TYPES = ['1013', '1016', '1022', '5001'];
+    public const SO_TYPES = ['1013', '1016', '1022', '5001', '5004'];
 
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',

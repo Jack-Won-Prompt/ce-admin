@@ -59,8 +59,8 @@ class ShopOrderController extends Controller
     {
         $withworksStatus = null;
         if ($shopOrder->withworks_so_no) {
-            $baseUrl = rtrim(config('services.todoworks.api_url', ''), '/');
-            $token   = config('services.todoworks.token');
+            $baseUrl = rtrim(config('services.demoworks.api_url', ''), '/');
+            $token   = config('services.demoworks.token');
             if ($baseUrl && $token) {
                 try {
                     $res = Http::withToken($token)->timeout(5)

@@ -11,7 +11,7 @@ use Illuminate\Http\Client\Pool;
 class ProductController extends Controller
 {
     /**
-     * todoworks.co.kr API를 통해 제품을 검색하는 프록시 엔드포인트.
+     * demoworks.co.kr API를 통해 제품을 검색하는 프록시 엔드포인트.
      */
     public function search(Request $request): JsonResponse
     {
@@ -21,10 +21,10 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'message' => '검색어를 입력해주세요.', 'data' => []]);
         }
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
 
-        Log::info('Todoworks 제품 검색 요청', [
+        Log::info('Demoworks 제품 검색 요청', [
             'keyword' => $keyword,
             'api_url' => $baseUrl,
             'has_token' => !empty($token),
@@ -38,13 +38,13 @@ class ProductController extends Controller
                     'per_page' => 30,
                 ]);
 
-            Log::info('Todoworks 응답', [
+            Log::info('Demoworks 응답', [
                 'status' => $response->status(),
                 'ok'     => $response->ok(),
             ]);
 
             if ($response->failed()) {
-                Log::warning('Todoworks API 오류', [
+                Log::warning('Demoworks API 오류', [
                     'status' => $response->status(),
                     'body'   => substr($response->body(), 0, 500),
                 ]);
@@ -60,17 +60,17 @@ class ProductController extends Controller
 
             if (!empty($body['error']) || (isset($body['code']) && (string)$body['code'] === '403')) {
                 $apiErr = $body['error'] ?? 'Unauthorized';
-                Log::error('Todoworks API 인증 오류', ['error' => $apiErr, 'body' => $body]);
+                Log::error('Demoworks API 인증 오류', ['error' => $apiErr, 'body' => $body]);
                 return response()->json([
                     'success' => false,
-                    'message' => "Todoworks 인증 실패 ({$apiErr}). 관리자에게 토큰 갱신을 요청하세요.",
+                    'message' => "Demoworks 인증 실패 ({$apiErr}). 관리자에게 토큰 갱신을 요청하세요.",
                     'data'    => [],
                 ]);
             }
 
             $items = $this->normalizeItems($body);
 
-            Log::info('Todoworks 정규화 완료', ['count' => count($items)]);
+            Log::info('Demoworks 정규화 완료', ['count' => count($items)]);
 
             // 재고 병렬 조회 — 코드가 있는 아이템만
             $codes = array_values(array_filter(array_column($items, 'code')));
@@ -111,7 +111,7 @@ class ProductController extends Controller
                 'total'   => count($items),
             ]);
         } catch (\Exception $e) {
-            Log::error('Todoworks API 연결 실패', ['error' => $e->getMessage()]);
+            Log::error('Demoworks API 연결 실패', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
@@ -133,8 +133,8 @@ class ProductController extends Controller
             return response()->json(['success' => false, 'qty' => null, 'message' => '제품코드가 필요합니다.']);
         }
 
-        $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
 
         try {
             $response = Http::withToken($token)
@@ -162,7 +162,7 @@ class ProductController extends Controller
                 'qty'     => $totalQty,
             ]);
         } catch (\Exception $e) {
-            Log::warning('Todoworks 재고 조회 실패', ['code' => $code, 'error' => $e->getMessage()]);
+            Log::warning('Demoworks 재고 조회 실패', ['code' => $code, 'error' => $e->getMessage()]);
             return response()->json(['success' => false, 'qty' => null]);
         }
     }

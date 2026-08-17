@@ -23,14 +23,17 @@ class WithworksSetting extends Model
         self::MODE_PROD => '운영 (위드웍스)',
     ];
 
-    /** 위드웍스와 주고받는 판매유형 — 지금은 이것 하나뿐이다 */
+    /** 위드웍스로 넘기는 판매 유형 */
     public const SO_TYPE_EUD = '5001';
+
+    /** 교환·반품·취소를 넘길 때 쓰는 유형 — 판매와 코드가 다르다 */
+    public const SO_TYPE_EUD_RETURN = '5004';
 
     protected $fillable = [
         'mode',
         'test_api_url', 'test_api_token', 'test_account_id',
         'prod_api_url', 'prod_api_token', 'prod_account_id',
-        'webhook_url', 'webhook_secret', 'so_type',
+        'webhook_url', 'webhook_secret', 'so_type', 'return_so_type',
     ];
 
     /** 처음 열었을 때 빈 화면을 보여 주지 않도록 아는 값으로 채워 둔다 */
@@ -43,11 +46,13 @@ class WithworksSetting extends Model
             'prod_api_url'    => 'https://www.withworks.co.kr',
             'prod_account_id' => '148659',
             // 이미 .env 로 돌던 값이 있으면 그대로 물려받는다
-            'test_api_token'  => env('TODOWORKS_API_TOKEN'),
+            // 서버 .env 가 아직 옛 이름일 수 있어 둘 다 본다
+            'test_api_token'  => env('DEMOWORKS_API_TOKEN', env('TODOWORKS_API_TOKEN')),
             'prod_api_token'  => null,
             'webhook_url'     => rtrim((string) config('app.url'), '/') . '/api/webhook/withworks',
             'webhook_secret'  => env('WITHWORKS_WEBHOOK_SECRET'),
             'so_type'         => self::SO_TYPE_EUD,
+            'return_so_type'  => self::SO_TYPE_EUD_RETURN,
         ]);
     }
 
@@ -89,12 +94,13 @@ class WithworksSetting extends Model
         $s = static::current();
 
         config([
-            'services.todoworks.api_url'        => $s->apiUrl(),
-            'services.todoworks.token'          => $s->apiToken(),
-            'services.todoworks.webhook_secret' => $s->webhook_secret,
-            'services.todoworks.account_id'     => $s->accountId(),
-            'services.todoworks.so_type'        => $s->so_type ?: self::SO_TYPE_EUD,
-            'services.todoworks.mode'           => $s->mode,
+            'services.demoworks.api_url'        => $s->apiUrl(),
+            'services.demoworks.token'          => $s->apiToken(),
+            'services.demoworks.webhook_secret' => $s->webhook_secret,
+            'services.demoworks.account_id'     => $s->accountId(),
+            'services.demoworks.so_type'        => $s->so_type ?: self::SO_TYPE_EUD,
+            'services.demoworks.return_so_type' => $s->return_so_type ?: self::SO_TYPE_EUD_RETURN,
+            'services.demoworks.mode'           => $s->mode,
         ]);
 
         return $s;

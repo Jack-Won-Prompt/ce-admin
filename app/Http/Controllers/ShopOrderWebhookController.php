@@ -129,8 +129,8 @@ class ShopOrderWebhookController extends Controller
 
     private function syncToWithworks(ShopOrder $order): void
     {
-        $baseUrl = rtrim(config('services.todoworks.api_url', ''), '/');
-        $token   = config('services.todoworks.token');
+        $baseUrl = rtrim(config('services.demoworks.api_url', ''), '/');
+        $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
             Log::info('Withworks not configured, skipping sync', ['order' => $order->order_number]);
@@ -206,7 +206,7 @@ class ShopOrderWebhookController extends Controller
           ->values();
 
         foreach ($candidates as $candidate) {
-            $resolved = $this->searchTodoworksItemCode($baseUrl, $token, $candidate);
+            $resolved = $this->searchDemoworksItemCode($baseUrl, $token, $candidate);
             if ($resolved) {
                 return $resolved;
             }
@@ -215,7 +215,7 @@ class ShopOrderWebhookController extends Controller
         return null;
     }
 
-    private function searchTodoworksItemCode(string $baseUrl, string $token, string $keyword): ?string
+    private function searchDemoworksItemCode(string $baseUrl, string $token, string $keyword): ?string
     {
         try {
             $response = Http::withToken($token)
@@ -255,7 +255,7 @@ class ShopOrderWebhookController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('Todoworks item search failed', [
+            Log::warning('Demoworks item search failed', [
                 'keyword' => $keyword,
                 'error' => $e->getMessage(),
             ]);

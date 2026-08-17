@@ -103,7 +103,7 @@ class OrderController extends Controller
             'shipping_fee'            => 'nullable|numeric|min:0',
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
-            'so_type'                 => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
         ]);
 
         $prescription = Prescription::findOrFail($request->prescription_id);
@@ -213,7 +213,7 @@ class OrderController extends Controller
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
             'shipping_postcode'       => 'nullable|string|max:10',
-            'so_type'                 => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
             'delivery_date'           => 'nullable|date',
         ]);
 

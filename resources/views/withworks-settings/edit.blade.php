@@ -172,14 +172,32 @@
         <label>연동 유형</label>
         <select name="so_type" class="form-control form-select" style="max-width:260px;">
           {{-- PHP 가 '5001' 같은 숫자 문자열 키를 정수로 바꾸므로 비교 전에 되돌린다 --}}
-          @foreach(\App\Models\Order::SO_TYPE_LABELS as $code => $meta)
+          @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
+            @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
             <option value="{{ $code }}" @selected(old('so_type', $s->so_type) === (string) $code)>{{ $code }} · {{ $meta[0] }}</option>
           @endforeach
         </select>
       </div>
-      <div class="ws-hint">
+      <div class="ws-hint" style="margin-bottom:12px;">
         위드웍스로 넘기는 주문은 모두 이 유형으로 나갑니다. 다른 유형으로 넘기면 저쪽 콜백
         대상에서 빠져 진행 상태를 받지 못합니다.
+      </div>
+
+      {{-- 되돌리는 것은 판매와 코드가 다르다. 한 칸으로 두면 반품이 판매 유형으로 나간다. --}}
+      <div class="ws-row">
+        <label>교환·반품·취소</label>
+        <select name="return_so_type" class="form-control form-select" style="max-width:260px;">
+          @foreach(\App\Models\Order::RETURN_SO_TYPES as $code)
+            @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
+            <option value="{{ $code }}" @selected(old('return_so_type', $s->return_so_type) === (string) $code)>
+              {{ $code }} · {{ $meta[0] }}
+            </option>
+          @endforeach
+        </select>
+      </div>
+      <div class="ws-hint">
+        교환·반품·취소를 위드웍스로 넘길 때 쓰는 유형입니다. 역물류 연계는 아직 붙지 않았고,
+        붙으면 이 값으로 나갑니다.
       </div>
     </div>
   </div>

@@ -36,8 +36,10 @@ return new class extends Migration
             $table->string('webhook_url', 190)->nullable();
             $table->string('webhook_secret', 190)->nullable();
 
-            // 위드웍스와 주고받는 판매유형. 지금은 End User Direct(5001) 하나만 쓴다.
+            /* 위드웍스와 주고받는 유형. 판매와 되돌리는 것이 서로 다른 코드다 —
+               한 칸으로 두면 반품을 넘길 때 판매 유형으로 나간다. */
             $table->string('so_type', 20)->default('5001');
+            $table->string('return_so_type', 20)->default('5004');
 
             $table->timestamps();
         });

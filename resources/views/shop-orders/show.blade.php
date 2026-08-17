@@ -186,7 +186,7 @@
         <i class="bx bx-link-alt" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">Withworks 연동</span>
         @if($shopOrder->withworks_so_no)
-          <a href="{{ rtrim(config('services.todoworks.api_url'), '/') }}" target="_blank"
+          <a href="{{ rtrim(config('services.demoworks.api_url'), '/') }}" target="_blank"
              class="btn btn-outline btn-sm ms-auto">바로가기</a>
         @endif
       </div>

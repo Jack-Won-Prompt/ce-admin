@@ -161,7 +161,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');
     });
 
-    // 제품 검색 / 재고 조회 (Todoworks API 프록시)
+    // 제품 검색 / 재고 조회 (Demoworks API 프록시)
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     Route::get('/products/stock',  [ProductController::class, 'stock'])->name('products.stock');
 
@@ -981,10 +981,10 @@ Route::get('/dev/seed-dispatch', function () {
 })->middleware('auth');
 
 // ── 개발용: orders 테이블 컬럼 마이그레이션 ──────────────────────
-Route::get('/dev/test-todoworks', function () {
+Route::get('/dev/test-demoworks', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) abort(403);
-    $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
-    $token   = config('services.todoworks.token');
+    $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
+    $token   = config('services.demoworks.token');
     try {
         $response = \Illuminate\Support\Facades\Http::withToken($token)
             ->timeout(15)
