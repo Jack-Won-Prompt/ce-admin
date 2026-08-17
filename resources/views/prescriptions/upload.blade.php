@@ -90,9 +90,6 @@
   .fu-input:focus { outline:none; border-color:var(--primary); }
   textarea.fu-input { height:80px; padding:12px; resize:vertical; }
   /* 환자 검색칸 위에 얹히는 안내 배지 (Figma 128:793) */
-  .fu-hint-badge { position:absolute; right:0; top:-9px; padding:1px 6px; border-radius:999px;
-                   background:var(--primary); color:var(--gray-0);
-                   font-size:10px; font-weight:500; line-height:1.6; white-space:nowrap; }
 
   /* ── 파일 타일 그리드 (Figma 128:798) — 6열, gap 8 ── */
   .fu-grid { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
@@ -275,7 +272,6 @@
                     <div style="flex:1;min-width:0;position:relative;">
                       <input type="text" id="patientSearchInput" class="fu-input"
                              placeholder="이름 또는 연락처로 검색" autocomplete="off" />
-                      <span class="fu-hint-badge">선택 시 OCR 자동 연결 건너뜀</span>
                     </div>
                     <div id="patientSelectedBadge" style="display:none;align-items:center;gap:8px;flex:1;min-width:0;">
                       <span id="patientSelectedName" class="fu-input"
