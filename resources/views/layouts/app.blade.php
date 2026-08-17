@@ -1251,14 +1251,22 @@
           <span>주문ㆍ재구매</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
-        {{-- 「주문」이 주문 목록을 연다.
-             예전에는 「주문」(처방전을 열어 주문을 만드는 화면)과 「주문 관리」(목록)가
-             나란히 있었다. 이름이 비슷해 어느 쪽이 목록인지 헷갈렸고, 주문을 보러
-             들어오는 일이 만들러 들어오는 일보다 훨씬 잦다.
-             만드는 화면은 처방전 목록에서 처방전을 열어 들어간다 — 어차피 처방전을
-             먼저 골라야 하는 일이라 그 길이 자연스럽다. --}}
+        {{-- 새 상담·처방을 시작하는 자리. 빈 초안을 하나 잡아 검수 화면으로 보낸다.
+             한때 메뉴에서 빼고 처방전 목록에서만 들어가게 했더니, 목록에 없는 것을
+             새로 적을 길이 사라졌다 — 처방전을 고르는 일과 새로 만드는 일은 다르다. --}}
+        @if($vis('prescriptions'))
+        @perm('prescriptions', 'create')
+        <div class="menu-item {{ request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="file-edit-02" href="{{ route('prescriptions.create') }}" data-title="주문 등록">
+            @dsicon('file-edit-02', 'ds-icon menu-icon')<span>주문 등록</span>
+          </a>
+        </div>
+        @endperm
+        @endif
+        {{-- 「주문」은 주문 목록이다. 보러 들어오는 일이 만들러 들어오는 일보다 훨씬 잦아
+             짧은 이름을 목록에 준다. --}}
         @if($vis('orders'))
-        <div class="menu-item {{ request()->routeIs('orders*') || request()->routeIs('prescriptions.create') || request()->routeIs('prescriptions.show') ? 'active' : '' }}">
+        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문">
             @dsicon('handle-with-care', 'ds-icon menu-icon')
             <span>주문</span>
