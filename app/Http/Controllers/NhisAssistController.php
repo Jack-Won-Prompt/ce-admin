@@ -345,7 +345,26 @@ class NhisAssistController extends Controller
         $tax  = $byType('tax_invoice');
         $cash = $byType('cash_receipt');
 
+        /* 신환은 위임 등록부터 해야 한다 — 그때 위임장과 동의서가 함께 들어간다.
+           구환은 이미 등록돼 있어 청구서만 올린다. 목록에 같이 두면 담당자가 매번
+           「이건 이번에도 필요한가」를 판단해야 한다. */
+        $isNew      = $order->patientType() === Order::PATIENT_NEW;
+        $delegation = $byType('delegation');
+        $consent    = $byType('consent');
+
+        $first = $isNew
+            ? [
+                ['name' => '요양비 지급 위임장 (신환)',
+                 'url'  => $delegation ? route('documents.download', $delegation) : null,
+                 'note' => $delegation ? null : '위임 등록에 필요합니다 — 아직 받지 못했습니다'],
+                ['name' => '개인정보 수집·이용 동의서 (신환)',
+                 'url'  => $consent ? route('documents.download', $consent) : null,
+                 'note' => $consent ? null : '위임 등록에 필요합니다 — 아직 받지 못했습니다'],
+            ]
+            : [];
+
         return [
+            ...$first,
             ['name' => '자가도뇨 소모성재료 처방전', 'url' => $rxImage,
              'note' => $rxImage ? null : '처방전 이미지가 없습니다'],
             ['name' => '현금영수증 또는 신용카드 매출전표',
@@ -371,9 +390,18 @@ class NhisAssistController extends Controller
             ? PrescriptionDocument::where('prescription_id', $prescription->id)->latest('id')->get()
             : collect();
 
-        $tax = $docs->firstWhere('type', 'tax_invoice');
+        $tax     = $docs->firstWhere('type', 'tax_invoice');
+        $consent = $docs->firstWhere('type', 'consent');
+
+        // 지자체도 처음 보내는 환자면 동의서를 함께 넣는다
+        $first = $order->patientType() === Order::PATIENT_NEW
+            ? [['name' => '개인정보 수집·이용 동의서 (신환)',
+                'url'  => $consent ? route('documents.download', $consent) : null,
+                'note' => $consent ? null : '아직 받지 못했습니다']]
+            : [];
 
         return [
+            ...$first,
             ['name' => '처방전',
              'url'  => $prescription?->image_path ? route('files.prescription-image', $prescription) : null,
              'note' => $prescription?->image_path ? null : '처방전 이미지가 없습니다'],
