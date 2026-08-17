@@ -35,12 +35,24 @@ return [
         ],
     ],
 
-    // ── Demoworks 제품 API ────────────────────────────────
+    /*
+    |──────────────────────────────────────────────────────
+    | 위드웍스 연동 (테스트=데모웍스 · 운영=위드웍스)
+    |──────────────────────────────────────────────────────
+    | 값은 .env 가 아니라 DB(withworks_settings)에서 온다. 설정 › 위드웍스 연동 화면에서
+    | 관리하고, WithworksSetting::applyToConfig() 가 요청마다 아래 자리를 채운다.
+    |
+    | 여기에 env() 를 두지 않는다. 두 곳에 값이 있으면 화면에서 바꿔도 .env 가 이기는 것처럼
+    | 보이는 때가 생기고, 어느 쪽이 실제로 쓰이는지 아무도 확신하지 못한다.
+    */
     'demoworks' => [
-        'api_url' => env('DEMOWORKS_API_URL', 'https://demoworks.co.kr'),
-        'token'   => env('DEMOWORKS_API_TOKEN'),
-        // Withworks 가 물류 상태를 알려 올 때 쓰는 공유 비밀
-        'webhook_secret' => env('WITHWORKS_WEBHOOK_SECRET'),
+        'api_url'        => null,
+        'token'          => null,
+        'webhook_secret' => null,
+        'account_id'     => null,
+        'so_type'        => null,
+        'return_so_type' => null,
+        'mode'           => null,
     ],
 
     // ── CE샵 Webhook & API ───────────────────────────────

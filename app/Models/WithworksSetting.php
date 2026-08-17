@@ -46,7 +46,9 @@ class WithworksSetting extends Model
             'prod_api_url'    => 'https://www.withworks.co.kr',
             'prod_account_id' => '148659',
             // 이미 .env 로 돌던 값이 있으면 그대로 물려받는다
-            // 서버 .env 가 아직 옛 이름일 수 있어 둘 다 본다
+            /* 처음 한 번만, 이미 .env 로 돌던 값을 물려받는다. 배포하자마자 연동이 끊기면
+               안 되기 때문이다. 이 뒤로는 DB 가 유일한 출처다 — 화면에서 바꾼 값이 언제나
+               이긴다. 서버 .env 가 아직 옛 이름일 수 있어 둘 다 본다. */
             'test_api_token'  => env('DEMOWORKS_API_TOKEN', env('TODOWORKS_API_TOKEN')),
             'prod_api_token'  => null,
             'webhook_url'     => rtrim((string) config('app.url'), '/') . '/api/webhook/withworks',

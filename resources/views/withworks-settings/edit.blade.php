@@ -56,6 +56,21 @@
 @if(session('status'))<div class="ws-bar ok">{{ session('status') }}</div>@endif
 @if(session('test_result'))<div class="ws-bar info">{{ session('test_result') }}</div>@endif
 
+{{-- 이 값들은 .env 가 아니라 여기서만 온다. 비어 있으면 연동이 조용히 멈추므로 알린다. --}}
+@php
+  $missing = [];
+  if (!$s->apiUrl())        { $missing[] = ($s->isProduction() ? '운영' : '테스트') . ' 주소'; }
+  if (!$s->apiToken())      { $missing[] = ($s->isProduction() ? '운영' : '테스트') . ' API 토큰'; }
+  if (!$s->accountId())     { $missing[] = '콜로 거래처'; }
+  if (!$s->webhook_secret)  { $missing[] = '콜백 공유 비밀'; }
+@endphp
+@if($missing)
+  <div class="ws-bar" style="background:var(--alert-100);border:1px solid var(--alert-200);color:var(--alert-500);">
+    비어 있는 항목 — {{ implode(' · ', $missing) }}.
+    주소·토큰이 없으면 주문이 넘어가지 않고, 공유 비밀이 없으면 들어오는 콜백을 전부 거절합니다.
+  </div>
+@endif
+
 <form method="POST" action="{{ route('withworks-settings.update') }}">
   @csrf
   @method('PUT')
