@@ -214,6 +214,21 @@
     </a>
   @endforeach
 
+  {{-- 신환은 공단 등록이 먼저다. 섞어 두면 청구부터 하려다 반려된다. --}}
+  @foreach(\App\Models\Order::PATIENT_TYPE_LABELS as $v => $label)
+    <a href="{{ route('nhis.index', array_merge(request()->except(['patient_type','page']), ['patient_type' => $v])) }}"
+       class="ds-chip {{ request('patient_type') === $v ? 'active' : '' }}" style="{{ $loop->first ? 'margin-left:8px;' : '' }}">
+      {{ $label }}
+    </a>
+  @endforeach
+
+  @foreach([\App\Support\ClaimAgency::NHIS, \App\Support\ClaimAgency::LOCAL] as $v)
+    <a href="{{ route('nhis.index', array_merge(request()->except(['agency','page']), ['agency' => $v])) }}"
+       class="ds-chip {{ request('agency') === $v ? 'active' : '' }}" style="{{ $loop->first ? 'margin-left:8px;' : '' }}">
+      {{ \App\Support\ClaimAgency::LABELS[$v] }}
+    </a>
+  @endforeach
+
   {{-- 자료가 갖춰진 것만 따로 볼 수 있어야 청구를 몰아서 한다 --}}
   <a href="{{ route('nhis.index', array_merge(request()->except('ready','page'), ['ready' => 'y'])) }}"
      class="ds-chip {{ request('ready') === 'y' ? 'active' : '' }}" style="margin-left:8px;">
@@ -380,11 +395,22 @@
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
+      { header: '신환/구환',   name: 'patient_type',  width: 90,  align: 'center', sortable: true },
       { header: '제품명',      name: 'product',       width: 170 },
       { header: '청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
       { header: '환자부담',    name: 'patient_copay', width: 100, editor: 'number' },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
+      {
+        // 공단이냐 지자체냐 — 서류도 보내는 법도 다르다
+        header: '청구처', name: 'agency', width: 130, align: 'center', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '건강보험공단';
+          if (v && v !== '건강보험공단') { s.style.cssText = 'color:var(--warning,#b45309);font-weight:700;'; }
+          return s;
+        },
+      },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
       {
         // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.

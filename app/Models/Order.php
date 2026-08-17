@@ -154,6 +154,39 @@ class Order extends Model
         return $this->belongsTo(Prescription::class);
     }
 
+    /** 신환 · 구환 */
+    public const PATIENT_NEW      = 'new';
+    public const PATIENT_EXISTING = 'existing';
+
+    public const PATIENT_TYPE_LABELS = [
+        self::PATIENT_NEW      => '신환',
+        self::PATIENT_EXISTING => '구환',
+    ];
+
+    /**
+     * 신환인가 구환인가 — 주민등록번호를 갖고 있는지로 가른다.
+     *
+     * 주민번호가 있어야 공단에 등록·청구가 되므로, 아직 받지 못한 환자는 앞선 절차가
+     * 남아 있다는 뜻이다. 별도 표시 항목을 두지 않는 이유는 그것이 사람 손을 타면
+     * 실제 자료와 어긋나기 때문이다 — 있는 것을 보고 판단한다.
+     *
+     * 환자에 없으면 처방전에서 읽은 값도 본다. 신규 접수 건은 환자 기록이 아직 얇다.
+     * 여기서는 평문을 열지 않는다. 있는지 없는지만 알면 되므로 감사로그를 남길 일도 없다.
+     */
+    public function patientType(): string
+    {
+        $has = $this->patient?->resident_no_hash
+            || $this->patient?->resident_no_enc
+            || $this->prescription?->resident_no_ocr_enc;
+
+        return $has ? self::PATIENT_EXISTING : self::PATIENT_NEW;
+    }
+
+    public function patientTypeLabel(): string
+    {
+        return self::PATIENT_TYPE_LABELS[$this->patientType()];
+    }
+
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);

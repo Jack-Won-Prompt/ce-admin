@@ -22,6 +22,26 @@ class NhisController extends Controller
             $query->where('nhis_claim_status', $request->nhis_status);
         }
 
+        /* 신환·구환은 주민번호 보유 여부로 갈리므로 조건도 그 컬럼으로 건다.
+           환자에 없으면 처방전 OCR 값까지 보는 것이 화면 표시와 같은 규칙이다. */
+        if ($request->filled('patient_type')) {
+            $hasRrn = fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p->whereNotNull('resident_no_hash'))
+                ->orWhereHas('prescription', fn ($p) => $p->whereNotNull('resident_no_ocr_enc'));
+
+            $request->patient_type === 'existing'
+                ? $query->where($hasRrn)
+                : $query->whereNot($hasRrn);
+        }
+
+        // 공단이냐 지자체냐 — 청구처가 다르면 서류도 보내는 법도 다르다
+        if ($request->filled('agency')) {
+            $agency = $request->agency;
+            $query->whereHas('prescription', fn ($p) => $agency === \App\Support\ClaimAgency::NHIS
+                ? $p->where(fn ($x) => $x->where('claim_agency', $agency)->orWhereNull('claim_agency'))
+                : $p->where('claim_agency', $agency));
+        }
+
         /* 자료가 갖춰진 건만 추린다. 청구할 수 있는 것과 아직 못 하는 것이 목록에서 똑같아
            보이면 담당자가 하나씩 열어 보고 닫기를 반복한다. */
         if ($request->filled('ready')) {
@@ -101,6 +121,8 @@ class NhisController extends Controller
                 'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
                 'result'       => $result,
+                // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
+                'patient_type' => $o->patientTypeLabel(),
                 // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
                 'claim_ready'  => (bool) $o->claim_ready,
                 'claim_missing' => $o->claim_missing ?? '',
