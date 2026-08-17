@@ -95,12 +95,23 @@ class WithworksReturns
             'withworks_error'        => null,
         ])->save();
 
-        // 주문 쪽 상태도 맞춰 둔다 — 창고에서 취소된 주문이 우리 화면에 살아 있으면 안 된다
+        /* 주문 쪽도 맞춰 둔다 — 창고에서 취소된 주문이 우리 화면에 살아 있으면 안 된다.
+           출고 전 취소는 물건이 안 나가는 것이 확정된 순간이라 여기서 바로 닫는다.
+           반품·교환은 다르다 — 검수에서 되돌아오는 일이 있어 환불완료까지 기다린다. */
+        $before = $order->status;
+
         $order->forceFill([
+            'status'                 => 'cancelled',
             'withworks_status'       => '99',
             'withworks_status_label' => '취소',
             'withworks_status_at'    => now(),
         ])->save();
+
+        if ($before !== 'cancelled') {
+            activity()->performedOn($order)->log(
+                "출고 전 취소로 주문을 닫았습니다 ({$return->receipt_no})"
+            );
+        }
 
         return true;
     }
