@@ -43,14 +43,6 @@
 </div>
 @endsection
 
-@section('header-actions')
-  @perm('prescription-upload', 'create')
-  <a href="{{ route('prescriptions.upload') }}" class="btn btn-primary btn-sm">
-    <i class="fa-solid fa-upload"></i> 처방전 업로드
-  </a>
-  @endperm
-@endsection
-
 @push('styles')
 <style>
   .filter-bar .form-control { height: 32px; font-size: 13px; }
@@ -207,6 +199,14 @@
         <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
       @endif
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+      {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
+           올릴 권한이 없는 사람에게는 보이지 않아야 하므로 @perm 을 그대로 둔다. --}}
+      @perm('prescription-upload', 'create')
+      <a href="{{ route('prescriptions.upload') }}" class="ds-btn ds-btn-primary"
+         data-ce-tab="처방자료 업로드" data-ce-icon="bx-upload">
+        <i class="fa-solid fa-upload"></i> 처방전 업로드
+      </a>
+      @endperm
     </div>
   </form>
 

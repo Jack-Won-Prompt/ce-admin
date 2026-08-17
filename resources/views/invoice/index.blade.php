@@ -161,12 +161,6 @@
 </style>
 @endpush
 
-@section('header-actions')
-<a href="{{ route('orders.index') }}" class="btn btn-outline btn-sm">
-  <i class="fa-solid fa-cart-shopping"></i> 주문 목록
-</a>
-@endsection
-
 @php
   $statusFilterTabs = [
     'all'          => ['전체',            $counts['total'],        'gray'],
@@ -227,6 +221,12 @@
       <a href="{{ route('invoice.index', ['tab'=>$tab]) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
+         data-ce-tab 이 붙어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
+    <a href="{{ route('orders.index') }}" class="ds-btn"
+       data-ce-tab="주문 관리" data-ce-icon="bx-cart">
+      <i class="fa-solid fa-cart-shopping"></i> 주문 목록
+    </a>
   </div>
 </form>
 
