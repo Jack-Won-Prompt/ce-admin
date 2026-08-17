@@ -77,7 +77,7 @@ class OrderController extends Controller
             view()->share('layout', 'layouts.partial');
         }
 
-        $order->load(['patient', 'prescription.items', 'creator']);
+        $order->load(['patient', 'prescription.items', 'creator', 'tossPayment']);
 
         // 상세를 열 때도 최신을 본다. 스케줄이 주기적으로 훑지만 그 사이에 바뀌었을 수 있다.
         $withworksStatus = app(WithworksSync::class)->pull($order);

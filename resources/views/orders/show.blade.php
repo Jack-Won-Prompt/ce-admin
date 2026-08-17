@@ -292,6 +292,13 @@
   .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
   .btn-close-modal { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
 
+  /* 결제·입금 카드의 한 줄 — 왼쪽 이름, 오른쪽 값 */
+  .od-detail .od-kv { display:flex; gap:12px; padding:7px 0; border-bottom:1px solid var(--border-light);
+                      font-size:13px; line-height:21px; }
+  .od-detail .od-kv:last-child { border-bottom:none; }
+  .od-detail .od-kv > span:first-child { width:88px; flex-shrink:0; color:var(--gray-700); font-weight:500; }
+  .od-detail .od-kv > span:last-child  { flex:1; text-align:right; color:var(--gray-1000); font-weight:500; }
+
   .amount-hint { font-size: 12px; font-weight: 400; line-height: 19px; color: var(--gray-600); margin-top: 4px; }
   .tax-calc-row { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; font-size: 12px; }
   .tax-calc-row b { color: var(--primary); }
@@ -674,6 +681,63 @@
               <div class="label">총 결제금액</div>
               <div class="value">{{ number_format($order->total_amount) }}원</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- 결제·입금 ─────────────────────────────────────────────
+           금액만 보이고 실제로 받았는지는 정산 화면에 가야 알 수 있었다. 한 주문의 돈이
+           어디까지 왔는지는 그 주문을 보는 자리에서 끝나야 한다.
+           환자 입금(가상계좌)과 기관 환급(공단)을 나란히 둔다 — 둘 다 들어와야 정산이 닫힌다. --}}
+      @php
+        $tp = $order->tossPayment;
+        $paid = $tp && $tp->is_done;
+      @endphp
+      <div class="card od-mb">
+        <div class="card-header">
+          <i class="bx bx-credit-card" style="color:var(--primary);"></i>
+          <span class="card-header-title">결제 · 입금</span>
+          <div style="margin-left:auto;">
+            @if($paid)
+              <span class="badge badge-success">입금완료</span>
+            @elseif($tp && $tp->is_expired)
+              <span class="badge badge-danger">기한 지남</span>
+            @elseif($tp)
+              <span class="badge badge-warning">입금대기</span>
+            @else
+              <span class="badge badge-secondary">미발급</span>
+            @endif
+          </div>
+        </div>
+        <div class="card-body">
+          @if($tp)
+            <div class="od-kv"><span>결제 수단</span><span>{{ $tp->method_label }}</span></div>
+            <div class="od-kv"><span>결제 금액</span><span>{{ number_format($tp->amount) }}원</span></div>
+            <div class="od-kv"><span>입금 계좌</span><span>
+              {{ trim($tp->bank_name . ' ' . ($tp->account_number ?? '')) ?: '—' }}
+              @if($tp->customer_name) · {{ $tp->customer_name }} @endif
+            </span></div>
+            <div class="od-kv"><span>입금 기한</span><span>{{ $tp->due_date?->format('Y-m-d H:i') ?? '—' }}</span></div>
+            <div class="od-kv"><span>입금 일시</span><span>
+              {{ $tp->deposited_at?->format('Y-m-d H:i') ?? '아직 들어오지 않았습니다' }}
+            </span></div>
+          @else
+            <div class="od-kv"><span>환자 입금</span><span>
+              가상계좌가 발급되지 않았습니다 — 처방전 검수 화면에서 발급합니다
+            </span></div>
+          @endif
+
+          {{-- 기관 입금 — 공단이 환급한 돈. 청구 결과를 등록하면 채워진다. --}}
+          <div class="od-kv" style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;">
+            <span>기관 환급</span>
+            <span>
+              @if($order->nhis_reimbursement)
+                {{ number_format($order->nhis_reimbursement) }}원
+                @if($order->nhis_approved_at) · {{ $order->nhis_approved_at->format('Y-m-d') }} @endif
+              @else
+                아직 환급되지 않았습니다
+              @endif
+            </span>
           </div>
         </div>
       </div>
@@ -1283,11 +1347,14 @@ window.HELP_TOUR_STEPS = [
     { key: '청구', label: '청구/발행',  icon: 'bx-receipt' },
     { key: '정보', label: '메모/정보',  icon: 'bx-note' },
   ];
+  /* 카드 제목 → 탭. 여기 없는 제목은 '정보' 로 떨어지므로, 카드 제목을 고칠 때는
+     이 표도 함께 고쳐야 한다. 실제로 '국민건강보험공단 청구' → '건강보험 요양비 청구',
+     '메모' → '정보' 로 바뀐 뒤 두 카드가 엉뚱한 탭에 가 있었다. */
   const MAP = {
-    '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본',
+    '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본', '결제 · 입금': '기본',
     '배송 정보': '배송', 'Withworks 출고 현황': '배송', '상태 변경': '배송',
-    '국민건강보험공단 청구': '청구', '세금계산서 / 현금영수증': '청구',
-    '메모': '정보',
+    '건강보험 요양비 청구': '청구', '세금계산서 / 현금영수증': '청구',
+    '정보': '정보', '메모': '정보',
   };
 
   const cards = [];

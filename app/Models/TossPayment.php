@@ -42,6 +42,18 @@ class TossPayment extends Model
         return TossClient::STATUS_LABELS[$this->status][1] ?? 'secondary';
     }
 
+    /** 결제 수단 — 지금은 가상계좌 하나뿐이지만 값이 그대로 보이면 읽히지 않는다 */
+    public const METHOD_LABELS = [
+        'VIRTUAL_ACCOUNT' => '가상계좌',
+        'CARD'            => '신용카드',
+        'TRANSFER'        => '계좌이체',
+    ];
+
+    public function getMethodLabelAttribute(): string
+    {
+        return self::METHOD_LABELS[$this->method] ?? ($this->method ?: '-');
+    }
+
     /** 은행명 */
     public function getBankNameAttribute(): string
     {
