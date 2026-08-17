@@ -5441,11 +5441,16 @@ window.HELP_TOUR_STEPS = [
     const totalCopay = validItems.reduce((s, i) => s + (i.patient_copay || 0), 0);
     const totalNhis  = validItems.reduce((s, i) => s + (i.nhis_amount  || 0), 0);
 
-    const shippingAddress = (() => {
-      const base   = document.getElementById('shippingAddr')?.value?.trim() || '';
-      const detail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
-      return base ? (detail ? base + ' ' + detail : base) : null;
-    })();
+    /* 기본주소와 상세주소를 따로 쥔다.
+       우리 주문에는 합쳐 넣는 것이 읽기 좋지만, 위드웍스는 둘을 따로 받아 스스로
+       합친다(기본 + 상세 + 전화). 합친 것을 기본주소 자리에 넣으면 상세가 두 번
+       붙는다 — 실제로 「…테헤란로 152 강남파이낸스센터 강남파이낸스센터(010-…)」로
+       들어가 있었다. */
+    const shippingBase   = document.getElementById('shippingAddr')?.value?.trim() || '';
+    const shippingDetail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
+    const shippingAddress = shippingBase
+      ? (shippingDetail ? shippingBase + ' ' + shippingDetail : shippingBase)
+      : null;
 
     const shippingRecipient = document.getElementById('shippingRecipient')?.value?.trim() || null;
 
@@ -5485,7 +5490,9 @@ window.HELP_TOUR_STEPS = [
       const wwPayload = {
         order_number:      res.order_number,
         items:             wwItems,
-        shipping_address:  shippingAddress,
+        // 위드웍스는 기본과 상세를 따로 받아 스스로 합친다 — 합쳐 보내면 두 번 붙는다
+        shipping_address:        shippingBase || null,
+        shipping_address_detail: shippingDetail,
         recipient_name:    shippingRecipient,
         delivery_date:     res.estimated_delivery || null,
         so_type:           currentSoType,
@@ -5650,11 +5657,16 @@ window.HELP_TOUR_STEPS = [
     const totalCopay = validItems.reduce((s, i) => s + (i.patient_copay || 0), 0);
     const totalNhis  = validItems.reduce((s, i) => s + (i.nhis_amount  || 0), 0);
 
-    const shippingAddress = (() => {
-      const base   = document.getElementById('shippingAddr')?.value?.trim() || '';
-      const detail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
-      return base ? (detail ? base + ' ' + detail : base) : null;
-    })();
+    /* 기본주소와 상세주소를 따로 쥔다.
+       우리 주문에는 합쳐 넣는 것이 읽기 좋지만, 위드웍스는 둘을 따로 받아 스스로
+       합친다(기본 + 상세 + 전화). 합친 것을 기본주소 자리에 넣으면 상세가 두 번
+       붙는다 — 실제로 「…테헤란로 152 강남파이낸스센터 강남파이낸스센터(010-…)」로
+       들어가 있었다. */
+    const shippingBase   = document.getElementById('shippingAddr')?.value?.trim() || '';
+    const shippingDetail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
+    const shippingAddress = shippingBase
+      ? (shippingDetail ? shippingBase + ' ' + shippingDetail : shippingBase)
+      : null;
 
     const shippingRecipient = document.getElementById('shippingRecipient')?.value?.trim() || null;
 
@@ -5687,7 +5699,9 @@ window.HELP_TOUR_STEPS = [
       const wwRes = await apiRequest(`/prescriptions/${RX_NUMBER}/withworks-order`, 'PUT', {
         order_number:     existingOrder.order_number,
         items:            wwItems,
-        shipping_address: shippingAddress,
+        // 위드웍스는 기본과 상세를 따로 받아 스스로 합친다 — 합쳐 보내면 두 번 붙는다
+        shipping_address:        shippingBase || null,
+        shipping_address_detail: shippingDetail,
         recipient_name:   shippingRecipient,
         so_type:          currentSoType,
       });
