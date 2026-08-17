@@ -76,28 +76,29 @@
 
 @section('content')
 
-@php $curType = request('type'); @endphp
+{{-- 유형은 CE 샘플주문 하나뿐이라 칩으로 가를 것이 없다. 진행 상태를 둔다. --}}
+@php $curStatus = request('status'); @endphp
 <div class="ds-chips">
-  <a href="{{ route('sample-orders.index', request()->except(['type','page'])) }}"
-     class="ds-chip {{ !$curType ? 'active' : '' }}">
+  <a href="{{ route('sample-orders.index', request()->except(['status','page'])) }}"
+     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
     전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
   </a>
-  @foreach(\App\Models\SampleOrder::TYPE_SHORT as $code => $label)
-    <a href="{{ route('sample-orders.index', array_merge(request()->except(['type','page']), ['type' => $code])) }}"
-       class="ds-chip {{ $curType === (string) $code ? 'active' : '' }}">
-      {{ $label }}
-      @if(($counts[$code] ?? 0) > 0)<span class="ds-chip-count">{{ $counts[$code] }}</span>@endif
+  @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
+    <a href="{{ route('sample-orders.index', array_merge(request()->except(['status','page']), ['status' => $k])) }}"
+       class="ds-chip {{ $curStatus === $k ? 'active' : '' }}">
+      {{ $meta[0] }}
+      @if(($counts[$k] ?? 0) > 0)<span class="ds-chip-count">{{ $counts[$k] }}</span>@endif
     </a>
   @endforeach
 </div>
 
 <form method="GET" action="{{ route('sample-orders.index') }}" class="ds-filter-card">
-  @if($curType)<input type="hidden" name="type" value="{{ $curType }}">@endif
+  @if($curStatus)<input type="hidden" name="status" value="{{ $curStatus }}">@endif
   <div class="ds-filter-fields">
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="샘플번호 · 거래처 · 받는 사람 · 판매주문번호">
+             placeholder="샘플번호 · 고객 · 받는 사람 · 판매주문번호">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">주문일</label>
@@ -107,19 +108,10 @@
         <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
       </div>
     </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">상태</label>
-      <select name="status" class="form-control form-select" onchange="this.form.submit()">
-        <option value="">전체</option>
-        @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
-          <option value="{{ $k }}" {{ request('status') === $k ? 'selected' : '' }}>{{ $meta[0] }}</option>
-        @endforeach
-      </select>
-    </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['q','status','date_from','date_to']))
-      <a href="{{ route('sample-orders.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
+    @if(request()->hasAny(['q','date_from','date_to']))
+      <a href="{{ route('sample-orders.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다 --}}
@@ -180,22 +172,27 @@
     <form class="smp-pane" id="smpForm">
       <div class="smp-sec">
         <div class="smp-sec-hd"><span class="step">1</span> 받는 곳</div>
+        {{-- 고객을 먼저 찾는다. 이름만 적어 두면 같은 사람을 두 번 적을 때 갈리고,
+             이 사람에게 몇 번 보냈는지 셀 수 없다. 등록되지 않은 사람이면 그냥 적는다. --}}
+        <div class="smp-find">
+          <input type="text" id="smpCustQ" class="form-control" placeholder="고객(환자) 이름 또는 연락처">
+          <button type="button" class="ds-btn" onclick="smpFindCustomer()">고객 조회</button>
+          <span class="ds-grid-hint" id="smpCustNote"></span>
+        </div>
+        <div class="smp-hits" id="smpCustHits" style="display:none;"></div>
+
         <div class="smp-grid">
           <div class="smp-f">
-            <label>유형</label>
-            <select id="smpType" class="form-control form-select">
-              @foreach(\App\Models\SampleOrder::TYPES as $code => $label)
-                <option value="{{ $code }}">{{ $code }} · {{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="smp-f">
-            <label>거래처</label>
-            <input type="text" id="smpAccount" class="form-control" maxlength="100" placeholder="병원·대리점 등">
+            <label>고객 *</label>
+            <input type="text" id="smpAccount" class="form-control" maxlength="100"
+                   placeholder="찾아서 고르거나 그대로 적으십시오">
+            <input type="hidden" id="smpPatientId" value="">
+            <span class="ds-grid-hint" id="smpCustKind"></span>
           </div>
           <div class="smp-f">
             <label>받는 사람 *</label>
-            <input type="text" id="smpRecipient" class="form-control" maxlength="100">
+            <input type="text" id="smpRecipient" class="form-control" maxlength="100"
+                   placeholder="고객과 같으면 그대로 둡니다">
           </div>
           <div class="smp-f">
             <label>연락처</label>
@@ -279,6 +276,7 @@
   const SHOW_BASE  = @json(url('sample-orders'));
   const STORE_URL  = @json(route('sample-orders.store'));
   const SEARCH_URL = @json(url('products/search'));
+  const CUST_URL   = @json(route('sample-orders.customerSearch'));
   const CSRF       = document.querySelector('meta[name=csrf-token]')?.content ?? '';
 
   const $ = (id) => document.getElementById(id);
@@ -288,9 +286,8 @@
     height: 'fit', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
     columns: [
       { header: '샘플번호',   name: 'sample_no', width: 150, sortable: true },
-      { header: '유형',       name: 'type',      width: 70,  align: 'center', sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
-      { header: '거래처',     name: 'account',   width: 140 },
+      { header: '고객',       name: 'customer',  width: 110, sortable: true },
       { header: '받는 사람',  name: 'recipient', width: 100 },
       { header: '연락처',     name: 'mobile',    width: 120 },
       { header: '배송지',     name: 'address',   width: 220 },
@@ -345,7 +342,7 @@
       const kv = (k, v) => `<div class="smp-kv"><span>${k}</span><span>${v ?? '-'}</span></div>`;
       $('smpDetailHead').innerHTML =
         kv('상태', head.status)
-        + kv('거래처', head.account)
+        + kv('고객', head.customer + (head.customer_kind ? ' · ' + head.customer_kind : ''))
         + kv('받는 사람', head.recipient + (head.mobile && head.mobile !== '-' ? ' · ' + head.mobile : ''))
         + kv('배송지', head.address)
         + kv('주문일', head.order_date + (head.delivery_date ? ' · 배송요청 ' + head.delivery_date : ''))
@@ -383,6 +380,62 @@
     return String(s ?? '').replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  // ── 고객 찾기 ────────────────────────────────────────
+  window.smpFindCustomer = async function () {
+    const q = $('smpCustQ').value.trim();
+    $('smpCustNote').textContent = '찾는 중…';
+    try {
+      const res = await fetch(CUST_URL + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+      const { rows, message } = await res.json();
+      drawCustomers(rows ?? []);
+      $('smpCustNote').textContent = message || ((rows ?? []).length ? rows.length + '명' : '');
+    } catch (e) {
+      $('smpCustNote').textContent = '찾지 못했습니다';
+    }
+  };
+
+  function drawCustomers(rows) {
+    const box = $('smpCustHits');
+    box.innerHTML = '';
+    box.style.display = '';
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="smp-empty">맞는 고객이 없습니다. 등록되지 않은 분이면 이름을 그대로 적으십시오.</div>';
+      return;
+    }
+
+    rows.forEach(r => {
+      const el = document.createElement('div');
+      el.className = 'smp-hit';
+      el.innerHTML = `<span class="code">${esc(r.name)}</span>`
+        + `<span class="name">${esc(r.address || '주소 없음')}</span>`
+        + `<span class="price">${esc(r.mobile || '')}</span>`;
+      el.addEventListener('click', () => pickCustomer(r));
+      box.appendChild(el);
+    });
+  }
+
+  function pickCustomer(r) {
+    $('smpPatientId').value = r.id;
+    $('smpAccount').value   = r.name;
+    $('smpCustKind').textContent = '환자로 이어 둡니다';
+    if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
+    if (r.mobile && !$('smpMobile').value.trim())   $('smpMobile').value = r.mobile;
+    if (r.address && !$('smpAddress').value.trim()) $('smpAddress').value = r.address;
+    $('smpCustHits').style.display = 'none';
+    $('smpCustQ').value = '';
+  }
+
+  // 고객 이름을 손으로 고치면 환자 연결을 끊는다 — 이름과 연결이 어긋나면 안 된다
+  $('smpAccount').addEventListener('input', () => {
+    if ($('smpPatientId').value) {
+      $('smpPatientId').value = '';
+      $('smpCustKind').textContent = '직접 적은 이름입니다';
+    }
+  });
+
+  $('smpCustQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); smpFindCustomer(); } });
 
   // ── 제품 담기 ────────────────────────────────────────
   let items = [];
@@ -474,7 +527,8 @@
   $('smpForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!items.length)                 { alert('제품을 담으십시오.'); return; }
-    if (!$('smpRecipient').value.trim()) { alert('받는 사람을 넣으십시오.'); return; }
+    if (!$('smpAccount').value.trim())   { alert('고객을 넣으십시오.'); return; }
+    if (!$('smpRecipient').value.trim()) { $('smpRecipient').value = $('smpAccount').value.trim(); }
     if (!$('smpAddress').value.trim())   { alert('주소를 넣으십시오.'); return; }
 
     const btn = e.target.querySelector('button[type=submit]');
@@ -486,8 +540,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
         body: JSON.stringify({
-          type:           $('smpType').value,
-          account_name:   $('smpAccount').value.trim() || null,
+          patient_id:     $('smpPatientId').value || null,
+          account_name:   $('smpAccount').value.trim(),
           recipient_name: $('smpRecipient').value.trim(),
           mobile:         $('smpMobile').value.trim() || null,
           postcode:       $('smpPostcode').value.trim() || null,

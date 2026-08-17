@@ -18,29 +18,15 @@ class SampleOrder extends Model
     use SoftDeletes;
 
     /**
-     * 위드웍스 판매유형.
+     * 위드웍스 판매유형 — 6001(CE 샘플주문) 하나뿐이다.
      *
-     * 되돌리는 것은 판매와 코드가 다르고, 셋끼리도 다르다 — 창고가 하는 일이 다르다.
-     * 값은 위드웍스 code_list 가 정한다.
+     * 되돌림(반품·교환·취소)은 아직 정해지지 않았다. 코드가 정해지면 여기를 늘린다 —
+     * 값은 위드웍스 code_list 가 정하므로 우리가 미리 지어 두면 안 된다.
      */
-    public const TYPE_SALE     = '6001';
-    public const TYPE_CANCEL   = '6004';
-    public const TYPE_RETURN   = '6005';
-    public const TYPE_EXCHANGE = '6006';
+    public const TYPE_SALE = '6001';
 
     public const TYPES = [
-        self::TYPE_SALE     => 'CE 샘플주문',
-        self::TYPE_CANCEL   => 'CE 샘플 취소',
-        self::TYPE_RETURN   => 'CE 샘플 반품',
-        self::TYPE_EXCHANGE => 'CE 샘플 교환',
-    ];
-
-    /** 목록 칩에 쓰는 짧은 이름 — 긴 이름은 한 줄에 넷이 들어가지 않는다 */
-    public const TYPE_SHORT = [
-        self::TYPE_SALE     => '판매',
-        self::TYPE_CANCEL   => '취소',
-        self::TYPE_RETURN   => '반품',
-        self::TYPE_EXCHANGE => '교환',
+        self::TYPE_SALE => 'CE 샘플주문',
     ];
 
     public const STATUS_LABELS = [
@@ -51,7 +37,7 @@ class SampleOrder extends Model
     ];
 
     protected $fillable = [
-        'sample_no', 'type',
+        'sample_no', 'type', 'patient_id',
         'account_name', 'recipient_name', 'mobile', 'postcode', 'address', 'address_detail',
         'order_date', 'delivery_date', 'purpose', 'note',
         'status', 'total_qty', 'total_amount',
@@ -67,6 +53,12 @@ class SampleOrder extends Model
         'total_qty'         => 'integer',
         'total_amount'      => 'integer',
     ];
+
+    /** 샘플을 받는 고객. 환자로 등록되지 않은 사람에게 보내는 일이 있어 비어 있을 수 있다 */
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
 
     public function items(): HasMany
     {

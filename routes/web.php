@@ -154,6 +154,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('sample-orders')->name('sample-orders.')->group(function () {
         Route::get('/',                [\App\Http\Controllers\SampleOrderController::class, 'index'])->name('index');
         Route::post('/',               [\App\Http\Controllers\SampleOrderController::class, 'store'])->name('store');
+        Route::get('/customer-search', [\App\Http\Controllers\SampleOrderController::class, 'customerSearch'])->name('customerSearch');
         Route::get('/{sampleOrder}',   [\App\Http\Controllers\SampleOrderController::class, 'show'])->name('show');
     });
 

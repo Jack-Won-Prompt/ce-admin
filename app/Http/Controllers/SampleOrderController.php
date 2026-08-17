@@ -20,11 +20,8 @@ class SampleOrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = SampleOrder::with('creator')->latest('id');
+        $query = SampleOrder::with(['creator', 'patient'])->latest('id');
 
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -34,7 +31,8 @@ class SampleOrderController extends Controller
                 ->where('sample_no', 'like', "%{$kw}%")
                 ->orWhere('account_name', 'like', "%{$kw}%")
                 ->orWhere('recipient_name', 'like', "%{$kw}%")
-                ->orWhere('withworks_so_no', 'like', "%{$kw}%"));
+                ->orWhere('withworks_so_no', 'like', "%{$kw}%")
+                ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$kw}%")));
         }
         if ($request->filled('date_from')) {
             $query->whereDate('order_date', '>=', $request->date_from);
@@ -48,9 +46,9 @@ class SampleOrderController extends Controller
         $gridData = $rows->map(fn (SampleOrder $s) => [
             'id'        => $s->id,
             'sample_no' => $s->sample_no,
-            'type'      => SampleOrder::TYPE_SHORT[$s->type] ?? $s->type,
             'status'    => $s->statusLabel(),
-            'account'   => $s->account_name ?: '-',
+            // 거래처는 고객이다. 환자로 등록된 사람이면 그 이름을, 아니면 적어 둔 이름을 쓴다.
+            'customer'  => $s->patient?->name ?: ($s->account_name ?: '-'),
             'recipient' => $s->recipient_name ?: '-',
             'mobile'    => $s->mobile ?: '-',
             'address'   => trim(($s->address ?? '') . ' ' . ($s->address_detail ?? '')) ?: '-',
@@ -61,7 +59,7 @@ class SampleOrderController extends Controller
             'creator'   => $s->creator?->name ?? '-',
         ])->values();
 
-        $counts = SampleOrder::selectRaw('type, count(*) c')->groupBy('type')->pluck('c', 'type');
+        $counts = SampleOrder::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status');
 
         return view('sample-orders.index', [
             'gridData' => $gridData,
@@ -70,10 +68,46 @@ class SampleOrderController extends Controller
         ]);
     }
 
+    /**
+     * 샘플을 받을 고객을 찾는다.
+     *
+     * 이름만 적어 두면 같은 사람을 두 번 적을 때 갈리고, 이 사람에게 몇 번 보냈는지
+     * 셀 수 없다. 환자를 걸어 두되, 등록되지 않은 사람에게 보내는 일이 있어 직접
+     * 적는 길도 남긴다.
+     */
+    public function customerSearch(Request $request): JsonResponse
+    {
+        $kw = trim((string) $request->q);
+
+        if (mb_strlen($kw) < 2) {
+            return response()->json(['rows' => [], 'message' => '두 글자 이상 넣으십시오']);
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $kw);
+
+        $rows = \App\Models\Patient::where(fn ($q) => $q
+                ->where('name', 'like', "%{$kw}%")
+                ->when($digits !== '', fn ($s) => $s
+                    ->orWhere('mobile', 'like', "%{$digits}%")
+                    ->orWhere('phone', 'like', "%{$digits}%")))
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'mobile', 'phone', 'address']);
+
+        return response()->json([
+            'rows' => $rows->map(fn ($p) => [
+                'id'      => $p->id,
+                'name'    => $p->name,
+                'mobile'  => $p->mobile ?: $p->phone ?: '',
+                'address' => $p->address ?: '',
+            ])->values(),
+        ]);
+    }
+
     /** 상세 — 머리 정보와 제품 목록을 함께 준다. 화면이 탭 안에서 그린다. */
     public function show(SampleOrder $sampleOrder): JsonResponse
     {
-        $sampleOrder->load(['items', 'creator']);
+        $sampleOrder->load(['items', 'creator', 'patient']);
 
         return response()->json([
             'head' => [
@@ -82,7 +116,8 @@ class SampleOrderController extends Controller
                 'type'        => $sampleOrder->typeLabel(),
                 'status'      => $sampleOrder->statusLabel(),
                 'status_badge'=> $sampleOrder->statusBadge(),
-                'account'     => $sampleOrder->account_name ?: '-',
+                'customer'    => $sampleOrder->patient?->name ?: ($sampleOrder->account_name ?: '-'),
+                'customer_kind'=> $sampleOrder->patient_id ? '환자' : '직접 입력',
                 'recipient'   => $sampleOrder->recipient_name ?: '-',
                 'mobile'      => $sampleOrder->mobile ?: '-',
                 'address'     => trim(($sampleOrder->address ?? '') . ' ' . ($sampleOrder->address_detail ?? '')) ?: '-',
@@ -110,7 +145,7 @@ class SampleOrderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'type'                 => 'required|string|in:' . implode(',', array_keys(SampleOrder::TYPES)),
+            'patient_id'           => 'nullable|exists:patients,id',
             'account_name'         => 'nullable|string|max:100',
             'recipient_name'       => 'required|string|max:100',
             'mobile'               => 'nullable|string|max:30',
@@ -133,6 +168,8 @@ class SampleOrderController extends Controller
                 collect($data)->except('items')->all(),
                 [
                     'sample_no'  => SampleOrder::generateNo(),
+                    // 유형은 하나뿐이라 고르게 하지 않는다 — 고르는 칸이 있으면 틀린 값이 들어올 자리가 생긴다
+                    'type'       => SampleOrder::TYPE_SALE,
                     'status'     => 'draft',
                     'created_by' => Auth::id(),
                 ]
