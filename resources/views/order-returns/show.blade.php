@@ -134,10 +134,14 @@
 <div class="rt-card">
   <div class="rt-hd">
     위드웍스 연계
-    @if($r->withworks_error)
+    {{-- 아직 못 보낸 건에는 보낼 길이 있어야 한다. 까닭이 남은 것만 다시 보내게 두면,
+         연동을 켜기 전에 접수한 건은 영영 창고에 알려지지 않는다. --}}
+    @if(!$r->sentToWithworks())
       <form method="POST" action="{{ route('order-returns.resend', $r) }}" style="margin-left:auto;display:inline;">
         @csrf
-        <button type="submit" class="ds-btn ds-btn-sm">다시 보내기</button>
+        <button type="submit" class="ds-btn ds-btn-sm">
+          {{ $r->withworks_error ? '다시 보내기' : '위드웍스로 보내기' }}
+        </button>
       </form>
     @endif
   </div>
