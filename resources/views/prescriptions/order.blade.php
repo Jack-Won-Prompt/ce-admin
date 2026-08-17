@@ -2482,21 +2482,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span style="color:var(--danger);font-size:11px;">*</span>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                @php
+                  $soIcons = ['1013' => 'fa-hospital', '1016' => 'fa-user',
+                              '1022' => 'fa-gift',     '5001' => 'fa-truck-fast'];
+                  $soCur = $prescription->order?->so_type ?? '1013';
+                @endphp
+                @foreach(\App\Models\Order::SO_TYPE_LABELS as $code => $meta)
                 <label class="so-type-opt">
-                  <input type="radio" name="so_type_radio" value="1013" checked onchange="onSoTypeChange(this.value)">
-                  <span><i class="fa-solid fa-hospital"></i> CE 판매</span>
+                  <input type="radio" name="so_type_radio" value="{{ $code }}"
+                         @checked($soCur === $code) onchange="onSoTypeChange(this.value)">
+                  <span><i class="fa-solid {{ $soIcons[$code] ?? 'fa-tag' }}"></i> {{ $meta[0] }}</span>
                 </label>
-                <label class="so-type-opt">
-                  <input type="radio" name="so_type_radio" value="1016" onchange="onSoTypeChange(this.value)">
-                  <span><i class="fa-solid fa-user"></i> 개인판매</span>
-                </label>
-                <label class="so-type-opt">
-                  <input type="radio" name="so_type_radio" value="1022" onchange="onSoTypeChange(this.value)">
-                  <span><i class="fa-solid fa-gift"></i> 샘플판매</span>
-                </label>
+                @endforeach
               </div>
               <div id="soTypeBadge" style="margin-left:auto;">
-                <span class="badge badge-primary" style="font-size:11px;">1013 · CE 판매</span>
+                <span class="badge badge-primary" style="font-size:11px;">{{ $soCur }} · {{ \App\Models\Order::SO_TYPE_LABELS[$soCur][0] ?? $soCur }}</span>
               </div>
             </div>
           </div>
@@ -3976,7 +3976,9 @@ window.HELP_TOUR_STEPS = [
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
   // ── 판매 유형 ────────────────────────────────────────
-  const SO_TYPE_LABELS = { '1013': 'CE 판매', '1016': '개인판매', '1022': '샘플판매' };
+  /* 위드웍스 code_list 를 따르는 값이라 모델 상수 하나만 보게 한다 —
+     두 벌로 두면 새 유형이 생길 때 한쪽만 늘어난다. */
+  const SO_TYPE_LABELS = @json(collect(\App\Models\Order::SO_TYPE_LABELS)->map(fn($v) => $v[0]));
   let currentSoType = '1013';
 
   // ── 기존 주문 상태 ───────────────────────────────────

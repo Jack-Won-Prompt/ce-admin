@@ -13,6 +13,7 @@ use App\Services\Popbill\TaxinvoiceService;
 use App\Services\WithworksSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -102,7 +103,7 @@ class OrderController extends Controller
             'shipping_fee'            => 'nullable|numeric|min:0',
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
-            'so_type'                 => 'nullable|string|in:1013,1016,1022',
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
         ]);
 
         $prescription = Prescription::findOrFail($request->prescription_id);
@@ -212,7 +213,7 @@ class OrderController extends Controller
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
             'shipping_postcode'       => 'nullable|string|max:10',
-            'so_type'                 => 'nullable|string|in:1013,1016,1022',
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
             'delivery_date'           => 'nullable|date',
         ]);
 

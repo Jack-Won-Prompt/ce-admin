@@ -13,11 +13,21 @@ class Order extends Model
     use SoftDeletes;
 
     /** 판매 유형 코드 → 레이블/배지 */
+    /**
+     * 위드웍스 판매유형 코드.
+     *
+     * 위드웍스 code_list 에 있는 값을 그대로 쓴다. 우리가 만드는 값이 아니라 그쪽이
+     * 정하는 것이라, 새 유형이 생기면 여기와 검증 목록을 함께 늘려야 한다.
+     */
     public const SO_TYPE_LABELS = [
-        '1013' => ['CE 판매',   'primary'],
-        '1016' => ['개인판매',  'info'],
-        '1022' => ['샘플판매',  'warning'],
+        '1013' => ['CE 판매',          'primary'],
+        '1016' => ['개인판매',         'info'],
+        '1022' => ['샘플판매',         'warning'],
+        '5001' => ['End User Direct', 'success'],
     ];
+
+    /** 검증에 쓸 코드 목록 — 라벨과 어긋나지 않게 여기서 뽑는다 */
+    public const SO_TYPES = ['1013', '1016', '1022', '5001'];
 
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',
@@ -101,17 +111,17 @@ class Order extends Model
 
     public static function generateOrderNumber(): string
     {
-        $max = static::withTrashed()
-            ->where('order_number', 'like', 'ORD-%')
-            ->max('order_number');
+        /* 번호 부분만 숫자로 보고 최대를 찾는다.
+           예전에는 order_number 의 문자열 최대값을 잡아 뒤 숫자를 뽑았는데, ORD- 뒤에 숫자가
+           아닌 것이 하나라도 섞이면(ORD-T0815… 같은 임시 번호) 그것이 문자열 최대가 되어
+           숫자 추출이 실패하고 번호가 1 로 되돌아간다. 그러면 이미 있는 번호와 부딪혀 주문이
+           아예 만들어지지 않는다. 자릿수가 넷을 넘어갈 때도 문자열 비교는 틀린 답을 준다. */
+        $max = (int) static::withTrashed()
+            ->whereRaw("order_number REGEXP '^ORD-[0-9]+$'")
+            ->selectRaw('MAX(CAST(SUBSTRING(order_number, 5) AS UNSIGNED)) AS seq')
+            ->value('seq');
 
-        if ($max && preg_match('/ORD-(\d+)$/', $max, $m)) {
-            $seq = (int) $m[1] + 1;
-        } else {
-            $seq = 1;
-        }
-
-        return sprintf('ORD-%04d', $seq);
+        return sprintf('ORD-%04d', $max + 1);
     }
 
     /**

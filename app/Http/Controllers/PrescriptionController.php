@@ -24,6 +24,7 @@ use App\Models\ChatRoom;
 use App\Models\PrescriptionAttachment;
 use App\Models\PrescriptionDocument;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -166,7 +167,7 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => 'nullable|string|in:1013,1016,1022',
+            'so_type'          => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
         ]);
 
         $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
@@ -279,7 +280,7 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => 'nullable|string|in:1013,1016,1022',
+            'so_type'          => ['nullable', 'string', Rule::in(Order::SO_TYPES)],
         ]);
 
         $baseUrl = rtrim(config('services.todoworks.api_url'), '/');
