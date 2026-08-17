@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderReturn;
+use App\Models\OrderReturnLog;
 use App\Models\WithworksEvent;
 use App\Services\ClaimReadiness;
 use App\Services\WithworksSync;
@@ -38,6 +40,21 @@ class WithworksWebhookController extends Controller
         'so.cancelled' => 'cancelled',
     ];
 
+    /**
+     * 되돌림 사건 → 우리 접수 단계.
+     *
+     * 판매와 사건 이름을 가르는 까닭이 있다. 되돌림에 so.* 를 쓰면 같은 ce_order_number 를
+     * 싣기 때문에 원 주문이 다시 배송중으로 되돌아간다.
+     *
+     * 창고가 실물을 받아 확정하면(ro.confirmed) 우리 쪽은 검수 단계로 옮긴다 — 물건이
+     * 들어왔으니 다음은 살펴보는 일이다. 등록(ro.created)은 우리가 보낸 것이 잘 섰다는
+     * 뜻이라 단계를 건드리지 않는다.
+     */
+    private const RETURN_STATUS = [
+        'ro.confirmed' => 'inspecting',
+        'ro.cancelled' => 'cancelled',
+    ];
+
     public function receive(Request $request, WithworksSync $sync, ClaimReadiness $readiness): JsonResponse
     {
         $secret = config('services.demoworks.webhook_secret');
@@ -56,7 +73,13 @@ class WithworksWebhookController extends Controller
         $v = Validator::make($request->all(), [
             'event_id'        => 'required|string|max:100',
             'event'           => 'required|string|max:50',
-            'ce_order_number' => 'required|string|max:50',
+            /* 되돌림 사건은 원 주문번호가 비어 올 수 있다 — 창고에서 만든 반품이면
+               우리 주문과 이어지지 않는다. 없다고 거절하면 그 사건은 영영 유실된다. */
+            'ce_order_number' => 'nullable|string|max:50',
+            'ce_return_number'=> 'nullable|string|max:50',
+            'origin_so_no'    => 'nullable|string|max:50',
+            'return_kind'     => 'nullable|string|max:20',
+            'so_type'         => 'nullable|string|max:10',
             'so_no'           => 'nullable|string|max:50',
             'occurred_at'     => 'nullable|date',
             /* 길이로 막지 않는다. 4xx 는 재시도하지 않는 것이 규격이라, 여기서 거절하면 그
@@ -80,13 +103,16 @@ class WithworksWebhookController extends Controller
             return response()->json(['success' => true, 'message' => 'Already processed']);
         }
 
-        $order = Order::where('order_number', $data['ce_order_number'])->first();
+        $isReturn = str_starts_with($data['event'], 'ro.');
+        $order    = ($data['ce_order_number'] ?? null)
+            ? Order::where('order_number', $data['ce_order_number'])->first()
+            : null;
 
         try {
             WithworksEvent::create([
                 'event_id'        => $data['event_id'],
                 'event'           => $data['event'],
-                'ce_order_number' => $data['ce_order_number'],
+                'ce_order_number' => $data['ce_order_number'] ?? null,
                 'so_no'           => $data['so_no'] ?? null,
                 'order_id'        => $order?->id,
                 // 요약 칸은 잘라 담는다. 원본은 바로 아래 payload 에 통째로 남는다.
@@ -100,6 +126,12 @@ class WithworksWebhookController extends Controller
                제약이 마지막 방어선이고, 여기까지 왔다는 것은 다른 요청이 이미 처리했다는
                뜻이라 200 으로 답한다 — 500 을 주면 그쪽이 계속 다시 보낸다. */
             return response()->json(['success' => true, 'message' => 'Already processed']);
+        }
+
+        /* 되돌림 사건은 접수 건을 찾아 옮긴다. 원 주문 상태에는 손대지 않는다 —
+           반품이 들어왔다고 판매가 배송중으로 돌아가서는 안 된다. */
+        if ($isReturn) {
+            return $this->applyReturn($data);
         }
 
         /* 우리가 모르는 주문이어도 사건은 남기고 200 으로 답한다. 404 를 주면 그쪽이 계속
@@ -128,5 +160,67 @@ class WithworksWebhookController extends Controller
         $readiness->refresh($order->refresh());
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * 되돌림 사건을 접수 건에 옮긴다.
+     *
+     * 접수번호(ce_return_number)로 짝짓는다. 우리가 보낸 것이 아니면 — 창고에서 직접
+     * 만든 반품이면 — 짝이 없다. 그래도 200 으로 답한다. 다시 보낸다고 우리에게 그
+     * 접수가 생기지는 않고, 사건은 이미 표에 남아 나중에 볼 수 있다.
+     */
+    private function applyReturn(array $data): JsonResponse
+    {
+        $no = $data['ce_return_number'] ?? null;
+
+        $return = $no ? OrderReturn::where('receipt_no', $no)->first() : null;
+
+        if (!$return) {
+            Log::warning('[Withworks] 모르는 되돌림의 사건', [
+                'event' => $data['event'], 'receipt' => $no,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Return not found — event recorded']);
+        }
+
+        $return->forceFill([
+            'withworks_so_no'        => $data['so_no'] ?? $return->withworks_so_no,
+            'withworks_so_type'      => $data['so_type'] ?? $return->withworks_so_type,
+            'withworks_status'       => isset($data['status'])
+                ? mb_substr($data['status'], 0, 50) : $return->withworks_status,
+            'withworks_status_label' => isset($data['status_label'])
+                ? mb_substr($data['status_label'], 0, 100) : $return->withworks_status_label,
+        ])->save();
+
+        /* 창고가 움직인 만큼만 우리 단계를 옮긴다. 이미 지나온 단계로는 되돌리지 않는다 —
+           담당자가 손으로 앞서 옮겨 둔 것을 창고 사건이 뒤로 끌면 안 된다. */
+        $to = self::RETURN_STATUS[$data['event']] ?? null;
+
+        if ($to && $to !== $return->status && $this->canAdvanceTo($return, $to)) {
+            OrderReturnLog::create([
+                'order_return_id' => $return->id,
+                'from_status'     => $return->status,
+                'to_status'       => $to,
+                'reason'          => '창고 ' . ($data['status_label'] ?? $data['event']),
+            ]);
+
+            $return->update(['status' => $to]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /** 흐름에서 뒤로 가는 것인지 본다 — 취소는 어디서든 갈 수 있다 */
+    private function canAdvanceTo(OrderReturn $return, string $to): bool
+    {
+        if ($to === 'cancelled') {
+            return true;
+        }
+
+        $flow = OrderReturn::FLOWS[$return->type] ?? [];
+        $now  = array_search($return->status, $flow, true);
+        $next = array_search($to, $flow, true);
+
+        return $now === false || $next === false || $next > $now;
     }
 }
