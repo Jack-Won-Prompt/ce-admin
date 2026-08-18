@@ -225,6 +225,9 @@
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
+      {{-- 환자 한 사람의 모든 것은 옆 탭에서 본다. 다른 화면으로 건너가면 어떤 조건으로
+           찾고 있었는지가 끊기고, 돌아오려면 처음부터 다시 찾아야 한다. --}}
+      <button type="button" id="pnlBtnFull" class="pnl-tab" onclick="pnlShow('full')">전체 상세</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
@@ -242,7 +245,8 @@
       <span id="pdName" style="font-weight:700;font-size:14px;line-height:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
       {{-- 요청서 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음' — 오른쪽 끝으로 밀지 않고
            이름 바로 뒤에 붙인다(margin-left:auto 제거). --}}
-      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;">전체 상세</a>
+      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;"
+         onclick="pfOpen(event)">전체 상세</a>
     </div>
     <div class="tab-bar">
       <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
@@ -254,6 +258,15 @@
     <div class="pt-pane" id="pd-purchase"></div>
   </div>
 </div>{{-- /#pnlDetail --}}
+
+{{-- ── 전체 상세 탭 — 환자 상세 화면을 그대로 들여온다 ── --}}
+<div id="pnlFull" style="display:none;">
+  {{-- 상세 화면은 이미 한 벌 있다. 두 벌로 만들면 한쪽만 고쳐져 서로 다른 것을 보여 준다.
+       액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
+  <div id="pfEmpty" class="pnl-empty">조회결과에서 환자를 고른 뒤 <b>전체 상세</b>를 누르면 여기에 나옵니다.</div>
+  <iframe id="pfFrame" title="환자 전체 상세" style="display:none;width:100%;border:0;
+          height:calc(100vh - 300px);min-height:520px;"></iframe>
+</div>{{-- /#pnlFull --}}
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
@@ -461,12 +474,65 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
   // 패널 탭 전환(조회결과/상세내용)
+  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull' };
+
   window.pnlShow = function (which) {
-    document.getElementById('pnlList').style.display   = which === 'detail' ? 'none' : '';
-    document.getElementById('pnlDetail').style.display = which === 'detail' ? '' : 'none';
-    document.getElementById('pnlBtnList').classList.toggle('active', which !== 'detail');
-    document.getElementById('pnlBtnDetail').classList.toggle('active', which === 'detail');
+    if (!PANES[which]) which = 'list';
+    Object.keys(PANES).forEach(k => {
+      document.getElementById(PANES[k]).style.display = k === which ? '' : 'none';
+      document.getElementById(TABS[k]).classList.toggle('active', k === which);
+    });
   };
+
+  /* 「전체 상세」 — 다른 화면으로 건너가지 않고 옆 탭에 들여온다.
+     아직 아무도 고르지 않았으면 누를 것이 없다. */
+  let _pfId = null;
+
+  window.pfOpen = function (e) {
+    if (e) e.preventDefault();
+    if (!_pfId) { pnlShow('full'); return; }
+
+    const frame = document.getElementById('pfFrame');
+    const url   = DETAIL_BASE + '/' + _pfId;
+    if (frame.dataset.url !== url) {
+      frame.src = url;
+      frame.dataset.url = url;
+    }
+    frame.style.display = '';
+    document.getElementById('pfEmpty').style.display = 'none';
+    pnlShow('full');
+  };
+
+  /* 액자 안에서 다른 화면으로 건너가는 링크를 그대로 두면 그 작은 액자 안에 통째로
+     열려 화면이 겹친다(환자 상세 안에 처방전 목록이 들어앉는 식이다).
+     환자 목록으로 가는 링크는 바깥의 조회 결과 탭으로 돌리고, 그 밖의 화면은
+     워크스페이스 탭으로 올려 보낸다. 같은 곳에서 온 문서라 안을 만질 수 있다. */
+  document.getElementById('pfFrame').addEventListener('load', function () {
+    const frameUrl = this.dataset.url;
+    try {
+      const d = this.contentDocument;
+      if (!d) return;
+
+      d.addEventListener('click', (ev) => {
+        const a = ev.target.closest('a[href]');
+        if (!a || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+
+        const raw = a.getAttribute('href');
+        if (!raw || raw.startsWith('#') || raw.startsWith('javascript')) return;
+        if (!a.href.startsWith(location.origin)) return;      // 바깥 주소는 그대로 둔다
+        if (a.href.split('#')[0] === frameUrl) return;        // 자기 자신이면 그대로
+
+        ev.preventDefault();
+
+        if (a.href.replace(/\/$/, '') === DETAIL_BASE.replace(/\/$/, '')) {
+          pnlShow('list');
+          return;
+        }
+        window.ceOpenTab(a.href, a.dataset.ceTab || a.textContent.trim(), a.dataset.ceIcon || '');
+      });
+    } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
+  });
 
   async function ptLoad(id) {
     document.getElementById('pdEmpty').style.display = 'none';
@@ -480,7 +546,17 @@ document.addEventListener('keydown', (e) => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
       document.getElementById('pdName').textContent = d.name + ' 이력';
-      document.getElementById('pdMore').setAttribute('href', DETAIL_BASE + '/' + id);
+      // 누르면 옆 탭에 들여온다. 주소는 남겨 둔다 — 가운데 클릭으로 새 창을 여는 길까지 막지 않는다.
+      _pfId = id;
+      const more = document.getElementById('pdMore');
+      more.setAttribute('href', DETAIL_BASE + '/' + id);
+      if (document.getElementById('pfFrame').dataset.url
+          && document.getElementById('pfFrame').dataset.url !== DETAIL_BASE + '/' + id) {
+        // 다른 환자를 골랐으면 들여둔 것을 비운다 — 이름과 내용이 어긋나면 안 된다
+        document.getElementById('pfFrame').style.display = 'none';
+        document.getElementById('pfFrame').removeAttribute('data-url');
+        document.getElementById('pfEmpty').style.display = '';
+      }
       document.getElementById('pdCntRx').textContent = d.prescriptions.length;
       document.getElementById('pdCntCs').textContent = d.counseling.length;
       document.getElementById('pdCntPu').textContent = d.purchases.length;
