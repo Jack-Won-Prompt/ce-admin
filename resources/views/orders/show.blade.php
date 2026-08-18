@@ -89,7 +89,7 @@
   .od-boxes { display: flex; flex-direction: column; gap: 8px; }
   .od-box-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .od-box-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
-  /* 제품 상자 — 1행 제품명, 2행 수량|보험가|본인부담 (사이 1px gray-300 세로선 h12) */
+  /* 제품 상자 — 1행 제품명, 2행 수량|단가|본인부담 (사이 1px gray-300 세로선 h12) */
   .od-prod-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; line-height: 21px; }
   .od-prod-label { color: var(--gray-700); }
   .od-prod-value { color: var(--gray-1000); }
@@ -424,7 +424,7 @@
         </div>
         <div class="card-body">
           @if($order->prescription?->items && $order->prescription->items->isNotEmpty())
-            {{-- 다중 제품 — 시안 148:6407: 제품 1건이 회색 상자 1개(1행 제품명 · 2행 수량|보험가|본인부담) --}}
+            {{-- 다중 제품 — 시안 148:6407: 제품 1건이 회색 상자 1개(1행 제품명 · 2행 수량|단가|본인부담) --}}
             <div class="od-boxes">
                 @foreach($order->prescription->items as $item)
               <div class="od-box od-prod">
@@ -434,7 +434,7 @@
                 </div>
                 <div class="od-prod-row od-prod-metrics">
                   <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $item->quantity }}</span></span>
-                  <span><span class="od-prod-label">보험가</span><span class="od-prod-value">{{ number_format($item->insurance_price ?? 0) }}원</span></span>
+                  <span><span class="od-prod-label">단가</span><span class="od-prod-value">{{ number_format($item->insurance_price ?? 0) }}원</span></span>
                   <span><span class="od-prod-label">본인부담</span><span class="od-prod-value">{{ number_format($item->patient_copay ?? 0) }}원</span></span>
                 </div>
               </div>
@@ -451,7 +451,7 @@
                 <div class="od-prod-row od-prod-metrics">
                   <span><span class="od-prod-label">제품코드</span><span class="od-prod-value">{{ $order->product_code ?? '-' }}</span></span>
                   <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $order->quantity ?? 1 }}개</span></span>
-                  <span><span class="od-prod-label">보험가 (단가)</span><span class="od-prod-value">{{ number_format($order->unit_price) }}원</span></span>
+                  <span><span class="od-prod-label">단가</span><span class="od-prod-value">{{ number_format($order->unit_price) }}원</span></span>
                 </div>
               </div>
             </div>
@@ -671,7 +671,7 @@
               <div class="value">{{ number_format($order->nhis_amount) }}원</div>
             </div>
             <div class="amount-box">
-              <div class="label">환자 본인부담</div>
+              <div class="label">본인부담금</div>
               <div class="value">{{ number_format($order->patient_copay) }}원</div>
             </div>
             <div class="amount-box">
@@ -1371,7 +1371,7 @@ function printDoc(type) {
 window.HELP_TOUR_STEPS = [
   { selector: '.status-flow', title: '주문 진행 상태', body: '주문 대기 → 주문 확정 → 배송 중 → 배송 완료 단계를 시각적으로 보여줍니다.' },
   { selector: '.card:nth-of-type(1)', title: '환자 정보', body: '이 주문과 연결된 환자의 기본 정보를 확인합니다.' },
-  { selector: '.card:nth-of-type(2)', title: '제품 정보', body: '주문된 제품 목록, 수량, 가격, 보험 적용 금액을 확인합니다.' },
+  { selector: '.card:nth-of-type(2)', title: '제품 정보', body: '주문된 제품 목록, 수량, 단가, 본인부담 금액을 확인합니다.' },
   { selector: '.card:nth-of-type(3)', title: '배송 정보', body: '운송장 번호를 입력하고 배송 상태를 관리합니다. 운송장 번호 입력 후 저장하면 배송 추적이 가능합니다.' },
   { selector: '.card:nth-of-type(4)', title: '세금계산서 / 현금영수증', body: '세금계산서 발행, 현금영수증 발행 및 취소를 여기서 처리합니다.' },
 ];

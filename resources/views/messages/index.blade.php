@@ -301,7 +301,7 @@
         <span class="ds-grid-total">메시지 유형</span>
       </div>
       <div class="ds-grid-bar-right">
-        <span class="ds-grid-hint">여기서 고친 내용은 처방전 검수 화면의 SMSㆍ알림톡 팝오버에도 그대로 나옵니다.</span>
+        <span class="ds-grid-hint">여기서 고친 내용은 주문 화면의 SMSㆍ알림톡 팝오버에도 그대로 나옵니다.</span>
         <button type="button" class="ds-btn ds-btn-primary" onclick="msTplNew()">유형 추가</button>
       </div>
     </div>

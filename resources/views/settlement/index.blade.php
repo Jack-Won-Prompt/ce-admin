@@ -229,7 +229,7 @@
         <div class="sum-card-sub">급여 청구분</div>
       </div>
       <div class="sum-card orange">
-        <div class="sum-card-label"><i class="fa-solid fa-user"></i> 환자 본인부담금</div>
+        <div class="sum-card-label"><i class="fa-solid fa-user"></i> 본인부담금</div>
         <div class="sum-card-val">{{ number_format($summary['patient_copay']) }}<span>원</span></div>
         <div class="sum-card-sub">가상계좌 수납 대상</div>
       </div>
@@ -630,7 +630,7 @@
           <div style="background:var(--bg);border-radius:var(--radius);padding:10px 14px;">
             ${amtRow('단가',        d.unit_price)}
             ${amtRow('청구액', d.nhis_amount,    'var(--primary-600)')}
-            ${amtRow('환자 본인부담', d.patient_copay, 'var(--primary)')}
+            ${amtRow('본인부담금', d.patient_copay, 'var(--primary)')}
             ${amtRow('배송비',      d.shipping_fee)}
             ${amtRow('환급',   d.nhis_reimb,    'var(--primary-600)')}
             <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:700;line-height:21px;">

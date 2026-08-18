@@ -219,7 +219,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#ymTrigger', title: '월 선택', body: '조회할 연월을 선택합니다. 클릭하면 년/월 선택 팝업이 열립니다.' },
-  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 예정 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 오른쪽에 펼쳐집니다.' },
+  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 가능 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 오른쪽에 펼쳐집니다.' },
   { selector: '.cal-cell:not(.cal-empty)', title: '날짜 셀 클릭', body: '숫자가 표시된 날짜를 클릭하면 재구매 대상 환자 목록이 나타납니다. 목록에서 카카오 알림톡 또는 SMS를 바로 발송할 수 있습니다.' },
 ];
 </script>
@@ -235,7 +235,7 @@ window.HELP_TOUR_STEPS = [
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [
-      { header: '재구매 예정일', name: 'repurchase', width: 130, sortable: true },
+      { header: '재구매 가능일', name: 'repurchase', width: 130, sortable: true },
       { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
       { header: '환자명',        name: 'patient',    width: 110, sortable: true },
       { header: '병원',          name: 'hospital',   width: 200 },
@@ -392,7 +392,7 @@ function loadDay(cell) {
   // 패널 제목
   const [y, m, d] = date.split('-');
   document.getElementById('dayPanelTitle').textContent =
-    `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 재구매 예정`;
+    `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 재구매 가능`;
 
   const panel = document.getElementById('dayPanel');
   const body  = document.getElementById('dayPanelBody');
@@ -408,7 +408,7 @@ function loadDay(cell) {
   .then(r => r.json())
   .then(({ data }) => {
     if (!data.length) {
-      body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">해당 날짜의 재구매 예정 건이 없습니다.</div>';
+      body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">해당 날짜의 재구매 가능 건이 없습니다.</div>';
       return;
     }
 

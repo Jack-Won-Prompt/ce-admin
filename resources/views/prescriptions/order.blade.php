@@ -1,10 +1,10 @@
 {{-- resources/views/prescriptions/order.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '처방전 확인 및 주문')
-@section('page-title', '처방전 확인 및 주문')
+@section('title', '주문')
+@section('page-title', '주문')
 
-@section('help-title', '처방전 확인 및 주문')
+@section('help-title', '주문')
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 구성</div>
@@ -18,11 +18,11 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon warn"><i class="bx bx-clipboard"></i></div>
-    <div class="help-item-text"><strong>처방전 정보 탭</strong>OCR로 추출된 환자/병원/제품 정보를 수정할 수 있습니다.</div>
+    <div class="help-item-text"><strong>상세 목록 탭</strong>OCR로 추출된 환자/병원/제품 정보를 수정할 수 있습니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-box"></i></div>
-    <div class="help-item-text"><strong>처방 제품 탭</strong>판매유형을 선택하고 제품을 추가합니다. 제품 검색으로 Todoworks에서 직접 가져옵니다.</div>
+    <div class="help-item-text"><strong>주문 정보 탭</strong>판매유형을 선택하고 제품을 추가합니다. 제품 검색으로 Todoworks에서 직접 가져옵니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
@@ -33,11 +33,11 @@
   <div class="help-section-title">주문 생성 순서</div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">1</div>
-    <div class="help-item-text">처방전 정보 탭에서 환자 정보 확인·수정 후 <b>검수 완료</b></div>
+    <div class="help-item-text">상세 목록 탭에서 환자 정보 확인·수정 후 <b>검수 완료</b></div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">2</div>
-    <div class="help-item-text">처방 제품 탭에서 <b>판매유형</b> 선택 후 제품 추가</div>
+    <div class="help-item-text">주문 정보 탭에서 <b>판매유형</b> 선택 후 제품 추가</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">3</div>
@@ -58,7 +58,7 @@
 </div>
 @endsection
 @section('breadcrumb')
-  홈 / 주문관리 / 처방전 확인 &nbsp;·&nbsp;
+  홈 / 주문관리 / 주문 &nbsp;·&nbsp;
   <span style="color:var(--primary);font-weight:500;">{{ $prescription->rx_number }}</span>
 @endsection
 
@@ -307,7 +307,7 @@
   .tb-act:hover { background:var(--gray-50); }
   .tb-act i    { font-size:12px; }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
-  /* 검수 탭은 이제 아코디언만 담는다. 처방 제품은 자기 탭으로 돌아갔다. */
+  /* 검수 탭은 이제 아코디언만 담는다. 주문 정보는 자기 탭으로 돌아갔다. */
   /* ── 카드 / 테이블 뷰 토글 ── */
   .cv { display: block; } .tv { display: none; }
   .tab-view-table .cv { display: none; } .tab-view-table .tv { display: block; }
@@ -364,7 +364,7 @@
   /* 카드뷰 item-row 안에서는 다른 입력 항목과 높이 통일 */
   .item-row .item-nhis-sel { height:32px !important; padding:0 4px !important; }
   .tab-view-table .item-nhis-sel { width:100% !important; }
-  /* 쓰는 곳 없음 — 처방 제품 카드 아래 합계 띠는 시안 148:3105 대로 카드 머리 오른쪽
+  /* 쓰는 곳 없음 — 주문 정보 카드 아래 합계 띠는 시안 148:3105 대로 카드 머리 오른쪽
      맨글자(.pt-head-total)로 옮겼다. 규칙만 남겨 둔다. */
   .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -389,7 +389,7 @@
   /* hover 는 시안에 없다. 선택 표시(도넛)와 헷갈리지 않도록 배경만 아주 옅게 준다. */
   .so-type-opt span:hover { background:var(--gray-50); }
 
-  /* ── 처방 제품 탭 — 시안 148:3105 (2026-08-11 재작성판) ─────────────────────
+  /* ── 주문 정보 탭 — 시안 148:3105 (2026-08-11 재작성판) ─────────────────────
      카드마다 전폭 머리띠를 두고 본문을 그 아래로 내린다.
      머리 h44 · pad 8/16 · 좌우 space-between · 아래 1px #E8EAEC (시안 Frame 48101479).
      접기 화살표(chevron 14)는 이 탭 카드를 여닫는 동작이 없어 넣지 않았다. */
@@ -423,7 +423,7 @@
                                  font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   #tab-product .pt-radio-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
-  /* ── 처방 제품 행 (카드뷰) — 시안 Frame 48101492: 1132×118 ────────────────
+  /* ── 주문 정보 제품 행 (카드뷰) — 시안 Frame 48101492: 1132×118 ────────────────
      .item-card 는 테이블뷰에서 <tr> 로도 쓰인다. 카드뷰 컨테이너 안으로만 범위를 잡는다. */
   #items-container .item-card { display:flex; align-items:stretch; padding:0; margin-bottom:12px; }
   #items-container .item-card:last-child { margin-bottom:0; }
@@ -1075,7 +1075,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <b style="font-family:monospace;color:var(--primary);">{{ $prescription->order?->order_number ?? '-' }}</b>
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
-                    <span style="color:var(--text-muted);">환자 본인부담금</span>
+                    <span style="color:var(--text-muted);">본인부담금</span>
                     <b style="color:var(--primary);">&#8361;{{ number_format($calcCopay) }}</b>
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;">
@@ -1674,7 +1674,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
            여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
       <div id="viewerCards">
 
-      {{-- ── 위임 서명 — 서명 이미지와 보호자 신분증 ──────────
+      {{-- ── 위임 서명 — 서명 이미지와 법정대리인 또는 가족 신분증 ──────────
            서명이 끝난 뒤에만 나타난다. 값은 위임동의 현황 조회에서 함께 받는다. --}}
       <div class="vw-card" id="signCard" style="display:none;">
         <div class="vw-card-head">
@@ -1695,11 +1695,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
           <div id="signCardIdWrap" style="display:none;">
             <div class="sc-cap">
-              보호자 신분증
+              법정대리인 또는 가족 신분증
               <a id="signCardIdOpen" href="#" target="_blank" rel="noopener"
                  style="float:right;font-size:11px;color:var(--primary);text-decoration:none;">크게 보기</a>
             </div>
-            <div class="sc-box"><img id="signCardIdImg" alt="보호자 신분증" /></div>
+            <div class="sc-box"><img id="signCardIdImg" alt="법정대리인 또는 가족 신분증" /></div>
           </div>
         </div>
       </div>
@@ -1857,8 +1857,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div id="tabsCol">
       <div id="tabBarOuter"><div id="tabBarInner" class="tab-bar">
         <div class="tab-bar-tabs">
-          <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">처방전 검수</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-product')">처방 제품</button>
+          <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">상세 목록</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-product')">주문 정보</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-order')">주문 연계</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-history')">이력</button>
         </div>
@@ -1887,7 +1887,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div></div>{{-- /tabBarInner /tabBarOuter --}}
 
-      {{-- Tab: OCR Edit (처방전 검수) --}}
+      {{-- Tab: OCR Edit (상세 목록) --}}
       <div class="tab-pane active" id="tab-ocr">
       <div class="cv">
 
@@ -2004,11 +2004,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
 
             <div class="rx-col">
-              {{-- 3열 — 처방전 여부 · 메모 (시안 315:58 Frame 48101512).
+              {{-- 3열 — 유형 · 메모 (시안 315:58 Frame 48101512).
                    재 상담 일자는 시안에 없지만, 상담 상태가 '재상담'일 때만 열리는
                    입력이라 빼면 그 값을 넣을 자리가 사라진다. 시안 두 줄 뒤에 이어 둔다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">처방전 여부</span>
+                <span class="rx-field-label">유형</span>
                 <select class="form-control" id="f-acc-add-type" style="flex:1;">
                   <option value="">선택</option>
                   <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
@@ -2079,13 +2079,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <span style="font-weight:500;color:var(--gray-600);">위임 서명 화면에 함께 보입니다.</span>
                 </div>
                 <div class="rx-field-row">
-                  <span class="rx-field-label">보호자 이름</span>
+                  <span class="rx-field-label">법정대리인 또는 가족 성명</span>
                   <input type="text" class="form-control" id="f-guardian-name" maxlength="50"
                          value="{{ $prescription->patient?->guardian_name ?? '' }}"
-                         placeholder="보호자 성명" style="flex:1;" />
+                         placeholder="법정대리인 또는 가족 성명" style="flex:1;" />
                 </div>
                 <div class="rx-field-row">
-                  <span class="rx-field-label">관계</span>
+                  <span class="rx-field-label">가입자ㆍ피부양자와의 관계</span>
                   <select class="form-control" id="f-guardian-relation" style="flex:1;">
                     @php $gRel = $prescription->patient?->guardian_relation ?? ''; @endphp
                     <option value="">선택</option>
@@ -2095,7 +2095,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </select>
                 </div>
                 <div class="rx-field-row">
-                  <span class="rx-field-label">보호자 생년월일</span>
+                  <span class="rx-field-label">법정대리인 또는 가족 생년월일</span>
                   <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
                          value="{{ $prescription->patient?->guardian_birth_date ?? '' }}"
                          placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
@@ -2164,7 +2164,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
 
             <div class="rx-col">
-              {{-- 2열 — 일일 도뇨 횟수 · Five(110days) · 현금영수증 · 보호자명 · Email · 건보 등록
+              {{-- 2열 — 일일 도뇨 횟수 · Five/Six(110days) · 현금영수증 · 송금자명 · Email · 건보 등록
                    (시안 315:58 Frame 48101514) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">일일 도뇨 횟수</span>
@@ -2180,7 +2180,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               {{-- 아래 둘은 시안대로 급여·보험 / 거래·주문 구획에서 옮겨 왔다 --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">Five(110days)</span>
+                <span class="rx-field-label">Five/Six(110days)</span>
                 <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
@@ -2203,8 +2203,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">보호자명</span>
-                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="보호자명" style="flex:1;" />
+                <span class="rx-field-label">송금자명</span>
+                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="송금자명" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Email</span>
@@ -2300,7 +2300,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">판매 거래처 유형</span>
+                <span class="rx-field-label">판매 거래처</span>
                 <input type="text" class="form-control" id="f-dealer-type" value="{{ $prescription->dealer_type ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
@@ -2349,7 +2349,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
             <div class="rx-col">
-              {{-- 2열 — 총 처방 기간 … Five/Six program 10줄 (시안 315:58 Frame 48101492, 361×392) --}}
+              {{-- 2열 — 총 처방 기간 … Five/Six 10줄 (시안 315:58 Frame 48101492, 361×392) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방 기간</span>
                 <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
@@ -2380,7 +2380,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">보험 유형</span>
+                <span class="rx-field-label">자격</span>
                 <select class="form-control" id="f-benefit-class" style="flex:1;">
                   <option value="">선택</option>
                   <option value="일반"      @selected(($prescription->benefit_class ?? '') == '일반')>일반</option>
@@ -2440,7 +2440,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->order_manager ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">Five/Six program</span>
+                <span class="rx-field-label">Five/Six</span>
                 <select class="form-control" id="f-five-program" style="flex:1;">
                   <option value="">선택</option>
                   <option value="00" @selected(($prescription->five_program ?? '') == '00')>N/A</option>
@@ -2450,10 +2450,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
             <div class="rx-col">
-              {{-- 3열 — Five(110days) … 재구매일 9줄 (시안 315:58 Frame 48101491, 361×392).
+              {{-- 3열 — Five/Six(110days) … 재구매일 9줄 (시안 315:58 Frame 48101491, 361×392).
                    종료일·신환master등록일은 시안에 없지만 개발이 넣은 입력이라 끝에 이어 남긴다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">Five(110days)</span>
+                <span class="rx-field-label">Five/Six(110days)</span>
                 <input type="text" class="form-control" id="f-five-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
@@ -2613,7 +2613,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </tr>
             <tr>
               <th>상담유형</th><td data-from="f-counsel-type">-</td>
-              <th>처방전여부</th><td data-from="f-acc-add-type">-</td>
+              <th>유형</th><td data-from="f-acc-add-type">-</td>
             </tr>
             <tr>
               <th>상담상태</th><td data-from="f-counsel-status">-</td>
@@ -2625,7 +2625,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>연락처</th><td data-from="f-mobile">{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '-' }}</td>
             </tr>
             <tr>
-              <th>보호자명</th><td data-from="f-guardian">{{ $prescription->caregiver_name ?? '-' }}</td>
+              <th>송금자명</th><td data-from="f-guardian">{{ $prescription->caregiver_name ?? '-' }}</td>
               <th>일일도뇨횟수</th><td data-from="f-diverticulums">-</td>
             </tr>
             <tr>
@@ -2682,7 +2682,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div>
               <p style="font-size:14px;font-weight:700;color:var(--gray-1000);margin:0 0 6px;">저장하지 않은 변경사항</p>
-              <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin:0;">처방전 검수 탭에 저장되지 않은 내용이 있습니다.<br>탭을 이동하기 전에 저장하시겠습니까?</p>
+              <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin:0;">상세 목록 탭에 저장되지 않은 내용이 있습니다.<br>탭을 이동하기 전에 저장하시겠습니까?</p>
             </div>
           </div>
           <div style="padding:20px 24px 24px;display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -2693,7 +2693,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div>
 
-      {{-- Tab: Product (처방전 검수 탭에서는 검수 영역 아래에 함께 표시) --}}
+      {{-- Tab: Product (상세 목록 탭에서는 검수 영역 아래에 함께 표시) --}}
       <div class="tab-pane" id="tab-product">
 
         {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
@@ -2753,7 +2753,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
 
         <div class="card">
-          {{-- 처방 제품 헤더 (카드/테이블뷰 공통) — 시안 Frame 48101494 의 머리띠 h44 --}}
+          {{-- 주문 정보 헤더 (카드/테이블뷰 공통) — 시안 Frame 48101494 의 머리띠 h44 --}}
           <div class="pt-card-head">
             <div class="pt-head-left">
               <span class="pt-card-title"><i class="fa-solid fa-boxes-stacked"></i> 처방 제품 정보</span>
@@ -2768,12 +2768,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="pt-head-right">
               {{-- 합계 — 시안은 카드 아래 띠가 아니라 머리 오른쪽 12/500 맨글자다.
-                   '총 환자부담' 은 시안 이 카드에 없지만 지우지 않고 같은 자리로 옮겼다. --}}
+                   '총 본인 부담금' 은 시안 이 카드에 없지만 지우지 않고 같은 자리로 옮겼다. --}}
               <span class="pt-head-total"><i class="fa-solid fa-circle-dollar-to-slot"></i>
-                총 급여: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+                총 기관 부담금: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
               </span>
               <span class="pt-head-total">
-                총 환자부담: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
+                총 본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
               </span>
               {{-- 버튼 3개 — 시안 Frame 48101503: [원본 복원 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
                    원본 복원·저장은 검수 탭 아코디언 머리에 있던 resetOCR()·saveOCR() 를 그대로 쓴다
@@ -2812,10 +2812,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div id="order-items-summary">{{-- JS renderOrderSummary() --}}</div>
 
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 비용 내역</div>
-            <div class="cost-row"><span>급여 청구 금액</span><span class="cost-val" id="costNhisAmt">₩ {{ number_format($calcNhis) }}</span></div>
-            <div class="cost-row"><span>환자부담 (급여 적용 후)</span><span class="cost-val" id="costNhis">₩ {{ number_format($calcCopay) }}</span></div>
+            <div class="cost-row"><span>기관 부담금</span><span class="cost-val" id="costNhisAmt">₩ {{ number_format($calcNhis) }}</span></div>
+            <div class="cost-row"><span>본인부담금</span><span class="cost-val" id="costNhis">₩ {{ number_format($calcCopay) }}</span></div>
             <div class="cost-row"><span>배송비</span><span class="cost-val">₩ 3,000</span></div>
-            <div class="cost-row total"><span>환자 부담 합계</span><span class="cost-val" id="costTotal">₩ {{ number_format($calcCopay + 3000) }}</span></div>
+            <div class="cost-row total"><span>본인 부담금 합계</span><span class="cost-val" id="costTotal">₩ {{ number_format($calcCopay + 3000) }}</span></div>
 
             <div style="margin-top:16px;">
               <label class="form-label">배송 정보</label>
@@ -2842,7 +2842,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </button>
                   <button type="button" class="btn btn-sm" onclick="fillFromPrescriptionAddress()"
                           style="white-space:nowrap;flex-shrink:0;background:var(--primary-light);border:1px solid var(--primary);color:var(--primary);"
-                          title="처방전 탭의 주소를 배송 주소로 가져옵니다">
+                          title="상세 목록 탭의 주소를 배송 주소로 가져옵니다">
                     <i class="fa-solid fa-file-import"></i> 처방전 주소 가져오기
                   </button>
                   <button type="button" class="btn btn-sm" onclick="clearShippingAddress()"
@@ -2901,11 +2901,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <table class="tab-tbl" style="margin-bottom:12px;">
               <tbody>
                 <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-receipt"></i> 비용 내역</td></tr>
-                <tr><th>급여 청구 금액</th><td id="tv-costNhisAmt">₩ {{ number_format($calcNhis) }}</td></tr>
-                <tr><th>환자부담</th><td id="tv-costNhis">₩ {{ number_format($calcCopay) }}</td></tr>
+                <tr><th>기관 부담금</th><td id="tv-costNhisAmt">₩ {{ number_format($calcNhis) }}</td></tr>
+                <tr><th>본인부담금</th><td id="tv-costNhis">₩ {{ number_format($calcCopay) }}</td></tr>
                 <tr><th>배송비</th><td>₩ 3,000</td></tr>
                 <tr>
-                  <th style="font-weight:700;color:var(--primary);">환자 부담 합계</th>
+                  <th style="font-weight:700;color:var(--primary);">본인 부담금 합계</th>
                   <td style="font-weight:700;color:var(--primary);" id="tv-costTotal">₩ {{ number_format($calcCopay + 3000) }}</td>
                 </tr>
                 <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-truck"></i> 배송 정보</td></tr>
@@ -4171,10 +4171,10 @@ function renderItemsTable() {
       <th style="text-align:center;">#</th>
       <th>제품명</th>
       <th>급여구분</th>
-      <th style="text-align:right;">보험가</th>
+      <th style="text-align:right;">단가</th>
       <th style="text-align:center;">수량</th>
-      <th style="text-align:right;">급여금액</th>
-      <th style="text-align:right;">환자부담</th>
+      <th style="text-align:right;">기관 부담금</th>
+      <th style="text-align:right;">본인 부담금</th>
       <th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -4193,16 +4193,16 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-bar',
     title: '처방전 처리 탭',
-    body: '처방전 검수 → 처방 제품 → 주문 연계 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
+    body: '상세 목록 → 주문 정보 → 주문 연계 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
   },
   {
     selector: '.tab-btn:nth-child(1)',
-    title: '처방전 검수 탭',
+    title: '상세 목록 탭',
     body: 'OCR이 자동 추출한 환자·병원·제품 정보를 확인하고 수정합니다. 완료 후 <b>검수 완료</b> 버튼을 클릭하세요.'
   },
   {
     selector: '.tab-btn:nth-child(2)',
-    title: '처방 제품 탭',
+    title: '주문 정보 탭',
     body: '<b>판매유형</b>(CE판매·개인판매·샘플판매)을 먼저 선택하고, 제품 검색 버튼으로 Todoworks에서 제품을 가져옵니다.'
   },
   {
@@ -4357,7 +4357,7 @@ window.HELP_TOUR_STEPS = [
     if (box) box.style.display = minor ? 'flex' : 'none';
   }
 
-  /* 보호자 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다 */
+  /* 법정대리인 또는 가족 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다 */
   function formatBirthInput(el) {
     const d = el.value.replace(/\D/g, '').slice(0, 8);
     el.value = d.length > 6 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`
@@ -4540,7 +4540,7 @@ window.HELP_TOUR_STEPS = [
     const detail   = document.getElementById('f-address-detail')?.value?.trim() ?? '';
 
     if (!address) {
-      showToast('처방전 탭에 주소가 입력되어 있지 않습니다.', 'warning');
+      showToast('상세 목록 탭에 주소가 입력되어 있지 않습니다.', 'warning');
       return;
     }
 
@@ -4563,7 +4563,7 @@ window.HELP_TOUR_STEPS = [
   }
   let currentSearchIdx = 0;
 
-  // ── 처방전 검수 아코디언 토글 ───────────────────────────
+  // ── 상세 목록 아코디언 토글 ───────────────────────────
   /* 아코디언을 여닫으면 위쪽 높이가 달라져 화면 전체가 밀린다. 뷰어는 붙어 있어도
      기준이 되는 스크롤 위치가 통째로 움직이니 같이 튄 것처럼 보인다.
      기준 요소가 화면에서 제자리에 있도록, 달라진 만큼 스크롤을 되돌린다. */
@@ -4704,8 +4704,8 @@ window.HELP_TOUR_STEPS = [
 
   function _dirtyLabel() {
     const parts = [];
-    if (_ocrDirty)     parts.push('처방전 검수');
-    if (_productDirty) parts.push('처방 제품');
+    if (_ocrDirty)     parts.push('상세 목록');
+    if (_productDirty) parts.push('주문 정보');
     if (_orderDirty)   parts.push('주문 연계');
     return parts.join(' · ');
   }
@@ -4762,7 +4762,7 @@ window.HELP_TOUR_STEPS = [
     const isTableView = () => document.getElementById('tabsCol')?.classList.contains('tab-view-table');
 
     // 시안(148:2628·2827·3046)의 검수 탭에는 아코디언 카드만 있다.
-    // 예전에는 처방 제품을 아래에 붙여 함께 보였는데, 시안에 없어 각자 탭으로 되돌린다.
+    // 예전에는 주문 정보를 아래에 붙여 함께 보였는데, 시안에 없어 각자 탭으로 되돌린다.
     if (tabId === 'tab-ocr') {
       document.getElementById('tab-ocr').classList.add('active');
       return;
@@ -4784,11 +4784,11 @@ window.HELP_TOUR_STEPS = [
     const fromOrder   = activeOnclick.includes('tab-order')   && tabId !== 'tab-order';
 
     if (fromOcr && _ocrDirty) {
-      showUnsavedDlg(btn, tabId, '처방전 검수', saveOCR);
+      showUnsavedDlg(btn, tabId, '상세 목록', saveOCR);
       return;
     }
     if (fromProduct && _productDirty) {
-      showUnsavedDlg(btn, tabId, '처방 제품', saveOCR);
+      showUnsavedDlg(btn, tabId, '주문 정보', saveOCR);
       return;
     }
     if (fromOrder && _orderDirty) {
@@ -4972,10 +4972,10 @@ window.HELP_TOUR_STEPS = [
           </div>
         </div>
         <div class="item-inline-field">
-          <div class="item-field-label">보험가</div>
+          <div class="item-field-label">단가</div>
           <div class="item-money-row">
             <input type="text" inputmode="numeric" class="form-control item-ins-price" value="${fmtPrice(item.insurance_price)}"
-                   placeholder="보험가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
+                   placeholder="단가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
             <span class="item-won">₩</span>
           </div>
         </div>
@@ -4989,13 +4989,13 @@ window.HELP_TOUR_STEPS = [
       </div>
       <div class="item-summary">
         <span class="item-sum-grp">
-          {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「급여」로 적는다 --}}
-          <span class="item-sum-badge">급여</span>
+          {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「기관 부담금」으로 적는다 --}}
+          <span class="item-sum-badge">기관 부담금</span>
           <b class="item-nhis-amt">₩ ${nhisAmt}</b>
         </span>
         <span class="item-sum-div"></span>
         <span class="item-sum-grp">
-          <span class="item-sum-badge is-copay">환자부담</span>
+          <span class="item-sum-badge is-copay">본인 부담금</span>
           <b class="item-copay">₩ ${copay}</b>
         </span>
       </div>
@@ -5188,7 +5188,7 @@ window.HELP_TOUR_STEPS = [
         ${_pcFR('환자명',       d.patient_name_ocr)}
         ${_pcFR('연락처',       _pcPhone(d.mobile_ocr || d.call_no))}
         ${_pcFR('주민번호',     d.resident_no_masked)}
-        ${_pcFR('보호자명',     d.udf24)}
+        ${_pcFR('송금자명',     d.udf24)}
         ${_pcFR('병원명',       d.hospital_name)}
         ${_pcFR('담당의사',     d.doctor_name || d.udf15)}
         ${_pcFR('처방전발행일', d.issued_date || d.udf12)}
@@ -5406,7 +5406,7 @@ window.HELP_TOUR_STEPS = [
     if (!el) return;
     const validItems = items.filter(i => i.product_name);
     if (!validItems.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">처방 제품 탭에서 제품을 먼저 선택해주세요.</div>';
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 정보 탭에서 제품을 먼저 선택해주세요.</div>';
       return;
     }
     el.innerHTML = validItems.map(item => {
@@ -5786,7 +5786,7 @@ window.HELP_TOUR_STEPS = [
         ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SO 번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
         ${!wwSuccess && wwMessage ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;">${wwMessage}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">제품 수</span><b>${localPayload.items?.length ?? 0}종</b></div>
-        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">환자 부담금</span><b style="color:var(--primary);">₩ ${(totalCopay + 3000).toLocaleString()}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">본인 부담금</span><b style="color:var(--primary);">₩ ${(totalCopay + 3000).toLocaleString()}</b></div>
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">예상 배송일</span><b>${res.estimated_delivery ?? '-'}</b></div>
       </div>`;
     document.getElementById('orderModal').classList.add('show');
@@ -7155,7 +7155,7 @@ window.HELP_TOUR_STEPS = [
       ${_pcFR('상담번호',    d.counselling_no)}
       ${_pcFR('상담 일자',   d.counsel_date || d.reg_date)}
       ${_pcFR('상담 유형',   _PC_TYPE_MAP[d.type??''] || d.type)}
-      ${_pcFR('처방전 여부', _PC_ACC_MAP[d.acc_add_type??''] || d.acc_add_type)}
+      ${_pcFR('유형', _PC_ACC_MAP[d.acc_add_type??''] || d.acc_add_type)}
       ${_pcFR('상담 상태',   _PC_STAT_MAP[st] || st)}
       ${_pcFR('전화번호',    _pcPhone(d.call_no))}
       ${_pcFR('재상담 일자', d.re_counsel_date)}
@@ -7171,7 +7171,7 @@ window.HELP_TOUR_STEPS = [
       ${_pcFR('환자명',       d.patient_name_ocr)}
       ${_pcFR('연락처',       _pcPhone(d.mobile_ocr || d.call_no))}
       ${_pcFR('주민번호',     d.resident_no_masked)}
-      ${_pcFR('보호자명',     d.udf24)}
+      ${_pcFR('송금자명',     d.udf24)}
       ${_pcFR('일일 도뇨횟수',_PC_DIVER_MAP[d.diverticulums??''] || d.diverticulums)}
       ${d.postcode ? _pcFR('우편번호', d.postcode) : ''}
       ${_pcFR('주소', [d.address_ocr, d.address_detail].filter(Boolean).join(' '), true)}
@@ -7208,7 +7208,7 @@ window.HELP_TOUR_STEPS = [
           <div style="display:flex;gap:10px;font-size:11px;color:var(--text-secondary);flex-wrap:wrap;align-items:center;">
             ${purchaseDate ? `<span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 7px;color:var(--text-muted);"><i class="fa-regular fa-calendar" style="font-size:9px;margin-right:3px;"></i>구매일: <b>${_pcEsc(purchaseDate)}</b></span>` : ''}
             ${item.product_price  ? `<span>제품가: <b>${Number(item.product_price).toLocaleString('ko-KR')}원</b></span>` : ''}
-            ${item.insurance_price? `<span>보험가: <b>${Number(item.insurance_price).toLocaleString('ko-KR')}원</b></span>` : ''}
+            ${item.insurance_price? `<span>단가: <b>${Number(item.insurance_price).toLocaleString('ko-KR')}원</b></span>` : ''}
             ${item.nhis_amount    ? `<span>급여액: <b>${Number(item.nhis_amount).toLocaleString('ko-KR')}원</b></span>` : ''}
             ${item.patient_copay  ? `<span>본인부담: <b style="color:var(--danger);">${Number(item.patient_copay).toLocaleString('ko-KR')}원</b></span>` : ''}
           </div>
