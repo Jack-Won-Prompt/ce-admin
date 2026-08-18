@@ -21,23 +21,23 @@
 @section('content')
 
 @php $curType = request('type'); @endphp
-<div class="ds-chips">
-  <a href="{{ route('order-returns.index', request()->except(['type','page'])) }}"
-     class="ds-chip {{ !$curType ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
-  </a>
-  @foreach(\App\Models\OrderReturn::TYPES as $key => $label)
-    <a href="{{ route('order-returns.index', array_merge(request()->except(['type','page']), ['type' => $key])) }}"
-       class="ds-chip {{ $curType === $key ? 'active' : '' }}">
-      {{ $label }}
-      @if(($counts[$key] ?? 0) > 0)<span class="ds-chip-count">{{ $counts[$key] }}</span>@endif
-    </a>
-  @endforeach
-</div>
+{{-- 종류는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 <form method="GET" action="{{ route('order-returns.index') }}" class="ds-filter-card">
-  @if($curType)<input type="hidden" name="type" value="{{ $curType }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 종류가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">종류</label>
+      <select name="type" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $counts->sum() }})</option>
+        @foreach(\App\Models\OrderReturn::TYPES as $key => $label)
+          <option value="{{ $key }}" {{ $curType === $key ? 'selected' : '' }}>
+            {{ $label }}@if(($counts[$key] ?? 0) > 0) ({{ $counts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
@@ -55,7 +55,7 @@
   </div>
   <div class="ds-filter-actions">
     @if(request('q') || request('status'))
-      <a href="{{ route('order-returns.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌고,

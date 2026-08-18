@@ -10,8 +10,7 @@
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.status-tabs', title: '주문 상태 탭', body: '전체·대기·확정·배송중·배송완료·취소 탭으로 주문을 상태별 필터링합니다.' },
-  { selector: '.ds-filter-card', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 날짜 범위로 조회합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '상태·유형을 고르고 주문번호, 환자명, 제품명으로 찾습니다. 기간으로도 좁힐 수 있습니다.' },
   { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
@@ -48,10 +47,6 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* .status-tabs / .status-tab 은 예전 선택자다. 칩은 전역 .ds-chip 이 그리고,
-     이 이름은 도움말 투어가 가리키는 앵커로만 남긴다 — 별도 스타일은 주지 않는다.
-     (스타일을 남겨 두면 gap 6·radius 20·12.5px/600 이 전역 규격을 덮어쓴다.) */
-
   .order-number { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .5px; font-family: monospace; }
   .patient-name-cell { font-weight: 500; }
   .product-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -83,31 +78,27 @@ window.HELP_TOUR_STEPS = [
 @endphp
 
 {{-- 상태 칩 — Figma 148:5526: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
-<div class="ds-chips status-tabs">
-  <a href="{{ route('orders.index', array_merge(request()->except('status','page'), [])) }}"
-     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $totalAll }}</span>
-  </a>
-  @foreach($statuses as $key => $meta)
-    <a href="{{ route('orders.index', array_merge(request()->except('status','page'), ['status' => $key])) }}"
-       class="ds-chip {{ $curStatus === $key ? 'active' : '' }}">
-      {{ $meta['label'] }}
-      @if(($statusCounts[$key] ?? 0) > 0)
-        <span class="ds-chip-count">{{ $statusCounts[$key] }}</span>
-      @endif
-    </a>
-  @endforeach
-</div>
+{{-- 상태는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 @php $curDeal = request('deal'); @endphp
 
 {{-- ── 검색 필터 ── --}}
 {{-- 검색 필터 — Figma 148:5526: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 · 기준/정렬 1열 --}}
 <form method="GET" action="{{ route('orders.index') }}" class="ds-filter-card">
-  @if($curStatus)
-    <input type="hidden" name="status" value="{{ $curStatus }}">
-  @endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $totalAll }})</option>
+        @foreach($statuses as $key => $meta)
+          <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
+            {{ $meta['label'] }}@if(($statusCounts[$key] ?? 0) > 0) ({{ $statusCounts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"

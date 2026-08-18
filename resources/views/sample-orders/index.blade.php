@@ -78,23 +78,23 @@
 
 {{-- 유형은 CE 샘플주문 하나뿐이라 칩으로 가를 것이 없다. 진행 상태를 둔다. --}}
 @php $curStatus = request('status'); @endphp
-<div class="ds-chips">
-  <a href="{{ route('sample-orders.index', request()->except(['status','page'])) }}"
-     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
-  </a>
-  @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
-    <a href="{{ route('sample-orders.index', array_merge(request()->except(['status','page']), ['status' => $k])) }}"
-       class="ds-chip {{ $curStatus === $k ? 'active' : '' }}">
-      {{ $meta[0] }}
-      @if(($counts[$k] ?? 0) > 0)<span class="ds-chip-count">{{ $counts[$k] }}</span>@endif
-    </a>
-  @endforeach
-</div>
+{{-- 상태는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 <form method="GET" action="{{ route('sample-orders.index') }}" class="ds-filter-card">
-  @if($curStatus)<input type="hidden" name="status" value="{{ $curStatus }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $counts->sum() }})</option>
+        @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
+          <option value="{{ $k }}" {{ $curStatus === $k ? 'selected' : '' }}>
+            {{ $meta[0] }}@if(($counts[$k] ?? 0) > 0) ({{ $counts[$k] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
@@ -111,7 +111,7 @@
   </div>
   <div class="ds-filter-actions">
     @if(request()->hasAny(['q','date_from','date_to']))
-      <a href="{{ route('sample-orders.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('sample-orders.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다 --}}

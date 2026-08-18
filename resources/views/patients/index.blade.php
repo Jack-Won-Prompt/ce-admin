@@ -129,7 +129,9 @@
   .pt-detail .tab-btn .cnt { display:inline-flex; align-items:center; justify-content:center;
     min-width:16px; height:16px; padding:0 4px; border-radius:999px;
     background:var(--bg); color:var(--text-secondary); font-size:10px; font-weight:700; line-height:12px; }
-  .pt-pane { display:none; padding:8px 16px 16px; overflow-y:auto; max-height:calc(100vh - 300px); }
+  /* 이력은 그대로 늘어나게 둔다. 안쪽에 스크롤을 두면 화면 스크롤과 둘이 되어
+     어느 쪽을 굴려야 할지 모르고, 짧은 이력에도 잘린 것처럼 보였다. */
+  .pt-pane { display:none; padding:8px 16px 16px; }
   .pt-pane.active { display:block; }
   .pt-hrow { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-light); font-size:13px; line-height:21px; cursor:pointer; }
   .pt-hrow:last-child { border-bottom:none; }
@@ -147,16 +149,8 @@
 
 @section('content')
 
-{{-- 화면 제목·등록 건수. 시안에는 없지만 개발에서 넣은 블록이라 유지한다.
-     '환자 추가' 버튼만 시안 위치인 결과바 우측으로 옮겼다. --}}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-  <div>
-    <h5 style="font-size:16px;font-weight:700;line-height:26px;margin:0;color:var(--text-primary);">환자 정보</h5>
-    <p style="font-size:12px;font-weight:400;line-height:19px;color:var(--text-muted);margin:4px 0 0;">
-      총 <strong>{{ number_format($total) }}</strong>명 등록
-    </p>
-  </div>
-</div>
+{{-- 제목과 등록 건수를 여기 두지 않는다. 화면 이름은 네비바가 이미 적고 있고,
+     건수는 아래 결과바의 「전체 N건」과 같은 말이었다. --}}
 
 {{-- 검색 필터 — Figma 114:4778: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
 <form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">

@@ -1322,7 +1322,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </span>
         </button>
         <div id="faxPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:580px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
-          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+          <div id="faxPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
             <div style="width:10px;height:10px;background:var(--gray-800);border:1px solid var(--gray-800);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
           {{-- 헤더 --}}
@@ -6269,6 +6269,7 @@ window.HELP_TOUR_STEPS = [
     const opening = pop.style.display === 'none';
     pop.style.display = opening ? 'block' : 'none';
     if (opening) {
+      placeFaxPopover();
       const activeBtn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
       if (activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
         document.getElementById('nhisSearchPanel').style.display = 'block';
@@ -6277,6 +6278,30 @@ window.HELP_TOUR_STEPS = [
       refreshFaxSentBanner();
     }
   }
+
+  /* 팩스 창은 단추에 왼쪽 끝을 맞춘다. 단추가 화면 오른쪽에 있으면 580 폭이 그대로
+     창밖으로 밀려 나가 절반이 잘렸다 — 넘치는 만큼 왼쪽으로 당긴다.
+     꼬리는 단추를 계속 가리켜야 하므로 당긴 만큼 되밀어 준다. */
+  function placeFaxPopover() {
+    const pop  = document.getElementById('faxPopover');
+    const wrap = document.getElementById('faxTriggerWrap');
+    if (!pop || !wrap || pop.style.display === 'none') return;
+
+    const gap  = 8;
+    const w    = pop.offsetWidth || 580;
+    const r    = wrap.getBoundingClientRect();
+    const over = (r.left + w) - (window.innerWidth - gap);
+    const left = over > 0 ? -Math.min(over, Math.max(0, r.left - gap)) : 0;
+
+    pop.style.left = left + 'px';
+
+    const arrow = document.getElementById('faxPopoverArrow');
+    if (arrow) {
+      arrow.style.left = Math.min(Math.max(24 - left, 12), w - 26) + 'px';   // 창 안에 머무는 선에서
+    }
+  }
+
+  window.addEventListener('resize', placeFaxPopover);
 
   function closeFaxPopover() {
     document.getElementById('faxPopover').style.display = 'none';
@@ -6288,6 +6313,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('faxTriggerWrap').style.display = 'block';
     closeAllPopovers();
     document.getElementById('faxPopover').style.display = 'block';
+    placeFaxPopover();
     if (typeof refreshFaxSentBanner === 'function') refreshFaxSentBanner();
   }
 

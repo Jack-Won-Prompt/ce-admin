@@ -461,7 +461,7 @@ class PrescriptionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'prescription_images'   => 'required|array|max:10',
+            'prescription_images'   => 'required|array|max:40',
             'prescription_images.*' => 'file|mimes:jpg,jpeg,png,pdf,heic|max:50240',
             'file_doc_types'        => 'nullable|array',
             'file_doc_types.*'      => 'nullable|string|in:prescription,id_card,registration_form,test_result,delegation,other',
