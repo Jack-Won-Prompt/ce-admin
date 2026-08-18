@@ -22,15 +22,6 @@
   .rt-kv > span:first-child { width:120px; flex-shrink:0; color:var(--text-muted); }
   .rt-kv > span:last-child  { flex:1; font-weight:500; }
 
-  /* 단계 — 어디까지 왔는지 한눈에 보여야 한다 */
-  .steps { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .step { font-size:12px; font-weight:700; padding:5px 11px; border-radius:99px;
-          background:var(--gray-100); color:var(--text-muted); }
-  .step.done { background:var(--primary-light); color:var(--primary); }
-  .step.now  { background:var(--primary); color:#fff; }
-  .step.off  { background:var(--alert-100); color:var(--alert-500); }
-  .step-sep { color:var(--text-muted); font-size:11px; }
-
   .log { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
   .log:last-child { border-bottom:none; }
   .log-when { width:120px; flex-shrink:0; color:var(--text-muted); }
@@ -43,50 +34,6 @@
 @section('content')
 
 @if(session('status'))<div class="ok-bar">{{ session('status') }}</div>@endif
-
-<div class="rt-card">
-  <div class="rt-hd">
-    진행 단계
-    <div class="grow"></div>
-    <span style="font-weight:400;font-size:11px;color:var(--text-muted);">{{ $r->typeLabel() }}</span>
-  </div>
-  <div class="rt-bd">
-    @php
-      $flow = \App\Models\OrderReturn::FLOWS[$r->type] ?? [];
-      $at   = array_search($r->status, $flow, true);
-    @endphp
-    <div class="steps">
-      @foreach($flow as $i => $s)
-        @if($i > 0)<span class="step-sep">›</span>@endif
-        <span class="step {{ $at !== false && $i < $at ? 'done' : ($r->status === $s ? 'now' : '') }}">
-          {{ \App\Models\OrderReturn::STATUS_LABELS[$s] ?? $s }}
-        </span>
-      @endforeach
-      @if($r->status === 'cancelled')
-        <span class="step-sep">›</span><span class="step off">취소</span>
-      @endif
-    </div>
-
-    @if($r->nextStatuses())
-      <form method="POST" action="{{ route('order-returns.advance', $r) }}"
-            style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        @csrf
-        <select name="to_status" class="form-control form-select" style="max-width:170px;">
-          @foreach($r->nextStatuses() as $s)
-            <option value="{{ $s }}">{{ \App\Models\OrderReturn::STATUS_LABELS[$s] ?? $s }}(으)로</option>
-          @endforeach
-        </select>
-        {{-- 단계마다 사유를 받는다. 마지막 사유만 남기면 왜 그렇게 흘러왔는지 알 수 없다. --}}
-        <input type="text" name="reason" class="form-control" style="flex:1;min-width:200px;"
-               maxlength="500" placeholder="이 단계로 옮기는 사유 (선택)">
-        <button class="btn btn-primary btn-sm" type="submit">단계 옮기기</button>
-      </form>
-      @error('to_status')<div style="color:var(--danger);font-size:12px;margin-top:6px;">{{ $message }}</div>@enderror
-    @else
-      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">더 옮길 단계가 없습니다.</div>
-    @endif
-  </div>
-</div>
 
 <div class="rt-card">
   <div class="rt-hd">원 주문</div>
@@ -109,6 +56,9 @@
   <div class="rt-hd">신청 내용</div>
   <div class="rt-bd">
     <div class="rt-kv"><span>접수번호</span><span>{{ $r->receipt_no }}</span></div>
+    {{-- 진행 단계 카드를 걷어냈으므로 지금 어느 단계인지는 여기에 남긴다.
+         어디까지 왔는지 모르면 다음에 무엇을 할지 정할 수 없다. --}}
+    <div class="rt-kv"><span>상태</span><span>{{ \App\Models\OrderReturn::STATUS_LABELS[$r->status] ?? $r->status }}</span></div>
     <div class="rt-kv"><span>사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
     <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
