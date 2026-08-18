@@ -177,9 +177,11 @@
     columns: [
       { header: '제품코드', name: 'product_code', width: 120 },
       { header: '제품명',   name: 'product_name', width: 300 },
-      { header: '수량',     name: 'quantity',     width: 80,  align: 'right' },
-      { header: '단가',     name: 'unit_price',   width: 110, align: 'right' },
-      { header: '환자부담', name: 'copay',        width: 110, align: 'right' },
+      { header: '수량',     name: 'quantity',     width: 80,  align: 'right', editor: 'number' },
+      /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
+         다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
+      { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number' },
+      { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number' },
     ],
     data: [],
   });
@@ -240,18 +242,23 @@
       picked = null;
       $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
 
-      // 한 건이면 고를 것이 없다 — 창을 띄우지 않고 바로 앉힌다
-      if (rows.length === 1) { pick(0); return; }
-      if (rows.length) showHits(btn);
+      /* 몇 건이 나오든 창을 띄운다. 한 건일 때만 조용히 앉히면 눌렀는데 아무 창도
+         안 뜬 것처럼 보이고, 무엇이 골라졌는지 확인할 자리도 없다.
+         없을 때도 띄운다 — 찾은 자리에서 「없다」고 알려 주는 편이 낫다. */
+      showHits(btn);
     } catch (e) {
+      // 지난 결과를 그대로 띄우면 방금 찾은 것으로 읽힌다
+      rows = [];
       $('rtoFindNote').textContent = '찾지 못했습니다';
+      showHits(btn);
     }
   };
 
   /* 찾은 주문을 고르는 창. 환자명·주문번호·주문일만 보인다 — 고를 때 필요한 것은 그 셋이다. */
   function showHits(btn) {
     hitModal.open({
-      title: '주문 고르기', width: 420, height: 340,
+      title: '주문 고르기 · ' + (rows.length ? rows.length + '건' : '없음'),
+      width: 420, height: 340,
       mode: 'popover', anchor: btn || $('rtoFindBtn'),
       items: rows.map((r, i) => ({
         value: i,
