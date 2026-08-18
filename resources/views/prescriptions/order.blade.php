@@ -3703,13 +3703,18 @@ function openBigViewer() {
     img.src = url; img.style.display = '';
   }
 
-  // 처음 열 때는 화면 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
-  const box = _bvBox ?? {
-    left: 12,
-    top:  Math.round((window.innerHeight - Math.round(window.innerHeight * 0.9)) / 2),
-    w:    Math.round(window.innerWidth * 0.5),
-    h:    Math.round(window.innerHeight * 0.9),
-  };
+  /* 처음 열 때는 본문 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
+     화면 왼쪽 끝(12)에서 열었더니 사이드바를 덮어, 메뉴가 접힌 것처럼 보였다 —
+     본문이 시작하는 자리에서 연다. */
+  const box = _bvBox ?? (() => {
+    const left = Math.round(_bvContentLeft()) + 12;
+    return {
+      left,
+      top:  Math.round((window.innerHeight - Math.round(window.innerHeight * 0.9)) / 2),
+      w:    Math.max(360, Math.round((window.innerWidth - left) * 0.55)),
+      h:    Math.round(window.innerHeight * 0.9),
+    };
+  })();
   _bvApplyBox(box);
 
   win.style.display = 'flex';
@@ -3725,12 +3730,23 @@ function closeBigViewer() {
   _bvEl('bvImg').removeAttribute('src');
 }
 
+/* 본문이 시작하는 가로 자리 — 사이드바 오른쪽 끝이다.
+   탭(액자) 안에서는 사이드바가 숨으므로 0 이 된다. */
+function _bvContentLeft() {
+  const menu = document.getElementById('layoutMenu');
+  if (!menu || getComputedStyle(menu).display === 'none') return 0;
+  const r = menu.getBoundingClientRect();
+  return r.width > 0 ? r.right : 0;
+}
+
 /* 창이 화면 밖으로 나가지 않게 붙들면서 자리와 크기를 준다 */
 function _bvApplyBox(box) {
   const win = _bvEl('bigViewer');
   const w = Math.max(320, Math.min(box.w, window.innerWidth  - 16));
   const h = Math.max(240, Math.min(box.h, window.innerHeight - 16));
-  const left = Math.max(0, Math.min(box.left, window.innerWidth  - w));
+  // 왼쪽은 본문이 시작하는 자리까지만 — 더 왼쪽으로 밀면 사이드바를 덮는다
+  const minLeft = _bvContentLeft();
+  const left = Math.max(minLeft, Math.min(box.left, window.innerWidth - w));
   const top  = Math.max(0, Math.min(box.top,  window.innerHeight - h));
   win.style.left = left + 'px';
   win.style.top  = top  + 'px';
