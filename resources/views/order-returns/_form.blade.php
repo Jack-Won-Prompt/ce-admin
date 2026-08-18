@@ -22,20 +22,6 @@
   .rto-fld input { height: 32px; width: 150px; }
   .rto-fld.wide input { width: 190px; }
 
-  /* 찾은 주문 — 골라야 아래가 채워진다 */
-  .rto-hits { border: 1px solid var(--border); border-radius: 8px; max-height: 190px; overflow-y: auto; }
-  .rto-hit { display: flex; gap: 10px; align-items: center; padding: 8px 12px; font-size: 12.5px;
-             border-bottom: 1px solid var(--border-light); cursor: pointer; }
-  .rto-hit:last-child { border-bottom: none; }
-  .rto-hit:hover { background: var(--primary-light); }
-  .rto-hit.on { background: var(--primary-light); box-shadow: inset 3px 0 0 var(--primary); }
-  .rto-hit .no { font-family: monospace; font-weight: 700; color: var(--primary); width: 110px; flex-shrink: 0; }
-  .rto-hit .who { width: 76px; flex-shrink: 0; font-weight: 500; }
-  .rto-hit .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-700); }
-  .rto-hit .amt { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
-  .rto-hit .warn { color: #B54708; font-weight: 700; font-size: 11px; }
-  .rto-empty { padding: 14px 12px; font-size: 12.5px; color: var(--gray-700); text-align: center; }
-
   .rto-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
   .rto-f { display: flex; flex-direction: column; gap: 4px; }
   .rto-f.span2 { grid-column: span 2; }
@@ -61,8 +47,14 @@
     </div>
 
     <div class="rto-filter">
-      <div class="rto-fld"><label>환자명</label>
-        <input type="text" id="rtoName" class="form-control" maxlength="50" placeholder="이름"></div>
+      <div class="rto-fld"><label>환자</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="rtoName" class="form-control" maxlength="50" placeholder="이름">
+          {{-- 이름만 적어 넣게 두면 동명이인을 가릴 수 없다. 고르면 생년월일·전화번호가
+               함께 채워져 그다음 조회가 한 사람으로 좁혀진다. --}}
+          <button type="button" class="ds-btn" style="flex-shrink:0;"
+                  id="rtoPatientBtn" onclick="rtoPickPatient(this)">조회</button>
+        </div></div>
       <div class="rto-fld"><label>생년월일</label>
         <input type="date" id="rtoBirth" class="form-control"></div>
       <div class="rto-fld"><label>전화번호</label>
@@ -79,9 +71,8 @@
       </span>
     </div>
 
-    <div class="rto-hits" id="rtoHits">
-      <div class="rto-empty">환자나 주문번호로 찾으십시오. 조건 없이 눌러도 최근 주문을 보여 줍니다.</div>
-    </div>
+    {{-- 찾은 주문 — 환자명·주문번호·주문일만 보인다. 고를 때 필요한 것은 그 셋이다. --}}
+    <div id="rtoHitGrid"></div>
   </div>
 
   {{-- ② 신청 내용 — 주문을 고르기 전에도 보인다 --}}
@@ -122,6 +113,18 @@
             <option value="{{ $k }}">{{ $label }}</option>
           @endforeach
         </select>
+      </div>
+      <div class="rto-f">
+        {{-- 고른 주문을 신청 내용 안에서도 보이게 둔다 — 아래를 적는 동안 위를 다시
+             올려다보지 않아도 무엇에 대한 신청인지 알 수 있다. --}}
+        <label>주문번호</label>
+        <input type="text" id="rtoOrderNo" class="form-control" readonly
+               style="background:var(--gray-50);" placeholder="주문을 고르면 채워집니다">
+      </div>
+      <div class="rto-f">
+        <label>주문일</label>
+        <input type="text" id="rtoOrderDate" class="form-control" readonly
+               style="background:var(--gray-50);" placeholder="—">
       </div>
       <div class="rto-f span4">
         <label>상세 사유</label>
@@ -197,8 +200,9 @@
 @push('scripts')
 <script>
 (function () {
-  const SEARCH_URL = @json(route('order-returns.orderSearch'));
-  const BURDENS    = @json(\App\Models\OrderReturn::BURDENS);
+  const SEARCH_URL  = @json(route('order-returns.orderSearch'));
+  const PATIENT_URL = @json(route('order-returns.patientSearch'));
+  const BURDENS     = @json(\App\Models\OrderReturn::BURDENS);
 
   const $ = (id) => document.getElementById(id);
   let rows = [];      // 마지막 조회 결과
@@ -206,6 +210,26 @@
 
   /* 주문 제품은 처음부터 자리를 잡아 둔다. 빈 표라도 보이면 무엇이 채워질 자리인지
      알 수 있고, 고른 뒤에 갑자기 나타나 아래가 밀리지 않는다. */
+  /* 찾은 주문 — 고를 때 필요한 것만 보인다. 눌러야 아래가 채워지므로 한 줄 클릭으로
+     고르게 한다(더블클릭은 고르는 동작이 아니라 여는 동작으로 읽힌다). */
+  const hitGrid = new wwGrid({
+    el: $('rtoHitGrid'),
+    height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    columns: [
+      { header: '환자명',   name: 'patient',    width: 110, sortable: true },
+      { header: '주문번호', name: 'order_no',   width: 150, sortable: true },
+      { header: '주문일',   name: 'order_date', width: 120, sortable: true, align: 'center' },
+    ],
+    data: [],
+  });
+  window.__rtoHitGrid = hitGrid;
+
+  $('rtoHitGrid').addEventListener('click', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    pick(parseInt(cell.dataset.rowIndex, 10));
+  });
+
   const itemGrid = new wwGrid({
     el: $('rtoItemGrid'),
     height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
@@ -219,6 +243,38 @@
     data: [],
   });
   window.__rtoItemGrid = itemGrid;
+
+  /* 환자 조회 — 누른 칸 옆에 붙는 팝오버로 연다. 고르면 이름·생년월일·전화번호가
+     채워지고 곧바로 그 사람의 주문을 찾는다. */
+  const modal = new GridModal();
+  let pRows = {};
+
+  window.rtoPickPatient = function (btn) {
+    modal.open({
+      title: '환자 조회', width: 420, height: 320, mode: 'popover', anchor: btn,
+      onSearch: async (q) => {
+        const res = await fetch(PATIENT_URL + '?q=' + encodeURIComponent(q ?? ''), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const { rows } = await res.json();
+        pRows = {};
+        (rows ?? []).forEach(r => { pRows[r.id] = r; });
+        return (rows ?? []).map(r => ({
+          value: r.id,
+          label: r.name + (r.birth ? ' · ' + r.birth : ''),
+          sub:   r.phone || '연락처 없음',
+        }));
+      },
+      onConfirm: (v) => {
+        const r = pRows[v];
+        if (!r) return;
+        $('rtoName').value  = r.name;
+        $('rtoBirth').value = r.birth || '';
+        $('rtoPhone').value = r.phone || '';
+        rtoFind();
+      },
+    });
+  };
 
   /* 원 주문 찾기.
      조건 없이 눌러도 최근 것을 보여 준다 — 방금 만든 주문을 되돌리는 일이 잦아
@@ -236,8 +292,9 @@
       const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = (await res.json()).rows ?? [];
-      drawHits();
-      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '';
+      picked = null;
+      hitGrid.setData(rows);
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
 
       // 한 건이면 고르는 수고를 덜어 준다
       if (rows.length === 1) pick(0);
@@ -246,48 +303,17 @@
     }
   };
 
-  function drawHits() {
-    const box = $('rtoHits');
-    box.innerHTML = '';
-
-    if (!rows.length) {
-      box.innerHTML = '<div class="rto-empty">맞는 주문이 없습니다. 조건을 줄여 보십시오.</div>';
-      return;
-    }
-
-    rows.forEach((r, i) => {
-      const el = document.createElement('div');
-      el.className = 'rto-hit' + (picked === i ? ' on' : '');
-      el.dataset.idx = i;
-
-      const no   = mk('span', 'no',   r.order_no);
-      const who  = mk('span', 'who',  r.patient + (r.birth ? '' : ''));
-      const what = mk('span', 'what', [r.birth, r.phone, r.product].filter(Boolean).join(' · '));
-      const amt  = mk('span', 'amt',  (r.amount || 0).toLocaleString() + '원');
-      el.append(no, who, what, amt);
-
-      if (r.returns > 0) el.appendChild(mk('span', 'warn', '접수 ' + r.returns + '건'));
-
-      el.addEventListener('click', () => pick(i));
-      box.appendChild(el);
-    });
-  }
-
-  function mk(tag, cls, text) {
-    const e = document.createElement(tag);
-    e.className = cls;
-    e.textContent = text ?? '';
-    return e;
-  }
-
   function pick(i) {
     picked = i;
     const r = rows[i];
 
-    $('rtoOrderId').value = r.id;
+    $('rtoOrderId').value   = r.id;
+    $('rtoOrderNo').value   = r.order_no;
+    $('rtoOrderDate').value = r.order_date || '';
     $('rtoPickedNote').textContent =
       '고른 주문 ' + r.order_no + ' · ' + r.patient
-      + (r.so_no ? ' · ' + r.so_no : '') + ' · ' + r.status;
+      + (r.so_no ? ' · ' + r.so_no : '') + ' · ' + r.status
+      + (r.returns > 0 ? ' · 접수 ' + r.returns + '건 있음' : '');
 
     // 환불 금액과 재배송지는 원 주문에서 끌어 온다 — 대개 그대로다
     if (!$('rtoRefundAmount').value) $('rtoRefundAmount').value = r.amount || '';
@@ -295,8 +321,6 @@
 
     itemGrid.setData(r.items ?? []);
     $('rtoItemNote').textContent = (r.items?.length ?? 0) + '개 품목 · ' + r.order_no;
-
-    drawHits();
   }
 
   /* 종류에 따라 물을 것이 다르다. 취소는 보낸 물건이 없어 수거를 묻지 않고,

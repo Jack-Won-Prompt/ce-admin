@@ -141,6 +141,41 @@ class OrderReturnController extends Controller
     }
 
     /**
+     * 환자를 찾는다 — 검색 칸 옆 조회 창이 쓴다.
+     *
+     * 이름만 적어 넣게 두면 동명이인을 가릴 수 없다. 고르면 생년월일·전화번호가 함께
+     * 채워져, 그다음 주문 조회가 한 사람으로 좁혀진다.
+     */
+    public function patientSearch(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $kw = trim((string) $request->q);
+
+        if (mb_strlen($kw) < 2) {
+            return response()->json(['rows' => [], 'message' => '두 글자 이상 넣으십시오']);
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $kw);
+
+        $rows = \App\Models\Patient::where(fn ($q) => $q
+                ->where('name', 'like', "%{$kw}%")
+                ->when($digits !== '', fn ($s) => $s
+                    ->orWhere('mobile', 'like', "%{$digits}%")
+                    ->orWhere('phone', 'like', "%{$digits}%")))
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'birth_date', 'mobile', 'phone']);
+
+        return response()->json([
+            'rows' => $rows->map(fn ($p) => [
+                'id'    => $p->id,
+                'name'  => $p->name,
+                'birth' => $p->birth_date?->format('Y-m-d') ?? '',
+                'phone' => $p->mobile ?: ($p->phone ?? ''),
+            ])->values(),
+        ]);
+    }
+
+    /**
      * 되돌릴 원 주문을 찾는다.
      *
      * 예전에는 최근 200건을 셀렉트에 통째로 부어 놓고 고르게 했다. 주문이 쌓이면
@@ -183,6 +218,7 @@ class OrderReturnController extends Controller
                 'address'  => trim(($o->shipping_address ?? '')),
                 'so_no'    => $o->withworks_so_no ?? '',
                 'status'   => $o->status_label,
+                'order_date' => $o->created_at?->format('Y-m-d') ?? '',
                 // 이미 접수한 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
                 'returns'  => $o->returns()->count(),
                 /* 제품은 주문에 딸린 것을 그대로 준다. 품목 표가 비어 있는 옛 주문은

@@ -144,6 +144,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',                [\App\Http\Controllers\OrderReturnController::class, 'index'])->name('index');
         Route::get('/create',          [\App\Http\Controllers\OrderReturnController::class, 'create'])->name('create');
         Route::get('/order-search',    [\App\Http\Controllers\OrderReturnController::class, 'orderSearch'])->name('orderSearch');
+        Route::get('/patient-search',  [\App\Http\Controllers\OrderReturnController::class, 'patientSearch'])->name('patientSearch');
         Route::post('/',               [\App\Http\Controllers\OrderReturnController::class, 'store'])->name('store');
         Route::get('/{orderReturn}',   [\App\Http\Controllers\OrderReturnController::class, 'show'])->name('show');
         Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
