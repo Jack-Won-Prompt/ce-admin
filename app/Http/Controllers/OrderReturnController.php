@@ -214,6 +214,9 @@ class OrderReturnController extends Controller
                 'so_no'    => $o->withworks_so_no ?? '',
                 'status'   => $o->status_label,
                 'order_date' => $o->created_at?->format('Y-m-d') ?? '',
+                /* 송장이 붙었는가 — 아직이면 되돌려 받을 물건이 없어 종류와 상관없이
+                   판매주문 취소로 나간다. 접수하는 사람이 그것을 미리 알아야 한다. */
+                'shipped'  => (bool) ($o->withworks_ship_no || $o->withworks_tracking_no),
                 // 이미 접수한 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
                 'returns'  => $o->returns()->count(),
                 /* 제품은 주문에 딸린 것을 그대로 준다. 품목 표가 비어 있는 옛 주문은

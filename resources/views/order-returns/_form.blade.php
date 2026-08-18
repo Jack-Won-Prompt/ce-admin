@@ -107,6 +107,16 @@
         <input type="text" id="rtoOrderDate" class="form-control" readonly
                style="background:var(--gray-50);" placeholder="—">
       </div>
+      <div class="rto-f span4" id="rtoPreShipWrap" style="display:none;">
+        {{-- 아직 나가지 않은 주문이면 종류와 상관없이 판매주문 취소로 나간다.
+             접수하고 나서 알면 늦다 — 고르는 자리에서 미리 알린다. --}}
+        <div style="padding:8px 12px;background:var(--primary-light);border:1px solid var(--primary-200);
+                    border-radius:8px;font-size:12px;color:var(--primary);">
+          아직 나가지 않은 주문입니다 — 창고에는 <b>판매주문 취소</b>로 넘어갑니다.
+          되돌려 받을 물건이 없어 수거·검수 단계를 두지 않습니다.
+          발행된 계산서·현금영수증이 있으면 함께 취소하고, 청구 대상에서도 뺍니다.
+        </div>
+      </div>
       <div class="rto-f span4">
         <label>상세 사유</label>
         <input type="text" name="reason_text" class="form-control" maxlength="500"
@@ -310,6 +320,9 @@
 
     // 환불 금액과 재배송지는 원 주문에서 끌어 온다 — 대개 그대로다
     if (!$('rtoRefundAmount').value) $('rtoRefundAmount').value = r.amount || '';
+
+    // 아직 나가지 않은 주문이면 무엇으로 나가는지 미리 알린다
+    $('rtoPreShipWrap').style.display = r.shipped ? 'none' : '';
 
     itemGrid.setData(r.items ?? []);
     $('rtoItemNote').textContent = (r.items?.length ?? 0) + '개 품목 · ' + r.order_no;

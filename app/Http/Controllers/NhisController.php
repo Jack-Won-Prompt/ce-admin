@@ -97,6 +97,7 @@ class NhisController extends Controller
             'submitted' => '청구완료',
             'approved'  => '승인',
             'rejected'  => '거부',
+            'cancelled' => '주문취소',
         ];
 
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)

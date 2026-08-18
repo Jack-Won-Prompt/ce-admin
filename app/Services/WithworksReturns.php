@@ -38,7 +38,8 @@ class WithworksReturns
     /**
      * 반품을 위드웍스에 알린다.
      *
-     * 출고 전 취소면 원 판매주문을 취소하고, 그 밖에는 반품 판매주문을 세운다.
+     * 아직 나가지 않은 물건이면 종류와 상관없이 원 판매주문을 취소하고,
+     * 이미 나간 뒤면 종류대로 반품 판매주문을 세운다.
      * 어느 쪽이든 결과를 접수 건에 적어 둔다 — 실패했을 때 왜인지 화면에서 보여야 한다.
      *
      * 되돌려주는 값은 성공 여부다. 실패해도 접수 자체는 살려 둔다. 창고에 알리지
@@ -65,13 +66,18 @@ class WithworksReturns
     }
 
     /**
-     * 출고 전 취소인가.
+     * 아직 나가지 않은 물건인가.
      *
-     * 출고번호가 붙었으면 물건이 나간 것이라 되돌려 받아야 한다 — 실질이 반품이다.
+     * 송장이 채번되기 전이면 창고에서 물건이 나가지 않았다. 그때는 종류가 무엇이든
+     * 되돌려 받을 물건이 없다 — 반품도 교환도 실질은 「이 주문을 없던 일로」다.
+     * 반품 주문을 세우면 창고는 오지 않을 물건을 기다리고, 우리 표에는 나가지도 않은
+     * 건의 수거·검수 단계가 남는다.
+     *
+     * 송장이 붙었으면 물건이 나간 것이므로 종류대로 반품 주문을 세운다.
      */
     private function isPreShipCancel(OrderReturn $return, Order $order): bool
     {
-        return $return->type === OrderReturn::TYPE_CANCEL && !$order->withworks_ship_no;
+        return !$order->withworks_ship_no && !$order->withworks_tracking_no;
     }
 
     /** 원 판매주문을 취소한다 — 반품 주문을 만들지 않는다 */
@@ -112,6 +118,16 @@ class WithworksReturns
                 "출고 전 취소로 주문을 닫았습니다 ({$return->receipt_no})"
             );
         }
+
+        /* 주문만 닫으면 뒤에 달린 것들이 남는다 — 이미 발행한 계산서·현금영수증을
+           되돌리고, 청구 대상에서도 뺀다. 공단에 이미 청구한 건은 우리가 물릴 수
+           없으므로 접수 건에 적어 사람이 보게 한다. */
+        $closed = app(\App\Services\OrderCancellation::class)->close($order, $return);
+
+        $return->forceFill([
+            'withworks_status_label' => '판매주문 취소',
+            'withworks_error'        => $closed['warnings'] ? implode(' / ', $closed['warnings']) : null,
+        ])->save();
 
         return true;
     }
