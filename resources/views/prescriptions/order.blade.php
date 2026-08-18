@@ -1794,7 +1794,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <span class="vw-card-title">문서 <b id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</b></span>
           <div class="vw-card-acts">
             <div style="position:relative;">
-              <input type="text" id="attachDocTypeSelect" value="주민등록증" autocomplete="off"
+              <input type="text" id="attachDocTypeSelect" value="신분증" autocomplete="off"
                      class="vw-btn-sm" style="width:120px;padding-right:26px;font-weight:400;"
                      oninput="_adtFilter(this.value)" onfocus="_adtOpen()" onblur="setTimeout(_adtClose,150)" />
               <span onmousedown="event.preventDefault();_adtToggle()"
@@ -1804,7 +1804,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--gray-0);border:1px solid var(--gray-200);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">위임장</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('주민등록증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">주민등록증</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('신분증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">신분증</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
@@ -4003,7 +4003,7 @@ function _adtFilter(q) {
 function handleAttachUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '주민등록증': 'id_card',
+  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '신분증': 'id_card',
                       '등록신청서': 'registration_form', '결과지': 'test_result', '기타': 'other' };
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';

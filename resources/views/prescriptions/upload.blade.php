@@ -439,7 +439,7 @@ const form      = document.getElementById('uploadForm');
 
 const DOC_TYPES = {
   prescription: { label: '처방전',    cls: 'type-prescription', icon: 'fa-file-medical' },
-  id_card:      { label: '주민등록증', cls: 'type-id_card',      icon: 'fa-id-card' },
+  id_card:      { label: '신분증', cls: 'type-id_card',      icon: 'fa-id-card' },
   delegation:   { label: '위임장',    cls: 'type-delegation',   icon: 'fa-file-signature' },
   other:        { label: '기타',      cls: 'type-other',        icon: 'fa-file' },
 };
