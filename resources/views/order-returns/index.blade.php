@@ -72,7 +72,7 @@
       <span class="ds-grid-total">전체 <b>{{ $total }}</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint" id="rtnHint">행을 <b>더블클릭</b>하면 상세로 이동합니다.</span>
+      <span class="ds-grid-hint" id="rtnHint">행을 <b>더블클릭</b>하면 상세내용 탭에서 열립니다.</span>
       <button type="button" class="ds-btn" onclick="window.__rtnGrid?.downloadExcel()">엑셀 저장</button>
     </div>
   </div>
@@ -81,11 +81,25 @@
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
     <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과</button>
+    {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
+         있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
+    <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>
     <button type="button" id="rtnTabNew"  class="pnl-tab" onclick="rtnPanel('new')">신규 접수</button>
   </div>
 
   <div class="ds-grid-card" id="rtnPaneList">
     <div id="rtnGrid"></div>
+  </div>
+
+  <div class="ds-grid-card" id="rtnPaneShow" style="display:none;padding:0;">
+    {{-- 상세는 이미 한 화면으로 있다. 그 화면을 그대로 들여온다 — 두 벌로 만들면
+         한쪽만 고쳐져 서로 다른 것을 보여 주게 된다.
+         액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
+    <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12.5px;color:var(--gray-700);">
+      목록에서 행을 더블클릭하면 여기에 나옵니다.
+    </div>
+    <iframe id="rtnShowFrame" title="상세내용" style="display:none;width:100%;border:0;
+            height:calc(100vh - 300px);min-height:520px;"></iframe>
   </div>
 
   <div class="ds-grid-card" id="rtnPaneNew" style="display:none;">
@@ -129,24 +143,55 @@
   });
   window.__rtnGrid = grid;
 
-  /* 목록 · 접수 탭. 접수 탭을 열면 원 주문 찾기에 바로 손이 가도록 커서를 옮긴다. */
+  /* 목록 · 상세 · 접수 탭. 접수 탭을 열면 원 주문 찾기에 바로 손이 가도록 커서를 옮긴다. */
+  const PANES = { list: 'rtnPaneList', show: 'rtnPaneShow', new: 'rtnPaneNew' };
+  const TABS  = { list: 'rtnTabList',  show: 'rtnTabShow',  new: 'rtnTabNew'  };
+
   window.rtnPanel = function (which) {
-    const isNew = which === 'new';
-    document.getElementById('rtnPaneList').style.display = isNew ? 'none' : '';
-    document.getElementById('rtnPaneNew').style.display  = isNew ? '' : 'none';
-    document.getElementById('rtnTabList').classList.toggle('active', !isNew);
-    document.getElementById('rtnTabNew').classList.toggle('active', isNew);
-    document.getElementById('rtnHint').style.visibility = isNew ? 'hidden' : '';
-    if (isNew) document.getElementById('rtoQ')?.focus();
+    if (!PANES[which]) which = 'list';
+    Object.keys(PANES).forEach(k => {
+      document.getElementById(PANES[k]).style.display = k === which ? '' : 'none';
+      document.getElementById(TABS[k]).classList.toggle('active', k === which);
+    });
+    // 더블클릭 안내는 목록을 보고 있을 때만 뜻이 있다
+    document.getElementById('rtnHint').style.visibility = which === 'list' ? '' : 'hidden';
+    if (which === 'new') document.getElementById('rtoQ')?.focus();
   };
-  /* wwGrid 에는 on() 이 없다. 그 자리에 optional chaining 을 써 두어 아무 일도
-     일어나지 않았고, 화면은 「더블클릭하면 상세로 이동합니다」라고 알리고 있었다.
-     다른 목록 화면과 같이 셀에서 행 번호를 읽는다. */
+
+  /* 액자 안의 「목록으로」는 액자 속에 목록을 또 열어 화면이 겹친다.
+     같은 곳에서 온 문서라 안을 만질 수 있으니, 누르면 바깥의 목록 탭으로 돌린다. */
+  document.getElementById('rtnShowFrame').addEventListener('load', function () {
+    try {
+      const d = this.contentDocument;
+      if (!d) return;
+      d.querySelectorAll('a[href]').forEach(a => {
+        if (a.href.replace(/\/$/, '') !== SHOW_BASE.replace(/\/$/, '')) return;
+        a.addEventListener('click', (e) => { e.preventDefault(); rtnPanel('list'); });
+      });
+    } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
+  });
+
+  /* 고른 건을 상세 탭에 들여온다. 탭 이름에 접수번호를 붙여 둔다 —
+     탭을 여럿 오가다 보면 무엇을 열어 두었는지 잊는다. */
+  function rtnShow(row) {
+    const frame = document.getElementById('rtnShowFrame');
+    const url   = SHOW_BASE + '/' + row.id;
+    if (frame.dataset.url !== url) {
+      frame.src = url;
+      frame.dataset.url = url;
+    }
+    frame.style.display = '';
+    document.getElementById('rtnShowEmpty').style.display = 'none';
+    document.getElementById('rtnTabShow').textContent =
+      '상세내용' + (row.receipt ? ' · ' + row.receipt : '');
+    rtnPanel('show');
+  }
+  /* wwGrid 에는 on() 이 없다 — 다른 목록 화면과 같이 셀에서 행 번호를 읽는다. */
   document.getElementById('rtnGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-    if (row?.id) location.href = SHOW_BASE + '/' + row.id;
+    if (row?.id) rtnShow(row);
   });
 })();
 </script>
