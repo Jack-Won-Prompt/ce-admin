@@ -1329,7 +1329,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   @php
                     $hint = ['card' => '결제 페이지에서 카드로 냅니다',
                              'virtual' => '결제 페이지에서 가상계좌를 발급받습니다',
-                             'bank' => '우리 입금계좌를 문자로 안내합니다 — 입금 확인은 사람이 합니다'][$code];
+                             'bank' => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code];
                   @endphp
                   <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                     <input type="radio" name="pay_method" value="{{ $code }}" style="accent-color:var(--primary);"
