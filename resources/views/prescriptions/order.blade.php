@@ -74,6 +74,20 @@
 
 @push('styles')
 <style>
+  /* 이전·다음으로 처방전을 넘길 때 흰 화면이 번쩍이지 않게 한다.
+     브라우저가 지금 보이는 화면을 붙들고 있다가 다음 화면이 준비되면 겹쳐 바꾼다 —
+     화면은 그대로 두고 내용만 바뀐 것처럼 보인다. 이동 자체는 예전과 같은 진짜
+     이동이라, 화면 안의 상태는 새로 짜인다(반쯤 갈아 끼운 화면이 남지 않는다).
+     지원하지 않는 브라우저는 이 규칙을 그냥 무시하고 예전처럼 넘어간다. */
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: .16s; }
+  /* 뷰어는 넘겨도 자리와 크기가 같다 — 따로 이름을 줘 그 자리에서 바뀌게 한다 */
+  #viewerCol { view-transition-name: rx-viewer; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  }
+
   /* 좌우 배치 — 시안 137:350. 뷰어 360 고정, 사이 간격 12 */
   .order-layout { display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
   .order-layout.viewer-right { grid-template-columns: 1fr 360px; }
@@ -7037,6 +7051,9 @@ window.HELP_TOUR_STEPS = [
       if (!ok) return;
       clearAllDirty();
     }
+    /* 화면 전환은 브라우저에 맡긴다(@view-transition) — 흰 화면이 끼지 않는다.
+       넘기는 동안 두 번 눌리지 않게 단추를 잠근다. 이동은 곧 일어나므로 되돌릴 일은 없다. */
+    document.querySelectorAll('.vw-nav-btn').forEach(b => { b.disabled = true; });
     location.href = `${BASE_URL}/prescriptions/${encodeURIComponent(rxNumber)}`;
   }
 
