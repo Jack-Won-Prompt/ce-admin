@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
+    /** 이어 받을 쪽 수 — 창고가 한 쪽에 10건씩 준다 */
+    private const MAX_PAGES = 3;
+
     /**
      * demoworks.co.kr API를 통해 제품을 검색하는 프록시 엔드포인트.
      */
@@ -30,13 +33,20 @@ class ProductController extends Controller
         ]);
 
         try {
-            $response = Http::withToken($token)
+            /* 창고는 per_page 를 듣지 않는다 — 무엇을 보내든 한 번에 10건씩 준다.
+               「Cath」로 찾으면 57건 중 앞 10건만 와서, 찾는 제품이 뒤에 있으면
+               영영 보이지 않았다. 다음 쪽을 이어 받는다.
+               한 쪽이 0.15초라 세 쪽까지는 사람이 기다릴 만하다 — 30건이면 대개 충분하고,
+               그보다 넓게 친 말은 검색어를 좁히는 편이 빠르다. */
+            $fetch = fn (int $page) => Http::withToken($token)
                 ->connectTimeout(5)
                 ->timeout(15)
                 ->get("{$baseUrl}/api/v1/item/item_list", [
-                    'item'     => $keyword,
-                    'per_page' => 30,
+                    'item' => $keyword,
+                    'page' => $page,
                 ]);
+
+            $response = $fetch(1);
 
             Log::info('Demoworks 응답', [
                 'status' => $response->status(),
@@ -70,7 +80,24 @@ class ProductController extends Controller
 
             $items = $this->normalizeItems($body);
 
-            Log::info('Demoworks 정규화 완료', ['count' => count($items)]);
+            // 뒤 쪽 이어 받기 — 세 쪽(30건)까지만
+            $lastPage = (int) ($body['result']['last_page'] ?? 1);
+            $total    = (int) ($body['result']['total'] ?? count($items));
+            for ($page = 2; $page <= min($lastPage, self::MAX_PAGES); $page++) {
+                $more = $fetch($page);
+                if ($more->failed()) {
+                    break;
+                }
+                $items = array_merge($items, $this->normalizeItems($more->json()));
+            }
+
+            // 못 보여 준 것이 있으면 숨기지 않는다 — 화면이 목록을 다 보여 준 것처럼 굴면 안 된다
+            $shown   = count($items);
+            $notice  = $total > $shown
+                ? "{$total}건 가운데 {$shown}건입니다 — 검색어를 좁혀 주십시오."
+                : null;
+
+            Log::info('Demoworks 정규화 완료', ['count' => $shown, 'total' => $total]);
 
             /* 재고는 여기서 묻지 않는다.
                제품 하나의 재고 조회(inv_search/inv_info)가 7초 걸린다. 검색 결과 열 건이면
@@ -80,7 +107,9 @@ class ProductController extends Controller
             return response()->json([
                 'success' => true,
                 'data'    => $items,
-                'total'   => count($items),
+                'total'   => $shown,
+                'found'   => $total,
+                'notice'  => $notice,
             ]);
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             // 끊긴 것과 답이 늦은 것은 다르다. 담당자가 할 일도 다르다 — 늦은 것은 다시 눌러 보면 된다.

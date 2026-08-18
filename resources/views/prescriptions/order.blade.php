@@ -7770,6 +7770,7 @@ window.HELP_TOUR_STEPS = [
      펼쳐진 목록이 아래 칸을 가렸다. 세 글자 미만은 찾지 않는다 — 두 글자로 찾으면
      수백 건이 쏟아져 고르지 못하고, 그 조회가 창고를 붙들어 다음 조회까지 늦춘다. */
   const _pacCache  = {};   // 검색 결과 캐시(같은 말로 다시 찾지 않는다)
+  const _pacNotice = {};   // 다 보여 주지 못한 검색의 안내
   const _pacFound  = {};   // 방금 창에 보인 것 — 고른 뒤 값을 꺼내 쓴다
   const _prodModal = new GridModal();
 
@@ -7790,6 +7791,17 @@ window.HELP_TOUR_STEPS = [
           if (!res.success) throw new Error(res.message || '조회 실패');
           data = res.data ?? [];
           _pacCache[key] = data;
+          _pacNotice[key] = res.notice ?? null;
+        }
+        /* 창고가 한 번에 다 주지 않는다. 못 보여 준 것이 있으면 건수 자리에 그대로 적는다 —
+           「30건」만 보이면 그게 전부인 줄 알고 없는 제품이라 여긴다.
+           창이 건수를 적은 뒤에 덮어써야 하므로 다음 차례로 미룬다. */
+        if (_pacNotice[key]) {
+          const notice = _pacNotice[key];
+          setTimeout(() => {
+            const c = document.querySelector('.cg-modal-counter');
+            if (c) { c.textContent = notice; c.style.color = '#B54708'; }
+          }, 0);
         }
         _pacFound[idx] = {};
         return data.map((it) => {
