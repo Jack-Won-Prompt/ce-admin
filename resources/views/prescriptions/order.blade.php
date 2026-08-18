@@ -1295,8 +1295,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
            카드·가상계좌는 우리 결제 페이지 주소를 보내고, 무통장입금은 우리 계좌를 적어 보낸다.
            보낸 것과 낸 것은 아래 이력에 쌓인다 — 다시 보낼지 전화할지를 그걸 보고 정한다. --}}
       <div id="payTriggerWrap" style="position:relative;">
-        <button class="pib-btn" id="btnPayTrigger" onclick="togglePayPopover(event)"
-                @if(!$prescription->order) disabled title="주문을 먼저 만들어야 보낼 수 있습니다" @endif>
+        {{-- 주문이 없어도 눌리게 둔다. 잠가 두면 눌러도 아무 일이 없어 고장으로 읽힌다 —
+             창을 열어 「주문을 먼저 만들라」고 그 자리에서 알려 주는 편이 낫다. --}}
+        <button class="pib-btn" id="btnPayTrigger" onclick="togglePayPopover(event)">
           <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
         </button>
 
@@ -1311,6 +1312,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
 
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            @unless($prescription->order)
+              <div style="padding:10px 12px;background:var(--alert-50);border:1px solid var(--alert-200);border-radius:var(--radius);font-size:12px;color:#B54708;">
+                아직 주문이 없습니다. <b>주문 연계</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
+              </div>
+            @endunless
             <div style="display:flex;justify-content:space-between;font-size:12px;">
               <span style="color:var(--text-muted);">결제 금액</span>
               <b id="payAmount" style="color:var(--primary);">{{ number_format($prescription->order?->total_amount ?? 0) }}원</b>
@@ -1347,7 +1353,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
 
-            <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)">
+            <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)"
+                    @unless($prescription->order) disabled @endunless>
               <i class="fa-solid fa-paper-plane"></i> 전송
             </button>
 
@@ -6237,7 +6244,11 @@ window.HELP_TOUR_STEPS = [
 
   async function loadPaymentLinks() {
     const box = document.getElementById('payHistory');
-    if (!box || !PAY_INDEX_URL) return;
+    if (!box) return;
+    if (!PAY_INDEX_URL) {
+      box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">주문을 만들면 이력이 쌓입니다.</div>';
+      return;
+    }
     try {
       const res  = await apiRequest(PAY_INDEX_URL, 'GET');
       const rows = res.rows ?? [];
