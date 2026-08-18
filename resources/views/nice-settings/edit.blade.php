@@ -2,7 +2,7 @@
 
 @section('title', '본인확인 설정')
 @section('page-title', 'NICE 본인확인 설정')
-@section('breadcrumb', '홈 / 설정 / 본인확인 설정')
+@section('breadcrumb', '홈 - 설정 - 본인확인 설정')
 
 @push('styles')
 <style>

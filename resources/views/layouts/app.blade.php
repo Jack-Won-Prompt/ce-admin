@@ -485,7 +485,9 @@
     .ds-grid-total b { font-weight: 700; color: var(--primary); }
     /* '전체 N건' 과 '선택 N건' 사이 4×4 구분점 (148:5526 Rectangle 10 · r999 · gray-300) */
     .ds-grid-sel { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
-    .ds-grid-sel b { color: var(--primary-400); }
+    {{-- 숫자에도 굵기를 못박는다. <b> 의 브라우저 기본 bolder 가 부모 500 위에서 700 으로 올려
+         시안(33장 전부 13/500 · #4898A9)과 어긋난다 — 「전체 N건」이 900 으로 찍히던 것과 같은 이치다. --}}
+    .ds-grid-sel b { font-weight: 500; color: var(--primary-400); }
     .ds-grid-total + .ds-grid-sel::before {
       content: ''; display: inline-block; vertical-align: middle;
       width: 4px; height: 4px; border-radius: 999px;

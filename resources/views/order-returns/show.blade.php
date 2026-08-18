@@ -2,7 +2,7 @@
 
 @section('title', $r->receipt_no)
 @section('page-title', $r->typeLabel() . ' · ' . $r->receipt_no)
-@section('breadcrumb', '홈 / 주문 / 교환·반품·취소 / 상세')
+@section('breadcrumb', '홈 - 주문 - 교환·반품·취소 - 상세')
 
 @section('header-actions')
 <a href="{{ route('order-returns.index') }}" class="btn btn-outline btn-sm">

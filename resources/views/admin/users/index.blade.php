@@ -2,7 +2,7 @@
 
 @section('title', '관리자 관리')
 @section('page-title', '관리자 관리')
-@section('breadcrumb', '홈 / 관리자 관리')
+@section('breadcrumb', '홈 - 관리자 관리')
 
 @section('content')
 

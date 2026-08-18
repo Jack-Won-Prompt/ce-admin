@@ -3,7 +3,7 @@
 
 @section('title', '마스터 관리')
 @section('page-title', '마스터 관리')
-@section('breadcrumb', '홈 / 설정 / 마스터 관리')
+@section('breadcrumb', '홈 - 설정 - 마스터 관리')
 
 @push('styles')
 <style>

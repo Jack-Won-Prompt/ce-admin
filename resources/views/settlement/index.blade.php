@@ -3,7 +3,8 @@
 
 @section('title', '정산/회계')
 @section('page-title', '정산/회계')
-@section('breadcrumb', '홈 / 청구·회계 / 정산')
+{{-- 시안 324:60 빵부스러기는 '홈 - 정산/회계' 두 마디다(구분자 하이픈). --}}
+@section('breadcrumb', '홈 - 정산/회계')
 
 @push('styles')
 <style>

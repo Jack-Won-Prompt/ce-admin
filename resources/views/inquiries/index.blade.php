@@ -2,7 +2,7 @@
 
 @section('title', '문의하기')
 @section('page-title', '문의하기')
-@section('breadcrumb', '홈 / 문의하기')
+@section('breadcrumb', '홈 - 문의하기')
 
 @push('styles')
 @endpush

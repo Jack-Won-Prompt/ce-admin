@@ -3,7 +3,7 @@
 
 @section('title', '사용자 로그')
 @section('page-title', '사용자 로그')
-@section('breadcrumb', '홈 / 시스템 / 사용자 로그')
+@section('breadcrumb', '홈 - 시스템 - 사용자 로그')
 
 @push('scripts')
 <script>

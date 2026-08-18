@@ -2,7 +2,7 @@
 
 @section('title', 'CE샵 주문')
 @section('page-title', 'CE샵 주문관리')
-@section('breadcrumb', '홈 / CE샵 주문')
+@section('breadcrumb', '홈 - CE샵 주문')
 
 @push('styles')
 <style>

@@ -3,7 +3,8 @@
 
 @section('title', '처방전 목록')
 @section('page-title', '처방전 목록')
-@section('breadcrumb', '홈 / 처방전 목록')
+{{-- 시안 128:1744 빵부스러기는 '홈 - 처방전 목록' 이다(구분자 하이픈). --}}
+@section('breadcrumb', '홈 - 처방전 목록')
 
 @section('help-title', '처방전 목록 도움말')
 @section('help-content')

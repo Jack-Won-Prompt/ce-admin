@@ -2,7 +2,7 @@
 
 @section('title', '위임장 설정')
 @section('page-title', '요양비 위임장 설정')
-@section('breadcrumb', '홈 / 설정 / 위임장 설정')
+@section('breadcrumb', '홈 - 설정 - 위임장 설정')
 
 @push('styles')
 <style>

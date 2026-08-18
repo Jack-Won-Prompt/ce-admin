@@ -2,7 +2,7 @@
 
 @section('title', 'CE샵 주문 상세')
 @section('page-title', 'CE샵 주문 상세')
-@section('breadcrumb')홈 / <a href="{{ route('shop-orders.index') }}">CE샵 주문</a> / {{ $shopOrder->order_number }}@endsection
+@section('breadcrumb')홈 - <a href="{{ route('shop-orders.index') }}">CE샵 주문</a> - {{ $shopOrder->order_number }}@endsection
 
 @push('styles')
 <style>

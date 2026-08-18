@@ -2,7 +2,7 @@
 
 @section('title', 'OCR 설정')
 @section('page-title', '처방전 OCR 설정')
-@section('breadcrumb', '홈 / 설정 / OCR 설정')
+@section('breadcrumb', '홈 - 설정 - OCR 설정')
 
 @push('styles')
 <style>

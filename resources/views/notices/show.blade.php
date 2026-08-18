@@ -2,7 +2,7 @@
 
 @section('title', $notice->title)
 @section('page-title', '공지사항')
-@section('breadcrumb', '홈 / 공지사항 / 상세')
+@section('breadcrumb', '홈 - 공지사항 - 상세')
 
 @section('content')
 <div style="max-width:900px;">

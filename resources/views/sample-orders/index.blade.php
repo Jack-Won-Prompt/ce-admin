@@ -3,7 +3,7 @@
 
 @section('title', 'CE 샘플주문')
 @section('page-title', 'CE 샘플주문')
-@section('breadcrumb', '홈 / 주문 / CE 샘플주문')
+@section('breadcrumb', '홈 - 주문 - CE 샘플주문')
 
 @section('help-title', 'CE 샘플주문 도움말')
 @section('help-content')

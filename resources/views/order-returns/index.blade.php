@@ -2,7 +2,7 @@
 
 @section('title', '교환/반품/취소')
 @section('page-title', '교환/반품/취소')
-@section('breadcrumb', '홈 / 주문 / 교환·반품·취소')
+@section('breadcrumb', '홈 - 주문 - 교환·반품·취소')
 
 @section('help-title', '교환/반품/취소 도움말')
 @section('help-content')

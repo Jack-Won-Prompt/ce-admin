@@ -2,7 +2,7 @@
 
 @section('title', 'CE샵 모니터링')
 @section('page-title', 'CE샵 사용자 모니터링')
-@section('breadcrumb', '홈 / CE샵 모니터링')
+@section('breadcrumb', '홈 - CE샵 모니터링')
 
 @push('styles')
 <style>

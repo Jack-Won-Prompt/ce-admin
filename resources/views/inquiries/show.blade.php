@@ -2,7 +2,7 @@
 
 @section('title', $inquiry->title)
 @section('page-title', '문의 상세')
-@section('breadcrumb', '홈 / 문의하기 / 상세')
+@section('breadcrumb', '홈 - 문의하기 - 상세')
 
 @section('content')
 <div style="max-width:900px;">
