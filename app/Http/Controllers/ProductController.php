@@ -6,7 +6,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Client\Pool;
 
 class ProductController extends Controller
 {
@@ -32,7 +31,8 @@ class ProductController extends Controller
 
         try {
             $response = Http::withToken($token)
-                ->timeout(10)
+                ->connectTimeout(5)
+                ->timeout(15)
                 ->get("{$baseUrl}/api/v1/item/item_list", [
                     'item'     => $keyword,
                     'per_page' => 30,
@@ -72,43 +72,24 @@ class ProductController extends Controller
 
             Log::info('Demoworks 정규화 완료', ['count' => count($items)]);
 
-            // 재고 병렬 조회 — 코드가 있는 아이템만
-            $codes = array_values(array_filter(array_column($items, 'code')));
-            if (!empty($codes)) {
-                try {
-                    $responses = Http::pool(fn (Pool $pool) => array_map(
-                        fn ($code) => $pool->as($code)
-                            ->withToken($token)
-                            ->timeout(5)
-                            ->get("{$baseUrl}/api/v1/inv_search/inv_info", ['item_code' => $code]),
-                        $codes
-                    ));
-
-                    $stockMap = [];
-                    foreach ($codes as $code) {
-                        $res = $responses[$code] ?? null;
-                        if ($res instanceof \Illuminate\Http\Client\Response && $res->ok()) {
-                            $b = $res->json();
-                            if (!empty($b['success'])) {
-                                $invData        = $b['data']['invData'] ?? [];
-                                $stockMap[$code] = collect($invData)->sum(fn ($r) => (int) ($r['avail_qty'] ?? 0));
-                            }
-                        }
-                    }
-
-                    foreach ($items as &$item) {
-                        $item['stock'] = $stockMap[$item['code']] ?? null;
-                    }
-                    unset($item);
-                } catch (\Exception $e) {
-                    Log::warning('재고 병렬 조회 실패', ['error' => $e->getMessage()]);
-                }
-            }
-
+            /* 재고는 여기서 묻지 않는다.
+               제품 하나의 재고 조회(inv_search/inv_info)가 7초 걸린다. 검색 결과 열 건이면
+               열 번을 한꺼번에 물었고, 그동안 창고 API 가 막혀 제품 검색(평소 0.15초)마저
+               10초를 넘겨 끊겼다 — 「제품 API 서버에 연결할 수 없습니다」의 정체다.
+               재고는 고른 뒤 그 한 건만 따로 묻는다(/products/stock). */
             return response()->json([
                 'success' => true,
                 'data'    => $items,
                 'total'   => count($items),
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            // 끊긴 것과 답이 늦은 것은 다르다. 담당자가 할 일도 다르다 — 늦은 것은 다시 눌러 보면 된다.
+            Log::warning('Demoworks 제품 검색 지연·끊김', ['keyword' => $keyword, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '창고 서버가 제때 답하지 않았습니다. 잠시 뒤 다시 검색해 주십시오.',
+                'data'    => [],
             ]);
         } catch (\Exception $e) {
             Log::error('Demoworks API 연결 실패', ['error' => $e->getMessage()]);
@@ -137,8 +118,10 @@ class ProductController extends Controller
         $token   = config('services.demoworks.token');
 
         try {
+            // 창고의 재고 조회는 한 건에 7초 안팎이다 — 8초로는 자주 놓친다
             $response = Http::withToken($token)
-                ->timeout(8)
+                ->connectTimeout(5)
+                ->timeout(20)
                 ->get("{$baseUrl}/api/v1/inv_search/inv_info", [
                     'item_code' => $code,
                 ]);
