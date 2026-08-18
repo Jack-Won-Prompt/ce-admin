@@ -161,7 +161,25 @@ class ProductController extends Controller
         $token   = config('services.demoworks.token');
 
         try {
-            // 창고의 재고 조회는 한 건에 7초 안팎이다 — 8초로는 자주 놓친다
+            /* CE 전용 재고 조회를 먼저 부른다 — 0.15초다.
+               예전 길(inv_search/inv_info)은 한 건에 7초 걸린다. */
+            $ours = Http::withToken($token)
+                ->connectTimeout(5)
+                ->timeout(20)
+                ->get("{$baseUrl}/api/v1/ce-admin/stock", ['item_codes' => $code]);
+
+            if ($ours->ok() && ($ours->json('success') ?? false)) {
+                $row   = $ours->json('result.0');
+                $found = (bool) ($row['found'] ?? false);
+
+                // 없는 코드에 0 을 돌려주면 「재고 없음」으로 읽힌다 — 모르는 것은 모른다고 한다
+                return response()->json([
+                    'success' => $found,
+                    'qty'     => $found ? (int) ($row['available_qty'] ?? 0) : null,
+                ]);
+            }
+
+            // 그 길이 없는 서버면 예전 길로 물러선다
             $response = Http::withToken($token)
                 ->connectTimeout(5)
                 ->timeout(20)

@@ -7837,15 +7837,18 @@ window.HELP_TOUR_STEPS = [
     card.querySelector('.item-code').value    = code;
     card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
     card.querySelector('.item-rbox').value    = rbox;
-    card.querySelector('.item-stock').value   = '';
+    /* 찾을 때 재고까지 함께 받았으면 그대로 쓴다 — 방금 받은 것을 버리고 다시 묻지 않는다.
+       예전 API 로 물러선 경우에는 재고가 없으므로 그때만 따로 묻는다. */
+    const stock = (p.stock ?? '') === '' ? '' : String(p.stock);
+    card.querySelector('.item-stock').value   = stock;
     if (price) {
       card.querySelector('.item-price').value     = fmtPrice(price);
       card.querySelector('.item-ins-price').value = fmtPrice(price);
     }
-    updateItemMeta(idx, rbox, '');
+    updateItemMeta(idx, rbox, stock);
     calcItem(idx);
 
-    if (code) {
+    if (code && stock === '') {
       apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
         .then(res => {
           if (res.success && res.qty !== null) {
