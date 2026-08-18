@@ -1611,14 +1611,25 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <span class="vw-rx">{{ $prescription->rx_number }}</span>
           <button type="button" class="vw-nav-btn" onclick="nextRecord()" title="다음 처방전"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
+        {{-- 볼 것이 있는지는 처방전 이미지가 아니라 문서 전체로 따진다.
+             이미지 없이 첨부(신분증·위임 서명 등)만 있는 처방전에서 크게 보기·원본보기가
+             통째로 숨어, 붙어 있는 파일을 열 길이 없었다. --}}
+        @php $firstDoc = $allDocsJson[0] ?? null; @endphp
         <div class="vw-acts">
           <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn" title="뷰어 위치 바꾸기">
             <span id="btnToggleViewerSideLabel">오른쪽으로</span>
           </button>
           {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다 --}}
           <button type="button" id="btnBigViewer" class="vw-btn" onclick="openBigViewer()" title="파일을 큰 창으로 봅니다 (창을 옮길 수 있고, 그동안에도 입력할 수 있습니다)"
-                  @if(!$prescription->image_url) style="display:none;" @endif>크게 보기</button>
-          <a id="viewerOpenBtn" class="vw-btn vw-btn-icon" href="{{ $prescription->image_url ?? '#' }}" target="_blank" title="원본보기" @if(!$prescription->image_url) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
+                  @if(!$firstDoc) style="display:none;" @endif>크게 보기</button>
+          {{-- 끌어 옮기고 키운 것을 한 번에 되돌린다. 그림 위 도구에도 같은 것이 있지만
+               거기까지 손을 옮겨야 했다 — 크게 보기 옆이 손이 이미 가 있는 자리다. --}}
+          <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
+                  title="처음으로 되돌리기 (배율·회전·위치)"
+                  @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-arrows-rotate"></i></button>
+          <a id="viewerOpenBtn" class="vw-btn vw-btn-icon"
+             href="{{ $prescription->image_url ?? ($firstDoc['url'] ?? '#') }}" target="_blank" title="원본보기"
+             @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
         </div>
       </div>
 
@@ -3805,6 +3816,11 @@ function switchViewerDoc(el) {
   }
 
   if (openBtn) { openBtn.href = doc.url || '#'; openBtn.style.display = ''; }
+  // 처음에 볼 것이 없어 숨겨 두었더라도, 문서를 고른 이상 열 수 있어야 한다
+  ['btnBigViewer', 'btnResetView'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.style.display = '';
+  });
 
   // 크게 보기 창이 떠 있으면 고른 문서를 따라간다
   const bv = document.getElementById('bigViewer');
