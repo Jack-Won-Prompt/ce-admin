@@ -3,7 +3,8 @@
 
 @section('title', '팩스 발송')
 @section('page-title', '팩스 발송')
-@section('breadcrumb', '홈 / 팩스 발송')
+{{-- 시안 324:10697 — 빵부스러기 구분자는 하이픈이다: '홈 - 팩스 발송'('홈' x367 · '-' x386 · '팩스 발송' x400) --}}
+@section('breadcrumb', '홈 - 팩스 발송')
 
 @section('help-title', '팩스 발송 도움말')
 @section('help-content')
@@ -383,7 +384,7 @@
     <div class="ds-filter-actions">
       {{-- 동기화 진행 문구 — 결과바에 있던 알약을 단추 옆으로 옛겼다(비어 있으면 안 보인다) --}}
       <span class="ds-grid-hint" id="sync-status"></span>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
       <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
       <button type="button" class="ds-btn" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>

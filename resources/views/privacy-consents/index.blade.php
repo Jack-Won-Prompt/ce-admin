@@ -1,8 +1,12 @@
 @extends('layouts.app')
 
 @section('title', '개인정보동의')
-@section('page-title', '개인정보 수집·이용 동의')
-@section('breadcrumb', '홈 / 개인정보동의')
+{{-- 시안 342:4037 머리(83×19 · 16/700 #333940)도, 바로 아래 빵부스러기 마지막 조각도 '개인정보동의' 다.
+     제목만 '개인정보 수집·이용 동의' 라 한 화면에 두 이름이 보였다. 시안·빵부스러기 쪽으로 맞춘다.
+     '개인정보 수집·이용 동의' 라는 낱말은 상세 탭 둘째 카드 제목에 그대로 남는다. --}}
+@section('page-title', '개인정보동의')
+{{-- 시안 342:4037 빵부스러기는 '홈'(x367) · '-'(x386) · '개인정보동의'(x400) 로 구분자가 하이픈이다. --}}
+@section('breadcrumb', '홈 - 개인정보동의')
 
 @push('styles')
 <style>
@@ -161,9 +165,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['search','from','to']))
-      <a href="{{ route('privacy-consents.index', request()->only('type')) }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안 342:4037 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+         유형 칩만 유지한 채 같은 라우트로 되돌아가는 링크라 조건만 걷었다. --}}
+    <a href="{{ route('privacy-consents.index', request()->only('type')) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__pcGrid?.downloadExcel()">엑셀 저장</button>
@@ -230,12 +234,14 @@
       { header: '이메일',   name: 'email',     width: 170 },
       { header: '주소',     name: 'address',   width: 320 },
       { header: '보험',     name: 'insurance_col',       width: 120, sortable: true },
-      { header: '지원자격', name: 'support_qualify_col', width: 140, sortable: true },
+      { header: '지원 자격', name: 'support_qualify_col', width: 140, sortable: true },
       { header: '필수동의', name: 'required',  width: 110, sortable: true },
       { header: '마케팅',   name: 'marketing', width: 100 },
-      { header: '작성일',   name: 'submitted', width: 150, sortable: true },
+      // 머리 낱말은 시안 342:4037 표 머리 실측 그대로다 — '제출일시'·'지원 자격'·'관리자 메모'.
+      // name 은 그대로라 데이터·엑셀 열 키는 손대지 않았다.
+      { header: '제출일시',   name: 'submitted', width: 150, sortable: true },
       // 메모는 그리드에서 바로 고친다 — 상세탭까지 들어갔다 나올 일이 아니다.
-      { header: '관리자메모', name: 'admin_memo', width: 220, sortable: false,
+      { header: '관리자 메모', name: 'admin_memo', width: 220, sortable: false,
         renderer: (v, row) => {
           const wrap = document.createElement('div');
           wrap.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;';

@@ -505,7 +505,8 @@
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
     footer: false,
     columns: [
-      { header: '거래일시', name: 'tradeDt',   width: 150, sortable: true },
+      // 시안 324:4656 x479 머리글은 '거래 일시' 다 — 띄어쓰기가 있다(name·width 는 그대로)
+      { header: '거래 일시', name: 'tradeDt',  width: 150, sortable: true },
       { header: '번호',     name: 'num',       width: 170 },
       { header: '고객명',   name: 'customer',  width: 110, sortable: true },
       { header: '합계금액', name: 'amount',    width: 110, editor: 'number' },

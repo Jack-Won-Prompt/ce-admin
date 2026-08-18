@@ -3,7 +3,9 @@
 
 @section('title', '청구 관리')
 @section('page-title', '청구 관리')
-@section('breadcrumb', '홈 / 청구')
+{{-- 시안 282:53 빵부스러기는 '홈'(x367) · '-'(x386) · 화면명(x400) 으로 구분자가 하이픈이다.
+     마지막 조각의 낱말('청구')은 DIFF 가 짚지 않아 그대로 두고 구분자만 맞춘다. --}}
+@section('breadcrumb', '홈 - 청구')
 
 @section('help-title', '청구 도움말')
 @section('help-content')
@@ -148,6 +150,19 @@
     'rejected'  => ['거부',      'danger'],
   ];
   $curNhisStatus = request('nhis_status');
+
+  /* 시안 282:53 실측 — 괄호 설명은 칩 밖 둘째 줄이 아니라 칩 라벨 안에 붙은 한 덩어리다.
+       미청구(청구 대기 중)      98×19 · 칩 138×31
+       청구완료(결과 대기 중)   109×19 · 칩 149×31
+       승인(이번달 0원 환급)    106×19 · 칩 146×31
+       거부(재청구 필요)         85×19 · 칩 125×31   (모두 12/700 #83888F)
+     지표 카드 넉 장은 시안에 없지만 개발이 넣은 표시라 지우지 않고 그대로 둔다. */
+  $nhisStatusNotes = [
+    'pending'   => '청구 대기 중',
+    'submitted' => '결과 대기 중',
+    'approved'  => '이번달 ' . number_format($monthlyApproved) . '원 환급',
+    'rejected'  => '재청구 필요',
+  ];
 @endphp
 
 @section('content')
@@ -266,10 +281,10 @@
   </div>
 
   <div class="ds-filter-actions">
-    @if(request('q') || request('date_from') || request('date_to'))
-      <a href="{{ route('nhis.index', $curNhisStatus ? ['nhis_status'=>$curNhisStatus] : []) }}"
-         class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안 282:53 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+         상태 칩만 유지한 채 같은 라우트로 되돌아가는 링크라 조건만 걷었다. --}}
+    <a href="{{ route('nhis.index', $curNhisStatus ? ['nhis_status'=>$curNhisStatus] : []) }}"
+       class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__nhisGrid?.downloadExcel()">엑셀 저장</button>

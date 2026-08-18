@@ -3,7 +3,9 @@
 
 @section('title', '서류 관리')
 @section('page-title', '서류 관리')
-@section('breadcrumb', '홈 / 서류 관리')
+{{-- 시안 248:2923 빵부스러기는 '홈'(x367) · '-'(x386) · '서류 관리'(x400) 로 구분자가 하이픈이다.
+     51장 전수 확인에서 슬래시를 쓴 프레임은 하나도 없다. --}}
+@section('breadcrumb', '홈 - 서류 관리')
 
 @push('styles')
 <style>
@@ -140,8 +142,10 @@
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
+      {{-- 시안 248:2923 Frame 48101591 — 안내글은 'ㆍ'(U+318D)로 이은 한 덩어리 '파일명ㆍ환자명' 이다.
+           같은 시안의 개인정보동의('성명ㆍ연락처ㆍ이메일')·계산서 발행('주문번호ㆍ환자명')과 같은 구분자다. --}}
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="파일명 · 이름">
+             placeholder="파일명ㆍ이름">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -161,9 +165,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('date_from') || request('date_to'))
-      <a href="{{ route('documents.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안 248:2923 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+         조건이 없을 때도 같은 라우트(유형 탭만 유지)로 되돌아가는 링크라 조건만 걷었다. --}}
+    <a href="{{ route('documents.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__documentGrid?.downloadExcel()">엑셀 저장</button>
@@ -276,14 +280,15 @@
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
-    /* 찾을 때 먼저 보는 것이 이름이라 맨 앞에 둔다.
-       다운로드경로 컬럼은 뺐다 — 주소를 눈으로 읽을 일이 없는데 260px 를 차지해 오른쪽
-       컬럼을 밀어냈다. 내려받기는 파일명을 누르면 된다. */
+    /* 차례는 시안 248:2923 표 머리 실측 그대로다 —
+       No 60 · 유형 137 · 생성유형 137 · 이름 100 · 처방번호 137 · 파일명 360 ·
+       생성자 100 · 생성일 137 · 다운로드 경로 360 (합 1568 = 카드 폭).
+       name·width·align 은 손대지 않고 차례만 시안에 맞췄다. */
     columns: [
-      { header: '이름',   name: 'patient',   width: 100, sortable: true },
-      { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
       { header: '유형',     name: 'type',      width: 110, sortable: true, align: 'center' },
       { header: '생성유형', name: 'source',    width: 120, sortable: true },
+      { header: '환자명',   name: 'patient',   width: 100, sortable: true },
+      { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
       {
         header: '파일명', name: 'filename', width: 320, sortable: true,
         renderer: (v, row) => {
@@ -308,6 +313,11 @@
       },
       { header: '생성자',   name: 'creator',   width: 100, sortable: true },
       { header: '생성일',   name: 'created',   width: 140, sortable: true },
+      /* 시안 아홉째 열. 값은 이미 gridData 에 있는 download(= route('documents.download', $doc))
+         절대주소라 새로 만드는 데이터가 아니다. 시안도 주소를 평문으로 흘려 보이고
+         (「https://www.ceadmin.co.kr/documents/49/d…」) 셀은 .cg-cell-inner 가 말줄임한다.
+         폭은 시안이 파일명과 같은 360 인데, 이 화면의 파일명이 320 이라 그 짝을 그대로 따랐다. */
+      { header: '다운로드 경로', name: 'download', width: 320, sortable: true },
     ],
     data: @json($gridData),
   });

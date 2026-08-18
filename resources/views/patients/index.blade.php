@@ -310,6 +310,22 @@
   .pt-hrow .pt-h-main { flex:1; min-width:0; }
   .pt-hrow .pt-h-sub { font-size:11px; font-weight:500; line-height:18px; color:var(--text-muted); margin-top:2px; }
   .pt-empty { text-align:center; color:var(--text-muted); padding:36px 12px; font-size:12px; font-weight:400; line-height:19px; }
+
+  /* ── '환자 추가' 는 채운 주요 버튼 ── 시안 114:4778 icon-header-setting:
+     73×32 · r8 · pad 0/12 · bg #28798B · 글자 13/500 #FFFFFF.
+     전역 .ds-btn-primary 는 흰 바탕 + primary 테두리(외곽선)라 결과바 안에서만 덮는다.
+     같은 화면의 '검색'(시안 60×32 · 흰 바탕 · bd 1px #28798B · 글자 #28798B)은
+     외곽선이 맞으므로 .ds-filter-actions 쪽은 건드리지 않는다.
+     /messages 의 '조건 전체 발송' 과 같은 손질이다 — 전역으로 올릴지는 판단 대기.
+     이 뷰의 밀어넣은 스타일은 다른 화면이 탭으로 열려 있는 동안에도 살아 있으므로
+     (바로 아래 .card-footer 주의 참고) 그 버튼 하나만 집도록 좁혀 쓴다. */
+  .ds-grid-bar .ds-btn-primary[onclick="openAddModal()"] {
+    background: var(--primary); border-color: var(--primary); color: var(--gray-0);
+  }
+  .ds-grid-bar .ds-btn-primary[onclick="openAddModal()"]:hover {
+    background: var(--primary-dark); border-color: var(--primary-dark); color: var(--gray-0);
+  }
+
   /* 주의 — 이 뷰에는 .card-footer 마크업이 없는데 전역 클래스명을 재정의하고 있다.
      @stack('styles') 가 전역 <style> 뒤에 실려서, 이 화면이 열려 있는 동안
      다른 화면의 카드 푸터 배경·글자색이 함께 바뀐다. 개발 자산이라 그대로 두되
@@ -354,9 +370,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['q','repurchase_within']))
-      <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 초기화 — 시안 114:4778 은 검색 왼쪽(x1773)에 늘 세워 둔다. 검색 조건이 있을 때만
+         내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다. --}}
+    <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>

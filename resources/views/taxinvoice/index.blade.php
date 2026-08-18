@@ -2,8 +2,9 @@
 @extends('layouts.app')
 
 @section('title', '세금계산서 발행')
-@section('page-title', '세금계산서 발행')
-@section('breadcrumb', '홈 / 세금계산서 발행')
+{{-- 시안 324:1720 — 제목 '전자세금계산서'(16/700 x367), 빵부스러기는 '홈 - 전자세금계산서'(구분자가 '-' 다) --}}
+@section('page-title', '전자세금계산서')
+@section('breadcrumb', '홈 - 전자세금계산서')
 
 @section('help-title', '세금계산서 도움말')
 @section('help-content')
@@ -341,7 +342,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         </div>
       </div>
       <div class="ds-filter-actions">
-        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
         {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
         <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
         <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>

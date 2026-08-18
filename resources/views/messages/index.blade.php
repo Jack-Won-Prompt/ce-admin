@@ -3,10 +3,17 @@
 
 @section('title', '메시지 관리')
 @section('page-title', '메시지 관리')
-@section('breadcrumb', '홈 / 발송ㆍ내역 / 메시지 관리')
+{{-- 시안(352:84) Frame 48101452 — 「홈 - 메시지 관리」 두 마디.
+     홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
+     구분자는 이 @section 안에 있어 이 파일이 고칠 자리다(전역 app.blade.php 에는 규칙이 없다).
+     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙는다 — 마디를 나눠 gap 8 을 준다.
+     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다. --}}
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>메시지 관리</span></span>@endsection
 
 @push('styles')
 <style>
+  /* 빵부스러기 마디 사이 8 — 시안 352:84 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
+  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
   /* ── 탭 칩 (352:84 Frame 48101549) ───────────────────────────────
      시안 h31 · r999 · pad 6/10 · 12px/700 lh19 · 테두리 없음 · 칩 사이 gap 8.
      전역 .ds-chip 과 같은 규격이라 버튼에 .ds-chip 을 함께 붙였다.
@@ -234,11 +241,11 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-      {{-- 결과바를 걷어낸 자리의 건수. 번호가 없는 곳은 발송에서 빠지므로 함께 적는다 --}}
+{{-- 결과바를 걷어낸 자리의 건수. 번호가 없는 곳은 발송에서 빠지므로 함께 적는다 --}}
       <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>) · 번호 있는 곳 {{ number_format($sendable) }}</span>
-      @if(request('q') || request('has_mobile'))
-        <a href="{{ route('messages.index') }}" class="ds-btn">초기화</a>
-      @endif
+      {{-- 시안(352:84)은 검색 왼쪽에 초기화를 늘 보여준다 — 조건을 걷어낸다.
+           같은 라우트로 되돌아가는 링크라 조건 없이도 하는 일이 같다 --}}
+      <a href="{{ route('messages.index') }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 --}}
       <button type="button" class="ds-btn" onclick="window.__msGrid?.downloadExcel()">엑셀 저장</button>

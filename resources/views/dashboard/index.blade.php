@@ -37,7 +37,8 @@
   </div>
 </div>
 @endsection
-@section('breadcrumb', '홈 / 대시보드 · ' . now()->format('Y-m-d'))
+{{-- 시안 382:107 의 빵부스러기에는 날짜가 없다. 오늘 날짜를 덧붙이던 조각을 뺀다. --}}
+@section('breadcrumb', '홈 / 대시보드')
 
 @push('scripts')
 <script>
@@ -158,7 +159,13 @@ window.HELP_TOUR_STEPS = [
   .queue-box:first-child::before { display: none; }
   .queue-box:hover { background: var(--gray-50); color: inherit; }
   /* 마크업 순서는 아이콘 → 숫자 → 라벨. 시안 순서(라벨 → 배지)로 CSS 에서만 세운다 */
-  .queue-box .q-icon  { order: 1; font-size: 16px; line-height: 16px; margin: 0; display: block; flex-shrink: 0; }
+  /* 시안 경고칩 안은 [라벨 · gap 8 · 18 배지] 둘뿐이고, 그 묶음이 389 칸 한가운데 놓여
+     라벨이 x492 / 872 / 1256 에서 시작한다. 렌더는 앞에 아이콘(16 + gap 8 = 24)이 하나 더
+     들어가 묶음 가운데가 12px 오른쪽으로 밀렸다. 아이콘은 남기고 폭+gap 만 상쇄해
+     라벨·배지가 시안대로 가운데에 서게 한다(−24 + 16 + gap 8 = 0).
+     왼쪽으로 빼야 한다 — 오른쪽으로 빼면 아이콘이 라벨 글자 위에 겹쳐 그려진다.
+     이렇게 두면 아이콘은 라벨 8px 앞(x468 등)에 그대로 보인다. */
+  .queue-box .q-icon  { order: 1; font-size: 16px; line-height: 16px; margin: 0 0 0 -24px; display: block; flex-shrink: 0; }
   .queue-box .q-label { order: 2; font-size: 14px; font-weight: 700; line-height: 22px; white-space: nowrap; }
   .queue-box .q-num {
     order: 3; width: 18px; height: 18px; border-radius: 999px; flex-shrink: 0;
@@ -247,8 +254,24 @@ window.HELP_TOUR_STEPS = [
      아예 닿을 수 없게 된다. 0 으로 풀면 표는 .cg-wrap 안에서 가로로 스크롤된다(다른 그리드 화면과 같다). */
   .dash-grid > div:first-child { min-width: 0; }
 
+  /* ── 카드 테두리 ── 시안 382:107: 본문 큰 카드 셋(1167×797 · 389×158 · 389×691)은
+     r12 흰 바탕에 stroke 가 없다. 구분선은 머리 프레임 아래 1px #E8EAEC 하나뿐이다.
+     전역 .card 의 사방 1px 을 이 화면 안에서만 끈다 — 머리 아래 선(.card-header 의
+     border-bottom)은 그대로 남는다. 사방 테두리가 있으면 머리가 x337 로 1px 밀린다. */
+  .dash-grid .card { border: 0; }
+
   /* ── 카드 머리 ── 시안 세 카드 모두 h44 · pad 0/16 · 제목 13/700 lh21 gray-1000 */
   .dash-grid .card-header { height: 44px; padding: 0 16px; gap: 4px; }
+  /* 시안 머리에는 아이콘이 없고 제목이 pad 16 자리(x352 · x1531)에서 바로 시작한다.
+     개발이 넣은 앞머리 아이콘은 남기되, 그 뒤 gap 4 만큼 제목이 밀리던 것을 되돌린다.
+     bx-file-medical·bx-zap 은 이 boxicons 판에 글리프가 없어 폭 0 으로 그려진다 —
+     아무것도 안 보이는 자리가 뒤 gap 4 만 먹고 제목을 밀고 있었으므로 그 둘만 상쇄한다.
+     '최근 활동'의 bx-time-five 는 실제로 16px 로 그려지므로 손대지 않는다. 왼쪽으로 빼면
+     그 시계 혼자 카드 안쪽 여백선(x1531)을 4px 넘어서서, 화면에서 유일하게 눈에 보이는
+     머리 아이콘이 다른 요소들의 왼쪽 줄을 깬다. 그 카드 제목을 x1531 까지 당기려면
+     아이콘을 빼야 하는데 지우는 일이라 디자이너 판단으로 남긴다. */
+  .dash-grid .card-header > i.bx-file-medical:first-child,
+  .dash-grid .card-header > i.bx-zap:first-child { margin-right: -4px; }
   .dash-grid .card-header-title { font-size: 13px; font-weight: 700; line-height: 21px; color: var(--gray-1000); letter-spacing: 0; }
   /* 제목 옆 건수 — 시안 13/700 primary, gap 4 */
   .dash-grid .card-header .rx-count { font-size: 13px; font-weight: 700; line-height: 21px; color: var(--primary); }
