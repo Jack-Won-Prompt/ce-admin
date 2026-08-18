@@ -158,6 +158,16 @@
     if (which === 'new') document.getElementById('rtoQ')?.focus();
   };
 
+  /* 다른 화면에서 「신청 등록」으로 들어오면 접수 탭을 펴고 원 주문을 앉힌다.
+     이 스크립트는 접수 폼보다 뒤에 돌아 rtnPanel·rtoPreset 이 모두 준비돼 있다. */
+  (function () {
+    const p = new URLSearchParams(location.search);
+    const orderNo = p.get('order_no');
+    if (!p.get('new') && !orderNo) return;
+    rtnPanel('new');
+    if (orderNo) window.rtoPreset?.(orderNo);
+  })();
+
   /* 액자 안의 「목록으로」는 액자 속에 목록을 또 열어 화면이 겹친다.
      같은 곳에서 온 문서라 안을 만질 수 있으니, 누르면 바깥의 목록 탭으로 돌린다. */
   document.getElementById('rtnShowFrame').addEventListener('load', function () {

@@ -254,6 +254,32 @@
     }
   };
 
+  /* 다른 화면에서 주문번호를 들고 들어온 경우. 무엇을 되돌릴지는 이미 정해져 있으니
+     찾아서 그대로 앉힌다 — 고를 것이 없는데 창을 띄우면 한 번 더 누르게 한다.
+     그 주문이 아닌 것이 섞여 나오면 그때는 창을 띄워 고르게 둔다. */
+  window.rtoPreset = async function (orderNo) {
+    if (!orderNo) return;
+    $('rtoNo').value = orderNo;
+    const q = new URLSearchParams({ patient_name: '', birth_date: '', phone: '', order_no: orderNo });
+
+    $('rtoFindNote').textContent = '찾는 중…';
+    try {
+      const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      rows = (await res.json()).rows ?? [];
+      picked = null;
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
+
+      const only = rows.findIndex(r => r.order_no === orderNo);
+      if (only >= 0)            pick(only);
+      else if (rows.length === 1) pick(0);
+      else if (rows.length)     showHits();
+    } catch (e) {
+      rows = [];
+      $('rtoFindNote').textContent = '찾지 못했습니다';
+    }
+  };
+
   /* 찾은 주문을 고르는 창. 환자명·주문번호·주문일만 보인다 — 고를 때 필요한 것은 그 셋이다. */
   function showHits(btn) {
     hitModal.open({

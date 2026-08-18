@@ -750,12 +750,13 @@
         <div class="card-header">
           <i class="bx bx-undo" style="color:var(--primary);"></i>
           <span class="card-header-title">교환 · 반품 · 취소</span>
-          {{-- data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다.
-               상세 내용은 주문현황 안에 끼워 넣은 조각이라, 그대로 두면 보고 있던
-               목록까지 접수 화면으로 바뀐다. --}}
-          <a href="{{ route('order-returns.create', ['order' => $order->id]) }}"
+          {{-- 교환/반품/취소 화면을 새 탭으로 열고 신규 접수를 펴 둔다. 이 주문번호를
+               넘겨 원 주문까지 앉혀 둔다 — 방금 보고 있던 주문을 다시 찾게 하지 않는다.
+               data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않는다. 상세 내용은
+               주문현황 안에 끼워 넣은 조각이라, 그대로 두면 보던 목록까지 바뀐다. --}}
+          <a href="{{ route('order-returns.index', ['new' => 1, 'order_no' => $order->order_number]) }}"
              class="ds-btn ds-btn-sm" style="margin-left:auto;"
-             data-ce-tab="교환/반품/취소 접수" data-ce-icon="bx-package">
+             data-ce-tab="교환/반품/취소" data-ce-icon="bx-package">
             <i class="bx bx-plus"></i> 신청 등록
           </a>
         </div>
