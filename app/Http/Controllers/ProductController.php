@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    /** 이어 받을 쪽 수 — 창고가 한 쪽에 10건씩 준다 */
+    /** 이어 받을 쪽 수 — 예전 길에서 창고가 한 쪽에 10건씩 준다 */
     private const MAX_PAGES = 3;
+
+    /** CE 전용 조회로 한 번에 받을 최대 건수 */
+    private const MAX_ITEMS = 100;
 
     /**
      * demoworks.co.kr API를 통해 제품을 검색하는 프록시 엔드포인트.
@@ -33,6 +36,13 @@ class ProductController extends Controller
         ]);
 
         try {
+            /* 먼저 CE 전용 조회를 부른다 — 쪽으로 나누지 않고 한 번에 주고, 재고도 함께 준다.
+               그쪽이 아직 배포되지 않았으면(404·405) 예전 길로 물러선다. */
+            $ours = $this->searchOurs($baseUrl, $token, $keyword);
+            if ($ours !== null) {
+                return response()->json($ours);
+            }
+
             /* 창고는 per_page 를 듣지 않는다 — 무엇을 보내든 한 번에 10건씩 준다.
                「Cath」로 찾으면 57건 중 앞 10건만 와서, 찾는 제품이 뒤에 있으면
                영영 보이지 않았다. 다음 쪽을 이어 받는다.
@@ -78,7 +88,8 @@ class ProductController extends Controller
                 ]);
             }
 
-            $items = $this->normalizeItems($body);
+            $dropped = 0;
+            $items   = $this->normalizeItems($body, $dropped);
 
             // 뒤 쪽 이어 받기 — 세 쪽(30건)까지만
             $lastPage = (int) ($body['result']['last_page'] ?? 1);
@@ -88,8 +99,11 @@ class ProductController extends Controller
                 if ($more->failed()) {
                     break;
                 }
-                $items = array_merge($items, $this->normalizeItems($more->json()));
+                $items = array_merge($items, $this->normalizeItems($more->json(), $dropped));
             }
+
+            // 쓰지 않는 품목을 걷어낸 만큼 전체 수에서도 뺀다 — 「57건 가운데 29건」처럼 어긋나지 않게
+            $total = max(0, $total - $dropped);
 
             // 못 보여 준 것이 있으면 숨기지 않는다 — 화면이 목록을 다 보여 준 것처럼 굴면 안 된다
             $shown   = count($items);
@@ -183,7 +197,63 @@ class ProductController extends Controller
      * 다양한 응답 형태를 단일 배열 형태로 정규화.
      * r_box, 재고(stock) 포함.
      */
-    private function normalizeItems(mixed $body): array
+    /**
+     * CE 전용 제품 조회(ce-admin/items).
+     *
+     * 쪽으로 나누지 않아 한 번에 다 온다. 재고도 한 번에 합산해 주므로 고른 뒤 따로
+     * 묻지 않아도 된다 — 예전에는 한 건에 7초짜리 조회를 품목마다 했다.
+     *
+     * 아직 그 API 가 없는 서버면 null 을 돌려 예전 길로 물러서게 한다.
+     */
+    private function searchOurs(string $baseUrl, ?string $token, string $keyword): ?array
+    {
+        $res = Http::withToken($token)
+            ->connectTimeout(5)
+            ->timeout(15)
+            ->get("{$baseUrl}/api/v1/ce-admin/items", [
+                'q'          => $keyword,
+                'limit'      => self::MAX_ITEMS,
+                'with_stock' => 1,
+            ]);
+
+        // 없는 길이면 물러선다. 그 밖의 실패는 예전 길도 같은 답을 줄 것이므로 함께 물러선다.
+        if (!$res->ok() || !($res->json('success') ?? false)) {
+            Log::info('CE 전용 제품 조회를 쓰지 못해 예전 길로', ['status' => $res->status()]);
+            return null;
+        }
+
+        $items = [];
+        foreach ($res->json('result') ?? [] as $i) {
+            $items[] = [
+                'code'  => (string) ($i['item_code']   ?? ''),
+                'name'  => (string) ($i['item_name']   ?? ''),
+                'price' => isset($i['sales_price']) ? (float) $i['sales_price'] : null,
+                'spec'  => (string) ($i['description'] ?? ''),
+                'unit'  => (string) ($i['basic_unit']  ?? ''),
+                'r_box' => (string) ($i['r_box']       ?? ''),
+                'stock' => $i['available_qty'] ?? null,
+            ];
+        }
+
+        $found = (int) ($res->json('found') ?? count($items));
+        $shown = count($items);
+
+        return [
+            'success' => true,
+            'data'    => $items,
+            'total'   => $shown,
+            'found'   => $found,
+            // 못 보여 준 것이 있으면 숨기지 않는다 — 다 보여 준 것처럼 굴면 없는 제품으로 여긴다
+            'notice'  => $found > $shown
+                ? "{$found}건 가운데 {$shown}건입니다 — 검색어를 좁혀 주십시오."
+                : null,
+        ];
+    }
+
+    /**
+     * @param int $dropped 걷어낸 미사용 품목 수(누적)
+     */
+    private function normalizeItems(mixed $body, int &$dropped = 0): array
     {
         $raw = $body['result']['data']
             ?? $body['result']
@@ -197,6 +267,14 @@ class ProductController extends Controller
         $result = [];
         foreach ($raw as $item) {
             if (!is_array($item)) {
+                continue;
+            }
+
+            /* 쓰지 않는 품목은 빼고 준다. 예전 길(item_list)에는 거르는 조건이 없어
+               단종된 것이 섞여 나온다 — 골라서 주문에 올리면 창고에서 막힌다.
+               (계정 136155 기준 미사용 15건) */
+            if (($item['use_yn'] ?? 'Y') === 'N') {
+                $dropped++;
                 continue;
             }
 
