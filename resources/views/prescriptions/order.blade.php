@@ -706,22 +706,8 @@
   .gd-btn i { font-size:12px; }
 
   /* ── 등록자 카드 (시안 137:652) ──
-     머리줄 없이 역할별 한 줄씩 쌓고, 그 아래에 OCR 신뢰도를 둔다. */
+     머리줄 없이 역할별 한 줄씩 쌓는다. */
   .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
-  /* OCR 신뢰도 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
-  .rg-ocr      { display:flex; flex-direction:column; gap:12px; }
-  .rg-ocr-meter{ display:flex; align-items:center; gap:12px; }
-  .rg-ocr-bar  { flex:1; min-width:0; height:8px; border-radius:999px; background:var(--gray-200); overflow:hidden; }
-  .rg-ocr-bar span { display:block; height:100%; border-radius:999px; background:var(--primary); }
-  .rg-ocr-val  { flex-shrink:0; font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
-  .rg-ocr-acts { display:flex; gap:6px; }
-  .rg-ocr-btn  { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
-                 height:28px; padding:0 12px; border-radius:8px;
-                 background:var(--gray-0); border:1px solid var(--gray-200);
-                 font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
-                 cursor:pointer; white-space:nowrap; }
-  .rg-ocr-btn:hover { background:var(--gray-50); }
-  .rg-ocr-btn i { font-size:12px; }
   .rg-rows { display:flex; flex-direction:column; }
   .rg-row  { display:flex; align-items:center; gap:8px; padding:8px; background:var(--gray-0);
              border-bottom:1px solid var(--gray-200); }
@@ -1770,10 +1756,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
-      {{-- 등록자 카드 — 탭 두 개(시안 137:653 등록자 · 148:279 OCR 신뢰도) --}}
+      {{-- 등록자 카드 — 등록·검수·수정을 한 줄씩 (시안 137:653) --}}
       <div class="vw-card rg-card">
-        {{-- 탭 알약 둘(등록자·OCR 신뢰도)은 두지 않는다. 두 판을 번갈아 보여 줄 뿐이라
-             한쪽을 보는 동안 다른 쪽은 없는 것이 됐다 — 카드가 짧아 함께 둬도 된다. --}}
 
         {{-- 역할별 한 줄 (시안 137:658) --}}
         <div class="rg-rows" id="infoPanel-uploader">
@@ -1811,31 +1795,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
         @endif
 
-        {{-- OCR 신뢰도 탭 (시안 148:279)
-             막대 252×8 · r999 · 바탕 gray-200 · 채움 primary, 값 13/700 primary.
-             버튼 145×28 · r8 · bd 1px gray-200 · 아이콘 12 · 12/500.
-             값과 동작은 이미 있는 것을 쓴다 —
-               display_confidence 접근자(Prescription.php), reanalyzeOCR(), resetOCR(). --}}
-        <div class="rg-ocr" id="infoPanel-ocr">
-          <div style="font-size:10px;font-weight:700;color:var(--gray-600);">OCR 신뢰도</div>
-          @php $conf = $prescription->display_confidence; @endphp
-          <div class="rg-ocr-meter">
-            <div class="rg-ocr-bar" role="img"
-                 aria-label="OCR 신뢰도 {{ $conf !== null ? $conf . '%' : '측정 전' }}">
-              <span style="width:{{ $conf !== null ? max(0, min(100, $conf)) : 0 }}%;"></span>
-            </div>
-            <span class="rg-ocr-val">{{ $conf !== null ? $conf . '%' : '-' }}</span>
-          </div>
-          <div class="rg-ocr-acts">
-            <button type="button" class="rg-ocr-btn" id="btn-reanalyze" onclick="reanalyzeOCR()">
-              <i class="fa-solid fa-rotate"></i>OCR 재분석
-            </button>
-            <button type="button" class="rg-ocr-btn" onclick="resetOCR()"
-                    title="입력값을 원본 OCR 결과로 되돌립니다">
-              <i class="fa-solid fa-rotate-left"></i>초기화
-            </button>
-          </div>
-        </div>
+        {{-- OCR 신뢰도는 쓰지 않는다. 숫자가 무엇을 뜻하는지 사람마다 달리 읽었고,
+             높든 낮든 하는 일은 같았다 — 어차피 눈으로 보고 고친다. --}}
       </div>
 
       @if($prescription->review_memo)
@@ -6976,42 +6937,6 @@ window.HELP_TOUR_STEPS = [
 
 
   // ── OCR 재분석 ────────────────────────────────────────
-  async function reanalyzeOCR() {
-    const btn = document.getElementById('btn-reanalyze');
-    BtnState.loading(btn, '분석 중...');
-
-    const res = await apiRequest(`/prescriptions/${RX_NUMBER}/reanalyze`, 'POST');
-
-    if (res.success) {
-      const f = res.fields;
-      // 폼 필드 업데이트
-      document.getElementById('f-name').value     = f.patient_name_ocr || '';
-      // 재분석 결과는 서버에 이미 저장됐다. 화면엔 마스킹만 알리고 입력칸은 비워 둔다.
-      {
-        const rn = document.getElementById('f-resident');
-        rn.value = '';
-        rn.placeholder = f.resident_no_masked || 'XXXXXX-XXXXXXX';
-      }
-      document.getElementById('f-mobile').value   = f.mobile_ocr       || '';
-      document.getElementById('f-postcode').value       = f.postcode       || '';
-      document.getElementById('f-address').value        = f.address_ocr   || '';
-      document.getElementById('f-address-detail').value = f.address_detail || '';
-      document.getElementById('f-hospital').value = f.hospital_name    || '';
-      document.getElementById('f-doctor').value   = f.doctor_name      || '';
-      document.getElementById('f-date').value     = f.issued_date      || '';
-      document.getElementById('f-disease').value  = f.disease_name     || '';
-      document.getElementById('f-disease-code').value = f.disease_code || '';
-      document.getElementById('f-daily').value    = f.daily_count      || '';
-      document.getElementById('f-days').value     = f.total_days       || '';
-      document.getElementById('f-total').value    = f.total_count      || '';
-      calcRenewDate();
-
-      // 신뢰도 수치·설명은 화면에서 제거되었으므로 결과만 알린다
-      showToast('처방전 재분석이 완료되었습니다.', 'success');
-    }
-
-    BtnState.reset(btn);
-  }
 
   // ── 네비게이션 ────────────────────────────────────────
   const PREV_RX = @json($prevId);   // 더 최근 처방전 rx_number
