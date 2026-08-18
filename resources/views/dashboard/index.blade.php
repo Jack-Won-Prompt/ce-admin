@@ -47,8 +47,9 @@
   const RX_BASE = @json(url('prescriptions'));   // + '/{rx_number}'
   const grid = new wwGrid({
     el: el,
-    // 최근 10건이 스크롤 없이 다 보이는 높이. 320 이면 25px 만 넘쳐 흔들리는 스크롤이 생긴다.
-    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    // 시안 382:107 — 표 안쪽 스크롤이 없다(행이 전부 보인다). 높이를 주지 않으면 내용만큼 자란다.
+    // 360 으로 못 박으면 10건이 찰 때 105px 이 잘려 나갔다.
+    editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
@@ -92,15 +93,16 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* ── Stat Cards ── 시안 카드 = radius 12 · 흰 배경 · 그림자 없음 */
+  /* ── Stat Cards ── 시안 382:107 실측: 251×73 · r12 · pad 16 · gap 16 · 흰 배경 · 그림자 없음 */
   /* 격자는 인라인 style= 이 아니라 여기에 둔다 — 그래야 미디어쿼리가 우선순위 강제 없이 이긴다 */
-  .stat-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; margin-bottom: 16px; }
+  /* 아래 여백은 .page-body 의 flex gap 12 하나로만 만든다(시안 통계줄 y188 → 다음 줄 y200) */
+  .stat-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; margin-bottom: 0; }
   .stat-card {
     background: var(--gray-0);
     border-radius: 12px;
     border: 1px solid var(--border);
     padding: 16px;
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 16px;
     cursor: pointer; transition: var(--transition);
     text-decoration: none; color: inherit;
     /* 전역 .stat-card 가 box-shadow:var(--shadow) 를 준다 — 선언을 빼면 그게 그대로 남는다.
@@ -109,6 +111,9 @@ window.HELP_TOUR_STEPS = [
   }
   /* 전역 .stat-card:hover 의 그림자와 -2px 들림도 같은 이유로 명시적으로 끈다 */
   .stat-card:hover { border-color: var(--primary); color: inherit; box-shadow: none; transform: none; }
+  /* 시안 글자 묶음 45×41 = 라벨(19) 위 + 값(22) 아래. 마크업은 값이 먼저라 CSS 로 뒤집는다
+     (조건식이 든 라벨 블록을 옮기지 않으려는 것 — 낱말·조건식은 그대로 둔다) */
+  .stat-card > div:last-child { display: flex; flex-direction: column-reverse; min-width: 0; }
   /* 32×32 · r8 · 아이콘 16 — 헤더 아이콘 버튼과 같은 규격 */
   .stat-icon {
     width: 32px; height: 32px; border-radius: 8px;
@@ -123,50 +128,82 @@ window.HELP_TOUR_STEPS = [
   .stat-icon.danger   { background: var(--alert-50);    color: var(--alert-500); }
   .stat-icon.info     { background: var(--primary-50);  color: var(--primary-400); }
   .stat-icon.purple   { background: var(--primary-50);  color: var(--primary-600); }
-  .stat-val   { font-size: 16px; font-weight: 700; line-height: 19px; color: var(--gray-1000); }
-  .stat-label { font-size: 12px; line-height: 18px; color: var(--gray-600); margin-top: 2px; font-weight: 500; }
+  /* 시안 값 14/700 lh22 gray-1000 · 라벨 12/500 lh19 gray-800 (합 41 = 카드 안쪽 73−32) */
+  .stat-val   { font-size: 14px; font-weight: 700; line-height: 22px; color: var(--gray-1000); }
+  .stat-label { font-size: 12px; line-height: 19px; color: var(--gray-800); margin-top: 0; font-weight: 500; }
 
-  /* ── Work Queue Boxes ── */
-  .queue-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
-  .queue-box {
+  /* ── Work Queue Boxes ──
+     시안: 흰 카드 1167×54 · r12 · pad 12/0 한 장 안에 389×30 알약 셋이 간격 0 으로 붙고,
+     칸 경계마다 1px gray-200 세로선이 선다. 알약 안은 가로 한 줄 가운데 정렬 —
+     라벨 14/700 lh22 + gap 8 + 18×18 정원 배지(11/700 · 흰 글자). */
+  .queue-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 0;
     background: var(--gray-0); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px; text-align: center; cursor: pointer;
+    padding: 12px 0;
+    margin-bottom: 10px;    /* 시안 상태줄 y254 → 표 카드 y264 */
+  }
+  .queue-box {
+    background: transparent; border: 0; border-radius: 999px;
+    height: 30px; padding: 4px 12px; cursor: pointer;
     transition: var(--transition);
-    text-decoration: none; color: inherit; display: block;
-    position: relative; overflow: hidden;
+    text-decoration: none; color: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    position: relative; overflow: visible;
   }
-  /* 상단 색띠 — 개발자가 넣은 구분 표시라 남긴다. 두께만 4 로, 모서리는 카드와 같은 12 로 맞춘다 */
+  /* 위쪽 색띠였던 ::before 를 칸 사이 세로 구분선으로 돌려 쓴다 (시안 x725 · x1114) */
   .queue-box::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    border-radius: 12px 12px 0 0;
+    content: ''; position: absolute; top: 0; bottom: 0; left: 0; right: auto;
+    width: 1px; height: auto; border-radius: 0; background: var(--border);
   }
-  .queue-box:hover { border-color: var(--primary); color: inherit; }
-  .queue-box.red::before   { background: var(--alert-500); }
-  .queue-box.blue::before  { background: var(--primary-500); }
-  .queue-box.green::before { background: var(--primary-700); }
-  .queue-box .q-icon { font-size: 16px; line-height: 16px; margin-bottom: 6px; display: block; }
-  .queue-box.red   .q-icon, .queue-box.red   .q-num { color: var(--alert-500); }
-  .queue-box.blue  .q-icon, .queue-box.blue  .q-num { color: var(--primary-500); }
-  .queue-box.green .q-icon, .queue-box.green .q-num { color: var(--primary-700); }
-  .queue-box .q-num   { font-size: 16px; font-weight: 700; line-height: 19px; margin-bottom: 2px; }
-  .queue-box .q-label { font-size: 12px; line-height: 18px; color: var(--gray-600); font-weight: 500; }
+  .queue-box:first-child::before { display: none; }
+  .queue-box:hover { background: var(--gray-50); color: inherit; }
+  /* 마크업 순서는 아이콘 → 숫자 → 라벨. 시안 순서(라벨 → 배지)로 CSS 에서만 세운다 */
+  .queue-box .q-icon  { order: 1; font-size: 16px; line-height: 16px; margin: 0; display: block; flex-shrink: 0; }
+  .queue-box .q-label { order: 2; font-size: 14px; font-weight: 700; line-height: 22px; white-space: nowrap; }
+  .queue-box .q-num {
+    order: 3; width: 18px; height: 18px; border-radius: 999px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; line-height: 18px; margin: 0; color: var(--gray-0);
+  }
+  .queue-box.red   .q-icon, .queue-box.red   .q-label { color: var(--alert-500); }
+  .queue-box.blue  .q-icon, .queue-box.blue  .q-label { color: var(--primary-500); }
+  .queue-box.green .q-icon, .queue-box.green .q-label { color: var(--gray-1000); }
+  .queue-box.red   .q-num { background: var(--alert-500); }
+  .queue-box.blue  .q-num { background: var(--primary-500); }
+  .queue-box.green .q-num { background: var(--gray-1000); }
 
-  /* ── Activity timeline (타이틀+시간 한 줄, 상세는 hover 팝오버) ── */
+  /* ── Activity timeline (시각·주체·내용이 한 줄, 상세는 hover 팝오버) ──
+     시안 한 줄 35 = pad 8/0 + 글자 19 · gap 4 · 줄 사이 1px gray-200 · 마지막 줄만 없음 */
   .activity-item {
-    display: flex; gap: 10px; align-items: center;
-    padding: 8px 0; border-bottom: 1px solid var(--border-light);
-    position: relative;
+    display: flex; gap: 4px; align-items: center;
+    padding: 8px 0; position: relative;
+    /* 줄 사이 선은 안쪽에 그린다 — 테두리로 주면 한 줄이 36 이 되어 네 줄이 시안(140)보다 3 커진다 */
+    border-bottom: 0; box-shadow: inset 0 -1px 0 var(--border);
   }
-  .activity-item:last-child { border-bottom: none; }
+  .activity-item:last-child { border-bottom: none; box-shadow: none; }
+  /* 시안은 이 자리가 14×14 시계 아이콘이다 */
   .activity-dot {
-    width: 4px; height: 4px; border-radius: 999px; flex-shrink: 0;
+    width: 14px; height: 14px; flex-shrink: 0;
+    font-size: 14px; line-height: 14px; color: var(--gray-500);
   }
-  .activity-main { min-width: 0; flex: 1; }
+  /* 마크업은 제목이 먼저라 CSS 로 뒤집어 [시각·주체][내용] 한 줄로 세운다 */
+  .activity-main {
+    min-width: 0; flex: 1;
+    display: flex; flex-direction: row-reverse; align-items: center; gap: 4px;
+  }
   .activity-title {
-    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
+    font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-1000);
+    flex: 1; min-width: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .activity-time { font-size: 11px; line-height: 18px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; }
+  .activity-time {
+    font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-500);
+    margin-top: 0; white-space: nowrap; flex-shrink: 0;
+    /* 시안 시각 48 + gap 4 + 주체 48 = 100. 다만 폭을 100 으로 못 박으면 nowrap 인 글자가
+       상자 밖으로 흘러 오른쪽 내용 글자와 겹친다(주체가 다섯 자 이상이면 실제로 겹쳤다).
+       최소폭으로 두면 보통 이름은 시안대로 100 이고, 긴 이름은 상자가 늘고 내용 쪽이 말줄임된다. */
+    min-width: 100px;
+  }
   /* 팝오버(상세 전체 내용) — 사이드바 좌측으로 열림 */
   .activity-pop {
     display: none; position: absolute; right: calc(100% + 12px); top: -6px;
@@ -180,26 +217,79 @@ window.HELP_TOUR_STEPS = [
   /* 팝오버가 카드 밖으로 나올 수 있게 클리핑 방지 */
   .recent-activity-body { overflow: visible; }
 
-  /* ── Quick action buttons ── */
+  /* ── Quick action buttons ──
+     시안 175×37 · r8 · pad 8/12 · 가로 · gap 8 · 흰 배경 ·
+     [16 아이콘 primary][라벨 13/500 lh21 gray-1000 한 줄][오른쪽 끝 chevron 14] */
   .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .qa-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 12px 8px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--gray-50); cursor: pointer; transition: var(--transition);
+    display: flex; flex-direction: row; align-items: center; gap: 8px;
+    /* 시안 바깥 높이 37 = 위아래 7 + 라벨 21 + 테두리 두 줄 (시안 pad 8 은 테두리를 안쪽으로 먹는 값) */
+    padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--gray-0); cursor: pointer; transition: var(--transition);
     text-decoration: none; color: inherit;
   }
   .qa-btn:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
   .qa-btn:hover .qa-icon { color: var(--primary); }
-  .qa-icon { font-size: 16px; line-height: 16px; color: var(--gray-500); }
-  .qa-label { font-size: 12px; line-height: 18px; font-weight: 500; color: var(--gray-800); text-align: center; }
+  .qa-icon { font-size: 16px; line-height: 16px; color: var(--primary); flex-shrink: 0; }
+  .qa-label {
+    font-size: 13px; line-height: 21px; font-weight: 500; color: var(--gray-1000); text-align: left;
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .qa-chev { font-size: 14px; line-height: 14px; color: var(--gray-1000); flex-shrink: 0; }
 
   .rx-id { font-family: monospace; font-size: 12px; color: var(--primary); font-weight: 700; }
 
-  .dash-grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+  /* 시안 왼쪽 1167 : 오른쪽 389 = 3 : 1 · gap 12 (?frame=1 에서도 같은 비율로 늘어난다) */
+  .dash-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; }
+  /* 표가 든 왼쪽 단은 격자 칸의 자동 최소폭(min-width:auto = 표의 min-content 781)을 풀어 준다.
+     풀지 않으면 사이드바를 편 1280·1366 폭에서 왼쪽 단이 783 으로 버텨 오른쪽 단(빠른 실행·최근 활동)이
+     화면 밖으로 155·69px 밀려 나가는데, .content-wrapper 가 overflow-x: clip 이라 스크롤조차 생기지 않아
+     아예 닿을 수 없게 된다. 0 으로 풀면 표는 .cg-wrap 안에서 가로로 스크롤된다(다른 그리드 화면과 같다). */
+  .dash-grid > div:first-child { min-width: 0; }
+
+  /* ── 카드 머리 ── 시안 세 카드 모두 h44 · pad 0/16 · 제목 13/700 lh21 gray-1000 */
+  .dash-grid .card-header { height: 44px; padding: 0 16px; gap: 4px; }
+  .dash-grid .card-header-title { font-size: 13px; font-weight: 700; line-height: 21px; color: var(--gray-1000); letter-spacing: 0; }
+  /* 제목 옆 건수 — 시안 13/700 primary, gap 4 */
+  .dash-grid .card-header .rx-count { font-size: 13px; font-weight: 700; line-height: 21px; color: var(--primary); }
+  /* 표 위 안내문 — 시안에는 없지만 더블클릭이 실제로 동작하므로 남긴다. 카드 머리로 옮겼다 */
+  .dash-grid .card-header .dash-hint {
+    font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600);
+    white-space: nowrap; margin-left: 12px;
+    /* 좁은 화면에서 전체보기 버튼을 밀어내지 않게 안내문 쪽이 먼저 줄어들게 둔다 */
+    min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* 전체보기 — 시안 66×28 · r8 · pad 0/12 · 12/500 (아이콘은 남긴다) */
+  .dash-grid .card-header .btn { height: 28px; padding: 0 12px; font-size: 12px; font-weight: 500; line-height: 19px; border-radius: 8px; gap: 6px; }
+  /* ── 카드 본문 ── 시안 빠른 실행·최근 활동 모두 pad 16 (표 카드만 0 — 인라인으로 준다) */
+  .dash-grid .card-body { padding: 16px; }
+
+  /* ── 최근 처방전 표 ── 시안: 표가 카드 좌우 끝까지 붙고 안쪽 스크롤이 없다.
+     행 41 = pad 10/12 + lh21, 구분선 1px 은 셀 안쪽에 그린다(테두리로 주면 42 가 된다) */
+  #recentRxGrid .cg-wrap { border: 0; border-radius: 0; }
+  /* 머리행 45 = pad 12 + 21 + 12. 아래 1px 은 이미 배경 그라디언트로 그려져 있어 테두리는 뺀다
+     (테두리를 두면 collapse 가 그 1px 을 첫 행에 얹어 첫 줄만 42 가 된다) */
+  #recentRxGrid .cg-thead th { border-bottom: 0; }
+  #recentRxGrid .cg-th-inner { line-height: 21px; }
+  #recentRxGrid .cg-cell-inner { line-height: 21px; }
+  #recentRxGrid .cg-tbody tr,
+  #recentRxGrid .cg-tbody tr:last-child { border-bottom: 0; }
+  /* 전역 tbody td 의 border-bottom 1px 도 이 표를 잡는다 — 그것까지 걷어야 42 가 41 이 된다 */
+  #recentRxGrid .cg-tbody td { border-bottom: 0; box-shadow: inset 0 -1px 0 var(--gray-100); }
+  /* 하단 '전체 N건' 띠 — 시안 페이저가 놓인 자리. pad 12/16 · 위 1px gray-200 · 흰 배경 */
+  #recentRxGrid .cg-footer {
+    background: var(--gray-0); border-top: 1px solid var(--border);
+    padding: 12px 16px; font-size: 12px; font-weight: 500; line-height: 19px;
+    color: var(--gray-600); border-radius: 0 0 12px 12px;
+  }
 
   /* 격자를 CSS 로 옮겨서 인라인 style= 과 싸울 일이 없어졌다 — 우선순위 강제를 걷어냈다 */
   @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 640px)  { .queue-grid { grid-template-columns: 1fr 1fr; } .stat-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 640px)  {
+    .queue-grid { grid-template-columns: 1fr 1fr; }
+    .queue-box::before { display: none; }
+    .stat-grid { grid-template-columns: repeat(2,1fr); }
+  }
 </style>
 @endpush
 
@@ -283,14 +373,13 @@ window.HELP_TOUR_STEPS = [
       <div class="card-header">
         <i class="bx bx-file-medical" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 처방전 현황</span>
+        <span class="rx-count">{{ count($recentRxGrid ?? []) }}</span>
+        <span class="dash-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
         <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm ms-auto">
           <i class="bx bx-list-ul"></i> 전체보기
         </a>
       </div>
-      <div class="card-body" style="padding:12px 16px;">
-        <div style="margin-bottom:8px;font-size:12px;font-weight:500;line-height:18px;color:var(--gray-600);">
-          <i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.
-        </div>
+      <div class="card-body" style="padding:0;">
         <div id="recentRxGrid"></div>
       </div>
     </div>
@@ -309,19 +398,23 @@ window.HELP_TOUR_STEPS = [
         <div class="quick-grid">
           <a href="{{ route('prescriptions.upload') }}" class="qa-btn">
             <i class="bx bx-upload qa-icon"></i>
-            <span class="qa-label">처방전<br>업로드</span>
+            <span class="qa-label">처방전 업로드</span>
+            <i class="bx bx-chevron-right qa-chev"></i>
           </a>
           <a href="{{ route('orders.index') }}" class="qa-btn">
             <i class="bx bx-clipboard qa-icon"></i>
-            <span class="qa-label">주문<br>확인</span>
+            <span class="qa-label">주문 확인</span>
+            <i class="bx bx-chevron-right qa-chev"></i>
           </a>
           <a href="{{ route('nhis.index') }}" class="qa-btn">
             <i class="bx bx-file-blank qa-icon"></i>
-            <span class="qa-label">요양비<br>청구</span>
+            <span class="qa-label">요양비 청구</span>
+            <i class="bx bx-chevron-right qa-chev"></i>
           </a>
           <a href="{{ route('patients.index') }}" class="qa-btn">
             <i class="bx bx-user-plus qa-icon"></i>
-            <span class="qa-label">환자<br>등록</span>
+            <span class="qa-label">환자 등록</span>
+            <i class="bx bx-chevron-right qa-chev"></i>
           </a>
         </div>
       </div>
@@ -333,10 +426,10 @@ window.HELP_TOUR_STEPS = [
         <i class="bx bx-time-five" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 활동</span>
       </div>
-      <div class="card-body recent-activity-body" style="padding:8px 18px;">
+      <div class="card-body recent-activity-body" style="padding:16px;">
         @forelse($activities as $act)
         <div class="activity-item">
-          <div class="activity-dot" style="background:var(--primary);"></div>
+          <i class="bx bx-time-five activity-dot"></i>
           <div class="activity-main">
             <div class="activity-title">{{ \Illuminate\Support\Str::before($act->description, ' | ') ?: $act->description }}</div>
             <div class="activity-time">{{ $act->created_at->format('H:i') }} · {{ $act->causer?->name ?? '시스템' }}</div>

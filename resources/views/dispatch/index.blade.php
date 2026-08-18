@@ -43,6 +43,206 @@
   .empty-state p { font-size:13px; font-weight:400; line-height:21px; margin:0; }
   .mono { font-family:monospace; font-size:12px; line-height:19px; color:var(--primary); font-weight:700; }
   .sub-text { font-size:11px; font-weight:500; line-height:18px; color:var(--text-muted); margin-top:2px; }
+
+  /* ════════════════════════════════════════════════════════════════════════
+     상세 내용 탭 — 주입되는 dispatch/show.blade.php 프래그먼트 규격
+     시안 352:4165(가상계좌 발행) · 381:5745(세금계산서 발행) · 381:6280(현금영수증 발행)
+     ────────────────────────────────────────────────────────────────────────
+     상세는 fetch 로 받은 show.blade.php 조각을 #pnlDetailContent 에 innerHTML 로 넣는다.
+     그 조각에는 show.blade.php 의 <style> 이 함께 실려 들어와 <head> 규칙보다 뒤에 놓이므로
+     같은 특정성이면 조각 쪽이 이긴다. 그래서 여기서는 #pnlDetailContent 로 특정성을 올려
+     덮는다. 조각에 인라인 style= 로 박혀 있는 값만 우선순위를 끝까지 올려 덮었다.
+     (show.blade.php 는 이번 배정 파일이 아니라 읽기만 했다.)
+     세 시안의 뼈대는 완전히 같고, 종류마다 다른 것은 금액 박스 개수·강조 위치와
+     정보 박스 열 수·값 색뿐이다. 종류 구분은 카드 제목 앞 아이콘으로 한다
+     (bx-bank=가상계좌 · bx-receipt=세금계산서 · bx-money=현금영수증 · bx-paper-plane=청구 발송). */
+
+  /* ── 본문 2단 — 시안 Frame 48101628 = 1016 + 12 + 508 (2fr / 1fr, 열 간격 12) ── */
+  #pnlDetailContent .dispatch-grid { grid-template-columns: 2fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { #pnlDetailContent .dispatch-grid { grid-template-columns: 1fr; } }
+  /* 왼쪽·오른쪽 세로 스택의 카드 간격 12 (인라인 gap 16/14 를 덮는다) */
+  #pnlDetailContent .dispatch-grid > div { gap: 12px !important; }
+
+  /* ── 제목줄 — 시안 Frame 48101679: 껍데기 없이 1536×48 두 줄(세로 gap 4).
+       1줄 = 발행번호 16/700 + gap 12 + 상태 배지, 2줄 = 메타 11/500 gray-500.
+       48×48 아이콘 상자는 시안에 없지만 지우지 않는다 — 상자만 걷고 16px 글리프로 남긴다. ── */
+  #pnlDetailContent .dispatch-header-card {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    column-gap: 12px; row-gap: 4px;
+    align-items: center;
+    padding: 0; border: 0; border-radius: 0; background: none;
+    margin-bottom: 12px;
+  }
+  #pnlDetailContent .dispatch-header-icon {
+    grid-column: 1; grid-row: 1 / span 2;
+    width: auto; height: auto; border-radius: 0; font-size: 16px;
+    background:none !important; color:var(--primary) !important;   /* 인라인 bgColor/iconColor 표를 덮는다 */
+  }
+  #pnlDetailContent .dispatch-header-meta { display: contents; }
+  #pnlDetailContent .dispatch-header-no { grid-column: 2; grid-row: 1; }
+  /* 상태 배지는 시안에서 발행번호 오른쪽에 gap 12 로 붙는다(카드 오른쪽 끝이 아니다) */
+  #pnlDetailContent .dispatch-header-card > div:last-child { grid-column: 3; grid-row: 1; justify-self: start; }
+  #pnlDetailContent .dispatch-header-sub {
+    grid-column: 2 / -1; grid-row: 2; margin-top: 0;
+    font-size: 11px; font-weight: 500; line-height: 18px; color: var(--gray-500);
+  }
+  /* 시안 메타줄은 주문번호도 500 굵기다 */
+  #pnlDetailContent .dispatch-header-sub b { font-weight: 500; }
+
+  /* ── 카드 안쪽 여백 — 시안 Frame 48101499·48101496: pad 12/16 ── */
+  #pnlDetailContent .card-body { padding: 12px 16px; }
+
+  /* ── 카드 제목줄 — 시안 984×28. 아래 구분선 없음, 본문까지 gap 12 ── */
+  #pnlDetailContent .sec-title {
+    min-height: 28px; align-items: center; gap: 8px;
+    padding-bottom: 0; border-bottom: 0; margin-bottom: 12px;
+  }
+
+  /* ── 금액 박스 — 시안 74 = pad 12 + 21 + gap 8 + 21 + pad 12. 테두리 없다.
+       라벨은 왼쪽 위, 값은 박스 오른쪽 끝. 금액 카드가 마지막 요소라 아래 여백 없음 ── */
+  #pnlDetailContent .amount-row { gap: 8px; margin-bottom: 0; }
+  #pnlDetailContent .amt-card { border: 0; padding: 12px; border-radius: 8px; }
+  #pnlDetailContent .amt-card .avalue { text-align: right; }
+  /* 세금계산서 금액 카드는 세 번째 '합계 금액'만 강조한다 — 첫 번째 '공급가액'은 회색으로 되돌린다 */
+  #pnlDetailContent .card-body:has(.amt-card.success-hl) .amt-card.hl { background: var(--gray-100); }
+  #pnlDetailContent .card-body:has(.amt-card.success-hl) .amt-card.hl .alabel { color: var(--gray-700); }
+  #pnlDetailContent .card-body:has(.amt-card.success-hl) .amt-card.hl .avalue { color: var(--gray-1000); }
+
+  /* ── 정보 값 박스 — 시안 240(3열이면 323)×74 · r8 · pad 12 · gap 8 · bg gray-100.
+       라벨 13/500 gray-700 왼쪽 위 · 값 13/500 오른쪽 아래. 행·열 간격 8 ── */
+  #pnlDetailContent .info-grid { gap: 8px; }
+  #pnlDetailContent .info-cell {
+    grid-column: auto !important;
+    padding: 12px; min-height: 74px;
+    background: var(--gray-100); border-radius: 8px; border-bottom: 0;
+  }
+  #pnlDetailContent .info-label { margin-bottom: 8px; }
+  #pnlDetailContent .info-value:not(.large) {
+    font-size: 13px !important; font-weight: 500; line-height: 21px; text-align: right;
+  }
+  /* 시안 값은 전부 Pretendard 13/500 이다 — monospace·자간·보조 색을 되돌린다 */
+  #pnlDetailContent .info-value.mono {
+    font-family: inherit; letter-spacing: 0 !important; color: var(--gray-1000);
+  }
+  /* 정보 박스 열 수 — 가상계좌·세금계산서 4열(240 폭), 현금영수증·청구 발송 3열 */
+  #pnlDetailContent .card-body:has(.sec-title i.bx-bank) .info-grid,
+  #pnlDetailContent .card-body:has(.sec-title i.bx-receipt) .info-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  /* 시안이 primary 로 뽑는 값 — 가상계좌는 결제 키만, 세금계산서는 앞 4개, 현금영수증은 앞 3개 */
+  #pnlDetailContent .card-body:has(.sec-title i.bx-bank) .info-cell:nth-child(6) .info-value,
+  #pnlDetailContent .card-body:has(.sec-title i.bx-receipt) .info-cell:nth-child(-n+4) .info-value,
+  #pnlDetailContent .card-body:has(.sec-title i.bx-money) .info-cell:nth-child(-n+3) .info-value {
+    color: var(--primary);
+  }
+  /* 가상계좌 은행명은 '기업은행 (코드: IBK)' 통째로 13/500 gray-1000 이다 */
+  #pnlDetailContent .card-body:has(.sec-title i.bx-bank) .info-cell:nth-child(1) .info-value span {
+    font-size: 13px !important; color: inherit !important;
+  }
+  /* 가상계좌 입금 마감일 — 시안은 '2026-06-23 09:35 (만료)' 한 줄에서 '(만료)' 만 색이 다르다 */
+  #pnlDetailContent .card-body:has(.sec-title i.bx-bank) .info-cell:nth-child(4) .badge {
+    background: none; padding: 0; border-radius: 0; color: var(--alert-500);
+    font-size: 13px; font-weight: 500; line-height: 21px;
+  }
+  /* 현금영수증 발급 유형 — 시안은 평문 '소득공제' 13/500 primary */
+  #pnlDetailContent .card-body:has(.sec-title i.bx-money) .info-cell:nth-child(2) .badge {
+    background: none; padding: 0; border-radius: 0; color: inherit;
+    font-size: 13px; font-weight: 500; line-height: 21px;
+  }
+
+  /* ── 가상계좌 '가상계좌 정보' 제목줄은 시안에서 SPACE_BETWEEN 이고, 오른쪽 끝에
+       '기업은행 X8011974797930 / 예금주: 김경한' 14/700 primary 한 줄이 붙는다.
+       구현의 은행 강조 블록(제목 아래 pad 12/16 · bg primary-light · bd 1px 상자)을
+       지우지 않고 제목줄 오른쪽으로 옮긴 뒤 껍데기(상자·44×44 아이콘 판)만 걷는다. ── */
+  #pnlDetailContent .card-body:has(> .info-grid) {
+    display: grid; grid-template-columns: max-content 1fr;
+    align-items: center; column-gap: 8px; row-gap: 12px;
+  }
+  #pnlDetailContent .card-body:has(> .info-grid) > .sec-title { grid-column: 1; grid-row: 1; margin-bottom: 0; }
+  #pnlDetailContent .card-body:has(> .info-grid) > .info-grid { grid-column: 1 / -1; grid-row: 2; }
+  #pnlDetailContent .card-body:has(> .info-grid) > div:not(.sec-title):not(.info-grid) {
+    grid-column: 2; grid-row: 1; justify-self: end; min-width: 0;
+    padding:0 !important; margin:0 !important; border:0 !important; border-radius:0 !important; background:none !important; gap:6px !important; align-items:center !important;
+  }
+  /* 44×44 아이콘 판 → 14px 글리프(지우지 않고 크기만 줄인다) */
+  #pnlDetailContent .card-body:has(> .info-grid) > div:not(.sec-title):not(.info-grid) > div:first-child {
+    width:auto !important; height:auto !important; border-radius:0 !important; background:none !important; color:var(--primary) !important; font-size:14px !important;
+  }
+  /* 두 줄로 쌓여 있던 은행명/계좌번호·예금주/이름을 한 줄로 편다 */
+  #pnlDetailContent .card-body:has(> .info-grid) > div:not(.sec-title):not(.info-grid) > div + div {
+    display:flex !important; align-items:center !important; gap:6px !important; flex:0 0 auto !important; text-align:left !important;
+  }
+  #pnlDetailContent .card-body:has(> .info-grid) > div:not(.sec-title):not(.info-grid) > div + div > div {
+    font-family:inherit !important; letter-spacing:0 !important; font-size:14px !important; font-weight:700 !important; line-height:22px !important; color:var(--primary) !important; margin:0 !important;
+  }
+
+  /* ── 처방 제품 내역 — 시안 Frame 48101498: 카드 pad 12/0/0/0, 제목줄만 pad 0/16,
+       표는 카드 좌우 끝까지 닿는다 ── */
+  #pnlDetailContent .card-body:has(.mini-table) { padding: 12px 0 0; }
+  #pnlDetailContent .card-body:has(.mini-table) > .sec-title { padding-left: 16px; padding-right: 16px; }
+  /* 표 둘레 1px 중 좌·우·아래는 카드 자신의 테두리가 대신한다(시안 Frame 48101520 은 카드와
+     폭이 같은 1016 이라 두 획이 정확히 겹친다). 브라우저에서 둘 다 그리면 좌·우·아래가 2px 이 되고,
+     카드의 r12 둥근 모서리를 표의 각진 모서리가 뚫고 나온다. 표는 위 획만 갖는다. */
+  #pnlDetailContent .mini-table {
+    font-size: 13px; table-layout: fixed;
+    border: 0; border-top: 1px solid var(--border);
+  }
+  /* 머리행 45 = pad 12 + 21 + pad 12 · 13/700 gray-600 · bg gray-50 · 왼쪽 정렬 */
+  #pnlDetailContent .mini-table th {
+    padding: 12px; font-size: 13px; font-weight: 700; line-height: 21px;
+    color: var(--gray-600); background: var(--gray-50);
+    border-bottom: 1px solid var(--border); text-align: left !important;
+  }
+  /* 본문행 41 = pad 10 + 21 + pad 10 · 13/400 gray-1000 · 여섯 열 전부 왼쪽 정렬 */
+  #pnlDetailContent .mini-table td {
+    padding: 10px 12px; font-size: 13px; line-height: 21px;
+    color: var(--gray-1000); border-bottom: 1px solid var(--border-light);
+    font-weight:400 !important; text-align:left !important;
+  }
+  /* 마지막 행 아래는 카드 테두리가 대신한다 */
+  #pnlDetailContent .mini-table tr:last-child td { border-bottom: 0; }
+  /* 열 폭 — 시안 제품명 400 / 코드·수량·소비자가·보험가·환자부담 각 123 (합 1015) */
+  #pnlDetailContent .mini-table th:first-child,
+  #pnlDetailContent .mini-table td:first-child { width: 39.4%; }
+  #pnlDetailContent .mini-table th + th,
+  #pnlDetailContent .mini-table td + td { width: 12.12%; }
+  /* 세로 구분선 — 시안은 본문 칸 사이에만 긋고 머리행에는 긋지 않는다(행 구분선과 같은 연한 색) */
+  #pnlDetailContent .mini-table td + td { border-left: 1px solid var(--border-light); }
+  /* 코드 열도 시안에서는 다른 열과 같은 13/400 gray-1000 이다 */
+  #pnlDetailContent .mini-table td:nth-child(2) {
+    font-family: inherit !important; font-size: 13px !important; color: var(--gray-1000) !important;
+  }
+  /* 환자부담 열만 13/700 primary — 굵기는 되살린다(색은 인라인 그대로) */
+  #pnlDetailContent .mini-table td:last-child { font-weight: 700 !important; }
+
+  /* ── 오른쪽 카드 머리 — 시안 508×44 · pad 8/16 · 제목 13/700 ── */
+  #pnlDetailContent .card-header { min-height: 44px; padding: 8px 16px !important; }
+  #pnlDetailContent .card-header span { font-size: 13px !important; line-height: 21px !important; }
+
+  /* ── 오른쪽 카드 본문 — 시안 pad 16 · 행 사이 gap 4.
+       한 행은 [라벨 140 · 13/500 gray-700][gap 8][값 13/500 gray-1000] 가로 배치(한 항목 21) ── */
+  #pnlDetailContent .card-body:has(.side-info) { padding: 16px; }
+  #pnlDetailContent .side-info {
+    display: grid; grid-template-columns: 140px 1fr;
+    column-gap: 8px; row-gap: 4px; align-items: start;
+    margin: 0;   /* 부트스트랩 reboot 의 dl{margin-bottom:1rem} 이 카드 아래에 16px 을 더한다 */
+  }
+  #pnlDetailContent .side-info dt { grid-column: 1; margin: 0; }
+  #pnlDetailContent .side-info dd { grid-column: 2; margin: 0; }
+  /* 굵기도 우선순위를 끝까지 올린다 — 배송지·주소 dd 에 인라인 font-weight:400 이 박혀 있어
+     그대로 두면 그 두 줄만 400 으로 남는다(시안은 오른쪽 카드 값이 전부 13/500). */
+  #pnlDetailContent .side-info dd,
+  #pnlDetailContent .side-info dd a {
+    font-weight:500 !important;
+    font-size:13px !important; line-height:21px !important; font-family:inherit !important;
+  }
+  /* 환자 정보 카드 마지막 행 '건강보험 급여 대상' 은 시안에서 평문 13/500 gray-1000 이다.
+     (같은 화면의 주문 상태·처방전 상태는 시안에도 배지라 그대로 둔다) */
+  #pnlDetailContent .card:has(.side-info a[href*="/patients/"]) .side-info dd:last-child .badge {
+    background: none; padding: 0; border-radius: 0; color: var(--gray-1000);
+    font-size: 13px; font-weight: 500; line-height: 21px;
+  }
 </style>
 @endpush
 
