@@ -706,15 +706,9 @@
   .gd-btn i { font-size:12px; }
 
   /* ── 등록자 카드 (시안 137:652) ──
-     머리줄 없이 탭 스위처로 시작하고, 아래에 역할별 한 줄씩 쌓는다. */
-  /* 시안 148:279 — 카드 pad 12/16 · gap 12, 탭 스위처 h33 · r8 · pad 2 · bg gray-200 */
+     머리줄 없이 역할별 한 줄씩 쌓고, 그 아래에 OCR 신뢰도를 둔다. */
   .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
-  .rg-tabs { display:flex; padding:2px; background:var(--gray-200); border-radius:8px; }
-  .rg-tab  { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 0;
-             border:none; background:none; cursor:pointer;
-             border-radius:6px; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
-  .rg-tab.active { background:var(--gray-0); color:var(--gray-1000); }
-  /* OCR 신뢰도 탭 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
+  /* OCR 신뢰도 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
   .rg-ocr      { display:flex; flex-direction:column; gap:12px; }
   .rg-ocr-meter{ display:flex; align-items:center; gap:12px; }
   .rg-ocr-bar  { flex:1; min-width:0; height:8px; border-radius:999px; background:var(--gray-200); overflow:hidden; }
@@ -1778,13 +1772,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 등록자 카드 — 탭 두 개(시안 137:653 등록자 · 148:279 OCR 신뢰도) --}}
       <div class="vw-card rg-card">
-        {{-- 탭 스위처 — 시안 296×33 · r8 · pad 2 · bg gray-200, 탭 146×29 · r6 · 13/500 --}}
-        <div class="rg-tabs" role="tablist">
-          <button type="button" class="rg-tab active" id="rgTabUploader"
-                  role="tab" aria-selected="true" onclick="rgTab('uploader')">등록자</button>
-          <button type="button" class="rg-tab" id="rgTabOcr"
-                  role="tab" aria-selected="false" onclick="rgTab('ocr')">OCR 신뢰도</button>
-        </div>
+        {{-- 탭 알약 둘(등록자·OCR 신뢰도)은 두지 않는다. 두 판을 번갈아 보여 줄 뿐이라
+             한쪽을 보는 동안 다른 쪽은 없는 것이 됐다 — 카드가 짧아 함께 둬도 된다. --}}
 
         {{-- 역할별 한 줄 (시안 137:658) --}}
         <div class="rg-rows" id="infoPanel-uploader">
@@ -1827,7 +1816,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
              버튼 145×28 · r8 · bd 1px gray-200 · 아이콘 12 · 12/500.
              값과 동작은 이미 있는 것을 쓴다 —
                display_confidence 접근자(Prescription.php), reanalyzeOCR(), resetOCR(). --}}
-        <div class="rg-ocr" id="infoPanel-ocr" style="display:none;">
+        <div class="rg-ocr" id="infoPanel-ocr">
+          <div style="font-size:10px;font-weight:700;color:var(--gray-600);">OCR 신뢰도</div>
           @php $conf = $prescription->display_confidence; @endphp
           <div class="rg-ocr-meter">
             <div class="rg-ocr-bar" role="img"
@@ -6984,19 +6974,6 @@ window.HELP_TOUR_STEPS = [
     showToast('공단 청구는 요양기관정보마당에 직접 입력·업로드합니다.', 'info');
   }
 
-  /* ── 등록자 카드 탭 (시안 148:279) ──────────────────────
-     보여 줄 판만 바꾼다. 값은 서버가 이미 그려 놓았다. */
-  window.rgTab = function (which) {
-    const isOcr = which === 'ocr';
-    document.getElementById('infoPanel-uploader').style.display = isOcr ? 'none' : '';
-    document.getElementById('infoPanel-ocr').style.display      = isOcr ? '' : 'none';
-    for (const [id, on] of [['rgTabUploader', !isOcr], ['rgTabOcr', isOcr]]) {
-      const t = document.getElementById(id);
-      if (!t) continue;
-      t.classList.toggle('active', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-  };
 
   // ── OCR 재분석 ────────────────────────────────────────
   async function reanalyzeOCR() {
