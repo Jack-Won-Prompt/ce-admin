@@ -110,27 +110,6 @@
     </div>
   </div>
 
-  <div class="rt-card rt-only" data-for="exchange">
-    <div class="rt-hd">교환 — 다시 보낼 것</div>
-    <div class="rt-bd">
-      <div class="rt-row">
-        <label>제품</label>
-        <input type="text" name="exchange_product" class="form-control" maxlength="200"
-               value="{{ old('exchange_product') }}" placeholder="바꿔 보낼 제품(사이즈 등)">
-      </div>
-      <div class="rt-row">
-        <label>수량</label>
-        <input type="number" name="exchange_quantity" class="form-control" min="1"
-               value="{{ old('exchange_quantity') }}">
-      </div>
-      <div class="rt-row">
-        <label>재배송지</label>
-        <input type="text" name="reship_address" id="rt-reship" class="form-control" maxlength="300"
-               value="{{ old('reship_address') }}" placeholder="비우면 원 주문 배송지로 보냅니다">
-      </div>
-    </div>
-  </div>
-
   <div class="rt-card rt-only" data-for="return cancel">
     <div class="rt-hd">환불</div>
     <div class="rt-bd">
@@ -198,8 +177,6 @@
     if (!opt?.value) return;
     const amount = document.getElementById('rt-refund-amount');
     if (amount && !amount.value) amount.value = opt.dataset.amount || '';
-    const reship = document.getElementById('rt-reship');
-    if (reship) reship.placeholder = opt.dataset.address || '비우면 원 주문 배송지로 보냅니다';
   }
 
   function syncRefund() {

@@ -134,25 +134,6 @@
     </div>
 
     {{-- 교환 --}}
-    <div class="rto-only" id="rtoExchangeSec" style="display:none;flex-direction:column;gap:8px;margin-top:12px;">
-      <div class="rto-grid">
-        <div class="rto-f span2">
-          <label>바꿔 보낼 제품</label>
-          <input type="text" name="exchange_product" class="form-control" maxlength="200"
-                 placeholder="사이즈 등">
-        </div>
-        <div class="rto-f">
-          <label>수량</label>
-          <input type="number" name="exchange_quantity" class="form-control" min="1">
-        </div>
-        <div class="rto-f span4">
-          <label>재배송지</label>
-          <input type="text" name="reship_address" id="rtoReship" class="form-control" maxlength="300"
-                 placeholder="비우면 원 주문 배송지로 보냅니다">
-        </div>
-      </div>
-    </div>
-
     {{-- 반품 · 취소 --}}
     <div class="rto-only" id="rtoRefundSec" style="display:block;margin-top:12px;">
       <div class="rto-grid">
@@ -317,7 +298,6 @@
 
     // 환불 금액과 재배송지는 원 주문에서 끌어 온다 — 대개 그대로다
     if (!$('rtoRefundAmount').value) $('rtoRefundAmount').value = r.amount || '';
-    $('rtoReship').placeholder = r.address || '비우면 원 주문 배송지로 보냅니다';
 
     itemGrid.setData(r.items ?? []);
     $('rtoItemNote').textContent = (r.items?.length ?? 0) + '개 품목 · ' + r.order_no;
@@ -328,8 +308,10 @@
   function syncType() {
     const t = $('rtoType').value;
     $('rtoCollectWrap').classList.toggle('on', t !== 'cancel');
-    $('rtoExchangeSec').style.display = t === 'exchange' ? 'block' : 'none';
-    $('rtoRefundSec').style.display   = t === 'exchange' ? 'none'  : 'block';
+    /* 교환은 따로 물을 것이 없다 — 무엇을 되돌리는지는 아래 주문 제품에 나와 있고,
+       바꿔 보낼 물건과 보낼 곳은 창고가 수거·검수를 마친 뒤 정해진다.
+       환불은 교환이 아닐 때만 묻는다. */
+    $('rtoRefundSec').style.display = t === 'exchange' ? 'none' : 'block';
     syncRefundMethod();
   }
 

@@ -181,7 +181,7 @@
             <div style="display:flex;gap:6px;">
               <input type="text" id="smpAccount" class="form-control" maxlength="100"
                      placeholder="조회해서 고르거나 그대로 적으십시오">
-              <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer()">조회</button>
+              <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer(this)">조회</button>
             </div>
             <input type="hidden" id="smpPatientId" value="">
             <span class="ds-grid-hint" id="smpCustKind"></span>
@@ -365,10 +365,15 @@
   const modal = new GridModal();
   let custRows = {};   // 고른 뒤 이름 말고 나머지도 써야 해서 들고 있는다
 
-  window.smpPickCustomer = function () {
+  /* 고객 조회는 누른 칸 옆에 붙는 팝오버로 연다 — 화면 한가운데를 덮으면 지금까지
+     적어 둔 것이 가려져, 무엇을 채우던 중이었는지 놓친다. */
+  window.smpPickCustomer = function (btn) {
     modal.open({
       title: '고객 조회',
-      width: 520,
+      width: 460,
+      height: 340,
+      mode: 'popover',
+      anchor: btn,
       currentValue: $('smpPatientId').value || null,
       onSearch: async (q) => {
         const res = await fetch(CUST_URL + '?q=' + encodeURIComponent(q ?? ''), {

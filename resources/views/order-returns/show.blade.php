@@ -116,8 +116,15 @@
       <div class="rt-kv"><span>수거 방법</span><span>{{ \App\Models\OrderReturn::COLLECT_METHODS[$r->collect_method] ?? '—' }}</span></div>
     @endif
     @if($r->type === \App\Models\OrderReturn::TYPE_EXCHANGE)
-      <div class="rt-kv"><span>교환 제품</span><span>{{ $r->exchange_product ?: '—' }} {{ $r->exchange_quantity ? '× ' . $r->exchange_quantity : '' }}</span></div>
-      <div class="rt-kv"><span>재배송지</span><span>{{ $r->reship_address ?: ($r->order?->shipping_address ?? '—') }}</span></div>
+      {{-- 접수 때는 더 묻지 않는다 — 무엇을 되돌리는지는 아래 주문 제품에 있고, 바꿔 보낼
+           물건과 보낼 곳은 창고가 수거·검수를 마친 뒤 정해진다. 예전에 받아 둔 건에만
+           값이 남아 있으니, 있을 때만 보여 준다. --}}
+      @if($r->exchange_product || $r->exchange_quantity)
+        <div class="rt-kv"><span>교환 제품</span><span>{{ $r->exchange_product ?: '—' }} {{ $r->exchange_quantity ? '× ' . $r->exchange_quantity : '' }}</span></div>
+      @endif
+      @if($r->reship_address)
+        <div class="rt-kv"><span>재배송지</span><span>{{ $r->reship_address }}</span></div>
+      @endif
     @else
       <div class="rt-kv"><span>환불 수단</span><span>{{ \App\Models\OrderReturn::REFUND_METHODS[$r->refund_method] ?? '—' }}</span></div>
       <div class="rt-kv"><span>환불 금액</span><span>{{ $r->refund_amount ? number_format($r->refund_amount) . '원' : '—' }}</span></div>
