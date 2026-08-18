@@ -431,7 +431,7 @@
             <th style="padding:6px 8px;text-align:left;border:1px solid var(--border);">코드</th>
             <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);">수량</th>
             <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);">급여</th>
-            <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">보험금액</th>
+            <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">단가</th>
             <th style="padding:6px 8px;text-align:right;border:1px solid var(--border);">본인부담</th>
           </tr></thead>
           <tbody>${d.items.map(i => `<tr>

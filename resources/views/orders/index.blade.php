@@ -105,7 +105,7 @@ window.HELP_TOUR_STEPS = [
              placeholder="주문번호ㆍ이름ㆍ제품명">
     </div>
     <div class="ds-filter-field span-2">
-      <label class="ds-field-label">기간</label>
+      <label class="ds-field-label">등록일자</label>
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
@@ -193,7 +193,7 @@ window.HELP_TOUR_STEPS = [
           <th>이름</th>
           <th>제품명</th>
           <th>수량</th>
-          <th class="amount-cell">환자부담금</th>
+          <th class="amount-cell">본인 부담금</th>
           <th class="amount-cell">배송비</th>
           <th class="amount-cell">총금액</th>
           <th>배송지</th>

@@ -588,24 +588,32 @@ document.addEventListener('keydown', (e) => {
           s.textContent = v;
           return s;
         } },
-      { header: '보호자 관계', name: 'g_relation', width: 90,  align: 'center' },
-      { header: '보호자 이름', name: 'g_name',     width: 100 },
-      { header: '보호자 생년월일', name: 'g_birth', width: 120 },
-      { header: '보호자 신분증', name: 'g_id', width: 100, align: 'center', exportable: false,
+      // 머리글이 길어져(요청 1차 4쪽) 90·100·120 으로는 잘린다 — 실측 글자폭 144·140·163·151
+      // + 좌우 padding 12+12 + 정렬 화살표 자리(gap 6 + 아이콘 10.5 — 한 번이라도 정렬을
+      // 누르면 모든 머리글에 ⇅ 가 붙는다) 이라 190·190·210·200 으로 넓힌다.
+      // name·align 은 그대로다.
+      { header: '가입자ㆍ피부양자와의 관계', name: 'g_relation', width: 190, align: 'center' },
+      { header: '법정대리인 또는 가족 성명', name: 'g_name',     width: 190 },
+      { header: '법정대리인 또는 가족 생년월일', name: 'g_birth', width: 210 },
+      { header: '법정대리인 또는 가족 신분증', name: 'g_id', width: 200, align: 'center', exportable: false,
         renderer: (v, row) => {
           if (!row.g_id_url) return '';
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'pt-chip clickable'; b.textContent = '보기';
-          b.title = '보호자 신분증 보기';
+          b.title = '법정대리인 또는 가족 신분증 보기';
           b.addEventListener('click', (e) => { e.stopPropagation();
-            ptShowImage('보호자 신분증 — ' + (row.g_name || row.name), row.g_id_url); });
+            ptShowImage('법정대리인 또는 가족 신분증 — ' + (row.g_name || row.name), row.g_id_url); });
           return b;
         } },
 
       { header: '처방건수',     name: 'rx_count',        width: 80,  editor: 'number', align: 'center', sortable: true },
       { header: '재구매일',     name: 'repurchase_date', width: 160, sortable: true },
-      // 머리글은 시안 114:4778 그리드 마지막 컬럼 '생성일'. key·width·align 은 그대로 둔다.
-      { header: '생성일',       name: 'created',         width: 110, sortable: true },
+      // 요청 1차 3쪽 '등록일 -> 신환 Master 등록일'. 시안 114:4778 은 아직 '생성일'이지만
+      // 낱말은 요청서를 따른다. 같은 칸을 요청 1차 14·16쪽이 '거래처관리에서 등록일과 연결'
+      // 이라 부르고 27쪽 주문 관리 목록도 '신환Master 등록일'로 적는다.
+      // name 'created'(created_at) 는 그대로 두고, 머리글 실측 121.7 + padding 12+12
+      // + 정렬 화살표(gap 6 + 10.5) = 162.2 라 110 → 170 으로 넓힌다.
+      { header: '신환 Master 등록일', name: 'created',    width: 170, sortable: true },
     ],
     data: @json($gridData),
   });

@@ -1948,7 +1948,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button type="button" id="btnPatientLookup" class="tb-act" onclick="openPatientLookup()"
                   title="이름으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
-                  title="검수 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
+                  title="주문 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
           {{-- 원본 복원·승인 요청·저장은 시안(148:2639)대로 아코디언 헤더에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
@@ -2071,7 +2071,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
 
             <div class="rx-col">
-              {{-- 3열 — 유형 · 메모 (시안 315:58 Frame 48101512).
+              {{-- 3열 — 유형 · 검수 메모 (시안 315:58 Frame 48101512).
                    재 상담 일자는 시안에 없지만, 상담 상태가 '재상담'일 때만 열리는
                    입력이라 빼면 그 값을 넣을 자리가 사라진다. 시안 두 줄 뒤에 이어 둔다. --}}
               <div class="rx-field-row">
@@ -2084,7 +2084,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row" style="align-items:flex-start;">
-                <span class="rx-field-label">메모</span>
+                <span class="rx-field-label">검수 메모</span>
                 {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
                 <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counsel_contents ?? '' }}</textarea>
               </div>
@@ -2127,7 +2127,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 주민번호 앞자리로 생년월일·만 나이를 즉시 계산해 보여준다.
                    번호를 치는 중에도 바뀌고, 아직 안 쳤으면 저장된 마스킹으로 계산한다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">생년월일</span>
+                <span class="rx-field-label">생년월일(1)</span>
                 <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
                   <input type="text" class="form-control" id="f-birth" readonly
                          style="flex:1;min-width:0;background:var(--gray-50);" placeholder="주민번호를 입력하면 계산됩니다" />
@@ -2518,7 +2518,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="rx-col">
               {{-- 3열 — Five/Six(110days) … 재구매일 9줄 (시안 315:58 Frame 48101491, 361×392).
-                   종료일·신환master등록일은 시안에 없지만 개발이 넣은 입력이라 끝에 이어 남긴다. --}}
+                   종료일·신환 Master 등록일은 시안에 없지만 개발이 넣은 입력이라 끝에 이어 남긴다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">Five/Six(110days)</span>
                 <input type="text" class="form-control" id="f-five-2" style="flex:1;" />
@@ -2599,7 +2599,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
                    (시안 315:58 Frame 48101500 이 두 값을 한 줄에 둔다). --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">신환master등록일</span>
+                <span class="rx-field-label">신환 Master 등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
               </div>
             </div>
@@ -2823,7 +2823,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 주문 정보 헤더 (카드/테이블뷰 공통) — 시안 Frame 48101494 의 머리띠 h44 --}}
           <div class="pt-card-head">
             <div class="pt-head-left">
-              <span class="pt-card-title"><i class="fa-solid fa-boxes-stacked"></i> 처방 제품 정보</span>
+              <span class="pt-card-title"><i class="fa-solid fa-boxes-stacked"></i> 주문 정보</span>
               {{-- 낱개 알약 4개 — 시안 Frame 48101522: h22 · r999 · pad 2/8 · gap 6 · 11/500.
                    시안에 없는 구분자 '|' 와 테두리를 빼고 알약을 넷으로 나눴다 --}}
               <span class="pt-head-badges">
@@ -2875,7 +2875,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div class="cv">
         <div class="card">
           <div class="card-body">
-            <div class="section-title"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 처방 제품 요약</div>
+            <div class="section-title"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 주문 정보 요약</div>
             <div id="order-items-summary">{{-- JS renderOrderSummary() --}}</div>
 
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 비용 내역</div>
@@ -3209,7 +3209,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 @endif
 
 {{-- ══════════════════════════════════════════════════════════
-     환자 조회 모달 — 이름으로 환자 검색 → 과거 상담이력 선택 → 검수 화면으로 가져오기
+     환자 조회 모달 — 이름으로 환자 검색 → 과거 상담이력 선택 → 주문 화면으로 가져오기
      (현재 처방전의 환자와 무관하게 조회 가능하므로 조건 없이 항상 렌더)
 ══════════════════════════════════════════════════════════ --}}
 <div class="modal-overlay" id="patientLookupModal" style="z-index:10000;" onclick="if(event.target===this)closePatientLookup()">
@@ -3264,7 +3264,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div style="flex-shrink:0;padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
             <input type="checkbox" id="plWithItems" checked style="width:16px;height:16px;">
-            처방 제품도 함께 가져오기
+            주문 정보도 함께 가져오기
           </label>
           <button type="button" id="plImportBtn" onclick="plImportSelected()" disabled
                   style="margin-left:auto;height:32px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
@@ -5344,7 +5344,7 @@ window.HELP_TOUR_STEPS = [
         ${_pcFR('주소', [d.postcode, d.address_ocr, d.address_detail].filter(Boolean).join(' '), true)}
       </div>
 
-      <div style="margin-top:14px;font-size:11px;font-weight:500;color:var(--text-muted);">처방 제품</div>
+      <div style="margin-top:14px;font-size:11px;font-weight:500;color:var(--text-muted);">주문 정보</div>
       <div style="margin-top:4px;">${itemsHtml}</div>
 
       <div style="margin-top:14px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;">
@@ -5355,7 +5355,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('plImportBtn').disabled = false;
   }
 
-  /* 선택한 상담이력을 검수 화면 입력값으로 채운다.
+  /* 선택한 상담이력을 주문 화면 입력값으로 채운다.
      값이 있는 항목만 덮어써서, 이력에 없는 필드의 기존 입력은 보존한다. */
   async function plImportSelected() {
     const d = _plCounselings[_plSelected];
@@ -5363,14 +5363,14 @@ window.HELP_TOUR_STEPS = [
 
     const withItems = document.getElementById('plWithItems').checked;
     const proceed = await ceConfirm(
-      `상담이력 ${d.counselling_no ?? ''} 의 내용을 검수 화면으로 가져옵니다.\n`
-      + (withItems ? '처방 제품도 함께 교체됩니다.\n' : '')
+      `상담이력 ${d.counselling_no ?? ''} 의 내용을 주문 화면으로 가져옵니다.\n`
+      + (withItems ? '주문 정보도 함께 교체됩니다.\n' : '')
       + '\n계속하시겠습니까?',
       { title: '상담이력 가져오기', confirmText: '가져오기' }
     );
     if (!proceed) return;
 
-    // 상담이력 필드 → 검수 화면 입력 필드 대응
+    // 상담이력 필드 → 주문 화면 입력 필드 대응
     const MAP = {
       'f-name':            d.patient_name_ocr,
       'f-mobile':          d.mobile_ocr || d.call_no,
@@ -5410,7 +5410,7 @@ window.HELP_TOUR_STEPS = [
     const _rn = document.getElementById('f-resident');
     if (_rn && d.resident_no_masked) _rn.placeholder = d.resident_no_masked;
 
-    // 처방 제품 교체
+    // 주문 정보 교체
     if (withItems && d.items && d.items.length) {
       items = d.items.map(it => ({
         product_name:    it.product_name ?? '',
@@ -5418,7 +5418,7 @@ window.HELP_TOUR_STEPS = [
         quantity:        it.quantity ?? DEFAULT_QTY,
         product_price:   it.product_price ?? '',
         insurance_price: it.insurance_price ?? '',
-        // 과거 이력은 Y/N 로 저장된 경우가 있어 검수 화면 값으로 변환
+        // 과거 이력은 Y/N 로 저장된 경우가 있어 주문 화면 값으로 변환
         nhis_status:     (it.nhis_status === 'Y') ? 'eligible'
                         : (it.nhis_status === 'N') ? 'ineligible'
                         : (it.nhis_status || 'eligible'),
@@ -7622,7 +7622,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('pcStickyRx').innerHTML     = d.rx_number
       ? `<i class="fa-solid fa-file-prescription" style="font-size:9px;"></i> ${_pcEsc(d.rx_number)}${d.rx_status_label ? ` <span style="padding:0 5px;background:var(--bg);border:1px solid var(--border);border-radius:999px;">${_pcEsc(d.rx_status_label)}</span>` : ''}`
       : '';
-    // 다른 처방전으로 '이동'하지 않고 새 탭으로 열어, 현재 검수 화면의 입력을 잃지 않게 한다
+    // 다른 처방전으로 '이동'하지 않고 새 탭으로 열어, 현재 주문 화면의 입력을 잃지 않게 한다
     document.getElementById('pcStickyBtn').onclick = () => ceOpenTab(
       `${_RX_URL_BASE}/${encodeURIComponent(d.rx_number ?? '')}`,
       `주문 - ${d.rx_number ?? '신규'}`, 'file-edit-02');

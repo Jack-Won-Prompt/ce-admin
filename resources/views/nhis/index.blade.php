@@ -379,7 +379,7 @@
       { header: '신환/구환',   name: 'patient_type',  width: 90,  align: 'center', sortable: true },
       { header: '제품명',      name: 'product',       width: 170 },
       { header: '청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
-      { header: '환자부담',    name: 'patient_copay', width: 100, editor: 'number' },
+      { header: '본인부담금',  name: 'patient_copay', width: 100, editor: 'number' },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       {

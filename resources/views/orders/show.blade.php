@@ -724,7 +724,7 @@
             </span></div>
           @else
             <div class="od-kv"><span>환자 입금</span><span>
-              가상계좌가 발급되지 않았습니다 — 처방전 검수 화면에서 발급합니다
+              가상계좌가 발급되지 않았습니다 — 처방전의 주문 화면에서 발급합니다
             </span></div>
           @endif
 
@@ -1175,7 +1175,7 @@
 const ORDER_ID   = {{ $order->id }};
 const ORDER_URL  = BASE_URL + '/orders/' + ORDER_ID;
 
-/* 처방전 버튼 → 처방전 검수 화면을 '새 탭'으로 연다(주문 화면은 그대로 유지).
+/* 처방전 버튼 → 그 처방전의 주문 화면을 '새 탭'으로 연다(주문 상세는 그대로 유지).
    워크스페이스 밖이면 브라우저 새 탭으로 폴백. href 는 남겨 두어 가운데 클릭 등
    브라우저 기본 동작도 살린다. 상세내용 탭에 주입될 때도 부모 프레임의 헬퍼를 쓴다. */
 window.orderOpenRxTab = function (ev, el) {
