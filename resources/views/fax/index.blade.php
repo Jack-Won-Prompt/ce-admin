@@ -3,7 +3,8 @@
 
 @section('title', '팩스 발송')
 @section('page-title', '팩스 발송')
-@section('breadcrumb', '홈 / 팩스 발송')
+{{-- 시안 324:10697 — 빵부스러기 구분자는 하이픈이다: '홈 - 팩스 발송'('홈' x367 · '-' x386 · '팩스 발송' x400) --}}
+@section('breadcrumb', '홈 - 팩스 발송')
 
 @section('help-title', '팩스 발송 도움말')
 @section('help-content')
@@ -379,27 +380,28 @@
 @section('content')
 
 {{-- 요약 카드 — 시안 Frame 48101550 은 흰 카드 한 장 안에 칸 셋을 세로 구분선으로 나눈다.
-     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다. --}}
+     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다.
+     빈값 기호는 시안이 하이픈 '-' 이다(324:10697 잔여 포인트 x625 7×22 · 14/700). em dash 가 아니다. --}}
 <div class="fax-summary">
   <div class="sum-card blue">
     <div class="sc-icon"><i class="bx bx-wallet"></i></div>
     <div class="sc-text">
       <div class="sc-label">잔여 포인트</div>
-      <div class="sc-val" id="balance-val">—</div>
+      <div class="sc-val" id="balance-val">-</div>
     </div>
   </div>
   <div class="sum-card green">
     <div class="sc-icon"><i class="bx bx-check-circle"></i></div>
     <div class="sc-text">
       <div class="sc-label">오늘 발송 <span class="sc-label-sub">(성공)</span></div>
-      <div class="sc-val" id="today-ok-val">—</div>
+      <div class="sc-val" id="today-ok-val">-</div>
     </div>
   </div>
   <div class="sum-card gray">
     <div class="sc-icon"><i class="bx bx-history"></i></div>
     <div class="sc-text">
       <div class="sc-label">이번 달 발송</div>
-      <div class="sc-val" id="month-total-val">—</div>
+      <div class="sc-val" id="month-total-val">-</div>
     </div>
   </div>
 </div>
@@ -422,7 +424,8 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-      <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+      {{-- 시안 324:10697 x1878 — 51장 전수에서 이 버튼의 낱말은 예외 없이 '검색' 이다 --}}
+      <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
     </div>
   </div>
 
@@ -698,7 +701,7 @@ async function loadBalance() {
     const res = await fetch(`${FAX_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
     const data = await res.json();
     document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '—';
+      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '-';
   } catch { document.getElementById('balance-val').textContent = '오류'; }
 }
 
@@ -727,14 +730,14 @@ async function loadTodayStats() {
     const res  = await fetch(`${FAX_BASE}/search?corp_num=${CORP_NUM.value}&start_date=${today}&end_date=${today}&per_page=1`, { headers: HEADERS });
     const data = await res.json();
     document.getElementById('today-ok-val').textContent = data.total ?? 0;
-  } catch { document.getElementById('today-ok-val').textContent = '—'; }
+  } catch { document.getElementById('today-ok-val').textContent = '-'; }
 
   const firstDay = fmtDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)).replace(/-/g,'');
   try {
     const res  = await fetch(`${FAX_BASE}/search?corp_num=${CORP_NUM.value}&start_date=${firstDay}&end_date=${today}&per_page=1`, { headers: HEADERS });
     const data = await res.json();
     document.getElementById('month-total-val').textContent = data.total ?? 0;
-  } catch { document.getElementById('month-total-val').textContent = '—'; }
+  } catch { document.getElementById('month-total-val').textContent = '-'; }
 }
 
 /* ── 수신자 관리 ── */

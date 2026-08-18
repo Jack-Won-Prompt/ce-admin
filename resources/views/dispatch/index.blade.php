@@ -3,7 +3,9 @@
 
 @section('title', '발송/발행 내역')
 @section('page-title', '발송/발행 내역')
-@section('breadcrumb', '홈 / 발송·발행 내역')
+{{-- 시안 352:3206 — 빵부스러기는 '홈 - 발송/발행 내역' 이다('홈' x367 · '-' x386 · 화면명 x400).
+     구분자는 하이픈이고 화면명도 제목과 같은 슬래시라 한 화면 안에서 낱말이 갈리지 않는다. --}}
+@section('breadcrumb', '홈 - 발송/발행 내역')
 
 @push('styles')
 <style>
@@ -302,14 +304,15 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-      @if($search || request()->hasAny(['date_from','date_to']))
-        <a href="{{ route('dispatch.index', ['type'=>$type]) }}" class="ds-btn">
-          <i class="fa-solid fa-xmark"></i> 초기화
-        </a>
-      @endif
-      <button type="submit" class="ds-btn ds-btn-primary">
-        <i class="fa-solid fa-magnifying-glass"></i> 검색
-      </button>
+      {{-- 시안 352:3206 은 검색 왼쪽(x1804)에 초기화를 늘 보여준다 — 검색 조건이 없을 때도 마찬가지다.
+           조건부(@if)를 걷어 첫 진입에서도 보이게 했다. 링크는 그대로 같은 라우트로 되돌아간다
+           (검색이 GET 폼이라 이 링크 하나로 조건이 비워진다 — 폼을 비우는 JS 는 만들지 않았다).
+           시안 Frame 48101589(128×61)는 초기화·검색 둘 다 글자만 든 60×32 다 — 아이콘이 없다.
+           늘 보이게 만든 뒤 아이콘 때문에 초기화 77×32 · 검색 69×32 로 벌어져 두 아이콘을 뺐다.
+           낱말 '초기화'·'검색' 은 그대로다. 같은 자리의 다른 여덟 화면(환자·주문·청구·서류·
+           재구매·개인정보동의·메시지·NHIS)도 글자만 든 60×32 라 이 화면만 어긋나 있었다. --}}
+      <a href="{{ route('dispatch.index', ['type'=>$type]) }}" class="ds-btn">초기화</a>
+      <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     </div>
   </form>
 

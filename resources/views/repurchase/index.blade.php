@@ -2,10 +2,17 @@
 
 @section('title', '재구매 관리')
 @section('page-title', '재구매 관리')
-@section('breadcrumb', '홈 / 재구매 관리')
+{{-- 시안(243:53 · 243:433) Frame 48101452 — 「홈 - 재구매 관리」 두 마디.
+     홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
+     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙어 마디 사이 8 이 안 나온다.
+     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다
+     (orders/index·prescriptions/upload 과 같은 방식). --}}
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>재구매 관리</span></span>@endsection
 
 @push('styles')
 <style>
+/* 빵부스러기 마디 사이 8 — 시안 243:53 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
+.page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 /* ═══════════════════════════════════════════════════════════
    재구매 관리 — Figma 243:433(테이블뷰) · 243:53(캘린더뷰)
    전역 컴포넌트(.ds-btn h32·r8·13px/500, 카드 r12, .ds-filter-card)를
@@ -53,10 +60,14 @@
 
 /* ── 뷰 전환 — 시안 91×32 버튼 두 개 · gap 8 (pad 0/12 · 아이콘 14×14 · 라벨 45×21) ── */
 .view-tabs  { display:flex; align-items:center; gap:8px; }
-.view-tab i { font-size:14px; }
-/* 시안은 두 탭이 똑같이 91×32 (묶음 190×32) 다. 라벨이 시안보다 짧아 80/70.5 로 어긋나던 것을
-   시안 실측값으로 고정한다. 위 .rp-topbar .ds-btn{min-width:0} 을 이기려면 같은 (0,2,0) 이어야 한다. */
-.rp-topbar .view-tab { min-width:91px; }
+/* 시안 아이콘 칸(labour-day · layout-01)은 둘 다 14×14 인데 글리프 폭은 12.25/14 로 제각각이라
+   칸을 14 로 못박아 글자 시작을 시안(x1748 · x1847)에 맞춘다. */
+.view-tab i { font-size:14px; display:inline-block; width:14px; text-align:center; }
+/* 시안은 두 탭이 똑같이 91×32 (묶음 190×32) 다 — pad 12 + 아이콘 14 + gap 8 + 글자 45 + pad 12 = 91.
+   시안 프레임에는 stroke 가 없으므로 전역 .ds-btn 의 1px 테두리도 폭에서 뺀다
+   (위 .rp-topbar 규칙이 색만 투명으로 만들어 2px 이 남아 있었다).
+   위 .rp-topbar .ds-btn{min-width:0} 을 이기려면 같은 (0,2,0) 이어야 한다. */
+.rp-topbar .view-tab { min-width:91px; border-width:0; }
 /* 시안(243:53 · 243:433)에는 활성 뷰 구분이 없다 — 테두리는 시안대로 지우고(위 .rp-topbar 규칙),
    어느 뷰인지 알 수 없어지지 않도록 배경·글자색만 남긴다. 디자이너 확인 대상. */
 .view-tab.active,
@@ -302,13 +313,13 @@ window.HELP_TOUR_STEPS = [
   <div class="view-tabs">
     <a class="ds-btn view-tab {{ $view === 'calendar' ? 'active' : '' }}"
        href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'calendar']) }}">
-      {{-- 시안 라벨은 '캘린더뷰' 지만 화면 낱말 '캘린더' 를 잃지 않도록 그대로 둔다 --}}
-      <i class="fa-regular fa-calendar"></i> 캘린더
+      {{-- 시안(243:53 · 243:433) 라벨 그대로 '캘린더뷰' — 45×21 · 13/500 · 글자 x1748 --}}
+      <i class="fa-regular fa-calendar"></i> 캘린더뷰
     </a>
     <a class="ds-btn view-tab {{ $view === 'list' ? 'active' : '' }}"
        href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}">
-      {{-- 시안 라벨은 '테이블뷰' 지만 화면 낱말 '목록' 을 잃지 않도록 그대로 둔다 --}}
-      <i class="fa-solid fa-list"></i> 목록
+      {{-- 시안(243:53 · 243:433) 라벨 그대로 '테이블뷰' — 45×21 · 13/500 · 글자 x1847 --}}
+      <i class="fa-solid fa-list"></i> 테이블뷰
     </a>
   </div>
 </div>

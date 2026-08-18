@@ -2,8 +2,9 @@
 @extends('layouts.app')
 
 @section('title', '세금계산서 발행')
-@section('page-title', '세금계산서 발행')
-@section('breadcrumb', '홈 / 세금계산서 발행')
+{{-- 시안 324:1720 — 제목 '전자세금계산서'(16/700 x367), 빵부스러기는 '홈 - 전자세금계산서'(구분자가 '-' 다) --}}
+@section('page-title', '전자세금계산서')
+@section('breadcrumb', '홈 - 전자세금계산서')
 
 @section('help-title', '세금계산서 도움말')
 @section('help-content')
@@ -334,23 +335,24 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 @section('content')
 
 {{-- 요약 4칸 — 시안 Frame 48101550 은 흰 카드 한 장 안에 칸 넷을 세로 구분선으로 나눈다.
-     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다. --}}
+     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다.
+     빈값 기호는 시안이 하이픈 '-' 이다(324:1720 잔여 포인트 x560 7×22 · 14/700). em dash 가 아니다. --}}
 <div class="ti-summary">
   <div class="sum-card blue">
     <div class="sc-icon"><i class="bx bx-wallet"></i></div>
-    <div class="sc-text"><div class="sc-label">잔여 포인트</div><div class="sc-val" id="balance-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">잔여 포인트</div><div class="sc-val" id="balance-val">-</div></div>
   </div>
   <div class="sum-card green">
     <div class="sc-icon"><i class="bx bx-file"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 발행</div><div class="sc-val" id="month-count-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 발행</div><div class="sc-val" id="month-count-val">-</div></div>
   </div>
   <div class="sum-card red">
     <div class="sc-icon"><i class="bx bx-x-circle"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 취소</div><div class="sc-val" id="month-cancel-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 취소</div><div class="sc-val" id="month-cancel-val">-</div></div>
   </div>
   <div class="sum-card gray">
     <div class="sc-icon"><i class="bx bx-won"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">—</div></div>
+    <div class="sc-text"><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">-</div></div>
   </div>
 </div>
 
@@ -384,7 +386,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         </div>
       </div>
       <div class="ds-filter-actions">
-        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+        {{-- 시안 324:1720 x1878 — 51장 전수에서 이 버튼의 낱말은 예외 없이 '검색' 이다 --}}
+        <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
       </div>
     </div>
 
@@ -844,7 +847,7 @@ async function loadBalance() {
     const res  = await fetch(`${TI_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
     const data = await res.json();
     document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '—';
+      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '-';
   } catch { document.getElementById('balance-val').textContent = '오류'; }
 }
 

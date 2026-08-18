@@ -11,16 +11,20 @@
   @media(max-width:900px){ .order-grid { grid-template-columns:1fr; } }
 
   /* 시안 148:6407 — 제목 줄(1536×33)과 세그먼트 컨트롤이 한 줄.
-     탭 바는 스크립트가 제목 줄 뒤에 끼워 넣으므로 흐름에서 빼 제목 줄 오른쪽 끝에 겹쳐 놓는다. */
+     탭 바는 스크립트가 제목 줄 뒤에 끼워 넣으므로 흐름에서 빼 제목 줄 오른쪽 끝에 겹쳐 놓는다.
+     시안에서 이 줄은 바깥 카드(1568 · pad 16) 안이라 x352 에서 시작해 x1888 에서 끝난다(Frame 48101627).
+     우리 상세는 그 바깥 카드가 없어(개발 몫) 줄이 컨테이너 끝 336/1904 에 붙어 있었다 —
+     좌우 16 을 넣어 시안 x 를 맞춘다. 아래 진행 스텝·카드는 건드리지 않으려고 이 줄에만 준다. */
   .od-detail { position: relative; }
   .od-title-row {
     display:flex; align-items:center; gap:12px;
-    min-height:33px; margin:0 0 12px; padding-right:576px;
+    min-height:33px; margin:0 0 12px; padding-left:16px; padding-right:592px;
   }
 
   /* 상세 내부 탭(스크립트로 카드 그룹핑) — 시안 세그먼트 트랙 564×33 · r8 · pad 2 · bg gray-200 */
   .od-tabs {
-    position:absolute; top:0; right:0; z-index:2;
+    /* 시안 Frame 48101484 — 트랙 564×33 이 x1324 에서 시작해 오른끝 1888. 컨테이너 오른끝 1904 에서 16 안쪽 */
+    position:absolute; top:0; right:16px; z-index:2;
     display:flex; flex-wrap:nowrap; gap:0;
     width:564px; max-width:100%; height:33px; padding:2px; margin:0;
     border:none; border-radius:var(--radius); background:var(--gray-200);
@@ -35,8 +39,8 @@
   .od-tab:hover { color:var(--gray-1000); }
   .od-tab.active { background:var(--gray-0); color:var(--gray-1000); border-bottom-color:transparent; }
   @media(max-width:1200px){
-    .od-title-row { padding-right:0; }
-    .od-tabs { position:static; width:100%; margin:0 0 12px; }
+    .od-title-row { padding-left:0; padding-right:0; }
+    .od-tabs { position:static; right:auto; width:100%; margin:0 0 12px; }
   }
 
   /* 탭 사용 시 카드는 가로 1행 — 시안 3열(504×3) / 2열(762×2), gap 12 */

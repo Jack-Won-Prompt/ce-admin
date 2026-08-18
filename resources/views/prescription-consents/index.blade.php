@@ -3,10 +3,17 @@
 
 @section('title', '위임장 서명')
 @section('page-title', '위임장 서명')
-@section('breadcrumb', '홈 / 서류ㆍ동의 / 위임장 서명')
+{{-- 시안(266:66) Frame 48101452 — 「홈 - 위임장 서명」 두 마디.
+     홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
+     구분자는 이 @section 안에 있어 이 파일이 고칠 자리다(전역 app.blade.php 에는 규칙이 없다).
+     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙는다 — 마디를 나눠 gap 8 을 준다.
+     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다. --}}
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>위임장 서명</span></span>@endsection
 
 @push('styles')
 <style>
+  /* 빵부스러기 마디 사이 8 — 시안 266:66 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
+  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
   /* 검색 카드 3필드 — 이 시안(266:66)은 9열 균등 분배가 아니다.
      Frame 48101591/48101593/48101592 실측: 검색어 295 · 기간(서명일) 295 · 서명 여부 140,
      필드 간격 16, 세 필드가 왼쪽에 몰리고 필드 영역(1384)의 오른쪽은 빈칸으로 남는다.
@@ -104,9 +111,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('date_from') || request('date_to') || request('signed_only'))
-      <a href="{{ route('prescription-consents.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안(266:66) Frame 48101589 — 초기화 60×32 x1760 · 검색 60×32 x1828 · gap 8, 초기화는 늘 있다.
+         조건을 걷어낸다. 같은 라우트로 되돌아가는 링크라 조건 없이도 하는 일이 같다 --}}
+    <a href="{{ route('prescription-consents.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
   </div>
 </form>

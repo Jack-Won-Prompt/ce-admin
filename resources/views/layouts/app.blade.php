@@ -145,6 +145,9 @@
       text-decoration: none;
       flex-shrink: 0;
     }
+    /* 브랜드 링크는 색을 안 줘 부트스트랩 기본 링크색(DS 램프 26색 밖)을 물려받고 있었다.
+       시안(174:955) 로고타입은 gray-1000 이다. */
+    .app-brand > a { color: var(--gray-1000); }
     /* 시안은 로고 이미지에 exposure -1 이 걸려 거의 검정(rgb 14,14,14)으로 나온다.
        원본 PNG 는 불투명부가 전부 rgb 111 단색이라 brightness .127 이면 111×.127=14.1 → 14 로 떨어진다.
        (에셋을 exposure 반영해 다시 내려받으면 이 filter 는 지운다) */
@@ -471,7 +474,9 @@
        시안 148:5526 은 안내문 묶음과 버튼 묶음 사이 12, 버튼끼리 8 이다. */
     .ds-grid-bar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .ds-grid-total { font-size: 16px; font-weight: 700; line-height: 26px; color: var(--gray-800); }
-    .ds-grid-total b { color: var(--primary); }
+    /* b 는 브라우저 기본이 bolder 라 부모 700 위에서 900 으로 풀린다.
+       시안(114:4778)은 '전체'·숫자·'건' 이 모두 16/700 이다. 굵기를 못박는다. */
+    .ds-grid-total b { font-weight: 700; color: var(--primary); }
     /* '전체 N건' 과 '선택 N건' 사이 4×4 구분점 (148:5526 Rectangle 10 · r999 · gray-300) */
     .ds-grid-sel { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
     .ds-grid-sel b { color: var(--primary-400); }
@@ -529,7 +534,11 @@
     .pnl-tab {
       height: 44px; padding: 0 8px; border: none; background: none; cursor: pointer;
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 13px; font-weight: 500; line-height: 21px; color: var(--text-muted);
+      font-size: 13px; font-weight: 500; line-height: 21px;
+      /* 시안(114:4778)의 비활성 탭 '상세 내용' 은 gray-600 이다. gray-400 은 흰 배경
+         대비 2.70:1 로 읽기 어렵다 — gray-600 은 5.32:1. --text-muted 토큰 자체는
+         다른 화면도 쓰므로 건드리지 않고 이 규칙만 옮긴다. */
+      color: var(--gray-600);
       border-bottom: 1px solid transparent; margin-bottom: -1px;
     }
     .pnl-tab:hover  { color: var(--primary); }
@@ -1659,7 +1668,8 @@
         <div class="navbar-brand-area">
           <div class="page-title">@yield('page-title', '대시보드')</div>
           <div class="page-breadcrumb">
-            <i class="bx bx-home-alt-2" style="font-size:11px;margin-right:3px;"></i>
+            {{-- 시안(174:955)의 빵부스러기는 아이콘 없이 '홈' 이 제목과 같은 x336 에서
+                 시작한다. 집 아이콘은 낱말이 아니라 장식이라 걷어냈다. --}}
             {!! $__env->yieldContent('breadcrumb', '홈') !!}
           </div>
         </div>

@@ -257,23 +257,24 @@
 
 @section('content')
 
-{{-- 요약 카드 — 시안 324:4656 Frame 48101550: 한 장짜리 카드, 열 4개 가운데 정렬, 열 사이 세로선 --}}
+{{-- 요약 카드 — 시안 324:4656 Frame 48101550: 한 장짜리 카드, 열 4개 가운데 정렬, 열 사이 세로선.
+     빈값 기호는 시안이 하이픈 '-' 이다(잔여 포인트 x560 7×22 · 14/700). em dash 가 아니다. --}}
 <div class="cb-summary">
   <div class="sum-card blue">
     <div class="sc-label"><span class="sc-icon"><i class="bx bx-wallet"></i></span>잔여 포인트</div>
-    <div class="sc-val" id="balance-val">—</div>
+    <div class="sc-val" id="balance-val">-</div>
   </div>
   <div class="sum-card green">
     <div class="sc-label"><span class="sc-icon"><i class="bx bx-receipt"></i></span>이번 달 발행</div>
-    <div class="sc-val" id="month-count-val">—</div>
+    <div class="sc-val" id="month-count-val">-</div>
   </div>
   <div class="sum-card red">
     <div class="sc-label"><span class="sc-icon"><i class="bx bx-x-circle"></i></span>이번 달 취소</div>
-    <div class="sc-val" id="month-cancel-val">—</div>
+    <div class="sc-val" id="month-cancel-val">-</div>
   </div>
   <div class="sum-card gray">
     <div class="sc-label"><span class="sc-icon"><i class="bx bx-won"></i></span>이번 달 합계금액</div>
-    <div class="sc-val" id="month-amount-val">—</div>
+    <div class="sc-val" id="month-amount-val">-</div>
   </div>
 </div>
 
@@ -547,7 +548,8 @@
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [
-      { header: '거래일시', name: 'tradeDt',   width: 150, sortable: true },
+      // 시안 324:4656 x479 머리글은 '거래 일시' 다 — 띄어쓰기가 있다(name·width 는 그대로)
+      { header: '거래 일시', name: 'tradeDt',  width: 150, sortable: true },
       { header: '번호',     name: 'num',       width: 170 },
       { header: '고객명',   name: 'customer',  width: 110, sortable: true },
       { header: '합계금액', name: 'amount',    width: 110, editor: 'number' },
@@ -661,7 +663,7 @@ async function loadBalance() {
     const res  = await fetch(`${CB_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
     const data = await res.json();
     document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '—';
+      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '-';
   } catch { document.getElementById('balance-val').textContent = '오류'; }
 }
 

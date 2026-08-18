@@ -190,9 +190,10 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-      @if(request()->hasAny(['search', 'date_from', 'date_to']))
-        <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
-      @endif
+      {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다. 검색 조건이 있을 때만
+           내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
+           (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
+      <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
            올릴 권한이 없는 사람에게는 보이지 않아야 하므로 @perm 을 그대로 둔다. --}}
@@ -270,7 +271,9 @@ window.HELP_TOUR_STEPS = [
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
-      { header: 'Withworks SO',  name: 'so_no',      width: 130, sortable: true },
+      // 표기는 시안 128:1744 대로 'WithWorks So'. 요청서에 이 낱말이 없어 시안이 기준이다.
+      // name·width·sortable 은 그대로 둔다(엑셀 머리글도 이 header 를 그대로 쓴다).
+      { header: 'WithWorks So',  name: 'so_no',      width: 130, sortable: true },
       { header: '검수 담당자',   name: 'assignee',   width: 90,  align: 'center', sortable: true },
       { header: '접수일시',      name: 'created',    width: 130, align: 'center', sortable: true },
     ],

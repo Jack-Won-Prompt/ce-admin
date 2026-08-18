@@ -1,11 +1,14 @@
 {{-- resources/views/orders/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '주문현황')
-@section('page-title', '주문현황')
+{{-- 화면 이름 — 시안 148:5526 은 제목도 빵부스러기도 「주문 관리」다(제목 x336 16/700 #333940).
+     사이드바 메뉴 이름만 「주문현황」으로 남는다 — 그 위에 「주문 등록」이 따로 있어
+     이름이 겹치지 않게 둔 것이고(app.blade.php 1317행 주석), 그 파일은 이번 배정이 아니다. --}}
+@section('title', '주문 관리')
+@section('page-title', '주문 관리')
 {{-- 브레드크럼 — Figma 148:5526 Frame 48101452: 홈 · - · 주문 관리, gap 8 (12px/500 lh14)
      @section 의 인자형(@section('x','...'))은 Laravel 이 e() 로 escape 한다 → 블록형으로 쓴다. --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문현황</span></span>@endsection
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문 관리</span></span>@endsection
 
 @push('scripts')
 <script>
@@ -17,7 +20,7 @@ window.HELP_TOUR_STEPS = [
 </script>
 @endpush
 
-@section('help-title', '주문현황 도움말')
+@section('help-title', '주문 관리 도움말')
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
@@ -152,9 +155,10 @@ window.HELP_TOUR_STEPS = [
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('date'))
-      <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 초기화 — 시안 148:5526 은 검색 왼쪽에 늘 세워 둔다. 검색어·등록일자가 있을 때만
+         내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
+         (지금 보고 있는 상태 칩·거래·처방유형은 유지). --}}
+    <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌다.
          data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}

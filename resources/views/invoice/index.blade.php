@@ -3,7 +3,8 @@
 
 @section('title', '계산서 발행')
 @section('page-title', '계산서 발행')
-@section('breadcrumb', '홈 / 계산서 발행')
+{{-- 시안 282:934 빵부스러기는 '홈 - 계산서 발행' 이다(구분자 하이픈). --}}
+@section('breadcrumb', '홈 - 계산서 발행')
 
 @push('styles')
 <style>
@@ -250,9 +251,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('date_from') || request('date_to'))
-      <a href="{{ route('invoice.index', ['tab'=>$tab]) }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안 282:934 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+         상태 칩(tab)만 유지한 채 같은 라우트로 되돌아가는 링크라 조건만 걷었다. --}}
+    <a href="{{ route('invoice.index', ['tab'=>$tab]) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
          data-ce-tab 이 붙어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
