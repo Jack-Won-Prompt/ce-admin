@@ -3579,6 +3579,8 @@ async function rxTplSave() {
    파일을 큰 창으로 띄우되 화면은 계속 쓸 수 있어야 한다. 덮개를 두지 않고
    창만 띄운다 — 창 밖은 그대로 눌리고 입력된다. */
 let _bvZoom = 1, _bvRot = 0;
+/* 끌어 옮긴 거리. 창을 옮기는 것과 그림을 옮기는 것은 다른 일이라 따로 센다. */
+let _bvTx = 0, _bvTy = 0;
 let _bvBox  = null;   // 옮기거나 크기를 바꾼 위치를 기억해 다시 열 때 그대로 쓴다
 
 function _bvEl(id) { return document.getElementById(id); }
@@ -3642,7 +3644,8 @@ function _bvApplyBox(box) {
 function _bvApplyImg() {
   const img = _bvEl('bvImg');
   if (!img) return;
-  img.style.transform = `rotate(${_bvRot}deg) scale(${_bvZoom})`;
+  // 옮긴 뒤에 돌리고 키운다 — 순서를 바꾸면 키울수록 옮긴 거리까지 함께 늘어난다
+  img.style.transform = `translate(${_bvTx}px, ${_bvTy}px) rotate(${_bvRot}deg) scale(${_bvZoom})`;
   _bvEl('bvZoomLabel').textContent = Math.round(_bvZoom * 100) + '%';
 }
 
@@ -3655,7 +3658,7 @@ function bvRotate() { _bvRot = (_bvRot + 90) % 360; _bvApplyImg(); }
 
 /* 창 크기에 맞춰 되돌린다 */
 function bvFit() {
-  _bvZoom = 1; _bvRot = 0;
+  _bvZoom = 1; _bvRot = 0; _bvTx = 0; _bvTy = 0;
   const img  = _bvEl('bvImg');
   const body = _bvEl('bigViewerBody');
   if (img) {
@@ -3711,6 +3714,67 @@ function bvFit() {
   window.addEventListener('resize', () => {
     if (win.style.display !== 'none' && _bvBox) _bvApplyBox(_bvBox);
   });
+})();
+
+/* 큰 창 안에서 그림을 끌어 옮기고 휠로 키운다 — 작은 뷰어와 같은 손놀림이다.
+   크게 본다는 것은 대개 어느 한 곳을 들여다본다는 뜻인데, 지금까지는 키우기만 하고
+   그 자리로 옮길 수가 없어 가운데만 볼 수 있었다.
+   PDF 는 건드리지 않는다 — 브라우저의 PDF 뷰어가 제 몫으로 한다. */
+(function () {
+  const body = document.getElementById('bigViewerBody');
+  const img  = document.getElementById('bvImg');
+  if (!body || !img) return;
+
+  let dragging = false, sx = 0, sy = 0, startX = 0, startY = 0;
+
+  img.addEventListener('pointerdown', (e) => {
+    if (img.style.display === 'none') return;
+    dragging = true;
+    sx = e.clientX; sy = e.clientY;
+    startX = _bvTx;  startY = _bvTy;
+    img.setPointerCapture(e.pointerId);
+    img.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  img.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    _bvTx = startX + (e.clientX - sx);
+    _bvTy = startY + (e.clientY - sy);
+    _bvApplyImg();
+  });
+
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    img.style.cursor = 'grab';
+    try { img.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  img.addEventListener('pointerup', stop);
+  img.addEventListener('pointercancel', stop);
+
+  // 두 번 누르면 옮긴 것만 되돌린다(배율은 그대로 둔다 — 다시 키우게 하지 않는다)
+  img.addEventListener('dblclick', () => { _bvTx = 0; _bvTy = 0; _bvApplyImg(); });
+
+  /* 휠은 커서가 가리키는 곳을 기준으로 키운다. 가운데 기준으로 키우면 보려던 곳이
+     화면 밖으로 밀려나 다시 끌어와야 한다. */
+  body.addEventListener('wheel', (e) => {
+    if (img.style.display === 'none') return;   // PDF 일 때는 그대로 둔다
+    e.preventDefault();
+
+    const before = _bvZoom;
+    const after  = Math.min(5, Math.max(0.2, before * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    if (after === before) return;
+
+    const rect = body.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width  / 2;
+    const cy = e.clientY - rect.top  - rect.height / 2;
+    const k  = after / before;
+    _bvTx = cx + (_bvTx - cx) * k;
+    _bvTy = cy + (_bvTy - cy) * k;
+    _bvZoom = after;
+    _bvApplyImg();
+  }, { passive: false });
 })();
 
 function switchViewerDoc(el) {
