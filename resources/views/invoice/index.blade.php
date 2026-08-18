@@ -220,21 +220,25 @@
 
 {{-- ── 상태 칩 — Figma 282:934: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 ──
      요약 카드 5개는 시안에 없다. 건수는 칩·결과바로, 설명 문구는 칩 줄 끝 안내로 옮겼다. --}}
-<div class="ds-chips">
-  @foreach($statusFilterTabs as $key => [$label, $count, $color])
-    <a href="{{ route('invoice.index', array_merge(request()->except('tab','page'), ['tab'=>$key])) }}"
-       class="ds-chip {{ $tab === $key ? 'active' : '' }}">
-      {{ $label }}{{ $statusChipNotes[$key] ?? '' }}
-      @if($count > 0)<span class="ds-chip-count">{{ $count }}</span>@endif
-    </a>
-  @endforeach
-  <span class="inv-chip-note">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</span>
-</div>
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+<div class="inv-chip-note" style="margin:0 0 8px;">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</div>
+
 
 {{-- ── 검색 필터 — Figma 282:934: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 ── --}}
 <form method="GET" action="{{ route('invoice.index') }}" class="ds-filter-card">
-  <input type="hidden" name="tab" value="{{ $tab }}">
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 발행 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">발행 상태</label>
+      <select name="tab" class="form-control form-select" onchange="this.form.submit()">
+        @foreach($statusFilterTabs as $key => [$label, $count, $color])
+          <option value="{{ $key }}" {{ $tab === $key ? 'selected' : '' }}>
+            {{ $label }}{{ $statusChipNotes[$key] ?? '' }}@if($count > 0) ({{ $count }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"

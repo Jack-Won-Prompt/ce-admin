@@ -182,29 +182,27 @@
 
 {{-- ── 청구 상태 칩 ── --}}
 {{-- Figma 282:53: h31 · r999 · pad 6/10 · 12px/700 · gap 4, 건수 배지 16×16 정원 10px/700 --}}
-<div class="ds-chips">
-  <a href="{{ route('nhis.index', array_merge(request()->except('nhis_status','page'), [])) }}"
-     class="ds-chip {{ !$curNhisStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
-  </a>
-  @foreach($nhisStatusLabels as $key => $statusInfo)
-    <a href="{{ route('nhis.index', array_merge(request()->except('nhis_status','page'), ['nhis_status' => $key])) }}"
-       class="ds-chip {{ $curNhisStatus === $key ? 'active' : '' }}">
-      {{ $statusInfo[0] }}
-      @if(($counts[$key] ?? 0) > 0)
-        <span class="ds-chip-count">{{ $counts[$key] }}</span>
-      @endif
-    </a>
-  @endforeach
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
-</div>
 
 {{-- ── 검색 필터 ── --}}
 {{-- Figma 282:53: 흰 카드(r12 · pad 12/16), 검색어 2열(295px) · 기간 2열(295px),
      버튼은 우측 하단에 초기화 → 검색 순서 --}}
 <form method="GET" action="{{ route('nhis.index') }}" class="ds-filter-card">
-  @if($curNhisStatus)<input type="hidden" name="nhis_status" value="{{ $curNhisStatus }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">청구 상태</label>
+      <select name="nhis_status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $counts->sum() }})</option>
+        @foreach($nhisStatusLabels as $key => $statusInfo)
+          <option value="{{ $key }}" {{ $curNhisStatus === $key ? 'selected' : '' }}>
+            {{ $statusInfo[0] }}@if(($counts[$key] ?? 0) > 0) ({{ $counts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"

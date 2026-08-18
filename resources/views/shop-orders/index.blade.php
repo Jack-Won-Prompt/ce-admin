@@ -39,21 +39,26 @@
   $allCount = $statusCounts->sum();
   $cur = request('status', '');
 @endphp
-<div class="ds-chips">
-  @foreach($statuses as $key => $label)
-    @php $isActive = ($key === 'all') ? !$cur : ($cur === $key); @endphp
-    <a href="{{ route('shop-orders.index', array_merge(request()->except('status','page'), $key !== 'all' ? ['status'=>$key] : [])) }}"
-       class="ds-chip {{ $isActive ? 'active' : '' }}">
-      {{ $label }}
-      <span class="ds-chip-count">{{ $key==='all' ? $allCount : ($statusCounts[$key] ?? 0) }}</span>
-    </a>
-  @endforeach
-</div>
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+
 
 {{-- 검색 필터 — 흰 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래, 검색어 2열 --}}
 <form method="GET" action="{{ route('shop-orders.index') }}" class="ds-filter-card">
   @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        @foreach($statuses as $key => $label)
+          @php $sel = ($key === 'all') ? !$cur : ($cur === $key); @endphp
+          <option value="{{ $key === 'all' ? '' : $key }}" {{ $sel ? 'selected' : '' }}>
+            {{ $label }} ({{ $key === 'all' ? $allCount : ($statusCounts[$key] ?? 0) }})
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <div class="search-wrap">

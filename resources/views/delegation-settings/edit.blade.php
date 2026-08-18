@@ -44,7 +44,7 @@
 
   <div class="ds-note">
     <i class="bx bx-info-circle"></i> 여기서 설정한 값은 <b>요양비 지급청구 위임장 PDF</b>의 ② 준요양기관 · ③ 수령계좌 ·
-    ⑤ 위임기간과 서명 위치에 자동으로 반영됩니다. (기존 <code>.env</code> 설정 대신 이 값이 우선 적용됩니다.)
+    ⑤ 위임기간과 서명 위치에 자동으로 반영됩니다.
   </div>
 
   <form method="POST" action="{{ route('delegation-settings.update') }}">
