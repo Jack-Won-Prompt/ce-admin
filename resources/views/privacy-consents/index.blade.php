@@ -9,12 +9,9 @@
   /* 결과바 '선택 N건' — 전역에 없어 화면마다 정의한다.
      Figma 342:4037: 13px/500 · lh21 · grayscale/600, 숫자만 primary/400 */
 
-  /* 검색 카드 9열 그리드 — 이 시안(342:4037)의 필드 사이 간격은 16 이다.
-     전역 .ds-filter-fields 는 gap 12 라 열폭이 143.1(span-2 = 298.2)로 나온다.
-     16 으로 두면 열폭 (1384 - 16×8) / 9 = 139.6 → span-2 = 295.1 이 되어
-     시안 검색어 295, 기간 묶음 왼끝 311 · 오른끝 606(구현 311.1 ~ 606.2)이 소수점까지 맞는다.
-     전역을 바꾸면 다른 7개 화면에 함께 번지므로 이 화면에서만 덮는다(globalCssNeeded 참고). */
-  .ds-filter-card .ds-filter-fields { gap: 16px; }
+  /* 검색 카드 9열 그리드의 열 사이 16 은 이제 전역 .ds-filter-fields 가 갖는다
+     (시안 전수 27장이 16, 표준 레이아웃 두 장 포함 — 여기서 덮을 필요가 없어졌다).
+     열폭 (1384 - 16×8) / 9 = 139.6 → span-2 = 295.1 로 시안 검색어·기간 295 와 맞는다. */
 
   /* 패널 탭(조회 결과 / 상세 내용) — Figma 342:4037: 카드 안 상단 h44 · pad 0/16 · 하단 1px --border.
      비활성 탭 글자색은 시안이 #656C74(gray-600)인데 전역 .pnl-tab 은 var(--text-muted)(gray-400 #999EA4)라
@@ -145,17 +142,22 @@
         <option value="stoma"    {{ $curT === 'stoma'    ? 'selected' : '' }}>장루 ({{ $counts['stoma'] }})</option>
       </select>
     </div>
+    {{-- 시안 342:4037 Frame 48101591 — 라벨은 '검색어' 한 마디고, 안내는 입력 안
+         placeholder('성명ㆍ연락처ㆍ이메일')가 맡는다. 295×61. --}}
     <div class="ds-filter-field span-2">
-      <label class="ds-field-label">검색어 (성명/연락처/이메일)</label>
+      <label class="ds-field-label">검색어</label>
       <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="성명ㆍ연락처ㆍ이메일">
     </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">시작일</label>
-      <input type="date" name="from" value="{{ $from }}" class="form-control">
-    </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">종료일</label>
-      <input type="date" name="to" value="{{ $to }}" class="form-control">
+    {{-- 시안 342:4037 Frame 48101593 — 기간은 두 칸이 아니라 한 칸(295×61)이다.
+         안쪽 Frame 48101490 이 [날짜 135] ~ [날짜 135] 로 gap 8 씩 벌어진다.
+         name 은 from·to 그대로라 컨트롤러 질의는 손대지 않는다. --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="from" value="{{ $from }}" class="form-control">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="to" value="{{ $to }}" class="form-control">
+      </div>
     </div>
   </div>
   <div class="ds-filter-actions">
