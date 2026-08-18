@@ -437,7 +437,9 @@
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
     .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
-    .ds-field-sep { color: var(--gray-400); font-size: 13px; flex-shrink: 0; }
+    /* 기간 두 입력 사이 '~' — 시안 31장이 예외 없이 13/400 · #101317(gray-1000)이다
+       (표준 레이아웃 두 장 포함). gray-400 이던 것을 바로잡는다. */
+    .ds-field-sep { color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
     .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0;
                          flex-wrap: wrap; row-gap: 8px; }
@@ -1290,20 +1292,13 @@
         </div>
         @endperm
         @endif
-        {{-- 주문이 지금 어디까지 왔는지 보는 자리. 「주문 등록」과 이름이 겹치지 않게
-             「주문현황」으로 둔다 — 앞의 것은 만드는 자리, 이것은 보는 자리다. --}}
-        @if($vis('orders'))
-        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문현황">
-            @dsicon('handle-with-care', 'ds-icon menu-icon')
-            <span>주문현황</span>
-            @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
-            @if($orderCount > 0)
-              <span class="menu-badge blue">{{ $orderCount }}</span>
-            @endif
-          </a>
-        </div>
-        @endif
+        {{-- 1차 요청 10쪽이 이 하위그룹의 차례를 적었다 —
+             주문 / 교환·반품·취소 / CE샘플판매주문 / 주문 관리 / 현황.
+             그 차례대로 늘어놓는다. 「주문 관리」는 orders.index 다(시안 148:5526 의
+             빵부스러기가 이 화면을 「주문 관리」로 적는다) — 메뉴 이름은
+             「주문 등록」과 겹치지 않게 「주문현황」 그대로 두고 자리만 옮겼다.
+             「현황」(요청 29·30쪽 현황 Dashboard)은 아직 화면이 없어 만들지 않는다.
+             재구매 관리·CE샵 주문은 요청 목록에 없어 뒤에 그대로 남긴다. --}}
         {{-- 1차 요청 CR-MNU-04 --}}
         @if($vis('order-returns'))
         <div class="menu-item {{ request()->routeIs('order-returns*') ? 'active' : '' }}">
@@ -1324,6 +1319,20 @@
         <div class="menu-item {{ request()->routeIs('sample-orders*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="add-package" href="{{ route('sample-orders.index') }}" data-title="CE 샘플주문">
             @dsicon('add-package', 'ds-icon menu-icon')<span>CE 샘플주문</span>
+          </a>
+        </div>
+        @endif
+        {{-- 주문이 지금 어디까지 왔는지 보는 자리. 「주문 등록」과 이름이 겹치지 않게
+             「주문현황」으로 둔다 — 앞의 것은 만드는 자리, 이것은 보는 자리다. --}}
+        @if($vis('orders'))
+        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문현황">
+            @dsicon('handle-with-care', 'ds-icon menu-icon')
+            <span>주문현황</span>
+            @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
+            @if($orderCount > 0)
+              <span class="menu-badge blue">{{ $orderCount }}</span>
+            @endif
           </a>
         </div>
         @endif
