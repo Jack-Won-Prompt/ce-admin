@@ -225,7 +225,7 @@
     <div class="ds-filter-fields">
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">거래처 검색</label>
-        <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="이름 · 전화번호">
+        <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="이름ㆍ전화번호">
       </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">번호</label>

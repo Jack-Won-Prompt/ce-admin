@@ -153,7 +153,10 @@
       <div class="ds-filter-field">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
-               placeholder="처방번호 · 환자명 · 병원명" value="{{ request('search') }}">
+               {{-- 시안 128:1744 는 '이름 또는 전화번호' 인데 컨트롤러는 rx_number·patient_name_ocr·
+                    hospital_name 셋을 건다(PrescriptionController.php:68~70). 시안 문구를 그대로 쓰면
+                    실제로 찾아지는 것과 어긋나므로 낱말은 두고 구분자만 시안 어법(ㆍ)에 맞춘다. --}}
+               placeholder="처방번호ㆍ환자명ㆍ병원명" value="{{ request('search') }}">
       </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">기간</label>

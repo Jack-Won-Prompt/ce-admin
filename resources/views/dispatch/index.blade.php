@@ -283,7 +283,7 @@
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
-               placeholder="주문번호 · 환자명 · 발행번호" value="{{ $search }}">
+               placeholder="주문번호ㆍ환자명ㆍ발행번호" value="{{ $search }}">
       </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">기간</label>

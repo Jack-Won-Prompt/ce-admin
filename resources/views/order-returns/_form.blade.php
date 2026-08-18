@@ -63,7 +63,7 @@
     <div class="rto-sec-hd"><span class="step">1</span> 원 주문</div>
     <div class="rto-find">
       <input type="text" id="rtoQ" class="form-control"
-             placeholder="주문번호 · 환자명 · 제품명 · 판매주문번호">
+             placeholder="주문번호ㆍ환자명ㆍ제품명ㆍ판매주문번호">
       <button type="button" class="ds-btn ds-btn-primary" onclick="rtoFind()">조회</button>
       <span class="rto-note" id="rtoFindNote"></span>
     </div>

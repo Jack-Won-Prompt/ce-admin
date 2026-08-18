@@ -223,7 +223,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호 · 환자명">
+             placeholder="주문번호ㆍ환자명">
     </div>
     {{-- 2차 요청(R2-09) — 주민번호는 마스킹된 값에서 부분검색한다. 평문은 화면에 내려보내지 않는다. --}}
     <div class="ds-filter-field">

@@ -51,7 +51,7 @@
     <div class="ds-filter-field span-4">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ $q }}" class="form-control"
-             placeholder="{{ implode(' · ', array_slice(array_column($cat['fields'], 'label'), 0, 4)) }}">
+             placeholder="{{ implode('ㆍ', array_slice(array_column($cat['fields'], 'label'), 0, 4)) }}">
     </div>
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">사용 여부</label>
