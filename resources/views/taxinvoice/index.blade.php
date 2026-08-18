@@ -48,32 +48,6 @@
 /* 결과바 '선택 N건'(.ds-grid-sel)·'전체 N건'(.ds-grid-total)·안내문(.ds-grid-hint) 은
    전역(layouts/app.blade.php 539~566)이 이미 갖고 있다. 이 화면은 아무것도 다시 정의하지 않는다. */
 
-/* ── 요약 카드 ──
-   시안 Frame 48101550 — 흰 카드 한 장 1568×75 · r12 · pad 12/0 · 가로.
-   안에 4칸이 각 392×51(pad 4/12 · gap 2)로 균등하게 들어가고 칸 사이에 세로 구분선 1px --gray-200.
-   칸 높이 51 = pad 4 + 43 + pad 4 이고, 43 은 라벨 19 + gap 2 + 값 22 이다(아이콘 36 이 그 안에 든다). */
-.ti-summary { display:flex; align-items:stretch; background:var(--gray-0); border-radius:12px; padding:12px 0; }
-.sum-card { flex:1 1 0; min-width:0; padding:4px 12px; display:flex; align-items:center; justify-content:center; gap:12px; }
-.sum-card + .sum-card { border-left:1px solid var(--gray-200); }
-/* 좁은 폭에서 2×2 로 접는다.
-   이 묶음은 반드시 .sum-card 뒤에 와야 한다 — 앞에 두면 뒤따르는 flex 단축값이
-   flex-basis 를 0 으로 되돌려 접기가 죽는다(860 폭에서 네 칸이 123px 까지 눌렸다). */
-@media(max-width:900px){
-  .ti-summary { flex-wrap:wrap; }
-  .sum-card { flex:1 1 40%; }
-  .sum-card + .sum-card       { border-left:none; }
-  .sum-card:nth-child(2n)     { border-left:1px solid var(--gray-200); }
-}
-.sum-card .sc-icon { width:36px; height:36px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.sum-card .sc-text  { min-width:0; text-align:center; }
-.sum-card .sc-label { font-size:12px; font-weight:700; line-height:19px; color:var(--gray-800); margin-bottom:2px; }
-.sum-card .sc-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
-/* 시안에 초록·주황이 없다. 네 칸을 primary 램프 두 단계 + alert + gray 로 나눈다 */
-.sum-card.blue  .sc-icon { background:var(--primary-50);  color:var(--primary-500); }
-.sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
-.sum-card.red   .sc-icon { background:var(--alert-50);    color:var(--alert-500); }
-.sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
-
 /* ── 발행 폼 카드 ──
    시안 324:2797 은 폼을 탭바와 같은 흰 카드(.ds-grid-card) 안에 둔다.
    .ti-card 는 그 카드 안에서 탭 묶음 노릇만 하므로 제 배경·모서리를 갖지 않는다. */
@@ -247,7 +221,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 /* 발행 단계는 임시저장 → 발행완료 → 국세청 완료 → 취소 네 칸이다.
    초록(--success)을 primary 로 접으면서 '발행완료'와 '국세청 완료'가 같은 색이 됐다.
    램프는 primary/alert 둘만 쓰되 국세청 완료만 한 단계 깊은 primary-100/600 을 준다
-   (이 화면이 .sum-card.blue/.green 과 도움말 범례에서 이미 쓰는 두 단계다). */
+   (도움말 범례가 이미 쓰는 두 단계다). */
 .ti-badge.draft   { background:var(--gray-100);      color:var(--gray-600); }
 .ti-badge.issued  { background:var(--primary-light); color:var(--primary); }
 .ti-badge.nts     { background:var(--primary-100);   color:var(--primary-600); }
@@ -333,26 +307,9 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
 @section('content')
 
-{{-- 요약 4칸 — 시안 Frame 48101550 은 흰 카드 한 장 안에 칸 넷을 세로 구분선으로 나눈다.
-     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다. --}}
-<div class="ti-summary">
-  <div class="sum-card blue">
-    <div class="sc-icon"><i class="bx bx-wallet"></i></div>
-    <div class="sc-text"><div class="sc-label">잔여 포인트</div><div class="sc-val" id="balance-val">—</div></div>
-  </div>
-  <div class="sum-card green">
-    <div class="sc-icon"><i class="bx bx-file"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 발행</div><div class="sc-val" id="month-count-val">—</div></div>
-  </div>
-  <div class="sum-card red">
-    <div class="sc-icon"><i class="bx bx-x-circle"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 취소</div><div class="sc-val" id="month-cancel-val">—</div></div>
-  </div>
-  <div class="sum-card gray">
-    <div class="sc-icon"><i class="bx bx-won"></i></div>
-    <div class="sc-text"><div class="sc-label">이번 달 공급가액</div><div class="sc-val" id="month-amount-val">—</div></div>
-  </div>
-</div>
+{{-- 요약 4칸(잔여 포인트·이번 달 발행·취소·공급가액)은 두지 않는다. 화면을 열 때마다
+     팝빌을 두 번 더 부르면서도 그 숫자로 하는 일이 없었다 — 발행과 취소는 아래 목록에서
+     한다. 포인트가 필요하면 팝빌에서 본다. --}}
 
 <div class="ti-layout">
 
@@ -757,8 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-end').value      = fmtDate(today);
   genMgtKey();
   addDetailRow();
-  loadBalance();
-  loadMonthStats();
   loadHistory(1);
 });
 
@@ -836,44 +791,6 @@ function recalc() {
   document.getElementById('sum-supply').textContent = sumSupply.toLocaleString() + '원';
   document.getElementById('sum-tax').textContent    = sumTax.toLocaleString() + '원';
   document.getElementById('sum-total').textContent  = total.toLocaleString() + '원';
-}
-
-/* ── 잔여포인트 ── */
-async function loadBalance() {
-  try {
-    const res  = await fetch(`${TI_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
-    const data = await res.json();
-    document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '—';
-  } catch { document.getElementById('balance-val').textContent = '오류'; }
-}
-
-/* ── 월간 통계 ── */
-async function loadMonthStats() {
-  const today = new Date();
-  const first = new Date(today.getFullYear(), today.getMonth(), 1);
-  const sd    = toApiDate(fmtDate(first));
-  const ed    = toApiDate(fmtDate(today));
-  const cn    = CORP_NUM.value;
-
-  try {
-    const res  = await fetch(`${TI_BASE}/search?corp_num=${cn}&mgt_key_type=SELL&start_date=${sd}&end_date=${ed}&per_page=100`, { headers: HEADERS });
-    const data = await res.json();
-    const list = data.list ?? [];
-    let totalSupply = 0, cancelCnt = 0;
-    list.forEach(r => {
-      // stateCode 500 = 취소
-      if (parseInt(r.stateCode) === 500) cancelCnt++;
-      else totalSupply += parseInt(r.supplyCostTotal ?? 0);
-    });
-    document.getElementById('month-count-val').textContent  = (data.total ?? 0).toLocaleString();
-    document.getElementById('month-cancel-val').textContent = cancelCnt.toLocaleString();
-    document.getElementById('month-amount-val').textContent = totalSupply.toLocaleString() + '원';
-  } catch {
-    ['month-count-val','month-cancel-val','month-amount-val'].forEach(id =>
-      document.getElementById(id).textContent = '오류'
-    );
-  }
 }
 
 /* ── 세금계산서 즉시발행 ── */
@@ -955,8 +872,6 @@ async function issueInvoice() {
     showToast(`세금계산서 발행 완료! 국세청승인번호: ${data.ntsConfirmNum ?? data.confirmNum ?? '확인중'}`, 'success', 7000);
     genMgtKey();
     loadHistory(1);
-    loadBalance();
-    loadMonthStats();
   } catch(e) {
     showToast('발행 실패: ' + e.message, 'danger', 8000);
   } finally {
@@ -1452,7 +1367,6 @@ async function confirmCancel() {
     closeModal('cancel-modal');
     showToast('세금계산서 발행이 취소되었습니다.', 'success', 5000);
     loadHistory(histPage);
-    loadMonthStats();
   } catch(e) {
     showToast('취소 실패: ' + e.message, 'danger', 7000);
   } finally {

@@ -20,37 +20,59 @@ class Order extends Model
      * 정하는 것이라, 새 유형이 생기면 여기와 검증 목록을 함께 늘려야 한다.
      */
     public const SO_TYPE_LABELS = [
-        '1013' => ['CE 판매',                       'primary'],
-        '1016' => ['개인판매',                      'info'],
-        '1022' => ['샘플판매',                      'warning'],
+        '1013' => ['CE 판매',                  'primary'],
+        '1016' => ['개인판매',                 'info'],
+        '1022' => ['샘플판매',                 'warning'],
+        // 2026-08-18 코드 개편 — 5000·6000번대가 지워지고 1500·1600번대가 그 자리를 받았다
+        '1501' => ['End User Direct',          'success'],
+        '1505' => ['End User Direct 반품',     'danger'],
+        '1601' => ['CE 샘플주문',              'warning'],
+        '1605' => ['CE 샘플 반품',             'danger'],
+        // 개편 전 코드 — 그 값으로 저장된 주문이 아직 진행 중이라 이름은 남긴다
         '5001' => ['End User Direct',          'success'],
-        '5004' => ['End User Direct 취소',      'danger'],
-        '5005' => ['End User Direct 반품',      'danger'],
-        '5006' => ['End User Direct 교환',      'warning'],
+        '5004' => ['End User Direct 취소',     'danger'],
+        '5005' => ['End User Direct 반품',     'danger'],
+        '5006' => ['End User Direct 교환',     'warning'],
+        '6001' => ['CE 샘플주문',              'warning'],
     ];
 
     /**
-     * 지금 고를 수 있는 판매 유형.
+     * 지금 고를 수 있는 판매 유형 — 설정 화면에 적어 둔 값 하나다.
      *
-     * 위드웍스와는 End User Direct 로만 주고받기로 해서 하나뿐이다. 1013·1016·1022 는
-     * 예전에 쓰던 것이라 위 라벨에는 남겨 둔다 — 그 값으로 저장된 주문이 이미 있고,
-     * 목록에서 코드만 덩그러니 보이면 무엇인지 알 수 없다.
+     * 코드를 여기 박아 두었더니 위드웍스가 개편할 때마다 배포를 해야 했고, 그 사이에는
+     * 지워진 코드로 주문이 나갔다. 이제 설정에서 읽는다 — 창고에서 코드가 바뀌면
+     * 화면에서 고쳐 넣으면 그만이다.
      *
-     * 5004 는 물건을 되돌리는 유형이라 여기 없다. 판매를 만들면서 고를 수 있게 두면
-     * 반품 유형으로 판매가 나간다.
+     * 되돌리는 유형(반품 등)은 여기 없다. 판매를 만들면서 고를 수 있게 두면 반품
+     * 유형으로 판매가 나간다.
      */
-    public const SALE_SO_TYPES = ['5001'];
+    public static function saleSoTypes(): array
+    {
+        $code = trim((string) \App\Models\WithworksSetting::current()->so_type);
+
+        return [$code !== '' ? $code : \App\Models\WithworksSetting::SO_TYPE_EUD];
+    }
 
     /**
-     * 되돌리는 주문의 유형 — 취소·반품·교환을 따로 둔다.
+     * 되돌리는 주문의 유형 — 종류마다 따로 둔다. 적어 둔 것만 쓴다.
      *
-     * 창고가 하는 일이 셋 다 다르다. 실제 코드값은 설정 화면에서 바꿀 수 있다 —
-     * 위드웍스 code_list 가 정하는 값이라 우리가 박아 두면 안 된다.
+     * 창고가 하는 일이 셋 다 다르다. 코드는 위드웍스 code_list 가 정하므로 설정 화면에서
+     * 적어 넣는다 — 아직 코드가 없는 종류는 비어 있고, 그 종류는 창고로 넘기지 않는다.
      */
-    public const RETURN_SO_TYPES = ['5004', '5005', '5006'];
+    public static function returnSoTypes(): array
+    {
+        $s = \App\Models\WithworksSetting::current();
+
+        return array_values(array_filter([
+            trim((string) $s->cancel_so_type),
+            trim((string) $s->return_so_type),
+            trim((string) $s->exchange_so_type),
+        ], fn ($c) => $c !== ''));
+    }
 
     /** 저장돼 있을 수 있는 값 — 옛 주문을 수정할 때 막히지 않게 넓게 둔다 */
-    public const SO_TYPES = ['1013', '1016', '1022', '5001', '5004', '5005', '5006'];
+    public const SO_TYPES = ['1013', '1016', '1022', '1501', '1505', '1601', '1605',
+                             '5001', '5004', '5005', '5006', '6001'];
 
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',

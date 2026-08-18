@@ -331,7 +331,10 @@
              개발이 넣은 '목록' 버튼은 지우지 않고 오른쪽 묶음 앞으로 옮겼다. --}}
         <div class="inv-detail-head-actions">
           <button class="ds-btn" onclick="switchPanel('list')">목록</button>
-          <a id="d-order-link" href="#" class="ds-btn" target="_blank">주문 상세 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+          {{-- 새 창이 아니라 워크스페이스 화면 탭으로 연다. 창이 따로 뜨면 보고 있던
+               발행 화면과 오가기가 번거롭고, 탭 목록에도 남지 않는다. --}}
+          <a id="d-order-link" href="#" class="ds-btn"
+             data-ce-tab="주문" data-ce-icon="bx-cart">주문 상세 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
         </div>
       </div>
 
@@ -553,6 +556,8 @@ function selectOrder(data) {
   statusBadge.style.color  = data.status_color;
   const orderLink = document.getElementById('d-order-link');
   orderLink.href = BASE_URL + '/orders/' + data.id;
+  // 탭 이름에 주문번호를 붙인다 — 여러 개를 열어 두면 무엇이 무엇인지 알 수 없다
+  orderLink.dataset.ceTab = '주문 - ' + data.order_number;
 
   // ── 기본 정보 ──
   document.getElementById('d-patient-name').textContent   = data.patient_name;

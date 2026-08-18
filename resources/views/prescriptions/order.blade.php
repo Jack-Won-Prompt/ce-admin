@@ -2703,8 +2703,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    $soCur 는 아래 라디오 블록에서 정하므로 여기서 먼저 셈해 둔다. --}}
               @php
                 $soCur = $prescription->order?->so_type;
-                if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
-                    $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
+                    $soCur = \App\Models\Order::saleSoTypes()[0];
                 }
               @endphp
               <div id="soTypeBadge">
@@ -2723,13 +2723,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   /* 저장된 값이 지금 고를 수 있는 목록에 없으면(옛 1013 등) 첫 번째로
                      떨어뜨린다. 그러지 않으면 아무것도 선택되지 않은 채로 열린다. */
                   $soCur = $prescription->order?->so_type;
-                  if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
-                      $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                  if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
+                      $soCur = \App\Models\Order::saleSoTypes()[0];
                   }
                 @endphp
                 {{-- 반품 계열 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
                      두면 반품 유형으로 판매가 나간다. --}}
-                @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
+                @foreach(\App\Models\Order::saleSoTypes() as $code)
                 @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
                 <label class="so-type-opt">
                   <input type="radio" name="so_type_radio" value="{{ $code }}"
@@ -4227,7 +4227,7 @@ window.HELP_TOUR_STEPS = [
      5001 하나로 좁혀진 뒤로는 그 값이 늘 거절되어 주문이 아예 만들어지지 않았다
      (「The selected so type is invalid.」). */
   let currentSoType = document.querySelector('input[name="so_type_radio"]:checked')?.value
-                      || @json(\App\Models\Order::SALE_SO_TYPES[0]);
+                      || @json(\App\Models\Order::saleSoTypes()[0]);
 
   // ── 기존 주문 상태 ───────────────────────────────────
   @if($prescription->order)

@@ -6,13 +6,8 @@
 
 @section('content')
 
-{{-- 화면 제목·설명. 시안에는 없지만 개발에서 넣은 블록이라 유지한다(제목 16/700 · 설명 12/400). --}}
-<div class="content-header" style="margin-bottom:12px;">
-  <h4 class="content-title" style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;line-height:26px;margin:0;color:var(--text-primary);">
-    <i class="bx bx-shield-quarter" style="color:var(--primary);font-size:16px;"></i> 관리자 관리
-  </h4>
-  <p class="content-sub" style="font-size:12px;font-weight:400;line-height:19px;color:var(--gray-600);margin:4px 0 0;">시스템 관리자 계정을 추가·수정·비활성화합니다.</p>
-</div>
+{{-- 제목과 설명을 여기 두지 않는다. 화면 이름은 네비바가 이미 적고 있고, 설명은
+     한 번 읽으면 그만인 말이 자리를 계속 차지하고 있었다. --}}
 
 {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 — 표준 구조(114:4778) --}}
 <div class="ds-grid-section">

@@ -179,7 +179,7 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
+            'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
         $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
@@ -294,7 +294,7 @@ class PrescriptionController extends Controller
             'items.*.unit_price' => 'nullable|numeric|min:0',
             'shipping_address' => 'nullable|string',
             'delivery_date'    => 'nullable|date',
-            'so_type'          => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
+            'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
         $baseUrl = rtrim(config('services.demoworks.api_url'), '/');

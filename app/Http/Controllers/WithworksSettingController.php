@@ -35,9 +35,10 @@ class WithworksSettingController extends Controller
             'webhook_url'     => 'nullable|url|max:190',
             'webhook_secret'  => 'nullable|string|max:190',
             'so_type'         => 'required|string|max:20',
-            'return_so_type'   => 'required|string|max:20',
-            'cancel_so_type'   => 'required|string|max:20',
-            'exchange_so_type' => 'required|string|max:20',
+            // 코드가 아직 없는 종류가 있다 — 비워 두면 그 종류는 넘기지 않는다
+            'return_so_type'   => 'nullable|string|max:20',
+            'cancel_so_type'   => 'nullable|string|max:20',
+            'exchange_so_type' => 'nullable|string|max:20',
         ]);
 
         $s = WithworksSetting::current();

@@ -168,15 +168,14 @@
   <div class="ws-card">
     <div class="ws-hd">판매유형</div>
     <div class="ws-bd">
+      {{-- 고르는 칸이 아니라 적는 칸이다. 코드는 위드웍스 code_list 가 정하고 그쪽에서
+           바뀐다 — 우리가 목록으로 박아 두면 코드가 바뀔 때마다 손을 대야 하고,
+           그 사이에는 없는 코드로 주문이 나간다. --}}
       <div class="ws-row">
         <label>연동 유형</label>
-        <select name="so_type" class="form-control form-select" style="max-width:260px;">
-          {{-- PHP 가 '5001' 같은 숫자 문자열 키를 정수로 바꾸므로 비교 전에 되돌린다 --}}
-          @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
-            @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
-            <option value="{{ $code }}" @selected(old('so_type', $s->so_type) === (string) $code)>{{ $code }} · {{ $meta[0] }}</option>
-          @endforeach
-        </select>
+        <input type="text" name="so_type" class="form-control" style="max-width:260px;"
+               maxlength="20" inputmode="numeric" placeholder="예: 1501"
+               value="{{ old('so_type', $s->so_type) }}">
       </div>
       <div class="ws-hint" style="margin-bottom:12px;">
         위드웍스로 넘기는 주문은 모두 이 유형으로 나갑니다. 다른 유형으로 넘기면 저쪽 콜백
@@ -187,25 +186,21 @@
            창고가 하는 일이 달라서다 — 반품은 넣고, 교환은 넣었다 내보내고, 취소는 안 움직인다.
            한 칸으로 묶으면 창고 담당자가 비고를 읽어야 무엇을 할지 알 수 있다. --}}
       @foreach([
-        ['cancel_so_type',   '취소', '출고 뒤 취소일 때만 씁니다. 출고 전이면 원 판매주문을 취소합니다.'],
-        ['return_so_type',   '반품', '수거해서 창고에 넣습니다.'],
-        ['exchange_so_type', '교환', '수거해 넣고 다시 내보냅니다.'],
-      ] as [$field, $label, $hint])
+        ['cancel_so_type',   '취소', '출고 뒤 취소일 때만 씁니다. 출고 전이면 원 판매주문을 취소합니다.', '위드웍스에 코드가 생기면 적습니다'],
+        ['return_so_type',   '반품', '수거해서 창고에 넣습니다.', '예: 1505'],
+        ['exchange_so_type', '교환', '수거해 넣고 다시 내보냅니다.', '위드웍스에 코드가 생기면 적습니다'],
+      ] as [$field, $label, $hint, $ph])
         <div class="ws-row">
           <label>{{ $label }}</label>
-          <select name="{{ $field }}" class="form-control form-select" style="max-width:260px;">
-            @foreach(\App\Models\Order::RETURN_SO_TYPES as $code)
-              @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
-              <option value="{{ $code }}" @selected(old($field, $s->$field) === (string) $code)>
-                {{ $code }} · {{ $meta[0] }}
-              </option>
-            @endforeach
-          </select>
+          <input type="text" name="{{ $field }}" class="form-control" style="max-width:260px;"
+                 maxlength="20" inputmode="numeric" placeholder="{{ $ph }}"
+                 value="{{ old($field, $s->$field) }}">
         </div>
         <div class="ws-hint" style="margin-bottom:12px;">{{ $hint }}</div>
       @endforeach
       <div class="ws-hint">
         위드웍스 code_list 가 정하는 값입니다. 그쪽에서 코드가 바뀌면 여기서 맞춰 주십시오.
+        비워 두면 그 종류는 창고로 넘기지 않습니다 — 코드가 없는데 보내면 저쪽이 거절합니다.
       </div>
     </div>
   </div>
