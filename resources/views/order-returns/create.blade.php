@@ -20,7 +20,6 @@
   .rt-row .form-control { flex:1; min-width:0; }
   .rt-hint { font-size:11px; color:var(--text-muted); margin-top:3px; }
   .rt-only { display:none; }
-  .rt-burden { font-size:12px; font-weight:700; color:var(--primary); }
 </style>
 @endpush
 
@@ -66,24 +65,9 @@
         <label>사유</label>
         <select name="reason_code" id="rt-reason" class="form-control form-select" required>
           @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
-            <option value="{{ $k }}" @selected(old('reason_code') === $k)
-                    data-burden="{{ $r['burden'] }}">{{ $r['label'] }}</option>
+            <option value="{{ $k }}" @selected(old('reason_code') === $k)>{{ $r['label'] }}</option>
           @endforeach
         </select>
-      </div>
-      <div class="rt-row">
-        <label>배송비 부담</label>
-        <select name="shipping_burden" id="rt-burden" class="form-control form-select">
-          <option value="">사유에 따름</option>
-          @foreach(\App\Models\OrderReturn::BURDENS as $k => $label)
-            <option value="{{ $k }}" @selected(old('shipping_burden') === $k)>{{ $label }}</option>
-          @endforeach
-        </select>
-      </div>
-      {{-- 사유가 정해지면 누가 무는지도 정해진다. 담당자마다 다르게 안내하지 않도록. --}}
-      <div class="rt-row">
-        <label></label>
-        <div class="rt-burden" id="rt-burden-hint"></div>
       </div>
       <div class="rt-row" style="align-items:flex-start;">
         <label style="padding-top:7px;">상세 사유</label>
@@ -136,8 +120,6 @@
 <script>
 (function () {
   const type   = document.getElementById('rt-type');
-  const reason = document.getElementById('rt-reason');
-  const burden = document.getElementById('rt-burden');
   const order  = document.getElementById('rt-order');
 
   /* 종류마다 필요한 칸이 다르다 — 취소·반품은 환불을 묻고, 교환은 묻지 않는다. */
@@ -145,14 +127,6 @@
     document.querySelectorAll('.rt-only[data-for]').forEach(el => {
       el.style.display = el.dataset.for.split(' ').includes(type.value) ? '' : 'none';
     });
-  }
-
-  // 사유가 정하는 부담 주체를 미리 알려 준다. 담당자가 고르면 그 값이 이긴다.
-  function syncBurden() {
-    const auto = reason.selectedOptions[0]?.dataset.burden || '';
-    const map  = @json(\App\Models\OrderReturn::BURDENS);
-    document.getElementById('rt-burden-hint').textContent =
-      burden.value ? '' : (auto ? `이 사유는 ${map[auto]}입니다` : '이 사유는 부담 주체가 정해져 있지 않습니다 — 직접 고르십시오');
   }
 
   function syncOrder() {
@@ -171,12 +145,10 @@
   }
 
   type.addEventListener('change', syncType);
-  reason.addEventListener('change', syncBurden);
-  burden.addEventListener('change', syncBurden);
   order.addEventListener('change', syncOrder);
   document.getElementById('rt-refund-method')?.addEventListener('change', syncRefund);
 
-  syncType(); syncBurden(); syncOrder(); syncRefund();
+  syncType(); syncOrder(); syncRefund();
 })();
 </script>
 @endpush

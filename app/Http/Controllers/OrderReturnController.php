@@ -92,7 +92,6 @@ class OrderReturnController extends Controller
             'type'              => 'required|in:exchange,return,cancel',
             'reason_code'       => 'required|string|in:' . implode(',', array_keys(OrderReturn::REASONS)),
             'reason_text'       => 'nullable|string|max:500',
-            'shipping_burden'   => 'nullable|in:customer,company',
             'refund_method'     => 'nullable|in:account,card,va',
             'refund_bank'       => 'nullable|string|max:50',
             'refund_account'    => 'nullable|string|max:50',
@@ -100,9 +99,9 @@ class OrderReturnController extends Controller
             'refund_amount'     => 'nullable|integer|min:0',
         ]);
 
-        // 사유가 정해지면 배송비를 누가 무는지도 정해진다. 담당자가 고쳐 보낸 값이 있으면 그것을 쓴다.
-        $data['shipping_burden'] = $data['shipping_burden']
-            ?? OrderReturn::REASONS[$data['reason_code']]['burden'] ?? null;
+        // 배송비를 누가 무는지는 사유가 정한다 — 접수 때 따로 묻지 않는다.
+        // 담당자마다 다르게 고르면 같은 사유인데 부담 주체가 갈린다.
+        $data['shipping_burden'] = OrderReturn::REASONS[$data['reason_code']]['burden'] ?? null;
 
         $return = DB::transaction(function () use ($data) {
             $return = OrderReturn::create($data + [

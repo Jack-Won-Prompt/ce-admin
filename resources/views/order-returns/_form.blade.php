@@ -22,10 +22,10 @@
   .rto-fld input { height: 32px; width: 150px; }
   .rto-fld.wide input { width: 190px; }
 
-  /* 물을 것을 한 줄에 늘어놓는다 — 종류·사유·부담·주문번호·주문일. 줄이 나뉘면
+  /* 물을 것을 한 줄에 늘어놓는다 — 종류·사유·주문번호·주문일. 줄이 나뉘면
      아래로 눈이 오르내려야 하고, 무엇까지 적었는지 놓친다.
      상세 사유만 아래에 넓게 둔다. 한 칸으로는 문장이 안 들어간다. */
-  .rto-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 14px; }
+  .rto-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
   .rto-f { display: flex; flex-direction: column; gap: 4px; }
   .rto-f.span2 { grid-column: span 2; }
   .rto-f.span4 { grid-column: 1 / -1; }
@@ -35,8 +35,7 @@
   .rto-only.on { display: flex; }
 
   /* 좁은 화면에서는 한 줄을 고집하지 않는다 — 칸이 눌려 글자가 안 보이는 편이 나쁘다 */
-  @media (max-width: 1280px) { .rto-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (max-width: 900px)  { .rto-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1100px) { .rto-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 
 <form method="POST" action="{{ route('order-returns.store') }}" class="rto-wrap" id="rtoForm">
@@ -92,19 +91,9 @@
         <label>사유</label>
         <select name="reason_code" id="rtoReason" class="form-control form-select" required>
           @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
-            <option value="{{ $k }}" data-burden="{{ $r['burden'] }}">{{ $r['label'] }}</option>
+            <option value="{{ $k }}">{{ $r['label'] }}</option>
           @endforeach
         </select>
-      </div>
-      <div class="rto-f">
-        <label>배송비 부담</label>
-        <select name="shipping_burden" id="rtoBurden" class="form-control form-select">
-          <option value="">사유에 따름</option>
-          @foreach(\App\Models\OrderReturn::BURDENS as $k => $label)
-            <option value="{{ $k }}">{{ $label }}</option>
-          @endforeach
-        </select>
-        <span class="rto-note" id="rtoBurdenNote"></span>
       </div>
       <div class="rto-f">
         {{-- 고른 주문을 신청 내용 안에서도 보이게 둔다 — 아래를 적는 동안 위를 다시
@@ -146,7 +135,7 @@
           <label>환불 계좌</label>
           <input type="text" name="refund_bank" class="form-control" maxlength="50" placeholder="은행">
         </div>
-        <div class="rto-f rto-only span2" id="rtoAccountWrap2">
+        <div class="rto-f rto-only" id="rtoAccountWrap2">
           <label>계좌번호 · 예금주</label>
           <div style="display:flex;gap:6px;">
             <input type="text" name="refund_account" class="form-control" maxlength="50" placeholder="계좌번호">
@@ -175,7 +164,6 @@
 (function () {
   const SEARCH_URL  = @json(route('order-returns.orderSearch'));
   const PATIENT_URL = @json(route('order-returns.patientSearch'));
-  const BURDENS     = @json(\App\Models\OrderReturn::BURDENS);
 
   const $ = (id) => document.getElementById(id);
   let rows = [];      // 마지막 조회 결과
@@ -310,14 +298,7 @@
     $('rtoAccountWrap2').classList.toggle('on', on);
   }
 
-  /* 사유가 정해지면 누가 무는지도 정해진다. 담당자마다 다르게 안내하지 않도록. */
-  function syncBurden() {
-    const b = $('rtoReason').selectedOptions[0]?.dataset.burden || '';
-    $('rtoBurdenNote').textContent = b ? '사유에 따라 ' + (BURDENS[b] ?? b) : '정해진 것이 없습니다';
-  }
-
   $('rtoType').addEventListener('change', syncType);
-  $('rtoReason').addEventListener('change', syncBurden);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
   ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } }));
@@ -326,7 +307,6 @@
     if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 고르십시오.'); }
   });
 
-  syncBurden();
   syncType();
 })();
 </script>
