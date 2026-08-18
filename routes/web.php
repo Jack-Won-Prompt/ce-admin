@@ -183,6 +183,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settlement/orders/{order}/detail',                  [SettlementController::class, 'orderDetail'])->name('settlement.order-detail');
     Route::post('/settlement/orders/{order}/virtual-account',        [SettlementController::class, 'issueVirtualAccount'])->name('settlement.issue-va');
     Route::get('/settlement/orders/{order}/payment-status',          [SettlementController::class, 'checkPaymentStatus'])->name('settlement.check-status');
+
+    /* 결제 전송 — 만들어 보내고, 무엇을 보냈는지 보고, 잘못 보낸 것은 닫는다.
+       환자가 여는 결제 페이지는 로그인 밖에 따로 둔다(아래 pay.*). */
+    Route::post('/orders/{order}/payment-links',    [\App\Http\Controllers\PaymentLinkController::class, 'store'])->name('payment-links.store');
+    Route::get( '/orders/{order}/payment-links',    [\App\Http\Controllers\PaymentLinkController::class, 'index'])->name('payment-links.index');
+    Route::post('/payment-links/{paymentLink}/cancel', [\App\Http\Controllers\PaymentLinkController::class, 'cancel'])->name('payment-links.cancel');
     Route::post('/settlement/orders/{order}/resend-va-sms',          [SettlementController::class, 'resendVirtualAccountSms'])->name('settlement.resend-va-sms');
 
     // 발송/발행 내역 관리
@@ -1051,6 +1057,11 @@ Route::get('/dev/migrate-order-cols', function () {
         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
 })->middleware('auth');
+
+/* 환자가 여는 결제 페이지 — 로그인 없이 열린다.
+   토큰으로만 찾는다. 주문번호로 열리면 번호를 바꿔 가며 남의 주문을 볼 수 있다. */
+Route::get('/pay/{token}',      [\App\Http\Controllers\PaymentLinkController::class, 'show'])->name('pay.show');
+Route::get('/pay/{token}/done', [\App\Http\Controllers\PaymentLinkController::class, 'done'])->name('pay.done');
 
 // 토스페이먼츠 웹훅 (인증 불필요 — 토스 서버에서 직접 호출)
 Route::post('/toss/webhook', [TossWebhookController::class, 'handle'])->name('toss.webhook');

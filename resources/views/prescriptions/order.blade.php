@@ -1291,6 +1291,80 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div>
 
+      {{-- 결제 전송 — 환자에게 「여기서 내십시오」를 보낸다.
+           카드·가상계좌는 우리 결제 페이지 주소를 보내고, 무통장입금은 우리 계좌를 적어 보낸다.
+           보낸 것과 낸 것은 아래 이력에 쌓인다 — 다시 보낼지 전화할지를 그걸 보고 정한다. --}}
+      <div id="payTriggerWrap" style="position:relative;">
+        <button class="pib-btn" id="btnPayTrigger" onclick="togglePayPopover(event)"
+                @if(!$prescription->order) disabled title="주문을 먼저 만들어야 보낼 수 있습니다" @endif>
+          <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
+        </button>
+
+        <div id="payPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
+          <div id="payPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
+          </div>
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-won-sign" style="color:#fff;font-size:14px;"></i>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">결제 전송</span>
+            <button onclick="closePayPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
+          </div>
+
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text-muted);">결제 금액</span>
+              <b id="payAmount" style="color:var(--primary);">{{ number_format($prescription->order?->total_amount ?? 0) }}원</b>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">결제 방법</div>
+              <div style="display:flex;flex-direction:column;gap:4px;" id="payMethods">
+                @foreach(\App\Models\PaymentLink::METHODS as $code => $label)
+                  @php
+                    $hint = ['card' => '결제 페이지에서 카드로 냅니다',
+                             'virtual' => '결제 페이지에서 가상계좌를 발급받습니다',
+                             'bank' => '우리 입금계좌를 문자로 안내합니다 — 입금 확인은 사람이 합니다'][$code];
+                  @endphp
+                  <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
+                    <input type="radio" name="pay_method" value="{{ $code }}" style="accent-color:var(--primary);"
+                           @checked($code === 'card')>
+                    <div style="min-width:0;flex:1;">
+                      <div style="font-weight:700;">{{ $label }}</div>
+                      <div style="font-size:10px;color:var(--text-muted);">{{ $hint }}</div>
+                    </div>
+                  </label>
+                @endforeach
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">받는 번호</div>
+              <input type="text" id="payMobile" class="form-control" style="font-size:12px;height:32px;"
+                     placeholder="010-XXXX-XXXX" data-phone
+                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+                알림톡으로 먼저 보내고, 막히면 문자로 이어 보냅니다.
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)">
+              <i class="fa-solid fa-paper-plane"></i> 전송
+            </button>
+
+            {{-- 보낸 것들 — 무엇을 언제 보냈고 냈는지. 다시 보낼지 전화할지는 이걸 보고 정한다 --}}
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">전송 이력</div>
+                <button type="button" class="rx-tpl-mini" onclick="loadPaymentLinks()">새로고침</button>
+              </div>
+              <div id="payHistory" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:11px;">
+                <div style="padding:10px;color:var(--text-muted);text-align:center;">불러오는 중…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- 현금영수증 --}}
       <div id="cashReceiptArea">
         @if($prescription->order?->cash_receipt_status === 'issued')
@@ -6093,10 +6167,119 @@ window.HELP_TOUR_STEPS = [
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+  }
+
+  /* ── 결제 전송 ─────────────────────────────────────────
+     만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러
+     둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
+  const PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
+  const PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
+  const PAY_CANCEL_URL = @json(url('payment-links'));
+
+  function togglePayPopover(e) {
+    e.stopPropagation();
+    const pop    = document.getElementById('payPopover');
+    const isOpen = pop.style.display !== 'none';
+    closeAllPopovers();
+    pop.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      placePayPopover();
+      const mobile = document.getElementById('f-mobile')?.value;
+      if (mobile) document.getElementById('payMobile').value = mobile;
+      loadPaymentLinks();
+    }
+  }
+
+  function closePayPopover() { document.getElementById('payPopover').style.display = 'none'; }
+
+  /* 팩스 창과 같은 사정이다 — 단추가 오른쪽에 있으면 창이 화면 밖으로 밀려 잘린다 */
+  function placePayPopover() {
+    const pop  = document.getElementById('payPopover');
+    const wrap = document.getElementById('payTriggerWrap');
+    if (!pop || !wrap || pop.style.display === 'none') return;
+
+    const gap  = 8;
+    const w    = pop.offsetWidth || 420;
+    const r    = wrap.getBoundingClientRect();
+    const over = (r.left + w) - (window.innerWidth - gap);
+    const left = over > 0 ? -Math.min(over, Math.max(0, r.left - gap)) : 0;
+
+    pop.style.left = left + 'px';
+    const arrow = document.getElementById('payPopoverArrow');
+    if (arrow) arrow.style.left = Math.min(Math.max(24 - left, 12), w - 26) + 'px';
+  }
+  window.addEventListener('resize', placePayPopover);
+
+  async function sendPaymentLink(btn) {
+    if (!PAY_STORE_URL) { showToast('주문을 먼저 만들어 주십시오.', 'warning'); return; }
+
+    const method = document.querySelector('input[name="pay_method"]:checked')?.value;
+    const mobile = document.getElementById('payMobile').value.trim();
+    if (!method) { showToast('결제 방법을 고르십시오.', 'warning'); return; }
+    if (!mobile) { showToast('받는 번호를 적어 주십시오.', 'warning'); return; }
+
+    BtnState.loading(btn, '보내는 중...');
+    try {
+      const res = await apiRequest(PAY_STORE_URL, 'POST', { method, mobile });
+      showToast(res.message || (res.success ? '보냈습니다.' : '보내지 못했습니다.'),
+                res.success ? 'success' : 'danger', 5000);
+      loadPaymentLinks();
+    } catch (e) {
+      showToast('보내지 못했습니다: ' + (e.message || ''), 'danger', 5000);
+    } finally {
+      BtnState.reset(btn);
+    }
+  }
+
+  async function loadPaymentLinks() {
+    const box = document.getElementById('payHistory');
+    if (!box || !PAY_INDEX_URL) return;
+    try {
+      const res  = await apiRequest(PAY_INDEX_URL, 'GET');
+      const rows = res.rows ?? [];
+      if (!rows.length) {
+        box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">보낸 것이 없습니다.</div>';
+        return;
+      }
+      box.innerHTML = rows.map(r => `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border-light);">
+          <span style="font-weight:700;width:56px;flex-shrink:0;">${escHtml(r.method)}</span>
+          <span style="width:64px;flex-shrink:0;text-align:right;">${Number(r.amount).toLocaleString()}원</span>
+          <span style="flex:1;min-width:0;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escHtml(r.sent_at || '-')} · ${escHtml(r.channel)}${r.error ? ' · ' + escHtml(r.error) : ''}
+          </span>
+          <span style="font-weight:700;color:${r.status === 'paid' ? 'var(--primary)' : (r.status === 'failed' ? 'var(--danger)' : 'var(--gray-700)')};">
+            ${escHtml(r.status_label)}
+          </span>
+          ${r.open ? `<button type="button" class="rx-tpl-mini" onclick="copyPayLink('${escHtml(r.url)}')">주소</button>
+                      <button type="button" class="rx-tpl-mini" onclick="cancelPayLink(${r.id})">닫기</button>` : ''}
+        </div>`).join('');
+    } catch (e) {
+      box.innerHTML = '<div style="padding:10px;color:var(--danger);text-align:center;">이력을 불러오지 못했습니다.</div>';
+    }
+  }
+
+  /* 문자가 막히는 환자도 있다 — 주소를 복사해 다른 길로 보낼 수 있게 둔다 */
+  function copyPayLink(url) {
+    navigator.clipboard?.writeText(url)
+      .then(() => showToast('결제 주소를 복사했습니다.', 'success'))
+      .catch(() => showToast(url, 'info', 8000));
+  }
+
+  async function cancelPayLink(id) {
+    if (!await ceConfirm('이 결제 요청을 닫습니다. 환자가 주소를 눌러도 열리지 않습니다.',
+                         { tone: 'warning', confirmText: '닫기' })) return;
+    try {
+      const res = await apiRequest(`${PAY_CANCEL_URL}/${id}/cancel`, 'POST');
+      showToast(res.message || '닫았습니다.', res.success ? 'success' : 'danger');
+      loadPaymentLinks();
+    } catch (e) {
+      showToast('닫지 못했습니다.', 'danger');
+    }
   }
 
   // ── 카카오 알림톡 팝오버 ─────────────────────────────

@@ -78,8 +78,10 @@ return [
                              'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보낸다.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
             'va_valid_hours' => ['label' => '입금 기한(시간)',    'config' => 'toss.virtual_account.valid_hours', 'type' => 'int', 'width' => 1],
-            'va_fallback_bank'    => ['label' => '대체 은행명',   'config' => 'toss.virtual_account.fallback_bank'],
-            'va_fallback_account' => ['label' => '대체 계좌번호', 'config' => 'toss.virtual_account.fallback_account'],
+            'va_fallback_bank'    => ['label' => '입금계좌 은행',   'config' => 'toss.virtual_account.fallback_bank',
+                                      'help'  => '무통장입금 안내와 가상계좌 대체 안내에 함께 쓴다.'],
+            'va_fallback_account' => ['label' => '입금계좌 번호', 'config' => 'toss.virtual_account.fallback_account',
+                                      'help'  => '비워 두면 무통장입금 문자에 「담당자에게 문의」로 나간다.'],
         ],
     ],
 
