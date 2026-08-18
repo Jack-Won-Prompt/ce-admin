@@ -118,10 +118,10 @@ window.HELP_TOUR_STEPS = [
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
-      {{-- 거래 구분 — 판매·교환·반품·취소.
+      {{-- 유형 — 판매·교환·반품·취소.
            칩으로 한 줄을 더 쓰면 상태 칩과 섞여 무엇이 무엇인지 헷갈린다.
            위쪽 칩은 진행 상태 하나만 두고, 나머지 갈래는 여기서 고른다. --}}
-      <label class="ds-field-label">거래</label>
+      <label class="ds-field-label">유형</label>
       <select name="deal" class="form-control form-select" onchange="this.form.submit()">
         <option value="">전체</option>
         @foreach(['sale' => '판매'] + \App\Models\OrderReturn::TYPES as $key => $label)
@@ -360,11 +360,21 @@ window.HELP_TOUR_STEPS = [
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
         // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.
-        header: '거래', name: 'deal', width: 130, sortable: true, align: 'center',
+        header: '유형', name: 'deal', width: 100, sortable: true, align: 'center',
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
           if (v && v !== '판매') { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
+      {
+        // 교환·반품·취소가 어디까지 왔는지. 판매 건은 빈칸이다 — 옆의 '상태'가 그 자리다.
+        header: '등록 상태', name: 'deal_state', width: 90, sortable: true, align: 'center',
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v ?? '';
+          if (v) { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
           return el;
         },
       },
@@ -379,7 +389,9 @@ window.HELP_TOUR_STEPS = [
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },
-      { header: '생성일',     name: 'created',   width: 130, sortable: true },
+      {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
+      { header: '판매일자',   name: 'sold_at',   width: 100, sortable: true, align: 'center' },
+      { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창
         header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
