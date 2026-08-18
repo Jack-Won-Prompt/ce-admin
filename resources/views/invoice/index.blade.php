@@ -6,6 +6,36 @@
 @section('breadcrumb', '홈 / 계산서 발행')
 
 @push('styles')
+
+<style>
+  /* 목록에서 바로 발행하는 창 — 화면 한가운데를 덮지 않고 누른 칸 옆에 붙는다 */
+  .inv-pop { position: fixed; z-index: 1200; width: 320px; background: var(--bg-card);
+             border: 1px solid var(--border); border-radius: var(--radius-lg);
+             box-shadow: 0 12px 36px rgba(0,0,0,.2); }
+  .inv-pop-hd { display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+                background: var(--primary); color: #fff; font-size: 13px; font-weight: 700;
+                border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .inv-pop-hd span { flex: 1; }
+  .inv-pop-hd button { background: none; border: none; color: #fff; font-size: 16px;
+                       line-height: 1; cursor: pointer; }
+  .inv-pop-bd { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .inv-pop-order { font-size: 11.5px; color: var(--text-muted); }
+  .inv-pop-row { display: flex; flex-direction: column; gap: 3px; }
+  .inv-pop-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .inv-pop-row label { font-size: 11px; font-weight: 600; color: var(--gray-700); }
+  .inv-pop-row .form-control { height: 30px; font-size: 12px; }
+  .inv-pop-radio { display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+                   font-weight: 500; color: var(--gray-1000); cursor: pointer; }
+  .inv-pop-note { font-size: 11px; color: var(--text-muted); }
+  .inv-pop-acts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
+  /* 목록 칸의 작은 단추 — 미발행이면 누를 수 있다는 것이 보여야 한다 */
+  .inv-cell-btn { height: 22px; padding: 0 8px; font-size: 11px; font-weight: 700;
+                  border-radius: 6px; border: 1px solid var(--primary); color: var(--primary);
+                  background: var(--bg-card); cursor: pointer; }
+  .inv-cell-btn:hover { background: var(--primary-light); }
+  .inv-cell-btn.off { border-color: var(--gray-300); color: var(--gray-700); }
+  .inv-cell-done { font-weight: 700; color: var(--primary); margin-right: 4px; }
+</style>
 <style>
 /* ── 상태 칩 줄 끝 안내 ──
    요약 카드(계산서 발행 대상 / 미발행 / 이번달 금액)에 달려 있던 설명 문구를
@@ -431,6 +461,11 @@
         <input type="text" id="ti_biz_name" class="form-control" placeholder="○○ 주식회사">
       </div>
       <div class="form-group">
+        {{-- 서버가 대표자를 받아야 발행한다. 이 칸이 없어 여기서 발행하면 늘 막혔다. --}}
+        <label class="form-label">대표자 <span>*</span></label>
+        <input type="text" id="ti_ceo_name" class="form-control" placeholder="홍길동">
+      </div>
+      <div class="form-group">
         <label class="form-label">사업자등록번호 <span>*</span></label>
         <input type="text" id="ti_biz_no" class="form-control" placeholder="000-00-00000"
                oninput="formatBizNo(this)" maxlength="12">
@@ -508,6 +543,72 @@
       <button class="btn btn-primary" onclick="submitCashReceipt()">
         <i class="fa-solid fa-receipt"></i> 발행
       </button>
+    </div>
+  </div>
+</div>
+
+{{-- ── 목록에서 바로 발행하는 창 ─────────────────────────────
+     지금까지는 행을 골라 상세로 들어가야 발행할 수 있었다. 목록을 훑다가 미발행을
+     보면 그 자리에서 끝내는 편이 빠르다 — 누른 칸 옆에 붙어 열린다. --}}
+<div id="invIssuePop" class="inv-pop" style="display:none;">
+  <div class="inv-pop-hd">
+    <span id="invPopTitle">발행</span>
+    <button type="button" onclick="closeIssuePop()" aria-label="닫기">&times;</button>
+  </div>
+  <div class="inv-pop-bd">
+    <div class="inv-pop-order" id="invPopOrder">-</div>
+
+    {{-- 세금계산서 --}}
+    <div id="invPopTax" style="display:none;">
+      <div class="inv-pop-row">
+        <label>공급받는자</label>
+        <div style="display:flex;gap:10px;">
+          <label class="inv-pop-radio"><input type="radio" name="ip_invoicee" value="사업자" checked
+                 onchange="onIpInvoicee()"> 사업자</label>
+          <label class="inv-pop-radio"><input type="radio" name="ip_invoicee" value="개인"
+                 onchange="onIpInvoicee()"> 개인</label>
+        </div>
+      </div>
+      <div class="inv-pop-row"><label>상호 *</label>
+        <input type="text" id="ip_biz_name" class="form-control" maxlength="100"></div>
+      <div class="inv-pop-row"><label>대표자 *</label>
+        <input type="text" id="ip_ceo_name" class="form-control" maxlength="50"></div>
+      <div class="inv-pop-row"><label id="ip_no_label">사업자번호 *</label>
+        <input type="text" id="ip_biz_no" class="form-control" maxlength="14"
+               placeholder="000-00-00000"></div>
+      <div class="inv-pop-row"><label>이메일</label>
+        <input type="email" id="ip_email" class="form-control" maxlength="100"></div>
+      <div class="inv-pop-row two">
+        <div><label>공급가액 *</label>
+          <input type="number" id="ip_supply" class="form-control" oninput="onIpSupply()"></div>
+        <div><label>부가세</label>
+          <input type="number" id="ip_vat" class="form-control"></div>
+      </div>
+      <div class="inv-pop-note" id="ip_person_note" style="display:none;">
+        번호를 비우면 처방전에 적힌 주민등록번호로 발행합니다.
+      </div>
+    </div>
+
+    {{-- 현금영수증 --}}
+    <div id="invPopCash" style="display:none;">
+      <div class="inv-pop-row">
+        <label>거래 구분</label>
+        <div style="display:flex;gap:10px;">
+          <label class="inv-pop-radio"><input type="radio" name="ip_cr_type" value="income_deduction" checked
+                 onchange="onIpCrType()"> 소득공제</label>
+          <label class="inv-pop-radio"><input type="radio" name="ip_cr_type" value="business_expense"
+                 onchange="onIpCrType()"> 지출증빙</label>
+        </div>
+      </div>
+      <div class="inv-pop-row"><label id="ip_cr_id_label">휴대폰 번호 *</label>
+        <input type="text" id="ip_cr_identifier" class="form-control" maxlength="20"></div>
+      <div class="inv-pop-row"><label>발행 금액 *</label>
+        <input type="number" id="ip_cr_amount" class="form-control"></div>
+    </div>
+
+    <div class="inv-pop-acts">
+      <button type="button" class="ds-btn" onclick="closeIssuePop()">닫기</button>
+      <button type="button" class="ds-btn ds-btn-primary" id="invPopSubmit" onclick="submitIssuePop(this)">발행</button>
     </div>
   </div>
 </div>
@@ -751,9 +852,13 @@ async function submitTaxInvoice() {
   if (!bizNo)   { showToast('사업자등록번호를 입력해주세요.', 'warning'); return; }
   if (supply <= 0) { showToast('공급가액을 입력해주세요.', 'warning'); return; }
 
+  const ceoName = document.getElementById('ti_ceo_name').value.trim();
+  if (!ceoName) { showToast('대표자를 입력해주세요.', 'warning'); return; }
+
   const res = await apiRequest(`${BASE_URL}/orders/${_taxOrderId}/tax-invoice`, 'POST', {
     tax_invoice_type:     document.getElementById('ti_type').value,
     tax_invoice_biz_name: bizName,
+    tax_invoice_ceo_name: ceoName,
     tax_invoice_biz_no:   bizNo,
     tax_invoice_email:    document.getElementById('ti_email').value.trim() || null,
     tax_invoice_supply:   supply,
@@ -849,6 +954,195 @@ async function cancelCash(orderId, orderNo) {
   }
 }
 
+/* ════════════════════════════════════════════════════════════
+   목록 칸에서 바로 발행·취소
+   행을 골라 상세로 들어갔다 나오는 걸음을 없앤다. 창은 누른 칸 옆에 붙어 열린다.
+   ════════════════════════════════════════════════════════════ */
+let _ipKind = null, _ipRow = null;
+
+/* 칸 그리기 — 미발행은 누를 수 있는 단추로, 발행된 건은 상태와 취소로.
+   renderer 는 노드를 돌려줘야 한다. 문자열을 주면 글자 그대로 찍힌다. */
+function issueCell(kind, value, row) {
+  const wrap = document.createElement('span');
+  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:4px;';
+
+  if (value === '발행완료') {
+    const done = document.createElement('span');
+    done.className = 'inv-cell-done';
+    done.textContent = '발행완료';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'inv-cell-btn off';
+    cancel.textContent = '취소';
+    cancel.onclick = (e) => {
+      e.stopPropagation();
+      (kind === 'tax' ? cancelTax : cancelCash)(row.id, row.order_number);
+    };
+    wrap.append(done, cancel);
+    return wrap;
+  }
+
+  if (value === '미발행') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'inv-cell-btn';
+    btn.textContent = '발행';
+    btn.onclick = (e) => { e.stopPropagation(); openIssuePop(kind, row, btn); };
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  wrap.textContent = value ?? '';
+  return wrap;
+}
+
+function openIssuePop(kind, row, anchor) {
+  _ipKind = kind;
+  _ipRow  = row;
+
+  const pop = document.getElementById('invIssuePop');
+  document.getElementById('invPopTitle').textContent = kind === 'tax' ? '세금계산서 발행' : '현금영수증 발행';
+  document.getElementById('invPopOrder').textContent =
+    row.order_number + ' · ' + row.patient_name + ' · ' + fmt(row.total_amount) + '원';
+  document.getElementById('invPopTax').style.display  = kind === 'tax'  ? '' : 'none';
+  document.getElementById('invPopCash').style.display = kind === 'cash' ? '' : 'none';
+
+  if (kind === 'tax') {
+    // 총액에서 갈라 둔다. 공급가 = 총액/1.1(반올림), 나머지가 부가세다.
+    const total  = Number(row.total_amount) || 0;
+    const supply = Math.round(total / 1.1);
+    document.querySelector('input[name="ip_invoicee"][value="사업자"]').checked = true;
+    document.getElementById('ip_biz_name').value = row.ti_biz_name || '';
+    document.getElementById('ip_ceo_name').value = '';
+    document.getElementById('ip_biz_no').value   = row.ti_biz_no || '';
+    document.getElementById('ip_email').value    = row.ti_email || '';
+    document.getElementById('ip_supply').value   = supply;
+    document.getElementById('ip_vat').value      = total - supply;
+    onIpInvoicee();
+  } else {
+    document.querySelector('input[name="ip_cr_type"][value="income_deduction"]').checked = true;
+    document.getElementById('ip_cr_identifier').value = row.patient_mobile || '';
+    document.getElementById('ip_cr_amount').value     = Number(row.total_amount) || 0;
+    onIpCrType();
+  }
+
+  pop.style.display = 'block';
+  placeIssuePop(anchor);
+}
+
+/* 누른 칸 옆에 두되 화면 밖으로 나가지 않게 붙든다 */
+function placeIssuePop(anchor) {
+  const pop = document.getElementById('invIssuePop');
+  const r   = anchor.getBoundingClientRect();
+  const w   = pop.offsetWidth  || 320;
+  const h   = pop.offsetHeight || 320;
+  const gap = 6;
+
+  let left = Math.min(r.left, window.innerWidth - w - 8);
+  let top  = r.bottom + gap;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - gap - h);
+
+  pop.style.left = Math.max(8, left) + 'px';
+  pop.style.top  = top + 'px';
+}
+
+function closeIssuePop() {
+  document.getElementById('invIssuePop').style.display = 'none';
+  _ipKind = null; _ipRow = null;
+}
+
+/* 개인은 사업자번호 대신 주민번호로 발행한다 — 비워 두면 처방전에 적힌 값을 쓴다 */
+function onIpInvoicee() {
+  const isPerson = document.querySelector('input[name="ip_invoicee"]:checked').value === '개인';
+  document.getElementById('ip_no_label').textContent = isPerson ? '주민등록번호' : '사업자번호 *';
+  document.getElementById('ip_biz_no').placeholder   = isPerson ? '비우면 처방전 값으로 발행합니다' : '000-00-00000';
+  document.getElementById('ip_person_note').style.display = isPerson ? '' : 'none';
+  if (isPerson && !document.getElementById('ip_biz_name').value.trim()) {
+    document.getElementById('ip_biz_name').value = (_ipRow && _ipRow.patient_name) || '';
+    document.getElementById('ip_ceo_name').value = (_ipRow && _ipRow.patient_name) || '';
+  }
+}
+
+function onIpSupply() {
+  const total  = Number(_ipRow && _ipRow.total_amount) || 0;
+  const supply = parseInt(document.getElementById('ip_supply').value) || 0;
+  document.getElementById('ip_vat').value = Math.max(0, total - supply);
+}
+
+function onIpCrType() {
+  const isBiz = document.querySelector('input[name="ip_cr_type"]:checked').value === 'business_expense';
+  document.getElementById('ip_cr_id_label').textContent = isBiz ? '사업자등록번호 *' : '휴대폰 번호 *';
+  const el = document.getElementById('ip_cr_identifier');
+  el.placeholder = isBiz ? '000-00-00000' : '010-0000-0000';
+  el.value = isBiz ? '' : ((_ipRow && _ipRow.patient_mobile) || '');
+}
+
+async function submitIssuePop(btn) {
+  if (!_ipRow) return;
+  const id   = _ipRow.id;
+  const kind = _ipKind;
+
+  let url, payload;
+  if (kind === 'tax') {
+    const isPerson = document.querySelector('input[name="ip_invoicee"]:checked').value === '개인';
+    const bizName  = document.getElementById('ip_biz_name').value.trim();
+    const ceoName  = document.getElementById('ip_ceo_name').value.trim();
+    const bizNo    = document.getElementById('ip_biz_no').value.trim();
+    const supply   = parseInt(document.getElementById('ip_supply').value) || 0;
+    const vat      = parseInt(document.getElementById('ip_vat').value) || 0;
+
+    if (!bizName) { showToast('상호를 적어 주십시오.', 'warning'); return; }
+    if (!ceoName) { showToast('대표자를 적어 주십시오.', 'warning'); return; }
+    if (!isPerson && !bizNo) { showToast('사업자번호를 적어 주십시오.', 'warning'); return; }
+    if (supply <= 0) { showToast('공급가액을 적어 주십시오.', 'warning'); return; }
+
+    url = BASE_URL + '/orders/' + id + '/tax-invoice';
+    payload = {
+      tax_invoice_type:     'electronic',
+      tax_invoice_invoicee: isPerson ? '개인' : '사업자',
+      tax_invoice_biz_name: bizName,
+      tax_invoice_ceo_name: ceoName,
+      tax_invoice_biz_no:   bizNo || null,
+      tax_invoice_email:    document.getElementById('ip_email').value.trim() || null,
+      tax_invoice_supply:   supply,
+      tax_invoice_vat:      vat,
+    };
+  } else {
+    const identifier = document.getElementById('ip_cr_identifier').value.trim();
+    const amount     = parseInt(document.getElementById('ip_cr_amount').value) || 0;
+    if (!identifier) { showToast('식별번호를 적어 주십시오.', 'warning'); return; }
+    if (amount <= 0) { showToast('금액을 적어 주십시오.', 'warning'); return; }
+
+    url = BASE_URL + '/orders/' + id + '/cash-receipt';
+    payload = {
+      cash_receipt_type:       document.querySelector('input[name="ip_cr_type"]:checked').value,
+      cash_receipt_identifier: identifier,
+      cash_receipt_amount:     amount,
+    };
+  }
+
+  BtnState.loading(btn, '발행 중...');
+  try {
+    const res = await apiRequest(url, 'POST', payload);
+    if (!res.success) throw new Error(res.message || '발행하지 못했습니다.');
+    showToast((kind === 'tax' ? '세금계산서' : '현금영수증') + ' 발행 완료', 'success', 4000);
+    closeIssuePop();
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast('발행하지 못했습니다: ' + (e.message || ''), 'danger', 6000);
+  } finally {
+    BtnState.reset(btn);
+  }
+}
+
+// 창 바깥을 누르면 닫는다 — 목록을 계속 보려는 뜻이다
+document.addEventListener('mousedown', (e) => {
+  const pop = document.getElementById('invIssuePop');
+  if (!pop || pop.style.display === 'none') return;
+  if (!pop.contains(e.target)) closeIssuePop();
+});
+window.addEventListener('resize', closeIssuePop);
+
 // 모달 외부 클릭 닫기
 ['taxModal','cashModal'].forEach(id => {
   document.getElementById(id)?.addEventListener('click', function(e) {
@@ -883,8 +1177,12 @@ window.HELP_TOUR_STEPS = [
       { header: '주문상태',   name: 'status_label', width: 90,  align: 'center', sortable: true },
       { header: '주문일',     name: 'created_at',   width: 100, align: 'center', sortable: true },
       { header: '배송완료일', name: 'delivered_at', width: 100, align: 'center', sortable: true },
-      { header: '세금계산서', name: 'ti_display',   width: 90,  align: 'center', sortable: true },
-      { header: '현금영수증', name: 'cr_display',   width: 90,  align: 'center', sortable: true },
+      /* 미발행이면 그 자리에서 발행한다 — 상세로 들어갔다 나오는 걸음을 없앤다.
+         발행된 건에는 취소를 함께 둔다. */
+      { header: '세금계산서', name: 'ti_display', width: 110, align: 'center', sortable: true,
+        renderer: (v, row) => issueCell('tax', v, row) },
+      { header: '현금영수증', name: 'cr_display', width: 110, align: 'center', sortable: true,
+        renderer: (v, row) => issueCell('cash', v, row) },
     ],
     data: @json($gridData),
   });

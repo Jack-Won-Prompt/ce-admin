@@ -181,9 +181,7 @@ window.HELP_TOUR_STEPS = [
 
 {{-- ── 상세내용 탭 (기존 상세 페이지 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
 <div id="pnlDetail" style="display:none;padding:16px;">
-  <div style="margin-bottom:12px;">
-    <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
-  </div>
+  {{-- 「조회결과로」 단추는 두지 않는다 — 바로 위 탭줄의 「조회 결과」가 같은 일을 한다. --}}
   <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 상세 내용이 여기에 표시됩니다.</div>
   <div id="pnlDetailContent"></div>
 </div>
@@ -370,12 +368,9 @@ window.HELP_TOUR_STEPS = [
         },
       },
       { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
-      { header: '제품명',     name: 'product',   width: 160 },
-      { header: '수량',       name: 'qty',       width: 60,  editor: 'number', align: 'center' },
-      { header: '환자부담금', name: 'copay',     width: 100, editor: 'number' },
-      { header: '배송비',     name: 'shipping',  width: 80,  editor: 'number' },
-      { header: '총금액',     name: 'total',     width: 100, editor: 'number' },
-      { header: '배송지',     name: 'address',   width: 180 },
+      /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
+         들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
+         왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
       { header: '처방유형',   name: 'acc_type',  width: 110, sortable: true, align: 'center' },
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },

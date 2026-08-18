@@ -1421,14 +1421,9 @@
           </a>
         </div>
         @endif
-        @if($vis('taxinvoice'))
-        <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="presentation-03" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
-            @dsicon('presentation-03', 'ds-icon menu-icon')
-            <span>전자세금계산서</span>
-          </a>
-        </div>
-        @endif
+        {{-- 전자세금계산서는 메뉴에 두지 않는다. 발행과 취소는 「계산서 발행」 화면에서
+             주문을 보며 하고, 이 화면은 팝빌 목록을 그대로 비추던 자리였다.
+             화면과 경로는 남아 있어 주소로는 열린다. --}}
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
