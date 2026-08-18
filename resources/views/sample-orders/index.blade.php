@@ -212,6 +212,19 @@
             <input type="date" id="smpOrderDate" class="form-control" value="{{ now()->format('Y-m-d') }}">
           </div>
           <div class="smp-f">
+            {{-- 샘플은 대개 영업 담당자가 달라고 하고 사무실에서 대신 넣는다.
+                 등록한 사람만 남으면 나중에 「이 샘플 누가 요청했나」를 물을 곳이 없다.
+                 손으로 적게 두지 않는다 — 같은 사람이 여러 이름으로 남는다. --}}
+            <label>요청자</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="smpRequester" class="form-control" readonly
+                     style="background:var(--gray-50);" placeholder="담당자를 고르십시오">
+              <button type="button" class="ds-btn" style="flex-shrink:0;"
+                      onclick="smpPickRequester(this)">조회</button>
+            </div>
+            <input type="hidden" id="smpRequesterId" value="">
+          </div>
+          <div class="smp-f">
             <label>배송요청일</label>
             <input type="date" id="smpDeliveryDate" class="form-control">
           </div>
@@ -257,6 +270,7 @@
   const STORE_URL  = @json(route('sample-orders.store'));
   const SEARCH_URL = @json(url('products/search'));
   const CUST_URL   = @json(route('sample-orders.customerSearch'));
+  const USER_URL  = @json(route('sample-orders.userSearch'));
   const CSRF       = document.querySelector('meta[name=csrf-token]')?.content ?? '';
 
   const $ = (id) => document.getElementById(id);
@@ -325,6 +339,7 @@
         + kv('고객', head.customer + (head.customer_kind ? ' · ' + head.customer_kind : ''))
         + kv('받는 사람', head.recipient + (head.mobile && head.mobile !== '-' ? ' · ' + head.mobile : ''))
         + kv('배송지', head.address)
+        + kv('요청자', head.requester)
         + kv('주문일', head.order_date + (head.delivery_date ? ' · 배송요청 ' + head.delivery_date : ''))
         + kv('용도', head.purpose)
         + kv('비고', head.note)
@@ -398,6 +413,40 @@
         if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
         $('smpMobile').value  = r.mobile  || $('smpMobile').value;
         $('smpAddress').value = r.address || $('smpAddress').value;
+      },
+    });
+  };
+
+  /* 요청자 조회 — 고객 조회와 같은 팝오버다. CE-Admin 에 등록된 담당자만 나온다. */
+  const reqModal = new GridModal();
+  let reqRows = {};
+
+  window.smpPickRequester = function (btn) {
+    reqModal.open({
+      title: '요청자 조회',
+      width: 420,
+      height: 340,
+      mode: 'popover',
+      anchor: btn,
+      currentValue: $('smpRequesterId').value || null,
+      onSearch: async (q) => {
+        const res = await fetch(USER_URL + '?q=' + encodeURIComponent(q ?? ''), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const { rows } = await res.json();
+        reqRows = {};
+        (rows ?? []).forEach(r => { reqRows[r.id] = r; });
+        return (rows ?? []).map(r => ({
+          value: r.id,
+          label: r.name,
+          sub:   [r.role, r.email, r.phone].filter(Boolean).join(' · '),
+        }));
+      },
+      onConfirm: (value) => {
+        const r = reqRows[value];
+        if (!r) return;
+        $('smpRequesterId').value = r.id;
+        $('smpRequester').value   = r.name;
       },
     });
   };
@@ -533,6 +582,9 @@
           postcode:       $('smpPostcode').value.trim() || null,
           address:        $('smpAddress').value.trim(),
           address_detail: $('smpAddressDetail').value.trim() || null,
+          requester_id:   $('smpRequesterId').value || null,
+          // 이름도 함께 보낸다 — 계정이 지워져도 그때 누구였는지는 남아야 한다
+          requester_name: $('smpRequester').value.trim() || null,
           order_date:     $('smpOrderDate').value,
           delivery_date:  $('smpDeliveryDate').value || null,
           purpose:        $('smpPurpose').value.trim() || null,

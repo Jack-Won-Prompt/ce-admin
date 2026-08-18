@@ -156,6 +156,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',                [\App\Http\Controllers\SampleOrderController::class, 'index'])->name('index');
         Route::post('/',               [\App\Http\Controllers\SampleOrderController::class, 'store'])->name('store');
         Route::get('/customer-search', [\App\Http\Controllers\SampleOrderController::class, 'customerSearch'])->name('customerSearch');
+        // 요청자(담당자) 조회 — 「/{sampleOrder}」 보다 앞에 둔다. 뒤에 두면 샘플번호로 읽힌다
+        Route::get('/user-search',     [\App\Http\Controllers\SampleOrderController::class, 'userSearch'])->name('userSearch');
         Route::get('/{sampleOrder}',   [\App\Http\Controllers\SampleOrderController::class, 'show'])->name('show');
         Route::post('/{sampleOrder}/resend', [\App\Http\Controllers\SampleOrderController::class, 'resend'])->name('resend');
     });
