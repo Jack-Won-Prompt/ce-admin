@@ -22,7 +22,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-box"></i></div>
-    <div class="help-item-text"><strong>처방 제품 탭</strong>판매유형을 선택하고 제품을 추가합니다. 제품 검색으로 Todoworks에서 직접 가져옵니다.</div>
+    <div class="help-item-text"><strong>주문 제품 탭</strong>판매유형을 선택하고 제품을 추가합니다. 제품 검색으로 Todoworks에서 직접 가져옵니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
@@ -37,7 +37,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">2</div>
-    <div class="help-item-text">처방 제품 탭에서 <b>판매유형</b> 선택 후 제품 추가</div>
+    <div class="help-item-text">주문 제품 탭에서 <b>판매유형</b> 선택 후 제품 추가</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">3</div>
@@ -140,18 +140,8 @@
   .product-name { font-size: 13px; font-weight: 700; }
   .product-code { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .product-price { font-size: 13px; font-weight: 700; color: var(--primary); margin-left: auto; }
-  /* ── 제품 자동완성 드롭다운 ── */
+  /* 제품 검색은 팝오버로 연다 — 칸 옆에 붙는 창이라 여기서 줄 모양은 .pac-wrap 뿐이다 */
   .pac-wrap { position:relative; flex:1; min-width:0; }
-  .pac-drop { position:absolute; top:calc(100% + 2px); left:0; right:0; background:#fff; border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,.13); z-index:2000; max-height:340px; overflow-y:auto; display:none; }
-  .pac-drop.open { display:block; }
-  .pac-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .1s; }
-  .pac-item:last-child { border-bottom:none; }
-  .pac-item:hover, .pac-item.ac-active { background:var(--primary-light); }
-  .pac-item-icon { width:32px; height:32px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
-  .pac-item-body { flex:1; min-width:0; }
-  .pac-item-name { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pac-item-meta { font-size:10px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
-  .pac-item-price { font-size:12px; font-weight:700; color:var(--primary); white-space:nowrap; flex-shrink:0; }
   .pac-status { padding:10px 14px; font-size:12px; color:var(--text-muted); text-align:center; }
   .qty-control { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
   .qty-btn { width: 28px; height: 28px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: var(--transition); }
@@ -334,8 +324,6 @@
   .tab-tbl td { color:var(--text-primary); overflow:hidden; }
   .tab-tbl th { overflow:hidden; }
   .tab-tbl td.pac-cell { overflow:visible; position:relative; }
-  /* 드롭다운이 다른 행 위에 표시되도록 */
-  .tab-tbl tbody tr:has(.pac-drop.open) { z-index:100; position:relative; }
   .tab-tbl .tbl-sec td { background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:700; }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; }
   .modal-overlay.show { display: flex; }
@@ -377,7 +365,10 @@
   .so-type-opt input[type=radio] { display:none; }
   .so-type-opt span {
     display:inline-flex; align-items:center; gap:8px;
-    width:143px; height:32px; padding:0 12px; border-radius:8px; font-size:13px; font-weight:400;
+    /* 시안 폭은 143 이지만 「End User Direct」는 그 안에서 두 줄로 접힌다.
+       폭을 최소값으로 두고 글자만큼 늘린다 — 접힌 이름은 읽는 데 걸린다. */
+    min-width:143px; white-space:nowrap; height:32px; padding:0 12px; border-radius:8px;
+    font-size:13px; font-weight:400;
     border:1px solid var(--border); background:#fff; color:var(--gray-1000);
     transition:var(--transition); user-select:none;
   }
@@ -469,7 +460,7 @@
   #items-container .item-summary b.item-copay { color:var(--primary); }
   #items-container .item-sum-div { width:1px; height:8px; background:var(--gray-300); flex-shrink:0; }
   /* 오른쪽 삭제칸 64 — 시안 Frame 48101658: pad 0/16 · bg #F9FAFC · 왼쪽 1px 경계.
-     행 카드에 overflow:hidden 을 걸면 제품 검색 드롭다운(.pac-drop)이 잘려 모서리만 둥글린다. */
+     행 카드에 overflow:hidden 을 걸지 않는다 — 안쪽 그림자와 모서리가 어긋난다. */
   #items-container .item-del-col { flex:0 0 64px; display:flex; align-items:center; justify-content:center;
                                    padding:0 16px; background:var(--gray-50);
                                    border-left:1px solid var(--gray-200); border-radius:0 12px 12px 0; }
@@ -1858,7 +1849,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <div id="tabBarOuter"><div id="tabBarInner" class="tab-bar">
         <div class="tab-bar-tabs">
           <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">처방전 검수</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-product')">처방 제품</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-product')">주문 제품</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-order')">주문 연계</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-history')">이력</button>
         </div>
@@ -4103,20 +4094,16 @@ function renderItemsTable() {
           <div style="display:flex;gap:4px;align-items:center;">
             <input type="text" class="form-control item-display" id="pac-input-${idx}"
                    style="font-size:12px;min-width:0;flex:1;height:32px;padding:2px 7px;" autocomplete="off"
-                   placeholder="제품명 또는 코드 입력..."
+                   placeholder="제품명 또는 코드 입력 후 검색"
                    value="${displayName}"
-                   oninput="pacInput(${idx},this.value)"
-                   onkeydown="pacKey(event,${idx})"
-                   onfocus="if(this.value.trim())pacInput(${idx},this.value)"
-                   onblur="pacBlur(${idx})" />
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();pacSearchBtn(${idx});}" />
             <button type="button" class="btn btn-primary btn-sm" title="제품 검색"
                     style="flex-shrink:0;padding:0 8px;height:32px;"
                     onmousedown="event.preventDefault()"
-                    onclick="pacSearchBtn(${idx})">
+                    onclick="pacSearchBtn(${idx},this)">
               <i class="fa-solid fa-magnifying-glass" style="font-size:11px;"></i>
             </button>
           </div>
-          <div class="pac-drop" id="pac-drop-${idx}"></div>
         </div>
         <input type="hidden" class="item-name"  value="${escHtml(item.product_name||'')}" />
         <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
@@ -4193,7 +4180,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-bar',
     title: '처방전 처리 탭',
-    body: '처방전 검수 → 처방 제품 → 주문 연계 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
+    body: '처방전 검수 → 주문 제품 → 주문 연계 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
   },
   {
     selector: '.tab-btn:nth-child(1)',
@@ -4202,7 +4189,7 @@ window.HELP_TOUR_STEPS = [
   },
   {
     selector: '.tab-btn:nth-child(2)',
-    title: '처방 제품 탭',
+    title: '주문 제품 탭',
     body: '<b>판매유형</b>(CE판매·개인판매·샘플판매)을 먼저 선택하고, 제품 검색 버튼으로 Todoworks에서 제품을 가져옵니다.'
   },
   {
@@ -4705,7 +4692,7 @@ window.HELP_TOUR_STEPS = [
   function _dirtyLabel() {
     const parts = [];
     if (_ocrDirty)     parts.push('처방전 검수');
-    if (_productDirty) parts.push('처방 제품');
+    if (_productDirty) parts.push('주문 제품');
     if (_orderDirty)   parts.push('주문 연계');
     return parts.join(' · ');
   }
@@ -4788,7 +4775,7 @@ window.HELP_TOUR_STEPS = [
       return;
     }
     if (fromProduct && _productDirty) {
-      showUnsavedDlg(btn, tabId, '처방 제품', saveOCR);
+      showUnsavedDlg(btn, tabId, '주문 제품', saveOCR);
       return;
     }
     if (fromOrder && _orderDirty) {
@@ -4927,20 +4914,19 @@ window.HELP_TOUR_STEPS = [
         <div class="item-inline-field" style="flex:2 1 236px;min-width:0;">
           <div class="item-field-label">제품명</div>
           <div class="item-name-row">
+            {{-- 치는 대로 목록이 따라 내려오던 것은 걷어냈다. 두 글자에도 창고를 찾으러
+                 가느라 느렸고, 아래로 펼쳐진 목록이 다음 칸을 가렸다.
+                 이제 검색 단추로 창을 열어 세 글자 이상에서 찾는다. --}}
             <div class="pac-wrap" style="position:relative;">
               <input type="text" class="form-control item-display" id="pac-input-${idx}"
                      style="width:100%;font-size:13px;height:32px;" autocomplete="off"
-                     placeholder="제품명 또는 코드 입력"
+                     placeholder="제품명 또는 코드 입력 후 검색"
                      value="${displayName}"
-                     oninput="pacInput(${idx},this.value)"
-                     onkeydown="pacKey(event,${idx})"
-                     onfocus="if(this.value.trim())pacInput(${idx},this.value)"
-                     onblur="pacBlur(${idx})" />
-              <div class="pac-drop" id="pac-drop-${idx}"></div>
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();pacSearchBtn(${idx});}" />
             </div>
             <button type="button" class="btn btn-sm item-search-btn" title="제품 검색"
                     onmousedown="event.preventDefault()"
-                    onclick="pacSearchBtn(${idx})">
+                    onclick="pacSearchBtn(${idx},this)">
               <i class="fa-solid fa-magnifying-glass"></i> 검색
             </button>
           </div>
@@ -5406,7 +5392,7 @@ window.HELP_TOUR_STEPS = [
     if (!el) return;
     const validItems = items.filter(i => i.product_name);
     if (!validItems.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">처방 제품 탭에서 제품을 먼저 선택해주세요.</div>';
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 제품 탭에서 제품을 먼저 선택해주세요.</div>';
       return;
     }
     el.innerHTML = validItems.map(item => {
@@ -7779,178 +7765,92 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 제품 자동완성 (Todoworks API) ─────────────────────
-  const _pacTimers = {};   // debounce timers per idx
-  const _pacCache  = {};   // 검색 결과 캐시
+  /* 제품 찾기 — 검색 단추를 누르면 그 자리 옆에 창이 열린다.
+     치는 대로 따라 내려오던 목록은 없앴다. 두 글자에도 창고를 찾으러 가느라 느렸고,
+     펼쳐진 목록이 아래 칸을 가렸다. 세 글자 미만은 찾지 않는다 — 두 글자로 찾으면
+     수백 건이 쏟아져 고르지 못하고, 그 조회가 창고를 붙들어 다음 조회까지 늦춘다. */
+  const _pacCache  = {};   // 검색 결과 캐시(같은 말로 다시 찾지 않는다)
+  const _pacFound  = {};   // 방금 창에 보인 것 — 고른 뒤 값을 꺼내 쓴다
+  const _prodModal = new GridModal();
 
-  function pacInput(idx, val) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    // "제품명 (코드)" 형태에서 "(코드)" 접미사 제거 후 검색
-    const kw = val.replace(/\s*\([^)]*\)\s*$/, '').trim();
-    if (kw.length < 1) { pacClose(idx); return; }
-    clearTimeout(_pacTimers[idx]);
-    drop.innerHTML = '<div class="pac-status"><i class="fa-solid fa-spinner fa-spin"></i> 검색 중...</div>';
-    drop.classList.add('open');
-    _pacTimers[idx] = setTimeout(() => pacFetch(idx, kw), 300);
-  }
-
-  async function pacFetch(idx, keyword) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    const cacheKey = keyword.toLowerCase();
-    let data;
-    if (_pacCache[cacheKey]) {
-      data = _pacCache[cacheKey];
-    } else {
-      try {
-        const res = await apiRequest(`/products/search?q=${encodeURIComponent(keyword)}`, 'GET');
-        if (!res.success || !res.data?.length) {
-          drop.innerHTML = '<div class="pac-status">검색 결과가 없습니다.</div>';
-          return;
-        }
-        data = res.data;
-        _pacCache[cacheKey] = data;
-      } catch {
-        drop.innerHTML = '<div class="pac-status">조회 오류가 발생했습니다.</div>';
-        return;
-      }
-    }
-    pacRender(idx, data);
-  }
-
-  function pacRender(idx, data) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    drop.innerHTML = data.map((item) => {
-      const qty        = item.stock ?? null;
-      const hasStock   = qty !== null;
-      const stockColor = hasStock ? (qty > 0 ? 'var(--primary)' : 'var(--danger)') : 'var(--text-muted)';
-      const stockBg    = hasStock ? (qty > 0 ? 'var(--primary-50)' : 'var(--danger-light)') : 'var(--bg)';
-      const stockBdr   = hasStock ? stockColor : 'var(--border)';
-      const stockTxt   = hasStock ? `재고: <b>${Number(qty).toLocaleString()}</b>` : '재고: -';
-      return `
-      <div class="pac-item"
-           data-code="${escHtml(item.code ?? '')}"
-           data-name="${escHtml(item.name ?? '')}"
-           data-price="${item.price ?? 0}"
-           data-rbox="${escHtml(item.r_box ?? '')}"
-           data-stock="${qty ?? ''}"
-           onmousedown="pacSelect(event,${idx},this)">
-        <div class="pac-item-icon"><i class="fa-solid fa-box"></i></div>
-        <div class="pac-item-body">
-          <div class="pac-item-name">${escHtml(item.name)}</div>
-          <div class="pac-item-meta">
-            ${item.code ? `<span style="background:var(--primary-light);color:var(--primary);padding:1px 5px;border-radius:6px;font-size:10px;">${escHtml(item.code)}</span>` : ''}
-            ${item.spec ? `<span>${escHtml(item.spec)}</span>` : ''}
-            ${item.unit ? `<span>· ${escHtml(item.unit)}</span>` : ''}
-            ${item.r_box ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 5px;border-radius:6px;">R-Box: ${escHtml(item.r_box)}</span>` : ''}
-            <span style="background:${stockBg};border:1px solid ${stockBdr};color:${stockColor};padding:1px 5px;border-radius:6px;">${stockTxt}</span>
-          </div>
-        </div>
-        ${item.price ? `<div class="pac-item-price">₩ ${Number(item.price).toLocaleString()}</div>` : ''}
-      </div>`;
-    }).join('');
-    drop.classList.add('open');
-  }
-
-  function pacSelect(e, idx, el) {
-    e.preventDefault();
-    const code  = el.dataset.code  || '';
-    const name  = el.dataset.name  || '';
-    const price = parseFloat(el.dataset.price) || 0;
-    const rbox  = el.dataset.rbox  || '';
-
-    // 재고: data-stock(조회 완료) → 뱃지 텍스트 파싱 → 빈값
-    let stock = el.dataset.stock || '';
-    if (!stock) {
-      const stockBadge = el.querySelector('[id^="pac-stock-"]');
-      const m = (stockBadge?.textContent ?? '').match(/재고:\s*([\d,]+)/);
-      if (m) stock = m[1].replace(/,/g, '');
-    }
-
-    const card = document.querySelector(`.item-card[data-idx="${idx}"]`);
-    if (card) {
-      card.querySelector('.item-name').value    = name;
-      card.querySelector('.item-code').value    = code;
-      card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
-      card.querySelector('.item-rbox').value    = rbox;
-      card.querySelector('.item-stock').value   = stock;
-      if (price) {
-        card.querySelector('.item-price').value     = fmtPrice(price);
-        card.querySelector('.item-ins-price').value = fmtPrice(price);
-      }
-      updateItemMeta(idx, rbox, stock);
-      calcItem(idx);
-
-      // 재고 미로딩 상태로 선택된 경우 → 선택 후 별도 조회하여 카드에 반영
-      if (!stock && code) {
-        apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
-          .then(res => {
-            if (res.success && res.qty !== null) {
-              const qty = String(res.qty);
-              card.querySelector('.item-stock').value = qty;
-              updateItemMeta(idx, rbox, qty);
-            }
-          }).catch(() => {});
-      }
-    }
-    pacClose(idx);
-    showToast(`"${name}" 선택됨`, 'success');
-  }
-
-  function pacClose(idx) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (drop) drop.classList.remove('open');
-  }
-
-  function pacBlur(idx) {
-    setTimeout(() => pacClose(idx), 180);
-  }
-
-  let _pacActiveIdx = {}; // 키보드 활성 인덱스
-  function pacKey(e, idx) {
-    const drop  = document.getElementById(`pac-drop-${idx}`);
-    if (!drop || !drop.classList.contains('open')) return;
-    const items = drop.querySelectorAll('.pac-item');
-    if (!items.length) return;
-    let cur = _pacActiveIdx[idx] ?? -1;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      cur = Math.min(cur + 1, items.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      cur = Math.max(cur - 1, 0);
-    } else if (e.key === 'Enter' && cur >= 0) {
-      e.preventDefault();
-      pacSelect(e, idx, items[cur]);
-      return;
-    } else if (e.key === 'Escape') {
-      pacClose(idx);
-      return;
-    } else { return; }
-    _pacActiveIdx[idx] = cur;
-    items.forEach((el, i) => el.classList.toggle('ac-active', i === cur));
-    items[cur]?.scrollIntoView({ block: 'nearest' });
-  }
-
-  // 검색 버튼 클릭 → 현재 입력값으로 즉시 검색
-  function pacSearchBtn(idx) {
+  function pacSearchBtn(idx, btn) {
     const inp = document.getElementById(`pac-input-${idx}`);
     if (!inp) return;
-    inp.focus();
-    const kw = inp.value.trim();
-    if (!kw) { showToast('검색어를 입력해주세요.', 'warning'); return; }
-    clearTimeout(_pacTimers[idx]);
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (drop) {
-      drop.innerHTML = '<div class="pac-status"><i class="fa-solid fa-spinner fa-spin"></i> 검색 중...</div>';
-      drop.classList.add('open');
+
+    _prodModal.open({
+      title: '제품 조회', width: 460, height: 360,
+      mode: 'popover', anchor: btn || inp,
+      minChars: 3,
+      query: inp.value.trim(),
+      onSearch: async (kw) => {
+        const key = kw.toLowerCase();
+        let data = _pacCache[key];
+        if (!data) {
+          const res = await apiRequest(`/products/search?q=${encodeURIComponent(kw)}`, 'GET');
+          if (!res.success) throw new Error(res.message || '조회 실패');
+          data = res.data ?? [];
+          _pacCache[key] = data;
+        }
+        _pacFound[idx] = {};
+        return data.map((it) => {
+          const code = it.code ?? it.name;
+          _pacFound[idx][code] = it;
+          return {
+            value: code,
+            label: it.name ?? '',
+            sub: [it.code, it.spec, it.unit,
+                  it.r_box ? 'R-Box ' + it.r_box : null,
+                  it.price ? '₩ ' + Number(it.price).toLocaleString() : null]
+                 .filter(Boolean).join(' · '),
+          };
+        });
+      },
+      onConfirm: (code) => applyProduct(idx, _pacFound[idx]?.[code]),
+    });
+  }
+
+  /* 고른 제품을 그 행에 앉힌다. 재고는 여기서 한 건만 따로 묻는다 —
+     창고의 재고 조회는 한 건에 7초라, 목록을 만들 때 모두 물으면 검색 자체가 끊긴다. */
+  function applyProduct(idx, p) {
+    if (!p) return;
+    const code  = p.code ?? '';
+    const name  = p.name ?? '';
+    const price = parseFloat(p.price) || 0;
+    const rbox  = p.r_box ?? '';
+
+    const card = document.querySelector(`.item-card[data-idx="${idx}"]`);
+    if (!card) return;
+
+    card.querySelector('.item-name').value    = name;
+    card.querySelector('.item-code').value    = code;
+    card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
+    card.querySelector('.item-rbox').value    = rbox;
+    card.querySelector('.item-stock').value   = '';
+    if (price) {
+      card.querySelector('.item-price').value     = fmtPrice(price);
+      card.querySelector('.item-ins-price').value = fmtPrice(price);
     }
-    pacFetch(idx, kw);
+    updateItemMeta(idx, rbox, '');
+    calcItem(idx);
+
+    if (code) {
+      apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
+        .then(res => {
+          if (res.success && res.qty !== null) {
+            const qty = String(res.qty);
+            card.querySelector('.item-stock').value = qty;
+            updateItemMeta(idx, rbox, qty);
+          }
+        }).catch(() => {});
+    }
+
+    showToast(`"${name}" 선택됨`, 'success');
   }
 
   // 구 팝업 호환
   function openProductSearch(idx) { pacSearchBtn(idx); }
+  // 예전 이름으로 부르는 자리가 남아 있어도 죽지 않게 둔다
+  function pacClose() {}
 
   // XSS 방지용 HTML 이스케이프
   function escHtml(s) {
