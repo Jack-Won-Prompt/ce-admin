@@ -261,9 +261,15 @@
   #ptImgBody { padding:16px; background:var(--gray-100); text-align:center; max-height:74vh; overflow:auto; }
   #ptImgBody img { max-width:100%; display:block; margin:0 auto; background:#fff; border-radius:8px; }
 
-  .pt-radios { display:flex; gap:8px; }
+  /* 알약 셋이 span-3 한 칸을 나눠 쓴다. 시안(114:4778)에 없는 개발 추가 항목이라
+     칸을 더 줄 자리가 없고, 좁은 폭에서는 '재구매일 10일 이내'(143px)가 칸(1440→99px)을
+     넘겨 글자가 잘렸다(1600·1440·1280 에서 29·47·65px 부족 — 옛 gap 12 에서도 같았다).
+     줄을 바꾸게 두면 시안 폭 1920 에서는 한 줄 그대로이고 좁은 폭에서만 접힌다. */
+  .pt-radios { display:flex; flex-wrap:wrap; gap:8px; }
   .pt-radio {
-    display:inline-flex; align-items:center; gap:8px; flex:1; min-width:0;
+    /* flex:1 + min-width:0 이면 칸이 좁아질 때 알약이 글자보다 작아져 잘린다.
+       글자폭을 지키고(shrink 0) 자리가 모자라면 위 flex-wrap 으로 줄을 바꾼다. */
+    display:inline-flex; align-items:center; gap:8px; flex:1 0 auto; min-width:max-content;
     height:32px; padding:0 12px; border-radius:8px;
     background:var(--gray-0); border:1px solid var(--gray-200);
     font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000);

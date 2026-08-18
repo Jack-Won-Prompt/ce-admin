@@ -418,9 +418,14 @@
       background: var(--gray-0);
     }
     /* 입력 영역은 9열 그리드 (174:1211) */
+    /* 9열 · 열 사이 16.
+       시안 전수(캐시 36장)에서 9열 검색 그리드의 gridColumnGap 은 16 이 27장, 12 가 9장이다.
+       16 쪽에 「표준 레이아웃」 두 장(펼침·접힘)이 들어 있고, 12 는 먼저 그려진 아홉 장
+       (거래처 관리 3 · 처방전 목록 1 · 주문 관리 5)뿐이라 16 을 표준으로 삼는다.
+       그 아홉 장은 시안이 아직 따라오지 못한 자리로 보고 예외를 두지 않았다 — 디자이너 확인 대상. */
     .ds-filter-fields {
       flex: 1; min-width: 0;
-      display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px;
+      display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px;
     }
     .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     .ds-filter-field.span-2 { grid-column: span 2; }
