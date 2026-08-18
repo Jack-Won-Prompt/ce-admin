@@ -1,17 +1,22 @@
 {{-- resources/views/prescriptions/upload.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '처방전 업로드')
-@section('page-title', '처방전 업로드')
-@section('breadcrumb')
-홈 / 처방전 / 업로드 &nbsp;·&nbsp; {{ now()->format('Y-m-d') }}
-@endsection
+{{-- 화면 이름은 시안 128:689 헤더 기준 '처방자료 업로드'.
+     사이드바(layouts/app data-title)·워크스페이스 탭·카드 머리도 모두 같은 이름이다. --}}
+@section('title', '처방자료 업로드')
+@section('page-title', '처방자료 업로드')
+{{-- 시안 128:691·128:693 — 「홈 - 처방전 목록」 두 마디, 마디 사이 8 --}}
+@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>처방전 목록</span></span>@endsection
 
 {{-- 검수 대기·처방전 목록은 시안(128:3167)대로 업로드 카드 헤더로 옮겼다.
      상단 헤더의 옛 건수는 화면에 뿌리는 최근 5건 안에서만 세어, 실제보다 적게 나왔다. --}}
 
 @push('styles')
 <style>
+  /* 브레드크럼 두 마디 사이 간격 8 (시안 128:691 → 128:693).
+     .page-breadcrumb 은 전역이지만 .bc-trail 은 이 화면 마크업이라 여기 둔다. */
+  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
+
   /* ── 단계 표시 (Figma 128:724) ──
      번호 원과 좌우 선 대신, 아이콘·제목·부제를 세로로 쌓고 점선으로 잇는다.
      흰 카드 radius 12, 테두리·그림자 없음. 지난 단계와 앞으로 올 단계는 회색. */
@@ -33,7 +38,13 @@
   .step-link.done u { background:var(--primary); }
 
   /* ── Layout (Figma 128:768) — 3 : 1, gap 12 ── */
-  .upload-layout { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,1fr); gap:12px; align-items:start; }
+  /* 시안 128:769 · 128:827 은 좌 1167×834 · 우 389×834 로 두 카드 높이가 같다.
+     오른쪽 「최근 업로드 이력」은 내용이 373 뿐이고 나머지는 흰 여백으로 남는다.
+     align-items:start 를 두면 카드가 제 내용만큼만 자라 아랫단이 어긋난다. */
+  .upload-layout { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,1fr); gap:12px; align-items:stretch; }
+  /* 왼쪽 칸은 모바일 알림 + 카드를 담는 껍데기라, 카드가 남은 높이를 받게 한다 */
+  .upload-layout > div { display:flex; flex-direction:column; }
+  .upload-layout > div > .up-card { flex:1; }
   @media(max-width:960px){ .upload-layout { grid-template-columns:1fr; } }
 
   /* ── 카드 (Figma 128:769 / 128:827) — 흰 카드 radius 12, 테두리·그림자 없음 ── */
@@ -65,6 +76,22 @@
   .up-sec { display:flex; flex-direction:column; gap:16px; }
   .up-sec-head { display:flex; align-items:center; justify-content:space-between; }
   .up-sec-title { font-size:14px; font-weight:700; line-height:1.6; color:var(--gray-800); }
+  /* 구획 제목 옆 안내문 (Figma 128:784) — 561×19 한 덩어리 문장.
+     문장을 inline-flex 로 담으면 <b> 마다 gap 4 가 끼어들어 「유형|을」 「처방전|은」
+     「위임장|등은」 세 곳에서 낱말이 갈라진다. 보통 글줄로 두고 아이콘만 앞에 세운다.
+     (전역 .ds-grid-hint 이 같은 이유로 같은 방식을 쓴다.) */
+  .up-sec-note { display:inline-block; font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  /* 강조 3곳 — 시안은 굵기를 올리지 않고 색만 바꾼다(본문도 이미 500) */
+  .up-sec-note b { font-weight:500; color:var(--primary-700); }
+  /* 12×12 alert-circle(동그라미 안 느낌표) — 전역 --icon-alert-circle 을 마스크로 그린다.
+     글줄 높이 19 만큼 상자를 잡고 그 안에서 12×12 를 가운데 놓아 글줄에 정확히 맞춘다. */
+  .up-note-icon { display:inline-block; vertical-align:top; width:12px; height:19px; margin-right:4px;
+                  background:currentColor;
+                  -webkit-mask:var(--icon-alert-circle) center / 12px 12px no-repeat;
+                          mask:var(--icon-alert-circle) center / 12px 12px no-repeat; }
+  /* 처방전 설정 구획 — 시안 Frame 48101562 는 1135×308 고정이라
+     메모 아래로 여백이 남고 그만큼 초기화·등록이 카드 맨 아래에 선다 (내용 높이는 158). */
+  .up-sec-setting { min-height:308px; }
   /* 하단 버튼 — 초기화 80×36, 등록은 남은 폭 (Figma 128:822) */
   .up-foot { display:flex; align-items:center; gap:8px; }
   .up-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -89,7 +116,25 @@
   .fu-input::placeholder { color:var(--gray-500); }
   .fu-input:focus { outline:none; border-color:var(--primary); }
   textarea.fu-input { height:80px; padding:12px; resize:vertical; }
-  /* 환자 검색칸 위에 얹히는 안내 배지 (Figma 128:793) */
+  /* 담당자 선택 상자 화살표 (Figma 128:814) — 14×14 chevron, 아래 방향, #101317.
+     브라우저 기본 화살표 대신 직접 그린다. .fu-input 의 background 단축이
+     background-image 를 지우므로 반드시 그 뒤에 온다. */
+  select.fu-input {
+    appearance:none; -webkit-appearance:none; padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101317' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.3 8.9 12 14.9 18.7 8.9'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:14px 14px;
+  }
+  /* 환자 검색칸 위에 얹히는 안내 배지 (Figma 128:793 · 128:3188 — 두 상태 모두 있다).
+     132×18 · r999 · pad 1/6 · 10px/500 lh16 · primary 바탕, 상자 오른쪽 위 테두리에 걸친다. */
+  .fu-hint-badge { position:absolute; right:0; top:-9px; padding:1px 6px; border-radius:999px;
+                   background:var(--primary); color:var(--gray-0);
+                   font-size:10px; font-weight:500; line-height:1.6; white-space:nowrap;
+                   /* 안내일 뿐이라 입력칸·버튼 위를 덮어도 누름을 가로채지 않는다 */
+                   pointer-events:none; }
+  /* 환자를 고르면 상자가 「다시 선택」(74) + 간격 8 만큼 줄어든다 — 시안 128:3188 은
+     배지 오른끝을 줄어든 상자 오른끝에 맞춘다. selectPatient() 가 남기는 인라인 스타일로
+     상태를 읽는다. 못 읽어도 배지는 필드 오른쪽 끝에 그대로 남는다(지금 자리). */
+  .patient-search-wrap:has(#patientSelectedBadge[style*="display: flex"]) .fu-hint-badge { right:82px; }
 
   /* ── 파일 타일 그리드 (Figma 128:798) — 6열, gap 8 ── */
   .fu-grid { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
@@ -111,8 +156,11 @@
 
   /* 선택된 파일 타일 (Figma 128:3202) — 미리보기 위에 어두운 겹판 */
   .fu-tile { display:flex; flex-direction:column; gap:6px; }
+  /* 1px 선을 border 로 두면 겹판(inset:0)이 안쪽 상자까지만 덮어 타일 둘레에 회색 테가 남는다.
+     overflow:hidden 은 안쪽 상자에서 자르므로 겹판을 밖으로 늘려도 소용이 없다.
+     시안 Rectangle 9 는 165×140 타일 전체를 덮는다 — 선을 inset 그림자로 그려 겹판 밑에 둔다. */
   .fu-card { position:relative; height:140px; border-radius:8px; overflow:hidden;
-             background:var(--gray-0); border:1px solid var(--gray-200); }
+             background:var(--gray-0); box-shadow:inset 0 0 0 1px var(--gray-200); }
   .fu-card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .fu-card-veil { position:absolute; inset:0; background:rgba(0,0,0,.4); }
   /* 140 타일을 통째로 채우는 자리표시 아이콘이다. 16 으로 내리면 타일이 비어 보여 24 로 둔다 */
@@ -128,18 +176,26 @@
                     color:var(--gray-0); font-size:12px; font-weight:400; line-height:1.6;
                     padding:0; cursor:pointer; }
   .fu-type select option { color:var(--gray-1000); }
-  .fu-type i { font-size:10px; line-height:12px; color:var(--gray-0); }
-  /* 파일명 띠 — 아래 가득, 반투명 검정 (Figma 128:3208) */
+  /* 시안 128:3213 은 12×12 상자 안의 아래 방향 chevron(벡터 8×4) 이다 */
+  .fu-type i { width:12px; height:12px; display:flex; align-items:center; justify-content:center;
+               font-size:10px; line-height:12px; color:var(--gray-0); }
+  /* 파일명 띠 — 아래 가득, 반투명 검정 (Figma 128:3208) — 164×25, 파일명은 띠 한가운데 */
   .fu-name { position:absolute; left:0; right:0; bottom:0; padding:6px;
-             background:rgba(0,0,0,.4); color:var(--gray-0);
-             font-size:11px; font-weight:500; line-height:1.2;
+             background:rgba(0,0,0,.4); color:var(--gray-0); text-align:center;
+             font-size:11px; font-weight:500; line-height:13px;
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  /* 크기 — 파일명 띠 바로 위 오른쪽 (Figma 128:3210) */
-  .fu-size { position:absolute; right:8px; bottom:31px; color:var(--gray-0); opacity:.4;
+  /* 크기 — 파일명 띠 윗선에서 4 띄운 오른쪽 (Figma 128:3210 — 타일 아래에서 29) */
+  .fu-size { position:absolute; right:8px; bottom:29px; color:var(--gray-0); opacity:.4;
              font-size:10px; font-weight:400; line-height:1.2; }
 
   /* ── Patient search ── */
   .patient-search-wrap { position:relative; }
+  /* 환자를 고르면 selectPatient() 가 입력칸만 display:none 으로 감춘다.
+     입력을 감싸는 상자를 따로 두면 그 상자가 flex:1 로 필드 절반(517)을 계속 차지해
+     채워진 상자가 필드 한가운데부터 시작한다 — 입력을 직접 flex 항목으로 둔다.
+     시안 128:3186 은 채워진 상자 946 + 8 + 「다시 선택」 73 = 1027 로 필드를 꽉 채운다. */
+  .patient-search-row { display:flex; gap:8px; align-items:center; }
+  .patient-search-row > #patientSearchInput { flex:1; min-width:0; }
   /* calc 는 연산자 둘레에 공백이 없으면 통째로 무효가 된다 — 드롭다운이 제자리에 붙지 않았다 */
   .patient-search-drop { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--gray-0); border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.13); z-index:500; max-height:240px; overflow-y:auto; display:none; }
   .patient-search-drop.open { display:block; }
@@ -152,14 +208,19 @@
 
   /* ── 최근 업로드 이력 항목 (Figma 128:834) ── */
   .history-list { display:flex; flex-direction:column; gap:8px; }
+  /* 시안 128:834 는 357×53 이고 그 안에 1px 선이 들어가 있다(pad 8/12 + 이름 19 + 메타 18).
+     border 로 그리면 선 2px 이 밖에 더 붙어 55 가 된다 — inset 그림자로 안쪽에 그린다. */
   .history-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px;
-                  background:var(--gray-0); border:1px solid var(--gray-200); cursor:pointer; transition:var(--transition); }
-  .history-item:hover { background:var(--gray-50); border-color:var(--primary); }
+                  background:var(--gray-0); box-shadow:inset 0 0 0 1px var(--gray-200); cursor:pointer; transition:var(--transition); }
+  .history-item:hover { background:var(--gray-50); box-shadow:inset 0 0 0 1px var(--primary); }
   .history-thumb { width:28px; height:28px; display:flex; align-items:center; justify-content:center;
                    font-size:16px; flex-shrink:0; }
   .history-body  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
-  .history-name  { font-size:12px; font-weight:500; color:var(--gray-1000); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .history-meta  { font-size:11px; font-weight:500; color:var(--gray-500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .history-name  { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .history-meta  { font-size:11px; font-weight:500; line-height:18px; color:var(--gray-500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* 처방번호·이름·시각 사이 구분점 — 시안 128:845 는 글자 「·」가 아니라 2×2 정원이다 */
+  .history-dot { display:inline-block; vertical-align:middle; width:2px; height:2px;
+                 border-radius:999px; background:var(--gray-300); margin:0 4px; }
   .history-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; flex-shrink:0; }
 
   /* mobile upload */
@@ -254,12 +315,9 @@
             <div class="up-sec-head">
               <span class="up-sec-title">파일 업로드</span>
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
-              <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
-                <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                각 파일의 <b style="font-weight:500;color:var(--primary-700);">유형</b>을 선택해 주세요.
-                <b style="font-weight:500;color:var(--primary-700);">처방전</b>은 OCR 분석,
-                <b style="font-weight:500;color:var(--primary-700);">주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.
-              </span>
+              <span class="up-sec-note"><i class="up-note-icon"></i>각 파일의 <b>유형</b>을 선택해 주세요.
+                <b>처방전</b>은 OCR 분석,
+                <b>주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.</span>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:8px;">
@@ -268,11 +326,10 @@
               <div class="fu-row">
                 <span class="fu-label">환자 선택</span>
                 <div class="fu-field patient-search-wrap">
-                  <div style="display:flex;gap:8px;align-items:center;position:relative;">
-                    <div style="flex:1;min-width:0;position:relative;">
-                      <input type="text" id="patientSearchInput" class="fu-input"
-                             placeholder="이름 또는 연락처로 검색" autocomplete="off" />
-                    </div>
+                  <span class="fu-hint-badge">선택 시 OCR 자동 연결 건너뜀</span>
+                  <div class="patient-search-row">
+                    <input type="text" id="patientSearchInput" class="fu-input"
+                           placeholder="이름 또는 연락처로 검색" autocomplete="off" />
                     <div id="patientSelectedBadge" style="display:none;align-items:center;gap:8px;flex:1;min-width:0;">
                       <span id="patientSelectedName" class="fu-input"
                             style="display:flex;align-items:center;background:var(--gray-50);color:var(--gray-800);"></span>
@@ -339,7 +396,7 @@
           </div>
 
           {{-- ── 처방전 설정 (Figma 128:805) — 시안에서 이 카드 안으로 들어왔다 ── --}}
-          <div class="up-sec">
+          <div class="up-sec up-sec-setting">
             <span class="up-sec-title">처방전 설정</span>
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div class="fu-row">
@@ -391,7 +448,7 @@
           </div>
           <div class="history-body">
             <span class="history-name">{{ $rx->image_original_name ?? $rx->rx_number }}</span>
-            <span class="history-meta">{{ $rx->rx_number }} · {{ $rx->patient_name_ocr ?? '-' }} · {{ $rx->created_at->format('H:i') }}</span>
+            <span class="history-meta">{{ $rx->rx_number }}<i class="history-dot"></i>{{ $rx->patient_name_ocr ?? '-' }}<i class="history-dot"></i>{{ $rx->created_at->format('H:i') }}</span>
           </div>
           <span class="history-badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span>
         </div>
@@ -593,10 +650,10 @@ function renderFileList() {
            ${item.url ? '' : `<div class="fu-card-doc"><i class="fa-regular ${ext === 'pdf' ? 'fa-file-pdf' : 'fa-file-image'}"></i></div>`}
            <span class="fu-type">
              <select onchange="changeDocType(${i}, this.value)">${opts}</select>
-             <i class="fa-solid fa-chevron-right"></i>
+             <i class="fa-solid fa-chevron-down"></i>
            </span>
            <button type="button" class="fu-del" onclick="removeFile(${i})" title="제거">
-             <i class="fa-solid fa-xmark"></i>
+             <i class="fa-solid fa-minus"></i>
            </button>
            <span class="fu-size">${size}</span>
            <span class="fu-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
