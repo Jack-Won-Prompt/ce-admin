@@ -2,7 +2,7 @@
 
 @section('title', '문의 작성')
 @section('page-title', '문의 작성')
-@section('breadcrumb', '홈 / 문의하기 / 작성')
+@section('breadcrumb', '홈 - 문의하기 - 작성')
 
 @section('content')
 <div style="max-width:800px;">

@@ -2,7 +2,7 @@
 
 @section('title', '공지 등록')
 @section('page-title', '공지 등록')
-@section('breadcrumb', '홈 / 공지사항 / 등록')
+@section('breadcrumb', '홈 - 공지사항 - 등록')
 
 @section('content')
 <div style="max-width:800px;">

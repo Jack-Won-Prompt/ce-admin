@@ -2,7 +2,7 @@
 
 @section('title', '공지사항')
 @section('page-title', '공지사항')
-@section('breadcrumb', '홈 / 공지사항')
+@section('breadcrumb', '홈 - 공지사항')
 
 @push('styles')
 @endpush

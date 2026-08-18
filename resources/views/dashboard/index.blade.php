@@ -38,7 +38,8 @@
 </div>
 @endsection
 {{-- 시안 382:107 의 빵부스러기에는 날짜가 없다. 오늘 날짜를 덧붙이던 조각을 뺀다. --}}
-@section('breadcrumb', '홈 / 대시보드')
+{{-- 시안 382:107 빵부스러기는 '홈' 한 마디뿐이다. --}}
+@section('breadcrumb', '홈')
 
 @push('scripts')
 <script>

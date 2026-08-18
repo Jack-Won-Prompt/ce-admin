@@ -3,7 +3,7 @@
 
 @section('title', '권한 그룹')
 @section('page-title', '권한 그룹')
-@section('breadcrumb', '홈 / 설정 / 권한 그룹')
+@section('breadcrumb', '홈 - 설정 - 권한 그룹')
 
 @push('styles')
 <style>

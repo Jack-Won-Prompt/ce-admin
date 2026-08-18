@@ -2,7 +2,7 @@
 
 @section('title', '공지 수정')
 @section('page-title', '공지 수정')
-@section('breadcrumb', '홈 / 공지사항 / 수정')
+@section('breadcrumb', '홈 - 공지사항 - 수정')
 
 @section('content')
 <div style="max-width:800px;">

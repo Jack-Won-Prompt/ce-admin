@@ -3,7 +3,7 @@
 
 @section('title', 'SR 관리')
 @section('page-title', 'SR 관리')
-@section('breadcrumb', '홈 / 지원 / SR 관리')
+@section('breadcrumb', '홈 - 지원 - SR 관리')
 
 @push('styles')
 <style>
