@@ -1,8 +1,10 @@
 @extends('layouts.app')
 
-@section('title', '환자 정보')
-@section('page-title', '환자 관리')
-@section('breadcrumb', '홈 / 환자 관리')
+{{-- 화면 이름은 시안 114:4778 · 114:6131 · 120:352 헤더 기준 '거래처 관리'.
+     워크스페이스 탭 이름도 .page-title 을 그대로 읽어 간다(layouts/app.blade.php). --}}
+@section('title', '거래처 관리')
+@section('page-title', '거래처 관리')
+@section('breadcrumb', '홈 - 거래처 관리')
 
 @section('help-title', '환자 관리 도움말')
 @section('help-content')
@@ -192,24 +194,48 @@
   .rx-count-badge { display:inline-block;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;line-height:18px;background:var(--primary-light);color:var(--primary); }
 
   /* ── Modal (Vuexy style) ── */
-  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(67,56,202,.3);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
+  /* 가림막 색은 전역 .modal-overlay 와 같은 중성 먹빛으로 맞췄다.
+     본디 rgba(67,56,202,.3) 남보라였는데 시안·DS 램프에 없는 색이다. */
+  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(13,27,42,.45);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
   .modal-overlay.show { display:flex; }
-  .modal-box { background:var(--bg-card);border-radius:12px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
+  /* 상자 — 시안 120:917 Frame 48101489: 960×902 · r12 · bg 흰색 · bd 1px gray-200.
+     .modal-box 는 layouts/app.blade.php 도 쓰는 전역 이름이라 #addModal 안으로 묶는다.
+     묶지 않으면 이 화면이 열려 있는 동안 전역 확인창(.modal-box.sm)에도 테두리가 붙는다. */
+  #addModal .modal-box { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:960px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
   /* 머리·본문·바닥 규격은 Figma 120:917(환자 추가 모달) 실측 —
-     머리 pad 16/24 · 제목 14px/700 lh22, 본문 pad 24, 바닥 pad 16/24 · gap 8 */
+     머리 960×54 pad 16/24 · gap 12 · 제목 14px/700 lh22,
+     본문 pad 24, 바닥 960×72 pad 16/24 · gap 8 */
   .modal-header { padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px; }
   .modal-header h3 { font-size:14px;font-weight:700;line-height:22px;margin:0;flex:1;color:var(--text-primary); }
   .modal-body   { padding:24px; }
   .modal-footer { padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--gray-0);border-radius:0 0 12px 12px; }
-  /* 시안 하단 버튼 글자는 14px/500 (본문 버튼 13px/500 과 다른 유일한 자리).
-     줄높이는 전역 .btn 의 20px 을 그대로 둬 버튼 높이 32 를 지킨다. */
-  .modal-footer .btn { font-size:14px;font-weight:500; }
-  .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
-  .form-group   { display:flex;flex-direction:column;gap:8px; }
-  /* 전역 .form-label 은 margin-bottom:5px 을 갖고 있다. 위 flex gap 8 과 더해지면
-     라벨↔입력 간격이 13px 이 되어 시안(라벨 21 + gap 8 + 입력 32)과 어긋난다.
-     gap 하나만 남긴다 — taxinvoice 의 .ti-card-body .form-label 과 같은 처리다. */
-  .form-group .form-label { margin-bottom:0; }
+  /* 시안 하단 버튼은 65×40 / 120×40 · r8 · pad 0/20 · 14px/500 lh22
+     (본문 버튼 h32 · 13px/500 과 다른 유일한 자리). */
+  .modal-footer .btn { height:40px;padding:0 20px;font-size:14px;font-weight:500;line-height:22px;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px; }
+  .modal-footer #btn-add-save { min-width:120px; }
+  /* 아래 폼 규칙은 전부 #addModal 안으로 묶는다.
+     .form-group · .form-label · .form-control 은 layouts/app.blade.php 가 쓰는 전역 이름이고,
+     이 화면이 열려 있는 동안 전역 문의하기 옆판(.side-panel .sp-form .form-group)까지
+     라벨 100px 가로 배치로 바뀌어 버린다(실측 확인: 라벨 위 → 라벨 왼쪽). */
+  /* 본문 2단 — 시안 912 = 444 + gap 24 + 444, 줄 사이 gap 8 */
+  #addModal .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;column-gap:24px;row-gap:8px; }
+  /* 한 줄 444×32 = 라벨 100 고정(13/500 lh16 gray-700) + gap 8 + 컨트롤 336×32.
+     라벨이 입력 위가 아니라 왼쪽에 붙는다.
+     전역 .form-group 의 margin-bottom:10px 을 걷어낸다 — 걷지 않으면 2단 묶음 안 칸에도
+     10px 이 붙어 줄 사이가 8 이 아니라 18 이 된다(시안 Frame 48101644 gap 8). */
+  #addModal .form-group   { display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:0; }
+  /* 전역 .form-label 은 display:block · margin-bottom:5px 을 갖고 있다.
+     가로 배치에서는 그 여백이 라벨을 위로 밀어 올리므로 걷어낸다. */
+  #addModal .form-group .form-label { flex:0 0 100px;width:100px;margin-bottom:0;
+    font-size:13px;font-weight:500;line-height:16px;color:var(--gray-700); }
+  #addModal .form-group > .form-control { flex:1 1 auto;min-width:0; }
+  /* 여러 줄 입력(메모)은 라벨을 첫 줄에 맞춰 위로 붙인다 */
+  #addModal .form-group:has(textarea) { align-items:flex-start; }
+  #addModal .form-group:has(textarea) .form-label { padding-top:8px; }
+  /* 2단 밖에 홀로 선 줄도 시안과 같은 444 폭을 지킨다(912 의 절반 - gap 12) */
+  #addModal .modal-body > .form-group { width:calc(50% - 12px); }
+  #addModal .modal-body > .form-group:has(textarea) { width:100%; }
 
   /* 패널 탭(조회결과/상세내용) */
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
@@ -252,7 +278,7 @@
   }
   .pt-radio-dot::after { content:''; width:6px; height:6px; border-radius:999px; background:var(--gray-0); }
   .pt-radio.on .pt-radio-dot { background:var(--primary); }
-  /* 상세내용 탭 안 이력 카드(전체폭) */
+  /* 상세내용 탭 안 이력 카드(전체폭) — Figma 114:6131 Frame 48101490 (1536×441 · r12 · bd 1px gray-200) */
   .pt-detail { background:var(--gray-0); border:1px solid var(--border);
     border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; }
   /* 좌우 여백은 카드 안 표준 16 — 아래 탭바(pad 0/16)·본문과 글자 시작선을 맞춘다 */
@@ -373,7 +399,7 @@
       <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid-2" style="margin-bottom:12px;">
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           {{-- 필수 표시는 전역 .form-label span 이 var(--danger) 로 그린다.
                인라인 color:red 는 그 규칙을 덮어 DS 밖 빨강이 되므로 걷어냈다. --}}
@@ -385,7 +411,7 @@
           <input type="text" class="form-control" id="add-resident" placeholder="XXXXXX-XXXXXXX" />
         </div>
       </div>
-      <div class="form-grid-2" style="margin-bottom:12px;">
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">생년월일</label>
           <input type="date" class="form-control" id="add-birth" />
@@ -399,7 +425,7 @@
           </select>
         </div>
       </div>
-      <div class="form-grid-2" style="margin-bottom:12px;">
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">휴대폰</label>
           <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
@@ -411,7 +437,7 @@
       </div>
       {{-- 주소는 주문 등록·환자 상세와 같은 구성이다 — 우편번호·도로명은 찾아서 채우고
            상세만 사람이 적는다. 한 칸에 몰아 적으면 주문 낼 때 다시 갈라야 한다. --}}
-      <div class="form-group" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:8px;">
         <label class="form-label">주소</label>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
           <input type="text" class="form-control" id="add-postcode" readonly placeholder="우편번호"
@@ -572,7 +598,8 @@ document.addEventListener('keydown', (e) => {
 
       { header: '처방건수',     name: 'rx_count',        width: 80,  editor: 'number', align: 'center', sortable: true },
       { header: '재구매일',     name: 'repurchase_date', width: 160, sortable: true },
-      { header: '등록일',       name: 'created',         width: 110, sortable: true },
+      // 머리글은 시안 114:4778 그리드 마지막 컬럼 '생성일'. key·width·align 은 그대로 둔다.
+      { header: '생성일',       name: 'created',         width: 110, sortable: true },
     ],
     data: @json($gridData),
   });
