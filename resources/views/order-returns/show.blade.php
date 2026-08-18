@@ -112,8 +112,9 @@
     <div class="rt-kv"><span>사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
     <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
-    @if($r->type !== \App\Models\OrderReturn::TYPE_CANCEL)
-      <div class="rt-kv"><span>수거 방법</span><span>{{ \App\Models\OrderReturn::COLLECT_METHODS[$r->collect_method] ?? '—' }}</span></div>
+    {{-- 접수 때는 수거 방법을 묻지 않는다 — 예전에 받아 둔 건에만 남아 있으니 있을 때만 --}}
+    @if($r->collect_method)
+      <div class="rt-kv"><span>수거 방법</span><span>{{ \App\Models\OrderReturn::COLLECT_METHODS[$r->collect_method] ?? $r->collect_method }}</span></div>
     @endif
     @if($r->type === \App\Models\OrderReturn::TYPE_EXCHANGE)
       {{-- 접수 때는 더 묻지 않는다 — 무엇을 되돌리는지는 아래 주문 제품에 있고, 바꿔 보낼

@@ -93,7 +93,6 @@ class OrderReturnController extends Controller
             'reason_code'       => 'required|string|in:' . implode(',', array_keys(OrderReturn::REASONS)),
             'reason_text'       => 'nullable|string|max:500',
             'shipping_burden'   => 'nullable|in:customer,company',
-            'collect_method'    => 'nullable|in:courier,self',
             'refund_method'     => 'nullable|in:account,card,va',
             'refund_bank'       => 'nullable|string|max:50',
             'refund_account'    => 'nullable|string|max:50',

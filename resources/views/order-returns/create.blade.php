@@ -93,23 +93,6 @@
     </div>
   </div>
 
-  {{-- 취소는 보낸 물건이 없어 수거가 없다 --}}
-  <div class="rt-card rt-only" data-for="exchange return">
-    <div class="rt-hd">수거</div>
-    <div class="rt-bd">
-      <div class="rt-row">
-        <label>수거 방법</label>
-        <select name="collect_method" class="form-control form-select">
-          <option value="">선택</option>
-          @foreach(\App\Models\OrderReturn::COLLECT_METHODS as $k => $label)
-            <option value="{{ $k }}" @selected(old('collect_method') === $k)>{{ $label }}</option>
-          @endforeach
-        </select>
-      </div>
-      <div class="rt-hint">위드웍스 역물류 연계가 아직 없어 수거 접수는 사람이 합니다.</div>
-    </div>
-  </div>
-
   <div class="rt-card rt-only" data-for="return cancel">
     <div class="rt-hd">환불</div>
     <div class="rt-bd">
@@ -157,7 +140,7 @@
   const burden = document.getElementById('rt-burden');
   const order  = document.getElementById('rt-order');
 
-  /* 종류마다 필요한 칸이 다르다. 취소 건에 수거 방법을 물으면 담당자가 헷갈린다. */
+  /* 종류마다 필요한 칸이 다르다 — 취소·반품은 환불을 묻고, 교환은 묻지 않는다. */
   function syncType() {
     document.querySelectorAll('.rt-only[data-for]').forEach(el => {
       el.style.display = el.dataset.for.split(' ').includes(type.value) ? '' : 'none';
