@@ -667,7 +667,11 @@
     /* ── Table ── */
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
-    thead th {
+    /* wwGrid 의 표(.cg-table)는 제외한다. 시안의 그리드 머리글은 대문자도 자간도 없다
+       (13/700 · 왼쪽 · 자간 0). 여기서 걸러 두지 않으면 wwGrid.css 가 선언으로 덮지 않는
+       두 속성이 그대로 새어, 'No' 가 'NO' 로 · '신환 Master 등록일' 이
+       '신환 MASTER 등록일' 로 보이고 자간이 .5px 벌어진다. */
+    table:not(.cg-table) thead th {
       padding: 12px; font-size: 13px; font-weight: 700;
       color: var(--text-muted); text-align: left; text-transform: uppercase;
       letter-spacing: .5px; border-bottom: 1px solid var(--border);

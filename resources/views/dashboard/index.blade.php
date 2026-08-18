@@ -33,7 +33,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link"></i></div>
-    <div class="help-item-text"><strong>Withworks 연계</strong>처방전 검수 후 주문 탭에서 Withworks 판매주문을 자동 생성합니다.</div>
+    <div class="help-item-text"><strong>Withworks 연계</strong>주문 화면에서 처방전을 검수한 뒤 주문 연계 탭에서 Withworks 판매주문을 자동 생성합니다.</div>
   </div>
 </div>
 @endsection
@@ -62,7 +62,7 @@
     ],
     data: @json($recentRxGrid ?? []),
   });
-  /* 더블클릭 → 처방전 검수 화면을 '새 탭'으로 연다.
+  /* 더블클릭 → 그 처방전의 주문 화면을 '새 탭'으로 연다.
      워크스페이스 안에서는 대시보드 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
      단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다.
      (처방전 목록·서류 관리·주문 상세와 같은 방식) */

@@ -11,7 +11,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.status-tabs', title: '주문 상태 탭', body: '전체·대기·확정·배송중·배송완료·취소 탭으로 주문을 상태별 필터링합니다.' },
-  { selector: '.ds-filter-card', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 날짜 범위로 조회합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 등록일자로 조회합니다.' },
   { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
@@ -114,7 +114,7 @@ window.HELP_TOUR_STEPS = [
              placeholder="주문번호ㆍ환자명ㆍ제품명">
     </div>
     <div class="ds-filter-field span-2">
-      <label class="ds-field-label">기간</label>
+      <label class="ds-field-label">등록일자</label>
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
@@ -214,7 +214,7 @@ window.HELP_TOUR_STEPS = [
           <th>환자명</th>
           <th>제품명</th>
           <th>수량</th>
-          <th class="amount-cell">환자부담금</th>
+          <th class="amount-cell">본인 부담금</th>
           <th class="amount-cell">배송비</th>
           <th class="amount-cell">총금액</th>
           <th>배송지</th>
@@ -371,7 +371,7 @@ window.HELP_TOUR_STEPS = [
       { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
       { header: '제품명',     name: 'product',   width: 160 },
       { header: '수량',       name: 'qty',       width: 60,  editor: 'number', align: 'center' },
-      { header: '환자부담금', name: 'copay',     width: 100, editor: 'number' },
+      { header: '본인 부담금', name: 'copay',     width: 100, editor: 'number' },
       { header: '배송비',     name: 'shipping',  width: 80,  editor: 'number' },
       { header: '총금액',     name: 'total',     width: 100, editor: 'number' },
       { header: '배송지',     name: 'address',   width: 180 },

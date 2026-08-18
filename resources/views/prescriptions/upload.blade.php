@@ -722,11 +722,11 @@ function setStep(num, state) {
 
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.steps-bar', title: '업로드 진행 단계', body: '파일 선택 → 등록 버튼 클릭 → OCR 분석 → 처방전 확인 및 주문 연결 순서로 진행됩니다.' },
+  { selector: '.steps-bar', title: '업로드 진행 단계', body: '파일 선택 → 등록 버튼 클릭 → OCR 분석 → 주문 화면 연결 순서로 진행됩니다.' },
   { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
   { selector: '#grid-etc', title: '기타 자료', body: '신분증·위임장 등을 넣습니다. 이미지 그대로 첨부 문서로 저장됩니다. 타일 왼쪽 위에서 유형을 바꿀 수 있습니다.' },
-  { selector: '#submitBtn', title: '등록 버튼', body: '버튼 클릭 시 OCR 분석이 시작되며, 완료 후 처방전 확인 화면으로 이동합니다.' },
+  { selector: '#submitBtn', title: '등록 버튼', body: '버튼 클릭 시 OCR 분석이 시작되며, 완료 후 주문 화면으로 이동합니다.' },
 ];
 </script>
 @endpush
