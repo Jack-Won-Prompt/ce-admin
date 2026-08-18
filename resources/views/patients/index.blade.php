@@ -152,12 +152,20 @@
        전역 --icon-alert-circle 과 같은 방식이다. */
     --pt-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M7.7 4.3L16.3 12 7.7 19.7'/></svg>"); }
   /* 머리 — 시안 Frame 48101479: 1536×44 · pad 8/16 · SPACE_BETWEEN · 하단 1px gray-200.
-     왼쪽 묶음(20×20 아이콘 + 이름 13/700 lh21) gap 8, '전체 상세'는 오른쪽 끝. */
-  .pt-detail-head { display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--border); }
-  .pt-detail-head > .bx { flex:0 0 20px; width:20px; height:20px; line-height:20px; text-align:center; }
-  /* 시안은 오른쪽 끝(SPACE_BETWEEN). 파일에 남아 있던 '요청서 4쪽 — 전체 상세 버튼이 앞쪽으로'
-     메모와 어긋나는 자리다. 이번 라운드는 시안을 따랐고, 되돌릴 판단은 요청서 담당 몫이다. */
-  .pt-detail-head #pdMore { margin-left:auto; }
+     왼쪽 묶음(20×20 아이콘 + 이름 13/700 lh21) gap 8.
+     ── 요청 1차 4쪽: '전체 상세 버튼이 앞쪽으로 오면 좋겠음 (Ex 박일성 이력 아래)' ──
+     시안은 '전체 상세'를 머리줄 오른쪽 끝에 두지만(실측 x1801 · 머리 h44),
+     배치는 요청서를 따라 이름 바로 아래·앞쪽(이름과 같은 x)으로 내린다.
+     마크업 차례(아이콘·이름·버튼)를 한 글자도 안 건드리려고 flex 를 2행 grid 로 바꾼다 —
+     1행 [아이콘 20][이름 13/700 lh21], 2행 [빈칸][전체 상세 69×28].
+     세로 사이는 머리가 이미 쓰는 gap 8 을 그대로 쓴다.
+     머리 높이는 8+21+8+28+8 = 73 이 되어 시안 44 보다 29 높아진다(요청서 우선). */
+  .pt-detail-head { display:grid; grid-template-columns:20px 1fr; column-gap:8px; row-gap:8px;
+    align-items:center; padding:8px 16px; border-bottom:1px solid var(--border); }
+  .pt-detail-head > .bx { grid-column:1; grid-row:1; width:20px; height:20px; line-height:20px; text-align:center; }
+  .pt-detail-head > #pdName { grid-column:2; grid-row:1; }
+  /* 이름 아래 같은 칸(2열) 왼쪽 끝. 알약 폭은 시안 69 그대로 — justify-self 로 늘어나지 않게 막는다. */
+  .pt-detail-head > #pdMore { grid-column:2; grid-row:2; justify-self:start; }
   /* '전체 상세' — 시안 69×28 · r8 · pad 0/12 · 12px/500 lh19 · 글자 gray-1000 · bd 1px gray-200 */
   #pdMore.btn { height:28px; padding:0 12px; border-radius:8px;
     font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
@@ -307,10 +315,11 @@
            개발이 넣은 boxicons 글리프를 그대로 두고 크기만 20 으로 맞췄다. --}}
       <i class="bx bx-user-pin" style="color:var(--primary);font-size:20px;"></i>
       <span id="pdName" style="font-weight:700;font-size:13px;line-height:21px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
-      {{-- 자리는 시안 114:6131(머리 SPACE_BETWEEN — 오른쪽 끝)을 따른다.
-           CSS 의 .pt-detail-head #pdMore { margin-left:auto } 가 민다.
-           파일에 남아 있던 '요청서 4쪽 — 전체 상세 버튼이 앞쪽으로' 메모와 어긋나는 자리라
-           요청서 담당 확인이 필요하다. --}}
+      {{-- 요청 1차 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음 (Ex 박일성 이력 아래)' 를 따라
+           이름(#pdName '박일성 이력') 바로 아래·앞쪽으로 내렸다. 자리는 CSS 의
+           .pt-detail-head grid 2행이 잡는다(마크업 차례는 그대로).
+           시안 114:6131 Frame 48101479 는 오른쪽 끝(SPACE_BETWEEN)이라 이 한 자리가 어긋난다.
+           href 는 아래 ptLoad() 가 id 로 채운다 — 옮겨도 그대로 돈다. --}}
       <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;">전체 상세</a>
     </div>
     <div class="tab-bar">
