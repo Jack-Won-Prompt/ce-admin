@@ -96,7 +96,8 @@
   /* 기간 구분자 — 예전 선택자(.filter-sep)를 함께 남기되, 전역 .filter-sep 은
      세로 구분선(1×20px · 회색 배경)이라 여기서 그 형태를 되돌려 놓는다.
      되돌리지 않으면 '~' 글자가 1px 폭 회색 막대 밖으로 삐져나온다.
-     색은 시안 324:60 기준 #101317 (전역 .ds-field-sep 은 gray-400 이라 여기서만 덮는다). */
+     색·글자는 이제 전역 .ds-field-sep 이 시안대로(13/400 · #101317) 갖는다 —
+     여기서는 세로막대 형태만 되돌린다. */
   .filter-sep { width: auto; height: auto; background: none; margin: 0;
     color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
   /* 기간 두 입력 높이 — 시안 324:60 은 검색어·주문 상태와 똑같은 135×32 다.
