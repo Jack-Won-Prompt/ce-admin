@@ -1003,7 +1003,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- 가상계좌 발급 --}}
-      <div id="vaButtonWrap">
+      {{-- 가상계좌 발급은 화면에 두지 않는다. 결제전송에서 카드·가상계좌·무통장입금을
+           함께 고르므로 같은 일을 하는 단추가 둘이 된다.
+           지우지는 않는다 — 발급된 계좌를 보여 주는 자리와 웹훅 처리가 여기에 매여 있고,
+           다시 꺼내야 할 때 display 만 되돌리면 된다. --}}
+      <div id="vaButtonWrap" style="display:none;">
       @if($prescription->order)
         @php
           $tp = $prescription->order->tossPayment;
@@ -5980,6 +5984,8 @@ window.HELP_TOUR_STEPS = [
   function injectVaButton(orderId) {
     const wrap = document.getElementById('vaButtonWrap');
     if (!wrap || wrap.querySelector('#btnVaTrigger, #vaResultBadge')) return;
+    // 자리는 감춰 두었다. 여기서 다시 보이게 하면 감춘 뜻이 없어진다.
+    wrap.style.display = 'none';
     const vaUrl  = VA_ISSUE_URL_TPL.replace('__ID__', orderId);
     wrap.innerHTML = `
       <div id="vaNotIssuedWrap" style="position:relative;">
