@@ -148,14 +148,25 @@ class OrderReturnController extends Controller
      */
     public function orderSearch(Request $request): \Illuminate\Http\JsonResponse
     {
-        $kw = trim((string) $request->q);
+        $no    = trim((string) $request->order_no);
+        $name  = trim((string) $request->patient_name);
+        $birth = trim((string) $request->birth_date);
+        $phone = preg_replace('/[^0-9]/', '', (string) $request->phone);
 
-        $orders = Order::with(['patient'])
-            ->when($kw !== '', fn ($q) => $q->where(fn ($sub) => $sub
-                ->where('order_number', 'like', "%{$kw}%")
-                ->orWhere('withworks_so_no', 'like', "%{$kw}%")
-                ->orWhere('product_name', 'like', "%{$kw}%")
-                ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$kw}%"))))
+        /* 조건이 하나도 없으면 최근 것을 보여 준다. 빈 손으로 눌러도 무엇이 있는지는
+           보여야 다음에 무엇을 칠지 정할 수 있다. */
+        $orders = Order::with(['patient', 'items'])
+            ->when($no !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('order_number', 'like', "%{$no}%")
+                ->orWhere('withworks_so_no', 'like', "%{$no}%")))
+            ->when($name !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$name}%")))
+            ->when($birth !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p->whereDate('birth_date', $birth)))
+            ->when($phone !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p
+                    ->whereRaw("REPLACE(REPLACE(mobile,'-',''),' ','') LIKE ?", ["%{$phone}%"])
+                    ->orWhereRaw("REPLACE(REPLACE(phone,'-',''),' ','') LIKE ?", ["%{$phone}%"])))
             ->latest('id')
             ->limit(50)
             ->get();
@@ -165,13 +176,33 @@ class OrderReturnController extends Controller
                 'id'       => $o->id,
                 'order_no' => $o->order_number,
                 'patient'  => $o->patient?->name ?? '-',
+                'birth'    => $o->patient?->birth_date?->format('Y-m-d') ?? '',
+                'phone'    => $o->patient?->mobile ?: ($o->patient?->phone ?? ''),
                 'product'  => $o->product_name ?? '-',
                 'amount'   => (int) $o->total_amount,
-                'address'  => $o->shipping_address ?? '',
+                'address'  => trim(($o->shipping_address ?? '')),
                 'so_no'    => $o->withworks_so_no ?? '',
                 'status'   => $o->status_label,
-                // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
+                // 이미 접수한 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
                 'returns'  => $o->returns()->count(),
+                /* 제품은 주문에 딸린 것을 그대로 준다. 품목 표가 비어 있는 옛 주문은
+                   주문 자체에 적힌 대표 제품 한 줄로 대신한다 — 빈 표를 보여 주면
+                   무엇을 되돌리는지 알 수 없다. */
+                'items'    => $o->items->isNotEmpty()
+                    ? $o->items->map(fn ($i) => [
+                        'product_code' => $i->product_code ?? '',
+                        'product_name' => $i->product_name ?? '',
+                        'quantity'     => (int) $i->quantity,
+                        'unit_price'   => (int) ($i->insurance_price ?: $i->product_price),
+                        'copay'        => (int) $i->patient_copay,
+                    ])->values()
+                    : collect([[
+                        'product_code' => $o->product_code ?? '',
+                        'product_name' => $o->product_name ?? '',
+                        'quantity'     => (int) $o->quantity,
+                        'unit_price'   => (int) $o->unit_price,
+                        'copay'        => (int) $o->patient_copay,
+                    ]]),
             ])->values(),
         ]);
     }
