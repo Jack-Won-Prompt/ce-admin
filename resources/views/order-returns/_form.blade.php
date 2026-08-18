@@ -12,24 +12,28 @@
   .rto-find { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .rto-find input { max-width: 320px; }
 
-  /* 찾은 주문 — 골라야 다음으로 간다 */
-  .rto-hits { border: 1px solid var(--border); border-radius: 8px; max-height: 200px; overflow-y: auto; }
-  .rto-hit { display: flex; gap: 10px; align-items: center; padding: 8px 12px; font-size: 12.5px;
-             border-bottom: 1px solid var(--border-light); cursor: pointer; }
-  .rto-hit:last-child { border-bottom: none; }
-  .rto-hit:hover { background: var(--primary-light); }
-  .rto-hit .no { font-family: monospace; font-weight: 700; color: var(--primary); width: 110px; flex-shrink: 0; }
-  .rto-hit .who { width: 70px; flex-shrink: 0; font-weight: 500; }
-  .rto-hit .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-700); }
-  .rto-hit .amt { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
-  .rto-hit .warn { color: #B54708; font-weight: 700; font-size: 11px; }
-  .rto-empty { padding: 14px 12px; font-size: 12.5px; color: var(--gray-700); text-align: center; }
+  /* 찾은 주문 — 골라야 다음으로 간다. 목록은 다른 화면과 같은 wwGrid 로 그린다.
+     상자(테두리·모서리·내부 스크롤)는 그리드의 .cg-wrap 이 갖는다 — 여기서 또 그리면 두 겹이 된다.
+     다만 레이아웃의 `.ds-grid-card .cg-wrap { border:0 }` 이 이 자리까지 걷어 간다.
+     그 규칙은 그리드가 카드 전체를 채울 때 이야기고, 이 목록은 폼 한가운데 놓인
+     작은 상자다. 테두리를 되돌려 준다(렌더로 확인 — 안 주면 상자가 아예 사라진다). */
+  /* 다섯 줄(머리 45.3 + 본문 41.8×5 + 테두리 2)까지만 서고 넘으면 상자 안에서 구른다.
+     .ds-grid-card .cg-wrap 이 전역에서 테두리를 걷어 가므로 여기서 도로 그린다. */
+  .rto-hits .cg-wrap { border: 1px solid var(--border); border-radius: 12px; max-height: 257px; }
+  .rto-hits .cg-cell-inner { cursor: pointer; }
+  .rto-hits .cg-cell-inner[data-col-name="order_no"] {
+    font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+  /* 이미 되돌린 적이 있는 주문. 쓰던 호박색은 DS 밖 값이라 alert 계열로 옮겼다. */
+  .rto-hit-warn { color: var(--alert-500); font-weight: 700; }
+  /* 0건일 때는 그리드를 숨기므로 상자를 이쪽이 대신 그린다 */
+  .rto-empty { padding: 14px 12px; font-size: 12px; line-height: 19px; color: var(--gray-700);
+               text-align: center; border: 1px solid var(--border); border-radius: 12px; }
 
   /* 고른 주문 */
   .rto-picked { display: none; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px;
                 border: 1px solid var(--primary); background: var(--primary-light); border-radius: 8px; }
   .rto-picked.on { display: flex; }
-  .rto-picked .no { font-family: monospace; font-weight: 700; color: var(--primary); }
+  .rto-picked .no { font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
   .rto-picked .meta { flex: 1; color: var(--gray-700); font-size: 12.5px; }
 
   .rto-body { display: none; }
@@ -63,7 +67,10 @@
       <button type="button" class="ds-btn ds-btn-primary" onclick="rtoFind()">조회</button>
       <span class="rto-note" id="rtoFindNote"></span>
     </div>
-    <div class="rto-hits" id="rtoHits" style="display:none;"></div>
+    <div class="rto-hits" id="rtoHits" style="display:none;">
+      <div id="rtoHitsGrid"></div>
+      <div class="rto-empty" id="rtoHitsEmpty" style="display:none;">맞는 주문이 없습니다. 검색어를 줄여 보십시오.</div>
+    </div>
     <div class="rto-picked" id="rtoPicked">
       <span class="no" id="rtoPickedNo"></span>
       <span class="meta" id="rtoPickedMeta"></span>
@@ -205,48 +212,76 @@
     }
   };
 
-  function drawHits(rows) {
-    const box = $('rtoHits');
-    box.innerHTML = '';
-    box.style.display = '';
+  /* 목록은 다른 화면과 같은 wwGrid 로 그린다.
+     다만 이 <script> 는 레이아웃의 wwGrid.js 보다 먼저 실린다. 여기서 바로
+     new wwGrid 를 부르면 ReferenceError 로 이 IIFE 가 통째로 죽어 rtoFind·syncType
+     까지 사라진다. 그래서 처음 조회할 때 — 스크립트가 다 실린 뒤에 — 만든다. */
+  let hitsGrid = null;
 
-    if (!rows.length) {
-      const d = document.createElement('div');
-      d.className = 'rto-empty';
-      d.textContent = '맞는 주문이 없습니다. 검색어를 줄여 보십시오.';
-      box.appendChild(d);
-      return;
-    }
+  function ensureHitsGrid() {
+    if (hitsGrid) return hitsGrid;
 
-    rows.forEach((r) => {
-      const el = document.createElement('div');
-      el.className = 'rto-hit';
-
-      const no = document.createElement('span');
-      no.className = 'no'; no.textContent = r.order_no;
-
-      const who = document.createElement('span');
-      who.className = 'who'; who.textContent = r.patient;
-
-      const what = document.createElement('span');
-      what.className = 'what';
-      what.textContent = r.product + (r.so_no ? ' · ' + r.so_no : '');
-
-      const amt = document.createElement('span');
-      amt.className = 'amt'; amt.textContent = (r.amount || 0).toLocaleString() + '원';
-
-      el.append(no, who, what, amt);
-
-      // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
-      if (r.returns > 0) {
-        const w = document.createElement('span');
-        w.className = 'warn'; w.textContent = '접수 ' + r.returns + '건';
-        el.appendChild(w);
-      }
-
-      el.addEventListener('click', () => pick(r));
-      box.appendChild(el);
+    hitsGrid = new wwGrid({
+      el: $('rtoHitsGrid'),
+      // 숫자 높이 — 이 폼은 숨은 탭 안에서 만들어져 'fit' 은 상자가 무너진다.
+      // 머리행 45.3 + 본문행 41.8 × 5 = 254.3 에 테두리 두 줄을 더해 257px.
+      // (254 로는 3px 이 모자라 다섯 번째 줄에서 스크롤바가 났다.)
+      // 숫자를 주면 wwGrid 가 래퍼에 height 를 못박아(wwGrid.js:818) 한 건만 찾아도
+      // 257px 상자가 서서 168px 이 빈 흰칸으로 남는다. 숫자가 아니면 그 줄을 건너뛰므로
+      // 높이는 내용이 정하고, 다섯 줄 상한만 CSS 의 max-height 로 건다.
+      // 행 번호는 켠다 — 이 집 그리드 서른셋이 모두 켜 두었고, 바로 옆 탭의
+      // 목록(#rtnGrid)에도 있다. 한쪽만 없으면 탭을 오갈 때 표가 어긋나 보인다.
+      // 체크박스는 끈다 — pick() 은 행 하나만 받는다(여럿 고르는 시늉이 된다).
+      height: 'auto', editable: false, rowCheckbox: false, rowNumber: true,
+      toolbar: false, summary: false, footer: false,
+      columns: [
+        { header: '주문번호',     name: 'order_no',    width: 120, sortable: false },
+        { header: '환자명',       name: 'patient',     width: 90,  sortable: false },
+        { header: '제품명',       name: 'product',     sortable: false },
+        { header: '판매주문번호', name: 'so_no',       width: 130, sortable: false },
+        // align:'right' 는 이웃 목록(환불금액·총금액)이 쓰는 대로 적어 둔다.
+        // 지금 화면에서는 wwGrid.css:178 이 이 옵션을 시안값(왼쪽)으로 되돌린다.
+        { header: '금액',         name: 'amount_text', width: 100, align: 'right', sortable: false },
+        {
+          // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
+          header: '기존 접수', name: 'return_text', width: 90, sortable: false,
+          renderer: (v) => {
+            const el = document.createElement('span');
+            el.textContent = v ?? '';
+            if (v) el.className = 'rto-hit-warn';
+            return el;
+          },
+        },
+      ],
+      data: [],
     });
+
+    /* 한 번 눌러 고른다 — 지금까지 쓰던 손버릇 그대로다.
+       잘못 골라도 바로 옆 「다시 고르기」로 되돌린다. */
+    $('rtoHitsGrid').addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = hitsGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row) pick(row);
+    });
+
+    return hitsGrid;
+  }
+
+  function drawHits(rows) {
+    $('rtoHits').style.display = '';
+
+    // 그리드에는 빈 상태가 없다 — 0건이면 그리드를 숨기고 안내문을 대신 보인다
+    const empty = !rows.length;
+    $('rtoHitsEmpty').style.display = empty ? '' : 'none';
+    $('rtoHitsGrid').style.display  = empty ? 'none' : '';
+    if (empty) return;
+
+    // 원본 아홉 필드를 그대로 둔 채 보여 줄 두 칸만 얹는다 — pick(r) 이 원본을 읽는다
+    ensureHitsGrid().setData(rows.map((r) => Object.assign({}, r, {
+      amount_text: (r.amount || 0).toLocaleString() + '원',
+      return_text: r.returns > 0 ? '접수 ' + r.returns + '건' : '',
+    })));
   }
 
   function pick(r) {
