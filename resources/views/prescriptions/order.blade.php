@@ -1397,11 +1397,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </span>
         </button>
         <div id="faxPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:580px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
+          {{-- 머리 색은 다른 창과 같은 주색이다. 여기만 검은색이라 팩스 창만 다른 곳에서
+               온 것처럼 보였다(알림톡의 노랑은 카카오 색이라 그대로 둔다). --}}
           <div id="faxPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:var(--gray-800);border:1px solid var(--gray-800);transform:rotate(45deg);margin:3px auto 0;"></div>
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
           {{-- 헤더 --}}
-          <div style="background:var(--gray-800);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-fax" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
             <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">팩스 전송</span>
             <button onclick="closeFaxPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
@@ -1518,7 +1520,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 전송 버튼 (전체 너비) --}}
           <div style="padding:0 14px 14px;">
             <button id="btnFaxSend" onclick="sendFax()"
-                    style="width:100%;padding:8px;background:var(--gray-800);color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    style="width:100%;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fa-solid fa-paper-plane"></i> 팩스 전송
             </button>
           </div>
