@@ -336,7 +336,7 @@
       </div>
       {{-- 담당자가 검수 화면에서 미리 적어 둔 값이 있으면 채워져 나온다 --}}
       <div class="g-field">
-        <label>환자와의 관계 <span style="color:#ef4444;">*</span></label>
+        <label>가입자ㆍ피부양자와의 관계 <span style="color:#ef4444;">*</span></label>
         <select id="gRelation" onchange="refreshAgree()">
           <option value="">선택</option>
           @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
@@ -345,8 +345,8 @@
         </select>
       </div>
       <div class="g-field">
-        <label>보호자 성명 <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="gName" maxlength="50" placeholder="보호자 이름"
+        <label>법정대리인 또는 가족 성명 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="gName" maxlength="50" placeholder="법정대리인 또는 가족 성명"
                value="{{ $consent->guardian_name }}" oninput="refreshAgree()" />
       </div>
       <div class="g-field">
@@ -355,7 +355,7 @@
                value="{{ $consent->guardian_phone }}" />
       </div>
       <div class="g-field">
-        <label>보호자 생년월일 <span style="color:#ef4444;">*</span></label>
+        <label>법정대리인 또는 가족 생년월일 <span style="color:#ef4444;">*</span></label>
         <input type="text" id="gBirth" maxlength="10" placeholder="YYYY-MM-DD" inputmode="numeric"
                value="{{ $consent->guardian_birth_date?->format('Y-m-d') }}" oninput="onGuardianBirth(this)" />
       </div>
@@ -375,7 +375,7 @@
       </div>
 
       <div class="sig-label" style="margin-top:14px;display:block;">
-        보호자 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
+        법정대리인 또는 가족 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
           주민등록증ㆍ운전면허증 등. 사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)
         </div>
@@ -763,7 +763,7 @@ async function submitConsent(action) {
     return;
   }
   if (action === 'agreed' && IS_MINOR && !guardianReady()) {
-    ceAlert('보호자 관계ㆍ성명ㆍ생년월일ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
+    ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
     return;
   }
 

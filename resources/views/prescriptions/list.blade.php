@@ -34,7 +34,7 @@
   <div class="help-section-title">주요 기능</div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-user-check"></i></div>
-    <div class="help-item-text"><strong>담당자 지정</strong>각 행의 담당 셀렉트박스에서 즉시 변경 가능합니다.</div>
+    <div class="help-item-text"><strong>담당자 지정</strong>각 행의 검수 담당자 셀렉트박스에서 즉시 변경 가능합니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link-external"></i></div>
@@ -218,12 +218,12 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '#rxGrid',
     title: '목록 그리드',
-    body: '행을 <b>더블클릭</b>하면 처방전 검수 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
+    body: '행을 <b>더블클릭</b>하면 주문 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
   },
   {
     selector: 'button[onclick="prescriptionViewDetail()"]',
     title: '선택 상세',
-    body: '행을 체크한 뒤 <b>선택 상세</b> 버튼을 눌러도 동일하게 검수 화면이 새 탭으로 열립니다.'
+    body: '행을 체크한 뒤 <b>선택 상세</b> 버튼을 눌러도 동일하게 주문 화면이 새 탭으로 열립니다.'
   },
 ];
 
@@ -248,7 +248,7 @@ window.HELP_TOUR_STEPS = [
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
       { header: 'Withworks SO',  name: 'so_no',      width: 130, sortable: true },
-      { header: '담당',          name: 'assignee',   width: 90,  align: 'center', sortable: true },
+      { header: '검수 담당자',   name: 'assignee',   width: 90,  align: 'center', sortable: true },
       { header: '접수일시',      name: 'created',    width: 130, align: 'center', sortable: true },
     ],
     data: @json($gridData),
@@ -257,13 +257,13 @@ window.HELP_TOUR_STEPS = [
   window.__rxGrid = grid;
   window.dsBindSelCount(grid, 'rxSelCount');
 
-  /* 검수 화면을 '새 탭'으로 연다.
+  /* 주문 화면을 '새 탭'으로 연다.
      워크스페이스 안에서는 목록 탭을 그대로 두고 별도 탭이 열리고(ceOpenTab),
      단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다. */
   function openReviewTab(rxNumber) {
     const url = DETAIL_BASE + '/' + encodeURIComponent(rxNumber);
     if (typeof window.ceOpenTab === 'function') {
-      {{-- 그 화면의 제목이 「처방전 확인 및 주문」이다. 탭 이름이 화면 이름과 다르면
+      {{-- 그 화면의 제목이 「주문」이다. 탭 이름이 화면 이름과 다르면
            어느 탭이 무엇인지 알 수 없다. --}}
       window.ceOpenTab(url, '주문 - ' + rxNumber, 'file-edit-02');
     } else {
@@ -271,7 +271,7 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
-  // 행 더블클릭 → 처방전 검수 화면을 새 탭으로 열기(목록은 그대로 유지)
+  // 행 더블클릭 → 주문 화면을 새 탭으로 열기(목록은 그대로 유지)
   document.getElementById('rxGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;

@@ -222,7 +222,7 @@
             <div class="avalue">₩{{ number_format($record->amount) }}</div>
           </div>
           <div class="amt-card">
-            <div class="alabel">환자 본인부담</div>
+            <div class="alabel">본인부담금</div>
             <div class="avalue">₩{{ number_format($order?->patient_copay ?? 0) }}</div>
           </div>
           <div class="amt-card">
@@ -453,7 +453,7 @@
             <div class="avalue">₩{{ number_format($record->nhis_amount) }}</div>
           </div>
           <div class="amt-card">
-            <div class="alabel">환자 부담금</div>
+            <div class="alabel">본인 부담금</div>
             <div class="avalue">₩{{ number_format($record->patient_copay) }}</div>
           </div>
         </div>
@@ -587,8 +587,8 @@
               <th>코드</th>
               <th style="text-align:right;">수량</th>
               <th style="text-align:right;">소비자가</th>
-              <th style="text-align:right;">보험가</th>
-              <th style="text-align:right;">환자부담</th>
+              <th style="text-align:right;">단가</th>
+              <th style="text-align:right;">본인부담금</th>
             </tr>
           </thead>
           <tbody>

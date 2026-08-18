@@ -204,7 +204,7 @@
            가운데 클릭·새 탭으로 열기 같은 브라우저 기본 동작도 살린다. --}}
       <a id="regRxLink" class="ds-btn" href="#" style="margin-left:auto;"
          onclick="return openRxTab(event)">
-        처방전 검수 화면 <i class="bx bx-link-external"></i>
+        주문 화면 <i class="bx bx-link-external"></i>
       </a>
       <button type="button" class="ds-btn" onclick="pnlShow('list')">
         <i class="bx bx-arrow-back"></i> 조회결과로
@@ -408,7 +408,7 @@
       : '<div class="doc-empty">첨부된 서류가 없습니다.</div>';
   }
 
-  /* ── 처방전 검수 화면을 '새 탭'으로 열기 ───────────────────
+  /* ── 주문 화면을 '새 탭'으로 열기 ───────────────────
      워크스페이스 안에서는 서류 관리 탭을 그대로 두고 별도 탭이 열리고,
      단독 페이지로 열려 있으면 브라우저 새 탭으로 대체된다. */
   window.openRxTab = function (ev) {
