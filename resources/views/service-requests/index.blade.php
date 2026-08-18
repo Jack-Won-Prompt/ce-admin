@@ -81,7 +81,7 @@
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="제목 · 내용">
+             placeholder="제목ㆍ내용">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">구분</label>

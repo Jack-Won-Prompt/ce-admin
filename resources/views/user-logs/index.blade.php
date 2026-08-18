@@ -111,7 +111,7 @@ window.HELP_TOUR_STEPS = [
     </div>
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
-      <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="사용자명 · IP · 메뉴명">
+      <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="사용자명ㆍIPㆍ메뉴명">
     </div>
     {{-- 표시 건수는 컨트롤러가 아직 읽지 않지만 개발 자산이라 그대로 둔다 --}}
     <div class="ds-filter-field">

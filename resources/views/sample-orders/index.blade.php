@@ -98,7 +98,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="샘플번호 · 고객 · 받는 사람 · 판매주문번호">
+             placeholder="샘플번호ㆍ고객ㆍ받는 사람ㆍ판매주문번호">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">주문일</label>

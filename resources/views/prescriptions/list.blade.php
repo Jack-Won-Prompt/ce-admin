@@ -136,7 +136,7 @@
       <div class="ds-filter-field">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
-               placeholder="처방번호 · 이름 · 병원명" value="{{ request('search') }}">
+               placeholder="처방번호ㆍ이름ㆍ병원명" value="{{ request('search') }}">
       </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">기간</label>
