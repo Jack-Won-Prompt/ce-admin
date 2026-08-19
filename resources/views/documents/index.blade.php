@@ -142,8 +142,8 @@
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
-      {{-- 시안 248:2923 Frame 48101591 — 안내글은 'ㆍ'(U+318D)로 이은 한 덩어리 '파일명ㆍ환자명' 이다.
-           같은 시안의 개인정보동의('성명ㆍ연락처ㆍ이메일')·계산서 발행('주문번호ㆍ환자명')과 같은 구분자다. --}}
+      {{-- 시안 248:2923 Frame 48101591 — 안내글은 'ㆍ'(U+318D)로 이은 한 덩어리 '파일명ㆍ이름' 이다.
+           같은 시안의 개인정보동의('성명ㆍ연락처ㆍ이메일')·계산서 발행('주문번호ㆍ이름')과 같은 구분자다. --}}
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="파일명ㆍ이름">
     </div>
@@ -282,12 +282,14 @@
     footer: false,
     /* 차례는 시안 248:2923 표 머리 실측 그대로다 —
        No 60 · 유형 137 · 생성유형 137 · 이름 100 · 처방번호 137 · 파일명 360 ·
-       생성자 100 · 생성일 137 · 다운로드 경로 360 (합 1568 = 카드 폭).
-       name·width·align 은 손대지 않고 차례만 시안에 맞췄다. */
+       생성자 100 · 생성일 137 (합 1568 = 카드 폭).
+       name·width·align 은 손대지 않고 차례만 시안에 맞췄다.
+       다만 「다운로드 경로」 칸은 두지 않는다 — 주소를 눈으로 읽을 일이 없는데 360 을
+       차지해 오른쪽 칸들을 밀어냈다. 내려받기는 파일명을 누르면 된다. */
     columns: [
       { header: '유형',     name: 'type',      width: 110, sortable: true, align: 'center' },
       { header: '생성유형', name: 'source',    width: 120, sortable: true },
-      { header: '환자명',   name: 'patient',   width: 100, sortable: true },
+      { header: '이름',     name: 'patient',   width: 100, sortable: true },
       { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
       {
         header: '파일명', name: 'filename', width: 320, sortable: true,
@@ -317,7 +319,6 @@
          절대주소라 새로 만드는 데이터가 아니다. 시안도 주소를 평문으로 흘려 보이고
          (「https://www.ceadmin.co.kr/documents/49/d…」) 셀은 .cg-cell-inner 가 말줄임한다.
          폭은 시안이 파일명과 같은 360 인데, 이 화면의 파일명이 320 이라 그 짝을 그대로 따랐다. */
-      { header: '다운로드 경로', name: 'download', width: 320, sortable: true },
     ],
     data: @json($gridData),
   });

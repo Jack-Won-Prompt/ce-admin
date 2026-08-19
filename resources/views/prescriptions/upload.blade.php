@@ -105,18 +105,6 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101317' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.3 8.9 12 14.9 18.7 8.9'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 12px center; background-size:14px 14px;
   }
-  /* 환자 검색칸 위에 얹히는 안내 배지 (Figma 128:793 · 128:3188 — 두 상태 모두 있다).
-     132×18 · r999 · pad 1/6 · 10px/500 lh16 · primary 바탕, 상자 오른쪽 위 테두리에 걸친다. */
-  .fu-hint-badge { position:absolute; right:0; top:-9px; padding:1px 6px; border-radius:999px;
-                   background:var(--primary); color:var(--gray-0);
-                   font-size:10px; font-weight:500; line-height:1.6; white-space:nowrap;
-                   /* 안내일 뿐이라 입력칸·버튼 위를 덮어도 누름을 가로채지 않는다 */
-                   pointer-events:none; }
-  /* 환자를 고르면 상자가 「다시 선택」(74) + 간격 8 만큼 줄어든다 — 시안 128:3188 은
-     배지 오른끝을 줄어든 상자 오른끝에 맞춘다. selectPatient() 가 남기는 인라인 스타일로
-     상태를 읽는다. 못 읽어도 배지는 필드 오른쪽 끝에 그대로 남는다(지금 자리). */
-  .patient-search-wrap:has(#patientSelectedBadge[style*="display: flex"]) .fu-hint-badge { right:82px; }
-
   /* ── 파일 타일 그리드 (Figma 128:798) — 6열, gap 8 ── */
   .fu-grid { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
   @media(max-width:1400px){ .fu-grid { grid-template-columns:repeat(4, minmax(0,1fr)); } }
@@ -292,7 +280,6 @@
               <div class="fu-row">
                 <span class="fu-label">환자 선택</span>
                 <div class="fu-field patient-search-wrap">
-                  <span class="fu-hint-badge">선택 시 OCR 자동 연결 건너뜀</span>
                   <div class="patient-search-row">
                     <input type="text" id="patientSearchInput" class="fu-input"
                            placeholder="이름 또는 연락처로 검색" autocomplete="off" />
