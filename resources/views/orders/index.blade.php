@@ -166,7 +166,7 @@ window.HELP_TOUR_STEPS = [
 <div class="ds-grid-section">
   <div class="ds-grid-card">
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과<span class="pnl-tab-cnt">(총 <b>{{ count($gridData) }}</b>건)</span></button>
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ count($gridData) }}</b>건)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
     </div>
     <div id="pnlList">

@@ -69,21 +69,24 @@
 </form>
 
 <div class="ds-grid-section">
+  {{-- 서류 관리와 같은 얼개다 — 흰 카드 한 장 안에 탭줄과 판이 들어간다.
+       탭줄을 카드 밖에 두었더니 그 줄만 회색 바탕 위에 떠 있었다. --}}
+  <div class="ds-grid-card">
   {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
-    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
     <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>
     <button type="button" id="rtnTabNew"  class="pnl-tab" onclick="rtnPanel('new')">신규 접수</button>
   </div>
 
-  <div class="ds-grid-card" id="rtnPaneList">
+  <div id="rtnPaneList">
     <div id="rtnGrid"></div>
   </div>
 
-  <div class="ds-grid-card" id="rtnPaneShow" style="display:none;padding:0;">
+  <div id="rtnPaneShow" style="display:none;">
     {{-- 상세는 이미 한 화면으로 있다. 그 화면을 그대로 들여온다 — 두 벌로 만들면
          한쪽만 고쳐져 서로 다른 것을 보여 주게 된다.
          액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
@@ -94,9 +97,10 @@
             height:calc(100vh - 300px);min-height:520px;"></iframe>
   </div>
 
-  <div class="ds-grid-card" id="rtnPaneNew" style="display:none;">
+  <div id="rtnPaneNew" style="display:none;">
     @include('order-returns._form')
   </div>
+  </div>{{-- /.ds-grid-card --}}
 </div>
 
 @endsection

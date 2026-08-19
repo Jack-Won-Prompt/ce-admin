@@ -387,7 +387,7 @@
   <div class="ds-grid-card">
     {{-- 탭바는 카드 안 상단. 시안은 아이콘 없이 텍스트만 --}}
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과<span class="pnl-tab-cnt">(총 <b id="total-count">{{ number_format($total) }}</b>건)</span></button>
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b id="total-count">{{ number_format($total) }}</b>건)</span></button>
       {{-- 상세는 하나다. 이력만 간추린 판과 전체 상세를 따로 두었더니, 열어 보고 나서
            「여기 말고 저기」를 한 번 더 눌러야 했다. 환자 한 사람의 모든 것을 이 탭에서 본다. --}}
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>

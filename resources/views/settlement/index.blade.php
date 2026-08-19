@@ -149,20 +149,6 @@
 @section('content')
 
   {{-- 탭 — 표준 상태 칩(h31 · r999 · 12/700), 건수는 16×16 정원 배지 --}}
-  <div class="ds-chips settle-tabs">
-    <a href="{{ route('settlement.index', ['tab' => 'settlement', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
-       class="ds-chip settle-tab {{ $tab === 'settlement' ? 'active' : '' }}">
-      <i class="fa-solid fa-calculator"></i> 정산 현황
-      <span class="ds-chip-count">{{ $summary['total_orders'] }}</span>
-    </a>
-    <a href="{{ route('settlement.index', ['tab' => 'virtual_account']) }}"
-       class="ds-chip settle-tab {{ $tab === 'virtual_account' ? 'active' : '' }}">
-      <i class="fa-solid fa-building-columns"></i> 가상계좌 매칭
-      @if(($vaStats['waiting'] ?? 0) > 0)
-        <span class="ds-chip-count">{{ $vaStats['waiting'] }}</span>
-      @endif
-    </a>
-  </div>
 
   @if($tab === 'settlement')
   {{-- ══════════════ 정산 현황 ══════════════ --}}
@@ -173,6 +159,18 @@
       {{-- 시안 324:60 — 검색어(span-2 · 295) → 기간(span-2 · 295) → 주문 상태(1열 · 140) 순으로
            왼쪽에 몰리고 오른쪽 4열은 비운다. 기간 두 입력은 span-2 안에서 135+8+'~'+8+135 로 나뉜다. --}}
       <div class="ds-filter-fields">
+        {{-- 무엇을 볼지가 가장 크게 가른다 — 첫 칸에 둔다. 위쪽 칩 줄을 따로 두면
+             그 줄만 회색 바탕 위에 떠 있고, 고르는 일은 여기서도 할 수 있다. --}}
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">보기</label>
+          <select class="form-control form-select"
+                  onchange="location.href = this.value;">
+            <option value="{{ route('settlement.index', ['tab' => 'settlement', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
+                    @selected($tab === 'settlement')>정산 현황 ({{ $summary['total_orders'] }})</option>
+            <option value="{{ route('settlement.index', ['tab' => 'virtual_account']) }}"
+                    @selected($tab === 'virtual_account')>가상계좌 매칭 ({{ $vaStats['waiting'] ?? 0 }})</option>
+          </select>
+        </div>
         <div class="ds-filter-field span-2">
           <label class="ds-field-label">검색어</label>
           <input type="text" name="search" class="form-control" placeholder="주문번호·이름·제품명" value="{{ request('search') }}">
@@ -273,6 +271,18 @@
     <form method="GET" action="{{ route('settlement.index') }}" class="ds-filter-card">
       <input type="hidden" name="tab" value="virtual_account">
       <div class="ds-filter-fields">
+        {{-- 무엇을 볼지가 가장 크게 가른다 — 첫 칸에 둔다. 위쪽 칩 줄을 따로 두면
+             그 줄만 회색 바탕 위에 떠 있고, 고르는 일은 여기서도 할 수 있다. --}}
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label">보기</label>
+          <select class="form-control form-select"
+                  onchange="location.href = this.value;">
+            <option value="{{ route('settlement.index', ['tab' => 'settlement', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
+                    @selected($tab === 'settlement')>정산 현황 ({{ $summary['total_orders'] }})</option>
+            <option value="{{ route('settlement.index', ['tab' => 'virtual_account']) }}"
+                    @selected($tab === 'virtual_account')>가상계좌 매칭 ({{ $vaStats['waiting'] ?? 0 }})</option>
+          </select>
+        </div>
         {{-- 폭은 정산 현황 탭에서 확정된 규격을 따른다 — 검색어 span-2(295) · 선택 1열(140) --}}
         <div class="ds-filter-field span-2">
           <label class="ds-field-label">검색어</label>
@@ -339,6 +349,9 @@
     {{-- 흰 카드(r12) 안에 그리드 --}}
     <div class="ds-grid-section">
       <div class="ds-grid-card">
+        <div class="pnl-tabs">
+          <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+        </div>
         {{-- ── 가상계좌 목록 (wwGrid) ── --}}
         <div id="vaGrid"></div>
       </div>{{-- /.ds-grid-card --}}

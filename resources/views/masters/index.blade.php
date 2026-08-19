@@ -76,7 +76,7 @@
 <div class="ds-grid-section">
   <div class="ds-grid-card">
       <div class="pnl-tabs">
-        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format(count($gridData)) }}건)</span></button>
+        <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 {{ number_format(count($gridData)) }}건)</span></button>
       </div>
     <div id="masterGrid"></div>
   </div>

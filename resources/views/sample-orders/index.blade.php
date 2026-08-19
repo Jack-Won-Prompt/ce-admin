@@ -124,18 +124,21 @@
 </form>
 
 <div class="ds-grid-section">
+  {{-- 서류 관리와 같은 얼개다 — 흰 카드 한 장 안에 탭줄과 판이 들어간다.
+       탭줄을 카드 밖에 두었더니 그 줄만 회색 바탕 위에 떠 있었다. --}}
+  <div class="ds-grid-card">
   <div class="pnl-tabs">
-    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')">조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
+    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
     <button type="button" id="smpTabDetail" class="pnl-tab" onclick="smpPane('detail')">상세보기</button>
     <button type="button" id="smpTabNew"    class="pnl-tab" onclick="smpPane('new')">신규등록</button>
   </div>
 
-  <div class="ds-grid-card" id="smpPaneList">
+  <div id="smpPaneList">
     <div id="smpGrid"></div>
   </div>
 
   {{-- 상세보기 — 머리 정보와 제품 목록 --}}
-  <div class="ds-grid-card" id="smpPaneDetail" style="display:none;">
+  <div id="smpPaneDetail" style="display:none;">
     <div class="smp-pane">
       <div id="smpDetailEmpty" class="smp-none">목록에서 행을 더블클릭하면 여기에 나옵니다.</div>
       <div id="smpDetailBody" style="display:none;">
@@ -160,7 +163,7 @@
   </div>
 
   {{-- 신규등록 --}}
-  <div class="ds-grid-card" id="smpPaneNew" style="display:none;">
+  <div id="smpPaneNew" style="display:none;">
     <form class="smp-pane" id="smpForm">
       <div class="smp-sec">
         <div class="smp-sec-hd"><span class="step">1</span> 받는 곳</div>
@@ -251,6 +254,7 @@
       </div>
     </form>
   </div>
+  </div>{{-- /.ds-grid-card --}}
 </div>
 
 @endsection

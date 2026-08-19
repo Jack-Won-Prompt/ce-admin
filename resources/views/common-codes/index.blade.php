@@ -51,7 +51,7 @@
         <a href="{{ route('common-codes.index', ['group' => $key]) }}"
            class="pnl-tab {{ $key === $current ? 'active' : '' }}"
            style="display:inline-flex;align-items:center;text-decoration:none;">
-          {{ $g['label'] }}
+          <i class="fa-solid fa-list"></i> {{ $g['label'] }}
           @if(($counts[$key] ?? 0) > 0)
             <span class="pnl-tab-cnt">(총 {{ $counts[$key] }}건)</span>
           @endif

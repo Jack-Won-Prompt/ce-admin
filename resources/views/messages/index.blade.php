@@ -289,7 +289,7 @@
     <div class="ds-grid-section">
       <div class="ds-grid-card">
         <div class="pnl-tabs">
-          <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+          <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
           {{-- 번호가 없는 곳은 발송에서 빠진다 — 골라 놓고 왜 덜 나갔는지 묻지 않게 적어 둔다 --}}
           <span class="ds-grid-hint" style="margin-left:auto;">번호 있는 곳 {{ number_format($sendable) }}곳</span>
         </div>

@@ -113,7 +113,7 @@
 <div class="ds-grid-section">
   <div class="ds-grid-card">
       <div class="pnl-tabs">
-        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 <b id="noticeTotalBadge">0</b>건)</span></button>
+        <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b id="noticeTotalBadge">0</b>건)</span></button>
       </div>
     {{-- 기관 탭 — 카드 안 상단, 탭 높이 44 --}}
     <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;">

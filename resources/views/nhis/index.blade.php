@@ -40,6 +40,10 @@
 
 @push('styles')
 <style>
+  /* 찾는 칸이 여덟이라 아홉 자리에 들어가지 못하고 「자료」만 아랫줄로 내려갔다.
+     이 화면만 열한 자리로 나눈다 — 기간은 날짜 두 칸이 서야 해서 세 자리를 쓴다
+     (1 + 2 + 1 + 1 + 3 + 1 + 1 + 1 = 11). */
+  .ds-filter-card .ds-filter-fields { grid-template-columns: repeat(11, minmax(0, 1fr)); }
   /* 패널 탭(목록/상세보기) — 그리드 카드 안 상단.
      Figma 282:2299: h44 · pad 0/16 · gap 16 · 하단 1px, 활성 밑줄 1px primary */
 
@@ -237,7 +241,7 @@
         <option value="not_issued" @selected(request('cash_receipt') === 'not_issued')>미발행</option>
       </select>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">

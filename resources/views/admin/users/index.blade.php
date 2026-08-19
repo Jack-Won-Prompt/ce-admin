@@ -15,7 +15,7 @@
     {{-- ── 패널 탭: 관리자 목록 / 초대 현황 ── --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
-        <i class="bx bx-user-check"></i> 관리자 목록
+        <i class="fa-solid fa-list"></i> 관리자 목록
         <span class="pnl-tab-cnt">(총 <b id="userCount">{{ number_format($total) }}</b>건)</span>
       </button>
       <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">

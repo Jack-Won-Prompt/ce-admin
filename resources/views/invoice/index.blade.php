@@ -310,7 +310,7 @@
     {{-- 패널 탭 헤더 — 시안은 아이콘 없이 텍스트만 --}}
     <div class="pnl-tabs">
       <button type="button" class="pnl-tab panel-tab-btn active" id="btn-list" onclick="switchPanel('list')">
-        계산서 발행 현황
+        <i class="fa-solid fa-list"></i> 계산서 발행 현황
         <span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span>
       </button>
       <button type="button" class="pnl-tab panel-tab-btn" id="btn-detail" onclick="switchPanel('detail')">
