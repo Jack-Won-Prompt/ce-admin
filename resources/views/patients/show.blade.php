@@ -6,15 +6,25 @@
 
 @push('styles')
 <style>
-  .detail-layout { display:grid; grid-template-columns:340px 1fr; gap:18px; }
-  .info-row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
-  .info-row:last-child { border-bottom:none; }
-  .info-label { font-size:11px; font-weight:700; color:var(--text-muted); width:100px; flex-shrink:0; padding-top:2px; }
-  .info-value { font-size:13px; color:var(--text-primary); flex:1; }
+  /* 고객 정보가 위, 주문 이력이 아래다. 좌우로 두었더니 왼쪽 칸이 340px 로 눌려
+     이름과 단추가 접히고, 오른쪽은 반이 비었다. */
+  .detail-layout { display:flex; flex-direction:column; gap:14px; }
+
+  /* 개인정보는 세로로 길게 쌓지 않고 한 줄에 여럿 눕힌다 — 여섯 항목이 한두 줄에 들어온다.
+     주소는 길어 두 칸을 쓴다. */
+  .view-panel { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:2px 20px; }
+  .info-row { display:flex; align-items:baseline; gap:10px; padding:9px 0;
+              border-bottom:1px solid var(--border-light, var(--border)); min-width:0; }
+  .info-row.wide { grid-column:span 2; }
+  .info-label { font-size:11px; font-weight:700; color:var(--text-muted); width:78px; flex-shrink:0; }
+  .info-value { font-size:13px; color:var(--text-primary); flex:1; min-width:0;
+                overflow-wrap:anywhere; }
+  @media(max-width:700px) { .info-row.wide { grid-column:auto; } }
 
   .edit-form { display:none; }
   .edit-form.active { display:block; }
-  .view-panel { display:block; }
+  /* 보이고 감추는 것만 여기서 정한다 — 배치는 위에서 정한 grid 를 그대로 쓴다.
+     예전에 display:block 을 여기 두어, 위에서 준 grid 를 덮고 있었다. */
   .view-panel.hidden { display:none; }
 
   .form-group { margin-bottom:12px; }
@@ -41,7 +51,7 @@
   .tab-pane { display:none; }
   .tab-pane.active { display:block; }
 
-  @media(max-width:900px) { .detail-layout { grid-template-columns:1fr; } }
+
 </style>
 @endpush
 
@@ -52,7 +62,7 @@
 
 <div class="detail-layout">
 
-  {{-- 좌측: 환자 정보 --}}
+  {{-- 위: 고객 정보 --}}
   <div>
     <div class="card">
       <div class="card-body">
@@ -103,7 +113,7 @@
             <span class="info-label">일반 전화</span>
             <span class="info-value">{{ $patient->phone ?? '-' }}</span>
           </div>
-          <div class="info-row">
+          <div class="info-row wide">
             <span class="info-label">주소</span>
             <span class="info-value">{{ $patient->address ?? '-' }}</span>
           </div>
@@ -122,7 +132,7 @@
             </span>
           </div>
           @if($patient->note)
-          <div class="info-row">
+          <div class="info-row wide">
             <span class="info-label">메모</span>
             <span class="info-value" style="white-space:pre-wrap;">{{ $patient->note }}</span>
           </div>
@@ -207,7 +217,7 @@
     </div>
   </div>
 
-  {{-- 우측: 주문 이력 --}}
+  {{-- 아래: 주문 이력 --}}
   <div>
     <div class="card">
       <div class="card-body">
