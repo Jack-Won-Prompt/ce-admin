@@ -170,6 +170,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
+        // 통화 내용을 그 자리에서 적어 둔다(거래처 관리 › 상담내역 › 상담하기)
+        Route::post('/{patient}/counsels', [PatientController::class, 'storeCounsel'])->name('counsels.store');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');
         Route::put('/{patient}',     [PatientController::class, 'update'])->name('update');
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');

@@ -190,6 +190,47 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * 상담 한 건을 적어 둔다.
+     *
+     * 상담은 처방전 레코드에 붙어 산다(counsel_* 칸). 통화만 하고 끝나는 상담도 있어
+     * 처방 내용은 비운 채로 세운다 — 나중에 그 상담이 주문으로 이어지면 같은 건에
+     * 처방을 채워 넣으면 된다. 새 상담마다 한 건이므로 이력이 겹쳐 덮이지 않는다.
+     */
+    public function storeCounsel(Request $request, Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'counsel_date'     => 'required|date',
+            'counsel_type'     => 'nullable|string|max:10',
+            'counsel_status'   => 'nullable|string|max:10',
+            'counsel_call_no'  => 'nullable|string|max:30',
+            'counsel_re_date'  => 'nullable|date',
+            'counsel_contents' => 'required|string|max:2000',
+        ]);
+
+        $rx = \App\Models\Prescription::create(array_merge($data, [
+            'rx_number'        => \App\Models\Prescription::generateRxNumber(),
+            'counsel_no'       => \App\Models\Prescription::generateCounselNo(),
+            'patient_id'       => $patient->id,
+            'patient_name_ocr' => $patient->name,
+            'mobile_ocr'       => $patient->mobile ?: $patient->phone,
+            'status'           => 'pending',
+            // upload_source 는 mobile·web 둘뿐이다. 상담도 웹 화면에서 적은 것이다.
+            'upload_source'    => 'web',
+            'created_by'       => \Illuminate\Support\Facades\Auth::id(),
+            'updated_by'       => \Illuminate\Support\Facades\Auth::id(),
+        ]));
+
+        activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($rx)
+            ->log("{$patient->name} 상담 기록 ({$rx->counsel_no})");
+
+        return response()->json([
+            'success'    => true,
+            'message'    => '상담을 적어 두었습니다.',
+            'counsel_no' => $rx->counsel_no,
+        ]);
+    }
+
     // ── 등록 ──────────────────────────────────────────────
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {

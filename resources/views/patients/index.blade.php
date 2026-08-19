@@ -25,10 +25,104 @@
     <div class="help-item-text"><strong>재구매 알림</strong>처방 주기에 따른 재구매 대상자를 확인할 수 있습니다.</div>
   </div>
 </div>
+{{-- ── 상담 창 — 화면 안에서 연다 ─────────────────────────
+     전화를 받으며 적는 자리다. 브라우저 창을 따로 띄우면 보던 목록이 뒤로 숨고,
+     팝업 차단에 막히기도 한다. 화면 안에 덮어 띄우고 닫으면 그대로 목록으로 돌아온다. --}}
+<div class="cs-overlay" id="csModal" style="display:none;">
+  <div class="cs-box" role="dialog" aria-modal="true" aria-labelledby="csTitle">
+    <div class="cs-head">
+      <i class="bx bx-conversation"></i>
+      <span id="csTitle">상담하기</span>
+      <button type="button" onclick="csClose()" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="cs-body">
+      <div class="cs-row two">
+        <div class="cs-f">
+          <label>상담일시 *</label>
+          <input type="date" id="csDate" class="form-control">
+        </div>
+        <div class="cs-f">
+          <label>통화번호</label>
+          <input type="text" id="csCallNo" class="form-control" maxlength="30" placeholder="010-0000-0000">
+        </div>
+      </div>
+
+      <div class="cs-row two">
+        <div class="cs-f">
+          <label>상담 유형</label>
+          <select id="csType" class="form-control form-select">
+            <option value="">선택</option>
+            <option value="1013">구매</option>
+            <option value="1016">개인구매</option>
+            <option value="1020">반품</option>
+            <option value="1030">문의</option>
+            <option value="1050">기타</option>
+          </select>
+        </div>
+        <div class="cs-f">
+          <label>상담 상태</label>
+          <select id="csStatus" class="form-control form-select" onchange="csSyncReDate()">
+            <option value="02">등록</option>
+            <option value="50">재상담</option>
+            <option value="95">확정</option>
+            <option value="99">취소</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cs-row" id="csReDateWrap" style="display:none;">
+        <div class="cs-f">
+          <label>재상담일</label>
+          <input type="date" id="csReDate" class="form-control">
+        </div>
+      </div>
+
+      <div class="cs-row">
+        <div class="cs-f">
+          {{-- 이 창의 본디 목적이다 — 통화한 내용을 그대로 적는다 --}}
+          <label>상담 내용 *</label>
+          <textarea id="csContents" class="form-control" rows="8" maxlength="2000"
+                    placeholder="고객이 말한 내용을 그대로 적어 두면 다음 사람이 이어받기 쉽습니다."></textarea>
+          <span class="cs-hint"><b id="csLen">0</b>/2000자</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-foot">
+      <span class="cs-hint" id="csNote">적은 내용은 저장을 눌러야 남습니다.</span>
+      <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
+      <button type="button" class="ds-btn ds-btn-primary" id="csSaveBtn" onclick="csSave(this)">저장</button>
+    </div>
+  </div>
+</div>
+
 @endsection
 
 @push('styles')
 <style>
+  /* 상담 창 — 화면 안에 덮어 띄운다 */
+  .cs-overlay { position: fixed; inset: 0; z-index: 1100; display: none;
+                align-items: center; justify-content: center; background: rgba(20,32,40,.45); }
+  .cs-box { width: 560px; max-width: calc(100vw - 32px); max-height: 88vh; display: flex;
+            flex-direction: column; background: var(--bg-card); border-radius: var(--radius-lg);
+            box-shadow: 0 20px 60px rgba(0,0,0,.28); overflow: hidden; }
+  .cs-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+             background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; }
+  .cs-head span { flex: 1; }
+  .cs-head button { background: none; border: none; color: #fff; font-size: 17px;
+                    line-height: 1; cursor: pointer; }
+  .cs-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .cs-row { display: flex; flex-direction: column; gap: 10px; }
+  .cs-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cs-f { display: flex; flex-direction: column; gap: 4px; }
+  .cs-f label { font-size: 11.5px; font-weight: 600; color: var(--gray-700); }
+  .cs-f textarea.form-control { height: auto; padding: 8px 10px; line-height: 1.7; resize: vertical; }
+  .cs-hint { font-size: 11px; color: var(--text-muted); }
+  .cs-foot { display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+             border-top: 1px solid var(--border); }
+  .cs-foot .cs-hint { margin-right: auto; }
+
   /* 상담내역 탭 — 사람 이름이 붙고, 닫는 단추가 오른쪽에 붙는다 */
   .pnl-tab-closable { display: inline-flex; align-items: center; gap: 6px; }
   .pnl-tab-x { font-size: 15px; line-height: 1; color: var(--text-muted); cursor: pointer;
@@ -418,7 +512,7 @@ document.addEventListener('keydown', (e) => {
           b.className = 'pt-chip clickable';
           b.textContent = '상담내역';
           b.title = '이 환자의 상담 이력을 봅니다';
-          b.addEventListener('click', (e) => { e.stopPropagation(); pcLoad(row.id, row.name); });
+          b.addEventListener('click', (e) => { e.stopPropagation(); pcLoad(row.id, row.name, row.mobile); });
           return b;
         } },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
@@ -556,22 +650,103 @@ document.addEventListener('keydown', (e) => {
      같은 사람의 탭이 둘이 되면 어느 것이 최신인지 알 수 없다. */
   const pcTabs = {};     // { [환자id]: { name, grid, wired } }
 
-  window.pcNew = function (patientId, patientName) {
-    const p = patientId ? { id: patientId, name: patientName } : pcActive();
+  /* ── 상담 창 ────────────────────────────────────────────
+     상담자가 고객과 통화한 내용을 그 자리에서 적는 자리다. 주문 등록 화면을 띄우던
+     것을 그만둔다 — 그 화면은 처방과 주문을 다루는 자리라, 통화 한 통을 적기에는
+     묻는 것이 너무 많았다.
+
+     적다 만 채로 닫는 일이 잦아, 무엇이든 적혀 있으면 닫기 전에 물어본다. */
+  let _csPatient = null;
+  let _csDirty   = false;
+
+  window.csOpen = function (id, name) {
+    const p = id ? { id, name } : pcActive();
     if (!p) { showToast('먼저 환자를 고르십시오.', 'warning'); return; }
 
-    /* 상담 창은 본 화면(주문 등록)을 그대로 창으로 연다. 상담만 따로 만들면 같은 값을
-       두 곳에서 받게 되어 서로 어긋난다. 저장·닫기 띠는 그 화면이 세운다. */
-    const url = `${BASE_URL}/prescriptions/create?popup=1&patient=${encodeURIComponent(p.id)}`;
-    const w   = Math.min(1280, Math.round(window.screen.availWidth  * 0.9));
-    const h   = Math.min(900,  Math.round(window.screen.availHeight * 0.9));
-    const win = window.open(url, 'ceCounsel_' + p.id,
-      `width=${w},height=${h},left=${Math.round((window.screen.availWidth - w) / 2)},` +
-      `top=${Math.round((window.screen.availHeight - h) / 2)},resizable=yes,scrollbars=yes`);
+    _csPatient = p;
+    _csDirty   = false;
 
-    if (!win) { showToast('팝업이 막혀 있습니다. 이 사이트의 팝업을 허용해 주십시오.', 'warning', 6000); return; }
-    win.focus();
+    document.getElementById('csTitle').textContent  = (p.name || '') + ' 상담하기';
+    document.getElementById('csDate').value         = new Date().toISOString().slice(0, 10);
+    document.getElementById('csCallNo').value       = pcTabs[p.id]?.mobile || '';
+    document.getElementById('csType').value         = '';
+    document.getElementById('csStatus').value       = '02';
+    document.getElementById('csReDate').value       = '';
+    document.getElementById('csContents').value     = '';
+    document.getElementById('csLen').textContent    = '0';
+    document.getElementById('csNote').textContent   = '적은 내용은 저장을 눌러야 남습니다.';
+    csSyncReDate();
+
+    document.getElementById('csModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('csContents').focus(), 50);
   };
+
+  /* 재상담으로 두면 언제 다시 걸지가 곧 다음 일이 된다 — 그때만 날짜를 묻는다 */
+  window.csSyncReDate = function () {
+    const on = document.getElementById('csStatus').value === '50';
+    document.getElementById('csReDateWrap').style.display = on ? '' : 'none';
+  };
+
+  window.csClose = async function () {
+    if (_csDirty) {
+      const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
+                                 { tone: 'warning', confirmText: '저장하고 닫기', cancelText: '그냥 닫기' });
+      if (ok) { await csSave(document.getElementById('csSaveBtn')); return; }
+    }
+    document.getElementById('csModal').style.display = 'none';
+    _csDirty = false;
+  };
+
+  window.csSave = async function (btn) {
+    const contents = document.getElementById('csContents').value.trim();
+    if (!contents) { showToast('상담 내용을 적어 주십시오.', 'warning'); return; }
+
+    BtnState.loading(btn, '저장 중...');
+    try {
+      const res = await apiRequest(`${DETAIL_BASE}/${_csPatient.id}/counsels`, 'POST', {
+        counsel_date:     document.getElementById('csDate').value,
+        counsel_type:     document.getElementById('csType').value || null,
+        counsel_status:   document.getElementById('csStatus').value || null,
+        counsel_call_no:  document.getElementById('csCallNo').value.trim() || null,
+        counsel_re_date:  document.getElementById('csStatus').value === '50'
+                            ? (document.getElementById('csReDate').value || null) : null,
+        counsel_contents: contents,
+      });
+      if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
+
+      showToast(`상담을 적어 두었습니다 (${res.counsel_no})`, 'success', 4000);
+      _csDirty = false;
+      document.getElementById('csModal').style.display = 'none';
+      // 방금 적은 것이 목록에 보여야 한다
+      pcLoad(_csPatient.id, _csPatient.name);
+    } catch (e) {
+      showToast('저장하지 못했습니다: ' + (e.message || ''), 'danger', 6000);
+    } finally {
+      BtnState.reset(btn);
+    }
+  };
+
+  /* 무엇이든 손댔으면 닫을 때 물어본다.
+     칸마다 걸지 않고 창 전체에서 받는다 — 칸을 늘려도 따라오고, 스크립트가 창보다
+     먼저 돌아도 놓치지 않는다. */
+  document.addEventListener('input', (e) => {
+    if (!e.target.closest?.('#csModal')) return;
+    _csDirty = true;
+    if (e.target.id === 'csContents') {
+      document.getElementById('csLen').textContent = e.target.value.length;
+    }
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.closest?.('#csModal')) _csDirty = true;
+  });
+
+  // 바깥을 누르거나 Esc 를 눌러도 닫는 길은 같다 — 적은 것이 있으면 똑같이 물어본다
+  document.getElementById('csModal')?.addEventListener('mousedown', (e) => {
+    if (e.target.id === 'csModal') csClose();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('csModal')?.style.display === 'flex') csClose();
+  });
 
   /** 지금 보고 있는 상담내역 탭의 환자 */
   function pcActive() {
@@ -621,11 +796,11 @@ document.addEventListener('keydown', (e) => {
       <div class="pnl-empty pc-empty">불러오는 중…</div>
       <div class="pc-grid" style="display:none;"></div>`;
     document.querySelector('.ds-grid-card').appendChild(pane);
-    pane.querySelector('.pc-new').onclick = () => pcNew(id, pcTabs[id]?.name);
+    pane.querySelector('.pc-new').onclick = () => csOpen(id, pcTabs[id]?.name);
 
     PANES[key] = paneId;
     TABS[key]  = tabId;
-    pcTabs[id] = { name, grid: null, wired: false };
+    pcTabs[id] = { name, mobile: '', grid: null, wired: false };
 
     return key;
   }
@@ -641,8 +816,9 @@ document.addEventListener('keydown', (e) => {
     if (!document.querySelector('.pnl-tab.active')) pnlShow('list');
   }
 
-  window.pcLoad = async function (id, name) {
+  window.pcLoad = async function (id, name, mobile) {
     const key  = pcEnsureTab(id, name);
+    if (mobile) pcTabs[id].mobile = mobile;   // 상담 창의 통화번호 기본값
     const pane = document.getElementById(PANES[key]);
     const tab  = document.getElementById(TABS[key]);
 
