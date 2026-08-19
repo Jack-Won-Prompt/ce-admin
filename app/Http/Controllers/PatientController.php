@@ -141,7 +141,30 @@ class PatientController extends Controller
             'url'       => route('prescriptions.show', $rx),
             /* 무엇을 샀는지는 한 칸에 다 들어가지 않는다 — 제품명 칸을 빼고, 대신 그
                주문의 제품 줄을 통째로 실어 둔다. 한 건을 열면 옆 탭에서 펼친다. */
-            'items'     => ($rx->order?->items ?? collect())->map(fn ($it) => [
+            'items'     => $this->orderItemRows($rx->order),
+            'ship'      => (int) ($rx->order?->shipping_fee ?? 0),
+            'total_amt' => (int) ($rx->order?->total_amount ?? 0),
+        ])->values();
+
+        return view('patients.show', compact('patient', 'rxRows'));
+    }
+
+    /**
+     * 주문 한 건의 제품 줄.
+     *
+     * 제품을 여러 줄로 담는 order_items 는 나중에 들어온 그릇이라, 지금 있는 주문은
+     * 대부분(26건 중 25건) 제품 하나를 주문 자체에 적어 두고 있다. 줄이 없다고
+     * 「제품 없음」이라고 하면 실제로는 산 물건이 있는데도 빈 표가 뜬다 —
+     * 줄이 없으면 주문에 적힌 그 하나를 한 줄로 만들어 보여 준다.
+     */
+    private function orderItemRows(?\App\Models\Order $order): \Illuminate\Support\Collection
+    {
+        if (!$order) {
+            return collect();
+        }
+
+        if ($order->items->isNotEmpty()) {
+            return $order->items->map(fn ($it) => [
                 'name'       => $it->product_name ?: '-',
                 'code'       => $it->product_code ?: '',
                 'qty'        => (int) $it->quantity,
@@ -149,10 +172,26 @@ class PatientController extends Controller
                 'nhis'       => (int) $it->nhis_amount,
                 'copay'      => (int) $it->patient_copay,
                 'total'      => (int) round($it->unit_price * max(1, (int) $it->quantity)),
-            ])->values(),
-        ])->values();
+            ])->values();
+        }
 
-        return view('patients.show', compact('patient', 'rxRows'));
+        if (!$order->product_name && !$order->quantity) {
+            return collect();
+        }
+
+        $qty  = max(1, (int) $order->quantity);
+        $unit = (int) round($order->unit_price ?? 0);
+
+        return collect([[
+            'name'       => $order->product_name ?: '-',
+            'code'       => $order->product_code ?: '',
+            'qty'        => $qty,
+            'unit_price' => $unit,
+            'nhis'       => (int) round($order->nhis_amount ?? 0),
+            'copay'      => (int) round($order->patient_copay ?? 0),
+            // 제품값 합계다 — 배송비가 붙은 주문 총액과는 다르다
+            'total'      => $unit * $qty,
+        ]]);
     }
 
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */

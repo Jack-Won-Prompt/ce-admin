@@ -15,7 +15,9 @@
   .view-panel { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:2px 20px; }
   .info-row { display:flex; align-items:baseline; gap:8px; padding:9px 0;
               border-bottom:1px solid var(--border-light, var(--border)); min-width:0; }
-  .info-row.wide { grid-column:span 2; }
+  /* 주소는 네 칸을 쓴다 — 우편번호·도로명·찾기·상세가 한 줄에 들어가야 한다 */
+  .info-row.wide { grid-column:span 4; }
+  @media(max-width:1200px) { .info-row.wide { grid-column:span 2; } }
   .info-label { font-size:11px; font-weight:700; color:var(--text-muted); flex-shrink:0;
                 white-space:nowrap; }
   .info-value { font-size:13px; color:var(--text-primary); flex:1; min-width:0;
@@ -36,6 +38,8 @@
   .is-editing .edit-only.inline-mini { display:inline-flex; gap:6px; align-items:center; vertical-align:middle; }
 
   .info-value .form-control { width:100%; height:30px; padding:2px 8px; font-size:13px; }
+  /* 적는 길이가 정해져 있는 칸은 그만큼만 잡는다 — 남는 자리는 주소가 쓴다 */
+  #e-resident, #e-mobile, #e-phone { max-width:148px; }
   .info-value textarea.form-control { height:auto; }
   /* 나란히 놓는 칸은 100% 를 물려받으면 서로 밀어낸다 — 제 글자만큼만 잡는다 */
   .info-value .inline .form-control { width:auto; }
@@ -295,9 +299,14 @@
 
       document.getElementById('tab-items-label').textContent = '주문 제품 - ' + label;
       document.getElementById('tab-btn-items').style.display = '';
+      /* 제품값·배송비·총액은 같은 수가 아니다 — 표는 제품값만 적고,
+         배송비와 주문 총액은 이 줄에 적는다. */
+      const won = (n) => Number(n || 0).toLocaleString() + '원';
       document.getElementById('itemsNote').textContent = items.length
         ? label + ' · ' + items.length + '건'
-        : label + ' — 등록된 제품 줄이 없습니다.';
+          + (row.ship ? ' · 배송비 ' + won(row.ship) : '')
+          + (row.total_amt ? ' · 주문 총액 ' + won(row.total_amt) : '')
+        : label + ' — 적혀 있는 제품이 없습니다.';
 
       const gridEl = document.getElementById('itemsGrid');
       if (!itemsGrid) {
