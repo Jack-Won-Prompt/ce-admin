@@ -19,7 +19,7 @@ class AuthApiController extends Controller
     private const OTP_MAX_ATTEMPTS = 5;
 
     // ── POST /api/auth/login ──────────────────────────────
-    // 이메일/비밀번호 검증. 그다음은 서버 설정(설정 › 로그인)이 가른다.
+    // 이메일/비밀번호 검증. 그다음은 서버 설정(설정 › 서비스 연동 설정 › 로그인)이 가른다.
     //   문자 인증 켬 → {otp_required: true, pending_token, masked_phone} (202)
     //   문자 인증 끔 → {otp_required: false, token, user, pusher}        (200)
     public function login(Request $request): JsonResponse
@@ -38,7 +38,7 @@ class AuthApiController extends Controller
             ], 401);
         }
 
-        // 문자 인증을 끄면(설정 › 로그인) 비밀번호만으로 들여보낸다
+        // 문자 인증을 끄면(설정 › 서비스 연동 설정 › 로그인) 비밀번호만으로 들여보낸다
         if (! config('auth.otp_enabled', true)) {
             return response()->json($this->issueToken($user));
         }

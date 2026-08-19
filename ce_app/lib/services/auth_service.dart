@@ -41,13 +41,9 @@ class AuthService {
         throw Exception('서버 응답 형식 오류 (${res.statusCode})');
       }
 
-      // 직접 토큰 반환 (OTP 없음)
-      final token = data['token']?.toString();
-      if (token != null) {
-        final userId = data['user']?['id'] as int? ?? 0;
-        final prefs  = await SharedPreferences.getInstance();
-        await prefs.setString(AppConstants.keyAccessToken, token);
-        await prefs.setInt(AppConstants.keyUserId, userId);
+      // 서버가 문자 인증을 끈 경우 — 토큰이 바로 온다
+      if (data['token'] != null) {
+        await _persistSession(data);
         return const LoginResult.direct();
       }
 
@@ -71,27 +67,36 @@ class AuthService {
         'pending_token': pendingToken,
         'code':          code,
       });
-      final data   = res.data as Map<String, dynamic>;
-      final token  = data['token'] as String;
-      final userId = (data['user']?['id'] as num).toInt();
-      final prefs  = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.keyAccessToken, token);
-      await prefs.setInt(AppConstants.keyUserId, userId);
-      final userName  = data['user']?['name']?.toString();
-      final userEmail = data['user']?['email']?.toString();
-      if (userName  != null) await prefs.setString(AppConstants.keyUserName,  userName);
-      if (userEmail != null) await prefs.setString(AppConstants.keyUserEmail, userEmail);
-
-      // Pusher 설정 저장
-      final pusher = data['pusher'];
-      if (pusher is Map) {
-        final key     = pusher['key']?.toString();
-        final cluster = pusher['cluster']?.toString();
-        if (key     != null) await prefs.setString(AppConstants.keyPusherKey,     key);
-        if (cluster != null) await prefs.setString(AppConstants.keyPusherCluster, cluster);
-      }
+      await _persistSession(res.data as Map);
     } on DioException catch (e) {
       throw Exception(_extractMessage(e));
+    }
+  }
+
+  /// 로그인 응답을 기기에 담는다.
+  /// 문자 인증을 거친 로그인과 건너뛴 로그인이 똑같은 값을 남겨야
+  /// 로그인 뒤 화면·실시간 알림이 어느 쪽으로 들어왔는지 몰라도 된다.
+  Future<void> _persistSession(Map data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.keyAccessToken, data['token'].toString());
+
+    final user = data['user'];
+    if (user is Map) {
+      final id = user['id'];
+      if (id is num) await prefs.setInt(AppConstants.keyUserId, id.toInt());
+      final name  = user['name']?.toString();
+      final email = user['email']?.toString();
+      if (name  != null) await prefs.setString(AppConstants.keyUserName,  name);
+      if (email != null) await prefs.setString(AppConstants.keyUserEmail, email);
+    }
+
+    // Pusher 설정 저장
+    final pusher = data['pusher'];
+    if (pusher is Map) {
+      final key     = pusher['key']?.toString();
+      final cluster = pusher['cluster']?.toString();
+      if (key     != null) await prefs.setString(AppConstants.keyPusherKey,     key);
+      if (cluster != null) await prefs.setString(AppConstants.keyPusherCluster, cluster);
     }
   }
 

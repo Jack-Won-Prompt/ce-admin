@@ -64,9 +64,8 @@ class AuthNotifier extends AsyncNotifier<bool> {
         );
         state = const AsyncData(false);
       } else {
-        // 직접 로그인 완료
-        state = const AsyncData(true);
-        await ChatNotificationService.instance.connectAndSubscribe();
+        // 서버가 문자 인증을 끈 경우 — 이 자리에서 로그인이 끝난다
+        await _adoptSession();
       }
     } catch (e, st) {
       state = AsyncError(e, st);
@@ -79,17 +78,23 @@ class AuthNotifier extends AsyncNotifier<bool> {
     try {
       await ref.read(authServiceProvider).verifyOtp(pendingToken, code);
       ref.read(otpPendingProvider.notifier).state = null;
-      final prefs = await SharedPreferences.getInstance();
-      ref.read(userNameProvider.notifier).state =
-          prefs.getString(AppConstants.keyUserName) ?? '';
-      ref.read(userIdProvider.notifier).state =
-          prefs.getInt(AppConstants.keyUserId);
-      state = const AsyncData(true);
-      await ChatNotificationService.instance.connectAndSubscribe();
-      await FcmService.instance.init(ref.read(dioProvider));
+      await _adoptSession();
     } catch (e, st) {
       state = AsyncError(e, st);
     }
+  }
+
+  /// 토큰을 받은 뒤 마무리 — 저장된 사용자 정보를 올리고 실시간 연결을 연다.
+  /// 문자 인증을 거친 로그인과 건너뛴 로그인이 같은 상태로 끝나야 한다.
+  Future<void> _adoptSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    ref.read(userNameProvider.notifier).state =
+        prefs.getString(AppConstants.keyUserName) ?? '';
+    ref.read(userIdProvider.notifier).state =
+        prefs.getInt(AppConstants.keyUserId);
+    state = const AsyncData(true);
+    await ChatNotificationService.instance.connectAndSubscribe();
+    await FcmService.instance.init(ref.read(dioProvider));
   }
 
   /// OTP 재발송 → 새 pendingToken 반환
