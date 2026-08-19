@@ -109,19 +109,13 @@
               환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
               <span class="view-only" style="display:inline;">
                 @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
-                @if($patient->gender) · {{ $patient->gender === 'male' ? '남' : '여' }} @endif
               </span>
-              {{-- 생일·성별은 적혀 있던 그 자리에서 고친다. 줄을 하나 더 만들면
-                   그만큼 아래 칸이 통째로 밀려, 고치기 전과 다른 화면이 된다. --}}
+              {{-- 생일은 적혀 있던 그 자리에서 고친다. 줄을 하나 더 만들면
+                   그만큼 아래 칸이 통째로 밀려, 고치기 전과 다른 화면이 된다.
+                   성별은 두지 않는다 — 주민번호에 이미 들어 있고, 쓰는 곳도 없었다. --}}
               <span class="edit-only inline-mini">
                 <input type="date" class="form-control" id="e-birth" style="width:132px;height:26px;font-size:12px;padding:1px 6px;"
                        value="{{ $patient->birth_date?->format('Y-m-d') }}" data-orig="{{ $patient->birth_date?->format('Y-m-d') }}" />
-                <select class="form-control" id="e-gender" style="width:74px;height:26px;font-size:12px;padding:1px 6px;"
-                        data-orig="{{ $patient->gender }}">
-                  <option value="">성별</option>
-                  <option value="male"   @selected($patient->gender==='male')>남</option>
-                  <option value="female" @selected($patient->gender==='female')>여</option>
-                </select>
               </span>
             </div>
           </div>
@@ -421,7 +415,6 @@
                              return (v === '' || v === el.dataset.masked) ? undefined : v;
                            })(document.getElementById('e-resident')),
       birth_date:          document.getElementById('e-birth').value               || null,
-      gender:              document.getElementById('e-gender').value              || null,
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,
