@@ -58,12 +58,14 @@
       <div class="card-body">
 
         {{-- 아이콘 + 이름 --}}
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
           <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;">
             <i class="fa-solid fa-user"></i>
           </div>
-          <div style="min-width:0;">
-            <div style="font-size:18px;font-weight:700;">{{ $patient->name }}</div>
+          {{-- 이름 칸이 줄어들다 못해 0 이 되면 한 글자씩 접힌다(왼쪽 칸이 340px 뿐이다).
+               줄어드는 대신 단추를 아랫줄로 내린다 — 이름은 끊기더라도 한 줄로 읽혀야 한다. --}}
+          <div style="flex:1 1 140px;min-width:120px;">
+            <div style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $patient->name }}</div>
             <div style="font-size:12px;color:var(--text-muted);">
               환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
               @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
@@ -73,7 +75,7 @@
 
           {{-- 이 사람에게 할 일은 이름 옆에 둔다 — 고치기, 통화 기록 보기, 지우기 순이다.
                지우기는 되돌릴 수 없어 한 칸 떼어 놓는다. --}}
-          <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;">
+          <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
             <button class="btn btn-outline btn-sm" id="btn-edit" onclick="toggleEdit(true)">
               <i class="fa-solid fa-pen"></i> 수정
             </button>
@@ -205,13 +207,13 @@
     </div>
   </div>
 
-  {{-- 우측: 처방 이력 --}}
+  {{-- 우측: 주문 이력 --}}
   <div>
     <div class="card">
       <div class="card-body">
         <div class="tab-bar">
           <button class="tab-btn active" onclick="switchTab(this,'tab-rx')">
-            <i class="fa-solid fa-file-medical"></i> 처방 이력
+            <i class="fa-solid fa-file-medical"></i> 주문 이력
             <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
           </button>
         </div>
@@ -234,7 +236,7 @@
           @empty
           <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
             <i class="fa-solid fa-file-medical" style="font-size:28px;opacity:.3;display:block;margin-bottom:10px;"></i>
-            처방 이력이 없습니다.
+            주문 이력이 없습니다.
           </div>
           @endforelse
         </div>
