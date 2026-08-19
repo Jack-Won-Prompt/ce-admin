@@ -192,7 +192,7 @@
       /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
          다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
       { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number',
-        summary: false }  // 한 개 값이라 더하지 않는다,
+        summary: false },  // 한 개 값이라 더하지 않는다
       { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number' },
     ],
     data: [],
