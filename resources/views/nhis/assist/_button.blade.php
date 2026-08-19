@@ -1,12 +1,16 @@
 {{-- 공단 청구 지원 창을 여는 버튼. 여러 목록 화면이 같은 것을 쓴다. --}}
 {{-- 넘기는 것은 주문 ID 하나뿐이고 나머지는 지원 화면이 스스로 조회한다. --}}
 <style>
+  /* 표 안 버튼은 시안이 h28 · r8 · pad 0/12 · gap 6 · 12/500 이다
+     (266:66 의 다운로드 묶음 74×28, 342:4037 의 365:135 116×28).
+     31h · 11/700 이라 이 버튼이 든 행만 52 로 부풀어 있었다 — 시안 행은 48 이다.
+     #d0d7de · #57606a 도 DS 램프 밖이라 gray-200 · gray-1000 으로. */
   .nhis-assist-btn {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:4px 9px; border:1px solid #d0d7de; background:#fff; border-radius:6px;
-    font-size:11px; font-weight:700; color:#57606a; cursor:pointer; white-space:nowrap;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    height:28px; padding:0 12px; border:1px solid var(--gray-200); background:var(--gray-0); border-radius:8px;
+    font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000); cursor:pointer; white-space:nowrap;
   }
-  .nhis-assist-btn:hover:not(:disabled) { border-color:#28798B; color:#28798B; }
+  .nhis-assist-btn:hover:not(:disabled) { border-color:var(--primary); color:var(--primary); }
   .nhis-assist-btn:disabled { opacity:.45; cursor:not-allowed; }
 </style>
 <script>

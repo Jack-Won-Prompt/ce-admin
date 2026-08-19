@@ -60,7 +60,8 @@
   color: var(--gray-600, #656C74);
   font-weight: 700;
   font-size: 13px;
-  line-height: 1.6;
+  /* 시안 머리 글자는 13/700 lh21 이다. 1.6 은 20.8 이라 행 높이가 소수로 떨어진다 */
+  line-height: 21px;
   padding: 0;
   /* Figma 148:5526 — 머리행은 세로 구분선 없이 하단 1px 만 있고 글자는 왼쪽이다.
      sticky 헤더가 스크롤 중 테두리를 잃는 것은 배경으로 그은 1px 이 대신 메운다
@@ -164,7 +165,8 @@
   color: var(--gray-1000, #101317);
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.6;
+  /* 시안 본문 셀 13/400 lh21 — 10 + 21 + 10 = 41 이 시안 행 높이다 */
+  line-height: 21px;
   cursor: default;
   white-space: nowrap;
   overflow: hidden;
@@ -315,7 +317,8 @@
 /* ── 빈 표 ── — 찾은 것이 없어도 표 몸통은 그대로 둔다 */
 .cg-empty-row td.cg-empty-cell {
   height: 220px; text-align: center; vertical-align: middle;
-  color: #8a9099; font-size: 13px; font-weight: 500;
+  /* #8a9099 는 DS 램프에 없다 — 가장 가까운 gray-500 로 */
+  color: var(--gray-500, #999EA4); font-size: 13px; font-weight: 500;
   background: var(--cg-bg, #fff);
 }
 

@@ -30,8 +30,11 @@
   .inv-pop-note { font-size: 11px; color: var(--text-muted); }
   .inv-pop-acts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
   /* 목록 칸의 작은 단추 — 미발행이면 누를 수 있다는 것이 보여야 한다 */
-  .inv-cell-btn { height: 22px; padding: 0 8px; font-size: 11px; font-weight: 700;
-                  border-radius: 6px; border: 1px solid var(--primary); color: var(--primary);
+  /* 표 안 버튼 규격은 시안이 h28 · r8 · pad 0/12 · 12/500 이다(266:66 · 342:4037).
+     위임장 서명의 .pc-cellbtn 과 같은 부품이라 같은 값으로 둔다. */
+  .inv-cell-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+                  height: 28px; padding: 0 12px; font-size: 12px; font-weight: 500; line-height:19px;
+                  border-radius: 8px; border: 1px solid var(--primary); color: var(--primary);
                   background: var(--bg-card); cursor: pointer; }
   .inv-cell-btn:hover { background: var(--primary-light); }
   .inv-cell-btn.off { border-color: var(--gray-300); color: var(--gray-700); }
