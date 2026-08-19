@@ -58,7 +58,7 @@
 @section('content')
 
 {{-- 위쪽 이름 띠는 두지 않는다. 바로 아래 카드가 같은 이름을 다시 적고 있어 화면을
-     열면 이름이 두 번 보였다. 손댈 단추(수정·삭제·상담내역)는 그 이름 옆으로 옮겼다. --}}
+     열면 이름이 두 번 보였다. 손댈 단추(수정·상담내역)는 그 이름 옆으로 옮겼다. --}}
 
 <div class="detail-layout">
 
@@ -83,18 +83,13 @@
             </div>
           </div>
 
-          {{-- 이 사람에게 할 일은 이름 옆에 둔다 — 고치기, 통화 기록 보기, 지우기 순이다.
-               지우기는 되돌릴 수 없어 한 칸 떼어 놓는다. --}}
+          {{-- 이 사람에게 할 일은 이름 옆에 둔다 — 고치기와 통화 기록 보기다 --}}
           <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
             <button class="btn btn-outline btn-sm" id="btn-edit" onclick="toggleEdit(true)">
               <i class="fa-solid fa-pen"></i> 수정
             </button>
             <button class="btn btn-outline btn-sm" onclick="openCounselTab()">
               <i class="bx bx-conversation"></i> 상담내역
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="deletePatient()" title="삭제"
-                    style="margin-left:6px;">
-              <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </div>
@@ -354,14 +349,9 @@
     }
   }
 
-  async function deletePatient() {
-    if (!await ceConfirm('"{{ $patient->name }}" 환자를 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })) return;
-    const res = await apiRequest(`/patients/{{ $patient->id }}`, 'DELETE');
-    if (res.success) {
-      showToast(res.message, 'success');
-      setTimeout(() => location.href = `${BASE_URL}/patients`, 800);
-    }
-  }
+  /* 삭제 단추는 두지 않는다. 환자에는 처방·주문·상담·서류가 달려 있어, 지우면 그
+     기록들이 어디에도 이어지지 않는 채로 남는다 — 지울 일은 관리자 손으로 따로 한다.
+     서버의 삭제 경로는 그대로 있다(다른 자리에서 쓰고 있고, 길을 막을 이유는 없다). */
 </script>
 <script>
 window.HELP_TOUR_STEPS = [

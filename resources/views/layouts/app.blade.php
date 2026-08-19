@@ -1135,10 +1135,11 @@
     html.is-framed .layout-navbar { display: none !important; }
     html.is-framed .layout-page { margin-left: 0 !important; }
     html.is-framed .content-wrapper { padding-top: 0 !important; }
-    /* 탭 안에서는 위 여백을 두지 않는다. 탭줄과 본문 사이 간격은 워크스페이스 셸의
-       #wsRoot gap 12 가 이미 만든다(시안 148:5526 container gap 12).
-       여기서 14 를 더하면 탭으로 열었을 때만 26 이 되어 시안보다 14px 벌어진다. */
-    html.is-framed .page-body { padding-top: 0; }
+    /* 탭 안에서는 위 여백을 거의 두지 않는다. 탭줄과 본문 사이 간격은 워크스페이스 셸의
+       #wsRoot gap 12 가 이미 만든다(시안 148:5526 container gap 12) — 여기서 14 를
+       더하면 탭으로 열었을 때만 26 이 되어 시안보다 벌어진다.
+       다만 0 으로 붙여 두니 첫 카드의 그림자와 모서리가 탭줄에 닿아, 10 만 둔다. */
+    html.is-framed .page-body { padding-top: 10px; }
 
     /* 프레임 안에서만 보이는 화면 단추 줄. 비어 있으면 자리도 차지하지 않는다 —
        :empty 로는 공백 때문에 잡히지 않아 자식이 없을 때를 본다. */
