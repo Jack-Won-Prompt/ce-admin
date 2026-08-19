@@ -70,9 +70,8 @@
                   background:currentColor;
                   -webkit-mask:var(--icon-alert-circle) center / 12px 12px no-repeat;
                           mask:var(--icon-alert-circle) center / 12px 12px no-repeat; }
-  /* 처방전 설정 구획 — 시안 Frame 48101562 는 1135×308 고정이라
-     메모 아래로 여백이 남고 그만큼 초기화·등록이 카드 맨 아래에 선다 (내용 높이는 158). */
-  .up-sec-setting { min-height:308px; }
+  /* 처방전 설정 구획 — 시안은 1135×308 고정이지만 높이를 못박지 않는다.
+     내용이 158 뿐이라 메모 아래로 150 이 흰 바닥으로 남았다. 초기화·등록은 내용 바로 밑에 선다. */
   /* 하단 버튼 — 초기화 80×36, 등록은 남은 폭 (Figma 128:822) */
   .up-foot { display:flex; align-items:center; gap:8px; }
   .up-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
