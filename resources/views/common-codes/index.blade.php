@@ -10,16 +10,16 @@
   .cc-kind-chips { display:flex; gap:6px; flex-wrap:wrap; }
   .cc-kind-chip { display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 8px;
                   border-radius:999px; background:var(--gray-100); color:var(--gray-700);
-                  font-size:11.5px; font-weight:600; }
+                  font-size:11px; font-weight:500; }
   .cc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
   .cc-form-grid .wide { grid-column:1 / -1; }
-  .cc-field label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:4px; }
+  .cc-field label { display:block; font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:4px; }
   .cc-tools { margin-left:auto; display:flex; align-items:center; gap:6px; }
   .cc-tool { width:28px; height:28px; border-radius:8px; border:1px solid var(--gray-200);
              background:var(--gray-0); color:var(--gray-700); font-size:16px; line-height:1;
              cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
   .cc-tool:hover { border-color:var(--primary); color:var(--primary); }
-  .cc-dirty { font-size:12px; font-weight:600; color:var(--primary); min-width:60px; text-align:right; }
+  .cc-dirty { font-size:12px; font-weight:500; color:var(--primary); min-width:60px; text-align:right; }
 </style>
 @endpush
 

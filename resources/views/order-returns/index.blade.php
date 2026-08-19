@@ -90,7 +90,7 @@
     {{-- 상세는 이미 한 화면으로 있다. 그 화면을 그대로 들여온다 — 두 벌로 만들면
          한쪽만 고쳐져 서로 다른 것을 보여 주게 된다.
          액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
-    <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12.5px;color:var(--gray-700);">
+    <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12px;color:var(--gray-700);">
       목록에서 행을 더블클릭하면 여기에 나옵니다.
     </div>
     <iframe id="rtnShowFrame" title="상세 내용" style="display:none;width:100%;border:0;

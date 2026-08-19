@@ -113,7 +113,7 @@
   /* 추가 타일 (Figma 128:799) — 높이 140, primary 테두리 */
   /* 넣는 자리 위의 서류명 고르는 칸 (128:796 옆) */
   .fu-pick { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .fu-pick-label { font-size:12px; font-weight:600; color:var(--gray-700); }
+  .fu-pick-label { font-size:12px; font-weight:500; color:var(--gray-700); }
   .fu-pick-sel { height:30px; min-width:220px; padding:2px 8px; font-size:13px;
                  border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0);
                  color:var(--gray-1000); cursor:pointer; }

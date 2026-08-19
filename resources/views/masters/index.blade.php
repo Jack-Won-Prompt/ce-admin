@@ -45,7 +45,7 @@
 </div>
 
 {{-- ── 검색 필터 (탭 안) ── --}}
-<form method="GET" action="{{ route('masters.index') }}" class="ds-filter-card" style="margin-top:12px;">
+<form method="GET" action="{{ route('masters.index') }}" class="ds-filter-card">
   <input type="hidden" name="cat" value="{{ $current }}">
   <div class="ds-filter-fields">
     <div class="ds-filter-field span-4">

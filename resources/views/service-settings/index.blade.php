@@ -18,7 +18,7 @@
   .ss-panel.active { display: flex; }
   .ss-card { background: var(--gray-0); border-radius: 12px; padding: 16px; }
   .ss-card-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
-  .ss-card-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .ss-card-title { font-size: 14px; font-weight: 700; color: var(--gray-900); }
   .ss-card-desc  { font-size: 12px; color: var(--gray-500); }
   .ss-fields { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px; }
   .ss-field  { display: flex; flex-direction: column; gap: 8px; min-width: 0; }

@@ -45,14 +45,14 @@
   .smp-find input { max-width: 300px; }
   .smp-hits { border: 1px solid var(--border); border-radius: 8px; max-height: 180px;
               overflow-y: auto; margin-bottom: 10px; }
-  .smp-hit { display: flex; gap: 10px; align-items: center; padding: 7px 12px; font-size: 12.5px;
+  .smp-hit { display: flex; gap: 10px; align-items: center; padding: 7px 12px; font-size: 12px;
              border-bottom: 1px solid var(--border-light); cursor: pointer; }
   .smp-hit:last-child { border-bottom: none; }
   .smp-hit:hover { background: var(--primary-light); }
   .smp-hit .code { width: 90px; flex-shrink: 0; font-family: monospace; font-weight: 700; color: var(--primary); }
   .smp-hit .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .smp-hit .price { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
-  .smp-empty { padding: 12px; font-size: 12.5px; color: var(--gray-700); text-align: center; }
+  .smp-empty { padding: 12px; font-size: 12px; color: var(--gray-700); text-align: center; }
 
   .smp-items { width: 100%; border-collapse: collapse; font-size: 13px; }
   .smp-items th, .smp-items td { padding: 7px 10px; border-bottom: 1px solid var(--border-light); text-align: left; }

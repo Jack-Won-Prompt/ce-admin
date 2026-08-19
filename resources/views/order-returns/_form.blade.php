@@ -11,14 +11,14 @@
   .rto-sec-hd .step { display: inline-flex; align-items: center; justify-content: center;
                       width: 18px; height: 18px; border-radius: 999px; background: var(--primary);
                       color: #fff; font-size: 11px; font-weight: 700; }
-  .rto-sec-hd .hint { margin-left: auto; font-size: 11.5px; font-weight: 500; color: var(--gray-700); }
+  .rto-sec-hd .hint { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--gray-700); }
 
   /* 찾는 자리 — 목록 화면의 검색 카드와 같은 규격 */
   .rto-filter { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
                 padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
                 background: var(--gray-50); margin-bottom: 10px; }
   .rto-fld { display: flex; flex-direction: column; gap: 4px; }
-  .rto-fld label { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .rto-fld label { font-size: 12px; font-weight: 500; color: var(--gray-700); }
   .rto-fld input { height: 32px; width: 150px; }
   .rto-fld.wide input { width: 190px; }
 
@@ -29,8 +29,8 @@
   .rto-f { display: flex; flex-direction: column; gap: 4px; }
   .rto-f.span2 { grid-column: span 2; }
   .rto-f.span4 { grid-column: 1 / -1; }
-  .rto-f label { font-size: 12px; font-weight: 600; color: var(--gray-700); }
-  .rto-note { font-size: 11.5px; color: var(--gray-700); }
+  .rto-f label { font-size: 12px; font-weight: 500; color: var(--gray-700); }
+  .rto-note { font-size: 11px; color: var(--gray-700); }
   .rto-only { display: none; }
   .rto-only.on { display: flex; }
 

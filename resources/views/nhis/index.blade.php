@@ -330,7 +330,7 @@
     <div class="modal-body">
       <input type="hidden" id="resultOrderId">
       <div style="background:var(--primary-light);border:1px solid var(--primary-accent);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text-muted);">청구 주문</div>
+        <div style="font-size:12px;font-weight:500;color:var(--text-muted);">청구 주문</div>
         <div id="resultOrderInfo" style="font-size:14px;font-weight:700;margin-top:2px;"></div>
       </div>
       <div class="form-group">

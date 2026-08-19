@@ -152,7 +152,7 @@
   .cs-row { display: flex; flex-direction: column; gap: 10px; }
   .cs-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .cs-f { display: flex; flex-direction: column; gap: 4px; }
-  .cs-f label { font-size: 11.5px; font-weight: 600; color: var(--gray-700); }
+  .cs-f label { font-size: 11px; font-weight: 500; color: var(--gray-700); }
   .cs-f textarea.form-control { height: auto; padding: 8px 10px; line-height: 1.7; resize: vertical; }
   .cs-hint { font-size: 11px; color: var(--text-muted); }
   .cs-foot { display: flex; align-items: center; gap: 6px; padding: 10px 14px;

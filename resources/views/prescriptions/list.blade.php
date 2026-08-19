@@ -53,7 +53,7 @@
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
   .status-tab {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+    padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 500;
     border: 1.5px solid var(--border); background: #fff;
     color: var(--text-secondary); cursor: pointer; text-decoration: none;
     transition: var(--transition);

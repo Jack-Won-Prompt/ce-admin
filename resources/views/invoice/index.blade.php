@@ -20,10 +20,10 @@
   .inv-pop-hd button { background: none; border: none; color: #fff; font-size: 16px;
                        line-height: 1; cursor: pointer; }
   .inv-pop-bd { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .inv-pop-order { font-size: 11.5px; color: var(--text-muted); }
+  .inv-pop-order { font-size: 11px; color: var(--text-muted); }
   .inv-pop-row { display: flex; flex-direction: column; gap: 3px; }
   .inv-pop-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .inv-pop-row label { font-size: 11px; font-weight: 600; color: var(--gray-700); }
+  .inv-pop-row label { font-size: 11px; font-weight: 500; color: var(--gray-700); }
   .inv-pop-row .form-control { height: 30px; font-size: 12px; }
   .inv-pop-radio { display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
                    font-weight: 500; color: var(--gray-1000); cursor: pointer; }
@@ -89,7 +89,7 @@
 .inv-cell { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
 .inv-issued    { color:var(--primary);font-size:11px;font-weight:700; }
 .inv-none      { color:var(--text-muted);font-size:11px; }
-.inv-cancelled { color:var(--danger);font-size:11px;font-weight:600; }
+.inv-cancelled { color:var(--danger);font-size:11px;font-weight:500; }
 .type-badge {
   display:inline-flex; align-items:center; gap:3px;
   padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
@@ -253,7 +253,7 @@
      요약 카드 5개는 시안에 없다. 건수는 칩·결과바로, 설명 문구는 칩 줄 끝 안내로 옮겼다. --}}
 {{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
      고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
-<div class="inv-chip-note" style="margin:0 0 8px;">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</div>
+<div class="inv-chip-note">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</div>
 
 
 {{-- ── 검색 필터 — Figma 282:934: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 ── --}}

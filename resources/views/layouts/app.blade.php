@@ -610,20 +610,26 @@
 
     /* ── Cards ── */
     /* Figma 카드에는 그림자가 없다 (radius 12 · 흰 배경) */
+    /* 시안 카드는 흰 채움에 테두리가 없다 — 148:6653(1568×749) · 156:7261(1536×93) ·
+       248:4141 · 342:4381 어디에도 stroke 가 없고, 안여백은 12/16 이다.
+       목록 카드(.ds-grid-card)는 이미 테두리가 없는데 상세·설정 화면이 쓰는 이 카드만
+       1px 을 두르고 있어 같은 부품이 화면마다 달라 보였다.
+       화면 쉰둘을 재 보니 보이는 카드 열아홉이 모두 회색 바탕 위에 홀로 있고
+       카드 안에 든 카드는 하나도 없다 — 테두리가 없어도 경계가 살아 있다. */
     .card {
       background: var(--bg-card);
-      border: 1px solid var(--border);
+      border: none;
       border-radius: var(--radius-lg);
       box-shadow: none;
     }
     .card-header {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; border-bottom: 1px solid var(--border);
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
       background: transparent;
     }
     .card-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -.2px; }
     .card-header-sub   { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
-    .card-body { padding: 14px 16px; }
+    .card-body { padding: 12px 16px; }
     .mt-4 { margin-top: 12px; } .mb-4 { margin-bottom: 12px; }
 
     /* ── Buttons ── */
@@ -2520,14 +2526,19 @@ window.dsBindSelCount = function (grid, elId) {
 #chatPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.15); }
 
 .chat-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .chat-header-title { font-size: 14px; font-weight: 700; flex: 1; }
+/* 닫기 단추 셋(채팅·SR·도움말)이 23×33 · 28×28 · 32×26 으로 제각각이었다.
+   같은 자리에서 같은 일을 하니 헤더 아이콘 버튼과 같은 32×32 · r8 로 맞춘다.
+   글자 크기 18·20 은 시안 규격(10~16) 밖이라 16 으로 내린다. */
 .chat-header-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
   background: none; border: none; color: var(--gray-400);
-  font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .chat-header-close:hover { color: #fff; background: rgba(255,255,255,.1); }
 
@@ -2839,14 +2850,15 @@ input#chatFileInput { display: none; }
 }
 #srPanel.open { right: 0; box-shadow: -6px 0 40px rgba(0,0,0,.18); }
 .sr-header {
-  display: flex; align-items: center; gap: 9px;
-  padding: 15px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .sr-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .sr-header-sub { font-size: 12px; color: var(--text-muted); }
 .sr-header-close {
-  margin-left: auto; width: 28px; height: 28px; border: none; background: none;
-  color: var(--text-muted); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: auto; width: 32px; height: 32px; flex-shrink: 0; border: none; background: none;
+  color: var(--text-muted); font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .sr-header-close:hover { background: var(--bg); color: var(--text-primary); }
 
@@ -4510,16 +4522,17 @@ function showPrescriptionNotif(data) {
 }
 #sidePanelOverlay.show { display: block; }
 
+/* 옆 패널 머리도 채팅·SR·도움말과 같은 12/16 · gap 8 로 둔다 */
 .sp-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .sp-title { font-size: 14px; font-weight: 700; flex: 1; }
 .sp-close, .sp-back {
   background: none; border: none; color: var(--gray-400);
-  font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 4px;
-  display: flex; align-items: center; gap: 4px; line-height: 1;
+  font-size: 16px; cursor: pointer; padding: 0 8px; min-width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1;
 }
 .sp-close:hover, .sp-back:hover { color: #fff; background: rgba(255,255,255,.1); }
 .sp-back { font-size: 13px; }
@@ -5448,14 +5461,16 @@ document.addEventListener('keydown', e => {
 #helpPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.12); }
 .help-header {
   display: flex; align-items: center; gap: 8px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--bg); flex-shrink: 0;
 }
 .help-header-icon { font-size: 22px; color: var(--primary); }
 .help-header-title { font-size: 14px; font-weight: 700; flex: 1; color: var(--text-primary); }
 .help-header-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
   background: none; border: none; color: var(--text-muted);
-  font-size: 20px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+  font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .help-header-close:hover { color: var(--text-primary); background: var(--border-light); }
 .help-body { flex: 1; overflow-y: auto; padding: 16px; }

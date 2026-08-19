@@ -221,8 +221,8 @@
   .od-status-actions .btn-danger:hover { background: var(--alert-100); color: var(--alert-500); }
 
   /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
+  /* 블록 사이 여백은 .page-body 의 gap 12 가 만든다 — 여기서 또 주면 28 이 된다 */
   .action-footer {
-    margin-top: 16px;
     background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 12px 20px;
     display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
