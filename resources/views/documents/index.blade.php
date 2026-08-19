@@ -165,29 +165,19 @@
       <a href="{{ route('documents.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__documentGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
-{{-- Figma 248:2923 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바·그리드·등록 패널 --}}
+{{-- Figma 248:2923 — 흰 카드(r12) 안에 탭바·그리드·등록 패널 --}}
 <div class="ds-grid-section">
   {{-- 좌: 전체·선택 건수 / 우: 안내문 + 액션(그리드 내장 툴바에서 옮긴 엑셀 저장) --}}
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="docSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>클릭</b>하면 해당 처방전의 모든 서류를 확인하고 추가 등록할 수 있습니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__documentGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- ── 패널 탭: 조회 결과 / 서류 등록 — 시안은 카드 안 상단(h44) ── --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-        <i class="fa-solid fa-list"></i> 조회 결과
-      </button>
+        <i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
       <button type="button" id="pnlBtnReg" class="pnl-tab" onclick="pnlShow('reg')">
         <i class="fa-solid fa-folder-plus"></i> 서류 등록
         <span id="pnlRegRx" style="font-family:monospace;font-size:11px;color:var(--gray-500);"></span>
@@ -283,7 +273,7 @@
   const grid = new wwGrid({
     el: document.getElementById('documentGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     /* 찾을 때 먼저 보는 것이 환자명이라 맨 앞에 둔다.

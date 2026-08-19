@@ -209,6 +209,11 @@
       <div class="ds-filter-actions">
         <a href="{{ route('settlement.index', ['tab'=>'settlement']) }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+        {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+        <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" onclick="settlementViewRx()">
+          <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
+        </button>
       </div>
     </form>
 
@@ -235,42 +240,12 @@
       </div>
     </div>
 
-    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 패널 탭과 그리드 --}}
+    {{-- 흰 카드(r12) 안에 패널 탭과 그리드 --}}
     <div class="ds-grid-section">
-      <div class="ds-grid-bar">
-        <div class="ds-grid-bar-left">
-          <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-          <span class="ds-grid-sel">선택 <b id="settleSelCount">0</b>건</span>
-          {{-- 보조 합계 4개 — 시안에서는 독립된 카드 줄이 아니라 결과바 왼쪽 인라인이다.
-               블록은 그대로 옮기기만 했고, 배열의 셋째 칸(값 색)만 시안 값으로 바꿨다.
-               시안 324:60 Frame 48101508 은 네 항목 모두 값 숫자가 #333940(gray-800) 한 가지다.
-               원래 있던 var(--success)(초록) · var(--warning)(주황) 은 DS 26색 밖이고 시안 어디에도 없다.
-               var(--text-primary) 도 gray-1000 이라 시안보다 두 톤 어둡다.
-               (단위 글자 '원·건'은 시안이 #656C74 지만 값이 한 문자열이라 나누지 못했다 — 숫자 색에 맞췄다) --}}
-          <div class="sum-mini-row">
-            @foreach([['환급 확정', number_format($summary['nhis_reimb']).'원', 'var(--gray-800)'], ['배송비 합계', number_format($summary['shipping_fee']).'원', 'var(--gray-800)'], ['대기 중 주문', $statusCounts['pending'].'건', 'var(--gray-800)'], ['배송 완료', $statusCounts['delivered'].'건', 'var(--gray-800)']] as [$lbl, $val, $color])
-            <div class="sum-mini">
-              <span class="sum-mini-label">{{ $lbl }}</span>
-              <span class="sum-mini-val" style="color:{{ $color }};">{{ $val }}</span>
-            </div>
-            @endforeach
-          </div>
-        </div>
-        <div class="ds-grid-bar-right">
-          {{-- 조회 기간 표시는 검색 카드 오른쪽 끝에 있던 것을 결과바 안내문으로 합쳤다. --}}
-          <span class="ds-grid-hint">{{ $dateFrom }} ~ {{ $dateTo }} · 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세 확인</span>
-          {{-- 그리드 툴바에 있던 엑셀 저장을 결과바로 옮겼다(동작은 downloadExcel() 동일) --}}
-          <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
-          <button type="button" class="ds-btn" onclick="settlementViewRx()">
-            <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
-          </button>
-        </div>
-      </div>
-
       <div class="ds-grid-card">
         {{-- 패널 탭: 조회 결과 / 상세 내용 --}}
         <div class="pnl-tabs">
-          <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과</button>
+          <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
           <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
           {{-- 상세 내용 패널 맨 위에 있던 '조회결과로' 버튼을 여기로 옮겼다(상세 내용 탭일 때만 보인다) --}}
           <button type="button" class="ds-btn pnl-back" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>
@@ -315,6 +290,23 @@
       <div class="ds-filter-actions">
         <a href="{{ route('settlement.index', ['tab'=>'virtual_account']) }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
+        {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+        @if($tossConfigured)
+        @perm('settlement', 'send')
+        <button type="button" class="ds-btn ds-btn-primary" onclick="vaIssueSelected(this)">
+          <i class="fa-solid fa-plus"></i> 선택 발급
+        </button>
+        @endperm
+        <button type="button" class="ds-btn" onclick="vaCheckSelected(this)">
+          <i class="fa-solid fa-rotate"></i> 선택 입금확인
+        </button>
+        @perm('settlement', 'send')
+        <button type="button" class="ds-btn" onclick="vaResendSelected(this)">
+          <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
+        </button>
+        @endperm
+        @endif
+        <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
       </div>
     </form>
 
@@ -342,39 +334,8 @@
       </div>
     </div>
 
-    {{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 --}}
+    {{-- 흰 카드(r12) 안에 그리드 --}}
     <div class="ds-grid-section">
-      <div class="ds-grid-bar">
-        <div class="ds-grid-bar-left">
-          <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-          <span class="ds-grid-sel">선택 <b id="settleSelCount">0</b>건</span>
-        </div>
-        <div class="ds-grid-bar-right">
-          @if($tossConfigured)
-            <span class="ds-grid-hint">행 체크 후 실행</span>
-            {{-- 가상계좌 발급·SMS 재전송은 외부로 나가는 동작이라 send 권한으로 통제 --}}
-            @perm('settlement', 'send')
-            <button type="button" class="ds-btn ds-btn-primary" onclick="vaIssueSelected(this)">
-              <i class="fa-solid fa-plus"></i> 선택 발급
-            </button>
-            @endperm
-            <button type="button" class="ds-btn" onclick="vaCheckSelected(this)">
-              <i class="fa-solid fa-rotate"></i> 선택 입금확인
-            </button>
-            @perm('settlement', 'send')
-            <button type="button" class="ds-btn" onclick="vaResendSelected(this)">
-              <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
-            </button>
-            @endperm
-          @else
-            {{-- 경고 삼각형이 앞에 있으면 전역 .ds-grid-hint::before 는 그리지 않는다 — 아이콘 하나만 선다 --}}
-            <span class="ds-grid-hint"><i class="fa-solid fa-triangle-exclamation"></i> 토스 API 미설정 — 발급/입금확인/SMS 불가</span>
-          @endif
-          {{-- 그리드 툴바에 있던 엑셀 저장을 결과바로 옮겼다(동작은 downloadExcel() 동일) --}}
-          <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
-        </div>
-      </div>
-
       <div class="ds-grid-card">
         {{-- ── 가상계좌 목록 (wwGrid) ── --}}
         <div id="vaGrid"></div>
@@ -732,7 +693,7 @@
     el: mountEl,
     // 엑셀 저장은 결과바 버튼으로 옮겼다(동작은 downloadExcel() 동일).
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     footer: false,
     columns: GRID_COLS,
     data: GRID_DATA,

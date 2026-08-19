@@ -99,32 +99,19 @@
       <button type="submit" class="ds-btn ds-btn-primary">
         <i class="fa-solid fa-magnifying-glass"></i> 검색
       </button>
+      {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+      <button type="button" class="ds-btn" onclick="window.__dispatchGrid?.downloadExcel()">엑셀 저장</button>
     </div>
   </form>
 
-  {{-- Figma 174:1241 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드.
+  {{-- Figma 174:1241 — 흰 카드(r12) 안에 탭바와 그리드.
        검색 카드 오른쪽에 있던 '총 N건'과 그리드 위 '전체 N건' 배지는
        시안 자리인 결과바 왼쪽 '전체 N건'(16/700) 한 곳으로 합쳤다. --}}
   <div class="ds-grid-section">
-    <div class="ds-grid-bar">
-      <div class="ds-grid-bar-left">
-        <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-        <span class="ds-grid-sel">선택 <b id="dispatchSelCount">0</b>건</span>
-      </div>
-      <div class="ds-grid-bar-right">
-        {{-- 안내문 앞 아이콘은 개발이 넣은 info-circle 을 그대로 쓴다. 전역
-             .ds-grid-hint:has(> i:first-child)::before { content:none } 이 이 자리의
-             전역 alert-circle 을 접어 주므로 아이콘은 하나만 나온다(겹치지 않는다). --}}
-        <span class="ds-grid-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
-        {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다 — 동작은 downloadExcel() 그대로 --}}
-        <button type="button" class="ds-btn" onclick="window.__dispatchGrid?.downloadExcel()">엑셀 저장</button>
-      </div>
-    </div>
-
     <div class="ds-grid-card">
       {{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
       <div class="pnl-tabs">
-        <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과</button>
+        <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
         <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
         {{-- 상세 내용 패널 맨 위에 있던 '조회결과로' 버튼을 여기로 옮겼다(상세 내용 탭일 때만 보인다) --}}
         <button type="button" class="ds-btn pnl-back" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
@@ -161,7 +148,7 @@ window.HELP_TOUR_STEPS = [
     el: document.getElementById('dispatchGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
-    footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바에 있다
+    footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다
     columns: @json($gridColumns),
     data: @json($gridData),
   });

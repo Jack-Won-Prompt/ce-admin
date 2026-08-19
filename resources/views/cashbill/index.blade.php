@@ -268,32 +268,23 @@
   </div>
   <div class="ds-filter-actions">
     <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__cashbillGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="cbRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+    <button type="button" class="ds-btn" onclick="cbRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+    <button type="button" class="ds-btn" style="color:var(--danger);" onclick="cbRowAction('cancel')"><i class="bx bx-x"></i> 선택 취소</button>
+    <button type="button" class="ds-btn" id="sync-btn" style="color:var(--primary);" onclick="syncFromPopbill()" title="팝빌에서 최신 데이터 가져오기"><i class="bx bx-refresh"></i> 팝빌 동기화</button>
   </div>
 </div>
 
-{{-- 결과바(h32) + 그리드 카드(r12). 그리드 툴바·하단 상태바는 껐고
+{{-- 그리드 카드(r12). 그리드 툴바·하단 상태바는 껐고
      엑셀 저장·선택 액션·팝빌 동기화를 전부 이 줄로 옮겼다.
      버튼 차례는 시안대로 엑셀 저장이 맨 앞이다. --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b id="cb-total-count">0</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="cb-sel-count">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
-      <button type="button" class="ds-btn" onclick="window.__cashbillGrid?.downloadExcel()">엑셀 저장</button>
-      <button type="button" class="ds-btn" onclick="cbRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-      <button type="button" class="ds-btn" onclick="cbRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
-      <button type="button" class="ds-btn" style="color:var(--danger);" onclick="cbRowAction('cancel')"><i class="bx bx-x"></i> 선택 취소</button>
-      <button type="button" class="ds-btn" id="sync-btn" style="color:var(--primary);" onclick="syncFromPopbill()" title="팝빌에서 최신 데이터 가져오기"><i class="bx bx-refresh"></i> 팝빌 동기화</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 탭줄은 카드 안 첫 줄이다(시안 324:4656 · 324:6158 공통) --}}
     <div class="titab-bar">
-      <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
+      <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(<b id="cb-total-count">0</b>)</span></button>
       <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-receipt"></i> 현금영수증 즉시발행</button>
       <span class="sync-badge" id="last-sync-label"></span>
     </div>
@@ -504,7 +495,7 @@
   window.__cbGrid = new wwGrid({
     el: el,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     // 시안은 표가 카드 바닥(페이저 위)까지 찬다 — 남는 높이는 .cb-pane-hist 의 flex 가 채운다
     // (1920×1221 에서 래퍼 808 로 자란다. 화면 상단 스타일 블록 참조).
     // height 를 아예 빼면 래퍼의 flex-basis 가 '내용 높이' 가 되는데,

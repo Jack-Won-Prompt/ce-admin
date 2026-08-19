@@ -63,24 +63,16 @@
     <button type="button" class="ds-btn ds-btn-primary" onclick="rtnPanel('new')">
       <i class="bx bx-plus"></i> 신규 접수
     </button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__rtnGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ $total }}</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint" id="rtnHint">행을 <b>더블클릭</b>하면 상세내용 탭에서 열립니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__rtnGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
-    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과</button>
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과<span class="pnl-tab-cnt">(<b>{{ $total }}</b>)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
     <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>
@@ -153,8 +145,6 @@
       document.getElementById(PANES[k]).style.display = k === which ? '' : 'none';
       document.getElementById(TABS[k]).classList.toggle('active', k === which);
     });
-    // 더블클릭 안내는 목록을 보고 있을 때만 뜻이 있다
-    document.getElementById('rtnHint').style.visibility = which === 'list' ? '' : 'hidden';
     if (which === 'new') document.getElementById('rtoQ')?.focus();
   };
 

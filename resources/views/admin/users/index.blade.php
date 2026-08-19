@@ -9,30 +9,23 @@
 {{-- 제목과 설명을 여기 두지 않는다. 화면 이름은 네비바가 이미 적고 있고, 설명은
      한 번 읽으면 그만인 말이 자리를 계속 차지하고 있었다. --}}
 
-{{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 — 표준 구조(114:4778) --}}
+{{-- 흰 카드(r12) 안에 탭바와 그리드 — 표준 구조(114:4778) --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b id="userCount">{{ number_format($total) }}</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>체크</b>한 뒤 탭 안의 동작 버튼을 누릅니다.</span>
-      <button type="button" class="ds-btn" onclick="openInviteModal()">이메일로 초대</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="openModal()">관리자 추가</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- ── 패널 탭: 관리자 목록 / 초대 현황 ── --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
         <i class="bx bx-user-check"></i> 관리자 목록
-        <span class="pnl-cnt">{{ number_format($total) }}</span>
+        <span class="pnl-cnt" id="userCount">{{ number_format($total) }}</span>
       </button>
       <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">
         <i class="bx bx-envelope-open"></i> 초대 현황
         <span class="pnl-cnt" id="pnlInvCnt" style="display:none;"></span>
       </button>
+      {{-- 결과바에 있던 단추를 탭줄 오른쪽 끝으로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다.
+           이 화면에는 검색 필터가 없어, 늘 보이는 줄은 탭줄뿐이다. --}}
+      <button type="button" class="ds-btn" style="margin-left:auto;" onclick="openInviteModal()">이메일로 초대</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="openModal()">관리자 추가</button>
     </div>
 
     {{-- ── 관리자 목록 탭 ── --}}
@@ -648,7 +641,7 @@ function updateRow(u)     { refreshUsersGrid(); }
   window.__usersGrid = new wwGrid({
     el: document.getElementById('usersGrid'),
     // 엑셀 저장은 탭 동작 줄로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바, 선택 건수는 탭 동작 줄에 있다.
+    // 하단 상태바는 시안에 없다 — 전체 건수는 탭 이름 뒤, 선택 건수는 탭 동작 줄에 있다.
     height: USERS_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [

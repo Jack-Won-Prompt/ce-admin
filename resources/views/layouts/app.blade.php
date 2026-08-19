@@ -434,7 +434,13 @@
     .ds-field-range .form-control { min-width: 0; flex: 1; }
     .ds-field-sep { color: var(--gray-400); font-size: 13px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
-    .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+    .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+                         flex-wrap: wrap; row-gap: 8px; }
+    /* 조회 결과 건수 — 목록 위에 띄를 따로 두지 않고 찾는 줄 안에 적는다.
+       탭이 있는 화면은 탭 이름 뒤 괄호로 적고, 없는 화면만 이 칸을 쓴다. */
+    .ds-filter-total { align-self: center; margin-right: auto; white-space: nowrap;
+                       font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
+    .ds-filter-total b { font-weight: 700; color: var(--gray-1000); }
     .ds-btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       min-width: 60px; height: 32px; padding: 0 12px;
@@ -525,6 +531,9 @@
       font-size: 13px; font-weight: 500; line-height: 21px; color: var(--text-muted);
       border-bottom: 1px solid transparent; margin-bottom: -1px;
     }
+    /* 탭 이름 뒤 괄호 안의 건수 — 탭은 gap 6 의 flex 라 그대로 두면
+       「조회 결과 ( 23 )」처럼 띄어서 보인다. 그 한 칸만 되돌린다. */
+    .pnl-tab-cnt, .titab .pnl-tab-cnt { margin-left: -6px; }
     .pnl-tab:hover  { color: var(--primary); }
     .pnl-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .pnl-empty {

@@ -62,25 +62,20 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format(count($gridData)) }}</b>)</span>
     @if($q || $onlyActive)
       <a href="{{ route('masters.index', ['cat' => $current]) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__masterGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn ds-btn-primary" onclick="msNew()">{{ $cat['label'] }} 등록</button>
   </div>
 </form>
 
 {{-- ── 목록 ── --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">{{ $cat['label'] }} <b>{{ number_format(count($gridData)) }}</b>건</span>
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 고칠 수 있습니다.</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <button type="button" class="ds-btn" onclick="window.__masterGrid?.downloadExcel()">엑셀 저장</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="msNew()">{{ $cat['label'] }} 등록</button>
-    </div>
-  </div>
   <div class="ds-grid-card">
     <div id="masterGrid"></div>
   </div>

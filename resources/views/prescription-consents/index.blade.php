@@ -104,36 +104,21 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     @if(request('q') || request('date_from') || request('date_to') || request('signed_only'))
       <a href="{{ route('prescription-consents.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__consentGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn ds-btn-primary" onclick="pcOpenNew()">
+      <i class="fa-solid fa-paper-plane"></i> 신규 위임동의 전송
+    </button>
   </div>
 </form>
 
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      {{-- 그리드 하단 상태바(footer)를 껐다. '선택 N건'은 시안대로 결과바에 둔다. --}}
-      <span class="ds-grid-sel">선택 <b id="pcSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      {{-- 전역 .ds-grid-hint 는 한 줄(nowrap · ellipsis)이라 이 두 문장은 결과바에서 잘린다.
-           문장을 줄이지 않고 title 로 전문을 붙여 둔다(마우스를 올리면 다 보인다). --}}
-      <span class="ds-grid-hint"
-            title="각 행의 버튼으로 서류를 받고 위임동의를 다시 보냅니다. 서류는 그 처방전의 가장 최근 동의 건으로 발행됩니다. 행을 더블클릭하면 해당 처방전이 새 탭으로 열립니다.">
-        각 행의 버튼으로 서류를 받고 위임동의를 다시 보냅니다.
-        서류는 그 처방전의 <b>가장 최근 동의 건</b>으로 발행됩니다. 행을 <b>더블클릭</b>하면 해당 처방전이 새 탭으로 열립니다.
-      </span>
-      {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다. 동작은 downloadExcel() 그대로. --}}
-      <button type="button" class="ds-btn" onclick="window.__consentGrid?.downloadExcel()">엑셀 저장</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="pcOpenNew()">
-        <i class="fa-solid fa-paper-plane"></i> 신규 위임동의 전송
-      </button>
-    </div>
-  </div>
-
   {{-- 시안은 그리드가 흰 카드(r12) 안에 들어간다 --}}
   <div class="ds-grid-card">
     <div id="consentGrid"></div>
@@ -275,7 +260,7 @@
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     toolbar: false,
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     footer: false,
     columns: [
       { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },

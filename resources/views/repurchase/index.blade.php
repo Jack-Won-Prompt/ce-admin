@@ -231,7 +231,7 @@ window.HELP_TOUR_STEPS = [
   const grid = new wwGrid({
     el: el,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [
@@ -532,28 +532,19 @@ function gotoYm(y, m) {
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ $listTotal }}</b>)</span>
     @if(request('search'))
       <a href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__repurchaseGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
-{{-- 결과바(h32) + 그리드 카드(r12) — Figma 243:433 Frame 48101545 --}}
+{{-- 그리드 카드(r12) — Figma 243:433 Frame 48101545 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ $listTotal }}</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      {{-- 안내 아이콘은 전역 .ds-grid-hint::before(12×12 alert-circle)가 그린다.
-           마크업의 <i> 를 그대로 두면 같은 아이콘이 두 개로 보여 CSS 쪽 하나만 남긴다. --}}
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
-      {{-- 그리드 툴바에 있던 '엑셀 저장' 을 시안 위치(결과바 우측)로 옮겼다 --}}
-      <button type="button" class="ds-btn" onclick="window.__repurchaseGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     <div id="repurchaseGrid"></div>
   </div>

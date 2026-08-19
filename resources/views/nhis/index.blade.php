@@ -271,27 +271,17 @@
          class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__nhisGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
-{{-- Figma 282:53 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 패널 탭과 그리드 --}}
+{{-- Figma 282:53 — 흰 카드(r12) 안에 패널 탭과 그리드 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="nhisSelCount">0</b>건</span>
-      <span class="ds-grid-meta">이번달 청구액: <b>{{ number_format($monthlyTotal) }}</b>원</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 상세내용 탭에서 주문 상세를 확인합니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__nhisGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과</button>
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
     </div>
 

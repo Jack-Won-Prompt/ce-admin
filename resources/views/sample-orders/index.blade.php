@@ -118,22 +118,14 @@
     <button type="button" class="ds-btn ds-btn-primary" onclick="smpPane('new')">
       <i class="bx bx-plus"></i> 신규
     </button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__smpGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ $total }}</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint" id="smpHint">행을 <b>더블클릭</b>하면 상세보기 탭에서 제품을 확인합니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__smpGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="pnl-tabs">
-    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')">조회 결과</button>
+    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')">조회 결과<span class="pnl-tab-cnt">(<b>{{ $total }}</b>)</span></button>
     <button type="button" id="smpTabDetail" class="pnl-tab" onclick="smpPane('detail')">상세보기</button>
     <button type="button" id="smpTabNew"    class="pnl-tab" onclick="smpPane('new')">신규등록</button>
   </div>
@@ -311,7 +303,6 @@
     $('smpTabList').classList.toggle('active', which === 'list');
     $('smpTabDetail').classList.toggle('active', which === 'detail');
     $('smpTabNew').classList.toggle('active', which === 'new');
-    $('smpHint').style.visibility = (which === 'list') ? '' : 'hidden';
     if (which === 'new') $('smpRecipient')?.focus();
   };
 

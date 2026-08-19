@@ -69,29 +69,22 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     @if(request('q'))
       <a href="{{ route('shop-orders.index', $cur ? ['status'=>$cur] : []) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__shopOrderGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn ds-btn-primary" onclick="shopOrderViewDetail()">
+      <i class="bx bx-detail"></i> 선택 상세
+    </button>
   </div>
 </form>
 
 {{-- ── 결과바(h32) + 목록 카드(r12) ── --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="shopOrderSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행 체크 후 <b>선택 상세</b> 버튼을 누르면 상세로 이동</span>
-      <button type="button" class="ds-btn" onclick="window.__shopOrderGrid?.downloadExcel()">엑셀 저장</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="shopOrderViewDetail()">
-        <i class="bx bx-detail"></i> 선택 상세
-      </button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     <div id="shopOrderGrid"></div>
   </div>
@@ -108,7 +101,7 @@
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     toolbar: false,
-    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     footer: false,
     columns: [
       { header: '주문번호',  name: 'order_no',  width: 130, sortable: true },

@@ -342,27 +342,17 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       </div>
       <div class="ds-filter-actions">
         <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+        {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+        <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+        <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
+        <button type="button" class="ds-btn" style="color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행 취소</button>
       </div>
     </div>
 
     {{-- 결과바(h32) — 검색 카드와 4px 띄우는 몫은 .ds-grid-section 의 padding-top 이 맡는다.
          그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
     <div class="ds-grid-section">
-      <div class="ds-grid-bar">
-        <div class="ds-grid-bar-left">
-          {{-- 시안 Frame 48101582 왼쪽은 '전체 N건'(16/700) → 4×4 구분점 → '선택 N건' 순이다.
-               구분점은 전역 .ds-grid-total + .ds-grid-sel::before 가 그리므로 앞에 놓아야 나온다. --}}
-          <span class="ds-grid-total">전체 <b id="taxTotalCount">0</b>건</span>
-          <span class="ds-grid-sel">선택 <b id="taxSelCount">0</b>건</span>
-        </div>
-        <div class="ds-grid-bar-right">
-          <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
-          <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
-          <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-          <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
-          <button type="button" class="ds-btn" style="color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행 취소</button>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -372,7 +362,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
     {{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
     <div class="pnl-tabs titab-bar">
-      <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역</button>
+      <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(<b id="taxTotalCount">0</b>)</span></button>
       <button type="button" class="pnl-tab titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-file"></i> 전자세금계산서 즉시발행</button>
     </div>
 
@@ -646,7 +636,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   window.__taxGrid = new wwGrid({
     el: el,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — '선택 N건' 은 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — '선택 N건' 은 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [

@@ -163,37 +163,21 @@
       <a href="{{ route('privacy-consents.index', request()->only('type')) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__pcGrid?.downloadExcel()">엑셀 저장</button>
+    <a href="{{ route('privacy-consents.export', request()->query()) }}" class="ds-btn">
+      <i class="bx bx-download"></i> 엑셀(CSV) 다운로드
+    </a>
   </div>
 </form>
 
-{{-- Figma 342:4037 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+{{-- Figma 342:4037 — 흰 카드(r12) 안에 탭바와 그리드 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format(count($gridData)) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="pcSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      {{-- 안내문 앞 12×12 alert-circle 은 전역 .ds-grid-hint::before 가 이미 그린다.
-           마크업에 아이콘을 또 두면 두 개가 되므로 기준 구현(patients·orders)처럼 두지 않는다. --}}
-      <span class="ds-grid-hint">
-        행을 <b>더블클릭</b>하면 상세내용 탭으로 전환되어 상세 내용을 확인합니다.
-      </span>
-      {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다. 동작은 downloadExcel() 그대로. --}}
-      <button type="button" class="ds-btn" onclick="window.__pcGrid?.downloadExcel()">엑셀 저장</button>
-      {{-- 서버 CSV 내려받기는 그리드 엑셀과 다른 기능이라 함께 남긴다. --}}
-      <a href="{{ route('privacy-consents.export', request()->query()) }}" class="ds-btn">
-        <i class="bx bx-download"></i> 엑셀(CSV) 다운로드
-      </a>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 뷰 전환 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
     <div class="pnl-tabs">
       <button type="button" id="pcTabBtnList" class="pnl-tab active" onclick="pcShowTab('list')">
-        <i class="bx bx-list-ul"></i> 조회 결과
-      </button>
+        <i class="bx bx-list-ul"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format(count($gridData)) }}</b>)</span></button>
       <button type="button" id="pcTabBtnDetail" class="pnl-tab" onclick="pcShowTab('detail')">
         <i class="bx bx-detail"></i> 상세 내용
       </button>
@@ -228,7 +212,7 @@
     rowNumber: true,
     toolbar: false,         // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     summary: false,
-    footer: false,          // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바에 있다
+    footer: false,          // 시안에 하단 상태바가 없다. 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다
     // 아래 폭은 옛 시안(266:66) 실측이다 — 체크 40 · No 60 · 주소 400 · 나머지 153 (합 1571 ≒ 카드 1568).
     // 새 시안 342:4037 은 컬럼 구성과 폭이 다르다 —
     //   체크 40 · No 60 · 구분 100 · 유형 62 · 성명 62 · 연락처 120 · 이메일 180 · 주소 360 ·

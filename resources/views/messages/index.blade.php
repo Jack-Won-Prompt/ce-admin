@@ -207,7 +207,12 @@
 <div class="ds-chips ms-tabs">
   <button type="button" class="ds-chip ms-tab active" data-panel="pnlSend"  onclick="msTab(this)">발송</button>
   <button type="button" class="ds-chip ms-tab"        data-panel="pnlTpl"   onclick="msTab(this)">메시지 유형</button>
-  <button type="button" class="ds-chip ms-tab"        data-panel="pnlHist"  onclick="msTab(this)">발송 이력</button>
+  <button type="button" class="ds-chip ms-tab"        data-panel="pnlHist"  onclick="msTab(this)">발송 이력({{ count($histories) }})</button>
+  {{-- 결과바에 있던 단추 — 판마다 쓰는 것이 달라 그 판을 보고 있을 때만 나온다 --}}
+  <button type="button" class="ds-btn ds-btn-primary ms-panel-act" data-for="pnlTpl"
+          style="margin-left:auto;display:none;" onclick="msTplNew()">유형 추가</button>
+  <button type="button" class="ds-btn ms-panel-act" data-for="pnlHist"
+          style="margin-left:auto;display:none;" onclick="window.__msHistGrid?.downloadExcel()">엑셀 저장</button>
 </div>
 
 {{-- ══ 발송 ══ --}}
@@ -229,10 +234,16 @@
       </div>
     </div>
     <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수. 번호가 없는 곳은 발송에서 빠지므로 함께 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>) · 번호 있는 곳 {{ number_format($sendable) }}</span>
       @if(request('q') || request('has_mobile'))
         <a href="{{ route('messages.index') }}" class="ds-btn">초기화</a>
       @endif
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+      {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 --}}
+      <button type="button" class="ds-btn" onclick="window.__msGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn ms-btn-quiet" onclick="msSend('selected')">선택 발송</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="msSend('all')">조건 전체 발송</button>
     </div>
   </form>
 
@@ -271,21 +282,6 @@
 
     {{-- 오른쪽 — 누구에게 --}}
     <div class="ds-grid-section">
-      <div class="ds-grid-bar">
-        <div class="ds-grid-bar-left">
-          <span class="ds-grid-total">거래처 <b>{{ number_format($total) }}</b>곳</span>
-          <span class="ds-grid-sel">선택 <b id="msSelCount">0</b>건</span>
-        </div>
-        <div class="ds-grid-bar-right">
-          <span class="ds-grid-hint">
-            번호가 있는 곳 <b>{{ number_format($sendable) }}</b>곳.
-            @if($total > $sendable) 번호가 없는 {{ number_format($total - $sendable) }}곳은 발송에서 빠집니다. @endif
-          </span>
-          <button type="button" class="ds-btn" onclick="window.__msGrid?.downloadExcel()">엑셀 저장</button>
-          <button type="button" class="ds-btn ms-btn-quiet" onclick="msSend('selected')">선택 발송</button>
-          <button type="button" class="ds-btn ds-btn-primary" onclick="msSend('all')">조건 전체 발송</button>
-        </div>
-      </div>
       <div class="ds-grid-card">
         <div id="msGrid"></div>
       </div>
@@ -296,15 +292,6 @@
 {{-- ══ 메시지 유형 ══ --}}
 <div id="pnlTpl" class="ms-panel">
   <div class="ds-grid-section">
-    <div class="ds-grid-bar">
-      <div class="ds-grid-bar-left">
-        <span class="ds-grid-total">메시지 유형</span>
-      </div>
-      <div class="ds-grid-bar-right">
-        <span class="ds-grid-hint">여기서 고친 내용은 처방전 검수 화면의 SMSㆍ알림톡 팝오버에도 그대로 나옵니다.</span>
-        <button type="button" class="ds-btn ds-btn-primary" onclick="msTplNew()">유형 추가</button>
-      </div>
-    </div>
     <div class="ds-grid-card">
       <div id="msTplManage"></div>
     </div>
@@ -314,15 +301,6 @@
 {{-- ══ 발송 이력 ══ --}}
 <div id="pnlHist" class="ms-panel">
   <div class="ds-grid-section">
-    <div class="ds-grid-bar">
-      <div class="ds-grid-bar-left">
-        <span class="ds-grid-total">최근 <b>{{ count($histories) }}</b>건</span>
-      </div>
-      <div class="ds-grid-bar-right">
-        <span class="ds-grid-hint">한 줄이 '한 번 누른 발송' 입니다. 받는 사람이 여럿이면 함께 묶입니다.</span>
-        <button type="button" class="ds-btn" onclick="window.__msHistGrid?.downloadExcel()">엑셀 저장</button>
-      </div>
-    </div>
     <div class="ds-grid-card">
       <div id="msHistGrid"></div>
     </div>
@@ -401,7 +379,7 @@
   const grid = new wwGrid({
     el: document.getElementById('msGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [
@@ -441,6 +419,10 @@
     btn.classList.add('active');
     document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('active'));
     document.getElementById(btn.dataset.panel).classList.add('active');
+    // 판마다 다른 단추는 그 판일 때만 보인다
+    document.querySelectorAll('.ms-panel-act').forEach(b => {
+      b.style.display = b.dataset.for === btn.dataset.panel ? '' : 'none';
+    });
     if (btn.dataset.panel === 'pnlTpl') msTplLoad();
   };
 

@@ -173,6 +173,8 @@
       </div>
     </div>
     <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
       @if(request()->hasAny(['search', 'date_from', 'date_to']))
         <a href="{{ route('prescriptions.index', request()->only('per_page')) }}" class="ds-btn">초기화</a>
       @endif
@@ -185,22 +187,14 @@
         <i class="fa-solid fa-upload"></i> 처방전 업로드
       </a>
       @endperm
+      {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+      <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
     </div>
   </form>
 
-  {{-- Figma 128:1744 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 --}}
+  {{-- Figma 128:1744 — 흰 카드(r12) 안에 그리드 --}}
   <div class="ds-grid-section">
-    <div class="ds-grid-bar">
-      <div class="ds-grid-bar-left">
-        <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-        <span class="ds-grid-sel">선택 <b id="rxSelCount">0</b>건</span>
-      </div>
-      <div class="ds-grid-bar-right">
-        <span class="ds-grid-hint">행을 <b>더블클릭</b>하면 <b>처방전 검수 화면이 새 탭</b>으로 열립니다. (체크 후 <b>선택 상세</b>도 동일)</span>
-        <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 저장</button>
-        <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
-      </div>
-    </div>
     <div class="ds-grid-card">
       <div id="rxGrid"></div>
     </div>
@@ -240,7 +234,7 @@ window.HELP_TOUR_STEPS = [
   const grid = new wwGrid({
     el: document.getElementById('rxGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [

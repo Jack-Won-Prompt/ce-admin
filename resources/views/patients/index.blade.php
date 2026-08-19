@@ -314,29 +314,20 @@
       <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
+    @perm('patients', 'create')
+    <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
+    @endperm
   </div>
 </form>
 
-{{-- Figma 114:4778 — 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+{{-- Figma 114:4778 — 흰 카드(r12) 안에 탭바와 그리드 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b id="total-count">{{ number_format($total) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="sel-count">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세 내용 탭에서 그 환자의 모든 것을 봅니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
-      @perm('patients', 'create')
-      <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
-      @endperm
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 탭바는 카드 안 상단. 시안은 아이콘 없이 텍스트만 --}}
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과<span class="pnl-tab-cnt">(<b id="total-count">{{ number_format($total) }}</b>)</span></button>
       {{-- 상세는 하나다. 이력만 간추린 판과 전체 상세를 따로 두었더니, 열어 보고 나서
            「여기 말고 저기」를 한 번 더 눌러야 했다. 환자 한 사람의 모든 것을 이 탭에서 본다. --}}
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>

@@ -381,28 +381,21 @@
       </div>
     </div>
     <div class="ds-filter-actions">
+      {{-- 동기화 진행 문구 — 결과바에 있던 알약을 단추 옆으로 옛겼다(비어 있으면 안 보인다) --}}
+      <span class="ds-grid-hint" id="sync-status"></span>
       <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">조회</button>
+      {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+      <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
+      <button type="button" class="ds-btn btn-sync" id="sync-btn" onclick="syncPending()" title="미완료 건 팝빌 상태 동기화">
+        <i class="bx bx-refresh"></i> 상태 동기화
+      </button>
     </div>
   </div>
 
   {{-- 결과바(h32) — 좌: 전체·선택 건수, 우: 안내문 + 액션 버튼.
        그리드 툴바의 '엑셀 저장'과 하단 상태바의 건수를 전부 여기로 옮겼다. --}}
   <div class="ds-grid-section">
-    <div class="ds-grid-bar">
-      <div class="ds-grid-bar-left">
-        <span class="ds-grid-total">전체 <b id="fax-total-count">0</b>건</span>
-        <span class="ds-grid-sel">선택 <b id="fax-sel-count">0</b>건</span>
-      </div>
-      <div class="ds-grid-bar-right">
-        <span class="ds-grid-hint" id="sync-status"></span>
-        <span class="ds-grid-hint">행 <b>더블클릭</b> 또는 체크 후 버튼</span>
-        <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
-        <button type="button" class="ds-btn" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
-        <button type="button" class="ds-btn btn-sync" id="sync-btn" onclick="syncPending()" title="미완료 건 팝빌 상태 동기화">
-          <i class="bx bx-refresh"></i> 상태 동기화
-        </button>
-      </div>
-    </div>
   </div>
 
 </div>
@@ -412,7 +405,7 @@
 
   {{-- 탭: 전송 내역 / 팩스 발송 (전송 내역 먼저) --}}
   <div class="pnl-tabs titab-bar">
-    <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-history"></i> 전송 내역</button>
+    <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-history"></i> 전송 내역<span class="pnl-tab-cnt">(<b id="fax-total-count">0</b>)</span></button>
     <button type="button" class="pnl-tab titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-printer"></i> 팩스 발송</button>
   </div>
 
@@ -568,7 +561,7 @@
   window.__faxGrid = new wwGrid({
     el: el,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     // 시안은 표가 카드 남은 높이를 채운다(1568×858 = 탭 44 + 표 762 + 페이저 52).
     // 460 고정이면 카드 아래가 빈다 — 기준 구현 patients/index.blade.php 와 같이 'fit' 을 쓴다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,

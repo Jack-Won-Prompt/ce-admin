@@ -124,28 +124,21 @@ window.HELP_TOUR_STEPS = [
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     @if(request()->hasAny(['user_id','type','date_from','date_to','q']))
       <a href="{{ route('user-logs.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">
       <i class="fa-solid fa-magnifying-glass"></i> 검색
     </button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__userlogsGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
-{{-- ── 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 그리드 ── --}}
+{{-- ── 흰 카드(r12) 안에 그리드 ── --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="card-header-title">활동 로그</span>
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">열 머리글을 <b>클릭</b>하면 정렬됩니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__userlogsGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     <div id="logGrid"></div>
   </div>
@@ -159,7 +152,7 @@ window.HELP_TOUR_STEPS = [
   const grid = new wwGrid({
     el: document.getElementById('logGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
-    // 하단 상태바는 시안에 없다 — 전체 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [

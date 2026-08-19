@@ -100,29 +100,19 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
+      <span class="ds-filter-total">조회 결과(<span id="noticeTotalBadge">0</span>)</span>
     <button type="button" class="ds-btn ds-btn-primary" id="btnSearch"><i class="bx bx-search"></i> 검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
+      <i class="bx bx-detail"></i> 선택 상세
+    </button>
+    <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </div>
 
 {{-- 결과바(h32) + 공지 목록 카드(r12) --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      {{-- JS 가 '전체 N건' 문구를 통째로 갈아 끼우므로 숫자만 굵게 나눌 수 없다 --}}
-      <span class="ds-grid-total" id="noticeTotalBadge">전체 0건</span>
-      <span class="ds-grid-sel">선택 <b id="noticeSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
-        <i class="bx bx-detail"></i> 선택 상세
-      </button>
-      {{-- 안내문의 화살표가 왼쪽 '선택 상세' 버튼을 가리키므로 버튼 뒤에 둔다 --}}
-      <span class="ds-grid-hint">← 행 체크 후 상세 보기</span>
-      {{-- 그리드 툴바(엑셀 저장)를 결과바로 옮겼다 --}}
-      <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 기관 탭 — 카드 안 상단, 탭 높이 44 --}}
     <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;">
@@ -245,7 +235,7 @@
   const grid = new wwGrid({
     el: document.getElementById('noticeGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [
@@ -331,7 +321,7 @@
         loading.classList.add('d-none');
         const items = res.data ?? [];
         grid.setData(items);
-        document.getElementById('noticeTotalBadge').textContent = '전체 ' + (res.total ?? items.length) + '건';
+        document.getElementById('noticeTotalBadge').textContent = (res.total ?? items.length);
 
         if (!items.length) {
           empty.classList.remove('d-none');

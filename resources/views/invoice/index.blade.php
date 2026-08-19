@@ -294,6 +294,9 @@
        data-ce-tab="주문현황" data-ce-icon="bx-cart">
       <i class="fa-solid fa-cart-shopping"></i> 주문 목록
     </a>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__invoiceGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="invoiceViewDetail()">선택 상세</button>
   </div>
 </form>
 
@@ -301,26 +304,6 @@
      결과바(h32) + 흰 카드(r12) — 카드 안 상단이 패널 탭(발행 현황 / 상세보기)
 ══════════════════════════════════════════════════════════════ --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      <span class="inv-sep"></span>
-      <span class="ds-grid-sel">선택 <b id="invSelCount">0</b>건</span>
-      <span class="inv-sep"></span>
-      <span class="inv-stat">이번달 세금계산서 <b>{{ number_format($monthlyTaxAmount) }}</b>원</span>
-      <span class="inv-sep"></span>
-      <span class="inv-stat">이번달 현금영수증 <b>{{ number_format($monthlyCashAmount) }}</b>원</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      {{-- 탭 이름이 시안 282:934 대로 '상세 내용' 이 됐으니 안내문도 같은 이름을 부른다.
-           시안 문장('행을 더블클릭하면 상세내용 탭으로 전환되어…')으로 통째로 갈면
-           '체크 후 눌러'(= 옆 '선택 상세' 버튼 설명)가 화면에서 없어진다 — 그 절은 남긴다. --}}
-      <span class="ds-grid-hint">행을 <b>더블클릭</b>하거나 체크 후 눌러 상세 내용 탭으로 이동</span>
-      <button type="button" class="ds-btn" onclick="window.__invoiceGrid?.downloadExcel()">엑셀 저장</button>
-      <button type="button" class="ds-btn" onclick="invoiceViewDetail()">선택 상세</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
 
     {{-- 패널 탭 헤더 — 시안은 아이콘 없이 텍스트만 --}}
@@ -1167,7 +1150,7 @@ window.HELP_TOUR_STEPS = [
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     toolbar: false,
-    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 시안에 하단 상태바가 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     footer: false,
     columns: [
       { header: '주문번호',   name: 'order_number', width: 130, sortable: true },

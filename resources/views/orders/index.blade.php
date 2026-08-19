@@ -153,26 +153,16 @@ window.HELP_TOUR_STEPS = [
        data-ce-tab="처방전 목록" data-ce-icon="bx-file">
       <i class="fa-solid fa-file-medical"></i> 처방전 목록
     </a>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__orderGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
 
 {{-- 패널 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단, 텍스트만 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      {{-- 지금 그리드에 있는 건수. 전체 건수를 적어 두면 필터를 걸었을 때 화면과 어긋난다. --}}
-      <span class="ds-grid-total">전체 <b>{{ count($gridData) }}</b>건</span>
-      <span class="ds-grid-sel">선택 <b id="orderSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 확인합니다.</span>
-      <button type="button" class="ds-btn" onclick="window.__orderGrid?.downloadExcel()">엑셀 저장</button>
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과<span class="pnl-tab-cnt">(<b>{{ count($gridData) }}</b>)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
     </div>
     <div id="pnlList">
@@ -341,7 +331,7 @@ window.HELP_TOUR_STEPS = [
   const grid = new wwGrid({
     el: document.getElementById('orderGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
     columns: [

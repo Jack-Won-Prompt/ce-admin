@@ -98,36 +98,24 @@
       <a href="{{ route('sr.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
+    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
+    <button type="button" class="ds-btn" onclick="window.__srxGrid?.downloadExcel()">엑셀 저장</button>
+    @perm('service-requests', 'delete')
+    <button type="button" class="ds-btn" style="color:var(--alert-500);"
+      onclick="srDeleteSelected()">
+      <i class="bx bx-trash"></i> 선택 삭제
+    </button>
+    @endperm
   </div>
 </form>
 
-{{-- 결과바(h32) 위, 그 아래 흰 카드(r12) 안에 탭바와 그리드 --}}
+{{-- 흰 카드(r12) 안에 탭바와 그리드 --}}
 <div class="ds-grid-section">
-  <div class="ds-grid-bar">
-    <div class="ds-grid-bar-left">
-      <span class="ds-grid-total">전체 <b>{{ number_format($total) }}</b>건</span>
-      {{-- 그리드 하단 상태바(footer)를 껐다. '선택 N건'은 시안대로 결과바에 둔다. --}}
-      <span class="ds-grid-sel">선택 <b id="srxSelCount">0</b>건</span>
-    </div>
-    <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">행을 <b>클릭</b>하면 상세 · 답변 탭이 열립니다.</span>
-      {{-- 그리드 내장 툴바(엑셀 저장)를 여기로 옮겼다. 동작은 downloadExcel() 그대로. --}}
-      <button type="button" class="ds-btn" onclick="window.__srxGrid?.downloadExcel()">엑셀 저장</button>
-      @perm('service-requests', 'delete')
-      <button type="button" class="ds-btn" style="color:var(--alert-500);"
-              onclick="srDeleteSelected()">
-        <i class="bx bx-trash"></i> 선택 삭제
-      </button>
-      @endperm
-    </div>
-  </div>
-
   <div class="ds-grid-card">
     {{-- 패널 탭은 카드 안 상단 (h44 · pad 0/16 · gap 16) --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-        <i class="fa-solid fa-list"></i> SR 목록
-      </button>
+        <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">
         <i class="fa-solid fa-comments"></i> 상세 · 답변
         <span id="pnlDetailTitle" style="font-size:12px;font-weight:500;color:var(--gray-600);"></span>
@@ -245,7 +233,7 @@
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     toolbar: false,
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 상단 결과바에 있다.
+    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     footer: false,
     columns: [
       { header: '상태',      name: 'statusLabel',   width: 90,  align: 'center', sortable: true },
