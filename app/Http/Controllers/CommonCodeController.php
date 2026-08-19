@@ -118,6 +118,95 @@ class CommonCodeController extends Controller
         ]);
     }
 
+    /**
+     * 표에서 고친 것을 한꺼번에 받는다.
+     *
+     * 줄마다 창을 열면 여러 줄을 고치는 날에 그만큼 손이 간다. 엑셀처럼 표에서
+     * 고치고 한 번 저장한다. 시스템 코드는 이름·차례·메모만 받고, 지우는 것은 거절한다.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $group = (string) $request->input('group');
+        CommonCode::groupOr404($group);
+        $kinds = array_keys(CommonCode::kinds($group));
+
+        $data = $request->validate([
+            'rows'                => ['array'],
+            'rows.*.id'           => ['nullable', 'integer', 'exists:common_codes,id'],
+            'rows.*.kind'         => ['required', Rule::in($kinds)],
+            'rows.*.code'         => ['required', 'string', 'max:60', 'regex:/^[a-z0-9_]+$/'],
+            'rows.*.label'        => ['required', 'string', 'max:100'],
+            'rows.*.note'         => ['nullable', 'string', 'max:200'],
+            'rows.*.sort_order'   => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'rows.*.is_active'    => ['boolean'],
+            'removed'             => ['array'],
+            'removed.*'           => ['integer', 'exists:common_codes,id'],
+        ], [
+            'rows.*.code.regex' => '코드는 영문 소문자·숫자·밑줄만 씁니다 (예: tax_invoice).',
+        ]);
+
+        $saved = $off = 0;
+        $skipped = [];
+
+        foreach ($data['rows'] ?? [] as $row) {
+            $existing = !empty($row['id']) ? CommonCode::find($row['id']) : null;
+
+            // 같은 목록 안에서 코드는 하나뿐이다
+            $dup = CommonCode::group($group)->where('code', $row['code'])
+                ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))->exists();
+            if ($dup) {
+                $skipped[] = "{$row['code']} — 이미 쓰는 코드";
+                continue;
+            }
+
+            $fields = [
+                'kind'       => $row['kind'],
+                'code'       => $row['code'],
+                'label'      => $row['label'],
+                'note'       => $row['note'] ?? null,
+                'sort_order' => (int) ($row['sort_order'] ?? 0),
+                'is_active'  => (bool) ($row['is_active'] ?? true),
+            ];
+
+            if ($existing) {
+                // 시스템 코드는 부르는 이름만 바뀐다
+                if ($existing->is_system) {
+                    $fields = collect($fields)->only(['label', 'note', 'sort_order'])->all();
+                }
+                $existing->update($fields);
+            } else {
+                CommonCode::create($fields + ['group' => $group, 'created_by' => Auth::id()]);
+            }
+            $saved++;
+        }
+
+        foreach ($data['removed'] ?? [] as $id) {
+            $code = CommonCode::find($id);
+            if (!$code) {
+                continue;
+            }
+            if ($code->is_system) {
+                $skipped[] = "{$code->label} — 시스템 코드라 둔다";
+                continue;
+            }
+            /* 지우지 않고 꺼 둔다 — 이미 그 유형으로 올려 둔 서류가 이름을 잃으면 안 된다 */
+            $code->update(['is_active' => false]);
+            $off++;
+        }
+
+        CommonCode::forget($group);
+
+        activity()->causedBy(Auth::user())
+            ->log("공통 코드 일괄 저장: {$group} 저장 {$saved} · 사용중지 {$off}");
+
+        $msg = "저장 {$saved}건" . ($off ? " · 사용 중지 {$off}건" : '');
+        if ($skipped) {
+            $msg .= ' · 건너뜀: ' . implode(', ', $skipped);
+        }
+
+        return response()->json(['success' => true, 'message' => $msg]);
+    }
+
     private function validated(Request $request, ?CommonCode $except = null): array
     {
         $group = (string) $request->input('group', $except?->group);

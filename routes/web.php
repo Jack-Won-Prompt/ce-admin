@@ -388,6 +388,7 @@ Route::middleware(['auth'])->group(function () {
     // 환경 설정 — 화면마다 고르는 목록(서류 유형 등)을 여기서 등록·수정한다
     Route::get(   '/settings/common-codes',              [\App\Http\Controllers\CommonCodeController::class, 'index'])->name('common-codes.index');
     Route::post(  '/settings/common-codes',              [\App\Http\Controllers\CommonCodeController::class, 'store'])->name('common-codes.store');
+    Route::post(  '/settings/common-codes/bulk',         [\App\Http\Controllers\CommonCodeController::class, 'bulk'])->name('common-codes.bulk');
     Route::put(   '/settings/common-codes/{commonCode}', [\App\Http\Controllers\CommonCodeController::class, 'update'])->name('common-codes.update');
     Route::delete('/settings/common-codes/{commonCode}', [\App\Http\Controllers\CommonCodeController::class, 'destroy'])->name('common-codes.destroy');
 

@@ -15,7 +15,12 @@
   .cc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
   .cc-form-grid .wide { grid-column:1 / -1; }
   .cc-field label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:4px; }
-  .cc-lock { font-size:11.5px; color:var(--warning, #d08700); margin-top:6px; }
+  .cc-tools { margin-left:auto; display:flex; align-items:center; gap:6px; }
+  .cc-tool { width:28px; height:28px; border-radius:8px; border:1px solid var(--gray-200);
+             background:var(--gray-0); color:var(--gray-700); font-size:16px; line-height:1;
+             cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .cc-tool:hover { border-color:var(--primary); color:var(--primary); }
+  .cc-dirty { font-size:12px; font-weight:600; color:var(--primary); min-width:60px; text-align:right; }
 </style>
 @endpush
 
@@ -42,9 +47,6 @@
   <div class="ds-filter-actions">
     <span class="ds-filter-total">{{ $groups[$current]['label'] }}({{ count($gridData) }})</span>
     <button type="button" class="ds-btn" onclick="window.__ccGrid?.downloadExcel()">엑셀 저장</button>
-    @perm('common-codes', 'create')
-    <button type="button" class="ds-btn ds-btn-primary" onclick="ccNew()">코드 등록</button>
-    @endperm
   </div>
 </form>
 
@@ -61,73 +63,23 @@
           @endif
         </a>
       @endforeach
-      <span class="cc-kind-chips" style="margin-left:auto;align-items:center;">
-        @foreach($kinds as $kk => $kl)
-          <span class="cc-kind-chip" title="{{ $groups[$current]['kinds'][$kk]['hint'] ?? '' }}">{{ $kl }}</span>
-        @endforeach
+      {{-- 줄을 더하고 지우는 자리는 표 바로 위 오른쪽이다. 고친 것은 저장을 눌러야 남는다. --}}
+      <span class="cc-tools">
+        @perm('common-codes', 'delete')
+        <button type="button" class="cc-tool" onclick="ccRemove()" title="고른 줄 사용 중지">−</button>
+        @endperm
+        @perm('common-codes', 'create')
+        <button type="button" class="cc-tool" onclick="ccAdd()" title="줄 추가">+</button>
+        @endperm
+        <span class="cc-dirty" id="ccDirty"></span>
+        @perm('common-codes', 'update')
+        <button type="button" class="ds-btn ds-btn-primary" id="ccSaveBtn" onclick="ccSave(this)">저장</button>
+        @endperm
       </span>
     </div>
 
     <div id="pnlList" style="padding:16px;">
       <div id="ccGrid"></div>
-    </div>
-  </div>
-</div>
-
-{{-- 등록·수정 창 --}}
-<div class="modal-overlay" id="ccModal">
-  <div class="modal-content" style="max-width:560px;">
-    <div class="modal-header">
-      <h3 id="ccModalTitle">코드 등록</h3>
-      <button type="button" class="modal-close" onclick="ccClose()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="cc-form-grid">
-        <div class="cc-field">
-          <label>유형 <span style="color:var(--danger);">*</span></label>
-          <select class="form-control form-select" id="cc-kind">
-            @foreach($kinds as $kk => $kl)
-              <option value="{{ $kk }}">{{ $kl }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div class="cc-field">
-          <label>코드 <span style="color:var(--danger);">*</span></label>
-          <input type="text" class="form-control" id="cc-code" maxlength="60" placeholder="tax_invoice">
-          <div class="cc-hint">저장에 쓰는 값입니다. 영문 소문자·숫자·밑줄만 씁니다.</div>
-        </div>
-        <div class="cc-field wide">
-          <label>이름 <span style="color:var(--danger);">*</span></label>
-          <input type="text" class="form-control" id="cc-label" maxlength="100" placeholder="세금계산서(주민등록번호)">
-          <div class="cc-hint">화면에서 고를 때 보이는 이름입니다.</div>
-        </div>
-        <div class="cc-field">
-          <label>차례</label>
-          <input type="number" class="form-control" id="cc-sort" min="0" max="9999" value="0">
-        </div>
-        <div class="cc-field">
-          <label>사용</label>
-          <select class="form-control form-select" id="cc-active">
-            <option value="1">사용</option>
-            <option value="0">사용 안 함</option>
-          </select>
-        </div>
-        <div class="cc-field wide">
-          <label>메모</label>
-          <input type="text" class="form-control" id="cc-note" maxlength="200" placeholder="언제 쓰는 서류인지">
-        </div>
-      </div>
-      <div class="cc-lock" id="ccLock" style="display:none;">
-        시스템이 쓰는 코드입니다 — 이름·차례·메모만 고칠 수 있습니다.
-      </div>
-    </div>
-    <div class="modal-footer">
-      @perm('common-codes', 'delete')
-      <button type="button" class="ds-btn" id="ccDelBtn" style="margin-right:auto;color:var(--alert-500);"
-              onclick="ccDelete()">사용 중지</button>
-      @endperm
-      <button type="button" class="ds-btn" onclick="ccClose()">닫기</button>
-      <button type="button" class="ds-btn ds-btn-primary" id="ccSaveBtn" onclick="ccSave(this)">저장</button>
     </div>
   </div>
 </div>
@@ -141,125 +93,97 @@
   const GROUP = @json($current);
   const BASE  = @json(url('settings/common-codes'));
 
+  const KINDS = @json($kinds);
+  const KIND_OPTS = Object.entries(KINDS).map(([value, label]) => ({ value, label }));
+
   const grid = new wwGrid({
     el: document.getElementById('ccGrid'),
-    height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    height: 'auto', editable: true, rowCheckbox: true, rowNumber: true,
+    toolbar: false, summary: false, footer: false,
     columns: [
-      { header: '유형',   name: 'kind',       width: 110, sortable: true },
-      { header: '코드',   name: 'code',       width: 180, sortable: true },
-      { header: '이름',   name: 'label',      width: 260, sortable: true },
-      { header: '차례',   name: 'sort_order', width: 70,  align: 'right' },
-      { header: '사용',   name: 'active',     width: 90,  align: 'center', sortable: true },
-      { header: '구분',   name: 'system',     width: 80,  align: 'center' },
+      { header: '유형',   name: 'kind_key',   width: 120, editor: 'combo', options: KIND_OPTS,
+        defaultValue: KIND_OPTS[0]?.value ?? '' },
+      { header: '코드',   name: 'code',       width: 180 },
+      { header: '이름',   name: 'label',      width: 260 },
+      { header: '차례',   name: 'sort_order', width: 80,  editor: 'number', align: 'right', defaultValue: 0 },
+      { header: '사용',   name: 'is_active',  width: 80,  editor: 'checkbox', align: 'center', defaultValue: true },
+      { header: '구분',   name: 'system',     width: 80,  align: 'center', editable: false },
       { header: '메모',   name: 'note',       width: 260 },
     ],
     data: ROWS,
   });
   window.__ccGrid = grid;
 
-  /* 고칠 것은 그 줄을 두 번 눌러 연다 — 목록 화면들과 같은 몸짓이다 */
-  document.getElementById('ccGrid').addEventListener('dblclick', (e) => {
-    const cell = e.target.closest('[data-row-index]');
-    if (!cell) return;
-    ccEdit(grid.getData()[parseInt(cell.dataset.rowIndex, 10)]);
-  });
+  /* 무엇을 손댔는지 알려 준다 — 저장을 누르지 않고 나가면 그대로 사라진다 */
+  const removed = [];
+  function ccMark() {
+    const m = grid.getModifiedRows();
+    const n = (m.added?.length ?? 0) + (m.updated?.length ?? 0) + removed.length;
+    document.getElementById('ccDirty').textContent = n ? `고친 줄 ${n}` : '';
+  }
+  document.getElementById('ccGrid').addEventListener('change', ccMark);
+  document.getElementById('ccGrid').addEventListener('blur', ccMark, true);
 
-  let editing = null;
-
-  window.ccNew = function () {
-    editing = null;
-    document.getElementById('ccModalTitle').textContent = '코드 등록';
-    document.getElementById('cc-code').value  = '';
-    document.getElementById('cc-label').value = '';
-    document.getElementById('cc-note').value  = '';
-    document.getElementById('cc-sort').value  = 0;
-    document.getElementById('cc-active').value = '1';
-    document.getElementById('cc-code').disabled   = false;
-    document.getElementById('cc-kind').disabled   = false;
-    document.getElementById('cc-active').disabled = false;
-    document.getElementById('ccLock').style.display = 'none';
-    const del = document.getElementById('ccDelBtn');
-    if (del) del.style.display = 'none';
-    document.getElementById('ccModal').classList.add('show');
-    setTimeout(() => document.getElementById('cc-label').focus(), 50);
+  window.ccAdd = function () {
+    grid.addRow({ kind_key: KIND_OPTS[0]?.value ?? '', is_active: true, sort_order: 0, system: '' });
+    ccMark();
   };
 
-  window.ccEdit = function (row) {
-    if (!row) return;
-    editing = row;
-    document.getElementById('ccModalTitle').textContent = row.label + ' 수정';
-    document.getElementById('cc-kind').value   = row.kind_key ?? '';
-    document.getElementById('cc-code').value   = row.code;
-    document.getElementById('cc-label').value  = row.label;
-    document.getElementById('cc-note').value   = row.note ?? '';
-    document.getElementById('cc-sort').value   = row.sort_order ?? 0;
-    document.getElementById('cc-active').value = row.is_active ? '1' : '0';
-
-    // 시스템 코드는 값과 유형를 잠근다 — 바꾸면 이미 쌓인 서류가 이름을 잃는다
-    document.getElementById('cc-code').disabled   = !!row.is_system;
-    document.getElementById('cc-kind').disabled   = !!row.is_system;
-    document.getElementById('cc-active').disabled = !!row.is_system;
-    document.getElementById('ccLock').style.display = row.is_system ? '' : 'none';
-    const del = document.getElementById('ccDelBtn');
-    if (del) del.style.display = row.is_system ? 'none' : '';
-
-    document.getElementById('ccModal').classList.add('show');
-  };
-
-  window.ccClose = function () {
-    document.getElementById('ccModal').classList.remove('show');
+  window.ccRemove = function () {
+    const rows = grid.getCheckedRows();
+    if (!rows.length) { showToast('사용 중지할 줄을 고르십시오.', 'warning'); return; }
+    const sys = rows.filter(r => r.is_system);
+    if (sys.length) showToast('시스템 코드는 둡니다 — ' + sys.map(r => r.label).join(', '), 'warning', 5000);
+    rows.filter(r => r.id && !r.is_system).forEach(r => removed.push(r.id));
+    grid.removeCheckedRows();
+    ccMark();
   };
 
   window.ccSave = async function (btn) {
-    const label = document.getElementById('cc-label').value.trim();
-    const code  = document.getElementById('cc-code').value.trim();
-    if (!label) { showToast('이름을 적어 주십시오.', 'warning'); return; }
-    if (!editing && !code) { showToast('코드를 적어 주십시오.', 'warning'); return; }
+    const data = grid.getData();
+    const rows = data
+      .filter(r => (r.code || '').trim() && (r.label || '').trim())
+      .map(r => ({
+        id:         r.id ?? null,
+        kind:       r.kind_key,
+        code:       (r.code || '').trim(),
+        label:      (r.label || '').trim(),
+        note:       (r.note || '').trim() || null,
+        sort_order: parseInt(r.sort_order) || 0,
+        is_active:  !!r.is_active,
+      }));
 
-    const payload = {
-      group:      GROUP,
-      kind:       document.getElementById('cc-kind').value,
-      code:       code || editing?.code,
-      label,
-      note:       document.getElementById('cc-note').value.trim() || null,
-      sort_order: parseInt(document.getElementById('cc-sort').value) || 0,
-      is_active:  document.getElementById('cc-active').value === '1',
-    };
+    const empty = data.length - rows.length;
+    if (empty > 0) showToast(`코드·이름이 비어 있는 ${empty}줄은 저장하지 않습니다.`, 'warning');
+    if (!rows.length && !removed.length) { showToast('저장할 것이 없습니다.', 'warning'); return; }
 
     BtnState.loading(btn, '저장 중...');
     try {
-      const res = editing
-        ? await apiRequest(`${BASE}/${editing.id}`, 'PUT',  payload)
-        : await apiRequest(BASE,                    'POST', payload);
+      const res = await apiRequest(`${BASE}/bulk`, 'POST', { group: GROUP, rows, removed });
       if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
-      showToast(res.message, 'success');
-      setTimeout(() => location.reload(), 600);
+      showToast(res.message, 'success', 5000);
+      setTimeout(() => location.reload(), 800);
     } catch (e) {
       BtnState.reset(btn);
-      showToast(e.message || '저장하지 못했습니다.', 'danger', 5000);
+      showToast(e.message || '저장하지 못했습니다.', 'danger', 6000);
     }
   };
 
-  window.ccDelete = async function () {
-    if (!editing) return;
-    const ok = await ceConfirm(`${editing.label} 을(를) 사용 안 함으로 바꿀까요?\n이미 그 유형으로 올린 서류의 이름은 그대로 남습니다.`,
-                               { tone: 'warning', confirmText: '사용 중지' });
-    if (!ok) return;
-    const res = await apiRequest(`${BASE}/${editing.id}`, 'DELETE');
-    if (res.success) {
-      showToast(res.message, 'success');
-      setTimeout(() => location.reload(), 600);
-    } else {
-      showToast(res.message || '바꾸지 못했습니다.', 'danger', 5000);
-    }
-  };
+  // 적다 만 채로 나가면 사라진다 — 나가기 전에 물어본다
+  window.addEventListener('beforeunload', (e) => {
+    const m = grid.getModifiedRows();
+    if ((m.added?.length ?? 0) + (m.updated?.length ?? 0) + removed.length === 0) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
 })();
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.pnl-tabs', title: '코드 목록', body: '화면마다 고르는 목록을 여기서 고릅니다. 지금은 <b>서류 유형</b> 하나입니다.' },
-  { selector: '[onclick="ccNew()"]', title: '코드 등록', body: '새 서류명을 더하면 처방자료 업로드에서 바로 고를 수 있습니다.' },
-  { selector: '#ccGrid', title: '고치기', body: '줄을 <b>더블클릭</b>하면 이름·차례를 고칩니다. 시스템 코드는 이름만 고칠 수 있습니다.' },
+  { selector: '.cc-tools', title: '줄 더하기·지우기', body: '<b>+</b> 로 줄을 더하고, 줄을 고른 뒤 <b>−</b> 로 사용 중지합니다. 고친 것은 <b>저장</b>을 눌러야 남습니다.' },
+  { selector: '#ccGrid', title: '표에서 고치기', body: '칸을 눌러 바로 고칩니다. 시스템 코드는 이름·차례만 바뀝니다.' },
 ];
 </script>
 @endpush
