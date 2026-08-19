@@ -604,12 +604,20 @@ function resetFiles() {
 }
 
 // ── 폼 제출 ─────────────────────────────────────────────
-form.addEventListener('submit', function (e) {
-  if (selectedFiles.length === 0) { e.preventDefault(); return; }
+form.addEventListener('submit', async function (e) {
+  e.preventDefault();          // 보내는 일은 아래에서 우리가 한다
+
+  if (selectedFiles.length === 0) return;
+
+  // 누구의 처방인지 모른 채로는 올리지 않는다 — 나중에 잇는 일이 더 비싸다
+  if (!document.getElementById('h_patient_id').value) {
+    showToast('환자를 먼저 고르십시오.', 'warning');
+    document.getElementById('patientSearchInput')?.focus();
+    return;
+  }
 
   const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
   if (!hasPrescription) {
-    e.preventDefault();
     showToast('처방전 파일을 최소 1개 이상 포함해야 합니다.', 'warning');
     return;
   }
@@ -634,11 +642,42 @@ form.addEventListener('submit', function (e) {
   const attCount = selectedFiles.length - rxCount;
   let sub = rxCount + '개 처방전';
   if (attCount > 0) sub += ` + ${attCount}개 첨부 문서`;
-  sub += ' OCR 분석 중...';
+  sub += ' 올리는 중...';
   document.getElementById('progressSub').textContent = sub;
   document.getElementById('progressOverlay').classList.add('active');
 
   setStep(1, 'done'); setStep(2, 'active');
+
+  try {
+    const res = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || Object.values(data.errors ?? {}).flat()[0] || '업로드하지 못했습니다.');
+    }
+
+    document.getElementById('progressOverlay').classList.remove('active');
+    setStep(2, 'done'); setStep(3, 'done');
+    showToast(data.message, 'success', 4000);
+
+    /* 주문 등록 화면은 화면 탭으로 연다 — 올린 자리는 그대로 두어 다음 건을 잇달아
+       올릴 수 있다. 워크스페이스 밖에서 열었으면 그 자리에서 옮겨 간다. */
+    if (typeof ceOpenTab === 'function') {
+      ceOpenTab(data.url, '주문 등록 - ' + (data.rx_number || ''), 'file-edit-02');
+      resetFiles();
+      form.querySelectorAll('input[name="file_doc_types[]"]').forEach(el => el.remove());
+    } else {
+      location.href = data.url;
+    }
+  } catch (err) {
+    document.getElementById('progressOverlay').classList.remove('active');
+    setStep(2); setStep(1, 'active');
+    form.querySelectorAll('input[name="file_doc_types[]"]').forEach(el => el.remove());
+    showToast(err.message || '업로드하지 못했습니다.', 'danger', 6000);
+  }
 });
 
 function escHtml(s) {
@@ -657,7 +696,7 @@ window.HELP_TOUR_STEPS = [
   { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
   { selector: '#grid-etc', title: '청구ㆍ기타 자료', body: '거래명세서·현금영수증 등 청구 자료를 넣습니다. 타일 왼쪽 위에서 서류명을 고르며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
-  { selector: '#submitBtn', title: '등록 버튼', body: '버튼 클릭 시 OCR 분석이 시작되며, 완료 후 처방전 확인 화면으로 이동합니다.' },
+  { selector: '#submitBtn', title: '등록 버튼', body: '환자를 고르고 파일을 넣은 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 자리는 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },
 ];
 </script>
 @endpush

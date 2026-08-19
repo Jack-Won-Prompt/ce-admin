@@ -485,7 +485,7 @@ class PrescriptionController extends Controller
     }
 
     // ── 웹에서 직접 업로드 ────────────────────────────────
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
             'prescription_images'   => 'required|array|max:40',
@@ -493,9 +493,12 @@ class PrescriptionController extends Controller
             'file_doc_types'        => 'nullable|array',
             'file_doc_types.*'      => ['nullable', 'string',
                                         \Illuminate\Validation\Rule::in(\App\Models\CommonCode::codes('doc_type'))],
-            'patient_id'            => 'nullable|exists:patients,id',
+            // 누구의 처방인지 모르는 채로는 받지 않는다 — 나중에 잇는 일이 더 비싸다
+            'patient_id'            => 'required|exists:patients,id',
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
+        ], [
+            'patient_id.required' => '환자를 먼저 고르십시오.',
         ]);
 
         $docTypes = $request->input('file_doc_types', []);
@@ -621,12 +624,32 @@ class PrescriptionController extends Controller
         }
 
         if (!empty($ocrErrors)) {
-            session()->flash('error', implode(' | ', $ocrErrors));
+            /* 사람에게 띄우지 않는다. OCR 이 못 읽었다는 말은 올린 사람이 그 자리에서
+               할 수 있는 일이 없고(자격증명·형식은 설정의 몫이다), 검수 화면에서 손으로
+               채우는 흐름은 그대로다. 무슨 일이 있었는지는 기록에 남긴다. */
+            Log::warning('업로드 OCR 실패', ['errors' => $ocrErrors]);
+        }
+
+        /* 화면 안에서 부른 것이면 어디로 갈지는 화면이 정한다 — 올린 자리는 그대로 두고
+           주문 등록 화면만 새 화면 탭으로 연다. 곧바로 옮겨 가면 여러 건을 잇달아 올릴 때
+           매번 되돌아와야 했다. */
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success'   => true,
+                'rx_number' => $firstPrescription?->rx_number,
+                'created'   => $created,
+                'url'       => $firstPrescription
+                                 ? route('prescriptions.show', $firstPrescription)
+                                 : route('prescriptions.index'),
+                'message'   => count($created) === 1
+                                 ? "{$firstPrescription->rx_number} 업로드 완료"
+                                 : count($created) . '개 처방전 업로드 완료: ' . implode(', ', $created),
+            ]);
         }
 
         if (count($created) === 1) {
             return redirect()->route('prescriptions.show', $firstPrescription)
-                ->with('success', "{$firstPrescription->rx_number} 업로드 완료 — OCR 결과를 확인하세요.");
+                ->with('success', "{$firstPrescription->rx_number} 업로드 완료");
         }
 
         return redirect()->route('prescriptions.index')
@@ -638,7 +661,8 @@ class PrescriptionController extends Controller
     {
         $request->validate([
             'file'      => 'required|file|mimes:jpg,jpeg,png,pdf,heic|max:51200',
-            'doc_type'  => 'required|string|in:prescription,id_card,registration_form,test_result,delegation,other',
+            'doc_type'  => ['required', 'string',
+                            \Illuminate\Validation\Rule::in(\App\Models\CommonCode::codes('doc_type'))],
             'doc_label' => 'nullable|string|max:50',
         ]);
 
