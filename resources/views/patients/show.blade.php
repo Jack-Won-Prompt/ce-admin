@@ -47,26 +47,8 @@
 
 @section('content')
 
-{{-- 헤더 --}}
-<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-  <a href="{{ route('patients.index') }}" class="btn btn-outline btn-sm">
-    <i class="fa-solid fa-chevron-left"></i> 목록
-  </a>
-  <div>
-    <h2 style="font-size:18px;font-weight:700;margin:0;">{{ $patient->name }}</h2>
-    <p style="font-size:12px;color:var(--text-muted);margin:3px 0 0;">
-      환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
-    </p>
-  </div>
-  <div style="margin-left:auto;display:flex;gap:8px;">
-    <button class="btn btn-outline btn-sm" id="btn-edit" onclick="toggleEdit(true)">
-      <i class="fa-solid fa-pen"></i> 수정
-    </button>
-    <button class="btn btn-danger btn-sm" onclick="deletePatient()">
-      <i class="fa-solid fa-trash"></i>
-    </button>
-  </div>
-</div>
+{{-- 위쪽 이름 띠는 두지 않는다. 바로 아래 카드가 같은 이름을 다시 적고 있어 화면을
+     열면 이름이 두 번 보였다. 손댈 단추(수정·삭제·상담내역)는 그 이름 옆으로 옮겼다. --}}
 
 <div class="detail-layout">
 
@@ -80,12 +62,28 @@
           <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;">
             <i class="fa-solid fa-user"></i>
           </div>
-          <div>
+          <div style="min-width:0;">
             <div style="font-size:18px;font-weight:700;">{{ $patient->name }}</div>
             <div style="font-size:12px;color:var(--text-muted);">
-              @if($patient->birth_date) {{ $patient->birth_date->format('Y-m-d') }} · 만 {{ $patient->age }}세 @endif
+              환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
+              @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
               @if($patient->gender) · {{ $patient->gender === 'male' ? '남' : '여' }} @endif
             </div>
+          </div>
+
+          {{-- 이 사람에게 할 일은 이름 옆에 둔다 — 고치기, 통화 기록 보기, 지우기 순이다.
+               지우기는 되돌릴 수 없어 한 칸 떼어 놓는다. --}}
+          <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-outline btn-sm" id="btn-edit" onclick="toggleEdit(true)">
+              <i class="fa-solid fa-pen"></i> 수정
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="openCounselTab()">
+              <i class="bx bx-conversation"></i> 상담내역
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deletePatient()" title="삭제"
+                    style="margin-left:6px;">
+              <i class="fa-solid fa-trash"></i>
+            </button>
           </div>
         </div>
 
@@ -250,6 +248,24 @@
 @endsection
 
 @push('scripts')
+
+<script>
+  /* 상담내역은 거래처 관리 화면의 탭에서 본다. 이 화면이 그 안에 액자로 들어가 있으면
+     바깥에 열라고 알리고, 혼자 열려 있으면 목록 화면으로 옮겨 그 탭을 연다. */
+  function openCounselTab() {
+    const msg = { source: 'ce-patient', action: 'counsel',
+                  id: @json($patient->id), name: @json($patient->name) };
+
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage(msg, window.location.origin);
+        return;
+      } catch (e) { /* 다른 곳에서 온 창이면 아래로 간다 */ }
+    }
+
+    location.href = @json(route('patients.index')) + '?counsel=' + @json($patient->id);
+  }
+</script>
 <script>
   function switchTab(btn, id) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

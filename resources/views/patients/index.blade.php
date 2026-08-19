@@ -333,7 +333,7 @@
       <span class="ds-grid-sel">선택 <b id="sel-count">0</b>건</span>
     </div>
     <div class="ds-grid-bar-right">
-      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세내용 탭에서 처방전·상담·구매 이력을 확인합니다.</span>
+      <span class="ds-grid-hint">환자 행을 <b>더블클릭</b>하면 상세 내용 탭에서 그 환자의 모든 것을 봅니다.</span>
       <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
       @perm('patients', 'create')
       <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
@@ -345,49 +345,22 @@
     {{-- 탭바는 카드 안 상단. 시안은 아이콘 없이 텍스트만 --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
+      {{-- 상세는 하나다. 이력만 간추린 판과 전체 상세를 따로 두었더니, 열어 보고 나서
+           「여기 말고 저기」를 한 번 더 눌러야 했다. 환자 한 사람의 모든 것을 이 탭에서 본다. --}}
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
-      {{-- 환자 한 사람의 모든 것은 옆 탭에서 본다. 다른 화면으로 건너가면 어떤 조건으로
-           찾고 있었는지가 끊기고, 돌아오려면 처음부터 다시 찾아야 한다. --}}
-      <button type="button" id="pnlBtnFull" class="pnl-tab" onclick="pnlShow('full')">전체 상세</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
     </div>
 
-{{-- ── 상세내용 탭 — 같은 카드 안 ── --}}
-<div id="pnlDetail" style="display:none;padding:16px;">
-  <div style="margin-bottom:12px;">
-    <button type="button" class="ds-btn" onclick="pnlShow('list')">조회결과로</button>
-  </div>
-  <div id="pdEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 이력이 여기에 표시됩니다.</div>
-  <div class="pt-detail" id="patientDetail" style="display:none;">
-    <div class="pt-detail-head">
-      <i class="bx bx-user-pin" style="color:var(--primary);font-size:16px;"></i>
-      <span id="pdName" style="font-weight:700;font-size:14px;line-height:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
-      {{-- 요청서 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음' — 오른쪽 끝으로 밀지 않고
-           이름 바로 뒤에 붙인다(margin-left:auto 제거). --}}
-      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;"
-         onclick="pfOpen(event)">전체 상세</a>
-    </div>
-    <div class="tab-bar">
-      <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
-      <button type="button" class="tab-btn"        data-tab="counsel"  onclick="ptTab('counsel')"><i class="fa-solid fa-comments"></i> 상담이력 <span class="cnt" id="pdCntCs">0</span></button>
-      <button type="button" class="tab-btn"        data-tab="purchase" onclick="ptTab('purchase')"><i class="fa-solid fa-cart-shopping"></i> 구매이력 <span class="cnt" id="pdCntPu">0</span></button>
-    </div>
-    <div class="pt-pane active" id="pd-rx"></div>
-    <div class="pt-pane" id="pd-counsel"></div>
-    <div class="pt-pane" id="pd-purchase"></div>
-  </div>
-</div>{{-- /#pnlDetail --}}
-
-{{-- ── 전체 상세 탭 — 환자 상세 화면을 그대로 들여온다 ── --}}
-<div id="pnlFull" style="display:none;">
-  {{-- 상세 화면은 이미 한 벌 있다. 두 벌로 만들면 한쪽만 고쳐져 서로 다른 것을 보여 준다.
-       액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
-  <div id="pfEmpty" class="pnl-empty">조회결과에서 환자를 고른 뒤 <b>전체 상세</b>를 누르면 여기에 나옵니다.</div>
-  <iframe id="pfFrame" title="환자 전체 상세" style="display:none;width:100%;border:0;
+{{-- ── 상세 내용 탭 — 환자 상세 화면을 그대로 들여온다 ──
+     상세 화면은 이미 한 벌 있다. 두 벌로 만들면 한쪽만 고쳐져 서로 다른 것을 보여 준다.
+     액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
+<div id="pnlDetail" style="display:none;">
+  <div id="pfEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 여기에 나옵니다.</div>
+  <iframe id="pfFrame" title="환자 상세" style="display:none;width:100%;border:0;
           height:calc(100vh - 300px);min-height:520px;"></iframe>
-</div>{{-- /#pnlFull --}}
+</div>{{-- /#pnlDetail --}}
 
 {{-- 상담내역 탭은 사람마다 하나씩 만들어 붙인다(pcEnsureTab) — 두 사람을 견주며
      일하는 때가 있어 한 자리를 돌려 쓰면 방금 보던 것이 사라진다. --}}
@@ -604,14 +577,10 @@ document.addEventListener('keydown', (e) => {
     '</div>';
   const emptyBox = t => '<div class="pt-empty">' + t + '</div>';
 
-  window.ptTab = function (name) {
-    document.querySelectorAll('.pt-detail .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-    document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
-  };
-  // 패널 탭 전환(조회결과/상세내용)
+  // 패널 탭 전환(조회 결과 · 상세 내용 · 상담내역)
   /* 상담내역 탭이 사람마다 생기고 없어지므로 목록은 고정이 아니다 */
-  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull' };
-  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull' };
+  const PANES = { list: 'pnlList', detail: 'pnlDetail' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail' };
 
   window.pnlShow = function (which) {
     if (!PANES[which]) which = 'list';
@@ -621,13 +590,13 @@ document.addEventListener('keydown', (e) => {
     });
   };
 
-  /* 「전체 상세」 — 다른 화면으로 건너가지 않고 옆 탭에 들여온다.
-     아직 아무도 고르지 않았으면 누를 것이 없다. */
+  /* 상세를 옆 탭에 들여온다. 다른 화면으로 건너가면 어떤 조건으로 찾고 있었는지가
+     끊기고, 돌아오려면 처음부터 다시 찾아야 한다. */
   let _pfId = null;
 
-  window.pfOpen = function (e) {
-    if (e) e.preventDefault();
-    if (!_pfId) { pnlShow('full'); return; }
+  window.ptOpen = function (id) {
+    if (id) _pfId = id;
+    if (!_pfId) { pnlShow('detail'); return; }
 
     const frame = document.getElementById('pfFrame');
     const url   = DETAIL_BASE + '/' + _pfId;
@@ -637,7 +606,7 @@ document.addEventListener('keydown', (e) => {
     }
     frame.style.display = '';
     document.getElementById('pfEmpty').style.display = 'none';
-    pnlShow('full');
+    pnlShow('detail');
   };
 
   /* 액자 안에서 다른 화면으로 건너가는 링크를 그대로 두면 그 작은 액자 안에 통째로
@@ -1118,6 +1087,20 @@ document.addEventListener('keydown', (e) => {
     }
   };
 
+  /* 상세(액자) 안에서 「상담내역」을 누르면 이 화면의 탭을 연다 */
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin) return;
+    if (e.data?.source !== 'ce-patient' || e.data?.action !== 'counsel') return;
+    pcLoad(e.data.id, e.data.name);
+  });
+
+  /* 주소에 counsel=환자 가 붙어 들어오면 그 사람의 상담내역부터 편다 —
+     상세 화면을 혼자 열어 두고 상담내역을 누른 경우다. */
+  (function () {
+    const id = new URLSearchParams(location.search).get('counsel');
+    if (id) pcLoad(id, '');
+  })();
+
   /* 상담 창이 저장하면 그 사람의 탭을 새로 읽는다 — 방금 적은 상담이 거기 보여야 한다 */
   window.addEventListener('message', (e) => {
     if (e.origin !== location.origin) return;
@@ -1126,59 +1109,12 @@ document.addEventListener('keydown', (e) => {
     if (p) pcLoad(p.id, p.name);
   });
 
-  async function ptLoad(id, tab = 'rx') {
-    document.getElementById('pdEmpty').style.display = 'none';
-    const panel = document.getElementById('patientDetail');
-    panel.style.display = 'flex';
-    window.pnlShow('detail');
-    document.getElementById('pdName').textContent = '불러오는 중...';
-    ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오는 중...'));
-    try {
-      const res = await fetch(DETAIL_BASE + '/' + id + '/histories', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const d = await res.json();
-      document.getElementById('pdName').textContent = d.name + ' 이력';
-      // 누르면 옆 탭에 들여온다. 주소는 남겨 둔다 — 가운데 클릭으로 새 창을 여는 길까지 막지 않는다.
-      _pfId = id;
-      const more = document.getElementById('pdMore');
-      more.setAttribute('href', DETAIL_BASE + '/' + id);
-      if (document.getElementById('pfFrame').dataset.url
-          && document.getElementById('pfFrame').dataset.url !== DETAIL_BASE + '/' + id) {
-        // 다른 환자를 골랐으면 들여둔 것을 비운다 — 이름과 내용이 어긋나면 안 된다
-        document.getElementById('pfFrame').style.display = 'none';
-        document.getElementById('pfFrame').removeAttribute('data-url');
-        document.getElementById('pfEmpty').style.display = '';
-      }
-      document.getElementById('pdCntRx').textContent = d.prescriptions.length;
-      document.getElementById('pdCntCs').textContent = d.counseling.length;
-      document.getElementById('pdCntPu').textContent = d.purchases.length;
-
-      document.getElementById('pd-rx').innerHTML = d.prescriptions.length
-        ? d.prescriptions.map(r => hrow(esc(r.rx_number), esc(r.hospital) + ' · ' + esc(r.date), '<span class="badge bg-label-primary">' + esc(r.status) + '</span>', r.url, '주문 - ' + esc(r.rx_number))).join('')
-        : emptyBox('처방전 이력이 없습니다.');
-
-      document.getElementById('pd-counsel').innerHTML = d.counseling.length
-        ? d.counseling.map(c => hrow(esc(c.counsel_no), esc(c.rx_number) + ' · ' + esc(c.date) + (c.note ? ' · ' + esc(c.note) : ''), '', c.url, '주문 - ' + esc(c.rx_number))).join('')
-        : emptyBox('상담 이력이 없습니다.');
-
-      document.getElementById('pd-purchase').innerHTML = d.purchases.length
-        ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, '주문 관리 - ' + esc(o.order_number))).join('')
-        : emptyBox('구매 이력이 없습니다.');
-
-      // 상담내역 단추로 열었으면 그 탭을 먼저 보여 준다 — 한 번 더 누르게 하지 않는다
-      window.ptTab(tab);
-    } catch (e) {
-      document.getElementById('pdName').textContent = '불러오기 실패';
-      ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오지 못했습니다.'));
-    }
-  }
-
-  // 행 더블클릭 → 우측에 이력 상세 표시
+  // 행 더블클릭 → 그 환자의 상세를 옆 탭에 연다
   document.getElementById('patientGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-    if (row && row.id) ptLoad(row.id);
+    if (row && row.id) ptOpen(row.id);
   });
 })();
 </script>
