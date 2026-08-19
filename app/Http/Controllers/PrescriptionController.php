@@ -400,11 +400,17 @@ class PrescriptionController extends Controller
         $prescriptions = Prescription::with(['patient', 'assignedUser'])->latest()->limit(5)->get();
         $managers      = User::where('role', 'manager')->get();
         // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
-        $patientsJson  = \App\Models\Patient::orderBy('name')->get(['id', 'name', 'mobile', 'resident_no_masked'])
+        $patientsJson  = \App\Models\Patient::orderBy('name')
+            ->get(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
             ->map(fn ($p) => [
                 'id'     => $p->id,
                 'name'   => $p->name,
                 'mobile' => $p->mobile ? preg_replace('/(\d{3})(\d{3,4})(\d{4})/', '$1-$2-$3', $p->mobile) : '',
+                'phone'  => $p->phone ?: '',
+                /* 생년월일로도 찾는다 — 같은 이름이 여럿일 때 이것으로 가른다.
+                   birth_date 칸은 지금 어느 환자도 채워 두지 않아, 비어 있으면 주민번호
+                   앞자리에서 읽는다(뒷자리 첫 숫자가 1900·2000 년대를 가른다). */
+                'birth'  => $p->birth_date?->format('Y-m-d') ?: self::birthFromMasked($p->resident_no_masked),
                 'rn'     => $p->resident_no_masked ? substr($p->resident_no_masked, 0, 6) . '-*' : '',
             ])->values();
 
@@ -1001,6 +1007,19 @@ class PrescriptionController extends Controller
     /**
      * 검수 화면 '환자 조회': 이름/연락처로 환자 검색 (상담이력 건수 포함).
      */
+    /** 주민번호 마스킹(820108-1******)에서 생년월일을 읽는다 — 못 읽으면 빈 값 */
+    private static function birthFromMasked(?string $masked): string
+    {
+        if (!$masked || !preg_match('/^(\d{2})(\d{2})(\d{2})-([0-9])/', $masked, $m)) {
+            return '';
+        }
+
+        $century = in_array($m[4], ['1', '2', '5', '6'], true) ? 19 : 20;
+        $date    = sprintf('%d%s-%s-%s', $century, $m[1], $m[2], $m[3]);
+
+        return checkdate((int) $m[2], (int) $m[3], (int) ($century . $m[1])) ? $date : '';
+    }
+
     public function patientSearch(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));

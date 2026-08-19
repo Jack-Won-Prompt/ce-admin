@@ -166,6 +166,32 @@
 
   /* ── Patient search ── */
   .patient-search-wrap { position:relative; }
+  /* 조회 단추 — 입력칸과 같은 키를 쓴다 */
+  .fu-find { flex:0 0 auto; height:32px; padding:0 12px; border-radius:8px;
+             background:var(--gray-0); border:1px solid var(--gray-200);
+             font-size:13px; font-weight:500; color:var(--gray-1000); cursor:pointer; white-space:nowrap; }
+  .fu-find:hover { border-color:var(--primary); color:var(--primary); }
+
+  /* ── 이름 조회 창 ── */
+  .pk-overlay { position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,.35);
+                display:flex; align-items:center; justify-content:center; }
+  .pk-box { width:min(860px, 94vw); max-height:86vh; display:flex; flex-direction:column;
+            background:var(--gray-0); border-radius:12px; overflow:hidden;
+            box-shadow:0 12px 40px rgba(0,0,0,.22); }
+  .pk-head { display:flex; align-items:center; gap:8px; padding:12px 16px;
+             background:var(--primary); color:var(--gray-0); font-size:14px; font-weight:700; }
+  .pk-head button { margin-left:auto; background:none; border:none; color:inherit;
+                    font-size:20px; line-height:1; cursor:pointer; }
+  .pk-filter { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
+               padding:12px 16px; border-bottom:1px solid var(--border); background:var(--gray-50); }
+  .pk-fld { display:flex; flex-direction:column; gap:4px; }
+  .pk-fld label { font-size:12px; font-weight:600; color:var(--gray-700); }
+  .pk-fld input { height:32px; width:180px; }
+  .pk-acts { display:flex; gap:6px; margin-left:auto; }
+  .pk-body { padding:12px 16px; overflow:auto; }
+  .pk-note { font-size:12px; color:var(--gray-600); margin-bottom:8px; }
+  .pk-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
+  .pk-hint { font-size:12px; color:var(--gray-600); margin-right:auto; }
   /* 환자를 고르면 selectPatient() 가 입력칸만 display:none 으로 감춘다.
      입력을 감싸는 상자를 따로 두면 그 상자가 flex:1 로 필드 절반(517)을 계속 차지해
      채워진 상자가 필드 한가운데부터 시작한다 — 입력을 직접 flex 항목으로 둔다.
@@ -275,13 +301,17 @@
 
             <div style="display:flex;flex-direction:column;gap:8px;">
 
-              {{-- 환자 선택 (128:789) --}}
+              {{-- 이름 선택 (128:789) — 적어서 고르거나, 창을 열어 찾아 고른다 --}}
               <div class="fu-row">
-                <span class="fu-label">환자 선택</span>
+                <span class="fu-label">이름 선택</span>
                 <div class="fu-field patient-search-wrap">
                   <div class="patient-search-row">
                     <input type="text" id="patientSearchInput" class="fu-input"
                            placeholder="이름 또는 연락처로 검색" autocomplete="off" />
+                    {{-- 이름이 겹치거나 기억이 흐릴 때는 창을 열어 전화번호·생년월일까지 보고 고른다 --}}
+                    <button type="button" class="fu-find" id="patientFindBtn" onclick="pkOpen()">
+                      <i class="fa-solid fa-magnifying-glass"></i> 조회
+                    </button>
                     <div id="patientSelectedBadge" style="display:none;align-items:center;gap:8px;flex:1;min-width:0;">
                       <span id="patientSelectedName" class="fu-input"
                             style="display:flex;align-items:center;background:var(--gray-50);color:var(--gray-800);"></span>
@@ -430,6 +460,48 @@
   </div>
 </div>
 
+{{-- ── 이름 조회 창 ─────────────────────────────────────
+     위에서 찾고 아래 표에서 고른다. 같은 이름이 여럿일 때 전화번호·생년월일로 가른다. --}}
+<div class="pk-overlay" id="pkModal" style="display:none;">
+  <div class="pk-box" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
+    <div class="pk-head">
+      <i class="fa-solid fa-user"></i>
+      <span id="pkTitle">이름 조회</span>
+      <button type="button" onclick="pkClose()" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="pk-filter">
+      <div class="pk-fld">
+        <label>이름</label>
+        <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
+      </div>
+      <div class="pk-fld">
+        <label>전화번호</label>
+        <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
+      </div>
+      <div class="pk-fld">
+        <label>생년월일</label>
+        <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
+      </div>
+      <div class="pk-acts">
+        <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
+        <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
+      </div>
+    </div>
+
+    <div class="pk-body">
+      <div class="pk-note" id="pkNote"></div>
+      <div id="pkGrid"></div>
+    </div>
+
+    <div class="pk-foot">
+      <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+      <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
+    </div>
+  </div>
+</div>
+
 {{-- OCR 처리 중 전체화면 오버레이 --}}
 <div class="progress-overlay" id="progressOverlay">
   <div class="progress-box">
@@ -482,6 +554,106 @@ document.addEventListener('click', e => {
   if (!patientInput.contains(e.target) && !patientDrop.contains(e.target)) {
     patientDrop.classList.remove('open');
   }
+});
+
+/* ── 이름 조회 창 ──────────────────────────────────────
+   적어서 고르는 길(위 자동완성)은 그대로 두고, 이름이 겹치거나 기억이 흐릴 때
+   전화번호·생년월일까지 보고 고르는 길을 하나 더 둔다. 목록은 이미 화면에 실려
+   있어(PATIENTS) 서버를 다시 부르지 않는다. */
+let pkGrid = null;
+
+function pkRows(list) {
+  return list.map(p => ({
+    id: p.id, name: p.name, mobile: p.mobile || p.phone || '', birth: p.birth || '', rn: p.rn || '',
+  }));
+}
+
+window.pkOpen = function () {
+  document.getElementById('pkModal').style.display = 'flex';
+  document.getElementById('pkName').value = patientInput.value.trim();
+  pkSearch();
+  setTimeout(() => document.getElementById('pkName').focus(), 50);
+};
+
+window.pkClose = function () {
+  document.getElementById('pkModal').style.display = 'none';
+};
+
+window.pkReset = function () {
+  ['pkName','pkPhone','pkBirth'].forEach(id => document.getElementById(id).value = '');
+  pkSearch();
+};
+
+window.pkSearch = function () {
+  const name  = document.getElementById('pkName').value.trim().toLowerCase();
+  const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
+  const birth = document.getElementById('pkBirth').value.replace(/\D/g, '');
+
+  const hit = PATIENTS.filter(p => {
+    if (name  && !(p.name || '').toLowerCase().includes(name)) return false;
+    if (phone && !((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(phone)) return false;
+    if (birth) {
+      // 1982-01-08 로도, 820108 로도 찾는다
+      const b = (p.birth || '').replace(/\D/g, '');
+      const rn = (p.rn || '').replace(/\D/g, '');
+      if (!b.includes(birth) && !rn.startsWith(birth) && !b.slice(2).includes(birth)) return false;
+    }
+    return true;
+  });
+
+  const rows = pkRows(hit);
+  document.getElementById('pkNote').textContent =
+    rows.length ? `${rows.length}명` : '찾은 사람이 없습니다.';
+
+  if (!pkGrid) {
+    pkGrid = new wwGrid({
+      el: document.getElementById('pkGrid'),
+      height: 320, editable: false, rowCheckbox: false, rowNumber: true,
+      toolbar: false, summary: false, footer: false,
+      columns: [
+        { header: '이름',     name: 'name',   width: 140, sortable: true },
+        { header: '전화번호', name: 'mobile', width: 160, sortable: true },
+        { header: '생년월일', name: 'birth',  width: 130, align: 'center', sortable: true },
+        { header: '주민번호', name: 'rn',     width: 140, align: 'center' },
+      ],
+      data: rows,
+    });
+    document.getElementById('pkGrid').addEventListener('dblclick', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = pkGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row) { selectPatient(row.id, row.name); pkClose(); }
+    });
+    // 한 줄을 고른 표시 — 「선택」 단추가 그 줄을 쓴다
+    document.getElementById('pkGrid').addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      pkGrid._pickedIndex = parseInt(cell.dataset.rowIndex, 10);
+      document.querySelectorAll('#pkGrid tr').forEach(tr => tr.classList.remove('cg-row-selected'));
+      cell.closest('tr')?.classList.add('cg-row-selected');
+    });
+  } else {
+    pkGrid._pickedIndex = null;
+    pkGrid.setData(rows);
+  }
+};
+
+window.pkPick = function () {
+  const i = pkGrid?._pickedIndex;
+  const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
+  if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
+  selectPatient(row.id, row.name);
+  pkClose();
+};
+
+// 바깥을 누르거나 Esc 로도 닫는다
+document.getElementById('pkModal')?.addEventListener('mousedown', (e) => {
+  if (e.target.id === 'pkModal') pkClose();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('pkModal')?.style.display === 'flex') pkClose();
+  if (e.key === 'Enter'  && document.getElementById('pkModal')?.style.display === 'flex'
+      && ['pkName','pkPhone','pkBirth'].includes(document.activeElement?.id)) pkSearch();
 });
 
 function selectPatient(id, name) {
@@ -778,7 +950,7 @@ function setStep(num, state) {
 
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
+  { selector: '#patientSearchInput', title: '이름 선택', body: '이름이나 연락처를 적어 고르거나, 옆의 <b>조회</b>로 창을 열어 전화번호·생년월일까지 보고 고릅니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
   { selector: '#grid-etc', title: '청구ㆍ기타 자료', body: '거래명세서·현금영수증 등 청구 자료를 넣습니다. 타일 왼쪽 위에서 서류명을 고르며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
   { selector: '#submitBtn', title: '등록 버튼', body: '환자를 고르고 파일을 넣은 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 자리는 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },

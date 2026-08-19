@@ -174,8 +174,6 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-{{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
       {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다. 검색 조건이 있을 때만
            내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
            (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
@@ -195,9 +193,13 @@
     </div>
   </form>
 
-  {{-- Figma 128:1744 — 흰 카드(r12) 안에 그리드 --}}
+  {{-- Figma 128:1744 — 흰 카드(r12) 안에 그리드.
+       건수는 거래처 관리와 같은 자리에서 읽는다 — 카드 첫 줄의 탭 이름 뒤 괄호다. --}}
   <div class="ds-grid-section">
     <div class="ds-grid-card">
+      <div class="pnl-tabs">
+        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+      </div>
       <div id="rxGrid"></div>
     </div>
   </div>
