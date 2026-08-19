@@ -55,7 +55,7 @@ class CommonCode extends Model
         return $all[$key];
     }
 
-    /** 그 목록의 갈래 [key => label] */
+    /** 그 목록의 유형 [key => label] */
     public static function kinds(string $group): array
     {
         return collect(static::groups()[$group]['kinds'] ?? [])
@@ -63,7 +63,7 @@ class CommonCode extends Model
     }
 
     /**
-     * 쓸 수 있는 코드들. 갈래를 주면 그 갈래만.
+     * 쓸 수 있는 코드들. 유형을 주면 그 유형만.
      *
      * @return \Illuminate\Support\Collection<int, CommonCode>
      */

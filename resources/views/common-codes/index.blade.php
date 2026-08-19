@@ -84,7 +84,7 @@
     <div class="modal-body">
       <div class="cc-form-grid">
         <div class="cc-field">
-          <label>갈래 <span style="color:var(--danger);">*</span></label>
+          <label>유형 <span style="color:var(--danger);">*</span></label>
           <select class="form-control form-select" id="cc-kind">
             @foreach($kinds as $kk => $kl)
               <option value="{{ $kk }}">{{ $kl }}</option>
@@ -145,7 +145,7 @@
     el: document.getElementById('ccGrid'),
     height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
     columns: [
-      { header: '갈래',   name: 'kind',       width: 110, sortable: true },
+      { header: '유형',   name: 'kind',       width: 110, sortable: true },
       { header: '코드',   name: 'code',       width: 180, sortable: true },
       { header: '이름',   name: 'label',      width: 260, sortable: true },
       { header: '차례',   name: 'sort_order', width: 70,  align: 'right' },
@@ -195,7 +195,7 @@
     document.getElementById('cc-sort').value   = row.sort_order ?? 0;
     document.getElementById('cc-active').value = row.is_active ? '1' : '0';
 
-    // 시스템 코드는 값과 갈래를 잠근다 — 바꾸면 이미 쌓인 서류가 이름을 잃는다
+    // 시스템 코드는 값과 유형를 잠근다 — 바꾸면 이미 쌓인 서류가 이름을 잃는다
     document.getElementById('cc-code').disabled   = !!row.is_system;
     document.getElementById('cc-kind').disabled   = !!row.is_system;
     document.getElementById('cc-active').disabled = !!row.is_system;
