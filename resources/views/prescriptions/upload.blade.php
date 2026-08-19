@@ -17,25 +17,7 @@
      .page-breadcrumb 은 전역이지만 .bc-trail 은 이 화면 마크업이라 여기 둔다. */
   .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 
-  /* ── 단계 표시 (Figma 128:724) ──
-     번호 원과 좌우 선 대신, 아이콘·제목·부제를 세로로 쌓고 점선으로 잇는다.
-     흰 카드 radius 12, 테두리·그림자 없음. 지난 단계와 앞으로 올 단계는 회색. */
-  .steps-bar { display:flex; justify-content:center; align-items:center; gap:16px;
-               background:var(--gray-0); border-radius:12px; padding:16px; }
-  .step { display:flex; flex-direction:column; align-items:center; gap:8px; }
-  /* 제목과 부제는 붙여 놓는다 — 아이콘과의 간격(8)만 벌린다 (Figma 128:731) */
-  .step-text { display:flex; flex-direction:column; align-items:center; }
-  .step-icon  { width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-                font-size:16px; line-height:16px; color:var(--gray-400); }
-  .step-label { font-size:13px; font-weight:700; line-height:1.6; color:var(--gray-400); }
-  .step-sub   { font-size:11px; font-weight:500; line-height:1.6; color:var(--gray-400); }
-  .step.active .step-icon, .step.active .step-label, .step.active .step-sub { color:var(--primary); }
-  /* 단계 사이 연결자 — 점 4px · 선 1px, 폭 100 (Figma 128:734) */
-  .step-link { display:flex; align-items:center; justify-content:center; gap:2px; width:100px; height:4px; flex-shrink:0; }
-  .step-link i { width:4px; height:4px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
-  .step-link u { flex:1; height:1px; background:var(--gray-300); }
-  .step-link.done i { background:var(--primary); }
-  .step-link.done u { background:var(--primary); }
+  /* 단계 표시(.steps-bar) 규격은 함께 걷었다 — 마크업이 없어 얹을 자리가 없다. */
 
   /* ── Layout (Figma 128:768) — 3 : 1, gap 12 ── */
   /* 시안 128:769 · 128:827 은 좌 1167×834 · 우 389×834 로 두 카드 높이가 같다.
@@ -238,32 +220,8 @@
 
 @section('content')
 
-{{-- ── 단계 표시 (Figma 128:724) ── --}}
-<div class="steps-bar">
-  <div class="step active" id="step1">
-    <div class="step-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
-    <div class="step-text">
-      <div class="step-label">파일 선택</div>
-      <div class="step-sub">처방전 및 첨부 문서</div>
-    </div>
-  </div>
-  <div class="step-link done"><i></i><u></u><i></i></div>
-  <div class="step" id="step2">
-    <div class="step-icon"><i class="fa-solid fa-expand"></i></div>
-    <div class="step-text">
-      <div class="step-label">OCR 분석</div>
-      <div class="step-sub">자동 텍스트 추출</div>
-    </div>
-  </div>
-  <div class="step-link"><i></i><u></u><i></i></div>
-  <div class="step" id="step3">
-    <div class="step-icon"><i class="fa-solid fa-file-prescription"></i></div>
-    <div class="step-text">
-      <div class="step-label">처방자료 확인</div>
-      <div class="step-sub">내용 검토 및 주문 연결</div>
-    </div>
-  </div>
-</div>
+{{-- 단계 표시는 두지 않는다 — 파일을 고르고 등록하면 그다음은 화면이 알아서
+     넘어간다. 늘 같은 그림이라 읽을 것이 없었다. --}}
 
 {{-- ── 업로드 레이아웃 ── --}}
 <div class="upload-layout">
@@ -285,12 +243,12 @@
         <div class="up-head-left">
           <span class="up-card-title">처방자료 업로드</span>
           {{-- 업로드 제한 배지 — 시안 128:2699. 문구는 실제 제한과 같다:
-               컨트롤러 max:10 · max:50240(KB) · mimes:jpg,jpeg,png,pdf,heic,
-               화면 JS 도 10개 / 50MB 에서 막는다. --}}
+               컨트롤러 max:40 · max:50240(KB) · mimes:jpg,jpeg,png,pdf,heic,
+               화면 JS 도 40개 / 50MB 에서 막는다. --}}
           <span class="up-head-limits">
             <span class="up-limit">최대 50MB</span>
             <span class="up-limit">JPG/PNG/PDF/HEIC</span>
-            <span class="up-limit">최대 10개</span>
+            <span class="up-limit">최대 40개</span>
           </span>
         </div>
         <div class="up-head-right">
@@ -315,9 +273,9 @@
             <div class="up-sec-head">
               <span class="up-sec-title">파일 업로드</span>
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
-              <span class="up-sec-note"><i class="up-note-icon"></i>각 파일의 <b>유형</b>을 선택해 주세요.
-                <b>처방전</b>은 OCR 분석,
-                <b>주민등록증·위임장</b> 등은 이미지 그대로 첨부 문서로 저장됩니다.</span>
+              {{-- 문장은 첫 마디만 둔다(c99af13). 규격은 .up-sec-note 로 —
+                   인라인 flex 는 <b> 마다 gap 4 를 끼워 「유형 | 을」 을 갈라 놓았다. --}}
+              <span class="up-sec-note"><i class="up-note-icon"></i>각 파일의 <b>유형</b>을 선택해 주세요.</span>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:8px;">
@@ -542,7 +500,7 @@ const form      = document.getElementById('uploadForm');
 
 const DOC_TYPES = {
   prescription: { label: '처방전',    cls: 'type-prescription', icon: 'fa-file-medical' },
-  id_card:      { label: '주민등록증', cls: 'type-id_card',      icon: 'fa-id-card' },
+  id_card:      { label: '신분증', cls: 'type-id_card',      icon: 'fa-id-card' },
   delegation:   { label: '위임장',    cls: 'type-delegation',   icon: 'fa-file-signature' },
   other:        { label: '기타',      cls: 'type-other',        icon: 'fa-file' },
 };
@@ -567,7 +525,7 @@ function addFiles(fileObjs, group) {
   const allowed = ['jpg','jpeg','png','pdf','heic'];
   const added = [];
   Array.from(fileObjs).forEach(f => {
-    if (selectedFiles.length + added.length >= 10) { showToast('최대 10개까지 선택할 수 있습니다.', 'warning'); return; }
+    if (selectedFiles.length + added.length >= 40) { showToast('최대 40개까지 선택할 수 있습니다.', 'warning'); return; }
     const ext = f.name.split('.').pop().toLowerCase();
     if (!allowed.includes(ext))  { showToast(f.name + ' — 지원하지 않는 형식', 'warning'); return; }
     if (f.size > 51200 * 1024)   { showToast(f.name + ' — 50MB 초과', 'warning'); return; }
@@ -722,7 +680,6 @@ function setStep(num, state) {
 
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.steps-bar', title: '업로드 진행 단계', body: '파일 선택 → 등록 버튼 클릭 → OCR 분석 → 주문 화면 연결 순서로 진행됩니다.' },
   { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
   { selector: '#grid-etc', title: '기타 자료', body: '신분증·위임장 등을 넣습니다. 이미지 그대로 첨부 문서로 저장됩니다. 타일 왼쪽 위에서 유형을 바꿀 수 있습니다.' },

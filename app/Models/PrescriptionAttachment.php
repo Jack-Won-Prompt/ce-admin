@@ -22,7 +22,7 @@ class PrescriptionAttachment extends Model
      */
     public const DOC_TYPE_LABELS = [
         'prescription'      => '처방전',
-        'id_card'           => '주민등록증',
+        'id_card'           => '신분증',
         'registration_form' => '등록신청서',
         'test_result'       => '결과지',
         'delegation'        => '위임장',
@@ -47,8 +47,19 @@ class PrescriptionAttachment extends Model
             : null;
     }
 
+    /**
+     * 화면에 적을 이름.
+     *
+     * 적어 둔 이름(doc_label)은 「기타」에 무엇인지 직접 쓰라고 둔 칸이다. 정해진 유형에는
+     * 지금 쓰는 이름을 쓴다 — 예전에 「주민등록증」으로 적힌 건이 유형 이름을 신분증으로
+     * 바꾼 뒤에도 옛 이름으로 남아, 같은 종류가 두 이름으로 보였다.
+     */
     public function getDocTypeLabelAttribute(): string
     {
+        if ($this->doc_type && $this->doc_type !== 'other') {
+            return self::DOC_TYPE_LABELS[$this->doc_type] ?? ($this->doc_label ?: '기타');
+        }
+
         return $this->doc_label ?: (self::DOC_TYPE_LABELS[$this->doc_type] ?? '기타');
     }
 

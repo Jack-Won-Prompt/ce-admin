@@ -151,21 +151,15 @@
     /* 이력 행 오른쪽 chevron-right 14×14(bd 1.5px gray-1000). 마크업을 안 건드리려고 mask 로 그린다 —
        전역 --icon-alert-circle 과 같은 방식이다. */
     --pt-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M7.7 4.3L16.3 12 7.7 19.7'/></svg>"); }
-  /* 머리 — 시안 Frame 48101479: 1536×44 · pad 8/16 · SPACE_BETWEEN · 하단 1px gray-200.
-     왼쪽 묶음(20×20 아이콘 + 이름 13/700 lh21) gap 8.
-     ── 요청 1차 4쪽: '전체 상세 버튼이 앞쪽으로 오면 좋겠음 (Ex 박일성 이력 아래)' ──
-     시안은 '전체 상세'를 머리줄 오른쪽 끝에 두지만(실측 x1801 · 머리 h44),
-     배치는 요청서를 따라 이름 바로 아래·앞쪽(이름과 같은 x)으로 내린다.
-     마크업 차례(아이콘·이름·버튼)를 한 글자도 안 건드리려고 flex 를 2행 grid 로 바꾼다 —
-     1행 [아이콘 20][이름 13/700 lh21], 2행 [빈칸][전체 상세 69×28].
-     세로 사이는 머리가 이미 쓰는 gap 8 을 그대로 쓴다.
-     머리 높이는 8+21+8+28+8 = 73 이 되어 시안 44 보다 29 높아진다(요청서 우선). */
-  .pt-detail-head { display:grid; grid-template-columns:20px 1fr; column-gap:8px; row-gap:8px;
-    align-items:center; padding:8px 16px; border-bottom:1px solid var(--border); }
-  .pt-detail-head > .bx { grid-column:1; grid-row:1; width:20px; height:20px; line-height:20px; text-align:center; }
-  .pt-detail-head > #pdName { grid-column:2; grid-row:1; }
-  /* 이름 아래 같은 칸(2열) 왼쪽 끝. 알약 폭은 시안 69 그대로 — justify-self 로 늘어나지 않게 막는다. */
-  .pt-detail-head > #pdMore { grid-column:2; grid-row:2; justify-self:start; }
+  /* 머리 — 시안 Frame 48101479: 1536×44 · pad 8/16 · 하단 1px gray-200.
+     한 줄 묶음(20×20 아이콘 + 이름 13/700 lh21 + '전체 상세' 69×28) gap 8.
+     좌우 여백은 카드 안 표준 16 — 아래 탭바·본문과 글자 시작선을 맞춘다.
+     ── 요청 1차 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음' 은 main 이 옆 탭(「전체 상세」
+     패널 탭)으로 풀었다. 버튼은 머리줄에 그대로 두고 누르면 그 탭이 선다.
+     이름 아래로 내리려고 짰던 2행 grid 는 접는다 — 같은 요청을 두 자리에서 푸는 셈이다.
+     세로는 가장 높은 '전체 상세' 28 + pad 8·8 = 44 로 시안 그대로다. */
+  .pt-detail-head { display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--border); }
+  .pt-detail-head > .bx { width:20px; height:20px; line-height:20px; text-align:center; flex:0 0 20px; }
   /* '전체 상세' — 시안 69×28 · r8 · pad 0/12 · 12px/500 lh19 · 글자 gray-1000 · bd 1px gray-200 */
   #pdMore.btn { height:28px; padding:0 12px; border-radius:8px;
     font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
@@ -187,8 +181,10 @@
   /* 건수 — 시안은 배지가 아니라 라벨과 같은 13/500 lh21 평문, 라벨과 같은 색 · gap 8 */
   .pt-detail .tab-btn .cnt { display:inline; min-width:0; height:auto; padding:0; border-radius:0;
     background:none; color:inherit; font-size:13px; font-weight:500; line-height:21px; }
-  /* 본문 — 시안 Frame 48101511: pad 12/16, 안쪽 세로 gap 12 */
-  .pt-pane { display:none; padding:12px 16px; overflow-y:auto; max-height:calc(100vh - 300px); }
+  /* 본문 — 시안 Frame 48101511: pad 12/16, 안쪽 세로 gap 12.
+     이력은 그대로 늘어나게 둔다(main). 안쪽에 스크롤을 두면 화면 스크롤과 둘이 되어
+     어느 쪽을 굴려야 할지 모르고, 짧은 이력에도 잘린 것처럼 보였다. */
+  .pt-pane { display:none; padding:12px 16px; }
   .pt-pane.active { display:flex; flex-direction:column; gap:12px; }
   /* 이력 행 — 시안 Frame 48101492: 1504×73 · r12 · pad 12/16 · gap 24 · bd 1px gray-200 · bg 흰색 */
   .pt-hrow { display:flex; align-items:center; gap:24px; padding:12px 16px;
@@ -234,18 +230,8 @@
 
 @section('content')
 
-{{-- 화면 제목·등록 건수. 시안에는 없지만 개발에서 넣은 블록이라 유지한다.
-     '환자 추가' 버튼만 시안 위치인 결과바 우측으로 옮겼다. --}}
-{{-- 아래 여백은 .page-body 의 gap 12 가 이미 만든다. margin 을 또 주면 24 가 되어
-     칩줄이 검색 카드에 붙는 다른 화면들과 어긋난다(실측 24 → 12). --}}
-<div style="display:flex;align-items:center;justify-content:space-between;">
-  <div>
-    <h5 style="font-size:16px;font-weight:700;line-height:26px;margin:0;color:var(--text-primary);">환자 정보</h5>
-    <p style="font-size:12px;font-weight:400;line-height:19px;color:var(--text-muted);margin:4px 0 0;">
-      총 <strong>{{ number_format($total) }}</strong>명 등록
-    </p>
-  </div>
-</div>
+{{-- 제목과 등록 건수를 여기 두지 않는다. 화면 이름은 네비바가 이미 적고 있고,
+     건수는 아래 결과바의 「전체 N건」과 같은 말이었다. --}}
 
 {{-- 검색 필터 — Figma 114:4778: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
 <form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">
@@ -314,6 +300,11 @@
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">조회 결과</button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
+      {{-- 환자 한 사람의 모든 것은 옆 탭에서 본다. 다른 화면으로 건너가면 어떤 조건으로
+           찾고 있었는지가 끊기고, 돌아오려면 처음부터 다시 찾아야 한다. --}}
+      <button type="button" id="pnlBtnFull" class="pnl-tab" onclick="pnlShow('full')">전체 상세</button>
+      {{-- 상담은 목록으로 훑는 일이 많다 — 이력 탭 안에 접어 두지 않고 제 자리를 준다 --}}
+      <button type="button" id="pnlBtnCounsel" class="pnl-tab" onclick="pnlShow('counsel')">상담내역</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
@@ -331,12 +322,12 @@
            개발이 넣은 boxicons 글리프를 그대로 두고 크기만 20 으로 맞췄다. --}}
       <i class="bx bx-user-pin" style="color:var(--primary);font-size:20px;"></i>
       <span id="pdName" style="font-weight:700;font-size:13px;line-height:21px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
-      {{-- 요청 1차 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음 (Ex 박일성 이력 아래)' 를 따라
-           이름(#pdName '박일성 이력') 바로 아래·앞쪽으로 내렸다. 자리는 CSS 의
-           .pt-detail-head grid 2행이 잡는다(마크업 차례는 그대로).
-           시안 114:6131 Frame 48101479 는 오른쪽 끝(SPACE_BETWEEN)이라 이 한 자리가 어긋난다.
-           href 는 아래 ptLoad() 가 id 로 채운다 — 옮겨도 그대로 돈다. --}}
-      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;">전체 상세</a>
+      {{-- 요청서 4쪽 '전체 상세 버튼이 앞쪽으로 오면 좋겠음' — 오른쪽 끝으로 밀지 않고
+           이름 바로 뒤에 붙인다(margin-left:auto 제거). 누르면 옆의 「전체 상세」 탭이
+           서고 그 안에 환자 상세 화면이 들어온다 — 다른 화면으로 건너가지 않는다.
+           href 는 아래 ptLoad() 가 id 로 채운다(가운데 클릭으로 새 창을 여는 길). --}}
+      <a id="pdMore" href="#" class="btn btn-outline btn-sm" style="white-space:nowrap;"
+         onclick="pfOpen(event)">전체 상세</a>
     </div>
     <div class="tab-bar">
       <button type="button" class="tab-btn active" data-tab="rx"       onclick="ptTab('rx')"><i class="fa-solid fa-file-medical"></i> 처방전 이력 <span class="cnt" id="pdCntRx">0</span></button>
@@ -348,6 +339,26 @@
     <div class="pt-pane" id="pd-purchase"></div>
   </div>
 </div>{{-- /#pnlDetail --}}
+
+{{-- ── 전체 상세 탭 — 환자 상세 화면을 그대로 들여온다 ── --}}
+<div id="pnlFull" style="display:none;">
+  {{-- 상세 화면은 이미 한 벌 있다. 두 벌로 만들면 한쪽만 고쳐져 서로 다른 것을 보여 준다.
+       액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
+  <div id="pfEmpty" class="pnl-empty">조회결과에서 환자를 고른 뒤 <b>전체 상세</b>를 누르면 여기에 나옵니다.</div>
+  <iframe id="pfFrame" title="환자 전체 상세" style="display:none;width:100%;border:0;
+          height:calc(100vh - 300px);min-height:520px;"></iframe>
+</div>{{-- /#pnlFull --}}
+
+{{-- ── 상담내역 탭 — 고른 환자의 상담을 목록으로 ── --}}
+<div id="pnlCounsel" style="display:none;padding:16px;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+    <i class="bx bx-conversation" style="color:var(--primary);font-size:16px;"></i>
+    <span id="pcName" style="font-weight:700;font-size:14px;">상담내역</span>
+    <span class="ds-grid-hint" id="pcNote" style="margin-left:auto;">행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.</span>
+  </div>
+  <div id="pcEmpty" class="pnl-empty">조회결과에서 <b>상담내역</b>을 누르면 여기에 나옵니다.</div>
+  <div id="pcGrid" style="display:none;"></div>
+</div>{{-- /#pnlCounsel --}}
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
@@ -488,7 +499,18 @@ document.addEventListener('keydown', (e) => {
       { header: '환자명',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
       { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
-      { header: '성별',         name: 'gender',          width: 60,  align: 'center', sortable: true },
+      /* 성별 자리에 상담내역을 둔다. 성별은 훑을 때 쓰는 값이 아니고(필요하면 상세에 있다),
+         목록에서 바로 하고 싶은 일은 「이 환자와 무슨 이야기를 했나」를 보는 것이다. */
+      { header: '상담내역', name: 'counsel', width: 90, align: 'center', exportable: false,
+        renderer: (v, row) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'pt-chip clickable';
+          b.textContent = '상담내역';
+          b.title = '이 환자의 상담 이력을 봅니다';
+          b.addEventListener('click', (e) => { e.stopPropagation(); pcLoad(row.id, row.name); });
+          return b;
+        } },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
       { header: '급여',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
@@ -564,14 +586,136 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
   // 패널 탭 전환(조회결과/상세내용)
+  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull', counsel: 'pnlCounsel' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull', counsel: 'pnlBtnCounsel' };
+
   window.pnlShow = function (which) {
-    document.getElementById('pnlList').style.display   = which === 'detail' ? 'none' : '';
-    document.getElementById('pnlDetail').style.display = which === 'detail' ? '' : 'none';
-    document.getElementById('pnlBtnList').classList.toggle('active', which !== 'detail');
-    document.getElementById('pnlBtnDetail').classList.toggle('active', which === 'detail');
+    if (!PANES[which]) which = 'list';
+    Object.keys(PANES).forEach(k => {
+      document.getElementById(PANES[k]).style.display = k === which ? '' : 'none';
+      document.getElementById(TABS[k]).classList.toggle('active', k === which);
+    });
   };
 
-  async function ptLoad(id) {
+  /* 「전체 상세」 — 다른 화면으로 건너가지 않고 옆 탭에 들여온다.
+     아직 아무도 고르지 않았으면 누를 것이 없다. */
+  let _pfId = null;
+
+  window.pfOpen = function (e) {
+    if (e) e.preventDefault();
+    if (!_pfId) { pnlShow('full'); return; }
+
+    const frame = document.getElementById('pfFrame');
+    const url   = DETAIL_BASE + '/' + _pfId;
+    if (frame.dataset.url !== url) {
+      frame.src = url;
+      frame.dataset.url = url;
+    }
+    frame.style.display = '';
+    document.getElementById('pfEmpty').style.display = 'none';
+    pnlShow('full');
+  };
+
+  /* 액자 안에서 다른 화면으로 건너가는 링크를 그대로 두면 그 작은 액자 안에 통째로
+     열려 화면이 겹친다(환자 상세 안에 처방전 목록이 들어앉는 식이다).
+     환자 목록으로 가는 링크는 바깥의 조회 결과 탭으로 돌리고, 그 밖의 화면은
+     워크스페이스 탭으로 올려 보낸다. 같은 곳에서 온 문서라 안을 만질 수 있다. */
+  document.getElementById('pfFrame').addEventListener('load', function () {
+    const frameUrl = this.dataset.url;
+    try {
+      const d = this.contentDocument;
+      if (!d) return;
+
+      d.addEventListener('click', (ev) => {
+        const a = ev.target.closest('a[href]');
+        if (!a || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+
+        const raw = a.getAttribute('href');
+        if (!raw || raw.startsWith('#') || raw.startsWith('javascript')) return;
+        if (!a.href.startsWith(location.origin)) return;      // 바깥 주소는 그대로 둔다
+        if (a.href.split('#')[0] === frameUrl) return;        // 자기 자신이면 그대로
+
+        ev.preventDefault();
+
+        if (a.href.replace(/\/$/, '') === DETAIL_BASE.replace(/\/$/, '')) {
+          pnlShow('list');
+          return;
+        }
+        window.ceOpenTab(a.href, a.dataset.ceTab || a.textContent.trim(), a.dataset.ceIcon || '');
+      });
+    } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
+  });
+
+  /* ── 상담내역 탭 ──────────────────────────────────────
+     상담은 「이 사람과 언제 무슨 이야기를 했나」를 훑는 일이라 목록이 맞다.
+     이력 탭 안에 접어 두면 한 건씩 펼쳐 봐야 해서, 제 자리를 따로 준다. */
+  let pcGrid = null;
+
+  window.pcLoad = async function (id, name) {
+    pnlShow('counsel');
+    document.getElementById('pcName').textContent = (name || '') + ' 상담내역';
+    document.getElementById('pcNote').textContent = '불러오는 중…';
+
+    try {
+      const res = await fetch(DETAIL_BASE + '/' + id + '/histories',
+                              { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      const rows = (d.counseling ?? []).map(c => ({
+        counsel_no: c.counsel_no || '-',
+        date:       c.date || '',
+        rx_number:  c.rx_number || '',
+        note:       c.note || '',
+        url:        c.url || '',
+      }));
+
+      document.getElementById('pcName').textContent = (d.name || name || '') + ' 상담내역';
+
+      if (!rows.length) {
+        document.getElementById('pcGrid').style.display  = 'none';
+        document.getElementById('pcEmpty').style.display = '';
+        document.getElementById('pcEmpty').innerHTML     = '상담 이력이 없습니다.';
+        document.getElementById('pcNote').textContent    = '0건';
+        return;
+      }
+
+      document.getElementById('pcEmpty').style.display = 'none';
+      document.getElementById('pcGrid').style.display  = '';
+      document.getElementById('pcNote').textContent    = rows.length + '건 · 행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.';
+
+      if (!pcGrid) {
+        pcGrid = new wwGrid({
+          el: document.getElementById('pcGrid'),
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+          columns: [
+            { header: '상담번호', name: 'counsel_no', width: 140, sortable: true },
+            { header: '상담일',   name: 'date',       width: 110, sortable: true, align: 'center' },
+            { header: '처방번호', name: 'rx_number',  width: 150, sortable: true },
+            { header: '상담 내용', name: 'note',      width: 420 },
+          ],
+          data: rows,
+        });
+
+        /* 더블클릭하면 그 처방전으로 간다. 화면 탭으로 열어야 보고 있던 목록이 남는다.
+           wwGrid 에는 on() 이 없어 셀에서 행 번호를 읽는다. */
+        document.getElementById('pcGrid').addEventListener('dblclick', (e) => {
+          const cell = e.target.closest('[data-row-index]');
+          if (!cell) return;
+          const row = pcGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+          if (row?.url) window.ceOpenTab(row.url, '주문 - ' + (row.rx_number || ''), 'bx-scan');
+        });
+      } else {
+        pcGrid.setData(rows);
+      }
+    } catch (e) {
+      document.getElementById('pcGrid').style.display  = 'none';
+      document.getElementById('pcEmpty').style.display = '';
+      document.getElementById('pcEmpty').innerHTML     = '상담내역을 불러오지 못했습니다.';
+      document.getElementById('pcNote').textContent    = '';
+    }
+  };
+
+  async function ptLoad(id, tab = 'rx') {
     document.getElementById('pdEmpty').style.display = 'none';
     const panel = document.getElementById('patientDetail');
     panel.style.display = 'flex';
@@ -583,7 +727,17 @@ document.addEventListener('keydown', (e) => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
       document.getElementById('pdName').textContent = d.name + ' 이력';
-      document.getElementById('pdMore').setAttribute('href', DETAIL_BASE + '/' + id);
+      // 누르면 옆 탭에 들여온다. 주소는 남겨 둔다 — 가운데 클릭으로 새 창을 여는 길까지 막지 않는다.
+      _pfId = id;
+      const more = document.getElementById('pdMore');
+      more.setAttribute('href', DETAIL_BASE + '/' + id);
+      if (document.getElementById('pfFrame').dataset.url
+          && document.getElementById('pfFrame').dataset.url !== DETAIL_BASE + '/' + id) {
+        // 다른 환자를 골랐으면 들여둔 것을 비운다 — 이름과 내용이 어긋나면 안 된다
+        document.getElementById('pfFrame').style.display = 'none';
+        document.getElementById('pfFrame').removeAttribute('data-url');
+        document.getElementById('pfEmpty').style.display = '';
+      }
       document.getElementById('pdCntRx').textContent = d.prescriptions.length;
       document.getElementById('pdCntCs').textContent = d.counseling.length;
       document.getElementById('pdCntPu').textContent = d.purchases.length;
@@ -600,7 +754,8 @@ document.addEventListener('keydown', (e) => {
         ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, '주문 관리 - ' + esc(o.order_number))).join('')
         : emptyBox('구매 이력이 없습니다.');
 
-      window.ptTab('rx');
+      // 상담내역 단추로 열었으면 그 탭을 먼저 보여 준다 — 한 번 더 누르게 하지 않는다
+      window.ptTab(tab);
     } catch (e) {
       document.getElementById('pdName').textContent = '불러오기 실패';
       ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오지 못했습니다.'));

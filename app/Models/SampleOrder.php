@@ -37,7 +37,7 @@ class SampleOrder extends Model
     ];
 
     protected $fillable = [
-        'sample_no', 'type', 'patient_id',
+        'sample_no', 'type', 'patient_id', 'requester_id', 'requester_name',
         'account_name', 'recipient_name', 'mobile', 'postcode', 'address', 'address_detail',
         'order_date', 'delivery_date', 'purpose', 'note',
         'status', 'total_qty', 'total_amount',
@@ -68,6 +68,12 @@ class SampleOrder extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** 샘플을 달라고 한 영업 담당자 — 등록한 사람과 다를 수 있다 */
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requester_id');
     }
 
     public function typeLabel(): string

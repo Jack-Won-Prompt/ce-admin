@@ -107,10 +107,42 @@ class SampleOrderController extends Controller
         ]);
     }
 
+    /**
+     * 요청자 조회 — CE-Admin 에 등록된 담당자.
+     *
+     * 샘플은 대개 영업 담당자가 달라고 하고 사무실에서 대신 넣는다. 이름을 손으로
+     * 적게 두면 같은 사람이 여러 이름으로 남아 나중에 누구 것인지 셀 수 없다.
+     * 쉬는 계정은 빼고 준다 — 지금 일하는 사람만 고를 수 있어야 한다.
+     */
+    public function userSearch(Request $request): JsonResponse
+    {
+        $kw = trim((string) $request->q);
+
+        $rows = \App\Models\User::query()
+            ->where('is_active', true)
+            ->when($kw !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('name', 'like', "%{$kw}%")
+                ->orWhere('email', 'like', "%{$kw}%")
+                ->orWhere('phone', 'like', '%' . preg_replace('/[^0-9]/', '', $kw) . '%')))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'email', 'phone', 'role']);
+
+        return response()->json([
+            'rows' => $rows->map(fn ($u) => [
+                'id'    => $u->id,
+                'name'  => $u->name,
+                'email' => $u->email ?: '',
+                'phone' => $u->phone ?: '',
+                'role'  => $u->role === 'admin' ? '관리자' : '담당자',
+            ])->values(),
+        ]);
+    }
+
     /** 상세 — 머리 정보와 제품 목록을 함께 준다. 화면이 탭 안에서 그린다. */
     public function show(SampleOrder $sampleOrder): JsonResponse
     {
-        $sampleOrder->load(['items', 'creator', 'patient']);
+        $sampleOrder->load(['items', 'creator', 'patient', 'requester']);
 
         return response()->json([
             'head' => [
@@ -132,6 +164,8 @@ class SampleOrderController extends Controller
                 'so_status'   => $sampleOrder->withworks_status_label ?: '',
                 'error'       => $sampleOrder->withworks_error ?: '',
                 'creator'     => $sampleOrder->creator?->name ?? '-',
+                // 계정이 지워졌어도 그때 누구였는지는 적어 둔 이름으로 남는다
+                'requester'   => $sampleOrder->requester?->name ?: ($sampleOrder->requester_name ?: '-'),
                 'total_qty'   => (int) $sampleOrder->total_qty,
                 'total_amount'=> (int) $sampleOrder->total_amount,
             ],
@@ -167,6 +201,8 @@ class SampleOrderController extends Controller
     {
         $data = $request->validate([
             'patient_id'           => 'nullable|exists:patients,id',
+            'requester_id'         => 'nullable|exists:users,id',
+            'requester_name'       => 'nullable|string|max:100',
             'account_name'         => 'nullable|string|max:100',
             'recipient_name'       => 'required|string|max:100',
             'mobile'               => 'nullable|string|max:30',

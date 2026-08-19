@@ -70,25 +70,25 @@
 @php $curStatus = request('status'); @endphp
 
 {{-- ── 상태 탭 ── --}}
-<div class="ds-chips">
-  <a href="{{ route('prescription-consents.index', request()->except('status', 'page')) }}"
-     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $statusCounts->sum() }}</span>
-  </a>
-  @foreach($statuses as $key => $label)
-    <a href="{{ route('prescription-consents.index', array_merge(request()->except('status','page'), ['status' => $key])) }}"
-       class="ds-chip {{ $curStatus === $key ? 'active' : '' }}">
-      {{ $label }} <span class="ds-chip-count">{{ $statusCounts[$key] ?? 0 }}</span>
-    </a>
-  @endforeach
-</div>
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+
 
 {{-- ── 검색 필터 ── --}}
 <form method="GET" action="{{ route('prescription-consents.index') }}" class="ds-filter-card">
-  @if($curStatus)
-    <input type="hidden" name="status" value="{{ $curStatus }}">
-  @endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $statusCounts->sum() }})</option>
+        @foreach($statuses as $key => $label)
+          <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
+            {{ $label }}@if(($statusCounts[$key] ?? 0) > 0) ({{ $statusCounts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"

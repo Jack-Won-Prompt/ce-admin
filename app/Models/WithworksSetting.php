@@ -23,19 +23,29 @@ class WithworksSetting extends Model
         self::MODE_PROD => '운영 (위드웍스)',
     ];
 
-    /** 위드웍스로 넘기는 판매 유형 */
-    public const SO_TYPE_EUD = '5001';
+    /**
+     * 위드웍스로 넘기는 판매 유형 — 처음 열었을 때 채워 둘 값이다.
+     *
+     * 코드는 위드웍스 code_list 가 정한다. 2026-08-18 개편으로 5000·6000번대가 지워지고
+     * 1500·1600번대가 그 자리를 받았다 — 판매 1501 · 샘플 1601 · 반품 1505(샘플 1605).
+     * 값은 설정 화면에서 적어 넣는다. 여기 있는 것은 첫 화면을 빈칸으로 두지 않기 위한
+     * 출발점일 뿐이다.
+     */
+    public const SO_TYPE_EUD = '1501';
 
     /**
-     * 되돌리는 주문의 판매유형 — 셋을 따로 둔다.
+     * 되돌리는 주문의 판매유형 — 종류마다 따로 둔다.
      *
      * 창고가 하는 일이 셋 다 다르다. 반품은 수거해서 넣고, 교환은 넣었다가 다시 내보내고,
      * 취소는 아무것도 움직이지 않는다. 한 코드로 묶으면 창고 담당자가 비고를 읽어야
      * 무엇을 할지 알 수 있다.
+     *
+     * 취소·교환은 위드웍스에 아직 코드가 없어 비워 둔다. 없는 코드로 보내면 저쪽이
+     * 거절한다 — 코드가 생기면 설정 화면에서 적어 넣으면 된다.
      */
-    public const SO_TYPE_EUD_CANCEL   = '5004';
-    public const SO_TYPE_EUD_RETURN   = '5005';
-    public const SO_TYPE_EUD_EXCHANGE = '5006';
+    public const SO_TYPE_EUD_CANCEL   = '';
+    public const SO_TYPE_EUD_RETURN   = '1505';
+    public const SO_TYPE_EUD_EXCHANGE = '';
 
     protected $fillable = [
         'mode',

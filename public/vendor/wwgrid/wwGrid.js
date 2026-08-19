@@ -27,7 +27,12 @@ class GridModal {
   open(opts) {
     this.close();
     const { title, width = 480, height = 420, items, render, onSearch,
-            currentValue, onConfirm, popupTheme, anchor } = opts;
+            currentValue, onConfirm, popupTheme, anchor,
+            /* minChars: 이 글자 수 이상일 때만 찾으러 간다. 두 글자로 찾으면 수백 건이
+               쏟아져 고르지 못하고, 그 조회가 서버를 붙들어 다음 조회까지 늦춘다.
+               query: 창을 열 때 이미 적혀 있던 말. 열자마자 그대로 찾는다 —
+               방금 친 것을 창에서 또 치게 하지 않는다. */
+            minChars = 1, query = '' } = opts;
     this._onConfirm = onConfirm;
 
     /* anchor 를 주면 화면 한가운데가 아니라 그 자리 옆에 붙는다(팝오버).
@@ -73,7 +78,7 @@ class GridModal {
     if (render) {
       render(body, currentValue, done);
     } else if (onSearch) {
-      this._renderRemoteSearch(body, onSearch, currentValue, done);
+      this._renderRemoteSearch(body, onSearch, currentValue, done, minChars, query);
     } else if (items) {
       this._renderItemList(body, items, currentValue, done);
     }
@@ -92,13 +97,20 @@ class GridModal {
    * @param {*}           currentValue
    * @param {Function}    done      - (value, label) => void
    */
-  _renderRemoteSearch(body, onSearch, currentValue, done) {
+  _renderRemoteSearch(body, onSearch, currentValue, done, minChars = 1, query = '') {
+    const need = Math.max(1, minChars);
+    const hint = need > 1
+      ? `코드나 이름을 ${need}자 이상 입력하면 검색합니다.`
+      : '코드나 이름을 입력하면 검색합니다.';
+
     // ── 검색창 ──
     const searchWrap = document.createElement('div');
     searchWrap.className = 'cg-modal-search-wrap';
     const search = document.createElement('input');
     search.className = 'cg-modal-search';
-    search.placeholder = '코드 또는 이름으로 검색...';
+    search.placeholder = need > 1
+      ? `코드 또는 이름 ${need}자 이상 입력...`
+      : '코드 또는 이름으로 검색...';
     searchWrap.appendChild(search);
     body.appendChild(searchWrap);
 
@@ -110,7 +122,7 @@ class GridModal {
     // ── 목록 ──
     const list = document.createElement('div');
     list.className = 'cg-modal-list';
-    list.innerHTML = '<div class="cg-modal-hint">코드나 이름을 입력하면 검색합니다.</div>';
+    list.innerHTML = `<div class="cg-modal-hint">${hint}</div>`;
     body.appendChild(list);
 
     let _timer   = null;
@@ -164,10 +176,10 @@ class GridModal {
     search.addEventListener('input', () => {
       const q = search.value.trim();
       clearTimeout(_timer);
-      if (!q) {
+      if (q.length < need) {
         _seq++;
         status.textContent = '';
-        list.innerHTML = '<div class="cg-modal-hint">코드나 이름을 입력하면 검색합니다.</div>';
+        list.innerHTML = `<div class="cg-modal-hint">${hint}</div>`;
         return;
       }
       status.innerHTML = '<span style="color:#aaa;font-size:11px;">입력 중...</span>';
@@ -179,11 +191,17 @@ class GridModal {
       if (e.key === 'Enter') {
         e.preventDefault();
         const q = search.value.trim();
-        if (q) { clearTimeout(_timer); doSearch(q); }
+        if (q.length >= need) { clearTimeout(_timer); doSearch(q); }
       }
     });
 
-    setTimeout(() => search.focus(), 50);
+    // 이미 적혀 있던 말이 있으면 열자마자 그대로 찾는다
+    if (query) {
+      search.value = query;
+      if (query.trim().length >= need) doSearch(query.trim());
+    }
+
+    setTimeout(() => { search.focus(); search.select(); }, 50);
   }
 
   /** 내장 검색 가능 리스트 */

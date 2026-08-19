@@ -69,12 +69,13 @@ class OrderController extends Controller
             $ww = $o->withworks_so_no
                 ? trim($o->withworks_so_no . ($o->withworks_status_label ? ' · ' . $o->withworks_status_label : ''))
                 : '';
-            /* 거래 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류와 상태.
-               여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다. */
+            /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
+               여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
+               어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
+               정렬이 종류와 상태가 뒤엉킨 순서가 되어 쓸모가 없다. */
             $rt   = $o->returns->first();
             $deal = $rt
-                ? \App\Models\OrderReturn::TYPES[$rt->type] . ' · '
-                    . (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status)
+                ? \App\Models\OrderReturn::TYPES[$rt->type]
                     . ($o->returns->count() > 1 ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
                 : '판매';
 
@@ -82,6 +83,8 @@ class OrderController extends Controller
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
                 'deal'      => $deal,
+                // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
+                'deal_state' => $rt ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
                 'acc_type'  => $o->prescription?->accTypeLabel() ?? '-',
                 'patient'   => $o->patient?->name ?? '',
                 'product'   => $o->product_name ?? '',
@@ -93,7 +96,9 @@ class OrderController extends Controller
                 'so_type'   => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 'withworks' => $ww,
-                'created'   => $o->created_at->format('Y-m-d H:i'),
+                // 언제 팔았고 언제 되돌아왔는지. 둘 사이가 벌어진 건은 눈에 띄어야 한다.
+                'sold_at'   => $o->created_at->format('Y-m-d'),
+                'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',
             ];
         })->values();
 
@@ -134,7 +139,7 @@ class OrderController extends Controller
             'shipping_fee'            => 'nullable|numeric|min:0',
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
-            'so_type'                 => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
         $prescription = Prescription::findOrFail($request->prescription_id);
@@ -244,7 +249,7 @@ class OrderController extends Controller
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_recipient'      => 'nullable|string|max:100',
             'shipping_postcode'       => 'nullable|string|max:10',
-            'so_type'                 => ['nullable', 'string', Rule::in(Order::SALE_SO_TYPES)],
+            'so_type'                 => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
             'delivery_date'           => 'nullable|date',
         ]);
 

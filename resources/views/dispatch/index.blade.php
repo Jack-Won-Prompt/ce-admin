@@ -250,36 +250,25 @@
 
 @section('content')
 
-  {{-- 타입 칩 — Figma 174:1185: h31 · r999 · pad 6/10 · 12/700 · gap 8,
-       건수 배지는 16×16 정원 · 10/700. 아이콘은 개발이 넣은 것이라 칩 안에 그대로 남겼다. --}}
-  <div class="ds-chips type-tabs">
-    <a href="{{ route('dispatch.index', ['type'=>'virtual_account'] + request()->except('type','page')) }}"
-       class="ds-chip {{ $type==='virtual_account' ? 'active' : '' }}">
-      <i class="bx bx-credit-card"></i> 가상계좌 발행
-      <span class="ds-chip-count">{{ number_format($counts['virtual_account']) }}</span>
-    </a>
-    <a href="{{ route('dispatch.index', ['type'=>'tax_invoice'] + request()->except('type','page')) }}"
-       class="ds-chip {{ $type==='tax_invoice' ? 'active' : '' }}">
-      <i class="bx bx-receipt"></i> 세금계산서 발행
-      <span class="ds-chip-count">{{ number_format($counts['tax_invoice']) }}</span>
-    </a>
-    <a href="{{ route('dispatch.index', ['type'=>'cash_receipt'] + request()->except('type','page')) }}"
-       class="ds-chip {{ $type==='cash_receipt' ? 'active' : '' }}">
-      <i class="bx bx-money"></i> 현금영수증 발행
-      <span class="ds-chip-count">{{ number_format($counts['cash_receipt']) }}</span>
-    </a>
-    <a href="{{ route('dispatch.index', ['type'=>'nhis'] + request()->except('type','page')) }}"
-       class="ds-chip {{ $type==='nhis' ? 'active' : '' }}">
-      <i class="bx bx-paper-plane"></i> 청구 발송
-      <span class="ds-chip-count">{{ number_format($counts['nhis']) }}</span>
-    </a>
-  </div>
+  {{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+       고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
   {{-- 검색 필터 — Figma 174:1210: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
        9열 그리드에 검색어 2열 · 기간 2열 · 표시 건수 1열. 입력·버튼은 전역 규격(h32 · r8 · 13px). --}}
   <form method="GET" action="{{ route('dispatch.index') }}" class="ds-filter-card">
-    <input type="hidden" name="type" value="{{ $type }}">
     <div class="ds-filter-fields">
+      <div class="ds-filter-field">
+        {{-- 무엇을 보낸 것인지가 가장 크게 가른다 — 첫 칸에 둔다 --}}
+        <label class="ds-field-label">종류</label>
+        <select name="type" class="form-control form-select" onchange="this.form.submit()">
+          @foreach(['virtual_account' => '가상계좌 발행', 'tax_invoice' => '세금계산서 발행',
+                    'cash_receipt' => '현금영수증 발행', 'nhis' => '청구 발송'] as $k => $label)
+            <option value="{{ $k }}" {{ $type === $k ? 'selected' : '' }}>
+              {{ $label }} ({{ number_format($counts[$k]) }})
+            </option>
+          @endforeach
+        </select>
+      </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"

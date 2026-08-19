@@ -120,27 +120,26 @@
 @endphp
 
 {{-- ── 유형 탭 ── --}}
-<div class="ds-chips">
-  <a href="{{ route('documents.index', request()->except('type', 'page')) }}"
-     class="ds-chip {{ !$curType ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $totalAll }}</span>
-  </a>
-  @foreach($types as $key => $label)
-    <a href="{{ route('documents.index', array_merge(request()->except('type','page'), ['type' => $key])) }}"
-       class="ds-chip {{ $curType === $key ? 'active' : '' }}">
-      {{ $label }} <span class="ds-chip-count">{{ $typeCounts[$key] ?? 0 }}</span>
-    </a>
-  @endforeach
-</div>
+{{-- 종류는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 {{-- ── 검색 필터 ── --}}
 {{-- Figma 248:2923 — 흰 카드(r12 · pad 12/16) 안 9열 그리드, 버튼은 우측 하단.
      실측 폭: 검색어 295(2열) · 기간 295(2열 = 135+~+135) · 표시 건수 140(1열) --}}
 <form method="GET" action="{{ route('documents.index') }}" class="ds-filter-card">
-  @if($curType)
-    <input type="hidden" name="type" value="{{ $curType }}">
-  @endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 종류가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">종류</label>
+      <select name="type" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $totalAll }})</option>
+        @foreach($types as $key => $label)
+          <option value="{{ $key }}" {{ $curType === $key ? 'selected' : '' }}>
+            {{ $label }}@if(($typeCounts[$key] ?? 0) > 0) ({{ $typeCounts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       {{-- 시안 248:2923 Frame 48101591 — 안내글은 'ㆍ'(U+318D)로 이은 한 덩어리 '파일명ㆍ환자명' 이다.
@@ -166,9 +165,10 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    {{-- 시안 248:2923 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
-         조건이 없을 때도 같은 라우트(유형 탭만 유지)로 되돌아가는 링크라 조건만 걷었다. --}}
-    <a href="{{ route('documents.index', array_filter(['type' => $curType])) }}" class="ds-btn">초기화</a>
+    {{-- 시안 248:2923 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다(조건 없이).
+         되돌아갈 자리는 라우트 맨 앞이다 — main 이 '유형'을 상단 칩에서 검색 필터 안으로
+         옮겼으므로(커밋 7a13e0a) 초기화가 유형도 함께 비우는 것이 맞다. --}}
+    <a href="{{ route('documents.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
   </div>
 </form>
@@ -502,19 +502,12 @@
       }, ...grid.getData()]);
     }
 
-    // 유형 탭 건수 +1 (전체 탭 포함)
-    document.querySelectorAll('.ds-chip').forEach(function (tab) {
-      const href = tab.getAttribute('href') || '';
-      const isAll = !/[?&]type=/.test(href);
-      if (!isAll && !href.includes('type=' + doc.type)) return;
-      let cnt = tab.querySelector('.ds-chip-count');
-      if (!cnt) {
-        cnt = document.createElement('span');
-        cnt.className = 'ds-chip-count';
-        cnt.textContent = '0';
-        tab.appendChild(cnt);
-      }
-      cnt.textContent = String((parseInt(cnt.textContent, 10) || 0) + 1);
+    /* 종류 칸의 건수도 함께 올린다 — 방금 만든 서류가 목록에는 있는데 건수는 그대로면
+       무엇이 맞는지 알 수 없다. 「전체」와 그 종류 둘을 올린다. */
+    document.querySelectorAll('select[name="type"] option').forEach(function (opt) {
+      if (opt.value !== '' && opt.value !== doc.type) return;
+      opt.textContent = opt.textContent.replace(/\((\d+)\)\s*$/, (m, n) => '(' + (parseInt(n, 10) + 1) + ')').trim();
+      if (!/\(\d+\)$/.test(opt.textContent)) opt.textContent = opt.textContent.trim() + ' (1)';
     });
   }
 })();

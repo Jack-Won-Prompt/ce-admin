@@ -1,6 +1,8 @@
 {{-- 교환·반품·취소 접수 — 목록 옆 탭에서 그대로 쓴다.
-     원 주문은 셀렉트에 통째로 붓지 않고 찾아서 고른다. 주문이 쌓이면 셀렉트로는
-     찾을 수 없고, 목록 밖의 주문은 아예 고를 수도 없었다. --}}
+
+     세 자리를 처음부터 모두 보여 준다 — 찾는 자리, 적는 자리, 무엇을 되돌리는지 보는 자리.
+     예전에는 주문을 고르기 전까지 아래를 감췄는데, 무엇을 적어야 하는지 미리 볼 수 없어
+     고르고 나서야 준비가 안 된 것을 알게 됐다. --}}
 <style>
   .rto-wrap { padding: 14px 16px 18px; }
   .rto-sec { margin-bottom: 16px; }
@@ -9,49 +11,31 @@
   .rto-sec-hd .step { display: inline-flex; align-items: center; justify-content: center;
                       width: 18px; height: 18px; border-radius: 999px; background: var(--primary);
                       color: #fff; font-size: 11px; font-weight: 700; }
-  .rto-find { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .rto-find input { max-width: 320px; }
+  .rto-sec-hd .hint { margin-left: auto; font-size: 11.5px; font-weight: 500; color: var(--gray-700); }
 
-  /* 찾은 주문 — 골라야 다음으로 간다. 목록은 다른 화면과 같은 wwGrid 로 그린다.
-     상자(테두리·모서리·내부 스크롤)는 그리드의 .cg-wrap 이 갖는다 — 여기서 또 그리면 두 겹이 된다.
-     다만 레이아웃의 `.ds-grid-card .cg-wrap { border:0 }` 이 이 자리까지 걷어 간다.
-     그 규칙은 그리드가 카드 전체를 채울 때 이야기고, 이 목록은 폼 한가운데 놓인
-     작은 상자다. 테두리를 되돌려 준다(렌더로 확인 — 안 주면 상자가 아예 사라진다). */
-  /* 다섯 줄(머리 45.3 + 본문 41.8×5 + 테두리 2)까지만 서고 넘으면 상자 안에서 구른다.
-     .ds-grid-card .cg-wrap 이 전역에서 테두리를 걷어 가므로 여기서 도로 그린다. */
-  .rto-hits .cg-wrap { border: 1px solid var(--border); border-radius: 12px; max-height: 257px; }
-  .rto-hits .cg-cell-inner { cursor: pointer; }
-  .rto-hits .cg-cell-inner[data-col-name="order_no"] {
-    font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
-  /* 이미 되돌린 적이 있는 주문. 쓰던 호박색은 DS 밖 값이라 alert 계열로 옮겼다. */
-  .rto-hit-warn { color: var(--alert-500); font-weight: 700; }
-  /* 0건일 때는 그리드를 숨기므로 상자를 이쪽이 대신 그린다 */
-  .rto-empty { padding: 14px 12px; font-size: 12px; line-height: 19px; color: var(--gray-700);
-               text-align: center; border: 1px solid var(--border); border-radius: 12px; }
+  /* 찾는 자리 — 목록 화면의 검색 카드와 같은 규격 */
+  .rto-filter { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+                padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+                background: var(--gray-50); margin-bottom: 10px; }
+  .rto-fld { display: flex; flex-direction: column; gap: 4px; }
+  .rto-fld label { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .rto-fld input { height: 32px; width: 150px; }
+  .rto-fld.wide input { width: 190px; }
 
-  /* 고른 주문 */
-  .rto-picked { display: none; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px;
-                border: 1px solid var(--primary); background: var(--primary-light); border-radius: 8px; }
-  .rto-picked.on { display: flex; }
-  .rto-picked .no { font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
-  .rto-picked .meta { flex: 1; color: var(--gray-700); font-size: 12.5px; }
-
-  .rto-body { display: none; }
-  .rto-body.on { display: block; }
-
+  /* 물을 것을 한 줄에 늘어놓는다 — 종류·사유·주문번호·주문일. 줄이 나뉘면
+     아래로 눈이 오르내려야 하고, 무엇까지 적었는지 놓친다.
+     상세 사유만 아래에 넓게 둔다. 한 칸으로는 문장이 안 들어간다. */
   .rto-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
   .rto-f { display: flex; flex-direction: column; gap: 4px; }
   .rto-f.span2 { grid-column: span 2; }
-  .rto-f.span4 { grid-column: span 4; }
+  .rto-f.span4 { grid-column: 1 / -1; }
   .rto-f label { font-size: 12px; font-weight: 600; color: var(--gray-700); }
   .rto-note { font-size: 11.5px; color: var(--gray-700); }
   .rto-only { display: none; }
   .rto-only.on { display: flex; }
 
-  .rto-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;
-                 padding-top: 12px; border-top: 1px solid var(--border); }
-  @media (max-width: 1100px) { .rto-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-                               .rto-f.span4 { grid-column: span 2; } }
+  /* 좁은 화면에서는 한 줄을 고집하지 않는다 — 칸이 눌려 글자가 안 보이는 편이 나쁘다 */
+  @media (max-width: 1100px) { .rto-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 
 <form method="POST" action="{{ route('order-returns.store') }}" class="rto-wrap" id="rtoForm">
@@ -60,96 +44,89 @@
 
   {{-- ① 원 주문 찾기 --}}
   <div class="rto-sec">
-    <div class="rto-sec-hd"><span class="step">1</span> 원 주문</div>
-    <div class="rto-find">
-      <input type="text" id="rtoQ" class="form-control"
-             placeholder="주문번호ㆍ환자명ㆍ제품명ㆍ판매주문번호">
-      <button type="button" class="ds-btn ds-btn-primary" onclick="rtoFind()">조회</button>
+    <div class="rto-sec-hd">
+      <span class="step">1</span> 원 주문 찾기
+      <span class="hint" id="rtoPickedNote">환자나 주문번호로 찾아 고르십시오</span>
+    </div>
+
+    <div class="rto-filter">
+      <div class="rto-fld"><label>환자</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="rtoName" class="form-control" maxlength="50" placeholder="이름">
+          {{-- 이름만 적어 넣게 두면 동명이인을 가릴 수 없다. 고르면 생년월일·전화번호가
+               함께 채워져 그다음 조회가 한 사람으로 좁혀진다. --}}
+          <button type="button" class="ds-btn" style="flex-shrink:0;"
+                  id="rtoPatientBtn" onclick="rtoPickPatient(this)">조회</button>
+        </div></div>
+      <div class="rto-fld"><label>생년월일</label>
+        <input type="date" id="rtoBirth" class="form-control"></div>
+      <div class="rto-fld"><label>전화번호</label>
+        <input type="text" id="rtoPhone" class="form-control" maxlength="20" placeholder="010-0000-0000"></div>
+      <div class="rto-fld wide"><label>주문번호</label>
+        <input type="text" id="rtoNo" class="form-control" maxlength="50" placeholder="주문번호ㆍ판매주문번호"></div>
+      <button type="button" class="ds-btn ds-btn-primary" id="rtoFindBtn" onclick="rtoFind(this)">검색</button>
       <span class="rto-note" id="rtoFindNote"></span>
-    </div>
-    <div class="rto-hits" id="rtoHits" style="display:none;">
-      <div id="rtoHitsGrid"></div>
-      <div class="rto-empty" id="rtoHitsEmpty" style="display:none;">맞는 주문이 없습니다. 검색어를 줄여 보십시오.</div>
-    </div>
-    <div class="rto-picked" id="rtoPicked">
-      <span class="no" id="rtoPickedNo"></span>
-      <span class="meta" id="rtoPickedMeta"></span>
-      <button type="button" class="ds-btn" onclick="rtoUnpick()">다시 고르기</button>
+      {{-- 끝내는 단추는 찾는 자리와 나란히 둔다. 아래에 두면 제품 목록이 길어질수록
+           멀어져, 접수하려고 화면을 끝까지 굴려 내려야 한다. --}}
+      <span style="margin-left:auto;display:flex;gap:8px;">
+        <button type="button" class="ds-btn" onclick="rtnPanel('list')">종료</button>
+        <button type="submit" class="ds-btn ds-btn-primary">접수</button>
+      </span>
     </div>
   </div>
 
-  {{-- ② 고른 뒤에만 나머지를 보여 준다. 주문 없이 채워 봐야 저장되지 않는다. --}}
-  <div class="rto-body" id="rtoBody">
-    <div class="rto-sec">
-      <div class="rto-sec-hd"><span class="step">2</span> 신청 내용</div>
-      <div class="rto-grid">
-        <div class="rto-f">
-          <label>종류</label>
-          <select name="type" id="rtoType" class="form-control form-select" required>
-            @foreach(\App\Models\OrderReturn::TYPES as $k => $label)
-              <option value="{{ $k }}">{{ $label }}</option>
-            @endforeach
-          </select>
+  {{-- ② 신청 내용 — 주문을 고르기 전에도 보인다 --}}
+  <div class="rto-sec">
+    <div class="rto-sec-hd"><span class="step">2</span> 신청 내용</div>
+    <div class="rto-grid">
+      <div class="rto-f">
+        <label>종류</label>
+        <select name="type" id="rtoType" class="form-control form-select" required>
+          @foreach(\App\Models\OrderReturn::TYPES as $k => $label)
+            <option value="{{ $k }}">{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="rto-f">
+        <label>사유</label>
+        <select name="reason_code" id="rtoReason" class="form-control form-select" required>
+          @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
+            <option value="{{ $k }}">{{ $r['label'] }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="rto-f">
+        {{-- 고른 주문을 신청 내용 안에서도 보이게 둔다 — 아래를 적는 동안 위를 다시
+             올려다보지 않아도 무엇에 대한 신청인지 알 수 있다. --}}
+        <label>주문번호</label>
+        <input type="text" id="rtoOrderNo" class="form-control" readonly
+               style="background:var(--gray-50);" placeholder="주문을 고르면 채워집니다">
+      </div>
+      <div class="rto-f">
+        <label>주문일</label>
+        <input type="text" id="rtoOrderDate" class="form-control" readonly
+               style="background:var(--gray-50);" placeholder="—">
+      </div>
+      <div class="rto-f span4" id="rtoPreShipWrap" style="display:none;">
+        {{-- 아직 나가지 않은 주문이면 종류와 상관없이 판매주문 취소로 나간다.
+             접수하고 나서 알면 늦다 — 고르는 자리에서 미리 알린다. --}}
+        <div style="padding:8px 12px;background:var(--primary-light);border:1px solid var(--primary-200);
+                    border-radius:8px;font-size:12px;color:var(--primary);">
+          아직 나가지 않은 주문입니다 — 창고에는 <b>판매주문 취소</b>로 넘어갑니다.
+          되돌려 받을 물건이 없어 수거·검수 단계를 두지 않습니다.
+          발행된 계산서·현금영수증이 있으면 함께 취소하고, 청구 대상에서도 뺍니다.
         </div>
-        <div class="rto-f">
-          <label>사유</label>
-          <select name="reason_code" id="rtoReason" class="form-control form-select" required>
-            @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
-              <option value="{{ $k }}" data-burden="{{ $r['burden'] }}">{{ $r['label'] }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div class="rto-f">
-          <label>배송비 부담</label>
-          <select name="shipping_burden" id="rtoBurden" class="form-control form-select">
-            <option value="">사유에 따름</option>
-            @foreach(\App\Models\OrderReturn::BURDENS as $k => $label)
-              <option value="{{ $k }}">{{ $label }}</option>
-            @endforeach
-          </select>
-          <span class="rto-note" id="rtoBurdenNote"></span>
-        </div>
-        <div class="rto-f rto-only" id="rtoCollectWrap">
-          <label>수거 방법</label>
-          <select name="collect_method" class="form-control form-select">
-            <option value="">선택</option>
-            @foreach(\App\Models\OrderReturn::COLLECT_METHODS as $k => $label)
-              <option value="{{ $k }}">{{ $label }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div class="rto-f span4">
-          <label>상세 사유</label>
-          <input type="text" name="reason_text" class="form-control" maxlength="500"
-                 placeholder="고객이 말한 내용을 그대로 적어 두면 나중에 판단이 쉽습니다">
-        </div>
+      </div>
+      <div class="rto-f span4">
+        <label>상세 사유</label>
+        <input type="text" name="reason_text" class="form-control" maxlength="500"
+               placeholder="고객이 말한 내용을 그대로 적어 두면 나중에 판단이 쉽습니다">
       </div>
     </div>
 
     {{-- 교환 --}}
-    <div class="rto-sec rto-only" id="rtoExchangeSec" style="display:none;">
-      <div class="rto-sec-hd"><span class="step">3</span> 다시 보낼 것</div>
-      <div class="rto-grid">
-        <div class="rto-f span2">
-          <label>제품</label>
-          <input type="text" name="exchange_product" class="form-control" maxlength="200"
-                 placeholder="바꿔 보낼 제품(사이즈 등)">
-        </div>
-        <div class="rto-f">
-          <label>수량</label>
-          <input type="number" name="exchange_quantity" class="form-control" min="1">
-        </div>
-        <div class="rto-f span4">
-          <label>재배송지</label>
-          <input type="text" name="reship_address" id="rtoReship" class="form-control" maxlength="300"
-                 placeholder="비우면 원 주문 배송지로 보냅니다">
-        </div>
-      </div>
-    </div>
-
     {{-- 반품 · 취소 --}}
-    <div class="rto-sec rto-only" id="rtoRefundSec">
-      <div class="rto-sec-hd"><span class="step">3</span> 환불</div>
+    <div class="rto-only" id="rtoRefundSec" style="display:block;margin-top:12px;">
       <div class="rto-grid">
         <div class="rto-f">
           <label>환불 수단</label>
@@ -178,145 +155,186 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="rto-actions">
-      <button type="button" class="ds-btn" onclick="rtnPanel('list')">그만두기</button>
-      <button type="submit" class="ds-btn ds-btn-primary">접수</button>
+  {{-- ③ 주문 제품 — 무엇을 되돌리는지 보는 자리 --}}
+  <div class="rto-sec">
+    <div class="rto-sec-hd">
+      <span class="step">3</span> 주문 제품
+      <span class="hint" id="rtoItemNote">주문을 고르면 그 주문의 제품이 나옵니다</span>
     </div>
+    <div id="rtoItemGrid"></div>
   </div>
 </form>
 
+{{-- 스크립트는 본문이 아니라 스크립트 자리로 보낸다.
+     본문 안에 두면 레이아웃이 wwGrid 를 싣기 전에 돌아 「wwGrid is not defined」로 죽는다. --}}
+@push('scripts')
 <script>
 (function () {
-  const SEARCH_URL = @json(route('order-returns.orderSearch'));
-  const BURDENS    = @json(\App\Models\OrderReturn::BURDENS);
-  let picked = null;
+  const SEARCH_URL  = @json(route('order-returns.orderSearch'));
+  const PATIENT_URL = @json(route('order-returns.patientSearch'));
 
   const $ = (id) => document.getElementById(id);
+  let rows = [];      // 마지막 조회 결과
+  let picked = null;
 
-  /* 원 주문 찾기. 비워 두고 눌러도 최근 것을 보여 준다 — 방금 만든 주문을
-     되돌리는 일이 잦아 그때 검색어를 칠 일이 없다. */
-  window.rtoFind = async function () {
-    const q = $('rtoQ').value.trim();
+  /* 주문 제품은 처음부터 자리를 잡아 둔다. 빈 표라도 보이면 무엇이 채워질 자리인지
+     알 수 있고, 고른 뒤에 갑자기 나타나 아래가 밀리지 않는다. */
+  const itemGrid = new wwGrid({
+    el: $('rtoItemGrid'),
+    height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    columns: [
+      { header: '제품코드', name: 'product_code', width: 120 },
+      { header: '제품명',   name: 'product_name', width: 300 },
+      { header: '수량',     name: 'quantity',     width: 80,  align: 'right', editor: 'number' },
+      /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
+         다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
+      { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number' },
+      { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number' },
+    ],
+    data: [],
+  });
+  window.__rtoItemGrid = itemGrid;
+
+  /* 환자 조회 — 누른 칸 옆에 붙는 팝오버로 연다. 고르면 이름·생년월일·전화번호가
+     채워지고 곧바로 그 사람의 주문을 찾는다. */
+  const modal    = new GridModal();   // 환자 조회
+  /* 찾은 주문은 화면에 깔지 않고 검색 단추 옆에 띄운다. 고르고 나면 쓸 일이 없는
+     목록이라, 화면에 남겨 두면 아래 적는 자리를 계속 밀어낸다.
+     창을 나눠 둔다 — 환자 팝오버가 닫히면서 곧 열릴 결과 팝오버까지 닫지 않도록. */
+  const hitModal = new GridModal();
+  let pRows = {};
+
+  window.rtoPickPatient = function (btn) {
+    modal.open({
+      title: '환자 조회', width: 420, height: 320, mode: 'popover', anchor: btn,
+      onSearch: async (q) => {
+        const res = await fetch(PATIENT_URL + '?q=' + encodeURIComponent(q ?? ''), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const { rows } = await res.json();
+        pRows = {};
+        (rows ?? []).forEach(r => { pRows[r.id] = r; });
+        return (rows ?? []).map(r => ({
+          value: r.id,
+          label: r.name + (r.birth ? ' · ' + r.birth : ''),
+          sub:   r.phone || '연락처 없음',
+        }));
+      },
+      onConfirm: (v) => {
+        const r = pRows[v];
+        if (!r) return;
+        $('rtoName').value  = r.name;
+        $('rtoBirth').value = r.birth || '';
+        $('rtoPhone').value = r.phone || '';
+        rtoFind($('rtoFindBtn'));
+      },
+    });
+  };
+
+  /* 원 주문 찾기.
+     조건 없이 눌러도 최근 것을 보여 준다 — 방금 만든 주문을 되돌리는 일이 잦아
+     그때는 칠 검색어가 없다. */
+  window.rtoFind = async function (btn) {
+    const q = new URLSearchParams({
+      patient_name: $('rtoName').value.trim(),
+      birth_date:   $('rtoBirth').value,
+      phone:        $('rtoPhone').value.trim(),
+      order_no:     $('rtoNo').value.trim(),
+    });
+
     $('rtoFindNote').textContent = '찾는 중…';
     try {
-      const res = await fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
-        headers: { 'Accept': 'application/json' },
-      });
+      const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const { rows } = await res.json();
-      drawHits(rows);
-      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '';
+      rows = (await res.json()).rows ?? [];
+      picked = null;
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
+
+      /* 몇 건이 나오든 창을 띄운다. 한 건일 때만 조용히 앉히면 눌렀는데 아무 창도
+         안 뜬 것처럼 보이고, 무엇이 골라졌는지 확인할 자리도 없다.
+         없을 때도 띄운다 — 찾은 자리에서 「없다」고 알려 주는 편이 낫다. */
+      showHits(btn);
     } catch (e) {
+      // 지난 결과를 그대로 띄우면 방금 찾은 것으로 읽힌다
+      rows = [];
+      $('rtoFindNote').textContent = '찾지 못했습니다';
+      showHits(btn);
+    }
+  };
+
+  /* 다른 화면에서 주문번호를 들고 들어온 경우. 무엇을 되돌릴지는 이미 정해져 있으니
+     찾아서 그대로 앉힌다 — 고를 것이 없는데 창을 띄우면 한 번 더 누르게 한다.
+     그 주문이 아닌 것이 섞여 나오면 그때는 창을 띄워 고르게 둔다. */
+  window.rtoPreset = async function (orderNo) {
+    if (!orderNo) return;
+    $('rtoNo').value = orderNo;
+    const q = new URLSearchParams({ patient_name: '', birth_date: '', phone: '', order_no: orderNo });
+
+    $('rtoFindNote').textContent = '찾는 중…';
+    try {
+      const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      rows = (await res.json()).rows ?? [];
+      picked = null;
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
+
+      const only = rows.findIndex(r => r.order_no === orderNo);
+      if (only >= 0)            pick(only);
+      else if (rows.length === 1) pick(0);
+      else if (rows.length)     showHits();
+    } catch (e) {
+      rows = [];
       $('rtoFindNote').textContent = '찾지 못했습니다';
     }
   };
 
-  /* 목록은 다른 화면과 같은 wwGrid 로 그린다.
-     다만 이 <script> 는 레이아웃의 wwGrid.js 보다 먼저 실린다. 여기서 바로
-     new wwGrid 를 부르면 ReferenceError 로 이 IIFE 가 통째로 죽어 rtoFind·syncType
-     까지 사라진다. 그래서 처음 조회할 때 — 스크립트가 다 실린 뒤에 — 만든다. */
-  let hitsGrid = null;
-
-  function ensureHitsGrid() {
-    if (hitsGrid) return hitsGrid;
-
-    hitsGrid = new wwGrid({
-      el: $('rtoHitsGrid'),
-      // 숫자 높이 — 이 폼은 숨은 탭 안에서 만들어져 'fit' 은 상자가 무너진다.
-      // 머리행 45.3 + 본문행 41.8 × 5 = 254.3 에 테두리 두 줄을 더해 257px.
-      // (254 로는 3px 이 모자라 다섯 번째 줄에서 스크롤바가 났다.)
-      // 숫자를 주면 wwGrid 가 래퍼에 height 를 못박아(wwGrid.js:818) 한 건만 찾아도
-      // 257px 상자가 서서 168px 이 빈 흰칸으로 남는다. 숫자가 아니면 그 줄을 건너뛰므로
-      // 높이는 내용이 정하고, 다섯 줄 상한만 CSS 의 max-height 로 건다.
-      // 행 번호는 켠다 — 이 집 그리드 서른셋이 모두 켜 두었고, 바로 옆 탭의
-      // 목록(#rtnGrid)에도 있다. 한쪽만 없으면 탭을 오갈 때 표가 어긋나 보인다.
-      // 체크박스는 끈다 — pick() 은 행 하나만 받는다(여럿 고르는 시늉이 된다).
-      height: 'auto', editable: false, rowCheckbox: false, rowNumber: true,
-      toolbar: false, summary: false, footer: false,
-      columns: [
-        { header: '주문번호',     name: 'order_no',    width: 120, sortable: false },
-        { header: '환자명',       name: 'patient',     width: 90,  sortable: false },
-        { header: '제품명',       name: 'product',     sortable: false },
-        { header: '판매주문번호', name: 'so_no',       width: 130, sortable: false },
-        // align:'right' 는 이웃 목록(환불금액·총금액)이 쓰는 대로 적어 둔다.
-        // 지금 화면에서는 wwGrid.css:178 이 이 옵션을 시안값(왼쪽)으로 되돌린다.
-        { header: '금액',         name: 'amount_text', width: 100, align: 'right', sortable: false },
-        {
-          // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
-          header: '기존 접수', name: 'return_text', width: 90, sortable: false,
-          renderer: (v) => {
-            const el = document.createElement('span');
-            el.textContent = v ?? '';
-            if (v) el.className = 'rto-hit-warn';
-            return el;
-          },
-        },
-      ],
-      data: [],
+  /* 찾은 주문을 고르는 창. 환자명·주문번호·주문일만 보인다 — 고를 때 필요한 것은 그 셋이다. */
+  function showHits(btn) {
+    hitModal.open({
+      title: '주문 고르기 · ' + (rows.length ? rows.length + '건' : '없음'),
+      width: 420, height: 340,
+      mode: 'popover', anchor: btn || $('rtoFindBtn'),
+      items: rows.map((r, i) => ({
+        value: i,
+        label: r.patient + ' · ' + r.order_no,
+        sub:   [r.order_date, r.status, r.returns > 0 ? '접수 ' + r.returns + '건' : null]
+                 .filter(Boolean).join(' · '),
+      })),
+      onConfirm: (i) => pick(i),
     });
-
-    /* 한 번 눌러 고른다 — 지금까지 쓰던 손버릇 그대로다.
-       잘못 골라도 바로 옆 「다시 고르기」로 되돌린다. */
-    $('rtoHitsGrid').addEventListener('click', (e) => {
-      const cell = e.target.closest('[data-row-index]');
-      if (!cell) return;
-      const row = hitsGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-      if (row) pick(row);
-    });
-
-    return hitsGrid;
   }
 
-  function drawHits(rows) {
-    $('rtoHits').style.display = '';
+  function pick(i) {
+    picked = i;
+    const r = rows[i];
 
-    // 그리드에는 빈 상태가 없다 — 0건이면 그리드를 숨기고 안내문을 대신 보인다
-    const empty = !rows.length;
-    $('rtoHitsEmpty').style.display = empty ? '' : 'none';
-    $('rtoHitsGrid').style.display  = empty ? 'none' : '';
-    if (empty) return;
-
-    // 원본 아홉 필드를 그대로 둔 채 보여 줄 두 칸만 얹는다 — pick(r) 이 원본을 읽는다
-    ensureHitsGrid().setData(rows.map((r) => Object.assign({}, r, {
-      amount_text: (r.amount || 0).toLocaleString() + '원',
-      return_text: r.returns > 0 ? '접수 ' + r.returns + '건' : '',
-    })));
-  }
-
-  function pick(r) {
-    picked = r;
-    $('rtoOrderId').value = r.id;
-    $('rtoPickedNo').textContent = r.order_no;
-    $('rtoPickedMeta').textContent =
-      r.patient + ' · ' + r.product + ' · ' + (r.amount || 0).toLocaleString() + '원'
-      + (r.so_no ? ' · ' + r.so_no : '') + ' · ' + r.status;
-    $('rtoPicked').classList.add('on');
-    $('rtoHits').style.display = 'none';
-    $('rtoBody').classList.add('on');
+    $('rtoOrderId').value   = r.id;
+    $('rtoOrderNo').value   = r.order_no;
+    $('rtoOrderDate').value = r.order_date || '';
+    $('rtoPickedNote').textContent =
+      '고른 주문 ' + r.order_no + ' · ' + r.patient
+      + (r.so_no ? ' · ' + r.so_no : '') + ' · ' + r.status
+      + (r.returns > 0 ? ' · 접수 ' + r.returns + '건 있음' : '');
 
     // 환불 금액과 재배송지는 원 주문에서 끌어 온다 — 대개 그대로다
     if (!$('rtoRefundAmount').value) $('rtoRefundAmount').value = r.amount || '';
-    $('rtoReship').placeholder = r.address || '비우면 원 주문 배송지로 보냅니다';
-    syncType();
+
+    // 아직 나가지 않은 주문이면 무엇으로 나가는지 미리 알린다
+    $('rtoPreShipWrap').style.display = r.shipped ? 'none' : '';
+
+    itemGrid.setData(r.items ?? []);
+    $('rtoItemNote').textContent = (r.items?.length ?? 0) + '개 품목 · ' + r.order_no;
   }
 
-  window.rtoUnpick = function () {
-    picked = null;
-    $('rtoOrderId').value = '';
-    $('rtoPicked').classList.remove('on');
-    $('rtoBody').classList.remove('on');
-    $('rtoHits').style.display = '';
-    $('rtoQ').focus();
-  };
-
-  /* 종류에 따라 물을 것이 다르다. 취소는 보낸 물건이 없어 수거를 묻지 않고,
-     교환은 환불이 아니라 다시 보낼 것을 묻는다. */
+  /* 종류에 따라 물을 것이 다르다. */
   function syncType() {
     const t = $('rtoType').value;
-    $('rtoCollectWrap').classList.toggle('on', t !== 'cancel');
-    $('rtoExchangeSec').style.display = t === 'exchange' ? '' : 'none';
-    $('rtoRefundSec').style.display   = t === 'exchange' ? 'none' : '';
+    /* 교환은 따로 물을 것이 없다 — 무엇을 되돌리는지는 아래 주문 제품에 나와 있고,
+       바꿔 보낼 물건과 보낼 곳은 창고가 수거·검수를 마친 뒤 정해진다.
+       환불은 교환이 아닐 때만 묻는다. */
+    $('rtoRefundSec').style.display = t === 'exchange' ? 'none' : 'block';
     syncRefundMethod();
   }
 
@@ -326,23 +344,16 @@
     $('rtoAccountWrap2').classList.toggle('on', on);
   }
 
-  /* 사유가 정해지면 누가 무는지도 정해진다. 담당자마다 다르게 안내하지 않도록. */
-  function syncBurden() {
-    const opt = $('rtoReason').selectedOptions[0];
-    const b   = opt?.dataset.burden || '';
-    $('rtoBurdenNote').textContent = b ? '사유에 따라 ' + (BURDENS[b] ?? b) : '정해진 것이 없습니다';
-  }
-
   $('rtoType').addEventListener('change', syncType);
-  $('rtoReason').addEventListener('change', syncBurden);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
-  $('rtoQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } });
+  ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
+    $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } }));
 
   $('rtoForm').addEventListener('submit', (e) => {
     if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 고르십시오.'); }
   });
 
-  syncBurden();
   syncType();
 })();
 </script>
+@endpush

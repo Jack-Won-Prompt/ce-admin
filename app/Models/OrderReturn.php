@@ -21,8 +21,7 @@ class OrderReturn extends Model
     protected $fillable = [
         'receipt_no', 'order_id', 'type', 'status',
         'reason_code', 'reason_text', 'shipping_burden',
-        'collect_method', 'collect_tracking_no',
-        'exchange_product', 'exchange_quantity', 'reship_address',
+        'collect_tracking_no',
         'refund_method', 'refund_bank', 'refund_account', 'refund_holder',
         'refund_amount', 'refunded_at',
         'assigned_user_id', 'created_by',

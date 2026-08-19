@@ -64,23 +64,6 @@
   /* 시안 324:4656 Frame 48101550 — 카드 4장이 아니라 한 장이다.
      1568×75 · r12 · pad 12/0 · bg 흰색. 안에 폭이 같은 열 4개(h51 · pad 4/12 · gap 2 · 가운데 정렬)와
      열 사이 세로선 1px gray-200(0×51). */
-  .cb-summary { display:flex; align-items:stretch; flex-wrap:wrap;
-    padding:12px 0; border-radius:12px; background:var(--gray-0); }
-  .sum-card { flex:1 1 200px; min-width:0; min-height:51px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-    padding:4px 12px; }
-  .sum-card + .sum-card { border-left:1px solid var(--gray-200); }
-  /* 시안에는 아이콘이 없다. 개발이 넣은 것이라 지우지 않고,
-     36×36 색칠 사각형을 걷어 라벨 앞 12px 글리프로 줄여 라벨 줄(19) 안에 넣는다. */
-  .sum-card .sc-label { display:inline-flex; align-items:center; gap:4px;
-    font-size:12px; font-weight:700; line-height:19px; color:var(--gray-800); }
-  .sum-card .sc-icon  { display:inline-flex; font-size:12px; line-height:1; flex-shrink:0; }
-  .sum-card .sc-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
-  .sum-card.blue  .sc-icon { color:var(--primary); }
-  /* 초록·주황은 이 디자인에 없다 — 파랑 램프·회색·경고(빨강) 로만 구분한다 */
-  .sum-card.green .sc-icon { color:var(--primary-600); }
-  .sum-card.red   .sc-icon { color:var(--alert-500); }
-  .sum-card.gray  .sc-icon { color:var(--gray-500); }
 
   /* ── 즉시발행 탭 ── */
   /* 시안 324:6158 Frame 48101521 — 탭 본문 pad 16 · gap 24.
@@ -257,26 +240,9 @@
 
 @section('content')
 
-{{-- 요약 카드 — 시안 324:4656 Frame 48101550: 한 장짜리 카드, 열 4개 가운데 정렬, 열 사이 세로선.
-     빈값 기호는 시안이 하이픈 '-' 이다(잔여 포인트 x560 7×22 · 14/700). em dash 가 아니다. --}}
-<div class="cb-summary">
-  <div class="sum-card blue">
-    <div class="sc-label"><span class="sc-icon"><i class="bx bx-wallet"></i></span>잔여 포인트</div>
-    <div class="sc-val" id="balance-val">-</div>
-  </div>
-  <div class="sum-card green">
-    <div class="sc-label"><span class="sc-icon"><i class="bx bx-receipt"></i></span>이번 달 발행</div>
-    <div class="sc-val" id="month-count-val">-</div>
-  </div>
-  <div class="sum-card red">
-    <div class="sc-label"><span class="sc-icon"><i class="bx bx-x-circle"></i></span>이번 달 취소</div>
-    <div class="sc-val" id="month-cancel-val">-</div>
-  </div>
-  <div class="sum-card gray">
-    <div class="sc-label"><span class="sc-icon"><i class="bx bx-won"></i></span>이번 달 합계금액</div>
-    <div class="sc-val" id="month-amount-val">-</div>
-  </div>
-</div>
+{{-- 요약 4칸(잔여 포인트·이번 달 발행·취소·합계금액)은 두지 않는다. 화면을 열 때마다
+     팝빌을 두 번 더 부르면서도 그 숫자로 하는 일이 없었다 — 발행과 취소는 아래에서 한다.
+     포인트가 필요하면 팝빌에서 본다. --}}
 
 {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16). 라벨 위 · 컨트롤 아래, 9열 그리드.
      조회는 AJAX 라서 <form> 이 아니다(엔터로 페이지가 새로 뜨면 안 된다).
@@ -613,8 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-end').value   = fmtDate(today);
   document.getElementById('cancel-org-date').value = fmtDate(today);
   genMgtKey();
-  loadBalance();
-  loadMonthStats();
   loadHistory(1);
 });
 
@@ -655,56 +619,6 @@ function setIdType(type, btn) {
   const hints = { phone:'휴대폰번호 (010XXXXXXXX)', rrn:'주민번호 13자리', biz:'사업자등록번호 10자리' };
   input.placeholder = hints[type];
   input.value = '';
-}
-
-/* ── 잔여포인트 ── */
-async function loadBalance() {
-  try {
-    const res  = await fetch(`${CB_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
-    const data = await res.json();
-    document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '-';
-  } catch { document.getElementById('balance-val').textContent = '오류'; }
-}
-
-/* ── 월간 통계 (팝빌 + 처방전 합산) ── */
-async function loadMonthStats() {
-  const today = new Date();
-  const first = new Date(today.getFullYear(), today.getMonth(), 1);
-  const sd    = toApiDate(fmtDate(first));
-  const ed    = toApiDate(fmtDate(today));
-  const cn    = CORP_NUM.value;
-
-  try {
-    const [pbRes, ordRes] = await Promise.all([
-      fetch(`${CB_BASE}/search?corp_num=${cn}&start_date=${sd}&end_date=${ed}&per_page=500`, { headers: HEADERS }),
-      fetch(`${CB_BASE}/order-receipts?corp_num=${cn}&start_date=${sd}&end_date=${ed}`, { headers: HEADERS }),
-    ]);
-    const pbData  = pbRes.ok  ? await pbRes.json()  : { list: [], total: 0 };
-    const ordData = ordRes.ok ? await ordRes.json() : { list: [], total: 0 };
-
-    const pbList  = pbData.list  ?? [];
-    const ordList = ordData.list ?? [];
-
-    let totalAmt = 0, cancelCnt = 0;
-    pbList.forEach(r => {
-      if (r.tradeType === '취소거래') cancelCnt++;
-      else totalAmt += parseInt(r.totalAmount ?? 0);
-    });
-    ordList.forEach(r => {
-      if (r.status === 'cancelled') cancelCnt++;
-      else totalAmt += parseInt(r.amount ?? 0);
-    });
-
-    const totalCount = pbList.length + ordList.filter(r => r.status !== 'cancelled').length;
-    document.getElementById('month-count-val').textContent  = totalCount.toLocaleString();
-    document.getElementById('month-cancel-val').textContent = cancelCnt.toLocaleString();
-    document.getElementById('month-amount-val').textContent = totalAmt.toLocaleString() + '원';
-  } catch {
-    ['month-count-val','month-cancel-val','month-amount-val'].forEach(id =>
-      document.getElementById(id).textContent = '오류'
-    );
-  }
 }
 
 /* ── 현금영수증 즉시발행 ── */
@@ -756,8 +670,6 @@ async function issueCashbill() {
     showToast(`현금영수증 발행 완료! 승인번호: ${data.confirmNum ?? '확인중'}`, 'success', 6000);
     genMgtKey();
     loadHistory(1);
-    loadBalance();
-    loadMonthStats();
   } catch(e) {
     showToast('발행 실패: ' + e.message, 'danger', 7000);
   } finally {
@@ -900,7 +812,6 @@ async function syncFromPopbill() {
 
     showToast(`동기화 완료 — 저장 ${data.synced}건, 상태갱신 ${data.updated}건`, 'success', 5000);
     loadHistory(histPage);
-    loadMonthStats();
   } catch(e) {
     showToast('동기화 실패: ' + e.message, 'danger', 6000);
   } finally {
@@ -1268,7 +1179,6 @@ async function confirmRevoke() {
     closeModal('cancel-modal');
     showToast('취소 현금영수증이 발행되었습니다.', 'success', 5000);
     loadHistory(1);
-    loadMonthStats();
   } catch(e) {
     showToast('취소 실패: ' + e.message, 'danger', 7000);
   } finally {

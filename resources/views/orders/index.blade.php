@@ -13,8 +13,7 @@
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.status-tabs', title: '주문 상태 탭', body: '전체·대기·확정·배송중·배송완료·취소 탭으로 주문을 상태별 필터링합니다.' },
-  { selector: '.ds-filter-card', title: '검색 필터', body: '주문번호, 환자명, SO번호로 검색하거나 등록일자로 조회합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '상태·유형을 고르고 주문번호, 환자명, 제품명으로 찾습니다. 기간으로도 좁힐 수 있습니다.' },
   { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
@@ -51,10 +50,6 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* .status-tabs / .status-tab 은 예전 선택자다. 칩은 전역 .ds-chip 이 그리고,
-     이 이름은 도움말 투어가 가리키는 앵커로만 남긴다 — 별도 스타일은 주지 않는다.
-     (스타일을 남겨 두면 gap 6·radius 20·12.5px/600 이 전역 규격을 덮어쓴다.) */
-
   .order-number { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .5px; font-family: monospace; }
   .patient-name-cell { font-weight: 500; }
   .product-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -86,31 +81,27 @@ window.HELP_TOUR_STEPS = [
 @endphp
 
 {{-- 상태 칩 — Figma 148:5526: h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
-<div class="ds-chips status-tabs">
-  <a href="{{ route('orders.index', array_merge(request()->except('status','page'), [])) }}"
-     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $totalAll }}</span>
-  </a>
-  @foreach($statuses as $key => $meta)
-    <a href="{{ route('orders.index', array_merge(request()->except('status','page'), ['status' => $key])) }}"
-       class="ds-chip {{ $curStatus === $key ? 'active' : '' }}">
-      {{ $meta['label'] }}
-      @if(($statusCounts[$key] ?? 0) > 0)
-        <span class="ds-chip-count">{{ $statusCounts[$key] }}</span>
-      @endif
-    </a>
-  @endforeach
-</div>
+{{-- 상태는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 @php $curDeal = request('deal'); @endphp
 
 {{-- ── 검색 필터 ── --}}
 {{-- 검색 필터 — Figma 148:5526: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 · 기준/정렬 1열 --}}
 <form method="GET" action="{{ route('orders.index') }}" class="ds-filter-card">
-  @if($curStatus)
-    <input type="hidden" name="status" value="{{ $curStatus }}">
-  @endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $totalAll }})</option>
+        @foreach($statuses as $key => $meta)
+          <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
+            {{ $meta['label'] }}@if(($statusCounts[$key] ?? 0) > 0) ({{ $statusCounts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
@@ -121,10 +112,10 @@ window.HELP_TOUR_STEPS = [
       <input type="date" name="date" value="{{ request('date') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
-      {{-- 거래 구분 — 판매·교환·반품·취소.
+      {{-- 유형 — 판매·교환·반품·취소.
            칩으로 한 줄을 더 쓰면 상태 칩과 섞여 무엇이 무엇인지 헷갈린다.
            위쪽 칩은 진행 상태 하나만 두고, 나머지 갈래는 여기서 고른다. --}}
-      <label class="ds-field-label">거래</label>
+      <label class="ds-field-label">유형</label>
       <select name="deal" class="form-control form-select" onchange="this.form.submit()">
         <option value="">전체</option>
         @foreach(['sale' => '판매'] + \App\Models\OrderReturn::TYPES as $key => $label)
@@ -194,9 +185,7 @@ window.HELP_TOUR_STEPS = [
 
 {{-- ── 상세내용 탭 (기존 상세 페이지 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
 <div id="pnlDetail" style="display:none;padding:16px;">
-  <div style="margin-bottom:12px;">
-    <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
-  </div>
+  {{-- 「조회결과로」 단추는 두지 않는다 — 바로 위 탭줄의 「조회 결과」가 같은 일을 한다. --}}
   <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 상세 내용이 여기에 표시됩니다.</div>
   <div id="pnlDetailContent"></div>
 </div>
@@ -364,7 +353,7 @@ window.HELP_TOUR_STEPS = [
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
         // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.
-        header: '거래', name: 'deal', width: 130, sortable: true, align: 'center',
+        header: '유형', name: 'deal', width: 100, sortable: true, align: 'center',
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
@@ -372,18 +361,27 @@ window.HELP_TOUR_STEPS = [
           return el;
         },
       },
+      {
+        // 교환·반품·취소가 어디까지 왔는지. 판매 건은 빈칸이다 — 옆의 '상태'가 그 자리다.
+        header: '등록 상태', name: 'deal_state', width: 90, sortable: true, align: 'center',
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v ?? '';
+          if (v) { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
       { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
-      { header: '제품명',     name: 'product',   width: 160 },
-      { header: '수량',       name: 'qty',       width: 60,  editor: 'number', align: 'center' },
-      { header: '본인 부담금', name: 'copay',     width: 100, editor: 'number' },
-      { header: '배송비',     name: 'shipping',  width: 80,  editor: 'number' },
-      { header: '총금액',     name: 'total',     width: 100, editor: 'number' },
-      { header: '배송지',     name: 'address',   width: 180 },
+      /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
+         들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
+         왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
       { header: '처방유형',   name: 'acc_type',  width: 110, sortable: true, align: 'center' },
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },
-      { header: '생성일',     name: 'created',   width: 130, sortable: true },
+      {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
+      { header: '판매일자',   name: 'sold_at',   width: 100, sortable: true, align: 'center' },
+      { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창
         header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,

@@ -119,11 +119,9 @@
 
 @section('content')
 {{-- 유형 칩 — Figma 342:4037: h31 · r999 · pad 6/10 · 12px/700, 건수 배지 16×16 정원 --}}
-<div class="ds-chips">
-  <a href="{{ route('privacy-consents.index') }}" class="ds-chip {{ (request('type','all')==='all')?'active':'' }}">전체 <span class="ds-chip-count">{{ $counts['all'] }}</span></a>
-  <a href="{{ route('privacy-consents.index',['type'=>'catheter']) }}" class="ds-chip {{ request('type')==='catheter'?'active':'' }}">카테터 <span class="ds-chip-count">{{ $counts['catheter'] }}</span></a>
-  <a href="{{ route('privacy-consents.index',['type'=>'stoma']) }}" class="ds-chip {{ request('type')==='stoma'?'active':'' }}">장루 <span class="ds-chip-count">{{ $counts['stoma'] }}</span></a>
-</div>
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+
 
 {{-- 검색 필터 — Figma 342:4037 Frame 48101549: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
      9열 그리드 gap 16(위 스타일에서 덮음) → 열폭 139.6.
@@ -137,8 +135,19 @@
      '검색어' 라벨도 같은 이유다. 시안 라벨은 '검색어'(34×21) 뿐이지만
      '(성명/연락처/이메일)' 을 떼면 그 낱말이 화면에서 없어진다(플레이스홀더는 'ㆍ' 로 이어진 다른 문자열이다). --}}
 <form method="GET" action="{{ route('privacy-consents.index') }}" class="ds-filter-card">
-  <input type="hidden" name="type" value="{{ request('type','all') }}">
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 종류가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다.
+           main 커밋 7a13e0a 가 상단 칩을 걷고 이리로 옮겼다(시안 342:4037 은 칩줄을
+           그리지만 제품 판단을 따른다 — 디자이너 확인 대상). --}}
+      <label class="ds-field-label">종류</label>
+      <select name="type" class="form-control form-select" onchange="this.form.submit()">
+        @php $curT = request('type', 'all'); @endphp
+        <option value="all"      {{ $curT === 'all'      ? 'selected' : '' }}>전체 ({{ $counts['all'] }})</option>
+        <option value="catheter" {{ $curT === 'catheter' ? 'selected' : '' }}>카테터 ({{ $counts['catheter'] }})</option>
+        <option value="stoma"    {{ $curT === 'stoma'    ? 'selected' : '' }}>장루 ({{ $counts['stoma'] }})</option>
+      </select>
+    </div>
     {{-- 시안 342:4037 Frame 48101591 — 라벨은 '검색어' 한 마디고, 안내는 입력 안
          placeholder('성명ㆍ연락처ㆍ이메일')가 맡는다. 295×61. --}}
     <div class="ds-filter-field span-2">

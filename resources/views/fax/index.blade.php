@@ -81,25 +81,6 @@
      칸 사이에 0×51 세로 구분선 1px --gray-200 이 두 줄 있다.
      칸 높이 51 = pad 4 + 43 + pad 4, 43 = 라벨 19 + gap 2 + 값 22.
      taxinvoice/index.blade.php 의 .ti-summary 와 같은 컴포넌트라 값도 같이 맞춘다. */
-  .fax-summary { display:flex; align-items:stretch; background:var(--gray-0); border-radius:12px; padding:12px 0; }
-  @media(max-width:700px){ .fax-summary { flex-wrap:wrap; } .sum-card { flex-basis:40%; } }
-  .sum-card { flex:1 1 0; min-width:0; padding:4px 12px; display:flex; align-items:center; justify-content:center; gap:12px; }
-  .sum-card + .sum-card { border-left:1px solid var(--gray-200); }
-  /* 아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다(taxinvoice 와 같은 36×36) */
-  .sum-card .sc-icon {
-    width:36px; height:36px; border-radius:8px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:16px;
-  }
-  .sum-card .sc-text  { min-width:0; text-align:center; }
-  .sum-card .sc-label { font-size:12px; font-weight:700; line-height:19px; color:var(--gray-800); margin-bottom:2px; }
-  /* '오늘 발송 (성공)' 은 시안에서 두 조각이다 — 앞은 12/700 #333940, 뒤는 12/500 #656C74 */
-  .sum-card .sc-label-sub { font-weight:500; color:var(--gray-600); }
-  .sum-card .sc-val   { font-size:14px; font-weight:700; line-height:22px; color:var(--primary); }
-  /* 클래스 이름(blue/green/gray)은 개발 코드가 쓰던 그대로 두고 색만 DS 토큰으로 옮겼다.
-     시안에 초록이 없어 green 도 primary 계열을 쓴다. */
-  .sum-card.blue  .sc-icon { background:var(--primary-50);  color:var(--primary-500); }
-  .sum-card.green .sc-icon { background:var(--primary-100); color:var(--primary-600); }
-  .sum-card.gray  .sc-icon { background:var(--gray-100);    color:var(--gray-500); }
 
   /* ── 발송 폼 판 ──
      시안 Frame 48101521 — 탭바와 같은 흰 카드 안, pad 16 · gap 24 세로.
@@ -379,32 +360,9 @@
 
 @section('content')
 
-{{-- 요약 카드 — 시안 Frame 48101550 은 흰 카드 한 장 안에 칸 셋을 세로 구분선으로 나눈다.
-     아이콘은 시안에 없지만 개발에서 넣은 것이라 칸 안에 그대로 둔다.
-     빈값 기호는 시안이 하이픈 '-' 이다(324:10697 잔여 포인트 x625 7×22 · 14/700). em dash 가 아니다. --}}
-<div class="fax-summary">
-  <div class="sum-card blue">
-    <div class="sc-icon"><i class="bx bx-wallet"></i></div>
-    <div class="sc-text">
-      <div class="sc-label">잔여 포인트</div>
-      <div class="sc-val" id="balance-val">-</div>
-    </div>
-  </div>
-  <div class="sum-card green">
-    <div class="sc-icon"><i class="bx bx-check-circle"></i></div>
-    <div class="sc-text">
-      <div class="sc-label">오늘 발송 <span class="sc-label-sub">(성공)</span></div>
-      <div class="sc-val" id="today-ok-val">-</div>
-    </div>
-  </div>
-  <div class="sum-card gray">
-    <div class="sc-icon"><i class="bx bx-history"></i></div>
-    <div class="sc-text">
-      <div class="sc-label">이번 달 발송</div>
-      <div class="sc-val" id="month-total-val">-</div>
-    </div>
-  </div>
-</div>
+{{-- 요약 3칸(잔여 포인트·오늘 발송·이번 달 발송)은 두지 않는다. 화면을 열 때마다
+     팝빌을 세 번 더 부르면서도 그 숫자로 하는 일이 없었다 — 보낸 것은 아래 내역에서 본다.
+     포인트가 필요하면 팝빌에서 본다. --}}
 
 {{-- ── 검색 카드와 결과바는 그리드 카드 바깥·탭바 위다.
      시안 324:10697(전송 내역)·324:11379(팩스 발송) 둘 다 이 두 줄을 그대로 두고
@@ -681,11 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-start').value = fmtDate(ago30);
   document.getElementById('f-end').value   = fmtDate(today);
 
-  loadBalance();
   loadSenderNumbers();
   initDropZone();
   loadHistory(1);
-  loadTodayStats();
 });
 
 function fmtDate(d) {
@@ -694,16 +650,6 @@ function fmtDate(d) {
     String(d.getDate()).padStart(2,'0');
 }
 function toApiDate(v) { return v.replace(/-/g,''); }
-
-/* ── 잔여포인트 ── */
-async function loadBalance() {
-  try {
-    const res = await fetch(`${FAX_BASE}/balance?corp_num=${CORP_NUM.value}`, { headers: HEADERS });
-    const data = await res.json();
-    document.getElementById('balance-val').textContent =
-      typeof data.balance === 'number' ? data.balance.toLocaleString() + ' P' : '-';
-  } catch { document.getElementById('balance-val').textContent = '오류'; }
-}
 
 /* ── 발신번호 로드 ── */
 async function loadSenderNumbers() {
@@ -721,23 +667,6 @@ async function loadSenderNumbers() {
   } catch {
     sel.innerHTML = '<option value="">로드 실패</option>';
   }
-}
-
-/* ── 오늘 통계 ── */
-async function loadTodayStats() {
-  const today = toApiDate(fmtDate(new Date()));
-  try {
-    const res  = await fetch(`${FAX_BASE}/search?corp_num=${CORP_NUM.value}&start_date=${today}&end_date=${today}&per_page=1`, { headers: HEADERS });
-    const data = await res.json();
-    document.getElementById('today-ok-val').textContent = data.total ?? 0;
-  } catch { document.getElementById('today-ok-val').textContent = '-'; }
-
-  const firstDay = fmtDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)).replace(/-/g,'');
-  try {
-    const res  = await fetch(`${FAX_BASE}/search?corp_num=${CORP_NUM.value}&start_date=${firstDay}&end_date=${today}&per_page=1`, { headers: HEADERS });
-    const data = await res.json();
-    document.getElementById('month-total-val').textContent = data.total ?? 0;
-  } catch { document.getElementById('month-total-val').textContent = '-'; }
 }
 
 /* ── 수신자 관리 ── */
@@ -873,9 +802,7 @@ async function sendFax() {
     selectedFiles = [];
     renderFileList();
     loadHistory(1);
-    loadBalance();
-    loadTodayStats();
-    // 30초 후 자동 동기화 (전송 결과 반영)
+        // 30초 후 자동 동기화 (전송 결과 반영)
     setTimeout(() => syncPending(), 30000);
   } catch(e) {
     showToast('전송 실패: ' + e.message, 'danger', 6000);

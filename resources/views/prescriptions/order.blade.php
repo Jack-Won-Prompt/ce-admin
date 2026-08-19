@@ -74,6 +74,20 @@
 
 @push('styles')
 <style>
+  /* 이전·다음으로 처방전을 넘길 때 흰 화면이 번쩍이지 않게 한다.
+     브라우저가 지금 보이는 화면을 붙들고 있다가 다음 화면이 준비되면 겹쳐 바꾼다 —
+     화면은 그대로 두고 내용만 바뀐 것처럼 보인다. 이동 자체는 예전과 같은 진짜
+     이동이라, 화면 안의 상태는 새로 짜인다(반쯤 갈아 끼운 화면이 남지 않는다).
+     지원하지 않는 브라우저는 이 규칙을 그냥 무시하고 예전처럼 넘어간다. */
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: .16s; }
+  /* 뷰어는 넘겨도 자리와 크기가 같다 — 따로 이름을 줘 그 자리에서 바뀌게 한다 */
+  #viewerCol { view-transition-name: rx-viewer; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  }
+
   /* 좌우 배치 — 시안 137:350. 뷰어 360 고정, 사이 간격 12 */
   .order-layout { display: grid; grid-template-columns: 360px 1fr; gap: 12px; align-items: start; }
   .order-layout.viewer-right { grid-template-columns: 1fr 360px; }
@@ -140,18 +154,8 @@
   .product-name { font-size: 13px; font-weight: 700; }
   .product-code { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .product-price { font-size: 13px; font-weight: 700; color: var(--primary); margin-left: auto; }
-  /* ── 제품 자동완성 드롭다운 ── */
+  /* 제품 검색은 팝오버로 연다 — 칸 옆에 붙는 창이라 여기서 줄 모양은 .pac-wrap 뿐이다 */
   .pac-wrap { position:relative; flex:1; min-width:0; }
-  .pac-drop { position:absolute; top:calc(100% + 2px); left:0; right:0; background:#fff; border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 24px rgba(0,0,0,.13); z-index:2000; max-height:340px; overflow-y:auto; display:none; }
-  .pac-drop.open { display:block; }
-  .pac-item { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .1s; }
-  .pac-item:last-child { border-bottom:none; }
-  .pac-item:hover, .pac-item.ac-active { background:var(--primary-light); }
-  .pac-item-icon { width:32px; height:32px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
-  .pac-item-body { flex:1; min-width:0; }
-  .pac-item-name { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pac-item-meta { font-size:10px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
-  .pac-item-price { font-size:12px; font-weight:700; color:var(--primary); white-space:nowrap; flex-shrink:0; }
   .pac-status { padding:10px 14px; font-size:12px; color:var(--text-muted); text-align:center; }
   .qty-control { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
   .qty-btn { width: 28px; height: 28px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: var(--transition); }
@@ -334,8 +338,6 @@
   .tab-tbl td { color:var(--text-primary); overflow:hidden; }
   .tab-tbl th { overflow:hidden; }
   .tab-tbl td.pac-cell { overflow:visible; position:relative; }
-  /* 드롭다운이 다른 행 위에 표시되도록 */
-  .tab-tbl tbody tr:has(.pac-drop.open) { z-index:100; position:relative; }
   .tab-tbl .tbl-sec td { background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:700; }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; }
   .modal-overlay.show { display: flex; }
@@ -377,7 +379,10 @@
   .so-type-opt input[type=radio] { display:none; }
   .so-type-opt span {
     display:inline-flex; align-items:center; gap:8px;
-    width:143px; height:32px; padding:0 12px; border-radius:8px; font-size:13px; font-weight:400;
+    /* 시안 폭은 143 이지만 「End User Direct」는 그 안에서 두 줄로 접힌다.
+       폭을 최소값으로 두고 글자만큼 늘린다 — 접힌 이름은 읽는 데 걸린다. */
+    min-width:143px; white-space:nowrap; height:32px; padding:0 12px; border-radius:8px;
+    font-size:13px; font-weight:400;
     border:1px solid var(--border); background:#fff; color:var(--gray-1000);
     transition:var(--transition); user-select:none;
   }
@@ -469,7 +474,7 @@
   #items-container .item-summary b.item-copay { color:var(--primary); }
   #items-container .item-sum-div { width:1px; height:8px; background:var(--gray-300); flex-shrink:0; }
   /* 오른쪽 삭제칸 64 — 시안 Frame 48101658: pad 0/16 · bg #F9FAFC · 왼쪽 1px 경계.
-     행 카드에 overflow:hidden 을 걸면 제품 검색 드롭다운(.pac-drop)이 잘려 모서리만 둥글린다. */
+     행 카드에 overflow:hidden 을 걸지 않는다 — 안쪽 그림자와 모서리가 어긋난다. */
   #items-container .item-del-col { flex:0 0 64px; display:flex; align-items:center; justify-content:center;
                                    padding:0 16px; background:var(--gray-50);
                                    border-left:1px solid var(--gray-200); border-radius:0 12px 12px 0; }
@@ -701,28 +706,8 @@
   .gd-btn i { font-size:12px; }
 
   /* ── 등록자 카드 (시안 137:652) ──
-     머리줄 없이 탭 스위처로 시작하고, 아래에 역할별 한 줄씩 쌓는다. */
-  /* 시안 148:279 — 카드 pad 12/16 · gap 12, 탭 스위처 h33 · r8 · pad 2 · bg gray-200 */
+     머리줄 없이 역할별 한 줄씩 쌓는다. */
   .rg-card { padding:12px 16px; display:flex; flex-direction:column; gap:12px; }
-  .rg-tabs { display:flex; padding:2px; background:var(--gray-200); border-radius:8px; }
-  .rg-tab  { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 0;
-             border:none; background:none; cursor:pointer;
-             border-radius:6px; font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
-  .rg-tab.active { background:var(--gray-0); color:var(--gray-1000); }
-  /* OCR 신뢰도 탭 — 막대 h8 · r999, 값 13/700 primary, 버튼 h28 · r8 · 12/500 */
-  .rg-ocr      { display:flex; flex-direction:column; gap:12px; }
-  .rg-ocr-meter{ display:flex; align-items:center; gap:12px; }
-  .rg-ocr-bar  { flex:1; min-width:0; height:8px; border-radius:999px; background:var(--gray-200); overflow:hidden; }
-  .rg-ocr-bar span { display:block; height:100%; border-radius:999px; background:var(--primary); }
-  .rg-ocr-val  { flex-shrink:0; font-size:13px; font-weight:700; line-height:21px; color:var(--primary); }
-  .rg-ocr-acts { display:flex; gap:6px; }
-  .rg-ocr-btn  { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
-                 height:28px; padding:0 12px; border-radius:8px;
-                 background:var(--gray-0); border:1px solid var(--gray-200);
-                 font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
-                 cursor:pointer; white-space:nowrap; }
-  .rg-ocr-btn:hover { background:var(--gray-50); }
-  .rg-ocr-btn i { font-size:12px; }
   .rg-rows { display:flex; flex-direction:column; }
   .rg-row  { display:flex; align-items:center; gap:8px; padding:8px; background:var(--gray-0);
              border-bottom:1px solid var(--gray-200); }
@@ -1018,7 +1003,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- 가상계좌 발급 --}}
-      <div id="vaButtonWrap">
+      {{-- 가상계좌 발급은 화면에 두지 않는다. 결제전송에서 카드·가상계좌·무통장입금을
+           함께 고르므로 같은 일을 하는 단추가 둘이 된다.
+           지우지는 않는다 — 발급된 계좌를 보여 주는 자리와 웹훅 처리가 여기에 매여 있고,
+           다시 꺼내야 할 때 display 만 되돌리면 된다. --}}
+      <div id="vaButtonWrap" style="display:none;">
       @if($prescription->order)
         @php
           $tp = $prescription->order->tossPayment;
@@ -1306,6 +1295,87 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
       </div>
 
+      {{-- 결제 전송 — 환자에게 「여기서 내십시오」를 보낸다.
+           카드·가상계좌는 우리 결제 페이지 주소를 보내고, 무통장입금은 우리 계좌를 적어 보낸다.
+           보낸 것과 낸 것은 아래 이력에 쌓인다 — 다시 보낼지 전화할지를 그걸 보고 정한다. --}}
+      <div id="payTriggerWrap" style="position:relative;">
+        {{-- 주문이 없어도 눌리게 둔다. 잠가 두면 눌러도 아무 일이 없어 고장으로 읽힌다 —
+             창을 열어 「주문을 먼저 만들라」고 그 자리에서 알려 주는 편이 낫다. --}}
+        <button class="pib-btn" id="btnPayTrigger" onclick="togglePayPopover(event)">
+          <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
+        </button>
+
+        <div id="payPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
+          <div id="payPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
+          </div>
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-won-sign" style="color:#fff;font-size:14px;"></i>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">결제 전송</span>
+            <button onclick="closePayPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
+          </div>
+
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            @unless($prescription->order)
+              <div style="padding:10px 12px;background:var(--alert-50);border:1px solid var(--alert-200);border-radius:var(--radius);font-size:12px;color:#B54708;">
+                아직 주문이 없습니다. <b>주문 연계</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
+              </div>
+            @endunless
+            <div style="display:flex;justify-content:space-between;font-size:12px;">
+              <span style="color:var(--text-muted);">결제 금액</span>
+              <b id="payAmount" style="color:var(--primary);">{{ number_format($prescription->order?->total_amount ?? 0) }}원</b>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">결제 방법</div>
+              <div style="display:flex;flex-direction:column;gap:4px;" id="payMethods">
+                @foreach(\App\Models\PaymentLink::METHODS as $code => $label)
+                  @php
+                    $hint = ['card' => '결제 페이지에서 카드로 냅니다',
+                             'virtual' => '결제 페이지에서 가상계좌를 발급받습니다',
+                             'bank' => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code];
+                  @endphp
+                  <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
+                    <input type="radio" name="pay_method" value="{{ $code }}" style="accent-color:var(--primary);"
+                           @checked($code === 'card')>
+                    <div style="min-width:0;flex:1;">
+                      <div style="font-weight:700;">{{ $label }}</div>
+                      <div style="font-size:10px;color:var(--text-muted);">{{ $hint }}</div>
+                    </div>
+                  </label>
+                @endforeach
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">받는 번호</div>
+              <input type="text" id="payMobile" class="form-control" style="font-size:12px;height:32px;"
+                     placeholder="010-XXXX-XXXX" data-phone
+                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+                알림톡으로 먼저 보내고, 막히면 문자로 이어 보냅니다.
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)"
+                    @unless($prescription->order) disabled @endunless>
+              <i class="fa-solid fa-paper-plane"></i> 전송
+            </button>
+
+            {{-- 보낸 것들 — 무엇을 언제 보냈고 냈는지. 다시 보낼지 전화할지는 이걸 보고 정한다 --}}
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">전송 이력</div>
+                <button type="button" class="rx-tpl-mini" onclick="loadPaymentLinks()">새로고침</button>
+              </div>
+              <div id="payHistory" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:11px;">
+                <div style="padding:10px;color:var(--text-muted);text-align:center;">불러오는 중…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- 현금영수증 --}}
       <div id="cashReceiptArea">
         @if($prescription->order?->cash_receipt_status === 'issued')
@@ -1331,11 +1401,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </span>
         </button>
         <div id="faxPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:580px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
-          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:var(--gray-800);border:1px solid var(--gray-800);transform:rotate(45deg);margin:3px auto 0;"></div>
+          {{-- 머리 색은 다른 창과 같은 주색이다. 여기만 검은색이라 팩스 창만 다른 곳에서
+               온 것처럼 보였다(알림톡의 노랑은 카카오 색이라 그대로 둔다). --}}
+          <div id="faxPopoverArrow" style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
           {{-- 헤더 --}}
-          <div style="background:var(--gray-800);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-fax" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
             <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">팩스 전송</span>
             <button onclick="closeFaxPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
@@ -1452,7 +1524,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 전송 버튼 (전체 너비) --}}
           <div style="padding:0 14px 14px;">
             <button id="btnFaxSend" onclick="sendFax()"
-                    style="width:100%;padding:8px;background:var(--gray-800);color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    style="width:100%;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fa-solid fa-paper-plane"></i> 팩스 전송
             </button>
           </div>
@@ -1626,14 +1698,25 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <span class="vw-rx">{{ $prescription->rx_number }}</span>
           <button type="button" class="vw-nav-btn" onclick="nextRecord()" title="다음 처방전"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
+        {{-- 볼 것이 있는지는 처방전 이미지가 아니라 문서 전체로 따진다.
+             이미지 없이 첨부(신분증·위임 서명 등)만 있는 처방전에서 크게 보기·원본보기가
+             통째로 숨어, 붙어 있는 파일을 열 길이 없었다. --}}
+        @php $firstDoc = $allDocsJson[0] ?? null; @endphp
         <div class="vw-acts">
           <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn" title="뷰어 위치 바꾸기">
             <span id="btnToggleViewerSideLabel">오른쪽으로</span>
           </button>
           {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다 --}}
           <button type="button" id="btnBigViewer" class="vw-btn" onclick="openBigViewer()" title="파일을 큰 창으로 봅니다 (창을 옮길 수 있고, 그동안에도 입력할 수 있습니다)"
-                  @if(!$prescription->image_url) style="display:none;" @endif>크게 보기</button>
-          <a id="viewerOpenBtn" class="vw-btn vw-btn-icon" href="{{ $prescription->image_url ?? '#' }}" target="_blank" title="원본보기" @if(!$prescription->image_url) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
+                  @if(!$firstDoc) style="display:none;" @endif>크게 보기</button>
+          {{-- 끌어 옮기고 키운 것을 한 번에 되돌린다. 그림 위 도구에도 같은 것이 있지만
+               거기까지 손을 옮겨야 했다 — 크게 보기 옆이 손이 이미 가 있는 자리다. --}}
+          <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
+                  title="처음으로 되돌리기 (배율·회전·위치)"
+                  @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-arrows-rotate"></i></button>
+          <a id="viewerOpenBtn" class="vw-btn vw-btn-icon"
+             href="{{ $prescription->image_url ?? ($firstDoc['url'] ?? '#') }}" target="_blank" title="원본보기"
+             @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
         </div>
       </div>
 
@@ -1711,7 +1794,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <span class="vw-card-title">문서 <b id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</b></span>
           <div class="vw-card-acts">
             <div style="position:relative;">
-              <input type="text" id="attachDocTypeSelect" value="주민등록증" autocomplete="off"
+              <input type="text" id="attachDocTypeSelect" value="신분증" autocomplete="off"
                      class="vw-btn-sm" style="width:120px;padding-right:26px;font-weight:400;"
                      oninput="_adtFilter(this.value)" onfocus="_adtOpen()" onblur="setTimeout(_adtClose,150)" />
               <span onmousedown="event.preventDefault();_adtToggle()"
@@ -1721,7 +1804,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--gray-0);border:1px solid var(--gray-200);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">위임장</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('주민등록증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">주민등록증</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('신분증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">신분증</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
@@ -1771,15 +1854,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
-      {{-- 등록자 카드 — 탭 두 개(시안 137:653 등록자 · 148:279 OCR 신뢰도) --}}
+      {{-- 등록자 카드 — 등록·검수·수정을 한 줄씩 (시안 137:653) --}}
       <div class="vw-card rg-card">
-        {{-- 탭 스위처 — 시안 296×33 · r8 · pad 2 · bg gray-200, 탭 146×29 · r6 · 13/500 --}}
-        <div class="rg-tabs" role="tablist">
-          <button type="button" class="rg-tab active" id="rgTabUploader"
-                  role="tab" aria-selected="true" onclick="rgTab('uploader')">등록자</button>
-          <button type="button" class="rg-tab" id="rgTabOcr"
-                  role="tab" aria-selected="false" onclick="rgTab('ocr')">OCR 신뢰도</button>
-        </div>
 
         {{-- 역할별 한 줄 (시안 137:658) --}}
         <div class="rg-rows" id="infoPanel-uploader">
@@ -1817,30 +1893,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
         </div>
         @endif
 
-        {{-- OCR 신뢰도 탭 (시안 148:279)
-             막대 252×8 · r999 · 바탕 gray-200 · 채움 primary, 값 13/700 primary.
-             버튼 145×28 · r8 · bd 1px gray-200 · 아이콘 12 · 12/500.
-             값과 동작은 이미 있는 것을 쓴다 —
-               display_confidence 접근자(Prescription.php), reanalyzeOCR(), resetOCR(). --}}
-        <div class="rg-ocr" id="infoPanel-ocr" style="display:none;">
-          @php $conf = $prescription->display_confidence; @endphp
-          <div class="rg-ocr-meter">
-            <div class="rg-ocr-bar" role="img"
-                 aria-label="OCR 신뢰도 {{ $conf !== null ? $conf . '%' : '측정 전' }}">
-              <span style="width:{{ $conf !== null ? max(0, min(100, $conf)) : 0 }}%;"></span>
-            </div>
-            <span class="rg-ocr-val">{{ $conf !== null ? $conf . '%' : '-' }}</span>
-          </div>
-          <div class="rg-ocr-acts">
-            <button type="button" class="rg-ocr-btn" id="btn-reanalyze" onclick="reanalyzeOCR()">
-              <i class="fa-solid fa-rotate"></i>OCR 재분석
-            </button>
-            <button type="button" class="rg-ocr-btn" onclick="resetOCR()"
-                    title="입력값을 원본 OCR 결과로 되돌립니다">
-              <i class="fa-solid fa-rotate-left"></i>초기화
-            </button>
-          </div>
-        </div>
+        {{-- OCR 신뢰도는 쓰지 않는다. 숫자가 무엇을 뜻하는지 사람마다 달리 읽었고,
+             높든 낮든 하는 일은 같았다 — 어차피 눈으로 보고 고친다. --}}
       </div>
 
       @if($prescription->review_memo)
@@ -2756,8 +2810,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    $soCur 는 아래 라디오 블록에서 정하므로 여기서 먼저 셈해 둔다. --}}
               @php
                 $soCur = $prescription->order?->so_type;
-                if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
-                    $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
+                    $soCur = \App\Models\Order::saleSoTypes()[0];
                 }
               @endphp
               <div id="soTypeBadge">
@@ -2776,13 +2830,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   /* 저장된 값이 지금 고를 수 있는 목록에 없으면(옛 1013 등) 첫 번째로
                      떨어뜨린다. 그러지 않으면 아무것도 선택되지 않은 채로 열린다. */
                   $soCur = $prescription->order?->so_type;
-                  if (!in_array($soCur, \App\Models\Order::SALE_SO_TYPES, true)) {
-                      $soCur = \App\Models\Order::SALE_SO_TYPES[0];
+                  if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
+                      $soCur = \App\Models\Order::saleSoTypes()[0];
                   }
                 @endphp
                 {{-- 반품 계열 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
                      두면 반품 유형으로 판매가 나간다. --}}
-                @foreach(\App\Models\Order::SALE_SO_TYPES as $code)
+                @foreach(\App\Models\Order::saleSoTypes() as $code)
                 @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
                 <label class="so-type-opt">
                   <input type="radio" name="so_type_radio" value="{{ $code }}"
@@ -3667,6 +3721,8 @@ async function rxTplSave() {
    파일을 큰 창으로 띄우되 화면은 계속 쓸 수 있어야 한다. 덮개를 두지 않고
    창만 띄운다 — 창 밖은 그대로 눌리고 입력된다. */
 let _bvZoom = 1, _bvRot = 0;
+/* 끌어 옮긴 거리. 창을 옮기는 것과 그림을 옮기는 것은 다른 일이라 따로 센다. */
+let _bvTx = 0, _bvTy = 0;
 let _bvBox  = null;   // 옮기거나 크기를 바꾼 위치를 기억해 다시 열 때 그대로 쓴다
 
 function _bvEl(id) { return document.getElementById(id); }
@@ -3691,13 +3747,18 @@ function openBigViewer() {
     img.src = url; img.style.display = '';
   }
 
-  // 처음 열 때는 화면 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
-  const box = _bvBox ?? {
-    left: 12,
-    top:  Math.round((window.innerHeight - Math.round(window.innerHeight * 0.9)) / 2),
-    w:    Math.round(window.innerWidth * 0.5),
-    h:    Math.round(window.innerHeight * 0.9),
-  };
+  /* 처음 열 때는 본문 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
+     화면 왼쪽 끝(12)에서 열었더니 사이드바를 덮어, 메뉴가 접힌 것처럼 보였다 —
+     본문이 시작하는 자리에서 연다. */
+  const box = _bvBox ?? (() => {
+    const left = Math.round(_bvContentLeft()) + 12;
+    return {
+      left,
+      top:  Math.round((window.innerHeight - Math.round(window.innerHeight * 0.9)) / 2),
+      w:    Math.max(360, Math.round((window.innerWidth - left) * 0.55)),
+      h:    Math.round(window.innerHeight * 0.9),
+    };
+  })();
   _bvApplyBox(box);
 
   win.style.display = 'flex';
@@ -3713,12 +3774,23 @@ function closeBigViewer() {
   _bvEl('bvImg').removeAttribute('src');
 }
 
+/* 본문이 시작하는 가로 자리 — 사이드바 오른쪽 끝이다.
+   탭(액자) 안에서는 사이드바가 숨으므로 0 이 된다. */
+function _bvContentLeft() {
+  const menu = document.getElementById('layoutMenu');
+  if (!menu || getComputedStyle(menu).display === 'none') return 0;
+  const r = menu.getBoundingClientRect();
+  return r.width > 0 ? r.right : 0;
+}
+
 /* 창이 화면 밖으로 나가지 않게 붙들면서 자리와 크기를 준다 */
 function _bvApplyBox(box) {
   const win = _bvEl('bigViewer');
   const w = Math.max(320, Math.min(box.w, window.innerWidth  - 16));
   const h = Math.max(240, Math.min(box.h, window.innerHeight - 16));
-  const left = Math.max(0, Math.min(box.left, window.innerWidth  - w));
+  // 왼쪽은 본문이 시작하는 자리까지만 — 더 왼쪽으로 밀면 사이드바를 덮는다
+  const minLeft = _bvContentLeft();
+  const left = Math.max(minLeft, Math.min(box.left, window.innerWidth - w));
   const top  = Math.max(0, Math.min(box.top,  window.innerHeight - h));
   win.style.left = left + 'px';
   win.style.top  = top  + 'px';
@@ -3730,7 +3802,8 @@ function _bvApplyBox(box) {
 function _bvApplyImg() {
   const img = _bvEl('bvImg');
   if (!img) return;
-  img.style.transform = `rotate(${_bvRot}deg) scale(${_bvZoom})`;
+  // 옮긴 뒤에 돌리고 키운다 — 순서를 바꾸면 키울수록 옮긴 거리까지 함께 늘어난다
+  img.style.transform = `translate(${_bvTx}px, ${_bvTy}px) rotate(${_bvRot}deg) scale(${_bvZoom})`;
   _bvEl('bvZoomLabel').textContent = Math.round(_bvZoom * 100) + '%';
 }
 
@@ -3743,7 +3816,7 @@ function bvRotate() { _bvRot = (_bvRot + 90) % 360; _bvApplyImg(); }
 
 /* 창 크기에 맞춰 되돌린다 */
 function bvFit() {
-  _bvZoom = 1; _bvRot = 0;
+  _bvZoom = 1; _bvRot = 0; _bvTx = 0; _bvTy = 0;
   const img  = _bvEl('bvImg');
   const body = _bvEl('bigViewerBody');
   if (img) {
@@ -3801,6 +3874,67 @@ function bvFit() {
   });
 })();
 
+/* 큰 창 안에서 그림을 끌어 옮기고 휠로 키운다 — 작은 뷰어와 같은 손놀림이다.
+   크게 본다는 것은 대개 어느 한 곳을 들여다본다는 뜻인데, 지금까지는 키우기만 하고
+   그 자리로 옮길 수가 없어 가운데만 볼 수 있었다.
+   PDF 는 건드리지 않는다 — 브라우저의 PDF 뷰어가 제 몫으로 한다. */
+(function () {
+  const body = document.getElementById('bigViewerBody');
+  const img  = document.getElementById('bvImg');
+  if (!body || !img) return;
+
+  let dragging = false, sx = 0, sy = 0, startX = 0, startY = 0;
+
+  img.addEventListener('pointerdown', (e) => {
+    if (img.style.display === 'none') return;
+    dragging = true;
+    sx = e.clientX; sy = e.clientY;
+    startX = _bvTx;  startY = _bvTy;
+    img.setPointerCapture(e.pointerId);
+    img.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  img.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    _bvTx = startX + (e.clientX - sx);
+    _bvTy = startY + (e.clientY - sy);
+    _bvApplyImg();
+  });
+
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    img.style.cursor = 'grab';
+    try { img.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  img.addEventListener('pointerup', stop);
+  img.addEventListener('pointercancel', stop);
+
+  // 두 번 누르면 옮긴 것만 되돌린다(배율은 그대로 둔다 — 다시 키우게 하지 않는다)
+  img.addEventListener('dblclick', () => { _bvTx = 0; _bvTy = 0; _bvApplyImg(); });
+
+  /* 휠은 커서가 가리키는 곳을 기준으로 키운다. 가운데 기준으로 키우면 보려던 곳이
+     화면 밖으로 밀려나 다시 끌어와야 한다. */
+  body.addEventListener('wheel', (e) => {
+    if (img.style.display === 'none') return;   // PDF 일 때는 그대로 둔다
+    e.preventDefault();
+
+    const before = _bvZoom;
+    const after  = Math.min(5, Math.max(0.2, before * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    if (after === before) return;
+
+    const rect = body.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width  / 2;
+    const cy = e.clientY - rect.top  - rect.height / 2;
+    const k  = after / before;
+    _bvTx = cx + (_bvTx - cx) * k;
+    _bvTy = cy + (_bvTy - cy) * k;
+    _bvZoom = after;
+    _bvApplyImg();
+  }, { passive: false });
+})();
+
 function switchViewerDoc(el) {
   const thumbs = Array.from(document.querySelectorAll('#docStrip .doc-thumb'));
   const idx = thumbs.indexOf(el);
@@ -3829,6 +3963,11 @@ function switchViewerDoc(el) {
   }
 
   if (openBtn) { openBtn.href = doc.url || '#'; openBtn.style.display = ''; }
+  // 처음에 볼 것이 없어 숨겨 두었더라도, 문서를 고른 이상 열 수 있어야 한다
+  ['btnBigViewer', 'btnResetView'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.style.display = '';
+  });
 
   // 크게 보기 창이 떠 있으면 고른 문서를 따라간다
   const bv = document.getElementById('bigViewer');
@@ -3908,7 +4047,7 @@ function _adtFilter(q) {
 function handleAttachUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '주민등록증': 'id_card',
+  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '신분증': 'id_card',
                       '등록신청서': 'registration_form', '결과지': 'test_result', '기타': 'other' };
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';
@@ -4147,20 +4286,16 @@ function renderItemsTable() {
           <div style="display:flex;gap:4px;align-items:center;">
             <input type="text" class="form-control item-display" id="pac-input-${idx}"
                    style="font-size:12px;min-width:0;flex:1;height:32px;padding:2px 7px;" autocomplete="off"
-                   placeholder="제품명 또는 코드 입력..."
+                   placeholder="제품명 또는 코드 입력 후 검색"
                    value="${displayName}"
-                   oninput="pacInput(${idx},this.value)"
-                   onkeydown="pacKey(event,${idx})"
-                   onfocus="if(this.value.trim())pacInput(${idx},this.value)"
-                   onblur="pacBlur(${idx})" />
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();pacSearchBtn(${idx});}" />
             <button type="button" class="btn btn-primary btn-sm" title="제품 검색"
                     style="flex-shrink:0;padding:0 8px;height:32px;"
                     onmousedown="event.preventDefault()"
-                    onclick="pacSearchBtn(${idx})">
+                    onclick="pacSearchBtn(${idx},this)">
               <i class="fa-solid fa-magnifying-glass" style="font-size:11px;"></i>
             </button>
           </div>
-          <div class="pac-drop" id="pac-drop-${idx}"></div>
         </div>
         <input type="hidden" class="item-name"  value="${escHtml(item.product_name||'')}" />
         <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
@@ -4284,7 +4419,7 @@ window.HELP_TOUR_STEPS = [
      5001 하나로 좁혀진 뒤로는 그 값이 늘 거절되어 주문이 아예 만들어지지 않았다
      (「The selected so type is invalid.」). */
   let currentSoType = document.querySelector('input[name="so_type_radio"]:checked')?.value
-                      || @json(\App\Models\Order::SALE_SO_TYPES[0]);
+                      || @json(\App\Models\Order::saleSoTypes()[0]);
 
   // ── 기존 주문 상태 ───────────────────────────────────
   @if($prescription->order)
@@ -4971,20 +5106,19 @@ window.HELP_TOUR_STEPS = [
         <div class="item-inline-field" style="flex:2 1 236px;min-width:0;">
           <div class="item-field-label">제품명</div>
           <div class="item-name-row">
+            {{-- 치는 대로 목록이 따라 내려오던 것은 걷어냈다. 두 글자에도 창고를 찾으러
+                 가느라 느렸고, 아래로 펼쳐진 목록이 다음 칸을 가렸다.
+                 이제 검색 단추로 창을 열어 세 글자 이상에서 찾는다. --}}
             <div class="pac-wrap" style="position:relative;">
               <input type="text" class="form-control item-display" id="pac-input-${idx}"
                      style="width:100%;font-size:13px;height:32px;" autocomplete="off"
-                     placeholder="제품명 또는 코드 입력"
+                     placeholder="제품명 또는 코드 입력 후 검색"
                      value="${displayName}"
-                     oninput="pacInput(${idx},this.value)"
-                     onkeydown="pacKey(event,${idx})"
-                     onfocus="if(this.value.trim())pacInput(${idx},this.value)"
-                     onblur="pacBlur(${idx})" />
-              <div class="pac-drop" id="pac-drop-${idx}"></div>
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();pacSearchBtn(${idx});}" />
             </div>
             <button type="button" class="btn btn-sm item-search-btn" title="제품 검색"
                     onmousedown="event.preventDefault()"
-                    onclick="pacSearchBtn(${idx})">
+                    onclick="pacSearchBtn(${idx},this)">
               <i class="fa-solid fa-magnifying-glass"></i> 검색
             </button>
           </div>
@@ -5910,6 +6044,8 @@ window.HELP_TOUR_STEPS = [
   function injectVaButton(orderId) {
     const wrap = document.getElementById('vaButtonWrap');
     if (!wrap || wrap.querySelector('#btnVaTrigger, #vaResultBadge')) return;
+    // 자리는 감춰 두었다. 여기서 다시 보이게 하면 감춘 뜻이 없어진다.
+    wrap.style.display = 'none';
     const vaUrl  = VA_ISSUE_URL_TPL.replace('__ID__', orderId);
     wrap.innerHTML = `
       <div id="vaNotIssuedWrap" style="position:relative;">
@@ -6106,10 +6242,123 @@ window.HELP_TOUR_STEPS = [
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+  }
+
+  /* ── 결제 전송 ─────────────────────────────────────────
+     만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러
+     둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
+  const PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
+  const PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
+  const PAY_CANCEL_URL = @json(url('payment-links'));
+
+  function togglePayPopover(e) {
+    e.stopPropagation();
+    const pop    = document.getElementById('payPopover');
+    const isOpen = pop.style.display !== 'none';
+    closeAllPopovers();
+    pop.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      placePayPopover();
+      const mobile = document.getElementById('f-mobile')?.value;
+      if (mobile) document.getElementById('payMobile').value = mobile;
+      loadPaymentLinks();
+    }
+  }
+
+  function closePayPopover() { document.getElementById('payPopover').style.display = 'none'; }
+
+  /* 팩스 창과 같은 사정이다 — 단추가 오른쪽에 있으면 창이 화면 밖으로 밀려 잘린다 */
+  function placePayPopover() {
+    const pop  = document.getElementById('payPopover');
+    const wrap = document.getElementById('payTriggerWrap');
+    if (!pop || !wrap || pop.style.display === 'none') return;
+
+    const gap  = 8;
+    const w    = pop.offsetWidth || 420;
+    const r    = wrap.getBoundingClientRect();
+    const over = (r.left + w) - (window.innerWidth - gap);
+    const left = over > 0 ? -Math.min(over, Math.max(0, r.left - gap)) : 0;
+
+    pop.style.left = left + 'px';
+    const arrow = document.getElementById('payPopoverArrow');
+    if (arrow) arrow.style.left = Math.min(Math.max(24 - left, 12), w - 26) + 'px';
+  }
+  window.addEventListener('resize', placePayPopover);
+
+  async function sendPaymentLink(btn) {
+    if (!PAY_STORE_URL) { showToast('주문을 먼저 만들어 주십시오.', 'warning'); return; }
+
+    const method = document.querySelector('input[name="pay_method"]:checked')?.value;
+    const mobile = document.getElementById('payMobile').value.trim();
+    if (!method) { showToast('결제 방법을 고르십시오.', 'warning'); return; }
+    if (!mobile) { showToast('받는 번호를 적어 주십시오.', 'warning'); return; }
+
+    BtnState.loading(btn, '보내는 중...');
+    try {
+      const res = await apiRequest(PAY_STORE_URL, 'POST', { method, mobile });
+      showToast(res.message || (res.success ? '보냈습니다.' : '보내지 못했습니다.'),
+                res.success ? 'success' : 'danger', 5000);
+      loadPaymentLinks();
+    } catch (e) {
+      showToast('보내지 못했습니다: ' + (e.message || ''), 'danger', 5000);
+    } finally {
+      BtnState.reset(btn);
+    }
+  }
+
+  async function loadPaymentLinks() {
+    const box = document.getElementById('payHistory');
+    if (!box) return;
+    if (!PAY_INDEX_URL) {
+      box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">주문을 만들면 이력이 쌓입니다.</div>';
+      return;
+    }
+    try {
+      const res  = await apiRequest(PAY_INDEX_URL, 'GET');
+      const rows = res.rows ?? [];
+      if (!rows.length) {
+        box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">보낸 것이 없습니다.</div>';
+        return;
+      }
+      box.innerHTML = rows.map(r => `
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border-light);">
+          <span style="font-weight:700;width:56px;flex-shrink:0;">${escHtml(r.method)}</span>
+          <span style="width:64px;flex-shrink:0;text-align:right;">${Number(r.amount).toLocaleString()}원</span>
+          <span style="flex:1;min-width:0;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escHtml(r.sent_at || '-')} · ${escHtml(r.channel)}${r.error ? ' · ' + escHtml(r.error) : ''}
+          </span>
+          <span style="font-weight:700;color:${r.status === 'paid' ? 'var(--primary)' : (r.status === 'failed' ? 'var(--danger)' : 'var(--gray-700)')};">
+            ${escHtml(r.status_label)}
+          </span>
+          ${r.open ? `<button type="button" class="rx-tpl-mini" onclick="copyPayLink('${escHtml(r.url)}')">주소</button>
+                      <button type="button" class="rx-tpl-mini" onclick="cancelPayLink(${r.id})">닫기</button>` : ''}
+        </div>`).join('');
+    } catch (e) {
+      box.innerHTML = '<div style="padding:10px;color:var(--danger);text-align:center;">이력을 불러오지 못했습니다.</div>';
+    }
+  }
+
+  /* 문자가 막히는 환자도 있다 — 주소를 복사해 다른 길로 보낼 수 있게 둔다 */
+  function copyPayLink(url) {
+    navigator.clipboard?.writeText(url)
+      .then(() => showToast('결제 주소를 복사했습니다.', 'success'))
+      .catch(() => showToast(url, 'info', 8000));
+  }
+
+  async function cancelPayLink(id) {
+    if (!await ceConfirm('이 결제 요청을 닫습니다. 환자가 주소를 눌러도 열리지 않습니다.',
+                         { tone: 'warning', confirmText: '닫기' })) return;
+    try {
+      const res = await apiRequest(`${PAY_CANCEL_URL}/${id}/cancel`, 'POST');
+      showToast(res.message || '닫았습니다.', res.success ? 'success' : 'danger');
+      loadPaymentLinks();
+    } catch (e) {
+      showToast('닫지 못했습니다.', 'danger');
+    }
   }
 
   // ── 카카오 알림톡 팝오버 ─────────────────────────────
@@ -6327,6 +6576,7 @@ window.HELP_TOUR_STEPS = [
     const opening = pop.style.display === 'none';
     pop.style.display = opening ? 'block' : 'none';
     if (opening) {
+      placeFaxPopover();
       const activeBtn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
       if (activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
         document.getElementById('nhisSearchPanel').style.display = 'block';
@@ -6335,6 +6585,30 @@ window.HELP_TOUR_STEPS = [
       refreshFaxSentBanner();
     }
   }
+
+  /* 팩스 창은 단추에 왼쪽 끝을 맞춘다. 단추가 화면 오른쪽에 있으면 580 폭이 그대로
+     창밖으로 밀려 나가 절반이 잘렸다 — 넘치는 만큼 왼쪽으로 당긴다.
+     꼬리는 단추를 계속 가리켜야 하므로 당긴 만큼 되밀어 준다. */
+  function placeFaxPopover() {
+    const pop  = document.getElementById('faxPopover');
+    const wrap = document.getElementById('faxTriggerWrap');
+    if (!pop || !wrap || pop.style.display === 'none') return;
+
+    const gap  = 8;
+    const w    = pop.offsetWidth || 580;
+    const r    = wrap.getBoundingClientRect();
+    const over = (r.left + w) - (window.innerWidth - gap);
+    const left = over > 0 ? -Math.min(over, Math.max(0, r.left - gap)) : 0;
+
+    pop.style.left = left + 'px';
+
+    const arrow = document.getElementById('faxPopoverArrow');
+    if (arrow) {
+      arrow.style.left = Math.min(Math.max(24 - left, 12), w - 26) + 'px';   // 창 안에 머무는 선에서
+    }
+  }
+
+  window.addEventListener('resize', placeFaxPopover);
 
   function closeFaxPopover() {
     document.getElementById('faxPopover').style.display = 'none';
@@ -6346,6 +6620,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('faxTriggerWrap').style.display = 'block';
     closeAllPopovers();
     document.getElementById('faxPopover').style.display = 'block';
+    placeFaxPopover();
     if (typeof refreshFaxSentBanner === 'function') refreshFaxSentBanner();
   }
 
@@ -7002,57 +7277,8 @@ window.HELP_TOUR_STEPS = [
     showToast('공단 청구는 요양기관정보마당에 직접 입력·업로드합니다.', 'info');
   }
 
-  /* ── 등록자 카드 탭 (시안 148:279) ──────────────────────
-     보여 줄 판만 바꾼다. 값은 서버가 이미 그려 놓았다. */
-  window.rgTab = function (which) {
-    const isOcr = which === 'ocr';
-    document.getElementById('infoPanel-uploader').style.display = isOcr ? 'none' : '';
-    document.getElementById('infoPanel-ocr').style.display      = isOcr ? '' : 'none';
-    for (const [id, on] of [['rgTabUploader', !isOcr], ['rgTabOcr', isOcr]]) {
-      const t = document.getElementById(id);
-      if (!t) continue;
-      t.classList.toggle('active', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-  };
 
   // ── OCR 재분석 ────────────────────────────────────────
-  async function reanalyzeOCR() {
-    const btn = document.getElementById('btn-reanalyze');
-    BtnState.loading(btn, '분석 중...');
-
-    const res = await apiRequest(`/prescriptions/${RX_NUMBER}/reanalyze`, 'POST');
-
-    if (res.success) {
-      const f = res.fields;
-      // 폼 필드 업데이트
-      document.getElementById('f-name').value     = f.patient_name_ocr || '';
-      // 재분석 결과는 서버에 이미 저장됐다. 화면엔 마스킹만 알리고 입력칸은 비워 둔다.
-      {
-        const rn = document.getElementById('f-resident');
-        rn.value = '';
-        rn.placeholder = f.resident_no_masked || 'XXXXXX-XXXXXXX';
-      }
-      document.getElementById('f-mobile').value   = f.mobile_ocr       || '';
-      document.getElementById('f-postcode').value       = f.postcode       || '';
-      document.getElementById('f-address').value        = f.address_ocr   || '';
-      document.getElementById('f-address-detail').value = f.address_detail || '';
-      document.getElementById('f-hospital').value = f.hospital_name    || '';
-      document.getElementById('f-doctor').value   = f.doctor_name      || '';
-      document.getElementById('f-date').value     = f.issued_date      || '';
-      document.getElementById('f-disease').value  = f.disease_name     || '';
-      document.getElementById('f-disease-code').value = f.disease_code || '';
-      document.getElementById('f-daily').value    = f.daily_count      || '';
-      document.getElementById('f-days').value     = f.total_days       || '';
-      document.getElementById('f-total').value    = f.total_count      || '';
-      calcRenewDate();
-
-      // 신뢰도 수치·설명은 화면에서 제거되었으므로 결과만 알린다
-      showToast('처방전 재분석이 완료되었습니다.', 'success');
-    }
-
-    BtnState.reset(btn);
-  }
 
   // ── 네비게이션 ────────────────────────────────────────
   const PREV_RX = @json($prevId);   // 더 최근 처방전 rx_number
@@ -7069,6 +7295,9 @@ window.HELP_TOUR_STEPS = [
       if (!ok) return;
       clearAllDirty();
     }
+    /* 화면 전환은 브라우저에 맡긴다(@view-transition) — 흰 화면이 끼지 않는다.
+       넘기는 동안 두 번 눌리지 않게 단추를 잠근다. 이동은 곧 일어나므로 되돌릴 일은 없다. */
+    document.querySelectorAll('.vw-nav-btn').forEach(b => { b.disabled = true; });
     location.href = `${BASE_URL}/prescriptions/${encodeURIComponent(rxNumber)}`;
   }
 
@@ -7825,178 +8054,107 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 제품 자동완성 (Todoworks API) ─────────────────────
-  const _pacTimers = {};   // debounce timers per idx
-  const _pacCache  = {};   // 검색 결과 캐시
+  /* 제품 찾기 — 검색 단추를 누르면 그 자리 옆에 창이 열린다.
+     치는 대로 따라 내려오던 목록은 없앴다. 두 글자에도 창고를 찾으러 가느라 느렸고,
+     펼쳐진 목록이 아래 칸을 가렸다. 세 글자 미만은 찾지 않는다 — 두 글자로 찾으면
+     수백 건이 쏟아져 고르지 못하고, 그 조회가 창고를 붙들어 다음 조회까지 늦춘다. */
+  const _pacCache  = {};   // 검색 결과 캐시(같은 말로 다시 찾지 않는다)
+  const _pacNotice = {};   // 다 보여 주지 못한 검색의 안내
+  const _pacFound  = {};   // 방금 창에 보인 것 — 고른 뒤 값을 꺼내 쓴다
+  const _prodModal = new GridModal();
 
-  function pacInput(idx, val) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    // "제품명 (코드)" 형태에서 "(코드)" 접미사 제거 후 검색
-    const kw = val.replace(/\s*\([^)]*\)\s*$/, '').trim();
-    if (kw.length < 1) { pacClose(idx); return; }
-    clearTimeout(_pacTimers[idx]);
-    drop.innerHTML = '<div class="pac-status"><i class="fa-solid fa-spinner fa-spin"></i> 검색 중...</div>';
-    drop.classList.add('open');
-    _pacTimers[idx] = setTimeout(() => pacFetch(idx, kw), 300);
-  }
-
-  async function pacFetch(idx, keyword) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    const cacheKey = keyword.toLowerCase();
-    let data;
-    if (_pacCache[cacheKey]) {
-      data = _pacCache[cacheKey];
-    } else {
-      try {
-        const res = await apiRequest(`/products/search?q=${encodeURIComponent(keyword)}`, 'GET');
-        if (!res.success || !res.data?.length) {
-          drop.innerHTML = '<div class="pac-status">검색 결과가 없습니다.</div>';
-          return;
-        }
-        data = res.data;
-        _pacCache[cacheKey] = data;
-      } catch {
-        drop.innerHTML = '<div class="pac-status">조회 오류가 발생했습니다.</div>';
-        return;
-      }
-    }
-    pacRender(idx, data);
-  }
-
-  function pacRender(idx, data) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (!drop) return;
-    drop.innerHTML = data.map((item) => {
-      const qty        = item.stock ?? null;
-      const hasStock   = qty !== null;
-      const stockColor = hasStock ? (qty > 0 ? 'var(--primary)' : 'var(--danger)') : 'var(--text-muted)';
-      const stockBg    = hasStock ? (qty > 0 ? 'var(--primary-50)' : 'var(--danger-light)') : 'var(--bg)';
-      const stockBdr   = hasStock ? stockColor : 'var(--border)';
-      const stockTxt   = hasStock ? `재고: <b>${Number(qty).toLocaleString()}</b>` : '재고: -';
-      return `
-      <div class="pac-item"
-           data-code="${escHtml(item.code ?? '')}"
-           data-name="${escHtml(item.name ?? '')}"
-           data-price="${item.price ?? 0}"
-           data-rbox="${escHtml(item.r_box ?? '')}"
-           data-stock="${qty ?? ''}"
-           onmousedown="pacSelect(event,${idx},this)">
-        <div class="pac-item-icon"><i class="fa-solid fa-box"></i></div>
-        <div class="pac-item-body">
-          <div class="pac-item-name">${escHtml(item.name)}</div>
-          <div class="pac-item-meta">
-            ${item.code ? `<span style="background:var(--primary-light);color:var(--primary);padding:1px 5px;border-radius:6px;font-size:10px;">${escHtml(item.code)}</span>` : ''}
-            ${item.spec ? `<span>${escHtml(item.spec)}</span>` : ''}
-            ${item.unit ? `<span>· ${escHtml(item.unit)}</span>` : ''}
-            ${item.r_box ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 5px;border-radius:6px;">R-Box: ${escHtml(item.r_box)}</span>` : ''}
-            <span style="background:${stockBg};border:1px solid ${stockBdr};color:${stockColor};padding:1px 5px;border-radius:6px;">${stockTxt}</span>
-          </div>
-        </div>
-        ${item.price ? `<div class="pac-item-price">₩ ${Number(item.price).toLocaleString()}</div>` : ''}
-      </div>`;
-    }).join('');
-    drop.classList.add('open');
-  }
-
-  function pacSelect(e, idx, el) {
-    e.preventDefault();
-    const code  = el.dataset.code  || '';
-    const name  = el.dataset.name  || '';
-    const price = parseFloat(el.dataset.price) || 0;
-    const rbox  = el.dataset.rbox  || '';
-
-    // 재고: data-stock(조회 완료) → 뱃지 텍스트 파싱 → 빈값
-    let stock = el.dataset.stock || '';
-    if (!stock) {
-      const stockBadge = el.querySelector('[id^="pac-stock-"]');
-      const m = (stockBadge?.textContent ?? '').match(/재고:\s*([\d,]+)/);
-      if (m) stock = m[1].replace(/,/g, '');
-    }
-
-    const card = document.querySelector(`.item-card[data-idx="${idx}"]`);
-    if (card) {
-      card.querySelector('.item-name').value    = name;
-      card.querySelector('.item-code').value    = code;
-      card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
-      card.querySelector('.item-rbox').value    = rbox;
-      card.querySelector('.item-stock').value   = stock;
-      if (price) {
-        card.querySelector('.item-price').value     = fmtPrice(price);
-        card.querySelector('.item-ins-price').value = fmtPrice(price);
-      }
-      updateItemMeta(idx, rbox, stock);
-      calcItem(idx);
-
-      // 재고 미로딩 상태로 선택된 경우 → 선택 후 별도 조회하여 카드에 반영
-      if (!stock && code) {
-        apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
-          .then(res => {
-            if (res.success && res.qty !== null) {
-              const qty = String(res.qty);
-              card.querySelector('.item-stock').value = qty;
-              updateItemMeta(idx, rbox, qty);
-            }
-          }).catch(() => {});
-      }
-    }
-    pacClose(idx);
-    showToast(`"${name}" 선택됨`, 'success');
-  }
-
-  function pacClose(idx) {
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (drop) drop.classList.remove('open');
-  }
-
-  function pacBlur(idx) {
-    setTimeout(() => pacClose(idx), 180);
-  }
-
-  let _pacActiveIdx = {}; // 키보드 활성 인덱스
-  function pacKey(e, idx) {
-    const drop  = document.getElementById(`pac-drop-${idx}`);
-    if (!drop || !drop.classList.contains('open')) return;
-    const items = drop.querySelectorAll('.pac-item');
-    if (!items.length) return;
-    let cur = _pacActiveIdx[idx] ?? -1;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      cur = Math.min(cur + 1, items.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      cur = Math.max(cur - 1, 0);
-    } else if (e.key === 'Enter' && cur >= 0) {
-      e.preventDefault();
-      pacSelect(e, idx, items[cur]);
-      return;
-    } else if (e.key === 'Escape') {
-      pacClose(idx);
-      return;
-    } else { return; }
-    _pacActiveIdx[idx] = cur;
-    items.forEach((el, i) => el.classList.toggle('ac-active', i === cur));
-    items[cur]?.scrollIntoView({ block: 'nearest' });
-  }
-
-  // 검색 버튼 클릭 → 현재 입력값으로 즉시 검색
-  function pacSearchBtn(idx) {
+  function pacSearchBtn(idx, btn) {
     const inp = document.getElementById(`pac-input-${idx}`);
     if (!inp) return;
-    inp.focus();
-    const kw = inp.value.trim();
-    if (!kw) { showToast('검색어를 입력해주세요.', 'warning'); return; }
-    clearTimeout(_pacTimers[idx]);
-    const drop = document.getElementById(`pac-drop-${idx}`);
-    if (drop) {
-      drop.innerHTML = '<div class="pac-status"><i class="fa-solid fa-spinner fa-spin"></i> 검색 중...</div>';
-      drop.classList.add('open');
+
+    _prodModal.open({
+      title: '제품 조회', width: 460, height: 360,
+      mode: 'popover', anchor: btn || inp,
+      minChars: 3,
+      query: inp.value.trim(),
+      onSearch: async (kw) => {
+        const key = kw.toLowerCase();
+        let data = _pacCache[key];
+        if (!data) {
+          const res = await apiRequest(`/products/search?q=${encodeURIComponent(kw)}`, 'GET');
+          if (!res.success) throw new Error(res.message || '조회 실패');
+          data = res.data ?? [];
+          _pacCache[key] = data;
+          _pacNotice[key] = res.notice ?? null;
+        }
+        /* 창고가 한 번에 다 주지 않는다. 못 보여 준 것이 있으면 건수 자리에 그대로 적는다 —
+           「30건」만 보이면 그게 전부인 줄 알고 없는 제품이라 여긴다.
+           창이 건수를 적은 뒤에 덮어써야 하므로 다음 차례로 미룬다. */
+        if (_pacNotice[key]) {
+          const notice = _pacNotice[key];
+          setTimeout(() => {
+            const c = document.querySelector('.cg-modal-counter');
+            if (c) { c.textContent = notice; c.style.color = '#B54708'; }
+          }, 0);
+        }
+        _pacFound[idx] = {};
+        return data.map((it) => {
+          const code = it.code ?? it.name;
+          _pacFound[idx][code] = it;
+          return {
+            value: code,
+            label: it.name ?? '',
+            sub: [it.code, it.spec, it.unit,
+                  it.r_box ? 'R-Box ' + it.r_box : null,
+                  it.price ? '₩ ' + Number(it.price).toLocaleString() : null]
+                 .filter(Boolean).join(' · '),
+          };
+        });
+      },
+      onConfirm: (code) => applyProduct(idx, _pacFound[idx]?.[code]),
+    });
+  }
+
+  /* 고른 제품을 그 행에 앉힌다. 재고는 여기서 한 건만 따로 묻는다 —
+     창고의 재고 조회는 한 건에 7초라, 목록을 만들 때 모두 물으면 검색 자체가 끊긴다. */
+  function applyProduct(idx, p) {
+    if (!p) return;
+    const code  = p.code ?? '';
+    const name  = p.name ?? '';
+    const price = parseFloat(p.price) || 0;
+    const rbox  = p.r_box ?? '';
+
+    const card = document.querySelector(`.item-card[data-idx="${idx}"]`);
+    if (!card) return;
+
+    card.querySelector('.item-name').value    = name;
+    card.querySelector('.item-code').value    = code;
+    card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
+    card.querySelector('.item-rbox').value    = rbox;
+    /* 찾을 때 재고까지 함께 받았으면 그대로 쓴다 — 방금 받은 것을 버리고 다시 묻지 않는다.
+       예전 API 로 물러선 경우에는 재고가 없으므로 그때만 따로 묻는다. */
+    const stock = (p.stock ?? '') === '' ? '' : String(p.stock);
+    card.querySelector('.item-stock').value   = stock;
+    if (price) {
+      card.querySelector('.item-price').value     = fmtPrice(price);
+      card.querySelector('.item-ins-price').value = fmtPrice(price);
     }
-    pacFetch(idx, kw);
+    updateItemMeta(idx, rbox, stock);
+    calcItem(idx);
+
+    if (code && stock === '') {
+      apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
+        .then(res => {
+          if (res.success && res.qty !== null) {
+            const qty = String(res.qty);
+            card.querySelector('.item-stock').value = qty;
+            updateItemMeta(idx, rbox, qty);
+          }
+        }).catch(() => {});
+    }
+
+    showToast(`"${name}" 선택됨`, 'success');
   }
 
   // 구 팝업 호환
   function openProductSearch(idx) { pacSearchBtn(idx); }
+  // 예전 이름으로 부르는 자리가 남아 있어도 죽지 않게 둔다
+  function pacClose() {}
 
   // XSS 방지용 HTML 이스케이프
   function escHtml(s) {

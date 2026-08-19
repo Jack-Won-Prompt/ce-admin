@@ -58,25 +58,26 @@
 @php $curStatus = request('status'); @endphp
 
 {{-- 상태 칩 — h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
-<div class="ds-chips status-tabs">
-  <a href="{{ route('sr.index', request()->except(['status','page'])) }}"
-     class="ds-chip status-tab {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count cnt">{{ $counts['all'] }}</span>
-  </a>
-  @foreach($statuses as $key => $label)
-    <a href="{{ route('sr.index', array_merge(request()->except(['status','page']), ['status' => $key])) }}"
-       class="ds-chip status-tab {{ $curStatus === $key ? 'active' : '' }}">
-      {{ $label }}
-      @if(($counts[$key] ?? 0) > 0)<span class="ds-chip-count cnt">{{ $counts[$key] }}</span>@endif
-    </a>
-  @endforeach
-</div>
+{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+
 
 {{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
      폭은 인라인 style 대신 9열 그리드(검색어 3열 · 구분 2열)로 잡는다. --}}
 <form method="GET" action="{{ route('sr.index') }}" class="ds-filter-card">
-  @if($curStatus)<input type="hidden" name="status" value="{{ $curStatus }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $counts['all'] }})</option>
+        @foreach($statuses as $key => $label)
+          <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
+            {{ $label }}@if(($counts[$key] ?? 0) > 0) ({{ $counts[$key] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"

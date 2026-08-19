@@ -92,11 +92,6 @@ class OrderReturnController extends Controller
             'type'              => 'required|in:exchange,return,cancel',
             'reason_code'       => 'required|string|in:' . implode(',', array_keys(OrderReturn::REASONS)),
             'reason_text'       => 'nullable|string|max:500',
-            'shipping_burden'   => 'nullable|in:customer,company',
-            'collect_method'    => 'nullable|in:courier,self',
-            'exchange_product'  => 'nullable|string|max:200',
-            'exchange_quantity' => 'nullable|integer|min:1',
-            'reship_address'    => 'nullable|string|max:300',
             'refund_method'     => 'nullable|in:account,card,va',
             'refund_bank'       => 'nullable|string|max:50',
             'refund_account'    => 'nullable|string|max:50',
@@ -104,9 +99,9 @@ class OrderReturnController extends Controller
             'refund_amount'     => 'nullable|integer|min:0',
         ]);
 
-        // 사유가 정해지면 배송비를 누가 무는지도 정해진다. 담당자가 고쳐 보낸 값이 있으면 그것을 쓴다.
-        $data['shipping_burden'] = $data['shipping_burden']
-            ?? OrderReturn::REASONS[$data['reason_code']]['burden'] ?? null;
+        // 배송비를 누가 무는지는 사유가 정한다 — 접수 때 따로 묻지 않는다.
+        // 담당자마다 다르게 고르면 같은 사유인데 부담 주체가 갈린다.
+        $data['shipping_burden'] = OrderReturn::REASONS[$data['reason_code']]['burden'] ?? null;
 
         $return = DB::transaction(function () use ($data) {
             $return = OrderReturn::create($data + [
@@ -141,6 +136,41 @@ class OrderReturnController extends Controller
     }
 
     /**
+     * 환자를 찾는다 — 검색 칸 옆 조회 창이 쓴다.
+     *
+     * 이름만 적어 넣게 두면 동명이인을 가릴 수 없다. 고르면 생년월일·전화번호가 함께
+     * 채워져, 그다음 주문 조회가 한 사람으로 좁혀진다.
+     */
+    public function patientSearch(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $kw = trim((string) $request->q);
+
+        if (mb_strlen($kw) < 2) {
+            return response()->json(['rows' => [], 'message' => '두 글자 이상 넣으십시오']);
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $kw);
+
+        $rows = \App\Models\Patient::where(fn ($q) => $q
+                ->where('name', 'like', "%{$kw}%")
+                ->when($digits !== '', fn ($s) => $s
+                    ->orWhere('mobile', 'like', "%{$digits}%")
+                    ->orWhere('phone', 'like', "%{$digits}%")))
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'birth_date', 'mobile', 'phone']);
+
+        return response()->json([
+            'rows' => $rows->map(fn ($p) => [
+                'id'    => $p->id,
+                'name'  => $p->name,
+                'birth' => $p->birth_date?->format('Y-m-d') ?? '',
+                'phone' => $p->mobile ?: ($p->phone ?? ''),
+            ])->values(),
+        ]);
+    }
+
+    /**
      * 되돌릴 원 주문을 찾는다.
      *
      * 예전에는 최근 200건을 셀렉트에 통째로 부어 놓고 고르게 했다. 주문이 쌓이면
@@ -148,14 +178,25 @@ class OrderReturnController extends Controller
      */
     public function orderSearch(Request $request): \Illuminate\Http\JsonResponse
     {
-        $kw = trim((string) $request->q);
+        $no    = trim((string) $request->order_no);
+        $name  = trim((string) $request->patient_name);
+        $birth = trim((string) $request->birth_date);
+        $phone = preg_replace('/[^0-9]/', '', (string) $request->phone);
 
-        $orders = Order::with(['patient'])
-            ->when($kw !== '', fn ($q) => $q->where(fn ($sub) => $sub
-                ->where('order_number', 'like', "%{$kw}%")
-                ->orWhere('withworks_so_no', 'like', "%{$kw}%")
-                ->orWhere('product_name', 'like', "%{$kw}%")
-                ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$kw}%"))))
+        /* 조건이 하나도 없으면 최근 것을 보여 준다. 빈 손으로 눌러도 무엇이 있는지는
+           보여야 다음에 무엇을 칠지 정할 수 있다. */
+        $orders = Order::with(['patient', 'items'])
+            ->when($no !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('order_number', 'like', "%{$no}%")
+                ->orWhere('withworks_so_no', 'like', "%{$no}%")))
+            ->when($name !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$name}%")))
+            ->when($birth !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p->whereDate('birth_date', $birth)))
+            ->when($phone !== '', fn ($q) => $q
+                ->whereHas('patient', fn ($p) => $p
+                    ->whereRaw("REPLACE(REPLACE(mobile,'-',''),' ','') LIKE ?", ["%{$phone}%"])
+                    ->orWhereRaw("REPLACE(REPLACE(phone,'-',''),' ','') LIKE ?", ["%{$phone}%"])))
             ->latest('id')
             ->limit(50)
             ->get();
@@ -165,13 +206,37 @@ class OrderReturnController extends Controller
                 'id'       => $o->id,
                 'order_no' => $o->order_number,
                 'patient'  => $o->patient?->name ?? '-',
+                'birth'    => $o->patient?->birth_date?->format('Y-m-d') ?? '',
+                'phone'    => $o->patient?->mobile ?: ($o->patient?->phone ?? ''),
                 'product'  => $o->product_name ?? '-',
                 'amount'   => (int) $o->total_amount,
-                'address'  => $o->shipping_address ?? '',
+                'address'  => trim(($o->shipping_address ?? '')),
                 'so_no'    => $o->withworks_so_no ?? '',
                 'status'   => $o->status_label,
-                // 이미 되돌린 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
+                'order_date' => $o->created_at?->format('Y-m-d') ?? '',
+                /* 송장이 붙었는가 — 아직이면 되돌려 받을 물건이 없어 종류와 상관없이
+                   판매주문 취소로 나간다. 접수하는 사람이 그것을 미리 알아야 한다. */
+                'shipped'  => (bool) ($o->withworks_ship_no || $o->withworks_tracking_no),
+                // 이미 접수한 적이 있으면 알려 준다 — 같은 주문을 두 번 접수하는 일이 있다
                 'returns'  => $o->returns()->count(),
+                /* 제품은 주문에 딸린 것을 그대로 준다. 품목 표가 비어 있는 옛 주문은
+                   주문 자체에 적힌 대표 제품 한 줄로 대신한다 — 빈 표를 보여 주면
+                   무엇을 되돌리는지 알 수 없다. */
+                'items'    => $o->items->isNotEmpty()
+                    ? $o->items->map(fn ($i) => [
+                        'product_code' => $i->product_code ?? '',
+                        'product_name' => $i->product_name ?? '',
+                        'quantity'     => (int) $i->quantity,
+                        'unit_price'   => (int) ($i->insurance_price ?: $i->product_price),
+                        'copay'        => (int) $i->patient_copay,
+                    ])->values()
+                    : collect([[
+                        'product_code' => $o->product_code ?? '',
+                        'product_name' => $o->product_name ?? '',
+                        'quantity'     => (int) $o->quantity,
+                        'unit_price'   => (int) $o->unit_price,
+                        'copay'        => (int) $o->patient_copay,
+                    ]]),
             ])->values(),
         ]);
     }

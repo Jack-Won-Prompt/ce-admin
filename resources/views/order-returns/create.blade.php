@@ -20,7 +20,6 @@
   .rt-row .form-control { flex:1; min-width:0; }
   .rt-hint { font-size:11px; color:var(--text-muted); margin-top:3px; }
   .rt-only { display:none; }
-  .rt-burden { font-size:12px; font-weight:700; color:var(--primary); }
 </style>
 @endpush
 
@@ -66,67 +65,14 @@
         <label>사유</label>
         <select name="reason_code" id="rt-reason" class="form-control form-select" required>
           @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
-            <option value="{{ $k }}" @selected(old('reason_code') === $k)
-                    data-burden="{{ $r['burden'] }}">{{ $r['label'] }}</option>
+            <option value="{{ $k }}" @selected(old('reason_code') === $k)>{{ $r['label'] }}</option>
           @endforeach
         </select>
-      </div>
-      <div class="rt-row">
-        <label>배송비 부담</label>
-        <select name="shipping_burden" id="rt-burden" class="form-control form-select">
-          <option value="">사유에 따름</option>
-          @foreach(\App\Models\OrderReturn::BURDENS as $k => $label)
-            <option value="{{ $k }}" @selected(old('shipping_burden') === $k)>{{ $label }}</option>
-          @endforeach
-        </select>
-      </div>
-      {{-- 사유가 정해지면 누가 무는지도 정해진다. 담당자마다 다르게 안내하지 않도록. --}}
-      <div class="rt-row">
-        <label></label>
-        <div class="rt-burden" id="rt-burden-hint"></div>
       </div>
       <div class="rt-row" style="align-items:flex-start;">
         <label style="padding-top:7px;">상세 사유</label>
         <textarea name="reason_text" class="form-control" rows="2" maxlength="500"
                   placeholder="고객이 말한 내용을 그대로 적어 두면 나중에 판단이 쉽습니다">{{ old('reason_text') }}</textarea>
-      </div>
-    </div>
-  </div>
-
-  {{-- 취소는 보낸 물건이 없어 수거가 없다 --}}
-  <div class="rt-card rt-only" data-for="exchange return">
-    <div class="rt-hd">수거</div>
-    <div class="rt-bd">
-      <div class="rt-row">
-        <label>수거 방법</label>
-        <select name="collect_method" class="form-control form-select">
-          <option value="">선택</option>
-          @foreach(\App\Models\OrderReturn::COLLECT_METHODS as $k => $label)
-            <option value="{{ $k }}" @selected(old('collect_method') === $k)>{{ $label }}</option>
-          @endforeach
-        </select>
-      </div>
-      <div class="rt-hint">위드웍스 역물류 연계가 아직 없어 수거 접수는 사람이 합니다.</div>
-    </div>
-  </div>
-
-  <div class="rt-card rt-only" data-for="exchange">
-    <div class="rt-hd">교환 — 다시 보낼 것</div>
-    <div class="rt-bd">
-      <div class="rt-row">
-        <label>제품</label>
-        <input type="text" name="exchange_product" class="form-control" maxlength="200"
-               value="{{ old('exchange_product') }}" placeholder="바꿔 보낼 제품(사이즈 등)">
-      </div>
-      <div class="rt-row">
-        <label>수량</label>
-        <input type="number" name="exchange_quantity" class="form-control" min="1"
-               value="{{ old('exchange_quantity') }}">
-      </div>
-      <div class="rt-row">
-        <label>재배송지</label>
-        <input type="text" name="reship_address" id="rt-reship" class="form-control" maxlength="300"
-               value="{{ old('reship_address') }}" placeholder="비우면 원 주문 배송지로 보냅니다">
       </div>
     </div>
   </div>
@@ -174,23 +120,13 @@
 <script>
 (function () {
   const type   = document.getElementById('rt-type');
-  const reason = document.getElementById('rt-reason');
-  const burden = document.getElementById('rt-burden');
   const order  = document.getElementById('rt-order');
 
-  /* 종류마다 필요한 칸이 다르다. 취소 건에 수거 방법을 물으면 담당자가 헷갈린다. */
+  /* 종류마다 필요한 칸이 다르다 — 취소·반품은 환불을 묻고, 교환은 묻지 않는다. */
   function syncType() {
     document.querySelectorAll('.rt-only[data-for]').forEach(el => {
       el.style.display = el.dataset.for.split(' ').includes(type.value) ? '' : 'none';
     });
-  }
-
-  // 사유가 정하는 부담 주체를 미리 알려 준다. 담당자가 고르면 그 값이 이긴다.
-  function syncBurden() {
-    const auto = reason.selectedOptions[0]?.dataset.burden || '';
-    const map  = @json(\App\Models\OrderReturn::BURDENS);
-    document.getElementById('rt-burden-hint').textContent =
-      burden.value ? '' : (auto ? `이 사유는 ${map[auto]}입니다` : '이 사유는 부담 주체가 정해져 있지 않습니다 — 직접 고르십시오');
   }
 
   function syncOrder() {
@@ -198,8 +134,6 @@
     if (!opt?.value) return;
     const amount = document.getElementById('rt-refund-amount');
     if (amount && !amount.value) amount.value = opt.dataset.amount || '';
-    const reship = document.getElementById('rt-reship');
-    if (reship) reship.placeholder = opt.dataset.address || '비우면 원 주문 배송지로 보냅니다';
   }
 
   function syncRefund() {
@@ -211,12 +145,10 @@
   }
 
   type.addEventListener('change', syncType);
-  reason.addEventListener('change', syncBurden);
-  burden.addEventListener('change', syncBurden);
   order.addEventListener('change', syncOrder);
   document.getElementById('rt-refund-method')?.addEventListener('change', syncRefund);
 
-  syncType(); syncBurden(); syncOrder(); syncRefund();
+  syncType(); syncOrder(); syncRefund();
 })();
 </script>
 @endpush

@@ -78,23 +78,23 @@
 
 {{-- 유형은 CE 샘플주문 하나뿐이라 칩으로 가를 것이 없다. 진행 상태를 둔다. --}}
 @php $curStatus = request('status'); @endphp
-<div class="ds-chips">
-  <a href="{{ route('sample-orders.index', request()->except(['status','page'])) }}"
-     class="ds-chip {{ !$curStatus ? 'active' : '' }}">
-    전체 <span class="ds-chip-count">{{ $counts->sum() }}</span>
-  </a>
-  @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
-    <a href="{{ route('sample-orders.index', array_merge(request()->except(['status','page']), ['status' => $k])) }}"
-       class="ds-chip {{ $curStatus === $k ? 'active' : '' }}">
-      {{ $meta[0] }}
-      @if(($counts[$k] ?? 0) > 0)<span class="ds-chip-count">{{ $counts[$k] }}</span>@endif
-    </a>
-  @endforeach
-</div>
+{{-- 상태는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
 
 <form method="GET" action="{{ route('sample-orders.index') }}" class="ds-filter-card">
-  @if($curStatus)<input type="hidden" name="status" value="{{ $curStatus }}">@endif
   <div class="ds-filter-fields">
+    <div class="ds-filter-field">
+      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ $counts->sum() }})</option>
+        @foreach(\App\Models\SampleOrder::STATUS_LABELS as $k => $meta)
+          <option value="{{ $k }}" {{ $curStatus === $k ? 'selected' : '' }}>
+            {{ $meta[0] }}@if(($counts[$k] ?? 0) > 0) ({{ $counts[$k] }})@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
@@ -111,7 +111,7 @@
   </div>
   <div class="ds-filter-actions">
     @if(request()->hasAny(['q','date_from','date_to']))
-      <a href="{{ route('sample-orders.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('sample-orders.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다 --}}
@@ -181,7 +181,7 @@
             <div style="display:flex;gap:6px;">
               <input type="text" id="smpAccount" class="form-control" maxlength="100"
                      placeholder="조회해서 고르거나 그대로 적으십시오">
-              <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer()">조회</button>
+              <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer(this)">조회</button>
             </div>
             <input type="hidden" id="smpPatientId" value="">
             <span class="ds-grid-hint" id="smpCustKind"></span>
@@ -210,6 +210,19 @@
           <div class="smp-f">
             <label>주문일 *</label>
             <input type="date" id="smpOrderDate" class="form-control" value="{{ now()->format('Y-m-d') }}">
+          </div>
+          <div class="smp-f">
+            {{-- 샘플은 대개 영업 담당자가 달라고 하고 사무실에서 대신 넣는다.
+                 등록한 사람만 남으면 나중에 「이 샘플 누가 요청했나」를 물을 곳이 없다.
+                 손으로 적게 두지 않는다 — 같은 사람이 여러 이름으로 남는다. --}}
+            <label>요청자</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="smpRequester" class="form-control" readonly
+                     style="background:var(--gray-50);" placeholder="담당자를 고르십시오">
+              <button type="button" class="ds-btn" style="flex-shrink:0;"
+                      onclick="smpPickRequester(this)">조회</button>
+            </div>
+            <input type="hidden" id="smpRequesterId" value="">
           </div>
           <div class="smp-f">
             <label>배송요청일</label>
@@ -257,6 +270,7 @@
   const STORE_URL  = @json(route('sample-orders.store'));
   const SEARCH_URL = @json(url('products/search'));
   const CUST_URL   = @json(route('sample-orders.customerSearch'));
+  const USER_URL  = @json(route('sample-orders.userSearch'));
   const CSRF       = document.querySelector('meta[name=csrf-token]')?.content ?? '';
 
   const $ = (id) => document.getElementById(id);
@@ -325,6 +339,7 @@
         + kv('고객', head.customer + (head.customer_kind ? ' · ' + head.customer_kind : ''))
         + kv('받는 사람', head.recipient + (head.mobile && head.mobile !== '-' ? ' · ' + head.mobile : ''))
         + kv('배송지', head.address)
+        + kv('요청자', head.requester)
         + kv('주문일', head.order_date + (head.delivery_date ? ' · 배송요청 ' + head.delivery_date : ''))
         + kv('용도', head.purpose)
         + kv('비고', head.note)
@@ -365,10 +380,15 @@
   const modal = new GridModal();
   let custRows = {};   // 고른 뒤 이름 말고 나머지도 써야 해서 들고 있는다
 
-  window.smpPickCustomer = function () {
+  /* 고객 조회는 누른 칸 옆에 붙는 팝오버로 연다 — 화면 한가운데를 덮으면 지금까지
+     적어 둔 것이 가려져, 무엇을 채우던 중이었는지 놓친다. */
+  window.smpPickCustomer = function (btn) {
     modal.open({
       title: '고객 조회',
-      width: 520,
+      width: 460,
+      height: 340,
+      mode: 'popover',
+      anchor: btn,
       currentValue: $('smpPatientId').value || null,
       onSearch: async (q) => {
         const res = await fetch(CUST_URL + '?q=' + encodeURIComponent(q ?? ''), {
@@ -393,6 +413,40 @@
         if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
         $('smpMobile').value  = r.mobile  || $('smpMobile').value;
         $('smpAddress').value = r.address || $('smpAddress').value;
+      },
+    });
+  };
+
+  /* 요청자 조회 — 고객 조회와 같은 팝오버다. CE-Admin 에 등록된 담당자만 나온다. */
+  const reqModal = new GridModal();
+  let reqRows = {};
+
+  window.smpPickRequester = function (btn) {
+    reqModal.open({
+      title: '요청자 조회',
+      width: 420,
+      height: 340,
+      mode: 'popover',
+      anchor: btn,
+      currentValue: $('smpRequesterId').value || null,
+      onSearch: async (q) => {
+        const res = await fetch(USER_URL + '?q=' + encodeURIComponent(q ?? ''), {
+          headers: { 'Accept': 'application/json' },
+        });
+        const { rows } = await res.json();
+        reqRows = {};
+        (rows ?? []).forEach(r => { reqRows[r.id] = r; });
+        return (rows ?? []).map(r => ({
+          value: r.id,
+          label: r.name,
+          sub:   [r.role, r.email, r.phone].filter(Boolean).join(' · '),
+        }));
+      },
+      onConfirm: (value) => {
+        const r = reqRows[value];
+        if (!r) return;
+        $('smpRequesterId').value = r.id;
+        $('smpRequester').value   = r.name;
       },
     });
   };
@@ -528,6 +582,9 @@
           postcode:       $('smpPostcode').value.trim() || null,
           address:        $('smpAddress').value.trim(),
           address_detail: $('smpAddressDetail').value.trim() || null,
+          requester_id:   $('smpRequesterId').value || null,
+          // 이름도 함께 보낸다 — 계정이 지워져도 그때 누구였는지는 남아야 한다
+          requester_name: $('smpRequester').value.trim() || null,
           order_date:     $('smpOrderDate').value,
           delivery_date:  $('smpDeliveryDate').value || null,
           purpose:        $('smpPurpose').value.trim() || null,

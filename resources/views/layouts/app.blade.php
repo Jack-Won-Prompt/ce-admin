@@ -1450,14 +1450,9 @@
           </a>
         </div>
         @endif
-        @if($vis('taxinvoice'))
-        <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="presentation-03" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
-            @dsicon('presentation-03', 'ds-icon menu-icon')
-            <span>전자세금계산서</span>
-          </a>
-        </div>
-        @endif
+        {{-- 전자세금계산서는 메뉴에 두지 않는다. 발행과 취소는 「계산서 발행」 화면에서
+             주문을 보며 하고, 이 화면은 팝빌 목록을 그대로 비추던 자리였다.
+             화면과 경로는 남아 있어 주소로는 열린다. --}}
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
@@ -1853,6 +1848,18 @@ document.addEventListener('click', (e) => {
     window.open(url, '_blank', 'noopener');
     return false;
   };
+
+  /* 화면 안에 다른 화면을 액자로 들여둔 자리가 있다(환자 전체 상세·접수 상세).
+     그 액자 안에서 「새 탭으로」를 부탁하면 바로 위 화면에게 말이 오는데, 탭을 만드는
+     것은 그보다 위의 워크스페이스다. 중간에서 끊기지 않게 그대로 올려 보낸다. */
+  window.addEventListener('message', function (e) {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.source !== 'ce-workspace' || e.data?.action !== 'open-tab') return;
+    if (window.self === window.top) return;          // 우리가 워크스페이스면 우리가 처리한다
+    if (e.source === window.parent) return;          // 위에서 내려온 말은 되돌리지 않는다
+
+    try { window.parent.postMessage(e.data, window.location.origin); } catch (err) {}
+  });
 
   // ── 버튼 프로세스 상태 유틸리티 ────────────────────────
   const BtnState = (() => {

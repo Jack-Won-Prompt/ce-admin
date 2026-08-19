@@ -321,42 +321,49 @@ window.HELP_TOUR_STEPS = [
 
 {{-- ── Stat Strip (6 KPIs) ── --}}
 <div class="stat-grid">
-  <a href="{{ route('prescriptions.index') }}" class="stat-card">
+  {{-- 숫자를 눌러 그 목록으로 간다. 화면 탭으로 열어야 대시보드가 남는다 --}}
+  <a href="{{ route('prescriptions.index') }}" class="stat-card"
+     data-ce-tab="처방전 목록" data-ce-icon="bx-file">
     <div class="stat-icon primary"><i class="bx bx-file-blank"></i></div>
     <div>
       <div class="stat-val">{{ $stats['total_today'] }}</div>
       <div class="stat-label">오늘 접수</div>
     </div>
   </a>
-  <a href="{{ route('prescriptions.index', ['status'=>'review_needed']) }}" class="stat-card">
+  <a href="{{ route('prescriptions.index', ['status'=>'review_needed']) }}" class="stat-card"
+     data-ce-tab="처방전 목록 - 검수 필요" data-ce-icon="bx-file">
     <div class="stat-icon warning"><i class="bx bx-error-circle"></i></div>
     <div>
       <div class="stat-val">{{ $stats['review_needed'] }}</div>
       <div class="stat-label">검수 대기</div>
     </div>
   </a>
-  <a href="{{ route('prescriptions.index', ['status'=>'approved']) }}" class="stat-card">
+  <a href="{{ route('prescriptions.index', ['status'=>'approved']) }}" class="stat-card"
+     data-ce-tab="처방전 목록 - 검수 완료" data-ce-icon="bx-file">
     <div class="stat-icon success"><i class="bx bx-check-shield"></i></div>
     <div>
       <div class="stat-val">{{ $stats['approved_today'] }}</div>
       <div class="stat-label">오늘 승인</div>
     </div>
   </a>
-  <a href="{{ route('orders.index') }}" class="stat-card">
+  <a href="{{ route('orders.index') }}" class="stat-card"
+     data-ce-tab="주문현황" data-ce-icon="bx-clipboard">
     <div class="stat-icon info"><i class="bx bx-cart-alt"></i></div>
     <div>
       <div class="stat-val">{{ $stats['orders_pending'] }}</div>
       <div class="stat-label">주문 대기</div>
     </div>
   </a>
-  <a href="{{ route('nhis.index') }}" class="stat-card">
+  <a href="{{ route('nhis.index') }}" class="stat-card"
+     data-ce-tab="청구 관리" data-ce-icon="bx-file-blank">
     <div class="stat-icon danger"><i class="bx bx-plus-medical"></i></div>
     <div>
       <div class="stat-val">{{ $stats['nhis_pending'] }}</div>
       <div class="stat-label">청구 대기</div>
     </div>
   </a>
-  <a href="{{ route('repurchase.index') }}" class="stat-card">
+  <a href="{{ route('repurchase.index') }}" class="stat-card"
+     data-ce-tab="재구매 관리" data-ce-icon="bx-repeat">
     <div class="stat-icon purple"><i class="bx bx-refresh"></i></div>
     <div>
       <div class="stat-val">{{ $stats['repurchase_today'] }}</div>
@@ -375,17 +382,20 @@ window.HELP_TOUR_STEPS = [
   <div>
     {{-- Work Queue --}}
     <div class="queue-grid">
-      <a href="{{ route('prescriptions.index', ['status' => 'review_needed']) }}" class="queue-box red">
+      <a href="{{ route('prescriptions.index', ['status' => 'review_needed']) }}" class="queue-box red"
+         data-ce-tab="처방전 목록 - 검수 필요" data-ce-icon="bx-file">
         <span class="q-icon"><i class="bx bx-error-alt"></i></span>
         <div class="q-num">{{ $stats['review_needed'] }}</div>
         <div class="q-label">검수 필요</div>
       </a>
-      <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing']) }}" class="queue-box blue">
+      <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing']) }}" class="queue-box blue"
+         data-ce-tab="처방전 목록 - OCR 처리중" data-ce-icon="bx-file">
         <span class="q-icon"><i class="bx bx-scan"></i></span>
         <div class="q-num">{{ $stats['ocr_processing'] }}</div>
         <div class="q-label">OCR 처리중</div>
       </a>
-      <a href="{{ route('prescriptions.index', ['status' => 'approved']) }}" class="queue-box green">
+      <a href="{{ route('prescriptions.index', ['status' => 'approved']) }}" class="queue-box green"
+         data-ce-tab="처방전 목록 - 검수 완료" data-ce-icon="bx-file">
         <span class="q-icon"><i class="bx bx-check-circle"></i></span>
         <div class="q-num">{{ $stats['approved_today'] }}</div>
         <div class="q-label">오늘 승인 완료</div>
@@ -397,9 +407,11 @@ window.HELP_TOUR_STEPS = [
       <div class="card-header">
         <i class="bx bx-file-medical" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 처방전 현황</span>
+        {{-- 건수·안내문(시안 382:107)과 main 이 더한 탭 열기(data-ce-*)는 서로 부딪히지 않아 둘 다 둔다 --}}
         <span class="rx-count">{{ count($recentRxGrid ?? []) }}</span>
         <span class="dash-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
-        <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm ms-auto">
+        <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm ms-auto"
+           data-ce-tab="처방전 목록" data-ce-icon="bx-file">
           <i class="bx bx-list-ul"></i> 전체보기
         </a>
       </div>
@@ -419,23 +431,30 @@ window.HELP_TOUR_STEPS = [
         <span class="card-header-title">빠른 실행</span>
       </div>
       <div class="card-body">
+        {{-- 화면 탭으로 연다. 그냥 링크면 대시보드가 그 화면으로 통째로 바뀌어,
+             보고 있던 오늘 현황이 사라지고 돌아오려면 대시보드를 다시 열어야 했다.
+             data-ce-tab 은 탭 이름이다 — 메뉴에 적힌 이름과 같게 맞춘다. --}}
         <div class="quick-grid">
-          <a href="{{ route('prescriptions.upload') }}" class="qa-btn">
+          <a href="{{ route('prescriptions.upload') }}" class="qa-btn"
+             data-ce-tab="처방자료 업로드" data-ce-icon="bx-upload">
             <i class="bx bx-upload qa-icon"></i>
             <span class="qa-label">처방전 업로드</span>
             <i class="bx bx-chevron-right qa-chev"></i>
           </a>
-          <a href="{{ route('orders.index') }}" class="qa-btn">
+          <a href="{{ route('orders.index') }}" class="qa-btn"
+             data-ce-tab="주문현황" data-ce-icon="bx-clipboard">
             <i class="bx bx-clipboard qa-icon"></i>
             <span class="qa-label">주문 확인</span>
             <i class="bx bx-chevron-right qa-chev"></i>
           </a>
-          <a href="{{ route('nhis.index') }}" class="qa-btn">
+          <a href="{{ route('nhis.index') }}" class="qa-btn"
+             data-ce-tab="청구 관리" data-ce-icon="bx-file-blank">
             <i class="bx bx-file-blank qa-icon"></i>
             <span class="qa-label">요양비 청구</span>
             <i class="bx bx-chevron-right qa-chev"></i>
           </a>
-          <a href="{{ route('patients.index') }}" class="qa-btn">
+          <a href="{{ route('patients.index') }}" class="qa-btn"
+             data-ce-tab="거래처 관리" data-ce-icon="bx-user-plus">
             <i class="bx bx-user-plus qa-icon"></i>
             <span class="qa-label">환자 등록</span>
             <i class="bx bx-chevron-right qa-chev"></i>

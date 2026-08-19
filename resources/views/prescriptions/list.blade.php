@@ -108,48 +108,31 @@
 
 @section('content')
 
-  {{-- 상태 탭 --}}
-  <div class="ds-chips">
-    <a href="{{ route('prescriptions.index') }}"
-       class="ds-chip {{ !request('status') ? 'active' : '' }}">
-      전체 <span class="ds-chip-count">{{ $statusCounts['all'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'review_needed'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'review_needed' ? 'active' : '' }}"
-       style="{{ !request('status') || request('status') === 'review_needed' ? '' : '' }}">
-      검수 필요 <span class="ds-chip-count">{{ $statusCounts['review_needed'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'ocr_processing' ? 'active' : '' }}">
-      OCR 처리중 <span class="ds-chip-count">{{ $statusCounts['ocr_processing'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'approved'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'approved' ? 'active' : '' }}">
-      검수 완료 <span class="ds-chip-count">{{ $statusCounts['approved'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'no_order'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'no_order' ? 'active' : '' }}">
-      주문 미등록 <span class="ds-chip-count">{{ $statusCounts['no_order'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'ordered'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'ordered' ? 'active' : '' }}">
-      주문 완료 <span class="ds-chip-count">{{ $statusCounts['ordered'] }}</span>
-    </a>
-    <a href="{{ route('prescriptions.index', ['status' => 'rejected'] + request()->except('status', 'page')) }}"
-       class="ds-chip {{ request('status') === 'rejected' ? 'active' : '' }}">
-      반려 <span class="ds-chip-count">{{ $statusCounts['rejected'] }}</span>
-    </a>
-  </div>
-
+  {{-- 상태는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
+       고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
   @php $curAcc = request('acc_type'); @endphp
 
   {{-- 검색 필터 — Figma 128:1744: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
   <form method="GET" action="{{ route('prescriptions.index') }}" class="ds-filter-card">
-    @if(request('status'))
-      <input type="hidden" name="status" value="{{ request('status') }}">
-    @endif
     <div class="ds-filter-fields">
       {{-- 검색어 143px(1열) · 기간 298px(2열) — 시안 실측 --}}
+      <div class="ds-filter-field">
+        <label class="ds-field-label">상태</label>
+        <select name="status" class="form-control form-select" onchange="this.form.submit()">
+          @php
+            $curSt = request('status');
+            $sts = ['' => '전체', 'review_needed' => '검수 필요', 'ocr_processing' => 'OCR 처리중',
+                    'approved' => '검수 완료', 'no_order' => '주문 미등록', 'ordered' => '주문 완료',
+                    'rejected' => '반려'];
+          @endphp
+          @foreach($sts as $code => $label)
+            @php $cnt = $statusCounts[$code === '' ? 'all' : $code] ?? 0; @endphp
+            <option value="{{ $code }}" {{ (string) $curSt === (string) $code ? 'selected' : '' }}>
+              {{ $label }}@if($cnt > 0) ({{ $cnt }})@endif
+            </option>
+          @endforeach
+        </select>
+      </div>
       <div class="ds-filter-field">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
@@ -194,10 +177,10 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-      {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다. 검색 조건이 있을 때만
-           내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
-           (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
-      <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
+      {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다(조건 없이).
+           되돌아갈 자리는 main 쪽을 따른다(per_page 만 유지) — main 이 상태를
+           상단 칩에서 검색 필터로 옮겼으므로 초기화가 상태도 함께 비우는 것이 맞다. --}}
+      <a href="{{ route('prescriptions.index', request()->only('per_page')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
            올릴 권한이 없는 사람에게는 보이지 않아야 하므로 @perm 을 그대로 둔다. --}}
