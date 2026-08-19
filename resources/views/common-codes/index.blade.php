@@ -7,7 +7,6 @@
 @push('styles')
 <style>
   /* 코드 목록은 마스터 관리와 같은 얼개다 — 탭으로 목록을 고르고, 표에서 고쳐 쓴다 */
-  .cc-hint { font-size:12px; color:var(--gray-600); line-height:1.7; }
   .cc-kind-chips { display:flex; gap:6px; flex-wrap:wrap; }
   .cc-kind-chip { display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 8px;
                   border-radius:999px; background:var(--gray-100); color:var(--gray-700);
@@ -38,10 +37,6 @@
           </option>
         @endforeach
       </select>
-    </div>
-    <div class="ds-filter-field span-3">
-      <label class="ds-field-label">쓰는 곳</label>
-      <div class="cc-hint">{{ $groups[$current]['hint'] ?? '' }}</div>
     </div>
   </div>
   <div class="ds-filter-actions">
