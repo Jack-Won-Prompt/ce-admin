@@ -635,7 +635,9 @@
     /* ── Buttons ── */
     /* Figma: 높이 32 · 13px/500 · padding 좌우 12 · radius 8 — .ds-btn 과 같은 규격 */
     .btn {
-      display: inline-flex; align-items: center; gap: 6px;
+      /* 아이콘↔글자 사이는 시안이 8 이다(248:4115 초기화 60×32 HORIZONTAL/8).
+         .ds-btn 은 8 인데 이쪽만 6 이라 같은 크기 단추의 글자 시작이 2 어긋났다. */
+      display: inline-flex; align-items: center; gap: 8px;
       padding: 5px 12px; border-radius: var(--radius);
       font-size: 13px; font-weight: 500; line-height: 20px; cursor: pointer;
       text-decoration: none; border: 1px solid transparent;
@@ -1035,9 +1037,11 @@
     .status-dot.offline::before { background: var(--gray-400); }
 
     /* ── Empty state ── */
-    .empty-state { text-align: center; padding: 52px 24px; }
-    .empty-state i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
-    .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
+    .empty-state { text-align: center; padding: 48px 24px; }
+    /* 자식 선택자여야 한다 — 그냥 .empty-state i 로 두면 이 안에 든 단추의 아이콘까지
+       38px 블록으로 만들어 「지금 수집 시작」 단추가 143×62 로 부풀었다(다른 단추는 32). */
+    .empty-state > i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
+    .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; }
 
     /* ── Modal overlay (design system) ── */
     .modal-overlay {
