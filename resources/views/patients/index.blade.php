@@ -118,6 +118,12 @@
 
 @push('styles')
 <style>
+  /* 상세 탭은 안에 든 화면만큼만 높다. 카드가 flex:1 로 남는 자리를 다 먹고
+     있어, 주문 이력 아래로 흰 바닥이 한 참 이어졌다. */
+  .ds-grid-section.is-fit .ds-grid-card { flex:0 0 auto; }
+  .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:0 0 auto; overflow:visible; }
+</style>
+<style>
   /* 상담 창 — 뒤를 덮지 않고 떠 있는다. 뒤 화면은 그대로 쓸 수 있다. */
   .cs-win { position: fixed; z-index: 1100; display: none; }
   .cs-box { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column;
@@ -341,8 +347,10 @@
      액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
 <div id="pnlDetail" style="display:none;">
   <div id="pfEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 여기에 나옵니다.</div>
-  <iframe id="pfFrame" title="환자 상세" style="display:none;width:100%;border:0;
-          height:calc(100vh - 300px);min-height:520px;"></iframe>
+  {{-- 높이는 안에 들어온 화면이 정한다 — 고정값을 주었더니 내용이 짧은 사람은
+       목록 아래로 흰 바닥이 한 참 남고, 긴 사람은 액자 안에서 또 스크롤해야 했다. --}}
+  <iframe id="pfFrame" title="환자 상세" scrolling="no"
+          style="display:none;width:100%;border:0;height:0;overflow:hidden;vertical-align:top;"></iframe>
 </div>{{-- /#pnlDetail --}}
 
 {{-- 상담내역 탭은 사람마다 하나씩 만들어 붙인다(pcEnsureTab) — 두 사람을 견주며
@@ -588,6 +596,9 @@ document.addEventListener('keydown', (e) => {
       document.getElementById(PANES[k]).style.display = k === which ? '' : 'none';
       document.getElementById(TABS[k]).classList.toggle('active', k === which);
     });
+    /* 목록은 화면을 가득 채워야 한 줄이라도 더 보이지만, 상세는 안에 든
+       화면만큼만 높으면 된다 — 늘려 두면 그만큼 흰 바닥이 아래에 남는다. */
+    document.querySelector('.ds-grid-section')?.classList.toggle('is-fit', which === 'detail');
   };
 
   /* 상세를 옆 탭에 들여온다. 다른 화면으로 건너가면 어떤 조건으로 찾고 있었는지가
@@ -604,7 +615,7 @@ document.addEventListener('keydown', (e) => {
       frame.src = url;
       frame.dataset.url = url;
     }
-    frame.style.display = '';
+    frame.style.display = 'block';   // inline 이면 글자 밑줄 자리만큼 아래가 뜨기게 된다
     document.getElementById('pfEmpty').style.display = 'none';
     pnlShow('detail');
   };
@@ -613,11 +624,27 @@ document.addEventListener('keydown', (e) => {
      열려 화면이 겹친다(환자 상세 안에 처방전 목록이 들어앉는 식이다).
      환자 목록으로 가는 링크는 바깥의 조회 결과 탭으로 돌리고, 그 밖의 화면은
      워크스페이스 탭으로 올려 보낸다. 같은 곳에서 온 문서라 안을 만질 수 있다. */
+  /* 액자 높이를 안의 내용에 맞춴 둔다. 탭을 옥기거나 고치기로 들어가면
+     안의 키가 바뀌므로, 한 번 재는 것으로는 모자란다 — 계속 따라간다. */
+  function pfFit(frame) {
+    const d = frame.contentDocument;
+    if (!d || !d.body) return;
+    const h = Math.max(d.body.scrollHeight, d.documentElement.scrollHeight);
+    if (h) frame.style.height = h + 'px';
+  }
+
   document.getElementById('pfFrame').addEventListener('load', function () {
     const frameUrl = this.dataset.url;
+    const frame    = this;
     try {
       const d = this.contentDocument;
       if (!d) return;
+
+      pfFit(frame);
+      if (window.ResizeObserver) {
+        new ResizeObserver(() => pfFit(frame)).observe(d.body);
+      }
+      d.defaultView.addEventListener('resize', () => pfFit(frame));
 
       d.addEventListener('click', (ev) => {
         const a = ev.target.closest('a[href]');
