@@ -141,7 +141,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="파일명 · 환자명">
+             placeholder="파일명 · 이름">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -276,11 +276,11 @@
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,
-    /* 찾을 때 먼저 보는 것이 환자명이라 맨 앞에 둔다.
+    /* 찾을 때 먼저 보는 것이 이름이라 맨 앞에 둔다.
        다운로드경로 컬럼은 뺐다 — 주소를 눈으로 읽을 일이 없는데 260px 를 차지해 오른쪽
        컬럼을 밀어냈다. 내려받기는 파일명을 누르면 된다. */
     columns: [
-      { header: '환자명',   name: 'patient',   width: 100, sortable: true },
+      { header: '이름',   name: 'patient',   width: 100, sortable: true },
       { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
       { header: '유형',     name: 'type',      width: 110, sortable: true, align: 'center' },
       { header: '생성유형', name: 'source',    width: 120, sortable: true },

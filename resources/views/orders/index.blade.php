@@ -10,8 +10,8 @@
 @push('scripts')
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.ds-filter-card', title: '검색 필터', body: '상태·유형을 고르고 주문번호, 환자명, 제품명으로 찾습니다. 기간으로도 좁힐 수 있습니다.' },
-  { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·환자명·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
+  { selector: '.ds-filter-card', title: '검색 필터', body: '상태·유형을 고르고 주문번호, 이름, 제품명으로 찾습니다. 기간으로도 좁힐 수 있습니다.' },
+  { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·이름·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
 @endpush
@@ -102,7 +102,7 @@ window.HELP_TOUR_STEPS = [
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호ㆍ환자명ㆍ제품명">
+             placeholder="주문번호ㆍ이름ㆍ제품명">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -190,7 +190,7 @@ window.HELP_TOUR_STEPS = [
       <thead>
         <tr>
           <th>주문번호</th>
-          <th>환자명</th>
+          <th>이름</th>
           <th>제품명</th>
           <th>수량</th>
           <th class="amount-cell">환자부담금</th>
@@ -357,7 +357,7 @@ window.HELP_TOUR_STEPS = [
           return el;
         },
       },
-      { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
+      { header: '이름',     name: 'patient',   width: 90,  sortable: true },
       /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */

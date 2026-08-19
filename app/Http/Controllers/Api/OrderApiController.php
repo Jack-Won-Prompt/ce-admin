@@ -22,7 +22,7 @@ class OrderApiController extends Controller
             $query->where('status', $request->status);
         }
 
-        // 검색 (주문번호 / 환자명)
+        // 검색 (주문번호 / 이름)
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {

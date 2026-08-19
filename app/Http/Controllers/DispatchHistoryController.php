@@ -64,7 +64,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시',   'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no', 'width' => 120],
-                ['header' => '환자명',     'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '이름',     'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '사업자번호', 'name' => 'biz_no',   'width' => 120],
                 ['header' => '상호',       'name' => 'biz_name', 'width' => 140],
                 ['header' => '공급가액',   'name' => 'supply',   'width' => 100, 'editor' => 'number'],
@@ -91,7 +91,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시',   'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no', 'width' => 120],
-                ['header' => '환자명',     'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '이름',     'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '종류',       'name' => 'cr_type',  'width' => 90,  'align' => 'center'],
                 ['header' => '식별번호',   'name' => 'ident',    'width' => 130],
                 ['header' => '발행금액',   'name' => 'amount',   'width' => 100, 'editor' => 'number'],
@@ -125,7 +125,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발송일시', 'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no', 'width' => 120],
-                ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '이름',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '발송 팩스','name' => 'fax',      'width' => 120],
                 ['header' => '청구금액', 'name' => 'claim',    'width' => 100, 'editor' => 'number'],
                 ['header' => '공단부담금','name' => 'nhis',     'width' => 100, 'editor' => 'number'],
@@ -154,7 +154,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시', 'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no', 'width' => 120],
-                ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '이름',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '은행',     'name' => 'bank',     'width' => 90],
                 ['header' => '계좌번호', 'name' => 'account',  'width' => 150],
                 ['header' => '금액',     'name' => 'amount',   'width' => 100, 'editor' => 'number'],

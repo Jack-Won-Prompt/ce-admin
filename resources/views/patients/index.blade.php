@@ -323,7 +323,7 @@
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
     @perm('patients', 'create')
-    <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">환자 추가</button>
+    <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">거래처 등록</button>
     @endperm
   </div>
 </form>
@@ -358,12 +358,12 @@
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
-{{-- 환자 추가 모달 --}}
+{{-- 거래처 등록 모달 --}}
 <div class="modal-overlay" id="addModal">
   <div class="modal-box">
     <div class="modal-header">
       <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i>
-      <h3>환자 추가</h3>
+      <h3>거래처 등록</h3>
       <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;">&times;</button>
     </div>
     <div class="modal-body">
@@ -371,7 +371,7 @@
         <div class="form-group">
           {{-- 필수 표시는 전역 .form-label span 이 var(--danger) 로 그린다.
                인라인 color:red 는 그 규칙을 덮어 DS 밖 빨강이 되므로 걷어냈다. --}}
-          <label class="form-label">환자명 <span>*</span></label>
+          <label class="form-label">이름 <span>*</span></label>
           <input type="text" class="form-control" id="add-name" placeholder="홍길동" />
         </div>
         <div class="form-group">
@@ -510,7 +510,7 @@ document.addEventListener('keydown', (e) => {
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
     footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
-      { header: '환자명',       name: 'name',            width: 110, sortable: true },
+      { header: '이름',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
       { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
       /* 성별 자리에 상담내역을 둔다. 성별은 훑을 때 쓰는 값이 아니고(필요하면 상세에 있다),
@@ -1152,7 +1152,7 @@ document.addEventListener('keydown', (e) => {
 
   async function savePatient() {
     const name = document.getElementById('add-name').value.trim();
-    if (!name) { showToast('환자명은 필수입니다.', 'warning'); return; }
+    if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
 
     const btn = document.getElementById('btn-add-save');
     BtnState.loading(btn, '저장 중...');
@@ -1198,7 +1198,7 @@ document.addEventListener('keydown', (e) => {
 window.HELP_TOUR_STEPS = [
   { selector: '.ds-filter-card', title: '환자 검색', body: '이름, 전화번호, 주민번호 앞자리로 검색합니다. 엔터 또는 검색 버튼을 누르세요.' },
   { selector: '#patientGrid', title: '환자 목록', body: '등록된 환자 목록입니다. 행을 체크한 뒤 <b>선택 상세</b> 버튼을 누르면 처방·주문 이력이 포함된 상세 화면으로 이동합니다.' },
-  { selector: '[onclick="openAddModal()"]', title: '환자 신규 등록', body: '<b>환자 추가</b> 버튼을 클릭하면 이름·연락처·주민번호 등을 입력하는 등록 폼이 열립니다.' },
+  { selector: '[onclick="openAddModal()"]', title: '거래처 신규 등록', body: '<b>거래처 등록</b> 버튼을 누르면 이름·연락처·주민번호 등을 적는 폼이 열립니다.' },
 ];
 </script>
 @endpush

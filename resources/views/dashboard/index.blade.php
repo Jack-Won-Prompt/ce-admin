@@ -14,7 +14,7 @@
   <div class="help-section-title">주요 구성</div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-file-blank"></i></div>
-    <div class="help-item-text"><strong>처방전 현황 카드</strong>OCR 처리 대기, 검수 필요, 주문 미등록 건수를 실시간으로 표시합니다.</div>
+    <div class="help-item-text"><strong>처방전 현황 카드</strong>처리 대기, 검수 필요, 주문 미등록 건수를 실시간으로 표시합니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
@@ -52,9 +52,9 @@
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
-      { header: '환자명',    name: 'patient',   width: 100, sortable: true },
+      { header: '이름',    name: 'patient',   width: 100, sortable: true },
       { header: '생년월일',  name: 'birth',     width: 110, align: 'center' },
-      { header: 'OCR 상태',  name: 'ocr',       width: 110, align: 'center', sortable: true },
+      { header: '상태',      name: 'ocr',       width: 110, align: 'center', sortable: true },
       { header: '주문',      name: 'order',     width: 90,  align: 'center' },
       { header: '청구',      name: 'claim',     width: 90,  align: 'center' },
       { header: '담당',      name: 'manager',   width: 90 },
@@ -275,10 +275,10 @@ window.HELP_TOUR_STEPS = [
         <div class="q-label">검수 필요</div>
       </a>
       <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing']) }}" class="queue-box blue"
-         data-ce-tab="처방전 목록 - OCR 처리중" data-ce-icon="bx-file">
+         data-ce-tab="처방전 목록 - 처리중" data-ce-icon="bx-file">
         <span class="q-icon"><i class="bx bx-scan"></i></span>
         <div class="q-num">{{ $stats['ocr_processing'] }}</div>
-        <div class="q-label">OCR 처리중</div>
+        <div class="q-label">처리중</div>
       </a>
       <a href="{{ route('prescriptions.index', ['status' => 'approved']) }}" class="queue-box green"
          data-ce-tab="처방전 목록 - 검수 완료" data-ce-icon="bx-file">

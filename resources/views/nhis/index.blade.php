@@ -206,7 +206,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호 · 환자명">
+             placeholder="주문번호 · 이름">
     </div>
     {{-- 2차 요청(R2-09) — 주민번호는 마스킹된 값에서 부분검색한다. 평문은 화면에 내려보내지 않는다. --}}
     <div class="ds-filter-field">
@@ -375,7 +375,7 @@
     footer: false,   // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
-      { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
+      { header: '이름',      name: 'patient',       width: 90,  sortable: true },
       { header: '신환/구환',   name: 'patient_type',  width: 90,  align: 'center', sortable: true },
       { header: '제품명',      name: 'product',       width: 170 },
       { header: '청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
@@ -568,7 +568,7 @@ async function previewDoc(orderId, orderNumber) {
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 환자명으로 청구 대상을 조회합니다.' },
+  { selector: '.ds-filter-card', title: '청구 검색 필터', body: '기간, 상태, 이름으로 청구 대상을 조회합니다.' },
   { selector: '#nhisGrid', title: '청구 목록', body: '주문별 청구 현황을 보여줍니다. 상태가 <b>청구 대기</b>인 항목을 공단 사이트에서 청구하고, 결과를 여기에 기록합니다.' },
 ];
 </script>

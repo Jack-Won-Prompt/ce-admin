@@ -149,8 +149,8 @@
              oninput="pcNewPreview()" />
     </div>
     <div>
-      <label class="ds-field-label" style="margin-bottom:4px;display:block;">환자명</label>
-      <input type="text" class="form-control" id="pcNewName" maxlength="50" placeholder="환자명"
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">이름</label>
+      <input type="text" class="form-control" id="pcNewName" maxlength="50" placeholder="이름"
              oninput="pcNewPreview()" />
     </div>
     <div>
@@ -199,7 +199,7 @@
              oninput="pcSmsPreview()" />
     </div>
     <div>
-      <label class="ds-field-label" style="margin-bottom:4px;display:block;">환자명</label>
+      <label class="ds-field-label" style="margin-bottom:4px;display:block;">이름</label>
       <input type="text" class="form-control" id="pcSmsName" maxlength="50"
              oninput="pcSmsPreview()" />
     </div>
@@ -369,7 +369,7 @@
   window.pcSendNew = async function () {
     const mobile = document.getElementById('pcNewMobile').value.trim();
     const name   = document.getElementById('pcNewName').value.trim();
-    if (!name)   { showToast('환자명을 입력해주세요.', 'warning'); return; }
+    if (!name)   { showToast('이름을 입력해주세요.', 'warning'); return; }
     if (mobile.replace(/\D/g, '').length < 9) {
       showToast('수신 번호를 다시 확인해주세요.', 'warning'); return;
     }

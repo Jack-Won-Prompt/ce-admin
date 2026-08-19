@@ -272,7 +272,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="주문번호ㆍ환자명">
+             placeholder="주문번호ㆍ이름">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
@@ -359,7 +359,7 @@
           <div class="detail-section-hd">주문 기본 정보</div>
           <div class="detail-section-bd">
             <dl class="dl">
-              <div class="dl-row"><dt>환자명</dt><dd id="d-patient-name"></dd></div>
+              <div class="dl-row"><dt>이름</dt><dd id="d-patient-name"></dd></div>
               <div class="dl-row"><dt>연락처</dt><dd id="d-patient-mobile"></dd></div>
               <div class="dl-row wide"><dt>제품명</dt><dd id="d-product-name"></dd></div>
               <div class="dl-row wide"><dt>총금액</dt><dd id="d-total-amount"></dd></div>
@@ -1137,7 +1137,7 @@ window.addEventListener('resize', closeIssuePop);
 window.HELP_TOUR_STEPS = [
   { selector: '#btn-list', title: '주문 목록 탭', body: '세금계산서 또는 현금영수증을 발행할 주문을 여기서 선택합니다.' },
   { selector: '#btn-detail', title: '계산서 발행 탭', body: '주문을 선택하면 이 탭에서 세금계산서·현금영수증을 발행하고 취소할 수 있습니다.' },
-  { selector: '.ds-filter-card', title: '필터', body: '기간, 발행 상태, 환자명으로 조회 범위를 좁힙니다.' },
+  { selector: '.ds-filter-card', title: '필터', body: '기간, 발행 상태, 이름으로 조회 범위를 좁힙니다.' },
 ];
 </script>
 @endpush
@@ -1154,7 +1154,7 @@ window.HELP_TOUR_STEPS = [
     footer: false,
     columns: [
       { header: '주문번호',   name: 'order_number', width: 130, sortable: true },
-      { header: '환자명',     name: 'patient_name', width: 90,  sortable: true },
+      { header: '이름',     name: 'patient_name', width: 90,  sortable: true },
       { header: '제품명',     name: 'product_name', width: 180, sortable: true },
       { header: '총금액',     name: 'total_amount', width: 110, align: 'right', editor: 'number', sortable: true },
       { header: '주문상태',   name: 'status_label', width: 90,  align: 'center', sortable: true },

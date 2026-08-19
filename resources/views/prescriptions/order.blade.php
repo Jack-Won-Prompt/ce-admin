@@ -851,7 +851,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
     <div class="pib-body">
 
-        {{-- 왼쪽 — 환자명과 배지 (시안 137:301) --}}
+        {{-- 왼쪽 — 이름과 배지 (시안 137:301) --}}
         <div class="pib-ident">
           <span class="pib-name" id="hdrPatientName">
             {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
@@ -919,7 +919,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      style="font-size:13px;" oninput="updateConsentPreview()" />
             </div>
             <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">환자명</label>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">이름</label>
               {{-- OCR 이름이 틀리거나 비어 있는 경우가 있어 여기서 고쳐 보낼 수 있게 한다.
                    비워 두면 서버가 처방전에 적힌 이름을 쓴다. --}}
               <input type="text" class="form-control" id="consentPatientName" maxlength="50"
@@ -1069,7 +1069,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div style="background:var(--primary-light);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;">
                   <div style="font-size:11px;color:var(--text-muted);font-weight:500;margin-bottom:8px;">발급 정보 확인</div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
-                    <span style="color:var(--text-muted);">환자명</span>
+                    <span style="color:var(--text-muted);">이름</span>
                     <b>{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}</b>
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
@@ -1946,7 +1946,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <div class="tb-btns">
           {{-- 시안 순서 그대로 — 환자 조회, 신규 등록 (137:706·708). 아이콘 없이 글자만. --}}
           <button type="button" id="btnPatientLookup" class="tb-act" onclick="openPatientLookup()"
-                  title="환자명으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
+                  title="이름으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
                   title="검수 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
           {{-- 원본 복원·승인 요청·저장은 시안(148:2639)대로 아코디언 헤더에 둔다 --}}
@@ -2102,13 +2102,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             <div class="rx-cols">
             <div class="rx-col">
-              {{-- 1열 — 환자명* · 주민등록번호 · 전화번호 1 · 전화번호 2 · 주소 (시안 315:58 Frame 48101490).
+              {{-- 1열 — 이름* · 주민등록번호 · 전화번호 1 · 전화번호 2 · 주소 (시안 315:58 Frame 48101490).
                    생년월일과 보호자(guardianBox)는 시안에 없지만 주민번호로 계산되는 짝이라
                    주민등록번호 바로 아래에 남긴다. --}}
               <div class="rx-field-row">
-                {{-- 시안 라벨 56개 중 '환자명 *' 하나만 13/700 이다(나머지는 전부 13/500).
+                {{-- 시안 라벨 56개 중 '이름 *' 하나만 13/700 이다(나머지는 전부 13/500).
                      '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
-                <span class="rx-field-label" style="font-weight:700;">환자명 <span style="color:var(--primary);">*</span></span>
+                <span class="rx-field-label" style="font-weight:700;">이름 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
@@ -2688,7 +2688,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-user"></i> 환자 정보</td></tr>
             <tr>
-              <th>환자명</th><td data-from="f-name">{{ $prescription->patient_name_ocr ?: '-' }}</td>
+              <th>이름</th><td data-from="f-name">{{ $prescription->patient_name_ocr ?: '-' }}</td>
               <th>연락처</th><td data-from="f-mobile">{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '-' }}</td>
             </tr>
             <tr>
@@ -3217,13 +3217,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div class="modal-header">
       <i class="fa-solid fa-magnifying-glass" style="color:var(--primary);font-size:16px;"></i>
       <span class="modal-title">환자 조회</span>
-      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">환자명(또는 연락처)으로 조회해 과거 상담이력을 가져옵니다</span>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">이름(또는 연락처)으로 조회해 과거 상담이력을 가져옵니다</span>
       <button class="modal-close" onclick="closePatientLookup()"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     {{-- 검색 바 --}}
     <div style="flex-shrink:0;padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
-      <input type="text" id="plQuery" placeholder="환자명 2글자 이상 (예: 홍길동) 또는 연락처 4자리 이상"
+      <input type="text" id="plQuery" placeholder="이름 2글자 이상 (예: 홍길동) 또는 연락처 4자리 이상"
              autocomplete="off"
              style="flex:1;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
       <button type="button" id="plSearchBtn" onclick="plSearch()"
@@ -3239,7 +3239,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           환자 <span id="plPatientCount"></span>
         </div>
         <div id="plPatientList" style="flex:1;overflow-y:auto;">
-          <div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">환자명을 검색하세요</div>
+          <div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">이름을 검색하세요</div>
         </div>
       </div>
 
@@ -3489,7 +3489,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <td id="cr-d-order-no" style="padding:7px 0;font-family:monospace;font-size:11px;"></td>
         </tr>
         <tr>
-          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">환자명</th>
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">이름</th>
           <td id="cr-d-patient" style="padding:7px 0;"></td>
         </tr>
       </tbody>
@@ -4619,7 +4619,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('shippingPostcode').value   = document.getElementById('f-postcode').value;
     document.getElementById('shippingAddr').value       = document.getElementById('f-address').value;
     document.getElementById('shippingAddrDetail').value = document.getElementById('f-address-detail').value;
-    // 받는 사람이 비어있으면 환자명으로 채움
+    // 받는 사람이 비어있으면 이름으로 채움
     const rec = document.getElementById('shippingRecipient');
     if (rec && !rec.value.trim()) {
       rec.value = document.getElementById('f-name')?.value?.trim() || '';
@@ -5192,7 +5192,7 @@ window.HELP_TOUR_STEPS = [
   function openPatientLookup() {
     document.getElementById('patientLookupModal').classList.add('show');
     const q = document.getElementById('plQuery');
-    // 현재 화면의 환자명을 기본 검색어로 넣어준다
+    // 현재 화면의 이름을 기본 검색어로 넣어준다
     if (!q.value.trim()) q.value = document.getElementById('f-name')?.value?.trim() || '';
     q.focus();
     q.select();
@@ -5332,7 +5332,7 @@ window.HELP_TOUR_STEPS = [
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">${_pcEsc(d.rx_number ?? '')} · ${_pcEsc(d.reg_date ?? '')}</div>
 
       <div class="pc-field-grid">
-        ${_pcFR('환자명',       d.patient_name_ocr)}
+        ${_pcFR('이름',       d.patient_name_ocr)}
         ${_pcFR('연락처',       _pcPhone(d.mobile_ocr || d.call_no))}
         ${_pcFR('주민번호',     d.resident_no_masked)}
         ${_pcFR('보호자명',     d.udf24)}
@@ -5642,7 +5642,7 @@ window.HELP_TOUR_STEPS = [
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
     if (!name || !hosp) {
-      showToast('환자명, 병원명은 필수 항목입니다.', 'warning');
+      showToast('이름, 병원명은 필수 항목입니다.', 'warning');
       return;
     }
 
@@ -7458,7 +7458,7 @@ window.HELP_TOUR_STEPS = [
 
     // ── 환자 정보 ─────────────────────────────────────
     let patientBody = `<div class="pc-field-grid">
-      ${_pcFR('환자명',       d.patient_name_ocr)}
+      ${_pcFR('이름',       d.patient_name_ocr)}
       ${_pcFR('연락처',       _pcPhone(d.mobile_ocr || d.call_no))}
       ${_pcFR('주민번호',     d.resident_no_masked)}
       ${_pcFR('보호자명',     d.udf24)}
@@ -7536,7 +7536,7 @@ window.HELP_TOUR_STEPS = [
             ${c.pdf_path ? `<a href="${c.pdf_path}" target="_blank" style="font-size:11px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-file-pdf"></i> 동의서 PDF</a>` : ''}
           </div>
           <div class="pc-field-grid" style="margin-top:8px;">
-            ${_pcFR('환자명', c.patient_name)}
+            ${_pcFR('이름', c.patient_name)}
             ${_pcFR('동의 일시', c.responded_at)}
             ${_pcFR('만료 일시', c.expires_at)}
           </div>

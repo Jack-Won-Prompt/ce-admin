@@ -112,7 +112,7 @@
           <div style="flex:1 1 260px;min-width:180px;display:flex;align-items:baseline;gap:8px;min-height:32px;">
             <span class="view-only" style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ $patient->name }}</span>
             <input type="text" class="form-control edit-only" id="e-name" value="{{ $patient->name }}"
-                   data-orig="{{ $patient->name }}" placeholder="환자명" style="flex:0 1 200px;" />
+                   data-orig="{{ $patient->name }}" placeholder="이름" style="flex:0 1 200px;" />
             <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
               환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
               <span class="view-only" style="display:inline;">
@@ -414,7 +414,7 @@
 
   async function savePatient() {
     const name = document.getElementById('e-name').value.trim();
-    if (!name) { showToast('환자명은 필수입니다.', 'warning'); return; }
+    if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
 
     const btn = document.getElementById('btn-save');
     BtnState.loading(btn, '저장 중...');

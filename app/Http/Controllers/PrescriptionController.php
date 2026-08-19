@@ -2450,7 +2450,7 @@ HTML;
         $mobile     = $d['mobile'] ?? $d['phone'] ?? null;
         $address    = $d['address'] ?? null;
 
-        // 환자명이 없으면 연결 불가
+        // 이름이 없으면 연결 불가
         if (empty($name)) {
             return;
         }

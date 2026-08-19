@@ -642,7 +642,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
       { header: '관리번호/처방번호', name: 'mgt',    width: 170 },
-      { header: '공급받는자/환자명', name: 'buyer',  width: 170, sortable: true },
+      { header: '공급받는자/이름', name: 'buyer',  width: 170, sortable: true },
       { header: '공급가액',          name: 'supply', width: 110, editor: 'number' },
       { header: '세액',              name: 'tax',    width: 90,  editor: 'number' },
       { header: '유형',              name: 'type',   width: 70,  align: 'center', sortable: true },

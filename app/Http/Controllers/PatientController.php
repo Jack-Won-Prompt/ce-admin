@@ -353,11 +353,11 @@ class PatientController extends Controller
         $patient = Patient::create($data);
 
         activity()->causedBy(auth()->user())->performedOn($patient)
-            ->log("{$patient->name} 환자 등록");
+            ->log("{$patient->name} 거래처 등록");
 
         return response()->json([
             'success' => true,
-            'message' => "{$patient->name} 환자가 등록되었습니다.",
+            'message' => "{$patient->name} 거래처로 등록되었습니다.",
             'id'      => $patient->id,
         ]);
     }

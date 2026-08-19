@@ -178,7 +178,7 @@ class SettlementController extends Controller
 
         $columns = [
             ['header' => '주문번호',    'name' => 'order_no',     'width' => 120, 'sortable' => true],
-            ['header' => '환자명',      'name' => 'patient',      'width' => 90,  'sortable' => true],
+            ['header' => '이름',      'name' => 'patient',      'width' => 90,  'sortable' => true],
             ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
             ['header' => '유형',        'name' => 'acc_type',     'width' => 100, 'align' => 'center', 'sortable' => true],
             ['header' => '제품명',      'name' => 'product',      'width' => 160],
@@ -233,7 +233,7 @@ class SettlementController extends Controller
 
         $columns = [
             ['header' => '주문번호',      'name' => 'order_no',   'width' => 120, 'sortable' => true],
-            ['header' => '환자명',        'name' => 'patient',    'width' => 90,  'sortable' => true],
+            ['header' => '이름',        'name' => 'patient',    'width' => 90,  'sortable' => true],
             ['header' => '연락처',        'name' => 'mobile',     'width' => 120],
             ['header' => '본인부담금',    'name' => 'copay',      'width' => 110, 'editor' => 'number'],
             ['header' => '주문상태',      'name' => 'status',     'width' => 90,  'align' => 'center', 'sortable' => true],

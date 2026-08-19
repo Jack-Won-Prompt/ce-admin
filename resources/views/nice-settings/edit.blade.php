@@ -132,7 +132,7 @@
         <input type="checkbox" name="match_name" value="1" {{ old('match_name', $setting->match_name) ? 'checked' : '' }}>
         <div>
           <div class="t">이름 일치 필수</div>
-          <div class="d">본인확인 결과의 성명이 처방전 환자명과 다르면 본인확인을 거부합니다.</div>
+          <div class="d">본인확인 결과의 성명이 처방전 이름과 다르면 본인확인을 거부합니다.</div>
         </div>
       </label>
 

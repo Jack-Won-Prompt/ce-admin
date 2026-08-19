@@ -188,7 +188,7 @@
 .rx-row-line1      { display:flex; align-items:center; gap:4px; min-width:0; overflow:hidden; }
 .rx-row-line2      { display:flex; align-items:center; gap:4px; min-width:0; }
 .rx-row-num        { font-size:12px; font-weight:500; line-height:19px; color:var(--primary); flex-shrink:0; }
-/* 환자명이 길면(OCR 값이라 길이가 들쭉날쭉하다) 스스로 줄인다 — 병원명과 같은 처리.
+/* 이름이 길면(OCR 값이라 길이가 들쭉날쭉하다) 스스로 줄인다 — 병원명과 같은 처리.
    flex-shrink:0 이면 RX 번호와 상태 배지 위로 글자가 겹쳐 나온다. */
 .rx-row-patient    { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-1000);
   min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -237,7 +237,7 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '재구매 예정일', name: 'repurchase', width: 130, sortable: true },
       { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
-      { header: '환자명',        name: 'patient',    width: 110, sortable: true },
+      { header: '이름',        name: 'patient',    width: 110, sortable: true },
       { header: '병원',          name: 'hospital',   width: 200 },
       { header: '상태',          name: 'status',     width: 100, align: 'center', sortable: true },
       { header: '등록일',        name: 'created',    width: 120, align: 'center', sortable: true },
@@ -527,7 +527,7 @@ function gotoYm(y, m) {
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="search" class="form-control"
-             placeholder="처방전 번호ㆍ환자명ㆍ병원명 검색"
+             placeholder="처방전 번호ㆍ이름ㆍ병원명 검색"
              value="{{ request('search') }}">
     </div>
   </div>

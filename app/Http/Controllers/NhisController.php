@@ -48,7 +48,7 @@ class NhisController extends Controller
             $query->where('claim_ready', $request->ready === 'y');
         }
 
-        // 검색 (환자명, 주문번호)
+        // 검색 (이름, 주문번호)
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {

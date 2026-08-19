@@ -135,7 +135,7 @@
       <div class="ds-filter-field">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
-               placeholder="처방번호 · 환자명 · 병원명" value="{{ request('search') }}">
+               placeholder="처방번호 · 이름 · 병원명" value="{{ request('search') }}">
       </div>
       <div class="ds-filter-field span-2">
         <label class="ds-field-label">기간</label>
@@ -213,7 +213,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.filter-bar',
     title: '검색 및 필터',
-    body: '환자명, 처방번호, 병원명으로 검색하거나 날짜 범위를 지정해 조회할 수 있습니다.'
+    body: '이름, 처방번호, 병원명으로 검색하거나 날짜 범위를 지정해 조회할 수 있습니다.'
   },
   {
     selector: '#rxGrid',
@@ -240,7 +240,7 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '처방번호',      name: 'rx_number',  width: 150, sortable: true },
       { header: '출처',          name: 'source',     width: 70,  align: 'center', sortable: true },
-      { header: '환자명',        name: 'patient',    width: 100, sortable: true },
+      { header: '이름',        name: 'patient',    width: 100, sortable: true },
       { header: '병원',          name: 'hospital',   width: 150, sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },

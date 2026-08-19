@@ -41,7 +41,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="접수번호 · 주문번호 · 환자명">
+             placeholder="접수번호 · 주문번호 · 이름">
     </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">상태</label>
@@ -124,7 +124,7 @@
           return el;
         },
       },
-      { header: '환자명',   name: 'patient',  width: 90 },
+      { header: '이름',   name: 'patient',  width: 90 },
       { header: '사유',     name: 'reason',   width: 100 },
       { header: '배송비',   name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },

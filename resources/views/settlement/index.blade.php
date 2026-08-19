@@ -173,7 +173,7 @@
       <div class="ds-filter-fields">
         <div class="ds-filter-field span-2">
           <label class="ds-field-label">검색어</label>
-          <input type="text" name="search" class="form-control" placeholder="주문번호·환자명·제품명" value="{{ request('search') }}">
+          <input type="text" name="search" class="form-control" placeholder="주문번호·이름·제품명" value="{{ request('search') }}">
         </div>
         <div class="ds-filter-field span-2">
           <label class="ds-field-label">기간</label>
@@ -274,7 +274,7 @@
         {{-- 폭은 정산 현황 탭에서 확정된 규격을 따른다 — 검색어 span-2(295) · 선택 1열(140) --}}
         <div class="ds-filter-field span-2">
           <label class="ds-field-label">검색어</label>
-          <input type="text" name="va_search" class="form-control" placeholder="주문번호·환자명·계좌번호" value="{{ request('va_search') }}">
+          <input type="text" name="va_search" class="form-control" placeholder="주문번호·이름·계좌번호" value="{{ request('va_search') }}">
         </div>
         <div class="ds-filter-field">
           <label class="ds-field-label">입금 상태</label>
@@ -456,7 +456,7 @@
           </div>
           <div>
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">환자 정보</div>
-            ${row('환자명', `<b>${d.patient_name}</b>`)}
+            ${row('이름', `<b>${d.patient_name}</b>`)}
             ${row('생년월일', d.patient_birth)}
             ${row('주민번호', d.resident_no)}
             ${row('연락처', d.patient_mobile)}
@@ -580,7 +580,7 @@
           </div>
           <div>
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">환자 정보</div>
-            ${row('환자명', `<b>${d.patient_name}</b>`)}
+            ${row('이름', `<b>${d.patient_name}</b>`)}
             ${row('연락처', d.patient_mobile)}
             ${row('배송주소', d.shipping_address)}
             ${row('송장번호', d.tracking_number)}

@@ -45,7 +45,7 @@
            data-ce-tab="주문 - {{ $r->order->order_number }}" data-ce-icon="bx-cart">{{ $r->order->order_number }}</a>
       @else — @endif
     </span></div>
-    <div class="rt-kv"><span>환자명</span><span>{{ $r->order?->patient?->name ?? '—' }}</span></div>
+    <div class="rt-kv"><span>이름</span><span>{{ $r->order?->patient?->name ?? '—' }}</span></div>
     <div class="rt-kv"><span>제품</span><span>{{ $r->order?->product_name ?? '—' }}</span></div>
     <div class="rt-kv"><span>주문 금액</span><span>{{ $r->order ? number_format($r->order->total_amount) . '원' : '—' }}</span></div>
     <div class="rt-kv"><span>배송지</span><span>{{ $r->order?->shipping_address ?? '—' }}</span></div>

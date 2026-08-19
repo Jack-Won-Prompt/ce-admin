@@ -660,7 +660,7 @@
       </div>
       <div class="card-body">
         <dl class="side-info">
-          <dt>환자명</dt>
+          <dt>이름</dt>
           <dd>
             <a href="{{ route('patients.show', $patient) }}"
                style="color:var(--text-primary);text-decoration:none;">
