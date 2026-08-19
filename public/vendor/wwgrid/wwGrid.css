@@ -317,6 +317,8 @@
   border-top: 2px solid var(--cg-border-sub);
   border-right: 1px solid var(--cg-border);
   background: var(--cg-summary-bg);
+  /* 줄이 많으면 합계가 끝까지 스크롤해야 보였다 — 밑에 붙여 둔다 */
+  position: sticky; bottom: 0; z-index: 3;
 }
 .cg-summary-label { font-weight: 600; color: #555; justify-content: flex-end; }
 .cg-summary-value { font-weight: 700; color: #1a3a5c; }

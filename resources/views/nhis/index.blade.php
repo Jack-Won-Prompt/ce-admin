@@ -370,7 +370,7 @@
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('nhisGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
     toolbar: false,  // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     footer: false,   // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [

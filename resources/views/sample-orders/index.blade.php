@@ -269,7 +269,8 @@
 
   const grid = new wwGrid({
     el: $('smpGrid'),
-    height: 'fit', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
+    summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
     columns: [
       { header: '샘플번호',   name: 'sample_no', width: 150, sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
@@ -277,7 +278,7 @@
       { header: '받는 사람',  name: 'recipient', width: 100 },
       { header: '연락처',     name: 'mobile',    width: 120 },
       { header: '배송지',     name: 'address',   width: 220 },
-      { header: '수량',       name: 'qty',       width: 70,  align: 'right' },
+      { header: '수량',       name: 'qty',       width: 70,  align: 'right', editor: 'number' },
       { header: '금액',       name: 'amount',    width: 100, align: 'right' },
       {
         // 창고에 넘겼는가. 못 넘긴 건은 눈에 띄어야 다시 보낸다.

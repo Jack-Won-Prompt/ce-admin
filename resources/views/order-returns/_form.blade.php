@@ -183,14 +183,16 @@
      알 수 있고, 고른 뒤에 갑자기 나타나 아래가 밀리지 않는다. */
   const itemGrid = new wwGrid({
     el: $('rtoItemGrid'),
-    height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+    summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
     columns: [
       { header: '제품코드', name: 'product_code', width: 120 },
       { header: '제품명',   name: 'product_name', width: 300 },
       { header: '수량',     name: 'quantity',     width: 80,  align: 'right', editor: 'number' },
       /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
          다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
-      { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number' },
+      { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number',
+        summary: false }  // 한 개 값이라 더하지 않는다,
       { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number' },
     ],
     data: [],

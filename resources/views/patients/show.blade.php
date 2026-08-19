@@ -284,7 +284,6 @@
             return a;
           } },
         { header: '병원',     name: 'hospital',  width: 160, sortable: true },
-        { header: '금액',     name: 'amount',    width: 110, align: 'right', editor: 'number' },
         { header: '접수일',   name: 'date',      width: 100, align: 'center', sortable: true },
         { header: '상태',     name: 'status',    width: 90,  align: 'center', sortable: true },
       ],
@@ -314,12 +313,14 @@
       if (!itemsGrid) {
         itemsGrid = new wwGrid({
           el: gridEl,
-          height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+          summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
           columns: [
             { header: '제품명',     name: 'name',       width: 300 },
             { header: '제품코드',   name: 'code',       width: 130 },
             { header: '수량',       name: 'qty',        width: 70,  align: 'right', editor: 'number' },
-            { header: '단가',       name: 'unit_price', width: 110, align: 'right', editor: 'number' },
+            { header: '단가',       name: 'unit_price', width: 110, align: 'right', editor: 'number',
+              summary: false },  // 단가는 한 개 값이라 더하지 않는다
             { header: '공단부담',   name: 'nhis',       width: 110, align: 'right', editor: 'number' },
             { header: '환자부담',   name: 'copay',      width: 110, align: 'right', editor: 'number' },
             { header: '금액',       name: 'total',      width: 110, align: 'right', editor: 'number' },

@@ -513,8 +513,11 @@
     /* 결과바 버튼은 primary 여도 테두리가 없다 — 시안 19개 전수 확인
        (엑셀 저장 · 환자 추가 · 선택 상세 · 신규 위임동의 전송 · 캘린더뷰 …).
        테두리가 있는 것은 카드 안 버튼뿐이다(처방전 검수 화면 · 주문 상세). */
+    /* 카드는 안에 든 것만큼만 높다. flex:1 로 남는 자리를 다 먹게 해 두었더니,
+       찾은 것이 몇 줄뿐인 날에는 표 아래로 흰 바닥이 화면 끝까지 이어졌다.
+       드물게 긴 목록은 그리드가 height:'fit' 으로 뷰포트까지 채우고 안에서 스크롤한다. */
     .ds-grid-card {
-      display: flex; flex-direction: column; flex: 1; min-height: 0;
+      display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
     }
     /* 카드가 overflow:hidden 이라, 안에 들어간 패널(조회 결과·상세 내용)이
