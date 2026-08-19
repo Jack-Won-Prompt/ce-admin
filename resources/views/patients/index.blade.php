@@ -401,7 +401,18 @@ document.addEventListener('keydown', (e) => {
       { header: '환자명',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
       { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
-      { header: '성별',         name: 'gender',          width: 60,  align: 'center', sortable: true },
+      /* 성별 자리에 상담내역을 둔다. 성별은 훑을 때 쓰는 값이 아니고(필요하면 상세에 있다),
+         목록에서 바로 하고 싶은 일은 「이 환자와 무슨 이야기를 했나」를 보는 것이다. */
+      { header: '상담내역', name: 'counsel', width: 90, align: 'center', exportable: false,
+        renderer: (v, row) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'pt-chip clickable';
+          b.textContent = '상담내역';
+          b.title = '이 환자의 상담 이력을 봅니다';
+          b.addEventListener('click', (e) => { e.stopPropagation(); ptLoad(row.id, 'counsel'); });
+          return b;
+        } },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
       { header: '급여',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
@@ -528,7 +539,7 @@ document.addEventListener('keydown', (e) => {
     } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
   });
 
-  async function ptLoad(id) {
+  async function ptLoad(id, tab = 'rx') {
     document.getElementById('pdEmpty').style.display = 'none';
     const panel = document.getElementById('patientDetail');
     panel.style.display = 'flex';
@@ -567,7 +578,8 @@ document.addEventListener('keydown', (e) => {
         ? d.purchases.map(o => hrow(esc(o.order_number), esc(o.product) + ' · ' + esc(o.date), '<div>' + Number(o.amount).toLocaleString() + '원</div><div class="pt-h-sub">' + esc(o.status) + '</div>', o.url, '주문 관리 - ' + esc(o.order_number))).join('')
         : emptyBox('구매 이력이 없습니다.');
 
-      window.ptTab('rx');
+      // 상담내역 단추로 열었으면 그 탭을 먼저 보여 준다 — 한 번 더 누르게 하지 않는다
+      window.ptTab(tab);
     } catch (e) {
       document.getElementById('pdName').textContent = '불러오기 실패';
       ['pd-rx', 'pd-counsel', 'pd-purchase'].forEach(i => document.getElementById(i).innerHTML = emptyBox('불러오지 못했습니다.'));
