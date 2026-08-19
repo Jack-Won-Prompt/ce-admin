@@ -19,8 +19,9 @@ class AuthApiController extends Controller
     private const OTP_MAX_ATTEMPTS = 5;
 
     // ── POST /api/auth/login ──────────────────────────────
-    // 1단계: 이메일/비밀번호 검증 → OTP SMS 발송
-    // 응답: {otp_required: true, pending_token, masked_phone}
+    // 이메일/비밀번호 검증. 그다음은 서버 설정(설정 › 로그인)이 가른다.
+    //   문자 인증 켬 → {otp_required: true, pending_token, masked_phone} (202)
+    //   문자 인증 끔 → {otp_required: false, token, user, pusher}        (200)
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -35,6 +36,11 @@ class AuthApiController extends Controller
                 'success' => false,
                 'message' => '이메일 또는 비밀번호가 올바르지 않습니다.',
             ], 401);
+        }
+
+        // 문자 인증을 끄면(설정 › 로그인) 비밀번호만으로 들여보낸다
+        if (! config('auth.otp_enabled', true)) {
+            return response()->json($this->issueToken($user));
         }
 
         if (empty($user->phone)) {
@@ -120,24 +126,7 @@ class AuthApiController extends Controller
         /** @var User $user */
         $user = $otp->user;
 
-        // 기존 모바일 토큰 삭제 후 새 토큰 발급 (단일 기기 로그인)
-        $user->tokens()->where('name', 'mobile-app')->delete();
-        $token = $user->createToken('mobile-app', ['prescription:upload', 'prescription:read'])->plainTextToken;
-
-        return response()->json([
-            'success' => true,
-            'token'   => $token,
-            'user'    => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'role'  => $user->role,
-            ],
-            'pusher'  => [
-                'key'     => config('broadcasting.connections.pusher.key'),
-                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
-            ],
-        ]);
+        return response()->json($this->issueToken($user));
     }
 
     // ── POST /api/auth/resend-otp ─────────────────────────
@@ -222,6 +211,33 @@ class AuthApiController extends Controller
     }
 
     // ─────────────────────────────────────────────────────
+
+    /**
+     * 로그인 완료 응답. OTP 를 건너뛴 로그인과 OTP 검증 뒤 로그인이 같은 값을 받는다
+     * — 앱이 두 경로를 가려 저장하지 않아도 되게.
+     */
+    private function issueToken(User $user): array
+    {
+        // 기존 모바일 토큰 삭제 후 새 토큰 발급 (단일 기기 로그인)
+        $user->tokens()->where('name', 'mobile-app')->delete();
+        $token = $user->createToken('mobile-app', ['prescription:upload', 'prescription:read'])->plainTextToken;
+
+        return [
+            'success'      => true,
+            'otp_required' => false,
+            'token'        => $token,
+            'user'         => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
+            ],
+            'pusher'       => [
+                'key'     => config('broadcasting.connections.pusher.key'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            ],
+        ];
+    }
 
     private function sendOtpSms(User $user, string $code): void
     {

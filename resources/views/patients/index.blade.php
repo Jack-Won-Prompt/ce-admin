@@ -557,8 +557,16 @@ document.addEventListener('keydown', (e) => {
      이력 탭 안에 접어 두면 한 건씩 펼쳐 봐야 해서, 제 자리를 따로 준다. */
   let pcGrid = null;
 
+  /** 탭 이름 — 「상담내역 - 홍길동」. 고른 사람이 없으면 그냥 「상담내역」이다. */
+  function pcTabTitle(name) {
+    const tab = document.getElementById('pnlBtnCounsel');
+    if (tab) tab.textContent = name ? '상담내역 - ' + name : '상담내역';
+  }
+
   window.pcLoad = async function (id, name) {
     pnlShow('counsel');
+    // 탭 이름에도 누구 것인지 붙인다 — 탭을 여럿 오가면 무엇을 열어 두었는지 잊는다
+    pcTabTitle(name);
     document.getElementById('pcName').textContent = (name || '') + ' 상담내역';
     document.getElementById('pcNote').textContent = '불러오는 중…';
 
@@ -567,15 +575,24 @@ document.addEventListener('keydown', (e) => {
                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
+      /* 한 줄이 곧 「무엇을 했나」다 — 상담번호와 날짜를 내용 앞에 붙여 한 칸으로 읽는다.
+         나머지는 언제·어디까지·무슨 갈래·누가 순으로 둔다. */
       const rows = (d.counseling ?? []).map(c => ({
-        counsel_no: c.counsel_no || '-',
+        action:     '#' + (c.counsel_no || '-') + (c.date ? ' ' + c.date : '')
+                    + (c.note ? ' : ' + c.note : ''),
         date:       c.date || '',
+        status:     c.status || '',
+        re_date:    c.re_date || '',
+        channel:    [c.type, c.call_no].filter(Boolean).join(' · '),
+        by:         c.by || '',
+        counsel_no: c.counsel_no || '-',
         rx_number:  c.rx_number || '',
         note:       c.note || '',
         url:        c.url || '',
       }));
 
       document.getElementById('pcName').textContent = (d.name || name || '') + ' 상담내역';
+      pcTabTitle(d.name || name);
 
       if (!rows.length) {
         document.getElementById('pcGrid').style.display  = 'none';
@@ -594,10 +611,13 @@ document.addEventListener('keydown', (e) => {
           el: document.getElementById('pcGrid'),
           height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
           columns: [
-            { header: '상담번호', name: 'counsel_no', width: 140, sortable: true },
-            { header: '상담일',   name: 'date',       width: 110, sortable: true, align: 'center' },
-            { header: '처방번호', name: 'rx_number',  width: 150, sortable: true },
-            { header: '상담 내용', name: 'note',      width: 420 },
+            { header: '상담 내용', name: 'action',    width: 420, sortable: true },
+            { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
+            { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
+            { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
+            { header: '갈래',      name: 'channel',   width: 130, sortable: true },
+            { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+            { header: '담당자',    name: 'by',        width: 90,  sortable: true },
           ],
           data: rows,
         });

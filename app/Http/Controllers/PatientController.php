@@ -142,7 +142,7 @@ class PatientController extends Controller
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $rx = $patient->prescriptions()->latest()->take(50)->get();
+        $rx = $patient->prescriptions()->with(['creator', 'updater'])->latest()->take(50)->get();
 
         $prescriptions = $rx->map(fn ($p) => [
             'rx_number' => $p->rx_number,
@@ -152,11 +152,23 @@ class PatientController extends Controller
             'url'       => route('prescriptions.show', $p),
         ])->values();
 
+        /* 상담 한 줄에 담는 것 — 무엇을 했나 · 언제 · 어디까지 왔나 · 무슨 갈래 · 누가.
+           상담 유형·상태는 코드로 저장돼 있어(1013 · 02 …) 그대로 두면 읽을 수 없다. */
+        $counselTypes = ['1013' => '구매', '1016' => '개인구매', '1020' => '반품',
+                         '1030' => '문의', '1050' => '기타'];
+        $counselStates = ['02' => '등록', '50' => '재상담', '95' => '확정', '99' => '취소'];
+
         $counseling = $rx->filter(fn ($p) => !empty($p->counsel_no))->map(fn ($p) => [
             'counsel_no' => $p->counsel_no ?: '-',
             'rx_number'  => $p->rx_number,
             'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
             'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
+            'type'       => $counselTypes[(string) $p->counsel_type] ?? ($p->counsel_type ?: ''),
+            'status'     => $counselStates[(string) $p->counsel_status] ?? ($p->counsel_status ?: ''),
+            'call_no'    => $p->counsel_call_no ?: '',
+            're_date'    => $p->counsel_re_date ?: '',
+            // 상담을 마지막으로 만진 사람. 고친 적이 없으면 등록한 사람이다.
+            'by'         => $p->updater?->name ?: ($p->creator?->name ?: ''),
             'url'        => route('prescriptions.show', $p),
         ])->values();
 
