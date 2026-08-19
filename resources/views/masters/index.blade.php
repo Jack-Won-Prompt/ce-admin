@@ -91,7 +91,7 @@
   <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;
        display:flex;align-items:center;gap:8px;position:sticky;top:0;">
     <span id="msTitle" style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">{{ $cat['label'] }}</span>
-    <button onclick="msClose()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
+    <button onclick="msClose()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-0);">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
     @foreach($cat['fields'] as $key => $f)

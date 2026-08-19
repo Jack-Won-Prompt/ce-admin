@@ -1062,17 +1062,23 @@
     .modal-box.xl  { max-width: 960px; }
     .modal-hd {
       display: flex; align-items: center; gap: 10px;
-      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      /* 시안 165:1316 머리 960×54 — pad 16/24 · gap 12 */
+      padding: 16px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
     .modal-title { font-size: 14px; font-weight: 700; color: var(--text-primary); flex: 1; letter-spacing: -.2px; }
+    /* 모달 닫기 — 시안 165:1318 은 16×16 아이콘이고 머리는 54(pad16 + 22 + pad16)다.
+       28×28 · 18px 이면 머리가 그만큼 커진다. 24×24 · 16px 이 머리를 지키는 최소다.
+       화면들이 10×16 · 11×29 · 13×20 … 열 가지로 갈려 있어 한 값으로 모은다. */
     .modal-close {
-      width: 28px; height: 28px; border-radius: 6px; border: none;
-      background: transparent; color: var(--text-muted); cursor: pointer;
+      width: 24px; height: 24px; border-radius: 6px; border: none;
+      background: transparent; color: var(--gray-500); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; transition: var(--transition); flex-shrink: 0;
+      font-size: 16px; line-height: 1; padding: 0;
+      transition: var(--transition); flex-shrink: 0;
     }
     .modal-close:hover { background: var(--bg); color: var(--text-primary); }
-    .modal-bd { padding: 20px; overflow-y: auto; flex: 1; }
+    /* 시안 165:1320 본문 — pad 24 · 세로 gap 16 */
+    .modal-bd { padding: 24px; overflow-y: auto; flex: 1; }
     .modal-ft {
       padding: 12px 20px; border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: flex-end; gap: 8px;

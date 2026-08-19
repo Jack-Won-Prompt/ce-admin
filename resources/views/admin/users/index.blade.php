@@ -224,7 +224,7 @@
 @keyframes modalIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--border); }
 .modal-title  { font-size:14px; font-weight:700; line-height:22px; }
-.modal-close  { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px; line-height:1; padding:0; }
+.modal-close  { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
 .modal-body   { padding:24px; max-height:70vh; overflow-y:auto; }
 .modal-footer { display:flex; align-items:center; padding:16px 24px; border-top:1px solid var(--border); gap:8px; }
 /* 시안 하단 버튼 글자는 14px/500. 줄높이는 전역 .btn 의 20px 을 그대로 둬 높이 32 를 지킨다 */

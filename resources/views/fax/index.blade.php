@@ -288,8 +288,9 @@
   .nd-modal { background:var(--gray-0); border-radius:12px; border:1px solid var(--gray-200); box-shadow:0 4px 24px rgba(153,158,164,.24); width:960px; max-width:92vw; max-height:85vh; display:flex; flex-direction:column; }
   .nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
   .nd-modal-head h3 { flex:1; min-width:0; font-size:14px; font-weight:700; line-height:22px; margin:0; color:var(--gray-1000); }
-  .nd-modal-close { width:16px; height:16px; flex-shrink:0; padding:0; background:none; border:none; font-size:16px; color:var(--gray-1000); cursor:pointer; line-height:1; }
-  .nd-modal-body { padding:16px; overflow-y:auto; flex:1; }
+  .nd-modal-close { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
+  /* 시안 165:1320 — 모달 본문 pad 24 */
+  .nd-modal-body { padding:24px; overflow-y:auto; flex:1; }
 
   /* 아래는 openDetail() 이 만드는 마크업이 쓰는 클래스라 이름을 그대로 둔다. */
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }

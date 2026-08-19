@@ -263,11 +263,12 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 .nd-modal-overlay.open { display:flex; }
 .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.22); width:640px; max-width:100%; max-height:calc(100vh - 16px); display:flex; flex-direction:column; }
 .nd-modal.wide { width:min(1200px, calc(100vw - 16px)); max-height:calc(100vh - 16px); }
-.nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
+/* 시안 165:1316 — 모달 머리 pad 16/24 */
+.nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .nd-modal-head h3 { flex:1; font-size:16px; font-weight:700; line-height:26px; margin:0; color:var(--gray-800); }
 .nd-modal-close { width:24px; height:24px; flex-shrink:0; background:none; border:none; border-radius:6px; font-size:16px; color:var(--gray-500); cursor:pointer; line-height:1; padding:0; }
 .nd-modal-close:hover { background:var(--gray-100); color:var(--gray-800); }
-.nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
+.nd-modal-body  { padding:24px; overflow-y:auto; flex:1; }
 
 /* 취소 모달 */
 .cancel-note { background:var(--danger-light); border-radius:8px; padding:10px 12px; font-size:12px; font-weight:400; line-height:19px; color:var(--danger); margin-bottom:12px; display:flex; gap:8px; align-items:flex-start; }

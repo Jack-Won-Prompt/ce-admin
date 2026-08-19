@@ -136,7 +136,7 @@
        display:flex;align-items:center;gap:8px;">
     <i class="fa-solid fa-file-signature" style="color:var(--gray-0);font-size:14px;flex-shrink:0;"></i>
     <span style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">신규 위임동의 SMS 발송</span>
-    <button onclick="pcCloseNew()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
+    <button onclick="pcCloseNew()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-0);">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
     <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:19px;">
@@ -179,7 +179,7 @@
        display:flex;align-items:center;gap:8px;">
     <i class="fa-solid fa-file-signature" style="color:var(--gray-0);font-size:14px;flex-shrink:0;"></i>
     <span id="pcSmsTitle" style="font-size:13px;font-weight:700;color:var(--gray-0);flex:1;">위임동의 SMS 발송</span>
-    <button onclick="pcCloseSms()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
+    <button onclick="pcCloseSms()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-0);">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
     {{-- 원래 주황 계열 하드코딩 경고 박스였다. 시안 경고색은 alert 램프 하나뿐이라 그쪽으로 옮겼다. --}}

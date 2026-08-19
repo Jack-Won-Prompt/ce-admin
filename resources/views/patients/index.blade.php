@@ -141,8 +141,11 @@
   .cs-grip::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
                     border-right: 2px solid var(--gray-300); border-bottom: 2px solid var(--gray-300); }
   .cs-head span { flex: 1; }
-  .cs-head button { background: none; border: none; color: #fff; font-size: 17px;
-                    line-height: 1; cursor: pointer; }
+  /* 닫기 규격은 24×24 · r6 · 16px 이다(17 은 시안 글자 규격 밖) */
+  .cs-head button { display: flex; align-items: center; justify-content: center;
+                    width: 24px; height: 24px; flex-shrink: 0; padding: 0;
+                    background: none; border: none; border-radius: 6px; color: #fff;
+                    font-size: 16px; line-height: 1; cursor: pointer; }
   .cs-body { flex: 1; min-height: 0; padding: 14px; display: flex; flex-direction: column;
              gap: 10px; overflow-y: auto; }
   /* 창이 커지면 적는 자리가 함께 커져야 한다 — 칸만 남고 여백이 늘면 뜻이 없다 */
@@ -424,7 +427,7 @@
     <div class="modal-header">
       <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i>
       <h3>거래처 등록</h3>
-      <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;">&times;</button>
+      <button onclick="closeAddModal()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-grid-2" style="margin-bottom:8px;">
@@ -501,7 +504,7 @@
     <a id="ptImgOpen" href="#" target="_blank" rel="noopener"
        style="font-size:11px;color:var(--primary);text-decoration:none;white-space:nowrap;">새 탭</a>
     <button type="button" onclick="ptCloseImage()"
-            style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;color:var(--gray-700);">&#215;</button>
+            style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">&#215;</button>
   </div>
   <div id="ptImgBody">
     <div id="ptImgLoading" style="padding:40px;font-size:13px;color:var(--gray-500);">불러오는 중...</div>

@@ -180,8 +180,11 @@
             box-shadow:0 12px 40px rgba(0,0,0,.22); }
   .pk-head { display:flex; align-items:center; gap:8px; padding:12px 16px;
              background:var(--primary); color:var(--gray-0); font-size:14px; font-weight:700; }
-  .pk-head button { margin-left:auto; background:none; border:none; color:inherit;
-                    font-size:20px; line-height:1; cursor:pointer; }
+  /* 닫기 규격은 24×24 · r6 · 16px 이다(20 은 시안 글자 규격 밖) */
+  .pk-head button { display:flex; align-items:center; justify-content:center;
+                    margin-left:auto; width:24px; height:24px; flex-shrink:0; padding:0;
+                    background:none; border:none; border-radius:6px; color:inherit;
+                    font-size:16px; line-height:1; cursor:pointer; }
   .pk-filter { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
                padding:12px 16px; border-bottom:1px solid var(--border); background:var(--gray-50); }
   .pk-fld { display:flex; flex-direction:column; gap:4px; }

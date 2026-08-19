@@ -198,16 +198,19 @@
 }
 .modal-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px; border-bottom:1px solid var(--border);
+  /* 시안 모달(165:1314 환자 추가) — 머리 pad 16/24 · 본문 pad 24 · 바닥 pad 16/24 다.
+     화면마다 11/16 · 14/16 · 14/18 · 16/20 · 18/20 여섯 가지였다. */
+  padding:16px 24px; border-bottom:1px solid var(--border);
 }
 .modal-title  { font-size:14px;font-weight:700; }
-.modal-body   { padding:16px; }
-.modal-footer { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+.modal-body   { padding:24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
 /* 모달 하단 '발행' 버튼도 전역 .btn-success(초록)를 쓰고 있다. 시안에 초록이 없어
    클래스는 그대로 두고 이 화면 안에서만 primary 로 덮는다 (.detail-action-bar 와 같은 처리). */
 .modal-footer .btn-success { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
 .modal-footer .btn-success:hover { background:var(--primary-dark); color:var(--gray-0); }
-.btn-close-modal { background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted); }
+/* 모달 닫기 규격은 24×24 · r6 · 16px 이다(전역 .modal-close 와 같은 부품) */
+.btn-close-modal { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
 .order-info-box {
   background:var(--primary-light); border:1px solid var(--primary-accent);
   border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px;

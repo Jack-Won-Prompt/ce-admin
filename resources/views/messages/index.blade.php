@@ -171,8 +171,11 @@
                    padding: 16px 24px; border-bottom: 1px solid var(--gray-200); }
   .ms-modal-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 22px;
                     color: var(--gray-1000); }
-  .ms-modal-x { background: none; border: none; cursor: pointer; padding: 0;
-                font-size: 16px; line-height: 1; color: var(--gray-1000); }
+  /* 모달 닫기 규격은 24×24 · r6 · 16px 이다(전역 .modal-close 와 같은 부품) */
+  .ms-modal-x { display:flex; align-items:center; justify-content:center;
+                width:24px; height:24px; flex-shrink:0; padding:0;
+                border:none; border-radius:6px; background:none;
+                font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
   .ms-modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
   /* 시안 창은 750 이다. 세로가 짧은 화면(1280×720 · 노트북 1366×768)에서는 창이
      화면 밖으로 나가는데 position:fixed 라 페이지를 굴려도 저장·취소에 닿지 않는다.

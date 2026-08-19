@@ -200,10 +200,11 @@
   .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; align-items:center; justify-content:center; }
   .nd-modal-overlay.open { display:flex; }
   .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.18); width:640px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; }
-  .nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  /* 시안 165:1316 — 모달 머리 pad 16/24 · gap 12 */
+  .nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .nd-modal-head h3 { flex:1; font-size:14px; font-weight:700; line-height:22px; margin:0; }
-  .nd-modal-close { background:none; border:none; font-size:16px; color:var(--gray-600); cursor:pointer; line-height:1; }
-  .nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
+  .nd-modal-close { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
+  .nd-modal-body  { padding:24px; overflow-y:auto; flex:1; }
 
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; }
   .detail-item .di-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
