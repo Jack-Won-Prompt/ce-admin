@@ -289,14 +289,6 @@
              placeholder="이름 또는 전화번호">
     </div>
     <div class="ds-filter-field">
-      <label class="ds-field-label">급여</label>
-      <select name="nhis" class="form-control form-select">
-        <option value="">급여 전체</option>
-        <option value="1" @selected(request('nhis')==='1')>급여 대상</option>
-        <option value="0" @selected(request('nhis')==='0')>비급여</option>
-      </select>
-    </div>
-    <div class="ds-filter-field">
       <label class="ds-field-label">표시 건수</label>
       <select name="per_page" class="form-control form-select">
         <option value="10"  @selected(request('per_page','10')==='10')>10개씩</option>
@@ -318,7 +310,7 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['q','nhis','repurchase_within']))
+    @if(request()->hasAny(['q','repurchase_within']))
       <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
@@ -416,23 +408,6 @@
         <label class="form-label">주소</label>
         <input type="text" class="form-control" id="add-address" placeholder="주소 입력" />
       </div>
-      <div class="form-grid-2" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label class="form-label">건강보험번호</label>
-          <input type="text" class="form-control" id="add-insurance-no" placeholder="건강보험 번호" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">급여 적용</label>
-          <select class="form-control" id="add-nhis">
-            <option value="0">비급여</option>
-            <option value="1">급여 대상</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label class="form-label">급여율 (%)</label>
-        <input type="number" class="form-control" id="add-coverage" value="90" min="0" max="100" />
-      </div>
       <div class="form-group">
         <label class="form-label">메모</label>
         <textarea class="form-control" id="add-note" rows="2" placeholder="특이사항 등"></textarea>
@@ -517,7 +492,6 @@ document.addEventListener('keydown', (e) => {
           return b;
         } },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
-      { header: '급여',         name: 'nhis',            width: 90,  align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
       { header: '서명여부',   name: 'signed',   width: 90, align: 'center', sortable: true,
         renderer: (v, row) => {
@@ -1138,9 +1112,6 @@ document.addEventListener('keydown', (e) => {
       mobile:              document.getElementById('add-mobile').value.trim()        || null,
       phone:               document.getElementById('add-phone').value.trim()         || null,
       address:             document.getElementById('add-address').value.trim()       || null,
-      health_insurance_no: document.getElementById('add-insurance-no').value.trim() || null,
-      is_nhis_eligible:    document.getElementById('add-nhis').value === '1',
-      nhis_coverage_rate:  parseInt(document.getElementById('add-coverage').value)   || 0,
       note:                document.getElementById('add-note').value.trim()          || null,
     };
 

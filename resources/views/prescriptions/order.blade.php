@@ -866,9 +866,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{ $prescription->masked_resident_no_ocr ?? '-' }}
             @endif
           </span>
-          @if($prescription->patient?->is_nhis_eligible)
-          <span class="badge badge-success" id="hdrNhisBadge"><i class="fa-solid fa-won-sign"></i> 급여 대상 ({{ $prescription->patient->nhis_coverage_rate }}%)</span>
-          @endif
         </div>
 
         {{-- 오른쪽 — 액션 버튼 (시안 137:311) --}}

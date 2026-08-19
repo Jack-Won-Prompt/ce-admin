@@ -677,15 +677,6 @@
           <dt>주소</dt>
           <dd style="font-size:12px;font-weight:400;line-height:1.5;">{{ $patient->address }}</dd>
           @endif
-          <dt>건강보험 급여 대상</dt>
-          <dd>
-            @if($patient->is_nhis_eligible)
-              <span class="badge badge-success">급여 대상</span>
-              <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">{{ $patient->nhis_coverage_rate }}% 적용</span>
-            @else
-              <span class="badge badge-secondary">비급여</span>
-            @endif
-          </dd>
         </dl>
       </div>
     </div>

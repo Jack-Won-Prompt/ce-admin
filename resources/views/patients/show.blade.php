@@ -38,9 +38,6 @@
   /* 나란히 놓는 칸은 100% 를 물려받으면 서로 밀어낸다 — 제 글자만큼만 잡는다 */
   .info-value .inline .form-control { width:auto; }
   .info-value select.form-control { padding-right:22px; }
-  #e-nhis    { min-width:96px; }
-  #e-coverage{ width:64px; flex:0 0 64px; text-align:right; }
-  .unit { font-size:12px; color:var(--text-muted); }
   /* 주소는 찾아서 넣는다 — 칸과 단추가 한 줄에 든다 */
   .addr-line { display:flex; gap:6px; align-items:center; }
   .addr-line .form-control { flex:1; min-width:0; }
@@ -146,7 +143,6 @@
                        data-masked="{{ $patient->masked_resident_no }}"
                        data-orig="{{ $patient->masked_resident_no }}"
                        placeholder="XXXXXX-XXXXXXX" />
-                <small class="info-hint">바꿀 때만 새로 적습니다</small>
               </span>
             </span>
           </div>
@@ -182,36 +178,8 @@
               </span>
             </span>
           </div>
-          <div class="info-row">
-            <span class="info-label">건강보험번호</span>
-            <span class="info-value">
-              <span class="view-only">{{ $patient->health_insurance_no ?? '-' }}</span>
-              <input type="text" class="form-control edit-only" id="e-insurance-no"
-                     value="{{ $patient->health_insurance_no }}" data-orig="{{ $patient->health_insurance_no }}" />
-            </span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">급여 적용</span>
-            <span class="info-value">
-              <span class="view-only">
-                @if($patient->is_nhis_eligible)
-                  <span style="color:var(--success);font-weight:700;"><i class="fa-solid fa-check-circle"></i> 급여 {{ $patient->nhis_coverage_rate }}%</span>
-                @else
-                  <span style="color:var(--text-muted);">비급여</span>
-                @endif
-              </span>
-              {{-- 급여 여부와 급여율은 늘 붙어 다닌다 — 한 칸 안에 나란히 둔다 --}}
-              <span class="edit-only inline">
-                <select class="form-control" id="e-nhis" data-orig="{{ $patient->is_nhis_eligible ? '1' : '0' }}">
-                  <option value="0" @selected(!$patient->is_nhis_eligible)>비급여</option>
-                  <option value="1" @selected($patient->is_nhis_eligible)>급여 대상</option>
-                </select>
-                <input type="number" class="form-control narrow" id="e-coverage" min="0" max="100"
-                       value="{{ $patient->nhis_coverage_rate }}" data-orig="{{ $patient->nhis_coverage_rate }}" title="급여율 (%)" />
-                <span class="unit">%</span>
-              </span>
-            </span>
-          </div>
+          {{-- 건강보험번호·급여 적용은 이 화면에서 보지 않는다. 급여 여부는 주문
+               한 건마다 정해지는 것이라, 사람에 붙여 두면 실제와 어긋난다. --}}
           {{-- 메모는 비어 있어도 칸을 남긴다 — 고칠 때만 나타나면 그만큼 틀이 밀린다 --}}
           <div class="info-row wide">
             <span class="info-label">메모</span>
@@ -426,9 +394,7 @@
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,
-      health_insurance_no: document.getElementById('e-insurance-no').value.trim()|| null,
-      is_nhis_eligible:    document.getElementById('e-nhis').value === '1',
-      nhis_coverage_rate:  parseInt(document.getElementById('e-coverage').value)  || 0,
+      // 건강보험번호·급여 항목은 화면에서 걷어냈다 — 보내지 않으면 저장된 값은 그대로 남는다
       note:                document.getElementById('e-note').value.trim()         || null,
       _method:             'PUT',
     };
@@ -451,7 +417,7 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '#view-panel', title: '환자 기본 정보', body: '환자의 이름, 연락처, 주민번호, 보험 정보를 확인합니다.' },
+  { selector: '#view-panel', title: '환자 기본 정보', body: '환자의 이름, 연락처, 주민번호, 주소를 확인합니다.' },
   { selector: '#btn-edit', title: '정보 편집', body: '보던 그 자리에서 바로 고칩니다. 수정 오른쪽에 저장·취소가 나타납니다.' },
   { selector: '.card', title: '처방·주문 이력', body: '이 환자의 처방전 업로드 이력과 주문 내역을 확인합니다. 처방번호 클릭 시 상세 화면으로 이동합니다.' },
 ];

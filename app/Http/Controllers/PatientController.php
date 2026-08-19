@@ -49,10 +49,6 @@ class PatientController extends Controller
             });
         }
 
-        if ($request->filled('nhis')) {
-            $query->where('is_nhis_eligible', $request->nhis === '1');
-        }
-
         // 재구매일 기간 필터
         if ($request->filled('repurchase_within')) {
             $days = (int) $request->repurchase_within;
@@ -78,11 +74,6 @@ class PatientController extends Controller
                 default  => '-',
             };
 
-            // 건보 배지 → 텍스트
-            $nhis = $p->is_nhis_eligible
-                ? '급여 ' . $p->nhis_coverage_rate . '%'
-                : '비급여';
-
             // 재구매일 + D-day
             $rd = $p->prescriptions_max_repurchase_date;
             if ($rd) {
@@ -105,7 +96,6 @@ class PatientController extends Controller
                 'birth_date'      => $birth,
                 'gender'          => $gender,
                 'mobile'          => $p->mobile ?? $p->phone ?? '-',
-                'nhis'            => $nhis,
 
                 // ── 위임 서명 ──
                 'signed'      => $c ? $c->statusLabel() : '',
