@@ -25,12 +25,13 @@
     <div class="help-item-text"><strong>재구매 알림</strong>처방 주기에 따른 재구매 대상자를 확인할 수 있습니다.</div>
   </div>
 </div>
-{{-- ── 상담 창 — 화면 안에서 연다 ─────────────────────────
-     전화를 받으며 적는 자리다. 브라우저 창을 따로 띄우면 보던 목록이 뒤로 숨고,
-     팝업 차단에 막히기도 한다. 화면 안에 덮어 띄우고 닫으면 그대로 목록으로 돌아온다. --}}
-<div class="cs-overlay" id="csModal" style="display:none;">
-  <div class="cs-box" role="dialog" aria-modal="true" aria-labelledby="csTitle">
-    <div class="cs-head">
+{{-- ── 상담 창 — 화면 안에 떠 있는 창 ────────────────────
+     전화를 받으며 적는 자리다. 브라우저 창을 따로 띄우면 보던 목록이 뒤로 숨고
+     팝업 차단에 막히기도 한다. 화면 안에 띄우되 뒤를 덮지 않는다 — 상담을 적는 동안에도
+     목록을 훑고 다른 탭을 눌러야 하는 일이 있다. 머리를 잡아 옮기고 모서리로 크기를 바꾼다. --}}
+<div class="cs-win" id="csModal" style="display:none;" role="dialog" aria-labelledby="csTitle">
+  <div class="cs-box">
+    <div class="cs-head" id="csHead">
       <i class="bx bx-conversation"></i>
       <span id="csTitle">상담하기</span>
       <button type="button" onclick="csClose()" aria-label="닫기">&times;</button>
@@ -94,6 +95,8 @@
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
       <button type="button" class="ds-btn ds-btn-primary" id="csSaveBtn" onclick="csSave(this)">저장</button>
     </div>
+    {{-- 오른쪽 아래 모서리를 잡아 크기를 바꾼다 --}}
+    <div class="cs-grip" id="csGrip" title="크기 조절"></div>
   </div>
 </div>
 
@@ -101,18 +104,29 @@
 
 @push('styles')
 <style>
-  /* 상담 창 — 화면 안에 덮어 띄운다 */
-  .cs-overlay { position: fixed; inset: 0; z-index: 1100; display: none;
-                align-items: center; justify-content: center; background: rgba(20,32,40,.45); }
-  .cs-box { width: 560px; max-width: calc(100vw - 32px); max-height: 88vh; display: flex;
-            flex-direction: column; background: var(--bg-card); border-radius: var(--radius-lg);
-            box-shadow: 0 20px 60px rgba(0,0,0,.28); overflow: hidden; }
+  /* 상담 창 — 뒤를 덮지 않고 떠 있는다. 뒤 화면은 그대로 쓸 수 있다. */
+  .cs-win { position: fixed; z-index: 1100; display: none; }
+  .cs-box { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,.28); overflow: hidden; }
   .cs-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px;
-             background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; }
+             background: var(--primary); color: #fff; font-size: 13px; font-weight: 700;
+             cursor: move; user-select: none; }
+  /* 옮기는 동안에는 글자가 잡히지 않게 — 끌다가 문장이 파랗게 뒤집히면 성가시다 */
+  .cs-win.is-moving, .cs-win.is-moving * { user-select: none; }
+  .cs-grip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+             cursor: nwse-resize; }
+  .cs-grip::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
+                    border-right: 2px solid var(--gray-300); border-bottom: 2px solid var(--gray-300); }
   .cs-head span { flex: 1; }
   .cs-head button { background: none; border: none; color: #fff; font-size: 17px;
                     line-height: 1; cursor: pointer; }
-  .cs-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .cs-body { flex: 1; min-height: 0; padding: 14px; display: flex; flex-direction: column;
+             gap: 10px; overflow-y: auto; }
+  /* 창이 커지면 적는 자리가 함께 커져야 한다 — 칸만 남고 여백이 늘면 뜻이 없다 */
+  .cs-body .cs-row:last-child { flex: 1; min-height: 0; }
+  .cs-body .cs-row:last-child .cs-f { flex: 1; min-height: 0; }
+  .cs-f textarea#csContents { flex: 1; min-height: 120px; }
   .cs-row { display: flex; flex-direction: column; gap: 10px; }
   .cs-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .cs-f { display: flex; flex-direction: column; gap: 4px; }
@@ -659,6 +673,83 @@ document.addEventListener('keydown', (e) => {
   let _csPatient = null;
   let _csDirty   = false;
 
+  /* 창 자리와 크기 — 옮겼던 자리는 기억해 둔다. 두 번째부터는 놓아 둔 곳에서 열린다.
+     화면 밖으로는 나가지 않게 붙든다. */
+  let _csBox = null;
+
+  function _csApplyBox(box) {
+    const win = document.getElementById('csModal');
+    const w = Math.max(380, Math.min(box.w, window.innerWidth  - 16));
+    const h = Math.max(320, Math.min(box.h, window.innerHeight - 16));
+    const left = Math.max(0, Math.min(box.left, window.innerWidth  - w));
+    const top  = Math.max(0, Math.min(box.top,  window.innerHeight - h));
+
+    win.style.left   = left + 'px';
+    win.style.top    = top  + 'px';
+    win.style.width  = w + 'px';
+    win.style.height = h + 'px';
+    _csBox = { left, top, w, h };
+  }
+
+  function _csDefaultBox() {
+    const w = Math.min(580, Math.round(window.innerWidth  * 0.5));
+    const h = Math.min(620, Math.round(window.innerHeight * 0.8));
+    return {
+      // 오른쪽에 둔다 — 왼쪽 목록을 보면서 적는 일이 많다
+      left: Math.max(8, window.innerWidth - w - 24),
+      top:  Math.max(8, Math.round((window.innerHeight - h) / 2)),
+      w, h,
+    };
+  }
+
+  /* 머리를 잡아 옮기고, 오른쪽 아래 모서리를 잡아 크기를 바꾼다.
+
+     손잡이에 바로 걸지 않고 문서에서 받는다 — 이 스크립트가 창 마크업보다 먼저 도는
+     자리라, 그때 손잡이를 찾으면 없다(예전에는 그래서 창이 꿈쩍도 하지 않았다).
+     pointer 이벤트라 커서가 창 밖으로 나가도 놓을 때까지 따라온다. */
+  (function () {
+    let mode = null, sx = 0, sy = 0, start = null;
+
+    document.addEventListener('pointerdown', (e) => {
+      const win = document.getElementById('csModal');
+      if (!win || win.style.display === 'none') return;
+
+      const onHead = e.target.closest?.('#csHead');
+      const onGrip = e.target.closest?.('#csGrip');
+      if (!onHead && !onGrip) return;
+      // 머리의 닫기 단추를 누른 것은 옮기려는 뜻이 아니다
+      if (onHead && e.target.closest('button')) return;
+
+      mode = onGrip ? 'size' : 'move';
+      sx = e.clientX; sy = e.clientY;
+      start = { ..._csBox };
+      win.classList.add('is-moving');
+      e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (!mode || !start) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      _csApplyBox(mode === 'move'
+        ? { ...start, left: start.left + dx, top: start.top + dy }
+        : { ...start, w: start.w + dx, h: start.h + dy });
+    });
+
+    const end = () => {
+      if (!mode) return;
+      mode = null; start = null;
+      document.getElementById('csModal')?.classList.remove('is-moving');
+    };
+    document.addEventListener('pointerup', end);
+    document.addEventListener('pointercancel', end);
+
+    // 화면 크기가 바뀌면 창이 밖에 나가 있을 수 있다
+    window.addEventListener('resize', () => {
+      const win = document.getElementById('csModal');
+      if (win && win.style.display !== 'none' && _csBox) _csApplyBox(_csBox);
+    });
+  })();
+
   window.csOpen = function (id, name) {
     const p = id ? { id, name } : pcActive();
     if (!p) { showToast('먼저 환자를 고르십시오.', 'warning'); return; }
@@ -677,7 +768,9 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('csNote').textContent   = '적은 내용은 저장을 눌러야 남습니다.';
     csSyncReDate();
 
-    document.getElementById('csModal').style.display = 'flex';
+    const win = document.getElementById('csModal');
+    win.style.display = 'block';
+    _csApplyBox(_csBox ?? _csDefaultBox());
     setTimeout(() => document.getElementById('csContents').focus(), 50);
   };
 
@@ -740,12 +833,14 @@ document.addEventListener('keydown', (e) => {
     if (e.target.closest?.('#csModal')) _csDirty = true;
   });
 
-  // 바깥을 누르거나 Esc 를 눌러도 닫는 길은 같다 — 적은 것이 있으면 똑같이 물어본다
-  document.getElementById('csModal')?.addEventListener('mousedown', (e) => {
-    if (e.target.id === 'csModal') csClose();
-  });
+  /* 바깥을 눌러도 닫지 않는다 — 뒤 화면을 그대로 쓰라고 띄운 창이라, 목록을 한 번
+     눌렀다고 적던 것이 사라지면 안 된다. 닫는 길은 닫기 단추와 Esc 둘이다.
+     Esc 는 이 창 안에 손이 가 있을 때만 듣는다. */
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('csModal')?.style.display === 'flex') csClose();
+    const win = document.getElementById('csModal');
+    if (e.key !== 'Escape' || !win || win.style.display === 'none') return;
+    if (!win.contains(document.activeElement)) return;
+    csClose();
   });
 
   /** 지금 보고 있는 상담내역 탭의 환자 */
