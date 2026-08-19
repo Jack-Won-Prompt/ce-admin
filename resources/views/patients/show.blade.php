@@ -30,6 +30,7 @@
   .edit-only { display:none; }
   .is-editing .view-only { display:none; }
   .is-editing .edit-only { display:block; }
+  .is-editing input.edit-only { display:inline-block; }
   .is-editing .edit-only.inline { display:flex; gap:6px; align-items:center; }
   .is-editing .edit-only.addr-box { display:flex; }
   /* 상세 주소도 같은 줄에 둔다 — 줄을 나누면 그만큼 아래 칸이 밀린다 */
@@ -46,7 +47,9 @@
   .info-value select.form-control { padding-right:22px; }
   /* 주소는 주문 등록과 같은 칸으로 나눈다 — 우편번호 · 도로명 · 상세.
      한 칸에 몰아 적어 두면 주문을 낼 때 사람이 다시 갈라 옮겨 적어야 했다. */
-  .addr-box { display:flex; gap:6px; align-items:center; width:100%; }
+  /* display 는 여기서 정하지 않는다 — 뒤에 오는 이 규칙이 .edit-only{display:none} 을
+     덮어, 보기 모드에서도 주소 입력칸이 그대로 서 있었다. 펴는 것은 .is-editing 이 한다. */
+  .addr-box { gap:6px; align-items:center; width:100%; }
   .addr-line { display:flex; gap:6px; align-items:center; flex:1 1 auto; min-width:0; }
   .addr-line .form-control { flex:1; min-width:0; }
   .addr-line .form-control.zip { flex:0 0 92px; width:92px; }
@@ -103,25 +106,24 @@
           <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;">
             <i class="fa-solid fa-user"></i>
           </div>
-          {{-- 이름 칸이 줄어들다 못해 0 이 되면 한 글자씩 접힌다. 줄어드는 대신 단추를
-               아랫줄로 내린다 — 이름은 끊기더라도 한 줄로 읽혀야 한다. --}}
-          <div style="flex:1 1 220px;min-width:160px;">
-            <div class="view-only" style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $patient->name }}</div>
+          {{-- 이름과 딸린 것들은 한 줄로 읽는다 — 두 줄로 쌓아 두니 아이콘 옆이
+               위아래로 벌어져, 정작 짧은 두 마디가 자리를 두 배로 썼다.
+               이름은 끊기더라도(ellipsis) 줄을 바꾸지 않는다. --}}
+          <div style="flex:1 1 260px;min-width:180px;display:flex;align-items:baseline;gap:8px;min-height:32px;">
+            <span class="view-only" style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ $patient->name }}</span>
             <input type="text" class="form-control edit-only" id="e-name" value="{{ $patient->name }}"
-                   data-orig="{{ $patient->name }}" placeholder="환자명" />
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                   data-orig="{{ $patient->name }}" placeholder="환자명" style="flex:0 1 200px;" />
+            <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
               환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
               <span class="view-only" style="display:inline;">
                 @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
               </span>
-              {{-- 생일은 적혀 있던 그 자리에서 고친다. 줄을 하나 더 만들면
-                   그만큼 아래 칸이 통째로 밀려, 고치기 전과 다른 화면이 된다.
-                   성별은 두지 않는다 — 주민번호에 이미 들어 있고, 쓰는 곳도 없었다. --}}
-              <span class="edit-only inline-mini">
-                <input type="date" class="form-control" id="e-birth" style="width:132px;height:26px;font-size:12px;padding:1px 6px;"
-                       value="{{ $patient->birth_date?->format('Y-m-d') }}" data-orig="{{ $patient->birth_date?->format('Y-m-d') }}" />
-              </span>
-            </div>
+            </span>
+            {{-- 생일은 적혀 있던 그 자리에서 고친다. 성별은 두지 않는다 —
+                 주민번호에 이미 들어 있고, 쓰는 곳도 없었다. --}}
+            <input type="date" class="form-control edit-only" id="e-birth"
+                   style="width:132px;height:26px;font-size:12px;padding:1px 6px;flex:0 0 132px;"
+                   value="{{ $patient->birth_date?->format('Y-m-d') }}" data-orig="{{ $patient->birth_date?->format('Y-m-d') }}" />
           </div>
 
           {{-- 이 사람에게 할 일은 이름 옆에 둔다. 고치는 동안에는 수정 단추 오른쪽에
