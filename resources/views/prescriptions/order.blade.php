@@ -244,20 +244,24 @@
   .pib-avatar { width:54px; height:54px; flex-shrink:0; border-radius:12px;
                 background:var(--gray-100); display:flex; align-items:center; justify-content:center;
                 color:var(--gray-400); font-size:24px; }
+  /* 이름·나이 옆에 전화·병원·담당을 이어 붙여 한 줄로 읽는다. 두 줄로 쌓아 두니
+     이름 아래가 비어 보이고 정보바가 그만큼 두꺼웠다. 마크업은 그대로 두고
+     격자 자리만 옮긴다(DOM 차례는 이름 · 단추 · 정보 순이다). */
   .pib-body     { flex:1; min-width:0;
-                  display:grid; grid-template-columns:minmax(0,1fr) auto;
-                  align-items:center; row-gap:2px; column-gap:8px; }
+                  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+                  align-items:center; row-gap:2px; column-gap:12px; }
   .pib-body > .pib-ident    { grid-row:1; grid-column:1; }
-  .pib-body > .pib-actions  { grid-row:1; grid-column:2; }
-  .pib-body > .pib-row-meta { grid-row:2; grid-column:1 / -1; }
+  .pib-body > .pib-row-meta { grid-row:1; grid-column:2; }
+  .pib-body > .pib-actions  { grid-row:1; grid-column:3; }
   .pib-ident    { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
   .pib-actions  { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; }
   .pib-row-meta { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
   /* 좁은 폭에서는 버튼 줄이 아래로 내려가야 이름·연락처가 눌리지 않는다 */
   @media (max-width: 1280px) {
     .pib-body { grid-template-columns:minmax(0,1fr); }
-    .pib-body > .pib-actions  { grid-row:2; grid-column:1; justify-content:flex-start; }
-    .pib-body > .pib-row-meta { grid-row:3; }
+    .pib-body > .pib-ident    { grid-row:1; grid-column:1; }
+    .pib-body > .pib-row-meta { grid-row:2; grid-column:1; }
+    .pib-body > .pib-actions  { grid-row:3; grid-column:1; justify-content:flex-start; }
   }
   /* 오른쪽 버튼이 늘어나면 탭 이름이 눌려 세로로 접힌다. 탭은 줄지 않게 고정하고,
      폭이 모자라면 버튼 줄이 아래로 넘어가게 한다. */

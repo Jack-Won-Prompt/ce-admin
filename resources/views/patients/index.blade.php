@@ -261,16 +261,14 @@
   #ptImgBody { padding:16px; background:var(--gray-100); text-align:center; max-height:74vh; overflow:auto; }
   #ptImgBody img { max-width:100%; display:block; margin:0 auto; background:#fff; border-radius:8px; }
 
-  /* 알약 셋이 span-3 한 칸을 나눠 쓴다. 시안(114:4778)에 없는 개발 추가 항목이라
-     칸을 더 줄 자리가 없고, 좁은 폭에서는 '재구매일 10일 이내'(143px)가 칸(1440→99px)을
-     넘겨 글자가 잘렸다(1600·1440·1280 에서 29·47·65px 부족 — 옛 gap 12 에서도 같았다).
-     줄을 바꾸게 두면 시안 폭 1920 에서는 한 줄 그대로이고 좁은 폭에서만 접힌다. */
+  /* 알약 셋이 span-3 한 칸을 나눠 쓴다. 글자에서 「재구매일」을 걷어내 셋이 한 줄에
+     들어간다(각 96 안팎 + gap 8). 그래도 모자라는 폭에서만 줄을 바꾼다. */
   .pt-radios { display:flex; flex-wrap:wrap; gap:8px; }
   .pt-radio {
     /* flex:1 + min-width:0 이면 칸이 좁아질 때 알약이 글자보다 작아져 잘린다.
        글자폭을 지키고(shrink 0) 자리가 모자라면 위 flex-wrap 으로 줄을 바꾼다. */
-    display:inline-flex; align-items:center; gap:8px; flex:1 0 auto; min-width:max-content;
-    height:32px; padding:0 12px; border-radius:8px;
+    display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; min-width:max-content;
+    height:32px; padding:0 10px; border-radius:8px;
     background:var(--gray-0); border:1px solid var(--gray-200);
     font-size:13px; font-weight:400; line-height:21px; color:var(--gray-1000);
     text-decoration:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -356,11 +354,13 @@
         <option value="30"  @selected(request('per_page','10')==='30')>30개씩</option>
       </select>
     </div>
-    {{-- 기간 — 시안은 라디오 3개를 한 칸에 넣는다. 링크 이동 방식은 그대로 둔다. --}}
+    {{-- 재구매일 — 시안은 라디오 3개를 한 칸에 넣는다. 링크 이동 방식은 그대로 둔다.
+         「재구매일」을 알약마다 되풀이하니 셋이 한 줄에 들어가지 못했다 — 라벨이 이미
+         그 말을 하고 있어 알약에서는 뺀다. --}}
     <div class="ds-filter-field span-3">
-      <label class="ds-field-label">기간</label>
+      <label class="ds-field-label">재구매일</label>
       <div class="pt-radios">
-        @foreach([10 => '재구매일 10일 이내', 15 => '재구매일 15일 이내', 30 => '재구매일 30일 이내'] as $days => $label)
+        @foreach([10 => '10일 이내', 15 => '15일 이내', 30 => '30일 이내'] as $days => $label)
           <a href="{{ route('patients.index', array_merge(request()->except('repurchase_within','page'), ['repurchase_within' => $days])) }}"
              class="pt-radio {{ request('repurchase_within') == $days ? 'on' : '' }}">
             <span class="pt-radio-dot"></span>{{ $label }}
