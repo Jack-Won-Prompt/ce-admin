@@ -29,6 +29,11 @@
 
 @push('styles')
 <style>
+  /* 상담내역 탭 — 사람 이름이 붙고, 닫는 단추가 오른쪽에 붙는다 */
+  .pnl-tab-closable { display: inline-flex; align-items: center; gap: 6px; }
+  .pnl-tab-x { font-size: 15px; line-height: 1; color: var(--text-muted); cursor: pointer;
+               padding: 0 2px; border-radius: 4px; }
+  .pnl-tab-x:hover { background: var(--alert-100); color: var(--alert-500); }
   /* ── Patient table ── */
   .patient-table { width:100%; border-collapse:collapse; }
   .patient-table thead th {
@@ -222,8 +227,6 @@
       {{-- 환자 한 사람의 모든 것은 옆 탭에서 본다. 다른 화면으로 건너가면 어떤 조건으로
            찾고 있었는지가 끊기고, 돌아오려면 처음부터 다시 찾아야 한다. --}}
       <button type="button" id="pnlBtnFull" class="pnl-tab" onclick="pnlShow('full')">전체 상세</button>
-      {{-- 상담은 목록으로 훑는 일이 많다 — 이력 탭 안에 접어 두지 않고 제 자리를 준다 --}}
-      <button type="button" id="pnlBtnCounsel" class="pnl-tab" onclick="pnlShow('counsel')">상담내역</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
@@ -264,16 +267,8 @@
           height:calc(100vh - 300px);min-height:520px;"></iframe>
 </div>{{-- /#pnlFull --}}
 
-{{-- ── 상담내역 탭 — 고른 환자의 상담을 목록으로 ── --}}
-<div id="pnlCounsel" style="display:none;padding:16px;">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-    <i class="bx bx-conversation" style="color:var(--primary);font-size:16px;"></i>
-    <span id="pcName" style="font-weight:700;font-size:14px;">상담내역</span>
-    <span class="ds-grid-hint" id="pcNote" style="margin-left:auto;">행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.</span>
-  </div>
-  <div id="pcEmpty" class="pnl-empty">조회결과에서 <b>상담내역</b>을 누르면 여기에 나옵니다.</div>
-  <div id="pcGrid" style="display:none;"></div>
-</div>{{-- /#pnlCounsel --}}
+{{-- 상담내역 탭은 사람마다 하나씩 만들어 붙인다(pcEnsureTab) — 두 사람을 견주며
+     일하는 때가 있어 한 자리를 돌려 쓰면 방금 보던 것이 사라진다. --}}
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
@@ -492,8 +487,9 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
   // 패널 탭 전환(조회결과/상세내용)
-  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull', counsel: 'pnlCounsel' };
-  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull', counsel: 'pnlBtnCounsel' };
+  /* 상담내역 탭이 사람마다 생기고 없어지므로 목록은 고정이 아니다 */
+  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull' };
 
   window.pnlShow = function (which) {
     if (!PANES[which]) which = 'list';
@@ -554,61 +550,153 @@ document.addEventListener('keydown', (e) => {
 
   /* ── 상담내역 탭 ──────────────────────────────────────
      상담은 「이 사람과 언제 무슨 이야기를 했나」를 훑는 일이라 목록이 맞다.
-     이력 탭 안에 접어 두면 한 건씩 펼쳐 봐야 해서, 제 자리를 따로 준다. */
-  let pcGrid = null;
 
-  /** 탭 이름 — 「상담내역 - 홍길동」. 고른 사람이 없으면 그냥 「상담내역」이다. */
-  function pcTabTitle(name) {
-    const tab = document.getElementById('pnlBtnCounsel');
-    if (tab) tab.textContent = name ? '상담내역 - ' + name : '상담내역';
+     탭은 사람마다 하나씩 열린다. 두 사람을 견주며 일하는 때가 있어 한 자리를 돌려
+     쓰면 방금 보던 것이 사라진다. 이미 열려 있는 사람을 다시 누르면 그 탭으로 간다 —
+     같은 사람의 탭이 둘이 되면 어느 것이 최신인지 알 수 없다. */
+  const pcTabs = {};     // { [환자id]: { name, grid, wired } }
+
+  window.pcNew = function (patientId, patientName) {
+    const p = patientId ? { id: patientId, name: patientName } : pcActive();
+    if (!p) { showToast('먼저 환자를 고르십시오.', 'warning'); return; }
+
+    /* 상담 창은 본 화면(주문 등록)을 그대로 창으로 연다. 상담만 따로 만들면 같은 값을
+       두 곳에서 받게 되어 서로 어긋난다. 저장·닫기 띠는 그 화면이 세운다. */
+    const url = `${BASE_URL}/prescriptions/create?popup=1&patient=${encodeURIComponent(p.id)}`;
+    const w   = Math.min(1280, Math.round(window.screen.availWidth  * 0.9));
+    const h   = Math.min(900,  Math.round(window.screen.availHeight * 0.9));
+    const win = window.open(url, 'ceCounsel_' + p.id,
+      `width=${w},height=${h},left=${Math.round((window.screen.availWidth - w) / 2)},` +
+      `top=${Math.round((window.screen.availHeight - h) / 2)},resizable=yes,scrollbars=yes`);
+
+    if (!win) { showToast('팝업이 막혀 있습니다. 이 사이트의 팝업을 허용해 주십시오.', 'warning', 6000); return; }
+    win.focus();
+  };
+
+  /** 지금 보고 있는 상담내역 탭의 환자 */
+  function pcActive() {
+    const key = Object.keys(PANES).find(k => k.startsWith('counsel:')
+      && document.getElementById(TABS[k])?.classList.contains('active'));
+    if (!key) return null;
+    const id = key.slice('counsel:'.length);
+    return { id, name: pcTabs[id]?.name || '' };
+  }
+
+  /** 그 환자의 탭과 판을 만든다(이미 있으면 그대로 쓴다) */
+  function pcEnsureTab(id, name) {
+    const key = 'counsel:' + id;
+    if (PANES[key]) return key;
+
+    const tabId  = 'pnlBtnCounsel-' + id;
+    const paneId = 'pnlCounsel-' + id;
+
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.id   = tabId;
+    tab.className = 'pnl-tab pnl-tab-closable';
+    tab.onclick = () => pnlShow(key);
+    tab.innerHTML = `<span class="pnl-tab-label"></span>`;
+
+    // 닫는 단추 — 탭을 여는 길이 있으면 닫는 길도 있어야 한다
+    const x = document.createElement('span');
+    x.className = 'pnl-tab-x';
+    x.title = '탭 닫기';
+    x.textContent = '×';
+    x.onclick = (e) => { e.stopPropagation(); pcCloseTab(id); };
+    tab.appendChild(x);
+
+    document.querySelector('.pnl-tabs').appendChild(tab);
+
+    const pane = document.createElement('div');
+    pane.id = paneId;
+    pane.style.cssText = 'display:none;padding:16px;';
+    pane.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <i class="bx bx-conversation" style="color:var(--primary);font-size:16px;"></i>
+        <span class="pc-name" style="font-weight:700;font-size:14px;"></span>
+        <span class="ds-grid-hint pc-note" style="margin-left:auto;"></span>
+        {{-- 상담은 전화를 받으며 적는 일이라, 보던 목록을 두고 창으로 띄운다 --}}
+        <button type="button" class="ds-btn ds-btn-primary pc-new">상담하기</button>
+      </div>
+      <div class="pnl-empty pc-empty">불러오는 중…</div>
+      <div class="pc-grid" style="display:none;"></div>`;
+    document.querySelector('.ds-grid-card').appendChild(pane);
+    pane.querySelector('.pc-new').onclick = () => pcNew(id, pcTabs[id]?.name);
+
+    PANES[key] = paneId;
+    TABS[key]  = tabId;
+    pcTabs[id] = { name, grid: null, wired: false };
+
+    return key;
+  }
+
+  function pcCloseTab(id) {
+    const key = 'counsel:' + id;
+    document.getElementById(TABS[key])?.remove();
+    document.getElementById(PANES[key])?.remove();
+    delete PANES[key];
+    delete TABS[key];
+    delete pcTabs[id];
+    // 보고 있던 탭을 닫았으면 조회 결과로 돌아간다
+    if (!document.querySelector('.pnl-tab.active')) pnlShow('list');
   }
 
   window.pcLoad = async function (id, name) {
-    pnlShow('counsel');
-    // 탭 이름에도 누구 것인지 붙인다 — 탭을 여럿 오가면 무엇을 열어 두었는지 잊는다
-    pcTabTitle(name);
-    document.getElementById('pcName').textContent = (name || '') + ' 상담내역';
-    document.getElementById('pcNote').textContent = '불러오는 중…';
+    const key  = pcEnsureTab(id, name);
+    const pane = document.getElementById(PANES[key]);
+    const tab  = document.getElementById(TABS[key]);
+
+    pcTabs[id].name = name || pcTabs[id].name;
+    tab.querySelector('.pnl-tab-label').textContent = '상담내역 - ' + (pcTabs[id].name || '');
+    pane.querySelector('.pc-name').textContent = (pcTabs[id].name || '') + ' 상담내역';
+    pane.querySelector('.pc-note').textContent = '불러오는 중…';
+    pnlShow(key);
 
     try {
       const res = await fetch(DETAIL_BASE + '/' + id + '/histories',
                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
+
       /* 한 줄이 곧 「무엇을 했나」다 — 상담번호와 날짜를 내용 앞에 붙여 한 칸으로 읽는다.
          나머지는 언제·어디까지·무슨 갈래·누가 순으로 둔다. */
       const rows = (d.counseling ?? []).map(c => ({
-        action:     '#' + (c.counsel_no || '-') + (c.date ? ' ' + c.date : '')
-                    + (c.note ? ' : ' + c.note : ''),
-        date:       c.date || '',
-        status:     c.status || '',
-        re_date:    c.re_date || '',
-        channel:    [c.type, c.call_no].filter(Boolean).join(' · '),
-        by:         c.by || '',
-        counsel_no: c.counsel_no || '-',
-        rx_number:  c.rx_number || '',
-        note:       c.note || '',
-        url:        c.url || '',
+        action:  '#' + (c.counsel_no || '-') + (c.date ? ' ' + c.date : '')
+                 + (c.note ? ' : ' + c.note : ''),
+        date:    c.date || '',
+        status:  c.status || '',
+        re_date: c.re_date || '',
+        channel: [c.type, c.call_no].filter(Boolean).join(' · '),
+        rx_number: c.rx_number || '',
+        by:      c.by || '',
+        url:     c.url || '',
       }));
 
-      document.getElementById('pcName').textContent = (d.name || name || '') + ' 상담내역';
-      pcTabTitle(d.name || name);
+      if (d.name) {
+        pcTabs[id].name = d.name;
+        tab.querySelector('.pnl-tab-label').textContent = '상담내역 - ' + d.name;
+        pane.querySelector('.pc-name').textContent = d.name + ' 상담내역';
+      }
+
+      const gridEl  = pane.querySelector('.pc-grid');
+      const emptyEl = pane.querySelector('.pc-empty');
 
       if (!rows.length) {
-        document.getElementById('pcGrid').style.display  = 'none';
-        document.getElementById('pcEmpty').style.display = '';
-        document.getElementById('pcEmpty').innerHTML     = '상담 이력이 없습니다.';
-        document.getElementById('pcNote').textContent    = '0건';
+        gridEl.style.display  = 'none';
+        emptyEl.style.display = '';
+        emptyEl.textContent   = '상담 이력이 없습니다.';
+        pane.querySelector('.pc-note').textContent = '0건';
         return;
       }
 
-      document.getElementById('pcEmpty').style.display = 'none';
-      document.getElementById('pcGrid').style.display  = '';
-      document.getElementById('pcNote').textContent    = rows.length + '건 · 행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.';
+      emptyEl.style.display = 'none';
+      gridEl.style.display  = '';
+      pane.querySelector('.pc-note').textContent =
+        rows.length + '건 · 행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.';
 
-      if (!pcGrid) {
-        pcGrid = new wwGrid({
-          el: document.getElementById('pcGrid'),
+      if (!pcTabs[id].grid) {
+        pcTabs[id].grid = new wwGrid({
+          el: gridEl,
           height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
           columns: [
             { header: '상담 내용', name: 'action',    width: 420, sortable: true },
@@ -624,22 +712,32 @@ document.addEventListener('keydown', (e) => {
 
         /* 더블클릭하면 그 처방전으로 간다. 화면 탭으로 열어야 보고 있던 목록이 남는다.
            wwGrid 에는 on() 이 없어 셀에서 행 번호를 읽는다. */
-        document.getElementById('pcGrid').addEventListener('dblclick', (e) => {
+        gridEl.addEventListener('dblclick', (e) => {
           const cell = e.target.closest('[data-row-index]');
           if (!cell) return;
-          const row = pcGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+          const row = pcTabs[id].grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
           if (row?.url) window.ceOpenTab(row.url, '주문 - ' + (row.rx_number || ''), 'bx-scan');
         });
       } else {
-        pcGrid.setData(rows);
+        pcTabs[id].grid.setData(rows);
       }
     } catch (e) {
-      document.getElementById('pcGrid').style.display  = 'none';
-      document.getElementById('pcEmpty').style.display = '';
-      document.getElementById('pcEmpty').innerHTML     = '상담내역을 불러오지 못했습니다.';
-      document.getElementById('pcNote').textContent    = '';
+      const gridEl  = pane.querySelector('.pc-grid');
+      const emptyEl = pane.querySelector('.pc-empty');
+      gridEl.style.display  = 'none';
+      emptyEl.style.display = '';
+      emptyEl.textContent   = '상담내역을 불러오지 못했습니다.';
+      pane.querySelector('.pc-note').textContent = '';
     }
   };
+
+  /* 상담 창이 저장하면 그 사람의 탭을 새로 읽는다 — 방금 적은 상담이 거기 보여야 한다 */
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin) return;
+    if (e.data?.source !== 'ce-counsel' || e.data?.action !== 'saved') return;
+    const p = pcActive();
+    if (p) pcLoad(p.id, p.name);
+  });
 
   async function ptLoad(id, tab = 'rx') {
     document.getElementById('pdEmpty').style.display = 'none';

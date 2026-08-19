@@ -74,6 +74,22 @@
 
 @push('styles')
 <style>
+  /* 상담 창(팝업)의 아래 띠 — 창을 닫는 자리가 화면 안에 있어야 한다.
+     띠가 본문 끝을 덮지 않도록 그만큼 아래 여백을 준다. */
+  #counselPopupBar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+    display: flex; align-items: center; gap: 8px; justify-content: flex-end;
+    padding: 10px 16px; background: var(--bg-card); border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+  }
+  #counselPopupNote { margin-right: auto; font-size: 12px; color: var(--text-muted); }
+  body.is-counsel-popup { padding-bottom: 60px; }
+  /* 창으로 띄운 상담은 사이드바·네비가 자리를 먹지 않게 둔다 — 본문만 보인다 */
+  body.is-counsel-popup .layout-menu,
+  body.is-counsel-popup .layout-navbar { display: none !important; }
+  body.is-counsel-popup .layout-page { margin-left: 0 !important; }
+  body.is-counsel-popup .info-bar-pinned { top: 0; left: 0; }
+
   /* 이전·다음으로 처방전을 넘길 때 흰 화면이 번쩍이지 않게 한다.
      브라우저가 지금 보이는 화면을 붙들고 있다가 다음 화면이 준비되면 겹쳐 바꾼다 —
      화면은 그대로 두고 내용만 바뀐 것처럼 보인다. 이동 자체는 예전과 같은 진짜
@@ -6203,6 +6219,54 @@ window.HELP_TOUR_STEPS = [
       if (el) el.style.display = 'none';
     });
   }
+
+  /* ── 상담 창(팝업)의 아래 띠 ────────────────────────────
+     거래처 관리의 「상담하기」로 열면 이 화면이 창으로 뜬다. 본 화면 그대로 고치되,
+     창을 닫는 자리가 필요하다 — 아래에 저장·닫기를 세운다.
+
+     적다 만 채로 닫는 일이 잦다. 그냥 닫으면 적은 것이 사라지므로 물어본다. */
+  (function () {
+    const isPopup = new URLSearchParams(location.search).get('popup') === '1';
+    if (!isPopup) return;
+
+    document.body.classList.add('is-counsel-popup');
+
+    const bar = document.createElement('div');
+    bar.id = 'counselPopupBar';
+    bar.innerHTML = `
+      <span id="counselPopupNote">적은 내용은 저장을 눌러야 남습니다.</span>
+      <button type="button" class="ds-btn" onclick="counselPopupClose()">닫기</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="counselPopupSave(this)">저장</button>`;
+    document.body.appendChild(bar);
+
+    /* 저장은 본 화면의 저장을 그대로 부른다 — 상담 창이라고 다른 규칙으로 저장하면
+       같은 값이 두 길로 들어가 서로 어긋난다. */
+    window.counselPopupSave = async function (btn) {
+      const note = document.getElementById('counselPopupNote');
+      note.textContent = '저장하는 중…';
+      try {
+        await saveOCR();
+        note.textContent = '저장했습니다.';
+        // 목록을 띄워 둔 창이 있으면 새로 읽게 한다 — 방금 적은 상담이 거기 보여야 한다
+        try { window.opener?.postMessage({ source: 'ce-counsel', action: 'saved' }, location.origin); } catch (_) {}
+      } catch (e) {
+        note.textContent = '저장하지 못했습니다.';
+      }
+    };
+
+    window.counselPopupClose = async function () {
+      if (isAnyDirty()) {
+        const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
+                                   { tone: 'warning', confirmText: '저장하고 닫기', cancelText: '그냥 닫기' });
+        if (ok) {
+          await counselPopupSave();
+          if (isAnyDirty()) return;      // 저장이 막혔으면 닫지 않는다
+        }
+        clearAllDirty();                 // 그냥 닫기 — beforeunload 가 한 번 더 묻지 않게
+      }
+      window.close();
+    };
+  })();
 
   /* ── 결제 전송 ─────────────────────────────────────────
      만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러

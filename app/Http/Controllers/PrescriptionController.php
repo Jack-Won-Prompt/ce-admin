@@ -428,7 +428,7 @@ class PrescriptionController extends Controller
      * 메뉴를 여러 번 눌러도 초안이 쌓이지 않도록, 아직 아무것도 입력하지 않은
      * 내 초안이 있으면 그것을 재사용한다.
      */
-    public function create(): RedirectResponse
+    public function create(Request $request): RedirectResponse
     {
         $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first();
 
@@ -454,7 +454,25 @@ class PrescriptionController extends Controller
             ]);
         }
 
-        return redirect()->route('prescriptions.show', $draft);
+        /* 누구의 상담인지 정해 놓고 들어오는 길이 있다(거래처 관리의 「상담하기」).
+           초안에 그 환자를 미리 붙여 두면 이름·연락처를 다시 치지 않아도 된다. */
+        if ($request->filled('patient')) {
+            $patient = \App\Models\Patient::find($request->patient);
+
+            if ($patient && (!$draft->patient_id || $draft->patient_id === $patient->id)) {
+                $draft->forceFill([
+                    'patient_id'       => $patient->id,
+                    'patient_name_ocr' => $draft->patient_name_ocr ?: $patient->name,
+                    'mobile_ocr'       => $draft->mobile_ocr ?: ($patient->mobile ?: $patient->phone),
+                ])->saveQuietly();
+            }
+        }
+
+        // 팝업으로 열었으면 그 표시를 이어 준다 — 상담 창은 아래에 저장·닫기 띠를 세운다
+        return redirect()->route('prescriptions.show', array_filter([
+            'prescription' => $draft->rx_number,
+            'popup'        => $request->boolean('popup') ? 1 : null,
+        ]));
     }
 
     // ── 웹에서 직접 업로드 ────────────────────────────────
