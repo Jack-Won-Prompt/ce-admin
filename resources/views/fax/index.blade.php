@@ -372,7 +372,7 @@
   {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 --}}
   <div class="ds-filter-card">
     <div class="ds-filter-fields">
-      <div class="ds-filter-field span-2">
+      <div class="ds-filter-field span-3">
         <label class="ds-field-label">전송 기간</label>
         <div class="ds-field-range">
           <input type="date" id="f-start" class="form-control" value="{{ date('Ymd', strtotime('-30 days')) }}">

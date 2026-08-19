@@ -438,7 +438,8 @@
     /* Figma 114:4778 — 라벨 13/500 · lh21 · grayscale/700. 라벨 21 + gap 8 + 인풋 32 = 필드 61 */
     .ds-field-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); }
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
-    .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; }   /* 시안 8 */
+    /* 자리가 모자라면 겹치지 말고 아래로 접는다 — 날짜 칸은 132 아래로 줄지 않는다 */
+    .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; row-gap: 6px; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
     /* 날짜는 「2026-06-01」과 달력 아이콘이 함께 서야 한다 — 그보다 좁아지면 글자가 잘린다 */
     .ds-field-range input[type="date"] { min-width: 132px; }

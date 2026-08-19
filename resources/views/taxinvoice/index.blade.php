@@ -323,7 +323,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
          GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
     <div class="ds-filter-card">
       <div class="ds-filter-fields">
-        <div class="ds-filter-field span-2">
+        <div class="ds-filter-field span-3">
           <label class="ds-field-label">기간</label>
           <div class="ds-field-range">
             <input type="date" id="f-start" class="form-control">

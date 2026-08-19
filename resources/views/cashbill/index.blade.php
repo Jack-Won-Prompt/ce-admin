@@ -249,7 +249,7 @@
      시안 324:6158 은 즉시발행 탭에서도 이 카드와 결과바가 그대로 보인다 — 탭 밖에 둔다. --}}
 <div class="ds-filter-card">
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" id="f-start" class="form-control">
