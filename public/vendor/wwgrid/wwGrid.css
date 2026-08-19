@@ -312,6 +312,13 @@
 .cg-wrap::-webkit-scrollbar-thumb { background: var(--cg-border-sub); border-radius: 4px; }
 .cg-wrap::-webkit-scrollbar-thumb:hover { background: #8898aa; }
 
+/* ── 빈 표 ── — 찾은 것이 없어도 표 몸통은 그대로 둔다 */
+.cg-empty-row td.cg-empty-cell {
+  height: 220px; text-align: center; vertical-align: middle;
+  color: #8a9099; font-size: 13px; font-weight: 500;
+  background: var(--cg-bg, #fff);
+}
+
 /* ── Summary (Sum) Row ── */
 .cg-tfoot .cg-summary-row td {
   border-top: 2px solid var(--cg-border-sub);

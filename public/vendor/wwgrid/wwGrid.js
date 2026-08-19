@@ -742,6 +742,8 @@ class wwGrid {
     this.editable     = options.editable    !== false;
     this.height       = options.height || null;
     this.summary      = options.summary     || false;
+    // 빈 표에 적을 말 — 화면마다 다르게 부를 수 있다
+    this.emptyText    = options.emptyText   || '검색 결과가 없습니다.';
     this.theme        = options.theme       || {};
     // toolbar: true(기본, 엑셀 버튼 표시) | false(툴바 숨김)
     this.toolbar = options.toolbar !== undefined ? options.toolbar : true;
@@ -1023,6 +1025,21 @@ class wwGrid {
   /* ── 바디 렌더링 ────────────────────────────── */
   _renderBody() {
     this._tbodyEl.innerHTML = '';
+
+    /* 찾은 것이 없을 때도 표는 자리를 지킨다. 머리줄만 남기면 못 불러온 것인지
+       없는 것인지 알 길이 없고, 아래 화면이 불쪽 솔아오른다. */
+    if (!this.data.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'cg-empty-row';
+      const td = document.createElement('td');
+      td.className = 'cg-empty-cell';
+      td.colSpan = this.columns.length + (this.rowCheckbox ? 1 : 0) + (this.rowNumber ? 1 : 0);
+      td.textContent = this.emptyText;
+      tr.appendChild(td);
+      this._tbodyEl.appendChild(tr);
+      return;
+    }
+
     this.data.forEach((row, rowIndex) => {
       this._tbodyEl.appendChild(this._makeRow(row, rowIndex));
     });
@@ -1951,6 +1968,8 @@ class wwGrid {
   _renderSummary() {
     this._tfootEl.innerHTML = '';
     if (!this.summary) return;
+    // 줄이 하나도 없으면 합계도 없다 — 0 을 줄로 세워 둘 이유가 없다
+    if (!this.data.length) return;
 
     // summary 대상 컬럼: editor=number 이고 col.summary !== false
     const hasSumCol = this.columns.some(c => c.editor === 'number' && c.summary !== false);

@@ -517,9 +517,14 @@
        찾은 것이 몇 줄뿐인 날에는 표 아래로 흰 바닥이 화면 끝까지 이어졌다.
        드물게 긴 목록은 그리드가 height:'fit' 으로 뷰포트까지 채우고 안에서 스크롤한다. */
     .ds-grid-card {
-      display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0;
+      display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
     }
+    /* 세로로 쌓는 자리에서만 안에 든 것만큼 높다. flex:1 로 남는 자리를 다
+       먹게 해 두었더니, 찾은 것이 몇 줄뿐인 날에는 표 아래로 흰 바닥이 화면
+       끝까지 이어졌다. 가로로 놓이는 카드(재구매 달력)는 그대로 늘어나야 한다 —
+       예전에 이 규칙을 모든 카드에 걸었더니 달력이 562px 로 접혔다. */
+    .ds-grid-section > .ds-grid-card { flex: 0 1 auto; }
     /* 카드가 overflow:hidden 이라, 안에 들어간 패널(조회 결과·상세 내용)이
        카드보다 길면 잘리고 스크롤도 안 생긴다. 패널이 스스로 스크롤하게 한다. */
     .ds-grid-card > [id^="pnl"] { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
