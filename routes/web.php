@@ -172,10 +172,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
         // 통화 내용을 그 자리에서 적어 둔다(거래처 관리 › 상담내역 › 상담하기)
         Route::post('/{patient}/counsels', [PatientController::class, 'storeCounsel'])->name('counsels.store');
+        // 상담을 어느 주문에 이을지 고르는 자리 — 처방으로 산 것과 처방 없이 산 것이 함께 온다
+        Route::get('/{patient}/orders',     [PatientController::class, 'orders'])->name('orders');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');
         Route::put('/{patient}',     [PatientController::class, 'update'])->name('update');
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');
     });
+
+    // 이어 둔 주문 고치기 — 상담 한 건의 연결만 바꾼다
+    Route::patch('/counsels/{prescription}/order', [PatientController::class, 'updateCounselOrder'])->name('counsels.order');
 
     // 제품 검색 / 재고 조회 (Demoworks API 프록시)
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');

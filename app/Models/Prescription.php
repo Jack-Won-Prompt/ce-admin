@@ -57,6 +57,7 @@ class Prescription extends Model
         // 상담·처방 부가 항목 — 예전에는 counseling_data JSON 이었다. 모두 컬럼으로 옮겼다.
         'counsel_no', 'counsel_date', 'counsel_type', 'counsel_acc_add_type',
         'counsel_status', 'counsel_call_no', 'counsel_re_date', 'counsel_contents',
+        'counsel_order_id',
         'dealer_type', 'caregiver_name',
         'benefit_class', 'claim_agency', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
         'rx_use_period', 'rx_end_date', 'purchase_type',
@@ -163,6 +164,12 @@ class Prescription extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    /** 이 상담이 어느 주문 이야기였나 — 처방으로 산 것일 수도, 처방 없이 산 것일 수도 있다 */
+    public function counselOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'counsel_order_id');
     }
 
     public function creator(): BelongsTo

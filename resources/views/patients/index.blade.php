@@ -81,6 +81,20 @@
 
       <div class="cs-row">
         <div class="cs-f">
+          {{-- 환자는 주문을 여러 번 한다(처방으로도, 처방 없이도) — 어느 건 이야기였는지
+               골라서 잇는다. 주문 전 문의처럼 이을 건이 없으면 비워 둔다. --}}
+          <label>주문</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="csOrderNo" class="form-control" readonly
+                   style="background:var(--gray-50);" placeholder="주문이력에서 고르십시오 (없으면 비워 둡니다)">
+            <button type="button" class="ds-btn" style="flex-shrink:0;"
+                    onclick="csPickOrder(this)">주문이력</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cs-row">
+        <div class="cs-f">
           {{-- 이 창의 본디 목적이다 — 통화한 내용을 그대로 적는다 --}}
           <label>상담 내용 *</label>
           <textarea id="csContents" class="form-control" rows="8" maxlength="2000"
@@ -672,6 +686,84 @@ document.addEventListener('keydown', (e) => {
      적다 만 채로 닫는 일이 잦아, 무엇이든 적혀 있으면 닫기 전에 물어본다. */
   let _csPatient = null;
   let _csDirty   = false;
+  let _csOrder   = null;   // 이 상담을 이을 주문
+
+  /* ── 주문 잇기 ──────────────────────────────────────────
+     환자 한 사람이 주문을 여러 번 한다 — 처방을 받아 사는 때도, 처방 없이 사는 때도
+     있다. 그래서 상담이 어느 건 이야기였는지는 골라서 이어야 한다.
+
+     고르는 창은 누른 자리 옆에 붙는다. 상담을 적다가 여는 자리라 화면 한가운데를
+     덮으면 적던 것이 가려진다. */
+  const _ordModal = new GridModal();
+  let _ordRows = {};
+
+  /** @param onPick (order) => void — 고른 주문을 받는다. 「연결 안 함」이면 null 이 온다. */
+  async function ordPick(anchor, patientId, onPick) {
+    /* 주문을 먼저 받아 놓고 연다. 글자를 쳐야 찾으러 가는 창으로 두면 열자마자 빈 목록이
+       보여, 이 사람은 주문이 없다고 읽힌다 — 한 사람의 주문은 많아야 수십 건이다. */
+    let rows = [];
+    try {
+      const res = await fetch(`${DETAIL_BASE}/${patientId}/orders`,
+                              { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      rows = (await res.json()).rows ?? [];
+    } catch (e) {
+      showToast('주문이력을 불러오지 못했습니다.', 'danger');
+      return;
+    }
+
+    _ordRows = {};
+    rows.forEach(r => { _ordRows[r.id] = r; });
+
+    // 잘못 이었을 때 풀 길도 함께 둔다
+    const items = [{ value: '', label: '— 연결 안 함 —', sub: '주문 전 문의처럼 이을 건이 없을 때' }]
+      .concat(rows.map(r => ({
+        value: r.id,
+        label: `${r.order_no} · ${r.date}`,
+        sub: `${r.kind}${r.rx_number ? ' ' + r.rx_number : ''} · ${r.product} · ` +
+             `${Number(r.amount).toLocaleString()}원 · ${r.status}`,
+      })));
+
+    _ordModal.open({
+      title: `주문이력 · ${rows.length}건`, width: 460, height: 360,
+      mode: 'popover', anchor, items,
+      onConfirm: (v) => onPick(v ? _ordRows[v] : null),
+    });
+  }
+
+  /* 상담 창에서 고른다 — 적는 중에도 이었다 풀었다 할 수 있다 */
+  window.csPickOrder = function (btn) {
+    if (!_csPatient) return;
+    ordPick(btn, _csPatient.id, (order) => {
+      _csOrder = order;
+      _csDirty = true;
+      csShowOrder();
+    });
+  };
+
+  window.csShowOrder = function () {
+    const el = document.getElementById('csOrderNo');
+    if (!el) return;
+    el.value = _csOrder ? `${_csOrder.order_no} · ${_csOrder.date} · ${_csOrder.kind}` : '';
+    el.placeholder = '주문이력에서 고르십시오 (없으면 비워 둡니다)';
+  };
+
+  /* 목록에서 고친다 — 이어 둔 뒤에도 바꿀 수 있어야 한다 */
+  window.csEditOrder = function (btn, counselId, patientId) {
+    ordPick(btn, patientId, async (order) => {
+      try {
+        const res = await apiRequest(`${BASE_URL}/counsels/${counselId}/order`, 'PATCH',
+                                     { counsel_order_id: order ? order.id : null });
+        if (!res.success) throw new Error(res.message || '바꾸지 못했습니다.');
+        showToast(res.message, 'success');
+        const p = pcActive();
+        if (p) pcLoad(p.id, p.name);
+      } catch (e) {
+        showToast('바꾸지 못했습니다: ' + (e.message || ''), 'danger', 5000);
+      }
+    });
+  };
+
+
 
   /* 창 자리와 크기 — 옮겼던 자리는 기억해 둔다. 두 번째부터는 놓아 둔 곳에서 열린다.
      화면 밖으로는 나가지 않게 붙든다. */
@@ -764,6 +856,8 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('csStatus').value       = '02';
     document.getElementById('csReDate').value       = '';
     document.getElementById('csContents').value     = '';
+    _csOrder = null;
+    csShowOrder();
     document.getElementById('csLen').textContent    = '0';
     document.getElementById('csNote').textContent   = '적은 내용은 저장을 눌러야 남습니다.';
     csSyncReDate();
@@ -804,6 +898,7 @@ document.addEventListener('keydown', (e) => {
         counsel_re_date:  document.getElementById('csStatus').value === '50'
                             ? (document.getElementById('csReDate').value || null) : null,
         counsel_contents: contents,
+        counsel_order_id: _csOrder ? _csOrder.id : null,
       });
       if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
 
@@ -938,7 +1033,9 @@ document.addEventListener('keydown', (e) => {
         status:  c.status || '',
         re_date: c.re_date || '',
         channel: [c.type, c.call_no].filter(Boolean).join(' · '),
-        rx_number: c.rx_number || '',
+        order_no: c.order_no || '',
+        order_id: c.order_id || null,
+        counsel_id: c.key,
         by:      c.by || '',
         url:     c.url || '',
       }));
@@ -975,7 +1072,23 @@ document.addEventListener('keydown', (e) => {
             { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
             { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
             { header: '갈래',      name: 'channel',   width: 130, sortable: true },
-            { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+            /* 이어 둔 주문. 잘못 이었으면 그 자리에서 다시 고른다 — 이력을 열어 놓고
+               고칠 수 있어야 「이 상담이 무슨 건이었나」가 맞아 간다. */
+            { header: '주문번호', name: 'order_no', width: 160, sortable: true, exportable: true,
+              renderer: (v, row) => {
+                const wrap = document.createElement('span');
+                wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+                const txt = document.createElement('span');
+                txt.textContent = v || '연결 안 됨';
+                if (!v) txt.style.color = 'var(--text-muted)';
+                const b = document.createElement('button');
+                b.type = 'button'; b.className = 'pt-chip clickable';
+                b.textContent = v ? '바꾸기' : '연결';
+                b.addEventListener('click', (e) => { e.stopPropagation();
+                  csEditOrder(b, row.counsel_id, pcActive()?.id); });
+                wrap.append(txt, b);
+                return wrap;
+              } },
             { header: '담당자',    name: 'by',        width: 90,  sortable: true },
           ],
           data: rows,
@@ -987,7 +1100,7 @@ document.addEventListener('keydown', (e) => {
           const cell = e.target.closest('[data-row-index]');
           if (!cell) return;
           const row = pcTabs[id].grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-          if (row?.url) window.ceOpenTab(row.url, '주문 - ' + (row.rx_number || ''), 'bx-scan');
+          if (row?.url) window.ceOpenTab(row.url, '상담 - ' + (row.order_no || ''), 'bx-conversation');
         });
       } else {
         pcTabs[id].grid.setData(rows);

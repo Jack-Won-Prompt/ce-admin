@@ -142,7 +142,7 @@ class PatientController extends Controller
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $rx = $patient->prescriptions()->with(['creator', 'updater'])->latest()->take(50)->get();
+        $rx = $patient->prescriptions()->with(['creator', 'updater', 'counselOrder'])->latest()->take(50)->get();
 
         $prescriptions = $rx->map(fn ($p) => [
             'rx_number' => $p->rx_number,
@@ -159,8 +159,14 @@ class PatientController extends Controller
         $counselStates = ['02' => '등록', '50' => '재상담', '95' => '확정', '99' => '취소'];
 
         $counseling = $rx->filter(fn ($p) => !empty($p->counsel_no))->map(fn ($p) => [
+            'id'         => $p->id,
+            // 상담을 다시 찾을 때 쓰는 열쇠 — 처방전은 처방번호로 찾는다(getRouteKeyName)
+            'key'        => $p->rx_number,
             'counsel_no' => $p->counsel_no ?: '-',
-            'rx_number'  => $p->rx_number,
+            /* 상담이 어느 주문 이야기였나. 주문은 여러 번 있고 처방 없이 사는 때도 있어,
+               상담을 적을 때 주문이력에서 골라 잇는다. 잇지 않은 상담도 있다(주문 전 문의). */
+            'order_id'   => $p->counsel_order_id,
+            'order_no'   => $p->counselOrder?->order_number ?: '',
             'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
             'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
             'type'       => $counselTypes[(string) $p->counsel_type] ?? ($p->counsel_type ?: ''),
@@ -206,6 +212,7 @@ class PatientController extends Controller
             'counsel_call_no'  => 'nullable|string|max:30',
             'counsel_re_date'  => 'nullable|date',
             'counsel_contents' => 'required|string|max:2000',
+            'counsel_order_id' => 'nullable|exists:orders,id',
         ]);
 
         $rx = \App\Models\Prescription::create(array_merge($data, [
@@ -228,6 +235,44 @@ class PatientController extends Controller
             'success'    => true,
             'message'    => '상담을 적어 두었습니다.',
             'counsel_no' => $rx->counsel_no,
+        ]);
+    }
+
+    /** 이 환자의 주문 — 상담을 어느 건에 이을지 고를 때 본다 */
+    public function orders(Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        $rows = $patient->orders()->with('prescription')->latest('id')->take(100)->get()
+            ->map(fn ($o) => [
+                'id'        => $o->id,
+                'order_no'  => $o->order_number,
+                'date'      => $o->created_at?->format('Y-m-d') ?? '',
+                'product'   => $o->product_name ?: '-',
+                'amount'    => (int) $o->total_amount,
+                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                // 처방으로 산 것인지 처방 없이 산 것인지 — 고를 때 그것부터 눈에 들어와야 한다
+                'rx_number' => $o->prescription?->rx_number ?: '',
+                'kind'      => $o->prescription_id ? '처방' : '처방 없음',
+            ])->values();
+
+        return response()->json(['rows' => $rows]);
+    }
+
+    /** 이어 둔 주문을 고친다 — 잘못 이은 것을 그 자리에서 바로잡는다 */
+    public function updateCounselOrder(Request $request, \App\Models\Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate(['counsel_order_id' => 'nullable|exists:orders,id']);
+
+        $prescription->forceFill([
+            'counsel_order_id' => $data['counsel_order_id'] ?? null,
+            'updated_by'       => \Illuminate\Support\Facades\Auth::id(),
+        ])->save();
+
+        $no = $prescription->refresh()->counselOrder?->order_number;
+
+        return response()->json([
+            'success'  => true,
+            'message'  => $no ? "{$no} 주문에 이었습니다." : '주문 연결을 풀었습니다.',
+            'order_no' => $no ?: '',
         ]);
     }
 
