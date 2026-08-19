@@ -222,6 +222,8 @@
       {{-- 환자 한 사람의 모든 것은 옆 탭에서 본다. 다른 화면으로 건너가면 어떤 조건으로
            찾고 있었는지가 끊기고, 돌아오려면 처음부터 다시 찾아야 한다. --}}
       <button type="button" id="pnlBtnFull" class="pnl-tab" onclick="pnlShow('full')">전체 상세</button>
+      {{-- 상담은 목록으로 훑는 일이 많다 — 이력 탭 안에 접어 두지 않고 제 자리를 준다 --}}
+      <button type="button" id="pnlBtnCounsel" class="pnl-tab" onclick="pnlShow('counsel')">상담내역</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
@@ -261,6 +263,17 @@
   <iframe id="pfFrame" title="환자 전체 상세" style="display:none;width:100%;border:0;
           height:calc(100vh - 300px);min-height:520px;"></iframe>
 </div>{{-- /#pnlFull --}}
+
+{{-- ── 상담내역 탭 — 고른 환자의 상담을 목록으로 ── --}}
+<div id="pnlCounsel" style="display:none;padding:16px;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+    <i class="bx bx-conversation" style="color:var(--primary);font-size:16px;"></i>
+    <span id="pcName" style="font-weight:700;font-size:14px;">상담내역</span>
+    <span class="ds-grid-hint" id="pcNote" style="margin-left:auto;">행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.</span>
+  </div>
+  <div id="pcEmpty" class="pnl-empty">조회결과에서 <b>상담내역</b>을 누르면 여기에 나옵니다.</div>
+  <div id="pcGrid" style="display:none;"></div>
+</div>{{-- /#pnlCounsel --}}
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
@@ -410,7 +423,7 @@ document.addEventListener('keydown', (e) => {
           b.className = 'pt-chip clickable';
           b.textContent = '상담내역';
           b.title = '이 환자의 상담 이력을 봅니다';
-          b.addEventListener('click', (e) => { e.stopPropagation(); ptLoad(row.id, 'counsel'); });
+          b.addEventListener('click', (e) => { e.stopPropagation(); pcLoad(row.id, row.name); });
           return b;
         } },
       { header: '휴대폰',       name: 'mobile',          width: 130 },
@@ -479,8 +492,8 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.pt-pane').forEach(p => p.classList.toggle('active', p.id === 'pd-' + name));
   };
   // 패널 탭 전환(조회결과/상세내용)
-  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull' };
-  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull' };
+  const PANES = { list: 'pnlList', detail: 'pnlDetail', full: 'pnlFull', counsel: 'pnlCounsel' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', full: 'pnlBtnFull', counsel: 'pnlBtnCounsel' };
 
   window.pnlShow = function (which) {
     if (!PANES[which]) which = 'list';
@@ -538,6 +551,75 @@ document.addEventListener('keydown', (e) => {
       });
     } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
   });
+
+  /* ── 상담내역 탭 ──────────────────────────────────────
+     상담은 「이 사람과 언제 무슨 이야기를 했나」를 훑는 일이라 목록이 맞다.
+     이력 탭 안에 접어 두면 한 건씩 펼쳐 봐야 해서, 제 자리를 따로 준다. */
+  let pcGrid = null;
+
+  window.pcLoad = async function (id, name) {
+    pnlShow('counsel');
+    document.getElementById('pcName').textContent = (name || '') + ' 상담내역';
+    document.getElementById('pcNote').textContent = '불러오는 중…';
+
+    try {
+      const res = await fetch(DETAIL_BASE + '/' + id + '/histories',
+                              { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      const rows = (d.counseling ?? []).map(c => ({
+        counsel_no: c.counsel_no || '-',
+        date:       c.date || '',
+        rx_number:  c.rx_number || '',
+        note:       c.note || '',
+        url:        c.url || '',
+      }));
+
+      document.getElementById('pcName').textContent = (d.name || name || '') + ' 상담내역';
+
+      if (!rows.length) {
+        document.getElementById('pcGrid').style.display  = 'none';
+        document.getElementById('pcEmpty').style.display = '';
+        document.getElementById('pcEmpty').innerHTML     = '상담 이력이 없습니다.';
+        document.getElementById('pcNote').textContent    = '0건';
+        return;
+      }
+
+      document.getElementById('pcEmpty').style.display = 'none';
+      document.getElementById('pcGrid').style.display  = '';
+      document.getElementById('pcNote').textContent    = rows.length + '건 · 행을 더블클릭하면 그 처방전을 새 탭에서 엽니다.';
+
+      if (!pcGrid) {
+        pcGrid = new wwGrid({
+          el: document.getElementById('pcGrid'),
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+          columns: [
+            { header: '상담번호', name: 'counsel_no', width: 140, sortable: true },
+            { header: '상담일',   name: 'date',       width: 110, sortable: true, align: 'center' },
+            { header: '처방번호', name: 'rx_number',  width: 150, sortable: true },
+            { header: '상담 내용', name: 'note',      width: 420 },
+          ],
+          data: rows,
+        });
+
+        /* 더블클릭하면 그 처방전으로 간다. 화면 탭으로 열어야 보고 있던 목록이 남는다.
+           wwGrid 에는 on() 이 없어 셀에서 행 번호를 읽는다. */
+        document.getElementById('pcGrid').addEventListener('dblclick', (e) => {
+          const cell = e.target.closest('[data-row-index]');
+          if (!cell) return;
+          const row = pcGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+          if (row?.url) window.ceOpenTab(row.url, '주문 - ' + (row.rx_number || ''), 'bx-scan');
+        });
+      } else {
+        pcGrid.setData(rows);
+      }
+    } catch (e) {
+      document.getElementById('pcGrid').style.display  = 'none';
+      document.getElementById('pcEmpty').style.display = '';
+      document.getElementById('pcEmpty').innerHTML     = '상담내역을 불러오지 못했습니다.';
+      document.getElementById('pcNote').textContent    = '';
+    }
+  };
 
   async function ptLoad(id, tab = 'rx') {
     document.getElementById('pdEmpty').style.display = 'none';
