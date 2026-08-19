@@ -5,23 +5,16 @@
 @section('page-title', '위임장 서명')
 {{-- 시안(266:66) Frame 48101452 — 「홈 - 위임장 서명」 두 마디.
      홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
-     구분자는 이 @section 안에 있어 이 파일이 고칠 자리다(전역 app.blade.php 에는 규칙이 없다).
-     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙는다 — 마디를 나눠 gap 8 을 준다.
-     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다. --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>위임장 서명</span></span>@endsection
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 위임장 서명')
 
 @push('styles')
 <style>
-  /* 빵부스러기 마디 사이 8 — 시안 266:66 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
-  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
-  /* 검색 카드 3필드 — 이 시안(266:66)은 9열 균등 분배가 아니다.
-     Frame 48101591/48101593/48101592 실측: 검색어 295 · 기간(서명일) 295 · 서명 여부 140,
-     필드 간격 16, 세 필드가 왼쪽에 몰리고 필드 영역(1384)의 오른쪽은 빈칸으로 남는다.
-     전역 9열 그리드(span-3/4/2 · gap 12)로는 453/608/298 이 되어 시안보다 훨씬 넓다. */
-  .ds-filter-card .ds-filter-fields { display: flex; gap: 16px; }
-  .ds-filter-card .ds-filter-field.span-3 { flex: 0 1 295px; }
-  .ds-filter-card .ds-filter-field.span-4 { flex: 0 1 295px; }
-  .ds-filter-card .ds-filter-field.span-2 { flex: 0 1 140px; }
+  /* 검색 카드 3필드 — 시안(266:66) Frame 48101591/48101593/48101592 실측:
+     검색어 295 · 기간(서명일) 295 · 서명 여부 140, 필드 간격 16.
+     전역 9열 그리드(열 139.56 · gap 16)에서 span-2 = 139.56×2+16 = 295.1,
+     한 칸 = 139.56 이라 시안값이 그대로 나온다 — 여기서 flex 로 다시 짜던 것을 걷어낸다.
+     (gap 12 시절에는 안 맞아 따로 짰었다. 전역이 16 으로 바뀌면서 맞아떨어졌다.) */
 
   /* 행 안의 작은 버튼 — 시안 266:66 실측(Frame 74×28)에 맞춘다.
      h28 · r8 · pad 0/12 · gap 6 · 12px/500 lh19 · 글자 gray-1000 · bd 1px gray-200 · bg 흰색.
@@ -89,12 +82,12 @@
         @endforeach
       </select>
     </div>
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="이름ㆍ전화번호ㆍ처방번호">
     </div>
-    <div class="ds-filter-field span-4">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간(서명일)</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control">
@@ -102,7 +95,7 @@
         <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
       </div>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">서명 여부</label>
       <select name="signed_only" class="form-control">
         <option value="">전체</option>

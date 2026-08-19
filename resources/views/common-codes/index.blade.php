@@ -2,7 +2,7 @@
 
 @section('title', '환경 설정')
 @section('page-title', '환경 설정')
-@section('breadcrumb', '홈 / 설정 / 환경 설정')
+@section('breadcrumb', '홈 - 설정 - 환경 설정')
 
 @push('styles')
 <style>

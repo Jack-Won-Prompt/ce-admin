@@ -5,17 +5,17 @@
      사이드바(layouts/app data-title)·워크스페이스 탭·카드 머리도 모두 같은 이름이다. --}}
 @section('title', '처방자료 업로드')
 @section('page-title', '처방자료 업로드')
-{{-- 시안 128:691·128:693 — 「홈 - 처방전 목록」 두 마디, 마디 사이 8 --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>처방전 목록</span></span>@endsection
+{{-- 시안 128:691·128:693 — 「홈 - 처방전 목록」 두 마디, 마디 사이 8.
+     제목(처방자료 업로드)과 마지막 마디가 다른 것은 시안이 일부러 그렇게 그린 자리다
+     (128:688 에서 제목 128:689 = 처방자료 업로드, 마디 128:693 = 처방전 목록).
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 처방전 목록')
 
 {{-- 검수 대기·처방전 목록은 시안(128:3167)대로 업로드 카드 헤더로 옮겼다.
      상단 헤더의 옛 건수는 화면에 뿌리는 최근 5건 안에서만 세어, 실제보다 적게 나왔다. --}}
 
 @push('styles')
 <style>
-  /* 브레드크럼 두 마디 사이 간격 8 (시안 128:691 → 128:693).
-     .page-breadcrumb 은 전역이지만 .bc-trail 은 이 화면 마크업이라 여기 둔다. */
-  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 
 
   /* ── Layout (Figma 128:768) — 3 : 1, gap 12 ── */

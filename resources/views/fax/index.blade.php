@@ -372,7 +372,7 @@
   {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 --}}
   <div class="ds-filter-card">
     <div class="ds-filter-fields">
-      <div class="ds-filter-field span-3">
+      <div class="ds-filter-field span-2">
         <label class="ds-field-label">전송 기간</label>
         <div class="ds-field-range">
           <input type="date" id="f-start" class="form-control" value="{{ date('Ymd', strtotime('-30 days')) }}">
@@ -384,6 +384,10 @@
     <div class="ds-filter-actions">
       {{-- 동기화 진행 문구 — 결과바에 있던 알약을 단추 옆으로 옛겼다(비어 있으면 안 보인다) --}}
       <span class="ds-grid-hint" id="sync-status"></span>
+      {{-- 시안 324:10697 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+           발송 폼을 비우는 함수는 여전히 없다. 여기 초기화는 찾는 조건만 되돌리는 것으로,
+           화면을 다시 여는 링크면 조건이 처음 값으로 돌아가 하는 일이 같다. --}}
+      <a href="{{ route('fax.index') }}" class="ds-btn">초기화</a>
       <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
       <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
@@ -394,14 +398,16 @@
     </div>
   </div>
 
-  {{-- 결과바(h32) — 좌: 전체·선택 건수, 우: 안내문 + 액션 버튼.
-       그리드 툴바의 '엑셀 저장'과 하단 상태바의 건수를 전부 여기로 옮겼다. --}}
-  <div class="ds-grid-section">
-  </div>
+  {{-- 결과바는 걷어냈다(499d611) — 건수는 탭 이름에, 단추는 찾는 줄에 있다 --}}
 
 </div>
 
 {{-- ── 탭바와 두 탭 본문은 같은 흰 카드 안이다 (시안 Frame 48101484) ── --}}
+{{-- 카드를 .ds-grid-section 안에 둔다. 밖에 두면 전역 .ds-grid-card 의 flex:1 이 살아
+     카드가 본문 남은 높이를 다 먹었다 — 표는 266 인데 카드는 1003 이라 아래로 흰 바닥이
+     693 남았다(.ds-grid-section > .ds-grid-card 만 flex:0 1 auto 로 눌러 준다).
+     다른 스물한 화면이 모두 이 구조다. --}}
+<div class="ds-grid-section">
 <div class="ds-grid-card">
 
   {{-- 탭: 전송 내역 / 팩스 발송 (전송 내역 먼저) --}}
@@ -536,6 +542,7 @@
   </div>
 
 </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 {{-- ── 상세 모달 ── --}}
 <div class="nd-modal-overlay" id="detail-modal">

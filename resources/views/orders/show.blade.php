@@ -3,7 +3,7 @@
 
 @section('title', '주문 상세 — ' . $order->order_number)
 @section('page-title', '주문 상세')
-@section('breadcrumb', '홈 - 주문관리 - ' . $order->order_number)
+@section('breadcrumb', '홈 - 주문 관리 - ' . $order->order_number)
 
 @push('styles')
 <style>

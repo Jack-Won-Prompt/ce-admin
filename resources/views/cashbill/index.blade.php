@@ -249,7 +249,7 @@
      시안 324:6158 은 즉시발행 탭에서도 이 카드와 결과바가 그대로 보인다 — 탭 밖에 둔다. --}}
 <div class="ds-filter-card">
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" id="f-start" class="form-control">
@@ -267,6 +267,10 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+    {{-- 시안 324:4656 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+         이 화면은 폼 전송이 아니라 loadHistory() 가 찾지만, 화면을 다시 여는 링크면
+         조건이 처음 값으로 돌아가 하는 일이 같다(다른 열아홉 화면과 같은 방식). --}}
+    <a href="{{ route('cashbill.index') }}" class="ds-btn">초기화</a>
     <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__cashbillGrid?.downloadExcel()">엑셀 저장</button>

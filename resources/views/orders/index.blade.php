@@ -6,9 +6,9 @@
      이름이 겹치지 않게 둔 것이고(app.blade.php 1317행 주석), 그 파일은 이번 배정이 아니다. --}}
 @section('title', '주문 관리')
 @section('page-title', '주문 관리')
-{{-- 브레드크럼 — Figma 148:5526 Frame 48101452: 홈 · - · 주문 관리, gap 8 (12px/500 lh14)
-     @section 의 인자형(@section('x','...'))은 Laravel 이 e() 로 escape 한다 → 블록형으로 쓴다. --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>주문 관리</span></span>@endsection
+{{-- 브레드크럼 — Figma 148:5526 Frame 48101452: 홈 · - · 주문 관리, gap 8 (12px/500 lh14).
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 주문 관리')
 
 @push('scripts')
 <script>
@@ -58,9 +58,6 @@ window.HELP_TOUR_STEPS = [
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 
-  /* 브레드크럼 3항목 간격 — 시안 Frame 48101452 gap 8.
-     .bc-trail 은 이 화면에서만 쓰는 마크업이라 여기 둔다. */
-  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 
   /* 아래 규칙들은 전역으로 올렸다 —
        구분선 안쪽 여백 · 결과바 위 4px · 패널 탭 gap 8 · 그리드 카드 테두리 제거

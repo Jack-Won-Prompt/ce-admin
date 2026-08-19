@@ -292,6 +292,12 @@
       margin-top: 4px;   /* Figma: 제목과 gap 4 */
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* 마디 사이 8 — 시안 248:4008 Frame 48101452 는 HORIZONTAL/8 이다
+       (홈 x336 w11 → '-' x355 · '-' w6 → 화면명 x369, 둘 다 8).
+       한 덩어리 문자열 '홈 - 서류 관리' 로 두면 하이픈 양옆이 일반 공백이라
+       12px/500 에서 3.0px 밖에 안 된다 — 시안보다 5 좁다.
+       화면 다섯 곳이 각자 갖고 있던 같은 규칙을 여기로 올린다. */
+    .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
     .navbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
     /* Navbar icon buttons */
@@ -415,8 +421,18 @@
     }
 
     /* 검색·필터 카드 (174:1210) — padding 12/16, gap 24, radius 12 */
+    /* 시안 캐시 14장(248:4088 · 266:336 · 282:335 · 282:1204 · 324:338 · 324:4932 ·
+       324:1986 · 324:10973 · 342:4328 · 352:555 · 352:3491 · 248:3205 · 207:1324 · 207:1478)이
+       예외 없이 같다 — 안쪽 줄 1536 = 필드 그리드 1384 + gap 24 + 버튼 자리 128.
+       버튼 자리 128 은 60×32 두 개(초기화·검색)와 gap 8 이 딱 들어가는 폭이다.
+       그런데 결과바를 걷어내면서(499d611) 엑셀 저장·선택 상세·선택 인쇄 같은 단추가
+       이 줄로 내려와 화면에 따라 최대 566 을 차지한다. 필드가 남는 자리를 받는 구조라
+       단추가 많을수록 검색칸이 좁아졌다 — 1920 에서 열폭이 90.9~139.5 로 갈리고
+       1280 에서는 20~68 까지 뭉개진다(cashbill 열폭 20 → 세 칸 묶어도 92).
+       그래서 필드 그리드에 시안값을 못박고, 남는 단추는 다음 줄로 접는다.
+       접히는 줄 사이는 시안 카드의 세로 gap 과 같은 12 다. */
     .ds-filter-card {
-      display: flex; align-items: stretch; gap: 24px;
+      display: flex; align-items: stretch; flex-wrap: wrap; gap: 12px 24px;
       padding: 12px 16px; border-radius: 12px;
       background: var(--gray-0);
     }
@@ -426,8 +442,11 @@
        16 쪽에 「표준 레이아웃」 두 장(펼침·접힘)이 들어 있고, 12 는 먼저 그려진 아홉 장
        (거래처 관리 3 · 처방전 목록 1 · 주문 관리 5)뿐이라 16 을 표준으로 삼는다.
        그 아홉 장은 시안이 아직 따라오지 못한 자리로 보고 예외를 두지 않았다 — 디자이너 확인 대상. */
+    /* 폭은 시안값 1384 로 못박는다 — 그래야 한 열이 어느 화면에서나 139.6 이다.
+       카드가 그보다 좁아지면(1600 이하 · 사이드바 펼친 노트북) 100% 를 받아
+       그 폭 안에서 아홉 열이 다시 고르게 나뉜다. */
     .ds-filter-fields {
-      flex: 1; min-width: 0;
+      flex: 0 0 auto; width: min(100%, 1384px); min-width: 0;
       display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px;
     }
     .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -447,8 +466,10 @@
        (표준 레이아웃 두 장 포함). gray-400 이던 것을 바로잡는다. */
     .ds-field-sep { color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
+    /* 단추 묶음은 늘 오른쪽 끝이다 — 다음 줄로 접혀도 마찬가지라 margin-left 를 auto 로 둔다
+       (시안 48101589 은 x1791 로 안쪽 줄의 오른쪽 끝에 붙어 있다). */
     .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0;
-                         flex-wrap: wrap; row-gap: 8px; }
+                         flex-wrap: wrap; row-gap: 8px; margin-left: auto; }
     /* 조회 결과 건수 — 목록 위에 띄를 따로 두지 않고 찾는 줄 안에 적는다.
        탭이 있는 화면은 탭 이름 뒤 괄호로 적고, 없는 화면만 이 칸을 쓴다. */
     .ds-filter-total { align-self: center; margin-right: auto; white-space: nowrap;
@@ -684,7 +705,12 @@
     }
     /* Figma placeholder = grayscale/500 (--text-muted 는 gray-400 이라 한 단계 연하다) */
     .form-control::placeholder { color: var(--gray-500); }
-    .form-select {
+    /* 고르는 칸은 어디서나 같은 화살표를 단다. .form-select 를 빠뜨린 select 가
+       열한 곳 있었고(마스터 관리·위임장 서명의 검색줄, 거래처 등록 모달, 처방전 검수 폼 여섯)
+       그 자리만 운영체제 기본 화살표가 나와 같은 줄의 옆 칸과 달라 보였다.
+       마크업을 열한 군데 고치는 대신 select 면 규칙이 걸리게 한다. */
+    .form-select,
+    select.form-control {
       appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 10px center;
@@ -918,29 +944,39 @@
        GLOBAL SHARED COMPONENTS
     ═══════════════════════════════════════════ */
 
-    /* ── Stat cards (all pages) ── */
-    .stat-grid { display: grid; gap: 14px; }
+    /* ── Stat cards (all pages) ──
+       세 화면이 쓴다 — 대시보드 · 기관 공지사항 · CE샵 모니터링.
+       대시보드는 시안 382:107 에 맞추느라 이 규칙을 화면에서 통째로 덮어쓰고 있었고,
+       나머지 둘은 옛 값 그대로여서 같은 부품이 화면마다 달랐다:
+         안여백 16 ↔ 18/20 · 그림자 없음 ↔ 있음 · 칸 사이 12 ↔ 14 ·
+         아이콘 32×32 r8/16 ↔ 48×48 r12/22 · 값 14/700 ↔ 24/700.
+       시안에는 17px 이상 글자도, 카드 그림자도 없다 — 시안값을 전역으로 올린다.
+       (대시보드의 같은 선언은 근거 주석을 안고 있어 그대로 둔다. 값은 이제 같다.) */
+    .stat-grid { display: grid; gap: 12px; }
     .stat-card {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow); padding: 18px 20px;
+      background: var(--gray-0); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: none; padding: 16px;
       display: flex; align-items: center; gap: 16px;
       text-decoration: none; color: inherit; cursor: pointer;
       transition: var(--transition);
     }
-    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: inherit; }
+    /* 시안 카드는 평평하다 — 들림·그림자 대신 테두리 색만 바뀐다 */
+    .stat-card:hover { border-color: var(--primary); color: inherit; }
     .stat-icon {
-      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
-    .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
-    .stat-icon.success { background: var(--success-light); color: var(--success); }
-    .stat-icon.warning { background: var(--warning-light); color: var(--warning); }
-    .stat-icon.danger  { background: var(--danger-light);  color: var(--danger); }
-    .stat-icon.info    { background: var(--info-light);    color: var(--info); }
-    .stat-icon.purple  { background: #F3EEFF;              color: var(--purple); }
-    .stat-icon.gray    { background: var(--border-light);  color: var(--text-muted); }
-    .stat-val   { font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--text-primary); }
-    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
+    /* 시안에는 초록·주황·남색이 없다. 강조는 primary 램프, 처리 대기는 alert 램프로만 나눈다
+       (클래스 이름은 그대로 둔다 — 화면들이 이 이름으로 붙인다). */
+    .stat-icon.primary { background: var(--primary-50); color: var(--primary-500); }
+    .stat-icon.success { background: var(--primary-50); color: var(--primary-700); }
+    .stat-icon.warning { background: var(--alert-50);   color: var(--alert-500); }
+    .stat-icon.danger  { background: var(--alert-50);   color: var(--alert-500); }
+    .stat-icon.info    { background: var(--primary-50); color: var(--primary-400); }
+    .stat-icon.purple  { background: var(--primary-50); color: var(--primary-600); }
+    .stat-icon.gray    { background: var(--gray-100);   color: var(--gray-600); }
+    .stat-val   { font-size: 14px; font-weight: 700; line-height: 22px; color: var(--gray-1000); }
+    .stat-label { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-800); margin-top: 0; }
     .stat-info  { min-width: 0; }
 
     /* ── Pill tabs (status/type filter) ── */
@@ -1690,8 +1726,24 @@
           <div class="page-title">@yield('page-title', '대시보드')</div>
           <div class="page-breadcrumb">
             {{-- 시안(174:955)의 빵부스러기는 아이콘 없이 '홈' 이 제목과 같은 x336 에서
-                 시작한다. 집 아이콘은 낱말이 아니라 장식이라 걷어냈다. --}}
-            {!! $__env->yieldContent('breadcrumb', '홈') !!}
+                 시작한다. 집 아이콘은 낱말이 아니라 장식이라 걷어냈다.
+
+                 마디 사이는 시안이 8 인데(248:4008), 화면이 '홈 - 서류 관리' 라는
+                 한 덩어리로 넘기면 하이픈 양옆이 일반 공백이라 3.0px 밖에 안 된다.
+                 평문으로 온 것만 ' - ' 에서 갈라 마디로 세운다.
+                 태그가 섞여 온 것(링크·화면이 직접 짠 마디)은 그 화면의 마크업이라
+                 건드리지 않고 그대로 흘린다. --}}
+            @php $__bc = trim($__env->yieldContent('breadcrumb', '홈')); @endphp
+            @if (strip_tags($__bc) === $__bc && str_contains($__bc, ' - '))
+              <span class="bc-trail">
+                @foreach (explode(' - ', $__bc) as $__i => $__seg)
+                  @if ($__i)<span>-</span>@endif
+                  <span>{{ $__seg }}</span>
+                @endforeach
+              </span>
+            @else
+              {!! $__bc !!}
+            @endif
           </div>
         </div>
 
@@ -3014,8 +3066,10 @@ input#chatFileInput { display: none; }
   {{-- 목록 --}}
   <div class="sr-body" id="srPaneList">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-      <select id="srFilterStatus" onchange="SrPanel.load()"
-              style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+      {{-- 화면의 다른 고르는 칸과 같은 화살표를 달려면 .form-control 이어야 한다
+           (인라인 style 은 그대로 두어 이 패널의 높이·여백을 지킨다) --}}
+      <select id="srFilterStatus" class="form-control" onchange="SrPanel.load()"
+              style="height:32px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
         <option value="">전체 상태</option>
         @foreach($srStatuses ?? \App\Models\ServiceRequest::STATUSES as $k => $v)
           <option value="{{ $k }}">{{ $v }}</option>

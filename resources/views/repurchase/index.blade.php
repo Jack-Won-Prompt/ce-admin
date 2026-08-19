@@ -4,15 +4,11 @@
 @section('page-title', '재구매 관리')
 {{-- 시안(243:53 · 243:433) Frame 48101452 — 「홈 - 재구매 관리」 두 마디.
      홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
-     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙어 마디 사이 8 이 안 나온다.
-     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다
-     (orders/index·prescriptions/upload 과 같은 방식). --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>재구매 관리</span></span>@endsection
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 재구매 관리')
 
 @push('styles')
 <style>
-/* 빵부스러기 마디 사이 8 — 시안 243:53 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
-.page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 /* ═══════════════════════════════════════════════════════════
    재구매 관리 — Figma 243:433(테이블뷰) · 243:53(캘린더뷰)
    전역 컴포넌트(.ds-btn h32·r8·13px/500, 카드 r12, .ds-filter-card)를
@@ -543,9 +539,9 @@ function gotoYm(y, m) {
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('search'))
-      <a href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수) — 조건을 걷어낸다.
+         같은 라우트로 되돌아가는 링크라 조건이 없어도 하는 일이 같다. --}}
+    <a href="{{ route('repurchase.index', ['year'=>$year,'month'=>$month,'view'=>'list']) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__repurchaseGrid?.downloadExcel()">엑셀 저장</button>

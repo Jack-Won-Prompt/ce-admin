@@ -2,7 +2,7 @@
 
 @section('title', '교환/반품/취소')
 @section('page-title', '교환/반품/취소')
-@section('breadcrumb', '홈 - 주문 - 교환·반품·취소')
+@section('breadcrumb', '홈 - 주문 - 교환/반품/취소')
 
 @section('help-title', '교환/반품/취소 도움말')
 @section('help-content')
@@ -54,9 +54,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('status'))
-      <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수) — 조건을 걷어낸다.
+         같은 라우트로 되돌아가는 링크라 조건이 없어도 하는 일이 같다. --}}
+    <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌고,
          찾다가 없으면 바로 접수하는 흐름과도 맞지 않았다. --}}
@@ -78,7 +78,7 @@
     <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
-    <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>
+    <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세 내용</button>
     <button type="button" id="rtnTabNew"  class="pnl-tab" onclick="rtnPanel('new')">신규 접수</button>
   </div>
 
@@ -93,7 +93,7 @@
     <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12.5px;color:var(--gray-700);">
       목록에서 행을 더블클릭하면 여기에 나옵니다.
     </div>
-    <iframe id="rtnShowFrame" title="상세내용" style="display:none;width:100%;border:0;
+    <iframe id="rtnShowFrame" title="상세 내용" style="display:none;width:100%;border:0;
             height:calc(100vh - 300px);min-height:520px;"></iframe>
   </div>
 
@@ -187,7 +187,7 @@
     frame.style.display = '';
     document.getElementById('rtnShowEmpty').style.display = 'none';
     document.getElementById('rtnTabShow').textContent =
-      '상세내용' + (row.receipt ? ' · ' + row.receipt : '');
+      '상세 내용' + (row.receipt ? ' · ' + row.receipt : '');
     rtnPanel('show');
   }
   /* wwGrid 에는 on() 이 없다 — 다른 목록 화면과 같이 셀에서 행 번호를 읽는다. */

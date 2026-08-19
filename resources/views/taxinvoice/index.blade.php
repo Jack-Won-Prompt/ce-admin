@@ -323,7 +323,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
          GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
     <div class="ds-filter-card">
       <div class="ds-filter-fields">
-        <div class="ds-filter-field span-3">
+        <div class="ds-filter-field span-2">
           <label class="ds-field-label">기간</label>
           <div class="ds-field-range">
             <input type="date" id="f-start" class="form-control">
@@ -342,6 +342,10 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         </div>
       </div>
       <div class="ds-filter-actions">
+        {{-- 시안 324:1720 Frame 48101589 — 초기화(60×32)는 검색 왼쪽에 늘 있다.
+             이 화면은 폼 전송이 아니라 loadHistory() 가 찾지만, 화면을 다시 여는 링크면
+             조건이 처음 값으로 돌아가 하는 일이 같다(다른 열아홉 화면과 같은 방식). --}}
+        <a href="{{ route('taxinvoice.index') }}" class="ds-btn">초기화</a>
         <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
         {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
         <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
@@ -351,14 +355,15 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       </div>
     </div>
 
-    {{-- 결과바(h32) — 검색 카드와 4px 띄우는 몫은 .ds-grid-section 의 padding-top 이 맡는다.
-         그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
-    <div class="ds-grid-section">
-    </div>
+    {{-- 결과바는 걷어냈다(499d611) — 건수는 탭 이름에, 단추는 찾는 줄에 있다 --}}
 
   </div>
 
   {{-- ── 탭바와 두 탭 본문은 같은 흰 카드 안이다 (시안 324:1720 / 324:2797) ── --}}
+  {{-- 카드를 .ds-grid-section 안에 둔다 — 밖에 두면 전역 .ds-grid-card 의 flex:1 이 살아
+       표보다 카드가 길어지고 아래로 흰 바닥이 남는다(팩스 발송에서 693 남았다).
+       다른 스물한 화면이 모두 이 구조다. --}}
+  <div class="ds-grid-section">
   <div class="ds-grid-card">
 
     {{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
@@ -579,6 +584,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     </div>
 
   </div>{{-- /.ds-grid-card --}}
+  </div>{{-- /.ds-grid-section --}}
 
 </div>
 

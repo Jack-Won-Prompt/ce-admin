@@ -327,8 +327,11 @@
   /* 줄이 많으면 합계가 끝까지 스크롤해야 보였다 — 밑에 붙여 둔다 */
   position: sticky; bottom: 0; z-index: 3;
 }
-.cg-summary-label { font-weight: 600; color: #555; justify-content: flex-end; }
-.cg-summary-value { font-weight: 700; color: #1a3a5c; }
+/* 굵기 600 과 #555 · #1a3a5c 는 시안에 없는 값이다 —
+   시안 굵기는 400/500/700 셋뿐이고 색은 DS 램프 26 색뿐이다.
+   합계 이름은 머리행과 같은 700/gray-600, 값은 gray-1000 으로 둔다. */
+.cg-summary-label { font-weight: 700; color: #656C74; justify-content: flex-end; }
+.cg-summary-value { font-weight: 700; color: #101317; }
 
 /* ── Popup cell trigger icon ── */
 .cg-popup-trigger {

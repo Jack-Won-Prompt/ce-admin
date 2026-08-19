@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('title', '기관 공지사항')
+{{-- page-title 이 없어 헤더에 기본값 '대시보드' 가 걸려 있었다 — 어느 화면에 있는지
+     헤더만 보면 알 수 없었다. 사이드바·시안 사이드바(174:955)와 같은 이름으로 세운다. --}}
+@section('page-title', '기관 공지사항')
+@section('breadcrumb', '홈 - 지원 - 기관 공지사항')
 
 @section('help-content')
   <div class="help-tip"><i class="bx bx-info-circle"></i>보건복지부·심사평가원·국민건강보험공단의 정책 공지를 자동 수집합니다. 로그인 시 당일 데이터가 없으면 자동 크롤링되며, <strong>지금 수집</strong> 버튼으로 수동 실행할 수 있습니다.</div>
@@ -100,6 +104,10 @@
     </div>
   </div>
   <div class="ds-filter-actions">
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수).
+         이 화면은 JS 가 찾지만, 화면을 다시 여는 링크면 조건이 처음 값으로 돌아가
+         하는 일이 같다(다른 스무 화면과 같은 방식). --}}
+    <a href="{{ route('institutional-notices.index') }}" class="ds-btn">초기화</a>
     <button type="button" class="ds-btn ds-btn-primary" id="btnSearch"><i class="bx bx-search"></i> 검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
@@ -120,7 +128,7 @@
       <ul class="nav-tabs" id="orgTabs" style="border:none;margin-bottom:0;">
         <li class="nav-item" style="position:relative;">
           <button class="nav-link active" data-org="MOHW" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-shield-quarter" style="margin-right:5px;color:var(--danger);"></i>보건복지부
+            <i class="bx bx-shield-quarter" style="margin-right:5px;color:var(--alert-500);"></i>보건복지부
           </button>
           <a href="https://www.mohw.go.kr/board.es?mid=a10503010100&bid=0027" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">
@@ -129,7 +137,7 @@
         </li>
         <li class="nav-item" style="position:relative;">
           <button class="nav-link" data-org="HIRA" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-search-alt" style="margin-right:5px;color:var(--warning);"></i>심사평가원
+            <i class="bx bx-search-alt" style="margin-right:5px;color:var(--primary-700);"></i>심사평가원
           </button>
           <a href="https://www.hira.or.kr/bbsDummy.do?pgmid=HIRAA020002000100" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">
@@ -138,7 +146,7 @@
         </li>
         <li class="nav-item" style="position:relative;">
           <button class="nav-link" data-org="NHIS" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-health" style="margin-right:5px;color:var(--info);"></i>건강보험공단
+            <i class="bx bx-health" style="margin-right:5px;color:var(--primary-400);"></i>건강보험공단
           </button>
           <a href="https://www.nhis.or.kr/nhis/minwon/wbhace10210m01.do" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">

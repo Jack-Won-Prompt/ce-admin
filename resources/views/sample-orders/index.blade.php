@@ -110,9 +110,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['q','date_from','date_to']))
-      <a href="{{ route('sample-orders.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수) — 조건을 걷어낸다.
+         같은 라우트로 되돌아가는 링크라 조건이 없어도 하는 일이 같다. --}}
+    <a href="{{ route('sample-orders.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다 --}}
     <button type="button" class="ds-btn ds-btn-primary" onclick="smpPane('new')">
@@ -129,15 +129,15 @@
   <div class="ds-grid-card">
   <div class="pnl-tabs">
     <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
-    <button type="button" id="smpTabDetail" class="pnl-tab" onclick="smpPane('detail')">상세보기</button>
-    <button type="button" id="smpTabNew"    class="pnl-tab" onclick="smpPane('new')">신규등록</button>
+    <button type="button" id="smpTabDetail" class="pnl-tab" onclick="smpPane('detail')">상세 내용</button>
+    <button type="button" id="smpTabNew"    class="pnl-tab" onclick="smpPane('new')">신규 등록</button>
   </div>
 
   <div id="smpPaneList">
     <div id="smpGrid"></div>
   </div>
 
-  {{-- 상세보기 — 머리 정보와 제품 목록 --}}
+  {{-- 상세 내용 — 머리 정보와 제품 목록 --}}
   <div id="smpPaneDetail" style="display:none;">
     <div class="smp-pane">
       <div id="smpDetailEmpty" class="smp-none">목록에서 행을 더블클릭하면 여기에 나옵니다.</div>
@@ -162,7 +162,7 @@
     </div>
   </div>
 
-  {{-- 신규등록 --}}
+  {{-- 신규 등록 --}}
   <div id="smpPaneNew" style="display:none;">
     <form class="smp-pane" id="smpForm">
       <div class="smp-sec">
@@ -301,7 +301,7 @@
   });
   window.__smpGrid = grid;
 
-  /* 목록 · 상세보기 · 신규등록 세 판을 오간다 */
+  /* 목록 · 상세 내용 · 신규 등록 세 판을 오간다 */
   window.smpPane = function (which) {
     const map = { list: 'smpPaneList', detail: 'smpPaneDetail', new: 'smpPaneNew' };
     Object.entries(map).forEach(([k, id]) => { $(id).style.display = (k === which) ? '' : 'none'; });
@@ -311,7 +311,7 @@
     if (which === 'new') $('smpRecipient')?.focus();
   };
 
-  /* 행을 더블클릭하면 목록 옆 상세보기 탭에 제품까지 편다 */
+  /* 행을 더블클릭하면 목록 옆 상세 내용 탭에 제품까지 편다 */
   $('smpGrid').addEventListener('dblclick', async function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;

@@ -124,9 +124,9 @@ window.HELP_TOUR_STEPS = [
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request()->hasAny(['user_id','type','date_from','date_to','q']))
-      <a href="{{ route('user-logs.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수) — 조건을 걷어낸다.
+         같은 라우트로 되돌아가는 링크라 조건이 없어도 하는 일이 같다. --}}
+    <a href="{{ route('user-logs.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">
       <i class="fa-solid fa-magnifying-glass"></i> 검색
     </button>

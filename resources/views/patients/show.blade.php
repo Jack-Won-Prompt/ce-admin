@@ -2,7 +2,7 @@
 
 @section('title', $patient->name . ' — 환자 상세')
 @section('page-title', '환자 상세')
-@section('breadcrumb', '홈 - 환자 관리 - ' . $patient->name)
+@section('breadcrumb', '홈 - 거래처 관리 - ' . $patient->name)
 
 @push('styles')
 <style>

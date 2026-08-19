@@ -40,9 +40,9 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('status') || request('category') || request('search'))
-      <a href="{{ route('inquiries.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 시안은 초기화를 검색 왼쪽에 늘 세워 둔다(캐시 42장 전수) — 조건을 걷어낸다.
+         같은 라우트로 되돌아가는 링크라 조건이 없어도 하는 일이 같다. --}}
+    <a href="{{ route('inquiries.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-search"></i> 검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="inquiryViewDetail()">

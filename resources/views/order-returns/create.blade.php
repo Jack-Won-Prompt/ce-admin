@@ -2,7 +2,7 @@
 
 @section('title', '교환/반품/취소 접수')
 @section('page-title', '교환/반품/취소 접수')
-@section('breadcrumb', '홈 - 주문 - 교환·반품·취소 - 접수')
+@section('breadcrumb', '홈 - 주문 - 교환/반품/취소 - 접수')
 
 @section('header-actions')
 <a href="{{ route('order-returns.index') }}" class="btn btn-outline btn-sm">

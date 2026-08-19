@@ -5,7 +5,7 @@
 @section('page-title', '청구 관리')
 {{-- 시안 282:53 빵부스러기는 '홈'(x367) · '-'(x386) · 화면명(x400) 으로 구분자가 하이픈이다.
      마지막 조각의 낱말('청구')은 DIFF 가 짚지 않아 그대로 두고 구분자만 맞춘다. --}}
-@section('breadcrumb', '홈 - 청구')
+@section('breadcrumb', '홈 - 청구 관리')
 
 @section('help-title', '청구 도움말')
 @section('help-content')
