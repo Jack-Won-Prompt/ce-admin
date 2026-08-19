@@ -111,8 +111,6 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-{{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     {{-- 시안(266:66) Frame 48101589 — 초기화 60×32 x1760 · 검색 60×32 x1828 · gap 8, 초기화는 늘 있다.
          조건을 걷어낸다. 같은 라우트로 되돌아가는 링크라 조건 없이도 하는 일이 같다 --}}
     <a href="{{ route('prescription-consents.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
@@ -128,6 +126,9 @@
 <div class="ds-grid-section">
   {{-- 시안은 그리드가 흰 카드(r12) 안에 들어간다 --}}
   <div class="ds-grid-card">
+      <div class="pnl-tabs">
+        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+      </div>
     <div id="consentGrid"></div>
   </div>
 </div>

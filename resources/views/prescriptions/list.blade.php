@@ -138,7 +138,9 @@
         <input type="text" name="search" class="form-control"
                placeholder="처방번호ㆍ이름ㆍ병원명" value="{{ request('search') }}">
       </div>
-      <div class="ds-filter-field span-2">
+      {{-- 두 칸(298)에서는 날짜가 「2026-06-…」로 잘렸다 — 달력 아이콘까지 서야 해서
+           한 칸이 150 은 있어야 한다. 세 칸을 준다(이 화면은 아홉 칸 중 여섯만 쓴다). --}}
+      <div class="ds-filter-field span-3">
         <label class="ds-field-label">기간</label>
         <div class="ds-field-range">
           <input type="date" name="date_from" class="form-control"

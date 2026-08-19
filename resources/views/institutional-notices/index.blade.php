@@ -100,8 +100,6 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<span id="noticeTotalBadge">0</span>)</span>
     <button type="button" class="ds-btn ds-btn-primary" id="btnSearch"><i class="bx bx-search"></i> 검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
@@ -114,6 +112,9 @@
 {{-- 결과바(h32) + 공지 목록 카드(r12) --}}
 <div class="ds-grid-section">
   <div class="ds-grid-card">
+      <div class="pnl-tabs">
+        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 <b id="noticeTotalBadge">0</b>건)</span></button>
+      </div>
     {{-- 기관 탭 — 카드 안 상단, 탭 높이 44 --}}
     <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;">
       <ul class="nav-tabs" id="orgTabs" style="border:none;margin-bottom:0;">

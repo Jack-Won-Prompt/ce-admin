@@ -247,7 +247,7 @@
       <div class="ds-grid-card">
         {{-- 패널 탭: 조회 결과 / 상세 내용 --}}
         <div class="pnl-tabs">
-          <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
+          <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
           <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
           {{-- 상세 내용 패널 맨 위에 있던 '조회결과로' 버튼을 여기로 옮겼다(상세 내용 탭일 때만 보인다) --}}
           <button type="button" class="ds-btn pnl-back" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>

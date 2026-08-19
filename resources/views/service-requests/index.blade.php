@@ -115,7 +115,7 @@
     {{-- 패널 탭은 카드 안 상단 (h44 · pad 0/16 · gap 16) --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-        <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
+        <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">
         <i class="fa-solid fa-comments"></i> 상세 · 답변
         <span id="pnlDetailTitle" style="font-size:12px;font-weight:500;color:var(--gray-600);"></span>

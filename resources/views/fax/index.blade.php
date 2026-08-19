@@ -406,7 +406,7 @@
 
   {{-- 탭: 전송 내역 / 팩스 발송 (전송 내역 먼저) --}}
   <div class="pnl-tabs titab-bar">
-    <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-history"></i> 전송 내역<span class="pnl-tab-cnt">(<b id="fax-total-count">0</b>)</span></button>
+    <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-history"></i> 전송 내역<span class="pnl-tab-cnt">(총 <b id="fax-total-count">0</b>건)</span></button>
     <button type="button" class="pnl-tab titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-printer"></i> 팩스 발송</button>
   </div>
 

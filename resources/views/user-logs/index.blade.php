@@ -124,8 +124,6 @@ window.HELP_TOUR_STEPS = [
     </div>
   </div>
   <div class="ds-filter-actions">
-      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     @if(request()->hasAny(['user_id','type','date_from','date_to','q']))
       <a href="{{ route('user-logs.index') }}" class="ds-btn">초기화</a>
     @endif
@@ -140,6 +138,9 @@ window.HELP_TOUR_STEPS = [
 {{-- ── 흰 카드(r12) 안에 그리드 ── --}}
 <div class="ds-grid-section">
   <div class="ds-grid-card">
+      <div class="pnl-tabs">
+        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+      </div>
     <div id="logGrid"></div>
   </div>
 </div>

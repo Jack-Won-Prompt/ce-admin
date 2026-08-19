@@ -440,6 +440,8 @@
     /* 기간처럼 두 입력을 한 칸에 넣는 경우 */
     .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
+    /* 날짜는 「2026-06-01」과 달력 아이콘이 함께 서야 한다 — 그보다 좁아지면 글자가 잘린다 */
+    .ds-field-range input[type="date"] { min-width: 132px; }
     /* 기간 두 입력 사이 '~' — 시안 31장이 예외 없이 13/400 · #101317(gray-1000)이다
        (표준 레이아웃 두 장 포함). gray-400 이던 것을 바로잡는다. */
     .ds-field-sep { color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }

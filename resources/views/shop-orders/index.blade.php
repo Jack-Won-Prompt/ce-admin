@@ -69,8 +69,6 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-      {{-- 결과바를 걷어낸 자리의 건수 — 이 화면에는 탭이 없어 여기 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>)</span>
     @if(request('q'))
       <a href="{{ route('shop-orders.index', $cur ? ['status'=>$cur] : []) }}" class="ds-btn">초기화</a>
     @endif
@@ -86,6 +84,9 @@
 {{-- ── 결과바(h32) + 목록 카드(r12) ── --}}
 <div class="ds-grid-section">
   <div class="ds-grid-card">
+      <div class="pnl-tabs">
+        <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+      </div>
     <div id="shopOrderGrid"></div>
   </div>
 </div>

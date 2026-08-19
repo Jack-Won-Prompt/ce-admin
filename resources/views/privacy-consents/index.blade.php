@@ -183,7 +183,7 @@
     {{-- 뷰 전환 탭: 조회 결과 / 상세 내용 — 시안은 카드 안 상단 --}}
     <div class="pnl-tabs">
       <button type="button" id="pcTabBtnList" class="pnl-tab active" onclick="pcShowTab('list')">
-        <i class="bx bx-list-ul"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format(count($gridData)) }}</b>)</span></button>
+        <i class="bx bx-list-ul"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format(count($gridData)) }}</b>건)</span></button>
       <button type="button" id="pcTabBtnDetail" class="pnl-tab" onclick="pcShowTab('detail')">
         <i class="bx bx-detail"></i> 상세 내용
       </button>

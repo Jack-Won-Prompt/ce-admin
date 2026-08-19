@@ -363,7 +363,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
     {{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
     <div class="pnl-tabs titab-bar">
-      <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(<b id="taxTotalCount">0</b>)</span></button>
+      <button type="button" class="pnl-tab titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(총 <b id="taxTotalCount">0</b>건)</span></button>
       <button type="button" class="pnl-tab titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-file"></i> 전자세금계산서 즉시발행</button>
     </div>
 

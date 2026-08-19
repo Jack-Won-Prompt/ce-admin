@@ -241,8 +241,6 @@
       </div>
     </div>
     <div class="ds-filter-actions">
-{{-- 결과바를 걷어낸 자리의 건수. 번호가 없는 곳은 발송에서 빠지므로 함께 적는다 --}}
-      <span class="ds-filter-total">조회 결과(<b>{{ number_format($total) }}</b>) · 번호 있는 곳 {{ number_format($sendable) }}</span>
       {{-- 시안(352:84)은 검색 왼쪽에 초기화를 늘 보여준다 — 조건을 걷어낸다.
            같은 라우트로 되돌아가는 링크라 조건 없이도 하는 일이 같다 --}}
       <a href="{{ route('messages.index') }}" class="ds-btn">초기화</a>
@@ -290,6 +288,11 @@
     {{-- 오른쪽 — 누구에게 --}}
     <div class="ds-grid-section">
       <div class="ds-grid-card">
+        <div class="pnl-tabs">
+          <button type="button" class="pnl-tab active" onclick="return false;">조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+          {{-- 번호가 없는 곳은 발송에서 빠진다 — 골라 놓고 왜 덜 나갔는지 묻지 않게 적어 둔다 --}}
+          <span class="ds-grid-hint" style="margin-left:auto;">번호 있는 곳 {{ number_format($sendable) }}곳</span>
+        </div>
         <div id="msGrid"></div>
       </div>
     </div>

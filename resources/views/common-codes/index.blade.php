@@ -40,7 +40,6 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    <span class="ds-filter-total">{{ $groups[$current]['label'] }}({{ count($gridData) }})</span>
     <button type="button" class="ds-btn" onclick="window.__ccGrid?.downloadExcel()">엑셀 저장</button>
   </div>
 </form>
@@ -54,7 +53,7 @@
            style="display:inline-flex;align-items:center;text-decoration:none;">
           {{ $g['label'] }}
           @if(($counts[$key] ?? 0) > 0)
-            <span class="pnl-tab-cnt">({{ $counts[$key] }})</span>
+            <span class="pnl-tab-cnt">(총 {{ $counts[$key] }}건)</span>
           @endif
         </a>
       @endforeach

@@ -72,7 +72,7 @@
   {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
-    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과<span class="pnl-tab-cnt">(<b>{{ $total }}</b>)</span></button>
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')">조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
     <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>

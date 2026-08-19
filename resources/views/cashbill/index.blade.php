@@ -284,7 +284,7 @@
   <div class="ds-grid-card">
     {{-- 탭줄은 카드 안 첫 줄이다(시안 324:4656 · 324:6158 공통) --}}
     <div class="titab-bar">
-      <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(<b id="cb-total-count">0</b>)</span></button>
+      <button type="button" class="titab active" data-tab="hist" onclick="tiTab('hist')"><i class="bx bx-list-ul"></i> 발행 내역<span class="pnl-tab-cnt">(총 <b id="cb-total-count">0</b>건)</span></button>
       <button type="button" class="titab" data-tab="issue" onclick="tiTab('issue')"><i class="bx bx-receipt"></i> 현금영수증 즉시발행</button>
       <span class="sync-badge" id="last-sync-label"></span>
     </div>

@@ -181,7 +181,7 @@
     {{-- ── 패널 탭: 조회 결과 / 서류 등록 — 시안은 카드 안 상단(h44) ── --}}
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-        <i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(<b>{{ number_format($total) }}</b>)</span></button>
+        <i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
       <button type="button" id="pnlBtnReg" class="pnl-tab" onclick="pnlShow('reg')">
         <i class="fa-solid fa-folder-plus"></i> 서류 등록
         <span id="pnlRegRx" style="font-family:monospace;font-size:11px;color:var(--gray-500);"></span>

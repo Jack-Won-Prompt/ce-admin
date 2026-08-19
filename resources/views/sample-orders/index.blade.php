@@ -125,7 +125,7 @@
 
 <div class="ds-grid-section">
   <div class="pnl-tabs">
-    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')">조회 결과<span class="pnl-tab-cnt">(<b>{{ $total }}</b>)</span></button>
+    <button type="button" id="smpTabList"   class="pnl-tab active" onclick="smpPane('list')">조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
     <button type="button" id="smpTabDetail" class="pnl-tab" onclick="smpPane('detail')">상세보기</button>
     <button type="button" id="smpTabNew"    class="pnl-tab" onclick="smpPane('new')">신규등록</button>
   </div>

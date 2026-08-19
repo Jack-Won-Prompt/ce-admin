@@ -16,11 +16,11 @@
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnUsers" class="pnl-tab active" onclick="pnlShow('users')">
         <i class="bx bx-user-check"></i> 관리자 목록
-        <span class="pnl-cnt" id="userCount">{{ number_format($total) }}</span>
+        <span class="pnl-tab-cnt">(총 <b id="userCount">{{ number_format($total) }}</b>건)</span>
       </button>
       <button type="button" id="pnlBtnInv" class="pnl-tab" onclick="pnlShow('inv')">
         <i class="bx bx-envelope-open"></i> 초대 현황
-        <span class="pnl-cnt" id="pnlInvCnt" style="display:none;"></span>
+        <span class="pnl-tab-cnt" id="pnlInvCntWrap" style="display:none;">(총 <b id="pnlInvCnt"></b>건)</span>
       </button>
       {{-- 결과바에 있던 단추를 탭줄 오른쪽 끝으로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다.
            이 화면에는 검색 필터가 없어, 늘 보이는 줄은 탭줄뿐이다. --}}
@@ -292,12 +292,11 @@ function renderInvitations(list) {
     badge.style.display  = 'none';
   }
 
-  // 탭에도 전체 건수를 표시해, 초대 현황 탭을 열지 않아도 상태가 보이게 한다
-  const tabCnt = document.getElementById('pnlInvCnt');
-  if (tabCnt) {
-    tabCnt.textContent   = String(list.length);
-    tabCnt.style.display = list.length ? 'inline-flex' : 'none';
-  }
+  // 탭에도 전체 건수를 적어, 초대 현황 탭을 열지 않아도 상태가 보이게 한다
+  const tabCnt  = document.getElementById('pnlInvCnt');
+  const tabWrap = document.getElementById('pnlInvCntWrap');
+  if (tabCnt)  tabCnt.textContent  = String(list.length);
+  if (tabWrap) tabWrap.style.display = list.length ? '' : 'none';
 
   const statusText = { pending: '대기중', accepted: '수락됨', expired: '만료됨' };
 
