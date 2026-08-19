@@ -1032,7 +1032,8 @@ document.addEventListener('keydown', (e) => {
         date:    c.date || '',
         status:  c.status || '',
         re_date: c.re_date || '',
-        channel: [c.type, c.call_no].filter(Boolean).join(' · '),
+        type:    c.type || '',
+        call_no: c.call_no || '',
         order_no: c.order_no || '',
         order_id: c.order_id || null,
         counsel_id: c.key,
@@ -1071,7 +1072,10 @@ document.addEventListener('keydown', (e) => {
             { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
             { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
             { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
-            { header: '갈래',      name: 'channel',   width: 130, sortable: true },
+            /* 「갈래」라고 묶어 두었더니 무엇을 담은 칸인지 이름만으로 서지 않았다.
+               상담 유형과 통화번호는 다른 것이므로 각자 칸을 준다. */
+            { header: '상담 유형', name: 'type',      width: 90,  sortable: true, align: 'center' },
+            { header: '통화번호',  name: 'call_no',   width: 130, sortable: true },
             /* 이어 둔 주문. 잘못 이었으면 그 자리에서 다시 고른다 — 이력을 열어 놓고
                고칠 수 있어야 「이 상담이 무슨 건이었나」가 맞아 간다. */
             { header: '주문번호', name: 'order_no', width: 160, sortable: true, exportable: true,
@@ -1083,7 +1087,7 @@ document.addEventListener('keydown', (e) => {
                 if (!v) txt.style.color = 'var(--text-muted)';
                 const b = document.createElement('button');
                 b.type = 'button'; b.className = 'pt-chip clickable';
-                b.textContent = v ? '바꾸기' : '연결';
+                b.textContent = v ? '변경' : '연결';
                 b.addEventListener('click', (e) => { e.stopPropagation();
                   csEditOrder(b, row.counsel_id, pcActive()?.id); });
                 wrap.append(txt, b);
