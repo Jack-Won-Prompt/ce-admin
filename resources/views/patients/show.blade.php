@@ -21,15 +21,22 @@
                 overflow-wrap:anywhere; }
   @media(max-width:700px) { .info-row.wide { grid-column:auto; } }
 
-  .edit-form { display:none; }
-  .edit-form.active { display:block; }
-  /* 보이고 감추는 것만 여기서 정한다 — 배치는 위에서 정한 grid 를 그대로 쓴다.
-     예전에 display:block 을 여기 두어, 위에서 준 grid 를 덮고 있었다. */
-  .view-panel.hidden { display:none; }
+  /* 고칠 때도 보던 틀 그대로다. 예전에는 조회 패널을 감추고 두 칸짜리 입력 폼을 대신
+     띄워, 수정을 누르는 순간 칸이 뒤섞이고 어디를 고치는지 다시 찾아야 했다.
+     이제는 같은 grid 를 그대로 두고 값 자리만 입력칸으로 바꾼다. */
+  .edit-only { display:none; }
+  .is-editing .view-only { display:none; }
+  .is-editing .edit-only { display:block; }
+  .is-editing .edit-only.inline { display:flex; gap:6px; align-items:center; }
+  /* 글줄 안에서 바꿔 끼우는 칸 — 줄을 새로 만들지 않아야 아래가 밀리지 않는다 */
+  .is-editing .edit-only.inline-mini { display:inline-flex; gap:6px; align-items:center; vertical-align:middle; }
 
-  .form-group { margin-bottom:12px; }
-  .form-label { font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px; }
-  .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .info-value .form-control { width:100%; height:30px; padding:2px 8px; font-size:13px; }
+  .info-value textarea.form-control { height:auto; }
+  .info-value .form-control.narrow { width:88px; flex:0 0 88px; }
+  .info-hint { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
+  /* 이름은 그 자리에서 고친다 — 글자 크기까지 같게 두어야 자리가 흔들리지 않는다 */
+  #e-name { font-size:17px; font-weight:700; height:27px; padding:1px 8px; }
 
   .rx-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .rx-row:last-child { border-bottom:none; }
@@ -72,139 +79,126 @@
           <div style="width:52px;height:52px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0;">
             <i class="fa-solid fa-user"></i>
           </div>
-          {{-- 이름 칸이 줄어들다 못해 0 이 되면 한 글자씩 접힌다(왼쪽 칸이 340px 뿐이다).
-               줄어드는 대신 단추를 아랫줄로 내린다 — 이름은 끊기더라도 한 줄로 읽혀야 한다. --}}
-          <div style="flex:1 1 140px;min-width:120px;">
-            <div style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $patient->name }}</div>
-            <div style="font-size:12px;color:var(--text-muted);">
+          {{-- 이름 칸이 줄어들다 못해 0 이 되면 한 글자씩 접힌다. 줄어드는 대신 단추를
+               아랫줄로 내린다 — 이름은 끊기더라도 한 줄로 읽혀야 한다. --}}
+          <div style="flex:1 1 220px;min-width:160px;">
+            <div class="view-only" style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $patient->name }}</div>
+            <input type="text" class="form-control edit-only" id="e-name" value="{{ $patient->name }}"
+                   data-orig="{{ $patient->name }}" placeholder="환자명" />
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
               환자 #{{ $patient->id }} · 등록 {{ $patient->created_at->format('Y-m-d') }}
-              @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
-              @if($patient->gender) · {{ $patient->gender === 'male' ? '남' : '여' }} @endif
+              <span class="view-only" style="display:inline;">
+                @if($patient->birth_date) · {{ $patient->birth_date->format('Y-m-d') }} 만 {{ $patient->age }}세 @endif
+                @if($patient->gender) · {{ $patient->gender === 'male' ? '남' : '여' }} @endif
+              </span>
+              {{-- 생일·성별은 적혀 있던 그 자리에서 고친다. 줄을 하나 더 만들면
+                   그만큼 아래 칸이 통째로 밀려, 고치기 전과 다른 화면이 된다. --}}
+              <span class="edit-only inline-mini">
+                <input type="date" class="form-control" id="e-birth" style="width:132px;height:26px;font-size:12px;padding:1px 6px;"
+                       value="{{ $patient->birth_date?->format('Y-m-d') }}" data-orig="{{ $patient->birth_date?->format('Y-m-d') }}" />
+                <select class="form-control" id="e-gender" style="width:74px;height:26px;font-size:12px;padding:1px 6px;"
+                        data-orig="{{ $patient->gender }}">
+                  <option value="">성별</option>
+                  <option value="male"   @selected($patient->gender==='male')>남</option>
+                  <option value="female" @selected($patient->gender==='female')>여</option>
+                </select>
+              </span>
             </div>
           </div>
 
-          {{-- 이 사람에게 할 일은 이름 옆에 둔다 — 고치기와 통화 기록 보기다 --}}
-          <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+          {{-- 이 사람에게 할 일은 이름 옆에 둔다. 고치는 동안에는 수정 단추 오른쪽에
+               저장·취소가 나란히 붙는다 — 누른 자리에서 끝맺을 수 있어야 한다. --}}
+          <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-outline btn-sm" id="btn-edit" onclick="toggleEdit(true)">
               <i class="fa-solid fa-pen"></i> 수정
             </button>
+            <button class="btn btn-warning btn-sm edit-only" id="btn-save" onclick="savePatient()">
+              <i class="fa-solid fa-floppy-disk"></i> 저장
+            </button>
+            <button class="btn btn-outline btn-sm edit-only" id="btn-cancel" onclick="toggleEdit(false)">취소</button>
             <button class="btn btn-outline btn-sm" onclick="openCounselTab()">
               <i class="bx bx-conversation"></i> 상담내역
             </button>
           </div>
         </div>
 
-        {{-- 조회 패널 --}}
+        {{-- 개인정보 — 보는 것과 고치는 것이 한 자리다 --}}
         <div class="view-panel" id="view-panel">
           <div class="info-row">
             <span class="info-label">주민번호</span>
-            <span class="info-value">{{ $patient->masked_resident_no ?? '-' }}</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->masked_resident_no ?? '-' }}</span>
+              {{-- 마스킹만 보여준다. 그대로 두면 기존 값이 유지되고, 바꿀 때만 전체를 새로 입력한다 --}}
+              <span class="edit-only">
+                <input type="text" class="form-control" id="e-resident"
+                       value="{{ $patient->masked_resident_no }}"
+                       data-masked="{{ $patient->masked_resident_no }}"
+                       data-orig="{{ $patient->masked_resident_no }}"
+                       placeholder="XXXXXX-XXXXXXX" />
+                <small class="info-hint">바꿀 때만 새로 적습니다</small>
+              </span>
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">휴대폰</span>
-            <span class="info-value">{{ $patient->mobile ?? '-' }}</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->mobile ?? '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-mobile" data-phone
+                     value="{{ $patient->mobile }}" data-orig="{{ $patient->mobile }}" placeholder="010-XXXX-XXXX" />
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">일반 전화</span>
-            <span class="info-value">{{ $patient->phone ?? '-' }}</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->phone ?? '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-phone" data-phone
+                     value="{{ $patient->phone }}" data-orig="{{ $patient->phone }}" placeholder="02-XXXX-XXXX" />
+            </span>
           </div>
           <div class="info-row wide">
             <span class="info-label">주소</span>
-            <span class="info-value">{{ $patient->address ?? '-' }}</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->address ?? '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-address"
+                     value="{{ $patient->address }}" data-orig="{{ $patient->address }}" />
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">건강보험번호</span>
-            <span class="info-value">{{ $patient->health_insurance_no ?? '-' }}</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->health_insurance_no ?? '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-insurance-no"
+                     value="{{ $patient->health_insurance_no }}" data-orig="{{ $patient->health_insurance_no }}" />
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">급여 적용</span>
             <span class="info-value">
-              @if($patient->is_nhis_eligible)
-                <span style="color:var(--success);font-weight:700;"><i class="fa-solid fa-check-circle"></i> 급여 {{ $patient->nhis_coverage_rate }}%</span>
-              @else
-                <span style="color:var(--text-muted);">비급여</span>
-              @endif
+              <span class="view-only">
+                @if($patient->is_nhis_eligible)
+                  <span style="color:var(--success);font-weight:700;"><i class="fa-solid fa-check-circle"></i> 급여 {{ $patient->nhis_coverage_rate }}%</span>
+                @else
+                  <span style="color:var(--text-muted);">비급여</span>
+                @endif
+              </span>
+              {{-- 급여 여부와 급여율은 늘 붙어 다닌다 — 한 칸 안에 나란히 둔다 --}}
+              <span class="edit-only inline">
+                <select class="form-control" id="e-nhis" data-orig="{{ $patient->is_nhis_eligible ? '1' : '0' }}">
+                  <option value="0" @selected(!$patient->is_nhis_eligible)>비급여</option>
+                  <option value="1" @selected($patient->is_nhis_eligible)>급여 대상</option>
+                </select>
+                <input type="number" class="form-control narrow" id="e-coverage" min="0" max="100"
+                       value="{{ $patient->nhis_coverage_rate }}" data-orig="{{ $patient->nhis_coverage_rate }}" title="급여율 (%)" />
+              </span>
             </span>
           </div>
-          @if($patient->note)
+          {{-- 메모는 비어 있어도 칸을 남긴다 — 고칠 때만 나타나면 그만큼 틀이 밀린다 --}}
           <div class="info-row wide">
             <span class="info-label">메모</span>
-            <span class="info-value" style="white-space:pre-wrap;">{{ $patient->note }}</span>
-          </div>
-          @endif
-        </div>
-
-        {{-- 편집 폼 --}}
-        <div class="edit-form" id="edit-form">
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label">환자명 <span style="color:red;">*</span></label>
-              <input type="text" class="form-control" id="e-name" value="{{ $patient->name }}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">주민등록번호</label>
-              {{-- 마스킹만 보여준다. 그대로 두면 기존 값이 유지되고, 바꿀 때만 전체를 새로 입력한다(P0-1) --}}
-              <input type="text" class="form-control" id="e-resident"
-                     value="{{ $patient->masked_resident_no }}"
-                     data-masked="{{ $patient->masked_resident_no }}"
-                     placeholder="XXXXXX-XXXXXXX" />
-              <small style="font-size:11px;color:var(--text-muted);">변경할 때만 전체 번호를 새로 입력하세요. 그대로 두면 기존 값이 유지됩니다.</small>
-            </div>
-          </div>
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label">생년월일</label>
-              <input type="date" class="form-control" id="e-birth" value="{{ $patient->birth_date?->format('Y-m-d') }}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">성별</label>
-              <select class="form-control" id="e-gender">
-                <option value="">선택</option>
-                <option value="male"   @selected($patient->gender==='male')>남</option>
-                <option value="female" @selected($patient->gender==='female')>여</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label">휴대폰</label>
-              <input type="text" class="form-control" id="e-mobile" value="{{ $patient->mobile }}" placeholder="010-XXXX-XXXX" data-phone />
-            </div>
-            <div class="form-group">
-              <label class="form-label">일반 전화</label>
-              <input type="text" class="form-control" id="e-phone" value="{{ $patient->phone }}" placeholder="02-XXXX-XXXX" data-phone />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">주소</label>
-            <input type="text" class="form-control" id="e-address" value="{{ $patient->address }}" />
-          </div>
-          <div class="form-grid-2">
-            <div class="form-group">
-              <label class="form-label">건강보험번호</label>
-              <input type="text" class="form-control" id="e-insurance-no" value="{{ $patient->health_insurance_no }}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">급여 적용</label>
-              <select class="form-control" id="e-nhis">
-                <option value="0" @selected(!$patient->is_nhis_eligible)>비급여</option>
-                <option value="1" @selected($patient->is_nhis_eligible)>급여 대상</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">급여율 (%)</label>
-            <input type="number" class="form-control" id="e-coverage" value="{{ $patient->nhis_coverage_rate }}" min="0" max="100" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">메모</label>
-            <textarea class="form-control" id="e-note" rows="3">{{ $patient->note }}</textarea>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="btn btn-outline flex-1" onclick="toggleEdit(false)">취소</button>
-            <button class="btn btn-warning flex-1" id="btn-save" onclick="savePatient()">
-              <i class="fa-solid fa-floppy-disk"></i> 저장
-            </button>
+            <span class="info-value">
+              <span class="view-only" style="white-space:pre-wrap;">{{ $patient->note ?: '-' }}</span>
+              <textarea class="form-control edit-only" id="e-note" rows="2" data-orig="{{ $patient->note }}">{{ $patient->note }}</textarea>
+            </span>
           </div>
         </div>
 
@@ -221,7 +215,12 @@
             <i class="fa-solid fa-file-medical"></i> 주문 이력
             <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
           </button>
-          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">행을 더블클릭하면 그 건을 새 탭에서 엽니다.</span>
+          {{-- 한 건을 열면 그 주문의 제품 줄이 이 옆 탭에 펼쳐진다. 목록에 제품명 칸을
+               두었더니 여러 줄짜리 주문은 첫 줄만 보였다 — 아예 제 자리를 준다. --}}
+          <button class="tab-btn" id="tab-btn-items" style="display:none;" onclick="switchTab(this,'tab-items')">
+            <i class="fa-solid fa-boxes-stacked"></i> <span id="tab-items-label">주문 제품</span>
+          </button>
+          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">행을 더블클릭하면 그 주문의 제품을 옆 탭에서 봅니다.</span>
         </div>
 
         {{-- 다른 목록 화면과 같은 표를 쓴다. 손으로 그린 줄은 정렬도 엑셀 저장도 없어,
@@ -237,6 +236,11 @@
           @endif
         </div>
 
+        <div class="tab-pane" id="tab-items">
+          <div class="ds-grid-hint" id="itemsNote" style="margin-bottom:8px;"></div>
+          <div id="itemsGrid"></div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -248,7 +252,7 @@
 @push('scripts')
 
 <script>
-  /* 주문 이력 표 — 행을 더블클릭하면 그 건을 화면 탭으로 연다.
+  /* 주문 이력 표 — 행을 더블클릭하면 그 주문의 제품을 옆 탭에서 펼친다.
      wwGrid 에는 on() 이 없어 셀에서 행 번호를 읽는다. */
   (function () {
     const el = document.getElementById('rxGrid');
@@ -261,9 +265,8 @@
       columns: [
         { header: '주문번호', name: 'order_no',  width: 130, sortable: true },
         { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
-        { header: '병원',     name: 'hospital',  width: 130, sortable: true },
-        { header: '제품',     name: 'product',   width: 240 },
-        { header: '금액',     name: 'amount',    width: 100, align: 'right', editor: 'number' },
+        { header: '병원',     name: 'hospital',  width: 160, sortable: true },
+        { header: '금액',     name: 'amount',    width: 110, align: 'right', editor: 'number' },
         { header: '접수일',   name: 'date',      width: 100, align: 'center', sortable: true },
         { header: '상태',     name: 'status',    width: 90,  align: 'center', sortable: true },
       ],
@@ -271,11 +274,51 @@
     });
     window.__rxGrid = grid;
 
+    /* 제품 표는 한 번만 만들고 내용만 갈아 끼운다 — 열 때마다 새로 만들면 정렬해 둔 것이 풀린다 */
+    let itemsGrid = null;
+
+    function showItems(row) {
+      const items = row.items || [];
+      const label = row.order_no || row.rx_number || '주문';
+
+      document.getElementById('tab-items-label').textContent = '주문 제품 - ' + label;
+      document.getElementById('tab-btn-items').style.display = '';
+      document.getElementById('itemsNote').textContent = items.length
+        ? label + ' · ' + items.length + '건'
+        : label + ' — 등록된 제품 줄이 없습니다.';
+
+      const gridEl = document.getElementById('itemsGrid');
+      if (!itemsGrid) {
+        itemsGrid = new wwGrid({
+          el: gridEl,
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+          columns: [
+            { header: '제품명',     name: 'name',       width: 300 },
+            { header: '제품코드',   name: 'code',       width: 130 },
+            { header: '수량',       name: 'qty',        width: 70,  align: 'right', editor: 'number' },
+            { header: '단가',       name: 'unit_price', width: 110, align: 'right', editor: 'number' },
+            { header: '공단부담',   name: 'nhis',       width: 110, align: 'right', editor: 'number' },
+            { header: '환자부담',   name: 'copay',      width: 110, align: 'right', editor: 'number' },
+            { header: '금액',       name: 'total',      width: 110, align: 'right', editor: 'number' },
+          ],
+          data: items,
+        });
+        window.__itemsGrid = itemsGrid;
+      } else {
+        itemsGrid.setData(items);
+      }
+
+      switchTab(document.getElementById('tab-btn-items'), 'tab-items');
+    }
+
     el.addEventListener('dblclick', (e) => {
       const cell = e.target.closest('[data-row-index]');
       if (!cell) return;
       const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-      if (row?.url) ceOpenTab(row.url, '주문 - ' + (row.order_no || row.rx_number), 'file-edit-02');
+      if (!row) return;
+      // 상담만 적고 아직 주문이 없는 줄도 있다 — 그때는 펼칠 것이 없다
+      if (!row.order_no) { showToast('아직 주문이 없는 건입니다.', 'warning'); return; }
+      showItems(row);
     });
   })();
 </script>
@@ -305,10 +348,17 @@
     document.getElementById(id).classList.add('active');
   }
 
+  /* 고치기로 들어가고 나오는 길. 칸을 갈아 끼우지 않고 표시만 바꾼다 —
+     보던 자리가 그대로 있어야 무엇을 고치는지 눈으로 따라갈 수 있다. */
   function toggleEdit(on) {
-    document.getElementById('view-panel').classList.toggle('hidden', on);
-    document.getElementById('edit-form').classList.toggle('active', on);
-    document.getElementById('btn-edit').style.display = on ? 'none' : '';
+    document.querySelector('.detail-layout').classList.toggle('is-editing', on);
+    // 그만두면 손댄 것은 없던 일로 한다
+    if (!on) {
+      document.querySelectorAll('.detail-layout [data-orig]').forEach(el => {
+        el.value = el.dataset.orig ?? '';
+      });
+    }
+    if (on) setTimeout(() => document.getElementById('e-name')?.focus(), 30);
   }
 
   async function savePatient() {
@@ -356,7 +406,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#view-panel', title: '환자 기본 정보', body: '환자의 이름, 연락처, 주민번호, 보험 정보를 확인합니다.' },
-  { selector: '#btn-edit', title: '정보 편집', body: '클릭하면 환자 정보를 직접 수정할 수 있는 입력 폼이 나타납니다.' },
+  { selector: '#btn-edit', title: '정보 편집', body: '보던 그 자리에서 바로 고칩니다. 수정 오른쪽에 저장·취소가 나타납니다.' },
   { selector: '.card', title: '처방·주문 이력', body: '이 환자의 처방전 업로드 이력과 주문 내역을 확인합니다. 처방번호 클릭 시 상세 화면으로 이동합니다.' },
 ];
 </script>

@@ -135,7 +135,8 @@ class PatientController extends Controller
     // ── 상세/편집 화면 ────────────────────────────────────
     public function show(Patient $patient): View
     {
-        $patient->load(['prescriptions' => fn ($q) => $q->with('order')->latest()->take(50)]);
+        // 주문 줄까지 미리 읽는다 — 표에서 한 건을 열면 그 주문의 제품 목록을 바로 보여준다
+        $patient->load(['prescriptions' => fn ($q) => $q->with('order.items')->latest()->take(50)]);
 
         /* 표에 실을 값은 여기서 만든다 — 화면에서 관계를 타고 다니면 한 줄마다 질의가 나간다.
            상담만 적고 아직 처방·주문이 없는 건도 이 목록에 있다(주문번호가 빈 줄). */
@@ -144,11 +145,21 @@ class PatientController extends Controller
             'rx_number' => $rx->rx_number,
             'order_no'  => $rx->order?->order_number ?: '',
             'hospital'  => $rx->hospital_name ?: '-',
-            'product'   => $rx->order?->product_name ?: '-',
             'amount'    => (int) ($rx->order?->total_amount ?? 0),
             'date'      => $rx->created_at?->format('Y-m-d') ?? '',
             'status'    => $rx->status_label,
             'url'       => route('prescriptions.show', $rx),
+            /* 무엇을 샀는지는 한 칸에 다 들어가지 않는다 — 제품명 칸을 빼고, 대신 그
+               주문의 제품 줄을 통째로 실어 둔다. 한 건을 열면 옆 탭에서 펼친다. */
+            'items'     => ($rx->order?->items ?? collect())->map(fn ($it) => [
+                'name'       => $it->product_name ?: '-',
+                'code'       => $it->product_code ?: '',
+                'qty'        => (int) $it->quantity,
+                'unit_price' => (int) $it->unit_price,
+                'nhis'       => (int) $it->nhis_amount,
+                'copay'      => (int) $it->patient_copay,
+                'total'      => (int) round($it->unit_price * max(1, (int) $it->quantity)),
+            ])->values(),
         ])->values();
 
         return view('patients.show', compact('patient', 'rxRows'));
