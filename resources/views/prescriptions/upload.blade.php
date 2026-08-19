@@ -489,22 +489,51 @@ document.querySelectorAll('.fu-add').forEach(box => {
     box.addEventListener(e, ev => { ev.preventDefault(); box.classList.remove('dragover'); }));
   box.addEventListener('drop', ev => addFiles(ev.dataTransfer.files, group));
   const inp = box.querySelector('input[type=file]');
-  inp.addEventListener('change', () => { addFiles(inp.files, group); inp.value = ''; });
+  inp.addEventListener('change', () => {
+    const picked = inp.files;          // 아래에서 비우기 전에 잡아 둔다
+    addFiles(picked, group);
+    inp.value = '';
+  });
 });
 
-function addFiles(fileObjs, group) {
+/* 같은 이름·같은 크기의 파일이 이미 있으면 대개 두 번 고른 것이다. 다만 서류 유형이
+   다르면 일부러 같은 종이를 두 이름으로 올리는 때가 있어(한 장이 처방전이자 결과지인
+   경우), 그때는 묻고 넣는다. 유형까지 같으면 그냥 지나간다 — 물어볼 것이 없다. */
+async function addFiles(fileObjs, group) {
   const allowed = ['jpg','jpeg','png','pdf','heic'];
-  const added = [];
+  const added   = [];
+  const dupes   = [];                    // 이름이 겹쳐 물어봐야 하는 것들
+  const docType = pickedType(group);     // 이번에 넣는 파일들의 서류명
   Array.from(fileObjs).forEach(f => {
     if (selectedFiles.length + added.length >= 40) { showToast('최대 40개까지 선택할 수 있습니다.', 'warning'); return; }
     const ext = f.name.split('.').pop().toLowerCase();
     if (!allowed.includes(ext))  { showToast(f.name + ' — 지원하지 않는 형식', 'warning'); return; }
     if (f.size > 51200 * 1024)   { showToast(f.name + ' — 50MB 초과', 'warning'); return; }
-    if (selectedFiles.find(s => s.file.name === f.name && s.file.size === f.size)) return;
+    const same = selectedFiles.concat(added)
+      .find(s => s.file.name === f.name && s.file.size === f.size);
+    if (same) {
+      if (same.docType === docType) return;    // 유형까지 같으면 같은 것이다
+      dupes.push({ file: f, docType, group, ext, was: same.docType });
+      return;
+    }
     // 이미지면 타일에 미리보기를 깔아 준다. PDF 는 아이콘으로 대신한다.
     const url = /^(jpg|jpeg|png)$/.test(ext) ? URL.createObjectURL(f) : null;
-    added.push({ file: f, docType: pickedType(group), group, url });
+    added.push({ file: f, docType, group, url });
   });
+
+  // 이름이 겹치는 것들은 한 번에 묻는다 — 파일마다 창을 띄우면 넣기가 고역이다
+  if (dupes.length) {
+    const names = dupes.map(d => `${d.file.name} (${typeLabel(d.was)} → ${typeLabel(d.docType)})`).join('\n');
+    const ok = await ceConfirm(`파일 이름이 중복되었습니다. 계속 진행하시겠습니까?\n\n${names}`,
+                               { tone: 'warning', confirmText: '계속' });
+    if (ok) {
+      dupes.forEach(d => {
+        const url = /^(jpg|jpeg|png)$/.test(d.ext) ? URL.createObjectURL(d.file) : null;
+        added.push({ file: d.file, docType: d.docType, group: d.group, url });
+      });
+    }
+  }
+
   if (!added.length) return;
   showFileProgress(added.map(a => a.file), () => {
     added.forEach(a => selectedFiles.push(a));
@@ -540,6 +569,15 @@ function showFileProgress(files, onDone) {
       if (onDone) onDone();
     }, 520);
   }));
+}
+
+/** 코드에 붙은 이름 — 물어볼 때 사람이 읽는 말로 적는다 */
+function typeLabel(code) {
+  for (const list of Object.values(DOC_CODES)) {
+    const hit = list.find(c => c.code === code);
+    if (hit) return hit.label;
+  }
+  return code;
 }
 
 function changeDocType(idx, val) {
