@@ -78,6 +78,14 @@
   @media(max-width:700px) { .fu-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 
   /* 추가 타일 (Figma 128:799) — 높이 140, primary 테두리 */
+  /* 넣는 자리 위의 서류명 고르는 칸 (128:796 옆) */
+  .fu-pick { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .fu-pick-label { font-size:12px; font-weight:600; color:var(--gray-700); }
+  .fu-pick-sel { height:30px; min-width:220px; padding:2px 8px; font-size:13px;
+                 border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0);
+                 color:var(--gray-1000); cursor:pointer; }
+  .fu-pick-sel:focus { outline:none; border-color:var(--primary); }
+
   .fu-add { position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center;
             gap:8px; height:140px; padding:0 12px; border-radius:8px;
             background:var(--gray-0); border:1px solid var(--primary); cursor:pointer;
@@ -212,7 +220,7 @@
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
               <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
                 <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                각 파일의 <b style="font-weight:500;color:var(--primary-700);">서류명</b>을 골라 주세요 — 올릴 때 그대로 확정됩니다.
+                넣는 자리 위에서 <b style="font-weight:500;color:var(--primary-700);">서류 유형</b>을 고르고 파일을 올립니다 — 파일마다 다르면 타일에서 고칩니다.
               </span>
             </div>
 
@@ -242,6 +250,16 @@
               <div class="fu-row">
                 <span class="fu-label">처방 서류</span>
                 <div class="fu-field">
+                  {{-- 올리기 전에 서류명을 먼저 고른다. 여기서 고른 것이 새로 넣는 파일의
+                       서류명이 되고, 파일마다 다르면 타일에서 다시 고칠 수 있다. --}}
+                  <div class="fu-pick">
+                    <span class="fu-pick-label">서류 유형</span>
+                    <select class="fu-pick-sel" id="pick-rx">
+                      @foreach(array_merge($docTypes['rx'], $docTypes['etc']) as $t)
+                        <option value="{{ $t['code'] }}">{{ $t['label'] }}</option>
+                      @endforeach
+                    </select>
+                  </div>
                   <div class="fu-grid" id="grid-rx">
                     <label class="fu-add" data-group="rx">
                       <input type="file" accept=".jpg,.jpeg,.png,.pdf,.heic" multiple>
@@ -259,6 +277,14 @@
               <div class="fu-row">
                 <span class="fu-label">청구ㆍ기타 자료</span>
                 <div class="fu-field">
+                  <div class="fu-pick">
+                    <span class="fu-pick-label">서류 유형</span>
+                    <select class="fu-pick-sel" id="pick-etc">
+                      @foreach(array_merge($docTypes['claim'], $docTypes['etc']) as $t)
+                        <option value="{{ $t['code'] }}">{{ $t['label'] }}</option>
+                      @endforeach
+                    </select>
+                  </div>
                   <div class="fu-grid" id="grid-etc">
                     <label class="fu-add" data-group="etc">
                       <input type="file" accept=".jpg,.jpeg,.png,.pdf,.heic" multiple>
@@ -446,11 +472,12 @@ const GROUP_CODES = {
   etc: DOC_CODES.claim.concat(DOC_CODES.etc),
 };
 
-// 어느 자리에 넣었는지가 첫 서류명을 정한다. 그래도 올리기 전에 한 번 더 고를 수 있다.
-const GROUP_DEFAULT = {
-  rx:  GROUP_CODES.rx[0]?.code  ?? 'other',
-  etc: GROUP_CODES.etc[0]?.code ?? 'other',
-};
+/* 자리 위에서 고른 서류명이 새로 넣는 파일에 붙는다 — 같은 서류를 여러 장 올릴 때
+   타일마다 다시 고르지 않아도 된다. 고르지 않았으면 그 자리의 첫 서류명이다. */
+function pickedType(group) {
+  const sel = document.getElementById('pick-' + group);
+  return sel?.value || GROUP_CODES[group]?.[0]?.code || 'other';
+}
 
 let selectedFiles = []; // [{file, docType, group, url}]
 
@@ -476,7 +503,7 @@ function addFiles(fileObjs, group) {
     if (selectedFiles.find(s => s.file.name === f.name && s.file.size === f.size)) return;
     // 이미지면 타일에 미리보기를 깔아 준다. PDF 는 아이콘으로 대신한다.
     const url = /^(jpg|jpeg|png)$/.test(ext) ? URL.createObjectURL(f) : null;
-    added.push({ file: f, docType: GROUP_DEFAULT[group] || 'other', group, url });
+    added.push({ file: f, docType: pickedType(group), group, url });
   });
   if (!added.length) return;
   showFileProgress(added.map(a => a.file), () => {
