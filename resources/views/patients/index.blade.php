@@ -83,12 +83,12 @@
         <div class="cs-f">
           {{-- 환자는 주문을 여러 번 한다(처방으로도, 처방 없이도) — 어느 건 이야기였는지
                골라서 잇는다. 주문 전 문의처럼 이을 건이 없으면 비워 둔다. --}}
-          <label>주문</label>
+          <label>주문번호</label>
           <div style="display:flex;gap:6px;">
             <input type="text" id="csOrderNo" class="form-control" readonly
-                   style="background:var(--gray-50);" placeholder="주문이력에서 고르십시오 (없으면 비워 둡니다)">
+                   style="background:var(--gray-50);" placeholder="주문조회에서 고르십시오 (없으면 비워 둡니다)">
             <button type="button" class="ds-btn" style="flex-shrink:0;"
-                    onclick="csPickOrder(this)">주문이력</button>
+                    onclick="csPickOrder(this)">주문조회</button>
           </div>
         </div>
       </div>
@@ -707,24 +707,23 @@ document.addEventListener('keydown', (e) => {
                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       rows = (await res.json()).rows ?? [];
     } catch (e) {
-      showToast('주문이력을 불러오지 못했습니다.', 'danger');
+      showToast('주문을 불러오지 못했습니다.', 'danger');
       return;
     }
 
     _ordRows = {};
     rows.forEach(r => { _ordRows[r.id] = r; });
 
-    // 잘못 이었을 때 풀 길도 함께 둔다
+    /* 고를 때 필요한 것은 언제 한 주문인가와 그 번호, 둘이다 — 제품·금액·상태까지 적으면
+       한 줄이 길어져 훑기 어렵다. 잘못 이었을 때 풀 길도 함께 둔다. */
     const items = [{ value: '', label: '— 연결 안 함 —', sub: '주문 전 문의처럼 이을 건이 없을 때' }]
       .concat(rows.map(r => ({
         value: r.id,
-        label: `${r.order_no} · ${r.date}`,
-        sub: `${r.kind}${r.rx_number ? ' ' + r.rx_number : ''} · ${r.product} · ` +
-             `${Number(r.amount).toLocaleString()}원 · ${r.status}`,
+        label: `${r.date}   ${r.order_no}`,
       })));
 
     _ordModal.open({
-      title: `주문이력 · ${rows.length}건`, width: 460, height: 360,
+      title: `주문조회 · ${rows.length}건`, width: 360, height: 340,
       mode: 'popover', anchor, items,
       onConfirm: (v) => onPick(v ? _ordRows[v] : null),
     });
@@ -743,8 +742,8 @@ document.addEventListener('keydown', (e) => {
   window.csShowOrder = function () {
     const el = document.getElementById('csOrderNo');
     if (!el) return;
-    el.value = _csOrder ? `${_csOrder.order_no} · ${_csOrder.date} · ${_csOrder.kind}` : '';
-    el.placeholder = '주문이력에서 고르십시오 (없으면 비워 둡니다)';
+    el.value = _csOrder ? `${_csOrder.date}   ${_csOrder.order_no}` : '';
+    el.placeholder = '주문조회에서 고르십시오 (없으면 비워 둡니다)';
   };
 
   /* 목록에서 고친다 — 이어 둔 뒤에도 바꿀 수 있어야 한다 */
