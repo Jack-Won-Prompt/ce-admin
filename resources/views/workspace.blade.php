@@ -27,7 +27,7 @@
   .ws-tab .ws-tab-label { overflow:hidden; text-overflow:ellipsis; }
   .ws-tab .ws-tab-close { display:inline-flex; align-items:center; justify-content:center;
     width:12px; height:12px; border:none; background:none; cursor:pointer; color:var(--gray-500); font-size:12px;
-    line-height:1; padding:0; border-radius:5px; flex-shrink:0; }
+    line-height:1; padding:0; border-radius:6px; flex-shrink:0; }
   .ws-tab .ws-tab-close:hover { background:var(--danger-light); color:var(--danger); }
   .ws-frames { position:relative; flex:1; min-height:0; background:#fff; }
   .ws-frames iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }

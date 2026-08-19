@@ -243,16 +243,17 @@
   /* 그리드 셀 안의 작은 표시·버튼 (서명여부·미성년·신분증) */
   /* 표 안 상태 배지 규격은 시안이 pad 2/6 · r6 · 11/500 이다(148:7122 「주문 대기」 53×22).
      화면 곳곳의 .impact-badge · .rx-status 도 같은 값인데 이것만 알약(r999) 에 700 이었다. */
-  /* 시안 배지(148:7122)에는 테두리가 없다 — 바탕색이 구분을 나른다.
-     테두리 1px 이 있으면 높이가 22 가 아니라 24 가 되어 그 행만 2 두꺼워진다.
-     누를 수 있는 것만 테두리를 남겨 눌린다는 것을 알린다. */
+  /* 시안 배지(148:7122 「주문 대기」 53×22)에는 테두리가 없다 — 바탕색이 구분을 나른다.
+     테두리 1px 이 있으면 22 가 아니라 24 가 되어 그 행만 2 두꺼워진다.
+     같은 화면 안의 .impact-badge · .rx-status 도 테두리 없이 22 다. */
   .pt-chip { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px;
              font-size:11px; font-weight:500; line-height:18px; white-space:nowrap;
-             background:var(--gray-100); color:var(--gray-600); border:1px solid transparent; }
+             background:var(--gray-100); color:var(--gray-600); border:none; }
   .pt-chip.on   { background:var(--primary-50); color:var(--primary); }
   .pt-chip.warn { background:var(--alert-50);   color:var(--alert-500); }
-  button.pt-chip.clickable { cursor:pointer; border-color:var(--gray-200); }
-  button.pt-chip.clickable:hover { border-color:var(--primary); color:var(--primary); }
+  /* 누를 수 있는 것은 색이 바뀌는 것으로 알린다(테두리를 주면 그 배지만 2 두꺼워진다) */
+  button.pt-chip.clickable { cursor:pointer; }
+  button.pt-chip.clickable:hover { background:var(--primary-100); color:var(--primary); }
 
   /* 이미지 보기 — 서명·신분증 */
   #ptImgBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10300; display:none; }

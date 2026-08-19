@@ -959,15 +959,17 @@
        시안에는 17px 이상 글자도, 카드 그림자도 없다 — 시안값을 전역으로 올린다.
        (대시보드의 같은 선언은 근거 주석을 안고 있어 그대로 둔다. 값은 이제 같다.) */
     .stat-grid { display: grid; gap: 12px; }
+    /* 시안 382:383 · 382:6832 는 251×73 이고 stroke 도 effect 도 없다 —
+       테두리 1px 이 있으면 73 이 아니라 75 가 된다. .card 와 같은 이유로 걷어낸다. */
     .stat-card {
-      background: var(--gray-0); border: 1px solid var(--border); border-radius: 12px;
+      background: var(--gray-0); border: none; border-radius: 12px;
       box-shadow: none; padding: 16px;
       display: flex; align-items: center; gap: 16px;
       text-decoration: none; color: inherit; cursor: pointer;
       transition: var(--transition);
     }
     /* 시안 카드는 평평하다 — 들림·그림자 대신 테두리 색만 바뀐다 */
-    .stat-card:hover { border-color: var(--primary); color: inherit; }
+    .stat-card:hover { background: var(--gray-50); color: inherit; }
     .stat-icon {
       width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 16px;

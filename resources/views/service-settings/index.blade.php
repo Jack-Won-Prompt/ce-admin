@@ -2,6 +2,9 @@
 
 @section('title', '서비스 연동 설정')
 @section('page-title', '서비스 연동 설정')
+{{-- 빵부스러기가 없어 기본값 '홈' 하나만 나왔다 — 다른 설정 화면 여섯과 같은 세 마디로.
+     낱말은 사이드바·시안 사이드바(174:955)와 같다. --}}
+@section('breadcrumb', '홈 - 설정 - 서비스 연동 설정')
 
 @section('help-title', '서비스 연동 설정 도움말')
 @section('help-body')
