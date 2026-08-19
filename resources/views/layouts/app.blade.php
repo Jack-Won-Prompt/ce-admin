@@ -1579,7 +1579,7 @@
         @endif
 
         {{-- ══ 설정 ══ --}}
-        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'ocr-settings', 'nice-settings'))
+        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'ocr-settings'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1631,14 +1631,9 @@
           </a>
         </div>
         @endif
-        @if($vis('nice-settings'))
-        <div class="menu-item {{ request()->routeIs('nice-settings*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="story-user" href="{{ route('nice-settings.edit') }}" data-title="본인확인 설정">
-            @dsicon('story-user', 'ds-icon menu-icon')
-            <span>본인확인 설정</span>
-          </a>
-        </div>
-        @endif
+        {{-- 본인확인 설정은 메뉴에 두지 않는다. 한 번 맞춰 두면 다시 열 일이 드물고,
+             설정 묶음이 길어질수록 매일 쓰는 것이 아래로 밀린다.
+             화면과 경로는 남아 있어 주소로는 열린다(/settings/nice). --}}
         @if($vis('service-settings'))
         <div class="menu-item {{ request()->routeIs('service-settings*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="wrench" href="{{ route('service-settings.index') }}" data-title="서비스 연동 설정">
