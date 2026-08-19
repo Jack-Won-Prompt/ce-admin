@@ -158,6 +158,12 @@
   .cs-foot .cs-hint { margin-right: auto; }
 
   /* 상담내역 탭 — 사람 이름이 붙고, 닫는 단추가 오른쪽에 붙는다 */
+  /* 「관리」 칸의 펼침 단추 — 표 안에서 알약보다 작고 조용하게 */
+  .pc-manage { width:24px; height:24px; border-radius:6px; border:1px solid var(--gray-200);
+               background:var(--gray-0); color:var(--gray-600); cursor:pointer;
+               display:inline-flex; align-items:center; justify-content:center; font-size:10px; }
+  .pc-manage:hover { border-color:var(--primary); color:var(--primary); }
+
   .pnl-tab-closable { display: inline-flex; align-items: center; gap: 6px; }
   .pnl-tab-x { font-size: 15px; line-height: 1; color: var(--text-muted); cursor: pointer;
                padding: 0 2px; border-radius: 4px; }
@@ -1032,6 +1038,7 @@ document.addEventListener('keydown', (e) => {
         order_no: c.order_no || '',
         order_id: c.order_id || null,
         counsel_id: c.key,
+        counsel_no: c.counsel_no || '',
         by:      c.by || '',
         url:     c.url || '',
       }));
@@ -1089,6 +1096,18 @@ document.addEventListener('keydown', (e) => {
                 return wrap;
               } },
             { header: '담당자',    name: 'by',        width: 90,  sortable: true },
+            /* 한 줄에 할 수 있는 일은 이 칸에 모은다. 칸마다 단추를 흩어 두면
+               표가 넓어지고, 쓰지 않는 날에도 자리를 차지한다. */
+            { header: '관리',      name: 'manage',    width: 70,  align: 'center',
+              renderer: (v, row) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'pc-manage';
+                b.title = '이 상담으로 할 일';
+                b.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+                b.addEventListener('click', (e) => { e.stopPropagation(); pcManage(b, row); });
+                return b;
+              } },
           ],
           data: rows,
         });
@@ -1127,6 +1146,28 @@ document.addEventListener('keydown', (e) => {
     const id = new URLSearchParams(location.search).get('counsel');
     if (id) pcLoad(id, '');
   })();
+
+  /* 한 줄로 할 수 있는 일 — 누른 자리 옆에 붙는다.
+     상태 값을 여기서 바꿀지는 아직 정하지 않았다. 지금은 이미 있는 두 가지만 건다. */
+  const _pcManageModal = new GridModal();
+
+  window.pcManage = function (btn, row) {
+    const p = pcActive();
+    _pcManageModal.open({
+      title: '상담 관리', width: 240, height: 200, mode: 'popover', anchor: btn,
+      items: [
+        { value: 'order', label: row.order_no ? '주문 연결 변경' : '주문 연결',
+          sub: row.order_no || '이은 주문이 없습니다' },
+        { value: 'open',  label: '상담 건 열기', sub: '그 처방전을 화면 탭으로 엽니다' },
+      ],
+      onConfirm: (v) => {
+        if (v === 'order') { csEditOrder(btn, row.counsel_id, p?.id); return; }
+        if (v === 'open' && row.url) {
+          window.ceOpenTab(row.url, '주문 - ' + (row.order_no || row.counsel_no || ''), 'file-edit-02');
+        }
+      },
+    });
+  };
 
   /* 상담 창이 저장하면 그 사람의 탭을 새로 읽는다 — 방금 적은 상담이 거기 보여야 한다 */
   window.addEventListener('message', (e) => {

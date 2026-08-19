@@ -1547,7 +1547,7 @@
         @endif
 
         {{-- ══ 설정 ══ --}}
-        @if($vis('admin-users', 'permission-groups', 'masters', 'delegation-settings', 'ocr-settings', 'nice-settings'))
+        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'ocr-settings', 'nice-settings'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1572,6 +1572,14 @@
           <a class="menu-link" data-icon="add-package" href="{{ route('masters.index') }}" data-title="마스터 관리">
             @dsicon('add-package', 'ds-icon menu-icon')
             <span>마스터 관리</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('common-codes'))
+        <div class="menu-item {{ request()->routeIs('common-codes*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="wrench" href="{{ route('common-codes.index') }}" data-title="환경 설정">
+            @dsicon('wrench', 'ds-icon menu-icon')
+            <span>환경 설정</span>
           </a>
         </div>
         @endif

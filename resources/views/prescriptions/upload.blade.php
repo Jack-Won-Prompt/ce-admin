@@ -212,7 +212,7 @@
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
               <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
                 <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                각 파일의 <b style="font-weight:500;color:var(--primary-700);">유형</b>을 선택해 주세요.
+                각 파일의 <b style="font-weight:500;color:var(--primary-700);">서류명</b>을 골라 주세요 — 올릴 때 그대로 확정됩니다.
               </span>
             </div>
 
@@ -238,7 +238,7 @@
                 </div>
               </div>
 
-              {{-- 처방 서류 (128:796) --}}
+              {{-- 처방 서류 (128:796) — 고를 수 있는 서류명은 환경 설정이 정한다 --}}
               <div class="fu-row">
                 <span class="fu-label">처방 서류</span>
                 <div class="fu-field">
@@ -248,16 +248,16 @@
                       <i class="fa-solid fa-plus fu-add-icon"></i>
                       <span class="fu-add-text">
                         <span class="fu-add-title">파일을 드래그 하거나<br>클릭하여 선택</span>
-                        <span class="fu-add-sub">등록신청서ㆍ처방전ㆍ결과지 등</span>
+                        <span class="fu-add-sub">{{ collect($docTypes['rx'])->pluck('label')->take(3)->implode('ㆍ') }} 등</span>
                       </span>
                     </label>
                   </div>
                 </div>
               </div>
 
-              {{-- 기타 자료 (165:1609) --}}
+              {{-- 청구·기타 자료 (165:1609) --}}
               <div class="fu-row">
-                <span class="fu-label">기타 자료</span>
+                <span class="fu-label">청구ㆍ기타 자료</span>
                 <div class="fu-field">
                   <div class="fu-grid" id="grid-etc">
                     <label class="fu-add" data-group="etc">
@@ -265,7 +265,7 @@
                       <i class="fa-solid fa-plus fu-add-icon"></i>
                       <span class="fu-add-text">
                         <span class="fu-add-title">파일을 드래그 하거나<br>클릭하여 선택</span>
-                        <span class="fu-add-sub">신분증ㆍ위임장ㆍ기타 등</span>
+                        <span class="fu-add-sub">{{ collect($docTypes['claim'])->pluck('label')->take(3)->implode('ㆍ') }} 등</span>
                       </span>
                     </label>
                   </div>
@@ -437,15 +437,20 @@ const fileInput = document.getElementById('fileInput');
 const submitBtn = document.getElementById('submitBtn');
 const form      = document.getElementById('uploadForm');
 
-const DOC_TYPES = {
-  prescription: { label: '처방전',    cls: 'type-prescription', icon: 'fa-file-medical' },
-  id_card:      { label: '신분증', cls: 'type-id_card',      icon: 'fa-id-card' },
-  delegation:   { label: '위임장',    cls: 'type-delegation',   icon: 'fa-file-signature' },
-  other:        { label: '기타',      cls: 'type-other',        icon: 'fa-file' },
+/* 서류명은 환경 설정 ▸ 서류 유형에서 정한다. 화면에 박아 두면 한 줄 늘리는 데도
+   배포가 필요했다. 자리마다 고를 수 있는 것이 다르다 —
+   처방 서류 자리에는 처방 서류를, 청구·기타 자리에는 청구 자료와 그 밖의 것을 둔다. */
+const DOC_CODES  = @json($docTypes);
+const GROUP_CODES = {
+  rx:  DOC_CODES.rx.concat(DOC_CODES.etc),
+  etc: DOC_CODES.claim.concat(DOC_CODES.etc),
 };
 
-// 영역별 기본 유형 — 어느 쪽에 넣었는지가 첫 유형을 정한다
-const GROUP_DEFAULT = { rx: 'prescription', etc: 'id_card' };
+// 어느 자리에 넣었는지가 첫 서류명을 정한다. 그래도 올리기 전에 한 번 더 고를 수 있다.
+const GROUP_DEFAULT = {
+  rx:  GROUP_CODES.rx[0]?.code  ?? 'other',
+  etc: GROUP_CODES.etc[0]?.code ?? 'other',
+};
 
 let selectedFiles = []; // [{file, docType, group, url}]
 
@@ -535,8 +540,11 @@ function renderFileList() {
       const f    = item.file;
       const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
       const ext  = f.name.split('.').pop().toLowerCase();
-      const opts = Object.entries(DOC_TYPES).map(([v, t]) =>
-        `<option value="${v}"${item.docType === v ? ' selected' : ''}>${t.label}</option>`).join('');
+      const list = GROUP_CODES[group] ?? [];
+      // 예전에 올린 유형이 지금 목록에 없으면(사용 중지) 그 줄만 따로 붙여 둔다
+      const opts = (list.some(c => c.code === item.docType) ? list : list.concat([{ code: item.docType, label: item.docType }]))
+        .map(c => `<option value="${c.code}"${item.docType === c.code ? ' selected' : ''}>${escHtml(c.label)}</option>`)
+        .join('');
 
       const tile = document.createElement('div');
       tile.className = 'fu-tile';
@@ -621,7 +629,7 @@ function setStep(num, state) {
 window.HELP_TOUR_STEPS = [
   { selector: '#patientSearchInput', title: '환자 선택', body: '이름 또는 연락처로 검색하여 기존 환자를 선택하면 OCR 결과와 자동 연결됩니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
-  { selector: '#grid-etc', title: '기타 자료', body: '신분증·위임장 등을 넣습니다. 이미지 그대로 첨부 문서로 저장됩니다. 타일 왼쪽 위에서 유형을 바꿀 수 있습니다.' },
+  { selector: '#grid-etc', title: '청구ㆍ기타 자료', body: '거래명세서·현금영수증 등 청구 자료를 넣습니다. 타일 왼쪽 위에서 서류명을 고르며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
   { selector: '#submitBtn', title: '등록 버튼', body: '버튼 클릭 시 OCR 분석이 시작되며, 완료 후 처방전 확인 화면으로 이동합니다.' },
 ];
 </script>

@@ -29,6 +29,22 @@ class PrescriptionAttachment extends Model
         'other'             => '기타',
     ];
 
+    /**
+     * 코드에 붙은 이름.
+     *
+     * 서류명은 환경 설정(공통 코드)에서 정한다. 예전에 박아 둔 상수는 이미 쌓인
+     * 자료를 읽기 위해 남겨 둔다 — 둘 다 없으면 「기타」다.
+     */
+    public static function labelFor(?string $code): string
+    {
+        if (!$code) {
+            return '기타';
+        }
+
+        return \App\Models\CommonCode::labels('doc_type')[$code]
+            ?? (self::DOC_TYPE_LABELS[$code] ?? '기타');
+    }
+
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);
@@ -57,7 +73,7 @@ class PrescriptionAttachment extends Model
     public function getDocTypeLabelAttribute(): string
     {
         if ($this->doc_type && $this->doc_type !== 'other') {
-            return self::DOC_TYPE_LABELS[$this->doc_type] ?? ($this->doc_label ?: '기타');
+            return self::labelFor($this->doc_type) ?: ($this->doc_label ?: '기타');
         }
 
         return $this->doc_label ?: (self::DOC_TYPE_LABELS[$this->doc_type] ?? '기타');

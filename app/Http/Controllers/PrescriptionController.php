@@ -415,7 +415,16 @@ class PrescriptionController extends Controller
         // 화면 상단에 알리는 검수 대기 건수 (시안 128:3171)
         $reviewPending = Prescription::where('status', 'review_needed')->count();
 
-        return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending', 'patientsJson', 'reviewPending'));
+        /* 서류명은 환경 설정에서 정한다 — 화면에 박아 두면 한 줄 늘리는 데도 배포가 필요했다.
+           갈래로 나누어 보낸다 — 처방 서류 자리와 청구·기타 자리에서 고를 수 있는 것이 다르다. */
+        $docTypes = [];
+        foreach (['rx', 'claim', 'etc'] as $kind) {
+            $docTypes[$kind] = \App\Models\CommonCode::options('doc_type', $kind)
+                ->map(fn ($c) => ['code' => $c->code, 'label' => $c->label])->values()->all();
+        }
+
+        return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending',
+                                                    'patientsJson', 'reviewPending', 'docTypes'));
     }
 
     /**
@@ -482,7 +491,8 @@ class PrescriptionController extends Controller
             'prescription_images'   => 'required|array|max:40',
             'prescription_images.*' => 'file|mimes:jpg,jpeg,png,pdf,heic|max:50240',
             'file_doc_types'        => 'nullable|array',
-            'file_doc_types.*'      => 'nullable|string|in:prescription,id_card,registration_form,test_result,delegation,other',
+            'file_doc_types.*'      => ['nullable', 'string',
+                                        \Illuminate\Validation\Rule::in(\App\Models\CommonCode::codes('doc_type'))],
             'patient_id'            => 'nullable|exists:patients,id',
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
@@ -601,7 +611,7 @@ class PrescriptionController extends Controller
                     'file_mime_type'     => $file->getMimeType(),
                     'file_size'          => $file->getSize(),
                     'doc_type'           => $item['doc_type'],
-                    'doc_label'          => PrescriptionAttachment::DOC_TYPE_LABELS[$item['doc_type']] ?? '기타',
+                    'doc_label'          => PrescriptionAttachment::labelFor($item['doc_type']),
                     'ocr_raw_text'       => null,
                     'ocr_confidence'     => 0,
                     'display_order'      => $order,
@@ -648,7 +658,7 @@ class PrescriptionController extends Controller
             'doc_type'           => $request->doc_type,
             'doc_label'          => ($request->doc_type === 'other' && $request->filled('doc_label'))
                                         ? $request->doc_label
-                                        : (PrescriptionAttachment::DOC_TYPE_LABELS[$request->doc_type] ?? '기타'),
+                                        : PrescriptionAttachment::labelFor($request->doc_type),
             'display_order'      => $maxOrder + 1,
             'uploaded_by'        => Auth::id(),
         ]);

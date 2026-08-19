@@ -238,6 +238,13 @@ return [
             'routes'  => ['masters'],
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
+        // 화면마다 쓰는 목록을 다룬다 — 잘못 고치면 여러 화면이 함께 흔들린다
+        'common-codes' => [
+            'label'   => '환경 설정',
+            'group'   => 'settings',
+            'routes'  => ['common-codes'],
+            'actions' => ['view', 'create', 'update', 'delete'],
+        ],
         'withworks-settings' => [
             'label'   => '위드웍스 연동 설정',
             'group'   => 'settings',

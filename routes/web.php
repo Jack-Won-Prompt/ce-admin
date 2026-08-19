@@ -385,6 +385,12 @@ Route::middleware(['auth'])->group(function () {
     Route::put(   '/settings/masters/{master}',  [\App\Http\Controllers\MasterController::class, 'update'])->name('masters.update');
     Route::delete('/settings/masters/{master}',  [\App\Http\Controllers\MasterController::class, 'destroy'])->name('masters.destroy');
 
+    // 환경 설정 — 화면마다 고르는 목록(서류 유형 등)을 여기서 등록·수정한다
+    Route::get(   '/settings/common-codes',              [\App\Http\Controllers\CommonCodeController::class, 'index'])->name('common-codes.index');
+    Route::post(  '/settings/common-codes',              [\App\Http\Controllers\CommonCodeController::class, 'store'])->name('common-codes.store');
+    Route::put(   '/settings/common-codes/{commonCode}', [\App\Http\Controllers\CommonCodeController::class, 'update'])->name('common-codes.update');
+    Route::delete('/settings/common-codes/{commonCode}', [\App\Http\Controllers\CommonCodeController::class, 'destroy'])->name('common-codes.destroy');
+
     // 메시지 관리 — 거래처를 골라 문자·알림톡을 보낸다
     Route::prefix('messages')->name('messages.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\MessageController::class, 'index'])->name('index');
