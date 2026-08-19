@@ -13,10 +13,11 @@
   /* 개인정보는 세로로 길게 쌓지 않고 한 줄에 여럿 눕힌다 — 여섯 항목이 한두 줄에 들어온다.
      주소는 길어 두 칸을 쓴다. */
   .view-panel { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:2px 20px; }
-  .info-row { display:flex; align-items:baseline; gap:10px; padding:9px 0;
+  .info-row { display:flex; align-items:baseline; gap:8px; padding:9px 0;
               border-bottom:1px solid var(--border-light, var(--border)); min-width:0; }
   .info-row.wide { grid-column:span 2; }
-  .info-label { font-size:11px; font-weight:700; color:var(--text-muted); width:78px; flex-shrink:0; }
+  .info-label { font-size:11px; font-weight:700; color:var(--text-muted); flex-shrink:0;
+                white-space:nowrap; }
   .info-value { font-size:13px; color:var(--text-primary); flex:1; min-width:0;
                 overflow-wrap:anywhere; }
   @media(max-width:700px) { .info-row.wide { grid-column:auto; } }
@@ -27,13 +28,23 @@
   .edit-only { display:none; }
   .is-editing .view-only { display:none; }
   .is-editing .edit-only { display:block; }
-  .is-editing .edit-only.inline { display:flex; gap:6px; align-items:center; }
+  .is-editing .edit-only.inline,
+  .is-editing .edit-only.addr-line { display:flex; gap:6px; align-items:center; }
   /* 글줄 안에서 바꿔 끼우는 칸 — 줄을 새로 만들지 않아야 아래가 밀리지 않는다 */
   .is-editing .edit-only.inline-mini { display:inline-flex; gap:6px; align-items:center; vertical-align:middle; }
 
   .info-value .form-control { width:100%; height:30px; padding:2px 8px; font-size:13px; }
   .info-value textarea.form-control { height:auto; }
-  .info-value .form-control.narrow { width:88px; flex:0 0 88px; }
+  /* 나란히 놓는 칸은 100% 를 물려받으면 서로 밀어낸다 — 제 글자만큼만 잡는다 */
+  .info-value .inline .form-control { width:auto; }
+  .info-value select.form-control { padding-right:22px; }
+  #e-nhis    { min-width:96px; }
+  #e-coverage{ width:64px; flex:0 0 64px; text-align:right; }
+  .unit { font-size:12px; color:var(--text-muted); }
+  /* 주소는 찾아서 넣는다 — 칸과 단추가 한 줄에 든다 */
+  .addr-line { display:flex; gap:6px; align-items:center; }
+  .addr-line .form-control { flex:1; min-width:0; }
+  .addr-line .btn { flex:0 0 auto; white-space:nowrap; }
   .info-hint { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
   /* 이름은 그 자리에서 고친다 — 글자 크기까지 같게 두어야 자리가 흔들리지 않는다 */
   #e-name { font-size:17px; font-weight:700; height:27px; padding:1px 8px; }
@@ -159,8 +170,16 @@
             <span class="info-label">주소</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->address ?? '-' }}</span>
-              <input type="text" class="form-control edit-only" id="e-address"
-                     value="{{ $patient->address }}" data-orig="{{ $patient->address }}" />
+              {{-- 주문 등록과 같은 우편번호 서비스를 쓴다. 환자 표에는 주소 칸이 하나뿐이라
+                   (우편번호) 도로명 까지 넣어 주고, 상세 주소는 그 뒤에 이어 적는다. --}}
+              <span class="edit-only addr-line">
+                <input type="text" class="form-control" id="e-address"
+                       value="{{ $patient->address }}" data-orig="{{ $patient->address }}"
+                       placeholder="주소 찾기로 채우고 상세 주소를 이어 적으십시오" />
+                <button type="button" class="btn btn-outline btn-sm" onclick="findAddress()">
+                  <i class="fa-solid fa-magnifying-glass"></i> 주소 찾기
+                </button>
+              </span>
             </span>
           </div>
           <div class="info-row">
@@ -189,6 +208,7 @@
                 </select>
                 <input type="number" class="form-control narrow" id="e-coverage" min="0" max="100"
                        value="{{ $patient->nhis_coverage_rate }}" data-orig="{{ $patient->nhis_coverage_rate }}" title="급여율 (%)" />
+                <span class="unit">%</span>
               </span>
             </span>
           </div>
@@ -323,6 +343,32 @@
   })();
 </script>
 
+{{-- 주문 등록 화면과 같은 카카오(다음) 우편번호 서비스 --}}
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script>
+  /* 주소를 손으로 다 적으면 오타가 난다 — 도로명까지는 찾아 넣고 상세만 적는다.
+     환자 표에는 주소 칸이 하나뿐이라 우편번호도 그 안에 담는다. */
+  function findAddress() {
+    if (typeof daum === 'undefined' || !daum.Postcode) {
+      showToast('주소 찾기를 불러오지 못했습니다. 직접 적어 주십시오.', 'warning');
+      return;
+    }
+    const W = 500, H = 600;
+    new daum.Postcode({
+      width: W, height: H,
+      oncomplete: function (data) {
+        const el = document.getElementById('e-address');
+        el.value = '(' + data.zonecode + ') ' + (data.roadAddress || data.jibunAddress) + ' ';
+        el.focus();
+        // 이어서 상세 주소를 적는다 — 커서를 끝에 둔다
+        el.setSelectionRange(el.value.length, el.value.length);
+      },
+    }).open({
+      left: Math.floor((window.screen.width  - W) / 2),
+      top:  Math.floor((window.screen.height - H) / 2),
+    });
+  }
+</script>
 <script>
   /* 상담내역은 거래처 관리 화면의 탭에서 본다. 이 화면이 그 안에 액자로 들어가 있으면
      바깥에 열라고 알리고, 혼자 열려 있으면 목록 화면으로 옮겨 그 탭을 연다. */
