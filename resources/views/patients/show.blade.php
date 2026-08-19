@@ -226,29 +226,20 @@
             <i class="fa-solid fa-file-medical"></i> 주문 이력
             <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
           </button>
+          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">행을 더블클릭하면 그 건을 새 탭에서 엽니다.</span>
         </div>
 
+        {{-- 다른 목록 화면과 같은 표를 쓴다. 손으로 그린 줄은 정렬도 엑셀 저장도 없어,
+             건수가 늘면 훑을 방법이 눈뿐이었다. --}}
         <div class="tab-pane active" id="tab-rx">
-          @forelse($patient->prescriptions as $rx)
-          <div class="rx-row" onclick="ceOpenTab('{{ route('prescriptions.show', $rx) }}', '주문 - {{ $rx->rx_number }}', 'file-edit-02')">
-            <div style="width:36px;height:36px;border-radius:var(--radius);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="fa-solid fa-file-waveform" style="color:var(--primary);font-size:14px;"></i>
+          @if($rxRows->isEmpty())
+            <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+              <i class="fa-solid fa-file-medical" style="font-size:28px;opacity:.3;display:block;margin-bottom:10px;"></i>
+              주문 이력이 없습니다.
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;">{{ $rx->rx_number }}</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-                {{ $rx->hospital_name ?? '-' }} · {{ $rx->created_at->format('Y-m-d') }}
-              </div>
-            </div>
-            <span class="rx-status badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span>
-            <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:11px;"></i>
-          </div>
-          @empty
-          <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
-            <i class="fa-solid fa-file-medical" style="font-size:28px;opacity:.3;display:block;margin-bottom:10px;"></i>
-            주문 이력이 없습니다.
-          </div>
-          @endforelse
+          @else
+            <div id="rxGrid"></div>
+          @endif
         </div>
 
       </div>
@@ -260,6 +251,39 @@
 @endsection
 
 @push('scripts')
+
+<script>
+  /* 주문 이력 표 — 행을 더블클릭하면 그 건을 화면 탭으로 연다.
+     wwGrid 에는 on() 이 없어 셀에서 행 번호를 읽는다. */
+  (function () {
+    const el = document.getElementById('rxGrid');
+    if (!el || typeof wwGrid === 'undefined') return;
+
+    const rows = @json($rxRows);
+    const grid = new wwGrid({
+      el,
+      height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+      columns: [
+        { header: '주문번호', name: 'order_no',  width: 130, sortable: true },
+        { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
+        { header: '병원',     name: 'hospital',  width: 130, sortable: true },
+        { header: '제품',     name: 'product',   width: 240 },
+        { header: '금액',     name: 'amount',    width: 100, align: 'right', editor: 'number' },
+        { header: '접수일',   name: 'date',      width: 100, align: 'center', sortable: true },
+        { header: '상태',     name: 'status',    width: 90,  align: 'center', sortable: true },
+      ],
+      data: rows,
+    });
+    window.__rxGrid = grid;
+
+    el.addEventListener('dblclick', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row?.url) ceOpenTab(row.url, '주문 - ' + (row.order_no || row.rx_number), 'file-edit-02');
+    });
+  })();
+</script>
 
 <script>
   /* 상담내역은 거래처 관리 화면의 탭에서 본다. 이 화면이 그 안에 액자로 들어가 있으면

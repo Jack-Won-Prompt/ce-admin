@@ -135,8 +135,23 @@ class PatientController extends Controller
     // ── 상세/편집 화면 ────────────────────────────────────
     public function show(Patient $patient): View
     {
-        $patient->load(['prescriptions' => fn($q) => $q->latest()->take(20)]);
-        return view('patients.show', compact('patient'));
+        $patient->load(['prescriptions' => fn ($q) => $q->with('order')->latest()->take(50)]);
+
+        /* 표에 실을 값은 여기서 만든다 — 화면에서 관계를 타고 다니면 한 줄마다 질의가 나간다.
+           상담만 적고 아직 처방·주문이 없는 건도 이 목록에 있다(주문번호가 빈 줄). */
+        $rxRows = $patient->prescriptions->map(fn ($rx) => [
+            'id'        => $rx->id,
+            'rx_number' => $rx->rx_number,
+            'order_no'  => $rx->order?->order_number ?: '',
+            'hospital'  => $rx->hospital_name ?: '-',
+            'product'   => $rx->order?->product_name ?: '-',
+            'amount'    => (int) ($rx->order?->total_amount ?? 0),
+            'date'      => $rx->created_at?->format('Y-m-d') ?? '',
+            'status'    => $rx->status_label,
+            'url'       => route('prescriptions.show', $rx),
+        ])->values();
+
+        return view('patients.show', compact('patient', 'rxRows'));
     }
 
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
