@@ -20,12 +20,24 @@ class Patient extends Model
         'cash_receipt_no', 'deduction', 'new_patient_date',
         'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
         'name', 'resident_no', 'birth_date', 'gender',
-        'phone', 'mobile', 'address',
+        'phone', 'mobile', 'address', 'postcode', 'address_detail',
         'health_insurance_no', 'is_nhis_eligible', 'nhis_coverage_rate', 'note',
         // 주민번호 암호화(P0-1)
         'resident_no_enc', 'resident_no_hash', 'resident_no_masked',
         'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
     ];
+
+    /** 화면·서류에 한 줄로 적는 주소 — (우편번호) 도로명 상세 */
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [
+            $this->postcode ? '(' . $this->postcode . ')' : '',
+            $this->address,
+            $this->address_detail,
+        ];
+
+        return trim(implode(' ', array_filter($parts))) ?: '';
+    }
 
     protected $casts = [
         'birth_date'       => 'date',

@@ -28,8 +28,10 @@
   .edit-only { display:none; }
   .is-editing .view-only { display:none; }
   .is-editing .edit-only { display:block; }
-  .is-editing .edit-only.inline,
-  .is-editing .edit-only.addr-line { display:flex; gap:6px; align-items:center; }
+  .is-editing .edit-only.inline { display:flex; gap:6px; align-items:center; }
+  .is-editing .edit-only.addr-box { display:flex; }
+  /* 상세 주소도 같은 줄에 둔다 — 줄을 나누면 그만큼 아래 칸이 밀린다 */
+  .addr-box > .form-control { flex:1 1 150px; min-width:0; }
   /* 글줄 안에서 바꿔 끼우는 칸 — 줄을 새로 만들지 않아야 아래가 밀리지 않는다 */
   .is-editing .edit-only.inline-mini { display:inline-flex; gap:6px; align-items:center; vertical-align:middle; }
 
@@ -38,9 +40,14 @@
   /* 나란히 놓는 칸은 100% 를 물려받으면 서로 밀어낸다 — 제 글자만큼만 잡는다 */
   .info-value .inline .form-control { width:auto; }
   .info-value select.form-control { padding-right:22px; }
-  /* 주소는 찾아서 넣는다 — 칸과 단추가 한 줄에 든다 */
-  .addr-line { display:flex; gap:6px; align-items:center; }
+  /* 주소는 주문 등록과 같은 칸으로 나눈다 — 우편번호 · 도로명 · 상세.
+     한 칸에 몰아 적어 두면 주문을 낼 때 사람이 다시 갈라 옮겨 적어야 했다. */
+  .addr-box { display:flex; gap:6px; align-items:center; width:100%; }
+  .addr-line { display:flex; gap:6px; align-items:center; flex:1 1 auto; min-width:0; }
   .addr-line .form-control { flex:1; min-width:0; }
+  .addr-line .form-control.zip { flex:0 0 92px; width:92px; }
+  /* 찾아서 채우는 칸이라 손으로 고치지 않는다 — 시안대로 바탕을 눕힌다 */
+  .addr-line .form-control[readonly] { background:var(--gray-50); cursor:default; }
   .addr-line .btn { flex:0 0 auto; white-space:nowrap; }
   .info-hint { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
   /* 이름은 그 자리에서 고친다 — 글자 크기까지 같게 두어야 자리가 흔들리지 않는다 */
@@ -49,6 +56,11 @@
   .rx-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .rx-row:last-child { border-bottom:none; }
   .rx-row:hover { background:var(--bg); border-radius:var(--radius); padding-left:8px; }
+  /* 표 안의 처방번호 — 누를 수 있는 것처럼 보여야 한다 */
+  .rx-link { border:none; background:none; padding:0; font:inherit; color:var(--primary);
+             font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .rx-link:hover { color:var(--primary-dark, var(--primary)); }
+
   .rx-status { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
 
   /* Vuexy underline tabs */
@@ -165,29 +177,32 @@
           <div class="info-row wide">
             <span class="info-label">주소</span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->address ?? '-' }}</span>
-              {{-- 주문 등록과 같은 우편번호 서비스를 쓴다. 환자 표에는 주소 칸이 하나뿐이라
-                   (우편번호) 도로명 까지 넣어 주고, 상세 주소는 그 뒤에 이어 적는다. --}}
-              <span class="edit-only addr-line">
-                <input type="text" class="form-control" id="e-address"
-                       value="{{ $patient->address }}" data-orig="{{ $patient->address }}"
-                       placeholder="주소 찾기로 채우고 상세 주소를 이어 적으십시오" />
-                <button type="button" class="btn btn-outline btn-sm" onclick="findAddress()">
-                  <i class="fa-solid fa-magnifying-glass"></i> 주소 찾기
-                </button>
+              <span class="view-only">{{ $patient->full_address ?: '-' }}</span>
+              {{-- 주문 등록과 같은 구성이다 — 우편번호·도로명은 찾아서 채우고(손으로 고치지
+                   않는다), 상세 주소만 사람이 적는다. --}}
+              <span class="edit-only addr-box">
+                <span class="addr-line">
+                  <input type="text" class="form-control zip" id="e-postcode" readonly
+                         value="{{ $patient->postcode }}" data-orig="{{ $patient->postcode }}"
+                         placeholder="우편번호" />
+                  <input type="text" class="form-control" id="e-address" readonly
+                         value="{{ $patient->address }}" data-orig="{{ $patient->address }}"
+                         placeholder="도로명 주소" />
+                  <button type="button" class="btn btn-outline btn-sm" onclick="findAddress()">
+                    <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
+                  </button>
+                </span>
+                <input type="text" class="form-control" id="e-address-detail"
+                       value="{{ $patient->address_detail }}" data-orig="{{ $patient->address_detail }}"
+                       placeholder="상세 주소" />
               </span>
             </span>
           </div>
           {{-- 건강보험번호·급여 적용은 이 화면에서 보지 않는다. 급여 여부는 주문
                한 건마다 정해지는 것이라, 사람에 붙여 두면 실제와 어긋난다. --}}
-          {{-- 메모는 비어 있어도 칸을 남긴다 — 고칠 때만 나타나면 그만큼 틀이 밀린다 --}}
-          <div class="info-row wide">
-            <span class="info-label">메모</span>
-            <span class="info-value">
-              <span class="view-only" style="white-space:pre-wrap;">{{ $patient->note ?: '-' }}</span>
-              <textarea class="form-control edit-only" id="e-note" rows="2" data-orig="{{ $patient->note }}">{{ $patient->note }}</textarea>
-            </span>
-          </div>
+          {{-- 메모 칸은 두지 않는다. 사람에 붙은 한 줄 메모는 어느 주문 이야기인지
+               알 수 없어 적어 두어도 다음 사람이 쓰지 못했다 — 통화 기록은 상담내역에 남는다.
+               이미 적혀 있는 메모는 지우지 않는다(화면에서 보내지 않을 뿐이다). --}}
         </div>
 
       </div>
@@ -208,7 +223,7 @@
           <button class="tab-btn" id="tab-btn-items" style="display:none;" onclick="switchTab(this,'tab-items')">
             <i class="fa-solid fa-boxes-stacked"></i> <span id="tab-items-label">주문 제품</span>
           </button>
-          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">행을 더블클릭하면 그 주문의 제품을 옆 탭에서 봅니다.</span>
+          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">처방번호를 누르면 주문 등록 화면이, 행을 더블클릭하면 그 주문의 제품이 열립니다.</span>
         </div>
 
         {{-- 다른 목록 화면과 같은 표를 쓴다. 손으로 그린 줄은 정렬도 엑셀 저장도 없어,
@@ -252,7 +267,22 @@
       height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
       columns: [
         { header: '주문번호', name: 'order_no',  width: 130, sortable: true },
-        { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
+        /* 처방번호를 누르면 그 건의 주문 등록 화면을 화면 탭으로 열어 준다 —
+           보던 환자 화면은 그대로 남아 돌아올 자리가 있다. */
+        { header: '처방번호', name: 'rx_number', width: 150, sortable: true,
+          renderer: (v, row) => {
+            if (!v) return '';
+            const a = document.createElement('button');
+            a.type = 'button';
+            a.className = 'rx-link';
+            a.textContent = v;
+            a.title = '주문 등록 화면을 엽니다';
+            a.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (row.url) ceOpenTab(row.url, '주문 - ' + (row.order_no || v), 'file-edit-02');
+            });
+            return a;
+          } },
         { header: '병원',     name: 'hospital',  width: 160, sortable: true },
         { header: '금액',     name: 'amount',    width: 110, align: 'right', editor: 'number' },
         { header: '접수일',   name: 'date',      width: 100, align: 'center', sortable: true },
@@ -314,8 +344,8 @@
 {{-- 주문 등록 화면과 같은 카카오(다음) 우편번호 서비스 --}}
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
-  /* 주소를 손으로 다 적으면 오타가 난다 — 도로명까지는 찾아 넣고 상세만 적는다.
-     환자 표에는 주소 칸이 하나뿐이라 우편번호도 그 안에 담는다. */
+  /* 주소를 손으로 다 적으면 오타가 난다 — 우편번호·도로명은 찾아 넣고 상세만 적는다.
+     주문 등록의 openAddressSearch() 와 같은 서비스·같은 순서다. */
   function findAddress() {
     if (typeof daum === 'undefined' || !daum.Postcode) {
       showToast('주소 찾기를 불러오지 못했습니다. 직접 적어 주십시오.', 'warning');
@@ -325,11 +355,12 @@
     new daum.Postcode({
       width: W, height: H,
       oncomplete: function (data) {
-        const el = document.getElementById('e-address');
-        el.value = '(' + data.zonecode + ') ' + (data.roadAddress || data.jibunAddress) + ' ';
-        el.focus();
-        // 이어서 상세 주소를 적는다 — 커서를 끝에 둔다
-        el.setSelectionRange(el.value.length, el.value.length);
+        document.getElementById('e-postcode').value = data.zonecode;
+        document.getElementById('e-address').value  = data.roadAddress || data.jibunAddress;
+        // 찾고 나면 남은 것은 상세 주소뿐이다
+        const detail = document.getElementById('e-address-detail');
+        detail.value = '';
+        detail.focus();
       },
     }).open({
       left: Math.floor((window.screen.width  - W) / 2),
@@ -394,8 +425,9 @@
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,
+      postcode:            document.getElementById('e-postcode').value.trim()     || null,
+      address_detail:      document.getElementById('e-address-detail').value.trim()|| null,
       // 건강보험번호·급여 항목은 화면에서 걷어냈다 — 보내지 않으면 저장된 값은 그대로 남는다
-      note:                document.getElementById('e-note').value.trim()         || null,
       _method:             'PUT',
     };
 

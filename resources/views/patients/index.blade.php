@@ -404,9 +404,20 @@
           <input type="text" class="form-control" id="add-phone" placeholder="02-XXXX-XXXX" data-phone />
         </div>
       </div>
+      {{-- 주소는 주문 등록·환자 상세와 같은 구성이다 — 우편번호·도로명은 찾아서 채우고
+           상세만 사람이 적는다. 한 칸에 몰아 적으면 주문 낼 때 다시 갈라야 한다. --}}
       <div class="form-group" style="margin-bottom:12px;">
         <label class="form-label">주소</label>
-        <input type="text" class="form-control" id="add-address" placeholder="주소 입력" />
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <input type="text" class="form-control" id="add-postcode" readonly placeholder="우편번호"
+                 style="flex:0 0 92px;background:var(--gray-50);cursor:default;" />
+          <input type="text" class="form-control" id="add-address" readonly placeholder="도로명 주소"
+                 style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+          <button type="button" class="ds-btn" onclick="addFindAddress()" style="flex:0 0 auto;">
+            <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
+          </button>
+        </div>
+        <input type="text" class="form-control" id="add-address-detail" placeholder="상세 주소" />
       </div>
       <div class="form-group">
         <label class="form-label">메모</label>
@@ -442,6 +453,30 @@
 @endsection
 
 @push('scripts')
+{{-- 주문 등록·환자 상세와 같은 카카오(다음) 우편번호 서비스 --}}
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script>
+  function addFindAddress() {
+    if (typeof daum === 'undefined' || !daum.Postcode) {
+      showToast('주소 찾기를 불러오지 못했습니다.', 'warning');
+      return;
+    }
+    const W = 500, H = 600;
+    new daum.Postcode({
+      width: W, height: H,
+      oncomplete: function (data) {
+        document.getElementById('add-postcode').value = data.zonecode;
+        document.getElementById('add-address').value  = data.roadAddress || data.jibunAddress;
+        const detail = document.getElementById('add-address-detail');
+        detail.value = '';
+        detail.focus();
+      },
+    }).open({
+      left: Math.floor((window.screen.width  - W) / 2),
+      top:  Math.floor((window.screen.height - H) / 2),
+    });
+  }
+</script>
 <script>
 /* 서명ㆍ신분증 보기 — 셀 버튼이 부른다 */
 function ptShowImage(title, url) {
@@ -1112,6 +1147,8 @@ document.addEventListener('keydown', (e) => {
       mobile:              document.getElementById('add-mobile').value.trim()        || null,
       phone:               document.getElementById('add-phone').value.trim()         || null,
       address:             document.getElementById('add-address').value.trim()       || null,
+      postcode:            document.getElementById('add-postcode').value.trim()      || null,
+      address_detail:      document.getElementById('add-address-detail').value.trim()|| null,
       note:                document.getElementById('add-note').value.trim()          || null,
     };
 
