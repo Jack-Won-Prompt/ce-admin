@@ -143,6 +143,16 @@
 
   /* 발급 버튼 — 작은 버튼 h28 · r8 · pad 3/10 · 13/500 */
   .btn-issue-va { height: 28px; padding: 3px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; line-height: 20px; }
+
+  /* 기간 — 두 칸을 한 줄에 세운다.
+     9열 그리드의 span-2 는 이 화면에서 약 241 이다(1920 화면 · 단추 넷이 오른쪽을 넓게 쓴다).
+     표준값인 날짜 칸 132 로는 132+8+~+8+132 = 287 이라 들어가지 못해 둘째 칸이 아래로 접혔다.
+     좌우 여백을 12 → 8, 폭 하한을 132 → 108, 사이 간격을 8 → 6 으로 줄여
+     108+6+~+6+108 = 235 로 맞춘다.
+     108 은 임의값이 아니라 실측 하한이다 — 여백 8 에서 「2026-06-01」과 달력 아이콘이
+     잘리지 않는 가장 좁은 폭이 108 이고, 106 부터 끝자리가 잘린다(여백 12 일 때는 116). */
+  .ds-filter-card .ds-field-range { gap: 6px; }
+  .ds-filter-card .ds-field-range input[type="date"] { min-width: 108px; padding-left: 8px; padding-right: 8px; }
 </style>
 @endpush
 
@@ -216,29 +226,6 @@
         </button>
       </div>
     </form>
-
-    <div class="summary-grid">
-      <div class="sum-card blue">
-        <div class="sum-card-label"><i class="fa-solid fa-cart-shopping"></i> 총 주문 건수</div>
-        <div class="sum-card-val">{{ number_format($summary['total_orders']) }}<span>건</span></div>
-        <div class="sum-card-sub">조회 기간 내</div>
-      </div>
-      <div class="sum-card blue">
-        <div class="sum-card-label"><i class="fa-solid fa-won-sign"></i> 총 주문 금액</div>
-        <div class="sum-card-val">{{ number_format($summary['total_amount']) }}<span>원</span></div>
-        <div class="sum-card-sub">배송비 포함</div>
-      </div>
-      <div class="sum-card green">
-        <div class="sum-card-label"><i class="fa-solid fa-hospital"></i> 청구 금액</div>
-        <div class="sum-card-val">{{ number_format($summary['nhis_amount']) }}<span>원</span></div>
-        <div class="sum-card-sub">급여 청구분</div>
-      </div>
-      <div class="sum-card orange">
-        <div class="sum-card-label"><i class="fa-solid fa-user"></i> 본인부담금</div>
-        <div class="sum-card-val">{{ number_format($summary['patient_copay']) }}<span>원</span></div>
-        <div class="sum-card-sub">가상계좌 수납 대상</div>
-      </div>
-    </div>
 
     {{-- 흰 카드(r12) 안에 패널 탭과 그리드 --}}
     <div class="ds-grid-section">
