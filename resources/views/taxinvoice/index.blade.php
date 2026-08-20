@@ -263,11 +263,12 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 .nd-modal-overlay.open { display:flex; }
 .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.22); width:640px; max-width:100%; max-height:calc(100vh - 16px); display:flex; flex-direction:column; }
 .nd-modal.wide { width:min(1200px, calc(100vw - 16px)); max-height:calc(100vh - 16px); }
-.nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
+/* 시안 165:1316 — 모달 머리 pad 16/24 */
+.nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .nd-modal-head h3 { flex:1; font-size:16px; font-weight:700; line-height:26px; margin:0; color:var(--gray-800); }
 .nd-modal-close { width:24px; height:24px; flex-shrink:0; background:none; border:none; border-radius:6px; font-size:16px; color:var(--gray-500); cursor:pointer; line-height:1; padding:0; }
 .nd-modal-close:hover { background:var(--gray-100); color:var(--gray-800); }
-.nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
+.nd-modal-body  { padding:24px; overflow-y:auto; flex:1; }
 
 /* 취소 모달 */
 .cancel-note { background:var(--danger-light); border-radius:8px; padding:10px 12px; font-size:12px; font-weight:400; line-height:19px; color:var(--danger); margin-bottom:12px; display:flex; gap:8px; align-items:flex-start; }
@@ -323,7 +324,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
          GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}
     <div class="ds-filter-card">
       <div class="ds-filter-fields">
-        <div class="ds-filter-field span-3">
+        <div class="ds-filter-field span-2">
           <label class="ds-field-label">기간</label>
           <div class="ds-field-range">
             <input type="date" id="f-start" class="form-control">
@@ -351,14 +352,15 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       </div>
     </div>
 
-    {{-- 결과바(h32) — 검색 카드와 4px 띄우는 몫은 .ds-grid-section 의 padding-top 이 맡는다.
-         그리드 툴바(엑셀 저장)와 행 선택 버튼들을 전부 여기로 올렸다. --}}
-    <div class="ds-grid-section">
-    </div>
+    {{-- 결과바는 걷어냈다(499d611) — 건수는 탭 이름에, 단추는 찾는 줄에 있다 --}}
 
   </div>
 
   {{-- ── 탭바와 두 탭 본문은 같은 흰 카드 안이다 (시안 324:1720 / 324:2797) ── --}}
+  {{-- 카드를 .ds-grid-section 안에 둔다 — 밖에 두면 전역 .ds-grid-card 의 flex:1 이 살아
+       표보다 카드가 길어지고 아래로 흰 바닥이 남는다(팩스 발송에서 693 남았다).
+       다른 스물한 화면이 모두 이 구조다. --}}
+  <div class="ds-grid-section">
   <div class="ds-grid-card">
 
     {{-- 탭: 발행 내역 / 즉시발행 (발행 내역 먼저) --}}
@@ -579,6 +581,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     </div>
 
   </div>{{-- /.ds-grid-card --}}
+  </div>{{-- /.ds-grid-section --}}
 
 </div>
 

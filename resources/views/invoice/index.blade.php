@@ -20,18 +20,21 @@
   .inv-pop-hd button { background: none; border: none; color: #fff; font-size: 16px;
                        line-height: 1; cursor: pointer; }
   .inv-pop-bd { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .inv-pop-order { font-size: 11.5px; color: var(--text-muted); }
+  .inv-pop-order { font-size: 11px; color: var(--text-muted); }
   .inv-pop-row { display: flex; flex-direction: column; gap: 3px; }
   .inv-pop-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .inv-pop-row label { font-size: 11px; font-weight: 600; color: var(--gray-700); }
+  .inv-pop-row label { font-size: 11px; font-weight: 500; color: var(--gray-700); }
   .inv-pop-row .form-control { height: 30px; font-size: 12px; }
   .inv-pop-radio { display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
                    font-weight: 500; color: var(--gray-1000); cursor: pointer; }
   .inv-pop-note { font-size: 11px; color: var(--text-muted); }
   .inv-pop-acts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
   /* 목록 칸의 작은 단추 — 미발행이면 누를 수 있다는 것이 보여야 한다 */
-  .inv-cell-btn { height: 22px; padding: 0 8px; font-size: 11px; font-weight: 700;
-                  border-radius: 6px; border: 1px solid var(--primary); color: var(--primary);
+  /* 표 안 버튼 규격은 시안이 h28 · r8 · pad 0/12 · 12/500 이다(266:66 · 342:4037).
+     위임장 서명의 .pc-cellbtn 과 같은 부품이라 같은 값으로 둔다. */
+  .inv-cell-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+                  height: 28px; padding: 0 12px; font-size: 12px; font-weight: 500; line-height:19px;
+                  border-radius: 8px; border: 1px solid var(--primary); color: var(--primary);
                   background: var(--bg-card); cursor: pointer; }
   .inv-cell-btn:hover { background: var(--primary-light); }
   .inv-cell-btn.off { border-color: var(--gray-300); color: var(--gray-700); }
@@ -89,7 +92,7 @@
 .inv-cell { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
 .inv-issued    { color:var(--primary);font-size:11px;font-weight:700; }
 .inv-none      { color:var(--text-muted);font-size:11px; }
-.inv-cancelled { color:var(--danger);font-size:11px;font-weight:600; }
+.inv-cancelled { color:var(--danger);font-size:11px;font-weight:500; }
 .type-badge {
   display:inline-flex; align-items:center; gap:3px;
   padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px;
@@ -195,16 +198,19 @@
 }
 .modal-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px; border-bottom:1px solid var(--border);
+  /* 시안 모달(165:1314 환자 추가) — 머리 pad 16/24 · 본문 pad 24 · 바닥 pad 16/24 다.
+     화면마다 11/16 · 14/16 · 14/18 · 16/20 · 18/20 여섯 가지였다. */
+  padding:16px 24px; border-bottom:1px solid var(--border);
 }
 .modal-title  { font-size:14px;font-weight:700; }
-.modal-body   { padding:16px; }
-.modal-footer { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+.modal-body   { padding:24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
 /* 모달 하단 '발행' 버튼도 전역 .btn-success(초록)를 쓰고 있다. 시안에 초록이 없어
    클래스는 그대로 두고 이 화면 안에서만 primary 로 덮는다 (.detail-action-bar 와 같은 처리). */
 .modal-footer .btn-success { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
 .modal-footer .btn-success:hover { background:var(--primary-dark); color:var(--gray-0); }
-.btn-close-modal { background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted); }
+/* 모달 닫기 규격은 24×24 · r6 · 16px 이다(전역 .modal-close 와 같은 부품) */
+.btn-close-modal { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
 .order-info-box {
   background:var(--primary-light); border:1px solid var(--primary-accent);
   border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px;
@@ -253,7 +259,7 @@
      요약 카드 5개는 시안에 없다. 건수는 칩·결과바로, 설명 문구는 칩 줄 끝 안내로 옮겼다. --}}
 {{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
      고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
-<div class="inv-chip-note" style="margin:0 0 8px;">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</div>
+<div class="inv-chip-note">계산서 발행 대상 — 주문확정 · 배송중 · 배송완료 · 미발행 건은 발행 대기 중 · 이번달 금액은 공급가액 / 발행금액 합계</div>
 
 
 {{-- ── 검색 필터 — Figma 282:934: 흰 카드(r12 · pad 12/16), 검색어 2열 · 기간 2열 ── --}}

@@ -5,7 +5,7 @@
 @section('page-title', '청구 관리')
 {{-- 시안 282:53 빵부스러기는 '홈'(x367) · '-'(x386) · 화면명(x400) 으로 구분자가 하이픈이다.
      마지막 조각의 낱말('청구')은 DIFF 가 짚지 않아 그대로 두고 구분자만 맞춘다. --}}
-@section('breadcrumb', '홈 - 청구')
+@section('breadcrumb', '홈 - 청구 관리')
 
 @section('help-title', '청구 도움말')
 @section('help-content')
@@ -106,12 +106,14 @@
   }
   .modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    /* 시안 165:1316 — 머리 pad 16/24 */
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
   }
   .modal-title { font-size: 14px; font-weight: 700; }
-  .modal-body  { padding: 18px; }
-  .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-  .btn-close-modal { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-muted); }
+  .modal-body  { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  /* 모달 닫기 규격은 24×24 · r6 · 16px 이다 */
+  .btn-close-modal { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
 
   /* 팩스 로그 패널 */
   .log-panel {
@@ -327,7 +329,7 @@
     <div class="modal-body">
       <input type="hidden" id="resultOrderId">
       <div style="background:var(--primary-light);border:1px solid var(--primary-accent);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text-muted);">청구 주문</div>
+        <div style="font-size:12px;font-weight:500;color:var(--text-muted);">청구 주문</div>
         <div id="resultOrderInfo" style="font-size:14px;font-weight:700;margin-top:2px;"></div>
       </div>
       <div class="form-group">

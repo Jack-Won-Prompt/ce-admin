@@ -288,8 +288,9 @@
   .nd-modal { background:var(--gray-0); border-radius:12px; border:1px solid var(--gray-200); box-shadow:0 4px 24px rgba(153,158,164,.24); width:960px; max-width:92vw; max-height:85vh; display:flex; flex-direction:column; }
   .nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
   .nd-modal-head h3 { flex:1; min-width:0; font-size:14px; font-weight:700; line-height:22px; margin:0; color:var(--gray-1000); }
-  .nd-modal-close { width:16px; height:16px; flex-shrink:0; padding:0; background:none; border:none; font-size:16px; color:var(--gray-1000); cursor:pointer; line-height:1; }
-  .nd-modal-body { padding:16px; overflow-y:auto; flex:1; }
+  .nd-modal-close { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
+  /* 시안 165:1320 — 모달 본문 pad 24 */
+  .nd-modal-body { padding:24px; overflow-y:auto; flex:1; }
 
   /* 아래는 openDetail() 이 만드는 마크업이 쓰는 클래스라 이름을 그대로 둔다. */
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -372,7 +373,7 @@
   {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 --}}
   <div class="ds-filter-card">
     <div class="ds-filter-fields">
-      <div class="ds-filter-field span-3">
+      <div class="ds-filter-field span-2">
         <label class="ds-field-label">전송 기간</label>
         <div class="ds-field-range">
           <input type="date" id="f-start" class="form-control" value="{{ date('Ymd', strtotime('-30 days')) }}">
@@ -394,14 +395,16 @@
     </div>
   </div>
 
-  {{-- 결과바(h32) — 좌: 전체·선택 건수, 우: 안내문 + 액션 버튼.
-       그리드 툴바의 '엑셀 저장'과 하단 상태바의 건수를 전부 여기로 옮겼다. --}}
-  <div class="ds-grid-section">
-  </div>
+  {{-- 결과바는 걷어냈다(499d611) — 건수는 탭 이름에, 단추는 찾는 줄에 있다 --}}
 
 </div>
 
 {{-- ── 탭바와 두 탭 본문은 같은 흰 카드 안이다 (시안 Frame 48101484) ── --}}
+{{-- 카드를 .ds-grid-section 안에 둔다. 밖에 두면 전역 .ds-grid-card 의 flex:1 이 살아
+     카드가 본문 남은 높이를 다 먹었다 — 표는 266 인데 카드는 1003 이라 아래로 흰 바닥이
+     693 남았다(.ds-grid-section > .ds-grid-card 만 flex:0 1 auto 로 눌러 준다).
+     다른 스물한 화면이 모두 이 구조다. --}}
+<div class="ds-grid-section">
 <div class="ds-grid-card">
 
   {{-- 탭: 전송 내역 / 팩스 발송 (전송 내역 먼저) --}}
@@ -536,6 +539,7 @@
   </div>
 
 </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
 {{-- ── 상세 모달 ── --}}
 <div class="nd-modal-overlay" id="detail-modal">

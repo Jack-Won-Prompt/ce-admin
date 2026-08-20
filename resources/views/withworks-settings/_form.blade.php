@@ -33,7 +33,8 @@
             padding:4px 10px; border-radius:999px; }
   .ws-now.test { background:var(--primary-100); color:var(--primary-600); }
   .ws-now.prod { background:var(--alert-100); color:var(--alert-500); }
-  .ws-bar { border-radius:8px; padding:10px 13px; font-size:12px; margin-bottom:14px; font-weight:700; }
+  /* 아래 여백은 .page-body 의 gap 12 가 만든다 — 여기서 또 주면 26 이 된다 */
+  .ws-bar { border-radius:8px; padding:10px 12px; font-size:12px; font-weight:700; }
   .ws-bar.ok { background:var(--primary-light); border:1px solid var(--primary-200); color:var(--primary); }
   .ws-bar.info { background:var(--gray-100); border:1px solid var(--gray-200); color:var(--gray-700); }
 </style>
@@ -210,7 +211,8 @@
   </div>
 </form>
 
-<form method="POST" action="{{ route('withworks-settings.test') }}" style="margin-top:10px;text-align:right;">
+{{-- 위 여백은 .page-body 의 gap 12 가 만든다 — 여기서 또 주면 22 가 된다 --}}
+<form method="POST" action="{{ route('withworks-settings.test') }}" style="text-align:right;">
   @csrf
   <button type="submit" class="btn btn-outline">지금 설정으로 연결 확인</button>
 </form>

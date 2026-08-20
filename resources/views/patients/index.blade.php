@@ -141,8 +141,11 @@
   .cs-grip::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
                     border-right: 2px solid var(--gray-300); border-bottom: 2px solid var(--gray-300); }
   .cs-head span { flex: 1; }
-  .cs-head button { background: none; border: none; color: #fff; font-size: 17px;
-                    line-height: 1; cursor: pointer; }
+  /* 닫기 규격은 24×24 · r6 · 16px 이다(17 은 시안 글자 규격 밖) */
+  .cs-head button { display: flex; align-items: center; justify-content: center;
+                    width: 24px; height: 24px; flex-shrink: 0; padding: 0;
+                    background: none; border: none; border-radius: 6px; color: #fff;
+                    font-size: 16px; line-height: 1; cursor: pointer; }
   .cs-body { flex: 1; min-height: 0; padding: 14px; display: flex; flex-direction: column;
              gap: 10px; overflow-y: auto; }
   /* 창이 커지면 적는 자리가 함께 커져야 한다 — 칸만 남고 여백이 늘면 뜻이 없다 */
@@ -152,7 +155,7 @@
   .cs-row { display: flex; flex-direction: column; gap: 10px; }
   .cs-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .cs-f { display: flex; flex-direction: column; gap: 4px; }
-  .cs-f label { font-size: 11.5px; font-weight: 600; color: var(--gray-700); }
+  .cs-f label { font-size: 11px; font-weight: 500; color: var(--gray-700); }
   .cs-f textarea.form-control { height: auto; padding: 8px 10px; line-height: 1.7; resize: vertical; }
   .cs-hint { font-size: 11px; color: var(--text-muted); }
   .cs-foot { display: flex; align-items: center; gap: 6px; padding: 10px 14px;
@@ -241,13 +244,19 @@
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
      원 12×12(선택 primary-500 / 비선택 gray-300) 안에 6×6 흰 점, 라벨 13/400 */
   /* 그리드 셀 안의 작은 표시·버튼 (서명여부·미성년·신분증) */
-  .pt-chip { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px;
-             font-size:11px; font-weight:700; line-height:18px; white-space:nowrap;
-             background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); }
-  .pt-chip.on   { background:var(--primary-50); color:var(--primary); border-color:var(--primary-200); }
-  .pt-chip.warn { background:var(--alert-50);   color:var(--alert-500); border-color:var(--alert-100); }
+  /* 표 안 상태 배지 규격은 시안이 pad 2/6 · r6 · 11/500 이다(148:7122 「주문 대기」 53×22).
+     화면 곳곳의 .impact-badge · .rx-status 도 같은 값인데 이것만 알약(r999) 에 700 이었다. */
+  /* 시안 배지(148:7122 「주문 대기」 53×22)에는 테두리가 없다 — 바탕색이 구분을 나른다.
+     테두리 1px 이 있으면 22 가 아니라 24 가 되어 그 행만 2 두꺼워진다.
+     같은 화면 안의 .impact-badge · .rx-status 도 테두리 없이 22 다. */
+  .pt-chip { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px;
+             font-size:11px; font-weight:500; line-height:18px; white-space:nowrap;
+             background:var(--gray-100); color:var(--gray-600); border:none; }
+  .pt-chip.on   { background:var(--primary-50); color:var(--primary); }
+  .pt-chip.warn { background:var(--alert-50);   color:var(--alert-500); }
+  /* 누를 수 있는 것은 색이 바뀌는 것으로 알린다(테두리를 주면 그 배지만 2 두꺼워진다) */
   button.pt-chip.clickable { cursor:pointer; }
-  button.pt-chip.clickable:hover { border-color:var(--primary); color:var(--primary); }
+  button.pt-chip.clickable:hover { background:var(--primary-100); color:var(--primary); }
 
   /* 이미지 보기 — 서명·신분증 */
   #ptImgBackdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10300; display:none; }
@@ -418,7 +427,7 @@
     <div class="modal-header">
       <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i>
       <h3>거래처 등록</h3>
-      <button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;">&times;</button>
+      <button onclick="closeAddModal()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-grid-2" style="margin-bottom:8px;">
@@ -495,7 +504,7 @@
     <a id="ptImgOpen" href="#" target="_blank" rel="noopener"
        style="font-size:11px;color:var(--primary);text-decoration:none;white-space:nowrap;">새 탭</a>
     <button type="button" onclick="ptCloseImage()"
-            style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;color:var(--gray-700);">&#215;</button>
+            style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">&#215;</button>
   </div>
   <div id="ptImgBody">
     <div id="ptImgLoading" style="padding:40px;font-size:13px;color:var(--gray-500);">불러오는 중...</div>

@@ -292,6 +292,12 @@
       margin-top: 4px;   /* Figma: 제목과 gap 4 */
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* 마디 사이 8 — 시안 248:4008 Frame 48101452 는 HORIZONTAL/8 이다
+       (홈 x336 w11 → '-' x355 · '-' w6 → 화면명 x369, 둘 다 8).
+       한 덩어리 문자열 '홈 - 서류 관리' 로 두면 하이픈 양옆이 일반 공백이라
+       12px/500 에서 3.0px 밖에 안 된다 — 시안보다 5 좁다.
+       화면 다섯 곳이 각자 갖고 있던 같은 규칙을 여기로 올린다. */
+    .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
     .navbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
     /* Navbar icon buttons */
@@ -415,8 +421,18 @@
     }
 
     /* 검색·필터 카드 (174:1210) — padding 12/16, gap 24, radius 12 */
+    /* 시안 캐시 14장(248:4088 · 266:336 · 282:335 · 282:1204 · 324:338 · 324:4932 ·
+       324:1986 · 324:10973 · 342:4328 · 352:555 · 352:3491 · 248:3205 · 207:1324 · 207:1478)이
+       예외 없이 같다 — 안쪽 줄 1536 = 필드 그리드 1384 + gap 24 + 버튼 자리 128.
+       버튼 자리 128 은 60×32 두 개(초기화·검색)와 gap 8 이 딱 들어가는 폭이다.
+       그런데 결과바를 걷어내면서(499d611) 엑셀 저장·선택 상세·선택 인쇄 같은 단추가
+       이 줄로 내려와 화면에 따라 최대 566 을 차지한다. 필드가 남는 자리를 받는 구조라
+       단추가 많을수록 검색칸이 좁아졌다 — 1920 에서 열폭이 90.9~139.5 로 갈리고
+       1280 에서는 20~68 까지 뭉개진다(cashbill 열폭 20 → 세 칸 묶어도 92).
+       그래서 필드 그리드에 시안값을 못박고, 남는 단추는 다음 줄로 접는다.
+       접히는 줄 사이는 시안 카드의 세로 gap 과 같은 12 다. */
     .ds-filter-card {
-      display: flex; align-items: stretch; gap: 24px;
+      display: flex; align-items: stretch; flex-wrap: wrap; gap: 12px 24px;
       padding: 12px 16px; border-radius: 12px;
       background: var(--gray-0);
     }
@@ -426,8 +442,11 @@
        16 쪽에 「표준 레이아웃」 두 장(펼침·접힘)이 들어 있고, 12 는 먼저 그려진 아홉 장
        (거래처 관리 3 · 처방전 목록 1 · 주문 관리 5)뿐이라 16 을 표준으로 삼는다.
        그 아홉 장은 시안이 아직 따라오지 못한 자리로 보고 예외를 두지 않았다 — 디자이너 확인 대상. */
+    /* 폭은 시안값 1384 로 못박는다 — 그래야 한 열이 어느 화면에서나 139.6 이다.
+       카드가 그보다 좁아지면(1600 이하 · 사이드바 펼친 노트북) 100% 를 받아
+       그 폭 안에서 아홉 열이 다시 고르게 나뉜다. */
     .ds-filter-fields {
-      flex: 1; min-width: 0;
+      flex: 0 0 auto; width: min(100%, 1384px); min-width: 0;
       display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px;
     }
     .ds-filter-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -447,8 +466,10 @@
        (표준 레이아웃 두 장 포함). gray-400 이던 것을 바로잡는다. */
     .ds-field-sep { color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
     /* 버튼은 우측 하단 정렬 (174:1236) */
+    /* 단추 묶음은 늘 오른쪽 끝이다 — 다음 줄로 접혀도 마찬가지라 margin-left 를 auto 로 둔다
+       (시안 48101589 은 x1791 로 안쪽 줄의 오른쪽 끝에 붙어 있다). */
     .ds-filter-actions { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-shrink: 0;
-                         flex-wrap: wrap; row-gap: 8px; }
+                         flex-wrap: wrap; row-gap: 8px; margin-left: auto; }
     /* 조회 결과 건수 — 목록 위에 띄를 따로 두지 않고 찾는 줄 안에 적는다.
        탭이 있는 화면은 탭 이름 뒤 괄호로 적고, 없는 화면만 이 칸을 쓴다. */
     .ds-filter-total { align-self: center; margin-right: auto; white-space: nowrap;
@@ -589,26 +610,34 @@
 
     /* ── Cards ── */
     /* Figma 카드에는 그림자가 없다 (radius 12 · 흰 배경) */
+    /* 시안 카드는 흰 채움에 테두리가 없다 — 148:6653(1568×749) · 156:7261(1536×93) ·
+       248:4141 · 342:4381 어디에도 stroke 가 없고, 안여백은 12/16 이다.
+       목록 카드(.ds-grid-card)는 이미 테두리가 없는데 상세·설정 화면이 쓰는 이 카드만
+       1px 을 두르고 있어 같은 부품이 화면마다 달라 보였다.
+       화면 쉰둘을 재 보니 보이는 카드 열아홉이 모두 회색 바탕 위에 홀로 있고
+       카드 안에 든 카드는 하나도 없다 — 테두리가 없어도 경계가 살아 있다. */
     .card {
       background: var(--bg-card);
-      border: 1px solid var(--border);
+      border: none;
       border-radius: var(--radius-lg);
       box-shadow: none;
     }
     .card-header {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; border-bottom: 1px solid var(--border);
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
       background: transparent;
     }
     .card-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: -.2px; }
     .card-header-sub   { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
-    .card-body { padding: 14px 16px; }
+    .card-body { padding: 12px 16px; }
     .mt-4 { margin-top: 12px; } .mb-4 { margin-bottom: 12px; }
 
     /* ── Buttons ── */
     /* Figma: 높이 32 · 13px/500 · padding 좌우 12 · radius 8 — .ds-btn 과 같은 규격 */
     .btn {
-      display: inline-flex; align-items: center; gap: 6px;
+      /* 아이콘↔글자 사이는 시안이 8 이다(248:4115 초기화 60×32 HORIZONTAL/8).
+         .ds-btn 은 8 인데 이쪽만 6 이라 같은 크기 단추의 글자 시작이 2 어긋났다. */
+      display: inline-flex; align-items: center; gap: 8px;
       padding: 5px 12px; border-radius: var(--radius);
       font-size: 13px; font-weight: 500; line-height: 20px; cursor: pointer;
       text-decoration: none; border: 1px solid transparent;
@@ -652,7 +681,13 @@
        시안은 정상 진행 상태를 전부 primary 연톤으로 그린다(OCR 완료·주문 대기·대기 중 13건),
        주의만 alert 연톤(검수 필요 4건)이다. 시안 전체에 초록·주황은 0건이므로
        success/info 를 primary 로 돌린다. 상태 구분은 배지 안 라벨 문구가 계속 담당한다.
-       warning 은 시안에 대응 표본이 없어 손대지 않았다. */
+       warning 은 시안에 대응 표본이 없어 손대지 않았다.
+
+       2026-08-20 DS 개정으로 success·warning **램프가 생겼지만**, 화면 시안 67장을
+       다시 훑어도 #88BE75·#FBAB61 을 쓰는 프레임은 여전히 0장이다 — 램프만 정의됐다.
+       그래서 이 규칙들은 그대로 둔다. 화면 시안이 새 색을 쓰기 시작하면 그때 따라간다.
+       .badge-warning 의 #B45309 도 남긴다 — DS 의 warning-500(#FBAB61)을 글자로 쓰면
+       warning-50 바탕 위 대비가 1.77:1 이라 읽히지 않는다(디자이너 확인 대상). */
     .badge-primary,   .bg-label-primary   { background: var(--primary-light); color: var(--primary); }
     .badge-success,   .bg-label-success   { background: var(--primary-light); color: var(--primary); }
     .badge-warning,   .bg-label-warning   { background: var(--warning-light); color: #B45309; }
@@ -684,7 +719,12 @@
     }
     /* Figma placeholder = grayscale/500 (--text-muted 는 gray-400 이라 한 단계 연하다) */
     .form-control::placeholder { color: var(--gray-500); }
-    .form-select {
+    /* 고르는 칸은 어디서나 같은 화살표를 단다. .form-select 를 빠뜨린 select 가
+       열한 곳 있었고(마스터 관리·위임장 서명의 검색줄, 거래처 등록 모달, 처방전 검수 폼 여섯)
+       그 자리만 운영체제 기본 화살표가 나와 같은 줄의 옆 칸과 달라 보였다.
+       마크업을 열한 군데 고치는 대신 select 면 규칙이 걸리게 한다. */
+    .form-select,
+    select.form-control {
       appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B95A1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 10px center;
@@ -918,29 +958,42 @@
        GLOBAL SHARED COMPONENTS
     ═══════════════════════════════════════════ */
 
-    /* ── Stat cards (all pages) ── */
-    .stat-grid { display: grid; gap: 14px; }
+    /* ── Stat cards (all pages) ──
+       세 화면이 쓴다 — 대시보드 · 기관 공지사항 · CE샵 모니터링.
+       대시보드는 시안 382:107 에 맞추느라 이 규칙을 화면에서 통째로 덮어쓰고 있었고,
+       나머지 둘은 옛 값 그대로여서 같은 부품이 화면마다 달랐다:
+         안여백 16 ↔ 18/20 · 그림자 없음 ↔ 있음 · 칸 사이 12 ↔ 14 ·
+         아이콘 32×32 r8/16 ↔ 48×48 r12/22 · 값 14/700 ↔ 24/700.
+       시안에는 17px 이상 글자도, 카드 그림자도 없다 — 시안값을 전역으로 올린다.
+       (대시보드의 같은 선언은 근거 주석을 안고 있어 그대로 둔다. 값은 이제 같다.) */
+    .stat-grid { display: grid; gap: 12px; }
+    /* 시안 382:383 · 382:6832 는 251×73 이고 stroke 도 effect 도 없다 —
+       테두리 1px 이 있으면 73 이 아니라 75 가 된다. .card 와 같은 이유로 걷어낸다. */
     .stat-card {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow); padding: 18px 20px;
+      background: var(--gray-0); border: none; border-radius: 12px;
+      box-shadow: none; padding: 16px;
       display: flex; align-items: center; gap: 16px;
       text-decoration: none; color: inherit; cursor: pointer;
       transition: var(--transition);
     }
-    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); color: inherit; }
+    /* 시안 카드는 평평하다 — 들림·그림자 대신 테두리 색만 바뀐다 */
+    .stat-card:hover { background: var(--gray-50); color: inherit; }
     .stat-icon {
-      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
-    .stat-icon.primary { background: var(--primary-light); color: var(--primary); }
-    .stat-icon.success { background: var(--success-light); color: var(--success); }
-    .stat-icon.warning { background: var(--warning-light); color: var(--warning); }
-    .stat-icon.danger  { background: var(--danger-light);  color: var(--danger); }
-    .stat-icon.info    { background: var(--info-light);    color: var(--info); }
-    .stat-icon.purple  { background: #F3EEFF;              color: var(--purple); }
-    .stat-icon.gray    { background: var(--border-light);  color: var(--text-muted); }
-    .stat-val   { font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--text-primary); }
-    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
+    /* 화면 시안에는 초록·주황·남색이 없다(67장 전수 0건 — 2026-08-20 DS 개정 뒤에도 그렇다.
+       램프는 생겼지만 어느 화면도 쓰지 않는다). 강조는 primary 램프, 처리 대기는 alert 램프로만
+       나눈다 (클래스 이름은 그대로 둔다 — 화면들이 이 이름으로 붙인다). */
+    .stat-icon.primary { background: var(--primary-50); color: var(--primary-500); }
+    .stat-icon.success { background: var(--primary-50); color: var(--primary-700); }
+    .stat-icon.warning { background: var(--alert-50);   color: var(--alert-500); }
+    .stat-icon.danger  { background: var(--alert-50);   color: var(--alert-500); }
+    .stat-icon.info    { background: var(--primary-50); color: var(--primary-400); }
+    .stat-icon.purple  { background: var(--primary-50); color: var(--primary-600); }
+    .stat-icon.gray    { background: var(--gray-100);   color: var(--gray-600); }
+    .stat-val   { font-size: 14px; font-weight: 700; line-height: 22px; color: var(--gray-1000); }
+    .stat-label { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-800); margin-top: 0; }
     .stat-info  { min-width: 0; }
 
     /* ── Pill tabs (status/type filter) ── */
@@ -991,9 +1044,11 @@
     .status-dot.offline::before { background: var(--gray-400); }
 
     /* ── Empty state ── */
-    .empty-state { text-align: center; padding: 52px 24px; }
-    .empty-state i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
-    .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
+    .empty-state { text-align: center; padding: 48px 24px; }
+    /* 자식 선택자여야 한다 — 그냥 .empty-state i 로 두면 이 안에 든 단추의 아이콘까지
+       38px 블록으로 만들어 「지금 수집 시작」 단추가 143×62 로 부풀었다(다른 단추는 32). */
+    .empty-state > i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
+    .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; }
 
     /* ── Modal overlay (design system) ── */
     .modal-overlay {
@@ -1014,17 +1069,23 @@
     .modal-box.xl  { max-width: 960px; }
     .modal-hd {
       display: flex; align-items: center; gap: 10px;
-      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      /* 시안 165:1316 머리 960×54 — pad 16/24 · gap 12 */
+      padding: 16px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
     .modal-title { font-size: 14px; font-weight: 700; color: var(--text-primary); flex: 1; letter-spacing: -.2px; }
+    /* 모달 닫기 — 시안 165:1318 은 16×16 아이콘이고 머리는 54(pad16 + 22 + pad16)다.
+       28×28 · 18px 이면 머리가 그만큼 커진다. 24×24 · 16px 이 머리를 지키는 최소다.
+       화면들이 10×16 · 11×29 · 13×20 … 열 가지로 갈려 있어 한 값으로 모은다. */
     .modal-close {
-      width: 28px; height: 28px; border-radius: 6px; border: none;
-      background: transparent; color: var(--text-muted); cursor: pointer;
+      width: 24px; height: 24px; border-radius: 6px; border: none;
+      background: transparent; color: var(--gray-500); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; transition: var(--transition); flex-shrink: 0;
+      font-size: 16px; line-height: 1; padding: 0;
+      transition: var(--transition); flex-shrink: 0;
     }
     .modal-close:hover { background: var(--bg); color: var(--text-primary); }
-    .modal-bd { padding: 20px; overflow-y: auto; flex: 1; }
+    /* 시안 165:1320 본문 — pad 24 · 세로 gap 16 */
+    .modal-bd { padding: 24px; overflow-y: auto; flex: 1; }
     .modal-ft {
       padding: 12px 20px; border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: flex-end; gap: 8px;
@@ -1686,8 +1747,24 @@
           <div class="page-title">@yield('page-title', '대시보드')</div>
           <div class="page-breadcrumb">
             {{-- 시안(174:955)의 빵부스러기는 아이콘 없이 '홈' 이 제목과 같은 x336 에서
-                 시작한다. 집 아이콘은 낱말이 아니라 장식이라 걷어냈다. --}}
-            {!! $__env->yieldContent('breadcrumb', '홈') !!}
+                 시작한다. 집 아이콘은 낱말이 아니라 장식이라 걷어냈다.
+
+                 마디 사이는 시안이 8 인데(248:4008), 화면이 '홈 - 서류 관리' 라는
+                 한 덩어리로 넘기면 하이픈 양옆이 일반 공백이라 3.0px 밖에 안 된다.
+                 평문으로 온 것만 ' - ' 에서 갈라 마디로 세운다.
+                 태그가 섞여 온 것(링크·화면이 직접 짠 마디)은 그 화면의 마크업이라
+                 건드리지 않고 그대로 흘린다. --}}
+            @php $__bc = trim($__env->yieldContent('breadcrumb', '홈')); @endphp
+            @if (strip_tags($__bc) === $__bc && str_contains($__bc, ' - '))
+              <span class="bc-trail">
+                @foreach (explode(' - ', $__bc) as $__i => $__seg)
+                  @if ($__i)<span>-</span>@endif
+                  <span>{{ $__seg }}</span>
+                @endforeach
+              </span>
+            @else
+              {!! $__bc !!}
+            @endif
           </div>
         </div>
 
@@ -2464,14 +2541,19 @@ window.dsBindSelCount = function (grid, elId) {
 #chatPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.15); }
 
 .chat-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .chat-header-title { font-size: 14px; font-weight: 700; flex: 1; }
+/* 닫기 단추 셋(채팅·SR·도움말)이 23×33 · 28×28 · 32×26 으로 제각각이었다.
+   같은 자리에서 같은 일을 하니 헤더 아이콘 버튼과 같은 32×32 · r8 로 맞춘다.
+   글자 크기 18·20 은 시안 규격(10~16) 밖이라 16 으로 내린다. */
 .chat-header-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
   background: none; border: none; color: var(--gray-400);
-  font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .chat-header-close:hover { color: #fff; background: rgba(255,255,255,.1); }
 
@@ -2783,14 +2865,15 @@ input#chatFileInput { display: none; }
 }
 #srPanel.open { right: 0; box-shadow: -6px 0 40px rgba(0,0,0,.18); }
 .sr-header {
-  display: flex; align-items: center; gap: 9px;
-  padding: 15px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .sr-header-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .sr-header-sub { font-size: 12px; color: var(--text-muted); }
 .sr-header-close {
-  margin-left: auto; width: 28px; height: 28px; border: none; background: none;
-  color: var(--text-muted); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: auto; width: 32px; height: 32px; flex-shrink: 0; border: none; background: none;
+  color: var(--text-muted); font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .sr-header-close:hover { background: var(--bg); color: var(--text-primary); }
 
@@ -3010,8 +3093,11 @@ input#chatFileInput { display: none; }
   {{-- 목록 --}}
   <div class="sr-body" id="srPaneList">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-      <select id="srFilterStatus" onchange="SrPanel.load()"
-              style="height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+      {{-- 화면의 다른 고르는 칸과 같은 화살표를 달려면 .form-control 이어야 한다.
+           단 .form-control 은 width:100% 라 이 칸이 823 로 늘어 툴바가 32 → 72 로
+           두 줄이 되고 표가 40 내려갔다 — 폭만 제 글자만큼으로 되돌린다. --}}
+      <select id="srFilterStatus" class="form-control" onchange="SrPanel.load()"
+              style="width:auto;height:32px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
         <option value="">전체 상태</option>
         @foreach($srStatuses ?? \App\Models\ServiceRequest::STATUSES as $k => $v)
           <option value="{{ $k }}">{{ $v }}</option>
@@ -4452,16 +4538,17 @@ function showPrescriptionNotif(data) {
 }
 #sidePanelOverlay.show { display: block; }
 
+/* 옆 패널 머리도 채팅·SR·도움말과 같은 12/16 · gap 8 로 둔다 */
 .sp-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--gray-1000); color: #fff; flex-shrink: 0;
 }
 .sp-title { font-size: 14px; font-weight: 700; flex: 1; }
 .sp-close, .sp-back {
   background: none; border: none; color: var(--gray-400);
-  font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 4px;
-  display: flex; align-items: center; gap: 4px; line-height: 1;
+  font-size: 16px; cursor: pointer; padding: 0 8px; min-width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1;
 }
 .sp-close:hover, .sp-back:hover { color: #fff; background: rgba(255,255,255,.1); }
 .sp-back { font-size: 13px; }
@@ -5390,14 +5477,16 @@ document.addEventListener('keydown', e => {
 #helpPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.12); }
 .help-header {
   display: flex; align-items: center; gap: 8px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
   background: var(--bg); flex-shrink: 0;
 }
 .help-header-icon { font-size: 22px; color: var(--primary); }
 .help-header-title { font-size: 14px; font-weight: 700; flex: 1; color: var(--text-primary); }
 .help-header-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
   background: none; border: none; color: var(--text-muted);
-  font-size: 20px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+  font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 .help-header-close:hover { color: var(--text-primary); background: var(--border-light); }
 .help-body { flex: 1; overflow-y: auto; padding: 16px; }

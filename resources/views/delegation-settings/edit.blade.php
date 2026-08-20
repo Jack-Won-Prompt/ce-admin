@@ -19,9 +19,12 @@
   .ds-field.full { grid-column:1 / -1; }
   .ds-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   /* 입력 h32 = pad 5 + lh 20 + pad 5 + 테두리 2 */
-  .ds-field input { padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
-    font-size:13px; font-weight:400; line-height:20px; font-family:inherit; }
-  .ds-field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+  /* 좌표 표 안의 입력 예순 개가 이 규칙 밖(표의 td 안)이라 브라우저 기본 그대로였다 —
+     25 높이에 2px #767676 테두리, 모서리는 각졌다. 이 화면의 모든 입력에 걸리게 한다. */
+  .ds-form input { padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    font-size:13px; font-weight:400; line-height:20px; font-family:inherit;
+    color:var(--gray-1000); background:var(--gray-0); }
+  .ds-form input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
   .ds-hint { font-size:12px; font-weight:400; line-height:18px; color:var(--text-muted); }
   .ds-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
     padding:12px 16px; font-size:12px; font-weight:400; line-height:18px; color:var(--text-secondary); margin-bottom:16px; }

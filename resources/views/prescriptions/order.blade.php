@@ -303,6 +303,10 @@
   .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
              min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
   #tabsCol > .tab-pane { padding: 16px; }
+  /* 이 칸은 바탕이 흰색이라(위 269행) 안에 든 흰 카드가 테두리 없이는 경계를 잃는다.
+     전역 .card 는 회색 바탕 위를 전제로 테두리를 걷었다 — 여기서만 되돌린다.
+     시안 Frame 48101493 도 이 카드들에 #E8EAEC 테두리를 그린다. */
+  #tabsCol .card { border: 1px solid var(--border); }
   .tab-bar-tabs { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
   /* 오른쪽은 두 묶음이다 (시안 137:695) — 글자 링크(gap 12)와 테두리 버튼(gap 6), 사이는 16 */
   .tab-bar-acts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
@@ -363,10 +367,11 @@
   .modal-overlay.show { display: flex; }
   .modal-box { background: var(--bg-card); border-radius: var(--radius-lg); width: 480px; max-width: 95vw; box-shadow: var(--shadow-lg); animation: slideUp .25s ease; }
   @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-  .modal-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  /* 시안 165:1316 — 머리 pad 16/24 */
+  .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
   .modal-title { font-size: 14px; font-weight: 700; flex: 1; }
-  .modal-close { background: none; border: none; font-size: 16px; color: var(--text-muted); cursor: pointer; }
-  .modal-body { padding: 20px; } .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-close { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
+  .modal-body { padding: 24px; } .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
   @media (max-width: 1200px) { .order-layout { grid-template-columns: 280px 1fr; } }
   @media (max-width: 768px)  { .order-layout { grid-template-columns: 1fr; } .action-footer { left: 0; flex-wrap: wrap; bottom: 42px; } }
 

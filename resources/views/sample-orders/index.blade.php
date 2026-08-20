@@ -45,14 +45,14 @@
   .smp-find input { max-width: 300px; }
   .smp-hits { border: 1px solid var(--border); border-radius: 8px; max-height: 180px;
               overflow-y: auto; margin-bottom: 10px; }
-  .smp-hit { display: flex; gap: 10px; align-items: center; padding: 7px 12px; font-size: 12.5px;
+  .smp-hit { display: flex; gap: 10px; align-items: center; padding: 7px 12px; font-size: 12px;
              border-bottom: 1px solid var(--border-light); cursor: pointer; }
   .smp-hit:last-child { border-bottom: none; }
   .smp-hit:hover { background: var(--primary-light); }
   .smp-hit .code { width: 90px; flex-shrink: 0; font-family: monospace; font-weight: 700; color: var(--primary); }
   .smp-hit .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .smp-hit .price { width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
-  .smp-empty { padding: 12px; font-size: 12.5px; color: var(--gray-700); text-align: center; }
+  .smp-empty { padding: 12px; font-size: 12px; color: var(--gray-700); text-align: center; }
 
   .smp-items { width: 100%; border-collapse: collapse; font-size: 13px; }
   .smp-items th, .smp-items td { padding: 7px 10px; border-bottom: 1px solid var(--border-light); text-align: left; }
@@ -137,7 +137,7 @@
     <div id="smpGrid"></div>
   </div>
 
-  {{-- 상세보기 — 머리 정보와 제품 목록 --}}
+  {{-- 상세 내용 — 머리 정보와 제품 목록 --}}
   <div id="smpPaneDetail" style="display:none;">
     <div class="smp-pane">
       <div id="smpDetailEmpty" class="smp-none">목록에서 행을 더블클릭하면 여기에 나옵니다.</div>
@@ -162,7 +162,7 @@
     </div>
   </div>
 
-  {{-- 신규등록 --}}
+  {{-- 신규 등록 --}}
   <div id="smpPaneNew" style="display:none;">
     <form class="smp-pane" id="smpForm">
       <div class="smp-sec">
@@ -300,7 +300,7 @@
   });
   window.__smpGrid = grid;
 
-  /* 목록 · 상세보기 · 신규등록 세 판을 오간다 */
+  /* 목록 · 상세 내용 · 신규 등록 세 판을 오간다 */
   window.smpPane = function (which) {
     const map = { list: 'smpPaneList', detail: 'smpPaneDetail', new: 'smpPaneNew' };
     Object.entries(map).forEach(([k, id]) => { $(id).style.display = (k === which) ? '' : 'none'; });
@@ -310,7 +310,7 @@
     if (which === 'new') $('smpRecipient')?.focus();
   };
 
-  /* 행을 더블클릭하면 목록 옆 상세보기 탭에 제품까지 편다 */
+  /* 행을 더블클릭하면 목록 옆 상세 내용 탭에 제품까지 편다 */
   $('smpGrid').addEventListener('dblclick', async function (e) {
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;

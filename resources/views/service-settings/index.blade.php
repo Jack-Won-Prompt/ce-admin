@@ -2,6 +2,9 @@
 
 @section('title', '서비스 연동 설정')
 @section('page-title', '서비스 연동 설정')
+{{-- 빵부스러기가 없어 기본값 '홈' 하나만 나왔다 — 다른 설정 화면 여섯과 같은 세 마디로.
+     낱말은 사이드바·시안 사이드바(174:955)와 같다. --}}
+@section('breadcrumb', '홈 - 설정 - 서비스 연동 설정')
 
 @section('help-title', '서비스 연동 설정 도움말')
 @section('help-body')
@@ -18,7 +21,7 @@
   .ss-panel.active { display: flex; }
   .ss-card { background: var(--gray-0); border-radius: 12px; padding: 16px; }
   .ss-card-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
-  .ss-card-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .ss-card-title { font-size: 14px; font-weight: 700; color: var(--gray-900); }
   .ss-card-desc  { font-size: 12px; color: var(--gray-500); }
   .ss-fields { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 16px; }
   .ss-field  { display: flex; flex-direction: column; gap: 8px; min-width: 0; }

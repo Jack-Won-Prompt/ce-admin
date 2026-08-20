@@ -16,7 +16,7 @@
 
 @section('title', $tl[0] . ' 상세')
 @section('page-title', $tl[0] . ' 상세')
-@section('breadcrumb', '홈 - 발송·발행 내역 - ' . $tl[0])
+@section('breadcrumb', '홈 - 발송/발행 내역 - ' . $tl[0])
 
 @section('header-actions')
   <a href="{{ $listUrl }}" class="btn btn-outline btn-sm">

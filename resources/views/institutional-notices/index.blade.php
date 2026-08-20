@@ -1,6 +1,14 @@
 @extends('layouts.app')
 
 @section('title', '기관 공지사항')
+{{-- page-title 이 없어 헤더에 기본값 '대시보드' 가 걸려 있었다 — 어느 화면에 있는지
+     헤더만 보면 알 수 없었다. 사이드바·시안 사이드바(174:955)와 같은 이름으로 세운다. --}}
+@section('page-title', '기관 공지사항')
+{{-- 시안 391:332 은 「홈 - 기관 공지사항」 두 마디다. 같은 「지원」 묶음 형제 넷
+     (391:7089 공지사항 · 391:7779 · 391:8218 · 391:9030 문의하기)도 전부 두 마디고,
+     시안 사이드바가 지원 아래 두면서도 빵부스러기에는 지원을 넣지 않는다.
+     어제 이 줄을 세 마디로 넣은 것을 바로잡는다. --}}
+@section('breadcrumb', '홈 - 기관 공지사항')
 
 @section('help-content')
   <div class="help-tip"><i class="bx bx-info-circle"></i>보건복지부·심사평가원·국민건강보험공단의 정책 공지를 자동 수집합니다. 로그인 시 당일 데이터가 없으면 자동 크롤링되며, <strong>지금 수집</strong> 버튼으로 수동 실행할 수 있습니다.</div>
@@ -120,7 +128,7 @@
       <ul class="nav-tabs" id="orgTabs" style="border:none;margin-bottom:0;">
         <li class="nav-item" style="position:relative;">
           <button class="nav-link active" data-org="MOHW" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-shield-quarter" style="margin-right:5px;color:var(--danger);"></i>보건복지부
+            <i class="bx bx-shield-quarter" style="margin-right:5px;color:var(--alert-500);"></i>보건복지부
           </button>
           <a href="https://www.mohw.go.kr/board.es?mid=a10503010100&bid=0027" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">
@@ -129,7 +137,7 @@
         </li>
         <li class="nav-item" style="position:relative;">
           <button class="nav-link" data-org="HIRA" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-search-alt" style="margin-right:5px;color:var(--warning);"></i>심사평가원
+            <i class="bx bx-search-alt" style="margin-right:5px;color:var(--primary-700);"></i>심사평가원
           </button>
           <a href="https://www.hira.or.kr/bbsDummy.do?pgmid=HIRAA020002000100" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">
@@ -138,7 +146,7 @@
         </li>
         <li class="nav-item" style="position:relative;">
           <button class="nav-link" data-org="NHIS" type="button" style="height:44px;padding:0 34px 0 16px;">
-            <i class="bx bx-health" style="margin-right:5px;color:var(--info);"></i>건강보험공단
+            <i class="bx bx-health" style="margin-right:5px;color:var(--primary-400);"></i>건강보험공단
           </button>
           <a href="https://www.nhis.or.kr/nhis/minwon/wbhace10210m01.do" target="_blank"
              onclick="event.stopPropagation()" class="org-ext-link">

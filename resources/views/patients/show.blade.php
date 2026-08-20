@@ -1,8 +1,10 @@
 @extends('layouts.app')
 
-@section('title', $patient->name . ' — 환자 상세')
-@section('page-title', '환자 상세')
-@section('breadcrumb', '홈 - 환자 관리 - ' . $patient->name)
+@section('title', $patient->name . ' — 거래처 관리')
+{{-- 시안 114:6264 · 120:485 — 상세 화면의 헤더 제목도 「거래처 관리」다.
+     요청서가 환자 → 거래처로 바꾼 낱말이 목록에만 반영돼 있었다. --}}
+@section('page-title', '거래처 관리')
+@section('breadcrumb', '홈 - 거래처 관리 - ' . $patient->name)
 
 @push('styles')
 <style>
@@ -58,14 +60,15 @@
   .addr-line .btn { flex:0 0 auto; white-space:nowrap; }
   .info-hint { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
   /* 이름은 그 자리에서 고친다 — 글자 크기까지 같게 두어야 자리가 흔들리지 않는다 */
-  #e-name { font-size:17px; font-weight:700; height:27px; padding:1px 8px; }
+  /* 이름은 그 자리에서 고친다 — 시안(120:680) 16/700 lh26 과 같게 둔다 */
+  #e-name { font-size:16px; font-weight:700; height:26px; padding:0 8px; }
 
   .rx-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .rx-row:last-child { border-bottom:none; }
   .rx-row:hover { background:var(--bg); border-radius:var(--radius); padding-left:8px; }
   /* 표 안의 처방번호 — 누를 수 있는 것처럼 보여야 한다 */
   .rx-link { border:none; background:none; padding:0; font:inherit; color:var(--primary);
-             font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+             font-weight:500; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
   .rx-link:hover { color:var(--primary-dark, var(--primary)); }
 
   .rx-status { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
@@ -75,7 +78,7 @@
     display:flex; border-bottom:2px solid var(--border); margin-bottom:18px;
   }
   .tab-btn {
-    padding:10px 20px; font-size:13px; font-weight:600;
+    padding:10px 20px; font-size:13px; font-weight:500;
     color:var(--text-muted); border:none; background:transparent;
     border-bottom:1px solid transparent; margin-bottom:-1px;
     cursor:pointer; transition:var(--transition);
@@ -110,7 +113,7 @@
                위아래로 벌어져, 정작 짧은 두 마디가 자리를 두 배로 썼다.
                이름은 끊기더라도(ellipsis) 줄을 바꾸지 않는다. --}}
           <div style="flex:1 1 260px;min-width:180px;display:flex;align-items:baseline;gap:8px;min-height:32px;">
-            <span class="view-only" style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ $patient->name }}</span>
+            <span class="view-only" style="font-size:16px;font-weight:700;line-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{ $patient->name }}</span>
             <input type="text" class="form-control edit-only" id="e-name" value="{{ $patient->name }}"
                    data-orig="{{ $patient->name }}" placeholder="이름" style="flex:0 1 200px;" />
             <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
@@ -223,7 +226,7 @@
           <button class="tab-btn" id="tab-btn-items" style="display:none;" onclick="switchTab(this,'tab-items')">
             <i class="fa-solid fa-boxes-stacked"></i> <span id="tab-items-label">주문 제품</span>
           </button>
-          <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">처방번호를 누르면 주문 등록 화면이, 행을 더블클릭하면 그 주문의 제품이 열립니다.</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">처방번호를 누르면 주문 등록 화면이, 행을 더블클릭하면 그 주문의 제품이 열립니다.</span>
         </div>
 
         {{-- 다른 목록 화면과 같은 표를 쓴다. 손으로 그린 줄은 정렬도 엑셀 저장도 없어,

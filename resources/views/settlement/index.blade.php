@@ -351,7 +351,7 @@
     <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <i class="fa-solid fa-file-medical" style="color:var(--primary);font-size:16px;"></i>
       <span style="font-size:14px;font-weight:700;line-height:22px;" id="rxModalTitle">처방전 상세</span>
-      <button onclick="closeModal('rxModal')" style="margin-left:auto;background:none;border:none;font-size:16px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
+      <button onclick="closeModal('rxModal')" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">×</button>
     </div>
     <div style="overflow-y:auto;padding:20px;" id="rxModalBody">
       <div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>
@@ -368,7 +368,7 @@
     <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
       <i class="fa-solid fa-cart-shopping" style="color:var(--primary);font-size:16px;"></i>
       <span style="font-size:14px;font-weight:700;line-height:22px;" id="orderModalTitle">주문 상세</span>
-      <button onclick="closeModal('orderModal')" style="margin-left:auto;background:none;border:none;font-size:16px;cursor:pointer;color:var(--text-muted);line-height:1;">×</button>
+      <button onclick="closeModal('orderModal')" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">×</button>
     </div>
     <div style="overflow-y:auto;padding:20px;" id="orderModalBody">
       <div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>

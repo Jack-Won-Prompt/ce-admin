@@ -5,17 +5,17 @@
      사이드바(layouts/app data-title)·워크스페이스 탭·카드 머리도 모두 같은 이름이다. --}}
 @section('title', '처방자료 업로드')
 @section('page-title', '처방자료 업로드')
-{{-- 시안 128:691·128:693 — 「홈 - 처방전 목록」 두 마디, 마디 사이 8 --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>처방전 목록</span></span>@endsection
+{{-- 시안 128:691·128:693 — 「홈 - 처방전 목록」 두 마디, 마디 사이 8.
+     제목(처방자료 업로드)과 마지막 마디가 다른 것은 시안이 일부러 그렇게 그린 자리다
+     (128:688 에서 제목 128:689 = 처방자료 업로드, 마디 128:693 = 처방전 목록).
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 처방전 목록')
 
 {{-- 검수 대기·처방전 목록은 시안(128:3167)대로 업로드 카드 헤더로 옮겼다.
      상단 헤더의 옛 건수는 화면에 뿌리는 최근 5건 안에서만 세어, 실제보다 적게 나왔다. --}}
 
 @push('styles')
 <style>
-  /* 브레드크럼 두 마디 사이 간격 8 (시안 128:691 → 128:693).
-     .page-breadcrumb 은 전역이지만 .bc-trail 은 이 화면 마크업이라 여기 둔다. */
-  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 
 
   /* ── Layout (Figma 128:768) — 3 : 1, gap 12 ── */
@@ -52,7 +52,7 @@
   .up-head-btn:hover { background:var(--gray-50); }
   /* 검수 대기 알림 */
   .up-head-alert { display:inline-flex; align-items:center; gap:4px;
-                   font-size:12px; font-weight:500; color:var(--alert-500, #D73D3F); white-space:nowrap; }
+                   font-size:12px; font-weight:500; color:var(--alert-500, #F17E64); white-space:nowrap; }
   /* 본문 안 구획 제목 */
   .up-sec { display:flex; flex-direction:column; gap:16px; }
   .up-sec-head { display:flex; align-items:center; justify-content:space-between; }
@@ -113,7 +113,7 @@
   /* 추가 타일 (Figma 128:799) — 높이 140, primary 테두리 */
   /* 넣는 자리 위의 서류명 고르는 칸 (128:796 옆) */
   .fu-pick { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .fu-pick-label { font-size:12px; font-weight:600; color:var(--gray-700); }
+  .fu-pick-label { font-size:12px; font-weight:500; color:var(--gray-700); }
   .fu-pick-sel { height:30px; min-width:220px; padding:2px 8px; font-size:13px;
                  border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-0);
                  color:var(--gray-1000); cursor:pointer; }
@@ -180,8 +180,11 @@
             box-shadow:0 12px 40px rgba(0,0,0,.22); }
   .pk-head { display:flex; align-items:center; gap:8px; padding:12px 16px;
              background:var(--primary); color:var(--gray-0); font-size:14px; font-weight:700; }
-  .pk-head button { margin-left:auto; background:none; border:none; color:inherit;
-                    font-size:20px; line-height:1; cursor:pointer; }
+  /* 닫기 규격은 24×24 · r6 · 16px 이다(20 은 시안 글자 규격 밖) */
+  .pk-head button { display:flex; align-items:center; justify-content:center;
+                    margin-left:auto; width:24px; height:24px; flex-shrink:0; padding:0;
+                    background:none; border:none; border-radius:6px; color:inherit;
+                    font-size:16px; line-height:1; cursor:pointer; }
   .pk-filter { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
                padding:12px 16px; border-bottom:1px solid var(--border); background:var(--gray-50); }
   .pk-fld { display:flex; flex-direction:column; gap:4px; }

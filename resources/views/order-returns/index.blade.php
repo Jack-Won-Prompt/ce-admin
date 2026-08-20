@@ -2,7 +2,7 @@
 
 @section('title', '교환/반품/취소')
 @section('page-title', '교환/반품/취소')
-@section('breadcrumb', '홈 - 주문 - 교환·반품·취소')
+@section('breadcrumb', '홈 - 주문 - 교환/반품/취소')
 
 @section('help-title', '교환/반품/취소 도움말')
 @section('help-content')
@@ -90,7 +90,7 @@
     {{-- 상세는 이미 한 화면으로 있다. 그 화면을 그대로 들여온다 — 두 벌로 만들면
          한쪽만 고쳐져 서로 다른 것을 보여 주게 된다.
          액자 안에서는 사이드바·네비가 스스로 숨는다(is-framed). --}}
-    <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12.5px;color:var(--gray-700);">
+    <div id="rtnShowEmpty" style="padding:28px 16px;text-align:center;font-size:12px;color:var(--gray-700);">
       목록에서 행을 더블클릭하면 여기에 나옵니다.
     </div>
     <iframe id="rtnShowFrame" title="상세내용" style="display:none;width:100%;border:0;
@@ -177,7 +177,7 @@
     frame.style.display = '';
     document.getElementById('rtnShowEmpty').style.display = 'none';
     document.getElementById('rtnTabShow').textContent =
-      '상세내용' + (row.receipt ? ' · ' + row.receipt : '');
+      '상세 내용' + (row.receipt ? ' · ' + row.receipt : '');
     rtnPanel('show');
   }
   /* wwGrid 에는 on() 이 없다 — 다른 목록 화면과 같이 셀에서 행 번호를 읽는다. */

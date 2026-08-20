@@ -200,10 +200,11 @@
   .nd-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; align-items:center; justify-content:center; }
   .nd-modal-overlay.open { display:flex; }
   .nd-modal { background:var(--gray-0); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.18); width:640px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; }
-  .nd-modal-head { padding:11px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  /* 시안 165:1316 — 모달 머리 pad 16/24 · gap 12 */
+  .nd-modal-head { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .nd-modal-head h3 { flex:1; font-size:14px; font-weight:700; line-height:22px; margin:0; }
-  .nd-modal-close { background:none; border:none; font-size:16px; color:var(--gray-600); cursor:pointer; line-height:1; }
-  .nd-modal-body  { padding:16px; overflow-y:auto; flex:1; }
+  .nd-modal-close { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
+  .nd-modal-body  { padding:24px; overflow-y:auto; flex:1; }
 
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; }
   .detail-item .di-label { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
@@ -249,7 +250,7 @@
      시안 324:6158 은 즉시발행 탭에서도 이 카드와 결과바가 그대로 보인다 — 탭 밖에 둔다. --}}
 <div class="ds-filter-card">
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" id="f-start" class="form-control">
@@ -1012,7 +1013,7 @@ async function openPrint(mgtKey) {
   .r-sub-row { display: flex; border: 1px solid #C2C5C8; border-top: none; }
   .r-sub-title { flex: 1; padding: 6px 10px; font-weight: 700; font-size: 13px; background: #F9FAFC; }
   .r-sub-title + .r-sub-title { border-left: 1px solid #C2C5C8; }
-  .r-red { color: #D73D3F; font-weight: 700; }
+  .r-red { color: var(--alert-500); font-weight: 700; }
   .r-footer { border-top: 1px solid #C2C5C8; padding: 10px 12px; font-size: 11px; color: #656C74; line-height: 18px; }
   .r-footer p { margin: 0; }
   .no-print { text-align: right; padding: 14px 0 0; }

@@ -2,7 +2,7 @@
 
 @section('title', $r->receipt_no)
 @section('page-title', $r->typeLabel() . ' · ' . $r->receipt_no)
-@section('breadcrumb', '홈 - 주문 - 교환·반품·취소 - 상세')
+@section('breadcrumb', '홈 - 주문 - 교환/반품/취소 - 상세')
 
 {{-- 「목록으로」는 액자 밖에서만 둔다. 교환·반품·취소 화면의 상세 내용 탭은 이 화면을
      그대로 들여오는데, 거기서는 옆의 「조회 결과」 탭이 이미 돌아가는 길이라

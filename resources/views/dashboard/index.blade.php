@@ -99,10 +99,11 @@ window.HELP_TOUR_STEPS = [
   /* 격자는 인라인 style= 이 아니라 여기에 둔다 — 그래야 미디어쿼리가 우선순위 강제 없이 이긴다 */
   /* 아래 여백은 .page-body 의 flex gap 12 하나로만 만든다(시안 통계줄 y188 → 다음 줄 y200) */
   .stat-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 12px; margin-bottom: 0; }
+  /* 시안 382:383 은 251×73 · stroke 없음 — 테두리를 두면 75 가 된다 */
   .stat-card {
     background: var(--gray-0);
     border-radius: 12px;
-    border: 1px solid var(--border);
+    border: none;
     padding: 16px;
     display: flex; align-items: center; gap: 16px;
     cursor: pointer; transition: var(--transition);
@@ -140,7 +141,8 @@ window.HELP_TOUR_STEPS = [
      라벨 14/700 lh22 + gap 8 + 18×18 정원 배지(11/700 · 흰 글자). */
   .queue-grid {
     display: grid; grid-template-columns: repeat(3,1fr); gap: 0;
-    background: var(--gray-0); border: 1px solid var(--border); border-radius: 12px;
+    /* 시안 382:7662 는 1167×54 · stroke 없음 — 테두리를 두면 56 이 된다 */
+    background: var(--gray-0); border: none; border-radius: 12px;
     padding: 12px 0;
     margin-bottom: 10px;    /* 시안 상태줄 y254 → 표 카드 y264 */
   }

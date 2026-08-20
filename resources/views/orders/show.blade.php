@@ -3,7 +3,7 @@
 
 @section('title', '주문 상세 — ' . $order->order_number)
 @section('page-title', '주문 상세')
-@section('breadcrumb', '홈 - 주문관리 - ' . $order->order_number)
+@section('breadcrumb', '홈 - 주문 관리 - ' . $order->order_number)
 
 @push('styles')
 <style>
@@ -221,8 +221,8 @@
   .od-status-actions .btn-danger:hover { background: var(--alert-100); color: var(--alert-500); }
 
   /* 하단 고정 바 제거 → 일반 흐름 바로 화면에 표시 */
+  /* 블록 사이 여백은 .page-body 의 gap 12 가 만든다 — 여기서 또 주면 28 이 된다 */
   .action-footer {
-    margin-top: 16px;
     background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 12px 20px;
     display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -289,12 +289,14 @@
   }
   .modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    /* 시안 165:1316 — 머리 pad 16/24 */
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
   }
   .modal-title  { font-size: 14px; font-weight: 700; }
-  .modal-body   { padding: 18px; }
-  .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-  .btn-close-modal { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
+  .modal-body   { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  /* 모달 닫기 규격은 24×24 · r6 · 16px 이다 */
+  .btn-close-modal { display:flex; align-items:center; justify-content:center; width:24px; height:24px; flex-shrink:0; padding:0; border:none; border-radius:6px; background:none; font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
 
   /* 결제·입금 카드의 한 줄 — 왼쪽 이름, 오른쪽 값 */
   .od-detail .od-kv { display:flex; gap:12px; padding:7px 0; border-bottom:1px solid var(--border-light);

@@ -5,15 +5,11 @@
 @section('page-title', '메시지 관리')
 {{-- 시안(352:84) Frame 48101452 — 「홈 - 메시지 관리」 두 마디.
      홈 x336(w11) · 구분자 '-' x355(w6) · 화면명 x369(w55), 12/500 · 마디 사이 8.
-     구분자는 이 @section 안에 있어 이 파일이 고칠 자리다(전역 app.blade.php 에는 규칙이 없다).
-     한 덩어리 글월로 두면 화면명이 x357.5 로 11.5 짧게 붙는다 — 마디를 나눠 gap 8 을 준다.
-     @section 의 인자형은 Laravel 이 e() 로 escape 하므로 블록형으로 쓴다. --}}
-@section('breadcrumb')<span class="bc-trail"><span>홈</span><span>-</span><span>메시지 관리</span></span>@endsection
+     마디로 세우는 일은 이제 레이아웃이 한다 — 여기서는 낱말만 적는다. --}}
+@section('breadcrumb', '홈 - 메시지 관리')
 
 @push('styles')
 <style>
-  /* 빵부스러기 마디 사이 8 — 시안 352:84 Frame 48101452 (홈 x336 · '-' x355 · 화면명 x369) */
-  .page-breadcrumb .bc-trail { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
   /* ── 탭 칩 (352:84 Frame 48101549) ───────────────────────────────
      시안 h31 · r999 · pad 6/10 · 12px/700 lh19 · 테두리 없음 · 칩 사이 gap 8.
      전역 .ds-chip 과 같은 규격이라 버튼에 .ds-chip 을 함께 붙였다.
@@ -175,8 +171,11 @@
                    padding: 16px 24px; border-bottom: 1px solid var(--gray-200); }
   .ms-modal-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 22px;
                     color: var(--gray-1000); }
-  .ms-modal-x { background: none; border: none; cursor: pointer; padding: 0;
-                font-size: 16px; line-height: 1; color: var(--gray-1000); }
+  /* 모달 닫기 규격은 24×24 · r6 · 16px 이다(전역 .modal-close 와 같은 부품) */
+  .ms-modal-x { display:flex; align-items:center; justify-content:center;
+                width:24px; height:24px; flex-shrink:0; padding:0;
+                border:none; border-radius:6px; background:none;
+                font-size:16px; line-height:1; color:var(--gray-500); cursor:pointer; }
   .ms-modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
   /* 시안 창은 750 이다. 세로가 짧은 화면(1280×720 · 노트북 1366×768)에서는 창이
      화면 밖으로 나가는데 position:fixed 라 페이지를 굴려도 저장·취소에 닿지 않는다.

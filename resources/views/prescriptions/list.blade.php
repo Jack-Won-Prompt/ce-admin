@@ -53,7 +53,7 @@
   .status-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
   .status-tab {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 16px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+    padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 500;
     border: 1.5px solid var(--border); background: #fff;
     color: var(--text-secondary); cursor: pointer; text-decoration: none;
     transition: var(--transition);
@@ -140,7 +140,7 @@
       </div>
       {{-- 두 칸(298)에서는 날짜가 「2026-06-…」로 잘렸다 — 달력 아이콘까지 서야 해서
            한 칸이 150 은 있어야 한다. 세 칸을 준다(이 화면은 아홉 칸 중 여섯만 쓴다). --}}
-      <div class="ds-filter-field span-3">
+      <div class="ds-filter-field span-2">
         <label class="ds-field-label">기간</label>
         <div class="ds-field-range">
           <input type="date" name="date_from" class="form-control"
@@ -212,12 +212,14 @@
 <script>
 window.HELP_TOUR_STEPS = [
   {
-    selector: '.status-tabs',
-    title: '상태 탭',
+    /* 상단 상태 칩은 main c99af13 이 걷고 검색 필터의 첫 칸으로 옮겼다 —
+       .status-tabs 는 마크업에 없어 아무것도 가리키지 못했다. */
+    selector: '.ds-filter-field:has(select[name="status"]), select[name="status"]',
+    title: '상태 고르기',
     body: '처방전을 상태별로 필터링합니다. <b>검수 필요</b> 탭을 먼저 확인하여 처리 대기 중인 처방전을 처리하세요.'
   },
   {
-    selector: '.filter-bar',
+    selector: '.ds-filter-card',
     title: '검색 및 필터',
     body: '이름, 처방번호, 병원명으로 검색하거나 날짜 범위를 지정해 조회할 수 있습니다.'
   },
