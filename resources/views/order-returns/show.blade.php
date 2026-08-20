@@ -4,10 +4,16 @@
 @section('page-title', $r->typeLabel() . ' · ' . $r->receipt_no)
 @section('breadcrumb', '홈 - 주문 - 교환·반품·취소 - 상세')
 
+{{-- 「목록으로」는 액자 밖에서만 둔다. 교환·반품·취소 화면의 상세 내용 탭은 이 화면을
+     그대로 들여오는데, 거기서는 옆의 「조회 결과」 탭이 이미 돌아가는 길이라
+     같은 일을 하는 단추가 하나 더 서 있었다. 주문 상세·창고 알림에서 곧장 들어온
+     경우에는 돌아갈 길이 이것뿐이라 그대로 둔다. --}}
 @section('header-actions')
+@unless(request()->boolean('frame'))
 <a href="{{ route('order-returns.index') }}" class="btn btn-outline btn-sm">
   <i class="bx bx-arrow-back"></i> 목록으로
 </a>
+@endunless
 @endsection
 
 @push('styles')

@@ -162,24 +162,14 @@
     if (orderNo) window.rtoPreset?.(orderNo);
   })();
 
-  /* 액자 안의 「목록으로」는 액자 속에 목록을 또 열어 화면이 겹친다.
-     같은 곳에서 온 문서라 안을 만질 수 있으니, 누르면 바깥의 목록 탭으로 돌린다. */
-  document.getElementById('rtnShowFrame').addEventListener('load', function () {
-    try {
-      const d = this.contentDocument;
-      if (!d) return;
-      d.querySelectorAll('a[href]').forEach(a => {
-        if (a.href.replace(/\/$/, '') !== SHOW_BASE.replace(/\/$/, '')) return;
-        a.addEventListener('click', (e) => { e.preventDefault(); rtnPanel('list'); });
-      });
-    } catch (e) { /* 다른 곳에서 온 문서면 만지지 않는다 */ }
-  });
-
   /* 고른 건을 상세 탭에 들여온다. 탭 이름에 접수번호를 붙여 둔다 —
      탭을 여럿 오가다 보면 무엇을 열어 두었는지 잊는다. */
   function rtnShow(row) {
     const frame = document.getElementById('rtnShowFrame');
-    const url   = SHOW_BASE + '/' + row.id;
+    /* frame=1 — 액자 안이라는 것을 서버에도 알린다. 레이아웃은 self!==top 으로도
+       알아채지만 그것은 화면이 그려진 뒤라, 「목록으로」를 아예 내보내지 않으려면
+       서버가 알아야 한다. */
+    const url   = SHOW_BASE + '/' + row.id + '?frame=1';
     if (frame.dataset.url !== url) {
       frame.src = url;
       frame.dataset.url = url;
