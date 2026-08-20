@@ -1386,40 +1386,6 @@
         </div></div>
         @endif
 
-        {{-- ══ 서류 · 동의 ══ --}}
-        @if($vis('documents', 'prescription-consents', 'privacy-consents'))
-        <div class="menu-group" data-menu-group="docs">
-        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
-          <span>서류ㆍ동의</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
-        </button>
-        <div class="menu-group-items">
-        @if($vis('documents'))
-        <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="briefcase" href="{{ route('documents.index') }}" data-title="서류 관리">
-            @dsicon('briefcase', 'ds-icon menu-icon')
-            <span>서류 관리</span>
-          </a>
-        </div>
-        @endif
-        @if($vis('prescription-consents'))
-        <div class="menu-item {{ request()->routeIs('prescription-consents*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('prescription-consents.index') }}" data-title="위임장 서명">
-            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
-            <span>위임장 서명</span>
-          </a>
-        </div>
-        @endif
-        @if($vis('privacy-consents'))
-        <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="check-user" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
-            @dsicon('check-user', 'ds-icon menu-icon')
-            <span>개인정보동의</span>
-          </a>
-        </div>
-        @endif
-        </div></div>
-        @endif
-
         {{-- ══ 청구 · 회계 ══ --}}
         @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill'))
         <div class="menu-group" data-menu-group="billing">
@@ -1479,6 +1445,40 @@
           <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
             @dsicon('cash', 'ds-icon menu-icon')
             <span>현금영수증</span>
+          </a>
+        </div>
+        @endif
+        </div></div>
+        @endif
+
+        {{-- ══ 서류 · 동의 ══ --}}
+        @if($vis('documents', 'prescription-consents', 'privacy-consents'))
+        <div class="menu-group" data-menu-group="docs">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>서류ㆍ동의</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
+        </button>
+        <div class="menu-group-items">
+        @if($vis('documents'))
+        <div class="menu-item {{ request()->routeIs('documents*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="briefcase" href="{{ route('documents.index') }}" data-title="서류 관리">
+            @dsicon('briefcase', 'ds-icon menu-icon')
+            <span>서류 관리</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('prescription-consents'))
+        <div class="menu-item {{ request()->routeIs('prescription-consents*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('prescription-consents.index') }}" data-title="위임장 서명">
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
+            <span>위임장 서명</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('privacy-consents'))
+        <div class="menu-item {{ request()->routeIs('privacy-consents*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="check-user" href="{{ route('privacy-consents.index') }}" data-title="개인정보동의">
+            @dsicon('check-user', 'ds-icon menu-icon')
+            <span>개인정보동의</span>
           </a>
         </div>
         @endif
