@@ -681,7 +681,13 @@
        시안은 정상 진행 상태를 전부 primary 연톤으로 그린다(OCR 완료·주문 대기·대기 중 13건),
        주의만 alert 연톤(검수 필요 4건)이다. 시안 전체에 초록·주황은 0건이므로
        success/info 를 primary 로 돌린다. 상태 구분은 배지 안 라벨 문구가 계속 담당한다.
-       warning 은 시안에 대응 표본이 없어 손대지 않았다. */
+       warning 은 시안에 대응 표본이 없어 손대지 않았다.
+
+       2026-08-20 DS 개정으로 success·warning **램프가 생겼지만**, 화면 시안 67장을
+       다시 훑어도 #88BE75·#FBAB61 을 쓰는 프레임은 여전히 0장이다 — 램프만 정의됐다.
+       그래서 이 규칙들은 그대로 둔다. 화면 시안이 새 색을 쓰기 시작하면 그때 따라간다.
+       .badge-warning 의 #B45309 도 남긴다 — DS 의 warning-500(#FBAB61)을 글자로 쓰면
+       warning-50 바탕 위 대비가 1.77:1 이라 읽히지 않는다(디자이너 확인 대상). */
     .badge-primary,   .bg-label-primary   { background: var(--primary-light); color: var(--primary); }
     .badge-success,   .bg-label-success   { background: var(--primary-light); color: var(--primary); }
     .badge-warning,   .bg-label-warning   { background: var(--warning-light); color: #B45309; }
@@ -976,8 +982,9 @@
       width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
-    /* 시안에는 초록·주황·남색이 없다. 강조는 primary 램프, 처리 대기는 alert 램프로만 나눈다
-       (클래스 이름은 그대로 둔다 — 화면들이 이 이름으로 붙인다). */
+    /* 화면 시안에는 초록·주황·남색이 없다(67장 전수 0건 — 2026-08-20 DS 개정 뒤에도 그렇다.
+       램프는 생겼지만 어느 화면도 쓰지 않는다). 강조는 primary 램프, 처리 대기는 alert 램프로만
+       나눈다 (클래스 이름은 그대로 둔다 — 화면들이 이 이름으로 붙인다). */
     .stat-icon.primary { background: var(--primary-50); color: var(--primary-500); }
     .stat-icon.success { background: var(--primary-50); color: var(--primary-700); }
     .stat-icon.warning { background: var(--alert-50);   color: var(--alert-500); }

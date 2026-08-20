@@ -52,7 +52,7 @@
   .up-head-btn:hover { background:var(--gray-50); }
   /* 검수 대기 알림 */
   .up-head-alert { display:inline-flex; align-items:center; gap:4px;
-                   font-size:12px; font-weight:500; color:var(--alert-500, #D73D3F); white-space:nowrap; }
+                   font-size:12px; font-weight:500; color:var(--alert-500, #F17E64); white-space:nowrap; }
   /* 본문 안 구획 제목 */
   .up-sec { display:flex; flex-direction:column; gap:16px; }
   .up-sec-head { display:flex; align-items:center; justify-content:space-between; }

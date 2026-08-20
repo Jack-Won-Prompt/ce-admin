@@ -43,7 +43,7 @@
        warning → primary(btn-primary) · 진행을 멈추는 주의
      같은 ceAlert 호출이 관리자 판형과 단독 판형에서 다른 색으로 보이면 안 된다.
      (consent/sign 한 화면에서 두 tone 이 함께 쓰인다 — 같은 색으로 모으면 구분이 사라진다) */
-  .ce-dlg-ok.danger  { background: #D73D3F; }
+  .ce-dlg-ok.danger  { background: var(--alert-500); }
   .ce-dlg-ok.warning { background: #28798B; }
   .ce-dlg-cancel { background: #F3F5F7; color: #474D54; }
 </style>

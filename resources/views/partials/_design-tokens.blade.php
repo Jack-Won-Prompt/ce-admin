@@ -30,9 +30,26 @@
       --gray-900:  #25292F;
       --gray-1000: #101317;
 
+      /* ── Alert — 2026-08-20 DS 개정 ──────────────────────
+         디자이너가 Alert 를 램프 셋으로 늘렸다(1:84 «colors» · 파일 수정 2026-08-19).
+         전에는 error 한 줄(50·100·500)뿐이었고 warning·success 는 DS 밖이었다.
+         이제 셋 다 50·100·500 을 갖는다 — 확장 요청서의 회신이 이것이다.
+
+         견본 아래 글자 라벨은 디자이너가 갱신하지 않아 error·success 의 50·100 이
+         둘 다 «#FFEDED» 로 적혀 있다. 실제 fill 값이 기준이다(옛 시안도 같은 모양이었고
+         우리는 그때도 fill 을 따랐다). grayscale 100 도 라벨은 «#F0F2F4» 인데
+         fill 은 #F3F5F7 이다 — 옛 시안부터 그랬다. 디자이너 확인 대상. */
       --alert-50:  #FBEEEF;
       --alert-100: #FBE3E4;
-      --alert-500: #D73D3F;      /* DS 이름은 alert/500-warning 이나 값은 빨강이다 */
+      --alert-500: #F17E64;      /* 개정 전 #D73D3F */
+
+      --warning-50:  #FFF6E8;
+      --warning-100: #FFEDD4;
+      --warning-500: #FBAB61;
+
+      --success-50:  #EEFBEF;
+      --success-100: #DAF7DD;
+      --success-500: #88BE75;
 
       /* ── 역할 토큰 ─────────────────────────────────────────
          화면 코드는 항상 이쪽을 쓴다. DS 값이 바뀌면 위 램프만 고치면 된다. */
@@ -41,11 +58,20 @@
       --primary-dark:   var(--primary-600);
       --primary-accent: var(--primary-300);
 
-      /* 의미색 — DS 미정의. 확장 요청서(docs/DS-extension-request_semantic-colors.md)
-         회신이 오면 이 네 줄만 새 램프로 교체한다. danger 는 DS 의 alert 를 이미 쓴다. */
-      --success:        #12B76A;  --success-light: #ECFDF5;
-      --warning:        #F59E0B;  --warning-light: #FFFBEB;
-      --danger:         var(--alert-500);  --danger-light:  var(--alert-50);
+      /* 의미색 — 2026-08-20 부로 success·warning 이 DS 안으로 들어왔다.
+         확장 요청서(docs/DS-extension-request_semantic-colors.md)의 회신이다.
+         이제 셋 다 위 램프를 가리킨다 — 값을 여기서 직접 적지 않는다.
+
+         **대비는 떨어졌다.** 흰 바탕 위 글자로 재면
+           error   #D73D3F 4.54:1(AA 통과) → #F17E64 **2.66:1**(미달)
+           warning #F59E0B 2.15:1          → #FBAB61 **1.89:1**
+           success #12B76A 2.62:1          → #88BE75 **2.17:1**
+         --danger 는 화면에서 224곳이 글자색이고 바탕색은 19곳뿐이라 이 값이 그대로 글자에 실린다.
+         시안이 기준이므로 값은 그대로 옮겼다 — 디자이너 확인 대상. */
+      --success:        var(--success-500);  --success-light: var(--success-50);
+      --warning:        var(--warning-500);  --warning-light: var(--warning-50);
+      --danger:         var(--alert-500);    --danger-light:  var(--alert-50);
+      /* info·purple 은 이번 개정에도 DS 에 없다 — 여전히 확장 요청 대상이다 */
       --info:           #0EA5E9;  --info-light:    #F0F9FF;
       --purple:         #7C3AED;
 

@@ -1017,7 +1017,7 @@ async function openPrint(mgtKey) {
   .r-sub-row { display: flex; border: 1px solid #C2C5C8; border-top: none; }
   .r-sub-title { flex: 1; padding: 6px 10px; font-weight: 700; font-size: 13px; background: #F9FAFC; }
   .r-sub-title + .r-sub-title { border-left: 1px solid #C2C5C8; }
-  .r-red { color: #D73D3F; font-weight: 700; }
+  .r-red { color: var(--alert-500); font-weight: 700; }
   .r-footer { border-top: 1px solid #C2C5C8; padding: 10px 12px; font-size: 11px; color: #656C74; line-height: 18px; }
   .r-footer p { margin: 0; }
   .no-print { text-align: right; padding: 14px 0 0; }
