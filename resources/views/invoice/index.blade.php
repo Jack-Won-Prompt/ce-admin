@@ -331,7 +331,6 @@
     <div class="detail-empty" id="detail-empty">
       <i class="fa-solid fa-file-magnifying-glass"></i>
       <p>좌측 <strong>계산서 발행 현황</strong> 탭에서 항목을 클릭하면<br>상세 내용이 이곳에 표시됩니다.</p>
-      <button class="ds-btn" onclick="switchPanel('list')">목록으로 이동</button>
     </div>
 
     {{-- 상세 내용 (선택 후 표시) --}}
@@ -342,9 +341,8 @@
         <span id="d-order-no" class="inv-detail-no"></span>
         <span id="d-status-badge" class="badge badge-secondary"></span>
         {{-- 시안 머리줄은 왼쪽이 주문번호, 오른쪽이 '주문 상세'(95×32 · 뒤에 chevron 14×14)뿐이다.
-             개발이 넣은 '목록' 버튼은 지우지 않고 오른쪽 묶음 앞으로 옮겼다. --}}
+             개발이 넣었던 '목록' 버튼은 걷었다 — 돌아가는 길은 위의 「계산서 발행 현황」 탭이다. --}}
         <div class="inv-detail-head-actions">
-          <button class="ds-btn" onclick="switchPanel('list')">목록</button>
           {{-- 새 창이 아니라 워크스페이스 화면 탭으로 연다. 창이 따로 뜨면 보고 있던
                발행 화면과 오가기가 번거롭고, 탭 목록에도 남지 않는다. --}}
           <a id="d-order-link" href="#" class="ds-btn"

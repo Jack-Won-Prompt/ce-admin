@@ -91,8 +91,6 @@
      시안(탭줄 바로 아래 pad 16 에서 ORD 머리줄 시작)과 어긋난다.
      지우지 않고 탭줄 오른쪽 끝으로 옮기고, 상세 내용 탭이 활성일 때만 보이게 한다.
      (활성 표시는 pnlShow() 가 붙이는 .active 클래스를 그대로 읽는다 — JS 는 건드리지 않는다) */
-  .pnl-tabs .pnl-back { margin-left: auto; align-self: center; display: none; }
-  .pnl-tabs #pnlBtnDetail.active ~ .pnl-back { display: inline-flex; }
   /* 결과바 '선택 N건' — 13/500 · gray-600, 숫자만 primary-400 */
   /* 기간 구분자 — 예전 선택자(.filter-sep)를 함께 남기되, 전역 .filter-sep 은
      세로 구분선(1×20px · 회색 배경)이라 여기서 그 형태를 되돌려 놓는다.
@@ -234,8 +232,6 @@
         <div class="pnl-tabs">
           <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
           <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
-          {{-- 상세 내용 패널 맨 위에 있던 '조회결과로' 버튼을 여기로 옮겼다(상세 내용 탭일 때만 보인다) --}}
-          <button type="button" class="ds-btn pnl-back" onclick="pnlShow('list')"><i class="fa-solid fa-arrow-left"></i> 조회결과로</button>
         </div>
 
         <div id="pnlList">

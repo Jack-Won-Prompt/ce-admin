@@ -311,9 +311,6 @@
 
 {{-- ── 상세내용 탭 (주문 상세 콘텐츠를 같은 페이지에 직접 주입) — 같은 카드 안 ── --}}
 <div id="pnlDetail" style="display:none;padding:16px;">
-  <div style="margin-bottom:12px;">
-    <button type="button" class="ds-btn" onclick="pnlShow('list')"><i class="bx bx-arrow-back"></i> 조회결과로</button>
-  </div>
   <div id="pnlEmpty" class="pnl-empty">조회결과에서 행을 <b>더블클릭</b>하면 주문 상세가 여기에 표시됩니다.</div>
   <div id="pnlDetailContent"></div>
 </div>
