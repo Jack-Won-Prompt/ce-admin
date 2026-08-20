@@ -29,7 +29,7 @@
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">제목 <span>*</span></label>
-          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="문의 제목을 입력하세요" required>
+          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="문의 제목을 입력하세요." required>
           @error('title')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
 

@@ -4,7 +4,11 @@
 {{-- page-title 이 없어 헤더에 기본값 '대시보드' 가 걸려 있었다 — 어느 화면에 있는지
      헤더만 보면 알 수 없었다. 사이드바·시안 사이드바(174:955)와 같은 이름으로 세운다. --}}
 @section('page-title', '기관 공지사항')
-@section('breadcrumb', '홈 - 지원 - 기관 공지사항')
+{{-- 시안 391:332 은 「홈 - 기관 공지사항」 두 마디다. 같은 「지원」 묶음 형제 넷
+     (391:7089 공지사항 · 391:7779 · 391:8218 · 391:9030 문의하기)도 전부 두 마디고,
+     시안 사이드바가 지원 아래 두면서도 빵부스러기에는 지원을 넣지 않는다.
+     어제 이 줄을 세 마디로 넣은 것을 바로잡는다. --}}
+@section('breadcrumb', '홈 - 기관 공지사항')
 
 @section('help-content')
   <div class="help-tip"><i class="bx bx-info-circle"></i>보건복지부·심사평가원·국민건강보험공단의 정책 공지를 자동 수집합니다. 로그인 시 당일 데이터가 없으면 자동 크롤링되며, <strong>지금 수집</strong> 버튼으로 수동 실행할 수 있습니다.</div>
@@ -99,7 +103,7 @@
       <label class="ds-field-label">검색어</label>
       <div class="search-wrap">
         <i class="bx bx-search"></i>
-        <input type="text" id="searchInput" class="form-control" placeholder="제목 검색...">
+        <input type="text" id="searchInput" class="form-control" placeholder="제목">
       </div>
     </div>
   </div>

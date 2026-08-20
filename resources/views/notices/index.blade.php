@@ -12,7 +12,10 @@
 window.HELP_TOUR_STEPS = [
   { selector: '#noticeGrid', title: '공지사항 목록', body: '관리자가 올린 공지사항 목록입니다. 제목을 클릭하면 내용을 확인할 수 있습니다.' },
   // 범위를 결과바로 좁힌다 — 전역 선택자였을 때 사이드바의 '처방전 관리'(/prescriptions/create)가 먼저 잡혔다
-  { selector: '.ds-grid-bar .btn-primary, .ds-grid-bar [href*="create"]', title: '공지 작성', body: '관리자는 <b>공지 작성</b> 버튼으로 새 공지사항을 등록할 수 있습니다.' },
+  /* 결과바(.ds-grid-bar)는 main 499d611 이 스물네 화면에서 걷었다 — 이 선택자는
+     아무것도 가리키지 못해 스포트라이트가 top:-9999px 로 가고 말풍선만 빈 화면에 떴다.
+     단추는 찾는 줄로 내려왔으므로 그 자리를 가리킨다(문의하기와 같은 모양). */
+  { selector: '.ds-filter-actions [href*="notices/create"], .ds-filter-actions .btn-primary', title: '공지 작성', body: '관리자는 <b>공지 작성</b> 버튼으로 새 공지사항을 등록할 수 있습니다.' },
 ];
 </script>
 @endpush
@@ -22,11 +25,12 @@ window.HELP_TOUR_STEPS = [
 {{-- 검색 필터 — 표준 필터 카드(r12 · pad 12/16), 라벨 13/500 위 · 입력 h32 아래 --}}
 <form method="GET" action="{{ route('notices.index') }}" class="ds-filter-card">
   <div class="ds-filter-fields">
-    <div class="ds-filter-field span-3">
+    {{-- 시안 391:6866 의 검색어 칸은 295(두 칸)다 — 세 칸이면 450.7 로 155.6 넓다 --}}
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <div class="search-wrap">
         <i class="bx bx-search"></i>
-        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목 또는 내용 검색...">
+        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목 또는 내용">
       </div>
     </div>
   </div>

@@ -35,7 +35,7 @@
       <label class="ds-field-label">검색어</label>
       <div class="search-wrap">
         <i class="bx bx-search"></i>
-        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목 검색...">
+        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="제목">
       </div>
     </div>
   </div>

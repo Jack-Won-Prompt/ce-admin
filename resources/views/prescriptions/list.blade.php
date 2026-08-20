@@ -212,12 +212,14 @@
 <script>
 window.HELP_TOUR_STEPS = [
   {
-    selector: '.status-tabs',
-    title: '상태 탭',
+    /* 상단 상태 칩은 main c99af13 이 걷고 검색 필터의 첫 칸으로 옮겼다 —
+       .status-tabs 는 마크업에 없어 아무것도 가리키지 못했다. */
+    selector: '.ds-filter-field:has(select[name="status"]), select[name="status"]',
+    title: '상태 고르기',
     body: '처방전을 상태별로 필터링합니다. <b>검수 필요</b> 탭을 먼저 확인하여 처리 대기 중인 처방전을 처리하세요.'
   },
   {
-    selector: '.filter-bar',
+    selector: '.ds-filter-card',
     title: '검색 및 필터',
     body: '이름, 처방번호, 병원명으로 검색하거나 날짜 범위를 지정해 조회할 수 있습니다.'
   },
