@@ -111,7 +111,7 @@
   const SHOW_BASE = @json(url('order-returns'));
   const grid = new wwGrid({
     el: document.getElementById('rtnGrid'),
-    height: 'fit', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+    height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
     columns: [
       { header: '접수번호', name: 'receipt',  width: 140, sortable: true },
       { header: '종류',     name: 'type',     width: 70,  align: 'center', sortable: true },

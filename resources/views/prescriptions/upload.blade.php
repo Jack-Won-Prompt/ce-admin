@@ -609,7 +609,7 @@ window.pkSearch = function () {
     pkGrid = new wwGrid({
       el: document.getElementById('pkGrid'),
       height: 320, editable: false, rowCheckbox: false, rowNumber: true,
-      toolbar: false, summary: false, footer: false,
+      toolbar: false, footer: false,
       columns: [
         { header: '이름',     name: 'name',   width: 140, sortable: true },
         { header: '전화번호', name: 'mobile', width: 160, sortable: true },

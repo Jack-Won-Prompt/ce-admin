@@ -561,7 +561,7 @@ document.addEventListener('keydown', (e) => {
   const DETAIL_BASE = @json(url('patients'));
   const grid = new wwGrid({
     el: document.getElementById('patientGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '이름',       name: 'name',            width: 110, sortable: true },
@@ -1125,7 +1125,7 @@ document.addEventListener('keydown', (e) => {
       if (!pcTabs[id].grid) {
         pcTabs[id].grid = new wwGrid({
           el: gridEl,
-          height: 'auto', editable: false, rowNumber: true, toolbar: false, summary: false, footer: false,
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
           columns: [
             { header: '상담 내용', name: 'action',    width: 420, sortable: true },
             { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },

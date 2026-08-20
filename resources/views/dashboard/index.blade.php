@@ -51,7 +51,7 @@
     el: el,
     // 시안 382:107 — 표 안쪽 스크롤이 없다(행이 전부 보인다). 높이를 주지 않으면 내용만큼 자란다.
     // 360 으로 못 박으면 10건이 찰 때 105px 이 잘려 나갔다.
-    editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },

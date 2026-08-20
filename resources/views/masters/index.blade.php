@@ -155,7 +155,7 @@
 
   const grid = new wwGrid({
     el: document.getElementById('masterGrid'),
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: cols,
     data: @json($gridData),

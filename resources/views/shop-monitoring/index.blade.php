@@ -101,7 +101,7 @@
   if (loginEl) {
     new wwGrid({
       el: loginEl,
-      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '상태',        name: 'status',        width: 80,  align: 'center', sortable: true },
@@ -123,7 +123,7 @@
     const LOG_BASE = @json(route('shop-monitoring.index'));
     const logGrid = new wwGrid({
       el: logEl,
-      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '날짜',     name: 'log_date',     width: 110, align: 'center', sortable: true },

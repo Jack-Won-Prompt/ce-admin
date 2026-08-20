@@ -184,7 +184,6 @@
   const itemGrid = new wwGrid({
     el: $('rtoItemGrid'),
     height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
-    summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
     columns: [
       { header: '제품코드', name: 'product_code', width: 120 },
       { header: '제품명',   name: 'product_name', width: 300 },

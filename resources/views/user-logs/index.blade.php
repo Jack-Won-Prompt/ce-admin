@@ -154,7 +154,7 @@ window.HELP_TOUR_STEPS = [
     el: document.getElementById('logGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — 전체 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: false,
     columns: [
       { header: '일시',      name: 'created', width: 150, sortable: true },

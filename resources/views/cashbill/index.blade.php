@@ -502,7 +502,7 @@
     // 레이아웃 바깥(.layout-wrapper)이 min-height:100vh 라 상한이 없어 줄어들지 않는다.
     // 그러면 15행이 뷰포트를 넘는 화면(높이 1073 미만 — 1080p·노트북 전부)에서
     // 표가 아니라 페이지 전체가 스크롤되고 머리행 고정도 풀린다. 기준값 460 을 남긴다.
-    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
+    height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: false,
     columns: [
       // 시안 324:4656 x479 머리글은 '거래 일시' 다 — 띄어쓰기가 있다(name·width 는 그대로)

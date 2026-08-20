@@ -565,7 +565,7 @@
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     // 시안은 표가 카드 남은 높이를 채운다(1568×858 = 탭 44 + 표 762 + 페이저 52).
     // 460 고정이면 카드 아래가 빈다 — 기준 구현 patients/index.blade.php 와 같이 'fit' 을 쓴다.
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: false,
     columns: [
       { header: '전송일시', name: 'sentAt',     width: 150, sortable: true },

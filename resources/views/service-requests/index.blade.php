@@ -230,7 +230,7 @@
 
   const grid = new wwGrid({
     el: document.getElementById('srxGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     toolbar: false,
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.

@@ -241,7 +241,7 @@ window.HELP_TOUR_STEPS = [
     el: document.getElementById('rxGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: false,
     columns: [
       { header: '처방번호',      name: 'rx_number',  width: 150, sortable: true },

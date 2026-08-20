@@ -3145,7 +3145,7 @@ const SrPanel = (() => {
   function buildGrid() {
     _grid = new wwGrid({
       el: document.getElementById('srGrid'),
-      height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+      height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '상태',   name: 'statusLabel',   width: 80,  align: 'center', sortable: true },

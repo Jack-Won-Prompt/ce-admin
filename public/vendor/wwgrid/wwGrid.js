@@ -517,7 +517,7 @@ class ExcelExporter {
    * @param {string}  [opts.filename='grid_export'] - 파일명 (확장자 제외)
    * @param {string}  [opts.sheetName='Sheet1']     - 워크시트명
    * @param {boolean} [opts.checkedOnly=false]      - 체크된 행만 출력
-   * @param {boolean} [opts.includeSummary]         - Sum 행 포함 (기본: grid.summary 설정값)
+   * @param {boolean} [opts.includeSummary]         - Sum 행 포함 (기본: 포함 — 화면의 합계줄과 맞춘다)
    */
   static download(grid, opts = {}) {
     const cols = grid.columns.filter(c => c.exportable !== false);
@@ -741,7 +741,12 @@ class wwGrid {
     this.rowNumber    = options.rowNumber   !== false;
     this.editable     = options.editable    !== false;
     this.height       = options.height || null;
-    this.summary      = options.summary     || false;
+    /* 합계줄은 이제 모든 그리드의 맨 아래에 똑같이 선다(_renderSummary 참고).
+       그래서 grid 단위 summary 옵션은 물린다 — 화면마다 표의 아래끝이 다르게 보이던
+       원인이 이 옵션이었다. 어느 칸을 더할지는 여전히 칸이 정한다
+       (editor:'number' 이고 col.summary !== false 인 칸만 더한다).
+       화면들이 아직 넘기는 summary: true/false 는 받아도 쓰지 않는다. */
+    this.summary      = true;
     // 빈 표에 적을 말 — 화면마다 다르게 부를 수 있다
     this.emptyText    = options.emptyText   || '검색 결과가 없습니다.';
     this.theme        = options.theme       || {};
@@ -1965,15 +1970,14 @@ class wwGrid {
 
   /* ── 푸터 갱신 ──────────────────────────────── */
   /* ── Sum 행 렌더링 ─────────────────────────── */
+  /* 맨 아래 합계줄. 모든 그리드에 언제나 선다 — 표의 아래끝이 화면마다 달라 보이지
+     않게 하기 위해서다. 예전에는 셋이 다 맞아야 그렸다:
+     (1) summary 를 켠 그리드일 것 (2) 줄이 하나라도 있을 것 (3) 숫자 칸이 있을 것.
+     이제는 줄이 언제나 서고, 더할 것이 있으면 숫자가 들어차고 없으면 「합계」 라벨만
+     있는 빈 줄로 남는다. tfoot 은 position:sticky 로 스크롤 상자 밑에 붙으므로
+     이 줄이 늘어도 그리드 높이는 달라지지 않는다(wwGrid.css:323). */
   _renderSummary() {
     this._tfootEl.innerHTML = '';
-    if (!this.summary) return;
-    // 줄이 하나도 없으면 합계도 없다 — 0 을 줄로 세워 둘 이유가 없다
-    if (!this.data.length) return;
-
-    // summary 대상 컬럼: editor=number 이고 col.summary !== false
-    const hasSumCol = this.columns.some(c => c.editor === 'number' && c.summary !== false);
-    if (!hasSumCol) return;
 
     const tr = document.createElement('tr');
     tr.className = 'cg-summary-row';
@@ -2003,13 +2007,16 @@ class wwGrid {
       inner.className = 'cg-cell-inner cg-align-right';
 
       if (col.editor === 'number' && col.summary !== false) {
-        // 합계 계산
-        const total = this.data.reduce((acc, row) => {
-          const v = Number(row[col.name]);
-          return acc + (isNaN(v) ? 0 : v);
-        }, 0);
-        inner.textContent = total.toLocaleString('ko-KR');
-        inner.classList.add('cg-summary-value');
+        /* 줄이 하나도 없으면 0 을 적지 않고 비워 둔다 —
+           아직 아무것도 더하지 않은 것과 더한 결과가 0 인 것은 다르다. */
+        if (this.data.length) {
+          const total = this.data.reduce((acc, row) => {
+            const v = Number(row[col.name]);
+            return acc + (isNaN(v) ? 0 : v);
+          }, 0);
+          inner.textContent = total.toLocaleString('ko-KR');
+          inner.classList.add('cg-summary-value');
+        }
       } else if (firstNonNum) {
         // 행 번호 없을 때 첫 컬럼에 합계 레이블
         inner.textContent = '합계';

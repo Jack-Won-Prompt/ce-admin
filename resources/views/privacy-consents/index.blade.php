@@ -217,7 +217,6 @@
     rowCheckbox: true,
     rowNumber: true,
     toolbar: false,         // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
-    summary: false,
     footer: false,          // 시안에 하단 상태바가 없다. 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다
     // 아래 폭은 옛 시안(266:66) 실측이다 — 체크 40 · No 60 · 주소 400 · 나머지 153 (합 1571 ≒ 카드 1568).
     // 새 시안 342:4037 은 컬럼 구성과 폭이 다르다 —

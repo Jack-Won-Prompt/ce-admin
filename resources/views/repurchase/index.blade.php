@@ -243,7 +243,7 @@ window.HELP_TOUR_STEPS = [
     el: el,
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — 전체 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false, summary: false,
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: false,
     columns: [
       { header: '재구매 가능일', name: 'repurchase', width: 130, sortable: true },

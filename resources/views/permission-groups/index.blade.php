@@ -161,7 +161,7 @@
   /* ── 그룹 목록 그리드 (wwGrid) ─────────────────────────── */
   const grid = new wwGrid({
     el: document.getElementById('pgGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true, summary: false,
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true,
     footer: { total: true, selected: true, modified: false },
     columns: [
       { header: '그룹명',   name: 'name',        width: 200, sortable: true },

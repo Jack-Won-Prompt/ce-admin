@@ -93,7 +93,7 @@
   const grid = new wwGrid({
     el: document.getElementById('ccGrid'),
     height: 'auto', editable: true, rowCheckbox: true, rowNumber: true,
-    toolbar: false, summary: false, footer: false,
+    toolbar: false, footer: false,
     columns: [
       { header: '유형',   name: 'kind_key',   width: 120, editor: 'combo', options: KIND_OPTS,
         defaultValue: KIND_OPTS[0]?.value ?? '' },
