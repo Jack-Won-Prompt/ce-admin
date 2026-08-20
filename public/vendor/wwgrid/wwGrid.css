@@ -318,7 +318,8 @@
 .cg-empty-row td.cg-empty-cell {
   height: 220px; text-align: center; vertical-align: middle;
   /* #8a9099 는 DS 램프에 없다 — 가장 가까운 gray-500 로 */
-  color: var(--gray-500, #999EA4); font-size: 13px; font-weight: 500;
+  /* 폴백값이 gray-400 의 값이었다 — gray-500 은 #83888F 다 */
+  color: var(--gray-500, #83888F); font-size: 13px; font-weight: 500; line-height: 21px;
   background: var(--cg-bg, #fff);
 }
 

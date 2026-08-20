@@ -303,6 +303,10 @@
   .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
              min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
   #tabsCol > .tab-pane { padding: 16px; }
+  /* 이 칸은 바탕이 흰색이라(위 269행) 안에 든 흰 카드가 테두리 없이는 경계를 잃는다.
+     전역 .card 는 회색 바탕 위를 전제로 테두리를 걷었다 — 여기서만 되돌린다.
+     시안 Frame 48101493 도 이 카드들에 #E8EAEC 테두리를 그린다. */
+  #tabsCol .card { border: 1px solid var(--border); }
   .tab-bar-tabs { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
   /* 오른쪽은 두 묶음이다 (시안 137:695) — 글자 링크(gap 12)와 테두리 버튼(gap 6), 사이는 16 */
   .tab-bar-acts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }

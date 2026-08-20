@@ -3097,10 +3097,11 @@ input#chatFileInput { display: none; }
   {{-- 목록 --}}
   <div class="sr-body" id="srPaneList">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-      {{-- 화면의 다른 고르는 칸과 같은 화살표를 달려면 .form-control 이어야 한다
-           (인라인 style 은 그대로 두어 이 패널의 높이·여백을 지킨다) --}}
+      {{-- 화면의 다른 고르는 칸과 같은 화살표를 달려면 .form-control 이어야 한다.
+           단 .form-control 은 width:100% 라 이 칸이 823 로 늘어 툴바가 32 → 72 로
+           두 줄이 되고 표가 40 내려갔다 — 폭만 제 글자만큼으로 되돌린다. --}}
       <select id="srFilterStatus" class="form-control" onchange="SrPanel.load()"
-              style="height:32px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              style="width:auto;height:32px;padding:0 30px 0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
         <option value="">전체 상태</option>
         @foreach($srStatuses ?? \App\Models\ServiceRequest::STATUSES as $k => $v)
           <option value="{{ $k }}">{{ $v }}</option>

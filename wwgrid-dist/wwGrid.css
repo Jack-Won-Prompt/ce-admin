@@ -60,7 +60,8 @@
   color: var(--gray-600, #656C74);
   font-weight: 700;
   font-size: 13px;
-  line-height: 1.6;
+  /* 시안 머리 글자는 13/700 lh21 이다. 1.6 은 20.8 이라 행 높이가 소수로 떨어진다 */
+  line-height: 21px;
   padding: 0;
   /* Figma 148:5526 — 머리행은 세로 구분선 없이 하단 1px 만 있고 글자는 왼쪽이다.
      sticky 헤더가 스크롤 중 테두리를 잃는 것은 배경으로 그은 1px 이 대신 메운다
@@ -164,7 +165,8 @@
   color: var(--gray-1000, #101317);
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.6;
+  /* 시안 본문 셀 13/400 lh21 — 10 + 21 + 10 = 41 이 시안 행 높이다 */
+  line-height: 21px;
   cursor: default;
   white-space: nowrap;
   overflow: hidden;
@@ -312,14 +314,28 @@
 .cg-wrap::-webkit-scrollbar-thumb { background: var(--cg-border-sub); border-radius: 4px; }
 .cg-wrap::-webkit-scrollbar-thumb:hover { background: #8898aa; }
 
+/* ── 빈 표 ── — 찾은 것이 없어도 표 몸통은 그대로 둔다 */
+.cg-empty-row td.cg-empty-cell {
+  height: 220px; text-align: center; vertical-align: middle;
+  /* #8a9099 는 DS 램프에 없다 — 가장 가까운 gray-500 로 */
+  /* 폴백값이 gray-400 의 값이었다 — gray-500 은 #83888F 다 */
+  color: var(--gray-500, #83888F); font-size: 13px; font-weight: 500; line-height: 21px;
+  background: var(--cg-bg, #fff);
+}
+
 /* ── Summary (Sum) Row ── */
 .cg-tfoot .cg-summary-row td {
   border-top: 2px solid var(--cg-border-sub);
   border-right: 1px solid var(--cg-border);
   background: var(--cg-summary-bg);
+  /* 줄이 많으면 합계가 끝까지 스크롤해야 보였다 — 밑에 붙여 둔다 */
+  position: sticky; bottom: 0; z-index: 3;
 }
-.cg-summary-label { font-weight: 600; color: #555; justify-content: flex-end; }
-.cg-summary-value { font-weight: 700; color: #1a3a5c; }
+/* 굵기 600 과 #555 · #1a3a5c 는 시안에 없는 값이다 —
+   시안 굵기는 400/500/700 셋뿐이고 색은 DS 램프 26 색뿐이다.
+   합계 이름은 머리행과 같은 700/gray-600, 값은 gray-1000 으로 둔다. */
+.cg-summary-label { font-weight: 700; color: #656C74; justify-content: flex-end; }
+.cg-summary-value { font-weight: 700; color: #101317; }
 
 /* ── Popup cell trigger icon ── */
 .cg-popup-trigger {
@@ -350,6 +366,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 팝오버로 열 때 — 바깥을 덮지 않는다.
+   고르려는 칸이 그대로 보여야 무엇을 고치던 중이었는지 놓치지 않는다.
+   자리를 차지하되 어둡게 깔지 않고, 바깥을 눌러 닫는 길만 남긴다. */
+.cg-modal-overlay-bare {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: block;
+}
+.cg-modal-popover {
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(15, 25, 50, 0.08);
+  animation: cg-popover-in 0.12s ease-out;
+  max-width: none;
+}
+@keyframes cg-popover-in {
+  from { transform: translateY(-4px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 /* ── Modal Box ── */
