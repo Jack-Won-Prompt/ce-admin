@@ -24,7 +24,11 @@
   .ss-field  { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .ss-help   { font-size: 11px; color: var(--gray-500); line-height: 1.5; }
   .ss-check  { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 13px; color: var(--gray-800); cursor: pointer; }
-  .ss-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .ss-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* 시험 결과는 단추 왼쪽에 그대로 적는다 — 토스트로 띄우면 사유가 길어 잘린다 */
+  .ss-test-out { margin-right: auto; font-size: 12px; line-height: 1.5; }
+  .ss-test-out.ok  { color: var(--success, #12805c); font-weight: 600; }
+  .ss-test-out.err { color: var(--danger, #b42318); font-weight: 600; }
   .ss-flash { padding: 10px 14px; border-radius: 8px; background: var(--primary-light); color: var(--primary); font-size: 13px; font-weight: 600; }
 </style>
 
@@ -101,7 +105,19 @@
       </div>
     </div>
 
+    @if (!empty($def['test']['route']))
+      {{-- 시험은 화면의 입력칸이 아니라 「저장된」 값으로 돈다. 서버에 든 것이 실제로
+           나가는 값이라, 고치는 중인 값으로 시험하면 결과가 거짓이 된다. --}}
+      <span class="ss-help">{{ $def['test']['help'] ?? '' }}</span>
+    @endif
+
     <div class="ss-actions">
+      @if (!empty($def['test']['route']))
+        <span class="ss-test-out" id="ssTestOut-{{ $group }}"></span>
+        <button type="button" class="ds-btn ss-test" data-url="{{ route($def['test']['route']) }}" data-group="{{ $group }}">
+          <i class="bx bx-plug"></i> {{ $def['test']['label'] ?? '연결 테스트' }}
+        </button>
+      @endif
       <button type="submit" class="ds-btn ds-btn-primary">저장</button>
     </div>
   </form>
@@ -129,5 +145,36 @@
       history.replaceState(null, '', url);
     });
   })();
+
+  /* 연결 테스트 — 스키마에 test.route 를 적어 둔 묶음에만 단추가 서 있다.
+     묶음이 늘어도 이 조각은 그대로다. 폼 안에 있는 단추라 type="button" 이어야
+     저장이 딸려 나가지 않는다. */
+  document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.ss-test');
+    if (!btn) return;
+
+    const out = document.getElementById('ssTestOut-' + btn.dataset.group);
+    btn.disabled = true;
+    if (out) { out.className = 'ss-test-out'; out.textContent = '테스트 중…'; }
+
+    try {
+      const res = await fetch(btn.dataset.url, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+          'Accept': 'application/json',
+        },
+      });
+      const d = await res.json();
+      if (out) {
+        out.className = 'ss-test-out ' + (d.ok ? 'ok' : 'err');
+        out.textContent = (d.ok ? '✅ ' : '⚠️ ') + (d.message || '') + (d.detail ? ' (' + d.detail + ')' : '');
+      }
+    } catch (err) {
+      if (out) { out.className = 'ss-test-out err'; out.textContent = '⚠️ 테스트 요청 중 오류가 발생했습니다.'; }
+    } finally {
+      btn.disabled = false;
+    }
+  });
 </script>
 @endsection

@@ -141,6 +141,15 @@ return [
         'label' => '본인확인(NICE)',
         'desc'  => '위임동의 링크에서 휴대폰 본인확인. 자격증명 3개가 모두 채워져야 켜진다.',
         'model' => \App\Models\NiceSetting::class,
+        // 이 묶음에는 「연결 테스트」 단추가 선다. 전용 화면(/settings/nice)에만 있던 것을
+        // 여기서도 누를 수 있게 한다 — 그 화면은 메뉴에 없어 주소를 알아야 닿는다.
+        // route 만 적으면 화면이 알아서 단추를 그린다. 다른 묶음도 같은 방법으로 붙일 수 있다.
+        'test' => [
+            'route' => 'nice-settings.test',
+            'label' => '연결 테스트',
+            'help'  => '저장된 자격증명으로 기관토큰ㆍ암호화토큰 발급까지만 확인합니다. '
+                     . '표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 바꿨다면 먼저 저장하세요.',
+        ],
         'fields' => [
             'client_id'     => ['label' => '클라이언트 ID', 'column' => 'client_id', 'width' => 3],
             'client_secret' => ['label' => '클라이언트 시크릿', 'column' => 'client_secret', 'type' => 'password', 'width' => 3],
