@@ -389,16 +389,14 @@
   const DETAIL_BASE = @json(url('orders'));
   const grid = new wwGrid({
     el: document.getElementById('nhisGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, summary: true,   /* 수량·금액은 맨 아래에서 합계를 낸다 */
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true,
+    summary: false,  /* 금액 칸이 없어 합계 낼 것이 없다 — 청구액·본인부담금을 뺀 자리 */
     toolbar: false,  // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     footer: false,   // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '이름',      name: 'patient',       width: 90,  sortable: true },
       { header: '신환/구환',   name: 'patient_type',  width: 90,  align: 'center', sortable: true },
-      { header: '제품명',      name: 'product',       width: 170 },
-      { header: '청구액',  name: 'nhis_amount',   width: 110, editor: 'number' },
-      { header: '본인부담금',  name: 'patient_copay', width: 100, editor: 'number' },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       {

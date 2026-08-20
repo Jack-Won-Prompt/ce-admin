@@ -1156,7 +1156,6 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '주문번호',   name: 'order_number', width: 130, sortable: true },
       { header: '이름',     name: 'patient_name', width: 90,  sortable: true },
-      { header: '제품명',     name: 'product_name', width: 180, sortable: true },
       { header: '총금액',     name: 'total_amount', width: 110, align: 'right', editor: 'number', sortable: true },
       { header: '주문상태',   name: 'status_label', width: 90,  align: 'center', sortable: true },
       { header: '주문일',     name: 'created_at',   width: 100, align: 'center', sortable: true },
