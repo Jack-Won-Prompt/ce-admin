@@ -27,15 +27,22 @@ class GridModal {
   open(opts) {
     this.close();
     const { title, width = 480, height = 420, items, render, onSearch,
-            currentValue, onConfirm, popupTheme } = opts;
+            currentValue, onConfirm, popupTheme, anchor,
+            /* minChars: 이 글자 수 이상일 때만 찾으러 간다. 두 글자로 찾으면 수백 건이
+               쏟아져 고르지 못하고, 그 조회가 서버를 붙들어 다음 조회까지 늦춘다.
+               query: 창을 열 때 이미 적혀 있던 말. 열자마자 그대로 찾는다 —
+               방금 친 것을 창에서 또 치게 하지 않는다. */
+            minChars = 1, query = '' } = opts;
     this._onConfirm = onConfirm;
 
-    // ── 오버레이 & 모달 ──
+    /* anchor 를 주면 화면 한가운데가 아니라 그 자리 옆에 붙는다(팝오버).
+       고르려는 칸을 가리지 않아, 무엇을 고치던 중이었는지 놓치지 않는다.
+       바깥을 덮지 않으므로 어둡게 깔지도 않는다 — 다만 바깥을 눌러 닫는 길은 남긴다. */
     const overlay = document.createElement('div');
-    overlay.className = 'cg-modal-overlay';
+    overlay.className = 'cg-modal-overlay' + (anchor ? ' cg-modal-overlay-bare' : '');
 
     const modal = document.createElement('div');
-    modal.className = 'cg-modal';
+    modal.className = 'cg-modal' + (anchor ? ' cg-modal-popover' : '');
     modal.style.width    = width + 'px';
     modal.style.maxHeight = height + 'px';
 
@@ -56,6 +63,9 @@ class GridModal {
     document.body.appendChild(overlay);
     this._overlay = overlay;
 
+    // 붙일 자리가 있으면 그 아래에 둔다. 화면 밖으로 나가면 위나 안쪽으로 접어 넣는다.
+    if (anchor) this._placeBy(modal, anchor, width, height);
+
     // ── 팝업 색상 테마 인라인 적용 ──
     this._applyPopupTheme(modal, hdr, body, popupTheme || {});
 
@@ -68,7 +78,7 @@ class GridModal {
     if (render) {
       render(body, currentValue, done);
     } else if (onSearch) {
-      this._renderRemoteSearch(body, onSearch, currentValue, done);
+      this._renderRemoteSearch(body, onSearch, currentValue, done, minChars, query);
     } else if (items) {
       this._renderItemList(body, items, currentValue, done);
     }
@@ -87,13 +97,20 @@ class GridModal {
    * @param {*}           currentValue
    * @param {Function}    done      - (value, label) => void
    */
-  _renderRemoteSearch(body, onSearch, currentValue, done) {
+  _renderRemoteSearch(body, onSearch, currentValue, done, minChars = 1, query = '') {
+    const need = Math.max(1, minChars);
+    const hint = need > 1
+      ? `코드나 이름을 ${need}자 이상 입력하면 검색합니다.`
+      : '코드나 이름을 입력하면 검색합니다.';
+
     // ── 검색창 ──
     const searchWrap = document.createElement('div');
     searchWrap.className = 'cg-modal-search-wrap';
     const search = document.createElement('input');
     search.className = 'cg-modal-search';
-    search.placeholder = '코드 또는 이름으로 검색...';
+    search.placeholder = need > 1
+      ? `코드 또는 이름 ${need}자 이상 입력...`
+      : '코드 또는 이름으로 검색...';
     searchWrap.appendChild(search);
     body.appendChild(searchWrap);
 
@@ -105,7 +122,7 @@ class GridModal {
     // ── 목록 ──
     const list = document.createElement('div');
     list.className = 'cg-modal-list';
-    list.innerHTML = '<div class="cg-modal-hint">코드나 이름을 입력하면 검색합니다.</div>';
+    list.innerHTML = `<div class="cg-modal-hint">${hint}</div>`;
     body.appendChild(list);
 
     let _timer   = null;
@@ -159,10 +176,10 @@ class GridModal {
     search.addEventListener('input', () => {
       const q = search.value.trim();
       clearTimeout(_timer);
-      if (!q) {
+      if (q.length < need) {
         _seq++;
         status.textContent = '';
-        list.innerHTML = '<div class="cg-modal-hint">코드나 이름을 입력하면 검색합니다.</div>';
+        list.innerHTML = `<div class="cg-modal-hint">${hint}</div>`;
         return;
       }
       status.innerHTML = '<span style="color:#aaa;font-size:11px;">입력 중...</span>';
@@ -174,11 +191,17 @@ class GridModal {
       if (e.key === 'Enter') {
         e.preventDefault();
         const q = search.value.trim();
-        if (q) { clearTimeout(_timer); doSearch(q); }
+        if (q.length >= need) { clearTimeout(_timer); doSearch(q); }
       }
     });
 
-    setTimeout(() => search.focus(), 50);
+    // 이미 적혀 있던 말이 있으면 열자마자 그대로 찾는다
+    if (query) {
+      search.value = query;
+      if (query.trim().length >= need) doSearch(query.trim());
+    }
+
+    setTimeout(() => { search.focus(); search.select(); }, 50);
   }
 
   /** 내장 검색 가능 리스트 */
@@ -243,6 +266,39 @@ class GridModal {
     renderList();
     search.addEventListener('input', () => renderList(search.value));
     setTimeout(() => search.focus(), 50);
+  }
+
+  /**
+   * 팝오버를 기준 자리 옆에 놓는다.
+   *
+   * 아래에 자리가 모자라면 위로 올리고, 오른쪽으로 넘치면 왼쪽으로 당긴다.
+   * 창을 넘어가 잘리면 고를 수 없다.
+   */
+  _placeBy(modal, anchor, width, maxHeight) {
+    const r  = anchor.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const gap = 4;
+
+    let left = r.left;
+    if (left + width + 8 > vw) left = Math.max(8, vw - width - 8);
+
+    const below = vh - r.bottom - gap;
+    const above = r.top - gap;
+    let top, h;
+
+    if (below >= Math.min(maxHeight, 240) || below >= above) {
+      top = r.bottom + gap;
+      h   = Math.min(maxHeight, below - 8);
+    } else {
+      h   = Math.min(maxHeight, above - 8);
+      top = r.top - gap - h;
+    }
+
+    modal.style.position  = 'fixed';
+    modal.style.left      = Math.round(left) + 'px';
+    modal.style.top       = Math.round(Math.max(8, top)) + 'px';
+    modal.style.maxHeight = Math.round(Math.max(160, h)) + 'px';
   }
 
   /** popup 색상 테마 인라인 적용 */
@@ -461,7 +517,7 @@ class ExcelExporter {
    * @param {string}  [opts.filename='grid_export'] - 파일명 (확장자 제외)
    * @param {string}  [opts.sheetName='Sheet1']     - 워크시트명
    * @param {boolean} [opts.checkedOnly=false]      - 체크된 행만 출력
-   * @param {boolean} [opts.includeSummary]         - Sum 행 포함 (기본: grid.summary 설정값)
+   * @param {boolean} [opts.includeSummary]         - Sum 행 포함 (기본: 포함 — 화면의 합계줄과 맞춘다)
    */
   static download(grid, opts = {}) {
     const cols = grid.columns.filter(c => c.exportable !== false);
@@ -685,7 +741,14 @@ class wwGrid {
     this.rowNumber    = options.rowNumber   !== false;
     this.editable     = options.editable    !== false;
     this.height       = options.height || null;
-    this.summary      = options.summary     || false;
+    /* 합계줄은 이제 모든 그리드의 맨 아래에 똑같이 선다(_renderSummary 참고).
+       그래서 grid 단위 summary 옵션은 물린다 — 화면마다 표의 아래끝이 다르게 보이던
+       원인이 이 옵션이었다. 어느 칸을 더할지는 여전히 칸이 정한다
+       (editor:'number' 이고 col.summary !== false 인 칸만 더한다).
+       화면들이 아직 넘기는 summary: true/false 는 받아도 쓰지 않는다. */
+    this.summary      = true;
+    // 빈 표에 적을 말 — 화면마다 다르게 부를 수 있다
+    this.emptyText    = options.emptyText   || '검색 결과가 없습니다.';
     this.theme        = options.theme       || {};
     // toolbar: true(기본, 엑셀 버튼 표시) | false(툴바 숨김)
     this.toolbar = options.toolbar !== undefined ? options.toolbar : true;
@@ -821,9 +884,14 @@ class wwGrid {
   /* ── height:'fit' 계산: 페이지 스크롤이 없어지도록 래퍼 높이를 뷰포트에 맞춤 ── */
   _applyFitHeight() {
     if (this.height !== 'fit' || !this._wrapEl) return;
+    // 0차: 내용이 짧으면 그만큼만 둔다 — 뷰포트까지 늘려 두면
+    //      마지막 줄 아래로 흰 바닥이 화면 끝까지 남는다.
+    this._wrapEl.style.height = '';
+    const natural = this._wrapEl.scrollHeight;
     // 1차: 래퍼 상단부터 뷰포트 하단까지 대략 채움
     const top = this._wrapEl.getBoundingClientRect().top; // 뷰포트 기준
     let h = Math.max(160, Math.floor(window.innerHeight - top - 16));
+    if (natural > 0 && natural < h) h = natural;
     this._wrapEl.style.height = h + 'px';
     // 2차: 그래도 페이지가 넘치면(푸터·레이아웃 하단여백 등) 넘친 만큼 줄여 페이지 스크롤 제거
     const overflow = document.documentElement.scrollHeight - window.innerHeight;
@@ -962,6 +1030,21 @@ class wwGrid {
   /* ── 바디 렌더링 ────────────────────────────── */
   _renderBody() {
     this._tbodyEl.innerHTML = '';
+
+    /* 찾은 것이 없을 때도 표는 자리를 지킨다. 머리줄만 남기면 못 불러온 것인지
+       없는 것인지 알 길이 없고, 아래 화면이 불쪽 솔아오른다. */
+    if (!this.data.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'cg-empty-row';
+      const td = document.createElement('td');
+      td.className = 'cg-empty-cell';
+      td.colSpan = this.columns.length + (this.rowCheckbox ? 1 : 0) + (this.rowNumber ? 1 : 0);
+      td.textContent = this.emptyText;
+      tr.appendChild(td);
+      this._tbodyEl.appendChild(tr);
+      return;
+    }
+
     this.data.forEach((row, rowIndex) => {
       this._tbodyEl.appendChild(this._makeRow(row, rowIndex));
     });
@@ -1149,7 +1232,7 @@ class wwGrid {
       // popup 에디터 → 모달 직접 오픈 (인라인 편집 없음)
       if (colDef.editor === 'popup') {
         if (this._editingCell) this._commitEdit();
-        this._openPopup(ri, col, colDef);
+        this._openPopup(ri, col, colDef, inner.closest('td') || inner);
         return;
       }
 
@@ -1596,7 +1679,7 @@ class wwGrid {
   }
 
   /* ── Popup 에디터 ───────────────────────────── */
-  _openPopup(rowIndex, colName, colDef) {
+  _openPopup(rowIndex, colName, colDef, anchorEl) {
     const currentValue = this.data[rowIndex][colName];
     const opts         = colDef.popup || {};
 
@@ -1607,6 +1690,8 @@ class wwGrid {
       items:        opts.items    || null,
       render:       opts.render   || null,
       onSearch:     opts.onSearch || null,
+      // 팝오버로 열라고 했으면 누른 칸에 붙인다
+      anchor:       opts.mode === 'popover' ? (anchorEl || null) : null,
       currentValue,
       // 그리드 테마에서 popup 색상 추출하여 전달
       popupTheme: {
@@ -1620,6 +1705,13 @@ class wwGrid {
       },
       onConfirm: (value, label) => {
         this._commitValue(rowIndex, colName, value);
+
+        /* 고른 것 하나로 옆 칸까지 채워야 할 때가 있다 — 제품을 고르면 코드·이름·단가가
+           함께 정해지는 식이다. 팝업이 값 하나만 넣고 끝내면 나머지는 사람이 옮겨 적어야
+           하고, 그러면 어긋난다. 부르는 쪽이 채우도록 자리를 열어 둔다. */
+        if (typeof opts.onSelect === 'function') {
+          opts.onSelect(rowIndex, value, label, this);
+        }
       }
     });
   }
@@ -1727,8 +1819,11 @@ class wwGrid {
     // 새 행이 보이도록 스크롤
     this._wrapEl.scrollTop = this._wrapEl.scrollHeight;
 
-    // 첫 편집 가능 컬럼으로 자동 포커스
-    const firstEditCol = this.columns.find(c => c.editor && c.editor !== 'checkbox');
+    /* 첫 편집 가능 컬럼으로 자동 포커스.
+       popup 칸은 건너뛴다 — 인라인 편집을 걸어 두면 셀이 편집 중으로 잠겨, 그다음
+       클릭이 「이미 편집 중」으로 되돌아가 조회 창이 영영 열리지 않는다. */
+    const firstEditCol = this.columns.find(c =>
+      c.editor && c.editor !== 'checkbox' && c.editor !== 'popup');
     if (firstEditCol) {
       const td = tr.querySelector(`td[data-col-name="${firstEditCol.name}"]`);
       if (td) setTimeout(() => this._startEdit(newIndex, firstEditCol.name, td), 0);
@@ -1875,13 +1970,14 @@ class wwGrid {
 
   /* ── 푸터 갱신 ──────────────────────────────── */
   /* ── Sum 행 렌더링 ─────────────────────────── */
+  /* 맨 아래 합계줄. 모든 그리드에 언제나 선다 — 표의 아래끝이 화면마다 달라 보이지
+     않게 하기 위해서다. 예전에는 셋이 다 맞아야 그렸다:
+     (1) summary 를 켠 그리드일 것 (2) 줄이 하나라도 있을 것 (3) 숫자 칸이 있을 것.
+     이제는 줄이 언제나 서고, 더할 것이 있으면 숫자가 들어차고 없으면 「합계」 라벨만
+     있는 빈 줄로 남는다. tfoot 은 position:sticky 로 스크롤 상자 밑에 붙으므로
+     이 줄이 늘어도 그리드 높이는 달라지지 않는다(wwGrid.css:323). */
   _renderSummary() {
     this._tfootEl.innerHTML = '';
-    if (!this.summary) return;
-
-    // summary 대상 컬럼: editor=number 이고 col.summary !== false
-    const hasSumCol = this.columns.some(c => c.editor === 'number' && c.summary !== false);
-    if (!hasSumCol) return;
 
     const tr = document.createElement('tr');
     tr.className = 'cg-summary-row';
@@ -1911,13 +2007,16 @@ class wwGrid {
       inner.className = 'cg-cell-inner cg-align-right';
 
       if (col.editor === 'number' && col.summary !== false) {
-        // 합계 계산
-        const total = this.data.reduce((acc, row) => {
-          const v = Number(row[col.name]);
-          return acc + (isNaN(v) ? 0 : v);
-        }, 0);
-        inner.textContent = total.toLocaleString('ko-KR');
-        inner.classList.add('cg-summary-value');
+        /* 줄이 하나도 없으면 0 을 적지 않고 비워 둔다 —
+           아직 아무것도 더하지 않은 것과 더한 결과가 0 인 것은 다르다. */
+        if (this.data.length) {
+          const total = this.data.reduce((acc, row) => {
+            const v = Number(row[col.name]);
+            return acc + (isNaN(v) ? 0 : v);
+          }, 0);
+          inner.textContent = total.toLocaleString('ko-KR');
+          inner.classList.add('cg-summary-value');
+        }
       } else if (firstNonNum) {
         // 행 번호 없을 때 첫 컬럼에 합계 레이블
         inner.textContent = '합계';
@@ -1975,3 +2074,5 @@ class wwGrid {
 
 // 전역 노출
 window.wwGrid = wwGrid;
+/* 그리드 밖에서도 같은 팝업을 쓴다 — 화면마다 조회 창을 새로 만들면 생김새가 갈린다 */
+window.GridModal = GridModal;
