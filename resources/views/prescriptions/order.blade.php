@@ -567,6 +567,16 @@
      1100 아래 1열은 원래 있던 규칙 그대로다. */
   @media (max-width:1599px) { .rx-cols { grid-template-columns:1fr 1fr; } }
   @media (max-width:1100px) { .rx-cols { grid-template-columns:1fr; } }
+  /* 환자 정보 구획만 넷으로 나눈다 — 「공단 재등록」 둘을 「기초(의료급여) 재평가」 셋의
+     오른쪽에 세우라는 요청이다. 열이 셋이면 넷째 열이 다음 줄 왼쪽으로 내려앉아
+     요청과 정반대가 된다.
+     넷으로 서려면 폭이 든다 — 위 계산식으로 입력영역이 1920→157 · 1728→109 라
+     1728 부터 날짜값이 잘리기 시작한다. 그래서 1900 아래로는 3열을 건너뛰고 바로 2열로
+     접는다. 2열에서도 [이름][전화] / [기초 재평가][공단 재등록] 으로 나뉘어
+     왼쪽·오른쪽 관계는 그대로 남는다. */
+  .rx-cols.rx-cols-4 { grid-template-columns:repeat(4,1fr); }
+  @media (max-width:1899px) { .rx-cols.rx-cols-4 { grid-template-columns:1fr 1fr; } }
+  @media (max-width:1100px) { .rx-cols.rx-cols-4 { grid-template-columns:1fr; } }
   /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
   .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
                  height:32px; padding:0 12px; border-radius:8px;
@@ -858,10 +868,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- 왼쪽 — 이름과 배지 (시안 137:301) --}}
         <div class="pib-ident">
           <span class="pib-name" id="hdrPatientName">
+            {{-- 「(OCR)」 꼬리표는 두지 않는다. 이름이 어디서 왔는지는 보는 사람이
+                 할 일을 바꾸지 않고, 아직 환자로 맺어지지 않았다는 것은 옆의 주민번호
+                 칸이 이미 말한다. --}}
             {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }}
-            @if(!$prescription->patient)
-              <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px;">(OCR)</span>
-            @endif
           </span>
           <span class="pib-chip" id="hdrPatientSub">
             @if($prescription->patient)
@@ -2094,7 +2104,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div class="rx-sec-head" style="margin-top:24px;">
               <span class="rx-sec-title">환자 정보</span>
             </div>
-            <div class="rx-cols">
+            <div class="rx-cols rx-cols-4">
             <div class="rx-col">
               {{-- 1열 — 이름* · 구분(SB/SCI) · 주민등록번호 · 생년월일(1) · Email · 주소.
                    1차 요청서 15쪽이 적은 환자 정보 순서를 따른다
@@ -2290,17 +2300,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
 
             <div class="rx-col">
-              {{-- 3열 — 건보 재등록 대상자/기한 · 기초(의료급여) 재평가 대상자/기한 ·
-                   신환 Master 등록일 (1차 요청서 15쪽 순서, 시안 315:58 Frame 48101515) --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 재등록 대상자</span>
-                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 재등록 기한</span>
-                <input type="date" class="form-control" id="f-nhis-renew-due"
-                       value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
-              </div>
+              {{-- 3열 — 기초(의료급여) 재평가 대상자/기한 · 신환 Master 등록일.
+                   1차 요청서 15쪽은 공단 재등록 둘을 이 앞에 적었지만, 그 둘은 오른쪽
+                   4열로 갈라 세운다(요청). 셋과 둘로 나뉘어 서로 가리지 않는다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
                 <input type="text" class="form-control" id="f-basic-reeval"
@@ -2316,6 +2318,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">신환 Master 등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
+              </div>
+            </div>
+
+            <div class="rx-col">
+              {{-- 4열 — 공단 재등록 대상자/기한. 3열의 기초 재평가 셋 오른쪽에 세운다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 재등록 대상자</span>
+                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 재등록 기한</span>
+                <input type="date" class="form-control" id="f-nhis-renew-due"
+                       value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
             </div>{{-- /rx-cols --}}
