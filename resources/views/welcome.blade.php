@@ -251,6 +251,22 @@
     .footer-links a { color:var(--text-dim); text-decoration:none; transition:color .2s; }
     .footer-links a:hover { color:#72BCCC; }
 
+    /* 기업 정보 — 바닥글 바로 위. 값은 설정에 든 것을 그대로 읽으므로 여기 적을 것이 없다. */
+    .corp-info {
+      border-top:1px solid var(--border-dark); padding:32px 64px 4px;
+      position:relative; z-index:1;
+    }
+    .corp-info-name { font-size:13px; font-weight:700; color:rgba(255,255,255,.72); margin-bottom:10px; }
+    .corp-info-list {
+      display:flex; flex-wrap:wrap; gap:2px 24px;
+      font-size:12.5px; line-height:1.9; color:var(--text-dim);
+    }
+    .corp-info-list b { font-weight:500; color:var(--text-muted); margin-right:6px; }
+    /* 주소는 길어 한 줄을 통째로 쓴다 — 다른 항목 사이에 끼면 줄이 들쭉날쭉해진다 */
+    .corp-info-addr { flex-basis:100%; }
+    /* 줄이 둘 겹치지 않게 — 위 구획이 이미 선을 그었다 */
+    .corp-info + .footer { border-top:none; padding-top:16px; }
+
     @media (max-width:768px) {
       .navbar { padding:0 24px; }
       .hero { padding:100px 20px 60px; }
@@ -260,6 +276,9 @@
       .workflow-step { border-right:none; border-bottom:1px solid var(--border-dark); }
       .workflow-step:last-child { border-bottom:none; }
       .footer { padding:24px; flex-direction:column; align-items:center; text-align:center; }
+      /* 좌우 여백은 바닥글과 같은 24 로. 가운데 정렬은 하지 않는다 —
+         항목이 여럿이라 가운데로 모으면 어느 값이 어느 이름인지 읽기 어렵다. */
+      .corp-info { padding:24px 24px 4px; }
     }
   </style>
 </head>
@@ -416,6 +435,37 @@
       </a>
     </div>
   </section>
+
+  {{-- 기업 정보 — 값은 설정에 든 것을 그대로 읽는다(서비스 연동 설정 · .env).
+       화면에 박아 두면 상호ㆍ주소가 바뀔 때 이 자리만 옛것으로 남는다. --}}
+  @php
+    /* 사업자등록번호는 팝빌 발행에 쓰는 번호가 곧 회사 번호다. 키 이름에 test 가 붙어 있지만
+       운영 전환(IsTest=false) 뒤로는 실제 발행에 쓰는 번호라 따로 둘 이유가 없다. */
+    $corpNum  = preg_replace('/^(\d{3})(\d{2})(\d{5})$/', '$1-$2-$3', (string) config('popbill.test.corp_num'));
+    $corpName = config('popbill.company.corp_name');
+    $corpRows = array_filter([
+      '대표자'         => config('popbill.company.ceo_name'),
+      '사업자등록번호' => $corpNum,
+      '업태'           => config('popbill.company.biz_type'),
+      '종목'           => config('popbill.company.biz_class'),
+      '대표전화'       => config('popbill.company.tel'),
+      '팩스'           => config('popbill.test.fax_sender'),
+      '이메일'         => config('popbill.company.email'),
+    ]);
+  @endphp
+  @if($corpName)
+  <section class="corp-info">
+    <div class="corp-info-name">{{ $corpName }}</div>
+    <div class="corp-info-list">
+      @foreach($corpRows as $k => $v)
+        <span><b>{{ $k }}</b>{{ $v }}</span>
+      @endforeach
+      @if(config('popbill.company.addr'))
+      <span class="corp-info-addr"><b>주소</b>{{ config('popbill.company.addr') }}</span>
+      @endif
+    </div>
+  </section>
+  @endif
 
   {{-- FOOTER --}}
   <footer class="footer">
