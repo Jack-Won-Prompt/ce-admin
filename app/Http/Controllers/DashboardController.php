@@ -14,7 +14,8 @@ class DashboardController extends Controller
         // 업무 큐 통계
         $stats = [
             'review_needed'  => Prescription::where('status', 'review_needed')->count(),
-            'ocr_processing' => Prescription::whereIn('status', ['pending', 'ocr_processing'])->count(),
+            // 담당자가 다 적고 검수를 기다리는 것. 예전 「처리중」(OCR) 자리를 대신한다.
+            'review_requested' => Prescription::where('status', 'review_requested')->count(),
             'approved_today' => Prescription::where('status', 'approved')->whereDate('reviewed_at', today())->count(),
             'total_today'    => Prescription::whereDate('created_at', today())->count(),
             'total_month'    => Prescription::whereMonth('created_at', now()->month)->count(),

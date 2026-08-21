@@ -1338,7 +1338,8 @@
           <a class="menu-link" data-icon="file-02" href="{{ route('prescriptions.index') }}" data-title="처방전 목록">
             @dsicon('file-02', 'ds-icon menu-icon')
             <span>처방전 목록</span>
-            @php $pendingCount = \App\Models\Prescription::whereIn('status',['review_needed','ocr_done'])->count(); @endphp
+            {{-- 손이 가야 하는 것 — 아직 검수가 끝나지 않은 처방전 --}}
+            @php $pendingCount = \App\Models\Prescription::whereIn('status',['review_needed','review_requested','ocr_done'])->count(); @endphp
             @if($pendingCount > 0)
               <span class="menu-badge">{{ $pendingCount }}</span>
             @endif

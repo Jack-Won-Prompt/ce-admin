@@ -7,7 +7,6 @@ use App\Events\PrescriptionUploaded;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPrescriptionOcr;
 use App\Models\Prescription;
-use App\Services\OcrService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,8 +14,6 @@ use Illuminate\Support\Facades\Validator;
 
 class PrescriptionApiController extends Controller
 {
-    public function __construct(private readonly OcrService $ocrService) {}
-
     // ── POST /api/prescriptions/upload ───────────────────
     /**
      * 모바일 앱에서 처방전 이미지 업로드
@@ -62,48 +59,14 @@ class PrescriptionApiController extends Controller
                 'image_mime_type'     => $file->getMimeType(),
                 'image_size'          => $file->getSize(),
                 'upload_source'       => 'mobile',
-                'status'              => 'ocr_processing',
+                // OCR 은 쓰지 않는다 — 올리면 곧장 검수 필요로 두고 담당자가 손으로 적는다
+                'status'              => 'review_needed',
                 'created_by'          => auth()->id(),
                 'admin_note'          => $request->filled('memo') ? $request->input('memo') : null,
             ]);
 
-            // OCR 처리 — 동기 처리 (간단한 경우) 또는 큐 사용
-            try {
-                $ocrResult = $this->ocrService->extractFromImage($path);
-                $ocrData   = $ocrResult['data'];
-
-                $prescription->update([
-                    'status'           => $ocrResult['confidence'] >= 85 ? 'ocr_done' : 'review_needed',
-                    'ocr_confidence'   => $ocrResult['confidence'],
-                    'ocr_raw_data'     => ['raw_text' => $ocrResult['raw_text']],
-                    'registration_no'  => $ocrData['registration_no'] ?? null,
-                    'serial_no'        => $ocrData['serial_no'] ?? null,
-                    'is_reissue'       => $ocrData['is_reissue'] ?? false,
-                    'patient_name_ocr' => $ocrData['patient_name'] ?? null,
-                    'resident_no_ocr'  => $ocrData['resident_no'] ?? null,
-                    'mobile_ocr'       => $ocrData['mobile'] ?? $ocrData['phone'] ?? null,
-                    'address_ocr'      => $ocrData['address'] ?? null,
-                    'hospital_name'    => $ocrData['hospital_name'] ?? null,
-                    'hospital_code'    => $ocrData['hospital_code'] ?? null,
-                    'doctor_name'      => $ocrData['doctor_name'] ?? null,
-                    'specialty'        => $ocrData['specialty'] ?? null,
-                    'license_no'       => $ocrData['license_no'] ?? null,
-                    'specialist_no'    => $ocrData['specialist_no'] ?? null,
-                    'department'       => $ocrData['department'] ?? null,
-                    'disease_name'     => $ocrData['disease_name'] ?? null,
-                    'disease_code'     => $ocrData['disease_code'] ?? null,
-                    'daily_count'      => $ocrData['daily_count'] ?? null,
-                    'total_days'       => $ocrData['total_days'] ?? null,
-                    'total_count'      => $ocrData['total_count'] ?? null,
-                    'usage_period'     => $ocrData['usage_period'] ?? null,
-                    'issued_date'      => $ocrData['issued_date'] ?? null,
-                ]);
-
-                $prescription->refresh();
-            } catch (\Exception $e) {
-                // OCR 실패해도 업로드는 성공 처리, 수동 검수로 전환
-                $prescription->update(['status' => 'review_needed']);
-            }
+            /* OCR 은 걷었다 — 신뢰도로 「OCR 완료 / 검수 필요」를 가르던 흐름을 없애고,
+               올린 것은 무엇이든 검수 필요로 둔다. 값은 담당자가 웹 검수 화면에서 적는다. */
 
             // 상담번호 자동 채번
             $prescription->update([
@@ -157,7 +120,6 @@ class PrescriptionApiController extends Controller
                 'hospital'       => $p->hospital_name,
                 'disease_name'   => $p->disease_name,
                 'issued_date'    => $p->issued_date?->format('Y-m-d'),
-                'ocr_confidence' => $p->ocr_confidence,
                 'image_url'      => $p->image_url,
                 'created_at'     => $p->created_at->format('Y-m-d H:i'),
             ]),
@@ -189,7 +151,6 @@ class PrescriptionApiController extends Controller
             'prescription_id' => $p->rx_number,
             'status'          => $p->status,
             'status_label'    => $p->status_label,
-            'ocr_confidence'  => $p->ocr_confidence,
             'ocr_result'      => [
                 'registration_no'    => $p->registration_no,
                 'serial_no'          => $p->serial_no,

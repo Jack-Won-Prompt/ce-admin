@@ -88,12 +88,11 @@ Route::middleware(['auth'])->group(function () {
         // 화면에서 읽을 방법이 없어야 복호화가 일어날 일도 없다.
 
         // OCR 미리보기 (임시 저장, DB 저장 없음)
-        Route::post('/analyze',          [PrescriptionController::class, 'analyze'])->name('analyze');
         // OCR 확인 후 최종 업로드
-        Route::post('/confirm-upload',   [PrescriptionController::class, 'confirmUpload'])->name('confirmUpload');
         // AJAX 액션
         Route::post('/{prescription}/ocr',       [PrescriptionController::class, 'updateOcr'])->name('updateOcr');
-        Route::post('/{prescription}/reanalyze', [PrescriptionController::class, 'reanalyze'])->name('reanalyze');
+        // 담당자가 다 적었다는 신호 
+        Route::post('/{prescription}/request-review', [PrescriptionController::class, 'requestReview'])->name('request-review');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
         Route::post('/{prescription}/reject',        [PrescriptionController::class, 'reject'])->name('reject');
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');

@@ -425,6 +425,7 @@ function loadDay(cell) {
     // 상태 구분은 배지 안 라벨 문구(status_label)가 계속 담당한다.
     const statusBadge = {
       pending:'bg-label-secondary', ocr_processing:'bg-label-secondary', ocr_done:'bg-label-primary',
+      review_requested:'bg-label-warning',
       review_needed:'bg-label-danger', approved:'bg-label-primary', rejected:'bg-label-danger', ordered:'bg-label-primary'
     };
 

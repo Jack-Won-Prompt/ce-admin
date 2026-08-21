@@ -529,7 +529,6 @@
   /* 저장만 주색으로 채운다 (시안 148:2647) */
   .rx-acc-btn-fill { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
   .rx-acc-btn-fill:hover { background:var(--primary); filter:brightness(1.06); }
-  .rx-acc-meta-hint { font-size:12px; font-weight:500; color:var(--gray-600); }
 
   /* ── 안쪽 가로 탭 (아코디언을 대신한다) ────────────────────
      바깥 탭줄(.tab-bar)과 헷갈리지 않게 작게ㆍ밑줄형으로 그린다 — 채운 알약은 바깥 것 몫이다.
@@ -2004,7 +2003,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   title="이름으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
                   title="주문 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
-          {{-- 원본 복원·승인 요청·저장은 시안(148:2639)대로 아코디언 헤더에 둔다 --}}
+          {{-- 되돌리기·검수 요청·검수 완료·저장은 시안(148:2639)대로 구획 머리(지금은 탭줄)에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
       </div></div>{{-- /tabBarInner /tabBarOuter --}}
@@ -2032,7 +2031,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- 세 구획은 아코디언이 아니라 안쪽 가로 탭이다.
              예전 아코디언도 하나를 열면 나머지를 닫아(상호배타) 동작은 이미 탭이었다.
              바꾸면서 얻은 것 — 닫힌 머리 둘이 먹던 112(44+여백12 씩)를 돌려받고,
-             셋 중 어느 것이든 한 번에 닿는다. 머리마다 세 벌씩 있던 원본 복원ㆍ승인 요청ㆍ
+             셋 중 어느 것이든 한 번에 닿는다. 머리마다 세 벌씩 있던 되돌리기ㆍ검수 요청ㆍ
              저장도 한 벌로 준다.
              바깥 탭줄(상세 목록ㆍ주문 제품…)과 헷갈리지 않게 작게ㆍ밑줄형으로 그린다.
              「테이블뷰」는 그대로다 — 그때는 탭줄을 감추고 셋을 한꺼번에 편다. --}}
@@ -2055,12 +2054,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </button>
             </div>
             <div class="rx-tabs-acts">
-              <span class="rx-acc-meta-hint" id="rxTabHint">상담정보ㆍ환자정보</span>
               {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
+              {{-- 담당자는 적고 「검수 요청」까지, 검수자만 「검수 완료」를 누른다.
+                   완료ㆍ반려는 approve 권한으로 갈라 두었다(config/permissions.php). --}}
               <div class="rx-acc-btns">
-                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
-                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
-                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
+                <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
+                <button type="button" class="rx-acc-btn" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청</button>
+                @perm('prescriptions', 'approve')
+                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수를 마치고 완료 처리합니다">검수 완료</button>
+                @endperm
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
           </div>
@@ -2914,12 +2917,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <span class="pt-head-total">
                 총 본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
               </span>
-              {{-- 버튼 3개 — 시안 Frame 48101503: [원본 복원 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
-                   원본 복원·저장은 검수 탭 아코디언 머리에 있던 resetOCR()·saveOCR() 를 그대로 쓴다
+              {{-- 버튼 3개 — 시안 Frame 48101503: [되돌리기 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
+                   되돌리기·저장은 상세 목록 탭줄에 있는 resetToSaved()·saveOCR() 를 그대로 쓴다
                    (둘 다 items 를 읽고 쓴다). 저장 버튼은 onclick 문자열이 정확히 'saveOCR()' 여야
                    saveOCR() 안 querySelectorAll('[onclick="saveOCR()"]') 이 로딩 상태를 함께 건다. --}}
               <div class="pt-head-btns">
-                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
+                <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
                 <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
               </div>
@@ -3086,9 +3089,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
             </div>
             <div class="workflow-step">
-              <div class="ws-icon {{ in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']) ? 'done' : 'active' }}"><i class="fa-solid fa-eye"></i></div>
+              <div class="ws-icon {{ in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']) ? 'done' : 'active' }}"><i class="fa-solid fa-eye"></i></div>
               <div><div class="ws-label">OCR 처리</div><div class="ws-time">{{ $prescription->updated_at->format('H:i') }} · 자동</div></div>
-              @if(in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']))
+              @if(in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']))
                 <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @else
                 <i class="fa-solid fa-spinner fa-spin ws-arrow" style="color:var(--primary);"></i>
@@ -3147,7 +3150,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <tr>
                   <td><i class="fa-solid fa-eye" style="color:var(--info);margin-right:5px;"></i>OCR 처리</td>
                   <td style="text-align:center;">
-                    @if(in_array($prescription->status, ['ocr_done','review_needed','approved','ordered']))
+                    @if(in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']))
                       <i class="fa-solid fa-check" style="color:var(--primary);"></i>
                     @else
                       <i class="fa-solid fa-spinner fa-spin" style="color:var(--primary);"></i>
@@ -3432,24 +3435,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
   <div class="modal-box">
     <div class="modal-header">
       <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:20px;"></i>
-      <span class="modal-title">처방전 승인요청</span>
+      <span class="modal-title">처방전 검수 완료</span>
       <button class="modal-close" onclick="closeModal('approveModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
       <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 승인 요청</div>
+        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 완료</div>
         <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
-          처방전 {{ $prescription->rx_number }}의 OCR 검수를 완료하고 승인 요청합니다.
+          처방전 {{ $prescription->rx_number }}의 검수를 마칩니다.
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">승인 메모</label>
-        <textarea class="form-control" id="approveMemo" rows="3" placeholder="승인 관련 메모를 입력하세요..."></textarea>
+        <label class="form-label">검수 메모</label>
+        <textarea class="form-control" id="approveMemo" rows="3" placeholder="검수 관련 메모를 입력하세요..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('approveModal')">취소</button>
-      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 승인 확정</button>
+      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 검수 완료</button>
     </div>
   </div>
 </div>
@@ -4826,21 +4829,14 @@ window.HELP_TOUR_STEPS = [
      탭으로 바꾸면서 세 함수(toggleAcc · toggleAllAcc · syncToggleAllBtn)와
      keepInPlace 가 함께 사라졌다 — keepInPlace 는 위 패널이 접혀 화면이 튕겨 올라가는
      것을 스크롤로 보정하던 함수인데, 탭에는 그 일이 없다.
-     힌트 글귀는 예전 머리 오른쪽에 있던 것을 탭줄로 옮겨 고른 판에 맞춰 갈아 끼운다. */
-  const RX_TAB_HINT = {
-    'rxp-1': '상담정보ㆍ환자정보',
-    'rxp-2': '병원 처방 정보ㆍ처방수량 상병ㆍ급여 보험 정보ㆍ신/재구매 정보',
-    'rxp-3': '공단 위임동의ㆍ인마켓 마감일ㆍ수량',
-  };
-
+     예전 머리 오른쪽의 안내 글귀(「상담정보ㆍ환자정보」 …)는 두지 않는다 — 탭 이름이
+     이미 같은 말을 하고, 판마다 길이가 달라 오른쪽 단추 자리가 흔들렸다. */
   function rxTab(btn) {
     const id = btn.dataset.pane;
     document.querySelectorAll('#tab-ocr .rx-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('#tab-ocr .rx-pane').forEach(pane => {
       pane.style.display = pane.id === id ? 'block' : 'none';
     });
-    const hint = document.getElementById('rxTabHint');
-    if (hint) hint.textContent = RX_TAB_HINT[id] || '';
   }
 
   // ── 미저장 감지 ────────────────────────────────────────
@@ -5795,8 +5791,11 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
-  // ── 원본 복원 ─────────────────────────────────────────
-  function resetOCR() {
+  /* ── 되돌리기 ─────────────────────────────────────────
+     저장된 값으로 되돌린다. 예전에는 「원본 복원」이라 불렀고 OCR 이 읽은 원본으로
+     돌아가는 뜻이었는데, OCR 을 쓰지 않는 지금 이 칸들(patient_name_ocr 따위)에는
+     담당자가 손으로 적어 저장한 값이 들어 있다 — 하는 일은 「마지막 저장으로 되돌리기」다. */
+  function resetToSaved() {
     document.getElementById('f-name').value         = @json($prescription->patient_name_ocr);
     // 주민번호는 되돌릴 원본을 화면이 들고 있지 않다. 친 값만 지운다 —
     // 그러면 저장할 때 값이 비어 서버가 기존 값을 그대로 둔다.
@@ -5817,10 +5816,27 @@ window.HELP_TOUR_STEPS = [
     if (!items.length) items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
     renderItems();
     calcRenewDate();
-    showToast('원본 데이터로 복원되었습니다.', 'info');
+    showToast('저장된 값으로 되돌렸습니다.', 'info');
   }
 
-  // ── 승인 요청 ─────────────────────────────────────────
+  /* ── 검수 요청 (담당자) ────────────────────────────────
+     적기를 마쳤다는 신호만 보낸다. 값은 「저장」이 이미 넣었다. */
+  async function requestReviewRx() {
+    if (!confirm('입력을 마치고 검수를 요청합니다. 계속할까요?')) return;
+    try {
+      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
+      if (res.success) {
+        showToast('✅ 검수를 요청했습니다.', 'success');
+        setTimeout(() => location.reload(), 900);
+      } else {
+        showToast(res.message || '검수 요청 실패', 'danger');
+      }
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+    }
+  }
+
+  // ── 검수 완료 (검수자) ─────────────────────────────────
   function approveRx() { document.getElementById('approveModal').classList.add('show'); }
 
   async function confirmApprove(btn) {
@@ -5829,12 +5845,12 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/approve`, 'POST', { memo });
       if (res.success) {
-        BtnState.success(btn, '승인 완료');
-        showToast('✅ 처방전이 승인되었습니다.', 'success');
+        BtnState.success(btn, '검수 완료');
+        showToast('✅ 검수를 마쳤습니다.', 'success');
         setTimeout(() => { closeModal('approveModal'); location.reload(); }, 1200);
       } else {
-        BtnState.error(btn, '승인 실패');
-        showToast(res.message || '승인 실패', 'danger');
+        BtnState.error(btn, '실패');
+        showToast(res.message || '검수 완료 실패', 'danger');
         setTimeout(() => BtnState.reset(btn), 2500);
       }
     } catch (e) {

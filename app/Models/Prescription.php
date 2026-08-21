@@ -119,14 +119,21 @@ class Prescription extends Model
     }
 
     // ── 상태 라벨 매핑 ───────────────────────────────────
+    /*
+     * 흐름은 셋이다 — 올리면 검수 필요, 담당자가 다 적으면 검수 요청, 검수자가 보면 검수 완료.
+     *   업로드 → review_needed → (담당자) review_requested → (검수자) approved → ordered
+     * OCR 은 쓰지 않는다. pending·ocr_processing·ocr_done 은 새로 만들지 않지만 라벨은
+     * 남긴다 — 예전에 그 상태로 저장된 처방전이 있어, 지우면 목록에서 상태가 빈칸이 된다.
+     */
     public const STATUS_LABELS = [
-        'pending'        => ['label' => '대기 중',    'badge' => 'secondary'],
-        'ocr_processing' => ['label' => 'OCR 처리중', 'badge' => 'warning'],
-        'ocr_done'       => ['label' => 'OCR 완료',   'badge' => 'info'],
-        'review_needed'  => ['label' => '검수 필요',  'badge' => 'danger'],
-        'approved'       => ['label' => '검수 완료',  'badge' => 'success'],
-        'rejected'       => ['label' => '반려',        'badge' => 'danger'],
-        'ordered'        => ['label' => '주문 완료',   'badge' => 'success'],
+        'pending'          => ['label' => '대기 중',    'badge' => 'secondary'],
+        'ocr_processing'   => ['label' => 'OCR 처리중', 'badge' => 'warning'],
+        'ocr_done'         => ['label' => 'OCR 완료',   'badge' => 'info'],
+        'review_needed'    => ['label' => '검수 필요',  'badge' => 'danger'],
+        'review_requested' => ['label' => '검수 요청',  'badge' => 'warning'],
+        'approved'         => ['label' => '검수 완료',  'badge' => 'success'],
+        'rejected'         => ['label' => '반려',        'badge' => 'danger'],
+        'ordered'          => ['label' => '주문 완료',   'badge' => 'success'],
     ];
 
     public function getStatusLabelAttribute(): string
@@ -346,9 +353,10 @@ class Prescription extends Model
     }
 
     // ── Scopes ───────────────────────────────────────────
+    /** 아직 검수가 끝나지 않은 것. 앞의 셋은 OCR 시절에 저장된 옛 상태다. */
     public function scopePending($query)
     {
-        return $query->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed']);
+        return $query->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed', 'review_requested']);
     }
 
     public function scopeToday($query)

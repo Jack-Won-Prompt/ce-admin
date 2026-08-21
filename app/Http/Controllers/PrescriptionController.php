@@ -13,7 +13,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\KakaoService;
 use App\Services\Popbill\FaxService as PopbillFaxService;
 use App\Services\Popbill\MessageService as PopbillMessageService;
-use App\Services\OcrService;
 use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +33,6 @@ use Illuminate\View\View;
 class PrescriptionController extends Controller
 {
     public function __construct(
-        private readonly OcrService $ocrService,
         private readonly VirtualAccountService $vaService,
         private readonly KakaoService $kakaoService,
         private readonly PopbillMessageService $smsService,
@@ -49,6 +47,7 @@ class PrescriptionController extends Controller
         $query->whereNot(fn ($q) => $q->blankDraft());
 
         if ($request->input('status') === 'no_order') {
+            // 주문을 만들 수 있는 것 — 검수가 끝난 것. ocr_done 은 예전 데이터 몫이다.
             $query->whereIn('status', ['approved', 'ocr_done'])
                   ->whereDoesntHave('order');
         } elseif ($request->filled('status')) {
@@ -97,7 +96,7 @@ class PrescriptionController extends Controller
         $statusCounts = [
             'all'            => Prescription::count(),
             'review_needed'  => Prescription::where('status', 'review_needed')->count(),
-            'ocr_processing' => Prescription::whereIn('status', ['pending', 'ocr_processing'])->count(),
+            'review_requested' => Prescription::where('status', 'review_requested')->count(),
             'approved'       => Prescription::where('status', 'approved')->count(),
             'no_order'       => Prescription::whereIn('status', ['approved', 'ocr_done'])->whereDoesntHave('order')->count(),
             'ordered'        => Prescription::where('status', 'ordered')->count(),
@@ -415,7 +414,7 @@ class PrescriptionController extends Controller
             ])->values();
 
         $mobilePending = Prescription::where('upload_source', 'mobile')
-            ->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed'])
+            ->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed', 'review_requested'])
             ->latest()->take(5)->get();
 
         // 화면 상단에 알리는 검수 대기 건수 (시안 128:3171)
@@ -526,7 +525,6 @@ class PrescriptionController extends Controller
         }
 
         $created         = [];
-        $ocrErrors       = [];
         $firstPrescription = null;
 
         foreach ($prescriptionFiles as $file) {
@@ -545,54 +543,20 @@ class PrescriptionController extends Controller
                 'image_mime_type'     => $file->getMimeType(),
                 'image_size'          => $file->getSize(),
                 'upload_source'       => 'web',
-                'status'              => 'ocr_processing',
+                // OCR 은 쓰지 않는다 — 올리면 곧장 검수 필요로 두고 담당자가 손으로 적는다
+                'status'              => 'review_needed',
             ]);
 
             if (!$firstPrescription) {
                 $firstPrescription = $prescription;
             }
 
-            // OCR 처리
-            try {
-                $ocrResult = $this->ocrService->extractFromImage($path);
-                $d         = $ocrResult['data'];
-
-                $prescription->update([
-                    'status'           => $ocrResult['confidence'] >= 85 ? 'ocr_done' : 'review_needed',
-                    'ocr_confidence'   => $ocrResult['confidence'],
-                    'ocr_raw_data'     => ['raw_text' => $ocrResult['raw_text']],
-                    'patient_name_ocr' => $d['patient_name']  ?? $d['patient_name_ocr'] ?? null,
-                    'resident_no_ocr'  => $d['resident_no']   ?? null,
-                    'mobile_ocr'       => $d['mobile'] ?? $d['phone'] ?? null,
-                    'address_ocr'      => $d['address'] ?? null,
-                    'registration_no'  => $d['registration_no'] ?? null,
-                    'serial_no'        => $d['serial_no']       ?? null,
-                    'is_reissue'       => $d['is_reissue']      ?? false,
-                    'hospital_name'    => $d['hospital_name']   ?? null,
-                    'hospital_code'    => $d['hospital_code']   ?? null,
-                    'doctor_name'      => $d['doctor_name']     ?? null,
-                    'specialty'        => $d['specialty']       ?? null,
-                    'license_no'       => $d['license_no']      ?? null,
-                    'specialist_no'    => $d['specialist_no']   ?? null,
-                    'department'       => $d['department']  ?? null,
-                    'disease_name'     => $d['disease_name'] ?? null,
-                    'disease_code'     => $d['disease_code'] ?? null,
-                    'daily_count'      => isset($d['daily_count'])  ? (int)$d['daily_count']  : null,
-                    'total_days'       => isset($d['total_days'])   ? (int)$d['total_days']   : null,
-                    'total_count'      => isset($d['total_count'])  ? (int)$d['total_count']  : null,
-                    'usage_period'     => $d['usage_period'] ?? null,
-                    'issued_date'      => $d['issued_date']  ?? null,
-                ]);
-
-                // 명시적 환자 선택이 없으면 OCR 기반 자동 연결
-                if (!$request->filled('patient_id')) {
-                    $this->linkOrCreatePatient($prescription, $d);
-                }
-
-            } catch (\Exception $e) {
-                $prescription->update(['status' => 'review_needed']);
-                $ocrErrors[] = "{$prescription->rx_number} OCR 실패: " . $e->getMessage();
-            }
+            /* 예전에는 여기서 OCR 을 돌려 환자명ㆍ병원ㆍ상병 따위를 채우고,
+               신뢰도 85 를 기준으로 OCR 완료 / 검수 필요를 갈랐다. 이제 쓰지 않는다 —
+               숫자가 무엇을 뜻하는지 사람마다 달리 읽었고, 높든 낮든 어차피 눈으로 보고
+               고쳤다. 올리면 검수 필요로 두고 담당자가 처음부터 손으로 적는다.
+               환자 자동 연결도 OCR 이 읽은 이름에 기대던 것이라 함께 걷었다 —
+               올릴 때 환자를 고르면 그 값(patient_id)이 그대로 들어간다. */
 
             $prescription->update([
                 'counsel_no'   => Prescription::generateCounselNo(),
@@ -627,13 +591,6 @@ class PrescriptionController extends Controller
                     'uploaded_by'        => Auth::id(),
                 ]);
             }
-        }
-
-        if (!empty($ocrErrors)) {
-            /* 사람에게 띄우지 않는다. OCR 이 못 읽었다는 말은 올린 사람이 그 자리에서
-               할 수 있는 일이 없고(자격증명·형식은 설정의 몫이다), 검수 화면에서 손으로
-               채우는 흐름은 그대로다. 무슨 일이 있었는지는 기록에 남긴다. */
-            Log::warning('업로드 OCR 실패', ['errors' => $ocrErrors]);
         }
 
         /* 화면 안에서 부른 것이면 어디로 갈지는 화면이 정한다 — 올린 자리는 그대로 두고
@@ -716,143 +673,6 @@ class PrescriptionController extends Controller
         $attachment->delete();
 
         return response()->json(['success' => true]);
-    }
-
-    // ── OCR 미리보기 (임시 저장 + OCR, DB 저장 없음) ────────
-    public function analyze(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $request->validate([
-            'prescription_image' => 'required|file|mimes:jpg,jpeg,png,pdf,heic|max:51200',
-        ]);
-
-        $file     = $request->file('prescription_image');
-        $subDir   = 'prescriptions/temp';
-        $fileName = 'tmp_' . Auth::id() . '_' . now()->format('Ymd_His') . '_' . uniqid()
-                    . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs($subDir, $fileName, 'public');
-
-        try {
-            $ocrResult = $this->ocrService->extractFromImage($path);
-            $d         = $ocrResult['data'];
-
-            return response()->json([
-                'success'    => true,
-                'temp_path'  => $path,
-                // storage 직결 대신 로그인·소유자를 확인하는 경로로 내보낸다
-                'image_url'  => route('files.prescription-temp', basename($path)),
-                'confidence' => $ocrResult['confidence'],
-                'raw_text'   => $ocrResult['raw_text'] ?? null,
-                'fields'     => [
-                    'patient_name'  => $d['patient_name']  ?? null,
-                    'resident_no'   => $d['resident_no']   ?? null,
-                    'mobile'        => $d['mobile'] ?? $d['phone'] ?? null,
-                    'address'       => $d['address']       ?? null,
-                    'hospital_name' => $d['hospital_name'] ?? null,
-                    'hospital_code' => $d['hospital_code'] ?? null,
-                    'doctor_name'   => $d['doctor_name']   ?? null,
-                    'specialty'     => $d['specialty']     ?? null,
-                    'issued_date'   => $d['issued_date']   ?? null,
-                    'disease_name'  => $d['disease_name']  ?? null,
-                    'disease_code'  => $d['disease_code']  ?? null,
-                    'daily_count'   => $d['daily_count']   ?? null,
-                    'total_days'    => $d['total_days']    ?? null,
-                    'total_count'   => $d['total_count']   ?? null,
-                    'product_name'  => $d['product_name']  ?? null,
-                    'usage_period'  => $d['usage_period']  ?? null,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            Storage::disk('public')->delete($path);
-            Log::error('OCR 미리보기 실패', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'OCR 처리 실패: ' . $e->getMessage()], 500);
-        }
-    }
-
-    // ── OCR 확인 후 최종 업로드 (temp_path 기반) ────────────
-    public function confirmUpload(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'temp_path'        => 'required|string|max:300',
-            'orig_name'        => 'nullable|string|max:300',
-            'assigned_user_id' => 'nullable|exists:users,id',
-            'admin_note'       => 'nullable|string|max:500',
-            // OCR 편집 필드
-            'patient_name'     => 'nullable|string|max:100',
-            'resident_no'      => 'nullable|string|max:20',
-            'mobile'           => 'nullable|string|max:30',
-            'address'          => 'nullable|string|max:300',
-            'hospital_name'    => 'nullable|string|max:100',
-            'doctor_name'      => 'nullable|string|max:50',
-            'specialty'        => 'nullable|string|max:100',
-            'issued_date'      => 'nullable|date',
-            'disease_name'     => 'nullable|string|max:500',
-            'disease_code'     => 'nullable|string|max:200',
-            'daily_count'      => 'nullable|integer|min:1',
-            'total_days'       => 'nullable|integer|min:1',
-            'total_count'      => 'nullable|integer|min:1',
-            'product_name'     => 'nullable|string|max:200',
-            'usage_period'     => 'nullable|string|max:200',
-            'confidence'       => 'nullable|integer',
-        ]);
-
-        // 임시 파일 → 영구 경로 이동
-        $tempPath = $request->input('temp_path');
-        if (!Storage::disk('public')->exists($tempPath)) {
-            return back()->with('error', '임시 파일을 찾을 수 없습니다. 다시 업로드해주세요.');
-        }
-
-        $ext     = pathinfo($tempPath, PATHINFO_EXTENSION);
-        $subDir  = 'prescriptions/' . now()->format('Y/m');
-        $newName = now()->format('Ymd_His') . '_' . uniqid() . '.' . $ext;
-        $newPath = $subDir . '/' . $newName;
-        Storage::disk('public')->move($tempPath, $newPath);
-
-        $origName = $request->input('orig_name') ?: basename($newPath);
-        $mimeType = Storage::disk('public')->mimeType($newPath);
-        $fileSize = Storage::disk('public')->size($newPath);
-
-        $prescription = Prescription::create([
-            'rx_number'           => Prescription::generateRxNumber(),
-            'assigned_user_id'    => $request->assigned_user_id ?: null,
-            'created_by'          => Auth::id(),
-            'admin_note'          => $request->admin_note,
-            'image_path'          => $newPath,
-            'image_original_name' => $origName,
-            'image_mime_type'     => $mimeType,
-            'image_size'          => $fileSize,
-            'upload_source'       => 'web',
-            'status'              => ($request->integer('confidence', 0) >= 85) ? 'ocr_done' : 'review_needed',
-            'ocr_confidence'      => $request->integer('confidence', 0) ?: null,
-            // OCR 필드
-            'patient_name_ocr'    => $request->patient_name,
-            'resident_no_ocr'     => $request->resident_no,
-            'mobile_ocr'          => $request->mobile,
-            'address_ocr'         => $request->address,
-            'hospital_name'       => $request->hospital_name,
-            'doctor_name'         => $request->doctor_name,
-            'specialty'           => $request->specialty,
-            'issued_date'         => $request->issued_date ?: null,
-            'disease_name'        => $request->disease_name,
-            'disease_code'        => $request->disease_code,
-            'daily_count'         => $request->daily_count ? (int)$request->daily_count : null,
-            'total_days'          => $request->total_days  ? (int)$request->total_days  : null,
-            'total_count'         => $request->total_count ? (int)$request->total_count : null,
-            'usage_period'        => $request->usage_period,
-        ]);
-
-        $this->linkOrCreatePatient($prescription, $request->all());
-
-        // 상담번호 자동 채번 (항상 생성)
-        $prescription->update([
-            'counsel_no'   => Prescription::generateCounselNo(),
-            'counsel_date' => now()->format('Y-m-d'),
-        ]);
-
-        activity()->causedBy(Auth::user())->performedOn($prescription)
-                  ->log("{$prescription->rx_number} 업로드 완료 (웹·미리보기 확인)");
-
-        return redirect()->route('prescriptions.show', $prescription)
-                         ->with('success', "처방전 {$prescription->rx_number} 등록 완료");
     }
 
     /**
@@ -1498,86 +1318,27 @@ class PrescriptionController extends Controller
         ]);
     }
 
-    // ── OCR 재분석 ────────────────────────────────────────
-    public function reanalyze(Prescription $prescription): \Illuminate\Http\JsonResponse
+    // ── 검수 요청 ─────────────────────────────────────────
+    /* 담당자가 손으로 다 적었다는 신호다. 여기서 상태만 바꾸고 값은 건드리지 않는다 —
+       적는 일은 저장(saveOCR)이 이미 했다. 검수자가 「검수 완료」를 누르기 전까지
+       담당자는 계속 고칠 수 있다. */
+    public function requestReview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
-        if (!$prescription->image_path) {
-            return response()->json(['success' => false, 'message' => '이미지가 없어 재분석할 수 없습니다.'], 422);
+        if (in_array($prescription->status, ['approved', 'ordered'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 검수가 끝난 처방전입니다.',
+            ], 422);
         }
 
-        $prescription->update(['status' => 'ocr_processing']);
-
-        try {
-            $ocrResult = $this->ocrService->extractFromImage($prescription->image_path);
-            $d         = $ocrResult['data'];
-
-            $prescription->update([
-                'status'           => $ocrResult['confidence'] >= 85 ? 'ocr_done' : 'review_needed',
-                'ocr_confidence'   => $ocrResult['confidence'],
-                'ocr_raw_data'     => ['raw_text' => $ocrResult['raw_text']],
-                // 수진자
-                'patient_name_ocr' => $d['patient_name']  ?? $d['patient_name_ocr'] ?? $prescription->patient_name_ocr,
-                'resident_no_ocr'  => $d['resident_no']   ?? $prescription->resident_no_ocr,
-                'mobile_ocr'       => $d['mobile'] ?? $d['phone'] ?? $prescription->mobile_ocr,
-                'address_ocr'      => $d['address'] ?? $prescription->address_ocr,
-                // 기관
-                'registration_no'  => $d['registration_no'] ?? $prescription->registration_no,
-                'serial_no'        => $d['serial_no']       ?? $prescription->serial_no,
-                'is_reissue'       => $d['is_reissue']      ?? $prescription->is_reissue,
-                'hospital_name'    => $d['hospital_name']   ?? $prescription->hospital_name,
-                'hospital_code'    => $d['hospital_code']   ?? $prescription->hospital_code,
-                'doctor_name'      => $d['doctor_name']     ?? $prescription->doctor_name,
-                'specialty'        => $d['specialty']       ?? $prescription->specialty,
-                'license_no'       => $d['license_no']      ?? $prescription->license_no,
-                'specialist_no'    => $d['specialist_no']   ?? $prescription->specialist_no,
-                // 진료
-                'department'       => $d['department']   ?? $prescription->department,
-                'disease_name'     => $d['disease_name'] ?? $prescription->disease_name,
-                'disease_code'     => $d['disease_code'] ?? $prescription->disease_code,
-                // 처방 수량
-                'daily_count'      => isset($d['daily_count'])  ? (int)$d['daily_count']  : $prescription->daily_count,
-                'total_days'       => isset($d['total_days'])   ? (int)$d['total_days']   : $prescription->total_days,
-                'total_count'      => isset($d['total_count'])  ? (int)$d['total_count']  : $prescription->total_count,
-                // 기타
-                'usage_period'     => $d['usage_period'] ?? $prescription->usage_period,
-                'issued_date'      => $d['issued_date']  ?? $prescription->issued_date,
-            ]);
-
-        } catch (\Exception $e) {
-            $prescription->update(['status' => 'review_needed']);
-            return response()->json(['success' => false, 'message' => 'OCR 재분석 실패: ' . $e->getMessage()], 500);
-        }
-
-        // 환자 자동 등록/연결 (재분석 시에도 적용)
-        $this->linkOrCreatePatient($prescription, $d);
-
-        $prescription->refresh();
-
-        activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 재분석');
-
-        return response()->json([
-            'success'    => true,
-            'message'    => 'OCR 재분석 완료',
-            'confidence' => $prescription->display_confidence,
-            'fields'     => [
-                'patient_name_ocr' => $prescription->patient_name_ocr,
-                // 재분석 결과는 이미 서버에 저장됐다. 평문을 응답에 실을 이유가 없으므로
-                // 화면 표시에 필요한 마스킹만 내려보낸다 — 평문은 '표시' 경로로만 나간다(P0-1).
-                'resident_no_masked' => $prescription->masked_resident_no_ocr,
-                'mobile_ocr'       => $prescription->mobile_ocr,
-                'address_ocr'      => $prescription->address_ocr,
-                'postcode'         => $prescription->postcode,
-                'address_detail'   => $prescription->address_detail,
-                'hospital_name'    => $prescription->hospital_name,
-                'doctor_name'      => $prescription->doctor_name,
-                'issued_date'      => $prescription->issued_date?->format('Y-m-d'),
-                'disease_name'     => $prescription->disease_name,
-                'disease_code'     => $prescription->disease_code,
-                'daily_count'      => $prescription->daily_count,
-                'total_days'       => $prescription->total_days,
-                'total_count'      => $prescription->total_count,
-            ],
+        $prescription->update([
+            'status'      => 'review_requested',
+            'review_memo' => $request->memo ?: $prescription->review_memo,
         ]);
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 요청');
+
+        return response()->json(['success' => true, 'message' => '검수 요청 완료']);
     }
 
     // ── 검수 승인 ─────────────────────────────────────────

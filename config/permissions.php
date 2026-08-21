@@ -20,6 +20,8 @@ return [
         'update' => '수정',
         'delete' => '삭제',
         'send'   => '발송·발행',
+        // 처방전 검수 완료ㆍ반려. 적는 사람(update)과 보는 사람을 가르려고 따로 둔다.
+        'approve' => '검수 완료',
     ],
 
     /*
@@ -81,7 +83,8 @@ return [
             'label'   => '주문 · 처방전 목록',
             'group'   => 'patient',
             'routes'  => ['prescriptions'],
-            'actions' => ['view', 'create', 'update', 'delete', 'send'],
+            // approve = 「검수 완료」. 담당자는 적고 요청까지(update), 완료는 검수자만 누른다.
+            'actions' => ['view', 'create', 'update', 'delete', 'send', 'approve'],
         ],
 
         // ── 주문 · 재구매 ────────────────────────────────────────
@@ -308,8 +311,10 @@ return [
         // 빈 검수·등록 화면 열기 — GET 이지만 초안 레코드를 만드므로 등록 권한으로 본다
         'prescriptions.create'        => [null, 'create'],
         'prescriptions.reanalyze'     => [null, 'update'],
-        'prescriptions.approve'       => [null, 'update'],
-        'prescriptions.reject'        => [null, 'update'],
+        // 검수 완료ㆍ반려는 검수자 몫이라 approve 로 가른다. 검수 요청은 담당자 몫(update).
+        'prescriptions.approve'        => [null, 'approve'],
+        'prescriptions.reject'         => [null, 'approve'],
+        'prescriptions.request-review' => [null, 'update'],
         'orders.updateStatus'         => [null, 'update'],
         'orders.updateTracking'       => [null, 'update'],
         'shop-orders.updateStatus'    => [null, 'update'],

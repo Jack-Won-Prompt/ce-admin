@@ -390,11 +390,13 @@ window.HELP_TOUR_STEPS = [
         <div class="q-num">{{ $stats['review_needed'] }}</div>
         <div class="q-label">검수 필요</div>
       </a>
-      <a href="{{ route('prescriptions.index', ['status' => 'ocr_processing']) }}" class="queue-box blue"
-         data-ce-tab="처방전 목록 - 처리중" data-ce-icon="bx-file">
-        <span class="q-icon"><i class="bx bx-scan"></i></span>
-        <div class="q-num">{{ $stats['ocr_processing'] }}</div>
-        <div class="q-label">처리중</div>
+      {{-- 담당자가 다 적고 검수를 기다리는 것. 예전 「처리중」(OCR) 자리다 —
+           OCR 을 쓰지 않게 되어 세는 것도 누를 때 가는 곳도 검수 요청으로 바꿨다. --}}
+      <a href="{{ route('prescriptions.index', ['status' => 'review_requested']) }}" class="queue-box blue"
+         data-ce-tab="처방전 목록 - 검수 요청" data-ce-icon="bx-file">
+        <span class="q-icon"><i class="bx bx-time-five"></i></span>
+        <div class="q-num">{{ $stats['review_requested'] }}</div>
+        <div class="q-label">검수 요청</div>
       </a>
       <a href="{{ route('prescriptions.index', ['status' => 'approved']) }}" class="queue-box green"
          data-ce-tab="처방전 목록 - 검수 완료" data-ce-icon="bx-file">

@@ -121,7 +121,9 @@
         <select name="status" class="form-control form-select" onchange="this.form.submit()">
           @php
             $curSt = request('status');
-            $sts = ['' => '전체', 'review_needed' => '검수 필요', 'ocr_processing' => 'OCR 처리중',
+            /* 흐름대로 늘어놓는다 — 검수 필요 → 검수 요청 → 검수 완료.
+               「OCR 처리중」은 더 생기지 않아 고르는 자리에서 걷었다. */
+            $sts = ['' => '전체', 'review_needed' => '검수 필요', 'review_requested' => '검수 요청',
                     'approved' => '검수 완료', 'no_order' => '주문 미등록', 'ordered' => '주문 완료',
                     'rejected' => '반려'];
           @endphp
