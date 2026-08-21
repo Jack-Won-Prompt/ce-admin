@@ -8,7 +8,6 @@ class Prescription {
   final String? hospital;
   final String? diseaseName;
   final String? issuedDate;
-  final int?    ocrConfidence;
   final String? imageUrl;
   final String  createdAt;
 
@@ -20,7 +19,6 @@ class Prescription {
     this.hospital,
     this.diseaseName,
     this.issuedDate,
-    this.ocrConfidence,
     this.imageUrl,
     required this.createdAt,
   });
@@ -33,7 +31,6 @@ class Prescription {
         hospital:      j['hospital']       as String?,
         diseaseName:   j['disease_name']   as String?,
         issuedDate:    j['issued_date']    as String?,
-        ocrConfidence: (j['ocr_confidence'] as num?)?.toInt(),
         imageUrl:      j['image_url']      as String?,
         createdAt:     j['created_at']     as String,
       );
@@ -43,7 +40,6 @@ class PrescriptionDetail {
   final String  rxNumber;
   final String  status;
   final String  statusLabel;
-  final int?    ocrConfidence;
   final String? imageUrl;
   final OcrResult ocr;
 
@@ -51,7 +47,6 @@ class PrescriptionDetail {
     required this.rxNumber,
     required this.status,
     required this.statusLabel,
-    this.ocrConfidence,
     this.imageUrl,
     required this.ocr,
   });
@@ -61,7 +56,6 @@ class PrescriptionDetail {
         rxNumber:      j['prescription_id'] as String,
         status:        j['status']          as String,
         statusLabel:   j['status_label']    as String,
-        ocrConfidence: (j['ocr_confidence'] as num?)?.toInt(),
         imageUrl:      j['image_url']       as String?,
         ocr: OcrResult.fromJson(
             j['ocr_result'] as Map<String, dynamic>? ?? {}),

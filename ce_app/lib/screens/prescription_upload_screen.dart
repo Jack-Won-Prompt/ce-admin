@@ -25,7 +25,7 @@ class _PrescriptionUploadScreenState
   String? _selectedFileName;
   bool    _uploading      = false;
   double  _uploadProgress = 0.0;   // 0.0 ~ 1.0 파일 전송 진행률
-  bool    _isOcr          = false;  // true = 서버 OCR 처리 대기 중
+  bool    _isSaving       = false;  // true = 올린 뒤 서버가 저장을 마치기를 기다리는 중
   String? _resultMsg;
   bool    _success   = false;
   Map<String, dynamic>? _ocrResult;
@@ -66,7 +66,7 @@ class _PrescriptionUploadScreenState
       _ocrResult        = null;
       _success          = false;
       _uploadProgress   = 0.0;
-      _isOcr            = false;
+      _isSaving            = false;
     });
     _memoCtrl.clear();
   }
@@ -82,7 +82,7 @@ class _PrescriptionUploadScreenState
     setState(() {
       _uploading      = true;
       _uploadProgress = 0.0;
-      _isOcr          = false;
+      _isSaving          = false;
       _resultMsg      = null;
       _ocrResult      = null;
     });
@@ -105,7 +105,7 @@ class _PrescriptionUploadScreenState
           if (total > 0 && mounted) {
             setState(() {
               _uploadProgress = sent / total;
-              if (_uploadProgress >= 1.0) _isOcr = true;
+              if (_uploadProgress >= 1.0) _isSaving = true;
             });
           }
         },
@@ -133,7 +133,7 @@ class _PrescriptionUploadScreenState
     } finally {
       setState(() {
         _uploading = false;
-        _isOcr     = false;
+        _isSaving     = false;
       });
     }
   }
@@ -266,7 +266,7 @@ class _PrescriptionUploadScreenState
                         ? _UploadProgressCard(
                             key: const ValueKey('progress'),
                             progress: _uploadProgress,
-                            isOcr: _isOcr,
+                            isSaving: _isSaving,
                           )
                         : GradientButton(
                             key: const ValueKey('btn'),
@@ -324,7 +324,7 @@ class _PrescriptionUploadScreenState
                     ),
                   ],
 
-                  // OCR result
+                  // 업로드 결과
                   if (_ocrResult != null) ...[
                     const SizedBox(height: 14),
                     _OcrResultCard(data: _ocrResult!),
@@ -503,8 +503,6 @@ class _OcrResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ocr = data['ocr_result'] as Map<String, dynamic>? ?? {};
-
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.primary.withOpacity(0.05),
@@ -517,40 +515,21 @@ class _OcrResultCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.document_scanner_outlined,
+              const Icon(Icons.check_circle_outline,
                   size: 18, color: AppTheme.primary),
               const SizedBox(width: 6),
-              const Text('OCR 인식 결과',
+              const Text('업로드 완료',
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primary,
                       fontSize: 14)),
-              const Spacer(),
-              if (data['ocr_confidence'] != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${data['ocr_confidence']}%',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ),
             ],
           ),
           const Divider(height: 16, color: AppTheme.border),
+          // 값은 담당자가 웹 검수 화면에서 손으로 적는다 — 올린 쪽에서 보여 줄 것은
+          // 번호와 지금 상태뿐이다.
           _row('처방전 번호', data['prescription_id']),
-          _row('환자명', ocr['patient_name']),
-          _row('병원명', ocr['hospital_name']),
-          _row('처방일', ocr['issued_date']),
-          _row('상병명', ocr['disease_name']),
-          _row('투여일수', ocr['total_days']?.toString()),
+          _row('상태', data['status_label']),
         ],
       ),
     );
@@ -586,11 +565,11 @@ class _OcrResultCard extends StatelessWidget {
 
 class _UploadProgressCard extends StatefulWidget {
   final double progress;
-  final bool   isOcr;
+  final bool   isSaving;
   const _UploadProgressCard({
     super.key,
     required this.progress,
-    required this.isOcr,
+    required this.isSaving,
   });
 
   @override
@@ -625,7 +604,7 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
       decoration: AppTheme.cardDecoration(radius: 16),
-      child: widget.isOcr ? _buildOcr() : _buildUpload(),
+      child: widget.isSaving ? _buildSaving() : _buildUpload(),
     );
   }
 
@@ -670,7 +649,7 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
     );
   }
 
-  Widget _buildOcr() {
+  Widget _buildSaving() {
     return Column(
       children: [
         AnimatedBuilder(
@@ -696,13 +675,13 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
                     color: Colors.white, size: 28),
               ),
               const SizedBox(height: 14),
-              const Text('OCR 처리 중...',
+              const Text('등록 중...',
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primary,
                       fontSize: 16)),
               const SizedBox(height: 4),
-              const Text('처방전을 분석하고 있습니다',
+              const Text('처방전을 올리고 있습니다',
                   style: TextStyle(
                       color: AppTheme.textMuted, fontSize: 12)),
             ],

@@ -181,12 +181,6 @@ class _PrescriptionDetailScreenState
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // OCR confidence
-                if (d.ocrConfidence != null) ...[
-                  _ConfidenceCard(d.ocrConfidence!),
-                  const SizedBox(height: 12),
-                ],
-
                 // Image
                 if (d.imageUrl != null) ...[
                   ClipRRect(
@@ -307,70 +301,6 @@ class _PrescriptionDetailScreenState
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ConfidenceCard extends StatelessWidget {
-  final int confidence;
-  const _ConfidenceCard(this.confidence);
-
-  @override
-  Widget build(BuildContext context) {
-    final color = confidence >= 85
-        ? AppTheme.success
-        : confidence >= 60
-            ? AppTheme.warning
-            : AppTheme.danger;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_fix_high_rounded, size: 16, color: color),
-              const SizedBox(width: 6),
-              Text('OCR 인식률',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: color,
-                      fontWeight: FontWeight.w700)),
-              const Spacer(),
-              Text('$confidence%',
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: color,
-                      fontWeight: FontWeight.w800)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: confidence / 100,
-              minHeight: 6,
-              backgroundColor: color.withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            confidence >= 85
-                ? '정확도가 높습니다.'
-                : confidence >= 60
-                    ? '일부 항목을 확인해주세요.'
-                    : '수동 검수가 필요합니다.',
-            style: TextStyle(fontSize: 11, color: color),
-          ),
-        ],
       ),
     );
   }

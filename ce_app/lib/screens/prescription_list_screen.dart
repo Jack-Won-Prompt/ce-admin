@@ -22,11 +22,12 @@ class _PrescriptionListScreenState
   String _statusFilter = '';
 
   static const _statusOptions = [
-    ('',               '전체'),
-    ('ocr_processing', 'OCR 처리중'),
-    ('ocr_done',       'OCR 완료'),
-    ('review_needed',  '검수 필요'),
-    ('approved',       '검수 완료'),
+    // 올리면 검수 필요 → 담당자가 다 적으면 검수 요청 → 검수자가 보면 검수 완료.
+    // OCR 처리중ㆍOCR 완료는 더 만들지 않아 고르는 자리에서도 걷었다.
+    ('',                 '전체'),
+    ('review_needed',    '검수 필요'),
+    ('review_requested', '검수 요청'),
+    ('approved',         '검수 완료'),
     ('rejected',       '반려'),
     ('ordered',        '주문 완료'),
   ];
@@ -423,10 +424,6 @@ class _PrescriptionCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                   ],
-                  if (prescription.ocrConfidence != null) ...[
-                    _ConfidenceBadge(prescription.ocrConfidence!),
-                    const SizedBox(width: 10),
-                  ],
                   const Spacer(),
                   Text(
                     prescription.createdAt,
@@ -467,30 +464,3 @@ class _InfoChip extends StatelessWidget {
   );
 }
 
-class _ConfidenceBadge extends StatelessWidget {
-  final int confidence;
-  const _ConfidenceBadge(this.confidence);
-
-  @override
-  Widget build(BuildContext context) {
-    final color = confidence >= 85
-        ? AppTheme.success
-        : confidence >= 60
-            ? AppTheme.warning
-            : AppTheme.danger;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        'OCR $confidence%',
-        style: TextStyle(
-            fontSize: 10, color: color, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
