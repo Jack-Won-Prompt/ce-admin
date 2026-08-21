@@ -1032,6 +1032,8 @@ class PrescriptionController extends Controller
     public function updateOcr(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([
+            // 「조회」로 고른 사람. 없으면 서버가 이름으로 찾거나 새로 만든다.
+            'patient_id'       => 'nullable|integer|exists:patients,id',
             'patient_name_ocr' => 'nullable|string|max:50',
             'resident_no_ocr'  => 'nullable|string|max:20',
             'mobile_ocr'       => 'nullable|string|max:30',
@@ -1214,6 +1216,16 @@ class PrescriptionController extends Controller
             'guardian_phone'      => $request->input('guardian_phone'),
         ], fn ($v) => $v !== null);
 
+        /* 「조회」로 고른 사람이 함께 왔으면 그 사람으로 잇는다. 화면에서 고른 것이
+           이름으로 찾는 것보다 확실하다 — 같은 이름이 여럿일 때 서버는 가리지 못한다.
+           처방전 자체는 업로드 때 이미 만들어졌으므로, 여기서 잇는 것만으로
+           그 사람의 새 처방전이 된다. */
+        if ($request->filled('patient_id')
+            && (int) $request->input('patient_id') !== (int) $prescription->patient_id
+            && Patient::whereKey($request->input('patient_id'))->exists()) {
+            $prescription->update(['patient_id' => (int) $request->input('patient_id')]);
+        }
+
         // 환자 마스터 업데이트 또는 자동 등록/연결
         $prescription->refresh();
         if ($prescription->patient) {
@@ -1254,6 +1266,17 @@ class PrescriptionController extends Controller
         if (!empty($promotedPatientFields)) {
             $prescription->refresh();
             $prescription->patient?->update($promotedPatientFields);
+        }
+
+        /* 공단에 신규 등록하면 2년 뒤 다시 등록해야 한다. 등록일이 있는데 기한이 비어 있으면
+           채워 둔다 — 화면에서도 계산해 넣지만, 다른 길로 저장될 때도 비지 않게 여기서 한 번 더 본다.
+           손으로 적어 둔 값은 건드리지 않는다. */
+        $prescription->refresh();
+        $pt = $prescription->patient;
+        if ($pt && $pt->nhis_reg_date && !$pt->nhis_renew_due) {
+            $pt->update([
+                'nhis_renew_due' => \Illuminate\Support\Carbon::parse($pt->nhis_reg_date)->addYears(2)->toDateString(),
+            ]);
         }
 
         // ── 아이템 동기화 ────────────────────────────────────────

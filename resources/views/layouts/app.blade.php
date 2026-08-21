@@ -1558,9 +1558,9 @@
         <div class="menu-group-items">
         @if($vis('fax'))
         <div class="menu-item {{ request()->routeIs('fax*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="printer" href="{{ route('fax.index') }}" data-title="팩스 발송">
+          <a class="menu-link" data-icon="printer" href="{{ route('fax.index') }}" data-title="공단 팩스 발송">
             @dsicon('printer', 'ds-icon menu-icon')
-            <span>팩스 발송</span>
+            <span>공단 팩스 발송</span>
           </a>
         </div>
         @endif

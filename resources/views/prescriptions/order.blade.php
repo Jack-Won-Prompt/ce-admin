@@ -1490,7 +1490,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- 팩스 전송 --}}
       <div id="faxTriggerWrap" style="display:{{ $lastFaxHistory ? 'none' : 'block' }};position:relative;">
         <button class="pib-btn" id="btnFaxTrigger" onclick="toggleFaxPopover(event)">
-          <i class="fa-solid fa-fax" style="font-size:12px;"></i> 팩스
+          <i class="fa-solid fa-fax" style="font-size:12px;"></i> 공단 팩스 발송
           <span id="faxSentBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--primary);border:2px solid var(--bg-card);align-items:center;justify-content:center;">
             <i class="fa-solid fa-check" style="font-size:7px;color:#fff;"></i>
           </span>
@@ -1504,7 +1504,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 헤더 --}}
           <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-fax" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">팩스 전송</span>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">공단 팩스 발송</span>
             <button onclick="closeFaxPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
           </div>
           {{-- 전송 완료 배너 --}}
@@ -2097,6 +2097,59 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
             <div class="rx-pane-cap">상담ㆍ환자 정보</div>
 
+            {{-- ── 공단 등록 할 일 ────────────────────────────────
+                 스스로 보내지 않는다. 팝빌이 운영으로 서 있어 발송이 곧 실거래라,
+                 잘못 만든 환자 하나에도 실제 문서가 나간다 — 무엇이 남았는지만 알리고
+                 보내는 일은 담당자가 누른다.
+                   · 공단 등록일이 비어 있으면 「신규」로 본다 — 위임장 서명과 등록 팩스가 남았다.
+                   · 등록일이 있으면 2년 뒤 재등록이다. 기한이 30일 안이거나 지났으면 알린다.
+                 두 단추는 정보바의 「위임동의」ㆍ「공단 팩스 발송」을 그대로 부른다. --}}
+            @php
+              $pt          = $prescription->patient;
+              $consentDone = $prescription->consents()->where('status', 'agreed')->latest()->first();
+              $isNewPt     = $pt && !$pt->nhis_reg_date;
+              /* diffInDays 는 실수로 돌아온다(10.0) — 0 과 === 로 견주려면 정수로 받아야 한다 */
+              $renewLeft   = ($pt && $pt->nhis_renew_due)
+                               ? (int) round(now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($pt->nhis_renew_due)->startOfDay(), false))
+                               : null;
+              $renewSoon   = $renewLeft !== null && $renewLeft <= 30;
+            @endphp
+            @if($pt && ($isNewPt || $renewSoon))
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px 12px;
+                        border:1px solid var(--alert-100);background:var(--alert-50);border-radius:8px;">
+              <div style="font-size:12px;font-weight:700;color:var(--alert-500);">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                @if($isNewPt) 신규 환자 — 공단 등록이 아직입니다
+                @elseif($renewLeft < 0) 공단 재등록 기한이 {{ -$renewLeft }}일 지났습니다
+                @else 공단 재등록 기한이 {{ $renewLeft === 0 ? '오늘까지입니다' : 'D-'.$renewLeft.' 입니다' }}
+                @endif
+              </div>
+
+              @if($isNewPt)
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-800);">
+                @if($consentDone)
+                  <span class="gb-state done"><i class="fa-solid fa-check"></i> 위임장 서명 완료</span>
+                  <span style="color:var(--gray-600);">{{ $consentDone->created_at?->format('Y-m-d') }}</span>
+                @else
+                  <span class="gb-state">위임장 서명 미완료</span>
+                  <button type="button" class="rx-acc-btn" onclick="toggleConsentPopover(event)">위임동의 보내기</button>
+                @endif
+              </div>
+              @endif
+
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-800);">
+                @if($lastFaxHistory)
+                  <span class="gb-state done"><i class="fa-solid fa-check"></i> 공단 팩스 보냄</span>
+                  <span style="color:var(--gray-600);">{{ $lastFaxHistory->created_at?->format('Y-m-d H:i') }}</span>
+                @else
+                  <span class="gb-state">{{ $isNewPt ? '공단 신규 등록 팩스 미발송' : '공단 재등록 팩스 미발송' }}</span>
+                @endif
+                <button type="button" class="rx-acc-btn" onclick="toggleFaxPopover(event)">공단 팩스 발송</button>
+                <span style="color:var(--gray-600);">등록신청서ㆍ결과지ㆍ신분증을 골라 관할지사로 보냅니다.</span>
+              </div>
+            </div>
+            @endif
+
             {{-- ▸ 상담 정보 소제목 + 메모 버튼 --}}
             <div class="rx-sec-head">
               <span class="rx-sec-title">상담 정보</span>
@@ -2199,6 +2252,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
+                {{-- 「조회」로 고른 사람. 저장할 때 이 값으로 처방전과 환자를 잇는다.
+                     비어 있으면 서버가 이름ㆍ주민번호ㆍ휴대폰으로 찾아 잇거나 새로 만든다. --}}
+                <input type="hidden" id="f-patient-id" value="{{ $prescription->patient_id }}" />
                 {{-- 같은 이름이 여럿이거나 기억이 흐릴 때 창을 열어 전화번호ㆍ생년월일까지
                      보고 고른다. 업로드 화면의 「이름 조회」와 같은 창이다. --}}
                 <button type="button" class="rx-side-btn" onclick="pkOpen(event)">
@@ -2434,8 +2490,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">공단 재등록 기한</span>
-                <input type="date" class="form-control" id="f-nhis-renew-due"
-                       value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+                  <input type="date" class="form-control" id="f-nhis-renew-due"
+                         value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;min-width:0;" />
+                  {{-- 기한이 30일 안으로 들어오면 여기에 남은 날을 적는다(nhisRenewBadge) --}}
+                  <span id="nhisRenewBadge" style="display:none;flex-shrink:0;font-size:11px;font-weight:700;
+                        padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
+                </div>
               </div>
               {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
                    병원ㆍ처방 정보 3열에 있던 줄을 그대로 옮겼다(id·값 그대로). --}}
@@ -4751,14 +4812,32 @@ window.HELP_TOUR_STEPS = [
     pkApply(row);
   };
 
-  /* 고른 사람의 이름을 이름 칸에 넣는다. 환자 레코드를 이 처방전에 잇는 일은
-     탭줄의 「환자 조회」가 맡는다 — 여기서는 이름만 채운다. */
+  /* 고른 사람을 이 처방전의 환자로 잇는다. 이름만 채우면 같은 이름이 여럿일 때
+     서버가 어느 쪽인지 가리지 못한다 — 고른 id 를 함께 들고 있다가 저장할 때 보낸다.
+     이 처방전은 그 사람의 새 처방전으로 남는다(처방전 자체는 업로드 때 이미 만들어졌다). */
   function pkApply(row) {
     const el = document.getElementById('f-name');
-    if (el) { el.value = row.name; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (el) {
+      el.dataset.pkFilling = '1';
+      el.value = row.name;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      delete el.dataset.pkFilling;
+    }
+    const hid = document.getElementById('f-patient-id');
+    if (hid) hid.value = row.id;
     markOcrDirty();
     pkClose();
+    showToast(`「${row.name}」 님으로 잇습니다. 저장하면 반영됩니다.`, 'info');
   }
+
+  /* 이름을 손으로 고쳐 쓰면 고른 사람과 어긋난다 — 이어 둔 것을 푼다. 그러면 저장할 때
+     서버가 이름ㆍ주민번호ㆍ휴대폰으로 다시 찾고, 없으면 그 이름으로 새 환자를 만든다.
+     (창에서 고를 때 pkApply 가 값을 넣은 직후의 input 은 지나친다 — 자기가 넣은 값이다.) */
+  document.getElementById('f-name')?.addEventListener('input', function (e) {
+    if (this.dataset.pkFilling === '1') return;
+    const hid = document.getElementById('f-patient-id');
+    if (hid) hid.value = '';
+  });
 
   document.addEventListener('click', (e) => {
     const pop = document.getElementById('pkModal');
@@ -4818,6 +4897,51 @@ window.HELP_TOUR_STEPS = [
   /* 주민등록번호는 쓰기 전용이다. 저장된 값을 복호화해 화면에 되돌려 주던
      '표시' 토글과 그것이 쓰던 코드는 걷어냈다. 있다는 사실은 placeholder 의
      마스킹으로 알리고, 새로 친 값만 저장으로 넘어간다. */
+
+  /* ── 공단 재등록 기한 ──────────────────────────────────
+     공단에 신규 등록하면 2년 뒤 다시 등록해야 한다. 등록일을 적으면 기한을 계산해
+     넣는다 — 손으로 적어 둔 값이 있으면 건드리지 않는다(예외를 지운다).
+     기한이 30일 안으로 들어오면 남은 날을 옆에 적는다. 지난 것은 붉게 적는다. */
+  const NHIS_RENEW_YEARS = 2;
+  const NHIS_RENEW_WARN_DAYS = 30;
+
+  function calcNhisRenewDue() {
+    const reg  = document.getElementById('f-nhis-reg-date');
+    const due  = document.getElementById('f-nhis-renew-due');
+    if (!reg || !due) return;
+    if (reg.value && !due.value) {
+      const d = new Date(reg.value);
+      d.setFullYear(d.getFullYear() + NHIS_RENEW_YEARS);
+      due.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    syncNhisRenewBadge();
+  }
+
+  function syncNhisRenewBadge() {
+    const due   = document.getElementById('f-nhis-renew-due');
+    const badge = document.getElementById('nhisRenewBadge');
+    if (!due || !badge) return;
+    if (!due.value) { badge.style.display = 'none'; return; }
+
+    // 날짜만 견준다 — 시:분이 섞이면 오늘이 D-1 로 보인다
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(due.value); d.setHours(0,0,0,0);
+    const left = Math.round((d - today) / 86400000);
+
+    if (left > NHIS_RENEW_WARN_DAYS) { badge.style.display = 'none'; return; }
+
+    const over = left < 0;
+    badge.textContent = over ? `기한 지남 ${-left}일` : (left === 0 ? '오늘까지' : `D-${left}`);
+    badge.style.display    = '';
+    badge.style.background = over ? 'var(--alert-50)'  : 'var(--alert-50)';
+    badge.style.color      = over ? 'var(--danger)'    : 'var(--alert-500)';
+    badge.style.border     = '1px solid ' + (over ? 'var(--danger)' : 'var(--alert-100)');
+    badge.title = over ? '공단 재등록 기한이 지났습니다.' : '공단 재등록 기한이 다가옵니다.';
+  }
+
+  document.getElementById('f-nhis-reg-date')?.addEventListener('change', calcNhisRenewDue);
+  document.getElementById('f-nhis-renew-due')?.addEventListener('change', syncNhisRenewBadge);
+  document.addEventListener('DOMContentLoaded', syncNhisRenewBadge);
 
   // ── 재구매일 계산 ────────────────────────────────────────
   function calcRenewDate() {
@@ -5862,6 +5986,8 @@ window.HELP_TOUR_STEPS = [
 
     const payload = {
       // ── 환자 정보 ────────────────────────────────────────
+      // 「조회」로 고른 사람. 비우면 서버가 이름ㆍ주민번호ㆍ휴대폰으로 찾거나 새로 만든다.
+      patient_id:       intOrNull('f-patient-id'),
       patient_name_ocr: name,
       resident_no_ocr:  strOrNull('f-resident'),   // 비우면 서버가 기존 값을 지키다
       mobile_ocr:       strOrNull('f-mobile'),

@@ -1,12 +1,12 @@
 {{-- resources/views/fax/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '팩스 발송')
-@section('page-title', '팩스 발송')
+@section('title', '공단 팩스 발송')
+@section('page-title', '공단 팩스 발송')
 {{-- 시안 324:10697 — 빵부스러기 구분자는 하이픈이다: '홈 - 팩스 발송'('홈' x367 · '-' x386 · '팩스 발송' x400) --}}
-@section('breadcrumb', '홈 - 팩스 발송')
+@section('breadcrumb', '홈 - 공단 팩스 발송')
 
-@section('help-title', '팩스 발송 도움말')
+@section('help-title', '공단 팩스 발송 도움말')
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
