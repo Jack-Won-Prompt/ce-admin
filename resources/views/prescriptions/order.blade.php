@@ -1584,6 +1584,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
                   <b style="color:var(--primary);">팩스는 환자 등록·재등록용입니다.</b><br>
                   등록신청서 · 결과지 · 신분증을 아래 첨부에서 골라 공단 관할지사로 보냅니다.<br>
+                  <b>미성년자</b>는 등록신청서에 보호자 정보를 함께 적고, <b>보호자 신분증</b>도 넣습니다.<br>
                   위임 등록과 청구 서류는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
                 </div>
 
@@ -2108,6 +2109,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
               $pt          = $prescription->patient;
               $consentDone = $prescription->consents()->where('status', 'agreed')->latest()->first();
               $isNewPt     = $pt && !$pt->nhis_reg_date;
+              /* 미성년자면 팩스에 넣을 것이 하나 더 있다(보호자 신분증). 나이는 환자의
+                 생년월일로 본다 — 없으면 알 수 없으니 조용히 넘어간다. 기준 나이는
+                 위임장 설정과 같은 값을 쓴다. */
+              $ptMinor     = $pt && $pt->age !== null
+                               && $pt->age < (int) config('delegation.minor_age', 19);
               /* diffInDays 는 실수로 돌아온다(10.0) — 0 과 === 로 견주려면 정수로 받아야 한다 */
               $renewLeft   = ($pt && $pt->nhis_renew_due)
                                ? (int) round(now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($pt->nhis_renew_due)->startOfDay(), false))
@@ -2145,7 +2151,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <span class="gb-state">{{ $isNewPt ? '공단 신규 등록 팩스 미발송' : '공단 재등록 팩스 미발송' }}</span>
                 @endif
                 <button type="button" class="rx-acc-btn" onclick="toggleFaxPopover(event)">공단 팩스 발송</button>
-                <span style="color:var(--gray-600);">등록신청서ㆍ결과지ㆍ신분증을 골라 관할지사로 보냅니다.</span>
+                <span style="color:var(--gray-600);">
+                  등록신청서ㆍ결과지ㆍ신분증을 골라 관할지사로 보냅니다.
+                  @if($ptMinor)
+                    <b style="color:var(--alert-500);">미성년자 — 등록신청서에 보호자 정보를 적고 보호자 신분증도 넣습니다.</b>
+                  @endif
+                </span>
               </div>
             </div>
             @endif
