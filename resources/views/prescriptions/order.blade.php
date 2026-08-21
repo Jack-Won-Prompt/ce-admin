@@ -572,16 +572,36 @@
      1100 아래 1열은 원래 있던 규칙 그대로다. */
   @media (max-width:1599px) { .rx-cols { grid-template-columns:1fr 1fr; } }
   @media (max-width:1100px) { .rx-cols { grid-template-columns:1fr; } }
-  /* 환자 정보 구획만 넷으로 나눈다 — 「공단 재등록」 둘을 「기초(의료급여) 재평가」 셋의
-     오른쪽에 세우라는 요청이다. 열이 셋이면 넷째 열이 다음 줄 왼쪽으로 내려앉아
-     요청과 정반대가 된다.
-     넷으로 서려면 폭이 든다 — 위 계산식으로 입력영역이 1920→157 · 1728→109 라
-     1728 부터 날짜값이 잘리기 시작한다. 그래서 1900 아래로는 3열을 건너뛰고 바로 2열로
-     접는다. 2열에서도 [이름][전화] / [기초 재평가][공단 재등록] 으로 나뉘어
-     왼쪽·오른쪽 관계는 그대로 남는다. */
-  .rx-cols.rx-cols-4 { grid-template-columns:repeat(4,1fr); }
-  @media (max-width:1899px) { .rx-cols.rx-cols-4 { grid-template-columns:1fr 1fr; } }
-  @media (max-width:1100px) { .rx-cols.rx-cols-4 { grid-template-columns:1fr; } }
+  /* 가로로 채우는 구획 — 상담 정보ㆍ환자 정보는 왼쪽에서 오른쪽으로 읽는다.
+     명세(주문 화면_상세목록_상담 환자 정보_수정.pptx 1장)가 라벨 좌표로 그렇게 적었다:
+     열 시작 x 는 70ㆍ299ㆍ539 세 줄기고, 줄마다 왼쪽부터 채워 나간다.
+     .rx-cols 는 「세로 기둥 셋」이라 이 순서가 나오지 않는다 — 여섯 칸 격자를 깔고
+     줄마다 필드를 놓는다. 보통 칸은 둘(= 열 셋), 주소는 넷, 기초 재평가는 셋이다
+     (명세에서 그 줄만 3열 격자를 벗어나 반씩 나뉘어 있다).
+     칸 사이 24ㆍ줄 사이 8 은 .rx-cols / .rx-col 과 같은 값이다. */
+  .rx-rows { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px 24px; align-items:start; }
+  /* 폭은 grid-column-end 로만 준다. 단축 grid-column:span N 을 쓰면 start 까지 함께
+     지정되어(start:span N / end:auto), 뒤따르는 .rx-row-start 의 start:1 이 그 span 을
+     덮어써 칸 하나로 줄어든다 — 두 규칙이 서로를 지우지 않게 갈라 둔다. */
+  .rx-rows > .rx-field-row { grid-column-end:span 2; }
+  .rx-rows > .rx-w3 { grid-column-end:span 3; }
+  .rx-rows > .rx-w4 { grid-column-end:span 4; }
+  /* 줄을 못 채우고 끝나는 줄이 있다(송금자명ㆍ현금영수증 = 넷). 다음 줄 첫 칸이
+     그 빈자리로 흘러들지 않게 시작 칸을 못박는다. */
+  .rx-rows > .rx-row-start { grid-column-start:1; }
+  /* 좁아지면 줄당 둘, 더 좁아지면 하나. 이때는 시작 칸을 풀어 그냥 흐르게 둔다 —
+     못박아 두면 빈칸이 줄줄이 생긴다. */
+  @media (max-width:1599px) {
+    .rx-rows { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .rx-rows > .rx-row-start { grid-column-start:auto; }
+    .rx-rows > .rx-w3 { grid-column-end:span 2; }
+    .rx-rows > .rx-w4 { grid-column-end:span 4; }
+  }
+  @media (max-width:1100px) {
+    .rx-rows { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .rx-rows > .rx-field-row, .rx-rows > .rx-w3, .rx-rows > .rx-w4 { grid-column-end:span 2; }
+  }
+  .rx-sec-head + .rx-rows { margin-top:12px; }
   /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
   .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
                  height:32px; padding:0 12px; border-radius:8px;
@@ -2028,9 +2048,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </span>
               </button>
             </div>
-            <div class="rx-cols">
-            <div class="rx-col">
-              {{-- 1열 — 상담 번호 · 상담 일자 (시안 315:58 Frame 48101490) --}}
+            <div class="rx-rows">
+            {{-- 명세(주문 화면_상세목록_상담 환자 정보_수정.pptx 1장)는 이 구획을 가로로 읽는다 —
+                 상담 번호ㆍ상담 일자ㆍ상담 유형 / 상담 상태ㆍ재 상담 일자. --}}
               <div class="rx-field-row" style="align-items:flex-start;">
                 <span class="rx-field-label">상담 번호</span>
                 {{-- 시안(Frame 48101481)은 두 칸이다: [입력 144 FILL][추가상담(채번) 101 HUG], 사이 8 = 253.
@@ -2062,10 +2082,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                           onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'">오늘</button>
                 </div>
               </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 2열 — 상담 유형 · 상담 상태 (시안 315:58 Frame 48101511) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">상담 유형</span>
                 <select class="form-control" id="f-counsel-type" onchange="onCounselTypeChange(this.value)" style="flex:1;">
@@ -2077,7 +2093,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="1050" @selected(($prescription->counsel_type ?? '') == '1050')>기타</option>
                 </select>
               </div>
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">상담 상태</span>
                 <select class="form-control" id="f-counsel-status" onchange="onCounselStatusChange(this.value)" style="flex:1;">
                   <option value="">선택</option>
@@ -2087,36 +2103,26 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <option value="99" @selected(($prescription->counsel_status ?? '') == '99')>취소</option>
                 </select>
               </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 3열 — 재 상담 일자.
-                   '유형'(f-acc-add-type)과 '검수 메모'(f-counsel-memo)는 1차 요청서 12·16쪽
-                   («처방전 여부->유형으로 명칭 변경 및 … 병원 처방정보로 이동»,
-                    «메모-> 병원 처방으로 이동 및 검수 메모로 명칭 변경»)에 따라
-                   병원ㆍ처방 정보 구획으로 옮겼다. id·값·옵션은 한 글자도 바뀌지 않았다.
-                   재 상담 일자는 시안에 없지만, 상담 상태가 '재상담'일 때만 열리는
-                   입력이라 빼면 그 값을 넣을 자리가 사라진다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">재 상담 일자</span>
                 <input type="date" class="form-control" id="f-re-counsel-date"
                        value="{{ $prescription->counsel_re_date ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            </div>{{-- /rx-cols --}}
+            </div>{{-- /rx-rows --}}
 
             {{-- ▸ 환자 정보 소제목 --}}
             <div class="rx-sec-head" style="margin-top:24px;">
               <span class="rx-sec-title">환자 정보</span>
             </div>
-            <div class="rx-cols rx-cols-4">
-            <div class="rx-col">
-              {{-- 1열 — 이름* · 구분(SB/SCI) · 주민등록번호 · 생년월일(1) · Email · 주소.
-                   1차 요청서 15쪽이 적은 환자 정보 순서를 따른다
-                   (…환자명 / 구분(SB/SCI)·상병 타입·주민등록번호 / 생년월일(1)(2)·생년 /
-                    성별·Email·Fax / 주소·전화번호1·전화번호2 …).
-                   생년월일과 보호자(guardianBox)는 시안에 없지만 주민번호로 계산되는 짝이라
-                   주민등록번호 바로 아래에 남긴다. --}}
+            <div class="rx-rows">
+            {{-- 명세(같은 문서 1장)는 이 구획도 가로로 읽는다. 라벨 좌표가 적은 차례 그대로다:
+                   이름ㆍ주민등록번호ㆍ생년월일(1) / 구분(SB/SCI)ㆍ전화번호 1ㆍ전화번호 2 /
+                   주소(두 칸)ㆍEmail / 송금자명ㆍ현금영수증 / 공단 등록ㆍ공단 등록일 /
+                   기초 재평가 대상자ㆍ기한(반씩) / 공단 재등록 대상자ㆍ기한ㆍ신환 Master 등록일.
+                 1차 요청서 15쪽이 적은 항목 차례와도 어긋나지 않는다.
+                 여기 없는 것들의 행방 — 유형ㆍ검수 메모ㆍ일일 도뇨 횟수ㆍFive/Six(110days) 는
+                 요청서 12·14·16쪽에 따라 병원ㆍ처방 정보 구획으로 옮겨 두었다.
+                 보호자(법정대리인) 입력은 생년월일 줄의 「미성년」 배지를 눌러 여는 팝오버로 접었다(명세 2장). --}}
               <div class="rx-field-row">
                 {{-- 시안 라벨 56개 중 '이름 *' 하나만 13/700 이다(나머지는 전부 13/500).
                      '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
@@ -2125,16 +2131,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
-              </div>
-              {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
-                   병원ㆍ처방 정보 1열에 있던 줄을 라벨ㆍ입력ㆍ옵션째 그대로 옮겼다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">구분(SB/SCI)</span>
-                <select class="form-control" id="f-sb-sci" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="SB"  @selected(($prescription->patient?->sb_sci ?? '') == 'SB')>SB</option>
-                  <option value="SCI" @selected(($prescription->patient?->sb_sci ?? '') == 'SCI')>SCI</option>
-                </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">주민등록번호</span>
@@ -2148,72 +2144,94 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               {{-- 주민번호 앞자리로 생년월일·만 나이를 즉시 계산해 보여준다.
                    번호를 치는 중에도 바뀌고, 아직 안 쳤으면 저장된 마스킹으로 계산한다. --}}
-              <div class="rx-field-row">
+              <div class="rx-field-row" style="position:relative;">
                 <span class="rx-field-label">생년월일(1)</span>
-                <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:6px;">
                   <input type="text" class="form-control" id="f-birth" readonly
-                         style="flex:1;min-width:0;background:var(--gray-50);" placeholder="주민번호를 입력하면 계산됩니다" />
-                  <span id="f-age-badge" style="display:none;flex-shrink:0;font-size:11px;font-weight:700;
+                         style="flex:1 1 120px;min-width:0;background:var(--gray-50);" placeholder="주민번호를 입력하면 계산됩니다" />
+                  {{-- 미성년이면 이 배지가 보호자 팝오버를 여는 자리다(명세 2장이 이 배지를 가리킨다).
+                       미성년이 아니면 나이만 알리는 표시라 누를 것이 없다 — rnRecalc 이 갈라 준다. --}}
+                  <span id="f-age-badge" onclick="toggleGuardianPop(event)"
+                        style="display:none;flex-shrink:0;font-size:11px;font-weight:700;
                         padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
-                </div>
-              </div>
-              {{-- ── 미성년자 — 법정대리인 ─────────────────────────
-                   만 나이가 기준보다 어릴 때만 나타난다. 여기 적어 두면 위임 서명 화면에
-                   그대로 보이고, 보호자는 서명과 신분증만 더하면 된다. --}}
-              <div id="guardianBox" style="display:none;flex-direction:column;gap:8px;
-                   border:1px solid var(--alert-100); background:var(--alert-50);
-                   border-radius:8px; padding:10px 12px; margin:4px 0;">
-                <div style="font-size:12px;font-weight:700;color:var(--alert-500);">
-                  미성년자 — 보호자(법정대리인) 정보
-                  <span style="font-weight:500;color:var(--gray-600);">위임 서명 화면에 함께 보입니다.</span>
-                </div>
-                <div class="rx-field-row">
-                  <span class="rx-field-label">법정대리인 또는 가족 성명</span>
-                  <input type="text" class="form-control" id="f-guardian-name" maxlength="50"
-                         value="{{ $prescription->patient?->guardian_name ?? '' }}"
-                         placeholder="법정대리인 또는 가족 성명" style="flex:1;" />
-                </div>
-                <div class="rx-field-row">
-                  <span class="rx-field-label">가입자ㆍ피부양자와의 관계</span>
-                  <select class="form-control" id="f-guardian-relation" style="flex:1;">
-                    @php $gRel = $prescription->patient?->guardian_relation ?? ''; @endphp
-                    <option value="">선택</option>
-                    @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
-                      <option value="{{ $r }}" {{ $gRel === $r ? 'selected' : '' }}>{{ $r }}</option>
-                    @endforeach
-                  </select>
-                </div>
-                <div class="rx-field-row">
-                  <span class="rx-field-label">법정대리인 또는 가족 생년월일</span>
-                  <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
-                         value="{{ $prescription->patient?->guardian_birth_date ?? '' }}"
-                         placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
-                </div>
-                <div class="rx-field-row">
-                  <span class="rx-field-label">보호자 전화번호</span>
-                  <input type="text" class="form-control" id="f-guardian-phone"
-                         value="{{ $prescription->patient?->guardian_phone ?? '' }}"
-                         placeholder="010-XXXX-XXXX" data-phone style="flex:1;" />
+                  {{-- 진행 상태는 팝오버를 닫아 두어도 보여야 한다 — 무엇이 아직 안 왔는지가
+                       이 줄에서 읽혀야 열어 볼지 말지를 정한다. 상자 안에 있던 것을 올렸다. --}}
+                  <span id="gbSignState" class="gb-state" style="display:none;">위임장 서명 미완료</span>
+                  <span id="gbIdState"   class="gb-state" style="display:none;">신분증 업로드 미완료</span>
                 </div>
 
-                {{-- 받은 것과 아직 안 받은 것을 한눈에. 서명 화면에서 들어오면 채워진다. --}}
-                <div class="rx-field-row">
-                  <span class="rx-field-label">진행 상태</span>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;">
-                    <span id="gbSignState" class="gb-state">위임장 서명 미완료</span>
-                    <span id="gbIdState"   class="gb-state">신분증 업로드 미완료</span>
+                {{-- ── 미성년자 — 보호자(법정대리인) 팝오버 ────────────────
+                     펼쳐 두면 이 줄 아래로 다섯 줄을 먹어 옆 칸과 높이가 어긋난다.
+                     명세 2장이 「클릭 시 팝오버」로 접으라 적었다.
+                     DOM 은 폼 안 제자리에 그대로 둔다 — 옮기면 저장 때 값을 잃는다.
+                     감싸는 .rx-acc-item 이 overflow:hidden 이지만 이 줄이 구획 첫 줄이라
+                     아래로 열리는 팝오버는 잘리지 않는다. --}}
+                {{-- 오른쪽 끝에 맞춰 연다. 왼쪽에 맞추면 이 줄이 구획의 셋째 칸이라
+                     420 짜리 상자가 카드 밖으로 160 넘어간다. --}}
+                <div id="guardianPop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+                     width:min(420px, calc(100vw - 48px)); z-index:60;
+                     box-shadow:0 8px 32px rgba(0,0,0,.18); border-radius:8px;">
+                  <div id="guardianBox" style="display:flex;flex-direction:column;gap:8px;
+                       border:1px solid var(--alert-100); background:var(--alert-50);
+                       border-radius:8px; padding:10px 12px; margin:0;">
+                    <div style="font-size:12px;font-weight:700;color:var(--alert-500);">
+                      미성년자 — 보호자(법정대리인) 정보
+                      <span style="font-weight:500;color:var(--gray-600);">위임 서명 화면에 함께 보입니다.</span>
+                    </div>
+                    <div class="rx-field-row">
+                      <span class="rx-field-label">법정대리인 또는 가족 성명</span>
+                      <input type="text" class="form-control" id="f-guardian-name" maxlength="50"
+                             value="{{ $prescription->patient?->guardian_name ?? '' }}"
+                             placeholder="법정대리인 또는 가족 성명" style="flex:1;" />
+                    </div>
+                    <div class="rx-field-row">
+                      <span class="rx-field-label">가입자ㆍ피부양자와의 관계</span>
+                      <select class="form-control" id="f-guardian-relation" style="flex:1;">
+                        @php $gRel = $prescription->patient?->guardian_relation ?? ''; @endphp
+                        <option value="">선택</option>
+                        @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
+                          <option value="{{ $r }}" {{ $gRel === $r ? 'selected' : '' }}>{{ $r }}</option>
+                        @endforeach
+                      </select>
+                    </div>
+                    <div class="rx-field-row">
+                      <span class="rx-field-label">법정대리인 또는 가족 생년월일</span>
+                      <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
+                             value="{{ $prescription->patient?->guardian_birth_date ?? '' }}"
+                             placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
+                    </div>
+                    <div class="rx-field-row">
+                      <span class="rx-field-label">보호자 전화번호</span>
+                      <input type="text" class="form-control" id="f-guardian-phone"
+                             value="{{ $prescription->patient?->guardian_phone ?? '' }}"
+                             placeholder="010-XXXX-XXXX" data-phone style="flex:1;" />
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {{-- 요청서 15쪽은 '성별/Email/Fax' 줄이 '주소/전화번호1/전화번호2' 줄보다 앞선다.
-                   Email 은 2열에 있던 줄을 그대로 옮겼고, 전화번호 1ㆍ2 는 2열 머리로 내려보냈다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">Email</span>
-                <input type="email" class="form-control" id="f-email"
-                       value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
+              {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
+                   병원ㆍ처방 정보 1열에 있던 줄을 라벨ㆍ입력ㆍ옵션째 그대로 옮겼다. --}}
+              <div class="rx-field-row rx-row-start">
+                <span class="rx-field-label">구분(SB/SCI)</span>
+                <select class="form-control" id="f-sb-sci" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="SB"  @selected(($prescription->patient?->sb_sci ?? '') == 'SB')>SB</option>
+                  <option value="SCI" @selected(($prescription->patient?->sb_sci ?? '') == 'SCI')>SCI</option>
+                </select>
               </div>
-              <div class="rx-field-row" style="align-items:flex-start;">
+              <div class="rx-field-row">
+                <span class="rx-field-label">전화번호 1</span>
+                <input type="text" class="form-control" id="f-mobile"
+                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">전화번호 2</span>
+                <input type="text" class="form-control" id="f-mobile2"
+                       value="{{ $prescription->patient?->phone ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+              </div>
+              <div class="rx-field-row rx-row-start rx-w4" style="align-items:flex-start;">
                 <span class="rx-field-label">주소</span>
                 <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
                   {{-- 1줄 — 시안 315:58 Frame 48101496: [우편번호 72 FIXED][도로명 주소 92 FILL][주소 검색 73 HUG],
@@ -2245,27 +2263,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 2열 — 전화번호 1 · 전화번호 2 · 송금자명 · 현금영수증 · 공단 등록 · 공단 등록일
-                   (1차 요청서 15쪽 순서).
-                   '일일 도뇨 횟수'(f-diverticulums)와 'Five/Six(110days)'(f-five)는 요청서 14·16쪽
-                   («일일 도뇨 횟수 :병원 처방 정보로 이동», «환자 정보 아닌, 병원 처방정보 이동»)에
-                   따라 병원ㆍ처방 정보 구획으로 옮겼다. --}}
+              {{-- 요청서 15쪽은 '성별/Email/Fax' 줄이 '주소/전화번호1/전화번호2' 줄보다 앞선다.
+                   Email 은 2열에 있던 줄을 그대로 옮겼고, 전화번호 1ㆍ2 는 2열 머리로 내려보냈다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 1</span>
-                <input type="text" class="form-control" id="f-mobile"
-                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                <span class="rx-field-label">Email</span>
+                <input type="email" class="form-control" id="f-email"
+                       value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 2</span>
-                <input type="text" class="form-control" id="f-mobile2"
-                       value="{{ $prescription->patient?->phone ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">송금자명</span>
                 <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="송금자명" style="flex:1;" />
               </div>
@@ -2288,7 +2293,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->patient?->cash_receipt_no ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
                 </div>
               </div>
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">공단 등록</span>
                 <select class="form-control" id="f-nhis-status" style="flex:1;">
                   <option value="">선택</option>
@@ -2302,33 +2307,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-nhis-reg-date"
                        value="{{ $prescription->patient?->nhis_reg_date ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 3열 — 기초(의료급여) 재평가 대상자/기한 · 신환 Master 등록일.
-                   1차 요청서 15쪽은 공단 재등록 둘을 이 앞에 적었지만, 그 둘은 오른쪽
-                   4열로 갈라 세운다(요청). 셋과 둘로 나뉘어 서로 가리지 않는다. --}}
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
                 <input type="text" class="form-control" id="f-basic-reeval"
                        value="{{ $prescription->patient?->basic_reeval ?? '' }}" placeholder="대상 여부 또는 비고" style="flex:1;" />
               </div>
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-w3">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
                 <input type="date" class="form-control" id="f-basic-reeval-due"
                        value="{{ $prescription->patient?->basic_reeval_due ?? '' }}" style="flex:1;" />
               </div>
-              {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
-                   병원ㆍ처방 정보 3열에 있던 줄을 그대로 옮겼다(id·값 그대로). --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">신환 Master 등록일</span>
-                <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
-              </div>
-            </div>
-
-            <div class="rx-col">
-              {{-- 4열 — 공단 재등록 대상자/기한. 3열의 기초 재평가 셋 오른쪽에 세운다. --}}
-              <div class="rx-field-row">
+              <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">공단 재등록 대상자</span>
                 <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
               </div>
@@ -2337,8 +2326,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-nhis-renew-due"
                        value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            </div>{{-- /rx-cols --}}
+              {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
+                   병원ㆍ처방 정보 3열에 있던 줄을 그대로 옮겼다(id·값 그대로). --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">신환 Master 등록일</span>
+                <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
+              </div>
+            </div>{{-- /rx-rows --}}
 
           </div>
         </div>
@@ -4549,12 +4543,16 @@ window.HELP_TOUR_STEPS = [
     const birth = birthFromRrn(src);
     const bEl   = document.getElementById('f-birth');
     const badge = document.getElementById('f-age-badge');
-    const box   = document.getElementById('guardianBox');
+    /* 보호자 입력은 팝오버 안에 있다. 미성년일 때 「열 수 있게」만 해 두고 열지는 않는다 —
+       펼쳐 두면 이 줄 아래로 다섯 줄을 먹어 옆 칸과 높이가 어긋난다(명세 2장). */
+    const states = ['gbSignState', 'gbIdState'].map(id => document.getElementById(id));
+    const showStates = (on) => states.forEach(el => { if (el) el.style.display = on ? '' : 'none'; });
 
     if (!birth) {
       if (bEl)  bEl.value = '';
       if (badge) badge.style.display = 'none';
-      if (box)  box.style.display = 'none';
+      showStates(false);
+      closeGuardianPop();
       return;
     }
 
@@ -4570,8 +4568,41 @@ window.HELP_TOUR_STEPS = [
       badge.style.color      = minor ? 'var(--alert-500)' : 'var(--gray-600)';
       badge.style.border     = '1px solid ' + (minor ? 'var(--alert-100)' : 'var(--gray-200)');
     }
-    if (box) box.style.display = minor ? 'flex' : 'none';
+    /* 미성년일 때만 누를 수 있는 배지가 된다. 아니면 나이만 알리는 표시라 손대지 않는다. */
+    if (badge) {
+      badge.style.cursor = minor ? 'pointer' : 'default';
+      badge.title = minor ? '보호자(법정대리인) 정보 열기' : '';
+      badge.setAttribute('role', minor ? 'button' : 'presentation');
+    }
+    showStates(minor);
+    if (!minor) closeGuardianPop();
   }
+
+  /* ── 보호자(법정대리인) 팝오버 ────────────────────────────
+     여는 자리는 「만 N세 · 미성년」 배지다(명세 2장이 그 배지를 가리킨다). */
+  function toggleGuardianPop(e) {
+    if (e) e.stopPropagation();
+    const badge = document.getElementById('f-age-badge');
+    // 미성년이 아니면 열 것이 없다
+    if (!badge || badge.getAttribute('role') !== 'button') return;
+    const pop = document.getElementById('guardianPop');
+    if (!pop) return;
+    pop.style.display = (pop.style.display === 'none' || !pop.style.display) ? 'block' : 'none';
+  }
+
+  function closeGuardianPop() {
+    const pop = document.getElementById('guardianPop');
+    if (pop) pop.style.display = 'none';
+  }
+
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('guardianPop');
+    if (!pop || pop.style.display === 'none' || !pop.style.display) return;
+    const badge = document.getElementById('f-age-badge');
+    if (pop.contains(e.target) || (badge && badge.contains(e.target))) return;
+    pop.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGuardianPop(); });
 
   /* 법정대리인 또는 가족 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다 */
   function formatBirthInput(el) {
@@ -6279,7 +6310,7 @@ window.HELP_TOUR_STEPS = [
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
