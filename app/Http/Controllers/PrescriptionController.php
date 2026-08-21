@@ -1058,7 +1058,6 @@ class PrescriptionController extends Controller
             'counsel_status'        => 'nullable|string|max:10',
             'counsel_call_no'       => 'nullable|string|max:30',
             'counsel_re_date'       => 'nullable|date',
-            'counsel_memo'          => 'nullable|string|max:2000',
             // 환자 정보 추가
             'guardian'              => 'nullable|string|max:50',
             // 미성년자 — 법정대리인
@@ -1147,7 +1146,8 @@ class PrescriptionController extends Controller
                                         ? preg_replace('/\D/', '', $request->input('counsel_call_no'))
                                         : null,
             'counsel_re_date'      => $request->input('counsel_re_date'),
-            'counsel_contents'     => $request->input('counsel_memo'),
+            // counsel_contents 는 건드리지 않는다 — 「검수 메모」 칸을 화면에서 걷어
+            // 보내오는 값이 없다. 여기서 덮어쓰면 예전에 적어 둔 것이 지워진다.
             // 병원·처방
             'hospital_code'        => $request->input('hospital_code'),
             'rx_use_period'        => $request->input('rx_period'),

@@ -2403,13 +2403,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
                    시안 315:58 Frame 48101490 (361×392). --}}
-              {{-- 1차 요청서 12쪽 «메모-> 병원 처방으로 이동 및 검수 메모로 명칭 변경».
-                   상담 정보 3열에 있던 줄을 라벨ㆍ입력째 그대로 옮겼다(id·값 그대로). --}}
-              <div class="rx-field-row" style="align-items:flex-start;">
-                <span class="rx-field-label">검수 메모</span>
-                {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
-                <textarea class="form-control" id="f-counsel-memo" rows="2" style="flex:1;resize:vertical;">{{ $prescription->counsel_contents ?? '' }}</textarea>
-              </div>
+              {{-- 「검수 메모」 칸은 두지 않는다. 1차 요청서 12쪽이 상담 정보의 「메모」를
+                   여기로 옮기고 이름을 바꾸라 했던 자리인데, 지금은 쓰지 않기로 했다.
+                   값(counsel_contents)은 지우지 않았다 — 예전에 적어 둔 것이 남아 있고
+                   거래처 관리의 상담내역이 그 값을 읽는다. 저장할 때 이 칸이 없으니
+                   빈 값으로 덮어쓰지 않도록 보내는 쪽ㆍ받는 쪽에서 함께 걷었다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">요양병원 코드</span>
                 {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
@@ -2611,7 +2609,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    그래서 그림자를 지우고 값을 쥔 원래 칸을 그 자리에 옮겨 놓았다 —
                    화면에 보이는 항목 수는 그대로고, 저장되는 값은 하나로 분명해진다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">Five/Six(110days)</span>
+                {{-- 라벨 칸은 100 이라 이 이름은 한 줄에 서지 못한다. 그냥 두면
+                     브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
+                     아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
+                <span class="rx-field-label">Five/Six<br>(110days)</span>
                 <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
@@ -5390,7 +5391,6 @@ window.HELP_TOUR_STEPS = [
       'f-counsel-type':    d.type,
       'f-acc-add-type':    d.acc_add_type,
       'f-counsel-status':  d.status,
-      'f-counsel-memo':    d.contents,
       'f-re-counsel-date': d.re_counsel_date,
       'f-repurchase-date': d.repurchase_date,
     };
@@ -5755,7 +5755,6 @@ window.HELP_TOUR_STEPS = [
       counsel_status:       strOrNull('f-counsel-status'),
       counsel_call_no:      strOrNull('f-call-no'),
       counsel_re_date:      strOrNull('f-re-counsel-date'),
-      counsel_memo:         strOrNull('f-counsel-memo'),
       // ── 제품 ──────────────────────────────────────────────
       items:            itemsPayload,
     };
