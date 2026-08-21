@@ -339,20 +339,23 @@
   /* ── 카드 / 테이블 뷰 토글 ── */
   .cv { display: block; } .tv { display: none; }
   .tab-view-table .cv { display: none; } .tab-view-table .tv { display: block; }
-  .tab-view-table #btnAccToggleAll { display: none; }
   /* OCR·주문 탭은 cv 유지 (입력 기능 보존) — 아코디언 크롬만 제거 */
   .tab-view-table #tab-ocr   > .cv { display: block; }
   .tab-view-table #tab-order > .cv { display: block; }
   .tab-view-table #tab-ocr   > .tv { display: none; }
   .tab-view-table #tab-order > .tv { display: none; }
   /* OCR 탭 table mode: 아코디언 → 플랫 섹션 */
+  /* 테이블뷰 — 셋을 한꺼번에 편다. 탭줄은 감추고, 구획 이름은 각 판 머리의 띠로 갈라 준다
+     (예전 아코디언 머리가 하던 일이다). 단추는 예전처럼 이 모드에서 보이지 않는다. */
   .tab-view-table #tab-ocr .rx-acc-item { border:none; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:0; }
   .tab-view-table #tab-ocr .rx-acc-item:last-child { border-bottom:none; }
-  .tab-view-table #tab-ocr .rx-acc-header { background:var(--primary-light); pointer-events:none; padding:5px 12px; }
-  .tab-view-table #tab-ocr .rx-acc-btns { display:none; }
-  .tab-view-table #tab-ocr .rx-acc-header > span:first-child { color:var(--primary); font-size:11px; }
-  .tab-view-table #tab-ocr .rx-acc-icon,
-  .tab-view-table #tab-ocr .rx-acc-body { display:block !important; padding:10px 12px; }
+  .tab-view-table #tab-ocr .rx-tabs { display:none; }
+  .tab-view-table #tab-ocr .rx-pane { display:block !important; padding:10px 12px; }
+  .tab-view-table #tab-ocr .rx-pane + .rx-pane { border-top:1px solid var(--border); }
+  .tab-view-table #tab-ocr .rx-pane-cap {
+    display:block; margin:-10px -12px 8px; padding:5px 12px;
+    background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:700;
+  }
   .tab-tbl { width:100%; border-collapse:collapse; font-size:12px; }
   .tab-tbl td, .tab-tbl th { padding:5px 9px; border:1px solid var(--border); vertical-align:middle; }
   .tab-tbl th { background:var(--bg); font-size:10px; font-weight:700; color:var(--text-secondary); white-space:nowrap; width:1%; min-width:76px; }
@@ -514,19 +517,9 @@
      열렸다고 테두리 색이나 머리 배경을 바꾸지 않는다. 시안은 닫힘·열림 모두
      흰 바탕에 #E8EAEC 테두리 하나로 두고, 펼침 여부는 화살표 방향으로만 알린다. */
   .rx-acc-item { border:1px solid var(--gray-200); border-radius:12px; margin-bottom:12px; overflow:hidden; background:var(--gray-0); }
-  .rx-acc-header { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:8px 16px; cursor:pointer; background:var(--gray-0); user-select:none; transition:var(--transition); gap:8px; }
-  .rx-acc-header:hover { background:var(--gray-50); }
-  /* 왼쪽 — 아이콘 20 + 제목 13/700 (시안 137:546) */
-  .rx-acc-header > span:first-child { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--gray-1000); }
-  .rx-acc-header > span:first-child > i,
-  .rx-acc-header > span:first-child > svg { width:20px; height:20px; font-size:16px; flex-shrink:0;
-                                            display:inline-flex; align-items:center; justify-content:center; }
-  /* 오른쪽 — 힌트 12/500 + 화살표 14 (시안 137:555) */
-  .rx-acc-meta { display:flex; align-items:center; gap:12px; }
-  /* 헤더 오른쪽 버튼 (시안 148:2642) — 펼쳤을 때만 보인다.
-     접힌 카드(137:545)에는 힌트와 화살표만 있다. */
-  .rx-acc-btns { display:none; align-items:center; gap:6px; }
-  .rx-acc-item.is-open > .rx-acc-header .rx-acc-btns { display:flex; }
+  /* 머리(.rx-acc-header)와 화살표(.rx-acc-icon)는 걷었다 — 세 구획이 탭으로 바뀌어
+     여닫는 머리가 없다. 단추 규격(.rx-acc-btn)은 탭줄에서 그대로 쓴다. */
+  .rx-acc-btns { display:flex; align-items:center; gap:6px; }
   .rx-acc-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
                 height:28px; padding:0 12px; border-radius:8px;
                 background:var(--gray-0); border:1px solid var(--gray-200);
@@ -537,9 +530,29 @@
   .rx-acc-btn-fill { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
   .rx-acc-btn-fill:hover { background:var(--primary); filter:brightness(1.06); }
   .rx-acc-meta-hint { font-size:12px; font-weight:500; color:var(--gray-600); }
-  .rx-acc-icon { width:14px; height:14px; font-size:14px; color:var(--gray-600); flex-shrink:0;
-                 display:inline-flex; align-items:center; justify-content:center; transition:transform .2s ease; }
-  .rx-acc-icon.open { transform:rotate(180deg); }
+
+  /* ── 안쪽 가로 탭 (아코디언을 대신한다) ────────────────────
+     바깥 탭줄(.tab-bar)과 헷갈리지 않게 작게ㆍ밑줄형으로 그린다 — 채운 알약은 바깥 것 몫이다.
+     높이 44 는 예전 아코디언 머리와 같아, 첫 구획이 서던 자리가 그대로다. */
+  .rx-tabs { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+             min-height:44px; padding:0 16px; background:var(--gray-0);
+             border-bottom:1px solid var(--gray-200); }
+  .rx-tabs-list { display:flex; align-items:stretch; gap:4px; min-width:0; flex-wrap:wrap; }
+  .rx-tab { display:inline-flex; align-items:center; gap:8px; height:43px; padding:0 10px;
+            border:none; background:none; cursor:pointer; white-space:nowrap;
+            font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-600);
+            border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .rx-tab > i { width:20px; height:20px; font-size:16px; flex-shrink:0;
+                display:inline-flex; align-items:center; justify-content:center; }
+  .rx-tab:hover { color:var(--gray-1000); }
+  .rx-tab.active { color:var(--primary); font-weight:700; border-bottom-color:var(--primary); }
+  .rx-tabs-acts { display:flex; align-items:center; gap:12px; margin-left:auto; }
+  /* 단추는 예전엔 「펼친 카드」에만 보였다. 이제 한 벌뿐이라 늘 보인다. */
+  .rx-tabs .rx-acc-btns { display:flex; }
+  /* 탭줄이 이미 아래 선을 그었다 */
+  .rx-tabbed > .rx-acc-body { border-top:none; }
+  /* 구획 이름은 테이블뷰에서만 쓴다 — 평소에는 탭 이름이 그 일을 한다 */
+  .rx-pane-cap { display:none; }
   /* 아코디언 본문 — 시안 148:2651: padding 12/16.
      칸 사이는 세로 8, 가로 24 (시안 148:2660 이 열 사이 24, 열 안 8). */
   .rx-acc-body { padding:12px 16px; background:var(--bg-card); border-top:1px solid var(--gray-200); }
@@ -1976,10 +1989,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div class="tab-bar-acts">
           {{-- 글자 링크 묶음 — 시안은 이 둘만 테두리 없이 둔다 (137:696) --}}
           <div class="tb-links">
-            <button type="button" id="btnAccToggleAll" class="tb-link" onclick="toggleAllAcc()">
-              <i class="fa-solid fa-angles-down" id="btnAccToggleAllIcon"></i>
-              <span id="btnAccToggleAllLabel">전체 열기</span>
-            </button>
+            {{-- 「전체 열기」는 걷었다 — 구획이 아코디언에서 탭으로 바뀌어 「모두 펴기」가
+                 뜻을 잃었다. 셋을 한꺼번에 보는 길은 옆의 「테이블뷰」가 그대로 맡는다. --}}
             <button type="button" id="btnViewToggle" class="tb-link" onclick="toggleTabView()">
               <i class="fa-solid fa-table-list" id="btnViewToggleIcon"></i>
               <span id="btnViewToggleLabel">테이블뷰</span>
@@ -2018,28 +2029,44 @@ $calcDeposit  = $calcCopay + $calcShipping;
           else                               $fmtCallNo = $rawCallNo;
           $isReturningPatient = $prescription->patient_id && $prevCounselings->isNotEmpty();
         @endphp
-        <div class="rx-acc-item is-open">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span>
-              <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> 상담ㆍ환자 정보
-              @if($isReturningPatient)
+        {{-- 세 구획은 아코디언이 아니라 안쪽 가로 탭이다.
+             예전 아코디언도 하나를 열면 나머지를 닫아(상호배타) 동작은 이미 탭이었다.
+             바꾸면서 얻은 것 — 닫힌 머리 둘이 먹던 112(44+여백12 씩)를 돌려받고,
+             셋 중 어느 것이든 한 번에 닿는다. 머리마다 세 벌씩 있던 원본 복원ㆍ승인 요청ㆍ
+             저장도 한 벌로 준다.
+             바깥 탭줄(상세 목록ㆍ주문 제품…)과 헷갈리지 않게 작게ㆍ밑줄형으로 그린다.
+             「테이블뷰」는 그대로다 — 그때는 탭줄을 감추고 셋을 한꺼번에 편다. --}}
+        <div class="rx-acc-item rx-tabbed">
+          <div class="rx-tabs">
+            <div class="rx-tabs-list">
+              <button type="button" class="rx-tab active" data-pane="rxp-1" onclick="rxTab(this)">
+                <i class="fa-solid fa-circle-info"></i> 상담ㆍ환자 정보
+                @if($isReturningPatient)
                 <span style="display:inline-flex;align-items:center;gap:3px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px;">
                   <i class="fa-solid fa-rotate-right" style="font-size:9px;"></i> 재방문
                 </span>
-              @endif
-            </span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">상담정보ㆍ환자정보</span>
-              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
-              <div class="rx-acc-btns" onclick="event.stopPropagation()">
+                @endif
+              </button>
+              <button type="button" class="rx-tab" data-pane="rxp-2" onclick="rxTab(this)">
+                <i class="fa-solid fa-hospital"></i> 병원ㆍ처방 정보
+              </button>
+              <button type="button" class="rx-tab" data-pane="rxp-3" onclick="rxTab(this)">
+                <i class="fa-solid fa-ellipsis"></i> 추가정보
+              </button>
+            </div>
+            <div class="rx-tabs-acts">
+              <span class="rx-acc-meta-hint" id="rxTabHint">상담정보ㆍ환자정보</span>
+              {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
+              <div class="rx-acc-btns">
                 <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
                 <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
               </div>
-              <i class="fa-solid fa-chevron-down rx-acc-icon open"></i>
             </div>
           </div>
-          <div class="rx-acc-body">
+          <div class="rx-acc-body rx-pane" id="rxp-1">
+            {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
+            <div class="rx-pane-cap">상담ㆍ환자 정보</div>
 
             {{-- ▸ 상담 정보 소제목 + 메모 버튼 --}}
             <div class="rx-sec-head">
@@ -2347,7 +2374,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div></div>{{-- /rx-rows --}}
 
           </div>
-        </div>
 
         {{-- ─────────────────────────────────────────────────
              아코디언 그룹 3: 병원 · 처방 정보 (기본 펼침, OCR)
@@ -2355,23 +2381,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- ── 병원ㆍ처방 정보 (시안 148:2827) ──
              병원·처방 / 처방수량·상병 / 급여·보험 / 신재구매 / 추가정보 다섯 카드를
              시안대로 하나로 합쳤다. 항목은 2열로 나눈다. --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span>
-              <i class="fa-solid fa-hospital" style="color:var(--primary);"></i> 병원ㆍ처방 정보
-            </span>
-            <div class="rx-acc-meta">
-              <span class="rx-acc-meta-hint">병원 처방 정보ㆍ처방수량 상병ㆍ급여 보험 정보ㆍ신/재구매 정보</span>
-              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
-              <div class="rx-acc-btns" onclick="event.stopPropagation()">
-                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
-                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
-                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
-              </div>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
-            </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
+          <div class="rx-acc-body rx-pane" id="rxp-2" style="display:none;">
+            {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
+            <div class="rx-pane-cap">병원ㆍ처방 정보</div>
             @php
               // 합치기 전에는 급여·보험 구획 안에 있던 정의다. 아래 입력과
               // 테이블뷰가 함께 쓰므로 본문 맨 앞으로 옮겼다.
@@ -2680,27 +2692,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             </div></div>{{-- /rx-cols --}}
           </div>
-        </div>
 
         {{-- ── 추가정보 (시안 148:3046) ── --}}
-        <div class="rx-acc-item">
-          <div class="rx-acc-header" onclick="toggleAcc(this)">
-            <span>
-              <i class="fa-solid fa-ellipsis" style="color:var(--primary);"></i> 추가정보
-            </span>
-            <div class="rx-acc-meta">
-              {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「공단」으로 적는다 --}}
-              <span class="rx-acc-meta-hint">공단 위임동의ㆍ인마켓 마감일ㆍ수량</span>
-              {{-- 헤더를 눌러 접히지 않게 클릭을 여기서 멈춘다 --}}
-              <div class="rx-acc-btns" onclick="event.stopPropagation()">
-                <button type="button" class="rx-acc-btn" onclick="resetOCR()" title="입력값을 원본 OCR 결과로 되돌립니다">원본 복원</button>
-                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수 완료 후 승인을 요청합니다">승인 요청</button>
-                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
-              </div>
-              <i class="fa-solid fa-chevron-down rx-acc-icon"></i>
-            </div>
-          </div>
-          <div class="rx-acc-body" style="display:none;">
+          <div class="rx-acc-body rx-pane" id="rxp-3" style="display:none;">
+            {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
+            <div class="rx-pane-cap">추가정보</div>
             <div class="rx-fit">
             <div class="rx-cols">
             <div class="rx-col">
@@ -2741,7 +2737,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             </div></div>{{-- /rx-cols --}}
           </div>
-        </div>
+        </div>{{-- /rx-tabbed --}}
 
       </div>{{-- /cv --}}
 
@@ -4824,132 +4820,27 @@ window.HELP_TOUR_STEPS = [
   }
   let currentSearchIdx = 0;
 
-  // ── 상세 목록 아코디언 토글 ───────────────────────────
-  /* 아코디언을 여닫으면 위쪽 높이가 달라져 화면 전체가 밀린다. 뷰어는 붙어 있어도
-     기준이 되는 스크롤 위치가 통째로 움직이니 같이 튄 것처럼 보인다.
-     기준 요소가 화면에서 제자리에 있도록, 달라진 만큼 스크롤을 되돌린다. */
-  /* 뷰어가 화면에 붙기 시작하는 스크롤 위치. 이보다 위로 올라가면 뷰어가 제자리에서
-     떨어져 같이 내려오므로, 보정할 때 이 아래로는 내려가지 않게 한다. */
-  function viewerStickY() {
-    const vc = document.getElementById('viewerCol');
-    if (!vc || !vc.parentElement) return 0;
-    const top = parseFloat(getComputedStyle(vc).top) || 0;
-    return Math.max(0, vc.parentElement.getBoundingClientRect().top + window.scrollY - top);
-  }
+  // ── 상세 목록 안쪽 탭 ─────────────────────────────────
+  /* ── 안쪽 탭 (상담ㆍ환자 / 병원ㆍ처방 / 추가정보) ─────────────
+     예전에는 아코디언 셋이었고, 하나를 열면 나머지를 닫아 이미 상호배타로 돌았다.
+     탭으로 바꾸면서 세 함수(toggleAcc · toggleAllAcc · syncToggleAllBtn)와
+     keepInPlace 가 함께 사라졌다 — keepInPlace 는 위 패널이 접혀 화면이 튕겨 올라가는
+     것을 스크롤로 보정하던 함수인데, 탭에는 그 일이 없다.
+     힌트 글귀는 예전 머리 오른쪽에 있던 것을 탭줄로 옮겨 고른 판에 맞춰 갈아 끼운다. */
+  const RX_TAB_HINT = {
+    'rxp-1': '상담정보ㆍ환자정보',
+    'rxp-2': '병원 처방 정보ㆍ처방수량 상병ㆍ급여 보험 정보ㆍ신/재구매 정보',
+    'rxp-3': '공단 위임동의ㆍ인마켓 마감일ㆍ수량',
+  };
 
-  function keepInPlace(anchor, mutate) {
-    // 분할 상태에서는 오른쪽 열이 스크롤한다. 페이지는 움직이지 않는다.
-    const col = document.getElementById('tabsCol');
-    const inCol = col && col.parentElement.classList.contains('is-split') &&
-                  col.scrollHeight > col.clientHeight + 1;
-    const before = anchor.getBoundingClientRect().top;
-    mutate();
-    const delta = anchor.getBoundingClientRect().top - before;
-    if (!delta) return;
-    if (inCol) { col.scrollTop += delta; return; }
-    // 위쪽 패널이 접히면 줄어든 높이가 지금 스크롤보다 커서 맨 위까지 튕겨 올라간다.
-    // 그때는 뷰어가 붙어 있는 최소 위치까지만 올린다.
-    const target = Math.max(window.scrollY + delta, viewerStickY());
-    // html 에 scroll-behavior:smooth 가 걸려 있어, 보정까지 애니메이션으로 흐르면
-    // 화면이 미끄러지듯 움직여 보인다. 즉시 옮긴다.
-    window.scrollTo({ top: target, behavior: 'instant' });
-  }
-
-  /* 좌우 분할 — 페이지가 아니라 두 열이 각각 스크롤하게 만든다.
-     .order-layout 이 화면 아래끝까지만 차지하면 문서가 화면을 넘지 않아
-     페이지 스크롤이 사라지고, 뷰어는 어떤 조작에도 움직이지 않는다. */
-  function sizeSplit() {
-    const lay = document.querySelector('.order-layout');
-    if (!lay) return;
-    // 좁은 화면은 한 열로 쌓이므로 분할하지 않는다
-    if (window.innerWidth <= 768) {
-      lay.classList.remove('is-split');
-      lay.style.height = '';
-      return;
-    }
-    lay.classList.add('is-split');
-    lay.style.height = 'auto';                       // 재기 전 초기화
-    window.scrollTo({ top: 0, behavior: 'instant' }); // 분할하면 페이지는 스크롤되지 않는다
-
-    // 아래쪽에 남겨야 할 여백 — 조상들의 padding·margin 을 더한다.
-    // 좌표 차이로 재면 옆에 선 사이드바가 더 길 때 그 길이까지 딸려 들어온다.
-    let below = parseFloat(getComputedStyle(lay).marginBottom) || 0;
-    for (let p = lay.parentElement; p && p !== document.documentElement; p = p.parentElement) {
-      const s = getComputedStyle(p);
-      below += (parseFloat(s.paddingBottom)     || 0)
-             + (parseFloat(s.marginBottom)      || 0)
-             + (parseFloat(s.borderBottomWidth) || 0);
-    }
-    const top = lay.getBoundingClientRect().top;
-    lay.style.height = Math.max(320, window.innerHeight - top - below) + 'px';
-  }
-
-  window.addEventListener('resize', sizeSplit);
-  document.addEventListener('DOMContentLoaded', () => {
-    sizeSplit();
-    // 환자 정보 줄이 줄바꿈되면 위쪽 높이가 달라진다. 그때마다 다시 잰다.
-    const bar = document.querySelector('.patient-info-bar') || document.querySelector('.pib-body');
-    if (bar && window.ResizeObserver) new ResizeObserver(sizeSplit).observe(bar);
-  });
-
-  function toggleAcc(header) {
-    keepInPlace(header, () => _toggleAcc(header));
-  }
-
-  function _toggleAcc(header) {
-    const item   = header.closest('.rx-acc-item');
-    const body   = header.nextElementSibling;
-    const isOpen = body.style.display !== 'none';
-
-    // 다른 패널 모두 닫기
-    document.querySelectorAll('#tab-ocr .rx-acc-item').forEach(el => {
-      const b = el.querySelector('.rx-acc-body');
-      const i = el.querySelector('.rx-acc-icon');
-      if (b && b !== body) {
-        b.style.display = 'none';
-        if (i) i.classList.remove('open');
-        el.classList.remove('is-open');
-      }
+  function rxTab(btn) {
+    const id = btn.dataset.pane;
+    document.querySelectorAll('#tab-ocr .rx-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('#tab-ocr .rx-pane').forEach(pane => {
+      pane.style.display = pane.id === id ? 'block' : 'none';
     });
-
-    // 클릭한 패널 토글
-    body.style.display = isOpen ? 'none' : 'block';
-    const icon = header.querySelector('.rx-acc-icon');
-    if (icon) icon.classList.toggle('open', !isOpen);
-    item.classList.toggle('is-open', !isOpen);
-    syncToggleAllBtn();
-  }
-
-  function toggleAllAcc() {
-    const items   = document.querySelectorAll('#tab-ocr .rx-acc-item');
-    if (!items.length) return;
-    const allOpen = Array.from(items).every(el => el.classList.contains('is-open'));
-    // 전체 닫기도 마찬가지다 — 첫 머리를 제자리에 붙들어 둔다
-    keepInPlace(items[0], () => {
-      items.forEach(el => {
-        const body = el.querySelector('.rx-acc-body');
-        const icon = el.querySelector('.rx-acc-icon');
-        body.style.display = allOpen ? 'none' : 'block';
-        if (icon) icon.classList.toggle('open', !allOpen);
-        el.classList.toggle('is-open', !allOpen);
-      });
-      syncToggleAllBtn();
-    });
-  }
-
-  function syncToggleAllBtn() {
-    const bodies   = document.querySelectorAll('#tab-ocr .rx-acc-body');
-    const allOpen  = Array.from(bodies).every(b => b.style.display !== 'none');
-    const iconEl   = document.getElementById('btnAccToggleAllIcon');
-    const labelEl  = document.getElementById('btnAccToggleAllLabel');
-    if (!iconEl) return;
-    if (allOpen) {
-      iconEl.className  = 'fa-solid fa-angles-up';
-      labelEl.textContent = '전체 닫기';
-    } else {
-      iconEl.className  = 'fa-solid fa-angles-down';
-      labelEl.textContent = '전체 열기';
-    }
+    const hint = document.getElementById('rxTabHint');
+    if (hint) hint.textContent = RX_TAB_HINT[id] || '';
   }
 
   // ── 미저장 감지 ────────────────────────────────────────
