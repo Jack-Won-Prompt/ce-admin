@@ -564,14 +564,19 @@
      열 안의 줄 사이는 8, 줄 높이는 32 (.rx-col · .rx-field-row). */
   .rx-cols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; align-items:start; }
   .rx-col  { display:flex; flex-direction:column; gap:8px; min-width:0; }
-  /* 시안은 1920 한 폭만 그려져 있다. 아래 두 단계는 시안 근거가 없는 결정값이다.
-     입력영역 폭 = (뷰포트 − 788 − 열간격) / 열수 − 108.
-     3열: 1920→253 · 1728→189 · 1600→147 · 1512→117 (날짜값이 잘리기 시작한다)
-     2열: 1600→286 · 1440→206 · 1280→126
-     그래서 1600 까지만 3열로 두고, 그 아래는 2열로 접는다.
-     1100 아래 1열은 원래 있던 규칙 그대로다. */
-  @media (max-width:1599px) { .rx-cols { grid-template-columns:1fr 1fr; } }
-  @media (max-width:1100px) { .rx-cols { grid-template-columns:1fr; } }
+  /* 열을 접는 기준은 「화면 폭」이 아니라 「이 구획의 폭」이다(.rx-fit 이 컨테이너다).
+     이 화면은 워크스페이스 탭(iframe) 안에서 열리는 일이 잦다. 그러면 미디어 쿼리가
+     보는 폭이 브라우저 폭이 아니라 액자 폭(1920 화면에서 약 1130)이라, 1600 기준에
+     늘 걸려 3열이 한 번도 서지 못했다. 사이드바를 접었는지에 따라서도 320 이 오간다.
+     구획의 실제 폭을 보면 어느 경우든 같은 자리에서 접힌다.
+
+     기준값은 실측이다 — 날짜 칸은 「2026-06-01」과 달력 아이콘이 서려면 116 이 하한이고
+     (여백 12 기준), 라벨 100 + gap 8 을 더해 한 칸에 224 가 든다.
+       3칸: 224×3 + 24×2 = 720 → 여유를 두어 780
+       2칸: 224×2 + 24   = 472 → 여유를 두어 520 */
+  .rx-fit { container-type:inline-size; }
+  @container (max-width:779px) { .rx-cols { grid-template-columns:1fr 1fr; } }
+  @container (max-width:519px) { .rx-cols { grid-template-columns:1fr; } }
   /* 가로로 채우는 구획 — 상담 정보ㆍ환자 정보는 왼쪽에서 오른쪽으로 읽는다.
      명세(주문 화면_상세목록_상담 환자 정보_수정.pptx 1장)가 라벨 좌표로 그렇게 적었다:
      열 시작 x 는 70ㆍ299ㆍ539 세 줄기고, 줄마다 왼쪽부터 채워 나간다.
@@ -591,17 +596,17 @@
   .rx-rows > .rx-row-start { grid-column-start:1; }
   /* 좁아지면 줄당 둘, 더 좁아지면 하나. 이때는 시작 칸을 풀어 그냥 흐르게 둔다 —
      못박아 두면 빈칸이 줄줄이 생긴다. */
-  @media (max-width:1599px) {
+  @container (max-width:779px) {
     .rx-rows { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .rx-rows > .rx-row-start { grid-column-start:auto; }
     .rx-rows > .rx-w3 { grid-column-end:span 2; }
     .rx-rows > .rx-w4 { grid-column-end:span 4; }
   }
-  @media (max-width:1100px) {
+  @container (max-width:519px) {
     .rx-rows { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .rx-rows > .rx-field-row, .rx-rows > .rx-w3, .rx-rows > .rx-w4 { grid-column-end:span 2; }
   }
-  .rx-sec-head + .rx-rows { margin-top:12px; }
+  .rx-sec-head + .rx-fit { margin-top:12px; }
   /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
   .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
                  height:32px; padding:0 12px; border-radius:8px;
@@ -2048,6 +2053,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </span>
               </button>
             </div>
+            <div class="rx-fit">
             <div class="rx-rows">
             {{-- 명세(주문 화면_상세목록_상담 환자 정보_수정.pptx 1장)는 이 구획을 가로로 읽는다 —
                  상담 번호ㆍ상담 일자ㆍ상담 유형 / 상담 상태ㆍ재 상담 일자. --}}
@@ -2064,7 +2070,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <input type="text" class="form-control" id="f-counselling-no"
                          value="{{ $curCounselNo }}"
                          placeholder="채번 버튼을 눌러 번호를 생성하세요"
-                         style="flex:1 1 144px;min-width:0;" />
+                         {{-- 기준 폭 144 는 3열 격자(열 사이 24 가 둘)일 때의 시안값이다.
+                              여섯 칸 격자는 열 사이가 다섯이라 한 칸이 10 남짓 좁아져,
+                              144+8+단추 103 = 255 가 243 에 들어가지 못하고 단추가 아랫줄로
+                              내려갔다. 기준 폭만 128 로 줄여 한 줄에 세운다 — 입력은 flex 라
+                              남는 자리를 받아 실제로는 다시 132 로 벌어진다. --}}
+                         style="flex:1 1 128px;min-width:0;" />
                   @if($isReturningPatient)
                   <button type="button" class="rx-side-btn" onclick="openPrevCounselModal()"
                           title="이전 상담 이력 {{ $prevCounselings->count() }}건">
@@ -2108,12 +2119,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-re-counsel-date"
                        value="{{ $prescription->counsel_re_date ?? '' }}" style="flex:1;" />
               </div>
-            </div>{{-- /rx-rows --}}
+            </div></div>{{-- /rx-rows --}}
 
             {{-- ▸ 환자 정보 소제목 --}}
             <div class="rx-sec-head" style="margin-top:24px;">
               <span class="rx-sec-title">환자 정보</span>
             </div>
+            <div class="rx-fit">
             <div class="rx-rows">
             {{-- 명세(같은 문서 1장)는 이 구획도 가로로 읽는다. 라벨 좌표가 적은 차례 그대로다:
                    이름ㆍ주민등록번호ㆍ생년월일(1) / 구분(SB/SCI)ㆍ전화번호 1ㆍ전화번호 2 /
@@ -2332,7 +2344,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">신환 Master 등록일</span>
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
               </div>
-            </div>{{-- /rx-rows --}}
+            </div></div>{{-- /rx-rows --}}
 
           </div>
         </div>
@@ -2366,6 +2378,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
               $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
             @endphp
+            <div class="rx-fit">
             <div class="rx-cols">
             <div class="rx-col">
               {{-- 1열 — 검수 메모 … 요류역학검사일 11줄.
@@ -2665,7 +2678,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    '신환 Master 등록일'(f-new-patient-date)은 요청서 14·16쪽대로
                    환자 정보 3열 끝으로 옮겼다. 둘 다 id·값 그대로다. --}}
             </div>
-            </div>{{-- /rx-cols --}}
+            </div></div>{{-- /rx-cols --}}
           </div>
         </div>
 
@@ -2688,6 +2701,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
           </div>
           <div class="rx-acc-body" style="display:none;">
+            <div class="rx-fit">
             <div class="rx-cols">
             <div class="rx-col">
               {{-- 위 둘은 병원ㆍ처방 카드의 '사용 시작일'·'급여 종료일'과 같은 값이다.
@@ -2725,7 +2739,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
             </div>
-            </div>{{-- /rx-cols --}}
+            </div></div>{{-- /rx-cols --}}
           </div>
         </div>
 
