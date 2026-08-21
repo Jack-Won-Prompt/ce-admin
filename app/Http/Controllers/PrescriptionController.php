@@ -399,19 +399,7 @@ class PrescriptionController extends Controller
         $prescriptions = Prescription::with(['patient', 'assignedUser'])->latest()->limit(5)->get();
         $managers      = User::where('role', 'manager')->get();
         // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
-        $patientsJson  = \App\Models\Patient::orderBy('name')
-            ->get(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
-            ->map(fn ($p) => [
-                'id'     => $p->id,
-                'name'   => $p->name,
-                'mobile' => $p->mobile ? preg_replace('/(\d{3})(\d{3,4})(\d{4})/', '$1-$2-$3', $p->mobile) : '',
-                'phone'  => $p->phone ?: '',
-                /* 생년월일로도 찾는다 — 같은 이름이 여럿일 때 이것으로 가른다.
-                   birth_date 칸은 지금 어느 환자도 채워 두지 않아, 비어 있으면 주민번호
-                   앞자리에서 읽는다(뒷자리 첫 숫자가 1900·2000 년대를 가른다). */
-                'birth'  => $p->birth_date?->format('Y-m-d') ?: self::birthFromMasked($p->resident_no_masked),
-                'rn'     => $p->resident_no_masked ? substr($p->resident_no_masked, 0, 6) . '-*' : '',
-            ])->values();
+        $patientsJson  = self::patientPickerList();
 
         $mobilePending = Prescription::where('upload_source', 'mobile')
             ->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed', 'review_requested'])
@@ -828,6 +816,28 @@ class PrescriptionController extends Controller
      * 검수 화면 '환자 조회': 이름/연락처로 환자 검색 (상담이력 건수 포함).
      */
     /** 주민번호 마스킹(820108-1******)에서 생년월일을 읽는다 — 못 읽으면 빈 값 */
+    /**
+     * 「이름 조회」 창이 쓰는 사람 목록. 업로드 화면과 주문 등록 화면이 같은 창을 쓰므로
+     * 만드는 자리도 하나로 둔다. 화면으로 나가는 목록이라 마스킹 컬럼만 읽는다 —
+     * 평문ㆍ암호문은 조회하지 않는다(P0-1).
+     */
+    private static function patientPickerList(): \Illuminate\Support\Collection
+    {
+        return \App\Models\Patient::orderBy('name')
+            ->get(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
+            ->map(fn ($p) => [
+                'id'     => $p->id,
+                'name'   => $p->name,
+                'mobile' => $p->mobile ? preg_replace('/(\d{3})(\d{3,4})(\d{4})/', '$1-$2-$3', $p->mobile) : '',
+                'phone'  => $p->phone ?: '',
+                /* 생년월일로도 찾는다 — 같은 이름이 여럿일 때 이것으로 가른다.
+                   birth_date 칸은 지금 어느 환자도 채워 두지 않아, 비어 있으면 주민번호
+                   앞자리에서 읽는다(뒷자리 첫 숫자가 1900ㆍ2000 년대를 가른다). */
+                'birth'  => $p->birth_date?->format('Y-m-d') ?: self::birthFromMasked($p->resident_no_masked),
+                'rn'     => $p->resident_no_masked ? substr($p->resident_no_masked, 0, 6) . '-*' : '',
+            ])->values();
+    }
+
     private static function birthFromMasked(?string $masked): string
     {
         if (!$masked || !preg_match('/^(\d{2})(\d{2})(\d{2})-([0-9])/', $masked, $m)) {
@@ -1007,11 +1017,14 @@ class PrescriptionController extends Controller
 
         $allDocsJson = array_merge($rxDoc, $attachmentsJson, $signDocs);
 
+        // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
+        $patientsJson = self::patientPickerList();
+
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
-            'lastFaxHistory', 'attachmentsJson', 'allDocsJson'
+            'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson'
         ));
     }
 

@@ -201,6 +201,10 @@
      시안 128:3186 은 채워진 상자 946 + 8 + 「다시 선택」 73 = 1027 로 필드를 꽉 채운다. */
   .patient-search-row { display:flex; gap:8px; align-items:center; }
   .patient-search-row > #patientSearchInput { flex:1; min-width:0; }
+  /* 「조회」는 늘 오른쪽 끝이다 — 고르기 전에는 입력칸 뒤, 고른 뒤에는 이름 상자 뒤.
+     마크업 차례가 [입력][조회][이름 상자] 라 그대로 두면 고른 뒤 조회가 가운데 낀다. */
+  .patient-search-row > #patientFindBtn { order:2; }
+  .patient-search-row > #patientSelectedBadge { order:1; }
   /* calc 는 연산자 둘레에 공백이 없으면 통째로 무효가 된다 — 드롭다운이 제자리에 붙지 않았다 */
   .patient-search-drop { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--gray-0); border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.13); z-index:500; max-height:240px; overflow-y:auto; display:none; }
   .patient-search-drop.open { display:block; }
@@ -315,11 +319,12 @@
                     <button type="button" class="fu-find" id="patientFindBtn" onclick="pkOpen()">
                       <i class="fa-solid fa-magnifying-glass"></i> 조회
                     </button>
+                    {{-- 고른 뒤에도 「조회」는 같은 자리에 그대로 있다. 예전에는 그 자리에
+                         「다시 선택」이 새로 생겨, 다시 고르려면 단추 두 개를 차례로
+                         눌러야 했다 — 이제 「조회」 한 번으로 다시 고른다. --}}
                     <div id="patientSelectedBadge" style="display:none;align-items:center;gap:8px;flex:1;min-width:0;">
                       <span id="patientSelectedName" class="fu-input"
                             style="display:flex;align-items:center;background:var(--gray-50);color:var(--gray-800);"></span>
-                      <button type="button" onclick="clearPatient()"
-                              style="height:32px;padding:0 12px;border-radius:8px;background:var(--gray-0);border:1px solid var(--gray-200);font-size:13px;color:var(--gray-1000);cursor:pointer;white-space:nowrap;">다시 선택</button>
                     </div>
                   </div>
                   <div class="patient-search-drop" id="patientDrop"></div>
@@ -499,6 +504,8 @@
 
     <div class="pk-foot">
       <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+      {{-- 「다시 선택」을 걷으면서 고른 것을 무를 길이 사라졌다 — 여기에 둔다 --}}
+      <button type="button" class="ds-btn" onclick="clearPatient(); pkClose();">선택 안 함</button>
       <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
     </div>
@@ -573,7 +580,10 @@ function pkRows(list) {
 
 window.pkOpen = function () {
   document.getElementById('pkModal').style.display = 'flex';
-  document.getElementById('pkName').value = patientInput.value.trim();
+  /* 이미 고른 사람이 있으면 그 이름을 넣어 준다 — 「조회」로 다시 고르는 길이라
+     매번 빈칸에서 다시 찾게 하지 않는다. */
+  document.getElementById('pkName').value =
+    patientInput.value.trim() || document.getElementById('patientSelectedName').textContent.trim();
   pkSearch();
   setTimeout(() => document.getElementById('pkName').focus(), 50);
 };
@@ -669,6 +679,8 @@ function selectPatient(id, name) {
   patientDrop.classList.remove('open');
 }
 
+/* 고른 사람을 물린다. 예전에는 「다시 선택」 단추가 이걸 불렀는데 그 단추를 걷었다 —
+   이제 다시 고르는 일은 「조회」가 맡고, 이 함수는 창 안의 「선택 안 함」이 부른다. */
 function clearPatient() {
   selectedPatientId = null;
   document.getElementById('h_patient_id').value = '';

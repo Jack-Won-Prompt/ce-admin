@@ -619,6 +619,32 @@
     .rx-rows > .rx-field-row, .rx-rows > .rx-w3, .rx-rows > .rx-w4 { grid-column-end:span 2; }
   }
   .rx-sec-head + .rx-fit { margin-top:12px; }
+  /* ── 이름 조회 창 ──────────────────────────────────────
+     업로드 화면(upload.blade.php)의 「이름 조회」와 같은 규격이다. 다만 그쪽은
+     화면을 어둡게 덮는 모달이고, 여기서는 바탕을 덮지 않는 팝오버로 띄운다 —
+     처방전 이미지를 옆에 놓고 대조하며 골라야 하기 때문이다. */
+  .pk-pop { position:absolute; top:calc(100% + 6px); left:100px; z-index:80;
+            width:min(760px, calc(100vw - 48px)); max-height:70vh;
+            display:flex; flex-direction:column; overflow:hidden;
+            background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px;
+            box-shadow:0 12px 40px rgba(0,0,0,.22); }
+  .pk-head { display:flex; align-items:center; gap:8px; padding:12px 16px;
+             background:var(--primary); color:var(--gray-0); font-size:14px; font-weight:700; }
+  .pk-head button { display:flex; align-items:center; justify-content:center;
+                    margin-left:auto; width:24px; height:24px; flex-shrink:0; padding:0;
+                    background:none; border:none; border-radius:6px; color:inherit;
+                    font-size:16px; line-height:1; cursor:pointer; }
+  .pk-filter { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
+               padding:12px 16px; border-bottom:1px solid var(--border); background:var(--gray-50); }
+  .pk-fld { display:flex; flex-direction:column; gap:4px; }
+  .pk-fld label { font-size:12px; font-weight:600; color:var(--gray-700); }
+  .pk-fld input { height:32px; width:160px; }
+  .pk-acts { display:flex; gap:6px; margin-left:auto; }
+  .pk-body { padding:12px 16px; overflow:auto; }
+  .pk-note { font-size:12px; color:var(--gray-600); margin-bottom:8px; }
+  .pk-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
+  .pk-hint { font-size:12px; color:var(--gray-600); margin-right:auto; }
+
   /* 입력칸 옆에 붙는 부속 버튼 — 시안 148:2667·2676: 32 높이, 흰 배경, 13/500 */
   .rx-side-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
                  height:32px; padding:0 12px; border-radius:8px;
@@ -2165,13 +2191,56 @@ $calcDeposit  = $calcCopay + $calcShipping;
                  여기 없는 것들의 행방 — 유형ㆍ검수 메모ㆍ일일 도뇨 횟수ㆍFive/Six(110days) 는
                  요청서 12·14·16쪽에 따라 병원ㆍ처방 정보 구획으로 옮겨 두었다.
                  보호자(법정대리인) 입력은 생년월일 줄의 「미성년」 배지를 눌러 여는 팝오버로 접었다(명세 2장). --}}
-              <div class="rx-field-row">
+              <div class="rx-field-row" style="position:relative;">
                 {{-- 시안 라벨 56개 중 '이름 *' 하나만 13/700 이다(나머지는 전부 13/500).
                      '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
                 <span class="rx-field-label" style="font-weight:700;">이름 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
+                </div>
+                {{-- 같은 이름이 여럿이거나 기억이 흐릴 때 창을 열어 전화번호ㆍ생년월일까지
+                     보고 고른다. 업로드 화면의 「이름 조회」와 같은 창이다. --}}
+                <button type="button" class="rx-side-btn" onclick="pkOpen(event)">
+                  <i class="fa-solid fa-magnifying-glass"></i> 조회
+                </button>
+
+                {{-- 창은 바탕을 덮지 않는다. 어둡게 깔면 뒤 화면이 통째로 가려져,
+                     처방전 이미지를 옆에 놓고 대조하며 고르지 못한다.
+                     이름 줄 아래에 붙는 팝오버로 띄우고 바깥을 눌러 닫는다. --}}
+                <div class="pk-pop" id="pkModal" style="display:none;">
+                  <div class="pk-head">
+                    <i class="fa-solid fa-user"></i>
+                    <span id="pkTitle">이름 조회</span>
+                    <button type="button" onclick="pkClose()" aria-label="닫기">&times;</button>
+                  </div>
+                  <div class="pk-filter">
+                    <div class="pk-fld">
+                      <label>이름</label>
+                      <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
+                    </div>
+                    <div class="pk-fld">
+                      <label>전화번호</label>
+                      <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
+                    </div>
+                    <div class="pk-fld">
+                      <label>생년월일</label>
+                      <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
+                    </div>
+                    <div class="pk-acts">
+                      <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
+                      <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
+                    </div>
+                  </div>
+                  <div class="pk-body">
+                    <div class="pk-note" id="pkNote"></div>
+                    <div id="pkGrid"></div>
+                  </div>
+                  <div class="pk-foot">
+                    <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+                    <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
+                  </div>
                 </div>
               </div>
               <div class="rx-field-row">
@@ -4592,6 +4661,120 @@ window.HELP_TOUR_STEPS = [
     if (!minor) closeGuardianPop();
   }
 
+  /* ── 이름 조회 창 ──────────────────────────────────────
+     업로드 화면의 같은 이름 창을 그대로 옮겼다(upload.blade.php). 목록은 화면에 이미
+     실려 있어(PK_PATIENTS) 서버를 다시 부르지 않는다. 여기서는 바탕을 덮지 않는
+     팝오버라, 고르는 동안에도 옆의 처방전 이미지를 그대로 볼 수 있다. */
+  const PK_PATIENTS = @json($patientsJson ?? []);
+  let pkGrid = null;
+
+  window.pkOpen = function (e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('pkModal');
+    if (!pop) return;
+    if (pop.style.display === 'block') { pkClose(); return; }
+    closeAllPopovers();
+    pop.style.display = 'block';
+    document.getElementById('pkName').value = document.getElementById('f-name')?.value?.trim() || '';
+    pkSearch();
+    setTimeout(() => document.getElementById('pkName').focus(), 50);
+  };
+
+  window.pkClose = function () {
+    const pop = document.getElementById('pkModal');
+    if (pop) pop.style.display = 'none';
+  };
+
+  window.pkReset = function () {
+    ['pkName','pkPhone','pkBirth'].forEach(id => document.getElementById(id).value = '');
+    pkSearch();
+  };
+
+  window.pkSearch = function () {
+    const name  = document.getElementById('pkName').value.trim().toLowerCase();
+    const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
+    const birth = document.getElementById('pkBirth').value.replace(/\D/g, '');
+
+    const hit = PK_PATIENTS.filter(p => {
+      if (name  && !(p.name || '').toLowerCase().includes(name)) return false;
+      if (phone && !((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(phone)) return false;
+      if (birth) {
+        // 1982-01-08 로도, 820108 로도 찾는다
+        const b  = (p.birth || '').replace(/\D/g, '');
+        const rn = (p.rn || '').replace(/\D/g, '');
+        if (!b.includes(birth) && !rn.startsWith(birth) && !b.slice(2).includes(birth)) return false;
+      }
+      return true;
+    });
+
+    const rows = hit.map(p => ({ id: p.id, name: p.name, mobile: p.mobile || p.phone || '',
+                                 birth: p.birth || '', rn: p.rn || '' }));
+    document.getElementById('pkNote').textContent =
+      rows.length ? `${rows.length}명` : '찾은 사람이 없습니다.';
+
+    if (!pkGrid) {
+      pkGrid = new wwGrid({
+        el: document.getElementById('pkGrid'),
+        height: 300, editable: false, rowCheckbox: false, rowNumber: true,
+        toolbar: false, footer: false,
+        columns: [
+          { header: '이름',     name: 'name',   width: 140, sortable: true },
+          { header: '전화번호', name: 'mobile', width: 160, sortable: true },
+          { header: '생년월일', name: 'birth',  width: 130, align: 'center', sortable: true },
+          { header: '주민번호', name: 'rn',     width: 140, align: 'center' },
+        ],
+        data: rows,
+      });
+      document.getElementById('pkGrid').addEventListener('dblclick', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        const row = pkGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+        if (row) pkApply(row);
+      });
+      document.getElementById('pkGrid').addEventListener('click', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        pkGrid._pickedIndex = parseInt(cell.dataset.rowIndex, 10);
+        document.querySelectorAll('#pkGrid tr').forEach(tr => tr.classList.remove('cg-row-selected'));
+        cell.closest('tr')?.classList.add('cg-row-selected');
+      });
+    } else {
+      pkGrid._pickedIndex = null;
+      pkGrid.setData(rows);
+    }
+  };
+
+  window.pkPick = function () {
+    const i = pkGrid?._pickedIndex;
+    const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
+    if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
+    pkApply(row);
+  };
+
+  /* 고른 사람의 이름을 이름 칸에 넣는다. 환자 레코드를 이 처방전에 잇는 일은
+     탭줄의 「환자 조회」가 맡는다 — 여기서는 이름만 채운다. */
+  function pkApply(row) {
+    const el = document.getElementById('f-name');
+    if (el) { el.value = row.name; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    markOcrDirty();
+    pkClose();
+  }
+
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('pkModal');
+    if (!pop || pop.style.display !== 'block') return;
+    if (pop.contains(e.target)) return;
+    pop.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => {
+    const pop = document.getElementById('pkModal');
+    if (!pop || pop.style.display !== 'block') return;
+    if (e.key === 'Escape') pkClose();
+    if (e.key === 'Enter' && ['pkName','pkPhone','pkBirth'].includes(document.activeElement?.id)) {
+      e.preventDefault(); pkSearch();
+    }
+  });
+
   /* ── 보호자(법정대리인) 팝오버 ────────────────────────────
      여는 자리는 「만 N세 · 미성년」 배지다(명세 2장이 그 배지를 가리킨다). */
   function toggleGuardianPop(e) {
@@ -6230,7 +6413,7 @@ window.HELP_TOUR_STEPS = [
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
