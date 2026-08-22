@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\InquiryApiController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\OrderApiController;
+use App\Http\Controllers\Api\PatientApiController;
 use App\Http\Controllers\Api\PrescriptionApiController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ShopOrderWebhookController;
@@ -82,6 +83,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',                           [PrescriptionApiController::class, 'index']);
         Route::post('/upload',                    [PrescriptionApiController::class, 'upload']);
         Route::get('/{rx_number}',               [PrescriptionApiController::class, 'show']);
+    });
+
+    // 환자 검색/등록 (처방자료 업로드 시 환자 선택용)
+    Route::prefix('patients')->group(function () {
+        Route::get('/search', [PatientApiController::class, 'search']);
+        Route::post('/',      [PatientApiController::class, 'store']);
     });
 
     // 공지사항
