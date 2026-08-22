@@ -13,9 +13,15 @@ class PrescriptionService {
   Future<({List<Prescription> items, int total, bool hasMore})> getList({
     int page = 1,
     String? status,
+    String? name,
+    String? dateFrom,
+    String? dateTo,
   }) async {
     final params = <String, dynamic>{'page': page};
-    if (status != null && status.isNotEmpty) params['status'] = status;
+    if (status   != null && status.isNotEmpty)   params['status']    = status;
+    if (name     != null && name.isNotEmpty)     params['name']      = name;
+    if (dateFrom != null && dateFrom.isNotEmpty) params['date_from'] = dateFrom;
+    if (dateTo   != null && dateTo.isNotEmpty)   params['date_to']   = dateTo;
 
     try {
       final res  = await _dio.get('/prescriptions', queryParameters: params);

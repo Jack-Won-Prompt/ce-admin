@@ -6,7 +6,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/patient.dart';
 import '../services/api_client.dart';
+import '../services/patient_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'prescription_camera_screen.dart';
@@ -30,6 +32,176 @@ class _PrescriptionUploadScreenState
   bool    _success   = false;
   Map<String, dynamic>? _ocrResult;
   final _memoCtrl = TextEditingController();
+
+  // ── 환자 선택 ──────────────────────────────────────────
+  final _nameCtrl        = TextEditingController();
+  PatientOption? _selectedPatient;
+  bool           _searchingPatient = false;
+
+  // ── 서류 유형 ──────────────────────────────────────────
+  static const _docTypes = [
+    ('registration_form', '등록신청서'),
+    ('prescription',      '처방전'),
+    ('test_result',       '결과지'),
+    ('id_card',           '신분증'),
+    ('delegation',        '위임장'),
+  ];
+  String _docType = 'registration_form';
+
+  Future<void> _searchPatient() async {
+    final query = _nameCtrl.text.trim();
+    if (query.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이름을 2글자 이상 입력해주세요.')),
+      );
+      return;
+    }
+    // 이름을 바꿔 다시 찾으면 이전 선택은 무효화한다
+    setState(() { _searchingPatient = true; _selectedPatient = null; });
+    try {
+      final results = await ref.read(patientServiceProvider).search(query);
+      if (!mounted) return;
+      if (results.isEmpty) {
+        await _showRegisterDialog(query);
+      } else {
+        await _showResultsSheet(results);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('검색 실패: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _searchingPatient = false);
+    }
+  }
+
+  Future<void> _showResultsSheet(List<PatientOption> results) async {
+    final picked = await showModalBottomSheet<PatientOption>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('환자 선택',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: results.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: AppTheme.border),
+                itemBuilder: (ctx, i) {
+                  final p = results[i];
+                  return ListTile(
+                    title: Text(p.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(p.mobile,
+                        style: const TextStyle(color: AppTheme.textMuted)),
+                    onTap: () => Navigator.pop(ctx, p),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedPatient = picked;
+        _nameCtrl.text   = picked.name;
+      });
+    }
+  }
+
+  Future<void> _showRegisterDialog(String initialName) async {
+    final nameCtrl     = TextEditingController(text: initialName);
+    final residentCtrl = TextEditingController();
+    bool  submitting   = false;
+
+    final created = await showDialog<PatientOption>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('환자 등록',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('검색된 환자가 없습니다. 새로 등록할까요?',
+                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: '이름'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: residentCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: '주민번호 (선택)'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        final name = nameCtrl.text.trim();
+                        if (name.isEmpty) return;
+                        setDialogState(() => submitting = true);
+                        try {
+                          final patient = await ref
+                              .read(patientServiceProvider)
+                              .create(
+                                name: name,
+                                residentNo: residentCtrl.text.trim(),
+                              );
+                          if (ctx.mounted) Navigator.pop(ctx, patient);
+                        } catch (e) {
+                          setDialogState(() => submitting = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('등록 실패: $e')),
+                            );
+                          }
+                        }
+                      },
+                child: const Text('등록'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (created != null && mounted) {
+      setState(() {
+        _selectedPatient = created;
+        _nameCtrl.text   = created.name;
+      });
+    }
+  }
 
   Future<void> _openCamera() async {
     final file = await PrescriptionCameraScreen.show(context);
@@ -67,6 +239,8 @@ class _PrescriptionUploadScreenState
       _success          = false;
       _uploadProgress   = 0.0;
       _isSaving            = false;
+      // 환자는 그대로 둔다 — 같은 환자 서류를 이어서 여러 건 올리는 경우가 많다
+      _docType          = 'registration_form';
     });
     _memoCtrl.clear();
   }
@@ -74,11 +248,12 @@ class _PrescriptionUploadScreenState
   @override
   void dispose() {
     _memoCtrl.dispose();
+    _nameCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _upload() async {
-    if (_selectedFile == null) return;
+    if (_selectedFile == null || _selectedPatient == null) return;
     setState(() {
       _uploading      = true;
       _uploadProgress = 0.0;
@@ -95,6 +270,8 @@ class _PrescriptionUploadScreenState
           _selectedFile!.path,
           filename: _selectedFileName,
         ),
+        'patient_id': _selectedPatient!.id,
+        'doc_type':   _docType,
         if (memo.isNotEmpty) 'memo': memo,
       });
 
@@ -196,6 +373,163 @@ class _PrescriptionUploadScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // 환자 선택 + 서류 유형
+                  Container(
+                    decoration: AppTheme.cardDecoration(radius: 16),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('이름',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textSecondary)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _nameCtrl,
+                                onChanged: (_) {
+                                  if (_selectedPatient != null) {
+                                    setState(() => _selectedPatient = null);
+                                  }
+                                },
+                                style: const TextStyle(
+                                    fontSize: 14, color: AppTheme.textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: '환자 이름으로 검색',
+                                  hintStyle: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 13),
+                                  isDense: true,
+                                  filled: true,
+                                  fillColor: AppTheme.background,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide:
+                                        const BorderSide(color: AppTheme.border),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide:
+                                        const BorderSide(color: AppTheme.border),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                        color: AppTheme.primary, width: 2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: _searchingPatient ? null : _searchPatient,
+                              child: Container(
+                                height: 44,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  gradient: AppTheme.primaryGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: _searchingPatient
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text('찾기',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_selectedPatient != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded,
+                                  size: 14, color: AppTheme.success),
+                              const SizedBox(width: 4),
+                              Text('${_selectedPatient!.name} 님 선택됨',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.success,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        const Text('서류 유형',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textSecondary)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _docType,
+                          isExpanded: true,
+                          icon: const Icon(Icons.expand_more_rounded,
+                              color: AppTheme.primary),
+                          borderRadius: BorderRadius.circular(16),
+                          dropdownColor: AppTheme.surface,
+                          elevation: 3,
+                          menuMaxHeight: 320,
+                          items: _docTypes.map((t) {
+                            final selected = t.$1 == _docType;
+                            return DropdownMenuItem(
+                              value: t.$1,
+                              child: Text(t.$2,
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: selected
+                                          ? AppTheme.primary
+                                          : AppTheme.textPrimary)),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _docType = v);
+                          },
+                          decoration: InputDecoration(
+                            isDense: true,
+                            filled: true,
+                            fillColor: AppTheme.background,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: AppTheme.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: AppTheme.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                  color: AppTheme.primary, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
                   // Image pick area
                   _ImagePickArea(
                     file: _selectedFile,
@@ -276,7 +610,9 @@ class _PrescriptionUploadScreenState
                                 : Icons.cloud_upload_outlined,
                             onPressed: _success
                                 ? _resetForm
-                                : (_selectedFile == null ? null : _upload),
+                                : ((_selectedFile == null || _selectedPatient == null)
+                                    ? null
+                                    : _upload),
                             gradient: AppTheme.secondaryGradient,
                           ),
                   ),
