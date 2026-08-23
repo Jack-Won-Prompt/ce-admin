@@ -850,6 +850,111 @@ class PrescriptionController extends Controller
         return checkdate((int) $m[2], (int) $m[3], (int) ($century . $m[1])) ? $date : '';
     }
 
+    /**
+     * 「조회」로 고른 사람의 상담ㆍ환자 정보 한 벌.
+     *
+     * 예전에는 이름만 채워 넣었다. 그러면 담당자가 이미 마스터에 적혀 있는 전화번호ㆍ주소ㆍ
+     * 공단 등록일을 처방전마다 다시 옮겨 적어야 했고, 옮겨 적다 어긋나면 어느 쪽이 맞는지
+     * 알 수 없었다. 고른 순간 그 사람이 가진 것을 전부 가져오고, 담당자는 처방전에만
+     * 적힌 것(병원ㆍ상병ㆍ수량ㆍ기간)을 채운다.
+     *
+     * 돌려주는 값의 열쇠는 화면의 입력칸 id 다 — 화면이 다시 짝을 맞출 일이 없다.
+     */
+    public function patientDetail(Patient $patient): JsonResponse
+    {
+        /* 날짜 칸이라고 다 Carbon 으로 오지 않는다 — 캐스트가 걸린 것과 문자열로
+           그냥 담긴 것이 섞여 있다. 어느 쪽이 와도 같은 모양으로 내보낸다. */
+        $d = function ($v) {
+            if ($v instanceof \DateTimeInterface) {
+                return $v->format('Y-m-d');
+            }
+            $v = trim((string) $v);
+            if ($v === '') {
+                return null;
+            }
+            try {
+                return \Carbon\Carbon::parse($v)->format('Y-m-d');
+            } catch (\Throwable) {
+                return $v;   // 「대상 아님」 같은 메모가 적혀 있을 수도 있다
+            }
+        };
+
+        /* 주민번호는 가린 것만 내보낸다. 원문을 화면으로 되돌리지 않는다(P0-1) —
+           화면은 이 가린 값을 그대로 들고 있다가, 손대지 않았으면 저장할 때 보내지 않는다. */
+        $masked = $patient->masked_resident_no;
+
+        $fill = [
+            'f-name'              => $patient->name,
+            'f-resident'          => $masked,
+            'f-birth'             => $d($patient->birth_date),
+            'f-sb-sci'            => $patient->sb_sci,
+            'f-mobile'            => $patient->mobile,
+            'f-mobile2'           => $patient->phone,
+            'f-postcode'          => $patient->postcode,
+            'f-address'           => $patient->address,
+            'f-address-detail'    => $patient->address_detail,
+            'f-email'             => $patient->email,
+            'f-deduction'         => $patient->deduction,
+            'f-cash-receipt'      => $patient->cash_receipt_no,
+            'f-nhis-status'       => $patient->nhis_reg_status,
+            'f-nhis-reg-date'     => $d($patient->nhis_reg_date),
+            'f-nhis-renew'        => $patient->nhis_renew,
+            'f-nhis-renew-due'    => $d($patient->nhis_renew_due),
+            'f-basic-reeval'      => $patient->basic_reeval,
+            'f-basic-reeval-due'  => $d($patient->basic_reeval_due),
+            'f-new-patient-date'  => $d($patient->new_patient_date),
+            // 위임동의 기간 — 병원ㆍ처방 정보 쪽에 있지만 값은 이 사람의 것이다
+            'f-nhis-agree-start'  => $d($patient->nhis_agree_start),
+            'f-nhis-agree-end'    => $d($patient->nhis_agree_end),
+            // 미성년 법정대리인
+            'f-guardian-name'     => $patient->guardian_name,
+            'f-guardian-relation' => $patient->guardian_relation,
+            'f-guardian-birth'    => $d($patient->guardian_birth_date),
+            'f-guardian-phone'    => $patient->guardian_phone,
+        ];
+
+        return response()->json([
+            'success'         => true,
+            'id'              => $patient->id,
+            'name'            => $patient->name,
+            'resident_masked' => $masked,
+            'fill'            => array_map(fn ($v) => $v === null ? '' : (string) $v, $fill),
+            'consent'         => $this->latestConsentState($patient),
+        ]);
+    }
+
+    /**
+     * 이 사람의 가장 최근 위임동의 상태.
+     *
+     * 동의는 처방전에 달리지만 사람에게 묶어 읽는다 — 지난 처방전에서 이미 서명을 받았다면
+     * 새 처방전에서도 「위임동의 완료」로 보여야 한다. 만료된 것은 만료로 적는다.
+     */
+    private function latestConsentState(Patient $patient): ?array
+    {
+        $c = \App\Models\PrescriptionConsent::whereIn(
+                'prescription_id',
+                Prescription::where('patient_id', $patient->id)->select('id')
+            )
+            ->orderByDesc('responded_at')->orderByDesc('id')
+            ->first();
+
+        if (!$c) {
+            return null;
+        }
+
+        $status = $c->status;
+        // 답이 없는 채로 기한이 지났으면 대기중이 아니라 만료다
+        if ($status === 'pending' && $c->expires_at && $c->expires_at->isPast()) {
+            $status = 'expired';
+        }
+
+        return [
+            'status'       => $status,
+            'responded_at' => $c->responded_at?->format('Y-m-d'),
+            'rx_number'    => $c->prescription?->rx_number,
+        ];
+    }
+
     public function patientSearch(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));

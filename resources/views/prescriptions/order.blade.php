@@ -2500,7 +2500,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div class="rx-col">
               {{-- 1열 — 검수 메모 … 요류역학검사일 11줄.
                    1차 요청서 17쪽이 적은 병원 처방 정보 순서를 따른다
-                   (검수 메모·설명 / 요양병원코드·병원명·판매거래처 / 유형·신구매 재구매 /
+                   (검수 메모·설명 / 요양병원코드·병원명 / 유형·신구매 재구매 /
                     진단 확인일·상병구분·상병코드 / 요류역학검사일·자격 …).
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
@@ -2522,10 +2522,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">판매 거래처</span>
-                <input type="text" class="form-control" id="f-dealer-type" value="{{ $prescription->dealer_type ?? '' }}" style="flex:1;" />
-              </div>
+              {{-- 「판매 거래처」 칸은 두지 않는다(요청). 값(dealer_type)은 지우지 않았다 —
+                   저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">추가정보 등록일</span>
                 <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->created_at?->format('Y-m-d') ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
@@ -4756,10 +4754,16 @@ window.HELP_TOUR_STEPS = [
     pkApply(row);
   };
 
+  const PATIENT_DETAIL_URL = @json(route('prescriptions.patientDetail', ['patient' => '__ID__']));
+
   /* 고른 사람을 이 처방전의 환자로 잇는다. 이름만 채우면 같은 이름이 여럿일 때
      서버가 어느 쪽인지 가리지 못한다 — 고른 id 를 함께 들고 있다가 저장할 때 보낸다.
-     이 처방전은 그 사람의 새 처방전으로 남는다(처방전 자체는 업로드 때 이미 만들어졌다). */
-  function pkApply(row) {
+     이 처방전은 그 사람의 새 처방전으로 남는다(처방전 자체는 업로드 때 이미 만들어졌다).
+
+     이름만 채우고 말면 담당자가 이미 마스터에 적혀 있는 전화번호ㆍ주소ㆍ공단 등록일을
+     처방전마다 다시 옮겨 적어야 했다. 고른 순간 그 사람이 가진 것을 전부 가져온다 —
+     담당자가 채울 것은 이 처방전에만 있는 것(병원ㆍ상병ㆍ수량ㆍ기간)이다. */
+  async function pkApply(row) {
     const el = document.getElementById('f-name');
     if (el) {
       el.dataset.pkFilling = '1';
@@ -4771,7 +4775,55 @@ window.HELP_TOUR_STEPS = [
     if (hid) hid.value = row.id;
     markOcrDirty();
     pkClose();
-    showToast(`「${row.name}」 님으로 잇습니다. 저장하면 반영됩니다.`, 'info');
+
+    let filled = 0;
+    try {
+      const res  = await fetch(PATIENT_DETAIL_URL.replace('__ID__', row.id),
+                               { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      if (data?.success) filled = pkFill(data);
+    } catch (e) {
+      // 채우지 못해도 이어 둔 것은 살아 있다 — 담당자가 손으로 적으면 된다
+      console.error('[환자 조회] 정보를 가져오지 못했습니다', e);
+      showToast(`「${row.name}」 님으로 이었습니다. 정보는 가져오지 못했습니다.`, 'warning');
+      return;
+    }
+
+    showToast(`「${row.name}」 님으로 잇습니다. 환자 정보 ${filled}칸을 채웠습니다.`, 'info');
+  }
+
+  /* 받아 온 값을 화면에 앉힌다. 열쇠가 곧 입력칸 id 라 여기서 짝을 다시 맞출 일이 없다.
+     빈 값은 지우지 않는다 — 마스터에 없는 것을 이미 적어 둔 담당자의 손을 덮지 않는다. */
+  function pkFill(data) {
+    let n = 0;
+    for (const [id, val] of Object.entries(data.fill || {})) {
+      if (val === '' || val === null) continue;
+      const el = document.getElementById(id);
+      if (!el) continue;
+      // 이름은 위에서 이미 넣었다(고른 사람과 이어 두는 표시까지 함께)
+      if (id === 'f-name') continue;
+      el.value = val;
+      n++;
+    }
+
+    /* 주민번호는 가린 값이 들어왔다. 그대로 저장하면 마스킹이 원문 자리에 앉는다 —
+       「손대지 않았으면 보내지 않는다」는 표시를 붙여 둔다. */
+    const rn = document.getElementById('f-resident');
+    if (rn && data.resident_masked) rn.dataset.masked = data.resident_masked;
+
+    // 생년월일ㆍ나이 배지ㆍ미성년 여부는 주민번호에서 다시 읽는다
+    if (typeof rnRecalc === 'function') rnRecalc();
+    // 공단 재등록 기한이 임박했는지 다시 본다
+    if (typeof syncNhisRenewBadge === 'function') syncNhisRenewBadge();
+    // 자격을 골라 둔 사람이면 청구처 추천도 따라온다
+    if (typeof renderBillingStrategy === 'function') renderBillingStrategy();
+
+    /* 위임동의는 처방전에 달리지만 사람에게 묶어 읽는다 — 지난 처방전에서 이미 서명을
+       받았다면 이 처방전에서도 「위임동의 완료」로 보여야 한다. */
+    const st = data.consent?.status;
+    if (st && typeof window._applyConsentBtn === 'function') window._applyConsentBtn(st);
+
+    return n;
   }
 
   /* 이름을 손으로 고쳐 쓰면 고른 사람과 어긋난다 — 이어 둔 것을 푼다. 그러면 저장할 때
@@ -5959,7 +6011,12 @@ window.HELP_TOUR_STEPS = [
       // 「조회」로 고른 사람. 비우면 서버가 이름ㆍ주민번호ㆍ휴대폰으로 찾거나 새로 만든다.
       patient_id:       intOrNull('f-patient-id'),
       patient_name_ocr: name,
-      resident_no_ocr:  strOrNull('f-resident'),   // 비우면 서버가 기존 값을 지키다
+      /* 「조회」로 채운 가린 값(900930-2******)을 그대로 보내면 마스킹이 원문 자리에
+         앉는다. 손대지 않았으면 보내지 않는다 — 서버는 기존 값을 지킨다. */
+      resident_no_ocr:  (function (el) {
+                          const v = (el?.value || '').trim();
+                          return (v === '' || v === el?.dataset.masked) ? null : v;
+                        })(document.getElementById('f-resident')),
       mobile_ocr:       strOrNull('f-mobile'),
       address_ocr:      strOrNull('f-address'),
       postcode:         strOrNull('f-postcode'),
@@ -5978,7 +6035,6 @@ window.HELP_TOUR_STEPS = [
       basic_reeval:     strOrNull('f-basic-reeval'),
       basic_reeval_due: strOrNull('f-basic-reeval-due'),
       // 시안 148:2827 로 새로 생긴 항목
-      dealer_type:      strOrNull('f-dealer-type'),
       pay_date:         strOrNull('f-pay-date'),
       buy_date:         strOrNull('f-buy-date'),
       // 시안 148:3046 (추가정보 카드)
@@ -8205,6 +8261,8 @@ window.HELP_TOUR_STEPS = [
     rb.style.whiteSpace = 'nowrap';
     rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
   }
+  // 이름 조회로 다른 사람을 고르면 그 사람의 동의 상태로 다시 그린다
+  window._applyConsentBtn = _applyConsentBtn;
 
   /* 보호자 영역의 진행 상태 — 서명과 신분증을 받았는지.
      둘 다 서명 화면에서 들어오므로 여기서는 결과만 보여 준다. */
