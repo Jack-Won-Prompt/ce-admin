@@ -86,6 +86,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/patients/{patient}/detail',          [PrescriptionController::class, 'patientDetail'])->name('patientDetail');
         // 그 사람이 지금까지 만든 건들 — 새 건으로 갈지 하던 건을 이어갈지 고른다
         Route::get('/patients/{patient}/cases',           [PrescriptionController::class, 'patientCases'])->name('patientCases');
+        // 주민등록번호 원문 — 「표시」를 누른 그때만 연다(사유 operator_view · 감사로그)
+        Route::get('/{prescription}/resident-no',         [PrescriptionController::class, 'residentNo'])->name('residentNo');
         Route::get('/{prescription}', [PrescriptionController::class, 'show'])->name('show');
 
         // 주민번호는 쓰기 전용이다. 원문을 되돌려 주던 resident-no 조회는 없앴다 —

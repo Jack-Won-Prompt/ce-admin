@@ -2288,13 +2288,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">주민등록번호</span>
-                {{-- 쓰기 전용이다. 저장된 번호는 복호화해 내려보내지 않고, 있다는 사실만
-                     마스킹으로 알린다. 새로 치면 덮어쓰고, 비워 두면 있던 값을 그대로 둔다. --}}
+                {{-- 저장된 번호는 암호로 잠겨 있어 화면에 저절로 내려오지 않는다(P0-1).
+                     전화를 받으며 본인을 확인해야 하는 자리에서는 원문이 필요하므로,
+                     「표시」를 눌렀을 때만 한 건씩 연다 — 여는 순간 누가ㆍ언제 열었는지가
+                     감사로그에 남는다(사유 operator_view). 새로 치면 덮어쓴다. --}}
                 <input type="text" class="form-control" id="f-resident" value="" maxlength="14"
                        autocomplete="off" inputmode="numeric"
                        placeholder="{{ $displayRn ?: 'XXXXXX-XXXXXXX' }}"
-                       title="저장된 번호는 다시 볼 수 없습니다. 새로 입력하면 덮어씁니다."
+                       title="「표시」를 누르면 저장된 번호를 봅니다. 새로 입력하면 덮어씁니다."
                        style="flex:1;min-width:0;letter-spacing:1px;" oninput="rnRecalc()" />
+                @if($displayRn)
+                  <button type="button" class="rx-side-btn" id="f-resident-show" onclick="rnShow(this)"
+                          title="저장된 주민등록번호를 봅니다 — 연 기록이 남습니다">
+                    <i class="fa-solid fa-eye"></i> 표시
+                  </button>
+                @endif
               </div>
               {{-- 주민번호 앞자리로 생년월일·만 나이를 즉시 계산해 보여준다.
                    번호를 치는 중에도 바뀌고, 아직 안 쳤으면 저장된 마스킹으로 계산한다. --}}
@@ -4610,6 +4618,33 @@ window.HELP_TOUR_STEPS = [
   }
 
   const pad2 = (n) => String(n).padStart(2, '0');
+
+  const RESIDENT_NO_URL = @json(route('prescriptions.residentNo', $prescription, absolute: false));
+
+  /* 저장된 주민등록번호를 화면에 편다.
+     한 번 열면 그 화면에서는 계속 보인다 — 상담하는 동안 다시 누르게 하지 않는다.
+     연 기록은 서버가 남긴다(사유 operator_view · 감사로그). */
+  async function rnShow(btn) {
+    const inp = document.getElementById('f-resident');
+    if (!inp) return;
+
+    BtnState.loading(btn, '여는 중…');
+    try {
+      const res  = await fetch(RESIDENT_NO_URL, { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      if (!data?.success) { showToast(data?.message || '주민등록번호를 열지 못했습니다.', 'warning'); return; }
+
+      /* 연 값은 화면에만 둔다. 저장할 때 이 값이 그대로 다시 올라가도 서버는 같은 번호를
+         다시 쓸 뿐이라 해롭지 않다 — 담당자가 고쳐 치면 그것이 저장된다. */
+      inp.value = data.resident_no;
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      btn.remove();
+    } catch (e) {
+      showToast('주민등록번호를 열지 못했습니다.', 'danger');
+    } finally {
+      if (btn.isConnected) BtnState.reset(btn);
+    }
+  }
 
   function rnRecalc() {
     const inp   = document.getElementById('f-resident');

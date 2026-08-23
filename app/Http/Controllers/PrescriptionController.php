@@ -851,6 +851,36 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 주민등록번호 원문 — 상담 담당자가 화면에서 확인한다.
+     *
+     * 이 번호는 저장할 때 암호화되고, 화면에는 가린 값만 내려간다(P0-1). 그런데 전화를
+     * 받으며 본인을 확인해야 하는 자리에서는 원문이 필요하다 — 그래서 「표시」를 눌렀을
+     * 때만, 한 건씩, 사유 코드를 달아 연다.
+     *
+     * 사유 코드는 config/rrn.php 에 이미 승인되어 있는 operator_view 다
+     * (「검수 화면에서 담당자가 원문 확인」). 여는 순간 누가ㆍ언제ㆍ무엇을 열었는지
+     * 감사로그에 남는다 — ResidentNo::decrypt 가 그 일을 한다.
+     *
+     * 처방전에 적힌 번호를 먼저 보고, 없으면 이어진 환자의 번호를 본다.
+     */
+    public function residentNo(Prescription $prescription): JsonResponse
+    {
+        $plain = $prescription->residentNoOcrFor('operator_view')
+              ?: $prescription->patient?->residentNoFor('operator_view');
+
+        if (!$plain) {
+            return response()->json(['success' => false, 'message' => '적혀 있는 주민등록번호가 없습니다.']);
+        }
+
+        // 보기 좋게 끊어 준다 — 저장은 숫자만 한다
+        $shown = strlen($plain) === 13
+            ? substr($plain, 0, 6) . '-' . substr($plain, 6)
+            : $plain;
+
+        return response()->json(['success' => true, 'resident_no' => $shown]);
+    }
+
+    /**
      * 「조회」로 고른 사람이 지금까지 만든 건들.
      *
      * 사람을 고른 다음 물어야 할 것이 하나 더 있다 — 「이번이 새 건인가, 하던 건인가」.
