@@ -739,6 +739,8 @@ class wwGrid {
    * @param {boolean}      [options.rowCheckbox] - 행 체크박스 표시 여부 (기본 true)
    * @param {boolean}      [options.rowNumber]   - 행 번호 표시 여부 (기본 true)
    * @param {boolean}      [options.editable]    - 전체 편집 가능 여부 (기본 true)
+   * @param {Function}     [options.onChange]    - 값이 바뀔 때 ({rowIndex, colName, value, row, grid})
+   *                                               칸별로 막으려면 컬럼에 editable:false 를 준다
    * @param {number}       [options.height]      - 그리드 높이 (px)
    */
   constructor(options) {
@@ -750,6 +752,9 @@ class wwGrid {
     this.rowCheckbox  = options.rowCheckbox !== false;
     this.rowNumber    = options.rowNumber   !== false;
     this.editable     = options.editable    !== false;
+    /* 값이 바뀔 때 부르는 자리 — ({rowIndex, colName, value, row, grid}) => void.
+       칸 하나가 다른 칸을 정하는 표(수량 × 단가 = 금액)가 여기에 기댄다. */
+    this.onChange     = options.onChange    || null;
     this.height       = options.height || null;
     /* 합계줄은 이제 모든 그리드의 맨 아래에 똑같이 선다(_renderSummary 참고).
        그래서 grid 단위 summary 옵션은 물린다 — 화면마다 표의 아래끝이 다르게 보이던
@@ -1108,7 +1113,7 @@ class wwGrid {
     td.dataset.colName  = col.name;
 
     const cellValue = row[col.name] !== undefined ? row[col.name] : '';
-    const isEditable = this.editable && col.editor;
+    const isEditable = this.editable && col.editor && col.editable !== false;
 
     const inner = document.createElement('div');
     const _alignCls = col.editor === 'number' || col.align === 'right'  ? ' cg-align-right'
@@ -1369,6 +1374,9 @@ class wwGrid {
 
     const colDef = this.columns.find(c => c.name === colName);
     if (!colDef) return;
+    /* 칸 하나만 못 고치게 두는 길. 표 전체를 잠그는 editable 과 달리, 셈해서 나오는
+       칸(합계ㆍ부담금 …)을 사람이 손대지 못하게 막을 때 쓴다. */
+    if (colDef.editable === false) return;
 
     const inner = td.querySelector('.cg-cell-inner');
     const currentValue = this.data[rowIndex][colName];
@@ -1601,6 +1609,13 @@ class wwGrid {
 
     this._refreshRow(rowIndex);
     this._renderSummary();
+
+    /* 바뀐 것을 화면에 알린다. 한 칸을 고치면 따라서 셈해야 하는 칸이 있는 표가 있는데,
+       알려 주지 않으면 그 표는 스스로 다시 셈할 자리를 찾지 못한다.
+       손댄 자리에서 값을 더 고칠 수 있게 grid 자신도 함께 넘긴다. */
+    if (typeof this.onChange === 'function') {
+      this.onChange({ rowIndex, colName, value, row: this.data[rowIndex], grid: this });
+    }
     this._updateFooter();
   }
 
@@ -1631,7 +1646,7 @@ class wwGrid {
     if (!colDef) return;
 
     const value = this.data[rowIndex][colName];
-    const isEditable = this.editable && colDef.editor;
+    const isEditable = this.editable && colDef.editor && colDef.editable !== false;
     const inner = td.querySelector('.cg-cell-inner') || document.createElement('div');
     const _rcAlignCls = colDef.editor === 'number' || colDef.align === 'right'  ? ' cg-align-right'
                       : colDef.align === 'center' ? ' cg-align-center' : '';
