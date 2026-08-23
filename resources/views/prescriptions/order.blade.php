@@ -452,6 +452,13 @@
   .bs-chip  { font-size:11px; color:var(--text-muted); border:1px solid var(--border);
               border-radius:999px; padding:2px 8px; background:#fff; white-space:nowrap; }
   .bs-chip b { color:var(--text); font-weight:600; }
+  /* 정하는 칸 — 결과 바로 위에 한 줄로. 좁아지면 접힌다 */
+  .bs-pick  { display:flex; gap:8px; flex-wrap:wrap; padding-bottom:8px; margin-bottom:2px;
+              border-bottom:1px solid var(--border); }
+  .bs-f     { display:flex; flex-direction:column; gap:3px; flex:1 1 110px; min-width:0; }
+  .bs-f-wide{ flex:2 1 200px; }
+  .bs-f > span { font-size:11px; font-weight:500; color:var(--gray-700); }
+  .bs-f .form-control { height:30px; font-size:12px; }
   /* 확정되지 않은 자격(산재ㆍ자동차보험)은 자리만 있다는 것을 색으로 알린다 */
   .bs-box.pending { border-color:var(--warning, #f0ad4e); background:#fff8ec; }
 
@@ -3020,6 +3027,35 @@ $calcDeposit  = $calcCopay + $calcShipping;
                  표는 App\Support\BillingStrategy 한 곳에만 있다 — 화면은 그것을 비춘다. --}}
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-scale-balanced" style="color:var(--primary);"></i> 청구전략</div>
             <div class="bs-box" id="bsBox">
+              {{-- 정하는 칸을 결과 옆에 둔다. 유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방
+                   정보에 있어 세 곳을 오가야 했다 — 여기 둔 칸은 그 두 칸을 그대로 비추는
+                   거울이라, 어느 쪽에서 고쳐도 같은 값이 된다.
+                   셋째 칸은 청구전략 자체다. 전략을 고르면 유형ㆍ자격이 그에 맞춰 선다 —
+                   전략이란 곧 그 두 칸의 짝이라, 따로 저장되는 값이 아니다. --}}
+              <div class="bs-pick">
+                <label class="bs-f"><span>유형</span>
+                  <select id="bsType" class="form-control" onchange="bsFromPair('bsType')">
+                    <option value="">선택</option>
+                    <option value="30">원내</option>
+                    <option value="10">원외</option>
+                    <option value="20">처방외</option>
+                  </select>
+                </label>
+                <label class="bs-f"><span>자격</span>
+                  <select id="bsClass" class="form-control" onchange="bsFromPair('bsClass')">
+                    <option value="">선택</option>
+                    <option value="일반">일반</option>
+                    <option value="차상위경감">차상위경감</option>
+                    <option value="기초">기초</option>
+                    <option value="자동차보험">자동차보험</option>
+                    <option value="산재">산재</option>
+                  </select>
+                </label>
+                <label class="bs-f bs-f-wide"><span>청구전략</span>
+                  <select id="bsStrategy" class="form-control" onchange="bsFromStrategy()"></select>
+                </label>
+              </div>
+
               <div class="bs-head"><span id="bsLabel">-</span><span class="bs-flag" id="bsFlag"></span></div>
               <div class="bs-split" id="bsSplit">-</div>
               <div class="bs-chips">
@@ -5230,9 +5266,71 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('bsTax').textContent  = pct(r.tax_invoice);
   }
 
-  document.getElementById('f-acc-add-type')?.addEventListener('change', renderBillingStrategy);
-  document.getElementById('f-benefit-class')?.addEventListener('change', renderBillingStrategy);
-  renderBillingStrategy();
+  /* ── 정하는 칸 셋 ───────────────────────────────────────────
+     유형ㆍ자격은 각자 제자리(상담ㆍ환자 정보 / 병원ㆍ처방 정보)에 그대로 있고, 여기 칸은
+     그것을 비추는 거울이다 — 저장되는 값은 언제나 제자리 칸이 쥔다.
+     청구전략은 따로 저장되는 값이 아니라 그 두 칸의 짝을 부르는 이름이다. 그래서 전략을
+     고르면 두 칸이 그에 맞춰 서고, 두 칸을 고치면 전략이 따라 선다. */
+  const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? t + '|' + c : '');
+
+  // 전략 고르개를 표에서 만든다 — 골라 넣을 수 있는 짝이 곧 표의 줄이다
+  (function fillStrategyOptions() {
+    const sel = document.getElementById('bsStrategy');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">선택</option>' +
+      Object.entries(BILLING_STRATEGY)
+        .map(([k, r]) => `<option value="${k}">${r.label}</option>`).join('');
+  })();
+
+  let _bsSyncing = false;
+
+  /** 제자리 칸 → 거울ㆍ전략ㆍ결과 */
+  function bsSyncFromSource() {
+    if (_bsSyncing) return;
+    _bsSyncing = true;
+    const t = document.getElementById('f-acc-add-type')?.value ?? '';
+    const c = document.getElementById('f-benefit-class')?.value ?? '';
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+    set('bsType', t);
+    set('bsClass', c);
+    set('bsStrategy', _bsKey(t, c));
+    renderBillingStrategy();
+    _bsSyncing = false;
+  }
+
+  /** 거울 칸에서 고쳤을 때 — 제자리 칸에 그대로 옮긴다 */
+  window.bsFromPair = function (which) {
+    if (_bsSyncing) return;
+    const src = which === 'bsType' ? 'f-acc-add-type' : 'f-benefit-class';
+    const el  = document.getElementById(src);
+    if (!el) return;
+    el.value = document.getElementById(which).value;
+    // 제자리 칸에 걸린 일들(청구처 추천ㆍ병원명 별표 …)이 함께 돌게 한다
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    bsSyncFromSource();
+    markOcrDirty();
+  };
+
+  /** 전략에서 고쳤을 때 — 그 짝을 이루는 유형ㆍ자격으로 두 칸을 세운다 */
+  window.bsFromStrategy = function () {
+    if (_bsSyncing) return;
+    const key = document.getElementById('bsStrategy').value;
+    const [t, c] = key ? key.split('|') : ['', ''];
+    const put = (id, v) => {
+      const e = document.getElementById(id);
+      if (!e) return;
+      e.value = v;
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    put('f-acc-add-type', t);
+    put('f-benefit-class', c);
+    bsSyncFromSource();
+    markOcrDirty();
+  };
+
+  document.getElementById('f-acc-add-type')?.addEventListener('change', bsSyncFromSource);
+  document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
+  bsSyncFromSource();
 
   // ── 처방전 주소 가져오기 ──────────────────────────────────
   function fillFromPrescriptionAddress() {
