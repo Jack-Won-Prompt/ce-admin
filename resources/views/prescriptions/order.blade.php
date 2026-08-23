@@ -2120,68 +2120,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
             <div class="rx-pane-cap">상담ㆍ환자 정보</div>
 
-            {{-- ── 공단 등록 할 일 ────────────────────────────────
-                 스스로 보내지 않는다. 팝빌이 운영으로 서 있어 발송이 곧 실거래라,
-                 잘못 만든 환자 하나에도 실제 문서가 나간다 — 무엇이 남았는지만 알리고
-                 보내는 일은 담당자가 누른다.
-                   · 공단 등록일이 비어 있으면 「신규」로 본다 — 위임장 서명과 등록 팩스가 남았다.
-                   · 등록일이 있으면 2년 뒤 재등록이다. 기한이 30일 안이거나 지났으면 알린다.
-                 두 단추는 정보바의 「위임동의」ㆍ「공단 팩스 발송」을 그대로 부른다. --}}
-            @php
-              $pt          = $prescription->patient;
-              $consentDone = $prescription->consents()->where('status', 'agreed')->latest()->first();
-              $isNewPt     = $pt && !$pt->nhis_reg_date;
-              /* 미성년자면 팩스에 넣을 것이 하나 더 있다(보호자 신분증). 나이는 환자의
-                 생년월일로 본다 — 없으면 알 수 없으니 조용히 넘어간다. 기준 나이는
-                 위임장 설정과 같은 값을 쓴다. */
-              $ptMinor     = $pt && $pt->age !== null
-                               && $pt->age < (int) config('delegation.minor_age', 19);
-              /* diffInDays 는 실수로 돌아온다(10.0) — 0 과 === 로 견주려면 정수로 받아야 한다 */
-              $renewLeft   = ($pt && $pt->nhis_renew_due)
-                               ? (int) round(now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($pt->nhis_renew_due)->startOfDay(), false))
-                               : null;
-              $renewSoon   = $renewLeft !== null && $renewLeft <= 30;
-            @endphp
-            @if($pt && ($isNewPt || $renewSoon))
-            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px 12px;
-                        border:1px solid var(--alert-100);background:var(--alert-50);border-radius:8px;">
-              <div style="font-size:12px;font-weight:700;color:var(--alert-500);">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                @if($isNewPt) 신규 환자 — 공단 등록이 아직입니다
-                @elseif($renewLeft < 0) 공단 재등록 기한이 {{ -$renewLeft }}일 지났습니다
-                @else 공단 재등록 기한이 {{ $renewLeft === 0 ? '오늘까지입니다' : 'D-'.$renewLeft.' 입니다' }}
-                @endif
-              </div>
-
-              @if($isNewPt)
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-800);">
-                @if($consentDone)
-                  <span class="gb-state done"><i class="fa-solid fa-check"></i> 위임장 서명 완료</span>
-                  <span style="color:var(--gray-600);">{{ $consentDone->created_at?->format('Y-m-d') }}</span>
-                @else
-                  <span class="gb-state">위임장 서명 미완료</span>
-                  <button type="button" class="rx-acc-btn" onclick="toggleConsentPopover(event)">위임동의 보내기</button>
-                @endif
-              </div>
-              @endif
-
-              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-800);">
-                @if($lastFaxHistory)
-                  <span class="gb-state done"><i class="fa-solid fa-check"></i> 공단 팩스 보냄</span>
-                  <span style="color:var(--gray-600);">{{ $lastFaxHistory->created_at?->format('Y-m-d H:i') }}</span>
-                @else
-                  <span class="gb-state">{{ $isNewPt ? '공단 신규 등록 팩스 미발송' : '공단 재등록 팩스 미발송' }}</span>
-                @endif
-                <button type="button" class="rx-acc-btn" onclick="toggleFaxPopover(event)">공단 팩스 발송</button>
-                <span style="color:var(--gray-600);">
-                  등록신청서ㆍ결과지ㆍ신분증을 골라 관할지사로 보냅니다.
-                  @if($ptMinor)
-                    <b style="color:var(--alert-500);">미성년자 — 등록신청서에 보호자 정보를 적고 보호자 신분증도 넣습니다.</b>
-                  @endif
-                </span>
-              </div>
-            </div>
-            @endif
+            {{-- 「공단 등록 할 일」 띠는 두지 않는다(요청). 무엇이 남았는지 적어 두어도
+                 담당자가 그 자리에서 할 일이 아니었고, 설명만 자리를 차지했다.
+                 위임동의ㆍ공단 팩스 발송은 위쪽 정보바의 같은 이름 단추로 그대로 한다. --}}
 
             {{-- 상담 정보 구획은 두지 않는다. 상담 번호ㆍ일자ㆍ상태ㆍ재상담 일자는
                  상담하는 자리에서 정하는 값이라 거래처 관리의 상담 창이 받는다 —
