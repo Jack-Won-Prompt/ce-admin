@@ -2993,6 +2993,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="pt-head-btns">
                 <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
                 <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
+                {{-- 줄마다 있던 휴지통 대신 체크해서 지운다 — 여러 줄을 한 번에 지울 수 있다 --}}
+                <button type="button" class="rx-acc-btn" onclick="removeCheckedItems()" title="체크한 줄을 지웁니다"><i class="fa-solid fa-trash"></i> 선택 삭제</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -5624,122 +5626,124 @@ window.HELP_TOUR_STEPS = [
   });
 
   // ── 멀티 제품: 아이템 HTML 템플릿 ───────────────────────
-  function itemHtml(idx, item) {
-    const displayName = item.product_name
-        ? escHtml(item.product_name) + (item.product_code ? ` (${escHtml(item.product_code)})` : '')
-        : '';
-    const nhisAmt  = Number(item.nhis_amount  || 0).toLocaleString();
-    const copay    = Number(item.patient_copay || 0).toLocaleString();
-    const nhisSt   = item.nhis_status || 'eligible';
-    const insBase  = Number(item.insurance_price || item.product_price || 0);
-    const totalAmt = Math.round(insBase * Number(item.quantity || 1)).toLocaleString('ko-KR');
-    // 시안 148:3105 Frame 48101492 — 행 카드 1132×118.
-    // 가로 2칸: 내용(pad 12 · 세로 gap 12) + 오른쪽 삭제칸 64(#F9FAFC).
-    // 열 폭 281/141×5, 라벨 13/500 #474D54 와 입력 사이 8. 규격은 CSS(#items-container)에 있다.
-    return `<div class="item-card" data-idx="${idx}">
-      <div class="item-card-main">
-      <div class="item-row">
-        <div class="item-inline-field" style="flex:2 1 236px;min-width:0;">
-          <div class="item-field-label">제품명</div>
-          <div class="item-name-row">
-            {{-- 치는 대로 목록이 따라 내려오던 것은 걷어냈다. 두 글자에도 창고를 찾으러
-                 가느라 느렸고, 아래로 펼쳐진 목록이 다음 칸을 가렸다.
-                 이제 검색 단추로 창을 열어 세 글자 이상에서 찾는다. --}}
-            <div class="pac-wrap" style="position:relative;">
-              <input type="text" class="form-control item-display" id="pac-input-${idx}"
-                     style="width:100%;font-size:13px;height:32px;" autocomplete="off"
-                     placeholder="제품명 또는 코드 입력 후 검색"
-                     value="${displayName}"
-                     onkeydown="if(event.key==='Enter'){event.preventDefault();pacSearchBtn(${idx});}" />
-            </div>
-            <button type="button" class="btn btn-sm item-search-btn" title="제품 검색"
-                    onmousedown="event.preventDefault()"
-                    onclick="pacSearchBtn(${idx},this)">
-              <i class="fa-solid fa-magnifying-glass"></i> 검색
-            </button>
-          </div>
-        </div>
-        <input type="hidden" class="item-name"  value="${escHtml(item.product_name||'')}" />
-        <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
-        <input type="hidden" class="item-rbox"  value="${escHtml(item.r_box||'')}" />
-        <input type="hidden" class="item-stock" value="${escHtml(String(item.stock||''))}" />
-        {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략이 정한다 --}}
-        <input type="hidden" class="item-nhis" value="${escHtml(nhisSt)}" />
-        <div class="item-inline-field">
-          <div class="item-field-label">청구전략</div>
-          <div class="item-nhis-shown" style="height:32px;display:flex;align-items:center;">${escHtml(BS_ITEM_LABEL())}</div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">수량</div>
-          <input type="number" class="form-control item-qty" value="${item.quantity||1}" min="1"
-                 oninput="calcItem(${idx})" style="font-size:13px;width:100%;height:32px;" />
-        </div>
-        <div class="item-inline-field" id="item-rbox-field-${idx}" style="display:${item.r_box?'flex':'none'};">
-          <div class="item-field-label">R-Box</div>
-          <div class="item-rbox-display" style="height:32px;display:flex;align-items:center;font-size:12px;font-weight:700;color:var(--primary);white-space:nowrap;">${escHtml(item.r_box||'')}</div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">소비자가</div>
-          <div class="item-money-row">
-            <input type="text" inputmode="numeric" class="form-control item-price" value="${fmtPrice(item.product_price)}"
-                   placeholder="소비자가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
-            <span class="item-won">₩</span>
-          </div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">단가</div>
-          <div class="item-money-row">
-            <input type="text" inputmode="numeric" class="form-control item-ins-price" value="${fmtPrice(item.insurance_price)}"
-                   placeholder="단가 입력" oninput="calcItem(${idx})" style="font-size:13px;height:32px;" />
-            <span class="item-won">₩</span>
-          </div>
-        </div>
-        <div class="item-inline-field">
-          <div class="item-field-label">총 금액</div>
-          <div class="item-total-amt">₩ ${totalAmt}</div>
-        </div>
-      </div>
-      <div class="item-meta" id="item-meta-${idx}" style="display:${item.stock?'flex':'none'};align-items:center;gap:6px;padding:4px 2px 2px;flex-wrap:wrap;">
-        ${item.stock  ? `<span style="background:var(--primary-50);color:var(--primary);padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;"><i class="fa-solid fa-layer-group" style="font-size:9px;margin-right:3px;"></i>재고: ${Number(item.stock).toLocaleString()}</span>` : ''}
-      </div>
-      <div class="item-summary">
-        <span class="item-sum-grp">
-          {{-- 화면에서 NHIS·건보 표현은 걷어냈다 — 「기관 부담금」으로 적는다 --}}
-          <span class="item-sum-badge">기관 부담금</span>
-          <b class="item-nhis-amt">₩ ${nhisAmt}</b>
-        </span>
-        <span class="item-sum-div"></span>
-        <span class="item-sum-grp">
-          <span class="item-sum-badge is-copay">본인 부담금</span>
-          <b class="item-copay">₩ ${copay}</b>
-        </span>
-      </div>
-      </div>
-      <div class="item-del-col">
-        <button type="button" class="btn btn-sm item-del-btn" onclick="removeItem(${idx})" title="삭제">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-    </div>`;
+  /* ── 제품 표 ────────────────────────────────────────────────
+     카드 두 벌(카드뷰ㆍ표뷰)로 손수 그리던 것을 wwGrid 한 벌로 바꿨다. 얻은 것은
+     아래끝 합계줄이다 — 예전에는 이 자리에 합계가 없어 총액을 보려면 다른 탭까지
+     가야 했다. 고르는 창(제품 조회)은 쓰던 것을 그대로 쓴다(같은 GridModal).
+
+     셈해서 나오는 칸(총 금액ㆍ기관ㆍ본인 부담금)은 editable:false 로 잠근다 —
+     사람이 고칠 값이 아니고, 고치면 곧 어긋난다. */
+  let itemGrid = null;
+
+  /** 한 줄의 금액을 셈한다 — 비율은 청구전략이 정한다(없으면 담긴 급여 구분) */
+  function computeRow(item) {
+    const ins  = Number(String(item.insurance_price ?? '').replace(/,/g, '')) || 0;
+    const cons = Number(String(item.product_price   ?? '').replace(/,/g, '')) || 0;
+    const base = ins > 0 ? ins : cons;
+    const qty  = Math.max(1, parseInt(item.quantity, 10) || 1);
+    const rates = bsRates();
+    const total = Math.round(base * qty);
+    const nhis  = rates
+      ? Math.round(base * qty * rates.payer)
+      : Math.round(base * qty * (item.nhis_status === 'partial' ? 0.5
+                               : item.nhis_status === 'ineligible' ? 0 : 0.9));
+    return { total, nhis_amount: nhis, patient_copay: total - nhis };
+  }
+
+  /** 화면에 실을 줄 — items 를 표가 읽는 모양으로 옮긴다 */
+  function itemRows() {
+    return items.map((it, idx) => {
+      const c = computeRow(it);
+      return {
+        _idx:            idx,
+        product_name:    it.product_name || '',
+        product_code:    it.product_code || '',
+        quantity:        Math.max(1, parseInt(it.quantity, 10) || 1),
+        product_price:   Number(String(it.product_price   ?? '').replace(/,/g, '')) || '',
+        insurance_price: Number(String(it.insurance_price ?? '').replace(/,/g, '')) || '',
+        total:           c.total,
+        nhis_amount:     c.nhis_amount,
+        patient_copay:   c.patient_copay,
+      };
+    });
+  }
+
+  /** 표에서 고친 것을 items 로 되돌린다 */
+  function itemsFromRows(rows) {
+    rows.forEach((r, idx) => {
+      const it = items[idx];
+      if (!it) return;
+      it.product_name    = r.product_name;
+      it.product_code    = r.product_code;
+      it.quantity        = Math.max(1, parseInt(r.quantity, 10) || 1);
+      it.product_price   = r.product_price   === '' ? '' : Number(r.product_price);
+      it.insurance_price = r.insurance_price === '' ? '' : Number(r.insurance_price);
+      Object.assign(it, computeRow(it));
+    });
   }
 
   function renderItems() {
-    document.getElementById('items-container').innerHTML =
-        items.map((item, idx) => itemHtml(idx, item)).join('');
-    document.querySelectorAll('.item-price, .item-ins-price').forEach(initPriceInput);
+    const el = document.getElementById('items-container');
+    if (!el) return;
+
+    const cols = [
+      { header: '제품명', name: 'product_name', width: 260, editor: 'popup',
+        popup: {
+          title: '제품 조회', width: 460, height: 360, mode: 'popover', minChars: 3,
+          onSearch: (kw) => pacSearch(kw),
+          onSelect: (rowIndex, code) => applyProduct(rowIndex, _pacLast[code]),
+        } },
+      { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
+      { header: '소비자가',   name: 'product_price',   width: 110, editor: 'number' },
+      { header: '단가',       name: 'insurance_price', width: 110, editor: 'number' },
+      { header: '총 금액',    name: 'total',           width: 120, editor: 'number', editable: false },
+      { header: '기관 부담금', name: 'nhis_amount',    width: 120, editor: 'number', editable: false },
+      { header: '본인 부담금', name: 'patient_copay',  width: 120, editor: 'number', editable: false },
+    ];
+
+    if (!itemGrid) {
+      itemGrid = new wwGrid({
+        el, columns: cols, data: itemRows(),
+        height: 'fit', rowCheckbox: true, rowNumber: true, toolbar: false, footer: false,
+        onChange: ({ grid }) => {
+          itemsFromRows(grid.getData());
+          grid.setData(itemRows());     // 셈해서 나온 칸을 다시 그린다
+          calcTotals();
+          renderOrderSummary();          // 주문 연계 탭의 같은 표도 함께
+          markProductDirty();
+        },
+      });
+    } else {
+      itemGrid.setData(itemRows());
+    }
     calcTotals();
   }
 
+
+  const emptyItem = () => ({ product_name:'', product_code:'', quantity:DEFAULT_QTY,
+                             product_price:'', insurance_price:'', nhis_status:'eligible',
+                             nhis_amount:0, patient_copay:0, r_box:'', stock:'' });
+
   function addItem() {
-    items.push({ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 });
+    items.push(emptyItem());
     if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
       renderItemsTable();
     } else {
       renderItems();
     }
-    // 추가된 아이템 스크롤
-    const cards = document.querySelectorAll('.item-card');
-    cards[cards.length-1]?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    markProductDirty();
+  }
+
+  /** 체크한 줄을 지운다 — 표에서 고르는 방식 */
+  function removeCheckedItems() {
+    const checked = itemGrid?.getCheckedRows?.() ?? [];
+    if (!checked.length) { showToast('지울 줄을 체크해 주십시오.', 'warning'); return; }
+    const idxs = new Set(checked.map(r => r._idx));
+    items = items.filter((_, i) => !idxs.has(i));
+    if (!items.length) items = [emptyItem()];
+    renderItems();
+    if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) renderItemsTable();
+    markProductDirty();
   }
 
   function removeItem(idx) {
@@ -6120,35 +6124,45 @@ window.HELP_TOUR_STEPS = [
     SMS_PLACEHOLDERS['#{금액}']       = fmtDeposit;
   }
 
+  /* ── 주문 정보 요약 ─────────────────────────────────────────
+     같은 제품을 손으로 짠 HTML 로 한 번 더 그리고 있었다. 주문 제품 탭의 표와 칸 이름도
+     생김새도 달라, 두 자리를 견주려면 눈으로 옮겨 읽어야 했다. 같은 표를 읽기 전용으로
+     한 번 더 세운다 — 칸도 합계도 저쪽과 같다. */
+  let summaryGrid = null;
+
   function renderOrderSummary() {
     const el = document.getElementById('order-items-summary');
     if (!el) return;
-    const validItems = items.filter(i => i.product_name);
-    if (!validItems.length) {
+
+    const rows = itemRows().filter(r => r.product_name);
+    if (!rows.length) {
+      summaryGrid = null;
       el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 제품 탭에서 제품을 먼저 선택해주세요.</div>';
       return;
     }
-    el.innerHTML = validItems.map(item => {
-      const base     = (item.insurance_price || item.product_price || 0);
-      const total    = Math.round(base * item.quantity).toLocaleString('ko-KR');
-      const nhisAmt  = Math.round(item.nhis_amount   || 0);
-      const copay    = Math.round(item.patient_copay || 0);
-      const nhisSt   = item.nhis_status || 'eligible';
-      const nhisLabel = nhisSt === 'eligible' ? '급여(90%)' : (nhisSt === 'partial' ? '일부(50%)' : '비급여');
-      const nhisColor = nhisSt === 'ineligible' ? 'var(--text-muted)' : 'var(--primary)';
-      const nhisInfo  = nhisSt === 'ineligible'
-          ? `<span style="font-size:11px;color:var(--text-muted);">${nhisLabel}</span>`
-          : `<span style="font-size:11px;color:${nhisColor};">${nhisLabel} &minus;₩${nhisAmt.toLocaleString('ko-KR')}</span>
-             <span style="font-size:11px;color:var(--text-secondary);">→ 환자 ₩${copay.toLocaleString('ko-KR')}</span>`;
-      return `<div class="cost-row" style="align-items:flex-start;">
-        <div style="display:flex;flex-direction:column;gap:2px;font-size:12px;">
-          <span>${escHtml(item.product_name)}${item.product_code?` <span style="color:var(--text-muted);font-size:11px;">(${escHtml(item.product_code)})</span>`:''} × ${item.quantity}</span>
-          <div style="display:flex;gap:8px;">${nhisInfo}</div>
-        </div>
-        <span class="cost-val" style="font-size:12px;white-space:nowrap;">₩ ${total}</span>
-      </div>`;
-    }).join('');
+
+    const cols = [
+      { header: '제품명',      name: 'product_name',  width: 200 },
+      { header: '수량',        name: 'quantity',      width: 70,  editor: 'number' },
+      { header: '단가',        name: 'insurance_price', width: 100, editor: 'number' },
+      { header: '총 금액',     name: 'total',         width: 110, editor: 'number' },
+      { header: '기관 부담금', name: 'nhis_amount',   width: 110, editor: 'number' },
+      { header: '본인 부담금', name: 'patient_copay', width: 110, editor: 'number' },
+    ];
+
+    if (!summaryGrid || !el.querySelector('table')) {
+      el.innerHTML = '';
+      summaryGrid = new wwGrid({
+        el, columns: cols, data: rows,
+        // 카드 안에 얹는 짧은 표다 — 'fit' 은 화면 아래끝까지 늘어난다
+        height: 'auto', editable: false, rowCheckbox: false, rowNumber: true,
+        toolbar: false, footer: false,
+      });
+    } else {
+      summaryGrid.setData(rows);
+    }
   }
+
 
   // ── 수량 조절 (order tab 호환) ──────────────────────────
   function changeQty(delta) {
@@ -8659,96 +8673,105 @@ window.HELP_TOUR_STEPS = [
      수백 건이 쏟아져 고르지 못하고, 그 조회가 창고를 붙들어 다음 조회까지 늦춘다. */
   const _pacCache  = {};   // 검색 결과 캐시(같은 말로 다시 찾지 않는다)
   const _pacNotice = {};   // 다 보여 주지 못한 검색의 안내
-  const _pacFound  = {};   // 방금 창에 보인 것 — 고른 뒤 값을 꺼내 쓴다
   const _prodModal = new GridModal();
 
+  /* 제품을 찾는다. 표의 제품명 칸이 이 결과로 창을 채운다.
+     찾은 것은 코드로 기억해 둔다 — 고른 뒤에 단가ㆍR-Box ㆍ재고를 함께 앉혀야 한다. */
+  let _pacLast = {};
+
+  async function pacSearch(kw) {
+    const key = kw.toLowerCase();
+    let data = _pacCache[key];
+    if (!data) {
+      const res = await apiRequest(`/products/search?q=${encodeURIComponent(kw)}`, 'GET');
+      if (!res.success) throw new Error(res.message || '조회 실패');
+      data = res.data ?? [];
+      _pacCache[key]  = data;
+      _pacNotice[key] = res.notice ?? null;
+    }
+
+    /* 창고가 한 번에 다 주지 않는다. 못 보여 준 것이 있으면 건수 자리에 그대로 적는다 —
+       「30건」만 보이면 그게 전부인 줄 알고 없는 제품이라 여긴다.
+       창이 건수를 적은 뒤에 덮어써야 하므로 다음 차례로 미룬다. */
+    if (_pacNotice[key]) {
+      const notice = _pacNotice[key];
+      setTimeout(() => {
+        const el = document.querySelector('.cg-modal-counter');
+        if (el) { el.textContent = notice; el.style.color = '#B54708'; }
+      }, 0);
+    }
+
+    _pacLast = {};
+    return data.map((it) => {
+      const code = it.code ?? it.name;
+      _pacLast[code] = it;
+      return {
+        value: code,
+        label: it.name ?? '',
+        sub: [it.code, it.spec, it.unit,
+              it.r_box ? 'R-Box ' + it.r_box : null,
+              it.price ? '₩ ' + Number(it.price).toLocaleString() : null]
+             .filter(Boolean).join(' · '),
+      };
+    });
+  }
+
+  /* 표뷰(테이블뷰)의 줄마다 있는 「검색」 단추가 여는 창.
+     제품 표는 칸을 눌러 열지만, 표뷰는 예전 모양 그대로라 이 길도 남겨 둔다.
+     찾는 일과 앉히는 일은 위아래 함수를 그대로 쓴다 — 두 길이 같은 결과를 낸다. */
   function pacSearchBtn(idx, btn) {
     const inp = document.getElementById(`pac-input-${idx}`);
-    if (!inp) return;
-
     _prodModal.open({
       title: '제품 조회', width: 460, height: 360,
       mode: 'popover', anchor: btn || inp,
       minChars: 3,
-      query: inp.value.trim(),
-      onSearch: async (kw) => {
-        const key = kw.toLowerCase();
-        let data = _pacCache[key];
-        if (!data) {
-          const res = await apiRequest(`/products/search?q=${encodeURIComponent(kw)}`, 'GET');
-          if (!res.success) throw new Error(res.message || '조회 실패');
-          data = res.data ?? [];
-          _pacCache[key] = data;
-          _pacNotice[key] = res.notice ?? null;
-        }
-        /* 창고가 한 번에 다 주지 않는다. 못 보여 준 것이 있으면 건수 자리에 그대로 적는다 —
-           「30건」만 보이면 그게 전부인 줄 알고 없는 제품이라 여긴다.
-           창이 건수를 적은 뒤에 덮어써야 하므로 다음 차례로 미룬다. */
-        if (_pacNotice[key]) {
-          const notice = _pacNotice[key];
-          setTimeout(() => {
-            const c = document.querySelector('.cg-modal-counter');
-            if (c) { c.textContent = notice; c.style.color = '#B54708'; }
-          }, 0);
-        }
-        _pacFound[idx] = {};
-        return data.map((it) => {
-          const code = it.code ?? it.name;
-          _pacFound[idx][code] = it;
-          return {
-            value: code,
-            label: it.name ?? '',
-            sub: [it.code, it.spec, it.unit,
-                  it.r_box ? 'R-Box ' + it.r_box : null,
-                  it.price ? '₩ ' + Number(it.price).toLocaleString() : null]
-                 .filter(Boolean).join(' · '),
-          };
-        });
-      },
-      onConfirm: (code) => applyProduct(idx, _pacFound[idx]?.[code]),
+      query: inp?.value?.trim() ?? '',
+      onSearch: (kw) => pacSearch(kw),
+      onConfirm: (code) => applyProduct(idx, _pacLast[code]),
     });
   }
 
-  /* 고른 제품을 그 행에 앉힌다. 재고는 여기서 한 건만 따로 묻는다 —
+  /* 고른 제품을 그 줄에 앉힌다. 재고는 여기서 한 건만 따로 묻는다 —
      창고의 재고 조회는 한 건에 7초라, 목록을 만들 때 모두 물으면 검색 자체가 끊긴다. */
   function applyProduct(idx, p) {
     if (!p) return;
+    const it = items[idx];
+    if (!it) return;
+
     const code  = p.code ?? '';
     const name  = p.name ?? '';
     const price = parseFloat(p.price) || 0;
     const rbox  = p.r_box ?? '';
-
-    const card = document.querySelector(`.item-card[data-idx="${idx}"]`);
-    if (!card) return;
-
-    card.querySelector('.item-name').value    = name;
-    card.querySelector('.item-code').value    = code;
-    card.querySelector('.item-display').value = name + (code ? ` (${code})` : '');
-    card.querySelector('.item-rbox').value    = rbox;
-    /* 찾을 때 재고까지 함께 받았으면 그대로 쓴다 — 방금 받은 것을 버리고 다시 묻지 않는다.
-       예전 API 로 물러선 경우에는 재고가 없으므로 그때만 따로 묻는다. */
+    // 찾을 때 재고까지 함께 받았으면 그대로 쓴다 — 방금 받은 것을 버리고 다시 묻지 않는다
     const stock = (p.stock ?? '') === '' ? '' : String(p.stock);
-    card.querySelector('.item-stock').value   = stock;
+
+    it.product_name = name;
+    it.product_code = code;
+    it.r_box        = rbox;
+    it.stock        = stock;
     if (price) {
-      card.querySelector('.item-price').value     = fmtPrice(price);
-      card.querySelector('.item-ins-price').value = fmtPrice(price);
+      it.product_price   = price;
+      it.insurance_price = price;
     }
-    updateItemMeta(idx, rbox, stock);
-    calcItem(idx);
+    Object.assign(it, computeRow(it));
+
+    renderItems();
+    calcTotals();
+    markProductDirty();
 
     if (code && stock === '') {
       apiRequest(`/products/stock?code=${encodeURIComponent(code)}`, 'GET')
         .then(res => {
           if (res.success && res.qty !== null) {
-            const qty = String(res.qty);
-            card.querySelector('.item-stock').value = qty;
-            updateItemMeta(idx, rbox, qty);
+            it.stock = String(res.qty);
+            renderItems();
           }
         }).catch(() => {});
     }
 
     showToast(`"${name}" 선택됨`, 'success');
   }
+
 
   // 구 팝업 호환
   function openProductSearch(idx) { pacSearchBtn(idx); }
