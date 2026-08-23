@@ -147,6 +147,21 @@
 
         {{-- 개인정보 — 보는 것과 고치는 것이 한 자리다 --}}
         <div class="view-panel" id="view-panel">
+          {{-- 사업부를 맨 앞에 둔다 — IC 냐 OC 냐에 따라 다루는 물건도, 붙는 서류도
+               갈린다. IC 로 두면 저장되는 이름 앞에 (E) 가 붙는다(위드웍스 표기). --}}
+          <div class="info-row">
+            <span class="info-label">사업부</span>
+            <span class="info-value">
+              <span class="view-only">{{ \App\Models\Patient::CARE_TYPES[$patient->care_type] ?? '-' }}</span>
+              <select class="form-control edit-only" id="e-care-type"
+                      data-orig="{{ $patient->care_type }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::CARE_TYPES as $code => $label)
+                  <option value="{{ $code }}" @selected($patient->care_type === $code)>{{ $label }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
           <div class="info-row">
             <span class="info-label">주민번호</span>
             <span class="info-value">
@@ -428,6 +443,7 @@
                              const v = el.value.trim();
                              return (v === '' || v === el.dataset.masked) ? undefined : v;
                            })(document.getElementById('e-resident')),
+      care_type:           document.getElementById('e-care-type').value           || null,
       birth_date:          document.getElementById('e-birth').value               || null,
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,

@@ -70,6 +70,11 @@ class PatientController extends Controller
             $query->where('sb_sci', $request->sb_sci);
         }
 
+        // 사업부 — IC(카테터) · OC(장루). 두 사업부는 다루는 물건도 서류도 다르다
+        if ($request->filled('care_type') && Patient::hasCareTypeColumn()) {
+            $query->where('care_type', $request->care_type);
+        }
+
         /* 개인정보 동의 여부 — privacy_consents 를 환자로 이어 본다.
            이 표는 밖에서 들어오는 폼이라 patient_id 가 비어 있을 수 있다(이름+전화로 채운다).
            그래서 「아니오」는 「이어진 동의서가 없다」는 뜻이지 「동의하지 않았다」가 아니다. */
@@ -127,6 +132,7 @@ class PatientController extends Controller
 
             return [
                 'id'              => $p->id,
+                'care_type'       => $p->care_type ?: '',
                 'name'            => $p->name,
                 'resident_no'     => $p->masked_resident_no ?? '-',
                 'birth_date'      => $birth,
@@ -372,6 +378,7 @@ class PatientController extends Controller
     {
         $data = $request->validate([
             'name'               => 'required|string|max:50',
+            'care_type'          => 'nullable|in:IC,OC',
             'resident_no'        => 'nullable|string|max:20',
             'birth_date'         => 'nullable|date',
             'gender'             => 'nullable|in:male,female',
@@ -385,6 +392,11 @@ class PatientController extends Controller
             'nhis_coverage_rate' => 'nullable|integer|min:0|max:100',
             'note'               => 'nullable|string|max:1000',
         ]);
+
+        // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
+        if (!Patient::hasCareTypeColumn()) {
+            unset($data['care_type']);
+        }
 
         $patient = Patient::create($data);
 
@@ -403,6 +415,7 @@ class PatientController extends Controller
     {
         $data = $request->validate([
             'name'               => 'required|string|max:50',
+            'care_type'          => 'nullable|in:IC,OC',
             'resident_no'        => 'nullable|string|max:20',
             'birth_date'         => 'nullable|date',
             'gender'             => 'nullable|in:male,female',
@@ -416,6 +429,11 @@ class PatientController extends Controller
             'nhis_coverage_rate' => 'nullable|integer|min:0|max:100',
             'note'               => 'nullable|string|max:1000',
         ]);
+
+        // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
+        if (!Patient::hasCareTypeColumn()) {
+            unset($data['care_type']);
+        }
 
         $patient->update($data);
 

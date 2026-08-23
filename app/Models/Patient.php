@@ -19,13 +19,60 @@ class Patient extends Model
         'nhis_agree_start', 'nhis_agree_end', 'basic_reeval', 'basic_reeval_due',
         'cash_receipt_no', 'deduction', 'new_patient_date',
         'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
-        'name', 'resident_no', 'birth_date', 'gender',
+        'care_type', 'name', 'resident_no', 'birth_date', 'gender',
         'phone', 'mobile', 'address', 'postcode', 'address_detail',
         'health_insurance_no', 'is_nhis_eligible', 'nhis_coverage_rate', 'note',
         // 주민번호 암호화(P0-1)
         'resident_no_enc', 'resident_no_hash', 'resident_no_masked',
         'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
     ];
+
+    /** IC = 카테터 · OC = 장루. 개인정보 동의서의 catheter/stoma 와 같은 축이다. */
+    public const CARE_TYPES = ['IC' => 'IC (카테터)', 'OC' => 'OC (장루)'];
+
+    /*
+     * IC 거래처는 이름 앞에 (E) 를 달아 둔다. 위드웍스의 개인 거래처 표기가 그렇고
+     * ((E)김현열), 그 이름 그대로 오가야 두 시스템에서 같은 거래처로 읽힌다.
+     * 표시만 바꾸지 않고 저장되는 이름에 넣는다(요청).
+     *
+     * 어느 길로 저장하든 규칙이 한 번만 적용되도록 모델에서 건다 — 화면이 여럿이라
+     * 각자 붙이면 「(E)(E)김콜로」 처럼 겹치거나, 어느 화면에서만 빠진다.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $p) {
+            /* 사업부를 모르면 이름에 손대지 않는다. 예전에 사람 손으로 (E) 를 달아 둔
+               이름이 있는데, 사업부가 비었다는 이유로 그것을 떼면 안 된다. */
+            if ($p->care_type !== null && $p->care_type !== '') {
+                $p->name = self::nameWithCareTag($p->name, $p->care_type);
+            }
+        });
+    }
+
+    /** 이름에 (E) 를 맞춰 단다 — IC 면 붙이고, 아니면 뗀다. 이미 붙어 있어도 겹치지 않는다. */
+    public static function nameWithCareTag(?string $name, ?string $careType): ?string
+    {
+        $bare = trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $name));
+        if ($bare === '') {
+            return $name;   // 이름이 비어 있으면 손대지 않는다 — 검증이 걸러 낼 몫이다
+        }
+        return $careType === 'IC' ? '(E)' . $bare : $bare;
+    }
+
+    /* 사업부 칸은 서버마다 있을 수도, 없을 수도 있다(마이그레이션 대기).
+       없는 곳에 쓰려 들면 질의가 깨지므로 한 번만 물어 기억해 둔다. */
+    private static ?bool $hasCareType = null;
+
+    public static function hasCareTypeColumn(): bool
+    {
+        return self::$hasCareType ??= \Illuminate\Support\Facades\Schema::hasColumn('patients', 'care_type');
+    }
+
+    /** (E) 를 뗀 이름. 찾을 때ㆍ서류에 적을 때 쓴다. */
+    public function getBareNameAttribute(): string
+    {
+        return trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $this->name));
+    }
 
     /** 화면·서류에 한 줄로 적는 주소 — (우편번호) 도로명 상세 */
     public function getFullAddressAttribute(): string

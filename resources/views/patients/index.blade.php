@@ -381,6 +381,15 @@
         <input type="date" name="agree_end_to" value="{{ request('agree_end_to') }}" class="form-control">
       </div>
     </div>
+    {{-- 사업부 — IC(카테터) · OC(장루). 두 사업부는 다루는 물건도 붙는 서류도 다르다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">사업부</label>
+      <select name="care_type" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="IC" @selected(request('care_type') === 'IC')>IC (카테터)</option>
+        <option value="OC" @selected(request('care_type') === 'OC')>OC (장루)</option>
+      </select>
+    </div>
     {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
     <div class="ds-filter-field">
       <label class="ds-field-label">상병타입</label>
@@ -477,21 +486,32 @@
     <div class="modal-body">
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
+          {{-- 사업부를 먼저 고른다 — IC 면 저장되는 이름 앞에 (E) 가 붙는다(위드웍스 표기). --}}
+          <label class="form-label">사업부</label>
+          <select class="form-control" id="add-care-type">
+            <option value="">선택</option>
+            <option value="IC">IC (카테터)</option>
+            <option value="OC">OC (장루)</option>
+          </select>
+        </div>
+        <div class="form-group">
           {{-- 필수 표시는 전역 .form-label span 이 var(--danger) 로 그린다.
                인라인 color:red 는 그 규칙을 덮어 DS 밖 빨강이 되므로 걷어냈다. --}}
           <label class="form-label">이름 <span>*</span></label>
           <input type="text" class="form-control" id="add-name" placeholder="홍길동" />
         </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">주민등록번호</label>
           <input type="text" class="form-control" id="add-resident" placeholder="XXXXXX-XXXXXXX" />
         </div>
-      </div>
-      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">생년월일</label>
           <input type="date" class="form-control" id="add-birth" />
         </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">성별</label>
           <select class="form-control" id="add-gender">
@@ -500,12 +520,12 @@
             <option value="female">여</option>
           </select>
         </div>
-      </div>
-      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">휴대폰</label>
           <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
         </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">일반 전화</label>
           <input type="text" class="form-control" id="add-phone" placeholder="02-XXXX-XXXX" data-phone />
@@ -618,6 +638,7 @@ document.addEventListener('keydown', (e) => {
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
+      { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
       { header: '이름',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
       { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
@@ -1327,6 +1348,7 @@ document.addEventListener('keydown', (e) => {
 
     const payload = {
       name,
+      care_type:           document.getElementById('add-care-type').value            || null,
       resident_no:         document.getElementById('add-resident').value.trim()     || null,
       birth_date:          document.getElementById('add-birth').value               || null,
       gender:              document.getElementById('add-gender').value               || null,

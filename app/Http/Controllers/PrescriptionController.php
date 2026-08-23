@@ -1199,6 +1199,8 @@ class PrescriptionController extends Controller
             'email'               => $request->input('email'),
             'phone'               => $request->input('mobile2'),
             'sb_sci'              => $request->input('sb_sci'),
+            // 사업부 — 골랐을 때만 올린다. IC 면 저장되는 이름 앞에 (E) 가 붙는다(모델이 단다)
+            'care_type'           => Patient::hasCareTypeColumn() ? $request->input('care_type') : null,
             'nhis_reg_status'     => $request->input('nhis_reg_status'),
             'nhis_reg_date'       => $request->input('nhis_reg_date'),
             'nhis_renew'          => $request->input('nhis_renew'),
@@ -1259,6 +1261,7 @@ class PrescriptionController extends Controller
                 'resident_no'  => $request->resident_no_ocr,
                 'mobile'       => $request->mobile_ocr,
                 'address'      => $request->address_ocr,
+                'care_type'    => Patient::hasCareTypeColumn() ? $request->input('care_type') : null,
             ]);
         }
 
@@ -2347,14 +2350,20 @@ HTML;
             }
         } else {
             // 신규 환자 등록
-            $patient = Patient::create([
+            $attrs = [
                 'name'        => $name,
                 'resident_no' => $residentNo,
                 'mobile'      => $mobile,
                 'address'     => $address,
                 'birth_date'  => $birth,
                 'gender'      => $gender,
-            ]);
+            ];
+            // 사업부는 골랐을 때만 넣는다 — 칸이 없는 서버에서 빈 값을 끼우면 질의가 깨진다
+            if (!empty($d['care_type'])) {
+                $attrs['care_type'] = $d['care_type'];
+            }
+
+            $patient = Patient::create($attrs);
 
             activity()
                 ->causedBy(Auth::user())
