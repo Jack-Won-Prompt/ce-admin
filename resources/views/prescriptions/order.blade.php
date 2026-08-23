@@ -5704,7 +5704,9 @@ window.HELP_TOUR_STEPS = [
     if (!itemGrid) {
       itemGrid = new wwGrid({
         el, columns: cols, data: itemRows(),
-        height: 'fit', rowCheckbox: true, rowNumber: true, toolbar: false, footer: false,
+        /* 줄 수만큼만 둔다. 'fit' 은 화면 아래끝까지 늘어나 두어 줄짜리 주문에도 빈
+           바닥이 한참 남았다 — 제품은 보통 한두 줄이다. */
+        height: 'auto', rowCheckbox: true, rowNumber: true, toolbar: false, footer: false,
         onChange: ({ grid }) => {
           itemsFromRows(grid.getData());
           grid.setData(itemRows());     // 셈해서 나온 칸을 다시 그린다
