@@ -2169,9 +2169,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
             @endif
 
-            {{-- ▸ 상담 정보 소제목 + 메모 버튼 --}}
+            {{-- 상담 정보 구획은 두지 않는다. 상담 번호ㆍ일자ㆍ상태ㆍ재상담 일자는
+                 상담하는 자리에서 정하는 값이라 거래처 관리의 상담 창이 받는다 —
+                 여기서 또 받으면 두 곳의 값이 갈라진다. 상담으로 가는 길은 이름 줄의
+                 「상담하기」 단추 하나로 남긴다.
+                 메모 단추는 이 구획 머리에 붙어 있던 것이라 환자 정보 머리로 옮겼다. --}}
+
+            {{-- ▸ 환자 정보 소제목 --}}
             <div class="rx-sec-head">
-              <span class="rx-sec-title">상담 정보</span>
+              <span class="rx-sec-title">환자 정보</span>
               <button id="memoPanelToggleBtn" onclick="toggleMemoPanel(event)"
                       class="rx-sec-btn">
                 <i class="fa-solid fa-note-sticky"></i> 메모
@@ -2180,82 +2186,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   {{ $prescription->memos->count() }}
                 </span>
               </button>
-            </div>
-            <div class="rx-fit">
-            <div class="rx-rows">
-            {{-- 명세(주문 화면_상세목록_상담 환자 정보_수정.pptx 1장)는 이 구획을 가로로 읽는다 —
-                 상담 번호ㆍ상담 일자ㆍ상담 유형 / 상담 상태ㆍ재 상담 일자. --}}
-              <div class="rx-field-row" style="align-items:flex-start;">
-                <span class="rx-field-label">상담 번호</span>
-                {{-- 시안(Frame 48101481)은 두 칸이다: [입력 144 FILL][추가상담(채번) 101 HUG], 사이 8 = 253.
-                     '과거 상담 N' 은 재방문 환자에게만 붙는 세 번째 칸이라 253 에 다 서지 못한다.
-                     입력의 기준 폭을 시안값 144 로 두고 줄바꿈을 허용해, 자리가 모자라면
-                     버튼만 아랫줄로 내려가게 했다. 버튼은 하나도 지우지 않는다.
-                     min-width 로 144 를 '잠그면' 안 된다 — 3열 1600(입력영역 141)·2열 1280(117)에서
-                     입력이 줄지 못해 열 밖으로 3~27px 삐져나갔다. min-width:0 으로 두면
-                     좁을 때 입력이 열 폭까지 줄어들고 버튼만 아랫줄로 내려간다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;flex-wrap:wrap;row-gap:8px;">
-                  <input type="text" class="form-control" id="f-counselling-no"
-                         value="{{ $curCounselNo }}"
-                         placeholder="채번 버튼을 눌러 번호를 생성하세요"
-                         {{-- 기준 폭 144 는 3열 격자(열 사이 24 가 둘)일 때의 시안값이다.
-                              여섯 칸 격자는 열 사이가 다섯이라 한 칸이 10 남짓 좁아져,
-                              144+8+단추 103 = 255 가 243 에 들어가지 못하고 단추가 아랫줄로
-                              내려갔다. 기준 폭만 128 로 줄여 한 줄에 세운다 — 입력은 flex 라
-                              남는 자리를 받아 실제로는 다시 132 로 벌어진다. --}}
-                         style="flex:1 1 128px;min-width:0;" />
-                  @if($isReturningPatient)
-                  <button type="button" class="rx-side-btn" onclick="openPrevCounselModal()"
-                          title="이전 상담 이력 {{ $prevCounselings->count() }}건">
-                    과거 상담 {{ $prevCounselings->count() }}
-                  </button>
-                  @endif
-                  <button type="button" id="btnCounselNo" class="rx-side-btn" onclick="generateCounselNo()">추가상담(채번)</button>
-                </div>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">상담 일자</span>
-                <div style="display:flex;gap:8px;flex:1;align-items:center;min-width:0;">
-                  <input type="date" class="form-control" id="f-counsel-date" value="{{ $curCounselDate }}" style="flex:1;min-width:0;" />
-                  <button type="button" class="rx-side-btn"
-                          onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'">오늘</button>
-                </div>
-              </div>
-              {{-- 「상담 유형」 칸은 두지 않는다. 유형은 상담하는 자리에서 정하는 것이라
-                   거래처 관리의 상담 창이 이미 받고 있다(csType). 여기서 또 받으면 두 곳의
-                   값이 갈라진다. 대신 그 창을 여는 단추를 둔다.
-                   유형이 없어지면서 위드웍스 판매주문 종류를 미리 골라 주던 연결
-                   (onCounselTypeChange → so-type 라디오)도 함께 걷었다 — 연계는 담당자가
-                   「주문 연계」 탭에서 고를 때만 나간다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">상담</span>
-                <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-                  <button type="button" class="rx-side-btn" onclick="openCounselWindow()">
-                    <i class="fa-solid fa-comments"></i> 상담하기
-                  </button>
-                  <span style="font-size:11px;color:var(--gray-600);">거래처 관리의 상담 창이 열립니다.</span>
-                </div>
-              </div>
-              <div class="rx-field-row rx-row-start">
-                <span class="rx-field-label">상담 상태</span>
-                <select class="form-control" id="f-counsel-status" onchange="onCounselStatusChange(this.value)" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="02" @selected(($prescription->counsel_status ?? '') == '02')>등록</option>
-                  <option value="50" @selected(($prescription->counsel_status ?? '') == '50')>재상담</option>
-                  <option value="95" @selected(($prescription->counsel_status ?? '') == '95')>확정</option>
-                  <option value="99" @selected(($prescription->counsel_status ?? '') == '99')>취소</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">재 상담 일자</span>
-                <input type="date" class="form-control" id="f-re-counsel-date"
-                       value="{{ $prescription->counsel_re_date ?? '' }}" style="flex:1;" />
-              </div>
-            </div></div>{{-- /rx-rows --}}
-
-            {{-- ▸ 환자 정보 소제목 --}}
-            <div class="rx-sec-head" style="margin-top:24px;">
-              <span class="rx-sec-title">환자 정보</span>
             </div>
             <div class="rx-fit">
             <div class="rx-rows">
@@ -2282,6 +2212,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      보고 고른다. 업로드 화면의 「이름 조회」와 같은 창이다. --}}
                 <button type="button" class="rx-side-btn" onclick="pkOpen(event)">
                   <i class="fa-solid fa-magnifying-glass"></i> 조회
+                </button>
+                {{-- 상담으로 가는 길. 상담 정보 구획을 걷으면서 이 단추만 이름 옆으로 옮겼다 --}}
+                <button type="button" class="rx-side-btn" onclick="openCounselWindow()">
+                  <i class="fa-solid fa-comments"></i> 상담하기
                 </button>
 
                 {{-- 창은 바탕을 덮지 않는다. 어둡게 깔면 뒤 화면이 통째로 가려져,
@@ -2904,8 +2838,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <tbody>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-clipboard-list"></i> 상담 정보</td></tr>
             <tr>
-              <th>상담번호</th><td data-from="f-counselling-no">{{ $curCounselNo ?: '-' }}</td>
-              <th>상담일자</th><td data-from="f-counsel-date">{{ $curCounselDate ?: '-' }}</td>
+              {{-- 상담 정보 구획을 걷어 이 칸들도 없앴다 --}}
             </tr>
             <tr>
               {{-- 상담유형 칸은 걷었다(거래처 관리의 상담 창이 받는다) — 표에서도 뺀다 --}}
@@ -2913,8 +2846,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th></th><td></td>
             </tr>
             <tr>
-              <th>상담상태</th><td data-from="f-counsel-status">-</td>
-              <th>재상담일자</th><td data-from="f-re-counsel-date">{{ $prescription->counsel_re_date ?? '-' }}</td>
+              <th></th><td></td>
+              <th></th><td></td>
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-user"></i> 환자 정보</td></tr>
             <tr>
@@ -3367,75 +3300,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
 @push('modals')
 {{-- 이전 상담 이력 조회 모달 --}}
 @if($isReturningPatient)
-<div class="modal-overlay" id="prevCounselModal" style="z-index:10000;" onclick="if(event.target===this)closePrevCounselModal()">
-  <div class="modal-box" style="width:800px;max-width:96vw;height:82vh;display:flex;flex-direction:column;">
-    <div class="modal-header">
-      <i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);font-size:17px;"></i>
-      <span class="modal-title">이전 상담 이력</span>
-      <span style="font-size:11px;color:var(--text-muted);background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;padding:1px 8px;margin-left:4px;">
-        {{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-' }} · {{ $prevCounselings->count() }}건
-      </span>
-      <button class="modal-close" onclick="closePrevCounselModal()"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
-
-      {{-- 왼쪽: 날짜/번호 목록 --}}
-      <div style="width:230px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--bg);">
-        @php
-          $pcStatusColorMap = ['02'=>'var(--info)','50'=>'var(--warning)','95'=>'var(--success)','99'=>'var(--danger)'];
-          $pcStatusLabelMap = ['02'=>'등록','50'=>'재상담','95'=>'확정','99'=>'취소'];
-        @endphp
-        @foreach($prevCounselings as $i => $pc)
-          @php
-            $pcSt   = $pc->counsel_status ?? '';
-            $pcDate = $pc->counsel_date ?: $pc->created_at->format('Y-m-d');
-            $pcNo   = $pc->counsel_no ?: '-';
-          @endphp
-          <div class="pc-list-item" data-idx="{{ $i }}" onclick="selectPrevCounsel({{ $i }})"
-               style="padding:11px 14px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:background .15s;">
-            <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:3px;word-break:break-all;">{{ $pcNo }}</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-              <span style="font-size:11px;color:var(--text-muted);">
-                <i class="fa-regular fa-calendar" style="font-size:10px;"></i> {{ $pcDate }}
-              </span>
-              @if($pcSt)
-                <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:{{ $pcStatusColorMap[$pcSt] ?? 'var(--gray-300)' }};color:#fff;flex-shrink:0;">
-                  {{ $pcStatusLabelMap[$pcSt] ?? $pcSt }}
-                </span>
-              @endif
-            </div>
-          </div>
-        @endforeach
-      </div>
-
-      {{-- 오른쪽: 상세 뷰 --}}
-      <div id="prevCounselDetail" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
-        {{-- sticky 헤더 --}}
-        <div id="prevCounselStickyHeader" style="display:none;flex-shrink:0;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--bg-card);">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <div style="min-width:0;">
-              <span id="pcStickyNo" style="font-size:13px;font-weight:700;color:var(--primary);"></span>
-              <span id="pcStickyName" style="font-size:12px;color:var(--text-muted);margin-left:8px;"></span>
-              <div id="pcStickyRx" style="font-size:10px;color:var(--text-muted);margin-top:2px;"></div>
-            </div>
-            <button id="pcStickyBtn"
-                    style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--primary);border-radius:6px;color:var(--primary);font-size:11px;font-weight:500;cursor:pointer;background:var(--bg-card);white-space:nowrap;flex-shrink:0;">
-              <i class="fa-solid fa-arrow-right"></i> 처방전 상세
-            </button>
-          </div>
-        </div>
-        {{-- 스크롤 바디 --}}
-        <div id="prevCounselBody" style="flex:1;overflow-y:auto;padding:20px 22px;">
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:10px;min-height:200px;">
-            <i class="fa-solid fa-hand-pointer" style="font-size:28px;opacity:.35;"></i>
-            <span style="font-size:13px;">왼쪽 목록에서 상담 이력을 선택하세요</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
+        {{-- 「과거 상담」 창은 걷었다 — 그 창을 열던 단추가 상담 정보 구획과 함께 사라졌다.
+             지난 상담은 거래처 관리의 상담 창에서 본다. --}}
 @endif
 
 {{-- ══════════════════════════════════════════════════════════
@@ -5034,22 +4900,6 @@ window.HELP_TOUR_STEPS = [
     else window.open(url, '_blank');
   }
 
-  // ── 상담 상태 변경 → 재상담 일자 활성화/비활성화 ────────
-  function onCounselStatusChange(val) {
-    const el    = document.getElementById('f-re-counsel-date');
-    const wrap  = el?.closest('.rx-field-row');
-    if (!el) return;
-    const isRecounsel = val === '50';
-    el.disabled = !isRecounsel;
-    el.style.background = isRecounsel ? '' : 'var(--bg-secondary,var(--gray-50))';
-    el.style.opacity    = isRecounsel ? '' : '.55';
-    if (!isRecounsel) el.value = '';
-    // 상담 상태 select 색상 표시
-    const statusColors = { '02': '', '50': 'var(--warning)', '95': 'var(--success)', '99': 'var(--danger)' };
-    const select = document.getElementById('f-counsel-status');
-    if (select) select.style.color = statusColors[val] ?? '';
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     const dateEl = document.getElementById('f-date');
     const daysEl = document.getElementById('f-days');
@@ -5083,8 +4933,6 @@ window.HELP_TOUR_STEPS = [
     }
 
     // 상담 상태 초기 색상 적용
-    const initStatus = document.getElementById('f-counsel-status')?.value;
-    if (initStatus) onCounselStatusChange(initStatus);
 
     // 상담 유형 초기 SO type 반영 (소프트 연동 — 기존 SO 선택 안 건드림)
     // (최초 로드 시에는 덮어쓰지 않음)
@@ -5750,11 +5598,7 @@ window.HELP_TOUR_STEPS = [
       'f-date':            d.issued_date || d.udf12,
       'f-rx-period':       d.udf13,
       'f-rx-end-date':     d.udf14,
-      'f-counselling-no':  d.counselling_no,
-      'f-counsel-date':    d.counsel_date || d.reg_date,
       'f-acc-add-type':    d.acc_add_type,
-      'f-counsel-status':  d.status,
-      'f-re-counsel-date': d.re_counsel_date,
       'f-repurchase-date': d.repurchase_date,
     };
 
@@ -6112,13 +5956,10 @@ window.HELP_TOUR_STEPS = [
       // ── 추가 정보 ──────────────────────────────────────────
       new_patient_date: strOrNull('f-new-patient-date'),
       five_110days:     strOrNull('f-five'),
-      // ── 상담 기본 정보 ─────────────────────────────────────
-      counsel_no:           strOrNull('f-counselling-no'),
-      counsel_date:         strOrNull('f-counsel-date'),
+      /* 상담 기본 정보(번호ㆍ일자ㆍ상태ㆍ재상담일ㆍ통화번호)는 보내지 않는다 —
+         칸을 걷었고, 그 값은 거래처 관리의 상담 창이 받는다. 여기서 빈 값을 보내면
+         이미 적어 둔 것이 지워진다. 「유형」은 병원ㆍ처방 정보에 남아 있어 그대로 보낸다. */
       counsel_acc_add_type: strOrNull('f-acc-add-type'),
-      counsel_status:       strOrNull('f-counsel-status'),
-      counsel_call_no:      strOrNull('f-call-no'),
-      counsel_re_date:      strOrNull('f-re-counsel-date'),
       // ── 제품 ──────────────────────────────────────────────
       items:            itemsPayload,
     };
@@ -7737,34 +7578,6 @@ window.HELP_TOUR_STEPS = [
   // ── 상담번호 채번 ──────────────────────────────────────
   const COUNSEL_NO_URL = @json(route('prescriptions.counselNo', $prescription));
 
-  async function generateCounselNo() {
-    const btn = document.getElementById('btnCounselNo');
-    const origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;"></span> 채번 중...';
-    try {
-      const res  = await fetch(COUNSEL_NO_URL, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
-      });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('f-counselling-no').value = data.counselling_no;
-        // 상담 일자가 비어있으면 오늘로
-        const dateEl = document.getElementById('f-counsel-date');
-        if (!dateEl.value) dateEl.value = data.counsel_date;
-        showToast(`상담번호 ${data.counselling_no} 채번 완료`, 'success');
-      } else {
-        showToast(data.message ?? '채번 실패', 'danger');
-      }
-    } catch (e) {
-      showToast('채번 중 오류가 발생했습니다.', 'danger');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-    }
-  }
-
   /* ── 상담이력 표시 공용 코드 ────────────────────────────
      '이전 상담 이력' 모달과 '환자 조회' 모달이 함께 쓰므로 조건부 블록 밖에 둔다.
      (환자 조회는 이전 상담이력이 없는 처방전에서도 열 수 있다) */
@@ -7806,15 +7619,6 @@ window.HELP_TOUR_STEPS = [
   // ── 이전 상담 이력 모달 (이 환자에게 이력이 있을 때만) ──────
   @if($isReturningPatient)
   const _PREV_COUNSEL_LIST = @json($prevCounselingsData);
-
-  function openPrevCounselModal() {
-    document.getElementById('prevCounselModal').classList.add('show');
-    // 첫 번째 항목 자동 선택
-    if (_PREV_COUNSEL_LIST.length) selectPrevCounsel(0);
-  }
-  function closePrevCounselModal() {
-    document.getElementById('prevCounselModal').classList.remove('show');
-  }
 
   function selectPrevCounsel(idx) {
     document.querySelectorAll('.pc-list-item').forEach((el, i) => {
