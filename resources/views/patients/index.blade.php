@@ -122,6 +122,11 @@
 <style>
   /* 상세 탭은 안에 든 화면만큼만 높다. 카드가 flex:1 로 남는 자리를 다 먹고
      있어, 주문 이력 아래로 흰 바닥이 한 참 이어졌다. */
+  /* 기간 두 칸은 한 줄에서 읽는다. 전역 규칙(min-width 132)으로는 258px 칸에
+     두 칸이 못 들어가 뒤 칸이 아래로 떨어졌다 — 정산/회계에서 쓴 값과 같게 줄인다. */
+  .ds-filter-card .ds-field-range { gap: 6px; }
+  .ds-filter-card .ds-field-range input[type="date"] { min-width: 108px; padding-left: 8px; padding-right: 8px; }
+
   /* 어디까지가 이 화면의 몫인지 한 줄로 알린다 — 카드가 아니라 안내다 */
   .pt-scope-note   { font-size:12px; color:var(--text-muted); margin:0 0 8px; display:flex;
                      align-items:center; gap:6px; flex-wrap:wrap; }

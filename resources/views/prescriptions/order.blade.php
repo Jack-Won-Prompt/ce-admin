@@ -2210,7 +2210,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                  여기 없는 것들의 행방 — 유형ㆍ검수 메모ㆍ일일 도뇨 횟수ㆍFive/Six(110days) 는
                  요청서 12·14·16쪽에 따라 병원ㆍ처방 정보 구획으로 옮겨 두었다.
                  보호자(법정대리인) 입력은 생년월일 줄의 「미성년」 배지를 눌러 여는 팝오버로 접었다(명세 2장). --}}
-              <div class="rx-field-row" style="position:relative;">
+              {{-- 이름 줄에 조회ㆍ상담하기 두 단추가 붙으면서 입력칸이 61px 까지 눌렸다.
+                   이름 줄만 네 칸으로 넓혀 자리를 낸다 — 주민등록번호는 폭 그대로 옆에 선다. --}}
+              <div class="rx-field-row rx-w4" style="position:relative;">
                 {{-- 시안 라벨 56개 중 '이름 *' 하나만 13/700 이다(나머지는 전부 13/500).
                      '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
                 <span class="rx-field-label" style="font-weight:700;">이름 <span style="color:var(--primary);">*</span></span>
