@@ -166,22 +166,15 @@
           @endforeach
         </select>
       </div>
-      <div class="ds-filter-field">
-        <label class="ds-field-label">표시 건수</label>
-        <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
-          @foreach([10, 20, 50, 100] as $n)
-            <option value="{{ $n }}" {{ (int)request('per_page', 10) === $n ? 'selected' : '' }}>
-              {{ $n }}개씩
-            </option>
-          @endforeach
-        </select>
-      </div>
+      {{-- 「표시 건수」 칸은 두지 않는다. 목록은 wwGrid 가 한 번에 다 받아 그리고
+           (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
+           이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
     </div>
     <div class="ds-filter-actions">
       {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다. 검색 조건이 있을 때만
            내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
            (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
-      <a href="{{ route('prescriptions.index', request()->only('status', 'per_page')) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('prescriptions.index', request()->only('status')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
            올릴 권한이 없는 사람에게는 보이지 않아야 하므로 @perm 을 그대로 둔다. --}}

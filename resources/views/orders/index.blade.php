@@ -133,14 +133,9 @@ window.HELP_TOUR_STEPS = [
         @endforeach
       </select>
     </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">기준/정렬</label>
-      <select name="per_page" class="form-control form-select" onchange="this.form.submit()">
-        @foreach([10,20,50,100] as $n)
-          <option value="{{ $n }}" {{ request('per_page', 20) == $n ? 'selected' : '' }}>{{ $n }}건</option>
-        @endforeach
-      </select>
-    </div>
+      {{-- 「표시 건수」 칸은 두지 않는다. 목록은 wwGrid 가 한 번에 다 받아 그리고
+           (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
+           이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
   </div>
   <div class="ds-filter-actions">
     {{-- 초기화 — 시안 148:5526 은 검색 왼쪽에 늘 세워 둔다. 검색어·등록일자가 있을 때만

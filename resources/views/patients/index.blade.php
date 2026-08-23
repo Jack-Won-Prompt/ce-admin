@@ -355,14 +355,9 @@
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="이름 또는 전화번호">
     </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">표시 건수</label>
-      <select name="per_page" class="form-control form-select">
-        <option value="10"  @selected(request('per_page','10')==='10')>10개씩</option>
-        <option value="15"  @selected(request('per_page','10')==='15')>15개씩</option>
-        <option value="30"  @selected(request('per_page','10')==='30')>30개씩</option>
-      </select>
-    </div>
+      {{-- 「표시 건수」 칸은 두지 않는다. 목록은 wwGrid 가 한 번에 다 받아 그리고
+           (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
+           이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
     {{-- 생성일자 — 한쪽만 채워도 걸린다(언제부터만ㆍ언제까지만 찾는 일이 잦다) --}}
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">생성일자</label>
