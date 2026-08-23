@@ -876,7 +876,9 @@ class PrescriptionController extends Controller
                 'product'   => $this->caseProductLabel($p),
                 'amount'    => (int) ($p->order?->total_amount ?? 0),
                 'status'    => $p->status_label,
-                'url'       => route('prescriptions.show', $p),
+                /* 같은 자리(호스트) 안에서만 오간다. 절대 주소로 두면 APP_URL 이 가리키는
+                   곳으로 건너뛰어, 로컬에서 열었는데 운영 화면이 뜨는 일이 생긴다. */
+                'url'       => route('prescriptions.show', $p, absolute: false),
                 'here'      => true,   // 이 화면에서 이어서 고칠 수 있는 건
             ];
         }
@@ -896,7 +898,7 @@ class PrescriptionController extends Controller
                 'product'   => $o->product_name ?: '-',
                 'amount'    => (int) $o->total_amount,
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
-                'url'       => route('orders.show', $o),
+                'url'       => route('orders.show', $o, absolute: false),
                 'here'      => false,  // 주문 상세로 보낸다
             ];
         }
