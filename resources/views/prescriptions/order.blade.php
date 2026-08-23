@@ -4689,6 +4689,14 @@ window.HELP_TOUR_STEPS = [
     pop.style.top       = down ? 'calc(100% + 6px)' : 'auto';
     pop.style.bottom    = down ? 'auto' : 'calc(100% + 6px)';
     pop.style.maxHeight = Math.max(MIN, Math.floor(down ? below : above)) + 'px';
+
+    /* 가로 — 창은 이 줄의 왼쪽 끝에 붙는다. 화면이 좁으면 오른쪽이 잘리므로 넘친 만큼
+       왼쪽으로 당긴다. 왼쪽 끝을 넘어가지는 않는다(당길 수 있는 만큼만). */
+    pop.style.left = '0px';
+    const over = pop.getBoundingClientRect().right - (window.innerWidth - EDGE);
+    if (over > 0) {
+      pop.style.left = '-' + Math.round(Math.min(over, Math.max(0, row.left - EDGE))) + 'px';
+    }
   }
 
   // 창을 열어 둔 채 창 크기가 바뀌거나 스크롤하면 자리를 다시 잡는다
@@ -4815,12 +4823,10 @@ window.HELP_TOUR_STEPS = [
       ocGrid = new wwGrid({
         el, height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
         columns: [
-          { header: '갈래',     name: 'kind',      width: 80,  align: 'center' },
           { header: '일자',     name: 'date',      width: 110, align: 'center', sortable: true },
-          { header: '처방번호', name: 'rx_number', width: 160 },
-          { header: '주문번호', name: 'order_no',  width: 130 },
-          { header: '제품',     name: 'product',   width: 200 },
-          { header: '상태',     name: 'status',    width: 100, align: 'center' },
+          { header: '처방번호', name: 'rx_number', width: 170 },
+          { header: '주문번호', name: 'order_no',  width: 140 },
+          { header: '상태',     name: 'status',    width: 110, align: 'center' },
         ],
         data: cases,
       });
@@ -4855,6 +4861,9 @@ window.HELP_TOUR_STEPS = [
      처방 없이 주문만 있는 건은 이 화면이 고칠 수 있는 것이 아니라 주문 상세로 보낸다. */
   function ocGo(row) {
     pkClose();
+    /* 고른 그 순간이 곧 「이 건으로 가겠다」는 답이다 — 떠나도 되느냐고 한 번 더 묻지
+       않는다. 물어보게 두면 고르고 나서 확인창을 또 지나야 한다(신규 등록도 같다). */
+    clearAllDirty();
     if (row.here) {
       showToast(`${row.rx_number} 로 갑니다.`, 'info');
       location.href = row.url;
