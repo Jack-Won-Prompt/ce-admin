@@ -851,6 +851,78 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 「조회」로 고른 사람이 지금까지 만든 건들.
+     *
+     * 사람을 고른 다음 물어야 할 것이 하나 더 있다 — 「이번이 새 건인가, 하던 건인가」.
+     * 같은 사람이 여러 번 사고, 적다 만 건이 남아 있기도 하다. 그것을 묻지 않고 늘 새
+     * 건으로 두면 하던 건이 둘로 갈라진다.
+     *
+     * 처방전 한 건이 곧 주문 등록 한 건이다. 주문까지 간 건은 주문번호를 함께 적고,
+     * 처방 없이 주문만 있는 건도 빠뜨리지 않는다(처방외로 산 것) — 다만 그것은 이
+     * 화면이 고칠 수 있는 건이 아니라 주문 상세로 보낸다.
+     */
+    public function patientCases(Patient $patient): JsonResponse
+    {
+        $rows = [];
+
+        $rx = $patient->prescriptions()->with(['order', 'items'])->latest('id')->take(50)->get();
+        foreach ($rx as $p) {
+            $rows[] = [
+                'key'       => $p->rx_number,
+                'rx_number' => $p->rx_number,
+                'order_no'  => $p->order?->order_number ?: '',
+                'date'      => ($p->issued_date ?: $p->created_at)?->format('Y-m-d') ?? '',
+                'kind'      => $p->order ? '주문' : '작성 중',
+                'product'   => $this->caseProductLabel($p),
+                'amount'    => (int) ($p->order?->total_amount ?? 0),
+                'status'    => $p->status_label,
+                'url'       => route('prescriptions.show', $p),
+                'here'      => true,   // 이 화면에서 이어서 고칠 수 있는 건
+            ];
+        }
+
+        // 처방전 없이 주문만 있는 건
+        $seen = $rx->pluck('order.id')->filter()->all();
+        foreach ($patient->orders()->latest('id')->take(50)->get() as $o) {
+            if ($o->prescription_id || in_array($o->id, $seen, true)) {
+                continue;
+            }
+            $rows[] = [
+                'key'       => 'ORD:' . $o->id,
+                'rx_number' => '',
+                'order_no'  => $o->order_number,
+                'date'      => $o->created_at?->format('Y-m-d') ?? '',
+                'kind'      => '처방 없음',
+                'product'   => $o->product_name ?: '-',
+                'amount'    => (int) $o->total_amount,
+                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'url'       => route('orders.show', $o),
+                'here'      => false,  // 주문 상세로 보낸다
+            ];
+        }
+
+        // 최근 것이 위로
+        usort($rows, fn ($a, $b) => strcmp($b['date'], $a['date']));
+
+        return response()->json([
+            'success' => true,
+            'patient' => ['id' => $patient->id, 'name' => $patient->name],
+            'cases'   => $rows,
+        ]);
+    }
+
+    /** 건 한 줄에 적을 제품 이름 — 여러 개면 「첫 제품 외 N」 */
+    private function caseProductLabel(Prescription $p): string
+    {
+        $names = $p->items->pluck('product_name')->filter()->values();
+        if ($names->isEmpty()) {
+            return '-';
+        }
+
+        return $names->count() === 1 ? $names[0] : $names[0] . ' 외 ' . ($names->count() - 1);
+    }
+
+    /**
      * 「조회」로 고른 사람의 상담ㆍ환자 정보 한 벌.
      *
      * 예전에는 이름만 채워 넣었다. 그러면 담당자가 이미 마스터에 적혀 있는 전화번호ㆍ주소ㆍ

@@ -2261,14 +2261,28 @@ $calcDeposit  = $calcCopay + $calcShipping;
                       <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
                     </div>
                   </div>
-                  <div class="pk-body">
+                  {{-- ① 사람 고르기 --}}
+                  <div class="pk-body" id="pkStep1">
                     <div class="pk-note" id="pkNote"></div>
                     <div id="pkGrid"></div>
                   </div>
-                  <div class="pk-foot">
+                  <div class="pk-foot" id="pkFoot1">
                     <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
                     <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
+                  </div>
+
+                  {{-- ② 그 사람의 건 고르기 — 새 건인가, 하던 건인가.
+                       사람만 고르고 늘 새 건으로 두면 적다 만 건이 둘로 갈라진다. --}}
+                  <div class="pk-body" id="pkStep2" style="display:none;">
+                    <div class="pk-note" id="ocNote"></div>
+                    <div id="ocGrid"></div>
+                  </div>
+                  <div class="pk-foot" id="pkFoot2" style="display:none;">
+                    <span class="pk-hint">하던 건을 고르면 그 건을 열어 이어서 고칩니다.</span>
+                    <button type="button" class="ds-btn" onclick="ocBack()">뒤로</button>
+                    <button type="button" class="ds-btn" onclick="ocNew()">신규로 진행</button>
+                    <button type="button" class="ds-btn ds-btn-primary" onclick="ocPick()">열기</button>
                   </div>
                 </div>
               </div>
@@ -4656,6 +4670,7 @@ window.HELP_TOUR_STEPS = [
        높이가 모자랄 때 표 칸이 줄지 않아 바닥줄(닫기ㆍ선택)이 상자 밖으로 밀려난다. */
     pop.style.display = 'flex';
     pkPlace(pop);
+    _ocStep(1);
     document.getElementById('pkName').value = document.getElementById('f-name')?.value?.trim() || '';
     pkSearch();
     setTimeout(() => document.getElementById('pkName').focus(), 50);
@@ -4731,7 +4746,7 @@ window.HELP_TOUR_STEPS = [
         const cell = ev.target.closest('[data-row-index]');
         if (!cell) return;
         const row = pkGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-        if (row) pkApply(row);
+        if (row) ocShow(row);
       });
       document.getElementById('pkGrid').addEventListener('click', (ev) => {
         const cell = ev.target.closest('[data-row-index]');
@@ -4750,7 +4765,109 @@ window.HELP_TOUR_STEPS = [
     const i = pkGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
     if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
-    pkApply(row);
+    ocShow(row);
+  };
+
+  const PATIENT_CASES_URL = @json(route('prescriptions.patientCases', ['patient' => '__ID__']));
+
+  /* ── 건 고르기(둘째 걸음) ─────────────────────────────────────
+     사람을 고른 다음 물어야 할 것이 하나 더 있다 — 「이번이 새 건인가, 하던 건인가」.
+     같은 사람이 여러 번 사고, 적다 만 건이 남아 있기도 하다. 묻지 않고 늘 새 건으로
+     두면 하던 건이 둘로 갈라진다. 창은 그대로 두고 안쪽만 바꾼다. */
+  let ocGrid = null;
+  let _ocPerson = null;
+
+  const _ocStep = (n) => {
+    document.querySelector('#pkModal .pk-filter').style.display = n === 1 ? '' : 'none';
+    document.getElementById('pkStep1').style.display = n === 1 ? '' : 'none';
+    document.getElementById('pkFoot1').style.display = n === 1 ? '' : 'none';
+    document.getElementById('pkStep2').style.display = n === 2 ? '' : 'none';
+    document.getElementById('pkFoot2').style.display = n === 2 ? '' : 'none';
+    document.getElementById('pkTitle').textContent =
+      n === 1 ? '이름 조회' : `${_ocPerson?.name ?? ''} 님의 건`;
+  };
+
+  window.ocBack = function () { _ocStep(1); pkPlace(document.getElementById('pkModal')); };
+
+  window.ocShow = async function (person) {
+    _ocPerson = person;
+    _ocStep(2);
+    document.getElementById('ocNote').textContent = '불러오는 중…';
+
+    let cases = [];
+    try {
+      const res = await fetch(PATIENT_CASES_URL.replace('__ID__', person.id),
+                              { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      cases = data?.cases ?? [];
+    } catch (e) {
+      console.error('[건 조회] 가져오지 못했습니다', e);
+      document.getElementById('ocNote').textContent = '건을 불러오지 못했습니다. 「신규로 진행」할 수 있습니다.';
+      return;
+    }
+
+    document.getElementById('ocNote').textContent = cases.length
+      ? `${cases.length}건 — 이어서 고칠 건을 고르거나, 「신규로 진행」을 누릅니다.`
+      : '지금까지 만든 건이 없습니다. 「신규로 진행」을 누릅니다.';
+
+    const el = document.getElementById('ocGrid');
+    if (!ocGrid) {
+      ocGrid = new wwGrid({
+        el, height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
+        columns: [
+          { header: '갈래',     name: 'kind',      width: 80,  align: 'center' },
+          { header: '일자',     name: 'date',      width: 110, align: 'center', sortable: true },
+          { header: '처방번호', name: 'rx_number', width: 160 },
+          { header: '주문번호', name: 'order_no',  width: 130 },
+          { header: '제품',     name: 'product',   width: 200 },
+          { header: '상태',     name: 'status',    width: 100, align: 'center' },
+        ],
+        data: cases,
+      });
+      el.addEventListener('dblclick', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        const row = ocGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+        if (row) ocGo(row);
+      });
+      el.addEventListener('click', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        ocGrid._pickedIndex = parseInt(cell.dataset.rowIndex, 10);
+        el.querySelectorAll('tr').forEach(tr => tr.classList.remove('cg-row-selected'));
+        cell.closest('tr')?.classList.add('cg-row-selected');
+      });
+    } else {
+      ocGrid._pickedIndex = null;
+      ocGrid.setData(cases);
+    }
+    pkPlace(document.getElementById('pkModal'));
+  };
+
+  window.ocPick = function () {
+    const i = ocGrid?._pickedIndex;
+    const row = (i === null || i === undefined) ? null : ocGrid.getData()[i];
+    if (!row) { showToast('고를 건을 눌러 주십시오. 새 건이면 「신규로 진행」입니다.', 'warning', 5000); return; }
+    ocGo(row);
+  };
+
+  /* 하던 건으로 간다. 처방전 한 건이 곧 이 화면 한 건이라 그대로 열어 이어서 고친다.
+     처방 없이 주문만 있는 건은 이 화면이 고칠 수 있는 것이 아니라 주문 상세로 보낸다. */
+  function ocGo(row) {
+    pkClose();
+    if (row.here) {
+      showToast(`${row.rx_number} 로 갑니다.`, 'info');
+      location.href = row.url;
+      return;
+    }
+    window.ceOpenTab(row.url, '주문 - ' + (row.order_no || ''), 'file-edit-02');
+  }
+
+  /* 새 건으로 간다 — 지금 보고 있는 이 빈 건에 그 사람을 이어 두고 정보를 채운다.
+     예전의 「선택」이 하던 일이 그대로 이 자리다. */
+  window.ocNew = function () {
+    if (!_ocPerson) return;
+    pkApply(_ocPerson);
   };
 
   const PATIENT_DETAIL_URL = @json(route('prescriptions.patientDetail', ['patient' => '__ID__']));
