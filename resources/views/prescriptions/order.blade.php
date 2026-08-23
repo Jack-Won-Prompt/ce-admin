@@ -2349,6 +2349,22 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </div>
               </div>
+              {{-- 「유형」은 병원ㆍ처방 정보에 있었다(1차 요청서 12·16쪽). 그런데 이 칸에는
+                   「처방외」— 처방전 없이 사는 건 — 가 들어 있다. 처방이 있느냐 없느냐를
+                   병원ㆍ처방 정보 안에서 고르게 두면 앞뒤가 뒤집힌다. 상담ㆍ환자 정보로
+                   올려, 이 주문이 무엇인지부터 정하고 나머지를 적게 한다. --}}
+              {{-- 1차 요청서 12·16쪽 «처방전 여부->유형으로 명칭 변경 및 … 병원 처방정보로 이동».
+                   상담 정보 3열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로).
+                   요청서 17쪽 순서가 '유형 / 신구매·재구매'를 한 줄에 두어 아래 줄과 붙여 둔다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">유형</span>
+                <select class="form-control" id="f-acc-add-type" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
+                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
+                  <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
+                </select>
+              </div>
               {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
                    병원ㆍ처방 정보 1열에 있던 줄을 라벨ㆍ입력ㆍ옵션째 그대로 옮겼다. --}}
               <div class="rx-field-row rx-row-start">
@@ -2517,7 +2533,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원 코드" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">병원명 <span style="color:var(--primary);">*</span></span>
+                {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
+                <span class="rx-field-label">병원명 <span id="f-hospital-req" style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
@@ -2528,18 +2545,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">추가정보 등록일</span>
                 <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->created_at?->format('Y-m-d') ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
-              </div>
-              {{-- 1차 요청서 12·16쪽 «처방전 여부->유형으로 명칭 변경 및 … 병원 처방정보로 이동».
-                   상담 정보 3열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로).
-                   요청서 17쪽 순서가 '유형 / 신구매·재구매'를 한 줄에 두어 아래 줄과 붙여 둔다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">유형</span>
-                <select class="form-control" id="f-acc-add-type" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
-                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
-                  <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
-                </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">신구매/재구매</span>
@@ -5965,11 +5970,33 @@ window.HELP_TOUR_STEPS = [
     if (refTotal) refTotal.textContent = total || '-';
   }
 
+  /** 처방전 없이 사는 건인가 — 「유형」이 처방외(20)일 때. */
+  function isNonRxOrder() {
+    return (document.getElementById('f-acc-add-type')?.value ?? '') === '20';
+  }
+
+  /* 처방외를 고르면 병원명 별표를 뗀다. 별표는 「없으면 저장이 안 된다」는 약속이라,
+     묻지 않기로 해 놓고 별표만 남겨 두면 그 약속이 거짓이 된다. */
+  function syncRxRequired() {
+    const star = document.getElementById('f-hospital-req');
+    if (star) star.style.display = isNonRxOrder() ? 'none' : '';
+  }
+
+  document.getElementById('f-acc-add-type')?.addEventListener('change', syncRxRequired);
+  document.addEventListener('DOMContentLoaded', syncRxRequired);
+
   async function saveOCR() {
     if (_saving) return;        // 중복 요청 방지
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
-    if (!name || !hosp) {
+
+    /* 처방외는 처방전 없이 사는 건이다 — 병원도 처방도 없다. 그런 건까지 병원명을
+       물으면 적을 수 없는 것을 적어야 저장이 되어, 없는 병원 이름이 들어간다. */
+    if (!name) {
+      showToast('이름은 필수 항목입니다.', 'warning');
+      return;
+    }
+    if (!isNonRxOrder() && !hosp) {
       showToast('이름, 병원명은 필수 항목입니다.', 'warning');
       return;
     }
