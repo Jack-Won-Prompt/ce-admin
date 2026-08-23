@@ -550,6 +550,12 @@
   .rx-tabs .rx-acc-btns { display:flex; }
   /* 탭줄이 이미 아래 선을 그었다 */
   .rx-tabbed > .rx-acc-body { border-top:none; }
+  /* 카드 밖으로 열리는 창을 자르지 않는다. .rx-acc-item 의 overflow:hidden 은 아코디언
+     시절 모서리를 다듬던 규칙인데, 이름 조회 창(538)이 카드(446)보다 커서 251 이 잘려
+     나갔다. 대신 모서리는 탭줄과 판이 각자 둥글린다(테두리 1 을 뺀 11). */
+  .rx-tabbed { overflow:visible; }
+  .rx-tabbed > .rx-tabs { border-radius:11px 11px 0 0; }
+  .rx-tabbed > .rx-acc-body { border-radius:0 0 11px 11px; }
   /* 구획 이름은 테이블뷰에서만 쓴다 — 평소에는 탭 이름이 그 일을 한다 */
   .rx-pane-cap { display:none; }
   /* 아코디언 본문 — 시안 148:2651: padding 12/16.
@@ -640,7 +646,9 @@
   .pk-fld label { font-size:12px; font-weight:600; color:var(--gray-700); }
   .pk-fld input { height:32px; width:160px; }
   .pk-acts { display:flex; gap:6px; margin-left:auto; }
-  .pk-body { padding:12px 16px; overflow:auto; }
+  /* 세로가 모자라면 이 칸이 줄고 안에서 스크롤한다. min-height:0 이 없으면 flex 자식이
+     제 내용보다 작아지지 않아, 줄어드는 대신 바닥줄(닫기ㆍ선택)이 상자 밖으로 밀려난다. */
+  .pk-body { padding:12px 16px; overflow:auto; flex:1 1 auto; min-height:0; }
   .pk-note { font-size:12px; color:var(--gray-600); margin-bottom:8px; }
   .pk-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
   .pk-hint { font-size:12px; color:var(--gray-600); margin-right:auto; }
@@ -4744,13 +4752,37 @@ window.HELP_TOUR_STEPS = [
     if (e) e.stopPropagation();
     const pop = document.getElementById('pkModal');
     if (!pop) return;
-    if (pop.style.display === 'block') { pkClose(); return; }
+    if (pop.style.display === 'flex') { pkClose(); return; }
     closeAllPopovers();
-    pop.style.display = 'block';
+    /* flex 로 연다 — block 으로 열면 CSS 의 display:flex 를 덮어써 세로 배치가 죽고,
+       높이가 모자랄 때 표 칸이 줄지 않아 바닥줄(닫기ㆍ선택)이 상자 밖으로 밀려난다. */
+    pop.style.display = 'flex';
+    pkPlace(pop);
     document.getElementById('pkName').value = document.getElementById('f-name')?.value?.trim() || '';
     pkSearch();
     setTimeout(() => document.getElementById('pkName').focus(), 50);
   };
+
+  /* 창을 화면 안에 앉힌다. 이름 줄이 화면 중간쯤이면 아래로 열 자리가 모자라
+     바닥(닫기ㆍ선택)이 화면 밖으로 나간다 — 아래가 좁으면 위로 뒤집고, 그래도 모자라면
+     높이를 남은 자리에 맞춘다. 표 칸(.pk-body)이 overflow:auto 라 안에서 스크롤된다. */
+  function pkPlace(pop) {
+    const row = pop.parentElement?.getBoundingClientRect();
+    if (!row) return;
+    const GAP = 6, EDGE = 12, MIN = 260;
+    const below = window.innerHeight - row.bottom - GAP - EDGE;
+    const above = row.top - GAP - EDGE;
+    const down  = below >= above;          // 넓은 쪽으로 연다
+    pop.style.top       = down ? 'calc(100% + 6px)' : 'auto';
+    pop.style.bottom    = down ? 'auto' : 'calc(100% + 6px)';
+    pop.style.maxHeight = Math.max(MIN, Math.floor(down ? below : above)) + 'px';
+  }
+
+  // 창을 열어 둔 채 창 크기가 바뀌거나 스크롤하면 자리를 다시 잡는다
+  ['resize', 'scroll'].forEach(ev => window.addEventListener(ev, () => {
+    const pop = document.getElementById('pkModal');
+    if (pop && pop.style.display === 'flex') pkPlace(pop);
+  }, true));
 
   window.pkClose = function () {
     const pop = document.getElementById('pkModal');
@@ -4852,7 +4884,7 @@ window.HELP_TOUR_STEPS = [
 
   document.addEventListener('click', (e) => {
     const pop = document.getElementById('pkModal');
-    if (!pop || pop.style.display !== 'block') return;
+    if (!pop || pop.style.display !== 'flex') return;
     if (pop.contains(e.target)) return;
     pop.style.display = 'none';
   });
