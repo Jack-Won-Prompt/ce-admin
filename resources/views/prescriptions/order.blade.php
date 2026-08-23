@@ -4515,7 +4515,7 @@ window.HELP_TOUR_STEPS = [
   // ── 기존 주문 상태 ───────────────────────────────────
   @if($prescription->order)
   @php
-  $_orderData = ['id' => $prescription->order->id, 'order_number' => $prescription->order->order_number, 'withworks_so_no' => $prescription->order->withworks_so_no ?? '', 'so_type' => $prescription->order->so_type ?? '1013', 'shipping_address' => $prescription->order->shipping_address ?? ''];
+  $_orderData = ['id' => $prescription->order->id, 'order_number' => $prescription->order->order_number, 'withworks_so_no' => $prescription->order->withworks_so_no ?? '', 'so_type' => $prescription->order->so_type ?? \App\Models\Order::saleSoTypes()[0], 'shipping_address' => $prescription->order->shipping_address ?? ''];
   @endphp
   let existingOrder = @json($_orderData);
   let orderExists = true;
@@ -4530,13 +4530,21 @@ window.HELP_TOUR_STEPS = [
     if (badge) badge.innerHTML = `<span class="badge badge-primary" style="font-size:11px;">${val} · ${SO_TYPE_LABELS[val] ?? val}</span>`;
   }
 
-  // 기존 주문의 so_type으로 라디오 초기화
+  /* 기존 주문의 판매 유형으로 라디오를 세운다.
+     그 값이 지금 고를 수 있는 목록에 없으면(옛 1013ㆍ5001 로 저장된 주문) 그대로 쓰지
+     않는다 — 라디오는 그려지지 않는데 보내는 값만 옛 코드로 남아, 저장할 때 서버가
+     통째로 거절했다(「The selected so type is invalid.」). 화면은 이미 서버가 떨어뜨려
+     둔 값(지금 고를 수 있는 첫 유형)을 보이고 있으므로, 보내는 값도 그것에 맞춘다. */
   document.addEventListener('DOMContentLoaded', () => {
-    if (existingOrder?.so_type) {
-      currentSoType = existingOrder.so_type;
-      const radio = document.querySelector(`input[name="so_type_radio"][value="${existingOrder.so_type}"]`);
-      if (radio) { radio.checked = true; onSoTypeChange(existingOrder.so_type); }
+    const cur   = existingOrder?.so_type;
+    const radio = cur ? document.querySelector(`input[name="so_type_radio"][value="${cur}"]`) : null;
+    if (radio) {
+      radio.checked = true;
+      onSoTypeChange(cur);
+      return;
     }
+    // 보이는 것과 보내는 것을 같게 둔다
+    onSoTypeChange(currentSoType);
   });
 
   // ── 주소 검색 (카카오 우편번호 서비스) ───────────────────
@@ -6288,6 +6296,9 @@ window.HELP_TOUR_STEPS = [
       total_count:      intOrNull('f-total'),
       // ── 급여·보험 정보 ─────────────────────────────────────
       benefit_class:    strOrNull('f-benefit-class'),
+      /* 청구전략 — 유형ㆍ자격에서 정해지는 값이라 서버가 다시 셈해 적는다.
+         보내는 것은 화면이 무엇으로 보고 있었는지를 남기기 위해서다. */
+      billing_strategy: strOrNull('bsStrategy'),
       claim_agency:     strOrNull('f-claim-agency'),
       // 지자체가 아니면 관할 지자체는 값이 있을 이유가 없다
       local_gov:        (document.getElementById('f-claim-agency')?.value === 'local')

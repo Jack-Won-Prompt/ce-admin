@@ -1316,6 +1316,7 @@ class PrescriptionController extends Controller
             'uro_date'              => 'nullable|date',
             // 급여·보험 추가
             'benefit_class'         => 'nullable|string|max:20',
+            'billing_strategy'      => 'nullable|string|max:40',
             // 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다
             'claim_agency'          => 'nullable|string|in:nhis,local,none',
             'local_gov'             => 'nullable|string|max:60',
@@ -1381,6 +1382,14 @@ class PrescriptionController extends Controller
             'disease_class'        => $request->input('disease_class'),
             'uro_date'             => $request->input('uro_date'),
             'benefit_class'        => $request->input('benefit_class'),
+            /* 청구전략은 유형 × 자격이 정한다. 화면이 보낸 값을 그대로 적지 않고 여기서
+               다시 셈한다 — 그래야 두 칸과 전략이 어긋난 건이 남지 않는다. 칸이 없는
+               서버에서는 조용히 건너뛴다. */
+            'billing_strategy'     => \App\Support\BillingStrategy::hasColumn()
+                                        ? \App\Support\BillingStrategy::key(
+                                            $request->input('counsel_acc_add_type'),
+                                            $request->input('benefit_class'))
+                                        : null,
             'claim_agency'         => $request->input('claim_agency'),
             'local_gov'            => $request->input('local_gov'),
             // 거래·주문

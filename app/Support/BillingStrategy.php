@@ -50,6 +50,26 @@ class BillingStrategy
         };
     }
 
+    /** 건에 적어 두는 열쇠 — 「유형|자격」. 화면ㆍ표가 쓰는 것과 같다. */
+    public static function key(?string $accAddType, ?string $benefitClass): ?string
+    {
+        $t = (string) $accAddType;
+        if ($t === self::TYPE_NONRX) {
+            return self::TYPE_NONRX . '|';
+        }
+
+        return ($t !== '' && (string) $benefitClass !== '') ? $t . '|' . $benefitClass : null;
+    }
+
+    /* 적어 두는 칸은 서버마다 있을 수도, 없을 수도 있다(마이그레이션 대기).
+       없는 곳에 쓰려 들면 질의가 깨지므로 한 번만 물어 기억해 둔다. */
+    private static ?bool $hasColumn = null;
+
+    public static function hasColumn(): bool
+    {
+        return self::$hasColumn ??= \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'billing_strategy');
+    }
+
     /** 확정되지 않아 주문을 진행하면 안 되는 자격인가 */
     public static function isPending(?string $accAddType, ?string $benefitClass): bool
     {

@@ -59,7 +59,7 @@ class Prescription extends Model
         'counsel_status', 'counsel_call_no', 'counsel_re_date', 'counsel_contents',
         'counsel_order_id',
         'dealer_type', 'caregiver_name',
-        'benefit_class', 'claim_agency', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
+        'benefit_class', 'billing_strategy', 'claim_agency', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
         'rx_use_period', 'rx_end_date', 'purchase_type',
         'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
         'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',
