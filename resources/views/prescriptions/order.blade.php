@@ -2221,16 +2221,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
                           onclick="document.getElementById('f-counsel-date').value='{{ now()->format('Y-m-d') }}'">오늘</button>
                 </div>
               </div>
+              {{-- 「상담 유형」 칸은 두지 않는다. 유형은 상담하는 자리에서 정하는 것이라
+                   거래처 관리의 상담 창이 이미 받고 있다(csType). 여기서 또 받으면 두 곳의
+                   값이 갈라진다. 대신 그 창을 여는 단추를 둔다.
+                   유형이 없어지면서 위드웍스 판매주문 종류를 미리 골라 주던 연결
+                   (onCounselTypeChange → so-type 라디오)도 함께 걷었다 — 연계는 담당자가
+                   「주문 연계」 탭에서 고를 때만 나간다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">상담 유형</span>
-                <select class="form-control" id="f-counsel-type" onchange="onCounselTypeChange(this.value)" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="1013" @selected(($prescription->counsel_type ?? '') == '1013')>구매</option>
-                  <option value="1016" @selected(($prescription->counsel_type ?? '') == '1016')>개인구매</option>
-                  <option value="1020" @selected(($prescription->counsel_type ?? '') == '1020')>반품</option>
-                  <option value="1030" @selected(($prescription->counsel_type ?? '') == '1030')>문의</option>
-                  <option value="1050" @selected(($prescription->counsel_type ?? '') == '1050')>기타</option>
-                </select>
+                <span class="rx-field-label">상담</span>
+                <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                  <button type="button" class="rx-side-btn" onclick="openCounselWindow()">
+                    <i class="fa-solid fa-comments"></i> 상담하기
+                  </button>
+                  <span style="font-size:11px;color:var(--gray-600);">거래처 관리의 상담 창이 열립니다.</span>
+                </div>
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">상담 상태</span>
@@ -2904,8 +2908,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>상담일자</th><td data-from="f-counsel-date">{{ $curCounselDate ?: '-' }}</td>
             </tr>
             <tr>
-              <th>상담유형</th><td data-from="f-counsel-type">-</td>
+              {{-- 상담유형 칸은 걷었다(거래처 관리의 상담 창이 받는다) — 표에서도 뺀다 --}}
               <th>유형</th><td data-from="f-acc-add-type">-</td>
+              <th></th><td></td>
             </tr>
             <tr>
               <th>상담상태</th><td data-from="f-counsel-status">-</td>
@@ -4745,6 +4750,7 @@ window.HELP_TOUR_STEPS = [
      업로드 화면의 같은 이름 창을 그대로 옮겼다(upload.blade.php). 목록은 화면에 이미
      실려 있어(PK_PATIENTS) 서버를 다시 부르지 않는다. 여기서는 바탕을 덮지 않는
      팝오버라, 고르는 동안에도 옆의 처방전 이미지를 그대로 볼 수 있다. */
+  const PATIENTS_INDEX_URL = @json(route('patients.index'));
   const PK_PATIENTS = @json($patientsJson ?? []);
   let pkGrid = null;
 
@@ -5011,13 +5017,21 @@ window.HELP_TOUR_STEPS = [
 
   // 처방일·처방기간 입력 시 재처방일 갱신
   // ── 상담 유형 변경 → 주문연계 탭 SO type 동기화 ────────
-  function onCounselTypeChange(val) {
-    const soMap = { '1013': '1013', '1016': '1016' };
-    const soVal = soMap[val];
-    if (soVal) {
-      const radio = document.querySelector(`input[name="so-type"][value="${soVal}"]`);
-      if (radio) { radio.checked = true; currentSoType = soVal; updateSoTypeSummary?.(); }
+  /* ── 상담하기 ──────────────────────────────────────────
+     거래처 관리의 상담 창(csOpen)을 연다. 그 창은 그 화면 안에 있어 여기서 바로 부를 수
+     없으므로, 거래처 관리를 화면 탭으로 열면서 누구와 상담할지 주소에 실어 보낸다.
+     환자가 아직 이어지지 않았으면 열 수 없다 — 창이 환자 하나를 놓고 도는 자리다. */
+  function openCounselWindow() {
+    const id   = document.getElementById('f-patient-id')?.value;
+    const name = document.getElementById('f-name')?.value?.trim() || '';
+    if (!id) {
+      showToast('먼저 환자를 이어 주십시오 — 이름 옆 「조회」로 고르거나, 적은 뒤 저장하면 이어집니다.', 'warning');
+      return;
     }
+    const url = PATIENTS_INDEX_URL + '?counsel=' + encodeURIComponent(id)
+              + (name ? '&counsel_name=' + encodeURIComponent(name) : '');
+    if (window.ceOpenTab) window.ceOpenTab(url, '상담하기', 'bx-user');
+    else window.open(url, '_blank');
   }
 
   // ── 상담 상태 변경 → 재상담 일자 활성화/비활성화 ────────
@@ -5738,7 +5752,6 @@ window.HELP_TOUR_STEPS = [
       'f-rx-end-date':     d.udf14,
       'f-counselling-no':  d.counselling_no,
       'f-counsel-date':    d.counsel_date || d.reg_date,
-      'f-counsel-type':    d.type,
       'f-acc-add-type':    d.acc_add_type,
       'f-counsel-status':  d.status,
       'f-re-counsel-date': d.re_counsel_date,
@@ -6102,7 +6115,6 @@ window.HELP_TOUR_STEPS = [
       // ── 상담 기본 정보 ─────────────────────────────────────
       counsel_no:           strOrNull('f-counselling-no'),
       counsel_date:         strOrNull('f-counsel-date'),
-      counsel_type:         strOrNull('f-counsel-type'),
       counsel_acc_add_type: strOrNull('f-acc-add-type'),
       counsel_status:       strOrNull('f-counsel-status'),
       counsel_call_no:      strOrNull('f-call-no'),

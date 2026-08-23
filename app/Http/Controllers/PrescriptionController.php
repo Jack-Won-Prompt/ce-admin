@@ -1068,7 +1068,6 @@ class PrescriptionController extends Controller
             // 상담 기본 정보
             'counsel_no'            => 'nullable|string|max:50',
             'counsel_date'          => 'nullable|date',
-            'counsel_type'          => 'nullable|string|max:10',
             'counsel_acc_add_type'  => 'nullable|string|max:10',
             'counsel_status'        => 'nullable|string|max:10',
             'counsel_call_no'       => 'nullable|string|max:30',
@@ -1154,7 +1153,8 @@ class PrescriptionController extends Controller
             // 상담
             'counsel_no'           => $request->input('counsel_no'),
             'counsel_date'         => $request->input('counsel_date'),
-            'counsel_type'         => $request->input('counsel_type'),
+            // counsel_type 은 건드리지 않는다 — 「상담 유형」 칸을 걷어 보내오는 값이 없다.
+            // 유형은 거래처 관리의 상담 창에서 정한다. 여기서 덮어쓰면 그 값이 지워진다.
             'counsel_acc_add_type' => $request->input('counsel_acc_add_type'),
             'counsel_status'       => $request->input('counsel_status'),
             'counsel_call_no'      => $request->input('counsel_call_no')
