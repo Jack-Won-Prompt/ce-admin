@@ -2582,6 +2582,26 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">요류역학검사일</span>
                 <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->uro_date ?? '' }}" style="flex:1;" />
               </div>
+              {{-- 이 두 줄은 3열 끝에 있었다. 3열만 두 줄 길어 오른쪽 아래에 홀로
+                   남았고, 왼쪽에는 빈자리가 넓게 났다 — 「오른쪽으로 치우쳤다」고
+                   보이던 까닭이다. 1열ㆍ2열 끝으로 한 줄씩 옮겨 세 기둥의 키를 맞춘다.
+                   둘은 나란한 한 줄에 앉아 여전히 짝으로 읽힌다. --}}
+<div class="rx-field-row">
+                <span class="rx-field-label">다음 재구매 가능일</span>
+                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
+                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
+                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
+                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
+                     값은 제 컬럼에서 읽는다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
+                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
+                  <button type="button" onclick="calcNextRepurchase(true)"
+                          title="처방전발행일 + 처방기간(일) + 1일"
+                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
+                    <i class="fa-solid fa-rotate"></i> 자동
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="rx-col">
               {{-- 2열 — 자격 … 사유 11줄. 1차 요청서 17쪽 순서를 따른다
@@ -2659,6 +2679,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               {{-- 「사유」 칸은 두지 않는다(요청). 값(reason)은 지우지 않았다 —
                    저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
+<div class="rx-field-row">
+                <span class="rx-field-label">재구매일</span>
+                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
+                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
+                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
+                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
+                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
+                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
+                <div class="rx-date-flow">
+                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
+                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
+                  <input type="text" class="form-control" id="f-repurchase-date" readonly
+                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
+                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
+                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                </div>
+                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
+              </div>
             </div>
             <div class="rx-col">
               {{-- 3열 — 일일 도뇨 횟수 … 재구매일 11줄. 1차 요청서 17쪽 순서를 따른다
@@ -2738,45 +2776,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        value="{{ $agreeEnd }}"
                        style="flex:1;" />
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">다음 재구매 가능일</span>
-                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
-                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
-                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
-                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
-                     값은 제 컬럼에서 읽는다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
-                  <button type="button" onclick="calcNextRepurchase(true)"
-                          title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
-                    <i class="fa-solid fa-rotate"></i> 자동
-                  </button>
-                </div>
-              </div>
-              {{-- '진단확인일'(f-diag-confirm-2)은 1열 '진단 확인일'(f-diagnosis-date)을
+                            {{-- '진단확인일'(f-diag-confirm-2)은 1열 '진단 확인일'(f-diagnosis-date)을
                    비추기만 하던 그림자였다 — 서버에서 값을 받지도(value 바인딩 없음),
                    저장 payload 에 실리지도 않았다. 1차 요청서 17쪽도 '진단 확인일' 하나만
                    적으므로, 값을 쥔 1열 칸만 남기고 그림자는 걷어냈다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">재구매일</span>
-                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
-                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
-                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
-                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
-                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
-                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
-                <div class="rx-date-flow">
-                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
-                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
-                  <input type="text" class="form-control" id="f-repurchase-date" readonly
-                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
-                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
-                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
-                </div>
-                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
-              </div>
-              {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
+                            {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
                    (시안 315:58 Frame 48101500 이 두 값을 한 줄에 둔다).
                    '종료일'(f-rx-end-date)은 요청서 17쪽 순서대로 2열 '처방전 사용 기간' 뒤로,
                    '신환 Master 등록일'(f-new-patient-date)은 요청서 14·16쪽대로
