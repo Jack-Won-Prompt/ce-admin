@@ -50,6 +50,19 @@ class BillingStrategy
         };
     }
 
+    /**
+     * 기관이 내는 몫(0~1). 전략이 정해지지 않았거나 비율이 확인중이면 null.
+     *
+     * null 을 받은 자리는 예전 규칙(품목의 급여 구분 90/50/0%)으로 셈한다 — 전략을
+     * 넣기 전에 만든 건의 금액이 저 혼자 달라지면 안 된다.
+     */
+    public static function payerRate(?string $accAddType, ?string $benefitClass): ?float
+    {
+        $r = self::resolve($accAddType, $benefitClass);
+
+        return $r['pending'] ? null : $r['payer_rate'] / 100;
+    }
+
     /** 건에 적어 두는 열쇠 — 「유형|자격」. 화면ㆍ표가 쓰는 것과 같다. */
     public static function key(?string $accAddType, ?string $benefitClass): ?string
     {

@@ -1515,11 +1515,16 @@ class PrescriptionController extends Controller
                 $nhisAmt = 0.0;
                 $copay   = 0.0;
                 if ($price !== null) {
-                    $rate = match($nhisStatus) {
-                        'eligible' => ($prescription->patient?->nhis_coverage_rate ?? 90) / 100,
-                        'partial'  => 0.50,
-                        default    => 0.0,
-                    };
+                    /* 기관이 내는 몫은 청구전략(유형 × 자격)이 정한다. 전략이 아직
+                       정해지지 않았거나 비율이 확인중인 자격이면 예전 규칙으로 셈한다. */
+                    $rate = \App\Support\BillingStrategy::payerRate(
+                                $request->input('counsel_acc_add_type'),
+                                $request->input('benefit_class'))
+                        ?? match($nhisStatus) {
+                            'eligible' => ($prescription->patient?->nhis_coverage_rate ?? 90) / 100,
+                            'partial'  => 0.50,
+                            default    => 0.0,
+                        };
                     $nhisAmt = round($price * $rate * $qty, 2);
                     $copay   = round($price * $qty - $nhisAmt, 2);
                 }
@@ -1682,10 +1687,13 @@ class PrescriptionController extends Controller
         $order = $prescription->order;
         $tp    = $order?->tossPayment;
 
-        $itemCopay = (int) $prescription->items->sum(function ($i) {
+        // 기관이 내는 몫은 청구전략이 정한다(정해지지 않았으면 예전 규칙)
+        $stratRate = \App\Support\BillingStrategy::payerRate(
+            $prescription->counsel_acc_add_type, $prescription->benefit_class);
+        $itemCopay = (int) $prescription->items->sum(function ($i) use ($stratRate) {
             $base = (float)($i->insurance_price ?? $i->product_price ?? 0);
             $qty  = (int)($i->quantity ?? 1);
-            $rate = match ($i->nhis_status ?? 'eligible') {
+            $rate = $stratRate ?? match ($i->nhis_status ?? 'eligible') {
                 'eligible' => 0.9, 'partial' => 0.5, default => 0.0,
             };
             return round($base * $qty) - round($base * $rate * $qty);

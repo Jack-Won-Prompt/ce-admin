@@ -932,21 +932,22 @@
 
 @php
 // 주문 연계 탭 calcItem() 공식과 동일: insurance_price × rate × qty
-$calcNhis = $prescription->items->sum(function($i) {
+/* 기관이 내는 몫은 청구전략(유형 × 자격)이 정한다. 전략이 아직 정해지지 않았거나
+   비율이 확인중인 자격이면 예전 규칙(품목의 급여 구분)으로 셈한다. */
+$stratRate = \App\Support\BillingStrategy::payerRate(
+    $prescription->counsel_acc_add_type, $prescription->benefit_class);
+$itemRate  = fn ($i) => $stratRate ?? match ($i->nhis_status ?? 'eligible') {
+    'eligible' => 0.9, 'partial' => 0.5, default => 0.0,
+};
+$calcNhis = $prescription->items->sum(function ($i) use ($itemRate) {
     $base = (float)($i->insurance_price ?? $i->product_price ?? 0);
     $qty  = (int)($i->quantity ?? 1);
-    $rate = match ($i->nhis_status ?? 'eligible') {
-        'eligible' => 0.9, 'partial' => 0.5, default => 0.0,
-    };
-    return round($base * $rate * $qty);
+    return round($base * $itemRate($i) * $qty);
 });
-$calcCopay = $prescription->items->sum(function($i) {
+$calcCopay = $prescription->items->sum(function ($i) use ($itemRate) {
     $base = (float)($i->insurance_price ?? $i->product_price ?? 0);
     $qty  = (int)($i->quantity ?? 1);
-    $rate = match ($i->nhis_status ?? 'eligible') {
-        'eligible' => 0.9, 'partial' => 0.5, default => 0.0,
-    };
-    return round($base * $qty) - round($base * $rate * $qty);
+    return round($base * $qty) - round($base * $itemRate($i) * $qty);
 });
 $calcShipping = (int)($prescription->order?->shipping_fee ?? 0);
 $calcDeposit  = $calcCopay + $calcShipping;
@@ -4359,9 +4360,6 @@ function renderItemsTable() {
   const cardCont = document.getElementById('items-container');
   if (cardCont) cardCont.innerHTML = '';
 
-  const nhisOpts = (sel) => [['eligible','급여(90%)'],['ineligible','비급여'],['partial','일부(50%)']].map(
-    ([v,l]) => `<option value="${v}"${sel===v?' selected':''}>${l}</option>`
-  ).join('');
 
   const rows = items.map((item, idx) => {
     const nhisSt     = item.nhis_status || 'eligible';
@@ -4395,9 +4393,10 @@ function renderItemsTable() {
         <input type="hidden" class="item-price" value="${escHtml(fmtPrice(item.product_price))}" />
       </td>
       <td>
-        <select class="form-control form-select item-nhis item-nhis-sel"
-                style="font-size:11px;padding:2px 4px;height:32px;width:100%;"
-                onchange="calcItem(${idx})">${nhisOpts(nhisSt)}</select>
+        {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략(유형 × 자격)이 정한다.
+             담긴 값은 지우지 않고 그대로 들고 다닌다(예전 건을 읽는 자리가 있다). --}}
+        <input type="hidden" class="item-nhis" value="${escHtml(nhisSt)}" />
+        <span class="item-nhis-shown">${escHtml(BS_ITEM_LABEL())}</span>
       </td>
       <td>
         <input type="text" inputmode="numeric" class="form-control item-ins-price"
@@ -5281,6 +5280,28 @@ window.HELP_TOUR_STEPS = [
      고르면 두 칸이 그에 맞춰 서고, 두 칸을 고치면 전략이 따라 선다. */
   const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? t + '|' + c : '');
 
+  /** 지금 고른 청구전략 — 없으면 null */
+  function bsCurrent() {
+    const t = document.getElementById('f-acc-add-type')?.value ?? '';
+    const c = document.getElementById('f-benefit-class')?.value ?? '';
+    return BILLING_STRATEGY[_bsKey(t, c)] ?? null;
+  }
+
+  /** 제품 줄에 적는 글 — 무엇으로 셈했는지 그 자리에서 읽는다 */
+  window.BS_ITEM_LABEL = function () {
+    const r = bsCurrent();
+    if (!r)        return '유형ㆍ자격 미선택';
+    if (r.pending) return r.label + ' (확인중)';
+    return `본인 ${r.self_rate}%` + (r.payer_rate > 0 ? ` · ${r.payer} ${r.payer_rate}%` : '');
+  };
+
+  /** 셈에 쓸 비율 — 전략이 정해졌을 때만. 아니면 null 이고, 그때는 담긴 급여 구분을 쓴다. */
+  window.bsRates = function () {
+    const r = bsCurrent();
+    if (!r || r.pending) return null;
+    return { payer: r.payer_rate / 100, self: r.self_rate / 100 };
+  };
+
   // 전략 고르개를 표에서 만든다 — 골라 넣을 수 있는 짝이 곧 표의 줄이다
   (function fillStrategyOptions() {
     const sel = document.getElementById('bsStrategy');
@@ -5303,6 +5324,8 @@ window.HELP_TOUR_STEPS = [
     set('bsClass', c);
     set('bsStrategy', _bsKey(t, c));
     renderBillingStrategy();
+    // 비율이 바뀌었으니 제품 줄의 금액도 함께 다시 선다
+    if (typeof recalcAllItems === 'function') recalcAllItems();
     _bsSyncing = false;
   }
 
@@ -5610,9 +5633,6 @@ window.HELP_TOUR_STEPS = [
     const nhisSt   = item.nhis_status || 'eligible';
     const insBase  = Number(item.insurance_price || item.product_price || 0);
     const totalAmt = Math.round(insBase * Number(item.quantity || 1)).toLocaleString('ko-KR');
-    const nhisOpts = [['eligible','급여(90%)'],['ineligible','비급여'],['partial','일부(50%)']].map(
-        ([v,l]) => `<option value="${v}"${nhisSt===v?' selected':''}>${l}</option>`
-    ).join('');
     // 시안 148:3105 Frame 48101492 — 행 카드 1132×118.
     // 가로 2칸: 내용(pad 12 · 세로 gap 12) + 오른쪽 삭제칸 64(#F9FAFC).
     // 열 폭 281/141×5, 라벨 13/500 #474D54 와 입력 사이 8. 규격은 CSS(#items-container)에 있다.
@@ -5643,10 +5663,11 @@ window.HELP_TOUR_STEPS = [
         <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
         <input type="hidden" class="item-rbox"  value="${escHtml(item.r_box||'')}" />
         <input type="hidden" class="item-stock" value="${escHtml(String(item.stock||''))}" />
+        {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략이 정한다 --}}
+        <input type="hidden" class="item-nhis" value="${escHtml(nhisSt)}" />
         <div class="item-inline-field">
-          <div class="item-field-label">급여 구분</div>
-          <select class="form-control form-select item-nhis item-nhis-sel"
-                  onchange="calcItem(${idx})">${nhisOpts}</select>
+          <div class="item-field-label">청구전략</div>
+          <div class="item-nhis-shown" style="height:32px;display:flex;align-items:center;">${escHtml(BS_ITEM_LABEL())}</div>
         </div>
         <div class="item-inline-field">
           <div class="item-field-label">수량</div>
@@ -6038,11 +6059,21 @@ window.HELP_TOUR_STEPS = [
     const nhisSel  = card.querySelector('.item-nhis')?.value || 'eligible';
     const qty      = parseInt(card.querySelector('.item-qty').value)          || 1;
     const base     = insPrice > 0 ? insPrice : price;
-    const rate     = nhisSel === 'eligible' ? 0.9 : (nhisSel === 'partial' ? 0.5 : 0);
-    const nhisAmt  = Math.round(base * rate * qty);
+
+    /* 비율은 청구전략(유형 × 자격)이 정한다 — 제품이 정하는 것이 아니다.
+       전략이 아직 정해지지 않았거나(미선택) 비율이 확인중인 자격이면, 예전처럼 그 줄에
+       담긴 급여 구분으로 셈한다. 그래야 전략을 넣기 전에 만든 건의 금액이 달라지지 않는다. */
+    const rates    = bsRates();
+    const nhisAmt  = rates
+                       ? Math.round(base * qty * rates.payer)
+                       : Math.round(base * qty * (nhisSel === 'eligible' ? 0.9 : (nhisSel === 'partial' ? 0.5 : 0)));
     const copay    = Math.round(base * qty) - nhisAmt;
 
     const insBase = insPrice > 0 ? insPrice : price;
+    /* 무엇으로 셈했는지 그 줄에 적어 둔다. 전략이 바뀌면 이 글도 함께 바뀌어야 한다 —
+       줄을 다시 그리지 않고 금액만 고치므로 여기서 손대 준다. */
+    const shown = card.querySelector('.item-nhis-shown');
+    if (shown) shown.textContent = BS_ITEM_LABEL();
     card.querySelector('.item-nhis-amt').textContent  = '₩ ' + nhisAmt.toLocaleString('ko-KR');
     card.querySelector('.item-copay').textContent     = '₩ ' + copay.toLocaleString('ko-KR');
     const totalEl = card.querySelector('.item-total-amt');
