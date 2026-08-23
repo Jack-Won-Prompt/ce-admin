@@ -56,6 +56,7 @@
     <span class="badge badge-warning">샘플판매 (1022)</span>
   </div>
 </div>
+
 @endsection
 @section('breadcrumb')
   홈 / 주문관리 / 주문 &nbsp;·&nbsp;
@@ -3310,6 +3311,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
   </div>
   </div>{{-- /page-body-inner --}}
 
+{{-- 상담 창 — 거래처 관리와 같은 창이다(partials/counsel-window) --}}
+@include('partials.counsel-window')
+
 @endsection
 
 @push('modals')
@@ -4631,7 +4635,6 @@ window.HELP_TOUR_STEPS = [
      업로드 화면의 같은 이름 창을 그대로 옮겼다(upload.blade.php). 목록은 화면에 이미
      실려 있어(PK_PATIENTS) 서버를 다시 부르지 않는다. 여기서는 바탕을 덮지 않는
      팝오버라, 고르는 동안에도 옆의 처방전 이미지를 그대로 볼 수 있다. */
-  const PATIENTS_INDEX_URL = @json(route('patients.index'));
   const PK_PATIENTS = @json($patientsJson ?? []);
   let pkGrid = null;
 
@@ -4956,17 +4959,22 @@ window.HELP_TOUR_STEPS = [
      거래처 관리의 상담 창(csOpen)을 연다. 그 창은 그 화면 안에 있어 여기서 바로 부를 수
      없으므로, 거래처 관리를 화면 탭으로 열면서 누구와 상담할지 주소에 실어 보낸다.
      환자가 아직 이어지지 않았으면 열 수 없다 — 창이 환자 하나를 놓고 도는 자리다. */
+  /* 「상담하기」 — 이 화면 안에서 상담 창을 연다.
+     예전에는 거래처 관리를 탭으로 열고 주소에 실어 보냈다. 통화 한 통을 적으려고
+     화면이 통째로 바뀌면 보던 처방전이 뒤로 숨는다 — 창은 뒤를 덮지 않고 떠 있다.
+
+     누구와 상담하는지는 이 처방전에 이어 둔 사람이다. 아직 아무도 이어 두지 않았으면
+     먼저 「조회」로 고르거나, 새 사람이면 저장해서 사람을 만든 뒤에 연다. */
   function openCounselWindow() {
     const id   = document.getElementById('f-patient-id')?.value;
     const name = document.getElementById('f-name')?.value?.trim() || '';
+
     if (!id) {
-      showToast('먼저 환자를 이어 주십시오 — 이름 옆 「조회」로 고르거나, 적은 뒤 저장하면 이어집니다.', 'warning');
+      showToast('먼저 「조회」로 사람을 고르십시오. 새 사람이면 저장한 뒤에 상담을 엽니다.', 'warning', 5000);
       return;
     }
-    const url = PATIENTS_INDEX_URL + '?counsel=' + encodeURIComponent(id)
-              + (name ? '&counsel_name=' + encodeURIComponent(name) : '');
-    if (window.ceOpenTab) window.ceOpenTab(url, '상담하기', 'bx-user');
-    else window.open(url, '_blank');
+
+    window.csOpen(parseInt(id, 10), name, document.getElementById('f-mobile')?.value?.trim() || '');
   }
 
   document.addEventListener('DOMContentLoaded', function () {
