@@ -1206,7 +1206,8 @@ class PrescriptionController extends Controller
             'rx_end_date'           => 'nullable|date',
             'diagnosis_date'        => 'nullable|date',
             // 처방 수량·상병 추가
-            'disease_class'         => 'nullable|string|max:10',
+            // 상병명을 그대로 적는다 — 열 자로는 「신경인성 방광 이외」 같은 이름이 들어가지 않는다
+            'disease_class'         => 'nullable|string|max:100',
             'sb_sci'                => 'nullable|string|max:50',
             'uro_date'              => 'nullable|date',
             // 급여·보험 추가

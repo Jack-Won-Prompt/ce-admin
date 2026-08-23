@@ -2553,14 +2553,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->diagnosis_date ?? '' }}" style="flex:1;min-width:0;" />
               </div>
               <div class="rx-field-row">
+                {{-- 「1 · 2-1 · 2-2 · 3」 네 코드를 고르던 칸이었다. 그 목록이 틀렸고,
+                     공단 목록의 상병명을 그대로 적는 자리다(청구 보조 화면의 안내와도 같다).
+                     자주 쓰는 이름은 환경 설정 → 공통 코드의 「상병 구분」에 담아 두면
+                     아래 목록에서 골라 넣을 수 있다 — 담아 둔 것이 없으면 그냥 적는다. --}}
                 <span class="rx-field-label">상병 구분</span>
-                <select class="form-control" id="f-disease-class" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="1"   @selected(($prescription->disease_class ?? '') == '1')>1</option>
-                  <option value="2-1" @selected(($prescription->disease_class ?? '') == '2-1')>2-1</option>
-                  <option value="2-2" @selected(($prescription->disease_class ?? '') == '2-2')>2-2</option>
-                  <option value="3"   @selected(($prescription->disease_class ?? '') == '3')>3</option>
-                </select>
+                <input type="text" class="form-control" id="f-disease-class" list="diseaseClassList"
+                       value="{{ $prescription->disease_class ?? '' }}" maxlength="100"
+                       placeholder="예: 신경인성 방광" style="flex:1;" />
+                <datalist id="diseaseClassList">
+                  @foreach(\App\Models\CommonCode::options('disease_class') as $dc)
+                    <option value="{{ $dc->label }}"></option>
+                  @endforeach
+                </datalist>
               </div>
               {{-- 시안 315:58 Frame 48101493 은 253 한 칸이고(값 'N31.8, R30.0, N30.8, K21.0')
                    위아래 간격이 다른 줄과 같은 8 이다. 한 칸으로 합치면 '상병명' 입력이 사라지므로
@@ -2651,25 +2656,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">담당 의사명</span>
                 <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
               </div>
-              <div class="rx-field-row">
-              <span class="rx-field-label">사유</span>
-              <select class="form-control" id="f-reason" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach([
-                    '진행중-재구매일자대기','진행중-샘플진행중','진행중-재고여유','진행중-입원중','진행중-통화연결실패',
-                    '진행중-미입금','진행중-유치도뇨','진행중-입금대기 또는 대리점 판매확정 미진행 예상',
-                    '진행중-대리점이 사유 확인중','진행중-출국','진행중-보류요청','진행중-환자정보 요청중',
-                    '진행중-대리점 출고 대기','진행중-이질감','진행중-공단 등록 진행중',
-                    '취소-타사제품','취소-재고여유','취소-복원','취소-입원중','취소-산재',
-                    '취소-보훈(급여적용불가)','취소-통화연결실패','취소-이질감','취소-처방전  error(이중발행 등)',
-                    '취소-미입금','취소-비용부담','취소-단순변심','취소-유치도뇨','취소-처방전 사용기간만료',
-                    '취소-CKL제품 의료기구매','취소-출국','취소-사망',
-                    '관리자 확인 -시스템 issue(판매 주문부터 시작/확정)',
-                    '재고부족으로 발송지연','카카오구매-요양병원',
-                  ] as $reason)
-                  <option value="{{ $reason }}" @selected(($prescription->reason ?? '') == $reason)>{{ $reason }}</option>
-                  @endforeach
-                </select>
+              {{-- 「사유」 칸은 두지 않는다(요청). 값(reason)은 지우지 않았다 —
+                   저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
             </div>
             </div>
             <div class="rx-col">
@@ -6078,7 +6066,6 @@ window.HELP_TOUR_STEPS = [
       order_manager:    strOrNull('f-order-manager'),
       next_repurchase:  strOrNull('f-next-repurchase'),
       special_case:     strOrNull('f-special-case'),
-      reason:           strOrNull('f-reason'),
       // ── 추가 정보 ──────────────────────────────────────────
       new_patient_date: strOrNull('f-new-patient-date'),
       five_110days:     strOrNull('f-five'),
