@@ -1368,28 +1368,12 @@
         </div>
         @endperm
         @endif
-        {{-- 주문이 지금 어디까지 왔는지 보는 자리. 「주문 등록」과 이름이 겹치지 않게
-             「주문현황」으로 둔다 — 앞의 것은 만드는 자리, 이것은 보는 자리다. --}}
-        @if($vis('orders'))
-        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문현황">
-            @dsicon('handle-with-care', 'ds-icon menu-icon')
-            <span>주문현황</span>
-            @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
-            @if($orderCount > 0)
-              <span class="menu-badge blue">{{ $orderCount }}</span>
-            @endif
-          </a>
-        </div>
-        @endif
-        {{-- 1차 요청 10쪽은 이 하위그룹의 차례를 이렇게 적었다 —
-             주문 / 교환·반품·취소 / CE샘플판매주문 / 주문 관리 / 현황.
-             그 중 「주문 관리」(orders.index — 시안 148:5526 의 빵부스러기가 이 화면을
-             그렇게 적는다)만 앞으로 당겨 「주문 등록」 바로 뒤에 둔다. 만드는 자리와
-             보는 자리는 잇달아 쓰는 짝이라 사이에 다른 것을 끼우지 않는다.
-             메뉴 이름은 「주문 등록」과 겹치지 않게 「주문현황」 그대로다.
-             나머지 차례는 요청서대로고, 「현황」(요청 29·30쪽 현황 Dashboard)은
-             아직 화면이 없어 만들지 않는다.
+        {{-- 1차 요청 10쪽이 적은 차례 그대로다 —
+             주문(주문 등록) / 교환·반품·취소 / CE샘플판매주문 / 주문 관리 / 주문 현황.
+             「주문 관리」는 orders.index 다(시안 148:5526 의 빵부스러기가 이 화면을 그렇게 적는다).
+             한때 「주문현황」이라 부르며 주문 등록 바로 뒤에 두었는데, 요청서 차례로 되돌리면서
+             이름도 요청서대로 「주문 관리」로 돌린다 — 그래야 다섯째 「주문 현황」과 갈린다.
+             「주문 현황」(요청 29·30쪽 현황 Dashboard)은 아직 화면이 없어 자리를 만들지 않았다.
              재구매 관리·CE샵 주문은 요청 목록에 없어 뒤에 그대로 남긴다. --}}
         {{-- 1차 요청 CR-MNU-04 --}}
         @if($vis('order-returns'))
@@ -1411,6 +1395,19 @@
         <div class="menu-item {{ request()->routeIs('sample-orders*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="add-package" href="{{ route('sample-orders.index') }}" data-title="CE 샘플주문">
             @dsicon('add-package', 'ds-icon menu-icon')<span>CE 샘플주문</span>
+          </a>
+        </div>
+        @endif
+        {{-- 주문이 지금 어디까지 왔는지 보는 자리. 요청서가 「주문 관리」로 적었다. --}}
+        @if($vis('orders'))
+        <div class="menu-item {{ request()->routeIs('orders*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="handle-with-care" href="{{ route('orders.index') }}" data-title="주문 관리">
+            @dsicon('handle-with-care', 'ds-icon menu-icon')
+            <span>주문 관리</span>
+            @php $orderCount = \App\Models\Order::where('status','pending')->count(); @endphp
+            @if($orderCount > 0)
+              <span class="menu-badge blue">{{ $orderCount }}</span>
+            @endif
           </a>
         </div>
         @endif
