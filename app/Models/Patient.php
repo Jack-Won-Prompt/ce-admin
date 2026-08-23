@@ -122,4 +122,10 @@ class Patient extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /** 개인정보 동의서. 밖에서 들어오는 폼이라 이어지지 않은 것도 있다(patient_id 가 빈다). */
+    public function privacyConsents(): HasMany
+    {
+        return $this->hasMany(PrivacyConsent::class);
+    }
 }

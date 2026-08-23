@@ -363,6 +363,56 @@
         <option value="30"  @selected(request('per_page','10')==='30')>30개씩</option>
       </select>
     </div>
+    {{-- 생성일자 — 한쪽만 채워도 걸린다(언제부터만ㆍ언제까지만 찾는 일이 잦다) --}}
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">생성일자</label>
+      <div class="ds-field-range">
+        <input type="date" name="created_from" value="{{ request('created_from') }}" class="form-control">
+        <span class="filter-sep ds-field-sep">~</span>
+        <input type="date" name="created_to" value="{{ request('created_to') }}" class="form-control">
+      </div>
+    </div>
+    {{-- 생년 — 네 자리 연도. 같은 이름이 여럿일 때 이것으로 가른다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">생년</label>
+      <input type="number" name="birth_year" value="{{ request('birth_year') }}" class="form-control"
+             placeholder="1984" min="1900" max="{{ date('Y') }}" step="1">
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">건보 위임 종료일</label>
+      <div class="ds-field-range">
+        <input type="date" name="agree_end_from" value="{{ request('agree_end_from') }}" class="form-control">
+        <span class="filter-sep ds-field-sep">~</span>
+        <input type="date" name="agree_end_to" value="{{ request('agree_end_to') }}" class="form-control">
+      </div>
+    </div>
+    {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">상병타입</label>
+      <select name="sb_sci" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="SB"  @selected(request('sb_sci') === 'SB')>SB</option>
+        <option value="SCI" @selected(request('sb_sci') === 'SCI')>SCI</option>
+      </select>
+    </div>
+    {{-- 「아니오」는 「이어진 동의서가 없다」는 뜻이다. 개인정보 동의서는 밖에서 들어오는
+         폼이라 이름ㆍ전화로 이어 두는데, 못 이은 것은 없는 것으로 보인다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">개인정보 동의</label>
+      <select name="privacy_consent" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="y" @selected(request('privacy_consent') === 'y')>동의</option>
+        <option value="n" @selected(request('privacy_consent') === 'n')>없음</option>
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">공단 위임장 동의</label>
+      <select name="nhis_consent" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="y" @selected(request('nhis_consent') === 'y')>동의</option>
+        <option value="n" @selected(request('nhis_consent') === 'n')>없음</option>
+      </select>
+    </div>
     {{-- 재구매일 — 시안은 라디오 3개를 한 칸에 넣는다. 링크 이동 방식은 그대로 둔다.
          「재구매일」을 알약마다 되풀이하니 셋이 한 줄에 들어가지 못했다 — 라벨이 이미
          그 말을 하고 있어 알약에서는 뺀다. --}}
@@ -934,6 +984,22 @@ document.addEventListener('keydown', (e) => {
     _csApplyBox(_csBox ?? _csDefaultBox());
     setTimeout(() => document.getElementById('csContents').focus(), 50);
   };
+
+  /* 주문 등록 화면의 「상담하기」로 들어오는 길.
+     그 화면에는 이 창이 없어 여기로 보내며 누구와 상담할지 주소에 싣는다
+     (…/patients?counsel=<환자id>&counsel_name=<이름>). 열고 나면 주소에서 지워
+     새로고침이나 뒤로 가기에 창이 또 뜨지 않게 한다. */
+  (function () {
+    const q  = new URLSearchParams(location.search);
+    const id = q.get('counsel');
+    if (!id) return;
+    const name = q.get('counsel_name') || '';
+    q.delete('counsel'); q.delete('counsel_name');
+    const rest = q.toString();
+    history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+    // 화면이 다 그려진 뒤에 연다 — 창 마크업보다 이 조각이 먼저 도는 자리가 있다
+    setTimeout(() => window.csOpen(parseInt(id, 10), name), 0);
+  })();
 
   /* 재상담으로 두면 언제 다시 걸지가 곧 다음 일이 된다 — 그때만 날짜를 묻는다 */
   window.csSyncReDate = function () {

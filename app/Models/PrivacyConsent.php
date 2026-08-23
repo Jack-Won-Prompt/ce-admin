@@ -12,6 +12,8 @@ class PrivacyConsent extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        // 환자와 잇는 열쇠. 밖에서 들어오는 폼이라 비어 있을 수 있다 — 이름+전화로 맞춰 채운다.
+        'patient_id',
         'type', 'source', 'name', 'phone', 'phone2', 'email', 'zip', 'addr1', 'addr2',
         'insurance', 'support_qualify',
         'birth', 'product', 'hospital', 'surgery_date', 'stoma_type', 'stoma_kind',
@@ -24,6 +26,11 @@ class PrivacyConsent extends Model
         'extra'        => 'array',
         'submitted_at' => 'datetime',
     ];
+
+    public function patient(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
 
     public const TYPE_LABELS = [
         'catheter' => '카테터',

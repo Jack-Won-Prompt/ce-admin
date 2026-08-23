@@ -49,6 +49,42 @@ class PatientController extends Controller
             });
         }
 
+        /* ── 찾는 조건들 ────────────────────────────────────
+           날짜 두 칸은 한쪽만 채워도 걸린다 — 「언제부터」만, 「언제까지」만 찾는 일이 잦다. */
+
+        // 생성일자
+        if ($request->filled('created_from')) $query->whereDate('created_at', '>=', $request->created_from);
+        if ($request->filled('created_to'))   $query->whereDate('created_at', '<=', $request->created_to);
+
+        // 생년 — 네 자리 연도. 생년월일이 비어 있는 환자는 걸리지 않는다.
+        if ($request->filled('birth_year')) {
+            $query->whereYear('birth_date', (int) $request->birth_year);
+        }
+
+        // 건보 위임 종료일
+        if ($request->filled('agree_end_from')) $query->whereDate('nhis_agree_end', '>=', $request->agree_end_from);
+        if ($request->filled('agree_end_to'))   $query->whereDate('nhis_agree_end', '<=', $request->agree_end_to);
+
+        // 상병타입 — 환자에 붙는 구분(SB/SCI)이다
+        if ($request->filled('sb_sci')) {
+            $query->where('sb_sci', $request->sb_sci);
+        }
+
+        /* 개인정보 동의 여부 — privacy_consents 를 환자로 이어 본다.
+           이 표는 밖에서 들어오는 폼이라 patient_id 가 비어 있을 수 있다(이름+전화로 채운다).
+           그래서 「아니오」는 「이어진 동의서가 없다」는 뜻이지 「동의하지 않았다」가 아니다. */
+        if ($request->filled('privacy_consent')) {
+            $has = $request->privacy_consent === 'y';
+            $query->{$has ? 'whereHas' : 'whereDoesntHave'}('privacyConsents');
+        }
+
+        // 공단 위임장 동의 여부 — 처방전에 딸린 동의가 하나라도 agreed 인가
+        if ($request->filled('nhis_consent')) {
+            $has = $request->nhis_consent === 'y';
+            $fn  = fn ($q) => $q->whereHas('consents', fn ($c) => $c->where('status', 'agreed'));
+            $query->{$has ? 'whereHas' : 'whereDoesntHave'}('prescriptions', $fn);
+        }
+
         // 재구매일 기간 필터
         if ($request->filled('repurchase_within')) {
             $days = (int) $request->repurchase_within;
