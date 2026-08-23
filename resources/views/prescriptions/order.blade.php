@@ -441,6 +441,19 @@
                         background:var(--gray-100); font-size:11px; font-weight:500; line-height:18px;
                         color:var(--gray-800); white-space:nowrap; }
   #tab-product .pt-hb b { font-weight:500; color:inherit; }
+  /* 청구전략 — 비용 내역과 같은 폭에 앉되, 규칙이라는 것이 보이게 옅은 바탕을 깐다 */
+  .bs-box   { border:1px solid var(--border); border-radius:8px; background:var(--gray-50, #f8f9fa);
+              padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .bs-head  { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text); }
+  .bs-flag  { font-size:11px; font-weight:500; color:var(--warning, #b26a00); }
+  .bs-split { font-size:12px; color:var(--text-muted); }
+  .bs-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .bs-chip  { font-size:11px; color:var(--text-muted); border:1px solid var(--border);
+              border-radius:999px; padding:2px 8px; background:#fff; white-space:nowrap; }
+  .bs-chip b { color:var(--text); font-weight:600; }
+  /* 확정되지 않은 자격(산재ㆍ자동차보험)은 자리만 있다는 것을 색으로 알린다 */
+  .bs-box.pending { border-color:var(--warning, #f0ad4e); background:#fff8ec; }
+
   /* 머리 오른쪽 합계 — 12/500 주색 맨글자 (시안 "총 NHIS 급여: ₩ 0") */
   #tab-product .pt-head-total { display:inline-flex; align-items:center; gap:6px;
                                 font-size:12px; font-weight:500; line-height:19px; color:var(--primary); white-space:nowrap; }
@@ -3041,6 +3054,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div class="section-title"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 주문 정보 요약</div>
             <div id="order-items-summary">{{-- JS renderOrderSummary() --}}</div>
 
+            {{-- 청구전략 — 유형 × 자격이 「누가 얼마를 내는가」를 정한다(회신 20p).
+                 같은 90%라도 공단이 내는 것과 지자체가 내는 것은 이후 절차가 통째로
+                 다르다. 그래서 비용 내역 바로 위에서 먼저 읽게 두었다.
+                 표는 App\Support\BillingStrategy 한 곳에만 있다 — 화면은 그것을 비춘다. --}}
+            <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-scale-balanced" style="color:var(--primary);"></i> 청구전략</div>
+            <div class="bs-box" id="bsBox">
+              <div class="bs-head"><span id="bsLabel">-</span><span class="bs-flag" id="bsFlag"></span></div>
+              <div class="bs-split" id="bsSplit">-</div>
+              <div class="bs-chips">
+                <span class="bs-chip">현금영수증 <b id="bsCash">-</b></span>
+                <span class="bs-chip">세금계산서 <b id="bsTax">-</b></span>
+              </div>
+            </div>
+
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 비용 내역</div>
             <div class="cost-row"><span>기관 부담금</span><span class="cost-val" id="costNhisAmt">₩ {{ number_format($calcNhis) }}</span></div>
             <div class="cost-row"><span>본인부담금</span><span class="cost-val" id="costNhis">₩ {{ number_format($calcCopay) }}</span></div>
@@ -5005,6 +5032,47 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-benefit-class')?.addEventListener('change', suggestClaimAgency);
   document.getElementById('f-claim-agency')?.addEventListener('change', onClaimAgencyChange);
   suggestClaimAgency();
+
+  /* ── 청구전략 ──────────────────────────────────────────────
+     표는 서버(App\Support\BillingStrategy)에 한 벌만 있고, 화면은 그것을 받아 비춘다.
+     여기에 비율을 다시 적으면 언젠가 두 곳이 어긋난다. */
+  const BILLING_STRATEGY = @json(\App\Support\BillingStrategy::table());
+
+  function renderBillingStrategy() {
+    const box = document.getElementById('bsBox');
+    if (!box) return;
+
+    const type = document.getElementById('f-acc-add-type')?.value ?? '';
+    const cls  = document.getElementById('f-benefit-class')?.value ?? '';
+    // 처방외는 자격을 보지 않는다 — 처방이 아니니 전액 본인이 낸다
+    const key  = type === '20' ? '20|' : (type && cls ? type + '|' + cls : null);
+    const r    = key ? BILLING_STRATEGY[key] : null;
+
+    const pct = (v) => (v === null || v === undefined) ? '확인중' : v + '%';
+
+    if (!r) {
+      box.classList.remove('pending');
+      document.getElementById('bsLabel').textContent = '유형ㆍ자격을 고르면 청구전략이 정해집니다';
+      document.getElementById('bsFlag').textContent  = '';
+      document.getElementById('bsSplit').textContent = '-';
+      document.getElementById('bsCash').textContent  = '-';
+      document.getElementById('bsTax').textContent   = '-';
+      return;
+    }
+
+    box.classList.toggle('pending', !!r.pending);
+    document.getElementById('bsLabel').textContent = r.label;
+    document.getElementById('bsFlag').textContent  = r.note;
+    document.getElementById('bsSplit').textContent = r.payer_rate > 0
+      ? `본인부담금 ${r.self_rate}% + ${r.payer} 부담금 ${r.payer_rate}%`
+      : `본인부담금 ${r.self_rate}%`;
+    document.getElementById('bsCash').textContent = pct(r.cash_receipt);
+    document.getElementById('bsTax').textContent  = pct(r.tax_invoice);
+  }
+
+  document.getElementById('f-acc-add-type')?.addEventListener('change', renderBillingStrategy);
+  document.getElementById('f-benefit-class')?.addEventListener('change', renderBillingStrategy);
+  renderBillingStrategy();
 
   // ── 처방전 주소 가져오기 ──────────────────────────────────
   function fillFromPrescriptionAddress() {
