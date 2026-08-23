@@ -2660,7 +2660,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 「사유」 칸은 두지 않는다(요청). 값(reason)은 지우지 않았다 —
                    저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
             </div>
-            </div>
             <div class="rx-col">
               {{-- 3열 — 일일 도뇨 횟수 … 재구매일 11줄. 1차 요청서 17쪽 순서를 따른다
                    (… 일일 도뇨횟수·Five/Six·Five/Six(110days) /

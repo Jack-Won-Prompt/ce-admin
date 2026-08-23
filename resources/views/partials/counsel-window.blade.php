@@ -371,7 +371,7 @@
 
     BtnState.loading(btn, '저장 중...');
     try {
-      const res = await apiRequest(`${DETAIL_BASE}/${_csPatient.id}/counsels`, 'POST', {
+      const res = await apiRequest(`${CS_BASE}/${_csPatient.id}/counsels`, 'POST', {
         counsel_date:     document.getElementById('csDate').value,
         counsel_type:     document.getElementById('csType').value || null,
         counsel_status:   document.getElementById('csStatus').value || null,

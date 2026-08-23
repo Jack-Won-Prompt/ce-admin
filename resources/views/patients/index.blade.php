@@ -709,7 +709,10 @@ document.addEventListener('keydown', (e) => {
      탭은 사람마다 하나씩 열린다. 두 사람을 견주며 일하는 때가 있어 한 자리를 돌려
      쓰면 방금 보던 것이 사라진다. 이미 열려 있는 사람을 다시 누르면 그 탭으로 간다 —
      같은 사람의 탭이 둘이 되면 어느 것이 최신인지 알 수 없다. */
-  const pcTabs = {};     // { [환자id]: { name, grid, wired } }
+  const pcTabs = {};     // { [환자id]: { name, mobile, grid, wired } }
+  /* 상담 창은 따로 사는 조각이라(partials/counsel-window) 이 안을 들여다볼 수 없다.
+     창이 「지금 보고 있는 사람」과 그 통화번호를 물어볼 수 있게 내어 둔다. */
+  window.pcTabs = pcTabs;
 
   /* 목록에서 고친다 — 이어 둔 뒤에도 바꿀 수 있어야 한다 */
   window.csEditOrder = function (btn, counselId, patientId) {
@@ -730,6 +733,7 @@ document.addEventListener('keydown', (e) => {
 
 
   /** 지금 보고 있는 상담내역 탭의 환자 */
+  window.pcActive = pcActive;
   function pcActive() {
     const key = Object.keys(PANES).find(k => k.startsWith('counsel:')
       && document.getElementById(TABS[k])?.classList.contains('active'));
