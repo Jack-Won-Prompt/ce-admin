@@ -52,6 +52,17 @@
 <style>
 
   /* 상담내역 탭 — 사람 이름이 붙고, 닫는 단추가 오른쪽에 붙는다 */
+  /* 상담 내용 한 줄 — 글처럼 보이되 누를 수 있다. 표를 넓히지 않게 한 줄로 줄인다.
+     이름을 pc-note 로 두면 판 위쪽 안내 글(.pc-note)까지 눌리므로 -cell 을 붙인다. */
+  .pc-note-cell { max-width:100%; padding:0; border:none; background:none; cursor:pointer;
+                  font:inherit; color:var(--text); text-align:left;
+                  display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pc-note-cell:hover { color:var(--primary); text-decoration:underline; }
+  /* 펼친 전문 — 적힌 그대로, 줄바꿈까지 */
+  .pc-note-meta { font-size:11px; color:var(--text-muted); margin-bottom:8px; }
+  .pc-note-full { font-size:13px; line-height:1.75; color:var(--text);
+                  white-space:pre-wrap; word-break:break-word; }
+
   /* 「관리」 칸의 펼침 단추 — 표 안에서 알약보다 작고 조용하게 */
   .pc-manage { width:24px; height:24px; border-radius:6px; border:1px solid var(--gray-200);
                background:var(--gray-0); color:var(--gray-600); cursor:pointer;
@@ -277,15 +288,8 @@
         <input type="date" name="agree_end_to" value="{{ request('agree_end_to') }}" class="form-control">
       </div>
     </div>
-    {{-- 사업부 — IC(카테터) · OC(장루). 두 사업부는 다루는 물건도 붙는 서류도 다르다. --}}
-    <div class="ds-filter-field">
-      <label class="ds-field-label">사업부</label>
-      <select name="care_type" class="form-control form-select">
-        <option value="">전체</option>
-        <option value="IC" @selected(request('care_type') === 'IC')>IC (카테터)</option>
-        <option value="OC" @selected(request('care_type') === 'OC')>OC (장루)</option>
-      </select>
-    </div>
+    {{-- 사업부는 검색 칸에 두지 않는다(요청). 목록 맨 앞 칸에서 눈으로 가른다.
+         거르는 길은 서버에 그대로 있어 ?care_type=IC 로 들어오면 걸린다. --}}
     {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
     <div class="ds-filter-field">
       <label class="ds-field-label">상병타입</label>
@@ -819,11 +823,11 @@ document.addEventListener('keydown', (e) => {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
 
-      /* 한 줄이 곧 「무엇을 했나」다 — 상담번호와 날짜를 내용 앞에 붙여 한 칸으로 읽는다.
+      /* 상담번호와 내용은 각자 칸이다. 한 칸에 「#번호 날짜 : 내용」으로 붙여 두었더니
+         번호로 찾을 수도, 내용으로 훑을 수도 없었다 — 정렬도 번호 순으로만 걸렸다.
          나머지는 언제·어디까지·무슨 갈래·누가 순으로 둔다. */
       const rows = (d.counseling ?? []).map(c => ({
-        action:  '#' + (c.counsel_no || '-') + (c.date ? ' ' + c.date : '')
-                 + (c.note ? ' : ' + c.note : ''),
+        note:    c.note || '',
         date:    c.date || '',
         status:  c.status || '',
         re_date: c.re_date || '',
@@ -864,7 +868,26 @@ document.addEventListener('keydown', (e) => {
           el: gridEl,
           height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
           columns: [
-            { header: '상담 내용', name: 'action',    width: 420, sortable: true },
+            { header: '상담번호',  name: 'counsel_no', width: 150, sortable: true },
+            /* 상담 내용은 길다(최대 2000자). 표에서는 한 줄로 줄여 두고, 누르면
+               전문을 팝오버로 편다 — 표를 넓히지 않고도 읽을 수 있어야 한다. */
+            { header: '상담 내용', name: 'note',      width: 360, sortable: true,
+              renderer: (v, row) => {
+                const txt = (v || '').trim();
+                if (!txt) {
+                  const s = document.createElement('span');
+                  s.textContent = '-';
+                  s.style.color = 'var(--text-muted)';
+                  return s;
+                }
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'pc-note-cell';
+                b.title = '눌러서 전문 보기';
+                b.textContent = txt;
+                b.addEventListener('click', (e) => { e.stopPropagation(); pcNote(b, row); });
+                return b;
+              } },
             { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
             { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
             { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
@@ -944,6 +967,34 @@ document.addEventListener('keydown', (e) => {
   /* 한 줄로 할 수 있는 일 — 누른 자리 옆에 붙는다.
      상태 값을 여기서 바꿀지는 아직 정하지 않았다. 지금은 이미 있는 두 가지만 건다. */
   const _pcManageModal = new GridModal();
+
+  /* 상담 내용 전문 — 표의 한 줄을 눌러 그 자리에서 편다.
+     화면 탭으로 처방전을 여는 것과 다르다. 「무슨 이야기였나」만 확인하려는 것이라,
+     보던 목록을 두고 떠날 이유가 없다. */
+  const _pcNoteModal = new GridModal();
+
+  window.pcNote = function (btn, row) {
+    _pcNoteModal.open({
+      title: '상담 내용' + (row.counsel_no ? ' · ' + row.counsel_no : ''),
+      width: 420, height: 360, mode: 'popover', anchor: btn,
+      render: (body) => {
+        body.innerHTML = '';
+
+        // 언제·어디까지 왔나 — 전문을 읽기 전에 눈이 먼저 닿는 자리
+        const meta = document.createElement('div');
+        meta.className = 'pc-note-meta';
+        meta.textContent = [row.date, row.status, row.type, row.call_no]
+          .filter(Boolean).join(' · ') || '';
+        if (meta.textContent) body.appendChild(meta);
+
+        const txt = document.createElement('div');
+        txt.className = 'pc-note-full';
+        // 적힌 그대로 보인다 — 줄바꿈이 뜻을 나르는 때가 많다
+        txt.textContent = row.note || '';
+        body.appendChild(txt);
+      },
+    });
+  };
 
   window.pcManage = function (btn, row) {
     const p = pcActive();
