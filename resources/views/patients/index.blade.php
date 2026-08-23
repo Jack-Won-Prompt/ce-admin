@@ -122,6 +122,12 @@
 <style>
   /* 상세 탭은 안에 든 화면만큼만 높다. 카드가 flex:1 로 남는 자리를 다 먹고
      있어, 주문 이력 아래로 흰 바닥이 한 참 이어졌다. */
+  /* 어디까지가 이 화면의 몫인지 한 줄로 알린다 — 카드가 아니라 안내다 */
+  .pt-scope-note   { font-size:12px; color:var(--text-muted); margin:0 0 8px; display:flex;
+                     align-items:center; gap:6px; flex-wrap:wrap; }
+  .pt-scope-note a { color:var(--primary); text-decoration:none; }
+  .pt-scope-note a:hover { text-decoration:underline; }
+
   .ds-grid-section.is-fit .ds-grid-card { flex:0 0 auto; }
   .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:0 0 auto; overflow:visible; }
 </style>
@@ -345,6 +351,13 @@
 
 {{-- 제목과 등록 건수를 여기 두지 않는다. 화면 이름은 네비바가 이미 적고 있고,
      건수는 아래 결과바의 「전체 N건」과 같은 말이었다. --}}
+
+{{-- 이 화면이 다루는 거래처는 개인(환자)뿐이다. 병원ㆍ기관은 담는 항목도 하는 일도
+     달라 마스터 관리에 따로 있다 — 찾는 사람이 헤매지 않게 길을 적어 둔다. --}}
+<div class="pt-scope-note">
+  개인(환자) 거래처만 다룹니다.
+  <a href="{{ route('masters.index') }}" onclick="event.preventDefault(); ceOpenTab(this.href, '마스터 관리');">병원ㆍ기관은 마스터 관리에서</a>
+</div>
 
 {{-- 검색 필터 — Figma 114:4778: 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래 --}}
 <form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">

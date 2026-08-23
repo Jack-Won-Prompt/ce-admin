@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * 마스터 항목 (병원ㆍ대리점).
+ * 마스터 항목 (병원ㆍ기관).
  *
  * 어떤 칸을 무슨 이름으로 쓸지는 config/masters.php 가 정한다. 카테고리를 늘릴 때
  * 이 파일을 고칠 일이 없다.

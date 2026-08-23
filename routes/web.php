@@ -378,7 +378,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'update'])->name('nice-settings.update');
     Route::post('/settings/nice/test', [\App\Http\Controllers\NiceSettingController::class, 'test'])->name('nice-settings.test');
 
-    // 마스터 관리 — 병원·대리점을 카테고리 탭으로
+    // 마스터 관리 — 병원·기관을 카테고리 탭으로
     Route::get(   '/settings/masters',           [\App\Http\Controllers\MasterController::class, 'index'])->name('masters.index');
     Route::post(  '/settings/masters',           [\App\Http\Controllers\MasterController::class, 'store'])->name('masters.store');
     Route::put(   '/settings/masters/{master}',  [\App\Http\Controllers\MasterController::class, 'update'])->name('masters.update');

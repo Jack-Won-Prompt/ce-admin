@@ -11,7 +11,7 @@ use Illuminate\View\View;
 /**
  * 마스터 관리 — 카테고리별 탭 안에 검색 필터와 목록.
  *
- * 병원과 대리점은 담는 항목이 거의 겹쳐 한 표에 category 로 나눠 담는다. 화면도 하나다.
+ * 병원과 기관은 담는 항목이 거의 겹쳐 한 표에 category 로 나눠 담는다. 화면도 하나다.
  * 카테고리를 늘리려면 config/masters.php 에 한 항목만 더하면 탭이 생긴다.
  */
 class MasterController extends Controller
