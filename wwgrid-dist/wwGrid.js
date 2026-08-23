@@ -280,8 +280,18 @@ class GridModal {
     const vh = window.innerHeight;
     const gap = 4;
 
+    /* 붙일 자리를 잴 때는 「달라고 한 폭」이 아니라 「실제로 그려진 폭」을 본다.
+       .cg-modal 에 min-width:300 이 걸려 있어, 240 을 달라고 해도 300 으로 그려진다.
+       달라고 한 값으로 접어 넣으면 그 차이만큼 화면 밖으로 삐져나갔다 — 오른쪽 끝
+       칸의 팝오버가 잘려 보이던 까닭이다.
+
+       재는 것은 offsetWidth 다. 창이 뜰 때 scale(0.92) 로 커지는 짧은 몸짓이 있어,
+       그 사이 getBoundingClientRect() 는 300 이 아니라 276 을 돌려준다 —
+       몸짓 중에 재고 그 값으로 자리를 잡으면 다 커진 뒤에 다시 삐져나간다. */
+    const real = modal.offsetWidth || width;
+
     let left = r.left;
-    if (left + width + 8 > vw) left = Math.max(8, vw - width - 8);
+    if (left + real + 8 > vw) left = Math.max(8, vw - real - 8);
 
     const below = vh - r.bottom - gap;
     const above = r.top - gap;
