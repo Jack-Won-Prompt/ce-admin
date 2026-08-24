@@ -24,7 +24,7 @@ class BillingOffice extends Model
     ];
 
     protected $fillable = [
-        'kind', 'region', 'office_name', 'dept', 'title', 'duty',
+        'kind', 'region', 'office_name', 'dept', 'manager_name', 'title', 'duty',
         'tel', 'fax', 'address', 'note', 'is_active', 'sort_order', 'created_by',
     ];
 

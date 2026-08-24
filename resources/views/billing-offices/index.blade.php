@@ -86,6 +86,10 @@
         <input type="text" id="boDept" class="form-control" maxlength="100" placeholder="보험급여부">
       </div>
       <div class="bo-field">
+        <label class="ds-field-label">담당자</label>
+        <input type="text" id="boManager" class="form-control" maxlength="40" placeholder="통화하며 알게 된 이름">
+      </div>
+      <div class="bo-field">
         <label class="ds-field-label">직책</label>
         <input type="text" id="boTitleF" class="form-control" maxlength="40" placeholder="주임 / 팀장">
       </div>
@@ -194,6 +198,7 @@ async function boLoad() {
     { header: '지역본부', name: 'region',      width: 130 },
     { header: '기관명',   name: 'office_name', width: 140 },
     { header: '부서',     name: 'dept',        width: 130 },
+    { header: '담당자',   name: 'manager_name', width: 90,  align: 'center' },
     { header: '직책',     name: 'title',       width: 70,  align: 'center' },
     { header: '담당업무', name: 'duty',        width: 220 },
     { header: '전화번호', name: 'tel',         width: 130, align: 'center' },
@@ -224,7 +229,7 @@ function boNew() {
   boEditId = null;
   document.getElementById('boTitle').textContent = '청구처 추가';
   document.getElementById('boDelBtn').style.display = 'none';
-  ['boRegion','boOffice','boDept','boTitleF','boDuty','boTel','boFax','boAddr','boNote','boAreaSido','boAreaSigungu','boAreas']
+  ['boRegion','boOffice','boDept','boManager','boTitleF','boDuty','boTel','boFax','boAddr','boNote','boAreaSido','boAreaSigungu','boAreas']
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('boKindSel').value = boKindFilter || 'nhis';
   document.getElementById('boActive').value = '1';
@@ -239,6 +244,7 @@ function boEdit(r) {
   document.getElementById('boRegion').value     = r.region ?? '';
   document.getElementById('boOffice').value     = r.office_name ?? '';
   document.getElementById('boDept').value       = r.dept ?? '';
+  document.getElementById('boManager').value    = r.manager_name ?? '';
   document.getElementById('boTitleF').value     = r.title ?? '';
   document.getElementById('boDuty').value       = r.duty ?? '';
   document.getElementById('boTel').value        = r.tel ?? '';
@@ -278,6 +284,7 @@ async function boSave() {
     region:      document.getElementById('boRegion').value.trim(),
     office_name: document.getElementById('boOffice').value.trim(),
     dept:        document.getElementById('boDept').value.trim(),
+    manager_name:document.getElementById('boManager').value.trim(),
     title:       document.getElementById('boTitleF').value.trim(),
     duty:        document.getElementById('boDuty').value.trim(),
     tel:         document.getElementById('boTel').value.trim(),

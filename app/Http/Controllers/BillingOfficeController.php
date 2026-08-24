@@ -38,6 +38,7 @@ class BillingOfficeController extends Controller
                 $q->where(function ($w) use ($kw) {
                     $w->where('office_name', 'like', "%{$kw}%")
                       ->orWhere('dept', 'like', "%{$kw}%")
+                      ->orWhere('manager_name', 'like', "%{$kw}%")
                       ->orWhere('duty', 'like', "%{$kw}%")
                       ->orWhere('region', 'like', "%{$kw}%")
                       ->orWhereHas('areas', fn ($a) => $a->where('emd', 'like', "%{$kw}%"));
@@ -136,17 +137,18 @@ class BillingOfficeController extends Controller
     private function rules(Request $request): array
     {
         return $request->validate([
-            'kind'        => 'required|in:nhis,local',
-            'region'      => 'nullable|string|max:40',
-            'office_name' => 'required|string|max:100',
-            'dept'        => 'nullable|string|max:100',
-            'title'       => 'nullable|string|max:40',
-            'duty'        => 'nullable|string|max:200',
-            'tel'         => 'nullable|string|max:40',
-            'fax'         => 'nullable|string|max:40',
-            'address'     => 'nullable|string|max:200',
-            'note'        => 'nullable|string|max:200',
-            'is_active'   => 'boolean',
+            'kind'         => 'required|in:nhis,local',
+            'region'       => 'nullable|string|max:40',
+            'office_name'  => 'required|string|max:100',
+            'dept'         => 'nullable|string|max:100',
+            'manager_name' => 'nullable|string|max:40',
+            'title'        => 'nullable|string|max:40',
+            'duty'         => 'nullable|string|max:200',
+            'tel'          => 'nullable|string|max:40',
+            'fax'          => 'nullable|string|max:40',
+            'address'      => 'nullable|string|max:200',
+            'note'         => 'nullable|string|max:200',
+            'is_active'    => 'boolean',
         ]);
     }
 
@@ -190,6 +192,7 @@ class BillingOfficeController extends Controller
             'region'       => $o->region,
             'office_name'  => $o->office_name,
             'dept'         => $o->dept,
+            'manager_name' => $o->manager_name,
             'title'        => $o->title,
             'duty'         => $o->duty,
             'tel'          => $o->tel,
