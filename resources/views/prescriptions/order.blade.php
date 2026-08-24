@@ -1117,7 +1117,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-triangle-exclamation"></i> 서명 정보를 불러오지 못했습니다.
             </div>
           </div>
-          <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:nowrap;gap:6px;border-top:1px solid var(--border);">
+          {{-- 단추 여섯이 540px 창에 한 줄로 서 있어 오른쪽으로 넘쳤다. 접히게 둔다 —
+               창을 넓히면 다른 팝오버와 폭이 어긋나고, 글자를 줄이면 무엇을 하는 단추인지
+               읽기 어려워진다. --}}
+          <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;row-gap:6px;border-top:1px solid var(--border);">
             {{-- 서명 이미지만 따로 받아 가는 경우가 있다(서류 첨부·대조) --}}
             <a id="csignPngBtn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
