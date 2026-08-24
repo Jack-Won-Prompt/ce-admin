@@ -21,7 +21,6 @@ class NiceSettingController extends Controller
             'configured'      => $setting->isConfigured(),
             'hasSecret'       => trim((string) $setting->client_secret) !== '',
             'defaultApiBase'  => config('nice.api_base'),
-            'defaultStdUrl'   => config('nice.standard_url'),
         ]);
     }
 
@@ -32,7 +31,6 @@ class NiceSettingController extends Controller
             'client_secret' => 'nullable|string|max:255',
             'product_id'    => 'nullable|string|max:100',
             'api_base'      => 'nullable|url|max:190',
-            'standard_url'  => 'nullable|url|max:190',
             'enforce'       => 'nullable|boolean',
             'match_name'    => 'nullable|boolean',
             'match_birth'   => 'nullable|boolean',

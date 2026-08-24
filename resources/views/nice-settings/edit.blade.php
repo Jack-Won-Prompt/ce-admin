@@ -72,7 +72,7 @@
   @if(! $configured)
     <div class="ns-warn">
       <i class="bx bx-error-circle"></i> <b>자격증명이 아직 완성되지 않았습니다.</b>
-      client_id / client_secret / productID 3개가 모두 채워질 때까지 본인확인은 <b>비활성</b> 상태이며,
+      client_id 와 client_secret 이 모두 채워질 때까지 본인확인은 <b>비활성</b> 상태이며,
       서명 페이지는 기존 흐름(본인확인 없이 서명)대로 동작합니다.
     </div>
   @endif
@@ -98,8 +98,11 @@
           <input type="text" name="client_id" autocomplete="off"
                  value="{{ old('client_id', $setting->client_id) }}" placeholder="NICE 발급 client_id">
         </div>
+        {{-- 통합인증은 client_id·client_secret 둘로 부른다. productID 는 예전
+             CheckPlus 표준창이 쓰던 값이라 이제 쓰이지 않는다 — 지우지는 않는다
+             (되돌릴 일이 있을 때 다시 적기 번거롭다). --}}
         <div class="ns-field">
-          <label>productID</label>
+          <label>productID <span class="ns-hint" style="font-weight:500;">(옛 CheckPlus 값 · 지금은 쓰지 않음)</span></label>
           <input type="text" name="product_id" autocomplete="off"
                  value="{{ old('product_id', $setting->product_id) }}" placeholder="이용상품 ID (본인확인)">
         </div>
@@ -155,14 +158,10 @@
           <label>API 서버</label>
           <input type="url" name="api_base" value="{{ old('api_base', $setting->api_base) }}"
                  placeholder="{{ $defaultApiBase }}">
-          <span class="ns-hint">기관토큰·암호화토큰 발급 서버</span>
+          <span class="ns-hint">통합인증 서버 — 접근토큰ㆍ인증주소ㆍ인증결과 ({{ $defaultApiBase }})</span>
         </div>
-        <div class="ns-field">
-          <label>표준창 URL</label>
-          <input type="url" name="standard_url" value="{{ old('standard_url', $setting->standard_url) }}"
-                 placeholder="{{ $defaultStdUrl }}">
-          <span class="ns-hint">휴대폰 본인확인 팝업(표준창) 주소</span>
-        </div>
+        {{-- 표준창 주소는 이제 우리가 들고 있지 않다. 인증 주소 요청 API 가 건마다
+             만들어 준다 — 적어 두어도 쓰이지 않으므로 칸을 두지 않는다. --}}
       </div>
     </div>
 

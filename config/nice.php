@@ -9,7 +9,10 @@ $clientId     = env('NICE_CLIENT_ID', '');
 $clientSecret = env('NICE_CLIENT_SECRET', '');
 $productId    = env('NICE_PRODUCT_ID', '');
 
-$enabled = $clientId !== '' && $clientSecret !== '' && $productId !== '';
+/* 통합인증(IDO/INTC)은 client_id 와 client_secret 두 개로 부른다.
+   productID 는 예전 CheckPlus 표준창이 쓰던 값이라 여기서는 묻지 않는다 —
+   그것까지 있어야 켜지게 두면, 새 자격증명만 받은 기관이 계속 「미설정」이 된다. */
+$enabled = $clientId !== '' && $clientSecret !== '';
 
 return [
 
@@ -34,11 +37,21 @@ return [
     | 엔드포인트 (운영 기본값 — 필요 시 .env 로 덮어쓰기)
     |──────────────────────────────────────────────────────────────
     */
-    // API 서버 (기관토큰/암호화토큰 발급)
-    'api_base' => rtrim(env('NICE_API_BASE', 'https://svc.niceapi.co.kr:22001'), '/'),
+    // 통합인증 API 서버 (접근토큰ㆍ인증주소ㆍ인증결과)
+    'api_base' => rtrim(env('NICE_API_BASE', 'https://auth.niceid.co.kr'), '/'),
 
-    // 표준창(팝업) 호출 URL
-    'standard_url' => env('NICE_STANDARD_URL', 'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb'),
+    // API 규격 버전 — 주소에 그대로 들어간다(/ido/intc/{version}/…)
+    'version' => env('NICE_API_VERSION', 'v1.0'),
+
+    /* 표준창에 세울 인증 수단 — M 휴대폰 · F 금융인증서 · I 아이핀 · U 공동인증서.
+       기본은 휴대폰 하나다. 위임장에 서명할 사람이 금융인증서까지 갖추고 있으리라
+       기대할 수 없다. */
+    'svc_types' => array_values(array_filter(
+        explode(',', (string) env('NICE_SVC_TYPES', 'M'))
+    )),
+
+    /* 표준창 주소는 이제 우리가 들고 있지 않다 — 인증 주소 요청 API 가 건마다 만들어
+       준다. 예전 값이 설정 표에 남아 있어도 쓰이지 않는다. */
 
     // NICE API 호출 타임아웃(초) — 응답 지연이 서명 페이지를 붙잡지 않게 제한
     'http_timeout' => (int) env('NICE_HTTP_TIMEOUT', 10),

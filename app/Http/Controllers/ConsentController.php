@@ -191,8 +191,8 @@ class ConsentController extends Controller
     }
 
     /**
-     * 공개 GET/POST: NICE 표준창 returnurl 콜백.
-     * enc_data 복호화 → 처방전 환자(이름/생년월일) 매칭 → 결과 저장.
+     * 공개 GET/POST: NICE 표준창 return_url 콜백.
+     * web_transaction_id 로 인증 결과를 받아 풀고 → 처방전 환자(이름/생년월일) 매칭 → 결과 저장.
      * 결과는 팝업 뷰에서 opener(서명 페이지)로 postMessage 후 창을 닫는다.
      */
     public function niceCallback(Request $request, string $token): View

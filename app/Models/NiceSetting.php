@@ -45,12 +45,16 @@ class NiceSetting extends Model
         });
     }
 
-    /** 자격증명 3종이 모두 채워졌는가 (= 실제 연동 활성화 조건). */
+    /**
+     * 자격증명이 채워졌는가 (= 실제 연동 활성화 조건).
+     *
+     * 통합인증(IDO/INTC)은 client_id 와 client_secret 두 개로 부른다. productID 까지
+     * 있어야 켜지게 두었더니, 새 자격증명만 받은 기관이 계속 「미설정」으로 남았다.
+     */
     public function isConfigured(): bool
     {
         return trim((string) $this->client_id) !== ''
-            && trim((string) $this->client_secret) !== ''
-            && trim((string) $this->product_id) !== '';
+            && trim((string) $this->client_secret) !== '';
     }
 
     /**

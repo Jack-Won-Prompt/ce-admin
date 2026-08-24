@@ -698,22 +698,16 @@ async function startNice() {
       return;
     }
 
-    // 표준창으로 POST 하는 폼을 만들어 팝업에서 제출
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = data.standard_url;
-    form.target = 'nicePopup';
-    form.acceptCharset = 'utf-8';
-    [['m', 'service'], ['token_version_id', data.token_version_id],
-     ['enc_data', data.enc_data], ['integrity_value', data.integrity_value]]
-      .forEach(([k, v]) => {
-        const i = document.createElement('input');
-        i.type = 'hidden'; i.name = k; i.value = v;
-        form.appendChild(i);
-      });
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
+    /* 열어 둔 팝업을 받아 온 인증 주소로 보낸다.
+       예전 표준창은 우리가 폼을 만들어 POST 해야 열렸는데, 통합인증은 건마다
+       주소를 하나 만들어 주므로 그리로 보내기만 하면 된다. */
+    if (!data.auth_url) {
+      if (nicePopup) nicePopup.close();
+      ceAlert('본인확인 주소를 받지 못했습니다.', { tone: 'danger' });
+      resetVerifyBtn();
+      return;
+    }
+    nicePopup.location.href = data.auth_url;
 
     if (btn) btn.textContent = '인증 진행 중...';
     watchNicePopup();
