@@ -1335,7 +1335,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='var(--border)';this.style.background='';}">
                   <input type="radio" name="kakao_tpl" value="{{ $code }}" style="accent-color:#FEE500;" onchange="onTplChange(this)">
                   <div style="min-width:0;flex:1;">
-                    <div style="font-weight:700;">{{ $tpl['label'] }}</div>
+                    <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
+                      {{ $tpl['label'] }}
+                      {{-- 팝빌 템플릿 코드나 본문이 없으면 고를 수는 있어도 나가지 않는다.
+                           눌러 보고 나서야 알게 두지 않는다. --}}
+                      @if(empty($tpl['ats']) || trim((string) ($tpl['text'] ?? '')) === '')
+                        <span style="font-size:10px;font-weight:700;color:var(--danger);background:var(--danger-light);border-radius:6px;padding:1px 5px;"
+                              title="팝빌 알림톡 템플릿코드와 승인 문구(본문)가 있어야 발송됩니다">발송 불가</span>
+                      @endif
+                    </div>
                     <div style="font-size:10px;color:var(--text-muted);">{{ $tpl['desc'] }}</div>
                   </div>
                   @perm('messages', 'update')
@@ -1373,9 +1381,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
             </div>
-            @if(config('kakao.test_mode'))
+            {{-- 팝빌이 시험 모드면 실제로 나가지 않는다. 알리고 설정(kakao.test_mode)을
+                 보던 자리인데, 알림톡은 이제 팝빌로 나간다. --}}
+            @if(config('popbill.IsTest'))
             <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:6px 10px;font-size:10px;color:var(--alert-500);">
-              <i class="fa-solid fa-flask"></i> 테스트 모드 — 실제 미전송
+              <i class="fa-solid fa-flask"></i> 팝빌 시험 모드 — 실제 미전송
             </div>
             @endif
             <button id="btnKakaoSend" onclick="sendKakaoMsg()"
@@ -3719,8 +3729,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <button onclick="rxTplClose()" style="background:none;border:none;cursor:pointer;color:var(--gray-0);font-size:16px;line-height:1;">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-    <div id="rxTplAlimNote" style="display:none;font-size:11px;color:var(--alert-500);line-height:1.6;">
-      알림톡 코드는 <b>카카오에 등록한 템플릿코드</b>와 같아야 실제로 발송됩니다.
+    {{-- 위 코드는 우리가 화면에서 부르는 이름이고, 알림톡이 나가는 열쇠는 팝빌에
+         등록ㆍ승인된 템플릿 코드다. 본문도 승인 문구와 같아야 그대로 나간다. --}}
+    <div id="rxTplAlimNote" style="display:none;">
+      <label class="ds-field-label" style="display:block;margin-bottom:4px;">팝빌 알림톡 템플릿코드</label>
+      <input type="text" id="rxTplAts" class="form-control" maxlength="60" placeholder="예: 025080000001" />
+      <div style="font-size:11px;color:var(--alert-500);line-height:1.6;margin-top:4px;">
+        팝빌에 등록해 <b>카카오 승인을 받은</b> 코드입니다. 비어 있으면 알림톡은 나가지 않습니다.
+        아래 본문은 <b>승인받은 문구 그대로</b> 적어 주십시오 — 그 글이 그대로 나갑니다.
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div>
@@ -3818,7 +3835,7 @@ let _rxTplChannel = 'sms', _rxTplId = null;
 function rxTplNew(channel) {
   _rxTplChannel = channel; _rxTplId = null;
   document.getElementById('rxTplTitle').textContent = '메시지 유형 추가';
-  ['rxTplCode', 'rxTplLabel', 'rxTplDesc', 'rxTplBody'].forEach(id => document.getElementById(id).value = '');
+  ['rxTplCode', 'rxTplAts', 'rxTplLabel', 'rxTplDesc', 'rxTplBody'].forEach(id => document.getElementById(id).value = '');
   _rxTplOpen();
 }
 
@@ -3833,6 +3850,7 @@ async function rxTplEdit(channel, code) {
     if (!t) { _rxTplSay('유형을 찾지 못했습니다.', false); return; }
     _rxTplId = t.id;
     document.getElementById('rxTplCode').value  = t.code;
+    document.getElementById('rxTplAts').value   = t.ats_template_code ?? '';
     document.getElementById('rxTplLabel').value = t.label;
     document.getElementById('rxTplDesc').value  = t.description ?? '';
     document.getElementById('rxTplBody').value  = t.body ?? '';
@@ -3843,8 +3861,9 @@ function _rxTplOpen() {
   const isAlim = _rxTplChannel === 'alimtalk';
   document.getElementById('rxTplChannelLabel').value = isAlim ? '카카오 알림톡' : '문자(SMS)';
   document.getElementById('rxTplAlimNote').style.display = isAlim ? 'block' : 'none';
-  // 알림톡 본문은 카카오가 정한다 — 여기서 고쳐도 나가지 않으므로 칸을 감춘다
-  document.getElementById('rxTplBodyWrap').style.display = isAlim ? 'none' : '';
+  /* 알림톡 본문 칸도 보여 준다. 예전에는 「카카오가 정하니 고쳐도 안 나간다」며 감췄는데,
+     팝빌로 보내는 지금은 우리가 실은 글이 그대로 나간다 — 승인 문구를 여기 적어 둔다. */
+  document.getElementById('rxTplBodyWrap').style.display = '';
   document.getElementById('rxTplResult').style.display = 'none';
   document.getElementById('rxTplBackdrop').style.display = 'block';
   document.getElementById('rxTplModal').style.display    = 'block';
@@ -3869,6 +3888,7 @@ async function rxTplSave() {
   const body = {
     channel:     _rxTplChannel,
     code:        document.getElementById('rxTplCode').value.trim(),
+    ats_template_code: document.getElementById('rxTplAts').value.trim(),
     label:       document.getElementById('rxTplLabel').value.trim(),
     description: document.getElementById('rxTplDesc').value.trim(),
     body:        document.getElementById('rxTplBody').value,

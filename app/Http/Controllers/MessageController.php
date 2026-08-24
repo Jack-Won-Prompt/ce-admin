@@ -209,16 +209,26 @@ class MessageController extends Controller
 
     private function templateRules(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'channel'     => 'required|in:sms,alimtalk',
             'code'        => 'required|string|max:60|regex:/^[A-Za-z0-9_\-]+$/',
             'label'       => 'required|string|max:100',
             'description' => 'nullable|string|max:200',
             'body'        => 'nullable|string|max:2000',
             'is_active'   => 'boolean',
+            /* 팝빌에 등록ㆍ승인된 알림톡 템플릿 코드. 알림톡은 이 코드로만 나간다.
+               문자에는 쓰이지 않는다. */
+            'ats_template_code' => 'nullable|string|max:60',
         ], [
             'code.regex' => '코드는 영문·숫자·_·- 만 쓸 수 있습니다.',
         ]);
+
+        // 칸이 아직 없는 서버에서는 저장 목록에서 뺀다 — 넣으면 저장이 통째로 실패한다
+        if (!MessageTemplate::hasAtsColumn()) {
+            unset($data['ats_template_code']);
+        }
+
+        return $data;
     }
 
     private function formatMobile(?string $v): string

@@ -15,7 +15,8 @@ class MessageTemplate extends Model
 {
     public const CHANNELS = ['sms' => '문자(SMS)', 'alimtalk' => '카카오 알림톡'];
 
-    protected $fillable = ['channel', 'code', 'label', 'description', 'body', 'sort_order', 'is_active'];
+    protected $fillable = ['channel', 'code', 'ats_template_code', 'label', 'description',
+                           'body', 'sort_order', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean', 'sort_order' => 'integer'];
 
@@ -59,8 +60,27 @@ class MessageTemplate extends Model
                 'label' => $t->label,
                 'desc'  => $t->description ?? '',
                 'text'  => $t->body ?? '',
+                /* 알림톡은 이 코드로만 나간다. 칸이 아직 없는 서버에서도 화면이 서야
+                   하므로 없으면 빈 값이다. */
+                'ats'   => static::hasAtsColumn() ? ($t->ats_template_code ?? '') : '',
             ]])
             ->all();
+    }
+
+    /** 팝빌 템플릿 코드 칸이 있는가 — 마이그레이션 전 서버에서도 화면이 서야 한다 */
+    public static function hasAtsColumn(): bool
+    {
+        static $has = null;
+
+        if ($has === null) {
+            try {
+                $has = \Illuminate\Support\Facades\Schema::hasColumn('message_templates', 'ats_template_code');
+            } catch (\Throwable) {
+                $has = false;
+            }
+        }
+
+        return $has;
     }
 
     /**

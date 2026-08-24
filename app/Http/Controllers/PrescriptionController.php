@@ -1205,7 +1205,10 @@ class PrescriptionController extends Controller
         }
 
         $tossConfigured  = $this->vaService->isConfigured();
-        $kakaoConfigured = $this->kakaoService->isConfigured();
+        /* 알림톡은 팝빌로 나간다. 예전에는 알리고 키가 있는지를 물었는데, 그 키는
+           채워진 적이 없어 화면이 늘 「미설정」이었다(그래 놓고 발송은 성공이라 답했다). */
+        $kakaoConfigured = (bool) (config('popbill.LinkID') && config('popbill.SecretKey')
+                                   && config('popbill.test.corp_num'));
         $kakaoTemplates  = \App\Services\KakaoService::templates();
         $smsTemplates    = self::smsTemplates();
 
@@ -1728,6 +1731,16 @@ class PrescriptionController extends Controller
     }
 
     // ── 카카오 알림톡 발송 ────────────────────────────────
+    /**
+     * 카카오 알림톡 발송 — 팝빌(ATS).
+     *
+     * 알림톡은 카카오가 승인한 템플릿으로만 나간다. 본문도 승인된 문구와 같아야 하므로,
+     * 우리 유형의 본문에 값만 채워 그대로 보낸다(치환자가 곧 템플릿의 변수 자리다).
+     *
+     * 예전에는 알리고(App\Services\KakaoService)로 갔는데, 키가 하나도 없고 시험 모드가
+     * 켜져 있어 「발송되었습니다」라고 답하고 아무것도 보내지 않았다 — 그렇게 기록만
+     * 남은 건이 열두 건이다. 보내지 못하면 보내지 못했다고 답한다.
+     */
     public function sendKakao(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -1739,34 +1752,85 @@ class PrescriptionController extends Controller
         $order = $prescription->order;
         $tp    = $order?->tossPayment;
 
+        $tpl = \App\Models\MessageTemplate::channel('alimtalk')->active()
+            ->where('code', $request->template_code)->first();
+
+        if (!$tpl) {
+            return response()->json(['success' => false, 'message' => '메시지 유형을 찾지 못했습니다.'], 422);
+        }
+
+        /* 팝빌에 등록ㆍ승인된 템플릿 코드가 있어야 나간다. 없으면 여기서 멈춘다 —
+           보낸 것처럼 답해 두면 아무도 받지 못한 채 보냈다고 기록만 남는다. */
+        $atsCode = \App\Models\MessageTemplate::hasAtsColumn() ? trim((string) $tpl->ats_template_code) : '';
+        if ($atsCode === '') {
+            return response()->json([
+                'success' => false,
+                'message' => "「{$tpl->label}」에 팝빌 알림톡 템플릿 코드가 없습니다. "
+                           . '메시지 관리에서 승인받은 템플릿 코드를 넣어 주십시오.',
+            ], 422);
+        }
+
         $params = [
             '#{고객명}'    => $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '고객',
+            '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
             '#{금액}'      => $order ? number_format(($order->patient_copay ?? 0) + ($order->shipping_fee ?? 0)) : '-',
+            '#{본인부담금}'=> $order ? number_format($order->patient_copay ?? 0) : '-',
             '#{은행명}'    => $tp?->bank_name ?? '-',
             '#{계좌번호}'  => $tp?->account_number ?? '-',
             '#{기한}'      => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
             '#{택배사}'    => '택배',
             '#{운송장번호}'=> $order?->tracking_number ?? '-',
             '#{배송지}'    => $order?->shipping_address ?? '-',
-            '#{채널명}'    => config('kakao.channel_id', '콜로플라스트'),
         ];
 
-        $result = $this->kakaoService->sendAlimtalk(
-            $request->mobile,
-            $request->template_code,
-            $params,
-            \App\Services\KakaoService::templates()[$request->template_code]['label'] ?? ''
-        );
+        $content = trim(strtr((string) $tpl->body, $params));
+        $mobile  = preg_replace('/\D/', '', $request->mobile);
 
-        if ($result['success']) {
-            $prescription->update(['kakao_sent_at' => now()]);
-            activity()->causedBy(auth()->user())->performedOn($prescription)
-                ->log('카카오 알림톡 발송: ' . $request->template_code . ' → ' . $request->mobile);
+        /* 본문이 곧 나가는 글이다. 비어 있으면 팝빌이 거절하기 전에 여기서 멈춘다 —
+           승인받은 문구를 메시지 관리의 본문 칸에 옮겨 적어야 한다. */
+        if ($content === '') {
+            return response()->json([
+                'success' => false,
+                'message' => "「{$tpl->label}」의 본문이 비어 있습니다. "
+                           . '메시지 관리에서 승인받은 알림톡 문구를 적어 주십시오.',
+            ], 422);
         }
 
-        return response()->json($result);
+        try {
+            $kakao = app(\App\Services\Popbill\KakaoService::class);
+
+            $receiver        = $kakao->newReceiver();
+            $receiver->rcv   = $mobile;
+            $receiver->rcvnm = $params['#{고객명}'];
+            $receiver->msg   = $content;
+
+            $receiptNum = $kakao->sendAts(
+                corpNum:      config('popbill.test.corp_num'),
+                templateCode: $atsCode,
+                sender:       config('popbill.test.sms_sender') ?: config('popbill.test.sender_num'),
+                content:      $content,
+                messages:     [$receiver],
+                userId:       config('popbill.test.user_id'),
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[알림톡] 발송 실패', [
+                'rx' => $prescription->rx_number, 'tpl' => $atsCode, 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => '알림톡 발송 실패: ' . $e->getMessage()], 502);
+        }
+
+        $prescription->update(['kakao_sent_at' => now()]);
+        activity()->causedBy(auth()->user())->performedOn($prescription)
+            ->log("카카오 알림톡 발송: {$tpl->label}({$atsCode}) → {$mobile} · 접수번호 {$receiptNum}");
+
+        return response()->json([
+            'success'     => true,
+            'message'     => '알림톡이 발송되었습니다.',
+            'receipt_num' => $receiptNum,
+        ]);
     }
 
     // ── 카카오 알림톡 미리보기 ──────────────────────────────

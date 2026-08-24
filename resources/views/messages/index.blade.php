@@ -338,8 +338,17 @@
       <label class="ds-field-label">코드</label>
       <input type="text" id="msTplCode" class="form-control" maxlength="60" placeholder="order_confirmed" />
     </div>
-    <div id="msTplCodeNote" style="display:none;font-size:11px;color:var(--alert-500);line-height:1.6;">
-      알림톡 코드는 <b>카카오에 등록한 템플릿코드</b >와 같아야 실제로 발송됩니다.
+    {{-- 위 코드는 우리가 화면에서 부르는 이름이고, 알림톡이 실제로 나가는 열쇠는
+         팝빌에 등록ㆍ승인된 템플릿 코드다. 둘을 한 칸에 담으려다 서로를 가렸다. --}}
+    <div id="msTplCodeNote" style="display:none;">
+      <div class="ms-field">
+        <label class="ds-field-label">팝빌 알림톡 템플릿코드</label>
+        <input type="text" id="msTplAts" class="form-control" maxlength="60" placeholder="예: 025080000001" />
+      </div>
+      <div style="font-size:11px;color:var(--alert-500);line-height:1.6;">
+        팝빌에 등록해 <b>카카오 승인을 받은</b> 템플릿 코드입니다. 이 칸이 비어 있으면
+        알림톡은 나가지 않습니다(발송을 누르면 그 자리에서 알려 줍니다).
+      </div>
     </div>
     <div class="ms-field">
       <label class="ds-field-label">이름</label>
@@ -569,7 +578,7 @@
     editingId = null;
     document.getElementById('msTplTitle').textContent = '메시지 유형 추가';
     document.getElementById('msTplChannel').value = channel;
-    ['msTplCode', 'msTplLabel', 'msTplDesc', 'msTplBody'].forEach(id => document.getElementById(id).value = '');
+    ['msTplCode', 'msTplAts', 'msTplLabel', 'msTplDesc', 'msTplBody'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('msTplActive').checked = true;
     document.getElementById('msTplDelete').style.display = 'none';
     _msTplOpen();
@@ -582,6 +591,7 @@
     document.getElementById('msTplTitle').textContent = '메시지 유형 수정';
     document.getElementById('msTplChannel').value = t.channel;
     document.getElementById('msTplCode').value    = t.code;
+    document.getElementById('msTplAts').value     = t.ats_template_code ?? '';
     document.getElementById('msTplLabel').value   = t.label;
     document.getElementById('msTplDesc').value    = t.description ?? '';
     document.getElementById('msTplBody').value    = t.body ?? '';
@@ -622,6 +632,7 @@
     const body = {
       channel:     document.getElementById('msTplChannel').value,
       code:        document.getElementById('msTplCode').value.trim(),
+      ats_template_code: document.getElementById('msTplAts').value.trim(),
       label:       document.getElementById('msTplLabel').value.trim(),
       description: document.getElementById('msTplDesc').value.trim(),
       body:        document.getElementById('msTplBody').value,
