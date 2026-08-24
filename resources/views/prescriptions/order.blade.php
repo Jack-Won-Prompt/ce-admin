@@ -2368,9 +2368,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">유형</span>
                 <select class="form-control" id="f-acc-add-type" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
-                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
                   <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
+                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
+                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
                 </select>
               </div>
               {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
@@ -8279,7 +8279,7 @@ window.HELP_TOUR_STEPS = [
   const _RX_URL_BASE = @json(rtrim(url('/prescriptions'), '/'));
 
   const _PC_TYPE_MAP   = {'1013':'구매(CE)','1016':'개인구매','1020':'반품','1030':'문의','1050':'기타'};
-  const _PC_ACC_MAP    = {'20':'처방외','10':'처방전-원외','30':'처방전-원내'};
+  const _PC_ACC_MAP    = {'30':'처방전-원내','10':'처방전-원외','20':'처방외'};
   const _PC_STAT_MAP   = {'02':'등록','50':'재상담','95':'확정','99':'취소'};
   const _PC_STAT_COLOR = {'02':'var(--info)','50':'var(--warning)','95':'var(--success)','99':'var(--danger)'};
   const _PC_DIVER_MAP  = {'01':'1회 미만','02':'1~2회','03':'3~4회','04':'5회','05':'6회 이상','06':'N/A'};
