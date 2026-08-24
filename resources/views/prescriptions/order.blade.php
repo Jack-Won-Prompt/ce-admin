@@ -2426,7 +2426,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <option value="지출증빙" @selected(($prescription->patient?->deduction ?? '') == '지출증빙')>지출증빙</option>
                     <option value="자진발급" @selected(($prescription->patient?->deduction ?? '') == '자진발급')>자진발급</option>
                   </select>
-                  <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호" value="{{ $prescription->patient?->cash_receipt_no ?? '' }}" placeholder="010-XXX-XXXX" style="flex:1;min-width:0;" />
+                  {{-- data-phone 을 달면 치는 대로 하이픈이 붙는다(전역 처리).
+                       저장된 값도 화면을 열 때 같은 모양으로 맞춰 그린다. --}}
+                  <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호"
+                         value="{{ $prescription->patient?->cash_receipt_no ?? '' }}"
+                         placeholder="010-XXXX-XXXX" data-phone style="flex:1;min-width:0;" />
                 </div>
               </div>
               <div class="rx-field-row rx-row-start">
