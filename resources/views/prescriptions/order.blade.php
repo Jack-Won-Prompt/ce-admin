@@ -10165,15 +10165,22 @@ window.HELP_TOUR_STEPS = [
     ph.style.display = 'block';
     bar.classList.add('info-bar-pinned');           // 상시 고정
     function sync() {
-      /* 자리표시자는 고정된 정보바가 흐름에서 비운 자리를 그만큼 채워 준다.
-         즉 필요한 것은 「바의 높이」이지 「바 아래끝까지의 거리」가 아니다.
+      /* 자리표시자는 고정된 정보바가 흐름에서 비운 자리를 채운다. 채워야 할 만큼은
+         「바의 높이」가 아니라 「자리표시자가 시작하는 곳부터 바 아래끝까지」다.
 
-         예전에는 두 요소의 화면좌표에 스크롤값을 더해 거리를 셈했다. 그런데 정보바는
-         position:fixed 라 화면좌표가 곧 제자리다 — 거기에 스크롤값을 더하면 스크롤한
-         만큼 자리표시자가 늘어나, 내려 볼수록 정보바 아래 흰 공백이 벌어졌다.
-         레이아웃 높이는 스크롤과 무관하므로 그것만 쓴다. */
-      const mb = parseFloat(getComputedStyle(bar).marginBottom) || 0;
-      ph.style.height = Math.max(0, Math.round(bar.offsetHeight + mb)) + 'px';
+         둘은 대개 같다 — 바는 제자리에 그대로 고정되니까. 다만 탭(iframe) 안에서는
+         네비바가 없어 바가 화면 맨 위(top:0)로 올라간다. 그런데 자리표시자는 여전히
+         page-body 안쪽 여백만큼 내려온 자리에서 시작한다. 거기에 바의 높이를 통째로
+         비워 두니, 바가 덮지도 않는 자리까지 두 번 비워져 아래 내용이 78px 만큼
+         밀려 내려가 있었다.
+
+         바는 position:fixed 라 화면좌표가 곧 제자리다. 자리표시자 쪽만 스크롤을 더해
+         문서 좌표로 맞춰 견준다(자리표시자가 시작하는 곳은 제 높이와 무관하므로
+         높이를 비웠다 다시 재지 않아도 된다). */
+      const mb   = parseFloat(getComputedStyle(bar).marginBottom) || 0;
+      const need = bar.getBoundingClientRect().bottom
+                 - (ph.getBoundingClientRect().top + window.scrollY);
+      ph.style.height = Math.max(0, Math.round(need + mb)) + 'px';
     }
     sync();
     // 폰트/이미지 로드나 wrap 변화로 바의 높이가 바뀔 수 있어 다시 잰다
