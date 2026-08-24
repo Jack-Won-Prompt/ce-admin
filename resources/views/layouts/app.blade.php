@@ -1466,6 +1466,13 @@
           </a>
         </div>
         @endif
+        {{-- 청구처 정보 — 어디로 청구ㆍ발송하는지. 청구 관리 바로 아래에 둔다. --}}
+        <div class="menu-item {{ request()->routeIs('billing-offices*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('billing-offices.index') }}" data-title="청구처 정보">
+            @dsicon('coin-hand', 'ds-icon menu-icon')
+            <span>청구처 정보</span>
+          </a>
+        </div>
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">

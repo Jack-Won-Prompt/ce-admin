@@ -402,6 +402,18 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/settings/common-codes/{commonCode}', [\App\Http\Controllers\CommonCodeController::class, 'destroy'])->name('common-codes.destroy');
 
     // 메시지 관리 — 거래처를 골라 문자·알림톡을 보낸다
+    /* 청구처 정보 — 공단 지사ㆍ지자체 부서와 그 담당자, 관할 읍ㆍ면ㆍ동.
+       건을 처리하며 한 번 찾은 것을 쌓아 다음부터 쓴다. */
+    Route::prefix('billing-offices')->name('billing-offices.')->group(function () {
+        Route::get('/',                 [\App\Http\Controllers\BillingOfficeController::class, 'index'])->name('index');
+        Route::get('/list',             [\App\Http\Controllers\BillingOfficeController::class, 'list'])->name('list');
+        // 환자 주소의 읍ㆍ면ㆍ동으로 관할을 찾는다
+        Route::get('/lookup',           [\App\Http\Controllers\BillingOfficeController::class, 'lookup'])->name('lookup');
+        Route::post('/',                [\App\Http\Controllers\BillingOfficeController::class, 'store'])->name('store');
+        Route::put('/{billingOffice}',  [\App\Http\Controllers\BillingOfficeController::class, 'update'])->name('update');
+        Route::delete('/{billingOffice}', [\App\Http\Controllers\BillingOfficeController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('messages')->name('messages.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\MessageController::class, 'index'])->name('index');
         Route::post('/send', [\App\Http\Controllers\MessageController::class, 'send'])->name('send');
