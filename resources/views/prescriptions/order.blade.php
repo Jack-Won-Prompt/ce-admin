@@ -1871,7 +1871,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <img id="prescCanvas" src="{{ $prescription->image_url }}" style="max-width:100%;max-height:100%;object-fit:contain;cursor:grab;user-select:none;" alt="처방전 이미지" draggable="false" />
             <iframe id="pdfCanvas" src="" style="display:none;width:100%;height:100%;border:none;background:#fff;"></iframe>
           @else
-            <div class="img-placeholder">
+            {{-- 볼 것이 없을 때만 서 있는 자리표. 문서를 고르면 걷는다(switchViewerDoc). --}}
+            <div class="img-placeholder" id="viewerPlaceholder">
               <i class="fa-regular fa-file-image"></i>
               <p>이미지 없음</p>
             </div>
@@ -4067,6 +4068,19 @@ window.syncDocEmpty = function () {
   strip.style.display = has ? '' : 'none';
   const countEl = document.getElementById('docCount');
   if (countEl) countEl.textContent = strip.querySelectorAll('.doc-thumb').length;
+
+  /* 볼 것이 하나도 남지 않았으면 자리표를 다시 세우고 보던 것을 치운다 —
+     지운 그림이 화면에 그대로 남아 있으면 지워진 줄 모른다. */
+  if (!has) {
+    const holder = document.getElementById('viewerPlaceholder');
+    if (holder) holder.style.display = '';
+    const img = document.getElementById('prescCanvas');
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    const pdf = document.getElementById('pdfCanvas');
+    if (pdf) { pdf.src = ''; pdf.style.display = 'none'; }
+    const badge = document.getElementById('viewerBadge');
+    if (badge) badge.style.display = 'none';
+  }
 };
 syncDocEmpty();
 
@@ -4086,6 +4100,11 @@ function switchViewerDoc(el) {
   const pdfFrame = document.getElementById('pdfCanvas');
   const badge    = document.getElementById('viewerBadge');
   const openBtn  = document.getElementById('viewerOpenBtn');
+
+  /* 처방전 그림 없이 열린 건은 「이미지 없음」 자리표가 서 있다. 문서를 고르면 그림이
+     그 위에 얹혀 둘이 함께 보였다 — 볼 것이 생겼으니 자리표는 걷는다. */
+  const holder = document.getElementById('viewerPlaceholder');
+  if (holder) holder.style.display = 'none';
 
   if (doc.isPdf) {
     if (prescImg) { prescImg.style.display = 'none'; prescImg.src = ''; }
