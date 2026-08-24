@@ -9,7 +9,17 @@ return [
     'UseLocalTimeYN'    => env('POPBILL_USE_LOCAL_TIME_YN', true),
     'LINKHUB_COMM_MODE' => env('POPBILL_LINKHUB_COMM_MODE', 'CURL'),
 
-    'sms_simulate'      => env('POPBILL_SMS_SIMULATE', true),
+    /*
+     * 문자를 실제로 보내지 않고 로그만 남길지.
+     *
+     * 예전 기본값은 true 였다. 그래서 팝빌을 운영으로 돌린 뒤에도(POPBILL_IS_TEST=false)
+     * 세금계산서ㆍ현금영수증ㆍ팩스는 실제로 나가는데 문자만 조용히 시뮬레이션이었다 —
+     * 화면은 「발송되었습니다」라고 하는데 아무도 받지 못했다. 문자만 다르게 서 있을
+     * 이유가 없어 팝빌 시험 여부를 그대로 따르게 한다.
+     *
+     * 그래도 따로 끄고 켤 수 있게 열쇠는 남긴다(POPBILL_SMS_SIMULATE).
+     */
+    'sms_simulate'      => env('POPBILL_SMS_SIMULATE', env('POPBILL_IS_TEST', true)),
 
     'test' => [
         'corp_num'     => env('POPBILL_TEST_CORP_NUM'),
