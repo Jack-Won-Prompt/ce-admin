@@ -3188,6 +3188,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
+                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                  <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
                 <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
                   <i class="fa-solid fa-pen-to-square"></i> 주문 수정
                 </button>
@@ -3197,10 +3201,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </button>
               </div>
               @else
-              {{-- 주문 없음: 생성 버튼 --}}
-              <button class="btn btn-primary w-full" id="btnCreateOrder" onclick="createOrder(event)">
-                <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
-              </button>
+              {{-- 주문 없음: 저장 + 생성 버튼 --}}
+              <div style="display:flex;gap:8px;">
+                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                  <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
+                <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+                  <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
+                </button>
+              </div>
               @endif
             </div>
           </div>
@@ -3236,11 +3246,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div id="order-items-summary-tv" style="margin-bottom:10px;"></div>
             @if($prescription->order)
               <div style="display:flex;gap:8px;">
+                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                  <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
                 <button class="btn btn-primary flex-1" onclick="updateOrder(event)"><i class="fa-solid fa-pen-to-square"></i> 주문 수정</button>
                 <button class="btn btn-danger" onclick="confirmDeleteOrder(event)" style="flex-shrink:0;padding:0 18px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
               </div>
             @else
-              <button class="btn btn-primary w-full" onclick="createOrder(event)"><i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계</button>
+              <div style="display:flex;gap:8px;">
+                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                  <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
+                <button class="btn btn-primary flex-1" onclick="createOrder(event)"><i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계</button>
+              </div>
             @endif
           </div>
         </div>
@@ -3746,7 +3766,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
 @endpush
 
 @php
-$_itemsData = $prescription->items->map(fn($i) => [
+/* 표에 실을 줄. 처방 품목이 정본이지만, 주문만 만들고 처방 품목은 남기지 않던 건이
+   있다 — 그런 건을 열면 주문 제품도 주문 연계 요약도 텅 비어 보였다(주문에는 제품이
+   있는데도). 처방 품목이 비어 있으면 주문 품목을 그대로 싣는다. */
+$_itemSource = $prescription->items->isNotEmpty()
+    ? $prescription->items
+    : ($prescription->order?->items ?? collect());
+
+$_itemsData = $_itemSource->map(fn($i) => [
     'product_name'    => $i->product_name,
     'product_code'    => $i->product_code,
     'quantity'        => $i->quantity,
@@ -6388,8 +6415,10 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-acc-add-type')?.addEventListener('change', syncRxRequired);
   document.addEventListener('DOMContentLoaded', syncRxRequired);
 
-  async function saveOCR() {
-    if (_saving) return;        // 중복 요청 방지
+  /* opts.silent: 알림을 내지 않는다(다른 단추가 저장을 대신 부를 때).
+     되돌리는 값은 「저장이 됐는가」다 — 부른 쪽이 이어서 할지 멈출지 가린다. */
+  async function saveOCR(opts = {}) {
+    if (_saving) return false;        // 중복 요청 방지
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
 
@@ -6397,38 +6426,36 @@ window.HELP_TOUR_STEPS = [
        물으면 적을 수 없는 것을 적어야 저장이 되어, 없는 병원 이름이 들어간다. */
     if (!name) {
       showToast('이름은 필수 항목입니다.', 'warning');
-      return;
+      return false;
     }
     if (!isNonRxOrder() && !hosp) {
       showToast('이름, 병원명은 필수 항목입니다.', 'warning');
-      return;
+      return false;
     }
 
-    // DOM에서 items 최신 상태 수집
-    const itemsPayload = Array.from(document.querySelectorAll('.item-card')).map(card => {
-      const idx      = parseInt(card.dataset.idx);
-      const stored   = items[idx] || {};
-      const price    = parsePrice(card.querySelector('.item-price').value)    || null;
-      const insPrice = parsePrice(card.querySelector('.item-ins-price').value) || null;
-      const qty      = parseInt(card.querySelector('.item-qty').value)          || 1;
-      const nhisSel  = card.querySelector('.item-nhis')?.value || 'eligible';
-      const base     = (insPrice || price || 0);
-      const rate     = nhisSel === 'eligible' ? 0.9 : (nhisSel === 'partial' ? 0.5 : 0);
-      const nhisAmt  = Math.round(base * rate * qty);
-      const copay    = Math.round(base * qty) - nhisAmt;
-      return {
-        product_name:    card.querySelector('.item-name').value.trim() || null,
-        product_code:    card.querySelector('.item-code').value.trim() || null,
-        quantity:        qty,
-        product_price:   price    ? Math.round(price)    : null,
-        insurance_price: insPrice ? Math.round(insPrice) : null,
-        nhis_status:     nhisSel,
-        nhis_amount:     nhisAmt,
-        patient_copay:   copay,
-      };
-    }).filter(i => i.product_name);
+    /* 보낼 제품 줄은 items 에서 만든다 — 표에서 고친 값을 wwGrid 의 onChange 가
+       그때그때 items 로 되돌려 놓는다. 여기서는 카드 화면 시절의 DOM(.item-card)을
+       읽고 있었는데 그 카드는 표로 바뀌면서 사라졌다. 그래서 무엇을 적어 넣든 늘 빈
+       목록이 나갔고, 저장해도 제품이 한 줄도 남지 않았다. */
+    const _num = v => (v === '' || v === null || v === undefined) ? null : Math.round(Number(v));
+    const itemsPayload = items
+      .filter(i => (i.product_name || '').trim())
+      .map(i => {
+        const c = computeRow(i);
+        return {
+          product_name:    String(i.product_name).trim(),
+          product_code:    (i.product_code || '').trim() || null,
+          quantity:        Math.max(1, parseInt(i.quantity, 10) || 1),
+          product_price:   _num(i.product_price),
+          insurance_price: _num(i.insurance_price),
+          nhis_status:     i.nhis_status || 'eligible',
+          nhis_amount:     c.nhis_amount,
+          patient_copay:   c.patient_copay,
+        };
+      });
 
     _saving = true;
+    let _saved = false;
     const saveBtns = document.querySelectorAll('[onclick="saveOCR()"]');
     saveBtns.forEach(btn => BtnState.loading(btn, '저장 중...'));
 
@@ -6530,7 +6557,7 @@ window.HELP_TOUR_STEPS = [
           const hid = document.getElementById('f-patient-id');
           if (hid) hid.value = res.patient_id;
         }
-        showToast('저장되었습니다.', 'success');
+        if (!opts.silent) showToast('저장되었습니다.', 'success');
         saveBtns.forEach(btn => BtnState.success(btn, '저장 완료'));
         setTimeout(() => saveBtns.forEach(btn => BtnState.reset(btn)), 2500);
         if (res.items && res.items.length) {
@@ -6543,6 +6570,7 @@ window.HELP_TOUR_STEPS = [
           recalcAllItems();
         }
         syncRxRef();
+        _saved = true;
       } else {
         const msgs = res.errors ? Object.values(res.errors).flat() : [res.message || '저장 실패'];
         msgs.forEach(m => showToast(m, 'danger'));
@@ -6555,6 +6583,7 @@ window.HELP_TOUR_STEPS = [
     } finally {
       _saving = false;
     }
+    return _saved;
   }
 
   /* ── 되돌리기 ─────────────────────────────────────────
@@ -6762,7 +6791,20 @@ window.HELP_TOUR_STEPS = [
 
   // ── 주문 생성 및 Withworks 연계 ──────────────────────────
   async function createOrder(e) {
-    const btn = e.target;
+    /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
+       「저장 중…」 글자가 아이콘 자리에만 박힌다. */
+    const btn = e.target.closest('button') ?? e.target;
+    BtnState.loading(btn, '저장 중...');
+
+    /* 주문을 만들기 전에 화면을 먼저 갈무리한다.
+       주문에는 제품과 배송지가 함께 들어가는데, 처방 쪽에 그것을 적어 두지 않으면
+       이 건을 다시 열었을 때 주문 제품도 요약도 빈 채로 보인다 — 주문은 있는데
+       화면만 비어 있는 꼴이다. 저장이 안 되면 주문도 만들지 않는다. */
+    if (await saveOCR({ silent: true }) === false) {
+      BtnState.error(btn, '저장 실패');
+      setTimeout(() => BtnState.reset(btn), 2000);
+      return;
+    }
     BtnState.loading(btn, '주문 생성 중...');
 
     const validItems = items.filter(i => i.product_name);
@@ -6978,9 +7020,17 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 주문 수정 ─────────────────────────────────────────
-  async function updateOrder(e) {
-    if (!existingOrder) { showToast('주문 정보를 찾을 수 없습니다.', 'danger'); return; }
+  async function updateOrder(e, opts = {}) {
+    if (!existingOrder) { showToast('주문 정보를 찾을 수 없습니다.', 'danger'); return false; }
     const btn = e.target.closest('button');
+    BtnState.loading(btn, '저장 중...');
+
+    // 주문을 고치기 전에 화면을 먼저 갈무리한다(만들 때와 같은 까닭)
+    if (!opts.skipSave && await saveOCR({ silent: true }) === false) {
+      BtnState.error(btn, '저장 실패');
+      setTimeout(() => BtnState.reset(btn), 2000);
+      return false;
+    }
     BtnState.loading(btn, '수정 중...');
 
     const validItems = items.filter(i => i.product_name);
@@ -7013,7 +7063,7 @@ window.HELP_TOUR_STEPS = [
     if (!localRes.success) {
       BtnState.error(btn, '수정 실패');
       showToast(localRes.message || '주문 수정 실패', 'danger');
-      return;
+      return false;
     }
 
     // ② Withworks 수정
@@ -7051,12 +7101,42 @@ window.HELP_TOUR_STEPS = [
     updateWwSoDisplay(existingOrder.order_number, existingOrder.withworks_so_no, currentSoType);
 
     _orderDirty = false;
-    showToast(
-      wwSuccess
-        ? '✅ 주문이 수정되었습니다. (Withworks 동기화 완료)'
-        : (wwMessage ? `주문 수정 완료 (Withworks: ${wwMessage})` : '주문 수정 완료 (Withworks 연계 실패)'),
-      wwSuccess ? 'success' : 'warning'
-    );
+    if (!opts.silent) {
+      showToast(
+        wwSuccess
+          ? '✅ 주문이 수정되었습니다. (Withworks 동기화 완료)'
+          : (wwMessage ? `주문 수정 완료 (Withworks: ${wwMessage})` : '주문 수정 완료 (Withworks 연계 실패)'),
+        wwSuccess ? 'success' : 'warning'
+      );
+    }
+    return true;
+  }
+
+  /* ── 주문 연계 탭의 「저장」 ─────────────────────────────
+     주문을 만들거나 창고로 보내지 않고, 적어 둔 것만 갈무리한다.
+     제품 줄과 상세 값은 처방에 쓰고, 배송 정보와 금액은 주문이 이미 있을 때 그쪽에
+     함께 쓴다 — 주문이 없으면 배송 정보를 둘 자리가 없다(그 자리는 「주문 생성 및
+     연계」가 만든다). 그래서 주문이 없을 때는 무엇이 저장됐는지 말로 밝힌다. */
+  async function saveOrderTab(e) {
+    const btn = e.target.closest('button');
+    BtnState.loading(btn, '저장 중...');
+
+    if (await saveOCR({ silent: true }) === false) {
+      BtnState.error(btn, '저장 실패');
+      setTimeout(() => BtnState.reset(btn), 2000);
+      return;
+    }
+
+    if (orderExists && existingOrder) {
+      const ok = await updateOrder({ target: btn }, { silent: true, skipSave: true });
+      if (ok === false) return;                 // updateOrder 가 이미 알렸다
+      showToast('주문 제품과 주문 연계 내용을 저장했습니다.', 'success');
+    } else {
+      showToast('주문 제품을 저장했습니다. 배송 정보는 「주문 생성 및 연계」에서 함께 저장됩니다.', 'success');
+    }
+
+    BtnState.success(btn, '저장 완료');
+    setTimeout(() => BtnState.reset(btn), 2000);
   }
 
   // ── 주문 삭제 확인 ────────────────────────────────────
