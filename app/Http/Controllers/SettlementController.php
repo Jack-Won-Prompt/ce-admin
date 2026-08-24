@@ -10,6 +10,7 @@ use App\Services\TossPayments\TossApiException;
 use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -99,8 +100,11 @@ class SettlementController extends Controller
             match($request->va_status) {
                 'issued'    => $vaQuery->whereHas('tossPayment'),
                 'not_issued'=> $vaQuery->whereDoesntHave('tossPayment'),
-                'done'      => $vaQuery->whereHas('tossPayment', fn($q) => $q->where('status', 'DONE')),
-                'waiting'   => $vaQuery->whereHas('tossPayment', fn($q) => $q->where('status', 'WAITING_FOR_DEPOSIT')),
+                /* 사람이 확인한 건도 입금완료다 — 토스만 보면 통장으로 받은 건이 샌다 */
+                'done'      => $vaQuery->where(fn($q) => $q->whereNotNull('deposit_confirmed_at')
+                                    ->orWhereHas('tossPayment', fn($t) => $t->where('status', 'DONE'))),
+                'waiting'   => $vaQuery->whereNull('deposit_confirmed_at')
+                                    ->whereHas('tossPayment', fn($q) => $q->where('status', 'WAITING_FOR_DEPOSIT')),
                 default     => null,
             };
         }
@@ -108,12 +112,20 @@ class SettlementController extends Controller
         $vaStats = [
             'total'      => Order::whereIn('status', ['confirmed','shipping','delivered'])->where('patient_copay', '>', 0)->count(),
             'issued'     => TossPayment::count(),
-            'done'       => TossPayment::where('status', 'DONE')->count(),
-            'waiting'    => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')->count(),
+            /* 토스가 확인한 것 + 사람이 확인한 것(토스가 아직 모르는 것만 더한다) */
+            'done'       => TossPayment::where('status', 'DONE')->count()
+                            + Order::whereNotNull('deposit_confirmed_at')
+                                ->whereDoesntHave('tossPayment', fn($q) => $q->where('status', 'DONE'))
+                                ->count(),
+            'waiting'    => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')
+                                ->whereHas('order', fn($q) => $q->whereNull('deposit_confirmed_at'))
+                                ->count(),
             'not_issued' => Order::whereIn('status', ['confirmed','shipping','delivered'])
                                 ->where('patient_copay', '>', 0)
                                 ->whereDoesntHave('tossPayment')->count(),
-            'pending_amount' => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')->sum('amount'),
+            'pending_amount' => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')
+                                    ->whereHas('order', fn($q) => $q->whereNull('deposit_confirmed_at'))
+                                    ->sum('amount'),
         ];
 
         // ── wwGrid: 활성 탭 데이터/컬럼 (클라이언트사이드, 배지→텍스트, 금액→정수) ──
@@ -143,7 +155,10 @@ class SettlementController extends Controller
         $data = $orders->map(function ($order) use ($nhisMap) {
             $tp = $order->tossPayment;
 
+            /* 토스가 확인했든 담당자가 통장을 보고 확인했든 「들어왔다」는 하나다.
+               사람이 확인한 것을 따로 두면, 화면이 두 가지 진실을 말하게 된다. */
             $vaState = match (true) {
+                $order->deposit_confirmed_at !== null => '입금완료',
                 !$tp             => '미발급',
                 $tp->is_done     => '입금완료',
                 $tp->is_expired  => '만료',
@@ -166,7 +181,13 @@ class SettlementController extends Controller
                 'copay'        => (int) ($order->patient_copay ?? 0),
                 'shipping'     => (int) ($order->shipping_fee ?? 0),
                 'va_state'     => $vaState,
-                'deposit'      => $tp?->is_done ? number_format($tp->amount ?? 0) : '-',
+                'deposit'      => $order->deposit_confirmed_at !== null
+                                    ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
+                                    : ($tp?->is_done ? number_format($tp->amount ?? 0) : '-'),
+                /* 「입금 확인」 단추가 무엇을 할지 가리는 데 쓴다(컬럼 아님) */
+                'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
+                'deposit_hand' => $order->deposit_confirmed_at !== null,
+                'deposit_due'  => (int) ($order->patient_copay ?? 0) + (int) ($order->shipping_fee ?? 0),
                 'status'       => $sl['label'],
                 'nhis_claim'   => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
                 'created'      => $order->created_at?->format('Y-m-d') ?? '-',
@@ -209,7 +230,10 @@ class SettlementController extends Controller
         $data = $vaOrders->map(function ($order) {
             $tp = $order->tossPayment;
 
+            /* 담당자가 통장을 보고 세운 것도 「입금완료」다. 토스만 보면 가상계좌를
+               발급하지 않은 건이 영영 「미발급」으로 남는다. */
             $vaStatus = match (true) {
+                $order->deposit_confirmed_at !== null => '입금완료',
                 !$tp                                  => '미발급',
                 $tp->is_done                          => '입금완료',
                 $tp->is_expired                       => '만료',
@@ -229,7 +253,14 @@ class SettlementController extends Controller
                 'va_account' => $tp ? trim(($tp->bank_name ?? '') . ' ' . ($tp->account_number ?? '')) : '미발급',
                 'va_status'  => $vaStatus,
                 'due'        => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
-                'deposited'  => $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
+                'deposited'  => $order->deposit_confirmed_at?->format('Y-m-d H:i')
+                                ?? $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
+                /* 누가 세웠는지 — 사람이 세운 것은 그렇다고 적어 둔다 */
+                'deposit_by' => $order->deposit_confirmed_at ? '담당자 확인' : ($tp?->is_done ? '토스' : '-'),
+                /* 아래 셋은 컬럼이 아니다 — 「입금 확인」 단추가 무엇을 할지 가린다 */
+                'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
+                'deposit_hand' => $order->deposit_confirmed_at !== null,
+                'deposit_due'  => (int) ($order->patient_copay ?? 0) + (int) ($order->shipping_fee ?? 0),
             ];
         })->values();
 
@@ -243,6 +274,7 @@ class SettlementController extends Controller
             ['header' => '입금 상태',     'name' => 'va_status',  'width' => 100, 'align' => 'center', 'sortable' => true],
             ['header' => '만료일시',      'name' => 'due',        'width' => 140, 'align' => 'center'],
             ['header' => '입금확인일',    'name' => 'deposited',  'width' => 140, 'align' => 'center'],
+            ['header' => '확인',        'name' => 'deposit_by', 'width' => 90,  'align' => 'center'],
         ];
 
         return [$data, $columns];
@@ -471,6 +503,79 @@ class SettlementController extends Controller
     // ─────────────────────────────────────────────────────────────
     // 입금 상태 실시간 조회 (AJAX)
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * 담당자가 통장을 보고 입금을 확인한다.
+     *
+     * 토스가 알려 주지 못하는 건이 있다 — 가상계좌를 발급하지 않았거나, 토스 밖에서
+     * 계좌이체ㆍ현금으로 들어왔거나, 웹훅이 유실된 건. 그런 건을 영영 「대기중」으로
+     * 두지 않으려고 사람이 직접 세운다.
+     *
+     * 금액은 청구액(본인부담금 + 배송비)을 그대로 적는다. 다른 값을 보내면 그 값을
+     * 적되, 말없이 덮지 않고 기록에 남긴다.
+     */
+    public function confirmDeposit(Request $request, Order $order): JsonResponse
+    {
+        $request->validate([
+            'amount' => 'nullable|integer|min:0',
+            'note'   => 'nullable|string|max:200',
+        ]);
+
+        if ($order->tossPayment?->is_done) {
+            return response()->json(['success' => false, 'message' => '토스에서 이미 입금이 확인된 주문입니다.'], 422);
+        }
+        if ($order->deposit_confirmed_at) {
+            return response()->json(['success' => false, 'message' => '이미 입금 확인된 주문입니다.'], 422);
+        }
+
+        $due    = $order->expectedDeposit();
+        $amount = $request->filled('amount') ? (int) $request->input('amount') : $due;
+
+        $order->update([
+            'deposit_confirmed_at' => now(),
+            'deposit_confirmed_by' => Auth::id(),
+            'deposit_amount'       => $amount,
+            'deposit_note'         => $request->input('note'),
+        ]);
+
+        /* 돈이 걸린 상태 변경이다 — 누가ㆍ얼마를ㆍ무엇을 보고 확인했는지 남긴다.
+           청구액과 다르면 그 사실도 함께 적는다. */
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('입금 확인(담당자): ' . number_format($amount) . '원'
+                . ($amount !== $due ? ' — 청구액 ' . number_format($due) . '원과 다름' : '')
+                . ($request->filled('note') ? ' · ' . $request->input('note') : ''));
+
+        return response()->json([
+            'success'      => true,
+            'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
+            'amount'       => $amount,
+            'mismatch'     => $amount !== $due,
+            'message'      => $amount === $due
+                ? '입금 확인했습니다.'
+                : '입금 확인했습니다. 청구액(' . number_format($due) . '원)과 금액이 다릅니다.',
+        ]);
+    }
+
+    /** 잘못 세운 것을 되돌린다 — 되돌린 것도 기록에 남는다. */
+    public function revokeDeposit(Order $order): JsonResponse
+    {
+        if (!$order->deposit_confirmed_at) {
+            return response()->json(['success' => false, 'message' => '담당자가 확인한 입금이 아닙니다.'], 422);
+        }
+
+        $was = (int) ($order->deposit_amount ?? 0);
+        $order->update([
+            'deposit_confirmed_at' => null,
+            'deposit_confirmed_by' => null,
+            'deposit_amount'       => null,
+            'deposit_note'         => null,
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('입금 확인 취소(담당자): ' . number_format($was) . '원');
+
+        return response()->json(['success' => true, 'message' => '입금 확인을 취소했습니다.']);
+    }
 
     public function checkPaymentStatus(Order $order): JsonResponse
     {

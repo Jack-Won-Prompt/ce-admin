@@ -74,10 +74,35 @@ class Order extends Model
     public const SO_TYPES = ['1013', '1016', '1022', '1501', '1505', '1601', '1605',
                              '5001', '5004', '5005', '5006', '6001'];
 
+    /**
+     * 입금이 확인되었는가 — 토스가 확인했거나, 담당자가 통장을 보고 확인했거나.
+     *
+     * 화면은 이 둘을 가르지 않는다. 「돈이 들어왔는가」 하나만 묻기 때문이다.
+     * 다만 누가 확인했는지는 기록에 남는다(deposit_confirmed_by).
+     */
+    public function isDepositConfirmed(): bool
+    {
+        return $this->deposit_confirmed_at !== null || (bool) $this->tossPayment?->is_done;
+    }
+
+    /** 담당자가 손으로 확인한 건인가 — 토스가 아니라 사람이 본 것 */
+    public function isDepositConfirmedByHand(): bool
+    {
+        return $this->deposit_confirmed_at !== null;
+    }
+
+    /** 들어와야 하는 금액 — 본인부담금 + 배송비 */
+    public function expectedDeposit(): int
+    {
+        return (int) ($this->patient_copay ?? 0) + (int) ($this->shipping_fee ?? 0);
+    }
+
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',
         'product_name', 'product_code', 'quantity',
         'unit_price', 'nhis_amount', 'patient_copay',
+        // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
+        'deposit_confirmed_at', 'deposit_confirmed_by', 'deposit_amount', 'deposit_note',
         'shipping_fee', 'total_amount',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
@@ -103,6 +128,7 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'deposit_confirmed_at' => 'datetime',
         'estimated_delivery'        => 'date',
         'delivered_at'              => 'datetime',
         'nhis_submitted_at'         => 'datetime',

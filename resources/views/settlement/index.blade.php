@@ -293,8 +293,15 @@
         </button>
         @endperm
         <button type="button" class="ds-btn" onclick="vaCheckSelected(this)">
-          <i class="fa-solid fa-rotate"></i> 선택 입금확인
+          <i class="fa-solid fa-rotate"></i> 토스 조회
         </button>
+        {{-- 토스가 알려 주지 못하는 건은 사람이 세운다 — 가상계좌를 발급하지 않았거나,
+             토스 밖에서 들어왔거나, 웹훅이 유실된 건. --}}
+        @perm('settlement', 'send')
+        <button type="button" class="ds-btn" onclick="vaConfirmDeposit(this)">
+          <i class="fa-solid fa-circle-check"></i> 입금 확인
+        </button>
+        @endperm
         @perm('settlement', 'send')
         <button type="button" class="ds-btn" onclick="vaResendSelected(this)">
           <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
@@ -788,6 +795,57 @@
     btn.dataset.url = ORDERS_BASE + '/' + r.id + '/payment-status';    // settlement.check-status (GET)
     checkStatus(r.id, btn);
   };
+  /* 담당자가 통장을 보고 세우는 입금 확인.
+     이미 세워 둔 건이면 되돌린다 — 잘못 누른 것을 풀 길이 있어야 한다. */
+  window.vaConfirmDeposit = async function (btn) {
+    const r = oneChecked(); if (!r) return;
+
+    if (r.deposit_done && !r.deposit_hand) {
+      showToast('토스에서 이미 입금이 확인된 주문입니다.', 'warning');
+      return;
+    }
+
+    const base = ORDERS_BASE + '/' + r.id + '/confirm-deposit';
+    const due  = Number(r.deposit_due || 0);
+
+    if (r.deposit_hand) {
+      const ok = await ceConfirm(
+        `${r.order_no} 의 입금 확인을 취소합니다.
+다시 「입금 대기」로 돌아갑니다.`,
+        { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
+      if (!ok) return;
+      await vaDepositCall(btn, base, 'DELETE', null);
+      return;
+    }
+
+    const ok = await ceConfirm(
+      `${r.order_no} 의 입금을 확인합니다.
+청구액 ${due.toLocaleString()}원이 들어온 것으로 세웁니다.`,
+      { title: '입금 확인', confirmText: '확인함', tone: 'info' });
+    if (!ok) return;
+    await vaDepositCall(btn, base, 'POST', { amount: due });
+  };
+
+  async function vaDepositCall(btn, url, method, body) {
+    BtnState.loading(btn, '처리 중...');
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: body ? JSON.stringify(body) : null,
+      });
+      const d = await res.json();
+      BtnState.reset(btn);
+      if (!d.success) { showToast(d.message || '처리하지 못했습니다.', 'danger'); return; }
+      showToast(d.message, d.mismatch ? 'warning' : 'success');
+      setTimeout(() => location.reload(), 700);   // 목록ㆍ요약을 함께 다시 센다
+    } catch (e) {
+      BtnState.reset(btn);
+      showToast('오류가 발생했습니다.', 'danger');
+    }
+  }
+
   window.vaResendSelected = function (btn) {
     const r = oneChecked(); if (!r) return;
     btn.dataset.url = ORDERS_BASE + '/' + r.id + '/resend-va-sms';     // settlement.resend-va-sms (POST)

@@ -201,6 +201,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settlement/orders/{order}/detail',                  [SettlementController::class, 'orderDetail'])->name('settlement.order-detail');
     Route::post('/settlement/orders/{order}/virtual-account',        [SettlementController::class, 'issueVirtualAccount'])->name('settlement.issue-va');
     Route::get('/settlement/orders/{order}/payment-status',          [SettlementController::class, 'checkPaymentStatus'])->name('settlement.check-status');
+    /* 담당자가 통장을 보고 세우는 입금 확인 — 토스가 알려 주지 못하는 건을 위한 길 */
+    Route::post('/settlement/orders/{order}/confirm-deposit',        [SettlementController::class, 'confirmDeposit'])->name('settlement.confirm-deposit');
+    Route::delete('/settlement/orders/{order}/confirm-deposit',      [SettlementController::class, 'revokeDeposit'])->name('settlement.revoke-deposit');
 
     /* 결제 전송 — 만들어 보내고, 무엇을 보냈는지 보고, 잘못 보낸 것은 닫는다.
        환자가 여는 결제 페이지는 로그인 밖에 따로 둔다(아래 pay.*). */
