@@ -77,7 +77,7 @@ table.purchase-tbl td.center { text-align:center; }
   $hasRx          = in_array('prescription', $docs) && $rxImageDataUri;
   $hasPurchase    = in_array('purchase_history', $docs) && $order;
   $hasCashReceipt = in_array('cash_receipt', $docs) && $order?->cash_receipt_status === 'issued';
-  $hasTaxInvoice  = !empty($taxInvoiceDataUri ?? null);
+  $hasTaxInvoice  = !empty($taxInvoiceForm ?? null);
   $hasAttachments = !empty($attachmentDataUris);
 @endphp
 
@@ -365,12 +365,12 @@ table.purchase-tbl td.center { text-align:center; }
 </div>
 @endif
 
-{{-- ⑤ 세금계산서 — 발행된 장표를 이미지 한 장으로 싣는다(dompdf 는 외부 PDF 를 못 끼운다) --}}
+{{-- ⑤ 세금계산서 — 내려받는 PDF 와 같은 서식 조각을 그대로 끼운다.
+     예전에는 장표를 PNG 로 따로 그려 실었는데, 그 그림은 국세청 서식이 아니라
+     「라벨: 값」 목록이었다. 서식이 두 벌이면 팩스와 종이가 서로 다른 것을 보여 준다. --}}
 @if($hasTaxInvoice)
 <div @if($hasAttachments) class="page-break" @endif>
-  <div class="rx-img-wrap" style="margin-top:0;padding:0;">
-    <img src="{{ $taxInvoiceDataUri }}" alt="전자세금계산서">
-  </div>
+  @include('documents._tax_invoice_form', $taxInvoiceForm)
 </div>
 @endif
 

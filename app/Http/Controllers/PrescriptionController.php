@@ -2373,11 +2373,11 @@ class PrescriptionController extends Controller
             }
         }
 
-        /* 세금계산서는 장표 이미지로 한 장 싣는다 — dompdf 는 외부 PDF 를 못 끼운다. */
-        $taxInvoiceDataUri = null;
+        /* 세금계산서는 서식 조각을 그대로 한 장 끼운다(App\Support\TaxInvoiceForm).
+           내려받는 PDF 와 같은 조각이라 팩스와 종이가 같은 것을 보여 준다. */
+        $taxInvoiceForm = null;
         if (in_array('tax_invoice', $documents) && $prescription->order?->tax_invoice_status === 'issued') {
-            $imgPath = \App\Support\TaxInvoiceImage::ensure($prescription->order);
-            $taxInvoiceDataUri = 'data:image/png;base64,' . base64_encode(Storage::get($imgPath));
+            $taxInvoiceForm = \App\Support\TaxInvoiceForm::data($prescription->order);
         }
 
         $html = view('prescriptions.fax-pdf', [
@@ -2388,7 +2388,7 @@ class PrescriptionController extends Controller
             'docs'               => $documents,
             'rxImageDataUri'     => $rxImageDataUri,
             'attachmentDataUris' => $attachmentDataUris,
-            'taxInvoiceDataUri'  => $taxInvoiceDataUri,
+            'taxInvoiceForm'     => $taxInvoiceForm,
         ])->render();
 
         $dompdf = $this->makeFaxDompdf();
@@ -2558,10 +2558,15 @@ class PrescriptionController extends Controller
                     break;
 
                 case 'tax_invoice':
-                    // 발행된 건만. 장표 이미지가 아직 없으면(옛 건) 그 자리에서 그린다.
+                    // 발행된 건만. 서식 그대로 PDF 로 그려 붙인다 — 팝빌 팩스는 PDF 를 받는다.
                     $order = $prescription->order;
                     if ($order?->tax_invoice_status === 'issued') {
-                        $files[] = Storage::path(\App\Support\TaxInvoiceImage::ensure($order));
+                        if (!is_dir(storage_path('app/temp'))) {
+                            mkdir(storage_path('app/temp'), 0755, true);
+                        }
+                        $tmpPath = storage_path('app/temp/taxinvoice_' . $prescription->rx_number . '_' . time() . '.pdf');
+                        file_put_contents($tmpPath, \App\Support\TaxInvoiceForm::render($order));
+                        $files[] = $tmpPath;
                     }
                     break;
             }

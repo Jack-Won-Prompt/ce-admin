@@ -469,9 +469,6 @@ class OrderController extends Controller
                     'original_filename' => $pdfName,
                 ]);
 
-                /* 장표 이미지도 함께 남긴다. 공단 팩스 합본은 dompdf 로 만드는데
-                   외부 PDF 는 페이지로 못 끼우므로, 팩스에 실리는 것은 이 이미지다. */
-                \App\Support\TaxInvoiceImage::ensure($order);
             } catch (\Throwable $e) {
                 Log::warning('[TaxInvoice] PDF 서류 저장 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
             }
@@ -742,64 +739,18 @@ HTML;
     }
 
     // ── 세금계산서 PDF 바이트 생성 (헬퍼) ──────────────────
+    /**
+     * 발행된 전자세금계산서를 종이 서식대로 그린다.
+     *
+     * 예전에는 「발행 확인증」이라는 표 한 장이었다. 승인번호와 금액은 맞았지만 받는
+     * 쪽이 아는 종이가 아니었다 — 국세청 별지 제11호 서식(붉은 선이 박힌 그것)이어야
+     * 한다. 서식은 App\Support\TaxInvoiceForm 이 그린다.
+     */
     private function buildTaxInvoicePdf(Order $order): string
     {
         $this->ensureNanumGothicVariantsRegistered();
-        $supply   = number_format((int) $order->tax_invoice_supply);
-        $vat      = number_format((int) $order->tax_invoice_vat);
-        $total    = number_format((int) $order->tax_invoice_supply + (int) $order->tax_invoice_vat);
-        $issuedAt = $order->tax_invoice_issued_at?->format('Y-m-d') ?? now()->format('Y-m-d');
 
-        $html = <<<HTML
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<style>
-* { box-sizing:border-box; margin:0; padding:0; font-family:'NanumGothic',sans-serif; }
-body { font-size:13px; color:#111; padding:30px 36px; }
-.title { text-align:center; font-size:20px; font-weight:700; letter-spacing:4px; padding:12px 0 8px; border-bottom:2px solid #111; margin-bottom:8px; }
-.subtitle { text-align:center; font-size:11px; color:#555; margin-bottom:20px; }
-table { width:100%; border-collapse:collapse; }
-th { width:38%; padding:8px 4px; font-weight:700; color:#444; text-align:left; border-bottom:1px solid #ddd; }
-td { padding:8px 4px; border-bottom:1px solid #ddd; }
-.amount { font-size:16px; font-weight:700; }
-.footer { margin-top:24px; text-align:center; font-size:10px; color:#888; border-top:1px dashed #ccc; padding-top:10px; }
-</style>
-</head>
-<body>
-<div class="title">전자세금계산서</div>
-<div class="subtitle">발행 확인증</div>
-<table>
-  <tr><th>승인번호</th><td><b>{$order->tax_invoice_no}</b></td></tr>
-  <tr><th>공급받는자</th><td>{$order->tax_invoice_biz_name}</td></tr>
-  <tr><th>사업자등록번호</th><td>{$order->tax_invoice_biz_no}</td></tr>
-  <tr><th>대표자명</th><td>{$order->tax_invoice_ceo_name}</td></tr>
-  <tr><th>공급가액</th><td>&#8361;{$supply}</td></tr>
-  <tr><th>세액</th><td>&#8361;{$vat}</td></tr>
-  <tr><th>합계금액</th><td class="amount">&#8361;{$total}</td></tr>
-  <tr><th>발행일</th><td>{$issuedAt}</td></tr>
-  <tr><th>주문번호</th><td>{$order->order_number}</td></tr>
-</table>
-<div class="footer">본 세금계산서는 국세청 전자세금계산서 시스템을 통해 발행되었습니다.</div>
-</body>
-</html>
-HTML;
-        $options = new \Dompdf\Options();
-        $options->setFontDir(storage_path('fonts'));
-        $options->setFontCache(storage_path('fonts'));
-        $options->setChroot(realpath(base_path()));
-        $options->setIsHtml5ParserEnabled(true);
-        $options->setIsRemoteEnabled(false);
-        // 쓰인 글자만 심는다. 나눔고딕 원본이 4.5MB 라 통째로 심으면 산출물이 2.7MB 가 되고
-        // 만드는 동안 메모리가 128MB 를 넘겨 위임장 내려받기가 500 으로 떨어졌다.
-        $options->setIsFontSubsettingEnabled(true);
-        $options->setDefaultFont('NanumGothic');
-        $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A5', 'portrait');
-        $dompdf->render();
-        return $dompdf->output();
+        return \App\Support\TaxInvoiceForm::render($order);
     }
 
     // ── 현금영수증 PDF 다운로드 ───────────────────────────
