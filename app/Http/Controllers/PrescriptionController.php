@@ -169,6 +169,50 @@ class PrescriptionController extends Controller
     }
 
     // ── Withworks 판매주문 연계 ────────────────────────────
+    /**
+     * 위드웍스 화면으로 건너갈 주소를 받아 온다.
+     *
+     * 저쪽이 서명된 한 번짜리 로그인 주소를 만들어 준다(2분). 그 주소로 열면 연동
+     * 계정으로 로그인된 채 판매주문 화면이 이 번호로 열린다.
+     *
+     * 저쪽이 아직 그 길을 모르면(구버전) 그냥 판매주문 주소를 준다 — 위드웍스에
+     * 로그인해 둔 브라우저면 그대로 열리고, 아니면 로그인 화면이 먼저 뜬다.
+     */
+    public function withworksSoLink(Prescription $prescription): JsonResponse
+    {
+        $soNo = $prescription->order?->withworks_so_no;
+        if (!$soNo) {
+            return response()->json(['success' => false, 'message' => '아직 위드웍스에 연계되지 않은 주문입니다.'], 422);
+        }
+
+        $baseUrl = rtrim((string) config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
+        $plain   = $baseUrl . '/salesorder?so_no=' . urlencode($soNo);
+
+        if (!$baseUrl) {
+            return response()->json(['success' => false, 'message' => '위드웍스 주소가 설정되어 있지 않습니다.'], 500);
+        }
+
+        try {
+            $res = Http::withToken($token)->timeout(8)
+                ->get("{$baseUrl}/api/v1/ce-admin/sso_link", ['so_no' => $soNo]);
+
+            $url = $res->successful() && ($res->json('success') ?? false)
+                ? ($res->json('result.url') ?? null)
+                : null;
+
+            return response()->json([
+                'success'   => true,
+                'url'       => $url ?: $plain,
+                'auto_login'=> (bool) $url,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('위드웍스 로그인 링크 실패', ['so_no' => $soNo, 'error' => $e->getMessage()]);
+
+            return response()->json(['success' => true, 'url' => $plain, 'auto_login' => false]);
+        }
+    }
+
     public function createWithworksOrder(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([

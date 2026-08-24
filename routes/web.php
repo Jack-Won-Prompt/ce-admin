@@ -112,6 +112,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/fax-regenerate', [PrescriptionController::class, 'regenerateFax'])->name('faxRegenerate');
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
         Route::patch('/{prescription}/assign',       [PrescriptionController::class, 'assignUser'])->name('assign');
+        // 판매번호를 눌렀을 때 건너갈 주소 — 저쪽이 만들어 주는 한 번짜리 로그인 주소다
+        Route::get(   '/{prescription}/withworks-link',  [PrescriptionController::class, 'withworksSoLink'])->name('withworksSoLink');
         Route::post(  '/{prescription}/withworks-order', [PrescriptionController::class, 'createWithworksOrder'])->name('withworksOrder');
         Route::put(   '/{prescription}/withworks-order', [PrescriptionController::class, 'updateWithworksOrder'])->name('withworksOrderUpdate');
         Route::delete('/{prescription}/withworks-order', [PrescriptionController::class, 'deleteWithworksOrder'])->name('withworksOrderDelete');

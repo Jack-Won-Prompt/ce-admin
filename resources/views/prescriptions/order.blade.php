@@ -7225,21 +7225,40 @@ window.HELP_TOUR_STEPS = [
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
   /* ── 위드웍스 판매주문 열기 ─────────────────────────────
-     판매번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다(?so_no=).
-     저쪽 화면이 그 번호를 받아 기간ㆍ상태 거르개를 풀고 바로 찾아 준다.
-     창은 하나만 쓴다 — 이름을 정해 두어, 여러 건을 오가도 탭이 쌓이지 않는다. */
-  const WW_WEB_URL = @json(rtrim((string) (\App\Models\WithworksSetting::current()->apiUrl() ?? ''), '/'));
+     판매번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다.
+
+     주소는 서버에 물어 받는다 — 위드웍스가 서명된 한 번짜리 로그인 주소를 만들어
+     주므로, 그 주소로 열면 연동 계정으로 로그인된 채 화면이 뜬다(다시 로그인하지
+     않는다). 저쪽이 그 길을 아직 모르면 그냥 판매주문 주소가 온다.
+
+     창은 먼저 비워 둔 채로 연다. 주소를 받아 온 뒤에 열면 「사용자가 누른 그 순간」이
+     아니라서 브라우저가 팝업으로 보고 막는다.
+     이름을 하나로 두어 여러 건을 오가도 탭이 쌓이지 않는다. */
+  const WW_SO_LINK_URL = @json(route('prescriptions.withworksSoLink', $prescription));
 
   function openWwSo(e) {
     if (e) e.stopPropagation();
-    const soNo = existingOrder?.withworks_so_no;
-    if (!soNo) return;                       // 아직 연계 전이면 갈 곳이 없다
+    if (!existingOrder?.withworks_so_no) return;   // 아직 연계 전이면 갈 곳이 없다
 
-    if (!WW_WEB_URL) {
-      showToast('위드웍스 주소가 설정되어 있지 않습니다. 환경 설정에서 연동 주소를 넣어 주십시오.', 'warning');
-      return;
+    const win = window.open('', 'withworks_so');
+    if (win) {
+      win.document.write('<p style="font-family:sans-serif;font-size:13px;padding:24px;color:#555;">위드웍스로 넘어가는 중…</p>');
     }
-    window.open(`${WW_WEB_URL}/salesorder?so_no=${encodeURIComponent(soNo)}`, 'withworks_so');
+
+    apiRequest(WW_SO_LINK_URL, 'GET')
+      .then(res => {
+        if (!res.success || !res.url) {
+          if (win) win.close();
+          showToast(res.message || '위드웍스 주소를 받지 못했습니다.', 'warning');
+          return;
+        }
+        if (win) win.location.href = res.url;
+        else window.open(res.url, 'withworks_so');   // 창을 못 열었으면 그때 연다
+      })
+      .catch(() => {
+        if (win) win.close();
+        showToast('위드웍스로 넘어가지 못했습니다.', 'danger');
+      });
   }
 
   function closeAllPopovers() {
