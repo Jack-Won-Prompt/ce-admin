@@ -453,7 +453,9 @@
               border-radius:999px; padding:2px 8px; background:#fff; white-space:nowrap; }
   .bs-chip b { color:var(--text); font-weight:600; }
   /* 정하는 칸 — 결과 바로 위에 한 줄로. 좁아지면 접힌다 */
-  .bs-pick  { display:flex; gap:8px; flex-wrap:wrap; padding-bottom:8px; margin-bottom:2px;
+  .bs-pick  { display:flex; gap:8px; flex-wrap:wrap; }
+  /* 결과가 붙을 때만 가르는 줄이 생긴다 — 고르기 전에는 상자가 한 줄로 끝난다 */
+  .bs-pick:has(+ #bsResult:not([style*="none"])) { padding-bottom:8px; margin-bottom:2px;
               border-bottom:1px solid var(--border); }
   .bs-f     { display:flex; flex-direction:column; gap:3px; flex:1 1 110px; min-width:0; }
   .bs-f-wide{ flex:2 1 200px; }
@@ -3059,11 +3061,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </label>
               </div>
 
-              <div class="bs-head"><span id="bsLabel">-</span><span class="bs-flag" id="bsFlag"></span></div>
-              <div class="bs-split" id="bsSplit">-</div>
-              <div class="bs-chips">
-                <span class="bs-chip">현금영수증 <b id="bsCash">-</b></span>
-                <span class="bs-chip">세금계산서 <b id="bsTax">-</b></span>
+              {{-- 아직 고르지 않았으면 이 아래는 통째로 감춘다. 고르는 칸이 바로 위에
+                   있으니 「고르면 정해집니다」라고 적어 둘 이유가 없다. --}}
+              <div id="bsResult" style="display:none;flex-direction:column;gap:6px;">
+                <div class="bs-head"><span id="bsLabel"></span><span class="bs-flag" id="bsFlag"></span></div>
+                <div class="bs-split" id="bsSplit"></div>
+                <div class="bs-chips">
+                  <span class="bs-chip">현금영수증 <b id="bsCash">-</b></span>
+                  <span class="bs-chip">세금계산서 <b id="bsTax">-</b></span>
+                </div>
               </div>
             </div>
 
@@ -5255,16 +5261,15 @@ window.HELP_TOUR_STEPS = [
 
     const pct = (v) => (v === null || v === undefined) ? '확인중' : v + '%';
 
+    const result = document.getElementById('bsResult');
+
     if (!r) {
       box.classList.remove('pending');
-      document.getElementById('bsLabel').textContent = '유형ㆍ자격을 고르면 청구전략이 정해집니다';
-      document.getElementById('bsFlag').textContent  = '';
-      document.getElementById('bsSplit').textContent = '-';
-      document.getElementById('bsCash').textContent  = '-';
-      document.getElementById('bsTax').textContent   = '-';
+      result.style.display = 'none';
       return;
     }
 
+    result.style.display = 'flex';
     box.classList.toggle('pending', !!r.pending);
     document.getElementById('bsLabel').textContent = r.label;
     document.getElementById('bsFlag').textContent  = r.note;
