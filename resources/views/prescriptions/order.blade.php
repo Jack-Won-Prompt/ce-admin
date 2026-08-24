@@ -1916,7 +1916,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
-      <div class="vw-card" id="docStripWrap" @if(!$prescription->image_url && $prescription->attachments->isEmpty()) style="display:none;" @endif>
+      {{-- 문서가 하나도 없어도 이 카드는 둔다. 신규로 시작한 건은 여기서 처방전ㆍ신분증을
+           올리게 되는데, 올릴 것이 없다고 올리는 자리까지 감춰 두면 길이 없다. --}}
+      <div class="vw-card" id="docStripWrap">
         {{-- 카드 머리 — 제목·개수와 유형 선택·첨부 추가 (시안 137:793) --}}
         <div class="vw-card-head">
           <span class="vw-card-title">문서 <b id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</b></span>
@@ -1943,6 +1945,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </button>
             <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
           </div>
+        </div>
+        {{-- 아무것도 없을 때 — 「첨부문서 추가」를 누르라고 한 줄 적어 둔다.
+             빈 칸만 있으면 여기가 무엇을 하는 자리인지 알 수 없다. --}}
+        <div id="docEmpty" style="display:none;padding:14px 12px;font-size:12px;color:var(--text-muted);">
+          올린 문서가 없습니다. 유형을 고르고 「첨부문서 추가」를 누르십시오.
         </div>
         <div class="attach-strip" id="docStrip">
           {{-- 처방전 (삭제 불가) --}}
@@ -4035,6 +4042,21 @@ function bvFit() {
   }, { passive: false });
 })();
 
+/** 문서가 하나도 없으면 안내 한 줄을, 있으면 그림들을 보인다.
+    올리고 지우는 자리가 이 조각 밖에 있어 전역으로 내어 둔다. */
+window.syncDocEmpty = function () {
+  const strip = document.getElementById('docStrip');
+  const empty = document.getElementById('docEmpty');
+  if (!strip || !empty) return;
+  const has = strip.querySelectorAll('.doc-thumb').length > 0;
+  empty.style.display = has ? 'none' : 'block';
+  strip.style.display = has ? '' : 'none';
+  const countEl = document.getElementById('docCount');
+  if (countEl) countEl.textContent = strip.querySelectorAll('.doc-thumb').length;
+};
+syncDocEmpty();
+
+
 function switchViewerDoc(el) {
   const thumbs = Array.from(document.querySelectorAll('#docStrip .doc-thumb'));
   const idx = thumbs.indexOf(el);
@@ -4111,7 +4133,8 @@ function deleteAttachment(e, id, btn) {
           thumb.remove();
           const strip = document.getElementById('docStrip');
           const wrap  = document.getElementById('docStripWrap');
-          if (strip && wrap && !strip.querySelectorAll('.doc-thumb').length) wrap.style.display = 'none';
+          // 비어도 카드는 그대로 둔다 — 다시 올릴 자리가 있어야 한다
+          syncDocEmpty();
           const countEl = document.getElementById('docCount');
           if (countEl) countEl.textContent = ALL_DOCS.length;
           if (currentDocIdx >= ALL_DOCS.length) {
@@ -4180,8 +4203,7 @@ function handleAttachUpload(input) {
       <button class="attach-del-btn" onclick="deleteAttachment(event,${att.id},this)" title="삭제"><i class="fa-solid fa-xmark"></i></button>`;
     strip.appendChild(thumbEl);
     if (wrap) wrap.style.display = '';
-    const countEl = document.getElementById('docCount');
-    if (countEl) countEl.textContent = ALL_DOCS.length;
+    syncDocEmpty();
     switchViewerDoc(thumbEl);
     showToast('첨부 문서가 추가되었습니다.', 'success');
   }).catch(() => showToast('업로드 실패', 'danger'));
