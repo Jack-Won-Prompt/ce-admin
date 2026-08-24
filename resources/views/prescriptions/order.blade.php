@@ -2547,9 +2547,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      공단 목록의 상병명을 그대로 적는 자리다(청구 보조 화면의 안내와도 같다).
                      자주 쓰는 이름은 환경 설정 → 공통 코드의 「상병 구분」에 담아 두면
                      아래 목록에서 골라 넣을 수 있다 — 담아 둔 것이 없으면 그냥 적는다. --}}
-                <span class="rx-field-label">상병 구분</span>
-                <input type="text" class="form-control" id="f-disease-class" list="diseaseClassList"
-                       value="{{ $prescription->disease_class ?? '' }}" maxlength="100"
+                <span class="rx-field-label">상병 명</span>
+                {{-- 상병명을 적는 자리는 하나다. 상병코드 줄에 같은 것을 받는 칸이 하나 더
+                     있어 어느 쪽이 맞는지 알 수 없었다 — 그쪽을 걷고 이 줄로 모았다.
+                     담기는 칸은 disease_name 이다. 위임장ㆍ공단 발송ㆍ청구 보조ㆍ정산이
+                     모두 그 칸을 읽으므로, 적는 자리를 옮긴다고 그것까지 옮길 수는 없다. --}}
+                <input type="text" class="form-control" id="f-disease" list="diseaseClassList"
+                       value="{{ $prescription->disease_name ?? '' }}" maxlength="200"
                        placeholder="예: 신경인성 방광" style="flex:1;" />
                 <datalist id="diseaseClassList">
                   @foreach(\App\Models\CommonCode::options('disease_class') as $dc)
@@ -2562,10 +2566,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    개발이 넣은 두 칸을 그대로 둔다. 두 칸 사이는 8 로 통일했다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">상병코드</span>
-                <div style="display:flex;gap:8px;flex:1;min-width:0;">
-                  <input type="text" class="form-control" id="f-disease" value="{{ $prescription->disease_name }}" placeholder="상병명" style="flex:2;min-width:0;" />
-                  <input type="text" class="form-control" id="f-disease-code" value="{{ $prescription->disease_code ?? $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:3;min-width:0;" />
-                </div>
+                <input type="text" class="form-control" id="f-disease-code"
+                       value="{{ $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:1;min-width:0;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">요류역학검사일</span>
@@ -2732,18 +2734,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">주문 담당자</span>
-                <input type="text" class="form-control" id="f-order-manager" value="{{ ($prescription->order_manager ?? null) ?: auth()->user()->name }}" placeholder="담당자" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">환급 해당 기관</span>
-                <select class="form-control" id="f-special-case" style="flex:1;">
+                {{-- 적어 두는 값은 이름이다. 손으로 치던 칸이라 사람마다 「김선미」ㆍ「선미」로
+                     갈렸다 — 고르는 칸으로 바꿔 한 가지로 모은다.
+                     처음 여는 건은 지금 이 화면을 보고 있는 사람으로 선다. --}}
+                @php
+                  $omCur  = ($prescription->order_manager ?? null) ?: auth()->user()->name;
+                  $omList = collect($orderManagers ?? []);
+                  // 목록에 없는 이름이 적혀 있으면(그만둔 사람 등) 그 이름도 함께 둔다
+                  if ($omCur && !$omList->contains($omCur)) { $omList = $omList->prepend($omCur); }
+                @endphp
+                <select class="form-control" id="f-order-manager" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="입원" @selected(($prescription->special_case ?? '') == '입원')>입원</option>
-                  <option value="산재" @selected(($prescription->special_case ?? '') == '산재')>산재</option>
-                  <option value="보훈" @selected(($prescription->special_case ?? '') == '보훈')>보훈</option>
-                  <option value="출국" @selected(($prescription->special_case ?? '') == '출국')>출국</option>
+                  @foreach($omList as $om)
+                    <option value="{{ $om }}" @selected($omCur === $om)>{{ $om }}</option>
+                  @endforeach
                 </select>
               </div>
+              {{-- 「환급 해당 기관」 칸은 두지 않는다(요청). 값(special_case)은 지우지
+                   않았다 — 저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">결제일</span>
                 <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}" style="flex:1;" />
@@ -2875,7 +2883,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>상병코드</th><td data-from="f-disease-code">{{ $prescription->disease_code ?? $prescription->disease_code ?? '-' }}</td>
             </tr>
             <tr>
-              <th>상병구분</th><td data-from="f-disease-class">-</td>
+              <th>상병명</th><td data-from="f-disease">-</td>
               <th>SB/SCI</th><td data-from="f-sb-sci">-</td>
             </tr>
             <tr>
@@ -4829,6 +4837,25 @@ window.HELP_TOUR_STEPS = [
     ocShow(row);
   };
 
+  /* 기존에 없는 사람이면 이 건은 그 사람의 첫 구매다 — 신구매를 미리 세운다.
+     「조회」로 고른 사람이 있으면(f-patient-id) 기존 사람이니 손대지 않는다. 이름만
+     쳤을 때는 이 화면이 들고 있는 거래처 목록에서 찾아보고, 없으면 새 사람으로 본다.
+     이미 골라 둔 값은 덮지 않는다 — 담당자가 재구매로 바꿔 두었으면 그대로 둔다. */
+  function syncPurchaseTypeForNewPatient() {
+    const sel = document.getElementById('f-purchase-type');
+    if (!sel || sel.value) return;
+
+    if (document.getElementById('f-patient-id')?.value) return;
+
+    const name = (document.getElementById('f-name')?.value ?? '').trim();
+    if (!name) return;
+
+    // (E) 는 사업부 표시라 이름을 견줄 때는 떼고 본다
+    const bare = (v) => String(v ?? '').replace(/^\s*\(E\)\s*/, '').trim();
+    const known = (PK_PATIENTS ?? []).some(p => bare(p.name) === bare(name));
+    if (!known) sel.value = '신구매';
+  }
+
   const PATIENT_CASES_URL = @json(route('prescriptions.patientCases', ['patient' => '__ID__']));
 
   /* ── 건 고르기(둘째 걸음) ─────────────────────────────────────
@@ -5011,7 +5038,9 @@ window.HELP_TOUR_STEPS = [
     if (this.dataset.pkFilling === '1') return;
     const hid = document.getElementById('f-patient-id');
     if (hid) hid.value = '';
+    syncPurchaseTypeForNewPatient();
   });
+  document.addEventListener('DOMContentLoaded', syncPurchaseTypeForNewPatient);
 
   document.addEventListener('click', (e) => {
     const pop = document.getElementById('pkModal');
@@ -6366,7 +6395,6 @@ window.HELP_TOUR_STEPS = [
       // ── 처방 수량·상병 ─────────────────────────────────────
       disease_name:     strOrNull('f-disease'),
       disease_code:     strOrNull('f-disease-code'),
-      disease_class:    strOrNull('f-disease-class'),
       sb_sci:           strOrNull('f-sb-sci'),
       uro_date:         strOrNull('f-uro-date'),
       daily_count:      intOrNull('f-daily'),
@@ -6392,7 +6420,6 @@ window.HELP_TOUR_STEPS = [
       cash_receipt_no:  strOrNull('f-cash-receipt'),
       order_manager:    strOrNull('f-order-manager'),
       next_repurchase:  strOrNull('f-next-repurchase'),
-      special_case:     strOrNull('f-special-case'),
       // ── 추가 정보 ──────────────────────────────────────────
       new_patient_date: strOrNull('f-new-patient-date'),
       five_110days:     strOrNull('f-five'),

@@ -1229,11 +1229,17 @@ class PrescriptionController extends Controller
         // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
         $patientsJson = self::patientPickerList();
 
+        /* 주문 담당자로 고를 수 있는 사람 — 지금 쓰고 있는 CE 담당자 전부(관리자 포함).
+           이름을 그대로 담는 칸이라 이름만 넘긴다. */
+        $orderManagers = \App\Models\User::where('is_active', true)
+            ->orderBy('name')->pluck('name')->unique()->values()->all();
+
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
-            'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson'
+            'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
+            'orderManagers'
         ));
     }
 
@@ -2591,6 +2597,13 @@ HTML;
             }
 
             $patient = Patient::create($attrs);
+
+            /* 기존에 없던 사람이니 이 건은 그 사람의 첫 구매다. 화면이 미리 세워 두지만,
+               다른 길(모바일ㆍ자동 등록)로 들어온 건에도 같게 적어 둔다.
+               담당자가 골라 둔 값이 있으면 손대지 않는다. */
+            if (empty($prescription->purchase_type)) {
+                $prescription->update(['purchase_type' => '신구매']);
+            }
 
             activity()
                 ->causedBy(Auth::user())
