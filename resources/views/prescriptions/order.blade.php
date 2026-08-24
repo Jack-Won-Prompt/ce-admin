@@ -7107,6 +7107,7 @@ window.HELP_TOUR_STEPS = [
     closeAllPopovers();
     pop.style.display = isOpen ? 'none' : 'block';
     if (!isOpen) {
+      syncNameForMessages();
       const mobile = document.getElementById('f-mobile')?.value ?? '';
       document.getElementById('kakaoMobile').value = mobile;
     }
@@ -7213,6 +7214,14 @@ window.HELP_TOUR_STEPS = [
   };
 
 
+  /* 문구에 들어가는 「고객명」은 서버가 그려 준 값이었다. 아직 저장하지 않은 새 사람은
+     그 값이 비어 「고객」으로 나갔다 — 화면에 이름이 적혀 있으면 그것을 쓴다.
+     문자ㆍ알림톡을 여는 자리마다 부른다(문구는 열 때 만들어진다). */
+  function syncNameForMessages() {
+    const typed = (document.getElementById('f-name')?.value ?? '').trim().replace(/^\s*\(E\)\s*/, '');
+    if (typed) SMS_PLACEHOLDERS['#{고객명}'] = typed;
+  }
+
   function toggleSmsPopover(e) {
     e.stopPropagation();
     const pop    = document.getElementById('smsPopover');
@@ -7220,6 +7229,7 @@ window.HELP_TOUR_STEPS = [
     closeAllPopovers();
     pop.style.display = isOpen ? 'none' : 'block';
     if (!isOpen) {
+      syncNameForMessages();
       const mobile = document.getElementById('f-mobile')?.value ?? '';
       document.getElementById('smsMobile').value = mobile;
     }
@@ -8512,6 +8522,18 @@ window.HELP_TOUR_STEPS = [
       const src = fMobileEl?.value?.trim() || mobileEl.value;
       mobileEl.value = formatPhone(src);
     }
+
+    /* 이름도 화면에 적혀 있는 것을 가져온다. 전화번호는 가져오면서 이름은 서버가 그려
+       준 값만 쓰고 있어, 아직 저장하지 않은 새 사람은 이름 칸이 빈 채로 열렸다.
+       화면의 이름이 비어 있을 때만 이 칸에 적힌 것을 지킨다. */
+    const nameEl  = document.getElementById('consentPatientName');
+    const fNameEl = document.getElementById('f-name');
+    if (nameEl) {
+      // (E) 는 사업부 표시라 문자에 실을 이름에서는 뗀다
+      const typed = (fNameEl?.value ?? '').trim().replace(/^\s*\(E\)\s*/, '');
+      if (typed) nameEl.value = typed;
+    }
+
     updateConsentPreview();
 
     closeAllPopovers();
