@@ -412,7 +412,7 @@ window.HELP_TOUR_STEPS = [
         <i class="bx bx-file-medical" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 처방전 현황</span>
         <span class="rx-count">{{ count($recentRxGrid ?? []) }}</span>
-        <span class="dash-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 처방전 상세로 이동합니다.</span>
+        <span class="dash-hint"><i class="bx bx-info-circle"></i> 행을 <b>더블클릭</b>하면 주문 등록 화면이 탭으로 열립니다.</span>
         {{-- 목록은 화면 탭으로 열어 대시보드를 남긴다(오늘 틀) --}}
         <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm ms-auto"
            data-ce-tab="처방전 목록" data-ce-icon="bx-file">

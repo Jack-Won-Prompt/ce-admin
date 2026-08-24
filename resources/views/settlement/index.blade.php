@@ -220,7 +220,7 @@
         {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
         <button type="button" class="ds-btn" onclick="window.__settlementGrid?.downloadExcel()">엑셀 저장</button>
         <button type="button" class="ds-btn" onclick="settlementViewRx()">
-          <i class="fa-solid fa-file-medical"></i> 처방 상세(선택)
+          <i class="fa-solid fa-file-medical"></i> 주문 보기
         </button>
       </div>
     </form>
@@ -391,6 +391,17 @@
     if (e.target.id === 'orderModal') closeModal('orderModal');
   });
 
+  /* 팝업 안의 「주문 보기」도 탭으로 연다 — 새 브라우저 창으로 튀지 않는다. */
+  window.settlementOpenRxTab = function (ev, el, rxNo) {
+    ev.preventDefault();
+    const url = el.getAttribute('href');
+    if (!url) return false;
+    closeModal('rxModal');
+    if (typeof window.ceOpenTab === 'function') window.ceOpenTab(url, '주문 - ' + (rxNo || ''), 'file-edit-02');
+    else window.open(url, '_blank', 'noopener');
+    return false;
+  };
+
   // ── 처방전 상세 팝업 ────────────────────────────────────────
   document.querySelectorAll('.rx-popup-link').forEach(el => {
     el.addEventListener('click', () => openRxModal(el.dataset.url));
@@ -486,7 +497,8 @@
 
       const footer = document.getElementById('rxModalFooter');
       footer.innerHTML = `
-        <a href="./prescriptions/${d.id}" target="_blank" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> 처방전 상세 페이지</a>
+        <a href="${BASE_URL}/prescriptions/${d.rx_number ?? d.id}" class="btn btn-outline btn-sm"
+           onclick="return settlementOpenRxTab(event, this, '${d.rx_number ?? ''}')"><i class="fa-solid fa-arrow-up-right-from-square"></i> 주문 보기</a>
         <button onclick="closeModal('rxModal')" class="btn btn-primary btn-sm">닫기</button>
       `;
     } catch(e) {
@@ -746,10 +758,17 @@
   }
 
   // ── 정산 탭: 상세 팝업(로직 보존 — openRxModal/openOrderModal 재사용) ──
+  /* 골라 둔 줄의 주문 등록 화면을 탭으로 연다.
+     예전에는 팝업으로 요약만 보여 주었다 — 거기서 고칠 수 있는 것이 없어, 결국
+     다시 주문 화면을 찾아 열어야 했다. 처음부터 그 화면으로 보낸다. */
   window.settlementViewRx = function () {
     const r = oneChecked(); if (!r) return;
-    if (!r.rx_url) { showToast('처방전이 없는 주문입니다.', 'warning'); return; }
-    openRxModal(r.rx_url);
+    if (!r.rx_open_url) { showToast('처방전이 없는 주문입니다.', 'warning'); return; }
+    if (typeof window.ceOpenTab === 'function') {
+      window.ceOpenTab(r.rx_open_url, '주문 - ' + (r.rx_number || r.order_no || ''), 'file-edit-02');
+    } else {
+      window.open(r.rx_open_url, '_blank', 'noopener');
+    }
   };
   window.settlementViewOrder = function () {
     const r = oneChecked(); if (!r) return;

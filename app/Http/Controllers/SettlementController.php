@@ -172,6 +172,9 @@ class SettlementController extends Controller
                 'created'      => $order->created_at?->format('Y-m-d') ?? '-',
                 // 상세 팝오버 URL (컬럼 아님 — 외부 버튼에서 사용)
                 'rx_url'       => $order->prescription ? route('settlement.prescription-detail', $order->prescription) : null,
+                /* 「주문 보기」가 여는 자리 — 팝업이 아니라 주문 등록 화면을 탭으로 연다 */
+                'rx_open_url'  => $order->prescription ? route('prescriptions.show', $order->prescription) : null,
+                'rx_number'    => $order->prescription?->rx_number,
                 'order_url'    => $order->product_name ? route('settlement.order-detail', $order) : null,
             ];
         })->values();

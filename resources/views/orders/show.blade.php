@@ -424,7 +424,7 @@
             <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
                style="margin-left:auto;" data-rx="{{ $order->prescription->rx_number }}"
                onclick="return orderOpenRxTab(event, this)">
-              <i class="bx bx-file-medical"></i> 처방전 보기
+              <i class="bx bx-file-medical"></i> 주문 보기
             </a>
           @endif
         </div>
@@ -1049,7 +1049,7 @@
     @if($order->prescription)
       <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
          data-rx="{{ $order->prescription->rx_number }}" onclick="return orderOpenRxTab(event, this)">
-        <i class="bx bx-file"></i> 처방전
+        <i class="bx bx-file"></i> 주문 보기
       </a>
     @endif
   </div>
