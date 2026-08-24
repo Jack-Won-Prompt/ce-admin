@@ -2090,6 +2090,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   title="이름으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
                   title="주문 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
+          {{-- 같은 사람이 같은 것을 다시 사는 일이 잦다. 보고 있는 건을 그대로 베껴
+               새 번호로 세운다 — 날짜만 비운다(그 건에만 속한 사실이라). --}}
+          <button type="button" id="btnDuplicate" class="tb-act" onclick="duplicateRx()"
+                  title="보고 있는 건을 그대로 베껴 새 번호로 만듭니다 (날짜는 비웁니다)">최종 신규 복제</button>
           {{-- 되돌리기·검수 요청·검수 완료·저장은 시안(148:2639)대로 구획 머리(지금은 탭줄)에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
@@ -6650,6 +6654,34 @@ window.HELP_TOUR_STEPS = [
 
   document.addEventListener('DOMContentLoaded',
     () => applyRxStage(@json($prescription->status)));
+
+  /* 보고 있는 건을 베껴 새 건으로 간다.
+     같은 사람이 같은 것을 다시 살 때 병원ㆍ상병ㆍ제품ㆍ수량을 다시 적는 것은 옮겨 적는
+     일일 뿐이고, 옮기다 어긋나면 지난번과 다른 주문이 된다.
+     날짜는 비운다 — 지난달 날짜로 이번 달 주문을 낼 수는 없다. */
+  async function duplicateRx() {
+    const ok = await ceConfirm(
+      `${RX_NUMBER} 을 그대로 베껴 새 번호로 만듭니다.
+날짜(처방전 발행일 등)는 비우고 갑니다. 계속할까요?`,
+      { tone: 'info', confirmText: '베껴서 새로 만들기', cancelText: '그만두기' }
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('btnDuplicate');
+    if (btn) BtnState.loading(btn, '베끼는 중…');
+    try {
+      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/duplicate`, 'POST', {});
+      if (!res.success) { showToast(res.message || '베끼지 못했습니다.', 'danger'); return; }
+      showToast(res.message, 'success');
+      // 고른 그 순간이 답이다 — 떠나도 되느냐고 다시 묻지 않는다
+      clearAllDirty();
+      location.href = res.url;
+    } catch (e) {
+      showToast('베끼지 못했습니다.', 'danger');
+    } finally {
+      if (btn && btn.isConnected) BtnState.reset(btn);
+    }
+  }
 
   async function requestReviewRx() {
     if (!confirm('입력을 마치고 검수를 요청합니다. 계속할까요?')) return;

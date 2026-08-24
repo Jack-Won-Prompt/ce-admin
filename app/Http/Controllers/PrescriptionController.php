@@ -17,6 +17,7 @@ use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use App\Events\ChatMessageSent;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
@@ -2542,6 +2543,67 @@ HTML;
 <div class="footer">본 영수증은 소득공제·지출증빙용으로 사용하실 수 있습니다.</div>
 </body></html>
 HTML;
+    }
+
+    /**
+     * 마지막으로 적어 둔 건을 그대로 베껴 새 건을 세운다.
+     *
+     * 같은 사람이 같은 것을 다시 사는 일이 잦다. 그때마다 병원ㆍ상병ㆍ제품ㆍ수량을 다시
+     * 적는 것은 옮겨 적는 일일 뿐이고, 옮기다 어긋나면 지난번과 다른 주문이 된다.
+     *
+     * 날짜만 비운다. 처방전 발행일ㆍ진단 확인일ㆍ결제일 같은 것은 그 건에만 속한 사실이라,
+     * 베껴 오면 지난달 날짜로 이번 달 주문을 내는 셈이 된다. 나머지는 그대로 온다.
+     *
+     * 처방전 그림과 첨부 서류도 베끼지 않는다 — 그 종이는 그 건의 것이다.
+     */
+    public function duplicate(Prescription $prescription): JsonResponse
+    {
+        /* 어느 칸이 날짜인지는 표에 물어본다. 칸이 늘 때마다 여기 목록을 고쳐 적는 일을
+           만들지 않으려는 것이다 — 적기를 잊으면 지난 날짜가 조용히 따라온다. */
+        $dateCols = collect(Schema::getColumnListing('prescriptions'))
+            ->filter(fn ($c) => in_array(
+                Schema::getColumnType('prescriptions', $c), ['date', 'datetime', 'timestamp'], true
+            ))->values()->all();
+
+        // 그 건에만 속한 것들 — 베끼면 안 되는 자리
+        $skip = array_merge($dateCols, [
+            'id', 'rx_number', 'status', 'is_blank_draft',
+            'reviewed_by', 'review_memo',
+            'image_path', 'image_original_name', 'image_mime_type', 'image_size',
+            'counsel_no', 'counsel_order_id',
+            'created_by', 'updated_by',
+            'registration_no', 'serial_no',
+        ]);
+
+        $attrs = collect($prescription->getAttributes())
+            ->except($skip)
+            ->filter(fn ($v) => $v !== null)
+            ->all();
+
+        $copy = Prescription::create(array_merge($attrs, [
+            'rx_number'     => Prescription::generateRxNumber(),
+            'status'        => 'pending',
+            'upload_source' => 'web',
+            'created_by'    => Auth::id(),
+            'updated_by'    => Auth::id(),
+        ]));
+
+        // 제품 줄도 함께 베낀다 — 같은 것을 다시 사는 것이 이 단추의 뜻이다
+        foreach ($prescription->items as $item) {
+            $copy->items()->create(
+                collect($item->getAttributes())->except(['id', 'prescription_id', 'created_at', 'updated_at'])->all()
+            );
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($copy)
+            ->log("{$prescription->rx_number} 를 베껴 {$copy->rx_number} 를 만듦");
+
+        return response()->json([
+            'success'   => true,
+            'message'   => "{$copy->rx_number} 로 베껴 왔습니다. 날짜는 새로 적어 주십시오.",
+            'rx_number' => $copy->rx_number,
+            'url'       => route('prescriptions.show', $copy, absolute: false),
+        ]);
     }
 
     /** 위드웍스로 넘길 청구전략 코드 — 우리 열쇠(「유형|자격」)를 저쪽 코드로 옮긴다 */

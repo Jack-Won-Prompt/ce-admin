@@ -99,6 +99,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/ocr',       [PrescriptionController::class, 'updateOcr'])->name('updateOcr');
         // 담당자가 다 적었다는 신호 
         Route::post('/{prescription}/request-review', [PrescriptionController::class, 'requestReview'])->name('request-review');
+        // 마지막 건을 베껴 새 건으로 — 날짜만 비운다
+        Route::post('/{prescription}/duplicate',      [PrescriptionController::class, 'duplicate'])->name('duplicate');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
         Route::post('/{prescription}/reject',        [PrescriptionController::class, 'reject'])->name('reject');
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');
