@@ -1092,7 +1092,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         {{-- 위임동의 서명 확인 팝오버 --}}
-        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:540px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
+        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:620px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
             <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
@@ -1134,22 +1134,27 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-triangle-exclamation"></i> 서명 정보를 불러오지 못했습니다.
             </div>
           </div>
-          {{-- 단추 여섯이 540px 창에 한 줄로 서 있어 오른쪽으로 넘쳤다. 접히게 둔다 —
-               창을 넓히면 다른 팝오버와 폭이 어긋나고, 글자를 줄이면 무엇을 하는 단추인지
-               읽기 어려워진다. --}}
+          {{-- 단추 여섯을 한 줄에 세운다. 창을 620 으로 넓히고 이름을 줄였다 —
+               「위임동의서 PDF」ㆍ「요양비 위임장 PDF」는 아이콘과 「PDF」가 무엇인지
+               말해 주므로 앞말을 덜었고, 줄인 만큼은 title 로 남겨 머물면 본래 이름이 뜬다.
+               「공단 위임 등록」ㆍ「설정 반영 재생성」은 그대로 둔다 — 줄이면 무엇을
+               등록하고 무엇을 다시 만드는지가 사라진다.
+               flex-wrap 은 남겨 둔다 — 글꼴이 다른 곳에서 한 자라도 넓어지면 넘치는
+               것보다 접히는 편이 낫다. --}}
           <div style="padding:12px 14px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;row-gap:6px;border-top:1px solid var(--border);">
             {{-- 서명 이미지만 따로 받아 가는 경우가 있다(서류 첨부·대조) --}}
             <a id="csignPngBtn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
               <i class="fa-solid fa-download"></i> 서명 PNG
             </a>
-            <a id="csignPdfBtn" href="#" target="_blank"
+            <a id="csignPdfBtn" href="#" target="_blank" title="위임동의서 PDF"
                style="display:none;padding:5px 10px;background:var(--danger);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
-              <i class="fa-solid fa-file-pdf"></i> 위임동의서 PDF
+              <i class="fa-solid fa-file-pdf"></i> 동의서 PDF
             </a>
             <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdfOriginal', $prescription) }}" target="_blank"
+               title="요양비 위임장 PDF"
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
-              <i class="fa-solid fa-file-signature"></i> 요양비 위임장 PDF
+              <i class="fa-solid fa-file-signature"></i> 위임장 PDF
             </a>
             {{-- 서명이 끝났으면 공단에 위임 등록을 해야 한다. 입력 지원 창을 연다. --}}
             <button id="csignNhisBtn" type="button"
@@ -7919,9 +7924,8 @@ window.HELP_TOUR_STEPS = [
                     state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
       }
     });
-    // 신청 파일에 들지 않는 첨부도 함께 보낼 수 있게 이어 둔다
-    ALL_DOCS.filter(d => d.id > 0 && !used.has(d.id))
-            .forEach(d => rows.push({ label: d.typeLabel, att: d, state: 'extra' }));
+    /* 신청 파일에 들지 않는 첨부는 세우지 않는다. 팩스로 나가는 것은 등록ㆍ재등록
+       서류 넷뿐인데, 처방전 같은 것이 함께 체크되어 있어 공단에 딸려 갔다. */
     return rows;
   }
 
@@ -7956,8 +7960,7 @@ window.HELP_TOUR_STEPS = [
         </div>`;
     }
 
-    const a     = r.att;
-    const isReq = r.state === 'ok';
+    const a = r.att;
     const thumb = a.isPdf
       ? `<i class="fa-regular fa-file-pdf" style="color:var(--danger);font-size:18px;flex-shrink:0;"></i>`
       : `<img src="${esc(a.url)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;">`;
@@ -7969,7 +7972,7 @@ window.HELP_TOUR_STEPS = [
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:500;">${esc(r.label)}</span>
-            <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">${isReq ? '첨부' : '그 밖'}</span>
+            <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">첨부</span>
           </div>
           <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}</div>
         </div>
@@ -7984,7 +7987,6 @@ window.HELP_TOUR_STEPS = [
     const rows    = faxDocRows();
     const missing = rows.filter(r => r.state === 'missing').map(r => r.label);
     const have    = FAX_REQ_DOCS.length - missing.length;
-    const extras  = rows.filter(r => r.state === 'extra');
 
     const head = `
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding-top:6px;border-top:1px dashed var(--border);">
@@ -8002,15 +8004,7 @@ window.HELP_TOUR_STEPS = [
          </div>`
       : '';
 
-    const extraHead = extras.length
-      ? `<div style="font-size:10px;font-weight:700;color:var(--text-muted);margin:8px 0 4px;padding-top:6px;border-top:1px dashed var(--border);">
-           <i class="fa-solid fa-paperclip"></i> 그 밖의 첨부
-         </div>`
-      : '';
-
-    box.innerHTML = head + note
-      + rows.filter(r => r.state !== 'extra').map(_faxDocRowHtml).join('')
-      + extraHead + extras.map(_faxDocRowHtml).join('');
+    box.innerHTML = head + note + rows.map(_faxDocRowHtml).join('');
   }
 
   /* ── 「공단 팩스 발송」 단추가 부른다 ───────────────────
