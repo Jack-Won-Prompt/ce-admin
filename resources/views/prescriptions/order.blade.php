@@ -1687,35 +1687,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <button onclick="reopenFaxPopover(event)" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;">재전송</button>
       </div>
 
-      {{-- Withworks 판매번호 — 번호가 붙어 있으면 눌러서 창고의 판매주문을 그 자리에서 본다 --}}
-      <div id="wwSoWrap" style="position:relative;">
-        <div id="wwSoCard" onclick="toggleWwSoPopover(event)"
-             title="{{ $prescription->order?->withworks_so_no ? '위드웍스 판매주문을 조회합니다' : '' }}"
-             style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid {{ $prescription->order?->withworks_so_no ? 'var(--primary)' : 'var(--border)' }};border-radius:var(--radius);background:{{ $prescription->order?->withworks_so_no ? 'var(--primary-light)' : 'var(--bg-card)' }};cursor:{{ $prescription->order?->withworks_so_no ? 'pointer' : 'default' }};">
-          <i class="fa-solid fa-link" style="color:var(--primary);font-size:10px;flex-shrink:0;"></i>
-          <div id="wwSoContent" style="font-size:11px;line-height:1.2;">
-            @if($prescription->order?->withworks_so_no)
-            <span style="font-family:monospace;font-weight:700;color:var(--primary);">{{ $prescription->order->withworks_so_no }}</span>
-            @else
-            <span id="wwSoBadge" style="color:var(--text-muted);">미연계</span>
-            @endif
-          </div>
+      {{-- Withworks 판매번호 — 번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다 --}}
+      <div id="wwSoCard" onclick="openWwSo(event)"
+           title="{{ $prescription->order?->withworks_so_no ? '위드웍스 판매주문 화면을 그 번호로 엽니다' : '' }}"
+           style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid {{ $prescription->order?->withworks_so_no ? 'var(--primary)' : 'var(--border)' }};border-radius:var(--radius);background:{{ $prescription->order?->withworks_so_no ? 'var(--primary-light)' : 'var(--bg-card)' }};cursor:{{ $prescription->order?->withworks_so_no ? 'pointer' : 'default' }};">
+        <i class="fa-solid fa-link" style="color:var(--primary);font-size:10px;flex-shrink:0;"></i>
+        <div id="wwSoContent" style="font-size:11px;line-height:1.2;">
+          @if($prescription->order?->withworks_so_no)
+          <span style="font-family:monospace;font-weight:700;color:var(--primary);">{{ $prescription->order->withworks_so_no }}</span>
+          @else
+          <span id="wwSoBadge" style="color:var(--text-muted);">미연계</span>
+          @endif
         </div>
-
-        {{-- 판매주문 조회 창 — 열면 그 자리에서 창고에 물어본다(loadWwSo) --}}
-        <div id="wwSoPopover" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:360px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
-          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:9px 12px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-warehouse" style="color:#fff;font-size:13px;flex-shrink:0;"></i>
-            <span style="font-size:12px;font-weight:700;color:#fff;flex:1;">위드웍스 판매주문</span>
-            <button type="button" onclick="loadWwSo(true)" title="다시 조회"
-                    style="background:none;border:none;cursor:pointer;color:#fff;font-size:12px;line-height:1;">
-              <i class="fa-solid fa-rotate"></i>
-            </button>
-            <button type="button" onclick="closeWwSoPopover()"
-                    style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">&times;</button>
-          </div>
-          <div id="wwSoBody" style="padding:12px;font-size:12px;"></div>
-        </div>
+        @if($prescription->order?->withworks_so_no)
+        <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--primary);font-size:9px;flex-shrink:0;"></i>
+        @endif
       </div>
 
       {{-- 세금계산서 --}}
@@ -6955,10 +6941,9 @@ window.HELP_TOUR_STEPS = [
     if (card) {
       card.style.borderColor = soNo ? 'var(--primary)' : 'var(--border)';
       card.style.background  = soNo ? 'var(--primary-light)' : 'var(--bg-card)';
-      /* 번호가 붙는 순간부터 눌러 볼 수 있다 — 새로고침을 기다리지 않는다 */
+      /* 번호가 붙는 순간부터 눌러 갈 수 있다 — 새로고침을 기다리지 않는다 */
       card.style.cursor = soNo ? 'pointer' : 'default';
-      card.title = soNo ? '위드웍스 판매주문을 조회합니다' : '';
-      _wwSoLoaded = false;          // 새 번호다. 앞서 받아 둔 것을 다시 보여 주지 않는다
+      card.title = soNo ? '위드웍스 판매주문 화면을 그 번호로 엽니다' : '';
     }
     if (content) {
       const typeLabels = { '1013': ['CE 판매','primary'], '1016': ['개인판매','info'], '1022': ['샘플판매','warning'] };
@@ -7239,103 +7224,26 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
-  /* ── 위드웍스 판매주문 조회 ─────────────────────────────
-     판매번호가 붙은 카드를 누르면 그 번호로 창고에 물어 그 자리에서 펴 보인다.
-     예전에는 번호만 적혀 있어, 그 주문이 창고에서 어떻게 되었는지 보려면 위드웍스에
-     따로 들어가 번호로 찾아야 했다. */
-  let _wwSoLoaded = false;
+  /* ── 위드웍스 판매주문 열기 ─────────────────────────────
+     판매번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다(?so_no=).
+     저쪽 화면이 그 번호를 받아 기간ㆍ상태 거르개를 풀고 바로 찾아 준다.
+     창은 하나만 쓴다 — 이름을 정해 두어, 여러 건을 오가도 탭이 쌓이지 않는다. */
+  const WW_WEB_URL = @json(rtrim((string) (\App\Models\WithworksSetting::current()->apiUrl() ?? ''), '/'));
 
-  function toggleWwSoPopover(e) {
+  function openWwSo(e) {
     if (e) e.stopPropagation();
-    if (!existingOrder?.withworks_so_no) return;      // 아직 연계 전이면 볼 것이 없다
+    const soNo = existingOrder?.withworks_so_no;
+    if (!soNo) return;                       // 아직 연계 전이면 갈 곳이 없다
 
-    const pop = document.getElementById('wwSoPopover');
-    if (!pop) return;
-    const opening = pop.style.display === 'none' || !pop.style.display;
-    closeAllPopovers();
-    pop.style.display = opening ? 'block' : 'none';
-    if (opening && !_wwSoLoaded) loadWwSo();
-  }
-
-  function closeWwSoPopover() {
-    const pop = document.getElementById('wwSoPopover');
-    if (pop) pop.style.display = 'none';
-  }
-
-  function _wwSoRow(label, value, mono) {
-    if (value === null || value === undefined || value === '') return '';
-    const style = 'font-weight:600;color:var(--text);' + (mono ? 'font-family:monospace;' : '');
-    return `<div style="display:flex;gap:8px;padding:3px 0;">
-              <span style="width:78px;flex-shrink:0;color:var(--text-muted);">${label}</span>
-              <span style="${style}flex:1;min-width:0;word-break:break-all;">${_faxEsc(value)}</span>
-            </div>`;
-  }
-
-  async function loadWwSo(force) {
-    const box = document.getElementById('wwSoBody');
-    if (!box || !existingOrder?.id) return;
-
-    box.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:12px;">
-        <i class="fa-solid fa-spinner fa-spin"></i> 창고에 물어보는 중…
-      </div>`;
-
-    try {
-      const res = await apiRequest(`/orders/${existingOrder.id}/withworks-status`, 'POST', {});
-      if (!res.success) {
-        box.innerHTML = `<div style="padding:10px;color:var(--danger);font-size:12px;line-height:1.6;">
-            <i class="fa-solid fa-triangle-exclamation"></i> ${_faxEsc(res.message || '조회하지 못했습니다.')}
-          </div>`;
-        return;
-      }
-      _wwSoLoaded = true;
-
-      const r    = res.result ?? {};
-      const ship = r.ship ?? res.ship ?? null;
-      const won  = v => (v === null || v === undefined || v === '') ? ''
-                      : '₩ ' + Number(v).toLocaleString();
-
-      box.innerHTML =
-        _wwSoRow('판매번호',  r.so_no ?? existingOrder.withworks_so_no, true)
-        + _wwSoRow('상태',    (r.status_label ?? res.status_label ?? '') + (r.status ? ` (${r.status})` : ''))
-        + _wwSoRow('주문일',  r.so_date)
-        + _wwSoRow('납기일',  r.delivery_date)
-        + _wwSoRow('주문금액', won(r.so_amount))
-        + _wwSoRow('비고',    r.remark)
-        + (ship
-            ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
-                 <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">
-                   <i class="fa-solid fa-truck"></i> 출고
-                 </div>
-                 ${_wwSoRow('출고번호', ship.ship_no, true)}
-                 ${_wwSoRow('출고상태', ship.ship_status_label)}
-                 ${_wwSoRow('송장번호', ship.tracking_no, true)}
-                 ${_wwSoRow('출고예정', ship.schedule_date)}
-                 ${_wwSoRow('출고완료', ship.ship_complete_date)}
-               </div>`
-            /* 출고 자리가 비어 있으면 「없다」고 적는다 — 빈 채로 두면 조회가 덜 된 것처럼 보인다 */
-            : `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);
-                       font-size:11px;color:var(--text-muted);">아직 출고 잡힌 것이 없습니다.</div>`)
-        + `<div style="margin-top:8px;font-size:10px;color:var(--text-muted);text-align:right;">
-             ${_faxEsc(res.fetched_at ?? '')} 조회
-           </div>`;
-    } catch (e) {
-      box.innerHTML = `<div style="padding:10px;color:var(--danger);font-size:12px;">
-          <i class="fa-solid fa-triangle-exclamation"></i> 조회 중 오류가 발생했습니다.
-        </div>`;
+    if (!WW_WEB_URL) {
+      showToast('위드웍스 주소가 설정되어 있지 않습니다. 환경 설정에서 연동 주소를 넣어 주십시오.', 'warning');
+      return;
     }
+    window.open(`${WW_WEB_URL}/salesorder?so_no=${encodeURIComponent(soNo)}`, 'withworks_so');
   }
-
-  /* 창 밖을 누르면 닫는다 — 다른 팝오버와 같은 몸짓이다 */
-  document.addEventListener('click', e => {
-    const pop  = document.getElementById('wwSoPopover');
-    const card = document.getElementById('wwSoCard');
-    if (!pop || pop.style.display === 'none') return;
-    if (pop.contains(e.target) || card?.contains(e.target)) return;
-    pop.style.display = 'none';
-  });
 
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal','wwSoPopover'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });

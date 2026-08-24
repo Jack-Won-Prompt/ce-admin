@@ -869,15 +869,11 @@ HTML;
             return response()->json(['success' => false, 'message' => 'Withworks에서 주문 상태를 가져오지 못했습니다.'], 502);
         }
 
-        /* 받아 온 것을 통째로도 함께 준다 — 주문 등록 화면의 판매번호 창이 주문일ㆍ
-           납기ㆍ금액ㆍ비고까지 그대로 펴 보인다. 앞서 쓰던 세 값은 그대로 둔다. */
         return response()->json([
             'success'      => true,
             'status'       => $result['status'] ?? null,
             'status_label' => $result['status_label'] ?? null,
             'ship'         => $result['ship'] ?? null,
-            'result'       => $result,
-            'fetched_at'   => now()->format('Y-m-d H:i:s'),
         ]);
     }
 }
