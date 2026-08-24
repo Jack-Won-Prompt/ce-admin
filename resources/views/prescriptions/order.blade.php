@@ -3251,15 +3251,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div><div class="ws-label">모바일/웹 업로드</div><div class="ws-time">{{ $prescription->created_at->format('H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</div></div>
               <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
             </div>
-            <div class="workflow-step">
-              <div class="ws-icon {{ in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']) ? 'done' : 'active' }}"><i class="fa-solid fa-eye"></i></div>
-              <div><div class="ws-label">OCR 처리</div><div class="ws-time">{{ $prescription->updated_at->format('H:i') }} · 자동</div></div>
-              @if(in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']))
-                <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
-              @else
-                <i class="fa-solid fa-spinner fa-spin ws-arrow" style="color:var(--primary);"></i>
-              @endif
-            </div>
+            {{-- 「OCR 처리」 걸음은 두지 않는다 — OCR 을 쓰지 않기로 했다(수기 입력).
+                 지나지 않는 걸음을 그려 두면 늘 도는 톱니처럼 보인다. --}}
             <div class="workflow-step">
               {{-- 검수를 마치면 이 걸음만 그 자리에서 고쳐 세운다 --}}
               <div class="ws-icon {{ in_array($prescription->status, ['approved','ordered']) ? 'done' : ($prescription->status === 'review_needed' ? 'active' : 'pending') }}" id="wsReviewIcon"><i class="fa-solid fa-clipboard-check"></i></div>
@@ -3311,17 +3304,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <td style="text-align:center;"><i class="fa-solid fa-check" style="color:var(--primary);"></i></td>
                   <td>{{ $prescription->created_at->format('Y-m-d H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</td>
                 </tr>
-                <tr>
-                  <td><i class="fa-solid fa-eye" style="color:var(--info);margin-right:5px;"></i>OCR 처리</td>
-                  <td style="text-align:center;">
-                    @if(in_array($prescription->status, ['ocr_done','review_needed','review_requested','approved','ordered']))
-                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
-                    @else
-                      <i class="fa-solid fa-spinner fa-spin" style="color:var(--primary);"></i>
-                    @endif
-                  </td>
-                  <td>{{ $prescription->updated_at->format('Y-m-d H:i') }} · 자동</td>
-                </tr>
+                {{-- OCR 처리 줄은 두지 않는다(위와 같은 까닭) --}}
                 <tr>
                   <td><i class="fa-solid fa-clipboard-check" style="color:var(--warning);margin-right:5px;"></i>검수 확인</td>
                   <td style="text-align:center;">
