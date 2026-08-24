@@ -1092,7 +1092,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         {{-- 위임동의 서명 확인 팝오버 --}}
-        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:620px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
+        <div id="consentSignPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:610px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:503;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
             <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
           </div>
@@ -1134,7 +1134,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <i class="fa-solid fa-triangle-exclamation"></i> 서명 정보를 불러오지 못했습니다.
             </div>
           </div>
-          {{-- 단추 여섯을 한 줄에 세운다. 창을 620 으로 넓히고 이름을 줄였다 —
+          {{-- 단추 여섯을 한 줄에 세운다. 창을 610 으로 넓히고 이름을 줄였다 —
                「위임동의서 PDF」ㆍ「요양비 위임장 PDF」는 아이콘과 「PDF」가 무엇인지
                말해 주므로 앞말을 덜었고, 줄인 만큼은 title 로 남겨 머물면 본래 이름이 뜬다.
                「공단 위임 등록」ㆍ「설정 반영 재생성」은 그대로 둔다 — 줄이면 무엇을
