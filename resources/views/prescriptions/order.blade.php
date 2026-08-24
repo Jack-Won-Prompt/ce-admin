@@ -9918,17 +9918,23 @@ window.HELP_TOUR_STEPS = [
     ph.style.display = 'block';
     bar.classList.add('info-bar-pinned');           // 상시 고정
     function sync() {
-      // 콘텐츠가 고정바 '바로 아래'에서 시작하도록 자리표시자 높이 확보(문서좌표 기준)
-      const docY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      const phTop     = ph.getBoundingClientRect().top + docY;   // 흐름상 자리(자기 높이와 무관)
-      const barBottom = bar.getBoundingClientRect().bottom + docY;
-      ph.style.height = Math.max(0, Math.round(barBottom - phTop)) + 'px';
+      /* 자리표시자는 고정된 정보바가 흐름에서 비운 자리를 그만큼 채워 준다.
+         즉 필요한 것은 「바의 높이」이지 「바 아래끝까지의 거리」가 아니다.
+
+         예전에는 두 요소의 화면좌표에 스크롤값을 더해 거리를 셈했다. 그런데 정보바는
+         position:fixed 라 화면좌표가 곧 제자리다 — 거기에 스크롤값을 더하면 스크롤한
+         만큼 자리표시자가 늘어나, 내려 볼수록 정보바 아래 흰 공백이 벌어졌다.
+         레이아웃 높이는 스크롤과 무관하므로 그것만 쓴다. */
+      const mb = parseFloat(getComputedStyle(bar).marginBottom) || 0;
+      ph.style.height = Math.max(0, Math.round(bar.offsetHeight + mb)) + 'px';
     }
     sync();
-    // 폰트/이미지 로드나 wrap 변화로 높이가 바뀔 수 있어 재동기화
+    // 폰트/이미지 로드나 wrap 변화로 바의 높이가 바뀔 수 있어 다시 잰다
     window.addEventListener('resize', sync);
     window.addEventListener('load', sync);
     requestAnimationFrame(sync);
+    // 바 안의 글자(이름ㆍ병원)가 늦게 채워지며 줄이 늘 수 있다 — 그때도 따라간다
+    if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
   })();
 </script>
 @endpush
