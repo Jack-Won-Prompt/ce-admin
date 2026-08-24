@@ -3238,8 +3238,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               @endif
             </div>
             <div class="workflow-step">
-              <div class="ws-icon {{ in_array($prescription->status, ['approved','ordered']) ? 'done' : ($prescription->status === 'review_needed' ? 'active' : 'pending') }}"><i class="fa-solid fa-clipboard-check"></i></div>
-              <div><div class="ws-label">검수 확인</div><div class="ws-time">{{ $prescription->reviewed_at ? $prescription->reviewed_at->format('H:i').' · '.$prescription->reviewer?->name : '대기 중' }}</div></div>
+              {{-- 검수를 마치면 이 걸음만 그 자리에서 고쳐 세운다 --}}
+              <div class="ws-icon {{ in_array($prescription->status, ['approved','ordered']) ? 'done' : ($prescription->status === 'review_needed' ? 'active' : 'pending') }}" id="wsReviewIcon"><i class="fa-solid fa-clipboard-check"></i></div>
+              <div><div class="ws-label">검수 확인</div><div class="ws-time" id="wsReviewTime">{{ $prescription->reviewed_at ? $prescription->reviewed_at->format('H:i').' · '.$prescription->reviewer?->name : '대기 중' }}</div></div>
               @if(in_array($prescription->status, ['approved','ordered']))
                 <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @endif
@@ -6539,6 +6540,44 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
+  /** 검수를 마쳤을 때 — 바뀌는 자리를 하나씩 고쳐 세운다 */
+  function setRxApproved(res) {
+    setRxStatus(res.status, res.status_label, res.status_badge);
+
+    // 다 끝난 건이라 검수로 가는 단추 둘 다 잠근다
+    document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
+      b.disabled = true; b.textContent = '검수 완료됨'; b.title = '이미 검수를 마쳤습니다';
+    });
+    document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => { b.disabled = true; });
+
+    // 진행 걸음
+    const icon = document.getElementById('wsReviewIcon');
+    if (icon) icon.className = 'ws-icon done';
+    const time = document.getElementById('wsReviewTime');
+    if (time && res.reviewed_at_short) {
+      time.textContent = res.reviewed_at_short + (res.reviewer ? ' · ' + res.reviewer : '');
+    }
+
+    /* 검수자 줄 — 없으면 맨 앞에 만든다. 이미 있으면(재검수) 이름ㆍ시각만 고친다. */
+    const rows = document.getElementById('infoPanel-uploader');
+    if (rows && res.reviewer) {
+      let row = rows.querySelector('.rg-row.is-review');
+      if (!row) {
+        row = document.createElement('div');
+        row.className = 'rg-row is-review';
+        row.innerHTML = '<span class="rg-badge rg-badge-review">검수</span>'
+                      + '<span class="rg-name"></span>'
+                      + '<span class="rg-when"><span>검수일자</span><span></span></span>';
+        rows.prepend(row);
+      }
+      row.querySelector('.rg-name').textContent = res.reviewer;
+      row.querySelector('.rg-when span:last-child').textContent = res.reviewed_at || '-';
+    }
+
+    // 검수를 마치며 만들어지는 서류(요양비위임장 등)를 다시 읽는다
+    if (typeof refreshGeneratedDocs === 'function') refreshGeneratedDocs();
+  }
+
   async function requestReviewRx() {
     if (!confirm('입력을 마치고 검수를 요청합니다. 계속할까요?')) return;
     try {
@@ -6568,7 +6607,10 @@ window.HELP_TOUR_STEPS = [
       if (res.success) {
         BtnState.success(btn, '검수 완료');
         showToast('✅ 검수를 마쳤습니다.', 'success');
-        setTimeout(() => { closeModal('approveModal'); location.reload(); }, 1200);
+        /* 화면을 다시 읽지 않는다 — 바뀌는 자리만 고쳐 세운다.
+           상태 배지ㆍ검수 걸음ㆍ검수자 줄, 그리고 검수를 마치며 만들어지는 서류. */
+        setRxApproved(res);
+        setTimeout(() => closeModal('approveModal'), 800);
       } else {
         BtnState.error(btn, '실패');
         showToast(res.message || '검수 완료 실패', 'danger');

@@ -1637,7 +1637,19 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 승인');
 
-        return response()->json(['success' => true, 'message' => '검수 승인 완료']);
+        // 바뀐 것을 함께 돌려준다 — 화면이 그 자리만 고쳐 세우면 되도록
+        $prescription->refresh()->load('reviewer');
+
+        return response()->json([
+            'success'           => true,
+            'message'           => '검수 승인 완료',
+            'status'            => $prescription->status,
+            'status_label'      => $prescription->status_label,
+            'status_badge'      => $prescription->status_badge,
+            'reviewer'          => $prescription->reviewer?->name,
+            'reviewed_at'       => $prescription->reviewed_at?->format('Y-m-d H:i'),
+            'reviewed_at_short' => $prescription->reviewed_at?->format('H:i'),
+        ]);
     }
 
     // ── 반려 ─────────────────────────────────────────────
