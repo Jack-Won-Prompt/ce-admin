@@ -9078,7 +9078,12 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('ti-type').value     = @json($prescription->order?->tax_invoice_type     ?? 'electronic');
     document.getElementById('ti-biz-name').value = @json($prescription->order?->tax_invoice_biz_name ?? '');
     document.getElementById('ti-ceo-name').value = @json($prescription->order?->tax_invoice_ceo_name ?? '');
-    document.getElementById('ti-email').value    = @json($prescription->order?->tax_invoice_email    ?? '');
+    /* 이메일은 지난 발행에 적었던 것을 먼저 쓰고, 없으면 화면의 환자 이메일을 가져온다.
+       같은 사람에게 보내는 계산서인데 환자 정보에 적어 둔 주소를 두고 빈칸으로 열려,
+       담당자가 옆 칸을 보고 옮겨 적어야 했다. */
+    const tiSavedEmail = @json($prescription->order?->tax_invoice_email ?? '');
+    document.getElementById('ti-email').value =
+      tiSavedEmail || (document.getElementById('f-email')?.value?.trim() ?? '');
     document.getElementById('ti-supply').value   = supply ? supply.toLocaleString('ko-KR') : '';
     document.getElementById('ti-vat').value      = vat    ? vat.toLocaleString('ko-KR')    : '';
 
