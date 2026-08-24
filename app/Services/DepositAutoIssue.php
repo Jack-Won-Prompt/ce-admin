@@ -16,11 +16,20 @@ use Illuminate\Support\Facades\Log;
  * 그 순간 청구전략이 정한 대로 현금영수증과 세금계산서를 낸다. 발행된 서류는
  * 발행 경로가 이미 PDF 로 만들어 서류 관리에 넣는다 — 우리는 부르기만 한다.
  *
- * 무엇을 내는가는 청구전략이 정한다(App\Support\BillingStrategy).
- *   · 현금영수증 — 환자가 낸 몫(본인부담금). 가상계좌ㆍ무통장입금일 때만 낸다.
- *     카드결제는 카드매출전표가 증빙이라, 현금영수증까지 내면 같은 금액이 두 번 신고된다.
- *   · 세금계산서 — 기관이 내는 몫. 공급받는자는 환자 개인이며 번호는 비워 보낸다
- *     (발행 경로가 처방전의 주민등록번호로 채운다).
+ * 무엇을 얼마로 내는가는 청구전략이 정한다(App\Support\BillingStrategy).
+ *
+ *   건강보험공단 일반(10/90)   → 세금계산서 90%
+ *   건강보험공단 차상위경감    → 세금계산서 100%
+ *   지자체(기초)               → 세금계산서 100%
+ *   산재                       → 세금계산서 100%  (본인부담 100% 인데도 그렇다)
+ *   처방외                     → 현금영수증 100%
+ *
+ * 본인부담이 있다고 그 몫으로 현금영수증을 내지는 않는다 — 일반은 세금계산서 하나로
+ * 끝난다. 현금영수증이 나가는 것은 처방외뿐이고, 그것도 가상계좌ㆍ무통장입금일 때만이다
+ * (카드결제는 카드매출전표가 증빙이라, 현금영수증까지 내면 같은 금액이 두 번 신고된다).
+ *
+ * 세금계산서의 공급받는자는 환자 개인이며 번호는 비워 보낸다 — 발행 경로가 처방전의
+ * 주민등록번호로 채운다(열람 기록이 남는다).
  *
  * 이 발행은 국세청 실신고다. 그래서 기본은 꺼져 있고(config: billing.auto_issue),
  * 켠 뒤에도 다음을 지킨다:
@@ -78,7 +87,7 @@ class DepositAutoIssue
 
     // ──────────────────────────────────────────────────────────
 
-    /** 현금영수증 — 환자가 낸 몫. 카드로 받았으면 내지 않는다. */
+    /** 현금영수증 — 처방외에만. 카드로 받았으면 내지 않는다. */
     private function cashReceipt(Order $order, array $strategy, array &$out): ?string
     {
         if (($strategy['cash_receipt'] ?? 0) <= 0) {
@@ -96,7 +105,9 @@ class DepositAutoIssue
             return null;
         }
 
-        $amount = (int) ($order->deposit_amount ?: $order->expectedDeposit());
+        /* 금액은 비율이 정한다. 제품 금액(본인부담 + 기관부담)에 비율을 곱하고,
+           배송비는 그대로 더한다 — 환자가 실제로 낸 돈이다. */
+        $amount = $this->share($order, (int) $strategy['cash_receipt']) + (int) ($order->shipping_fee ?? 0);
         if ($amount <= 0) {
             $out['skipped'][] = '현금영수증: 금액이 0원';
             return null;
@@ -119,7 +130,7 @@ class DepositAutoIssue
         ], '현금영수증', $out);
     }
 
-    /** 세금계산서 — 기관이 내는 몫. 공급받는자는 환자 개인이다. */
+    /** 세금계산서 — 청구전략이 정한 비율만큼. 공급받는자는 환자 개인이다. */
     private function taxInvoice(Order $order, array $strategy, array &$out): ?string
     {
         if (($strategy['tax_invoice'] ?? 0) <= 0) {
@@ -131,9 +142,11 @@ class DepositAutoIssue
             return null;
         }
 
-        $amount = (int) ($order->nhis_amount ?? 0);
+        /* 기관 부담금이 아니라 비율이 정한다 — 산재는 본인부담 100% 인데도
+           세금계산서는 100% 로 나간다(기관 부담금은 0 이다). */
+        $amount = $this->share($order, (int) $strategy['tax_invoice']);
         if ($amount <= 0) {
-            $out['skipped'][] = '세금계산서: 기관 부담금이 0원';
+            $out['skipped'][] = '세금계산서: 금액이 0원';
             return null;
         }
 
@@ -156,6 +169,23 @@ class DepositAutoIssue
             'tax_invoice_supply'   => $supply,
             'tax_invoice_vat'      => $amount - $supply,
         ], '세금계산서', $out);
+    }
+
+    /**
+     * 제품 금액에서 비율만큼.
+     *
+     * 밑돈은 본인부담 + 기관부담이다(= 제품 금액). 총액 칸을 쓰지 않는 까닭은 그 칸에
+     * 배송비가 섞여 있는 건이 있어서다 — 세금계산서에 배송비를 얹으면 금액이 어긋난다.
+     */
+    private function share(Order $order, int $percent): int
+    {
+        if ($percent <= 0) {
+            return 0;
+        }
+
+        $base = (int) ($order->patient_copay ?? 0) + (int) ($order->nhis_amount ?? 0);
+
+        return (int) round($base * $percent / 100);
     }
 
     /**
