@@ -2161,6 +2161,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @perm('prescriptions', 'approve')
                 <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 완료 처리합니다">검수 완료</button>
                 @endperm
+                {{-- 검수 다음 걸음은 주문이다. 여기까지 와서 주문을 만들었는지 아닌지는
+                     탭을 열어 봐야 알 수 있었다 — 걸음 띠에서 바로 읽게 한다.
+                     data-stage 는 붙이지 않는다. 다른 단추는 처방 상태가 걸음을 정하지만
+                     이 단추는 「주문이 있느냐」가 정한다(syncOrderStageBtn). --}}
+                <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
+                        title="주문 연계 탭으로 갑니다">{{ $prescription->order ? '주문 완료' : '주문 미등록' }}</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -6671,7 +6677,7 @@ window.HELP_TOUR_STEPS = [
 
   /** 상태 배지를 그 자리에서 고쳐 세운다. 되돌릴 수 없는 걸음은 단추도 잠근다. */
   function setRxStatus(status, label, badge) {
-    if (status) applyRxStage(status);
+    if (status) { RX_STATUS = status; applyRxStage(status); syncOrderStageBtn(); }
     const el = document.getElementById('rxStatusBadge');
     if (el && label) {
       el.textContent = label;
@@ -6724,8 +6730,35 @@ window.HELP_TOUR_STEPS = [
     if (typeof refreshGeneratedDocs === 'function') refreshGeneratedDocs();
   }
 
-  document.addEventListener('DOMContentLoaded',
-    () => applyRxStage(@json($prescription->status)));
+  /* 지금 처방이 어느 상태인가 — 주문 단추가 「지금 할 일」인지 가리는 데 쓴다.
+     상태가 바뀌면 setRxStatus 가 여기도 고쳐 둔다. */
+  let RX_STATUS = @json($prescription->status);
+
+  /* 「주문 미등록 / 주문 완료」 — 주문이 있으면 지난 걸음(체크), 검수를 마쳤는데 아직
+     없으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다. */
+  function syncOrderStageBtn() {
+    const btn = document.getElementById('btnOrderStage');
+    if (!btn) return;
+
+    const has = !!(orderExists && existingOrder);
+    btn.textContent = has ? '주문 완료' : '주문 미등록';
+    btn.classList.remove('is-done', 'is-now', 'is-wait');
+    btn.classList.add(has ? 'is-done'
+                    : (RX_STATUS === 'approved' || RX_STATUS === 'ordered') ? 'is-now'
+                    : 'is-wait');
+    btn.title = has ? '주문 연계 탭에서 이 주문을 봅니다' : '주문 연계 탭으로 갑니다';
+  }
+
+  /** 주문 연계 탭으로 간다 — 적다 만 것이 있으면 switchTab 이 먼저 묻는다. */
+  function goOrderTab() {
+    const tab = document.querySelector('.tab-btn[onclick*="tab-order"]');
+    if (tab) switchTab(tab, 'tab-order');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    applyRxStage(RX_STATUS);
+    syncOrderStageBtn();
+  });
 
   /* 보고 있는 건을 베껴 새 건으로 간다.
      같은 사람이 같은 것을 다시 살 때 병원ㆍ상병ㆍ제품ㆍ수량을 다시 적는 것은 옮겨 적는
@@ -6922,6 +6955,7 @@ window.HELP_TOUR_STEPS = [
         shipping_address: shippingAddress,
       };
       orderExists   = true;
+      syncOrderStageBtn();          // 걸음 띠의 「주문 미등록」이 「주문 완료」로 선다
       // 현금영수증 발행에 필요한 주문 ID·금액 동기화
       _ORDER_ID     = res.order_id ?? _ORDER_ID;
       _ORDER_TOTAL  = res.total_amount ?? totalCopay ?? _ORDER_TOTAL;
@@ -7196,15 +7230,27 @@ window.HELP_TOUR_STEPS = [
     _ORDER_ID      = 0;
     _ORDER_TOTAL   = 0;
     _PATIENT_COPAY = 0;
+    syncOrderStageBtn();          // 「주문 완료」를 「주문 미등록」으로 되돌린다
     document.getElementById('orderActionArea').innerHTML = `
-      <button class="btn btn-primary w-full" id="btnCreateOrder" onclick="createOrder(event)">
-        <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
-      </button>`;
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                title="주문 제품과 주문 연계 내용을 저장합니다">
+          <i class="fa-solid fa-floppy-disk"></i> 저장
+        </button>
+        <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+          <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
+        </button>
+      </div>`;
 
     // 환자 정보 바 Withworks 판매번호 초기화
     const card = document.getElementById('wwSoCard');
     const content = document.getElementById('wwSoContent');
-    if (card) { card.style.borderColor = 'var(--border)'; card.style.background = 'var(--bg-card)'; }
+    if (card) {
+      card.style.borderColor = 'var(--border)';
+      card.style.background  = 'var(--bg-card)';
+      card.style.cursor = 'default';     // 갈 곳이 없어졌다
+      card.title = '';
+    }
     if (content) content.innerHTML = `<span id="wwSoBadge" style="color:var(--text-muted);font-size:11px;">미연계</span>`;
 
     // 워크플로우 스텝 초기화 (사이드바 + 이력 탭)
