@@ -222,6 +222,13 @@
         <button type="button" class="ds-btn" onclick="settlementViewRx()">
           <i class="fa-solid fa-file-medical"></i> 주문 보기
         </button>
+        {{-- 입금 확인은 정산 탭에서도 한다. 가상계좌 탭까지 건너가야 세울 수 있으면,
+             통장을 보며 정산을 맞추다가 화면을 옮겨 다니게 된다. --}}
+        @perm('settlement', 'send')
+        <button type="button" class="ds-btn" onclick="vaConfirmDeposit(this)">
+          <i class="fa-solid fa-circle-check"></i> 입금 확인
+        </button>
+        @endperm
       </div>
     </form>
 
