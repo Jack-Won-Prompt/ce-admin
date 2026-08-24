@@ -1454,6 +1454,18 @@
           <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
+        @if($vis('settlement'))
+        <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
+            @dsicon('calculator', 'ds-icon menu-icon')
+            <span>정산/회계</span>
+            @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
+            @if($unpaidCount > 0)
+              <span class="menu-badge">{{ $unpaidCount }}</span>
+            @endif
+          </a>
+        </div>
+        @endif
         @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="청구 관리">
@@ -1489,18 +1501,6 @@
             @endphp
             @if($invoiceCount > 0)
               <span class="menu-badge blue">{{ $invoiceCount }}</span>
-            @endif
-          </a>
-        </div>
-        @endif
-        @if($vis('settlement'))
-        <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
-            @dsicon('calculator', 'ds-icon menu-icon')
-            <span>정산/회계</span>
-            @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
-            @if($unpaidCount > 0)
-              <span class="menu-badge">{{ $unpaidCount }}</span>
             @endif
           </a>
         </div>
