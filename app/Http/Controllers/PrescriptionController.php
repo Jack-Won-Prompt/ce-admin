@@ -1584,6 +1584,11 @@ class PrescriptionController extends Controller
             ])->values(),
             'total_nhis'  => $totalNhis,
             'total_copay' => $totalCopay,
+            /* 이 건이 어느 사람에게 붙었는지 돌려준다. 새 사람으로 저장하면 그 사람은
+               방금 만들어진 것이라 화면이 id 를 모른다 — 저장 직후에 「상담하기」를
+               누르면 누구와 상담하는지 가리지 못해 열리지 않았다. */
+            'patient_id'   => $prescription->fresh()->patient_id,
+            'patient_name' => $prescription->fresh()->patient?->name,
         ]);
     }
 

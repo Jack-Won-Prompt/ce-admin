@@ -5181,16 +5181,40 @@ window.HELP_TOUR_STEPS = [
 
      누구와 상담하는지는 이 처방전에 이어 둔 사람이다. 아직 아무도 이어 두지 않았으면
      먼저 「조회」로 고르거나, 새 사람이면 저장해서 사람을 만든 뒤에 연다. */
-  function openCounselWindow() {
-    const id   = document.getElementById('f-patient-id')?.value;
-    const name = document.getElementById('f-name')?.value?.trim() || '';
+  async function openCounselWindow() {
+    const nameEl = document.getElementById('f-name');
+    const hid    = document.getElementById('f-patient-id');
+    const name   = nameEl?.value?.trim() || '';
+    const tel    = document.getElementById('f-mobile')?.value?.trim() || '';
 
-    if (!id) {
-      showToast('먼저 「조회」로 사람을 고르십시오. 새 사람이면 저장한 뒤에 상담을 엽니다.', 'warning', 5000);
+    /* 상담은 사람에게 달린다 — 누구와 상담하는지 가려야 열 수 있다.
+       이어 둔 사람이 있으면 바로 연다. */
+    if (hid?.value) {
+      window.csOpen(parseInt(hid.value, 10), name, tel);
       return;
     }
 
-    window.csOpen(parseInt(id, 10), name, document.getElementById('f-mobile')?.value?.trim() || '');
+    /* 이어 둔 사람이 없다 — 처방전만 적어 둔 새 사람이다. 저장하면 그 사람이 만들어지고
+       거래처에 오른다. 저장은 담당자가 알아야 할 일이라 묻고 나서 한다. */
+    if (!name) {
+      showToast('이름을 먼저 적어 주십시오. 상담은 사람에게 답니다.', 'warning', 5000);
+      return;
+    }
+
+    const ok = await ceConfirm(
+      `「${name}」 님은 아직 거래처에 없습니다.
+지금 저장해 거래처로 올리고 상담을 열까요?`,
+      { tone: 'info', confirmText: '저장하고 상담 열기', cancelText: '그만두기' }
+    );
+    if (!ok) return;
+
+    await saveOCR();
+
+    // 저장이 끝나면 서버가 알려 준 사람 id 가 들어와 있다
+    const id = document.getElementById('f-patient-id')?.value;
+    if (!id) { showToast('저장하지 못해 상담을 열지 못했습니다.', 'danger', 5000); return; }
+
+    window.csOpen(parseInt(id, 10), document.getElementById('f-name')?.value?.trim() || name, tel);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -6435,6 +6459,12 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/ocr`, 'POST', payload);
       if (res.success) {
         clearAllDirty();
+        /* 저장하면서 새로 만들어진 사람이 있으면 그 id 를 받아 둔다 — 이걸 들고 있어야
+           바로 「상담하기」를 누를 수 있다(누구와 상담하는지 가려야 창이 열린다). */
+        if (res.patient_id) {
+          const hid = document.getElementById('f-patient-id');
+          if (hid) hid.value = res.patient_id;
+        }
         showToast('저장되었습니다.', 'success');
         saveBtns.forEach(btn => BtnState.success(btn, '저장 완료'));
         setTimeout(() => saveBtns.forEach(btn => BtnState.reset(btn)), 2500);
