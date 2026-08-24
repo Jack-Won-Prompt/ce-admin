@@ -181,12 +181,9 @@ class SettlementController extends Controller
                 'copay'        => (int) ($order->patient_copay ?? 0),
                 'shipping'     => (int) ($order->shipping_fee ?? 0),
                 'va_state'     => $vaState,
-                /* 결제 방식 — 가상계좌인가 카드결제인가.
-                   결제 링크를 카드로 보냈으면 카드결제, 그 밖에는 가상계좌다
-                   (가상계좌가 이 업무의 기본 흐름이다). */
-                'pay_method'   => $order->paymentLinks
-                                    ->firstWhere('method', \App\Models\PaymentLink::METHOD_CARD)
-                                  ? '카드결제' : '가상계좌',
+                /* 결제 방식 — 가상계좌ㆍ카드결제ㆍ무통장입금 셋. 셈은 주문이 한다. */
+                'pay_method'     => $order->payMethodLabel(),
+                'pay_method_key' => $order->payMethod(),
                 'deposit'      => $order->deposit_confirmed_at !== null
                                     ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
                                     : ($tp?->is_done ? number_format($tp->amount ?? 0) : '-'),
@@ -559,6 +556,37 @@ class SettlementController extends Controller
             'message'      => $amount === $due
                 ? '입금 확인했습니다.'
                 : '입금 확인했습니다. 청구액(' . number_format($due) . '원)과 금액이 다릅니다.',
+        ]);
+    }
+
+    /**
+     * 결제 방식을 바꾼다 — 가상계좌ㆍ카드결제ㆍ무통장입금.
+     *
+     * 전화로 「카드로 낼게요」 하면 그 자리에서 바꾼다. 이미 입금이 확인된 건은 바꾸지
+     * 않는다 — 낸 방식은 지난 일이고, 고치면 기록과 어긋난다.
+     */
+    public function setPayMethod(Request $request, Order $order): JsonResponse
+    {
+        $request->validate([
+            'method' => 'required|string|in:' . implode(',', array_keys(\App\Models\PaymentLink::METHODS)),
+        ]);
+
+        if ($order->deposit_confirmed_at || $order->tossPayment?->is_done) {
+            return response()->json(['success' => false, 'message' => '이미 입금이 확인된 주문입니다.'], 422);
+        }
+
+        $was = $order->payMethodLabel();
+        $order->update(['pay_method' => $request->input('method')]);
+        $order->refresh();
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log("결제 방식 변경: {$was} → {$order->payMethodLabel()}");
+
+        return response()->json([
+            'success' => true,
+            'method'  => $order->payMethod(),
+            'label'   => $order->payMethodLabel(),
+            'message' => "결제 방식을 {$order->payMethodLabel()}(으)로 바꿨습니다.",
         ]);
     }
 

@@ -747,6 +747,101 @@
   const _actCol = TAB === 'virtual_account' ? 'deposit_by' : 'deposit';
   GRID_COLS.forEach(c => { if (c.name === _actCol) c.renderer = depositCell; });
 
+  /* ── 결제 방식 — 아직 안 낸 건은 그 자리에서 바꾼다 ────────────
+     전화로 「카드로 낼게요」 하는 일이 잦다. 목록을 떠나 주문을 열고 고치고 돌아오는
+     대신, 칸을 눌러 세 가지에서 고른다. 이미 낸 건은 바꾸지 않는다 — 낸 방식은 지난
+     일이고, 고치면 기록과 어긋난다. */
+  const PAY_METHODS = @json(\App\Models\PaymentLink::METHODS);
+
+  function payMethodCell(v, row) {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+
+    if (row.deposit_done || !CAN_CONFIRM) {
+      box.textContent = v || '가상계좌';
+      return box;
+    }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pay-cell-btn';
+    btn.style.cssText = 'height:22px;padding:0 8px;font-size:11px;cursor:pointer;line-height:1;'
+                      + 'border:1px dashed var(--gray-300);border-radius:6px;background:transparent;'
+                      + 'color:var(--gray-1000);';
+    btn.textContent = v || '가상계좌';
+    btn.title = '눌러서 결제 방식을 바꿉니다';
+    btn.onclick = (ev) => { ev.stopPropagation(); payMethodPick(ev.currentTarget, row); };
+    box.appendChild(btn);
+    return box;
+  }
+
+  GRID_COLS.forEach(c => { if (c.name === 'pay_method') c.renderer = payMethodCell; });
+
+  let _payPop = null;
+
+  function payMethodClose() {
+    if (_payPop) { _payPop.remove(); _payPop = null; }
+  }
+  document.addEventListener('click', payMethodClose);
+
+  function payMethodPick(anchor, row) {
+    payMethodClose();
+
+    const pop = document.createElement('div');
+    _payPop = pop;
+    pop.style.cssText = 'position:fixed;z-index:1200;background:var(--bg-card);border:1px solid var(--primary);'
+                      + 'border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;'
+                      + 'display:flex;flex-direction:column;gap:2px;min-width:130px;';
+    pop.onclick = (ev) => ev.stopPropagation();
+
+    Object.entries(PAY_METHODS).forEach(([key, label]) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      const on = key === row.pay_method_key;
+      item.style.cssText = 'text-align:left;padding:6px 10px;font-size:12px;border:none;cursor:pointer;'
+                         + 'border-radius:6px;background:' + (on ? 'var(--primary-light)' : 'transparent')
+                         + ';color:' + (on ? 'var(--primary)' : 'var(--gray-1000)')
+                         + ';font-weight:' + (on ? '700' : '400') + ';';
+      item.textContent = label;
+      item.onclick = () => payMethodSet(row, key, anchor);
+      pop.appendChild(item);
+    });
+
+    document.body.appendChild(pop);
+
+    /* 칸 바로 아래에 붙인다. 화면 아래끝을 넘으면 위로 뒤집는다 —
+       목록 끝줄에서 고르려면 창이 화면 밖에 서기 때문이다. */
+    const r = anchor.getBoundingClientRect();
+    const h = pop.offsetHeight;
+    const top = (r.bottom + h + 8 > window.innerHeight) ? r.top - h - 4 : r.bottom + 4;
+    pop.style.left = Math.min(r.left, window.innerWidth - pop.offsetWidth - 8) + 'px';
+    pop.style.top  = Math.max(8, top) + 'px';
+  }
+
+  async function payMethodSet(row, method, anchor) {
+    payMethodClose();
+    if (method === row.pay_method_key) return;
+
+    try {
+      const res = await fetch(ORDERS_BASE + '/' + row.id + '/pay-method', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: JSON.stringify({ method }),
+      });
+      const d = await res.json();
+      if (!d.success) { showToast(d.message || '바꾸지 못했습니다.', 'danger'); return; }
+
+      // 그 줄만 고쳐 세운다 — 목록을 통째로 다시 부르지 않는다
+      row.pay_method     = d.label;
+      row.pay_method_key = d.method;
+      if (anchor) anchor.textContent = d.label;
+      showToast(d.message, 'success');
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+    }
+  }
+
   const grid = new wwGrid({
     el: mountEl,
     // 엑셀 저장은 결과바 버튼으로 옮겼다(동작은 downloadExcel() 동일).

@@ -74,7 +74,30 @@ class Order extends Model
     public const SO_TYPES = ['1013', '1016', '1022', '1501', '1505', '1601', '1605',
                              '5001', '5004', '5005', '5006', '6001'];
 
-    /** 이 주문으로 보낸 결제 링크들 — 결제 방식(카드ㆍ가상계좌)을 여기서 읽는다. */
+    /**
+     * 결제 방식 — 가상계좌ㆍ카드결제ㆍ무통장입금.
+     *
+     * 정해 둔 것이 있으면 그것을 따른다. 없으면 보낸 결제 링크에서 되짚는다 —
+     * 낸 것이 있으면 그 방식, 아직이면 마지막으로 보낸 방식, 그것도 없으면 가상계좌다.
+     */
+    public function payMethod(): string
+    {
+        if ($this->pay_method && isset(\App\Models\PaymentLink::METHODS[$this->pay_method])) {
+            return $this->pay_method;
+        }
+
+        $link = $this->paymentLinks->firstWhere('status', 'paid')
+             ?? $this->paymentLinks->sortByDesc('id')->first();
+
+        return $link?->method ?? \App\Models\PaymentLink::METHOD_VIRTUAL;
+    }
+
+    public function payMethodLabel(): string
+    {
+        return \App\Models\PaymentLink::METHODS[$this->payMethod()] ?? '가상계좌';
+    }
+
+    /** 이 주문으로 보낸 결제 링크들 — 결제 방식을 정해 두지 않았을 때 여기서 되짚는다. */
     public function paymentLinks()
     {
         return $this->hasMany(\App\Models\PaymentLink::class);
@@ -109,6 +132,7 @@ class Order extends Model
         'unit_price', 'nhis_amount', 'patient_copay',
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
         'deposit_confirmed_at', 'deposit_confirmed_by', 'deposit_amount', 'deposit_note',
+        'pay_method',
         'shipping_fee', 'total_amount',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
