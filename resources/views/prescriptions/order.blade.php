@@ -702,6 +702,9 @@
   .pk-fld { display:flex; flex-direction:column; gap:4px; }
   .pk-fld label { font-size:12px; font-weight:600; color:var(--gray-700); }
   .pk-fld input { height:32px; width:160px; }
+  /* 찾는 칸은 하나다 — 남는 자리를 다 차지하고, 좁아지면 단추 줄이 아래로 내려간다 */
+  .pk-fld-wide { flex:1 1 260px; min-width:0; }
+  .pk-fld-wide input { width:100%; }
   .pk-acts { display:flex; gap:6px; margin-left:auto; }
   /* 세로가 모자라면 이 칸이 줄고 안에서 스크롤한다. min-height:0 이 없으면 flex 자식이
      제 내용보다 작아지지 않아, 줄어드는 대신 바닥줄(닫기ㆍ선택)이 상자 밖으로 밀려난다. */
@@ -2221,17 +2224,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <button type="button" onclick="pkClose()" aria-label="닫기">&times;</button>
                   </div>
                   <div class="pk-filter">
-                    <div class="pk-fld">
-                      <label>이름</label>
-                      <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
-                    </div>
-                    <div class="pk-fld">
-                      <label>전화번호</label>
-                      <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
-                    </div>
-                    <div class="pk-fld">
-                      <label>생년월일</label>
-                      <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
+                    {{-- 찾는 칸은 하나다. 이름ㆍ전화번호ㆍ생년월일을 나눠 두면 어느 칸에
+                         칠지부터 정해야 하고, 전화번호를 이름 칸에 치면 아무도 나오지 않는다.
+                         무엇을 치든 세 값에서 함께 찾는다(pkSearch). --}}
+                    <div class="pk-fld pk-fld-wide">
+                      <label>조회</label>
+                      <input type="text" id="pkQ" class="form-control" autocomplete="off"
+                             placeholder="이름 · 전화번호 · 생년월일 — 예: 이희영, 010-1234-5678, 820108">
                     </div>
                     <div class="pk-acts">
                       <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
@@ -2685,7 +2684,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">담당 의사명</span>
-                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
+                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
+              </div>
+              {{-- 의사면허번호 — 칸(license_no)은 처음부터 있었고 OCR 이 읽어 넣기도 했지만
+                   화면에 적을 자리가 없었다. 공단 청구 도움 화면이 이 값을 쓴다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">의사면허번호</span>
+                <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}" placeholder="예: 56553" style="flex:1;" />
               </div>
               {{-- 「사유」 칸은 두지 않는다(요청). 값(reason)은 지우지 않았다 —
                    저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
@@ -2889,12 +2894,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>요양병원코드</th><td data-from="f-hospital-code">{{ $prescription->hospital_code ?? '-' }}</td>
             </tr>
             <tr>
-              <th>담당의사</th><td data-from="f-doctor">{{ $prescription->doctor_name ?? $prescription->doctor_name ?? '-' }}</td>
-              <th>처방전발행일</th><td data-from="f-date">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</td>
+              <th>담당의사</th><td data-from="f-doctor">{{ $prescription->doctor_name ?: '-' }}</td>
+              <th>의사면허번호</th><td data-from="f-license-no">{{ $prescription->license_no ?: '-' }}</td>
             </tr>
             <tr>
+              <th>처방전발행일</th><td data-from="f-date">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</td>
               <th>처방기간</th><td data-from="f-rx-period">{{ ($prescription->total_days ?? '-') }}</td>
-              <th>재구매일</th><td id="tv-renew-date">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</td>
+            </tr>
+            {{-- 의사면허번호가 한 자리를 차지해 짝이 하나 밀렸다. 빈 칸을 남기는 대신
+                 주소 줄처럼 남은 폭을 채운다 — 빈 th·td 는 표에 구멍으로 보인다. --}}
+            <tr>
+              <th>재구매일</th><td colspan="3" id="tv-renew-date">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</td>
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-clipboard-list"></i> 처방 수량 · 상병</td></tr>
             <tr>
@@ -4756,9 +4766,9 @@ window.HELP_TOUR_STEPS = [
     pop.style.display = 'flex';
     pkPlace(pop);
     _ocStep(1);
-    document.getElementById('pkName').value = document.getElementById('f-name')?.value?.trim() || '';
+    document.getElementById('pkQ').value = document.getElementById('f-name')?.value?.trim() || '';
     pkSearch();
-    setTimeout(() => document.getElementById('pkName').focus(), 50);
+    setTimeout(() => document.getElementById('pkQ').select(), 50);
   };
 
   /* 창을 화면 안에 앉힌다. 이름 줄이 화면 중간쯤이면 아래로 열 자리가 모자라
@@ -4796,26 +4806,31 @@ window.HELP_TOUR_STEPS = [
   };
 
   window.pkReset = function () {
-    ['pkName','pkPhone','pkBirth'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pkQ').value = '';
     pkSearch();
+    document.getElementById('pkQ').focus();
   };
 
-  window.pkSearch = function () {
-    const name  = document.getElementById('pkName').value.trim().toLowerCase();
-    const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
-    const birth = document.getElementById('pkBirth').value.replace(/\D/g, '');
+  /* 친 말 하나가 이름ㆍ전화번호ㆍ생년월일 어디에든 걸리면 그 사람이다.
+     띄어 쓰면 낱말마다 걸려야 한다 — 「이희영 820108」로 동명이인을 가른다.
+     숫자를 친 것이면 전화번호와 생년월일에서 찾는다(1982-01-08 로도, 820108 로도). */
+  function _pkHits(p, term) {
+    if ((p.name || '').toLowerCase().includes(term)) return true;
+    const d = term.replace(/\D/g, '');
+    if (!d) return false;
+    if (((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(d)) return true;
+    const b  = (p.birth || '').replace(/\D/g, '');
+    const rn = (p.rn || '').replace(/\D/g, '');
+    return b.includes(d) || b.slice(2).includes(d) || rn.startsWith(d);
+  }
 
-    const hit = PK_PATIENTS.filter(p => {
-      if (name  && !(p.name || '').toLowerCase().includes(name)) return false;
-      if (phone && !((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(phone)) return false;
-      if (birth) {
-        // 1982-01-08 로도, 820108 로도 찾는다
-        const b  = (p.birth || '').replace(/\D/g, '');
-        const rn = (p.rn || '').replace(/\D/g, '');
-        if (!b.includes(birth) && !rn.startsWith(birth) && !b.slice(2).includes(birth)) return false;
-      }
-      return true;
-    });
+  window.pkSearch = function () {
+    const terms = (document.getElementById('pkQ').value || '')
+      .trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    const hit = terms.length
+      ? PK_PATIENTS.filter(p => terms.every(t => _pkHits(p, t)))
+      : PK_PATIENTS;
 
     const rows = hit.map(p => ({ id: p.id, name: p.name, mobile: p.mobile || p.phone || '',
                                  birth: p.birth || '', rn: p.rn || '' }));
@@ -5094,9 +5109,10 @@ window.HELP_TOUR_STEPS = [
   });
   document.addEventListener('keydown', (e) => {
     const pop = document.getElementById('pkModal');
-    if (!pop || pop.style.display !== 'block') return;
+    /* 창은 flex 로 연다. 여기서 block 을 견주고 있어 엔터도 ESC 도 여태 걸리지 않았다. */
+    if (!pop || pop.style.display === 'none' || !pop.style.display) return;
     if (e.key === 'Escape') pkClose();
-    if (e.key === 'Enter' && ['pkName','pkPhone','pkBirth'].includes(document.activeElement?.id)) {
+    if (e.key === 'Enter' && document.activeElement?.id === 'pkQ') {
       e.preventDefault(); pkSearch();
     }
   });
@@ -6086,6 +6102,7 @@ window.HELP_TOUR_STEPS = [
       'f-hospital':        d.hospital_name,
       'f-hospital-code':   d.erp_cd9,
       'f-doctor':          d.doctor_name || d.udf15,
+      'f-license-no':      d.license_no,
       'f-date':            d.issued_date || d.udf12,
       'f-rx-period':       d.udf13,
       'f-rx-end-date':     d.udf14,
@@ -6458,6 +6475,7 @@ window.HELP_TOUR_STEPS = [
       hospital_name:    hosp,
       hospital_code:    strOrNull('f-hospital-code'),
       doctor_name:      strOrNull('f-doctor'),
+      license_no:       strOrNull('f-license-no'),
       issued_date:      strOrNull('f-date'),
       repurchase_date:  strOrNull('f-repurchase-date'),
       rx_period:        intOrNull('f-rx-period'),
@@ -6554,6 +6572,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('f-address-detail').value = @json($prescription->address_detail ?? '');
     document.getElementById('f-hospital').value     = @json($prescription->hospital_name);
     document.getElementById('f-doctor').value       = @json($prescription->doctor_name);
+    document.getElementById('f-license-no').value  = @json($prescription->license_no);
     document.getElementById('f-date').value         = @json($prescription->issued_date?->format('Y-m-d'));
     document.getElementById('f-disease').value      = @json($prescription->disease_name);
     document.getElementById('f-disease-code').value = @json($prescription->disease_code);

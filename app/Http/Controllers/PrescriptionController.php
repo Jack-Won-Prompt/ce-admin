@@ -747,6 +747,7 @@ class PrescriptionController extends Controller
             'address_detail'     => $p->address_detail,
             'hospital_name'      => $p->hospital_name,
             'doctor_name'        => $p->doctor_name,
+            'license_no'         => $p->license_no,
             'issued_date'        => $p->issued_date?->format('Y-m-d'),
             'repurchase_date'    => $p->repurchase_date?->format('Y-m-d'),
             'items'              => $p->items->map(function ($i) {
@@ -1109,7 +1110,7 @@ class PrescriptionController extends Controller
             ->get([
                 'id', 'rx_number', 'created_at', 'status',
                 'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
-                'hospital_name', 'doctor_name', 'issued_date',
+                'hospital_name', 'doctor_name', 'license_no', 'issued_date',
                 'postcode', 'address_detail', 'patient_id', 'repurchase_date',
             ])
             ->filter(fn ($p) => !empty($p->counsel_no))
@@ -1144,7 +1145,7 @@ class PrescriptionController extends Controller
                 ->get([
                     'id', 'rx_number', 'created_at', 'status',
                     'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
-                    'hospital_name', 'doctor_name', 'issued_date',
+                    'hospital_name', 'doctor_name', 'license_no', 'issued_date',
                     'postcode', 'address_detail', 'patient_id', 'repurchase_date',
                 ])
                 ->filter(fn($p) => !empty($p->counsel_no))
@@ -1260,6 +1261,7 @@ class PrescriptionController extends Controller
             'address_detail'   => 'nullable|string|max:200',
             'hospital_name'    => 'nullable|string|max:100',
             'doctor_name'      => 'nullable|string|max:50',
+            'license_no'       => 'nullable|string|max:30',
             'department'       => 'nullable|string|max:100',
             'disease_name'     => 'nullable|string|max:500',
             'disease_code'     => 'nullable|string|max:200',
@@ -1385,6 +1387,7 @@ class PrescriptionController extends Controller
             // 보내오는 값이 없다. 여기서 덮어쓰면 예전에 적어 둔 것이 지워진다.
             // 병원·처방
             'hospital_code'        => $request->input('hospital_code'),
+            'license_no'           => $request->input('license_no'),
             'rx_use_period'        => $request->input('rx_period'),
             'rx_end_date'          => $request->input('rx_end_date'),
             'diagnosis_date'       => $request->input('diagnosis_date'),
