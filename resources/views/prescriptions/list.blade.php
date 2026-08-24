@@ -16,12 +16,9 @@
   <div class="help-section-title">상태 탭 설명</div>
   <div class="help-item">
     <div class="help-item-icon warn"><i class="bx bx-error"></i></div>
-    <div class="help-item-text"><strong>검수 필요</strong>OCR 결과를 사람이 직접 확인해야 하는 처방전입니다. 우선 처리하세요.</div>
+    <div class="help-item-text"><strong>검수 필요</strong>담당자가 적어야 하는 처방전입니다. 우선 처리하세요.</div>
   </div>
-  <div class="help-item">
-    <div class="help-item-icon info"><i class="bx bx-scan"></i></div>
-    <div class="help-item-text"><strong>OCR 처리중</strong>자동 인식이 진행 중입니다. 잠시 후 새로고침하세요.</div>
-  </div>
+  {{-- 「OCR 처리중」 안내는 두지 않는다 — OCR 을 쓰지 않는다(담당자 수기 입력) --}}
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-check-circle"></i></div>
     <div class="help-item-text"><strong>검수 완료</strong>확인된 처방전입니다. 주문 연계 대기 상태입니다.</div>

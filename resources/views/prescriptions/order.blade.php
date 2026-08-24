@@ -3130,21 +3130,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <label class="form-label">배송 정보</label>
               <div style="display:flex;flex-direction:column;gap:6px;">
 
-                {{-- 받는 사람 --}}
-                <div style="display:flex;align-items:center;gap:6px;">
+                {{-- 첫 줄 — 받는 사람ㆍ우편번호와 주소를 다루는 단추들.
+                     세 줄로 쌓여 있던 것을 두 줄로 모았다. 받는 사람 한 줄이 통째로
+                     한 층을 쓰고 있었는데, 이름은 짧아 그 옆이 늘 비어 있었다. --}}
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                   <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;width:72px;flex-shrink:0;">
                     <i class="fa-solid fa-user" style="color:var(--primary);width:14px;"></i> 받는 사람
                   </span>
                   <input type="text" class="form-control" id="shippingRecipient"
                          placeholder="받는 사람 이름"
                          value="{{ $prescription->order?->shipping_recipient ?? ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '') }}"
-                         style="flex:1;" />
-                </div>
-
-                {{-- 우편번호 + 주소 검색 --}}
-                <div style="display:flex;gap:6px;">
+                         style="flex:1 1 140px;min-width:0;" />
                   <input type="text" class="form-control" id="shippingPostcode" readonly
-                         placeholder="우편번호" style="width:110px;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
+                         placeholder="우편번호" style="width:96px;flex-shrink:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <button type="button" class="btn btn-outline btn-sm" onclick="openAddressSearch('shippingPostcode','shippingAddr','shippingAddrDetail')"
                           style="white-space:nowrap;flex-shrink:0;">
                     <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
@@ -3160,7 +3158,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </button>
                 </div>
 
-                {{-- 도로명 + 상세 --}}
+                {{-- 둘째 줄 — 도로명 + 상세 --}}
                 <div style="display:flex;gap:6px;">
                   <input type="text" class="form-control" id="shippingAddr"
                          placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));cursor:default;" />

@@ -512,13 +512,14 @@
   </div>
 </div>
 
-{{-- OCR 처리 중 전체화면 오버레이 --}}
+{{-- 올리는 동안 덮는 화면. 예전에는 OCR 이 돌던 자리라 「OCR 분석 중」이라 적혀 있었는데,
+     OCR 을 쓰지 않게 된 뒤로는 파일을 올리는 동안만 뜬다 — 하는 일 그대로 적는다. --}}
 <div class="progress-overlay" id="progressOverlay">
   <div class="progress-box">
     <div class="progress-spinner"></div>
-    <div class="progress-title">OCR 분석 중...</div>
-    <div class="progress-sub" id="progressSub">처방전 텍스트를 인식하고 있습니다</div>
-    <div style="margin-top:12px;font-size:11px;font-weight:500;line-height:18px;color:var(--gray-500);">10~30초 소요됩니다. 창을 닫지 마세요.</div>
+    <div class="progress-title">올리는 중...</div>
+    <div class="progress-sub" id="progressSub">파일을 올리고 있습니다</div>
+    <div style="margin-top:12px;font-size:11px;font-weight:500;line-height:18px;color:var(--gray-500);">창을 닫지 마세요.</div>
   </div>
 </div>
 
@@ -966,7 +967,7 @@ function setStep(num, state) {
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#patientSearchInput', title: '이름 선택', body: '이름이나 연락처를 적어 고르거나, 옆의 <b>조회</b>로 창을 열어 전화번호·생년월일까지 보고 고릅니다.' },
-  { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작하며 OCR 분석 대상이 됩니다.' },
+  { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작합니다.' },
   { selector: '#grid-etc', title: '청구ㆍ기타 자료', body: '거래명세서·현금영수증 등 청구 자료를 넣습니다. 타일 왼쪽 위에서 서류명을 고르며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
   { selector: '#submitBtn', title: '등록 버튼', body: '환자를 고르고 파일을 넣은 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 자리는 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },
 ];
