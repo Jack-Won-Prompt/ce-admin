@@ -558,6 +558,21 @@
   .rx-acc-btn-fill { background:var(--primary); border-color:var(--primary); color:var(--gray-0); }
   .rx-acc-btn-fill:hover { background:var(--primary); filter:brightness(1.06); }
 
+  /* ── 어느 걸음에 와 있는가 ──────────────────────────────
+     적기 → 검수 요청 → 검수 완료 세 걸음이다. 단추가 넷 다 같은 모양이면 지금 무엇을
+     눌러야 하는지 화면이 말해 주지 않아, 담당자가 순서를 외워 두어야 했다.
+       지난 걸음  옅게 + 체크        지금 걸음  주색으로 채움        아직  기본 */
+  .rx-acc-btn.is-done { background:var(--primary-50); border-color:var(--primary-200);
+                        color:var(--primary); cursor:default; }
+  .rx-acc-btn.is-done::before { content:'00c'; font-family:'Font Awesome 6 Free'; font-weight:900;
+                                font-size:10px; }
+  .rx-acc-btn.is-now  { background:var(--primary); border-color:var(--primary); color:var(--gray-0);
+                        box-shadow:0 0 0 3px var(--primary-50); }
+  .rx-acc-btn.is-now:hover { filter:brightness(1.06); }
+  /* 아직 차례가 아닌 걸음 — 눌리지만 눈에 먼저 들어오지는 않는다 */
+  .rx-acc-btn.is-wait { color:var(--gray-600); }
+  .rx-acc-btn:disabled { opacity:.65; cursor:default; }
+
   /* ── 안쪽 가로 탭 (아코디언을 대신한다) ────────────────────
      바깥 탭줄(.tab-bar)과 헷갈리지 않게 작게ㆍ밑줄형으로 그린다 — 채운 알약은 바깥 것 몫이다.
      높이 44 는 예전 아코디언 머리와 같아, 첫 구획이 서던 자리가 그대로다. */
@@ -2131,11 +2146,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    완료ㆍ반려는 approve 권한으로 갈라 두었다(config/permissions.php). --}}
               <div class="rx-acc-btns">
                 <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
-                <button type="button" class="rx-acc-btn" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청</button>
+                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청</button>
                 @perm('prescriptions', 'approve')
-                <button type="button" class="rx-acc-btn" onclick="approveRx()" title="검수를 마치고 완료 처리합니다">검수 완료</button>
+                <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 완료 처리합니다">검수 완료</button>
                 @endperm
-                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
+                <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
           </div>
@@ -5806,8 +5821,10 @@ window.HELP_TOUR_STEPS = [
           onSelect: (rowIndex, code) => applyProduct(rowIndex, _pacLast[code]),
         } },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
-      { header: '소비자가',   name: 'product_price',   width: 110, editor: 'number' },
-      { header: '단가',       name: 'insurance_price', width: 110, editor: 'number' },
+      /* 소비자가ㆍ단가는 제품이 들고 오는 값이다. 사람이 고치면 그 줄만 다른 값이 되어
+         어느 것이 맞는지 알 수 없다 — 제품을 바꿔 고른다. */
+      { header: '소비자가',   name: 'product_price',   width: 110, editor: 'number', editable: false },
+      { header: '단가',       name: 'insurance_price', width: 110, editor: 'number', editable: false },
       { header: '총 금액',    name: 'total',           width: 120, editor: 'number', editable: false },
       { header: '기관 부담금', name: 'nhis_amount',    width: 120, editor: 'number', editable: false },
       { header: '본인 부담금', name: 'patient_copay',  width: 120, editor: 'number', editable: false },
@@ -6551,8 +6568,51 @@ window.HELP_TOUR_STEPS = [
 
   /* ── 검수 요청 (담당자) ────────────────────────────────
      적기를 마쳤다는 신호만 보낸다. 값은 「저장」이 이미 넣었다. */
+  /* ── 지금 어느 걸음인가 ─────────────────────────────────────
+     적기 → 검수 요청 → 검수 완료. 단추 넷이 다 같은 모양이면 화면이 순서를 말해 주지
+     않아, 담당자가 외워 두어야 했다. 지난 걸음은 옅게 체크로, 지금 할 걸음은 주색으로
+     채워 둔다. 아직 차례가 아닌 것은 눌리되 눈에 먼저 들어오지 않는다. */
+  const RX_STAGE_DONE = {
+    // 상태별로 이미 지난 걸음
+    pending:          [],
+    ocr_processing:   [],
+    ocr_done:         [],
+    review_needed:    [],
+    review_requested: ['request'],
+    approved:         ['request', 'approve'],
+    ordered:          ['request', 'approve'],
+    rejected:         ['request'],
+  };
+  const RX_STAGE_NOW = {
+    pending:          'save',
+    ocr_processing:   'save',
+    ocr_done:         'save',
+    review_needed:    'save',
+    rejected:         'save',
+    review_requested: 'approve',
+    approved:         null,
+    ordered:          null,
+  };
+
+  function applyRxStage(status) {
+    const done = RX_STAGE_DONE[status] ?? [];
+    const now  = RX_STAGE_NOW[status]  ?? null;
+
+    document.querySelectorAll('.rx-acc-btn[data-stage]').forEach(btn => {
+      const stage = btn.dataset.stage;
+      btn.classList.remove('is-done', 'is-now', 'is-wait');
+      // 저장은 늘 채워 두던 단추라, 지금 걸음이 아닐 때만 채움을 거둔다
+      if (stage === 'save') btn.classList.toggle('rx-acc-btn-fill', now === 'save');
+
+      if (done.includes(stage))      btn.classList.add('is-done');
+      else if (stage === now)        btn.classList.add('is-now');
+      else                           btn.classList.add('is-wait');
+    });
+  }
+
   /** 상태 배지를 그 자리에서 고쳐 세운다. 되돌릴 수 없는 걸음은 단추도 잠근다. */
   function setRxStatus(status, label, badge) {
+    if (status) applyRxStage(status);
     const el = document.getElementById('rxStatusBadge');
     if (el && label) {
       el.textContent = label;
@@ -6604,6 +6664,9 @@ window.HELP_TOUR_STEPS = [
     // 검수를 마치며 만들어지는 서류(요양비위임장 등)를 다시 읽는다
     if (typeof refreshGeneratedDocs === 'function') refreshGeneratedDocs();
   }
+
+  document.addEventListener('DOMContentLoaded',
+    () => applyRxStage(@json($prescription->status)));
 
   async function requestReviewRx() {
     if (!confirm('입력을 마치고 검수를 요청합니다. 계속할까요?')) return;
@@ -8954,6 +9017,13 @@ window.HELP_TOUR_STEPS = [
       it.product_price   = price;
       it.insurance_price = price;
     }
+
+    /* 수량은 처방에 적힌 총계를 그대로 따른다 — 제품을 고르는 순간 몇 개를 보낼지는
+       이미 정해져 있다(1일 처방개수 × 총 처방기간). 담당자가 옆 탭의 숫자를 보고
+       옮겨 적던 일이라, 옮기다 어긋나면 수량이 처방과 달라진다.
+       총계가 아직 비어 있으면 손대지 않는다. */
+    const totalQty = parseInt(document.getElementById('f-total')?.value, 10);
+    if (totalQty > 0) it.quantity = totalQty;
     Object.assign(it, computeRow(it));
 
     renderItems();
