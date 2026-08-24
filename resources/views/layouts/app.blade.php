@@ -4357,6 +4357,12 @@ const ChatPanel = (() => {
 (function () {
   if (!pusherClient) return;
 
+  /* 알림은 맨 바깥 창에서만 띄운다.
+     화면은 탭(iframe) 안에서 열리고 이 스크립트는 껍데기와 탭마다 한 벌씩 돈다 —
+     그래서 서버가 한 번 보낸 알림이 열려 있는 탭 수만큼 겹쳐 떴다(탭 하나면 두 장).
+     띄우는 일은 껍데기가 맡고, 탭 안에서는 화면을 고치는 데 쓰는 이벤트만 흘린다. */
+  const IS_FRAMED = window.self !== window.top;
+
   const DURATION = 10000; // 10초
 
   function showConsentNotif(data) {
@@ -4407,11 +4413,13 @@ const ChatPanel = (() => {
 
   const adminCh = pusherClient.subscribe('private-admin');
   adminCh.bind('consent.submitted', function (data) {
-    showConsentNotif(data);
-    // order 페이지에서 버튼 업데이트할 수 있도록 커스텀 이벤트 발송
+    if (!IS_FRAMED) showConsentNotif(data);
+    /* 이 이벤트는 탭 안에서도 흘려야 한다 — 주문 화면이 이것을 받아
+       위임동의 단추와 생성 서류를 그 자리에서 고친다. */
     window.dispatchEvent(new CustomEvent('ce:consentResult', { detail: data }));
   });
   adminCh.bind('prescription.uploaded', function (data) {
+    if (IS_FRAMED) return;
     showPrescriptionNotif(data);
   });
 
@@ -4421,7 +4429,7 @@ const ChatPanel = (() => {
      같은 사건이 두 번 방송되어도 토스트가 겹치지 않게 잠깐 기억해 둔다. */
   const wwSeen = new Map();
   adminCh.bind('withworks.status', function (data) {
-    if (!data) return;
+    if (!data || IS_FRAMED) return;
 
     const key = (data.event || '') + '|' + (data.body || '');
     const now = Date.now();
