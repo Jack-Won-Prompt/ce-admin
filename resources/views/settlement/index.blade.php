@@ -708,7 +708,7 @@
      토스가 확인한 것은 단추를 두지 않는다. 사람이 손댈 일이 아니다. */
   const CAN_CONFIRM = @json(auth()->user()?->can('settlement.send') ?? true);
 
-  function depositCell(v, row) {
+  function depositCell(v, row, rowIndex) {
     const box = document.createElement('div');
     box.style.cssText = 'display:flex;align-items:center;gap:6px;justify-content:flex-end;';
 
@@ -736,7 +736,7 @@
                       + 'color:var(--gray-1000);line-height:1;';
     btn.textContent = row.deposit_hand ? '취소' : '입금 확인';
     if (row.deposit_hand) btn.style.color = 'var(--danger)';
-    btn.onclick = (ev) => { ev.stopPropagation(); depositAct(row, btn); };
+    btn.onclick = (ev) => { ev.stopPropagation(); depositAct(row, rowIndex, btn); };
     box.appendChild(btn);
 
     return box;
@@ -747,18 +747,18 @@
   const _actCol = TAB === 'virtual_account' ? 'deposit_by' : 'deposit';
   GRID_COLS.forEach(c => { if (c.name === _actCol) c.renderer = depositCell; });
 
-  /* ── 결제 방식 — 아직 안 낸 건은 그 자리에서 바꾼다 ────────────
-     전화로 「카드로 낼게요」 하는 일이 잦다. 목록을 떠나 주문을 열고 고치고 돌아오는
-     대신, 칸을 눌러 세 가지에서 고른다. 이미 낸 건은 바꾸지 않는다 — 낸 방식은 지난
-     일이고, 고치면 기록과 어긋난다. */
+  /* ── 결제 방식 — 고르는 순간이 곧 입금 확인이다 ──────────────
+     입금이 확인되기 전에는 「무엇으로 받았는가」를 말할 수 없다. 그래서 칸은 「-」로
+     비어 있고, 통장ㆍ단말을 보고 방식을 고르는 순간 그 건은 받은 것이 된다.
+     이미 받은 건은 글자만 선다 — 낸 방식은 지난 일이고, 고치면 기록과 어긋난다. */
   const PAY_METHODS = @json(\App\Models\PaymentLink::METHODS);
 
-  function payMethodCell(v, row) {
+  function payMethodCell(v, row, rowIndex) {
     const box = document.createElement('div');
     box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
 
     if (row.deposit_done || !CAN_CONFIRM) {
-      box.textContent = v || '가상계좌';
+      box.textContent = v || '-';
       return box;
     }
 
@@ -768,9 +768,9 @@
     btn.style.cssText = 'height:22px;padding:0 8px;font-size:11px;cursor:pointer;line-height:1;'
                       + 'border:1px dashed var(--gray-300);border-radius:6px;background:transparent;'
                       + 'color:var(--gray-1000);';
-    btn.textContent = v || '가상계좌';
-    btn.title = '눌러서 결제 방식을 바꿉니다';
-    btn.onclick = (ev) => { ev.stopPropagation(); payMethodPick(ev.currentTarget, row); };
+    btn.textContent = '-';
+    btn.title = '무엇으로 받았는지 고르면 입금 확인됩니다';
+    btn.onclick = (ev) => { ev.stopPropagation(); payMethodPick(ev.currentTarget, row, rowIndex); };
     box.appendChild(btn);
     return box;
   }
@@ -784,7 +784,7 @@
   }
   document.addEventListener('click', payMethodClose);
 
-  function payMethodPick(anchor, row) {
+  function payMethodPick(anchor, row, rowIndex) {
     payMethodClose();
 
     const pop = document.createElement('div');
@@ -803,7 +803,7 @@
                          + ';color:' + (on ? 'var(--primary)' : 'var(--gray-1000)')
                          + ';font-weight:' + (on ? '700' : '400') + ';';
       item.textContent = label;
-      item.onclick = () => payMethodSet(row, key, anchor);
+      item.onclick = () => payMethodSet(row, rowIndex, key);
       pop.appendChild(item);
     });
 
@@ -818,7 +818,40 @@
     pop.style.top  = Math.max(8, top) + 'px';
   }
 
-  async function payMethodSet(row, method, anchor) {
+  /* 바뀐 값을 그 줄에만 입힌다 — 화면을 다시 부르지 않는다.
+     칸 둘(결제 방식ㆍ입금확인)과 위쪽 요약 카드가 함께 움직여야 한 화면이 한 말을 한다. */
+  function applyDeposit(row, rowIndex, { done, label, methodKey, amount }) {
+    row.deposit_done = done;
+    row.deposit_hand = done;
+    row.deposit      = done ? Number(amount || 0).toLocaleString() : '-';
+    row.deposit_by   = done ? '담당자 확인' : '-';
+    row.pay_method     = done ? (label ?? row.pay_method) : '-';
+    row.pay_method_key = done ? (methodKey ?? row.pay_method_key) : null;
+    if ('va_status' in row) row.va_status = done ? '입금완료' : (row.va_account === '미발급' ? '미발급' : '입금대기');
+
+    ['pay_method', 'deposit', 'deposit_by', 'va_status'].forEach(name => {
+      if (GRID_COLS.some(c => c.name === name)) grid._refreshCell(rowIndex, name);
+    });
+
+    sumCardShift(done ? 1 : -1, Number(amount || 0));
+  }
+
+  /* 요약 카드(입금 완료ㆍ입금 대기ㆍ대기 금액)를 그만큼 옮긴다. 가상계좌 탭에만 있다. */
+  function sumCardShift(dir, amount) {
+    const pick = (cls) => document.querySelector('.sum-card.' + cls + ' .sum-card-val');
+    const bump = (el, delta) => {
+      if (!el) return;
+      const n = Number((el.firstChild?.textContent ?? el.textContent).replace(/[^0-9-]/g, '')) || 0;
+      const next = Math.max(0, n + delta);
+      if (el.firstChild) el.firstChild.textContent = next.toLocaleString();
+      else el.textContent = next.toLocaleString();
+    };
+    bump(pick('green'),  dir);
+    bump(pick('orange'), -dir);
+    bump(pick('red'),    -dir * amount);
+  }
+
+  async function payMethodSet(row, rowIndex, method) {
     payMethodClose();
     if (method === row.pay_method_key) return;
 
@@ -832,10 +865,7 @@
       const d = await res.json();
       if (!d.success) { showToast(d.message || '바꾸지 못했습니다.', 'danger'); return; }
 
-      // 그 줄만 고쳐 세운다 — 목록을 통째로 다시 부르지 않는다
-      row.pay_method     = d.label;
-      row.pay_method_key = d.method;
-      if (anchor) anchor.textContent = d.label;
+      applyDeposit(row, rowIndex, { done: true, label: d.label, methodKey: d.method, amount: d.amount });
       showToast(d.message, 'success');
     } catch (e) {
       showToast('오류가 발생했습니다.', 'danger');
@@ -933,7 +963,7 @@
   };
   /* 담당자가 통장을 보고 세우는 입금 확인.
      이미 세워 둔 건이면 되돌린다 — 잘못 누른 것을 풀 길이 있어야 한다. */
-  async function depositAct(r, btn) {
+  async function depositAct(r, rowIndex, btn) {
     if (r.deposit_done && !r.deposit_hand) {
       showToast('토스에서 이미 입금이 확인된 주문입니다.', 'warning');
       return;
@@ -948,19 +978,16 @@
 다시 「입금 대기」로 돌아갑니다.`,
         { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
       if (!ok) return;
-      await vaDepositCall(btn, base, 'DELETE', null);
+      await vaDepositCall(btn, base, 'DELETE', null, r, rowIndex, 0);
       return;
     }
 
-    const ok = await ceConfirm(
-      `${r.order_no} 의 입금을 확인합니다.
-청구액 ${due.toLocaleString()}원이 들어온 것으로 세웁니다.`,
-      { title: '입금 확인', confirmText: '확인함', tone: 'info' });
-    if (!ok) return;
-    await vaDepositCall(btn, base, 'POST', { amount: due });
+    /* 묻지 않고 바로 세운다. 통장을 한 줄씩 맞춰 보는 일이라 확인 창이 매번 끼면
+       손이 끊긴다 — 잘못 눌러도 같은 자리에서 「취소」로 되돌린다. */
+    await vaDepositCall(btn, base, 'POST', { amount: due }, r, rowIndex, due);
   };
 
-  async function vaDepositCall(btn, url, method, body) {
+  async function vaDepositCall(btn, url, method, body, row, rowIndex, amount) {
     BtnState.loading(btn, '처리 중...');
     try {
       const res = await fetch(url, {
@@ -972,8 +999,8 @@
       const d = await res.json();
       BtnState.reset(btn);
       if (!d.success) { showToast(d.message || '처리하지 못했습니다.', 'danger'); return; }
+      applyDeposit(row, rowIndex, { done: method === 'POST', amount });
       showToast(d.message, d.mismatch ? 'warning' : 'success');
-      setTimeout(() => location.reload(), 700);   // 목록ㆍ요약을 함께 다시 센다
     } catch (e) {
       BtnState.reset(btn);
       showToast('오류가 발생했습니다.', 'danger');

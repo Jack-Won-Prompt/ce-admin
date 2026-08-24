@@ -181,9 +181,10 @@ class SettlementController extends Controller
                 'copay'        => (int) ($order->patient_copay ?? 0),
                 'shipping'     => (int) ($order->shipping_fee ?? 0),
                 'va_state'     => $vaState,
-                /* 결제 방식 — 가상계좌ㆍ카드결제ㆍ무통장입금 셋. 셈은 주문이 한다. */
-                'pay_method'     => $order->payMethodLabel(),
-                'pay_method_key' => $order->payMethod(),
+                /* 결제 방식 — 받은 뒤에야 말할 수 있다. 확인 전에는 「-」로 둔다. */
+                'pay_method'     => ($order->deposit_confirmed_at !== null || (bool) $tp?->is_done)
+                                        ? $order->payMethodLabel() : '-',
+                'pay_method_key' => $order->pay_method,
                 'deposit'      => $order->deposit_confirmed_at !== null
                                     ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
                                     : ($tp?->is_done ? number_format($tp->amount ?? 0) : '-'),
@@ -560,10 +561,13 @@ class SettlementController extends Controller
     }
 
     /**
-     * 결제 방식을 바꾼다 — 가상계좌ㆍ카드결제ㆍ무통장입금.
+     * 무엇으로 받았는지 고른다 — 그리고 그것이 곧 입금 확인이다.
      *
-     * 전화로 「카드로 낼게요」 하면 그 자리에서 바꾼다. 이미 입금이 확인된 건은 바꾸지
-     * 않는다 — 낸 방식은 지난 일이고, 고치면 기록과 어긋난다.
+     * 입금이 확인되기 전에는 「무엇으로 받았는가」를 말할 수 없다. 그래서 결제 방식 칸은
+     * 「-」로 비어 있고, 담당자가 통장ㆍ단말을 보고 방식을 고르는 순간 그 건은 받은
+     * 것이 된다. 방식을 고르는 일과 입금을 세우는 일이 하나다.
+     *
+     * 금액은 청구액(본인부담금 + 배송비)을 그대로 적는다.
      */
     public function setPayMethod(Request $request, Order $order): JsonResponse
     {
@@ -575,18 +579,26 @@ class SettlementController extends Controller
             return response()->json(['success' => false, 'message' => '이미 입금이 확인된 주문입니다.'], 422);
         }
 
-        $was = $order->payMethodLabel();
-        $order->update(['pay_method' => $request->input('method')]);
+        $due = $order->expectedDeposit();
+
+        $order->update([
+            'pay_method'           => $request->input('method'),
+            'deposit_confirmed_at' => now(),
+            'deposit_confirmed_by' => Auth::id(),
+            'deposit_amount'       => $due,
+        ]);
         $order->refresh();
 
         activity()->causedBy(Auth::user())->performedOn($order)
-            ->log("결제 방식 변경: {$was} → {$order->payMethodLabel()}");
+            ->log("입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원');
 
         return response()->json([
-            'success' => true,
-            'method'  => $order->payMethod(),
-            'label'   => $order->payMethodLabel(),
-            'message' => "결제 방식을 {$order->payMethodLabel()}(으)로 바꿨습니다.",
+            'success'      => true,
+            'method'       => $order->payMethod(),
+            'label'        => $order->payMethodLabel(),
+            'amount'       => $due,
+            'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
+            'message'      => "{$order->payMethodLabel()}으로 " . number_format($due) . '원 입금 확인했습니다.',
         ]);
     }
 
@@ -603,6 +615,9 @@ class SettlementController extends Controller
             'deposit_confirmed_by' => null,
             'deposit_amount'       => null,
             'deposit_note'         => null,
+            /* 방식도 함께 비운다 — 받지 않은 건에 「무엇으로 받았다」가 남아 있으면
+               다음 사람이 이미 받은 것으로 읽는다. */
+            'pay_method'           => null,
         ]);
 
         activity()->causedBy(Auth::user())->performedOn($order)
