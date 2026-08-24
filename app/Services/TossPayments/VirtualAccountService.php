@@ -143,6 +143,20 @@ class VirtualAccountService extends TossClient
             'status'      => $verified['status'] ?? null,
         ]);
 
+        /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다.
+           담당자가 통장을 보고 세운 것과 같은 일이다 — 부르는 곳만 다르다.
+           웹훅이 실패로 끝나면 토스가 다시 보내므로, 발행에서 나는 오류가 그 재시도를
+           부르지 않게 여기서 삼킨다(자동 발행은 스스로 두 번 내지 않는다). */
+        if ($tossPayment->is_done && $tossPayment->order) {
+            try {
+                app(\App\Services\DepositAutoIssue::class)->run($tossPayment->order, '토스 웹훅');
+            } catch (\Throwable $e) {
+                Log::warning('[Toss] 입금 후 자동 발행 실패', [
+                    'order_id' => $tossPayment->order_id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return $tossPayment;
     }
 }

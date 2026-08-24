@@ -982,6 +982,16 @@
       return;
     }
 
+    /* 무엇으로 받았는지 모르는 채로 세우지 않는다.
+       결제 방식은 이후 절차를 가른다 — 현금영수증은 가상계좌ㆍ무통장입금에만 나가고
+       카드결제는 카드매출전표가 증빙이다. 방식이 비어 있으면 그 자리에서 고르게 한다. */
+    if (!r.pay_method_key) {
+      showToast('결제 방식을 먼저 고르십시오.', 'warning');
+      const cell = btn.closest('tr')?.querySelector('.pay-cell-btn');
+      if (cell) payMethodPick(cell, r, rowIndex);
+      return;
+    }
+
     /* 묻지 않고 바로 세운다. 통장을 한 줄씩 맞춰 보는 일이라 확인 창이 매번 끼면
        손이 끊긴다 — 잘못 눌러도 같은 자리에서 「취소」로 되돌린다. */
     await vaDepositCall(btn, base, 'POST', { amount: due }, r, rowIndex, due);

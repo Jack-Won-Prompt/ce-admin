@@ -549,8 +549,11 @@ class SettlementController extends Controller
                 . ($amount !== $due ? ' — 청구액 ' . number_format($due) . '원과 다름' : '')
                 . ($request->filled('note') ? ' · ' . $request->input('note') : ''));
 
+        $issued = app(\App\Services\DepositAutoIssue::class)->run($order, '담당자 확인');
+
         return response()->json([
             'success'      => true,
+            'issued'       => $issued,
             'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
             'amount'       => $amount,
             'mismatch'     => $amount !== $due,
@@ -592,8 +595,13 @@ class SettlementController extends Controller
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log("입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원');
 
+        /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다. 실패해도 입금 확인은
+           그대로 둔다 — 들어온 것은 들어온 것이다(기본은 꺼져 있다). */
+        $issued = app(\App\Services\DepositAutoIssue::class)->run($order, '담당자 확인');
+
         return response()->json([
             'success'      => true,
+            'issued'       => $issued,
             'method'       => $order->payMethod(),
             'label'        => $order->payMethodLabel(),
             'amount'       => $due,
