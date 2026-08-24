@@ -160,7 +160,8 @@ class OrderController extends Controller
         // 다중 제품이면 품목명을 note에 기록
         $productNames = $items->pluck('product_name')->implode(', ');
 
-        $shippingFee = $request->shipping_fee ?? 3000;
+        // 배송비는 받지 않기로 했다(2026-08-24). 보내오면 그 값을 쓰고, 없으면 0 이다.
+        $shippingFee = $request->shipping_fee ?? 0;
         $totalAmount = $totalCopay + $shippingFee;
 
         $order = Order::create([
@@ -259,7 +260,8 @@ class OrderController extends Controller
         $totalNhis  = $request->total_nhis    ?? $items->sum('nhis_amount');
         $unitPrice  = (float)($firstItem['insurance_price'] ?? $firstItem['product_price'] ?? 0);
         $totalQty   = $items->sum('quantity') ?: 1;
-        $shippingFee = $order->shipping_fee ?? 3000;
+        // 배송비는 받지 않기로 했다(2026-08-24) — 예전 주문에 적힌 값은 그대로 지킨다
+        $shippingFee = $order->shipping_fee ?? 0;
         $totalAmount = $totalCopay + $shippingFee;
         $productNames = $items->pluck('product_name')->implode(', ');
 

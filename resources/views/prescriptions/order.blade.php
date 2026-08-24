@@ -446,7 +446,11 @@
   /* 청구전략 — 비용 내역과 같은 폭에 앉되, 규칙이라는 것이 보이게 옅은 바탕을 깐다 */
   .bs-box   { border:1px solid var(--border); border-radius:8px; background:var(--gray-50, #f8f9fa);
               padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
-  .bs-head  { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--text); }
+  /* 결과 한 줄 — 이름 · 비율 · 발행 방식이 나란히 선다 */
+  .bs-result { display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:6px; }
+  .bs-head  { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text); }
+  .bs-result .bs-split { font-size:12px; color:var(--text-muted); }
+  .bs-result .bs-chips { margin-left:auto; }
   .bs-flag  { font-size:11px; font-weight:500; color:var(--warning, #b26a00); }
   .bs-split { font-size:12px; color:var(--text-muted); }
   .bs-chips { display:flex; gap:6px; flex-wrap:wrap; }
@@ -1197,7 +1201,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:12px;">
                     <span style="color:var(--text-muted);">배송비</span>
-                    <b>&#8361;{{ number_format($prescription->order?->shipping_fee ?? 3000) }}</b>
+                    <b>&#8361;{{ number_format($prescription->order?->shipping_fee ?? 0) }}</b>
                   </div>
                 </div>
                 <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--primary-600);margin-bottom:12px;">
@@ -3084,21 +3088,24 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
               {{-- 아직 고르지 않았으면 이 아래는 통째로 감춘다. 고르는 칸이 바로 위에
                    있으니 「고르면 정해집니다」라고 적어 둘 이유가 없다. --}}
-              <div id="bsResult" style="display:none;flex-direction:column;gap:6px;">
-                <div class="bs-head"><span id="bsLabel"></span><span class="bs-flag" id="bsFlag"></span></div>
-                <div class="bs-split" id="bsSplit"></div>
-                <div class="bs-chips">
+              {{-- 결과는 한 줄로 읽는다 — 이름ㆍ비율ㆍ발행 방식이 세 줄로 쌓여 있어
+                   상자만 길어지고 정작 견주기는 어려웠다. 좁아지면 접힌다. --}}
+              <div id="bsResult" class="bs-result" style="display:none;">
+                <span class="bs-head"><span id="bsLabel"></span><span class="bs-flag" id="bsFlag"></span></span>
+                <span class="bs-split" id="bsSplit"></span>
+                <span class="bs-chips">
                   <span class="bs-chip">현금영수증 <b id="bsCash">-</b></span>
                   <span class="bs-chip">세금계산서 <b id="bsTax">-</b></span>
-                </div>
+                </span>
               </div>
             </div>
 
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 비용 내역</div>
             <div class="cost-row"><span>기관 부담금</span><span class="cost-val" id="costNhisAmt">₩ {{ number_format($calcNhis) }}</span></div>
             <div class="cost-row"><span>본인부담금</span><span class="cost-val" id="costNhis">₩ {{ number_format($calcCopay) }}</span></div>
-            <div class="cost-row"><span>배송비</span><span class="cost-val">₩ 3,000</span></div>
-            <div class="cost-row total"><span>본인 부담금 합계</span><span class="cost-val" id="costTotal">₩ {{ number_format($calcCopay + 3000) }}</span></div>
+            {{-- 배송비는 받지 않기로 했다(2026-08-24). 줄을 걷고 합계에서도 뺀다 —
+                 줄만 지우고 합계에 남겨 두면 화면의 숫자가 서로 맞지 않는다. --}}
+            <div class="cost-row total"><span>본인 부담금 합계</span><span class="cost-val" id="costTotal">₩ {{ number_format($calcCopay) }}</span></div>
 
             <div style="margin-top:16px;">
               <label class="form-label">배송 정보</label>
@@ -3189,7 +3196,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <tr><th>배송비</th><td>₩ 3,000</td></tr>
                 <tr>
                   <th style="font-weight:700;color:var(--primary);">본인 부담금 합계</th>
-                  <td style="font-weight:700;color:var(--primary);" id="tv-costTotal">₩ {{ number_format($calcCopay + 3000) }}</td>
+                  <td style="font-weight:700;color:var(--primary);" id="tv-costTotal">₩ {{ number_format($calcCopay) }}</td>
                 </tr>
                 <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-truck"></i> 배송 정보</td></tr>
                 <tr><th>받는 사람</th><td id="tv-ship-recipient">{{ $prescription->order?->shipping_recipient ?? ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-') }}</td></tr>
@@ -6213,13 +6220,14 @@ window.HELP_TOUR_STEPS = [
     const fmtNhis    = Math.round(totalNhis).toLocaleString('ko-KR');
     const fmtCopay   = Math.round(totalCopay).toLocaleString('ko-KR');
     const el = id => document.getElementById(id);
-    const shipping = {{ $prescription->order?->shipping_fee ?? 3000 }};
+    // 배송비는 받지 않는다 — 예전 주문에 적힌 값이 있으면 그것만 따른다
+    const shipping = {{ (int) ($prescription->order?->shipping_fee ?? 0) }};
     const vaTotal  = Math.round(totalCopay) + shipping;
     if (el('summary-nhis'))  el('summary-nhis').textContent  = '₩ ' + fmtNhis;
     if (el('summary-copay')) el('summary-copay').textContent = '₩ ' + fmtCopay;
     if (el('costNhisAmt'))   el('costNhisAmt').textContent   = '₩ ' + fmtNhis;
     if (el('costNhis'))      el('costNhis').textContent      = '₩ ' + fmtCopay;
-    if (el('costTotal'))     el('costTotal').textContent     = '₩ ' + (Math.round(totalCopay) + 3000).toLocaleString('ko-KR');
+    if (el('costTotal'))     el('costTotal').textContent     = '₩ ' + Math.round(totalCopay).toLocaleString('ko-KR');
     if (el('vaTotalAmt'))    el('vaTotalAmt').textContent    = '₩' + vaTotal.toLocaleString('ko-KR');
     if (el('vaCopayAmt'))    el('vaCopayAmt').textContent    = '본인부담 ₩' + Math.round(totalCopay).toLocaleString('ko-KR');
     const fmtDeposit = vaTotal.toLocaleString('ko-KR');
@@ -6735,7 +6743,7 @@ window.HELP_TOUR_STEPS = [
         ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SO 번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
         ${!wwSuccess && wwMessage ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;">${wwMessage}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">제품 수</span><b>${localPayload.items?.length ?? 0}종</b></div>
-        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">본인 부담금</span><b style="color:var(--primary);">₩ ${(totalCopay + 3000).toLocaleString()}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">본인 부담금</span><b style="color:var(--primary);">₩ ${totalCopay.toLocaleString()}</b></div>
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">예상 배송일</span><b>${res.estimated_delivery ?? '-'}</b></div>
       </div>`;
     document.getElementById('orderModal').classList.add('show');
@@ -6753,7 +6761,7 @@ window.HELP_TOUR_STEPS = [
       orderExists   = true;
       // 현금영수증 발행에 필요한 주문 ID·금액 동기화
       _ORDER_ID     = res.order_id ?? _ORDER_ID;
-      _ORDER_TOTAL  = res.total_amount ?? (totalCopay + 3000) ?? _ORDER_TOTAL;
+      _ORDER_TOTAL  = res.total_amount ?? totalCopay ?? _ORDER_TOTAL;
       _PATIENT_COPAY = res.patient_copay ?? totalCopay ?? _PATIENT_COPAY;
       switchToEditDeleteButtons(res.order_number, soNo);
       updateWwSoDisplay(res.order_number, soNo, currentSoType);
@@ -6925,7 +6933,7 @@ window.HELP_TOUR_STEPS = [
     existingOrder.so_type         = currentSoType;
     existingOrder.shipping_address = shippingAddress;
     // 수정된 금액 동기화
-    _ORDER_TOTAL   = localRes.total_amount ?? (totalCopay + 3000) ?? _ORDER_TOTAL;
+    _ORDER_TOTAL   = localRes.total_amount ?? totalCopay ?? _ORDER_TOTAL;
     _PATIENT_COPAY = totalCopay ?? _PATIENT_COPAY;
 
     // Col 3 판매번호 카드 업데이트 (수정 후 SO 번호는 동일 유지, 타입만 갱신)
@@ -8016,7 +8024,7 @@ window.HELP_TOUR_STEPS = [
         // ── 가상계좌 내용 SMS 자동 발송 ──────────────────────
         const patientName  = SMS_PLACEHOLDERS['#{고객명}'] ?? '';
         const mobile       = document.getElementById('smsMobile')?.value?.trim() ?? '';
-        const shippingFee  = Number(data.shipping_fee ?? 3000);
+        const shippingFee  = Number(data.shipping_fee ?? 0);
         const productTotal = items.reduce((s, i) => {
             const base = Number(i.insurance_price ?? i.product_price ?? 0);
             const qty  = Number(i.quantity ?? 1);
