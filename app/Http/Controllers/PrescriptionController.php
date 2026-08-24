@@ -226,6 +226,14 @@ class PrescriptionController extends Controller
                예전에는 25 가 박혀 있어 어느 건이든 같은 값이 나갔다. 코드표를 아직 받지
                못해 표의 값은 모두 25 지만, 받으면 config 한 곳만 고치면 된다. */
             'billing_strategy'        => $this->withworksBillingStrategy($prescription),
+            /* 수량은 낱개로 센다 — 우리 화면의 「수량」은 총계(1일 처방개수 × 총 처방기간)다.
+               밝히지 않으면 저쪽은 RB(박스)로 읽고 r_box 를 곱해, 540개가 5,400개로
+               등록됐다. 고치는 쪽(so_update)은 진작 낱개로 읽고 있어 만들 때와 고칠 때가
+               열 배 어긋나 있었다. */
+            'qty_unit'                => 'EA',
+            /* 확정은 창고에서 한다. 우리는 등록까지만 한다 — 올리자마자 확정되면
+               수량ㆍ배송지를 고칠 자리가 없고, 재고가 그 자리에서 묶인다. */
+            'confirm'                 => false,
         ];
 
         try {
