@@ -221,8 +221,10 @@ class PrescriptionController extends Controller
             'so_type'                 => config('services.demoworks.so_type', '5001'),
             // 받는 사람
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
-            // 청구전략
-            'billing_strategy'        => 25,
+            /* 청구전략 — 우리 화면이 정한 것(유형 × 자격)을 위드웍스 코드로 옮겨 보낸다.
+               예전에는 25 가 박혀 있어 어느 건이든 같은 값이 나갔다. 코드표를 아직 받지
+               못해 표의 값은 모두 25 지만, 받으면 config 한 곳만 고치면 된다. */
+            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
         ];
 
         try {
@@ -2540,6 +2542,20 @@ HTML;
 <div class="footer">본 영수증은 소득공제·지출증빙용으로 사용하실 수 있습니다.</div>
 </body></html>
 HTML;
+    }
+
+    /** 위드웍스로 넘길 청구전략 코드 — 우리 열쇠(「유형|자격」)를 저쪽 코드로 옮긴다 */
+    private function withworksBillingStrategy(Prescription $prescription): int
+    {
+        $key = \App\Support\BillingStrategy::key(
+            $prescription->counsel_acc_add_type,
+            $prescription->benefit_class,
+        );
+
+        $conf = (array) config('services.withworks_billing_strategy', []);
+        $map  = (array) ($conf['map'] ?? []);
+
+        return (int) ($map[$key] ?? $conf['default'] ?? 25);
     }
 
     // ── SMS 템플릿 목록 ────────────────────────────────────
