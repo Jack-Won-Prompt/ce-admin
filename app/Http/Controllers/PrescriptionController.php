@@ -1178,7 +1178,7 @@ class PrescriptionController extends Controller
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
-        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator']);
+        $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator', 'billingOffice']);
         $patients = Patient::orderBy('name')->get();
 
         // 이전(ID 작은 쪽) / 다음(ID 큰 쪽) — rx_number 반환
@@ -1385,6 +1385,7 @@ class PrescriptionController extends Controller
             'billing_strategy'      => 'nullable|string|max:40',
             // 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다
             'claim_agency'          => 'nullable|string|in:nhis,local,none',
+            'billing_office_id'     => 'nullable|integer|exists:billing_offices,id',
             'local_gov'             => 'nullable|string|max:60',
             'nhis_reg_status'       => 'nullable|string|max:20',
             'nhis_renew'            => 'nullable|string|max:100',
@@ -1458,6 +1459,8 @@ class PrescriptionController extends Controller
                                             $request->input('benefit_class'))
                                         : null,
             'claim_agency'         => $request->input('claim_agency'),
+            /* 이 건을 보내는 청구처 — 주소로 찾아 사람이 고른 한 줄이다 */
+            'billing_office_id'    => $request->input('billing_office_id'),
             'local_gov'            => $request->input('local_gov'),
             // 거래·주문
             'purchase_type'        => $request->input('purchase_type'),

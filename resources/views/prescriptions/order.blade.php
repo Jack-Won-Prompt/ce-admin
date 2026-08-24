@@ -2667,6 +2667,26 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   @endforeach
                 </select>
               </div>
+              {{-- 관할 청구처 — 어느 지사ㆍ어느 부서ㆍ누구에게 보내는가.
+                   환자 주소에서 읍ㆍ면ㆍ동만 뽑아 찾는다(청구처 정보에 쌓아 둔 것). --}}
+              <div class="rx-field-row rx-row-start">
+                <span class="rx-field-label">관할 청구처</span>
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;position:relative;">
+                  <input type="hidden" id="f-billing-office" value="{{ $prescription->billing_office_id ?? '' }}">
+                  <span id="boPickLabel" style="flex:1;min-width:0;font-size:12px;line-height:1.5;
+                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                        color:{{ $prescription->billingOffice ? 'var(--text)' : 'var(--text-muted)' }};">
+                    @if($prescription->billingOffice)
+                      {{ $prescription->billingOffice->displayName() }}@if($prescription->billingOffice->manager_name) · {{ $prescription->billingOffice->manager_name }}@endif
+                      @if($prescription->billingOffice->tel) <span style="font-family:monospace;">{{ $prescription->billingOffice->tel }}</span>@endif
+                    @else
+                      아직 고르지 않았습니다
+                    @endif
+                  </span>
+                  <button type="button" class="rx-side-btn" onclick="boFindOpen(event)">찾기</button>
+                  @include('prescriptions._billing_office_pop')
+                </div>
+              </div>
               <div class="rx-field-row" id="row-local-gov" style="{{ ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL ? '' : 'display:none;' }}">
                 <span class="rx-field-label">관할 지자체</span>
                 <input type="text" class="form-control" id="f-local-gov"
@@ -6558,6 +6578,7 @@ window.HELP_TOUR_STEPS = [
          보내는 것은 화면이 무엇으로 보고 있었는지를 남기기 위해서다. */
       billing_strategy: strOrNull('bsStrategy'),
       claim_agency:     strOrNull('f-claim-agency'),
+      billing_office_id: intOrNull('f-billing-office'),
       // 지자체가 아니면 관할 지자체는 값이 있을 이유가 없다
       local_gov:        (document.getElementById('f-claim-agency')?.value === 'local')
                           ? strOrNull('f-local-gov') : null,
@@ -7327,8 +7348,234 @@ window.HELP_TOUR_STEPS = [
       });
   }
 
+  /* ── 관할 청구처 찾기 ──────────────────────────────────
+     환자 주소에서 읍ㆍ면ㆍ동만 뽑아 쌓아 둔 청구처를 찾는다. 없으면 공단 지사찾기를
+     열어 확인하고 그 자리에서 등록한다 — 다음 건부터는 바로 뜬다.
+
+     주소를 서버로 보내지 않는다. 읍ㆍ면ㆍ동과 시군구만 보낸다 — 관할을 가리는 데
+     그 둘이면 충분하고, 굳이 번지까지 흘릴 까닭이 없다. */
+  const BO_LOOKUP_URL = @json(route('billing-offices.lookup'));
+  const BO_STORE_URL  = @json(route('billing-offices.store'));
+  const BO_NHIS_URL   = 'https://www.nhis.or.kr/nhis/about/retrieveBranchList.do';
+
+  /** 주소에서 읍ㆍ면ㆍ동을 집는다 — 서버(BillingOffice::emdFromAddress)와 같은 잣대다. */
+  function boEmdOf(addr) {
+    const s = (addr || '').trim();
+    if (!s) return '';
+    const m = s.match(/([가-힣]{1,6}[0-9]{0,2}[동읍면])(?=\s|$)/g);
+    if (!m) return '';
+    for (const cand of m) {
+      if (cand.length >= 2 && !/(로동|가동)$/.test(cand)) return cand;
+    }
+    return '';
+  }
+
+  /** 시군구 — 광역(특별시ㆍ광역시)은 빼고 마지막 것을 쓴다(「부천시 원미구」면 원미구). */
+  function boSigunguOf(addr) {
+    const m = (addr || '').match(/([가-힣]{2,10}(?:시|군|구))(?=\s)/g);
+    if (!m) return '';
+    let picked = '';
+    for (const c of m) {
+      if (/(특별시|광역시|특별자치시|특별자치도)$/.test(c)) continue;
+      picked = c;
+    }
+    return picked;
+  }
+
+  function boPatientAddress() {
+    const base = document.getElementById('f-address')?.value ?? '';
+    return base.trim();
+  }
+
+  function boFindOpen(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('boFindPop');
+    if (!pop) return;
+    const opening = pop.style.display === 'none' || !pop.style.display;
+    closeAllPopovers();
+    pop.style.display = opening ? 'block' : 'none';
+    if (!opening) return;
+
+    boFindNewCancel();
+    boFindPlace();
+    const addr = boPatientAddress();
+    document.getElementById('boFindEmd').value     = boEmdOf(addr);
+    document.getElementById('boFindSigungu').value = boSigunguOf(addr);
+    boFindRun();
+  }
+
+  /* 창이 오른쪽으로 넘치면 그만큼 왼쪽으로 당긴다.
+     이 칸은 화면 오른쪽 열에 있어 520 폭이 그대로 잘려 나간다 — 본문(.content-wrapper)이
+     넘치는 것을 잘라 내므로, 넘겨 놓으면 「+ 여기에 등록」 단추가 아예 보이지 않는다. */
+  function boFindPlace() {
+    const pop = document.getElementById('boFindPop');
+    if (!pop || pop.style.display === 'none') return;
+
+    pop.style.left = '0px';
+    const gap  = 8;
+    const wrap = document.querySelector('.content-wrapper');
+    const edge = wrap ? wrap.getBoundingClientRect().right : window.innerWidth;
+    const r    = pop.getBoundingClientRect();
+    const over = r.right - (edge - gap);
+
+    if (over > 0) {
+      // 왼쪽으로 나가지 않는 선까지만 당긴다
+      pop.style.left = -Math.min(over, Math.max(0, r.left - gap)) + 'px';
+    }
+  }
+
+  window.addEventListener('resize', boFindPlace);
+
+  function boFindClose() {
+    const pop = document.getElementById('boFindPop');
+    if (pop) pop.style.display = 'none';
+  }
+
+  function boFindOpenNhis() { window.open(BO_NHIS_URL, 'nhis_branch'); }
+
+  async function boFindRun() {
+    const emd     = document.getElementById('boFindEmd').value.trim();
+    const sigungu = document.getElementById('boFindSigungu').value.trim();
+    const note    = document.getElementById('boFindNote');
+    const list    = document.getElementById('boFindList');
+
+    if (!emd) {
+      /* 도로명 주소에는 읍면동이 없다. 엉뚱한 관할을 들이미느니 모른다고 말한다. */
+      note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동을 뽑지 못했습니다(도로명 주소일 수 있습니다). '
+                     + '위 칸에 직접 적고 찾아 주십시오.';
+      list.innerHTML = '';
+      return;
+    }
+
+    note.textContent = '불러오는 중…';
+    list.innerHTML   = '';
+
+    try {
+      const qs  = new URLSearchParams({ emd });
+      if (sigungu) qs.set('sigungu', sigungu);
+      const res = await fetch(BO_LOOKUP_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
+      const d   = await res.json();
+      const rows = d.rows ?? [];
+
+      if (!rows.length) {
+        note.innerHTML = `<b>${_faxEsc(emd)}</b> 로 쌓아 둔 청구처가 없습니다. `
+                       + '공단 지사찾기에서 확인한 뒤 「+ 여기에 등록」으로 적어 두십시오.';
+        return;
+      }
+
+      note.innerHTML = `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
+                     + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
+
+      const cur = document.getElementById('f-billing-office').value;
+      list.innerHTML = rows.map(r => `
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid ${String(r.id) === cur ? 'var(--primary)' : 'var(--border)'};
+               border-radius:var(--radius);cursor:pointer;font-size:12px;background:${String(r.id) === cur ? 'var(--primary-light)' : 'var(--bg-card)'};">
+          <input type="radio" name="bo_pick" value="${r.id}" ${String(r.id) === cur ? 'checked' : ''}
+                 style="accent-color:var(--primary);margin-top:2px;" onchange="boFindPick(${r.id})">
+          <span style="flex:1;min-width:0;">
+            <span style="font-weight:700;">${_faxEsc(r.office_name)}</span>
+            ${r.dept ? ' · ' + _faxEsc(r.dept) : ''}
+            ${r.manager_name ? ' · ' + _faxEsc(r.manager_name) : ''}${r.title ? ' ' + _faxEsc(r.title) : ''}
+            <span style="display:block;color:var(--text-muted);font-size:11px;">${_faxEsc(r.duty || '')}</span>
+            <span style="display:block;font-family:monospace;font-size:11px;">
+              ${r.tel ? '☎ ' + _faxEsc(r.tel) : ''}${r.fax ? '  FAX ' + _faxEsc(r.fax) : ''}
+            </span>
+          </span>
+          <span style="font-size:10px;color:var(--text-muted);flex-shrink:0;">${_faxEsc(r.kind_label)}</span>
+        </label>`).join('');
+    } catch (e) {
+      note.textContent = '찾는 중 오류가 발생했습니다.';
+    }
+  }
+
+  /** 고른 것을 화면에 세우고 칸에 넣는다 — 저장은 「저장」이 한다. */
+  function boFindPick(id) {
+    const row = [...document.querySelectorAll('#boFindList label')]
+      .find(l => l.querySelector('input')?.value === String(id));
+    document.getElementById('f-billing-office').value = id;
+
+    const label = document.getElementById('boPickLabel');
+    if (label && row) {
+      label.textContent = row.innerText.replace(/\s*\n\s*/g, ' · ').trim();
+      label.style.color = 'var(--text)';
+    }
+    markOcrDirty();
+    boFindClose();
+    showToast('관할 청구처를 골랐습니다. 저장하면 이 건에 남습니다.', 'success');
+  }
+
+  function boFindNew() {
+    const f = document.getElementById('boFindForm');
+    f.style.display = 'flex';
+    document.getElementById('boNewMsg').style.display = 'none';
+    document.getElementById('boNewOffice').focus();
+  }
+
+  function boFindNewCancel() {
+    const f = document.getElementById('boFindForm');
+    if (f) f.style.display = 'none';
+    ['boNewOffice','boNewDept','boNewManager','boNewTitle','boNewDuty','boNewTel','boNewFax']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  }
+
+  async function boFindNewSave() {
+    const emd     = document.getElementById('boFindEmd').value.trim();
+    const sigungu = document.getElementById('boFindSigungu').value.trim();
+    const office  = document.getElementById('boNewOffice').value.trim();
+    const msg     = document.getElementById('boNewMsg');
+
+    const say = (t, ok) => {
+      msg.style.display = 'block';
+      msg.style.color = ok ? 'var(--primary)' : 'var(--danger)';
+      msg.textContent = t;
+    };
+
+    if (!office) { say('기관명은 반드시 적어야 합니다.', false); return; }
+    if (!emd)    { say('관할 읍ㆍ면ㆍ동을 먼저 적어 주십시오.', false); return; }
+
+    try {
+      const res = await fetch(BO_STORE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: JSON.stringify({
+          kind:         document.getElementById('boNewKind').value,
+          office_name:  office,
+          dept:         document.getElementById('boNewDept').value.trim(),
+          manager_name: document.getElementById('boNewManager').value.trim(),
+          title:        document.getElementById('boNewTitle').value.trim(),
+          duty:         document.getElementById('boNewDuty').value.trim(),
+          tel:          document.getElementById('boNewTel').value.trim(),
+          fax:          document.getElementById('boNewFax').value.trim(),
+          is_active:    true,
+          area_sigungu: sigungu,
+          areas:        emd,
+        }),
+      });
+      const d = await res.json();
+      if (!d.success) {
+        say(d.message ?? (Object.values(d.errors ?? {})[0]?.[0]) ?? '등록 실패', false);
+        return;
+      }
+      boFindNewCancel();
+      await boFindRun();
+      boFindPick(d.row.id);          // 방금 적은 것을 그대로 고른다
+    } catch (e) {
+      say('네트워크 오류가 발생했습니다.', false);
+    }
+  }
+
+  /* 창 밖을 누르면 닫는다 */
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('boFindPop');
+    if (!pop || pop.style.display === 'none') return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest('[onclick^="boFindOpen"]')) return;
+    pop.style.display = 'none';
+  });
+
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal','boFindPop'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });

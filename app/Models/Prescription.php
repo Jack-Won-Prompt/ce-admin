@@ -59,7 +59,7 @@ class Prescription extends Model
         'counsel_status', 'counsel_call_no', 'counsel_re_date', 'counsel_contents',
         'counsel_order_id',
         'dealer_type', 'caregiver_name',
-        'benefit_class', 'billing_strategy', 'claim_agency', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
+        'benefit_class', 'billing_strategy', 'claim_agency', 'billing_office_id', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
         'rx_use_period', 'rx_end_date', 'purchase_type',
         'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
         'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',
@@ -198,6 +198,12 @@ class Prescription extends Model
     public function order(): HasOne
     {
         return $this->hasOne(Order::class);
+    }
+
+    /** 이 건을 보내는 청구처 — 공단 지사 또는 지자체 부서의 담당자 한 줄. */
+    public function billingOffice()
+    {
+        return $this->belongsTo(\App\Models\BillingOffice::class, 'billing_office_id');
     }
 
     public function items(): HasMany
