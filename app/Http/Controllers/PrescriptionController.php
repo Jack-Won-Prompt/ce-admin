@@ -2556,8 +2556,10 @@ HTML;
      *
      * 처방전 그림과 첨부 서류도 베끼지 않는다 — 그 종이는 그 건의 것이다.
      */
-    public function duplicate(Prescription $prescription): JsonResponse
+    public function duplicate(Request $request, Prescription $prescription): JsonResponse
     {
+        $request->validate(['patient_id' => 'nullable|integer|exists:patients,id']);
+
         /* 어느 칸이 날짜인지는 표에 물어본다. 칸이 늘 때마다 여기 목록을 고쳐 적는 일을
            만들지 않으려는 것이다 — 적기를 잊으면 지난 날짜가 조용히 따라온다. */
         $dateCols = collect(Schema::getColumnListing('prescriptions'))
@@ -2586,6 +2588,9 @@ HTML;
             'upload_source' => 'web',
             'created_by'    => Auth::id(),
             'updated_by'    => Auth::id(),
+            /* 「조회」에서 고른 사람으로 이어 달라고 하면 그 사람에게 붙인다.
+               같은 사람이 다시 사는 것이면 원본과 같고, 다른 사람이면 그쪽으로 간다. */
+            'patient_id'    => $request->input('patient_id') ?: $prescription->patient_id,
         ]));
 
         // 제품 줄도 함께 베낀다 — 같은 것을 다시 사는 것이 이 단추의 뜻이다

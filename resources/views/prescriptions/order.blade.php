@@ -4982,11 +4982,31 @@ window.HELP_TOUR_STEPS = [
     window.ceOpenTab(row.url, '주문 - ' + (row.order_no || ''), 'file-edit-02');
   }
 
-  /* 새 건으로 간다 — 지금 보고 있는 이 빈 건에 그 사람을 이어 두고 정보를 채운다.
-     예전의 「선택」이 하던 일이 그대로 이 자리다. */
-  window.ocNew = function () {
+  /* 새 건으로 간다.
+     그 사람이 지난번에 산 것과 같은 것을 다시 사는 일이 잦다. 그래서 마지막 건을 그대로
+     베껴 새 번호로 세우고, 날짜만 비운다 — 병원ㆍ상병ㆍ제품ㆍ수량을 다시 옮겨 적지
+     않아도 된다. 벤 건에는 이어 둔 주문이 없으므로 주문은 처음부터 다시 잇는다.
+
+     지난 건이 하나도 없으면(처음 오는 사람) 베낄 것이 없다 — 그때는 예전처럼 이 빈 건에
+     그 사람을 이어 두고 환자 정보만 채운다. */
+  window.ocNew = async function () {
     if (!_ocPerson) return;
-    pkApply(_ocPerson);
+
+    const rows = ocGrid?.getData?.() ?? [];
+    const last = rows.find(r => r.here && r.rx_number);
+    if (!last) { pkApply(_ocPerson); return; }
+
+    pkClose();
+    try {
+      const res = await apiRequest(`/prescriptions/${last.rx_number}/duplicate`, 'POST',
+                                   { patient_id: _ocPerson.id });
+      if (!res.success) { showToast(res.message || '새 건을 만들지 못했습니다.', 'danger'); return; }
+      showToast(`${last.rx_number} 을 베껴 왔습니다. 날짜와 주문은 새로 잡아 주십시오.`, 'success', 5000);
+      clearAllDirty();
+      location.href = res.url;
+    } catch (e) {
+      showToast('새 건을 만들지 못했습니다.', 'danger');
+    }
   };
 
   const PATIENT_DETAIL_URL = @json(route('prescriptions.patientDetail', ['patient' => '__ID__']));
