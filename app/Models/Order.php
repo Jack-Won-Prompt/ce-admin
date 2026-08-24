@@ -74,6 +74,12 @@ class Order extends Model
     public const SO_TYPES = ['1013', '1016', '1022', '1501', '1505', '1601', '1605',
                              '5001', '5004', '5005', '5006', '6001'];
 
+    /** 이 주문으로 보낸 결제 링크들 — 결제 방식(카드ㆍ가상계좌)을 여기서 읽는다. */
+    public function paymentLinks()
+    {
+        return $this->hasMany(\App\Models\PaymentLink::class);
+    }
+
     /**
      * 입금이 확인되었는가 — 토스가 확인했거나, 담당자가 통장을 보고 확인했거나.
      *

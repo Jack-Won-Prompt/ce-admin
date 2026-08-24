@@ -222,13 +222,7 @@
         <button type="button" class="ds-btn" onclick="settlementViewRx()">
           <i class="fa-solid fa-file-medical"></i> 주문 보기
         </button>
-        {{-- 입금 확인은 정산 탭에서도 한다. 가상계좌 탭까지 건너가야 세울 수 있으면,
-             통장을 보며 정산을 맞추다가 화면을 옮겨 다니게 된다. --}}
-        @perm('settlement', 'send')
-        <button type="button" class="ds-btn" onclick="vaConfirmDeposit(this)">
-          <i class="fa-solid fa-circle-check"></i> 입금 확인
-        </button>
-        @endperm
+
       </div>
     </form>
 
@@ -302,13 +296,7 @@
         <button type="button" class="ds-btn" onclick="vaCheckSelected(this)">
           <i class="fa-solid fa-rotate"></i> 토스 조회
         </button>
-        {{-- 토스가 알려 주지 못하는 건은 사람이 세운다 — 가상계좌를 발급하지 않았거나,
-             토스 밖에서 들어왔거나, 웹훅이 유실된 건. --}}
-        @perm('settlement', 'send')
-        <button type="button" class="ds-btn" onclick="vaConfirmDeposit(this)">
-          <i class="fa-solid fa-circle-check"></i> 입금 확인
-        </button>
-        @endperm
+
         @perm('settlement', 'send')
         <button type="button" class="ds-btn" onclick="vaResendSelected(this)">
           <i class="fa-solid fa-comment-sms"></i> 선택 SMS재전송
@@ -713,6 +701,52 @@
   const mountEl = document.getElementById(TAB === 'virtual_account' ? 'vaGrid' : 'settlementGrid');
   if (!mountEl) return;
 
+  /* 입금 확인은 목록 안에서 한다.
+     줄을 체크하고 위쪽 단추로 누르게 두면, 통장을 한 줄씩 맞춰 보는 일과 손이 어긋난다 —
+     보고 있는 그 줄에서 바로 세운다.
+
+     토스가 확인한 것은 단추를 두지 않는다. 사람이 손댈 일이 아니다. */
+  const CAN_CONFIRM = @json(auth()->user()?->can('settlement.send') ?? true);
+
+  function depositCell(v, row) {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;gap:6px;justify-content:flex-end;';
+
+    const amount = document.createElement('span');
+    amount.textContent = (v === undefined || v === null || v === '') ? '-' : v;
+    box.appendChild(amount);
+
+    if (row.deposit_done && !row.deposit_hand) {
+      const tag = document.createElement('span');
+      tag.textContent = '토스';
+      tag.style.cssText = 'font-size:10px;color:var(--text-muted);flex-shrink:0;';
+      box.appendChild(tag);
+      return box;
+    }
+
+    if (!CAN_CONFIRM) return box;
+
+    /* 목록 안 단추다. 위쪽 단추줄과 같은 클래스(.ds-btn)를 주면 「단추줄의 단추」를
+       찾는 코드에 줄 수만큼 끼어든다 — 생김새만 같게 두고 클래스는 따로 쓴다. */
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dep-cell-btn';
+    btn.style.cssText = 'height:22px;padding:0 8px;font-size:11px;flex-shrink:0;cursor:pointer;'
+                      + 'border:1px solid var(--gray-200);border-radius:6px;background:var(--gray-0);'
+                      + 'color:var(--gray-1000);line-height:1;';
+    btn.textContent = row.deposit_hand ? '취소' : '입금 확인';
+    if (row.deposit_hand) btn.style.color = 'var(--danger)';
+    btn.onclick = (ev) => { ev.stopPropagation(); depositAct(row, btn); };
+    box.appendChild(btn);
+
+    return box;
+  }
+
+  /* 정산 탭은 「입금확인」 칸에서, 가상계좌 탭은 「확인」 칸에서 세운다 —
+     둘 다 그 줄의 입금을 말하는 자리다. */
+  const _actCol = TAB === 'virtual_account' ? 'deposit_by' : 'deposit';
+  GRID_COLS.forEach(c => { if (c.name === _actCol) c.renderer = depositCell; });
+
   const grid = new wwGrid({
     el: mountEl,
     // 엑셀 저장은 결과바 버튼으로 옮겼다(동작은 downloadExcel() 동일).
@@ -804,9 +838,7 @@
   };
   /* 담당자가 통장을 보고 세우는 입금 확인.
      이미 세워 둔 건이면 되돌린다 — 잘못 누른 것을 풀 길이 있어야 한다. */
-  window.vaConfirmDeposit = async function (btn) {
-    const r = oneChecked(); if (!r) return;
-
+  async function depositAct(r, btn) {
     if (r.deposit_done && !r.deposit_hand) {
       showToast('토스에서 이미 입금이 확인된 주문입니다.', 'warning');
       return;

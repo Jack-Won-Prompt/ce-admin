@@ -53,7 +53,7 @@ class SettlementController extends Controller
         ];
 
         // ── 정산 목록 ──────────────────────────────────────────
-        $query = Order::with(['patient', 'prescription', 'tossPayment'])
+        $query = Order::with(['patient', 'prescription', 'tossPayment', 'paymentLinks'])
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->latest();
 
@@ -181,6 +181,12 @@ class SettlementController extends Controller
                 'copay'        => (int) ($order->patient_copay ?? 0),
                 'shipping'     => (int) ($order->shipping_fee ?? 0),
                 'va_state'     => $vaState,
+                /* 결제 방식 — 가상계좌인가 카드결제인가.
+                   결제 링크를 카드로 보냈으면 카드결제, 그 밖에는 가상계좌다
+                   (가상계좌가 이 업무의 기본 흐름이다). */
+                'pay_method'   => $order->paymentLinks
+                                    ->firstWhere('method', \App\Models\PaymentLink::METHOD_CARD)
+                                  ? '카드결제' : '가상계좌',
                 'deposit'      => $order->deposit_confirmed_at !== null
                                     ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
                                     : ($tp?->is_done ? number_format($tp->amount ?? 0) : '-'),
@@ -211,7 +217,7 @@ class SettlementController extends Controller
             ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
             ['header' => '본인부담',    'name' => 'copay',        'width' => 100, 'editor' => 'number'],
             ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
-            ['header' => '가상계좌',    'name' => 'va_state',     'width' => 90,  'align' => 'center', 'sortable' => true],
+            ['header' => '결제 방식',   'name' => 'pay_method',   'width' => 90,  'align' => 'center', 'sortable' => true],
             ['header' => '입금확인',    'name' => 'deposit',      'width' => 100, 'align' => 'right'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
             ['header' => '청구',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
