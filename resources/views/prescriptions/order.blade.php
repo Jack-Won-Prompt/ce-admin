@@ -64,7 +64,8 @@
 @endsection
 
 @section('header-actions')
-  <span class="badge badge-{{ $prescription->status_badge }}">{{ $prescription->status_label }}</span>
+  {{-- 상태가 바뀌면 이 자리만 고쳐 세운다 — 그러자고 이름을 붙인다 --}}
+  <span id="rxStatusBadge" class="badge badge-{{ $prescription->status_badge }}">{{ $prescription->status_label }}</span>
   <a href="{{ route('prescriptions.index') }}" class="btn btn-outline btn-sm">
     <i class="bx bx-arrow-back"></i> 목록
   </a>
@@ -6522,13 +6523,32 @@ window.HELP_TOUR_STEPS = [
 
   /* ── 검수 요청 (담당자) ────────────────────────────────
      적기를 마쳤다는 신호만 보낸다. 값은 「저장」이 이미 넣었다. */
+  /** 상태 배지를 그 자리에서 고쳐 세운다. 되돌릴 수 없는 걸음은 단추도 잠근다. */
+  function setRxStatus(status, label, badge) {
+    const el = document.getElementById('rxStatusBadge');
+    if (el && label) {
+      el.textContent = label;
+      if (badge) el.className = 'badge badge-' + badge;
+    }
+    if (status === 'review_requested') {
+      document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(btn => {
+        btn.disabled = true;
+        btn.title = '이미 검수를 요청했습니다';
+        btn.textContent = '검수 요청함';
+      });
+    }
+  }
+
   async function requestReviewRx() {
     if (!confirm('입력을 마치고 검수를 요청합니다. 계속할까요?')) return;
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
       if (res.success) {
         showToast('✅ 검수를 요청했습니다.', 'success');
-        setTimeout(() => location.reload(), 900);
+        /* 화면을 다시 읽지 않는다. 적던 자리ㆍ연 탭ㆍ스크롤이 통째로 처음으로 돌아가,
+           이어서 할 일이 있어도 그 자리를 다시 찾아가야 했다.
+           바뀌는 것은 상태 하나뿐이니 그 자리만 고쳐 세운다. */
+        setRxStatus(res.status, res.status_label, res.status_badge);
       } else {
         showToast(res.message || '검수 요청 실패', 'danger');
       }

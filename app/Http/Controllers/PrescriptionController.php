@@ -1612,7 +1612,17 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 요청');
 
-        return response()->json(['success' => true, 'message' => '검수 요청 완료']);
+        /* 바뀐 상태를 함께 돌려준다 — 화면이 그 자리만 고쳐 세우면 되도록.
+           예전에는 새로고침으로 맞췄는데, 적던 자리가 통째로 처음으로 돌아갔다. */
+        $prescription->refresh();
+
+        return response()->json([
+            'success'      => true,
+            'message'      => '검수 요청 완료',
+            'status'       => $prescription->status,
+            'status_label' => $prescription->status_label,
+            'status_badge' => $prescription->status_badge,
+        ]);
     }
 
     // ── 검수 승인 ─────────────────────────────────────────
