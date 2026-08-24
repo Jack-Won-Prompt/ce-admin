@@ -37,8 +37,16 @@ return [
     | 엔드포인트 (운영 기본값 — 필요 시 .env 로 덮어쓰기)
     |──────────────────────────────────────────────────────────────
     */
-    // 통합인증 API 서버 (접근토큰ㆍ인증주소ㆍ인증결과)
-    'api_base' => rtrim(env('NICE_API_BASE', 'https://auth.niceid.co.kr'), '/'),
+    /* 통합인증 API 서버 (접근토큰ㆍ인증주소ㆍ인증결과).
+       .env 에 옛 CheckPlus 주소(svc.niceapi.co.kr)가 남아 있으면 못 본 척한다 —
+       그 API 는 이제 부르지 않는데, 적혀 있다는 이유로 새 주소를 덮으면 배포하고도
+       계속 옛 서버로 가서 403 을 받는다(설정 표 쪽도 같은 이유로 걸러 낸다). */
+    'api_base' => rtrim(
+        str_contains((string) env('NICE_API_BASE', ''), 'svc.niceapi.co.kr')
+            ? 'https://auth.niceid.co.kr'
+            : env('NICE_API_BASE', 'https://auth.niceid.co.kr'),
+        '/'
+    ),
 
     // API 규격 버전 — 주소에 그대로 들어간다(/ido/intc/{version}/…)
     'version' => env('NICE_API_VERSION', 'v1.0'),
