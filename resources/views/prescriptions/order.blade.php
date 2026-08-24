@@ -236,6 +236,20 @@
   .pib-btn i { font-size:14px; }
   .pib-btn-primary { color:var(--primary); }
   .pib-btn-off { background:var(--gray-50); color:var(--gray-400); cursor:default; }
+  /* 신규 등록ㆍ재등록 건은 공단에 서류를 팩스로 보내야 한다 — 단추가 스스로 부른다.
+     글자를 껐다 켜지 않는다. 사라졌다 나타나는 글자는 읽던 눈을 끌어다 붙든다.
+     테두리 빛만 부풀렸다 사라지게 두어, 보고 있지 않을 때만 눈에 걸리게 한다.
+     움직임을 줄여 달라고 한 사람에게는 움직이지 않는 테두리로 같은 말을 한다. */
+  @keyframes pibNudge {
+    0%   { box-shadow:0 0 0 0 var(--primary-200); }
+    70%  { box-shadow:0 0 0 6px transparent; }
+    100% { box-shadow:0 0 0 0 transparent; }
+  }
+  .pib-btn.pib-nudge { border-color:var(--primary); color:var(--primary);
+                       animation:pibNudge 1.8s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .pib-btn.pib-nudge { animation:none; box-shadow:0 0 0 3px var(--primary-200); }
+  }
   /* 시안 148:1304 실측 — 바 1568×78 · r12 · pad 12/16 · gap 16 · 가로
        아바타 54×54 · r12 · bg gray-100
        오른쪽 묶음(세로 gap 2)
@@ -1631,44 +1645,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div style="display:flex;flex-direction:column;">
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">전송 서류 선택</div>
               <div style="display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;padding-right:2px;">
-                @php
-                  $latestConsent = $prescription->consents()->where('status','agreed')->latest()->first();
-                @endphp
-                {{-- 팩스는 환자 등록·재등록(Step1) 전용이다. 위임 등록과 청구는 공단 사이트에
-                     직접 입력·업로드하므로 청구 서류를 팩스로 보내지 않는다. --}}
+                {{-- 팩스는 환자 등록·재등록(Step1) 전용이다. 청구 자료는 공단 사이트에
+                     직접 입력·업로드하므로 팩스로 보내지 않는다. --}}
                 <div style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
                   <b style="color:var(--primary);">팩스는 환자 등록·재등록용입니다.</b><br>
-                  등록신청서 · 결과지 · 신분증을 아래 첨부에서 골라 공단 관할지사로 보냅니다.<br>
+                  등록신청서 · 결과지 · 위임장 · 신분증을 공단 관할지사로 보냅니다.<br>
                   <b>미성년자</b>는 등록신청서에 보호자 정보를 함께 적고, <b>보호자 신분증</b>도 넣습니다.<br>
-                  위임 등록과 청구 서류는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
+                  청구 자료는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
                 </div>
 
-                {{-- ── 첨부 문서 (등록신청서·결과지·신분증) ── --}}
-                @if($prescription->attachments->isNotEmpty())
-                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
-                  <div style="font-size:10px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">
-                    <i class="fa-solid fa-paperclip"></i> 첨부 문서
-                  </div>
-                  @foreach($prescription->attachments as $att)
-                  <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
-                    <input type="checkbox" class="fax-att-chk" value="{{ $att->id }}"
-                           style="accent-color:var(--primary);" checked>
-                    <div style="flex:1;min-width:0;">
-                      <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="font-weight:500;">{{ $att->doc_type_label }}</span>
-                        <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">첨부</span>
-                      </div>
-                      <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $att->file_original_name }}</div>
-                    </div>
-                    @if($att->is_image)
-                      <img src="{{ $att->file_url }}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;" />
-                    @else
-                      <i class="fa-regular fa-file-pdf" style="color:var(--danger);font-size:18px;flex-shrink:0;"></i>
-                    @endif
-                  </label>
-                  @endforeach
-                </div>
-                @endif
+                {{-- 신청 파일 · 그 밖의 첨부 — 화면에서 그린다(renderFaxDocs).
+                     서버가 한 번 그려 두면 이 창을 열어 둔 채 올리거나 지운 파일이
+                     비치지 않는다. 없는 신청 파일은 여기서 「등록 안 됨」으로 적는다. --}}
+                <div id="faxDocList" style="margin-top:6px;"></div>
               </div>
             </div>
           </div>
@@ -1948,7 +1937,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <span class="vw-card-title">문서 <b id="docCount">{{ ($prescription->image_url ? 1 : 0) + $prescription->attachments->count() }}</b></span>
           <div class="vw-card-acts">
             <div style="position:relative;">
-              <input type="text" id="attachDocTypeSelect" value="신분증" autocomplete="off"
+              {{-- 처음 놓인 값이 곧 대부분의 선택이 된다. 첫 문서는 처방전이라
+                   처방전으로 놓는다 — 신분증으로 두면 처방전을 신분증으로 올린다. --}}
+              <input type="text" id="attachDocTypeSelect" value="처방전" autocomplete="off"
                      class="vw-btn-sm" style="width:120px;padding-right:26px;font-weight:400;"
                      oninput="_adtFilter(this.value)" onfocus="_adtOpen()" onblur="setTimeout(_adtClose,150)" />
               <span onmousedown="event.preventDefault();_adtToggle()"
@@ -4184,6 +4175,7 @@ function deleteAttachment(e, id, btn) {
             const firstThumb = strip ? strip.querySelector('.doc-thumb') : null;
             if (firstThumb) switchViewerDoc(firstThumb);
           }
+          renderFaxDocs();
           showToast('첨부 파일이 삭제되었습니다.', 'success');
         }
       }).catch(() => showToast('삭제 실패', 'danger'));
@@ -4247,6 +4239,7 @@ function handleAttachUpload(input) {
     strip.appendChild(thumbEl);
     if (wrap) wrap.style.display = '';
     syncDocEmpty();
+    renderFaxDocs();
     switchViewerDoc(thumbEl);
     showToast('첨부 문서가 추가되었습니다.', 'success');
   }).catch(() => showToast('업로드 실패', 'danger'));
@@ -7519,6 +7512,7 @@ window.HELP_TOUR_STEPS = [
         renderNhisOffices('');
       }
       refreshFaxSentBanner();
+      renderFaxDocs();
     }
   }
 
@@ -7558,6 +7552,8 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('faxPopover').style.display = 'block';
     placeFaxPopover();
     if (typeof refreshFaxSentBanner === 'function') refreshFaxSentBanner();
+    renderFaxDocs();
+    faxNudgeSync();
   }
 
   document.addEventListener('click', e => {
@@ -7797,6 +7793,158 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
+  /* ── 공단 신청 파일 ────────────────────────────────────
+     신규 등록ㆍ재등록으로 공단에 내는 것은 넷이다 — 등록신청서 · 결과지 · 위임장 ·
+     신분증. 없는 것을 그냥 빼고 그리면 목록이 짧아질 뿐이라 「고를 게 없네」로 읽고
+     그대로 보낸다. 없는 줄도 자리를 지키고 서서 없다고 말하게 한다. */
+  const FAX_REQ_DOCS = [
+    { type: 'registration_form', label: '등록신청서' },
+    { type: 'test_result',       label: '결과지'    },
+    { type: 'delegation',        label: '위임장'    },
+    { type: 'id_card',           label: '신분증'    },
+  ];
+  /* 위임장은 서명하면 시스템이 만든다(생성 서류). 다만 팩스로 나가는 것은 첨부 파일뿐이라
+     「있다」와 「보낼 수 있다」를 나눠 적는다 — 만들어져 있어도 첨부가 아니면 안 나간다. */
+  let faxGenDelegation = {{ $prescription->documents->where('type', 'delegation')->isNotEmpty() ? 'true' : 'false' }};
+
+  /* 팩스 창에 세울 줄들. ALL_DOCS 가 화면의 정본이라 여기서 읽는다 —
+     올리고 지운 것이 창을 닫았다 열지 않아도 그대로 비친다.
+     id 가 0 이하인 것은 첨부가 아니다(0 처방전 이미지 · -1 위임 서명 · -2 보호자 신분증). */
+  function faxDocRows() {
+    const rows = [], used = new Set();
+    FAX_REQ_DOCS.forEach(req => {
+      const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
+      hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
+      if (!hits.length) {
+        rows.push({ label: req.label, att: null,
+                    state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
+      }
+    });
+    // 신청 파일에 들지 않는 첨부도 함께 보낼 수 있게 이어 둔다
+    ALL_DOCS.filter(d => d.id > 0 && !used.has(d.id))
+            .forEach(d => rows.push({ label: d.typeLabel, att: d, state: 'extra' }));
+    return rows;
+  }
+
+  function _faxEsc(t) {
+    return String(t ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  }
+
+  function _faxDocRowHtml(r) {
+    const esc = _faxEsc;
+
+    if (r.state === 'missing') {
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--danger);
+                    border-radius:var(--radius);background:var(--danger-light);font-size:12px;margin-bottom:3px;">
+          <i class="fa-solid fa-circle-exclamation" style="color:var(--danger);font-size:12px;flex-shrink:0;"></i>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;color:var(--danger);">${esc(r.label)}</div>
+            <div style="font-size:10px;color:var(--danger);">등록 안 됨 — 「문서」 카드에서 올리십시오</div>
+          </div>
+        </div>`;
+    }
+
+    if (r.state === 'gen') {
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
+                    border-radius:var(--radius);background:var(--bg);font-size:12px;margin-bottom:3px;">
+          <i class="fa-regular fa-file-lines" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:500;color:var(--text-secondary);">${esc(r.label)}</div>
+            <div style="font-size:10px;color:var(--text-muted);">생성 서류에 있음 — 팩스로 보내려면 첨부로 올리십시오</div>
+          </div>
+        </div>`;
+    }
+
+    const a     = r.att;
+    const isReq = r.state === 'ok';
+    const thumb = a.isPdf
+      ? `<i class="fa-regular fa-file-pdf" style="color:var(--danger);font-size:18px;flex-shrink:0;"></i>`
+      : `<img src="${esc(a.url)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;">`;
+
+    return `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
+                    border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
+        <input type="checkbox" class="fax-att-chk" value="${a.id}" style="accent-color:var(--primary);" checked>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:500;">${esc(r.label)}</span>
+            <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">${isReq ? '첨부' : '그 밖'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}</div>
+        </div>
+        ${thumb}
+      </label>`;
+  }
+
+  function renderFaxDocs() {
+    const box = document.getElementById('faxDocList');
+    if (!box) return;
+
+    const rows    = faxDocRows();
+    const missing = rows.filter(r => r.state === 'missing').map(r => r.label);
+    const have    = FAX_REQ_DOCS.length - missing.length;
+    const extras  = rows.filter(r => r.state === 'extra');
+
+    const head = `
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding-top:6px;border-top:1px dashed var(--border);">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);flex:1;">
+          <i class="fa-solid fa-paperclip"></i> 신청 파일
+        </span>
+        <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;
+              background:${missing.length ? 'var(--danger-light)' : 'var(--primary-light)'};
+              color:${missing.length ? 'var(--danger)' : 'var(--primary)'};">${have}/${FAX_REQ_DOCS.length}</span>
+      </div>`;
+
+    const note = missing.length
+      ? `<div style="font-size:10px;color:var(--danger);margin-bottom:4px;line-height:1.5;">
+           ${_faxEsc(missing.join(' · '))} 이(가) 아직 등록되지 않았습니다.
+         </div>`
+      : '';
+
+    const extraHead = extras.length
+      ? `<div style="font-size:10px;font-weight:700;color:var(--text-muted);margin:8px 0 4px;padding-top:6px;border-top:1px dashed var(--border);">
+           <i class="fa-solid fa-paperclip"></i> 그 밖의 첨부
+         </div>`
+      : '';
+
+    box.innerHTML = head + note
+      + rows.filter(r => r.state !== 'extra').map(_faxDocRowHtml).join('')
+      + extraHead + extras.map(_faxDocRowHtml).join('');
+  }
+
+  /* ── 「공단 팩스 발송」 단추가 부른다 ───────────────────
+     신규 등록(신구매)이거나 공단 재등록 대상자면 공단에 등록 서류를 보내야 한다.
+     화면 어디에도 그 말이 없어, 보내야 하는 줄 이미 아는 사람만 보냈다.
+     이미 보낸 건은 단추 자리가 「팩스 전송」 배지로 바뀌므로 부를 일이 없다. */
+  function faxNudgeSync() {
+    const wrap = document.getElementById('faxTriggerWrap');
+    const btn  = document.getElementById('btnFaxTrigger');
+    if (!wrap || !btn) return;
+
+    const sent    = wrap.style.display === 'none';
+    const isNew   = (document.getElementById('f-purchase-type')?.value || '') === '신구매';
+    const isRenew = (document.getElementById('f-nhis-renew')?.value || '').trim() !== '';
+    const need    = !sent && (isNew || isRenew);
+
+    btn.classList.toggle('pib-nudge', need);
+    btn.title = need
+      ? (isNew ? '신규 등록 건입니다 — 등록신청서ㆍ결과지ㆍ위임장ㆍ신분증을 공단으로 보내십시오.'
+               : '공단 재등록 대상자입니다 — 등록 서류를 공단으로 보내십시오.')
+      : '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderFaxDocs();
+    faxNudgeSync();
+    ['f-purchase-type', 'f-nhis-renew'].forEach(id => {
+      const el = document.getElementById(id);
+      el?.addEventListener('change', faxNudgeSync);
+      el?.addEventListener('input',  faxNudgeSync);
+    });
+  });
+
   async function sendFax() {
     const faxNo = document.getElementById('fax-no').value.trim();
     if (!faxNo) { showToast('수신 팩스번호를 입력해주세요.', 'warning'); return; }
@@ -7877,6 +8025,7 @@ window.HELP_TOUR_STEPS = [
 
     // 팝오버 배너 업데이트
     refreshFaxSentBanner();
+    faxNudgeSync();
   }
 
   function openFaxPdfModal() {
@@ -8962,6 +9111,11 @@ window.HELP_TOUR_STEPS = [
       } else {
         _genDocsTries = 0;
         if (hadDeleg && typeof showToast === 'function') showToast('요양비위임장이 생성 서류에 추가되었습니다.', 'success');
+      }
+      /* 위임장이 생겼으면 팩스 창의 신청 파일 줄도 「없음」에서 내려온다 */
+      if (hadDeleg) {
+        faxGenDelegation = true;
+        if (typeof renderFaxDocs === 'function') renderFaxDocs();
       }
     } catch (e) { /* 무시 */ }
   }
