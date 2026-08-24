@@ -86,12 +86,14 @@ class NiceSetting extends Model
             ],
         ]);
 
-        // 엔드포인트는 비워두면 config/.env 기본값 유지
-        if (trim((string) $s->api_base) !== '') {
-            config(['nice.api_base' => rtrim($s->api_base, '/')]);
-        }
-        if (trim((string) $s->standard_url) !== '') {
-            config(['nice.standard_url' => $s->standard_url]);
+        /* 엔드포인트는 비워두면 config/.env 기본값을 그대로 쓴다.
+           다만 표에 옛 CheckPlus 주소(svc.niceapi.co.kr)가 남아 있으면 못 본 척한다 —
+           그 API 는 이제 부르지 않는데, 값이 남아 있다는 이유로 새 주소를 덮어 버리면
+           배포하고도 계속 옛 서버로 가서 403 을 받는다. 실제로 그렇게 하루를 보냈다.
+           설정 화면에서 새 주소로 고치면 그때부터는 그 값이 쓰인다. */
+        $apiBase = trim((string) $s->api_base);
+        if ($apiBase !== '' && !str_contains($apiBase, 'svc.niceapi.co.kr')) {
+            config(['nice.api_base' => rtrim($apiBase, '/')]);
         }
 
         return $s;
