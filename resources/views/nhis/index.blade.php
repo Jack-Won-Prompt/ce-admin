@@ -398,13 +398,34 @@
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       {
-        // 공단이냐 지자체냐 — 서류도 보내는 법도 다르다
-        header: '청구처', name: 'agency', width: 130, align: 'center', sortable: true,
-        renderer: (v) => {
-          const s = document.createElement('span');
-          s.textContent = v || '건강보험공단';
-          if (v && v !== '건강보험공단') { s.style.cssText = 'color:var(--warning,#b45309);font-weight:700;'; }
-          return s;
+        /* 공단이냐 지자체냐 — 서류도 보내는 법도 다르다.
+           그 아래에 어느 지사ㆍ어느 부서로 보내는지 함께 적는다. 「건강보험공단」만
+           적혀 있으면 결국 건마다 다시 찾아야 하기 때문이다(화면정의서 14ㆍ15).
+           아직 고르지 않았으면 「관할 미지정」이라 적어 둔다 — 빈칸으로 두면 고른
+           것인지 안 고른 것인지 알 수 없다. */
+        header: '청구처', name: 'agency', width: 200, sortable: true,
+        renderer: (v, row) => {
+          const box = document.createElement('div');
+          box.style.cssText = 'line-height:1.45;text-align:left;';
+
+          const top = document.createElement('div');
+          top.textContent = v || '건강보험공단';
+          if (v && v !== '건강보험공단') { top.style.cssText = 'color:var(--warning,#b45309);font-weight:700;'; }
+          box.appendChild(top);
+
+          const sub = document.createElement('div');
+          sub.style.cssText = 'font-size:11px;color:var(--text-muted);overflow:hidden;'
+                            + 'text-overflow:ellipsis;white-space:nowrap;';
+          if (row?.office) {
+            sub.textContent = row.office + (row.office_who ? ' · ' + row.office_who : '');
+            if (row.office_tel) sub.title = row.office_tel + (row.office_fax ? ' / FAX ' + row.office_fax : '');
+          } else {
+            sub.textContent = '관할 미지정';
+            sub.style.color = 'var(--warning,#b45309)';
+          }
+          box.appendChild(sub);
+
+          return box;
         },
       },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },

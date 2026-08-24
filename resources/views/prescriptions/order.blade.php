@@ -7354,6 +7354,22 @@ window.HELP_TOUR_STEPS = [
 
      주소를 서버로 보내지 않는다. 읍ㆍ면ㆍ동과 시군구만 보낸다 — 관할을 가리는 데
      그 둘이면 충분하고, 굳이 번지까지 흘릴 까닭이 없다. */
+  /* 이 건이 고른 청구처 — 팩스 창이 수신처를 미리 세우는 데 쓴다.
+     고르면 그 자리에서 바뀐다(boFindPick). */
+  @php
+    /* @json 안에서 배열을 여러 줄로 적으면 블레이드가 지시어 끝을 잘못 찾는다 —
+       값은 여기서 만들고 아래에서는 변수만 넘긴다. */
+    $_bo = $prescription->billingOffice;
+    $_boJs = $_bo ? [
+        'id'   => $_bo->id,
+        'name' => $_bo->displayName(),
+        'who'  => trim(($_bo->manager_name ?? '') . ' ' . ($_bo->title ?? '')),
+        'tel'  => $_bo->tel,
+        'fax'  => $_bo->fax,
+    ] : null;
+  @endphp
+  let RX_BILLING_OFFICE = @json($_boJs);
+
   const BO_LOOKUP_URL = @json(route('billing-offices.lookup'));
   const BO_STORE_URL  = @json(route('billing-offices.store'));
   const BO_NHIS_URL   = 'https://www.nhis.or.kr/nhis/about/retrieveBranchList.do';
@@ -7426,6 +7442,8 @@ window.HELP_TOUR_STEPS = [
 
   window.addEventListener('resize', boFindPlace);
 
+  let _boLastRows = [];
+
   function boFindClose() {
     const pop = document.getElementById('boFindPop');
     if (pop) pop.style.display = 'none';
@@ -7466,6 +7484,7 @@ window.HELP_TOUR_STEPS = [
       note.innerHTML = `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
                      + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
 
+      _boLastRows = rows;
       const cur = document.getElementById('f-billing-office').value;
       list.innerHTML = rows.map(r => `
         <label style="display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid ${String(r.id) === cur ? 'var(--primary)' : 'var(--border)'};
@@ -7499,6 +7518,17 @@ window.HELP_TOUR_STEPS = [
       label.textContent = row.innerText.replace(/\s*\n\s*/g, ' · ').trim();
       label.style.color = 'var(--text)';
     }
+    /* 팩스 창이 이 값을 본다 — 골라 두면 수신처를 손으로 다시 찾지 않는다 */
+    const picked = (_boLastRows || []).find(x => String(x.id) === String(id));
+    if (picked) {
+      RX_BILLING_OFFICE = {
+        id: picked.id, name: (picked.office_name || '') + (picked.dept ? ' · ' + picked.dept : ''),
+        who: [picked.manager_name, picked.title].filter(Boolean).join(' '),
+        tel: picked.tel, fax: picked.fax,
+      };
+      faxRecipientFromOffice();
+    }
+
     markOcrDirty();
     boFindClose();
     showToast('관할 청구처를 골랐습니다. 저장하면 이 건에 남습니다.', 'success');
@@ -7975,6 +8005,30 @@ window.HELP_TOUR_STEPS = [
       }
       refreshFaxSentBanner();
       renderFaxDocs();
+      faxRecipientFromOffice();
+    }
+  }
+
+  /* 고른 청구처가 있으면 수신처를 미리 세운다.
+     예전에는 창을 열 때마다 지사 목록에서 다시 찾아 골랐다 — 그 지사의 대표 팩스라
+     담당 부서로 곧장 가지도 않았다. 이 건이 어디로 가는지는 이미 정해 두었으니
+     그것을 그대로 쓴다. 담당자가 다른 곳으로 보내려 하면 그대로 고쳐 쓰면 된다. */
+  function faxRecipientFromOffice() {
+    const o = RX_BILLING_OFFICE;
+    if (!o || !o.fax) return;
+
+    const faxEl = document.getElementById('fax-no');
+    if (!faxEl) return;
+    // 손으로 이미 적어 둔 것이 있으면 덮지 않는다
+    if (faxEl.value.trim() !== '') return;
+
+    faxEl.value = o.fax;
+
+    const btn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
+    if (btn) {
+      btn.dataset.fax = o.fax;
+      const sub = btn.querySelector('div > div:last-child');
+      if (sub) sub.textContent = o.name + (o.who ? ' · ' + o.who : '') + ' · ' + o.fax;
     }
   }
 

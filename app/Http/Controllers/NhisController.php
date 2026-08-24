@@ -13,7 +13,7 @@ class NhisController extends Controller
     // ── 목록 ─────────────────────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Order::with(['patient', 'prescription'])
+        $query = Order::with(['patient', 'prescription.billingOffice'])
             ->whereIn('status', ['delivered', 'shipping', 'confirmed'])
             ->latest();
 
@@ -131,6 +131,13 @@ class NhisController extends Controller
                 'claim_na'     => ($o->prescription?->claim_agency ?? \App\Support\ClaimAgency::NHIS)
                                     !== \App\Support\ClaimAgency::NHIS,
                 'agency'       => \App\Support\ClaimAgency::LABELS[$o->prescription?->claim_agency] ?? '',
+                /* 어느 지사ㆍ어느 부서로 보내는가. 「건강보험공단」만 적혀 있으면 결국
+                   건마다 다시 찾아야 한다 — 골라 둔 것이 있으면 그것을 보여 준다. */
+                'office'       => $o->prescription?->billingOffice?->displayName() ?? '',
+                'office_tel'   => $o->prescription?->billingOffice?->tel ?? '',
+                'office_fax'   => $o->prescription?->billingOffice?->fax ?? '',
+                'office_who'   => trim(($o->prescription?->billingOffice?->manager_name ?? '')
+                                    . ' ' . ($o->prescription?->billingOffice?->title ?? '')),
             ];
         })->values();
 
