@@ -28,6 +28,24 @@
   .ds-hint { font-size:12px; font-weight:400; line-height:18px; color:var(--text-muted); }
   .ds-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
     padding:12px 16px; font-size:12px; font-weight:400; line-height:18px; color:var(--text-secondary); margin-bottom:16px; }
+  /* ── 가로 탭 ──────────────────────────────────────────
+     구획 여섯이 세로로 쌓여 있어 좌표 하나 고치려면 한참 내려가야 했다. 가로로 갈라
+     한 번에 한 구획만 보이게 한다. 저장 단추는 탭 밖에 두어 어느 탭에서든 누른다
+     (칸은 모두 한 폼 안에 남아 있어, 감춰진 탭의 값도 함께 저장된다). */
+  .ds-tabs { display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border);
+             margin-bottom:16px; }
+  .ds-tab  { padding:9px 14px; border:none; background:none; cursor:pointer;
+             font-size:13px; font-weight:500; line-height:20px; color:var(--gray-700);
+             border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap;
+             display:inline-flex; align-items:center; gap:6px; }
+  .ds-tab:hover  { color:var(--primary); }
+  .ds-tab.active { color:var(--primary); font-weight:700; border-bottom-color:var(--primary); }
+  .ds-pane { display:none; }
+  .ds-pane.active { display:block; }
+  /* 탭 안에서는 카드가 하나뿐이라 테두리를 겹쳐 두지 않는다 */
+  .ds-pane .ds-card { border:none; padding:0; }
+  .ds-pane .ds-card h3 { margin-top:0; }
+
   /* 성공은 primary 램프로만 표현한다(시안에 초록이 없다) */
   .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
     padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
@@ -54,7 +72,17 @@
     @csrf
     @method('PUT')
 
-    <div class="ds-cards">
+    {{-- 탭줄 — 구획 이름 그대로다 --}}
+    <div class="ds-tabs" role="tablist">
+      <button type="button" class="ds-tab active" data-pane="dsp-provider"><i class="bx bx-buildings"></i> ② 준요양기관</button>
+      <button type="button" class="ds-tab" data-pane="dsp-account"><i class="bx bx-credit-card"></i> ③ 수령계좌</button>
+      <button type="button" class="ds-tab" data-pane="dsp-period"><i class="bx bx-calendar"></i> ⑤ 위임기간</button>
+      <button type="button" class="ds-tab" data-pane="dsp-sig"><i class="bx bx-move"></i> 서명 위치</button>
+      <button type="button" class="ds-tab" data-pane="dsp-gsig"><i class="bx bx-user-check"></i> 보호자 서명 위치</button>
+      <button type="button" class="ds-tab" data-pane="dsp-fields"><i class="bx bx-text"></i> 글자 항목 위치</button>
+    </div>
+
+    <div class="ds-pane active" id="dsp-provider">
     <div class="ds-card">
       <h3><i class="bx bx-buildings"></i> ② 준요양기관</h3>
       <div class="ds-grid">
@@ -65,6 +93,9 @@
       </div>
     </div>
 
+    </div>{{-- /pane --}}
+
+    <div class="ds-pane" id="dsp-account">
     <div class="ds-card">
       <h3><i class="bx bx-credit-card"></i> ③ 요양비 수령계좌</h3>
       <div class="ds-grid">
@@ -75,6 +106,9 @@
       </div>
     </div>
 
+    </div>{{-- /pane --}}
+
+    <div class="ds-pane" id="dsp-period">
     <div class="ds-card">
       <h3><i class="bx bx-calendar"></i> ⑤ 위임기간</h3>
       <div class="ds-grid">
@@ -83,6 +117,9 @@
       <div class="ds-hint" style="margin-top:8px;">서명일부터 위 기간만큼 자동 계산됩니다.</div>
     </div>
 
+    </div>{{-- /pane --}}
+
+    <div class="ds-pane" id="dsp-sig">
     <div class="ds-card">
       <h3><i class="bx bx-move"></i> 서명 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-grid">
@@ -93,6 +130,9 @@
       <div class="ds-hint" style="margin-top:8px;">기본값: X=164, Y=266, 너비=28 (A4 기준, "(서명 또는 인)" 위).</div>
     </div>
 
+    </div>{{-- /pane --}}
+
+    <div class="ds-pane" id="dsp-gsig">
     <div class="ds-card">
       <h3><i class="bx bx-user-check"></i> 보호자 서명 위치 (미성년자, 단위 mm)</h3>
       <div class="ds-grid">
@@ -104,12 +144,13 @@
         위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만일 때만 찍힙니다.
       </div>
     </div>
-    </div>{{-- /ds-cards --}}
+    </div>{{-- /pane --}}
 
     {{-- ── 글자 항목 위치 ────────────────────────────────────
          서명과 같은 방식으로 항목마다 위치를 정한다. 예전에는 이 값들이 코드에 박혀 있어
          양식이 조금만 달라져도 배포를 해야 했다. --}}
-    <div class="ds-card" style="margin-top:16px;">
+    <div class="ds-pane" id="dsp-fields">
+    <div class="ds-card">
       <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-hint" style="margin-bottom:12px;">
         X는 왼쪽에서, Y는 위에서 잰 거리입니다(A4 = 210 × 297). 값이 비면 기본값을 씁니다.
@@ -147,8 +188,35 @@
         </table>
       </div>
     </div>
+    </div>{{-- /pane --}}
 
     <button type="submit" class="btn btn-primary" style="margin-top:16px;"><i class="bx bx-save"></i> 설정 저장</button>
   </form>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+  const tabs  = [...document.querySelectorAll('.ds-tab')];
+  const panes = [...document.querySelectorAll('.ds-pane')];
+  if (!tabs.length) return;
+
+  function show(id) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === id));
+    panes.forEach(p => p.classList.toggle('active', p.id === id));
+  }
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.pane)));
+
+  /* 감춰진 탭에 빈 필수 칸이 있으면 브라우저가 그 칸으로 가려다 막힌다(보이지 않는 칸은
+     초점을 받지 못한다) — 저장이 아무 말 없이 멈춘 것처럼 보인다. 그 칸이 있는 탭을
+     먼저 펴 준다. */
+  // 이 화면의 폼을 콕 집는다 — 레이아웃에도 폼이 있어 첫 번째를 잡으면 엉뚱한 것을 잡는다
+  const form = panes[0]?.closest('form');
+  form?.addEventListener('invalid', (e) => {
+    const pane = e.target.closest('.ds-pane');
+    if (pane && !pane.classList.contains('active')) show(pane.id);
+  }, true);
+})();
+</script>
+@endpush
 @endsection
