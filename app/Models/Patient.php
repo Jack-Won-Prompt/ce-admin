@@ -47,6 +47,16 @@ class Patient extends Model
                 $p->name = self::nameWithCareTag($p->name, $p->care_type);
             }
         });
+
+        /* 신환 Master 등록일 — 이 사람이 마스터에 처음 오른 날이다.
+           주문 등록에서 기존에 없던 사람으로 저장하면 그날이 곧 이 날짜다. 담당자가
+           손으로 적어 넣었으면(위드웍스에서 옮겨 온 날짜 같은 것) 그것을 지키고,
+           비어 있을 때만 오늘로 채운다. 어느 화면에서 만들든 같게 두려고 여기 건다. */
+        static::creating(function (self $p) {
+            if (empty($p->new_patient_date)) {
+                $p->new_patient_date = now()->toDateString();
+            }
+        });
     }
 
     /** 이름에 (E) 를 맞춰 단다 — IC 면 붙이고, 아니면 뗀다. 이미 붙어 있어도 겹치지 않는다. */
