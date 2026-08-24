@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Models\Order;
 use App\Models\PaymentLink;
 use App\Support\BillingStrategy;
+use App\Support\TransactionStatement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -31,6 +32,9 @@ use Illuminate\Support\Facades\Log;
  * 세금계산서의 공급받는자는 환자 개인이며 번호는 비워 보낸다 — 발행 경로가 처방전의
  * 주민등록번호로 채운다(열람 기록이 남는다).
  *
+ * 발행이 끝나면 거래명세서를 서식대로 만들어 같은 주문의 첨부문서로 넣는다. 그것은
+ * 신고 서류가 아니라 물건과 함께 나가는 종이라, 자동 발행 스위치와 상관없이 붙는다.
+ *
  * 이 발행은 국세청 실신고다. 그래서 기본은 꺼져 있고(config: billing.auto_issue),
  * 켠 뒤에도 다음을 지킨다:
  *   · 이미 발행된 것은 다시 내지 않는다
@@ -47,42 +51,55 @@ class DepositAutoIssue
 
     /**
      * @param  string  $cause  무엇이 불렀는지 — 기록에 남는다('담당자 확인' · '토스 웹훅')
-     * @return array{cash:?string, tax:?string, skipped:array<string>}
+     * @return array{cash:?string, tax:?string, statement:?string, skipped:array<string>}
      */
     public function run(Order $order, string $cause = ''): array
     {
-        $out = ['cash' => null, 'tax' => null, 'skipped' => []];
+        $out = ['cash' => null, 'tax' => null, 'statement' => null, 'skipped' => []];
 
-        if (!$this->enabled()) {
-            $out['skipped'][] = '자동 발행이 꺼져 있음';
-            return $out;
-        }
-
-        $order->loadMissing(['patient', 'prescription', 'tossPayment']);
+        $order->loadMissing(['patient', 'prescription', 'items', 'tossPayment']);
 
         if (!$order->isDepositConfirmed()) {
             $out['skipped'][] = '입금이 확인되지 않음';
             return $out;
         }
 
-        $rx       = $order->prescription;
-        $strategy = BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class);
+        if ($this->enabled()) {
+            $rx       = $order->prescription;
+            $strategy = BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class);
 
-        /* 전략이 정해지지 않았거나 확인중이면 아무것도 내지 않는다.
-           모르는 채로 낸 신고는 되돌리는 데 더 큰 품이 든다. */
-        if (!empty($strategy['pending'])) {
-            $out['skipped'][] = '청구전략이 정해지지 않음(' . ($strategy['note'] ?: '확인중') . ')';
-            $this->log($order, $cause, $out);
-
-            return $out;
+            /* 전략이 정해지지 않았거나 확인중이면 아무것도 내지 않는다.
+               모르는 채로 낸 신고는 되돌리는 데 더 큰 품이 든다. */
+            if (!empty($strategy['pending'])) {
+                $out['skipped'][] = '청구전략이 정해지지 않음(' . ($strategy['note'] ?: '확인중') . ')';
+            } else {
+                $out['cash'] = $this->cashReceipt($order, $strategy, $out);
+                $out['tax']  = $this->taxInvoice($order, $strategy, $out);
+            }
+        } else {
+            $out['skipped'][] = '자동 발행이 꺼져 있음';
         }
 
-        $out['cash'] = $this->cashReceipt($order, $strategy, $out);
-        $out['tax']  = $this->taxInvoice($order, $strategy, $out);
+        /* 거래명세서는 세무 서류가 아니라 물건과 함께 나가는 종이다. 국세청에 신고되는
+           것이 없으니 자동 발행 스위치와 상관없이, 입금이 확인되면 붙인다. */
+        $out['statement'] = $this->statement($order, $out);
 
         $this->log($order, $cause, $out);
 
         return $out;
+    }
+
+    /** 거래명세서 — 받은 서식대로 만들어 주문의 첨부문서로 넣는다. */
+    private function statement(Order $order, array &$out): ?string
+    {
+        $att = TransactionStatement::attach($order);
+
+        if (!$att) {
+            $out['skipped'][] = '거래명세서: 만들지 못함';
+            return null;
+        }
+
+        return $att->file_original_name;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -223,6 +240,7 @@ class DepositAutoIssue
         $done = array_filter([
             $out['cash'] ? "현금영수증 {$out['cash']}" : null,
             $out['tax']  ? "세금계산서 {$out['tax']}"  : null,
+            $out['statement'] ? '거래명세서' : null,
         ]);
 
         activity()->performedOn($order)->log(
