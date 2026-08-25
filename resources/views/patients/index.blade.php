@@ -337,6 +337,9 @@
          내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다. --}}
     <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 통화를 받으며 여는 자리다. 목록에서 한 사람을 체크하고 누른다 —
+         상담내역 칸의 「상담하기」까지 두 걸음 들어가지 않아도 된다. --}}
+    <button type="button" class="ds-btn" onclick="ptCounsel()">상담하기</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
     <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
     @perm('patients', 'create')
@@ -613,6 +616,20 @@ document.addEventListener('keydown', (e) => {
   });
   window.__patientGrid = grid;
   window.dsBindSelCount(grid, 'sel-count');
+
+  /* 찾는 자리의 「상담하기」 — 체크해 둔 한 사람과 상담한다.
+
+     창은 주문 등록에서 여는 것과 같은 것이다(partials/counsel-window). 지난 상담을
+     먼저 표로 보여 주고, 줄을 고르면 그 상담을 이어 적고, 「신규로 상담하기」면
+     새로 시작한다. 두 화면이 같은 창을 쓰므로 물어보는 것이 어디서나 같다. */
+  window.ptCounsel = function () {
+    const rows = grid.getCheckedRows?.() ?? [];
+    if (!rows.length)    { showToast('상담할 거래처를 목록에서 체크하십시오.', 'warning'); return; }
+    if (rows.length > 1) { showToast('한 사람만 체크하십시오. 상담은 사람에게 답니다.', 'warning'); return; }
+
+    const r = rows[0];
+    csOpen(r.id, r.name, r.mobile);
+  };
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   // 이력 행 클릭 → 해당 상세(처방전 검수·주문)를 워크스페이스 새 탭으로 (환자 목록 유지)
