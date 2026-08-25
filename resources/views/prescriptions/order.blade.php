@@ -5030,6 +5030,7 @@ window.HELP_TOUR_STEPS = [
     // 「새 사람으로 저장」은 같은 이름을 가릴 때만 서는 단추다
     const nb = document.getElementById('pkNewPerson');
     if (nb) nb.style.display = 'none';
+    _sameNameFlow = false;
   };
 
   window.pkReset = function () {
@@ -5081,7 +5082,7 @@ window.HELP_TOUR_STEPS = [
         const cell = ev.target.closest('[data-row-index]');
         if (!cell) return;
         const row = pkGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-        if (row) ocShow(row);
+        if (row) pkTake(row);
       });
       document.getElementById('pkGrid').addEventListener('click', (ev) => {
         const cell = ev.target.closest('[data-row-index]');
@@ -5100,8 +5101,27 @@ window.HELP_TOUR_STEPS = [
     const i = pkGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
     if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
-    ocShow(row);
+    pkTake(row);
   };
+
+  /**
+   * 고른 사람을 어디로 보낼지 가린다.
+   *
+   * 손으로 「조회」를 눌러 연 창이면 둘째 걸음(그 사람의 건 고르기)으로 간다 —
+   * 무엇을 하려고 사람을 찾았는지가 아직 정해지지 않은 자리다.
+   *
+   * 저장하다가 같은 이름이 있어 열린 창이면 그리로 가지 않는다. 그때 담당자가 하려던
+   * 일은 「이 건을 저장」이지 「다른 건으로 가기」가 아니다. 둘째 걸음의 「신규로 진행」은
+   * 지난 건을 베껴 새 처방번호를 내주는데, 그 바람에 적고 있던 번호를 두고 새 번호가
+   * 생겼다. 이 자리에서는 고른 사람만 이 건에 이어 두고 하던 저장을 마친다.
+   */
+  async function pkTake(row) {
+    if (!_sameNameFlow) { ocShow(row); return; }
+
+    _sameNameFlow = false;
+    await pkApply(row);     // 이 건에 그 사람을 잇고 환자 정보를 채운다(번호는 그대로)
+    await saveOCR();
+  }
 
   /* 기존에 없는 사람이면 이 건은 그 사람의 첫 구매다 — 신구매를 미리 세운다.
      「조회」로 고른 사람이 있으면(f-patient-id) 기존 사람이니 손대지 않는다. 이름만
@@ -5133,6 +5153,9 @@ window.HELP_TOUR_STEPS = [
   /* 같은 이름이 있어 저장을 멈췄을 때 여는 창.
      쓰던 「이름 조회」 창 그대로다 — 그 이름으로 찾아 놓고 열되, 바닥에 「새 사람으로
      저장」을 하나 더 세운다. 고르면 그 사람으로 이어지고, 새 사람이면 그대로 간다. */
+  /* 저장하다가 같은 이름을 가리려고 연 창인가 — 고른 사람을 어디로 보낼지 이 값이 가린다 */
+  let _sameNameFlow = false;
+
   function openSameNamePicker(name, count) {
     /* pkOpen 은 열려 있으면 닫는 토글이다 — 닫아 두고 연다.
        창은 f-name 을 그대로 찾아 놓고 열리므로 따로 칠 말을 넣지 않아도 된다. */
@@ -5140,6 +5163,7 @@ window.HELP_TOUR_STEPS = [
     const btn = document.getElementById('pkNewPerson');
     if (btn) btn.style.display = '';
     pkOpen();
+    _sameNameFlow = true;   // pkOpen 안의 pkClose 가 걷고 지나가므로 그 뒤에 세운다
 
     showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 같은 분이면 고르고, 다른 분이면 「새 사람으로 저장」을 누르십시오.`,
               'warning', 7000);
@@ -5148,6 +5172,7 @@ window.HELP_TOUR_STEPS = [
   /* 정말 새 사람이다 — 가리기를 건너뛰고 그대로 저장한다 */
   window.pkSaveAsNew = async function () {
     pkClose();
+    _sameNameFlow = false;
     await saveOCR({ newPerson: true });
   };
 
