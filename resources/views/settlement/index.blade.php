@@ -1053,34 +1053,27 @@
     const due  = Number(r.deposit_due || 0);
 
     if (r.deposit_hand) {
-      const ok = await ceConfirm(
-        `${r.order_no} 의 입금 확인을 취소합니다.
-다시 「입금 대기」로 돌아갑니다.`,
-        { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
-      if (!ok) return;
+      /* 입금이 없던 일이 되면 그 돈으로 나간 증빙도 없던 일이 된다 — 함께 취소한다.
+         묻고 고르게 두면 「입금은 없던 일인데 신고는 살아 있는」 줄이 남는 길이 열린다.
 
-      /* 입금이 확인되면 청구전략대로 증빙이 자동으로 나간다. 그 입금이 없던 일이 되면
-         증빙도 없던 일이 되는 것이 맞지만, 팝빌 취소는 국세청 실취소다 — 묻고 한다.
-         잘못 눌러 되돌리는 흔한 실수까지 실취소로 이어지게 두지 않는다.
-
-         취소한 증빙은 되살릴 수 없고 새로 발행해야 한다. 그 말도 함께 적어 둔다. */
-      let cancelDocs = false;
+         다만 팝빌 취소는 국세청 실취소이고 되살릴 수 없다. 고르게 하지 않는 대신,
+         무엇이 함께 사라지는지 되돌리기 전에 그대로 적어 둔다. */
       const issued = [
         r.tax_issued  ? '세금계산서' + (r.tax_no  ? ` (승인 ${r.tax_no})`  : '') : '',
         r.cash_issued ? '현금영수증' + (r.cash_no ? ` (승인 ${r.cash_no})` : '') : '',
       ].filter(Boolean);
 
-      if (issued.length) {
-        cancelDocs = await ceConfirm(
-          `이 건에는 ${issued.join(' 과 ')} 가 나가 있습니다.
-함께 취소할까요?
+      const ok = await ceConfirm(
+        `${r.order_no} 의 입금 확인을 취소합니다.
+다시 「입금 대기」로 돌아갑니다.` + (issued.length ? `
 
-※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 붙어 있던 그 증빙 PDF 도
-   함께 걷힙니다. 취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.`,
-          { title: '증빙도 함께 취소', confirmText: '함께 취소', cancelText: '입금 확인만 취소', tone: 'danger' });
-      }
+이 건에 나가 있는 ${issued.join(' 과 ')} 도 함께 취소됩니다.
+※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 붙어 있던 그 증빙 PDF 도 걷힙니다.
+   취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.` : ''),
+        { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
+      if (!ok) return;
 
-      await vaDepositCall(btn, base, 'DELETE', { cancel_docs: cancelDocs }, r, rowIndex, 0);
+      await vaDepositCall(btn, base, 'DELETE', null, r, rowIndex, 0);
       return;
     }
 

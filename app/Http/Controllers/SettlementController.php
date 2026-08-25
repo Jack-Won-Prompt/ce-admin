@@ -628,17 +628,18 @@ class SettlementController extends Controller
      * 담당자가 세운 입금 확인을 되돌린다.
      *
      * 입금이 확인되면 청구전략대로 세금계산서나 현금영수증이 자동으로 나간다. 그 입금이
-     * 없던 일이 되면 그 돈으로 나간 증빙도 없던 일이 되는 것이 맞다 — 다만 팝빌 취소는
-     * 국세청 실취소라, 부를지 말지는 화면이 담당자에게 묻고 cancel_docs 로 알려 준다.
-     * 묻지 않고 늘 취소하면 잘못 누른 것을 되돌리는 흔한 실수까지 실취소가 된다.
+     * 없던 일이 되면 그 돈으로 나간 증빙도 없던 일이 된다 — 묻지 않고 함께 취소한다.
+     *
+     * 한때 물어보게 두었다(cancel_docs). 팝빌 취소가 국세청 실취소라서였는데, 그러면
+     * 「입금은 없던 일인데 신고는 살아 있는」 줄이 남는 길이 열린다. 받지 않은 돈으로 낸
+     * 신고가 남는 쪽이 더 나쁘다 — 지금은 늘 함께 취소한다. 대신 되돌리기 전에 화면이
+     * 무엇이 함께 사라지는지 적어 두고 한 번 묻는다.
      */
-    public function revokeDeposit(Request $request, Order $order): JsonResponse
+    public function revokeDeposit(Order $order): JsonResponse
     {
         if (!$order->deposit_confirmed_at) {
             return response()->json(['success' => false, 'message' => '담당자가 확인한 입금이 아닙니다.'], 422);
         }
-
-        $cancelDocs = $request->boolean('cancel_docs');
 
         $was = (int) ($order->deposit_amount ?? 0);
         $order->update([
@@ -654,7 +655,7 @@ class SettlementController extends Controller
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log('입금 확인 취소(담당자): ' . number_format($was) . '원');
 
-        $docs = $cancelDocs ? $this->cancelIssuedDocs($order) : ['done' => [], 'failed' => []];
+        $docs = $this->cancelIssuedDocs($order);
 
         $message = '입금 확인을 취소했습니다.';
         if ($docs['done']) {
