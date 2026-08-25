@@ -193,6 +193,17 @@ class SettlementController extends Controller
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
                 'deposit_due'  => (int) ($order->patient_copay ?? 0) + (int) ($order->shipping_fee ?? 0),
                 'status'       => $sl['label'],
+                /* 증빙 — 발행된 것만 눌러서 펼쳐 볼 수 있다. 칸에는 아무 글자도 두지
+                   않는다(단추만 선다). 발행 여부와 승인번호는 단추가 읽는 값이다. */
+                'proof'        => '',
+                'tax_issued'   => $order->tax_invoice_status === 'issued',
+                'tax_no'       => (string) ($order->tax_invoice_no ?? ''),
+                'tax_url'      => $order->tax_invoice_status === 'issued'
+                                    ? route('orders.taxInvoicePreview', $order) : null,
+                'cash_issued'  => $order->cash_receipt_status === 'issued',
+                'cash_no'      => (string) ($order->cash_receipt_no ?? ''),
+                'cash_url'     => $order->cash_receipt_status === 'issued'
+                                    ? route('orders.cashReceiptPreview', $order) : null,
                 'nhis_claim'   => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
                 'created'      => $order->created_at?->format('Y-m-d') ?? '-',
                 // 상세 팝오버 URL (컬럼 아님 — 외부 버튼에서 사용)
@@ -217,6 +228,8 @@ class SettlementController extends Controller
             ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
             ['header' => '결제 방식',   'name' => 'pay_method',   'width' => 90,  'align' => 'center', 'sortable' => true],
             ['header' => '입금확인',    'name' => 'deposit',      'width' => 100, 'align' => 'right'],
+            // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
+            ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
             ['header' => '청구',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
             ['header' => '접수일',      'name' => 'created',      'width' => 100, 'sortable' => true],

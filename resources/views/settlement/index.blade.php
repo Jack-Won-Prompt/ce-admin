@@ -380,6 +380,26 @@
     </div>
   </div>
 </div>
+{{-- ══ 증빙 미리보기 팝업 ══
+     발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 본다. 예전에는 이 목록에서
+     증빙이 나갔는지 보려면 주문 화면까지 들어가야 했다. --}}
+<div id="proofModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:0 20px 60px rgba(0,0,0,.25);width:900px;max-width:95vw;height:88vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <i id="proofModalIcon" class="fa-solid fa-receipt" style="color:var(--primary);font-size:16px;"></i>
+      <span style="font-size:14px;font-weight:700;line-height:22px;" id="proofModalTitle">증빙</span>
+      <span style="font-size:12px;color:var(--text-muted);" id="proofModalNo"></span>
+      <button onclick="closeModal('proofModal')" style="margin-left:auto;display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">×</button>
+    </div>
+    <div style="flex:1;min-height:0;background:var(--gray-100);">
+      <iframe id="proofFrame" style="width:100%;height:100%;border:none;background:#fff;"></iframe>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;display:flex;justify-content:flex-end;gap:8px;">
+      <a id="proofOpen" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm">새 창으로</a>
+      <button onclick="closeModal('proofModal')" class="btn btn-outline btn-sm">닫기</button>
+    </div>
+  </div>
+</div>
 @endpush
 
 @push('scripts')
@@ -387,11 +407,40 @@
   // ── 모달 공통 ──────────────────────────────────────────────
   function openModal(id)  { const m = document.getElementById(id); m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
   function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal('rxModal'); closeModal('orderModal'); } });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal('rxModal'); closeModal('orderModal'); closeProofModal(); }
+  });
   document.addEventListener('click', e => {
     if (e.target.id === 'rxModal')    closeModal('rxModal');
     if (e.target.id === 'orderModal') closeModal('orderModal');
+    if (e.target.id === 'proofModal') closeProofModal();
   });
+
+  /* 창을 닫으면 파일도 놓아 준다 — src='' 로 두면 브라우저가 현재 주소를 다시 부른다 */
+  function closeProofModal() {
+    const f = document.getElementById('proofFrame');
+    if (f) f.removeAttribute('src');
+    closeModal('proofModal');
+  }
+
+  /** 발행된 증빙을 펼쳐 본다 — kind 는 'tax' 아니면 'cash' */
+  window.openProofModal = function (row, kind) {
+    const isTax = kind === 'tax';
+    const url   = isTax ? row.tax_url : row.cash_url;
+    if (!url) {
+      showToast(isTax ? '발행된 세금계산서가 없습니다.' : '발행된 현금영수증이 없습니다.', 'warning');
+      return;
+    }
+
+    document.getElementById('proofModalTitle').textContent = isTax ? '세금계산서' : '현금영수증';
+    document.getElementById('proofModalIcon').className    = isTax ? 'fa-solid fa-file-invoice' : 'fa-solid fa-receipt';
+    document.getElementById('proofModalNo').textContent    =
+      (row.order_no || '') + (isTax ? (row.tax_no ? ' · 승인 ' + row.tax_no : '')
+                                    : (row.cash_no ? ' · 승인 ' + row.cash_no : ''));
+    document.getElementById('proofOpen').href  = url;
+    document.getElementById('proofFrame').src  = url;
+    openModal('proofModal');
+  };
 
   /* 팝업 안의 「주문 보기」도 탭으로 연다 — 새 브라우저 창으로 튀지 않는다. */
   window.settlementOpenRxTab = function (ev, el, rxNo) {
@@ -746,6 +795,37 @@
      둘 다 그 줄의 입금을 말하는 자리다. */
   const _actCol = TAB === 'virtual_account' ? 'deposit_by' : 'deposit';
   GRID_COLS.forEach(c => { if (c.name === _actCol) c.renderer = depositCell; });
+
+  /* ── 증빙 — 입금 확인 다음 칸 ────────────────────────────────
+     입금이 확인되면 청구전략대로 세금계산서나 현금영수증이 자동으로 나간다. 나갔는지
+     보려면 지금까지는 주문 화면까지 들어가야 했다. 그 줄에서 바로 펼쳐 본다.
+     발행되지 않은 것은 흐린 채로 서 있다 — 칸을 비워 두면 왜 없는지 알 수 없다. */
+  function proofBtn(label, on, onClick, offTitle) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'proof-cell-btn';
+    b.textContent = label;
+    b.style.cssText = 'height:22px;padding:0 7px;font-size:10px;line-height:1;border-radius:6px;'
+                    + 'border:1px solid var(--gray-200);background:var(--gray-0);white-space:nowrap;'
+                    + (on ? 'color:var(--gray-1000);cursor:pointer;'
+                          : 'color:var(--gray-400);cursor:default;border-style:dashed;');
+    b.title = on ? label + ' 미리보기' : offTitle;
+    if (on) b.onclick = (ev) => { ev.stopPropagation(); onClick(); };
+    else    b.onclick = (ev) => { ev.stopPropagation(); };
+    return b;
+  }
+
+  function proofCell(v, row) {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;gap:4px;justify-content:center;';
+    box.appendChild(proofBtn('세금계산서', !!row.tax_issued,
+      () => openProofModal(row, 'tax'),  '발행된 세금계산서가 없습니다'));
+    box.appendChild(proofBtn('현금영수증', !!row.cash_issued,
+      () => openProofModal(row, 'cash'), '발행된 현금영수증이 없습니다'));
+    return box;
+  }
+
+  GRID_COLS.forEach(c => { if (c.name === 'proof') c.renderer = proofCell; });
 
   /* ── 결제 방식 — 고르는 순간이 곧 입금 확인이다 ──────────────
      입금이 확인되기 전에는 「무엇으로 받았는가」를 말할 수 없다. 그래서 칸은 「-」로

@@ -709,6 +709,47 @@ class OrderController extends Controller
         return \App\Support\TaxInvoiceForm::render($order);
     }
 
+    /**
+     * 발행된 증빙을 그 자리에서 펼쳐 본다(내려받지 않는다).
+     *
+     * 서식은 주문의 칸에서 그때그때 그린다 — 발행할 때 저장해 둔 파일을 찾아가지
+     * 않는다. 옛 건은 그 파일이 없거나 옛 모양이라, 목록에서 눌렀을 때 어떤 건은
+     * 열리고 어떤 건은 안 열리는 일이 생긴다.
+     */
+    public function previewCashReceipt(Order $order)
+    {
+        if ($order->cash_receipt_status !== 'issued') {
+            abort(404, '발행된 현금영수증이 없습니다.');
+        }
+
+        return $this->inlinePdf(
+            \App\Support\CashReceiptForm::render($order),
+            '현금영수증_' . ($order->patient?->name ?? '') . '_' . $order->order_number . '.pdf'
+        );
+    }
+
+    public function previewTaxInvoice(Order $order)
+    {
+        if ($order->tax_invoice_status !== 'issued') {
+            abort(404, '발행된 세금계산서가 없습니다.');
+        }
+
+        $this->ensureNanumGothicVariantsRegistered();
+
+        return $this->inlinePdf(
+            \App\Support\TaxInvoiceForm::render($order),
+            '세금계산서_' . ($order->tax_invoice_biz_name ?? '') . '_' . $order->order_number . '.pdf'
+        );
+    }
+
+    private function inlinePdf(string $bytes, string $filename)
+    {
+        return response($bytes, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename*=UTF-8\'\'' . rawurlencode($filename),
+        ]);
+    }
+
     // ── 현금영수증 PDF 다운로드 ───────────────────────────
     public function downloadCashReceiptPdf(Order $order)
     {

@@ -350,6 +350,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{order}/cash-receipt',        [OrderController::class, 'issueCashReceipt'])->name('issueCashReceipt');
         Route::delete('/{order}/cash-receipt',      [OrderController::class, 'cancelCashReceipt'])->name('cancelCashReceipt');
         Route::get('/{order}/cash-receipt-pdf',     [OrderController::class, 'downloadCashReceiptPdf'])->name('cashReceiptPdf');
+        // 미리보기 — 내려받지 않고 그 자리에서 펼쳐 본다(정산/회계 목록의 증빙 단추)
+        Route::get('/{order}/cash-receipt-preview', [OrderController::class, 'previewCashReceipt'])->name('cashReceiptPreview');
+        Route::get('/{order}/tax-invoice-preview',  [OrderController::class, 'previewTaxInvoice'])->name('taxInvoicePreview');
         Route::post('/{order}/withworks-status',   [OrderController::class, 'fetchWithworksStatus'])->name('fetchWithworksStatus');
     });
 
