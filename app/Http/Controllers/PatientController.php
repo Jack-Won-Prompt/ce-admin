@@ -335,6 +335,81 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * 이 사람의 지난 상담.
+     *
+     * 「상담하기」를 누르면 새 상담부터 열어 주던 것을 그만둔다 — 지난 통화를 이어 갈
+     * 길이 없어, 같은 이야기가 상담 여러 건으로 갈라져 쌓였다. 먼저 보여 주고 고르게
+     * 한다. 이을 것이 없으면 그때 새로 연다(화면이 알아서 건너뛴다).
+     */
+    public function counsels(Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        $types  = ['1013' => '구매', '1016' => '개인구매', '1020' => '반품', '1030' => '문의', '1050' => '기타'];
+        $states = ['02' => '등록', '50' => '재상담', '95' => '확정', '99' => '취소'];
+
+        $rows = $patient->prescriptions()
+            ->whereNotNull('counsel_no')
+            ->with('counselOrder')
+            ->latest('id')->take(100)->get()
+            ->map(fn ($p) => [
+                'id'           => $p->id,
+                'counsel_no'   => (string) $p->counsel_no,
+                'rx_number'    => (string) $p->rx_number,
+                'date'         => (string) ($p->counsel_date ?: $p->created_at?->format('Y-m-d')),
+                'type'         => (string) ($p->counsel_type ?? ''),
+                'type_label'   => $types[(string) $p->counsel_type] ?? '',
+                'status'       => (string) ($p->counsel_status ?? ''),
+                'status_label' => $states[(string) $p->counsel_status] ?? '',
+                'call_no'      => (string) ($p->counsel_call_no ?? ''),
+                're_date'      => (string) ($p->counsel_re_date ?? ''),
+                'contents'     => (string) ($p->counsel_contents ?? ''),
+                'order_id'     => $p->counsel_order_id,
+                'order_no'     => (string) ($p->counselOrder?->order_number ?? ''),
+            ])->values();
+
+        return response()->json(['rows' => $rows]);
+    }
+
+    /**
+     * 지난 상담을 이어 적는다.
+     *
+     * 상담 한 건은 처방전 한 줄에 붙어 산다(counsel_* 칸). 다시 걸어 온 통화까지 새 건으로
+     * 세우면 같은 이야기가 둘로 갈라진다 — 재상담으로 두었던 그 건을 고쳐 잇는다.
+     */
+    public function updateCounsel(
+        Request $request,
+        Patient $patient,
+        \App\Models\Prescription $prescription
+    ): \Illuminate\Http\JsonResponse {
+        // 남의 상담을 고치지 못하게 — 주소를 손으로 고쳐도 이 문턱은 지난다
+        if ((int) $prescription->patient_id !== (int) $patient->id || !$prescription->counsel_no) {
+            abort(404, '이 사람의 상담이 아닙니다.');
+        }
+
+        $data = $request->validate([
+            'counsel_date'     => 'required|date',
+            'counsel_type'     => 'nullable|string|max:10',
+            'counsel_status'   => 'nullable|string|max:10',
+            'counsel_call_no'  => 'nullable|string|max:30',
+            'counsel_re_date'  => 'nullable|date',
+            'counsel_contents' => 'required|string|max:2000',
+            'counsel_order_id' => 'nullable|exists:orders,id',
+        ]);
+
+        $prescription->forceFill(array_merge($data, [
+            'updated_by' => \Illuminate\Support\Facades\Auth::id(),
+        ]))->save();
+
+        activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($prescription)
+            ->log("{$patient->name} 상담 이어 적음 ({$prescription->counsel_no})");
+
+        return response()->json([
+            'success'    => true,
+            'message'    => '상담을 이어 적었습니다.',
+            'counsel_no' => $prescription->counsel_no,
+        ]);
+    }
+
     /** 이 환자의 주문 — 상담을 어느 건에 이을지 고를 때 본다 */
     public function orders(Patient $patient): \Illuminate\Http\JsonResponse
     {

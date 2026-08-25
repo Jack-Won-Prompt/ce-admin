@@ -179,6 +179,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
         // 통화 내용을 그 자리에서 적어 둔다(거래처 관리 › 상담내역 › 상담하기)
         Route::post('/{patient}/counsels', [PatientController::class, 'storeCounsel'])->name('counsels.store');
+        /* 이 사람의 지난 상담 — 「상담하기」를 누르면 먼저 이 목록을 보여 준다.
+           새 상담만 열면 지난 통화를 이어 갈 길이 없어, 같은 이야기가 여러 건으로 갈라졌다. */
+        Route::get('/{patient}/counsels', [PatientController::class, 'counsels'])->name('counsels.index');
+        Route::patch('/{patient}/counsels/{prescription}', [PatientController::class, 'updateCounsel'])->name('counsels.update');
         // 상담을 어느 주문에 이을지 고르는 자리 — 처방으로 산 것과 처방 없이 산 것이 함께 온다
         Route::get('/{patient}/orders',     [PatientController::class, 'orders'])->name('orders');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');

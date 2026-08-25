@@ -47,6 +47,23 @@
   .cs-foot { display: flex; align-items: center; gap: 6px; padding: 10px 14px;
              border-top: 1px solid var(--border); }
   .cs-foot .cs-hint { margin-right: auto; }
+
+  /* ── 지난 상담 고르기 ──
+     표를 세우지 않고 줄로 늘어놓는다. 이 창은 580 폭이라 칸을 나누면 상담 내용이
+     먼저 잘리는데, 어느 상담이었는지 가리는 것은 대개 그 내용 첫 줄이다. */
+  .cs-list { display: flex; flex-direction: column; gap: 6px; }
+  .cs-item { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+             background: var(--gray-0); cursor: pointer; }
+  .cs-item:hover { border-color: var(--primary); background: var(--gray-50); }
+  .cs-item-top { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;
+                 color: var(--gray-1000); }
+  .cs-item-no { color: var(--primary); }
+  .cs-item-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px;
+                 background: var(--gray-100); color: var(--gray-700); }
+  .cs-item-tag.re { background: #fff4e5; color: #b26a00; }
+  .cs-item-note { margin-top: 3px; font-size: 11px; color: var(--text-muted);
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-empty { padding: 22px 12px; text-align: center; font-size: 12px; color: var(--text-muted); }
 </style>
 @endonce
 
@@ -62,7 +79,19 @@
       <button type="button" onclick="csClose()" aria-label="닫기">&times;</button>
     </div>
 
-    <div class="cs-body">
+    {{-- ① 지난 상담 고르기 — 이어 갈 것이 있으면 먼저 보여 준다 --}}
+    <div class="cs-body" id="csStep1" style="display:none;">
+      <div class="cs-hint" id="csListNote">불러오는 중…</div>
+      <div class="cs-list" id="csList"></div>
+    </div>
+    <div class="cs-foot" id="csFoot1" style="display:none;">
+      <span class="cs-hint">이어 갈 상담을 고르거나, 새 상담을 시작합니다.</span>
+      <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="csNew()">신규로 상담하기</button>
+    </div>
+
+    {{-- ② 적는 자리 — 새 상담이든 이어 가는 상담이든 같은 칸을 쓴다 --}}
+    <div class="cs-body" id="csStep2">
       <div class="cs-row two">
         <div class="cs-f">
           <label>상담일시 *</label>
@@ -129,8 +158,10 @@
       </div>
     </div>
 
-    <div class="cs-foot">
+    <div class="cs-foot" id="csFoot2">
       <span class="cs-hint" id="csNote">적은 내용은 저장을 눌러야 남습니다.</span>
+      {{-- 목록에서 들어왔을 때만 선다 — 곧장 새 상담으로 열린 건은 돌아갈 목록이 없다 --}}
+      <button type="button" class="ds-btn" id="csBackBtn" style="display:none;" onclick="csBack()">목록</button>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
       <button type="button" class="ds-btn ds-btn-primary" id="csSaveBtn" onclick="csSave(this)">저장</button>
     </div>
@@ -155,6 +186,10 @@
   let _csPatient = null;
   let _csDirty   = false;
   let _csOrder   = null;   // 이 상담을 이을 주문
+  /* 이어 가는 상담. null 이면 새 상담이다 — 저장이 새로 세울지 고쳐 이을지 이 값이 가린다. */
+  let _csEditing = null;
+  let _csList    = [];     // 지난 상담(목록 걸음이 들고 있는 것)
+  let _csMobile  = '';     // 이 사람의 통화번호 — 새 상담을 열 때 미리 채운다
 
   /* ── 주문 잇기 ──────────────────────────────────────────
      환자 한 사람이 주문을 여러 번 한다 — 처방을 받아 사는 때도, 처방 없이 사는 때도
@@ -306,31 +341,139 @@
    * @param {string}        name 창 머리에 적을 이름
    * @param {string}        [mobile] 통화번호로 미리 채울 번호
    */
-  window.csOpen = function (id, name, mobile) {
+  window.csOpen = async function (id, name, mobile) {
     const p = id ? { id, name } : (typeof pcActive === 'function' ? pcActive() : null);
     if (!p) { showToast('먼저 환자를 고르십시오.', 'warning'); return; }
 
     _csPatient = p;
     _csDirty   = false;
+    _csMobile  = (typeof pcTabs !== 'undefined' ? pcTabs[p.id]?.mobile : '') || mobile || '';
 
-    document.getElementById('csTitle').textContent  = (p.name || '') + ' 상담하기';
-    document.getElementById('csDate').value         = new Date().toISOString().slice(0, 10);
-    document.getElementById('csCallNo').value       =
-      (typeof pcTabs !== 'undefined' ? pcTabs[p.id]?.mobile : '') || mobile || '';
-    document.getElementById('csType').value         = '';
-    document.getElementById('csStatus').value       = '02';
-    document.getElementById('csReDate').value       = '';
-    document.getElementById('csContents').value     = '';
-    _csOrder = null;
-    csShowOrder();
-    document.getElementById('csLen').textContent    = '0';
-    document.getElementById('csNote').textContent   = '적은 내용은 저장을 눌러야 남습니다.';
-    csSyncReDate();
+    document.getElementById('csTitle').textContent = (p.name || '') + ' 상담하기';
 
     const win = document.getElementById('csModal');
     win.style.display = 'block';
     _csApplyBox(_csBox ?? _csDefaultBox());
+
+    /* 지난 상담이 있으면 먼저 보여 준다 — 다시 걸어 온 통화를 새 건으로 세우면
+       같은 이야기가 둘로 갈라진다. 이을 것이 없으면 곧장 새 상담으로 연다. */
+    _csStep(1);
+    document.getElementById('csListNote').textContent = '지난 상담을 불러오는 중…';
+    document.getElementById('csList').innerHTML = '';
+
+    try {
+      const res  = await fetch(`${CS_BASE}/${p.id}/counsels`,
+                               { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      _csList = (await res.json()).rows ?? [];
+    } catch (e) {
+      _csList = [];
+    }
+
+    if (!_csList.length) { csNew({ fromList: false }); return; }
+    csRenderList();
+  };
+
+  /** 걸음 바꾸기 — ① 지난 상담 고르기 · ② 적는 자리 */
+  function _csStep(n) {
+    document.getElementById('csStep1').style.display = n === 1 ? '' : 'none';
+    document.getElementById('csFoot1').style.display = n === 1 ? '' : 'none';
+    document.getElementById('csStep2').style.display = n === 2 ? '' : 'none';
+    document.getElementById('csFoot2').style.display = n === 2 ? '' : 'none';
+  }
+
+  function csRenderList() {
+    const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    document.getElementById('csListNote').textContent =
+      `지난 상담 ${_csList.length}건 — 이어 갈 상담을 누르십시오.`;
+
+    document.getElementById('csList').innerHTML = _csList.map((c, i) => {
+      const tags = [
+        c.type_label ? `<span class="cs-item-tag">${esc(c.type_label)}</span>` : '',
+        c.status_label
+          ? `<span class="cs-item-tag${c.status === '50' ? ' re' : ''}">${esc(c.status_label)}</span>` : '',
+        c.order_no ? `<span class="cs-item-tag">${esc(c.order_no)}</span>` : '',
+      ].join('');
+      const first = (c.contents || '').split(/\r?\n/)[0] || '(내용 없음)';
+      const re    = c.status === '50' && c.re_date ? ` · 재상담 ${esc(c.re_date)}` : '';
+      return `<div class="cs-item" onclick="csPick(${i})">
+                <div class="cs-item-top">
+                  <span class="cs-item-no">${esc(c.counsel_no)}</span>
+                  <span>${esc(c.date)}${re}</span>
+                  <span style="margin-left:auto;display:flex;gap:4px;">${tags}</span>
+                </div>
+                <div class="cs-item-note">${esc(first)}</div>
+              </div>`;
+    }).join('');
+  }
+
+  /** 지난 상담을 이어 간다 — 적어 둔 것을 그대로 띄우고, 저장하면 그 건이 고쳐진다 */
+  window.csPick = function (i) {
+    const c = _csList[i];
+    if (!c) return;
+
+    _csEditing = c;
+    _csDirty   = false;
+    _csOrder   = c.order_id ? { id: c.order_id, order_no: c.order_no } : null;
+
+    document.getElementById('csDate').value     = c.date || new Date().toISOString().slice(0, 10);
+    document.getElementById('csCallNo').value   = c.call_no || _csMobile;
+    document.getElementById('csType').value     = c.type   || '';
+    document.getElementById('csStatus').value   = c.status || '02';
+    document.getElementById('csReDate').value   = c.re_date || '';
+    document.getElementById('csContents').value = c.contents || '';
+    document.getElementById('csLen').textContent = String((c.contents || '').length);
+    document.getElementById('csNote').textContent =
+      `${c.counsel_no} 을 이어 적습니다 — 저장하면 이 상담이 고쳐집니다.`;
+    document.getElementById('csBackBtn').style.display = '';
+
+    csShowOrder();
+    csSyncReDate();
+    _csStep(2);
+
+    // 커서는 적어 둔 것 끝에 — 이어 적는 자리다
+    setTimeout(() => {
+      const t = document.getElementById('csContents');
+      t.focus();
+      t.setSelectionRange(t.value.length, t.value.length);
+      t.scrollTop = t.scrollHeight;
+    }, 50);
+  };
+
+  /** 새 상담을 시작한다 */
+  window.csNew = function (opts = {}) {
+    const fromList = opts.fromList !== false;
+
+    _csEditing = null;
+    _csDirty   = false;
+    _csOrder   = null;
+
+    document.getElementById('csDate').value      = new Date().toISOString().slice(0, 10);
+    document.getElementById('csCallNo').value    = _csMobile;
+    document.getElementById('csType').value      = '';
+    document.getElementById('csStatus').value    = '02';
+    document.getElementById('csReDate').value    = '';
+    document.getElementById('csContents').value  = '';
+    document.getElementById('csLen').textContent = '0';
+    document.getElementById('csNote').textContent = '적은 내용은 저장을 눌러야 남습니다.';
+    document.getElementById('csBackBtn').style.display = fromList && _csList.length ? '' : 'none';
+
+    csShowOrder();
+    csSyncReDate();
+    _csStep(2);
     setTimeout(() => document.getElementById('csContents').focus(), 50);
+  };
+
+  /** 목록으로 돌아간다 — 적다 만 것이 있으면 물어본다 */
+  window.csBack = async function () {
+    if (_csDirty) {
+      const ok = await ceConfirm('적던 내용이 사라집니다. 목록으로 돌아갈까요?',
+                                 { tone: 'warning', confirmText: '돌아가기', cancelText: '계속 적기' });
+      if (!ok) return;
+    }
+    _csDirty = false;
+    _csEditing = null;
+    csRenderList();
+    _csStep(1);
   };
 
   /* 주문 등록 화면의 「상담하기」로 들어오는 길.
@@ -371,7 +514,14 @@
 
     BtnState.loading(btn, '저장 중...');
     try {
-      const res = await apiRequest(`${CS_BASE}/${_csPatient.id}/counsels`, 'POST', {
+      /* 이어 가는 상담이면 그 건을 고친다. 다시 걸어 온 통화까지 새 건으로 세우면
+         같은 이야기가 둘로 갈라진다. */
+      const url    = _csEditing
+        ? `${CS_BASE}/${_csPatient.id}/counsels/${_csEditing.id}`
+        : `${CS_BASE}/${_csPatient.id}/counsels`;
+      const method = _csEditing ? 'PATCH' : 'POST';
+
+      const res = await apiRequest(url, method, {
         counsel_date:     document.getElementById('csDate').value,
         counsel_type:     document.getElementById('csType').value || null,
         counsel_status:   document.getElementById('csStatus').value || null,
@@ -383,8 +533,10 @@
       });
       if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
 
-      showToast(`상담을 적어 두었습니다 (${res.counsel_no})`, 'success', 4000);
-      _csDirty = false;
+      showToast(`${_csEditing ? '상담을 이어 적었습니다' : '상담을 적어 두었습니다'} (${res.counsel_no})`,
+                'success', 4000);
+      _csDirty   = false;
+      _csEditing = null;
       document.getElementById('csModal').style.display = 'none';
       // 방금 적은 것이 목록에 보여야 한다 — 그 목록이 있는 화면에서만
       if (typeof pcLoad === 'function') pcLoad(_csPatient.id, _csPatient.name);
