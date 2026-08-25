@@ -4,9 +4,9 @@
      어느 화면에서 적었느냐에 따라 물어보는 것이 달라진다. 창ㆍ모양ㆍ여닫는 법을
      여기 한 벌만 두고, 부르는 화면은 csOpen(환자id, 이름, 통화번호) 만 부른다.
 
-     이 창이 기대는 것은 전역으로 있는 것들뿐이다(GridModal · apiRequest · showToast ·
-     ceConfirm · BtnState). 거래처 관리에만 있는 상담내역 탭(pcTabs · pcActive · pcLoad)은
-     있을 때만 쓴다 — 없으면 없는 대로 연다. --}}
+     이 창이 기대는 것은 전역으로 있는 것들뿐이다(wwGrid · GridModal · apiRequest ·
+     showToast · ceConfirm · BtnState — 모두 레이아웃이 실어 준다). 거래처 관리에만 있는
+     상담내역 탭(pcTabs · pcActive · pcLoad)은 있을 때만 쓴다 — 없으면 없는 대로 연다. --}}
 
 {{-- 모양은 그 자리에 그대로 둔다 — 이 조각은 화면 본문 안에서 그려지고,
      머리의 styles 자리는 그때 이미 지나가 있다. --}}
@@ -49,21 +49,10 @@
   .cs-foot .cs-hint { margin-right: auto; }
 
   /* ── 지난 상담 고르기 ──
-     표를 세우지 않고 줄로 늘어놓는다. 이 창은 580 폭이라 칸을 나누면 상담 내용이
-     먼저 잘리는데, 어느 상담이었는지 가리는 것은 대개 그 내용 첫 줄이다. */
-  .cs-list { display: flex; flex-direction: column; gap: 6px; }
-  .cs-item { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
-             background: var(--gray-0); cursor: pointer; }
-  .cs-item:hover { border-color: var(--primary); background: var(--gray-50); }
-  .cs-item-top { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;
-                 color: var(--gray-1000); }
-  .cs-item-no { color: var(--primary); }
-  .cs-item-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px;
-                 background: var(--gray-100); color: var(--gray-700); }
-  .cs-item-tag.re { background: #fff4e5; color: #b26a00; }
-  .cs-item-note { margin-top: 3px; font-size: 11px; color: var(--text-muted);
-                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cs-empty { padding: 22px 12px; text-align: center; font-size: 12px; color: var(--text-muted); }
+     목록은 이 화면들이 쓰는 표(wwGrid)로 세운다. 손수 그린 줄은 정렬도 스크롤도
+     따로 만들어야 했고, 다른 목록과 눈에 익은 모양이 달랐다. */
+  .cs-body#csStep1 { padding-top: 10px; }
+  .cs-body#csStep1 > #csGrid { flex: 1; min-height: 0; }
 </style>
 @endonce
 
@@ -81,13 +70,14 @@
 
     {{-- ① 지난 상담 고르기 — 이어 갈 것이 있으면 먼저 보여 준다 --}}
     <div class="cs-body" id="csStep1" style="display:none;">
-      <div class="cs-hint" id="csListNote">불러오는 중…</div>
-      <div class="cs-list" id="csList"></div>
+      <div class="cs-hint" id="csListNote" style="display:none;"></div>
+      <div id="csGrid"></div>
     </div>
     <div class="cs-foot" id="csFoot1" style="display:none;">
-      <span class="cs-hint">이어 갈 상담을 고르거나, 새 상담을 시작합니다.</span>
+      <span class="cs-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="csNew()">신규로 상담하기</button>
+      <button type="button" class="ds-btn" onclick="csNew()">신규로 상담하기</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="csPickSelected()">선택</button>
     </div>
 
     {{-- ② 적는 자리 — 새 상담이든 이어 가는 상담이든 같은 칸을 쓴다 --}}
@@ -272,7 +262,9 @@
   }
 
   function _csDefaultBox() {
-    const w = Math.min(580, Math.round(window.innerWidth  * 0.5));
+    /* 지난 상담을 표로 늘어놓게 되면서 580 으로는 상담번호부터 잘렸다.
+       적는 자리도 두 칸 배치라 넓어진 만큼 편해진다. 옮기고 줄인 자리는 기억한다. */
+    const w = Math.min(760, Math.round(window.innerWidth  * 0.62));
     const h = Math.min(620, Math.round(window.innerHeight * 0.8));
     return {
       // 오른쪽에 둔다 — 왼쪽 목록을 보면서 적는 일이 많다
@@ -358,8 +350,9 @@
     /* 지난 상담이 있으면 먼저 보여 준다 — 다시 걸어 온 통화를 새 건으로 세우면
        같은 이야기가 둘로 갈라진다. 이을 것이 없으면 곧장 새 상담으로 연다. */
     _csStep(1);
-    document.getElementById('csListNote').textContent = '지난 상담을 불러오는 중…';
-    document.getElementById('csList').innerHTML = '';
+    const note = document.getElementById('csListNote');
+    note.textContent = '지난 상담을 불러오는 중…';
+    note.style.display = '';
 
     try {
       const res  = await fetch(`${CS_BASE}/${p.id}/counsels`,
@@ -369,6 +362,7 @@
       _csList = [];
     }
 
+    note.style.display = 'none';
     if (!_csList.length) { csNew({ fromList: false }); return; }
     csRenderList();
   };
@@ -381,30 +375,71 @@
     document.getElementById('csFoot2').style.display = n === 2 ? '' : 'none';
   }
 
-  function csRenderList() {
-    const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    document.getElementById('csListNote').textContent =
-      `지난 상담 ${_csList.length}건 — 이어 갈 상담을 누르십시오.`;
+  let _csGrid = null;
 
-    document.getElementById('csList').innerHTML = _csList.map((c, i) => {
-      const tags = [
-        c.type_label ? `<span class="cs-item-tag">${esc(c.type_label)}</span>` : '',
-        c.status_label
-          ? `<span class="cs-item-tag${c.status === '50' ? ' re' : ''}">${esc(c.status_label)}</span>` : '',
-        c.order_no ? `<span class="cs-item-tag">${esc(c.order_no)}</span>` : '',
-      ].join('');
-      const first = (c.contents || '').split(/\r?\n/)[0] || '(내용 없음)';
-      const re    = c.status === '50' && c.re_date ? ` · 재상담 ${esc(c.re_date)}` : '';
-      return `<div class="cs-item" onclick="csPick(${i})">
-                <div class="cs-item-top">
-                  <span class="cs-item-no">${esc(c.counsel_no)}</span>
-                  <span>${esc(c.date)}${re}</span>
-                  <span style="margin-left:auto;display:flex;gap:4px;">${tags}</span>
-                </div>
-                <div class="cs-item-note">${esc(first)}</div>
-              </div>`;
-    }).join('');
+  /* 표에 세울 줄 — 창이 580 폭이라 칸을 넉넉히 둘 수 없다. 어느 상담이었는지 가리는
+     것은 상담번호ㆍ날짜ㆍ상담원, 그리고 적어 둔 내용 첫 줄이다. 재상담 건은 날짜 칸에
+     다시 걸 날을 함께 적는다 — 그것이 곧 다음 할 일이라 눈에 먼저 들어와야 한다. */
+  function csRenderList() {
+    const rows = _csList.map((c, i) => ({
+      _i:     i,
+      no:     c.counsel_no,
+      date:   c.date + (c.status === '50' && c.re_date ? ` → ${c.re_date}` : ''),
+      type:   c.type_label || '',
+      status: c.status_label || '',
+      by:     c.by || '',
+      note:   (c.contents || '').split(/\r?\n/)[0] || '',
+    }));
+
+    if (!_csGrid) {
+      /* 표는 창을 채운다 — 320 으로 못 박아 두었더니 아래에 빈 자리가 남았다.
+         이어 둔 주문번호는 칸으로 두지 않는다. 창이 580 폭이라 일곱 칸을 세우면
+         정작 어느 상담이었는지 가리는 「상담 내용」이 먼저 밀려난다 —
+         주문번호는 고르고 나면 적는 자리에 그대로 보인다. */
+      const pane = document.getElementById('csStep1');
+      _csGrid = new wwGrid({
+        el: document.getElementById('csGrid'),
+        height: Math.max(220, (pane?.clientHeight || 320) - 8),
+        editable: false, rowCheckbox: false, rowNumber: false,
+        toolbar: false, footer: false,
+        columns: [
+          { header: '상담번호',  name: 'no',     width: 126, sortable: true },
+          { header: '상담일',    name: 'date',   width: 148, align: 'center', sortable: true },
+          { header: '유형',      name: 'type',   width: 56,  align: 'center', sortable: true },
+          { header: '상태',      name: 'status', width: 60,  align: 'center', sortable: true },
+          { header: '상담원',    name: 'by',     width: 92,  sortable: true },
+          { header: '상담 내용', name: 'note',   width: 220 },
+        ],
+        data: rows,
+      });
+
+      const el = document.getElementById('csGrid');
+      el.addEventListener('click', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        _csGrid._pickedIndex = parseInt(cell.dataset.rowIndex, 10);
+        el.querySelectorAll('tr').forEach(tr => tr.classList.remove('cg-row-selected'));
+        cell.closest('tr')?.classList.add('cg-row-selected');
+      });
+      el.addEventListener('dblclick', (ev) => {
+        const cell = ev.target.closest('[data-row-index]');
+        if (!cell) return;
+        const row = _csGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+        if (row) csPick(row._i);
+      });
+    } else {
+      _csGrid._pickedIndex = null;
+      _csGrid.setData(rows);
+    }
   }
+
+  /** 바닥의 「선택」 — 고른 줄로 이어 간다 */
+  window.csPickSelected = function () {
+    const i = _csGrid?._pickedIndex;
+    const row = (i === null || i === undefined) ? null : _csGrid.getData()[i];
+    if (!row) { showToast('이어 갈 상담을 눌러 주십시오.', 'warning'); return; }
+    csPick(row._i);
+  };
 
   /** 지난 상담을 이어 간다 — 적어 둔 것을 그대로 띄우고, 저장하면 그 건이 고쳐진다 */
   window.csPick = function (i) {
@@ -516,8 +551,11 @@
     try {
       /* 이어 가는 상담이면 그 건을 고친다. 다시 걸어 온 통화까지 새 건으로 세우면
          같은 이야기가 둘로 갈라진다. */
+      /* 주소에 싣는 것은 처방번호다 — 상담 한 건은 처방전 한 줄에 붙어 살고,
+         그 줄은 id 가 아니라 rx_number 로 찾는다(Prescription::getRouteKeyName).
+         id 를 실었더니 「No query results for model … 92」로 떨어졌다. */
       const url    = _csEditing
-        ? `${CS_BASE}/${_csPatient.id}/counsels/${_csEditing.id}`
+        ? `${CS_BASE}/${_csPatient.id}/counsels/${encodeURIComponent(_csEditing.rx_number)}`
         : `${CS_BASE}/${_csPatient.id}/counsels`;
       const method = _csEditing ? 'PATCH' : 'POST';
 

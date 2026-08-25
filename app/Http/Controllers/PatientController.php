@@ -349,7 +349,8 @@ class PatientController extends Controller
 
         $rows = $patient->prescriptions()
             ->whereNotNull('counsel_no')
-            ->with('counselOrder')
+            // 누가 받은 통화였는지 — 이어 걸 때 그 사람에게 먼저 물어보게 된다
+            ->with(['counselOrder', 'creator', 'updater'])
             ->latest('id')->take(100)->get()
             ->map(fn ($p) => [
                 'id'           => $p->id,
@@ -365,6 +366,11 @@ class PatientController extends Controller
                 'contents'     => (string) ($p->counsel_contents ?? ''),
                 'order_id'     => $p->counsel_order_id,
                 'order_no'     => (string) ($p->counselOrder?->order_number ?? ''),
+                /* 상담원 — 처음 받은 사람이다. 이어 적은 사람이 다르면 그 이름을 함께
+                   적는다(「김선미 → 강정석」). 이어 걸 때 누구에게 물어볼지가 갈린다. */
+                'by'           => trim(($p->creator?->name ?? '')
+                                    . ($p->updater && $p->updater->id !== $p->creator?->id
+                                        ? ' → ' . $p->updater->name : '')),
             ])->values();
 
         return response()->json(['rows' => $rows]);
@@ -375,6 +381,8 @@ class PatientController extends Controller
      *
      * 상담 한 건은 처방전 한 줄에 붙어 산다(counsel_* 칸). 다시 걸어 온 통화까지 새 건으로
      * 세우면 같은 이야기가 둘로 갈라진다 — 재상담으로 두었던 그 건을 고쳐 잇는다.
+     *
+     * 주소가 가리키는 것은 처방번호다(Prescription::getRouteKeyName 이 rx_number 다).
      */
     public function updateCounsel(
         Request $request,
