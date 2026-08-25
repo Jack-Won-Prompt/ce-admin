@@ -334,7 +334,8 @@
   /* 오른쪽은 두 묶음이다 (시안 137:695) — 글자 링크(gap 12)와 테두리 버튼(gap 6), 사이는 16 */
   .tab-bar-acts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
   .tb-links { display: flex; align-items: center; gap: 12px; }
-  .tb-btns  { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  /* 단추 묶음은 줄어들지 않는다 — 좁아지면 탭줄이 아래로 접히지, 단추가 잘리지 않는다 */
+  .tb-btns  { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
   /* 전체 열기·테이블뷰는 테두리 없는 글자 링크 (시안 137:697·701) */
   .tb-link { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none;
              font-size: 12px; font-weight: 500; line-height: 1.6; color: var(--gray-700);
@@ -2088,11 +2089,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
           {{-- 테두리 버튼 묶음 (137:705) --}}
           <div class="tb-btns">
-          {{-- 시안 순서 그대로 — 환자 조회, 신규 등록 (137:706·708). 아이콘 없이 글자만. --}}
-          <button type="button" id="btnPatientLookup" class="tb-act" onclick="openPatientLookup()"
-                  title="이름으로 조회해 과거 상담이력을 가져옵니다">환자 조회</button>
+          {{-- 「환자 조회」는 걷었다 — 이름으로 사람을 찾는 일은 환자 정보의 「조회」 창이
+               맡는다. 같은 일을 두 자리에서 하면 어느 쪽이 무엇을 하는지 매번 헤맨다.
+
+               「신규 등록」은 어떤 상태에서도 선다. 기존 건을 불러와 보고 있든 빈 초안이든,
+               새 건을 시작하는 길은 늘 열려 있어야 한다 — 조건을 붙이지 않는다. --}}
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
-                  title="주문 화면의 모든 입력 내용을 비웁니다">신규 등록</button>
+                  title="새 처방번호로 새 건을 시작합니다">신규 등록</button>
           {{-- 같은 사람이 같은 것을 다시 사는 일이 잦다. 보고 있는 건을 그대로 베껴
                새 번호로 세운다 — 날짜만 비운다(그 건에만 속한 사실이라). --}}
           <button type="button" id="btnDuplicate" class="tb-act" onclick="duplicateRx()"
@@ -3423,74 +3426,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- 「과거 상담」 창은 걷었다 — 그 창을 열던 단추가 상담 정보 구획과 함께 사라졌다.
              지난 상담은 거래처 관리의 상담 창에서 본다. --}}
 @endif
-
-{{-- ══════════════════════════════════════════════════════════
-     환자 조회 모달 — 이름으로 환자 검색 → 과거 상담이력 선택 → 주문 화면으로 가져오기
-     (현재 처방전의 환자와 무관하게 조회 가능하므로 조건 없이 항상 렌더)
-══════════════════════════════════════════════════════════ --}}
-<div class="modal-overlay" id="patientLookupModal" style="z-index:10000;" onclick="if(event.target===this)closePatientLookup()">
-  <div class="modal-box" style="width:1000px;max-width:97vw;height:84vh;display:flex;flex-direction:column;">
-    <div class="modal-header">
-      <i class="fa-solid fa-magnifying-glass" style="color:var(--primary);font-size:16px;"></i>
-      <span class="modal-title">환자 조회</span>
-      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">이름(또는 연락처)으로 조회해 과거 상담이력을 가져옵니다</span>
-      <button class="modal-close" onclick="closePatientLookup()"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-
-    {{-- 검색 바 --}}
-    <div style="flex-shrink:0;padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;">
-      <input type="text" id="plQuery" placeholder="이름 2글자 이상 (예: 홍길동) 또는 연락처 4자리 이상"
-             autocomplete="off"
-             style="flex:1;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
-      <button type="button" id="plSearchBtn" onclick="plSearch()"
-              style="height:32px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
-        <i class="fa-solid fa-magnifying-glass"></i> 검색
-      </button>
-    </div>
-
-    <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
-      {{-- 1) 환자 목록 --}}
-      <div style="width:250px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);">
-        <div style="flex-shrink:0;padding:7px 14px;font-size:11px;font-weight:500;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
-          환자 <span id="plPatientCount"></span>
-        </div>
-        <div id="plPatientList" style="flex:1;overflow-y:auto;">
-          <div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">이름을 검색하세요</div>
-        </div>
-      </div>
-
-      {{-- 2) 상담이력 목록 --}}
-      <div style="width:240px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;">
-        <div style="flex-shrink:0;padding:7px 14px;font-size:11px;font-weight:500;color:var(--text-muted);border-bottom:1px solid var(--border-light);">
-          상담이력 <span id="plCounselCount"></span>
-        </div>
-        <div id="plCounselList" style="flex:1;overflow-y:auto;">
-          <div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">환자를 선택하세요</div>
-        </div>
-      </div>
-
-      {{-- 3) 선택한 상담이력 요약 + 가져오기 --}}
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
-        <div id="plDetailBody" style="flex:1;overflow-y:auto;padding:18px 20px;">
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:200px;color:var(--text-muted);gap:10px;">
-            <i class="fa-solid fa-hand-pointer" style="font-size:26px;opacity:.35;"></i>
-            <span style="font-size:13px;">가져올 상담이력을 선택하세요</span>
-          </div>
-        </div>
-        <div style="flex-shrink:0;padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
-            <input type="checkbox" id="plWithItems" checked style="width:16px;height:16px;">
-            주문 정보도 함께 가져오기
-          </label>
-          <button type="button" id="plImportBtn" onclick="plImportSelected()" disabled
-                  style="margin-left:auto;height:32px;padding:0 18px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
-            <i class="fa-solid fa-file-import"></i> 이 상담이력 가져오기
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 {{-- Attachment Delete Confirm Popover --}}
 {{-- 팩스 PDF 뷰어 팝오버 --}}
@@ -5331,7 +5266,7 @@ window.HELP_TOUR_STEPS = [
       if (data?.success) filled = pkFill(data);
     } catch (e) {
       // 채우지 못해도 이어 둔 것은 살아 있다 — 담당자가 손으로 적으면 된다
-      console.error('[환자 조회] 정보를 가져오지 못했습니다', e);
+      console.error('[이름 조회] 정보를 가져오지 못했습니다', e);
       showToast(`「${row.name}」 님으로 이었습니다. 정보는 가져오지 못했습니다.`, 'warning');
       return;
     }
@@ -6184,260 +6119,6 @@ window.HELP_TOUR_STEPS = [
     }
     renderItems();
     if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) renderItemsTable();
-  }
-
-  /* ══ 환자 조회 → 과거 상담이력 가져오기 ══════════════════════ */
-  const PL_SEARCH_URL   = @json(route('prescriptions.patientSearch'));
-  const PL_COUNSEL_TPL  = @json(url('prescriptions/patients/__ID__/counselings'));
-  let _plCounselings = [];   // 선택한 환자의 상담이력
-  let _plSelected    = -1;   // 선택한 상담이력 인덱스
-
-  function openPatientLookup() {
-    document.getElementById('patientLookupModal').classList.add('show');
-    const q = document.getElementById('plQuery');
-    // 현재 화면의 이름을 기본 검색어로 넣어준다
-    if (!q.value.trim()) q.value = document.getElementById('f-name')?.value?.trim() || '';
-    q.focus();
-    q.select();
-    if (q.value.trim().length >= 2) plSearch();
-  }
-
-  function closePatientLookup() {
-    document.getElementById('patientLookupModal').classList.remove('show');
-  }
-
-  // 엔터로 검색
-  document.getElementById('plQuery')?.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); plSearch(); }
-  });
-
-  async function plSearch() {
-    const q    = document.getElementById('plQuery').value.trim();
-    const btn  = document.getElementById('plSearchBtn');
-    const list = document.getElementById('plPatientList');
-
-    if (q.length < 2) { showToast('두 글자 이상 입력해 주세요.', 'warning'); return; }
-
-    btn.disabled = true;
-    list.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:12px;color:var(--text-muted);">'
-      + '<i class="fa-solid fa-spinner fa-spin"></i> 조회 중...</div>';
-    _plResetCounselPane('환자를 선택하세요');
-
-    try {
-      const res = await fetch(PL_SEARCH_URL + '?q=' + encodeURIComponent(q), {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      });
-      const d = await res.json();
-      const rows = d.patients || [];
-      document.getElementById('plPatientCount').textContent = rows.length ? rows.length + '명' : '';
-
-      if (!rows.length) {
-        list.innerHTML = '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">'
-          + (d.message ? _pcEsc(d.message) : '검색 결과가 없습니다.') + '</div>';
-        return;
-      }
-
-      list.innerHTML = rows.map((p, i) => `
-        <div class="pl-patient-item" data-idx="${i}" onclick="plSelectPatient(${p.id}, this)"
-             style="padding:10px 14px;border-bottom:1px solid var(--border-light);cursor:pointer;border-left:3px solid transparent;">
-          <div style="font-size:13px;font-weight:700;color:var(--text-primary);">${_pcEsc(p.name)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-            ${_pcEsc(p.resident_no)} · ${_pcEsc(p.mobile)}
-          </div>
-          <div style="font-size:10px;margin-top:3px;color:${p.counseling_count ? 'var(--primary)' : 'var(--text-muted)'};">
-            상담이력 ${p.counseling_count}건
-          </div>
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--danger);">조회 중 오류가 발생했습니다.</div>';
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  function _plResetCounselPane(msg) {
-    _plCounselings = [];
-    _plSelected    = -1;
-    document.getElementById('plCounselCount').textContent = '';
-    document.getElementById('plCounselList').innerHTML =
-      `<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">${_pcEsc(msg)}</div>`;
-    document.getElementById('plDetailBody').innerHTML =
-      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:200px;color:var(--text-muted);gap:10px;">'
-      + '<i class="fa-solid fa-hand-pointer" style="font-size:26px;opacity:.35;"></i>'
-      + '<span style="font-size:13px;">가져올 상담이력을 선택하세요</span></div>';
-    document.getElementById('plImportBtn').disabled = true;
-  }
-
-  async function plSelectPatient(patientId, el) {
-    document.querySelectorAll('.pl-patient-item').forEach(function (n) {
-      n.style.background = ''; n.style.borderLeftColor = 'transparent';
-    });
-    if (el) { el.style.background = 'var(--primary-light)'; el.style.borderLeftColor = 'var(--primary)'; }
-
-    const list = document.getElementById('plCounselList');
-    _plResetCounselPane('불러오는 중...');
-    list.innerHTML = '<div style="padding:24px 14px;text-align:center;font-size:12px;color:var(--text-muted);">'
-      + '<i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>';
-
-    try {
-      const res = await fetch(PL_COUNSEL_TPL.replace('__ID__', patientId), {
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      });
-      const d = await res.json();
-      _plCounselings = d.counselings || [];
-      document.getElementById('plCounselCount').textContent = _plCounselings.length ? _plCounselings.length + '건' : '';
-
-      if (!_plCounselings.length) {
-        list.innerHTML = '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--text-muted);">상담이력이 없습니다.</div>';
-        return;
-      }
-
-      list.innerHTML = _plCounselings.map((c, i) => {
-        const st = c.status ?? '';
-        return `
-        <div class="pl-counsel-item" data-idx="${i}" onclick="plSelectCounsel(${i})"
-             style="padding:10px 13px;border-bottom:1px solid var(--border-light);cursor:pointer;border-left:3px solid transparent;">
-          <div style="font-size:12px;font-weight:700;color:var(--primary);word-break:break-all;">${_pcEsc(c.counselling_no ?? '-')}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:3px;">
-            <span style="font-size:10px;color:var(--text-muted);">
-              <i class="fa-regular fa-calendar" style="font-size:9px;"></i> ${_pcEsc(c.counsel_date || c.reg_date || '-')}
-            </span>
-            ${st ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:${_PC_STAT_COLOR[st] ?? 'var(--gray-300)'};color:#fff;flex-shrink:0;">${_pcEsc(_PC_STAT_MAP[st] ?? st)}</span>` : ''}
-          </div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${_pcEsc(c.rx_number ?? '')}</div>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      list.innerHTML = '<div style="padding:28px 14px;text-align:center;font-size:12px;color:var(--danger);">상담이력을 불러오지 못했습니다.</div>';
-    }
-  }
-
-  function plSelectCounsel(idx) {
-    const d = _plCounselings[idx];
-    if (!d) return;
-    _plSelected = idx;
-
-    document.querySelectorAll('.pl-counsel-item').forEach(function (n, i) {
-      n.style.background = i === idx ? 'var(--primary-light)' : '';
-      n.style.borderLeftColor = i === idx ? 'var(--primary)' : 'transparent';
-    });
-
-    const itemsHtml = (d.items && d.items.length)
-      ? d.items.map(it => `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border-light);font-size:12px;">
-            <span>${_pcEsc(it.product_name ?? '-')}${it.product_code ? ` <span style="color:var(--text-muted);font-size:10px;">[${_pcEsc(it.product_code)}]</span>` : ''}</span>
-            <span style="font-weight:700;color:var(--primary);flex-shrink:0;">×${it.quantity ?? 1}</span>
-          </div>`).join('')
-      : '<div style="font-size:12px;color:var(--text-muted);padding:6px 0;">등록된 제품이 없습니다.</div>';
-
-    document.getElementById('plDetailBody').innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:2px;">${_pcEsc(d.counselling_no ?? '-')}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">${_pcEsc(d.rx_number ?? '')} · ${_pcEsc(d.reg_date ?? '')}</div>
-
-      <div class="pc-field-grid">
-        ${_pcFR('이름',       d.patient_name_ocr)}
-        ${_pcFR('연락처',       _pcPhone(d.mobile_ocr || d.call_no))}
-        ${_pcFR('주민번호',     d.resident_no_masked)}
-        ${_pcFR('송금자명',     d.udf24)}
-        ${_pcFR('병원명',       d.hospital_name)}
-        ${_pcFR('담당의사',     d.doctor_name || d.udf15)}
-        ${_pcFR('처방전발행일', d.issued_date || d.udf12)}
-        ${_pcFR('상담 유형',    _PC_TYPE_MAP[d.type??''] || d.type)}
-        ${_pcFR('재구매 가능일', d.repurchase_date)}
-        ${_pcFR('주소', [d.postcode, d.address_ocr, d.address_detail].filter(Boolean).join(' '), true)}
-      </div>
-
-      <div style="margin-top:14px;font-size:11px;font-weight:500;color:var(--text-muted);">주문 정보</div>
-      <div style="margin-top:4px;">${itemsHtml}</div>
-
-      <div style="margin-top:14px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;">
-        <div style="font-size:10px;font-weight:700;color:var(--gray-600);margin-bottom:5px;"><i class="fa-solid fa-note-sticky"></i> 상담 메모</div>
-        <div style="font-size:12px;line-height:1.8;white-space:pre-wrap;color:${d.contents ? 'var(--text-primary)' : 'var(--text-muted)'};">${d.contents ? _pcEsc(d.contents) : '(메모 없음)'}</div>
-      </div>`;
-
-    document.getElementById('plImportBtn').disabled = false;
-  }
-
-  /* 선택한 상담이력을 주문 화면 입력값으로 채운다.
-     값이 있는 항목만 덮어써서, 이력에 없는 필드의 기존 입력은 보존한다. */
-  async function plImportSelected() {
-    const d = _plCounselings[_plSelected];
-    if (!d) { showToast('가져올 상담이력을 선택하세요.', 'warning'); return; }
-
-    const withItems = document.getElementById('plWithItems').checked;
-    const proceed = await ceConfirm(
-      `상담이력 ${d.counselling_no ?? ''} 의 내용을 주문 화면으로 가져옵니다.\n`
-      + (withItems ? '주문 정보도 함께 교체됩니다.\n' : '')
-      + '\n계속하시겠습니까?',
-      { title: '상담이력 가져오기', confirmText: '가져오기' }
-    );
-    if (!proceed) return;
-
-    // 상담이력 필드 → 주문 화면 입력 필드 대응
-    const MAP = {
-      'f-name':            d.patient_name_ocr,
-      'f-mobile':          d.mobile_ocr || d.call_no,
-      'f-guardian':        d.udf24,
-      'f-diverticulums':   d.diverticulums,
-      'f-postcode':        d.postcode,
-      'f-address':         d.address_ocr,
-      'f-address-detail':  d.address_detail,
-      'f-hospital':        d.hospital_name,
-      'f-hospital-code':   d.erp_cd9,
-      'f-doctor':          d.doctor_name || d.udf15,
-      'f-license-no':      d.license_no,
-      'f-date':            d.issued_date || d.udf12,
-      'f-rx-period':       d.udf13,
-      'f-rx-end-date':     d.udf14,
-      'f-acc-add-type':    d.acc_add_type,
-      'f-repurchase-date': d.repurchase_date,
-    };
-
-    let filled = 0;
-    for (const [id, val] of Object.entries(MAP)) {
-      const el = document.getElementById(id);
-      if (!el) continue;
-      const v = (val === null || val === undefined) ? '' : String(val).trim();
-      if (v === '') continue;                       // 빈 값으로는 덮어쓰지 않는다
-      el.value = v;
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      filled++;
-    }
-
-    // 주민번호는 마스킹뿐이라 값으로 넣으면 그대로 저장된다. 있다는 표시만 한다.
-    const _rn = document.getElementById('f-resident');
-    if (_rn && d.resident_no_masked) _rn.placeholder = d.resident_no_masked;
-
-    // 주문 정보 교체
-    if (withItems && d.items && d.items.length) {
-      items = d.items.map(it => ({
-        product_name:    it.product_name ?? '',
-        product_code:    it.product_code ?? '',
-        quantity:        it.quantity ?? DEFAULT_QTY,
-        product_price:   it.product_price ?? '',
-        insurance_price: it.insurance_price ?? '',
-        // 과거 이력은 Y/N 로 저장된 경우가 있어 주문 화면 값으로 변환
-        nhis_status:     (it.nhis_status === 'Y') ? 'eligible'
-                        : (it.nhis_status === 'N') ? 'ineligible'
-                        : (it.nhis_status || 'eligible'),
-        nhis_amount:     it.nhis_amount ?? 0,
-        patient_copay:   it.patient_copay ?? 0,
-      }));
-      const isTable = !!document.getElementById('tabsCol')?.classList.contains('tab-view-table');
-      if (isTable) renderItemsTable(); else renderItems();
-      calcTotals();
-      markProductDirty();
-    }
-
-    // 테이블뷰 미러 갱신
-    if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
-      syncCardToTable();
-      syncOrderTabToTable();
-    }
-
-    markOcrDirty();
-    closePatientLookup();
-    showToast(`상담이력을 가져왔습니다. (${filled}개 항목${withItems && d.items?.length ? ` · 제품 ${d.items.length}건` : ''})`, 'success');
   }
 
   /* ── 신규 등록: 새 처방번호로 새 건 시작 ────────────────────
@@ -9128,8 +8809,8 @@ window.HELP_TOUR_STEPS = [
   const COUNSEL_NO_URL = @json(route('prescriptions.counselNo', $prescription));
 
   /* ── 상담이력 표시 공용 코드 ────────────────────────────
-     '이전 상담 이력' 모달과 '환자 조회' 모달이 함께 쓰므로 조건부 블록 밖에 둔다.
-     (환자 조회는 이전 상담이력이 없는 처방전에서도 열 수 있다) */
+     「이전 상담 이력」 창이 쓴다. 예전에는 「환자 조회」 창도 함께 썼는데 그 창을
+     걷었다 — 이름으로 사람을 찾는 일은 환자 정보의 「조회」 창이 맡는다. */
   const _RX_URL_BASE = @json(rtrim(url('/prescriptions'), '/'));
 
   const _PC_TYPE_MAP   = {'1013':'구매(CE)','1016':'개인구매','1020':'반품','1030':'문의','1050':'기타'};
