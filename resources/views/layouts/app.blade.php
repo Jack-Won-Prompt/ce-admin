@@ -1478,13 +1478,9 @@
           </a>
         </div>
         @endif
-        {{-- 청구처 정보 — 어디로 청구ㆍ발송하는지. 청구 관리 바로 아래에 둔다. --}}
-        <div class="menu-item {{ request()->routeIs('billing-offices*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="coin-hand" href="{{ route('billing-offices.index') }}" data-title="청구처 정보">
-            @dsicon('coin-hand', 'ds-icon menu-icon')
-            <span>청구처 정보</span>
-          </a>
-        </div>
+        {{-- 「청구처 정보」는 메뉴에 두지 않는다 — 마스터 관리의 「청구처」 탭으로 들였다.
+             병원ㆍ기관과 마찬가지로 「어디에 연락하는가」를 적어 두는 자리라,
+             찾으러 갈 곳이 둘일 까닭이 없다. --}}
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">

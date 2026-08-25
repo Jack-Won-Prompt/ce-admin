@@ -13,20 +13,48 @@ use Illuminate\View\View;
  *
  * 병원과 기관은 담는 항목이 거의 겹쳐 한 표에 category 로 나눠 담는다. 화면도 하나다.
  * 카테고리를 늘리려면 config/masters.php 에 한 항목만 더하면 탭이 생긴다.
+ *
+ * 청구처(공단 지사ㆍ지자체 부서)는 그 틀을 쓰지 않는다. 담는 것이 다르고(구분ㆍ부서ㆍ
+ * 담당업무), 무엇보다 관할 읍ㆍ면ㆍ동을 여러 줄 딸고 있어 한 줄짜리 마스터 항목에
+ * 담기지 않는다. 그래서 탭만 여기에 세우고 그리기는 조각이 맡는다
+ * (resources/views/masters/_billing_offices.blade.php).
+ *
+ * 화면을 따로 두었던 것을 들여온 까닭은 하나다 — 병원ㆍ기관과 마찬가지로 「어디에
+ * 연락하는가」를 적어 두는 자리라, 찾으러 갈 곳이 둘일 까닭이 없다.
  */
 class MasterController extends Controller
 {
+    /** 마스터 항목 틀을 쓰지 않고 스스로 그리는 탭 */
+    private const BILLING_OFFICE = 'billing_office';
+
     public function index(Request $request): View
     {
-        $categories = MasterItem::categories();
-        $current    = $request->get('cat');
+        $categories = MasterItem::categories()
+            + [self::BILLING_OFFICE => ['label' => '청구처', 'fields' => []]];
+
+        $current = $request->get('cat');
         if (!isset($categories[$current])) {
             $current = array_key_first($categories);
         }
 
         // 탭마다 건수를 보여 준다 — 어느 탭에 자료가 있는지 열어 보지 않아도 안다
         $counts = MasterItem::selectRaw('category, count(*) as cnt')
-            ->groupBy('category')->pluck('cnt', 'category');
+            ->groupBy('category')->pluck('cnt', 'category')->all();
+        $counts[self::BILLING_OFFICE] = \App\Models\BillingOffice::count();
+
+        if ($current === self::BILLING_OFFICE) {
+            return view('masters.index', [
+                'categories' => $categories,
+                'current'    => $current,
+                'counts'     => $counts,
+                // 청구처 조각이 쓰는 것 — 구분(공단ㆍ지자체)과 구분별 건수
+                'kinds'      => \App\Models\BillingOffice::KINDS,
+                'boCounts'   => [
+                    'nhis'  => \App\Models\BillingOffice::where('kind', \App\Models\BillingOffice::KIND_NHIS)->count(),
+                    'local' => \App\Models\BillingOffice::where('kind', \App\Models\BillingOffice::KIND_LOCAL)->count(),
+                ],
+            ]);
+        }
 
         return view('masters.index', [
             'categories' => $categories,

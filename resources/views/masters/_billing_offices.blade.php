@@ -1,15 +1,18 @@
-{{-- 청구처 정보 — 공단 지사ㆍ지자체 부서와 담당자, 그리고 관할 읍ㆍ면ㆍ동.
+{{-- 청구처 — 마스터 관리의 한 탭.
 
-     미리 다 채우는 화면이 아니다. 건을 처리하며 한 번 찾은 것을 쌓아 두고, 여기서는
-     그 쌓인 것을 보고 고친다. 그래서 「공단 지사찾기 열기」를 화면 위에 둔다 —
-     찾는 일은 여전히 공단 사이트에서 하고, 옮겨 적는 일만 여기서 한다. --}}
-@extends('layouts.app')
+     공단 지사ㆍ지자체 부서와 담당자, 그리고 관할 읍ㆍ면ㆍ동을 쌓아 둔다.
+     화면을 따로 두었던 것을 마스터 관리로 들였다 — 병원ㆍ기관과 마찬가지로 「어디에
+     연락하는가」를 적어 두는 자리라, 찾으러 갈 곳이 둘일 까닭이 없다.
 
-@section('title', '청구처 정보')
-@section('page-title', '청구처 정보')
-@section('breadcrumb', '홈 - 청구ㆍ회계 - 청구처 정보')
+     담는 것이 병원ㆍ기관과 다르다(구분ㆍ부서ㆍ담당업무, 그리고 관할 읍ㆍ면ㆍ동 여러 줄).
+     그래서 config/masters.php 의 틀을 쓰지 않고 이 조각이 스스로 그린다.
 
-@push('styles')
+     미리 다 채우는 자리가 아니다. 건을 처리하며 한 번 찾은 것을 쌓아 두고, 여기서는
+     그 쌓인 것을 보고 고친다. 그래서 「공단 지사찾기 열기」를 위에 둔다 — 찾는 일은
+     여전히 공단 사이트에서 하고, 옮겨 적는 일만 여기서 한다. --}}
+
+{{-- 모양은 그 자리에 그대로 둔다 — 이 조각은 본문 안에서 그려지므로, 머리의 styles
+     자리에 밀어 넣지 않는다(다른 떠 있는 조각들도 같은 방식이다). --}}
 <style>
   .bo-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
              padding:12px 16px; border-radius:12px; background:var(--gray-0); }
@@ -29,13 +32,11 @@
   .bo-modal-head { background:var(--primary); color:#fff; padding:10px 14px; display:flex; align-items:center; gap:8px;
                    border-radius:var(--radius-lg) var(--radius-lg) 0 0; font-size:13px; font-weight:700; }
 </style>
-@endpush
 
-@section('content')
 <div class="bo-head">
   <button type="button" class="bo-chip on" data-kind="" onclick="boKind(this,'')">전체</button>
-  <button type="button" class="bo-chip" data-kind="nhis"  onclick="boKind(this,'nhis')">건강보험공단 {{ $counts['nhis'] ?: '' }}</button>
-  <button type="button" class="bo-chip" data-kind="local" onclick="boKind(this,'local')">지자체 {{ $counts['local'] ?: '' }}</button>
+  <button type="button" class="bo-chip" data-kind="nhis"  onclick="boKind(this,'nhis')">건강보험공단 {{ $boCounts['nhis'] ?: '' }}</button>
+  <button type="button" class="bo-chip" data-kind="local" onclick="boKind(this,'local')">지자체 {{ $boCounts['local'] ?: '' }}</button>
 
   <input type="text" id="boQ" class="form-control" style="height:32px;width:260px;"
          placeholder="기관ㆍ부서ㆍ담당업무ㆍ읍면동" onkeydown="if(event.key==='Enter')boLoad()">
@@ -159,7 +160,6 @@
     </div>
   </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>

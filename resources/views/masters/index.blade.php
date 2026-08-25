@@ -33,9 +33,9 @@
 
 @section('content')
 
-@php $cat = $categories[$current]; @endphp
-
-{{-- ── 카테고리 탭 ── --}}
+{{-- ── 카테고리 탭 ──
+     병원ㆍ기관은 config/masters.php 가 짜 주고, 청구처는 담는 것이 달라 스스로 그린다
+     (masters/_billing_offices). 탭줄은 하나다 — 어디서 찾을지 헤매지 않게. --}}
 <div class="ms-cat">
   @foreach($categories as $key => $c)
     <a href="{{ route('masters.index', ['cat' => $key]) }}" class="{{ $key === $current ? 'active' : '' }}">
@@ -43,6 +43,11 @@
     </a>
   @endforeach
 </div>
+
+@if($current === 'billing_office')
+  @include('masters._billing_offices')
+@else
+@php $cat = $categories[$current]; @endphp
 
 {{-- ── 검색 필터 (탭 안) ── --}}
 <form method="GET" action="{{ route('masters.index') }}" class="ds-filter-card">
@@ -121,9 +126,11 @@
     </div>
   </div>
 </div>
+@endif
 
 @endsection
 
+@if($current !== 'billing_office')
 @push('scripts')
 <script>
 (function () {
@@ -252,3 +259,4 @@
 })();
 </script>
 @endpush
+@endif

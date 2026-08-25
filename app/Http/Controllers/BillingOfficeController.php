@@ -7,27 +7,19 @@ use App\Models\BillingOfficeArea;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
 
 /**
- * 청구처 정보.
+ * 청구처 정보 — 값을 주고받는 길만 남았다.
+ *
+ * 보는 화면은 마스터 관리의 「청구처」 탭이다(masters.index?cat=billing_office).
+ * 화면을 따로 두었던 것을 그리로 들였다 — 병원ㆍ기관과 마찬가지로 「어디에
+ * 연락하는가」를 적어 두는 자리라, 찾으러 갈 곳이 둘일 까닭이 없다.
  *
  * 공단 지사와 지자체 부서를, 그 담당자와 관할 읍ㆍ면ㆍ동까지 적어 둔다.
  * 미리 다 채우지 않는다 — 건을 처리하며 한 번 찾은 것을 그 자리에서 쌓는다.
  */
 class BillingOfficeController extends Controller
 {
-    public function index(): View
-    {
-        return view('billing-offices.index', [
-            'kinds'  => BillingOffice::KINDS,
-            'counts' => [
-                'nhis'  => BillingOffice::where('kind', BillingOffice::KIND_NHIS)->count(),
-                'local' => BillingOffice::where('kind', BillingOffice::KIND_LOCAL)->count(),
-            ],
-        ]);
-    }
-
     /** 목록 — 화면의 표가 읽는다. */
     public function list(Request $request): JsonResponse
     {

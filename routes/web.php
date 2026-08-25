@@ -415,7 +415,8 @@ Route::middleware(['auth'])->group(function () {
     /* 청구처 정보 — 공단 지사ㆍ지자체 부서와 그 담당자, 관할 읍ㆍ면ㆍ동.
        건을 처리하며 한 번 찾은 것을 쌓아 다음부터 쓴다. */
     Route::prefix('billing-offices')->name('billing-offices.')->group(function () {
-        Route::get('/',                 [\App\Http\Controllers\BillingOfficeController::class, 'index'])->name('index');
+        /* 보는 화면은 마스터 관리의 「청구처」 탭이다(masters.index?cat=billing_office).
+           여기 남은 것은 그 탭과 주문 등록 화면이 값을 주고받는 길뿐이다. */
         Route::get('/list',             [\App\Http\Controllers\BillingOfficeController::class, 'list'])->name('list');
         // 환자 주소의 읍ㆍ면ㆍ동으로 관할을 찾는다
         Route::get('/lookup',           [\App\Http\Controllers\BillingOfficeController::class, 'lookup'])->name('lookup');
