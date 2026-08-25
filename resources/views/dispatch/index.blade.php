@@ -258,11 +258,12 @@
       <div class="ds-filter-field">
         {{-- 무엇을 보낸 것인지가 가장 크게 가른다 — 첫 칸에 둔다 --}}
         <label class="ds-field-label">종류</label>
+        {{-- 갈래는 컨트롤러가 정한다(DispatchHistoryController::TYPES) — 화면과 서버가
+             다른 목록을 들고 있으면 없는 갈래를 고를 수 있게 된다. --}}
         <select name="type" class="form-control form-select" onchange="this.form.submit()">
-          @foreach(['virtual_account' => '가상계좌 발행', 'tax_invoice' => '세금계산서 발행',
-                    'cash_receipt' => '현금영수증 발행', 'nhis' => '청구 발송'] as $k => $label)
+          @foreach($types as $k => $label)
             <option value="{{ $k }}" {{ $type === $k ? 'selected' : '' }}>
-              {{ $label }} ({{ number_format($counts[$k]) }})
+              {{ $label }} ({{ number_format($counts[$k] ?? 0) }})
             </option>
           @endforeach
         </select>
@@ -381,14 +382,20 @@ window.HELP_TOUR_STEPS = [
     }
   };
 
-  // 행 더블클릭 → 상세내용 탭에 상세를 인페이지로 표시(페이지 이동 없음)
-  document.getElementById('dispatchGrid').addEventListener('dblclick', function (e) {
-    const cell = e.target.closest('[data-row-index]');
-    if (!cell) return;
-    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-    if (!row || !row.id) return;
-    window.pnlLoadDetail(DETAIL_BASE + '/' + TYPE + '/' + row.id + '?partial=1');
-  });
+  /* 행 더블클릭 → 상세내용 탭에 상세를 인페이지로 표시(페이지 이동 없음).
+
+     상세를 갖춘 갈래에서만 건다. 문자ㆍ팩스ㆍ창고는 아직 목록뿐이라, 눌러도 아무 일이
+     없는 편이 「상세를 불러오지 못했습니다」가 뜨는 것보다 낫다. */
+  const HAS_DETAIL = ['virtual_account', 'tax_invoice', 'cash_receipt', 'nhis'];
+  if (HAS_DETAIL.includes(TYPE)) {
+    document.getElementById('dispatchGrid').addEventListener('dblclick', function (e) {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (!row || !row.id) return;
+      window.pnlLoadDetail(DETAIL_BASE + '/' + TYPE + '/' + row.id + '?partial=1');
+    });
+  }
 })();
 </script>
 @endpush
