@@ -52,7 +52,7 @@
   th { background: #f1f2f4; font-weight: 700; text-align: center; letter-spacing: .06em; }
 
   /* ── 거래 당사자 ─────────────────────────── */
-  .parties { margin-top: 5mm; position: relative; }
+  .parties { margin-top: 5mm; }
   /* 폭은 몫으로 적는다. dompdf 에 mm 로 적으면 안쪽 여백만큼 부풀어, 서식이 좌우
      같게 잡아 둔 두 값 칸이 29mm 와 84mm 로 갈라진다. 186mm 기준 몫이다. */
   .party-band { width: 3.8%; background: #f1f2f4; font-weight: 700; font-size: 8pt;
@@ -61,13 +61,6 @@
                  letter-spacing: .1em; }
   .party-gap { width: 1.6%; border: 0 !important; padding: 0 !important; }
   .party-value { width: 33.6%; text-align: left; }
-  .party-value.has-seal { padding-right: 27mm; }
-
-  .seal { position: absolute; right: 4mm; top: 10mm; width: 24mm; height: 24mm; }
-  .seal img { width: 24mm; height: 24mm; }
-  .seal .seal-ph { width: 24mm; height: 24mm; border: 0.35mm dashed #c9ccd1; border-radius: 12mm;
-                   color: #b9bdc4; font-size: 7.5pt; letter-spacing: .08em; text-align: center;
-                   padding-top: 10mm; }
 
   /* ── 품목 ──────────────────────────────── */
   .items { margin-top: 4mm; }
@@ -134,18 +127,11 @@
             <td class="party-gap"></td>
             @if($i === 0)<td class="party-band" rowspan="4">공<br>급<br>자</td>@endif
             <td class="party-label">{{ $row[2] }}</td>
-            <td class="party-value{{ $i === 1 || $i === 2 ? ' has-seal' : '' }}">{{ $row[3] }}</td>
+            <td class="party-value">{{ $row[3] }}</td>
           </tr>
           @endforeach
         </tbody>
       </table>
-      <div class="seal">
-        @if(!empty($doc['sealPath']))
-          <img src="{{ $doc['sealPath'] }}" alt="사용인감">
-        @else
-          <div class="seal-ph">사용인감</div>
-        @endif
-      </div>
     </div>
 
     {{-- 품목 — 열 줄 고정 --}}

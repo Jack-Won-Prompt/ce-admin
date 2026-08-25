@@ -134,7 +134,6 @@ final class TransactionStatement
                 'saleNo'     => $order->withworks_so_no ?: '',
                 'issueDate'  => now()->format('Y-m-d'),
                 'footNote'   => '',
-                'sealPath'   => self::sealPath(),
             ],
             'partyRows' => [
                 ['주민번호', self::maskedRrn($rx), '등록번호', self::bizNo()],
@@ -184,19 +183,6 @@ final class TransactionStatement
         return strlen($n) === 10
             ? substr($n, 0, 3) . '-' . substr($n, 3, 2) . '-' . substr($n, 5)
             : $n;
-    }
-
-    /** 사용인감 — 두었으면 찍고, 없으면 서식이 자리만 남긴다. */
-    private static function sealPath(): ?string
-    {
-        foreach (['seal.png', 'seal.jpg'] as $f) {
-            $p = storage_path('app/public/company/' . $f);
-            if (is_file($p)) {
-                return $p;
-            }
-        }
-
-        return null;
     }
 
     /**
