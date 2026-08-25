@@ -61,14 +61,6 @@ table.purchase-tbl td.center { text-align:center; }
 .rx-img-wrap { text-align:center; margin-top:8px; padding:0 50px; }
 .rx-img-wrap img { width:100%; max-height:900px; }
 
-/* ── 현금영수증 스타일 ── */
-.cr-title { text-align:center; font-size:16px; font-weight:800; margin-bottom:12px; letter-spacing:2px; border-top:3px solid #111; border-bottom:3px solid #111; padding:8px 0; }
-.cr-box { border:1px solid #bbb; border-radius:4px; padding:16px 20px; margin-top:12px; }
-.cr-row { display:table; width:100%; margin-bottom:6px; font-size:12px; }
-.cr-label { display:table-cell; width:30%; font-weight:700; color:#555; }
-.cr-value { display:table-cell; font-weight:600; }
-.cr-amount { text-align:center; font-size:22px; font-weight:800; padding:14px 0; border-top:1px solid #eee; border-bottom:1px solid #eee; margin:14px 0; }
-.cr-note { font-size:10px; color:#777; margin-top:12px; }
 </style>
 </head>
 <body>
@@ -76,7 +68,7 @@ table.purchase-tbl td.center { text-align:center; }
 @php
   $hasRx          = in_array('prescription', $docs) && $rxImageDataUri;
   $hasPurchase    = in_array('purchase_history', $docs) && $order;
-  $hasCashReceipt = in_array('cash_receipt', $docs) && $order?->cash_receipt_status === 'issued';
+  $hasCashReceipt = !empty($cashReceiptForm ?? null);
   $hasTaxInvoice  = !empty($taxInvoiceForm ?? null);
   $hasAttachments = !empty($attachmentDataUris);
 @endphp
@@ -311,57 +303,12 @@ table.purchase-tbl td.center { text-align:center; }
 @endif
 
 
-{{-- ④ 현금영수증 --}}
+{{-- ④ 현금영수증 — 내려받는 PDF 와 같은 서식 조각을 그대로 끼운다.
+     예전에는 이 자리에 「라벨: 값」 목록을 손수 그렸는데, 홈택스가 보여 주는 종이와
+     달라 받는 쪽이 같은 것으로 읽지 못했다. --}}
 @if($hasCashReceipt)
-@php
-  $crTypeLabel = $order->cash_receipt_type === 'income_deduction' ? '소득공제' : '지출증빙';
-  $crIdentifier = $order->cash_receipt_type === 'income_deduction'
-    ? ($order->cash_receipt_phone ?? '—')
-    : ($order->cash_receipt_biz_no ?? '—');
-  $crIdentifierLabel = $order->cash_receipt_type === 'income_deduction' ? '휴대폰번호' : '사업자번호';
-@endphp
-<div @if($hasAttachments) class="page-break" @endif>
-  <div class="cr-title">현 금 영 수 증</div>
-  <div class="cr-box">
-    <div class="cr-row">
-      <span class="cr-label">발행일</span>
-      <span class="cr-value">{{ $order->cash_receipt_issued_at?->format('Y년 m월 d일') ?? now()->format('Y년 m월 d일') }}</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">승인번호</span>
-      <span class="cr-value" style="font-family:monospace;">{{ $order->cash_receipt_no ?? '—' }}</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">유형</span>
-      <span class="cr-value">{{ $crTypeLabel }}</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">{{ $crIdentifierLabel }}</span>
-      <span class="cr-value">{{ $crIdentifier }}</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">환자명</span>
-      <span class="cr-value">{{ $patient->name ?? $prescription->patient_name_ocr ?? '—' }}</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">주문번호</span>
-      <span class="cr-value">{{ $order->order_number ?? '—' }}</span>
-    </div>
-    <div class="cr-amount">
-      {{ number_format((int)$order->cash_receipt_amount) }} 원
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">공급가액</span>
-      <span class="cr-value">{{ number_format((int)round($order->cash_receipt_amount / 1.1)) }}원</span>
-    </div>
-    <div class="cr-row">
-      <span class="cr-label">부가세</span>
-      <span class="cr-value">{{ number_format((int)round($order->cash_receipt_amount - $order->cash_receipt_amount / 1.1)) }}원</span>
-    </div>
-    <div class="cr-note">
-      본 현금영수증은 국세청 홈택스(www.hometax.go.kr)에서 확인하실 수 있습니다.
-    </div>
-  </div>
+<div @if($hasTaxInvoice || $hasAttachments) class="page-break" @endif>
+  @include('documents._cash_receipt_form', $cashReceiptForm)
 </div>
 @endif
 

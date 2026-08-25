@@ -2405,11 +2405,16 @@ class PrescriptionController extends Controller
             }
         }
 
-        /* 세금계산서는 서식 조각을 그대로 한 장 끼운다(App\Support\TaxInvoiceForm).
-           내려받는 PDF 와 같은 조각이라 팩스와 종이가 같은 것을 보여 준다. */
+        /* 세금계산서ㆍ현금영수증은 서식 조각을 그대로 한 장씩 끼운다. 내려받는 PDF 와
+           같은 조각이라 팩스와 종이가 같은 것을 보여 준다. */
         $taxInvoiceForm = null;
         if (in_array('tax_invoice', $documents) && $prescription->order?->tax_invoice_status === 'issued') {
             $taxInvoiceForm = \App\Support\TaxInvoiceForm::data($prescription->order);
+        }
+
+        $cashReceiptForm = null;
+        if (in_array('cash_receipt', $documents) && $prescription->order?->cash_receipt_status === 'issued') {
+            $cashReceiptForm = \App\Support\CashReceiptForm::data($prescription->order);
         }
 
         $html = view('prescriptions.fax-pdf', [
@@ -2421,6 +2426,7 @@ class PrescriptionController extends Controller
             'rxImageDataUri'     => $rxImageDataUri,
             'attachmentDataUris' => $attachmentDataUris,
             'taxInvoiceForm'     => $taxInvoiceForm,
+            'cashReceiptForm'    => $cashReceiptForm,
         ])->render();
 
         $dompdf = $this->makeFaxDompdf();
@@ -2577,14 +2583,14 @@ class PrescriptionController extends Controller
                     break;
 
                 case 'cash_receipt':
+                    // 발행된 건만. 서식 그대로 PDF 로 그려 붙인다 — 팝빌 팩스는 PDF 를 받는다.
                     $order = $prescription->order;
                     if ($order?->cash_receipt_status === 'issued') {
-                        $html    = $this->buildCashReceiptHtml($order);
-                        $tmpPath = storage_path('app/temp/cashreceipt_' . $prescription->rx_number . '_' . time() . '.html');
                         if (!is_dir(storage_path('app/temp'))) {
                             mkdir(storage_path('app/temp'), 0755, true);
                         }
-                        file_put_contents($tmpPath, $html);
+                        $tmpPath = storage_path('app/temp/cashreceipt_' . $prescription->rx_number . '_' . time() . '.pdf');
+                        file_put_contents($tmpPath, \App\Support\CashReceiptForm::render($order));
                         $files[] = $tmpPath;
                     }
                     break;
@@ -2665,41 +2671,6 @@ class PrescriptionController extends Controller
   <tbody>{$rows}</tbody>
 </table>
 <div class="total">합계: {$total}원</div>
-</body></html>
-HTML;
-    }
-
-    private function buildCashReceiptHtml(Order $order): string
-    {
-        $typeLabel  = $order->cash_receipt_type === 'income_deduction' ? '소득공제' : '지출증빙';
-        $amount     = number_format((int) $order->cash_receipt_amount);
-        $issuedAt   = $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '';
-        $patient    = $order->patient;
-
-        return <<<HTML
-<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-<style>
-  body{font-family:'맑은 고딕',sans-serif;font-size:12px;padding:20mm;}
-  .title{text-align:center;font-size:20px;font-weight:700;letter-spacing:4px;padding:10px 0 6px;border-bottom:2px solid #111;margin-bottom:12px;}
-  .subtitle{text-align:center;font-size:11px;color:#555;margin-bottom:20px;}
-  table{width:100%;border-collapse:collapse;}
-  th{width:38%;padding:7px 4px;font-weight:600;color:#444;text-align:left;border-bottom:1px solid #ddd;}
-  td{padding:7px 4px;border-bottom:1px solid #ddd;}
-  .amount{font-size:16px;font-weight:700;}
-  .footer{margin-top:20px;text-align:center;font-size:10px;color:#888;border-top:1px dashed #ccc;padding-top:10px;}
-</style></head><body>
-<div class="title">현금영수증</div>
-<div class="subtitle">국세청 현금영수증 발행 확인증</div>
-<table>
-  <tr><th>승인번호</th><td><b>{$order->cash_receipt_no}</b></td></tr>
-  <tr><th>거래유형</th><td>{$typeLabel}</td></tr>
-  <tr><th>식별번호</th><td>{$order->cash_receipt_identifier}</td></tr>
-  <tr><th>거래금액</th><td class="amount">&#8361;{$amount}</td></tr>
-  <tr><th>발행일시</th><td>{$issuedAt}</td></tr>
-  <tr><th>주문번호</th><td>{$order->order_number}</td></tr>
-  <tr><th>고객명</th><td>{$patient?->name}</td></tr>
-</table>
-<div class="footer">본 영수증은 소득공제·지출증빙용으로 사용하실 수 있습니다.</div>
 </body></html>
 HTML;
     }

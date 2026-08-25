@@ -680,62 +680,18 @@ class OrderController extends Controller
     }
 
     // ── 현금영수증 PDF 바이트 생성 (헬퍼) ──────────────────
+    /**
+     * 발행된 현금영수증을 종이 서식대로 그린다.
+     *
+     * 예전에는 「국세청 현금영수증 발행 확인증」이라는 표 한 장이었다. 승인번호와
+     * 금액은 맞았지만 받는 쪽이 아는 종이가 아니었고, 가맹점 정보가 어디에도 없었다.
+     * 서식은 App\Support\CashReceiptForm 이 그린다.
+     */
     private function buildCashReceiptPdf(Order $order): string
     {
         $this->ensureNanumGothicVariantsRegistered();
-        $typeLabel   = $order->cash_receipt_type === 'income_deduction' ? '소득공제' : '지출증빙';
-        $amount      = number_format((int) $order->cash_receipt_amount);
-        $issuedAt    = $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '-';
-        $patientName = $order->patient?->name ?? '-';
 
-        $html = <<<HTML
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<style>
-* { box-sizing:border-box; margin:0; padding:0; font-family:'NanumGothic',sans-serif; }
-body { font-size:13px; color:#111; padding:30px 36px; }
-.title { text-align:center; font-size:22px; font-weight:700; letter-spacing:4px; padding:12px 0 8px; border-bottom:2px solid #111; margin-bottom:8px; }
-.subtitle { text-align:center; font-size:11px; color:#555; margin-bottom:20px; }
-table { width:100%; border-collapse:collapse; }
-th { width:38%; padding:8px 4px; font-weight:700; color:#444; text-align:left; border-bottom:1px solid #ddd; }
-td { padding:8px 4px; border-bottom:1px solid #ddd; }
-.amount { font-size:18px; font-weight:700; }
-.footer { margin-top:24px; text-align:center; font-size:10px; color:#888; border-top:1px dashed #ccc; padding-top:10px; }
-</style>
-</head>
-<body>
-<div class="title">현금영수증</div>
-<div class="subtitle">국세청 현금영수증 발행 확인증</div>
-<table>
-  <tr><th>승인번호</th><td><b>{$order->cash_receipt_no}</b></td></tr>
-  <tr><th>거래유형</th><td>{$typeLabel}</td></tr>
-  <tr><th>식별번호</th><td>{$order->cash_receipt_identifier}</td></tr>
-  <tr><th>거래금액</th><td class="amount">&#8361;{$amount}</td></tr>
-  <tr><th>발행일시</th><td>{$issuedAt}</td></tr>
-  <tr><th>주문번호</th><td>{$order->order_number}</td></tr>
-  <tr><th>고객명</th><td>{$patientName}</td></tr>
-</table>
-<div class="footer">본 영수증은 소득공제 · 지출증빙용으로 사용하실 수 있습니다.</div>
-</body>
-</html>
-HTML;
-        $options = new \Dompdf\Options();
-        $options->setFontDir(storage_path('fonts'));
-        $options->setFontCache(storage_path('fonts'));
-        $options->setChroot(realpath(base_path()));
-        $options->setIsHtml5ParserEnabled(true);
-        $options->setIsRemoteEnabled(false);
-        // 쓰인 글자만 심는다. 나눔고딕 원본이 4.5MB 라 통째로 심으면 산출물이 2.7MB 가 되고
-        // 만드는 동안 메모리가 128MB 를 넘겨 위임장 내려받기가 500 으로 떨어졌다.
-        $options->setIsFontSubsettingEnabled(true);
-        $options->setDefaultFont('NanumGothic');
-        $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper([0, 0, 340, 480], 'portrait');
-        $dompdf->render();
-        return $dompdf->output();
+        return \App\Support\CashReceiptForm::render($order);
     }
 
     // ── 세금계산서 PDF 바이트 생성 (헬퍼) ──────────────────
