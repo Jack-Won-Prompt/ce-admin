@@ -509,6 +509,10 @@ class OrderController extends Controller
                 'tax_invoice_cancelled_at' => now(),
             ]);
 
+            /* 나갔던 종이를 걷는다 — 취소한 계산서의 PDF 가 주문의 서류에 그대로 남아
+               있으면 다음 사람이 그것을 유효한 증빙으로 읽는다. */
+            $this->dropIssuedDocs($order, 'tax_invoice', 'tax_invoices');
+
             // 취소하면 청구 자료가 다시 모자라진다
             app(ClaimReadiness::class)->refresh($order);
 
@@ -666,6 +670,9 @@ class OrderController extends Controller
                 'cash_receipt_cancelled_at' => now(),
             ]);
 
+            // 나갔던 종이를 걷는다(세금계산서 취소와 같은 뜻이다)
+            $this->dropIssuedDocs($order, 'cash_receipt', 'cash_receipts');
+
             app(ClaimReadiness::class)->refresh($order);
 
             activity()->causedBy(Auth::user())->performedOn($order)
@@ -707,6 +714,39 @@ class OrderController extends Controller
         $this->ensureNanumGothicVariantsRegistered();
 
         return \App\Support\TaxInvoiceForm::render($order);
+    }
+
+    /**
+     * 취소한 증빙의 종이를 주문의 서류에서 걷는다.
+     *
+     * 취소해 놓고 PDF 를 그대로 두면 주문 등록 화면의 문서 칸에 그 종이가 남아, 다음
+     * 사람이 유효한 증빙으로 읽는다. 취소된 계산서는 증빙이 아니다.
+     *
+     * 어느 줄이 이 주문의 것인지는 파일 자리로 가린다(tax_invoices/{주문id}/…).
+     * 서류 표에는 주문 id 칸이 없고, 한 처방에 주문이 둘 이상 붙는 날이 오면
+     * 처방 id 로 지우다가 남의 종이까지 걷게 된다. 옛 장표(PNG)도 같은 자리에 있어
+     * 함께 걷힌다.
+     */
+    private function dropIssuedDocs(Order $order, string $type, string $dir): void
+    {
+        $rows = PrescriptionDocument::where('type', $type)
+            ->where('file_path', 'like', $dir . '/' . $order->id . '/%')
+            ->get();
+
+        foreach ($rows as $doc) {
+            foreach (['local', 'public'] as $disk) {
+                if ($doc->file_path && Storage::disk($disk)->exists($doc->file_path)) {
+                    Storage::disk($disk)->delete($doc->file_path);
+                }
+            }
+            $doc->delete();
+        }
+
+        if ($rows->isNotEmpty()) {
+            Log::info('[증빙 취소] 서류를 걷었다', [
+                'order' => $order->order_number, 'type' => $type, 'count' => $rows->count(),
+            ]);
+        }
     }
 
     /**

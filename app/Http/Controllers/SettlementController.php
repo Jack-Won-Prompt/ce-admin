@@ -624,11 +624,21 @@ class SettlementController extends Controller
     }
 
     /** 잘못 세운 것을 되돌린다 — 되돌린 것도 기록에 남는다. */
-    public function revokeDeposit(Order $order): JsonResponse
+    /**
+     * 담당자가 세운 입금 확인을 되돌린다.
+     *
+     * 입금이 확인되면 청구전략대로 세금계산서나 현금영수증이 자동으로 나간다. 그 입금이
+     * 없던 일이 되면 그 돈으로 나간 증빙도 없던 일이 되는 것이 맞다 — 다만 팝빌 취소는
+     * 국세청 실취소라, 부를지 말지는 화면이 담당자에게 묻고 cancel_docs 로 알려 준다.
+     * 묻지 않고 늘 취소하면 잘못 누른 것을 되돌리는 흔한 실수까지 실취소가 된다.
+     */
+    public function revokeDeposit(Request $request, Order $order): JsonResponse
     {
         if (!$order->deposit_confirmed_at) {
             return response()->json(['success' => false, 'message' => '담당자가 확인한 입금이 아닙니다.'], 422);
         }
+
+        $cancelDocs = $request->boolean('cancel_docs');
 
         $was = (int) ($order->deposit_amount ?? 0);
         $order->update([
@@ -644,7 +654,72 @@ class SettlementController extends Controller
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log('입금 확인 취소(담당자): ' . number_format($was) . '원');
 
-        return response()->json(['success' => true, 'message' => '입금 확인을 취소했습니다.']);
+        $docs = $cancelDocs ? $this->cancelIssuedDocs($order) : ['done' => [], 'failed' => []];
+
+        $message = '입금 확인을 취소했습니다.';
+        if ($docs['done']) {
+            $message .= ' ' . implode('·', $docs['done']) . '도 취소했습니다.';
+        }
+        if ($docs['failed']) {
+            $message .= ' 다만 ' . implode(' · ', $docs['failed']) . '.';
+        }
+
+        return response()->json([
+            'success'    => true,
+            'message'    => $message,
+            // 목록이 증빙 단추를 그 자리에서 흐리게 돌리는 데 쓴다
+            'tax_issued'  => $order->refresh()->tax_invoice_status === 'issued',
+            'cash_issued' => $order->cash_receipt_status === 'issued',
+            'doc_failed'  => (bool) $docs['failed'],
+        ]);
+    }
+
+    /**
+     * 이 건에 나가 있는 증빙을 팝빌에서 취소한다.
+     *
+     * 발행과 마찬가지로 화면이 쓰는 취소 경로를 그대로 부른다 — 취소 신고ㆍ상태 기록ㆍ
+     * 청구 준비도 갱신이 이미 그 안에 있다. 같은 일을 여기에 다시 적으면 두 곳이 서로
+     * 다르게 자란다.
+     *
+     * 하나가 실패해도 나머지는 이어서 한다. 입금 확인 취소 자체는 이미 끝난 일이라
+     * 되돌리지 않는다 — 남는 것은 기록과 알림이다.
+     *
+     * @return array{done:array<string>, failed:array<string>}
+     */
+    private function cancelIssuedDocs(Order $order): array
+    {
+        $done = $failed = [];
+
+        $jobs = [
+            ['세금계산서', 'tax_invoice_status',  'cancelTaxInvoice'],
+            ['현금영수증', 'cash_receipt_status', 'cancelCashReceipt'],
+        ];
+
+        foreach ($jobs as [$what, $statusCol, $action]) {
+            if ($order->{$statusCol} !== 'issued') {
+                continue;
+            }
+
+            try {
+                $res  = app(\App\Http\Controllers\OrderController::class)->{$action}($order);
+                $body = json_decode($res->getContent(), true) ?: [];
+
+                if ($body['success'] ?? false) {
+                    $done[] = $what;
+                } else {
+                    $failed[] = $what . '는 취소하지 못했습니다(' . ($body['message'] ?? '까닭 없음') . ')';
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[입금 확인 취소] ' . $what . ' 취소 실패', [
+                    'order' => $order->order_number, 'error' => $e->getMessage(),
+                ]);
+                $failed[] = $what . '는 취소하지 못했습니다';
+            }
+
+            $order->refresh();
+        }
+
+        return ['done' => $done, 'failed' => $failed];
     }
 
     public function checkPaymentStatus(Order $order): JsonResponse

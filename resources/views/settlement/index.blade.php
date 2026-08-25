@@ -1058,7 +1058,29 @@
 다시 「입금 대기」로 돌아갑니다.`,
         { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
       if (!ok) return;
-      await vaDepositCall(btn, base, 'DELETE', null, r, rowIndex, 0);
+
+      /* 입금이 확인되면 청구전략대로 증빙이 자동으로 나간다. 그 입금이 없던 일이 되면
+         증빙도 없던 일이 되는 것이 맞지만, 팝빌 취소는 국세청 실취소다 — 묻고 한다.
+         잘못 눌러 되돌리는 흔한 실수까지 실취소로 이어지게 두지 않는다.
+
+         취소한 증빙은 되살릴 수 없고 새로 발행해야 한다. 그 말도 함께 적어 둔다. */
+      let cancelDocs = false;
+      const issued = [
+        r.tax_issued  ? '세금계산서' + (r.tax_no  ? ` (승인 ${r.tax_no})`  : '') : '',
+        r.cash_issued ? '현금영수증' + (r.cash_no ? ` (승인 ${r.cash_no})` : '') : '',
+      ].filter(Boolean);
+
+      if (issued.length) {
+        cancelDocs = await ceConfirm(
+          `이 건에는 ${issued.join(' 과 ')} 가 나가 있습니다.
+함께 취소할까요?
+
+※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 붙어 있던 그 증빙 PDF 도
+   함께 걷힙니다. 취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.`,
+          { title: '증빙도 함께 취소', confirmText: '함께 취소', cancelText: '입금 확인만 취소', tone: 'danger' });
+      }
+
+      await vaDepositCall(btn, base, 'DELETE', { cancel_docs: cancelDocs }, r, rowIndex, 0);
       return;
     }
 
@@ -1090,7 +1112,16 @@
       BtnState.reset(btn);
       if (!d.success) { showToast(d.message || '처리하지 못했습니다.', 'danger'); return; }
       applyDeposit(row, rowIndex, { done: method === 'POST', amount });
-      showToast(d.message, d.mismatch ? 'warning' : 'success');
+
+      /* 증빙이 취소됐으면 그 줄의 단추도 그 자리에서 흐려져야 한다 —
+         화면을 다시 읽지 않는 것이 이 목록의 약속이다. */
+      if ('tax_issued' in d)  { row.tax_issued  = d.tax_issued;  }
+      if ('cash_issued' in d) { row.cash_issued = d.cash_issued; }
+      if ('tax_issued' in d || 'cash_issued' in d) {
+        if (GRID_COLS.some(c => c.name === 'proof')) grid._refreshCell(rowIndex, 'proof');
+      }
+
+      showToast(d.message, (d.mismatch || d.doc_failed) ? 'warning' : 'success');
     } catch (e) {
       BtnState.reset(btn);
       showToast('오류가 발생했습니다.', 'danger');
