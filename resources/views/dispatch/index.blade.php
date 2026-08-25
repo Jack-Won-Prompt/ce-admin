@@ -382,20 +382,14 @@ window.HELP_TOUR_STEPS = [
     }
   };
 
-  /* 행 더블클릭 → 상세내용 탭에 상세를 인페이지로 표시(페이지 이동 없음).
-
-     상세를 갖춘 갈래에서만 건다. 문자ㆍ팩스ㆍ창고는 아직 목록뿐이라, 눌러도 아무 일이
-     없는 편이 「상세를 불러오지 못했습니다」가 뜨는 것보다 낫다. */
-  const HAS_DETAIL = ['virtual_account', 'tax_invoice', 'cash_receipt', 'nhis'];
-  if (HAS_DETAIL.includes(TYPE)) {
-    document.getElementById('dispatchGrid').addEventListener('dblclick', function (e) {
-      const cell = e.target.closest('[data-row-index]');
-      if (!cell) return;
-      const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-      if (!row || !row.id) return;
-      window.pnlLoadDetail(DETAIL_BASE + '/' + TYPE + '/' + row.id + '?partial=1');
-    });
-  }
+  // 행 더블클릭 → 상세내용 탭에 상세를 인페이지로 표시(페이지 이동 없음)
+  document.getElementById('dispatchGrid').addEventListener('dblclick', function (e) {
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row || !row.id) return;
+    window.pnlLoadDetail(DETAIL_BASE + '/' + TYPE + '/' + row.id + '?partial=1');
+  });
 })();
 </script>
 @endpush

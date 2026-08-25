@@ -67,17 +67,30 @@ class DispatchHistoryController extends Controller
         [$gridData, $gridColumns] = $this->buildGrid($type, $rows);
         $total = $gridData->count();
 
+        /* 갈래 옆 숫자는 「이 기간에 몇 건인가」다.
+
+           예전에는 전체 건수를 적었다. 그래서 「가상계좌 발행 (1)」로 보이는데 골라 보면
+           비어 있었다 — 그 한 건이 두 달 전 것이라 기본 기간(30일) 밖이었다.
+           고르기 전에 세어 둔 숫자가 고른 뒤와 달라서는 안 된다. */
+        $inRange = fn ($q, string $col) => $q->whereBetween(DB::raw("DATE({$col})"), [$dateFrom, $dateTo]);
+
         $counts = [
-            'message'         => MessageHistory::count(),
-            'fax'             => FaxHistory::count(),
-            'tax_invoice'     => Order::whereNotNull('tax_invoice_no')->count(),
-            'cash_receipt'    => Order::whereNotNull('cash_receipt_no')->count(),
-            'virtual_account' => TossPayment::whereHas('order')->count(),
-            'nhis'            => NhisFaxLog::count(),
+            'message'         => $inRange(MessageHistory::query(), 'created_at')->count(),
+            'fax'             => $inRange(FaxHistory::query(), 'created_at')->count(),
+            'tax_invoice'     => Order::whereNotNull('tax_invoice_no')
+                                    ->where(fn ($q) => $q->whereBetween(DB::raw('DATE(tax_invoice_issued_at)'), [$dateFrom, $dateTo])
+                                                         ->orWhereBetween(DB::raw('DATE(tax_invoice_cancelled_at)'), [$dateFrom, $dateTo]))
+                                    ->count(),
+            'cash_receipt'    => Order::whereNotNull('cash_receipt_no')
+                                    ->where(fn ($q) => $q->whereBetween(DB::raw('DATE(cash_receipt_issued_at)'), [$dateFrom, $dateTo])
+                                                         ->orWhereBetween(DB::raw('DATE(cash_receipt_cancelled_at)'), [$dateFrom, $dateTo]))
+                                    ->count(),
+            'virtual_account' => $inRange(TossPayment::whereHas('order'), 'toss_payments.created_at')->count(),
+            'nhis'            => $inRange(NhisFaxLog::query(), 'nhis_fax_logs.created_at')->count(),
             /* 창고는 보낸 것과 받은 것을 함께 센다. 보낸 것은 목록이 읽는 것과 같은
                자리(활동 기록)에서 센다 — 주문 수로 세면 목록보다 적게 나온다. */
-            'withworks'       => WithworksEvent::count()
-                               + \Spatie\Activitylog\Models\Activity::where('description', 'like', 'Withworks %')->count(),
+            'withworks'       => $inRange(WithworksEvent::query(), 'COALESCE(occurred_at, created_at)')->count()
+                               + $inRange(\Spatie\Activitylog\Models\Activity::where('description', 'like', 'Withworks %'), 'created_at')->count(),
         ];
 
         $types = self::TYPES;
@@ -291,7 +304,13 @@ class DispatchHistoryController extends Controller
         return [$data, $columns];
     }
 
-    public function show(string $type, int $id)
+    /**
+     * 한 건의 상세.
+     *
+     * id 를 문자로 받는다 — 창고 갈래는 원본이 둘이라 「a12(보낸 기록)」ㆍ「e45(받은 사건)」
+     * 처럼 앞 글자로 어느 쪽인지 가린다.
+     */
+    public function show(string $type, string $id)
     {
         // 다른 화면의 '상세내용' 탭에 주입될 때(?partial=1)는 크롬 없는 프래그먼트로 렌더
         if (request()->boolean('partial')) {
@@ -301,12 +320,70 @@ class DispatchHistoryController extends Controller
         /* 상세를 갖춘 갈래만 연다. 문자ㆍ팩스ㆍ창고는 아직 목록뿐이라, 모르는 갈래를
            가상계좌 상세로 흘려보내면 엉뚱한 건을 열거나 500 으로 떨어진다. */
         return match ($type) {
-            'virtual_account' => $this->showVirtualAccount($id),
-            'tax_invoice'     => $this->showTaxInvoice($id),
-            'cash_receipt'    => $this->showCashReceipt($id),
-            'nhis'            => $this->showNhis($id),
-            default           => abort(404, '이 갈래는 상세가 없습니다.'),
+            'virtual_account' => $this->showVirtualAccount((int) $id),
+            'tax_invoice'     => $this->showTaxInvoice((int) $id),
+            'cash_receipt'    => $this->showCashReceipt((int) $id),
+            'nhis'            => $this->showNhis((int) $id),
+            'message'         => $this->showMessage((int) $id),
+            'fax'             => $this->showFax((int) $id),
+            'withworks'       => $this->showWithworks($id),
+            default           => abort(404, '없는 갈래입니다.'),
         };
+    }
+
+    /* ── 상세: 문자ㆍ알림톡 ─────────────────────── */
+    private function showMessage(int $id)
+    {
+        $record = MessageHistory::with(['sentBy', 'prescription.patient', 'prescription.order'])
+            ->findOrFail($id);
+
+        $prescription = $record->prescription;
+        $order        = $prescription?->order;
+        $patient      = $prescription?->patient;
+        $type         = 'message';
+
+        return view('dispatch.show', compact('record', 'order', 'prescription', 'patient', 'type'));
+    }
+
+    /* ── 상세: 팩스 ─────────────────────────────── */
+    private function showFax(int $id)
+    {
+        $record = FaxHistory::with(['sentBy', 'prescription.patient', 'prescription.order'])
+            ->findOrFail($id);
+
+        $prescription = $record->prescription;
+        $order        = $prescription?->order;
+        $patient      = $prescription?->patient;
+        $type         = 'fax';
+
+        return view('dispatch.show', compact('record', 'order', 'prescription', 'patient', 'type'));
+    }
+
+    /* ── 상세: 창고와 주고받은 것 ─────────────────── */
+    private function showWithworks(string $id)
+    {
+        $kind = substr($id, 0, 1);
+        $num  = (int) substr($id, 1);
+
+        if ($kind === 'e') {
+            $record = WithworksEvent::with(['order.prescription.patient', 'order.patient'])->findOrFail($num);
+            $order  = $record->order;
+        } elseif ($kind === 'a') {
+            $record       = \Spatie\Activitylog\Models\Activity::with('subject')->findOrFail($num);
+            $prescription = $record->subject instanceof \App\Models\Prescription ? $record->subject : null;
+            $order        = $prescription?->order
+                         ?? ($record->subject instanceof Order ? $record->subject : null);
+        } else {
+            abort(404, '없는 기록입니다.');
+        }
+
+        $prescription = $order?->prescription ?? ($prescription ?? null);
+        $patient      = $order?->patient ?? $prescription?->patient;
+        $type         = 'withworks';
+        // 화면이 「보냄/받음」을 가려 그린다
+        $wwWay        = $kind === 'a' ? 'sent' : 'got';
+
+        return view('dispatch.show', compact('record', 'order', 'prescription', 'patient', 'type', 'wwWay'));
     }
 
     /* ── 상세: 가상계좌 ─────────────────────────── */

@@ -3,10 +3,13 @@
 
 @php
   $typeLabels = [
+    'message'         => ['문자ㆍ알림톡', 'bx-message-detail', 'primary'],
+    'fax'             => ['팩스',          'bx-printer',        'warning'],
     'virtual_account' => ['가상계좌 발행', 'bx-credit-card',    'primary'],
     'tax_invoice'     => ['세금계산서 발행','bx-receipt',        'success'],
     'cash_receipt'    => ['현금영수증 발행','bx-money',          'info'],
     'nhis'            => ['청구 발송', 'bx-paper-plane',   'warning'],
+    'withworks'       => ['창고(위드웍스)', 'bx-package',       'info'],
   ];
   $tl = $typeLabels[$type] ?? ['발행 상세', 'bx-file', 'secondary'];
 
@@ -154,17 +157,25 @@
 
 @php
   // 공통: 발행 식별자/날짜 계산
+  /* 갈래마다 「무엇으로 부르는가ㆍ언제ㆍ어떻게 됐나」가 다르다.
+     default 를 두는 까닭 — 갈래를 늘릴 때 여기를 잊으면 화면이 통째로 죽는다. */
   $dispatchNo = match($type) {
-    'virtual_account' => $record->toss_order_id ?? ('-'),
+    'virtual_account' => $record->toss_order_id ?? '-',
     'tax_invoice'     => $order->tax_invoice_no ?? '-',
     'cash_receipt'    => $order->cash_receipt_no ?? '-',
     'nhis'            => $record->reference_no ?? '-',
+    'message'         => $record->template_label ?: ($record->template_code ?: '자유 문구'),
+    'fax'             => $record->receipt_num ?: '-',
+    'withworks'       => $record->so_no ?? ($order->withworks_so_no ?? '-'),
+    default           => '-',
   };
   $issuedAt = match($type) {
     'virtual_account' => $record->created_at,
     'tax_invoice'     => $order->tax_invoice_issued_at,
     'cash_receipt'    => $order->cash_receipt_issued_at,
     'nhis'            => $record->sent_at ?? $record->created_at,
+    'withworks'       => $record->occurred_at ?? $record->created_at,
+    default           => $record->created_at,
   };
   $statusBadge = match($type) {
     'virtual_account' => [$record->status_label, $record->status_badge],
@@ -174,6 +185,14 @@
                           \App\Models\Order::CASH_RECEIPT_STATUS_LABELS[$order->cash_receipt_status][1] ?? 'secondary'],
     'nhis'            => [\App\Models\NhisFaxLog::STATUS_LABELS[$record->status]['label'] ?? $record->status,
                           \App\Models\NhisFaxLog::STATUS_LABELS[$record->status]['badge'] ?? 'secondary'],
+    'message'         => [$record->resultLabel(),
+                          $record->fail_count === 0 ? 'success' : ($record->success_count === 0 ? 'danger' : 'warning')],
+    'fax'             => [[0=>'대기',1=>'전송 중',2=>'성공',3=>'실패',4=>'취소'][$record->popbill_state] ?? '대기',
+                          [0=>'secondary',1=>'info',2=>'success',3=>'danger',4=>'secondary'][$record->popbill_state] ?? 'secondary'],
+    'withworks'       => ($wwWay ?? 'got') === 'sent'
+                          ? ['보냄', 'primary']
+                          : [$record->status_label ?: ($record->status ?: '받음'), 'info'],
+    default           => ['-', 'secondary'],
   };
   $iconColor = ['primary'=>'var(--primary)','success'=>'var(--success)','info'=>'var(--info)','warning'=>'var(--warning)'];
   $bgColor   = ['primary'=>'var(--primary-light)','success'=>'var(--success-light)','info'=>'var(--info-light)','warning'=>'var(--warning-light)'];
@@ -208,6 +227,200 @@
 
   {{-- ══ 왼쪽 메인 ══ --}}
   <div style="display:flex;flex-direction:column;gap:16px;">
+
+    {{-- ── 문자ㆍ알림톡 상세 ── --}}
+    @if($type === 'message')
+    @php
+      $receivers = is_array($record->receivers) ? $record->receivers
+                 : (json_decode((string) $record->receivers, true) ?: []);
+      $receipts  = is_array($record->receipt_nums) ? $record->receipt_nums
+                 : (json_decode((string) $record->receipt_nums, true) ?: []);
+    @endphp
+
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-title"><i class="bx bx-message-detail"></i> 보낸 내용</div>
+        {{-- 목록에서는 첫 줄만 보인다. 무엇을 보냈는지 확인하는 자리라 여기서는 전문이다. --}}
+        <div style="padding:14px 16px;background:var(--gray-100);border:1px solid var(--gray-200);
+                    border-radius:var(--radius);font-size:13px;line-height:1.8;color:var(--gray-900);
+                    white-space:pre-wrap;">{{ $record->content }}</div>
+        <div class="info-grid" style="margin-top:14px;">
+          <div class="info-cell">
+            <div class="info-label">채널</div>
+            <div class="info-value">{{ $record->channelLabel() }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">유형</div>
+            <div class="info-value">{{ $record->template_label ?: ($record->template_code ?: '자유 문구') }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">보낸 사람</div>
+            <div class="info-value">{{ $record->sentBy?->name ?? '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">보낸 자리</div>
+            <div class="info-value">{{ $record->source ?: '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-title"><i class="bx bx-user-voice"></i> 받는 사람 ({{ count($receivers) ?: $record->total }}명)</div>
+        <div class="amount-row" style="margin-bottom:14px;">
+          <div class="amt-card hl"><div class="alabel">대상</div><div class="avalue">{{ number_format($record->total) }}</div></div>
+          <div class="amt-card"><div class="alabel">성공</div><div class="avalue">{{ number_format($record->success_count) }}</div></div>
+          <div class="amt-card"><div class="alabel">실패</div><div class="avalue">{{ number_format($record->fail_count) }}</div></div>
+        </div>
+        @if($receivers)
+        <table class="item-table">
+          <thead><tr><th>이름</th><th>번호</th><th>접수번호</th></tr></thead>
+          <tbody>
+            @foreach($receivers as $i => $r)
+            <tr>
+              <td>{{ is_array($r) ? ($r['name'] ?? '-') : '-' }}</td>
+              <td style="font-family:monospace;font-size:12px;">{{ is_array($r) ? ($r['tel'] ?? $r['to'] ?? '-') : $r }}</td>
+              <td style="font-family:monospace;font-size:11px;color:var(--gray-600);">{{ $receipts[$i] ?? '-' }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+        @endif
+        @if($record->error)
+          <div style="margin-top:12px;padding:12px 16px;background:var(--danger-light);border-radius:var(--radius);
+                      font-size:13px;line-height:1.7;color:var(--danger);">{{ $record->error }}</div>
+        @endif
+      </div>
+    </div>
+    @endif
+
+    {{-- ── 팩스 상세 ── --}}
+    @if($type === 'fax')
+    @php
+      $faxFiles = is_array($record->file_names) ? $record->file_names
+                : (json_decode((string) $record->file_names, true) ?: []);
+      $faxTo    = is_array($record->receivers) ? $record->receivers
+                : (json_decode((string) $record->receivers, true) ?: []);
+    @endphp
+
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-title"><i class="bx bx-printer"></i> 보낸 팩스</div>
+        <div class="info-grid">
+          <div class="info-cell" style="grid-column:1 / -1;">
+            <div class="info-label">제목</div>
+            <div class="info-value">{{ $record->title ?: '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">받는 번호</div>
+            <div class="info-value" style="font-family:monospace;">{{ $record->fax_no ?: '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">받는 곳</div>
+            <div class="info-value">{{ $record->recipient_type ?: '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">보낸 번호</div>
+            <div class="info-value" style="font-family:monospace;">{{ $record->sender ?: '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">보낸 사람</div>
+            <div class="info-value">{{ $record->sentBy?->name ?? '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">접수번호</div>
+            <div class="info-value" style="font-family:monospace;font-size:12px;">{{ $record->receipt_num ?: '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">상태 확인일시</div>
+            <div class="info-value">{{ $record->synced_at?->format('Y-m-d H:i') ?? '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-title"><i class="bx bx-file"></i> 보낸 문서 ({{ count($faxFiles) }}장)</div>
+        @if($faxFiles)
+          <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.9;color:var(--gray-800);">
+            @foreach($faxFiles as $f)<li>{{ $f }}</li>@endforeach
+          </ul>
+        @else
+          <p style="margin:0;font-size:13px;color:var(--gray-600);">적어 둔 문서 이름이 없습니다.</p>
+        @endif
+        @if($record->pdfUrl())
+          {{-- 보낸 그대로의 합본이다 — 무엇이 넘어갔는지는 이것으로 확인한다 --}}
+          <a href="{{ $record->pdfUrl() }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm"
+             style="margin-top:12px;">보낸 합본 보기</a>
+        @endif
+      </div>
+    </div>
+    @endif
+
+    {{-- ── 창고와 주고받은 것 ── --}}
+    @if($type === 'withworks')
+    @php
+      $wwSent    = ($wwWay ?? 'got') === 'sent';
+      $wwPayload = $wwSent ? null
+                 : (is_array($record->payload) ? $record->payload
+                    : (json_decode((string) $record->payload, true) ?: []));
+    @endphp
+
+    <div class="card">
+      <div class="card-body">
+        <div class="sec-title">
+          <i class="bx bx-package"></i> {{ $wwSent ? '창고로 보낸 것' : '창고에서 온 것' }}
+        </div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-label">일시</div>
+            <div class="info-value">{{ $issuedAt?->format('Y-m-d H:i:s') ?? '-' }}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">판매번호</div>
+            <div class="info-value" style="font-family:monospace;">{{ $dispatchNo }}</div>
+          </div>
+          @if($wwSent)
+            <div class="info-cell" style="grid-column:1 / -1;">
+              <div class="info-label">기록</div>
+              <div class="info-value">{{ $record->description }}</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-label">누가</div>
+              <div class="info-value">{{ $record->causer?->name ?? '-' }}</div>
+            </div>
+          @else
+            <div class="info-cell">
+              <div class="info-label">사건</div>
+              <div class="info-value">{{ $record->event }}</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-label">상태</div>
+              <div class="info-value">{{ $record->status_label ?: ($record->status ?: '-') }}</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-label">사건 번호</div>
+              <div class="info-value" style="font-family:monospace;font-size:12px;">{{ $record->event_id ?: '-' }}</div>
+            </div>
+          @endif
+        </div>
+      </div>
+    </div>
+
+    @if($wwPayload)
+    <div class="card">
+      <div class="card-body">
+        {{-- 창고가 보내 온 것 그대로다. 우리가 옮겨 적으며 흘린 값이 있는지 여기서 본다. --}}
+        <div class="sec-title"><i class="bx bx-code-curly"></i> 받은 값 그대로</div>
+        <pre style="margin:0;padding:14px 16px;background:var(--gray-100);border:1px solid var(--gray-200);
+                    border-radius:var(--radius);font-size:12px;line-height:1.7;color:var(--gray-900);
+                    overflow-x:auto;white-space:pre-wrap;word-break:break-all;">{{ json_encode($wwPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+      </div>
+    </div>
+    @endif
+    @endif
 
     {{-- ── 가상계좌 발행 상세 ── --}}
     @if($type === 'virtual_account')
