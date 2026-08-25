@@ -191,8 +191,15 @@ class PrescriptionDocumentController extends Controller
         foreach (['local', 'public'] as $disk) {
             if (Storage::disk($disk)->exists($document->file_path)) {
                 $content = Storage::disk($disk)->get($document->file_path);
+                /* 대개 PDF 지만, 장표를 PNG 로 그려 넣던 시절의 줄이 남아 있다.
+                   무엇이든 application/pdf 로 내보내면 그림이 깨진 채로 뜬다. */
+                $mime = [
+                    'pdf' => 'application/pdf', 'png' => 'image/png',
+                    'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+                ][strtolower(pathinfo((string) $document->file_path, PATHINFO_EXTENSION))] ?? 'application/pdf';
+
                 return response($content, 200, [
-                    'Content-Type'        => 'application/pdf',
+                    'Content-Type'        => $mime,
                     'Content-Disposition' => 'inline; filename*=UTF-8\'\'' . rawurlencode($document->original_filename),
                 ]);
             }

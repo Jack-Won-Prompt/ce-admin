@@ -153,6 +153,13 @@
   .vw-tool:hover { color:var(--primary); }
   .vw-zoom { font-size:12px; font-weight:500; line-height:1.2; color:var(--gray-1000); text-align:center; }
   .img-viewer-canvas { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  /* PDF 한 쪽을 그리는 데 잠깐 걸린다(첫 장은 일꾼을 깨우느라 더). 아무 표시가 없으면
+     눌렸는지 안 눌렸는지 알 수 없어 같은 자리를 또 누르게 된다. */
+  .vw-busy { position:absolute; inset:0; z-index:3; display:none; align-items:center; justify-content:center;
+             gap:8px; background:rgba(255,255,255,.62); font-size:12px; color:var(--gray-700); }
+  .vw-busy.on { display:flex; }
+  .vw-busy i { font-size:15px; animation:vwspin 1s linear infinite; }
+  @keyframes vwspin { to { transform:rotate(360deg); } }
   .img-placeholder { text-align: center; color: var(--gray-700); }
   .img-placeholder i { font-size: 56px; margin-bottom: 10px; display: block; opacity: .4; }
   .img-placeholder p { font-size: 13px; opacity: .6; }
@@ -817,10 +824,6 @@
      예전에는 이 상자가 없어 카드가 뷰어 폭을 그대로 채우고 카드 사이도 붙어 있었다. */
   #viewerCards { display:flex; flex-direction:column; gap:12px;
                  padding:16px; border-top:1px solid var(--gray-200); }
-  /* 생성 서류는 JS 가 통째로 갈아 끼우는 상자다(refreshGeneratedDocs).
-     상자를 그대로 두면 서류가 0건일 때도 칸을 차지해 빈 간격 12 가 생긴다.
-     display:contents 로 두면 안의 카드가 바로 이 묶음의 칸이 된다. */
-  #viewerCards > #genDocsContainer { display:contents; }
   /* 카드 사이 간격은 gap 12 하나로만 잡는다 (검수 메모 카드의 .mt-3 상쇄) */
   #viewerCards > .mt-3 { margin-top:0; }
 
@@ -843,33 +846,6 @@
   .vw-btn-sm:hover { background:var(--gray-50); }
   .vw-btn-sm i { font-size:12px; }
   .vw-btn-add { color:var(--primary); }
-
-  /* ── 생성 서류 (시안 137:961) ──
-     한 줄에 이름과 버튼을 나란히 두던 것을, 위는 파일 정보 아래는 버튼 세 개로 나눈다.
-     좁은 뷰어 폭에서 파일명이 잘리지 않게 하려는 배치다. */
-  .gd-list  { display:flex; flex-direction:column; gap:8px; padding:12px 16px; }
-  .gd-item  { display:flex; flex-direction:column; gap:8px; padding:8px 12px;
-              background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px; }
-  .gd-top   { display:flex; align-items:center; gap:8px; }
-  /* 시안 148:1585 의 서류 아이콘은 회색이다 — 본체 #E8EAEC(gray-200), 줄 #C2C5C8(gray-300).
-     여기 아이콘은 한 가지 색만 쓰는 외곽선 글리프(fa-regular)라 줄 색으로 맞춘다.
-     빨강은 시안에 없고, 서류 유형과 무관하게 모두 같은 회색이다. */
-  .gd-icon  { width:28px; height:28px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-              font-size:22px; color:var(--gray-300); }
-  .gd-info  { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
-  .gd-name  { font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
-              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .gd-meta  { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:500; line-height:1.6;
-              color:var(--gray-500); min-width:0; }
-  .gd-dot   { width:2px; height:2px; border-radius:999px; background:var(--gray-300); flex-shrink:0; }
-  .gd-state { color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .gd-acts  { display:flex; gap:6px; }
-  .gd-btn   { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;
-              height:28px; border-radius:8px; background:var(--gray-0); border:1px solid var(--gray-200);
-              font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
-              cursor:pointer; text-decoration:none; white-space:nowrap; }
-  .gd-btn:hover { background:var(--gray-50); }
-  .gd-btn i { font-size:12px; }
 
   /* ── 등록자 카드 (시안 137:652) ──
      머리줄 없이 역할별 한 줄씩 쌓는다. */
@@ -907,7 +883,11 @@
   .attach-type-badge { position:absolute; left:0; right:0; bottom:0; padding:4px; text-align:center;
                        background:rgba(0,0,0,.4); color:var(--gray-0);
                        font-size:11px; font-weight:500; line-height:1.2; }
-  .attach-del-btn { position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:999px;
+  /* 시스템이 만든 서류는 지우지 못한다 — 지우는 X 대신 갱신 단추만 둔다.
+     테두리를 주색으로 두어 올린 문서와 한눈에 갈린다. */
+  .attach-thumb.is-gen { border-color:var(--primary); }
+  .attach-thumb.is-gen .attach-type-badge { background:rgba(115,103,240,.86); }
+  .attach-del-btn { overflow:hidden; position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:999px;
                     background:var(--danger); border:none; color:#fff; font-size:9px; cursor:pointer;
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
@@ -1890,6 +1870,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <button type="button" class="vw-tool" onclick="rotateImg()" title="회전"><i class="fa-solid fa-rotate-left"></i></button>
             <button type="button" class="vw-tool" onclick="resetImg()" title="처음으로 복원"><i class="fa-solid fa-arrows-rotate"></i></button>
           </div>
+          {{-- 여러 쪽짜리 서류의 쪽 넘기기 — PDF 를 볼 때만 선다 --}}
+          <div class="vw-tool-group" id="pdfPager" style="display:none;">
+            <button type="button" class="vw-tool" onclick="pdfPage(-1)" title="이전 쪽"><i class="fa-solid fa-chevron-up"></i></button>
+            <span id="pdfPageLabel" class="vw-zoom">1/1</span>
+            <button type="button" class="vw-tool" onclick="pdfPage(1)" title="다음 쪽"><i class="fa-solid fa-chevron-down"></i></button>
+          </div>
           <div class="vw-tool-group">
             <button type="button" class="vw-tool" onclick="zoomOut()" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
             <span id="zoomLabel" class="vw-zoom">100%</span>
@@ -1897,6 +1883,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         <div class="img-viewer-canvas" id="imgCanvas">
+          <div class="vw-busy" id="viewerBusy"><i class="fa-solid fa-circle-notch"></i><span>여는 중…</span></div>
           @php $isRxPdf = str_contains($prescription->image_mime_type ?? '', 'pdf'); @endphp
           @if($prescription->image_url && $isRxPdf)
             <img id="prescCanvas" src="" style="display:none;max-width:100%;max-height:100%;object-fit:contain;cursor:grab;user-select:none;" alt="" draggable="false" />
@@ -1993,7 +1980,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 처방전 (삭제 불가) --}}
           @if($prescription->image_url)
             @php $isRxPdfThumb = str_contains($prescription->image_mime_type ?? '', 'pdf'); @endphp
-            <div class="attach-thumb doc-thumb active" onclick="switchViewerDoc(this)">
+            <div class="attach-thumb doc-thumb active" data-doc-id="0" onclick="switchViewerDoc(this)">
               @if($isRxPdfThumb)
                 <div class="attach-thumb-pdf"><i class="fa-regular fa-file-pdf"></i></div>
               @else
@@ -2005,7 +1992,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 첨부 파일 --}}
           @foreach($prescription->attachments as $att)
             @php $isPdf = $att->is_pdf; @endphp
-            <div class="attach-thumb doc-thumb" data-att-id="{{ $att->id }}" onclick="switchViewerDoc(this)">
+            <div class="attach-thumb doc-thumb" data-doc-id="{{ $att->id }}" data-att-id="{{ $att->id }}" onclick="switchViewerDoc(this)">
               @if($isPdf)
                 <div class="attach-thumb-pdf"><i class="fa-regular fa-file-pdf"></i></div>
               @else
@@ -2017,12 +2004,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </button>
             </div>
           @endforeach
+          {{-- 시스템이 만든 서류 — 위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서 등.
+               따로 목록 카드를 두던 것을 여기로 모았다. 서명이 끝나 위임장이 새로
+               생기면 refreshGeneratedDocs() 가 이 자리를 다시 그린다. --}}
+          <span id="genThumbs" style="display:contents"></span>
         </div>
-      </div>
-
-      {{-- ── 생성 서류 (위임동의서·요양비위임장 등) — 서명 시 실시간 갱신 ── --}}
-      <div id="genDocsContainer">
-        @include('prescriptions._generated_docs')
       </div>
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
@@ -3839,10 +3825,22 @@ $_itemsData = $_itemSource->map(fn($i) => [
 @endphp
 
 @push('scripts')
+{{-- PDF 도 그림처럼 보려고 pdf.js 를 들인다(뒤쪽 openPdfInViewer 참고).
+     바깥에서 받아 오지 않고 우리 폴더에 둔 것을 쓴다 — 인터넷이 없어도 열려야 한다. --}}
+<script src="{{ asset('vendor/pdfjs/pdf.min.js') }}"></script>
 <script>
 // ── 통합 문서 뷰어 ─────────────────────────────────────
 const ALL_DOCS = @json($allDocsJson);
 let currentDocIdx = 0;
+
+/* PDF 를 그림으로 그리는 일꾼(pdf.js) 과, 시스템이 만든 서류를 다시 만드는 주소들.
+   그림칸을 자바스크립트가 그리므로 주소도 여기서 한 번에 준다. */
+const PDFJS_WORKER_URL = @json(asset('vendor/pdfjs/pdf.worker.min.js'));
+const GEN_DOCS_URL     = @json(route('prescriptions.generatedDocs', $prescription));
+const GEN_DOC_URLS = {
+  delegation: @json(route('prescriptions.delegationRegenerate', $prescription)),
+  fax:        @json(route('prescriptions.faxRegenerate', $prescription)),
+};
 
 /* ── 메시지 유형 편집 ──────────────────────────────────────
    메시지 관리 화면과 같은 표를 고친다. 저장하면 화면을 다시 불러와 팝오버 목록에
@@ -3955,12 +3953,16 @@ function openBigViewer() {
   _bvEl('bigViewerTitle').textContent = doc?.name || '처방전';
   _bvEl('bvOpen').href = url;
 
-  if (doc?.isPdf) {
-    img.style.display = 'none'; img.src = '';
+  /* PDF 도 그림으로 그려 두었으면 그것을 쓴다 — 작은 뷰어와 같은 쪽이고, 그림이라
+     휠로 키우고 끌어 옮기는 손놀림이 그대로 걸린다. 못 그린 것만 예전처럼 창에 맡긴다. */
+  const rendered = doc?.isPdf && PDF_VIEW.doc && PDF_VIEW.url === url && PDF_VIEW.blobUrl;
+  if (doc?.isPdf && !rendered) {
+    img.style.display = 'none'; img.removeAttribute('src');
     frame.src = url; frame.style.display = '';
   } else {
-    frame.style.display = 'none'; frame.src = '';
-    img.src = url; img.style.display = '';
+    frame.style.display = 'none'; frame.removeAttribute('src');
+    img.src = rendered ? PDF_VIEW.blobUrl : url;
+    img.style.display = '';
   }
 
   /* 처음 열 때는 본문 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
@@ -4171,24 +4173,133 @@ window.syncDocEmpty = function () {
     const img = document.getElementById('prescCanvas');
     if (img) { img.src = ''; img.style.display = 'none'; }
     const pdf = document.getElementById('pdfCanvas');
-    if (pdf) { pdf.src = ''; pdf.style.display = 'none'; }
+    if (pdf) { pdf.removeAttribute('src'); pdf.style.display = 'none'; }
     const badge = document.getElementById('viewerBadge');
     if (badge) badge.style.display = 'none';
+    if (typeof PDF_VIEW !== 'undefined') {
+      PDF_VIEW.seq++; PDF_VIEW.doc = null; PDF_VIEW.total = 0;
+      if (typeof _pdfPagerSync === 'function') _pdfPagerSync();
+    }
   }
 };
-syncDocEmpty();
 
 
-function switchViewerDoc(el) {
-  const thumbs = Array.from(document.querySelectorAll('#docStrip .doc-thumb'));
-  const idx = thumbs.indexOf(el);
-  if (idx < 0 || idx >= ALL_DOCS.length) return;
+/* -- PDF 도 그림처럼 본다 ----------------------------------
+   PDF 를 <iframe> 에 띄우면 브라우저의 PDF 뷰어가 통째로 맡는다. 그 안에서는 우리
+   휠도 끌기도 닿지 않아, 처방전 그림에는 되는 확대ㆍ이동이 서류에는 안 됐다.
+   pdf.js 로 한 쪽씩 그려 그림 한 장으로 만들면 이미 있는 손놀림이 그대로 걸린다 --
+   새 기능을 만든 것이 아니라 쓰던 것을 쓰게 한 것이다.
 
-  currentDocIdx = idx;
-  const doc = ALL_DOCS[idx];
+   그리다 실패하면(pdf.js 가 안 실려 있거나 파일이 깨졌거나) 예전처럼 <iframe> 으로
+   떨어진다. 보이지 않는 것보다는 확대가 안 되는 편이 낫다. */
+const PDF_VIEW = { url: null, doc: null, page: 1, total: 0, blobUrl: null, seq: 0 };
 
-  thumbs.forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+function _pdfLib() {
+  const lib = window.pdfjsLib;
+  if (!lib) return null;
+  lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  return lib;
+}
+
+function _pdfBusy(on) {
+  const el = document.getElementById('viewerBusy');
+  if (el) el.classList.toggle('on', !!on);
+}
+
+function _pdfPagerSync() {
+  const pager = document.getElementById('pdfPager');
+  const label = document.getElementById('pdfPageLabel');
+  if (!pager) return;
+  // 한 쪽짜리는 넘길 것이 없다
+  pager.style.display = PDF_VIEW.total > 1 ? '' : 'none';
+  if (label) label.textContent = PDF_VIEW.page + '/' + PDF_VIEW.total;
+}
+
+/** 예전 방식 -- 브라우저 PDF 뷰어에 맡긴다 */
+function _pdfFallback(url) {
+  const img   = document.getElementById('prescCanvas');
+  const frame = document.getElementById('pdfCanvas');
+  if (img)   { img.style.display = 'none'; img.removeAttribute('src'); }
+  if (frame && url) { frame.src = url; frame.style.display = ''; }
+  PDF_VIEW.doc = null; PDF_VIEW.total = 0;
+  _pdfPagerSync();
+}
+
+async function openPdfInViewer(url) {
+  const lib = _pdfLib();
+  if (!lib) { _pdfFallback(url); return; }
+
+  const mine = ++PDF_VIEW.seq;          // 빨리 여러 번 고르면 마지막 것만 그린다
+  _pdfBusy(true);
+  try {
+    const doc = await lib.getDocument({ url: url, withCredentials: true }).promise;
+    if (mine !== PDF_VIEW.seq) return;
+    PDF_VIEW.url = url; PDF_VIEW.doc = doc; PDF_VIEW.total = doc.numPages;
+    await renderPdfPage(1, mine);
+  } catch (e) {
+    if (mine === PDF_VIEW.seq) { _pdfBusy(false); _pdfFallback(url); }
+  }
+}
+
+async function renderPdfPage(n, seq) {
+  if (!PDF_VIEW.doc) return;
+  const mine = (seq === undefined) ? PDF_VIEW.seq : seq;
+  PDF_VIEW.page = Math.min(Math.max(1, n), PDF_VIEW.total);
+  _pdfBusy(true);
+
+  try {
+    const page = await PDF_VIEW.doc.getPage(PDF_VIEW.page);
+    if (mine !== PDF_VIEW.seq) return;
+
+    /* 그리는 크기 -- 보이는 칸의 두 배로 그려 둔다. 100% 로 볼 때 또렷하고,
+       키워도 한동안 버틴다. 그림도 키우면 흐려지므로 거기까지가 같은 값이다. */
+    const box   = document.getElementById('imgCanvas');
+    const wantW = Math.max(900, Math.min(2200, ((box && box.clientWidth) || 700) * 2));
+    const base  = page.getViewport({ scale: 1 });
+    const view  = page.getViewport({ scale: wantW / base.width });
+
+    const cv = document.createElement('canvas');
+    cv.width  = Math.round(view.width);
+    cv.height = Math.round(view.height);
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: view }).promise;
+    if (mine !== PDF_VIEW.seq) return;
+
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    if (mine !== PDF_VIEW.seq || !blob) return;
+    if (PDF_VIEW.blobUrl) URL.revokeObjectURL(PDF_VIEW.blobUrl);
+    PDF_VIEW.blobUrl = URL.createObjectURL(blob);
+
+    const img   = document.getElementById('prescCanvas');
+    const frame = document.getElementById('pdfCanvas');
+    if (frame) { frame.style.display = 'none'; frame.removeAttribute('src'); }
+    if (img)   { img.src = PDF_VIEW.blobUrl; img.style.display = ''; }
+    _pdfBusy(false);
+    _pdfPagerSync();
+    resetImg();
+
+    // 크게 보기 창이 떠 있으면 같은 쪽을 보여 준다
+    const bv = document.getElementById('bigViewer');
+    if (bv && bv.style.display !== 'none') {
+      const bvImg   = document.getElementById('bvImg');
+      const bvFrame = document.getElementById('bvFrame');
+      if (bvFrame) { bvFrame.style.display = 'none'; bvFrame.removeAttribute('src'); }
+      if (bvImg)   { bvImg.src = PDF_VIEW.blobUrl; bvImg.style.display = ''; bvFit(); }
+    }
+  } catch (e) {
+    if (mine === PDF_VIEW.seq) { _pdfBusy(false); _pdfFallback(PDF_VIEW.url); }
+  }
+}
+
+function pdfPage(delta) {
+  if (!PDF_VIEW.doc) return;
+  const next = PDF_VIEW.page + delta;
+  if (next < 1 || next > PDF_VIEW.total) return;
+  renderPdfPage(next);
+}
+
+/** 고른 문서를 뷰어에 세운다 -- 그림이든 PDF 든 여기 하나를 지난다 */
+function showDoc(doc) {
+  if (!doc) return;
 
   const prescImg = document.getElementById('prescCanvas');
   const pdfFrame = document.getElementById('pdfCanvas');
@@ -4196,32 +4307,115 @@ function switchViewerDoc(el) {
   const openBtn  = document.getElementById('viewerOpenBtn');
 
   /* 처방전 그림 없이 열린 건은 「이미지 없음」 자리표가 서 있다. 문서를 고르면 그림이
-     그 위에 얹혀 둘이 함께 보였다 — 볼 것이 생겼으니 자리표는 걷는다. */
+     그 위에 얹혀 둘이 함께 보였다 -- 볼 것이 생겼으니 자리표는 걷는다. */
   const holder = document.getElementById('viewerPlaceholder');
   if (holder) holder.style.display = 'none';
 
+  if (badge) { badge.textContent = doc.name || ''; badge.style.display = doc.name ? '' : 'none'; }
+
   if (doc.isPdf) {
-    if (prescImg) { prescImg.style.display = 'none'; prescImg.src = ''; }
-    if (pdfFrame) { pdfFrame.src = doc.url; pdfFrame.style.display = ''; }
-    if (badge) badge.style.display = 'none';
+    openPdfInViewer(doc.url);
   } else {
-    if (pdfFrame) { pdfFrame.style.display = 'none'; pdfFrame.src = ''; }
+    PDF_VIEW.seq++; PDF_VIEW.doc = null; PDF_VIEW.total = 0;
+    _pdfBusy(false);
+    _pdfPagerSync();
+    if (pdfFrame) { pdfFrame.style.display = 'none'; pdfFrame.removeAttribute('src'); }
     if (prescImg) { prescImg.src = doc.url; prescImg.style.display = ''; }
-    if (badge) { badge.textContent = doc.name; badge.style.display = ''; }
     resetImg();
   }
 
   if (openBtn) { openBtn.href = doc.url || '#'; openBtn.style.display = ''; }
   // 처음에 볼 것이 없어 숨겨 두었더라도, 문서를 고른 이상 열 수 있어야 한다
-  ['btnBigViewer', 'btnResetView'].forEach(id => {
+  ['btnBigViewer', 'btnResetView'].forEach(function (id) {
     const b = document.getElementById(id);
     if (b) b.style.display = '';
   });
+}
+
+/**
+ * 그림칸을 눌렀을 때.
+ *
+ * 자리 순서가 아니라 data-doc-id 로 찾는다. 시스템이 만든 서류가 첨부 뒤에 서고
+ * 새로 올린 첨부는 그 앞에 꽂히므로, 순서로 세면 곧 어긋난다.
+ */
+function switchViewerDoc(el) {
+  const id  = Number(el.dataset.docId);
+  const idx = ALL_DOCS.findIndex(function (d) { return Number(d.id) === id; });
+  if (idx < 0) return;
+
+  currentDocIdx = idx;
+
+  document.querySelectorAll('#docStrip .doc-thumb').forEach(function (t) { t.classList.remove('active'); });
+  el.classList.add('active');
+
+  showDoc(ALL_DOCS[idx]);
 
   // 크게 보기 창이 떠 있으면 고른 문서를 따라간다
   const bv = document.getElementById('bigViewer');
   if (bv && bv.style.display !== 'none') openBigViewer();
 }
+
+/**
+ * 시스템이 만든 서류의 그림칸을 다시 그린다.
+ *
+ * 위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서처럼 우리가 만든 것들이다.
+ * 예전에는 아래에 「생성 서류」 목록 카드가 따로 있었는데, 보는 자리가 둘이면
+ * 어느 쪽을 봐야 하는지 매번 헤맸고 그 카드에서는 확대도 이동도 되지 않았다.
+ */
+function renderGenThumbs() {
+  const slot = document.getElementById('genThumbs');
+  if (!slot) return;
+
+  slot.innerHTML = ALL_DOCS.filter(function (d) { return d.isGenerated; }).map(function (d) {
+    /* 위임장과 팩스통합본은 지금 설정으로 다시 만들 수 있다. 첨부의 지우는 X 자리에
+       갱신 단추를 둔다 -- 이 서류들은 지우는 것이 아니라 다시 만드는 것이다. */
+    var regen = '';
+    if (d.type === 'delegation') {
+      regen = '<button class="attach-del-btn" style="background:var(--primary);"'
+            + ' onclick="event.stopPropagation();regenerateDelegation(this)"'
+            + ' data-url="' + GEN_DOC_URLS.delegation + '" title="현재 위임장 설정으로 다시 만들기">'
+            + '<i class="fa-solid fa-rotate"></i></button>';
+    } else if (d.type === 'fax') {
+      regen = '<button class="attach-del-btn" style="background:var(--primary);"'
+            + ' onclick="event.stopPropagation();regenerateFax(this)"'
+            + ' data-url="' + GEN_DOC_URLS.fax + '" title="현재 데이터로 팩스통합본 다시 만들기">'
+            + '<i class="fa-solid fa-rotate"></i></button>';
+    }
+
+    // 거의 PDF 지만, 장표를 PNG 로 그려 넣던 시절의 줄은 그림으로 보여 준다
+    const face = d.isPdf
+      ? '<div class="attach-thumb-pdf"><i class="fa-regular fa-file-pdf"></i></div>'
+      : '<img class="attach-thumb-img" src="' + _htmlAttr(d.url) + '" alt="' + _htmlAttr(d.typeLabel) + '" loading="lazy">';
+
+    return '<div class="attach-thumb doc-thumb is-gen" data-doc-id="' + d.id + '"'
+         + ' onclick="switchViewerDoc(this)" title="' + _htmlAttr(d.name) + '">'
+         + face
+         + '<div class="attach-type-badge">' + _htmlAttr(d.typeLabel) + '</div>'
+         + regen
+         + '</div>';
+  }).join('');
+
+  syncDocEmpty();
+}
+
+function _htmlAttr(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* 문서 칸을 처음 세운다.
+
+   그림칸을 다 그린 뒤에 첫 문서를 뷰어에 올린다. 처방전이 PDF 인 건은 서버가 이미
+   <iframe> 에 띄워 두었는데, 그대로 두면 그 한 건만 확대ㆍ이동이 안 되는 채로 남는다 —
+   같은 길(showDoc)로 다시 세운다.
+
+   DOMContentLoaded 를 기다리는 까닭은 resetImg 따위가 뒤쪽 <script> 에 있어서다. */
+document.addEventListener('DOMContentLoaded', function () {
+  renderGenThumbs();
+
+  const first = ALL_DOCS[0];
+  if (first && first.isPdf) showDoc(first);
+});
 
 function _closeAttachPopover() {
   document.getElementById('deleteAttachPopover').style.display = 'none';
@@ -4261,10 +4455,11 @@ function deleteAttachment(e, id, btn) {
           const strip = document.getElementById('docStrip');
           const wrap  = document.getElementById('docStripWrap');
           // 비어도 카드는 그대로 둔다 — 다시 올릴 자리가 있어야 한다
+          // 건수는 그림칸을 세어 붙인다(syncDocEmpty) — ALL_DOCS 에는 그림칸 없는
+          // 것(위임 서명 따위)도 들어 있어 길이로 세면 어긋난다
           syncDocEmpty();
-          const countEl = document.getElementById('docCount');
-          if (countEl) countEl.textContent = ALL_DOCS.length;
-          if (currentDocIdx >= ALL_DOCS.length) {
+          // 보고 있던 것을 지웠으면 남은 첫 문서로 옮겨 간다
+          if (currentDocIdx === docIdx || currentDocIdx >= ALL_DOCS.length) {
             const firstThumb = strip ? strip.querySelector('.doc-thumb') : null;
             if (firstThumb) switchViewerDoc(firstThumb);
           }
@@ -4316,7 +4511,8 @@ function handleAttachUpload(input) {
   }).then(r => r.json()).then(d => {
     if (!d.success) { showToast(d.message || '업로드 실패', 'danger'); return; }
     const att = d.attachment;
-    ALL_DOCS.push(att);
+    const genAt = ALL_DOCS.findIndex(x => x.isGenerated);
+    ALL_DOCS.splice(genAt < 0 ? ALL_DOCS.length : genAt, 0, att);
     const strip = document.getElementById('docStrip');
     const wrap  = document.getElementById('docStripWrap');
     const thumbHtml = att.isPdf
@@ -4324,12 +4520,16 @@ function handleAttachUpload(input) {
       : `<img class="attach-thumb-img" src="${att.url}" alt="${att.typeLabel}" loading="lazy">`;
     const thumbEl = document.createElement('div');
     thumbEl.className = 'attach-thumb doc-thumb';
+    thumbEl.dataset.docId = att.id;
     thumbEl.dataset.attId = att.id;
     thumbEl.setAttribute('onclick', 'switchViewerDoc(this)');
     thumbEl.innerHTML = `${thumbHtml}
       <div class="attach-type-badge">${att.typeLabel}</div>
       <button class="attach-del-btn" onclick="deleteAttachment(event,${att.id},this)" title="삭제"><i class="fa-solid fa-xmark"></i></button>`;
-    strip.appendChild(thumbEl);
+    /* 올린 문서는 시스템이 만든 서류 앞에 선다 — 사람이 넣은 것과 기계가 만든 것을
+       섞어 놓으면 어느 것이 무엇인지 눈으로 갈라내야 한다 */
+    const genSlot = document.getElementById('genThumbs');
+    strip.insertBefore(thumbEl, genSlot || null);
     if (wrap) wrap.style.display = '';
     syncDocEmpty();
     renderFaxDocs();
@@ -9596,26 +9796,35 @@ window.HELP_TOUR_STEPS = [
     }
   });
 
-  // 생성 서류 목록을 서버에서 다시 받아 갱신 (새로고침 없이)
+  /* 시스템이 만든 서류를 서버에서 다시 받아 문서 칸에 세운다(새로고침 없이).
+
+     예전에는 「생성 서류」 카드의 HTML 을 통째로 받아 갈아 끼웠다. 그 카드를 걷고
+     문서 칸 하나로 모았으므로, 이제는 값만 받아 그림칸을 다시 그린다. */
   let _genDocsTries = 0;
   async function refreshGeneratedDocs() {
     try {
-      const res = await fetch(@json(route('prescriptions.generatedDocs', $prescription)), {
-        headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+      const res = await fetch(GEN_DOCS_URL, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
       });
       if (!res.ok) return;
-      const html = (await res.text()).trim();
-      const container = document.getElementById('genDocsContainer');
-      if (!container) return;
-      const hadDeleg = html.includes('요양비위임장');
-      container.innerHTML = html;
+      const docs = (await res.json()).docs || [];
+      const hadDeleg = docs.some(d => d.type === 'delegation');
+
+      // ALL_DOCS 에서 시스템 서류만 갈아 끼운다 — 처방전ㆍ첨부는 건드리지 않는다
+      for (let k = ALL_DOCS.length - 1; k >= 0; k--) {
+        if (ALL_DOCS[k].isGenerated) ALL_DOCS.splice(k, 1);
+      }
+      const signAt = ALL_DOCS.findIndex(d => d.id < 0);
+      ALL_DOCS.splice(signAt < 0 ? ALL_DOCS.length : signAt, 0, ...docs);
+      renderGenThumbs();
+
       // 서명 직후 서버에서 아직 위임장 생성 중이면 잠깐 뒤 재시도 (최대 3회)
       if (!hadDeleg && _genDocsTries < 3) {
         _genDocsTries++;
         setTimeout(refreshGeneratedDocs, 1500);
       } else {
         _genDocsTries = 0;
-        if (hadDeleg && typeof showToast === 'function') showToast('요양비위임장이 생성 서류에 추가되었습니다.', 'success');
+        if (hadDeleg && typeof showToast === 'function') showToast('요양비위임장이 문서에 추가되었습니다.', 'success');
       }
       /* 위임장이 생겼으면 팩스 창의 신청 파일 줄도 「없음」에서 내려온다 */
       if (hadDeleg) {

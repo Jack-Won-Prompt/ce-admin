@@ -1283,7 +1283,10 @@ class PrescriptionController extends Controller
             }
         }
 
-        $allDocsJson = array_merge($rxDoc, $attachmentsJson, $signDocs);
+        /* 시스템이 만든 서류(위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서…)도
+           같은 자리에 세운다. 따로 목록 카드를 두던 것을 걷었다 — 보는 자리가 둘이면
+           어느 쪽을 봐야 하는지 매번 헤맸고, 그 카드에서는 확대도 이동도 되지 않았다. */
+        $allDocsJson = array_merge($rxDoc, $attachmentsJson, self::generatedDocsJson($prescription), $signDocs);
 
         // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
         $patientsJson = self::patientPickerList();
@@ -2200,12 +2203,41 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * 생성 서류 목록 partial HTML 반환 (서명 완료 시 실시간 갱신용).
+     * 시스템이 만든 서류 목록 (서명 완료 뒤 문서 칸을 새로 고칠 때 쓴다).
+     *
+     * 예전에는 「생성 서류」 카드의 HTML 조각을 돌려줬다. 그 카드를 걷고 문서 칸
+     * 하나로 모았으므로, 이제는 화면이 그림칸을 다시 그릴 수 있게 값만 준다.
      */
-    public function generatedDocs(Prescription $prescription): \Illuminate\Http\Response
+    public function generatedDocs(Prescription $prescription): \Illuminate\Http\JsonResponse
     {
-        $prescription->load('documents.creator');
-        return response(view('prescriptions._generated_docs', compact('prescription'))->render());
+        $prescription->load('documents');
+
+        return response()->json(['docs' => self::generatedDocsJson($prescription)]);
+    }
+
+    /**
+     * 시스템이 만든 서류를 문서 칸이 읽는 모양으로.
+     *
+     * id 는 음수다 — 첨부 파일의 id 와 한 배열에 서므로 겹치면 안 되고, 팩스 창처럼
+     * 「첨부만」 세는 곳이 id 가 양수인 것만 고르기 때문이다.
+     */
+    private static function generatedDocsJson(Prescription $prescription): array
+    {
+        return $prescription->documents->map(fn ($d) => [
+            'id'          => -1000 - $d->id,
+            'docId'       => $d->id,
+            'url'         => route('documents.preview', $d),
+            'downloadUrl' => route('documents.download', $d),
+            'type'        => $d->type,
+            'typeLabel'   => $d->typeLabel(),
+            'name'        => $d->original_filename ?: $d->typeLabel(),
+            /* 지금 만드는 것은 모두 PDF 지만, 예전에 장표를 PNG 로 그려 넣던 시절의
+               줄이 남아 있다. 확장자로 가른다 — PDF 가 아닌 것을 pdf.js 에 주면
+               그리지 못하고 예전 방식으로 떨어진다. */
+            'isPdf'       => strtolower(pathinfo((string) $d->file_path, PATHINFO_EXTENSION)) === 'pdf',
+            'isRx'        => false,
+            'isGenerated' => true,
+        ])->values()->toArray();
     }
 
     /**
