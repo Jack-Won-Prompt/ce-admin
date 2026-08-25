@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 class PatientApiController extends Controller
 {
     // ── GET /api/patients/search?q=... ────────────────────
-    /** 모바일 처방자료 업로드 — 환자 이름/연락처로 검색 (웹 patientSearch()와 동일한 규칙) */
+    /** 모바일 처방자료 업로드 — 환자 이름ㆍ연락처로 검색 */
     public function search(Request $request): JsonResponse
     {
         $q = trim((string) $request->input('q', ''));

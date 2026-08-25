@@ -80,8 +80,6 @@ Route::middleware(['auth'])->group(function () {
         // 빈 검수·등록 화면 (메뉴 '처방전 관리') — 초안 1건을 잡아 검수 화면으로 보낸다
         // ('/{prescription}' 보다 먼저 등록해야 'create' 가 처방번호로 해석되지 않는다)
         Route::get('/create',                            [PrescriptionController::class, 'create'])->name('create');
-        Route::get('/patient-search',                    [PrescriptionController::class, 'patientSearch'])->name('patientSearch');
-        Route::get('/patients/{patient}/counselings',     [PrescriptionController::class, 'patientCounselings'])->name('patientCounselings');
         // 「조회」로 고른 사람의 상담ㆍ환자 정보 한 벌 — 고른 순간 화면을 채운다
         Route::get('/patients/{patient}/detail',          [PrescriptionController::class, 'patientDetail'])->name('patientDetail');
         // 그 사람이 지금까지 만든 건들 — 새 건으로 갈지 하던 건을 이어갈지 고른다

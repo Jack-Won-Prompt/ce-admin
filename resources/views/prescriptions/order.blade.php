@@ -2259,6 +2259,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                   <div class="pk-foot" id="pkFoot1">
                     <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+                    {{-- 같은 이름이 있어 저장을 멈췄을 때만 선다. 정말 다른 사람이면
+                         여기서 그대로 간다 — 같은 이름이라고 저장 자체를 막지는 않는다. --}}
+                    <button type="button" class="ds-btn" id="pkNewPerson" style="display:none;"
+                            onclick="pkSaveAsNew()">새 사람으로 저장</button>
                     <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
                   </div>
@@ -2551,7 +2555,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row">
                 {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
-                <span class="rx-field-label">병원명 <span id="f-hospital-req" style="color:var(--primary);">*</span></span>
+                {{-- 별표를 뗐다. 병원명이 없다고 저장을 막으면, 처방전을 손에 들기 전에
+                     이름부터 적어 두는 흔한 순서가 막힌다 — 적을 것은 적히는 대로 남긴다. --}}
+                <span class="rx-field-label">병원명</span>
                 <div class="field-group" style="flex:1;">
                   <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
@@ -5021,6 +5027,9 @@ window.HELP_TOUR_STEPS = [
   window.pkClose = function () {
     const pop = document.getElementById('pkModal');
     if (pop) pop.style.display = 'none';
+    // 「새 사람으로 저장」은 같은 이름을 가릴 때만 서는 단추다
+    const nb = document.getElementById('pkNewPerson');
+    if (nb) nb.style.display = 'none';
   };
 
   window.pkReset = function () {
@@ -5112,6 +5121,35 @@ window.HELP_TOUR_STEPS = [
     const known = (PK_PATIENTS ?? []).some(p => bare(p.name) === bare(name));
     if (!known) sel.value = '신구매';
   }
+
+  /* 거래처에 같은 이름이 있는가 — (E) 는 사업부 표시라 견줄 때는 떼고 본다 */
+  function sameNamePatients(name) {
+    const bare = (v) => String(v ?? '').replace(/^\s*\(E\)\s*/, '').trim();
+    const n = bare(name);
+    if (!n) return [];
+    return (PK_PATIENTS ?? []).filter(p => bare(p.name) === n);
+  }
+
+  /* 같은 이름이 있어 저장을 멈췄을 때 여는 창.
+     쓰던 「이름 조회」 창 그대로다 — 그 이름으로 찾아 놓고 열되, 바닥에 「새 사람으로
+     저장」을 하나 더 세운다. 고르면 그 사람으로 이어지고, 새 사람이면 그대로 간다. */
+  function openSameNamePicker(name, count) {
+    /* pkOpen 은 열려 있으면 닫는 토글이다 — 닫아 두고 연다.
+       창은 f-name 을 그대로 찾아 놓고 열리므로 따로 칠 말을 넣지 않아도 된다. */
+    pkClose();
+    const btn = document.getElementById('pkNewPerson');
+    if (btn) btn.style.display = '';
+    pkOpen();
+
+    showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 같은 분이면 고르고, 다른 분이면 「새 사람으로 저장」을 누르십시오.`,
+              'warning', 7000);
+  }
+
+  /* 정말 새 사람이다 — 가리기를 건너뛰고 그대로 저장한다 */
+  window.pkSaveAsNew = async function () {
+    pkClose();
+    await saveOCR({ newPerson: true });
+  };
 
   const PATIENT_CASES_URL = @json(route('prescriptions.patientCases', ['patient' => '__ID__']));
 
@@ -5486,11 +5524,13 @@ window.HELP_TOUR_STEPS = [
     );
     if (!ok) return;
 
-    await saveOCR();
+    /* 저장이 멈추면 그대로 멈춘다 — 왜 멈췄는지는 저장 쪽이 이미 알렸다.
+       여기서 「저장하지 못해…」를 한 번 더 내면 진짜 까닭이 그 밑에 깔린다. */
+    if (!await saveOCR()) return;
 
     // 저장이 끝나면 서버가 알려 준 사람 id 가 들어와 있다
     const id = document.getElementById('f-patient-id')?.value;
-    if (!id) { showToast('저장하지 못해 상담을 열지 못했습니다.', 'danger', 5000); return; }
+    if (!id) { showToast('저장은 됐지만 사람을 잇지 못했습니다.', 'danger', 5000); return; }
 
     window.csOpen(parseInt(id, 10), document.getElementById('f-name')?.value?.trim() || name, tel);
   }
@@ -6337,21 +6377,6 @@ window.HELP_TOUR_STEPS = [
     if (refTotal) refTotal.textContent = total || '-';
   }
 
-  /** 처방전 없이 사는 건인가 — 「유형」이 처방외(20)일 때. */
-  function isNonRxOrder() {
-    return (document.getElementById('f-acc-add-type')?.value ?? '') === '20';
-  }
-
-  /* 처방외를 고르면 병원명 별표를 뗀다. 별표는 「없으면 저장이 안 된다」는 약속이라,
-     묻지 않기로 해 놓고 별표만 남겨 두면 그 약속이 거짓이 된다. */
-  function syncRxRequired() {
-    const star = document.getElementById('f-hospital-req');
-    if (star) star.style.display = isNonRxOrder() ? 'none' : '';
-  }
-
-  document.getElementById('f-acc-add-type')?.addEventListener('change', syncRxRequired);
-  document.addEventListener('DOMContentLoaded', syncRxRequired);
-
   /* opts.silent: 알림을 내지 않는다(다른 단추가 저장을 대신 부를 때).
      되돌리는 값은 「저장이 됐는가」다 — 부른 쪽이 이어서 할지 멈출지 가린다. */
   async function saveOCR(opts = {}) {
@@ -6359,15 +6384,25 @@ window.HELP_TOUR_STEPS = [
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
 
-    /* 처방외는 처방전 없이 사는 건이다 — 병원도 처방도 없다. 그런 건까지 병원명을
-       물으면 적을 수 없는 것을 적어야 저장이 되어, 없는 병원 이름이 들어간다. */
+    /* 저장의 문턱은 이름 하나다.
+
+       예전에는 병원명도 물었다. 그런데 상담은 대개 이름과 전화번호부터 적히고 처방전은
+       나중에 온다 — 그때마다 「이름, 병원명은 필수 항목입니다」에 막혀 적어 둔 것을
+       통째로 잃었다. 병원명은 서버도 nullable 이다. 적을 것은 적히는 대로 남긴다. */
     if (!name) {
       showToast('이름은 필수 항목입니다.', 'warning');
       return false;
     }
-    if (!isNonRxOrder() && !hosp) {
-      showToast('이름, 병원명은 필수 항목입니다.', 'warning');
-      return false;
+
+    /* 다만 사람이 둘로 갈라지는 것은 막는다.
+
+       이어 둔 사람 없이 이름만 적었는데 거래처에 같은 이름이 이미 있으면, 그대로
+       저장하면 같은 사람이 둘이 된다 — 한 번 갈라지면 상담도 주문도 두 곳에 나뉘어
+       쌓이고, 나중에 합치는 데 더 큰 품이 든다. 창을 열어 누구인지 가린 뒤에 저장한다.
+       정말 다른 사람이면 그 창에서 「새 사람으로 저장」을 누른다. */
+    if (!opts.newPerson && !document.getElementById('f-patient-id')?.value) {
+      const dup = sameNamePatients(name);
+      if (dup.length) { openSameNamePicker(name, dup.length); return false; }
     }
 
     /* 보낼 제품 줄은 items 에서 만든다 — 표에서 고친 값을 wwGrid 의 onChange 가

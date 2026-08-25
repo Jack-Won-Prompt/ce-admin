@@ -1115,66 +1115,6 @@ class PrescriptionController extends Controller
         ];
     }
 
-    public function patientSearch(Request $request): JsonResponse
-    {
-        $q = trim((string) $request->input('q', ''));
-        if (mb_strlen($q) < 2) {
-            return response()->json(['success' => false, 'message' => '두 글자 이상 입력해 주세요.', 'patients' => []]);
-        }
-
-        $digits = preg_replace('/\D/', '', $q);
-
-        $patients = Patient::where(function ($sub) use ($q, $digits) {
-                $sub->where('name', 'like', "%{$q}%");
-                if ($digits !== '' && strlen($digits) >= 4) {
-                    $sub->orWhere('mobile', 'like', "%{$digits}%")
-                        ->orWhere('phone', 'like', "%{$digits}%");
-                }
-            })
-            ->withCount(['prescriptions as counseling_count' => fn ($sub) => $sub->whereNotNull('counsel_no')])
-            ->orderBy('name')
-            ->limit(30)
-            ->get();
-
-        return response()->json([
-            'success'  => true,
-            'patients' => $patients->map(fn (Patient $p) => [
-                'id'               => $p->id,
-                'name'             => $p->name,
-                'resident_no'      => $p->masked_resident_no ?? '-',
-                'mobile'           => $p->mobile ?? $p->phone ?? '-',
-                'counseling_count' => (int) $p->counseling_count,
-            ])->values(),
-        ]);
-    }
-
-    /**
-     * 검수 화면 '환자 조회': 선택한 환자의 과거 상담 이력 목록.
-     * 반환 형식은 검수 화면의 '이전 상담 이력' 모달과 동일해 그대로 재사용·가져오기가 된다.
-     */
-    public function patientCounselings(Patient $patient): JsonResponse
-    {
-        $rows = Prescription::where('patient_id', $patient->id)
-            ->whereNotNull('counsel_no')
-            ->orderByDesc('id')
-            ->limit(30)
-            ->with(['items', 'order.tossPayment', 'consents', 'faxHistories'])
-            ->get([
-                'id', 'rx_number', 'created_at', 'status',
-                'patient_name_ocr', 'resident_no_ocr_masked', 'mobile_ocr', 'address_ocr',
-                'hospital_name', 'doctor_name', 'license_no', 'issued_date',
-                'postcode', 'address_detail', 'patient_id', 'repurchase_date',
-            ])
-            ->filter(fn ($p) => !empty($p->counsel_no))
-            ->values();
-
-        return response()->json([
-            'success'     => true,
-            'patient'     => ['id' => $patient->id, 'name' => $patient->name],
-            'counselings' => $rows->map(fn ($p) => $this->counselingPayload($p))->values(),
-        ]);
-    }
-
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
