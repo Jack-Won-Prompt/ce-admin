@@ -1279,6 +1279,25 @@
        다만 0 으로 붙여 두니 첫 카드의 그림자와 모서리가 탭줄에 닿아, 10 만 둔다. */
     html.is-framed .page-body { padding-top: 10px; }
 
+    /* 액자 안에서는 문서가 창을 넘지 않는다 — 넘치는 만큼은 본문이 스스로 굴린다.
+
+       예전에는 넘친 채로 두고, 액자를 쥔 바깥 화면이 그만큼 액자를 늘려 맞췄다
+       (거래처 관리의 pfFit 이 그랬다). 그런데 안쪽 판이 「짧아도 바닥까지」 채우도록
+       바뀌면서, 액자를 늘리면 안쪽도 그만큼 늘어 넘치는 양이 그대로 남았다 —
+       서로 쫓느라 화면이 끝없이 떨렸다.
+
+       넘치지 않게 두면 늘릴 까닭도 사라진다. 길면 본문이 굴러가고, 아래가 잘리지도
+       않는다.
+
+       키를 창에서부터 아래로 내려 준다. 한 마디라도 빠뜨리면 그 아래는 다시 내용만큼
+       커져 버리므로, 액자 바닥까지 이어지는 마디를 모두 적는다. */
+    html.is-framed, html.is-framed body { height: 100%; overflow: hidden; }
+    html.is-framed .layout-wrapper,
+    html.is-framed .layout-container,
+    html.is-framed .layout-page,
+    html.is-framed .content-wrapper { height: 100%; min-height: 0; }
+    html.is-framed .page-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
     /* 프레임 안에서만 보이는 화면 단추 줄. 비어 있으면 자리도 차지하지 않는다 —
        :empty 로는 공백 때문에 잡히지 않아 자식이 없을 때를 본다. */
     .framed-actions { display: none; }

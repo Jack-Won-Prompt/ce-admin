@@ -374,7 +374,7 @@
   <div id="pfEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 여기에 나옵니다.</div>
   {{-- 높이는 안에 들어온 화면이 정한다 — 고정값을 주었더니 내용이 짧은 사람은
        목록 아래로 흰 바닥이 한 참 남고, 긴 사람은 액자 안에서 또 스크롤해야 했다. --}}
-  {{-- 높이는 CSS 가 판에 맞춘다. pfFit 은 판보다 내용이 길 때만 늘린다. --}}
+  {{-- 높이는 CSS 가 잡는다 — 판을 채우고, 안쪽이 길면 안에서 굴린다. --}}
   <iframe id="pfFrame" title="환자 상세"
           style="display:none;width:100%;border:0;vertical-align:top;"></iframe>
 </div>{{-- /#pnlDetail --}}
@@ -688,18 +688,18 @@ document.addEventListener('keydown', (e) => {
      열려 화면이 겹친다(환자 상세 안에 처방전 목록이 들어앉는 식이다).
      환자 목록으로 가는 링크는 바깥의 조회 결과 탭으로 돌리고, 그 밖의 화면은
      워크스페이스 탭으로 올려 보낸다. 같은 곳에서 온 문서라 안을 만질 수 있다. */
-  /* 액자 높이를 안의 내용에 맞춴 둔다. 탭을 옥기거나 고치기로 들어가면
-     안의 키가 바뀌므로, 한 번 재는 것으로는 모자란다 — 계속 따라간다. */
-  /* 액자는 판을 채우는 것이 기본이다(CSS flex). 안쪽 내용이 판보다 길 때만 그만큼 늘려
-     안팎으로 스크롤이 겹치지 않게 한다. */
-  function pfFit(frame) {
-    const d = frame.contentDocument;
-    if (!d || !d.body) return;
-    const h = Math.max(d.body.scrollHeight, d.documentElement.scrollHeight);
-    const pane = frame.parentElement;
-    const avail = pane ? pane.clientHeight : 0;
-    frame.style.minHeight = (h && h > avail) ? h + 'px' : '';
-  }
+  /* 액자 높이는 CSS 가 잡는다 — 판을 채우고, 안쪽이 길면 안에서 굴린다
+     (.ds-grid-section.is-fit #pfFrame).
+
+     예전에는 여기서 안쪽 키를 재어 액자를 늘렸다(pfFit). 안쪽 문서가 제 내용만큼만
+     크던 시절에는 그것이 맞았는데, 상세 화면이 「내용이 짧아도 바닥까지」 채우도록
+     바뀌면서 서로 쫓는 꼴이 됐다 —
+
+       액자가 커진다 → 안쪽 문서가 그만큼 늘어난다 → 잰 키가 더 커진다 → 액자를 더
+       늘린다 → …
+
+     ResizeObserver 가 그 한 바퀴마다 다시 불려 화면이 끝없이 떨렸다. 두 쪽이 서로
+     「상대만큼 커지겠다」고 하면 멈출 자리가 없다. 재는 쪽을 걷어 한 방향으로 만든다. */
 
   document.getElementById('pfFrame').addEventListener('load', function () {
     const frameUrl = this.dataset.url;
@@ -708,11 +708,8 @@ document.addEventListener('keydown', (e) => {
       const d = this.contentDocument;
       if (!d) return;
 
-      pfFit(frame);
-      if (window.ResizeObserver) {
-        new ResizeObserver(() => pfFit(frame)).observe(d.body);
-      }
-      d.defaultView.addEventListener('resize', () => pfFit(frame));
+      // 지난 화면에서 늘려 둔 값이 남아 있으면 걷는다
+      frame.style.minHeight = '';
 
       d.addEventListener('click', (ev) => {
         const a = ev.target.closest('a[href]');
