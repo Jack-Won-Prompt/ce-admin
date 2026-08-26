@@ -15,7 +15,8 @@
      그 탭에 빈 흰 칸이 따로 생긴 것처럼 보인다. */
   .detail-layout { display:flex; flex-direction:column; gap:14px; flex:1 1 auto; min-height:0; }
   .detail-layout > :last-child { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
-  .detail-layout > :last-child > .card { flex:1 1 auto; min-height:0; }
+  /* 밑변까지 내려온 표가 카드 모서리 밖으로 새지 않게 한다 */
+  .detail-layout > :last-child > .card { flex:1 1 auto; min-height:0; overflow:hidden; }
 
   /* 개인정보는 세로로 길게 쌓지 않고 한 줄에 여럿 눕힌다 — 여섯 항목이 한두 줄에 들어온다.
      주소는 길어 두 칸을 쓴다. */
@@ -90,8 +91,23 @@
   }
   .tab-btn:hover { color:var(--primary); }
   .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
-  .tab-pane { display:none; }
-  .tab-pane.active { display:block; }
+  /* 탭 판은 받은 높이를 표에 그대로 넘긴다 — 표가 카드 밑변까지 서고 「전체 N건」
+     띠가 그 바닥에 붙는다. display:block 이던 시절에는 표가 제 내용만큼만 서서
+     띠가 표 밑에 떠 있고, 그 아래로 흰 바닥이 한 참 남았다. */
+  .tab-bar { flex:0 0 auto; }
+  /* 접힌 판은 `:not(.active)` 로 접는다. 그냥 `.tab-pane` 이면 레이아웃의
+     `.card *:has(.cg-root)`(표를 품은 껍데기를 세로 flex 로 만드는 규칙)보다 약해
+     져, 표가 한 번 만들어진 판은 접어도 다시 펴졌다 — 주문 제품을 한 번 연 뒤
+     주문 이력으로 돌아가면 두 표가 함께 보였다. */
+  .tab-pane:not(.active) { display:none; }
+  .tab-pane.active { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+
+  /* 표는 카드 안쪽 여백(12/16)을 넘어 양옆·밑변까지 간다 — 띠가 카드 폭을 다 쓴다.
+     조회 결과 목록의 아래끝이 그렇게 생겼고, 같은 자리에서 같게 읽혀야 한다.
+     카드가 이미 흰 판이니 표는 제 테두리·모서리를 또 두르지 않는다. */
+  #tab-rx, #tab-items { margin:0 -16px -12px; }
+  #itemsNote { padding:0 16px; }
+  #tab-rx .cg-wrap, #tab-items .cg-wrap { border:0; border-radius:0; }
 
 
 </style>
