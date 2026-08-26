@@ -9,8 +9,22 @@
 <style>
   /* 패널 탭(그룹 목록 / 권한 편집) — 다른 화면과 동일 패턴 */
 
-  .pg-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:12px 16px; font-size:12px; font-weight:400; color:var(--text-secondary); margin-bottom:16px; line-height:18px; }
+  /* 안내문 — 상자를 걷고 전역 .ds-grid-hint(12/500 · gray-600 · 앞에 12×12 alert-circle)를 쓴다.
+     그 부품은 결과바 한 줄용이라 nowrap + 말줄임이라, 두 문장짜리 이 안내를 그대로 담으면
+     뒷말이 잘려 화면에서 낱말이 사라진다. 줄바꿈만 되돌리고 규격은 전역 그대로 둔다.
+     안여백은 카드 안 규격 12/16 (아래는 다음 줄의 pad-top 12 가 만든다). */
+  .pg-note { display:block; white-space:normal; overflow:visible; text-overflow:clip;
+    margin:0; padding:12px 16px 0; }
+
+  /* 카드 안 동작 줄 — 안여백 12/16 · 단추 사이 8 */
+  .ds-panel-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 16px; }
+  /* 되돌릴 수 없는 동작(선택 삭제)만 alert 램프 — var(--danger) 가 곧 var(--alert-500) 이라 색은 그대로다 */
+  .ds-btn-danger       { border-color:var(--alert-500); color:var(--alert-500); }
+  .ds-btn-danger:hover { background:var(--alert-50); }
+
+  /* 권한 편집 패널도 같은 카드 안이다 — 카드 안여백 12/16 */
+  #pnlEdit { padding:12px 16px; }
+
   .pg-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   /* 입력 h32 = pad 5 + lh 20 + pad 5 + 테두리 2 */
   .pg-head input[type=text] { height:32px; padding:0 12px; border:1px solid var(--gray-200); border-radius:8px;
@@ -40,20 +54,26 @@
 
 @section('content')
 
-<div class="pnl-tabs">
-  <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-    <i class="fa-solid fa-layer-group"></i> 그룹 목록
-  </button>
-  <button type="button" id="pnlBtnEdit" class="pnl-tab" onclick="pnlShow('edit')">
-    <i class="fa-solid fa-sliders"></i> 권한 편집
-    <span id="pnlEditName" style="font-size:11px;color:var(--text-muted);font-weight:500;"></span>
-  </button>
-</div>
+<div class="ds-grid-section">
+  <div class="ds-grid-card">
+
+    <div class="pnl-tabs">
+      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
+        <i class="fa-solid fa-layer-group"></i> 그룹 목록
+        <span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span>
+      </button>
+      <button type="button" id="pnlBtnEdit" class="pnl-tab" onclick="pnlShow('edit')">
+        <i class="fa-solid fa-sliders"></i> 권한 편집
+        <span id="pnlEditName" style="font-size:11px;color:var(--text-muted);font-weight:500;"></span>
+      </button>
+      <button type="button" class="ds-btn ds-btn-primary" style="margin-left:auto;" onclick="openCreate()">
+        <i class="bx bx-plus"></i> 그룹 추가
+      </button>
+    </div>
 
 {{-- ══ 그룹 목록 ══ --}}
 <div id="pnlList">
-  <div class="pg-note">
-    <i class="bx bx-info-circle"></i>
+  <div class="ds-grid-hint pg-note">
     권한 그룹을 만들어 사용자에게 부여하면, 그룹에 허용한 <b>페이지만 메뉴에 보이고</b>
     허용한 <b>동작(조회·등록·수정·삭제·발송)만 버튼으로 노출</b>됩니다.
     사용자별 부여는 <b>설정 &gt; 관리자 관리</b>에서 합니다.<br>
@@ -61,23 +81,19 @@
     권한 설정 실수로 시스템에서 잠기는 일을 막기 위한 안전장치입니다.
   </div>
 
-  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;">
-    <button type="button" class="btn btn-primary btn-sm" onclick="openCreate()">
-      <i class="bx bx-plus"></i> 그룹 추가
-    </button>
-    <button type="button" class="btn btn-outline btn-sm" onclick="editSelected()">
+  <div class="ds-panel-actions">
+    <button type="button" class="ds-btn" onclick="editSelected()">
       <i class="bx bx-sliders"></i> 선택 권한 편집
     </button>
-    <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);"
-            onclick="deleteSelected()">
+    <button type="button" class="ds-btn ds-btn-danger" onclick="deleteSelected()">
       <i class="bx bx-trash"></i> 선택 삭제
     </button>
-    <span style="font-size:12px;color:var(--text-muted);">
-      <i class="bx bx-info-circle"></i> 행을 <b>클릭</b>하면 권한 편집 탭이 열립니다.
-    </span>
-    <span class="badge bg-label-primary" style="margin-left:auto;">전체 {{ number_format($total) }}개</span>
+    <span class="ds-grid-hint">행을 <b>클릭</b>하면 권한 편집 탭이 열립니다.</span>
+    <button type="button" class="ds-btn" style="margin-left:auto;" onclick="window.__pgGrid?.downloadExcel()">
+      엑셀 저장
+    </button>
   </div>
-  <div id="pgGrid"></div>
+  <div style="padding:0 16px 16px;"><div id="pgGrid"></div></div>
 </div>
 
 {{-- ══ 권한 편집 ══ --}}
@@ -98,16 +114,19 @@
     <div id="pgMatrix"></div>
 
     <div class="pg-actions">
-      <button type="button" class="btn btn-outline btn-sm" onclick="pnlShow('list')">
+      <button type="button" class="ds-btn" onclick="pnlShow('list')">
         <i class="bx bx-arrow-back"></i> 목록으로
       </button>
       <span class="spacer"></span>
-      <button type="button" class="btn btn-outline btn-sm" onclick="checkAll(true)">전체 허용</button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="checkAll(false)">전체 해제</button>
-      <button type="button" class="btn btn-primary btn-sm" id="pgSaveBtn" onclick="saveMatrix()">
+      <button type="button" class="ds-btn" onclick="checkAll(true)">전체 허용</button>
+      <button type="button" class="ds-btn" onclick="checkAll(false)">전체 해제</button>
+      <button type="button" class="ds-btn ds-btn-primary" id="pgSaveBtn" onclick="saveMatrix()">
         <i class="bx bx-save"></i> 저장
       </button>
     </div>
+  </div>
+</div>
+
   </div>
 </div>
 
@@ -161,7 +180,9 @@
   /* ── 그룹 목록 그리드 (wwGrid) ─────────────────────────── */
   const grid = new wwGrid({
     el: document.getElementById('pgGrid'),
-    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true,
+    // toolbar:false — 그리드가 표 위에 따로 그리던 「엑셀 저장」 줄을 끄고,
+    // 그 단추를 카드 안 동작 줄로 옮겼다(목록 화면 스물넷과 같은 자리다).
+    height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '그룹명',   name: 'name',        width: 200, sortable: true },

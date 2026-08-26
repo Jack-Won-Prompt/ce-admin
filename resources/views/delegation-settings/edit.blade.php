@@ -6,14 +6,35 @@
 
 @push('styles')
 <style>
-  .ds-form { max-width:100%; }
-  /* 카드 2열 배치로 우측 공백 최소화(좁은 화면은 1열) */
-  .ds-cards { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; align-items:start; }
-  @media (max-width:820px) { .ds-cards { grid-template-columns:1fr; } }
-  .ds-card { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:0; }
-  /* 섹션 제목 = 14px/700 */
-  .ds-card h3 { margin:0 0 16px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
-    padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  /* 껍데기 — 블록 사이 12. .page-body 가 제 자식들에게 두는 간격과 같다. */
+  .ds-form { max-width:100%; gap:12px; }
+
+  /* ── 안내문 ──────────────────────────────────────────
+     전역 .ds-grid-hint 규격 그대로다 — 12/500 · #656C74 · 앞에 12 아이콘 · gap 4 · 상자 없음.
+     전에는 파란 상자(bg #E9F9FB · 1px 테두리 · r8 · pad 12/16 · 12/400)였는데
+     목록 화면 스물넷 어디에도 그런 상자가 없다.
+     결과바에서는 한 줄로 줄이지만(말줄임) 여기서는 줄을 접어 낱말을 다 보인다. */
+  .ds-form .ds-grid-hint { white-space:normal; overflow:visible; text-overflow:clip; margin-right:0; }
+  /* 개발자가 넣어 둔 info-circle 을 그대로 쓴다(전역 규칙이 제 mask 아이콘을 접는다).
+     크기를 시안값 12 로, 글자와의 사이를 4 로 못박는다. */
+  .ds-form .ds-grid-hint > i { font-size:12px; line-height:19px; vertical-align:top; margin-right:4px; }
+  /* <b> 의 브라우저 기본 bolder 는 500 위에서 700 으로 풀린다 — 시안 굵기로 못박는다 */
+  .ds-form .ds-grid-hint b { font-weight:700; }
+
+  /* ── 흰 카드 ──────────────────────────────────────────
+     탭줄과 폼과 저장 단추를 전역 .ds-grid-card 하나가 담는다 — /documents 와 같은 부품이다
+     (흰 바탕 · r12 · 테두리 없음 · 그림자 없음. 시안 148:6653 · 156:7261).
+     전에는 흰 카드가 눌려 있어(.ds-pane .ds-card { border:none; padding:0 })
+     폼이 회색 바탕 위에 바로 놓였다.
+     한 가지만 되돌린다 — overflow. 목록 카드는 hidden 이라 그리드가 안에서 스크롤하지만,
+     「글자 항목 위치」 탭은 표가 뷰포트보다 길어 hidden 이면 잘리고 스크롤도 안 생긴다. */
+  .ds-form .ds-grid-card { overflow:visible; }
+
+  /* 카드 안여백 12/16 */
+  .ds-card { background:transparent; border:none; border-radius:0; padding:12px 16px; margin-bottom:0; }
+  /* 구획 제목 = 14px/700. 바로 위 탭줄이 이미 경계선이라 제목은 선을 또 긋지 않는다. */
+  .ds-card h3 { margin:0 0 12px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
+    display:flex; align-items:center; gap:8px; }
   .ds-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .ds-field { display:flex; flex-direction:column; gap:4px; }
   .ds-field.full { grid-column:1 / -1; }
@@ -26,44 +47,34 @@
     color:var(--gray-1000); background:var(--gray-0); }
   .ds-form input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
   .ds-hint { font-size:12px; font-weight:400; line-height:18px; color:var(--text-muted); }
-  .ds-note { background:var(--primary-light); border:1px solid var(--border); border-radius:8px;
-    padding:12px 16px; font-size:12px; font-weight:400; line-height:18px; color:var(--text-secondary); margin-bottom:16px; }
+
   /* ── 가로 탭 ──────────────────────────────────────────
      구획 여섯이 세로로 쌓여 있어 좌표 하나 고치려면 한참 내려가야 했다. 가로로 갈라
      한 번에 한 구획만 보이게 한다. 저장 단추는 탭 밖에 두어 어느 탭에서든 누른다
-     (칸은 모두 한 폼 안에 남아 있어, 감춰진 탭의 값도 함께 저장된다). */
-  .ds-tabs { display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border);
-             margin-bottom:16px; }
-  .ds-tab  { padding:9px 14px; border:none; background:none; cursor:pointer;
-             font-size:13px; font-weight:500; line-height:20px; color:var(--gray-700);
-             border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap;
-             display:inline-flex; align-items:center; gap:6px; }
-  .ds-tab:hover  { color:var(--primary); }
-  .ds-tab.active { color:var(--primary); font-weight:700; border-bottom-color:var(--primary); }
+     (칸은 모두 한 폼 안에 남아 있어, 감춰진 탭의 값도 함께 저장된다).
+     줄 자체는 전역 .pnl-tabs / .pnl-tab 을 가져다 쓴다 —
+     h44 · pad 0/16 · gap 8 · 13/500 · 밑줄 1px. 전에는 이 화면만 h40 · gap 4 · 13/700 · 밑줄 2px 이었다. */
   .ds-pane { display:none; }
   .ds-pane.active { display:block; }
-  /* 탭 안에서는 카드가 하나뿐이라 테두리를 겹쳐 두지 않는다 */
-  .ds-pane .ds-card { border:none; padding:0; }
-  .ds-pane .ds-card h3 { margin-top:0; }
+
+  /* ── 저장 단추 ────────────────────────────────────────
+     카드 오른쪽 아래. 설정 화면 둘(/settings/services · /settings/withworks)이 같은 자리다 —
+     카드 오른쪽 안여백 16 에 맞춰 선다. 전에는 카드 밖 왼쪽 아래(x336)에 홀로 떠 있었다.
+     margin-top:auto 가 짧은 탭에서 단추를 카드 바닥으로 내려보내고,
+     표가 긴 「글자 항목 위치」 탭에서는 0 이 되어 표 바로 아래에 붙는다. */
+  .ds-save { display:flex; justify-content:flex-end; padding:12px 16px; margin-top:auto; flex-shrink:0; }
 
   /* ── 아래를 채운다 ──────────────────────────────────────
      한 번에 탭 하나만 보이는 화면이라, 짧은 탭에서는 흰 카드 아래로 회색이
-     754~866 드러났다. 껍데기(.ds-form) → FORM → 보이는 .ds-pane 순서로
-     남는 높이를 내려보내고, 흰 .ds-card 가 그것을 받는다.
-     늘어나는 것은 카드의 빈 아래쪽이다 — 입력칸·표 행은 제 높이 그대로다. */
-  .ds-pane.active.fill-col { display:flex; flex-direction:column; }
-  /* 세로 flex 의 stretch 가 저장 단추를 본문 폭만큼 늘리는 것을 막는다 */
-  .ds-form > form.fill-col > .btn { align-self:flex-start; }
-  /* 저장 단추(32)와 그 위 여백(16)이 카드 밖에 있어, 카드를 바닥까지 늘려도
-     48 짜리 회색 띠가 단추 오른쪽으로 1473 만큼 남았다. 카드 아래에 그만큼
-     안여백을 두고 판을 같은 만큼 끌어내려, 단추가 카드의 빈 아래쪽에 앉게 한다.
-     (짧은 탭이든 표가 긴 「글자 항목 위치」 탭이든 겹치는 곳이 없다.) */
-  .ds-pane .ds-card.fill-rest { padding-bottom:48px; }
-  .ds-pane.active.fill-col     { margin-bottom:-48px; }
+     754~866 드러났다. 껍데기(.ds-form) → FORM → 흰 .ds-grid-card 순서로
+     .fill-rest / .fill-col 이 남는 높이를 내려보낸다.
+     늘어나는 것은 카드의 빈 아래쪽이다 — 입력칸·표 행은 제 높이 그대로다.
+     판(.ds-pane)에는 .fill-rest 를 걸지 않는다. 그 자리는 저장 단추의 margin-top:auto 가
+     대신한다 — min-height:0 인 판이 긴 탭에서 제 내용보다 짧게 줄어드는 일이 없다. */
 
   /* 성공은 primary 램프로만 표현한다(시안에 초록이 없다) */
   .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
-    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
+    padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; }
 </style>
 @endpush
 
@@ -78,27 +89,27 @@
     </div>
   @endif
 
-  <div class="ds-note">
-    <i class="bx bx-info-circle"></i> 여기서 설정한 값은 <b>요양비 지급청구 위임장 PDF</b>의 ② 준요양기관 · ③ 수령계좌 ·
-    ⑤ 위임기간과 서명 위치에 자동으로 반영됩니다.
-  </div>
+  {{-- 앞 아이콘은 전역 .ds-grid-hint::before 가 그린다 (12×12 alert-circle · mr 4) --}}
+  <div class="ds-grid-hint">여기서 설정한 값은 <b>요양비 지급청구 위임장 PDF</b>의 ② 준요양기관 · ③ 수령계좌 ·
+    ⑤ 위임기간과 서명 위치에 자동으로 반영됩니다.</div>
 
   <form method="POST" action="{{ route('delegation-settings.update') }}" class="fill-rest fill-col">
     @csrf
     @method('PUT')
 
+    <div class="ds-grid-card fill-rest fill-col">
     {{-- 탭줄 — 구획 이름 그대로다 --}}
-    <div class="ds-tabs" role="tablist">
-      <button type="button" class="ds-tab active" data-pane="dsp-provider"><i class="bx bx-buildings"></i> ② 준요양기관</button>
-      <button type="button" class="ds-tab" data-pane="dsp-account"><i class="bx bx-credit-card"></i> ③ 수령계좌</button>
-      <button type="button" class="ds-tab" data-pane="dsp-period"><i class="bx bx-calendar"></i> ⑤ 위임기간</button>
-      <button type="button" class="ds-tab" data-pane="dsp-sig"><i class="bx bx-move"></i> 서명 위치</button>
-      <button type="button" class="ds-tab" data-pane="dsp-gsig"><i class="bx bx-user-check"></i> 보호자 서명 위치</button>
-      <button type="button" class="ds-tab" data-pane="dsp-fields"><i class="bx bx-text"></i> 글자 항목 위치</button>
+    <div class="pnl-tabs" role="tablist">
+      <button type="button" class="pnl-tab active" data-pane="dsp-provider"><i class="bx bx-buildings"></i> ② 준요양기관</button>
+      <button type="button" class="pnl-tab" data-pane="dsp-account"><i class="bx bx-credit-card"></i> ③ 수령계좌</button>
+      <button type="button" class="pnl-tab" data-pane="dsp-period"><i class="bx bx-calendar"></i> ⑤ 위임기간</button>
+      <button type="button" class="pnl-tab" data-pane="dsp-sig"><i class="bx bx-move"></i> 서명 위치</button>
+      <button type="button" class="pnl-tab" data-pane="dsp-gsig"><i class="bx bx-user-check"></i> 보호자 서명 위치</button>
+      <button type="button" class="pnl-tab" data-pane="dsp-fields"><i class="bx bx-text"></i> 글자 항목 위치</button>
     </div>
 
-    <div class="ds-pane active fill-rest fill-col" id="dsp-provider">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane active" id="dsp-provider">
+    <div class="ds-card">
       <h3><i class="bx bx-buildings"></i> ② 준요양기관</h3>
       <div class="ds-grid">
         <div class="ds-field full"><label>상호</label><input type="text" name="provider_name" value="{{ old('provider_name', $setting->provider_name) }}" placeholder="예: 콜로플라스트코리아(주)"></div>
@@ -110,8 +121,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane fill-rest fill-col" id="dsp-account">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane" id="dsp-account">
+    <div class="ds-card">
       <h3><i class="bx bx-credit-card"></i> ③ 요양비 수령계좌</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>수령자</label><input type="text" name="account_receiver" value="{{ old('account_receiver', $setting->account_receiver) }}"></div>
@@ -123,8 +134,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane fill-rest fill-col" id="dsp-period">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane" id="dsp-period">
+    <div class="ds-card">
       <h3><i class="bx bx-calendar"></i> ⑤ 위임기간</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>위임기간(년) <span class="ds-hint">최장 5년</span></label><input type="number" name="period_years" value="{{ old('period_years', $setting->period_years) }}" min="1" max="5" required></div>
@@ -134,8 +145,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane fill-rest fill-col" id="dsp-sig">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane" id="dsp-sig">
+    <div class="ds-card">
       <h3><i class="bx bx-move"></i> 서명 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>X (좌우) <span class="ds-hint">↑ 오른쪽</span></label><input type="number" step="0.1" name="sig_x" value="{{ old('sig_x', $setting->sig_x) }}" required></div>
@@ -147,8 +158,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane fill-rest fill-col" id="dsp-gsig">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane" id="dsp-gsig">
+    <div class="ds-card">
       <h3><i class="bx bx-user-check"></i> 보호자 서명 위치 (미성년자, 단위 mm)</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>X (좌우)</label><input type="number" step="0.1" name="gsig_x" value="{{ old('gsig_x', $setting->gsig_x ?? config('delegation.guardian_signature.x')) }}"></div>
@@ -164,8 +175,8 @@
     {{-- ── 글자 항목 위치 ────────────────────────────────────
          서명과 같은 방식으로 항목마다 위치를 정한다. 예전에는 이 값들이 코드에 박혀 있어
          양식이 조금만 달라져도 배포를 해야 했다. --}}
-    <div class="ds-pane fill-rest fill-col" id="dsp-fields">
-    <div class="ds-card fill-rest">
+    <div class="ds-pane" id="dsp-fields">
+    <div class="ds-card">
       <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-hint" style="margin-bottom:12px;">
         X는 왼쪽에서, Y는 위에서 잰 거리입니다(A4 = 210 × 297). 값이 비면 기본값을 씁니다.
@@ -205,14 +216,17 @@
     </div>
     </div>{{-- /pane --}}
 
-    <button type="submit" class="btn btn-primary" style="margin-top:16px;"><i class="bx bx-save"></i> 설정 저장</button>
+    <div class="ds-save">
+      <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 설정 저장</button>
+    </div>
+    </div>{{-- /card --}}
   </form>
 </div>
 
 @push('scripts')
 <script>
 (function () {
-  const tabs  = [...document.querySelectorAll('.ds-tab')];
+  const tabs  = [...document.querySelectorAll('.ds-form .pnl-tab')];
   const panes = [...document.querySelectorAll('.ds-pane')];
   if (!tabs.length) return;
 
