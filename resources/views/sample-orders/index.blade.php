@@ -273,7 +273,7 @@
 
   const grid = new wwGrid({
     el: $('smpGrid'),
-    height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
+    height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '샘플번호',   name: 'sample_no', width: 150, sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
@@ -504,7 +504,7 @@
   const itemGrid = new wwGrid({
     el: $('smpItemGrid'),
     height: 'auto', editable: true, rowCheckbox: true, rowNumber: true,
-    toolbar: false, footer: false,
+    toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '제품코드', name: 'product_code', width: 130, editor: 'popup', popup: popupOpts },
       { header: '제품명',   name: 'product_name', width: 280, editor: 'popup', popup: popupOpts },

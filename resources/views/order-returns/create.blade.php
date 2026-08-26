@@ -20,12 +20,20 @@
   .rt-row .form-control { flex:1; min-width:0; }
   .rt-hint { font-size:11px; color:var(--text-muted); margin-top:3px; }
   .rt-only { display:none; }
+  /* 하단 채우기 — 폼이 남는 높이를 받고(전역 .fill-rest/.fill-col) 마지막 카드가 바닥까지 내려온다.
+     내용이 길어지면 카드가 눌리지 않고 페이지가 스크롤되도록 shrink 만 막아 둔다. */
+  .rt-card, .rt-card.fill-rest, .rt-actions { flex-shrink:0; }
+  /* 접수 단추 줄만 카드 밖(아래)에 있어 흰 것이 바닥에서 46 모자랐다 — 카드 아래 여백 14 + 단추 줄 32.
+     단추 줄에 카드와 똑같은 흰 판(배경·1px 테두리·모서리 12)을 입혀 흰 것이 본문 바닥에 닿게 한다.
+     안여백 12/16 은 DS 값이고, 오른쪽 16 이 카드 안 입력칸 오른쪽 끝과 맞는다.
+     같은 손질을 문의 작성(.iqc-wrap)·공지 등록(.notice-shell)에서도 했다. */
+  .rt-actions { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:12px 16px; }
 </style>
 @endpush
 
 @section('content')
 
-<form method="POST" action="{{ route('order-returns.store') }}">
+<form method="POST" action="{{ route('order-returns.store') }}" class="fill-rest fill-col">
   @csrf
 
   <div class="rt-card">
@@ -50,7 +58,7 @@
     </div>
   </div>
 
-  <div class="rt-card">
+  <div class="rt-card fill-rest">
     <div class="rt-hd">신청 내용</div>
     <div class="rt-bd">
       <div class="rt-row">
@@ -109,7 +117,7 @@
     </div>
   </div>
 
-  <div style="text-align:right;">
+  <div class="rt-actions" style="text-align:right;">
     <button type="submit" class="btn btn-primary">접수</button>
   </div>
 </form>

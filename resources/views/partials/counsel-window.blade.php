@@ -401,7 +401,7 @@
         el: document.getElementById('csGrid'),
         height: Math.max(220, (pane?.clientHeight || 320) - 8),
         editable: false, rowCheckbox: false, rowNumber: false,
-        toolbar: false, footer: false,
+        toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
           { header: '상담번호',  name: 'no',     width: 126, sortable: true },
           { header: '상담일',    name: 'date',   width: 148, align: 'center', sortable: true },

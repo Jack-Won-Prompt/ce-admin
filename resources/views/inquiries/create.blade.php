@@ -4,17 +4,28 @@
 @section('page-title', '문의 작성')
 @section('breadcrumb', '홈 - 문의하기 - 작성')
 
+@push('styles')
+<style>
+  /* 내용이 짧아도 아래가 회색으로 남지 않게 —
+     껍데기(.iqc-wrap)가 흰 판이 되어 바닥까지 내려오고, 그 안의 카드는 fill-rest 로 늘어난다.
+     단추줄은 그 흰 판의 아래쪽(카드 푸터 자리)에 앉는다. */
+  .iqc-wrap { background: var(--bg-card); border-radius: var(--radius-lg); }
+  /* 단추가 카드 안 입력칸(안여백 16)과 오른쪽 끝을 맞춘다. */
+  .iqc-actions { padding: 0 16px 16px; }
+</style>
+@endpush
+
 @section('content')
-<div style="max-width:800px;">
-  <form method="POST" action="{{ route('inquiries.store') }}" enctype="multipart/form-data">
+<div class="iqc-wrap fill-rest fill-col" style="max-width:800px;">
+  <form method="POST" action="{{ route('inquiries.store') }}" enctype="multipart/form-data" class="fill-rest fill-col">
     @csrf
-    <div class="card">
+    <div class="card fill-rest fill-col">
       <div class="card-header">
         <i class="bx bx-headphone" style="color:var(--primary);"></i>
         <span class="card-header-title">새 문의 작성</span>
         <span class="card-header-sub">빠른 시일 내에 답변 드리겠습니다.</span>
       </div>
-      <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card-body fill-rest fill-col" style="display:flex;flex-direction:column;gap:16px;">
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">분류 <span>*</span></label>
@@ -82,7 +93,7 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+    <div class="iqc-actions" style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
       <a href="{{ route('inquiries.index') }}" class="btn btn-outline">취소</a>
       <button type="submit" class="btn btn-primary">
         <i class="bx bx-send"></i> 문의 등록

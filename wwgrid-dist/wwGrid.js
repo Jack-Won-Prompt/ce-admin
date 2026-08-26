@@ -899,14 +899,13 @@ class wwGrid {
   /* ── height:'fit' 계산: 페이지 스크롤이 없어지도록 래퍼 높이를 뷰포트에 맞춤 ── */
   _applyFitHeight() {
     if (this.height !== 'fit' || !this._wrapEl) return;
-    // 0차: 내용이 짧으면 그만큼만 둔다 — 뷰포트까지 늘려 두면
-    //      마지막 줄 아래로 흰 바닥이 화면 끝까지 남는다.
+    // 판은 언제나 뷰포트 아래까지 채운다. 전에는 '내용이 짧으면 그만큼만' 두었는데,
+    // 그러면 줄이 몇 개 없는 날 표가 위에 붙고 그 아래가 회색으로 드러났다.
+    // 짧을 때 남는 자리는 흰 바닥으로 두는 것이 맞다 — 카드가 바닥까지 이어진다.
     this._wrapEl.style.height = '';
-    const natural = this._wrapEl.scrollHeight;
-    // 1차: 래퍼 상단부터 뷰포트 하단까지 대략 채움
+    // 1차: 래퍼 상단부터 뷰포트 하단까지 채움
     const top = this._wrapEl.getBoundingClientRect().top; // 뷰포트 기준
     let h = Math.max(160, Math.floor(window.innerHeight - top - 16));
-    if (natural > 0 && natural < h) h = natural;
     this._wrapEl.style.height = h + 'px';
     // 2차: 그래도 페이지가 넘치면(푸터·레이아웃 하단여백 등) 넘친 만큼 줄여 페이지 스크롤 제거
     const overflow = document.documentElement.scrollHeight - window.innerHeight;

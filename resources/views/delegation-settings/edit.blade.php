@@ -46,6 +46,21 @@
   .ds-pane .ds-card { border:none; padding:0; }
   .ds-pane .ds-card h3 { margin-top:0; }
 
+  /* ── 아래를 채운다 ──────────────────────────────────────
+     한 번에 탭 하나만 보이는 화면이라, 짧은 탭에서는 흰 카드 아래로 회색이
+     754~866 드러났다. 껍데기(.ds-form) → FORM → 보이는 .ds-pane 순서로
+     남는 높이를 내려보내고, 흰 .ds-card 가 그것을 받는다.
+     늘어나는 것은 카드의 빈 아래쪽이다 — 입력칸·표 행은 제 높이 그대로다. */
+  .ds-pane.active.fill-col { display:flex; flex-direction:column; }
+  /* 세로 flex 의 stretch 가 저장 단추를 본문 폭만큼 늘리는 것을 막는다 */
+  .ds-form > form.fill-col > .btn { align-self:flex-start; }
+  /* 저장 단추(32)와 그 위 여백(16)이 카드 밖에 있어, 카드를 바닥까지 늘려도
+     48 짜리 회색 띠가 단추 오른쪽으로 1473 만큼 남았다. 카드 아래에 그만큼
+     안여백을 두고 판을 같은 만큼 끌어내려, 단추가 카드의 빈 아래쪽에 앉게 한다.
+     (짧은 탭이든 표가 긴 「글자 항목 위치」 탭이든 겹치는 곳이 없다.) */
+  .ds-pane .ds-card.fill-rest { padding-bottom:48px; }
+  .ds-pane.active.fill-col     { margin-bottom:-48px; }
+
   /* 성공은 primary 램프로만 표현한다(시안에 초록이 없다) */
   .status-ok { background:var(--primary-50); border:1px solid var(--primary-200); color:var(--primary-700); border-radius:8px;
     padding:12px 16px; font-size:13px; font-weight:500; line-height:21px; margin-bottom:16px; }
@@ -53,7 +68,7 @@
 @endpush
 
 @section('content')
-<div class="ds-form">
+<div class="ds-form fill-rest fill-col">
   @if(session('status'))
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
@@ -68,7 +83,7 @@
     ⑤ 위임기간과 서명 위치에 자동으로 반영됩니다.
   </div>
 
-  <form method="POST" action="{{ route('delegation-settings.update') }}">
+  <form method="POST" action="{{ route('delegation-settings.update') }}" class="fill-rest fill-col">
     @csrf
     @method('PUT')
 
@@ -82,8 +97,8 @@
       <button type="button" class="ds-tab" data-pane="dsp-fields"><i class="bx bx-text"></i> 글자 항목 위치</button>
     </div>
 
-    <div class="ds-pane active" id="dsp-provider">
-    <div class="ds-card">
+    <div class="ds-pane active fill-rest fill-col" id="dsp-provider">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-buildings"></i> ② 준요양기관</h3>
       <div class="ds-grid">
         <div class="ds-field full"><label>상호</label><input type="text" name="provider_name" value="{{ old('provider_name', $setting->provider_name) }}" placeholder="예: 콜로플라스트코리아(주)"></div>
@@ -95,8 +110,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane" id="dsp-account">
-    <div class="ds-card">
+    <div class="ds-pane fill-rest fill-col" id="dsp-account">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-credit-card"></i> ③ 요양비 수령계좌</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>수령자</label><input type="text" name="account_receiver" value="{{ old('account_receiver', $setting->account_receiver) }}"></div>
@@ -108,8 +123,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane" id="dsp-period">
-    <div class="ds-card">
+    <div class="ds-pane fill-rest fill-col" id="dsp-period">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-calendar"></i> ⑤ 위임기간</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>위임기간(년) <span class="ds-hint">최장 5년</span></label><input type="number" name="period_years" value="{{ old('period_years', $setting->period_years) }}" min="1" max="5" required></div>
@@ -119,8 +134,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane" id="dsp-sig">
-    <div class="ds-card">
+    <div class="ds-pane fill-rest fill-col" id="dsp-sig">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-move"></i> 서명 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>X (좌우) <span class="ds-hint">↑ 오른쪽</span></label><input type="number" step="0.1" name="sig_x" value="{{ old('sig_x', $setting->sig_x) }}" required></div>
@@ -132,8 +147,8 @@
 
     </div>{{-- /pane --}}
 
-    <div class="ds-pane" id="dsp-gsig">
-    <div class="ds-card">
+    <div class="ds-pane fill-rest fill-col" id="dsp-gsig">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-user-check"></i> 보호자 서명 위치 (미성년자, 단위 mm)</h3>
       <div class="ds-grid">
         <div class="ds-field"><label>X (좌우)</label><input type="number" step="0.1" name="gsig_x" value="{{ old('gsig_x', $setting->gsig_x ?? config('delegation.guardian_signature.x')) }}"></div>
@@ -149,8 +164,8 @@
     {{-- ── 글자 항목 위치 ────────────────────────────────────
          서명과 같은 방식으로 항목마다 위치를 정한다. 예전에는 이 값들이 코드에 박혀 있어
          양식이 조금만 달라져도 배포를 해야 했다. --}}
-    <div class="ds-pane" id="dsp-fields">
-    <div class="ds-card">
+    <div class="ds-pane fill-rest fill-col" id="dsp-fields">
+    <div class="ds-card fill-rest">
       <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-hint" style="margin-bottom:12px;">
         X는 왼쪽에서, Y는 위에서 잰 거리입니다(A4 = 210 × 297). 값이 비면 기본값을 씁니다.

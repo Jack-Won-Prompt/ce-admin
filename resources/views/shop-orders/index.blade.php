@@ -103,7 +103,7 @@
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     toolbar: false,
     // 시안에 하단 상태바가 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '주문번호',  name: 'order_no',  width: 130, sortable: true },
       { header: '주문일시',  name: 'created',   width: 130, sortable: true },

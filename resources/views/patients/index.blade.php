@@ -542,7 +542,7 @@ document.addEventListener('keydown', (e) => {
   const grid = new wwGrid({
     el: document.getElementById('patientGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
+    footer: { total: true, selected: false, modified: false },   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
       { header: '이름',       name: 'name',            width: 110, sortable: true },
@@ -883,7 +883,7 @@ document.addEventListener('keydown', (e) => {
       if (!pcTabs[id].grid) {
         pcTabs[id].grid = new wwGrid({
           el: gridEl,
-          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
           columns: [
             { header: '상담번호',  name: 'counsel_no', width: 150, sortable: true },
             /* 상담 내용은 길다(최대 2000자). 표에서는 한 줄로 줄여 두고, 누르면

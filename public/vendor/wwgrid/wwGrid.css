@@ -239,12 +239,17 @@
 }
 
 /* ── Footer / status bar ── */
+/* 하단 「전체 N건」 띠 — 모든 그리드가 같은 값을 쓴다.
+   전에는 pad 5/10 · 12px · #555 였는데 5·10 은 시안 간격 어휘에 없고 #555 는 DS 램프 밖이다.
+   대시보드가 시안(페이저가 놓이던 자리)에 맞춰 쓰던 값을 여기로 올린다 —
+   pad 12/16 · 12/500 lh19 · gray-600 · 흰 바탕 · 위 1px gray-200. */
 .cg-footer {
   display: flex; align-items: center; gap: 16px;
-  padding: 5px 10px;
-  background: var(--cg-footer-bg);
+  padding: 12px 16px;
+  background: var(--gray-0, #fff);
   border-top: 1px solid var(--cg-border);
-  font-size: 12px; color: #555;
+  font-size: 12px; font-weight: 500; line-height: 19px;
+  color: var(--gray-600, #656C74);
 }
 .cg-footer strong { color: var(--cg-accent); }
 

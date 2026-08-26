@@ -504,7 +504,7 @@
     // 그러면 15행이 뷰포트를 넘는 화면(높이 1073 미만 — 1080p·노트북 전부)에서
     // 표가 아니라 페이지 전체가 스크롤되고 머리행 고정도 풀린다. 기준값 460 을 남긴다.
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       // 시안 324:4656 x479 머리글은 '거래 일시' 다 — 띄어쓰기가 있다(name·width 는 그대로)
       { header: '거래 일시', name: 'tradeDt',  width: 150, sortable: true },

@@ -399,7 +399,7 @@
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
     // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '거래처명', name: 'name',     width: 140, sortable: true },
       { header: '전화번호', name: 'mobile',   width: 140, sortable: true },
@@ -416,7 +416,7 @@
   window.__msHistGrid = new wwGrid({
     el: document.getElementById('msHistGrid'),
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '일시',   name: 'at',      width: 150, sortable: true },
       { header: '수단',   name: 'ch',      width: 110, sortable: true },

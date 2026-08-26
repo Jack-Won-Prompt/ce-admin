@@ -38,7 +38,7 @@
 @endpush
 
 @section('content')
-<div class="ocr-form">
+<div class="ocr-form fill-rest fill-col">
   @if(session('status'))
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
@@ -60,7 +60,7 @@
     </div>
   @endif
 
-  <div class="ocr-card">
+  <div class="ocr-card fill-rest">
     <h3><i class="bx bx-scan"></i> OCR 공급자</h3>
 
     <div class="opt sel" style="cursor:default;">

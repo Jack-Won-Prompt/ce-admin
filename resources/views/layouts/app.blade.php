@@ -356,6 +356,25 @@
       display: flex; flex-direction: column; gap: 12px;
     }
 
+    /* ── 아래를 채우는 두 도구 ────────────────────────────
+       .page-body 는 이미 세로 flex 이고 남는 높이를 갖고 있다(1920×1200 에서 1132).
+       목록 화면은 .ds-grid-section 이 flex:1 이라 흰 카드가 아래까지 내려온다.
+       그런데 대시보드·등록 폼·설정처럼 목록이 아닌 화면은 마지막 덩이가
+       flex:0 1 auto 라 자라지 않아, 짧은 날에는 그 아래로 회색 바닥이 드러났다
+       (설정 여섯 화면에서 최대 772).
+
+       흰 카드는 대개 투명 껍데기 안에 들어 있어 껍데기만 늘려서는 회색이 그대로다.
+       그래서 두 조각으로 나눈다 —
+         .fill-rest  남는 높이를 받는다
+         .fill-col   받은 높이를 다시 자식에게 나눠 주려면 세로 flex 여야 한다
+       껍데기에 둘 다 붙이고, 그 안의 흰 카드에 .fill-rest 를 붙이면 끝까지 내려온다.
+
+       `:last-child` 로 하지 않은 까닭 — 화면 서른아홉 중 열일곱이 숨은 모달이나
+       <script> 를 DOM 마지막 자식으로 갖고 있어 엉뚱한 것이 잡힌다. */
+    .page-body > .fill-rest,
+    .fill-col > .fill-rest { flex: 1 1 auto; min-height: 0; }
+    .fill-col { display: flex; flex-direction: column; min-height: 0; }
+
 
     /* ══════════════════════════════════════════════════
        Figma 표준 layout 본문 컴포넌트 (174:1184 하위)
@@ -558,11 +577,13 @@
       display: flex; flex-direction: column; flex: 1; min-height: 0;
       background: var(--gray-0); border-radius: 12px; overflow: hidden;
     }
-    /* 세로로 쌓는 자리에서만 안에 든 것만큼 높다. flex:1 로 남는 자리를 다
-       먹게 해 두었더니, 찾은 것이 몇 줄뿐인 날에는 표 아래로 흰 바닥이 화면
-       끝까지 이어졌다. 가로로 놓이는 카드(재구매 달력)는 그대로 늘어나야 한다 —
-       예전에 이 규칙을 모든 카드에 걸었더니 달력이 562px 로 접혔다. */
-    .ds-grid-section > .ds-grid-card { flex: 0 1 auto; }
+    /* 카드는 남는 자리를 끝까지 받는다 — 찾은 것이 몇 줄뿐이어도 바닥까지 흰색이다.
+       전에는 `flex: 0 1 auto` 로 내용만큼만 두었다. 그러면 다섯 줄짜리 날에
+       카드가 574 에서 끝나고 그 아래 610 이 회색으로 드러났다(2000×1200 · 거래처 관리).
+       시안도 목록 카드를 `layoutGrow 1` 로 그린다(391:451 · 1568×858).
+       가로로 놓이는 카드(재구매 달력)는 `.ds-grid-section` 의 직계 자식이 아니라
+       이 규칙에 걸리지 않는다 — 예전에 모든 카드에 걸었다가 달력이 562 로 접혔던 자리다. */
+    .ds-grid-section > .ds-grid-card { flex: 1 1 auto; }
     /* 카드가 overflow:hidden 이라, 안에 들어간 패널(조회 결과·상세 내용)이
        카드보다 길면 잘리고 스크롤도 안 생긴다. 패널이 스스로 스크롤하게 한다. */
     .ds-grid-card > [id^="pnl"] { flex: 1 1 auto; min-height: 0; overflow-y: auto; }

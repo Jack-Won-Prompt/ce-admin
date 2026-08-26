@@ -59,8 +59,9 @@
   </div>
 </div>
 
-{{-- 상품 조회 로그 --}}
-<div class="card">
+{{-- 상품 조회 로그 — 본문의 마지막 블록이라 남는 높이를 받아 바닥까지 내려간다.
+     .card 는 이미 세로 flex 이고 .card-body 가 flex:1 1 auto 라 늘어난 22 는 표 아래 흰 여백이 된다 --}}
+<div class="card fill-rest">
   <div class="card-header">
     <i class="bx bx-list-check" style="font-size:16px;color:var(--primary);"></i>
     <span class="card-header-title">상품 조회 로그</span>

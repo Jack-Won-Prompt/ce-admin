@@ -379,9 +379,14 @@ window.HELP_TOUR_STEPS = [
 </div>
 
 {{-- ── Main Grid ── --}}
-<div class="dash-grid">
+{{-- 본문이 짧은 날에도 아래가 비지 않게 한다. .dash-grid 가 .page-body 의 마지막 덩이라
+     fill-rest 로 남는 높이를 받고(격자 한 줄이 auto 라 align-content 기본값 stretch 가
+     그 줄을 통째로 늘린다), 두 칸은 격자 기본 stretch 로 같이 늘어난다.
+     칸 자체는 투명한 껍데기라 fill-col 로 세로 flex 를 이어 주고, 각 칸에서 마지막에
+     오는 흰 카드가 fill-rest 로 바닥까지 내려온다. --}}
+<div class="dash-grid fill-rest">
 
-  <div>
+  <div class="fill-col">
     {{-- Work Queue --}}
     <div class="queue-grid">
       <a href="{{ route('prescriptions.index', ['status' => 'review_needed']) }}" class="queue-box red"
@@ -407,7 +412,7 @@ window.HELP_TOUR_STEPS = [
     </div>
 
     {{-- Recent Prescriptions Table --}}
-    <div class="card">
+    <div class="card fill-rest">
       <div class="card-header">
         <i class="bx bx-file-medical" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 처방전 현황</span>
@@ -426,7 +431,7 @@ window.HELP_TOUR_STEPS = [
   </div>
 
   {{-- ── RIGHT COLUMN ── --}}
-  <div>
+  <div class="fill-col">
 
     {{-- Quick Actions --}}
     <div class="card" style="margin-bottom:12px;">
@@ -468,7 +473,7 @@ window.HELP_TOUR_STEPS = [
     </div>
 
     {{-- Recent Activity --}}
-    <div class="card">
+    <div class="card fill-rest">
       <div class="card-header">
         <i class="bx bx-time-five" style="font-size:16px;color:var(--primary);"></i>
         <span class="card-header-title">최근 활동</span>

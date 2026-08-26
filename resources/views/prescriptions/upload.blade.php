@@ -251,7 +251,7 @@
      넘어간다. 늘 같은 그림이라 읽을 것이 없었다. --}}
 
 {{-- ── 업로드 레이아웃 ── --}}
-<div class="upload-layout">
+<div class="upload-layout fill-rest">
   <div>
     {{-- 모바일 대기 알림 --}}
     @if($mobilePending->isNotEmpty())
@@ -623,7 +623,7 @@ window.pkSearch = function () {
     pkGrid = new wwGrid({
       el: document.getElementById('pkGrid'),
       height: 320, editable: false, rowCheckbox: false, rowNumber: true,
-      toolbar: false, footer: false,
+      toolbar: false, footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '이름',     name: 'name',   width: 140, sortable: true },
         { header: '전화번호', name: 'mobile', width: 160, sortable: true },

@@ -183,7 +183,7 @@
      알 수 있고, 고른 뒤에 갑자기 나타나 아래가 밀리지 않는다. */
   const itemGrid = new wwGrid({
     el: $('rtoItemGrid'),
-    height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+    height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '제품코드', name: 'product_code', width: 120 },
       { header: '제품명',   name: 'product_name', width: 300 },

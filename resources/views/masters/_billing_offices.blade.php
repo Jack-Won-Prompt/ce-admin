@@ -212,7 +212,7 @@ async function boLoad() {
       el: document.getElementById('boGrid'),
       columns: cols, data: rows,
       height: 'auto', editable: false, rowNumber: true, rowCheckbox: false,
-      toolbar: false, footer: false,
+      toolbar: false, footer: { total: true, selected: false, modified: false },
     });
     document.getElementById('boGrid').addEventListener('dblclick', ev => {
       const cell = ev.target.closest('[data-row-index]');

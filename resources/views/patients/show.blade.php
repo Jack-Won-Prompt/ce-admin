@@ -282,7 +282,7 @@
     const rows = @json($rxRows);
     const grid = new wwGrid({
       el,
-      height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+      height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '주문번호', name: 'order_no',  width: 130, sortable: true },
         /* 처방번호를 누르면 그 건의 주문 등록 화면을 화면 탭으로 열어 준다 —
@@ -331,7 +331,7 @@
       if (!itemsGrid) {
         itemsGrid = new wwGrid({
           el: gridEl,
-          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: false,
+          height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
           columns: [
             { header: '제품명',     name: 'name',       width: 300 },
             { header: '제품코드',   name: 'code',       width: 130 },

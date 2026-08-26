@@ -240,7 +240,7 @@ window.HELP_TOUR_STEPS = [
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — 전체 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '재구매 가능일', name: 'repurchase', width: 130, sortable: true },
       { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
@@ -323,7 +323,10 @@ window.HELP_TOUR_STEPS = [
 {{-- ══════════════════════════════════ CALENDAR VIEW ══════════════════════════════════ --}}
 @if($view === 'calendar')
 {{-- 시안 243:53 — 캘린더 카드(좌) 와 날짜 상세 패널(우) 이 나란히, gap 12 --}}
-<div class="rp-cal-layout">
+{{-- .fill-rest 로 .page-body 의 남는 높이를 받는다(달력 카드가 바닥까지 내려온다).
+     이 줄은 가로 flex 다 — .fill-col 을 붙이면 달력이 세로로 접힌다.
+     align-items:stretch(기본값) 로 달력 카드와 날짜 패널이 같은 높이로 늘어난다. --}}
+<div class="rp-cal-layout fill-rest">
   <div class="ds-grid-card rp-cal-card">
     {{-- 요일 헤더 --}}
     <div class="cal-grid" id="calGrid">

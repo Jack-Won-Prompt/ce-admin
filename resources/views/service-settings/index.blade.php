@@ -33,6 +33,18 @@
   .ss-test-out.ok  { color: var(--success, #12805c); font-weight: 600; }
   .ss-test-out.err { color: var(--danger, #b42318); font-weight: 600; }
   .ss-flash { padding: 10px 14px; border-radius: 8px; background: var(--primary-light); color: var(--primary); font-size: 13px; font-weight: 600; }
+
+  /* ── 아래를 채운다 ────────────────────────────────────────────────
+     카드만 늘려서는 흰 것이 바닥에 닿지 않았다 — 판의 마지막 자식이 카드가 아니라
+     저장 단추 줄이라, 카드 아래로 회색이 48(연결 테스트 안내문이 있는 본인확인은 80)
+     남았다. 그래서 판 자체를 카드와 같은 흰 판으로 칠한다. 안내문·단추 줄까지
+     흰 것 안에 들어오고 판이 본문 바닥에 닿는다(회색 띠 0).
+     공지 등록·문의 작성 화면에서 쓴 방식과 같다.
+     .fill-col 을 받은 스키마 판 열 개에만 걸린다 — 위드웍스 판은 그대로다. */
+  .ss-panel.fill-col { background: var(--gray-0); border-radius: 12px; padding-bottom: 16px; }
+  /* 흰 판 안으로 들어온 안내문·단추 줄을 카드 속 입력칸(안여백 16)과 같은 선에 맞춘다 */
+  .ss-panel.fill-col > .ss-help,
+  .ss-panel.fill-col > .ss-actions { padding-left: 16px; padding-right: 16px; }
 </style>
 
 @if (session('success'))
@@ -53,12 +65,19 @@
 </div>
 
 @foreach ($schema as $group => $def)
+  {{-- fill-rest/fill-col — 판이 남는 높이를 받아(.fill-rest) 안의 흰 카드에 다시 나눠 준다(.fill-col).
+       .fill-col 의 display:flex 가 숨은 판을 깨우지 않는다 — 특정성이 같은데
+       이 화면의 .ss-panel{display:none} 이 전역 규칙보다 문서에서 뒤에 있어 이긴다. --}}
   <form method="POST" action="{{ route('service-settings.update', $group) }}"
-        class="ss-panel {{ $group === $active ? 'active' : '' }}" data-panel="{{ $group }}">
+        class="ss-panel fill-rest fill-col {{ $group === $active ? 'active' : '' }}" data-panel="{{ $group }}">
     @csrf
     @method('PUT')
 
-    <div class="ss-card">
+    {{-- 흰 카드가 남는 높이를 다 받는다. 카드는 display:block 이라 안의 칸·글줄은
+         제 높이를 지키고, 늘어나는 것은 카드의 빈 아래쪽뿐이다.
+         저장 단추 줄(.ss-actions)은 제 높이(32) 그대로 카드 아래에 남고,
+         판이 흰 판이라 그 자리도 흰 것 안이다(위 .ss-panel.fill-col 참고). --}}
+    <div class="ss-card fill-rest">
       <div class="ss-card-head">
         <span class="ss-card-title">{{ $def['label'] }}</span>
         @if (!empty($def['desc']))

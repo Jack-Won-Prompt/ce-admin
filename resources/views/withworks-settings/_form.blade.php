@@ -6,6 +6,13 @@
      폼이 제 라우트로 따로 나간다. 그래서 generic 렌더러에 얹지 않고 조각으로 뺐다. --}}
 
 <style>
+/* 저장·연결 확인 단추가 카드 밖에 있어 그 두 줄이 회색 위에 떠 있었다(바닥까지 굴리면 90).
+   서비스 연동 설정의 다른 판들과 같이 판 전체를 흰 바탕으로 두어 단추까지 흰 것 안에 들인다.
+   두 곳이 같은 조각을 쓰므로 /settings/withworks 와 서비스 연동 설정 탭이 함께 맞는다. */
+.ws-shell { background:var(--gray-0); border-radius:12px; padding:16px;
+            display:flex; flex-direction:column; gap:12px; }
+.ws-shell > form { margin:0; }
+.ws-shell .ws-card:last-of-type { margin-bottom:0; }
 .ws-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; }
   .ws-hd { padding:11px 16px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700;
            display:flex; align-items:center; gap:8px; }
@@ -57,6 +64,7 @@
   </div>
 @endif
 
+<div class="ws-shell fill-rest fill-col">
 <form method="POST" action="{{ route('withworks-settings.update') }}">
   @csrf
   @method('PUT')
@@ -216,3 +224,4 @@
   @csrf
   <button type="submit" class="btn btn-outline">지금 설정으로 연결 확인</button>
 </form>
+</div>{{-- /.ws-shell --}}

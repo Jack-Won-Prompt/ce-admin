@@ -642,7 +642,7 @@ function updateRow(u)     { refreshUsersGrid(); }
     // 엑셀 저장은 탭 동작 줄로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — 전체 건수는 탭 이름 뒤, 선택 건수는 탭 동작 줄에 있다.
     height: USERS_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: 'ID',     name: 'id',      width: 60,  align: 'center', sortable: true },
       { header: '이름',   name: 'name',    width: 160, sortable: true },
@@ -669,7 +669,7 @@ function updateRow(u)     { refreshUsersGrid(); }
     el: document.getElementById('invitationsGrid'),
     // 엑셀 저장은 탭 동작 줄로 옮겼다. 하단 상태바는 시안에 없다.
     height: INV_H, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '이메일',       name: 'email',      width: 220, sortable: true },
       { header: '역할',         name: 'role',       width: 90,  align: 'center', sortable: true },

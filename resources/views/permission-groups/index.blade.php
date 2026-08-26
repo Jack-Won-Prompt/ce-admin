@@ -162,7 +162,7 @@
   const grid = new wwGrid({
     el: document.getElementById('pgGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: true,
-    footer: { total: true, selected: true, modified: false },
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '그룹명',   name: 'name',        width: 200, sortable: true },
       { header: '설명',     name: 'description', width: 320 },

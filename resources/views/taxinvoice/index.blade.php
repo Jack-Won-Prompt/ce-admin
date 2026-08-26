@@ -313,7 +313,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
      팝빌을 두 번 더 부르면서도 그 숫자로 하는 일이 없었다 — 발행과 취소는 아래 목록에서
      한다. 포인트가 필요하면 팝빌에서 본다. --}}
 
-<div class="ti-layout">
+<div class="ti-layout fill-rest fill-col">
 
   {{-- ── 발행 내역 — 검색 카드와 결과바는 그리드 카드 바깥·탭바 위다(시안 324:1720) ── --}}
   <div class="ti-panel" data-titab="hist">
@@ -642,7 +642,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — '선택 N건' 은 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: false,
+    footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
       { header: '관리번호/처방번호', name: 'mgt',    width: 170 },

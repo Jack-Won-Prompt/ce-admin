@@ -5069,7 +5069,7 @@ window.HELP_TOUR_STEPS = [
       pkGrid = new wwGrid({
         el: document.getElementById('pkGrid'),
         height: 300, editable: false, rowCheckbox: false, rowNumber: true,
-        toolbar: false, footer: false,
+        toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
           { header: '이름',     name: 'name',   width: 140, sortable: true },
           { header: '전화번호', name: 'mobile', width: 160, sortable: true },
@@ -5221,7 +5221,7 @@ window.HELP_TOUR_STEPS = [
     const el = document.getElementById('ocGrid');
     if (!ocGrid) {
       ocGrid = new wwGrid({
-        el, height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: false,
+        el, height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
           { header: '일자',     name: 'date',      width: 110, align: 'center', sortable: true },
           { header: '처방번호', name: 'rx_number', width: 170 },
@@ -6135,7 +6135,7 @@ window.HELP_TOUR_STEPS = [
         el, columns: cols, data: itemRows(),
         /* 줄 수만큼만 둔다. 'fit' 은 화면 아래끝까지 늘어나 두어 줄짜리 주문에도 빈
            바닥이 한참 남았다 — 제품은 보통 한두 줄이다. */
-        height: 'auto', rowCheckbox: true, rowNumber: true, toolbar: false, footer: false,
+        height: 'auto', rowCheckbox: true, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
         onChange: ({ grid }) => {
           itemsFromRows(grid.getData());
           grid.setData(itemRows());     // 셈해서 나온 칸을 다시 그린다
@@ -6335,7 +6335,7 @@ window.HELP_TOUR_STEPS = [
         el, columns: cols, data: rows,
         // 카드 안에 얹는 짧은 표다 — 'fit' 은 화면 아래끝까지 늘어난다
         height: 'auto', editable: false, rowCheckbox: false, rowNumber: true,
-        toolbar: false, footer: false,
+        toolbar: false, footer: { total: true, selected: false, modified: false },
       });
     } else {
       summaryGrid.setData(rows);

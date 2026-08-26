@@ -8,6 +8,8 @@
 <style>
   .ns-form { max-width:860px; }
   .ns-card { background:var(--gray-0); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px; }
+  /* 내용이 짧을 때 남는 높이는 마지막 카드가 받는다 — 그 카드는 본문 바닥에 닿으므로 아래 여백을 지운다 */
+  .ns-card.fill-rest { margin-bottom:0; }
   /* 섹션 제목 = 14px/700 (시안 '환자 추가 · 파일 업로드' 계열) */
   .ns-card h3 { margin:0 0 16px; font-size:14px; font-weight:700; line-height:22px; color:var(--primary);
     padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
@@ -56,7 +58,7 @@
 @endpush
 
 @section('content')
-<div class="ns-form">
+<div class="ns-form fill-rest fill-col">
   @if(session('status'))
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
@@ -77,7 +79,7 @@
     </div>
   @endif
 
-  <form method="POST" action="{{ route('nice-settings.update') }}">
+  <form method="POST" action="{{ route('nice-settings.update') }}" class="fill-rest fill-col">
     @csrf
     @method('PUT')
 
@@ -165,7 +167,7 @@
       </div>
     </div>
 
-    <div class="ns-card">
+    <div class="ns-card fill-rest">
       <div class="ns-actions">
         <button type="submit" class="btn-save"><i class="bx bx-save"></i> 저장</button>
         <button type="button" class="btn-test" id="btnTest" onclick="runNiceTest()">
