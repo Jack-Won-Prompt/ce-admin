@@ -10,7 +10,12 @@
 <style>
   /* 고객 정보가 위, 주문 이력이 아래다. 좌우로 두었더니 왼쪽 칸이 340px 로 눌려
      이름과 단추가 접히고, 오른쪽은 반이 비었다. */
-  .detail-layout { display:flex; flex-direction:column; gap:14px; }
+  /* 내용이 짧아도 바닥까지 — 마지막 카드(주문 이력)가 남는 높이를 받는다.
+     이 화면은 거래처 관리의 「상세 내용」 탭 안 액자로도 그려져, 여기가 안 차면
+     그 탭에 빈 흰 칸이 따로 생긴 것처럼 보인다. */
+  .detail-layout { display:flex; flex-direction:column; gap:14px; flex:1 1 auto; min-height:0; }
+  .detail-layout > :last-child { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  .detail-layout > :last-child > .card { flex:1 1 auto; min-height:0; }
 
   /* 개인정보는 세로로 길게 쌓지 않고 한 줄에 여럿 눕힌다 — 여섯 항목이 한두 줄에 들어온다.
      주소는 길어 두 칸을 쓴다. */
@@ -97,7 +102,7 @@
 {{-- 위쪽 이름 띠는 두지 않는다. 바로 아래 카드가 같은 이름을 다시 적고 있어 화면을
      열면 이름이 두 번 보였다. 손댈 단추(수정·상담내역)는 그 이름 옆으로 옮겼다. --}}
 
-<div class="detail-layout">
+<div class="detail-layout fill-rest">
 
   {{-- 위: 고객 정보 --}}
   <div>

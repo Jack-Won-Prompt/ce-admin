@@ -49,7 +49,10 @@
   /* 상세 내용 탭도 카드가 바닥까지 내려온다. 전에는 「내용만큼만」이라 카드가 185 에서
      끝나고 그 아래 999 가 회색으로 드러났다. 판이 남는 높이를 받고, 넘치면 스스로 굴린다. */
   .ds-grid-section.is-fit .ds-grid-card { flex:1 1 auto; }
-  .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:1 1 auto; min-height:0; overflow-y:auto; }
+  .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  /* 액자가 제 내용만큼만 크면 그 아래 남은 판이 빈 카드처럼 따로 보인다.
+     액자가 판을 채우게 두면 안쪽 문서가 이어서 바닥까지 흰색을 그린다. */
+  .ds-grid-section.is-fit #pfFrame { flex:1 1 auto; min-height:0; height:auto !important; }
 </style>
 <style>
 
@@ -371,8 +374,9 @@
   <div id="pfEmpty" class="pnl-empty">조회결과에서 환자 행을 <b>더블클릭</b>하면 여기에 나옵니다.</div>
   {{-- 높이는 안에 들어온 화면이 정한다 — 고정값을 주었더니 내용이 짧은 사람은
        목록 아래로 흰 바닥이 한 참 남고, 긴 사람은 액자 안에서 또 스크롤해야 했다. --}}
-  <iframe id="pfFrame" title="환자 상세" scrolling="no"
-          style="display:none;width:100%;border:0;height:0;overflow:hidden;vertical-align:top;"></iframe>
+  {{-- 높이는 CSS 가 판에 맞춘다. pfFit 은 판보다 내용이 길 때만 늘린다. --}}
+  <iframe id="pfFrame" title="환자 상세"
+          style="display:none;width:100%;border:0;vertical-align:top;"></iframe>
 </div>{{-- /#pnlDetail --}}
 
 {{-- 상담내역 탭은 사람마다 하나씩 만들어 붙인다(pcEnsureTab) — 두 사람을 견주며
@@ -686,11 +690,15 @@ document.addEventListener('keydown', (e) => {
      워크스페이스 탭으로 올려 보낸다. 같은 곳에서 온 문서라 안을 만질 수 있다. */
   /* 액자 높이를 안의 내용에 맞춴 둔다. 탭을 옥기거나 고치기로 들어가면
      안의 키가 바뀌므로, 한 번 재는 것으로는 모자란다 — 계속 따라간다. */
+  /* 액자는 판을 채우는 것이 기본이다(CSS flex). 안쪽 내용이 판보다 길 때만 그만큼 늘려
+     안팎으로 스크롤이 겹치지 않게 한다. */
   function pfFit(frame) {
     const d = frame.contentDocument;
     if (!d || !d.body) return;
     const h = Math.max(d.body.scrollHeight, d.documentElement.scrollHeight);
-    if (h) frame.style.height = h + 'px';
+    const pane = frame.parentElement;
+    const avail = pane ? pane.clientHeight : 0;
+    frame.style.minHeight = (h && h > avail) ? h + 'px' : '';
   }
 
   document.getElementById('pfFrame').addEventListener('load', function () {

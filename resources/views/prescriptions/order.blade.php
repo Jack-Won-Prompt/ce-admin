@@ -301,7 +301,9 @@
      튀었다. sticky 로 두면 브라우저가 알아서 맞춘다.
      뷰어가 화면보다 길면 그 안에서만 스크롤된다. */
   /* 붙는 위치는 고정 헤더 아래여야 한다. 12px 로 두면 헤더에 가려 처방번호 줄이 안 보인다. */
-  #viewerCol { position: sticky; top: calc(var(--nav-h, 60px) + 12px); align-self: start;
+  /* 두 열이 같이 바닥까지 내려온다 — align-self:start 면 왼쪽만 839 에서 끊겨
+     그 아래가 회색으로 드러났다(1920×1200 에서 345). */
+  #viewerCol { position: sticky; top: calc(var(--nav-h, 60px) + 12px); align-self: stretch;
                max-height: calc(100vh - var(--nav-h, 60px) - 24px);
                overflow: hidden auto; }
   /* 워크스페이스 안(iframe)에서는 높이만 조정한다.
