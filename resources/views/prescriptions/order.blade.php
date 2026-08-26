@@ -216,6 +216,12 @@
      이 값은 분할 보기 높이 계산(sizeSplit)에도 그대로 들어가므로,
      지우면 왼쪽·오른쪽 열이 그만큼 더 길어져 빈 칸도 함께 줄어든다. */
   .page-body-inner { padding-bottom: 0; }
+  /* 본문이 바닥까지 내려온다 — 전에는 두 열이 내용만큼만이라(align-items:start)
+     짧은 처방전에서 아래로 회색이 361 드러났다. 두 열이 같이 늘고, 그 안의 흰 판도 따라온다. */
+  .page-body-inner { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
+  .page-body-inner > .order-layout { flex:1 1 auto; min-height:0; align-items:stretch; }
+  .order-layout > #viewerCol,
+  .order-layout > #tabsCol { min-height:0; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */

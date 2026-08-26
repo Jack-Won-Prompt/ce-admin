@@ -46,8 +46,10 @@
   .pt-scope-note a { color:var(--primary); text-decoration:none; }
   .pt-scope-note a:hover { text-decoration:underline; }
 
-  .ds-grid-section.is-fit .ds-grid-card { flex:0 0 auto; }
-  .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:0 0 auto; overflow:visible; }
+  /* 상세 내용 탭도 카드가 바닥까지 내려온다. 전에는 「내용만큼만」이라 카드가 185 에서
+     끝나고 그 아래 999 가 회색으로 드러났다. 판이 남는 높이를 받고, 넘치면 스스로 굴린다. */
+  .ds-grid-section.is-fit .ds-grid-card { flex:1 1 auto; }
+  .ds-grid-section.is-fit .ds-grid-card > #pnlDetail { flex:1 1 auto; min-height:0; overflow-y:auto; }
 </style>
 <style>
 

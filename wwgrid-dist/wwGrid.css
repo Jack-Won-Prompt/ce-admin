@@ -48,7 +48,17 @@
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  /* 판이 내용보다 크면 표가 판을 채운다 — 남는 자리는 아래 빈 줄이 받고,
+     합계(tfoot)는 판 바닥에 앉는다. 내용이 더 길면 그대로 넘쳐 판이 스크롤한다. */
+  height: 100%;
 }
+/* 자료 줄은 제 내용만큼만 — height 는 표에서 최소값이라 줄이 눌리지 않는다.
+   이 한 줄이 없으면 표가 커질 때 남는 높이가 모든 줄에 나뉘어 행이 늘어난다. */
+.cg-tbody tr:not(.cg-filler-row) { height: 1px; }
+/* 남는 자리를 혼자 받는 빈 줄 — 세로 구분선을 이어 그려 표가 바닥까지 이어져 보인다 */
+.cg-filler-row { height: auto; border-bottom: 0; }
+.cg-filler-row:hover { background: transparent; }
+.cg-filler-row > td { padding: 0; border-bottom: 0; background: var(--cg-bg, #fff); }
 
 /* ── Header ──
    본문을 스크롤해도 헤더는 상단에 고정된다(.cg-wrap 이 스크롤 컨테이너).

@@ -589,6 +589,20 @@
     .ds-grid-card > [id^="pnl"] { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     /* 그리드는 이미 카드(r12) 안에 있다 — 자기 테두리·모서리를 또 갖지 않는다 */
     .ds-grid-card .cg-wrap { border: 0; border-radius: 0; }
+    /* 그리드 껍데기(.cg-root)가 카드 높이를 받아 세로로 나눈다 —
+       판은 남는 자리를 다 받고, 「전체 N건」 띠는 카드 바닥에 붙는다.
+       전에는 띠가 표 바로 밑에 떠 있고 그 아래가 통째로 비었다.
+
+       카드와 그리드 사이에 display:block 껍데기가 끼면 높이가 거기서 끊긴다
+       (#pnlUsers · #pnlList · .ti-grid-pane · .card-body 가 그렇다).
+       그리드를 품은 껍데기는 세로 flex 로 높이를 넘긴다 — 곁에 선 것들
+       (.ds-panel-actions · .pg-note 같은)은 제 높이 그대로 남는다. */
+    .ds-grid-card *:has(.cg-root),
+    .card *:has(.cg-root) { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+    .ds-grid-card .cg-root,
+    .card .cg-root,
+    .page-body > .cg-root { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+    .cg-root > .cg-wrap { flex: 1 1 auto; min-height: 0; }
 
     /* 카드 안 패널 탭 (114:4778) — h44 · pad 0/16 · gap 16 · 하단 1px */
     .pnl-tabs { display: flex; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }

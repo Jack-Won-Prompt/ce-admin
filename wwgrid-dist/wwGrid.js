@@ -1062,6 +1062,18 @@ class wwGrid {
     this.data.forEach((row, rowIndex) => {
       this._tbodyEl.appendChild(this._makeRow(row, rowIndex));
     });
+
+    /* 줄이 판보다 적을 때 남는 자리를 받는 빈 줄.
+       이것이 없으면 합계(tfoot)와 「전체 N건」이 마지막 줄에 붙어 뜨고
+       그 아래가 통째로 비어, 표가 판 위쪽에 얹혀 있는 것처럼 보인다.
+       data-row-index 가 없어 더블클릭·체크·정렬 어디에도 걸리지 않는다. */
+    const filler = document.createElement('tr');
+    filler.className = 'cg-filler-row';
+    filler.setAttribute('aria-hidden', 'true');
+    const fillerTd = document.createElement('td');
+    fillerTd.colSpan = this.columns.length + (this.rowCheckbox ? 1 : 0) + (this.rowNumber ? 1 : 0);
+    filler.appendChild(fillerTd);
+    this._tbodyEl.appendChild(filler);
   }
 
   _makeRow(row, rowIndex) {
