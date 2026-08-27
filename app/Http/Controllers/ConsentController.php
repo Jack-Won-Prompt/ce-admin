@@ -212,9 +212,10 @@ class ConsentController extends Controller
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
             if ($needPrivacy) {
-                $this->savePrivacyConsent($consent, $request);
-                // 환자가 적어 준 것을 환자ㆍ처방전에도 옮겨 적는다(주문 등록이 읽는 자리)
+                /* 환자를 잇는 것이 먼저다. 아직 사람으로 맺어지지 않은 처방전이면 여기서
+                   맺어지고, 그 번호가 아래 개인정보 동의 줄에도 함께 적힌다. */
                 $applied = $this->applyPrivacyToRecords($consent, $request);
+                $this->savePrivacyConsent($consent, $request);
             }
             $this->generateConsentPdf($consent);
 
@@ -303,10 +304,52 @@ class ConsentController extends Controller
     {
         $consent->loadMissing('prescription.patient');
         $rx = $consent->prescription;
-        $p  = $rx?->patient;
 
         $applied = [];
         $val = fn (string $k): string => trim((string) $request->input($k));
+
+        if (! $rx) {
+            return [];
+        }
+
+        /* 아직 사람으로 맺어지지 않은 처방전이 많다 — 주문 등록에서 이름만 적어 두고
+           저장을 누르지 않은 채 링크를 보낸 건들이다. 그대로 두면 서명이 끝나도 옮겨
+           적을 자리가 없어 고객관리에 아무것도 남지 않는다. 여기서 맺는다.
+
+           잇는 규칙은 주문 등록의 저장과 같은 것(PatientLink)을 쓴다 — 주민번호로,
+           없으면 이름+휴대폰으로, 그것도 없으면 이름이 하나뿐일 때. 아무것도 걸리지
+           않으면 그 이름으로 새로 만든다. */
+        if (! $rx->patient_id) {
+            \App\Support\PatientLink::attach($rx, [
+                'patient_name' => $consent->patient_name ?: $rx->patient_name_ocr,
+                'resident_no'  => null,
+                'mobile'       => $val('phone') ?: $consent->patient_mobile ?: $rx->mobile_ocr,
+                'address'      => $val('addr1'),
+                'care_type'    => $request->input('privacy_type') === 'stoma' ? 'OC' : 'IC',
+            ]);
+            $rx->refresh();
+        }
+
+        $p = $rx->patient;
+
+        /* 주소ㆍ휴대폰은 처방전에도 제 칸이 있다. 주문 등록 화면이 읽는 것이 그 칸이라,
+           환자에만 적어 두면 새로고침해도 옛 주소가 그대로 보인다. 둘 다 적는다. */
+        $rxSet = [];
+        foreach ([
+            'zip'   => ['postcode',       'f-postcode'],
+            'addr1' => ['address_ocr',    'f-address'],
+            'addr2' => ['address_detail', 'f-address-detail'],
+            'phone' => ['mobile_ocr',     'f-mobile'],
+        ] as $from => [$col, $fieldId]) {
+            $v = $val($from);
+            if ($v !== '' && (string) $rx->{$col} !== $v) {
+                $rxSet[$col] = $v;
+                $applied[$fieldId] = $v;
+            }
+        }
+        if ($rxSet) {
+            $rx->forceFill($rxSet)->save();
+        }
 
         if ($p) {
             $set = [];
@@ -321,7 +364,7 @@ class ConsentController extends Controller
                 $v = $val($from);
                 if ($v !== '' && (string) $p->{$col} !== $v) {
                     $set[$col] = $v;
-                    $applied[$fieldId] = $v;
+                    $applied[$fieldId] = $v;   // 처방전 칸과 겹치면 같은 값이라 덮어도 같다
                 }
             }
 
@@ -344,7 +387,7 @@ class ConsentController extends Controller
 
         /* 자격은 처방전에 붙는다. 이미 골라 둔 것이 있으면 담당자의 손을 덮지 않는다.
            동의서의 「보험」은 산업재해만 자격 칸에 대응하는 값이 있다. */
-        if ($rx && ! $rx->benefit_class) {
+        if (! $rx->benefit_class) {
             $bc = ['일반' => '일반', '차상위경감대상자' => '차상위경감', '기초생활수급자' => '기초'][$val('support_qualify')]
                   ?? ($val('insurance') === '산업재해' ? '산재' : null);
             if ($bc) {
