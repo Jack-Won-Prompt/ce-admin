@@ -139,6 +139,28 @@ class PrivacyConsent extends Model
             }
         }
 
+        /* 신청자가 적어 준 것. 주소ㆍ이메일처럼 주문 등록에 제 칸이 있는 것은 그리로
+           옮겨 적지만, 보험ㆍ지원 자격ㆍ장루 상세는 갈 자리가 없다 — 여기서 동의서
+           그대로 읽는다. 빈 칸은 적지 않는다. */
+        $info = [];
+        foreach ([
+            '주소'       => $c->full_address,
+            '이메일'     => $c->email,
+            '연락처2'    => $c->phone2,
+            '생년월일'   => $c->birth,
+            '보험'       => $c->insurance,
+            '지원 자격'  => $c->support_qualify,
+            '사용 제품'  => $c->product,
+            '수술 병원'  => $c->hospital,
+            '수술일자'   => $c->surgery_date,
+            '장루 타입'  => $c->stoma_type,
+            '장루 종류'  => $c->stoma_kind,
+        ] as $label => $v) {
+            if (trim((string) $v) !== '') {
+                $info[] = ['label' => $label, 'value' => (string) $v];
+            }
+        }
+
         return [
             'exists'    => true,
             'agreed'    => $c->required_agreed,
@@ -148,6 +170,7 @@ class PrivacyConsent extends Model
             'source'    => $c->source_label,
             'at'        => $c->submitted_at?->format('Y-m-d H:i'),
             'marketing' => $c->agree_marketing === '동의함',
+            'info'      => $info,
             'items'     => $items,
         ];
     }

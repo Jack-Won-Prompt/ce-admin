@@ -249,6 +249,13 @@
   .pib-btn i { font-size:14px; }
   .pib-btn-primary { color:var(--primary); }
   .pib-btn-off { background:var(--gray-50); color:var(--gray-400); cursor:default; }
+  /* 서명 화면에서 방금 들어온 값 — 어디가 바뀌었는지 한 번은 보이게 한다 */
+  .ce-consent-filled { animation: ceConsentFill 2.4s ease-out 1; }
+  @keyframes ceConsentFill {
+    0%, 60% { background: var(--primary-50); box-shadow: 0 0 0 2px var(--primary-200); }
+    100%    { background: none; box-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ce-consent-filled { animation: none; } }
   /* 신규 등록ㆍ재등록 건은 공단에 서류를 팩스로 보내야 한다 — 단추가 스스로 부른다.
      글자를 껐다 켜지 않는다. 사라졌다 나타나는 글자는 읽던 눈을 끌어다 붙든다.
      테두리 빛만 부풀렸다 사라지게 두어, 보고 있지 않을 때만 눈에 걸리게 한다.
@@ -9544,12 +9551,22 @@ window.HELP_TOUR_STEPS = [
         <i class="fa-solid fa-triangle-exclamation"></i> 필수 항목 가운데 동의하지 않은 것이 있습니다.
       </div>`;
 
+    /* 신청자가 적어 준 것. 주소ㆍ이메일처럼 위 칸에 제 자리가 있는 것은 서명과 함께 이미
+       그리로 들어갔고, 보험ㆍ장루 상세처럼 갈 자리가 없는 것은 여기서 읽는다. */
+    const info = (st.info ?? []).map(it => row(it.label, it.value)).join('');
+    const infoBox = info ? `
+      <div style="border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">신청자 정보</div>
+        ${info}
+      </div>` : '';
+
     return `
       ${row('동의자', st.name)}
       ${row('연락처', st.phone)}
       ${row('유형', [st.type, st.source].filter(Boolean).join(' · '))}
       ${row('동의일', st.at)}
       ${warn}
+      ${infoBox}
       <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:6px;">${items}</div>
       <div style="display:flex;justify-content:flex-end;">
         <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면에서 보기</button>
@@ -9705,8 +9722,46 @@ window.HELP_TOUR_STEPS = [
       refreshGeneratedDocs();
       // 서명 화면에서 개인정보 동의도 함께 받았다 — 단추를 다시 읽는다
       updateConsentStatus();
+      // 환자가 동의서에 적어 준 것을 화면에도 앉힌다
+      applyConsentInfo(data.applied);
     }
   });
+
+  /* 환자가 서명 화면에서 적어 준 주소ㆍ이메일ㆍ연락처를 이 화면의 칸에 앉힌다.
+     서버가 환자ㆍ처방전에 이미 옮겨 적었으므로 여기서 따로 저장하지 않는다 —
+     화면만 그 값으로 맞춘다. 새로고침을 하지 않아도 보여야 한다는 뜻이다.
+
+     담당자가 지금 적고 있는 칸은 건드리지 않는다. 손이 올라가 있는 자리를 값이
+     밀어내면 무엇을 적던 중이었는지 알 길이 없다 — 그 칸만 남겨 두고 알린다. */
+  function applyConsentInfo(applied) {
+    if (!applied || !Object.keys(applied).length) return;
+
+    const LABELS = {
+      'f-postcode': '우편번호', 'f-address': '주소', 'f-address-detail': '상세주소',
+      'f-email': '이메일', 'f-mobile': '전화번호1', 'f-mobile2': '전화번호2',
+      'f-birth': '생년월일', 'f-benefit-class': '자격',
+    };
+
+    const 앉힌것 = [], 남긴것 = [];
+    for (const [id, val] of Object.entries(applied)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      if (el === document.activeElement) { 남긴것.push(LABELS[id] ?? id); continue; }
+      el.value = val;
+      el.classList.add('ce-consent-filled');
+      앉힌것.push(LABELS[id] ?? id);
+    }
+    if (!앉힌것.length && !남긴것.length) return;
+
+    // 자격이 바뀌면 청구처 추천도 따라 움직인다
+    if (applied['f-benefit-class'] && typeof renderBillingStrategy === 'function') renderBillingStrategy();
+
+    const 이름 = document.getElementById('f-name')?.value?.trim() || '환자';
+    let msg = `「${이름}」 님이 동의서에 적은 ${앉힌것.join('ㆍ')}을(를) 화면에 반영했습니다.`;
+    if (!앉힌것.length) msg = `「${이름}」 님이 동의서에 ${남긴것.join('ㆍ')}을(를) 적었습니다.`;
+    else if (남긴것.length) msg += ` ${남긴것.join('ㆍ')}은(는) 적고 계셔서 그대로 두었습니다.`;
+    showToast(msg, 'info');
+  }
 
   /* 시스템이 만든 서류를 서버에서 다시 받아 문서 칸에 세운다(새로고침 없이).
 

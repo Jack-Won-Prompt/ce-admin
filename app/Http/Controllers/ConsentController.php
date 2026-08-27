@@ -188,6 +188,8 @@ class ConsentController extends Controller
             ], 422);
         }
 
+        $applied = [];   // 위임 서명과 함께 주문 등록에 옮겨 적은 칸들
+
         $payload = [
             'status'         => $request->action,
             'signature_data' => $request->action === 'agreed' ? $request->input('signature') : null,
@@ -211,6 +213,8 @@ class ConsentController extends Controller
         if ($request->action === 'agreed') {
             if ($needPrivacy) {
                 $this->savePrivacyConsent($consent, $request);
+                // 환자가 적어 준 것을 환자ㆍ처방전에도 옮겨 적는다(주문 등록이 읽는 자리)
+                $applied = $this->applyPrivacyToRecords($consent, $request);
             }
             $this->generateConsentPdf($consent);
 
@@ -223,7 +227,7 @@ class ConsentController extends Controller
 
         // 관리자 전체에게 실시간 알림 브로드캐스트
         try {
-            broadcast(new ConsentSubmitted($consent));
+            broadcast(new ConsentSubmitted($consent, $applied));
         } catch (\Throwable $e) {
             \Log::warning('ConsentSubmitted 브로드캐스트 실패: ' . $e->getMessage());
         }
@@ -281,6 +285,75 @@ class ConsentController extends Controller
                 'consent_id' => $consent->id, 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 동의서에 적어 준 것을 환자ㆍ처방전에도 옮겨 적는다.
+     *
+     * 환자가 손수 적은 주소ㆍ이메일ㆍ연락처가 개인정보동의 표에만 남아 있으면, 주문 등록
+     * 화면은 여전히 옛 주소를 들고 배송을 건다. 갈 자리가 있는 것은 그 자리로 보낸다.
+     *
+     * 갈 자리가 없는 것(보험ㆍ지원 자격 원문ㆍ장루 상세)은 옮기지 않는다 — 억지로 메모에
+     * 밀어 넣으면 담당자가 적은 것과 섞인다. 그것들은 주문 등록의 「개인정보동의」 단추를
+     * 눌러 동의서 그대로 읽는다.
+     *
+     * @return array<string,string> 주문 등록의 입력칸 id => 새 값
+     */
+    private function applyPrivacyToRecords(PrescriptionConsent $consent, Request $request): array
+    {
+        $consent->loadMissing('prescription.patient');
+        $rx = $consent->prescription;
+        $p  = $rx?->patient;
+
+        $applied = [];
+        $val = fn (string $k): string => trim((string) $request->input($k));
+
+        if ($p) {
+            $set = [];
+            foreach ([
+                'zip'    => ['postcode',       'f-postcode'],
+                'addr1'  => ['address',        'f-address'],
+                'addr2'  => ['address_detail', 'f-address-detail'],
+                'email'  => ['email',          'f-email'],
+                'phone'  => ['mobile',         'f-mobile'],
+                'phone2' => ['phone',          'f-mobile2'],
+            ] as $from => [$col, $fieldId]) {
+                $v = $val($from);
+                if ($v !== '' && (string) $p->{$col} !== $v) {
+                    $set[$col] = $v;
+                    $applied[$fieldId] = $v;
+                }
+            }
+
+            // 생년월일은 비어 있을 때만 — 주민번호에서 읽는 값이 더 확실하다
+            if ($val('birth') !== '' && ! $p->birth_date) {
+                $set['birth_date'] = $val('birth');
+                $applied['f-birth'] = $val('birth');
+            }
+
+            /* 사업부도 비어 있을 때만 둔다. 이름 앞의 (E) 가 이 칸을 따라 붙고 떨어져,
+               환자가 유형을 잘못 골랐을 때 이름까지 바뀐다. */
+            if (! $p->care_type) {
+                $set['care_type'] = $request->input('privacy_type') === 'stoma' ? 'OC' : 'IC';
+            }
+
+            if ($set) {
+                $p->forceFill($set)->save();
+            }
+        }
+
+        /* 자격은 처방전에 붙는다. 이미 골라 둔 것이 있으면 담당자의 손을 덮지 않는다.
+           동의서의 「보험」은 산업재해만 자격 칸에 대응하는 값이 있다. */
+        if ($rx && ! $rx->benefit_class) {
+            $bc = ['일반' => '일반', '차상위경감대상자' => '차상위경감', '기초생활수급자' => '기초'][$val('support_qualify')]
+                  ?? ($val('insurance') === '산업재해' ? '산재' : null);
+            if ($bc) {
+                $rx->forceFill(['benefit_class' => $bc])->save();
+                $applied['f-benefit-class'] = $bc;
+            }
+        }
+
+        return $applied;
     }
 
     /**
