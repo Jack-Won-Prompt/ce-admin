@@ -1585,6 +1585,16 @@ class PrescriptionController extends Controller
         $totalNhis  = $prescription->items->sum('nhis_amount');
         $totalCopay = $prescription->items->sum('patient_copay');
 
+        /* 저장하면 주문 관리에도 선다. 처방전 그림이 없어도, 제품을 아직 안 골랐어도
+           그렇다 — 주문 등록에서 저장한 건은 곧 하나의 거래이고, 그것을 보는 자리가
+           주문 관리다. 예전에는 「주문 생성 및 연계」를 눌러야만 줄이 생겨, 상담만
+           받아 적어 둔 건은 어느 목록에도 없이 떠 있었다.
+
+           여기서는 우리 쪽 주문만 만든다. 위드웍스로 보내는 것은 그 단추가 할 일이다 —
+           저장할 때마다 창고로 주문이 날아가서는 안 된다. */
+        $hadOrder = $prescription->order()->exists();
+        $order    = $this->ensureOrder($prescription);
+
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
 
         return response()->json([
@@ -1607,7 +1617,17 @@ class PrescriptionController extends Controller
                누르면 누구와 상담하는지 가리지 못해 열리지 않았다. */
             'patient_id'   => $prescription->fresh()->patient_id,
             'patient_name' => $prescription->fresh()->patient?->name,
+            /* 저장으로 주문이 새로 섰으면 그 번호를 돌려준다 — 화면의 「주문 미등록」이
+               그 자리에서 「주문 완료」로 선다. 이미 있던 것이면 null 이다. */
+            'order_created' => $hadOrder ? null : $order?->order_number,
+            'order_id'      => $order?->id ?? $prescription->order?->id,
         ]);
+    }
+
+    /** 이 처방전의 주문 줄을 세워 둔다 — 몸통은 App\Support\OrderSync 다. */
+    private function ensureOrder(Prescription $prescription): ?\App\Models\Order
+    {
+        return \App\Support\OrderSync::ensure($prescription);
     }
 
     // ── 검수 요청 ─────────────────────────────────────────

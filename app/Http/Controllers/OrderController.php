@@ -144,8 +144,12 @@ class OrderController extends Controller
 
         $prescription = Prescription::findOrFail($request->prescription_id);
 
-        // 이미 주문이 있으면 반환
-        if ($prescription->order()->exists()) {
+        /* 저장만 해도 주문 줄은 선다(주문 관리에 보이도록 — PrescriptionController::ensureOrder).
+           그 줄은 아직 창고로 보내지 않은 빈 껍데기다. 여기서는 그것을 채워 보낸다 —
+           「이미 있다」고 물리면 저장을 한 번이라도 한 건은 영영 주문을 낼 수 없다.
+           이미 보낸 주문(SO 가 붙은 것)은 그대로 막는다 — 같은 것을 두 번 보낼 수는 없다. */
+        $existing = $prescription->order()->first();
+        if ($existing && $existing->withworks_so_no) {
             return response()->json(['success' => false, 'message' => '이미 주문이 생성된 처방전입니다.'], 409);
         }
 
@@ -164,8 +168,8 @@ class OrderController extends Controller
         $shippingFee = $request->shipping_fee ?? 0;
         $totalAmount = $totalCopay + $shippingFee;
 
-        $order = Order::create([
-            'order_number'     => Order::generateOrderNumber(),
+        $attrs = [
+            'order_number'     => $existing?->order_number ?? Order::generateOrderNumber(),
             'prescription_id'  => $prescription->id,
             'patient_id'       => $prescription->patient_id,
             'created_by'       => Auth::id(),
@@ -183,7 +187,16 @@ class OrderController extends Controller
             'status'             => 'pending',
             'so_type'            => $request->so_type ?? '1013',
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : null,
-        ]);
+        ];
+
+        if ($existing) {
+            // 껍데기를 채운다 — 번호는 그대로 두어 이미 적어 둔 곳(입금ㆍ영수증)이 어긋나지 않는다
+            $existing->update($attrs);
+            $existing->items()->delete();
+            $order = $existing;
+        } else {
+            $order = Order::create($attrs);
+        }
 
         /* 품목을 줄 단위로 남긴다. orders 의 product_name·quantity 는 목록 화면이 쓰는 요약이고,
            두 번째 제품부터는 여기에만 있다. 공단 제출용 구매내역 서류도 이 줄을 근거로 만든다. */

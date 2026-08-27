@@ -2201,8 +2201,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      탭을 열어 봐야 알 수 있었다 — 걸음 띠에서 바로 읽게 한다.
                      data-stage 는 붙이지 않는다. 다른 단추는 처방 상태가 걸음을 정하지만
                      이 단추는 「주문이 있느냐」가 정한다(syncOrderStageBtn). --}}
+                {{-- 저장만 해도 주문 줄은 선다(주문 관리에 보이도록). 그러니 「주문이
+                     있느냐」로는 이 걸음을 가릴 수 없다 — 창고로 보냈느냐로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
-                        title="주문 연계 탭으로 갑니다">{{ $prescription->order ? '주문 완료' : '주문 미등록' }}</button>
+                        title="주문 연계 탭으로 갑니다">{{ $prescription->order?->withworks_so_no ? '주문 완료' : '주문 미등록' }}</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -3253,7 +3255,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
             {{-- 주문 생성 / 수정·삭제 버튼 영역 --}}
             <div id="orderActionArea" style="margin-top:12px;">
-              @if($prescription->order)
+              {{-- 「주문이 있느냐」가 아니라 「창고로 보냈느냐」로 가른다. 저장만 해도
+                   주문 줄은 서기 때문이다(주문 관리에 보이도록). 아직 보내지 않은 줄은
+                   빈 껍데기라, 「주문 생성 및 연계」가 그것을 채워 보낸다. --}}
+              @if($prescription->order?->withworks_so_no)
               {{-- 이미 주문 있음: 수정 + 삭제 --}}
               <div id="orderExistsInfo" style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
                 <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:15px;"></i>
@@ -4854,7 +4859,9 @@ window.HELP_TOUR_STEPS = [
   $_orderData = ['id' => $prescription->order->id, 'order_number' => $prescription->order->order_number, 'withworks_so_no' => $prescription->order->withworks_so_no ?? '', 'so_type' => $prescription->order->so_type ?? \App\Models\Order::saleSoTypes()[0], 'shipping_address' => $prescription->order->shipping_address ?? ''];
   @endphp
   let existingOrder = @json($_orderData);
-  let orderExists = true;
+  /* 줄이 있느냐가 아니라 보냈느냐다 — 저장만 해도 줄은 선다(주문 관리에 보이도록).
+     아직 보내지 않은 줄은 빈 껍데기이고, 「주문 생성 및 연계」가 그것을 채워 보낸다. */
+  let orderExists = !!existingOrder.withworks_so_no;
   @else
   let existingOrder = null;
   let orderExists = false;
@@ -6595,6 +6602,14 @@ window.HELP_TOUR_STEPS = [
         if (res.patient_id) {
           const hid = document.getElementById('f-patient-id');
           if (hid) hid.value = res.patient_id;
+        }
+        /* 저장하면 주문 관리에 설 줄도 함께 만들어진다. 그 번호를 받아 두어야
+           현금영수증ㆍ가상계좌처럼 주문에 매달리는 것들이 바로 동작한다.
+           걸음 띠는 그대로 「주문 미등록」이다 — 아직 창고로 보낸 것이 아니다. */
+        if (res.order_id) _ORDER_ID = res.order_id;
+        if (res.order_created && !existingOrder) {
+          existingOrder = { id: res.order_id ?? null, order_number: res.order_created,
+                            withworks_so_no: '', so_type: currentSoType, shipping_address: null };
         }
         if (!opts.silent) showToast('저장되었습니다.', 'success');
         saveBtns.forEach(btn => BtnState.success(btn, '저장 완료'));

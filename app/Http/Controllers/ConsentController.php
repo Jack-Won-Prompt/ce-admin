@@ -217,6 +217,15 @@ class ConsentController extends Controller
                 $applied = $this->applyPrivacyToRecords($consent, $request);
                 $this->savePrivacyConsent($consent, $request);
             }
+
+            /* 서명이 끝난 건은 주문 관리에도 선다. 처방전 그림이 없어도, 아직 제품을
+               고르지 않았어도 그렇다 — 위임을 받아 둔 건은 이미 거래가 시작된 것이고,
+               담당자가 그다음에 손댈 것을 찾는 자리가 그 목록이다.
+               우리 쪽 줄만 세운다. 창고로 보내는 것은 「주문 생성 및 연계」가 할 일이다. */
+            $consent->loadMissing('prescription');
+            if ($consent->prescription) {
+                \App\Support\OrderSync::ensure($consent->prescription->refresh());
+            }
             $this->generateConsentPdf($consent);
 
             // 요양비위임장(원본 오버레이)도 첨부문서에 자동 추가
