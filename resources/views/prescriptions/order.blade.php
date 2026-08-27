@@ -1011,6 +1011,28 @@ $calcDeposit  = $calcCopay + $calcShipping;
         {{-- 오른쪽 — 액션 버튼 (시안 137:311) --}}
         <div class="pib-actions">
 
+      {{-- ── 개인정보동의 ──────────────────────────────────
+           위임동의 왼쪽에 나란히 선다. 이 사람의 개인정보 수집·이용 동의를 이미
+           받아 두었으면 「개인정보동의 완료」로 적는다 — 개인정보동의 화면이
+           동의자로 읽는 이름ㆍ연락처가 이 사람과 같은지를 본다. --}}
+      <div style="position:relative;">
+        <button class="pib-btn" type="button" id="privacyActionBtn" onclick="togglePrivacyPopover(event)">
+          <i class="fa-solid fa-shield-halved" style="font-size:11px;"></i>
+          <span id="privacyBtnText">개인정보동의</span>
+        </button>
+        <div id="privacyPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
+          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
+          </div>
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-shield-halved" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">개인정보 수집·이용 동의</span>
+            <button onclick="closePrivacyPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;" id="privacyPopBody"></div>
+        </div>
+      </div>
+
       {{-- 위임동의 SMS 발송 --}}
       <div style="position:relative;">
         <div id="consentBtnWrap">
@@ -5375,6 +5397,10 @@ window.HELP_TOUR_STEPS = [
        받았다면 이 처방전에서도 「위임동의 완료」로 보여야 한다. */
     const st = data.consent?.status;
     if (st && typeof window._applyConsentBtn === 'function') window._applyConsentBtn(st);
+    // 개인정보 동의도 사람을 따라간다 — 없으면 「받은 것 없음」으로 되돌린다
+    if (typeof window._applyPrivacyBtn === 'function') {
+      window._applyPrivacyBtn(data.privacy ?? { exists: false, agreed: false });
+    }
 
     return n;
   }
@@ -7554,7 +7580,7 @@ window.HELP_TOUR_STEPS = [
   });
 
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal','boFindPop'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','privacyPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal','boFindPop'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -9448,6 +9474,137 @@ window.HELP_TOUR_STEPS = [
   // 이름 조회로 다른 사람을 고르면 그 사람의 동의 상태로 다시 그린다
   window._applyConsentBtn = _applyConsentBtn;
 
+  // ── 개인정보동의 단추 ───────────────────────────────────
+  /* 위임동의는 처방전마다 받지만, 개인정보 동의는 사람에게 한 번 받으면 그것으로 끝이다.
+     그래서 「완료」 여부만 적고, 무엇에 동의했는지는 눌러서 본다. */
+  let PRIVACY_STATE = @json($privacyState ?? ['exists' => false, 'agreed' => false]);
+  const PRIVACY_LIST_URL = @json(route('privacy-consents.index'));
+
+  function _applyPrivacyBtn(state) {
+    if (!state) return;
+    PRIVACY_STATE = state;
+
+    const btn  = document.getElementById('privacyActionBtn');
+    const text = document.getElementById('privacyBtnText');
+    if (!btn || !text) return;
+
+    if (state.agreed) {
+      text.textContent = '개인정보동의 완료';
+      btn.style.background  = 'var(--primary-50)';
+      btn.style.borderColor = 'var(--primary-200)';
+      btn.style.color       = 'var(--primary)';
+      btn.querySelector('i').className = 'fa-solid fa-circle-check';
+      btn.title = `${state.at ?? ''} · ${state.source ?? ''}`.trim();
+    } else {
+      text.textContent = '개인정보동의';
+      btn.style.background  = '';
+      btn.style.borderColor = '';
+      btn.style.color       = '';
+      btn.querySelector('i').className = 'fa-solid fa-shield-halved';
+      btn.title = '';
+    }
+    btn.querySelector('i').style.fontSize = '11px';
+  }
+  window._applyPrivacyBtn = _applyPrivacyBtn;
+
+  function _privacyPopHtml() {
+    const st  = PRIVACY_STATE || {};
+    const esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+    if (!st.exists) {
+      return `
+        <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+          이 사람에게서 받은 <strong>개인정보 수집·이용 동의</strong>가 아직 없습니다.<br>
+          위임동의 링크 화면에서 개인정보·마케팅 활용 동의를 함께 받습니다.
+        </p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button class="btn btn-outline btn-sm" id="pvOpenList">동의 목록</button>
+          <button class="btn btn-primary btn-sm" id="pvSendConsent">
+            <i class="fa-solid fa-paper-plane"></i> 위임동의 발송
+          </button>
+        </div>`;
+    }
+
+    const row = (k, v) => `<div style="display:flex;gap:8px;font-size:12px;line-height:1.9;">
+        <span style="width:56px;flex-shrink:0;color:var(--text-muted);">${k}</span>
+        <span style="color:var(--text-primary);font-weight:500;">${esc(v) || '-'}</span></div>`;
+
+    const items = (st.items ?? []).map(it => {
+      const yes = it.value === '동의함';
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+          <i class="fa-solid ${yes ? 'fa-circle-check' : 'fa-circle-minus'}"
+             style="font-size:10px;color:${yes ? 'var(--primary)' : 'var(--text-muted)'};"></i>
+          <span style="flex:1;color:var(--text-secondary);">${esc(it.label)}</span>
+          <span style="font-weight:700;color:${yes ? 'var(--primary)' : 'var(--text-muted)'};">${esc(it.value)}</span>
+        </div>`;
+    }).join('');
+
+    const warn = st.agreed ? '' : `
+      <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--alert-500);line-height:1.6;">
+        <i class="fa-solid fa-triangle-exclamation"></i> 필수 항목 가운데 동의하지 않은 것이 있습니다.
+      </div>`;
+
+    return `
+      ${row('동의자', st.name)}
+      ${row('연락처', st.phone)}
+      ${row('유형', [st.type, st.source].filter(Boolean).join(' · '))}
+      ${row('동의일', st.at)}
+      ${warn}
+      <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:6px;">${items}</div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면에서 보기</button>
+      </div>`;
+  }
+
+  /* 단추는 그려 넣은 뒤에 잇는다. onclick 문자열에 이름을 끼워 넣으면 따옴표 하나에
+     속성이 끊겨 반쪽짜리 코드가 남는다 — 실제로 그렇게 끊겨 눌러도 아무 일이
+     없었다. 값은 여기 클로저에서 그대로 읽는다. */
+  function _privacyPopWire() {
+    const st   = PRIVACY_STATE || {};
+    /* 누른 것이 문서까지 올라가면, 「바깥을 누르면 닫는다」는 규칙들이 방금 연 팝오버를
+       도로 닫는다 — 위임동의 팝오버가 그렇게 열리자마자 닫혔다. 여기서 멈춘다. */
+    const list = document.getElementById('pvOpenList');
+    if (list) {
+      list.onclick = (e) => {
+        e.stopPropagation();
+        closePrivacyPopover();
+        const q = st.name ? '?search=' + encodeURIComponent(st.name) : '';
+        ceOpenTab(PRIVACY_LIST_URL + q, '개인정보동의', 'check-user');
+      };
+    }
+    const send = document.getElementById('pvSendConsent');
+    if (send) {
+      send.onclick = (e) => { e.stopPropagation(); closePrivacyPopover(); openConsentModal(); };
+    }
+  }
+
+  function togglePrivacyPopover(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('privacyPopover');
+    if (!pop) return;
+    if (pop.style.display !== 'none' && pop.style.display) { pop.style.display = 'none'; return; }
+    document.getElementById('privacyPopBody').innerHTML = _privacyPopHtml();
+    _privacyPopWire();
+    closeAllPopovers();
+    pop.style.display = 'block';
+  }
+
+  function closePrivacyPopover() {
+    const pop = document.getElementById('privacyPopover');
+    if (pop) pop.style.display = 'none';
+  }
+
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('privacyPopover');
+    const btn = document.getElementById('privacyActionBtn');
+    if (pop && pop.style.display !== 'none' && pop.style.display
+        && !pop.contains(e.target) && !(btn && btn.contains(e.target))) {
+      pop.style.display = 'none';
+    }
+  });
+
+  _applyPrivacyBtn(PRIVACY_STATE);
+
   /* 보호자 영역의 진행 상태 — 서명과 신분증을 받았는지.
      둘 다 서명 화면에서 들어오므로 여기서는 결과만 보여 준다. */
   function _guardianState(data) {
@@ -9501,6 +9658,10 @@ window.HELP_TOUR_STEPS = [
     try {
       const res  = await fetch(CONSENT_STATUS_URL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content } });
       const data = await res.json();
+      // 개인정보 동의는 위임동의가 없어도 있을 수 있다 — 먼저 그린다
+      if (typeof window._applyPrivacyBtn === 'function' && data.privacy) {
+        window._applyPrivacyBtn(data.privacy);
+      }
       if (!data.exists) return;
 
       // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
@@ -9542,6 +9703,8 @@ window.HELP_TOUR_STEPS = [
     // 서명 완료 시 생성 서류(요양비위임장 등) 실시간 반영
     if (data.status === 'agreed') {
       refreshGeneratedDocs();
+      // 서명 화면에서 개인정보 동의도 함께 받았다 — 단추를 다시 읽는다
+      updateConsentStatus();
     }
   });
 

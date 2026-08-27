@@ -126,6 +126,44 @@
     }
     .consent-text strong { color: #111827; }
 
+    /* 개인정보 수집·이용 동의 — 개인정보동의 페이지(privacy)와 같은 얼개다.
+       그 페이지와 같은 항목ㆍ같은 문구를 받으므로 보이는 모습도 같게 둔다. */
+    .agree-title {
+      font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .agree-all {
+      display: flex; align-items: center; gap: 9px; cursor: pointer;
+      padding: 11px 13px; margin-bottom: 10px; border-radius: 9px;
+      background: #eef7f9; border: 1px solid #cfe6ea;
+      font-size: 13px; font-weight: 700; color: #1f6274;
+    }
+    .agree-all input { width: 18px; height: 18px; accent-color: #28798B; }
+    .agree-item { border: 1px solid #e5e7eb; border-radius: 9px; padding: 12px 13px; margin-bottom: 10px; background: #fafafa; }
+    .agree-head { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 700; color: #374151; }
+    .agree-head .tag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+    .tag.must { background: #fdecea; color: #ef4444; }
+    .tag.opt  { background: #eef1f5; color: #6b7280; }
+    .agree-radios { display: flex; gap: 8px; margin-top: 10px; }
+    .agree-radios > div { flex: 1; position: relative; }
+    .agree-radios input { position: absolute; opacity: 0; pointer-events: none; }
+    .agree-radios label {
+      display: block; text-align: center; padding: 10px 8px; margin: 0;
+      border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;
+      font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer;
+    }
+    .agree-radios input:checked + label { border-color: #28798B; background: #eef7f9; color: #1f6274; font-weight: 800; }
+    .agree-detail {
+      background: none; border: none; color: #28798B; font-size: 12px; font-weight: 700;
+      cursor: pointer; padding: 8px 0 0; text-decoration: underline; font-family: inherit;
+    }
+    .agree-box {
+      display: none; margin-top: 10px; padding: 12px; background: #fff;
+      border: 1px dashed #e5e7eb; border-radius: 8px;
+      font-size: 12px; line-height: 1.7; color: #6b7280; white-space: pre-line;
+    }
+    .agree-box.open { display: block; }
+
     /* 서명란 */
     .sig-section {}
     .sig-label {
@@ -296,6 +334,66 @@
       콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
       <strong>급여 위임청구 동의</strong>를 합니다.<br><br>
       위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위
+    </div>
+
+    {{-- ── 개인정보 수집·이용 동의 ────────────────────────────
+         위임만 받고 개인정보 동의는 따로 받으러 다니던 것을 한 화면에서 끝낸다.
+         항목ㆍ문구는 개인정보동의 페이지(privacy/catheter)와 같은 것을 쓴다 —
+         두 곳에서 받은 동의가 같은 표(privacy_consents)에 같은 값으로 쌓여야
+         개인정보동의 화면에서 한 줄로 읽힌다. --}}
+    <div class="sig-section" style="margin-bottom:18px;">
+      <div class="agree-title">개인정보 수집·이용 및 마케팅 활용 동의</div>
+
+      <label class="agree-all">
+        <input type="checkbox" id="agreeAll" onclick="checkAllAgree(this)"> 아래 동의 항목에 모두 동의합니다.
+      </label>
+
+      {{-- 일반정보 (필수) --}}
+      <div class="agree-item">
+        <div class="agree-head"><span class="tag must">필수</span> 일반정보의 수집·이용에 대한 동의</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agGy" name="agree_general" value="동의함" onchange="refreshAgree()"><label for="agGy">동의함</label></div>
+          <div><input type="radio" id="agGn" name="agree_general" value="동의하지 않음" onchange="refreshAgree()"><label for="agGn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 수집·이용 목적
+· 환자의 신원 확인 및 정보전달, 샘플 및 제품 배송
+· 제품 관련 문의·불만 처리, 제품 사용법 교육
+· 구매 및 상담 등에 대한 전산관리, 환자 DB 구축
+· 회사에 부과되는 법적·행정적 의무의 이행
+2. 수집·이용 항목 : 성명, 성별, 생년월일, 연락처, 주소, 이메일
+3. 보유 및 이용기간 : 관계 법령에 따라 보존해야 하는 경우가 아닌 한 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
+4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
+      </div>
+
+      {{-- 제3자 제공 (필수) --}}
+      <div class="agree-item">
+        <div class="agree-head"><span class="tag must">필수</span> 개인정보의 제3자 제공에 대한 동의</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agTy" name="agree_third_party" value="동의함" onchange="refreshAgree()"><label for="agTy">동의함</label></div>
+          <div><input type="radio" id="agTn" name="agree_third_party" value="동의하지 않음" onchange="refreshAgree()"><label for="agTn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 제공받는 자 : 요양비 지원·처방 관련 업무 수행 기관(준요양기관 등)
+2. 이용목적 : 요양비 지원 신청 및 처리, 배송·상담
+3. 제공항목 : 성명, 연락처, 주소, 보험·지원자격 정보
+4. 보유 및 이용기간 : 제공 목적 달성 시까지
+5. 귀하는 위 제3자 제공을 거부할 수 있습니다. 다만 거부 시 지원 신청 처리가 제한될 수 있습니다.</div>
+      </div>
+
+      {{-- 마케팅 활용 (선택) --}}
+      <div class="agree-item">
+        <div class="agree-head"><span class="tag opt">선택</span> 개인정보의 마케팅 활용에 대한 동의</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agMy" name="agree_marketing" value="동의함" onchange="refreshAgree()"><label for="agMy">동의함</label></div>
+          <div><input type="radio" id="agMn" name="agree_marketing" value="동의하지 않음" onchange="refreshAgree()"><label for="agMn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 수집항목 : 성명, 생년월일, 연락처, 이메일
+2. 이용목적 : 뉴스레터, 새로운 제품 소개, 재처방 예정일 안내 등 마케팅 목적의 정보 전달
+3. 보유기간 : 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
+4. 귀하는 위 선택 항목의 수집·이용을 거부할 수 있으며, 거부 시 뉴스레터·제품 소개 등 정보를 제공받을 수 없습니다.</div>
+      </div>
     </div>
 
     {{-- 서명란 --}}
@@ -523,8 +621,40 @@ function guardianReady() {
   return !!(name && rel && guardianBirthOk() && gHasSig && gIdData);
 }
 
+/* ── 개인정보 수집·이용 동의 ───────────────────────────── */
+function toggleAgreeBox(btn) {
+  const box = btn.nextElementSibling;
+  const on  = box.classList.toggle('open');
+  btn.textContent = on ? '접기 ▲' : '자세히보기 ▼';
+}
+
+/* 「모두 동의」는 선택 항목까지 함께 켠다 — 하나씩 되돌릴 수 있다 */
+function checkAllAgree(cb) {
+  ['agGy', 'agTy', 'agMy', 'agGn', 'agTn', 'agMn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = cb.checked && id.endsWith('y');
+  });
+  refreshAgree();
+}
+
+function agreePicked(name) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value ?? '';
+}
+
+/* 필수 두 항목에 「동의함」이 찍혀야 서명할 수 있다.
+   개인정보동의 페이지의 카테터 폼과 같은 두 항목이다. */
+function privacyReady() {
+  return agreePicked('agree_general') === '동의함'
+      && agreePicked('agree_third_party') === '동의함';
+}
+
 function refreshAgree() {
-  const ok = hasSig && (!NICE_ENFORCE || identityVerified) && guardianReady();
+  // 셋을 다 골라 두었으면 위의 「모두 동의」도 따라 켠다
+  const all = document.getElementById('agreeAll');
+  if (all) {
+    all.checked = privacyReady() && agreePicked('agree_marketing') === '동의함';
+  }
+  const ok = hasSig && (!NICE_ENFORCE || identityVerified) && guardianReady() && privacyReady();
   document.getElementById('btnAgree').disabled = !ok;
 }
 
@@ -760,6 +890,10 @@ async function submitConsent(action) {
     ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
     return;
   }
+  if (action === 'agreed' && !privacyReady()) {
+    ceAlert('개인정보 수집·이용의 필수 동의 항목에 동의해 주세요.', { tone: 'warning' });
+    return;
+  }
 
   const btnAgree   = document.getElementById('btnAgree');
   const btnDecline = document.getElementById('btnDecline');
@@ -769,6 +903,10 @@ async function submitConsent(action) {
   const body = { action };
   if (action === 'agreed') {
     body.signature = canvas.toDataURL('image/png');
+    body.agree_general     = agreePicked('agree_general');
+    body.agree_third_party = agreePicked('agree_third_party');
+    // 선택 항목은 고르지 않아도 넘어간다 — 고르지 않은 것은 「동의하지 않음」으로 남긴다
+    body.agree_marketing   = agreePicked('agree_marketing') || '동의하지 않음';
     if (IS_MINOR) {
       body.guardian_name      = document.getElementById('gName').value.trim();
       body.guardian_relation  = document.getElementById('gRelation').value;

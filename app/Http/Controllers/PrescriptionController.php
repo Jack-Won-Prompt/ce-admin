@@ -1080,6 +1080,9 @@ class PrescriptionController extends Controller
             'resident_masked' => $masked,
             'fill'            => array_map(fn ($v) => $v === null ? '' : (string) $v, $fill),
             'consent'         => $this->latestConsentState($patient),
+            // 개인정보 동의도 사람에게 묶어 읽는다 — 다른 사람을 고르면 그 사람 것으로 다시 그린다
+            'privacy'         => \App\Models\PrivacyConsent::stateFor(
+                                     $patient->id, $patient->bare_name, $patient->mobile),
         ]);
     }
 
@@ -1236,12 +1239,20 @@ class PrescriptionController extends Controller
         $orderManagers = \App\Models\User::where('is_active', true)
             ->orderBy('name')->pluck('name')->unique()->values()->all();
 
+        /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,
+           환자가 있으면 그 사람으로, 없으면 처방전에 적힌 이름ㆍ휴대폰으로 찾는다. */
+        $privacyState = \App\Models\PrivacyConsent::stateFor(
+            $prescription->patient_id,
+            $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
+            $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
+        );
+
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
-            'orderManagers'
+            'orderManagers', 'privacyState'
         ));
     }
 

@@ -69,7 +69,24 @@ class ConsentController extends Controller
             'guardian_phone'     => 'nullable|string|max:40',
             'guardian_signature' => 'nullable|string|max:500000',
             'guardian_id'        => 'nullable|string|max:8000000',
+            // 개인정보 수집·이용 동의 (개인정보동의 페이지와 같은 항목·같은 값)
+            'agree_general'      => 'nullable|in:동의함,동의하지 않음',
+            'agree_third_party'  => 'nullable|in:동의함,동의하지 않음',
+            'agree_marketing'    => 'nullable|in:동의함,동의하지 않음',
         ]);
+
+        /* 필수 개인정보 동의 — 화면에서도 막지만 서버에서 다시 본다.
+           개인정보동의 페이지(privacy)의 카테터 폼과 같은 두 항목이 필수다. */
+        if ($request->action === 'agreed') {
+            foreach (['agree_general' => '일반정보 수집·이용', 'agree_third_party' => '제3자 제공'] as $k => $label) {
+                if ($request->input($k) !== '동의함') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "「{$label}」 동의가 필요합니다.",
+                    ], 422);
+                }
+            }
+        }
 
         /* 미성년자는 혼자 위임할 수 없다. 화면에서도 막지만, 화면을 거치지 않고 들어오는
            요청이 있으므로 서버에서 다시 본다. */
@@ -115,6 +132,7 @@ class ConsentController extends Controller
 
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
+            $this->savePrivacyConsent($consent, $request);
             $this->generateConsentPdf($consent);
 
             // 요양비위임장(원본 오버레이)도 첨부문서에 자동 추가
@@ -135,6 +153,59 @@ class ConsentController extends Controller
             'success' => true,
             'action'  => $request->action,
         ]);
+    }
+
+    /**
+     * 서명 화면에서 함께 받은 개인정보 수집·이용 동의를 남긴다.
+     *
+     * 개인정보동의 화면(privacy_consents)이 읽는 그 표에 그대로 쌓는다 — 동의를 어디서
+     * 받았든 한 자리에서 보아야 하고, 주문 등록의 「개인정보동의 완료」도 이 표를 본다.
+     *
+     * 줄은 고치지 않고 새로 적는다. 동의는 그때 그 시점의 기록이라, 뒤에 다시 받은 동의가
+     * 앞의 것을 덮으면 언제 무엇에 동의했는지가 사라진다(공개 폼도 같게 쌓는다).
+     */
+    private function savePrivacyConsent(PrescriptionConsent $consent, Request $request): void
+    {
+        $consent->loadMissing('prescription.patient');
+        $rx      = $consent->prescription;
+        $patient = $rx?->patient;
+
+        // IC = 카테터 · OC = 장루. 모르면 카테터 폼과 같은 항목을 받았으므로 카테터로 둔다.
+        $type = match ($patient?->care_type) { 'OC' => 'stoma', default => 'catheter' };
+
+        try {
+            \App\Models\PrivacyConsent::create([
+                'patient_id'        => $rx?->patient_id,
+                'type'              => $type,
+                'source'            => 'mobile',
+                'name'              => $consent->patient_name ?: $patient?->bare_name,
+                'phone'             => $consent->patient_mobile ?: $patient?->mobile,
+                'email'             => $patient?->email,
+                'zip'               => $patient?->postcode,
+                'addr1'             => $patient?->address,
+                'addr2'             => $patient?->address_detail,
+                'birth'             => $consent->patient_birth_date?->toDateString()
+                                       ?? $patient?->birth_date?->toDateString(),
+                'agree_general'     => $request->input('agree_general'),
+                'agree_third_party' => $request->input('agree_third_party'),
+                'agree_marketing'   => $request->input('agree_marketing') ?: '동의하지 않음',
+                // 어느 위임동의 서명에서 따라온 동의인지 — 뒤에 되짚을 자리를 남긴다
+                'extra'             => [
+                    'from'                    => 'consent_sign',
+                    'prescription_consent_id' => $consent->id,
+                    'rx_number'               => $rx?->rx_number,
+                ],
+                'ip'           => $request->ip(),
+                'user_agent'   => substr((string) $request->userAgent(), 0, 300),
+                'submitted_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            /* 개인정보 동의를 남기지 못했다고 위임동의 서명까지 되돌릴 수는 없다.
+               서명은 환자가 이미 마친 일이다 — 흔적만 남기고 계속 간다. */
+            \Log::error('위임동의 서명의 개인정보 동의 저장 실패', [
+                'consent_id' => $consent->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -305,8 +376,18 @@ class ConsentController extends Controller
             ->latest()
             ->first();
 
+        /* 개인정보 동의는 위임동의와 다른 표에 쌓인다. 주문 등록 화면의 두 단추가
+           같은 한 번의 확인으로 다시 그려지도록 여기에 함께 싣는다 —
+           위임동의를 아직 보내지 않은 처방전에도 개인정보 동의는 있을 수 있어,
+           아래 「없음」 답에도 넣는다. */
+        $privacy = \App\Models\PrivacyConsent::stateFor(
+            $prescription->patient_id,
+            $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
+            $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
+        );
+
         if (!$latest) {
-            return response()->json(['exists' => false]);
+            return response()->json(['exists' => false, 'privacy' => $privacy]);
         }
 
         // pending 이면 실시간으로 만료 여부 체크
@@ -316,6 +397,7 @@ class ConsentController extends Controller
 
         return response()->json([
             'exists'          => true,
+            'privacy'         => $privacy,
             'status'          => $latest->status,
             'status_label'    => $latest->statusLabel(),
             'responded_at'    => $latest->responded_at?->format('Y-m-d H:i:s'),
