@@ -164,6 +164,39 @@
     }
     .agree-box.open { display: block; }
 
+    /* 신청자 정보 — 개인정보동의 페이지의 「신청자 정보」 카드와 같은 칸들이다 */
+    .pv-card { border: 1px solid #e5e7eb; border-radius: 9px; padding: 13px; margin-bottom: 12px; background: #fff; }
+    .pv-sub {
+      font-size: 12px; font-weight: 800; color: #1f6274;
+      padding-bottom: 9px; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb;
+    }
+    .pv-field { margin-bottom: 12px; }
+    .pv-field:last-child { margin-bottom: 0; }
+    .pv-field > label { display: block; font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .pv-req { color: #ef4444; font-size: 11px; margin-left: 2px; }
+    .pv-opt { color: #6b7280; font-size: 11px; margin-left: 3px; font-weight: 500; }
+    .pv-field input {
+      width: 100%; padding: 10px 11px; border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: 14px; background: #fbfcfe; color: #1f2937; font-family: inherit;
+    }
+    .pv-field input:focus { outline: none; border-color: #28798B; }
+    .pv-field input[readonly] { background: #f3f4f6; color: #6b7280; }
+    .pv-row { display: flex; gap: 8px; }
+    .pv-btn-line {
+      flex: 1; padding: 10px; border: 1.5px solid #28798B; border-radius: 8px;
+      background: #fff; color: #28798B; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .pv-subline { font-size: 12px; font-weight: 700; margin-top: 10px; color: #374151; }
+    .pv-note { font-size: 11px; color: #6b7280; margin: 10px 0 0; }
+    /* 고르지 않은 유형의 칸은 접는다 — 유형마다 받는 것이 다르다.
+       인라인 style 로 여닫지 않는다. style.display='' 는 인라인 값을 지울 뿐이라
+       아래 규칙이 다시 걸려 그대로 접혀 있었다 — 고른 유형을 껍데기에 적어 둔다. */
+    #privacyBlock [data-only] { display: none; }
+    #privacyBlock[data-type="catheter"] div[data-only="catheter"],
+    #privacyBlock[data-type="stoma"]    div[data-only="stoma"]    { display: block; }
+    #privacyBlock[data-type="catheter"] span[data-only="catheter"],
+    #privacyBlock[data-type="stoma"]    span[data-only="stoma"]   { display: inline; }
+
     /* 서명란 */
     .sig-section {}
     .sig-label {
@@ -338,17 +371,135 @@
 
     {{-- ── 개인정보 수집·이용 동의 ────────────────────────────
          위임만 받고 개인정보 동의는 따로 받으러 다니던 것을 한 화면에서 끝낸다.
-         항목ㆍ문구는 개인정보동의 페이지(privacy/catheter)와 같은 것을 쓴다 —
-         두 곳에서 받은 동의가 같은 표(privacy_consents)에 같은 값으로 쌓여야
-         개인정보동의 화면에서 한 줄로 읽힌다. --}}
-    <div class="sig-section" style="margin-bottom:18px;">
-      <div class="agree-title">개인정보 수집·이용 및 마케팅 활용 동의</div>
+         신청 유형ㆍ신청자 정보ㆍ동의 항목까지 개인정보동의 페이지(privacy)의
+         그 유형 폼과 같은 것을 받는다 — 두 곳에서 받은 동의가 같은 표
+         (privacy_consents)에 같은 값으로 쌓여야 한 줄로 읽힌다.
 
+         이미 동의를 받아 둔 사람에게는 이 영역이 아예 서지 않는다. 동의는 사람에게
+         한 번 받으면 족하고, 처방전마다 다시 물으면 같은 것을 몇 번씩 읽히게 된다. --}}
+    @if(! $privacyDone)
+    <div class="sig-section" id="privacyBlock" style="margin-bottom:18px;">
+      <div class="agree-title">개인정보 수집·이용 동의</div>
+
+      {{-- 신청 유형 — 이 뒤의 칸과 동의 항목이 유형마다 다르다 --}}
+      <div class="pv-field">
+        <label>신청 유형 <span class="pv-req">*</span></label>
+        <div class="agree-radios">
+          <div><input type="radio" id="pvTypeC" name="privacy_type" value="catheter"
+                      {{ ($privacyFill['type'] ?? '') === 'catheter' ? 'checked' : '' }}
+                      onchange="onPrivacyType()"><label for="pvTypeC">카테터(자가도뇨)</label></div>
+          <div><input type="radio" id="pvTypeS" name="privacy_type" value="stoma"
+                      {{ ($privacyFill['type'] ?? '') === 'stoma' ? 'checked' : '' }}
+                      onchange="onPrivacyType()"><label for="pvTypeS">장루</label></div>
+        </div>
+      </div>
+
+      {{-- 신청자 정보 — 우리가 아는 것은 채워 둔다. 틀린 것만 고치면 된다. --}}
+      <div class="pv-card" id="pvInfo">
+        <div class="pv-sub">신청자 정보</div>
+
+        <div class="pv-field">
+          <label>성명 <span class="pv-req">*</span></label>
+          <input type="text" id="pvName" maxlength="100" value="{{ $privacyFill['name'] ?? '' }}"
+                 placeholder="성명" oninput="refreshAgree()">
+        </div>
+
+        <div class="pv-field">
+          <label><span data-only="stoma">연락처1</span><span data-only="catheter">연락처</span> <span class="pv-req">*</span></label>
+          <input type="tel" id="pvPhone" maxlength="30" value="{{ $privacyFill['phone'] ?? '' }}"
+                 placeholder="010-0000-0000" oninput="refreshAgree()">
+        </div>
+
+        <div class="pv-field" data-only="stoma">
+          <label>연락처2 <span class="pv-opt">(선택)</span></label>
+          <input type="tel" id="pvPhone2" maxlength="30" value="{{ $privacyFill['phone2'] ?? '' }}"
+                 placeholder="보호자 등 추가 연락처">
+        </div>
+
+        <div class="pv-field">
+          <label>주소</label>
+          <div class="pv-row">
+            <input type="text" id="pvZip" maxlength="10" value="{{ $privacyFill['zip'] ?? '' }}"
+                   placeholder="우편번호" readonly onclick="findPrivacyZip()" style="flex:0 0 42%;">
+            <button type="button" class="pv-btn-line" onclick="findPrivacyZip()">주소 검색</button>
+          </div>
+          <input type="text" id="pvAddr1" maxlength="200" value="{{ $privacyFill['addr1'] ?? '' }}"
+                 placeholder="기본주소" style="margin-top:8px;">
+          <input type="text" id="pvAddr2" maxlength="200" value="{{ $privacyFill['addr2'] ?? '' }}"
+                 placeholder="상세주소" style="margin-top:8px;">
+        </div>
+
+        <div class="pv-field">
+          <label>이메일 <span class="pv-opt">(선택)</span></label>
+          <input type="email" id="pvEmail" maxlength="150" value="{{ $privacyFill['email'] ?? '' }}"
+                 placeholder="example@email.com">
+        </div>
+
+        {{-- 카테터 전용 --}}
+        <div class="pv-field" data-only="catheter">
+          <label>보험 <span class="pv-req">*</span></label>
+          <div class="agree-radios">
+            @foreach(['일반', '보훈', '산업재해'] as $i => $v)
+              <div><input type="radio" id="pvIns{{ $i }}" name="pv_insurance" value="{{ $v }}" onchange="refreshAgree()"><label for="pvIns{{ $i }}">{{ $v }}</label></div>
+            @endforeach
+          </div>
+        </div>
+
+        <div class="pv-field" data-only="catheter">
+          <label>지원 자격 <span class="pv-opt">(선택)</span></label>
+          <div class="agree-radios">
+            @foreach(['일반', '차상위경감대상자', '기초생활수급자'] as $i => $v)
+              <div><input type="radio" id="pvSup{{ $i }}" name="pv_support" value="{{ $v }}"><label for="pvSup{{ $i }}">{{ $v }}</label></div>
+            @endforeach
+          </div>
+        </div>
+
+        {{-- 장루 전용 --}}
+        <div class="pv-field" data-only="stoma">
+          <label>생년월일 <span class="pv-req">*</span></label>
+          <input type="date" id="pvBirth" value="{{ $privacyFill['birth'] ?? '' }}" onchange="refreshAgree()">
+        </div>
+
+        <div class="pv-field" data-only="stoma">
+          <label>사용 제품 <span class="pv-opt">(선택)</span></label>
+          <div class="agree-radios">
+            @foreach(['미오', '센슈라', '기타', '모름'] as $i => $v)
+              <div><input type="radio" id="pvPrd{{ $i }}" name="pv_product" value="{{ $v }}"><label for="pvPrd{{ $i }}">{{ $v }}</label></div>
+            @endforeach
+          </div>
+        </div>
+
+        <div class="pv-field" data-only="stoma">
+          <label>수술 병원 <span class="pv-opt">(선택)</span></label>
+          <input type="text" id="pvHospital" maxlength="100" placeholder="수술 받은 병원명">
+        </div>
+
+        <div class="pv-field" data-only="stoma">
+          <label>수술일자 <span class="pv-opt">(선택)</span></label>
+          <input type="date" id="pvSurgeryDate">
+        </div>
+
+        <div class="pv-field" data-only="stoma">
+          <label>장루 타입 <span class="pv-opt">(선택)</span></label>
+          <div class="agree-radios" style="margin-bottom:8px;">
+            @foreach(['영구 장루', '임시 장루', '모름'] as $i => $v)
+              <div><input type="radio" id="pvSt{{ $i }}" name="pv_stoma_type" value="{{ $v }}"><label for="pvSt{{ $i }}">{{ $v }}</label></div>
+            @endforeach
+          </div>
+          <div class="agree-radios">
+            @foreach(['결장루', '회장루', '요루'] as $i => $v)
+              <div><input type="radio" id="pvSk{{ $i }}" name="pv_stoma_kind" value="{{ $v }}"><label for="pvSk{{ $i }}">{{ $v }}</label></div>
+            @endforeach
+          </div>
+        </div>
+      </div>
+
+      {{-- 동의 항목 --}}
       <label class="agree-all">
         <input type="checkbox" id="agreeAll" onclick="checkAllAgree(this)"> 아래 동의 항목에 모두 동의합니다.
       </label>
 
-      {{-- 일반정보 (필수) --}}
+      {{-- 일반정보 (두 유형 모두 필수) --}}
       <div class="agree-item">
         <div class="agree-head"><span class="tag must">필수</span> 일반정보의 수집·이용에 대한 동의</div>
         <div class="agree-radios">
@@ -366,8 +517,8 @@
 4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
       </div>
 
-      {{-- 제3자 제공 (필수) --}}
-      <div class="agree-item">
+      {{-- 제3자 제공 — 카테터는 필수, 장루는 선택이다 --}}
+      <div class="agree-item" data-only="catheter">
         <div class="agree-head"><span class="tag must">필수</span> 개인정보의 제3자 제공에 대한 동의</div>
         <div class="agree-radios">
           <div><input type="radio" id="agTy" name="agree_third_party" value="동의함" onchange="refreshAgree()"><label for="agTy">동의함</label></div>
@@ -375,15 +526,31 @@
         </div>
         <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
         <div class="agree-box">1. 제공받는 자 : 요양비 지원·처방 관련 업무 수행 기관(준요양기관 등)
-2. 이용목적 : 요양비 지원 신청 및 처리, 배송·상담
+2. 이용목적 : 카테터 요양비 지원 신청 및 처리, 배송·상담
 3. 제공항목 : 성명, 연락처, 주소, 보험·지원자격 정보
 4. 보유 및 이용기간 : 제공 목적 달성 시까지
 5. 귀하는 위 제3자 제공을 거부할 수 있습니다. 다만 거부 시 지원 신청 처리가 제한될 수 있습니다.</div>
       </div>
 
+      {{-- 민감정보 (장루 필수) --}}
+      <div class="agree-item" data-only="stoma">
+        <div class="agree-head"><span class="tag must">필수</span> 민감정보의 수집·이용에 대한 동의</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agSy" name="agree_sensitive" value="동의함" onchange="refreshAgree()"><label for="agSy">동의함</label></div>
+          <div><input type="radio" id="agSn" name="agree_sensitive" value="동의하지 않음" onchange="refreshAgree()"><label for="agSn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 민감정보의 수집 및 이용 목적
+· 환자의 신원 확인 및 정보전달, 샘플 및 제품 배송, 제품 관련 문의·불만 처리, 사용법 교육, 전산관리, DB 구축, 법적·행정적 의무 이행
+2. 수집 및 이용 항목 : 수술병원, 장루종류, 사용제품, 건강상태, 처방관련 항목, 수술/상처부위 사진
+※ 수술/상처부위 사진은 환자를 알아볼 수 없는 형태로 촬영·수집됩니다.
+3. 보유 및 이용기간 : 관계 법령에 따라 보존해야 하는 경우가 아닌 한 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
+4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
+      </div>
+
       {{-- 마케팅 활용 (선택) --}}
       <div class="agree-item">
-        <div class="agree-head"><span class="tag opt">선택</span> 개인정보의 마케팅 활용에 대한 동의</div>
+        <div class="agree-head"><span class="tag opt">선택</span> 개인정보의 마케팅 목적 수집·이용 및 광고성 정보 전송 동의</div>
         <div class="agree-radios">
           <div><input type="radio" id="agMy" name="agree_marketing" value="동의함" onchange="refreshAgree()"><label for="agMy">동의함</label></div>
           <div><input type="radio" id="agMn" name="agree_marketing" value="동의하지 않음" onchange="refreshAgree()"><label for="agMn">동의하지 않음</label></div>
@@ -394,8 +561,49 @@
 3. 보유기간 : 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
 4. 귀하는 위 선택 항목의 수집·이용을 거부할 수 있으며, 거부 시 뉴스레터·제품 소개 등 정보를 제공받을 수 없습니다.</div>
       </div>
-    </div>
 
+      {{-- 민감정보 마케팅 (장루 선택) --}}
+      <div class="agree-item" data-only="stoma">
+        <div class="agree-head"><span class="tag opt">선택</span> 민감정보에 대한 마케팅 목적 수집·이용 동의</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agMSy" name="agree_marketing_sensitive" value="동의함" onchange="refreshAgree()"><label for="agMSy">동의함</label></div>
+          <div><input type="radio" id="agMSn" name="agree_marketing_sensitive" value="동의하지 않음" onchange="refreshAgree()"><label for="agMSn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 수집항목 : 수술부위사진, 상처부위 사진, 질병정보
+※ 수술/상처부위 사진은 환자를 알아볼 수 없는 형태로 촬영·수집됩니다.
+2. 이용목적 : 제품 홍보를 위한 의학적 자료 수집·이용, 심포지엄 등 학술대회 자료 활용
+3. 보유기간 : 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
+4. 귀하는 위 선택적 민감정보 수집 및 마케팅 목적 이용을 거부할 수 있습니다.</div>
+      </div>
+
+      {{-- 제3자 제공 (장루 선택 — 일반ㆍ민감을 따로 받는다) --}}
+      <div class="agree-item" data-only="stoma">
+        <div class="agree-head"><span class="tag opt">선택</span> 일반 개인정보 및 민감정보의 제3자 제공(공개) 동의</div>
+        <div class="pv-subline">· 일반 개인정보의 제3자 제공(공개)</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agT2y" name="agree_third_party" value="동의함" onchange="refreshAgree()"><label for="agT2y">동의함</label></div>
+          <div><input type="radio" id="agT2n" name="agree_third_party" value="동의하지 않음" onchange="refreshAgree()"><label for="agT2n">동의하지 않음</label></div>
+        </div>
+        <div class="pv-subline">· 민감정보의 제3자 제공(공개)</div>
+        <div class="agree-radios">
+          <div><input type="radio" id="agTSy" name="agree_third_sensitive" value="동의함" onchange="refreshAgree()"><label for="agTSy">동의함</label></div>
+          <div><input type="radio" id="agTSn" name="agree_third_sensitive" value="동의하지 않음" onchange="refreshAgree()"><label for="agTSn">동의하지 않음</label></div>
+        </div>
+        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
+        <div class="agree-box">1. 제공받는 자 : 회사 주최 심포지엄 등 학술대회에서 의학적 자료를 전달받는 보건의료전문가
+2. 이용목적 : 수술·처방 등 의료 과정에서 회사 제품 활용 시 참조
+3. 제공항목
+· 일반 개인정보 : 성별, 나이
+· 민감정보 : 수술부위사진, 상처부위 사진, 질병정보
+※ 수술/상처부위 사진은 환자를 알아볼 수 없는 형태로 촬영·수집됩니다.
+4. 보유 및 이용기간 : 해당 보건의료전문가의 이용 목적 달성 시까지
+5. 귀하는 위 제3자 제공을 거부할 수 있습니다.</div>
+      </div>
+
+      <p class="pv-note">* 표시는 필수 입력·동의 항목입니다.</p>
+    </div>
+    @endif
     {{-- 서명란 --}}
     <div class="sig-section">
       <div class="sig-label">
@@ -628,35 +836,98 @@ function toggleAgreeBox(btn) {
   btn.textContent = on ? '접기 ▲' : '자세히보기 ▼';
 }
 
-/* 「모두 동의」는 선택 항목까지 함께 켠다 — 하나씩 되돌릴 수 있다 */
+/* 이미 동의를 받아 둔 사람이면 이 영역이 화면에 없다 — 그때는 묻지도 보내지도 않는다 */
+const PRIVACY_ASK = !!document.getElementById('privacyBlock');
+
+function privacyType() {
+  return document.querySelector('input[name="privacy_type"]:checked')?.value ?? '';
+}
+
+/* 유형을 고르면 그 유형의 칸과 동의 항목만 남긴다.
+   카테터와 장루는 받는 것이 다르다 — 개인정보동의 페이지도 아예 다른 폼이다. */
+function onPrivacyType() {
+  const t = privacyType();
+  document.getElementById('privacyBlock').dataset.type = t;
+  // 접힌 쪽에 찍어 둔 답은 지운다. 보이지 않는 것이 서명을 열어 주면 안 된다.
+  document.querySelectorAll('#privacyBlock [data-only] input').forEach(el => {
+    if (el.closest('[data-only]').dataset.only !== t) el.checked = false;
+  });
+  refreshAgree();
+}
+
+/* 「모두 동의」는 보이는 항목만 켠다 — 접힌 유형의 것까지 켤 까닭이 없다 */
 function checkAllAgree(cb) {
-  ['agGy', 'agTy', 'agMy', 'agGn', 'agTn', 'agMn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.checked = cb.checked && id.endsWith('y');
+  document.querySelectorAll('#privacyBlock .agree-item').forEach(item => {
+    if (item.dataset.only && item.dataset.only !== privacyType()) return;
+    item.querySelectorAll('input[type=radio]').forEach(r => {
+      r.checked = cb.checked && r.value === '동의함';
+    });
   });
   refreshAgree();
 }
 
 function agreePicked(name) {
-  return document.querySelector(`input[name="${name}"]:checked`)?.value ?? '';
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  // 접힌 유형의 칸에 남은 답은 없는 것으로 친다
+  const only = el?.closest('[data-only]')?.dataset.only;
+  if (only && only !== privacyType()) return '';
+  return el?.value ?? '';
 }
 
-/* 필수 두 항목에 「동의함」이 찍혀야 서명할 수 있다.
-   개인정보동의 페이지의 카테터 폼과 같은 두 항목이다. */
+function pvVal(id) {
+  return (document.getElementById(id)?.value ?? '').trim();
+}
+
+/* 유형마다 필수가 다르다 — 개인정보동의 페이지의 그 폼과 같은 것을 본다.
+   카테터 : 성명ㆍ연락처ㆍ보험 + 일반ㆍ제3자 동의
+   장루   : 성명ㆍ연락처ㆍ생년월일 + 일반ㆍ민감 동의 */
 function privacyReady() {
-  return agreePicked('agree_general') === '동의함'
+  if (!PRIVACY_ASK) return true;
+
+  const t = privacyType();
+  if (!t) return false;
+  if (!pvVal('pvName') || !pvVal('pvPhone')) return false;
+
+  if (t === 'stoma') {
+    return !!pvVal('pvBirth')
+        && agreePicked('agree_general')   === '동의함'
+        && agreePicked('agree_sensitive') === '동의함';
+  }
+  return !!document.querySelector('input[name="pv_insurance"]:checked')
+      && agreePicked('agree_general')     === '동의함'
       && agreePicked('agree_third_party') === '동의함';
 }
 
 function refreshAgree() {
-  // 셋을 다 골라 두었으면 위의 「모두 동의」도 따라 켠다
+  // 보이는 항목을 다 「동의함」으로 골라 두었으면 위의 「모두 동의」도 따라 켠다
   const all = document.getElementById('agreeAll');
   if (all) {
-    all.checked = privacyReady() && agreePicked('agree_marketing') === '동의함';
+    const items = [...document.querySelectorAll('#privacyBlock .agree-item')]
+      .filter(i => !i.dataset.only || i.dataset.only === privacyType());
+    all.checked = items.length > 0 && items.every(i =>
+      [...i.querySelectorAll('input[type=radio]')].some(r => r.checked && r.value === '동의함'));
   }
   const ok = hasSig && (!NICE_ENFORCE || identityVerified) && guardianReady() && privacyReady();
   document.getElementById('btnAgree').disabled = !ok;
 }
+
+/* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
+function findPrivacyZip() {
+  if (typeof daum === 'undefined' || !daum.Postcode) {
+    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 적어 주십시오.', { tone: 'warning' });
+    return;
+  }
+  new daum.Postcode({
+    oncomplete: (data) => {
+      document.getElementById('pvZip').value   = data.zonecode;
+      document.getElementById('pvAddr1').value = data.roadAddress || data.jibunAddress;
+      document.getElementById('pvAddr2').focus();
+    },
+  }).open();
+}
+
+// 첫 그림 — 미리 골라 둔 유형이 있으면 그 칸만 남는다
+if (PRIVACY_ASK) onPrivacyType();
 
 /* 보호자 서명판 — 위 서명판과 같은 방식이다. 캔버스만 다르다. */
 let gCanvas = null, gCtx = null, gDrawing = false;
@@ -891,7 +1162,7 @@ async function submitConsent(action) {
     return;
   }
   if (action === 'agreed' && !privacyReady()) {
-    ceAlert('개인정보 수집·이용의 필수 동의 항목에 동의해 주세요.', { tone: 'warning' });
+    ceAlert('개인정보 수집·이용의 신청 유형ㆍ필수 입력ㆍ필수 동의 항목을 모두 채워 주세요.', { tone: 'warning' });
     return;
   }
 
@@ -903,10 +1174,42 @@ async function submitConsent(action) {
   const body = { action };
   if (action === 'agreed') {
     body.signature = canvas.toDataURL('image/png');
-    body.agree_general     = agreePicked('agree_general');
-    body.agree_third_party = agreePicked('agree_third_party');
-    // 선택 항목은 고르지 않아도 넘어간다 — 고르지 않은 것은 「동의하지 않음」으로 남긴다
-    body.agree_marketing   = agreePicked('agree_marketing') || '동의하지 않음';
+    if (PRIVACY_ASK) {
+      const t = privacyType();
+      const picked = (n) => document.querySelector(`input[name="${n}"]:checked`)?.value ?? '';
+
+      body.privacy_type = t;
+      body.name   = pvVal('pvName');
+      body.phone  = pvVal('pvPhone');
+      body.zip    = pvVal('pvZip');
+      body.addr1  = pvVal('pvAddr1');
+      body.addr2  = pvVal('pvAddr2');
+      body.email  = pvVal('pvEmail');
+
+      if (t === 'stoma') {
+        body.phone2       = pvVal('pvPhone2');
+        body.birth        = pvVal('pvBirth');
+        body.hospital     = pvVal('pvHospital');
+        body.surgery_date = pvVal('pvSurgeryDate');
+        body.product      = picked('pv_product');
+        body.stoma_type   = picked('pv_stoma_type');
+        body.stoma_kind   = picked('pv_stoma_kind');
+      } else {
+        body.insurance       = picked('pv_insurance');
+        body.support_qualify = picked('pv_support');
+      }
+
+      // 선택 항목은 고르지 않아도 넘어간다 — 고르지 않은 것은 「동의하지 않음」으로 남긴다
+      ['agree_general', 'agree_sensitive', 'agree_third_party',
+       'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive'].forEach(k => {
+        const v = agreePicked(k);
+        if (v) body[k] = v;
+        else if (k !== 'agree_general' && k !== 'agree_sensitive' && k !== 'agree_third_party') {
+          body[k] = '동의하지 않음';
+        }
+      });
+      if (!body.agree_marketing) body.agree_marketing = '동의하지 않음';
+    }
     if (IS_MINOR) {
       body.guardian_name      = document.getElementById('gName').value.trim();
       body.guardian_relation  = document.getElementById('gRelation').value;
@@ -966,5 +1269,6 @@ function showResult(icon, title, msg, color) {
 
 {{-- CSRF hidden for fetch --}}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </body>
 </html>

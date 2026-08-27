@@ -42,7 +42,51 @@ class ConsentController extends Controller
         $niceEnforce = $nice->enforce();
         $verified    = $consent->isIdentityVerified();
 
-        return view('consent.sign', compact('consent', 'niceEnabled', 'niceEnforce', 'verified'));
+        /* 개인정보 동의를 이미 받아 둔 사람에게는 그 영역을 보이지 않는다.
+           동의는 사람에게 한 번 받으면 그것으로 족하다 — 처방전마다 다시 물으면
+           같은 것을 몇 번씩 읽히는 꼴이 되고, 목록에도 같은 줄이 쌓인다. */
+        $privacyDone = $this->privacyAlreadyDone($consent);
+        $privacyFill = $privacyDone ? [] : $this->privacyPrefill($consent);
+
+        return view('consent.sign', compact(
+            'consent', 'niceEnabled', 'niceEnforce', 'verified', 'privacyDone', 'privacyFill'
+        ));
+    }
+
+    /** 이 사람의 개인정보 동의를 이미 받아 두었는가 — 서명 화면과 제출이 같은 눈으로 본다. */
+    private function privacyAlreadyDone(PrescriptionConsent $consent): bool
+    {
+        $consent->loadMissing('prescription.patient');
+        $rx = $consent->prescription;
+
+        $found = \App\Models\PrivacyConsent::findFor(
+            $rx?->patient_id,
+            $consent->patient_name ?: $rx?->patient?->bare_name,
+            $consent->patient_mobile ?: $rx?->patient?->mobile,
+        );
+
+        return (bool) $found?->required_agreed;
+    }
+
+    /** 신청자 정보 미리 채우기 — 우리가 이미 아는 것을 환자에게 다시 적게 하지 않는다. */
+    private function privacyPrefill(PrescriptionConsent $consent): array
+    {
+        $consent->loadMissing('prescription.patient');
+        $p = $consent->prescription?->patient;
+
+        return [
+            // IC = 카테터 · OC = 장루. 모르면 고르게 둔다.
+            'type'   => match ($p?->care_type) { 'IC' => 'catheter', 'OC' => 'stoma', default => '' },
+            'name'   => $consent->patient_name ?: (string) $p?->bare_name,
+            'phone'  => $consent->patient_mobile ?: (string) $p?->mobile,
+            'phone2' => (string) $p?->phone,
+            'zip'    => (string) $p?->postcode,
+            'addr1'  => (string) $p?->address,
+            'addr2'  => (string) $p?->address_detail,
+            'email'  => (string) $p?->email,
+            'birth'  => $consent->patient_birth_date?->toDateString()
+                        ?? $p?->birth_date?->toDateString() ?? '',
+        ];
     }
 
     /**
@@ -69,21 +113,54 @@ class ConsentController extends Controller
             'guardian_phone'     => 'nullable|string|max:40',
             'guardian_signature' => 'nullable|string|max:500000',
             'guardian_id'        => 'nullable|string|max:8000000',
-            // 개인정보 수집·이용 동의 (개인정보동의 페이지와 같은 항목·같은 값)
-            'agree_general'      => 'nullable|in:동의함,동의하지 않음',
-            'agree_third_party'  => 'nullable|in:동의함,동의하지 않음',
-            'agree_marketing'    => 'nullable|in:동의함,동의하지 않음',
+            // 개인정보 수집·이용 동의 — 개인정보동의 페이지(privacy)와 같은 칸·같은 값
+            'privacy_type'    => 'nullable|in:catheter,stoma',
+            'name'            => 'nullable|string|max:100',
+            'phone'           => 'nullable|string|max:30',
+            'phone2'          => 'nullable|string|max:30',
+            'email'           => 'nullable|string|max:150',
+            'zip'             => 'nullable|string|max:10',
+            'addr1'           => 'nullable|string|max:200',
+            'addr2'           => 'nullable|string|max:200',
+            'insurance'       => 'nullable|string|max:30',
+            'support_qualify' => 'nullable|string|max:40',
+            'birth'           => 'nullable|string|max:20',
+            'product'         => 'nullable|string|max:40',
+            'hospital'        => 'nullable|string|max:100',
+            'surgery_date'    => 'nullable|string|max:20',
+            'stoma_type'      => 'nullable|string|max:20',
+            'stoma_kind'      => 'nullable|string|max:20',
+            'agree_general'             => 'nullable|in:동의함,동의하지 않음',
+            'agree_sensitive'           => 'nullable|in:동의함,동의하지 않음',
+            'agree_third_party'         => 'nullable|in:동의함,동의하지 않음',
+            'agree_third_sensitive'     => 'nullable|in:동의함,동의하지 않음',
+            'agree_marketing'           => 'nullable|in:동의함,동의하지 않음',
+            'agree_marketing_sensitive' => 'nullable|in:동의함,동의하지 않음',
         ]);
 
-        /* 필수 개인정보 동의 — 화면에서도 막지만 서버에서 다시 본다.
-           개인정보동의 페이지(privacy)의 카테터 폼과 같은 두 항목이 필수다. */
-        if ($request->action === 'agreed') {
-            foreach (['agree_general' => '일반정보 수집·이용', 'agree_third_party' => '제3자 제공'] as $k => $label) {
+        /* 개인정보 동의 — 화면에서도 막지만 서버에서 다시 본다. 필수 칸ㆍ필수 동의는
+           개인정보동의 페이지의 그 유형 폼과 같은 것을 본다(카테터/장루가 다르다).
+           이미 받아 둔 사람에게는 화면에 그 영역이 없으므로 여기서도 묻지 않는다. */
+        $needPrivacy = $request->action === 'agreed' && !$this->privacyAlreadyDone($consent);
+
+        if ($needPrivacy) {
+            $type = $request->input('privacy_type') === 'stoma' ? 'stoma' : 'catheter';
+
+            $need = $type === 'stoma'
+                ? ['name' => '성명', 'phone' => '연락처', 'birth' => '생년월일']
+                : ['name' => '성명', 'phone' => '연락처', 'insurance' => '보험'];
+            foreach ($need as $k => $label) {
+                if (trim((string) $request->input($k)) === '') {
+                    return response()->json(['success' => false, 'message' => "개인정보 동의의 「{$label}」을(를) 적어 주세요."], 422);
+                }
+            }
+
+            $must = $type === 'stoma'
+                ? ['agree_general' => '일반정보 수집·이용', 'agree_sensitive' => '민감정보 수집·이용']
+                : ['agree_general' => '일반정보 수집·이용', 'agree_third_party' => '제3자 제공'];
+            foreach ($must as $k => $label) {
                 if ($request->input($k) !== '동의함') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "「{$label}」 동의가 필요합니다.",
-                    ], 422);
+                    return response()->json(['success' => false, 'message' => "「{$label}」 동의가 필요합니다."], 422);
                 }
             }
         }
@@ -132,7 +209,9 @@ class ConsentController extends Controller
 
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
-            $this->savePrivacyConsent($consent, $request);
+            if ($needPrivacy) {
+                $this->savePrivacyConsent($consent, $request);
+            }
             $this->generateConsentPdf($consent);
 
             // 요양비위임장(원본 오버레이)도 첨부문서에 자동 추가
@@ -167,30 +246,26 @@ class ConsentController extends Controller
     private function savePrivacyConsent(PrescriptionConsent $consent, Request $request): void
     {
         $consent->loadMissing('prescription.patient');
-        $rx      = $consent->prescription;
-        $patient = $rx?->patient;
+        $rx = $consent->prescription;
 
-        // IC = 카테터 · OC = 장루. 모르면 카테터 폼과 같은 항목을 받았으므로 카테터로 둔다.
-        $type = match ($patient?->care_type) { 'OC' => 'stoma', default => 'catheter' };
+        // 환자가 화면에서 고른 유형을 따른다. 고르지 않았으면 카테터 폼과 같은 항목을 받았다.
+        $type = $request->input('privacy_type') === 'stoma' ? 'stoma' : 'catheter';
+
+        $fields = [
+            'name', 'phone', 'phone2', 'email', 'zip', 'addr1', 'addr2',
+            'insurance', 'support_qualify', 'birth', 'product', 'hospital', 'surgery_date',
+            'stoma_type', 'stoma_kind',
+            'agree_general', 'agree_sensitive', 'agree_third_party',
+            'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
+        ];
 
         try {
-            \App\Models\PrivacyConsent::create([
-                'patient_id'        => $rx?->patient_id,
-                'type'              => $type,
-                'source'            => 'mobile',
-                'name'              => $consent->patient_name ?: $patient?->bare_name,
-                'phone'             => $consent->patient_mobile ?: $patient?->mobile,
-                'email'             => $patient?->email,
-                'zip'               => $patient?->postcode,
-                'addr1'             => $patient?->address,
-                'addr2'             => $patient?->address_detail,
-                'birth'             => $consent->patient_birth_date?->toDateString()
-                                       ?? $patient?->birth_date?->toDateString(),
-                'agree_general'     => $request->input('agree_general'),
-                'agree_third_party' => $request->input('agree_third_party'),
-                'agree_marketing'   => $request->input('agree_marketing') ?: '동의하지 않음',
+            \App\Models\PrivacyConsent::create(array_merge($request->only($fields), [
+                'patient_id'   => $rx?->patient_id,
+                'type'         => $type,
+                'source'       => 'mobile',
                 // 어느 위임동의 서명에서 따라온 동의인지 — 뒤에 되짚을 자리를 남긴다
-                'extra'             => [
+                'extra'        => [
                     'from'                    => 'consent_sign',
                     'prescription_consent_id' => $consent->id,
                     'rx_number'               => $rx?->rx_number,
@@ -198,7 +273,7 @@ class ConsentController extends Controller
                 'ip'           => $request->ip(),
                 'user_agent'   => substr((string) $request->userAgent(), 0, 300),
                 'submitted_at' => now(),
-            ]);
+            ]));
         } catch (\Throwable $e) {
             /* 개인정보 동의를 남기지 못했다고 위임동의 서명까지 되돌릴 수는 없다.
                서명은 환자가 이미 마친 일이다 — 흔적만 남기고 계속 간다. */
