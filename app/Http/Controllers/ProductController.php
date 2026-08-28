@@ -245,7 +245,12 @@ class ProductController extends Controller
             $items[] = [
                 'code'  => (string) ($i['item_code']   ?? ''),
                 'name'  => (string) ($i['item_name']   ?? ''),
-                'price' => isset($i['sales_price']) ? (float) $i['sales_price'] : null,
+                /* 단가는 소비자가(unit_price2)다. 위드웍스의 매출단가 표에 붙어 있는 값으로,
+                   품목의 sales_price 와 다른 품목이 있다(계정 136155 기준 48개).
+                   그 칸을 아직 안 주는 서버도 있어, 없으면 예전대로 sales_price 를 쓴다. */
+                'price' => ((float) ($i['unit_price2'] ?? 0)) > 0
+                         ? (float) $i['unit_price2']
+                         : (isset($i['sales_price']) ? (float) $i['sales_price'] : null),
                 'spec'  => (string) ($i['description'] ?? ''),
                 'unit'  => (string) ($i['basic_unit']  ?? ''),
                 'r_box' => (string) ($i['r_box']       ?? ''),
@@ -299,8 +304,11 @@ class ProductController extends Controller
             $result[] = [
                 'code'  => (string) ($item['item_code']    ?? $item['code']         ?? $item['product_code'] ?? ''),
                 'name'  => (string) ($item['item_name']    ?? $item['name']         ?? $item['product_name'] ?? ''),
-                'price' => isset($item['sales_price'])  ? (float) $item['sales_price']
-                         : (isset($item['price'])       ? (float) $item['price']    : null),
+                // 소비자가가 오면 그것이 단가다(위 searchOurs 와 같은 규칙)
+                'price' => ((float) ($item['unit_price2'] ?? 0)) > 0
+                         ? (float) $item['unit_price2']
+                         : (isset($item['sales_price'])  ? (float) $item['sales_price']
+                         : (isset($item['price'])        ? (float) $item['price']    : null)),
                 'spec'  => (string) ($item['description']  ?? $item['spec']         ?? ''),
                 'unit'  => (string) ($item['basic_unit']   ?? $item['unit']         ?? $item['unit_name']    ?? ''),
                 'r_box' => (string) ($item['r_box']        ?? ''),
