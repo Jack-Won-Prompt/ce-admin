@@ -1344,15 +1344,20 @@ class PrescriptionController extends Controller
             ->orderBy('name')->pluck('name')->unique()->values()->all();
 
         /* 주문 목록 탭 — 이 화면 안에서 다른 건으로 건너뛰는 자리다.
-           반품ㆍ교환ㆍ취소가 붙은 건은 뺀다(판매만). 그것들은 「교환/반품/취소」 화면이
-           맡고, 여기서 하려는 일은 「다음에 손댈 주문을 고르는 것」이다.
+           여기서 하려는 일은 「다음에 손댈 주문을 고르는 것」이라, 아직 확정되지 않은 건만
+           세운다(주문 대기). 확정ㆍ배송ㆍ완료된 건은 손댈 차례가 지났고, 그것들을 훑는
+           자리는 주문 관리다.
+
+           반품ㆍ교환ㆍ취소가 붙은 건도 뺀다(판매만) — 그것들은 「교환/반품/취소」 화면이 맡는다.
 
            목록은 wwGrid 가 한 번에 다 받아 그리므로 통째로 넘긴다. 다만 끝없이 늘어날
            표라 최근 것부터 상한을 둔다 — 넘친 만큼은 화면이 말해 준다. */
         $orderListLimit = 500;
-        $orderListTotal = \App\Models\Order::whereDoesntHave('returns')->count();
+        $orderListTotal = \App\Models\Order::whereDoesntHave('returns')
+            ->where('status', 'pending')->count();
         $orderListRows  = \App\Models\Order::with(['patient', 'prescription.assignedUser'])
             ->whereDoesntHave('returns')
+            ->where('status', 'pending')
             ->latest('id')
             ->limit($orderListLimit)
             ->get()

@@ -448,28 +448,6 @@
   .items-total-bar { display: flex; gap: 16px; font-size: 12px; padding: 8px 12px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* 판매 유형 라디오 버튼 — 시안 148:3105 Frame 48101489.
-     알약 143×32 · r8 · pad 0/12 · gap 8 · bd 1px #E8EAEC · bg #FFFFFF — 셋 다 같다.
-     선택 여부는 알약 배경이 아니라 왼쪽 12×12 도넛의 바깥 원 색으로만 알린다
-     (선택 #28798B / 미선택 #C2C5C8, 안쪽 6×6 흰 원). */
-  .so-type-opt { display:inline-flex; align-items:center; cursor:pointer; }
-  .so-type-opt input[type=radio] { display:none; }
-  .so-type-opt span {
-    display:inline-flex; align-items:center; gap:8px;
-    /* 시안 폭은 143 이지만 「End User Direct」는 그 안에서 두 줄로 접힌다.
-       폭을 최소값으로 두고 글자만큼 늘린다 — 접힌 이름은 읽는 데 걸린다. */
-    min-width:143px; white-space:nowrap; height:32px; padding:0 12px; border-radius:8px;
-    font-size:13px; font-weight:400;
-    border:1px solid var(--border); background:#fff; color:var(--gray-1000);
-    transition:var(--transition); user-select:none;
-  }
-  .so-type-opt span::before {
-    content:''; width:12px; height:12px; border-radius:999px; flex-shrink:0;
-    background:var(--gray-0); box-shadow:inset 0 0 0 3px var(--gray-300);
-  }
-  .so-type-opt input[type=radio]:checked + span::before { box-shadow:inset 0 0 0 3px var(--primary); }
-  /* hover 는 시안에 없다. 선택 표시(도넛)와 헷갈리지 않도록 배경만 아주 옅게 준다. */
-  .so-type-opt span:hover { background:var(--gray-50); }
 
   /* ── 주문 정보 탭 — 시안 148:3105 (2026-08-11 재작성판) ─────────────────────
      카드마다 전폭 머리띠를 두고 본문을 그 아래로 내린다.
@@ -520,16 +498,7 @@
   #tab-product .pt-head-total { display:inline-flex; align-items:center; gap:6px;
                                 font-size:12px; font-weight:500; line-height:19px; color:var(--primary); white-space:nowrap; }
   #tab-product .pt-head-total b { font-weight:500; color:inherit; }
-  /* 판매 유형 머리 오른쪽 '1013 · CE 판매' — 시안은 배지가 아니라 12/500 #656C74 맨글자다.
-     onSoTypeChange() 가 같은 배지 마크업을 innerHTML 로 다시 써 넣으므로 JS 는 두고 CSS 로 누른다. */
-  #tab-product #soTypeBadge .badge { background:none; padding:0; border-radius:0;
-                                     font-size:12px !important; font-weight:500; line-height:19px; color:var(--gray-600); }
   #tab-product .pt-head-btns { display:flex; align-items:center; gap:6px; }
-  /* 판매 유형 본문 — 라벨 100 + gap 8 + 라디오 묶음 446 (시안 Frame 48101481) */
-  #tab-product .pt-field-row   { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  #tab-product .pt-field-label { flex:0 0 100px; width:100px;
-                                 font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
-  #tab-product .pt-radio-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
   /* ── 주문 정보 제품 행 (카드뷰) — 시안 Frame 48101492: 1132×118 ────────────────
      .item-card 는 테이블뷰에서 <tr> 로도 쓰인다. 카드뷰 컨테이너 안으로만 범위를 잡는다. */
@@ -2141,10 +2110,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <label class="ds-field-label">접수일 (까지)</label>
               <input type="date" id="ol-to" class="form-control">
             </div>
-            <div class="ol-field">
-              <label class="ds-field-label">진행 상태</label>
-              <select id="ol-status" class="form-control form-select"><option value="">전체</option></select>
-            </div>
+            {{-- 진행 상태로 거르는 칸은 두지 않는다 — 이 표에는 「주문 대기」뿐이라
+                 고를 것이 없다. 확정된 건을 보는 자리는 주문 관리다. --}}
             <div class="ol-field">
               <label class="ds-field-label">담당자</label>
               <select id="ol-manager" class="form-control form-select">
@@ -2161,6 +2128,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>
         </div>
         <div class="ds-grid-hint" style="margin:8px 0;">
+          아직 <b>확정되지 않은 주문</b>만 세웁니다 — 손댈 차례가 지난 건은 주문 관리에서 봅니다.
           줄을 더블클릭하면 그 건의 <b>상세 목록</b>으로 갑니다. 아직 맡은 사람이 없는 건은
           연 사람이 담당자가 됩니다.
           @if($orderListTotal > $orderListLimit)
@@ -3074,61 +3042,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- Tab: Product (상세 목록 탭에서는 검수 영역 아래에 함께 표시) --}}
       <div class="tab-pane" id="tab-product">
 
-        {{-- 판매 유형 선택 (카드/테이블뷰 공통) --}}
-        {{-- 카드 간격은 시안 12 다. 부트스트랩 CDN 의 .mb-3 은 16px 이고 !important 라
-             전역에서 못 이긴다 — 클래스를 떼고 인라인으로 12 를 준다. --}}
-        {{-- 시안 Frame 48101493: 카드 테두리는 다른 카드와 같은 #E8EAEC 다(주색 강조 아님) --}}
-        <div class="card" style="margin-bottom:12px;">
-          {{-- 머리띠 — h44 · pad 8/16 · 아래 1px --}}
-          <div class="pt-card-head">
-            <div class="pt-head-left">
-              <span class="pt-card-title"><i class="fa-solid fa-tag"></i> 판매 유형</span>
-            </div>
-            <div class="pt-head-right">
-              {{-- 시안에는 값이 박혀 있었다. 지금 골라진 유형을 보여야 한다 —
-                   보이는 것과 보내는 것이 갈리면 안 된다.
-                   $soCur 는 아래 라디오 블록에서 정하므로 여기서 먼저 셈해 둔다. --}}
-              @php
-                $soCur = $prescription->order?->so_type;
-                if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
-                    $soCur = \App\Models\Order::saleSoTypes()[0];
-                }
-              @endphp
-              <div id="soTypeBadge">
-                <span class="badge badge-primary" style="font-size:11px;">{{ $soCur }} · {{ \App\Models\Order::SO_TYPE_LABELS[$soCur][0] ?? $soCur }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="card-body" style="padding:12px 16px;">
-            <div class="pt-field-row">
-              {{-- 시안 "판매 유형 *" 100×32 · 13/500 · #474D54 — 별표도 라벨과 같은 색이다 --}}
-              <span class="pt-field-label">판매 유형 *</span>
-              <div class="pt-radio-group">
-                @php
-                  $soIcons = ['1013' => 'fa-hospital', '1016' => 'fa-user',
-                              '1022' => 'fa-gift',     '5001' => 'fa-truck-fast'];
-                  /* 저장된 값이 지금 고를 수 있는 목록에 없으면(옛 1013 등) 첫 번째로
-                     떨어뜨린다. 그러지 않으면 아무것도 선택되지 않은 채로 열린다. */
-                  $soCur = $prescription->order?->so_type;
-                  if (!in_array($soCur, \App\Models\Order::saleSoTypes(), true)) {
-                      $soCur = \App\Models\Order::saleSoTypes()[0];
-                  }
-                @endphp
-                {{-- 반품 계열 유형(5004·5005·5006)은 여기 없다. 판매를 만들면서 고를 수 있게
-                     두면 반품 유형으로 판매가 나간다. --}}
-                @foreach(\App\Models\Order::saleSoTypes() as $code)
-                @php $meta = \App\Models\Order::SO_TYPE_LABELS[$code]; @endphp
-                <label class="so-type-opt">
-                  <input type="radio" name="so_type_radio" value="{{ $code }}"
-                         @checked($soCur === (string) $code) onchange="onSoTypeChange(this.value)">
-                  <span><i class="fa-solid {{ $soIcons[$code] ?? 'fa-tag' }}"></i> {{ $meta[0] }}</span>
-                </label>
-                @endforeach
-              </div>
-
-            </div>
-          </div>
-        </div>
+        {{-- 판매 유형 카드는 두지 않는다.
+             위드웍스와는 End User Direct 한 가지로만 주고받아(Order::saleSoTypes) 고를
+             것이 하나뿐이었다. 고를 수 없는 것을 고르라고 세워 두면 자리만 먹고, 별표까지
+             붙어 있어 무언가 정해야 하는 줄 알게 된다.
+             값은 그대로 나간다 — 아래 currentSoType 이 그 하나를 쥔다. --}}
 
         <div class="card">
           {{-- 주문 정보 헤더 (카드/테이블뷰 공통) — 시안 Frame 48101494 의 머리띠 h44 --}}
@@ -4887,14 +4805,16 @@ window.HELP_TOUR_STEPS = [
   // ── 판매 유형 ────────────────────────────────────────
   /* 위드웍스 code_list 를 따르는 값이라 모델 상수 하나만 보게 한다 —
      두 벌로 두면 새 유형이 생길 때 한쪽만 늘어난다. */
-  const SO_TYPE_LABELS = @json(collect(\App\Models\Order::SO_TYPE_LABELS)->map(fn($v) => $v[0]));
   /* 화면에 골라져 있는 것을 그대로 쓴다.
      라디오는 서버에서 5001 이 선택된 채로 그려지는데, 사람이 손대지 않으면 onchange 가
      불리지 않아 여기 박아 둔 옛 기본값 1013 이 그대로 나갔다. 고를 수 있는 유형이
      5001 하나로 좁혀진 뒤로는 그 값이 늘 거절되어 주문이 아예 만들어지지 않았다
      (「The selected so type is invalid.」). */
-  let currentSoType = document.querySelector('input[name="so_type_radio"]:checked')?.value
-                      || @json(\App\Models\Order::saleSoTypes()[0]);
+  /* 화면에서 고르지 않는다 — 판매 유형 카드를 걷었다(고를 것이 하나뿐이었다).
+     기존 주문에 적힌 값이 지금 고를 수 있는 목록에 있으면 그것을, 아니면 첫 유형을 쓴다.
+     예전에는 라디오를 읽었는데, 사람이 손대지 않으면 여기 박아 둔 옛 기본값 1013 이
+     그대로 나가 서버가 통째로 거절했다(「The selected so type is invalid.」). */
+  let currentSoType = @json(\App\Models\Order::saleSoTypes()[0]);
 
   // ── 기존 주문 상태 ───────────────────────────────────
   @if($prescription->order)
@@ -4910,27 +4830,13 @@ window.HELP_TOUR_STEPS = [
   let orderExists = false;
   @endif
 
-  function onSoTypeChange(val) {
-    currentSoType = val;
-    const badge = document.getElementById('soTypeBadge');
-    if (badge) badge.innerHTML = `<span class="badge badge-primary" style="font-size:11px;">${val} · ${SO_TYPE_LABELS[val] ?? val}</span>`;
-  }
-
-  /* 기존 주문의 판매 유형으로 라디오를 세운다.
-     그 값이 지금 고를 수 있는 목록에 없으면(옛 1013ㆍ5001 로 저장된 주문) 그대로 쓰지
-     않는다 — 라디오는 그려지지 않는데 보내는 값만 옛 코드로 남아, 저장할 때 서버가
-     통째로 거절했다(「The selected so type is invalid.」). 화면은 이미 서버가 떨어뜨려
-     둔 값(지금 고를 수 있는 첫 유형)을 보이고 있으므로, 보내는 값도 그것에 맞춘다. */
+  /* 기존 주문에 적힌 유형이 지금 고를 수 있는 목록에 있으면 그것을 이어 쓴다.
+     없으면(옛 1013ㆍ5001 로 저장된 주문) 손대지 않는다 — 그 값을 그대로 보내면 서버가
+     통째로 거절한다. */
+  const SALE_SO_TYPES = @json(\App\Models\Order::saleSoTypes());
   document.addEventListener('DOMContentLoaded', () => {
-    const cur   = existingOrder?.so_type;
-    const radio = cur ? document.querySelector(`input[name="so_type_radio"][value="${cur}"]`) : null;
-    if (radio) {
-      radio.checked = true;
-      onSoTypeChange(cur);
-      return;
-    }
-    // 보이는 것과 보내는 것을 같게 둔다
-    onSoTypeChange(currentSoType);
+    const cur = existingOrder?.so_type;
+    if (cur && SALE_SO_TYPES.includes(String(cur))) currentSoType = String(cur);
   });
 
   // ── 주소 검색 (카카오 우편번호 서비스) ───────────────────
@@ -9052,7 +8958,6 @@ window.HELP_TOUR_STEPS = [
         el.appendChild(o);
       });
     };
-    fill('ol-status',  OL_ROWS.map(r => r.status));
     fill('ol-manager', OL_ROWS.map(r => r.manager));
 
     olGrid = new wwGrid({
@@ -9104,7 +9009,6 @@ window.HELP_TOUR_STEPS = [
     const q       = (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
     const from    = document.getElementById('ol-from')?.value ?? '';
     const to      = document.getElementById('ol-to')?.value ?? '';
-    const status  = document.getElementById('ol-status')?.value ?? '';
     const manager = document.getElementById('ol-manager')?.value ?? '';
 
     const rows = OL_ROWS.filter(r => {
@@ -9114,7 +9018,6 @@ window.HELP_TOUR_STEPS = [
       }
       if (from && (r.sold_at || '') < from) return false;
       if (to   && (r.sold_at || '') > to)   return false;
-      if (status && r.status !== status) return false;
       // 「미배정」은 값이 아니라 값이 없다는 뜻이라 따로 본다
       if (manager === '__none__' && r.manager) return false;
       if (manager && manager !== '__none__' && r.manager !== manager) return false;
@@ -9126,7 +9029,7 @@ window.HELP_TOUR_STEPS = [
   }
 
   function olReset() {
-    ['ol-q', 'ol-from', 'ol-to', 'ol-status', 'ol-manager'].forEach(id => {
+    ['ol-q', 'ol-from', 'ol-to', 'ol-manager'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
