@@ -1216,6 +1216,15 @@ class PrescriptionController extends Controller
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
     public function show(Prescription $prescription): View
     {
+        /* 주문 목록에서 더블클릭해 들어온 건이다(claim=1).
+           아직 맡은 사람이 없으면 연 사람이 맡는다 — 집어 든 사람이 임자가 되어야
+           두 사람이 같은 건을 붙들지 않는다. 이미 임자가 있으면 덮지 않는다. */
+        if (request()->boolean('claim') && ! $prescription->assigned_user_id && Auth::id()) {
+            $prescription->forceFill(['assigned_user_id' => Auth::id()])->save();
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->log('주문 목록에서 열어 담당자로 지정');
+        }
+
         $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator', 'billingOffice']);
         $patients = Patient::orderBy('name')->get();
 
@@ -1334,6 +1343,38 @@ class PrescriptionController extends Controller
         $orderManagers = \App\Models\User::where('is_active', true)
             ->orderBy('name')->pluck('name')->unique()->values()->all();
 
+        /* 주문 목록 탭 — 이 화면 안에서 다른 건으로 건너뛰는 자리다.
+           반품ㆍ교환ㆍ취소가 붙은 건은 뺀다(판매만). 그것들은 「교환/반품/취소」 화면이
+           맡고, 여기서 하려는 일은 「다음에 손댈 주문을 고르는 것」이다.
+
+           목록은 wwGrid 가 한 번에 다 받아 그리므로 통째로 넘긴다. 다만 끝없이 늘어날
+           표라 최근 것부터 상한을 둔다 — 넘친 만큼은 화면이 말해 준다. */
+        $orderListLimit = 500;
+        $orderListTotal = \App\Models\Order::whereDoesntHave('returns')->count();
+        $orderListRows  = \App\Models\Order::with(['patient', 'prescription.assignedUser'])
+            ->whereDoesntHave('returns')
+            ->latest('id')
+            ->limit($orderListLimit)
+            ->get()
+            ->map(fn ($o) => [
+                'id'        => $o->id,
+                'order_no'  => $o->order_number,
+                'rx_number' => $o->prescription?->rx_number ?? '',
+                'patient'   => $o->patient?->name ?? ($o->prescription?->patient_name_ocr ?? ''),
+                // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
+                'manager'   => $o->prescription?->assignedUser?->name ?? '',
+                'product'   => $o->product_name ?? '',
+                'qty'       => (int) ($o->quantity ?? 0),
+                'copay'     => (int) $o->patient_copay,
+                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'nhis'      => $o->prescription?->patient?->nhis_reg_status ?? '',
+                'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
+                // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
+                'url'       => $o->prescription
+                                 ? route('prescriptions.show', $o->prescription) . '?claim=1'
+                                 : null,
+            ])->values();
+
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,
            환자가 있으면 그 사람으로, 없으면 처방전에 적힌 이름ㆍ휴대폰으로 찾는다. */
         $privacyState = \App\Models\PrivacyConsent::stateFor(
@@ -1347,7 +1388,8 @@ class PrescriptionController extends Controller
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
-            'orderManagers', 'privacyState'
+            'orderManagers', 'privacyState',
+            'orderListRows', 'orderListTotal', 'orderListLimit'
         ));
     }
 

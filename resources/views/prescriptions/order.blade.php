@@ -362,6 +362,16 @@
              font-size: 13px; font-weight: 500; line-height: 1.6; color: var(--gray-600); border: none; background: transparent;
              border-bottom: 1px solid transparent; cursor: pointer; transition: var(--transition); margin-bottom: -1px; }
   .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── 주문 목록 탭의 찾는 줄 ─────────────────────────────
+     목록 화면의 .ds-filter-card 와 같은 규격이다. 다만 폼을 보내지 않고 화면 안에서
+     거르므로 form 이 아니다 — 보내면 보고 있던 건이 날아간다. */
+  .ol-filter { background:var(--gray-0); border:1px solid var(--border); border-radius:12px; padding:12px 16px; }
+  .ol-fields { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
+  .ol-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .ol-field.span-2 { grid-column:span 2; }
+  .ol-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  @media (max-width:1100px) { .ol-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
      .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
   /* 테두리 버튼 — 시안 137:706: 높이 28, padding 0 12, radius 8, 12/500.
@@ -2076,6 +2086,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
     <div id="tabsCol">
       <div id="tabBarOuter"><div id="tabBarInner" class="tab-bar">
         <div class="tab-bar-tabs">
+          {{-- 상세 목록 왼쪽에 목록을 둔다 — 이 화면에 들어와서야 「다음에 무엇을 손대나」를
+               알 수 있어야 한다. 반품ㆍ교환ㆍ취소가 붙은 건은 빼고 판매만 세운다. --}}
+          <button class="tab-btn" onclick="switchTab(this,'tab-orders')">주문 목록</button>
           <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">상세 목록</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-product')">주문 제품</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-order')">주문 연계</button>
@@ -2109,6 +2122,54 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </div>{{-- /tb-btns --}}
         </div>
       </div></div>{{-- /tabBarInner /tabBarOuter --}}
+
+      {{-- Tab: 주문 목록 ────────────────────────────────────
+           찾는 줄은 화면 안에서 거른다. 다른 목록 화면처럼 폼을 보내 새로 그리면
+           보고 있던 건이 날아간다 — 여기서는 받아 둔 것을 그 자리에서 좁힌다. --}}
+      <div class="tab-pane" id="tab-orders">
+        <div class="ol-filter">
+          <div class="ol-fields">
+            <div class="ol-field span-2">
+              <label class="ds-field-label">검색어</label>
+              <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ제품명">
+            </div>
+            <div class="ol-field">
+              <label class="ds-field-label">접수일 (부터)</label>
+              <input type="date" id="ol-from" class="form-control">
+            </div>
+            <div class="ol-field">
+              <label class="ds-field-label">접수일 (까지)</label>
+              <input type="date" id="ol-to" class="form-control">
+            </div>
+            <div class="ol-field">
+              <label class="ds-field-label">진행 상태</label>
+              <select id="ol-status" class="form-control form-select"><option value="">전체</option></select>
+            </div>
+            <div class="ol-field">
+              <label class="ds-field-label">담당자</label>
+              <select id="ol-manager" class="form-control form-select">
+                <option value="">전체</option>
+                <option value="__none__">임자 없음</option>
+              </select>
+            </div>
+          </div>
+          <div class="ol-actions">
+            <button type="button" class="btn btn-outline btn-sm" onclick="olReset()">초기화</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="olApply()">
+              <i class="fa-solid fa-magnifying-glass"></i> 검색
+            </button>
+          </div>
+        </div>
+        <div class="ds-grid-hint" style="margin:8px 0;">
+          줄을 더블클릭하면 그 건의 <b>상세 목록</b>으로 갑니다. 아직 맡은 사람이 없는 건은
+          연 사람이 담당자가 됩니다.
+          @if($orderListTotal > $orderListLimit)
+            <b>{{ number_format($orderListTotal) }}건 가운데 최근 {{ number_format($orderListLimit) }}건</b>입니다 —
+            더 예전 것은 주문 관리 화면에서 봅니다.
+          @endif
+        </div>
+        <div id="orderListGrid"></div>
+      </div>
 
       {{-- Tab: OCR Edit (상세 목록) --}}
       <div class="tab-pane active" id="tab-ocr">
@@ -5948,6 +6009,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     document.getElementById(tabId).classList.add('active');
+    if (tabId === 'tab-orders')  { olEnsureGrid(); }
     if (tabId === 'tab-order')   {
       recalcAllItems();
       renderOrderSummary();
@@ -8967,6 +9029,114 @@ window.HELP_TOUR_STEPS = [
   });
 
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  /* ── 주문 목록 탭 ──────────────────────────────────────
+     이 화면에 들어와서야 「다음에 무엇을 손대나」를 알 수 있어야 한다. 판매만 세운다 —
+     반품ㆍ교환ㆍ취소는 제 화면이 따로 있다.
+
+     표는 처음 열 때 한 번만 세운다. 탭을 오갈 때마다 다시 만들면 정렬해 둔 것이 풀린다
+     (주문 제품 표에서 겪은 자리다). */
+  const OL_ROWS = @json($orderListRows);
+  let   olGrid  = null;
+
+  function olEnsureGrid() {
+    if (olGrid || typeof wwGrid === 'undefined') return;
+
+    // 거르는 칸의 선택지는 받아 둔 줄에서 뽑는다 — 없는 값을 고르게 두지 않는다
+    const fill = (id, values) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      [...new Set(values.filter(Boolean))].sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        el.appendChild(o);
+      });
+    };
+    fill('ol-status',  OL_ROWS.map(r => r.status));
+    fill('ol-manager', OL_ROWS.map(r => r.manager));
+
+    olGrid = new wwGrid({
+      el: document.getElementById('orderListGrid'),
+      height: 'fit', editable: false, rowNumber: true, toolbar: false,
+      footer: { total: true, selected: false, modified: false },
+      columns: [
+        { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
+        { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+        { header: '접수일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
+        { header: '환자',      name: 'patient',   width: 90,  sortable: true },
+        /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
+           「이건 아직 임자가 없다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
+        { header: '담당자',    name: 'manager',   width: 90,  sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v || '임자 없음';
+            if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
+            return s;
+          } },
+        { header: '제품',      name: 'product',   width: 200, sortable: true },
+        { header: '수량',      name: 'qty',       width: 60,  align: 'right' },
+        { header: '본인부담금', name: 'copay',     width: 90,  align: 'right', editor: 'number' },
+        { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+        { header: '공단 등록', name: 'nhis',      width: 90,  align: 'center', sortable: true },
+      ],
+      data: OL_ROWS,
+    });
+    window.__olGrid = olGrid;
+
+    /* 더블클릭하면 그 건으로 간다. 적다 만 것이 있으면 switchTab 이 아니라 여기서
+       물어야 한다 — 화면을 통째로 떠나는 걸음이라 되돌릴 수 없다. */
+    document.getElementById('orderListGrid').addEventListener('dblclick', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = olGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (!row?.url) { showToast('이 주문에는 처방전이 이어져 있지 않습니다.', 'warning'); return; }
+      if (typeof isAnyDirty === 'function' && isAnyDirty()) {
+        showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), row.url);
+        return;
+      }
+      location.href = row.url;
+    });
+  }
+
+  /* 거르기 — 받아 둔 줄을 그 자리에서 좁힌다. 서버로 다시 묻지 않는다. */
+  function olApply() {
+    if (!olGrid) return;
+    const q       = (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
+    const from    = document.getElementById('ol-from')?.value ?? '';
+    const to      = document.getElementById('ol-to')?.value ?? '';
+    const status  = document.getElementById('ol-status')?.value ?? '';
+    const manager = document.getElementById('ol-manager')?.value ?? '';
+
+    const rows = OL_ROWS.filter(r => {
+      if (q) {
+        const hay = [r.order_no, r.rx_number, r.patient, r.product].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (from && (r.sold_at || '') < from) return false;
+      if (to   && (r.sold_at || '') > to)   return false;
+      if (status && r.status !== status) return false;
+      // 「임자 없음」은 값이 아니라 값이 없다는 뜻이라 따로 본다
+      if (manager === '__none__' && r.manager) return false;
+      if (manager && manager !== '__none__' && r.manager !== manager) return false;
+      return true;
+    });
+
+    olGrid.setData(rows);
+    showToast(`${rows.length}건`, 'info');
+  }
+
+  function olReset() {
+    ['ol-q', 'ol-from', 'ol-to', 'ol-status', 'ol-manager'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    if (olGrid) olGrid.setData(OL_ROWS);
+  }
+
+  // 검색어 칸에서 엔터를 치면 곧바로 찾는다
+  document.getElementById('ol-q')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); olApply(); }
+  });
 
   // ── 상담번호 채번 ──────────────────────────────────────
   const COUNSEL_NO_URL = @json(route('prescriptions.counselNo', $prescription));
