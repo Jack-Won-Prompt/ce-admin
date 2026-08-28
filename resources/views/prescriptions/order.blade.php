@@ -2627,6 +2627,50 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">요류역학검사일</span>
                 <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->uro_date ?? '' }}" style="flex:1;" />
               </div>
+              {{-- ── 자가도뇨 등록신청서(별지 제4호서식)에만 쓰는 값 ────────────
+                   나머지 칸(성명ㆍ주민번호ㆍ전화ㆍ진단확인일ㆍ상병ㆍ요류역학검사일ㆍ
+                   병원ㆍ의사)은 이미 이 화면에 있다. 여기 넷만 서식에서 새로 묻는다.
+                   공단 팩스에 그 서식을 함께 보낼 때 이 값들이 찍힌다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">상병구분</span>
+                <select class="form-control" id="f-reg-dx-type" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(config('registration.dx_types', []) as $k => $label)
+                    <option value="{{ $k }}" @selected(($prescription->reg_dx_type ?? '') === $k)>{{ $label }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="rx-field-row" style="align-items:flex-start;">
+                <span class="rx-field-label" style="padding-top:6px;">확인사항</span>
+                @php $regChecked = (array) ($prescription->reg_confirm_items ?? []); @endphp
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+                  @foreach(config('registration.confirm_items', []) as $k => $label)
+                    <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:18px;cursor:pointer;margin:0;">
+                      <input type="checkbox" class="f-reg-confirm" value="{{ $k }}"
+                             @checked(in_array($k, $regChecked, true))
+                             style="width:14px;height:14px;margin-top:2px;flex-shrink:0;accent-color:var(--primary);" />
+                      <span style="min-width:0;">{{ $label }}</span>
+                    </label>
+                  @endforeach
+                </div>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">등록결과통보(SMS)</span>
+                <select class="form-control" id="f-reg-sms" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="1" @selected($prescription->reg_sms_notify === true)>예</option>
+                  <option value="0" @selected($prescription->reg_sms_notify === false)>아니오</option>
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">수진자와의 관계</span>
+                <select class="form-control" id="f-reg-relation" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(config('registration.relations', []) as $r)
+                    <option value="{{ $r }}" @selected(($prescription->reg_relation ?? '') === $r)>{{ $r }}</option>
+                  @endforeach
+                </select>
+              </div>
               {{-- 이 두 줄은 3열 끝에 있었다. 3열만 두 줄 길어 오른쪽 아래에 홀로
                    남았고, 왼쪽에는 빈자리가 넓게 났다 — 「오른쪽으로 치우쳤다」고
                    보이던 까닭이다. 1열ㆍ2열 끝으로 한 줄씩 옮겨 세 기둥의 키를 맞춘다.
@@ -6580,6 +6624,14 @@ window.HELP_TOUR_STEPS = [
          칸을 걷었고, 그 값은 거래처 관리의 상담 창이 받는다. 여기서 빈 값을 보내면
          이미 적어 둔 것이 지워진다. 「유형」은 병원ㆍ처방 정보에 남아 있어 그대로 보낸다. */
       counsel_acc_add_type: strOrNull('f-acc-add-type'),
+      // ── 자가도뇨 등록신청서(별지 제4호서식) 전용 ──────────────
+      reg_dx_type:      strOrNull('f-reg-dx-type'),
+      reg_confirm_items: [...document.querySelectorAll('.f-reg-confirm:checked')].map(el => el.value),
+      /* 「예/아니오」와 「아직 고르지 않음」은 다르다 — 고르지 않았으면 서식에 아무것도
+         찍지 않아야 하므로 null 로 보낸다. '0' 이 거짓으로 사라지지 않게 값을 본다. */
+      reg_sms_notify:   (document.getElementById('f-reg-sms')?.value ?? '') === ''
+                          ? null : document.getElementById('f-reg-sms').value === '1',
+      reg_relation:     strOrNull('f-reg-relation'),
       // ── 제품 ──────────────────────────────────────────────
       items:            itemsPayload,
     };
@@ -8367,6 +8419,12 @@ window.HELP_TOUR_STEPS = [
      「있다」와 「보낼 수 있다」를 나눠 적는다 — 만들어져 있어도 첨부가 아니면 안 나간다. */
   let faxGenDelegation = {{ $prescription->documents->where('type', 'delegation')->isNotEmpty() ? 'true' : 'false' }};
 
+  /* 등록신청서를 미리 켜 둘지 — 공단 등록이 「진행중」이면 신규ㆍ재등록을 하는 중이다.
+     화면의 칸을 본다. 담당자가 방금 바꿔 놓고 아직 저장하지 않았어도 그 뜻을 따른다. */
+  function regNeeded() {
+    return (document.getElementById('f-nhis-status')?.value ?? '') === '진행중';
+  }
+
   /* 팩스 창에 세울 줄들. ALL_DOCS 가 화면의 정본이라 여기서 읽는다 —
      올리고 지운 것이 창을 닫았다 열지 않아도 그대로 비친다.
      id 가 0 이하인 것은 첨부가 아니다(0 처방전 이미지 · -1 위임 서명 · -2 보호자 신분증). */
@@ -8376,6 +8434,13 @@ window.HELP_TOUR_STEPS = [
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
       if (!hits.length) {
+        /* 등록신청서는 우리가 만들어 보낸다(별지 제4호서식) — 첨부가 없어도 나간다.
+           공단 등록이 「진행중」이면 미리 켜 둔다. 신규ㆍ재등록이 그 상태다. */
+        if (req.type === 'registration_form') {
+          rows.push({ label: req.label, att: null, state: 'make',
+                      docId: 'fax-doc-registration', on: regNeeded() });
+          return;
+        }
         rows.push({ label: req.label, att: null,
                     state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
       }
@@ -8402,6 +8467,24 @@ window.HELP_TOUR_STEPS = [
             <div style="font-size:10px;color:var(--danger);">등록 안 됨 — 「문서」 카드에서 올리십시오</div>
           </div>
         </div>`;
+    }
+
+    /* 우리가 만들어 보내는 서류. 첨부가 아니라 체크 하나로 켜고 끈다 —
+       보낼 때 서버가 그 자리에서 원본 양식에 값을 얹어 통합본에 붙인다. */
+    if (r.state === 'make') {
+      return `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--primary-200);
+                      border-radius:var(--radius);background:var(--primary-50);cursor:pointer;font-size:12px;margin-bottom:3px;">
+          <input type="checkbox" id="${esc(r.docId)}" style="accent-color:var(--primary);" ${r.on ? 'checked' : ''}>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:500;">${esc(r.label)}</span>
+              <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">자동 작성</span>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);">별지 제4호서식에 이 건의 값을 얹어 함께 보냅니다</div>
+          </div>
+          <i class="fa-regular fa-file-pdf" style="color:var(--primary);font-size:16px;flex-shrink:0;"></i>
+        </label>`;
     }
 
     if (r.state === 'gen') {
@@ -8441,6 +8524,7 @@ window.HELP_TOUR_STEPS = [
     if (!box) return;
 
     const rows    = faxDocRows();
+    // 우리가 만드는 서류는 「없는 것」이 아니다
     const missing = rows.filter(r => r.state === 'missing').map(r => r.label);
     const have    = FAX_REQ_DOCS.length - missing.length;
 
@@ -8500,7 +8584,9 @@ window.HELP_TOUR_STEPS = [
 
     const docMap = {
       /* 팩스는 환자 등록·재등록 전용이라 생성 서류를 싣지 않는다.
-         등록신청서·결과지·신분증은 첨부(attachment_ids)로 나간다. */
+         결과지·신분증은 첨부(attachment_ids)로 나간다.
+         등록신청서만 예외다 — 별지 제4호서식은 우리가 값을 얹어 만들어 보낸다. */
+      'fax-doc-registration': { value: 'registration', label: '자가도뇨 등록신청서' },
     };
     const selected = Object.entries(docMap)
       .filter(([id]) => document.getElementById(id)?.checked);

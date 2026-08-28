@@ -1744,6 +1744,14 @@
           </a>
         </div>
         @endif
+        @if($vis('registration-settings'))
+        <div class="menu-item {{ request()->routeIs('registration-settings*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('registration-settings.edit') }}" data-title="등록 신청서 설정">
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
+            <span>등록 신청서 설정</span>
+          </a>
+        </div>
+        @endif
         {{-- OCR 설정도 메뉴에 두지 않는다 — 같은 까닭이다.
              화면과 경로는 남아 있어 주소로는 열린다(/settings/ocr). --}}
         {{-- 본인확인 설정은 메뉴에 두지 않는다. 한 번 맞춰 두면 다시 열 일이 드물고,

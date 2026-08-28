@@ -261,6 +261,12 @@ return [
             'routes'  => ['delegation-settings'],
             'actions' => ['view', 'update'],
         ],
+        'registration-settings' => [
+            'label'   => '등록 신청서 설정',
+            'group'   => 'settings',
+            'routes'  => ['registration-settings'],
+            'actions' => ['view', 'update'],
+        ],
         'ocr-settings' => [
             'label'   => 'OCR 설정',
             'group'   => 'settings',
