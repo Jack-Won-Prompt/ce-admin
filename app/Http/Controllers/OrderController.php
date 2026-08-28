@@ -222,24 +222,14 @@ class OrderController extends Controller
             ->performedOn($order)
             ->log("{$order->order_number} 주문 생성");
 
-        // SMS 알림
-        $mobile      = $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? null;
-        $patientName = $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '';
-        if ($mobile) {
-            try {
-                $delivery    = $order->estimated_delivery->format('Y-m-d');
-                $copayFmt    = number_format((int) $order->patient_copay);
-                $totalFmt    = number_format((int) $order->total_amount);
-                $smsContent  = "[콜로플라스트] {$patientName}님 주문이 확정되었습니다.\n"
-                             . "- 주문번호: {$order->order_number}\n"
-                             . "- 제품: {$order->product_name}\n"
-                             . "- 환자부담금: {$copayFmt}원 (배송비 포함 {$totalFmt}원)\n"
-                             . "- 예상배송일: {$delivery}";
-                app(MessageService::class)->send($mobile, $smsContent, $patientName);
-            } catch (\Throwable $e) {
-                Log::warning('[Order] SMS 발송 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
-            }
-        }
+        /* 주문 확정 문자는 여기서 보내지 않는다.
+           여기는 우리 쪽 줄만 선 자리다 — 창고에 판매주문이 서기 전이라, 연계가 실패하면
+           고객은 확정 문자를 받았는데 창고에는 아무것도 없는 꼴이 된다. 실제로 그렇게
+           나가고 있었다. 창고에 줄이 선 뒤로 옮겼다
+           (PrescriptionController::sendOrderConfirmedSms).
+
+           문구도 그 자리에서 메시지 관리의 「주문 확정」 유형을 읽는다 — 여기 박혀 있던
+           글은 고치려면 배포를 해야 했고, 보낸 기록이 발송ㆍ발행 내역에 남지도 않았다. */
 
         return response()->json([
             'success'      => true,

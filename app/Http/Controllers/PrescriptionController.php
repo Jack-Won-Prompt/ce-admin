@@ -305,6 +305,11 @@ class PrescriptionController extends Controller
                 activity()->causedBy(Auth::user())->performedOn($prescription)
                     ->log("Withworks 판매주문 연계: {$soNo}");
 
+                /* 창고에 판매주문이 섰다 — 이제 고객에게 알린다. 여기까지 와야 「확정」이다.
+                   보내지 못해도 주문은 이미 선 것이라 되돌리지 않는다. 무슨 일이 있었는지는
+                   답에 실어 화면이 함께 보여 준다. */
+                $sms = $this->sendOrderConfirmedSms($prescription);
+
                 $accountNew  = $result['patient_account_new'] ?? false;
                 $addressNew  = $result['patient_address_new'] ?? false;
 
@@ -318,6 +323,7 @@ class PrescriptionController extends Controller
                     'message' => 'Withworks 판매주문이 생성되었습니다.' . ($detail ? ' (' . implode(', ', $detail) . ')' : ''),
                     'patient_account_id' => $result['patient_account_id'] ?? null,
                     'patient_address_id' => $result['patient_address_id'] ?? null,
+                    'sms'     => $sms,
                 ]);
             }
 
@@ -335,6 +341,76 @@ class PrescriptionController extends Controller
             Log::error('Withworks API 연결 오류', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Withworks 서버에 연결할 수 없습니다.'], 500);
         }
+    }
+
+    /**
+     * 주문 확정 문자 — 창고에 판매주문이 선 뒤에 보낸다.
+     *
+     * 「주문 생성 및 연계」를 누른 그 순간이 아니라, 저쪽에 줄이 실제로 선 뒤여야 한다.
+     * 우리 쪽만 만들어 두고 알렸다가 연계가 실패하면, 고객은 확정 문자를 받았는데
+     * 창고에는 아무것도 없는 꼴이 된다.
+     *
+     * 문구는 메시지 관리의 「주문 확정」 유형을 그대로 쓴다 — 손으로 보내는 문자와 같은
+     * 글이 나가야 하고, 문구를 고치려고 배포할 일이 없어야 한다.
+     * 보낸 것은 발송ㆍ발행 내역에 남는다(MessageSender 가 기록을 함께 남긴다).
+     *
+     * @return array{sent: bool, message: string}
+     */
+    private function sendOrderConfirmedSms(Prescription $prescription): array
+    {
+        $prescription->refresh()->loadMissing('patient', 'order');
+        $order = $prescription->order;
+
+        $name   = $prescription->patient?->bare_name ?: ($prescription->patient_name_ocr ?: '고객');
+        $mobile = preg_replace('/\D/', '',
+            (string) ($prescription->patient?->mobile ?: $prescription->mobile_ocr));
+
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return ['sent' => false, 'message' => '고객 연락처가 없어 주문 확정 문자를 보내지 못했습니다.'];
+        }
+
+        $body = trim((string) \App\Models\MessageTemplate::channel('sms')->active()
+            ->where('code', 'order_confirmed')->value('body'));
+
+        if ($body === '') {
+            return ['sent' => false, 'message' => '메시지 관리의 「주문 확정」 본문이 비어 있습니다.'];
+        }
+
+        $copay = (float) ($order?->patient_copay ?? 0);
+        $content = trim(strtr($body, [
+            '#{고객명}'     => $name,
+            '#{처방번호}'   => $prescription->rx_number,
+            '#{주문번호}'   => $order?->order_number ?? '-',
+            '#{제품명}'     => $order?->product_name ?? '-',
+            '#{본인부담금}' => number_format($copay),
+            '#{금액}'       => number_format($copay + (float) ($order?->shipping_fee ?? 0)),
+            '#{운송장번호}' => $order?->tracking_number ?? '-',
+            '#{배송지}'     => $order?->shipping_address ?? '-',
+        ]));
+
+        try {
+            $res = app(\App\Services\MessageSender::class)->sendBulk(
+                'sms',
+                [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $prescription->patient_id]],
+                $content,
+                'order_confirmed',
+                ['source' => 'order_confirm', 'prescription_id' => $prescription->id],
+            );
+        } catch (\Throwable $e) {
+            Log::error('[주문 확정 문자] 발송 실패', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+            return ['sent' => false, 'message' => '주문 확정 문자 발송 실패: ' . $e->getMessage()];
+        }
+
+        if (! ($res['success'] ?? false)) {
+            return ['sent' => false, 'message' => $res['failed'][0]['error'] ?? '주문 확정 문자를 보내지 못했습니다.'];
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->log("주문 확정 문자 발송 → {$mobile}");
+
+        return ['sent' => true, 'message' => "주문 확정 문자를 {$mobile} 로 보냈습니다."];
     }
 
     // ── Withworks 판매주문 수정 연계 ──────────────────────

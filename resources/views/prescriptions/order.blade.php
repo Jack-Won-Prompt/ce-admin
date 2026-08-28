@@ -6944,6 +6944,7 @@ window.HELP_TOUR_STEPS = [
     let soNo = null;
     let wwSuccess = false;
     let wwMessage = '';
+    let smsResult = null;   // 창고에 줄이 서면 고객에게 주문 확정 문자가 나간다
 
     if (wwItems.length > 0) {
       const wwPayload = {
@@ -6960,6 +6961,7 @@ window.HELP_TOUR_STEPS = [
       wwSuccess = wwRes.success ?? false;
       soNo      = wwRes.so_no  ?? null;
       wwMessage = wwRes.message ?? '';
+      smsResult = wwRes.sms ?? null;
     } else {
       wwMessage = '제품 코드가 없어 Withworks 연계를 건너뜁니다.';
     }
@@ -6970,6 +6972,19 @@ window.HELP_TOUR_STEPS = [
     const wwBadge = wwSuccess
       ? `<span style="display:inline-block;background:var(--primary-50);color:var(--primary);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 완료</span>`
       : `<span style="display:inline-block;background:var(--gray-100);color:var(--gray-600);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 미완료</span>`;
+
+    /* 주문 확정 문자 — 창고에 줄이 선 뒤에만 나간다. 보냈는지, 왜 못 보냈는지를
+       이 창에서 바로 읽어야 한다. 못 보낸 건은 담당자가 손으로 보내야 하기 때문이다. */
+    const smsRow = smsResult ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted);">주문 확정 문자</span>
+          <span style="display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;
+                       background:${smsResult.sent ? 'var(--primary-50)' : 'var(--gray-100)'};
+                       color:${smsResult.sent ? 'var(--primary)' : 'var(--gray-600)'};">
+            ${smsResult.sent ? '발송 완료' : '발송 안 됨'}
+          </span>
+        </div>
+        ${smsResult.sent ? '' : `<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;text-align:right;">${smsResult.message ?? ''}</span></div>`}` : '';
 
     document.getElementById('orderModalBody').innerHTML = `
       <div style="font-size:52px;color:var(--primary);margin-bottom:12px;">✅</div>
@@ -6984,6 +6999,7 @@ window.HELP_TOUR_STEPS = [
         </div>
         ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SO 번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
         ${!wwSuccess && wwMessage ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;">${wwMessage}</span></div>` : ''}
+        ${smsRow}
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">제품 수</span><b>${localPayload.items?.length ?? 0}종</b></div>
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">본인 부담금</span><b style="color:var(--primary);">₩ ${totalCopay.toLocaleString()}</b></div>
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">예상 배송일</span><b>${res.estimated_delivery ?? '-'}</b></div>
