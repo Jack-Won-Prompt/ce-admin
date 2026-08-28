@@ -33,7 +33,7 @@
   <div class="help-section-title">주문 생성 순서</div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">1</div>
-    <div class="help-item-text">상세 목록 탭에서 환자 정보 확인·수정 후 <b>검수 완료</b></div>
+    <div class="help-item-text">상세 목록 탭에서 환자 정보 확인·수정 후 <b>검수 승인하기</b></div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">2</div>
@@ -2187,18 +2187,23 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    완료ㆍ반려는 approve 권한으로 갈라 두었다(config/permissions.php). --}}
               <div class="rx-acc-btns">
                 <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
-                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청</button>
+                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청하기</button>
                 @perm('prescriptions', 'approve')
-                <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 완료 처리합니다">검수 완료</button>
+                <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 승인합니다">검수 승인하기</button>
                 @endperm
                 {{-- 검수 다음 걸음은 주문이다. 여기까지 와서 주문을 만들었는지 아닌지는
                      탭을 열어 봐야 알 수 있었다 — 걸음 띠에서 바로 읽게 한다.
                      data-stage 는 붙이지 않는다. 다른 단추는 처방 상태가 걸음을 정하지만
                      이 단추는 「주문이 있느냐」가 정한다(syncOrderStageBtn). --}}
-                {{-- 저장만 해도 주문 줄은 선다(주문 관리에 보이도록). 그러니 「주문이
-                     있느냐」로는 이 걸음을 가릴 수 없다 — 창고로 보냈느냐로 본다. --}}
+                {{-- 이 단추만 성질이 다르다 — 누른다고 무엇이 바뀌지 않고 주문 제품 탭으로
+                     갈 뿐이다. 그래서 이름도 「주문 보기」다. 앞의 둘과 나란히 「주문 완료」라
+                     적어 두었더니 눌러서 완료시키는 것처럼 읽혔다.
+
+                     주문을 냈는지 아닌지는 글자 대신 색이 말한다(지난 걸음이면 체크색).
+                     저장만 해도 주문 줄은 서므로(주문 관리에 보이도록) 그 기준은 「창고로
+                     보냈느냐」다 — syncOrderStageBtn 이 같은 눈으로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
-                        title="주문 제품 탭으로 갑니다">{{ $prescription->order?->withworks_so_no ? '주문 완료' : '주문 미등록' }}</button>
+                        title="주문 제품 탭으로 갑니다">주문 보기</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -3414,12 +3419,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
   <div class="modal-box">
     <div class="modal-header">
       <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:20px;"></i>
-      <span class="modal-title">처방전 검수 완료</span>
+      <span class="modal-title">처방전 검수 승인</span>
       <button class="modal-close" onclick="closeModal('approveModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
       <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 완료</div>
+        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 승인</div>
         <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
           처방전 {{ $prescription->rx_number }}의 검수를 마칩니다.
         </div>
@@ -3431,7 +3436,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('approveModal')">취소</button>
-      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 검수 완료</button>
+      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 검수 승인하기</button>
     </div>
   </div>
 </div>
@@ -4669,7 +4674,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(2)',
     title: '상세 목록 탭',
-    body: '환자·병원·처방 정보를 확인하고 수정합니다. 완료 후 <b>검수 완료</b> 버튼을 클릭하세요.'
+    body: '환자·병원·처방 정보를 확인하고 수정합니다. 다 적었으면 <b>검수 요청하기</b>, 검수자는 <b>검수 승인하기</b>를 누릅니다.'
   },
   {
     selector: '.tab-btn:nth-child(3)',
@@ -6516,7 +6521,7 @@ window.HELP_TOUR_STEPS = [
       document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(btn => {
         btn.disabled = true;
         btn.title = '이미 검수를 요청했습니다';
-        btn.textContent = '검수 요청함';
+        btn.textContent = '검수 요청됨';
       });
     }
   }
@@ -6527,7 +6532,7 @@ window.HELP_TOUR_STEPS = [
 
     // 다 끝난 건이라 검수로 가는 단추 둘 다 잠근다
     document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
-      b.disabled = true; b.textContent = '검수 완료됨'; b.title = '이미 검수를 마쳤습니다';
+      b.disabled = true; b.textContent = '검수 승인됨'; b.title = '이미 검수를 마쳤습니다';
     });
     document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => { b.disabled = true; });
 
@@ -6563,19 +6568,21 @@ window.HELP_TOUR_STEPS = [
      상태가 바뀌면 setRxStatus 가 여기도 고쳐 둔다. */
   let RX_STATUS = @json($prescription->status);
 
-  /* 「주문 미등록 / 주문 완료」 — 주문이 있으면 지난 걸음(체크), 검수를 마쳤는데 아직
-     없으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다. */
+  /* 「주문 보기」 — 글자는 고정이다. 창고로 보냈으면 지난 걸음(체크), 검수를 마쳤는데
+     아직 안 보냈으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다.
+     예전에는 글자를 「주문 미등록/주문 완료」로 갈아 끼웠는데, 옆의 두 단추가 눌러서
+     상태를 바꾸는 것들이라 이것도 눌러서 완료시키는 줄 알게 됐다. */
   function syncOrderStageBtn() {
     const btn = document.getElementById('btnOrderStage');
     if (!btn) return;
 
     const has = !!(orderExists && existingOrder);
-    btn.textContent = has ? '주문 완료' : '주문 미등록';
     btn.classList.remove('is-done', 'is-now', 'is-wait');
     btn.classList.add(has ? 'is-done'
                     : (RX_STATUS === 'approved' || RX_STATUS === 'ordered') ? 'is-now'
                     : 'is-wait');
-    btn.title = has ? '주문 제품 탭에서 이 주문을 봅니다' : '주문 제품 탭으로 갑니다';
+    btn.title = has ? '창고로 보낸 주문입니다 — 주문 제품 탭에서 봅니다'
+                    : '아직 창고로 보내지 않았습니다 — 주문 제품 탭으로 갑니다';
   }
 
   /** 주문 제품 탭으로 간다 — 배송ㆍ주문 단추가 그 아래 있다.
