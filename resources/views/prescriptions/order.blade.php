@@ -2047,8 +2047,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div class="tab-bar-tabs">
           {{-- 상세 목록 왼쪽에 목록을 둔다 — 이 화면에 들어와서야 「다음에 무엇을 손대나」를
                알 수 있어야 한다. 반품ㆍ교환ㆍ취소가 붙은 건은 빼고 판매만 세운다. --}}
-          <button class="tab-btn" onclick="switchTab(this,'tab-orders')">주문 목록</button>
-          <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">상세 목록</button>
+          {{-- 처음 서는 탭 — 「주문 등록」으로 막 들어온 빈 초안이면 주문 목록이다.
+               무엇을 손댈지부터 고르는 자리이기 때문이다. 어떤 건을 콕 집어 왔으면
+               (처방전 목록에서 눌렀거나 주문 목록에서 더블클릭했으면) 그 건의 상세 목록으로
+               연다 — 목록을 보자고 온 것이 아니다. --}}
+          @php $_openList = (bool) $prescription->is_blank_draft; @endphp
+          <button class="tab-btn {{ $_openList ? 'active' : '' }}" onclick="switchTab(this,'tab-orders')">주문 목록</button>
+          <button class="tab-btn {{ $_openList ? '' : 'active' }}" onclick="switchTab(this,'tab-ocr')">상세 목록</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-product')">주문 제품</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-history')">이력</button>
         </div>
@@ -2084,7 +2089,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- Tab: 주문 목록 ────────────────────────────────────
            찾는 줄은 화면 안에서 거른다. 다른 목록 화면처럼 폼을 보내 새로 그리면
            보고 있던 건이 날아간다 — 여기서는 받아 둔 것을 그 자리에서 좁힌다. --}}
-      <div class="tab-pane" id="tab-orders">
+      <div class="tab-pane {{ $_openList ? 'active' : '' }}" id="tab-orders">
         {{-- 찾는 줄은 한 줄이다. 칸 넷과 단추 둘이 같은 줄에 선다 — 좁아지면 접힌다.
              진행 상태로 거르는 칸은 두지 않는다: 이 표에는 「주문 대기」뿐이라 고를 것이
              없다(확정된 건을 보는 자리는 주문 관리다). --}}
@@ -2115,13 +2120,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </button>
           </div>
         </div>
-        <div class="ds-grid-hint" style="margin:8px 0;">
-          아직 <b>확정되지 않은 주문</b>만 세웁니다 — 손댈 차례가 지난 건은 주문 관리에서 봅니다.
-          줄을 더블클릭하면 그 건의 <b>상세 목록</b>으로 갑니다. 아직 맡은 사람이 없는 건은
-          연 사람이 담당자가 됩니다.
+        {{-- 목록의 이름. 무엇을 하는 자리인지는 이름 하나로 족하다 — 규칙을 세 줄로
+             적어 두었더니 표보다 안내가 먼저 눈에 들었다. 넘친 건수만 뒤에 붙인다. --}}
+        <div class="section-title" style="margin:8px 0;">
+          <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> 작업 대기 리스트
           @if($orderListTotal > $orderListLimit)
-            <b>{{ number_format($orderListTotal) }}건 가운데 최근 {{ number_format($orderListLimit) }}건</b>입니다 —
-            더 예전 것은 주문 관리 화면에서 봅니다.
+            <span style="font-size:11px;font-weight:500;color:var(--text-muted);margin-left:6px;">
+              {{ number_format($orderListTotal) }}건 가운데 최근 {{ number_format($orderListLimit) }}건
+            </span>
           @endif
         </div>
         {{-- 표는 흰 카드 안에 담는다. 카드 없이 두었더니 회색 바탕 위에 표가 그대로
@@ -2131,7 +2137,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       </div>
 
       {{-- Tab: OCR Edit (상세 목록) --}}
-      <div class="tab-pane active" id="tab-ocr">
+      <div class="tab-pane {{ $_openList ? '' : 'active' }}" id="tab-ocr">
       <div class="cv">
 
         @php $displayRn = $prescription->masked_resident_no_ocr ?? $prescription->patient?->masked_resident_no; @endphp
@@ -4653,22 +4659,22 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-bar',
     title: '처방전 처리 탭',
-    body: '상세 목록 → 주문 정보 → 주문 연계 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
+    body: '주문 목록 → 상세 목록 → 주문 제품 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
   },
   {
     selector: '.tab-btn:nth-child(1)',
-    title: '상세 목록 탭',
-    body: 'OCR이 자동 추출한 환자·병원·제품 정보를 확인하고 수정합니다. 완료 후 <b>검수 완료</b> 버튼을 클릭하세요.'
+    title: '주문 목록 탭',
+    body: '아직 확정되지 않은 주문이 섭니다. 줄을 더블클릭하면 그 건의 상세 목록으로 가고, 아직 맡은 사람이 없으면 연 사람이 담당자가 됩니다.'
   },
   {
     selector: '.tab-btn:nth-child(2)',
-    title: '주문 제품 탭',
-    body: '<b>판매유형</b>(CE판매·개인판매·샘플판매)을 먼저 선택하고, 제품 검색 버튼으로 Todoworks에서 제품을 가져옵니다.'
+    title: '상세 목록 탭',
+    body: '환자·병원·처방 정보를 확인하고 수정합니다. 완료 후 <b>검수 완료</b> 버튼을 클릭하세요.'
   },
   {
     selector: '.tab-btn:nth-child(3)',
-    title: '주문 연계 탭',
-    body: '받는 사람과 배송 주소를 확인한 후 <b>주문 생성 및 연계</b> 버튼을 클릭합니다. Withworks 판매주문이 자동 생성됩니다.'
+    title: '주문 제품 탭',
+    body: '제품을 고르고 배송 정보를 적은 뒤 <b>주문 생성 및 연계</b>를 누릅니다. Withworks 판매주문이 자동 생성됩니다.'
   },
   {
     selector: '#wwSoCard',
@@ -4678,7 +4684,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(4)',
     title: '이력 탭',
-    body: '처방전의 전체 처리 이력을 확인합니다. 업로드 → OCR → 검수 → 주문 생성 단계가 순서대로 표시됩니다.'
+    body: '처방전의 전체 처리 이력을 확인합니다. 업로드 → 검수 → 주문 생성 단계가 순서대로 표시됩니다.'
   },
 ];
 </script>
@@ -8866,6 +8872,12 @@ window.HELP_TOUR_STEPS = [
   // 검색어 칸에서 엔터를 치면 곧바로 찾는다
   document.getElementById('ol-q')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); olApply(); }
+  });
+
+  /* 이 탭이 처음부터 서 있으면 표도 그때 세운다 — 탭을 누르지 않으니 누를 때 세우던
+     코드가 돌지 않는다. */
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('tab-orders')?.classList.contains('active')) olEnsureGrid();
   });
 
   // ── 상담번호 채번 ──────────────────────────────────────
