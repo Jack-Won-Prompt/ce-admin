@@ -100,29 +100,9 @@ class BillingStrategy
     /** 자격 목록 — 화면의 「자격」 칸과 전략 목록이 같은 순서를 쓴다 */
     public const CLASSES = ['일반', '차상위경감', '기초', '산재', '자동차보험'];
 
-    /**
-     * 고를 수 있는 전략 — 화면의 「청구전략」 칸이 세우는 줄이다.
-     *
-     * 원내ㆍ원외로 나누지 않는다. 둘은 부담 비율도 발행 방식도 같아, 나누면 글자만
-     * 다른 같은 줄이 다섯 쌍 선다. 어느 쪽인지는 옆의 「유형」 칸이 말한다.
-     *
-     * 처방외의 열쇠는 'nonrx' 다. 유형 코드('20')를 그대로 쓰면 자바스크립트가 그것을
-     * 정수 열쇠로 보아 목록 맨 앞으로 끌어올린다 — 마지막에 서야 하는 줄이다.
-     *
-     * @return array<string, string> 자격(또는 nonrx) => 이름
-     */
-    public const OPTION_NONRX = 'nonrx';
-
-    public static function options(): array
-    {
-        $out = [];
-        foreach (self::CLASSES as $c) {
-            $out[$c] = self::resolve(self::TYPE_OUT, $c)['label'];
-        }
-        $out[self::OPTION_NONRX] = self::resolve(self::TYPE_NONRX, null)['label'];
-
-        return $out;
-    }
+    /* 고를 수 있는 전략 목록(options)은 두지 않는다. 주문 제품 탭의 전략 고르개를
+       걷었고, 유형ㆍ자격은 각자 제자리에서 고른다 — 부르는 곳이 없는 표는 언젠가
+       실제와 어긋난 채로 남는다. 이름은 아래 resolve() 가 짓는다. */
 
     /** 화면(JS)이 같은 표를 쓰도록 통째로 넘긴다 — 두 곳에 적으면 언젠가 어긋난다 */
     public static function table(): array

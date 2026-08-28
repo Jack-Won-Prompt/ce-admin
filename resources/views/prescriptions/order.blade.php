@@ -376,7 +376,9 @@
      그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
   #tabsCol > #tab-orders.active { display:flex; flex-direction:column; min-height:0; }
   #tab-orders .ol-filter, #tab-orders .ds-grid-hint { flex:0 0 auto; }
-  #tab-orders .ol-card { flex:1 1 auto; min-height:260px; display:flex; flex-direction:column;
+  /* 표가 제 키(300)를 쥐므로 카드는 그만큼만 선다 — 남는 높이를 받아 늘어나면
+     표 아래로 흰 바닥이 길게 남는다. */
+  #tab-orders .ol-card { flex:0 0 auto; display:flex; flex-direction:column;
                          overflow:hidden; padding:0; }
   /* 카드가 이미 흰 판이다 — 표가 제 테두리ㆍ모서리를 또 두르지 않는다 */
   #tab-orders .cg-wrap { border:0; border-radius:0; }
@@ -481,32 +483,6 @@
      읽는 결이 달라 색으로 갈라 둔다. 비율이 확인중인 자격은 경고색으로 선다. */
   #tab-product .pt-hb-bs { background:var(--primary-50); color:var(--primary); font-weight:700; }
   #tab-product .pt-hb-bs.is-pending { background:var(--alert-50); color:var(--alert-500); }
-  /* 청구전략 — 비용 내역과 같은 폭에 앉되, 규칙이라는 것이 보이게 옅은 바탕을 깐다 */
-  .bs-box   { border:1px solid var(--border); border-radius:8px; background:var(--gray-50, #f8f9fa);
-              padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
-  /* 결과 한 줄 — 이름 · 비율 · 발행 방식이 나란히 선다 */
-  .bs-result { display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:6px; }
-  .bs-head  { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text); }
-  .bs-result .bs-split { font-size:12px; color:var(--text-muted); }
-  .bs-result .bs-chips { margin-left:auto; }
-  .bs-flag  { font-size:11px; font-weight:500; color:var(--warning, #b26a00); }
-  .bs-split { font-size:12px; color:var(--text-muted); }
-  .bs-chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .bs-chip  { font-size:11px; color:var(--text-muted); border:1px solid var(--border);
-              border-radius:999px; padding:2px 8px; background:#fff; white-space:nowrap; }
-  .bs-chip b { color:var(--text); font-weight:600; }
-  /* 정하는 칸 — 결과 바로 위에 한 줄로. 좁아지면 접힌다 */
-  .bs-pick  { display:flex; gap:8px; flex-wrap:wrap; }
-  /* 결과가 붙을 때만 가르는 줄이 생긴다 — 고르기 전에는 상자가 한 줄로 끝난다 */
-  .bs-pick:has(+ #bsResult:not([style*="none"])) { padding-bottom:8px; margin-bottom:2px;
-              border-bottom:1px solid var(--border); }
-  .bs-f     { display:flex; flex-direction:column; gap:3px; flex:1 1 110px; min-width:0; }
-  .bs-f-wide{ flex:2 1 200px; }
-  .bs-f > span { font-size:11px; font-weight:500; color:var(--gray-700); }
-  .bs-f .form-control { height:30px; font-size:12px; }
-  /* 확정되지 않은 자격(산재ㆍ자동차보험)은 자리만 있다는 것을 색으로 알린다 */
-  .bs-box.pending { border-color:var(--warning, #f0ad4e); background:#fff8ec; }
-
   /* 머리 오른쪽 합계 — 12/500 주색 맨글자 (시안 "총 NHIS 급여: ₩ 0") */
   #tab-product .pt-head-total { display:inline-flex; align-items:center; gap:6px;
                                 font-size:12px; font-weight:500; line-height:19px; color:var(--primary); white-space:nowrap; }
@@ -3120,51 +3096,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
                  함께 있던 「주문 정보 요약」과 「비용 내역」은 옮기지 않았다 — 바로 위
                  제품 목록과 카드 머리의 두 합계가 같은 말을 이미 하고 있다. --}}
-            <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-scale-balanced" style="color:var(--primary);"></i> 청구전략</div>
-            <div class="bs-box" id="bsBox">
-              {{-- 정하는 칸을 결과 옆에 둔다. 유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방
-                   정보에 있어 세 곳을 오가야 했다 — 여기 둔 칸은 그 두 칸을 그대로 비추는
-                   거울이라, 어느 쪽에서 고쳐도 같은 값이 된다.
-                   셋째 칸은 청구전략 자체다. 전략을 고르면 유형ㆍ자격이 그에 맞춰 선다 —
-                   전략이란 곧 그 두 칸의 짝이라, 따로 저장되는 값이 아니다. --}}
-              <div class="bs-pick">
-                <label class="bs-f"><span>유형</span>
-                  <select id="bsType" class="form-control" onchange="bsFromPair('bsType')">
-                    <option value="">선택</option>
-                    <option value="30">원내</option>
-                    <option value="10">원외</option>
-                    <option value="20">처방외</option>
-                  </select>
-                </label>
-                <label class="bs-f"><span>자격</span>
-                  <select id="bsClass" class="form-control" onchange="bsFromPair('bsClass')">
-                    <option value="">선택</option>
-                    <option value="일반">일반</option>
-                    <option value="차상위경감">차상위경감</option>
-                    <option value="기초">기초</option>
-                    <option value="자동차보험">자동차보험</option>
-                    <option value="산재">산재</option>
-                  </select>
-                </label>
-                <label class="bs-f bs-f-wide"><span>청구전략</span>
-                  <select id="bsStrategy" class="form-control" onchange="bsFromStrategy()"></select>
-                </label>
-              </div>
-
-              {{-- 아직 고르지 않았으면 이 아래는 통째로 감춘다. 고르는 칸이 바로 위에
-                   있으니 「고르면 정해집니다」라고 적어 둘 이유가 없다. --}}
-              {{-- 결과는 한 줄로 읽는다 — 이름ㆍ비율ㆍ발행 방식이 세 줄로 쌓여 있어
-                   상자만 길어지고 정작 견주기는 어려웠다. 좁아지면 접힌다. --}}
-              <div id="bsResult" class="bs-result" style="display:none;">
-                <span class="bs-head"><span id="bsLabel"></span><span class="bs-flag" id="bsFlag"></span></span>
-                <span class="bs-split" id="bsSplit"></span>
-                <span class="bs-chips">
-                  <span class="bs-chip">현금영수증 <b id="bsCash">-</b></span>
-                  <span class="bs-chip">세금계산서 <b id="bsTax">-</b></span>
-                </span>
-              </div>
-            </div>
-
+            {{-- 청구전략 상자는 두지 않는다. 유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방
+                 정보에 이미 제자리가 있고, 그 둘이 정한 전략은 이 카드 머리에 배지로
+                 선다(rx-ref-bs) — 같은 것을 세 번 보이던 자리였다. --}}
 
             <div style="margin-top:16px;">
               <label class="form-label">배송 정보</label>
@@ -5624,9 +5558,12 @@ window.HELP_TOUR_STEPS = [
      여기에 비율을 다시 적으면 언젠가 두 곳이 어긋난다. */
   const BILLING_STRATEGY = @json(\App\Support\BillingStrategy::table());
 
+  /* 청구전략을 보이는 자리는 이제 주문 정보 카드 머리의 배지 하나다.
+     상자를 걷었으므로 여기서 그 상자를 찾지 않는다 — 찾아서 없으면 돌아서던 코드라,
+     그대로 두었으면 배지까지 함께 서지 않았을 자리다. */
   function renderBillingStrategy() {
-    const box = document.getElementById('bsBox');
-    if (!box) return;
+    const hb = document.getElementById('rx-ref-bs');
+    if (!hb) return;
 
     const type = document.getElementById('f-acc-add-type')?.value ?? '';
     const cls  = document.getElementById('f-benefit-class')?.value ?? '';
@@ -5634,42 +5571,18 @@ window.HELP_TOUR_STEPS = [
     const key  = type === '20' ? '20|' : (type && cls ? type + '|' + cls : null);
     const r    = key ? BILLING_STRATEGY[key] : null;
 
-    const pct = (v) => (v === null || v === undefined) ? '확인중' : v + '%';
+    if (!r) { hb.style.display = 'none'; return; }
 
-    const result = document.getElementById('bsResult');
-
-    if (!r) {
-      box.classList.remove('pending');
-      result.style.display = 'none';
-      const hb0 = document.getElementById('rx-ref-bs');
-      if (hb0) hb0.style.display = 'none';
-      return;
-    }
-
-    result.style.display = 'flex';
-    box.classList.toggle('pending', !!r.pending);
-    document.getElementById('bsLabel').textContent = r.label;
-    document.getElementById('bsFlag').textContent  = r.note;
-    document.getElementById('bsSplit').textContent = r.payer_rate > 0
-      ? `본인부담금 ${r.self_rate}% + ${r.payer} 부담금 ${r.payer_rate}%`
-      : `본인부담금 ${r.self_rate}%`;
-    document.getElementById('bsCash').textContent = pct(r.cash_receipt);
-    document.getElementById('bsTax').textContent  = pct(r.tax_invoice);
-
-    // 주문 정보 머리의 배지도 같은 값을 비춘다
-    const hb = document.getElementById('rx-ref-bs');
-    if (hb) {
-      hb.style.display = '';
-      hb.textContent = r.label + (r.pending ? ' · ' + (r.note || '확인중') : '');
-      hb.classList.toggle('is-pending', !!r.pending);
-    }
+    hb.style.display = '';
+    hb.textContent = r.label + (r.pending ? ' · ' + (r.note || '확인중') : '');
+    hb.classList.toggle('is-pending', !!r.pending);
   }
 
-  /* ── 정하는 칸 셋 ───────────────────────────────────────────
-     유형ㆍ자격은 각자 제자리(상담ㆍ환자 정보 / 병원ㆍ처방 정보)에 그대로 있고, 여기 칸은
-     그것을 비추는 거울이다 — 저장되는 값은 언제나 제자리 칸이 쥔다.
-     청구전략은 따로 저장되는 값이 아니라 그 두 칸의 짝을 부르는 이름이다. 그래서 전략을
-     고르면 두 칸이 그에 맞춰 서고, 두 칸을 고치면 전략이 따라 선다. */
+  /* ── 유형 × 자격 ───────────────────────────────────────────
+     유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방 정보에 각자 제자리가 있다. 청구전략은
+     따로 저장되는 값이 아니라 그 두 칸의 짝을 부르는 이름이라, 여기서는 읽기만 한다.
+     예전에는 주문 제품 탭에 그 둘을 비추는 거울 칸과 전략 고르개를 함께 두었는데,
+     같은 것을 세 자리에서 보이고 세 자리에서 고칠 수 있어 어디가 정본인지 흐렸다. */
   const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? t + '|' + c : '');
 
   /** 지금 고른 청구전략 — 없으면 null */
@@ -5694,79 +5607,19 @@ window.HELP_TOUR_STEPS = [
     return { payer: r.payer_rate / 100, self: r.self_rate / 100 };
   };
 
-  /* 전략 고르개 — 여섯 줄이다. 원내ㆍ원외로 나누지 않는다(둘은 부담 비율도 발행 방식도
-     같아, 나누면 글자만 다른 같은 줄이 다섯 쌍 선다). 어느 쪽인지는 옆의 「유형」 칸이 말한다.
-     열쇠는 자격이고 처방외만 'nonrx' 다 — '20' 을 쓰면 자바스크립트가 정수 열쇠로 보아
-     목록 맨 앞으로 끌어올린다. */
-  const BILLING_OPTIONS = @json(\App\Support\BillingStrategy::options());
-  (function fillStrategyOptions() {
-    const sel = document.getElementById('bsStrategy');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">선택</option>' +
-      Object.entries(BILLING_OPTIONS)
-        .map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
-  })();
-
-  /** 지금 고른 짝이 전략 고르개의 어느 줄인가 */
-  const _bsOption = (t, c) => t === '20' ? 'nonrx' : (c || '');
-
   let _bsSyncing = false;
 
-  /** 제자리 칸 → 거울ㆍ전략ㆍ결과 */
+  /** 유형ㆍ자격이 바뀌면 배지와 금액을 다시 세운다 */
   function bsSyncFromSource() {
     if (_bsSyncing) return;
     _bsSyncing = true;
     const t = document.getElementById('f-acc-add-type')?.value ?? '';
     const c = document.getElementById('f-benefit-class')?.value ?? '';
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
-    set('bsType', t);
-    set('bsClass', c);
-    set('bsStrategy', _bsOption(t, c));
     renderBillingStrategy();
     // 비율이 바뀌었으니 제품 줄의 금액도 함께 다시 선다
     if (typeof recalcAllItems === 'function') recalcAllItems();
     _bsSyncing = false;
   }
-
-  /** 거울 칸에서 고쳤을 때 — 제자리 칸에 그대로 옮긴다 */
-  window.bsFromPair = function (which) {
-    if (_bsSyncing) return;
-    const src = which === 'bsType' ? 'f-acc-add-type' : 'f-benefit-class';
-    const el  = document.getElementById(src);
-    if (!el) return;
-    el.value = document.getElementById(which).value;
-    // 제자리 칸에 걸린 일들(청구처 추천ㆍ병원명 별표 …)이 함께 돌게 한다
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    bsSyncFromSource();
-    markOcrDirty();
-  };
-
-  /** 전략에서 고쳤을 때 — 그 짝을 이루는 유형ㆍ자격으로 두 칸을 세운다 */
-  window.bsFromStrategy = function () {
-    if (_bsSyncing) return;
-    const pick = document.getElementById('bsStrategy').value;
-    const put = (id, v) => {
-      const e = document.getElementById(id);
-      if (!e) return;
-      e.value = v;
-      e.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-
-    if (pick === 'nonrx') {                  // 처방외 — 자격을 보지 않는다
-      put('f-acc-add-type', '20');
-      put('f-benefit-class', '');
-    } else if (pick === '') {
-      put('f-benefit-class', '');
-    } else {
-      /* 자격만 세운다. 원내냐 원외냐는 전략이 정하는 것이 아니다 —
-         아직 안 골랐으면 원외로 둔다(처방전은 대개 원외다). */
-      const cur = document.getElementById('f-acc-add-type')?.value ?? '';
-      if (cur === '' || cur === '20') put('f-acc-add-type', '10');
-      put('f-benefit-class', pick);
-    }
-    bsSyncFromSource();
-    markOcrDirty();
-  };
 
   document.getElementById('f-acc-add-type')?.addEventListener('change', bsSyncFromSource);
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
@@ -6496,9 +6349,8 @@ window.HELP_TOUR_STEPS = [
       total_count:      intOrNull('f-total'),
       // ── 급여·보험 정보 ─────────────────────────────────────
       benefit_class:    strOrNull('f-benefit-class'),
-      /* 청구전략 — 유형ㆍ자격에서 정해지는 값이라 서버가 다시 셈해 적는다.
-         보내는 것은 화면이 무엇으로 보고 있었는지를 남기기 위해서다. */
-      billing_strategy: strOrNull('bsStrategy'),
+      /* 청구전략은 보내지 않는다 — 유형ㆍ자격에서 정해지는 값이라 서버가 그 둘로 다시
+         셈해 적는다(BillingStrategy::key). 화면에서 따로 고르는 칸도 이제 없다. */
       claim_agency:     strOrNull('f-claim-agency'),
       billing_office_id: intOrNull('f-billing-office'),
       // 지자체가 아니면 관할 지자체는 값이 있을 이유가 없다
@@ -8937,7 +8789,9 @@ window.HELP_TOUR_STEPS = [
 
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
-      height: 'fit', editable: false, rowNumber: true, toolbar: false,
+      /* 키는 300 으로 못박는다. 'fit' 은 창 아래끝까지 채우는데, 이 표는 화면 안의 한
+         구획일 뿐이라 그렇게 늘어나면 아래 것들이 밀려난다. 줄이 많으면 표 안에서 굴린다. */
+      height: 300, editable: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
