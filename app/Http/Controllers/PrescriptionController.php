@@ -1368,11 +1368,16 @@ class PrescriptionController extends Controller
                 'patient'   => $o->patient?->name ?? ($o->prescription?->patient_name_ocr ?? ''),
                 // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
                 'manager'   => $o->prescription?->assignedUser?->name ?? '',
-                'product'   => $o->product_name ?? '',
-                'qty'       => (int) ($o->quantity ?? 0),
+                /* 처방여부 — 처방전이냐 아니냐. 유형(원내ㆍ원외ㆍ처방외) 가운데 처방외만
+                   「비처방」이다. 아직 고르지 않았으면 비워 둔다 — 모르는 것을 「처방전」이라
+                   적어 두면 그 말이 근거처럼 읽힌다. */
+                'rx_type'   => match ((string) ($o->prescription?->counsel_acc_add_type ?? '')) {
+                                   '20'    => '비처방',
+                                   '10', '30' => '처방전',
+                                   default => '',
+                               },
                 'copay'     => (int) $o->patient_copay,
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
-                'nhis'      => $o->prescription?->patient?->nhis_reg_status ?? '',
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
                 'url'       => $o->prescription

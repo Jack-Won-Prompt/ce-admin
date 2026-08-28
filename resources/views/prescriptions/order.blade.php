@@ -2091,7 +2091,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <div class="ol-filter">
           <div class="ol-field ol-field-q">
             <label class="ds-field-label">검색어</label>
-            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ제품명">
+            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ담당자">
           </div>
           <div class="ol-field">
             <label class="ds-field-label">접수일 (부터)</label>
@@ -8807,11 +8807,9 @@ window.HELP_TOUR_STEPS = [
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
-        { header: '제품',      name: 'product',   width: 200, sortable: true },
-        { header: '수량',      name: 'qty',       width: 60,  align: 'right' },
+        { header: '처방여부',  name: 'rx_type',   width: 90,  align: 'center', sortable: true },
         { header: '본인부담금', name: 'copay',     width: 90,  align: 'right', editor: 'number' },
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
-        { header: '공단 등록', name: 'nhis',      width: 90,  align: 'center', sortable: true },
       ],
       data: OL_ROWS,
     });
@@ -8842,7 +8840,7 @@ window.HELP_TOUR_STEPS = [
 
     const rows = OL_ROWS.filter(r => {
       if (q) {
-        const hay = [r.order_no, r.rx_number, r.patient, r.product].join(' ').toLowerCase();
+        const hay = [r.order_no, r.rx_number, r.patient, r.manager].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (from && (r.sold_at || '') < from) return false;
