@@ -378,7 +378,7 @@
      그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
   #tabsCol > #tab-orders.active { display:flex; flex-direction:column; min-height:0; }
   #tab-orders .ol-filter, #tab-orders .ds-grid-hint { flex:0 0 auto; }
-  /* 표가 제 키(300)를 쥐므로 카드는 그만큼만 선다 — 남는 높이를 받아 늘어나면
+  /* 표가 제 키(399)를 쥐므로 카드는 그만큼만 선다 — 남는 높이를 받아 늘어나면
      표 아래로 흰 바닥이 길게 남는다. */
   #tab-orders .ol-card { flex:0 0 auto; display:flex; flex-direction:column;
                          overflow:hidden; padding:0; }
@@ -8789,9 +8789,9 @@ window.HELP_TOUR_STEPS = [
 
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
-      /* 키는 300 으로 못박는다. 'fit' 은 창 아래끝까지 채우는데, 이 표는 화면 안의 한
+      /* 키는 399 로 못박는다. 'fit' 은 창 아래끝까지 채우는데, 이 표는 화면 안의 한
          구획일 뿐이라 그렇게 늘어나면 아래 것들이 밀려난다. 줄이 많으면 표 안에서 굴린다. */
-      height: 300, editable: false, rowNumber: true, toolbar: false,
+      height: 399, editable: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
