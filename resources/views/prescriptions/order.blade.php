@@ -2149,7 +2149,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <label class="ds-field-label">담당자</label>
               <select id="ol-manager" class="form-control form-select">
                 <option value="">전체</option>
-                <option value="__none__">임자 없음</option>
+                <option value="__none__">미배정</option>
               </select>
             </div>
           </div>
@@ -9065,11 +9065,11 @@ window.HELP_TOUR_STEPS = [
         { header: '접수일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
         { header: '환자',      name: 'patient',   width: 90,  sortable: true },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
-           「이건 아직 임자가 없다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
+           「이건 아직 아무도 맡지 않았다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
         { header: '담당자',    name: 'manager',   width: 90,  sortable: true,
           renderer: (v) => {
             const s = document.createElement('span');
-            s.textContent = v || '임자 없음';
+            s.textContent = v || '미배정';
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
@@ -9115,7 +9115,7 @@ window.HELP_TOUR_STEPS = [
       if (from && (r.sold_at || '') < from) return false;
       if (to   && (r.sold_at || '') > to)   return false;
       if (status && r.status !== status) return false;
-      // 「임자 없음」은 값이 아니라 값이 없다는 뜻이라 따로 본다
+      // 「미배정」은 값이 아니라 값이 없다는 뜻이라 따로 본다
       if (manager === '__none__' && r.manager) return false;
       if (manager && manager !== '__none__' && r.manager !== manager) return false;
       return true;
