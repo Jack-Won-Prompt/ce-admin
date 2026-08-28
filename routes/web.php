@@ -122,8 +122,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/consent-signature', [ConsentController::class,  'downloadSignature'])->name('consentSignature');
         Route::get( '/{prescription}/delegation-pdf', [ConsentController::class,     'downloadDelegationPdf'])->name('delegationPdf');
         Route::get( '/{prescription}/delegation-pdf-original', [ConsentController::class, 'downloadDelegationOverlayPdf'])->name('delegationPdfOriginal');
-        // 자가도뇨 소모성 재료 급여대상자 등록 신청서(별지 제4호서식)
-        Route::get( '/{prescription}/registration-pdf', [\App\Http\Controllers\PrescriptionController::class, 'downloadRegistrationPdf'])->name('registrationPdf');
         Route::post('/{prescription}/delegation-regenerate', [ConsentController::class, 'regenerateDelegation'])->name('delegationRegenerate');
         Route::post('/{prescription}/counsel-no',     [PrescriptionController::class, 'generateCounselNo'])->name('counselNo');
         Route::post('/{prescription}/memos',                [PrescriptionController::class, 'storeMemo'])->name('memos.store');
@@ -379,10 +377,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/settings/delegation',  [DelegationSettingController::class, 'edit'])->name('delegation-settings.edit');
     Route::put('/settings/delegation',  [DelegationSettingController::class, 'update'])->name('delegation-settings.update');
-
-    // 자가도뇨 소모성 재료 등록 신청서(별지 제4호서식) — 위임장과 같은 얼개
-    Route::get('/settings/registration', [\App\Http\Controllers\RegistrationSettingController::class, 'edit'])->name('registration-settings.edit');
-    Route::put('/settings/registration', [\App\Http\Controllers\RegistrationSettingController::class, 'update'])->name('registration-settings.update');
 
     // 처방전 OCR 공급자 설정
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');

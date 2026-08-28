@@ -1388,12 +1388,6 @@ class PrescriptionController extends Controller
             'counsel_no'            => 'nullable|string|max:50',
             'counsel_date'          => 'nullable|date',
             'counsel_acc_add_type'  => 'nullable|string|max:10',
-            // 자가도뇨 등록신청서(별지 제4호서식) 전용
-            'reg_dx_type'           => 'nullable|string|max:20',
-            'reg_confirm_items'     => 'nullable|array',
-            'reg_confirm_items.*'   => 'string|max:40',
-            'reg_sms_notify'        => 'nullable|boolean',
-            'reg_relation'          => 'nullable|string|max:20',
             'counsel_status'        => 'nullable|string|max:10',
             'counsel_call_no'       => 'nullable|string|max:30',
             'counsel_re_date'       => 'nullable|date',
@@ -1528,20 +1522,7 @@ class PrescriptionController extends Controller
             'daily_use_qty'        => $request->input('daily_use_qty'),
             'diverticulums'        => $request->input('diverticulums'),
             'caregiver_name'       => $request->input('guardian'),
-            // 등록신청서 전용 — 고르지 않은 것은 null 이라 아래 filter 가 걸러 낸다
-            'reg_dx_type'          => $request->input('reg_dx_type'),
-            'reg_relation'         => $request->input('reg_relation'),
         ], fn ($v) => $v !== null);
-
-        /* 확인사항과 SMS 통보는 위 filter 를 태우지 않는다.
-           체크를 모두 풀면 빈 배열이 오는데, 그것은 「아직 안 골랐다」가 아니라
-           「전부 풀었다」는 뜻이다 — 걸러 내면 지울 수가 없다. */
-        if ($request->has('reg_confirm_items')) {
-            $rxCols['reg_confirm_items'] = array_values((array) $request->input('reg_confirm_items')) ?: null;
-        }
-        if ($request->has('reg_sms_notify')) {
-            $rxCols['reg_sms_notify'] = $request->input('reg_sms_notify');
-        }
 
         if ($rxCols) {
             $prescription->update($rxCols);
@@ -1964,24 +1945,6 @@ class PrescriptionController extends Controller
         ]);
     }
 
-    /**
-     * 자가도뇨 소모성 재료 급여대상자 등록 신청서(별지 제4호서식) PDF 내려받기.
-     *
-     * 공단에 신규ㆍ재등록할 때 처방전과 함께 보내는 서류다. 팩스로도 같이 나간다.
-     */
-    public function downloadRegistrationPdf(Prescription $prescription)
-    {
-        $pdf = \App\Support\RegistrationForm::build($prescription);
-
-        activity()->causedBy(Auth::user())->performedOn($prescription)
-            ->log('자가도뇨 등록 신청서 PDF 내려받기');
-
-        return response($pdf, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="registration_' . $prescription->rx_number . '.pdf"',
-        ]);
-    }
-
     // ── 상담번호 채번 ──────────────────────────────────────
     public function generateCounselNo(Prescription $prescription): \Illuminate\Http\JsonResponse
     {
@@ -2112,7 +2075,7 @@ class PrescriptionController extends Controller
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'documents'       => 'nullable|array',
-            'documents.*'     => 'string|in:authorization,delegation,registration,prescription,purchase_history,cash_receipt,tax_invoice',
+            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
@@ -2124,7 +2087,6 @@ class PrescriptionController extends Controller
         $docLabels = [
             'authorization'    => '위임장',
             'delegation'       => '요양비위임장',
-            'registration'     => '자가도뇨 등록신청서',
             'prescription'     => '처방전',
             'purchase_history' => '제품 구매내역',
             'cash_receipt'     => '현금영수증',
@@ -2283,7 +2245,7 @@ class PrescriptionController extends Controller
     // ── 팩스 서류 PDF 다운로드 ────────────────────────────
     public function downloadFaxPdf(Request $request, Prescription $prescription): \Illuminate\Http\Response
     {
-        $allowed = ['authorization', 'delegation', 'registration', 'prescription', 'purchase_history', 'cash_receipt'];
+        $allowed = ['authorization', 'delegation', 'prescription', 'purchase_history', 'cash_receipt'];
         $docs    = array_values(array_intersect(
             (array) $request->input('docs', ['authorization']),
             $allowed
@@ -2345,7 +2307,7 @@ class PrescriptionController extends Controller
     public function regenerateFax(Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         // 적용 가능한 모든 문서로 재생성 (요양비위임장 포함) — 데이터 없는 섹션은 뷰에서 자동 제외
-        $docs = ['authorization', 'delegation', 'registration', 'prescription', 'purchase_history', 'cash_receipt'];
+        $docs = ['authorization', 'delegation', 'prescription', 'purchase_history', 'cash_receipt'];
 
         try {
             [$pdfOutput, $filename] = $this->buildFaxCombinedPdf($prescription, $docs);
@@ -2409,18 +2371,6 @@ class PrescriptionController extends Controller
             $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
             if ($delegBytes) {
                 $pdfOutput = $this->mergePdfBytes([$pdfOutput, $delegBytes]);
-            }
-        }
-
-        /* 자가도뇨 소모성 재료 급여대상자 등록 신청서(별지 제4호서식).
-           신규ㆍ재등록 건에 함께 나간다. 만들지 못해도 팩스는 나가야 한다 — 나머지
-           서류라도 닿는 편이 아무것도 못 보내는 것보다 낫다. */
-        if (in_array('registration', $docs)) {
-            try {
-                $regBytes = \App\Support\RegistrationForm::build($prescription);
-                $pdfOutput = $this->mergePdfBytes([$pdfOutput, $regBytes]);
-            } catch (\Throwable $e) {
-                Log::warning('등록 신청서 병합 실패: ' . $e->getMessage(), ['rx' => $prescription->rx_number]);
             }
         }
 

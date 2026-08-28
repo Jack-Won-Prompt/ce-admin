@@ -60,8 +60,6 @@ class Prescription extends Model
         'counsel_order_id',
         'dealer_type', 'caregiver_name',
         'benefit_class', 'billing_strategy', 'claim_agency', 'billing_office_id', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
-        // 자가도뇨 소모성 재료 등록 신청서(별지 제4호서식)에만 쓰는 값 — 건마다 다르다
-        'reg_dx_type', 'reg_confirm_items', 'reg_sms_notify', 'reg_relation',
         'rx_use_period', 'rx_end_date', 'purchase_type',
         'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
         'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',
@@ -83,8 +81,6 @@ class Prescription extends Model
         'insurance_price' => 'float',
         'nhis_amount'     => 'float',
         'patient_copay'   => 'float',
-        'reg_confirm_items' => 'array',
-        'reg_sms_notify'    => 'boolean',
     ];
 
     /**
