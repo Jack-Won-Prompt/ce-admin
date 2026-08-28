@@ -696,6 +696,11 @@ class PrescriptionController extends Controller
                 'counsel_date' => now()->format('Y-m-d'),
             ]);
 
+            /* 올라온 그 자리에서 주문 관리에도 선다. 제품도 금액도 아직 없는 빈 줄이지만,
+               담당자가 「손댈 차례가 된 것」을 찾는 자리가 그 목록이다 — 거기에 없으면
+               처방전 목록과 주문 관리를 오가며 무엇이 남았는지 맞춰 봐야 했다. */
+            \App\Support\OrderSync::ensure($prescription);
+
             $created[] = $prescription->rx_number;
 
             activity()->causedBy(Auth::user())->performedOn($prescription)
