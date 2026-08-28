@@ -26,7 +26,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
-    <div class="help-item-text"><strong>주문 연계 탭</strong>배송 정보를 입력하고 주문을 생성합니다. Withworks에 자동 연계됩니다.</div>
+    <div class="help-item-text"><strong>주문 제품 탭</strong>제품을 고르고 배송 정보를 적어 주문을 만듭니다. Withworks에 자동 연계됩니다.</div>
   </div>
 </div>
 <div class="help-section">
@@ -41,7 +41,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">3</div>
-    <div class="help-item-text">주문 연계 탭에서 배송지 확인 후 <b>주문 생성 및 연계</b> 클릭</div>
+    <div class="help-item-text">주문 제품 탭에서 배송지 확인 후 <b>주문 생성 및 연계</b> 클릭</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">4</div>
@@ -951,7 +951,7 @@
 @section('content')
 
 @php
-// 주문 연계 탭 calcItem() 공식과 동일: insurance_price × rate × qty
+// 화면의 calcItem() 공식과 동일: insurance_price × rate × qty
 /* 기관이 내는 몫은 청구전략(유형 × 자격)이 정한다. 전략이 아직 정해지지 않았거나
    비율이 확인중인 자격이면 예전 규칙(품목의 급여 구분)으로 셈한다. */
 $stratRate = \App\Support\BillingStrategy::payerRate(
@@ -1503,7 +1503,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             @unless($prescription->order)
               <div style="padding:10px 12px;background:var(--alert-50);border:1px solid var(--alert-200);border-radius:var(--radius);font-size:12px;color:#B54708;">
-                아직 주문이 없습니다. <b>주문 연계</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
+                아직 주문이 없습니다. <b>주문 제품</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
               </div>
             @endunless
             <div style="display:flex;justify-content:space-between;font-size:12px;">
@@ -2073,7 +2073,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
           <button class="tab-btn" onclick="switchTab(this,'tab-orders')">주문 목록</button>
           <button class="tab-btn active" onclick="switchTab(this,'tab-ocr')">상세 목록</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-product')">주문 제품</button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-order')">주문 연계</button>
           <button class="tab-btn" onclick="switchTab(this,'tab-history')">이력</button>
         </div>
         <div class="tab-bar-acts">
@@ -2217,7 +2216,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 저장만 해도 주문 줄은 선다(주문 관리에 보이도록). 그러니 「주문이
                      있느냐」로는 이 걸음을 가릴 수 없다 — 창고로 보냈느냐로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
-                        title="주문 연계 탭으로 갑니다">{{ $prescription->order?->withworks_so_no ? '주문 완료' : '주문 미등록' }}</button>
+                        title="주문 제품 탭으로 갑니다">{{ $prescription->order?->withworks_so_no ? '주문 완료' : '주문 미등록' }}</button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -2483,7 +2482,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
                       {{-- 적어 둔 배송지가 이 건의 주소와 다르면 풀어 둔다. 늘 켜 두면
-                           주문 연계 탭을 여는 것만으로 따로 적어 둔 배송지가 덮인다. --}}
+                           주문 제품 탭을 여는 것만으로 따로 적어 둔 배송지가 덮인다. --}}
                       @php
                         $_ship = trim((string) ($prescription->order?->shipping_address ?? ''));
                         $_here = trim(($prescription->address_ocr ?? $prescription->patient?->address ?? '')
@@ -3115,23 +3114,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div id="items-table-container"><div style="color:var(--text-muted);font-size:12px;text-align:center;padding:8px 0;">제품 없음</div></div>
             </div>
 
-          </div>
-        </div>
+            {{-- ── 「주문 연계」 탭에 있던 것들을 여기로 내렸다 ────────────────
+                 제품을 고르고 → 무엇으로 셈하는지 보고 → 어디로 보낼지 적고 → 만든다.
+                 한 줄로 이어지는 일인데 탭이 갈라 두 곳을 오가게 했다.
 
-      </div>{{-- /tab-product --}}
-
-      {{-- Tab: Order --}}
-      <div class="tab-pane" id="tab-order">
-      <div class="cv">
-        <div class="card">
-          <div class="card-body">
-            <div class="section-title"><i class="fa-solid fa-boxes-stacked" style="color:var(--primary);"></i> 주문 정보 요약</div>
-            <div id="order-items-summary">{{-- JS renderOrderSummary() --}}</div>
-
-            {{-- 청구전략 — 유형 × 자격이 「누가 얼마를 내는가」를 정한다(회신 20p).
-                 같은 90%라도 공단이 내는 것과 지자체가 내는 것은 이후 절차가 통째로
-                 다르다. 그래서 비용 내역 바로 위에서 먼저 읽게 두었다.
-                 표는 App\Support\BillingStrategy 한 곳에만 있다 — 화면은 그것을 비춘다. --}}
+                 함께 있던 「주문 정보 요약」과 「비용 내역」은 옮기지 않았다 — 바로 위
+                 제품 목록과 카드 머리의 두 합계가 같은 말을 이미 하고 있다. --}}
             <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-scale-balanced" style="color:var(--primary);"></i> 청구전략</div>
             <div class="bs-box" id="bsBox">
               {{-- 정하는 칸을 결과 옆에 둔다. 유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방
@@ -3177,12 +3165,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div>
 
-            <div class="section-title" style="margin-top:20px;"><i class="fa-solid fa-receipt" style="color:var(--primary);"></i> 비용 내역</div>
-            <div class="cost-row"><span>기관 부담금</span><span class="cost-val" id="costNhisAmt">₩ {{ number_format($calcNhis) }}</span></div>
-            <div class="cost-row"><span>본인부담금</span><span class="cost-val" id="costNhis">₩ {{ number_format($calcCopay) }}</span></div>
-            {{-- 배송비는 받지 않기로 했다(2026-08-24). 줄을 걷고 합계에서도 뺀다 —
-                 줄만 지우고 합계에 남겨 두면 화면의 숫자가 서로 맞지 않는다. --}}
-            <div class="cost-row total"><span>본인 부담금 합계</span><span class="cost-val" id="costTotal">₩ {{ number_format($calcCopay) }}</span></div>
 
             <div style="margin-top:16px;">
               <label class="form-label">배송 정보</label>
@@ -3251,8 +3233,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
-                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                        title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
                 <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
@@ -3267,7 +3249,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 주문 없음: 저장 + 생성 버튼 --}}
               <div style="display:flex;gap:8px;">
                 <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 주문 연계 내용을 저장합니다">
+                        title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
                 <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
@@ -3278,59 +3260,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
           </div>
         </div>
-      </div>{{-- /cv --}}
-      <div class="tv">
-        <div class="card">
-          <div class="card-body" style="padding:12px 16px;">
-            <table class="tab-tbl" style="margin-bottom:12px;">
-              <tbody>
-                <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-receipt"></i> 비용 내역</td></tr>
-                <tr><th>기관 부담금</th><td id="tv-costNhisAmt">₩ {{ number_format($calcNhis) }}</td></tr>
-                <tr><th>본인부담금</th><td id="tv-costNhis">₩ {{ number_format($calcCopay) }}</td></tr>
-                <tr><th>배송비</th><td>₩ 3,000</td></tr>
-                <tr>
-                  <th style="font-weight:700;color:var(--primary);">본인 부담금 합계</th>
-                  <td style="font-weight:700;color:var(--primary);" id="tv-costTotal">₩ {{ number_format($calcCopay) }}</td>
-                </tr>
-                <tr class="tbl-sec"><td colspan="2"><i class="fa-solid fa-truck"></i> 배송 정보</td></tr>
-                <tr><th>받는 사람</th><td id="tv-ship-recipient">{{ $prescription->order?->shipping_recipient ?? ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '-') }}</td></tr>
-                <tr><th>배송 주소</th><td id="tv-ship-addr">{{ trim(($prescription->order?->shipping_address ?? '') . ' ' . ($prescription->order?->shipping_address_detail ?? '')) ?: '-' }}</td></tr>
-                @if($prescription->order)
-                  <tr>
-                    <th>주문번호</th>
-                    <td><span style="color:var(--primary);font-weight:700;">{{ $prescription->order->order_number }}</span>
-                    @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:8px;font-size:11px;">SO: {{ $prescription->order->withworks_so_no }}</span>@endif</td>
-                  </tr>
-                @else
-                  <tr><th>주문상태</th><td style="color:var(--text-muted);">주문 없음</td></tr>
-                @endif
-              </tbody>
-            </table>
-            <div id="order-items-summary-tv" style="margin-bottom:10px;"></div>
-            @if($prescription->order)
-              <div style="display:flex;gap:8px;">
-                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 주문 연계 내용을 저장합니다">
-                  <i class="fa-solid fa-floppy-disk"></i> 저장
-                </button>
-                <button class="btn btn-primary flex-1" onclick="updateOrder(event)"><i class="fa-solid fa-pen-to-square"></i> 주문 수정</button>
-                <button class="btn btn-danger" onclick="confirmDeleteOrder(event)" style="flex-shrink:0;padding:0 18px;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
-              </div>
-            @else
-              <div style="display:flex;gap:8px;">
-                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 주문 연계 내용을 저장합니다">
-                  <i class="fa-solid fa-floppy-disk"></i> 저장
-                </button>
-                <button class="btn btn-primary flex-1" onclick="createOrder(event)"><i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계</button>
-              </div>
-            @endif
           </div>
         </div>
-      </div>{{-- /tv --}}
-      </div>{{-- /tab-order --}}
 
-      {{-- Tab: History --}}
+      </div>{{-- /tab-product --}}
+
+      {{-- Tab: Order --}}
       <div class="tab-pane" id="tab-history">
       <div class="cv">
         <div class="card">
@@ -5898,19 +5833,22 @@ window.HELP_TOUR_STEPS = [
     const parts = [];
     if (_ocrDirty)     parts.push('상세 목록');
     if (_productDirty) parts.push('주문 제품');
-    if (_orderDirty)   parts.push('주문 연계');
+    if (_orderDirty)   parts.push('배송 정보');
     return parts.join(' · ');
   }
 
   function _activeSaveFn() {
     const oc = document.querySelector('.tab-btn.active')?.getAttribute('onclick') ?? '';
-    if (oc.includes('tab-order')) return _saveOrderForNav;
+    /* 'tab-order' 로 견주지 않는다 — 주문 목록('tab-orders')까지 걸린다(앞머리가 같다).
+       배송ㆍ주문 단추는 이제 주문 제품 탭에 있으므로 거기서는 그 저장을 쓴다. */
+    if (oc.includes("'tab-product'")) return _saveOrderForNav;
     return saveOCR;
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     // 탭별 입력 감지
-    const panes = { 'tab-ocr': markOcrDirty, 'tab-product': markProductDirty, 'tab-order': markOrderDirty };
+    // 배송 정보 칸도 이제 주문 제품 판 안에 있어 markProductDirty 가 함께 잡는다
+    const panes = { 'tab-ocr': markOcrDirty, 'tab-product': markProductDirty };
     Object.entries(panes).forEach(([id, fn]) => {
       const el = document.getElementById(id);
       if (el) { el.addEventListener('input', fn); el.addEventListener('change', fn); }
@@ -5933,14 +5871,13 @@ window.HELP_TOUR_STEPS = [
     if (isAnyDirty()) { e.preventDefault(); e.returnValue = ''; }
   });
 
+  /* 화면을 떠나면서 갈무리하는 자리다. 주문을 만들거나 창고로 보내지 않는다 —
+     그것은 사람이 단추를 눌러 할 일이고, 제품이 없으면 애초에 만들어지지도 않는다.
+     적어 둔 것(제품 줄ㆍ배송 정보)만 담는다. */
   async function _saveOrderForNav() {
-    if (orderExists && existingOrder) {
-      const btn = document.getElementById('btnUpdateOrder');
-      if (btn) await updateOrder({ target: btn });
-    } else {
-      const btn = document.getElementById('btnCreateOrder');
-      if (btn) await createOrder({ target: btn });
-    }
+    const btn = document.getElementById('btnSaveOrderTab');
+    if (btn) { await saveOrderTab({ target: btn }); return; }
+    await saveOCR({ silent: true });
   }
 
   // ── 탭 전환 ────────────────────────────────────────────
@@ -5962,16 +5899,13 @@ window.HELP_TOUR_STEPS = [
 
     document.getElementById(tabId).classList.add('active');
     if (tabId === 'tab-orders')  { olEnsureGrid(); }
-    if (tabId === 'tab-order')   {
+    if (tabId === 'tab-product') {
+      if (isTableView()) renderItemsTable(); else renderItems();
       recalcAllItems();
-      renderOrderSummary();
       /* 배송 주소를 이 자리에서 다시 맞춘다. 처음 그릴 때 한 번만 맞춰 두었더니, 주소를
          뒤에 적거나 이름 조회로 다른 사람을 골라 온 건은 배송지가 빈 채로 열렸다.
          「배송 주소 동일」이 풀려 있으면 손대지 않는다 — 따로 적어 둔 것이다. */
       if (document.getElementById('sameShipping')?.checked) syncShippingAddress(true);
-    }
-    if (tabId === 'tab-product') {
-      if (isTableView()) renderItemsTable(); else renderItems();
     }
   }
 
@@ -5979,9 +5913,7 @@ window.HELP_TOUR_STEPS = [
     const activeBtn     = document.querySelector('.tab-btn.active');
     const activeOnclick = activeBtn?.getAttribute('onclick') ?? '';
     const fromOcr     = activeOnclick.includes('tab-ocr')    && tabId !== 'tab-ocr';
-    const fromProduct = activeOnclick.includes('tab-product') && tabId !== 'tab-product'
-                        && (tabId === 'tab-order' || tabId === 'tab-history');
-    const fromOrder   = activeOnclick.includes('tab-order')   && tabId !== 'tab-order';
+    const fromProduct = activeOnclick.includes('tab-product') && tabId !== 'tab-product';
 
     if (fromOcr && _ocrDirty) {
       showUnsavedDlg(btn, tabId, '상세 목록', saveOCR);
@@ -5989,10 +5921,6 @@ window.HELP_TOUR_STEPS = [
     }
     if (fromProduct && _productDirty) {
       showUnsavedDlg(btn, tabId, '주문 제품', saveOCR);
-      return;
-    }
-    if (fromOrder && _orderDirty) {
-      showUnsavedDlg(btn, tabId, '주문 연계', _saveOrderForNav);
       return;
     }
     _doSwitchTab(btn, tabId);
@@ -6789,13 +6717,14 @@ window.HELP_TOUR_STEPS = [
     btn.classList.add(has ? 'is-done'
                     : (RX_STATUS === 'approved' || RX_STATUS === 'ordered') ? 'is-now'
                     : 'is-wait');
-    btn.title = has ? '주문 연계 탭에서 이 주문을 봅니다' : '주문 연계 탭으로 갑니다';
+    btn.title = has ? '주문 제품 탭에서 이 주문을 봅니다' : '주문 제품 탭으로 갑니다';
   }
 
-  /** 주문 연계 탭으로 간다 — 적다 만 것이 있으면 switchTab 이 먼저 묻는다. */
+  /** 주문 제품 탭으로 간다 — 배송ㆍ주문 단추가 그 아래 있다.
+      적다 만 것이 있으면 switchTab 이 먼저 묻는다. */
   function goOrderTab() {
-    const tab = document.querySelector('.tab-btn[onclick*="tab-order"]');
-    if (tab) switchTab(tab, 'tab-order');
+    const tab = document.querySelector('.tab-btn[onclick*="tab-product"]');
+    if (tab) switchTab(tab, 'tab-product');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -7333,7 +7262,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('orderActionArea').innerHTML = `
       <div style="display:flex;gap:8px;">
         <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                title="주문 제품과 주문 연계 내용을 저장합니다">
+                title="주문 제품과 배송 정보를 저장합니다">
           <i class="fa-solid fa-floppy-disk"></i> 저장
         </button>
         <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
