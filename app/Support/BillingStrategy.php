@@ -30,14 +30,17 @@ class BillingStrategy
     {
         // 처방외는 자격을 보지 않는다 — 처방이 아니니 전액 본인이 낸다
         if ((string) $accAddType === self::TYPE_NONRX) {
-            return self::row('처방외 · 처방 아님', 100, '—', 0, 100, 0, false, '');
+            return self::row('처방외', 100, '—', 0, 100, 0, false, '');
         }
 
         if ($accAddType === null || $accAddType === '' || $benefitClass === null || $benefitClass === '') {
             return self::row('유형ㆍ자격을 고르면 청구전략이 정해집니다', 0, '—', 0, null, null, true, '미선택');
         }
 
-        $type = (string) $accAddType === self::TYPE_IN ? '처방전-원내' : '처방전-원외';
+        /* 이름에 원내ㆍ원외를 적지 않는다. 부담 비율과 발행 방식은 둘이 같아서,
+           전략 목록에 열한 줄이 서고 그 가운데 다섯 쌍이 글자만 다른 같은 줄이었다.
+           원내냐 원외냐는 옆의 「유형」 칸이 따로 말한다. */
+        $type = '처방전';
 
         /* 발행 규칙(2026-08-24 확정).
            본인부담이 있어도 그 몫으로 현금영수증을 내지는 않는다 — 일반(10/90)은
@@ -94,12 +97,39 @@ class BillingStrategy
         return self::resolve($accAddType, $benefitClass)['pending'];
     }
 
+    /** 자격 목록 — 화면의 「자격」 칸과 전략 목록이 같은 순서를 쓴다 */
+    public const CLASSES = ['일반', '차상위경감', '기초', '산재', '자동차보험'];
+
+    /**
+     * 고를 수 있는 전략 — 화면의 「청구전략」 칸이 세우는 줄이다.
+     *
+     * 원내ㆍ원외로 나누지 않는다. 둘은 부담 비율도 발행 방식도 같아, 나누면 글자만
+     * 다른 같은 줄이 다섯 쌍 선다. 어느 쪽인지는 옆의 「유형」 칸이 말한다.
+     *
+     * 처방외의 열쇠는 'nonrx' 다. 유형 코드('20')를 그대로 쓰면 자바스크립트가 그것을
+     * 정수 열쇠로 보아 목록 맨 앞으로 끌어올린다 — 마지막에 서야 하는 줄이다.
+     *
+     * @return array<string, string> 자격(또는 nonrx) => 이름
+     */
+    public const OPTION_NONRX = 'nonrx';
+
+    public static function options(): array
+    {
+        $out = [];
+        foreach (self::CLASSES as $c) {
+            $out[$c] = self::resolve(self::TYPE_OUT, $c)['label'];
+        }
+        $out[self::OPTION_NONRX] = self::resolve(self::TYPE_NONRX, null)['label'];
+
+        return $out;
+    }
+
     /** 화면(JS)이 같은 표를 쓰도록 통째로 넘긴다 — 두 곳에 적으면 언젠가 어긋난다 */
     public static function table(): array
     {
         $out = [];
         foreach ([self::TYPE_IN, self::TYPE_OUT] as $t) {
-            foreach (['일반', '차상위경감', '기초', '산재', '자동차보험'] as $b) {
+            foreach (self::CLASSES as $b) {
                 $out["{$t}|{$b}"] = self::resolve($t, $b);
             }
         }

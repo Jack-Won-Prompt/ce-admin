@@ -371,6 +371,15 @@
   .ol-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
   .ol-field.span-2 { grid-column:span 2; }
   .ol-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+
+  /* 판이 받은 높이를 표까지 흘려보낸다 — 표가 카드 밑변까지 서고 「전체 N건」 띠가
+     그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
+  #tabsCol > #tab-orders.active { display:flex; flex-direction:column; min-height:0; }
+  #tab-orders .ol-filter, #tab-orders .ds-grid-hint { flex:0 0 auto; }
+  #tab-orders .ol-card { flex:1 1 auto; min-height:260px; display:flex; flex-direction:column;
+                         overflow:hidden; padding:0; }
+  /* 카드가 이미 흰 판이다 — 표가 제 테두리ㆍ모서리를 또 두르지 않는다 */
+  #tab-orders .cg-wrap { border:0; border-radius:0; }
   @media (max-width:1100px) { .ol-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
      .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
@@ -468,6 +477,10 @@
                         background:var(--gray-100); font-size:11px; font-weight:500; line-height:18px;
                         color:var(--gray-800); white-space:nowrap; }
   #tab-product .pt-hb b { font-weight:500; color:inherit; }
+  /* 청구전략 배지 — 다른 알약이 「무엇을 얼마나」라면 이것은 「무엇으로 셈했나」다.
+     읽는 결이 달라 색으로 갈라 둔다. 비율이 확인중인 자격은 경고색으로 선다. */
+  #tab-product .pt-hb-bs { background:var(--primary-50); color:var(--primary); font-weight:700; }
+  #tab-product .pt-hb-bs.is-pending { background:var(--alert-50); color:var(--alert-500); }
   /* 청구전략 — 비용 내역과 같은 폭에 앉되, 규칙이라는 것이 보이게 옅은 바탕을 깐다 */
   .bs-box   { border:1px solid var(--border); border-radius:8px; background:var(--gray-50, #f8f9fa);
               padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
@@ -2136,7 +2149,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
             더 예전 것은 주문 관리 화면에서 봅니다.
           @endif
         </div>
-        <div id="orderListGrid"></div>
+        {{-- 표는 흰 카드 안에 담는다. 카드 없이 두었더니 회색 바탕 위에 표가 그대로
+             얹혀, 합계줄과 「전체 N건」 띠가 어디에도 붙지 못하고 떠 있었다.
+             다른 목록 화면(거래처 관리ㆍ주문 관리)의 아래끝과 같게 맞춘다. --}}
+        <div class="card ol-card"><div id="orderListGrid"></div></div>
       </div>
 
       {{-- Tab: OCR Edit (상세 목록) --}}
@@ -3060,6 +3076,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="pt-hb">1일 <b id="rx-ref-daily">{{ $prescription->daily_count ?? '-' }}</b>개</span>
                 <span class="pt-hb">처방 <b id="rx-ref-days">{{ $prescription->total_days ?? '-' }}</b>일</span>
                 <span class="pt-hb">총 <b id="rx-ref-total">{{ $prescription->total_count ?? '-' }}</b>개</span>
+                {{-- 청구전략 — 금액을 셈한 근거다. 아래 청구전략 상자까지 내려가지 않아도
+                     무엇으로 셈했는지 여기서 읽힌다. 아직 안 골랐으면 서지 않는다. --}}
+                <span class="pt-hb pt-hb-bs" id="rx-ref-bs" style="display:none;"></span>
               </span>
             </div>
             <div class="pt-head-right">
@@ -5687,6 +5706,8 @@ window.HELP_TOUR_STEPS = [
     if (!r) {
       box.classList.remove('pending');
       result.style.display = 'none';
+      const hb0 = document.getElementById('rx-ref-bs');
+      if (hb0) hb0.style.display = 'none';
       return;
     }
 
@@ -5699,6 +5720,14 @@ window.HELP_TOUR_STEPS = [
       : `본인부담금 ${r.self_rate}%`;
     document.getElementById('bsCash').textContent = pct(r.cash_receipt);
     document.getElementById('bsTax').textContent  = pct(r.tax_invoice);
+
+    // 주문 정보 머리의 배지도 같은 값을 비춘다
+    const hb = document.getElementById('rx-ref-bs');
+    if (hb) {
+      hb.style.display = '';
+      hb.textContent = r.label + (r.pending ? ' · ' + (r.note || '확인중') : '');
+      hb.classList.toggle('is-pending', !!r.pending);
+    }
   }
 
   /* ── 정하는 칸 셋 ───────────────────────────────────────────
@@ -5730,14 +5759,21 @@ window.HELP_TOUR_STEPS = [
     return { payer: r.payer_rate / 100, self: r.self_rate / 100 };
   };
 
-  // 전략 고르개를 표에서 만든다 — 골라 넣을 수 있는 짝이 곧 표의 줄이다
+  /* 전략 고르개 — 여섯 줄이다. 원내ㆍ원외로 나누지 않는다(둘은 부담 비율도 발행 방식도
+     같아, 나누면 글자만 다른 같은 줄이 다섯 쌍 선다). 어느 쪽인지는 옆의 「유형」 칸이 말한다.
+     열쇠는 자격이고 처방외만 'nonrx' 다 — '20' 을 쓰면 자바스크립트가 정수 열쇠로 보아
+     목록 맨 앞으로 끌어올린다. */
+  const BILLING_OPTIONS = @json(\App\Support\BillingStrategy::options());
   (function fillStrategyOptions() {
     const sel = document.getElementById('bsStrategy');
     if (!sel) return;
     sel.innerHTML = '<option value="">선택</option>' +
-      Object.entries(BILLING_STRATEGY)
-        .map(([k, r]) => `<option value="${k}">${r.label}</option>`).join('');
+      Object.entries(BILLING_OPTIONS)
+        .map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
   })();
+
+  /** 지금 고른 짝이 전략 고르개의 어느 줄인가 */
+  const _bsOption = (t, c) => t === '20' ? 'nonrx' : (c || '');
 
   let _bsSyncing = false;
 
@@ -5750,7 +5786,7 @@ window.HELP_TOUR_STEPS = [
     const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
     set('bsType', t);
     set('bsClass', c);
-    set('bsStrategy', _bsKey(t, c));
+    set('bsStrategy', _bsOption(t, c));
     renderBillingStrategy();
     // 비율이 바뀌었으니 제품 줄의 금액도 함께 다시 선다
     if (typeof recalcAllItems === 'function') recalcAllItems();
@@ -5773,16 +5809,26 @@ window.HELP_TOUR_STEPS = [
   /** 전략에서 고쳤을 때 — 그 짝을 이루는 유형ㆍ자격으로 두 칸을 세운다 */
   window.bsFromStrategy = function () {
     if (_bsSyncing) return;
-    const key = document.getElementById('bsStrategy').value;
-    const [t, c] = key ? key.split('|') : ['', ''];
+    const pick = document.getElementById('bsStrategy').value;
     const put = (id, v) => {
       const e = document.getElementById(id);
       if (!e) return;
       e.value = v;
       e.dispatchEvent(new Event('change', { bubbles: true }));
     };
-    put('f-acc-add-type', t);
-    put('f-benefit-class', c);
+
+    if (pick === 'nonrx') {                  // 처방외 — 자격을 보지 않는다
+      put('f-acc-add-type', '20');
+      put('f-benefit-class', '');
+    } else if (pick === '') {
+      put('f-benefit-class', '');
+    } else {
+      /* 자격만 세운다. 원내냐 원외냐는 전략이 정하는 것이 아니다 —
+         아직 안 골랐으면 원외로 둔다(처방전은 대개 원외다). */
+      const cur = document.getElementById('f-acc-add-type')?.value ?? '';
+      if (cur === '' || cur === '20') put('f-acc-add-type', '10');
+      put('f-benefit-class', pick);
+    }
     bsSyncFromSource();
     markOcrDirty();
   };
