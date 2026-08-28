@@ -914,13 +914,6 @@
               background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); }
   .gb-state.done { background:var(--primary-50); color:var(--primary); border-color:var(--primary-200); }
 
-  /* 위임 서명 카드 — 서명과 신분증 미리보기 */
-  .sc-cap { font-size:10px; font-weight:700; color:var(--gray-500); letter-spacing:.5px;
-            text-transform:uppercase; margin-bottom:6px; }
-  .sc-box { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:8px;
-            padding:8px; text-align:center; }
-  .sc-box img { max-width:100%; max-height:150px; display:block; margin:0 auto; }
-
   /* 팝오버 안에서 메시지 유형을 손보는 작은 버튼 */
   .rx-tpl-mini { flex-shrink:0; border:1px solid var(--gray-200); background:var(--gray-0); border-radius:6px;
                  padding:1px 6px; font-size:10px; font-weight:700; line-height:18px;
@@ -1946,35 +1939,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
            여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
       <div id="viewerCards">
 
-      {{-- ── 위임 서명 — 서명 이미지와 법정대리인 또는 가족 신분증 ──────────
-           서명이 끝난 뒤에만 나타난다. 값은 위임동의 현황 조회에서 함께 받는다. --}}
-      <div class="vw-card" id="signCard" style="display:none;">
-        <div class="vw-card-head">
-          <span class="vw-card-title">위임 서명</span>
-          <div class="vw-card-acts">
-            <a id="signCardPng" class="vw-btn" href="{{ route('prescriptions.consentSignature', $prescription) }}"
-               title="서명 이미지를 파일로 받습니다">서명 PNG</a>
-          </div>
-        </div>
-        <div style="padding:12px;display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <div class="sc-cap">위임인 서명</div>
-            <div class="sc-box"><img id="signCardImg" alt="위임인 서명" /></div>
-          </div>
-          <div id="signCardGuardianWrap" style="display:none;">
-            <div class="sc-cap">보호자 서명 <span id="signCardGuardianWho"></span></div>
-            <div class="sc-box"><img id="signCardGuardianImg" alt="보호자 서명" /></div>
-          </div>
-          <div id="signCardIdWrap" style="display:none;">
-            <div class="sc-cap">
-              법정대리인 또는 가족 신분증
-              <a id="signCardIdOpen" href="#" target="_blank" rel="noopener"
-                 style="float:right;font-size:11px;color:var(--primary);text-decoration:none;">크게 보기</a>
-            </div>
-            <div class="sc-box"><img id="signCardIdImg" alt="법정대리인 또는 가족 신분증" /></div>
-          </div>
-        </div>
-      </div>
+      {{-- 위임 서명ㆍ보호자 신분증 카드는 두지 않는다.
+           아래 문서 스트립이 이미 그 둘을 문서로 세운다(「위임 서명」ㆍ「보호자 신분증」).
+           같은 그림을 두 곳에 두었더니 미리보기 자리가 그만큼 길어졌고, 카드 쪽은
+           확대도 이동도 되지 않아 결국 아래에서 다시 열어 보게 됐다. --}}
 
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
       {{-- 문서가 하나도 없어도 이 카드는 둔다. 신규로 시작한 건은 여기서 처방전ㆍ신분증을
@@ -6944,7 +6912,7 @@ window.HELP_TOUR_STEPS = [
     let soNo = null;
     let wwSuccess = false;
     let wwMessage = '';
-    let smsResult = null;   // 창고에 줄이 서면 고객에게 주문 확정 문자가 나간다
+    let smsResult = null;   // 창고에 줄이 서면 고객에게 결제 안내가 나간다
 
     if (wwItems.length > 0) {
       const wwPayload = {
@@ -6973,18 +6941,22 @@ window.HELP_TOUR_STEPS = [
       ? `<span style="display:inline-block;background:var(--primary-50);color:var(--primary);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 완료</span>`
       : `<span style="display:inline-block;background:var(--gray-100);color:var(--gray-600);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">연계 미완료</span>`;
 
-    /* 주문 확정 문자 — 창고에 줄이 선 뒤에만 나간다. 보냈는지, 왜 못 보냈는지를
-       이 창에서 바로 읽어야 한다. 못 보낸 건은 담당자가 손으로 보내야 하기 때문이다. */
+    /* 주문 확정 안내 — 창고에 줄이 선 뒤에만 나간다. 무엇으로 보냈는지(무통장입금ㆍ
+       링크페이), 보냈는지, 왜 못 보냈는지를 이 창에서 바로 읽어야 한다. 못 보낸 건은
+       담당자가 결제전송으로 손수 보내야 하기 때문이다. */
     const smsRow = smsResult ? `
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="color:var(--text-muted);">주문 확정 문자</span>
+          <span style="color:var(--text-muted);">${smsResult.method || '결제'} 안내</span>
           <span style="display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;
                        background:${smsResult.sent ? 'var(--primary-50)' : 'var(--gray-100)'};
                        color:${smsResult.sent ? 'var(--primary)' : 'var(--gray-600)'};">
             ${smsResult.sent ? '발송 완료' : '발송 안 됨'}
           </span>
         </div>
-        ${smsResult.sent ? '' : `<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;text-align:right;">${smsResult.message ?? ''}</span></div>`}` : '';
+        <div style="display:flex;justify-content:space-between;gap:8px;">
+          <span style="color:var(--text-muted);">${smsResult.sent ? '보낸 방법' : '사유'}</span>
+          <span style="font-size:11px;text-align:right;${smsResult.sent ? '' : 'color:var(--warning);'}">${smsResult.message ?? ''}</span>
+        </div>` : '';
 
     document.getElementById('orderModalBody').innerHTML = `
       <div style="font-size:52px;color:var(--primary);margin-bottom:12px;">✅</div>
@@ -9702,39 +9674,6 @@ window.HELP_TOUR_STEPS = [
     idc.className    = 'gb-state' + (hasId ? ' done' : '');
   }
 
-  /* 서명이 끝난 건에만 서명·신분증 카드를 세운다.
-     신분증은 본문으로 오지 않는다 — 볼 때만 권한을 거치는 주소로 불러온다. */
-  function _fillSignCard(data) {
-    const card = document.getElementById('signCard');
-    if (!card) return;
-
-    if (data.status !== 'agreed' || !data.signature_data) {
-      card.style.display = 'none';
-      return;
-    }
-    card.style.display = '';
-    document.getElementById('signCardImg').src = data.signature_data;
-
-    const gWrap = document.getElementById('signCardGuardianWrap');
-    if (data.guardian_signature) {
-      document.getElementById('signCardGuardianImg').src = data.guardian_signature;
-      const who = [data.guardian_name, data.guardian_relation].filter(Boolean).join(' · ');
-      document.getElementById('signCardGuardianWho').textContent = who ? `(${who})` : '';
-      gWrap.style.display = '';
-    } else {
-      gWrap.style.display = 'none';
-    }
-
-    const iWrap = document.getElementById('signCardIdWrap');
-    if (data.guardian_id_url) {
-      document.getElementById('signCardIdImg').src   = data.guardian_id_url;
-      document.getElementById('signCardIdOpen').href = data.guardian_id_url;
-      iWrap.style.display = '';
-    } else {
-      iWrap.style.display = 'none';
-    }
-  }
-
   async function updateConsentStatus() {
     try {
       const res  = await fetch(CONSENT_STATUS_URL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content } });
@@ -9748,7 +9687,6 @@ window.HELP_TOUR_STEPS = [
       // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
       _applyConsentBtn(data.status);
 
-      _fillSignCard(data);
       // 서명 화면에서 보호자가 적어 넣은 값이 있으면 화면에도 반영한다
       if (data.is_minor) {
         const set = (id, v) => { const el = document.getElementById(id); if (el && v && !el.value) el.value = v; };

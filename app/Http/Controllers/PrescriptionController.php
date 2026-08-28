@@ -344,73 +344,87 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * 주문 확정 문자 — 창고에 판매주문이 선 뒤에 보낸다.
+     * 주문 확정 안내 — 창고에 판매주문이 선 뒤에 보낸다.
      *
      * 「주문 생성 및 연계」를 누른 그 순간이 아니라, 저쪽에 줄이 실제로 선 뒤여야 한다.
      * 우리 쪽만 만들어 두고 알렸다가 연계가 실패하면, 고객은 확정 문자를 받았는데
      * 창고에는 아무것도 없는 꼴이 된다.
      *
-     * 문구는 메시지 관리의 「주문 확정」 유형을 그대로 쓴다 — 손으로 보내는 문자와 같은
-     * 글이 나가야 하고, 문구를 고치려고 배포할 일이 없어야 한다.
-     * 보낸 것은 발송ㆍ발행 내역에 남는다(MessageSender 가 기록을 함께 남긴다).
+     * 보내는 말은 「주문이 확정됐다」가 아니라 「어떻게 내시면 된다」다 — 확정을 알리는
+     * 일과 돈을 받는 일이 문자 두 통으로 갈리면 고객은 두 번 읽고 한 번 헷갈린다.
+     * 그래서 결제전송(PaymentLinkService)이 쓰는 그 길을 그대로 탄다. 결제 이력에도
+     * 같이 쌓이고, 담당자가 손으로 다시 보낼 때와 문구가 갈리지 않는다.
      *
-     * @return array{sent: bool, message: string}
+     * 무엇으로 안내할지는 설정 → 서비스 설정 → 주문 에서 고른다(order.confirm_pay_method).
+     * 링크페이는 토스페이먼츠 승인을 받아야 쓸 수 있어, 키가 비어 있으면 무통장입금으로
+     * 내려가 보낸다 — 승인 전에 골라 두었다고 아무것도 못 보내서는 안 된다.
+     *
+     * @return array{sent: bool, method: string, message: string}
      */
     private function sendOrderConfirmedSms(Prescription $prescription): array
     {
         $prescription->refresh()->loadMissing('patient', 'order');
         $order = $prescription->order;
 
-        $name   = $prescription->patient?->bare_name ?: ($prescription->patient_name_ocr ?: '고객');
-        $mobile = preg_replace('/\D/', '',
-            (string) ($prescription->patient?->mobile ?: $prescription->mobile_ocr));
-
-        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
-            return ['sent' => false, 'message' => '고객 연락처가 없어 주문 확정 문자를 보내지 못했습니다.'];
+        if (! $order) {
+            return ['sent' => false, 'method' => '', 'message' => '주문이 없어 결제 안내를 보내지 못했습니다.'];
         }
 
-        $body = trim((string) \App\Models\MessageTemplate::channel('sms')->active()
-            ->where('code', 'order_confirmed')->value('body'));
-
-        if ($body === '') {
-            return ['sent' => false, 'message' => '메시지 관리의 「주문 확정」 본문이 비어 있습니다.'];
-        }
-
-        $copay = (float) ($order?->patient_copay ?? 0);
-        $content = trim(strtr($body, [
-            '#{고객명}'     => $name,
-            '#{처방번호}'   => $prescription->rx_number,
-            '#{주문번호}'   => $order?->order_number ?? '-',
-            '#{제품명}'     => $order?->product_name ?? '-',
-            '#{본인부담금}' => number_format($copay),
-            '#{금액}'       => number_format($copay + (float) ($order?->shipping_fee ?? 0)),
-            '#{운송장번호}' => $order?->tracking_number ?? '-',
-            '#{배송지}'     => $order?->shipping_address ?? '-',
-        ]));
+        $method = $this->confirmPayMethod();
+        $mobile = $prescription->patient?->mobile ?: $prescription->mobile_ocr;
 
         try {
-            $res = app(\App\Services\MessageSender::class)->sendBulk(
-                'sms',
-                [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $prescription->patient_id]],
-                $content,
-                'order_confirmed',
-                ['source' => 'order_confirm', 'prescription_id' => $prescription->id],
-            );
+            $res = app(\App\Services\PaymentLinkService::class)->issue($order, $method, $mobile);
         } catch (\Throwable $e) {
-            Log::error('[주문 확정 문자] 발송 실패', [
+            Log::error('[주문 확정 안내] 발송 실패', [
                 'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
             ]);
-            return ['sent' => false, 'message' => '주문 확정 문자 발송 실패: ' . $e->getMessage()];
+            return ['sent' => false, 'method' => $method, 'message' => '결제 안내 발송 실패: ' . $e->getMessage()];
         }
 
-        if (! ($res['success'] ?? false)) {
-            return ['sent' => false, 'message' => $res['failed'][0]['error'] ?? '주문 확정 문자를 보내지 못했습니다.'];
+        /* 화면에 적는 이름. 결제전송 팝오버는 「카드결제」라 부르지만, 주문 확정 안내에서
+           담당자가 쓰는 말은 「링크페이」다 — 설정 화면의 이름과 같아야 헷갈리지 않는다. */
+        $label = $method === \App\Models\PaymentLink::METHOD_CARD
+            ? '링크페이'
+            : (\App\Models\PaymentLink::METHODS[$method] ?? $method);
+
+        if ($res['sent'] ?? false) {
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->log("주문 확정 안내({$label}) 발송 → " . ($res['link']->receiver ?? '-'));
         }
 
-        activity()->causedBy(Auth::user())->performedOn($prescription)
-            ->log("주문 확정 문자 발송 → {$mobile}");
+        $sent = (bool) ($res['sent'] ?? false);
 
-        return ['sent' => true, 'message' => "주문 확정 문자를 {$mobile} 로 보냈습니다."];
+        return [
+            'sent'    => $sent,
+            'method'  => $label,
+            // 보냈으면 「무엇으로 갔나」, 못 보냈으면 「왜 못 갔나」를 그대로 적는다
+            'message' => $sent
+                ? "{$label} 안내를 " . ($res['message'] ?? '보냈습니다.')
+                : ($res['message'] ?? '보내지 못했습니다.'),
+        ];
+    }
+
+    /**
+     * 주문 확정 안내를 무엇으로 보낼지.
+     *
+     * 링크페이는 토스 결제 페이지를 여는 것이라 클라이언트 키·시크릿 키가 있어야 한다.
+     * 승인 전에 골라 두었으면 무통장입금으로 내려간다 — 보내지 못하고 멈추는 것보다
+     * 계좌라도 적어 보내는 편이 낫다.
+     */
+    private function confirmPayMethod(): string
+    {
+        $want = config('order.confirm_pay_method', 'bank') === 'card'
+            ? \App\Models\PaymentLink::METHOD_CARD
+            : \App\Models\PaymentLink::METHOD_BANK;
+
+        if ($want === \App\Models\PaymentLink::METHOD_CARD
+            && (! config('toss.client_key') || ! config('toss.secret_key'))) {
+            Log::warning('[주문 확정 안내] 링크페이로 설정돼 있으나 토스 키가 없어 무통장입금으로 보낸다');
+            return \App\Models\PaymentLink::METHOD_BANK;
+        }
+
+        return $want;
     }
 
     // ── Withworks 판매주문 수정 연계 ──────────────────────

@@ -62,7 +62,8 @@ class PaymentLinkService
                 $link->update(['channel' => $channel, 'sent_at' => now(), 'error' => null]);
 
                 return ['link' => $link->refresh(), 'sent' => true, 'channel' => $channel,
-                        'message' => ($channel === 'alimtalk' ? '알림톡' : '문자') . '으로 보냈습니다.'];
+                        // 「문자으로」가 되지 않게 조사를 통째로 쥔다
+                        'message' => ($channel === 'alimtalk' ? '알림톡으로' : '문자로') . ' 보냈습니다.'];
             }
             $last = $res['message'] ?? '보내지 못했습니다.';
         }
