@@ -373,6 +373,10 @@
   .ol-field-q { flex:1 1 220px; }
   /* 단추는 줄 끝에 붙는다. align-items:flex-end 가 입력칸과 밑선을 맞춘다. */
   .ol-actions { display:flex; gap:8px; margin-left:auto; flex-shrink:0; }
+  /* 표 안의 지우기 단추 — 줄을 고르는 것과 헷갈리지 않게 작고 조용히 둔다 */
+  .ol-del { border:1px solid var(--border); background:var(--gray-0); border-radius:6px;
+            width:26px; height:24px; line-height:1; cursor:pointer; color:var(--gray-500); }
+  .ol-del:hover { border-color:var(--danger); color:var(--danger); background:var(--danger-light); }
 
   /* 판이 받은 높이를 표까지 흘려보낸다 — 표가 카드 밑변까지 서고 「전체 N건」 띠가
      그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
@@ -8835,8 +8839,25 @@ window.HELP_TOUR_STEPS = [
             return s;
           } },
         { header: '처방여부',  name: 'rx_type',   width: 90,  align: 'center', sortable: true },
-        { header: '본인부담금', name: 'copay',     width: 90,  align: 'right', editor: 'number' },
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+        /* 빈 건을 치우는 자리. 처방전도 안 올라왔고 창고에도 서지 않은 줄에만 단추가 선다 —
+           그 밖에는 무엇이든 실제로 일어난 일이 있어 지울 것이 아니다. */
+        { header: '', name: 'erasable', width: 56, align: 'center', sortable: false, exportable: false,
+          renderer: (v, row) => {
+            if (!v || !row.rx_url) {
+              const s = document.createElement('span');
+              s.textContent = '—';
+              s.style.color = 'var(--gray-300)';
+              return s;
+            }
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ol-del';
+            b.title = '이 빈 건을 지웁니다';
+            b.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+            b.addEventListener('click', (e) => { e.stopPropagation(); olDelete(row); });
+            return b;
+          } },
       ],
       data: OL_ROWS,
     });
@@ -8855,6 +8876,24 @@ window.HELP_TOUR_STEPS = [
       }
       location.href = row.url;
     });
+  }
+
+  /** 빈 건 지우기 — 처방전과 주문 줄을 함께 치운다(둘 다 되돌릴 수 있는 삭제다) */
+  async function olDelete(row) {
+    const ok = await ceConfirm(
+      `${row.rx_number || row.order_no} 을(를) 지웁니다.
+처방전도 올라오지 않았고 창고에도 서지 않은 건입니다.`,
+      { title: '빈 건 삭제', tone: 'danger', confirmText: '지우기' });
+    if (!ok) return;
+
+    const res = await apiRequest(row.rx_url, 'DELETE');
+    if (!res.success) { showToast(res.message || '지우지 못했습니다.', 'danger'); return; }
+
+    // 받아 둔 줄에서도 빼야 거르기를 해도 되살아나지 않는다
+    const i = OL_ROWS.findIndex(r => r.id === row.id);
+    if (i >= 0) OL_ROWS.splice(i, 1);
+    olGrid.setData(olGrid.getData().filter(r => r.id !== row.id));
+    showToast(res.message, 'success');
   }
 
   /* 거르기 — 받아 둔 줄을 그 자리에서 좁힌다. 서버로 다시 묻지 않는다. */

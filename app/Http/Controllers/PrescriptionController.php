@@ -1371,8 +1371,11 @@ class PrescriptionController extends Controller
                                    '10', '30' => '처방전',
                                    default => '',
                                },
-                'copay'     => (int) $o->patient_copay,
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                /* 지울 수 있는 건인가 — 처방전도 안 올라왔고 창고에도 서지 않은 자리다.
+                   서버가 다시 한 번 따지므로 여기 값은 「단추를 세울지」에만 쓴다. */
+                'erasable'  => ! $o->prescription?->image_path && ! $o->withworks_so_no,
+                'rx_url'    => $o->prescription ? route('prescriptions.destroyEmpty', $o->prescription) : null,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
                 'url'       => $o->prescription
@@ -2005,6 +2008,47 @@ class PrescriptionController extends Controller
             'preview' => $preview,
             'mobile'  => $mobile,
         ]);
+    }
+
+    /**
+     * 주문 목록에서 빈 건을 지운다.
+     *
+     * 처방전도 올라오지 않았고 주문도 창고에 서지 않은 건 — 잘못 만들어져 「손댈 차례」에
+     * 이름만 올려 두고 있는 자리다. 처방전과 주문 줄을 함께 지운다(둘 다 소프트 삭제라
+     * 되돌릴 수 있다).
+     *
+     * 하나라도 실제로 일어난 일이 있으면 지우지 않는다. 지우는 것은 되돌리기 어렵고,
+     * 어긋난 자리를 남기느니 못 지우는 편이 낫다.
+     */
+    public function destroyEmpty(Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $prescription->loadMissing('order');
+        $order = $prescription->order;
+
+        $blockers = [];
+        if ($prescription->image_path)            $blockers[] = '처방전이 올라와 있습니다';
+        if ($order?->withworks_so_no)             $blockers[] = '창고에 주문이 서 있습니다';
+        if ($order?->deposit_confirmed_at)        $blockers[] = '입금이 확인된 건입니다';
+        if (($order?->tax_invoice_status ?? 'not_issued') !== 'not_issued')   $blockers[] = '세금계산서가 발행된 건입니다';
+        if (($order?->cash_receipt_status ?? 'not_issued') !== 'not_issued')  $blockers[] = '현금영수증이 발행된 건입니다';
+        if ($prescription->attachments()->exists()) $blockers[] = '첨부한 서류가 있습니다';
+        if ($prescription->consents()->where('status', 'agreed')->exists()) $blockers[] = '위임동의 서명을 받은 건입니다';
+
+        if ($blockers) {
+            return response()->json([
+                'success' => false,
+                'message' => '지울 수 없습니다 — ' . implode(' · ', $blockers) . '.',
+            ], 422);
+        }
+
+        $no = $prescription->rx_number;
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->log("빈 건 삭제 (처방전 {$no}" . ($order ? ", 주문 {$order->order_number}" : '') . ')');
+
+        $order?->delete();
+        $prescription->delete();
+
+        return response()->json(['success' => true, 'message' => "{$no} 을(를) 지웠습니다."]);
     }
 
     // ── 상담번호 채번 ──────────────────────────────────────

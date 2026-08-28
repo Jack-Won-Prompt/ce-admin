@@ -122,6 +122,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/consent-signature', [ConsentController::class,  'downloadSignature'])->name('consentSignature');
         Route::get( '/{prescription}/delegation-pdf', [ConsentController::class,     'downloadDelegationPdf'])->name('delegationPdf');
         Route::get( '/{prescription}/delegation-pdf-original', [ConsentController::class, 'downloadDelegationOverlayPdf'])->name('delegationPdfOriginal');
+        /* 주문 목록에서 빈 건을 지운다 — 처방전도 주문도 아직 없는 자리만 */
+        Route::delete('/{prescription}/empty', [PrescriptionController::class, 'destroyEmpty'])->name('destroyEmpty');
         Route::post('/{prescription}/delegation-regenerate', [ConsentController::class, 'regenerateDelegation'])->name('delegationRegenerate');
         Route::post('/{prescription}/counsel-no',     [PrescriptionController::class, 'generateCounselNo'])->name('counselNo');
         Route::post('/{prescription}/memos',                [PrescriptionController::class, 'storeMemo'])->name('memos.store');
