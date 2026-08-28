@@ -138,6 +138,8 @@ class OrderController extends Controller
             'patient_copay'           => 'nullable|numeric|min:0',
             'shipping_fee'            => 'nullable|numeric|min:0',
             'shipping_address'        => 'nullable|string|max:200',
+            'shipping_address_detail' => 'nullable|string|max:200',
+            'shipping_postcode'       => 'nullable|string|max:10',
             'shipping_recipient'      => 'nullable|string|max:100',
             'so_type'                 => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
@@ -187,7 +189,7 @@ class OrderController extends Controller
             'status'             => 'pending',
             'so_type'            => $request->so_type ?? '1013',
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : null,
-        ];
+        ] + self::shippingExtras($request);
 
         if ($existing) {
             // 껍데기를 채운다 — 번호는 그대로 두어 이미 적어 둔 곳(입금ㆍ영수증)이 어긋나지 않는다
@@ -290,7 +292,7 @@ class OrderController extends Controller
             'shipping_recipient' => $request->shipping_recipient ?? $order->shipping_recipient,
             'so_type'            => $request->so_type            ?? $order->so_type,
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : $order->note,
-        ]);
+        ] + self::shippingExtras($request, $order));
 
         activity()->causedBy(Auth::user())
             ->performedOn($order)
@@ -301,6 +303,26 @@ class OrderController extends Controller
             'order_number' => $order->order_number,
             'total_amount' => $order->total_amount,
         ]);
+    }
+
+    /**
+     * 배송지의 우편번호와 상세주소.
+     *
+     * 화면에는 세 칸(우편번호ㆍ도로명ㆍ상세)이 있는데 주문에는 한 칸뿐이라 두 값이 저장되지
+     * 않고 사라졌다. 칸을 늘렸지만(2026_08_28_000001) 아직 옮기지 않은 서버가 있으므로,
+     * 있을 때만 쓴다 — 없는 칸에 쓰려 들면 저장 자체가 깨진다.
+     *
+     * @return array<string,mixed>
+     */
+    private static function shippingExtras(Request $request, ?Order $order = null): array
+    {
+        $out = [];
+        foreach (['shipping_postcode', 'shipping_address_detail'] as $col) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('orders', $col)) {
+                $out[$col] = $request->input($col) ?? $order?->{$col};
+            }
+        }
+        return $out;
     }
 
     // ── 주문 삭제 ─────────────────────────────────────────

@@ -62,7 +62,9 @@ class OrderSync
                 // 배송비는 받지 않기로 했다(2026-08-24)
                 'shipping_fee'    => 0,
                 'status'          => 'pending',
-                'so_type'         => '1013',
+                // 지금 팔 수 있는 유형의 첫째. 「1013」을 박아 두었더니 고를 수 없는 값이
+                // 껍데기에 앉아, 주문 연계 탭이 그것을 되살리지 못했다.
+                'so_type'         => Order::saleSoTypes()[0] ?? null,
             ]);
             activity()->causedBy(Auth::user())->performedOn($order)
                 ->log("주문 {$order->order_number} 자동 생성 (처방전 {$prescription->rx_number} 저장)");

@@ -153,8 +153,8 @@ class Order extends Model
         'withworks_status', 'withworks_status_label', 'withworks_status_at',
         'withworks_ship_no', 'withworks_ship_status', 'withworks_ship_status_label',
         'withworks_tracking_no', 'withworks_ship_at',
-        // 배송
-        'shipping_recipient',
+        // 배송 — 우편번호와 상세주소는 칸이 없어 사라지던 값이다(2026-08-28 마이그레이션)
+        'shipping_recipient', 'shipping_postcode', 'shipping_address_detail',
     ];
 
     protected $casts = [

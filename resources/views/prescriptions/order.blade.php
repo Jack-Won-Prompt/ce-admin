@@ -3226,6 +3226,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                          value="{{ $prescription->order?->shipping_recipient ?? ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '') }}"
                          style="flex:1 1 140px;min-width:0;" />
                   <input type="text" class="form-control" id="shippingPostcode" readonly
+                         value="{{ $prescription->order?->shipping_postcode ?? '' }}"
                          placeholder="우편번호" style="width:96px;flex-shrink:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <button type="button" class="btn btn-outline btn-sm" onclick="openAddressSearch('shippingPostcode','shippingAddr','shippingAddrDetail')"
                           style="white-space:nowrap;flex-shrink:0;">
@@ -3244,9 +3245,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
                 {{-- 둘째 줄 — 도로명 + 상세 --}}
                 <div style="display:flex;gap:6px;">
+                  {{-- 적어 둔 배송지가 다시 보여야 한다. 전에는 값 바인딩이 없어, 저장한
+                       뒤 화면을 다시 열면 세 칸이 모두 비어 있었다 — 적힌 것이 없는 줄 알고
+                       다시 적게 된다. 상세주소 칸이 없는 서버에서는 도로명 한 줄만 되살린다. --}}
                   <input type="text" class="form-control" id="shippingAddr"
+                         value="{{ $prescription->order?->shipping_address ?? '' }}"
                          placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingAddrDetail"
+                         value="{{ $prescription->order?->shipping_address_detail ?? '' }}"
                          placeholder="상세 주소" style="flex:1;" />
                 </div>
 
@@ -6912,6 +6918,8 @@ window.HELP_TOUR_STEPS = [
       patient_copay:      totalCopay,
       shipping_postcode:  document.getElementById('shippingPostcode')?.value?.trim() || null,
       shipping_address:   shippingAddress,
+      // 상세주소는 따로도 남긴다 — 붙여 둔 것을 다시 가르다 두 번 붙는 일이 있었다
+      shipping_address_detail: shippingDetail || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     };
@@ -7140,7 +7148,9 @@ window.HELP_TOUR_STEPS = [
       items:              validItems,
       total_nhis:         totalNhis,
       patient_copay:      totalCopay,
+      shipping_postcode:  document.getElementById('shippingPostcode')?.value?.trim() || null,
       shipping_address:   shippingAddress,
+      shipping_address_detail: shippingDetail || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     });
@@ -7213,9 +7223,32 @@ window.HELP_TOUR_STEPS = [
     }
 
     if (orderExists && existingOrder) {
+      // 이미 창고로 보낸 주문 — 우리 쪽과 창고를 함께 고친다
       const ok = await updateOrder({ target: btn }, { silent: true, skipSave: true });
       if (ok === false) return;                 // updateOrder 가 이미 알렸다
       showToast('주문 제품과 주문 연계 내용을 저장했습니다.', 'success');
+    } else if (existingOrder?.id) {
+      /* 아직 보내지 않은 줄 — 배송지ㆍ수령인도 여기서 갈무리한다. 창고에는 보내지
+         않는다(보낼 SO 가 아직 없다). 예전에는 주문 줄 자체가 없어 배송 정보를 둘
+         자리가 없었고, 「주문 생성 및 연계」를 누를 때까지 적어 둔 것이 날아갔다. */
+      const base   = document.getElementById('shippingAddr')?.value?.trim() || '';
+      const detail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
+      const res = await apiRequest(`/orders/${existingOrder.id}`, 'PUT', {
+        items:              items.filter(i => i.product_name),
+        shipping_postcode:  document.getElementById('shippingPostcode')?.value?.trim() || null,
+        shipping_address:   base ? (detail ? base + ' ' + detail : base) : null,
+        shipping_address_detail: detail || null,
+        shipping_recipient: document.getElementById('shippingRecipient')?.value?.trim() || null,
+        so_type:            currentSoType,
+      });
+      if (!res.success) {
+        BtnState.error(btn, '저장 실패');
+        showToast(res.message || '주문 내용 저장 실패', 'danger');
+        setTimeout(() => BtnState.reset(btn), 2000);
+        return;
+      }
+      _orderDirty = false;
+      showToast('주문 제품과 배송 정보를 저장했습니다. 창고 연계는 「주문 생성 및 연계」에서 합니다.', 'success');
     } else {
       showToast('주문 제품을 저장했습니다. 배송 정보는 「주문 생성 및 연계」에서 함께 저장됩니다.', 'success');
     }
