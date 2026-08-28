@@ -696,11 +696,6 @@ class PrescriptionController extends Controller
                 'counsel_date' => now()->format('Y-m-d'),
             ]);
 
-            /* 올라온 그 자리에서 주문 관리에도 선다. 제품도 금액도 아직 없는 빈 줄이지만,
-               담당자가 「손댈 차례가 된 것」을 찾는 자리가 그 목록이다 — 거기에 없으면
-               처방전 목록과 주문 관리를 오가며 무엇이 남았는지 맞춰 봐야 했다. */
-            \App\Support\OrderSync::ensure($prescription);
-
             $created[] = $prescription->rx_number;
 
             activity()->causedBy(Auth::user())->performedOn($prescription)
@@ -1739,8 +1734,7 @@ class PrescriptionController extends Controller
 
            여기서는 우리 쪽 주문만 만든다. 위드웍스로 보내는 것은 그 단추가 할 일이다 —
            저장할 때마다 창고로 주문이 날아가서는 안 된다. */
-        $hadOrder = $prescription->order()->exists();
-        $order    = $this->ensureOrder($prescription);
+        $order = $this->ensureOrder($prescription);
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
 
@@ -1764,9 +1758,11 @@ class PrescriptionController extends Controller
                누르면 누구와 상담하는지 가리지 못해 열리지 않았다. */
             'patient_id'   => $prescription->fresh()->patient_id,
             'patient_name' => $prescription->fresh()->patient?->name,
-            /* 저장으로 주문이 새로 섰으면 그 번호를 돌려준다 — 화면의 「주문 미등록」이
-               그 자리에서 「주문 완료」로 선다. 이미 있던 것이면 null 이다. */
-            'order_created' => $hadOrder ? null : $order?->order_number,
+            /* 이 건의 주문번호. 화면이 아직 모르고 있으면(빈 초안으로 시작해 방금 선 경우)
+               이것을 받아 쥔다 — 그래야 배송 정보를 담을 자리를 안다.
+               「방금 생겼는가」로 가리지 않는다. 처방전이 담길 때 모델이 먼저 세우기도 해서
+               (Prescription::booted → OrderSync::seed) 그 갈래로는 늘 「이미 있음」이 된다. */
+            'order_created' => $order?->order_number ?? $prescription->order?->order_number,
             'order_id'      => $order?->id ?? $prescription->order?->id,
         ]);
     }

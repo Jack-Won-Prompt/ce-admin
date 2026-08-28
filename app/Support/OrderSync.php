@@ -22,6 +22,24 @@ use Illuminate\Support\Facades\Auth;
  */
 class OrderSync
 {
+    /**
+     * 줄이 없으면 세우기만 한다 — 있으면 손대지 않는다.
+     *
+     * 처방전이 담길 때마다 부른다(Prescription 모델의 saved). 그래서 값을 다시 맞추지는
+     * 않는다 — 품목 줄을 지웠다 다시 쓰는 일을 저장마다 하면 헛일이 쌓인다. 값을 맞추는
+     * 것은 주문 등록의 저장(updateOcr)처럼 그 일을 하려고 부른 자리의 몫이다.
+     *
+     * 빈 초안은 세우지 않는다. 아직 이름 한 자 없는 자리라 「손댈 차례」에 세울 것이 없다.
+     */
+    public static function seed(Prescription $prescription): ?Order
+    {
+        if ($prescription->is_blank_draft || $prescription->order()->exists()) {
+            return null;
+        }
+
+        return self::ensure($prescription);
+    }
+
     public static function ensure(Prescription $prescription): ?Order
     {
         $order = $prescription->order()->first();

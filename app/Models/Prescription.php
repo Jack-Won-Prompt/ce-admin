@@ -246,6 +246,17 @@ class Prescription extends Model
      */
     protected static function booted(): void
     {
+        /* 빈 초안이 아닌 처방전은 주문 관리에도 선다.
+           어느 길로 만들어지든(업로드ㆍ상담하기ㆍ주문 등록의 저장ㆍ위임동의 서명) 빠지지
+           않게 여기 한 곳에서 세운다 — 길마다 한 줄씩 붙여 두었더니 나중에 난 길(상담하기)이
+           빠져, 이름과 상담이 적힌 건이 어느 목록에도 없이 떠 있었다.
+
+           이미 줄이 있으면 손대지 않는다(OrderSync::seed). 값을 다시 맞추는 것은 그 일을
+           하려고 부른 자리의 몫이다. */
+        static::saved(function (self $p) {
+            \App\Support\OrderSync::seed($p);
+        });
+
         static::updating(function (self $rx) {
             /* 마지막으로 고친 사람을 남긴다.
                로그인한 사람이 실제 값을 바꿀 때만 기록한다 — 배치·웹훅처럼

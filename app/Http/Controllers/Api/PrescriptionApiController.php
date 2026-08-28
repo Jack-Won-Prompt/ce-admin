@@ -125,11 +125,6 @@ class PrescriptionApiController extends Controller
             ]);
         }
 
-        /* 올라온 그 자리에서 주문 관리에도 선다(웹 업로드와 같다).
-           제품도 금액도 아직 없는 빈 줄이지만, 담당자가 「손댈 차례가 된 것」을 찾는
-           자리가 그 목록이다. */
-        \App\Support\OrderSync::ensure($prescription->refresh());
-
         // 웹 관리자에게 실시간 알림
         try {
             broadcast(new PrescriptionUploaded(
