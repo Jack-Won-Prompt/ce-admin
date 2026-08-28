@@ -366,11 +366,13 @@
   /* ── 주문 목록 탭의 찾는 줄 ─────────────────────────────
      목록 화면의 .ds-filter-card 와 같은 규격이다. 다만 폼을 보내지 않고 화면 안에서
      거르므로 form 이 아니다 — 보내면 보고 있던 건이 날아간다. */
-  .ol-filter { background:var(--gray-0); border:1px solid var(--border); border-radius:12px; padding:12px 16px; }
-  .ol-fields { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
-  .ol-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .ol-field.span-2 { grid-column:span 2; }
-  .ol-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  .ol-filter { background:var(--gray-0); border:1px solid var(--border); border-radius:12px;
+               padding:12px 16px; display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+  /* 날짜ㆍ담당자는 제 폭만 쓰고, 검색어가 남는 자리를 받는다 */
+  .ol-field { display:flex; flex-direction:column; gap:4px; min-width:0; flex:0 0 150px; }
+  .ol-field-q { flex:1 1 220px; }
+  /* 단추는 줄 끝에 붙는다. align-items:flex-end 가 입력칸과 밑선을 맞춘다. */
+  .ol-actions { display:flex; gap:8px; margin-left:auto; flex-shrink:0; }
 
   /* 판이 받은 높이를 표까지 흘려보낸다 — 표가 카드 밑변까지 서고 「전체 N건」 띠가
      그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
@@ -382,7 +384,6 @@
                          overflow:hidden; padding:0; }
   /* 카드가 이미 흰 판이다 — 표가 제 테두리ㆍ모서리를 또 두르지 않는다 */
   #tab-orders .cg-wrap { border:0; border-radius:0; }
-  @media (max-width:1100px) { .ol-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   /* 탭바 오른쪽 액션 버튼 — 종류와 무관하게 같은 크기로 세운다.
      .btn/.btn-sm 을 쓰면 레이아웃 쪽 규칙과 우선순위 다툼이 나므로 이 클래스만 쓴다. */
   /* 테두리 버튼 — 시안 137:706: 높이 28, padding 0 12, radius 8, 12/500.
@@ -2084,29 +2085,28 @@ $calcDeposit  = $calcCopay + $calcShipping;
            찾는 줄은 화면 안에서 거른다. 다른 목록 화면처럼 폼을 보내 새로 그리면
            보고 있던 건이 날아간다 — 여기서는 받아 둔 것을 그 자리에서 좁힌다. --}}
       <div class="tab-pane" id="tab-orders">
+        {{-- 찾는 줄은 한 줄이다. 칸 넷과 단추 둘이 같은 줄에 선다 — 좁아지면 접힌다.
+             진행 상태로 거르는 칸은 두지 않는다: 이 표에는 「주문 대기」뿐이라 고를 것이
+             없다(확정된 건을 보는 자리는 주문 관리다). --}}
         <div class="ol-filter">
-          <div class="ol-fields">
-            <div class="ol-field span-2">
-              <label class="ds-field-label">검색어</label>
-              <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ제품명">
-            </div>
-            <div class="ol-field">
-              <label class="ds-field-label">접수일 (부터)</label>
-              <input type="date" id="ol-from" class="form-control">
-            </div>
-            <div class="ol-field">
-              <label class="ds-field-label">접수일 (까지)</label>
-              <input type="date" id="ol-to" class="form-control">
-            </div>
-            {{-- 진행 상태로 거르는 칸은 두지 않는다 — 이 표에는 「주문 대기」뿐이라
-                 고를 것이 없다. 확정된 건을 보는 자리는 주문 관리다. --}}
-            <div class="ol-field">
-              <label class="ds-field-label">담당자</label>
-              <select id="ol-manager" class="form-control form-select">
-                <option value="">전체</option>
-                <option value="__none__">미배정</option>
-              </select>
-            </div>
+          <div class="ol-field ol-field-q">
+            <label class="ds-field-label">검색어</label>
+            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ제품명">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">접수일 (부터)</label>
+            <input type="date" id="ol-from" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">접수일 (까지)</label>
+            <input type="date" id="ol-to" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">담당자</label>
+            <select id="ol-manager" class="form-control form-select">
+              <option value="">전체</option>
+              <option value="__none__">미배정</option>
+            </select>
           </div>
           <div class="ol-actions">
             <button type="button" class="btn btn-outline btn-sm" onclick="olReset()">초기화</button>
