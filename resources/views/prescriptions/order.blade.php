@@ -6524,6 +6524,18 @@ window.HELP_TOUR_STEPS = [
         btn.textContent = '검수 요청됨';
       });
     }
+
+    /* 이미 마친 건은 두 단추를 잠근다. 예전에는 승인한 그 순간에만 잠갔더니(setRxApproved),
+       화면을 다시 열면 「검수 승인하기」가 멀쩡히 눌렸다 — 두 번 누르면 검수자와
+       검수일시가 덮인다. 열 때도 같은 자리에서 잠근다. */
+    if (status === 'approved' || status === 'ordered') {
+      document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
+        b.disabled = true; b.textContent = '검수 승인됨'; b.title = '이미 검수를 마쳤습니다';
+      });
+      document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => {
+        b.disabled = true; b.title = '이미 검수를 마쳤습니다';
+      });
+    }
   }
 
   /** 검수를 마쳤을 때 — 바뀌는 자리를 하나씩 고쳐 세운다 */
@@ -6595,6 +6607,8 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('DOMContentLoaded', () => {
     applyRxStage(RX_STATUS);
     syncOrderStageBtn();
+    // 이미 마친 건이면 여기서 두 단추가 잠긴다(글자ㆍ배지는 서버가 그린 것을 지킨다)
+    setRxStatus(RX_STATUS, null, null);
   });
 
   /* 보고 있는 건을 베껴 새 건으로 간다.

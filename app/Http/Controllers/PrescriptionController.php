@@ -1813,6 +1813,15 @@ class PrescriptionController extends Controller
     // ── 검수 승인 ─────────────────────────────────────────
     public function approve(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
+        /* 이미 마친 건은 다시 승인하지 않는다. 두 번 누르면 검수자와 검수일시가 덮여,
+           누가 언제 보았는지가 사라진다 — 검수 요청 쪽은 진작 이렇게 막고 있었다. */
+        if (in_array($prescription->status, ['approved', 'ordered'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 검수를 마친 처방전입니다.',
+            ], 422);
+        }
+
         $prescription->update([
             'status'      => 'approved',
             'reviewed_by' => Auth::id(),
