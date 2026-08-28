@@ -155,6 +155,17 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => '이미 주문이 생성된 처방전입니다.'], 409);
         }
 
+        /* 제품이 없으면 주문을 내지 않는다. 여기서 막지 않으면 처방전이 「주문 완료」로
+           넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이 청구를 건다.
+           저장으로 서는 빈 껍데기(OrderSync)는 그대로 둔다. 그것은 「아직 손대지 않은
+           건」이라는 표시이고, 여기는 「이제 판다」는 자리라 뜻이 다르다. */
+        if (collect($request->input('items', []))->filter(fn ($i) => ! empty($i['product_name']))->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => '주문할 제품이 없습니다. 제품을 먼저 고른 뒤에 주문을 만들어 주십시오.',
+            ], 422);
+        }
+
         // items 배열에서 대표 제품 및 합계 계산
         $items       = collect($request->input('items', []))->filter(fn($i) => !empty($i['product_name']));
         $firstItem   = $items->first() ?? [];

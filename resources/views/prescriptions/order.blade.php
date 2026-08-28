@@ -2437,7 +2437,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                            value="{{ $prescription->address_detail ?? '' }}"
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
-                      <input type="checkbox" id="sameShipping" checked onchange="syncShippingAddress(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
+                      {{-- 적어 둔 배송지가 이 건의 주소와 다르면 풀어 둔다. 늘 켜 두면
+                           주문 연계 탭을 여는 것만으로 따로 적어 둔 배송지가 덮인다. --}}
+                      @php
+                        $_ship = trim((string) ($prescription->order?->shipping_address ?? ''));
+                        $_here = trim(($prescription->address_ocr ?? $prescription->patient?->address ?? '')
+                                      . ' ' . ($prescription->address_detail ?? ''));
+                        $_same = $_ship === '' || $_ship === $_here;
+                      @endphp
+                      <input type="checkbox" id="sameShipping" @checked($_same) onchange="syncShippingAddress(this.checked)" style="width:16px;height:16px;cursor:pointer;" />
                       배송 주소 동일
                     </label>
                   </div>
@@ -5589,8 +5597,9 @@ window.HELP_TOUR_STEPS = [
     if (daysEl) daysEl.addEventListener('input',  calcRenewDate);
     calcRenewDate(); // 초기 계산
 
-    // 배송 주소 동일 초기 동기화 (기본 체크 상태)
-    syncShippingAddress(true);
+    /* 배송 주소 동일 — 체크가 켜져 있을 때만 맞춘다. 예전에는 true 가 박혀 있어,
+       따로 적어 둔 배송지가 화면을 여는 것만으로 이 건의 주소로 덮였다. */
+    syncShippingAddress(document.getElementById('sameShipping')?.checked ?? false);
 
     // 상세 주소 직접 입력 시 실시간 반영
     const addrDetail = document.getElementById('f-address-detail');
@@ -5626,10 +5635,11 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('shippingPostcode').value   = document.getElementById('f-postcode').value;
     document.getElementById('shippingAddr').value       = document.getElementById('f-address').value;
     document.getElementById('shippingAddrDetail').value = document.getElementById('f-address-detail').value;
-    // 받는 사람이 비어있으면 이름으로 채움
+    /* 받는 사람은 비어 있을 때만 채운다 — 담당자가 보호자 이름으로 바꿔 둔 것을 덮지
+       않는다. 이름 앞의 (E) 는 사업부 표시라 택배 송장에 실을 것이 아니다. */
     const rec = document.getElementById('shippingRecipient');
     if (rec && !rec.value.trim()) {
-      rec.value = document.getElementById('f-name')?.value?.trim() || '';
+      rec.value = (document.getElementById('f-name')?.value ?? '').trim().replace(/^\s*\(E\)\s*/, '');
     }
   }
 
@@ -5938,7 +5948,14 @@ window.HELP_TOUR_STEPS = [
     }
 
     document.getElementById(tabId).classList.add('active');
-    if (tabId === 'tab-order')   { recalcAllItems(); renderOrderSummary(); }
+    if (tabId === 'tab-order')   {
+      recalcAllItems();
+      renderOrderSummary();
+      /* 배송 주소를 이 자리에서 다시 맞춘다. 처음 그릴 때 한 번만 맞춰 두었더니, 주소를
+         뒤에 적거나 이름 조회로 다른 사람을 골라 온 건은 배송지가 빈 채로 열렸다.
+         「배송 주소 동일」이 풀려 있으면 손대지 않는다 — 따로 적어 둔 것이다. */
+      if (document.getElementById('sameShipping')?.checked) syncShippingAddress(true);
+    }
     if (tabId === 'tab-product') {
       if (isTableView()) renderItemsTable(); else renderItems();
     }
@@ -6849,6 +6866,15 @@ window.HELP_TOUR_STEPS = [
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
        「저장 중…」 글자가 아이콘 자리에만 박힌다. */
     const btn = e.target.closest('button') ?? e.target;
+
+    /* 제품을 고르지 않았으면 여기서 멈춘다. 그냥 두면 0원짜리 주문이 서고 처방전이
+       「주문 완료」로 넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이
+       청구를 건다. 저장은 이미 눌러 뒀을 수 있으니 적어 둔 것은 건드리지 않는다. */
+    if (!items.some(i => i.product_name)) {
+      showToast('주문할 제품이 없습니다. 제품 탭에서 제품을 먼저 고르십시오.', 'warning');
+      return;
+    }
+
     BtnState.loading(btn, '저장 중...');
 
     /* 주문을 만들기 전에 화면을 먼저 갈무리한다.
