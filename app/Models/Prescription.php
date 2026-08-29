@@ -60,6 +60,8 @@ class Prescription extends Model
         'counsel_order_id',
         'dealer_type', 'caregiver_name',
         'benefit_class', 'billing_strategy', 'claim_agency', 'billing_office_id', 'local_gov', 'disease_class', 'uro_date', 'diagnosis_date',
+        // 화면 확정요청 2026-08-27 — 상병 구분(1ㆍ2-1ㆍ2-2ㆍ3)과 요류역학검사 확인사항
+        'disease_grade', 'uro_findings',
         'rx_use_period', 'rx_end_date', 'purchase_type',
         'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
         'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',

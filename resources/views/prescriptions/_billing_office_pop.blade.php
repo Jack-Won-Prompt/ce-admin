@@ -15,19 +15,14 @@
   </div>
 
   <div style="padding:12px;display:flex;flex-direction:column;gap:10px;">
-    {{-- 무엇으로 찾고 있는지 먼저 보인다. 못 뽑았으면 못 뽑았다고 적는다. --}}
-    <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-      <span style="color:var(--text-muted);flex-shrink:0;">읍ㆍ면ㆍ동</span>
-      <input type="text" id="boFindEmd" class="form-control" style="height:30px;width:120px;">
-      <span style="color:var(--text-muted);flex-shrink:0;">시군구</span>
-      <input type="text" id="boFindSigungu" class="form-control" style="height:30px;width:110px;">
-      <button type="button" class="ds-btn" style="height:30px;" onclick="boFindRun()">찾기</button>
-    </div>
-    <div id="boFindNote" style="font-size:11px;color:var(--text-muted);line-height:1.6;"></div>
+    {{-- 할 일 둘을 첫 줄에 둔다(요청서 15쪽). 읍ㆍ면ㆍ동을 직접 적어 찾는 줄은 걷었다 —
+         환자 주소에서 뽑아 창이 열리자마자 찾으므로 손으로 칠 일이 없었고, 못 뽑는
+         경우에는 어차피 공단 지사찾기로 확인해 「여기에 등록」하는 것이 길이다.
+         두 칸은 숨겨 남긴다 — 찾기ㆍ등록이 그 값을 읽고 쓴다. --}}
+    <input type="hidden" id="boFindEmd">
+    <input type="hidden" id="boFindSigungu">
 
-    <div id="boFindList" style="display:flex;flex-direction:column;gap:4px;max-height:230px;overflow:auto;"></div>
-
-    <div style="display:flex;gap:6px;border-top:1px dashed var(--border);padding-top:10px;">
+    <div style="display:flex;gap:6px;">
       <button type="button" class="ds-btn" onclick="boFindOpenNhis()"
               title="공단 지사찾기 사이트를 새 창으로 엽니다">
         <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기 열기
@@ -35,6 +30,11 @@
       <span style="flex:1;"></span>
       <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNew()">+ 여기에 등록</button>
     </div>
+
+    {{-- 무엇으로 찾았는지ㆍ찾은 것이 있는지는 여기로 알린다 --}}
+    <div id="boFindNote" style="font-size:11px;color:var(--text-muted);line-height:1.6;"></div>
+
+    <div id="boFindList" style="display:flex;flex-direction:column;gap:4px;max-height:230px;overflow:auto;"></div>
 
     {{-- 그 자리 등록 — 공단 사이트에서 확인한 것을 옮겨 적는다.
          관할 읍면동은 위에서 찾던 값이 그대로 들어간다. --}}
@@ -56,16 +56,13 @@
           <label class="ds-field-label">부서</label>
           <input type="text" id="boNewDept" class="form-control" style="height:30px;" placeholder="보험급여부">
         </div>
-        <div>
-          <label class="ds-field-label">담당자 · 직책</label>
-          <div style="display:flex;gap:6px;">
-            <input type="text" id="boNewManager" class="form-control" style="height:30px;" placeholder="이름">
-            <input type="text" id="boNewTitle" class="form-control" style="height:30px;width:80px;" placeholder="주임">
-          </div>
-        </div>
+        {{-- 담당자ㆍ직책ㆍ담당업무는 뺐다(요청서 15쪽). 사람은 자주 바뀌는데 한 번 적어
+             두면 그대로 남아, 몇 달 뒤에는 없는 사람 이름이 서류에 실렸다.
+             대신 적어 둘 곳이 필요해 참고사항을 둔다 — 「팩스는 오후에만 받는다」 같은 것. --}}
         <div style="grid-column:1 / -1;">
-          <label class="ds-field-label">담당업무</label>
-          <input type="text" id="boNewDuty" class="form-control" style="height:30px;" placeholder="본인부담금환급금, 현금급여비">
+          <label class="ds-field-label">참고사항</label>
+          <input type="text" id="boNewNote" class="form-control" style="height:30px;"
+                 placeholder="예: 팩스 접수는 오후에만 · 접수 뒤 전화 확인 필요">
         </div>
         <div>
           <label class="ds-field-label">전화번호</label>

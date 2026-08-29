@@ -89,6 +89,11 @@ class PrescriptionController extends Controller
                 'order_no'   => $order?->order_number ?? '',
                 'so_no'      => $order?->withworks_so_no ?? '',
                 'assignee'   => $rx->assignedUser?->name ?? '미지정',
+                // 요청서 6쪽 — 목록에서 바로 견주는 값들
+                'resident_no'  => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
+                'uploader'     => $rx->creator?->name ?? '',
+                'reviewed_at'  => $rx->reviewed_at?->format('Y-m-d H:i') ?? '',
+                'review_memo'  => $rx->review_memo ?? '',
                 'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
             ];
         });
@@ -1500,6 +1505,8 @@ class PrescriptionController extends Controller
             'special_case'          => 'nullable|string|max:50',
             'reason'                => 'nullable|string|max:200',
             'specialty'             => 'nullable|string|max:100',
+            'disease_grade'         => 'nullable|string|max:10',
+            'uro_findings'          => 'nullable|string|max:200',
             // 추가 정보
             'new_patient_date'      => 'nullable|date',
             'five_110days'          => 'nullable|string|max:50',
@@ -1571,6 +1578,8 @@ class PrescriptionController extends Controller
             'special_case'         => $request->input('special_case'),
             'reason'               => $request->input('reason'),
             'specialty'            => $request->input('specialty'),
+            'disease_grade'        => $request->input('disease_grade'),
+            'uro_findings'         => $request->input('uro_findings'),
             'dealer_type'          => $request->input('dealer_type'),
             'pay_date'             => $request->input('pay_date'),
             'buy_date'             => $request->input('buy_date'),

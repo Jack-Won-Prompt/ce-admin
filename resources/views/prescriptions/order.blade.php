@@ -2658,6 +2658,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
                    시안 315:58 Frame 48101490 (361×392). --}}
+              {{-- 검수 메모 — 처방전 목록에서 검수자가 적어 둔 것을 그대로 보여 준다
+                   (요청서 6·12쪽). 여기서 고치지는 않는다 — 적는 자리는 검수 화면이고,
+                   두 곳에서 고치면 어느 것이 검수자의 말인지 알 수 없어진다. --}}
+              <div class="rx-field-row rx-row-start rx-w3">
+                <span class="rx-field-label">검수 메모</span>
+                <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
+                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
+              </div>
               {{-- 「검수 메모」 칸은 두지 않는다. 1차 요청서 12쪽이 상담 정보의 「메모」를
                    여기로 옮기고 이름을 바꾸라 했던 자리인데, 지금은 쓰지 않기로 했다.
                    값(counsel_contents)은 지우지 않았다 — 예전에 적어 둔 것이 남아 있고
@@ -2719,13 +2728,53 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    위아래 간격이 다른 줄과 같은 8 이다. 한 칸으로 합치면 '상병명' 입력이 사라지므로
                    개발이 넣은 두 칸을 그대로 둔다. 두 칸 사이는 8 로 통일했다. --}}
               <div class="rx-field-row">
+                {{-- 상병 구분 (요청서 12쪽 · 위드웍스와 같은 네 값).
+                     예전에 이 값을 담던 disease_class 는 지금 상병명을 담고 있어
+                     칸을 따로 둔다 — 거기에 다시 넣으면 적어 둔 이름이 지워진다. --}}
+                <span class="rx-field-label">상병 구분</span>
+                <select class="form-control" id="f-disease-grade" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(['1', '2-1', '2-2', '3'] as $g)
+                    <option value="{{ $g }}" @selected(($prescription->disease_grade ?? '') === $g)>{{ $g }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="rx-field-row">
                 <span class="rx-field-label">상병코드</span>
                 <input type="text" class="form-control" id="f-disease-code"
                        value="{{ $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:1;min-width:0;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">요류역학검사일</span>
-                <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->uro_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-uro-date" value="{{ $prescription->uro_date ?? '' }}"
+                       style="flex:1;" onchange="uroCheckAge()" />
+              </div>
+              {{-- 확인사항 (요청서 12·13쪽 · 등록 신청서 별지 제4호서식).
+                   다섯 소견 가운데 하나 이상이거나, 선천기형으로 검사 자체가 불가해야
+                   급여 대상이 된다. 검사일만 적어 두었더니 무엇이 확인됐는지가 어디에도
+                   남지 않아, 공단이 되물으면 처방전을 다시 꺼내 읽어야 했다. --}}
+              @php $uroPicked = \App\Support\UroFindings::parse($prescription->uro_findings ?? null); @endphp
+              <div class="rx-field-row rx-row-start rx-w3" style="align-items:flex-start;">
+                <span class="rx-field-label">확인사항</span>
+                <div id="f-uro-findings" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
+                  @foreach(\App\Support\UroFindings::RESULTS as $k => $label)
+                    <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;cursor:pointer;">
+                      <input type="checkbox" value="{{ $k }}" @checked(in_array($k, $uroPicked, true))
+                             style="margin-top:2px;flex-shrink:0;accent-color:var(--primary);">
+                      <span>{{ $label }}</span>
+                    </label>
+                  @endforeach
+                  <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;
+                                cursor:pointer;border-top:1px dashed var(--border);padding-top:4px;margin-top:2px;">
+                    <input type="checkbox" value="{{ \App\Support\UroFindings::UNABLE }}"
+                           @checked(in_array(\App\Support\UroFindings::UNABLE, $uroPicked, true))
+                           style="margin-top:2px;flex-shrink:0;accent-color:var(--primary);">
+                    <span>{{ \App\Support\UroFindings::UNABLE_LABEL }}</span>
+                  </label>
+                  {{-- 검사는 신청서 발행일 기준 3년 이내 것만 쓴다 — 지난 것을 내면
+                       공단이 되돌려 보낸다. 그때가 되어서야 알면 늦다. --}}
+                  <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;"></span>
+                </div>
               </div>
               {{-- 이 두 줄은 3열 끝에 있었다. 3열만 두 줄 길어 오른쪽 아래에 홀로
                    남았고, 왼쪽에는 빈자리가 넓게 났다 — 「오른쪽으로 치우쳤다」고
@@ -6518,6 +6567,12 @@ window.HELP_TOUR_STEPS = [
       license_no:       strOrNull('f-license-no'),
       // 요청서 12ㆍ13쪽 — 전문과목ㆍ사유를 고르는 자리로 되돌렸다
       specialty:        strOrNull('f-specialty'),
+      disease_grade:    strOrNull('f-disease-grade'),
+      // 고른 확인사항을 쉼표로 이어 보낸다 — 하나도 안 골랐으면 null
+      uro_findings:     (() => {
+        const v = [...document.querySelectorAll('#f-uro-findings input:checked')].map(i => i.value);
+        return v.length ? v.join(',') : null;
+      })(),
       reason:           strOrNull('f-reason'),
       issued_date:      strOrNull('f-date'),
       repurchase_date:  strOrNull('f-repurchase-date'),
@@ -6858,6 +6913,26 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 주문 생성 및 Withworks 연계 ──────────────────────────
+  /* 요류역학검사가 아직 살아 있는가 — 등록 신청서 발행일 기준 3년.
+     지난 검사로 신청서를 내면 공단이 되돌려 보내는데, 그때가 되어서야 알면 늦다. */
+  window.uroCheckAge = function () {
+    const note = document.getElementById('uroAgeNote');
+    const d    = document.getElementById('f-uro-date')?.value;
+    if (!note) return;
+
+    if (!d) { note.style.display = 'none'; return; }
+
+    const limit = new Date();
+    limit.setFullYear(limit.getFullYear() - 3);
+
+    const old = new Date(d) < limit;
+    note.style.display = old ? '' : 'none';
+    note.textContent   = old
+      ? '검사일이 3년을 넘었습니다 — 등록 신청서에는 발행일 기준 3년 이내 검사만 씁니다.'
+      : '';
+  };
+  uroCheckAge();
+
   /* ── 주문으로 넘어가기 전에 지나야 하는 문 ──────────────────
      요청서 7ㆍ12ㆍ17쪽. 여기서 막지 않으면 검수도 안 끝난 건이 창고로 나가고,
      동의 없이 공단에 청구할 서류가 만들어지며, 처방보다 많은 수량이 팔린다. */
@@ -7567,7 +7642,7 @@ window.HELP_TOUR_STEPS = [
     if (!emd) {
       /* 도로명 주소에는 읍면동이 없다. 엉뚱한 관할을 들이미느니 모른다고 말한다. */
       note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동을 뽑지 못했습니다(도로명 주소일 수 있습니다). '
-                     + '위 칸에 직접 적고 찾아 주십시오.';
+                     + '「공단 지사찾기 열기」로 확인한 뒤 「+ 여기에 등록」으로 적어 두십시오.';
       list.innerHTML = '';
       return;
     }
@@ -7601,8 +7676,9 @@ window.HELP_TOUR_STEPS = [
           <span style="flex:1;min-width:0;">
             <span style="font-weight:700;">${_faxEsc(r.office_name)}</span>
             ${r.dept ? ' · ' + _faxEsc(r.dept) : ''}
-            ${r.manager_name ? ' · ' + _faxEsc(r.manager_name) : ''}${r.title ? ' ' + _faxEsc(r.title) : ''}
-            <span style="display:block;color:var(--text-muted);font-size:11px;">${_faxEsc(r.duty || '')}</span>
+            {{-- 담당자ㆍ직책ㆍ담당업무는 보이지 않는다(요청서 15쪽) — 사람이 자주 바뀌어
+                 몇 달 뒤에는 없는 이름이 서류에 실렸다. 대신 참고사항을 적어 둔다. --}}
+            <span style="display:block;color:var(--text-muted);font-size:11px;">${_faxEsc(r.note || '')}</span>
             <span style="display:block;font-family:monospace;font-size:11px;">
               ${r.tel ? '☎ ' + _faxEsc(r.tel) : ''}${r.fax ? '  FAX ' + _faxEsc(r.fax) : ''}
             </span>
@@ -7651,7 +7727,7 @@ window.HELP_TOUR_STEPS = [
   function boFindNewCancel() {
     const f = document.getElementById('boFindForm');
     if (f) f.style.display = 'none';
-    ['boNewOffice','boNewDept','boNewManager','boNewTitle','boNewDuty','boNewTel','boNewFax']
+    ['boNewOffice','boNewDept','boNewNote','boNewTel','boNewFax']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 
@@ -7679,9 +7755,7 @@ window.HELP_TOUR_STEPS = [
           kind:         document.getElementById('boNewKind').value,
           office_name:  office,
           dept:         document.getElementById('boNewDept').value.trim(),
-          manager_name: document.getElementById('boNewManager').value.trim(),
-          title:        document.getElementById('boNewTitle').value.trim(),
-          duty:         document.getElementById('boNewDuty').value.trim(),
+          note:         document.getElementById('boNewNote').value.trim(),
           tel:          document.getElementById('boNewTel').value.trim(),
           fax:          document.getElementById('boNewFax').value.trim(),
           is_active:    true,
