@@ -2454,6 +2454,8 @@ document.addEventListener('click', (e) => {
 
 {{-- 화면의 인라인 스크립트가 wwGrid 를 바로 쓸 수 있도록 스택보다 먼저 싣는다 --}}
 <script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
+{{-- 날짜 칸에 직접 쳐 넣기ㆍ붙여넣기. 칸의 종류를 바꾸지 않아 달력은 그대로 쓴다. --}}
+<script src="@assetv('vendor/ce/date-input.js')"></script>
 
 {{-- 시안대로 그리드 하단 상태바(footer)를 끈 화면에서, 결과바의 ‘선택 N건’ 표시를
      그리드 선택 상태에 맞춘다. 그리드가 선택이 바뀔 때마다 부르는 지점에

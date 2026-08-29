@@ -2816,14 +2816,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    환자 정보 2열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">일일 도뇨 횟수</span>
+                {{-- 구간(1~2회 · 6회 이상)으로는 여섯 번과 아홉 번을 가릴 수 없어 재구매
+                     주기가 늘 같은 값으로 읽혔다. 앞으로는 횟수를 그대로 적는다.
+                     옛 값이 담긴 건은 그 줄을 함께 세워 값을 잃지 않게 한다(SR #2088). --}}
+                @php $freq = (string) ($prescription->diverticulums ?? ''); @endphp
                 <select class="form-control" id="f-diverticulums" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="01" @selected(($prescription->diverticulums ?? '') == '01')>1회 미만</option>
-                  <option value="02" @selected(($prescription->diverticulums ?? '') == '02')>1~2회</option>
-                  <option value="03" @selected(($prescription->diverticulums ?? '') == '03')>3회 ~ 4회</option>
-                  <option value="04" @selected(($prescription->diverticulums ?? '') == '04')>5회</option>
-                  <option value="05" @selected(($prescription->diverticulums ?? '') == '05')>6회 이상</option>
-                  <option value="06" @selected(($prescription->diverticulums ?? '') == '06')>N/A</option>
+                  @foreach(\App\Support\CatheterFrequency::options() as $k => $label)
+                    <option value="{{ $k }}" @selected($freq === $k)>{{ $label }}</option>
+                  @endforeach
+                  @if(\App\Support\CatheterFrequency::isLegacy($freq))
+                    <optgroup label="기존 위드웍스 값">
+                      <option value="{{ $freq }}" selected>{{ \App\Support\CatheterFrequency::LEGACY[$freq] }}</option>
+                    </optgroup>
+                  @endif
                 </select>
               </div>
               <div class="rx-field-row">

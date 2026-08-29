@@ -788,6 +788,15 @@ class wwGrid {
     // code 에디터 조회 캐시: 'colName:value' → 표시 label
     this._lookupCache   = {};
 
+    /* 조정한 열너비를 이 브라우저에 남긴다. 화면을 다시 열 때마다 코드에 적힌
+       너비로 돌아가면, 넓혀 놓고 쓰던 사람은 올 때마다 다시 넓혀야 한다.
+       열쇠는 「경로 + 담는 칸의 id」다 — 한 화면에 표가 둘이어도 갈린다.
+       id 가 없는 표는 남길 자리가 없어 그냥 지나간다. */
+    this._widthKey    = (this.el && this.el.id)
+      ? 'wwgrid.w:' + location.pathname + '#' + this.el.id
+      : null;
+    this._savedWidths = this._loadWidths();
+
     this._build();
   }
 
@@ -983,6 +992,37 @@ class wwGrid {
     this._theadEl.appendChild(tr2);
   }
 
+  /* ── 열너비 기억 ─────────────────────────────
+     브라우저가 막아 둔 경우(사생활 보호 창ㆍ쿠키 차단)에는 읽기만 해도 던진다.
+     기억하지 못하는 것은 불편할 뿐이라, 조용히 지나가고 표는 그대로 그린다. */
+  _loadWidths() {
+    if (!this._widthKey) return {};
+    try {
+      return JSON.parse(localStorage.getItem(this._widthKey) || '{}') || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  _saveWidths() {
+    if (!this._widthKey) return;
+    try {
+      localStorage.setItem(this._widthKey, JSON.stringify(this._savedWidths));
+    } catch (e) {
+      /* 남기지 못해도 이번 화면에서는 이미 넓어져 있다 */
+    }
+  }
+
+  /** 코드에 적힌 너비로 되돌린다 — 머리줄 손잡이를 두 번 누르면 이 자리로 온다 */
+  resetColumnWidth(colName) {
+    delete this._savedWidths[colName];
+    this._saveWidths();
+
+    const colDef = this.columns.find(c => c.name === colName);
+    const colEl  = this._colMap[colName];
+    if (colEl) colEl.style.width = colDef && colDef.width ? colDef.width + 'px' : '';
+  }
+
   /* ── Colgroup (컬럼 너비 관리) ──────────────── */
   _buildColgroup() {
     this._colgroupEl.innerHTML = '';
@@ -998,7 +1038,8 @@ class wwGrid {
     if (this.rowCheckbox) addCol(40);
     if (this.rowNumber)   addCol(60);   // Figma No 컬럼 60px
     this.columns.forEach(c => {
-      this._colMap[c.name] = addCol(c.width || null);
+      // 사람이 조정해 둔 것이 있으면 그것이 먼저다 — 코드의 너비는 첫 모습일 뿐이다
+      this._colMap[c.name] = addCol(this._savedWidths[c.name] || c.width || null);
     });
   }
 
@@ -1312,12 +1353,25 @@ class wwGrid {
           const finalW = parseInt(colEl.style.width) || startW;
           const colDef = this.columns.find(c => c.name === colName);
           if (colDef) colDef.width = finalW;
+          // 다음에 이 화면을 열 때도 이 너비로 선다
+          this._savedWidths[colName] = finalW;
+          this._saveWidths();
         }
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+    });
+
+    /* 손잡이를 두 번 누르면 코드에 적힌 너비로 돌아간다 — 잘못 끌어 칸이
+       뭉개졌을 때 되돌릴 길이 없으면 화면을 새로 고쳐도 그대로다. */
+    this._theadEl.addEventListener('dblclick', e => {
+      const handle = e.target.closest('.cg-resize-handle');
+      if (!handle) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.resetColumnWidth(handle.dataset.colName);
     });
 
     // 컬럼 드래그 순서 변경
