@@ -2291,7 +2291,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- 이 구획의 칸은 거래처관리가 정본이라 여기서는 읽기만 한다(rxLockPatientFields).
                  유형만 뺀다 — 이 주문이 무엇인지는 주문의 성질이지 사람의 성질이 아니다. --}}
             <div class="rx-rows" id="rx-patient-fields">
-            {{-- 명세(같은 문서 1장)는 이 구획도 가로로 읽는다. 라벨 좌표가 적은 차례 그대로다:
+            {{-- 차례는 요청서 9쪽 그대로다. 보호자 관련 칸은 「미성년」 배지가 여는
+                 팝오버에 있어 여기 서지 않는다. --}}
+              {{-- 연락이 닿는가 — 사망ㆍ수신거부ㆍ타사이동은 다음에 할 일이 서로 다르다.
+                   고치는 자리는 거래처관리다(요청서 1·9쪽). --}}
+              <div class="rx-field-row rx-row-start">
+                <span class="rx-field-label">연락 상태</span>
+                <input type="text" class="form-control" id="f-contact-status" readonly
+                       value="{{ $prescription->patient?->contactStatusLabel() }}" style="flex:1;" />
+              </div>
+              {{-- 명세(같은 문서 1장)는 이 구획도 가로로 읽는다. 라벨 좌표가 적은 차례 그대로다:
                    이름ㆍ주민등록번호ㆍ생년월일(1) / 구분(SB/SCI)ㆍ전화번호 1ㆍ전화번호 2 /
                    주소(두 칸)ㆍEmail / 송금자명ㆍ현금영수증 / 공단 등록ㆍ공단 등록일 /
                    기초 재평가 대상자ㆍ기한(반씩) / 공단 재등록 대상자ㆍ기한ㆍ신환 Master 등록일.
@@ -2482,16 +2491,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 1</span>
-                <input type="text" class="form-control" id="f-mobile"
-                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                <span class="rx-field-label">연락 선호 방식</span>
+                <input type="text" class="form-control" id="f-contact-channel" readonly
+                       value="{{ $prescription->patient?->contactChannelLabel() }}" style="flex:1;" />
+              </div>
+              {{-- 요청서 15쪽은 '성별/Email/Fax' 줄이 '주소/전화번호1/전화번호2' 줄보다 앞선다.
+                   Email 은 2열에 있던 줄을 그대로 옮겼고, 전화번호 1ㆍ2 는 2열 머리로 내려보냈다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">Email</span>
+                <input type="email" class="form-control" id="f-email"
+                       value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 2</span>
-                <input type="text" class="form-control" id="f-mobile2"
-                       value="{{ $prescription->patient?->phone ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                <span class="rx-field-label">Fax</span>
+                <input type="text" class="form-control" id="f-fax" readonly
+                       value="{{ $prescription->patient?->fax }}" style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start rx-w4" style="align-items:flex-start;">
                 <span class="rx-field-label">주소</span>
@@ -2533,12 +2547,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </div>
               </div>
-              {{-- 요청서 15쪽은 '성별/Email/Fax' 줄이 '주소/전화번호1/전화번호2' 줄보다 앞선다.
-                   Email 은 2열에 있던 줄을 그대로 옮겼고, 전화번호 1ㆍ2 는 2열 머리로 내려보냈다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">Email</span>
-                <input type="email" class="form-control" id="f-email"
-                       value="{{ $prescription->patient?->email ?? '' }}" placeholder="name@example.com" style="flex:1;" />
+                <span class="rx-field-label">전화번호 1</span>
+                <input type="text" class="form-control" id="f-mobile"
+                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">전화번호 2</span>
+                <input type="text" class="form-control" id="f-mobile2"
+                       value="{{ $prescription->patient?->phone ?? '' }}"
+                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">송금자명</span>
@@ -2590,26 +2609,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-nhis-reg-date"
                        value="{{ $prescription->patient?->nhis_reg_date ?? '' }}" style="flex:1;" />
               </div>
-              <div class="rx-field-row rx-row-start rx-w3">
-                <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
-                {{-- 「대상 여부 또는 비고」로 두었더니 사람마다 다르게 적혀 세어지지 않았다.
-                     Y/N 으로만 받는다(요청서 11쪽). 예전에 적어 둔 글은 그 건에서만 남긴다. --}}
-                @php $basic = (string) ($prescription->patient?->basic_reeval ?? ''); @endphp
-                <select class="form-control" id="f-basic-reeval" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach(\App\Models\Patient::YN as $v)
-                    <option value="{{ $v }}" @selected($basic === $v)>{{ $v }}</option>
-                  @endforeach
-                  @if($basic && !in_array($basic, \App\Models\Patient::YN, true))
-                    <optgroup label="기존 값"><option value="{{ $basic }}" selected>{{ $basic }}</option></optgroup>
-                  @endif
-                </select>
-              </div>
-              <div class="rx-field-row rx-w3">
-                <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
-                <input type="date" class="form-control" id="f-basic-reeval-due"
-                       value="{{ $prescription->patient?->basic_reeval_due ?? '' }}" style="flex:1;" />
-              </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">공단 재등록 대상자</span>
                 @php $renew = (string) ($prescription->patient?->nhis_renew ?? ''); @endphp
@@ -2633,6 +2632,44 @@ $calcDeposit  = $calcCopay + $calcShipping;
                         padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
                 </div>
               </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 위임동의 시작일</span>
+                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 위임동의 종료일</span>
+                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
+              </div>
+              <div class="rx-field-row rx-row-start rx-w3">
+                <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
+                {{-- 「대상 여부 또는 비고」로 두었더니 사람마다 다르게 적혀 세어지지 않았다.
+                     Y/N 으로만 받는다(요청서 11쪽). 예전에 적어 둔 글은 그 건에서만 남긴다. --}}
+                @php $basic = (string) ($prescription->patient?->basic_reeval ?? ''); @endphp
+                <select class="form-control" id="f-basic-reeval" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Models\Patient::YN as $v)
+                    <option value="{{ $v }}" @selected($basic === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($basic && !in_array($basic, \App\Models\Patient::YN, true))
+                    <optgroup label="기존 값"><option value="{{ $basic }}" selected>{{ $basic }}</option></optgroup>
+                  @endif
+                </select>
+              </div>
+              <div class="rx-field-row rx-w3">
+                <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
+                <input type="date" class="form-control" id="f-basic-reeval-due"
+                       value="{{ $prescription->patient?->basic_reeval_due ?? '' }}" style="flex:1;" />
+              </div>
+              {{-- 누가 만들고 누가 마지막으로 고쳤는가(요청서 9쪽). 거래처관리의 값이라
+                   여기서는 한 줄로 읽기만 한다 — 세 칸으로 벌리면 자리만 먹는다. --}}
+              <div class="rx-field-row rx-w3 rx-row-start">
+                <span class="rx-field-label">등록자 · 수정자</span>
+                <input type="text" class="form-control" id="f-patient-audit" readonly
+                       value="{{ trim(($prescription->patient?->creator?->name ?? '—')
+                                . ' · ' . ($prescription->patient?->updater?->name ?? '—')
+                                . ' · ' . ($prescription->patient?->updated_at?->format('Y-m-d H:i') ?? '—')) }}"
+                       style="flex:1;" />
+              </div>
               {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
                    병원ㆍ처방 정보 3열에 있던 줄을 그대로 옮겼다(id·값 그대로). --}}
               <div class="rx-field-row">
@@ -2640,30 +2677,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="date" class="form-control" id="f-new-patient-date" value="{{ $prescription->patient?->new_patient_date ?? '' }}" style="flex:1;" />
               </div>
             </div></div>{{-- /rx-rows --}}
-
-
-            {{-- 추가정보 탭에서 옮겨 온 두 날짜 (요청서 14쪽).
-                 위임동의가 언제부터 언제까지인지는 환자에 붙는 이야기라 여기가 제자리다.
-                 값은 병원ㆍ처방 카드의 사용 시작일ㆍ급여 종료일과 서로 비춘다. --}}
-            <div class="rx-sec-head" style="margin-top:14px;">
-              <span class="rx-sec-title">공단 위임동의</span>
-            </div>
-            <div class="rx-fit">
-            <div class="rx-cols">
-            <div class="rx-col">
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 시작일</span>
-                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
-              </div>
-            </div>
-            <div class="rx-col">
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 종료일</span>
-                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
-              </div>
-            </div>
-            <div class="rx-col"></div>
-            </div></div>{{-- /rx-cols --}}
           </div>
 
         {{-- ─────────────────────────────────────────────────
@@ -2681,9 +2694,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
               $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
             @endphp
-            <div class="rx-fit">
-            <div class="rx-cols">
-            <div class="rx-col">
+                        <div class="rx-fit">
+            {{-- 요청서 13쪽의 차례 그대로 가로로 읽는다. 세 기둥(.rx-col)에
+                 나눠 담으면 첫 기둥을 끝까지 읽고 다음으로 넘어가야 해서,
+                 한 줄로 늘어놓은 요청서의 차례와 맞출 수가 없었다.
+                 상담ㆍ환자 정보가 이미 이 얼개다(.rx-rows · 6칸 격자). --}}
+            <div class="rx-rows">
               {{-- 1열 — 검수 메모 … 요류역학검사일 11줄.
                    1차 요청서 17쪽이 적은 병원 처방 정보 순서를 따른다
                    (검수 메모·설명 / 요양병원코드·병원명 / 유형·신구매 재구매 /
@@ -2699,6 +2715,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
                      background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
+              </div>
+              <div class="rx-field-row">
+                {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
+                {{-- 별표를 뗐다. 병원명이 없다고 저장을 막으면, 처방전을 손에 들기 전에
+                     이름부터 적어 두는 흔한 순서가 막힌다 — 적을 것은 적히는 대로 남긴다. --}}
+                <span class="rx-field-label">병원명</span>
+                <div class="field-group" style="flex:1;">
+                  <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
+                </div>
               </div>
               {{-- 「검수 메모」 칸은 두지 않는다. 1차 요청서 12쪽이 상담 정보의 「메모」를
                    여기로 옮기고 이름을 바꾸라 했던 자리인데, 지금은 쓰지 않기로 했다.
@@ -2731,51 +2757,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
-                {{-- 별표를 뗐다. 병원명이 없다고 저장을 막으면, 처방전을 손에 들기 전에
-                     이름부터 적어 두는 흔한 순서가 막힌다 — 적을 것은 적히는 대로 남긴다. --}}
-                <span class="rx-field-label">병원명</span>
-                <div class="field-group" style="flex:1;">
-                  <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
-                </div>
-              </div>
-              {{-- 「판매 거래처」 칸은 두지 않는다(요청). 값(dealer_type)은 지우지 않았다 —
-                   저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">추가정보 등록일</span>
-                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->created_at?->format('Y-m-d') ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">신구매/재구매</span>
-                <select class="form-control" id="f-purchase-type" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="신구매" @selected(($prescription->purchase_type ?? '') == '신구매')>신구매</option>
-                  <option value="재구매" @selected(($prescription->purchase_type ?? '') == '재구매')>재구매</option>
-                </select>
-              </div>
-              <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
                 <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->diagnosis_date ?? '' }}" style="flex:1;min-width:0;" />
-              </div>
-              <div class="rx-field-row">
-                {{-- 「1 · 2-1 · 2-2 · 3」 네 코드를 고르던 칸이었다. 그 목록이 틀렸고,
-                     공단 목록의 상병명을 그대로 적는 자리다(청구 보조 화면의 안내와도 같다).
-                     자주 쓰는 이름은 환경 설정 → 공통 코드의 「상병 구분」에 담아 두면
-                     아래 목록에서 골라 넣을 수 있다 — 담아 둔 것이 없으면 그냥 적는다. --}}
-                <span class="rx-field-label">상병 명</span>
-                {{-- 상병명을 적는 자리는 하나다. 상병코드 줄에 같은 것을 받는 칸이 하나 더
-                     있어 어느 쪽이 맞는지 알 수 없었다 — 그쪽을 걷고 이 줄로 모았다.
-                     담기는 칸은 disease_name 이다. 위임장ㆍ공단 발송ㆍ청구 보조ㆍ정산이
-                     모두 그 칸을 읽으므로, 적는 자리를 옮긴다고 그것까지 옮길 수는 없다. --}}
-                <input type="text" class="form-control" id="f-disease" list="diseaseClassList"
-                       value="{{ $prescription->disease_name ?? '' }}" maxlength="200"
-                       placeholder="예: 신경인성 방광" style="flex:1;" />
-                <datalist id="diseaseClassList">
-                  @foreach(\App\Models\CommonCode::options('disease_class') as $dc)
-                    <option value="{{ $dc->label }}"></option>
-                  @endforeach
-                </datalist>
               </div>
               {{-- 시안 315:58 Frame 48101493 은 253 한 칸이고(값 'N31.8, R30.0, N30.8, K21.0')
                    위아래 간격이 다른 줄과 같은 8 이다. 한 칸으로 합치면 '상병명' 입력이 사라지므로
@@ -2796,6 +2779,25 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">상병코드</span>
                 <input type="text" class="form-control" id="f-disease-code"
                        value="{{ $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:1;min-width:0;" />
+              </div>
+              <div class="rx-field-row">
+                {{-- 「1 · 2-1 · 2-2 · 3」 네 코드를 고르던 칸이었다. 그 목록이 틀렸고,
+                     공단 목록의 상병명을 그대로 적는 자리다(청구 보조 화면의 안내와도 같다).
+                     자주 쓰는 이름은 환경 설정 → 공통 코드의 「상병 구분」에 담아 두면
+                     아래 목록에서 골라 넣을 수 있다 — 담아 둔 것이 없으면 그냥 적는다. --}}
+                <span class="rx-field-label">상병 명</span>
+                {{-- 상병명을 적는 자리는 하나다. 상병코드 줄에 같은 것을 받는 칸이 하나 더
+                     있어 어느 쪽이 맞는지 알 수 없었다 — 그쪽을 걷고 이 줄로 모았다.
+                     담기는 칸은 disease_name 이다. 위임장ㆍ공단 발송ㆍ청구 보조ㆍ정산이
+                     모두 그 칸을 읽으므로, 적는 자리를 옮긴다고 그것까지 옮길 수는 없다. --}}
+                <input type="text" class="form-control" id="f-disease" list="diseaseClassList"
+                       value="{{ $prescription->disease_name ?? '' }}" maxlength="200"
+                       placeholder="예: 신경인성 방광" style="flex:1;" />
+                <datalist id="diseaseClassList">
+                  @foreach(\App\Models\CommonCode::options('disease_class') as $dc)
+                    <option value="{{ $dc->label }}"></option>
+                  @endforeach
+                </datalist>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">요류역학검사일</span>
@@ -2829,28 +2831,160 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;"></span>
                 </div>
               </div>
-              {{-- 이 두 줄은 3열 끝에 있었다. 3열만 두 줄 길어 오른쪽 아래에 홀로
-                   남았고, 왼쪽에는 빈자리가 넓게 났다 — 「오른쪽으로 치우쳤다」고
-                   보이던 까닭이다. 1열ㆍ2열 끝으로 한 줄씩 옮겨 세 기둥의 키를 맞춘다.
-                   둘은 나란한 한 줄에 앉아 여전히 짝으로 읽힌다. --}}
-<div class="rx-field-row">
-                <span class="rx-field-label">다음 재구매 가능일</span>
-                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
-                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
-                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
-                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
-                     값은 제 컬럼에서 읽는다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
-                  <button type="button" onclick="calcNextRepurchase(true)"
-                          title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
-                    <i class="fa-solid fa-rotate"></i> 자동
-                  </button>
+              <div class="rx-field-row">
+                <span class="rx-field-label">신구매/재구매</span>
+                <select class="form-control" id="f-purchase-type" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="신구매" @selected(($prescription->purchase_type ?? '') == '신구매')>신구매</option>
+                  <option value="재구매" @selected(($prescription->purchase_type ?? '') == '재구매')>재구매</option>
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">1일 처방 개수</span>
+                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">총 처방일수</span>
+                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">총계</span>
+                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->total_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전 발행일</span>
+                <div class="field-group" style="flex:1;">
+                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->issued_date?->format('Y-m-d') ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
+                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
               </div>
-            </div>
-            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전 사용 기간 (교부일로부터)</span>
+                {{-- 시안은 입력영역 안 부속 사이를 전부 8 로 둔다(상담 번호·상담 일자·주소·재구매일 모두 8).
+                     '일' 글자는 시안에 없지만 단위 안내라 남기고 간격만 4 → 8 로 맞췄다.
+                     값은 제 컬럼에서 읽는다. --}}
+                <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
+                  <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-600);white-space:nowrap;">일</span>
+                </div>
+              </div>
+              {{-- 요청서 17쪽은 '처방전발행일 / 처방전사용기간 / 처방전종료일'을 한 줄에 둔다.
+                   3열 끝에 있던 '종료일'(f-rx-end-date)을 사용 기간 바로 뒤로 올렸다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전종료일</span>
+                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->rx_end_date ?? '' }}" style="flex:1;min-width:0;" />
+              </div>
+              {{-- 전문과목 (요청서 12·13쪽). 자유롭게 적게 두었더니 「비뇨기과」ㆍ
+                   「비뇨의학과」ㆍ「비뇨기과의원」이 한 표에 섞였다. --}}
+              @php $spec = (string) ($prescription->specialty ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">전문과목</span>
+                <select class="form-control" id="f-specialty" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\OrderReason::SPECIALTIES as $v)
+                    <option value="{{ $v }}" @selected($spec === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($spec && !in_array($spec, \App\Support\OrderReason::SPECIALTIES, true))
+                    <optgroup label="기존 값"><option value="{{ $spec }}" selected>{{ $spec }}</option></optgroup>
+                  @endif
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">담당 의사명</span>
+                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
+              </div>
+              {{-- 의사면허번호 — 칸(license_no)은 처음부터 있었고 OCR 이 읽어 넣기도 했지만
+                   화면에 적을 자리가 없었다. 공단 청구 도움 화면이 이 값을 쓴다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">의사면허번호</span>
+                <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}" placeholder="예: 56553" style="flex:1;" />
+              </div>
+              {{-- 사유 (요청서 7쪽 · 위드웍스와 같은 목록).
+                   자유롭게 적게 두면 「미입금」과 「입금 안 됨」이 한 표에 섞여 세어지지
+                   않는다. 진행중과 취소를 갈라 둔다 — 앞엣것은 살아 있는 건이다. --}}
+              @php $reason = (string) ($prescription->reason ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">사유</span>
+                <select class="form-control" id="f-reason" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\OrderReason::groups() as $group => $items)
+                    <optgroup label="{{ $group }}">
+                      @foreach($items as $v)
+                        <option value="{{ $v }}" @selected($reason === $v)>{{ $v }}</option>
+                      @endforeach
+                    </optgroup>
+                  @endforeach
+                  @if($reason && !\App\Support\OrderReason::isKnown($reason))
+                    <optgroup label="기존 값"><option value="{{ $reason }}" selected>{{ $reason }}</option></optgroup>
+                  @endif
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">주문 담당자</span>
+                {{-- 적어 두는 값은 이름이다. 손으로 치던 칸이라 사람마다 「김선미」ㆍ「선미」로
+                     갈렸다 — 고르는 칸으로 바꿔 한 가지로 모은다.
+                     처음 여는 건은 지금 이 화면을 보고 있는 사람으로 선다. --}}
+                @php
+                  $omCur  = ($prescription->order_manager ?? null) ?: auth()->user()->name;
+                  $omList = collect($orderManagers ?? []);
+                  // 목록에 없는 이름이 적혀 있으면(그만둔 사람 등) 그 이름도 함께 둔다
+                  if ($omCur && !$omList->contains($omCur)) { $omList = $omList->prepend($omCur); }
+                @endphp
+                <select class="form-control" id="f-order-manager" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach($omList as $om)
+                    <option value="{{ $om }}" @selected($omCur === $om)>{{ $om }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">Five/Six</span>
+                <select class="form-control" id="f-five-program" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="00" @selected(($prescription->five_program ?? '') == '00')>N/A</option>
+                  <option value="05" @selected(($prescription->five_program ?? '') == '05')>Five</option>
+                  <option value="06" @selected(($prescription->five_program ?? '') == '06')>Six</option>
+                </select>
+              </div>
+              {{-- 3열 — 일일 도뇨 횟수 … 재구매일 11줄. 1차 요청서 17쪽 순서를 따른다
+                   (… 일일 도뇨횟수·Five/Six·Five/Six(110days) /
+                    주문 담당자·System Operator·환급해당기관 / 결제일·구입일·사용 시작일 /
+                    급여종료일·다음 재구매 가능일).
+                   'System Operator'는 화면에 없는 항목이라 만들지 않았다.
+                   '재구매일'은 요청서에 없지만 개발이 넣은 자동계산 줄이라 끝에 이어 남긴다.
+                   시안 315:58 Frame 48101491 (361×392). --}}
+              {{-- 1차 요청서 14·16쪽 «일일 도뇨 횟수 :병원 처방 정보로 이동».
+                   환자 정보 2열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로). --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">일일 도뇨 횟수</span>
+                {{-- 구간(1~2회 · 6회 이상)으로는 여섯 번과 아홉 번을 가릴 수 없어 재구매
+                     주기가 늘 같은 값으로 읽혔다. 앞으로는 횟수를 그대로 적는다.
+                     옛 값이 담긴 건은 그 줄을 함께 세워 값을 잃지 않게 한다(SR #2088). --}}
+                @php $freq = (string) ($prescription->diverticulums ?? ''); @endphp
+                <select class="form-control" id="f-diverticulums" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\CatheterFrequency::options() as $k => $label)
+                    <option value="{{ $k }}" @selected($freq === $k)>{{ $label }}</option>
+                  @endforeach
+                  @if(\App\Support\CatheterFrequency::isLegacy($freq))
+                    <optgroup label="기존 위드웍스 값">
+                      <option value="{{ $freq }}" selected>{{ \App\Support\CatheterFrequency::LEGACY[$freq] }}</option>
+                    </optgroup>
+                  @endif
+                </select>
+              </div>
+              {{-- 1차 요청서 14·16쪽 «Five(110days) … 환자 정보 아닌, 병원 처방정보 이동».
+                   여기 있던 같은 이름의 칸(f-five-2)은 서버에서 값을 읽지 않고 f-five 를
+                   비추기만 하던 그림자였다(저장 payload 는 f-five 하나만 보냈다).
+                   그래서 그림자를 지우고 값을 쥔 원래 칸을 그 자리에 옮겨 놓았다 —
+                   화면에 보이는 항목 수는 그대로고, 저장되는 값은 하나로 분명해진다. --}}
+              <div class="rx-field-row">
+                {{-- 라벨 칸은 100 이라 이 이름은 한 줄에 서지 못한다. 그냥 두면
+                     브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
+                     아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
+                <span class="rx-field-label">Five/Six<br>(110days)</span>
+                <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
+              </div>
               {{-- 2열 — 자격 … 사유 11줄. 1차 요청서 17쪽 순서를 따른다
                    (… 요류역학검사일·자격 / 1일 처방개수·총 처방기간·총계 /
                     처방전발행일·처방전사용기간·처방전종료일 / 담당 의사명·진료과목·사유 …).
@@ -2899,178 +3033,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   @include('prescriptions._billing_office_pop')
                 </div>
               </div>
-              <div class="rx-field-row" id="row-local-gov" style="{{ ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL ? '' : 'display:none;' }}">
-                <span class="rx-field-label">관할 지자체</span>
-                <input type="text" class="form-control" id="f-local-gov"
-                       value="{{ $prescription->local_gov ?? '' }}"
-                       placeholder="예: 서울특별시 강남구" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">1일 처방 개수</span>
-                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">총 처방일수</span>
-                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">총계</span>
-                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->total_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">처방전 발행일</span>
-                <div class="field-group" style="flex:1;">
-                  <input type="date" class="form-control has-ok" id="f-date" value="{{ $prescription->issued_date?->format('Y-m-d') ?? $prescription->issued_date?->format('Y-m-d') ?? '' }}" style="min-width:0;" onchange="calcNextRepurchase()" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
-                </div>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">처방전 사용 기간 (교부일로부터)</span>
-                {{-- 시안은 입력영역 안 부속 사이를 전부 8 로 둔다(상담 번호·상담 일자·주소·재구매일 모두 8).
-                     '일' 글자는 시안에 없지만 단위 안내라 남기고 간격만 4 → 8 로 맞췄다.
-                     값은 제 컬럼에서 읽는다. --}}
-                <div style="display:flex;align-items:center;gap:8px;flex:1;">
-                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
-                  <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-600);white-space:nowrap;">일</span>
-                </div>
-              </div>
-              {{-- 요청서 17쪽은 '처방전발행일 / 처방전사용기간 / 처방전종료일'을 한 줄에 둔다.
-                   3열 끝에 있던 '종료일'(f-rx-end-date)을 사용 기간 바로 뒤로 올렸다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">종료일</span>
-                <input type="date" class="form-control" id="f-rx-end-date" value="{{ $prescription->rx_end_date ?? '' }}" style="flex:1;min-width:0;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">담당 의사명</span>
-                <input type="text" class="form-control" id="f-doctor" value="{{ $prescription->doctor_name ?? '' }}" placeholder="의사 성명" style="flex:1;" />
-              </div>
-              {{-- 의사면허번호 — 칸(license_no)은 처음부터 있었고 OCR 이 읽어 넣기도 했지만
-                   화면에 적을 자리가 없었다. 공단 청구 도움 화면이 이 값을 쓴다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">의사면허번호</span>
-                <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}" placeholder="예: 56553" style="flex:1;" />
-              </div>
-              {{-- 전문과목 (요청서 12·13쪽). 자유롭게 적게 두었더니 「비뇨기과」ㆍ
-                   「비뇨의학과」ㆍ「비뇨기과의원」이 한 표에 섞였다. --}}
-              @php $spec = (string) ($prescription->specialty ?? ''); @endphp
-              <div class="rx-field-row">
-                <span class="rx-field-label">전문과목</span>
-                <select class="form-control" id="f-specialty" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach(\App\Support\OrderReason::SPECIALTIES as $v)
-                    <option value="{{ $v }}" @selected($spec === $v)>{{ $v }}</option>
-                  @endforeach
-                  @if($spec && !in_array($spec, \App\Support\OrderReason::SPECIALTIES, true))
-                    <optgroup label="기존 값"><option value="{{ $spec }}" selected>{{ $spec }}</option></optgroup>
-                  @endif
-                </select>
-              </div>
-              {{-- 사유 (요청서 7쪽 · 위드웍스와 같은 목록).
-                   자유롭게 적게 두면 「미입금」과 「입금 안 됨」이 한 표에 섞여 세어지지
-                   않는다. 진행중과 취소를 갈라 둔다 — 앞엣것은 살아 있는 건이다. --}}
-              @php $reason = (string) ($prescription->reason ?? ''); @endphp
-              <div class="rx-field-row">
-                <span class="rx-field-label">사유</span>
-                <select class="form-control" id="f-reason" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach(\App\Support\OrderReason::groups() as $group => $items)
-                    <optgroup label="{{ $group }}">
-                      @foreach($items as $v)
-                        <option value="{{ $v }}" @selected($reason === $v)>{{ $v }}</option>
-                      @endforeach
-                    </optgroup>
-                  @endforeach
-                  @if($reason && !\App\Support\OrderReason::isKnown($reason))
-                    <optgroup label="기존 값"><option value="{{ $reason }}" selected>{{ $reason }}</option></optgroup>
-                  @endif
-                </select>
-              </div>
-<div class="rx-field-row">
-                <span class="rx-field-label">재구매일</span>
-                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
-                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
-                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
-                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
-                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
-                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
-                <div class="rx-date-flow">
-                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
-                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
-                  <input type="text" class="form-control" id="f-repurchase-date" readonly
-                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
-                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
-                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
-                </div>
-                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
-              </div>
-            </div>
-            <div class="rx-col">
-              {{-- 3열 — 일일 도뇨 횟수 … 재구매일 11줄. 1차 요청서 17쪽 순서를 따른다
-                   (… 일일 도뇨횟수·Five/Six·Five/Six(110days) /
-                    주문 담당자·System Operator·환급해당기관 / 결제일·구입일·사용 시작일 /
-                    급여종료일·다음 재구매 가능일).
-                   'System Operator'는 화면에 없는 항목이라 만들지 않았다.
-                   '재구매일'은 요청서에 없지만 개발이 넣은 자동계산 줄이라 끝에 이어 남긴다.
-                   시안 315:58 Frame 48101491 (361×392). --}}
-              {{-- 1차 요청서 14·16쪽 «일일 도뇨 횟수 :병원 처방 정보로 이동».
-                   환자 정보 2열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로). --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">일일 도뇨 횟수</span>
-                {{-- 구간(1~2회 · 6회 이상)으로는 여섯 번과 아홉 번을 가릴 수 없어 재구매
-                     주기가 늘 같은 값으로 읽혔다. 앞으로는 횟수를 그대로 적는다.
-                     옛 값이 담긴 건은 그 줄을 함께 세워 값을 잃지 않게 한다(SR #2088). --}}
-                @php $freq = (string) ($prescription->diverticulums ?? ''); @endphp
-                <select class="form-control" id="f-diverticulums" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach(\App\Support\CatheterFrequency::options() as $k => $label)
-                    <option value="{{ $k }}" @selected($freq === $k)>{{ $label }}</option>
-                  @endforeach
-                  @if(\App\Support\CatheterFrequency::isLegacy($freq))
-                    <optgroup label="기존 위드웍스 값">
-                      <option value="{{ $freq }}" selected>{{ \App\Support\CatheterFrequency::LEGACY[$freq] }}</option>
-                    </optgroup>
-                  @endif
-                </select>
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">Five/Six</span>
-                <select class="form-control" id="f-five-program" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="00" @selected(($prescription->five_program ?? '') == '00')>N/A</option>
-                  <option value="05" @selected(($prescription->five_program ?? '') == '05')>Five</option>
-                  <option value="06" @selected(($prescription->five_program ?? '') == '06')>Six</option>
-                </select>
-              </div>
-              {{-- 1차 요청서 14·16쪽 «Five(110days) … 환자 정보 아닌, 병원 처방정보 이동».
-                   여기 있던 같은 이름의 칸(f-five-2)은 서버에서 값을 읽지 않고 f-five 를
-                   비추기만 하던 그림자였다(저장 payload 는 f-five 하나만 보냈다).
-                   그래서 그림자를 지우고 값을 쥔 원래 칸을 그 자리에 옮겨 놓았다 —
-                   화면에 보이는 항목 수는 그대로고, 저장되는 값은 하나로 분명해진다. --}}
-              <div class="rx-field-row">
-                {{-- 라벨 칸은 100 이라 이 이름은 한 줄에 서지 못한다. 그냥 두면
-                     브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
-                     아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
-                <span class="rx-field-label">Five/Six<br>(110days)</span>
-                <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">주문 담당자</span>
-                {{-- 적어 두는 값은 이름이다. 손으로 치던 칸이라 사람마다 「김선미」ㆍ「선미」로
-                     갈렸다 — 고르는 칸으로 바꿔 한 가지로 모은다.
-                     처음 여는 건은 지금 이 화면을 보고 있는 사람으로 선다. --}}
-                @php
-                  $omCur  = ($prescription->order_manager ?? null) ?: auth()->user()->name;
-                  $omList = collect($orderManagers ?? []);
-                  // 목록에 없는 이름이 적혀 있으면(그만둔 사람 등) 그 이름도 함께 둔다
-                  if ($omCur && !$omList->contains($omCur)) { $omList = $omList->prepend($omCur); }
-                @endphp
-                <select class="form-control" id="f-order-manager" style="flex:1;">
-                  <option value="">선택</option>
-                  @foreach($omList as $om)
-                    <option value="{{ $om }}" @selected($omCur === $om)>{{ $om }}</option>
-                  @endforeach
-                </select>
-              </div>
               {{-- 「환급 해당 기관」 칸은 두지 않는다(요청). 값(special_case)은 지우지
                    않았다 — 저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
               <div class="rx-field-row">
@@ -3094,17 +3056,57 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        value="{{ $agreeEnd }}"
                        style="flex:1;" />
               </div>
-                            {{-- '진단확인일'(f-diag-confirm-2)은 1열 '진단 확인일'(f-diagnosis-date)을
-                   비추기만 하던 그림자였다 — 서버에서 값을 받지도(value 바인딩 없음),
-                   저장 payload 에 실리지도 않았다. 1차 요청서 17쪽도 '진단 확인일' 하나만
-                   적으므로, 값을 쥔 1열 칸만 남기고 그림자는 걷어냈다. --}}
-                            {{-- '소득공제' 줄은 환자 정보 구획의 '현금영수증' 줄로 옮겼다
-                   (시안 315:58 Frame 48101500 이 두 값을 한 줄에 둔다).
-                   '종료일'(f-rx-end-date)은 요청서 17쪽 순서대로 2열 '처방전 사용 기간' 뒤로,
-                   '신환 Master 등록일'(f-new-patient-date)은 요청서 14·16쪽대로
-                   환자 정보 3열 끝으로 옮겼다. 둘 다 id·값 그대로다. --}}
-            </div>
-            </div></div>{{-- /rx-cols --}}
+              {{-- 「판매 거래처」 칸은 두지 않는다(요청). 값(dealer_type)은 지우지 않았다 —
+                   저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">추가정보 등록일</span>
+                <input type="text" class="form-control" id="f-add-reg-date" value="{{ $prescription->created_at?->format('Y-m-d') ?? '' }}" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));" />
+              </div>
+              {{-- 이 두 줄은 3열 끝에 있었다. 3열만 두 줄 길어 오른쪽 아래에 홀로
+                   남았고, 왼쪽에는 빈자리가 넓게 났다 — 「오른쪽으로 치우쳤다」고
+                   보이던 까닭이다. 1열ㆍ2열 끝으로 한 줄씩 옮겨 세 기둥의 키를 맞춘다.
+                   둘은 나란한 한 줄에 앉아 여전히 짝으로 읽힌다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">다음 재구매 가능일</span>
+                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
+                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
+                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
+                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
+                     값은 제 컬럼에서 읽는다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
+                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
+                  <button type="button" onclick="calcNextRepurchase(true)"
+                          title="처방전발행일 + 처방기간(일) + 1일"
+                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
+                    <i class="fa-solid fa-rotate"></i> 자동
+                  </button>
+                </div>
+              </div>
+              <div class="rx-field-row" id="row-local-gov" style="{{ ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL ? '' : 'display:none;' }}">
+                <span class="rx-field-label">관할 지자체</span>
+                <input type="text" class="form-control" id="f-local-gov"
+                       value="{{ $prescription->local_gov ?? '' }}"
+                       placeholder="예: 서울특별시 강남구" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">재구매일</span>
+                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
+                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
+                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
+                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
+                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
+                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
+                <div class="rx-date-flow">
+                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
+                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
+                  <input type="text" class="form-control" id="f-repurchase-date" readonly
+                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
+                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
+                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                </div>
+                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
+              </div>
+            </div></div>{{-- /rx-rows --}}
 
             {{-- 추가정보 탭에서 옮겨 온 세 칸 (요청서 14쪽).
                  하루 몇 개를 쓰는지ㆍ언제까지 마감인지ㆍ마지막에 몇 개로 확정했는지는
@@ -6972,7 +6974,10 @@ window.HELP_TOUR_STEPS = [
 
      칸마다 readonly 를 박지 않고 한자리에서 건다 — 칸이 스물이 넘어 하나씩 적으면
      새 칸을 늘릴 때마다 빠뜨린다. 유형과 조회ㆍ상담 단추는 뺀다. */
-  const RX_PATIENT_UNLOCKED = ['f-acc-add-type'];
+  /* 유형은 병원ㆍ처방 정보로 옮겼으니 여기 없다. 공단 위임동의 두 날짜는 이 구획에
+     서 있지만 처방에 붙는 값이라 잠그지 않는다 — 사람의 성질이 아니라 이 건의
+     동의가 언제부터 언제까지인가다. */
+  const RX_PATIENT_UNLOCKED = ['f-agree-start-2', 'f-agree-end-2'];
 
   function rxLockPatientFields() {
     const box = document.getElementById('rx-patient-fields');
