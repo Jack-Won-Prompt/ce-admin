@@ -148,6 +148,9 @@
   /* 2단 밖에 홀로 선 줄도 시안과 같은 444 폭을 지킨다(912 의 절반 - gap 12) */
   #addModal .modal-body > .form-group { width:calc(50% - 12px); }
   #addModal .modal-body > .form-group:has(textarea) { width:100%; }
+  /* 주소는 두 열을 다 쓴다. 절반(444)에 우편번호ㆍ도로명ㆍ찾기 단추를 함께 넣으면
+     도로명 칸이 150 남짓으로 눌려, 찾아 넣은 주소가 늘 끝에서 잘려 보였다. */
+  #addModal .modal-body > .form-group.wide { width:100%; }
 
   /* 패널 탭(조회결과/상세내용) */
   /* 기간 라디오 — Figma 114:4778: pill 146×32 · r8 · bd 1px gray-200 · pad 0/12 · gap 8,
@@ -489,18 +492,23 @@
 
       {{-- 주소는 주문 등록·환자 상세와 같은 구성이다 — 우편번호·도로명은 찾아서 채우고
            상세만 사람이 적는다. 한 칸에 몰아 적으면 주문 낼 때 다시 갈라야 한다. --}}
-      <div class="form-group" style="margin-bottom:8px;">
-        <label class="form-label">주소</label>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-          <input type="text" class="form-control" id="add-postcode" readonly placeholder="우편번호"
-                 style="flex:0 0 92px;background:var(--gray-50);cursor:default;" />
-          <input type="text" class="form-control" id="add-address" readonly placeholder="도로명 주소"
-                 style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
-          <button type="button" class="ds-btn" onclick="addFindAddress()" style="flex:0 0 auto;">
-            <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
-          </button>
+      {{-- 이 줄만 두 열을 다 쓴다. 라벨은 왼쪽에 두고 오른쪽을 세로로 쌓아 두 줄을
+           만든다 — .form-group 이 가로 flex 라, 안의 줄에 자리를 정해 주지 않으면
+           도로명 칸이 40px 까지 눌리고 상세 주소가 같은 줄로 올라온다. --}}
+      <div class="form-group wide" style="margin-bottom:8px;align-items:flex-start;">
+        <label class="form-label" style="padding-top:8px;">주소</label>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" class="form-control" id="add-postcode" readonly placeholder="우편번호"
+                   style="flex:0 0 92px;background:var(--gray-50);cursor:default;" />
+            <input type="text" class="form-control" id="add-address" readonly placeholder="도로명 주소"
+                   style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+            <button type="button" class="ds-btn" onclick="addFindAddress()" style="flex:0 0 auto;">
+              <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
+            </button>
+          </div>
+          <input type="text" class="form-control" id="add-address-detail" placeholder="상세 주소" />
         </div>
-        <input type="text" class="form-control" id="add-address-detail" placeholder="상세 주소" />
       </div>
 
       {{-- ── 돈 ──────────────────────────────────────────
