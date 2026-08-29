@@ -2103,11 +2103,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ담당자">
           </div>
           <div class="ol-field">
-            <label class="ds-field-label">접수일 (부터)</label>
+            <label class="ds-field-label">등록일 (부터)</label>
             <input type="date" id="ol-from" class="form-control">
           </div>
           <div class="ol-field">
-            <label class="ds-field-label">접수일 (까지)</label>
+            <label class="ds-field-label">등록일 (까지)</label>
             <input type="date" id="ol-to" class="form-control">
           </div>
           <div class="ol-field">
@@ -2116,6 +2116,36 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <option value="">전체</option>
               <option value="__none__">미배정</option>
             </select>
+          </div>
+          {{-- 요청서 8쪽이 적은 조회키 — 유형ㆍ신구매/재구매ㆍ병원명ㆍ처방전종료일ㆍ
+               다음재구매가능일. 선택지는 받아 둔 줄에서 뽑는다(없는 값을 고르게 두지 않는다). --}}
+          <div class="ol-field">
+            <label class="ds-field-label">유형</label>
+            <select id="ol-rxtype" class="form-control form-select">
+              <option value="">전체</option>
+              <option value="처방전">처방전</option>
+              <option value="처방외">처방외</option>
+            </select>
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">신구매/재구매</label>
+            <select id="ol-purchase" class="form-control form-select">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">병원명</label>
+            <select id="ol-hospital" class="form-control form-select">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">처방전종료일 (까지)</label>
+            <input type="date" id="ol-rxend" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">다음재구매가능일 (까지)</label>
+            <input type="date" id="ol-nextrepur" class="form-control">
           </div>
           <div class="ol-actions">
             <button type="button" class="btn btn-outline btn-sm" onclick="olReset()">초기화</button>
@@ -9191,7 +9221,9 @@ window.HELP_TOUR_STEPS = [
         el.appendChild(o);
       });
     };
-    fill('ol-manager', OL_ROWS.map(r => r.manager));
+    fill('ol-manager',  OL_ROWS.map(r => r.manager));
+    fill('ol-purchase', OL_ROWS.map(r => r.purchase));
+    fill('ol-hospital', OL_ROWS.map(r => r.hospital));
 
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
@@ -9202,7 +9234,8 @@ window.HELP_TOUR_STEPS = [
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
-        { header: '접수일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
+        // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
+        { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
         { header: '환자',      name: 'patient',   width: 90,  sortable: true },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
            「이건 아직 아무도 맡지 않았다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
@@ -9215,6 +9248,30 @@ window.HELP_TOUR_STEPS = [
           } },
         { header: '처방여부',  name: 'rx_type',   width: 90,  align: 'center', sortable: true },
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+
+        /* ── 요청서 8쪽이 적은 칸들 ────────────────────────────
+           오른쪽으로 넘쳐도 좋으니 한 건씩 열어 보지 않고 가릴 수 있어야 한다는 요청이다.
+           차례는 요청서가 적은 그대로다. */
+        { header: '신구매/재구매',  name: 'purchase',    width: 110, align: 'center', sortable: true },
+        { header: '처방전 발행일',  name: 'issued',      width: 120, align: 'center', sortable: true },
+        { header: '총 처방일수',    name: 'total_days',  width: 100, align: 'right',  sortable: true },
+        { header: '담당의사',       name: 'doctor',      width: 90,  sortable: true },
+        { header: '병원명',         name: 'hospital',    width: 150, sortable: true },
+        { header: '다음재구매가능일', name: 'next_repur', width: 130, align: 'center', sortable: true },
+        { header: 'Five/Six(110days)', name: 'five110',  width: 140, align: 'center' },
+        { header: '주민등록번호',   name: 'resident_no', width: 130 },
+        { header: '자격',           name: 'benefit',     width: 100, align: 'center', sortable: true },
+        { header: 'Five/Six',       name: 'five',        width: 90,  align: 'center', sortable: true },
+        { header: '송금자명',       name: 'remitter',    width: 100 },
+        { header: '처방전종료일',   name: 'rx_end',      width: 120, align: 'center', sortable: true },
+        { header: '처방전 사용기간', name: 'rx_period',  width: 120, align: 'right' },
+        { header: '판매상태',       name: 'sale_status', width: 110, align: 'center', sortable: true },
+        { header: '출고상태',       name: 'ship_status', width: 110, align: 'center', sortable: true },
+        { header: '상병코드',       name: 'disease_code', width: 110 },
+        { header: '사유',           name: 'reason',      width: 200, sortable: true },
+        { header: '결제수단',       name: 'pay_method',  width: 100, align: 'center', sortable: true },
+        { header: '등록담당자',     name: 'creator',     width: 100, align: 'center', sortable: true },
+        { header: '수정담당자',     name: 'updater',     width: 100, align: 'center', sortable: true },
         /* 빈 건을 치우는 자리. 처방전도 안 올라왔고 창고에도 서지 않은 줄에만 단추가 선다 —
            그 밖에는 무엇이든 실제로 일어난 일이 있어 지울 것이 아니다. */
         { header: '', name: 'erasable', width: 56, align: 'center', sortable: false, exportable: false,
@@ -9278,10 +9335,17 @@ window.HELP_TOUR_STEPS = [
     const from    = document.getElementById('ol-from')?.value ?? '';
     const to      = document.getElementById('ol-to')?.value ?? '';
     const manager = document.getElementById('ol-manager')?.value ?? '';
+    // 요청서 8쪽이 적은 조회키
+    const rxtype    = document.getElementById('ol-rxtype')?.value    ?? '';
+    const purchase  = document.getElementById('ol-purchase')?.value  ?? '';
+    const hospital  = document.getElementById('ol-hospital')?.value  ?? '';
+    const rxend     = document.getElementById('ol-rxend')?.value     ?? '';
+    const nextrepur = document.getElementById('ol-nextrepur')?.value ?? '';
 
     const rows = OL_ROWS.filter(r => {
       if (q) {
-        const hay = [r.order_no, r.rx_number, r.patient, r.manager].join(' ').toLowerCase();
+        const hay = [r.order_no, r.rx_number, r.patient, r.manager, r.hospital, r.doctor]
+                      .join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (from && (r.sold_at || '') < from) return false;
@@ -9289,6 +9353,15 @@ window.HELP_TOUR_STEPS = [
       // 「미배정」은 값이 아니라 값이 없다는 뜻이라 따로 본다
       if (manager === '__none__' && r.manager) return false;
       if (manager && manager !== '__none__' && r.manager !== manager) return false;
+
+      if (rxtype   && r.rx_type  !== rxtype)   return false;
+      if (purchase && r.purchase !== purchase) return false;
+      if (hospital && r.hospital !== hospital) return false;
+
+      /* 날짜 둘은 「그날까지」로 본다 — 처방전이 언제 끝나는지ㆍ다음 재구매가 언제인지를
+         보는 까닭은 「곧 닥치는 것」을 추리기 위해서다. 비어 있는 건은 걸리지 않는다. */
+      if (rxend     && (!r.rx_end     || r.rx_end     > rxend))     return false;
+      if (nextrepur && (!r.next_repur || r.next_repur > nextrepur)) return false;
       return true;
     });
 
@@ -9297,7 +9370,8 @@ window.HELP_TOUR_STEPS = [
   }
 
   function olReset() {
-    ['ol-q', 'ol-from', 'ol-to', 'ol-manager'].forEach(id => {
+    ['ol-q', 'ol-from', 'ol-to', 'ol-manager',
+     'ol-rxtype', 'ol-purchase', 'ol-hospital', 'ol-rxend', 'ol-nextrepur'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });

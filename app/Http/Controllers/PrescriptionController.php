@@ -1355,38 +1355,71 @@ class PrescriptionController extends Controller
         $orderListLimit = 500;
         $orderListTotal = \App\Models\Order::whereDoesntHave('returns')
             ->where('status', 'pending')->count();
-        $orderListRows  = \App\Models\Order::with(['patient', 'prescription.assignedUser'])
+        $orderListRows  = \App\Models\Order::with([
+                'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
+            ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
             ->latest('id')
             ->limit($orderListLimit)
             ->get()
-            ->map(fn ($o) => [
+            ->map(function ($o) {
+                $rx = $o->prescription;
+                $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
+
+                return [
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
-                'rx_number' => $o->prescription?->rx_number ?? '',
-                'patient'   => $o->patient?->name ?? ($o->prescription?->patient_name_ocr ?? ''),
+                'rx_number' => $rx?->rx_number ?? '',
+                'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
                 // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
-                'manager'   => $o->prescription?->assignedUser?->name ?? '',
-                /* 처방여부 — 처방전이냐 아니냐. 유형(원내ㆍ원외ㆍ처방외) 가운데 처방외만
-                   「비처방」이다. 아직 고르지 않았으면 비워 둔다 — 모르는 것을 「처방전」이라
-                   적어 두면 그 말이 근거처럼 읽힌다. */
-                'rx_type'   => match ((string) ($o->prescription?->counsel_acc_add_type ?? '')) {
-                                   '20'    => '비처방',
+                'manager'   => $rx?->assignedUser?->name ?? '',
+                /* 처방여부 — 처방전이냐 아니냐. 유형 가운데 처방외만 「처방외」다.
+                   아직 고르지 않았으면 비워 둔다 — 모르는 것을 「처방전」이라 적어 두면
+                   그 말이 근거처럼 읽힌다. */
+                'rx_type'   => match ((string) ($rx?->counsel_acc_add_type ?? '')) {
+                                   '20'    => '처방외',
                                    '10', '30' => '처방전',
                                    default => '',
                                },
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 /* 지울 수 있는 건인가 — 처방전도 안 올라왔고 창고에도 서지 않은 자리다.
                    서버가 다시 한 번 따지므로 여기 값은 「단추를 세울지」에만 쓴다. */
-                'erasable'  => ! $o->prescription?->image_path && ! $o->withworks_so_no,
-                'rx_url'    => $o->prescription ? route('prescriptions.destroyEmpty', $o->prescription) : null,
+                'erasable'  => ! $rx?->image_path && ! $o->withworks_so_no,
+                'rx_url'    => $rx ? route('prescriptions.destroyEmpty', $rx) : null,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
-                'url'       => $o->prescription
-                                 ? route('prescriptions.show', $o->prescription) . '?claim=1'
-                                 : null,
-            ])->values();
+                'url'       => $rx ? route('prescriptions.show', $rx) . '?claim=1' : null,
+
+                /* ── 요청서 8쪽이 적은 칸들 ────────────────────────
+                   한 건씩 열어 보지 않고도 「무엇을 먼저 해야 하는가」를 가릴 수 있어야
+                   한다 — 처방전이 언제 끝나는지, 다음 재구매가 언제인지, 왜 멈춰 있는지. */
+                'purchase'    => $rx?->purchase_type ?? '',
+                'issued'      => $d($rx?->issued_date),
+                'total_days'  => $rx?->total_days ?? '',
+                'doctor'      => $rx?->doctor_name ?? '',
+                'hospital'    => $rx?->hospital_name ?? '',
+                'next_repur'  => $d($rx?->next_repurchase ?: $rx?->repurchase_date),
+                'five110'     => $rx?->five_110days ?? '',
+                'resident_no' => $rx?->resident_no_ocr_masked ?? $o->patient?->masked_resident_no ?? '',
+                'benefit'     => $rx?->benefit_class ?? '',
+                'five'        => match ((string) ($rx?->five_program ?? '')) {
+                                     '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
+                                 },
+                // 송금자명 — 돈을 보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다)
+                'remitter'    => $o->patient?->remitter_name ?? '',
+                'rx_end'      => $d($rx?->rx_end_date),
+                'rx_period'   => $rx?->rx_use_period ?? '',
+                // 창고가 지금 무엇을 하고 있는가
+                'sale_status' => $o->withworks_status_label ?: '',
+                'ship_status' => $o->withworks_ship_status_label ?: '',
+                'disease_code'=> $rx?->disease_code ?? '',
+                'reason'      => $rx?->reason ?? '',
+                'pay_method'  => $o->pay_method ?? '',
+                'creator'     => $rx?->creator?->name ?? '',
+                'updater'     => $rx?->updater?->name ?? '',
+                ];
+            })->values();
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,
            환자가 있으면 그 사람으로, 없으면 처방전에 적힌 이름ㆍ휴대폰으로 찾는다. */
