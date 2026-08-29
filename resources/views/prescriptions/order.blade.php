@@ -2250,9 +2250,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <button type="button" class="rx-sec-btn" onclick="openCounselWindow()">
                 <i class="fa-solid fa-comments"></i> 상담하기
               </button>
+              {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
+                   「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
+              <button type="button" class="rx-sec-btn" id="btnGoMaster" onclick="goPatientMaster()"
+                      title="거래처관리에서 이 사람의 정보를 고칩니다">
+                <i class="fa-solid fa-address-card"></i> 거래처관리에서 고치기
+              </button>
             </div>
             <div class="rx-fit">
-            <div class="rx-rows">
+            {{-- 이 구획의 칸은 거래처관리가 정본이라 여기서는 읽기만 한다(rxLockPatientFields).
+                 유형만 뺀다 — 이 주문이 무엇인지는 주문의 성질이지 사람의 성질이 아니다. --}}
+            <div class="rx-rows" id="rx-patient-fields">
             {{-- 명세(같은 문서 1장)는 이 구획도 가로로 읽는다. 라벨 좌표가 적은 차례 그대로다:
                    이름ㆍ주민등록번호ㆍ생년월일(1) / 구분(SB/SCI)ㆍ전화번호 1ㆍ전화번호 2 /
                    주소(두 칸)ㆍEmail / 송금자명ㆍ현금영수증 / 공단 등록ㆍ공단 등록일 /
@@ -2276,7 +2284,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="hidden" id="f-patient-id" value="{{ $prescription->patient_id }}" />
                 {{-- 같은 이름이 여럿이거나 기억이 흐릴 때 창을 열어 전화번호ㆍ생년월일까지
                      보고 고른다. 업로드 화면의 「이름 조회」와 같은 창이다. --}}
-                <button type="button" class="rx-side-btn" onclick="pkOpen(event)">
+                {{-- 처방전 목록을 통해 들어온 건(이미 사람이 이어진 건)은 조회를 잠근다
+                     (요청서 10쪽) — 앞 단계에서 정해진 사람을 여기서 바꾸면 그 처방전과
+                     주문이 서로 다른 사람의 것이 된다. 고칠 일이 있으면 앞 단계에서 한다.
+                     아직 이어지지 않은 건에서는 조회로 사람을 고른다 — 그것마저 막으면
+                     새 주문에 사람을 붙일 길이 없다. --}}
+                <button type="button" class="rx-side-btn" id="btnPatientPick" onclick="pkOpen(event)"
+                        @if($prescription->patient_id) disabled
+                           title="처방전에 이미 이어진 사람입니다 — 바꾸려면 처방전 검수에서 고치십시오"
+                           style="opacity:.45;cursor:not-allowed;" @endif>
                   <i class="fa-solid fa-magnifying-glass"></i> 조회
                 </button>
                 {{-- 상담하기는 구획 머리(메모 단추가 있던 자리)로 옮겼다 — 한 화면에
@@ -2422,22 +2438,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   </div>
                 </div>
               </div>
-              {{-- 「유형」은 병원ㆍ처방 정보에 있었다(1차 요청서 12·16쪽). 그런데 이 칸에는
-                   「처방외」— 처방전 없이 사는 건 — 가 들어 있다. 처방이 있느냐 없느냐를
-                   병원ㆍ처방 정보 안에서 고르게 두면 앞뒤가 뒤집힌다. 상담ㆍ환자 정보로
-                   올려, 이 주문이 무엇인지부터 정하고 나머지를 적게 한다. --}}
-              {{-- 1차 요청서 12·16쪽 «처방전 여부->유형으로 명칭 변경 및 … 병원 처방정보로 이동».
-                   상담 정보 3열에 있던 줄을 옵션ㆍ값째 그대로 옮겼다(id 그대로).
-                   요청서 17쪽 순서가 '유형 / 신구매·재구매'를 한 줄에 두어 아래 줄과 붙여 둔다. --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">유형</span>
-                <select class="form-control" id="f-acc-add-type" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="30"  @selected(($prescription->counsel_acc_add_type ?? '') == '30')>원내</option>
-                  <option value="10"  @selected(($prescription->counsel_acc_add_type ?? '') == '10')>원외</option>
-                  <option value="20"  @selected(($prescription->counsel_acc_add_type ?? '') == '20')>처방외</option>
-                </select>
-              </div>
+              {{-- 「유형」은 병원ㆍ처방 정보로 옮겼다(요청서 9쪽).
+                   처방전으로 사는 것인지 처방 없이 사는 것인지는 처방의 성질이고,
+                   이 구획은 거래처관리가 정본이라 통째로 읽기만 한다. --}}
               {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
                    병원ㆍ처방 정보 1열에 있던 줄을 라벨ㆍ입력ㆍ옵션째 그대로 옮겼다. --}}
               <div class="rx-field-row rx-row-start">
@@ -2676,6 +2679,26 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">요양병원 코드</span>
                 {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
                 <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원 코드" style="flex:1;" />
+              </div>
+              {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 순서도 요청서대로
+                   병원명ㆍ요양병원코드 다음이다. id·값은 그대로라 청구전략 셈은 손대지
+                   않았다.
+                   선택지는 「처방전 / 처방외」 둘이다(요청서 1·8쪽) — 원내ㆍ원외는
+                   청구전략이 같은 값을 내므로 갈라 둘 뜻이 없었는데 고르는 사람만
+                   망설였다. 이미 원내로 담긴 건은 그 건에서만 한 줄을 세운다. --}}
+              @php $accType = (string) ($prescription->counsel_acc_add_type ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">유형</span>
+                <select class="form-control" id="f-acc-add-type" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="10" @selected($accType === '10')>처방전</option>
+                  <option value="20" @selected($accType === '20')>처방외</option>
+                  @if($accType === '30')
+                    <optgroup label="기존 값">
+                      <option value="30" selected>처방전 - 원내</option>
+                    </optgroup>
+                  @endif
+                </select>
               </div>
               <div class="rx-field-row">
                 {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
@@ -6913,6 +6936,47 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 주문 생성 및 Withworks 연계 ──────────────────────────
+  /* ── 환자 정보는 읽기만 한다 ────────────────────────────
+     요청서 1·11쪽: 「항상 거래처관리에서만 등록 및 update 하고, 각 화면에 연결 /
+     거래처 관리 외 화면에서는 관련 정보 block」.
+
+     칸마다 readonly 를 박지 않고 한자리에서 건다 — 칸이 스물이 넘어 하나씩 적으면
+     새 칸을 늘릴 때마다 빠뜨린다. 유형과 조회ㆍ상담 단추는 뺀다. */
+  const RX_PATIENT_UNLOCKED = ['f-acc-add-type'];
+
+  function rxLockPatientFields() {
+    const box = document.getElementById('rx-patient-fields');
+    if (!box) return;
+
+    box.querySelectorAll('input, select, textarea').forEach(el => {
+      if (RX_PATIENT_UNLOCKED.includes(el.id)) return;
+      if (el.type === 'hidden') return;
+
+      if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
+        /* select 는 readonly 가 없다. disabled 로 두면 저장에서 값이 빠지므로
+           눌리지만 바뀌지는 않게 막는다 — 담긴 값은 그대로 실려 간다. */
+        el.dataset.locked = '1';
+        el.addEventListener('mousedown', e => e.preventDefault());
+        el.addEventListener('keydown',   e => e.preventDefault());
+      } else {
+        el.readOnly = true;
+      }
+
+      el.style.background = 'var(--gray-50)';
+      el.style.cursor     = 'default';
+      el.title            = '거래처관리에서 고칩니다';
+    });
+  }
+
+  /** 거래처관리로 간다 — 이어진 사람이 있으면 그 사람 화면으로, 없으면 목록으로 */
+  window.goPatientMaster = function () {
+    const pid = document.getElementById('f-patient-id')?.value;
+    const url = pid ? `{{ url('patients') }}/${pid}` : `{{ url('patients') }}`;
+    ceOpenTab(url, pid ? '거래처 관리 - 상세' : '거래처 관리', 'user-multiple');
+  };
+
+  rxLockPatientFields();
+
   /* 요류역학검사가 아직 살아 있는가 — 등록 신청서 발행일 기준 3년.
      지난 검사로 신청서를 내면 공단이 되돌려 보내는데, 그때가 되어서야 알면 늦다. */
   window.uroCheckAge = function () {
