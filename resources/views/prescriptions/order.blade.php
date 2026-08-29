@@ -2181,16 +2181,19 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <button type="button" class="rx-tab" data-pane="rxp-2" onclick="rxTab(this)">
                 <i class="fa-solid fa-hospital"></i> 병원ㆍ처방 정보
               </button>
-              <button type="button" class="rx-tab" data-pane="rxp-3" onclick="rxTab(this)">
-                <i class="fa-solid fa-ellipsis"></i> 추가정보
-              </button>
+              {{-- 추가정보 탭은 없앴다(요청서 14쪽). 다섯 칸뿐인데 탭을 하나 더 열어야
+                   보였고, 그 다섯이 어느 쪽 이야기인지도 갈려 있었다 — 공단 위임동의
+                   두 날짜는 상담ㆍ환자 정보로, 하루 사용 수량ㆍ인마켓 마감일ㆍ마지막
+                   확정 수량은 병원ㆍ처방 정보로 옮겼다. --}}
             </div>
             <div class="rx-tabs-acts">
               {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
               {{-- 담당자는 적고 「검수 요청」까지, 검수자만 「검수 완료」를 누른다.
                    완료ㆍ반려는 approve 권한으로 갈라 두었다(config/permissions.php). --}}
               <div class="rx-acc-btns">
-                <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
+                {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
+                     누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
+                     resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
                 <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청하기</button>
                 @perm('prescriptions', 'approve')
                 <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 승인합니다">검수 승인하기</button>
@@ -2208,6 +2211,17 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      보냈느냐」다 — syncOrderStageBtn 이 같은 눈으로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
                         title="주문 제품 탭으로 갑니다">주문 보기</button>
+                {{-- 메모를 여는 길은 여기 남긴다. 환자 정보 머리의 자리는 상담하기에
+                     내주었지만(요청서 10쪽), 그 단추가 유일한 길이라 함께 없애면
+                     적어 둔 메모를 다시 볼 방법이 사라진다. --}}
+                <button type="button" class="rx-acc-btn" id="memoPanelToggleBtn"
+                        onclick="toggleMemoPanel(event)" title="이 건에 적어 둔 메모를 봅니다"
+                        style="position:relative;">메모
+                  <span id="memoBadgeCount"
+                        style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:10px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
+                    {{ $prescription->memos->count() }}
+                  </span>
+                </button>
                 <button type="button" class="rx-acc-btn rx-acc-btn-fill" data-stage="save" onclick="saveOCR()" title="적은 내용을 저장합니다">저장</button>
               </div>
             </div>
@@ -2229,13 +2243,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- ▸ 환자 정보 소제목 --}}
             <div class="rx-sec-head">
               <span class="rx-sec-title">환자 정보</span>
-              <button id="memoPanelToggleBtn" onclick="toggleMemoPanel(event)"
-                      class="rx-sec-btn">
-                <i class="fa-solid fa-note-sticky"></i> 메모
-                <span id="memoBadgeCount"
-                      style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:10px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
-                  {{ $prescription->memos->count() }}
-                </span>
+              {{-- 메모 단추는 걷고 그 자리를 상담하기에 준다(요청서 10쪽).
+                   메모는 이 사람에 대해 적어 두는 것인데, 정작 담당자가 이 자리에서
+                   하려는 일은 통화 기록을 남기는 것이었다 — 그것은 상담 창이 받는다.
+                   toggleMemoPanel 은 남겨 둔다: 처방전 그림 옆 메모판이 그대로 쓴다. --}}
+              <button type="button" class="rx-sec-btn" onclick="openCounselWindow()">
+                <i class="fa-solid fa-comments"></i> 상담하기
               </button>
             </div>
             <div class="rx-fit">
@@ -2266,10 +2279,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <button type="button" class="rx-side-btn" onclick="pkOpen(event)">
                   <i class="fa-solid fa-magnifying-glass"></i> 조회
                 </button>
-                {{-- 상담으로 가는 길. 상담 정보 구획을 걷으면서 이 단추만 이름 옆으로 옮겼다 --}}
-                <button type="button" class="rx-side-btn" onclick="openCounselWindow()">
-                  <i class="fa-solid fa-comments"></i> 상담하기
-                </button>
+                {{-- 상담하기는 구획 머리(메모 단추가 있던 자리)로 옮겼다 — 한 화면에
+                     같은 단추가 둘이면 어느 것을 눌러야 하는지 매번 고민하게 된다. --}}
 
                 {{-- 창은 바탕을 덮지 않는다. 어둡게 깔면 뒤 화면이 통째로 가려져,
                      처방전 이미지를 옆에 놓고 대조하며 고르지 못한다.
@@ -2344,10 +2355,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 주민번호 앞자리로 생년월일·만 나이를 즉시 계산해 보여준다.
                    번호를 치는 중에도 바뀌고, 아직 안 쳤으면 저장된 마스킹으로 계산한다. --}}
               <div class="rx-field-row" style="position:relative;">
-                <span class="rx-field-label">생년월일(1)</span>
+                {{-- 생년월일 칸은 지웠다(요청서 11쪽). 환자 정보의 정본은 거래처관리이고,
+                     여기서는 주민번호로 계산해 「미성년」인지만 알면 된다.
+                     f-birth 는 감춘 채 남긴다 — rnRecalc 이 여기에 계산 결과를 적고,
+                     미성년 배지ㆍ보호자 팝오버가 그 값을 보고 열린다. --}}
+                <span class="rx-field-label">미성년</span>
                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:6px;">
-                  <input type="text" class="form-control" id="f-birth" readonly
-                         style="flex:1 1 120px;min-width:0;background:var(--gray-50);" placeholder="주민번호를 입력하면 계산됩니다" />
+                  <input type="hidden" id="f-birth" />
                   {{-- 미성년이면 이 배지가 보호자 팝오버를 여는 자리다(명세 2장이 이 배지를 가리킨다).
                        미성년이 아니면 나이만 알리는 표시라 누를 것이 없다 — rnRecalc 이 갈라 준다. --}}
                   <span id="f-age-badge" onclick="toggleGuardianPop(event)"
@@ -2522,11 +2536,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">공단 등록</span>
+                {{-- 「진행중ㆍ완료」 둘로는 신규인지 재등록인지 알 수 없었다. 공단에 내는
+                     서류도 다음에 할 일도 그 둘이 다르다(요청서 11쪽). 목록은 거래처관리와
+                     한 벌만 둔다 — 두 화면이 서로 다른 말을 하면 안 된다. --}}
+                @php $nhisReg = (string) ($prescription->patient?->nhis_reg_status ?? ''); @endphp
                 <select class="form-control" id="f-nhis-status" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="진행중"   @selected(($prescription->patient?->nhis_reg_status ?? '') == '진행중')>진행중</option>
-                  <option value="완료"     @selected(($prescription->patient?->nhis_reg_status ?? '') == '완료')>완료</option>
-                  <option value="필요없음" @selected(($prescription->patient?->nhis_reg_status ?? '') == '필요없음')>필요없음</option>
+                  @foreach(\App\Models\Patient::NHIS_REG_STATUSES as $v)
+                    <option value="{{ $v }}" @selected($nhisReg === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($nhisReg && !in_array($nhisReg, \App\Models\Patient::NHIS_REG_STATUSES, true))
+                    <optgroup label="기존 값">
+                      <option value="{{ $nhisReg }}" selected>{{ $nhisReg }}</option>
+                    </optgroup>
+                  @endif
                 </select>
               </div>
               <div class="rx-field-row">
@@ -2536,8 +2559,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
-                <input type="text" class="form-control" id="f-basic-reeval"
-                       value="{{ $prescription->patient?->basic_reeval ?? '' }}" placeholder="대상 여부 또는 비고" style="flex:1;" />
+                {{-- 「대상 여부 또는 비고」로 두었더니 사람마다 다르게 적혀 세어지지 않았다.
+                     Y/N 으로만 받는다(요청서 11쪽). 예전에 적어 둔 글은 그 건에서만 남긴다. --}}
+                @php $basic = (string) ($prescription->patient?->basic_reeval ?? ''); @endphp
+                <select class="form-control" id="f-basic-reeval" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Models\Patient::YN as $v)
+                    <option value="{{ $v }}" @selected($basic === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($basic && !in_array($basic, \App\Models\Patient::YN, true))
+                    <optgroup label="기존 값"><option value="{{ $basic }}" selected>{{ $basic }}</option></optgroup>
+                  @endif
+                </select>
               </div>
               <div class="rx-field-row rx-w3">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 기한</span>
@@ -2546,7 +2579,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">공단 재등록 대상자</span>
-                <input type="text" class="form-control" id="f-nhis-renew" value="{{ $prescription->patient?->nhis_renew ?? '' }}" placeholder="날짜 또는 비고" style="flex:1;" />
+                @php $renew = (string) ($prescription->patient?->nhis_renew ?? ''); @endphp
+                <select class="form-control" id="f-nhis-renew" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Models\Patient::YN as $v)
+                    <option value="{{ $v }}" @selected($renew === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($renew && !in_array($renew, \App\Models\Patient::YN, true))
+                    <optgroup label="기존 값"><option value="{{ $renew }}" selected>{{ $renew }}</option></optgroup>
+                  @endif
+                </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">공단 재등록 기한</span>
@@ -2566,6 +2608,29 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
             </div></div>{{-- /rx-rows --}}
 
+
+            {{-- 추가정보 탭에서 옮겨 온 두 날짜 (요청서 14쪽).
+                 위임동의가 언제부터 언제까지인지는 환자에 붙는 이야기라 여기가 제자리다.
+                 값은 병원ㆍ처방 카드의 사용 시작일ㆍ급여 종료일과 서로 비춘다. --}}
+            <div class="rx-sec-head" style="margin-top:14px;">
+              <span class="rx-sec-title">공단 위임동의</span>
+            </div>
+            <div class="rx-fit">
+            <div class="rx-cols">
+            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 위임동의 시작일</span>
+                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
+              </div>
+            </div>
+            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">공단 위임동의 종료일</span>
+                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
+              </div>
+            </div>
+            <div class="rx-col"></div>
+            </div></div>{{-- /rx-cols --}}
           </div>
 
         {{-- ─────────────────────────────────────────────────
@@ -2743,7 +2808,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">총 처방 기간</span>
+                <span class="rx-field-label">총 처방일수</span>
                 <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
               </div>
               <div class="rx-field-row">
@@ -2783,8 +2848,41 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">의사면허번호</span>
                 <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}" placeholder="예: 56553" style="flex:1;" />
               </div>
-              {{-- 「사유」 칸은 두지 않는다(요청). 값(reason)은 지우지 않았다 —
-                   저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
+              {{-- 전문과목 (요청서 12·13쪽). 자유롭게 적게 두었더니 「비뇨기과」ㆍ
+                   「비뇨의학과」ㆍ「비뇨기과의원」이 한 표에 섞였다. --}}
+              @php $spec = (string) ($prescription->specialty ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">전문과목</span>
+                <select class="form-control" id="f-specialty" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\OrderReason::SPECIALTIES as $v)
+                    <option value="{{ $v }}" @selected($spec === $v)>{{ $v }}</option>
+                  @endforeach
+                  @if($spec && !in_array($spec, \App\Support\OrderReason::SPECIALTIES, true))
+                    <optgroup label="기존 값"><option value="{{ $spec }}" selected>{{ $spec }}</option></optgroup>
+                  @endif
+                </select>
+              </div>
+              {{-- 사유 (요청서 7쪽 · 위드웍스와 같은 목록).
+                   자유롭게 적게 두면 「미입금」과 「입금 안 됨」이 한 표에 섞여 세어지지
+                   않는다. 진행중과 취소를 갈라 둔다 — 앞엣것은 살아 있는 건이다. --}}
+              @php $reason = (string) ($prescription->reason ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">사유</span>
+                <select class="form-control" id="f-reason" style="flex:1;">
+                  <option value="">선택</option>
+                  @foreach(\App\Support\OrderReason::groups() as $group => $items)
+                    <optgroup label="{{ $group }}">
+                      @foreach($items as $v)
+                        <option value="{{ $v }}" @selected($reason === $v)>{{ $v }}</option>
+                      @endforeach
+                    </optgroup>
+                  @endforeach
+                  @if($reason && !\App\Support\OrderReason::isKnown($reason))
+                    <optgroup label="기존 값"><option value="{{ $reason }}" selected>{{ $reason }}</option></optgroup>
+                  @endif
+                </select>
+              </div>
 <div class="rx-field-row">
                 <span class="rx-field-label">재구매일</span>
                 {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
@@ -2905,52 +3003,40 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    환자 정보 3열 끝으로 옮겼다. 둘 다 id·값 그대로다. --}}
             </div>
             </div></div>{{-- /rx-cols --}}
-          </div>
 
-        {{-- ── 추가정보 (시안 148:3046) ── --}}
-          <div class="rx-acc-body rx-pane" id="rxp-3" style="display:none;">
-            {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
-            <div class="rx-pane-cap">추가정보</div>
+            {{-- 추가정보 탭에서 옮겨 온 세 칸 (요청서 14쪽).
+                 하루 몇 개를 쓰는지ㆍ언제까지 마감인지ㆍ마지막에 몇 개로 확정했는지는
+                 처방과 수량의 이야기라 여기가 제자리다. --}}
+            <div class="rx-sec-head" style="margin-top:14px;">
+              <span class="rx-sec-title">수량ㆍ마감</span>
+            </div>
             <div class="rx-fit">
             <div class="rx-cols">
             <div class="rx-col">
-              {{-- 위 둘은 병원ㆍ처방 카드의 '사용 시작일'·'급여 종료일'과 같은 값이다.
-                   시안이 양쪽에 그려 두어 서로 비추게 한다(아래 초기화 코드 참조). --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 시작일</span>
-                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
-              </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 종료일</span>
-                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
-              </div>
-
-            </div>
-            <div class="rx-col">
-              {{-- 2열 — 하루 사용 수량 · 마지막 확정 수량 (시안 315:58 Frame 48101492) --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">하루 사용 수량</span>
-                {{-- 값은 제 컬럼에서 읽는다 --}}
                 <input type="number" min="0" class="form-control" id="f-daily-use-qty"
                        value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
               </div>
+            </div>
+            <div class="rx-col">
+              <div class="rx-field-row">
+                <span class="rx-field-label">인마켓 마감일</span>
+                <input type="date" class="form-control" id="f-inmarket-due"
+                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
+              </div>
+            </div>
+            <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
               </div>
             </div>
-            <div class="rx-col">
-              {{-- 3열 — 인마켓 마감일 (시안 315:58 Frame 48101491) --}}
-              <div class="rx-field-row">
-                <span class="rx-field-label">인마켓 마감일</span>
-                {{-- 값은 제 컬럼에서 읽는다 --}}
-                <input type="date" class="form-control" id="f-inmarket-due"
-                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
-              </div>
-            </div>
             </div></div>{{-- /rx-cols --}}
           </div>
+
+        {{-- ── 추가정보 (시안 148:3046) ── --}}
         </div>{{-- /rx-tabbed --}}
 
       </div>{{-- /cv --}}
@@ -3091,7 +3177,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    (둘 다 items 를 읽고 쓴다). 저장 버튼은 onclick 문자열이 정확히 'saveOCR()' 여야
                    saveOCR() 안 querySelectorAll('[onclick="saveOCR()"]') 이 로딩 상태를 함께 건다. --}}
               <div class="pt-head-btns">
-                <button type="button" class="rx-acc-btn" onclick="resetToSaved()" title="저장된 값으로 되돌립니다">되돌리기</button>
+                {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
+                     누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
+                     resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
                 <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
                 {{-- 줄마다 있던 휴지통 대신 체크해서 지운다 — 여러 줄을 한 번에 지울 수 있다 --}}
                 <button type="button" class="rx-acc-btn" onclick="removeCheckedItems()" title="체크한 줄을 지웁니다"><i class="fa-solid fa-trash"></i> 선택 삭제</button>
@@ -6306,6 +6394,11 @@ window.HELP_TOUR_STEPS = [
         };
       });
 
+    /* 1일 처방개수 × 총 처방일수 가 총계와 다르면 알린다. 여기서는 막지 않는다 —
+       처방전이 실제로 그렇게 적혀 있는 일이 있고, 그때는 적힌 대로 담아야 한다.
+       막는 것은 주문 제품 쪽이다(요청서 12쪽 대 17쪽). */
+    gateTotalCount(false);
+
     _saving = true;
     let _saved = false;
     const saveBtns = document.querySelectorAll('[onclick="saveOCR()"]');
@@ -6355,6 +6448,9 @@ window.HELP_TOUR_STEPS = [
       hospital_code:    strOrNull('f-hospital-code'),
       doctor_name:      strOrNull('f-doctor'),
       license_no:       strOrNull('f-license-no'),
+      // 요청서 12ㆍ13쪽 — 전문과목ㆍ사유를 고르는 자리로 되돌렸다
+      specialty:        strOrNull('f-specialty'),
+      reason:           strOrNull('f-reason'),
       issued_date:      strOrNull('f-date'),
       repurchase_date:  strOrNull('f-repurchase-date'),
       rx_period:        intOrNull('f-rx-period'),
@@ -6694,10 +6790,73 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 주문 생성 및 Withworks 연계 ──────────────────────────
+  /* ── 주문으로 넘어가기 전에 지나야 하는 문 ──────────────────
+     요청서 7ㆍ12ㆍ17쪽. 여기서 막지 않으면 검수도 안 끝난 건이 창고로 나가고,
+     동의 없이 공단에 청구할 서류가 만들어지며, 처방보다 많은 수량이 팔린다. */
+
+  /** 검수를 마쳤는가 — 마치기 전에는 사지도 저장하지도 못한다 */
+  function gateReviewed() {
+    if (RX_STATUS === 'approved' || RX_STATUS === 'ordered') return true;
+
+    ceAlert('검수 완료 후 구매 진행 및 저장 가능합니다.', { title: '검수가 아직입니다' });
+    return false;
+  }
+
+  /** 두 동의를 모두 받았는가 — 받지 않고 낸 주문은 서류를 만들 수 없다 */
+  function gateConsent() {
+    const missing = [];
+    if (!PRIVACY_STATE?.agreed)              missing.push('개인정보 수집·이용 동의');
+    if (window.CONSENT_STATUS !== 'agreed')  missing.push('요양비 위임 동의');
+
+    if (!missing.length) return true;
+
+    ceAlert(missing.join(' · ') + ' 이(가) 아직입니다. 동의를 받은 뒤 진행하십시오.',
+            { title: '동의가 아직입니다' });
+    return false;
+  }
+
+  /**
+   * 처방된 총계를 넘지 않는가.
+   *
+   * 1일 처방개수 × 총 처방일수 가 총계다. 넘겨서 팔면 넘은 만큼은 공단에 청구할 수
+   * 없고, 그 사실은 청구 단계에서야 드러난다.
+   *
+   * @param {boolean} block  넘었을 때 막을 것인가(주문 제품) 알리기만 할 것인가(상세 목록)
+   */
+  function gateTotalCount(block) {
+    const daily = parseInt(document.getElementById('f-daily')?.value || '0', 10);
+    const days  = parseInt(document.getElementById('f-days')?.value  || '0', 10);
+    const total = parseInt(document.getElementById('f-total')?.value || '0', 10);
+
+    // 셋 중 하나라도 비어 있으면 견줄 것이 없다 — 적기 전에 막지 않는다
+    if (!daily || !days || !total) return true;
+
+    if (daily * days === total) return true;
+
+    const msg = `1일 처방 개수: ${daily} / 총 처방일수: ${days} / 총계: ${daily * days}개가 아닙니다.`;
+
+    if (!block) {
+      // 상세 목록에서는 알리기만 하고 저장은 그대로 둔다(요청서 12쪽)
+      showToast(msg + ' 확인 후 진행 바랍니다.', 'warning');
+      return true;
+    }
+
+    ceAlert('1일 처방 개수 / 총 처방일수 / 총계 확인 후 진행 및 저장 바랍니다.\n\n' + msg,
+            { title: '수량이 맞지 않습니다' });
+    return false;
+  }
+
+  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 셋 */
+  function gateOrder() {
+    return gateReviewed() && gateConsent() && gateTotalCount(true);
+  }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
        「저장 중…」 글자가 아이콘 자리에만 박힌다. */
     const btn = e.target.closest('button') ?? e.target;
+
+    // 검수ㆍ동의ㆍ수량 — 셋 다 지나야 창고로 보낼 수 있다(요청서 7ㆍ12ㆍ17쪽)
+    if (!gateOrder()) return;
 
     /* 제품을 고르지 않았으면 여기서 멈춘다. 그냥 두면 0원짜리 주문이 서고 처방전이
        「주문 완료」로 넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이
@@ -7060,6 +7219,10 @@ window.HELP_TOUR_STEPS = [
      연계」가 만든다). 그래서 주문이 없을 때는 무엇이 저장됐는지 말로 밝힌다. */
   async function saveOrderTab(e) {
     const btn = e.target.closest('button');
+
+    // 저장도 구매의 일부다 — 요청서가 「구매 진행 및 저장」을 한 묶음으로 적는다
+    if (!gateOrder()) return;
+
     BtnState.loading(btn, '저장 중...');
 
     if (await saveOCR({ silent: true }) === false) {
@@ -9496,7 +9659,12 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 위임동의 버튼 상태 업데이트 ────────────────────────────
+  /* 지금 위임동의가 어디까지 왔는가. 배지를 그리는 함수가 곧 유일한 소식통이라
+     여기서 붙잡아 둔다 — 주문을 낼 때 이 값을 본다(요청서 12쪽). */
+  window.CONSENT_STATUS = @json($prescription->consents()->latest('id')->value('status'));
+
   function _applyConsentBtn(status) {
+    window.CONSENT_STATUS = status;
     const bw  = document.getElementById('consentBtnWrap');
     const rb  = document.getElementById('consentResultBadge');
     if (!bw || !rb) return;
@@ -10445,6 +10613,7 @@ window.HELP_TOUR_STEPS = [
     e?.stopPropagation();
     const wrap = document.getElementById('memoPanelWrap');
     const btn  = document.getElementById('memoPanelToggleBtn');
+    if (!wrap || !btn) return;
     const open = wrap.style.display === 'none';
     if (open) {
       // 버튼 바로 아래에 위치
@@ -10465,7 +10634,9 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('click', function (e) {
     const wrap = document.getElementById('memoPanelWrap');
     const btn  = document.getElementById('memoPanelToggleBtn');
-    if (!wrap.contains(e.target) && !btn.contains(e.target)) {
+    // 단추가 없는 화면도 있다 — 없다고 문서 클릭마다 죽으면 안 된다
+    if (!wrap) return;
+    if (!wrap.contains(e.target) && !(btn && btn.contains(e.target))) {
       wrap.style.display = 'none';
     }
   });

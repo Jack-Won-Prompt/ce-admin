@@ -1499,6 +1499,7 @@ class PrescriptionController extends Controller
             'next_repurchase'       => 'nullable|date',
             'special_case'          => 'nullable|string|max:50',
             'reason'                => 'nullable|string|max:200',
+            'specialty'             => 'nullable|string|max:100',
             // 추가 정보
             'new_patient_date'      => 'nullable|date',
             'five_110days'          => 'nullable|string|max:50',
@@ -1569,6 +1570,7 @@ class PrescriptionController extends Controller
             'next_repurchase'      => $request->input('next_repurchase'),
             'special_case'         => $request->input('special_case'),
             'reason'               => $request->input('reason'),
+            'specialty'            => $request->input('specialty'),
             'dealer_type'          => $request->input('dealer_type'),
             'pay_date'             => $request->input('pay_date'),
             'buy_date'             => $request->input('buy_date'),
