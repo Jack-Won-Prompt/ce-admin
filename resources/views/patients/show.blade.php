@@ -490,8 +490,9 @@
                         data-orig="{{ $patient->note }}" placeholder="특이사항 등">{{ $patient->note }}</textarea>
             </span>
           </div>
+          {{-- 라벨은 두지 않는다. 뒤따르는 글이 「등록 · 수정 · 수정일자 …」로 스스로
+               무엇인지 말하고 있어, 「남긴 사람」은 같은 말을 한 번 더 하는 셈이었다. --}}
           <div class="info-row wide">
-            <span class="info-label">남긴 사람</span>
             <span class="info-value" style="font-size:12px;color:var(--text-muted);">
               등록 {{ $patient->creator?->name ?: '-' }}
               · 수정 {{ $patient->updater?->name ?: '-' }}
