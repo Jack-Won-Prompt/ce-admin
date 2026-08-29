@@ -731,6 +731,10 @@
                 font-size:12px; font-weight:500; line-height:1.6; color:var(--gray-1000);
                 cursor:pointer; position:relative; flex-shrink:0; }
   .rx-sec-btn:hover { background:var(--gray-50); }
+  /* 머리줄의 단추 묶음 — 늘 오른쪽 끝이다. 자리가 모자라면 아래로 접히되
+     둘은 붙어 다닌다. */
+  .rx-sec-btns { display:inline-flex; align-items:center; gap:6px; margin-left:auto;
+                 flex-wrap:wrap; row-gap:6px; justify-content:flex-end; }
   .rx-sec-btn i { font-size:12px; }
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
   .rx-field-row.full { grid-column:1 / -1; }
@@ -2277,15 +2281,20 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    메모는 이 사람에 대해 적어 두는 것인데, 정작 담당자가 이 자리에서
                    하려는 일은 통화 기록을 남기는 것이었다 — 그것은 상담 창이 받는다.
                    toggleMemoPanel 은 남겨 둔다: 처방전 그림 옆 메모판이 그대로 쓴다. --}}
-              <button type="button" class="rx-sec-btn" onclick="openCounselWindow()">
-                <i class="fa-solid fa-comments"></i> 상담하기
-              </button>
-              {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
-                   「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
-              <button type="button" class="rx-sec-btn" id="btnGoMaster" onclick="goPatientMaster()"
-                      title="거래처관리에서 이 사람의 정보를 고칩니다">
-                <i class="fa-solid fa-address-card"></i> 거래처관리에서 고치기
-              </button>
+              {{-- 단추 둘은 한 묶음으로 오른쪽 끝에 붙인다. 낱개로 두면 머리줄의
+                   space-between 이 셋을 고르게 벌려 놓아, 「상담하기」가 제목과 오른쪽
+                   단추 사이에 홀로 떠 있었다. --}}
+              <span class="rx-sec-btns">
+                <button type="button" class="rx-sec-btn" onclick="openCounselWindow()">
+                  <i class="fa-solid fa-comments"></i> 상담하기
+                </button>
+                {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
+                     「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
+                <button type="button" class="rx-sec-btn" id="btnGoMaster" onclick="goPatientMaster()"
+                        title="거래처관리에서 이 사람의 정보를 고칩니다">
+                  <i class="fa-solid fa-address-card"></i> 거래처 수정
+                </button>
+              </span>
             </div>
             <div class="rx-fit">
             {{-- 이 구획의 칸은 거래처관리가 정본이라 여기서는 읽기만 한다(rxLockPatientFields).
@@ -2813,13 +2822,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    목록이 격자 한가운데를 세로로 갈라 옆 칸들의 줄맞춤을 무너뜨렸다.
                    고르는 일은 한 건에 한 번뿐인데 자리는 늘 여섯 줄을 먹었다.
                    담기는 값은 그대로다 — 저장은 체크된 것을 읽어 간다. --}}
-              <div class="rx-field-row rx-w3" style="position:relative;">
+              <div class="rx-field-row rx-w4" style="position:relative;">
                 <span class="rx-field-label">확인사항</span>
                 <div style="display:flex;gap:6px;flex:1;min-width:0;">
                   <input type="text" class="form-control" id="uroSummary" readonly
                          style="flex:1;min-width:0;background:var(--gray-50);cursor:pointer;"
-                         placeholder="고르지 않았습니다" onclick="uroToggle(event)" />
-                  <button type="button" class="rx-side-btn" onclick="uroToggle(event)">고르기</button>
+                         placeholder="선택하세요." onclick="uroToggle(event)" />
+                  <button type="button" class="rx-side-btn" onclick="uroToggle(event)">선택</button>
                 </div>
                 <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;
                       position:absolute;left:0;top:100%;margin-top:2px;"></span>
@@ -3125,38 +3134,26 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
                 <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
               </div>
-            </div></div>{{-- /rx-rows --}}
-
-            {{-- 추가정보 탭에서 옮겨 온 세 칸 (요청서 14쪽).
-                 하루 몇 개를 쓰는지ㆍ언제까지 마감인지ㆍ마지막에 몇 개로 확정했는지는
-                 처방과 수량의 이야기라 여기가 제자리다. --}}
-            <div class="rx-sec-head" style="margin-top:14px;">
-              <span class="rx-sec-title">수량ㆍ마감</span>
-            </div>
-            <div class="rx-fit">
-            <div class="rx-cols">
-            <div class="rx-col">
-              <div class="rx-field-row">
+              {{-- 추가정보 탭에서 옮겨 온 세 칸 (요청서 14쪽). 소제목은 두지 않는다 —
+                   하루 몇 개를 쓰는지ㆍ언제까지 마감인지ㆍ마지막에 몇 개로 확정했는지는
+                   위의 처방ㆍ수량 이야기와 이어지는 것이라, 사이에 이름을 하나 세우면
+                   다른 구획처럼 읽혀 오히려 끊긴다. --}}
+              <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">하루 사용 수량</span>
                 <input type="number" min="0" class="form-control" id="f-daily-use-qty"
                        value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">인마켓 마감일</span>
                 <input type="date" class="form-control" id="f-inmarket-due"
                        value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            <div class="rx-col">
               <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
               </div>
-            </div>
-            </div></div>{{-- /rx-cols --}}
+            </div></div>{{-- /rx-rows --}}
           </div>
 
         {{-- ── 추가정보 (시안 148:3046) ── --}}
