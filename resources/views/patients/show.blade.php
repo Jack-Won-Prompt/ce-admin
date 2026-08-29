@@ -16,7 +16,14 @@
   .detail-layout { display:flex; flex-direction:column; gap:14px; flex:1 1 auto; min-height:0; }
   .detail-layout > :last-child { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
   /* 밑변까지 내려온 표가 카드 모서리 밖으로 새지 않게 한다 */
-  .detail-layout > :last-child > .card { flex:1 1 auto; min-height:0; overflow:hidden; }
+  .detail-layout > :last-child > .card { flex:1 1 auto; min-height:0; overflow:hidden;
+                                         display:flex; flex-direction:column; }
+  /* 카드 안도 세로 flex 여야 탭 판이 남는 높이를 받는다. 이것이 없으면 판은 제
+     내용만큼만 서고, 넘치는 만큼은 카드의 overflow:hidden 이 잘라 낸다 —
+     고치는 중에 칸이 커지면 아래쪽 줄이 통째로 사라져 보였다. */
+  .detail-layout > :last-child > .card > .card-body {
+    flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+  }
 
   /* 개인정보는 세로로 길게 쌓지 않고 한 줄에 여럿 눕힌다 — 여섯 항목이 한두 줄에 들어온다.
      주소는 길어 두 칸을 쓴다. */
@@ -104,6 +111,9 @@
   /* 표가 든 판은 줄 수만큼만 차지한다. 판이 남는 높이를 다 받으면 표 안이 비고
      합계줄이 카드 밖으로 밀려난다 — 한 줄짜리 주문에서 그 빈칸이 화면 절반이었다. */
   #tab-rx.tab-pane.active, #tab-items.tab-pane.active { flex:0 0 auto; }
+  /* 개인정보는 고칠 때 칸이 커져 판을 넘긴다. 카드가 잘라 내게 두지 않고
+     판 안에서 굴린다 — 잘리면 아래쪽 줄이 있는 줄도 모른다. */
+  #tab-info.tab-pane.active { overflow-y:auto; }
 
   /* 표는 카드 안쪽 여백(12/16)을 넘어 양옆·밑변까지 간다 — 띠가 카드 폭을 다 쓴다.
      조회 결과 목록의 아래끝이 그렇게 생겼고, 같은 자리에서 같게 읽혀야 한다.

@@ -986,6 +986,18 @@ document.addEventListener('keydown', (e) => {
     if (!document.querySelector('.pnl-tab.active')) pnlShow('list');
   }
 
+  /* 화면 탭 이름 — 붙일 번호가 하나도 없으면 꼬리표(「- 」)를 달지 않는다.
+     상담은 상담번호가 먼저다. 주문에 이어 두지 않은 상담이 대부분이라
+     주문번호로 지으면 거의 모든 탭이 「상담 - 」로 끝났다. */
+  function pcTabLabel(prefix, row) {
+    /* 서버가 빈 상담번호를 「-」로 채워 보낸다(histories) — 그대로 쓰면 「상담 - -」가
+       된다. 번호가 아닌 것은 없는 것으로 본다. counsel_id 는 처방번호다. */
+    const clean = (v) => { const t = String(v ?? '').trim(); return (t && t !== '-') ? t : ''; };
+    const no = clean(row?.counsel_no) || clean(row?.order_no)
+            || clean(row?.counsel_id) || clean(row?.rx_number);
+    return no ? prefix + ' - ' + no : prefix;
+  }
+
   window.pcLoad = async function (id, name, mobile) {
     const key  = pcEnsureTab(id, name);
     if (mobile) pcTabs[id].mobile = mobile;   // 상담 창의 통화번호 기본값
@@ -1116,7 +1128,9 @@ document.addEventListener('keydown', (e) => {
           const cell = e.target.closest('[data-row-index]');
           if (!cell) return;
           const row = pcTabs[id].grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-          if (row?.url) window.ceOpenTab(row.url, '상담 - ' + (row.order_no || ''), 'bx-conversation');
+          /* 탭 이름은 상담번호로 짓는다. 주문번호로 지었더니 주문에 이어 두지 않은
+             상담(대부분이 그렇다)에서 「상담 - 」로 끝나 무엇을 연 것인지 알 수 없었다. */
+          if (row?.url) window.ceOpenTab(row.url, pcTabLabel('상담', row), 'bx-conversation');
         });
       } else {
         pcTabs[id].grid.setData(rows);
@@ -1189,7 +1203,7 @@ document.addEventListener('keydown', (e) => {
       onConfirm: (v) => {
         if (v === 'order') { csEditOrder(btn, row.counsel_id, p?.id); return; }
         if (v === 'open' && row.url) {
-          window.ceOpenTab(row.url, '주문 - ' + (row.order_no || row.counsel_no || ''), 'file-edit-02');
+          window.ceOpenTab(row.url, pcTabLabel('주문', row), 'file-edit-02');
         }
       },
     });
