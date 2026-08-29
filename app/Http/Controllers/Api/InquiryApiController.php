@@ -56,7 +56,9 @@ class InquiryApiController extends Controller
         $request->validate([
             'title'      => 'required|string|max:255',
             'body'       => 'nullable|string',
-            'category'   => 'required|in:general,technical,other',
+            // 새 분류(구매·처방전·앱 이용·기타)와, 이미 나간 앱이 보내는 옛 값을 함께 받는다
+            'category'   => 'required|in:' . implode(',', array_merge(
+                array_keys(Inquiry::CATEGORIES), array_keys(Inquiry::LEGACY_CATEGORIES))),
             'attachment' => 'nullable|file|max:10240',
         ]);
 
@@ -66,8 +68,16 @@ class InquiryApiController extends Controller
 
         $inquiry = Inquiry::create([
             'user_id'  => Auth::id(),
+            // 문의자는 환자다 — 앱 계정으로 환자를 찾아 붙인다
+            'patient_id' => $this->patientFor(Auth::user())?->id,
             'title'    => $request->input('title'),
-            'category' => $request->input('category'),
+            // 옛 값으로 올라온 것은 새 자리로 옮겨 담는다 — 목록의 분류가 갈리면 안 된다
+            'category' => Inquiry::LEGACY_CATEGORIES[$request->input('category')]
+                          ?? $request->input('category'),
+            // 앱에서 올린 것은 앱으로 회신한다
+            'reply_channel' => 'app',
+            'contact'  => Auth::user()->phone,
+            'content'  => $request->input('body'),
             'status'   => 'pending',
         ]);
 
@@ -231,5 +241,34 @@ class InquiryApiController extends Controller
             'is_image'        => $msg->is_image,
             'created_at'      => $msg->created_at->format('Y-m-d H:i'),
         ];
+    }
+
+    /**
+     * 앱 계정에 딸린 환자.
+     *
+     * 계정과 환자를 잇는 칸이 아직 없다. 휴대폰이 같으면 같은 사람으로 보고, 없으면
+     * 이름이 하나뿐일 때만 잇는다 — 동명이인을 잘못 이으면 남의 문의가 된다.
+     */
+    private function patientFor(?User $user): ?\App\Models\Patient
+    {
+        if (!$user) {
+            return null;
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', (string) $user->phone);
+
+        if ($digits !== '') {
+            $hit = \App\Models\Patient::whereRaw(
+                "REPLACE(REPLACE(mobile,'-',''),' ','') = ?", [$digits]
+            )->first();
+
+            if ($hit) {
+                return $hit;
+            }
+        }
+
+        $byName = \App\Models\Patient::where('name', $user->name)->limit(2)->get();
+
+        return $byName->count() === 1 ? $byName->first() : null;
     }
 }

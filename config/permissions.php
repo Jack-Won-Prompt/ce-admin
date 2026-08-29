@@ -209,7 +209,7 @@ return [
             'actions' => ['view', 'create', 'update', 'delete'],
         ],
         'inquiries' => [
-            'label'   => '문의하기',
+            'label'   => '환자 문의',
             'group'   => 'support',
             'routes'  => ['inquiries'],
             'actions' => ['view', 'create', 'update', 'delete'],

@@ -22,14 +22,17 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
   final _formKey   = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _bodyCtrl  = TextEditingController();
-  String _category  = 'general';
+  String _category  = 'purchase';
   bool   _isLoading = false;
   XFile? _attachment;
 
+  // 분류는 CEAdmin 의 Inquiry::CATEGORIES 와 같은 값이라야 목록에서 갈리지 않는다.
+  // 옛 값(general·technical)은 서버가 아직 받아 새 자리로 옮겨 담는다.
   static const _categories = [
-    ('general',   '일반'),
-    ('technical', '기술'),
-    ('other',     '기타'),
+    ('purchase',     '구매'),
+    ('prescription', '처방전'),
+    ('app',          '앱 이용'),
+    ('other',        '기타'),
   ];
 
   @override

@@ -1666,9 +1666,9 @@
         @endif
         @if($vis('inquiries'))
         <div class="menu-item {{ request()->routeIs('inquiries*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="bubble-chat-edit" href="{{ route('inquiries.index') }}" data-title="문의하기">
+          <a class="menu-link" data-icon="bubble-chat-edit" href="{{ route('inquiries.index') }}" data-title="환자 문의">
             @dsicon('bubble-chat-edit', 'ds-icon menu-icon')
-            <span>문의하기</span>
+            <span>환자 문의</span>
             @if(Auth::user()->role === 'admin')
               @php
                 try { $inquiryPending = \App\Models\Inquiry::where('status', 'pending')->count(); }

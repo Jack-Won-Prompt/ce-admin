@@ -292,6 +292,10 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('inquiries')->name('inquiries.')->group(function () {
         Route::get('/',                    [InquiryController::class, 'index'])->name('index');
         Route::get('/create',              [InquiryController::class, 'create'])->name('create');
+        // 환자 조회는 {inquiry} 보다 앞에 둔다 — 뒤에 두면 「patient-search」를 문의 번호로 읽는다
+        Route::get('/patient-search',      [InquiryController::class, 'patientSearch'])->name('patientSearch');
+        Route::get('/{inquiry}/detail',    [InquiryController::class, 'detail'])->name('detail');
+        Route::post('/{inquiry}/handle',   [InquiryController::class, 'handle'])->name('handle');
         Route::post('/',                   [InquiryController::class, 'store'])->name('store');
         Route::get('/{inquiry}',           [InquiryController::class, 'show'])->name('show');
         Route::post('/{inquiry}/reply',    [InquiryController::class, 'reply'])->name('reply');
