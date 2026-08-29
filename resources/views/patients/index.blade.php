@@ -113,7 +113,7 @@
   /* 상자 — 시안 120:917 Frame 48101489: 960×902 · r12 · bg 흰색 · bd 1px gray-200.
      .modal-box 는 layouts/app.blade.php 도 쓰는 전역 이름이라 #addModal 안으로 묶는다.
      묶지 않으면 이 화면이 열려 있는 동안 전역 확인창(.modal-box.sm)에도 테두리가 붙는다. */
-  #addModal .modal-box { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:960px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
+  #addModal .modal-box { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:960px;max-width:95vw;max-height:95vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
   /* 머리·본문·바닥 규격은 Figma 120:917(환자 추가 모달) 실측 —
      머리 960×54 pad 16/24 · gap 12 · 제목 14px/700 lh22,
      본문 pad 24, 바닥 960×72 pad 16/24 · gap 8 */
