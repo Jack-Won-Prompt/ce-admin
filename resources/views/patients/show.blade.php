@@ -101,6 +101,9 @@
      주문 이력으로 돌아가면 두 표가 함께 보였다. */
   .tab-pane:not(.active) { display:none; }
   .tab-pane.active { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+  /* 표가 든 판은 줄 수만큼만 차지한다. 판이 남는 높이를 다 받으면 표 안이 비고
+     합계줄이 카드 밖으로 밀려난다 — 한 줄짜리 주문에서 그 빈칸이 화면 절반이었다. */
+  #tab-rx.tab-pane.active, #tab-items.tab-pane.active { flex:0 0 auto; }
 
   /* 표는 카드 안쪽 여백(12/16)을 넘어 양옆·밑변까지 간다 — 띠가 카드 폭을 다 쓴다.
      조회 결과 목록의 아래끝이 그렇게 생겼고, 같은 자리에서 같게 읽혀야 한다.
@@ -166,7 +169,29 @@
           </div>
         </div>
 
+        {{-- 가로 탭 — 개인정보ㆍ주문 이력ㆍ주문 제품이 한 카드 안에서 갈린다.
+             예전에는 개인정보가 일곱 줄을 먹고 그 아래에 주문 이력 카드가 따로 서서,
+             개인정보를 다 읽고 나서야 주문이 보였다. 이 화면을 여는 까닭은 대개
+             「이 사람이 무엇을 언제 샀나」인데 그것이 늘 화면 밖에 있었다.
+             이름 줄은 탭 밖이다 — 어느 탭에 있든 누구를 보고 있는지는 보여야 한다. --}}
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-btn-info" onclick="switchTab(this,'tab-info')">
+            <i class="fa-solid fa-id-card"></i> 개인정보
+          </button>
+          <button class="tab-btn" id="tab-btn-rx" onclick="switchTab(this,'tab-rx')">
+            <i class="fa-solid fa-file-medical"></i> 주문 이력
+            <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
+          </button>
+          {{-- 한 건을 열면 그 주문의 제품 줄이 이 옆 탭에 펼쳐진다. 목록에 제품명 칸을
+               두었더니 여러 줄짜리 주문은 첫 줄만 보였다 — 아예 제 자리를 준다. --}}
+          <button class="tab-btn" id="tab-btn-items" style="display:none;" onclick="switchTab(this,'tab-items')">
+            <i class="fa-solid fa-boxes-stacked"></i> <span id="tab-items-label">주문 제품</span>
+          </button>
+          <span id="rxTabHint" style="margin-left:auto;font-size:11px;color:var(--text-muted);display:none;">처방번호를 누르면 주문 등록 화면이, 행을 더블클릭하면 그 주문의 제품이 열립니다.</span>
+        </div>
+
         {{-- 개인정보 — 보는 것과 고치는 것이 한 자리다 --}}
+        <div class="tab-pane active" id="tab-info">
         <div class="view-panel" id="view-panel">
           {{-- 사업부를 맨 앞에 둔다 — IC 냐 OC 냐에 따라 다루는 물건도, 붙는 서류도
                갈린다. IC 로 두면 저장되는 이름 앞에 (E) 가 붙는다(위드웍스 표기). --}}
@@ -481,31 +506,12 @@
                알 수 없어 적어 두어도 다음 사람이 쓰지 못했다 — 통화 기록은 상담내역에 남는다.
                이미 적혀 있는 메모는 지우지 않는다(화면에서 보내지 않을 뿐이다). --}}
         </div>
-
-      </div>
-    </div>
-  </div>
-
-  {{-- 아래: 주문 이력 --}}
-  <div>
-    <div class="card">
-      <div class="card-body">
-        <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchTab(this,'tab-rx')">
-            <i class="fa-solid fa-file-medical"></i> 주문 이력
-            <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
-          </button>
-          {{-- 한 건을 열면 그 주문의 제품 줄이 이 옆 탭에 펼쳐진다. 목록에 제품명 칸을
-               두었더니 여러 줄짜리 주문은 첫 줄만 보였다 — 아예 제 자리를 준다. --}}
-          <button class="tab-btn" id="tab-btn-items" style="display:none;" onclick="switchTab(this,'tab-items')">
-            <i class="fa-solid fa-boxes-stacked"></i> <span id="tab-items-label">주문 제품</span>
-          </button>
-          <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">처방번호를 누르면 주문 등록 화면이, 행을 더블클릭하면 그 주문의 제품이 열립니다.</span>
-        </div>
+        </div>{{-- /tab-info --}}
 
         {{-- 다른 목록 화면과 같은 표를 쓴다. 손으로 그린 줄은 정렬도 엑셀 저장도 없어,
              건수가 늘면 훑을 방법이 눈뿐이었다. --}}
-        <div class="tab-pane active" id="tab-rx">
+        {{-- 처음 열면 개인정보가 선다. 주문 이력은 옆 탭이다. --}}
+        <div class="tab-pane" id="tab-rx">
           @if($rxRows->isEmpty())
             <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
               <i class="fa-solid fa-file-medical" style="font-size:28px;opacity:.3;display:block;margin-bottom:10px;"></i>
@@ -673,11 +679,23 @@
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(id).classList.add('active');
+
+    /* 「처방번호를 누르면…」 안내는 표가 있는 탭에서만 뜻이 있다. 개인정보를 보는
+       동안에도 떠 있으면 무엇을 누르라는 말인지 알 수 없다. */
+    const hint = document.getElementById('rxTabHint');
+    if (hint) hint.style.display = (id === 'tab-info') ? 'none' : '';
   }
 
   /* 고치기로 들어가고 나오는 길. 칸을 갈아 끼우지 않고 표시만 바꾼다 —
      보던 자리가 그대로 있어야 무엇을 고치는지 눈으로 따라갈 수 있다. */
   function toggleEdit(on) {
+    /* 고치는 칸은 개인정보 탭에 있다. 주문 이력을 보다가 「수정」을 누르면 아무 일도
+       일어나지 않은 것처럼 보이므로, 고칠 자리로 함께 옮겨 준다. */
+    if (on) {
+      const btn = document.getElementById('tab-btn-info');
+      if (btn && !btn.classList.contains('active')) switchTab(btn, 'tab-info');
+    }
+
     document.querySelector('.detail-layout').classList.toggle('is-editing', on);
     // 그만두면 손댄 것은 없던 일로 한다
     if (!on) {
