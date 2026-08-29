@@ -153,6 +153,11 @@
                     <input type="password" name="{{ $key }}" class="form-control" autocomplete="new-password"
                            placeholder="{{ $state['filled'] ? '설정됨 — 바꿀 때만 입력' : '미설정' }}">
 
+                  @elseif ($type === 'textarea')
+                    {{-- 여러 줄로 적는 값(쉬는 날 목록 따위) — 한 줄 칸에 넣으면 끝이 안 보인다 --}}
+                    <textarea name="{{ $key }}" class="form-control" rows="3"
+                              style="min-height:72px;line-height:1.5;">{{ $state['value'] }}</textarea>
+
                   @else
                     <input type="{{ $type === 'int' ? 'number' : 'text' }}" name="{{ $key }}" class="form-control"
                            value="{{ $state['value'] }}">

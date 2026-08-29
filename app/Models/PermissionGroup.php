@@ -42,6 +42,7 @@ class PermissionGroup extends Model
                 'update' => (bool) $p->can_update,
                 'delete' => (bool) $p->can_delete,
                 'send'   => (bool) $p->can_send,
+                'approve' => (bool) $p->can_approve,
             ];
         }
         return $matrix;

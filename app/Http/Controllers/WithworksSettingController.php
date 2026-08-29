@@ -39,6 +39,7 @@ class WithworksSettingController extends Controller
             'return_so_type'   => 'nullable|string|max:20',
             'cancel_so_type'   => 'nullable|string|max:20',
             'exchange_so_type' => 'nullable|string|max:20',
+            'adjust_so_type'   => 'nullable|string|max:20',
         ]);
 
         $s = WithworksSetting::current();

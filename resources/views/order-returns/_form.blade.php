@@ -87,6 +87,16 @@
           @endforeach
         </select>
       </div>
+      <div class="rto-f rto-only" id="rtoSubtypeWrap">
+        {{-- 취소는 두 갈래다. 아직 나가지 않은 것을 무르는 것과, 자격이 바뀌어 이미 받은
+             돈만 되돌리는 것(일반 환불). 둘은 창고에 보내는 것도 단계도 다르다. --}}
+        <label>취소 갈래</label>
+        <select name="subtype" id="rtoSubtype" class="form-control form-select">
+          @foreach(\App\Models\OrderReturn::SUBTYPES as $k => $label)
+            <option value="{{ $k }}">{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
       <div class="rto-f">
         <label>사유</label>
         <select name="reason_code" id="rtoReason" class="form-control form-select" required>
@@ -106,6 +116,13 @@
         <label>주문일</label>
         <input type="text" id="rtoOrderDate" class="form-control" readonly
                style="background:var(--gray-50);" placeholder="—">
+      </div>
+      <div class="rto-f span4">
+        {{-- 갈래가 정해지면 단계도 배송비도 승인자도 정해진다. 접수하는 사람이 그것을
+             미리 알아야 고객에게 무엇을 안내할지 정할 수 있다. --}}
+        <div id="rtoFlowNote" style="padding:8px 12px;background:var(--gray-50);
+                    border:1px solid var(--border);border-radius:8px;font-size:12px;
+                    color:var(--gray-700);line-height:1.6;"></div>
       </div>
       <div class="rto-f span4" id="rtoPreShipWrap" style="display:none;">
         {{-- 아직 나가지 않은 주문이면 종류와 상관없이 판매주문 취소로 나간다.
@@ -173,6 +190,12 @@
 <script>
 (function () {
   const SEARCH_URL  = @json(route('order-returns.orderSearch'));
+  /* 갈래별 단계·승인자는 모델이 정한다. 화면에 두 벌로 적으면 한쪽만 고쳐진다. */
+  const FLOWS = @json(collect(\App\Models\OrderReturn::FLOWS)->map(
+      fn ($f) => collect($f)->map(fn ($s) => \App\Models\OrderReturn::STATUS_LABELS[$s])->all()));
+  const SC_LABELS = @json(\App\Models\OrderReturn::SCENARIO_LABELS);
+  const APPROVERS = @json(\App\Models\OrderReturn::APPROVERS);
+  const DEFECTS   = @json(\App\Models\OrderReturn::DEFECT_REASONS);
   const PATIENT_URL = @json(route('order-returns.patientSearch'));
 
   const $ = (id) => document.getElementById(id);
@@ -181,18 +204,21 @@
 
   /* 주문 제품은 처음부터 자리를 잡아 둔다. 빈 표라도 보이면 무엇이 채워질 자리인지
      알 수 있고, 고른 뒤에 갑자기 나타나 아래가 밀리지 않는다. */
+  /* 되돌릴 수량만 고칠 수 있다 — 부분 취소가 여기서 산다. 주문 수량을 함께 보여 주어
+     몇 개 가운데 몇 개인지 한눈에 보이게 한다. 0 을 넣으면 그 줄은 되돌리지 않는다. */
   const itemGrid = new wwGrid({
     el: $('rtoItemGrid'),
-    height: 'auto', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
+    height: 'auto', editable: true, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
-      { header: '제품코드', name: 'product_code', width: 120 },
-      { header: '제품명',   name: 'product_name', width: 300 },
-      { header: '수량',     name: 'quantity',     width: 80,  align: 'right', editor: 'number' },
+      { header: '제품코드', name: 'product_code', width: 120, editable: false },
+      { header: '제품명',   name: 'product_name', width: 260, editable: false },
+      { header: '주문수량', name: 'ordered_quantity', width: 90, align: 'right', editor: 'number', editable: false },
+      { header: '되돌릴 수량', name: 'quantity', width: 110, align: 'right', editor: 'number' },
       /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
          다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
       { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number',
-        summary: false },  // 한 개 값이라 더하지 않는다
-      { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number' },
+        editable: false, summary: false },  // 한 개 값이라 더하지 않는다
+      { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number', editable: false },
     ],
     data: [],
   });
@@ -325,8 +351,10 @@
     // 아직 나가지 않은 주문이면 무엇으로 나가는지 미리 알린다
     $('rtoPreShipWrap').style.display = r.shipped ? 'none' : '';
 
-    itemGrid.setData(r.items ?? []);
-    $('rtoItemNote').textContent = (r.items?.length ?? 0) + '개 품목 · ' + r.order_no;
+    /* 처음에는 다 되돌리는 것으로 앉힌다 — 대개 그렇고, 부분이면 수량만 줄이면 된다. */
+    itemGrid.setData((r.items ?? []).map(i => ({ ...i, ordered_quantity: i.quantity })));
+    $('rtoItemNote').textContent = (r.items?.length ?? 0)
+      + '개 품목 · ' + r.order_no + ' — 일부만 되돌리려면 「되돌릴 수량」을 줄이십시오';
   }
 
   /* 종류에 따라 물을 것이 다르다. */
@@ -336,7 +364,54 @@
        바꿔 보낼 물건과 보낼 곳은 창고가 수거·검수를 마친 뒤 정해진다.
        환불은 교환이 아닐 때만 묻는다. */
     $('rtoRefundSec').style.display = t === 'exchange' ? 'none' : 'block';
+    // 취소일 때만 갈래를 묻는다 — 교환·반품에는 갈래가 없다
+    $('rtoSubtypeWrap').classList.toggle('on', t === 'cancel');
+    syncReason();
     syncRefundMethod();
+    syncNote();
+  }
+
+  /* 자격 변경은 되돌려 받을 물건이 없다 — 언제나 일반 환불이다.
+     고른 갈래와 사유가 어긋나면 접수한 뒤에 흐름이 엉뚱하게 잡힌다. */
+  /* 지금 고른 것이 절차서의 어느 갈래인가 — 모델의 scenario() 와 같은 규칙이다. */
+  function scenarioOf() {
+    const t = $('rtoType').value;
+    const r = $('rtoReason').value;
+    if (t === 'exchange') return DEFECTS.includes(r) ? 'exchange_defect' : 'exchange_mind';
+    if (t === 'return')   return 'return_refund';
+    return (r === 'eligibility' || $('rtoSubtype').value === 'refund_only')
+      ? 'refund_only' : 'cancel_before_ship';
+  }
+
+  const RULES = {
+    exchange_mind: '환자가 3PL 로 보내면 배송비는 <b>환자 부담</b>입니다. '
+      + '검수·승인·입금 확인을 마쳐야 다시 나갑니다.',
+    exchange_defect: '3PL 이 회수하고 택배비도 <b>3PL 이 뭅니다</b>. '
+      + '<b>동일 제품만</b> 바꿔 드리고, 불량 lot 은 빼고 출고합니다. '
+      + '최초 일자 기준으로 청구하며 재결제는 하지 않습니다. '
+      + '회수·교환 기간에 쓸 제품은 따로 보냅니다.',
+    return_refund: '물건을 받아 검수한 뒤 결제를 취소하고 마이너스로 발행합니다.',
+    cancel_before_ship: '아직 나가지 않은 주문입니다 — 수거·검수가 없습니다.',
+    refund_only: '되돌려 받을 물건이 없습니다. 창고에는 알리지 않고, '
+      + '승인·결제취소 뒤 <b>전산판매(금액조정)</b> 주문을 세웁니다.',
+  };
+
+  function syncNote() {
+    const sc = scenarioOf();
+    $('rtoFlowNote').innerHTML =
+      '<b>' + SC_LABELS[sc] + '</b> · 승인 ' + APPROVERS[sc]
+      + '<br>' + (FLOWS[sc] || []).join(' → ')
+      + '<br>' + RULES[sc];
+  }
+
+  function syncReason() {
+    if ($('rtoType').value !== 'cancel') return;
+    if ($('rtoReason').value === 'eligibility') {
+      $('rtoSubtype').value = 'refund_only';
+      $('rtoSubtype').disabled = true;
+    } else {
+      $('rtoSubtype').disabled = false;
+    }
   }
 
   function syncRefundMethod() {
@@ -347,11 +422,44 @@
 
   $('rtoType').addEventListener('change', syncType);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
+  $('rtoReason').addEventListener('change', () => { syncReason(); syncNote(); });
+  $('rtoSubtype').addEventListener('change', syncNote);
   ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } }));
 
+  /* 그리드는 폼 칸이 아니다 — 보낼 때 숨은 칸으로 옮겨 싣는다.
+     되돌릴 수량이 0 인 줄은 빼고, 하나도 남지 않으면 접수를 막는다. */
   $('rtoForm').addEventListener('submit', (e) => {
-    if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 고르십시오.'); }
+    if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 고르십시오.'); return; }
+
+    document.querySelectorAll('.rto-item-field').forEach(el => el.remove());
+
+    const rows = (itemGrid.getData() ?? []).filter(r => Number(r.quantity) > 0);
+
+    if (!rows.length) {
+      e.preventDefault();
+      alert('되돌릴 수량이 하나도 없습니다. 「되돌릴 수량」을 적으십시오.');
+      return;
+    }
+
+    rows.forEach((r, i) => {
+      Object.entries({
+        order_item_id:    r.order_item_id ?? '',
+        product_code:     r.product_code ?? '',
+        product_name:     r.product_name ?? '',
+        ordered_quantity: r.ordered_quantity ?? 0,
+        quantity:         r.quantity ?? 0,
+        unit_price:       r.unit_price ?? 0,
+        copay:            r.copay ?? 0,
+      }).forEach(([k, v]) => {
+        const el = document.createElement('input');
+        el.type = 'hidden';
+        el.className = 'rto-item-field';
+        el.name = `items[${i}][${k}]`;
+        el.value = v;
+        $('rtoForm').appendChild(el);
+      });
+    });
   });
 
   syncType();

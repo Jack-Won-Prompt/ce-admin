@@ -20,8 +20,9 @@ return [
         'update' => '수정',
         'delete' => '삭제',
         'send'   => '발송·발행',
-        // 처방전 검수 완료ㆍ반려. 적는 사람(update)과 보는 사람을 가르려고 따로 둔다.
-        'approve' => '검수 완료',
+        // 처방전 검수 완료ㆍ반려, 교환·반품의 검수 확정ㆍ전자 승인.
+        // 적는 사람(update)과 승인하는 사람을 가르려고 따로 둔다.
+        'approve' => '검수 완료 · 전자 승인',
     ],
 
     /*
@@ -99,7 +100,8 @@ return [
             'group'   => 'order',
             'routes'  => ['order-returns'],
             // 단계를 옮기는 것은 POST 라 create 로 추론된다 — 아래 overrides 에서 바로잡는다
-            'actions' => ['view', 'create', 'update', 'delete'],
+            // approve = 「검수 확정」ㆍ「전자 승인」. 절차서가 승인자를 따로 두라고 한다.
+            'actions' => ['view', 'create', 'update', 'delete', 'send', 'approve'],
         ],
         'sample-orders' => [
             'label'   => 'CE 샘플주문',
@@ -296,6 +298,13 @@ return [
         // 처방전을 볼 수 있는 사람만 그 파일도 볼 수 있게 명시한다.
         // 단계를 옮기는 것은 새로 만드는 일이 아니라 고치는 일이다
         'order-returns.advance'         => ['order-returns', 'update'],
+        // 검수 확정ㆍ전자 승인은 승인자 몫이라 approve 로 가른다
+        'order-returns.confirmInspection' => ['order-returns', 'approve'],
+        'order-returns.approve'           => ['order-returns', 'approve'],
+        // 마이너스 발행은 국세청으로 나간다 — 등록ㆍ수정과 따로 통제한다
+        'order-returns.issueCredit'       => ['order-returns', 'send'],
+        // 창고 검수 결과를 물어 오는 것은 조회다
+        'order-returns.pullInspection'    => ['order-returns', 'view'],
         // 연결 확인은 값을 만들지 않는다 — 설정을 쓰는 일이다
         'withworks-settings.test'       => ['withworks-settings', 'update'],
         'files.prescription-image'      => ['prescriptions', 'view'],

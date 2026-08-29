@@ -60,9 +60,18 @@ class WithworksReturns
             return true;   // 이미 보냈다 — 접수번호로 멱등이지만 부르지 않는 편이 낫다
         }
 
-        return $this->isPreShipCancel($return, $order)
-            ? $this->cancelOrigin($return, $order)
-            : $this->storeReturn($return, $order);
+        if (!$this->isPreShipCancel($return, $order)) {
+            return $this->storeReturn($return, $order);
+        }
+
+        /* 부분이면 원 판매주문을 통째로 취소하지 않는다 — 남는 수량은 그대로 나가야 한다.
+           수량을 줄이는 것은 Consumer Operation 이 위드웍스에서 직접 한다(절차서). */
+        if ($return->is_partial) {
+            return $this->fail($return, '부분 취소라 판매주문을 통째로 취소하지 않았습니다 — '
+                . '위드웍스에서 수량을 줄여 주십시오 (Consumer Operation)');
+        }
+
+        return $this->cancelOrigin($return, $order);
     }
 
     /**
@@ -253,6 +262,19 @@ class WithworksReturns
      */
     private function items(OrderReturn $return, Order $order): array
     {
+        /* 부분 취소면 받아 둔 줄이 곧 되돌리는 것이다. 원 주문의 수량을 그대로 보내면
+           창고는 다 돌아온다고 알고 기다린다. */
+        if ($return->relationLoaded('items') || $return->items()->exists()) {
+            $picked = $return->items
+                ->filter(fn ($i) => $i->product_code && $i->quantity > 0)
+                ->map(fn ($i) => ['item_code' => $i->product_code, 'qty' => (int) $i->quantity])
+                ->values()->all();
+
+            if ($picked !== []) {
+                return $picked;
+            }
+        }
+
         $items = $order->items
             ->filter(fn ($i) => $i->product_code)
             ->map(fn ($i) => [

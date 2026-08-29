@@ -158,6 +158,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{orderReturn}',   [\App\Http\Controllers\OrderReturnController::class, 'show'])->name('show');
         Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
         Route::post('/{orderReturn}/resend',  [\App\Http\Controllers\OrderReturnController::class, 'resend'])->name('resend');
+        // 창고 검수 결과 받아 오기 · 마이너스 발행 다시 시도
+        Route::post('/{orderReturn}/pull-inspection', [\App\Http\Controllers\OrderReturnController::class, 'pullInspection'])->name('pullInspection');
+        Route::post('/{orderReturn}/issue-credit',    [\App\Http\Controllers\OrderReturnController::class, 'issueCredit'])->name('issueCredit');
     });
 
     // CE 샘플판매주문 — 목록·상세·신규를 한 화면의 탭으로 둔다

@@ -168,6 +168,7 @@ class PermissionService
                 'update' => (bool) $r->can_update,
                 'delete' => (bool) $r->can_delete,
                 'send'   => (bool) $r->can_send,
+                'approve' => (bool) $r->can_approve,
             ];
         }
 

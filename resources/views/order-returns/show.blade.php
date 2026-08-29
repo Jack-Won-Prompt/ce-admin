@@ -34,6 +34,22 @@
   .log-move { width:150px; flex-shrink:0; font-weight:700; }
   .ok-bar { background:var(--primary-light); border:1px solid var(--primary-200); color:var(--primary);
             border-radius:8px; padding:9px 12px; font-size:12px; margin-bottom:14px; font-weight:700; }
+
+  /* 진행 단계 — 절차서의 칸 하나가 칩 하나다 */
+  .rt-steps { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .rt-step { border:1px solid var(--border); border-radius:8px; padding:6px 10px; min-width:92px;
+             background:var(--gray-50); }
+  .rt-step b { display:block; font-size:12px; font-weight:700; color:var(--gray-700); }
+  .rt-step span { display:block; font-size:10px; color:var(--text-muted); margin-top:2px; }
+  .rt-step.done { background:var(--primary-light); border-color:var(--primary-200); }
+  .rt-step.done b { color:var(--primary); }
+  .rt-step.now { background:var(--primary); border-color:var(--primary); }
+  .rt-step.now b, .rt-step.now span { color:#fff; }
+  .rt-late { color:#B54708; font-weight:700; font-size:12px; }
+  .rt-go { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px;
+           padding-top:12px; border-top:1px solid var(--border-light); }
+  .rt-go input[type=text] { flex:1; min-width:180px; height:32px; }
+  .rt-locked { font-size:12px; color:#B54708; }
 </style>
 @endpush
 
@@ -65,6 +81,7 @@
     {{-- 진행 단계 카드를 걷어냈으므로 지금 어느 단계인지는 여기에 남긴다.
          어디까지 왔는지 모르면 다음에 무엇을 할지 정할 수 없다. --}}
     <div class="rt-kv"><span>상태</span><span>{{ \App\Models\OrderReturn::STATUS_LABELS[$r->status] ?? $r->status }}</span></div>
+    <div class="rt-kv"><span>갈래</span><span>{{ $r->scenarioLabel() }}{{ $r->is_partial ? ' · 부분' : '' }}</span></div>
     <div class="rt-kv"><span>사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
     <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
@@ -94,6 +111,154 @@
   </div>
 </div>
 
+{{-- 진행 단계 ─────────────────────────────────────────
+     「Unicorn 교환·반품 절차」의 칸 하나가 단계 하나다. 어디까지 왔고 다음은 누가
+     무엇을 하는지가 보이지 않으면 담당자는 매번 절차서를 열어 봐야 한다.
+     검수 확정과 전자 승인은 승인 권한이 있어야 눌린다. --}}
+@php
+  $flow       = $r->flow();
+  $od         = $r->overdue();
+  $canApprove = perm('order-returns', 'approve');
+  $nexts      = $r->nextStatuses();
+@endphp
+<div class="rt-card">
+  <div class="rt-hd">
+    진행 단계 · {{ $r->scenarioLabel() }}
+    <span class="grow"></span>
+    @if($r->is_partial)<span style="font-size:11px;color:var(--text-muted);">부분 취소</span>@endif
+    @if($od)<span class="rt-late">{{ $od[0] }} 기한 {{ $od[1] }}영업일 초과</span>@endif
+  </div>
+  <div class="rt-bd">
+    <div class="rt-steps">
+      @foreach($flow as $st)
+        <div class="rt-step {{ $r->status === $st ? 'now' : ($r->reached($st) ? 'done' : '') }}">
+          <b>{{ \App\Models\OrderReturn::STATUS_LABELS[$st] ?? $st }}</b>
+          <span>{{ \App\Models\OrderReturn::STATUS_ACTORS[$st] ?? '' }}</span>
+        </div>
+      @endforeach
+    </div>
+
+    @if($r->hasDeadlines())
+      {{-- 기한은 창고 입고일부터 센다. 접수일부터 세면 고객이 늦게 보낸 날까지
+           창고가 뒤집어쓴다. --}}
+      <div class="rt-kv"><span>창고 입고</span><span>
+        {{ $r->arrived_at?->format('Y-m-d H:i') ?? '아직 — 「검수중」으로 옮기면 그때가 입고일이 됩니다' }}
+      </span></div>
+      @if($r->arrived_at)
+        <div class="rt-kv"><span>검수 기한</span><span>
+          {{ $r->inspectDueAt()?->format('Y-m-d') }}
+          <span style="color:var(--text-muted);font-weight:400;">
+            (입고 +{{ config('returns.inspect_days') }}영업일 · 검수 확정까지)
+          </span>
+        </span></div>
+        <div class="rt-kv"><span>{{ $r->type === \App\Models\OrderReturn::TYPE_EXCHANGE ? '출고' : '발행' }} 기한</span><span>
+          {{ $r->finalDueAt()?->format('Y-m-d') }}
+          <span style="color:var(--text-muted);font-weight:400;">
+            (입고 +{{ config('returns.ship_days') }}영업일)
+          </span>
+        </span></div>
+      @endif
+    @endif
+
+    <div class="rt-kv"><span>검수 확정</span><span>
+      {{ $r->inspect_confirmed_at?->format('Y-m-d H:i') ?? '—' }}
+      {{ $r->inspectConfirmer?->name ? '· ' . $r->inspectConfirmer->name : '' }}
+    </span></div>
+    <div class="rt-kv"><span>전자 승인</span><span>
+      {{ $r->approved_at?->format('Y-m-d H:i') ?? '—' }}
+      {{ $r->approver?->name ? '· ' . $r->approver->name : '' }}
+      <span style="color:var(--text-muted);font-weight:400;">(승인 주체 {{ $r->approverRole() }})</span>
+    </span></div>
+    @if($r->scenario() === \App\Models\OrderReturn::SC_EXCHANGE_MIND)
+      <div class="rt-kv"><span>입금 확인</span><span>{{ $r->payment_checked_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
+    @endif
+    @if($r->order_confirmed_at)
+      <div class="rt-kv"><span>오더 확정</span><span>{{ $r->order_confirmed_at->format('Y-m-d H:i') }}</span></div>
+    @endif
+
+    {{-- 다음으로 갈 곳. 흐름에 없는 곳으로는 건너뛸 수 없다 —
+         검수도 안 했는데 환불완료가 되는 식이면 단계를 둔 뜻이 없다. --}}
+    @if($nexts)
+      <form method="POST" action="{{ route('order-returns.advance', $r) }}" class="rt-go">
+        @csrf
+        <input type="text" name="reason" class="form-control" maxlength="500"
+               placeholder="옮기는 까닭 (남겨 두면 나중에 판단이 쉽습니다)">
+        @foreach($nexts as $st)
+          @php $locked = \App\Models\OrderReturn::needsApproval($st) && !$canApprove; @endphp
+          <button type="submit" name="to_status" value="{{ $st }}"
+                  class="ds-btn {{ $st === 'cancelled' ? '' : 'ds-btn-primary' }}"
+                  @disabled($locked)
+                  @if(in_array($st, ['credited', 'adjusted'], true))
+                    onclick="return confirm('세금계산서·현금영수증이 실제로 처리됩니다. 계속할까요?');"
+                  @endif>
+            {{ \App\Models\OrderReturn::STATUS_LABELS[$st] ?? $st }}@if($locked) 🔒 @endif
+          </button>
+        @endforeach
+      </form>
+      @if(!$canApprove && collect($nexts)->contains(fn ($st) => \App\Models\OrderReturn::needsApproval($st)))
+        <div class="rt-locked" style="margin-top:6px;">
+          이 단계는 승인 권한({{ $r->approverRole() }})이 있어야 누를 수 있습니다 —
+          설정 › 권한 그룹에서 「교환·반품 전자 승인」을 받으십시오.
+        </div>
+      @endif
+    @else
+      <div style="font-size:12px;color:var(--text-muted);margin-top:10px;">더 갈 단계가 없습니다.</div>
+    @endif
+  </div>
+</div>
+
+{{-- 되돌리는 품목 — 부분 취소면 몇 개 가운데 몇 개인지가 여기서 보인다 --}}
+@if($r->items->isNotEmpty())
+<div class="rt-card">
+  <div class="rt-hd">되돌리는 품목 <span class="grow"></span>
+    <span style="font-size:11px;font-weight:500;color:var(--text-muted);">
+      {{ $r->is_partial ? '부분 — 기관 청구 서류는 최종 청구분에 반영합니다' : '전부' }}
+    </span>
+  </div>
+  <div class="rt-bd">
+    @foreach($r->items as $it)
+      <div class="rt-kv">
+        <span>{{ $it->product_code ?: '—' }}</span>
+        <span>{{ $it->product_name ?: '—' }}
+          · {{ number_format($it->quantity) }}@if($it->ordered_quantity)/{{ number_format($it->ordered_quantity) }}@endif개
+          @if($it->copay) · 환불 {{ number_format($it->refundAmount()) }}원 @endif
+        </span>
+      </div>
+    @endforeach
+  </div>
+</div>
+@endif
+
+{{-- 마이너스 발행 · 금액조정 ───────────────────────────
+     절차서의 마지막 칸이다. 팝빌은 운영으로 붙어 있어 여기서 부르는 취소·발행은
+     국세청 신고까지 간다 — 사람이 누를 때만 돈다. --}}
+@if($r->credit_issued_at || $r->credit_note || $r->adjust_so_no || $r->reached('refunded'))
+<div class="rt-card">
+  <div class="rt-hd">
+    마이너스 발행
+    @if($r->credit_note && perm('order-returns', 'send'))
+      <form method="POST" action="{{ route('order-returns.issueCredit', $r) }}" style="margin-left:auto;">
+        @csrf
+        <button type="submit" class="ds-btn ds-btn-sm"
+                onclick="return confirm('세금계산서·현금영수증을 실제로 처리합니다. 계속할까요?');">
+          다시 시도
+        </button>
+      </form>
+    @endif
+  </div>
+  <div class="rt-bd">
+    <div class="rt-kv"><span>발행 처리</span><span>{{ $r->credit_issued_at?->format('Y-m-d H:i') ?? '아직' }}</span></div>
+    <div class="rt-kv"><span>내용</span><span>{{ $r->credit_note ?: '—' }}</span></div>
+    @if($r->scenario() === \App\Models\OrderReturn::SC_REFUND_ONLY)
+      <div class="rt-kv"><span>금액조정 주문</span><span>
+        {{ $r->adjust_so_no ?: '아직' }}
+        {{ $r->adjusted_at ? '· ' . $r->adjusted_at->format('Y-m-d H:i') : '' }}
+      </span></div>
+    @endif
+  </div>
+</div>
+@endif
+
 {{-- 창고 연계 ─────────────────────────────────────────
      되돌리는 건이 CEAdmin 안에서만 돌면 창고는 물건이 돌아온다는 것을 모른다.
      알렸는지, 창고가 어디까지 했는지를 여기서 본다. --}}
@@ -108,6 +273,13 @@
         <button type="submit" class="ds-btn ds-btn-sm">
           {{ $r->withworks_error ? '다시 보내기' : '위드웍스로 보내기' }}
         </button>
+      </form>
+    @elseif($r->hasReturnSo())
+      {{-- 검수는 3PL 이 한다. 그 결과를 눈으로 옮겨 적으면 잘못 적히고 언제 받았는지도
+           남지 않는다 — 받아 온 뒤 확정은 Care team manager 가 누른다. --}}
+      <form method="POST" action="{{ route('order-returns.pullInspection', $r) }}" style="margin-left:auto;display:inline;">
+        @csrf
+        <button type="submit" class="ds-btn ds-btn-sm">검수 결과 받기</button>
       </form>
     @endif
   </div>

@@ -11,10 +11,24 @@
   <div class="help-tip"><i class="bx bx-info-circle"></i>배송된 물건을 바꾸거나 돌려받고, 출고 전 주문을 무르는 자리입니다.</div>
 </div>
 <div class="help-section">
-  <div class="help-section-title">종류별 단계</div>
-  <div class="help-item"><div class="help-item-text"><strong>교환</strong>접수 → 수거중 → 검수중 → 재발송 → 완료</div></div>
-  <div class="help-item"><div class="help-item-text"><strong>반품</strong>접수 → 수거중 → 검수중 → 확인요청 → 환불승인 → 환불완료</div></div>
-  <div class="help-item"><div class="help-item-text"><strong>취소</strong>보낸 물건이 없어 수거·검수를 건너뜁니다</div></div>
+  <div class="help-section-title">갈래별 단계 (Unicorn 교환·반품 절차)</div>
+  @foreach(\App\Models\OrderReturn::FLOWS as $sc => $flow)
+    <div class="help-item"><div class="help-item-text">
+      <strong>{{ \App\Models\OrderReturn::SCENARIO_LABELS[$sc] }}</strong>
+      {{ collect($flow)->map(fn ($st) => \App\Models\OrderReturn::STATUS_LABELS[$st])->implode(' → ') }}
+    </div></div>
+  @endforeach
+</div>
+<div class="help-section">
+  <div class="help-section-title">기한</div>
+  <div class="help-tip"><i class="bx bx-time"></i>창고 입고일로부터 검수 {{ config('returns.inspect_days') }}영업일 ·
+    출고(반품은 발행) {{ config('returns.ship_days') }}영업일입니다. 넘긴 건은 목록에 붉게 뜹니다.
+    쉬는 날은 설정 › 서비스 설정 › 교환·반품에서 고칩니다.</div>
+</div>
+<div class="help-section">
+  <div class="help-section-title">전자 승인</div>
+  <div class="help-tip"><i class="bx bx-lock-alt"></i>검수 확정과 전자 승인은 승인 권한이 있어야 누릅니다.
+    설정 › 권한 그룹의 「교환·반품 전자 승인」을 주면 됩니다.</div>
 </div>
 @endsection
 
@@ -75,7 +89,7 @@
   {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
-    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건)</span></button>
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건@if($lateCount) · <b style="color:#B54708;">기한 초과 {{ $lateCount }}</b>@endif)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
     <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>
@@ -114,8 +128,21 @@
     height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '접수번호', name: 'receipt',  width: 140, sortable: true },
-      { header: '종류',     name: 'type',     width: 70,  align: 'center', sortable: true },
+      { header: '종류',     name: 'type',     width: 60,  align: 'center', sortable: true },
+      // 같은 「교환」이라도 변심과 불량은 배송비도 승인자도 다르다 — 갈래를 세운다
+      { header: '갈래',     name: 'scenario', width: 110, align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
+      {
+        // 절차서의 기한을 넘긴 건. 묻히면 기한을 둔 뜻이 없다.
+        header: '기한', name: 'overdue', width: 110, align: 'center', sortable: true,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v || '';
+          if (v) { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
+      { header: '범위',     name: 'partial',  width: 60,  align: 'center', sortable: true },
       { header: '주문번호', name: 'order_no', width: 120, sortable: true },
       { header: '원 판매주문', name: 'origin_so', width: 130, sortable: true },
       {

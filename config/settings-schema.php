@@ -105,6 +105,35 @@ return [
         ],
     ],
 
+    'returns' => [
+        'label' => '교환·반품',
+        'desc'  => '「입고일로부터 2영업일 이내 검수 · 3영업일 이내 출고」를 재는 기준',
+        'fields' => [
+            'inspect_days' => [
+                'label'  => '검수 기한 (영업일)',
+                'config' => 'returns.inspect_days',
+                'type'   => 'int',
+                'width'  => 1,
+                'help'   => '3PL 창고에 물건이 들어온 날부터 센다. 접수일이 아니다.',
+            ],
+            'ship_days' => [
+                'label'  => '출고·발행 기한 (영업일)',
+                'config' => 'returns.ship_days',
+                'type'   => 'int',
+                'width'  => 1,
+                'help'   => '교환은 재발송까지, 반품은 마이너스 발행까지의 기한이다.',
+            ],
+            'holidays' => [
+                'label'  => '쉬는 날',
+                'config' => 'returns.holidays',
+                'type'   => 'textarea',
+                'width'  => 3,
+                'help'   => 'YYYY-MM-DD 를 쉼표나 줄바꿈으로 나눠 적는다. 토·일은 적지 않아도 쉰다. '
+                          . '대체공휴일·임시공휴일은 해마다 관보로 정해지므로 그해 것을 확인해 고쳐 넣는다.',
+            ],
+        ],
+    ],
+
     'kakao' => [
         'label' => '카카오 알림톡',
         'desc'  => '알림톡 발송 채널·발신 정보',

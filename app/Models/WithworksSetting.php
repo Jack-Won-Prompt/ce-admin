@@ -47,12 +47,20 @@ class WithworksSetting extends Model
     public const SO_TYPE_EUD_RETURN   = '1505';
     public const SO_TYPE_EUD_EXCHANGE = '';
 
+    /**
+     * 일반 환불(자격 변경 등)이 세우는 금액조정 주문 — 전산판매(금액조정).
+     *
+     * 물건은 움직이지 않고 금액만 마이너스로 맞춘다. 반품 코드로 보내면 창고가
+     * 오지 않을 물건을 기다린다.
+     */
+    public const SO_TYPE_ADJUST = '1092';
+
     protected $fillable = [
         'mode',
         'test_api_url', 'test_api_token', 'test_account_id',
         'prod_api_url', 'prod_api_token', 'prod_account_id',
         'webhook_url', 'webhook_secret', 'so_type',
-        'return_so_type', 'cancel_so_type', 'exchange_so_type',
+        'return_so_type', 'cancel_so_type', 'exchange_so_type', 'adjust_so_type',
     ];
 
     /** 처음 열었을 때 빈 화면을 보여 주지 않도록 아는 값으로 채워 둔다 */
@@ -76,6 +84,7 @@ class WithworksSetting extends Model
             'cancel_so_type'   => self::SO_TYPE_EUD_CANCEL,
             'return_so_type'   => self::SO_TYPE_EUD_RETURN,
             'exchange_so_type' => self::SO_TYPE_EUD_EXCHANGE,
+            'adjust_so_type'   => self::SO_TYPE_ADJUST,
         ]);
     }
 
@@ -125,6 +134,7 @@ class WithworksSetting extends Model
             'services.demoworks.cancel_so_type'   => $s->cancel_so_type ?: self::SO_TYPE_EUD_CANCEL,
             'services.demoworks.return_so_type'   => $s->return_so_type ?: self::SO_TYPE_EUD_RETURN,
             'services.demoworks.exchange_so_type' => $s->exchange_so_type ?: self::SO_TYPE_EUD_EXCHANGE,
+            'services.demoworks.adjust_so_type'   => $s->adjust_so_type ?: self::SO_TYPE_ADJUST,
             'services.demoworks.mode'           => $s->mode,
         ]);
 

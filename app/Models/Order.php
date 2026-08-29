@@ -28,6 +28,8 @@ class Order extends Model
         '1505' => ['End User Direct 반품',     'danger'],
         '1601' => ['CE 샘플주문',              'warning'],
         '1605' => ['CE 샘플 반품',             'danger'],
+        // 일반 환불(자격 변경 등) — 물건은 움직이지 않고 금액만 마이너스로 맞춘다
+        '1092' => ['전산판매 (금액조정)',      'secondary'],
         // 개편 전 코드 — 그 값으로 저장된 주문이 아직 진행 중이라 이름은 남긴다
         '5001' => ['End User Direct',          'success'],
         '5004' => ['End User Direct 취소',     'danger'],

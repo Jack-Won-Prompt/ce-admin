@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Models\OrderReturnItem;
 use App\Models\OrderReturnLog;
+use App\Services\ReturnSettlement;
 use App\Services\WithworksReturns;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +26,10 @@ use Illuminate\View\View;
  */
 class OrderReturnController extends Controller
 {
-    public function __construct(private readonly WithworksReturns $withworks) {}
+    public function __construct(
+        private readonly WithworksReturns $withworks,
+        private readonly ReturnSettlement $settlement,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -50,7 +55,12 @@ class OrderReturnController extends Controller
             'id'        => $r->id,
             'receipt'   => $r->receipt_no,
             'type'      => $r->typeLabel(),
+            // 절차서의 갈래 — 같은 「교환」이라도 변심과 불량은 하는 일이 다르다
+            'scenario'  => $r->scenarioLabel(),
             'status'    => $r->statusLabel(),
+            'partial'   => $r->is_partial ? '부분' : '전부',
+            // 늦은 건은 눈에 띄어야 한다 — 묻히면 절차서의 기한을 둔 뜻이 없다
+            'overdue'   => ($o = $r->overdue()) ? "{$o[0]} {$o[1]}일 초과" : '',
             'order_no'  => $r->order?->order_number ?? '-',
             // 창고와 맞춰 볼 때 쓰는 번호 — 없으면 아직 알리지 못한 것이다
             'origin_so' => $r->order?->withworks_so_no ?: '-',
@@ -65,10 +75,14 @@ class OrderReturnController extends Controller
 
         $counts = OrderReturn::selectRaw('type, count(*) c')->groupBy('type')->pluck('c', 'type');
 
+        // 늦은 건이 몇 건인지는 목록을 다 훑어야 알 수 있다 — 화면 위에 세어 둔다
+        $lateCount = $rows->filter(fn (OrderReturn $r) => $r->overdue() !== null)->count();
+
         return view('order-returns.index', [
             'gridData' => $gridData,
             'total'    => $gridData->count(),
             'counts'   => $counts,
+            'lateCount' => $lateCount,
         ]);
     }
 
@@ -90,6 +104,8 @@ class OrderReturnController extends Controller
         $data = $request->validate([
             'order_id'          => 'required|exists:orders,id',
             'type'              => 'required|in:exchange,return,cancel',
+            // 취소의 하위 갈래 — 출고 전 취소인가, 자격 변경 같은 일반 환불인가
+            'subtype'           => 'nullable|in:' . implode(',', array_keys(OrderReturn::SUBTYPES)),
             'reason_code'       => 'required|string|in:' . implode(',', array_keys(OrderReturn::REASONS)),
             'reason_text'       => 'nullable|string|max:500',
             'refund_method'     => 'nullable|in:account,card,va',
@@ -97,18 +113,63 @@ class OrderReturnController extends Controller
             'refund_account'    => 'nullable|string|max:50',
             'refund_holder'     => 'nullable|string|max:50',
             'refund_amount'     => 'nullable|integer|min:0',
+            // 되돌리는 줄 — 부분 취소가 여기서 산다
+            'items'                    => 'nullable|array',
+            'items.*.order_item_id'    => 'nullable|integer',
+            'items.*.product_code'     => 'nullable|string|max:50',
+            'items.*.product_name'     => 'nullable|string|max:200',
+            'items.*.ordered_quantity' => 'nullable|integer|min:0',
+            'items.*.quantity'         => 'nullable|integer|min:0',
+            'items.*.unit_price'       => 'nullable|integer|min:0',
+            'items.*.copay'            => 'nullable|integer|min:0',
         ]);
+
+        $rawItems = collect($data['items'] ?? [])
+            ->map(fn ($i) => [
+                'order_item_id'    => $i['order_item_id'] ?? null,
+                'product_code'     => $i['product_code'] ?? null,
+                'product_name'     => $i['product_name'] ?? null,
+                'ordered_quantity' => (int) ($i['ordered_quantity'] ?? 0),
+                'quantity'         => (int) ($i['quantity'] ?? 0),
+                'unit_price'       => (int) ($i['unit_price'] ?? 0),
+                'copay'            => (int) ($i['copay'] ?? 0),
+            ])
+            // 0개는 되돌리지 않는 줄이다 — 담지 않는다
+            ->filter(fn ($i) => $i['quantity'] > 0)
+            ->values();
+
+        unset($data['items']);
 
         // 배송비를 누가 무는지는 사유가 정한다 — 접수 때 따로 묻지 않는다.
         // 담당자마다 다르게 고르면 같은 사유인데 부담 주체가 갈린다.
         $data['shipping_burden'] = OrderReturn::REASONS[$data['reason_code']]['burden'] ?? null;
 
-        $return = DB::transaction(function () use ($data) {
+        /* 취소인데 갈래를 안 골랐으면 출고 전 취소로 본다 — 지금까지 취소는 그것 하나였다.
+           자격 변경은 물건이 없어 언제나 일반 환불이다. */
+        if ($data['type'] === OrderReturn::TYPE_CANCEL) {
+            $data['subtype'] = $data['reason_code'] === 'eligibility'
+                ? OrderReturn::SUB_REFUND_ONLY
+                : ($data['subtype'] ?: OrderReturn::SUB_BEFORE_SHIP);
+        } else {
+            $data['subtype'] = null;
+        }
+
+        /* 한 줄이라도 원 주문보다 적게 되돌리면 부분이다. 부분은 이미 발행한 계산서를
+           자동으로 취소하지 않는다 — 남는 금액을 얼마로 할지는 사람이 정한다. */
+        $data['is_partial'] = $rawItems->contains(
+            fn ($i) => $i['ordered_quantity'] > 0 && $i['quantity'] < $i['ordered_quantity']
+        );
+
+        $return = DB::transaction(function () use ($data, $rawItems) {
             $return = OrderReturn::create($data + [
                 'receipt_no' => OrderReturn::generateReceiptNo(),
                 'status'     => 'received',
                 'created_by' => Auth::id(),
             ]);
+
+            foreach ($rawItems as $item) {
+                OrderReturnItem::create($item + ['order_return_id' => $return->id]);
+            }
 
             OrderReturnLog::create([
                 'order_return_id' => $return->id,
@@ -127,6 +188,16 @@ class OrderReturnController extends Controller
            출고 전 취소면 원 판매주문을 취소한다.
            실패해도 접수는 살려 둔다 — 창고에 알리지 못한 것과 고객의 신청을 받지 못한 것은
            다른 일이다. 대신 왜 못 갔는지를 화면에 띄워 다시 보낼 수 있게 한다. */
+        /* 일반 환불(자격 변경 등)은 여기서 창고에 알리지 않는다. 되돌려 받을 물건이 없어
+           반품 주문을 세우면 창고가 오지 않을 물건을 기다리고, 원 주문은 이미 나가 정상
+           출고된 건이라 취소할 것도 아니다. 금액조정 주문은 승인·결제취소를 마친 뒤
+           「금액조정」 단계에서 따로 세운다. */
+        if ($return->scenario() === OrderReturn::SC_REFUND_ONLY) {
+            return redirect()->route('order-returns.show', $return)->with('status',
+                "접수했습니다. 접수번호 {$return->receipt_no} — 일반 환불이라 창고에는 알리지 않습니다. "
+                . '승인·결제취소 뒤 금액조정 주문을 세웁니다.');
+        }
+
         $sent = $this->withworks->push($return->load('order.items'));
 
         return redirect()->route('order-returns.show', $return)
@@ -224,6 +295,7 @@ class OrderReturnController extends Controller
                    무엇을 되돌리는지 알 수 없다. */
                 'items'    => $o->items->isNotEmpty()
                     ? $o->items->map(fn ($i) => [
+                        'order_item_id' => $i->id,
                         'product_code' => $i->product_code ?? '',
                         'product_name' => $i->product_name ?? '',
                         'quantity'     => (int) $i->quantity,
@@ -231,6 +303,7 @@ class OrderReturnController extends Controller
                         'copay'        => (int) $i->patient_copay,
                     ])->values()
                     : collect([[
+                        'order_item_id' => null,
                         'product_code' => $o->product_code ?? '',
                         'product_name' => $o->product_name ?? '',
                         'quantity'     => (int) $o->quantity,
@@ -243,7 +316,10 @@ class OrderReturnController extends Controller
 
     public function show(OrderReturn $orderReturn): View
     {
-        $orderReturn->load(['order.patient', 'order.items', 'logs.creator', 'assignee', 'creator']);
+        $orderReturn->load([
+            'order.patient', 'order.items', 'items', 'logs.creator',
+            'assignee', 'creator', 'approver', 'inspectConfirmer',
+        ]);
 
         return view('order-returns.show', ['r' => $orderReturn]);
     }
@@ -261,28 +337,53 @@ class OrderReturnController extends Controller
             'reason'    => 'nullable|string|max:500',
         ]);
 
-        if (!in_array($data['to_status'], $orderReturn->nextStatuses(), true)) {
+        $to = $data['to_status'];
+
+        if (!in_array($to, $orderReturn->nextStatuses(), true)) {
             return back()->withErrors(['to_status' => '지금 상태에서 갈 수 없는 단계입니다.']);
         }
 
-        DB::transaction(function () use ($orderReturn, $data) {
+        /* 검수 확정과 전자 승인은 승인 권한이 있어야 누른다. 절차서가 승인자를 따로
+           두라고 했는데 아무나 누를 수 있으면 그 줄을 둔 뜻이 없다. */
+        if (OrderReturn::needsApproval($to) && !perm('order-returns', 'approve')) {
+            return back()->withErrors(['to_status' =>
+                OrderReturn::STATUS_LABELS[$to] . '은(는) 승인 권한이 있어야 누를 수 있습니다 ('
+                . $orderReturn->approverRole() . ').']);
+        }
+
+        DB::transaction(function () use ($orderReturn, $data, $to) {
             OrderReturnLog::create([
                 'order_return_id' => $orderReturn->id,
                 'from_status'     => $orderReturn->status,
-                'to_status'       => $data['to_status'],
+                'to_status'       => $to,
                 'reason'          => $data['reason'] ?? null,
                 'created_by'      => Auth::id(),
             ]);
 
-            $orderReturn->update([
-                'status'      => $data['to_status'],
-                // 환불완료로 넘어가는 순간이 실제로 돈이 나간 때다
-                'refunded_at' => $data['to_status'] === 'refunded' ? now() : $orderReturn->refunded_at,
-            ]);
+            $fill = ['status' => $to];
+
+            /* 단계마다 「누가 언제」를 따로 남긴다. 이력만으로도 읽히지만, 승인·검수는
+               다른 화면과 문서가 곧바로 찾아 쓰는 값이라 칸으로 둔다. */
+            match ($to) {
+                // 창고에 물건이 들어온 때 — 검수 2영업일·출고 3영업일을 여기서부터 센다
+                'inspecting'      => $fill['arrived_at'] = $orderReturn->arrived_at ?? now(),
+                'inspected'       => $fill = $fill + [
+                    'inspect_confirmed_by' => Auth::id(),
+                    'inspect_confirmed_at' => now(),
+                ],
+                'approved'        => $fill = $fill + ['approved_by' => Auth::id(), 'approved_at' => now()],
+                'payment_checked' => $fill['payment_checked_at'] = now(),
+                'order_confirmed' => $fill['order_confirmed_at'] = now(),
+                'refunded'        => $fill['refunded_at'] = $orderReturn->refunded_at ?? now(),
+                default           => null,
+            };
+
+            $orderReturn->update($fill);
 
             /* 반품·취소가 끝나면 원 주문도 취소된 것이다. 주문 목록에 그대로 살아 있으면
-               정산·청구가 그 주문을 계속 셈에 넣는다. */
-            if (in_array($data['to_status'], ['refunded'], true)
+               정산·청구가 그 주문을 계속 셈에 넣는다.
+               부분은 다르다 — 남는 수량이 있어 주문 자체는 살아 있다. */
+            if ($to === 'refunded' && !$orderReturn->is_partial
                 && in_array($orderReturn->type, [OrderReturn::TYPE_RETURN, OrderReturn::TYPE_CANCEL], true)) {
                 $orderReturn->order?->update(['status' => 'cancelled']);
             }
@@ -293,7 +394,23 @@ class OrderReturnController extends Controller
            사라진다. 로그에만 남긴다. */
         $this->withworks->pushStatus($orderReturn);
 
-        return back()->with('status', '상태를 옮겼습니다.');
+        $extra = '';
+
+        /* 금액조정·마이너스 발행은 단계에 딸린 일이라 여기서 함께 한다. 사람이 단추를
+           한 번 더 눌러야 하면 잊고 넘어가 결국 돈만 안 맞는다.
+           실패해도 단계는 이미 옮겼다 — 왜 안 됐는지를 화면에 띄우고 다시 누르게 둔다. */
+        if ($to === 'adjusted') {
+            $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
+                ? ' 금액조정 주문을 세웠습니다.'
+                : ' 금액조정 주문은 세우지 못했습니다 — 상세에서 다시 시도하십시오.';
+        }
+
+        if ($to === 'credited') {
+            $out   = $this->settlement->credit($orderReturn->fresh(['order', 'items']));
+            $extra = ' ' . $out['note'];
+        }
+
+        return back()->with('status', '상태를 옮겼습니다.' . $extra);
     }
 
     /**
@@ -309,5 +426,41 @@ class OrderReturnController extends Controller
         return back()->with('status', $sent
             ? '위드웍스에 전달했습니다.'
             : '전달하지 못했습니다: ' . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 까닭'));
+    }
+
+    /**
+     * 3PL 검수 결과를 위드웍스에서 받아 온다.
+     *
+     * 검수는 창고가 한다. 그 결과를 눈으로 옮겨 적게 두면 잘못 적히고, 언제 받은
+     * 것인지도 남지 않는다. 받아 온 뒤 확정은 사람이 누른다 — Care team manager 몫이다.
+     */
+    public function pullInspection(OrderReturn $orderReturn): RedirectResponse
+    {
+        $r = $this->withworks->pull($orderReturn);
+
+        if ($r === null) {
+            return back()->withErrors(['withworks' =>
+                '창고에서 받아 오지 못했습니다 — 반품 주문이 아직 서지 않았거나 연동이 꺼져 있습니다.']);
+        }
+
+        return back()->with('status', '창고 검수 결과를 받았습니다: '
+            . ($orderReturn->fresh()->withworks_status_label ?: '상태 없음'));
+    }
+
+    /**
+     * 마이너스 발행을 다시 시도한다.
+     *
+     * 단계를 옮길 때 함께 돌지만 팝빌이 거절하는 일이 있다. 그때 단계를 되돌려 다시
+     * 밟게 하면 이력이 지저분해진다 — 발행만 다시 누르게 둔다.
+     *
+     * ⚠ 국세청 신고까지 가는 동작이다. 화면에서 한 번 더 묻는다.
+     */
+    public function issueCredit(OrderReturn $orderReturn): RedirectResponse
+    {
+        $out = $this->settlement->credit($orderReturn->load(['order', 'items']));
+
+        return $out['ok']
+            ? back()->with('status', $out['note'])
+            : back()->withErrors(['credit' => $out['note']]);
     }
 }
