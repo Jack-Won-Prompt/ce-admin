@@ -38,7 +38,11 @@
   /* 기간 두 칸은 한 줄에서 읽는다. 전역 규칙(min-width 132)으로는 258px 칸에
      두 칸이 못 들어가 뒤 칸이 아래로 떨어졌다 — 정산/회계에서 쓴 값과 같게 줄인다. */
   .ds-filter-card .ds-field-range { gap: 6px; }
-  .ds-filter-card .ds-field-range input[type="date"], .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; padding-left: 8px; padding-right: 8px; }
+  .ds-filter-card .ds-field-range input[type="date"] { min-width: 108px; padding-left: 8px; padding-right: 8px; }
+  /* 껍데기에는 여백을 주지 않는다 — 그만큼 폭이 더 필요해져 두 칸이 아래로 접힌다.
+     달력 아이콘 자리(오른쪽 26)는 안쪽 칸이 이미 비켜 두었다. */
+  .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; }
+  .ds-filter-card .ds-field-range .ce-date-wrap > input[data-ce-date] { padding-left: 8px; }
 
   /* 어디까지가 이 화면의 몫인지 한 줄로 알린다 — 카드가 아니라 안내다 */
   .pt-scope-note   { font-size:12px; color:var(--text-muted); margin:0 0 8px; display:flex;
@@ -262,7 +266,7 @@
 <form method="GET" action="{{ route('patients.index') }}" class="ds-filter-card">
   {{-- 시안 114:4778 — 필드는 143px(9열 중 1열) 균일, 기간만 3열 --}}
   <div class="ds-filter-fields">
-    <div class="ds-filter-field">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="이름 또는 전화번호">
@@ -271,7 +275,7 @@
            (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
            이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
     {{-- 생성일자 — 한쪽만 채워도 걸린다(언제부터만ㆍ언제까지만 찾는 일이 잦다) --}}
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">생성일자</label>
       <div class="ds-field-range">
         <input type="date" name="created_from" value="{{ request('created_from') }}" class="form-control">
@@ -285,7 +289,7 @@
       <input type="number" name="birth_year" value="{{ request('birth_year') }}" class="form-control"
              placeholder="1984" min="1900" max="{{ date('Y') }}" step="1">
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">건보 위임 종료일</label>
       <div class="ds-field-range">
         <input type="date" name="agree_end_from" value="{{ request('agree_end_from') }}" class="form-control">
@@ -296,7 +300,7 @@
     {{-- 사업부는 검색 칸에 두지 않는다(요청). 목록 맨 앞 칸에서 눈으로 가른다.
          거르는 길은 서버에 그대로 있어 ?care_type=IC 로 들어오면 걸린다. --}}
     {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
-    <div class="ds-filter-field">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">상병타입</label>
       <select name="sb_sci" class="form-control form-select">
         <option value="">전체</option>
@@ -306,7 +310,7 @@
     </div>
     {{-- 「아니오」는 「이어진 동의서가 없다」는 뜻이다. 개인정보 동의서는 밖에서 들어오는
          폼이라 이름ㆍ전화로 이어 두는데, 못 이은 것은 없는 것으로 보인다. --}}
-    <div class="ds-filter-field">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">개인정보 동의</label>
       <select name="privacy_consent" class="form-control form-select">
         <option value="">전체</option>
@@ -314,8 +318,8 @@
         <option value="n" @selected(request('privacy_consent') === 'n')>없음</option>
       </select>
     </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">공단 위임장 동의</label>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">건보 위임장 동의</label>
       <select name="nhis_consent" class="form-control form-select">
         <option value="">전체</option>
         <option value="y" @selected(request('nhis_consent') === 'y')>동의</option>

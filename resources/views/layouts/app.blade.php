@@ -1065,9 +1065,10 @@
     .tab-u.active { color: var(--primary); border-bottom-color: var(--primary); }
 
     /* ── Filter bar ── (표준 정의는 위 DS 컴포넌트 영역에 있다) */
-    /* 바탕(세로 막대)은 두지 않는다 — 「~」 글자가 이미 사이를 가르고 있어
-       막대까지 서면 한 줄에 구분자가 둘이 된다. */
-    .filter-sep { width: 1px; height: 20px; margin: 0 4px; flex-shrink: 0; }
+    /* 세로 막대는 두지 않는다 — 「~」 글자가 이미 사이를 가르고 있어 막대까지 서면
+       한 줄에 구분자가 둘이 된다. 바탕만 지우고 폭 1px 을 남겼더니 이번에는 그 「~」가
+       1px 안에 갇혀 보이지 않았다 — 크기는 글자가 정하게 둔다. */
+    .filter-sep { margin: 0 4px; flex-shrink: 0; }
     .filter-label { font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 
     /* ── Search input with icon ── */

@@ -11,6 +11,16 @@
   min-width: 0;
 }
 
+/*
+ * 껍데기는 감싸기 전 칸이 하던 몫을 그대로 해야 한다.
+ *
+ * 칸에 인라인으로 걸린 flexㆍwidth 는 스크립트가 껍데기로 옮긴다. 하지만 자리를
+ * 스타일시트가 정해 주던 곳(.ds-field-range .form-control { flex:1 })은 옮길 수가
+ * 없다 — 껍데기는 .form-control 이 아니기 때문이다. 그런 자리를 여기서 잇는다.
+ * 잇지 않으면 늘어나던 칸이 제 글자만큼만 서서 옆 칸이 아래로 밀린다.
+ */
+.ds-field-range > .ce-date-wrap { flex: 1; }
+
 /* 달력 아이콘 자리만큼 글자를 비켜 준다 — 긴 날짜가 아이콘 밑으로 들어가지 않게 */
 .ce-date-wrap > input[data-ce-date] {
   padding-right: 26px;
