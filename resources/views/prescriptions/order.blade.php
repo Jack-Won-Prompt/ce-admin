@@ -3160,17 +3160,18 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="pt-hb">총 <b id="rx-ref-total">{{ $prescription->total_count ?? '-' }}</b>개</span>
                 {{-- 청구전략 — 금액을 셈한 근거다. 아래 청구전략 상자까지 내려가지 않아도
                      무엇으로 셈했는지 여기서 읽힌다. 아직 안 골랐으면 서지 않는다. --}}
-                <span class="pt-hb pt-hb-bs" id="rx-ref-bs" style="display:none;"></span>
+                <span class="pt-hb pt-hb-bs is-pending" id="rx-ref-bs">청구전략 · 유형ㆍ자격 미선택</span>
               </span>
             </div>
             <div class="pt-head-right">
               {{-- 합계 — 시안은 카드 아래 띠가 아니라 머리 오른쪽 12/500 맨글자다.
-                   '총 본인 부담금' 은 시안 이 카드에 없지만 지우지 않고 같은 자리로 옮겼다. --}}
+                   본인 부담금이 앞에 선다(요청서 16쪽) — 고객에게 얼마를 받는지가 이
+                   화면에서 가장 먼저 필요한 숫자고, 기관 몫은 그다음에 따라온다. --}}
               <span class="pt-head-total"><i class="fa-solid fa-circle-dollar-to-slot"></i>
-                총 기관 부담금: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+                총 본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
               </span>
               <span class="pt-head-total">
-                총 본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
+                총 기관 부담금: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
               </span>
               {{-- 버튼 3개 — 시안 Frame 48101503: [되돌리기 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
                    되돌리기·저장은 상세 목록 탭줄에 있는 resetToSaved()·saveOCR() 를 그대로 쓴다
@@ -3235,6 +3236,14 @@ $calcDeposit  = $calcCopay + $calcShipping;
                           style="white-space:nowrap;flex-shrink:0;background:var(--primary-light);border:1px solid var(--primary);color:var(--primary);"
                           title="상세 목록 탭의 주소를 배송 주소로 가져옵니다">
                     <i class="fa-solid fa-file-import"></i> 처방전 주소 가져오기
+                  </button>
+                  {{-- 거래처관리에 쌓인 주소 가운데 고른다(요청서 16쪽). 가장 최근 것이
+                       맨 위다 — 이사한 사람에게 옛 주소로 보내는 일을 막으려면
+                       「지금까지 어디였는지」가 고르는 그 자리에 있어야 한다. --}}
+                  <button type="button" class="btn btn-sm" id="btnPickAddr" onclick="pickPatientAddress(this)"
+                          style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);"
+                          title="거래처관리에 적힌 주소 중에서 고릅니다">
+                    <i class="fa-solid fa-address-book"></i> 거래처 주소
                   </button>
                   <button type="button" class="btn btn-sm" onclick="clearShippingAddress()"
                           style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);" title="주소 지우기">
@@ -4698,11 +4707,11 @@ function renderItemsTable() {
         <input type="hidden" class="item-nhis" value="${escHtml(nhisSt)}" />
         <span class="item-nhis-shown">${escHtml(BS_ITEM_LABEL())}</span>
       </td>
-      <td>
+      {{-- 단가 칸은 걷었다(요청서 16쪽). 값은 제품이 들고 오므로 화면에서 고칠 일이
+           없고, 계산에는 그대로 쓰인다 — 숨은 칸으로 남겨 calcItem 이 읽게 한다. --}}
+      <td style="display:none;">
         <input type="text" inputmode="numeric" class="form-control item-ins-price"
-               style="font-size:12px;text-align:right;padding:2px 7px;height:32px;width:100%;"
-               value="${fmtPrice(item.insurance_price)}" placeholder="₩"
-               oninput="calcItem(${idx})" />
+               value="${fmtPrice(item.insurance_price)}" />
       </td>
       <td>
         <input type="number" class="form-control item-qty"
@@ -4740,7 +4749,7 @@ function renderItemsTable() {
       <th style="text-align:center;">#</th>
       <th>제품명</th>
       <th>급여구분</th>
-      <th style="text-align:right;">단가</th>
+      <th style="display:none;"></th>
       <th style="text-align:center;">수량</th>
       <th style="text-align:right;">기관 부담금</th>
       <th style="text-align:right;">본인 부담금</th>
@@ -5680,9 +5689,17 @@ window.HELP_TOUR_STEPS = [
     const key  = type === '20' ? '20|' : (type && cls ? type + '|' + cls : null);
     const r    = key ? BILLING_STRATEGY[key] : null;
 
-    if (!r) { hb.style.display = 'none'; return; }
-
+    /* 안 골랐다고 감추지 않는다(요청서 16쪽). 감춰 두었더니 「보이던 것이 사라졌다」로
+       읽혔고, 실은 유형ㆍ자격 가운데 하나가 비어 있던 것이다 — 무엇이 비었는지를
+       그 자리에서 말해 주는 편이 낫다. */
     hb.style.display = '';
+
+    if (!r) {
+      hb.textContent = '청구전략 · 유형ㆍ자격 미선택';
+      hb.classList.add('is-pending');
+      return;
+    }
+
     hb.textContent = r.label + (r.pending ? ' · ' + (r.note || '확인중') : '');
     hb.classList.toggle('is-pending', !!r.pending);
   }
@@ -5733,6 +5750,55 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-acc-add-type')?.addEventListener('change', bsSyncFromSource);
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
   bsSyncFromSource();
+
+  /* ── 거래처 주소 고르기 ────────────────────────────────
+     환자에 쌓인 주소 이력을 팝오버로 보여 주고 고른 것을 배송지에 앉힌다.
+     환자가 아직 이어지지 않은 건(처방전만 올린 상태)에는 고를 것이 없다. */
+  let _addrRows = {};
+
+  window.pickPatientAddress = function (btn) {
+    const pid = document.getElementById('f-patient-id')?.value;
+
+    if (!pid) {
+      showToast('먼저 「조회」로 환자를 고르십시오 — 그 사람의 주소를 불러옵니다.', 'warning');
+      return;
+    }
+
+    /* 먼저 받아 오고 목록째 띄운다. onSearch 로 두면 창이 「무언가 치기」를 기다리는데,
+       고를 것이 서너 줄뿐이라 칠 말이 없다. */
+    (async () => {
+    const res = await fetch(`{{ url('patients') }}/${pid}/addresses`,
+                            { headers: { Accept: 'application/json' } });
+    const { rows } = await res.json();
+
+    if (!rows?.length) {
+      showToast('이 환자에게 적어 둔 주소가 없습니다 — 거래처관리에서 먼저 적으십시오.', 'warning');
+      return;
+    }
+
+    _addrRows = {};
+    rows.forEach(r => { _addrRows[r.id] = r; });
+
+    new GridModal().open({
+      title: '거래처 주소 · ' + rows.length + '건', width: 460, height: 320, anchor: btn,
+      items: rows.map((r, i) => ({
+        value: r.id,
+        // 맨 윗줄이 지금 쓰는 주소다 — 고르는 사람이 그것을 알아야 한다
+        label: (i === 0 ? '[현재] ' : '') + r.full,
+        sub:   r.at + (r.by ? ' · ' + r.by : ''),
+      })),
+      onConfirm: (v) => {
+        const r = _addrRows[v];
+        if (!r) return;
+        document.getElementById('shippingPostcode').value   = r.postcode;
+        document.getElementById('shippingAddr').value       = r.address;
+        document.getElementById('shippingAddrDetail').value = r.detail;
+        _orderDirty = true;
+        showToast('배송지를 바꿨습니다.', 'success');
+      },
+    });
+    })();
+  };
 
   // ── 처방전 주소 가져오기 ──────────────────────────────────
   function fillFromPrescriptionAddress() {
@@ -6064,10 +6130,12 @@ window.HELP_TOUR_STEPS = [
           onSelect: (rowIndex, code) => applyProduct(rowIndex, _pacLast[code]),
         } },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
-      /* 소비자가ㆍ단가는 제품이 들고 오는 값이다. 사람이 고치면 그 줄만 다른 값이 되어
-         어느 것이 맞는지 알 수 없다 — 제품을 바꿔 고른다. */
+      /* 소비자가는 제품이 들고 오는 값이다. 사람이 고치면 그 줄만 다른 값이 되어
+         어느 것이 맞는지 알 수 없다 — 제품을 바꿔 고른다.
+         단가 칸은 걷었다(요청서 16쪽). 소비자가와 총 금액 사이에 끼어 셋이 비슷한
+         숫자로 늘어서 있었고, 정작 담당자가 견주는 것은 총 금액과 부담금이다.
+         값(insurance_price)은 그대로 남아 금액 계산에 쓰인다. */
       { header: '소비자가',   name: 'product_price',   width: 110, editor: 'number', editable: false },
-      { header: '단가',       name: 'insurance_price', width: 110, editor: 'number', editable: false },
       { header: '총 금액',    name: 'total',           width: 120, editor: 'number', editable: false },
       { header: '기관 부담금', name: 'nhis_amount',    width: 120, editor: 'number', editable: false },
       { header: '본인 부담금', name: 'patient_copay',  width: 120, editor: 'number', editable: false },

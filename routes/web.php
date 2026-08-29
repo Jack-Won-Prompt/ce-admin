@@ -182,6 +182,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
+        // 주소 이력 — 주문 제품 탭의 배송지 고르개가 읽는다
+        Route::get('/{patient}/addresses', [PatientController::class, 'addresses'])->name('addresses');
         // 통화 내용을 그 자리에서 적어 둔다(거래처 관리 › 상담내역 › 상담하기)
         Route::post('/{patient}/counsels', [PatientController::class, 'storeCounsel'])->name('counsels.store');
         /* 이 사람의 지난 상담 — 「상담하기」를 누르면 먼저 이 목록을 보여 준다.

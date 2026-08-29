@@ -310,6 +310,27 @@ class PatientController extends Controller
         ]]);
     }
 
+    /**
+     * 이 사람의 주소 이력 — 가장 최근 것이 맨 위.
+     *
+     * 주문 제품 탭의 배송지 고르개가 읽는다. 이사한 사람에게 옛 주소로 보내는 일을
+     * 막으려면 「지금까지 어디였는지」가 그 자리에서 보여야 한다.
+     */
+    public function addresses(Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'rows' => $patient->addresses->map(fn ($a) => [
+                'id'       => $a->id,
+                'postcode' => $a->postcode ?? '',
+                'address'  => $a->address ?? '',
+                'detail'   => $a->address_detail ?? '',
+                'full'     => $a->full,
+                'at'       => $a->created_at?->format('Y-m-d') ?? '',
+                'by'       => $a->creator?->name ?? '',
+            ])->values(),
+        ]);
+    }
+
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
