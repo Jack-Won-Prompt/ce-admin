@@ -375,6 +375,24 @@
     csRenderList();
   };
 
+  /**
+   * 그 상담 한 건을 바로 편다.
+   *
+   * 상담내역에서 한 줄을 고른 사람은 「이 통화를 이어 적겠다」는 뜻이지 「지난 상담을
+   * 고르겠다」는 뜻이 아니다. 창을 열어 목록에서 그 줄을 한 번 더 찾게 하면 방금 고른
+   * 것을 다시 고르는 셈이 된다 — 열면서 곧장 그 건으로 간다.
+   *
+   * 못 찾으면 목록에 그대로 선다(지운 건일 수 있다).
+   */
+  window.csOpenFor = async function (patientId, name, mobile, key) {
+    await csOpen(patientId, name, mobile);
+
+    const at = _csList.findIndex(c =>
+      (key && c.rx_number === key) || (key && c.counsel_no === key));
+
+    if (at >= 0) csPick(at);
+  };
+
   /** 걸음 바꾸기 — ① 지난 상담 고르기 · ② 적는 자리 */
   function _csStep(n) {
     document.getElementById('csStep1').style.display = n === 1 ? '' : 'none';

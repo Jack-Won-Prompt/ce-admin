@@ -38,7 +38,7 @@
   /* 기간 두 칸은 한 줄에서 읽는다. 전역 규칙(min-width 132)으로는 258px 칸에
      두 칸이 못 들어가 뒤 칸이 아래로 떨어졌다 — 정산/회계에서 쓴 값과 같게 줄인다. */
   .ds-filter-card .ds-field-range { gap: 6px; }
-  .ds-filter-card .ds-field-range input[type="date"] { min-width: 108px; padding-left: 8px; padding-right: 8px; }
+  .ds-filter-card .ds-field-range input[type="date"], .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; padding-left: 8px; padding-right: 8px; }
 
   /* 어디까지가 이 화면의 몫인지 한 줄로 알린다 — 카드가 아니라 안내다 */
   .pt-scope-note   { font-size:12px; color:var(--text-muted); margin:0 0 8px; display:flex;
@@ -1128,9 +1128,14 @@ document.addEventListener('keydown', (e) => {
           const cell = e.target.closest('[data-row-index]');
           if (!cell) return;
           const row = pcTabs[id].grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-          /* 탭 이름은 상담번호로 짓는다. 주문번호로 지었더니 주문에 이어 두지 않은
-             상담(대부분이 그렇다)에서 「상담 - 」로 끝나 무엇을 연 것인지 알 수 없었다. */
-          if (row?.url) window.ceOpenTab(row.url, pcTabLabel('상담', row), 'bx-conversation');
+          /* 상담 창을 그 자리에서 편다. 예전에는 주문 등록 화면을 새 탭으로 열었는데,
+             한 줄을 고른 사람의 뜻은 「이 통화를 이어 적겠다」이지 「이 주문을 보겠다」가
+             아니었다 — 주문을 볼 길은 이 창의 「주문 연결」과 주문번호 칸에 따로 있다. */
+          const p = pcActive();
+          if (row) window.csOpenFor(p?.id ?? pcTabs[id]?.id ?? id,
+                                    p?.name ?? pcTabs[id]?.name ?? '',
+                                    pcTabs[id]?.mobile ?? '',
+                                    row.counsel_id || row.counsel_no || '');
         });
       } else {
         pcTabs[id].grid.setData(rows);

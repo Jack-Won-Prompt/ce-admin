@@ -143,10 +143,12 @@
   cursor: col-resize;
   z-index: 1;
 }
+/* 금은 칸 경계에 딱 붙여 긋는다. 2px 안쪽에 그었더니 머리줄의 선과 본문의 칸
+   테두리가 그만큼 어긋나 보였다 — 표를 훑을 때 세로줄이 두 겹으로 읽혔다. */
 .cg-resize-handle::after {
   content: '';
   position: absolute;
-  right: 2px; top: 6px; bottom: 6px;
+  right: 0; top: 6px; bottom: 6px;
   width: 1px;
   background: rgba(60,130,196,0.28);
 }

@@ -106,7 +106,7 @@
      그 2px 이 필드(61→63) · 검색 카드(140→142) · 조회 버튼 기준선까지 밀고 있었다.
      전역 .form-control 은 손대지 않고 이 화면 기간 입력만 32 로 눌러 맞춘다
      (scrollHeight 30 = clientHeight 30 — 글자가 잘리지 않는다). */
-  .ds-field-range input[type="date"].form-control { height: 32px; }
+  .ds-field-range input[type="date"].form-control, .ds-field-range .ce-date-wrap { height: 32px; }
 
   /* ── 아래 선택자들은 현재 마크업에 사용처가 없다(목록을 wwGrid 가 텍스트로 그린다).
         개발 자산이라 남기되 값만 시안 규격에 맞춰 둔다. ── */
@@ -150,7 +150,7 @@
      108 은 임의값이 아니라 실측 하한이다 — 여백 8 에서 「2026-06-01」과 달력 아이콘이
      잘리지 않는 가장 좁은 폭이 108 이고, 106 부터 끝자리가 잘린다(여백 12 일 때는 116). */
   .ds-filter-card .ds-field-range { gap: 6px; }
-  .ds-filter-card .ds-field-range input[type="date"] { min-width: 108px; padding-left: 8px; padding-right: 8px; }
+  .ds-filter-card .ds-field-range input[type="date"], .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; padding-left: 8px; padding-right: 8px; }
 </style>
 @endpush
 

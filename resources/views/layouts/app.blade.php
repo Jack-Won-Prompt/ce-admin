@@ -480,7 +480,7 @@
     .ds-field-range { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; row-gap: 6px; }   /* 시안 8 */
     .ds-field-range .form-control { min-width: 0; flex: 1; }
     /* 날짜는 「2026-06-01」과 달력 아이콘이 함께 서야 한다 — 그보다 좁아지면 글자가 잘린다 */
-    .ds-field-range input[type="date"] { min-width: 132px; }
+    .ds-field-range input[type="date"], .ds-field-range .ce-date-wrap { min-width: 132px; }
     /* 기간 두 입력 사이 '~' — 시안 31장이 예외 없이 13/400 · #101317(gray-1000)이다
        (표준 레이아웃 두 장 포함). gray-400 이던 것을 바로잡는다. */
     .ds-field-sep { color: var(--gray-1000); font-size: 13px; font-weight: 400; line-height: 21px; flex-shrink: 0; }
@@ -1065,7 +1065,9 @@
     .tab-u.active { color: var(--primary); border-bottom-color: var(--primary); }
 
     /* ── Filter bar ── (표준 정의는 위 DS 컴포넌트 영역에 있다) */
-    .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+    /* 바탕(세로 막대)은 두지 않는다 — 「~」 글자가 이미 사이를 가르고 있어
+       막대까지 서면 한 줄에 구분자가 둘이 된다. */
+    .filter-sep { width: 1px; height: 20px; margin: 0 4px; flex-shrink: 0; }
     .filter-label { font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
 
     /* ── Search input with icon ── */
@@ -1314,6 +1316,8 @@
        (2) 두 번 실리면 GridModal 재선언으로 두 번째 로드가 죽었다.
        소유자를 한 곳으로 두면 두 문제가 함께 사라진다. --}}
   <link rel="stylesheet" href="@assetv('vendor/wwgrid/wwGrid.css')">
+  {{-- 날짜 칸(글자 칸 + 달력 단추) --}}
+  <link rel="stylesheet" href="@assetv('vendor/ce/date-input.css')">
   @stack('styles')
 </head>
 <body>

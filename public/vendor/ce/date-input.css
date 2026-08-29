@@ -1,0 +1,46 @@
+/*
+ * 날짜 칸 — 글자 칸 + 달력 단추.
+ *
+ * 브라우저 날짜 칸의 달력 아이콘이 있던 자리를 그대로 쓴다. 겉모습이 달라지면
+ * 같은 줄에 선 다른 칸과 높이·테두리가 어긋난다.
+ */
+.ce-date-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* 달력 아이콘 자리만큼 글자를 비켜 준다 — 긴 날짜가 아이콘 밑으로 들어가지 않게 */
+.ce-date-wrap > input[data-ce-date] {
+  padding-right: 26px;
+}
+
+.ce-date-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted, #999);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ce-date-btn:hover {
+  background: var(--gray-100, rgba(0, 0, 0, .06));
+  color: var(--primary, #3c82c4);
+}
+
+/* 읽기만 하는 칸은 눌러도 할 일이 없다 */
+input[data-ce-date][readonly] ~ .ce-date-btn,
+input[data-ce-date][disabled] ~ .ce-date-btn { display: none; }
