@@ -2587,7 +2587,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div class="rx-field-row rx-row-start">
-                <span class="rx-field-label">공단 등록</span>
+                <span class="rx-field-label">건보등록</span>
                 {{-- 「진행중ㆍ완료」 둘로는 신규인지 재등록인지 알 수 없었다. 공단에 내는
                      서류도 다음에 할 일도 그 둘이 다르다(요청서 11쪽). 목록은 거래처관리와
                      한 벌만 둔다 — 두 화면이 서로 다른 말을 하면 안 된다. --}}
@@ -2605,12 +2605,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">공단 등록일</span>
+                <span class="rx-field-label">건보등록일</span>
                 <input type="date" class="form-control" id="f-nhis-reg-date"
                        value="{{ $prescription->patient?->nhis_reg_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start">
-                <span class="rx-field-label">공단 재등록 대상자</span>
+                <span class="rx-field-label">건보 재등록 대상자</span>
                 @php $renew = (string) ($prescription->patient?->nhis_renew ?? ''); @endphp
                 <select class="form-control" id="f-nhis-renew" style="flex:1;">
                   <option value="">선택</option>
@@ -2623,7 +2623,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </select>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">공단 재등록 기한</span>
+                <span class="rx-field-label">건보 재등록 기한</span>
                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
                   <input type="date" class="form-control" id="f-nhis-renew-due"
                          value="{{ $prescription->patient?->nhis_renew_due ?? '' }}" style="flex:1;min-width:0;" />
@@ -2633,11 +2633,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 시작일</span>
+                <span class="rx-field-label">건보위임동의 시작일</span>
                 <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">공단 위임동의 종료일</span>
+                <span class="rx-field-label">건보위임동의 종료일</span>
                 <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start rx-w3">
@@ -2809,28 +2809,47 @@ $calcDeposit  = $calcCopay + $calcShipping;
                    급여 대상이 된다. 검사일만 적어 두었더니 무엇이 확인됐는지가 어디에도
                    남지 않아, 공단이 되물으면 처방전을 다시 꺼내 읽어야 했다. --}}
               @php $uroPicked = \App\Support\UroFindings::parse($prescription->uro_findings ?? null); @endphp
-              <div class="rx-field-row rx-row-start rx-w3" style="align-items:flex-start;">
+              {{-- 확인사항 — 고른 것을 쉼표로 이어 한 줄에 적는다. 여섯 줄짜리 체크
+                   목록이 격자 한가운데를 세로로 갈라 옆 칸들의 줄맞춤을 무너뜨렸다.
+                   고르는 일은 한 건에 한 번뿐인데 자리는 늘 여섯 줄을 먹었다.
+                   담기는 값은 그대로다 — 저장은 체크된 것을 읽어 간다. --}}
+              <div class="rx-field-row rx-w3" style="position:relative;">
                 <span class="rx-field-label">확인사항</span>
-                <div id="f-uro-findings" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
-                  @foreach(\App\Support\UroFindings::RESULTS as $k => $label)
-                    <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;cursor:pointer;">
-                      <input type="checkbox" value="{{ $k }}" @checked(in_array($k, $uroPicked, true))
+                <div style="display:flex;gap:6px;flex:1;min-width:0;">
+                  <input type="text" class="form-control" id="uroSummary" readonly
+                         style="flex:1;min-width:0;background:var(--gray-50);cursor:pointer;"
+                         placeholder="고르지 않았습니다" onclick="uroToggle(event)" />
+                  <button type="button" class="rx-side-btn" onclick="uroToggle(event)">고르기</button>
+                </div>
+                <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;
+                      position:absolute;left:0;top:100%;margin-top:2px;"></span>
+
+                {{-- 고르는 자리. 펼쳐 두면 아래 칸들이 여섯 줄만큼 밀린다. --}}
+                <div id="uroPop" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:60;
+                     width:min(560px, calc(100vw - 48px));padding:10px 12px;background:var(--gray-0);
+                     border:1px solid var(--gray-200);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);">
+                  <div id="f-uro-findings" style="display:flex;flex-direction:column;gap:4px;">
+                    @foreach(\App\Support\UroFindings::RESULTS as $k => $label)
+                      <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;cursor:pointer;">
+                        <input type="checkbox" value="{{ $k }}" @checked(in_array($k, $uroPicked, true))
+                               style="margin-top:2px;flex-shrink:0;accent-color:var(--primary);">
+                        <span>{{ $label }}</span>
+                      </label>
+                    @endforeach
+                    <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;
+                                  cursor:pointer;border-top:1px dashed var(--border);padding-top:6px;margin-top:2px;">
+                      <input type="checkbox" value="{{ \App\Support\UroFindings::UNABLE }}"
+                             @checked(in_array(\App\Support\UroFindings::UNABLE, $uroPicked, true))
                              style="margin-top:2px;flex-shrink:0;accent-color:var(--primary);">
-                      <span>{{ $label }}</span>
+                      <span>{{ \App\Support\UroFindings::UNABLE_LABEL }}</span>
                     </label>
-                  @endforeach
-                  <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.5;
-                                cursor:pointer;border-top:1px dashed var(--border);padding-top:4px;margin-top:2px;">
-                    <input type="checkbox" value="{{ \App\Support\UroFindings::UNABLE }}"
-                           @checked(in_array(\App\Support\UroFindings::UNABLE, $uroPicked, true))
-                           style="margin-top:2px;flex-shrink:0;accent-color:var(--primary);">
-                    <span>{{ \App\Support\UroFindings::UNABLE_LABEL }}</span>
-                  </label>
-                  {{-- 검사는 신청서 발행일 기준 3년 이내 것만 쓴다 — 지난 것을 내면
-                       공단이 되돌려 보낸다. 그때가 되어서야 알면 늦다. --}}
-                  <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;"></span>
+                  </div>
+                  <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+                    <button type="button" class="ds-btn ds-btn-sm" onclick="uroClose()">닫기</button>
+                  </div>
                 </div>
               </div>
+
               <div class="rx-field-row">
                 <span class="rx-field-label">신구매/재구매</span>
                 <select class="form-control" id="f-purchase-type" style="flex:1;">
@@ -4674,21 +4693,35 @@ document.addEventListener('DOMContentLoaded', function () {
       absTop = null; isFixed = false;
     }
 
+    /** 고정된 탭줄을 제 열 위에 다시 앉힌다 */
+    function place() {
+      const r = ph.getBoundingClientRect();
+      bar.style.top   = getTop() + 'px';
+      bar.style.left  = r.left + 'px';
+      bar.style.width = ph.offsetWidth + 'px';
+    }
+
     function onScroll() {
       const top = getTop();
       // 자연 위치: 고정 중이면 placeholder, 아니면 bar 자체(rect=뷰포트 기준, 스크롤러 무관)
       const natTop = (isFixed ? ph : bar).getBoundingClientRect().top;
       if (natTop <= top && !isFixed)      fix();
       else if (natTop > top && isFixed)   unfix();
-      else if (isFixed) {
-        const r = ph.getBoundingClientRect();
-        bar.style.top = getTop() + 'px'; bar.style.left = r.left + 'px'; bar.style.width = ph.offsetWidth + 'px';
-      }
+      else if (isFixed)                   place();
     }
 
     // capture:true → 워크스페이스 iframe 등 어떤 스크롤러의 scroll도 포착
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', () => { if (isFixed) unfix(); absTop = null; onScroll(); });
+
+    /* 자리는 스크롤만으로 바뀌지 않는다. 처방전 그림 칸을 접거나 좌우를 바꾸거나
+       사이드바를 접으면 이 열의 왼쪽과 폭이 달라지는데, 그때 다시 재지 않으면
+       고정된 탭줄만 옛 자리에 남아 아래 내용과 왼쪽 끝이 어긋난 채로 섰다. */
+    if (window.ResizeObserver) {
+      const col = barParent.parentNode;
+      if (col) new ResizeObserver(() => { if (isFixed) place(); }).observe(col);
+    }
+
     onScroll();
   })();
 });
@@ -5587,7 +5620,7 @@ window.HELP_TOUR_STEPS = [
     badge.style.background = over ? 'var(--alert-50)'  : 'var(--alert-50)';
     badge.style.color      = over ? 'var(--danger)'    : 'var(--alert-500)';
     badge.style.border     = '1px solid ' + (over ? 'var(--danger)' : 'var(--alert-100)');
-    badge.title = over ? '공단 재등록 기한이 지났습니다.' : '공단 재등록 기한이 다가옵니다.';
+    badge.title = over ? '건보 재등록 기한이 지났습니다.' : '건보 재등록 기한이 다가옵니다.';
   }
 
   document.getElementById('f-nhis-reg-date')?.addEventListener('change', calcNhisRenewDue);
@@ -7011,6 +7044,44 @@ window.HELP_TOUR_STEPS = [
   };
 
   rxLockPatientFields();
+
+  /* ── 확인사항 ────────────────────────────────────────
+     고른 것을 쉼표로 이어 한 줄에 적는다. 값은 체크 상자가 그대로 쥐고 있어
+     저장하는 쪽(payload)은 손대지 않는다. */
+  window.uroSync = function () {
+    const box = document.getElementById('f-uro-findings');
+    const out = document.getElementById('uroSummary');
+    if (!box || !out) return;
+
+    const picked = [...box.querySelectorAll('input:checked')]
+      .map(i => i.parentNode.textContent.trim());
+
+    out.value = picked.join(', ');
+    out.title = picked.length ? picked.join('\n') : '';
+  };
+
+  window.uroToggle = function (e) {
+    e?.stopPropagation();
+    const pop = document.getElementById('uroPop');
+    if (!pop) return;
+    pop.style.display = pop.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.uroClose = function () {
+    const pop = document.getElementById('uroPop');
+    if (pop) pop.style.display = 'none';
+  };
+
+  document.getElementById('f-uro-findings')
+    ?.addEventListener('change', () => uroSync());
+
+  /* 바깥을 누르면 닫는다 — 열어 둔 채 다른 칸을 적으면 그 칸이 가려진다 */
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('uroPop');
+    if (pop && pop.style.display !== 'none' && !pop.contains(e.target)) uroClose();
+  });
+
+  uroSync();
 
   /* 요류역학검사가 아직 살아 있는가 — 등록 신청서 발행일 기준 3년.
      지난 검사로 신청서를 내면 공단이 되돌려 보내는데, 그때가 되어서야 알면 늦다. */
