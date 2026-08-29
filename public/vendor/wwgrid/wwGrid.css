@@ -73,10 +73,14 @@
   /* 시안 머리 글자는 13/700 lh21 이다. 1.6 은 20.8 이라 행 높이가 소수로 떨어진다 */
   line-height: 21px;
   padding: 0;
-  /* Figma 148:5526 — 머리행은 세로 구분선 없이 하단 1px 만 있고 글자는 왼쪽이다.
-     sticky 헤더가 스크롤 중 테두리를 잃는 것은 배경으로 그은 1px 이 대신 메운다
+  /* 머리줄도 본문과 같은 자리에 같은 세로선을 긋는다.
+     세로선 없이 두었더니(Figma 148:5526) 표를 훑을 때 머리와 본문의 칸 경계가
+     따로 놀았다. 열너비 손잡이가 그리던 옅은 금은 손잡이가 있는 칸(자료 칸)에만
+     서고 위아래로 6px 씩 잘려 있어, 체크칸ㆍNo 칸에는 아예 선이 없고 나머지도
+     본문 선과 길이가 달라 어긋나 보였다.
+     sticky 헤더가 스크롤 중 아래 테두리를 잃는 것은 배경으로 그은 1px 이 메운다
      (inset 그림자에는 세로선이 함께 들어 있어 쓸 수 없다). */
-  border-right: 0;
+  border-right: 1px solid var(--cg-row-border);
   border-bottom: 1px solid var(--cg-border);
   background-image: linear-gradient(var(--cg-border), var(--cg-border));
   background-repeat: no-repeat;
@@ -143,17 +147,16 @@
   cursor: col-resize;
   z-index: 1;
 }
-/* 금은 칸 경계에 딱 붙여 긋는다. 2px 안쪽에 그었더니 머리줄의 선과 본문의 칸
-   테두리가 그만큼 어긋나 보였다 — 표를 훑을 때 세로줄이 두 겹으로 읽혔다. */
-.cg-resize-handle::after {
+/* 늘 그어 두던 옅은 금은 걷었다 — 이제 머리줄에도 본문과 같은 테두리가 있어
+   그것이 칸 경계를 말한다. 손잡이는 손이 닿았을 때만 제 자리를 드러낸다. */
+.cg-resize-handle:hover { background: rgba(60,130,196,0.35); }
+.cg-resize-handle:hover::after {
   content: '';
   position: absolute;
-  right: 0; top: 6px; bottom: 6px;
+  right: 0; top: 0; bottom: 0;
   width: 1px;
-  background: rgba(60,130,196,0.28);
+  background: rgba(60,130,196,0.9);
 }
-.cg-resize-handle:hover { background: rgba(60,130,196,0.35); }
-.cg-resize-handle:hover::after { background: rgba(60,130,196,0.9); }
 
 /* ── Body rows ── */
 .cg-tbody tr {
