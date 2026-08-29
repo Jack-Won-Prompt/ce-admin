@@ -198,7 +198,7 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">휴대폰</span>
+            <span class="info-label">전화번호1</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->mobile ?? '-' }}</span>
               <input type="text" class="form-control edit-only" id="e-mobile" data-phone
@@ -206,7 +206,7 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">일반 전화</span>
+            <span class="info-label">전화번호2</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->phone ?? '-' }}</span>
               <input type="text" class="form-control edit-only" id="e-phone" data-phone
@@ -237,6 +237,244 @@
               </span>
             </span>
           </div>
+          {{-- ── 요청서(2026-08-27) 2·3쪽의 나머지 칸 ──────────────
+               조회결과와 상세 내용이 같은 것을 보여야 한다는 것이 재요청이었다.
+               여기서 고친 값이 곧 다른 화면이 읽는 정본이다. --}}
+          <div class="info-row">
+            <span class="info-label">생년월일</span>
+            <span class="info-value">
+              <span class="view-only">
+                {{ $patient->birth_dotted ?: '-' }}
+                @if($patient->birth_iso) · {{ $patient->birth_iso }} · {{ $patient->birth_year }}
+                  @if($patient->age !== null) · 만 {{ $patient->age }}세 @endif
+                @endif
+              </span>
+              <span class="edit-only" style="color:var(--text-muted);font-size:12px;">
+                위 이름 옆 칸에서 고칩니다
+              </span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">구분(SB/SCI)</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->sb_sci ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-sb-sci" data-orig="{{ $patient->sb_sci }}">
+                <option value="">선택</option>
+                <option value="SB"  @selected($patient->sb_sci === 'SB')>SB</option>
+                <option value="SCI" @selected($patient->sb_sci === 'SCI')>SCI</option>
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">연락 상태</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->contactStatusLabel() ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-contact-status" data-orig="{{ $patient->contact_status }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::CONTACT_STATUSES as $k => $label)
+                  <option value="{{ $k }}" @selected($patient->contact_status === $k)>{{ $label }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">연락 선호 방식</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->contactChannelLabel() ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-contact-channel" data-orig="{{ $patient->contact_channel }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::CONTACT_CHANNELS as $k => $label)
+                  <option value="{{ $k }}" @selected($patient->contact_channel === $k)>{{ $label }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->email ?: '-' }}</span>
+              <input type="email" class="form-control edit-only" id="e-email"
+                     value="{{ $patient->email }}" data-orig="{{ $patient->email }}" placeholder="name@example.com" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Fax</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->fax ?: '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-fax" data-phone
+                     value="{{ $patient->fax }}" data-orig="{{ $patient->fax }}" placeholder="02-XXXX-XXXX" />
+            </span>
+          </div>
+
+          {{-- 주소 이력 — 가장 최근 것이 맨 위다. 이사한 뒤에 지난 주문이 어디로 갔는지
+               되짚으려면 「언제 어디였는지」가 남아 있어야 한다(요청서 3쪽). --}}
+          @if($patient->addresses->count() > 1)
+          <div class="info-row wide">
+            <span class="info-label">지난 주소</span>
+            <span class="info-value" style="font-size:12px;line-height:1.7;">
+              @foreach($patient->addresses->slice(1)->take(5) as $old)
+                <div style="color:var(--text-muted);">
+                  {{ $old->created_at->format('Y-m-d') }} · {{ $old->full }}
+                </div>
+              @endforeach
+            </span>
+          </div>
+          @endif
+
+          <div class="info-row">
+            <span class="info-label">송금자명</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->remitter_name ?: '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-remitter"
+                     value="{{ $patient->remitter_name }}" data-orig="{{ $patient->remitter_name }}"
+                     placeholder="입금자명이 다르면 적습니다" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">현금영수증</span>
+            <span class="info-value">
+              <span class="view-only">
+                {{ $patient->deduction ?: '-' }}
+                @if($patient->cash_receipt_no) · {{ $patient->cash_receipt_no }} @endif
+              </span>
+              {{-- 인라인 display 는 .edit-only{display:none} 을 덮는다 — 보는 중에도 칸이 서 버린다.
+                   그래서 .inline 반은 클래스로 준다(위 40~42줄 규칙). --}}
+              <span class="edit-only inline">
+                <select class="form-control" id="e-deduction" data-orig="{{ $patient->deduction }}"
+                        style="flex:0 0 120px;">
+                  <option value="">선택</option>
+                  @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
+                    <option value="{{ $t }}" @selected($patient->deduction === $t)>{{ $t }}</option>
+                  @endforeach
+                </select>
+                <input type="text" class="form-control" id="e-cash-receipt" data-phone
+                       value="{{ $patient->cash_receipt_no }}" data-orig="{{ $patient->cash_receipt_no }}"
+                       placeholder="010-XXXX-XXXX" style="flex:1;min-width:0;" />
+              </span>
+            </span>
+          </div>
+
+          {{-- ── 공단 · 기초 ────────────────────────────── --}}
+          <div class="info-row">
+            <span class="info-label">건보등록</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_reg_status ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-nhis-reg" data-orig="{{ $patient->nhis_reg_status }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::NHIS_REG_STATUSES as $v)
+                  <option value="{{ $v }}" @selected($patient->nhis_reg_status === $v)>{{ $v }}</option>
+                @endforeach
+                @if($patient->nhis_reg_status && !in_array($patient->nhis_reg_status, \App\Models\Patient::NHIS_REG_STATUSES, true))
+                  {{-- 옛 값(진행중ㆍ완료)이 담긴 건은 그 값을 잃지 않게 함께 세운다 --}}
+                  <optgroup label="기존 값">
+                    <option value="{{ $patient->nhis_reg_status }}" selected>{{ $patient->nhis_reg_status }}</option>
+                  </optgroup>
+                @endif
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">건보등록일</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_reg_date ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-nhis-reg-date"
+                     value="{{ $patient->nhis_reg_date }}" data-orig="{{ $patient->nhis_reg_date }}" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">건보 재등록 대상자</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_renew ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-nhis-renew" data-orig="{{ $patient->nhis_renew }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::YN as $v)
+                  <option value="{{ $v }}" @selected($patient->nhis_renew === $v)>{{ $v }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">건보 재등록 기한</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_renew_due ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-nhis-renew-due"
+                     value="{{ $patient->nhis_renew_due }}" data-orig="{{ $patient->nhis_renew_due }}" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">건보위임동의 시작일</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_agree_start ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-agree-start"
+                     value="{{ $patient->nhis_agree_start }}" data-orig="{{ $patient->nhis_agree_start }}" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">건보위임동의 종료일</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->nhis_agree_end ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-agree-end"
+                     value="{{ $patient->nhis_agree_end }}" data-orig="{{ $patient->nhis_agree_end }}" />
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">기초(의료급여) 재평가 대상자</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->basic_reeval ?: '-' }}</span>
+              <select class="form-control edit-only" id="e-basic-reeval" data-orig="{{ $patient->basic_reeval }}">
+                <option value="">선택</option>
+                @foreach(\App\Models\Patient::YN as $v)
+                  <option value="{{ $v }}" @selected($patient->basic_reeval === $v)>{{ $v }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">기초(의료급여) 재평가 기한</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->basic_reeval_due ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-basic-due"
+                     value="{{ $patient->basic_reeval_due }}" data-orig="{{ $patient->basic_reeval_due }}" />
+            </span>
+          </div>
+
+          {{-- 이 사람의 처방ㆍ재구매에서 읽어 오는 값. 여기서는 보기만 한다 — 고치는
+               자리는 주문 등록의 병원ㆍ처방 정보다(요청서 4쪽 «주문 화면에서 역으로 연결»). --}}
+          <div class="info-row">
+            <span class="info-label">일일 도뇨 횟수</span>
+            <span class="info-value">{{ $rxFacts['daily'] ?: '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Five/Six</span>
+            <span class="info-value">{{ $rxFacts['five'] ?: '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Five/Six (110days)</span>
+            <span class="info-value">{{ $rxFacts['five110'] ?: '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">다음 재구매 가능일</span>
+            <span class="info-value">{{ $rxFacts['next'] ?: '-' }}</span>
+          </div>
+
+          <div class="info-row wide">
+            <span class="info-label">메모</span>
+            <span class="info-value">
+              <span class="view-only" style="white-space:pre-wrap;">{{ $patient->note ?: '-' }}</span>
+              <textarea class="form-control edit-only" id="e-note" rows="2"
+                        data-orig="{{ $patient->note }}" placeholder="특이사항 등">{{ $patient->note }}</textarea>
+            </span>
+          </div>
+          <div class="info-row wide">
+            <span class="info-label">남긴 사람</span>
+            <span class="info-value" style="font-size:12px;color:var(--text-muted);">
+              등록 {{ $patient->creator?->name ?: '-' }}
+              · 수정 {{ $patient->updater?->name ?: '-' }}
+              · 수정일자 {{ $patient->updated_at?->format('Y-m-d H:i') }}
+              · 신환 Master 등록일 {{ $patient->new_patient_date ?: '-' }}
+            </span>
+          </div>
+
           {{-- 건강보험번호·급여 적용은 이 화면에서 보지 않는다. 급여 여부는 주문
                한 건마다 정해지는 것이라, 사람에 붙여 두면 실제와 어긋난다. --}}
           {{-- 메모 칸은 두지 않는다. 사람에 붙은 한 줄 메모는 어느 주문 이야기인지
@@ -450,6 +688,16 @@
     if (on) setTimeout(() => document.getElementById('e-name')?.focus(), 30);
   }
 
+  /* 빈 칸은 null 로 보낸다 — 빈 글자를 담으면 날짜 칸 검증에서 걸리고,
+     「적었는데 비웠다」와 「안 적었다」가 구별되지 않는다. */
+  const ev = (id) => (document.getElementById(id)?.value ?? '').trim() || null;
+
+  /* 자진발급이면 번호가 정해져 있다(010-000-1234) — 고르는 그 자리에서 채운다 */
+  document.getElementById('e-deduction')?.addEventListener('change', function () {
+    const no = document.getElementById('e-cash-receipt');
+    if (this.value === '자진발급' && !no.value.trim()) no.value = '010-000-1234';
+  });
+
   async function savePatient() {
     const name = document.getElementById('e-name').value.trim();
     if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
@@ -471,6 +719,26 @@
       address:             document.getElementById('e-address').value.trim()      || null,
       postcode:            document.getElementById('e-postcode').value.trim()     || null,
       address_detail:      document.getElementById('e-address-detail').value.trim()|| null,
+
+      // ── 화면 확정요청 2026-08-27 (2ㆍ3쪽) ──
+      sb_sci:           ev('e-sb-sci'),
+      contact_status:   ev('e-contact-status'),
+      contact_channel:  ev('e-contact-channel'),
+      email:            ev('e-email'),
+      fax:              ev('e-fax'),
+      remitter_name:    ev('e-remitter'),
+      deduction:        ev('e-deduction'),
+      cash_receipt_no:  ev('e-cash-receipt'),
+      nhis_reg_status:  ev('e-nhis-reg'),
+      nhis_reg_date:    ev('e-nhis-reg-date'),
+      nhis_renew:       ev('e-nhis-renew'),
+      nhis_renew_due:   ev('e-nhis-renew-due'),
+      nhis_agree_start: ev('e-agree-start'),
+      nhis_agree_end:   ev('e-agree-end'),
+      basic_reeval:     ev('e-basic-reeval'),
+      basic_reeval_due: ev('e-basic-due'),
+      note:             ev('e-note'),
+
       // 건강보험번호·급여 항목은 화면에서 걷어냈다 — 보내지 않으면 저장된 값은 그대로 남는다
       _method:             'PUT',
     };

@@ -430,16 +430,59 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">휴대폰</label>
-          <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
+          <label class="form-label">구분(SB/SCI)</label>
+          <select class="form-control" id="add-sb-sci">
+            <option value="">선택</option>
+            <option value="SB">SB</option>
+            <option value="SCI">SCI</option>
+          </select>
+        </div>
+      </div>
+
+      {{-- ── 연락 ──────────────────────────────────────────
+           어디로 거는 것이 나은지와 지금 닿는지를 함께 적는다. 적어 두지 않으면
+           담당자가 바뀔 때마다 처음부터 다시 알아내야 한다(요청서 2쪽). --}}
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">연락 상태</label>
+          <select class="form-control" id="add-contact-status">
+            <option value="">선택</option>
+            @foreach(\App\Models\Patient::CONTACT_STATUSES as $k => $label)
+              <option value="{{ $k }}">{{ $label }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">연락 선호 방식</label>
+          <select class="form-control" id="add-contact-channel">
+            <option value="">선택</option>
+            @foreach(\App\Models\Patient::CONTACT_CHANNELS as $k => $label)
+              <option value="{{ $k }}">{{ $label }}</option>
+            @endforeach
+          </select>
         </div>
       </div>
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
-          <label class="form-label">일반 전화</label>
+          <label class="form-label">전화번호1</label>
+          <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
+        </div>
+        <div class="form-group">
+          <label class="form-label">전화번호2</label>
           <input type="text" class="form-control" id="add-phone" placeholder="02-XXXX-XXXX" data-phone />
         </div>
       </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="add-email" placeholder="name@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fax</label>
+          <input type="text" class="form-control" id="add-fax" placeholder="02-XXXX-XXXX" data-phone />
+        </div>
+      </div>
+
       {{-- 주소는 주문 등록·환자 상세와 같은 구성이다 — 우편번호·도로명은 찾아서 채우고
            상세만 사람이 적는다. 한 칸에 몰아 적으면 주문 낼 때 다시 갈라야 한다. --}}
       <div class="form-group" style="margin-bottom:8px;">
@@ -455,6 +498,87 @@
         </div>
         <input type="text" class="form-control" id="add-address-detail" placeholder="상세 주소" />
       </div>
+
+      {{-- ── 돈 ──────────────────────────────────────────
+           보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다). 입금자명이 달라
+           맞춰 보지 못하는 일을 막으려고 미리 적어 둔다. --}}
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">송금자명</label>
+          <input type="text" class="form-control" id="add-remitter" placeholder="입금자명이 다르면 적습니다" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">현금영수증</label>
+          <div style="display:flex;gap:6px;">
+            {{-- 주문 등록의 같은 칸과 값이 같아야 한다 — 두 화면이 서로 다른 말을 하면 안 된다.
+                 자진발급이면 번호가 정해져 있어 자동으로 채운다. --}}
+            <select class="form-control" id="add-deduction" style="flex:0 0 120px;">
+              <option value="">선택</option>
+              @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
+                <option value="{{ $t }}">{{ $t }}</option>
+              @endforeach
+            </select>
+            <input type="text" class="form-control" id="add-cash-receipt"
+                   placeholder="010-XXXX-XXXX" data-phone style="flex:1;min-width:0;" />
+          </div>
+        </div>
+      </div>
+
+      {{-- ── 공단 · 기초 (요청서 3쪽) ────────────────────── --}}
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">건보등록</label>
+          <select class="form-control" id="add-nhis-reg">
+            <option value="">선택</option>
+            @foreach(\App\Models\Patient::NHIS_REG_STATUSES as $v)
+              <option value="{{ $v }}">{{ $v }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">건보등록일</label>
+          <input type="date" class="form-control" id="add-nhis-reg-date" />
+        </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">건보 재등록 대상자</label>
+          <select class="form-control" id="add-nhis-renew">
+            <option value="">선택</option>
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">건보 재등록 기한</label>
+          <input type="date" class="form-control" id="add-nhis-renew-due" />
+        </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">건보위임동의 시작일</label>
+          <input type="date" class="form-control" id="add-agree-start" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">건보위임동의 종료일</label>
+          <input type="date" class="form-control" id="add-agree-end" />
+        </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px;">
+        <div class="form-group">
+          <label class="form-label">기초(의료급여) 재평가 대상자</label>
+          <select class="form-control" id="add-basic-reeval">
+            <option value="">선택</option>
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">기초(의료급여) 재평가 기한</label>
+          <input type="date" class="form-control" id="add-basic-due" />
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">메모</label>
         <textarea class="form-control" id="add-note" rows="2" placeholder="특이사항 등"></textarea>
@@ -553,7 +677,14 @@ document.addEventListener('keydown', (e) => {
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
       { header: '이름',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
-      { header: '생년월일',     name: 'birth_date',      width: 160, sortable: true },
+      /* 생년월일 셋 — 위드웍스 표는 「1982. 11. 11.」, 우리 표는 「1982-11-11」, 해만
+         맞춰 보는 자리도 있다. 만 나이는 요청대로 따로 세운다(요청서 2쪽). */
+      { header: '생년월일(1)', name: 'birth_dotted',   width: 120, align: 'center', sortable: true },
+      { header: '생년월일(2)', name: 'birth_iso',      width: 110, align: 'center', sortable: true },
+      { header: '생년',        name: 'birth_year',     width: 70,  align: 'center', sortable: true },
+      { header: '나이',        name: 'age',            width: 80,  align: 'center' },
+      { header: '연락 상태',   name: 'contact_status', width: 110, align: 'center', sortable: true },
+      { header: '연락 선호 방식', name: 'contact_channel', width: 140, align: 'center', sortable: true },
       /* 성별 자리에 상담내역을 둔다. 성별은 훑을 때 쓰는 값이 아니고(필요하면 상세에 있다),
          목록에서 바로 하고 싶은 일은 「이 환자와 무슨 이야기를 했나」를 보는 것이다. */
       { header: '상담내역', name: 'counsel', width: 90, align: 'center', exportable: false,
@@ -566,7 +697,18 @@ document.addEventListener('keydown', (e) => {
           b.addEventListener('click', (e) => { e.stopPropagation(); pcLoad(row.id, row.name, row.mobile); });
           return b;
         } },
-      { header: '휴대폰',       name: 'mobile',          width: 130 },
+      // 요청서 3쪽 «휴대폰->전화번호1으로 변경 / 전화번호2 추가»
+      { header: '전화번호1',   name: 'mobile',   width: 130 },
+      { header: '전화번호2',   name: 'phone2',   width: 130 },
+      { header: 'Email',       name: 'email',    width: 180 },
+      { header: 'Fax',         name: 'fax',      width: 120 },
+      { header: '주소',        name: 'address',  width: 280 },
+      // 이 주소가 언제부터인가 — 이력의 맨 윗줄이 적힌 날이다
+      { header: '주소 변경일', name: 'address_at', width: 110, align: 'center', sortable: true },
+      { header: '송금자명',    name: 'remitter', width: 100 },
+      { header: '현금영수증',  name: 'deduction', width: 100, align: 'center', sortable: true },
+      { header: '현금영수증 번호', name: 'cash_receipt_no', width: 130 },
+      { header: '구분(SB/SCI)', name: 'sb_sci',  width: 110, align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
       { header: '서명여부',   name: 'signed',   width: 90, align: 'center', sortable: true,
         renderer: (v, row) => {
@@ -609,14 +751,29 @@ document.addEventListener('keydown', (e) => {
           return b;
         } },
 
+      // ── 공단ㆍ기초 (요청서 3쪽) ──
+      { header: '건보등록',     name: 'nhis_reg',       width: 110, align: 'center', sortable: true },
+      { header: '건보등록일',   name: 'nhis_reg_date',  width: 110, align: 'center', sortable: true },
+      { header: '건보재등록 대상자', name: 'nhis_renew', width: 140, align: 'center' },
+      { header: '건보재등록 기한',   name: 'nhis_renew_due', width: 130, align: 'center', sortable: true },
+      { header: '건보위임동의 시작일', name: 'agree_start', width: 140, align: 'center', sortable: true },
+      { header: '건보위임동의 종료일', name: 'agree_end',   width: 140, align: 'center', sortable: true },
+      { header: '기초(의료급여) 재평가 대상자', name: 'basic_reeval', width: 200, align: 'center' },
+      { header: '기초(의료급여) 재평가 기한',   name: 'basic_due',    width: 190, align: 'center', sortable: true },
+
       { header: '처방건수',     name: 'rx_count',        width: 80,  editor: 'number', align: 'center', sortable: true },
       { header: '재구매일',     name: 'repurchase_date', width: 160, sortable: true },
+      { header: '메모',         name: 'memo',            width: 240 },
       // 요청 1차 3쪽 '등록일 -> 신환 Master 등록일'. 시안 114:4778 은 아직 '생성일'이지만
       // 낱말은 요청서를 따른다. 같은 칸을 요청 1차 14·16쪽이 '거래처관리에서 등록일과 연결'
       // 이라 부르고 27쪽 주문 관리 목록도 '신환Master 등록일'로 적는다.
       // name 'created'(created_at) 는 그대로 두고, 머리글 실측 121.7 + padding 12+12
       // + 정렬 화살표(gap 6 + 10.5) = 162.2 라 110 → 170 으로 넓힌다.
       { header: '신환 Master 등록일', name: 'created',    width: 170, sortable: true },
+      // 누가 만들고 누가 마지막으로 고쳤는가 (요청서 2쪽)
+      { header: '등록자',   name: 'creator', width: 90,  align: 'center', sortable: true },
+      { header: '수정자',   name: 'updater', width: 90,  align: 'center', sortable: true },
+      { header: '수정일자', name: 'updated', width: 140, align: 'center', sortable: true },
     ],
     data: @json($gridData),
   });
@@ -1060,6 +1217,10 @@ document.addEventListener('keydown', (e) => {
   function openAddModal()  { document.getElementById('addModal').classList.add('show'); }
   function closeAddModal() { document.getElementById('addModal').classList.remove('show'); }
 
+  /* 빈 칸은 null 로 보낸다 — 빈 글자를 담으면 「적었는데 비었다」와 「안 적었다」가
+     구별되지 않고, 날짜 칸은 빈 글자에서 검증이 걸린다. */
+  const val = (id) => (document.getElementById(id)?.value ?? '').trim() || null;
+
   async function savePatient() {
     const name = document.getElementById('add-name').value.trim();
     if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
@@ -1079,6 +1240,24 @@ document.addEventListener('keydown', (e) => {
       postcode:            document.getElementById('add-postcode').value.trim()      || null,
       address_detail:      document.getElementById('add-address-detail').value.trim()|| null,
       note:                document.getElementById('add-note').value.trim()          || null,
+
+      // ── 화면 확정요청 2026-08-27 (2ㆍ3쪽) ──
+      sb_sci:          val('add-sb-sci'),
+      contact_status:  val('add-contact-status'),
+      contact_channel: val('add-contact-channel'),
+      email:           val('add-email'),
+      fax:             val('add-fax'),
+      remitter_name:   val('add-remitter'),
+      deduction:       val('add-deduction'),
+      cash_receipt_no: val('add-cash-receipt'),
+      nhis_reg_status:  val('add-nhis-reg'),
+      nhis_reg_date:    val('add-nhis-reg-date'),
+      nhis_renew:       val('add-nhis-renew'),
+      nhis_renew_due:   val('add-nhis-renew-due'),
+      nhis_agree_start: val('add-agree-start'),
+      nhis_agree_end:   val('add-agree-end'),
+      basic_reeval:     val('add-basic-reeval'),
+      basic_reeval_due: val('add-basic-due'),
     };
 
     const res = await apiRequest('/patients', 'POST', payload);
@@ -1093,6 +1272,13 @@ document.addEventListener('keydown', (e) => {
       showToast(res.message || '저장 실패', 'danger');
     }
   }
+
+  /* 자진발급이면 번호가 정해져 있다(010-000-1234). 저장한 뒤에야 채워지면 담당자는
+     비어 있는 줄 알고 손으로 적는다 — 고르는 그 자리에서 채운다. */
+  document.getElementById('add-deduction')?.addEventListener('change', function () {
+    const no = document.getElementById('add-cash-receipt');
+    if (this.value === '자진발급' && !no.value.trim()) no.value = '010-000-1234';
+  });
 
   async function deletePatient(id, name) {
     if (!await ceConfirm(`"${name}" 환자를 삭제하시겠습니까?`, { tone: 'danger', confirmText: '삭제' })) return;

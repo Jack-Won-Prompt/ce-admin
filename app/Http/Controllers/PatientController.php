@@ -101,6 +101,10 @@ class PatientController extends Controller
 
         $consents = $this->latestConsentByPatient();
 
+        /* 주소가 언제 바뀌었는지도 함께 보여 준다 — 「이 주소가 언제부터인가」를
+           모르면 지난 주문이 어디로 갔는지 되짚을 수 없다. */
+        $query->with(['creator:id,name', 'updater:id,name', 'addresses']);
+
         // ── wwGrid 데이터 ──────────────────────────────────
         $gridData = $query->get()->map(function ($p) use ($consents) {
             // 생년월일 + 나이
@@ -130,14 +134,54 @@ class PatientController extends Controller
             $agreed  = $c && $c->status === 'agreed';
             $minorRx = $c && $c->is_minor;
 
+            $addr = $p->addresses->first();
+
             return [
                 'id'              => $p->id,
                 'care_type'       => $p->care_type ?: '',
                 'name'            => $p->name,
                 'resident_no'     => $p->masked_resident_no ?? '-',
+                // 생년월일은 세 가지 표기로 나란히 둔다 — 위드웍스 표와 눈으로 맞춰 본다
+                'birth_dotted'    => $p->birth_dotted,
+                'birth_iso'       => $p->birth_iso,
+                'birth_year'      => $p->birth_year,
+                'age'             => $p->age !== null ? '만 ' . $p->age . '세' : '',
+                // 옛 칸 — 다른 화면이 아직 이 이름으로 읽는다
                 'birth_date'      => $birth,
                 'gender'          => $gender,
-                'mobile'          => $p->mobile ?? $p->phone ?? '-',
+                'mobile'          => $p->mobile ?? '-',
+                'phone2'          => $p->phone ?? '',
+
+                // ── 연락 ──
+                'contact_status'  => $p->contactStatusLabel(),
+                'contact_channel' => $p->contactChannelLabel(),
+                'email'           => $p->email ?? '',
+                'fax'             => $p->fax ?? '',
+                'address'         => $p->full_address,
+                'address_at'      => $addr?->created_at?->format('Y-m-d') ?? '',
+
+                // ── 돈 ──
+                'remitter'        => $p->remitter_name ?? '',
+                'deduction'       => $p->deduction ?? '',
+                'cash_receipt_no' => $p->cash_receipt_no ?? '',
+
+                // ── 공단ㆍ기초 ──
+                'nhis_reg'        => $p->nhis_reg_status ?? '',
+                'nhis_reg_date'   => $p->nhis_reg_date ? \Carbon\Carbon::parse($p->nhis_reg_date)->format('Y-m-d') : '',
+                'nhis_renew'      => $p->nhis_renew ?? '',
+                'nhis_renew_due'  => $p->nhis_renew_due ? \Carbon\Carbon::parse($p->nhis_renew_due)->format('Y-m-d') : '',
+                'agree_start'     => $p->nhis_agree_start ? \Carbon\Carbon::parse($p->nhis_agree_start)->format('Y-m-d') : '',
+                'agree_end'       => $p->nhis_agree_end ? \Carbon\Carbon::parse($p->nhis_agree_end)->format('Y-m-d') : '',
+                'basic_reeval'    => $p->basic_reeval ?? '',
+                'basic_due'       => $p->basic_reeval_due ? \Carbon\Carbon::parse($p->basic_reeval_due)->format('Y-m-d') : '',
+
+                'sb_sci'          => $p->sb_sci ?? '',
+                'memo'            => $p->note ?: ($p->memo ?? ''),
+
+                // ── 남긴 사람 ──
+                'creator'         => $p->creator?->name ?? '',
+                'updater'         => $p->updater?->name ?? '',
+                'updated'         => $p->updated_at?->format('Y-m-d H:i') ?? '',
 
                 // ── 위임 서명 ──
                 'signed'      => $c ? $c->statusLabel() : '',
@@ -188,7 +232,37 @@ class PatientController extends Controller
             'total_amt' => (int) ($rx->order?->total_amount ?? 0),
         ])->values();
 
-        return view('patients.show', compact('patient', 'rxRows'));
+        /* 일일 도뇨 횟수ㆍFive/SixㆍFive/Six(110days)ㆍ다음 재구매 가능일은 처방에 붙는
+           값이라 환자에는 칸이 없다. 가장 최근에 적힌 것을 끌어와 보여 준다 —
+           고치는 자리는 주문 등록의 병원ㆍ처방 정보다(요청서 4쪽 «역으로 연결»). */
+        $rxFacts = $this->rxFacts($patient);
+
+        return view('patients.show', compact('patient', 'rxRows', 'rxFacts'));
+    }
+
+    /**
+     * 처방에서 끌어오는 환자 요약값.
+     *
+     * 처방마다 적히는 값이라 비어 있는 건이 섞인다 — 최근 것부터 훑어 처음 만나는
+     * 값을 쓴다. 「최근 처방에 안 적혀 있으니 없다」로 보이면 안 된다.
+     */
+    private function rxFacts(Patient $patient): array
+    {
+        $rows = $patient->prescriptions;
+
+        $first = fn (string $col) => $rows->pluck($col)->first(fn ($v) => $v !== null && $v !== '');
+
+        return [
+            'daily'   => \App\Support\CatheterFrequency::label($first('diverticulums')),
+            'five'    => match ((string) $first('five_program')) {
+                '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
+            },
+            'five110' => (string) ($first('five_110days') ?? ''),
+            'next'    => ($n = $first('next_repurchase'))
+                ? \Carbon\Carbon::parse($n)->format('Y-m-d')
+                : (($r = $rows->pluck('repurchase_date')->first(fn ($v) => $v))
+                    ? \Carbon\Carbon::parse($r)->format('Y-m-d') : ''),
+        ];
     }
 
     /**
@@ -457,9 +531,15 @@ class PatientController extends Controller
     }
 
     // ── 등록 ──────────────────────────────────────────────
-    public function store(Request $request): \Illuminate\Http\JsonResponse
+    /**
+     * 등록ㆍ수정이 함께 쓰는 규칙.
+     *
+     * 두 벌로 두었더니 칸을 늘릴 때마다 한쪽만 늘어, 등록으로는 담기는데 수정으로는
+     * 사라지는 값이 생겼다.
+     */
+    private function patientRules(): array
     {
-        $data = $request->validate([
+        return [
             'name'               => 'required|string|max:50',
             'care_type'          => 'nullable|in:IC,OC',
             'resident_no'        => 'nullable|string|max:20',
@@ -474,7 +554,42 @@ class PatientController extends Controller
             'is_nhis_eligible'   => 'boolean',
             'nhis_coverage_rate' => 'nullable|integer|min:0|max:100',
             'note'               => 'nullable|string|max:1000',
-        ]);
+
+            // ── 화면 확정요청 2026-08-27 (2ㆍ3쪽) ──
+            'email'           => 'nullable|email|max:190',
+            'fax'             => 'nullable|string|max:30',
+            'sb_sci'          => 'nullable|string|max:10',
+            'remitter_name'   => 'nullable|string|max:50',
+            'contact_channel' => 'nullable|in:' . implode(',', array_keys(\App\Models\Patient::CONTACT_CHANNELS)),
+            'contact_status'  => 'nullable|in:' . implode(',', array_keys(\App\Models\Patient::CONTACT_STATUSES)),
+            'deduction'       => 'nullable|in:' . implode(',', \App\Models\Patient::DEDUCTION_TYPES),
+            'cash_receipt_no' => 'nullable|string|max:30',
+
+            'nhis_reg_status'  => 'nullable|string|max:30',
+            'nhis_reg_date'    => 'nullable|date',
+            'nhis_renew'       => 'nullable|string|max:100',
+            'nhis_renew_due'   => 'nullable|date',
+            'nhis_agree_start' => 'nullable|date',
+            'nhis_agree_end'   => 'nullable|date',
+            'basic_reeval'     => 'nullable|string|max:100',
+            'basic_reeval_due' => 'nullable|date',
+            'new_patient_date' => 'nullable|date',
+        ];
+    }
+
+    /** 자진발급이면 번호가 정해져 있다 — 담당자가 매번 외워 치지 않게 여기서 채운다 */
+    private function fillSelfIssue(array $data): array
+    {
+        if (($data['deduction'] ?? null) === '자진발급' && empty($data['cash_receipt_no'])) {
+            $data['cash_receipt_no'] = \App\Models\Patient::SELF_ISSUE_NO;
+        }
+
+        return $data;
+    }
+
+    public function store(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $this->fillSelfIssue($request->validate($this->patientRules()));
 
         // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
         if (!Patient::hasCareTypeColumn()) {
@@ -496,22 +611,7 @@ class PatientController extends Controller
     // ── 수정 ──────────────────────────────────────────────
     public function update(Request $request, Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $data = $request->validate([
-            'name'               => 'required|string|max:50',
-            'care_type'          => 'nullable|in:IC,OC',
-            'resident_no'        => 'nullable|string|max:20',
-            'birth_date'         => 'nullable|date',
-            'gender'             => 'nullable|in:male,female',
-            'mobile'             => 'nullable|string|max:30',
-            'phone'              => 'nullable|string|max:30',
-            'address'            => 'nullable|string|max:300',
-            'postcode'           => 'nullable|string|max:10',
-            'address_detail'     => 'nullable|string|max:200',
-            'health_insurance_no'=> 'nullable|string|max:20',
-            'is_nhis_eligible'   => 'boolean',
-            'nhis_coverage_rate' => 'nullable|integer|min:0|max:100',
-            'note'               => 'nullable|string|max:1000',
-        ]);
+        $data = $this->fillSelfIssue($request->validate($this->patientRules()));
 
         // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
         if (!Patient::hasCareTypeColumn()) {

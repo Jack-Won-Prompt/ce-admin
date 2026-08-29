@@ -88,8 +88,12 @@
           <input type="date" id="csDate" class="form-control">
         </div>
         <div class="cs-f">
-          <label>통화번호</label>
-          <input type="text" id="csCallNo" class="form-control" maxlength="30" placeholder="010-0000-0000">
+          {{-- 여기서 고치면 환자 정보와 어긋난다 — 거래처관리가 정본이다(요청서 4쪽).
+               값은 연 화면에서 실어 준다. 고쳐야 하면 거래처관리에서 고친다. --}}
+          <label>전화번호1</label>
+          <input type="text" id="csCallNo" class="form-control" maxlength="30"
+                 readonly style="background:var(--gray-50);cursor:default;"
+                 title="거래처관리에서 고칩니다" placeholder="거래처관리에 적힌 번호">
         </div>
       </div>
 
@@ -99,8 +103,11 @@
           <select id="csType" class="form-control form-select">
             <option value="">선택</option>
             <option value="1013">구매</option>
-            <option value="1016">개인구매</option>
+            {{-- 개인구매는 뺐다(요청서 4쪽). 되돌리는 일이 반품 하나로 뭉뚱그려져 있어
+                 교환과 환불을 갈랐다 — 셋은 하는 일도 서류도 다르다. --}}
             <option value="1020">반품</option>
+            <option value="1021">교환</option>
+            <option value="1022">환불</option>
             <option value="1030">문의</option>
             <option value="1050">기타</option>
           </select>
@@ -109,7 +116,8 @@
           <label>상담 상태</label>
           <select id="csStatus" class="form-control form-select" onchange="csSyncReDate()">
             <option value="02">등록</option>
-            <option value="50">재상담</option>
+            {{-- 재상담은 뺐다(요청서 4쪽). 이미 재상담으로 담긴 건은 값을 잃지 않게
+                 그 건에서만 함께 세운다 — 아래 csFill 이 넣는다. --}}
             <option value="95">확정</option>
             <option value="99">취소</option>
           </select>
@@ -453,7 +461,7 @@
     document.getElementById('csDate').value     = c.date || new Date().toISOString().slice(0, 10);
     document.getElementById('csCallNo').value   = c.call_no || _csMobile;
     document.getElementById('csType').value     = c.type   || '';
-    document.getElementById('csStatus').value   = c.status || '02';
+    csSetStatus(c.status || '02');
     document.getElementById('csReDate').value   = c.re_date || '';
     document.getElementById('csContents').value = c.contents || '';
     document.getElementById('csLen').textContent = String((c.contents || '').length);
@@ -528,6 +536,21 @@
   })();
 
   /* 재상담으로 두면 언제 다시 걸지가 곧 다음 일이 된다 — 그때만 날짜를 묻는다 */
+  /* 이미 「재상담」으로 담긴 건이 있다. 그 값을 고르는 자리에서 뺐으므로, 그대로
+     넣으면 select 가 조용히 빈 값으로 떨어지고 저장하면 상태가 지워진다 —
+     없는 값이면 그 건에서만 한 줄을 세워 되돌려 준다. */
+  window.csSetStatus = function (v) {
+    const sel = document.getElementById('csStatus');
+    if (v && ![...sel.options].some(o => o.value === v)) {
+      const LABELS = { '50': '재상담' };
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = (LABELS[v] || v) + ' (기존 값)';
+      sel.appendChild(o);
+    }
+    sel.value = v;
+  };
+
   window.csSyncReDate = function () {
     const on = document.getElementById('csStatus').value === '50';
     document.getElementById('csReDateWrap').style.display = on ? '' : 'none';

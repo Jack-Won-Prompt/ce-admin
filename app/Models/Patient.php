@@ -7,6 +7,7 @@ use App\Support\ResidentNo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Patient extends Model
@@ -25,7 +26,66 @@ class Patient extends Model
         // 주민번호 암호화(P0-1)
         'resident_no_enc', 'resident_no_hash', 'resident_no_masked',
         'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
+        // 화면 확정요청 2026-08-27 — 거래처관리를 환자 정보의 정본으로
+        'remitter_name', 'contact_channel', 'contact_status', 'fax',
+        'created_by', 'updated_by',
     ];
+
+    /**
+     * 어디로 거는 것이 나은가.
+     *
+     * 사람마다 닿는 길이 다르다 — 전화를 안 받고 카톡만 보는 환자가 있고, 그 반대도
+     * 있다. 적어 두지 않으면 담당자가 바뀔 때마다 처음부터 다시 알아내야 한다.
+     */
+    public const CONTACT_CHANNELS = [
+        'phone'      => '전화',
+        'happytalk'  => '해피톡',
+        'sms2586'    => '업무폰2586 문자',
+        'kakao2586'  => '업무폰2586 카톡',
+        'sms3018'    => '업무폰3018 문자',
+        'kakao3018'  => '업무폰3018 카톡',
+    ];
+
+    /**
+     * 연락이 닿는가.
+     *
+     * 예전에는 Active/Inactive 둘이었다. 왜 안 닿는지가 다음에 할 일을 정한다 —
+     * 사망과 수신거부와 타사이동은 서로 다른 일이고, 재구매 안내를 보낼지도 갈린다.
+     */
+    public const CONTACT_STATUSES = [
+        'normal'      => '정상',
+        'deceased'    => '사망',
+        'recovered'   => '회복',
+        'optout'      => '수신거부',
+        'unreachable' => '연결실패',
+        'moved'       => '타사이동',
+        'device_buy'  => '의료기상 구매(콜로)',
+        'cic_stopped' => 'CIC중단',
+        'etc'         => '기타',
+    ];
+
+    /** 현금영수증 발행 방식 — 주문 등록의 같은 칸과 값이 같아야 한다 */
+    public const DEDUCTION_TYPES = ['소득공제', '지출증빙', '자진발급'];
+
+    /** 자진발급이면 번호가 정해져 있다 — 국세청이 쓰는 자리다 */
+    public const SELF_ISSUE_NO = '010-000-1234';
+
+    /**
+     * 공단 등록 상태 (화면 확정요청 2026-08-27, 11쪽).
+     *
+     * 「진행중ㆍ완료」 둘로는 신규인지 재등록인지 알 수 없었다. 공단에 내는 서류도
+     * 다음에 할 일도 그 둘이 다르다.
+     */
+    public const NHIS_REG_STATUSES = [
+        '신규 등록 진행중',
+        '신규 등록 완료',
+        '재등록 진행중',
+        '재등록 완료',
+        '필요없음',
+    ];
+
+    /** 예ㆍ아니오만 받는 칸 — 「대상 여부 또는 비고」로 두었더니 사람마다 다르게 적혔다 */
+    public const YN = ['Y', 'N'];
 
     /** IC = 카테터 · OC = 장루. 개인정보 동의서의 catheter/stoma 와 같은 축이다. */
     public const CARE_TYPES = ['IC' => 'IC (카테터)', 'OC' => 'OC (장루)'];
@@ -56,6 +116,51 @@ class Patient extends Model
             if (empty($p->new_patient_date)) {
                 $p->new_patient_date = now()->toDateString();
             }
+        });
+
+        /* 누가 만들고 누가 마지막으로 고쳤는가.
+           화면마다 따로 적으면 어느 길로 저장했느냐에 따라 비는 곳이 생긴다.
+           사람이 아닌 길(웹훅ㆍ배치)로 들어온 것은 비워 둔다 — 없는 사람을 적을 수 없다. */
+        static::saving(function (self $p) {
+            $id = \Illuminate\Support\Facades\Auth::id();
+            if (!$id || !\Illuminate\Support\Facades\Schema::hasColumn('patients', 'updated_by')) {
+                return;
+            }
+
+            if (!$p->exists && !$p->created_by) {
+                $p->created_by = $id;
+            }
+
+            // 값이 실제로 바뀔 때만 수정자를 갈아 낀다 — 열어만 봐도 바뀌면 뜻이 없다
+            if ($p->exists && $p->isDirty()) {
+                $p->updated_by = $id;
+            }
+        });
+
+        /* 주소가 바뀌면 이력에 한 줄 쌓는다.
+           환자 칸에는 늘 가장 최근 것이 남으므로, 그 칸을 읽는 화면(주문 등록ㆍ팩스ㆍ
+           서류)은 손대지 않아도 된다. 여기 쌓이는 것은 「언제 어디였는지」다. */
+        static::saved(function (self $p) {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('patient_addresses')) {
+                return;
+            }
+
+            if (!$p->address) {
+                return;
+            }
+
+            $last = $p->addresses()->first();
+
+            if ($last && $last->sameAs($p->postcode, $p->address, $p->address_detail)) {
+                return;
+            }
+
+            $p->addresses()->create([
+                'postcode'       => $p->postcode,
+                'address'        => $p->address,
+                'address_detail' => $p->address_detail,
+                'created_by'     => \Illuminate\Support\Facades\Auth::id(),
+            ]);
         });
     }
 
@@ -178,6 +283,53 @@ class Patient extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** 주소 이력 — 가장 최근 것이 맨 위다 */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(PatientAddress::class)->orderByDesc('id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function contactChannelLabel(): string
+    {
+        return self::CONTACT_CHANNELS[$this->contact_channel] ?? '';
+    }
+
+    public function contactStatusLabel(): string
+    {
+        return self::CONTACT_STATUSES[$this->contact_status] ?? '';
+    }
+
+    /**
+     * 생년월일 세 가지 표기 (화면 확정요청 2026-08-27, 2쪽).
+     *
+     * 위드웍스에서 받아 온 표는 「1982. 11. 11.」이고, 우리 표는 「1982-11-11」이며,
+     * 해만 맞춰 보는 자리도 있다. 셋을 나란히 두어야 눈으로 맞춰 볼 수 있다.
+     */
+    public function getBirthDottedAttribute(): string
+    {
+        return $this->birth_date?->format('Y. m. d.') ?? '';
+    }
+
+    public function getBirthIsoAttribute(): string
+    {
+        return $this->birth_date?->format('Y-m-d') ?? '';
+    }
+
+    public function getBirthYearAttribute(): string
+    {
+        return $this->birth_date?->format('Y') ?? '';
     }
 
     /** 개인정보 동의서. 밖에서 들어오는 폼이라 이어지지 않은 것도 있다(patient_id 가 빈다). */
