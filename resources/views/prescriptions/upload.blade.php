@@ -375,15 +375,17 @@
           <div class="up-sec up-sec-setting">
             <span class="up-sec-title">처방전 설정</span>
             <div style="display:flex;flex-direction:column;gap:8px;">
+              {{-- 담당자 — 이름을 쳐서 고른다. 바로 위 「이름 선택」과 같은 방식이다.
+                   고르는 칸으로 두었더니 사람이 늘수록 굴려 내려가 찾아야 했고, 이름을
+                   알고 있어도 목록에서 눈으로 짚어야 했다. --}}
               <div class="fu-row">
                 <span class="fu-label">담당자</span>
-                <div class="fu-field">
-                  <select class="fu-input" id="sideAssignedUser">
-                    <option value="">담당자 선택</option>
-                    @foreach($managers as $m)
-                      <option value="{{ $m->id }}">{{ $m->name }}</option>
-                    @endforeach
-                  </select>
+                <div class="fu-field patient-search-wrap">
+                  <input type="text" id="sideAssignedName" class="fu-input"
+                         placeholder="담당자 이름으로 검색" autocomplete="off">
+                  {{-- 저장하는 쪽은 이 값을 읽는다 — 이름이 아니라 누구인지가 실려야 한다 --}}
+                  <input type="hidden" id="sideAssignedUser">
+                  <div class="patient-search-drop" id="sideAssignedDrop"></div>
                 </div>
               </div>
               <div class="fu-row">
@@ -540,6 +542,54 @@ patientInput.addEventListener('input', function () {
 document.addEventListener('click', e => {
   if (!patientInput.contains(e.target) && !patientDrop.contains(e.target)) {
     patientDrop.classList.remove('open');
+  }
+});
+
+// ── 담당자 ───────────────────────────────────────────────
+/* 환자와 같은 방식으로 쳐서 고른다. 다른 것은 하나뿐이다 — 담당자는 이름 말고
+   견줄 것이 없어(전화번호도 주민번호도 여기 쓰지 않는다) 이름만 본다. */
+const MANAGERS = @json($managers->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values());
+
+const mgInput = document.getElementById('sideAssignedName');
+const mgHid   = document.getElementById('sideAssignedUser');
+const mgDrop  = document.getElementById('sideAssignedDrop');
+
+function mgRender(list) {
+  mgDrop.innerHTML = list.length
+    ? list.map(m =>
+        `<div class="ps-item" onclick="mgPick(${m.id}, '${escHtml(m.name)}')">
+           <i class="fa-solid fa-user-tie" style="color:var(--primary);font-size:13px;"></i>
+           <div class="ps-item-name">${escHtml(m.name)}</div>
+         </div>`).join('')
+    : '<div class="ps-no-result">그런 담당자가 없습니다</div>';
+  mgDrop.classList.add('open');
+}
+
+window.mgPick = function (id, name) {
+  mgHid.value   = id;
+  mgInput.value = name;
+  mgDrop.classList.remove('open');
+};
+
+/* 손으로 고쳐 쓰면 고른 사람과 어긋난다 — 이어 둔 것을 푼다. 그러면 담당자 없이
+   저장되지, 엉뚱한 사람에게 붙지 않는다. */
+mgInput?.addEventListener('input', function () {
+  mgHid.value = '';
+  const q = this.value.trim().toLowerCase();
+  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10)
+             : MANAGERS.slice(0, 10));
+});
+
+/* 빈 칸을 눌러도 누가 있는지 보인다 — 이름을 모를 때 굴려 보던 것이 그 자리다 */
+mgInput?.addEventListener('focus', function () {
+  const q = this.value.trim().toLowerCase();
+  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10)
+             : MANAGERS.slice(0, 10));
+});
+
+document.addEventListener('click', e => {
+  if (mgInput && !mgInput.contains(e.target) && !mgDrop.contains(e.target)) {
+    mgDrop.classList.remove('open');
   }
 });
 
