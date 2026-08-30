@@ -275,7 +275,7 @@
     /* 지난 상담을 표로 늘어놓게 되면서 580 으로는 상담번호부터 잘렸다.
        적는 자리도 두 칸 배치라 넓어진 만큼 편해진다. 옮기고 줄인 자리는 기억한다. */
     const w = Math.min(760, Math.round(window.innerWidth  * 0.62));
-    const h = Math.min(620, Math.round(window.innerHeight * 0.8));
+    const h = Math.min(670, Math.round(window.innerHeight * 0.8));
     return {
       // 오른쪽에 둔다 — 왼쪽 목록을 보면서 적는 일이 많다
       left: Math.max(8, window.innerWidth - w - 24),
