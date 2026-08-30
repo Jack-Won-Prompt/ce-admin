@@ -246,7 +246,9 @@
   window.csShowOrder = function () {
     const el = document.getElementById('csOrderNo');
     if (!el) return;
-    el.value = _csOrder ? `${_csOrder.date}   ${_csOrder.order_no}` : '';
+    /* 날짜가 없는 채로 오는 길이 있다(지난 상담을 이어 적을 때) — 그대로 끼워 넣으면
+       칸에 「undefined ORD-0028」이 적혔다. 있는 것만 이어 붙인다. */
+    el.value = _csOrder ? [_csOrder.date, _csOrder.order_no].filter(Boolean).join('   ') : '';
     el.placeholder = '주문조회에서 고르십시오 (없으면 비워 둡니다)';
   };
 
@@ -474,7 +476,7 @@
 
     _csEditing = c;
     _csDirty   = false;
-    _csOrder   = c.order_id ? { id: c.order_id, order_no: c.order_no } : null;
+    _csOrder   = c.order_id ? { id: c.order_id, order_no: c.order_no, date: c.order_date || '' } : null;
 
     document.getElementById('csDate').value     = c.date || new Date().toISOString().slice(0, 10);
     document.getElementById('csCallNo').value   = c.call_no || _csMobile;

@@ -200,6 +200,11 @@
      어느 쪽을 굴려야 할지 모르고, 짧은 이력에도 잘린 것처럼 보였다. */
   .pt-pane { display:none; padding:8px 16px 16px; }
   .pt-pane.active { display:block; }
+  /* 이은 주문번호 — 글자 그대로 보이되 누르면 그 주문 등록 화면이 열린다 */
+  .pc-order-no { padding:0; border:none; background:none; font:inherit; color:var(--primary);
+                 cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .pc-order-no:hover { color:var(--primary-dark); }
+
   .pt-hrow { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-light); font-size:13px; line-height:21px; cursor:pointer; }
   .pt-hrow:last-child { border-bottom:none; }
   .pt-hrow:hover { background:var(--bg); border-radius:6px; }
@@ -1015,6 +1020,7 @@ document.addEventListener('keydown', (e) => {
         type:    c.type || '',
         call_no: c.call_no || '',
         order_no: c.order_no || '',
+        order_url: c.order_url || '',
         order_id: c.order_id || null,
         counsel_id: c.key,
         counsel_no: c.counsel_no || '',
@@ -1070,21 +1076,27 @@ document.addEventListener('keydown', (e) => {
                 return b;
               } },
             { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
-            { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
-            { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
-            /* 「갈래」라고 묶어 두었더니 무엇을 담은 칸인지 이름만으로 서지 않았다.
-               상담 유형과 통화번호는 다른 것이므로 각자 칸을 준다. */
-            { header: '상담 유형', name: 'type',      width: 90,  sortable: true, align: 'center' },
-            { header: '통화번호',  name: 'call_no',   width: 130, sortable: true },
-            /* 이어 둔 주문. 잘못 이었으면 그 자리에서 다시 고른다 — 이력을 열어 놓고
-               고칠 수 있어야 「이 상담이 무슨 건이었나」가 맞아 간다. */
+            /* 이어 둔 주문 — 상담일시 바로 다음이다. 「언제 무슨 건으로 이야기했나」가
+               한 눈에 이어져 읽힌다. 번호를 누르면 그 주문을 만든 주문 등록 화면이
+               탭으로 열리고, 잘못 이었으면 옆 단추로 그 자리에서 다시 고른다. */
             { header: '주문번호', name: 'order_no', width: 160, sortable: true, exportable: true,
               renderer: (v, row) => {
                 const wrap = document.createElement('span');
                 wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
-                const txt = document.createElement('span');
-                txt.textContent = v || '연결 안 됨';
-                if (!v) txt.style.color = 'var(--text-muted)';
+                let txt;
+                if (v && row.order_url) {
+                  txt = document.createElement('button');
+                  txt.type = 'button';
+                  txt.className = 'pc-order-no';
+                  txt.title = '주문 등록 화면 열기';
+                  txt.textContent = v;
+                  txt.addEventListener('click', (e) => { e.stopPropagation();
+                    window.ceOpenTab(row.order_url, '주문 - ' + v, 'file-edit-02'); });
+                } else {
+                  txt = document.createElement('span');
+                  txt.textContent = v || '연결 안 됨';
+                  if (!v) txt.style.color = 'var(--text-muted)';
+                }
                 const b = document.createElement('button');
                 b.type = 'button'; b.className = 'pt-chip clickable';
                 b.textContent = v ? '변경' : '연결';
@@ -1093,6 +1105,12 @@ document.addEventListener('keydown', (e) => {
                 wrap.append(txt, b);
                 return wrap;
               } },
+            { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
+            { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
+            /* 「갈래」라고 묶어 두었더니 무엇을 담은 칸인지 이름만으로 서지 않았다.
+               상담 유형과 통화번호는 다른 것이므로 각자 칸을 준다. */
+            { header: '상담 유형', name: 'type',      width: 90,  sortable: true, align: 'center' },
+            { header: '통화번호',  name: 'call_no',   width: 130, sortable: true },
             { header: '담당자',    name: 'by',        width: 90,  sortable: true },
             /* 한 줄에 할 수 있는 일은 이 칸에 모은다. 칸마다 단추를 흩어 두면
                표가 넓어지고, 쓰지 않는 날에도 자리를 차지한다. */

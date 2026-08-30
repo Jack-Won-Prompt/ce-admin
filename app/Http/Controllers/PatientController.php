@@ -334,7 +334,9 @@ class PatientController extends Controller
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $rx = $patient->prescriptions()->with(['creator', 'updater', 'counselOrder'])->latest()->take(50)->get();
+        $rx = $patient->prescriptions()
+            ->with(['creator', 'updater', 'counselOrder.prescription'])
+            ->latest()->take(50)->get();
 
         $prescriptions = $rx->map(fn ($p) => [
             'rx_number' => $p->rx_number,
@@ -359,6 +361,13 @@ class PatientController extends Controller
                상담을 적을 때 주문이력에서 골라 잇는다. 잇지 않은 상담도 있다(주문 전 문의). */
             'order_id'   => $p->counsel_order_id,
             'order_no'   => $p->counselOrder?->order_number ?: '',
+            /* 그 주문이 어디서 열리나. 주문은 주문 등록 화면에서 만들어지므로
+               그 처방전으로 보낸다 — 처방 없이 선 주문(개인구매)만 주문 상세로 간다. */
+            'order_url'  => $p->counselOrder
+                ? ($p->counselOrder->prescription
+                    ? route('prescriptions.show', $p->counselOrder->prescription)
+                    : route('orders.show', $p->counselOrder))
+                : '',
             'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
             'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
             'type'       => $counselTypes[(string) $p->counsel_type] ?? ($p->counsel_type ?: ''),
@@ -461,6 +470,8 @@ class PatientController extends Controller
                 'contents'     => (string) ($p->counsel_contents ?? ''),
                 'order_id'     => $p->counsel_order_id,
                 'order_no'     => (string) ($p->counselOrder?->order_number ?? ''),
+                // 주문조회에서 고를 때와 같은 꼴로 보이려면 날짜도 있어야 한다
+                'order_date'   => (string) ($p->counselOrder?->created_at?->format('Y-m-d') ?? ''),
                 /* 상담원 — 처음 받은 사람이다. 이어 적은 사람이 다르면 그 이름을 함께
                    적는다(「김선미 → 강정석」). 이어 걸 때 누구에게 물어볼지가 갈린다. */
                 'by'           => trim(($p->creator?->name ?? '')
