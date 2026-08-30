@@ -33,8 +33,9 @@
   /* 주소는 네 칸을 쓴다 — 우편번호·도로명·찾기·상세가 한 줄에 들어가야 한다 */
   .info-row.wide { grid-column:span 4; }
   @media(max-width:1200px) { .info-row.wide { grid-column:span 2; } }
-  .info-label { font-size:11px; font-weight:700; color:var(--text-muted); flex-shrink:0;
-                white-space:nowrap; }
+  /* 글자 값(13/500 · lh21 · gray-700)은 전역을 그대로 쓴다. 여기서는 줄에서 자리를
+     잡는 것만 정한다 — 라벨은 줄지 않고 줄바꿈도 하지 않는다. */
+  .info-label { flex-shrink:0; white-space:nowrap; margin-bottom:0; }
   .info-value { font-size:13px; color:var(--text-primary); flex:1; min-width:0;
                 overflow-wrap:anywhere; }
   @media(max-width:700px) { .info-row.wide { grid-column:auto; } }

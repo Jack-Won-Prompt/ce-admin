@@ -10,8 +10,7 @@
   @media(max-width:900px){ .show-grid{grid-template-columns:1fr;} }
   .info-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
   @media(max-width:600px){ .info-grid-2{grid-template-columns:1fr;} }
-  /* 전역 .info-label 의 uppercase · letter-spacing .4px 가 살아남지 않도록 함께 끈다. */
-  .info-label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); text-transform:none; letter-spacing:0; margin-bottom:4px; }
+  {{-- .info-label 은 전역이 이미 이 값이라 여기서 다시 적지 않는다 --}}
   .info-val   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-1000); }
   .ww-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; }
   .ww-02 { background:var(--primary-light); color:var(--primary); }

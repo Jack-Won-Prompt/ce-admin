@@ -58,12 +58,8 @@
     border-bottom: 1px solid var(--border-light);
   }
   .info-cell:nth-last-child(-n+2) { border-bottom: none; }
-  /* 전역 .info-label 의 uppercase · letter-spacing .4px 가 살아남지 않도록 함께 끈다. */
-  .info-label {
-    font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700);
-    text-transform: none; letter-spacing: 0;
-    margin-bottom: 8px;
-  }
+  /* 글자 값은 전역이 이미 이 값이다 — 이 화면은 아래 여백만 넓게 쓴다 */
+  .info-label { margin-bottom: 8px; }
   .info-value {
     font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-1000);
     word-break: break-all;

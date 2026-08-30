@@ -1137,7 +1137,11 @@
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .info-grid-3 { grid-template-columns: repeat(3,1fr); }
     .info-cell { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; }
-    .info-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+    /* 항목 이름은 한 값으로 쓴다 — .ds-field-label 과 같다(Figma 114:4778 ·
+       13/500 · lh21 · grayscale/700). 예전에는 11/700 · gray-400 에 영문 대문자
+       변환까지 걸린 캡션 값이라, 같은 화면의 검색 필터 라벨과 나란히 두면 같은
+       말인데 크기도 색도 달랐다. 두 화면이 이미 각자 이 값으로 되돌려 놓고 있었다. */
+    .info-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-700); margin-bottom: 4px; }
     .info-value { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 
     /* ── Section card title ── */
