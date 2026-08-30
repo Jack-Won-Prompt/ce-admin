@@ -57,6 +57,18 @@
   let active = null, seq = 0;
 
   const base = u => u.split('#')[0];
+  /* 주소를 우리 자리의 상대 주소로 맞춘다. 못 맞추면(남의 자리ㆍ javascript: 따위) null.
+     메뉴는 절대 주소를, 액자 안에서 온 말은 상대 주소를 준다 — 한 꼴로 맞춰 두지 않으면
+     같은 화면인데 다른 것으로 보여 탭이 둘로 선다. */
+  const toPath = u => {
+    try {
+      const t = new URL(String(u ?? ''), location.origin);
+      /* 자리는 host 로 잰다 — scheme 까지 견주면 앞단(프록시)이 https 로 주소를 내는데
+         화면은 http 로 열려 있는 자리에서 제 것마저 남의 것으로 보게 된다.
+         host 가 같으면 우리 앱이다. 「//다른곳」도 「javascript:」(host 가 빈다)도 걸린다. */
+      return t.host && t.host === location.host ? t.pathname + t.search : null;
+    } catch (_) { return null; }
+  };
   const esc  = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const stripFrame = u => u.replace(/[?&]frame=1\b/, '').replace(/\?$/, '');
 
@@ -90,6 +102,7 @@
   }
 
   function openTab(url, title, icon, isHome) {
+    url = toPath(url) || url;      // 메뉴는 절대 주소로 부른다 — 한 꼴로 맞춘다
     const hit = tabs.find(t => base(t.url) === base(url));
     if (hit) { activate(hit.id); return; }
     const id = ++seq;
@@ -170,7 +183,9 @@
       sessionStorage.setItem(STORE, JSON.stringify({
         v: 1,
         active: i < 0 ? 0 : i,
-        tabs: tabs.slice(0, MAX).map(t => ({ url: t.url, title: t.title, icon: t.icon, home: !!t.home })),
+        tabs: tabs.slice(0, MAX)
+          .map(t => ({ url: toPath(t.url), title: t.title, icon: t.icon, home: !!t.home }))
+          .filter(t => t.url),
       }));
     } catch (_) { /* 못 적어도 하던 일은 그대로다 */ }
   }
@@ -183,9 +198,11 @@
     try { d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); } catch (_) { return false; }
     if (!d || d.v !== 1 || !Array.isArray(d.tabs) || !d.tabs.length) return false;
 
-    const safe = d.tabs.filter(t => typeof t?.url === 'string'
-                                 && t.url.startsWith('/')
-                                 && !t.url.startsWith('//'));
+    /* 「/ 로 시작하는가」로 재면 메뉴로 연 탭(절대 주소)이 전부 버려진다 —
+       풀어 보고 우리 자리인 것만 받는다. 「//다른곳」도 「javascript:」도 여기서 걸린다. */
+    const safe = d.tabs
+      .map(t => ({ ...t, url: toPath(t?.url) }))
+      .filter(t => t.url);
     if (!safe.length) return false;
 
     /* 대시보드는 늘 첫 자리에 있어야 한다 — 닫을 수 없는 탭이라, 없이 되살리면
