@@ -7851,31 +7851,106 @@ window.HELP_TOUR_STEPS = [
     if (!opening) return;
 
     boFindNewCancel();
-    boFindPlace();
+    boFindPlace();   // 옮겨 둔 자리가 있으면 그 자리에서 연다
     const addr = boPatientAddress();
     document.getElementById('boFindEmd').value     = boEmdOf(addr);
     document.getElementById('boFindSigungu').value = boSigunguOf(addr);
     boFindRun();
   }
 
-  /* 창이 오른쪽으로 넘치면 그만큼 왼쪽으로 당긴다.
-     이 칸은 화면 오른쪽 열에 있어 520 폭이 그대로 잘려 나간다 — 본문(.content-wrapper)이
-     넘치는 것을 잘라 내므로, 넘겨 놓으면 「+ 여기에 등록」 단추가 아예 보이지 않는다. */
+  /* 옮겨 둔 자리 — 한 번 옮기면 그 뒤로는 그 자리에서 연다(상담 창과 같다).
+     화면 크기가 바뀌면 밖으로 나가지 않는 선까지 붙든다. */
+  let _boBox = null;
+
+  function boFindApplyBox() {
+    const pop = document.getElementById('boFindPop');
+    if (!pop || !_boBox) return;
+
+    /* 옮긴 창은 붙박이(fixed)로 둔다. 줄에 붙어 있는 동안에는 오른쪽 열의 넘침이
+       창을 잘라 냈는데, 떼어 내면 그 잘림에서도 벗어난다. */
+    pop.style.position = 'fixed';
+    const w = pop.offsetWidth  || 520;
+    const h = pop.offsetHeight || 300;
+    const left = Math.max(8, Math.min(_boBox.left, window.innerWidth  - w - 8));
+    const top  = Math.max(8, Math.min(_boBox.top,  window.innerHeight - h - 8));
+
+    pop.style.left = left + 'px';
+    pop.style.top  = top  + 'px';
+    _boBox = { left, top };
+  }
+
+  /* 머리를 잡아 옮긴다. 손잡이에 바로 걸지 않고 문서에서 받는다 — 이 창은 판이
+     다시 그려질 때 함께 만들어지는 자리에 있어, 그때 손잡이를 찾으면 없다.
+     pointer 이벤트라 커서가 창 밖으로 나가도 놓을 때까지 따라온다. */
+  (function () {
+    let sx = 0, sy = 0, start = null;
+
+    document.addEventListener('pointerdown', (e) => {
+      const head = e.target.closest?.('#boFindHead');
+      if (!head) return;
+      if (e.target.closest('button')) return;   // 닫기 단추는 옮기기가 아니다
+
+      const pop = document.getElementById('boFindPop');
+      if (!pop || pop.style.display === 'none') return;
+
+      const r = pop.getBoundingClientRect();
+      start = { left: r.left, top: r.top };
+      sx = e.clientX; sy = e.clientY;
+      _boBox = { left: r.left, top: r.top };
+      boFindApplyBox();
+
+      try { head.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      _boBox = { left: start.left + (e.clientX - sx), top: start.top + (e.clientY - sy) };
+      boFindApplyBox();
+    });
+
+    document.addEventListener('pointerup', () => { start = null; });
+  })();
+
+  /* 창 전체가 보이는 자리에 세운다.
+
+     「관할 청구처」 줄은 판 아래쪽이라, 그 줄에 붙여 아래로 펴면 창의 아랫도리가
+     화면 밖으로 나갔다(처음 열었을 때 위쪽이 1338 · 화면은 900). 후보도 등록 칸도
+     보이지 않아 굴려 내려가야 무엇이 열렸는지 알 수 있었다.
+
+     줄 아래에 두되 아래가 모자라면 줄 위로 뒤집고, 그래도 모자라면 화면 안으로
+     붙든다. 오른쪽도 같다 — 이 칸은 오른쪽 열에 있어 520 폭이 곧잘 넘친다.
+     붙박이(fixed)로 세우므로 본문이 넘치는 것을 잘라 내는 것에도 걸리지 않는다.
+     한 번 옮긴 뒤로는 이 손질을 하지 않는다 — 놓아 둔 자리를 도로 끌어당기게 된다. */
   function boFindPlace() {
     const pop = document.getElementById('boFindPop');
     if (!pop || pop.style.display === 'none') return;
+    if (_boBox) { boFindApplyBox(); return; }
 
-    pop.style.left = '0px';
-    const gap  = 8;
-    const wrap = document.querySelector('.content-wrapper');
-    const edge = wrap ? wrap.getBoundingClientRect().right : window.innerWidth;
-    const r    = pop.getBoundingClientRect();
-    const over = r.right - (edge - gap);
+    const gap = 8;
+    const row = pop.parentElement;                 // 「관할 청구처」 줄
+    const ar  = row.getBoundingClientRect();
 
-    if (over > 0) {
-      // 왼쪽으로 나가지 않는 선까지만 당긴다
-      pop.style.left = -Math.min(over, Math.max(0, r.left - gap)) + 'px';
-    }
+    pop.style.position = 'fixed';
+    /* 화면보다 긴 창은 안에서 굴린다 — 잘라 내지 않고 다 볼 수 있어야 한다 */
+    pop.style.maxHeight = (window.innerHeight - gap * 2) + 'px';
+    pop.style.overflowY = 'auto';
+
+    const w = pop.offsetWidth  || 520;
+    const h = pop.offsetHeight || 300;
+
+    let left = ar.left;
+    if (left + w > window.innerWidth - gap) left = window.innerWidth - w - gap;
+    if (left < gap) left = gap;
+
+    let top = ar.bottom + gap;
+    if (top + h > window.innerHeight - gap) top = ar.top - h - gap;      // 줄 위로 뒤집는다
+    /* 줄 자체가 화면 밖에 있을 수 있다 — 이 줄은 판 아래쪽이라 굴리지 않으면 보이지도
+       않는다. 그때는 뒤집어도 밖이므로, 창을 화면 안으로 그냥 끌어들인다. */
+    top = Math.max(gap, Math.min(top, window.innerHeight - h - gap));
+
+    pop.style.left = left + 'px';
+    pop.style.top  = top  + 'px';
   }
 
   window.addEventListener('resize', boFindPlace);
@@ -7922,6 +7997,7 @@ window.HELP_TOUR_STEPS = [
         return;
       }
       boOuterHide();
+      boFindPlace();     // 줄이 채워져 높이가 달라졌다 — 다시 세운다
 
       note.innerHTML = `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
                      + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
@@ -8031,6 +8107,8 @@ window.HELP_TOUR_STEPS = [
         <button type="button" class="ds-btn" style="flex-shrink:0;height:26px;padding:0 8px;font-size:11px;"
                 onclick="boOuterUse(${i})">이 곳으로 등록</button>
       </div>`).join('');
+
+    boFindPlace();   // 후보가 서면서 창이 길어졌다 — 다시 세운다
   }
 
   /** 고른 후보를 등록 칸에 앉힌다 — 사람은 부서ㆍ팩스만 보태고 누른다 */
@@ -8080,6 +8158,7 @@ window.HELP_TOUR_STEPS = [
     const f = document.getElementById('boFindForm');
     f.style.display = 'flex';
     document.getElementById('boNewMsg').style.display = 'none';
+    boFindPlace();   // 등록 칸이 펴지며 창이 길어졌다 — 다시 세운다
     document.getElementById('boNewOffice').focus();
   }
 

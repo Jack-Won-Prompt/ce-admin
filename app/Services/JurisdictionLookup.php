@@ -145,8 +145,9 @@ class JurisdictionLookup
         $key     = (string) config('services.kakao_local.rest_key', '');
 
         if ($key === '') {
-            return ['rows' => [], 'hdong' => null,
-                    'error' => '카카오 로컬 REST 키가 없습니다(환경 설정 ▸ 카카오).'];
+            /* 한 줄에 붙어 서는 자리라 짧게 적는다 — 어디서 넣는지는 이 말을 보고
+               설정 화면을 열면 그 자리에 적혀 있다(환경 설정 ▸ 카카오 ▸ 로컬 REST 키). */
+            return ['rows' => [], 'hdong' => null, 'error' => '카카오 REST 키 설정 필요'];
         }
         if ($address === '') {
             return ['rows' => [], 'hdong' => null, 'error' => '주소가 비어 있습니다.'];
