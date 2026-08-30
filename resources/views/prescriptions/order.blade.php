@@ -7851,7 +7851,24 @@ window.HELP_TOUR_STEPS = [
     if (!opening) return;
 
     boFindNewCancel();
-    boFindPlace();   // 옮겨 둔 자리가 있으면 그 자리에서 연다
+
+    /* 자리는 이 자리에서 다 정한다 — 그려 놓고 나중에 다시 재면 줄 아래에 한 번
+       떴다가 위로 올라간다. 화면에 칠해지는 것은 이 일이 다 끝난 뒤라, 사람 눈에는
+       처음부터 가운데다. */
+    const gap = 8;
+    pop.style.position   = 'fixed';
+    pop.style.maxHeight  = (window.innerHeight - gap * 2) + 'px';
+    pop.style.overflowY  = 'auto';
+
+    if (!_boBox) {
+      /* 화면 한가운데. 지금 높이로 재면 후보가 서기 전이라 창이 짧아 아래쪽에 앉는데,
+         곧 길어지며 또 움직인다 — 다 찼을 때의 높이(대략 460)로 미리 잡아 둔다. */
+      const w  = pop.offsetWidth || 520;
+      const h0 = Math.min(window.innerHeight - gap * 2, 460);
+      _boBox = { left: Math.round((window.innerWidth  - w)  / 2),
+                 top:  Math.round((window.innerHeight - h0) / 2) };
+    }
+    boFindApplyBox();   // 옮겨 둔 자리가 있으면 그 자리다
     const addr = boPatientAddress();
     document.getElementById('boFindEmd').value     = boEmdOf(addr);
     document.getElementById('boFindSigungu').value = boSigunguOf(addr);
@@ -7912,45 +7929,13 @@ window.HELP_TOUR_STEPS = [
     document.addEventListener('pointerup', () => { start = null; });
   })();
 
-  /* 창 전체가 보이는 자리에 세운다.
-
-     「관할 청구처」 줄은 판 아래쪽이라, 그 줄에 붙여 아래로 펴면 창의 아랫도리가
-     화면 밖으로 나갔다(처음 열었을 때 위쪽이 1338 · 화면은 900). 후보도 등록 칸도
-     보이지 않아 굴려 내려가야 무엇이 열렸는지 알 수 있었다.
-
-     줄 아래에 두되 아래가 모자라면 줄 위로 뒤집고, 그래도 모자라면 화면 안으로
-     붙든다. 오른쪽도 같다 — 이 칸은 오른쪽 열에 있어 520 폭이 곧잘 넘친다.
-     붙박이(fixed)로 세우므로 본문이 넘치는 것을 잘라 내는 것에도 걸리지 않는다.
-     한 번 옮긴 뒤로는 이 손질을 하지 않는다 — 놓아 둔 자리를 도로 끌어당기게 된다. */
+  /* 내용이 길어졌을 때 부른다 — 화면 밖으로 나갈 때만 그만큼 끌어들인다.
+     자리를 다시 잡지는 않는다. 후보가 서고 등록 칸이 펴질 때마다 자리를 새로 재면,
+     누르려던 단추가 손 아래에서 달아난다. */
   function boFindPlace() {
     const pop = document.getElementById('boFindPop');
     if (!pop || pop.style.display === 'none') return;
-    if (_boBox) { boFindApplyBox(); return; }
-
-    const gap = 8;
-    const row = pop.parentElement;                 // 「관할 청구처」 줄
-    const ar  = row.getBoundingClientRect();
-
-    pop.style.position = 'fixed';
-    /* 화면보다 긴 창은 안에서 굴린다 — 잘라 내지 않고 다 볼 수 있어야 한다 */
-    pop.style.maxHeight = (window.innerHeight - gap * 2) + 'px';
-    pop.style.overflowY = 'auto';
-
-    const w = pop.offsetWidth  || 520;
-    const h = pop.offsetHeight || 300;
-
-    let left = ar.left;
-    if (left + w > window.innerWidth - gap) left = window.innerWidth - w - gap;
-    if (left < gap) left = gap;
-
-    let top = ar.bottom + gap;
-    if (top + h > window.innerHeight - gap) top = ar.top - h - gap;      // 줄 위로 뒤집는다
-    /* 줄 자체가 화면 밖에 있을 수 있다 — 이 줄은 판 아래쪽이라 굴리지 않으면 보이지도
-       않는다. 그때는 뒤집어도 밖이므로, 창을 화면 안으로 그냥 끌어들인다. */
-    top = Math.max(gap, Math.min(top, window.innerHeight - h - gap));
-
-    pop.style.left = left + 'px';
-    pop.style.top  = top  + 'px';
+    boFindApplyBox();
   }
 
   window.addEventListener('resize', boFindPlace);
