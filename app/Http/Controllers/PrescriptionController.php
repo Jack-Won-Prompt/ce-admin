@@ -559,9 +559,9 @@ class PrescriptionController extends Controller
         $reviewPending = Prescription::where('status', 'review_needed')->count();
 
         /* 서류명은 환경 설정에서 정한다 — 화면에 박아 두면 한 줄 늘리는 데도 배포가 필요했다.
-           갈래로 나누어 보낸다 — 처방 서류 자리와 청구·기타 자리에서 고를 수 있는 것이 다르다. */
+           이 화면은 처방 서류만 받으므로 청구 갈래(claim)는 보내지 않는다. */
         $docTypes = [];
-        foreach (['rx', 'claim', 'etc'] as $kind) {
+        foreach (['rx', 'etc'] as $kind) {
             $docTypes[$kind] = \App\Models\CommonCode::options('doc_type', $kind)
                 ->map(fn ($c) => ['code' => $c->code, 'label' => $c->label])->values()->all();
         }

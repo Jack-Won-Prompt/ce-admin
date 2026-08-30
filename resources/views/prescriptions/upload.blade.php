@@ -358,30 +358,10 @@
                 </div>
               </div>
 
-              {{-- 청구·기타 자료 (165:1609) --}}
-              <div class="fu-row">
-                <span class="fu-label">청구ㆍ기타 자료</span>
-                <div class="fu-field">
-                  <div class="fu-pick">
-                    <span class="fu-pick-label">서류 유형</span>
-                    <select class="fu-pick-sel" id="pick-etc">
-                      @foreach(array_merge($docTypes['claim'], $docTypes['etc']) as $t)
-                        <option value="{{ $t['code'] }}">{{ $t['label'] }}</option>
-                      @endforeach
-                    </select>
-                  </div>
-                  <div class="fu-grid" id="grid-etc">
-                    <label class="fu-add" data-group="etc">
-                      <input type="file" accept=".jpg,.jpeg,.png,.pdf,.heic" multiple>
-                      <i class="fa-solid fa-plus fu-add-icon"></i>
-                      <span class="fu-add-text">
-                        <span class="fu-add-title">파일을 드래그 하거나<br>클릭하여 선택</span>
-                        <span class="fu-add-sub">{{ collect($docTypes['claim'])->pluck('label')->take(3)->implode('ㆍ') }} 등</span>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
+              {{-- 청구ㆍ기타 자료 자리는 두지 않는다. 이 화면(과 앱)은 처방 서류를 올리는
+                   자리다 — 거래명세서·현금영수증 같은 청구 자료는 주문이 선 다음에
+                   그 건에서 나오는 것이라, 처방을 올리는 자리에서 함께 받으면 어느 주문의
+                   것인지가 정해지지 않는다. 서류 관리에서 그 처방전에 붙인다. --}}
 
             </div>
           </div>
@@ -699,12 +679,11 @@ const submitBtn = document.getElementById('submitBtn');
 const form      = document.getElementById('uploadForm');
 
 /* 서류명은 환경 설정 ▸ 서류 유형에서 정한다. 화면에 박아 두면 한 줄 늘리는 데도
-   배포가 필요했다. 자리마다 고를 수 있는 것이 다르다 —
-   처방 서류 자리에는 처방 서류를, 청구·기타 자리에는 청구 자료와 그 밖의 것을 둔다. */
+   배포가 필요했다. 자리는 처방 서류 하나다 — 등록신청서ㆍ처방전ㆍ결과지ㆍ신분증에
+   위임장과 기타를 더해 고른다. */
 const DOC_CODES  = @json($docTypes);
 const GROUP_CODES = {
-  rx:  DOC_CODES.rx.concat(DOC_CODES.etc),
-  etc: DOC_CODES.claim.concat(DOC_CODES.etc),
+  rx: DOC_CODES.rx.concat(DOC_CODES.etc),
 };
 
 /* 자리 위에서 고른 서류명이 새로 넣는 파일에 붙는다 — 같은 서류를 여러 장 올릴 때
@@ -829,7 +808,7 @@ function removeFile(idx) {
 function renderFileList() {
   submitBtn.disabled = selectedFiles.length === 0;
 
-  ['rx', 'etc'].forEach(group => {
+  ['rx'].forEach(group => {
     const grid = document.getElementById('grid-' + group);
     const add  = grid.querySelector('.fu-add');
     // 추가 타일만 남기고 지운 뒤 다시 그린다
@@ -967,8 +946,7 @@ function setStep(num, state) {
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#patientSearchInput', title: '이름 선택', body: '이름이나 연락처를 적어 고르거나, 옆의 <b>조회</b>로 창을 열어 전화번호·생년월일까지 보고 고릅니다.' },
-  { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지를 넣습니다. 여기에 넣은 파일은 처방전으로 시작합니다.' },
-  { selector: '#grid-etc', title: '청구ㆍ기타 자료', body: '거래명세서·현금영수증 등 청구 자료를 넣습니다. 타일 왼쪽 위에서 서류명을 고르며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
+  { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지·신분증을 넣습니다. 타일 왼쪽 위에서 서류명을 고치며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
   { selector: '#submitBtn', title: '등록 버튼', body: '환자를 고르고 파일을 넣은 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 자리는 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },
 ];
 </script>
