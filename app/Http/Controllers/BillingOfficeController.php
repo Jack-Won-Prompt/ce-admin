@@ -81,6 +81,32 @@ class BillingOfficeController extends Controller
         ]);
     }
 
+    /**
+     * 밖에 물어 후보를 세운다 — 우리 표에 아직 없는 곳.
+     *
+     * 지금까지는 담당자가 공단 지사찾기를 새 창으로 열어 눈으로 읽고 옮겨 적었다.
+     * 옮기다 틀리면 엉뚱한 곳으로 팩스가 갔다. 여기서 대신 묻고, 고른 것을 그대로
+     * 등록 칸에 앉힌다 — 사람은 확인하고 누르기만 한다.
+     *
+     * 밖이 막히거나 늦어도 이 화면은 멈추지 않는다. 후보가 비면 예전처럼 손으로
+     * 적으면 된다 — 그 길을 걷어 내지 않았다.
+     */
+    public function resolve(Request $request, \App\Services\JurisdictionLookup $lookup): JsonResponse
+    {
+        $emd     = trim((string) $request->input('emd'));
+        $sigungu = trim((string) $request->input('sigungu'));
+        $address = trim((string) $request->input('address'));
+
+        $nhis  = $lookup->nhisBranches($emd, $sigungu);
+        $local = $lookup->communityCenters($address);
+
+        return response()->json([
+            'success' => true,
+            'nhis'    => $nhis,
+            'local'   => $local,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $this->rules($request);

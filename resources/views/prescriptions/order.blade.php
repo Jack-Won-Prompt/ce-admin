@@ -7809,6 +7809,7 @@ window.HELP_TOUR_STEPS = [
 
   const BO_LOOKUP_URL = @json(route('billing-offices.lookup'));
   const BO_STORE_URL  = @json(route('billing-offices.store'));
+  const BO_RESOLVE_URL = @json(route('billing-offices.resolve'));
   const BO_NHIS_URL   = 'https://www.nhis.or.kr/nhis/about/retrieveBranchList.do';
 
   /** 주소에서 읍ㆍ면ㆍ동을 집는다 — 서버(BillingOffice::emdFromAddress)와 같은 잣대다. */
@@ -7895,10 +7896,13 @@ window.HELP_TOUR_STEPS = [
     const list    = document.getElementById('boFindList');
 
     if (!emd) {
-      /* 도로명 주소에는 읍면동이 없다. 엉뚱한 관할을 들이미느니 모른다고 말한다. */
-      note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동을 뽑지 못했습니다(도로명 주소일 수 있습니다). '
-                     + '「공단 지사찾기 열기」로 확인한 뒤 「+ 여기에 등록」으로 적어 두십시오.';
+      /* 도로명 주소에는 읍면동이 없다 — 우리 표는 읍면동으로 쌓여 있어 찾을 수가 없다.
+         예전에는 여기서 멈추고 「공단 지사찾기 열기」를 권했는데, 그것이 정작 가장
+         자주 걸리는 자리였다(주소는 대개 도로명이다). 밖에 물어 본다 —
+         공단은 시ㆍ군ㆍ구로 찾고, 카카오는 도로명 주소에서 행정동을 짚어 준다. */
+      note.innerHTML = '환자 주소에 읍ㆍ면ㆍ동이 없습니다(도로명 주소). 밖에 물어보는 중…';
       list.innerHTML = '';
+      if (sigungu || boPatientAddress()) boOuterRun(); else boOuterHide();
       return;
     }
 
@@ -7913,10 +7917,11 @@ window.HELP_TOUR_STEPS = [
       const rows = d.rows ?? [];
 
       if (!rows.length) {
-        note.innerHTML = `<b>${_faxEsc(emd)}</b> 로 쌓아 둔 청구처가 없습니다. `
-                       + '공단 지사찾기에서 확인한 뒤 「+ 여기에 등록」으로 적어 두십시오.';
+        note.innerHTML = `<b>${_faxEsc(emd)}</b> 로 쌓아 둔 청구처가 없습니다. 밖에 물어보는 중…`;
+        boOuterRun();
         return;
       }
+      boOuterHide();
 
       note.innerHTML = `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
                      + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
@@ -7944,6 +7949,105 @@ window.HELP_TOUR_STEPS = [
       note.textContent = '찾는 중 오류가 발생했습니다.';
     }
   }
+
+  /* ── 밖에 물어 후보를 세운다 ────────────────────────────
+     우리 표에 없을 때만 한다. 공단 지사찾기(지사명ㆍ주소)와 카카오 로컬(행정복지센터의
+     이름ㆍ주소ㆍ전화)에 서버가 대신 묻는다.
+
+     전화ㆍ팩스가 늘 따라오지는 않는다 — 공단 쪽은 부서별 연락처 화면이 지사를 세션에
+     쥐고 있어 지사코드를 실어 보내도 앞서 본 지사만 되돌려 준다. 그 번호는 한 번
+     적어 두면 우리 표에 남으므로, 여기서는 「어느 지사인가」까지만 대신 찾아 준다. */
+  let _boOuterRows = [];
+
+  function boOuterHide() {
+    const box = document.getElementById('boOuter');
+    if (box) box.style.display = 'none';
+  }
+
+  async function boOuterRun() {
+    const box  = document.getElementById('boOuter');
+    const note = document.getElementById('boOuterNote');
+    const list = document.getElementById('boOuterList');
+    if (!box) return;
+
+    box.style.display = 'flex';
+    note.textContent  = '묻는 중…';
+    list.innerHTML    = '';
+
+    const qs = new URLSearchParams({
+      emd:     document.getElementById('boFindEmd').value.trim(),
+      sigungu: document.getElementById('boFindSigungu').value.trim(),
+      address: boPatientAddress(),
+    });
+
+    let d;
+    try {
+      const res = await fetch(BO_RESOLVE_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
+      d = await res.json();
+    } catch (e) {
+      note.textContent = '밖에 묻지 못했습니다. 「공단 지사찾기 열기」로 확인해 주십시오.';
+      return;
+    }
+
+    /* 두 곳의 답을 한 줄씩 세운다. 어디서 온 것인지 배지로 갈라 둔다 —
+       공단 지사와 행정복지센터는 청구처로서 하는 일이 다르다. */
+    const rows = [];
+    (d?.nhis?.rows ?? []).forEach(r => rows.push({
+      kind: 'nhis', badge: '공단',
+      name: r.office_name, sub: [r.region, r.address].filter(Boolean).join(' · '),
+      tel: '', address: r.address, region: r.region,
+    }));
+    (d?.local?.rows ?? []).forEach(r => rows.push({
+      kind: 'local', badge: '지자체',
+      name: r.office_name, sub: [r.address, r.tel].filter(Boolean).join(' · '),
+      tel: r.tel || '', address: r.address, region: r.region,
+    }));
+
+    _boOuterRows = rows;
+
+    /* 카카오가 짚어 준 행정동을 관할로 삼는다.
+       도로명 주소에는 읍면동이 없어 이 칸이 비어 있는데, 등록은 관할 읍면동을
+       반드시 받는다(그것으로 다음 건을 찾기 때문이다) — 비운 채로는 저장이 막혔다. */
+    const emdEl = document.getElementById('boFindEmd');
+    if (emdEl && !emdEl.value.trim() && d?.local?.hdong) emdEl.value = d.local.hdong;
+
+    const errs = [d?.nhis?.error, d?.local?.error].filter(Boolean);
+    if (!rows.length) {
+      note.textContent = errs.length ? errs.join(' · ') : '밖에서도 찾지 못했습니다.';
+      return;
+    }
+    note.textContent = `${rows.length}곳` + (errs.length ? ' · ' + errs.join(' · ') : '');
+
+    list.innerHTML = rows.map((r, i) => `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid var(--border);
+           border-radius:var(--radius);font-size:12px;background:var(--bg-card);">
+        <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;
+              background:${r.kind === 'nhis' ? 'var(--primary-light)' : 'var(--gray-100)'};
+              color:${r.kind === 'nhis' ? 'var(--primary)' : 'var(--gray-700)'};">${_faxEsc(r.badge)}</span>
+        <span style="flex:1;min-width:0;">
+          <span style="font-weight:700;">${_faxEsc(r.name)}</span>
+          <span style="display:block;color:var(--text-muted);font-size:11px;">${_faxEsc(r.sub)}</span>
+        </span>
+        <button type="button" class="ds-btn" style="flex-shrink:0;height:26px;padding:0 8px;font-size:11px;"
+                onclick="boOuterUse(${i})">이 곳으로 등록</button>
+      </div>`).join('');
+  }
+
+  /** 고른 후보를 등록 칸에 앉힌다 — 사람은 부서ㆍ팩스만 보태고 누른다 */
+  window.boOuterUse = function (i) {
+    const r = _boOuterRows[i];
+    if (!r) return;
+
+    boFindNew();
+    document.getElementById('boNewKind').value   = r.kind;
+    document.getElementById('boNewOffice').value = r.name;
+    if (r.tel) document.getElementById('boNewTel').value = r.tel;
+    /* 주소는 담아 두는 칸이 창에 없다 — 참고사항에 적어 둔다. 팩스를 보낼 때
+       「어디로 가는 것인가」를 그 한 줄로 알아본다. */
+    const note = document.getElementById('boNewNote');
+    if (!note.value.trim() && r.address) note.value = r.address;
+    document.getElementById('boNewDept').focus();
+  };
 
   /** 고른 것을 화면에 세우고 칸에 넣는다 — 저장은 「저장」이 한다. */
   function boFindPick(id) {
@@ -8024,6 +8128,7 @@ window.HELP_TOUR_STEPS = [
         return;
       }
       boFindNewCancel();
+      boOuterHide();                 // 등록했으니 밖의 후보는 더 볼 일이 없다
       await boFindRun();
       boFindPick(d.row.id);          // 방금 적은 것을 그대로 고른다
     } catch (e) {

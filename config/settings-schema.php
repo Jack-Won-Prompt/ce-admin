@@ -144,6 +144,11 @@ return [
             'sender_phone' => ['label' => '발신 번호',   'config' => 'kakao.sender_phone'],
             'channel_id'   => ['label' => '채널 아이디', 'config' => 'kakao.channel_id', 'help' => '@채널명'],
             'channel_url'  => ['label' => '채널 주소',   'config' => 'kakao.channel_url', 'help' => 'https://pf.kakao.com/_xxxxx'],
+            /* 알림톡과는 다른 열쇠다 — 카카오 개발자센터의 REST API 키.
+               관할 청구처 찾기가 주소로 행정동과 행정복지센터를 물을 때 쓴다. */
+            'local_rest_key' => ['label' => '로컬 REST 키', 'config' => 'services.kakao_local.rest_key',
+                                 'type' => 'password', 'width' => 3,
+                                 'help' => '관할 청구처 찾기의 행정복지센터 조회에 쓴다(카카오 개발자센터 REST API 키).'],
             'test_mode'    => ['label' => '테스트 모드', 'config' => 'kakao.test_mode', 'type' => 'bool',
                                'help'  => '켜면 실제로 보내지 않는다.'],
         ],

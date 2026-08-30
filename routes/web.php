@@ -431,6 +431,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/list',             [\App\Http\Controllers\BillingOfficeController::class, 'list'])->name('list');
         // 환자 주소의 읍ㆍ면ㆍ동으로 관할을 찾는다
         Route::get('/lookup',           [\App\Http\Controllers\BillingOfficeController::class, 'lookup'])->name('lookup');
+        /* 우리 표에 아직 없을 때 — 공단 지사찾기와 카카오 로컬에 대신 물어 후보를 세운다.
+           고르면 그 값으로 등록되어, 다음 건부터는 위의 lookup 이 우리 표에서 찾는다. */
+        Route::get('/resolve',          [\App\Http\Controllers\BillingOfficeController::class, 'resolve'])->name('resolve');
         Route::post('/',                [\App\Http\Controllers\BillingOfficeController::class, 'store'])->name('store');
         Route::put('/{billingOffice}',  [\App\Http\Controllers\BillingOfficeController::class, 'update'])->name('update');
         Route::delete('/{billingOffice}', [\App\Http\Controllers\BillingOfficeController::class, 'destroy'])->name('destroy');

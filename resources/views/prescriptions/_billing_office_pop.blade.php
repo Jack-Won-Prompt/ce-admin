@@ -36,6 +36,17 @@
 
     <div id="boFindList" style="display:flex;flex-direction:column;gap:4px;max-height:230px;overflow:auto;"></div>
 
+    {{-- 밖에서 물어 온 후보 — 우리 표에 아직 없을 때만 선다.
+         공단 지사찾기와 카카오 로컬에 대신 물은 것이다. 고르면 아래 등록 칸이
+         그 값으로 채워져, 사람은 부서ㆍ팩스만 보태고 누른다. --}}
+    <div id="boOuter" style="display:none;flex-direction:column;gap:6px;border-top:1px dashed var(--border);padding-top:10px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;font-weight:700;color:var(--gray-700);">밖에 물어 본 것</span>
+        <span id="boOuterNote" style="font-size:11px;color:var(--text-muted);flex:1;"></span>
+      </div>
+      <div id="boOuterList" style="display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto;"></div>
+    </div>
+
     {{-- 그 자리 등록 — 공단 사이트에서 확인한 것을 옮겨 적는다.
          관할 읍면동은 위에서 찾던 값이 그대로 들어간다. --}}
     <div id="boFindForm" style="display:none;border-top:1px dashed var(--border);padding-top:10px;
