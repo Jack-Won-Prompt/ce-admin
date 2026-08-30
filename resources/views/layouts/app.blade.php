@@ -1087,7 +1087,7 @@
     /* ── Empty state ── */
     .empty-state { text-align: center; padding: 48px 24px; }
     /* 자식 선택자여야 한다 — 그냥 .empty-state i 로 두면 이 안에 든 단추의 아이콘까지
-       38px 블록으로 만들어 「지금 수집 시작」 단추가 143×62 로 부풀었다(다른 단추는 32). */
+       38px 블록으로 만들어 「수집 시작」 단추가 143×62 로 부풀었다(다른 단추는 32). */
     .empty-state > i { font-size: 38px; opacity: .25; display: block; margin-bottom: 12px; color: var(--text-muted); }
     .empty-state p { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; }
 

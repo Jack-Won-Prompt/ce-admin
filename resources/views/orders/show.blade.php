@@ -983,7 +983,7 @@
             @endif
             @if($order->status === 'shipping')
               <button class="btn btn-primary w-full" onclick="changeStatus('delivered')">
-                <i class="bx bx-package"></i> 배송 완료 처리
+                <i class="bx bx-package"></i> 배송 완료
               </button>
             @endif
             @if(!in_array($order->status, ['delivered','cancelled']))
@@ -1202,7 +1202,7 @@ async function changeStatus(status) {
   const labels = {
     confirmed: '주문을 확정하시겠습니까?',
     shipping:  '배송 시작 처리를 하시겠습니까?',
-    delivered: '배송 완료 처리를 하시겠습니까?',
+    delivered: '배송 완료를 하시겠습니까?',
     cancelled: '정말 주문을 취소하시겠습니까?',
   };
   if (!await ceConfirm(labels[status] || '상태를 변경하시겠습니까?',

@@ -2395,7 +2395,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     {{-- 같은 이름이 있어 저장을 멈췄을 때만 선다. 정말 다른 사람이면
                          여기서 그대로 간다 — 같은 이름이라고 저장 자체를 막지는 않는다. --}}
                     <button type="button" class="ds-btn" id="pkNewPerson" style="display:none;"
-                            onclick="pkSaveAsNew()">새 사람으로 저장</button>
+                            onclick="pkSaveAsNew()">신규 저장</button>
                     <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
                   </div>
@@ -3372,7 +3372,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <button type="button" class="btn btn-sm" onclick="fillFromPrescriptionAddress()"
                           style="white-space:nowrap;flex-shrink:0;background:var(--primary-light);border:1px solid var(--primary);color:var(--primary);"
                           title="상세 목록 탭의 주소를 배송 주소로 가져옵니다">
-                    <i class="fa-solid fa-file-import"></i> 처방전 주소 가져오기
+                    <i class="fa-solid fa-file-import"></i> 처방전 주소
                   </button>
                   {{-- 거래처관리에 쌓인 주소 가운데 고른다(요청서 16쪽). 가장 최근 것이
                        맨 위다 — 이사한 사람에게 옛 주소로 보내는 일을 막으려면
@@ -5190,7 +5190,7 @@ window.HELP_TOUR_STEPS = [
   window.pkClose = function () {
     const pop = document.getElementById('pkModal');
     if (pop) pop.style.display = 'none';
-    // 「새 사람으로 저장」은 같은 이름을 가릴 때만 서는 단추다
+    // 「신규 저장」은 같은 이름을 가릴 때만 서는 단추다
     const nb = document.getElementById('pkNewPerson');
     if (nb) nb.style.display = 'none';
     _sameNameFlow = false;
@@ -5328,7 +5328,7 @@ window.HELP_TOUR_STEPS = [
     pkOpen();
     _sameNameFlow = true;   // pkOpen 안의 pkClose 가 걷고 지나가므로 그 뒤에 세운다
 
-    showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 같은 분이면 고르고, 다른 분이면 「새 사람으로 저장」을 누르십시오.`,
+    showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 같은 분이면 고르고, 다른 분이면 「신규 저장」을 누르십시오.`,
               'warning', 7000);
   }
 
@@ -5713,7 +5713,7 @@ window.HELP_TOUR_STEPS = [
     const ok = await ceConfirm(
       `「${name}」 님은 아직 거래처에 없습니다.
 지금 저장해 거래처로 올리고 상담을 열까요?`,
-      { tone: 'info', confirmText: '저장하고 상담 열기', cancelText: '그만두기' }
+      { tone: 'info', confirmText: '저장 후 상담', cancelText: '취소' }
     );
     if (!ok) return;
 
@@ -5965,7 +5965,7 @@ window.HELP_TOUR_STEPS = [
     })();
   };
 
-  // ── 처방전 주소 가져오기 ──────────────────────────────────
+  // ── 처방전 주소 ──────────────────────────────────
   function fillFromPrescriptionAddress() {
     const postcode = document.getElementById('f-postcode')?.value?.trim() ?? '';
     const address  = document.getElementById('f-address')?.value?.trim()  ?? '';
@@ -6602,7 +6602,7 @@ window.HELP_TOUR_STEPS = [
        이어 둔 사람 없이 이름만 적었는데 거래처에 같은 이름이 이미 있으면, 그대로
        저장하면 같은 사람이 둘이 된다 — 한 번 갈라지면 상담도 주문도 두 곳에 나뉘어
        쌓이고, 나중에 합치는 데 더 큰 품이 든다. 창을 열어 누구인지 가린 뒤에 저장한다.
-       정말 다른 사람이면 그 창에서 「새 사람으로 저장」을 누른다. */
+       정말 다른 사람이면 그 창에서 「신규 저장」을 누른다. */
     if (!opts.newPerson && !document.getElementById('f-patient-id')?.value) {
       const dup = sameNamePatients(name);
       if (dup.length) { openSameNamePicker(name, dup.length); return false; }
@@ -6966,7 +6966,7 @@ window.HELP_TOUR_STEPS = [
     const ok = await ceConfirm(
       `${RX_NUMBER} 을 그대로 베껴 새 번호로 만듭니다.
 날짜(처방전 발행일 등)는 비우고 갑니다. 계속할까요?`,
-      { tone: 'info', confirmText: '베껴서 새로 만들기', cancelText: '그만두기' }
+      { tone: 'info', confirmText: '복제', cancelText: '취소' }
     );
     if (!ok) return;
 
@@ -7972,7 +7972,7 @@ window.HELP_TOUR_STEPS = [
 
     if (!emd) {
       /* 도로명 주소에는 읍면동이 없다 — 우리 표는 읍면동으로 쌓여 있어 찾을 수가 없다.
-         예전에는 여기서 멈추고 「공단 지사찾기 열기」를 권했는데, 그것이 정작 가장
+         예전에는 여기서 멈추고 「공단 지사찾기」를 권했는데, 그것이 정작 가장
          자주 걸리는 자리였다(주소는 대개 도로명이다). 밖에 물어 본다 —
          공단은 시ㆍ군ㆍ구로 찾고, 카카오는 도로명 주소에서 행정동을 짚어 준다. */
       note.innerHTML = '환자 주소에 읍ㆍ면ㆍ동이 없습니다(도로명 주소). 밖에 물어보는 중…';
@@ -8061,7 +8061,7 @@ window.HELP_TOUR_STEPS = [
       const res = await fetch(BO_RESOLVE_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
       d = await res.json();
     } catch (e) {
-      note.textContent = '밖에 묻지 못했습니다. 「공단 지사찾기 열기」로 확인해 주십시오.';
+      note.textContent = '밖에 묻지 못했습니다. 「공단 지사찾기」로 확인해 주십시오.';
       return;
     }
 
@@ -8105,7 +8105,7 @@ window.HELP_TOUR_STEPS = [
           <span style="display:block;color:var(--text-muted);font-size:11px;">${_faxEsc(r.sub)}</span>
         </span>
         <button type="button" class="ds-btn" style="flex-shrink:0;height:26px;padding:0 8px;font-size:11px;"
-                onclick="boOuterUse(${i})">이 곳으로 등록</button>
+                onclick="boOuterUse(${i})">선택</button>
       </div>`).join('');
 
     boFindPlace();   // 후보가 서면서 창이 길어졌다 — 다시 세운다
@@ -8268,7 +8268,7 @@ window.HELP_TOUR_STEPS = [
     window.counselPopupClose = async function () {
       if (isAnyDirty()) {
         const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
-                                   { tone: 'warning', confirmText: '저장하고 닫기', cancelText: '그냥 닫기' });
+                                   { tone: 'warning', confirmText: '저장 및 닫기', cancelText: '그냥 닫기' });
         if (ok) {
           await counselPopupSave();
           if (isAnyDirty()) return;      // 저장이 막혔으면 닫지 않는다
@@ -10405,7 +10405,7 @@ window.HELP_TOUR_STEPS = [
       ${infoBox}
       <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:6px;">${items}</div>
       <div style="display:flex;justify-content:flex-end;">
-        <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면에서 보기</button>
+        <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면</button>
       </div>`;
   }
 

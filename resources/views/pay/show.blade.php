@@ -74,7 +74,7 @@
     <div class="card">
       <div id="payment-method"></div>
       <div id="agreement"></div>
-      <button class="btn" id="payBtn" disabled>{{ number_format($link->amount) }}원 결제하기</button>
+      <button class="btn" id="payBtn" disabled>{{ number_format($link->amount) }}원 결제</button>
       <p class="note">결제창은 토스페이먼츠에서 열립니다. 카드 정보는 우리 서버에 남지 않습니다.</p>
     </div>
   @endif

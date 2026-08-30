@@ -79,7 +79,7 @@
     </div>
     <div class="grow"></div>
     <button class="btn" onclick="resetAll()">복사 기록 지우기</button>
-    <button class="btn btn-pri" onclick="window.open(@js($portalUrl),'_blank','noopener')">공단 사이트 열기</button>
+    <button class="btn btn-pri" onclick="window.open(@js($portalUrl),'_blank','noopener')">공단 사이트</button>
   </div>
 
   <div class="prog">

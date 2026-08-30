@@ -8,7 +8,7 @@
      그래서 config/masters.php 의 틀을 쓰지 않고 이 조각이 스스로 그린다.
 
      미리 다 채우는 자리가 아니다. 건을 처리하며 한 번 찾은 것을 쌓아 두고, 여기서는
-     그 쌓인 것을 보고 고친다. 그래서 「공단 지사찾기 열기」를 위에 둔다 — 찾는 일은
+     그 쌓인 것을 보고 고친다. 그래서 「공단 지사찾기」를 위에 둔다 — 찾는 일은
      여전히 공단 사이트에서 하고, 옮겨 적는 일만 여기서 한다. --}}
 
 {{-- 모양은 그 자리에 그대로 둔다 — 이 조각은 본문 안에서 그려지므로, 머리의 styles
@@ -46,7 +46,7 @@
 
   {{-- 찾는 일은 공단 사이트에서 한다. 여기서는 옮겨 적기만 한다. --}}
   <button type="button" class="ds-btn" onclick="boOpenNhis()" title="공단 지사찾기 사이트를 새 창으로 엽니다">
-    <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기 열기
+    <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기
   </button>
   <button type="button" class="ds-btn ds-btn-primary" onclick="boNew()">+ 청구처 추가</button>
 </div>

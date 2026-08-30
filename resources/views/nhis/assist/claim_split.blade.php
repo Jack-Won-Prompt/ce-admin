@@ -4,7 +4,7 @@
   값을 넣어 줄 수는 없다 — 복사는 왼쪽에서, 붙여넣기는 사람이 오른쪽에 한다.
 
   로그인 세션 쿠키에 SameSite 가 없어 브라우저가 Lax 로 다루면 프레임 안에서는 쿠키가 실리지
-  않는다. 그러면 로그인이 풀리거나 아예 안 된다. 그때를 대비해 「공단을 새 창으로」를 늘 옆에
+  않는다. 그러면 로그인이 풀리거나 아예 안 된다. 그때를 대비해 「공단 새 창」를 늘 옆에
   둔다 — 담당자가 한 번 눌러 창 방식으로 넘어가면 일이 멈추지 않는다.
 --}}
 <!DOCTYPE html>
@@ -47,7 +47,7 @@
   <span class="warn">왼쪽 칸을 눌러 복사 → 오른쪽 같은 자리에 붙여넣기</span>
   <div class="grow"></div>
   <button class="bbtn" onclick="reloadPortal()">공단 새로고침</button>
-  <button class="bbtn" onclick="portalToWindow()">공단을 새 창으로</button>
+  <button class="bbtn" onclick="portalToWindow()">공단 새 창</button>
   <button class="bbtn" onclick="location.href=@js($soloUrl)">프레임 해제</button>
 </div>
 
@@ -67,7 +67,7 @@
     <div class="pane-hd">
       <span>공단 요양기관정보마당</span>
       <div class="grow"></div>
-      <span style="font-weight:400;color:#777">로그인이 풀리면 「공단을 새 창으로」를 누르십시오</span>
+      <span style="font-weight:400;color:#777">로그인이 풀리면 「공단 새 창」를 누르십시오</span>
     </div>
     <iframe src="{{ $portalUrl }}" id="portal"></iframe>
   </div>

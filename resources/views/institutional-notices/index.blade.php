@@ -173,7 +173,7 @@
         <i class="bx bx-data"></i>
         <p>수집된 공지사항이 없습니다.</p>
         <button class="btn btn-primary btn-sm" id="btnCrawlEmpty">
-          <i class="bx bx-refresh"></i> 지금 수집 시작
+          <i class="bx bx-refresh"></i> 수집 시작
         </button>
       </div>
     </div>

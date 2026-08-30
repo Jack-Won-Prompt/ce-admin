@@ -481,7 +481,7 @@
     <div class="modal-ft">
       <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
       {{-- 「다시 선택」을 걷으면서 고른 것을 무를 길이 사라졌다 — 여기에 둔다 --}}
-      <button type="button" class="btn btn-outline btn-sm" onclick="clearPatient(); pkClose();">선택 안 함</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="clearPatient(); pkClose();">선택 해제</button>
       <button type="button" class="btn btn-outline btn-sm" onclick="pkClose()">닫기</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="pkPick()">선택</button>
     </div>
@@ -657,7 +657,7 @@ function selectPatient(id, name) {
 }
 
 /* 고른 사람을 물린다. 예전에는 「다시 선택」 단추가 이걸 불렀는데 그 단추를 걷었다 —
-   이제 다시 고르는 일은 「조회」가 맡고, 이 함수는 창 안의 「선택 안 함」이 부른다. */
+   이제 다시 고르는 일은 「조회」가 맡고, 이 함수는 창 안의 「선택 해제」가 부른다. */
 function clearPatient() {
   selectedPatientId = null;
   document.getElementById('h_patient_id').value = '';

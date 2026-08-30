@@ -249,7 +249,7 @@
       </div>
 
       <div class="smp-actions">
-        <button type="button" class="ds-btn" onclick="smpPane('list')">그만두기</button>
+        <button type="button" class="ds-btn" onclick="smpPane('list')">목록</button>
         <button type="submit" class="ds-btn ds-btn-primary">저장</button>
       </div>
     </form>

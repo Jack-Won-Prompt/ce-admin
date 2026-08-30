@@ -76,7 +76,7 @@
     <div class="cs-foot" id="csFoot1" style="display:none;">
       <span class="cs-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
-      <button type="button" class="ds-btn" onclick="csNew()">신규로 상담하기</button>
+      <button type="button" class="ds-btn" onclick="csNew()">신규 상담</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="csPickSelected()">선택</button>
     </div>
 
@@ -579,7 +579,7 @@
   window.csClose = async function () {
     if (_csDirty) {
       const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
-                                 { tone: 'warning', confirmText: '저장하고 닫기', cancelText: '그냥 닫기' });
+                                 { tone: 'warning', confirmText: '저장 및 닫기', cancelText: '그냥 닫기' });
       if (ok) { await csSave(document.getElementById('csSaveBtn')); return; }
     }
     document.getElementById('csModal').style.display = 'none';

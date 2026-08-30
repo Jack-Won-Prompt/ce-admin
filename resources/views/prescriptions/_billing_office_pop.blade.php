@@ -30,10 +30,10 @@
     <div style="display:flex;gap:6px;">
       <button type="button" class="ds-btn" onclick="boFindOpenNhis()"
               title="공단 지사찾기 사이트를 새 창으로 엽니다">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기 열기
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기
       </button>
       <span style="flex:1;"></span>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNew()">+ 여기에 등록</button>
+      <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNew()">등록하기</button>
     </div>
 
     {{-- 무엇으로 찾았는지ㆍ찾은 것이 있는지는 여기로 알린다 --}}
@@ -91,8 +91,8 @@
       </div>
       <div id="boNewMsg" style="display:none;font-size:11px;"></div>
       <div style="display:flex;gap:6px;justify-content:flex-end;">
-        <button type="button" class="ds-btn" onclick="boFindNewCancel()">그만두기</button>
-        <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNewSave()">등록하고 고르기</button>
+        <button type="button" class="ds-btn" onclick="boFindNewCancel()">종료</button>
+        <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNewSave()">저장 및 선택</button>
       </div>
     </div>
   </div>

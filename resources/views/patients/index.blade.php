@@ -815,7 +815,7 @@ document.addEventListener('keydown', (e) => {
   /* 찾는 자리의 「상담하기」 — 체크해 둔 한 사람과 상담한다.
 
      창은 주문 등록에서 여는 것과 같은 것이다(partials/counsel-window). 지난 상담을
-     먼저 표로 보여 주고, 줄을 고르면 그 상담을 이어 적고, 「신규로 상담하기」면
+     먼저 표로 보여 주고, 줄을 고르면 그 상담을 이어 적고, 「신규 상담」이면
      새로 시작한다. 두 화면이 같은 창을 쓰므로 물어보는 것이 어디서나 같다. */
   window.ptCounsel = function () {
     const rows = grid.getCheckedRows?.() ?? [];
@@ -1248,7 +1248,7 @@ document.addEventListener('keydown', (e) => {
       items: [
         { value: 'order', label: row.order_no ? '주문 연결 변경' : '주문 연결',
           sub: row.order_no || '이은 주문이 없습니다' },
-        { value: 'open',  label: '상담 건 열기', sub: '그 처방전을 화면 탭으로 엽니다' },
+        { value: 'open',  label: '상담 건', sub: '그 처방전을 화면 탭으로 엽니다' },
       ],
       onConfirm: (v) => {
         if (v === 'order') { csEditOrder(btn, row.counsel_id, p?.id); return; }

@@ -154,8 +154,8 @@
   <button class="tbtn" id="fitBtn" onclick="toggleFit()">폭 맞춤 <span id="fitPct"></span></button>
   <button class="tbtn" onclick="resetAll()">복사 기록 지우기</button>
   {{-- 프레임 안에서 열렸을 때는 다시 프레임을 열 이유가 없다 --}}
-  <button class="tbtn on" id="splitBtn" onclick="openSplit()">좌우 프레임으로 보기</button>
-  <button class="tbtn" onclick="openPortal()">공단을 새 창으로</button>
+  <button class="tbtn on" id="splitBtn" onclick="openSplit()">좌우 분할</button>
+  <button class="tbtn" onclick="openPortal()">공단 새 창</button>
 </div>
 
 {{-- ───────────────────────── 여기서부터 공단 2221 서식 구조 ───────────────────────── --}}

@@ -276,7 +276,7 @@
     {{-- 연결 확인은 저장과 라우트가 달라 제 폼으로 나간다. 폼은 겹칠 수 없으므로
          단추만 여기 세우고 form= 으로 아래 빈 폼을 가리킨다.
          data-no-loading — 전역 잠금이 저장 대신 이 단추를 붙잡지 않게 한다. --}}
-    <button type="submit" form="wwTestForm" data-no-loading class="ds-btn"><i class="bx bx-plug"></i> 지금 설정으로 연결 확인</button>
+    <button type="submit" form="wwTestForm" data-no-loading class="ds-btn"><i class="bx bx-plug"></i> 연결 확인</button>
     <button type="submit" class="ds-btn ds-btn-primary">저장</button>
   </div>
 </form>
