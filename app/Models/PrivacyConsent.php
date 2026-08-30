@@ -85,6 +85,20 @@ class PrivacyConsent extends Model
     ];
 
     /**
+     * 갈래마다 묻는 항목.
+     *
+     * 카테터에는 민감정보 물음이 없다 — 폼에도 서명 화면에도 뜨지 않는다.
+     * 그런데 담긴 값에는 「동의하지 않음」이 들어 있는 건이 있다(서명 화면이 고르지
+     * 않은 선택 항목을 그렇게 채워 보내던 때의 것이다). 그것을 그대로 보여 주면
+     * 물어보지도 않은 것을 환자가 거절한 것처럼 읽힌다 — 갈래로 걸러 세운다.
+     */
+    public const TYPE_AGREES = [
+        'catheter' => ['agree_general', 'agree_third_party', 'agree_marketing'],
+        'stoma'    => ['agree_general', 'agree_sensitive', 'agree_third_party',
+                       'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive'],
+    ];
+
+    /**
      * 이 사람의 가장 최근 동의.
      *
      * 동의서는 밖에서 환자가 직접 적는 폼이라 환자 번호가 비어 있는 것이 많다.
@@ -132,8 +146,13 @@ class PrivacyConsent extends Model
             return ['exists' => false, 'agreed' => false];
         }
 
+        /* 이 갈래에서 묻는 것만 세운다. 갈래를 모르는 옛 건은 담긴 것을 그대로 보인다 —
+           지우고 말하느니 있는 대로 보여 주는 편이 낫다. */
+        $asked = self::TYPE_AGREES[$c->type] ?? array_keys(self::AGREE_LABELS);
+
         $items = [];
         foreach (self::AGREE_LABELS as $field => $label) {
+            if (!in_array($field, $asked, true)) continue;
             if (($c->{$field} ?? '') !== '') {
                 $items[] = ['label' => $label, 'value' => $c->{$field}];
             }

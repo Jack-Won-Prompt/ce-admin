@@ -1199,16 +1199,25 @@ async function submitConsent(action) {
         body.support_qualify = picked('pv_support');
       }
 
-      // 선택 항목은 고르지 않아도 넘어간다 — 고르지 않은 것은 「동의하지 않음」으로 남긴다
-      ['agree_general', 'agree_sensitive', 'agree_third_party',
-       'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive'].forEach(k => {
+      /* 갈래에서 묻는 것만 담는다.
+         민감정보 셋은 장루에서만 묻는다 — 카테터에서는 화면에 뜨지도 않는데 예전에는
+         「동의하지 않음」으로 채워 보냈다. 그러면 주문 등록의 개인정보동의 창에 그 줄이
+         서서, 물어보지도 않은 것을 환자가 거절한 것처럼 보인다.
+         고르지 않은 선택 항목만 「동의하지 않음」으로 남긴다 — 필수는 위에서 이미
+         고르지 않으면 넘어가지 못한다. */
+      const ASKED = t === 'stoma'
+        ? ['agree_general', 'agree_sensitive', 'agree_third_party',
+           'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive']
+        : ['agree_general', 'agree_third_party', 'agree_marketing'];
+      const REQUIRED = t === 'stoma'
+        ? ['agree_general', 'agree_sensitive']
+        : ['agree_general', 'agree_third_party'];
+
+      ASKED.forEach(k => {
         const v = agreePicked(k);
         if (v) body[k] = v;
-        else if (k !== 'agree_general' && k !== 'agree_sensitive' && k !== 'agree_third_party') {
-          body[k] = '동의하지 않음';
-        }
+        else if (!REQUIRED.includes(k)) body[k] = '동의하지 않음';
       });
-      if (!body.agree_marketing) body.agree_marketing = '동의하지 않음';
     }
     if (IS_MINOR) {
       body.guardian_name      = document.getElementById('gName').value.trim();
