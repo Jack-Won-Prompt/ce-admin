@@ -278,16 +278,14 @@
                여기서 고친 값이 곧 다른 화면이 읽는 정본이다. --}}
           <div class="info-row">
             <span class="info-label">생년월일</span>
+            {{-- 고칠 때도 그대로 보인다. 「위 이름 옆 칸에서 고칩니다」라는 안내를 두었더니
+                 값이 있던 자리에 설명만 남아, 고치는 동안 생년월일이 무엇이었는지 볼 수
+                 없었다 — 고치는 칸은 이름 줄에 있으니 여기서는 읽기만 하면 된다. --}}
             <span class="info-value">
-              <span class="view-only">
-                {{ $patient->birth_dotted ?: '-' }}
-                @if($patient->birth_iso) · {{ $patient->birth_iso }} · {{ $patient->birth_year }}
-                  @if($patient->age !== null) · 만 {{ $patient->age }}세 @endif
-                @endif
-              </span>
-              <span class="edit-only" style="color:var(--text-muted);font-size:12px;">
-                위 이름 옆 칸에서 고칩니다
-              </span>
+              {{ $patient->birth_dotted ?: '-' }}
+              @if($patient->birth_iso) · {{ $patient->birth_iso }} · {{ $patient->birth_year }}
+                @if($patient->age !== null) · 만 {{ $patient->age }}세 @endif
+              @endif
             </span>
           </div>
           <div class="info-row">
