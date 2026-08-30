@@ -78,18 +78,34 @@
     highlightMenu();
   }
 
+  /* 액자는 그 탭을 볼 때 붙인다.
+     새로 고치며 다섯 탭을 되살리면 다섯 화면이 한꺼번에 서버를 부른다 — 처방전 그림에
+     주문 목록에 이력까지라, 첫 화면이 뜨는 데 한참 걸렸다. 보는 것 하나만 붙이고
+     나머지는 눌렀을 때 붙인다. */
+  function mount(t) {
+    if (!t || document.getElementById('wsF-' + t.id)) return;
+    const f = document.createElement('iframe');
+    f.id = 'wsF-' + t.id; f.src = t.url; f.loading = 'lazy';
+    framesEl.appendChild(f);
+  }
+
   function openTab(url, title, icon, isHome) {
     const hit = tabs.find(t => base(t.url) === base(url));
     if (hit) { activate(hit.id); return; }
     const id = ++seq;
-    tabs.push({ id, url, title, icon, home: !!isHome });
-    const f = document.createElement('iframe');
-    f.id = 'wsF-' + id; f.src = url; f.loading = 'lazy';
-    framesEl.appendChild(f);
+    const t  = { id, url, title, icon, home: !!isHome };
+    tabs.push(t);
+    mount(t);
     active = id;
     render();
+    save();
   }
-  function activate(id) { active = id; render(); }
+  function activate(id) {
+    active = id;
+    mount(tabs.find(t => t.id === id));
+    render();
+    save();
+  }
   function closeTab(id) {
     const i = tabs.findIndex(t => t.id === id);
     if (i < 0 || tabs[i].home) return;
@@ -97,7 +113,9 @@
     const f = document.getElementById('wsF-' + id); if (f) f.remove();
     tabs.splice(i, 1);
     if (wasActive && tabs.length) active = (tabs[Math.max(0, i - 1)] || tabs[0]).id;
+    mount(tabs.find(t => t.id === active));
     render();
+    save();
   }
   function highlightMenu() {
     const t = tabs.find(x => x.id === active);
@@ -139,8 +157,55 @@
     openTab(url, a.dataset.title || a.textContent.trim(), a.dataset.icon || '', false);
   });
 
-  // 홈(대시보드) 탭
-  openTab(HOME.url, HOME.title, HOME.icon, true);
+  /* ── 펴 둔 것을 기억한다 ─────────────────────────────────
+     브라우저 탭마다 따로 둔다(sessionStorage). 두 창을 띄워 서로 다른 건을 보는
+     사람이 있어, 한 곳에 모아 두면 서로의 자리를 덮는다. 창을 닫으면 함께 사라진다.
+     사사로운 창(시크릿ㆍ쿠키 막음)에서는 저장이 막힐 수 있다 — 막히면 그냥 지나간다. */
+  const STORE = 'ce-ws-tabs';
+  const MAX   = 20;
+
+  function save() {
+    try {
+      const i = tabs.findIndex(t => t.id === active);
+      sessionStorage.setItem(STORE, JSON.stringify({
+        v: 1,
+        active: i < 0 ? 0 : i,
+        tabs: tabs.slice(0, MAX).map(t => ({ url: t.url, title: t.title, icon: t.icon, home: !!t.home })),
+      }));
+    } catch (_) { /* 못 적어도 하던 일은 그대로다 */ }
+  }
+
+  /* 되살릴 때는 적어 둔 주소를 믿지 않는다. 남이 심어 둘 수 있는 자리라(같은 브라우저의
+     다른 화면이 쓰는 저장소다), 우리 자리의 상대 주소만 받는다 —
+     「//다른곳」이나 「javascript:」 같은 것은 걷어 낸다. */
+  function restore() {
+    let d;
+    try { d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); } catch (_) { return false; }
+    if (!d || d.v !== 1 || !Array.isArray(d.tabs) || !d.tabs.length) return false;
+
+    const safe = d.tabs.filter(t => typeof t?.url === 'string'
+                                 && t.url.startsWith('/')
+                                 && !t.url.startsWith('//'));
+    if (!safe.length) return false;
+
+    /* 대시보드는 늘 첫 자리에 있어야 한다 — 닫을 수 없는 탭이라, 없이 되살리면
+       돌아갈 곳이 사라진다. */
+    if (!safe.some(t => t.home)) safe.unshift({ url: HOME.url, title: HOME.title, icon: HOME.icon, home: true });
+
+    safe.slice(0, MAX).forEach(t => {
+      tabs.push({ id: ++seq, url: t.url, title: String(t.title || '새 탭'),
+                  icon: String(t.icon || ''), home: !!t.home });
+    });
+
+    const cur = tabs[Math.min(Math.max(0, d.active | 0), tabs.length - 1)] || tabs[0];
+    active = cur.id;
+    mount(cur);           // 보는 것 하나만 붙인다 — 나머지는 눌렀을 때
+    render();
+    return true;
+  }
+
+  // 되살릴 것이 없으면 대시보드 하나로 시작한다
+  if (!restore()) openTab(HOME.url, HOME.title, HOME.icon, true);
 })();
 </script>
 @endpush
