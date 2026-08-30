@@ -916,10 +916,29 @@ class wwGrid {
     const top = this._wrapEl.getBoundingClientRect().top; // 뷰포트 기준
     let h = Math.max(160, Math.floor(window.innerHeight - top - 16));
     this._wrapEl.style.height = h + 'px';
-    // 2차: 그래도 페이지가 넘치면(푸터·레이아웃 하단여백 등) 넘친 만큼 줄여 페이지 스크롤 제거
-    const overflow = document.documentElement.scrollHeight - window.innerHeight;
-    if (overflow > 0) {
-      h = Math.max(140, h - overflow - 2);
+    // 2차: 그래도 넘치면(푸터·레이아웃 하단여백 등) 넘친 만큼 줄여 스크롤 제거.
+    //      굴리는 것이 문서가 아닐 수 있다 — 화면 탭(iframe) 안에서는 html 이 굴리지
+    //      않고 본문(.page-body)이 굴린다. 그때 문서만 보고 있으면 넘친 것을 못 보고
+    //      지나쳐, 표가 화면 아래로 삐져나온 채 남는다. 실제로 굴리는 것을 찾아 잰다.
+    const scroller = (() => {
+      let n = this._wrapEl.parentElement;
+      while (n && n !== document.body) {
+        const oy = getComputedStyle(n).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n;
+        n = n.parentElement;
+      }
+      return null;
+    })();
+    /* 한 번 줄이면 판이 다시 짜이면서 넘치는 양도 달라진다 — 사라질 때까지 몇 번
+       더 본다. 세 번이면 넉넉하고, 그래도 남으면 표가 더 줄 수 없는 것이다(140). */
+    const overflowOf = () => scroller
+      ? scroller.scrollHeight - scroller.clientHeight
+      : document.documentElement.scrollHeight - window.innerHeight;
+
+    for (let i = 0; i < 3; i++) {
+      const over = overflowOf();
+      if (over <= 0) break;
+      h = Math.max(140, h - over - 2);
       this._wrapEl.style.height = h + 'px';
     }
   }

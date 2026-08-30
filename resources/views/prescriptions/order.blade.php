@@ -319,7 +319,12 @@
                max-height: calc(100vh - var(--nav-h, 60px) - 24px);
                overflow: hidden auto; }
   /* 워크스페이스 안(iframe)에서는 높이만 조정한다.
-     top 을 따로 주면 붙지 않아, 기본값(nav + 12)을 그대로 쓴다. */
+     top 을 따로 주면 붙지 않아, 기본값(nav + 12)을 그대로 쓴다.
+
+     키는 JS 가 잰다(sizeViewer). 「화면 높이 - 24」로 못박아 두었더니 그 위에 붙는
+     것들(화면 탭 단추줄 32 · 환자 정보바 106)이 셈에 없어, 액자만으로 이미 화면보다
+     길었다 — 두 열은 나란히 서므로(격자 stretch) 오른쪽 탭 열까지 그 키를 따라갔고,
+     주문 목록처럼 짧은 탭에서도 세로 스크롤이 생겼다. */
   html.is-framed #viewerCol { max-height: calc(100vh - 24px); }
 
   /* 화면 탭(iframe) 안에서는 이 판이 내용만큼 자라야 한다.
@@ -6091,7 +6096,10 @@ window.HELP_TOUR_STEPS = [
     }
 
     document.getElementById(tabId).classList.add('active');
-    if (tabId === 'tab-orders')  { olEnsureGrid(); }
+    /* 탭을 옮기면 액자와 표의 키를 다시 잰다 — 판이 바뀌며 시작하는 자리가 달라진다.
+       처음 만들 때 잰 키 그대로 두면 그만큼 어긋난다. */
+    window.sizeViewer?.();
+    if (tabId === 'tab-orders')  { olEnsureGrid(); olGrid?._applyFitHeight?.(); }
     if (tabId === 'tab-product') {
       if (isTableView()) renderItemsTable(); else renderItems();
       recalcAllItems();
@@ -7940,6 +7948,25 @@ window.HELP_TOUR_STEPS = [
 
   window.addEventListener('resize', boFindPlace);
 
+  /* ── 왼쪽 액자의 키 ──────────────────────────────────────
+     액자가 시작하는 자리에서 화면 아래끝까지로 잰다. 위에 무엇이 몇 개 붙든(화면 탭
+     단추줄ㆍ환자 정보바) 알아서 맞는다 — 화면 높이에서 빼는 식으로는 그것들을 셈에
+     넣을 수 없어, 액자가 저 혼자 화면보다 길어지곤 했다.
+     붙어 있는 동안(sticky)에는 붙은 자리에서 재므로 굴려도 값이 흔들리지 않는다. */
+  function sizeViewer() {
+    const v = document.getElementById('viewerCol');
+    if (!v) return;
+
+    const top = v.getBoundingClientRect().top;
+    const h   = Math.max(240, Math.floor(window.innerHeight - top - 16));
+    v.style.maxHeight = h + 'px';
+  }
+  window.sizeViewer = sizeViewer;
+
+  sizeViewer();
+  window.addEventListener('resize', sizeViewer);
+  document.addEventListener('DOMContentLoaded', sizeViewer);
+
   let _boLastRows = [];
 
   function boFindClose() {
@@ -9557,9 +9584,11 @@ window.HELP_TOUR_STEPS = [
 
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
-      /* 키는 399 로 못박는다. 'fit' 은 창 아래끝까지 채우는데, 이 표는 화면 안의 한
-         구획일 뿐이라 그렇게 늘어나면 아래 것들이 밀려난다. 줄이 많으면 표 안에서 굴린다. */
-      height: 399, editable: false, rowNumber: true, toolbar: false,
+      /* 남는 높이를 받아 화면 아래끝까지 선다('fit'). 예전에는 399 로 못박았는데,
+         찾는 줄과 안내가 그 위에 있어 판이 화면보다 길어졌다 — 이 탭만 세로 스크롤이
+         생겼다. 이 표는 이 판의 마지막 것이라 아래로 밀려날 것이 없다.
+         줄이 많으면 표 안에서 굴린다 — 페이지가 아니라. */
+      height: 'fit', editable: false, rowNumber: true, toolbar: false,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
