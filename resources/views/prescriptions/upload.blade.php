@@ -172,29 +172,17 @@
              font-size:13px; font-weight:500; color:var(--gray-1000); cursor:pointer; white-space:nowrap; }
   .fu-find:hover { border-color:var(--primary); color:var(--primary); }
 
-  /* ── 이름 조회 창 ── */
-  .pk-overlay { position:fixed; inset:0; z-index:1300; background:rgba(0,0,0,.35);
-                display:flex; align-items:center; justify-content:center; }
-  .pk-box { width:min(860px, 94vw); max-height:86vh; display:flex; flex-direction:column;
-            background:var(--gray-0); border-radius:12px; overflow:hidden;
-            box-shadow:0 12px 40px rgba(0,0,0,.22); }
-  .pk-head { display:flex; align-items:center; gap:8px; padding:12px 16px;
-             background:var(--primary); color:var(--gray-0); font-size:14px; font-weight:700; }
-  /* 닫기 규격은 24×24 · r6 · 16px 이다(20 은 시안 글자 규격 밖) */
-  .pk-head button { display:flex; align-items:center; justify-content:center;
-                    margin-left:auto; width:24px; height:24px; flex-shrink:0; padding:0;
-                    background:none; border:none; border-radius:6px; color:inherit;
-                    font-size:16px; line-height:1; cursor:pointer; }
-  .pk-filter { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
-               padding:12px 16px; border-bottom:1px solid var(--border); background:var(--gray-50); }
-  .pk-fld { display:flex; flex-direction:column; gap:4px; }
-  .pk-fld label { font-size:12px; font-weight:600; color:var(--gray-700); }
-  .pk-fld input { height:32px; width:180px; }
-  .pk-acts { display:flex; gap:6px; margin-left:auto; }
-  .pk-body { padding:12px 16px; overflow:auto; }
-  .pk-note { font-size:12px; color:var(--gray-600); margin-bottom:8px; }
-  .pk-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
-  .pk-hint { font-size:12px; color:var(--gray-600); margin-right:auto; }
+  /* ── 이름 조회 창 ──
+     뼈대와 글자 값은 전역 창 규칙(.modal-overlay/.modal-box/.modal-hd/.modal-bd/.modal-ft)이
+     정한다. 여기서는 이 창에만 필요한 것만 적는다 — 창 폭, 본문 줄 사이, 두 줄의 안내. */
+  #pkModal { z-index: 1300; }
+  #pkModal .modal-box { max-width: 860px; max-height: 86vh; }
+  #pkModal .modal-bd { display:flex; flex-direction:column; gap:12px; }
+  /* 찾는 칸 셋은 여섯 열을 둘씩 나눠 쓰고, 단추는 다음 줄 오른쪽 끝에 선다 */
+  #pkModal .ds-filter-fields { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  #pkModal .ds-filter-actions { grid-column: span 6; }
+  .pk-note { font-size:12px; line-height:19px; color:var(--gray-600); }
+  .pk-hint { font-size:12px; line-height:19px; color:var(--gray-600); margin-right:auto; }
   /* 환자를 고르면 selectPatient() 가 입력칸만 display:none 으로 감춘다.
      입력을 감싸는 상자를 따로 두면 그 상자가 flex:1 로 필드 절반(517)을 계속 차지해
      채워진 상자가 필드 한가운데부터 시작한다 — 입력을 직접 flex 항목으로 둔다.
@@ -449,45 +437,53 @@
 </div>
 
 {{-- ── 이름 조회 창 ─────────────────────────────────────
-     위에서 찾고 아래 표에서 고른다. 같은 이름이 여럿일 때 전화번호·생년월일로 가른다. --}}
-<div class="pk-overlay" id="pkModal" style="display:none;">
-  <div class="pk-box" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
-    <div class="pk-head">
-      <i class="fa-solid fa-user"></i>
-      <span id="pkTitle">이름 조회</span>
-      <button type="button" onclick="pkClose()" aria-label="닫기">&times;</button>
+     위에서 찾고 아래 표에서 고른다. 같은 이름이 여럿일 때 전화번호·생년월일로 가른다.
+
+     뼈대는 집 안의 다른 창과 같다 — 덮개(.modal-overlay) · 상자(.modal-box) ·
+     머리(.modal-hd) · 본문(.modal-bd) · 바닥(.modal-ft). 찾는 자리도 다른 화면의
+     검색 필터와 같은 짜임이다(.ds-filter-fields · 라벨 위, 단추 오른쪽 끝).
+     예전에는 이 창만 청록 머리에 제 나름의 여백과 라벨 값을 갖고 있어, 같은 일을
+     하는 창인데 혼자 다르게 보였다. --}}
+<div class="modal-overlay" id="pkModal" style="display:none;">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
+    <div class="modal-hd">
+      <i class="fa-solid fa-user" style="color:var(--primary);font-size:17px;"></i>
+      <span class="modal-title" id="pkTitle">이름 조회</span>
+      <button type="button" class="modal-close" onclick="pkClose()" aria-label="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
 
-    <div class="pk-filter">
-      <div class="pk-fld">
-        <label>이름</label>
-        <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
+    <div class="modal-bd">
+      <div class="ds-filter-fields">
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label" for="pkName">이름</label>
+          <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
+        </div>
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label" for="pkPhone">전화번호</label>
+          <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
+        </div>
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label" for="pkBirth">생년월일</label>
+          <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
+        </div>
+        <div class="ds-filter-actions">
+          <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
+          <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
+        </div>
       </div>
-      <div class="pk-fld">
-        <label>전화번호</label>
-        <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
-      </div>
-      <div class="pk-fld">
-        <label>생년월일</label>
-        <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
-      </div>
-      <div class="pk-acts">
-        <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
-        <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
-      </div>
-    </div>
 
-    <div class="pk-body">
       <div class="pk-note" id="pkNote"></div>
       <div id="pkGrid"></div>
     </div>
 
-    <div class="pk-foot">
+    <div class="modal-ft">
       <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
       {{-- 「다시 선택」을 걷으면서 고른 것을 무를 길이 사라졌다 — 여기에 둔다 --}}
-      <button type="button" class="ds-btn" onclick="clearPatient(); pkClose();">선택 안 함</button>
-      <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
-      <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="clearPatient(); pkClose();">선택 안 함</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="pkClose()">닫기</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="pkPick()">선택</button>
     </div>
   </div>
 </div>
