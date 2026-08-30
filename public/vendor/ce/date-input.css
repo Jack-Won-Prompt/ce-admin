@@ -21,6 +21,11 @@
  */
 .ds-field-range > .ce-date-wrap { flex: 1; }
 
+/* 껍데기는 칸에서 물려받은 표로 숨고 펴진다(.edit-only 따위).
+   화면이 「고치는 중」에 그런 칸을 block 으로 펴는데, 껍데기는 달력 단추와 나란히
+   서야 하므로 inline-flex 를 지킨다. */
+.is-editing .ce-date-wrap.edit-only { display: inline-flex; }
+
 /* 달력 아이콘 자리만큼 글자를 비켜 준다 — 긴 날짜가 아이콘 밑으로 들어가지 않게 */
 .ce-date-wrap > input[data-ce-date] {
   padding-right: 26px;

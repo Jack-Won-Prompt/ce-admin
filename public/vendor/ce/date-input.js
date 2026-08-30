@@ -131,6 +131,16 @@
     var wrap = document.createElement('span');
     wrap.className = 'ce-date-wrap';
 
+    /* 칸에 걸어 둔 표(.edit-only 같은 것)를 껍데기에도 옮긴다.
+       감싸고 나면 화면의 「보기 모드에서는 숨긴다」 규칙이 칸에만 닿아, 칸은 숨고
+       껍데기와 달력 단추만 그대로 떠 있었다 — 고치기를 누르지도 않았는데 달력
+       아이콘이 줄줄이 보였다.
+       form-control 만 뺀다: 그것은 칸의 생김새라 껍데기가 쓰면 테두리가 두 겹이 된다. */
+    for (var ci = 0; ci < el.classList.length; ci++) {
+      var cls = el.classList[ci];
+      if (cls !== 'form-control') wrap.classList.add(cls);
+    }
+
     /* 칸을 껍데기로 감싸면 줄에서 자리를 잡던 주체가 칸에서 껍데기로 바뀐다.
        칸에 걸려 있던 자리 규칙(flex·width)을 껍데기로 옮기고, 칸은 껍데기를 채운다 —
        그러지 않으면 「flex:1」로 늘어나던 칸이 제 글자만큼만 서서 줄이 어그러진다. */
