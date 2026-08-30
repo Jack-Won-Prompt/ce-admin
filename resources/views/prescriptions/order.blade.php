@@ -322,6 +322,15 @@
      top 을 따로 주면 붙지 않아, 기본값(nav + 12)을 그대로 쓴다. */
   html.is-framed #viewerCol { max-height: calc(100vh - 24px); }
 
+  /* 화면 탭(iframe) 안에서는 이 판이 내용만큼 자라야 한다.
+     .page-body-inner 는 flex:1 1 auto 라 틀의 높이(≈759)를 그대로 받는다. 그 안의
+     .order-layout 이 stretch 로 같은 높이에 묶이니, 오른쪽 열은 내용이 1229 가 되어도
+     759 에서 멈췄다 — 넘친 470 은 열 밖으로 삐져나와 잘렸고, 바깥 스크롤도 그만큼
+     늘어나지 않아 손이 닿지 않았다(표뷰의 상세 목록에서 늘 그랬다).
+     줄지 않게 두면 내용만큼 자라고, 넘치는 만큼 .page-body 가 굴러 준다.
+     이 화면의 판에만 건다 — .page-body-inner 는 다른 화면도 쓰는 이름이다. */
+  html.is-framed .page-body-inner:has(> .order-layout) { flex: 1 0 auto; }
+
   /* ── 좌우 분할 (넓은 화면) ────────────────────────────────
      sticky 는 페이지가 스크롤될 때만 자리를 지킨다. 아코디언을 접어 페이지가
      화면보다 짧아지면 붙을 자리가 없어져 뷰어가 제 위치로 내려온다.
@@ -3437,8 +3446,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
             </div>
           </div>
         </div>
-          </div>
-        </div>
+        {{-- 닫는 태그 둘이 남아 있었다. 그것이 주문 제품 판이 아니라 오른쪽 열(#tabsCol)과
+             판 전체(.order-layout)를 여기서 닫아 버려, 뒤따르는 이력 판이 열 밖으로
+             떨어져 나갔다 — 화면 맨 아래에 가로로 길게 그려졌다. --}}
 
       </div>{{-- /tab-product --}}
 
@@ -4813,6 +4823,9 @@ function renderItemsTable() {
     const nhisSt     = item.nhis_status || 'eligible';
     const nhisAmt    = Number(item.nhis_amount   || 0).toLocaleString('ko-KR');
     const copay      = Number(item.patient_copay || 0).toLocaleString('ko-KR');
+    const calc       = computeRow(item);
+    const priceShown = Number(String(item.product_price ?? '').replace(/,/g, '') || 0).toLocaleString('ko-KR');
+    const totalShown = Number(calc.total || 0).toLocaleString('ko-KR');
     const displayName = item.product_name
       ? escHtml(item.product_name) + (item.product_code ? ` (${escHtml(item.product_code)})` : '')
       : '';
@@ -4839,6 +4852,11 @@ function renderItemsTable() {
         <input type="hidden" class="item-rbox"  value="${escHtml(item.r_box||'')}" />
         <input type="hidden" class="item-stock" value="${escHtml(String(item.stock||''))}" />
         <input type="hidden" class="item-price" value="${escHtml(fmtPrice(item.product_price))}" />
+        {{-- 단가(insurance_price)는 화면에서 고치지 않는다(요청서 16쪽). 그래도 금액을
+             셈하는 calcItem 이 읽으므로 값은 여기 숨겨 둔다. 예전에는 이것을 「보이지
+             않는 칸」으로 표에 세워 두었는데, 칸은 자리를 차지하고 안의 셀만 사라져
+             뒤의 칸들이 한 자리씩 밀렸다 — 표 틀이 어긋난 까닭이다. --}}
+        <input type="hidden" class="item-ins-price" value="${escHtml(fmtPrice(item.insurance_price))}" />
       </td>
       <td>
         {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략(유형 × 자격)이 정한다.
@@ -4846,18 +4864,16 @@ function renderItemsTable() {
         <input type="hidden" class="item-nhis" value="${escHtml(nhisSt)}" />
         <span class="item-nhis-shown">${escHtml(BS_ITEM_LABEL())}</span>
       </td>
-      {{-- 단가 칸은 걷었다(요청서 16쪽). 값은 제품이 들고 오므로 화면에서 고칠 일이
-           없고, 계산에는 그대로 쓰인다 — 숨은 칸으로 남겨 calcItem 이 읽게 한다. --}}
-      <td style="display:none;">
-        <input type="text" inputmode="numeric" class="form-control item-ins-price"
-               value="${fmtPrice(item.insurance_price)}" />
-      </td>
       <td>
         <input type="number" class="form-control item-qty"
                style="font-size:12px;text-align:center;padding:2px 4px;height:32px;width:100%;"
                value="${item.quantity||1}" min="1"
                oninput="calcItem(${idx})" />
       </td>
+      {{-- 카드뷰와 같은 돈 칸이다. 표뷰에만 이 둘이 없어, 같은 주문을 보기만 바꿔도
+           얼마짜리 제품인지가 사라졌다. --}}
+      <td style="text-align:right;white-space:nowrap;" class="item-price-shown">₩ ${priceShown}</td>
+      <td style="text-align:right;white-space:nowrap;" class="item-total-amt">₩ ${totalShown}</td>
       <td style="text-align:right;color:var(--primary);white-space:nowrap;" class="item-nhis-amt">₩ ${nhisAmt}</td>
       <td style="text-align:right;white-space:nowrap;" class="item-copay">₩ ${copay}</td>
       <td style="text-align:center;">
@@ -4872,24 +4888,29 @@ function renderItemsTable() {
 
   const nhisTotal  = items.reduce((s, i) => s + Number(i.nhis_amount   || 0), 0);
   const copayTotal = items.reduce((s, i) => s + Number(i.patient_copay || 0), 0);
+  const grandTotal = items.reduce((s, i) => s + Number(computeRow(i).total || 0), 0);
 
   el.innerHTML = `<table class="tab-tbl" style="table-layout:fixed;width:100%;">
+    {{-- 칸 아홉과 셀 아홉이 하나씩 맞아야 한다. 안 보이는 칸을 하나 끼워 두면 그 뒤가
+         모두 한 자리씩 밀려, 머리와 몸이 어긋나고 오른쪽에 빈 칸 하나가 남는다. --}}
     <colgroup>
       <col style="width:3%;">
-      <col style="width:36%;">
-      <col style="width:13%;">
+      <col style="width:30%;">
       <col style="width:11%;">
       <col style="width:7%;">
-      <col style="width:12%;">
-      <col style="width:12%;">
-      <col style="width:6%;">
+      <col style="width:11%;">
+      <col style="width:11%;">
+      <col style="width:11%;">
+      <col style="width:11%;">
+      <col style="width:5%;">
     </colgroup>
     <thead><tr>
       <th style="text-align:center;">#</th>
       <th>제품명</th>
       <th>급여구분</th>
-      <th style="display:none;"></th>
       <th style="text-align:center;">수량</th>
+      <th style="text-align:right;">소비자가</th>
+      <th style="text-align:right;">총 금액</th>
       <th style="text-align:right;">기관 부담금</th>
       <th style="text-align:right;">본인 부담금</th>
       <th></th>
@@ -4897,13 +4918,14 @@ function renderItemsTable() {
     <tbody>${rows}</tbody>
     <tfoot><tr>
       <th colspan="5" style="text-align:right;background:var(--bg);">합계</th>
+      <th style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
       <th style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
       <th style="background:var(--bg);"></th>
     </tr></tfoot>
   </table>`;
 
-  document.querySelectorAll('#items-table-container .item-ins-price').forEach(initPriceInput);
+  {{-- 단가는 숨은 값이라 누를 일이 없다 — 자릿점 다듬개(initPriceInput)를 붙이지 않는다 --}}
 }
 
 window.HELP_TOUR_STEPS = [
@@ -6410,6 +6432,8 @@ window.HELP_TOUR_STEPS = [
     card.querySelector('.item-copay').textContent     = '₩ ' + copay.toLocaleString('ko-KR');
     const totalEl = card.querySelector('.item-total-amt');
     if (totalEl) totalEl.textContent = '₩ ' + Math.round(insBase * qty).toLocaleString('ko-KR');
+    const priceEl = card.querySelector('.item-price-shown');
+    if (priceEl) priceEl.textContent = '₩ ' + Math.round(price).toLocaleString('ko-KR');
 
     // items 배열 동기화
     items[idx] = {
@@ -10432,7 +10456,13 @@ window.HELP_TOUR_STEPS = [
     if (totalQty > 0) it.quantity = totalQty;
     Object.assign(it, computeRow(it));
 
-    renderItems();
+    /* 보고 있는 쪽을 다시 그린다. 카드뷰만 다시 그리고 있어, 표뷰에서 제품을 고르면
+       이름도 금액도 그대로였다 — 다른 자리를 건드려야 그제서야 바뀌었다. */
+    if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
+      renderItemsTable();
+    } else {
+      renderItems();
+    }
     calcTotals();
     markProductDirty();
 
