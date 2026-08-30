@@ -205,6 +205,13 @@ class PatientController extends Controller
 
         $total = $gridData->count();
 
+        /* 목록만 다시 달라는 부름(?json=1). 어디선가 거래처를 고치면 열려 있는 목록이
+           화면을 다시 열지 않고 그 자리에서 줄을 새로 받는다 — 보던 탭도 체크해 둔 것도
+           그대로 남는다. 찾는 조건은 주소에 그대로 실려 오므로 위 흐름을 함께 탄다. */
+        if ($request->boolean('json')) {
+            return response()->json(['rows' => $gridData, 'total' => $total]);
+        }
+
         return view('patients.index', compact('gridData', 'total'));
     }
 

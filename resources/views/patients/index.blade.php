@@ -775,6 +775,41 @@ document.addEventListener('keydown', (e) => {
     data: @json($gridData),
   });
   window.__patientGrid = grid;
+
+  /* ── 거래처가 고쳐지면 이 목록도 따라온다 ─────────────────
+     고치는 자리는 상세 화면이다(이 화면의 「상세 내용」 탭도 그 화면을 액자로 들인다).
+     거기서 저장해도 뒤에 있는 이 목록은 옛 값을 그대로 보여 주고 있어, 담당자가 화면을
+     다시 열어야 방금 고친 것이 보였다 — 그러면 찾아 둔 조건도 열어 둔 상담내역 탭도
+     함께 사라졌다.
+     줄만 새로 받는다. 찾는 조건은 지금 주소에 그대로 실려 있으므로 그대로 얹는다. */
+  async function ptReloadRows() {
+    const url = new URL(location.href);
+    url.searchParams.set('json', '1');
+    try {
+      const res  = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await res.json();
+      if (!Array.isArray(data?.rows)) return;
+      grid.setData(data.rows);
+      const cnt = document.getElementById('total-count');
+      if (cnt) cnt.textContent = Number(data.total ?? data.rows.length).toLocaleString('ko-KR');
+    } catch (e) {
+      console.error('[거래처] 목록을 다시 읽지 못했습니다', e);
+    }
+  }
+
+  try {
+    const _ptCh = new BroadcastChannel('ce-patient');
+    _ptCh.onmessage = (e) => {
+      if (e.data?.action !== 'saved') return;
+      ptReloadRows();
+      /* 그 사람의 상담내역 탭을 열어 두었으면 이름도 이력도 다시 읽는다 —
+         탭 이름에 옛 이름이 남아 있으면 어느 사람의 탭인지 어긋난다. */
+      const id = e.data.id;
+      if (typeof pcTabs !== 'undefined' && pcTabs[id]) {
+        pcLoad(id, e.data.name || pcTabs[id].name);
+      }
+    };
+  } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
   window.dsBindSelCount(grid, 'sel-count');
 
   /* 찾는 자리의 「상담하기」 — 체크해 둔 한 사람과 상담한다.
@@ -1250,6 +1285,15 @@ document.addEventListener('keydown', (e) => {
      구별되지 않고, 날짜 칸은 빈 글자에서 검증이 걸린다. */
   const val = (id) => (document.getElementById(id)?.value ?? '').trim() || null;
 
+  /* 같은 자리(origin)의 화면들에 알린다. 받는 쪽이 없어도 그만이라 실패를 따지지 않는다. */
+  function ptTell(msg) {
+    try {
+      const ch = new BroadcastChannel('ce-patient');
+      ch.postMessage(msg);
+      ch.close();
+    } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
+  }
+
   async function savePatient() {
     const name = document.getElementById('add-name').value.trim();
     if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
@@ -1295,6 +1339,7 @@ document.addEventListener('keydown', (e) => {
       BtnState.success(btn, '저장 완료');
       closeAddModal();
       showToast(res.message, 'success');
+      ptTell({ action: 'saved', id: res.id, name, created: true });
       setTimeout(() => location.href = `${BASE_URL}/patients/${res.id}`, 800);
     } else {
       BtnState.error(btn, '저장 실패');

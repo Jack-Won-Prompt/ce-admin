@@ -7053,6 +7053,10 @@ window.HELP_TOUR_STEPS = [
     box.querySelectorAll('input, select, textarea').forEach(el => {
       if (RX_PATIENT_UNLOCKED.includes(el.id)) return;
       if (el.type === 'hidden') return;
+      /* 이름 조회 창은 이름 줄에 붙는 팝오버라 이 상자 안에 있다. 그러나 거래처의
+         값을 적는 칸이 아니라 「누구를 찾는가」를 치는 칸이다 — 함께 잠가 버려서
+         조회 창을 열어도 한 글자도 쳐지지 않았다. */
+      if (el.closest('#pkModal')) return;
 
       if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
         /* select 는 readonly 가 없다. disabled 로 두면 저장에서 값이 빠지므로

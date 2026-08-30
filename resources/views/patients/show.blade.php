@@ -667,6 +667,21 @@
   }
 </script>
 <script>
+  /* 같은 사람을 다른 자리에서 고치면 이 화면도 다시 읽는다.
+     한 사람을 두 탭에 펴 놓고 한쪽에서 고치면, 다른 쪽은 옛 값을 보여 준 채로 남아
+     거기서 저장하면 방금 고친 것을 되돌려 놓는다.
+     제가 보낸 말은 제게 오지 않으므로(BroadcastChannel), 저장하고 다시 읽는 길과
+     겹치지 않는다. */
+  try {
+    const _psCh = new BroadcastChannel('ce-patient');
+    _psCh.onmessage = (e) => {
+      if (e.data?.action !== 'saved') return;
+      if (String(e.data.id) !== String(@json($patient->id))) return;
+      location.reload();
+    };
+  } catch (e) { /* 못 하는 브라우저면 손으로 다시 열어야 한다 */ }
+</script>
+<script>
   /* 상담내역은 거래처 관리 화면의 탭에서 본다. 이 화면이 그 안에 액자로 들어가 있으면
      바깥에 열라고 알리고, 혼자 열려 있으면 목록 화면으로 옮겨 그 탭을 연다. */
   function openCounselTab() {
