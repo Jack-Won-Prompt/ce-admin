@@ -1057,6 +1057,13 @@ class ConsentController extends Controller
         $put('period_to_m',   $ed->format('n'));
         $put('period_to_d',   $ed->format('j'));
 
+        /* 위임일 — 서명란 바로 위의 「년 월 일」 줄. 비워 두면 언제 위임한 것인지가
+           종이에 남지 않는다(공단이 되돌려 보내는 사유다). 서명한 날이 곧 위임한 날이라
+           위임기간 시작일과 같은 날을 쓴다. 자리는 설정에서 고친다. */
+        $put('sign_date_y', $sd->format('Y'));
+        $put('sign_date_m', $sd->format('n'));
+        $put('sign_date_d', $sd->format('j'));
+
         /* 서명란의 이름 — 양식에는 「위임인    (서명 또는 인)」 한 줄뿐이라 이름 적을 자리가
            없다. 서명 그림만 남으면 누가 위임했는지 그림으로 읽어야 한다. 그림 왼쪽에
            이름을 적어 둔다. 자리는 설정에서 고친다(다른 칸과 같은 방식). */

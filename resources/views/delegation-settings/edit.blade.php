@@ -29,6 +29,14 @@
      한 가지만 되돌린다 — overflow. 목록 카드는 hidden 이라 그리드가 안에서 스크롤하지만,
      「글자 항목 위치」 탭은 표가 뷰포트보다 길어 hidden 이면 잘리고 스크롤도 안 생긴다. */
   .ds-form .ds-grid-card { overflow:visible; }
+  /* 그런데 카드 자체가 내용보다 짧았다. .fill-rest 는 남는 높이를 받으라고
+     flex:1 1 auto · min-height:0 을 거는데, 줄지 말라는 말이 없어 「글자 항목 위치」
+     탭처럼 화면보다 긴 표를 담으면 카드는 남는 높이까지만 서고 표는 제 길이로 섰다 —
+     흰 바탕이 끝난 아래로 줄들이 회색 위에 떠 있었다.
+     내용만큼은 지키게 한다. 짧은 탭에서 아래를 채우는 일은 그대로다. */
+  .ds-form.fill-rest,
+  .ds-form form.fill-rest,
+  .ds-form .ds-grid-card.fill-rest { min-height:fit-content; }
 
   /* 카드 안여백 12/16 */
   .ds-card { background:transparent; border:none; border-radius:0; padding:12px 16px; margin-bottom:0; }
