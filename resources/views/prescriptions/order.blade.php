@@ -4834,9 +4834,10 @@ function renderItemsTable() {
     const calc       = computeRow(item);
     const priceShown = Number(String(item.product_price ?? '').replace(/,/g, '') || 0).toLocaleString('ko-KR');
     const totalShown = Number(calc.total || 0).toLocaleString('ko-KR');
-    const displayName = item.product_name
-      ? escHtml(item.product_name) + (item.product_code ? ` (${escHtml(item.product_code)})` : '')
-      : '';
+    /* 이름 칸에는 이름만 둔다 — 코드는 옆에 제 칸이 생겼다. 붙여 두었더니 이름이 길면
+       코드가 먼저 잘려, 정작 견주려던 것이 보이지 않았다. */
+    const displayName = item.product_name ? escHtml(item.product_name) : '';
+    const codeShown   = item.product_code ? escHtml(item.product_code) : '';
     return `<tr class="item-card" data-idx="${idx}">
       <td style="text-align:center;color:var(--text-muted);font-size:11px;">${idx+1}</td>
       <td class="pac-cell">
@@ -4866,6 +4867,9 @@ function renderItemsTable() {
              뒤의 칸들이 한 자리씩 밀렸다 — 표 틀이 어긋난 까닭이다. --}}
         <input type="hidden" class="item-ins-price" value="${escHtml(fmtPrice(item.insurance_price))}" />
       </td>
+      {{-- 제품 코드 — 창고와 주고받는 것은 이 값이다 --}}
+      <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          class="item-code-shown" title="${codeShown}">${codeShown}</td>
       <td>
         {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략(유형 × 자격)이 정한다.
              담긴 값은 지우지 않고 그대로 들고 다닌다(예전 건을 읽는 자리가 있다). --}}
@@ -4903,18 +4907,20 @@ function renderItemsTable() {
          모두 한 자리씩 밀려, 머리와 몸이 어긋나고 오른쪽에 빈 칸 하나가 남는다. --}}
     <colgroup>
       <col style="width:3%;">
-      <col style="width:30%;">
-      <col style="width:11%;">
-      <col style="width:7%;">
-      <col style="width:11%;">
-      <col style="width:11%;">
-      <col style="width:11%;">
+      <col style="width:22%;">
+      <col style="width:13%;">
+      <col style="width:10%;">
+      <col style="width:6%;">
+      <col style="width:10%;">
+      <col style="width:10%;">
+      <col style="width:10%;">
       <col style="width:11%;">
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
       <th style="text-align:center;">#</th>
       <th>제품명</th>
+      <th>제품 코드</th>
       <th>급여구분</th>
       <th style="text-align:center;">수량</th>
       <th style="text-align:right;">소비자가</th>
@@ -4925,7 +4931,7 @@ function renderItemsTable() {
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <th colspan="5" style="text-align:right;background:var(--bg);">합계</th>
+      <th colspan="6" style="text-align:right;background:var(--bg);">합계</th>
       <th style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
       <th style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
@@ -6302,6 +6308,9 @@ window.HELP_TOUR_STEPS = [
           onSearch: (kw) => pacSearch(kw),
           onSelect: (rowIndex, code) => applyProduct(rowIndex, _pacLast[code]),
         } },
+      /* 제품 코드 — 제품을 고르면 따라 들어온다. 여기서 고치지 않는다: 코드는 제품이
+         제 것으로 들고 오는 값이라, 손으로 바꾸면 이름과 어긋난 줄이 창고로 간다. */
+      { header: '제품 코드',  name: 'product_code',    width: 120, editable: false },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
       /* 소비자가는 제품이 들고 오는 값이다. 사람이 고치면 그 줄만 다른 값이 되어
          어느 것이 맞는지 알 수 없다 — 제품을 바꿔 고른다.
