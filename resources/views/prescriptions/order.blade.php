@@ -220,8 +220,13 @@
      짧은 처방전에서 아래로 회색이 361 드러났다. 두 열이 같이 늘고, 그 안의 흰 판도 따라온다. */
   .page-body-inner { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
   .page-body-inner > .order-layout { flex:1 1 auto; min-height:0; align-items:stretch; }
+  /* 격자 칸은 기본값(min-width:auto)이라 안에 든 것보다 좁아지지 않는다. 스물여덟
+     칸짜리 표가 들어오자 이 기둥이 3249px 로 벌어져 화면 전체에 가로 스크롤이
+     생겼고, 그 폭에 맞춰 찾는 줄까지 한 줄로 길게 늘어섰다.
+     min-width:0 을 주어 제 몫(1fr)만 받게 한다 — 넘치는 표는 제 껍데기(.cg-wrap,
+     overflow-x:auto) 안에서 굴러가고, 찾는 줄은 그 폭 안에서 접힌다. */
   .order-layout > #viewerCol,
-  .order-layout > #tabsCol { min-height:0; }
+  .order-layout > #tabsCol { min-height:0; min-width:0; }
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
