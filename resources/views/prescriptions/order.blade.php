@@ -1810,17 +1810,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
     </div>
 
       {{-- 라벨 칩 + 값, 사이는 4px 점 --}}
+      {{-- 전화ㆍ병원은 여기 적지 않는다. 둘 다 아래 판에 제 칸이 있고(전화번호1 ·
+           병원명), 이 줄에 겹쳐 두면 고친 값과 어긋난 채로 나란히 선다 —
+           이 줄은 서버가 그린 그대로라 고쳐도 따라 바뀌지 않았다.
+           남는 것은 「담당」이다. 이 건이 누구 손에 있는지는 다른 어느 칸도
+           말해 주지 않는다. --}}
       <div class="pib-row-meta">
-        <span style="display:inline-flex;align-items:center;gap:6px;">
-          <span class="pib-tag">전화</span>
-          <span class="pib-val" id="hdrPatientPhone">{{ $prescription->patient?->mobile ?? '-' }}</span>
-        </span>
-        <span class="pib-dot"></span>
-        <span style="display:inline-flex;align-items:center;gap:6px;">
-          <span class="pib-tag">병원</span>
-          <span class="pib-val" id="hdrHospital">{{ $prescription->hospital_name ?? '-' }}</span>
-        </span>
-        <span class="pib-dot"></span>
         <span style="display:inline-flex;align-items:center;gap:6px;">
           <span class="pib-tag">담당</span>
           <span class="pib-val" id="hdrAssignee">{{ $prescription->assignedUser?->name ?? '-' }}</span>
@@ -2746,6 +2741,27 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
                      background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
               </div>
+              {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 자리는 검수 메모 바로
+                   다음이다. 이 건이 처방전인지 처방외인지가 아래 병원ㆍ상병ㆍ수량을
+                   어떻게 읽을지를 먼저 정한다 — 그것을 뒤에 두면 다 적고 나서야 갈랐다.
+                   id·값은 그대로라 청구전략 셈은 손대지 않았다.
+                   선택지는 「처방전 / 처방외」 둘이다(요청서 1·8쪽) — 원내ㆍ원외는
+                   청구전략이 같은 값을 내므로 갈라 둘 뜻이 없었는데 고르는 사람만
+                   망설였다. 이미 원내로 담긴 건은 그 건에서만 한 줄을 세운다. --}}
+              @php $accType = (string) ($prescription->counsel_acc_add_type ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">유형</span>
+                <select class="form-control" id="f-acc-add-type" style="flex:1;">
+                  <option value="">선택</option>
+                  <option value="10" @selected($accType === '10')>처방전</option>
+                  <option value="20" @selected($accType === '20')>처방외</option>
+                  @if($accType === '30')
+                    <optgroup label="기존 값">
+                      <option value="30" selected>처방전 - 원내</option>
+                    </optgroup>
+                  @endif
+                </select>
+              </div>
               <div class="rx-field-row">
                 {{-- 처방외(처방전 없이 사는 건)에는 병원이 없다 — 그때는 별표를 뗀다 --}}
                 {{-- 별표를 뗐다. 병원명이 없다고 저장을 막으면, 처방전을 손에 들기 전에
@@ -2765,26 +2781,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span class="rx-field-label">요양병원 코드</span>
                 {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
                 <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원 코드" style="flex:1;" />
-              </div>
-              {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 순서도 요청서대로
-                   병원명ㆍ요양병원코드 다음이다. id·값은 그대로라 청구전략 셈은 손대지
-                   않았다.
-                   선택지는 「처방전 / 처방외」 둘이다(요청서 1·8쪽) — 원내ㆍ원외는
-                   청구전략이 같은 값을 내므로 갈라 둘 뜻이 없었는데 고르는 사람만
-                   망설였다. 이미 원내로 담긴 건은 그 건에서만 한 줄을 세운다. --}}
-              @php $accType = (string) ($prescription->counsel_acc_add_type ?? ''); @endphp
-              <div class="rx-field-row">
-                <span class="rx-field-label">유형</span>
-                <select class="form-control" id="f-acc-add-type" style="flex:1;">
-                  <option value="">선택</option>
-                  <option value="10" @selected($accType === '10')>처방전</option>
-                  <option value="20" @selected($accType === '20')>처방외</option>
-                  @if($accType === '30')
-                    <optgroup label="기존 값">
-                      <option value="30" selected>처방전 - 원내</option>
-                    </optgroup>
-                  @endif
-                </select>
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
