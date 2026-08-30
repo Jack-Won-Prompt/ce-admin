@@ -776,6 +776,14 @@
     if (res.success) {
       BtnState.success(btn, '저장 완료');
       showToast(res.message, 'success');
+      /* 이 사람을 펴 놓은 다른 화면에 알린다 — 주문 등록 화면이 적어 둔 거래처 항목을
+         그 자리에서 다시 읽는다. 같은 자리(origin)의 화면끼리만 오가는 말이다.
+         받는 쪽이 없어도 그만이라 실패를 따지지 않는다. */
+      try {
+        const ch = new BroadcastChannel('ce-patient');
+        ch.postMessage({ action: 'saved', id: @json($patient->id), name });
+        ch.close();
+      } catch (e) { /* 이 브라우저가 못 하면 예전처럼 화면을 다시 열어야 한다 */ }
       setTimeout(() => location.reload(), 700);
     } else {
       BtnState.error(btn, '저장 실패');

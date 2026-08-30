@@ -428,7 +428,11 @@
      (예전 아코디언 머리가 하던 일이다). 단추는 예전처럼 이 모드에서 보이지 않는다. */
   .tab-view-table #tab-ocr .rx-acc-item { border:none; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:0; }
   .tab-view-table #tab-ocr .rx-acc-item:last-child { border-bottom:none; }
-  .tab-view-table #tab-ocr .rx-tabs { display:none; }
+  /* 표뷰에서는 탭 이름만 감춘다(셋을 한꺼번에 펴므로 고를 것이 없다).
+     줄째로 감추면 그 안에 있는 단추 일곱까지 함께 사라져, 표뷰에서는 상담하기도
+     거래처 수정도 저장도 누를 수 없었다. */
+  .tab-view-table #tab-ocr .rx-tabs-list { display:none; }
+  .tab-view-table #tab-ocr .rx-tabs { justify-content:flex-end; }
   .tab-view-table #tab-ocr .rx-pane { display:block !important; padding:10px 12px; }
   .tab-view-table #tab-ocr .rx-pane + .rx-pane { border-top:1px solid var(--border); }
   .tab-view-table #tab-ocr .rx-pane-cap {
@@ -572,6 +576,8 @@
   /* 머리(.rx-acc-header)와 화살표(.rx-acc-icon)는 걷었다 — 세 구획이 탭으로 바뀌어
      여닫는 머리가 없다. 단추 규격(.rx-acc-btn)은 탭줄에서 그대로 쓴다. */
   .rx-acc-btns { display:flex; align-items:center; gap:6px; }
+  /* 사람에게 가는 단추(상담하기ㆍ거래처 수정)와 건을 밀고 가는 단추 사이를 벌린다 */
+  .rx-acc-btns .rx-acc-btn-sep { margin-right:10px; }
   .rx-acc-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
                 height:28px; padding:0 12px; border-radius:8px;
                 background:var(--gray-0); border:1px solid var(--gray-200);
@@ -2239,6 +2245,23 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 담당자는 적고 「검수 요청」까지, 검수자만 「검수 완료」를 누른다.
                    완료ㆍ반려는 approve 권한으로 갈라 두었다(config/permissions.php). --}}
               <div class="rx-acc-btns">
+                {{-- 상담하기ㆍ거래처 수정은 이 띠의 왼쪽 끝이다.
+                     예전에는 「환자 정보」 소제목 줄에 있었는데, 그 줄은 상담ㆍ환자 정보
+                     판 안이라 병원ㆍ처방 정보 탭을 누르면 함께 사라졌다 — 전화를 받으며
+                     처방을 보다가 상담을 적으려면 탭을 되돌아가야 했다. 이 띠는 판 밖
+                     (탭줄)이라 어느 탭에서나 서 있다.
+                     오른쪽 다섯(검수 요청하기ㆍ검수 승인하기ㆍ주문 보기ㆍ메모ㆍ저장)은
+                     이 건을 앞으로 밀고 가는 단추다. 이 둘은 성질이 달라 — 사람에게 가는
+                     길이다 — 사이를 조금 벌려 갈라 둔다. --}}
+                <button type="button" class="rx-acc-btn" onclick="openCounselWindow()">
+                  <i class="fa-solid fa-comments"></i> 상담하기
+                </button>
+                {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
+                     「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
+                <button type="button" class="rx-acc-btn rx-acc-btn-sep" id="btnGoMaster" onclick="goPatientMaster()"
+                        title="거래처관리에서 이 사람의 정보를 고칩니다">
+                  <i class="fa-solid fa-address-card"></i> 거래처 수정
+                </button>
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
                      누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
                      resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
@@ -2291,24 +2314,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
             {{-- ▸ 환자 정보 소제목 --}}
             <div class="rx-sec-head">
               <span class="rx-sec-title">환자 정보</span>
-              {{-- 메모 단추는 걷고 그 자리를 상담하기에 준다(요청서 10쪽).
-                   메모는 이 사람에 대해 적어 두는 것인데, 정작 담당자가 이 자리에서
-                   하려는 일은 통화 기록을 남기는 것이었다 — 그것은 상담 창이 받는다.
-                   toggleMemoPanel 은 남겨 둔다: 처방전 그림 옆 메모판이 그대로 쓴다. --}}
-              {{-- 단추 둘은 한 묶음으로 오른쪽 끝에 붙인다. 낱개로 두면 머리줄의
-                   space-between 이 셋을 고르게 벌려 놓아, 「상담하기」가 제목과 오른쪽
-                   단추 사이에 홀로 떠 있었다. --}}
-              <span class="rx-sec-btns">
-                <button type="button" class="rx-sec-btn" onclick="openCounselWindow()">
-                  <i class="fa-solid fa-comments"></i> 상담하기
-                </button>
-                {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
-                     「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
-                <button type="button" class="rx-sec-btn" id="btnGoMaster" onclick="goPatientMaster()"
-                        title="거래처관리에서 이 사람의 정보를 고칩니다">
-                  <i class="fa-solid fa-address-card"></i> 거래처 수정
-                </button>
-              </span>
+              {{-- 상담하기ㆍ거래처 수정은 위쪽 걸음 띠로 옮겼다 — 병원ㆍ처방 정보 탭에서도
+                   그대로 보여야 한다. 메모 단추는 그 띠에 이미 있다. --}}
             </div>
             <div class="rx-fit">
             {{-- 이 구획의 칸은 거래처관리가 정본이라 여기서는 읽기만 한다(rxLockPatientFields).
@@ -5499,15 +5506,16 @@ window.HELP_TOUR_STEPS = [
 
   /* 받아 온 값을 화면에 앉힌다. 열쇠가 곧 입력칸 id 라 여기서 짝을 다시 맞출 일이 없다.
      빈 값은 지우지 않는다 — 마스터에 없는 것을 이미 적어 둔 담당자의 손을 덮지 않는다. */
-  function pkFill(data) {
+  function pkFill(data, opts = {}) {
     let n = 0;
     for (const [id, val] of Object.entries(data.fill || {})) {
-      if (val === '' || val === null) continue;
+      const empty = (val === '' || val === null);
+      if (empty && !opts.clearEmpty) continue;
       const el = document.getElementById(id);
       if (!el) continue;
-      // 이름은 위에서 이미 넣었다(고른 사람과 이어 두는 표시까지 함께)
+      // 이름은 부르는 쪽이 이미 넣었다(고른 사람과 이어 두는 표시까지 함께)
       if (id === 'f-name') continue;
-      el.value = val;
+      el.value = empty ? '' : val;
       n++;
     }
 
@@ -7068,6 +7076,57 @@ window.HELP_TOUR_STEPS = [
     const url = pid ? `{{ url('patients') }}/${pid}` : `{{ url('patients') }}`;
     ceOpenTab(url, pid ? '거래처 관리 - 상세' : '거래처 관리', 'user-multiple');
   };
+
+  /* 거기서 고치면 여기가 따라 바뀐다.
+     이 화면의 거래처 칸은 읽기만 하는 자리라(rxLockPatientFields) 마스터가 정본이다 —
+     그런데 고치고 돌아와도 적힌 것은 그대로여서, 화면을 닫았다 다시 열어야 했다.
+     그러면 적어 두었던 병원ㆍ처방 값이 함께 날아갔다.
+     이어 둔 사람이 아니면 지나간다. 창을 옮겨 다니며 여러 사람을 보는 자리다. */
+  async function rxReloadPatient(pid, name) {
+    const cur = document.getElementById('f-patient-id')?.value;
+    if (!cur || String(cur) !== String(pid)) return;
+
+    let data;
+    try {
+      const res = await fetch(PATIENT_DETAIL_URL.replace('__ID__', pid),
+                              { headers: { 'Accept': 'application/json' } });
+      data = await res.json();
+    } catch (e) {
+      console.error('[거래처] 고쳐진 정보를 가져오지 못했습니다', e);
+      return;
+    }
+    if (!data?.success) return;
+
+    /* 이름은 따로 넣는다 — 손으로 고쳐 쓰면 이어 둔 것을 푸는 감시가 붙어 있어,
+       그것이 우리가 넣은 값에 걸리면 사람과의 연결이 끊긴다. */
+    const nameEl = document.getElementById('f-name');
+    const newName = data.fill?.['f-name'] || name || '';
+    if (nameEl && newName && nameEl.value !== newName) {
+      nameEl.dataset.pkFilling = '1';
+      nameEl.value = newName;
+      nameEl.dispatchEvent(new Event('input', { bubbles: true }));
+      delete nameEl.dataset.pkFilling;
+    }
+
+    // 마스터에서 지운 값은 여기서도 지운다 — 두 화면이 다른 말을 하면 안 된다
+    const n = pkFill(data, { clearEmpty: true });
+
+    // 위쪽 이름표도 같은 이름을 적는다
+    const hdr = document.getElementById('hdrPatientName');
+    if (hdr && newName) hdr.textContent = newName;
+
+    /* 고쳐 온 값은 마스터의 것이므로 저장할 것이 생긴 것이 아니다 —
+       markOcrDirty() 를 부르지 않는다(부르면 화면을 떠날 때마다 붙잡는다). */
+    showToast(`거래처에서 고친 내용을 가져왔습니다 (${n}칸).`, 'info');
+  }
+
+  try {
+    const _pch = new BroadcastChannel('ce-patient');
+    _pch.onmessage = (e) => {
+      if (e.data?.action !== 'saved') return;
+      rxReloadPatient(e.data.id, e.data.name);
+    };
+  } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
 
   rxLockPatientFields();
 
