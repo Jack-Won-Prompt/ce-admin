@@ -44,6 +44,9 @@
   .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; }
   .ds-filter-card .ds-field-range .ce-date-wrap > input[data-ce-date] { padding-left: 8px; }
 
+  /* 단추 묶음은 둘째 줄에 남은 다섯 열을 받아 오른쪽 끝에 선다 */
+  .ds-filter-card .ds-filter-fields > .ds-filter-actions { grid-column: span 5; }
+
   /* 상세 내용 탭도 카드가 바닥까지 내려온다. 전에는 「내용만큼만」이라 카드가 185 에서
      끝나고 그 아래 999 가 회색으로 드러났다. 판이 남는 높이를 받고, 넘치면 스스로 굴린다. */
   .ds-grid-section.is-fit .ds-grid-card { flex:1 1 auto; }
@@ -275,7 +278,7 @@
     {{-- 사업부는 검색 칸에 두지 않는다(요청). 목록 맨 앞 칸에서 눈으로 가른다.
          거르는 길은 서버에 그대로 있어 ?care_type=IC 로 들어오면 걸린다. --}}
     {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">상병타입</label>
       <select name="sb_sci" class="form-control form-select">
         <option value="">전체</option>
@@ -285,7 +288,7 @@
     </div>
     {{-- 「아니오」는 「이어진 동의서가 없다」는 뜻이다. 개인정보 동의서는 밖에서 들어오는
          폼이라 이름ㆍ전화로 이어 두는데, 못 이은 것은 없는 것으로 보인다. --}}
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">개인정보 동의</label>
       <select name="privacy_consent" class="form-control form-select">
         <option value="">전체</option>
@@ -293,7 +296,7 @@
         <option value="n" @selected(request('privacy_consent') === 'n')>없음</option>
       </select>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
       <label class="ds-field-label">건보 위임장 동의</label>
       <select name="nhis_consent" class="form-control form-select">
         <option value="">전체</option>
@@ -304,7 +307,7 @@
     {{-- 재구매일 — 알약 셋 대신 고르는 칸 하나로 둔다. 알약은 누르는 즉시 화면이
          옮겨 가서, 옆의 다른 조건을 적어 두었어도 그것만으로 다시 찾아 왔다.
          이제 다른 칸과 함께 「검색」으로 걸린다. --}}
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field">
       <label class="ds-field-label">재구매일</label>
       <select name="repurchase_within" class="form-control form-select">
         <option value="">전체</option>
@@ -313,8 +316,10 @@
         @endforeach
       </select>
     </div>
-  </div>
-  <div class="ds-filter-actions">
+    {{-- 단추 묶음도 격자 안에 둔다. 밖에 두면 카드가 줄바꿈으로 배치하는 탓에
+         늘 셋째 줄로 접혔다 — 위의 고르는 칸 넷을 한 열씩으로 줄여 비운 다섯 열에
+         앉히면 찾는 자리가 두 줄로 끝난다. --}}
+    <div class="ds-filter-actions">
     {{-- 초기화 — 시안 114:4778 은 검색 왼쪽(x1773)에 늘 세워 둔다. 검색 조건이 있을 때만
          내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다. --}}
     <a href="{{ route('patients.index') }}" class="ds-btn">초기화</a>
@@ -327,6 +332,7 @@
     @perm('patients', 'create')
     <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">거래처 등록</button>
     @endperm
+    </div>
   </div>
 </form>
 
