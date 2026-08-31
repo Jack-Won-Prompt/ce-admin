@@ -1967,7 +1967,8 @@ class PrescriptionController extends Controller
             '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
-            '#{금액}'      => $order ? number_format(($order->patient_copay ?? 0) + ($order->shipping_fee ?? 0)) : '-',
+            // 배송비는 받을 돈에 넣지 않는다(요청서 3쪽 회신) — 본인부담금 그대로다
+            '#{금액}'      => $order ? number_format($order->expectedDeposit()) : '-',
             '#{본인부담금}'=> $order ? number_format($order->patient_copay ?? 0) : '-',
             '#{은행명}'    => $tp?->bank_name ?? '-',
             '#{계좌번호}'  => $tp?->account_number ?? '-',
@@ -2051,7 +2052,7 @@ class PrescriptionController extends Controller
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
             '#{본인부담금}'=> $itemCopay ? number_format($itemCopay) : '-',
-            '#{금액}'      => $itemCopay ? number_format($itemCopay + ($order->shipping_fee ?? 0)) : '-',
+            '#{금액}'      => $itemCopay ? number_format($itemCopay) : '-',
             '#{은행명}'    => $tp?->bank_name ?? '-',
             '#{계좌번호}'  => $tp?->account_number ?? '-',
             '#{기한}'      => $tp?->due_date?->format('Y-m-d H:i') ?? '-',

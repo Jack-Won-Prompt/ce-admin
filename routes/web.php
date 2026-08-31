@@ -240,6 +240,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settlement/orders/{order}/payment-status',          [SettlementController::class, 'checkPaymentStatus'])->name('settlement.check-status');
     /* 담당자가 통장을 보고 세우는 입금 확인 — 토스가 알려 주지 못하는 건을 위한 길 */
     Route::post('/settlement/orders/{order}/confirm-deposit',        [SettlementController::class, 'confirmDeposit'])->name('settlement.confirm-deposit');
+    // 정산 상태를 옮긴다 — 마감(셈을 닫음) → 확정(잠금). 요청서 12쪽
+    Route::patch('/settlement/orders/{order}/settle',                [SettlementController::class, 'settle'])->name('settlement.settle');
     Route::delete('/settlement/orders/{order}/confirm-deposit',      [SettlementController::class, 'revokeDeposit'])->name('settlement.revoke-deposit');
     /* 결제 방식 — 전화로 바꾸는 일이 잦아 목록에서 바로 고친다 */
     Route::post('/settlement/orders/{order}/pay-method',             [SettlementController::class, 'setPayMethod'])->name('settlement.pay-method');

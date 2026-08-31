@@ -156,6 +156,9 @@ class FinanceController extends Controller
             'approved'   => $agencyPaid,
             'agency_at'  => $o->nhis_approved_at?->format('Y-m-d') ?? '',
             'claim_state' => $o->claimStatusLabel(),
+            // 정산이 어디까지 갔는가(요청서 12쪽) — 마감 → 확정
+            'settle'     => $o->settleStatusLabel(),
+            'settle_reason' => $o->settle_reason ?? '',
             'note'       => $o->nhis_rejection_reason ?? '',
 
             // ── 미정산 ────────────────────────────────────
@@ -281,6 +284,7 @@ class FinanceController extends Controller
                 ['header' => '입금금액',   'name' => 'paid',      'width' => 110] + $money,
                 ['header' => '입금자명',   'name' => 'payer',     'width' => 100],
                 ['header' => '결제수단',   'name' => 'pay_method','width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => 'PG 사',      'name' => 'pg',        'width' => 110, 'align' => 'center'],
             ],
@@ -296,6 +300,7 @@ class FinanceController extends Controller
                 ['header' => '입금일자',   'name' => 'agency_at', 'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금금액',   'name' => 'approved',  'width' => 110] + $money,
                 ['header' => '청구상태',   'name' => 'claim_state','width' => 90, 'align' => 'center', 'sortable' => true],
+                ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '미정산금액', 'name' => 'unpaid',    'width' => 110] + $money,
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '비고',       'name' => 'note',      'width' => 200],
@@ -313,6 +318,9 @@ class FinanceController extends Controller
                 ['header' => '미정산금액',   'name' => 'unpaid',    'width' => 110] + $money,
                 ['header' => '미정산구분',   'name' => 'unpaid_of', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '경과일수',     'name' => 'aged',      'width' => 90,  'align' => 'right', 'sortable' => true],
+                // 조치상태 — 정산 상태가 그 자리다(요청서 12쪽의 마감ㆍ확정ㆍ반려ㆍ보류ㆍ취소)
+                ['header' => '조치상태',     'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
+                ['header' => '조치 사유',    'name' => 'settle_reason', 'width' => 200],
                 ['header' => '출고일자',     'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
             ],
 

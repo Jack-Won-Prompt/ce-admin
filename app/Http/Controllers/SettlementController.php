@@ -11,6 +11,7 @@ use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -41,7 +42,8 @@ class SettlementController extends Controller
             'nhis_amount'   => $base()->sum('nhis_amount'),
             'patient_copay' => $base()->sum('patient_copay'),
             'nhis_reimb'    => $base()->sum('nhis_reimbursement'),
-            'shipping_fee'  => $base()->sum('shipping_fee'),
+            // 배송비는 세지 않는다(요청서 3쪽 회신) — 칸도 셈도 걷었다
+            'shipping_fee'  => 0,
         ];
 
         $statusCounts = [
@@ -185,7 +187,6 @@ class SettlementController extends Controller
                 'nhis_amount'  => (int) ($order->nhis_amount ?? 0),
                 'unit_price'   => (int) ($order->unit_price ?? 0),
                 'copay'        => (int) ($order->patient_copay ?? 0),
-                'shipping'     => (int) ($order->shipping_fee ?? 0),
                 'va_state'     => $vaState,
                 /* 결제 방식 — 받은 뒤에야 말할 수 있다. 확인 전에는 「-」로 둔다. */
                 'pay_method'     => ($order->deposit_confirmed_at !== null || (bool) $tp?->is_done)
@@ -197,8 +198,14 @@ class SettlementController extends Controller
                 /* 「입금 확인」 단추가 무엇을 할지 가리는 데 쓴다(컬럼 아님) */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
-                'deposit_due'  => (int) ($order->patient_copay ?? 0) + (int) ($order->shipping_fee ?? 0),
+                // 배송비는 받을 돈으로 세지 않는다(요청서 3쪽 회신)
+                'deposit_due'  => $order->expectedDeposit(),
                 'status'       => $sl['label'],
+                'settle'       => $order->settleStatusLabel(),
+                /* 못 받은 채로 닫은 건은 이것이 없으면 나중에 다시 못 들춘다
+                   (요청서 12쪽 — 「입금 받지 못할 경우에도 마감 확정해야 하는 경우」) */
+                'settle_reason' => $order->settle_reason ?? '',
+                'settle_key'   => $order->settle_status,
                 /* 증빙 — 발행된 것만 눌러서 펼쳐 볼 수 있다. 칸에는 아무 글자도 두지
                    않는다(단추만 선다). 발행 여부와 승인번호는 단추가 읽는 값이다. */
                 'proof'        => '',
@@ -232,11 +239,13 @@ class SettlementController extends Controller
             ['header' => '유형',        'name' => 'acc_type',     'width' => 100, 'align' => 'center', 'sortable' => true],
             // 한 개 값이라 더하지 않는다 — 다 합쳐 봐야 아무 뜻이 없다
             ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
-            ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
             ['header' => '입금액',      'name' => 'deposit',      'width' => 100, 'align' => 'right'],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
             ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
+            // 정산이 어디까지 갔는가(요청서 12쪽) — 마감 → 확정
+            ['header' => '정산상태',    'name' => 'settle',       'width' => 90,  'align' => 'center', 'sortable' => true],
+            ['header' => '정산 사유',   'name' => 'settle_reason','width' => 200],
             ['header' => '접수일',      'name' => 'created',      'width' => 100, 'sortable' => true],
         ];
 
@@ -286,7 +295,8 @@ class SettlementController extends Controller
                 /* 아래 셋은 컬럼이 아니다 — 「입금 확인」 단추가 무엇을 할지 가린다 */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
-                'deposit_due'  => (int) ($order->patient_copay ?? 0) + (int) ($order->shipping_fee ?? 0),
+                // 배송비는 받을 돈으로 세지 않는다(요청서 3쪽 회신)
+                'deposit_due'  => $order->expectedDeposit(),
             ];
         })->values();
 
@@ -835,4 +845,63 @@ class SettlementController extends Controller
             return false;
         }
     }
+
+    /**
+     * 정산 상태를 옮긴다 (요청서 12쪽, 2026-08-31 회신 A).
+     *
+     * 마감은 셈을 닫는 것이고 확정은 잠그는 것이다. 확정된 건은 여기로 다시 들어오지
+     * 못한다 — 잠갔다는 말이 그 뜻이다. 되돌려야 할 일이 생기면 DB 를 고치는 것이 아니라
+     * 왜 되돌리는지를 사람이 남기고 손대야 한다.
+     *
+     * 못 받은 돈이 있어도 닫을 수 있다(요청서 12쪽 — 「입금 받지 못할 경우에도 마감
+     * 확정해야 하는 경우」). 그때는 사유를 받는다.
+     */
+    public function settle(Request $request, Order $order): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(array_keys(Order::SETTLE_STATUS_LABELS))],
+            'reason' => 'nullable|string|max:300',
+        ]);
+
+        if ($order->isSettleLocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => '확정된 건입니다 — 되돌리려면 관리자에게 요청하십시오.',
+            ], 409);
+        }
+
+        /* 받을 돈이 남았는데 닫으려 하면 까닭을 묻는다. 막지는 않는다 — 3PL 샘플로
+           입고 잡고 닫는 일이 실제로 있다(요청서 12쪽). 다만 말없이 닫히면 그 건은
+           나중에 아무도 못 찾는다. */
+        $left = $order->expectedDeposit() - (int) ($order->isDepositConfirmed()
+                    ? ($order->deposit_amount ?: $order->expectedDeposit()) : 0);
+
+        if (in_array($data['status'], ['closed', 'confirmed'], true)
+            && $left > 0 && blank($data['reason'])) {
+            return response()->json([
+                'success' => false,
+                'message' => '아직 ' . number_format($left) . '원이 남았습니다 — 닫는 까닭을 적어 주십시오.',
+            ], 422);
+        }
+
+        $order->update([
+            'settle_status'    => $data['status'],
+            'settle_status_at' => now(),
+            'settle_status_by' => Auth::id(),
+            'settle_reason'    => $data['reason'] ?: $order->settle_reason,
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('정산 상태: ' . $order->settleStatusLabel()
+                  . ($data['reason'] ? ' — ' . $data['reason'] : ''));
+
+        return response()->json([
+            'success' => true,
+            /* 「마감으로」와 「반려로」는 받침에 따라 조사가 갈린다. 「상태로」를 붙여
+               그 갈림을 없앤다 — 상태가 늘 수도 있는데 그때마다 조사를 따질 수 없다. */
+            'message' => $order->settleStatusLabel() . ' 상태로 옮겼습니다.',
+            'label'   => $order->settleStatusLabel(),
+        ]);
+    }
+
 }

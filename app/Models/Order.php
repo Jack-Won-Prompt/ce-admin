@@ -141,10 +141,16 @@ class Order extends Model
         return $this->deposit_confirmed_at !== null;
     }
 
-    /** 들어와야 하는 금액 — 본인부담금 + 배송비 */
+    /**
+     * 들어와야 하는 금액 — 본인부담금.
+     *
+     * 배송비는 세지 않는다(요청서 3쪽, 2026-08-31 회신). 2026-08-24 부터 받지 않기로
+     * 했고, 그 전 스물여섯 건에 3,000원이 적혀 있다. 그것까지 받을 돈으로 세면 이미
+     * 끝난 건이 영영 「3,000원 모자람」으로 남는다.
+     */
     public function expectedDeposit(): int
     {
-        return (int) ($this->patient_copay ?? 0) + (int) ($this->shipping_fee ?? 0);
+        return (int) ($this->patient_copay ?? 0);
     }
 
     protected $fillable = [
@@ -158,6 +164,8 @@ class Order extends Model
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
         'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at', 'nhis_reject_stage',
+        // 정산이 어디까지 갔는가(요청서 12쪽)
+        'settle_status', 'settle_status_at', 'settle_status_by', 'settle_reason',
         'nhis_reimbursement', 'latest_fax_log_id', 'nhis_rejection_reason',
         // 세금계산서
         'tax_invoice_status', 'tax_invoice_no', 'tax_invoice_type',
@@ -196,6 +204,7 @@ class Order extends Model
         'withworks_ship_at'         => 'datetime',
         'shipped_at'                => 'date',
         'closing_checked_at'        => 'datetime',
+        'settle_status_at'          => 'datetime',
         'unit_price'          => 'float',
         'nhis_amount'         => 'float',
         'patient_copay'       => 'float',
@@ -288,6 +297,36 @@ class Order extends Model
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);
+    }
+
+    /**
+     * 정산이 어디까지 갔는가 (요청서 12쪽, 2026-08-31 회신 A).
+     *
+     * 「마감」은 셈을 닫은 것이고 「확정」은 그 뒤 되돌릴 수 없게 잠근 것이다.
+     * 둘을 가르는 까닭 — 닫고 나서도 며칠은 고칠 일이 생긴다. 잠그는 것을 따로 두지
+     * 않으면 담당자가 닫기를 미루게 되고, 그러면 어디까지 봤는지가 영영 안 남는다.
+     */
+    public const SETTLE_STATUS_LABELS = [
+        'open'      => '진행중',
+        'closed'    => '마감',
+        'confirmed' => '확정',
+        'rejected'  => '반려',
+        'on_hold'   => '보류',
+        'cancelled' => '취소',
+    ];
+
+    /** 확정은 끝이다 — 여기서 다른 데로 가지 않는다 */
+    public const SETTLE_LOCKED = 'confirmed';
+
+    public function settleStatusLabel(): string
+    {
+        return self::SETTLE_STATUS_LABELS[$this->settle_status] ?? (string) $this->settle_status;
+    }
+
+    /** 잠긴 건인가 — 잠긴 것은 금액도 상태도 손대지 않는다 */
+    public function isSettleLocked(): bool
+    {
+        return $this->settle_status === self::SETTLE_LOCKED;
     }
 
     /**
@@ -415,6 +454,13 @@ class Order extends Model
     public function closingChecker(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'closing_checked_by');
+    }
+
+
+    /** 정산 상태를 마지막으로 옮긴 사람 */
+    public function settleBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'settle_status_by');
     }
 
 }

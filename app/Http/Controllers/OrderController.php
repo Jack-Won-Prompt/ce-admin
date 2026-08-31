@@ -134,6 +134,20 @@ class OrderController extends Controller
             'closing_checked_by' => $checked ? ($order->closing_checked_by ?? Auth::id()) : null,
         ]);
 
+        /* 마감 체크는 정산 상태의 「마감」과 같은 말이다(요청서 6쪽과 12쪽이 각각 적어
+           왔지만 가리키는 것이 하나다). 두 곳에 따로 두면 한쪽만 눌린 건이 생기고,
+           그때 「마감 몇 건」이 화면마다 달라진다.
+
+           확정된 건은 건드리지 않는다 — 잠갔다는 말이 그 뜻이다. 체크를 풀어도 진행중으로
+           되돌리지 않는다: 마감을 무르는 일은 정산/회계에서 까닭을 남기고 한다. */
+        if ($checked && !$order->isSettleLocked() && $order->settle_status === 'open') {
+            $order->update([
+                'settle_status'    => 'closed',
+                'settle_status_at' => now(),
+                'settle_status_by' => Auth::id(),
+            ]);
+        }
+
         return back()->with('success', 'Operation 정보를 적었습니다.');
     }
 

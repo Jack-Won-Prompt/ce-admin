@@ -832,6 +832,76 @@
 
   GRID_COLS.forEach(c => { if (c.name === 'proof') c.renderer = proofCell; });
 
+  /* 정산 상태 — 눌러서 옮긴다(요청서 12쪽). 마감은 셈을 닫는 것이고 확정은 잠그는
+     것이라, 확정된 건은 더 누를 것이 없다. */
+  const SETTLE = @json(\App\Models\Order::SETTLE_STATUS_LABELS);
+  const SETTLE_TONE = { open:'', closed:'var(--primary)', confirmed:'var(--success)',
+                        rejected:'var(--danger)', on_hold:'var(--warning)', cancelled:'var(--text-muted)' };
+
+  function settleCell(v, row) {
+    const wrap = document.createElement('div');
+    const tag = document.createElement('span');
+    tag.textContent = v || '';
+    tag.style.cssText = 'font-weight:700;font-size:12px;color:' + (SETTLE_TONE[row.settle_key] || 'var(--text-secondary)');
+
+    if (row.settle_key === 'confirmed') { wrap.appendChild(tag); return wrap; }
+
+    const sel = document.createElement('select');
+    sel.className = 'form-control';
+    sel.style.cssText = 'height:26px;font-size:11px;padding:0 4px;min-width:78px;';
+    Object.entries(SETTLE).forEach(([k, label]) => {
+      const o = document.createElement('option');
+      o.value = k; o.textContent = label; o.selected = k === row.settle_key;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('click', (e) => e.stopPropagation());
+    sel.addEventListener('change', () => settleMove(row, sel.value, sel));
+    wrap.appendChild(sel);
+    return wrap;
+  }
+  GRID_COLS.forEach(c => { if (c.name === 'settle') c.renderer = settleCell; });
+
+  async function settleMove(row, status, sel) {
+    /* 확정은 되돌릴 수 없다 — 누르기 전에 한 번 묻는다. 그 밖의 상태는 다시 옮길 수
+       있으므로 묻지 않는다. */
+    if (status === 'confirmed'
+        && !confirm(`${row.order_no} 을(를) 확정합니다. 확정하면 되돌릴 수 없습니다. 계속할까요?`)) {
+      sel.value = row.settle_key; return;
+    }
+
+    let reason = null;
+
+    const send = async (r) => {
+      const res = await fetch(`${BASE_URL}/settlement/orders/${row.id}/settle`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: JSON.stringify({ status, reason: r }),
+      });
+      return [res.status, await res.json()];
+    };
+
+    try {
+      let [code, d] = await send(reason);
+
+      /* 받을 돈이 남았는데 닫으려 하면 서버가 까닭을 묻는다. 막는 것이 아니라
+         적어 달라는 것이라(3PL 샘플로 입고 잡고 닫는 일이 있다), 그 자리에서 받는다. */
+      if (code === 422) {
+        reason = prompt(d.message + '\n\n까닭:');
+        if (!reason) { sel.value = row.settle_key; return; }
+        [code, d] = await send(reason);
+      }
+
+      showToast(d.message || (d.success ? '옮겼습니다.' : '옮기지 못했습니다.'),
+                d.success ? 'success' : 'danger');
+      if (d.success) setTimeout(() => location.reload(), 600);
+      else sel.value = row.settle_key;
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+      sel.value = row.settle_key;
+    }
+  }
+
   /* ── 결제 방식 — 고르는 순간이 곧 입금 확인이다 ──────────────
      입금이 확인되기 전에는 「무엇으로 받았는가」를 말할 수 없다. 그래서 칸은 「-」로
      비어 있고, 통장ㆍ단말을 보고 방식을 고르는 순간 그 건은 받은 것이 된다.
