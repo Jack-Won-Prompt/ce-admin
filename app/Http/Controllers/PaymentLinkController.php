@@ -138,7 +138,7 @@ class PaymentLinkController extends Controller
     {
         $va = $res['virtualAccount'] ?? null;
 
-        TossPayment::updateOrCreate(
+        $tp = TossPayment::updateOrCreate(
             ['payment_key' => $res['paymentKey'] ?? $link->payment_key],
             [
                 'order_id'       => $link->order_id,
@@ -154,6 +154,14 @@ class PaymentLinkController extends Controller
                 'raw_response'   => $res,
             ],
         );
+
+        /* 가상계좌를 고른 사람에게는 계좌를 문자로 한 번 더 적어 보낸다.
+           이 화면을 닫으면 계좌를 다시 볼 곳이 우리 쪽에 없어, 담당자에게 전화해
+           다시 묻는 일이 잦았다.
+           방금 처음 담긴 때만 보낸다 — 이 자리는 새로고침으로 두 번 들어올 수 있다. */
+        if ($va && $tp->wasRecentlyCreated) {
+            app(\App\Services\PaymentLinkService::class)->sendVirtualAccount($link, $va);
+        }
     }
 
     private function row(PaymentLink $l): array

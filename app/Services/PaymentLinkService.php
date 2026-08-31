@@ -105,6 +105,83 @@ class PaymentLinkService
              . "링크는 " . self::VALID_DAYS . "일간 열려 있습니다.";
     }
 
+    /**
+     * 발급된 가상계좌를 문자로 적어 보낸다.
+     *
+     * 링크페이는 토스 결제창을 여는 것이라 고객이 그 안에서 카드ㆍ가상계좌를 고른다.
+     * 가상계좌를 고르면 은행ㆍ계좌번호ㆍ기한이 완료 화면에 뜨지만, 그 화면을 닫으면
+     * 우리 쪽에는 다시 볼 곳이 없다 — 고객은 담당자에게 전화해 계좌를 다시 물었다.
+     *
+     * 못 보내도 결제 자체는 이미 선 것이라 막지 않는다 — 적어만 두고 지나간다.
+     *
+     * @param array $va 토스 승인 응답의 virtualAccount
+     * @return array{sent: bool, channel: ?string, message: string}
+     */
+    public function sendVirtualAccount(PaymentLink $link, array $va): array
+    {
+        $order = $link->order;
+        $mobile = $this->digits($link->receiver ?: ($order?->patient?->mobile ?? ''));
+
+        if (!$order || !$mobile) {
+            return ['sent' => false, 'channel' => null, 'message' => '받는 번호가 없습니다.'];
+        }
+
+        $account = trim((string) ($va['accountNumber'] ?? ''));
+        if ($account === '') {
+            return ['sent' => false, 'channel' => null, 'message' => '계좌번호가 없습니다.'];
+        }
+
+        $text = $this->composeVirtualAccount($link, $va);
+
+        $channels = $this->alimtalkTemplate() ? ['alimtalk', 'sms'] : ['sms'];
+        $last = null;
+
+        foreach ($channels as $channel) {
+            $res = $this->send($channel, $order, $mobile, $text);
+            if ($res['success'] ?? false) {
+                return ['sent' => true, 'channel' => $channel, 'message' => '보냈습니다.'];
+            }
+            $last = $res['message'] ?? null;
+        }
+
+        Log::warning('[결제전송] 가상계좌 안내를 보내지 못했다',
+                     ['link' => $link->id, 'error' => $last]);
+
+        return ['sent' => false, 'channel' => null, 'message' => $last ?? '보내지 못했습니다.'];
+    }
+
+    /** 계좌 안내에 적을 말 — 어디로 얼마를 언제까지, 그 셋이면 된다 */
+    public function composeVirtualAccount(PaymentLink $link, array $va): string
+    {
+        $name   = $link->order?->patient?->name ?? '고객';
+        $amount = number_format($link->amount);
+
+        /* 은행은 코드로 온다(IBK · 003). 사람이 읽을 이름으로 바꾼다 — 코드만 적어
+           보내면 어느 은행 앱을 열어야 할지 알 수 없다. */
+        $code = $va['bankCode'] ?? $va['bank'] ?? '';
+        $bank = \App\Services\TossPayments\TossClient::BANK_NAMES[$code] ?? ($code ?: '');
+
+        $holder = trim((string) ($va['customerName'] ?? ''));
+
+        $lines = [
+            '[' . $this->company() . '] ' . $name . '님, 입금하실 계좌입니다.',
+            trim($bank . ' ' . $va['accountNumber']),
+        ];
+
+        if ($holder !== '') $lines[] = '예금주 ' . $holder;
+
+        $lines[] = '금액 ' . $amount . '원';
+
+        /* 기한이 지나면 그 계좌로 넣어도 들어가지 않는다 — 반드시 적는다 */
+        if (!empty($va['dueDate'])) {
+            try {
+                $lines[] = '입금 기한 ' . \Illuminate\Support\Carbon::parse($va['dueDate'])->format('Y-m-d H:i');
+            } catch (\Throwable) { /* 꼴이 뜻밖이면 적지 않는다 */ }
+        }
+
+        return implode("\n", $lines);
+    }
+
     /** 낸 것으로 표시한다 — 토스가 확인해 준 뒤에만 부른다 */
     public function markPaid(PaymentLink $link, string $paymentKey, ?string $tossOrderId = null): void
     {
