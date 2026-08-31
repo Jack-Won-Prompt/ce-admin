@@ -86,7 +86,9 @@
       </div>
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
-          <label class="form-label">주민등록번호</label>
+          {{-- 처방 서류는 이 번호로 공단에 청구한다. 이름만 적어 두면 결국 누군가
+               다시 열어 채워야 하므로 여기서 받는다. --}}
+          <label class="form-label">주민등록번호 <span>*</span></label>
           <input type="text" class="form-control" id="add-resident" placeholder="XXXXXX-XXXXXXX" />
         </div>
         <div class="form-group">
@@ -427,6 +429,22 @@
     window.addEventListener('resize', () => { if (pop.classList.contains('show')) peClamp(pop); });
   })();
 
+  /* 주민번호에도 붙임표를 놓는다 — 열세 자리가 붙어 나오면 앞뒤를 눈으로 센다.
+     가린 값(900101-1******)이 서 있을 때는 손대지 않는다: 별표를 숫자로 세어 자르면
+     가린 것이 무너져 「고쳤다」로 읽힌다. */
+  (function () {
+    const el = document.getElementById('add-resident');
+    if (!el) return;
+    el.addEventListener('input', function () {
+      if (el.value.includes('*')) return;
+      const pos = el.selectionStart, prev = el.value;
+      const d = el.value.replace(/\D/g, '').slice(0, 13);
+      el.value = d.length <= 6 ? d : d.slice(0, 6) + '-' + d.slice(6);
+      const diff = el.value.length - prev.length;
+      try { el.setSelectionRange(pos + diff, pos + diff); } catch (e) {}
+    });
+  })();
+
   /* 창은 하나를 돌려 쓴다 — 지난번에 적은 것이 남아 있으면 새 사람에 그것이 붙는다 */
   function peClear() {
     document.querySelectorAll('#addModal input, #addModal textarea').forEach(el => { el.value = ''; });
@@ -454,8 +472,25 @@
   }
 
   window.savePatient = async function () {
-    const name = document.getElementById('add-name').value.trim();
-    if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
+    const nameEl = document.getElementById('add-name');
+    const rnEl   = document.getElementById('add-resident');
+    const name   = nameEl.value.trim();
+
+    if (!name) { showToast('이름은 필수입니다.', 'warning'); nameEl.focus(); return; }
+
+    /* 주민번호도 필수다. 다만 고칠 때는 가린 것(900101-1******)이 서 있고 그것이
+       「이미 적혀 있다」는 뜻이라 그대로 통과시킨다 — 원문은 내주지 않으므로
+       열세 자리를 다시 치라고 할 수 없다. 새로 친 것만 자릿수를 따진다. */
+    const rnRaw    = rnEl.value.trim();
+    const 가린것   = rnEl.dataset.masked || '';
+    const 그대로면 = 가린것 !== '' && rnRaw === 가린것;
+
+    if (!rnRaw) { showToast('주민등록번호는 필수입니다.', 'warning'); rnEl.focus(); return; }
+    if (!그대로면 && rnRaw.replace(/\D/g, '').length !== 13) {
+      showToast('주민등록번호 열세 자리를 적어 주십시오.', 'warning');
+      rnEl.focus();
+      return;
+    }
 
     const btn = document.getElementById('btn-add-save');
     BtnState.loading(btn, '저장 중...');
@@ -464,10 +499,7 @@
       name,
       care_type:           document.getElementById('add-care-type').value            || null,
       // 가린 것 그대로면 「고치지 않았다」 — 보내지 않으면 서버가 건드리지 않는다
-      resident_no:         (function (el) {
-                             const v = el.value.trim();
-                             return (v === '' || v === el.dataset.masked) ? undefined : v;
-                           })(document.getElementById('add-resident')),
+      resident_no:         그대로면 ? undefined : rnRaw,
       birth_date:          document.getElementById('add-birth').value               || null,
       gender:              document.getElementById('add-gender').value               || null,
       mobile:              document.getElementById('add-mobile').value.trim()        || null,
