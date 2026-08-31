@@ -651,6 +651,26 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       { header: '세액',              name: 'tax',    width: 90,  editor: 'number' },
       { header: '유형',              name: 'type',   width: 70,  align: 'center', sortable: true },
       { header: '상태',              name: 'status', width: 90,  align: 'center', sortable: true },
+
+      /* 팝빌이 주는 나머지 (요청서 6쪽). 예전에는 일곱만 세워, 승인번호나 언제
+         발행됐는지를 보려면 팝빌 사이트를 따로 열어야 했다. */
+      { header: '합계금액',   name: 'total',      width: 110, align: 'right', editor: 'number' },
+      { header: '발행일시',   name: 'issuedAt',   width: 140, sortable: true },
+      { header: '상태일시',   name: 'stateAt',    width: 140, sortable: true },
+      { header: '승인번호',   name: 'ntsNo',      width: 150 },
+      { header: '공급자',     name: 'seller',     width: 150 },
+      { header: '공급자 대표', name: 'sellerCeo', width: 100 },
+      { header: '공급받는자 사업자번호', name: 'buyerBizNo', width: 130 },
+      { header: '공급받는자 대표', name: 'buyerCeo', width: 100 },
+      { header: '발행형태',   name: 'issueType',  width: 90,  align: 'center' },
+      { header: '영수/청구',  name: 'purpose',    width: 90,  align: 'center' },
+      { header: '연동관리번호', name: 'mgtKeyCol', width: 170 },
+      { header: '동기화',     name: 'syncedAt',   width: 140 },
+
+      /* 네 화면이 함께 쓰던 칸 — 주문에 이어진 줄에만 값이 선다(요청서 3ㆍ6쪽).
+         팝빌에서 직접 발행해 이을 주문이 없는 줄은 빈칸이고, 그 빈칸이 곧 그 말이다. */
+      ...ceMoneyCols(),
+      ...ceWwCols(),
     ],
     data: [],
   });
@@ -898,12 +918,17 @@ async function loadHistory(page = 1) {
       return;
     }
 
+    /* 팝빌은 날짜를 붙여 쓴 숫자로 준다(20260814161906). 사람이 읽는 모양으로 펴 준다 —
+       그대로 세우면 정렬은 되지만 눈으로 훑을 수가 없다. */
+    const ymdt = (v) => String(v ?? '').replace(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1-$2-$3 $4:$5');
+
     const rows = list.map(r => {
       const wDate  = (r.writeDate ?? '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
       const supply = parseInt(r.supplyCostTotal ?? 0);
       const tax    = parseInt(r.taxTotal ?? 0);
       if (r.record_type === 'prescription') {
         return {
+          ...r,
           date: wDate, mgt: (r.rx_number ?? '—'), buyer: (r.invoiceeCorpName ?? '—'),
           supply, tax, type: '처방전',
           status: (r.rx_status === 'ordered' ? '주문완료' : '검수완료'),
@@ -915,8 +940,27 @@ async function loadHistory(page = 1) {
       const ttTxt = { ValueAdded:'과세', ZeroTax:'영세', FreeTax:'면세' }[r.taxType] ?? '—';
       const mgtKey = r.invoicerMgtKey ?? r.invoiceeMgtKey ?? r.trusteeMgtKey ?? '';
       return {
+        /* 서버가 주문을 타고 실어 보낸 공통 칸을 먼저 편다. 아래에서 같은 이름을 다시
+           적으면 그것이 이긴다 — 화면이 다듬은 값이 원본보다 뒤에 와야 한다. */
+        ...r,
+
         date: wDate, mgt: (mgtKey || '—'), buyer: (r.invoiceeCorpName ?? '—'),
         supply, tax, type: ttTxt, status: sTxt,
+
+        // 팝빌이 주는 나머지 (요청서 6쪽)
+        total:      parseInt(r.totalAmount ?? 0),
+        issuedAt:   ymdt(r.issueDT),
+        stateAt:    ymdt(r.stateDT),
+        ntsNo:      r.ntsconfirmNum ?? '',
+        seller:     r.invoicerCorpName ?? '',
+        sellerCeo:  r.invoicerCeoName ?? '',
+        buyerBizNo: r.invoiceeCorpNum ?? '',
+        buyerCeo:   r.invoiceeCeoName ?? '',
+        issueType:  r.issueType ?? '',
+        purpose:    ({ Receipt:'영수', Charge:'청구' }[r.purposeType] ?? r.purposeType ?? ''),
+        mgtKeyCol:  mgtKey,
+        syncedAt:   r.syncedAt ?? '',
+
         record_type: 'tax', mgtKey, canCancel: sc !== 500,
       };
     });

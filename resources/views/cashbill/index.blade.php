@@ -259,12 +259,23 @@
       </div>
     </div>
     <div class="ds-filter-field">
-      <label class="ds-field-label">거래 유형</label>
+      {{-- 값에서 「거래」를 뗐으므로 거르는 칸도 그렇게 적는다(요청서 6쪽) --}}
+      <label class="ds-field-label">거래구분</label>
       <select id="f-trade-type" class="form-control form-select">
-        <option value="">전체 유형</option>
-        <option value="승인거래">승인거래</option>
-        <option value="취소거래">취소거래</option>
+        <option value="">전체</option>
+        <option value="승인거래">승인</option>
+        <option value="취소거래">취소</option>
       </select>
+    </div>
+    {{-- 요청서 6쪽 — 현금영수증은 휴대폰번호와 신분확인번호로 찾는다.
+         둘 다 부분검색이다. 앞자리만 기억하는 일이 잦다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">휴대폰번호</label>
+      <input type="text" id="f-hp" class="form-control" placeholder="숫자만" inputmode="numeric">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">신분확인번호</label>
+      <input type="text" id="f-identity" class="form-control" placeholder="주민번호ㆍ휴대폰" inputmode="numeric">
     </div>
   </div>
   <div class="ds-filter-actions">
@@ -510,11 +521,47 @@
       { header: '거래 일시', name: 'tradeDt',  width: 150, sortable: true },
       { header: '번호',     name: 'num',       width: 170 },
       { header: '고객명',   name: 'customer',  width: 110, sortable: true },
+      /* 취소 건은 금액을 마이너스로 세운다(요청서 6쪽). 합계가 그만큼 깎여야 이 표만
+         보고도 이 기간에 얼마가 남았는지 읽힌다. */
       { header: '합계금액', name: 'amount',    width: 110, editor: 'number' },
-      { header: '유형',     name: 'tradeType', width: 80,  align: 'center', sortable: true },
+      // 「유형」이 아니라 「거래구분」이고, 값에서 「거래」는 뗀다 — 승인ㆍ취소만 남는다
+      { header: '거래구분', name: 'tradeType', width: 90,  align: 'center', sortable: true },
       { header: '용도',     name: 'usage',     width: 90,  align: 'center', sortable: true },
       { header: '국세청',   name: 'nts',       width: 80,  align: 'center' },
       { header: '출처',     name: 'source',    width: 80,  align: 'center', sortable: true },
+
+      /* 팝빌이 주는 나머지 (요청서 6쪽).
+         예전에는 스물몇 가운데 여덟만 세웠다. 전송 결과나 취소 사유를 보려면 팝빌
+         사이트를 따로 열어야 했다. 팝빌에 없는 칸(팩스번호ㆍ추가공제ㆍ거래방법ㆍ
+         비고ㆍ인쇄여부)은 세우지 않는다 — 빈 칸은 「아직 안 받아 왔나」로 읽힌다. */
+      { header: '작성일자',     name: 'writeDate',    width: 100, align: 'center', sortable: true },
+      { header: '발행일자',     name: 'issueDate',    width: 100, align: 'center', sortable: true },
+      { header: '품목명',       name: 'itemName',     width: 160 },
+      { header: '신분확인번호', name: 'identityNum',  width: 130 },
+      { header: '휴대폰번호',   name: 'hp',           width: 130 },
+      { header: '이메일',       name: 'email',        width: 180 },
+      { header: '공급가액',     name: 'supplyCost',   width: 110, align: 'right', editor: 'number' },
+      { header: '세액',         name: 'taxAmount',    width: 90,  align: 'right', editor: 'number' },
+      { header: '봉사료',       name: 'serviceFee',   width: 90,  align: 'right', editor: 'number' },
+      { header: '과세형태',     name: 'taxationType', width: 90,  align: 'center', sortable: true },
+      { header: '승인번호',     name: 'confirmNum',   width: 130 },
+      // 취소 건이 가리키는 원본 — 무엇을 물렸는지는 이 둘로 찾는다
+      { header: '원본 승인번호', name: 'orgConfirmNum', width: 130 },
+      { header: '원본 거래일자', name: 'orgTradeDate',  width: 110, align: 'center' },
+      { header: '상태',         name: 'stateLabel',   width: 90,  align: 'center', sortable: true },
+      // 취소 사유가 여기 실려 온다
+      { header: '취소 사유',    name: 'stateMemo',    width: 200 },
+      { header: '전송결과',     name: 'ntsMessage',   width: 160 },
+      { header: '전송일시',     name: 'ntsSendDt',    width: 140, sortable: true },
+      { header: '전송결과일시', name: 'ntsResultDt',  width: 140, sortable: true },
+      { header: '연동관리번호', name: 'mgtKeyCol',    width: 170 },
+      { header: '가맹점',       name: 'franchise',    width: 160 },
+      { header: '동기화',       name: 'syncedAt',     width: 140 },
+
+      /* 네 화면이 함께 쓰던 칸 — 주문에 이어진 줄에만 값이 선다(요청서 3ㆍ6쪽).
+         팝빌에서 직접 발행해 이을 주문이 없는 줄은 빈칸이고, 그 빈칸이 곧 그 말이다. */
+      ...ceMoneyCols(),
+      ...ceWwCols(),
     ],
     data: [],
   });
@@ -685,6 +732,13 @@ async function loadHistory(page = 1) {
   try {
     // 팝빌 현금영수증 (DB 기반, 전체 조회 후 클라이언트 페이지네이션)
     let popbillUrl = `${CB_BASE}/search?corp_num=${cn}&start_date=${sd}&end_date=${ed}&per_page=500&order=D`;
+
+    /* 요청서 6쪽의 두 가지. 숫자만 남겨 보낸다 — 붙임표를 넣고 치는 사람이 있는데
+       팝빌이 준 값에는 붙임표가 없다. */
+    const digits = (id) => (document.getElementById(id)?.value ?? '').replace(/\D/g, '');
+    const hp = digits('f-hp'), idn = digits('f-identity');
+    if (hp)  popbillUrl += `&hp=${hp}`;
+    if (idn) popbillUrl += `&identity_num=${idn}`;
     if (tradeType) popbillUrl += `&trade_type=${encodeURIComponent(tradeType)}`;
 
     // 처방전 현금영수증 (orders 테이블)
@@ -757,20 +811,61 @@ function renderHistPage(page) {
     return;
   }
 
+  /* 팝빌은 날짜를 붙여 쓴 숫자로 준다(20260814 · 20260814161906). 사람이 읽는 모양으로
+     펴 준다 — 그대로 세우면 정렬은 되지만 눈으로 훑을 수가 없다. */
+  const ymd  = (v) => String(v ?? '').replace(/^(\d{4})(\d{2})(\d{2}).*$/, '$1-$2-$3');
+  const ymdt = (v) => String(v ?? '').replace(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1-$2-$3 $4:$5');
+  const STATE = { 1:'등록', 2:'발행예정', 3:'발행완료', 4:'발행취소', 5:'발행실패', 6:'폐기' };
+
   const rows = slice.map(r => {
-    const tradeDt = (r.tradeDT ?? r.issueDT ?? '').replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5');
-    const ntsTxt  = r._source === 'order' ? '바로빌' : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
-    const amount  = parseInt(r.totalAmount ?? 0);
+    const tradeDt = ymdt(r.tradeDT ?? r.issueDT ?? '');
+    const ntsTxt  = r._source === 'order' ? '처방전 발행' : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
+    /* 취소는 금액을 마이너스로 세운다(요청서 6쪽). 팝빌은 취소 건도 양수로 주므로
+       여기서 부호를 뒤집는다 — 그래야 합계가 이 기간에 남은 금액이 된다. */
+    const isCancel = String(r.tradeType ?? '').includes('취소') || r.status === 'cancelled';
+    const amount   = (isCancel ? -1 : 1) * parseInt(r.totalAmount ?? r.amount ?? 0);
     const num     = r._source === 'order'
       ? ((r.orderNumber ?? '') + (r.rxNumber ? ' / ' + r.rxNumber : ''))
       : (r.mgtKey ?? '—');
     const source  = r._source === 'order' ? '처방전' : '팝빌';
+    // 값에서 「거래」를 뗀다 — 승인ㆍ취소만 남는다(요청서 6쪽)
+    const kind  = String(r.tradeType ?? (r.status === 'cancelled' ? '취소' : '승인')).replace('거래', '') || '—';
+    const usage = String(r.tradeUsage ?? r.receiptTypeLabel ?? '—').replace('거래', '');
+
     return {
+      /* 서버가 주문을 타고 실어 보낸 공통 칸을 먼저 편다. 아래에서 같은 이름을 다시
+         적으면 그것이 이긴다 — 화면이 다듬은 값이 원본보다 뒤에 와야 한다. */
+      ...r,
+
       // 표시 필드
-      tradeDt, num, customer: (r.customerName ?? '—'), amount,
-      tradeType: (r.tradeType ?? '—'), usage: (r.tradeUsage ?? '—'), nts: ntsTxt, source,
+      tradeDt, num, customer: (r.customerName ?? r.patientName ?? '—'), amount,
+      tradeType: kind, usage, nts: ntsTxt, source,
+
+      // 팝빌이 주는 나머지 (요청서 6쪽)
+      writeDate:   ymd(r.tradeDate ?? r.tradeDT ?? ''),
+      issueDate:   ymd(r.issueDT ?? r.issuedAt ?? ''),
+      itemName:    r.itemName ?? '',
+      identityNum: r.identityNum ?? r.identifier ?? '',
+      hp:          r.hp ?? '',
+      email:       r.email ?? '',
+      supplyCost:  parseInt(r.supplyCost ?? 0) || '',
+      taxAmount:   parseInt(r.tax ?? 0) || '',
+      serviceFee:  parseInt(r.serviceFee ?? 0) || '',
+      taxationType: r.taxationType ?? '',
+      confirmNum:  r.confirmNum ?? r.receiptNo ?? '',
+      orgConfirmNum: r.orgConfirmNum ?? '',
+      orgTradeDate:  ymd(r.orgTradeDate ?? ''),
+      stateLabel:  STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : ''),
+      stateMemo:   r.stateMemo ?? '',
+      ntsMessage:  r.ntsresultMessage ?? '',
+      ntsSendDt:   ymdt(r.ntsSendDT ?? ''),
+      ntsResultDt: ymdt(r.ntsresultDT ?? ''),
+      mgtKeyCol:   r.mgtKey ?? '',
+      franchise:   r.franchiseCorpName ?? '',
+      syncedAt:    r.syncedAt ?? '',
+
       // 액션용 숨김 필드
-      _source: r._source, mgtKey: (r.mgtKey ?? ''), confirmNum: (r.confirmNum ?? ''),
+      _source: r._source, mgtKey: (r.mgtKey ?? ''),
       rxNumber: (r.rxNumber ?? ''), cancelDate: (r.tradeDT ?? r.issueDT ?? '').slice(0,8),
     };
   });

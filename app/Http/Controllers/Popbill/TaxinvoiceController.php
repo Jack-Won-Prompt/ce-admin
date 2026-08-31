@@ -159,7 +159,15 @@ class TaxinvoiceController extends Controller
 
         $this->applyFilters($tiQuery, $request);
 
-        $tiRecords = $tiQuery->orderByDesc('write_date')->orderByDesc('id')->get()
+        /* 발행 건이 어느 주문의 것인지는 order_id 가 안다(요청서 6쪽 · 관리번호에 심어
+           둔 주문 id 를 읽어 둔 칸이다). 그 주문을 타고 가면 네 화면이 함께 쓰는 칸을
+           여기서도 세울 수 있다 — 처방 유형ㆍ청구전략ㆍ자격ㆍ관할 청구처가 그것이다. */
+        $tiRows = $tiQuery->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots'])
+            ->orderByDesc('write_date')->orderByDesc('id')->get();
+
+        $tiExtras = \App\Support\OrderGridExtras::forPatients($tiRows->pluck('order.patient_id'));
+
+        $tiRecords = $tiRows
             ->map(fn($r) => [
                 'record_type'     => 'taxinvoice',
                 'sort_date'       => $r->write_date,
@@ -181,7 +189,23 @@ class TaxinvoiceController extends Controller
                 'taxTotal'        => (string) $r->tax_total,
                 'totalAmount'     => (string) $r->total_amount,
                 'ntsconfirmNum'   => $r->nts_confirm_num,
-            ]);
+
+                // 팝빌이 주는 나머지 (요청서 6쪽)
+                'invoicerCeoName' => $r->invoicer_ceo_name,
+                'invoiceeCeoName' => $r->invoicee_ceo_name,
+                'stateDT'         => $r->state_dt,
+                'isFinal'         => (bool) $r->is_final,
+                'syncedAt'        => $r->synced_at?->toDateTimeString(),
+
+                // 우리 주문을 타고 온 것
+                'orderNumber'     => $r->order?->order_number,
+                'rxNumber'        => $r->order?->prescription?->rx_number,
+                'patientName'     => $r->order?->patient?->name,
+            ] + ($r->order
+                    ? $tiExtras->rx($r->order->prescription, $r->order->patient)
+                      + $tiExtras->ww($r->order, $r->order->prescription, $r->order->patient)
+                      + $tiExtras->of($r->order)
+                    : []));
 
         // ── 3. 처방전 확인·주문완료 내역 ───────────────────────────
         $startDT = \Carbon\Carbon::createFromFormat('Ymd', $startDate)->startOfDay();

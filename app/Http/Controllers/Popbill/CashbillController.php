@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Popbill;
 use App\Http\Controllers\Controller;
 use App\Models\CashbillRecord;
 use App\Models\Order;
+use App\Support\OrderGridExtras;
 use App\Services\Popbill\CashbillService;
 use App\Services\Popbill\CashbillSyncService;
 use Illuminate\Http\JsonResponse;
@@ -78,15 +79,22 @@ class CashbillController extends Controller
 
         $this->applyFilters($query, $request);
 
-        $total   = $query->count();
-        $records = $query->forPage($page, $perPage)->get();
+        $total = $query->count();
+
+        /* 발행 건이 어느 주문의 것인지는 order_id 가 안다(요청서 6쪽). 그 주문을 타고
+           가면 네 화면이 함께 쓰는 칸을 여기서도 세울 수 있다 — 처방 유형ㆍ청구전략ㆍ
+           자격ㆍ관할 청구처가 그것이다. */
+        $records = $query->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots'])
+                         ->forPage($page, $perPage)->get();
+
+        $extras = OrderGridExtras::forPatients($records->pluck('order.patient_id'));
 
         return response()->json([
             'total'     => $total,
             'perPage'   => $perPage,
             'pageNum'   => $page,
             'pageCount' => (int) ceil($total / $perPage),
-            'list'      => $records->map(fn(CashbillRecord $r) => $this->toListItem($r)),
+            'list'      => $records->map(fn (CashbillRecord $r) => $this->toListItem($r, $extras)),
         ]);
     }
 
@@ -233,13 +241,16 @@ class CashbillController extends Controller
         $start = \Carbon\Carbon::createFromFormat('Ymd', $request->query('start_date'))->startOfDay();
         $end   = \Carbon\Carbon::createFromFormat('Ymd', $request->query('end_date'))->endOfDay();
 
-        $orders = Order::with(['patient', 'prescription'])
+        $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots'])
             ->whereIn('cash_receipt_status', ['issued', 'cancelled'])
             ->whereBetween('cash_receipt_issued_at', [$start, $end])
             ->orderByDesc('cash_receipt_issued_at')
             ->get();
 
-        $list = $orders->map(fn(Order $o) => [
+        // 팝빌 쪽 줄과 같은 칸을 세운다 — 한 표에 섞여 서므로 이름이 갈리면 안 된다
+        $extras = OrderGridExtras::forPatients($orders->pluck('patient_id'));
+
+        $list = $orders->map(fn (Order $o) => [
             'source'           => 'order',
             'orderId'          => $o->id,
             'orderNumber'      => $o->order_number,
@@ -253,7 +264,9 @@ class CashbillController extends Controller
             'status'           => $o->cash_receipt_status,
             'issuedAt'         => $o->cash_receipt_issued_at?->format('YmdHis'),
             'cancelledAt'      => $o->cash_receipt_cancelled_at?->format('YmdHis'),
-        ]);
+        ] + $extras->rx($o->prescription, $o->patient)
+          + $extras->ww($o, $o->prescription, $o->patient)
+          + $extras->of($o));
 
         return response()->json(['total' => $orders->count(), 'list' => $list]);
     }
@@ -284,6 +297,11 @@ class CashbillController extends Controller
         // 주민번호 — 휴대폰번호가 들어간 건이 섞여 있어 부분검색으로 둔다
         if ($v = preg_replace('/\D/', '', (string) $request->query('identity_num'))) {
             $query->where('identity_num', 'like', "%{$v}%");
+        }
+
+        // 휴대폰번호(요청서 6쪽). 앞자리만 기억하는 일이 잦아 부분검색이다.
+        if ($v = preg_replace('/\D/', '', (string) $request->query('hp'))) {
+            $query->where('hp', 'like', "%{$v}%");
         }
 
         if ($v = trim((string) $request->query('confirm_num'))) {
@@ -324,12 +342,27 @@ class CashbillController extends Controller
         }
     }
 
-    private function toListItem(CashbillRecord $r): array
+    /**
+     * 팝빌이 주는 칸을 남김없이 내준다 (요청서 6쪽, 2026-08-31).
+     *
+     * 예전에는 스물몇 가운데 스물을 버리고 여덟만 내줬다. 그래서 담당자가 전송 결과나
+     * 취소 사유를 보려면 팝빌 사이트를 따로 열어야 했다.
+     *
+     * 팝빌에 없는 칸(팩스번호ㆍ추가공제ㆍ거래방법ㆍ비고ㆍ인쇄여부)은 세우지 않는다 —
+     * 빈 칸을 만들어 두면 「아직 안 받아 왔나」 하고 되묻게 된다.
+     */
+    private function toListItem(CashbillRecord $r, ?OrderGridExtras $extras = null): array
     {
+        $o = $r->order;
+
         return [
+            // ── 팝빌이 주는 그대로 ────────────────────────────
             'mgtKey'       => $r->mgt_key,
+            'itemKey'      => $r->item_key,
             'tradeDT'      => $r->trade_dt,
             'tradeDate'    => $r->trade_date,
+            'issueDT'      => $r->issue_dt,
+            'regDT'        => $r->reg_dt,
             'tradeType'    => $r->trade_type,
             'tradeUsage'   => $r->trade_usage,
             'taxationType' => $r->taxation_type,
@@ -339,15 +372,36 @@ class CashbillController extends Controller
             'serviceFee'   => $r->service_fee,
             'customerName' => $r->customer_name,
             'itemName'     => $r->item_name,
-            'confirmNum'   => $r->confirm_num,
-            'orderNumber'  => $r->order_number,
             'identityNum'  => $r->identity_num,
+            'hp'           => $r->hp,
+            'email'        => $r->email,
+            'confirmNum'   => $r->confirm_num,
+            // 취소 건이 가리키는 원본 — 무엇을 물렸는지는 이 둘로 찾는다
+            'orgConfirmNum' => $r->org_confirm_num,
+            'orgTradeDate'  => $r->org_trade_date,
             'stateCode'    => $r->state_code,
+            'stateDT'      => $r->state_dt,
+            // 취소 사유가 여기 실려 온다
+            'stateMemo'    => $r->state_memo,
             'ntsresult'    => $r->nts_result,
             'ntsresultDT'  => $r->nts_result_dt,
-            'issueDT'      => $r->issue_dt,
+            'ntsresultCode'    => $r->nts_result_code,
+            'ntsresultMessage' => $r->nts_result_message,
+            'ntsSendDT'    => $r->nts_send_dt,
+            // 가맹점 — 우리가 아니라 남의 것으로 발행한 건이 섞여 있다
+            'franchiseCorpNum'  => $r->franchise_corp_num,
+            'franchiseCorpName' => $r->franchise_corp_name,
+            'orderNumber'  => $r->order_number,
             'syncedAt'     => $r->synced_at?->toDateTimeString(),
-        ];
+
+            // ── 우리 주문을 타고 온 칸 ────────────────────────
+            'rxNumber'     => $o?->prescription?->rx_number,
+            'patientName'  => $o?->patient?->name,
+        ] + ($extras && $o
+                ? $extras->rx($o->prescription, $o->patient)
+                  + $extras->ww($o, $o->prescription, $o->patient)
+                  + $extras->of($o)
+                : []);
     }
 
     private function toDetailItem(CashbillRecord $r): array
