@@ -151,6 +151,14 @@ return [
             'routes'  => ['deposits'],
             'actions' => ['view', 'update'],
         ],
+        /* 토스페이먼츠를 거친 결제(요청서 7쪽). 입금 내역과 다른 것을 본다 —
+           그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. */
+        'payments' => [
+            'label'   => 'PG 결제',
+            'group'   => 'billing',
+            'routes'  => ['payments'],
+            'actions' => ['view'],
+        ],
         'nhis' => [
             'label'   => '청구 관리',
             'group'   => 'billing',

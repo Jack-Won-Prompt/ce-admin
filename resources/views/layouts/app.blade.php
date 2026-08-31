@@ -1514,20 +1514,24 @@
         @endif
 
         {{-- ══ 청구 · 회계 ══ --}}
-        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits'))
+        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits', 'payments'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
+        {{-- 차례는 요청서 7쪽이 정한 것이다 — 입금 내역ㆍ현금영수증ㆍ전자세금계산서ㆍ
+             PG 결제ㆍ청구 관리ㆍ정산/회계. 돈이 들어오는 쪽에서 시작해 정산으로 끝난다. --}}
         {{-- 통장에 무엇이 들어왔는가(요청서 5쪽). 정산/회계와 따로 둔다 —
              그쪽은 「얼마를 받아야 하는가」이고 이쪽은 「무엇이 들어왔는가」다. --}}
         @if($vis('deposits'))
         <div class="menu-item {{ request()->routeIs('deposits*') ? 'active' : '' }}">
           {{-- 아이콘은 아직 「입금」 그림이 없다. 돈이 오가는 그림 가운데 안 쓰는 것을
                빌린다 — 없는 이름을 부르면 점선 네모가 선다(DsIcon). --}}
-          <a class="menu-link" data-icon="coin-hand" href="{{ route('deposits.index') }}" data-title="입금 내역">
-            @dsicon('coin-hand', 'ds-icon menu-icon')
+          {{-- 청구 관리도 coin-hand 를 쓴다. 한 묶음에 나란히 서면 갈리지 않아
+               「돈을 보낸다」 쪽 그림으로 바꾼다 — 아직 「입금」 그림이 없다. --}}
+          <a class="menu-link" data-icon="send-money" href="{{ route('deposits.index') }}" data-title="입금 내역">
+            @dsicon('send-money', 'ds-icon menu-icon')
             <span>입금 내역</span>
             @php
               try {
@@ -1538,27 +1542,14 @@
           </a>
         </div>
         @endif
-        @if($vis('settlement'))
-        <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
-            @dsicon('calculator', 'ds-icon menu-icon')
-            <span>정산/회계</span>
-            @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
-            @if($unpaidCount > 0)
-              <span class="menu-badge">{{ $unpaidCount }}</span>
-            @endif
-          </a>
-        </div>
-        @endif
-        @if($vis('nhis'))
-        <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="청구 관리">
-            @dsicon('coin-hand', 'ds-icon menu-icon')
-            <span>청구 관리</span>
-            @php $nhisCount = \App\Models\Order::where('nhis_claim_status','pending')->whereIn('status',['delivered','shipping','confirmed'])->count(); @endphp
-            @if($nhisCount > 0)
-              <span class="menu-badge">{{ $nhisCount }}</span>
-            @endif
+        {{-- 전자세금계산서는 메뉴에 두지 않는다. 발행과 취소는 「계산서 발행」 화면에서
+             주문을 보며 하고, 이 화면은 팝빌 목록을 그대로 비추던 자리였다.
+             화면과 경로는 남아 있어 주소로는 열린다. --}}
+        @if($vis('cashbill'))
+        <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
+            @dsicon('cash', 'ds-icon menu-icon')
+            <span>현금영수증</span>
           </a>
         </div>
         @endif
@@ -1567,9 +1558,9 @@
              찾으러 갈 곳이 둘일 까닭이 없다. --}}
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">
+          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="전자세금계산서">
             @dsicon('receipt', 'ds-icon menu-icon')
-            <span>계산서 발행</span>
+            <span>전자세금계산서</span>
             @php
               try {
                 $invoiceCount = \Illuminate\Support\Facades\Schema::hasColumn('orders','tax_invoice_status')
@@ -1585,14 +1576,38 @@
           </a>
         </div>
         @endif
-        {{-- 전자세금계산서는 메뉴에 두지 않는다. 발행과 취소는 「계산서 발행」 화면에서
-             주문을 보며 하고, 이 화면은 팝빌 목록을 그대로 비추던 자리였다.
-             화면과 경로는 남아 있어 주소로는 열린다. --}}
-        @if($vis('cashbill'))
-        <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
+        {{-- PG 결제 — 토스페이먼츠(요청서 7쪽). 입금 내역과 다른 것을 본다:
+             그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. 가상계좌로 받은 돈은
+             둘 다에 나타나는데, 어긋나면 그것이 곧 봐야 할 일이다. --}}
+        @if($vis('payments'))
+        <div class="menu-item {{ request()->routeIs('payments*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="cash" href="{{ route('payments.index') }}" data-title="PG 결제">
             @dsicon('cash', 'ds-icon menu-icon')
-            <span>현금영수증</span>
+            <span>PG 결제</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('nhis'))
+        <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="청구 관리">
+            @dsicon('coin-hand', 'ds-icon menu-icon')
+            <span>청구 관리</span>
+            @php $nhisCount = \App\Models\Order::where('nhis_claim_status','pending')->whereIn('status',['delivered','shipping','confirmed'])->count(); @endphp
+            @if($nhisCount > 0)
+              <span class="menu-badge">{{ $nhisCount }}</span>
+            @endif
+          </a>
+        </div>
+        @endif
+        @if($vis('settlement'))
+        <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
+            @dsicon('calculator', 'ds-icon menu-icon')
+            <span>정산/회계</span>
+            @php $unpaidCount = \App\Models\TossPayment::where('status','WAITING')->count(); @endphp
+            @if($unpaidCount > 0)
+              <span class="menu-badge">{{ $unpaidCount }}</span>
+            @endif
           </a>
         </div>
         @endif

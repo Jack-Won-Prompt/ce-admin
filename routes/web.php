@@ -149,6 +149,9 @@ Route::middleware(['auth'])->group(function () {
     // 재구매 관리
     /* 교환·반품·취소 — 주문을 무르거나 바꾸는 일. 지금까지는 주문 상태만 cancelled 로
        바뀌고 왜·무엇이 오갔는지는 남지 않았다. */
+    // PG 결제 — 토스페이먼츠를 거친 결제(요청서 7쪽)
+    Route::get('/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('payments.index');
+
     /* 입금 내역 — 통장에 무엇이 들어왔는가(요청서 5쪽). 정산/회계와 따로 둔다.
        그쪽은 「얼마를 받아야 하는가」이고 이쪽은 「무엇이 들어왔는가」다. */
     Route::prefix('deposits')->name('deposits.')->group(function () {
