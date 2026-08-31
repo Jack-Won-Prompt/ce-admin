@@ -33,6 +33,15 @@
   /* 주소는 네 칸을 쓴다 — 우편번호·도로명·찾기·상세가 한 줄에 들어가야 한다 */
   .info-row.wide { grid-column:span 4; }
   @media(max-width:1200px) { .info-row.wide { grid-column:span 2; } }
+  /* 이름이 긴 칸은 두 칸을 쓴다. 라벨은 줄지 않으므로(nowrap) 길면 길수록 값이
+     설 자리를 먹는다 — 「기초(의료급여) 재평가 기한」은 라벨만 139 이라 한 칸(246)에서
+     값에게 99 밖에 남지 않았고, 날짜칸은 YYYY-MM-DD 와 달력 단추를 넣는 데 150 이
+     필요해 적는 족족 글자가 잘렸다. 짝지어 쓰는 줄은 둘을 함께 넘겨 나란히 선다. */
+  .info-row.w2 { grid-column:span 2; }
+  /* 두 칸을 받았다고 칸까지 두 배로 늘이지는 않는다 — 날짜나 예/아니오를 받는
+     칸이 혼자 길면 옆 줄과 밑선이 안 맞아 줄마다 길이가 다른 표처럼 보인다. */
+  .info-row.w2 .info-value .form-control { max-width:240px; }
+  @media(max-width:700px) { .info-row.w2 { grid-column:auto; } }
   /* 글자 값(13/500 · lh21 · gray-700)은 전역을 그대로 쓴다. 여기서는 줄에서 자리를
      잡는 것만 정한다 — 라벨은 줄지 않고 줄바꿈도 하지 않는다. */
   .info-label { flex-shrink:0; white-space:nowrap; margin-bottom:0; }
@@ -435,7 +444,7 @@
                      value="{{ $patient->nhis_renew_due }}" data-orig="{{ $patient->nhis_renew_due }}" />
             </span>
           </div>
-          <div class="info-row">
+          <div class="info-row w2">
             <span class="info-label">건보위임동의 시작일</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->nhis_agree_start ?: '-' }}</span>
@@ -443,7 +452,7 @@
                      value="{{ $patient->nhis_agree_start }}" data-orig="{{ $patient->nhis_agree_start }}" />
             </span>
           </div>
-          <div class="info-row">
+          <div class="info-row w2">
             <span class="info-label">건보위임동의 종료일</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->nhis_agree_end ?: '-' }}</span>
@@ -451,7 +460,7 @@
                      value="{{ $patient->nhis_agree_end }}" data-orig="{{ $patient->nhis_agree_end }}" />
             </span>
           </div>
-          <div class="info-row">
+          <div class="info-row w2">
             <span class="info-label">기초(의료급여) 재평가 대상자</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->basic_reeval ?: '-' }}</span>
@@ -463,7 +472,7 @@
               </select>
             </span>
           </div>
-          <div class="info-row">
+          <div class="info-row w2">
             <span class="info-label">기초(의료급여) 재평가 기한</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->basic_reeval_due ?: '-' }}</span>
