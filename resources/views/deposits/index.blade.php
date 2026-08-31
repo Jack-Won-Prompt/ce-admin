@@ -22,19 +22,7 @@
 
 @section('content')
 
-@if(!$configured)
-  {{-- 계좌가 팝빌에 등록되기 전에는 긁어 올 것이 없다. 빈 화면만 보이면 고장으로 읽힌다. --}}
-  <div class="ds-filter-card" style="border-color:var(--warning-light);background:var(--warning-light);margin-bottom:12px;">
-    <div style="font-size:13px;color:var(--warning);font-weight:600;">
-      <i class="bx bx-info-circle"></i>
-      계좌조회 설정이 아직 없습니다 — 팝빌에 계좌를 등록하고
-      <code>BANK_ACCOUNT_BANK_CODE</code>ㆍ<code>BANK_ACCOUNT_NUMBER</code> 를 적어 주십시오.
-    </div>
-  </div>
-@endif
-
-{{-- 거르는 줄은 하나다. 이 화면이 묻는 것은 「언제」와 「누구」 둘뿐이라
-     두 줄을 쓸 까닭이 없다. --}}
+{{-- 검색 조건은 한 줄이다. 이 화면이 묻는 것은 기간과 대상 둘뿐이다. --}}
 <form method="GET" class="ds-filter-card">
   <input type="hidden" name="tab" value="{{ $tab }}">
   <div class="ds-filter-fields">
@@ -220,7 +208,7 @@
                                kind: TAB === 'agency' ? 'agency' : 'copay' }),
       });
       const d = await res.json();
-      showToast(d.message || (d.success ? '이었습니다.' : '잇지 못했습니다.'),
+      showToast(d.message || (d.success ? '연결했습니다.' : '연결하지 못했습니다.'),
                 d.success ? 'success' : 'danger');
       if (d.success) setTimeout(() => location.reload(), 600);
     } catch (e) {
@@ -246,7 +234,7 @@
   }
 
   async function closeAll(row) {
-    if (!confirm(`이 입금에 걸린 ${row.closable}건을 마감합니다. 계속할까요?`)) return;
+    if (!confirm(`이 입금에 연결된 ${row.closable}건을 마감합니다. 계속할까요?`)) return;
 
     try {
       const res = await fetch(`${BASE}/${row.id}/close`, {

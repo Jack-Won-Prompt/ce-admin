@@ -316,7 +316,7 @@ async function boSave() {
 
 async function boDelete() {
   if (!boEditId) return;
-  const ok = await ceConfirm('이 청구처를 지웁니다. 관할로 적어 둔 읍ㆍ면ㆍ동도 함께 사라집니다.',
+  const ok = await ceConfirm('이 청구처를 지웁니다. 관할로 등록된 읍ㆍ면ㆍ동도 함께 삭제됩니다.',
     { title: '청구처 삭제', confirmText: '삭제', tone: 'danger' });
   if (!ok) return;
 

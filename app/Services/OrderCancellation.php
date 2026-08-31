@@ -49,7 +49,7 @@ class OrderCancellation
 
         if ($out['warnings']) {
             activity()->performedOn($order)->log(
-                '취소 뒤처리에 사람 손이 필요합니다 — ' . implode(' / ', $out['warnings'])
+                '취소 후처리에 수동 조치가 필요합니다 — ' . implode(' / ', $out['warnings'])
             );
         }
 

@@ -203,8 +203,6 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 /* ── 내역 패널 ── */
 /* 패널 제목 — 섹션 제목 14/700. 카드 껍데기(.hist-card/.hist-head/.hist-filter/.hist-body)는
    표준 .ds-filter-card · .ds-grid-bar · .ds-grid-card 로 바뀌어 규칙이 남아 있을 자리가 없다. */
-.hist-head-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-800); }
-.hist-head-title i { font-size:16px; color:var(--primary); }
 /* 관리번호 자동생성 버튼이 계속 쓴다 — 시안 69×32 · r8 · pad 0/12 · bd 1px #E8EAEC · bg #FFFFFF · 13/500 #101317 */
 .btn-search { height:32px; padding:0 12px; background:var(--gray-0); color:var(--gray-1000); border:1px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:500; line-height:21px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; flex-shrink:0; }
 .btn-search:hover { background:var(--gray-50); }
@@ -317,8 +315,6 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
   {{-- ── 발행 내역 — 검색 카드와 결과바는 그리드 카드 바깥·탭바 위다(시안 324:1720) ── --}}
   <div class="ti-panel" data-titab="hist">
-
-    <div class="hist-head-title"><i class="bx bx-list-ul"></i> 발행 내역</div>
 
     {{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
          GET 폼이 아니라 loadHistory() 가 읽어 가는 입력이라 <form> 으로 감싸지 않는다. --}}

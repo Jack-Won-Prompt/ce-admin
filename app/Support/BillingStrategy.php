@@ -140,6 +140,49 @@ class BillingStrategy
         return $out;
     }
 
+    /**
+     * 그 서류를 내야 하는 주문만 남긴다.
+     *
+     * 「누가 내는가」로 이미 표(resolve)가 갈라 놓았다 — 기관이 내면 세금계산서로,
+     * 개인이 전액을 내면 현금영수증으로 간다. 그 결과를 SQL 에 다시 적으면 두 벌이
+     * 되어 한쪽만 고치는 날이 오므로, 여기서 표를 읽어 자격 값을 뽑아 건다.
+     *
+     * 유형ㆍ자격이 비어 있는 건은 어느 쪽에도 걸리지 않는다. 전략이 「미선택」이라
+     * 무엇을 낼지 아직 정해지지 않은 건이고, 그런 건을 발행 대기에 세우면 담당자가
+     * 낼 수 없는 것을 붙들고 있게 된다.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query  Order 질의
+     * @param  'cash_receipt'|'tax_invoice'           $document
+     */
+    public static function targets($query, string $document)
+    {
+        $classes = [];
+        foreach (self::CLASSES as $class) {
+            if ((int) (self::resolve(self::TYPE_OUT, $class)[$document] ?? 0) > 0) {
+                $classes[] = $class;
+            }
+        }
+        $nonRx = (int) (self::resolve(self::TYPE_NONRX, null)[$document] ?? 0) > 0;
+
+        return $query->whereHas('prescription', function ($p) use ($nonRx, $classes) {
+            $p->where(function ($x) use ($nonRx, $classes) {
+                if ($nonRx) {
+                    $x->orWhere('counsel_acc_add_type', self::TYPE_NONRX);
+                }
+                if ($classes) {
+                    /* 처방외를 뺀 나머지가 자격으로 갈린다. NULL 은 !== 로 걸러지지
+                       않으므로 유형이 비어 있는 건도 여기서 함께 빠진다 — 그래도 된다.
+                       유형이 없으면 전략도 없다. */
+                    $x->orWhere(fn ($y) => $y->where('counsel_acc_add_type', '!=', self::TYPE_NONRX)
+                                             ->whereIn('benefit_class', $classes));
+                }
+                if (!$nonRx && ! $classes) {
+                    $x->whereRaw('1 = 0');
+                }
+            });
+        });
+    }
+
     private static function row(string $label, int $self, string $payer, int $payerRate,
                                 ?int $cash, ?int $tax, bool $pending, string $note): array
     {

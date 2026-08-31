@@ -727,7 +727,7 @@ class SettlementController extends Controller
                 if ($body['success'] ?? false) {
                     $done[] = $what;
                 } else {
-                    $failed[] = $what . '는 취소하지 못했습니다(' . ($body['message'] ?? '까닭 없음') . ')';
+                    $failed[] = $what . '는 취소하지 못했습니다(' . ($body['message'] ?? '사유 없음') . ')';
                 }
             } catch (\Throwable $e) {
                 Log::warning('[입금 확인 취소] ' . $what . ' 취소 실패', [
@@ -880,7 +880,7 @@ class SettlementController extends Controller
             && $left > 0 && blank($data['reason'])) {
             return response()->json([
                 'success' => false,
-                'message' => '아직 ' . number_format($left) . '원이 남았습니다 — 닫는 까닭을 적어 주십시오.',
+                'message' => '아직 ' . number_format($left) . '원이 남았습니다 — 마감 사유를 입력해 주십시오.',
             ], 422);
         }
 

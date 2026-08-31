@@ -46,7 +46,7 @@
   <div class="rto-sec">
     <div class="rto-sec-hd">
       <span class="step">1</span> 원 주문 찾기
-      <span class="hint" id="rtoPickedNote">환자나 주문번호로 찾아 고르십시오</span>
+      <span class="hint" id="rtoPickedNote">환자명 또는 주문번호로 조회해 선택해 주십시오</span>
     </div>
 
     <div class="rto-filter">
@@ -130,7 +130,7 @@
         <div style="padding:8px 12px;background:var(--primary-light);border:1px solid var(--primary-200);
                     border-radius:8px;font-size:12px;color:var(--primary);">
           아직 나가지 않은 주문입니다 — 창고에는 <b>판매주문 취소</b>로 넘어갑니다.
-          되돌려 받을 물건이 없어 수거·검수 단계를 두지 않습니다.
+          반품 받을 제품이 없어 수거·검수 단계를 두지 않습니다.
           발행된 계산서·현금영수증이 있으면 함께 취소하고, 청구 대상에서도 뺍니다.
         </div>
       </div>
@@ -399,11 +399,11 @@
     exchange_defect: '3PL 이 회수하고 택배비도 <b>3PL 이 뭅니다</b>. '
       + '<b>동일 제품만</b> 바꿔 드리고, 불량 lot 은 빼고 출고합니다. '
       + '최초 일자 기준으로 청구하며 재결제는 하지 않습니다. '
-      + '회수·교환 기간에 쓸 제품은 따로 보냅니다.',
-    return_refund: '물건을 받아 검수한 뒤 결제를 취소하고 마이너스로 발행합니다.',
+      + '회수·교환 기간에 사용할 제품은 별도로 발송합니다.',
+    return_refund: '제품을 회수해 검수한 뒤 결제를 취소하고 마이너스로 발행합니다.',
     cancel_before_ship: '아직 나가지 않은 주문입니다 — 수거·검수가 없습니다.',
-    refund_only: '되돌려 받을 물건이 없습니다. 창고에는 알리지 않고, '
-      + '승인·결제취소 뒤 <b>전산판매(금액조정)</b> 주문을 세웁니다.',
+    refund_only: '반품 받을 제품이 없습니다. 창고에는 알리지 않고, '
+      + '승인·결제취소 뒤 <b>전산판매(금액조정)</b> 주문을 생성합니다.',
   };
 
   function syncNote() {
@@ -440,7 +440,7 @@
   /* 그리드는 폼 칸이 아니다 — 보낼 때 숨은 칸으로 옮겨 싣는다.
      되돌릴 수량이 0 인 줄은 빼고, 하나도 남지 않으면 접수를 막는다. */
   $('rtoForm').addEventListener('submit', (e) => {
-    if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 고르십시오.'); return; }
+    if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 선택해 주십시오.'); return; }
 
     document.querySelectorAll('.rto-item-field').forEach(el => el.remove());
 
@@ -448,7 +448,7 @@
 
     if (!rows.length) {
       e.preventDefault();
-      alert('되돌릴 수량이 하나도 없습니다. 「되돌릴 수량」을 적으십시오.');
+      alert('반품 수량이 입력되지 않았습니다. 「반품 수량」을 입력해 주십시오.');
       return;
     }
 

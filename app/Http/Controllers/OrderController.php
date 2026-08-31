@@ -208,7 +208,7 @@ class OrderController extends Controller
         if (collect($request->input('items', []))->filter(fn ($i) => ! empty($i['product_name']))->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => '주문할 제품이 없습니다. 제품을 먼저 고른 뒤에 주문을 만들어 주십시오.',
+                'message' => '주문할 제품이 없습니다. 제품을 먼저 선택한 뒤 주문을 생성해 주십시오.',
             ], 422);
         }
 
@@ -838,7 +838,7 @@ class OrderController extends Controller
         }
 
         if ($rows->isNotEmpty()) {
-            Log::info('[증빙 취소] 서류를 걷었다', [
+            Log::info('[증빙 취소] 첨부 서류 삭제', [
                 'order' => $order->order_number, 'type' => $type, 'count' => $rows->count(),
             ]);
         }

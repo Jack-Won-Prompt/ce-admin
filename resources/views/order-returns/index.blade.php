@@ -8,7 +8,7 @@
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 소개</div>
-  <div class="help-tip"><i class="bx bx-info-circle"></i>배송된 물건을 바꾸거나 돌려받고, 출고 전 주문을 무르는 자리입니다.</div>
+  <div class="help-tip"><i class="bx bx-info-circle"></i>배송된 제품의 교환ㆍ반품과 출고 전 주문 취소를 처리하는 화면입니다.</div>
 </div>
 <div class="help-section">
   <div class="help-section-title">사유별 단계 (Unicorn 교환·반품 절차)</div>
@@ -23,7 +23,7 @@
   <div class="help-section-title">기한</div>
   <div class="help-tip"><i class="bx bx-time"></i>창고 입고일로부터 검수 {{ config('returns.inspect_days') }}영업일 ·
     출고(반품은 발행) {{ config('returns.ship_days') }}영업일입니다. 넘긴 건은 목록에 붉게 뜹니다.
-    쉬는 날은 설정 › 서비스 설정 › 교환·반품에서 고칩니다.</div>
+    휴무일은 설정 › 서비스 설정 › 교환·반품에서 변경합니다.</div>
 </div>
 <div class="help-section">
   <div class="help-section-title">전자 승인</div>

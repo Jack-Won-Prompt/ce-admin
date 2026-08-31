@@ -181,7 +181,7 @@
 </div>
 
 <div class="rt-card">
-  <div class="rt-hd">환불 처리 자취</div>
+  <div class="rt-hd">환불 처리 이력</div>
   <form method="POST" action="{{ route('order-returns.update', $r) }}" class="rt-refund rt-bd">
     @csrf @method('PATCH')
     <div class="rt-rf"><label>카드사</label>
@@ -249,7 +249,7 @@
       {{-- 기한은 창고 입고일부터 센다. 접수일부터 세면 고객이 늦게 보낸 날까지
            창고가 뒤집어쓴다. --}}
       <div class="rt-kv"><span>창고 입고</span><span>
-        {{ $r->arrived_at?->format('Y-m-d H:i') ?? '아직 — 「검수중」으로 옮기면 그때가 입고일이 됩니다' }}
+        {{ $r->arrived_at?->format('Y-m-d H:i') ?? '미입고 — 「검수중」으로 변경하는 시점이 입고일이 됩니다' }}
       </span></div>
       @if($r->arrived_at)
         <div class="rt-kv"><span>검수 기한</span><span>
@@ -289,7 +289,7 @@
       <form method="POST" action="{{ route('order-returns.advance', $r) }}" class="rt-go">
         @csrf
         <input type="text" name="reason" class="form-control" maxlength="500"
-               placeholder="옮기는 까닭 (남겨 두면 나중에 판단이 쉽습니다)">
+               placeholder="변경 사유 (선택 · 이력에 남습니다)">
         @foreach($nexts as $st)
           @php $locked = \App\Models\OrderReturn::needsApproval($st) && !$canApprove; @endphp
           <button type="submit" name="to_status" value="{{ $st }}"
@@ -317,7 +317,7 @@
 {{-- 되돌리는 품목 — 부분 취소면 몇 개 가운데 몇 개인지가 여기서 보인다 --}}
 @if($r->items->isNotEmpty())
 <div class="rt-card">
-  <div class="rt-hd">되돌리는 품목 <span class="grow"></span>
+  <div class="rt-hd">반품 품목 <span class="grow"></span>
     <span style="font-size:11px;font-weight:500;color:var(--text-muted);">
       {{ $r->is_partial ? '부분 — 기관 청구 서류는 최종 청구분에 반영합니다' : '전체' }}
     </span>
@@ -404,7 +404,7 @@
     @elseif($r->sentToWithworks())
       {{-- 출고 전 취소는 반품 주문을 세우지 않는다 — 원 주문을 취소한다 --}}
       <div class="rt-kv"><span>처리</span><span>
-        원 판매주문을 취소했습니다 — 되돌릴 물건이 없어 새 주문을 세우지 않습니다
+        원 판매주문을 취소했습니다 — 반품 제품이 없어 반품 주문을 생성하지 않습니다
       </span></div>
     @else
       <div class="rt-kv"><span>전달</span><span style="color:#B54708;font-weight:600;">

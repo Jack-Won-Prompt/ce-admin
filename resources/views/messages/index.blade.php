@@ -509,7 +509,7 @@
     // 이 대화상자는 글자를 그대로 보여준다(태그를 쓰지 않는다). 줄바꿈으로 나눈다.
     const what = channel === 'sms' ? '문자' : '알림톡';
     const ok = await ceConfirm(
-      `${scope === 'all' ? '조건에 걸린 전체' : '선택한'} ${n.toLocaleString()}곳에 ${what}를 보냅니다.\n`
+      `${scope === 'all' ? '조건에 해당하는 전체' : '선택한'} ${n.toLocaleString()}곳에 ${what}를 보냅니다.\n`
       + '실제로 발송되며 되돌릴 수 없습니다.',
       { title: `${what} 발송`, confirmText: '발송', tone: 'danger' }
     );

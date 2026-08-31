@@ -73,7 +73,7 @@ class DepositAutoIssue
            여기서 물러나도 잃는 것은 없다 — 창고가 출고를 알려 올 때 다시 부른다
            (WithworksSync::apply). */
         if (!$order->isShipped()) {
-            $out['skipped'][] = '아직 출고 전 — 출고되면 그때 냅니다';
+            $out['skipped'][] = '아직 출고 전 — 출고 후 자동 발행됩니다';
 
             return $out;
         }

@@ -42,7 +42,7 @@
       <div class="rt-row">
         <label>주문</label>
         <select name="order_id" id="rt-order" class="form-control form-select" required>
-          <option value="">주문을 고르십시오</option>
+          <option value="">주문을 선택해 주십시오</option>
           @foreach($orders as $o)
             <option value="{{ $o->id }}" @selected(old('order_id', $order?->id) == $o->id)
                     data-amount="{{ (int) $o->total_amount }}"

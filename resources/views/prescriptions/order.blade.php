@@ -1509,7 +1509,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      담당자가 해 줄 수 없는데, 고르면 환자에게는 그렇게 약속이 나갔다. --}}
                 @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
                   @php
-                    $hint = ['card' => '결제 페이지 주소를 보내면 고객이 거기서 카드로 냅니다',
+                    $hint = ['card' => '결제 페이지 주소를 보내면 고객이 카드로 결제합니다',
                              'bank' => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code];
                   @endphp
                   <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
@@ -2056,7 +2056,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 같은 사람이 같은 것을 다시 사는 일이 잦다. 보고 있는 건을 그대로 베껴
                새 번호로 세운다 — 날짜만 비운다(그 건에만 속한 사실이라). --}}
           <button type="button" id="btnDuplicate" class="tb-act" onclick="duplicateRx()"
-                  title="보고 있는 건을 그대로 베껴 새 번호로 만듭니다 (날짜는 비웁니다)">최종 신규 복제</button>
+                  title="현재 건을 복사해 새 번호로 생성합니다 (날짜는 초기화됩니다)">최종 신규 복제</button>
           {{-- 되돌리기·검수 요청·검수 완료·저장은 시안(148:2639)대로 구획 머리(지금은 탭줄)에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
@@ -2207,7 +2207,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 고치는 자리는 거래처관리 하나다(요청서 1쪽). 여기서 막아만 두면
                      「어디서 고치느냐」를 매번 묻게 되므로, 그 자리로 가는 길을 함께 둔다. --}}
                 <button type="button" class="rx-acc-btn rx-acc-btn-sep" id="btnGoMaster" onclick="goPatientMaster()"
-                        title="거래처관리에서 이 사람의 정보를 고칩니다">
+                        title="거래처관리에서 이 환자의 정보를 수정합니다">
                   <i class="fa-solid fa-address-card"></i> 거래처 수정
                 </button>
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
@@ -2234,7 +2234,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      내주었지만(요청서 10쪽), 그 단추가 유일한 길이라 함께 없애면
                      적어 둔 메모를 다시 볼 방법이 사라진다. --}}
                 <button type="button" class="rx-acc-btn" id="memoPanelToggleBtn"
-                        onclick="toggleMemoPanel(event)" title="이 건에 적어 둔 메모를 봅니다"
+                        onclick="toggleMemoPanel(event)" title="이 건에 등록된 메모를 봅니다"
                         style="position:relative;">메모
                   <span id="memoBadgeCount"
                         style="display:{{ $prescription->memos->count() > 0 ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--danger);color:#fff;font-size:10px;align-items:center;justify-content:center;font-weight:700;line-height:1;">
@@ -2349,7 +2349,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <div id="pkGrid"></div>
                   </div>
                   <div class="pk-foot" id="pkFoot1">
-                    <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+                    <span class="pk-hint">행을 더블클릭하거나 선택한 뒤 「선택」을 누릅니다.</span>
                     {{-- 같은 이름이 있어 저장을 멈췄을 때만 선다. 정말 다른 사람이면
                          여기서 그대로 간다 — 같은 이름이라고 저장 자체를 막지는 않는다. --}}
                     <button type="button" class="ds-btn" id="pkNewPerson" style="display:none;"
@@ -2372,7 +2372,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <div id="ocGrid"></div>
                   </div>
                   <div class="pk-foot" id="pkFoot2" style="display:none;">
-                    <span class="pk-hint">하던 건을 고르면 그 건을 열어 이어서 고칩니다.</span>
+                    <span class="pk-hint">작성 중인 건을 선택하면 그 건을 열어 이어서 수정합니다.</span>
                     <button type="button" class="ds-btn" onclick="ocBack()">뒤로</button>
                     <button type="button" class="ds-btn" onclick="ocNew()">신규로 진행</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="ocPick()">열기</button>
@@ -5316,7 +5316,7 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/prescriptions/${last.rx_number}/duplicate`, 'POST',
                                    { patient_id: _ocPerson.id });
       if (!res.success) { showToast(res.message || '새 건을 만들지 못했습니다.', 'danger'); return; }
-      showToast(`${last.rx_number} 을 베껴 왔습니다. 날짜와 주문은 새로 잡아 주십시오.`, 'success', 5000);
+      showToast(`${last.rx_number} 을 복사했습니다. 날짜와 주문은 새로 지정해 주십시오.`, 'success', 5000);
       clearAllDirty();
       location.href = res.url;
     } catch (e) {
@@ -5359,7 +5359,7 @@ window.HELP_TOUR_STEPS = [
       return;
     }
 
-    showToast(`「${row.name}」 님으로 잇습니다. 환자 정보 ${filled}칸을 채웠습니다.`, 'info');
+    showToast(`「${row.name}」 님으로 연결했습니다. 환자 정보 ${filled}개 항목을 채웠습니다.`, 'info');
   }
 
   /* 받아 온 값을 화면에 앉힌다. 열쇠가 곧 입력칸 id 라 여기서 짝을 다시 맞출 일이 없다.
@@ -5585,7 +5585,7 @@ window.HELP_TOUR_STEPS = [
 
     // 저장이 끝나면 서버가 알려 준 사람 id 가 들어와 있다
     const id = document.getElementById('f-patient-id')?.value;
-    if (!id) { showToast('저장은 됐지만 사람을 잇지 못했습니다.', 'danger', 5000); return; }
+    if (!id) { showToast('저장은 되었으나 환자 연결에 실패했습니다.', 'danger', 5000); return; }
 
     window.csOpen(parseInt(id, 10), document.getElementById('f-name')?.value?.trim() || name, tel);
   }
@@ -5802,7 +5802,7 @@ window.HELP_TOUR_STEPS = [
     const { rows } = await res.json();
 
     if (!rows?.length) {
-      showToast('이 환자에게 적어 둔 주소가 없습니다 — 거래처관리에서 먼저 적으십시오.', 'warning');
+      showToast('이 환자에게 등록된 주소가 없습니다 — 거래처관리에서 먼저 등록해 주십시오.', 'warning');
       return;
     }
 
@@ -6776,7 +6776,7 @@ window.HELP_TOUR_STEPS = [
      날짜는 비운다 — 지난달 날짜로 이번 달 주문을 낼 수는 없다. */
   async function duplicateRx() {
     const ok = await ceConfirm(
-      `${RX_NUMBER} 을 그대로 베껴 새 번호로 만듭니다.
+      `${RX_NUMBER} 을 복사해 새 번호로 생성합니다.
 날짜(처방전 발행일 등)는 비우고 갑니다. 계속할까요?`,
       { tone: 'info', confirmText: '복제', cancelText: '취소' }
     );
@@ -6878,7 +6878,7 @@ window.HELP_TOUR_STEPS = [
 
       el.style.background = 'var(--gray-50)';
       el.style.cursor     = 'default';
-      el.title            = '거래처관리에서 고칩니다';
+      el.title            = '거래처관리에서 수정합니다';
     });
   }
 
@@ -7943,7 +7943,7 @@ window.HELP_TOUR_STEPS = [
       const res = await fetch(BO_RESOLVE_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
       d = await res.json();
     } catch (e) {
-      note.textContent = '밖에 묻지 못했습니다. 「공단 지사찾기」로 확인해 주십시오.';
+      note.textContent = '외부 조회에 실패했습니다. 「공단 지사찾기」로 확인해 주십시오.';
       return;
     }
 

@@ -290,7 +290,7 @@
               {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
               <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
                 <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                넣는 자리 위에서 <b style="font-weight:500;color:var(--primary-700);">서류 유형</b>을 고르고 파일을 올립니다 — 파일마다 다르면 타일에서 고칩니다.
+                넣는 자리 위에서 <b style="font-weight:500;color:var(--primary-700);">서류 유형</b>을 고르고 파일을 올립니다 — 파일마다 다르면 타일에서 변경합니다.
               </span>
             </div>
 
@@ -486,7 +486,7 @@
     </div>
 
     <div class="modal-ft">
-      <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+      <span class="pk-hint">행을 더블클릭하거나 선택한 뒤 「선택」을 누릅니다.</span>
       {{-- 「다시 선택」을 걷으면서 고른 것을 무를 길이 사라졌다 — 여기에 둔다 --}}
       {{-- 없는 사람을 찾고 나면 다음 걸음은 언제나 「그럼 새로 적자」다 —
            거래처 관리로 건너가 다시 찾게 하지 않는다. 찾았을 때는 숨는다:

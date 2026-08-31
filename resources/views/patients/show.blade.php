@@ -861,7 +861,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#view-panel', title: '환자 기본 정보', body: '환자의 이름, 연락처, 주민번호, 주소를 확인합니다.' },
-  { selector: '#btn-edit', title: '정보 편집', body: '보던 그 자리에서 바로 고칩니다. 수정 오른쪽에 저장·취소가 나타납니다.' },
+  { selector: '#btn-edit', title: '정보 편집', body: '보던 자리에서 바로 수정합니다. 수정 오른쪽에 저장·취소가 나타납니다.' },
   { selector: '.card', title: '처방·주문 이력', body: '이 환자의 처방전 업로드 이력과 주문 내역을 확인합니다. 처방번호 클릭 시 상세 화면으로 이동합니다.' },
 ];
 </script>

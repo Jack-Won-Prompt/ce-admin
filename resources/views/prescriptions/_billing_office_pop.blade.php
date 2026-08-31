@@ -13,7 +13,7 @@
        display:flex;align-items:center;gap:8px;cursor:move;user-select:none;">
     <i class="fa-solid fa-building-columns" style="color:#fff;font-size:13px;"></i>
     <span style="font-size:12px;font-weight:700;color:#fff;flex:1;">관할 청구처 찾기</span>
-    <i class="fa-solid fa-up-down-left-right" title="머리를 잡아 옮깁니다"
+    <i class="fa-solid fa-up-down-left-right" title="제목 표시줄을 끌어 이동"
        style="color:#fff;opacity:.7;font-size:11px;"></i>
     <button type="button" onclick="boFindClose()"
             style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">&times;</button>

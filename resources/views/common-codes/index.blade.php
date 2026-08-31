@@ -60,7 +60,7 @@
       {{-- 줄을 더하고 지우는 자리는 표 바로 위 오른쪽이다. 고친 것은 저장을 눌러야 남는다. --}}
       <span class="cc-tools">
         @perm('common-codes', 'delete')
-        <button type="button" class="cc-tool" onclick="ccRemove()" title="고른 줄 사용 중지">−</button>
+        <button type="button" class="cc-tool" onclick="ccRemove()" title="선택한 행 사용 중지">−</button>
         @endperm
         @perm('common-codes', 'create')
         <button type="button" class="cc-tool" onclick="ccAdd()" title="줄 추가">+</button>
@@ -125,7 +125,7 @@
 
   window.ccRemove = function () {
     const rows = grid.getCheckedRows();
-    if (!rows.length) { showToast('사용 중지할 줄을 고르십시오.', 'warning'); return; }
+    if (!rows.length) { showToast('사용 중지할 행을 선택해 주십시오.', 'warning'); return; }
     const sys = rows.filter(r => r.is_system);
     if (sys.length) showToast('시스템 코드는 둡니다 — ' + sys.map(r => r.label).join(', '), 'warning', 5000);
     rows.filter(r => r.id && !r.is_system).forEach(r => removed.push(r.id));
@@ -175,9 +175,9 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.pnl-tabs', title: '코드 목록', body: '화면마다 고르는 목록을 여기서 고릅니다. 지금은 <b>서류 유형</b> 하나입니다.' },
-  { selector: '.cc-tools', title: '줄 더하기·지우기', body: '<b>+</b> 로 줄을 더하고, 줄을 고른 뒤 <b>−</b> 로 사용 중지합니다. 고친 것은 <b>저장</b>을 눌러야 남습니다.' },
-  { selector: '#ccGrid', title: '표에서 고치기', body: '칸을 눌러 바로 고칩니다. 시스템 코드는 이름·차례만 바뀝니다.' },
+  { selector: '.pnl-tabs', title: '코드 목록', body: '화면에서 선택하는 목록을 여기서 관리합니다. 지금은 <b>서류 유형</b> 하나입니다.' },
+  { selector: '.cc-tools', title: '행 추가·삭제', body: '<b>+</b> 로 행을 추가하고, 행을 선택한 뒤 <b>−</b> 로 사용 중지합니다. 고친 것은 <b>저장</b>을 눌러야 남습니다.' },
+  { selector: '#ccGrid', title: '표에서 수정', body: '항목을 눌러 바로 수정합니다. 시스템 코드는 이름·순서만 변경됩니다.' },
 ];
 </script>
 @endpush

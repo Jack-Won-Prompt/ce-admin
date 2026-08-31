@@ -327,7 +327,7 @@ class DispatchHistoryController extends Controller
             'message'         => $this->showMessage((int) $id),
             'fax'             => $this->showFax((int) $id),
             'withworks'       => $this->showWithworks($id),
-            default           => abort(404, '없는 갈래입니다.'),
+            default           => abort(404, '없는 유형입니다.'),
         };
     }
 

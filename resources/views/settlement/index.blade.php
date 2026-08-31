@@ -887,12 +887,12 @@
       /* 받을 돈이 남았는데 닫으려 하면 서버가 까닭을 묻는다. 막는 것이 아니라
          적어 달라는 것이라(3PL 샘플로 입고 잡고 닫는 일이 있다), 그 자리에서 받는다. */
       if (code === 422) {
-        reason = prompt(d.message + '\n\n까닭:');
+        reason = prompt(d.message + '\n\n사유:');
         if (!reason) { sel.value = row.settle_key; return; }
         [code, d] = await send(reason);
       }
 
-      showToast(d.message || (d.success ? '옮겼습니다.' : '옮기지 못했습니다.'),
+      showToast(d.message || (d.success ? '변경했습니다.' : '변경하지 못했습니다.'),
                 d.success ? 'success' : 'danger');
       if (d.success) setTimeout(() => location.reload(), 600);
       else sel.value = row.settle_key;
@@ -1143,7 +1143,7 @@
 다시 「입금 대기」로 돌아갑니다.` + (issued.length ? `
 
 이 건에 나가 있는 ${issued.join(' 과 ')} 도 함께 취소됩니다.
-※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 붙어 있던 그 증빙 PDF 도 걷힙니다.
+※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 첨부된 증빙 PDF도 함께 삭제됩니다.
    취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.` : ''),
         { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
       if (!ok) return;

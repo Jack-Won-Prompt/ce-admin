@@ -32,7 +32,7 @@ class ReturnSettlement
         $order = $return->order;
 
         if (!$order) {
-            return $this->note($return, '주문을 찾을 수 없어 금액조정 주문을 세우지 못했습니다');
+            return $this->note($return, '주문을 찾을 수 없어 금액조정 주문을 생성하지 못했습니다');
         }
 
         if ($return->adjust_so_no) {
@@ -60,7 +60,7 @@ class ReturnSettlement
         }
 
         if (!$soType) {
-            return $this->note($return, '금액조정 판매유형이 비어 있습니다 — 설정 › 위드웍스에서 적으십시오');
+            return $this->note($return, '금액조정 판매유형이 비어 있습니다 — 설정 › 위드웍스에서 입력해 주십시오');
         }
 
         $items = $this->items($return);

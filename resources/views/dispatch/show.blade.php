@@ -344,7 +344,7 @@
             @foreach($faxFiles as $f)<li>{{ $f }}</li>@endforeach
           </ul>
         @else
-          <p style="margin:0;font-size:13px;color:var(--gray-600);">적어 둔 문서 이름이 없습니다.</p>
+          <p style="margin:0;font-size:13px;color:var(--gray-600);">등록된 문서 이름이 없습니다.</p>
         @endif
         @if($record->pdfUrl())
           {{-- 보낸 그대로의 합본이다 — 무엇이 넘어갔는지는 이것으로 확인한다 --}}

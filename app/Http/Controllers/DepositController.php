@@ -279,7 +279,7 @@ class DepositController extends Controller
         if ($orders->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => '닫을 건이 없습니다 — 먼저 주문에 잇거나 환자별로 나눠 주십시오.',
+                'message' => '닫을 건이 없습니다 — 먼저 주문에 연결하거나 환자별로 분리해 주십시오.',
             ], 422);
         }
 

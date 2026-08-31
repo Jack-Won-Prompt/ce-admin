@@ -175,7 +175,7 @@
             <label>고객 *</label>
             <div style="display:flex;gap:6px;">
               <input type="text" id="smpAccount" class="form-control" maxlength="100"
-                     placeholder="조회해서 고르거나 그대로 적으십시오">
+                     placeholder="조회해 선택하거나 직접 입력해 주십시오">
               <button type="button" class="ds-btn" style="flex-shrink:0;" onclick="smpPickCustomer(this)">조회</button>
             </div>
             <input type="hidden" id="smpPatientId" value="">
@@ -241,7 +241,7 @@
           {{-- 줄을 더하고 던다. 제품코드·제품명 칸을 누르면 조회 창이 열린다. --}}
           <span style="margin-left:auto;display:flex;gap:6px;">
             <span class="ds-grid-hint" id="smpSumNote">0줄 · 0개 · 0원</span>
-            <button type="button" class="ds-btn" onclick="smpDelRow()" title="고른 줄을 던다">−</button>
+            <button type="button" class="ds-btn" onclick="smpDelRow()" title="선택한 행 삭제">−</button>
             <button type="button" class="ds-btn" onclick="smpAddRow()" title="줄을 더한다">+</button>
           </span>
         </div>

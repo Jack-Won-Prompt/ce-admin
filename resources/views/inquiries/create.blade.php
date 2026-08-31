@@ -34,7 +34,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <input type="hidden" name="patient_id" id="iqcPatientId" value="{{ old('patient_id') }}">
             <input type="text" id="iqcPatientName" class="form-control" readonly
-                   style="max-width:220px;background:var(--gray-50);" placeholder="조회해서 고르십시오">
+                   style="max-width:220px;background:var(--gray-50);" placeholder="조회해 선택해 주십시오">
             <button type="button" class="ds-btn" id="iqcPickBtn" onclick="iqcPickPatient(this)">환자 조회</button>
             <button type="button" class="ds-btn" onclick="iqcClearPatient()">지우기</button>
           </div>

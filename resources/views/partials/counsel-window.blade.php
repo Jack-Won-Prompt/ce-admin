@@ -74,7 +74,7 @@
       <div id="csGrid"></div>
     </div>
     <div class="cs-foot" id="csFoot1" style="display:none;">
-      <span class="cs-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
+      <span class="cs-hint">행을 더블클릭하거나 선택한 뒤 「선택」을 누릅니다.</span>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
       <button type="button" class="ds-btn" onclick="csNew()">신규 상담</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="csPickSelected()">선택</button>
@@ -93,7 +93,7 @@
           <label>전화번호1</label>
           <input type="text" id="csCallNo" class="form-control" maxlength="30"
                  readonly style="background:var(--gray-50);cursor:default;"
-                 title="거래처관리에서 고칩니다" placeholder="거래처관리에 적힌 번호">
+                 title="거래처관리에서 수정합니다" placeholder="거래처관리에 적힌 번호">
         </div>
       </div>
 
@@ -138,7 +138,7 @@
           <label>주문번호</label>
           <div style="display:flex;gap:6px;">
             <input type="text" id="csOrderNo" class="form-control" readonly
-                   style="background:var(--gray-50);" placeholder="주문조회에서 고르십시오 (없으면 비워 둡니다)">
+                   style="background:var(--gray-50);" placeholder="주문조회에서 선택해 주십시오 (없으면 비워 둡니다)">
             <button type="button" class="ds-btn" style="flex-shrink:0;"
                     onclick="csPickOrder(this)">주문조회</button>
           </div>
@@ -249,7 +249,7 @@
     /* 날짜가 없는 채로 오는 길이 있다(지난 상담을 이어 적을 때) — 그대로 끼워 넣으면
        칸에 「undefined ORD-0028」이 적혔다. 있는 것만 이어 붙인다. */
     el.value = _csOrder ? [_csOrder.date, _csOrder.order_no].filter(Boolean).join('   ') : '';
-    el.placeholder = '주문조회에서 고르십시오 (없으면 비워 둡니다)';
+    el.placeholder = '주문조회에서 선택해 주십시오 (없으면 비워 둡니다)';
   };
 
 
@@ -345,7 +345,7 @@
    */
   window.csOpen = async function (id, name, mobile) {
     const p = id ? { id, name } : (typeof pcActive === 'function' ? pcActive() : null);
-    if (!p) { showToast('먼저 환자를 고르십시오.', 'warning'); return; }
+    if (!p) { showToast('먼저 환자를 선택해 주십시오.', 'warning'); return; }
 
     _csPatient = p;
     _csDirty   = false;

@@ -262,7 +262,7 @@ class OrderReturnController extends Controller
         if ($return->scenario() === OrderReturn::SC_REFUND_ONLY) {
             return redirect()->route('order-returns.show', $return)->with('status',
                 "접수했습니다. 접수번호 {$return->receipt_no} — 일반 환불이라 창고에는 알리지 않습니다. "
-                . '승인·결제취소 뒤 금액조정 주문을 세웁니다.');
+                . '승인·결제취소 뒤 금액조정 주문을 생성합니다.');
         }
 
         $sent = $this->withworks->push($return->load('order.items'));
@@ -532,7 +532,7 @@ class OrderReturnController extends Controller
         if ($to === 'adjusted') {
             $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
                 ? ' 금액조정 주문을 세웠습니다.'
-                : ' 금액조정 주문은 세우지 못했습니다 — 상세에서 다시 시도하십시오.';
+                : ' 금액조정 주문을 생성하지 못했습니다 — 상세에서 다시 시도해 주십시오.';
         }
 
         if ($to === 'credited') {
@@ -555,7 +555,7 @@ class OrderReturnController extends Controller
 
         return back()->with('status', $sent
             ? '위드웍스에 전달했습니다.'
-            : '전달하지 못했습니다: ' . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 까닭'));
+            : '전달하지 못했습니다: ' . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 오류'));
     }
 
     /**

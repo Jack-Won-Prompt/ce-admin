@@ -206,7 +206,7 @@ class SampleOrderController extends Controller
             'success' => $sent,
             'message' => $sent
                 ? '위드웍스에 전달했습니다.'
-                : '전달하지 못했습니다: ' . ($sampleOrder->fresh()->withworks_error ?: '알 수 없는 까닭'),
+                : '전달하지 못했습니다: ' . ($sampleOrder->fresh()->withworks_error ?: '알 수 없는 오류'),
         ]);
     }
 
