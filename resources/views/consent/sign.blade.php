@@ -1099,6 +1099,15 @@ async function startNice() {
       return;
     }
 
+    /* 시험용으로 통과시킨 경우다(NICE_SIMULATE) — 팝업을 열 곳이 없다. */
+    if (data.simulated) {
+      if (nicePopup) nicePopup.close();
+      identityVerified = true;
+      if (btn) { btn.textContent = '확인됨 (시험)'; btn.disabled = true; }
+      refreshAgree();
+      return;
+    }
+
     /* 열어 둔 팝업을 받아 온 인증 주소로 보낸다.
        예전 표준창은 우리가 폼을 만들어 POST 해야 열렸는데, 통합인증은 건마다
        주소를 하나 만들어 주므로 그리로 보내기만 하면 된다. */

@@ -446,6 +446,20 @@ class ConsentController extends Controller
             return response()->json(['success' => false, 'message' => '이미 처리되었거나 만료된 요청입니다.'], 422);
         }
 
+        /* 시험 중에는 NICE 에 묻지 않고 통과시킨다(NICE_SIMULATE). 실제 인증에서
+           채우는 칸을 그대로 채워 두어, 뒤 화면들이 다른 것을 보지 않게 한다. */
+        if (config('nice.simulate')) {
+            $consent->update([
+                'nice_verified_at' => now(),
+                'nice_name'        => $consent->patient_name,
+                /* 칸이 좁다(varchar 몇 자) — NICE 가 주는 값도 'M'ㆍ'S' 같은 한 글자다 */
+                'nice_authtype'    => 'S',
+            ]);
+            \Log::info('[NICE][시뮬레이션] 본인확인을 통과시켰습니다', ['consent' => $consent->id]);
+
+            return response()->json(['success' => true, 'simulated' => true, 'name' => $consent->patient_name]);
+        }
+
         $nice = app(\App\Services\Nice\NiceIdentityService::class);
         if (!$nice->enabled()) {
             return response()->json(['success' => false, 'message' => '본인확인 서비스가 아직 설정되지 않았습니다.'], 503);
