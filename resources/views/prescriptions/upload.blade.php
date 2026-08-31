@@ -470,6 +470,14 @@
           <label class="ds-field-label" for="pkBirth">생년월일</label>
           <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
         </div>
+        {{-- 주민등록번호 — 찾는 데도 쓰고, 없을 때 새로 만드는 데도 쓴다.
+             처방 서류는 이 번호로 공단에 청구하므로, 이름만으로 만든 거래처는
+             결국 누군가 다시 열어 번호를 채워야 한다. --}}
+        <div class="ds-filter-field span-2">
+          <label class="ds-field-label" for="pkRn">주민등록번호</label>
+          <input type="text" id="pkRn" class="form-control" placeholder="900101-1234567"
+                 maxlength="14" autocomplete="off">
+        </div>
         <div class="ds-filter-actions">
           <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
           <button type="button" class="ds-btn ds-btn-primary" onclick="pkSearch()">검색</button>
@@ -483,6 +491,13 @@
     <div class="modal-ft">
       <span class="pk-hint">줄을 더블클릭하거나 고른 뒤 「선택」을 누릅니다.</span>
       {{-- 「다시 선택」을 걷으면서 고른 것을 무를 길이 사라졌다 — 여기에 둔다 --}}
+      {{-- 없는 사람을 찾고 나면 다음 걸음은 언제나 「그럼 새로 적자」다 —
+           거래처 관리로 건너가 다시 찾게 하지 않는다. 찾았을 때는 숨는다:
+           고를 것이 눈앞에 있는데 새로 만들라고 권하면 같은 사람이 둘로 갈라진다. --}}
+      <button type="button" class="btn btn-outline btn-sm" id="pkNewBtn" style="display:none;"
+              onclick="pkCreate(this)">
+        <i class="fa-solid fa-user-plus"></i> 신규
+      </button>
       <button type="button" class="btn btn-outline btn-sm" onclick="clearPatient(); pkClose();">선택 해제</button>
       <button type="button" class="btn btn-outline btn-sm" onclick="pkClose()">닫기</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="pkPick()">선택</button>
@@ -626,7 +641,7 @@ window.pkClose = function () {
 };
 
 window.pkReset = function () {
-  ['pkName','pkPhone','pkBirth'].forEach(id => document.getElementById(id).value = '');
+  ['pkName','pkPhone','pkBirth','pkRn'].forEach(id => document.getElementById(id).value = '');
   pkSearch();
 };
 
@@ -634,6 +649,7 @@ window.pkSearch = function () {
   const name  = document.getElementById('pkName').value.trim().toLowerCase();
   const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
   const birth = document.getElementById('pkBirth').value.replace(/\D/g, '');
+  const rnq   = document.getElementById('pkRn').value.replace(/\D/g, '');
 
   const hit = PATIENTS.filter(p => {
     if (name  && !(p.name || '').toLowerCase().includes(name)) return false;
@@ -644,12 +660,22 @@ window.pkSearch = function () {
       const rn = (p.rn || '').replace(/\D/g, '');
       if (!b.includes(birth) && !rn.startsWith(birth) && !b.slice(2).includes(birth)) return false;
     }
+    /* 목록의 주민번호는 가려져 있다(900101-1******) — 앞 일곱 자리까지만 견준다.
+       뒤를 다 쳐도 가린 자리와는 맞지 않으니, 그만큼만 보고 나머지는 눈으로 가린다. */
+    if (rnq) {
+      const rn = (p.rn || '').replace(/\D/g, '');
+      if (!rn.startsWith(rnq.slice(0, 7))) return false;
+    }
     return true;
   });
 
   const rows = pkRows(hit);
   document.getElementById('pkNote').textContent =
     rows.length ? `${rows.length}명` : '찾은 사람이 없습니다.';
+
+  // 없을 때만 「신규」가 선다
+  const nb = document.getElementById('pkNewBtn');
+  if (nb) nb.style.display = rows.length ? 'none' : '';
 
   if (!pkGrid) {
     pkGrid = new wwGrid({
@@ -682,6 +708,73 @@ window.pkSearch = function () {
     pkGrid._pickedIndex = null;
     pkGrid.setData(rows);
   }
+};
+
+/* 주민등록번호에도 붙임표를 놓는다 — 열세 자리가 붙어 나오면 앞뒤를 눈으로 세야 한다 */
+(function () {
+  const el = document.getElementById('pkRn');
+  if (!el) return;
+  el.addEventListener('input', function () {
+    const pos = el.selectionStart, prev = el.value;
+    const d = el.value.replace(/\D/g, '').slice(0, 13);
+    el.value = d.length <= 6 ? d : d.slice(0, 6) + '-' + d.slice(6);
+    const diff = el.value.length - prev.length;
+    try { el.setSelectionRange(pos + diff, pos + diff); } catch (e) {}
+  });
+})();
+
+/**
+ * 찾은 사람이 없을 때 — 그 자리에서 거래처를 만든다.
+ *
+ * 이름과 주민등록번호 둘 다 있어야 한다. 처방 서류는 이 번호로 공단에 청구하므로,
+ * 이름만으로 만들어 두면 결국 누군가 다시 열어 번호를 채워야 한다.
+ *
+ * 만들고 나면 그 사람을 이 화면에 골라 둔다 — 창을 닫고 다시 찾게 하지 않는다.
+ * 고르고 나면 첨부파일을 올릴 수 있다.
+ */
+window.pkCreate = async function (btn) {
+  const nameEl = document.getElementById('pkName');
+  const rnEl   = document.getElementById('pkRn');
+  const name   = nameEl.value.trim();
+  const rn     = rnEl.value.replace(/\D/g, '');
+
+  if (!name) { showToast('이름을 적어 주십시오.', 'warning'); nameEl.focus(); return; }
+  if (rn.length !== 13) {
+    showToast('주민등록번호 열세 자리를 적어 주십시오.', 'warning');
+    rnEl.focus();
+    return;
+  }
+
+  /* 같은 번호를 두 번 만들지 않는다. 목록의 번호는 가려져 있어 앞 일곱 자리까지만
+     견줄 수 있다 — 그래도 같은 날 태어난 같은 이름이 아니면 대개 걸린다. */
+  const 겹침 = PATIENTS.find(p =>
+    (p.rn || '').replace(/\D/g, '').startsWith(rn.slice(0, 7)) &&
+    (p.name || '').replace(/^\s*\(E\)\s*/, '') === name);
+  if (겹침) {
+    showToast(`${name} 님은 이미 있습니다 — 그 줄을 고르십시오.`, 'warning');
+    document.getElementById('pkRn').value = '';
+    pkSearch();
+    return;
+  }
+
+  BtnState.loading(btn, '만드는 중...');
+  const res = await apiRequest('/patients', 'POST', {
+    name,
+    resident_no: rnEl.value.trim(),
+    mobile: document.getElementById('pkPhone').value.trim() || null,
+  });
+
+  if (!res?.success) { BtnState.error(btn, '실패'); return; }
+
+  BtnState.success(btn, '만듦');
+
+  /* 새로 만든 사람을 목록에도 넣어 둔다 — 화면을 다시 열지 않아도 다음 찾기에 걸린다 */
+  PATIENTS.unshift({ id: res.id, name, mobile: document.getElementById('pkPhone').value.trim() || '',
+                     phone: '', birth: '', rn: rnEl.value.trim() });
+
+  selectPatient(res.id, name);
+  pkClose();
+  showToast(`${name} 님을 만들고 골랐습니다. 이제 파일을 올릴 수 있습니다.`, 'success');
 };
 
 window.pkPick = function () {
