@@ -101,6 +101,10 @@ class DepositController extends Controller
                 /* 분리 합계가 원금과 어긋나면 아직 다 가르지 못한 것이다. 눈에 띄어야
                    마감 전에 채운다. */
                 'split_left' => $t->splits->count() ? (int) $t->amount_in - (int) $t->split_total : '',
+                /* 이 입금에 걸린 주문 가운데 아직 안 닫힌 것이 몇인가(요청서 5쪽 —
+                   「여러 환자건 한 번에 입금 시, 각 관련정보 끌고와서 마감 확정」).
+                   나눠 놓고 마감을 잊으면 그 돈은 들어왔는데 미정산으로 남는다. */
+                'closable'  => $t->closableOrders()->count() ?: '',
 
                 // 네 화면이 함께 쓰는 칸 — 주문이 붙은 줄에만 값이 선다
             ] + $extras->rx($o?->prescription, $o?->patient)
@@ -255,4 +259,55 @@ class DepositController extends Controller
             ]),
         ]);
     }
+
+    /**
+     * 이 입금에 걸린 주문을 한 번에 마감한다 (요청서 5쪽).
+     *
+     * 지자체가 여러 환자 건을 통으로 보내면, 나누는 것까지는 했는데 마감을 건마다
+     * 다시 눌러야 했다. 열 건이면 열 번이다 — 그러다 몇 건을 잊으면 돈은 들어왔는데
+     * 미정산으로 남는다.
+     *
+     * 확정까지 하지는 않는다. 확정은 되돌릴 수 없으니 사람이 건별로 보고 눌러야 한다 —
+     * 여기서는 셈을 닫는 데까지만 한다.
+     */
+    public function close(Request $request, BankTransaction $deposit): JsonResponse
+    {
+        $data = $request->validate(['reason' => 'nullable|string|max:300']);
+
+        $orders = $deposit->closableOrders()->get();
+
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => '닫을 건이 없습니다 — 먼저 주문에 잇거나 환자별로 나눠 주십시오.',
+            ], 422);
+        }
+
+        /* 이 입금이 무엇이었는지를 각 건에 남긴다. 나중에 「왜 마감됐지」를 물을 때
+           통장 줄까지 되짚을 수 있어야 한다. */
+        $note = trim(($data['reason'] ?? '') ?: sprintf(
+            '%s 입금 일괄 마감 (%s · %s원)',
+            $deposit->traded_at?->format('Y-m-d') ?? $deposit->trade_date?->format('Y-m-d') ?? '',
+            $deposit->sender ?: '입금자 미상',
+            number_format((int) $deposit->amount_in)
+        ));
+
+        foreach ($orders as $o) {
+            $o->update([
+                'settle_status'    => 'closed',
+                'settle_status_at' => now(),
+                'settle_status_by' => Auth::id(),
+                'settle_reason'    => mb_substr($note, 0, 300),
+            ]);
+
+            activity()->causedBy(Auth::user())->performedOn($o)
+                ->log('정산 마감 — ' . $note);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $orders->count() . '건을 마감했습니다.',
+        ]);
+    }
+
 }

@@ -160,6 +160,14 @@
         header: '환자별 분리', name: 'split_n', width: 120, align: 'center', sortable: true,
         renderer: (v, row) => splitCell(row),
       },
+      {
+        /* 이 입금에 걸린 건을 한 번에 닫는다(요청서 5쪽 — 「여러 환자건 한 번에 입금
+           시, 각 관련정보 끌고와서 마감 확정」). 나눠 놓고 마감을 잊으면 그 돈은
+           들어왔는데 미정산으로 남는다.
+           확정까지는 하지 않는다 — 되돌릴 수 없는 일이라 건별로 보고 눌러야 한다. */
+        header: '일괄 마감', name: 'closable', width: 110, align: 'center', sortable: true,
+        renderer: (v, row) => closeCell(row),
+      },
       { header: '분리 합계',   name: 'split_sum',  width: 100, align: 'right', renderer: money },
       { header: '미분리 금액', name: 'split_left', width: 110, align: 'right', renderer: money },
       { header: '거래후 잔액', name: 'balance',   width: 110, align: 'right', renderer: money },
@@ -213,6 +221,42 @@
       });
       const d = await res.json();
       showToast(d.message || (d.success ? '이었습니다.' : '잇지 못했습니다.'),
+                d.success ? 'success' : 'danger');
+      if (d.success) setTimeout(() => location.reload(), 600);
+    } catch (e) {
+      showToast('오류가 발생했습니다.', 'danger');
+    }
+  }
+
+  /* ── 일괄 마감 ─────────────────────────────────────── */
+  function closeCell(row) {
+    if (!row.closable) {
+      const s = document.createElement('span');
+      s.style.cssText = 'color:var(--text-muted);font-size:11px;';
+      s.textContent = row.order_no || row.split_n ? '마감됨' : '';
+      return s;
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ds-btn';
+    btn.style.cssText = 'height:26px;padding:0 8px;font-size:11px;';
+    btn.textContent = `${row.closable}건 마감`;
+    btn.onclick = () => closeAll(row);
+    return btn;
+  }
+
+  async function closeAll(row) {
+    if (!confirm(`이 입금에 걸린 ${row.closable}건을 마감합니다. 계속할까요?`)) return;
+
+    try {
+      const res = await fetch(`${BASE}/${row.id}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: JSON.stringify({}),
+      });
+      const d = await res.json();
+      showToast(d.message || (d.success ? '마감했습니다.' : '마감하지 못했습니다.'),
                 d.success ? 'success' : 'danger');
       if (d.success) setTimeout(() => location.reload(), 600);
     } catch (e) {

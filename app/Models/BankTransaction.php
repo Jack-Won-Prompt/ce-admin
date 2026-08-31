@@ -90,4 +90,23 @@ class BankTransaction extends Model
     {
         return $q->whereNull('order_id')->doesntHave('splits');
     }
+
+    /**
+     * 이 입금으로 마감할 수 있는 주문 (요청서 5쪽).
+     *
+     * 나눠 적은 몫이 있으면 그것들이고, 없으면 이 입금이 걸린 주문 하나다.
+     * 이미 닫혔거나 잠긴 건은 뺀다 — 다시 닫아 봐야 사유만 덮어쓴다.
+     */
+    public function closableOrders(): \Illuminate\Database\Eloquent\Builder
+    {
+        $ids = $this->splits->pluck('order_id')->filter();
+
+        if ($ids->isEmpty() && $this->order_id) {
+            $ids = collect([$this->order_id]);
+        }
+
+        return Order::whereIn('id', $ids->all())
+            ->whereIn('settle_status', ['open', 'rejected', 'on_hold']);
+    }
+
 }

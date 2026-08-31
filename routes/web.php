@@ -171,6 +171,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{deposit}/match',    [\App\Http\Controllers\DepositController::class, 'match'])->name('match');
         Route::get('/{deposit}/splits',     [\App\Http\Controllers\DepositController::class, 'splits'])->name('splits');
         Route::post('/{deposit}/split',     [\App\Http\Controllers\DepositController::class, 'split'])->name('split');
+        // 이 입금에 걸린 건을 한 번에 마감한다(요청서 5쪽)
+        Route::post('/{deposit}/close',     [\App\Http\Controllers\DepositController::class, 'close'])->name('close');
     });
 
     Route::prefix('order-returns')->name('order-returns.')->group(function () {
