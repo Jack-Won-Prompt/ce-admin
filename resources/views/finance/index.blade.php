@@ -41,7 +41,11 @@
   {{-- 여섯을 한 화면의 탭으로 둔다 — 묻는 것이 같고(기간), 여는 사람이 같고,
        무엇보다 여섯을 오가며 견주어 본다. 메뉴를 여섯으로 늘리면 그때마다 기간을
        다시 고르게 된다. --}}
-  <div class="pnl-tabs" style="overflow-x:auto;">
+  {{-- overflow-x:auto 를 걸어 두었더니 걸린 탭의 아래 선이 사라졌다. 탭은
+       margin-bottom:-1px 로 제 아래 선을 탭줄의 아래 선 위에 겹쳐 놓는데,
+       가로 넘침을 auto 로 두면 세로도 auto 가 되어 그 1px 이 잘린다.
+       여섯이 한 줄에 서므로 넘칠 일이 없고, 좁아지면 접히게 둔다. --}}
+  <div class="pnl-tabs" style="flex-wrap:wrap;">
     @foreach(\App\Http\Controllers\FinanceController::TABS as $k => $label)
       <a href="{{ route('finance.index', array_filter(['tab' => $k, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo])) }}"
          class="pnl-tab {{ $tab === $k ? 'active' : '' }}" style="white-space:nowrap;">
