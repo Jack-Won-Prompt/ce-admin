@@ -846,7 +846,7 @@
         <div class="card-body">
           @if($order->withworks_so_no)
             <div style="margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">SO 번호</div>
+              <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">판매번호</div>
               <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $order->withworks_so_no }}</div>
             </div>
             @if($withworksStatus)

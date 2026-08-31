@@ -36,7 +36,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link-external"></i></div>
-    <div class="help-item-text"><strong>주문/SO 번호</strong>Withworks 판매주문번호(SO)가 연계된 경우 파란 모노스페이스 폰트로 표시됩니다.</div>
+    <div class="help-item-text"><strong>주문번호ㆍ판매번호</strong>위드웍스 판매번호가 이어진 건은 파란 모노스페이스 글꼴로 보입니다.</div>
   </div>
 </div>
 @endsection
@@ -218,7 +218,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '#rxGrid',
     title: '목록 그리드',
-    body: '행을 <b>더블클릭</b>하면 주문 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>Withworks SO</b> 컬럼에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
+    body: '행을 <b>더블클릭</b>하면 주문 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>판매번호</b> 칸에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
   },
   {
     selector: 'button[onclick="prescriptionViewDetail()"]',

@@ -192,7 +192,7 @@
       <div style="padding:16px;">
         @if($shopOrder->withworks_so_no)
           <div style="margin-bottom:10px;">
-            <div class="info-label">SO 번호</div>
+            <div class="info-label">판매번호</div>
             <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $shopOrder->withworks_so_no }}</div>
           </div>
           @if($withworksStatus)

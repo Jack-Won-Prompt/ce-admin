@@ -391,7 +391,7 @@
         <div class="workflow-step">
           <div class="workflow-num">3</div>
           <div class="workflow-step-title">주문 생성</div>
-          <div class="workflow-step-desc">Withworks SO 자동 생성, 배송 정보 연계</div>
+          <div class="workflow-step-desc">위드웍스 판매번호 자동 생성, 배송 정보 연계</div>
         </div>
         <div class="workflow-step">
           <div class="workflow-num">4</div>

@@ -45,7 +45,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">4</div>
-    <div class="help-item-text">우측 카드에서 <b>Withworks 판매번호(SO)** 확인</div>
+    <div class="help-item-text">우측 카드에서 <b>판매번호</b> 확인</div>
   </div>
 </div>
 <div class="help-section">
@@ -1692,7 +1692,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
         <button onclick="reopenFaxPopover(event)" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;">재전송</button>
       </div>
 
-      {{-- Withworks 판매번호 — 번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다 --}}
+      {{-- 판매번호 — 번호를 누르면 위드웍스 판매주문 화면이 그 번호로 열린다 --}}
       <div id="wwSoCard" onclick="openWwSo(event)"
            title="{{ $prescription->order?->withworks_so_no ? '위드웍스 판매주문 화면을 그 번호로 엽니다' : '' }}"
            style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid {{ $prescription->order?->withworks_so_no ? 'var(--primary)' : 'var(--border)' }};border-radius:var(--radius);background:{{ $prescription->order?->withworks_so_no ? 'var(--primary-light)' : 'var(--bg-card)' }};cursor:{{ $prescription->order?->withworks_so_no ? 'pointer' : 'default' }};">
@@ -2405,7 +2405,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      여기서는 주민번호로 계산해 「미성년」인지만 알면 된다.
                      f-birth 는 감춘 채 남긴다 — rnRecalc 이 여기에 계산 결과를 적고,
                      미성년 배지ㆍ보호자 팝오버가 그 값을 보고 열린다. --}}
-                <span class="rx-field-label">성년/미성년</span>
+                {{-- 라벨에 「성년/미성년」이라 적으면 화면에 두 낱말이 다 보인다. 값 자리에
+                     주민등록번호로 셈한 하나만 선다(요청, 2026-08-31). --}}
+                <span class="rx-field-label">연령 구분</span>
                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:6px;">
                   <input type="hidden" id="f-birth" />
                   {{-- 미성년이면 이 배지가 보호자 팝오버를 여는 자리다(명세 2장이 이 배지를 가리킨다).
@@ -3384,7 +3386,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <b style="color:var(--primary);">주문 생성 완료</b>
                   <span style="color:var(--text-muted);margin-left:8px;">{{ $prescription->order->order_number }}</span>
                   @if($prescription->order->withworks_so_no)
-                    <span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">SO: {{ $prescription->order->withworks_so_no }}</span>
+                    <span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">판매번호 {{ $prescription->order->withworks_so_no }}</span>
                   @endif
                 </div>
               </div>
@@ -3460,7 +3462,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   @if($prescription->order)
                     {{ $prescription->order->order_number }}
                     @if($prescription->order->withworks_so_no)
-                      <span style="color:var(--primary);font-family:monospace;display:block;">SO: {{ $prescription->order->withworks_so_no }}</span>
+                      <span style="color:var(--primary);font-family:monospace;display:block;">판매번호 {{ $prescription->order->withworks_so_no }}</span>
                     @endif
                   @else
                     대기 중
@@ -3519,7 +3521,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                   <td>
                     @if($prescription->order)
                       <span style="font-weight:700;">{{ $prescription->order->order_number }}</span>
-                      @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:6px;font-size:11px;">SO: {{ $prescription->order->withworks_so_no }}</span>@endif
+                      @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:6px;font-size:11px;">판매번호 {{ $prescription->order->withworks_so_no }}</span>@endif
                     @else대기 중@endif
                   </td>
                 </tr>
@@ -3607,7 +3609,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       <p style="font-size:13px;margin:0 0 8px;">다음 주문을 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
       <div style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:12px;line-height:2;">
         <div><span style="color:var(--text-muted);">CE 주문번호</span> &nbsp;<b id="deleteOrderNum" style="font-family:monospace;color:var(--danger);">-</b></div>
-        <div><span style="color:var(--text-muted);">Withworks SO</span> &nbsp;<b id="deleteOrderSoNo" style="font-family:monospace;color:var(--primary);">-</b></div>
+        <div><span style="color:var(--text-muted);">판매번호</span> &nbsp;<b id="deleteOrderSoNo" style="font-family:monospace;color:var(--primary);">-</b></div>
       </div>
       <p style="font-size:12px;color:var(--warning);margin:10px 0 0;"><i class="fa-solid fa-circle-info"></i> Withworks 판매주문도 함께 삭제됩니다.</p>
     </div>
@@ -4792,8 +4794,8 @@ window.HELP_TOUR_STEPS = [
   },
   {
     selector: '#wwSoCard',
-    title: 'Withworks 판매번호',
-    body: '주문 생성 후 이 카드에 Withworks SO 번호가 표시됩니다. 연계 완료 여부를 여기서 확인하세요.'
+    title: '판매번호',
+    body: '주문을 세우면 이 카드에 위드웍스 판매번호가 섭니다. 이어졌는지를 여기서 봅니다.'
   },
   {
     selector: '.tab-btn:nth-child(4)',
@@ -7249,10 +7251,10 @@ window.HELP_TOUR_STEPS = [
       </div>
       <div style="background:var(--bg);border-radius:var(--radius);padding:14px;text-align:left;font-size:12px;line-height:2.2;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="color:var(--text-muted);">Withworks SO</span>
+          <span style="color:var(--text-muted);">판매번호</span>
           <span>${wwBadge}</span>
         </div>
-        ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SO 번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
+        ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">판매번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
         ${!wwSuccess && wwMessage ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;">${wwMessage}</span></div>` : ''}
         ${smsRow}
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">제품 수</span><b>${localPayload.items?.length ?? 0}종</b></div>
@@ -7307,7 +7309,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ── 워크플로우 "주문 생성" 스텝 (사이드바 + 이력 탭) ─────────────────
-    const soTimeHtml = `${orderNum}${soNo ? `<span style="color:var(--primary);font-family:monospace;display:block;">SO: ${soNo}</span>` : ''}`;
+    const soTimeHtml = `${orderNum}${soNo ? `<span style="color:var(--primary);font-family:monospace;display:block;">판매번호 ${soNo}</span>` : ''}`;
 
     // 사이드바
     const wsIcon = document.getElementById('wsOrderIcon');
@@ -7369,7 +7371,7 @@ window.HELP_TOUR_STEPS = [
         <div>
           <b style="color:var(--primary);">주문 생성 완료</b>
           <span style="color:var(--text-muted);margin-left:8px;">${orderNum}</span>
-          ${soNo ? `<span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">SO: ${soNo}</span>` : ''}
+          ${soNo ? `<span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">판매번호 ${soNo}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:8px;">
@@ -7463,7 +7465,7 @@ window.HELP_TOUR_STEPS = [
     _ORDER_TOTAL   = localRes.total_amount ?? totalCopay ?? _ORDER_TOTAL;
     _PATIENT_COPAY = totalCopay ?? _PATIENT_COPAY;
 
-    // Col 3 판매번호 카드 업데이트 (수정 후 SO 번호는 동일 유지, 타입만 갱신)
+    // Col 3 판매번호 카드 업데이트 (수정해도 판매번호는 그대로, 유형만 갱신)
     updateWwSoDisplay(existingOrder.order_number, existingOrder.withworks_so_no, currentSoType);
 
     _orderDirty = false;
@@ -9706,7 +9708,7 @@ window.HELP_TOUR_STEPS = [
           ${_pcFR('주문상태',   d.order.status_label || d.order.status)}
           ${_pcFR('주문일',     d.order.created_at)}
           ${_pcFR('총 금액',    d.order.total_amount ? Number(d.order.total_amount).toLocaleString('ko-KR')+'원' : null)}
-          ${_pcFR('Withworks SO', d.order.withworks_so_no)}
+          ${_pcFR('판매번호', d.order.withworks_so_no)}
         </div>
       </div>`;
     }

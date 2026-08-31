@@ -63,7 +63,7 @@
       <div class="rto-fld"><label>전화번호</label>
         <input type="text" id="rtoPhone" class="form-control" maxlength="20" placeholder="010-0000-0000"></div>
       <div class="rto-fld wide"><label>주문번호</label>
-        <input type="text" id="rtoNo" class="form-control" maxlength="50" placeholder="주문번호 · 판매주문번호"></div>
+        <input type="text" id="rtoNo" class="form-control" maxlength="50" placeholder="주문번호 · 판매번호"></div>
       <button type="button" class="ds-btn ds-btn-primary" id="rtoFindBtn" onclick="rtoFind(this)">검색</button>
       <span class="rto-note" id="rtoFindNote"></span>
       {{-- 끝내는 단추는 찾는 자리와 나란히 둔다. 아래에 두면 제품 목록이 길어질수록

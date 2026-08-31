@@ -113,7 +113,7 @@
       { header: '결제금액',  name: 'amount',    width: 110, editor: 'number' },
       { header: '배송',      name: 'delivery',  width: 70,  align: 'center' },
       { header: '상태',      name: 'status',    width: 90,  align: 'center', sortable: true },
-      { header: 'Withworks', name: 'withworks', width: 120, align: 'center' },
+      { header: '판매번호',   name: 'withworks', width: 120, align: 'center' },
     ],
     data: @json($gridData),
   });
