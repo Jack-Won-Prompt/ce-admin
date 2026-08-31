@@ -22,16 +22,6 @@
 
 @section('content')
 
-{{-- 탭 — 요청서 5쪽의 셋. 건수는 기간과 상관없이 전체를 센다(할 일이 얼마나 남았는가) --}}
-<div class="ds-chip-row" style="margin-bottom:12px;">
-  @foreach(\App\Http\Controllers\DepositController::TABS as $k => $label)
-    <a href="{{ route('deposits.index', ['tab' => $k, 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
-       class="ds-chip {{ $tab === $k ? 'active' : '' }}">
-      {{ $label }}<span class="ds-chip-cnt">{{ number_format($counts[$k] ?? 0) }}</span>
-    </a>
-  @endforeach
-</div>
-
 @if(!$configured)
   {{-- 계좌가 팝빌에 등록되기 전에는 긁어 올 것이 없다. 빈 화면만 보이면 고장으로 읽힌다. --}}
   <div class="ds-filter-card" style="border-color:var(--warning-light);background:var(--warning-light);margin-bottom:12px;">
@@ -43,15 +33,17 @@
   </div>
 @endif
 
+{{-- 거르는 줄은 하나다. 이 화면이 묻는 것은 「언제」와 「누구」 둘뿐이라
+     두 줄을 쓸 까닭이 없다. --}}
 <form method="GET" class="ds-filter-card">
   <input type="hidden" name="tab" value="{{ $tab }}">
-  <div class="ds-filter-grid">
+  <div class="ds-filter-fields">
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="입금자명ㆍ적요ㆍ주문번호ㆍ이름">
     </div>
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ $dateFrom }}" class="form-control">
@@ -69,10 +61,18 @@
 </form>
 
 <div class="ds-grid-card">
+  {{-- 요청서 5쪽의 세 탭. 다른 화면의 「조회 결과ㆍ상세 내용」과 같은 규격으로 세운다 —
+       화면마다 탭이 다른 모양이면 어디를 눌러야 갈리는지를 매번 다시 익혀야 한다.
+
+       건수는 지금 걸린 기간과 상관없이 전체를 센다. 여기서 묻는 것은 「이 달에 몇 건인가」가
+       아니라 「할 일이 얼마나 남았는가」다. --}}
   <div class="pnl-tabs">
-    <button type="button" class="pnl-tab active" onclick="return false;">
-      <i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format(count($gridData)) }}</b>건)</span>
-    </button>
+    @foreach(\App\Http\Controllers\DepositController::TABS as $k => $label)
+      <a href="{{ route('deposits.index', array_filter(['tab' => $k, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo])) }}"
+         class="pnl-tab {{ $tab === $k ? 'active' : '' }}">
+        {{ $label }}<span class="pnl-tab-cnt">(총 <b>{{ number_format($counts[$k] ?? 0) }}</b>건)</span>
+      </a>
+    @endforeach
     <div style="margin-left:auto;display:flex;gap:6px;align-items:center;padding-right:12px;">
       {{-- 서른 분마다 저절로 돌지만, 방금 들어온 돈은 곧바로 봐야 할 때가 있다 --}}
       <form method="POST" action="{{ route('deposits.pull') }}" style="display:inline;">
