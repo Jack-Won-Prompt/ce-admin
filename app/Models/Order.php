@@ -120,6 +120,21 @@ class Order extends Model
         return $this->deposit_confirmed_at !== null || (bool) $this->tossPayment?->is_done;
     }
 
+    /**
+     * 물건이 나갔는가.
+     *
+     * 창고가 알려 주는 출고일이 먼저다. 그 값은 2026-08-31 부터 받기 시작했으므로 그
+     * 전 건에는 없어, 주문이 배송 단계에 들었는지로 갈음한다.
+     *
+     * 한 곳에 두는 까닭 — 발행이 이 판정에 걸린다(요청서 8ㆍ9쪽). 두 곳에 적어 두면
+     * 언젠가 갈리고, 갈린 쪽이 「출고 전인데 이미 신고된 건」을 만든다.
+     */
+    public function isShipped(): bool
+    {
+        return $this->shipped_at !== null
+            || in_array($this->status, ['shipping', 'delivered'], true);
+    }
+
     /** 담당자가 손으로 확인한 건인가 — 토스가 아니라 사람이 본 것 */
     public function isDepositConfirmedByHand(): bool
     {

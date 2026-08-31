@@ -185,6 +185,14 @@ class WithworksWebhookController extends Controller
            한 건에 한 번만 나가는 것은 ShipNotice 가 발송 이력으로 가린다. */
         if ($data['event'] === 'so.shipped') {
             app(\App\Services\ShipNotice::class)->send($order->refresh());
+
+            /* 입금이 먼저 들어온 건은 그때 발행을 미뤄 두었다(요청서 8ㆍ9쪽 —
+               「입금 및 출고 되어야」). 이제 출고됐으니 낸다.
+
+               WithworksSync 도 출고 상태가 바뀌면 같은 것을 부르는데, 이 사건에
+               ship 블록이 실려 오지 않으면 그쪽은 바뀐 것을 못 본다. 두 번 불려도
+               이미 발행된 것은 DepositAutoIssue 가 거른다. */
+            app(\App\Services\DepositAutoIssue::class)->run($order->refresh(), '출고 웹훅');
         }
 
         $this->announce($data, $order);

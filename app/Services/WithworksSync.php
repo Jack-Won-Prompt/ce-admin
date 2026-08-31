@@ -187,6 +187,13 @@ class WithworksSync
 
         if ($shipAfter !== $shipBefore && in_array($shipAfter, self::SHIPPED, true)) {
             app(ShipNotice::class)->send($order);
+
+            /* 입금이 먼저 들어온 건은 그때 발행을 미뤄 두었다(요청서 8ㆍ9쪽 —
+               「입금 및 출고 되어야」). 이제 출고됐으니 낸다.
+
+               두 번 내지 않는다 — 이미 발행된 것은 DepositAutoIssue 가 거른다.
+               입금이 아직이면 거기서 물러나고, 나중에 입금이 확인될 때 그쪽에서 낸다. */
+            app(DepositAutoIssue::class)->run($order, '출고 확인');
         }
     }
 

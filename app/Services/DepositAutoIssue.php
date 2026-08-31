@@ -64,6 +64,20 @@ class DepositAutoIssue
             return $out;
         }
 
+        /* 출고 전에는 아무것도 내지 않는다 (요청서 8ㆍ9쪽 「입금 및 출고 되어야」,
+           2026-08-31 회신).
+
+           예전에는 입금만 보고 냈다. 그러면 물건이 아직 창고에 있는데 국세청 신고가
+           끝나 있고, 그 뒤 주문이 취소되면 취소 신고를 다시 해야 한다.
+
+           여기서 물러나도 잃는 것은 없다 — 창고가 출고를 알려 올 때 다시 부른다
+           (WithworksSync::apply). */
+        if (!$order->isShipped()) {
+            $out['skipped'][] = '아직 출고 전 — 출고되면 그때 냅니다';
+
+            return $out;
+        }
+
         if ($this->enabled()) {
             $rx       = $order->prescription;
             $strategy = BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class);

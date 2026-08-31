@@ -393,6 +393,12 @@ class NhisAssistController extends Controller
         $tax     = $docs->firstWhere('type', 'tax_invoice');
         $consent = $docs->firstWhere('type', 'consent');
 
+        // 거래명세서는 첨부문서로 붙는다 — 발행 서류(prescription_documents)와 다른 표다
+        $statement = $prescription
+            ? \App\Models\PrescriptionAttachment::where('prescription_id', $prescription->id)
+                ->where('doc_type', 'trade_statement')->latest('id')->first()
+            : null;
+
         // 지자체도 처음 보내는 환자면 동의서를 함께 넣는다
         $first = $order->patientType() === Order::PATIENT_NEW
             ? [['name' => '개인정보 수집·이용 동의서 (신환)',
@@ -405,13 +411,18 @@ class NhisAssistController extends Controller
             ['name' => '처방전',
              'url'  => $prescription?->image_path ? route('files.prescription-image', $prescription) : null,
              'note' => $prescription?->image_path ? null : '처방전 이미지가 없습니다'],
-            ['name' => '거래명세서', 'url' => null,
-             'note' => '만드는 기능이 없습니다 — 따로 준비하십시오'],
+            /* 거래명세서는 만드는 기능이 있다(TransactionStatement). 입금이 확인되면
+               저절로 붙고, 그때 붙은 것을 여기서 그대로 내려받는다.
+               「만드는 기능이 없습니다」라고 적어 두었던 것은 그 기능이 생기기 전의
+               말이라, 담당자가 있는 서류를 따로 만들고 있었다. */
+            ['name' => '거래명세서',
+             'url'  => $statement ? route('files.prescription-attachment', $statement) : null,
+             'note' => $statement ? null : '아직 만들어지지 않았습니다 — 입금이 확인되면 붙습니다'],
             ['name' => '전자세금계산서 (주민등록번호)',
              'url'  => $tax ? route('documents.download', $tax) : null,
              'note' => $tax ? null : ($order->tax_invoice_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
             ['name' => '의료용품구입확인서 (지자체용)', 'url' => null,
-             'note' => '서식을 아직 받지 못해 만들지 못합니다'],
+             'note' => '양식은 받았습니다 — 값을 얹어 만드는 일은 아직입니다'],
         ];
     }
 
