@@ -1846,10 +1846,6 @@
             @dsicon('message-typing')
             <span class="notif-dot" id="chatUnreadDot" style="display:none;"></span>
           </button>
-          {{-- Help --}}
-          <button class="btn-icon" id="helpToggleBtn" title="도움말" onclick="HelpPanel.toggle()">
-            @dsicon('help-circle-contained')
-          </button>
           {{-- SR 관리 --}}
           @perm('service-requests')
           <button class="btn-icon" id="srToggleBtn" title="SR 관리" onclick="SrPanel.toggle()">
@@ -5682,73 +5678,19 @@ const InquiryPanel = (() => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.getElementById('chatLightbox').classList.remove('show');
-    HelpPanel.close();
     Tour.end();
   }
 });
 </script>
 
 {{-- ═══════════════════════════════════════════════════════════
-     HELP PANEL + TOUR SYSTEM
+     TOUR SYSTEM
+
+     도움말 패널과 상단의 ? 단추는 걷었다(요청, 2026-08-31). 화면마다 적어 둔
+     @section('help-content') 는 그대로 남겨 둔다 — @yield 가 없어 그려지지 않을
+     뿐이라, 되돌릴 때 다시 쓸 수 있다.
 ═══════════════════════════════════════════════════════════ --}}
 <style>
-/* ── Help Panel ───────────────────────────────────────────── */
-#helpPanel {
-  position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
-  background: #fff; border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; z-index: 999;
-  transition: right .28s cubic-bezier(.4,0,.2,1);
-}
-#helpPanel.open { right: 0; box-shadow: -4px 0 32px rgba(0,0,0,.12); }
-.help-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px; border-bottom: 1px solid var(--border);
-  background: var(--bg); flex-shrink: 0;
-}
-.help-header-icon { font-size: 22px; color: var(--primary); }
-.help-header-title { font-size: 14px; font-weight: 700; flex: 1; color: var(--text-primary); }
-.help-header-close {
-  display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; flex-shrink: 0;
-  background: none; border: none; color: var(--text-muted);
-  font-size: 16px; line-height: 1; cursor: pointer; border-radius: 8px;
-}
-.help-header-close:hover { color: var(--text-primary); background: var(--border-light); }
-.help-body { flex: 1; overflow-y: auto; padding: 16px; }
-.help-tour-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;
-  background: var(--primary-light); color: var(--primary);
-  border: 1px solid var(--primary); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: var(--transition);
-}
-.help-tour-btn:hover { background: var(--primary); color: #fff; }
-.help-section { margin-bottom: 18px; }
-.help-section-title {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;
-  color: var(--text-muted); margin-bottom: 10px; padding-bottom: 5px;
-  border-bottom: 1px solid var(--border-light);
-}
-.help-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
-.help-item-icon {
-  width: 30px; height: 30px; border-radius: 6px;
-  background: var(--primary-light); color: var(--primary);
-  display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
-}
-.help-item-icon.warn { background: var(--warning-light); color: var(--warning); }
-.help-item-icon.success { background: var(--success-light); color: var(--success); }
-.help-item-icon.info { background: var(--info-light); color: var(--info); }
-.help-item-icon.purple { background: var(--primary-light); color: var(--primary); }
-.help-item-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
-.help-item-text strong { color: var(--text-primary); display: block; margin-bottom: 1px; font-size: 13px; }
-.help-tip {
-  background: #eff6ff; border-left: 3px solid var(--primary);
-  border-radius: 0 6px 6px 0; padding: 8px 12px; margin-bottom: 10px;
-  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
-}
-.help-tip i { margin-right: 4px; color: var(--primary); }
-.help-badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-
 /* ── Tour Overlay ─────────────────────────────────────────── */
 #tourOverlay { position: fixed; inset: 0; z-index: 10000; display: none; }
 #tourOverlay.active { display: block; }
@@ -5789,25 +5731,6 @@ document.addEventListener('keydown', e => {
 .tour-btn-next:hover { background: var(--primary-dark); }
 </style>
 
-{{-- Help Panel --}}
-<div id="helpPanel">
-  <div class="help-header">
-    <i class="bx bx-help-circle help-header-icon"></i>
-    <span class="help-header-title" id="helpPanelTitle">@yield('help-title', '도움말')</span>
-    <button class="help-header-close" onclick="HelpPanel.close()"><i class="bx bx-x"></i></button>
-  </div>
-  <div class="help-body" id="helpPanelBody">
-    <button class="help-tour-btn" id="helpTourBtn" onclick="Tour.start()" style="display:none;">
-      <i class="bx bx-play-circle" style="font-size:16px;"></i> 화면 안내 투어 시작
-    </button>
-    @hasSection('help-content')
-      @yield('help-content')
-    @else
-      <div class="help-tip"><i class="bx bx-info-circle"></i>이 페이지의 도움말을 준비 중입니다.</div>
-    @endif
-  </div>
-</div>
-
 {{-- Tour Overlay --}}
 <div id="tourOverlay">
   <div id="tourSpotlight"></div>
@@ -5825,17 +5748,6 @@ document.addEventListener('keydown', e => {
 </div>
 
 <script>
-// ── Help Panel ──────────────────────────────────────────────
-const HelpPanel = (() => {
-  function toggle() {
-    const p = document.getElementById('helpPanel');
-    p.classList.contains('open') ? close() : open();
-  }
-  function open() { document.getElementById('helpPanel').classList.add('open'); }
-  function close() { document.getElementById('helpPanel').classList.remove('open'); }
-  return { toggle, open, close };
-})();
-
 // ── Tour System ────────────────────────────────────────────
 const Tour = (() => {
   let _steps = [];
@@ -5857,12 +5769,7 @@ const Tour = (() => {
     {
       selector: '.layout-navbar',
       title: '상단 네비게이션',
-      body: '알림, 채팅, 도움말(?), SR 관리 버튼이 있습니다. <b>?</b> 버튼을 누르면 현재 페이지 도움말을 볼 수 있습니다.'
-    },
-    {
-      selector: '#helpToggleBtn',
-      title: '도움말 버튼',
-      body: '이 버튼을 클릭하면 현재 페이지 설명과 투어를 다시 시작할 수 있습니다. 언제든지 활용하세요.'
+      body: '알림ㆍ채팅ㆍSR 관리 단추가 있습니다.'
     },
   ];
 
@@ -5870,10 +5777,6 @@ const Tour = (() => {
     const cfg = window.HELP_TOUR_STEPS;
     _steps   = (cfg && cfg.length) ? cfg : _defaultSteps;
     _pageKey = window.TOUR_PAGE_KEY || window.location.pathname;
-
-    // 투어 버튼 항상 표시
-    const btn = document.getElementById('helpTourBtn');
-    if (btn) btn.style.display = 'flex';
 
     // 이 사용자가 아직 이 페이지 투어를 보지 않은 경우 자동 시작 (1.2초 후)
     if (_pageKey && !(window.CE_TOURED || []).includes(_pageKey)) {
@@ -5884,7 +5787,6 @@ const Tour = (() => {
   function start() {
     if (!_steps.length) { showToast('이 페이지의 투어가 없습니다.', 'info'); return; }
     _idx = 0;
-    HelpPanel.close();
     document.getElementById('tourOverlay').classList.add('active');
     _buildDots();
     _showStep();

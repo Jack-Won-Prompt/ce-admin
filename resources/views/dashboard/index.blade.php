@@ -88,7 +88,6 @@ window.HELP_TOUR_STEPS = [
   { selector: '.stat-grid', title: '현황 요약 카드', body: '오늘 접수·검수 대기·주문 미등록 등 핵심 수치를 한눈에 확인합니다. 카드를 클릭하면 해당 목록으로 바로 이동합니다.' },
   { selector: '.stat-card', title: '통계 카드', body: '각 카드는 클릭 가능한 링크입니다. 숫자를 클릭하면 해당 상태로 필터된 목록이 열립니다.' },
   { selector: '.layout-menu .menu-inner', title: '사이드바 메뉴', body: '처방전·환자·주문·청구·정산 등 모든 기능을 여기서 이동합니다. 좌측 상단 화살표로 메뉴를 접을 수 있습니다.' },
-  { selector: '#helpToggleBtn', title: '도움말 항상 여기에', body: '어느 화면에서든 ? 버튼을 누르면 해당 페이지 설명과 투어를 다시 시작할 수 있습니다.' },
 ];
 </script>
 @endpush
