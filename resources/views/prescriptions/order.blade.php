@@ -392,10 +392,6 @@
   .ol-field-q { flex:1 1 220px; }
   /* 단추는 줄 끝에 붙는다. align-items:flex-end 가 입력칸과 밑선을 맞춘다. */
   .ol-actions { display:flex; gap:8px; margin-left:auto; flex-shrink:0; }
-  /* 표 안의 지우기 단추 — 줄을 고르는 것과 헷갈리지 않게 작고 조용히 둔다 */
-  .ol-del { border:1px solid var(--border); background:var(--gray-0); border-radius:6px;
-            width:26px; height:24px; line-height:1; cursor:pointer; color:var(--gray-500); }
-  .ol-del:hover { border-color:var(--danger); color:var(--danger); background:var(--danger-light); }
 
   /* 판이 받은 높이를 표까지 흘려보낸다 — 표가 카드 밑변까지 서고 「전체 N건」 띠가
      그 바닥에 붙는다. 찾는 줄과 안내는 제 높이 그대로 남는다. */
@@ -9601,8 +9597,8 @@ window.HELP_TOUR_STEPS = [
       });
     };
     fill('ol-manager',  OL_ROWS.map(r => r.manager));
-    fill('ol-purchase', OL_ROWS.map(r => r.purchase));
-    fill('ol-hospital', OL_ROWS.map(r => r.hospital));
+    fill('ol-purchase', OL_ROWS.map(r => r.rx_purchase));
+    fill('ol-hospital', OL_ROWS.map(r => r.rx_hospital));
 
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
@@ -9615,11 +9611,11 @@ window.HELP_TOUR_STEPS = [
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+        { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
         ...ceMoneyCols(),
         { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
-        { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
            「이건 아직 아무도 맡지 않았다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
         { header: '담당자',    name: 'manager',   width: 90,  sortable: true,
@@ -9640,29 +9636,11 @@ window.HELP_TOUR_STEPS = [
         /* 결제수단은 공통 칸(ceCommonCols)이 세운다 — 여기 또 두면 같은 값이 두 칸에 선다 */
         { header: '등록담당자',     name: 'creator',     width: 100, align: 'center', sortable: true },
         { header: '수정담당자',     name: 'updater',     width: 100, align: 'center', sortable: true },
-        /* 빈 건을 치우는 자리. 처방전도 안 올라왔고 창고에도 서지 않은 줄에만 단추가 선다 —
-           그 밖에는 무엇이든 실제로 일어난 일이 있어 지울 것이 아니다. */
-        { header: '', name: 'erasable', width: 56, align: 'center', sortable: false, exportable: false,
-          renderer: (v, row) => {
-            if (!v || !row.rx_url) {
-              const s = document.createElement('span');
-              s.textContent = '—';
-              s.style.color = 'var(--gray-300)';
-              return s;
-            }
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'ol-del';
-            b.title = '이 빈 건을 지웁니다';
-            b.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-            b.addEventListener('click', (e) => { e.stopPropagation(); olDelete(row); });
-            return b;
-          } },
 
-        // 네 목록 화면이 함께 쓰는 칸 — 이름ㆍ차례ㆍ표기가 한 곳에서 나온다
         // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
         ...ceRxCols(),
 
+        // 네 목록 화면이 함께 쓰는 칸 — 이름ㆍ차례ㆍ표기가 한 곳에서 나온다
         ...ceCommonCols(),
       ],
       data: OL_ROWS,
@@ -9684,24 +9662,6 @@ window.HELP_TOUR_STEPS = [
     });
   }
 
-  /** 빈 건 지우기 — 처방전과 주문 줄을 함께 치운다(둘 다 되돌릴 수 있는 삭제다) */
-  async function olDelete(row) {
-    const ok = await ceConfirm(
-      `${row.rx_number || row.order_no} 을(를) 지웁니다.
-처방전도 올라오지 않았고 창고에도 서지 않은 건입니다.`,
-      { title: '빈 건 삭제', tone: 'danger', confirmText: '지우기' });
-    if (!ok) return;
-
-    const res = await apiRequest(row.rx_url, 'DELETE');
-    if (!res.success) { showToast(res.message || '지우지 못했습니다.', 'danger'); return; }
-
-    // 받아 둔 줄에서도 빼야 거르기를 해도 되살아나지 않는다
-    const i = OL_ROWS.findIndex(r => r.id === row.id);
-    if (i >= 0) OL_ROWS.splice(i, 1);
-    olGrid.setData(olGrid.getData().filter(r => r.id !== row.id));
-    showToast(res.message, 'success');
-  }
-
   /* 거르기 — 받아 둔 줄을 그 자리에서 좁힌다. 서버로 다시 묻지 않는다. */
   function olApply() {
     if (!olGrid) return;
@@ -9718,7 +9678,7 @@ window.HELP_TOUR_STEPS = [
 
     const rows = OL_ROWS.filter(r => {
       if (q) {
-        const hay = [r.order_no, r.rx_number, r.patient, r.manager, r.hospital, r.doctor]
+        const hay = [r.order_no, r.rx_number, r.patient, r.manager, r.rx_hospital, r.rx_doctor]
                       .join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -9728,14 +9688,15 @@ window.HELP_TOUR_STEPS = [
       if (manager === '__none__' && r.manager) return false;
       if (manager && manager !== '__none__' && r.manager !== manager) return false;
 
-      if (rxtype   && r.rx_type  !== rxtype)   return false;
-      if (purchase && r.purchase !== purchase) return false;
-      if (hospital && r.hospital !== hospital) return false;
+      /* 「처방전」을 고르면 「처방전 - 원내」도 함께 온다 — 둘 다 처방전이다 */
+      if (rxtype   && !(r.rx_acc_type || '').startsWith(rxtype)) return false;
+      if (purchase && r.rx_purchase !== purchase) return false;
+      if (hospital && r.rx_hospital !== hospital) return false;
 
       /* 날짜 둘은 「그날까지」로 본다 — 처방전이 언제 끝나는지ㆍ다음 재구매가 언제인지를
          보는 까닭은 「곧 닥치는 것」을 추리기 위해서다. 비어 있는 건은 걸리지 않는다. */
-      if (rxend     && (!r.rx_end     || r.rx_end     > rxend))     return false;
-      if (nextrepur && (!r.next_repur || r.next_repur > nextrepur)) return false;
+      if (rxend     && (!r.rx_end        || r.rx_end        > rxend))     return false;
+      if (nextrepur && (!r.rx_next_repur || r.rx_next_repur > nextrepur)) return false;
       return true;
     });
 

@@ -332,6 +332,7 @@ window.HELP_TOUR_STEPS = [
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
+      { header: '이름',     name: 'patient',   width: 90,  sortable: true },
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
         // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.
@@ -353,7 +354,6 @@ window.HELP_TOUR_STEPS = [
           return el;
         },
       },
-      { header: '이름',     name: 'patient',   width: 90,  sortable: true },
       /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */

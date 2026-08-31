@@ -1380,10 +1380,6 @@ class PrescriptionController extends Controller
                 // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
                 'manager'   => $rx?->assignedUser?->name ?? '',
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
-                /* 지울 수 있는 건인가 — 처방전도 안 올라왔고 창고에도 서지 않은 자리다.
-                   서버가 다시 한 번 따지므로 여기 값은 「단추를 세울지」에만 쓴다. */
-                'erasable'  => ! $rx?->image_path && ! $o->withworks_so_no,
-                'rx_url'    => $rx ? route('prescriptions.destroyEmpty', $rx) : null,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
                 'url'       => $rx ? route('prescriptions.show', $rx) . '?claim=1' : null,

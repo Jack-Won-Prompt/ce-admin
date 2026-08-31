@@ -128,6 +128,8 @@
     height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '접수번호', name: 'receipt',  width: 140, sortable: true },
+      { header: '주문번호', name: 'order_no', width: 120, sortable: true },
+      { header: '이름',   name: 'patient',  width: 90 },
       { header: '종류',     name: 'type',     width: 60,  align: 'center', sortable: true },
       // 같은 「교환」이라도 변심과 불량은 배송비도 승인자도 다르다 — 갈래를 세운다
       { header: '갈래',     name: 'scenario', width: 110, align: 'center', sortable: true },
@@ -143,7 +145,6 @@
         },
       },
       { header: '범위',     name: 'partial',  width: 60,  align: 'center', sortable: true },
-      { header: '주문번호', name: 'order_no', width: 120, sortable: true },
       { header: '원 판매주문', name: 'origin_so', width: 130, sortable: true },
       {
         // 창고에 알렸는가. 못 알린 건은 눈에 띄어야 다시 보낸다.
@@ -155,7 +156,6 @@
           return el;
         },
       },
-      { header: '이름',   name: 'patient',  width: 90 },
       { header: '반품 사유', name: 'reason',   width: 110 },
       { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
