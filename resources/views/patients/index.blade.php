@@ -447,6 +447,22 @@ document.addEventListener('keydown', (e) => {
           }
           return el;
         } },
+      {
+        /* 의료용품 구입 확인서 — 거래처 본인이 달라고 할 때 내준다(요청서 회신).
+           목록에서 곧바로 내려받는다. 문자ㆍ메일로 보내는 것은 상세에서 한다 —
+           밖으로 나가는 것이라 누구에게 가는지를 보고 눌러야 한다. */
+        header: '구입 확인서', name: 'purchase_confirm', width: 110, align: 'center',
+        sortable: false, exportable: false,
+        renderer: (v, row) => {
+          const a = document.createElement('a');
+          a.href = `${DETAIL_BASE}/${row.id}/purchase-confirm`;
+          a.className = 'ds-btn';
+          a.style.cssText = 'height:24px;padding:0 8px;font-size:11px;';
+          a.textContent = '내려받기';
+          a.addEventListener('click', (e) => e.stopPropagation());
+          return a;
+        },
+      },
       { header: '미성년',     name: 'minor',     width: 80, align: 'center', sortable: true,
         renderer: (v) => {
           if (!v) return '';

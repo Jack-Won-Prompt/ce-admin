@@ -8,6 +8,24 @@
 
 @push('styles')
 <style>
+  /* 구입 확인서 — 세 갈래(내려받기ㆍ문자ㆍ메일)를 단추 하나 아래 접어 둔다.
+     이름 옆 단추 줄이 길어지면 정작 「수정」이 밀려난다. */
+  .pc-menu { position: relative; }
+  .pc-pop { display: none; position: absolute; right: 0; top: calc(100% + 4px); z-index: 30;
+            min-width: 168px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 4px; }
+  .pc-pop.open { display: block; }
+  .pc-pop a, .pc-pop button { display: flex; align-items: center; gap: 6px; width: 100%;
+            padding: 7px 10px; font-size: 12.5px; color: var(--text-primary);
+            background: none; border: 0; border-radius: 7px; cursor: pointer; text-align: left; }
+  .pc-pop a:hover, .pc-pop button:hover:not(:disabled) { background: var(--gray-50); }
+  .pc-pop button:disabled { color: var(--text-muted); cursor: not-allowed; }
+  .pc-pop form { margin: 0; }
+</style>
+@endpush
+
+@push('styles')
+<style>
   /* 고객 정보가 위, 주문 이력이 아래다. 좌우로 두었더니 왼쪽 칸이 340px 로 눌려
      이름과 단추가 접히고, 오른쪽은 반이 비었다. */
   /* 내용이 짧아도 바닥까지 — 마지막 카드(주문 이력)가 남는 높이를 받는다.
@@ -186,6 +204,36 @@
             <button class="btn btn-outline btn-sm" onclick="openCounselTab()">
               <i class="bx bx-conversation"></i> 상담내역
             </button>
+
+            {{-- 의료용품 구입 확인서 — 거래처 본인이 달라고 할 때 내준다(요청서 회신).
+                 내려받아 건네거나, 문자ㆍ메일로 링크를 보낸다. 링크는 이레만 산다. --}}
+            <div class="pc-menu">
+              <button type="button" class="btn btn-outline btn-sm" onclick="pcToggle(event)">
+                <i class="bx bx-file"></i> 구입 확인서
+              </button>
+              <div class="pc-pop" id="pcPop">
+                <a href="{{ route('documents.purchaseConfirm', $patient) }}">
+                  <i class="bx bx-download"></i> 내려받기
+                </a>
+                <form method="POST" action="{{ route('documents.purchaseConfirm.send', $patient) }}">
+                  @csrf
+                  <input type="hidden" name="channel" value="sms">
+                  <button type="submit" @disabled(blank($patient->mobile))
+                          title="{{ blank($patient->mobile) ? '연락처가 없습니다' : $patient->mobile }}">
+                    <i class="bx bx-message-detail"></i> 문자로 보내기
+                  </button>
+                </form>
+                {{-- 메일은 주소가 있을 때만 고를 수 있다(요청서 회신 — 「이메일 존재하면」) --}}
+                <form method="POST" action="{{ route('documents.purchaseConfirm.send', $patient) }}">
+                  @csrf
+                  <input type="hidden" name="channel" value="email">
+                  <button type="submit" @disabled(blank($patient->email))
+                          title="{{ blank($patient->email) ? '이메일이 없습니다' : $patient->email }}">
+                    <i class="bx bx-envelope"></i> 메일로 보내기
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -537,6 +585,15 @@
 @endsection
 
 @push('scripts')
+<script>
+  /* 구입 확인서 메뉴 — 바깥을 누르면 닫는다 */
+  window.pcToggle = function (e) {
+    e.stopPropagation();
+    document.getElementById('pcPop')?.classList.toggle('open');
+  };
+  document.addEventListener('click', () => document.getElementById('pcPop')?.classList.remove('open'));
+</script>
+
 
 <script>
   /* 주문 이력 표 — 행을 더블클릭하면 그 주문의 제품을 옆 탭에서 펼친다.

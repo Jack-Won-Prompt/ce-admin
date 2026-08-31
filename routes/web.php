@@ -149,6 +149,11 @@ Route::middleware(['auth'])->group(function () {
     // 재구매 관리
     /* 교환·반품·취소 — 주문을 무르거나 바꾸는 일. 지금까지는 주문 상태만 cancelled 로
        바뀌고 왜·무엇이 오갔는지는 남지 않았다. */
+    /* 의료용품 구입 확인서 — 거래처 한 사람의 구입내역을 한 장에 모은다.
+       담당자가 내려받아 건네거나, 문자ㆍ메일로 링크를 보낸다. */
+    Route::get( '/patients/{patient}/purchase-confirm',      [\App\Http\Controllers\PurchaseConfirmController::class, 'download'])->name('documents.purchaseConfirm');
+    Route::post('/patients/{patient}/purchase-confirm/send', [\App\Http\Controllers\PurchaseConfirmController::class, 'send'])->name('documents.purchaseConfirm.send');
+
     // PG 결제 — 토스페이먼츠를 거친 결제(요청서 7쪽)
     Route::get('/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('payments.index');
 
@@ -1200,6 +1205,14 @@ Route::get('/dev/migrate-fcm-token', function () {
     return response()->json(['ok' => true, 'msg' => '이미 존재합니다.']);
 })->middleware('auth');
 
+
+/* 환자가 링크로 여는 구입 확인서 — 로그인이 없다.
+   서명이 맞아야 열린다. 주소를 손으로 고쳐 남의 것을 볼 수 없고, 이레가 지나면
+   죽는다 — 사람에게 보내는 주소가 영영 살아 있으면 그 주소를 받은 누구든 남의
+   구입내역을 볼 수 있다. */
+Route::get('/docs/purchase-confirm/{patient}',
+    [\App\Http\Controllers\PurchaseConfirmController::class, 'open'])
+    ->middleware('signed')->name('documents.purchaseConfirm.open');
 
 // Laravel Breeze/Fortify 인증 라우트 (별도 설치 필요)
 require __DIR__ . '/auth.php';
