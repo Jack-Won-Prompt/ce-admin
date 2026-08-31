@@ -745,6 +745,11 @@
   const TAB       = @json($tab);
   const GRID_DATA = @json($gridData);
   const GRID_COLS = @json($gridColumns);
+
+  /* 네 화면이 함께 쓰던 칸을 정산 탭에 잇는다(요청서 3쪽 — 「모든 화면의 항목이 최종으로
+     보이게」). 가상계좌 탭은 주문이 아니라 발급 건을 세는 자리라 잇지 않는다.
+     여기서 이어야 아래의 renderer 붙이기(결제수단 칸)가 이 칸들에도 닿는다. */
+  if (TAB === 'settlement') GRID_COLS.push(...ceMoneyCols(), ...ceWwCols());
   const ORDERS_BASE = @json(url('settlement/orders'));   // + '/{id}/virtual-account' 등
 
   const mountEl = document.getElementById(TAB === 'virtual_account' ? 'vaGrid' : 'settlementGrid');

@@ -53,7 +53,9 @@ class SettlementController extends Controller
         ];
 
         // ── 정산 목록 ──────────────────────────────────────────
-        $query = Order::with(['patient', 'prescription', 'tossPayment', 'paymentLinks'])
+        // items.lots ㆍ billingOffice — 네 화면이 함께 쓰는 칸이 읽는다
+        $query = Order::with(['patient', 'prescription.billingOffice', 'tossPayment',
+                              'paymentLinks', 'items.lots'])
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->latest();
 
@@ -152,7 +154,11 @@ class SettlementController extends Controller
     {
         $nhisMap = ['pending' => '대기', 'submitted' => '청구완료', 'approved' => '승인', 'rejected' => '반려'];
 
-        $data = $orders->map(function ($order) use ($nhisMap) {
+        /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽). 동의 두 가지는 사람에
+           붙어, 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 모아 둔다. */
+        $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
+
+        $data = $orders->map(function ($order) use ($nhisMap, $extras) {
             $tp = $order->tossPayment;
 
             /* 토스가 확인했든 담당자가 통장을 보고 확인했든 「들어왔다」는 하나다.
@@ -212,7 +218,11 @@ class SettlementController extends Controller
                 'rx_open_url'  => $order->prescription ? route('prescriptions.show', $order->prescription) : null,
                 'rx_number'    => $order->prescription?->rx_number,
                 'order_url'    => $order->product_name ? route('settlement.order-detail', $order) : null,
-            ];
+
+                // 네 화면이 함께 쓰는 칸 — 차례와 이름이 어디서나 같다
+            ] + $extras->rx($order->prescription, $order->patient)
+              + $extras->ww($order, $order->prescription, $order->patient)
+              + $extras->of($order);
         })->values();
 
         $columns = [
@@ -220,20 +230,19 @@ class SettlementController extends Controller
             ['header' => '이름',      'name' => 'patient',      'width' => 90,  'sortable' => true],
             ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
             ['header' => '유형',        'name' => 'acc_type',     'width' => 100, 'align' => 'center', 'sortable' => true],
-            ['header' => '총 주문금액', 'name' => 'total_amount', 'width' => 110, 'editor' => 'number'],
-            ['header' => '청구액',   'name' => 'nhis_amount',  'width' => 100, 'editor' => 'number'],
             // 한 개 값이라 더하지 않는다 — 다 합쳐 봐야 아무 뜻이 없다
             ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
-            ['header' => '본인부담',    'name' => 'copay',        'width' => 100, 'editor' => 'number'],
             ['header' => '배송비',      'name' => 'shipping',     'width' => 90,  'editor' => 'number'],
-            ['header' => '결제 방식',   'name' => 'pay_method',   'width' => 90,  'align' => 'center', 'sortable' => true],
-            ['header' => '입금확인',    'name' => 'deposit',      'width' => 100, 'align' => 'right'],
+            ['header' => '입금액',      'name' => 'deposit',      'width' => 100, 'align' => 'right'],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
             ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
-            ['header' => '청구',        'name' => 'nhis_claim',   'width' => 80,  'align' => 'center', 'sortable' => true],
             ['header' => '접수일',      'name' => 'created',      'width' => 100, 'sortable' => true],
         ];
+
+        /* 네 화면이 함께 쓰던 칸을 이어 붙인다(요청서 3쪽). 이 화면은 칸을 PHP 로 넘기므로
+           ceMoneyCols()ㆍceWwCols() 를 화면에서 펼친다 — buildSettlementGrid 는 앞의 것만
+           만들고, 뒤는 settlement/index 가 잇는다. */
 
         return [$data, $columns];
     }

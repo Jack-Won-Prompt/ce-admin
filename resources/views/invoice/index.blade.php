@@ -1160,16 +1160,20 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '주문번호',   name: 'order_number', width: 130, sortable: true },
       { header: '이름',     name: 'patient_name', width: 90,  sortable: true },
-      { header: '총금액',     name: 'total_amount', width: 110, align: 'right', editor: 'number', sortable: true },
       { header: '주문상태',   name: 'status_label', width: 90,  align: 'center', sortable: true },
       { header: '주문일',     name: 'created_at',   width: 100, align: 'center', sortable: true },
       { header: '배송완료일', name: 'delivered_at', width: 100, align: 'center', sortable: true },
       /* 미발행이면 그 자리에서 발행한다 — 상세로 들어갔다 나오는 걸음을 없앤다.
          발행된 건에는 취소를 함께 둔다. */
-      { header: '세금계산서', name: 'ti_display', width: 110, align: 'center', sortable: true,
+      { header: '세금계산서 발행', name: 'ti_display', width: 120, align: 'center', sortable: true,
         renderer: (v, row) => issueCell('tax', v, row) },
-      { header: '현금영수증', name: 'cr_display', width: 110, align: 'center', sortable: true,
+      { header: '현금영수증 발행', name: 'cr_display', width: 120, align: 'center', sortable: true,
         renderer: (v, row) => issueCell('cash', v, row) },
+
+      /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽 — 「모든 화면의 항목이
+         최종으로 보이게」). 차례와 이름이 어디서나 같다. */
+      ...ceMoneyCols(),
+      ...ceWwCols(),
     ],
     data: @json($gridData),
   });

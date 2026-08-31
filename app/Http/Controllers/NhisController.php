@@ -13,7 +13,8 @@ class NhisController extends Controller
     // ── 목록 ─────────────────────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Order::with(['patient', 'prescription.billingOffice'])
+        // items.lots — 네 화면이 함께 쓰는 칸에 Lotㆍ유효기간이 선다
+        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots'])
             ->whereIn('status', ['delivered', 'shipping', 'confirmed'])
             ->latest();
 
@@ -100,8 +101,13 @@ class NhisController extends Controller
             'cancelled' => '주문취소',
         ];
 
+        /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽). 동의 두 가지는 사람에
+           붙어 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 한 번에 모아 둔다. */
+        $rows   = $query->get();
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
+
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
-        $gridData = $query->get()->map(function ($o) use ($nhisStatusLabels) {
+        $gridData = $rows->map(function ($o) use ($nhisStatusLabels, $extras) {
             // 승인/거부 결과 텍스트
             if ($o->nhis_claim_status === 'approved') {
                 $result = number_format((int) $o->nhis_reimbursement) . '원';
@@ -125,7 +131,7 @@ class NhisController extends Controller
                 // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
                 'patient_type' => $o->patientTypeLabel(),
                 // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
-                'claim_ready'  => (bool) $o->claim_ready,
+                'claim_ready_flag' => (bool) $o->claim_ready,
                 'claim_missing' => $o->claim_missing ?? '',
                 // 공단에 낼 건이 아니면 자료를 따질 것도 없다 — 색을 달리 쓴다
                 'claim_na'     => ($o->prescription?->claim_agency ?? \App\Support\ClaimAgency::NHIS)
@@ -138,7 +144,11 @@ class NhisController extends Controller
                 'office_fax'   => $o->prescription?->billingOffice?->fax ?? '',
                 'office_who'   => trim(($o->prescription?->billingOffice?->manager_name ?? '')
                                     . ' ' . ($o->prescription?->billingOffice?->title ?? '')),
-            ];
+
+                // 네 화면이 함께 쓰는 칸 — 차례와 이름이 어디서나 같다
+            ] + $extras->rx($o->prescription, $o->patient)
+              + $extras->ww($o, $o->prescription, $o->patient)
+              + $extras->of($o);
         })->values();
 
         $total = $gridData->count();

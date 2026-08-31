@@ -403,7 +403,7 @@
            적혀 있으면 결국 건마다 다시 찾아야 하기 때문이다(화면정의서 14ㆍ15).
            아직 고르지 않았으면 「관할 미지정」이라 적어 둔다 — 빈칸으로 두면 고른
            것인지 안 고른 것인지 알 수 없다. */
-        header: '청구처', name: 'agency', width: 200, sortable: true,
+        header: '청구처ㆍ관할', name: 'agency', width: 200, sortable: true,
         renderer: (v, row) => {
           const box = document.createElement('div');
           box.style.cssText = 'line-height:1.45;text-align:left;';
@@ -437,7 +437,7 @@
           if (row.claim_na) {
             s.textContent = v || '공단 청구 건 아님';
             s.style.cssText = 'color:var(--text-muted);font-size:11px;';
-          } else if (row.claim_ready) {
+          } else if (row.claim_ready_flag) {
             s.textContent = '완비';
             s.style.cssText = 'color:var(--success);font-weight:700;';
           } else {
@@ -454,6 +454,12 @@
         header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
         renderer: (v, row) => nhisAssistBtn(row.id),
       },
+
+      /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽 — 「모든 화면의 항목이
+         최종으로 보이게」). 차례와 이름이 어디서나 같아야 화면을 옮길 때 다시 읽는
+         법을 배우지 않는다. */
+      ...ceMoneyCols(),
+      ...ceWwCols(),
     ],
     data: @json($gridData),
   });

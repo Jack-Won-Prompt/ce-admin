@@ -16,7 +16,8 @@ class InvoiceController extends Controller
 
         $invoiceStatuses = ['confirmed', 'shipping', 'delivered'];
 
-        $query = Order::with(['patient'])
+        // prescription ㆍ items.lots — 네 화면이 함께 쓰는 칸이 읽는다
+        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots'])
             ->whereIn('status', $invoiceStatuses)
             ->latest();
 
@@ -62,7 +63,12 @@ class InvoiceController extends Controller
         // ── wwGrid용 데이터 ──
         $crTypes = Order::CASH_RECEIPT_TYPE_LABELS;
 
-        $gridData = $query->get()->map(function ($order) use ($taxColExists, $crTypes) {
+        /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽). 동의 두 가지는 사람에
+           붙어, 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 모아 둔다. */
+        $rows   = $query->get();
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
+
+        $gridData = $rows->map(function ($order) use ($taxColExists, $crTypes, $extras) {
             $tiStatus = $taxColExists ? ($order->tax_invoice_status ?? 'not_issued') : null;
             $crStatus = $taxColExists ? ($order->cash_receipt_status ?? 'not_issued') : null;
 
@@ -121,7 +127,11 @@ class InvoiceController extends Controller
                 'cr_amount'      => (int) ($order->cash_receipt_amount ?? 0),
                 'cr_issued_at'   => $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '',
                 'cr_cancelled_at'=> $order->cash_receipt_cancelled_at?->format('Y-m-d H:i') ?? '',
-            ];
+
+                // 네 화면이 함께 쓰는 칸 — 차례와 이름이 어디서나 같다
+            ] + $extras->rx($order->prescription, $order->patient)
+              + $extras->ww($order, $order->prescription, $order->patient)
+              + $extras->of($order);
         });
 
         $total = $gridData->count();
