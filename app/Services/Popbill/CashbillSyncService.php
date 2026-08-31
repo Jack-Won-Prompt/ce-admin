@@ -149,6 +149,9 @@ class CashbillSyncService
             'customer_name' => $info->customerName ?? null,
             'item_name'     => $info->itemName     ?? null,
             'order_number'  => $info->orderNumber  ?? null,
+            // 우리 주문에 잇는다(요청서 6쪽) — 못 이으면 빈칸이다
+            'order_id'      => \App\Support\PopbillLink::orderIdFor(
+                                   $info->mgtKey ?? null, $info->orderNumber ?? null),
             'email'         => $info->email        ?? null,
             'hp'            => $info->hp           ?? null,
             'confirm_num'   => $info->confirmNum   ?? null,
@@ -202,6 +205,8 @@ class CashbillSyncService
             'customer_name'   => $full->customerName  ?? null,
             'item_name'       => $full->itemName      ?? null,
             'order_number'    => $full->orderNumber   ?? null,
+            'order_id'        => \App\Support\PopbillLink::orderIdFor(
+                                     $full->mgtKey ?? null, $full->orderNumber ?? null),
             'email'           => $full->email         ?? null,
             'hp'              => $full->hp            ?? null,
             'confirm_num'     => $full->confirmNum    ?? null,

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class PopbillTaxinvoice extends Model
 {
     protected $fillable = [
+        // 우리 주문에 잇는 열쇠 — 관리번호에 심어 둔 주문 id 를 읽는다
+        'order_id',
         'corp_num', 'mgt_key_type', 'mgt_key',
         'item_key', 'state_code', 'state_dt',
         'tax_type', 'purpose_type', 'issue_type', 'write_date', 'issue_dt',
@@ -59,6 +61,8 @@ class PopbillTaxinvoice extends Model
             'corp_num'          => $corpNum,
             'mgt_key_type'      => $mgtKeyType,
             'mgt_key'           => $mgtKey,
+            // 팝빌은 주문번호 칸을 주지 않는다 — 관리번호에 심어 둔 것을 읽는다(요청서 6쪽)
+            'order_id'          => \App\Support\PopbillLink::fromMgtKey($mgtKey),
             'item_key'          => $info->itemKey       ?? null,
             'state_code'        => $stateCode,
             'state_dt'          => $info->stateDT       ?? null,
@@ -80,5 +84,11 @@ class PopbillTaxinvoice extends Model
             'is_final'          => in_array($stateCode, self::FINAL_STATES, true),
             'synced_at'         => now(),
         ];
+    }
+
+    /** 어느 주문의 발행 건인가 — 못 이은 것은 null 이다 */
+    public function order(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Order::class);
     }
 }

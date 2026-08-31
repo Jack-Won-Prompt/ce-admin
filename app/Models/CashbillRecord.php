@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class CashbillRecord extends Model
 {
     protected $fillable = [
+        // 우리 주문에 잇는 열쇠 — 팝빌이 돌려준 주문번호나 관리번호에서 읽는다
+        'order_id',
         'corp_num', 'mgt_key', 'item_key',
         'trade_type', 'trade_usage', 'taxation_type',
         'total_amount', 'supply_cost', 'tax', 'service_fee',
@@ -45,5 +47,11 @@ class CashbillRecord extends Model
             3 => '실패',
             default => '—',
         };
+    }
+
+    /** 어느 주문의 발행 건인가 — 못 이은 것은 null 이다 */
+    public function order(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Order::class);
     }
 }
