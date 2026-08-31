@@ -4642,7 +4642,7 @@ const ChatPanel = (() => {
      출고나 취소처럼 곧 손을 써야 하는 일이 늦어진다.
      같은 사건이 두 번 방송되어도 토스트가 겹치지 않게 잠깐 기억해 둔다. */
   const wwSeen = new Map();
-  adminCh.bind('withworks.status', function (data) {
+  function onWithworksStatus(data) {
     if (!data || IS_FRAMED) return;
 
     const key = (data.event || '') + '|' + (data.body || '');
@@ -4657,7 +4657,17 @@ const ChatPanel = (() => {
       : `<b>${escHtml(data.title)}</b><br>${escHtml(data.body)}`;
 
     showToast(msg, data.tone || 'info', 8000);
-  });
+  }
+
+  adminCh.bind('withworks.status', onWithworksStatus);
+
+  /* 임자가 있는 사건은 그 사람에게만 온다 — 반품 접수자, 승인을 기다리는 팀장.
+     전원에게 띄우면 정작 할 일이 있는 사람의 화면에서 남의 건에 섞여 묻힌다.
+     wwSeen 을 함께 쓰므로 두 길로 같은 것이 와도 한 번만 뜬다. */
+  if (AUTH_USER_ID) {
+    pusherClient.subscribe('private-App.Models.User.' + AUTH_USER_ID)
+                .bind('withworks.status', onWithworksStatus);
+  }
 })();
 </script>
 

@@ -160,6 +160,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{orderReturn}',  [\App\Http\Controllers\OrderReturnController::class, 'update'])->name('update');
         Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
         Route::post('/{orderReturn}/resend',  [\App\Http\Controllers\OrderReturnController::class, 'resend'])->name('resend');
+        // 어디까지 왔는지 환자에게 알린다 — 접수자가 눌러 보낸다
+        Route::post('/{orderReturn}/notify-patient', [\App\Http\Controllers\OrderReturnController::class, 'notifyPatient'])->name('notifyPatient');
         // 창고 검수 결과 받아 오기 · 마이너스 발행 다시 시도
         Route::post('/{orderReturn}/pull-inspection', [\App\Http\Controllers\OrderReturnController::class, 'pullInspection'])->name('pullInspection');
         Route::post('/{orderReturn}/issue-credit',    [\App\Http\Controllers\OrderReturnController::class, 'issueCredit'])->name('issueCredit');

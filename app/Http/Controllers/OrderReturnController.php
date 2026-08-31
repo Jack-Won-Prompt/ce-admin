@@ -421,6 +421,24 @@ class OrderReturnController extends Controller
         return back()->with('success', '환불 정보를 적었습니다.');
     }
 
+    /**
+     * 어디까지 왔는지 환자에게 알린다 (요청서 4쪽 「접수자 → 환자 inform」).
+     *
+     * 창고 사건마다 저절로 보내지 않는다. 밖으로 나가는 말이라 무를 수 없고, 검수중ㆍ
+     * 입고중처럼 환자가 알 까닭이 없는 걸음도 있다 — 무엇을 알릴지는 접수자가 정한다.
+     */
+    public function notifyPatient(Request $request, OrderReturn $orderReturn,
+                                  \App\Services\ReturnPatientNotice $notice): RedirectResponse
+    {
+        $data = $request->validate(['extra' => 'nullable|string|max:200']);
+
+        $out = $notice->send($orderReturn, $data['extra'] ?? null);
+
+        return $out['sent']
+            ? back()->with('status', $out['message'])
+            : back()->withErrors(['extra' => $out['message']]);
+    }
+
     public function show(OrderReturn $orderReturn): View
     {
         $orderReturn->load([
@@ -500,6 +518,11 @@ class OrderReturnController extends Controller
            그냥 지나간다. 실패해도 우리 쪽 단계는 이미 옮겼다 — 되돌리면 담당자가 한 일이
            사라진다. 로그에만 남긴다. */
         $this->withworks->pushStatus($orderReturn);
+
+        /* 절차서의 「접수자 → 팀장님 승인요청」(요청서 4쪽). 다음 걸음이 승인이면
+           그때가 곧 요청이다 — 접수자가 따로 부탁하게 두면 잊는다.
+           알람과 채팅을 함께, 승인할 수 있는 사람에게만 보낸다(2026-08-31 회신). */
+        app(\App\Services\ReturnNotice::class)->askApproval($orderReturn->fresh());
 
         $extra = '';
 

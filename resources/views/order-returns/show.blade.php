@@ -146,6 +146,31 @@
      요청서 4쪽. 카드 취소 승인번호ㆍ통장을 물린 날ㆍ환불분 현금영수증 번호는 팝빌과
      토스 화면을 보며 담당자가 옮겨 적는 값이다. 우리가 만들 수 없어 적는 자리를 둔다.
      단계는 여기서 옮기지 않는다 — 그것은 아래 「진행 단계」가 절차서대로 한다. --}}
+{{-- 환자에게 알린다 ────────────────────────────────────
+     절차서의 「접수자 → 환자 inform」. 창고 사건마다 저절로 보내지 않는다 — 밖으로
+     나가는 말이라 무를 수 없고, 검수중ㆍ입고중처럼 환자가 알 까닭이 없는 걸음도 있다.
+     무엇을 알릴지는 접수자가 정한다. --}}
+<div class="rt-card">
+  <div class="rt-hd">환자 안내</div>
+  <div class="rt-bd">
+    @if($r->order?->patient?->mobile)
+      <div class="rt-kv"><span>보낼 곳</span><span>{{ $r->order->patient->name }} · {{ $r->order->patient->mobile }}</span></div>
+      <div class="rt-kv" style="border-bottom:none;"><span>보낼 말</span><span style="white-space:pre-line;color:var(--text-secondary);font-weight:400;">{{ app(\App\Services\ReturnPatientNotice::class)->compose($r) }}</span></div>
+      <form method="POST" action="{{ route('order-returns.notifyPatient', $r) }}" class="rt-go" style="margin-top:10px;">
+        @csrf
+        <input type="text" name="extra" class="form-control" maxlength="200"
+               placeholder="덧붙일 말 (없으면 비워 둡니다)">
+        <button type="submit" class="btn btn-primary"
+                onclick="return confirm('환자에게 실제로 발송됩니다. 계속할까요?');">
+          <i class="bx bx-send"></i> 안내 보내기
+        </button>
+      </form>
+    @else
+      <div style="font-size:13px;color:var(--text-muted);">환자 연락처가 없어 보낼 수 없습니다.</div>
+    @endif
+  </div>
+</div>
+
 <div class="rt-card">
   <div class="rt-hd">환불 처리 자취</div>
   <form method="POST" action="{{ route('order-returns.update', $r) }}" class="rt-refund rt-bd">
