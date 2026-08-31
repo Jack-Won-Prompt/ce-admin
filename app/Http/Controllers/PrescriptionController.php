@@ -3033,7 +3033,9 @@ HTML;
         $conf = (array) config('services.withworks_billing_strategy', []);
         $map  = (array) ($conf['map'] ?? []);
 
-        return (int) ($map[$key] ?? $conf['default'] ?? 25);
+        /* 자격을 아직 고르지 않은 건은 열쇠가 null 이다 — 널로 배열을 찾으면 PHP 가
+           나무란다. 빈 글자로 바꾸면 표에 없는 열쇠가 되어 default 로 내려간다. */
+        return (int) ($map[$key ?? ''] ?? $conf['default'] ?? 25);
     }
 
     // ── SMS 템플릿 목록 ────────────────────────────────────
