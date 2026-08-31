@@ -1207,6 +1207,10 @@
       ? (int) round($_tiBase * $_crRate / 100) + (int) ($order->shipping_fee ?? 0)
       : (int) $order->total_amount;
   $_crId   = $order->patient?->cash_receipt_no ?: ($order->patient?->mobile ?? '');
+  /* 발행 구분도 거래처에 적어 둔 것을 따른다 — 늘 「소득공제」로 열려, 지출증빙으로
+     적어 둔 거래처도 담당자가 매번 다시 골라야 했다. 거래처는 우리말로 적어 두고
+     발행은 코드로 보내므로 여기서 옮긴다. */
+  $_crType = ($order->patient?->deduction === '지출증빙') ? 'business_expense' : 'income_deduction';
 @endphp
 <div class="modal-overlay" id="cashModal">
   <div class="modal-box">
@@ -1226,13 +1230,13 @@
         <label class="form-label">발행 구분 <span>*</span></label>
         <div style="display:flex;gap:12px;margin-top:4px;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="cr_type" id="cr_type_income" value="income_deduction" checked
-                   onchange="onCrTypeChange()">
+            <input type="radio" name="cr_type" id="cr_type_income" value="income_deduction"
+                   @checked($_crType === 'income_deduction') onchange="onCrTypeChange()">
             소득공제 (개인)
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
             <input type="radio" name="cr_type" id="cr_type_biz" value="business_expense"
-                   onchange="onCrTypeChange()">
+                   @checked($_crType === 'business_expense') onchange="onCrTypeChange()">
             지출증빙 (사업자)
           </label>
         </div>
