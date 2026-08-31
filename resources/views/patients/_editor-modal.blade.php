@@ -278,6 +278,42 @@
      창은 하나뿐이라 이 셋만 갈아 끼우면 두 가지 일을 다 한다. */
   let _peMode = 'create', _peId = null, _peDone = null;
 
+  /* 빈 칸은 null 로 보낸다 — 빈 글자를 담으면 「적었는데 비었다」와 「안 적었다」가
+     구별되지 않고, 날짜 칸은 빈 글자에서 검증이 걸린다. */
+  const val = (id) => (document.getElementById(id)?.value ?? '').trim() || null;
+
+  /* 같은 자리(origin)의 화면들에 알린다. 받는 쪽이 없어도 그만이라 실패를 따지지 않는다. */
+  function ptTell(msg) {
+    try {
+      const ch = new BroadcastChannel('ce-patient');
+      ch.postMessage(msg);
+      ch.close();
+    } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
+  }
+
+  /* 주소 찾기 — 두 화면 모두 다음(카카오) 우편번호 서비스를 이미 불러 둔다.
+     그래도 없을 때를 살핀다: 밖에서 오는 스크립트라 막히는 자리가 있다. */
+  window.addFindAddress = function () {
+    if (typeof daum === 'undefined' || !daum.Postcode) {
+      showToast('주소 찾기를 불러오지 못했습니다.', 'warning');
+      return;
+    }
+    const W = 500, H = 600;
+    new daum.Postcode({
+      width: W, height: H,
+      oncomplete: function (data) {
+        document.getElementById('add-postcode').value = data.zonecode;
+        document.getElementById('add-address').value  = data.roadAddress || data.jibunAddress;
+        const detail = document.getElementById('add-address-detail');
+        detail.value = '';
+        detail.focus();
+      },
+    }).open({
+      left: Math.floor((window.screen.width  - W) / 2),
+      top:  Math.floor((window.screen.height - H) / 2),
+    });
+  };
+
   /* 이 셋은 창의 onclick 이 부른다 — 인라인 handler 는 전역에서만 이름을 찾으므로
      감싸 둔 함수 안에 두면 「is not defined」로 죽는다. */
   window.openAddModal  = function () { openPatientEditor(); };

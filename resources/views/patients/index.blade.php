@@ -360,28 +360,6 @@
 {{-- 주문 등록·환자 상세와 같은 카카오(다음) 우편번호 서비스 --}}
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
-  function addFindAddress() {
-    if (typeof daum === 'undefined' || !daum.Postcode) {
-      showToast('주소 찾기를 불러오지 못했습니다.', 'warning');
-      return;
-    }
-    const W = 500, H = 600;
-    new daum.Postcode({
-      width: W, height: H,
-      oncomplete: function (data) {
-        document.getElementById('add-postcode').value = data.zonecode;
-        document.getElementById('add-address').value  = data.roadAddress || data.jibunAddress;
-        const detail = document.getElementById('add-address-detail');
-        detail.value = '';
-        detail.focus();
-      },
-    }).open({
-      left: Math.floor((window.screen.width  - W) / 2),
-      top:  Math.floor((window.screen.height - H) / 2),
-    });
-  }
-</script>
-<script>
 /* 서명ㆍ신분증 보기 — 셀 버튼이 부른다 */
 function ptShowImage(title, url) {
   document.getElementById('ptImgTitle').textContent = title;
