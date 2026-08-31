@@ -40,12 +40,13 @@ class WithworksSetting extends Model
      * 취소는 아무것도 움직이지 않는다. 한 코드로 묶으면 창고 담당자가 비고를 읽어야
      * 무엇을 할지 알 수 있다.
      *
-     * 취소·교환은 위드웍스에 아직 코드가 없어 비워 둔다. 없는 코드로 보내면 저쪽이
-     * 거절한다 — 코드가 생기면 설정 화면에서 적어 넣으면 된다.
+     * 2026-08-31 위드웱스가 세 가지를 다 열었다 — 취소 1504 ㆍ 반품 1505 ㆍ 교환 1506.
+     * 전에는 반품만 있어 둘을 비워 두었다. 여기 값은 첫 화면을 빈칸으로 두지 않기
+     * 위한 출발점일 뿐이다 — 저쪽이 바꾸면 설정 화면에서 고친다.
      */
-    public const SO_TYPE_EUD_CANCEL   = '';
+    public const SO_TYPE_EUD_CANCEL   = '1504';
     public const SO_TYPE_EUD_RETURN   = '1505';
-    public const SO_TYPE_EUD_EXCHANGE = '';
+    public const SO_TYPE_EUD_EXCHANGE = '1506';
 
     /**
      * 일반 환불(자격 변경 등)이 세우는 금액조정 주문 — 전산판매(금액조정).
