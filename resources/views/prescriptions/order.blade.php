@@ -355,8 +355,9 @@
      화면에 하나도 남지 않는다. 15px(1.3%)보다 그 표시가 크다고 보고 막대를 살려 둔다.
      시안 폭 1164 는 스크롤바가 보이는 한 퍼블리싱으로 맞출 수 없다 — 디자이너 확인 필요. */
   /* 열이 스크롤되면 탭 줄이 따라 올라가 버린다. 열 안에서 붙여 둔다. */
-  .order-layout.is-split > #tabsCol > #tabBarOuter { position: sticky; top: 0; z-index: 2;
-                                        background: var(--gray-0); border-radius: 12px 12px 0 0; }
+  #tabsCol { overflow: hidden auto; }
+  #tabsCol > #tabBarOuter { position: sticky; top: 0; z-index: 2;
+                            background: var(--gray-0); border-radius: 12px 12px 0 0; }
   .tab-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 6px;
              min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0; }
   #tabsCol > .tab-pane { padding: 16px; }
@@ -6095,6 +6096,7 @@ window.HELP_TOUR_STEPS = [
     // 예전에는 주문 정보를 아래에 붙여 함께 보였는데, 시안에 없어 각자 탭으로 되돌린다.
     if (tabId === 'tab-ocr') {
       document.getElementById('tab-ocr').classList.add('active');
+      window.sizeViewer?.();
       return;
     }
 
@@ -7978,6 +7980,14 @@ window.HELP_TOUR_STEPS = [
     const top = v.getBoundingClientRect().top;
     const h   = Math.max(240, Math.floor(window.innerHeight - top - 16));
     v.style.maxHeight = h + 'px';
+
+    /* 오른쪽 열도 같은 키로 묶는다. 격자는 stretch 라 한쪽이 길어지면 다른
+       쪽도 따라 늘어난다 — 재지 않고 두었더니 탭마다 판의 키가 달랐고(주문 목록
+       804 ㆍ 상세 목록 1317 ㆍ 주문 제품 794), 바뀌는 순간마다 왼쪽 액자가 위아래로
+       움목였다. 탭을 바꿔도 테두리는 제자리에 있어야 한다 — 넘치는 것은 열
+       안에서 굴린다(탭 줄은 sticky 로 그 위에 붙어 있다). */
+    const t = document.getElementById('tabsCol');
+    if (t) t.style.maxHeight = h + 'px';
   }
   window.sizeViewer = sizeViewer;
 
