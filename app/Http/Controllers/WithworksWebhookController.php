@@ -52,6 +52,11 @@ class WithworksWebhookController extends Controller
      * 뜻이라 단계를 건드리지 않는다.
      */
     private const RETURN_STATUS = [
+        /* 실물이 창고에 들어온 순간이다. 반품주문의 확정(ro.confirmed)은 창고 담당자가
+           따로 누르는 일이라 늦게 올 수 있다 — 그것만 보면 물건이 이미 들어왔는데도
+           우리 표는 「수거중」에 멈춰 있다. 둘 중 먼저 오는 것이 단계를 옮기고, 뒤에
+           오는 것은 제자리에 멈췄다(같은 단계로는 옮기지 않는다). */
+        'ro.rcpt_completed' => 'inspecting',
         'ro.confirmed' => 'inspecting',
         'ro.cancelled' => 'cancelled',
     ];
@@ -89,6 +94,8 @@ class WithworksWebhookController extends Controller
             'status'          => 'nullable|string',
             'status_label'    => 'nullable|string',
             'ship'            => 'nullable|array',
+            // 입고완료 사건이 실어 보내는 것 — 입고번호ㆍ상태ㆍ입고일시
+            'receiving'       => 'nullable|array',
         ]);
 
         if ($v->fails()) {
@@ -203,6 +210,14 @@ class WithworksWebhookController extends Controller
                 ? mb_substr($data['status_label'], 0, 100) : $return->withworks_status_label,
         ])->save();
 
+        /* 실물이 들어온 날. 전에는 사람이 손으로 적었는데, 창고가 알려 주는 것을
+           두고 다시 적게 할 까닭이 없다. 이미 적혀 있으면 건드리지 않는다 — 담당자가
+           고쳐 둔 것이 창고의 날짜보다 정확할 수 있다. */
+        $arrived = $data['receiving']['received_date'] ?? null;
+        if ($arrived && !$return->arrived_at) {
+            $return->forceFill(['arrived_at' => \Carbon\Carbon::parse($arrived)])->save();
+        }
+
         /* 창고가 움직인 만큼만 우리 단계를 옮긴다. 이미 지나온 단계로는 되돌리지 않는다 —
            담당자가 손으로 앞서 옮겨 둔 것을 창고 사건이 뒤로 끌면 안 된다. */
         $to = self::RETURN_STATUS[$data['event']] ?? null;
@@ -212,7 +227,12 @@ class WithworksWebhookController extends Controller
                 'order_return_id' => $return->id,
                 'from_status'     => $return->status,
                 'to_status'       => $to,
-                'reason'          => '창고 ' . ($data['status_label'] ?? $data['event']),
+                /* 입고완료는 반품주문의 상태가 아니라 입고의 상태가 할 말을 한다 —
+                   그때 반품주문은 아직 「등록」이라 발자취에 「창고 등록」이 남는다. */
+                'reason'          => '창고 ' . (
+                    $data['receiving']['rcpt_status_label']
+                    ?? $data['status_label'] ?? $data['event']
+                ),
             ]);
 
             $return->update(['status' => $to]);
@@ -258,7 +278,8 @@ class WithworksWebhookController extends Controller
     {
         $tell = [
             'ro.created'   => ['반품이 창고에 접수되었습니다', 'info'],
-            'ro.confirmed' => ['반품 실물이 입고되었습니다',   'success'],
+            'ro.rcpt_completed' => ['반품 실물이 창고에 들어왔습니다', 'success'],
+            'ro.confirmed' => ['반품이 창고에서 확정되었습니다', 'success'],
             'ro.cancelled' => ['반품이 취소되었습니다',        'danger'],
         ];
 

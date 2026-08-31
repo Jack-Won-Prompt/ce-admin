@@ -25,7 +25,7 @@ class Order extends Model
         '1022' => ['샘플판매',                 'warning'],
         // 2026-08-18 코드 개편 — 5000·6000번대가 지워지고 1500·1600번대가 그 자리를 받았다
         '1501' => ['End User Direct',          'success'],
-        // 2026-08-31 위드웱스가 되돌리는 세 가지를 다 열었다 — 전에는 반품만 있었다
+        // 2026-08-31 위드웍스가 되돌리는 세 가지를 다 열었다 — 전에는 반품만 있었다
         '1504' => ['End User Direct 취소',     'danger'],
         '1505' => ['End User Direct 반품',     'danger'],
         '1506' => ['End User Direct 교환',     'warning'],
