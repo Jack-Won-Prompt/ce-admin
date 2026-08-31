@@ -134,7 +134,6 @@ class OrderGridExtras
             'rx_hosp_code'   => $p?->hospital_code ?? '',
             'rx_diag_date'   => $d($p?->diagnosis_date),
             'rx_dz_grade'    => $p?->disease_grade ?? '',
-            'rx_dz_code'     => $p?->disease_code ?? '',
             'rx_dz_name'     => $p?->disease_name ?? '',
             'rx_uro_date'    => $d($p?->uro_date),
             'rx_uro_find'    => implode(' · ', \App\Support\UroFindings::labels($p?->uro_findings)),

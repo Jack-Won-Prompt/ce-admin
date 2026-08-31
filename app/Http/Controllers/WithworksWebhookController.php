@@ -96,6 +96,9 @@ class WithworksWebhookController extends Controller
             'ship'            => 'nullable|array',
             // 입고완료 사건이 실어 보내는 것 — 입고번호ㆍ상태ㆍ입고일시
             'receiving'       => 'nullable|array',
+            /* 창고가 지금 무엇을 하고 있는가 — 도착완료ㆍ검수중ㆍ검수완료ㆍ입고중ㆍ
+               입고완료ㆍ출고중ㆍ출고완료(요청서 4쪽). 우리 접수 단계와 다른 것을 잰다. */
+            'pl3'             => 'nullable|array',
         ]);
 
         if ($v->fails()) {
@@ -218,6 +221,24 @@ class WithworksWebhookController extends Controller
             'withworks_status_label' => isset($data['status_label'])
                 ? mb_substr($data['status_label'], 0, 100) : $return->withworks_status_label,
         ])->save();
+
+        /* 창고가 지금 무엇을 하고 있는가(요청서 4쪽). 우리 단계는 건드리지 않는다 —
+           그것은 「우리가 어디까지 했는가」이고 이것은 「창고가 어디까지 했는가」다.
+
+           pl3 로 오면 그것을 쓰고, 없으면 입고 사건이 싣고 온 입고 상태로 갈음한다 —
+           위드웍스가 pl3 를 싣기 전까지는 그것이 우리가 아는 전부다. */
+        $pl3 = $data['pl3'] ?? null;
+        $label = $pl3['status_label'] ?? $data['receiving']['rcpt_status_label'] ?? null;
+
+        if ($label) {
+            $return->forceFill([
+                'pl3_status'       => mb_substr((string) ($pl3['status']
+                                        ?? $data['receiving']['rcpt_status'] ?? ''), 0, 30) ?: null,
+                'pl3_status_label' => mb_substr((string) $label, 0, 50),
+                'pl3_status_at'    => \Carbon\Carbon::parse(
+                                        $pl3['occurred_at'] ?? $data['occurred_at'] ?? now()),
+            ])->save();
+        }
 
         /* 실물이 들어온 날. 전에는 사람이 손으로 적었는데, 창고가 알려 주는 것을
            두고 다시 적게 할 까닭이 없다. 이미 적혀 있으면 건드리지 않는다 — 담당자가

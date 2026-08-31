@@ -11,7 +11,7 @@
   <div class="help-tip"><i class="bx bx-info-circle"></i>배송된 물건을 바꾸거나 돌려받고, 출고 전 주문을 무르는 자리입니다.</div>
 </div>
 <div class="help-section">
-  <div class="help-section-title">갈래별 단계 (Unicorn 교환·반품 절차)</div>
+  <div class="help-section-title">사유별 단계 (Unicorn 교환·반품 절차)</div>
   @foreach(\App\Models\OrderReturn::FLOWS as $sc => $flow)
     <div class="help-item"><div class="help-item-text">
       <strong>{{ \App\Models\OrderReturn::SCENARIO_LABELS[$sc] }}</strong>
@@ -130,10 +130,12 @@
       { header: '접수번호', name: 'receipt',  width: 140, sortable: true },
       { header: '주문번호', name: 'order_no', width: 120, sortable: true },
       { header: '이름',   name: 'patient',  width: 90 },
-      { header: '종류',     name: 'type',     width: 60,  align: 'center', sortable: true },
-      // 같은 「교환」이라도 변심과 불량은 배송비도 승인자도 다르다 — 갈래를 세운다
-      { header: '갈래',     name: 'scenario', width: 110, align: 'center', sortable: true },
+      { header: '유형',     name: 'type',     width: 60,  align: 'center', sortable: true },
+      // 같은 「교환」이라도 변심과 불량은 배송비도 승인자도 다르다 — 사유를 세운다
+      { header: '사유',     name: 'scenario', width: 110, align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
+      // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
+      { header: '3PL 상태', name: 'pl3',      width: 100, align: 'center', sortable: true },
       {
         // 절차서의 기한을 넘긴 건. 묻히면 기한을 둔 뜻이 없다.
         header: '기한', name: 'overdue', width: 110, align: 'center', sortable: true,
@@ -156,7 +158,7 @@
           return el;
         },
       },
-      { header: '반품 사유', name: 'reason',   width: 110 },
+      { header: '신청 사유', name: 'reason',   width: 110 },
       { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },

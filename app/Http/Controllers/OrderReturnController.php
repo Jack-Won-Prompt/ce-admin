@@ -61,7 +61,9 @@ class OrderReturnController extends Controller
             // 절차서의 갈래 — 같은 「교환」이라도 변심과 불량은 하는 일이 다르다
             'scenario'  => $r->scenarioLabel(),
             'status'    => $r->statusLabel(),
-            'partial'   => $r->is_partial ? '부분' : '전부',
+            // 창고가 알려 준 그대로다 — 우리가 적는 값이 아니다
+            'pl3'       => $r->pl3_status_label ?? '',
+            'partial'   => $r->is_partial ? '부분' : '전체',
             // 늦은 건은 눈에 띄어야 한다 — 묻히면 절차서의 기한을 둔 뜻이 없다
             'overdue'   => ($o = $r->overdue()) ? "{$o[0]} {$o[1]}일 초과" : '',
             'order_no'  => $r->order?->order_number ?? '-',

@@ -90,7 +90,7 @@
       <div class="rto-f rto-only" id="rtoSubtypeWrap">
         {{-- 취소는 두 갈래다. 아직 나가지 않은 것을 무르는 것과, 자격이 바뀌어 이미 받은
              돈만 되돌리는 것(일반 환불). 둘은 창고에 보내는 것도 단계도 다르다. --}}
-        <label>취소 갈래</label>
+        <label>취소 유형</label>
         <select name="subtype" id="rtoSubtype" class="form-control form-select">
           @foreach(\App\Models\OrderReturn::SUBTYPES as $k => $label)
             <option value="{{ $k }}">{{ $label }}</option>

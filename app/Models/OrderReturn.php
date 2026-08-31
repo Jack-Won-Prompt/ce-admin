@@ -41,9 +41,12 @@ class OrderReturn extends Model
         'withworks_so_no', 'withworks_so_id', 'withworks_so_type',
         'withworks_status', 'withworks_status_label', 'withworks_sent_at', 'withworks_error',
         'adjust_so_no', 'adjusted_at',
+        // 창고가 지금 무엇을 하고 있는가 — 우리 단계(status)와 다른 것을 잰다
+        'pl3_status', 'pl3_status_label', 'pl3_status_at',
     ];
 
     protected $casts = [
+        'pl3_status_at'        => 'datetime',
         'arrived_at'           => 'datetime',
         'inspect_confirmed_at' => 'datetime',
         'approved_at'          => 'datetime',

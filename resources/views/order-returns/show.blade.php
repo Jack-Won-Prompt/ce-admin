@@ -81,8 +81,13 @@
     {{-- 진행 단계 카드를 걷어냈으므로 지금 어느 단계인지는 여기에 남긴다.
          어디까지 왔는지 모르면 다음에 무엇을 할지 정할 수 없다. --}}
     <div class="rt-kv"><span>상태</span><span>{{ \App\Models\OrderReturn::STATUS_LABELS[$r->status] ?? $r->status }}</span></div>
-    <div class="rt-kv"><span>갈래</span><span>{{ $r->scenarioLabel() }}{{ $r->is_partial ? ' · 부분' : '' }}</span></div>
-    <div class="rt-kv"><span>사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
+    {{-- 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽).
+         창고가 알려 주기 전에는 빈칸이라 아예 세우지 않는다. --}}
+    @if($r->pl3_status_label)
+      <div class="rt-kv"><span>3PL 상태</span><span>{{ $r->pl3_status_label }}{{ $r->pl3_status_at ? ' · ' . $r->pl3_status_at->format('Y-m-d H:i') : '' }}</span></div>
+    @endif
+    <div class="rt-kv"><span>사유</span><span>{{ $r->scenarioLabel() }}{{ $r->is_partial ? ' · 부분' : '' }}</span></div>
+    <div class="rt-kv"><span>신청 사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
     <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
     {{-- 접수 때는 수거 방법을 묻지 않는다 — 예전에 받아 둔 건에만 남아 있으니 있을 때만 --}}
@@ -212,7 +217,7 @@
 <div class="rt-card">
   <div class="rt-hd">되돌리는 품목 <span class="grow"></span>
     <span style="font-size:11px;font-weight:500;color:var(--text-muted);">
-      {{ $r->is_partial ? '부분 — 기관 청구 서류는 최종 청구분에 반영합니다' : '전부' }}
+      {{ $r->is_partial ? '부분 — 기관 청구 서류는 최종 청구분에 반영합니다' : '전체' }}
     </span>
   </div>
   <div class="rt-bd">
