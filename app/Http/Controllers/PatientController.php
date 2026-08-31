@@ -243,51 +243,6 @@ class PatientController extends Controller
     }
 
     /**
-     * 아직 거래처와 이어지지 않은 처방전.
-     *
-     * 처방전은 밖에서 올라온다(웹ㆍ앱). 그 사람이 우리 거래처로 등록돼 있지 않으면
-     * 처방전만 떠 있고 주문도 청구도 걸 수 없다 — 아흔둘 가운데 일흔여덟이 그렇다.
-     *
-     * 「거래처 만들기」 탭이 이 목록을 세운다. 새로 올라오는 것을 그때그때 처리하는
-     * 자리라 최근 것부터 본다. 하나를 이으면 다음에 열 때 목록에서 사라진다.
-     */
-    public function unlinkedPrescriptions(): \Illuminate\Http\JsonResponse
-    {
-        $rows = \App\Models\Prescription::whereNull('patient_id')
-            ->where('is_blank_draft', false)
-            ->latest('id')
-            ->limit(200)
-            ->get();
-
-        return response()->json([
-            'rows' => $rows->map(fn ($p) => [
-                'id'        => $p->id,
-                'rx_number' => $p->rx_number,
-                /* 이름은 OCR 이 읽은 것이다. 없는 것도 있어(아흔둘 중 서른다섯) 빈칸으로
-                   둔다 — 「이름 없음」이라 적어 두면 그것이 이름처럼 읽힌다. */
-                'name'      => $p->patient_name_ocr ?: '',
-                'mobile'    => $p->mobile_ocr ?: '',
-                'resident'  => $p->masked_resident_no_ocr ?: '',
-                'hospital'  => $p->hospital_name ?: '',
-                'uploaded'  => $p->created_at?->format('Y-m-d') ?? '',
-                'source'    => $p->upload_source === 'mobile' ? '앱' : '웹',
-                // 뷰어에 띄울 것 — 그림이든 PDF 든 한 장의 그림처럼 본다
-                'url'       => $p->image_url,
-                'is_pdf'    => str_contains((string) $p->image_mime_type, 'pdf'),
-                /* 창을 미리 채울 값. 처방전에서 읽은 것을 사람이 다시 치게 하면
-                   보고 있는 것을 옮겨 적다가 틀린다. */
-                'prefill'   => [
-                    'name'           => $p->patient_name_ocr ?: '',
-                    'mobile'         => $p->mobile_ocr ?: '',
-                    'address'        => $p->address_ocr ?: '',
-                    'postcode'       => $p->postcode ?: '',
-                    'address_detail' => $p->address_detail ?: '',
-                ],
-            ])->values(),
-        ]);
-    }
-
-    /**
      * 주문 한 건의 제품 줄.
      *
      * 제품을 여러 줄로 담는 order_items 는 나중에 들어온 그릇이라, 지금 있는 주문은

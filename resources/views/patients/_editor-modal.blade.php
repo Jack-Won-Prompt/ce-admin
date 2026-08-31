@@ -15,13 +15,6 @@
      이 창을 들여놓는 것만으로 그쪽 여백이 달라진다. */
   #addModal { display:none; position:fixed; z-index:210; }
   #addModal.show { display:block; }
-  /* 판에 끼워 넣은 모양 — 뜨는 창이 아니라 화면의 한 칸이 된다(거래처 만들기 탭).
-     같은 칸ㆍ같은 저장을 두 모양으로 쓴다. 폼을 한 벌 더 만들면 언젠가 갈린다. */
-  #addModal.docked { position:static; z-index:auto; height:100%; }
-  #addModal.docked .modal-box { width:auto; max-width:none; max-height:none; height:100%;
-                                box-shadow:none; }
-  #addModal.docked .modal-header { cursor:default; }
-  #addModal.docked .pe-move { display:none; }
 
   #addModal .modal-box {
     background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
@@ -335,7 +328,6 @@
    *   openPatientEditor({ prefill:{name:'임윤아'} })         이름 조회에서 못 찾았을 때
    *   openPatientEditor({ id: 7, onSaved:fn })              고치기
    *   openPatientEditor({ avoid: '#viewerCol' })            그 칸은 덮지 않는다
-   *   openPatientEditor({ dock: '#rxNewPane' })             뜨는 창이 아니라 그 칸에 끼운다
    */
   window.openPatientEditor = async function (opts = {}) {
     _peMode = opts.id ? 'edit' : 'create';
@@ -365,19 +357,7 @@
 
     const pop = document.getElementById('addModal');
     pop.classList.add('show');
-
-    /* 판에 끼워 달라고 하면 그리로 옮긴다. 창으로 되돌아올 때를 위해 원래 자리를
-       기억해 둔다 — 한 화면에서 두 모양을 오갈 수 있다. */
-    const dock = opts.dock && document.querySelector(opts.dock);
-    if (dock) {
-      if (pop.parentElement !== dock) dock.appendChild(pop);
-      pop.classList.add('docked');
-      pop.style.left = ''; pop.style.top = '';
-    } else {
-      if (pop.parentElement !== document.body) document.body.appendChild(pop);
-      pop.classList.remove('docked');
-      peCentre(pop, opts.avoid);
-    }
+    peCentre(pop, opts.avoid);
     setTimeout(() => document.getElementById('add-name')?.focus(), 50);
   };
 
@@ -522,9 +502,7 @@
 
     if (res.success) {
       BtnState.success(btn, '저장 완료');
-      /* 판에 끼운 채면 닫지 않는다 — 적은 것을 그대로 두고 다음 걸음을 부르는 쪽이
-         정한다. 뜨는 창일 때만 닫는다. */
-      if (!document.getElementById('addModal').classList.contains('docked')) closeAddModal();
+      closeAddModal();
       showToast(res.message, 'success');
       const id = res.id ?? _peId;
       ptTell({ action: 'saved', id, name, created: _peMode === 'create' });

@@ -111,8 +111,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
         Route::patch('/{prescription}/assign',       [PrescriptionController::class, 'assignUser'])->name('assign');
         // 판매번호를 눌렀을 때 건너갈 주소 — 저쪽이 만들어 주는 한 번짜리 로그인 주소다
-        // 거래처 만들기 탭 — 만든 사람을 이 처방전에 잇는다
-        Route::patch('/{prescription}/link-patient', [PrescriptionController::class, 'linkPatient'])->name('linkPatient');
         Route::get(   '/{prescription}/withworks-link',  [PrescriptionController::class, 'withworksSoLink'])->name('withworksSoLink');
         Route::post(  '/{prescription}/withworks-order', [PrescriptionController::class, 'createWithworksOrder'])->name('withworksOrder');
         Route::put(   '/{prescription}/withworks-order', [PrescriptionController::class, 'updateWithworksOrder'])->name('withworksOrderUpdate');
@@ -183,9 +181,6 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('patients')->name('patients.')->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
-        // 거래처 만들기 탭 — 아직 사람과 이어지지 않은 처방전
-        Route::get('/unlinked-prescriptions', [PatientController::class, 'unlinkedPrescriptions'])
-             ->name('unlinkedPrescriptions');
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
         // 주소 이력 — 주문 제품 탭의 배송지 고르개가 읽는다
         Route::get('/{patient}/addresses', [PatientController::class, 'addresses'])->name('addresses');
