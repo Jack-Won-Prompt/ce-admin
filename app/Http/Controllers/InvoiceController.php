@@ -130,6 +130,18 @@ class InvoiceController extends Controller
                 'cr_issued_at'   => $order->cash_receipt_issued_at?->format('Y-m-d H:i') ?? '',
                 'cr_cancelled_at'=> $order->cash_receipt_cancelled_at?->format('Y-m-d H:i') ?? '',
 
+                /* ── 발행 창을 미리 채울 값 (요청서 8ㆍ9쪽 뒤처리) ─────────
+                   지금까지 발행 창은 늘 빈칸으로 열렸다. 담당자가 매번 같은 값을 다시
+                   치고, 친 값은 그 주문에만 남아 다음 발행에서 또 빈칸이 된다 —
+                   그래서 거래처의 현금영수증번호ㆍ소득공제 구분이 열 명 가운데 아무도
+                   채워지지 않았다.
+
+                   거래처가 적어 둔 것이 있으면 그것으로, 없으면 지난번에 쓴 것으로
+                   연다. 값이 쌓이는 바퀴가 이 자리에서 돈다. */
+                'cr_fill_no'   => self::cashReceiptNo($order),
+                'cr_fill_type' => self::cashReceiptType($order),
+            ] + self::taxPrefill($order) + [
+
                 // 네 화면이 함께 쓰는 칸 — 차례와 이름이 어디서나 같다
             ] + $extras->rx($order->prescription, $order->patient)
               + $extras->ww($order, $order->prescription, $order->patient)
@@ -199,6 +211,66 @@ class InvoiceController extends Controller
             ->where(fn ($q) => $q
                 ->where('tax_invoice_status', 'not_issued')
                 ->orWhere('cash_receipt_status', 'not_issued'));
+    }
+
+
+    /**
+     * 현금영수증 신분확인번호로 쓸 값.
+     *
+     * 거래처가 적어 둔 번호가 먼저다 — 담당자가 한 번 확인해 둔 값이라 휴대폰보다 믿는다.
+     * 자진발급은 번호를 못 받은 건이라 정해진 번호로 낸다.
+     */
+    private static function cashReceiptNo(Order $order): string
+    {
+        $p = $order->patient;
+
+        if ($p?->deduction === '자진발급') {
+            return \App\Models\Patient::SELF_ISSUE_NO;
+        }
+
+        return trim((string) ($p?->cash_receipt_no ?: $p?->mobile ?: ''));
+    }
+
+    /** 소득공제인가 지출증빙인가 — 거래처에 적어 둔 것을 따른다 */
+    private static function cashReceiptType(Order $order): string
+    {
+        return $order->patient?->deduction === '지출증빙' ? 'business_expense' : 'income_deduction';
+    }
+
+    /**
+     * 세금계산서 공급받는자 — 지난번에 쓴 것으로 연다.
+     *
+     * 상호와 대표는 발행에 반드시 있어야 하는데(팝빌이 거절한다) 주문마다 사람이 적는
+     * 값이라 서른일곱 건 가운데 세 건에만 적혀 있다. 거래처에 담을 칸을 새로 만들지 않고
+     * 같은 사람의 지난 발행에서 가져온다 — 한 번 적으면 다음부터 따라온다.
+     *
+     * @return array<string, string>
+     */
+    private static function taxPrefill(Order $order): array
+    {
+        $own = trim((string) $order->tax_invoice_biz_name) !== '' ? $order : null;
+
+        $last = $own ?: ($order->patient_id
+            ? Order::where('patient_id', $order->patient_id)
+                ->whereKeyNot($order->getKey())
+                ->whereNotNull('tax_invoice_biz_name')
+                ->where('tax_invoice_biz_name', '<>', '')
+                ->latest('tax_invoice_issued_at')->latest('id')->first()
+            : null);
+
+        /* 번호는 사업자등록번호일 때만 내려보낸다.
+           개인 발행 건은 이 칸에 주민등록번호가 들어 있고(가려진 채로 들어간 건도 있다),
+           그것을 목록에 실으면 서른 줄짜리 화면의 소스에 주민번호가 흩어진다. 가려진
+           값은 발행에도 못 쓴다 — 팝빌이 거절한다. 개인 건은 화면이 「개인」을 고르면
+           처방전의 주민번호로 발행하므로(OrderController) 여기서 채울 것이 없다. */
+        $no = preg_replace('/\D/', '', (string) ($last->tax_invoice_biz_no ?? ''));
+
+        return [
+            'ti_fill_name'  => (string) ($last->tax_invoice_biz_name ?? ''),
+            'ti_fill_ceo'   => (string) ($last->tax_invoice_ceo_name ?? ''),
+            'ti_fill_no'    => strlen($no) === 10 ? $no : '',
+            'ti_fill_email' => (string) ($last->tax_invoice_email ?? $order->patient?->email ?? ''),
+        ];
     }
 
 }

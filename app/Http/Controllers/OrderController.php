@@ -653,6 +653,13 @@ class OrderController extends Controller
                 'cash_receipt_issued_at'  => $issuedAt,
             ]);
 
+            /* 방금 쓴 것을 거래처에도 적어 둔다. 그러지 않으면 다음 발행에서 또 빈칸으로
+               열리고, 담당자는 같은 값을 다시 친다 — 거래처 열 명 가운데 현금영수증번호가
+               한 명도 채워지지 않은 까닭이 그것이다.
+               이미 적혀 있으면 건드리지 않는다. 담당자가 확인해 둔 값이 이번에 한 번
+               다르게 친 것에 덮이면 안 된다. */
+            $this->rememberForPatient($order, $data);
+
             /* 현금영수증 화면 목록은 우리 표(cashbill_records)를 읽는다. 발행만 하고 두면
                그 화면에서 방금 발행한 건이 보이지 않아 담당자가 동기화를 눌러야 했다. */
             try {
@@ -938,4 +945,40 @@ class OrderController extends Controller
             'ship'         => $result['ship'] ?? null,
         ]);
     }
+
+    /**
+     * 발행하며 쓴 값을 거래처에 남긴다 (요청서 8ㆍ9쪽 뒤처리).
+     *
+     * 값이 쌓이는 바퀴다. 발행 창은 거래처가 적어 둔 것으로 열리고(InvoiceController),
+     * 발행하며 고친 것은 여기서 거래처로 돌아간다. 한 번 적으면 다음부터 따라온다.
+     *
+     * 이미 적혀 있으면 덮지 않는다 — 담당자가 확인해 둔 값이 이번에 한 번 다르게 친
+     * 것에 밀리면 안 된다.
+     */
+    private function rememberForPatient(Order $order, array $data): void
+    {
+        $p = $order->patient;
+
+        if (!$p) {
+            return;
+        }
+
+        $fill = [];
+
+        if (blank($p->deduction)) {
+            $fill['deduction'] = $data['cash_receipt_type'] === 'business_expense' ? '지출증빙' : '소득공제';
+        }
+
+        /* 자진발급 번호는 「번호를 못 받았다」는 표시라 거래처에 적어 둘 것이 아니다 —
+           적어 두면 다음에도 자진발급으로 열려 진짜 번호를 받을 기회가 사라진다. */
+        if (blank($p->cash_receipt_no)
+            && $data['cash_receipt_identifier'] !== \App\Models\Patient::SELF_ISSUE_NO) {
+            $fill['cash_receipt_no'] = $data['cash_receipt_identifier'];
+        }
+
+        if ($fill) {
+            $p->forceFill($fill)->save();
+        }
+    }
+
 }

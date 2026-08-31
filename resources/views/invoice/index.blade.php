@@ -716,7 +716,7 @@ function renderTiSection(data) {
       ? `<span><i class="fa-solid fa-calendar"></i> 취소일시: ${data.ti_cancelled_at}</span>` : '';
     actions.innerHTML = `
       <button class="btn btn-outline btn-sm"
-              onclick="openTaxModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount})">
+              onclick="openTaxModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, {name: '${data.ti_fill_name ?? ''}', ceo: '${data.ti_fill_ceo ?? ''}', no: '${data.ti_fill_no ?? ''}', email: '${data.ti_fill_email ?? ''}'})">
         <i class="fa-solid fa-file-invoice"></i> 재발행
       </button>`;
   } else {
@@ -726,7 +726,7 @@ function renderTiSection(data) {
     meta.innerHTML  = '<span style="font-size:12px;color:var(--text-muted);">세금계산서가 발행되지 않았습니다.</span>';
     actions.innerHTML = `
       <button class="btn btn-success btn-sm"
-              onclick="openTaxModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount})">
+              onclick="openTaxModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, {name: '${data.ti_fill_name ?? ''}', ceo: '${data.ti_fill_ceo ?? ''}', no: '${data.ti_fill_no ?? ''}', email: '${data.ti_fill_email ?? ''}'})">
         <i class="fa-solid fa-file-invoice"></i> 세금계산서 발행
       </button>`;
   }
@@ -773,7 +773,7 @@ function renderCrSection(data) {
       ? `<span><i class="fa-solid fa-calendar"></i> 취소일시: ${data.cr_cancelled_at}</span>` : '';
     actions.innerHTML = `
       <button class="btn btn-outline btn-sm"
-              onclick="openCashModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, '${data.patient_mobile}')">
+              onclick="openCashModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, '${data.patient_mobile}', {no: '${data.cr_fill_no ?? ''}', type: '${data.cr_fill_type ?? ''}'})">
         <i class="fa-solid fa-receipt"></i> 재발행
       </button>`;
   } else {
@@ -783,7 +783,7 @@ function renderCrSection(data) {
     meta.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">현금영수증이 발행되지 않았습니다.</span>';
     actions.innerHTML = `
       <button class="btn btn-primary btn-sm"
-              onclick="openCashModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, '${data.patient_mobile}')">
+              onclick="openCashModal(${data.id}, '${data.order_number}', '${data.patient_name}', ${data.total_amount}, '${data.patient_mobile}', {no: '${data.cr_fill_no ?? ''}', type: '${data.cr_fill_type ?? ''}'})">
         <i class="fa-solid fa-receipt"></i> 현금영수증 발행
       </button>`;
   }
@@ -794,7 +794,7 @@ function renderCrSection(data) {
 // ════════════════════════════════════════════════════════════
 let _taxOrderId = null;
 
-function openTaxModal(orderId, orderNo, patientName, totalAmount) {
+function openTaxModal(orderId, orderNo, patientName, totalAmount, fill) {
   _taxOrderId = orderId;
   document.getElementById('tax_order_label').textContent  = `${orderNo}  —  ${patientName}`;
   document.getElementById('tax_amount_label').textContent = `총 결제금액: ${fmt(totalAmount)}원`;
@@ -803,9 +803,13 @@ function openTaxModal(orderId, orderNo, patientName, totalAmount) {
   document.getElementById('ti_supply').value = supply;
   document.getElementById('ti_vat').value    = Math.round(vat);
   updateTiCalc();
-  document.getElementById('ti_biz_name').value = '';
-  document.getElementById('ti_biz_no').value   = '';
-  document.getElementById('ti_email').value    = '';
+  /* 지난번에 쓴 공급받는자로 연다. 상호와 대표는 발행에 반드시 있어야 하는데
+     주문마다 다시 적게 두면 서른일곱 건에 세 건만 적히는 일이 계속된다. */
+  document.getElementById('ti_biz_name').value = (fill && fill.name)  || '';
+  document.getElementById('ti_biz_no').value   = (fill && fill.no)    || '';
+  document.getElementById('ti_email').value    = (fill && fill.email) || '';
+  const ceoEl = document.getElementById('ti_ceo_name');
+  if (ceoEl) ceoEl.value = (fill && fill.ceo) || '';
   document.getElementById('taxModal').classList.add('open');
 }
 function closeTaxModal() { document.getElementById('taxModal').classList.remove('open'); }
@@ -878,13 +882,15 @@ async function cancelTax(orderId, orderNo) {
 let _cashOrderId   = null;
 let _patientMobile = '';
 
-function openCashModal(orderId, orderNo, patientName, totalAmount, patientMobile) {
+function openCashModal(orderId, orderNo, patientName, totalAmount, patientMobile, fill) {
   _cashOrderId   = orderId;
   _patientMobile = patientMobile || '';
   document.getElementById('cash_order_label').textContent  = `${orderNo}  —  ${patientName}`;
   document.getElementById('cash_amount_label').textContent = `총 결제금액: ${fmt(totalAmount)}원`;
   document.getElementById('cr_amount').value     = totalAmount;
-  document.getElementById('cr_identifier').value = '';
+  /* 거래처가 적어 둔 값으로 연다. 빈칸으로 열면 매번 같은 값을 다시 치게 되고,
+     친 값은 그 주문에만 남아 다음 발행에서 또 빈칸이 된다. */
+  document.getElementById('cr_identifier').value = (fill && fill.no) || '';
   const btn  = document.getElementById('cr_autofill_btn');
   const text = document.getElementById('cr_autofill_text');
   if (_patientMobile) {
@@ -893,8 +899,11 @@ function openCashModal(orderId, orderNo, patientName, totalAmount, patientMobile
   } else {
     btn.style.display = 'none';
   }
-  document.querySelector('input[name="cr_type_r"][value="income_deduction"]').checked = true;
+  const crType = (fill && fill.type) || 'income_deduction';
+  document.querySelector(`input[name="cr_type_r"][value="${crType}"]`).checked = true;
   onCrTypeChange();
+  // onCrTypeChange 가 칸을 비운다 — 미리 채운 값을 그 뒤에 다시 앉힌다
+  if (fill && fill.no) document.getElementById('cr_identifier').value = fill.no;
   document.getElementById('cashModal').classList.add('open');
 }
 function closeCashModal() { document.getElementById('cashModal').classList.remove('open'); }
