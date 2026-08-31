@@ -243,12 +243,31 @@
         <option value="not_issued" @selected(request('cash_receipt') === 'not_issued')>미발행</option>
       </select>
     </div>
+    <div class="ds-filter-field">
+      {{-- 현금영수증과 나란히 거른다(요청서 11쪽) --}}
+      <label class="ds-field-label">전자세금계산서</label>
+      <select name="tax_invoice" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="issued"     @selected(request('tax_invoice') === 'issued')>발행</option>
+        <option value="not_issued" @selected(request('tax_invoice') === 'not_issued')>미발행</option>
+      </select>
+    </div>
+    {{-- 기간이 둘이다. 위는 「언제 나갔는가」(출고일), 아래는 「언제 청구했는가」.
+         한 칸으로 합치면 둘 중 하나를 못 본다 — 요청서 11쪽이 청구 기간을 따로 달라 했다. --}}
     <div class="ds-filter-field span-3">
-      <label class="ds-field-label">기간</label>
+      <label class="ds-field-label">출고 기간</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">
         <span class="ds-field-sep">~</span>
         <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
+      </div>
+    </div>
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">청구 기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="claim_from" value="{{ request('claim_from') }}" class="form-control" title="청구일 시작">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="claim_to"   value="{{ request('claim_to') }}"   class="form-control" title="청구일 종료">
       </div>
     </div>
     {{-- 위쪽 칩은 청구 진행 상태 하나만 둔다. 나머지 갈래를 칩으로 늘어놓으면
@@ -429,13 +448,29 @@
         },
       },
       { header: '청구일시',    name: 'submitted_at',  width: 130, sortable: true },
+      { header: '청구 기한',   name: 'claim_due',     width: 100, align: 'center', sortable: true },
+      {
+        /* 남은 날. 넘긴 건은 붉게 세운다 — 「지났다」만 알면 얼마나 다급한지가
+           갈리지 않아 며칠 넘겼는지를 적는다(요청서 10ㆍ11쪽). */
+        header: '기한', name: 'claim_dday', width: 90, align: 'center', sortable: true,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v || '';
+          if (!v) return el;
+          const over = v.includes('초과');
+          const near = /^D-(\d+)$/.test(v) && Number(RegExp.$1) <= 3;
+          if (over || near) { el.style.color = over ? '#B54708' : 'var(--warning)'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
+      { header: '반려 사유',   name: 'reject_reason', width: 220 },
       {
         // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
         header: '청구 자료', name: 'claim_missing', width: 200, sortable: true,
         renderer: (v, row) => {
           const s = document.createElement('span');
           if (row.claim_na) {
-            s.textContent = v || '공단 청구 건 아님';
+            s.textContent = v || '공단 청구 건 아님';   // 지자체 건이라는 뜻이다
             s.style.cssText = 'color:var(--text-muted);font-size:11px;';
           } else if (row.claim_ready_flag) {
             s.textContent = '완비';
@@ -451,7 +486,7 @@
       { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.
-        header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        header: '청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
         renderer: (v, row) => nhisAssistBtn(row.id),
       },
 

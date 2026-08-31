@@ -92,6 +92,25 @@ class NhisController extends Controller
             $query->whereRaw("{$shipDate} <= ?", [$request->date_to . ' 23:59:59']);
         }
 
+        /* 청구일 기간 — 위의 기간과 다른 것을 센다(요청서 11쪽).
+           위는 「언제 나갔는가」이고 이것은 「언제 청구했는가」다. 한 달치 청구를
+           묶어 볼 때 쓰는 것은 이쪽이라, 한 칸으로 합치면 둘 중 하나를 못 본다. */
+        if ($request->filled('claim_from')) {
+            $query->whereDate('nhis_submitted_at', '>=', $request->claim_from);
+        }
+        if ($request->filled('claim_to')) {
+            $query->whereDate('nhis_submitted_at', '<=', $request->claim_to);
+        }
+
+        // 전자세금계산서 — 현금영수증과 나란히 거른다(요청서 11쪽)
+        if ($request->filled('tax_invoice')) {
+            match ($request->tax_invoice) {
+                'issued'     => $query->where('tax_invoice_status', 'issued'),
+                'not_issued' => $query->where('tax_invoice_status', '!=', 'issued'),
+                default      => null,
+            };
+        }
+
         // NHIS 청구 상태 라벨 (배지 → 텍스트)
         $nhisStatusLabels = [
             'pending'   => '미청구',
@@ -127,6 +146,9 @@ class NhisController extends Controller
                 'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
+                /* 왜 반려됐는가. 칸은 진작 있었는데 목록에 세우지 않아, 반려된 건을
+                   다시 내려면 한 건씩 열어 봐야 했다(요청서 10쪽). */
+                'reject_reason' => $o->nhis_rejection_reason ?? '',
                 'result'       => $result,
                 // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
                 'patient_type' => $o->patientTypeLabel(),
@@ -136,6 +158,11 @@ class NhisController extends Controller
                 // 공단에 낼 건이 아니면 자료를 따질 것도 없다 — 색을 달리 쓴다
                 'claim_na'     => ($o->prescription?->claim_agency ?? \App\Support\ClaimAgency::NHIS)
                                     !== \App\Support\ClaimAgency::NHIS,
+                /* 청구 기한 — 출고일에서 두 주다(요청서 10쪽 「출고일자+2주」).
+                   아직 청구하지 않은 건만 센다. 이미 낸 건에 남은 날을 적어 두면
+                   무엇이 급한지가 묻힌다(요청서 11쪽 「미청구 경우 D-14 보이게」). */
+                'claim_due'  => ($due = self::claimDue($o))?->format('Y-m-d') ?? '',
+                'claim_dday' => self::dday($o, $due),
                 'agency'       => \App\Support\ClaimAgency::LABELS[$o->prescription?->claim_agency] ?? '',
                 /* 어느 지사ㆍ어느 부서로 보내는가. 「건강보험공단」만 적혀 있으면 결국
                    건마다 다시 찾아야 한다 — 골라 둔 것이 있으면 그것을 보여 준다. */
@@ -274,6 +301,37 @@ class NhisController extends Controller
             '  출력일시    : ' . now()->format('Y-m-d H:i'),
             '═══════════════════════════════════════════════',
         ]);
+    }
+
+
+    /**
+     * 언제까지 청구해야 하는가 — 출고일 + 2주 (요청서 10쪽).
+     *
+     * 출고일은 창고가 알려 주는 값이라 2026-08-31 부터 쌓인다. 그 전 건에는 없어
+     * 배송이 끝난 날로 갈음한다 — 둘 다 없으면 셀 수가 없다.
+     */
+    private static function claimDue(Order $o): ?\Carbon\Carbon
+    {
+        $base = $o->shipped_at ?? $o->delivered_at;
+
+        return $base ? \Carbon\Carbon::parse($base)->startOfDay()->addDays(14) : null;
+    }
+
+    /**
+     * 며칠 남았는가 — 아직 청구하지 않은 건만.
+     *
+     * 이미 낸 건에 남은 날을 적어 두면 무엇이 급한지가 묻힌다. 넘긴 건은 며칠 넘겼는지를
+     * 적는다 — 「지났다」만 알면 얼마나 다급한지가 갈리지 않는다.
+     */
+    private static function dday(Order $o, ?\Carbon\Carbon $due): string
+    {
+        if (!$due || $o->nhis_claim_status !== 'pending') {
+            return '';
+        }
+
+        $left = today()->diffInDays($due, false);
+
+        return $left < 0 ? abs($left) . '일 초과' : 'D-' . $left;
     }
 
 }

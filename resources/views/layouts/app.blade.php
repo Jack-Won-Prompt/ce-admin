@@ -2122,7 +2122,8 @@ document.addEventListener('click', (e) => {
       { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
       { header: '위임동의',     name: 'nhis_consent',    width: 90,  align: 'center', sortable: true },
       { header: '청구 준비',    name: 'claim_ready',     width: 90,  align: 'center', sortable: true },
-      { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
+      {{-- 지자체 청구도 있어 「공단」이라 부르지 않는다(요청서 10쪽) --}}
+      { header: '청구',        name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
       { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
       { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
       /* 발행ㆍ청구ㆍ정산을 맡은 사람과 그 자취(요청서 6ㆍ10ㆍ11ㆍ12쪽).

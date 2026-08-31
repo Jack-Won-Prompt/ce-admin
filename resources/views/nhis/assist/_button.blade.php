@@ -19,7 +19,8 @@ window.nhisAssistBtn = function (orderId, opts) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'nhis-assist-btn';
-  btn.innerHTML = '<i class="fa-solid fa-clipboard-list"></i> 공단 청구';
+  // 지자체 청구도 이 창을 쓴다 — 「공단」이라 부르지 않는다(요청서 10쪽)
+  btn.innerHTML = '<i class="fa-solid fa-clipboard-list"></i> 청구';
 
   if (!orderId) {
     btn.disabled = true;
