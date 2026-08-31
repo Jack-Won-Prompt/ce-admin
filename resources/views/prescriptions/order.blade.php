@@ -2511,7 +2511,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        줄지 않아 카드를 넘긴다(입력영역 147 기준 14 초과). 줄바꿈을 허용해
                        모자랄 때만 '주소 검색' 이 아랫줄로 내려가게 했다. --}}
                   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;row-gap:8px;">
-                    <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? '' }}"
+                    {{-- 도로명만 거래처에서 끌어오고 우편번호ㆍ상세주소는 안 끌어오고 있었다.
+                         그러면 상세주소가 빈 채로 출고 주소가 만들어진다 — 몇 층 몇 호가 없다. --}}
+                    <input type="text" class="form-control" id="f-postcode" readonly value="{{ $prescription->postcode ?? $prescription->patient?->postcode ?? '' }}"
                            placeholder="우편번호" style="flex:0 0 72px;min-width:0;background:var(--gray-50);cursor:default;" />
                     <input type="text" class="form-control" id="f-address"
                            value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
@@ -2524,7 +2526,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                        모자랄 때만 체크 묶음이 아랫줄로 내려가게 한다. --}}
                   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;row-gap:8px;">
                     <input type="text" class="form-control" id="f-address-detail"
-                           value="{{ $prescription->address_detail ?? '' }}"
+                           value="{{ $prescription->address_detail ?? $prescription->patient?->address_detail ?? '' }}"
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
                     <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
                       {{-- 적어 둔 배송지가 이 건의 주소와 다르면 풀어 둔다. 늘 켜 두면
@@ -2977,8 +2979,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 @php $freq = (string) ($prescription->diverticulums ?? ''); @endphp
                 <select class="form-control" id="f-diverticulums" style="flex:1;">
                   <option value="">선택</option>
+                  {{-- 배열의 '1'~'10' 은 PHP 가 정수로 바꿔 담는다. 저장값은 문자열 '5' 라
+                       $freq === $k 가 늘 거짓이었다 — 저장은 되는데 다시 열면 「선택」으로
+                       비어 보이고, 담당자는 같은 값을 또 골라야 했다. 글자로 견준다. --}}
                   @foreach(\App\Support\CatheterFrequency::options() as $k => $label)
-                    <option value="{{ $k }}" @selected($freq === $k)>{{ $label }}</option>
+                    <option value="{{ $k }}" @selected($freq === (string) $k)>{{ $label }}</option>
                   @endforeach
                   @if(\App\Support\CatheterFrequency::isLegacy($freq))
                     <optgroup label="기존 위드웍스 값">
@@ -4668,7 +4673,11 @@ function renderItemsTable() {
     const displayName = item.product_name ? escHtml(item.product_name) : '';
     const codeShown   = item.product_code ? escHtml(item.product_code) : '';
     return `<tr class="item-card" data-idx="${idx}">
-      <td style="text-align:center;color:var(--text-muted);font-size:11px;">${idx+1}</td>
+      {{-- 「선택 삭제」가 볼 체크 칸이다. 칸을 하나 더 세우면 머리ㆍ몸ㆍ바닥의 열 수가
+           어긋나므로 번호 칸 안에 함께 둔다. --}}
+      <td style="text-align:center;color:var(--text-muted);font-size:11px;white-space:nowrap;">
+        <input type="checkbox" class="item-pick" data-idx="${idx}" style="vertical-align:middle;margin-right:4px;cursor:pointer;" />${idx+1}
+      </td>
       <td class="pac-cell">
         <div class="pac-wrap" style="position:relative;width:100%;">
           <div style="display:flex;gap:4px;align-items:center;">
@@ -4735,8 +4744,8 @@ function renderItemsTable() {
     {{-- 칸 아홉과 셀 아홉이 하나씩 맞아야 한다. 안 보이는 칸을 하나 끼워 두면 그 뒤가
          모두 한 자리씩 밀려, 머리와 몸이 어긋나고 오른쪽에 빈 칸 하나가 남는다. --}}
     <colgroup>
-      <col style="width:3%;">
-      <col style="width:22%;">
+      <col style="width:6%;">
+      <col style="width:19%;">
       <col style="width:13%;">
       <col style="width:10%;">
       <col style="width:6%;">
@@ -4747,7 +4756,10 @@ function renderItemsTable() {
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
-      <th style="text-align:center;">#</th>
+      <th style="text-align:center;white-space:nowrap;">
+        <input type="checkbox" id="item-pick-all" style="vertical-align:middle;margin-right:4px;cursor:pointer;"
+               onclick="document.querySelectorAll('.item-pick').forEach(c => c.checked = this.checked);" />#
+      </th>
       <th>제품명</th>
       <th>제품 코드</th>
       <th>급여구분</th>
@@ -6143,7 +6155,15 @@ window.HELP_TOUR_STEPS = [
 
   /** 체크한 줄을 지운다 — 표에서 고르는 방식 */
   function removeCheckedItems() {
-    const checked = itemGrid?.getCheckedRows?.() ?? [];
+    /* 표(renderItemsTable)와 그리드(itemGrid)가 서로 다른 것을 그린다. 표를 보고
+       있을 때는 itemGrid 가 아직 만들어지지 않아, 예전에는 이 단추가 늘 「체크해
+       주십시오」만 띄우고 아무것도 지우지 못했다. 보고 있는 쪽을 먼저 본다. */
+    const picked = Array.from(document.querySelectorAll('.item-pick:checked'))
+                        .map(c => parseInt(c.dataset.idx, 10));
+    const checked = picked.length
+      ? picked.map(i => ({ _idx: i }))
+      : (itemGrid?.getCheckedRows?.() ?? []);
+
     if (!checked.length) { showToast('지울 줄을 체크해 주십시오.', 'warning'); return; }
     const idxs = new Set(checked.map(r => r._idx));
     items = items.filter((_, i) => !idxs.has(i));
@@ -6371,7 +6391,18 @@ window.HELP_TOUR_STEPS = [
   function syncRxRef() {
     const daily = document.getElementById('f-daily')?.value;
     const days  = document.getElementById('f-days')?.value;
-    const total = document.getElementById('f-total')?.value;
+
+    /* 총계는 1일 개수 × 처방일수다. 두 값을 다 적어 두고도 총계를 손으로 다시 적게
+       두면 어긋난 채로 저장되고, 그 숫자가 주문 수량ㆍ금액ㆍ청구까지 따라간다.
+       다만 비어 있을 때만 채운다 — 처방전에 다른 총계가 적혀 있는 건이 있어
+       담당자가 고쳐 둔 값을 덮으면 안 된다. */
+    const totalEl = document.getElementById('f-total');
+    if (totalEl && !totalEl.value && daily && days) {
+      const n = parseInt(daily, 10) * parseInt(days, 10);
+      if (Number.isFinite(n) && n > 0) totalEl.value = n;
+    }
+
+    const total = totalEl?.value;
     const refDaily = document.getElementById('rx-ref-daily');
     const refDays  = document.getElementById('rx-ref-days');
     const refTotal = document.getElementById('rx-ref-total');
@@ -6605,9 +6636,9 @@ window.HELP_TOUR_STEPS = [
     // 그러면 저장할 때 값이 비어 서버가 기존 값을 그대로 둔다.
     document.getElementById('f-resident').value = '';
     document.getElementById('f-mobile').value       = @json($prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '');
-    document.getElementById('f-postcode').value       = @json($prescription->postcode ?? '');
+    document.getElementById('f-postcode').value       = @json($prescription->postcode ?? $prescription->patient?->postcode ?? '');
     document.getElementById('f-address').value        = @json($prescription->address_ocr ?? $prescription->patient?->address ?? '');
-    document.getElementById('f-address-detail').value = @json($prescription->address_detail ?? '');
+    document.getElementById('f-address-detail').value = @json($prescription->address_detail ?? $prescription->patient?->address_detail ?? '');
     document.getElementById('f-hospital').value     = @json($prescription->hospital_name);
     document.getElementById('f-doctor').value       = @json($prescription->doctor_name);
     document.getElementById('f-license-no').value  = @json($prescription->license_no);

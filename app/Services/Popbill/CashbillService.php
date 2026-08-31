@@ -55,6 +55,10 @@ class CashbillService extends PopbillBaseService
      */
     public function registIssue(string $corpNum, Cashbill $cashbill, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('현금영수증 즉시발행')) {
+            return $sim;
+        }
+
         try {
             return $this->api->RegistIssue($corpNum, $cashbill, $userId);
         } catch (PopbillException $e) {
@@ -67,6 +71,10 @@ class CashbillService extends PopbillBaseService
      */
     public function register(string $corpNum, Cashbill $cashbill, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('현금영수증 임시저장')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Register($corpNum, $cashbill, $userId);
         } catch (PopbillException $e) {
@@ -79,6 +87,10 @@ class CashbillService extends PopbillBaseService
      */
     public function issue(string $corpNum, string $mgtKey, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('현금영수증 발행')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Issue($corpNum, $mgtKey, $userId);
         } catch (PopbillException $e) {
@@ -91,6 +103,10 @@ class CashbillService extends PopbillBaseService
      */
     public function delete(string $corpNum, string $mgtKey, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('현금영수증 삭제')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Delete($corpNum, $mgtKey, $userId);
         } catch (PopbillException $e) {
@@ -111,6 +127,10 @@ class CashbillService extends PopbillBaseService
         string $orgTradeDate = '',
         ?string $userId = null
     ): object {
+        if ($sim = $this->simulated('현금영수증 취소발행')) {
+            return $sim;
+        }
+
         try {
             return $this->api->RevokeRegistIssue($corpNum, $mgtKey, $orgMgtKey, $orgTradeDate, false, null, $userId);
         } catch (PopbillException $e) {
@@ -225,4 +245,22 @@ class CashbillService extends PopbillBaseService
     {
         return new Cashbill();
     }
+
+    /**
+     * 시험 중에는 팝빌에 쓰지 않는다.
+     *
+     * 켜져 있으면(POPBILL_ISSUE_SIMULATE) 실제 전송 없이 성공한 것처럼 돌려준다.
+     * 조회는 막지 않는다 — 막으면 화면이 무엇을 보고 있는지 알 수 없다.
+     */
+    private function simulated(string $what, array $ctx = []): ?object
+    {
+        if (! config('popbill.issue_simulate', false)) {
+            return null;
+        }
+
+        \Illuminate\Support\Facades\Log::info('[Popbill][시뮬레이션] ' . $what . ' — 팝빌에 보내지 않았습니다', $ctx);
+
+        return (object) ['code' => 1, 'message' => '시뮬레이션 (팝빌 미전송)'];
+    }
+
 }

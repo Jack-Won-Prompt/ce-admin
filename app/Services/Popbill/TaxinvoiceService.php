@@ -56,6 +56,10 @@ class TaxinvoiceService extends PopbillBaseService
      */
     public function registIssue(string $corpNum, Taxinvoice $invoice, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('세금계산서 즉시발행')) {
+            return $sim;
+        }
+
         try {
             return $this->api->RegistIssue($corpNum, $invoice, $userId);
         } catch (PopbillException $e) {
@@ -68,6 +72,10 @@ class TaxinvoiceService extends PopbillBaseService
      */
     public function register(string $corpNum, Taxinvoice $invoice, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('세금계산서 임시저장')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Register($corpNum, $invoice, $userId);
         } catch (PopbillException $e) {
@@ -80,6 +88,10 @@ class TaxinvoiceService extends PopbillBaseService
      */
     public function issue(string $corpNum, string $mgtKeyType, string $mgtKey, ?string $memo = null, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('세금계산서 발행')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Issue($corpNum, $mgtKeyType, $mgtKey, $memo, null, $userId);
         } catch (PopbillException $e) {
@@ -92,6 +104,10 @@ class TaxinvoiceService extends PopbillBaseService
      */
     public function delete(string $corpNum, string $mgtKeyType, string $mgtKey, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('세금계산서 삭제')) {
+            return $sim;
+        }
+
         try {
             return $this->api->Delete($corpNum, $mgtKeyType, $mgtKey, $userId);
         } catch (PopbillException $e) {
@@ -104,6 +120,10 @@ class TaxinvoiceService extends PopbillBaseService
      */
     public function cancelIssue(string $corpNum, string $mgtKeyType, string $mgtKey, ?string $memo = null, ?string $userId = null): object
     {
+        if ($sim = $this->simulated('세금계산서 발행취소')) {
+            return $sim;
+        }
+
         try {
             return $this->api->CancelIssue($corpNum, $mgtKeyType, $mgtKey, $memo, $userId);
         } catch (PopbillException $e) {
@@ -224,4 +244,22 @@ class TaxinvoiceService extends PopbillBaseService
     {
         return new TaxinvoiceDetail();
     }
+
+    /**
+     * 시험 중에는 팝빌에 쓰지 않는다.
+     *
+     * 켜져 있으면(POPBILL_ISSUE_SIMULATE) 실제 전송 없이 성공한 것처럼 돌려준다.
+     * 조회는 막지 않는다 — 막으면 화면이 무엇을 보고 있는지 알 수 없다.
+     */
+    private function simulated(string $what, array $ctx = []): ?object
+    {
+        if (! config('popbill.issue_simulate', false)) {
+            return null;
+        }
+
+        \Illuminate\Support\Facades\Log::info('[Popbill][시뮬레이션] ' . $what . ' — 팝빌에 보내지 않았습니다', $ctx);
+
+        return (object) ['code' => 1, 'message' => '시뮬레이션 (팝빌 미전송)'];
+    }
+
 }

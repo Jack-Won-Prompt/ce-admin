@@ -21,6 +21,16 @@ return [
      */
     'sms_simulate'      => env('POPBILL_SMS_SIMULATE', env('POPBILL_IS_TEST', true)),
 
+    /*
+     * 발행ㆍ취소를 팝빌에 보내지 않고 성공으로 처리할지.
+     *
+     * 팝빌이 운영이면(IS_TEST=false) 발행은 곧 국세청 신고다. 화면을 처음부터 끝까지
+     * 훑어 보는 시험에서는 그 신고가 나가면 안 된다 — 되돌리려면 취소 신고를 또 해야
+     * 하고, 그것도 남의 회사 이름으로 남는다. 이 열쇠가 켜져 있으면 조회는 그대로
+     * 팝빌에 묻고, 쓰는 일(즉시발행ㆍ임시저장ㆍ발행ㆍ삭제ㆍ취소)만 막는다.
+     */
+    'issue_simulate'    => env('POPBILL_ISSUE_SIMULATE', false),
+
     'test' => [
         'corp_num'     => env('POPBILL_TEST_CORP_NUM'),
         'user_id'      => env('POPBILL_TEST_USER_ID'),
