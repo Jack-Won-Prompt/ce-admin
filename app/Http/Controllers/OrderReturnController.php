@@ -267,14 +267,19 @@ class OrderReturnController extends Controller
 
         /* 조건이 하나도 없으면 최근 것을 보여 준다. 빈 손으로 눌러도 무엇이 있는지는
            보여야 다음에 무엇을 칠지 정할 수 있다. */
-        $orders = Order::with(['patient', 'items'])
+        $orders = Order::with(['patient', 'items', 'prescription'])
             // 창고에 넘긴 건만 고를 수 있다 — 까닭은 Order::scopeSentToWarehouse 에 적어 두었다
             ->sentToWarehouse()
             ->when($no !== '', fn ($q) => $q->where(fn ($sub) => $sub
                 ->where('order_number', 'like', "%{$no}%")
                 ->orWhere('withworks_so_no', 'like', "%{$no}%")))
-            ->when($name !== '', fn ($q) => $q
-                ->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$name}%")))
+            /* 이름은 두 곳에 있다 — 환자로 맺어진 건은 patients 에, 아직 안 맺어진 건은
+               처방전에 적힌 이름뿐이다. 한 쪽만 보면 스무네 가운데 스물네가 이름으로
+               찾히지 않는다. */
+            ->when($name !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$name}%"))
+                ->orWhereHas('prescription', fn ($p) => $p
+                    ->where('patient_name_ocr', 'like', "%{$name}%"))))
             ->when($birth !== '', fn ($q) => $q
                 ->whereHas('patient', fn ($p) => $p->whereDate('birth_date', $birth)))
             ->when($phone !== '', fn ($q) => $q
@@ -289,7 +294,9 @@ class OrderReturnController extends Controller
             'rows' => $orders->map(fn (Order $o) => [
                 'id'       => $o->id,
                 'order_no' => $o->order_number,
-                'patient'  => $o->patient?->name ?? '-',
+                /* 환자로 맺어지지 않은 건이 스물네 가운데 스물넷이다 — 그것을 전부 「-」로
+                   보이면 무엇을 고르는지 알 수 없다. 처방전에 적힌 이름으로라도 채운다. */
+                'patient'  => $o->patient?->name ?: ($o->prescription?->patient_name_ocr ?: '-'),
                 'birth'    => $o->patient?->birth_date?->format('Y-m-d') ?? '',
                 'phone'    => $o->patient?->mobile ?: ($o->patient?->phone ?? ''),
                 'product'  => $o->product_name ?? '-',

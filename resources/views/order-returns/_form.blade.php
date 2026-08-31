@@ -330,7 +330,7 @@
   /* 찾은 주문을 고르는 창. 이름·주문번호·주문일만 보인다 — 고를 때 필요한 것은 그 셋이다. */
   function showHits(btn) {
     hitModal.open({
-      title: '주문 고르기 · ' + (rows.length ? rows.length + '건' : '없음'),
+      title: '판매 주문 선택 · ' + (rows.length ? rows.length + '건' : '없음'),
       width: 420, height: 340,
       mode: 'popover', anchor: btn || $('rtoFindBtn'),
       items: rows.map((r, i) => ({
