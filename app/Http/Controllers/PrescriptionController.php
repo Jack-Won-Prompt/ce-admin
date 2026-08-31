@@ -467,7 +467,9 @@ class PrescriptionController extends Controller
             // 등록과 같은 이유로 수정 때도 End User Direct 로 고정한다
             'so_type'                 => config('services.demoworks.so_type', '5001'),
             'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
-            'billing_strategy'        => 25,
+            /* 25 는 아무것도 가리키지 않는 줄이었다(데모웍스 account_id 0). 등록과 같은
+               자리에서 셈해 보낸다 — 등록과 수정이 다른 전략으로 나가면 안 된다. */
+            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
         ];
 
         try {
@@ -3022,20 +3024,31 @@ HTML;
         ]);
     }
 
-    /** 위드웍스로 넘길 청구전략 코드 — 우리 열쇠(「유형|자격」)를 저쪽 코드로 옮긴다 */
-    private function withworksBillingStrategy(Prescription $prescription): int
+    /**
+     * 위드웍스로 넘길 청구전략 — 저쪽 billing_strategies 표의 id 다.
+     *
+     * 코드값이 아니라 줄 번호라 서버마다 다르다. 그래서 지금 붙어 있는 곳(test·production)의
+     * 표에서만 찾는다 — 데모웍스 id 를 운영으로 보내면 엉뚱한 줄을 가리킨다.
+     *
+     * 못 찾으면 null 을 돌려준다. 아무 값이나 실어 보내느니 싣지 않는 편이 낫다 —
+     * 저쪽은 값이 없으면 제 기본값(전자세금계산서 100%)으로 갈아 끼우고, 그것이
+     * 우리가 25 를 보내던 시절에 실제로 일어나던 일이다.
+     */
+    private function withworksBillingStrategy(Prescription $prescription): ?int
     {
+        /* 자격을 아직 고르지 않은 건은 열쇠가 null 이다 — 널로 배열을 찾으면 PHP 가
+           나무란다. 빈 글자로 바꾸면 표에 없는 열쇠가 되어 기본값으로 내려간다. */
         $key = \App\Support\BillingStrategy::key(
             $prescription->counsel_acc_add_type,
             $prescription->benefit_class,
-        );
+        ) ?? '';
 
-        $conf = (array) config('services.withworks_billing_strategy', []);
-        $map  = (array) ($conf['map'] ?? []);
+        $mode = config('services.demoworks.mode') === 'production' ? 'production' : 'test';
+        $conf = (array) config("services.withworks_billing_strategy.{$mode}", []);
 
-        /* 자격을 아직 고르지 않은 건은 열쇠가 null 이다 — 널로 배열을 찾으면 PHP 가
-           나무란다. 빈 글자로 바꾸면 표에 없는 열쇠가 되어 default 로 내려간다. */
-        return (int) ($map[$key ?? ''] ?? $conf['default'] ?? 25);
+        $id = ((array) ($conf['map'] ?? []))[$key] ?? $conf['default'] ?? null;
+
+        return $id === null ? null : (int) $id;
     }
 
     // ── SMS 템플릿 목록 ────────────────────────────────────
