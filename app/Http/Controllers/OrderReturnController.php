@@ -152,19 +152,6 @@ class OrderReturnController extends Controller
         ]);
     }
 
-    /** 원 주문을 골라 신청서를 연다 */
-    public function create(Request $request): View
-    {
-        $order = $request->filled('order')
-            ? Order::with(['patient', 'items', 'prescription'])->find($request->order)
-            : null;
-
-        return view('order-returns.create', [
-            'order'  => $order,
-            // 여기도 같은 규칙이다 — 창고에 넘긴 건만 고른다
-            'orders' => Order::with('patient')->sentToWarehouse()->latest('id')->limit(200)->get(),
-        ]);
-    }
 
     public function store(Request $request): RedirectResponse
     {
