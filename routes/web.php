@@ -156,6 +156,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/patient-search',  [\App\Http\Controllers\OrderReturnController::class, 'patientSearch'])->name('patientSearch');
         Route::post('/',               [\App\Http\Controllers\OrderReturnController::class, 'store'])->name('store');
         Route::get('/{orderReturn}',   [\App\Http\Controllers\OrderReturnController::class, 'show'])->name('show');
+        // 환불을 실제로 처리한 자취를 적는다 — 단계는 advance 가 옮긴다
+        Route::patch('/{orderReturn}',  [\App\Http\Controllers\OrderReturnController::class, 'update'])->name('update');
         Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
         Route::post('/{orderReturn}/resend',  [\App\Http\Controllers\OrderReturnController::class, 'resend'])->name('resend');
         // 창고 검수 결과 받아 오기 · 마이너스 발행 다시 시도

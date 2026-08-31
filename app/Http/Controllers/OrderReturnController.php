@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -34,7 +35,8 @@ class OrderReturnController extends Controller
     public function index(Request $request): View
     {
         $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'assignee',
-                                    'order.items.lots'])->latest('id');
+                                    'order.items.lots', 'order.tossPayment', 'items',
+                                    'creator', 'approver'])->latest('id');
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
@@ -81,6 +83,56 @@ class OrderReturnController extends Controller
                하나뿐이라 누구의 무슨 건인지 상세를 열어야 알았다. */
             'resident_no' => $r->order?->patient?->masked_resident_no ?? '',
             'mobile'      => $r->order?->patient?->mobile ?? '',
+
+            /* ── 요청서 4쪽이 더 달라 한 것들 ─────────────────────────
+               우리 표에 있는 것은 그대로 꺼내고, 원 주문ㆍ결제에 있는 것은 거기서
+               끌어온다. 같은 값을 두 곳에 적어 두면 언젠가 갈린다. */
+            'taker'        => $r->creator?->name ?? '',
+            'approver'     => $r->approver?->name ?? '',
+            'approved_at'  => $r->approved_at?->format('Y-m-d') ?? '',
+            // 몇 개 가운데 몇 개가 되돌아왔는가 — 부분 반품은 이 둘이 갈린다
+            'qty_ordered'  => (int) $r->items->sum('ordered_quantity') ?: '',
+            'qty_returned' => (int) $r->items->sum('quantity') ?: '',
+            // 되돌아온 물건의 Lot — 사람이 상자를 보고 적는다
+            'rt_lot'       => $r->items->pluck('lot_no')->filter()->implode(', '),
+            // 수거 송장. 나갈 때의 송장은 공통 칸의 「운송장」이 세운다.
+            'collect_no'   => $r->collect_tracking_no ?? '',
+
+            // ── 환불을 어떻게 돌려줬는가 ──────────────────────
+            'refund_method' => OrderReturn::REFUND_METHODS[$r->refund_method] ?? '',
+            'refunded_at'   => $r->refunded_at?->format('Y-m-d') ?? '',
+            'refund_bank'   => $r->refund_bank ?? '',
+            'refund_holder' => $r->refund_holder ?? '',
+            'refund_acct'   => $r->refund_account ?? '',
+            'card_issuer'   => $r->card_issuer ?? '',
+            'card_expiry'   => $r->card_expiry ?? '',
+            'approval_no'   => $r->refund_approval_no ?? '',
+            'handling'      => $r->handling_branch ?? '',
+            'refund_agency' => $r->refund_agency ?? '',
+            'rt_cash_no'    => $r->refund_cash_receipt_no ?? '',
+            'rt_cash_type'  => OrderReturn::REFUND_RECEIPT_TYPES[$r->refund_cash_receipt_type] ?? '',
+            'memo'          => $r->memo ?? '',
+            'staff_memo'    => $r->staff_memo ?? '',
+
+            /* ── 무엇을 물렸는가 ────────────────────────────────
+               현금영수증ㆍ세금계산서 취소는 주문이 적고 있다 — 여기 옮겨 적지 않고
+               그 값을 그대로 본다. 카드ㆍ무통장 취소는 우리 표에 있다. */
+            'ti_cancel'   => $r->order?->tax_invoice_cancelled_at?->format('Y-m-d') ?? '',
+            'cr_cancel'   => $r->order?->cash_receipt_cancelled_at?->format('Y-m-d') ?? '',
+            'card_cancel' => $r->card_cancelled_at?->format('Y-m-d') ?? '',
+            'bank_cancel' => $r->bank_cancelled_at?->format('Y-m-d') ?? '',
+
+            /* ── 원 주문의 결제 ─────────────────────────────────
+               가상계좌는 토스가 발급한 것이라 toss_payments 가 원본이다. */
+            'va_no'     => $r->order?->tossPayment?->account_number ?? '',
+            'va_bank'   => $r->order?->tossPayment?->bank ?? '',
+            'va_holder' => $r->order?->tossPayment?->customer_name ?? '',
+
+            /* ── 절차서가 정한 기한 ─────────────────────────────
+               입고일에서 셈해 나오는 값이다. 적어 두지 않는 까닭은 규칙이 바뀌면
+               적어 둔 옛 값이 남기 때문이다. */
+            'due_inspect' => $r->inspectDueAt()?->format('Y-m-d') ?? '',
+            'due_final'   => $r->finalDueAt()?->format('Y-m-d') ?? '',
 
             // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
         ] + $extras->rx($r->order?->prescription, $r->order?->patient)
@@ -336,6 +388,37 @@ class OrderReturnController extends Controller
                     ]]),
             ])->values(),
         ]);
+    }
+
+    /**
+     * 환불을 실제로 처리한 자취를 적는다 (요청서 4쪽, 2026-08-31).
+     *
+     * 카드 취소 승인번호, 통장을 물린 날, 환불분 현금영수증 번호 — 팝빌과 토스 화면을
+     * 보며 담당자가 옮겨 적는 값이다. 우리가 만들 수 없어 받아 적는 자리를 둔다.
+     *
+     * 단계는 여기서 건드리지 않는다. 그것은 advance() 가 절차서대로 옮긴다 —
+     * 두 곳에서 옮기면 승인 없이 넘어가는 길이 생긴다.
+     */
+    public function update(Request $request, OrderReturn $orderReturn): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'card_issuer'              => 'nullable|string|max:50',
+            // 카드번호는 받지 않는다 — 유효기간만으로는 결제할 수 없다
+            'card_expiry'              => 'nullable|string|max:7',
+            'refund_approval_no'       => 'nullable|string|max:50',
+            'card_cancelled_at'        => 'nullable|date',
+            'bank_cancelled_at'        => 'nullable|date',
+            'handling_branch'          => 'nullable|string|max:100',
+            'refund_agency'            => 'nullable|string|max:200',
+            'refund_cash_receipt_no'   => 'nullable|string|max:50',
+            'refund_cash_receipt_type' => ['nullable', Rule::in(array_keys(OrderReturn::REFUND_RECEIPT_TYPES))],
+            'memo'                     => 'nullable|string|max:500',
+            'staff_memo'               => 'nullable|string|max:500',
+        ]);
+
+        $orderReturn->update($data);
+
+        return back()->with('success', '환불 정보를 적었습니다.');
     }
 
     public function show(OrderReturn $orderReturn): View

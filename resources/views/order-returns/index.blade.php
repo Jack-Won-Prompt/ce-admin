@@ -162,6 +162,49 @@
       { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
+      // 접수한 사람과 승인한 사람은 다르다 — 절차서가 그렇게 나눈다
+      { header: '접수자',   name: 'taker',    width: 90 },
+      { header: '승인자',   name: 'approver', width: 90 },
+      { header: '승인일자', name: 'approved_at', width: 100, align: 'center', sortable: true },
+
+      /* ── 무엇이 얼마나 되돌아왔는가 (요청서 4쪽) ────────── */
+      { header: '원판매 주문수량', name: 'qty_ordered',  width: 120, align: 'right' },
+      { header: '반품 수량',      name: 'qty_returned', width: 90,  align: 'right' },
+      { header: '반품 Lot',       name: 'rt_lot',       width: 140 },
+      { header: '수거 송장',      name: 'collect_no',   width: 130 },
+
+      /* ── 어떻게 돌려줬는가 ──────────────────────────────── */
+      { header: '환불수단',   name: 'refund_method', width: 110, align: 'center', sortable: true },
+      { header: '환불일자',   name: 'refunded_at',   width: 100, align: 'center', sortable: true },
+      { header: '환불은행',   name: 'refund_bank',   width: 100 },
+      { header: '예금주',     name: 'refund_holder', width: 90 },
+      { header: '환불계좌',   name: 'refund_acct',   width: 140 },
+      { header: '카드사',     name: 'card_issuer',   width: 90 },
+      { header: '유효기간',   name: 'card_expiry',   width: 90,  align: 'center' },
+      { header: '승인번호',   name: 'approval_no',   width: 120 },
+      { header: '취급점',     name: 'handling',      width: 120 },
+      { header: '환불기관정보', name: 'refund_agency', width: 160 },
+      { header: '환불 현금영수증번호', name: 'rt_cash_no',   width: 150 },
+      { header: '환불 영수증 구분',   name: 'rt_cash_type', width: 120, align: 'center' },
+
+      /* ── 원 주문의 가상계좌 (토스가 발급한 것) ───────────── */
+      { header: '가상계좌번호',     name: 'va_no',     width: 140 },
+      { header: '가상계좌은행',     name: 'va_bank',   width: 100 },
+      { header: '가상계좌 예금주명', name: 'va_holder', width: 120 },
+
+      /* ── 무엇을 물렸는가 ────────────────────────────────── */
+      { header: '현금영수증 취소',   name: 'cr_cancel',   width: 120, align: 'center', sortable: true },
+      { header: '전자세금계산서 취소', name: 'ti_cancel', width: 140, align: 'center', sortable: true },
+      { header: '카드결제 취소',     name: 'card_cancel', width: 120, align: 'center', sortable: true },
+      { header: '무통장결제 취소',   name: 'bank_cancel', width: 120, align: 'center', sortable: true },
+
+      /* ── 기한과 적바림 ──────────────────────────────────── */
+      // 입고일에서 셈해 나온다 — 적어 둔 값이 아니라 늘 규칙과 맞는다
+      { header: '검수 기한',  name: 'due_inspect', width: 100, align: 'center', sortable: true },
+      { header: '처리 기한',  name: 'due_final',   width: 100, align: 'center', sortable: true },
+      // 적요는 통장에 찍히는 글자, 담당자메모는 우리끼리 보는 글이다
+      { header: '적요',       name: 'memo',        width: 180 },
+      { header: '담당자메모', name: 'staff_memo',  width: 200 },
       // 정산 — 「언제 접수했고 얼마였나」는 나란히 본다
       ...ceMoneyCols(),
       { header: '접수일',   name: 'created',  width: 100, sortable: true },

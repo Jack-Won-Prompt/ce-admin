@@ -18,7 +18,7 @@ class OrderReturnItem extends Model
 {
     protected $fillable = [
         'order_return_id', 'order_item_id',
-        'product_code', 'product_name',
+        'product_code', 'product_name', 'lot_no',
         'ordered_quantity', 'quantity', 'unit_price', 'copay',
     ];
 

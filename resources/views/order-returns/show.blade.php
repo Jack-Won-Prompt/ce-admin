@@ -27,6 +27,14 @@
   .rt-kv:last-child { border-bottom:none; }
   .rt-kv > span:first-child { width:120px; flex-shrink:0; color:var(--text-muted); }
   .rt-kv > span:last-child  { flex:1; font-weight:500; }
+  /* 환불 처리 자취 — 두 칸으로 세우고, 긴 글은 한 줄을 다 쓴다 */
+  .rt-refund { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; }
+  .rt-rf { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .rt-rf-wide { grid-column:1 / -1; }
+  .rt-rf > label { font-size:12px; color:var(--text-muted); }
+  .rt-rf .form-control { height:32px; font-size:13px; }
+  .rt-rf-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; }
+  @media (max-width: 720px) { .rt-refund { grid-template-columns:1fr; } }
 
   .log { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
   .log:last-child { border-bottom:none; }
@@ -113,7 +121,67 @@
       <div class="rt-kv"><span>환불 완료</span><span>{{ $r->refunded_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
     @endif
     <div class="rt-kv"><span>담당자</span><span>{{ $r->assignee?->name ?? $r->creator?->name ?? '—' }}</span></div>
+    <div class="rt-kv"><span>접수자</span><span>{{ $r->creator?->name ?? '—' }}</span></div>
+    <div class="rt-kv"><span>승인자</span><span>{{ $r->approver?->name ?? '—' }}{{ $r->approved_at ? ' · ' . $r->approved_at->format('Y-m-d') : '' }}</span></div>
+    {{-- 원 주문이 언제 나갔는가 — 청구 기한도 반품 기한도 이 날에서 센다 --}}
+    <div class="rt-kv"><span>출고일자</span><span>{{ $r->order?->shipped_at?->format('Y-m-d') ?? '—' }}</span></div>
+    @if($r->collect_tracking_no)
+      <div class="rt-kv"><span>수거 송장</span><span>{{ $r->collect_tracking_no }}</span></div>
+    @endif
+    {{-- 원 주문의 가상계좌 — 토스가 발급한 것이라 여기 옮겨 적지 않고 그대로 본다 --}}
+    @if($r->order?->tossPayment?->account_number)
+      <div class="rt-kv"><span>가상계좌</span><span>{{ $r->order->tossPayment->bank }} {{ $r->order->tossPayment->account_number }} {{ $r->order->tossPayment->customer_name }}</span></div>
+    @endif
+    {{-- 무엇을 물렸는가 — 발행은 주문이 적고 있어 그 값을 그대로 본다 --}}
+    @if($r->order?->cash_receipt_cancelled_at || $r->order?->tax_invoice_cancelled_at)
+      <div class="rt-kv"><span>발행 취소</span><span>
+        @if($r->order?->cash_receipt_cancelled_at)현금영수증 {{ $r->order->cash_receipt_cancelled_at->format('Y-m-d') }}@endif
+        @if($r->order?->tax_invoice_cancelled_at) · 세금계산서 {{ $r->order->tax_invoice_cancelled_at->format('Y-m-d') }}@endif
+      </span></div>
+    @endif
   </div>
+</div>
+
+{{-- 환불을 실제로 처리한 자취 ───────────────────────────
+     요청서 4쪽. 카드 취소 승인번호ㆍ통장을 물린 날ㆍ환불분 현금영수증 번호는 팝빌과
+     토스 화면을 보며 담당자가 옮겨 적는 값이다. 우리가 만들 수 없어 적는 자리를 둔다.
+     단계는 여기서 옮기지 않는다 — 그것은 아래 「진행 단계」가 절차서대로 한다. --}}
+<div class="rt-card">
+  <div class="rt-hd">환불 처리 자취</div>
+  <form method="POST" action="{{ route('order-returns.update', $r) }}" class="rt-refund rt-bd">
+    @csrf @method('PATCH')
+    <div class="rt-rf"><label>카드사</label>
+      <input type="text" name="card_issuer" class="form-control" maxlength="50" value="{{ old('card_issuer', $r->card_issuer) }}"></div>
+    <div class="rt-rf"><label>유효기간</label>
+      <input type="text" name="card_expiry" class="form-control" maxlength="7" placeholder="MM/YY" value="{{ old('card_expiry', $r->card_expiry) }}"></div>
+    <div class="rt-rf"><label>승인번호</label>
+      <input type="text" name="refund_approval_no" class="form-control" maxlength="50" value="{{ old('refund_approval_no', $r->refund_approval_no) }}"></div>
+    <div class="rt-rf"><label>카드결제 취소</label>
+      <input type="date" name="card_cancelled_at" class="form-control" value="{{ old('card_cancelled_at', $r->card_cancelled_at?->format('Y-m-d')) }}"></div>
+    <div class="rt-rf"><label>무통장결제 취소</label>
+      <input type="date" name="bank_cancelled_at" class="form-control" value="{{ old('bank_cancelled_at', $r->bank_cancelled_at?->format('Y-m-d')) }}"></div>
+    <div class="rt-rf"><label>취급점</label>
+      <input type="text" name="handling_branch" class="form-control" maxlength="100" placeholder="콜로 → 환자 환불" value="{{ old('handling_branch', $r->handling_branch) }}"></div>
+    <div class="rt-rf"><label>환불기관정보</label>
+      <input type="text" name="refund_agency" class="form-control" maxlength="200" value="{{ old('refund_agency', $r->refund_agency) }}"></div>
+    <div class="rt-rf"><label>환불 현금영수증번호</label>
+      <input type="text" name="refund_cash_receipt_no" class="form-control" maxlength="50" value="{{ old('refund_cash_receipt_no', $r->refund_cash_receipt_no) }}"></div>
+    <div class="rt-rf"><label>환불 영수증 구분</label>
+      <select name="refund_cash_receipt_type" class="form-control form-select">
+        <option value="">선택</option>
+        @foreach(\App\Models\OrderReturn::REFUND_RECEIPT_TYPES as $k => $label)
+          <option value="{{ $k }}" @selected(old('refund_cash_receipt_type', $r->refund_cash_receipt_type) === $k)>{{ $label }}</option>
+        @endforeach
+      </select></div>
+    {{-- 적요는 통장에 찍히는 글자, 담당자메모는 우리끼리 보는 글이다 --}}
+    <div class="rt-rf rt-rf-wide"><label>적요</label>
+      <input type="text" name="memo" class="form-control" maxlength="500" value="{{ old('memo', $r->memo) }}"></div>
+    <div class="rt-rf rt-rf-wide"><label>담당자메모</label>
+      <input type="text" name="staff_memo" class="form-control" maxlength="500" value="{{ old('staff_memo', $r->staff_memo) }}"></div>
+    <div class="rt-rf-actions">
+      <button type="submit" class="btn btn-primary">저장</button>
+    </div>
+  </form>
 </div>
 
 {{-- 진행 단계 ─────────────────────────────────────────

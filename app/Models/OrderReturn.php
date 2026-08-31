@@ -43,9 +43,15 @@ class OrderReturn extends Model
         'adjust_so_no', 'adjusted_at',
         // 창고가 지금 무엇을 하고 있는가 — 우리 단계(status)와 다른 것을 잰다
         'pl3_status', 'pl3_status_label', 'pl3_status_at',
+        // 환불을 실제로 처리한 자취(요청서 4쪽)
+        'card_issuer', 'card_expiry', 'refund_approval_no', 'card_cancelled_at',
+        'bank_cancelled_at', 'handling_branch', 'refund_agency',
+        'refund_cash_receipt_no', 'refund_cash_receipt_type', 'memo', 'staff_memo',
     ];
 
     protected $casts = [
+        'card_cancelled_at'    => 'datetime',
+        'bank_cancelled_at'    => 'datetime',
         'pl3_status_at'        => 'datetime',
         'arrived_at'           => 'datetime',
         'inspect_confirmed_at' => 'datetime',
@@ -208,6 +214,20 @@ class OrderReturn extends Model
         'account' => '계좌 환불',
         'card'    => '카드 결제취소',
         'va'      => '가상계좌 환불',
+    ];
+
+    /**
+     * 환불분 현금영수증을 어느 몫으로 끊는가 (요청서 4쪽).
+     *
+     * 주문 발행 때 쓰는 두 가지(소득공제ㆍ지출증빙)에 둘을 더 둔다. 번호를 못 받은
+     * 건은 자진발급으로 끊고, 카드로 돌려준 건은 현금영수증이 아니라 카드 취소로
+     * 처리했다는 표시다 — 그것도 적어 두어야 나중에 「왜 안 끊었나」를 되묻지 않는다.
+     */
+    public const REFUND_RECEIPT_TYPES = [
+        'income_deduction'  => '소득공제',
+        'business_expense'  => '지출증빙',
+        'self_issue'        => '자진발급',
+        'card'              => '카드결제',
     ];
 
     public function order(): BelongsTo
