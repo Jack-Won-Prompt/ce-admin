@@ -2030,10 +2030,12 @@ document.addEventListener('click', (e) => {
      같은 이름으로 같은 차례에 세운다. 화면마다 따로 적으면 이름도 차례도 조금씩 갈리고,
      담당자는 화면을 옮길 때마다 눈으로 다시 찾는다.
 
-     쓰는 법 — columns: [ ...화면 고유 칸, ...ceCommonCols() ]
+     쓰는 법 — columns: [ …앞쪽 칸, ...ceMoneyCols(), 날짜 칸, …, ...ceCommonCols() ]
      서버는 App\Support\OrderGridExtras 가 같은 열쇠로 값을 실어 준다.
 
-     차례에 뜻이 있다: 동의(2) → 청구(3) → 발행(2) → 정산(5). 일이 벌어지는 순서다. */
+     둘로 갈라 둔다. 동의ㆍ청구ㆍ발행은 뒤쪽에 모아 두고(일이 벌어지는 순서다), 돈은
+     따로 떼어 날짜 앞에 세운다 — 「언제 팔았고 얼마였나」는 나란히 보는 값인데 뒤쪽
+     끝에 두면 가로로 한참 밀어야 닿는다. */
   window.ceCommonCols = function () {
     /* 돈은 천 단위로 끊어 오른쪽에 세운다. 0 은 빈칸으로 둔다 — 「0원」과 「아직 안 정함」이
        같은 글자로 보이면 어느 쪽인지 알 수 없다. */
@@ -2058,8 +2060,21 @@ document.addEventListener('click', (e) => {
       // 발행
       { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
       { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
+    ];
+  };
 
-      // 정산
+  /* 정산 — 날짜 칸 바로 앞에 세운다. 화면마다 그 칸의 이름이 다르지만(판매일자ㆍ
+     등록일ㆍ접수일ㆍ주문일) 가리키는 것은 같다. 다섯의 차례는 어디서나 이대로다. */
+  window.ceMoneyCols = function () {
+    const money = (v) => {
+      const n = Number(v || 0);
+      if (!n) return '';
+      const s = document.createElement('span');
+      s.textContent = n.toLocaleString('ko-KR');
+      return s;
+    };
+
+    return [
       { header: '결제수단',     name: 'pay_method',      width: 100, align: 'center', sortable: true },
       { header: '입금확인',     name: 'deposit_at',      width: 100, align: 'center', sortable: true },
       { header: '총 금액',      name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },

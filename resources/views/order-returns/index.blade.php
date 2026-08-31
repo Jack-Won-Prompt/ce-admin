@@ -160,6 +160,8 @@
       { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
+      // 정산 — 「언제 접수했고 얼마였나」는 나란히 본다
+      ...ceMoneyCols(),
       { header: '접수일',   name: 'created',  width: 100, sortable: true },
 
       /* 누구의 무슨 건인가 — 지금까지는 이름 하나뿐이라 상세를 열어야 알았다 */

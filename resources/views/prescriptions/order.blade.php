@@ -9616,6 +9616,8 @@ window.HELP_TOUR_STEPS = [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
+        // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
+        ...ceMoneyCols(),
         { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
         { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧

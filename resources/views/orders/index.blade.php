@@ -362,6 +362,8 @@ window.HELP_TOUR_STEPS = [
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
+      // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
+      ...ceMoneyCols(),
       { header: '판매일자',   name: 'sold_at',   width: 100, sortable: true, align: 'center' },
       { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {

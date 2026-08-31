@@ -293,6 +293,8 @@
           return el;
         },
       },
+      // 정산 — 샘플은 무상이라 대개 비지만, 자리는 다른 화면과 같아야 한다
+      ...ceMoneyCols(),
       { header: '주문일',     name: 'order_date', width: 100, sortable: true },
       { header: '등록자',     name: 'creator',    width: 90 },
 
