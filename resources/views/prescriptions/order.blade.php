@@ -141,6 +141,10 @@
   .field-group { position: relative; }
   .field-group .field-status { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; }
   .field-group input.has-warn { border-color: var(--alert-500); background: var(--alert-50); }
+  /* 주민번호 칸은 값을 비워 두고 가린 번호를 자리표로 보여 준다(원문은 「표시」로만
+     연다). 그런데 자리표는 회색이라 적혀 있는 번호가 「비어 있다」로 읽혔다 —
+     쥐고 있는 것이 있을 때만 진하게 한다. 없을 때는 그대로 흐린 안내다. */
+  #f-resident[data-has-rn]::placeholder { color: var(--gray-800); opacity: 1; }
   .field-group input.has-ok   { border-color: var(--primary); }
   .benefit-box { padding: 12px 14px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-lg); margin-top: 4px; }
   .benefit-title { font-size: 13px; font-weight: 700; color: var(--primary); }
@@ -2289,7 +2293,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      '병원명 *' 은 시안도 13/500 이라 굵게 하지 않았다. --}}
                 <span class="rx-field-label" style="font-weight:700;">이름 <span style="color:var(--primary);">*</span></span>
                 <div class="field-group" style="flex:1;">
-                  <input type="text" class="form-control has-ok" id="f-name" value="{{ $prescription->patient_name_ocr }}" />
+                  {{-- 이어진 사람이 있으면 그 이름이 먼저다. OCR 이 읽은 이름만 보던 탓에,
+                       업로드 화면에서 거래처를 골라(또는 새로 만들어) 올린 건은 이름이 빈
+                       채로 열렸다 — 그 길에서는 OCR 을 돌리지 않아 patient_name_ocr 이 없다.
+                       위쪽 이름표(hdrPatientName)는 진작 이 순서로 보고 있었다. --}}
+                  <input type="text" class="form-control has-ok" id="f-name"
+                         value="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr }}" />
                   <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
                 </div>
                 {{-- 「조회」로 고른 사람. 저장할 때 이 값으로 처방전과 환자를 잇는다.
@@ -2378,6 +2387,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      감사로그에 남는다(사유 operator_view). 새로 치면 덮어쓴다. --}}
                 <input type="text" class="form-control" id="f-resident" value="" maxlength="14"
                        autocomplete="off" inputmode="numeric"
+                       @if($displayRn) data-has-rn="1" @endif
                        placeholder="{{ $displayRn ?: 'XXXXXX-XXXXXXX' }}"
                        title="「표시」를 누르면 저장된 번호를 봅니다. 새로 입력하면 덮어씁니다."
                        style="flex:1;min-width:0;letter-spacing:1px;" oninput="rnRecalc()" />
