@@ -9629,29 +9629,14 @@ window.HELP_TOUR_STEPS = [
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
-        { header: '처방여부',  name: 'rx_type',   width: 90,  align: 'center', sortable: true },
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
 
-        /* ── 요청서 8쪽이 적은 칸들 ────────────────────────────
-           오른쪽으로 넘쳐도 좋으니 한 건씩 열어 보지 않고 가릴 수 있어야 한다는 요청이다.
-           차례는 요청서가 적은 그대로다. */
-        { header: '신구매/재구매',  name: 'purchase',    width: 110, align: 'center', sortable: true },
-        { header: '처방전 발행일',  name: 'issued',      width: 120, align: 'center', sortable: true },
-        { header: '총 처방일수',    name: 'total_days',  width: 100, align: 'right',  sortable: true },
-        { header: '담당의사',       name: 'doctor',      width: 90,  sortable: true },
-        { header: '병원명',         name: 'hospital',    width: 150, sortable: true },
-        { header: '다음재구매가능일', name: 'next_repur', width: 130, align: 'center', sortable: true },
-        { header: 'Five/Six(110days)', name: 'five110',  width: 140, align: 'center' },
+        /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ창고가 지금
+           무엇을 하고 있는가. 병원ㆍ처방 이야기는 아래 공통 블록이 한꺼번에 세운다. */
         { header: '주민등록번호',   name: 'resident_no', width: 130 },
-        { header: '자격',           name: 'benefit',     width: 100, align: 'center', sortable: true },
-        { header: 'Five/Six',       name: 'five',        width: 90,  align: 'center', sortable: true },
         { header: '송금자명',       name: 'remitter',    width: 100 },
-        { header: '처방전종료일',   name: 'rx_end',      width: 120, align: 'center', sortable: true },
-        { header: '처방전 사용기간', name: 'rx_period',  width: 120, align: 'right' },
         { header: '판매상태',       name: 'sale_status', width: 110, align: 'center', sortable: true },
         { header: '출고상태',       name: 'ship_status', width: 110, align: 'center', sortable: true },
-        { header: '상병코드',       name: 'disease_code', width: 110 },
-        { header: '사유',           name: 'reason',      width: 200, sortable: true },
         /* 결제수단은 공통 칸(ceCommonCols)이 세운다 — 여기 또 두면 같은 값이 두 칸에 선다 */
         { header: '등록담당자',     name: 'creator',     width: 100, align: 'center', sortable: true },
         { header: '수정담당자',     name: 'updater',     width: 100, align: 'center', sortable: true },
@@ -9675,6 +9660,9 @@ window.HELP_TOUR_STEPS = [
           } },
 
         // 네 목록 화면이 함께 쓰는 칸 — 이름ㆍ차례ㆍ표기가 한 곳에서 나온다
+        // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
+        ...ceRxCols(),
+
         ...ceCommonCols(),
       ],
       data: OL_ROWS,

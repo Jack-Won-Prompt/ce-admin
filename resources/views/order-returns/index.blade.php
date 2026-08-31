@@ -156,7 +156,7 @@
         },
       },
       { header: '이름',   name: 'patient',  width: 90 },
-      { header: '사유',     name: 'reason',   width: 100 },
+      { header: '반품 사유', name: 'reason',   width: 110 },
       { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
@@ -167,10 +167,11 @@
       /* 누구의 무슨 건인가 — 지금까지는 이름 하나뿐이라 상세를 열어야 알았다 */
       { header: '주민등록번호', name: 'resident_no',  width: 130 },
       { header: '전화번호1',    name: 'mobile',       width: 130 },
-      { header: '병원명',       name: 'hospital',     width: 140, sortable: true },
-      { header: '상병코드',     name: 'disease_code', width: 110, sortable: true },
       { header: '제품코드',     name: 'product_code', width: 120 },
       { header: '제품명',       name: 'product',      width: 180, sortable: true },
+
+      // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
+      ...ceRxCols(),
 
       // 네 목록 화면이 함께 쓰는 칸
       ...ceCommonCols(),

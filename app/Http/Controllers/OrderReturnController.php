@@ -33,7 +33,7 @@ class OrderReturnController extends Controller
 
     public function index(Request $request): View
     {
-        $query = OrderReturn::with(['order.patient', 'assignee'])->latest('id');
+        $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'assignee'])->latest('id');
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
@@ -78,13 +78,12 @@ class OrderReturnController extends Controller
                하나뿐이라 누구의 무슨 건인지 상세를 열어야 알았다. */
             'resident_no' => $r->order?->patient?->masked_resident_no ?? '',
             'mobile'      => $r->order?->patient?->mobile ?? '',
-            'hospital'    => $r->order?->prescription?->hospital_name ?? '',
-            'disease_code'=> $r->order?->prescription?->disease_code ?? '',
             'product'     => $r->order?->product_name ?? '',
             'product_code'=> $r->order?->product_code ?? '',
 
-            // 네 화면이 함께 쓰는 칸
-        ] + $extras->of($r->order))->values();
+            // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
+        ] + $extras->rx($r->order?->prescription, $r->order?->patient)
+          + $extras->of($r->order))->values();
 
         $counts = OrderReturn::selectRaw('type, count(*) c')->groupBy('type')->pluck('c', 'type');
 

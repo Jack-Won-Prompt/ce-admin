@@ -1355,6 +1355,7 @@ class PrescriptionController extends Controller
             ->where('status', 'pending')->count();
         $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
+                'prescription.billingOffice',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
@@ -1378,14 +1379,6 @@ class PrescriptionController extends Controller
                 'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
                 // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
                 'manager'   => $rx?->assignedUser?->name ?? '',
-                /* 처방여부 — 처방전이냐 아니냐. 유형 가운데 처방외만 「처방외」다.
-                   아직 고르지 않았으면 비워 둔다 — 모르는 것을 「처방전」이라 적어 두면
-                   그 말이 근거처럼 읽힌다. */
-                'rx_type'   => match ((string) ($rx?->counsel_acc_add_type ?? '')) {
-                                   '20'    => '처방외',
-                                   '10', '30' => '처방전',
-                                   default => '',
-                               },
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 /* 지울 수 있는 건인가 — 처방전도 안 올라왔고 창고에도 서지 않은 자리다.
                    서버가 다시 한 번 따지므로 여기 값은 「단추를 세울지」에만 쓴다. */
@@ -1395,36 +1388,19 @@ class PrescriptionController extends Controller
                 // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
                 'url'       => $rx ? route('prescriptions.show', $rx) . '?claim=1' : null,
 
-                /* ── 요청서 8쪽이 적은 칸들 ────────────────────────
-                   한 건씩 열어 보지 않고도 「무엇을 먼저 해야 하는가」를 가릴 수 있어야
-                   한다 — 처방전이 언제 끝나는지, 다음 재구매가 언제인지, 왜 멈춰 있는지. */
-                'purchase'    => $rx?->purchase_type ?? '',
-                'issued'      => $d($rx?->issued_date),
-                'total_days'  => $rx?->total_days ?? '',
-                'doctor'      => $rx?->doctor_name ?? '',
-                'hospital'    => $rx?->hospital_name ?? '',
-                'next_repur'  => $d($rx?->next_repurchase ?: $rx?->repurchase_date),
-                'five110'     => $rx?->five_110days ?? '',
+                /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ
+                   창고가 지금 무엇을 하고 있는가. */
                 'resident_no' => $rx?->resident_no_ocr_masked ?? $o->patient?->masked_resident_no ?? '',
-                'benefit'     => $rx?->benefit_class ?? '',
-                'five'        => match ((string) ($rx?->five_program ?? '')) {
-                                     '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
-                                 },
                 // 송금자명 — 돈을 보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다)
                 'remitter'    => $o->patient?->remitter_name ?? '',
-                'rx_end'      => $d($rx?->rx_end_date),
-                'rx_period'   => $rx?->rx_use_period ?? '',
                 // 창고가 지금 무엇을 하고 있는가
                 'sale_status' => $o->withworks_status_label ?: '',
                 'ship_status' => $o->withworks_ship_status_label ?: '',
-                'disease_code'=> $rx?->disease_code ?? '',
-                'reason'      => $rx?->reason ?? '',
-                'pay_method'  => $o->pay_method ?? '',
                 'creator'     => $rx?->creator?->name ?? '',
                 'updater'     => $rx?->updater?->name ?? '',
 
-                // 네 화면이 함께 쓰는 칸 — 동의ㆍ청구ㆍ발행ㆍ정산
-                ] + $extras->of($o);
+                // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
+                ] + $extras->rx($rx, $o->patient) + $extras->of($o);
             })->values();
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,

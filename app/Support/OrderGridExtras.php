@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Order;
+use App\Models\Patient;
+use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
 use App\Models\PrivacyConsent;
 use App\Models\SampleOrder;
@@ -84,7 +86,8 @@ class OrderGridExtras
         return [
             'privacy_consent' => $this->privacyLabel($pid),
             'nhis_consent'    => $this->consentLabel($pid),
-            'claim_agency'    => ClaimAgency::LABELS[$o?->prescription?->claim_agency] ?? '',
+            // 청구처를 아직 고르지 않은 건은 널가 null 이다 — 바로 물으면 PHP 가 나무란다
+            'claim_agency'    => ClaimAgency::LABELS[$o?->prescription?->claim_agency ?? ''] ?? '',
             'claim_ready'     => $o === null ? '' : ($o->claim_ready ? '준비' : '미비'),
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
@@ -96,6 +99,74 @@ class OrderGridExtras
             'total_amount'    => (int) ($o?->total_amount ?? 0),
             'copay'           => (int) ($o?->patient_copay ?? 0),
             'nhis_amount'     => (int) ($o?->nhis_amount ?? 0),
+        ];
+    }
+
+
+    /**
+     * 병원ㆍ처방 정보 탭의 칸을 그대로 목록에 세운다.
+     *
+     * 그 탭에는 서른아홉 칸이 있는데 목록에는 열여섯만 서 있었다 — 나머지는 한 건씩
+     * 열어야 보였다. 무엇을 먼저 처리할지 가리는 일은 목록에서 훑으며 하는 것이라,
+     * 열어 보지 않고도 가릴 수 있어야 한다는 요청이다.
+     *
+     * 「청구처」는 여기 두지 않는다 — 공통 칸(of·ofSample)이 이미 세운다. 같은 값이
+     * 두 칸에 서면 어느 쪽이 맞는지 되묻게 된다.
+     *
+     * 사용 시작일ㆍ급여 종료일 두 가지는 처방전이 아니라 사람에 붙는다(환자의 공단
+     * 동의 기간). 그래서 환자를 따로 받는다.
+     */
+    public function rx(?Prescription $p, ?Patient $pt = null): array
+    {
+        $d = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
+
+        // 0 과 「아직 안 적음」은 다른 말이다 — 숫자 칸은 빈 것을 빈칸으로 둔다
+        $n = fn ($v) => ($v === null || $v === '') ? '' : (string) $v;
+
+        return [
+            'rx_memo'        => $p?->review_memo ?? '',
+            'rx_acc_type'    => match ((string) ($p?->counsel_acc_add_type ?? '')) {
+                                    '10' => '처방전', '20' => '처방외', '30' => '처방전 - 원내',
+                                    default => '',
+                                },
+            'rx_hospital'    => $p?->hospital_name ?? '',
+            'rx_hosp_code'   => $p?->hospital_code ?? '',
+            'rx_diag_date'   => $d($p?->diagnosis_date),
+            'rx_dz_grade'    => $p?->disease_grade ?? '',
+            'rx_dz_code'     => $p?->disease_code ?? '',
+            'rx_dz_name'     => $p?->disease_name ?? '',
+            'rx_uro_date'    => $d($p?->uro_date),
+            'rx_uro_find'    => implode(' · ', \App\Support\UroFindings::labels($p?->uro_findings)),
+            'rx_purchase'    => $p?->purchase_type ?? '',
+            'rx_daily'       => $n($p?->daily_count),
+            'rx_days'        => $n($p?->total_days),
+            'rx_total'       => $n($p?->total_count),
+            'rx_issued'      => $d($p?->issued_date),
+            'rx_period'      => $n($p?->rx_use_period),
+            'rx_end'         => $d($p?->rx_end_date),
+            'rx_specialty'   => $p?->specialty ?? '',
+            'rx_doctor'      => $p?->doctor_name ?? '',
+            'rx_license'     => $p?->license_no ?? '',
+            'rx_reason'      => $p?->reason ?? '',
+            'rx_order_mgr'   => $p?->order_manager ?? '',
+            'rx_five'        => match ((string) ($p?->five_program ?? '')) {
+                                    '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
+                                },
+            'rx_cath_freq'   => \App\Support\CatheterFrequency::label($p?->diverticulums),
+            'rx_five110'     => $p?->five_110days ?? '',
+            'rx_benefit'     => $p?->benefit_class ?? '',
+            'rx_office'      => $p?->billingOffice?->office_name ?? '',
+            'rx_pay_date'    => $d($p?->pay_date),
+            'rx_buy_date'    => $d($p?->buy_date),
+            'rx_agree_start' => $d($pt?->nhis_agree_start),
+            'rx_agree_end'   => $d($pt?->nhis_agree_end),
+            'rx_created'     => $p?->created_at?->format('Y-m-d') ?? '',
+            'rx_next_repur'  => $d($p?->next_repurchase ?: $p?->repurchase_date),
+            'rx_local_gov'   => $p?->local_gov ?? '',
+            'rx_repur_date'  => $d($p?->repurchase_date),
+            'rx_use_qty'     => $n($p?->daily_use_qty),
+            'rx_inmarket'    => $d($p?->inmarket_due),
+            'rx_last_qty'    => $n($p?->last_confirmed_qty),
         ];
     }
 

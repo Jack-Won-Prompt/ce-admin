@@ -357,7 +357,6 @@ window.HELP_TOUR_STEPS = [
       /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
-      { header: '처방유형',   name: 'acc_type',  width: 110, sortable: true, align: 'center' },
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       { header: 'Withworks',  name: 'withworks', width: 170 },
@@ -378,10 +377,8 @@ window.HELP_TOUR_STEPS = [
          배송지는 남긴다 — 어디로 가는지는 훑으면서 가리는 값이다. */
       { header: '배송지',   name: 'address',  width: 240 },
 
-      // 처방 쪽 — 무엇을 근거로 판 건인가
-      { header: '병원명',   name: 'hospital', width: 140, sortable: true },
-      { header: '담당의사', name: 'doctor',   width: 90,  sortable: true },
-      { header: '상병코드', name: 'disease_code', width: 110, sortable: true },
+      // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
+      ...ceRxCols(),
 
       // 네 목록 화면이 함께 쓰는 칸
       ...ceCommonCols(),

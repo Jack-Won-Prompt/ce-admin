@@ -24,7 +24,7 @@ class OrderController extends Controller
     // ── 목록 ──────────────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Order::with(['patient', 'prescription', 'creator', 'returns'])->latest();
+        $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -88,7 +88,6 @@ class OrderController extends Controller
                 'deal'      => $deal,
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
                 'deal_state' => $rt ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
-                'acc_type'  => $o->prescription?->accTypeLabel() ?? '-',
                 'patient'   => $o->patient?->name ?? '',
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
@@ -102,15 +101,8 @@ class OrderController extends Controller
                 // 언제 팔았고 언제 되돌아왔는지. 둘 사이가 벌어진 건은 눈에 띄어야 한다.
                 'sold_at'   => $o->created_at->format('Y-m-d'),
                 'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',
-
-                /* 처방 쪽에서 끌어 오는 것 — 한 건씩 열어 보지 않고도 무엇이 남았는지
-                   가릴 수 있어야 한다 */
-                'hospital'  => $o->prescription?->hospital_name ?? '',
-                'doctor'    => $o->prescription?->doctor_name ?? '',
-                'disease_code' => $o->prescription?->disease_code ?? '',
-
-                // 네 화면이 함께 쓰는 칸
-            ] + $extras->of($o);
+                // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
+            ] + $extras->rx($o->prescription, $o->patient) + $extras->of($o);
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));

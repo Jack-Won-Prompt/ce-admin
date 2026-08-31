@@ -63,9 +63,9 @@ class SampleOrderController extends Controller
             'order_date'=> $s->order_date?->format('Y-m-d') ?? '',
             'creator'   => $s->creator?->name ?? '-',
 
-            /* 네 화면이 함께 쓰는 칸. 샘플은 무상이라 동의ㆍ청구ㆍ본인부담이 없어 여러
-               칸이 빈다 — 그 빈칸이 곧 「샘플에는 없는 일」이라는 말이다. */
-        ] + $extras->ofSample($s))->values();
+            /* 샘플은 처방전이 없어 병원ㆍ처방 칸은 모두 빈다. 그래도 세운다 —
+               네 화면이 같은 차례를 가져야 눈이 화면마다 다시 배우지 않는다. */
+        ] + $extras->rx(null, $s->patient) + $extras->ofSample($s))->values();
 
         $counts = SampleOrder::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status');
 
