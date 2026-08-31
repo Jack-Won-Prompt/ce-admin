@@ -458,25 +458,22 @@
 
     <div class="modal-bd">
       <div class="ds-filter-fields">
+        {{-- 이름 · 주민등록번호 · 전화번호 차례다. 앞의 둘은 새로 만들 때도 그대로
+             쓰는 값이라 나란히 둔다 — 못 찾아 「신규」를 누르는 순간 손이 이미
+             그 자리에 있다. 생년월일은 걷었다: 주민번호 앞자리가 곧 생년월일이라
+             같은 것을 두 칸에서 묻고 있었다. --}}
         <div class="ds-filter-field span-2">
           <label class="ds-field-label" for="pkName">이름</label>
           <input type="text" id="pkName" class="form-control" placeholder="이름" autocomplete="off">
         </div>
         <div class="ds-filter-field span-2">
+          <label class="ds-field-label" for="pkRn">주민등록번호</label>
+          <input type="text" id="pkRn" class="form-control" placeholder="900101-1234567 또는 900101"
+                 maxlength="14" autocomplete="off">
+        </div>
+        <div class="ds-filter-field span-2">
           <label class="ds-field-label" for="pkPhone">전화번호</label>
           <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
-        </div>
-        <div class="ds-filter-field span-2">
-          <label class="ds-field-label" for="pkBirth">생년월일</label>
-          <input type="text" id="pkBirth" class="form-control" placeholder="1982-01-08 또는 820108" autocomplete="off">
-        </div>
-        {{-- 주민등록번호 — 찾는 데도 쓰고, 없을 때 새로 만드는 데도 쓴다.
-             처방 서류는 이 번호로 공단에 청구하므로, 이름만으로 만든 거래처는
-             결국 누군가 다시 열어 번호를 채워야 한다. --}}
-        <div class="ds-filter-field span-2">
-          <label class="ds-field-label" for="pkRn">주민등록번호</label>
-          <input type="text" id="pkRn" class="form-control" placeholder="900101-1234567"
-                 maxlength="14" autocomplete="off">
         </div>
         <div class="ds-filter-actions">
           <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>
@@ -641,30 +638,31 @@ window.pkClose = function () {
 };
 
 window.pkReset = function () {
-  ['pkName','pkPhone','pkBirth','pkRn'].forEach(id => document.getElementById(id).value = '');
+  ['pkName','pkRn','pkPhone'].forEach(id => document.getElementById(id).value = '');
   pkSearch();
 };
 
 window.pkSearch = function () {
   const name  = document.getElementById('pkName').value.trim().toLowerCase();
-  const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
-  const birth = document.getElementById('pkBirth').value.replace(/\D/g, '');
   const rnq   = document.getElementById('pkRn').value.replace(/\D/g, '');
+  const phone = document.getElementById('pkPhone').value.replace(/\D/g, '');
 
   const hit = PATIENTS.filter(p => {
     if (name  && !(p.name || '').toLowerCase().includes(name)) return false;
     if (phone && !((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(phone)) return false;
-    if (birth) {
-      // 1982-01-08 로도, 820108 로도 찾는다
-      const b = (p.birth || '').replace(/\D/g, '');
-      const rn = (p.rn || '').replace(/\D/g, '');
-      if (!b.includes(birth) && !rn.startsWith(birth) && !b.slice(2).includes(birth)) return false;
-    }
-    /* 목록의 주민번호는 가려져 있다(900101-1******) — 앞 일곱 자리까지만 견준다.
-       뒤를 다 쳐도 가린 자리와는 맞지 않으니, 그만큼만 보고 나머지는 눈으로 가린다. */
+    /* 주민번호가 생년월일 몫까지 맡는다 — 앞 여섯 자리가 곧 생년월일이라
+       900101 만 쳐도 그날 태어난 사람이 다 걸린다.
+
+       목록에 실린 번호는 앞 여섯 자리뿐이다(900101-*, patientPickerList). 열세 자리를
+       다 쳐도 여섯까지만 견줄 수 있으니 있는 만큼만 본다 — 일곱으로 못 박아 두었더니
+       번호를 다 친 사람이 아무도 못 찾았다.
+
+       번호가 아직 없는 사람은 생년월일로도 걸리게 둔다. */
     if (rnq) {
       const rn = (p.rn || '').replace(/\D/g, '');
-      if (!rn.startsWith(rnq.slice(0, 7))) return false;
+      const bd = (p.birth || '').replace(/\D/g, '').slice(2);
+      const 겹치나 = (a, b) => { const n = Math.min(a.length, b.length); return n > 0 && a.slice(0, n) === b.slice(0, n); };
+      if (!겹치나(rn, rnq) && !(rn === '' && 겹치나(bd, rnq))) return false;
     }
     return true;
   });
@@ -745,11 +743,14 @@ window.pkCreate = async function (btn) {
     return;
   }
 
-  /* 같은 번호를 두 번 만들지 않는다. 목록의 번호는 가려져 있어 앞 일곱 자리까지만
-     견줄 수 있다 — 그래도 같은 날 태어난 같은 이름이 아니면 대개 걸린다. */
-  const 겹침 = PATIENTS.find(p =>
-    (p.rn || '').replace(/\D/g, '').startsWith(rn.slice(0, 7)) &&
-    (p.name || '').replace(/^\s*\(E\)\s*/, '') === name);
+  /* 같은 사람을 두 번 만들지 않는다. 목록에 실린 번호는 앞 여섯 자리뿐이라 그만큼만
+     견준다 — 같은 날 태어난 같은 이름이 아니면 대개 걸린다. */
+  const 겹침 = PATIENTS.find(p => {
+    const 있는것 = (p.rn || '').replace(/\D/g, '');
+    const n = Math.min(있는것.length, rn.length);
+    return n > 0 && 있는것.slice(0, n) === rn.slice(0, n)
+        && (p.name || '').replace(/^\s*\(E\)\s*/, '') === name;
+  });
   if (겹침) {
     showToast(`${name} 님은 이미 있습니다 — 그 줄을 고르십시오.`, 'warning');
     document.getElementById('pkRn').value = '';
@@ -792,7 +793,7 @@ document.getElementById('pkModal')?.addEventListener('mousedown', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.getElementById('pkModal')?.style.display === 'flex') pkClose();
   if (e.key === 'Enter'  && document.getElementById('pkModal')?.style.display === 'flex'
-      && ['pkName','pkPhone','pkBirth'].includes(document.activeElement?.id)) pkSearch();
+      && ['pkName','pkRn','pkPhone'].includes(document.activeElement?.id)) pkSearch();
 });
 
 function selectPatient(id, name) {
