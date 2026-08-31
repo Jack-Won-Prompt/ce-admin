@@ -52,32 +52,14 @@ window.HELP_TOUR_STEPS = [
 
 @section('content')
 
-{{-- ── 통계 칩 ── --}}
 @php
-  $totalCount  = $total;
-  $loginCount  = \App\Models\UserActivityLog::where('type','login')->count();
-  $pageCount   = \App\Models\UserActivityLog::where('type','page')->count();
-  $userCount   = \App\Models\UserActivityLog::distinct('user_id')->count('user_id');
+  /* 예전에는 이 숫자를 검색 카드 위 칩 줄에 따로 세웠다. 그런데 「전체 로그ㆍ로그인ㆍ
+     페이지 방문」은 바로 아래 활동 유형과 같은 가름이라, 같은 것을 두 군데서 고르게 된다.
+     건수는 유형 칸의 괄호로 들어가고, 활동 사용자는 목록 탭 옆에 적는다. */
+  $loginCount = \App\Models\UserActivityLog::where('type','login')->count();
+  $pageCount  = \App\Models\UserActivityLog::where('type','page')->count();
+  $userCount  = \App\Models\UserActivityLog::distinct('user_id')->count('user_id');
 @endphp
-{{-- 칩 규격 — h31 · r999 · pad 6/10 · 12px/700, 건수 배지 16×16 정원 · 10px/700 --}}
-<div class="ds-chips">
-  <span class="ds-chip is-static">
-    <i class="bx bx-list-check" style="font-size:16px;"></i>
-    전체 로그 <span class="ds-chip-count">{{ number_format($loginCount + $pageCount) }}</span>
-  </span>
-  <span class="ds-chip is-static">
-    <i class="bx bx-log-in-circle" style="font-size:16px;"></i>
-    로그인 <span class="ds-chip-count">{{ number_format($loginCount) }}</span>
-  </span>
-  <span class="ds-chip is-static">
-    <i class="bx bx-window-alt" style="font-size:16px;"></i>
-    페이지 방문 <span class="ds-chip-count">{{ number_format($pageCount) }}</span>
-  </span>
-  <span class="ds-chip is-static">
-    <i class="bx bx-group" style="font-size:16px;"></i>
-    활동 사용자 <span class="ds-chip-count">{{ number_format($userCount) }}</span>
-  </span>
-</div>
 
 {{-- ── 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래, 9열 그리드 ── --}}
 <form method="GET" action="{{ route('user-logs.index') }}" class="ds-filter-card">
@@ -95,10 +77,10 @@ window.HELP_TOUR_STEPS = [
     </div>
     <div class="ds-filter-field">
       <label class="ds-field-label">활동 유형</label>
-      <select name="type" class="form-control form-select">
-        <option value="">전체 유형</option>
-        <option value="login" {{ request('type') === 'login' ? 'selected' : '' }}>로그인</option>
-        <option value="page"  {{ request('type') === 'page'  ? 'selected' : '' }}>페이지 방문</option>
+      <select name="type" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ number_format($loginCount + $pageCount) }})</option>
+        <option value="login" {{ request('type') === 'login' ? 'selected' : '' }}>로그인 ({{ number_format($loginCount) }})</option>
+        <option value="page"  {{ request('type') === 'page'  ? 'selected' : '' }}>페이지 방문 ({{ number_format($pageCount) }})</option>
       </select>
     </div>
     <div class="ds-filter-field span-2">
@@ -140,6 +122,9 @@ window.HELP_TOUR_STEPS = [
   <div class="ds-grid-card">
       <div class="pnl-tabs">
         <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+        <span style="margin-left:auto;padding-right:12px;font-size:13px;color:var(--gray-600);">
+          활동 사용자 <b style="color:var(--gray-1000);">{{ number_format($userCount) }}</b>명
+        </span>
       </div>
     <div id="logGrid"></div>
   </div>

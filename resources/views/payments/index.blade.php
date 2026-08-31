@@ -7,25 +7,23 @@
 
 @section('content')
 
-{{-- 상태 칩 — 어느 상태에 몇 건이 있는지가 먼저 읽혀야 손댈 곳이 정해진다 --}}
-<div class="ds-chip-row" style="margin-bottom:12px;">
-  <a href="{{ route('payments.index', ['date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
-     class="ds-chip {{ request('status') ? '' : 'active' }}">
-    전체<span class="ds-chip-cnt">{{ number_format(array_sum($statusCounts)) }}</span>
-  </a>
-  @foreach(\App\Services\TossPayments\TossClient::STATUS_LABELS as $k => [$label, $badge])
-    @if(($statusCounts[$k] ?? 0) > 0)
-      <a href="{{ route('payments.index', ['status' => $k, 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
-         class="ds-chip {{ request('status') === $k ? 'active' : '' }}">
-        {{ $label }}<span class="ds-chip-cnt">{{ number_format($statusCounts[$k]) }}</span>
-      </a>
-    @endif
-  @endforeach
-</div>
-
 <form method="GET" class="ds-filter-card">
-  <div class="ds-filter-grid">
+  <div class="ds-filter-fields">
+    {{-- 상태가 무엇을 볼지를 가장 크게 가른다 — 첫 칸에 둔다. 위쪽에 칩 줄을 따로
+         두면 그 줄만 회색 바탕 위에 띄어 있고, 고르는 일은 여기서도 할 수 있다
+         (정산/회계ㆍ서류 함ㆍ서비스 요청과 같은 결로 맞춘다). --}}
     <div class="ds-filter-field span-2">
+      <label class="ds-field-label">상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체 ({{ number_format(array_sum($statusCounts)) }})</option>
+        @foreach(\App\Services\TossPayments\TossClient::STATUS_LABELS as $k => [$label, $badge])
+          @if(($statusCounts[$k] ?? 0) > 0)
+            <option value="{{ $k }}" @selected(request('status') === $k)>{{ $label }} ({{ number_format($statusCounts[$k]) }})</option>
+          @endif
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="주문번호ㆍ이름ㆍ예금주ㆍ계좌번호">

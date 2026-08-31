@@ -272,7 +272,7 @@
     </div>
     {{-- 기간이 둘이다. 위는 「언제 나갔는가」(출고일), 아래는 「언제 청구했는가」.
          한 칸으로 합치면 둘 중 하나를 못 본다 — 요청서 11쪽이 청구 기간을 따로 달라 했다. --}}
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">출고 기간</label>
       <div class="ds-field-range">
         <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">
@@ -280,7 +280,7 @@
         <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
       </div>
     </div>
-    <div class="ds-filter-field span-3">
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">청구 기간</label>
       <div class="ds-field-range">
         <input type="date" name="claim_from" value="{{ request('claim_from') }}" class="form-control" title="청구일 시작">
