@@ -9,7 +9,6 @@ use App\Http\Controllers\DispatchHistoryController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DelegationSettingController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NhisController;
 use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\OrderController;
@@ -269,7 +268,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/taxinvoice', [TaxinvoicePageController::class, 'index'])->name('taxinvoice.index');
 
     // 계산서 발행 관리
-    Route::get('/invoice', [InvoiceController::class, 'index'])->name('invoice.index');
 
     // NHIS 청구 관리
     Route::prefix('nhis')->name('nhis.')->group(function () {

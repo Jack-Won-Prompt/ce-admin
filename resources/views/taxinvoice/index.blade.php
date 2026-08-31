@@ -674,10 +674,10 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   window.__taxinvoiceGrid = window.__taxGrid;
   window.dsBindSelCount(window.__taxGrid, 'taxSelCount');   // 결과바 '선택 N건'
   function taxOpenRow(r) {
-    if (r.record_type === 'prescription') {
-      // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
-      ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rx_number),
-                '주문 - ' + (r.rx_number || '신규'), 'file-edit-02');
+    if (r.record_type === 'pending') {
+      /* 발행은 주문 상세에서 한다 — 공급받는자ㆍ금액을 확인하고 누르는 자리다. */
+      ceOpenTab(BASE_URL + '/orders/' + encodeURIComponent(r.order_id),
+                '주문 - ' + (r.order_number || ''), 'file-edit-02');
     } else {
       openDetail('SELL', r.mgtKey);
     }
@@ -693,7 +693,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { taxOpenRow(r); return; }
-    if (r.record_type === 'prescription') { showToast('처방전 항목은 인쇄/취소 대상이 아닙니다.', 'warning'); return; }
+    if (r.record_type === 'pending') { showToast('아직 발행되지 않은 건입니다 — 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
     if (action === 'print')  openPrint('SELL', r.mgtKey);
     if (action === 'cancel') { if (!r.canCancel) { showToast('이미 취소된 건입니다.', 'warning'); return; } openCancelModal(r.mgtKey); }
   };
@@ -922,13 +922,14 @@ async function loadHistory(page = 1) {
       const wDate  = (r.writeDate ?? '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
       const supply = parseInt(r.supplyCostTotal ?? 0);
       const tax    = parseInt(r.taxTotal ?? 0);
-      if (r.record_type === 'prescription') {
+      /* 아직 세금계산서가 나가지 않은 대상이다. 발행된 줄과 한 표에 서야
+         「무엇이 남았는가」가 한눈에 읽힌다. */
+      if (r.record_type === 'pending') {
         return {
           ...r,
-          date: wDate, mgt: (r.rx_number ?? '—'), buyer: (r.invoiceeCorpName ?? '—'),
-          supply, tax, type: '처방전',
-          status: (r.rx_status === 'ordered' ? '주문완료' : '검수완료'),
-          record_type: 'prescription', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
+          date: wDate, mgt: (r.order_number ?? '—'), buyer: (r.invoiceeCorpName ?? '—'),
+          supply, tax, type: '—', status: '발행 대기',
+          record_type: 'pending', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
         };
       }
       const sc = parseInt(r.stateCode ?? 0);

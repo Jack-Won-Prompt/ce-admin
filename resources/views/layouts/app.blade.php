@@ -1561,9 +1561,9 @@
              요청서 6쪽으로 팝빌이 주는 칸을 다 세우고 주문까지 이어 붙였으니 이제
              찾아갈 까닭이 있다.
 
-             바로 아래 「계산서 발행」과 다른 것을 본다 — 그쪽은 주문을 보며 발행하고
-             무르는 자리이고(세금계산서와 현금영수증을 함께 다룬다), 이쪽은 발행된
-             것이 국세청까지 잘 갔는지를 보는 자리다. --}}
+             2026-09-01 요청으로 「계산서 발행」 화면을 없애고 그 일을 이리로 모았다 —
+             발행된 것과 아직 내지 않은 대상이 한 표에 선다. 발행 자체는 주문 상세에서
+             한다(금액과 공급받는자를 보고 누르는 자리다). --}}
         @if($vis('taxinvoice'))
         <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="file-02" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
@@ -1575,26 +1575,6 @@
         {{-- 「청구처 정보」는 메뉴에 두지 않는다 — 마스터 관리의 「청구처」 탭으로 들였다.
              병원ㆍ기관과 마찬가지로 「어디에 연락하는가」를 적어 두는 자리라,
              찾으러 갈 곳이 둘일 까닭이 없다. --}}
-        @if($vis('invoice'))
-        <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">
-            @dsicon('receipt', 'ds-icon menu-icon')
-            <span>계산서 발행</span>
-            @php
-              try {
-                $invoiceCount = \Illuminate\Support\Facades\Schema::hasColumn('orders','tax_invoice_status')
-                  ? \App\Models\Order::where('status','delivered')
-                      ->where(function($q){ $q->where('tax_invoice_status','not_issued')->orWhere('cash_receipt_status','not_issued'); })
-                      ->count()
-                  : 0;
-              } catch(\Throwable $e) { $invoiceCount = 0; }
-            @endphp
-            @if($invoiceCount > 0)
-              <span class="menu-badge blue">{{ $invoiceCount }}</span>
-            @endif
-          </a>
-        </div>
-        @endif
         {{-- PG 결제 — 토스페이먼츠(요청서 7쪽). 입금 내역과 다른 것을 본다:
              그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. 가상계좌로 받은 돈은
              둘 다에 나타나는데, 어긋나면 그것이 곧 봐야 할 일이다. --}}

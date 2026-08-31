@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Popbill;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\PopbillTaxinvoice;
+use App\Support\BillingStrategy;
 use App\Services\Popbill\TaxinvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -207,38 +209,64 @@ class TaxinvoiceController extends Controller
                       + $tiExtras->of($r->order)
                     : []));
 
-        // ── 3. 처방전 확인·주문완료 내역 ───────────────────────────
+        // ── 3. 세금계산서 발행 대기 ─────────────────────────────
+        /* 「계산서 발행」 화면이 하던 일이다 — 2026-09-01 요청으로 그 화면을 없애고
+           여기로 모았다. 전에는 검수·주문완료 처방전을 모두 세웠는데, 그 안에는
+           현금영수증으로 가는 건(처방외ㆍ산재ㆍ자동차보험)도 섞여 있었다.
+           이 화면은 세금계산서 대상만 보여야 한다. */
         $startDT = \Carbon\Carbon::createFromFormat('Ymd', $startDate)->startOfDay();
         $endDT   = \Carbon\Carbon::createFromFormat('Ymd', $endDate)->endOfDay();
 
-        $rxRecords = \App\Models\Prescription::whereIn('status', ['approved', 'ordered'])
-            ->whereBetween('reviewed_at', [$startDT, $endDT])
-            ->orderByDesc('reviewed_at')
+        $pendingQuery = Order::with(['patient', 'prescription'])
+            ->whereIn('status', ['confirmed', 'shipping', 'delivered']);
+
+        BillingStrategy::targets($pendingQuery, 'tax_invoice');
+
+        $rxRecords = $pendingQuery
+            ->where(fn ($q) => $q->whereNull('tax_invoice_status')
+                                 ->orWhere('tax_invoice_status', '!=', 'issued'))
+            /* 언제 것인가 — 나간 날이 있으면 그 날, 없으면 받은 날이다.
+               출고 전 건도 대기 목록에 서야 담당자가 순서를 잡을 수 있다. */
+            ->where(fn ($q) => $q->whereBetween('delivered_at', [$startDT, $endDT])
+                                 ->orWhere(fn ($x) => $x->whereNull('delivered_at')
+                                                        ->whereBetween('created_at', [$startDT, $endDT])))
+            ->orderByDesc('id')
             ->get()
-            ->map(fn($p) => [
-                'record_type'     => 'prescription',
-                'sort_date'       => $p->reviewed_at?->format('Ymd') ?? $startDate,
-                'invoicerMgtKey'  => null,
-                'invoiceeMgtKey'  => null,
-                'trusteeMgtKey'   => null,
-                'itemKey'         => null,
-                'stateCode'       => null,
-                'taxType'         => null,
-                'purposeType'     => null,
-                'issueType'       => null,
-                'writeDate'       => $p->reviewed_at?->format('Ymd'),
-                'issueDT'         => null,
-                'invoicerCorpNum' => null,
-                'invoicerCorpName'=> null,
-                'invoiceeCorpNum' => null,
-                'invoiceeCorpName'=> $p->patient_name_ocr ?? '—',
-                'supplyCostTotal' => (string) intval($p->patient_copay ?? 0),
-                'taxTotal'        => '0',
-                'totalAmount'     => (string) intval($p->patient_copay ?? 0),
-                'ntsconfirmNum'   => null,
-                'rx_number'       => $p->rx_number,
-                'rx_status'       => $p->status,
-            ]);
+            ->map(function (Order $o) {
+                $rx    = $o->prescription;
+                $rate  = (int) (BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class)['tax_invoice'] ?? 0);
+                /* 밑돈은 본인부담 + 기관부담이다. total_amount 를 쓰면 안 된다 —
+                   그 칸에는 배송비가 섞인 건이 있어 발행 금액이 어긋난다. */
+                $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100);
+                $supply = (int) round($amount / 1.1);
+                $at     = $o->delivered_at ?? $o->created_at;
+
+                return [
+                    'record_type'     => 'pending',
+                    'sort_date'       => $at?->format('Ymd') ?? '',
+                    'invoicerMgtKey'  => null,
+                    'invoiceeMgtKey'  => null,
+                    'trusteeMgtKey'   => null,
+                    'itemKey'         => null,
+                    'stateCode'       => null,
+                    'taxType'         => null,
+                    'purposeType'     => null,
+                    'issueType'       => null,
+                    'writeDate'       => $at?->format('Ymd'),
+                    'issueDT'         => null,
+                    'invoicerCorpNum' => null,
+                    'invoicerCorpName'=> null,
+                    'invoiceeCorpNum' => null,
+                    'invoiceeCorpName'=> $o->patient?->name ?? $rx?->patient_name_ocr ?? '—',
+                    'supplyCostTotal' => (string) $supply,
+                    'taxTotal'        => (string) ($amount - $supply),
+                    'totalAmount'     => (string) $amount,
+                    'ntsconfirmNum'   => null,
+                    'order_id'        => $o->id,
+                    'order_number'    => $o->order_number,
+                    'rx_number'       => $rx?->rx_number,
+                ];
+            });
 
         // ── 4. 합치기 → 날짜 내림차순 → 페이징 ────────────────────
         $combined = $tiRecords->concat($rxRecords)

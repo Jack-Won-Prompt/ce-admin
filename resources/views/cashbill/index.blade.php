@@ -265,6 +265,8 @@
         <option value="">전체</option>
         <option value="승인거래">승인</option>
         <option value="취소거래">취소</option>
+        {{-- 아직 내지 않은 대상이다. 팝빌에는 없는 값이라 그때는 팝빌을 부르지 않는다. --}}
+        <option value="발행 대기">발행 대기</option>
       </select>
     </div>
     {{-- 요청서 6쪽 — 현금영수증은 휴대폰번호와 신분확인번호로 찾는다.
@@ -568,6 +570,12 @@
   window.__cashbillGrid = window.__cbGrid;                 // 결과바 '엑셀 저장' 버튼이 이걸 부른다
   window.dsBindSelCount(window.__cbGrid, 'cb-sel-count');  // 결과바 '선택 N건' 표시를 연결한다
   function cbOpenRow(r) {
+    if (r.status === 'pending') {
+      /* 발행은 주문 상세에서 한다 — 금액과 식별번호를 확인하고 누르는 자리다. */
+      ceOpenTab(BASE_URL + '/orders/' + encodeURIComponent(r.orderId),
+                '주문 - ' + (r.orderNumber || ''), 'file-edit-02');
+      return;
+    }
     if (r._source === 'order') {
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
       ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rxNumber),
@@ -587,7 +595,8 @@
     if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { cbOpenRow(r); return; }
-    if (r._source === 'order') { showToast('처방전 항목은 인쇄/취소 대상이 아닙니다.', 'warning'); return; }
+    if (r.status === 'pending') { showToast('아직 발행되지 않은 건입니다 — 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
+    if (r._source === 'order') { showToast('주문에서 발행한 건은 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
     if (action === 'print')  openPrint(r.mgtKey);
     if (action === 'cancel') {
       if (r.tradeType === '취소거래') { showToast('이미 취소된 건입니다.', 'warning'); return; }
@@ -739,7 +748,10 @@ async function loadHistory(page = 1) {
     const hp = digits('f-hp'), idn = digits('f-identity');
     if (hp)  popbillUrl += `&hp=${hp}`;
     if (idn) popbillUrl += `&identity_num=${idn}`;
-    if (tradeType) popbillUrl += `&trade_type=${encodeURIComponent(tradeType)}`;
+    /* 「발행 대기」는 우리 주문에만 있는 값이라 팝빌에 그대로 보내면 안 된다.
+       그때는 팝빌 쪽 결과를 아예 쓰지 않는다. */
+    const onlyPending = tradeType === '발행 대기';
+    if (tradeType && !onlyPending) popbillUrl += `&trade_type=${encodeURIComponent(tradeType)}`;
 
     // 처방전 현금영수증 (orders 테이블)
     const orderUrl = `${CB_BASE}/order-receipts?corp_num=${cn}&start_date=${sd}&end_date=${ed}`;
@@ -753,7 +765,7 @@ async function loadHistory(page = 1) {
     const ordData = ordRes.ok ? await ordRes.json() : { list: [] };
 
     // 팝빌 행 정규화
-    const pbRows = (pbData.list ?? []).map(r => ({
+    const pbRows = onlyPending ? [] : (pbData.list ?? []).map(r => ({
       _source:  'popbill',
       _sortKey: r.tradeDT ?? r.issueDT ?? '',
       ...r,
@@ -827,7 +839,7 @@ function renderHistPage(page) {
     const num     = r._source === 'order'
       ? ((r.orderNumber ?? '') + (r.rxNumber ? ' / ' + r.rxNumber : ''))
       : (r.mgtKey ?? '—');
-    const source  = r._source === 'order' ? '처방전' : '팝빌';
+    const source  = r.status === 'pending' ? '대기' : (r._source === 'order' ? '처방전' : '팝빌');
     // 값에서 「거래」를 뗀다 — 승인ㆍ취소만 남는다(요청서 6쪽)
     const kind  = String(r.tradeType ?? (r.status === 'cancelled' ? '취소' : '승인')).replace('거래', '') || '—';
     const usage = String(r.tradeUsage ?? r.receiptTypeLabel ?? '—').replace('거래', '');
@@ -855,7 +867,8 @@ function renderHistPage(page) {
       confirmNum:  r.confirmNum ?? r.receiptNo ?? '',
       orgConfirmNum: r.orgConfirmNum ?? '',
       orgTradeDate:  ymd(r.orgTradeDate ?? ''),
-      stateLabel:  STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : ''),
+      stateLabel:  r.status === 'pending' ? '발행 대기'
+                   : (STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : '')),
       stateMemo:   r.stateMemo ?? '',
       ntsMessage:  r.ntsresultMessage ?? '',
       ntsSendDt:   ymdt(r.ntsSendDT ?? ''),

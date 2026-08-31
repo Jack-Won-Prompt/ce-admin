@@ -173,11 +173,14 @@ return [
             'routes'  => ['nhis'],
             'actions' => ['view', 'update', 'send'],
         ],
+        /* 「계산서 발행」 화면은 2026-09-01 요청으로 없앴다. 권한 묶음은 남긴다 —
+           주문 상세의 세금계산서ㆍ현금영수증 발행과 취소가 이 묶음을 본다
+           (아래 orders.issueTaxInvoice 등). 갈 화면이 없으므로 routes 는 비운다. */
         'invoice' => [
-            'label'   => '계산서 발행',
+            'label'   => '세무 증빙 발행',
             'group'   => 'billing',
-            'routes'  => ['invoice'],
-            'actions' => ['view', 'send', 'delete'],
+            'routes'  => [],
+            'actions' => ['send', 'delete'],
         ],
         'settlement' => [
             'label'   => '정산/회계',
@@ -371,9 +374,9 @@ return [
         'admin.users.invite'                  => ['admin-users', 'send'],
         'admin.users.invitations.resend'      => ['admin-users', 'send'],
 
-        // 계산서·현금영수증 발행/취소는 주문 상세와 '계산서 발행' 화면 양쪽에서 호출되지만,
-        // 라우트는 orders.* 다. 발행 권한은 '계산서 발행' 페이지에서 통제하는 게 맞으므로
-        // invoice 페이지로 넘긴다.
+        // 세금계산서·현금영수증 발행/취소는 라우트가 orders.* 이지만, 주문을 보는 권한과
+        // 국세청에 신고가 들어가는 권한은 달라야 한다. 그래서 별도의 'invoice' 묶음으로
+        // 넘긴다 — 화면은 없어졌어도(2026-09-01) 이 권한은 그대로 쓰인다.
         'orders.issueTaxInvoice'   => ['invoice', 'send'],
         'orders.issueCashReceipt'  => ['invoice', 'send'],
         'orders.cancelTaxInvoice'  => ['invoice', 'delete'],

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Popbill;
 use App\Http\Controllers\Controller;
 use App\Models\CashbillRecord;
 use App\Models\Order;
+use App\Support\BillingStrategy;
 use App\Support\OrderGridExtras;
 use App\Services\Popbill\CashbillService;
 use App\Services\Popbill\CashbillSyncService;
@@ -268,7 +269,60 @@ class CashbillController extends Controller
           + $extras->ww($o, $o->prescription, $o->patient)
           + $extras->of($o));
 
-        return response()->json(['total' => $orders->count(), 'list' => $list]);
+        /* ── 발행 대기 ──────────────────────────────────────────────
+           「계산서 발행」 화면이 하던 일이다 — 2026-09-01 요청으로 그 화면을 없애고
+           여기로 모았다. 낸 것만 보이면 「무엇이 남았는가」를 이 화면에서 알 수 없다.
+           대상은 청구전략이 현금영수증으로 정한 건뿐이다(처방외ㆍ산재ㆍ자동차보험). */
+        $pendingQuery = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
+            ->whereIn('status', ['confirmed', 'shipping', 'delivered']);
+
+        BillingStrategy::targets($pendingQuery, 'cash_receipt');
+
+        $pending = $pendingQuery
+            ->where(fn ($q) => $q->whereNull('cash_receipt_status')
+                                 ->orWhere('cash_receipt_status', '!=', 'issued'))
+            /* 언제 것인가 — 나간 날이 있으면 그 날, 없으면 받은 날이다. */
+            ->where(fn ($q) => $q->whereBetween('delivered_at', [$start, $end])
+                                 ->orWhere(fn ($x) => $x->whereNull('delivered_at')
+                                                        ->whereBetween('created_at', [$start, $end])))
+            ->orderByDesc('id')
+            ->get();
+
+        $pendingExtras = OrderGridExtras::forPatients($pending->pluck('patient_id'));
+
+        $pendingList = $pending->map(function (Order $o) use ($pendingExtras) {
+            $rx   = $o->prescription;
+            $rate = (int) (BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class)['cash_receipt'] ?? 0);
+            /* 제품 금액(본인부담 + 기관부담)에 비율을 곱하고 배송비를 더한다 —
+               자동 발행이 세는 법과 같다. total_amount 에는 배송비가 섞인 건이 있어 쓰지 않는다. */
+            $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100)
+                    + (int) ($o->shipping_fee ?? 0);
+            $at = $o->delivered_at ?? $o->created_at;
+
+            return [
+                'source'           => 'order',
+                '_sortKey'         => $at?->format('YmdHis') ?? '',
+                'tradeType'        => '발행 대기',
+                'orderId'          => $o->id,
+                'orderNumber'      => $o->order_number,
+                'rxNumber'         => $rx?->rx_number,
+                'patientName'      => $o->patient?->name ?? $rx?->patient_name_ocr ?? '—',
+                'receiptNo'        => null,
+                'receiptTypeKey'   => 'income_deduction',
+                'receiptTypeLabel' => Order::CASH_RECEIPT_TYPE_LABELS['income_deduction'] ?? '소득공제용',
+                'identifier'       => $o->patient?->cash_receipt_no ?: $o->patient?->mobile,
+                'amount'           => $amount,
+                'status'           => 'pending',
+                'issuedAt'         => null,
+                'cancelledAt'      => null,
+            ] + $pendingExtras->rx($rx, $o->patient)
+              + $pendingExtras->ww($o, $rx, $o->patient)
+              + $pendingExtras->of($o);
+        });
+
+        $all = $list->concat($pendingList)->values();
+
+        return response()->json(['total' => $all->count(), 'list' => $all]);
     }
 
     // ── private helpers ──────────────────────────────────────────────────────
