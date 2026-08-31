@@ -6,59 +6,64 @@
 
      부르는 법은 openPatientEditor() 주석에 적어 두었다. --}}
 <style>
-  /* 가림막 색은 전역 .modal-overlay 와 같은 중성 먹빛으로 맞췄다.
-     본디 rgba(67,56,202,.3) 남보라였는데 시안·DS 램프에 없는 색이다. */
-  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(13,27,42,.45);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center; }
-  .modal-overlay.show { display:flex; }
-  /* 상자 — 시안 120:917 Frame 48101489: 960×902 · r12 · bg 흰색 · bd 1px gray-200.
-     .modal-box 는 layouts/app.blade.php 도 쓰는 전역 이름이라 #addModal 안으로 묶는다.
-     묶지 않으면 이 화면이 열려 있는 동안 전역 확인창(.modal-box.sm)에도 테두리가 붙는다. */
-  #addModal .modal-box { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:960px;max-width:95vw;max-height:95vh;overflow-y:auto;box-shadow:0 8px 40px rgba(75,70,92,.25); }
-  /* 머리·본문·바닥 규격은 Figma 120:917(환자 추가 모달) 실측 —
-     머리 960×54 pad 16/24 · gap 12 · 제목 14px/700 lh22,
-     본문 pad 24, 바닥 960×72 pad 16/24 · gap 8 */
-  .modal-header { padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px; }
-  .modal-header h3 { font-size:14px;font-weight:700;line-height:22px;margin:0;flex:1;color:var(--text-primary); }
-  .modal-body   { padding:24px; }
-  .modal-footer { padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--gray-0);border-radius:0 0 12px 12px; }
-  /* 시안 하단 버튼은 65×40 / 120×40 · r8 · pad 0/20 · 14px/500 lh22
-     (본문 버튼 h32 · 13px/500 과 다른 유일한 자리). */
-  .modal-footer .btn { height:40px;padding:0 20px;font-size:14px;font-weight:500;line-height:22px;
-    display:inline-flex;align-items:center;justify-content:center;gap:8px; }
-  .modal-footer #btn-add-save { min-width:120px; }
-  /* 아래 폼 규칙은 전부 #addModal 안으로 묶는다.
-     .form-group · .form-label · .form-control 은 layouts/app.blade.php 가 쓰는 전역 이름이고,
-     이 화면이 열려 있는 동안 전역 문의하기 옆판(.side-panel .sp-form .form-group)까지
-     라벨 100px 가로 배치로 바뀌어 버린다(실측 확인: 라벨 위 → 라벨 왼쪽). */
-  /* 본문 2단 — 시안 912 = 444 + gap 24 + 444, 줄 사이 gap 8 */
-  #addModal .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;column-gap:24px;row-gap:8px; }
-  /* 한 줄 444×32 = 라벨 100 고정(13/500 lh16 gray-700) + gap 8 + 컨트롤 336×32.
-     라벨이 입력 위가 아니라 왼쪽에 붙는다.
-     전역 .form-group 의 margin-bottom:10px 을 걷어낸다 — 걷지 않으면 2단 묶음 안 칸에도
-     10px 이 붙어 줄 사이가 8 이 아니라 18 이 된다(시안 Frame 48101644 gap 8). */
-  #addModal .form-group   { display:flex;flex-direction:row;align-items:center;gap:8px;margin-bottom:0; }
-  /* 전역 .form-label 은 display:block · margin-bottom:5px 을 갖고 있다.
-     가로 배치에서는 그 여백이 라벨을 위로 밀어 올리므로 걷어낸다. */
-  #addModal .form-group .form-label { flex:0 0 100px;width:100px;margin-bottom:0;
-    font-size:13px;font-weight:500;line-height:16px;color:var(--gray-700); }
+  /* ── 뜨는 창 ──────────────────────────────────────────────
+     가림막을 두지 않는다. 처방전을 보면서 적어야 하는 자리라, 뒤가 가려지면
+     읽을 수가 없고 뒤를 누를 수도 없어야 할 까닭이 없다. 머리를 잡아 옮긴다.
+
+     이름을 모두 #addModal 안으로 묶는다. .modal-header · .modal-body ·
+     .modal-footer 는 주문 등록 화면도 제 창에 쓰는 이름이라, 묶지 않으면
+     이 창을 들여놓는 것만으로 그쪽 여백이 달라진다. */
+  #addModal { display:none; position:fixed; z-index:210; }
+  #addModal.show { display:block; }
+
+  #addModal .modal-box {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+    width:960px; max-width:95vw; max-height:88vh; overflow-y:auto;
+    /* 가림막이 없으니 그림자가 「떠 있음」을 말한다 — 조금 더 짙게 둔다 */
+    box-shadow:0 12px 48px rgba(75,70,92,.32);
+  }
+
+  /* 머리 — 잡아 옮기는 자리. 시안 120:917: 960×54 pad 16/24 · gap 12 · 14px/700 lh22 */
+  #addModal .modal-header {
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px;
+    cursor:move; user-select:none;
+    position:sticky; top:0; z-index:1; background:var(--bg-card); border-radius:12px 12px 0 0;
+  }
+  #addModal .modal-header h3 { font-size:14px;font-weight:700;line-height:22px;margin:0;flex:1;color:var(--text-primary); }
+  /* 옮기라고 말해 주는 자리 — 머리에 커서만 바뀌면 눌러 보기 전에는 알 수 없다 */
+  #addModal .pe-move { font-size:11px; font-weight:500; color:var(--gray-500); }
+
+  #addModal .modal-body   { padding:24px; }
+  #addModal .modal-footer {
+    padding:16px 24px; border-top:1px solid var(--border);
+    display:flex; gap:8px; justify-content:flex-end;
+    background:var(--gray-0); border-radius:0 0 12px 12px;
+    position:sticky; bottom:0;
+  }
+  #addModal .modal-footer .btn { height:40px;padding:0 20px;font-size:14px;font-weight:500;line-height:22px;
+                                 border-radius:8px;display:inline-flex;align-items:center;gap:8px;cursor:pointer; }
+  #addModal .modal-footer #btn-add-save { min-width:120px; }
+
+  /* 칸은 라벨과 나란히 눕는다 — 100px 라벨 + 남는 자리 */
+  #addModal .form-grid-2  { display:grid;grid-template-columns:1fr 1fr;column-gap:24px;row-gap:12px; }
+  #addModal .form-group   { display:flex;flex-direction:row;align-items:center;gap:12px;margin-bottom:12px; }
+  #addModal .form-group .form-label { flex:0 0 100px;width:100px;margin-bottom:0; }
   #addModal .form-group > .form-control { flex:1 1 auto;min-width:0; }
-  /* 여러 줄 입력(메모)은 라벨을 첫 줄에 맞춰 위로 붙인다 */
   #addModal .form-group:has(textarea) { align-items:flex-start; }
   #addModal .form-group:has(textarea) .form-label { padding-top:8px; }
-  /* 2단 밖에 홀로 선 줄도 시안과 같은 444 폭을 지킨다(912 의 절반 - gap 12) */
   #addModal .modal-body > .form-group { width:calc(50% - 12px); }
   #addModal .modal-body > .form-group:has(textarea) { width:100%; }
-  /* 주소는 두 열을 다 쓴다. 절반(444)에 우편번호ㆍ도로명ㆍ찾기 단추를 함께 넣으면
-     도로명 칸이 150 남짓으로 눌려, 찾아 넣은 주소가 늘 끝에서 잘려 보였다. */
   #addModal .modal-body > .form-group.wide { width:100%; }
 </style>
 
 {{-- 거래처 등록 모달 --}}
-<div class="modal-overlay" id="addModal">
+<div id="addModal">
   <div class="modal-box">
     <div class="modal-header">
       <i class="fa-solid fa-user-plus" style="color:var(--primary);"></i>
       <h3 id="addModalTitle">거래처 등록</h3>
+      <span class="pe-move"><i class="fa-solid fa-up-down-left-right"></i> 끌어서 옴김</span>
       <button onclick="closeAddModal()" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;padding:0;border:none;border-radius:6px;background:none;font-size:16px;line-height:1;cursor:pointer;color:var(--gray-500);">&times;</button>
     </div>
     <div class="modal-body">
@@ -286,6 +291,7 @@
    *   openPatientEditor()                                  거래처 관리의 「거래처 등록」
    *   openPatientEditor({ prefill:{name:'임윤아'} })         이름 조회에서 못 찾았을 때
    *   openPatientEditor({ id: 7, onSaved:fn })              고치기
+   *   openPatientEditor({ avoid: '#viewerCol' })            그 칸은 덮지 않는다
    */
   window.openPatientEditor = async function (opts = {}) {
     _peMode = opts.id ? 'edit' : 'create';
@@ -313,9 +319,77 @@
       peFill(opts.prefill);
     }
 
-    document.getElementById('addModal').classList.add('show');
+    const pop = document.getElementById('addModal');
+    pop.classList.add('show');
+    peCentre(pop, opts.avoid);
     setTimeout(() => document.getElementById('add-name')?.focus(), 50);
   };
+
+  /* 처음에는 화면 가운데. 한 번 옮겨 두면 그 자리를 기억한다 — 여러 사람을 잇달아
+     고칠 때 창이 매번 가운데로 되돌아오면 옮겨 둔 뜻이 없다. */
+  let _peMoved = null;
+
+  function peCentre(pop, avoid) {
+    const box = pop.querySelector('.modal-box');
+    if (_peMoved) { pop.style.left = _peMoved.x + 'px'; pop.style.top = _peMoved.y + 'px'; peClamp(pop); return; }
+
+    const w = box.offsetWidth || 960, h = box.offsetHeight || 600;
+    let x = Math.round((innerWidth - w) / 2);
+
+    /* 가리지 말라고 이른 것이 있으면 그 오른쪽에 선다 — 주문 등록에서는 처방전
+       뷰어다. 보면서 적으라고 만든 창인데 그것을 덮으면 뜻이 없다.
+       오른쪽에 자리가 모자라면 그냥 가운데로 둔다(peClamp 이 화면 안에 붙든다). */
+    const el = avoid && document.querySelector(avoid);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.width && r.right + w + 16 <= innerWidth) x = Math.round(r.right + 12);
+    }
+
+    pop.style.left = Math.max(8, x) + 'px';
+    pop.style.top  = Math.max(8, Math.round((innerHeight - h) / 2)) + 'px';
+    peClamp(pop);
+  }
+
+  /* 화면 밖으로 나가지 않게 — 머리를 잡을 수 없는 자리로 보내면 되돌릴 길이 없다 */
+  function peClamp(pop) {
+    const box = pop.querySelector('.modal-box');
+    const w = box.offsetWidth, h = box.offsetHeight;
+    const x = Math.min(Math.max(8, parseInt(pop.style.left) || 0), Math.max(8, innerWidth  - w - 8));
+    const y = Math.min(Math.max(8, parseInt(pop.style.top)  || 0), Math.max(8, innerHeight - h - 8));
+    pop.style.left = x + 'px';
+    pop.style.top  = y + 'px';
+  }
+
+  /* 머리를 잡아 옮긴다. 단추 위에서 시작하면 옮기지 않는다 — 닫기를 누르려다 끌리면
+     창이 딸려 가고 닫히지도 않는다. */
+  (function () {
+    const pop = document.getElementById('addModal');
+    const head = pop?.querySelector('.modal-header');
+    if (!head) return;
+
+    head.addEventListener('mousedown', function (e) {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      const sx = e.clientX, sy = e.clientY;
+      const ox = parseInt(pop.style.left) || 0, oy = parseInt(pop.style.top) || 0;
+
+      const move = (ev) => {
+        pop.style.left = (ox + ev.clientX - sx) + 'px';
+        pop.style.top  = (oy + ev.clientY - sy) + 'px';
+      };
+      const up = () => {
+        peClamp(pop);
+        _peMoved = { x: parseInt(pop.style.left), y: parseInt(pop.style.top) };
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup',   up);
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup',   up);
+    });
+
+    // 창이 작아지면 밖으로 나가 있을 수 있다
+    window.addEventListener('resize', () => { if (pop.classList.contains('show')) peClamp(pop); });
+  })();
 
   /* 창은 하나를 돌려 쓴다 — 지난번에 적은 것이 남아 있으면 새 사람에 그것이 붙는다 */
   function peClear() {

@@ -7133,6 +7133,8 @@ window.HELP_TOUR_STEPS = [
 
     openPatientEditor({
       id: pid,
+      // 처방전 액자는 덮지 않는다 — 보면서 고치라고 창으로 연 것이다
+      avoid: '#viewerCol',
       onSaved: ({ name }) => rxReloadPatient(pid, name),
     });
   };
@@ -7146,6 +7148,7 @@ window.HELP_TOUR_STEPS = [
 
     pkClose();
     openPatientEditor({
+      avoid: '#viewerCol',
       prefill: {
         // 창에서 친 말이 이름 같으면 그것을 쓴다 — 숫자만 쳤으면 이름이 아니다
         name:        /[0-9]/.test(친것) ? v('f-name') : (친것 || v('f-name')),
