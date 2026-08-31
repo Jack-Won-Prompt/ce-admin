@@ -151,6 +151,14 @@ return [
             'routes'  => ['deposits'],
             'actions' => ['view', 'update'],
         ],
+        /* 재무가 보는 여섯 목록(요청서 14~19쪽) — 통합주문ㆍ환자결제ㆍ공단지자체ㆍ
+           미정산ㆍ반품환불ㆍ부가세신고. 보고 내려받는 자리라 손댈 것이 없다. */
+        'finance' => [
+            'label'   => 'Finance',
+            'group'   => 'billing',
+            'routes'  => ['finance'],
+            'actions' => ['view'],
+        ],
         /* 토스페이먼츠를 거친 결제(요청서 7쪽). 입금 내역과 다른 것을 본다 —
            그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. */
         'payments' => [

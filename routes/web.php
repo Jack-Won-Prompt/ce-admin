@@ -154,6 +154,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get( '/patients/{patient}/purchase-confirm',      [\App\Http\Controllers\PurchaseConfirmController::class, 'download'])->name('documents.purchaseConfirm');
     Route::post('/patients/{patient}/purchase-confirm/send', [\App\Http\Controllers\PurchaseConfirmController::class, 'send'])->name('documents.purchaseConfirm.send');
 
+    /* Finance 목록 여섯 — 재무가 보는 자리(요청서 14~19쪽).
+       담당자가 일하는 화면과 다른 것을 묻는다. 그쪽은 「이 건을 어떻게 처리하나」이고
+       이쪽은 「이 달에 얼마가 오갔나」다. */
+    Route::get('/finance', [\App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
+
     // PG 결제 — 토스페이먼츠를 거친 결제(요청서 7쪽)
     Route::get('/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('payments.index');
 

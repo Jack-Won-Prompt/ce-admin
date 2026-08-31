@@ -1519,7 +1519,7 @@
         @endif
 
         {{-- ══ 청구 · 회계 ══ --}}
-        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits', 'payments'))
+        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits', 'payments', 'finance'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1566,8 +1566,8 @@
              것이 국세청까지 잘 갔는지를 보는 자리다. --}}
         @if($vis('taxinvoice'))
         <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="presentation-03" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
-            @dsicon('presentation-03', 'ds-icon menu-icon')
+          <a class="menu-link" data-icon="file-02" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
+            @dsicon('file-02', 'ds-icon menu-icon')
             <span>전자세금계산서</span>
           </a>
         </div>
@@ -1627,6 +1627,17 @@
             @if($unpaidCount > 0)
               <span class="menu-badge">{{ $unpaidCount }}</span>
             @endif
+          </a>
+        </div>
+        @endif
+        {{-- Finance — 재무가 보는 여섯 목록(요청서 14~19쪽). 담당자가 일하는 화면과
+             다른 것을 묻는다: 그쪽은 「이 건을 어떻게 처리하나」이고 이쪽은 「이 달에
+             얼마가 오갔나」다. 셈이 끝난 것을 보는 자리라 정산/회계 뒤에 둔다. --}}
+        @if($vis('finance'))
+        <div class="menu-item {{ request()->routeIs('finance*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="presentation-03" href="{{ route('finance.index') }}" data-title="Finance">
+            @dsicon('presentation-03', 'ds-icon menu-icon')
+            <span>Finance</span>
           </a>
         </div>
         @endif
