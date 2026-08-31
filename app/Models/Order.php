@@ -157,7 +157,7 @@ class Order extends Model
         'shipping_fee', 'total_amount',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
-        'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at',
+        'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at', 'nhis_reject_stage',
         'nhis_reimbursement', 'latest_fax_log_id', 'nhis_rejection_reason',
         // 세금계산서
         'tax_invoice_status', 'tax_invoice_no', 'tax_invoice_type',
@@ -288,6 +288,41 @@ class Order extends Model
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);
+    }
+
+    /**
+     * 청구가 어디까지 갔는가 (요청서 13쪽, 2026-08-31 회신 A).
+     *
+     * 낸 것(청구완료)과 공단이 인정한 것(승인)은 다른 일이라 한 칸으로 묶지 않는다.
+     * 보류는 공단이 판단을 미룬 것이다(2026-08-31 회신) — 미청구와 다르다. 미청구는
+     * 「우리가 아직 손대지 않았다」이고 보류는 「내고 나서 멈췄다」라, 섞으면 무엇을
+     * 살펴봐야 하는지가 묻힌다.
+     */
+    public const CLAIM_STATUS_LABELS = [
+        'pending'    => '청구 전',
+        'submitting' => '청구중',
+        'submitted'  => '청구완료',
+        'approved'   => '승인',
+        'rejected'   => '반려',
+        'on_hold'    => '보류',
+        'cancelled'  => '취소',
+    ];
+
+    /**
+     * 반려 뒤의 걸음 (요청서 13쪽).
+     *
+     * 상태로 두지 않는 까닭 — 재신청 중에도 그 건은 여전히 반려된 건이다. 상태를
+     * 옮겨 버리면 「반려 몇 건」이 갑자기 줄어, 다시 내야 할 일이 눈에서 사라진다.
+     */
+    public const CLAIM_REJECT_STAGES = [
+        'reviewed'    => '관할 지사의 검토결과 반려',
+        'resubmitted' => '재신청(승인대기)',
+        'redone'      => '재신청완료',
+    ];
+
+    public function claimStatusLabel(): string
+    {
+        return self::CLAIM_STATUS_LABELS[$this->nhis_claim_status] ?? (string) $this->nhis_claim_status;
     }
 
     /** 신환 · 구환 */

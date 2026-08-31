@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class NhisController extends Controller
@@ -111,12 +112,12 @@ class NhisController extends Controller
             };
         }
 
-        // NHIS 청구 상태 라벨 (배지 → 텍스트)
-        $nhisStatusLabels = [
-            'pending'   => '미청구',
+        // 청구 상태 이름은 모델이 한 벌만 갖는다(Order::CLAIM_STATUS_LABELS)
+        $nhisStatusLabels = Order::CLAIM_STATUS_LABELS + [
+            'pending'   => '청구 전',
             'submitted' => '청구완료',
             'approved'  => '승인',
-            'rejected'  => '거부',
+            'rejected'  => '반려',
             'cancelled' => '주문취소',
         ];
 
@@ -149,6 +150,8 @@ class NhisController extends Controller
                 /* 왜 반려됐는가. 칸은 진작 있었는데 목록에 세우지 않아, 반려된 건을
                    다시 내려면 한 건씩 열어 봐야 했다(요청서 10쪽). */
                 'reject_reason' => $o->nhis_rejection_reason ?? '',
+                // 반려 뒤 어디까지 갔는가 — 다시 내는 일이 눈에서 사라지지 않게 한다
+                'reject_stage'  => Order::CLAIM_REJECT_STAGES[$o->nhis_reject_stage] ?? '',
                 'result'       => $result,
                 // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
                 'patient_type' => $o->patientTypeLabel(),
@@ -220,17 +223,27 @@ class NhisController extends Controller
     public function recordResult(Request $request, Order $order): \Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
-            'nhis_result'     => 'required|in:approved,rejected,partial',
+            // 보류는 공단이 판단을 미룬 것이다(2026-08-31 회신)
+            'nhis_result'     => 'required|in:approved,rejected,partial,on_hold',
+            'reject_stage'    => ['nullable', Rule::in(array_keys(Order::CLAIM_REJECT_STAGES))],
             'approved_amount' => 'nullable|numeric|min:0',
             'nhis_message'    => 'nullable|string|max:500',
         ]);
 
+        $status = $data['nhis_result'] === 'partial' ? 'approved' : $data['nhis_result'];
+
         $order->update([
-            'nhis_claim_status'     => $data['nhis_result'] === 'partial' ? 'approved' : $data['nhis_result'],
-            'nhis_approved_at'      => now(),
-            'nhis_reimbursement'    => $data['approved_amount'] ?? $order->nhis_amount,
-            // 거부 사유는 거부일 때만 남긴다 — 승인 건에 남아 있으면 나중에 읽는 사람이 헷갈린다
-            'nhis_rejection_reason' => $data['nhis_result'] === 'rejected' ? ($data['nhis_message'] ?? null) : null,
+            'nhis_claim_status'  => $status,
+            /* 보류는 아직 결론이 아니다 — 승인일을 찍으면 정산이 그 날을 받은 날로 읽는다 */
+            'nhis_approved_at'   => $status === 'on_hold' ? $order->nhis_approved_at : now(),
+            'nhis_reimbursement' => $status === 'on_hold'
+                                        ? $order->nhis_reimbursement
+                                        : ($data['approved_amount'] ?? $order->nhis_amount),
+            // 사유는 반려ㆍ보류일 때만 남긴다 — 승인 건에 남아 있으면 읽는 사람이 헷갈린다
+            'nhis_rejection_reason' => in_array($status, ['rejected', 'on_hold'], true)
+                                        ? ($data['nhis_message'] ?? null) : null,
+            // 반려 뒤의 걸음은 반려일 때만 뜻이 있다
+            'nhis_reject_stage'  => $status === 'rejected' ? ($data['reject_stage'] ?? null) : null,
         ]);
 
         activity()->causedBy(Auth::user())->performedOn($order)

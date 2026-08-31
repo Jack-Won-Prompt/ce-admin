@@ -149,12 +149,19 @@
 @endpush
 
 @php
-  $nhisStatusLabels = [
-    'pending'   => ['미청구',    'secondary'],
-    'submitted' => ['청구완료',  'primary'],
-    'approved'  => ['승인',      'success'],
-    'rejected'  => ['거부',      'danger'],
+  /* 요청서 13쪽의 일곱(2026-08-31 회신 A). 이름은 모델이 한 벌만 갖는다
+     (Order::CLAIM_STATUS_LABELS) — 여기서는 색만 붙인다. */
+  $nhisStatusBadges = [
+    'pending'    => 'secondary',
+    'submitting' => 'info',
+    'submitted'  => 'primary',
+    'approved'   => 'success',
+    'rejected'   => 'danger',
+    'on_hold'    => 'warning',
+    'cancelled'  => 'secondary',
   ];
+  $nhisStatusLabels = collect(\App\Models\Order::CLAIM_STATUS_LABELS)
+      ->map(fn ($label, $k) => [$label, $nhisStatusBadges[$k] ?? 'secondary'])->all();
   $curNhisStatus = request('nhis_status');
 
   /* 시안 282:53 실측 — 괄호 설명은 칩 밖 둘째 줄이 아니라 칩 라벨 안에 붙은 한 덩어리다.
@@ -164,10 +171,13 @@
        거부(재청구 필요)         85×19 · 칩 125×31   (모두 12/700 #83888F)
      지표 카드 넉 장은 시안에 없지만 개발이 넣은 표시라 지우지 않고 그대로 둔다. */
   $nhisStatusNotes = [
-    'pending'   => '청구 대기 중',
-    'submitted' => '결과 대기 중',
-    'approved'  => '이번달 ' . number_format($monthlyApproved) . '원 환급',
-    'rejected'  => '재청구 필요',
+    'pending'    => '청구 대기 중',
+    'submitting' => '올리는 중',
+    'submitted'  => '결과 대기 중',
+    'approved'   => '이번달 ' . number_format($monthlyApproved) . '원 환급',
+    'rejected'   => '재청구 필요',
+    'on_hold'    => '공단이 판단을 미룸',
+    'cancelled'  => '',
   ];
 @endphp
 
@@ -195,9 +205,17 @@
     <div class="s-sub">이번달 {{ number_format($monthlyApproved) }}원 환급</div>
   </div>
   <div class="summary-card red">
-    <div class="s-label">거부</div>
+    {{-- 요청서 13쪽이 「반려」라 부른다. 「거부」는 우리끼리 쓰던 말이다. --}}
+    <div class="s-label">반려</div>
     <div class="s-value" style="color:var(--danger);">{{ $counts['rejected'] ?? 0 }}</div>
     <div class="s-sub">재청구 필요</div>
+  </div>
+  <div class="summary-card">
+    {{-- 보류는 공단이 판단을 미룬 건이다(2026-08-31 회신). 미청구와 섞으면
+         「우리가 안 낸 것」과 「내고 기다리는 것」이 한 숫자가 된다. --}}
+    <div class="s-label">보류</div>
+    <div class="s-value" style="color:var(--warning);">{{ $counts['on_hold'] ?? 0 }}</div>
+    <div class="s-sub">공단이 판단을 미룸</div>
   </div>
 </div>
 
@@ -357,7 +375,20 @@
           <option value="">선택하세요</option>
           <option value="approved">승인</option>
           <option value="partial">부분 승인</option>
-          <option value="rejected">거부</option>
+          <option value="rejected">반려</option>
+          {{-- 보류는 공단이 판단을 미룬 것이다(2026-08-31 회신). 승인일도 환급액도
+               찍지 않는다 — 아직 결론이 아니라, 찍어 두면 정산이 받은 날로 읽는다. --}}
+          <option value="on_hold">보류</option>
+        </select>
+      </div>
+      {{-- 반려 뒤의 걸음(요청서 13쪽). 다시 내는 일이 눈에서 사라지지 않게 적어 둔다. --}}
+      <div class="form-group" id="rejectStageGroup" style="display:none;">
+        <label class="form-label">재신청 진행</label>
+        <select id="rejectStage" class="form-control form-select">
+          <option value="">선택하세요</option>
+          @foreach(\App\Models\Order::CLAIM_REJECT_STAGES as $k => $label)
+            <option value="{{ $k }}">{{ $label }}</option>
+          @endforeach
         </select>
       </div>
       <div class="form-group" id="approvedAmountGroup" style="display:none;">
@@ -368,8 +399,8 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">공단 메시지 / 거부 사유</label>
-        <textarea id="nhisMessage" class="form-control" rows="3" placeholder="공단 처리 메시지 또는 거부 사유 입력"></textarea>
+        <label class="form-label">공단 메시지 / 반려ㆍ보류 사유</label>
+        <textarea id="nhisMessage" class="form-control" rows="3" placeholder="공단 처리 메시지 또는 반려ㆍ보류 사유 입력"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -464,6 +495,8 @@
         },
       },
       { header: '반려 사유',   name: 'reject_reason', width: 220 },
+      // 반려 뒤 어디까지 갔는가 — 다시 내는 일이 눈에서 사라지지 않게 한다(요청서 13쪽)
+      { header: '재신청',      name: 'reject_stage',  width: 150, align: 'center', sortable: true },
       {
         // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
         header: '청구 자료', name: 'claim_missing', width: 200, sortable: true,
@@ -483,7 +516,7 @@
           return s;
         },
       },
-      { header: '승인/거부',   name: 'result',        width: 110, align: 'center' },
+      { header: '승인/반려',   name: 'result',        width: 110, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.
         header: '청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
@@ -597,6 +630,10 @@ function onResultTypeChange() {
   const val = document.getElementById('resultType').value;
   document.getElementById('approvedAmountGroup').style.display =
     (val === 'approved' || val === 'partial') ? 'block' : 'none';
+  /* 재신청 진행은 반려일 때만 뜻이 있다 — 승인 건에 세워 두면 무엇을 다시 낸다는
+     것인지 되묻게 된다(요청서 13쪽). */
+  document.getElementById('rejectStageGroup').style.display =
+    val === 'rejected' ? 'block' : 'none';
 }
 
 async function submitResult() {
@@ -608,6 +645,9 @@ async function submitResult() {
     nhis_result:     resultType,
     approved_amount: document.getElementById('approvedAmount').value || null,
     nhis_message:    document.getElementById('nhisMessage').value || null,
+    // 반려일 때만 보낸다 — 서버도 반려가 아니면 지운다
+    reject_stage:    resultType === 'rejected'
+                       ? (document.getElementById('rejectStage').value || null) : null,
   };
 
   const res = await apiRequest(`${BASE_URL}/nhis/${_resultOrderId}/record-result`, 'POST', data);
