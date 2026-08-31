@@ -92,6 +92,12 @@
   <div class="card">
     <div class="card-hd">보낼 서류 <span class="grow"></span>
       <span style="font-weight:400;font-size:11px;color:var(--sub);">위임 등록 절차는 없습니다</span>
+      {{-- 하나씩 눌러 내려받으면 다섯 번 누르는 동안 한둘을 빠뜨린다. 빠진 채로 부치면
+           반려되어 돌아오고, 그때는 이미 우편 값이 나간 뒤다(요청서 10쪽). --}}
+      <a class="lnk" style="margin-left:8px;font-weight:600;"
+         href="{{ route('nhis.assist.bundle', $order) }}" target="_blank" rel="noopener">
+        한 묶음으로 인쇄
+      </a>
     </div>
     @foreach($documents as $d)
       <div class="doc">

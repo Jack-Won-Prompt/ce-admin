@@ -285,6 +285,10 @@ Route::middleware(['auth'])->group(function () {
             [\App\Http\Controllers\NhisAssistController::class, 'storeLocalDispatch'])->name('assist.localDispatch');
         Route::get('/assist/local-receipt/{dispatch}',
             [\App\Http\Controllers\NhisAssistController::class, 'localReceipt'])->name('assist.localReceipt');
+        /* 청구 자료를 한 묶음으로 뽑는다(요청서 10쪽) — 지자체는 등기로 부치므로
+           하나씩 눌러 내려받으면 다섯 번 누르는 동안 한둘을 빠뜨린다. */
+        Route::get('/assist/bundle/{order}',
+            [\App\Http\Controllers\NhisAssistController::class, 'bundle'])->name('assist.bundle');
         Route::get('/assist/delegation/{prescription}',
             [\App\Http\Controllers\NhisAssistController::class, 'delegation'])->name('assist.delegation');
         Route::post('/assist/delegation/{prescription}/rrn',

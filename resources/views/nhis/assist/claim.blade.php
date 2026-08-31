@@ -321,7 +321,14 @@
   {{-- 제출서류 등록 --}}
   <div class="sec">
     <span class="sec-name" style="color:#d21414;">제출서류 등록</span>
-    <span class="sec-right red">※ 제출서류를 반드시 등록하시기 바랍니다.</span>
+    <span class="sec-right red">※ 제출서류를 반드시 등록하시기 바랍니다.
+      {{-- 공단은 사이트에 올리므로 인쇄할 일이 드물다. 다만 「간혹 프린트 필요」라
+           하셨고(요청서 10쪽), 그때 하나씩 눌러 받게 두면 빠뜨린다. --}}
+      <a href="{{ route('nhis.assist.bundle', $order) }}" target="_blank" rel="noopener"
+         style="margin-left:8px;color:#1a5fb4;font-weight:600;text-decoration:underline;">
+        한 묶음으로 인쇄
+      </a>
+    </span>
   </div>
   <table class="docs">
     <colgroup><col style="width:150px"><col><col style="width:240px"></colgroup>

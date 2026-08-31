@@ -626,4 +626,23 @@ class NhisAssistController extends Controller
             2 => substr($rest, $mid) ?: null,
         };
     }
+
+    /**
+     * 청구 자료를 한 묶음으로 뽑는다 (요청서 10쪽).
+     *
+     * 지자체는 서류를 등기로 보내므로 다섯을 한 번에 뽑아야 한다. 하나씩 눌러 내려받게
+     * 두면 다섯 번 누르는 동안 한둘을 빠뜨리고, 빠진 채로 부치면 반려되어 돌아온다 —
+     * 그때는 이미 우편 값이 나간 뒤다.
+     */
+    public function bundle(Order $order, \App\Services\ClaimBundle $bundle)
+    {
+        $out = $bundle->build($order);
+
+        return response($out['pdf'], 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . rawurlencode(
+                '청구자료_' . $order->order_number . '.pdf') . '"',
+        ]);
+    }
+
 }
