@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * 주문 한 줄.
@@ -36,5 +37,30 @@ class OrderItem extends Model
     public function getUnitPriceAttribute(): float
     {
         return (float) ($this->insurance_price ?? $this->product_price ?? 0);
+    }
+
+    /** 어느 Lot 으로 나갔는가 — 창고가 출고 확정 때 알려 준다 */
+    public function lots(): HasMany
+    {
+        return $this->hasMany(OrderItemLot::class);
+    }
+
+    /**
+     * 한 칸에 적을 Lot — 목록의 좁은 칸에 선다.
+     *
+     * 둘로 나뉘어 나갔으면 둘 다 적는다. 하나만 적으면 나머지 물건의 유효기간을
+     * 영영 알 수 없다.
+     */
+    public function getLotSummaryAttribute(): string
+    {
+        return $this->lots->pluck('lot_no')->filter()->implode(', ');
+    }
+
+    /** Lot 과 짝이 되는 유효기간. 차례가 위와 같아야 짝이 읽힌다. */
+    public function getExpirySummaryAttribute(): string
+    {
+        return $this->lots
+            ->map(fn ($l) => $l->expiry_date?->format('Y-m-d'))
+            ->filter()->implode(', ');
     }
 }

@@ -241,13 +241,16 @@
     </div>
     {{-- 사업부는 검색 칸에 두지 않는다(요청). 목록 맨 앞 칸에서 눈으로 가른다.
          거르는 길은 서버에 그대로 있어 ?care_type=IC 로 들어오면 걸린다. --}}
-    {{-- 상병타입 — 환자에 붙는 구분이다. 선택지는 주문 등록 화면의 「구분(SB/SCI)」과 같다. --}}
+    {{-- 환자구분 — 환자에 붙는 값이다. 선택지는 주문 등록 화면의 것과 같다(Patient::SB_SCI).
+         거르는 값에는 옛 SB·SCI 도 둔다 — 이미 그렇게 적힌 사람을 찾을 수 없으면
+         「유지한다」고 해 놓고 못 보게 막는 셈이다. --}}
     <div class="ds-filter-field">
-      <label class="ds-field-label">상병타입</label>
+      <label class="ds-field-label">환자구분</label>
       <select name="sb_sci" class="form-control form-select">
         <option value="">전체</option>
-        <option value="SB"  @selected(request('sb_sci') === 'SB')>SB</option>
-        <option value="SCI" @selected(request('sb_sci') === 'SCI')>SCI</option>
+        @foreach(array_merge(\App\Models\Patient::SB_SCI, ['SB', 'SCI']) as $v)
+          <option value="{{ $v }}" @selected(request('sb_sci') === $v)>{{ $v }}</option>
+        @endforeach
       </select>
     </div>
     {{-- 「아니오」는 「이어진 동의서가 없다」는 뜻이다. 개인정보 동의서는 밖에서 들어오는
@@ -427,7 +430,7 @@ document.addEventListener('keydown', (e) => {
       { header: '송금자명',    name: 'remitter', width: 100 },
       { header: '현금영수증',  name: 'deduction', width: 100, align: 'center', sortable: true },
       { header: '현금영수증 번호', name: 'cash_receipt_no', width: 130 },
-      { header: '구분(SB/SCI)', name: 'sb_sci',  width: 110, align: 'center', sortable: true },
+      { header: '환자구분',     name: 'sb_sci',  width: 110, align: 'center', sortable: true },
       // ── 위임 서명 ── 가장 최근 동의 건 기준
       { header: '서명여부',   name: 'signed',   width: 90, align: 'center', sortable: true,
         renderer: (v, row) => {

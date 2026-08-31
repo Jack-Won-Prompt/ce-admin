@@ -106,11 +106,15 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">구분(SB/SCI)</label>
+          <label class="form-label">환자구분</label>
+          {{-- 새로 등록하는 자리라 옛 SB·SCI 는 세우지 않는다 — 요청이 「앞으로 신규
+               등록 때만 새 값」이다. 고쳐 쓸 때 옛 값을 지키는 일은 openPatientEditor 가
+               맡는다(목록에 없는 값이면 한 줄을 붙인다). --}}
           <select class="form-control" id="add-sb-sci">
             <option value="">선택</option>
-            <option value="SB">SB</option>
-            <option value="SCI">SCI</option>
+            @foreach(\App\Models\Patient::SB_SCI as $v)
+              <option value="{{ $v }}">{{ $v }}</option>
+            @endforeach
           </select>
         </div>
       </div>
@@ -474,6 +478,18 @@
       const el = document.getElementById(id);
       if (el && data?.[k] != null) el.value = data[k];
     });
+
+    /* 환자구분은 2026-08-31 에 다섯으로 바뀌었다. 그 전에 SB·SCI 로 적힌 사람은 고르는
+       칸에 그 값이 없어, 창을 열자마자 빈칸이 되고 저장하면 지워진다.
+       목록에 없는 값이면 한 줄을 붙여 지킨다 — 새로 고르지 않는 한 그대로 남는다. */
+    const 구분 = String(data?.sb_sci ?? '').trim();
+    const sel  = document.getElementById('add-sb-sci');
+    if (sel && 구분 !== '') {
+      if (![...sel.options].some(o => o.value === 구분)) {
+        sel.add(new Option(구분 + ' (예전 값)', 구분), sel.options[1] ?? null);
+      }
+      sel.value = 구분;
+    }
   }
 
   window.savePatient = async function () {

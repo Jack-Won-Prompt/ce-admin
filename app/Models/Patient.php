@@ -90,6 +90,33 @@ class Patient extends Model
     /** IC = 카테터 · OC = 장루. 개인정보 동의서의 catheter/stoma 와 같은 축이다. */
     public const CARE_TYPES = ['IC' => 'IC (카테터)', 'OC' => 'OC (장루)'];
 
+    /**
+     * 환자구분 (요청서 2쪽, 2026-08-31).
+     *
+     * 예전에는 SB·SCI 둘뿐이었다. 그것으로는 같은 SB 안에서 갈리는 것을 적을 데가 없어
+     * 다섯으로 늘렸다.
+     *
+     * 이미 적힌 SB·SCI 는 그대로 둔다 — 요청이 「기존 위드웍스 data 는 유지, 앞으로
+     * 신규 등록 때만」이다. 그래서 목록에는 없지만 저장된 값이 옛것이면 화면이 그 값을
+     * 선택지로 한 줄 더 세운다(optionsFor). 목록에 없다고 지워 버리면 고르지도 않은
+     * 사이에 값이 날아간다.
+     */
+    public const SB_SCI = ['SB-O', 'SB-N', 'SCI-O', 'SCI-N', 'NB'];
+
+    /**
+     * 화면에 세울 선택지 — 저장된 값이 목록 밖이면 그것을 앞에 붙인다.
+     *
+     * @return list<string>
+     */
+    public static function sbSciOptions(?string $current = null): array
+    {
+        $current = trim((string) $current);
+
+        return $current !== '' && !in_array($current, self::SB_SCI, true)
+            ? array_merge([$current], self::SB_SCI)
+            : self::SB_SCI;
+    }
+
     /*
      * IC 거래처는 이름 앞에 (E) 를 달아 둔다. 위드웍스의 개인 거래처 표기가 그렇고
      * ((E)김현열), 그 이름 그대로 오가야 두 시스템에서 같은 거래처로 읽힌다.

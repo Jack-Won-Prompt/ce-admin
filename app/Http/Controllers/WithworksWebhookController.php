@@ -164,6 +164,15 @@ class WithworksWebhookController extends Controller
             ]);
         }
 
+        /* 출고일자는 창고가 ship.shipped_at 으로 알려 준다(WithworksSync 가 적는다).
+           그것 없이 출고 사건만 온 건은 사건이 일어난 날을 출고일로 본다 — 목록의
+           「출고일자」가 비어 있으면 청구 기한을 셀 수 없다. */
+        if ($data['event'] === 'so.shipped' && !$order->refresh()->shipped_at) {
+            $order->update([
+                'shipped_at' => \Carbon\Carbon::parse($data['occurred_at'] ?? now())->toDateString(),
+            ]);
+        }
+
         // 배송이 끝나야 청구할 수 있다 — 상태가 움직였으면 준비 여부도 다시 따진다
         $readiness->refresh($order->refresh());
 

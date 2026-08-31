@@ -2044,8 +2044,10 @@ document.addEventListener('click', (e) => {
       // ── 위드웍스 차례 ──────────────────────────────────
       { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
       { header: '병원명',         name: 'rx_hospital',  width: 150, sortable: true },
+      { header: '판매번호',       name: 'ww_so_no',       width: 130, sortable: true },
       { header: '판매상태',       name: 'ww_sale_status', width: 110, align: 'center', sortable: true },
       { header: '출고상태',       name: 'ww_ship_status', width: 110, align: 'center', sortable: true },
+      { header: '출고일자',       name: 'ww_ship_date',   width: 100, align: 'center', sortable: true },
       { header: '입고 상태',      name: 'ww_rcpt',      width: 90,  align: 'center' },
       { header: '배송주소명',     name: 'ww_recipient', width: 100 },
       { header: '배송요청일자',   name: 'ww_due',       width: 110, align: 'center', sortable: true },
@@ -2080,6 +2082,11 @@ document.addEventListener('click', (e) => {
       { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
       { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
       { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
+
+      /* Lot 과 유효기간 — 창고가 출고를 확정하며 알려 준다(요청서 2쪽, 2026-08-31).
+         품목이 여럿이면 쉼표로 잇는다. 차례가 같아 짝이 읽힌다. */
+      { header: 'Lot',          name: 'lot_no',          width: 140 },
+      { header: '유효기간',     name: 'expiry',          width: 120, align: 'center', sortable: true },
 
       // 병원ㆍ처방 정보 탭의 나머지 — 저쪽 목록에 없는 것들
       { header: '검수 메모',      name: 'rx_memo',      width: 200 },

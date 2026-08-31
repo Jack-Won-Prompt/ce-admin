@@ -159,6 +159,8 @@ class Order extends Model
         'withworks_status', 'withworks_status_label', 'withworks_status_at',
         'withworks_ship_no', 'withworks_ship_status', 'withworks_ship_status_label',
         'withworks_tracking_no', 'withworks_ship_at',
+        // 창고가 알려 주는 진짜 출고일 — withworks_ship_at 은 우리가 적어 둔 시각이다
+        'shipped_at',
         // 배송 — 우편번호와 상세주소는 칸이 없어 사라지던 값이다(2026-08-28 마이그레이션)
         'shipping_recipient', 'shipping_postcode', 'shipping_address_detail',
     ];
@@ -175,6 +177,7 @@ class Order extends Model
         'cash_receipt_cancelled_at' => 'datetime',
         'withworks_status_at'       => 'datetime',
         'withworks_ship_at'         => 'datetime',
+        'shipped_at'                => 'date',
         'unit_price'          => 'float',
         'nhis_amount'         => 'float',
         'patient_copay'       => 'float',

@@ -33,7 +33,8 @@ class OrderReturnController extends Controller
 
     public function index(Request $request): View
     {
-        $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'assignee'])->latest('id');
+        $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'assignee',
+                                    'order.items.lots'])->latest('id');
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);

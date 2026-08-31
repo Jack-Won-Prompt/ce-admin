@@ -135,6 +135,7 @@ class WithworksSync
                 'withworks_ship_status_label' => null,
                 'withworks_tracking_no'       => null,
                 'withworks_ship_at'           => null,
+                'shipped_at'                  => null,
             ];
         }
 
@@ -158,6 +159,13 @@ class WithworksSync
             }
             $update['withworks_ship_at'] = now();
 
+            /* 창고가 알려 주는 출고일. 바로 위의 withworks_ship_at 과 다른 값이다 —
+               그것은 우리가 받아 적은 시각이라, 웹훅이 실패해 열 분 뒤 훑기가 채우면
+               열 분 늦은 날이 적힌다. 청구 기한(출고일+2주)이 이 날을 센다. */
+            if (($shippedAt = $ship['shipped_at'] ?? null)) {
+                $update['shipped_at'] = \Carbon\Carbon::parse($shippedAt)->toDateString();
+            }
+
             // 송장이 나오면 우리 주문에도 옮겨 둔다. 목록·청구가 이 컬럼을 본다.
             if (($ship['tracking_no'] ?? null) && !$order->tracking_number) {
                 $update['tracking_number'] = $ship['tracking_no'];
@@ -165,6 +173,10 @@ class WithworksSync
         }
 
         $order->update($update);
+
+        if (isset($result['ship']['items']) && is_array($result['ship']['items'])) {
+            $this->applyLots($order, $result['ship']['items']);
+        }
 
         /* 출고로 막 바뀌었으면 환자에게 알린다.
 
@@ -175,6 +187,45 @@ class WithworksSync
 
         if ($shipAfter !== $shipBefore && in_array($shipAfter, self::SHIPPED, true)) {
             app(ShipNotice::class)->send($order);
+        }
+    }
+
+    /**
+     * 출고한 Lot 과 유효기간을 주문 줄에 적는다 (요청서 2쪽, 2026-08-31).
+     *
+     * 제품코드로 짝짓는다. 우리 주문에 없는 코드가 오면 적지 않고 남긴다 — 짐작으로
+     * 아무 줄에나 붙이면 그 물건의 유효기간이 딴 제품의 것이 된다. 원본은 사건 표
+     * (withworks_events.payload)에 통째로 남아 나중에 볼 수 있다.
+     *
+     * 같은 사건이 다시 와도 줄이 겹치지 않는다 — Lot 번호로 갱신한다.
+     */
+    private function applyLots(Order $order, array $items): void
+    {
+        $byCode = $order->items()->get()->keyBy(fn ($i) => (string) $i->product_code);
+
+        foreach ($items as $row) {
+            $code = (string) ($row['product_code'] ?? '');
+            $lot  = trim((string) ($row['lot_no'] ?? ''));
+
+            // Lot 번호가 없으면 적을 것이 없다 — 유효기간만으로는 무엇의 것인지 모른다
+            if ($lot === '' || !($item = $byCode[$code] ?? null)) {
+                if ($lot !== '') {
+                    Log::warning('Withworks 출고 Lot — 짝이 없는 제품코드', [
+                        'order' => $order->order_number, 'code' => $code, 'lot' => $lot,
+                    ]);
+                }
+
+                continue;
+            }
+
+            $item->lots()->updateOrCreate(
+                ['lot_no' => mb_substr($lot, 0, 100)],
+                [
+                    'expiry_date' => ($row['expiry_date'] ?? null)
+                        ? \Carbon\Carbon::parse($row['expiry_date'])->toDateString() : null,
+                    'quantity'    => isset($row['quantity']) ? (int) $row['quantity'] : null,
+                ]
+            );
         }
     }
 

@@ -2405,7 +2405,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      여기서는 주민번호로 계산해 「미성년」인지만 알면 된다.
                      f-birth 는 감춘 채 남긴다 — rnRecalc 이 여기에 계산 결과를 적고,
                      미성년 배지ㆍ보호자 팝오버가 그 값을 보고 열린다. --}}
-                <span class="rx-field-label">미성년</span>
+                <span class="rx-field-label">성년/미성년</span>
                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:6px;">
                   <input type="hidden" id="f-birth" />
                   {{-- 미성년이면 이 배지가 보호자 팝오버를 여는 자리다(명세 2장이 이 배지를 가리킨다).
@@ -2474,11 +2474,12 @@ $calcDeposit  = $calcCopay + $calcShipping;
               {{-- 1차 요청서 14쪽 «구분(SB/SCI): 병원 처방 정보->환자 정보로 이동».
                    병원ㆍ처방 정보 1열에 있던 줄을 라벨ㆍ입력ㆍ옵션째 그대로 옮겼다. --}}
               <div class="rx-field-row rx-row-start">
-                <span class="rx-field-label">구분(SB/SCI)</span>
+                <span class="rx-field-label">환자구분</span>
                 <select class="form-control" id="f-sb-sci" style="flex:1;">
                   <option value="">선택</option>
-                  <option value="SB"  @selected(($prescription->patient?->sb_sci ?? '') == 'SB')>SB</option>
-                  <option value="SCI" @selected(($prescription->patient?->sb_sci ?? '') == 'SCI')>SCI</option>
+                  @foreach(\App\Models\Patient::sbSciOptions($prescription->patient?->sb_sci) as $v)
+                    <option value="{{ $v }}" @selected(($prescription->patient?->sb_sci ?? '') === $v)>{{ $v }}</option>
+                  @endforeach
                 </select>
               </div>
               <div class="rx-field-row">
@@ -3402,6 +3403,16 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               @else
               {{-- 주문 없음: 저장 + 생성 버튼 --}}
+              @if($repurchaseBlock ?? null)
+                {{-- 재구매 가능일이 아직 멀다(요청서 2쪽). 단추는 그대로 두고 까닭만 세운다 —
+                     서버가 다시 막으므로 여기서 감추면 왜 안 되는지가 사라진다. --}}
+                <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;
+                            border:1px solid var(--alert-100);background:var(--alert-50);border-radius:8px;
+                            font-size:12px;line-height:1.6;color:var(--alert-500);font-weight:600;">
+                  <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
+                  <span>{{ $repurchaseBlock }}</span>
+                </div>
+              @endif
               <div style="display:flex;gap:8px;">
                 <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                         title="주문 제품과 배송 정보를 저장합니다">
@@ -4934,7 +4945,18 @@ window.HELP_TOUR_STEPS = [
 
     if (!birth) {
       if (bEl)  bEl.value = '';
-      if (badge) badge.style.display = 'none';
+      /* 자리는 지킨다(요청서 2쪽 — 성년ㆍ미성년 구분과 나이를 고정으로 보인다).
+         감추면 「아직 안 적었다」와 「성년이다」가 똑같이 빈자리로 보인다. */
+      if (badge) {
+        badge.textContent      = '주민등록번호 없음';
+        badge.style.display    = '';
+        badge.style.background = 'var(--gray-100)';
+        badge.style.color      = 'var(--gray-600)';
+        badge.style.border     = '1px solid var(--gray-200)';
+        badge.style.cursor     = 'default';
+        badge.title            = '';
+        badge.setAttribute('role', 'presentation');
+      }
       showStates(false);
       closeGuardianPop();
       return;
@@ -4946,7 +4968,10 @@ window.HELP_TOUR_STEPS = [
 
     if (bEl) bEl.value = ymd;
     if (badge) {
-      badge.textContent = `만 ${age}세` + (minor ? ' · 미성년' : '');
+      /* 구분을 앞에 세운다 — 먼저 읽히는 것이 「성년인가 미성년인가」다.
+         성년일 때도 적는다(요청서 2쪽). 예전에는 미성년일 때만 붙어, 아무 말이 없는
+         것이 성년이라는 뜻인지 아직 안 본 것인지 갈리지 않았다. */
+      badge.textContent = (minor ? '미성년' : '성년') + ` · 만 ${age}세`;
       badge.style.display    = '';
       badge.style.background = minor ? 'var(--alert-50)'  : 'var(--gray-100)';
       badge.style.color      = minor ? 'var(--alert-500)' : 'var(--gray-600)';

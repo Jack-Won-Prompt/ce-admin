@@ -14,7 +14,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.ds-filter-card', title: '검색 필터', body: '상태·유형을 고르고 주문번호, 이름, 제품명으로 찾습니다. 기간으로도 좁힐 수 있습니다.' },
-  { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·이름·Withworks SO번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
+  { selector: '#orderGrid', title: '주문 목록', body: '각 행에서 주문번호·이름·판매번호·배송 상태를 확인합니다. 행을 클릭하면 주문 상세로 이동합니다.' },
 ];
 </script>
 @endpush
@@ -39,7 +39,7 @@ window.HELP_TOUR_STEPS = [
   <div class="help-section-title">주요 기능</div>
   <div class="help-item">
     <div class="help-item-icon warn"><i class="bx bx-link"></i></div>
-    <div class="help-item-text"><strong>Withworks SO</strong>주문 목록에서 Withworks 판매주문번호를 바로 확인합니다.</div>
+    <div class="help-item-text"><strong>판매번호</strong>위드웍스 판매주문번호입니다. 목록에서 바로 확인합니다.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-receipt"></i></div>
@@ -195,7 +195,7 @@ window.HELP_TOUR_STEPS = [
           <th>배송지</th>
           <th>주문유형</th>
           <th>상태</th>
-          <th style="text-align:center;min-width:110px;">Withworks</th>
+          <th style="text-align:center;min-width:110px;">판매번호</th>
           <th>생성일</th>
           <th></th>
         </tr>
@@ -359,7 +359,6 @@ window.HELP_TOUR_STEPS = [
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
-      { header: 'Withworks',  name: 'withworks', width: 170 },
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
       // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
       ...ceMoneyCols(),

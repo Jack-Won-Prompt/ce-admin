@@ -231,6 +231,13 @@ class PrescriptionController extends Controller
             'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
+        /* 아직 살 때가 아니면 여기서 멈춘다(요청서 2쪽, 2026-08-31). 물건이 나가면
+           되돌릴 수 없고, 이르게 나간 건은 나중에 청구가 반려된다 — 창고에 넘기기
+           전인 이 자리가 막을 수 있는 마지막 곳이다. */
+        if ($why = \App\Support\RepurchaseWindow::block($prescription)) {
+            return response()->json(['success' => false, 'message' => $why], 422);
+        }
+
         $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
         $token   = config('services.demoworks.token');
 
@@ -1373,7 +1380,7 @@ class PrescriptionController extends Controller
             ->where('status', 'pending')->count();
         $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
-                'prescription.billingOffice',
+                'prescription.billingOffice', 'items.lots',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
@@ -1424,8 +1431,12 @@ class PrescriptionController extends Controller
             $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
         );
 
+        /* 아직 살 때가 아닌 건은 눌러 보기 전에 알려 준다(요청서 2쪽). 눌러야 알면
+           제품과 배송지를 다 채운 뒤에야 막히는 셈이라, 그 일이 통째로 헛일이 된다. */
+        $repurchaseBlock = \App\Support\RepurchaseWindow::block($prescription);
+
         return view('prescriptions.order', compact(
-            'prescription', 'patients', 'prevId', 'nextId',
+            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',

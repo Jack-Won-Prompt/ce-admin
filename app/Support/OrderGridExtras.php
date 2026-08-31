@@ -187,12 +187,21 @@ class OrderGridExtras
         $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
         $dt = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d H:i') : '';
 
+        [$lotNo, $expiry] = $this->lotsOf($o);
+
         return [
             /* 입고 상태 — 반품에만 있다. 창고가 실물을 받았다고 알려 오면(ro.rcpt_completed)
                그 날을 적어 두므로, 날이 있으면 들어온 것이다. */
+            /* 「Withworks 정보」가 곧 판매번호다(요청서 2쪽 회신, 2026-08-31). 예전에는
+               번호와 상태를 한 칸에 겹쳐 그렸는데, 그러면 정렬이 번호와 상태가 뒤엉킨
+               차례가 되어 쓸모가 없었다 — 요청서 3쪽이 나누라 한 그것이다. */
+            'ww_so_no'       => $o?->withworks_so_no ?? '',
             // 창고가 지금 무엇을 하고 있는가 — 주문 목록에만 있던 둘을 네 화면이 함께 쓴다
             'ww_sale_status' => $o?->withworks_status_label ?: '',
             'ww_ship_status' => $o?->withworks_ship_status_label ?: '',
+            /* 출고일자 — 창고가 출고를 확정하며 알려 준다. withworks_ship_at 을 쓰지
+               않는다. 그것은 우리가 받아 적은 시각이라 웹훅이 늦으면 날이 어긋난다. */
+            'ww_ship_date'   => $d($o?->shipped_at),
             'ww_rcpt'       => $rt?->arrived_at ? '입고완료' : '',
             'ww_recipient'  => $o?->shipping_recipient ?? '',
             'ww_due'        => '',                       // 배송요청일자 — 샘플만 있다(화면에서 채운다)
@@ -219,6 +228,36 @@ class OrderGridExtras
             'ww_cash_no'    => $pt?->cash_receipt_no ?? '',
             'ww_created_at' => $dt($o?->created_at ?? $p?->created_at),
             'ww_updated_at' => $dt($o?->updated_at ?? $p?->updated_at),
+            /* Lot 과 유효기간 — 창고가 출고를 확정하며 알려 준다(요청서 2쪽).
+               「제품 정보가 든 모든 화면」이라 공통 칸에 둔다. 품목이 여럿이면 쉼표로
+               잇는다. 어느 Lot 이 어느 제품의 것인지는 주문 상세에서 본다. */
+            'lot_no'        => $lotNo,
+            'expiry'        => $expiry,
+        ];
+    }
+
+    /**
+     * 출고한 Lot 과 유효기간을 한 칸씩에 담는다.
+     *
+     * 관계를 미리 실어 두지 않았으면 묻지 않는다 — 서른 줄에 예순 번을 더 묻느니 빈칸이
+     * 낫다. 목록을 만드는 쪽에서 with('items.lots') 를 걸면 값이 선다.
+     *
+     * @return array{0: string, 1: string} [Lot, 유효기간]
+     */
+    private function lotsOf(?Order $o): array
+    {
+        if (!$o || !$o->relationLoaded('items')) {
+            return ['', ''];
+        }
+
+        $lots = $o->items->flatMap(
+            fn ($i) => $i->relationLoaded('lots') ? $i->lots : collect()
+        );
+
+        return [
+            $lots->pluck('lot_no')->filter()->implode(', '),
+            // 차례가 위와 같아야 Lot 과 유효기간의 짝이 읽힌다
+            $lots->map(fn ($l) => $l->expiry_date?->format('Y-m-d'))->filter()->implode(', '),
         ];
     }
 

@@ -24,7 +24,9 @@ class OrderController extends Controller
     // ── 목록 ──────────────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns'])->latest();
+        // items.lots — 출고한 Lot 과 유효기간이 목록에 선다(요청서 2쪽)
+        $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns',
+                              'items.lots'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -69,9 +71,6 @@ class OrderController extends Controller
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
         $gridData = $orders->map(function ($o) use ($extras) {
-            $ww = $o->withworks_so_no
-                ? trim($o->withworks_so_no . ($o->withworks_status_label ? ' · ' . $o->withworks_status_label : ''))
-                : '';
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -97,7 +96,6 @@ class OrderController extends Controller
                 'address'   => $o->shipping_address ?? '',
                 'so_type'   => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
-                'withworks' => $ww,
                 // 언제 팔았고 언제 되돌아왔는지. 둘 사이가 벌어진 건은 눈에 띄어야 한다.
                 'sold_at'   => $o->created_at->format('Y-m-d'),
                 'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',
@@ -169,6 +167,12 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => '주문할 제품이 없습니다. 제품을 먼저 고른 뒤에 주문을 만들어 주십시오.',
             ], 422);
+        }
+
+        /* 아직 살 때가 아닌 건은 여기서도 막는다(요청서 2쪽, 2026-08-31). 주문이 서는
+           길이 둘이라, 한쪽만 막으면 다른 길로 그대로 나간다. */
+        if ($why = \App\Support\RepurchaseWindow::block($prescription)) {
+            return response()->json(['success' => false, 'message' => $why], 422);
         }
 
         // items 배열에서 대표 제품 및 합계 계산

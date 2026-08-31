@@ -298,13 +298,14 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">구분(SB/SCI)</span>
+            <span class="info-label">환자구분</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->sb_sci ?: '-' }}</span>
               <select class="form-control edit-only" id="e-sb-sci" data-orig="{{ $patient->sb_sci }}">
                 <option value="">선택</option>
-                <option value="SB"  @selected($patient->sb_sci === 'SB')>SB</option>
-                <option value="SCI" @selected($patient->sb_sci === 'SCI')>SCI</option>
+                @foreach(\App\Models\Patient::sbSciOptions($patient->sb_sci) as $v)
+                  <option value="{{ $v }}" @selected($patient->sb_sci === $v)>{{ $v }}</option>
+                @endforeach
               </select>
             </span>
           </div>
