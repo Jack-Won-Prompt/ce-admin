@@ -1440,6 +1440,10 @@ class PrescriptionController extends Controller
     // ── OCR 수정 저장 ─────────────────────────────────────
     public function updateOcr(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
+        /* 이 저장이 처방전을 사람에게 처음 붙이는 저장인가 — 아래에서 위임동의를 보낼지
+           가리는 데 쓴다. 붙고 난 뒤에는 몇 번을 저장하든 첫 저장이 아니다. */
+        $hadPatient = (bool) $prescription->patient_id;
+
         $request->validate([
             // 「조회」로 고른 사람. 없으면 서버가 이름으로 찾거나 새로 만든다.
             'patient_id'       => 'nullable|integer|exists:patients,id',
@@ -1783,9 +1787,15 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
 
+        /* 이 저장으로 사람이 처음 붙었으면 위임동의 서명 SMS 를 함께 보낸다.
+           보내지 못해도 저장은 이미 끝난 것이라 되돌리지 않는다 — 무슨 일이 있었는지는
+           답에 실어 화면이 함께 보여 준다(주문 확정 안내와 같은 방식). */
+        $consentSms = $this->consentSmsOnFirstSave($prescription, $hadPatient);
+
         return response()->json([
             'success'     => true,
             'message'     => '저장되었습니다.',
+            'consent_sms' => $consentSms,
             'items'       => $prescription->items->map(fn($item) => [
                 'product_name'    => $item->product_name,
                 'product_code'    => $item->product_code,
@@ -2124,6 +2134,88 @@ class PrescriptionController extends Controller
             ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
 
         return $this->issueConsent($prescription, $mobile, $patientName);
+    }
+
+    /**
+     * 첫 저장에 얹는 위임동의 SMS.
+     *
+     * 주문 등록에서 처음 저장하는 그 자리가 처방전을 사람에게 붙이는 자리다 — 그 전에는
+     * 보낼 번호도 없다. 담당자가 저장하자마자 손으로 누르던 단추를 대신 누른다.
+     *
+     * 보내지 않는 때에는 까닭을 함께 돌려준다 — 조용히 지나가면 담당자는 나간 줄 알고
+     * 기다린다. 어느 경우든 손으로 보내는 단추는 그대로 있다.
+     *
+     * @return array{sent: bool, reason: ?string, expires_at: ?string}
+     */
+    private function consentSmsOnFirstSave(Prescription $prescription, bool $hadPatient): array
+    {
+        $no = fn (?string $why) => ['sent' => false, 'reason' => $why, 'expires_at' => null];
+
+        if (!config('order.consent_sms_on_first_save')) return $no(null);   // 꺼 두었으면 말도 하지 않는다
+        if ($hadPatient) return $no(null);                                  // 첫 저장이 아니다
+
+        $prescription->refresh()->loadMissing('patient');
+        $patient = $prescription->patient;
+        if (!$patient) return $no(null);                                    // 아직 사람이 붙지 않았다
+
+        /* 이미 받아 둔 동의가 있으면 다시 받지 않는다. 처방전이 아니라 사람으로 본다 —
+           위임은 사람이 하는 것이고, 화면의 「위임동의 완료」도 그렇게 읽는다. */
+        $hasAgreed = \App\Models\PrescriptionConsent::whereIn(
+                'prescription_id', Prescription::where('patient_id', $patient->id)->select('id'))
+            ->where('status', 'agreed')->exists();
+        if ($hasAgreed) return $no('이미 위임동의를 받은 분입니다.');
+
+        // 아직 살아 있는 링크가 있으면 그것을 쓰게 둔다 — 두 통이 가면 어느 것을 여는지 갈린다
+        $alive = \App\Models\PrescriptionConsent::whereIn(
+                'prescription_id', Prescription::where('patient_id', $patient->id)->select('id'))
+            ->where('status', 'pending')->where('expires_at', '>', now())->exists();
+        if ($alive) return $no('보낸 서명 링크가 아직 열려 있습니다.');
+
+        $mobile = preg_replace('/\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return $no('연락처가 없어 위임동의를 보내지 못했습니다.');
+        }
+
+        /* 서명 링크는 30분만 열린다. 밤에 보내면 환자가 아침에 열어 이미 만료다 —
+           정해 둔 시간 밖이면 보내지 않고 그렇게 말한다. */
+        if (!$this->withinConsentHours()) {
+            return $no('발송 시간(' . config('order.consent_sms_hours') . ') 밖이라 보내지 않았습니다.');
+        }
+
+        $name = $patient->name ?: ($prescription->patient_name_ocr ?: '고객');
+
+        try {
+            $res = $this->issueConsent($prescription, $mobile, $name)->getData(true);
+        } catch (\Throwable $e) {
+            Log::error('[위임동의] 첫 저장 발송 실패', ['rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
+
+            return $no('위임동의를 보내지 못했습니다.');
+        }
+
+        return [
+            'sent'       => (bool) ($res['success'] ?? false),
+            'reason'     => ($res['success'] ?? false) ? null : ($res['message'] ?? '보내지 못했습니다.'),
+            'expires_at' => $res['expires_at'] ?? null,
+        ];
+    }
+
+    /** 지금이 위임동의를 보내도 되는 시간인가 — 비워 두었으면 가리지 않는다 */
+    private function withinConsentHours(): bool
+    {
+        $range = trim((string) config('order.consent_sms_hours'));
+        if ($range === '') return true;
+
+        if (!preg_match('/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/', $range, $m)) {
+            Log::warning('[위임동의] 발송 시간 설정을 읽지 못했다 — 가리지 않는다', ['value' => $range]);
+
+            return true;
+        }
+
+        $now = now();
+        $from = $now->copy()->setTimeFromTimeString($m[1]);
+        $to   = $now->copy()->setTimeFromTimeString($m[2]);
+
+        return $now->betweenIncluded($from, $to);
     }
 
     /**

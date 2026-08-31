@@ -15,4 +15,19 @@ return [
      */
     'confirm_pay_method' => env('ORDER_CONFIRM_PAY_METHOD', 'bank'),
 
+    /*
+     * 주문 등록에서 처음 저장할 때 위임동의 서명 SMS 를 함께 보낼 것인가.
+     *
+     * 그 저장이 처방전을 사람에게 처음 붙이는 자리다(그 전에는 보낼 번호도 없다).
+     * 담당자가 저장하자마자 손으로 누르던 단추를 대신 누른다 — 손으로 보내는 길은
+     * 그대로다.
+     *
+     * 켜기 전에 알아 둘 것: 서명 링크는 30분만 열린다. 업무시간 밖에 저장하면 환자가
+     * 아침에 열어 이미 만료다. 그래서 시간을 정해 두고, 그 밖이면 보내지 않고 화면에
+     * 알린다 — 담당자가 통화하는 때에 손으로 보내면 된다.
+     * 비워 두면 시간을 가리지 않는다.
+     */
+    'consent_sms_on_first_save' => (bool) env('ORDER_CONSENT_SMS_ON_FIRST_SAVE', false),
+    'consent_sms_hours'         => env('ORDER_CONSENT_SMS_HOURS', '09:00-20:00'),
+
 ];

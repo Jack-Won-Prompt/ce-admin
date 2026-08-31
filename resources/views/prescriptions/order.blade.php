@@ -6773,6 +6773,18 @@ window.HELP_TOUR_STEPS = [
                             withworks_so_no: '', so_type: currentSoType, shipping_address: null };
         }
         if (!opts.silent) showToast('저장되었습니다.', 'success');
+
+        /* 첫 저장에 위임동의 서명 SMS 가 함께 나갔는지 알린다. 나가지 않은 때에도 까닭을
+           적는다 — 조용히 지나가면 담당자는 나간 줄 알고 기다린다.
+           꺼 두었거나 첫 저장이 아니면 서버가 아무 말도 하지 않는다(reason 이 없다). */
+        const cs = res.consent_sms;
+        if (cs?.sent) {
+          showToast('위임동의 서명 SMS 를 보냈습니다 — ' + (cs.expires_at || '') + '까지 열려 있습니다.', 'success');
+          /* 보낸 뒤에는 그 단추가 「다시 보내기」가 되어야 한다 — 상태를 다시 읽는다 */
+          if (typeof updateConsentStatus === 'function') updateConsentStatus();
+        } else if (cs?.reason) {
+          showToast(cs.reason, 'warning');
+        }
         saveBtns.forEach(btn => BtnState.success(btn, '저장 완료'));
         setTimeout(() => saveBtns.forEach(btn => BtnState.reset(btn)), 2500);
         if (res.items && res.items.length) {
