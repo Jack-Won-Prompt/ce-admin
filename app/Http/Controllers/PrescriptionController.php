@@ -382,6 +382,16 @@ class PrescriptionController extends Controller
             return ['sent' => false, 'method' => '', 'message' => '주문이 없어 결제 안내를 보내지 못했습니다.'];
         }
 
+        /* 받을 돈이 없으면 보내지 않는다. 차상위경감ㆍ기초는 본인부담이 0 이라,
+           그대로 두면 환자에게 「0원을 입금해 주십시오」가 나갔다. */
+        if ($order->expectedDeposit() <= 0) {
+            return [
+                'sent'    => false,
+                'method'  => '',
+                'message' => '본인부담금이 없어 결제 안내를 보내지 않았습니다.',
+            ];
+        }
+
         $method = $this->confirmPayMethod();
         $mobile = $prescription->patient?->mobile ?: $prescription->mobile_ocr;
 
