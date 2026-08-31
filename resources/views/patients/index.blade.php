@@ -217,7 +217,7 @@
            (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
            이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
     {{-- 생성일자 — 한쪽만 채워도 걸린다(언제부터만ㆍ언제까지만 찾는 일이 잦다) --}}
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">생성일자</label>
       <div class="ds-field-range">
         <input type="date" name="created_from" value="{{ request('created_from') }}" class="form-control">
@@ -231,7 +231,7 @@
       <input type="number" name="birth_year" value="{{ request('birth_year') }}" class="form-control"
              placeholder="1984" min="1900" max="{{ date('Y') }}" step="1">
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">건보 위임 종료일</label>
       <div class="ds-field-range">
         <input type="date" name="agree_end_from" value="{{ request('agree_end_from') }}" class="form-control">

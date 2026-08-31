@@ -270,24 +270,6 @@
         <option value="not_issued" @selected(request('tax_invoice') === 'not_issued')>미발행</option>
       </select>
     </div>
-    {{-- 기간이 둘이다. 위는 「언제 나갔는가」(출고일), 아래는 「언제 청구했는가」.
-         한 칸으로 합치면 둘 중 하나를 못 본다 — 요청서 11쪽이 청구 기간을 따로 달라 했다. --}}
-    <div class="ds-filter-field span-2">
-      <label class="ds-field-label">출고 기간</label>
-      <div class="ds-field-range">
-        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">
-        <span class="ds-field-sep">~</span>
-        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
-      </div>
-    </div>
-    <div class="ds-filter-field span-2">
-      <label class="ds-field-label">청구 기간</label>
-      <div class="ds-field-range">
-        <input type="date" name="claim_from" value="{{ request('claim_from') }}" class="form-control" title="청구일 시작">
-        <span class="ds-field-sep">~</span>
-        <input type="date" name="claim_to"   value="{{ request('claim_to') }}"   class="form-control" title="청구일 종료">
-      </div>
-    </div>
     {{-- 위쪽 칩은 청구 진행 상태 하나만 둔다. 나머지 갈래를 칩으로 늘어놓으면
          한 줄에 네 가지 기준이 섞여 무엇이 켜져 있는지 알 수 없었다.
          한 묶음 안에 두어야 칸 너비가 고르게 나뉜다 — 묶음을 나누면 라벨이 눌린다. --}}
@@ -320,6 +302,27 @@
         <option value="y" {{ request('ready') === 'y' ? 'selected' : '' }}>완비 ({{ $readyCount }})</option>
         <option value="n" {{ request('ready') === 'n' ? 'selected' : '' }}>부족</option>
       </select>
+    </div>
+    {{-- 기간이 둘이다. 위는 「언제 나갔는가」(출고일), 아래는 「언제 청구했는가」.
+         한 칸으로 합치면 둘 중 하나를 못 본다 — 요청서 11쪽이 청구 기간을 따로 달라 했다.
+         날짜 칸은 세 열이라야 한 줄에 선다(두 열 폭에서는 뒤 날짜가 아래로 접힌다).
+         그래서 기간 둘은 맨 뒤에 둔다 — 앞의 고르는 칸 여덟이 아홉 열을 꼭 채우고,
+         기간 둘이 다음 줄을 함께 쓴다. 사이에 끼우면 남는 폭이 줄을 하나 더 만든다. --}}
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">출고 기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" title="출고일 시작">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="date_to"   value="{{ request('date_to') }}"   class="form-control" title="출고일 종료">
+      </div>
+    </div>
+    <div class="ds-filter-field span-3">
+      <label class="ds-field-label">청구 기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="claim_from" value="{{ request('claim_from') }}" class="form-control" title="청구일 시작">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="claim_to"   value="{{ request('claim_to') }}"   class="form-control" title="청구일 종료">
+      </div>
     </div>
   </div>
 
