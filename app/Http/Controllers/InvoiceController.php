@@ -29,6 +29,8 @@ class InvoiceController extends Controller
                 'cash_pending' => $query->where('cash_receipt_status', 'not_issued'),
                 'tax_issued'   => $query->where('tax_invoice_status', 'issued'),
                 'cash_issued'  => $query->where('cash_receipt_status', 'issued'),
+                // 요청서 8ㆍ9쪽 — 입금과 출고가 다 된 건. 이제 발행할 차례다.
+                'ready'        => self::scopeReady($query),
                 default        => null,
             };
         }
@@ -143,6 +145,11 @@ class InvoiceController extends Controller
             'cash_pending' => $taxColExists ? Order::whereIn('status',$invoiceStatuses)->where('cash_receipt_status','not_issued')->count() : 0,
             'tax_issued'   => $taxColExists ? Order::whereIn('status',$invoiceStatuses)->where('tax_invoice_status','issued')->count() : 0,
             'cash_issued'  => $taxColExists ? Order::whereIn('status',$invoiceStatuses)->where('cash_receipt_status','issued')->count() : 0,
+            /* 요청서 8ㆍ9쪽이 「입금 및 출고 되어야 결제일로 자동 발행」이라 했다. 자동으로
+               내보내기 전에, 먼저 그 대상이 무엇인지가 한 자리에 보여야 한다 — 스무 건이
+               조용히 밀려 있는지 세 건인지도 모르고 스케줄을 켤 수는 없다. */
+            'ready'        => $taxColExists
+                ? self::scopeReady(Order::whereIn('status', $invoiceStatuses))->count() : 0,
         ]);
 
         // 이번 달 발행 금액
@@ -165,4 +172,33 @@ class InvoiceController extends Controller
             'monthlyTaxAmount', 'monthlyCashAmount'
         ));
     }
+
+    /**
+     * 발행할 차례가 된 건 (요청서 8ㆍ9쪽, 2026-08-31).
+     *
+     * 「입금 및 출고 되어야」가 조건이다. 둘 중 하나만 되어도 발행하면 안 된다 —
+     * 물건이 안 나갔는데 계산서가 먼저 나가거나, 돈을 못 받았는데 영수증이 나간다.
+     *
+     * 입금은 두 길로 들어온다. 담당자가 통장을 보고 확인한 것과, 토스가 확인해 준 것.
+     * 둘 다 「들어왔다」는 하나다 — 한쪽만 보면 나머지 절반이 영영 안 걸린다.
+     *
+     * 출고는 창고가 알려 준 출고일이 있거나 주문이 배송 단계에 있는 것으로 본다.
+     * 출고일은 2026-08-31 부터 받기 시작한 값이라 그 전 건에는 없다.
+     *
+     * 아직 하나라도 발행이 남아 있는 건만 센다 — 둘 다 끝난 건은 볼 것이 없다.
+     */
+    public static function scopeReady($query)
+    {
+        return $query
+            ->where(fn ($q) => $q
+                ->whereNotNull('deposit_confirmed_at')
+                ->orWhereHas('tossPayment', fn ($t) => $t->where('status', 'DONE')))
+            ->where(fn ($q) => $q
+                ->whereNotNull('shipped_at')
+                ->orWhereIn('status', ['shipping', 'delivered']))
+            ->where(fn ($q) => $q
+                ->where('tax_invoice_status', 'not_issued')
+                ->orWhere('cash_receipt_status', 'not_issued'));
+    }
+
 }

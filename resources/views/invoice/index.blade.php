@@ -231,6 +231,8 @@
     'cash_pending' => ['현금영수증 미발행', $counts['cash_pending'], 'teal'],
     'tax_issued'   => ['세금계산서 발행',   $counts['tax_issued'],   'green'],
     'cash_issued'  => ['현금영수증 발행',   $counts['cash_issued'],  'green'],
+    /* 요청서 8ㆍ9쪽 — 입금과 출고가 다 된 건. 이제 발행할 차례다. */
+    'ready'        => ['발행 대기',        $counts['ready'],        'orange'],
   ];
   /* 칩 라벨 뒤 괄호 설명 — 시안 282:934 는 이 문구를 칩 안에 넣는다
      ("세금계산서 미발행(주문확정 · 배송중 · 배송완료)" 268×31,
@@ -238,6 +240,7 @@
   $statusChipNotes = [
     'tax_pending'  => '(주문확정 · 배송중 · 배송완료)',
     'cash_pending' => '(발행 대기 중)',
+    'ready'        => '(입금ㆍ출고 완료)',
   ];
 @endphp
 
