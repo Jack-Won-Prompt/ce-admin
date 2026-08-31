@@ -381,6 +381,8 @@ Route::middleware(['auth'])->group(function () {
         // 미리보기 — 내려받지 않고 그 자리에서 펼쳐 본다(정산/회계 목록의 증빙 단추)
         Route::get('/{order}/cash-receipt-preview', [OrderController::class, 'previewCashReceipt'])->name('cashReceiptPreview');
         Route::get('/{order}/tax-invoice-preview',  [OrderController::class, 'previewTaxInvoice'])->name('taxInvoicePreview');
+        // Operation 담당자ㆍ마감 체크ㆍ참고사항 — 상담 담당자와 다른 사람이다
+        Route::patch('/{order}/operation',        [OrderController::class, 'operation'])->name('operation');
         Route::post('/{order}/withworks-status',   [OrderController::class, 'fetchWithworksStatus'])->name('fetchWithworksStatus');
     });
 

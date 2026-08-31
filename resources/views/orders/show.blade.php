@@ -378,6 +378,56 @@
     {{-- ── 왼쪽: 주문 상세 ── --}}
     <div>
 
+      {{-- Operation ─────────────────────────────────────────
+           요청서 6ㆍ10ㆍ11ㆍ12쪽이 네 쪽에 걸쳐 달라 한 셋이다. 상담을 맡은 사람과
+           발행ㆍ청구ㆍ정산을 맡은 사람이 다른 것이 예사라, 여기서 따로 적는다.
+           목록에서는 공통 칸으로 일곱 화면에 함께 선다. --}}
+      <div class="card od-mb">
+        <div class="card-header">
+          <i class="bx bx-user-check" style="color:var(--primary);"></i>
+          <span class="card-header-title">Operation</span>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ route('orders.operation', $order) }}"
+                style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;align-items:end;">
+            @csrf @method('PATCH')
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:12px;color:var(--text-muted);">Operation 담당자</label>
+              <select name="operation_user_id" class="form-control">
+                <option value="">선택</option>
+                @foreach(\App\Models\User::orderBy('name')->get(['id','name']) as $u)
+                  <option value="{{ $u->id }}" @selected($order->operation_user_id === $u->id)>{{ $u->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              {{-- 「이 건은 더 볼 것이 없다」는 표시다. 12쪽의 정산 상태와는 다른 것이다. --}}
+              <label style="font-size:12px;color:var(--text-muted);">마감 체크</label>
+              <label style="display:flex;align-items:center;gap:6px;height:32px;font-size:13px;">
+                <input type="checkbox" name="closing_checked" value="1" @checked($order->closing_checked_at)>
+                @if($order->closing_checked_at)
+                  <span>{{ $order->closing_checked_at->format('Y-m-d') }}
+                    {{ $order->closingChecker?->name ? '· ' . $order->closingChecker->name : '' }}</span>
+                @else
+                  <span style="color:var(--text-muted);">아직</span>
+                @endif
+              </label>
+            </div>
+            <div style="grid-column:1 / -1;display:flex;flex-direction:column;gap:4px;">
+              {{-- 주문의 note 와 다르다. 그것은 주문을 낼 때 적는 말이고, 이것은 청구ㆍ
+                   발행을 하며 남기는 말이다. --}}
+              <label style="font-size:12px;color:var(--text-muted);">참고사항</label>
+              <input type="text" name="reference_note" class="form-control" maxlength="500"
+                     value="{{ old('reference_note', $order->reference_note) }}"
+                     placeholder="청구ㆍ발행에서 눈여겨볼 것">
+            </div>
+            <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary btn-sm">저장</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       {{-- 환자 정보 --}}
       <div class="card od-mb">
         <div class="card-header">

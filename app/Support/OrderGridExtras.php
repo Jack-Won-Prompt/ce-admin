@@ -225,6 +225,11 @@ class OrderGridExtras
             'ww_new_master' => $d($pt?->new_patient_date),
             'ww_deduction'  => $pt?->deduction ?? '',
             'ww_cash_no'    => $pt?->cash_receipt_no ?? '',
+            /* 요청서 6ㆍ10ㆍ11ㆍ12쪽이 네 쪽에 걸쳐 달라 한 셋. 상담 담당자와 다른
+               사람이라 따로 세운다 — 「누구에게 물어야 하나」가 갈려야 한다. */
+            'op_manager'    => $o?->operationUser?->name ?? '',
+            'op_closed'     => $o?->closing_checked_at ? $d($o->closing_checked_at) : '',
+            'op_note'       => $o?->reference_note ?? '',
             'ww_created_at' => $dt($o?->created_at ?? $p?->created_at),
             'ww_updated_at' => $dt($o?->updated_at ?? $p?->updated_at),
             /* Lot 과 유효기간 — 창고가 출고를 확정하며 알려 준다(요청서 2쪽).

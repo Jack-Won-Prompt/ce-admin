@@ -44,7 +44,7 @@ class DepositController extends Controller
         $dateTo   = $request->get('date_to',   today()->toDateString());
 
         $query = BankTransaction::with(['order.patient', 'order.prescription.billingOffice',
-                                        'order.items.lots', 'patient', 'splits.patient'])
+                                        'order.items.lots', 'order.operationUser', 'patient', 'splits.patient'])
             ->whereBetween('trade_date', [$dateFrom, $dateTo])
             /* 나간 돈은 입금 내역이 아니다. 통장에는 함께 긁혀 오지만 이 화면이 세는
                것은 「무엇이 들어왔는가」다. */

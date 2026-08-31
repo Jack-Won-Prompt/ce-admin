@@ -17,7 +17,7 @@ class InvoiceController extends Controller
         $invoiceStatuses = ['confirmed', 'shipping', 'delivered'];
 
         // prescription ㆍ items.lots — 네 화면이 함께 쓰는 칸이 읽는다
-        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots'])
+        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
             ->whereIn('status', $invoiceStatuses)
             ->latest();
 

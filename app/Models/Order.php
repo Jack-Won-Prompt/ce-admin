@@ -161,6 +161,8 @@ class Order extends Model
         'withworks_tracking_no', 'withworks_ship_at',
         // 창고가 알려 주는 진짜 출고일 — withworks_ship_at 은 우리가 적어 둔 시각이다
         'shipped_at',
+        // 발행ㆍ청구ㆍ정산을 맡은 사람과 그 자취(요청서 6ㆍ10ㆍ11ㆍ12쪽)
+        'operation_user_id', 'closing_checked_at', 'closing_checked_by', 'reference_note',
         // 배송 — 우편번호와 상세주소는 칸이 없어 사라지던 값이다(2026-08-28 마이그레이션)
         'shipping_recipient', 'shipping_postcode', 'shipping_address_detail',
     ];
@@ -178,6 +180,7 @@ class Order extends Model
         'withworks_status_at'       => 'datetime',
         'withworks_ship_at'         => 'datetime',
         'shipped_at'                => 'date',
+        'closing_checked_at'        => 'datetime',
         'unit_price'          => 'float',
         'nhis_amount'         => 'float',
         'patient_copay'       => 'float',
@@ -346,4 +349,22 @@ class Order extends Model
     {
         return $this->hasOne(\App\Models\TossPayment::class);
     }
+
+    /**
+     * 발행ㆍ청구ㆍ정산을 맡은 사람 (Consumer Operation).
+     *
+     * 상담을 맡은 사람(prescriptions.assigned_user_id)과 다르다. 상담한 사람과 청구한
+     * 사람이 다른 것이 예사라, 한 칸에 담으면 「누구에게 물어야 하나」가 갈리지 않는다.
+     */
+    public function operationUser(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'operation_user_id');
+    }
+
+    /** 마감을 확인한 사람 — 「확인했다」만 남기면 되물을 사람을 못 찾는다 */
+    public function closingChecker(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closing_checked_by');
+    }
+
 }

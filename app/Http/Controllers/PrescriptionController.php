@@ -1380,7 +1380,7 @@ class PrescriptionController extends Controller
             ->where('status', 'pending')->count();
         $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
-                'prescription.billingOffice', 'items.lots',
+                'prescription.billingOffice', 'items.lots', 'operationUser',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')

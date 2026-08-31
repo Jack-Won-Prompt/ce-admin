@@ -2096,6 +2096,11 @@ document.addEventListener('click', (e) => {
       { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
       { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
       { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
+      /* 발행ㆍ청구ㆍ정산을 맡은 사람과 그 자취(요청서 6ㆍ10ㆍ11ㆍ12쪽).
+         상담 담당자(「주문 담당자」)와 다른 사람이다. */
+      { header: 'Operation 담당자', name: 'op_manager', width: 120, sortable: true },
+      { header: '마감 체크',    name: 'op_closed',       width: 100, align: 'center', sortable: true },
+      { header: '참고사항',     name: 'op_note',         width: 200 },
 
       /* Lot 과 유효기간 — 창고가 출고를 확정하며 알려 준다(요청서 2쪽, 2026-08-31).
          품목이 여럿이면 쉼표로 잇는다. 차례가 같아 짝이 읽힌다. */

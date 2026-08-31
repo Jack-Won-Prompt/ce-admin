@@ -84,7 +84,7 @@ class CashbillController extends Controller
         /* 발행 건이 어느 주문의 것인지는 order_id 가 안다(요청서 6쪽). 그 주문을 타고
            가면 네 화면이 함께 쓰는 칸을 여기서도 세울 수 있다 — 처방 유형ㆍ청구전략ㆍ
            자격ㆍ관할 청구처가 그것이다. */
-        $records = $query->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots'])
+        $records = $query->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots', 'order.operationUser'])
                          ->forPage($page, $perPage)->get();
 
         $extras = OrderGridExtras::forPatients($records->pluck('order.patient_id'));
@@ -241,7 +241,7 @@ class CashbillController extends Controller
         $start = \Carbon\Carbon::createFromFormat('Ymd', $request->query('start_date'))->startOfDay();
         $end   = \Carbon\Carbon::createFromFormat('Ymd', $request->query('end_date'))->endOfDay();
 
-        $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots'])
+        $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
             ->whereIn('cash_receipt_status', ['issued', 'cancelled'])
             ->whereBetween('cash_receipt_issued_at', [$start, $end])
             ->orderByDesc('cash_receipt_issued_at')

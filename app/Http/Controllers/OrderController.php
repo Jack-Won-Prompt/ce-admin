@@ -26,7 +26,7 @@ class OrderController extends Controller
     {
         // items.lots — 출고한 Lot 과 유효기간이 목록에 선다(요청서 2쪽)
         $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns',
-                              'items.lots'])->latest();
+                              'items.lots', 'operationUser'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -106,6 +106,35 @@ class OrderController extends Controller
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));
+    }
+
+    /**
+     * Operation 담당자ㆍ마감 체크ㆍ참고사항을 적는다 (요청서 6ㆍ10ㆍ11ㆍ12쪽).
+     *
+     * 상담을 맡은 사람(처방전의 배정 담당자)과 다른 사람이라 여기서 따로 적는다.
+     * 마감 체크는 「이 건은 더 볼 것이 없다」는 표시다 — 12쪽의 정산 상태(마감ㆍ확정ㆍ
+     * 반려ㆍ보류ㆍ취소)와는 다른 것이라, 그것이 정해지면 그때 이어 붙인다.
+     */
+    public function operation(Request $request, Order $order): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'operation_user_id' => 'nullable|exists:users,id',
+            'closing_checked'   => 'nullable|boolean',
+            'reference_note'    => 'nullable|string|max:500',
+        ]);
+
+        $checked = (bool) ($data['closing_checked'] ?? false);
+
+        $order->update([
+            'operation_user_id' => $data['operation_user_id'] ?: null,
+            'reference_note'    => $data['reference_note'] ?? null,
+            /* 이미 찍힌 날은 그대로 둔다 — 저장을 다시 누를 때마다 날이 오늘로 밀리면
+               언제 마감했는지를 잃는다. 체크를 풀면 함께 지운다. */
+            'closing_checked_at' => $checked ? ($order->closing_checked_at ?? now()) : null,
+            'closing_checked_by' => $checked ? ($order->closing_checked_by ?? Auth::id()) : null,
+        ]);
+
+        return back()->with('success', 'Operation 정보를 적었습니다.');
     }
 
     // ── 상세 ──────────────────────────────────────────────

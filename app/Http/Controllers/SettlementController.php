@@ -55,7 +55,7 @@ class SettlementController extends Controller
         // ── 정산 목록 ──────────────────────────────────────────
         // items.lots ㆍ billingOffice — 네 화면이 함께 쓰는 칸이 읽는다
         $query = Order::with(['patient', 'prescription.billingOffice', 'tossPayment',
-                              'paymentLinks', 'items.lots'])
+                              'paymentLinks', 'items.lots', 'operationUser'])
             ->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo])
             ->latest();
 
