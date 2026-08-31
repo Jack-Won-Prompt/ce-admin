@@ -95,7 +95,8 @@ class OrderReturnController extends Controller
 
         return view('order-returns.create', [
             'order'  => $order,
-            'orders' => Order::with('patient')->latest('id')->limit(200)->get(),
+            // 여기도 같은 규칙이다 — 창고에 넘긴 건만 고른다
+            'orders' => Order::with('patient')->sentToWarehouse()->latest('id')->limit(200)->get(),
         ]);
     }
 
@@ -257,16 +258,8 @@ class OrderReturnController extends Controller
         /* 조건이 하나도 없으면 최근 것을 보여 준다. 빈 손으로 눌러도 무엇이 있는지는
            보여야 다음에 무엇을 칠지 정할 수 있다. */
         $orders = Order::with(['patient', 'items'])
-            /* 창고에 판매주문이 선 건만 고를 수 있다.
-
-               교환ㆍ반품ㆍ취소는 모두 창고에 이미 넘긴 건을 되돌리는 일이다 — 아직 보내지
-               않은 주문은 되돌릴 물건도, 취소할 판매주문도 그쪽에 없다. 그런 건은 주문
-               등록에서 지우면 된다.
-
-               걸러 두지 않아 고르는 창에 「주문 대기」인 건까지 나왔고, 그것을 골라
-               접수하면 창고로 보낼 것이 없어 그 자리에서 막혔다. */
-            ->whereNotNull('withworks_so_no')
-            ->where('withworks_so_no', '!=', '')
+            // 창고에 넘긴 건만 고를 수 있다 — 까닭은 Order::scopeSentToWarehouse 에 적어 두었다
+            ->sentToWarehouse()
             ->when($no !== '', fn ($q) => $q->where(fn ($sub) => $sub
                 ->where('order_number', 'like', "%{$no}%")
                 ->orWhere('withworks_so_no', 'like', "%{$no}%")))

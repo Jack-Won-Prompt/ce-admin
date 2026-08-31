@@ -212,6 +212,20 @@ class Order extends Model
         return self::STATUS_LABELS[$this->status]['label'] ?? $this->status;
     }
 
+    /**
+     * 창고에 판매주문이 선 건만.
+     *
+     * 교환ㆍ반품ㆍ취소는 모두 창고에 이미 넘긴 건을 되돌리는 일이다 — 아직 보내지 않은
+     * 주문은 되돌릴 물건도, 취소할 판매주문도 그쪽에 없다. 그런 건은 주문 등록에서
+     * 지우면 된다.
+     *
+     * 고르는 자리가 둘이라(찾기 창ㆍ옛 접수 화면) 규칙을 여기 한 곳에 둔다.
+     */
+    public function scopeSentToWarehouse($q)
+    {
+        return $q->whereNotNull('withworks_so_no')->where('withworks_so_no', '!=', '');
+    }
+
     public static function generateOrderNumber(): string
     {
         /* 번호 부분만 숫자로 보고 최대를 찾는다.

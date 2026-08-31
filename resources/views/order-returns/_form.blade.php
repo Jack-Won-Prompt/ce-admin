@@ -277,7 +277,10 @@
 
     $('rtoFindNote').textContent = '찾는 중…';
     try {
-      const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
+      /* 되쓰지 않는다 — 같은 주소로 다시 물으면 브라우저가 앞서 받아 둔 답을 그대로
+         내주는 일이 있어, 고른 조건이 달라졌는데 옛 목록이 보일 수 있다. */
+      const res = await fetch(SEARCH_URL + '?' + q.toString(),
+                              { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = (await res.json()).rows ?? [];
       picked = null;
@@ -305,7 +308,10 @@
 
     $('rtoFindNote').textContent = '찾는 중…';
     try {
-      const res = await fetch(SEARCH_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
+      /* 되쓰지 않는다 — 같은 주소로 다시 물으면 브라우저가 앞서 받아 둔 답을 그대로
+         내주는 일이 있어, 고른 조건이 달라졌는데 옛 목록이 보일 수 있다. */
+      const res = await fetch(SEARCH_URL + '?' + q.toString(),
+                              { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = (await res.json()).rows ?? [];
       picked = null;
