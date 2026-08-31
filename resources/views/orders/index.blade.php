@@ -370,12 +370,11 @@ window.HELP_TOUR_STEPS = [
         renderer: (v, row) => nhisAssistBtn(row.id),
       },
 
-      /* 이미 실려 오던 값인데 칸을 세우지 않아 보이지 않던 것들 — 제품ㆍ수량ㆍ배송지.
-         한 건씩 열어 보지 않고도 무엇을 얼마나 어디로 보냈는지 알 수 있어야 한다. */
-      { header: '제품명',   name: 'product',  width: 180, sortable: true },
-      { header: '수량',     name: 'qty',      width: 70,  align: 'center', sortable: true },
+      /* 제품명ㆍ수량ㆍ배송비는 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야
+         하고, 훑을 때 필요한 것은 누구의 무슨 건이 어디까지 왔는가다 — 무엇을 얼마나
+         보냈는지는 줄을 더블클릭해 상세에서 본다. 배송비는 받지도 않는다.
+         배송지는 남긴다 — 어디로 가는지는 훑으면서 가리는 값이다. */
       { header: '배송지',   name: 'address',  width: 240 },
-      { header: '배송비',   name: 'shipping', width: 90,  align: 'right',  sortable: true },
 
       // 처방 쪽 — 무엇을 근거로 판 건인가
       { header: '병원명',   name: 'hospital', width: 140, sortable: true },
