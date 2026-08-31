@@ -472,25 +472,6 @@
             </span>
           </div>
 
-          {{-- 이 사람의 처방ㆍ재구매에서 읽어 오는 값. 여기서는 보기만 한다 — 고치는
-               자리는 주문 등록의 병원ㆍ처방 정보다(요청서 4쪽 «주문 화면에서 역으로 연결»). --}}
-          <div class="info-row">
-            <span class="info-label">일일 도뇨 횟수</span>
-            <span class="info-value">{{ $rxFacts['daily'] ?: '-' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Five/Six</span>
-            <span class="info-value">{{ $rxFacts['five'] ?: '-' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Five/Six (110days)</span>
-            <span class="info-value">{{ $rxFacts['five110'] ?: '-' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">다음 재구매 가능일</span>
-            <span class="info-value">{{ $rxFacts['next'] ?: '-' }}</span>
-          </div>
-
           <div class="info-row wide">
             <span class="info-label">메모</span>
             <span class="info-value">

@@ -239,37 +239,7 @@ class PatientController extends Controller
             'total_amt' => (int) ($rx->order?->total_amount ?? 0),
         ])->values();
 
-        /* 일일 도뇨 횟수ㆍFive/SixㆍFive/Six(110days)ㆍ다음 재구매 가능일은 처방에 붙는
-           값이라 환자에는 칸이 없다. 가장 최근에 적힌 것을 끌어와 보여 준다 —
-           고치는 자리는 주문 등록의 병원ㆍ처방 정보다(요청서 4쪽 «역으로 연결»). */
-        $rxFacts = $this->rxFacts($patient);
-
-        return view('patients.show', compact('patient', 'rxRows', 'rxFacts'));
-    }
-
-    /**
-     * 처방에서 끌어오는 환자 요약값.
-     *
-     * 처방마다 적히는 값이라 비어 있는 건이 섞인다 — 최근 것부터 훑어 처음 만나는
-     * 값을 쓴다. 「최근 처방에 안 적혀 있으니 없다」로 보이면 안 된다.
-     */
-    private function rxFacts(Patient $patient): array
-    {
-        $rows = $patient->prescriptions;
-
-        $first = fn (string $col) => $rows->pluck($col)->first(fn ($v) => $v !== null && $v !== '');
-
-        return [
-            'daily'   => \App\Support\CatheterFrequency::label($first('diverticulums')),
-            'five'    => match ((string) $first('five_program')) {
-                '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
-            },
-            'five110' => (string) ($first('five_110days') ?? ''),
-            'next'    => ($n = $first('next_repurchase'))
-                ? \Carbon\Carbon::parse($n)->format('Y-m-d')
-                : (($r = $rows->pluck('repurchase_date')->first(fn ($v) => $v))
-                    ? \Carbon\Carbon::parse($r)->format('Y-m-d') : ''),
-        ];
+        return view('patients.show', compact('patient', 'rxRows'));
     }
 
     /**
