@@ -726,7 +726,14 @@
   .pk-acts { display:flex; gap:6px; margin-left:auto; }
   /* 세로가 모자라면 이 칸이 줄고 안에서 스크롤한다. min-height:0 이 없으면 flex 자식이
      제 내용보다 작아지지 않아, 줄어드는 대신 바닥줄(닫기ㆍ선택)이 상자 밖으로 밀려난다. */
-  .pk-body { padding:12px 16px; overflow:auto; flex:1 1 auto; min-height:0; }
+  .pk-body { padding:12px 16px; overflow:hidden; flex:1 1 auto; min-height:0;
+             display:flex; flex-direction:column; }
+  /* 굴리는 것은 표 하나뿐이다. 예전에는 이 칸도 함께 굴러 막대가 둘이었다 —
+     어느 쪽을 잡아야 줄이 움직이는지 알 수 없었고, 바깥을 굴리면 「합계」가 잘렸다.
+     표는 남는 자리를 다 받고, 「합계」 줄은 표 밖(형제)이라 자리를 지킨다. */
+  .pk-body > #pkGrid, .pk-body > #ocGrid { flex:1 1 auto; min-height:0;
+                                           display:flex; flex-direction:column; }
+  .pk-body > #pkGrid > .cg-wrap, .pk-body > #ocGrid > .cg-wrap { flex:1 1 auto; min-height:0; }
   .pk-note { font-size:12px; color:var(--gray-600); margin-bottom:8px; }
   .pk-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
   .pk-hint { font-size:12px; color:var(--gray-600); margin-right:auto; }
@@ -5179,7 +5186,7 @@ window.HELP_TOUR_STEPS = [
 
   /* 창을 화면 안에 앉힌다. 이름 줄이 화면 중간쯤이면 아래로 열 자리가 모자라
      바닥(닫기ㆍ선택)이 화면 밖으로 나간다 — 아래가 좁으면 위로 뒤집고, 그래도 모자라면
-     높이를 남은 자리에 맞춘다. 표 칸(.pk-body)이 overflow:auto 라 안에서 스크롤된다. */
+     높이를 남은 자리에 맞춘다. 줄어드는 몫은 표가 받아 제 안에서 굴린다. */
   function pkPlace(pop) {
     const row = pop.parentElement?.getBoundingClientRect();
     if (!row) return;
@@ -5255,7 +5262,8 @@ window.HELP_TOUR_STEPS = [
     if (!pkGrid) {
       pkGrid = new wwGrid({
         el: document.getElementById('pkGrid'),
-        height: 300, editable: false, rowCheckbox: false, rowNumber: true,
+        /* 키를 못 박지 않는다 — 창이 준 자리를 flex 로 받는다(위 .pk-body 규칙) */
+        editable: false, rowCheckbox: false, rowNumber: true,
         toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
           { header: '이름',     name: 'name',   width: 140, sortable: true },
@@ -5408,7 +5416,9 @@ window.HELP_TOUR_STEPS = [
     const el = document.getElementById('ocGrid');
     if (!ocGrid) {
       ocGrid = new wwGrid({
-        el, height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
+        /* 'fit' 은 뷰포트 바닥까지 재는 것이라 창 안에서는 맞지 않다 — 창이 준
+           자리를 flex 로 받는다(.pk-body 규칙). */
+        el, editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
           { header: '일자',     name: 'date',      width: 110, align: 'center', sortable: true },
           { header: '처방번호', name: 'rx_number', width: 170 },
