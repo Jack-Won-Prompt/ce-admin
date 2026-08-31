@@ -167,8 +167,6 @@
       /* 누구의 무슨 건인가 — 지금까지는 이름 하나뿐이라 상세를 열어야 알았다 */
       { header: '주민등록번호', name: 'resident_no',  width: 130 },
       { header: '전화번호1',    name: 'mobile',       width: 130 },
-      { header: '제품코드',     name: 'product_code', width: 120 },
-      { header: '제품명',       name: 'product',      width: 180, sortable: true },
 
       // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
       ...ceRxCols(),
