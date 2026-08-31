@@ -9650,7 +9650,7 @@ window.HELP_TOUR_STEPS = [
         { header: '출고상태',       name: 'ship_status', width: 110, align: 'center', sortable: true },
         { header: '상병코드',       name: 'disease_code', width: 110 },
         { header: '사유',           name: 'reason',      width: 200, sortable: true },
-        { header: '결제수단',       name: 'pay_method',  width: 100, align: 'center', sortable: true },
+        /* 결제수단은 공통 칸(ceCommonCols)이 세운다 — 여기 또 두면 같은 값이 두 칸에 선다 */
         { header: '등록담당자',     name: 'creator',     width: 100, align: 'center', sortable: true },
         { header: '수정담당자',     name: 'updater',     width: 100, align: 'center', sortable: true },
         /* 빈 건을 치우는 자리. 처방전도 안 올라왔고 창고에도 서지 않은 줄에만 단추가 선다 —
@@ -9671,6 +9671,9 @@ window.HELP_TOUR_STEPS = [
             b.addEventListener('click', (e) => { e.stopPropagation(); olDelete(row); });
             return b;
           } },
+
+        // 네 목록 화면이 함께 쓰는 칸 — 이름ㆍ차례ㆍ표기가 한 곳에서 나온다
+        ...ceCommonCols(),
       ],
       data: OL_ROWS,
     });

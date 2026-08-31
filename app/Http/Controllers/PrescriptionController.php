@@ -1353,15 +1353,21 @@ class PrescriptionController extends Controller
         $orderListLimit = 500;
         $orderListTotal = \App\Models\Order::whereDoesntHave('returns')
             ->where('status', 'pending')->count();
-        $orderListRows  = \App\Models\Order::with([
+        $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
             ->latest('id')
             ->limit($orderListLimit)
-            ->get()
-            ->map(function ($o) {
+            ->get();
+
+        /* 동의 두 가지는 사람에 붙는다 — 줄마다 물으면 마흔 줄에 여든을 더 묻는다.
+           목록을 만들기 전에 한 번에 모아 둔다. */
+        $extras = \App\Support\OrderGridExtras::forPatients($orderListSource->pluck('patient_id'));
+
+        $orderListRows = $orderListSource
+            ->map(function ($o) use ($extras) {
                 $rx = $o->prescription;
                 $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
 
@@ -1416,7 +1422,9 @@ class PrescriptionController extends Controller
                 'pay_method'  => $o->pay_method ?? '',
                 'creator'     => $rx?->creator?->name ?? '',
                 'updater'     => $rx?->updater?->name ?? '',
-                ];
+
+                // 네 화면이 함께 쓰는 칸 — 동의ㆍ청구ㆍ발행ㆍ정산
+                ] + $extras->of($o);
             })->values();
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,

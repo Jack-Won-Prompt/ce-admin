@@ -366,9 +366,24 @@ window.HELP_TOUR_STEPS = [
       { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창
-        header: '공단 청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        header: '청구 도우미', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
         renderer: (v, row) => nhisAssistBtn(row.id),
       },
+
+      /* 이미 실려 오던 값인데 칸을 세우지 않아 보이지 않던 것들 — 제품ㆍ수량ㆍ배송지.
+         한 건씩 열어 보지 않고도 무엇을 얼마나 어디로 보냈는지 알 수 있어야 한다. */
+      { header: '제품명',   name: 'product',  width: 180, sortable: true },
+      { header: '수량',     name: 'qty',      width: 70,  align: 'center', sortable: true },
+      { header: '배송지',   name: 'address',  width: 240 },
+      { header: '배송비',   name: 'shipping', width: 90,  align: 'right',  sortable: true },
+
+      // 처방 쪽 — 무엇을 근거로 판 건인가
+      { header: '병원명',   name: 'hospital', width: 140, sortable: true },
+      { header: '담당의사', name: 'doctor',   width: 90,  sortable: true },
+      { header: '상병코드', name: 'disease_code', width: 110, sortable: true },
+
+      // 네 목록 화면이 함께 쓰는 칸
+      ...ceCommonCols(),
     ],
     data: @json($gridData),
   });

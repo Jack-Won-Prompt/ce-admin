@@ -65,7 +65,10 @@ class OrderController extends Controller
         }
 
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
-        $gridData = $query->get()->map(function ($o) {
+        $orders = $query->get();
+        $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
+
+        $gridData = $orders->map(function ($o) use ($extras) {
             $ww = $o->withworks_so_no
                 ? trim($o->withworks_so_no . ($o->withworks_status_label ? ' · ' . $o->withworks_status_label : ''))
                 : '';
@@ -99,7 +102,15 @@ class OrderController extends Controller
                 // 언제 팔았고 언제 되돌아왔는지. 둘 사이가 벌어진 건은 눈에 띄어야 한다.
                 'sold_at'   => $o->created_at->format('Y-m-d'),
                 'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',
-            ];
+
+                /* 처방 쪽에서 끌어 오는 것 — 한 건씩 열어 보지 않고도 무엇이 남았는지
+                   가릴 수 있어야 한다 */
+                'hospital'  => $o->prescription?->hospital_name ?? '',
+                'doctor'    => $o->prescription?->doctor_name ?? '',
+                'disease_code' => $o->prescription?->disease_code ?? '',
+
+                // 네 화면이 함께 쓰는 칸
+            ] + $extras->of($o);
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));

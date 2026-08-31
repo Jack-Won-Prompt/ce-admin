@@ -282,7 +282,7 @@
       { header: '연락처',     name: 'mobile',    width: 120 },
       { header: '배송지',     name: 'address',   width: 220 },
       { header: '수량',       name: 'qty',       width: 70,  align: 'right', editor: 'number' },
-      { header: '금액',       name: 'amount',    width: 100, align: 'right' },
+      /* 금액은 공통 칸의 「총 금액」이 세운다 — 같은 값을 두 이름으로 두지 않는다 */
       {
         // 창고에 넘겼는가. 못 넘긴 건은 눈에 띄어야 다시 보낸다.
         header: '판매주문', name: 'so_no', width: 130, sortable: true,
@@ -295,6 +295,11 @@
       },
       { header: '주문일',     name: 'order_date', width: 100, sortable: true },
       { header: '등록자',     name: 'creator',    width: 90 },
+
+      /* 네 목록 화면이 함께 쓰는 칸. 샘플은 무상이라 여러 칸이 빈다 — 그 빈칸이 곧
+         「샘플에는 없는 일」이라는 말이고, 칸 차례가 어긋나지 않아야 다른 화면과
+         같은 눈으로 읽힌다. */
+      ...ceCommonCols(),
     ],
     data: @json($gridData),
   });

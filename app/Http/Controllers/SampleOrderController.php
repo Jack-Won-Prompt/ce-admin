@@ -46,6 +46,8 @@ class SampleOrderController extends Controller
 
         $rows = $query->get();
 
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
+
         $gridData = $rows->map(fn (SampleOrder $s) => [
             'id'        => $s->id,
             'sample_no' => $s->sample_no,
@@ -60,7 +62,10 @@ class SampleOrderController extends Controller
             'so_no'     => $s->withworks_so_no ?: ($s->withworks_error ? '실패' : '미전달'),
             'order_date'=> $s->order_date?->format('Y-m-d') ?? '',
             'creator'   => $s->creator?->name ?? '-',
-        ])->values();
+
+            /* 네 화면이 함께 쓰는 칸. 샘플은 무상이라 동의ㆍ청구ㆍ본인부담이 없어 여러
+               칸이 빈다 — 그 빈칸이 곧 「샘플에는 없는 일」이라는 말이다. */
+        ] + $extras->ofSample($s))->values();
 
         $counts = SampleOrder::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status');
 

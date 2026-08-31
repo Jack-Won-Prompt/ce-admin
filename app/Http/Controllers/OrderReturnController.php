@@ -51,6 +51,8 @@ class OrderReturnController extends Controller
 
         $rows = $query->get();
 
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('order.patient_id'));
+
         $gridData = $rows->map(fn (OrderReturn $r) => [
             'id'        => $r->id,
             'receipt'   => $r->receipt_no,
@@ -71,7 +73,18 @@ class OrderReturnController extends Controller
             'refund'    => $r->refund_amount ? number_format($r->refund_amount) : '-',
             'assignee'  => $r->assignee?->name ?? '-',
             'created'   => $r->created_at?->format('Y-m-d') ?? '-',
-        ])->values();
+
+            /* 접수 화면에서도 사람과 처방을 알아볼 수 있어야 한다 — 지금까지는 이름
+               하나뿐이라 누구의 무슨 건인지 상세를 열어야 알았다. */
+            'resident_no' => $r->order?->patient?->masked_resident_no ?? '',
+            'mobile'      => $r->order?->patient?->mobile ?? '',
+            'hospital'    => $r->order?->prescription?->hospital_name ?? '',
+            'disease_code'=> $r->order?->prescription?->disease_code ?? '',
+            'product'     => $r->order?->product_name ?? '',
+            'product_code'=> $r->order?->product_code ?? '',
+
+            // 네 화면이 함께 쓰는 칸
+        ] + $extras->of($r->order))->values();
 
         $counts = OrderReturn::selectRaw('type, count(*) c')->groupBy('type')->pluck('c', 'type');
 

@@ -161,6 +161,17 @@
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
       { header: '접수일',   name: 'created',  width: 100, sortable: true },
+
+      /* 누구의 무슨 건인가 — 지금까지는 이름 하나뿐이라 상세를 열어야 알았다 */
+      { header: '주민등록번호', name: 'resident_no',  width: 130 },
+      { header: '전화번호1',    name: 'mobile',       width: 130 },
+      { header: '병원명',       name: 'hospital',     width: 140, sortable: true },
+      { header: '상병코드',     name: 'disease_code', width: 110, sortable: true },
+      { header: '제품코드',     name: 'product_code', width: 120 },
+      { header: '제품명',       name: 'product',      width: 180, sortable: true },
+
+      // 네 목록 화면이 함께 쓰는 칸
+      ...ceCommonCols(),
     ],
     data: @json($gridData),
   });

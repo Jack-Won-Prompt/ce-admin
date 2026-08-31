@@ -2025,6 +2025,48 @@ document.addEventListener('click', (e) => {
     try { window.parent.postMessage(e.data, window.location.origin); } catch (err) {}
   });
 
+  /* ── 목록 그리드의 공통 칸 ────────────────────────────────
+     주문 등록 ▸ 주문 목록 · 주문관리 · 교환/반품/취소 · CE 샘플, 네 화면이 같은 값을
+     같은 이름으로 같은 차례에 세운다. 화면마다 따로 적으면 이름도 차례도 조금씩 갈리고,
+     담당자는 화면을 옮길 때마다 눈으로 다시 찾는다.
+
+     쓰는 법 — columns: [ ...화면 고유 칸, ...ceCommonCols() ]
+     서버는 App\Support\OrderGridExtras 가 같은 열쇠로 값을 실어 준다.
+
+     차례에 뜻이 있다: 동의(2) → 청구(3) → 발행(2) → 정산(5). 일이 벌어지는 순서다. */
+  window.ceCommonCols = function () {
+    /* 돈은 천 단위로 끊어 오른쪽에 세운다. 0 은 빈칸으로 둔다 — 「0원」과 「아직 안 정함」이
+       같은 글자로 보이면 어느 쪽인지 알 수 없다. */
+    const money = (v) => {
+      const n = Number(v || 0);
+      if (!n) return '';
+      const s = document.createElement('span');
+      s.textContent = n.toLocaleString('ko-KR');
+      return s;
+    };
+
+    return [
+      // 동의 — 사람에 붙는다(처방전이 아니라)
+      { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
+      { header: '위임동의',     name: 'nhis_consent',    width: 90,  align: 'center', sortable: true },
+
+      // 청구 — 어디에 내는가 · 낼 준비가 됐는가 · 어디까지 갔는가
+      { header: '청구처',       name: 'claim_agency',    width: 130, sortable: true },
+      { header: '청구 준비',    name: 'claim_ready',     width: 90,  align: 'center', sortable: true },
+      { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
+
+      // 발행
+      { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
+      { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
+
+      // 정산
+      { header: '결제수단',     name: 'pay_method',      width: 100, align: 'center', sortable: true },
+      { header: '입금확인',     name: 'deposit_at',      width: 100, align: 'center', sortable: true },
+      { header: '총 금액',      name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },
+      { header: '본인 부담금',  name: 'copay',           width: 110, align: 'right',  sortable: true, renderer: money },
+      { header: '기관 부담금',  name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
+    ];
+  };
   // ── 버튼 프로세스 상태 유틸리티 ────────────────────────
   const BtnState = (() => {
     function loading(btn, text = '처리 중...') {
