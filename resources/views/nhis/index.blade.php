@@ -52,31 +52,6 @@
   .ds-grid-meta   { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-600); }
   .ds-grid-meta b { color:var(--gray-800); font-weight:500; }
 
-  /* 요약 카드 — 시안(282:53)에는 없는 블록이다(칩 라벨로 흡수돼 있다).
-     개발이 넣은 정보라 남기고, 카드 규격(r12 · pad 12/16 · bd 1px gray-200)만 맞춘다.
-     아래 여백은 .page-body 의 gap 이 만든다. */
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  @media(max-width:900px){ .summary-grid { grid-template-columns: repeat(2,1fr); } }
-
-  .summary-card {
-    background: var(--gray-0); border: 1px solid var(--gray-200); border-radius: 12px;
-    padding: 12px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
-  }
-  .summary-card .sc-icon {
-    width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
-  }
-  .summary-card .s-label { font-size: 13px; font-weight: 500; line-height: 21px; color: var(--gray-600); }
-  .summary-card .s-value { font-size: 16px; font-weight: 700; line-height: 26px; }
-  .summary-card .s-sub   { font-size: 12px; font-weight: 500; line-height: 19px; color: var(--gray-600); }
-  .summary-card.blue  .sc-icon { background: var(--primary-light); color: var(--primary); }
-  .summary-card.green .sc-icon { background: var(--success-light); color: var(--success); }
-  .summary-card.red   .sc-icon { background: var(--danger-light);  color: var(--danger); }
-  .summary-card.gray  .sc-icon { background: var(--border-light);  color: var(--text-muted); }
-  .summary-card.blue  .s-value { color: var(--primary); }
-  .summary-card.green .s-value { color: var(--success); }
-  .summary-card.red   .s-value { color: var(--danger); }
-
   .table-scroll-wrap { overflow-x: auto; }
   .table-scroll-wrap thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 
@@ -164,70 +139,15 @@
       ->map(fn ($label, $k) => [$label, $nhisStatusBadges[$k] ?? 'secondary'])->all();
   $curNhisStatus = request('nhis_status');
 
-  /* 시안 282:53 실측 — 괄호 설명은 칩 밖 둘째 줄이 아니라 칩 라벨 안에 붙은 한 덩어리다.
-       미청구(청구 대기 중)      98×19 · 칩 138×31
-       청구완료(결과 대기 중)   109×19 · 칩 149×31
-       승인(이번달 0원 환급)    106×19 · 칩 146×31
-       거부(재청구 필요)         85×19 · 칩 125×31   (모두 12/700 #83888F)
-     지표 카드 넉 장은 시안에 없지만 개발이 넣은 표시라 지우지 않고 그대로 둔다. */
-  $nhisStatusNotes = [
-    'pending'    => '청구 대기 중',
-    'submitting' => '올리는 중',
-    'submitted'  => '결과 대기 중',
-    'approved'   => '이번달 ' . number_format($monthlyApproved) . '원 환급',
-    'rejected'   => '재청구 필요',
-    'on_hold'    => '공단이 판단을 미룸',
-    'cancelled'  => '',
-  ];
 @endphp
 
 @section('content')
 
-{{-- ── 요약 카드 ── --}}
-<div class="summary-grid">
-  <div class="summary-card gray">
-    <div class="s-label">미청구 건수</div>
-    <div class="s-value" style="color:var(--text-secondary);">{{ $counts['pending'] ?? 0 }}</div>
-    {{-- 미청구 중에서도 지금 바로 할 수 있는 것이 몇 건인지가 실제로 궁금한 값이다 --}}
-    <div class="s-sub">
-      자료 완비 <b style="color:var(--success);">{{ $readyCount }}</b>건 ·
-      대기 {{ max(0, ($counts['pending'] ?? 0) - $readyCount) }}건
-    </div>
-  </div>
-  <div class="summary-card blue">
-    <div class="s-label">청구 완료</div>
-    <div class="s-value" style="color:var(--primary);">{{ $counts['submitted'] ?? 0 }}</div>
-    <div class="s-sub">결과 대기 중</div>
-  </div>
-  <div class="summary-card green">
-    <div class="s-label">승인</div>
-    <div class="s-value" style="color:var(--success);">{{ $counts['approved'] ?? 0 }}</div>
-    <div class="s-sub">이번달 {{ number_format($monthlyApproved) }}원 환급</div>
-  </div>
-  <div class="summary-card red">
-    {{-- 요청서 13쪽이 「반려」라 부른다. 「거부」는 우리끼리 쓰던 말이다. --}}
-    <div class="s-label">반려</div>
-    <div class="s-value" style="color:var(--danger);">{{ $counts['rejected'] ?? 0 }}</div>
-    <div class="s-sub">재청구 필요</div>
-  </div>
-  <div class="summary-card">
-    {{-- 보류는 공단이 판단을 미룬 건이다(2026-08-31 회신). 미청구와 섞으면
-         「우리가 안 낸 것」과 「내고 기다리는 것」이 한 숫자가 된다. --}}
-    <div class="s-label">보류</div>
-    <div class="s-value" style="color:var(--warning);">{{ $counts['on_hold'] ?? 0 }}</div>
-    <div class="s-sub">공단이 판단을 미룸</div>
-  </div>
-</div>
-
-{{-- ── 청구 상태 칩 ── --}}
-{{-- Figma 282:53: h31 · r999 · pad 6/10 · 12px/700 · gap 4, 건수 배지 16×16 정원 10px/700 --}}
-{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
-     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
-
-
 {{-- ── 검색 필터 ── --}}
-{{-- Figma 282:53: 흰 카드(r12 · pad 12/16), 검색어 2열(295px) · 기간 2열(295px),
-     버튼은 우측 하단에 초기화 → 검색 순서 --}}
+{{-- Figma 282:53: 흰 카드(r12 · pad 12/16), 라벨 위 · 컨트롤 아래 9열,
+     버튼은 우측 하단에 초기화 → 검색 순서.
+     상태 칩 줄도, 요약 카드 다섯 장도 이 위에 있었다. 칩은 필터가 이미 하던 일이라
+     걷었고, 카드는 요청(2026-09-01)으로 걷었다 — 건수는 청구 상태 칸의 괄호에 있다. --}}
 <form method="GET" action="{{ route('nhis.index') }}" class="ds-filter-card">
   <div class="ds-filter-fields">
     <div class="ds-filter-field">
@@ -274,12 +194,14 @@
          한 줄에 네 가지 기준이 섞여 무엇이 켜져 있는지 알 수 없었다.
          한 묶음 안에 두어야 칸 너비가 고르게 나뉜다 — 묶음을 나누면 라벨이 눌린다. --}}
     <div class="ds-filter-field">
-      {{-- 신환은 공단 등록이 먼저다. 섞어 두면 청구부터 하려다 반려된다. --}}
-      <label class="ds-field-label">신환/구환</label>
-      <select name="patient_type" class="form-control form-select" onchange="this.form.submit()">
+      {{-- 처방전에 적는 값으로 거른다(요청서 11쪽 「신환/구환 → 신구매/재구매」).
+           예전에는 주민번호가 있느냐로 신환·구환을 스스로 갈랐는데, 목록에 공통 칸의
+           신구매/재구매가 함께 서면서 비슷해 보이는 칸이 둘이 됐다. --}}
+      <label class="ds-field-label">신구매/재구매</label>
+      <select name="purchase_type" class="form-control form-select" onchange="this.form.submit()">
         <option value="">전체</option>
-        @foreach(\App\Models\Order::PATIENT_TYPE_LABELS as $v => $label)
-          <option value="{{ $v }}" {{ request('patient_type') === (string) $v ? 'selected' : '' }}>{{ $label }}</option>
+        @foreach(['신구매', '재구매'] as $label)
+          <option value="{{ $label }}" @selected(request('purchase_type') === $label)>{{ $label }}</option>
         @endforeach
       </select>
     </div>
@@ -344,6 +266,11 @@
     <div class="pnl-tabs">
       <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')"><i class="fa-solid fa-file-lines"></i> 상세 내용</button>
+      {{-- 요약 카드를 걷으면서 갈 곳을 잃은 값이다. 건수는 검색 필터의 청구 상태
+           괄호로 다 보이지만, 환급액은 어디에도 없다 — 여기 한 줄로 적어 둔다. --}}
+      <span style="margin-left:auto;padding-right:12px;font-size:13px;color:var(--gray-600);">
+        이번달 환급 <b style="color:var(--success);">{{ number_format($monthlyApproved) }}</b>원
+      </span>
     </div>
 
 <div id="pnlList">
@@ -447,7 +374,6 @@
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '이름',      name: 'patient',       width: 90,  sortable: true },
-      { header: '신환/구환',   name: 'patient_type',  width: 90,  align: 'center', sortable: true },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       {

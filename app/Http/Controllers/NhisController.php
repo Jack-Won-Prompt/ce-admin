@@ -24,16 +24,14 @@ class NhisController extends Controller
             $query->where('nhis_claim_status', $request->nhis_status);
         }
 
-        /* 신환·구환은 주민번호 보유 여부로 갈리므로 조건도 그 컬럼으로 건다.
-           환자에 없으면 처방전 OCR 값까지 보는 것이 화면 표시와 같은 규칙이다. */
-        if ($request->filled('patient_type')) {
-            $hasRrn = fn ($q) => $q
-                ->whereHas('patient', fn ($p) => $p->whereNotNull('resident_no_hash'))
-                ->orWhereHas('prescription', fn ($p) => $p->whereNotNull('resident_no_ocr_enc'));
-
-            $request->patient_type === 'existing'
-                ? $query->where($hasRrn)
-                : $query->whereNot($hasRrn);
+        /* 신구매·재구매는 처방전에 사람이 적는 값이다(요청서 11쪽). 예전에는 주민번호가
+           있느냐로 신환·구환을 스스로 갈랐는데, 그 칸과 공통 칸의 신구매/재구매가 목록에
+           나란히 서면서 비슷해 보이는 칸이 둘이 됐다. 하나로 모은다.
+           주민번호 유무는 그대로 쓰인다 — 공단 등록 서류를 보낼지 가르는 자리
+           (NhisAssistController) 는 Order::patientType() 을 그대로 본다. */
+        if ($request->filled('purchase_type')) {
+            $type = $request->purchase_type;
+            $query->whereHas('prescription', fn ($p) => $p->where('purchase_type', $type));
         }
 
         // 공단이냐 지자체냐 — 청구처가 다르면 서류도 보내는 법도 다르다
@@ -154,7 +152,6 @@ class NhisController extends Controller
                 'reject_stage'  => Order::CLAIM_REJECT_STAGES[$o->nhis_reject_stage] ?? '',
                 'result'       => $result,
                 // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
-                'patient_type' => $o->patientTypeLabel(),
                 // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
                 'claim_ready_flag' => (bool) $o->claim_ready,
                 'claim_missing' => $o->claim_missing ?? '',
