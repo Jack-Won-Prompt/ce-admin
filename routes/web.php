@@ -428,6 +428,8 @@ Route::middleware(['auth'])->group(function () {
 
     // 마스터 관리 — 병원·기관을 카테고리 탭으로
     Route::get(   '/settings/masters',           [\App\Http\Controllers\MasterController::class, 'index'])->name('masters.index');
+    // 반품 사유의 규칙(배송비 부담ㆍ금액조정ㆍ발행포함) — 바뀔 값이라 화면에서 고친다
+    Route::patch( '/settings/masters/return-reasons', [\App\Http\Controllers\MasterController::class, 'updateReturnReasons'])->name('masters.returnReasons');
     Route::post(  '/settings/masters',           [\App\Http\Controllers\MasterController::class, 'store'])->name('masters.store');
     Route::put(   '/settings/masters/{master}',  [\App\Http\Controllers\MasterController::class, 'update'])->name('masters.update');
     Route::delete('/settings/masters/{master}',  [\App\Http\Controllers\MasterController::class, 'destroy'])->name('masters.destroy');

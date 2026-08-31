@@ -27,10 +27,15 @@ class MasterController extends Controller
     /** 마스터 항목 틀을 쓰지 않고 스스로 그리는 탭 */
     private const BILLING_OFFICE = 'billing_office';
 
+    /* 반품 사유도 그 틀을 쓰지 않는다. 담는 것이 이름ㆍ차례가 아니라 규칙이라
+       (배송비 부담ㆍ금액조정ㆍ발행포함) 한 줄짜리 마스터 항목에 담기지 않는다. */
+    private const RETURN_REASON = 'return_reason';
+
     public function index(Request $request): View
     {
         $categories = MasterItem::categories()
-            + [self::BILLING_OFFICE => ['label' => '청구처', 'fields' => []]];
+            + [self::BILLING_OFFICE => ['label' => '청구처', 'fields' => []]]
+            + [self::RETURN_REASON  => ['label' => '반품 사유', 'fields' => []]];
 
         $current = $request->get('cat');
         if (!isset($categories[$current])) {
@@ -41,6 +46,16 @@ class MasterController extends Controller
         $counts = MasterItem::selectRaw('category, count(*) as cnt')
             ->groupBy('category')->pluck('cnt', 'category')->all();
         $counts[self::BILLING_OFFICE] = \App\Models\BillingOffice::count();
+        $counts[self::RETURN_REASON]  = \App\Models\ReturnReason::count();
+
+        if ($current === self::RETURN_REASON) {
+            return view('masters.index', [
+                'categories' => $categories,
+                'current'    => $current,
+                'counts'     => $counts,
+                'reasons'    => \App\Models\ReturnReason::orderBy('sort_order')->get(),
+            ]);
+        }
 
         if ($current === self::BILLING_OFFICE) {
             return view('masters.index', [
@@ -180,4 +195,40 @@ class MasterController extends Controller
     {
         return MasterItem::categories()[$category]['label'] ?? $category;
     }
+
+    /**
+     * 반품 사유의 규칙을 고친다 (요청서 6쪽, 2026-08-31).
+     *
+     * 사유는 코드로 찾는다 — 이름이 바뀌어도 이미 접수된 건이 가리키는 곳은 그대로여야
+     * 한다. 그래서 여기서는 코드를 만들거나 지우지 않고, 있는 줄의 규칙만 고친다.
+     * 사유를 늘리는 일은 드물고, 늘리면 흐름(FLOWS)과 승인자도 함께 봐야 한다.
+     */
+    public function updateReturnReasons(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'rows'                        => 'required|array',
+            'rows.*.code'                 => 'required|string|exists:return_reasons,code',
+            'rows.*.label'                => 'required|string|max:60',
+            'rows.*.burden'               => ['nullable', Rule::in(array_keys(\App\Models\OrderReturn::BURDENS))],
+            'rows.*.adjusts_amount'       => 'nullable|boolean',
+            'rows.*.includes_issue'       => 'nullable|boolean',
+            'rows.*.is_active'            => 'nullable|boolean',
+            'rows.*.sort_order'           => 'nullable|integer|min:0|max:9999',
+        ]);
+
+        foreach ($data['rows'] as $row) {
+            \App\Models\ReturnReason::where('code', $row['code'])->update([
+                'label'          => $row['label'],
+                'burden'         => $row['burden'] ?: null,
+                // 체크를 풀면 아예 오지 않는다 — 없으면 끈 것이다
+                'adjusts_amount' => (bool) ($row['adjusts_amount'] ?? false),
+                'includes_issue' => (bool) ($row['includes_issue'] ?? false),
+                'is_active'      => (bool) ($row['is_active'] ?? false),
+                'sort_order'     => (int) ($row['sort_order'] ?? 0),
+            ]);
+        }
+
+        return back()->with('success', '반품 사유를 적었습니다.');
+    }
+
 }

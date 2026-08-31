@@ -296,7 +296,7 @@ class WithworksReturns
 
     private function reasonText(OrderReturn $return): string
     {
-        $label = OrderReturn::REASONS[$return->reason_code]['label'] ?? $return->reason_code;
+        $label = OrderReturn::reasonLabel($return->reason_code);
 
         return trim($label . ($return->reason_text ? ' — ' . $return->reason_text : ''));
     }

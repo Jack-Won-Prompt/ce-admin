@@ -819,7 +819,7 @@
         <div class="card-body">
           @forelse($order->returns as $rt)
             @php
-              $reason = \App\Models\OrderReturn::REASONS[$rt->reason_code] ?? null;
+              $reason = \App\Models\OrderReturn::reasons()[$rt->reason_code] ?? null;
               $done   = in_array($rt->status, ['refunded', 'done'], true);
             @endphp
             <div class="od-kv" style="align-items:flex-start;">

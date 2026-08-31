@@ -72,7 +72,7 @@
       <div class="rt-row">
         <label>사유</label>
         <select name="reason_code" id="rt-reason" class="form-control form-select" required>
-          @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
+          @foreach(\App\Models\OrderReturn::reasons() as $k => $r)
             <option value="{{ $k }}" @selected(old('reason_code') === $k)>{{ $r['label'] }}</option>
           @endforeach
         </select>

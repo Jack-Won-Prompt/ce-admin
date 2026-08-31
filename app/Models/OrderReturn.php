@@ -206,6 +206,34 @@ class OrderReturn extends Model
     /** 3PL 이 무는 사유 — 불량 교환으로 갈린다 */
     public const DEFECT_REASONS = ['defect', 'wrong_item'];
 
+    /**
+     * 사유표 — 이제 표가 원본이다 (요청서 6쪽, 2026-08-31).
+     *
+     * 위의 REASONS 는 표가 비었을 때의 대비로 남긴다. 화면과 검증은 이 메서드를 본다 —
+     * 사유를 늘리거나 규칙을 고치는 일이 배포를 기다리지 않아야 한다.
+     *
+     * @return array<string, array{label: string, burden: ?string}>
+     */
+    public static function reasons(): array
+    {
+        $rows = \App\Models\ReturnReason::table()->where('is_active', true);
+
+        if ($rows->isEmpty()) {
+            return self::REASONS;
+        }
+
+        return $rows->mapWithKeys(fn ($r) => [
+            $r->code => ['label' => $r->label, 'burden' => $r->burden],
+        ])->all();
+    }
+
+    /** 그 사유의 이름 — 표에 없어도 옛 건은 읽혀야 한다 */
+    public static function reasonLabel(?string $code): string
+    {
+        return \App\Models\ReturnReason::table()[$code]?->label
+            ?? (self::REASONS[$code]['label'] ?? (string) $code);
+    }
+
     public const BURDENS = ['customer' => '고객 부담', 'company' => '판매자 부담'];
 
     public const COLLECT_METHODS = ['courier' => '택배 자동수거', 'self' => '고객 직접발송'];

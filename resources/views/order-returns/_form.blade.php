@@ -100,7 +100,7 @@
       <div class="rto-f">
         <label>사유</label>
         <select name="reason_code" id="rtoReason" class="form-control form-select" required>
-          @foreach(\App\Models\OrderReturn::REASONS as $k => $r)
+          @foreach(\App\Models\OrderReturn::reasons() as $k => $r)
             <option value="{{ $k }}">{{ $r['label'] }}</option>
           @endforeach
         </select>

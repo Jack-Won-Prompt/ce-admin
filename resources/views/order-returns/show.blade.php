@@ -95,7 +95,16 @@
       <div class="rt-kv"><span>3PL 상태</span><span>{{ $r->pl3_status_label }}{{ $r->pl3_status_at ? ' · ' . $r->pl3_status_at->format('Y-m-d H:i') : '' }}</span></div>
     @endif
     <div class="rt-kv"><span>사유</span><span>{{ $r->scenarioLabel() }}{{ $r->is_partial ? ' · 부분' : '' }}</span></div>
-    <div class="rt-kv"><span>신청 사유</span><span>{{ \App\Models\OrderReturn::REASONS[$r->reason_code]['label'] ?? $r->reason_code }}</span></div>
+    <div class="rt-kv"><span>신청 사유</span><span>{{ \App\Models\OrderReturn::reasonLabel($r->reason_code) }}
+      @php $rr = \App\Models\ReturnReason::table()[$r->reason_code] ?? null; @endphp
+      @if($rr)
+        {{-- 사유가 정하는 것 — 담당자가 다음에 무엇이 일어날지 미리 안다(요청서 6쪽) --}}
+        <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">
+          금액조정 {{ $rr->adjusts_amount ? '있음' : '없음' }} ·
+          발행 {{ $rr->includes_issue ? '포함' : '불포함' }}
+        </span>
+      @endif
+    </span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
     <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
     {{-- 접수 때는 수거 방법을 묻지 않는다 — 예전에 받아 둔 건에만 남아 있으니 있을 때만 --}}

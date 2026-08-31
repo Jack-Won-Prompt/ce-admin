@@ -46,6 +46,8 @@
 
 @if($current === 'billing_office')
   @include('masters._billing_offices')
+@elseif($current === 'return_reason')
+  @include('masters._return_reasons')
 @else
 @php $cat = $categories[$current]; @endphp
 
@@ -130,7 +132,9 @@
 
 @endsection
 
-@if($current !== 'billing_office')
+{{-- 스스로 그리는 탭(청구처ㆍ반품 사유)은 이 스크립트를 쓰지 않는다 —
+     $cat 이 없어 그리려 들면 터진다. --}}
+@if(!in_array($current, ['billing_office', 'return_reason'], true))
 @push('scripts')
 <script>
 (function () {
