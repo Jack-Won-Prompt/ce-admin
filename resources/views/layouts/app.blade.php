@@ -1542,9 +1542,6 @@
           </a>
         </div>
         @endif
-        {{-- 전자세금계산서는 메뉴에 두지 않는다. 발행과 취소는 「계산서 발행」 화면에서
-             주문을 보며 하고, 이 화면은 팝빌 목록을 그대로 비추던 자리였다.
-             화면과 경로는 남아 있어 주소로는 열린다. --}}
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
@@ -1553,14 +1550,31 @@
           </a>
         </div>
         @endif
+        {{-- 전자세금계산서 — 팝빌에 발행된 것을 그대로 비추는 자리다.
+
+             오래 메뉴에 두지 않았다. 팝빌 목록을 비추기만 해 볼 것이 적었기 때문인데,
+             요청서 6쪽으로 팝빌이 주는 칸을 다 세우고 주문까지 이어 붙였으니 이제
+             찾아갈 까닭이 있다.
+
+             바로 아래 「계산서 발행」과 다른 것을 본다 — 그쪽은 주문을 보며 발행하고
+             무르는 자리이고(세금계산서와 현금영수증을 함께 다룬다), 이쪽은 발행된
+             것이 국세청까지 잘 갔는지를 보는 자리다. --}}
+        @if($vis('taxinvoice'))
+        <div class="menu-item {{ request()->routeIs('taxinvoice*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="presentation-03" href="{{ route('taxinvoice.index') }}" data-title="전자세금계산서">
+            @dsicon('presentation-03', 'ds-icon menu-icon')
+            <span>전자세금계산서</span>
+          </a>
+        </div>
+        @endif
         {{-- 「청구처 정보」는 메뉴에 두지 않는다 — 마스터 관리의 「청구처」 탭으로 들였다.
              병원ㆍ기관과 마찬가지로 「어디에 연락하는가」를 적어 두는 자리라,
              찾으러 갈 곳이 둘일 까닭이 없다. --}}
         @if($vis('invoice'))
         <div class="menu-item {{ request()->routeIs('invoice*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="전자세금계산서">
+          <a class="menu-link" data-icon="receipt" href="{{ route('invoice.index') }}" data-title="계산서 발행">
             @dsicon('receipt', 'ds-icon menu-icon')
-            <span>전자세금계산서</span>
+            <span>계산서 발행</span>
             @php
               try {
                 $invoiceCount = \Illuminate\Support\Facades\Schema::hasColumn('orders','tax_invoice_status')
