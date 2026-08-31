@@ -65,7 +65,15 @@ class SampleOrderController extends Controller
 
             /* 샘플은 처방전이 없어 병원ㆍ처방 칸은 모두 빈다. 그래도 세운다 —
                네 화면이 같은 차례를 가져야 눈이 화면마다 다시 배우지 않는다. */
-        ] + $extras->rx(null, $s->patient) + $extras->ofSample($s))->values();
+            /* 샘플 것을 먼저 둔다 — 배열 더하기는 왼쪽을 지키므로, 뒤에 두면 ww() 의
+               빈 값이 이겨 배송요청일자가 늘 빈칸이 된다. 주문에는 그 칸이 없다. */
+        ] + ['ww_due'        => $s->delivery_date?->format('Y-m-d') ?? '',
+             'ww_recipient'  => $s->recipient_name ?: '',
+             'ww_created_at' => $s->created_at?->format('Y-m-d H:i') ?? '',
+             'ww_updated_at' => $s->updated_at?->format('Y-m-d H:i') ?? '']
+          + $extras->rx(null, $s->patient)
+          + $extras->ww(null, null, $s->patient)
+          + $extras->ofSample($s))->values();
 
         $counts = SampleOrder::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status');
 

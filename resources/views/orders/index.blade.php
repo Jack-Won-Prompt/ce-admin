@@ -377,11 +377,9 @@ window.HELP_TOUR_STEPS = [
          배송지는 남긴다 — 어디로 가는지는 훑으면서 가리는 값이다. */
       { header: '배송지',   name: 'address',  width: 240 },
 
-      // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
-      ...ceRxCols(),
 
-      // 네 목록 화면이 함께 쓰는 칸
-      ...ceCommonCols(),
+      // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
+      ...ceWwCols(),
     ],
     data: @json($gridData),
   });

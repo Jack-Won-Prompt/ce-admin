@@ -9644,17 +9644,13 @@ window.HELP_TOUR_STEPS = [
            무엇을 하고 있는가. 병원ㆍ처방 이야기는 아래 공통 블록이 한꺼번에 세운다. */
         { header: '주민등록번호',   name: 'resident_no', width: 130 },
         { header: '송금자명',       name: 'remitter',    width: 100 },
-        { header: '판매상태',       name: 'sale_status', width: 110, align: 'center', sortable: true },
-        { header: '출고상태',       name: 'ship_status', width: 110, align: 'center', sortable: true },
-        /* 결제수단은 공통 칸(ceCommonCols)이 세운다 — 여기 또 두면 같은 값이 두 칸에 선다 */
+        /* 결제수단은 공통 칸(ceWwCols)이 세운다 — 여기 또 두면 같은 값이 두 칸에 선다 */
         { header: '등록담당자',     name: 'creator',     width: 100, align: 'center', sortable: true },
         { header: '수정담당자',     name: 'updater',     width: 100, align: 'center', sortable: true },
 
-        // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
-        ...ceRxCols(),
 
-        // 네 목록 화면이 함께 쓰는 칸 — 이름ㆍ차례ㆍ표기가 한 곳에서 나온다
-        ...ceCommonCols(),
+        // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
+        ...ceWwCols(),
       ],
       data: OL_ROWS,
     });

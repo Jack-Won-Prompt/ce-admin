@@ -168,11 +168,9 @@
       { header: '주민등록번호', name: 'resident_no',  width: 130 },
       { header: '전화번호1',    name: 'mobile',       width: 130 },
 
-      // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
-      ...ceRxCols(),
 
-      // 네 목록 화면이 함께 쓰는 칸
-      ...ceCommonCols(),
+      // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
+      ...ceWwCols(),
     ],
     data: @json($gridData),
   });

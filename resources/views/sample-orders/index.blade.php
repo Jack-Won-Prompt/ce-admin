@@ -298,13 +298,11 @@
       { header: '주문일',     name: 'order_date', width: 100, sortable: true },
       { header: '등록자',     name: 'creator',    width: 90 },
 
-      // 병원ㆍ처방 정보 탭의 칸을 그 탭의 차례 그대로
-      ...ceRxCols(),
 
       /* 네 목록 화면이 함께 쓰는 칸. 샘플은 무상이라 여러 칸이 빈다 — 그 빈칸이 곧
          「샘플에는 없는 일」이라는 말이고, 칸 차례가 어긋나지 않아야 다른 화면과
          같은 눈으로 읽힌다. */
-      ...ceCommonCols(),
+      ...ceWwCols(),
     ],
     data: @json($gridData),
   });

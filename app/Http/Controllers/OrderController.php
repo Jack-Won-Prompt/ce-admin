@@ -102,7 +102,9 @@ class OrderController extends Controller
                 'sold_at'   => $o->created_at->format('Y-m-d'),
                 'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',
                 // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
-            ] + $extras->rx($o->prescription, $o->patient) + $extras->of($o);
+            ] + $extras->rx($o->prescription, $o->patient)
+              + $extras->ww($o, $o->prescription, $o->patient)
+              + $extras->of($o);
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Order;
+use App\Models\OrderReturn;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
@@ -167,6 +168,57 @@ class OrderGridExtras
             'rx_use_qty'     => $n($p?->daily_use_qty),
             'rx_inmarket'    => $d($p?->inmarket_due),
             'rx_last_qty'    => $n($p?->last_confirmed_qty),
+        ];
+    }
+
+
+    /**
+     * 위드웍스 판매주문 현황이 세우는 칸 가운데 우리에게 값이 있는 것.
+     *
+     * 저쪽 화면과 우리 목록의 차례를 맞추자는 요청이다(2026-08-31). 창고ㆍERP 고유
+     * 칸(etc SoNoㆍ출고창고ㆍ납품창고 따위 스물하나)은 우리가 만들 수도 받을 수도
+     * 없어 세우지 않는다 — 그것은 위드웍스 화면에서 본다.
+     *
+     * 사람에 붙는 넷(보호자명ㆍ신환master등록일ㆍ소득공제ㆍ현금영수증번호)은 환자를
+     * 따로 받는다. 처방전이 아니라 사람의 것이다.
+     */
+    public function ww(?Order $o, ?Prescription $p, ?Patient $pt, ?OrderReturn $rt = null): array
+    {
+        $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
+        $dt = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d H:i') : '';
+
+        return [
+            /* 입고 상태 — 반품에만 있다. 창고가 실물을 받았다고 알려 오면(ro.rcpt_completed)
+               그 날을 적어 두므로, 날이 있으면 들어온 것이다. */
+            // 창고가 지금 무엇을 하고 있는가 — 주문 목록에만 있던 둘을 네 화면이 함께 쓴다
+            'ww_sale_status' => $o?->withworks_status_label ?: '',
+            'ww_ship_status' => $o?->withworks_ship_status_label ?: '',
+            'ww_rcpt'       => $rt?->arrived_at ? '입고완료' : '',
+            'ww_recipient'  => $o?->shipping_recipient ?? '',
+            'ww_due'        => '',                       // 배송요청일자 — 샘플만 있다(화면에서 채운다)
+            'ww_ref_no'     => $p?->rx_number ?? '',     // 참조 번호 — 위드웍스에 udf2 로 보내는 그것
+            /* 유형ㆍ자격을 고르기 전이면 열쇠가 없다. 그때 resolve 는 「고르면 정해집니다」라는
+               안내말을 돌려주는데, 그것은 상세 화면에서 쓸 말이지 표의 한 칸에 설
+               것이 아니다 — 서른 줄에 긴 문장이 들어서면 오히려 읽힐 것을 덮는다. */
+            'ww_bs_code'    => $bsKey = (\App\Support\BillingStrategy::key(
+                                   $p?->counsel_acc_add_type, $p?->benefit_class) ?? ''),
+            'ww_bs_name'    => $bsKey === '' ? '' : \App\Support\BillingStrategy::resolve(
+                                   $p->counsel_acc_add_type, $p->benefit_class)['label'],
+            'ww_ship_no'    => $o?->withworks_ship_no ?? '',
+            'ww_remark'     => $p?->admin_note ?? '',
+            'ww_tracking'   => $o?->tracking_number ?: ($o?->withworks_tracking_no ?? ''),
+            /* 상담 진행 — 상담 창이 쓰는 코드 그대로다(02 등록 · 95 확정 · 99 취소).
+               숫자를 그대로 세우면 읽는 사람이 코드표를 외워야 한다. */
+            'ww_counsel'    => match ((string) ($p?->counsel_status ?? '')) {
+                                   '02' => '등록', '95' => '확정', '99' => '취소',
+                                   '10' => '재상담', default => '',
+                               },
+            'ww_guardian'   => $pt?->guardian_name ?? '',
+            'ww_new_master' => $d($pt?->new_patient_date),
+            'ww_deduction'  => $pt?->deduction ?? '',
+            'ww_cash_no'    => $pt?->cash_receipt_no ?? '',
+            'ww_created_at' => $dt($o?->created_at ?? $p?->created_at),
+            'ww_updated_at' => $dt($o?->updated_at ?? $p?->updated_at),
         ];
     }
 

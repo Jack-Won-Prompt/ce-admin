@@ -1391,14 +1391,13 @@ class PrescriptionController extends Controller
                 'resident_no' => $rx?->resident_no_ocr_masked ?? $o->patient?->masked_resident_no ?? '',
                 // 송금자명 — 돈을 보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다)
                 'remitter'    => $o->patient?->remitter_name ?? '',
-                // 창고가 지금 무엇을 하고 있는가
-                'sale_status' => $o->withworks_status_label ?: '',
-                'ship_status' => $o->withworks_ship_status_label ?: '',
                 'creator'     => $rx?->creator?->name ?? '',
                 'updater'     => $rx?->updater?->name ?? '',
 
                 // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
-                ] + $extras->rx($rx, $o->patient) + $extras->of($o);
+                ] + $extras->rx($rx, $o->patient)
+                  + $extras->ww($o, $rx, $o->patient)
+                  + $extras->of($o);
             })->values();
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,

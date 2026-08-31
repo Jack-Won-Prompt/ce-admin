@@ -2025,79 +2025,87 @@ document.addEventListener('click', (e) => {
     try { window.parent.postMessage(e.data, window.location.origin); } catch (err) {}
   });
 
-  /* 처방 — 「병원ㆍ처방 정보」 탭의 칸을 그대로 목록에 세운다.
-     그 탭에는 서른아홉 칸이 있는데 목록에는 열여섯만 서 있어, 나머지는 한 건씩 열어야
-     보였다. 무엇을 먼저 처리할지 가리는 일은 목록에서 훑으며 하는 것이다.
-     차례는 그 탭이 적은 그대로다 — 화면과 목록이 같은 순서면 눈이 다시 배우지 않는다.
-     「청구처」만 빼 둔다: 공통 칸(ceCommonCols)이 이미 세운다. */
-  window.ceRxCols = function () {
+  /* ── 공통 칸 — 위드웍스 판매주문 현황의 차례를 따른다 ──────────────
+     저쪽 화면을 보다 우리 목록으로 넘어와도 눈이 다시 배우지 않아야 한다는
+     요청이다(2026-08-31). 저쪽 예순 칸 가운데 창고ㆍERP 고유 스물하나(etc SoNo ㆍ
+     출고창고 ㆍ납품창고 ㆍ확정판매금액 …)는 우리가 만들 수도 받을 수도 없어 세우지
+     않는다 — 그것은 위드웍스 화면에서 본다.
+
+     저쪽이 부르지 않는 우리 칸(동의ㆍ발행ㆍ상병ㆍ수량 따위)은 걷지 않고 뒤에 잇는다 —
+     지난 요청으로 세운 것들이라, 차례를 맞추자고 지우면 그때 한 일이 없던 일이 된다.
+
+     쓰는 법 — columns: [ …번호ㆍ이름, ...ceMoneyCols(), 날짜, …화면 고유, ...ceWwCols() ] */
+  window.ceWwCols = function () {
     return [
+      // ── 위드웍스 차례 ──────────────────────────────────
+      { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
+      { header: '병원명',         name: 'rx_hospital',  width: 150, sortable: true },
+      { header: '판매상태',       name: 'ww_sale_status', width: 110, align: 'center', sortable: true },
+      { header: '출고상태',       name: 'ww_ship_status', width: 110, align: 'center', sortable: true },
+      { header: '입고 상태',      name: 'ww_rcpt',      width: 90,  align: 'center' },
+      { header: '배송주소명',     name: 'ww_recipient', width: 100 },
+      { header: '배송요청일자',   name: 'ww_due',       width: 110, align: 'center', sortable: true },
+      { header: '참조 번호',      name: 'ww_ref_no',    width: 150, sortable: true },
+      { header: '청구 전략 코드', name: 'ww_bs_code',   width: 120 },
+      { header: '청구전략명',     name: 'ww_bs_name',   width: 160, sortable: true },
+      { header: '송장 번호',      name: 'ww_ship_no',   width: 130 },
+      { header: '비고',           name: 'ww_remark',    width: 200 },
+      { header: '운송장',         name: 'ww_tracking',  width: 130 },
+      { header: '신구매/재구매',  name: 'rx_purchase',  width: 110, align: 'center', sortable: true },
+      { header: '자격',           name: 'rx_benefit',   width: 100, align: 'center', sortable: true },
+      { header: '처방전 발행일',  name: 'rx_issued',    width: 120, align: 'center', sortable: true },
+      { header: '처방전 사용기간', name: 'rx_period',   width: 120, align: 'right' },
+      { header: '일일 도뇨 횟수', name: 'rx_cath_freq', width: 120, align: 'center', sortable: true },
+      { header: '담당 의사명',    name: 'rx_doctor',    width: 100, sortable: true },
+      { header: '상담 진행',      name: 'ww_counsel',   width: 90,  align: 'center', sortable: true },
+      { header: '구입일',         name: 'rx_buy_date',  width: 100, align: 'center', sortable: true },
+      { header: '다음 재구매 가능일', name: 'rx_next_repur', width: 130, align: 'center', sortable: true },
+      { header: '보호자명',       name: 'ww_guardian',  width: 100 },
+      { header: '청구처',         name: 'claim_agency', width: 130, sortable: true },
+      { header: '신환master 등록일', name: 'ww_new_master', width: 130, align: 'center', sortable: true },
+      { header: '소득공제/지출증빙', name: 'ww_deduction', width: 120, align: 'center' },
+      { header: '현금영수증번호', name: 'ww_cash_no',   width: 130 },
+      { header: '등록 일시',      name: 'ww_created_at', width: 130, align: 'center', sortable: true },
+      { header: '수정 일시',      name: 'ww_updated_at', width: 130, align: 'center', sortable: true },
+
+      /* ── 저쪽이 부르지 않는 우리 칸 ─────────────────────
+         동의ㆍ청구ㆍ발행은 우리 절차라 위드웍스 화면에 있을 까닭이 없다. */
+      { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
+      { header: '위임동의',     name: 'nhis_consent',    width: 90,  align: 'center', sortable: true },
+      { header: '청구 준비',    name: 'claim_ready',     width: 90,  align: 'center', sortable: true },
+      { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
+      { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
+      { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
+
+      // 병원ㆍ처방 정보 탭의 나머지 — 저쪽 목록에 없는 것들
       { header: '검수 메모',      name: 'rx_memo',      width: 200 },
       { header: '처방 유형',      name: 'rx_acc_type',  width: 100, align: 'center', sortable: true },
-      { header: '병원명',         name: 'rx_hospital',  width: 150, sortable: true },
-      { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
       { header: '진단 확인일',    name: 'rx_diag_date', width: 110, align: 'center', sortable: true },
       { header: '상병 구분',      name: 'rx_dz_grade',  width: 90,  align: 'center', sortable: true },
       { header: '상병코드',       name: 'rx_dz_code',   width: 110, sortable: true },
       { header: '상병 명',        name: 'rx_dz_name',   width: 160, sortable: true },
       { header: '요류역학검사일', name: 'rx_uro_date',  width: 120, align: 'center', sortable: true },
       { header: '확인사항',       name: 'rx_uro_find',  width: 220 },
-      { header: '신구매/재구매',  name: 'rx_purchase',  width: 110, align: 'center', sortable: true },
       { header: '1일 처방 개수',  name: 'rx_daily',     width: 110, align: 'right',  sortable: true },
       { header: '총 처방일수',    name: 'rx_days',      width: 100, align: 'right',  sortable: true },
       { header: '총계',           name: 'rx_total',     width: 90,  align: 'right',  sortable: true },
-      { header: '처방전 발행일',  name: 'rx_issued',    width: 120, align: 'center', sortable: true },
-      { header: '처방전 사용기간', name: 'rx_period',   width: 120, align: 'right' },
       { header: '처방전종료일',   name: 'rx_end',       width: 120, align: 'center', sortable: true },
       { header: '전문과목',       name: 'rx_specialty', width: 100, sortable: true },
-      { header: '담당 의사명',    name: 'rx_doctor',    width: 100, sortable: true },
       { header: '의사면허번호',   name: 'rx_license',   width: 110 },
       { header: '사유',           name: 'rx_reason',    width: 200, sortable: true },
       { header: '주문 담당자',    name: 'rx_order_mgr', width: 100, sortable: true },
       { header: 'Five/Six',       name: 'rx_five',      width: 90,  align: 'center', sortable: true },
-      { header: '일일 도뇨 횟수', name: 'rx_cath_freq', width: 120, align: 'center', sortable: true },
       { header: 'Five/Six(110days)', name: 'rx_five110', width: 140, align: 'center' },
-      { header: '자격',           name: 'rx_benefit',   width: 100, align: 'center', sortable: true },
       { header: '관할 청구처',    name: 'rx_office',    width: 160, sortable: true },
       { header: '결제일',         name: 'rx_pay_date',  width: 100, align: 'center', sortable: true },
-      { header: '구입일',         name: 'rx_buy_date',  width: 100, align: 'center', sortable: true },
       { header: '사용 시작일',    name: 'rx_agree_start', width: 110, align: 'center', sortable: true },
       { header: '급여 종료일',    name: 'rx_agree_end', width: 110, align: 'center', sortable: true },
       { header: '추가정보 등록일', name: 'rx_created',  width: 120, align: 'center', sortable: true },
-      { header: '다음 재구매 가능일', name: 'rx_next_repur', width: 130, align: 'center', sortable: true },
       { header: '관할 지자체',    name: 'rx_local_gov', width: 140, sortable: true },
       { header: '재구매일',       name: 'rx_repur_date', width: 110, align: 'center', sortable: true },
       { header: '하루 사용 수량', name: 'rx_use_qty',   width: 110, align: 'right',  sortable: true },
       { header: '인마켓 마감일',  name: 'rx_inmarket',  width: 110, align: 'center', sortable: true },
       { header: '마지막 확정 수량', name: 'rx_last_qty', width: 120, align: 'right', sortable: true },
-    ];
-  };
-
-  /* ── 목록 그리드의 공통 칸 ────────────────────────────────
-     주문 등록 ▸ 주문 목록 · 주문관리 · 교환/반품/취소 · CE 샘플, 네 화면이 같은 값을
-     같은 이름으로 같은 차례에 세운다. 화면마다 따로 적으면 이름도 차례도 조금씩 갈리고,
-     담당자는 화면을 옮길 때마다 눈으로 다시 찾는다.
-
-     쓰는 법 — columns: [ …앞쪽 칸, ...ceMoneyCols(), 날짜 칸, …, ...ceCommonCols() ]
-     서버는 App\Support\OrderGridExtras 가 같은 열쇠로 값을 실어 준다.
-
-     둘로 갈라 둔다. 동의ㆍ청구ㆍ발행은 뒤쪽에 모아 두고(일이 벌어지는 순서다), 돈은
-     따로 떼어 날짜 앞에 세운다 — 「언제 팔았고 얼마였나」는 나란히 보는 값인데 뒤쪽
-     끝에 두면 가로로 한참 밀어야 닿는다. */
-  window.ceCommonCols = function () {
-    return [
-      // 동의 — 사람에 붙는다(처방전이 아니라)
-      { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
-      { header: '위임동의',     name: 'nhis_consent',    width: 90,  align: 'center', sortable: true },
-
-      // 청구 — 어디에 내는가 · 낼 준비가 됐는가 · 어디까지 갔는가
-      { header: '청구처',       name: 'claim_agency',    width: 130, sortable: true },
-      { header: '청구 준비',    name: 'claim_ready',     width: 90,  align: 'center', sortable: true },
-      { header: '공단 청구',    name: 'nhis_claim',      width: 90,  align: 'center', sortable: true },
-
-      // 발행
-      { header: '세금계산서',   name: 'tax_invoice',     width: 100, align: 'center', sortable: true },
-      { header: '현금영수증',   name: 'cash_receipt',    width: 100, align: 'center', sortable: true },
     ];
   };
 
@@ -2120,6 +2128,7 @@ document.addEventListener('click', (e) => {
       { header: '기관 부담금',  name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
     ];
   };
+
   // ── 버튼 프로세스 상태 유틸리티 ────────────────────────
   const BtnState = (() => {
     function loading(btn, text = '처리 중...') {

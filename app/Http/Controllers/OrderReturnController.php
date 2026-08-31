@@ -81,6 +81,7 @@ class OrderReturnController extends Controller
 
             // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
         ] + $extras->rx($r->order?->prescription, $r->order?->patient)
+          + $extras->ww($r->order, $r->order?->prescription, $r->order?->patient, $r)
           + $extras->of($r->order))->values();
 
         $counts = OrderReturn::selectRaw('type, count(*) c')->groupBy('type')->pluck('c', 'type');
