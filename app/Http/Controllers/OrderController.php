@@ -459,12 +459,21 @@ class OrderController extends Controller
         if ($invoiceeType === '개인' && $invoiceeNum === '') {
             $invoiceeNum = preg_replace('/\D/', '',
                 (string) $order->prescription?->residentNoOcrFor('tax_invoice'));
+
+            /* 처방전에 없으면 거래처에 적힌 것을 본다. 주민번호를 고치는 자리는
+               거래처관리 하나이므로(요청서 1쪽), 그쪽에만 적어 둔 건이 대부분이다.
+               처방전만 보다가 「없다」고 막으면, 자동 발행도 같은 길이라 출고 뒤
+               계산서가 조용히 나가지 않는다. */
+            if (strlen($invoiceeNum) !== 13) {
+                $invoiceeNum = preg_replace('/\D/', '',
+                    (string) $order->patient?->residentNoFor('tax_invoice'));
+            }
         }
 
         if ($invoiceeType === '개인' && strlen($invoiceeNum) !== 13) {
             return response()->json([
                 'success' => false,
-                'message' => '개인 발행에는 주민등록번호 13자리가 필요합니다. 처방전에 주민등록번호를 먼저 저장해 주세요.',
+                'message' => '개인 발행에는 주민등록번호 13자리가 필요합니다 — 거래처관리나 처방전에 먼저 저장해 주십시오.',
             ], 422);
         }
         if ($invoiceeType === '사업자' && strlen($invoiceeNum) !== 10) {

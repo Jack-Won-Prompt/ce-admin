@@ -1106,6 +1106,19 @@
 </div>
 
 {{-- ══════════ 세금계산서 발행 모달 ══════════ --}}
+@php
+  /* 얼마를 내는가는 청구전략이 정한다 — 자동 발행(DepositAutoIssue)이 쓰는 셈과 같아야
+     한다. 예전에는 total_amount(= 본인부담금)를 기본값으로 세워, 같은 주문을 자동으로
+     내면 303,750 원이고 손으로 내면 33,750 원이었다.
+     밑돈은 본인부담 + 기관부담이다. total_amount 에는 배송비가 섞인 건이 있다. */
+  $_tiRx    = $order->prescription;
+  $_tiRate  = (int) (\App\Support\BillingStrategy::resolve($_tiRx?->counsel_acc_add_type, $_tiRx?->benefit_class)['tax_invoice'] ?? 0);
+  $_tiBase  = (int) ($order->patient_copay ?? 0) + (int) ($order->nhis_amount ?? 0);
+  $_tiAmt   = $_tiRate > 0 ? (int) round($_tiBase * $_tiRate / 100) : (int) $order->total_amount;
+  $_tiSupply = (int) round($_tiAmt / 1.1);
+  $_tiVat    = $_tiAmt - $_tiSupply;
+  $_tiName   = $order->patient?->name ?? $_tiRx?->patient_name_ocr ?? '';
+@endphp
 <div class="modal-overlay" id="taxModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -1115,7 +1128,10 @@
     <div class="modal-body">
       <div style="background:var(--primary-light);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:12px;">
         <div style="font-weight:700;margin-bottom:2px;">주문 {{ $order->order_number }}</div>
-        <div style="color:var(--text-secondary);">결제금액: {{ number_format($order->total_amount) }}원</div>
+        <div style="color:var(--text-secondary);">
+          청구전략 {{ $_tiRate > 0 ? $_tiRate.'%' : '미설정' }} · 발행 대상 금액 {{ number_format($_tiAmt) }}원
+          <span style="color:var(--text-muted);">(본인부담 {{ number_format($order->patient_copay ?? 0) }} · 기관부담 {{ number_format($order->nhis_amount ?? 0) }})</span>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1125,14 +1141,32 @@
           <option value="manual">일반세금계산서</option>
         </select>
       </div>
+      {{-- 이 사업의 공급받는자는 환자 개인이다(청구전략 · 자동 발행과 같다). 창이
+           사업자만 상정하고 있어, 개인 앞으로는 손으로 낼 길이 아예 없었다. --}}
       <div class="form-group">
-        <label class="form-label">사업자명 (공급받는자) <span>*</span></label>
-        <input type="text" id="ti_biz_name" class="form-control" placeholder="○○ 주식회사">
+        <label class="form-label">공급받는자 <span>*</span></label>
+        <select id="ti_invoicee" class="form-control form-select" onchange="onTiInvoiceeChange()">
+          <option value="개인" selected>개인 (환자)</option>
+          <option value="사업자">사업자</option>
+        </select>
       </div>
       <div class="form-group">
+        <label class="form-label" id="ti_biz_name_label">이름 (공급받는자) <span>*</span></label>
+        <input type="text" id="ti_biz_name" class="form-control" placeholder="홍길동"
+               value="{{ $_tiName }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="ti_ceo_label">대표자명 <span>*</span></label>
+        {{-- 서버가 반드시 받는 값인데 창이 아예 보내지 않아, 무엇을 채워도 발행이
+             되지 않았다. 개인이면 이름과 같다. --}}
+        <input type="text" id="ti_ceo_name" class="form-control" placeholder="홍길동"
+               value="{{ $_tiName }}">
+      </div>
+      <div class="form-group" id="ti_biz_no_group" style="display:none;">
         <label class="form-label">사업자등록번호 <span>*</span></label>
         <input type="text" id="ti_biz_no" class="form-control" placeholder="000-00-00000"
                oninput="formatBizNo(this)">
+        <div class="amount-hint">개인 건은 비워 둡니다 — 처방전에 적힌 주민등록번호로 발행됩니다.</div>
       </div>
       <div class="form-group" id="ti_email_group">
         <label class="form-label">이메일 (전자발송)</label>
@@ -1141,18 +1175,18 @@
       <div class="form-group">
         <label class="form-label">공급가액 <span>*</span></label>
         <input type="number" id="ti_supply" class="form-control" placeholder="0"
-               oninput="calcVat()" value="{{ round($order->total_amount / 1.1) }}">
-        <div class="amount-hint">총 결제금액의 부가세 역산 기본 적용 (수정 가능)</div>
+               oninput="calcVat()" value="{{ $_tiSupply }}">
+        <div class="amount-hint">청구전략이 정한 금액에서 부가세를 역산했습니다 (수정 가능)</div>
       </div>
       <div class="form-group">
         <label class="form-label">부가세 (VAT 10%) <span>*</span></label>
         <input type="number" id="ti_vat" class="form-control" placeholder="0"
-               value="{{ $order->total_amount - round($order->total_amount / 1.1) }}">
+               value="{{ $_tiVat }}">
       </div>
       <div class="tax-calc-row" id="taxCalcSummary">
-        공급가액 <b id="calcSupply">{{ number_format(round($order->total_amount / 1.1)) }}</b>원
-        + 부가세 <b id="calcVat">{{ number_format($order->total_amount - round($order->total_amount / 1.1)) }}</b>원
-        = 합계 <b id="calcTotal">{{ number_format($order->total_amount) }}</b>원
+        공급가액 <b id="calcSupply">{{ number_format($_tiSupply) }}</b>원
+        + 부가세 <b id="calcVat">{{ number_format($_tiVat) }}</b>원
+        = 합계 <b id="calcTotal">{{ number_format($_tiAmt) }}</b>원
       </div>
     </div>
     <div class="modal-footer">
@@ -1165,6 +1199,15 @@
 </div>
 
 {{-- ══════════ 현금영수증 발행 모달 ══════════ --}}
+@php
+  /* 세금계산서와 같은 셈이다 — 청구전략이 정한 몫에 배송비를 더한다(자동 발행과 같다).
+     식별번호는 환자가 적어 둔 현금영수증 번호가 먼저고, 없으면 휴대폰번호다. */
+  $_crRate = (int) (\App\Support\BillingStrategy::resolve($_tiRx?->counsel_acc_add_type, $_tiRx?->benefit_class)['cash_receipt'] ?? 0);
+  $_crAmt  = $_crRate > 0
+      ? (int) round($_tiBase * $_crRate / 100) + (int) ($order->shipping_fee ?? 0)
+      : (int) $order->total_amount;
+  $_crId   = $order->patient?->cash_receipt_no ?: ($order->patient?->mobile ?? '');
+@endphp
 <div class="modal-overlay" id="cashModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -1174,7 +1217,9 @@
     <div class="modal-body">
       <div style="background:var(--primary-light);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:12px;">
         <div style="font-weight:700;margin-bottom:2px;">주문 {{ $order->order_number }}</div>
-        <div style="color:var(--text-secondary);">결제금액: {{ number_format($order->total_amount) }}원</div>
+        <div style="color:var(--text-secondary);">
+          청구전략 {{ $_crRate > 0 ? $_crRate.'%' : '해당 없음' }} · 발행 대상 금액 {{ number_format($_crAmt) }}원
+        </div>
       </div>
 
       <div class="form-group">
@@ -1194,15 +1239,17 @@
       </div>
       <div class="form-group">
         <label class="form-label" id="cr_id_label">휴대폰 번호 <span>*</span></label>
+        {{-- 거래처에 적어 둔 값을 그대로 세운다 — 「환자 번호 자동 입력」을 누르지
+             않으면 빈칸이라, 담당자가 번호를 다시 찾아 적고 있었다. --}}
         <input type="text" id="cr_identifier" class="form-control"
-               placeholder="010-0000-0000" data-phone>
+               placeholder="010-0000-0000" data-phone value="{{ $_crId }}">
         <div class="amount-hint" id="cr_id_hint">소득공제: 환자 휴대폰 번호 입력</div>
       </div>
       <div class="form-group">
         <label class="form-label">발행 금액 <span>*</span></label>
         <input type="number" id="cr_amount" class="form-control"
-               placeholder="0" value="{{ $order->total_amount }}">
-        <div class="amount-hint">총 결제금액 기본 적용 (수정 가능)</div>
+               placeholder="0" value="{{ $_crAmt }}">
+        <div class="amount-hint">청구전략이 정한 금액입니다 (수정 가능)</div>
       </div>
 
       {{-- 환자 번호 자동 채우기 --}}
@@ -1313,22 +1360,35 @@ document.getElementById('ti_type')?.addEventListener('change', function() {
   emailGroup.style.display = this.value === 'electronic' ? 'block' : 'none';
 });
 
-async function submitTaxInvoice() {
-  const type    = document.getElementById('ti_type').value;
-  const bizName = document.getElementById('ti_biz_name').value.trim();
-  const bizNo   = document.getElementById('ti_biz_no').value.trim();
-  const email   = document.getElementById('ti_email').value.trim();
-  const supply  = parseInt(document.getElementById('ti_supply').value) || 0;
-  const vat     = parseInt(document.getElementById('ti_vat').value)    || 0;
+/* 개인이면 사업자번호를 묻지 않는다 — 서버가 처방전의 주민등록번호로 발행한다.
+   화면에는 그 번호를 내려보내지 않으므로 여기서 채울 수도 없다. */
+function onTiInvoiceeChange() {
+  const isBiz = document.getElementById('ti_invoicee').value === '사업자';
+  document.getElementById('ti_biz_no_group').style.display = isBiz ? '' : 'none';
+  document.getElementById('ti_biz_name_label').innerHTML   = isBiz ? '사업자명 (공급받는자) <span>*</span>' : '이름 (공급받는자) <span>*</span>';
+}
 
-  if (!bizName) { showToast('사업자명을 입력해주세요.', 'warning'); return; }
-  if (!bizNo)   { showToast('사업자등록번호를 입력해주세요.', 'warning'); return; }
-  if (supply <= 0) { showToast('공급가액을 입력해주세요.', 'warning'); return; }
+async function submitTaxInvoice() {
+  const type     = document.getElementById('ti_type').value;
+  const invoicee = document.getElementById('ti_invoicee').value;
+  const bizName  = document.getElementById('ti_biz_name').value.trim();
+  const ceoName  = document.getElementById('ti_ceo_name').value.trim();
+  const bizNo    = document.getElementById('ti_biz_no').value.trim();
+  const email    = document.getElementById('ti_email').value.trim();
+  const supply   = parseInt(document.getElementById('ti_supply').value) || 0;
+  const vat      = parseInt(document.getElementById('ti_vat').value)    || 0;
+
+  if (!bizName) { showToast(invoicee === '사업자' ? '사업자명을 입력해 주십시오.' : '이름을 입력해 주십시오.', 'warning'); return; }
+  if (!ceoName) { showToast('대표자명을 입력해 주십시오.', 'warning'); return; }
+  if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력해 주십시오.', 'warning'); return; }
+  if (supply <= 0) { showToast('공급가액을 입력해 주십시오.', 'warning'); return; }
 
   const res = await apiRequest(ORDER_URL + '/tax-invoice', 'POST', {
     tax_invoice_type:     type,
+    tax_invoice_invoicee: invoicee,
     tax_invoice_biz_name: bizName,
-    tax_invoice_biz_no:   bizNo,
+    tax_invoice_ceo_name: ceoName,
+    tax_invoice_biz_no:   invoicee === '사업자' ? bizNo : '',
     tax_invoice_email:    email || null,
     tax_invoice_supply:   supply,
     tax_invoice_vat:      vat,
