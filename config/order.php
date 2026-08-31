@@ -30,4 +30,16 @@ return [
     'consent_sms_on_first_save' => (bool) env('ORDER_CONSENT_SMS_ON_FIRST_SAVE', false),
     'consent_sms_hours'         => env('ORDER_CONSENT_SMS_HOURS', '09:00-20:00'),
 
+    /*
+     * 창고가 출고했다고 알려 오면(so.shipped) 환자에게 배송 안내 문자를 보낼 것인가.
+     *
+     * 위드웍스는 배송 완료를 알려 주지 않기로 했으므로 — 택배사 조회 연동이 없어 보낼
+     * 값이 없다 — 배송에 관해 우리가 아는 마지막 시점이 출고다. 여기서 알리지 않으면
+     * 환자는 물건이 언제 오는지 모른 채 담당자에게 전화한다.
+     *
+     * 시간은 가리지 않는다. 웹훅은 창고가 일하는 동안에만 오고, 배송 안내는 위임동의와
+     * 달리 늦게 읽어도 뜻이 그대로다.
+     */
+    'ship_notice_on_shipped' => (bool) env('ORDER_SHIP_NOTICE_ON_SHIPPED', false),
+
 ];

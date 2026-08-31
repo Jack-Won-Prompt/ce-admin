@@ -160,6 +160,14 @@ class WithworksWebhookController extends Controller
         // 배송이 끝나야 청구할 수 있다 — 상태가 움직였으면 준비 여부도 다시 따진다
         $readiness->refresh($order->refresh());
 
+        /* 출고했으면 환자에게 알린다. 위드웍스는 배송 완료를 알려 주지 않으므로, 배송에
+           관해 우리가 아는 마지막 시점이 여기다.
+           보내지 못해도 웹훅은 성공이다 — 알리지 못한 것과 받지 못한 것은 다른 일이다.
+           한 건에 한 번만 나가는 것은 ShipNotice 가 발송 이력으로 가린다. */
+        if ($data['event'] === 'so.shipped') {
+            app(\App\Services\ShipNotice::class)->send($order->refresh());
+        }
+
         $this->announce($data, $order);
 
         return response()->json(['success' => true]);

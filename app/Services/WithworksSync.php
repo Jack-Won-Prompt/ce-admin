@@ -85,8 +85,39 @@ class WithworksSync
      *
      * 콜백이 생기면 그쪽에서도 이 메서드를 부르면 된다.
      */
+    /**
+     * 창고의 출고 상태값(withworks_ship_status).
+     *
+     * 판매주문 상태(withworks_status)와 다른 체계다 — 그쪽은 02 등록ㆍ03 확정ㆍ95 확정ㆍ
+     * 99 취소이고, 이쪽이 출고가 어디까지 왔는지를 말한다. 둘을 섞으면 「95」가 판매
+     * 확정인지 출고완료인지 갈리지 않는다.
+     *
+     * 창고 화면의 고르는 칸에 있는 그대로다(2026-08-31 확인).
+     */
+    public const SHIP_STATUS = [
+        '02' => '신규',              '9'  => '취소',
+        '14' => '부분할당',          '15' => '부분할당/부분피킹',
+        '16' => '부분할당/부분출고', '17' => '할당완료',
+        '51' => '피킹중',            '52' => '부분피킹',
+        '53' => '부분피킹/부분출고', '55' => '피킹완료',
+        '57' => '피킹완료/부분출고', '92' => '부분출고',
+        '93' => '출고확정대기',      '95' => '출고완료',
+        '98' => '오더종결',
+    ];
+
+    /**
+     * 환자에게 「보냈습니다」라고 말해도 되는 상태.
+     *
+     * 부분출고(16ㆍ53ㆍ57ㆍ92)는 넣지 않는다. 나머지가 남아 있는데 발송 안내를 보내면
+     * 환자는 전량이 온 줄 알고 기다리다 다시 묻는다. 오더종결(98)은 넣는다 — 출고완료를
+     * 놓치고 종결만 본 건에서도 알림은 나가야 하고, 두 번 보내는 것은 ShipNotice 가 막는다.
+     */
+    public const SHIPPED = ['95', '98'];
+
     public function apply(Order $order, array $result, bool $full = false): void
     {
+        $shipBefore = (string) $order->withworks_ship_status;
+
         /* 온 것만 덮는다. 웹훅 한 건은 그때 바뀐 것만 담을 수 있어서, 없는 값을 null 로 밀어
            넣으면 확정 알림 하나에 앞서 받은 송장이 지워진다. 「값이 없다」와 「이번에 안
            왔다」는 다르다.
@@ -134,6 +165,17 @@ class WithworksSync
         }
 
         $order->update($update);
+
+        /* 출고로 막 바뀌었으면 환자에게 알린다.
+
+           웹훅(so.shipped)에서도 부르지만 여기에도 둔다 — 웹훅이 몇 번 실패한 건은 10분마다
+           도는 훑기가 상태를 맞추는데, 알림이 웹훅에만 있으면 그 건은 문자도 빠진다.
+           두 번 나가는 것은 ShipNotice 가 발송 이력으로 막는다. */
+        $shipAfter = (string) $order->refresh()->withworks_ship_status;
+
+        if ($shipAfter !== $shipBefore && in_array($shipAfter, self::SHIPPED, true)) {
+            app(ShipNotice::class)->send($order);
+        }
     }
 
     /** 칸에 들어갈 만큼만 남긴다 */
