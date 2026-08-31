@@ -322,6 +322,11 @@ class WithworksWebhookController extends Controller
             . ($return->order?->patient?->name ? ' · ' . $return->order->patient->name : '');
 
         $this->tell('창고 — ' . $what, $body, route('order-returns.show', $return), $tone, $data['event']);
+
+        /* 절차서의 「접수자에게 inform」 — 알람과 채팅을 함께 보낸다(2026-08-31 회신).
+           위의 토스트는 보고 있을 때만 눈에 들고, 자리를 비운 사이에 지나간 것은 아무
+           데도 남지 않는다. 채팅에 남겨야 돌아와서 볼 수 있다. */
+        app(\App\Services\ReturnNotice::class)->tellTaker($return, $what);
     }
 
     /**

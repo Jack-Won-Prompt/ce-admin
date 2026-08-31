@@ -193,7 +193,9 @@ class ChatController extends Controller
             'id'              => $m->id,
             'user_id'         => $m->user_id,
             'screen_name'     => $deleted ? null : $this->resolveSenderScreenName($room, $m),
-            'user_name'       => $m->user?->name ?? 'CE샵 고객',
+            /* 보낸 사람이 없는 메시지는 둘 중 하나다 — CE샵 손님이 남긴 것이거나,
+               우리가 남긴 알림이거나. 방을 보면 갈린다. */
+            'user_name'       => $m->user?->name ?? ($room->shop_user_name ? 'CE샵 고객' : '알림'),
             'body'            => $deleted ? null : $this->stripScreenTag($m->body),
             'attachment_path' => $deleted ? null : $m->attachment_path,
             'attachment_name' => $deleted ? null : $m->attachment_name,

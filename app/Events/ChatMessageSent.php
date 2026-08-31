@@ -37,7 +37,8 @@ class ChatMessageSent implements ShouldBroadcastNow
             'id'              => $msg->id,
             'room_id'         => $msg->chat_room_id,
             'user_id'         => $msg->user_id,
-            'user_name'       => $msg->user->name,
+            // 사람이 보내지 않은 알림도 있다(창고 알림) — 이름이 없으면 그렇게 부른다
+            'user_name'       => $msg->user?->name ?? '알림',
             'screen_name'     => $this->resolveSenderScreenName(),
             'body'            => $this->stripScreenTag($msg->body),
             'attachment_path' => $msg->attachment_path,
