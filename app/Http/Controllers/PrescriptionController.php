@@ -3040,6 +3040,35 @@ HTML;
     }
 
     /**
+     * 처방전에 사람을 이어 준다.
+     *
+     * 거래처 만들기 탭이 쓴다 — 처방전을 보며 거래처를 만들고, 만든 그 사람을 곧바로
+     * 이 처방전에 적는다. 잇지 않으면 처방전은 여전히 떠 있고 다음에 또 같은 것을
+     * 만나게 된다.
+     *
+     * 이미 이어진 건은 건드리지 않는다. 두 사람이 같은 처방전을 동시에 잡았을 때
+     * 나중 사람이 앞사람의 것을 덮어쓰면 안 된다.
+     */
+    public function linkPatient(Request $request, Prescription $prescription): JsonResponse
+    {
+        $data = $request->validate(['patient_id' => 'required|exists:patients,id']);
+
+        if ($prescription->patient_id) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 다른 거래처가 이어져 있습니다.',
+            ], 409);
+        }
+
+        $prescription->forceFill(['patient_id' => $data['patient_id']])->save();
+
+        activity()->causedBy(auth()->user())->performedOn($prescription)
+            ->log("{$prescription->rx_number} 에 거래처를 이었습니다");
+
+        return response()->json(['success' => true, 'message' => '이었습니다.']);
+    }
+
+    /**
      * 위드웍스로 넘길 청구전략 — 저쪽 billing_strategies 표의 id 다.
      *
      * 코드값이 아니라 줄 번호라 서버마다 다르다. 그래서 지금 붙어 있는 곳(test·production)의

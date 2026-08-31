@@ -146,6 +146,36 @@
   .pt-detail-head { display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--border); }
   /* 상세 카드 안 탭바 — 전역 .pnl-tabs 와 같은 규격(h44 · pad 0/16 · gap 16 · 탭 13/500 lh21) */
   .pt-detail .tab-bar { display:flex; gap:16px; border-bottom:1px solid var(--border); padding:0 16px; overflow-x:auto; }
+  /* ── 거래처 만들기 탭 ────────────────────────────────
+     왼쪽에 처방전, 오른쪽에 폼. 보면서 옮겨 적으라고 나란히 둔다.
+     1 : 2 다 — 처방전은 세로로 길고 폼은 두 칸이라 이 비율이 맞다. */
+  /* 명시도를 한 단 올려 둔다 — 전역의 `.ds-grid-card :has(.cg-root)` 가 표를 품은
+     것을 모두 flex 로 만든다. 이 판도 표를 품고 있어 그 규칙에 걸린다. */
+  #pnlNew .rxn-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr);
+                gap:12px; align-items:stretch; padding:12px;
+                height:calc(100vh - 260px); min-height:520px; }
+  @media(max-width:1100px){ #pnlNew .rxn-layout { grid-template-columns:1fr; height:auto; } }
+
+  .rxn-left, .rxn-right { min-width:0; min-height:0; display:flex; flex-direction:column;
+                          border:1px solid var(--border); border-radius:12px;
+                          background:var(--bg-card); overflow:hidden; }
+  /* 목록과 처방전은 한 자리를 돌려 쓴다 — 둘 다 세우면 어느 쪽도 제대로 안 보인다 */
+  .rxn-left > div { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
+  .rxn-head { display:flex; align-items:center; gap:8px; flex:0 0 auto;
+              padding:10px 12px; border-bottom:1px solid var(--border); background:var(--gray-50); }
+  .rxn-title { font-size:13px; font-weight:700; color:var(--text-primary);
+               flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rxn-head .ds-btn { flex-shrink:0; }
+  /* 표가 남는 자리를 다 받고 제 안에서 굴린다 — 판이 함께 구르면 막대가 둘이 된다 */
+  #rxnGrid { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding:12px; }
+  #rxnGrid > .cg-wrap { flex:1 1 auto; min-height:0; }
+  /* 뷰어는 남는 자리를 다 받는다 — 주문 등록에서는 340 으로 못 박혀 있지만
+     여기서는 이 칸이 곧 처방전을 보는 자리다. */
+  #rxnViewer .img-viewer { height:auto; flex:1 1 auto; min-height:0; }
+  #rxnGrid .cg-table tbody tr { cursor:pointer; }
+  /* 폼이 끼워지기 전까지 서 있는 안내 */
+  #rxNewPane > .pnl-empty { margin:auto; }
+
   .pt-detail .tab-btn { height:44px; padding:0 8px; font-size:13px; font-weight:500; line-height:21px; color:var(--text-muted);
     border:none; background:none; cursor:pointer; border-bottom:1px solid transparent; margin-bottom:-1px;
     display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
@@ -309,6 +339,9 @@
       {{-- 상세는 하나다. 이력만 간추린 판과 전체 상세를 따로 두었더니, 열어 보고 나서
            「여기 말고 저기」를 한 번 더 눌러야 했다. 환자 한 사람의 모든 것을 이 탭에서 본다. --}}
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
+      {{-- 밖에서 올라온 처방전 가운데 아직 사람과 이어지지 않은 것을 여기서 등록한다.
+           처방전만 떠 있으면 주문도 청구도 걸 수 없다. --}}
+      <button type="button" id="pnlBtnNew" class="pnl-tab" onclick="pnlShow('new')">거래처 만들기</button>
     </div>
     <div id="pnlList">
       <div id="patientGrid"></div>
@@ -325,6 +358,49 @@
   <iframe id="pfFrame" title="환자 상세"
           style="display:none;width:100%;border:0;vertical-align:top;"></iframe>
 </div>{{-- /#pnlDetail --}}
+
+{{-- ── 거래처 만들기 탭 ────────────────────────────────────
+     밖에서 올라온 처방전 가운데 아직 사람과 이어지지 않은 것을 세운다. 하나를 고르면
+     왼쪽에 그 처방전이 뜨고 오른쪽에 등록 폼이 선다 — 보면서 옮겨 적으라고 나란히 둔다.
+
+     폼은 거래처 등록 창을 그대로 끼워 넣은 것이다(openPatientEditor 의 dock).
+     한 벌 더 만들면 언젠가 두 벌이 갈린다. --}}
+<div id="pnlNew" style="display:none;">
+  <div class="rxn-layout">
+
+    {{-- 왼쪽 1/3 — 목록과 처방전이 한 자리를 돌려 쓴다 --}}
+    <div class="rxn-left">
+      <div id="rxnList">
+        <div class="rxn-head">
+          <span class="rxn-title">거래처가 없는 처방전 <b id="rxnCount">0</b></span>
+          <button type="button" class="ds-btn" onclick="rxnLoad()" title="다시 읽습니다">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+        <div id="rxnGrid"></div>
+      </div>
+
+      {{-- 고른 처방전 — 뷰어는 주문 등록과 같은 부품이다 --}}
+      <div id="rxnViewer" style="display:none;">
+        <div class="rxn-head">
+          <span class="rxn-title" id="rxnPicked">—</span>
+          <button type="button" class="ds-btn" onclick="rxnBackToList()">
+            <i class="fa-solid fa-list"></i> 목록
+          </button>
+        </div>
+        @include('prescriptions._viewer')
+      </div>
+    </div>
+
+    {{-- 오른쪽 2/3 — 등록 폼이 여기 끼워진다 --}}
+    <div class="rxn-right" id="rxNewPane">
+      <div class="pnl-empty" id="rxnEmpty">
+        왼쪽에서 처방전을 <b>고르면</b> 여기에 등록 폼이 섭니다.
+      </div>
+    </div>
+
+  </div>
+</div>{{-- /#pnlNew --}}
 
 {{-- 상담내역 탭은 사람마다 하나씩 만들어 붙인다(pcEnsureTab) — 두 사람을 견주며
      일하는 때가 있어 한 자리를 돌려 쓰면 방금 보던 것이 사라진다. --}}
@@ -562,8 +638,8 @@ document.addEventListener('keydown', (e) => {
 
   // 패널 탭 전환(조회 결과 · 상세 내용 · 상담내역)
   /* 상담내역 탭이 사람마다 생기고 없어지므로 목록은 고정이 아니다 */
-  const PANES = { list: 'pnlList', detail: 'pnlDetail' };
-  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail' };
+  const PANES = { list: 'pnlList', detail: 'pnlDetail', new: 'pnlNew' };
+  const TABS  = { list: 'pnlBtnList', detail: 'pnlBtnDetail', new: 'pnlBtnNew' };
 
   window.pnlShow = function (which) {
     if (!PANES[which]) which = 'list';
@@ -574,6 +650,89 @@ document.addEventListener('keydown', (e) => {
     /* 목록은 화면을 가득 채워야 한 줄이라도 더 보이지만, 상세는 안에 든
        화면만큼만 높으면 된다 — 늘려 두면 그만큼 흰 바닥이 아래에 남는다. */
     document.querySelector('.ds-grid-section')?.classList.toggle('is-fit', which === 'detail');
+
+    // 처음 열 때만 읽는다 — 매번 읽으면 적다 만 폼이 날아간다
+    if (which === 'new' && !rxnGrid) rxnLoad();
+  };
+
+  /* ── 거래처 만들기 ──────────────────────────────────────
+     처방전은 밖에서 올라오는데 그 사람이 거래처로 등록돼 있지 않으면 처방전만 떠 있고
+     주문도 청구도 걸 수 없다. 여기서 처방전을 보며 곧바로 등록한다. */
+  let rxnGrid = null, rxnRows = [];
+
+  window.rxnLoad = async function () {
+    const res = await apiRequest('/patients/unlinked-prescriptions', 'GET');
+    rxnRows = res?.rows ?? [];
+    document.getElementById('rxnCount').textContent = rxnRows.length;
+
+    if (!rxnGrid) {
+      rxnGrid = new wwGrid({
+        el: document.getElementById('rxnGrid'),
+        editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+        footer: { total: true, selected: false, modified: false },
+        columns: [
+          { header: '올라온 날', name: 'uploaded', width: 100, align: 'center', sortable: true },
+          { header: '길',        name: 'source',   width: 50,  align: 'center' },
+          /* 이름은 OCR 이 읽은 것이라 없는 것도 있다. 빈칸으로 둔다 —
+             「이름 없음」이라 적으면 그것이 이름처럼 읽힌다. */
+          { header: '이름',      name: 'name',     width: 90,  sortable: true },
+          { header: '전화번호',  name: 'mobile',   width: 130 },
+          { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+        ],
+        data: rxnRows,
+      });
+
+      document.getElementById('rxnGrid').addEventListener('click', (e) => {
+        const cell = e.target.closest('[data-row-index]');
+        if (!cell) return;
+        rxnPick(rxnGrid.getData()[parseInt(cell.dataset.rowIndex, 10)]);
+      });
+    } else {
+      rxnGrid.setData(rxnRows);
+    }
+  };
+
+  /* 한 건을 고른다 — 왼쪽은 처방전으로 바뀌고 오른쪽에 폼이 선다 */
+  function rxnPick(row) {
+    if (!row) return;
+
+    document.getElementById('rxnList').style.display   = 'none';
+    document.getElementById('rxnViewer').style.display = '';
+    document.getElementById('rxnPicked').textContent   =
+      (row.name || '이름 없음') + ' · ' + row.rx_number;
+
+    /* 볼 것이 없는 건도 있다(그림이 안 올라온 처방전). 그때는 뷰어를 비워 두되
+       폼은 그대로 세운다 — 이름ㆍ연락처만 읽힌 건도 등록할 수 있어야 한다. */
+    if (row.url) showDoc({ url: row.url, isPdf: !!row.is_pdf, name: row.rx_number });
+
+    document.getElementById('rxnEmpty').style.display = 'none';
+    openPatientEditor({
+      dock: '#rxNewPane',
+      prefill: row.prefill,
+      onSaved: ({ id, name }) => {
+        /* 저장한 그대로 둔다(요청). 목록에서만 그 줄을 걷는다 — 이어졌으니 할 일이
+           하나 줄었다는 것이 눈에 보여야 한다. */
+        rxnRows = rxnRows.filter(r => r.id !== row.id);
+        rxnGrid?.setData(rxnRows);
+        document.getElementById('rxnCount').textContent = rxnRows.length;
+        rxnLink(row.id, id, name);
+      },
+    });
+  }
+
+  /* 처방전에 그 사람을 적어 둔다. 실패해도 거래처는 이미 만들어졌으니 그 말만 알린다 —
+     여기서 되돌리면 방금 적은 것이 통째로 사라진다. */
+  async function rxnLink(rxId, patientId, name) {
+    const res = await apiRequest(`/prescriptions/${rxId}/link-patient`, 'PATCH', { patient_id: patientId });
+    showToast(res?.success
+      ? `${name} 님을 등록하고 이 처방전에 이었습니다.`
+      : `${name} 님은 등록했지만 처방전에 잇지 못했습니다 — 주문 등록에서 이어 주십시오.`,
+      res?.success ? 'success' : 'warning');
+  }
+
+  window.rxnBackToList = function () {
+    document.getElementById('rxnViewer').style.display = 'none';
+    document.getElementById('rxnList').style.display   = '';
   };
 
   /* 상세를 옆 탭에 들여온다. 다른 화면으로 건너가면 어떤 조건으로 찾고 있었는지가
