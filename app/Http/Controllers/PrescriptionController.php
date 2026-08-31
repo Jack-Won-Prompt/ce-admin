@@ -1178,6 +1178,22 @@ class PrescriptionController extends Controller
             // 개인정보 동의도 사람에게 묶어 읽는다 — 다른 사람을 고르면 그 사람 것으로 다시 그린다
             'privacy'         => \App\Models\PrivacyConsent::stateFor(
                                      $patient->id, $patient->bare_name, $patient->mobile),
+
+            /* 거래처 수정 창이 채워 넣을 값 — 사람의 칸 이름 그대로다.
+
+               fill 을 쓰면 안 된다. 그것은 이 화면의 칸(f-…)에 비추려고 고른 것이라
+               사업부ㆍ성별ㆍFaxㆍ연락 상태ㆍ송금자명ㆍ메모가 빠져 있다. 빠진 채로
+               창을 채우고 저장하면 그 칸들이 빈 값으로 덮여 지워진다. */
+            'account'         => $patient->only([
+                'name', 'care_type', 'resident_no', 'birth_date', 'gender',
+                'mobile', 'phone', 'email', 'fax', 'sb_sci',
+                'postcode', 'address', 'address_detail', 'note',
+                'contact_status', 'contact_channel', 'remitter_name',
+                'deduction', 'cash_receipt_no',
+                'nhis_reg_status', 'nhis_reg_date', 'nhis_renew', 'nhis_renew_due',
+                'nhis_agree_start', 'nhis_agree_end',
+                'basic_reeval', 'basic_reeval_due',
+            ]) + ['resident_no' => $patient->resident_no],
         ]);
     }
 

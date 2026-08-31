@@ -2399,6 +2399,13 @@ $calcDeposit  = $calcCopay + $calcShipping;
                          여기서 그대로 간다 — 같은 이름이라고 저장 자체를 막지는 않는다. --}}
                     <button type="button" class="ds-btn" id="pkNewPerson" style="display:none;"
                             onclick="pkSaveAsNew()">신규 저장</button>
+                    {{-- 찾지 못했을 때만 선다. 없는 사람을 찾고 나면 다음 걸음은 언제나
+                         「그럼 새로 적자」다 — 거래처 관리로 건너가서 다시 찾게 하지 않는다.
+                         친 이름은 그대로 들고 간다. --}}
+                    <button type="button" class="ds-btn" id="pkNewAccount" style="display:none;"
+                            onclick="pkNewAccount()">
+                      <i class="fa-solid fa-user-plus"></i> 신규 등록
+                    </button>
                     <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
                   </div>
@@ -3573,6 +3580,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
 {{-- 상담 창 — 거래처 관리와 같은 창이다(partials/counsel-window) --}}
 @include('partials.counsel-window')
+
+{{-- 거래처 등록ㆍ수정 창 — 처방전을 보면서 고칠 수 있게 화면 탭이 아니라 창으로 연다 --}}
+@include('patients._editor-modal')
 
 @endsection
 
@@ -5236,6 +5246,11 @@ window.HELP_TOUR_STEPS = [
                                  birth: p.birth || '', rn: p.rn || '' }));
     document.getElementById('pkNote').textContent =
       rows.length ? `${rows.length}명` : '찾은 사람이 없습니다.';
+
+    /* 없는 사람이면 다음 걸음은 새로 적는 일이다. 찾았으면 숨긴다 —
+       고를 것이 눈앞에 있는데 새로 적으라고 권하면 같은 사람이 둘로 갈라진다. */
+    const nb = document.getElementById('pkNewAccount');
+    if (nb) nb.style.display = rows.length ? 'none' : '';
 
     if (!pkGrid) {
       pkGrid = new wwGrid({
@@ -7102,10 +7117,57 @@ window.HELP_TOUR_STEPS = [
   }
 
   /** 거래처관리로 간다 — 이어진 사람이 있으면 그 사람 화면으로, 없으면 목록으로 */
+  /* 거래처를 고치는 자리 — 창으로 연다.
+     전에는 거래처 관리를 화면 탭으로 열었는데, 처방전을 보면서 고쳐야 하는 일이라
+     탭을 오가며 적게 됐다. 방금 읽은 값을 외워 옮기는 셈이라 틀리기 쉬웠다.
+     창이면 처방전이 뒤에 그대로 남는다. 고치고 나면 이 화면의 거래처 칸도 따라 바뀐다. */
   window.goPatientMaster = function () {
     const pid = document.getElementById('f-patient-id')?.value;
-    const url = pid ? `{{ url('patients') }}/${pid}` : `{{ url('patients') }}`;
-    ceOpenTab(url, pid ? '거래처 관리 - 상세' : '거래처 관리', 'user-multiple');
+
+    if (!pid) {
+      /* 아직 사람이 이어지지 않은 건이다. 고칠 것이 없으니 새로 적는 창을 연다 —
+         처방전에서 읽은 값을 들고 간다. */
+      pkNewAccount();
+      return;
+    }
+
+    openPatientEditor({
+      id: pid,
+      onSaved: ({ name }) => rxReloadPatient(pid, name),
+    });
+  };
+
+  /* 이름 조회에서 못 찾았을 때 — 그대로 새로 적는다.
+     처방전에서 읽어 둔 것을 미리 채워 준다. OCR 이 읽은 이름ㆍ주민번호ㆍ연락처를
+     사람이 다시 치게 하면, 보고 있는 것을 옮겨 적다가 틀린다. */
+  window.pkNewAccount = function () {
+    const v = (id) => (document.getElementById(id)?.value ?? '').trim();
+    const 친것 = (document.getElementById('pkQ')?.value ?? '').trim();
+
+    pkClose();
+    openPatientEditor({
+      prefill: {
+        // 창에서 친 말이 이름 같으면 그것을 쓴다 — 숫자만 쳤으면 이름이 아니다
+        name:        /[0-9]/.test(친것) ? v('f-name') : (친것 || v('f-name')),
+        resident_no: v('f-resident'),
+        birth_date:  v('f-birth'),
+        mobile:      v('f-mobile'),
+        phone:       v('f-mobile2'),
+        postcode:    v('f-postcode'),
+        address:     v('f-address'),
+        address_detail: v('f-address-detail'),
+      },
+      onSaved: ({ id, name }) => {
+        /* 새로 적은 사람을 이 건에 이어 준다 — 창을 닫고 다시 조회하게 두면
+           방금 만든 사람을 또 찾아야 한다. */
+        const idEl = document.getElementById('f-patient-id');
+        if (idEl) idEl.value = id;
+        const nameEl = document.getElementById('f-name');
+        if (nameEl) nameEl.value = name;
+        rxReloadPatient(id, name);
+        showToast(`${name} 님을 이 건에 이었습니다.`, 'success');
+      },
+    });
   };
 
   /* 거기서 고치면 여기가 따라 바뀐다.
