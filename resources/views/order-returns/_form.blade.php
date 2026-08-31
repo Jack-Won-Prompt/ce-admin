@@ -190,6 +190,10 @@
 <script>
 (function () {
   const SEARCH_URL  = @json(route('order-returns.orderSearch'));
+
+  /* 없을 때 그냥 「없다」고만 하면 검색이 고장 난 줄 안다 — 창고에 선 건만 고를 수
+     있다는 것을 그 자리에서 알려 준다. */
+  const NONE_NOTE = '창고에 전달된 주문이 없습니다 — 교환ㆍ반품ㆍ취소는 창고에 넘긴 건만 접수합니다';
   /* 갈래별 단계·승인자는 모델이 정한다. 화면에 두 벌로 적으면 한쪽만 고쳐진다. */
   const FLOWS = @json(collect(\App\Models\OrderReturn::FLOWS)->map(
       fn ($f) => collect($f)->map(fn ($s) => \App\Models\OrderReturn::STATUS_LABELS[$s])->all()));
@@ -277,7 +281,7 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = (await res.json()).rows ?? [];
       picked = null;
-      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : NONE_NOTE;
 
       /* 몇 건이 나오든 창을 띄운다. 한 건일 때만 조용히 앉히면 눌렀는데 아무 창도
          안 뜬 것처럼 보이고, 무엇이 골라졌는지 확인할 자리도 없다.
@@ -305,7 +309,7 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = (await res.json()).rows ?? [];
       picked = null;
-      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : '맞는 주문이 없습니다';
+      $('rtoFindNote').textContent = rows.length ? rows.length + '건' : NONE_NOTE;
 
       const only = rows.findIndex(r => r.order_no === orderNo);
       if (only >= 0)            pick(only);
