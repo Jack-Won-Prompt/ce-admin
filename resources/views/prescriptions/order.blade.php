@@ -1524,10 +1524,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <div>
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">결제 방법</div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="payMethods">
-                @foreach(\App\Models\PaymentLink::METHODS as $code => $label)
+                {{-- 고를 수 있는 것만 세운다. 가상계좌는 발급 단추를 화면에서 걷은 뒤로
+                     담당자가 해 줄 수 없는데, 고르면 환자에게는 그렇게 약속이 나갔다. --}}
+                @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
                   @php
-                    $hint = ['card' => '결제 페이지에서 카드로 냅니다',
-                             'virtual' => '결제 페이지에서 가상계좌를 발급받습니다',
+                    $hint = ['card' => '결제 페이지 주소를 보내면 고객이 거기서 카드로 냅니다',
                              'bank' => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code];
                   @endphp
                   <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">

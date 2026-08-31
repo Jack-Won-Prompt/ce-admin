@@ -387,11 +387,9 @@ class PrescriptionController extends Controller
             return ['sent' => false, 'method' => $method, 'message' => '결제 안내 발송 실패: ' . $e->getMessage()];
         }
 
-        /* 화면에 적는 이름. 결제전송 팝오버는 「카드결제」라 부르지만, 주문 확정 안내에서
-           담당자가 쓰는 말은 「링크페이」다 — 설정 화면의 이름과 같아야 헷갈리지 않는다. */
-        $label = $method === \App\Models\PaymentLink::METHOD_CARD
-            ? '링크페이'
-            : (\App\Models\PaymentLink::METHODS[$method] ?? $method);
+        /* 화면에 적는 이름. 예전에는 결제전송 팝오버만 「카드결제」라 불러 여기서 따로
+           「링크페이」로 바꿔 적었는데, 이제 이름표가 한 가지라 그대로 쓴다. */
+        $label = \App\Models\PaymentLink::METHODS[$method] ?? $method;
 
         if ($res['sent'] ?? false) {
             activity()->causedBy(Auth::user())->performedOn($prescription)
