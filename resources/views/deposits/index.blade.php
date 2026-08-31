@@ -92,12 +92,12 @@
 <div id="splitModal" class="modal" style="display:none;">
   <div class="modal-dialog" style="max-width:820px;">
     <div class="modal-header">
-      <span class="modal-title">입금 나누기</span>
+      <span class="modal-title">환자별 분리</span>
       <button type="button" class="modal-close" onclick="spClose()">&times;</button>
     </div>
     <div class="modal-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">
-        지자체가 여러 환자 건을 통으로 보낸 입금입니다. 환자별로 나눠 적으면 각 주문에 걸립니다.
+        지자체가 여러 환자 건을 통으로 보낸 입금입니다. 환자별로 갈라 적으면 각 주문에 걸립니다.
         원본 줄은 통장이 준 그대로 남습니다.
       </div>
       <div class="sp-row sp-head">
@@ -109,7 +109,7 @@
       </button>
       <div class="sp-sum">
         <span>입금액 <b id="spTotal">0</b>원</span>
-        <span>나눈 합 <b id="spSum">0</b>원 · 남은 금액 <b id="spLeft">0</b>원</span>
+        <span>분리 합계 <b id="spSum">0</b>원 · 미분리 금액 <b id="spLeft">0</b>원</span>
       </div>
     </div>
     <div class="modal-footer">
@@ -149,18 +149,19 @@
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
       { header: '이름',       name: 'patient',   width: 90,  sortable: true },
       {
-        /* 맞추기 — 주문번호를 적으면 그 자리에서 걸린다. 상세로 들어갔다 나오는
-           걸음을 없앤다. 비우고 저장하면 맺음이 풀린다. */
-        header: '맞추기', name: 'match', width: 150, sortable: false, exportable: false,
+        /* 이 입금이 어느 주문의 돈인지 잇는다. 주문번호를 적으면 그 자리에서 걸리고,
+           비우고 저장하면 풀린다 — 상세로 들어갔다 나오는 걸음을 없앤다. */
+        header: '주문 연결', name: 'match', width: 150, sortable: false, exportable: false,
         renderer: (v, row) => matchCell(row),
       },
       {
-        // 통으로 온 입금을 환자별로 나눈다(요청서 5쪽)
-        header: '나누기', name: 'split_n', width: 120, align: 'center', sortable: true,
+        /* 통으로 온 입금을 환자별로 가른다. 요청서 5쪽이 쓴 말이 「분리」다 —
+           「나누기」는 우리끼리 쓰던 말이라 화면에 두지 않는다. */
+        header: '환자별 분리', name: 'split_n', width: 120, align: 'center', sortable: true,
         renderer: (v, row) => splitCell(row),
       },
-      { header: '나눈 합',    name: 'split_sum',  width: 100, align: 'right', renderer: money },
-      { header: '남은 금액',  name: 'split_left', width: 100, align: 'right', renderer: money },
+      { header: '분리 합계',   name: 'split_sum',  width: 100, align: 'right', renderer: money },
+      { header: '미분리 금액', name: 'split_left', width: 110, align: 'right', renderer: money },
       { header: '거래후 잔액', name: 'balance',   width: 110, align: 'right', renderer: money },
       { header: '콜로 모 계좌', name: 'acct',     width: 140 },
       { header: '입금 번호',  name: 'deposit_no', width: 150 },
@@ -178,7 +179,7 @@
   window.__depositGrid = grid;
   window.dsBindSelCount?.(grid, 'depSelCount');
 
-  /* ── 맞추기 ────────────────────────────────────────── */
+  /* ── 주문 연결 ─────────────────────────────────────── */
   function matchCell(row) {
     const box = document.createElement('div');
     box.style.cssText = 'display:flex;gap:4px;align-items:center;';
@@ -194,7 +195,7 @@
     btn.type = 'button';
     btn.className = 'ds-btn';
     btn.style.cssText = 'height:26px;padding:0 8px;font-size:11px;flex-shrink:0;';
-    btn.textContent = '맞춤';
+    btn.textContent = '연결';
     btn.onclick = () => save(row.id, inp.value.trim());
 
     box.append(inp, btn);
@@ -211,7 +212,7 @@
                                kind: TAB === 'agency' ? 'agency' : 'copay' }),
       });
       const d = await res.json();
-      showToast(d.message || (d.success ? '맞췄습니다.' : '맞추지 못했습니다.'),
+      showToast(d.message || (d.success ? '이었습니다.' : '잇지 못했습니다.'),
                 d.success ? 'success' : 'danger');
       if (d.success) setTimeout(() => location.reload(), 600);
     } catch (e) {
@@ -219,7 +220,7 @@
     }
   }
 
-  /* ── 나누기 ────────────────────────────────────────── */
+  /* ── 환자별 분리 ───────────────────────────────────── */
   let spId = null, spAmount = 0;
 
   function splitCell(row) {
@@ -227,11 +228,11 @@
     btn.type = 'button';
     btn.className = 'ds-btn';
     btn.style.cssText = 'height:26px;padding:0 8px;font-size:11px;';
-    btn.textContent = row.split_n ? `${row.split_n}건 나눔` : '나누기';
+    btn.textContent = row.split_n ? `${row.split_n}건 분리` : '분리';
     if (row.split_left && Number(row.split_left) !== 0) {
       btn.style.color = 'var(--danger)';
       btn.style.fontWeight = '700';
-      btn.title = '나눈 합이 입금액과 맞지 않습니다';
+      btn.title = '분리 합계가 입금액과 맞지 않습니다';
     }
     btn.onclick = () => spOpen(row.id, Number(row.amount || 0));
     return btn;
@@ -278,8 +279,8 @@
     spRecalc();
   };
 
-  /* 남은 금액이 0 이 아니면 아직 다 나누지 못한 것이다 — 저장은 막지 않는다.
-     한 번에 다 못 나누는 날이 있고, 그때 적어 둔 것까지 잃으면 처음부터 다시 한다. */
+  /* 미분리 금액이 0 이 아니면 아직 다 가르지 못한 것이다 — 저장은 막지 않는다.
+     한 번에 다 못 가르는 날이 있고, 그때 적어 둔 것까지 잃으면 처음부터 다시 한다. */
   function spRecalc() {
     let sum = 0;
     document.querySelectorAll('#splitRows .sp-amt').forEach(el => { sum += Number(el.value || 0); });
@@ -306,7 +307,7 @@
         body: JSON.stringify({ rows }),
       });
       const d = await res.json();
-      showToast(d.message || (d.success ? '나눴습니다.' : '나누지 못했습니다.'),
+      showToast(d.message || (d.success ? '분리했습니다.' : '분리하지 못했습니다.'),
                 d.success ? 'success' : 'danger');
       if (d.success) { spClose(); setTimeout(() => location.reload(), 600); }
     } catch (e) {

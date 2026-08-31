@@ -98,8 +98,8 @@ class DepositController extends Controller
                 // 나눠 적은 몫 — 기관이 통으로 보낸 건이 여기서 갈린다
                 'split_n'   => $t->splits->count() ?: '',
                 'split_sum' => $t->splits->count() ? (int) $t->split_total : '',
-                /* 나눈 합이 원금과 어긋나면 아직 다 나누지 못한 것이다. 눈에 띄어야
-                   마감 전에 맞춘다. */
+                /* 분리 합계가 원금과 어긋나면 아직 다 가르지 못한 것이다. 눈에 띄어야
+                   마감 전에 채운다. */
                 'split_left' => $t->splits->count() ? (int) $t->amount_in - (int) $t->split_total : '',
 
                 // 네 화면이 함께 쓰는 칸 — 주문이 붙은 줄에만 값이 선다
@@ -172,7 +172,7 @@ class DepositController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $order ? "{$order->order_number} 에 맞췄습니다." : '맺음을 풀었습니다.',
+            'message' => $order ? "{$order->order_number} 에 이었습니다." : '연결을 풀었습니다.',
         ]);
     }
 
@@ -199,7 +199,7 @@ class DepositController extends Controller
         if ($sum > (int) $deposit->amount_in) {
             return response()->json([
                 'success' => false,
-                'message' => '나눈 몫의 합('.number_format($sum).'원)이 입금액을 넘습니다.',
+                'message' => '분리 합계('.number_format($sum).'원)가 입금액을 넘습니다.',
             ], 422);
         }
 
@@ -236,7 +236,7 @@ class DepositController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => count($data['rows']) . '건으로 나눴습니다.'
+            'message' => count($data['rows']) . '건으로 분리했습니다.'
                 . ($left > 0 ? ' 남은 금액 ' . number_format($left) . '원.' : ''),
         ]);
     }

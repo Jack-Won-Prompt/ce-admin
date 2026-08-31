@@ -618,7 +618,12 @@
          다른 화면도 쓰므로 건드리지 않고 이 규칙만 옮긴다. */
       color: var(--gray-600);
       border-bottom: 1px solid transparent; margin-bottom: -1px;
+      /* 탭을 <a> 로 세우는 화면이 있다(입금 내역 — 눌러 옮기는 것이 주소이므로).
+         그때 링크 밑줄이 붙는데, 그 줄은 활성 탭의 아래 선과 겹쳐 보여 어느 것이
+         걸린 탭인지 갈리지 않는다. 규격에 없는 줄이라 지운다. */
+      text-decoration: none;
     }
+    .pnl-tab:hover { text-decoration: none; }
     /* 탭 이름 뒤 괄호 안의 건수 — 탭은 gap 6 의 flex 라 그대로 두면
        「조회 결과 ( 23 )」처럼 띄어서 보인다. 그 한 칸만 되돌린다. */
     .pnl-tab-cnt, .titab .pnl-tab-cnt { margin-left: -6px; }
