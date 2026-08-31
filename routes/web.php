@@ -149,6 +149,17 @@ Route::middleware(['auth'])->group(function () {
     // 재구매 관리
     /* 교환·반품·취소 — 주문을 무르거나 바꾸는 일. 지금까지는 주문 상태만 cancelled 로
        바뀌고 왜·무엇이 오갔는지는 남지 않았다. */
+    /* 입금 내역 — 통장에 무엇이 들어왔는가(요청서 5쪽). 정산/회계와 따로 둔다.
+       그쪽은 「얼마를 받아야 하는가」이고 이쪽은 「무엇이 들어왔는가」다. */
+    Route::prefix('deposits')->name('deposits.')->group(function () {
+        Route::get('/',                     [\App\Http\Controllers\DepositController::class, 'index'])->name('index');
+        // 서른 분마다 저절로 돌지만, 방금 들어온 돈은 곧바로 봐야 할 때가 있다
+        Route::post('/pull',                [\App\Http\Controllers\DepositController::class, 'pull'])->name('pull');
+        Route::patch('/{deposit}/match',    [\App\Http\Controllers\DepositController::class, 'match'])->name('match');
+        Route::get('/{deposit}/splits',     [\App\Http\Controllers\DepositController::class, 'splits'])->name('splits');
+        Route::post('/{deposit}/split',     [\App\Http\Controllers\DepositController::class, 'split'])->name('split');
+    });
+
     Route::prefix('order-returns')->name('order-returns.')->group(function () {
         Route::get('/',                [\App\Http\Controllers\OrderReturnController::class, 'index'])->name('index');
         Route::get('/create',          [\App\Http\Controllers\OrderReturnController::class, 'create'])->name('create');

@@ -26,3 +26,10 @@ Schedule::command('withworks:sync')->everyTenMinutes()->withoutOverlapping();
 /* 청구 준비 여부는 발행·배송 때마다 그 자리에서 다시 따지지만, 주문을 건드리지 않는
    변화(위임 등록일이 환자 쪽에서 바뀌는 것 같은)가 있어 주기적으로 다시 본다. */
 Schedule::command('claim:refresh')->hourly()->withoutOverlapping();
+
+/* 통장에 무엇이 들어왔는지 서른 분마다 긁는다(요청서 5쪽 · 2026-08-31 회신).
+
+   화면에서 「지금 가져오기」로 곧바로 받을 수 있지만, 눌러 주는 사람이 없어도 맞춰지는
+   그물이 있어야 한다 — 무통장으로 들어온 돈과 기관 환급은 아무도 알려 주지 않는다.
+   기다리지 않는다. 팝빌이 아직 모으는 중이면 다음 차례가 같은 기간을 다시 읽는다. */
+Schedule::command('bank:sync')->everyThirtyMinutes()->withoutOverlapping();

@@ -1514,12 +1514,30 @@
         @endif
 
         {{-- ══ 청구 · 회계 ══ --}}
-        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill'))
+        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
+        {{-- 통장에 무엇이 들어왔는가(요청서 5쪽). 정산/회계와 따로 둔다 —
+             그쪽은 「얼마를 받아야 하는가」이고 이쪽은 「무엇이 들어왔는가」다. --}}
+        @if($vis('deposits'))
+        <div class="menu-item {{ request()->routeIs('deposits*') ? 'active' : '' }}">
+          {{-- 아이콘은 아직 「입금」 그림이 없다. 돈이 오가는 그림 가운데 안 쓰는 것을
+               빌린다 — 없는 이름을 부르면 점선 네모가 선다(DsIcon). --}}
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('deposits.index') }}" data-title="입금 내역">
+            @dsicon('coin-hand', 'ds-icon menu-icon')
+            <span>입금 내역</span>
+            @php
+              try {
+                $unmatched = \App\Models\BankTransaction::where('amount_in', '>', 0)->unmatched()->count();
+              } catch (\Throwable $e) { $unmatched = 0; }
+            @endphp
+            @if($unmatched > 0)<span class="menu-badge">{{ $unmatched }}</span>@endif
+          </a>
+        </div>
+        @endif
         @if($vis('settlement'))
         <div class="menu-item {{ request()->routeIs('settlement*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="calculator" href="{{ route('settlement.index') }}" data-title="정산/회계">
