@@ -277,9 +277,9 @@
     columns: [
       { header: '샘플번호',   name: 'sample_no', width: 150, sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
-      { header: '고객',       name: 'customer',  width: 110, sortable: true },
+      { header: '이름',       name: 'customer',  width: 110, sortable: true },
       { header: '받는 사람',  name: 'recipient', width: 100 },
-      { header: '연락처',     name: 'mobile',    width: 120 },
+      { header: '전화번호1',  name: 'mobile',    width: 120 },
       { header: '배송지',     name: 'address',   width: 220 },
       { header: '수량',       name: 'qty',       width: 70,  align: 'right', editor: 'number' },
       /* 금액은 공통 칸의 「총 금액」이 세운다 — 같은 값을 두 이름으로 두지 않는다 */

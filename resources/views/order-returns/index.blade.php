@@ -157,7 +157,7 @@
       },
       { header: '이름',   name: 'patient',  width: 90 },
       { header: '사유',     name: 'reason',   width: 100 },
-      { header: '배송비',   name: 'burden',   width: 100, align: 'center' },
+      { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
       { header: '접수일',   name: 'created',  width: 100, sortable: true },

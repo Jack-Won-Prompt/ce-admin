@@ -9617,7 +9617,7 @@ window.HELP_TOUR_STEPS = [
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
-        { header: '환자',      name: 'patient',   width: 90,  sortable: true },
+        { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
            「이건 아직 아무도 맡지 않았다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
         { header: '담당자',    name: 'manager',   width: 90,  sortable: true,
