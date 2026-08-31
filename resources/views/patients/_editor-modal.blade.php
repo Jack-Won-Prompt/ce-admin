@@ -276,6 +276,11 @@
 @push('scripts')
 <script>
 (function () {
+  /* 고칠 값을 읽어 오는 자리. 주소를 손으로 적었더니 /patients/115/detail 로 나가
+     404 가 났다 — 이 길은 처방 쪽에 걸려 있어 prescriptions/patients/{id}/detail 이다.
+     route() 로 짓게 두면 길이 옮겨져도 따라간다. */
+  const PE_DETAIL_URL = @json(route('prescriptions.patientDetail', ['patient' => '__ID__']));
+
   /* 지금 무엇을 하고 있는가 — 등록인가 수정인가, 누구를, 끝나면 무엇을 할 것인가.
      창은 하나뿐이라 이 셋만 갈아 끼우면 두 가지 일을 다 한다. */
   let _peMode = 'create', _peId = null, _peDone = null;
@@ -343,7 +348,7 @@
     if (_peMode === 'edit') {
       /* 고칠 것을 먼저 읽어 채운다. 빈 창을 띄우고 나중에 채우면, 그 사이에 사람이
          손을 대기 시작해 방금 친 것이 서버 값으로 덮인다. */
-      const res = await apiRequest(`/patients/${_peId}/detail`, 'GET');
+      const res = await apiRequest(PE_DETAIL_URL.replace('__ID__', _peId), 'GET');
       if (!res?.account) { showToast('거래처를 불러오지 못했습니다.', 'danger'); return; }
       peFill(res.account);
 
