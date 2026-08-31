@@ -5850,6 +5850,10 @@ window.HELP_TOUR_STEPS = [
      여기에 비율을 다시 적으면 언젠가 두 곳이 어긋난다. */
   const BILLING_STRATEGY = @json(\App\Support\BillingStrategy::table());
 
+  /* 원내(30)도 원외(10)와 같은 줄이다 — 서버의 BillingStrategy::key 와 같게 모은다.
+     이미 30 으로 적힌 건이 있어, 모으지 않으면 그 건만 전략 배지가 빈다. */
+  const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? (t === '30' ? '10' : t) + '|' + c : '');
+
   /* 청구전략을 보이는 자리는 이제 주문 정보 카드 머리의 배지 하나다.
      상자를 걷었으므로 여기서 그 상자를 찾지 않는다 — 찾아서 없으면 돌아서던 코드라,
      그대로 두었으면 배지까지 함께 서지 않았을 자리다. */
@@ -5860,7 +5864,7 @@ window.HELP_TOUR_STEPS = [
     const type = document.getElementById('f-acc-add-type')?.value ?? '';
     const cls  = document.getElementById('f-benefit-class')?.value ?? '';
     // 처방외는 자격을 보지 않는다 — 처방이 아니니 전액 본인이 낸다
-    const key  = type === '20' ? '20|' : (type && cls ? type + '|' + cls : null);
+    const key  = _bsKey(type, cls) || null;
     const r    = key ? BILLING_STRATEGY[key] : null;
 
     /* 안 골랐다고 감추지 않는다(요청서 16쪽). 감춰 두었더니 「보이던 것이 사라졌다」로
@@ -5883,7 +5887,6 @@ window.HELP_TOUR_STEPS = [
      따로 저장되는 값이 아니라 그 두 칸의 짝을 부르는 이름이라, 여기서는 읽기만 한다.
      예전에는 주문 제품 탭에 그 둘을 비추는 거울 칸과 전략 고르개를 함께 두었는데,
      같은 것을 세 자리에서 보이고 세 자리에서 고칠 수 있어 어디가 정본인지 흐렸다. */
-  const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? t + '|' + c : '');
 
   /** 지금 고른 청구전략 — 없으면 null */
   function bsCurrent() {

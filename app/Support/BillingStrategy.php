@@ -18,7 +18,18 @@ class BillingStrategy
     /** 유형 코드 — 화면의 「유형」 select 와 같다 */
     public const TYPE_OUT   = '10';   // 처방전-원외
     public const TYPE_NONRX = '20';   // 처방외
-    public const TYPE_IN    = '30';   // 처방전-원내
+
+    /**
+     * 처방전-원내. 청구전략에서는 원외와 가르지 않는다.
+     *
+     * 부담 비율도 발행 방식도 둘이 한 글자도 다르지 않아, 열한 줄 가운데 다섯 쌍이
+     * 열쇠쇠만 다른 같은 줄이었다. 표를 둘로 두면 한쪽만 고치는 날이 온다.
+     * 원내냐 원외냐는 옆의 「유형」 칸이 따로 말한다.
+     *
+     * 이미 30 으로 적힌 건이 있어 코드 자체는 남긴다 — key() 가 10 으로 모아
+     * 같은 줄을 가리키게 한다.
+     */
+    public const TYPE_IN    = '30';
 
     /**
      * 유형ㆍ자격으로 청구전략을 읽는다.
@@ -79,6 +90,11 @@ class BillingStrategy
             return self::TYPE_NONRX . '|';
         }
 
+        // 원내도 원외와 같은 줄이다 — 열쇠를 하나로 모은다
+        if ($t === self::TYPE_IN) {
+            $t = self::TYPE_OUT;
+        }
+
         return ($t !== '' && (string) $benefitClass !== '') ? $t . '|' . $benefitClass : null;
     }
 
@@ -108,10 +124,8 @@ class BillingStrategy
     public static function table(): array
     {
         $out = [];
-        foreach ([self::TYPE_IN, self::TYPE_OUT] as $t) {
-            foreach (self::CLASSES as $b) {
-                $out["{$t}|{$b}"] = self::resolve($t, $b);
-            }
+        foreach (self::CLASSES as $b) {
+            $out[self::TYPE_OUT . "|{$b}"] = self::resolve(self::TYPE_OUT, $b);
         }
         $out[self::TYPE_NONRX . '|'] = self::resolve(self::TYPE_NONRX, null);
 
