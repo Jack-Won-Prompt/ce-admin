@@ -6864,7 +6864,10 @@ window.HELP_TOUR_STEPS = [
       id: pid,
       // 처방전 액자는 덮지 않는다 — 보면서 고치라고 창으로 연 것이다
       avoid: '#viewerCol',
-      onSaved: ({ name }) => rxReloadPatient(pid, name),
+      onSaved: async ({ name }) => {
+        await rxReloadPatient(pid, name);
+        showToast(`${name} 님의 거래처 정보를 고쳤습니다.`, 'success');
+      },
     });
   };
 
@@ -6897,7 +6900,7 @@ window.HELP_TOUR_STEPS = [
         const nameEl = document.getElementById('f-name');
         if (nameEl) nameEl.value = name;
         rxReloadPatient(id, name);
-        showToast(`${name} 님을 이 건에 이었습니다.`, 'success');
+        showToast(`${name} 님을 등록하고 이 건에 이었습니다.`, 'success');
       },
     });
   };
@@ -6907,7 +6910,7 @@ window.HELP_TOUR_STEPS = [
      그런데 고치고 돌아와도 적힌 것은 그대로여서, 화면을 닫았다 다시 열어야 했다.
      그러면 적어 두었던 병원ㆍ처방 값이 함께 날아갔다.
      이어 둔 사람이 아니면 지나간다. 창을 옮겨 다니며 여러 사람을 보는 자리다. */
-  async function rxReloadPatient(pid, name) {
+  async function rxReloadPatient(pid, name, opts = {}) {
     const cur = document.getElementById('f-patient-id')?.value;
     if (!cur || String(cur) !== String(pid)) return;
 
@@ -6942,14 +6945,19 @@ window.HELP_TOUR_STEPS = [
 
     /* 고쳐 온 값은 마스터의 것이므로 저장할 것이 생긴 것이 아니다 —
        markOcrDirty() 를 부르지 않는다(부르면 화면을 떠날 때마다 붙잡는다). */
-    showToast(`거래처에서 고친 내용을 가져왔습니다 (${n}칸).`, 'info');
+    /* 남이 다른 화면에서 고쳐 온 것만 알린다. 이 화면의 창에서 고친 것은 부른 쪽이
+       한 번 알리므로, 여기서 또 알리면 같은 일로 알림이 겹친다. */
+    if (opts.announce) showToast(`거래처에서 고친 내용을 가져왔습니다 (${n}칸).`, 'info');
   }
 
   try {
     const _pch = new BroadcastChannel('ce-patient');
     _pch.onmessage = (e) => {
       if (e.data?.action !== 'saved') return;
-      rxReloadPatient(e.data.id, e.data.name);
+      /* 이 화면의 창에서 고친 것이면 이미 그 자리에서 다 했다 — 다시 하면
+         같은 일을 두 번 하고 알림도 두 번 뜬다. 남이 고친 것만 받는다. */
+      if (e.data.src && e.data.src === window.CE_PAGE_ID) return;
+      rxReloadPatient(e.data.id, e.data.name, { announce: true });
     };
   } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
 

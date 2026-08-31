@@ -288,7 +288,7 @@
   function ptTell(msg) {
     try {
       const ch = new BroadcastChannel('ce-patient');
-      ch.postMessage(msg);
+      ch.postMessage({ ...msg, src: window.CE_PAGE_ID });
       ch.close();
     } catch (e) { /* 못 하는 브라우저면 예전처럼 화면을 다시 열어야 한다 */ }
   }
@@ -535,7 +535,8 @@
     if (res.success) {
       BtnState.success(btn, '저장 완료');
       closeAddModal();
-      showToast(res.message, 'success');
+      /* 부른 쪽이 뒤를 이으면 그쪽이 알린다 — 둘 다 알리면 같은 일로 알림이 겹친다 */
+      if (!_peDone) showToast(res.message, 'success');
       const id = res.id ?? _peId;
       ptTell({ action: 'saved', id, name, created: _peMode === 'create' });
 

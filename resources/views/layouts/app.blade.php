@@ -1988,6 +1988,10 @@ document.addEventListener('click', (e) => {
   const BASE_URL   = '{{ rtrim(url('/'), '/') }}';
   // CSRF 토큰 전역 설정
   const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+  /* 이 화면 하나를 가리키는 표. BroadcastChannel 은 보낸 객체에만 안 보내고 같은
+     화면의 다른 객체에는 그대로 보낸다 — 내가 고친 것을 내가 다시 듣고 두 번 일한다.
+     보낼 때 이 표를 실어 두면 받는 쪽이 제 것을 가려낼 수 있다. */
+  window.CE_PAGE_ID = Math.random().toString(36).slice(2);
   // 투어 완료 페이지 목록 (DB, 사용자별)
   (function () {
     const d = JSON.parse(document.getElementById('ce-server-data').textContent);
