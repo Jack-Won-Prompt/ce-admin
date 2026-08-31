@@ -217,18 +217,28 @@ class Order extends Model
     }
 
     /**
-     * 창고에 판매주문이 선 건만.
+     * 되돌릴 수 있는 원 주문만.
      *
-     * 교환ㆍ반품ㆍ취소는 모두 창고에 이미 넘긴 건을 되돌리는 일이다 — 아직 보내지 않은
-     * 주문은 되돌릴 물건도, 취소할 판매주문도 그쪽에 없다. 그런 건은 주문 등록에서
-     * 지우면 된다.
+     * 교환ㆍ반품ㆍ취소는 모두 이미 나간 것을 되돌리는 일이다. 두 가지를 함께 본다.
+     *
+     * 하나, 창고에 판매주문이 서 있어야 한다. 아직 보내지 않은 주문은 되돌릴 물건도,
+     * 취소할 판매주문도 그쪽에 없다 — 그런 건은 주문 등록에서 지우면 된다.
+     *
+     * 둘, 주문이 확정된 뒤여야 한다. 「주문 대기」는 우리 쪽에서 아직 손대는 중이라
+     * 되돌릴 것이 아니고, 「취소」는 이미 되돌린 것이라 두 번 되돌릴 수 없다.
+     * 판매주문 번호만 보고 골랐더니 주문 대기 열일곱 건이 고를 거리로 섰다.
      *
      * 고르는 자리가 둘이라(찾기 창ㆍ옛 접수 화면) 규칙을 여기 한 곳에 둔다.
      */
     public function scopeSentToWarehouse($q)
     {
-        return $q->whereNotNull('withworks_so_no')->where('withworks_so_no', '!=', '');
+        return $q->whereNotNull('withworks_so_no')
+                 ->where('withworks_so_no', '!=', '')
+                 ->whereIn('status', self::RETURNABLE_STATUSES);
     }
+
+    /** 되돌릴 수 있는 주문 상태 — 대기(아직 우리 손 안)와 취소(이미 되돌림)는 뺀다 */
+    public const RETURNABLE_STATUSES = ['confirmed', 'shipping', 'delivered'];
 
     public static function generateOrderNumber(): string
     {
