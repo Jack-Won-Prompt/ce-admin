@@ -10008,12 +10008,9 @@ window.HELP_TOUR_STEPS = [
     if (el) el.textContent = preview;
   }
 
-  function formatPhone(v) {
-    v = v.replace(/\D/g, '').slice(0, 11);
-    if (v.length <= 3) return v;
-    if (v.length <= 7) return v.slice(0,3) + '-' + v.slice(3);
-    return v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7);
-  }
+  /* 놓는 규칙은 layouts/app.blade.php 한 곳에 있다 — 여기 것은 02 번호를 가르지
+     못해 서울 번호가 010 처럼 셋으로 잘렸다. 이름만 남겨 부르는 자리를 지킨다. */
+  function formatPhone(v) { return ceFormatPhone(v); }
 
   document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('consentMobile').addEventListener('input', function(e) {

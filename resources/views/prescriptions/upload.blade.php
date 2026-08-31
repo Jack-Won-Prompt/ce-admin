@@ -605,6 +605,12 @@ function pkRows(list) {
   }));
 }
 
+/* 전화번호 칸은 치는 대로 붙임표가 놓인다. 숫자 열한 개가 붙어 나오면 어디까지가
+   국번인지 눈으로 세야 하고, 목록에 적힌 것과 견주기도 어렵다.
+   놓는 규칙은 layouts/app.blade.php 한 곳에 있다(ceFormatPhone) — 화면마다 따로
+   적으면 어느 화면에서는 02 번호가 셋으로 갈리고 어느 화면에서는 안 갈린다. */
+ceBindPhone(document.getElementById('pkPhone'));
+
 window.pkOpen = function () {
   document.getElementById('pkModal').style.display = 'flex';
   /* 이미 고른 사람이 있으면 그 이름을 넣어 준다 — 「조회」로 다시 고르는 길이라

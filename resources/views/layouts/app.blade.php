@@ -2431,6 +2431,39 @@ document.addEventListener('click', (e) => {
     };
   })();
 
+  /* ── 전화번호에 붙임표를 놓는다 ─────────────────────────
+     사람은 숫자만 친다(01012345678). 그대로 두면 열한 자리가 붙어 나와 어디까지가
+     국번인지 눈으로 세야 하고, 적어 둔 것과 견주기도 어렵다.
+
+     자리 수에 따라 나눈다 — 02 로 시작하는 서울 번호는 앞이 두 자리다.
+     칸에 걸 때는 ceBindPhone 을 쓴다(커서가 끝으로 튀지 않게 잡아 준다). */
+  window.ceFormatPhone = function (v) {
+    const d = String(v ?? '').replace(/\D/g, '').slice(0, 11);
+    if (d.startsWith('02')) {
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return d.slice(0, 2) + '-' + d.slice(2);
+      if (d.length <= 9) return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
+      return d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6, 10);
+    }
+    if (d.length <= 3) return d;
+    if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+    return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+  };
+
+  /* 칸 하나에 걸어 둔다. 붙임표가 끼어들면 글자 수가 늘어 커서가 뒤로 밀리는데,
+     그만큼 되돌려 놓지 않으면 가운데를 고칠 때 커서가 끝으로 튄다. */
+  window.ceBindPhone = function (el) {
+    if (!el || el.dataset.phoneBound) return;
+    el.dataset.phoneBound = '1';
+    el.addEventListener('input', function () {
+      const pos  = el.selectionStart;
+      const prev = el.value;
+      el.value = ceFormatPhone(el.value);
+      const diff = el.value.length - prev.length;
+      try { el.setSelectionRange(pos + diff, pos + diff); } catch (e) { /* 숨은 칸 */ }
+    });
+  };
+
   // ── 공통 AJAX fetch 래퍼 (에러 자동 Toast) ─────────────
   async function apiRequest(url, method = 'POST', data = {}) {
     try {
