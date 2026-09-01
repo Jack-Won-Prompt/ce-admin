@@ -65,7 +65,7 @@
       </div>
       <div class="ld-acts">
         <button type="button" class="ds-btn" onclick="closeLocalDispatchPop()">취소</button>
-        <button type="submit" class="ds-btn ds-btn-primary">발송 기록</button>
+        <button type="submit" class="ds-btn ds-btn-primary">저장</button>
       </div>
     </form>
   </div>

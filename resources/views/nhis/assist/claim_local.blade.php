@@ -141,7 +141,7 @@
         </div>
         @error('receipt')<div style="color:var(--danger);font-size:11px;margin-bottom:8px;">{{ $message }}</div>@enderror
         <div style="text-align:right;">
-          <button class="btn" type="submit">발송 기록</button>
+          <button class="btn" type="submit">저장</button>
         </div>
       </form>
     </div>
