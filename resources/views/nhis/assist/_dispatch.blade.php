@@ -60,8 +60,7 @@
         </div>
         <div class="ld-f" style="margin-bottom:0;">
           <label>메모</label>
-          <input type="text" name="memo" maxlength="500" class="form-control"
-                 placeholder="반송·재발송 사유 등">
+          <input type="text" name="memo" maxlength="500" class="form-control">
         </div>
       </div>
       <div class="ld-acts">

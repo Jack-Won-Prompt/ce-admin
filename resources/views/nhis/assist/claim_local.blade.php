@@ -137,7 +137,7 @@
         </div>
         <div class="row" style="align-items:flex-start;">
           <label style="padding-top:6px;">메모</label>
-          <textarea name="memo" maxlength="500" placeholder="반송·재발송 사유 등">{{ old('memo') }}</textarea>
+          <textarea name="memo" maxlength="500">{{ old('memo') }}</textarea>
         </div>
         @error('receipt')<div style="color:var(--danger);font-size:11px;margin-bottom:8px;">{{ $message }}</div>@enderror
         <div style="text-align:right;">
