@@ -367,10 +367,25 @@ window.HELP_TOUR_STEPS = [
       { header: '판매일자',   name: 'sold_at',   width: 100, sortable: true, align: 'center' },
       { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {
-        // 공단 사이트에 옮겨 적는 것을 돕는 창
-        header: '청구 도우미', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+        /* 청구처에 따라 하는 일이 다르다 — 공단은 사이트에 옮겨 적고, 지자체는 등기로
+           부치고, 낼 곳이 없는 건은 증빙을 거래처로 보낸다. 「도우미」라 부르면 무엇을
+           하는 자리인지 알 수 없어 「청구 진행」으로 적는다. */
+        header: '청구 진행', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
         renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code,
                                                        name: row.patient, mobile: row.send_mobile, email: row.send_email }),
+      },
+      {
+        /* 냈는가 안 냈는가만 본다. 상태 일곱 가지는 옆의 「청구」 칸이 따로 말한다. */
+        header: '청구 여부', name: 'claim_done', width: 90, align: 'center', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          if (v === '청구 완료') s.style.color = 'var(--primary)';
+          else if (v === '미청구') s.style.color = 'var(--danger)';
+          else s.style.color = 'var(--gray-400)';
+          s.style.fontWeight = '600';
+          return s;
+        },
       },
 
       /* 제품명ㆍ수량ㆍ배송비는 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야

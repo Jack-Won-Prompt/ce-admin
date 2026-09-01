@@ -91,6 +91,13 @@ class OrderController extends Controller
                 /* 「직접 처리」가 증빙을 어디로 보낼지 정하는 값이다 */
                 'send_mobile' => \App\Support\PhoneNo::format($o->patient?->mobile),
                 'send_email'  => $o->patient?->email ?? '',
+                /* 청구를 냈는가 — 「청구 진행」 옆에서 한눈에 읽혀야 한다. 청구 상태
+                   일곱 가지를 그대로 두면 낸 건인지 아닌지를 매번 헤아려야 한다.
+                   낼 곳이 없는 건은 「미청구」가 아니다 — 그 말은 아직 안 냈다는 뜻이라
+                   담당자가 찾아 나서게 된다. */
+                'claim_done'  => (($o->prescription?->claim_agency ?? '') === 'none')
+                    ? '해당 없음'
+                    : (in_array($o->nhis_claim_status, ['submitted', 'approved'], true) ? '청구 완료' : '미청구'),
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
                 'copay'     => (int) $o->patient_copay,
