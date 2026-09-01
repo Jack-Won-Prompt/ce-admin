@@ -322,6 +322,7 @@ window.HELP_TOUR_STEPS = [
 @push('scripts')
 @include('nhis.assist._button')
 @include('nhis.assist._direct')
+@include('nhis.assist._dispatch')
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
