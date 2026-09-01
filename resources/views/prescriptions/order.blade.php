@@ -722,6 +722,33 @@
                  font-size:13px; font-weight:500; line-height:1.6; color:var(--gray-1000);
                  cursor:pointer; white-space:nowrap; }
   .rx-side-btn:hover { background:var(--gray-50); }
+
+  /* 병원 조회 창 — 거래처 조회와 같은 결이되, 이 창은 화면 가운데 선다 */
+  .hp-back { display:none; position:fixed; inset:0; z-index:1200; background:rgba(16,19,23,.45);
+             align-items:center; justify-content:center; padding:24px; }
+  .hp-back.open { display:flex; }
+  .hp-box { width:min(680px,100%); max-height:min(84vh,760px); display:flex; flex-direction:column;
+            background:var(--gray-0); border-radius:12px; box-shadow:0 12px 40px rgba(16,19,23,.24); overflow:hidden; }
+  .hp-head { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--gray-200);
+             font-size:14px; font-weight:700; color:var(--gray-1000); }
+  .hp-head button { margin-left:auto; border:none; background:none; font-size:20px; line-height:1;
+                    color:var(--gray-600); cursor:pointer; }
+  .hp-find { display:flex; gap:8px; padding:12px 16px; border-bottom:1px solid var(--gray-200); }
+  .hp-find .form-control { flex:1; min-width:0; }
+  .hp-list { flex:1; overflow:auto; padding:6px 0; }
+  .hp-row { display:flex; align-items:center; gap:10px; padding:9px 16px; cursor:pointer; font-size:13px; }
+  .hp-row:hover { background:var(--primary-light); }
+  .hp-row b { font-weight:600; color:var(--gray-1000); }
+  .hp-row span { color:var(--gray-600); font-size:12px; }
+  .hp-empty { padding:22px 16px; text-align:center; font-size:13px; color:var(--gray-600); }
+  .hp-new { padding:12px 16px; border-top:1px solid var(--gray-200); background:var(--gray-50); }
+  .hp-new-title { font-size:13px; font-weight:700; margin-bottom:9px; color:var(--gray-1000); }
+  .hp-new-grid { display:grid; grid-template-columns:96px 1fr; gap:8px 10px; align-items:center; }
+  .hp-new-grid label { font-size:13px; font-weight:500; color:var(--gray-700); }
+  .hp-new-acts { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+  .hp-foot { display:flex; align-items:center; gap:8px; padding:10px 16px; border-top:1px solid var(--gray-200); }
+  .hp-hint { flex:1; font-size:12px; color:var(--gray-600); }
+
   .rx-sec      { display:flex; flex-direction:column; gap:12px; }
   .rx-sec + .rx-sec { margin-top:24px; }
   /* 소제목 — 시안 148:2654: 14/700 #333940, 줄 높이 28, 아이콘·밑줄 없음 */
@@ -2738,9 +2765,15 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 별표를 뗐다. 병원명이 없다고 저장을 막으면, 처방전을 손에 들기 전에
                      이름부터 적어 두는 흔한 순서가 막힌다 — 적을 것은 적히는 대로 남긴다. --}}
                 <span class="rx-field-label">병원명</span>
-                <div class="field-group" style="flex:1;">
-                  <input type="text" class="form-control has-ok" id="f-hospital" value="{{ $prescription->hospital_name }}" />
-                  <span class="field-status"><i class="fa-solid fa-circle-check" style="color:var(--primary);"></i></span>
+                {{-- 병원은 조회해서 고른다. 손으로 치던 자리라 같은 병원이
+                     「순천향대학교 부속 부천병원」과 「순천향대학교 부천병원」으로 따로
+                     쌓였고, 요양기관번호가 빈 채로 남은 건도 있었다 — 그 번호가 없으면
+                     공단이 청구를 받지 않는다. 없는 병원은 조회 창에서 바로 만든다. --}}
+                <div class="field-group" style="flex:1;display:flex;gap:6px;align-items:center;">
+                  <input type="text" class="form-control has-ok" id="f-hospital" style="flex:1;min-width:0;"
+                         value="{{ $prescription->hospital_name }}" />
+                  <button type="button" class="rx-side-btn" onclick="openHospitalPick()"
+                          style="flex-shrink:0;">조회</button>
                 </div>
               </div>
               {{-- 「검수 메모」 칸은 두지 않는다. 1차 요청서 12쪽이 상담 정보의 「메모」를
@@ -2751,7 +2784,11 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div class="rx-field-row">
                 <span class="rx-field-label">요양병원 코드</span>
                 {{-- 값은 제 컬럼에서 읽는다. 상담 JSON 에서 꺼내 각자 컬럼에 담았다. --}}
-                <input type="text" class="form-control" id="f-hospital-code" value="{{ $prescription->hospital_code ?? '' }}" placeholder="요양병원 코드" style="flex:1;" />
+                {{-- 고른 병원이 들고 오는 값이다. 손으로 고치면 병원 표와 어긋나
+                     같은 병원이 두 번호를 갖는다 — 고치려면 조회 창에서 병원을 고친다. --}}
+                <input type="text" class="form-control" id="f-hospital-code" readonly
+                       value="{{ $prescription->hospital_code ?? '' }}" placeholder="병원을 조회해 고르면 채워집니다"
+                       style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
@@ -3557,6 +3594,59 @@ $calcDeposit  = $calcCopay + $calcShipping;
 
 {{-- 거래처 등록ㆍ수정 창 — 처방전을 보면서 고칠 수 있게 화면 탭이 아니라 창으로 연다 --}}
 @include('patients._editor-modal')
+
+
+{{-- ══════════ 병원 조회ㆍ등록 ══════════════════════════════
+     처방전마다 손으로 치던 병원명ㆍ요양기관번호를 한자리에서 고른다.
+     없으면 이 창에서 바로 만들어 고른다 — 거래처 등록 팝업과 같은 결이다. --}}
+<div class="hp-back" id="hpBack" onclick="if(event.target===this)closeHospitalPick()">
+  <div class="hp-box">
+    <div class="hp-head">
+      <i class="fa-solid fa-hospital"></i>
+      <span>병원 조회</span>
+      <button type="button" onclick="closeHospitalPick()" aria-label="닫기">&times;</button>
+    </div>
+
+    <div class="hp-find">
+      <input type="text" id="hpQ" class="form-control" autocomplete="off"
+             placeholder="병원명 · 요양기관번호"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();hospitalSearch();}">
+      <button type="button" class="ds-btn ds-btn-primary" onclick="hospitalSearch()">검색</button>
+    </div>
+
+    <div class="hp-list" id="hpList">
+      <div class="hp-empty">병원명이나 요양기관번호로 찾습니다.</div>
+    </div>
+
+    {{-- 찾지 못했을 때 다음 걸음은 언제나 「그럼 새로 적자」다. 마스터 화면으로
+         건너가서 다시 찾게 하지 않는다 — 친 이름은 그대로 들고 온다. --}}
+    <div class="hp-new" id="hpNew" style="display:none;">
+      <div class="hp-new-title">새 병원 등록</div>
+      <div class="hp-new-grid">
+        <label>병원명 <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="hpName" class="form-control" placeholder="예: 서울대학교병원">
+        <label>요양기관번호</label>
+        <input type="text" id="hpCode" class="form-control" placeholder="여덟 자리 — 모르면 비워 둡니다"
+               inputmode="numeric" maxlength="20">
+        <label>진료과</label>
+        <input type="text" id="hpDept" class="form-control" placeholder="예: 비뇨의학과">
+        <label>전화번호</label>
+        <input type="text" id="hpTel" class="form-control" placeholder="02-0000-0000">
+        <label>주소</label>
+        <input type="text" id="hpAddr" class="form-control" placeholder="병원 주소">
+      </div>
+      <div class="hp-new-acts">
+        <button type="button" class="ds-btn" onclick="hospitalNewCancel()">취소</button>
+        <button type="button" class="ds-btn ds-btn-primary" onclick="hospitalCreate(this)">등록하고 고르기</button>
+      </div>
+    </div>
+
+    <div class="hp-foot">
+      <span class="hp-hint">줄을 누르면 병원명과 요양기관번호가 함께 채워집니다.</span>
+      <button type="button" class="ds-btn" id="hpNewBtn" onclick="hospitalNewOpen()">새 병원 등록</button>
+    </div>
+  </div>
+</div>
 
 @endsection
 
@@ -11456,4 +11546,114 @@ window.HELP_TOUR_STEPS = [
     if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
   })();
 </script>
+
+<script>
+// ══════════ 병원 조회ㆍ등록 ═══════════════════════════════
+/* 병원명은 손으로 치던 자리였다. 같은 병원이 띄어쓰기만 다르게 여럿 쌓이고,
+   요양기관번호가 빈 채로 남으면 공단이 청구를 받지 않는다 — 골라서 채운다. */
+function openHospitalPick() {
+  document.getElementById('hpBack').classList.add('open');
+  const q = document.getElementById('hpQ');
+  q.value = document.getElementById('f-hospital')?.value?.trim() || '';
+  hospitalNewCancel();
+  q.focus();
+  if (q.value) hospitalSearch();
+}
+
+function closeHospitalPick() {
+  document.getElementById('hpBack').classList.remove('open');
+}
+
+async function hospitalSearch() {
+  const q    = document.getElementById('hpQ').value.trim();
+  const list = document.getElementById('hpList');
+  list.innerHTML = '<div class="hp-empty">찾는 중…</div>';
+
+  try {
+    const res  = await fetch(@js(route('hospitals.search')) + '?q=' + encodeURIComponent(q),
+                             { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const data = await res.json();
+    const rows = data.data || [];
+
+    if (!rows.length) {
+      list.innerHTML = '<div class="hp-empty">찾는 병원이 없습니다 — 아래 「새 병원 등록」으로 만들어 고르십시오.</div>';
+      return;
+    }
+
+    list.innerHTML = rows.map(h => `
+      <div class="hp-row" onclick="hospitalPick(${h.id}, ${JSON.stringify(h.name)}, ${JSON.stringify(h.code || '')})">
+        <b>${escHtml(h.name)}</b>
+        <span>${h.code ? escHtml(h.code) : '요양기관번호 없음'}${h.department ? ' · ' + escHtml(h.department) : ''}</span>
+      </div>`).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="hp-empty">조회에 실패했습니다.</div>';
+  }
+}
+
+/* 고르면 병원명과 요양기관번호가 함께 들어온다 — 둘이 따로 놀지 않게 한 번에 채운다 */
+function hospitalPick(id, name, code) {
+  const n = document.getElementById('f-hospital');
+  const c = document.getElementById('f-hospital-code');
+  if (n) { n.value = name; n.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (c) { c.value = code || ''; c.dispatchEvent(new Event('input', { bubbles: true })); }
+  closeHospitalPick();
+  showToast(code ? `${name} · ${code}` : `${name} (요양기관번호 없음)`, code ? 'success' : 'warning');
+}
+
+function hospitalNewOpen() {
+  document.getElementById('hpNew').style.display = '';
+  document.getElementById('hpNewBtn').style.display = 'none';
+  document.getElementById('hpName').value = document.getElementById('hpQ').value.trim();
+  document.getElementById('hpName').focus();
+}
+
+function hospitalNewCancel() {
+  document.getElementById('hpNew').style.display = 'none';
+  document.getElementById('hpNewBtn').style.display = '';
+  ['hpName', 'hpCode', 'hpDept', 'hpTel', 'hpAddr'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.value = '';
+  });
+}
+
+async function hospitalCreate(btn) {
+  const name = document.getElementById('hpName').value.trim();
+  if (!name) { showToast('병원명을 입력해 주십시오.', 'warning'); return; }
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(@js(route('hospitals.store')), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+      },
+      body: JSON.stringify({
+        name,
+        code:       document.getElementById('hpCode').value.trim() || null,
+        department: document.getElementById('hpDept').value.trim() || null,
+        tel:        document.getElementById('hpTel').value.trim()  || null,
+        address:    document.getElementById('hpAddr').value.trim() || null,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      const msg = data.message
+        || Object.values(data.errors || {}).flat()[0]
+        || '등록하지 못했습니다.';
+      showToast(msg, 'danger', 5000);
+      return;
+    }
+
+    if (data.created === false) showToast(data.message, 'info');
+    hospitalPick(data.data.id, data.data.name, data.data.code || '');
+  } catch (e) {
+    showToast('등록 중 오류가 발생했습니다.', 'danger');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+
 @endpush

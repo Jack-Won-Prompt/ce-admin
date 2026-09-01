@@ -229,6 +229,10 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/counsels/{prescription}/order', [PatientController::class, 'updateCounselOrder'])->name('counsels.order');
 
     // 제품 검색 / 재고 조회 (Demoworks API 프록시)
+    /* 병원은 처방전마다 손으로 치던 값이다 — 조회해서 고르고, 없으면 그 자리에서
+       만들어 고른다(거래처 등록 팝업과 같은 결). */
+    Route::get( '/hospitals/search', [\App\Http\Controllers\HospitalController::class, 'search'])->name('hospitals.search');
+    Route::post('/hospitals',        [\App\Http\Controllers\HospitalController::class, 'store'])->name('hospitals.store');
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     Route::get('/products/stock',  [ProductController::class, 'stock'])->name('products.stock');
 
