@@ -88,6 +88,9 @@ class OrderController extends Controller
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
                 'deal_state' => $rt ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
                 'patient'   => $o->patient?->name ?? '',
+                /* 「직접 처리」가 증빙을 어디로 보낼지 정하는 값이다 */
+                'send_mobile' => \App\Support\PhoneNo::format($o->patient?->mobile),
+                'send_email'  => $o->patient?->email ?? '',
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
                 'copay'     => (int) $o->patient_copay,

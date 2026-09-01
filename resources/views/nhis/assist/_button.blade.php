@@ -32,14 +32,28 @@ window.nhisAssistBtn = function (orderId, opts) {
   const none   = agency === 'none';
 
   btn.innerHTML = none
-    ? '<i class="fa-solid fa-minus"></i> 청구 없음'
+    ? '<i class="fa-solid fa-paper-plane"></i> 직접 처리'
     : local
       ? '<i class="fa-solid fa-envelope"></i> ' + (opts.sent ? '등기 영수증' : '등기 발송')
       : '<i class="fa-solid fa-clipboard-list"></i> 청구';
 
+  /* 내지 않는 건이라고 할 일이 없는 것은 아니다 — 환자가 보험사ㆍ근로복지공단에
+     직접 내므로, 우리가 발행한 증빙을 거래처로 보내 주는 것이 우리가 할 일이다. */
   if (none) {
-    btn.disabled = true;
-    btn.title = '공단에도 지자체에도 내지 않는 건입니다 (처방외ㆍ산재ㆍ자동차보험)';
+    if (!orderId) {
+      btn.disabled = true;
+      btn.title = opts.reason || '연결된 주문이 없습니다';
+      return btn;
+    }
+    btn.title = '발행된 증빙을 거래처로 문자ㆍ메일로 보냅니다 (청구는 환자가 직접 합니다)';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDirectSendPop(orderId, btn, {
+        name:   opts.name   || '',
+        mobile: opts.mobile || '',
+        email:  opts.email  || '',
+      });
+    });
     return btn;
   }
 

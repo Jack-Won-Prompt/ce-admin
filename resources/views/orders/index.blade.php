@@ -321,6 +321,7 @@ window.HELP_TOUR_STEPS = [
 
 @push('scripts')
 @include('nhis.assist._button')
+@include('nhis.assist._direct')
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
@@ -367,7 +368,8 @@ window.HELP_TOUR_STEPS = [
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창
         header: '청구 도우미', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
-        renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code }),
+        renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code,
+                                                       name: row.patient, mobile: row.send_mobile, email: row.send_email }),
       },
 
       /* 제품명ㆍ수량ㆍ배송비는 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야

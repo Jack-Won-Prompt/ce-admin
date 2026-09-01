@@ -139,6 +139,10 @@ class NhisController extends Controller
                 'id'           => $o->id,
                 'order_no'     => $o->order_number ?? '',
                 'patient'      => $o->patient?->name ?? '',
+                /* 「직접 처리」가 증빙을 어디로 보낼지 정하는 값이다 — 없으면 그 길을
+                   막아 둔다(눌러 놓고 「연락처가 없습니다」를 만나지 않게). */
+                'send_mobile'  => \App\Support\PhoneNo::format($o->patient?->mobile),
+                'send_email'   => $o->patient?->email ?? '',
                 'product'      => $o->product_name ?? '',
                 'nhis_amount'  => (int) $o->nhis_amount,
                 'patient_copay'=> (int) $o->patient_copay,

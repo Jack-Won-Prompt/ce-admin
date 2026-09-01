@@ -229,6 +229,11 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/counsels/{prescription}/order', [PatientController::class, 'updateCounselOrder'])->name('counsels.order');
 
     // 제품 검색 / 재고 조회 (Demoworks API 프록시)
+    /* 공단에도 지자체에도 내지 않는 건(처방외ㆍ산재ㆍ자동차보험)은 환자가 직접 낸다.
+       그때 쓸 증빙을 거래처로 보내 준다 — 담당자가 하나씩 내려받아 붙이던 일이다. */
+    Route::get( '/orders/{order}/docs',      [\App\Http\Controllers\OrderDocSendController::class, 'list'])->name('orders.docs.list');
+    Route::post('/orders/{order}/docs/send', [\App\Http\Controllers\OrderDocSendController::class, 'send'])->name('orders.docs.send');
+
     /* 병원은 처방전마다 손으로 치던 값이다 — 조회해서 고르고, 없으면 그 자리에서
        만들어 고른다(거래처 등록 팝업과 같은 결). */
     Route::get( '/hospitals/search', [\App\Http\Controllers\HospitalController::class, 'search'])->name('hospitals.search');
@@ -1231,6 +1236,13 @@ Route::get('/dev/migrate-fcm-token', function () {
    서명이 맞아야 열린다. 주소를 손으로 고쳐 남의 것을 볼 수 없고, 이레가 지나면
    죽는다 — 사람에게 보내는 주소가 영영 살아 있으면 그 주소를 받은 누구든 남의
    구입내역을 볼 수 있다. */
+/* 문자로 보낸 주소 — 로그인 없이 그 주문의 증빙만 보인다. 서명이 붙어 있어
+   정해진 날이 지나면 열리지 않는다. */
+Route::get('/docs/order/{order}',            [\App\Http\Controllers\OrderDocSendController::class, 'open'])
+    ->middleware('signed')->name('orders.docs.open');
+Route::get('/docs/order/{order}/{key}',      [\App\Http\Controllers\OrderDocSendController::class, 'file'])
+    ->middleware('signed')->name('orders.docs.file');
+
 Route::get('/docs/purchase-confirm/{patient}',
     [\App\Http\Controllers\PurchaseConfirmController::class, 'open'])
     ->middleware('signed')->name('documents.purchaseConfirm.open');
