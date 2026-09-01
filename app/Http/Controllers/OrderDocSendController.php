@@ -51,7 +51,8 @@ class OrderDocSendController extends Controller
 
         $order->loadMissing('patient');
         $name  = $order->patient?->name ?: ($order->prescription?->patient_name_ocr ?: '고객');
-        $names = implode('ㆍ', array_column($docs, 'label'));
+        /* 문자에도 유형을 한 번씩만 적는다 — 같은 서류의 PDFㆍPNG 두 벌이 붙는 일이 있다 */
+        $names = implode('ㆍ', array_unique(array_column($docs, 'label')));
 
         if ($data['channel'] === 'email') {
             $to = trim((string) $order->patient?->email);
@@ -59,19 +60,31 @@ class OrderDocSendController extends Controller
                 return response()->json(['success' => false, 'message' => '이메일이 없어 보내지 못했습니다.'], 422);
             }
 
-            /* 메일에는 파일을 그대로 붙인다 — 받는 사람이 보험사에 그대로 내면 된다.
-               파일이 서버에 없는 건은 조용히 빠지지 않게 세어 두고 알린다. */
-            $attached = 0;
+            /* 붙일 수 있는 것을 먼저 가린다. 보내면서 붙이면 한 장도 못 붙인 채로 메일이
+               나가는데, 받는 사람에게는 「증빙을 보냅니다」라 해 놓고 빈 봉투를 준 셈이다.
+               파일이 이 서버에 없는 일이 실제로 있다 — 발행은 다른 서버에서 했다. */
+            $ready = array_values(array_filter($docs,
+                fn ($d) => $d['path'] && Storage::exists($d['path'])));
+
+            if (! $ready) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '증빙 파일을 이 서버에서 찾지 못해 보내지 않았습니다 — 서류 관리에서 파일을 확인해 주십시오.',
+                ], 422);
+            }
+
+            $missing = count($docs) - count($ready);
+            /* 본문에는 유형을 한 번씩만 적는다. 같은 서류의 PDFㆍPNG 두 벌이 붙는 일이
+               있어 「세금계산서ㆍ세금계산서」로 읽혔다 — 붙는 파일은 그대로 다 보낸다. */
+            $names   = implode('ㆍ', array_unique(array_column($ready, 'label')));
+
             try {
                 Mail::raw(
                     "{$name}님, 주문 {$order->order_number} 의 증빙을 보내 드립니다.\n\n{$names}\n\n콜로플라스트 코리아",
-                    function ($m) use ($to, $order, $docs, &$attached) {
+                    function ($m) use ($to, $order, $ready) {
                         $m->to($to)->subject("[콜로플라스트] 주문 {$order->order_number} 증빙");
-                        foreach ($docs as $d) {
-                            if ($d['path'] && Storage::exists($d['path'])) {
-                                $m->attach(Storage::path($d['path']), ['as' => $d['file']]);
-                                $attached++;
-                            }
+                        foreach ($ready as $d) {
+                            $m->attach(Storage::path($d['path']), ['as' => $d['file']]);
                         }
                     }
                 );
@@ -84,9 +97,9 @@ class OrderDocSendController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $attached < count($docs)
-                    ? "{$to} 로 보냈습니다 — 다만 " . (count($docs) - $attached) . '건은 파일이 없어 빠졌습니다.'
-                    : "{$to} 로 {$attached}건을 보냈습니다.",
+                'message' => $missing
+                    ? "{$to} 로 " . count($ready) . "건을 보냈습니다 — 다만 {$missing}건은 파일이 없어 빠졌습니다."
+                    : "{$to} 로 " . count($ready) . '건을 보냈습니다.',
             ]);
         }
 
