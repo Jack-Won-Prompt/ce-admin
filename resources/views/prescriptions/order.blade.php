@@ -2590,7 +2590,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">송금자명</span>
-                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?? '' }}" placeholder="송금자명" style="flex:1;" />
+                {{-- 거래처가 환자 정보의 정본이다. 이 건에 따로 적어 둔 것이 없으면
+                     거래처에 적힌 송금자명이 그대로 보인다 — 두 곳이 다른 값을 보고 있었다. --}}
+                <input type="text" class="form-control" id="f-guardian" value="{{ $prescription->caregiver_name ?: ($prescription->patient?->remitter_name ?? '') }}" placeholder="송금자명" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">현금영수증</span>
@@ -3218,7 +3220,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <th>연락처</th><td data-from="f-mobile">{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '-' }}</td>
             </tr>
             <tr>
-              <th>송금자명</th><td data-from="f-guardian">{{ $prescription->caregiver_name ?? '-' }}</td>
+              <th>송금자명</th><td data-from="f-guardian">{{ $prescription->caregiver_name ?: ($prescription->patient?->remitter_name ?: '-') }}</td>
               <th>일일도뇨횟수</th><td data-from="f-diverticulums">-</td>
             </tr>
             <tr>
@@ -8131,11 +8133,22 @@ window.HELP_TOUR_STEPS = [
     boFindNew();
     document.getElementById('boNewKind').value   = r.kind;
     document.getElementById('boNewOffice').value = r.name;
-    if (r.tel) document.getElementById('boNewTel').value = r.tel;
     /* 주소는 담아 두는 칸이 창에 없다 — 참고사항에 적어 둔다. 팩스를 보낼 때
        「어디로 가는 것인가」를 그 한 줄로 알아본다. */
     const note = document.getElementById('boNewNote');
-    if (!note.value.trim() && r.address) note.value = r.address;
+    /* 밖에서 물어 온 주소는 갈아 끼운다 — 다른 지사를 다시 골랐는데 앞의 주소가
+       남아 있으면 엉뚱한 곳으로 팩스가 간다. 담당자가 손으로 적어 둔 메모는 지킨다
+       (그때는 auto 표가 지워져 있다). */
+    if (r.address && (!note.value.trim() || note.dataset.auto === '1')) {
+      note.value = r.address;
+      note.dataset.auto = '1';
+    }
+    if (!note.dataset.autoBound) {
+      note.dataset.autoBound = '1';
+      note.addEventListener('input', () => { delete note.dataset.auto; });
+    }
+    /* 기관마다 전화가 다르다 — 앞 지사 번호가 남지 않게 한다 */
+    document.getElementById('boNewTel').value = r.tel || '';
     document.getElementById('boNewDept').focus();
   };
 
@@ -8170,6 +8183,10 @@ window.HELP_TOUR_STEPS = [
     const f = document.getElementById('boFindForm');
     f.style.display = 'flex';
     document.getElementById('boNewMsg').style.display = 'none';
+    /* 찾을 때 쓰던 읍면동을 그대로 실어 준다. 못 짚었으면 빈 칸으로 서고,
+       담당자가 그 자리에서 적는다 — 없으면 저장이 막힌다. */
+    const emdNew = document.getElementById('boNewEmd');
+    if (emdNew && !emdNew.value.trim()) emdNew.value = document.getElementById('boFindEmd').value.trim();
     boFindPlace();   // 등록 칸이 펴지며 창이 길어졌다 — 다시 세운다
     document.getElementById('boNewOffice').focus();
   }
@@ -8177,12 +8194,14 @@ window.HELP_TOUR_STEPS = [
   function boFindNewCancel() {
     const f = document.getElementById('boFindForm');
     if (f) f.style.display = 'none';
-    ['boNewOffice','boNewDept','boNewNote','boNewTel','boNewFax']
+    ['boNewOffice','boNewDept','boNewNote','boNewTel','boNewFax','boNewEmd']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 
   async function boFindNewSave() {
-    const emd     = document.getElementById('boFindEmd').value.trim();
+    /* 눈에 보이는 칸을 먼저 본다 — 담당자가 그 자리에서 고쳐 적을 수 있어야 한다 */
+    const emd     = (document.getElementById('boNewEmd')?.value.trim())
+                 || document.getElementById('boFindEmd').value.trim();
     const sigungu = document.getElementById('boFindSigungu').value.trim();
     const office  = document.getElementById('boNewOffice').value.trim();
     const msg     = document.getElementById('boNewMsg');

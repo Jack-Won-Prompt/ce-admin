@@ -2500,6 +2500,9 @@ document.addEventListener('click', (e) => {
       if (d.length <= 9) return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
       return d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6, 10);
     }
+    /* 대표번호는 여덟 자리를 넷ㆍ넷으로 끊는다 — 1577-1000 을 세 자리로 끊으면
+       157-710-00 이 되어 누구도 알아보지 못한다. 15xxㆍ16xxㆍ18xx 로 시작한다. */
+    if (d.length === 8 && /^1[568]/.test(d)) return d.slice(0, 4) + '-' + d.slice(4);
     if (d.length <= 3) return d;
     if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
     return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
@@ -5958,6 +5961,8 @@ const Tour = (() => {
       if (d.length <= 9) return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
       return d.slice(0, 2) + '-' + d.slice(2, 6) + '-' + d.slice(6, 10);
     }
+    /* 대표번호(15xxㆍ16xxㆍ18xx) 여덟 자리는 넷ㆍ넷으로 */
+    if (d.length === 8 && /^1[568]/.test(d)) return d.slice(0, 4) + '-' + d.slice(4);
     if (d.length <= 6) return d.slice(0, 3) + (d.length > 3 ? '-' + d.slice(3) : '');
     if (d.length <= 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
     return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7, 11);

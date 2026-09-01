@@ -76,7 +76,10 @@
     <div class="cs-foot" id="csFoot1" style="display:none;">
       <span class="cs-hint">행을 더블클릭하거나 선택한 뒤 「선택」을 누릅니다.</span>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
-      <button type="button" class="ds-btn" onclick="csNew()">신규 상담</button>
+      {{-- 「신규 상담」이라고만 적혀 있어, 같은 건에 상담만 더하려던 사람이
+           눌렀다가 처방전ㆍ주문이 하나 더 서는 것을 뒤늦게 알았다. --}}
+      <button type="button" class="ds-btn" onclick="csNewAsk()"
+              title="이 사람의 새 상담 건을 만듭니다 — 처방전과 주문 줄이 함께 섭니다">새 상담 건</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="csPickSelected()">선택</button>
     </div>
 
@@ -503,6 +506,18 @@
   };
 
   /** 새 상담을 시작한다 */
+  /* 새 상담 건은 처방전과 주문 줄을 하나 더 세운다. 같은 건에 이어 적으려던
+     사람에게는 뜻밖의 일이라, 만들기 전에 한 번 묻는다. */
+  window.csNewAsk = async function () {
+    const ok = await ceConfirm(
+      '이 사람의 새 상담 건을 만듭니다.
+처방전과 주문 줄이 하나씩 함께 섭니다.
+
+같은 건에 이어 적으려면 목록에서 그 상담을 고르십시오.',
+      { title: '새 상담 건', confirmText: '만들기', cancelText: '취소' });
+    if (ok) csNew();
+  };
+
   window.csNew = function (opts = {}) {
     const fromList = opts.fromList !== false;
 

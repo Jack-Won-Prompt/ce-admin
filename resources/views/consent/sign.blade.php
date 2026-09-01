@@ -386,7 +386,10 @@
         <label>신청 유형 <span class="pv-req">*</span></label>
         <div class="agree-radios">
           <div><input type="radio" id="pvTypeC" name="privacy_type" value="catheter"
-                      {{ ($privacyFill['type'] ?? '') === 'catheter' ? 'checked' : '' }}
+                      {{-- 아무것도 고르지 않은 채로 서면 「동의 서명」이 열리지 않는데,
+                           까닭이 화면에 적히지 않아 담당자가 멈춰 선다. 이 서명은
+                           자가도뇨 소모성 재료 급여 위임이므로 카테터가 기본이다. --}}
+                      {{ (($privacyFill['type'] ?? '') ?: 'catheter') !== 'stoma' ? 'checked' : '' }}
                       onchange="onPrivacyType()"><label for="pvTypeC">카테터(자가도뇨)</label></div>
           <div><input type="radio" id="pvTypeS" name="privacy_type" value="stoma"
                       {{ ($privacyFill['type'] ?? '') === 'stoma' ? 'checked' : '' }}

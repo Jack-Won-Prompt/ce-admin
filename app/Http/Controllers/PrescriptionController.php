@@ -37,6 +37,8 @@ class PrescriptionController extends Controller
         private readonly VirtualAccountService $vaService,
         private readonly KakaoService $kakaoService,
         private readonly PopbillMessageService $smsService,
+        /* 나간 것은 발송 내역에 쌓여야 한다 — 팝빌을 곧바로 부르면 그 자취가 없다 */
+        private readonly \App\Services\MessageSender $sender,
     ) {}
 
     // ── 처방전 목록 ───────────────────────────────────────
@@ -1182,6 +1184,13 @@ class PrescriptionController extends Controller
             // 위임동의 기간 — 병원ㆍ처방 정보 쪽에 있지만 값은 이 사람의 것이다
             'f-nhis-agree-start'  => $d($patient->nhis_agree_start),
             'f-nhis-agree-end'    => $d($patient->nhis_agree_end),
+            /* 거래처에서 고친 뒤 이 화면이 따라오지 않던 넷.
+               읽기만 하는 칸이라 마스터가 정본인데, 채우는 표에 빠져 있어
+               고치고 돌아와도 빈칸이었다 — 새로 고쳐야 보였다. */
+            'f-contact-status'    => $patient->contactStatusLabel(),
+            'f-contact-channel'   => $patient->contactChannelLabel(),
+            'f-fax'               => $patient->fax,
+            'f-guardian'          => $patient->remitter_name,
             // 미성년 법정대리인
             'f-guardian-name'     => $patient->guardian_name,
             'f-guardian-relation' => $patient->guardian_relation,
@@ -2287,7 +2296,16 @@ class PrescriptionController extends Controller
         $message = "[콜로플라스트] {$patientName}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n{$url}";
 
         try {
-            $this->smsService->send($mobile, $message, $patientName);
+            /* 발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
+               「발송ㆍ내역」에는 아무것도 남지 않아, 나갔는지 담당자가 알 길이 없었다. */
+            $res = $this->sender->sendBulk('sms',
+                [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
+                $message, null,
+                ['source' => 'consent', 'prescription_id' => $prescription->id]);
+
+            if (! ($res['success'] ?? false)) {
+                throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
+            }
 
             activity()->causedBy(auth()->user())->performedOn($prescription)
                 ->log("위임동의 SMS 발송 → {$patientName} {$mobile}");
@@ -2318,7 +2336,14 @@ class PrescriptionController extends Controller
         $patientName = $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '';
 
         try {
-            $this->smsService->send($mobile, $message, $patientName);
+            $res = $this->sender->sendBulk('sms',
+                [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
+                $message, null,
+                ['source' => 'prescription', 'prescription_id' => $prescription->id]);
+
+            if (! ($res['success'] ?? false)) {
+                throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
+            }
 
             $prescription->update(['sms_sent_at' => now()]);
             activity()->causedBy(auth()->user())->performedOn($prescription)

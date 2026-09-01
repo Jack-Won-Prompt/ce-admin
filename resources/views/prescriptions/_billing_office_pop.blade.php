@@ -72,6 +72,14 @@
           <label class="ds-field-label">부서</label>
           <input type="text" id="boNewDept" class="form-control" style="height:30px;" placeholder="보험급여부">
         </div>
+        {{-- 관할 읍ㆍ면ㆍ동은 반드시 받는다 — 다음 건을 이 값으로 찾기 때문이다.
+             한때 숨겨 두었다. 환자 주소가 도로명이면 읍면동이 없고 밖에서도 못 짚어
+             주는데, 저장은 그것을 요구해 담당자가 등록 자체를 할 수 없었다. --}}
+        <div>
+          <label class="ds-field-label">관할 읍ㆍ면ㆍ동 *</label>
+          <input type="text" id="boNewEmd" class="form-control" style="height:30px;"
+                 placeholder="예: 역삼동">
+        </div>
         {{-- 담당자ㆍ직책ㆍ담당업무는 뺐다(요청서 15쪽). 사람은 자주 바뀌는데 한 번 적어
              두면 그대로 남아, 몇 달 뒤에는 없는 사람 이름이 서류에 실렸다.
              대신 적어 둘 곳이 필요해 참고사항을 둔다 — 「팩스는 오후에만 받는다」 같은 것. --}}
