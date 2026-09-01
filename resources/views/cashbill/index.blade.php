@@ -557,7 +557,6 @@
       { header: '전송일시',     name: 'ntsSendDt',    width: 140, sortable: true },
       { header: '전송결과일시', name: 'ntsResultDt',  width: 140, sortable: true },
       { header: '연동관리번호', name: 'mgtKeyCol',    width: 170 },
-      { header: '가맹점',       name: 'franchise',    width: 160 },
       { header: '동기화',       name: 'syncedAt',     width: 140 },
 
       /* 네 화면이 함께 쓰던 칸 — 주문에 이어진 줄에만 값이 선다(요청서 3ㆍ6쪽).
@@ -874,7 +873,6 @@ function renderHistPage(page) {
       ntsSendDt:   ymdt(r.ntsSendDT ?? ''),
       ntsResultDt: ymdt(r.ntsresultDT ?? ''),
       mgtKeyCol:   r.mgtKey ?? '',
-      franchise:   r.franchiseCorpName ?? '',
       syncedAt:    r.syncedAt ?? '',
 
       // 액션용 숨김 필드
@@ -1026,29 +1024,6 @@ async function openDetail(mgtKey) {
             </tbody>
           </table>
 
-          <div class="cbv-sub-row">
-            <div class="cbv-sub-title">현금영수증 가맹점</div>
-          </div>
-          <table><colgroup><col width="15%"><col width="35%"><col width="15%"><col width="35%"></colgroup>
-            <tbody>
-              <tr>
-                <td>상호</td><td colspan="3">${r.franchiseCorpName ?? '—'}</td>
-              </tr>
-              <tr>
-                <td>사업자번호</td><td>${corpFmt(r.franchiseCorpNum)}</td>
-                <td>종사업장</td><td></td>
-              </tr>
-              <tr>
-                <td>대표자</td><td>${r.franchiseCEOName ?? '—'}</td>
-                <td>전화번호</td><td>${telFmt(r.franchiseTEL)}</td>
-              </tr>
-              <tr>
-                <td style="height:50px;">주소</td>
-                <td colspan="3" style="line-height:1.6;">${r.franchiseAddr ?? '—'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
         <div class="cbv-footer">
           <p>본 현금영수증은 발행 후 24시간 이내 국세청에서 확인하여 확정되며, 홈택스(www.hometax.go.kr)에서 전송내역을 확인할 수 있습니다.</p>
           <p>현금영수증 문의(국세청) : 126</p>
@@ -1184,29 +1159,6 @@ async function openPrint(mgtKey) {
         </tr>
       </tbody>
     </table>
-    <div class="r-sub-row">
-      <div class="r-sub-title">현금영수증 가맹점</div>
-    </div>
-    <table><colgroup><col width="18%"><col width="32%"><col width="18%"><col width="32%"></colgroup>
-      <tbody>
-        <tr>
-          <td>상호</td><td colspan="3">${r.franchiseCorpName ?? '—'}</td>
-        </tr>
-        <tr>
-          <td>사업자번호</td><td>${corpFmt(r.franchiseCorpNum)}</td>
-          <td>종사업장</td><td></td>
-        </tr>
-        <tr>
-          <td>대표자</td><td>${r.franchiseCEOName ?? '—'}</td>
-          <td>전화번호</td><td>${telFmt(r.franchiseTEL)}</td>
-        </tr>
-        <tr>
-          <td style="height:50px;">주소</td>
-          <td colspan="3" style="line-height:1.6;">${r.franchiseAddr ?? '—'}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
   <div class="r-footer">
     <p>본 현금영수증은 발행 후 24시간 이내 국세청에서 확인하여 확정되며, 홈택스(www.hometax.go.kr)에서 전송내역을 확인할 수 있습니다.</p>
     <p>현금영수증 문의(국세청) : 126</p>

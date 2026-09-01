@@ -580,6 +580,10 @@ class PrescriptionController extends Controller
         $docTypes = [];
         foreach (['rx', 'etc'] as $kind) {
             $docTypes[$kind] = \App\Models\CommonCode::options('doc_type', $kind)
+                /* 위임장은 고르는 자리에 두지 않는다 — 주문 등록에서 환자가 서명하면
+                   그때 저절로 만들어져 서류 관리에 들어간다. 여기서 또 올리게 두면
+                   같은 위임장이 두 장이 되고, 어느 것이 서명본인지 알 수 없다. */
+                ->reject(fn ($c) => $c->code === 'delegation')
                 ->map(fn ($c) => ['code' => $c->code, 'label' => $c->label])->values()->all();
         }
 

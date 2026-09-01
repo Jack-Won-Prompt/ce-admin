@@ -77,9 +77,12 @@ class PopbillTaxinvoice extends Model
             'invoicee_corp_num' => $info->invoiceeCorpNum  ?? null,
             'invoicee_corp_name'=> $info->invoiceeCorpName ?? null,
             'invoicee_ceo_name' => $info->invoiceeCEOName  ?? $info->invoiceeCeoName ?? null,
-            'supply_cost_total' => (int) ($info->supplyCostTotal ?? 0),
-            'tax_total'         => (int) ($info->taxTotal        ?? 0),
-            'total_amount'      => (int) ($info->totalAmount     ?? 0),
+            'supply_cost_total' => $supply = (int) ($info->supplyCostTotal ?? 0),
+            'tax_total'         => $tax    = (int) ($info->taxTotal        ?? 0),
+            /* 팝빌이 합계를 늘 주지는 않는다 — 목록 조회에서는 0 으로 온다. 그대로
+               적어 두면 화면의 「합계금액」 칸이 0 원으로 서서, 공급가액과 세액이
+               멀쩡한데 합계만 없는 줄이 된다. 안 주면 우리가 더한다. */
+            'total_amount'      => (int) ($info->totalAmount ?: ($supply + $tax)),
             'nts_confirm_num'   => $info->ntsconfirmNum ?? null,
             'is_final'          => in_array($stateCode, self::FINAL_STATES, true),
             'synced_at'         => now(),

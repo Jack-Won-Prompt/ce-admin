@@ -189,7 +189,8 @@ class TaxinvoiceController extends Controller
                 'invoiceeCorpName'=> $r->invoicee_corp_name,
                 'supplyCostTotal' => (string) $r->supply_cost_total,
                 'taxTotal'        => (string) $r->tax_total,
-                'totalAmount'     => (string) $r->total_amount,
+                /* 예전에 0 으로 적힌 줄이 있다 — 고쳐 쓰지 않고 보일 때 더한다 */
+                'totalAmount'     => (string) ($r->total_amount ?: $r->supply_cost_total + $r->tax_total),
                 'ntsconfirmNum'   => $r->nts_confirm_num,
 
                 // 팝빌이 주는 나머지 (요청서 6쪽)
