@@ -130,7 +130,7 @@ class NhisAssistController extends Controller
         ]);
 
         activity()->causedBy(Auth::user())->performedOn($order)
-            ->log('지자체 등기 발송 기록: ' . ($data['registered_no'] ?: '등기번호 미기재'));
+            ->log('지자체 등기 발송 기록: ' . (($data['registered_no'] ?? null) ?: '등기번호 미기재'));
 
         return back()->with('status', '등기 발송을 기록했습니다.');
     }
@@ -156,11 +156,14 @@ class NhisAssistController extends Controller
 
         $order->update([
             'nhis_claim_status' => 'submitted',
-            'nhis_submitted_at' => $data['submitted_at'] ?: now(),
+            /* 비워 두면 지금이다. validate 가 nullable 이라 키 자체가 없을 수 있어
+               ?? 로 받는다 — 메모 없이 누르면 그 자리에서 500 으로 죽었다. */
+            'nhis_submitted_at' => ($data['submitted_at'] ?? null) ?: now(),
         ]);
 
+        $memo = $data['memo'] ?? null;
         activity()->causedBy(Auth::user())->performedOn($order)
-            ->log('공단 청구 완료로 표시' . ($data['memo'] ? ' — ' . $data['memo'] : ''));
+            ->log('공단 청구 완료로 표시' . ($memo ? ' — ' . $memo : ''));
 
         return back()->with('status', '청구 완료로 적었습니다.');
     }
