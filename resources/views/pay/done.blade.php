@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ $ok ? '결제 완료' : '결제 실패' }} — {{ $link->order?->order_number }}</title>
+  <title>{{ $ok ? ($waiting ? '입금 안내' : '결제 완료') : '결제 실패' }} — {{ $link->order?->order_number }}</title>
   <style>
     body { margin:0; padding:24px 16px; background:#F4F5F7; color:#1F2329;
            font-family:'Pretendard','Apple SD Gothic Neo',sans-serif; font-size:14px; line-height:1.6; }
@@ -28,14 +28,16 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <div class="mark {{ $ok ? 'ok' : 'no' }}">{{ $ok ? '✓' : '!' }}</div>
-    <h1>{{ $ok ? '결제가 끝났습니다' : '결제하지 못했습니다' }}</h1>
-    <p>{{ $ok ? '영수증은 문자로 안내드립니다.' : ($message ?: '다시 시도하시거나 담당자에게 문의해 주십시오.') }}</p>
+    {{-- 가상계좌는 계좌가 나왔을 뿐 아직 낸 것이 아니다 — 「끝났습니다」로 적으면
+         환자가 입금하지 않고 창을 닫는다 --}}
+    <div class="mark {{ $ok ? 'ok' : 'no' }}">{{ $ok ? ($waiting ? '!' : '✓') : '!' }}</div>
+    <h1>@if(!$ok)결제하지 못했습니다@elseif($waiting)계좌가 나왔습니다@else결제가 끝났습니다@endif</h1>
+    <p>@if(!$ok){{ $message ?: '다시 시도하시거나 담당자에게 문의해 주십시오.' }}@elseif($waiting)아래 계좌로 입금해 주셔야 결제가 끝납니다.@else영수증은 문자로 안내드립니다.@endif</p>
 
     <div class="rows">
       <div class="row"><span class="k">주문번호</span><span class="v">{{ $link->order?->order_number }}</span></div>
       <div class="row"><span class="k">금액</span><span class="v">{{ number_format($link->amount) }}원</span></div>
-      @if($ok)
+      @if($ok && !$waiting)
         <div class="row"><span class="k">결제 시각</span><span class="v">{{ $link->paid_at?->format('Y-m-d H:i') }}</span></div>
       @endif
     </div>
@@ -45,7 +47,9 @@
     @if($ok && $va)
       <div class="va">
         <div style="font-weight:700;">아래 계좌로 입금해 주십시오</div>
-        <div>{{ $va['bank'] ?? $va['bankCode'] ?? '' }}</div>
+        {{-- 토스는 은행을 코드로 준다(03) — 그대로 두면 환자가 「03 은행」을 찾는다 --}}
+        @php $bankCode = $va['bank'] ?? $va['bankCode'] ?? ''; @endphp
+        <div>{{ \App\Services\TossPayments\TossClient::BANK_NAMES[$bankCode] ?? $bankCode }}</div>
         <div class="acc">{{ $va['accountNumber'] ?? '' }}</div>
         <div>예금주 {{ $va['customerName'] ?? '' }}</div>
         @if(!empty($va['dueDate']))

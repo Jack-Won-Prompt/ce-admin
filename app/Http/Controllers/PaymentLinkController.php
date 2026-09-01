@@ -84,7 +84,28 @@ class PaymentLinkController extends Controller
             'link'      => $link,
             'order'     => $link->order,
             'clientKey' => config('toss.client_key'),
+            'customerKey' => $this->customerKey($link),
         ]);
+    }
+
+    /**
+     * 결제위젯에 줄 「이 사람」 표.
+     *
+     * 여태 비회원(ANONYMOUS)으로 열었더니 결제수단 칸이 비어 있었다 — 위젯에 브랜드페이가
+     * 들어 있고, 브랜드페이는 비회원에게 내주지 않는다(「비회원은 브랜드페이 사용이
+     * 어려워요」). 그래서 사람마다 하나씩 붙는 표를 준다.
+     *
+     * 표는 우리 앱 열쇠로 뜬 것이라 밖에서 지어낼 수 없고, 같은 환자에게는 늘 같은 것이
+     * 나온다 — 다음에 다시 낼 때 저장해 둔 카드가 그대로 보인다. 환자 줄이 아직 없으면
+     * 그 결제 한 건에만 붙는 표를 준다.
+     */
+    private function customerKey(PaymentLink $link): string
+    {
+        $seed = $link->order?->patient_id
+            ? 'patient:' . $link->order->patient_id
+            : 'link:' . $link->token;
+
+        return 'ce-' . substr(hash_hmac('sha256', $seed, (string) config('app.key')), 0, 40);
     }
 
     /**
@@ -103,14 +124,14 @@ class PaymentLinkController extends Controller
         $error      = $request->query('message') ?: $request->query('code');
 
         if (!$paymentKey || !$tossOrder) {
-            return view('pay.done', ['link' => $link, 'ok' => false,
+            return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false,
                                      'message' => $error ?: '결제가 완료되지 않았습니다.']);
         }
 
         if ($amount !== (int) $link->amount) {
             Log::warning('[결제전송] 금액이 다르다', ['link' => $link->id, 'sent' => $link->amount, 'got' => $amount]);
 
-            return view('pay.done', ['link' => $link, 'ok' => false, 'message' => '결제 금액이 맞지 않습니다.']);
+            return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false, 'message' => '결제 금액이 맞지 않습니다.']);
         }
 
         try {
@@ -122,13 +143,27 @@ class PaymentLinkController extends Controller
         } catch (\Throwable $e) {
             Log::error('[결제전송] 승인 실패', ['link' => $link->id, 'error' => $e->getMessage()]);
 
-            return view('pay.done', ['link' => $link, 'ok' => false, 'message' => $e->getMessage()]);
+            return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false, 'message' => $e->getMessage()]);
         }
 
-        $this->links->markPaid($link, $paymentKey, $tossOrder);
+        /* 가상계좌는 승인이 끝나도 아직 낸 것이 아니다 — 계좌가 나왔을 뿐이고, 돈은
+           환자가 은행에 넣어야 들어온다(WAITING_FOR_DEPOSIT). 여기서 「결제완료」로
+           적으면 목록에서 받은 돈으로 읽히고, 담당자가 입금을 기다리지 않게 된다.
+           들어온 것은 토스가 입금 웹훅으로 알려 준다 — 그때 낸 것으로 적는다. */
+        $waiting = ($res['status'] ?? '') === 'WAITING_FOR_DEPOSIT';
+
+        if ($waiting) {
+            $link->update(['payment_key' => $paymentKey, 'toss_order_id' => $tossOrder]);
+        } else {
+            $this->links->markPaid($link, $paymentKey, $tossOrder);
+        }
+
         $this->record($link, $res);
 
-        return view('pay.done', ['link' => $link->refresh(), 'ok' => true, 'message' => null, 'toss' => $res]);
+        return view('pay.done', [
+            'link' => $link->refresh(), 'ok' => true, 'message' => null,
+            'toss' => $res, 'waiting' => $waiting,
+        ]);
     }
 
     // ── 안쪽 ──────────────────────────────────────────────
