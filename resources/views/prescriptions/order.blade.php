@@ -5800,6 +5800,15 @@ window.HELP_TOUR_STEPS = [
     const sel = document.getElementById('f-claim-agency');
     if (!sel || sel.value) return;                 // 담당자가 이미 골랐으면 두지 않는다
 
+    /* 처방외는 자격을 고를 것도 없이 우리가 청구하지 않는다 — 환자가 제 돈으로
+       사는 건이다. 자격만 보고 있어 처방외를 골라도 청구처가 비어 있었고,
+       그러면 주문 관리에서 청구 단추가 어느 갈래인지 정하지 못한다. */
+    if (document.getElementById('f-acc-add-type')?.value === '20') {
+      sel.value = 'none';
+      onClaimAgencyChange();
+      return;
+    }
+
     const guess = CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
     if (!guess) return;
 
@@ -5808,6 +5817,8 @@ window.HELP_TOUR_STEPS = [
   }
 
   document.getElementById('f-benefit-class')?.addEventListener('change', suggestClaimAgency);
+  /* 유형(처방전ㆍ처방외)도 청구처를 가른다 — 바뀌면 다시 본다 */
+  document.getElementById('f-acc-add-type')?.addEventListener('change', suggestClaimAgency);
   document.getElementById('f-claim-agency')?.addEventListener('change', onClaimAgencyChange);
   suggestClaimAgency();
 
