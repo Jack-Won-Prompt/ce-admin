@@ -7313,7 +7313,12 @@ window.HELP_TOUR_STEPS = [
     const res = await apiRequest('/orders', 'POST', localPayload);
     if (!res.success) {
       BtnState.error(btn, '생성 실패');
-      showToast(res.message || '주문 생성 실패', 'danger');
+      /* 단추를 되돌린다. 그러지 않으면 「생성 실패」에 붙박여 다시 누를 수 없다 —
+         재구매 기한처럼 조건이 바뀌면 다시 눌러야 하는 막힘이 있다. */
+      setTimeout(() => BtnState.reset(btn), 2500);
+      /* 막는 까닭은 오래 세워 둔다. 금방 사라지면 담당자는 아무 말도 못 본 채로
+         「왜 안 되지」만 남는다. */
+      showToast(res.message || '주문 생성 실패', 'danger', 8000);
       return;
     }
 
