@@ -117,13 +117,6 @@
         <input type="text" id="rtoOrderDate" class="form-control" readonly
                style="background:var(--gray-50);" placeholder="—">
       </div>
-      <div class="rto-f span4">
-        {{-- 갈래가 정해지면 단계도 배송비도 승인자도 정해진다. 접수하는 사람이 그것을
-             미리 알아야 고객에게 무엇을 안내할지 정할 수 있다. --}}
-        <div id="rtoFlowNote" style="padding:8px 12px;background:var(--gray-50);
-                    border:1px solid var(--border);border-radius:8px;font-size:12px;
-                    color:var(--gray-700);line-height:1.6;"></div>
-      </div>
       <div class="rto-f span4" id="rtoPreShipWrap" style="display:none;">
         {{-- 아직 나가지 않은 주문이면 종류와 상관없이 판매주문 취소로 나간다.
              접수하고 나서 알면 늦다 — 고르는 자리에서 미리 알린다. --}}
@@ -195,10 +188,6 @@
      있다는 것을 그 자리에서 알려 준다. */
   const NONE_NOTE = '창고에 전달된 주문이 없습니다 — 교환ㆍ반품ㆍ취소는 창고에 넘긴 건만 접수합니다';
   /* 갈래별 단계·승인자는 모델이 정한다. 화면에 두 벌로 적으면 한쪽만 고쳐진다. */
-  const FLOWS = @json(collect(\App\Models\OrderReturn::FLOWS)->map(
-      fn ($f) => collect($f)->map(fn ($s) => \App\Models\OrderReturn::STATUS_LABELS[$s])->all()));
-  const SC_LABELS = @json(\App\Models\OrderReturn::SCENARIO_LABELS);
-  const APPROVERS = @json(\App\Models\OrderReturn::APPROVERS);
   const DEFECTS   = @json(\App\Models\OrderReturn::DEFECT_REASONS);
   const PATIENT_URL = @json(route('order-returns.patientSearch'));
 
@@ -378,7 +367,6 @@
     $('rtoSubtypeWrap').classList.toggle('on', t === 'cancel');
     syncReason();
     syncRefundMethod();
-    syncNote();
   }
 
   /* 자격 변경은 되돌려 받을 물건이 없다 — 언제나 일반 환불이다.
@@ -391,27 +379,6 @@
     if (t === 'return')   return 'return_refund';
     return (r === 'eligibility' || $('rtoSubtype').value === 'refund_only')
       ? 'refund_only' : 'cancel_before_ship';
-  }
-
-  const RULES = {
-    exchange_mind: '환자가 3PL 로 보내면 배송비는 <b>환자 부담</b>입니다. '
-      + '검수·승인·입금 확인을 마쳐야 다시 나갑니다.',
-    exchange_defect: '3PL 이 회수하고 택배비도 <b>3PL 이 뭅니다</b>. '
-      + '<b>동일 제품만</b> 바꿔 드리고, 불량 lot 은 빼고 출고합니다. '
-      + '최초 일자 기준으로 청구하며 재결제는 하지 않습니다. '
-      + '회수·교환 기간에 사용할 제품은 별도로 발송합니다.',
-    return_refund: '제품을 회수해 검수한 뒤 결제를 취소하고 마이너스로 발행합니다.',
-    cancel_before_ship: '아직 나가지 않은 주문입니다 — 수거·검수가 없습니다.',
-    refund_only: '반품 받을 제품이 없습니다. 창고에는 알리지 않고, '
-      + '승인·결제취소 뒤 <b>전산판매(금액조정)</b> 주문을 생성합니다.',
-  };
-
-  function syncNote() {
-    const sc = scenarioOf();
-    $('rtoFlowNote').innerHTML =
-      '<b>' + SC_LABELS[sc] + '</b> · 승인 ' + APPROVERS[sc]
-      + '<br>' + (FLOWS[sc] || []).join(' → ')
-      + '<br>' + RULES[sc];
   }
 
   function syncReason() {
@@ -432,8 +399,7 @@
 
   $('rtoType').addEventListener('change', syncType);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
-  $('rtoReason').addEventListener('change', () => { syncReason(); syncNote(); });
-  $('rtoSubtype').addEventListener('change', syncNote);
+  $('rtoReason').addEventListener('change', () => { syncReason(); });
   ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } }));
 

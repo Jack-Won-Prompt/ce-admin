@@ -19,6 +19,15 @@
 @push('styles')
 <style>
   .rt-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; }
+  /* 가로 탭 — 판 아홉을 여섯 묶음으로 세웠다. 탭줄은 전역 .pnl-tabs 를 쓴다. */
+  .rt-tabwrap { padding-bottom:14px; }
+  .rt-pane { display:none; padding:14px 16px 0; }
+  .rt-pane.active { display:block; }
+  /* 탭 안에서는 카드가 다시 테두리를 두르지 않는다 — 판 안의 판이 되어 겹쳐 보인다 */
+  .rt-pane .rt-card { border:none; border-radius:0; margin-bottom:14px; background:transparent; }
+  .rt-pane .rt-card:last-child { margin-bottom:0; }
+  .rt-pane .rt-hd { padding:0 0 9px; border-bottom:1px solid var(--border); }
+  .rt-pane .rt-bd { padding:12px 0 0; }
   .rt-hd { padding:11px 16px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700;
            display:flex; align-items:center; gap:8px; }
   .rt-hd .grow { flex:1; }
@@ -65,6 +74,20 @@
 
 @if(session('status'))<div class="ok-bar">{{ session('status') }}</div>@endif
 
+{{-- 판이 아홉이라 세로로 늘어놓으면 아래 것을 보려고 계속 굴려야 했다. 붙어 있는
+     것끼리 묶어 가로 탭으로 세운다 — 차례는 그대로다. 뒤 판에서 정한 값을 앞 판이
+     쓰는 자리가 있어, 차례를 바꾸면 화면이 통째로 죽는다. --}}
+<div class="ds-grid-card rt-tabwrap">
+  <div class="pnl-tabs">
+      <button type="button" class="pnl-tab active" data-rtab="apply" onclick="rtTab(this)">신청 내용</button>
+      <button type="button" class="pnl-tab" data-rtab="notice" onclick="rtTab(this)">환자 안내ㆍ환불</button>
+      <button type="button" class="pnl-tab" data-rtab="flow" onclick="rtTab(this)">진행 단계</button>
+      <button type="button" class="pnl-tab" data-rtab="items" onclick="rtTab(this)">반품 품목</button>
+      <button type="button" class="pnl-tab" data-rtab="issue" onclick="rtTab(this)">발행ㆍ연계</button>
+      <button type="button" class="pnl-tab" data-rtab="logs" onclick="rtTab(this)">처리 이력</button>
+  </div>
+
+  <div class="rt-pane active" data-rtab="apply">
 <div class="rt-card">
   <div class="rt-hd">원 주문</div>
   <div class="rt-bd">
@@ -81,7 +104,6 @@
     <div class="rt-kv"><span>배송지</span><span>{{ $r->order?->shipping_address ?? '—' }}</span></div>
   </div>
 </div>
-
 <div class="rt-card">
   <div class="rt-hd">신청 내용</div>
   <div class="rt-bd">
@@ -155,6 +177,9 @@
      요청서 4쪽. 카드 취소 승인번호ㆍ통장을 물린 날ㆍ환불분 현금영수증 번호는 팝빌과
      토스 화면을 보며 담당자가 옮겨 적는 값이다. 우리가 만들 수 없어 적는 자리를 둔다.
      단계는 여기서 옮기지 않는다 — 그것은 아래 「진행 단계」가 절차서대로 한다. --}}
+  </div>
+
+  <div class="rt-pane" data-rtab="notice">
 {{-- 환자에게 알린다 ────────────────────────────────────
      절차서의 「접수자 → 환자 inform」. 창고 사건마다 저절로 보내지 않는다 — 밖으로
      나가는 말이라 무를 수 없고, 검수중ㆍ입고중처럼 환자가 알 까닭이 없는 걸음도 있다.
@@ -179,7 +204,6 @@
     @endif
   </div>
 </div>
-
 <div class="rt-card">
   <div class="rt-hd">환불 처리 이력</div>
   <form method="POST" action="{{ route('order-returns.update', $r) }}" class="rt-refund rt-bd">
@@ -217,7 +241,9 @@
     </div>
   </form>
 </div>
+  </div>
 
+  <div class="rt-pane" data-rtab="flow">
 {{-- 진행 단계 ─────────────────────────────────────────
      「Unicorn 교환·반품 절차」의 칸 하나가 단계 하나다. 어디까지 왔고 다음은 누가
      무엇을 하는지가 보이지 않으면 담당자는 매번 절차서를 열어 봐야 한다.
@@ -313,7 +339,9 @@
     @endif
   </div>
 </div>
+  </div>
 
+  <div class="rt-pane" data-rtab="items">
 {{-- 되돌리는 품목 — 부분 취소면 몇 개 가운데 몇 개인지가 여기서 보인다 --}}
 @if($r->items->isNotEmpty())
 <div class="rt-card">
@@ -335,7 +363,9 @@
   </div>
 </div>
 @endif
+  </div>
 
+  <div class="rt-pane" data-rtab="issue">
 {{-- 마이너스 발행 · 금액조정 ───────────────────────────
      절차서의 마지막 칸이다. 팝빌은 운영으로 붙어 있어 여기서 부르는 취소·발행은
      국세청 신고까지 간다 — 사람이 누를 때만 돈다. --}}
@@ -365,7 +395,6 @@
   </div>
 </div>
 @endif
-
 {{-- 창고 연계 ─────────────────────────────────────────
      되돌리는 건이 CEAdmin 안에서만 돌면 창고는 물건이 돌아온다는 것을 모른다.
      알렸는지, 창고가 어디까지 했는지를 여기서 본다. --}}
@@ -414,7 +443,9 @@
     <div class="rt-kv"><span>전달 시각</span><span>{{ $r->withworks_sent_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
   </div>
 </div>
+  </div>
 
+  <div class="rt-pane" data-rtab="logs">
 <div class="rt-card">
   <div class="rt-hd">처리 이력</div>
   <div class="rt-bd">
@@ -433,5 +464,27 @@
     @endforelse
   </div>
 </div>
+  </div>
+</div>
 
 @endsection
+
+@push('scripts')
+<script>
+/* 탭 하나만 보인다. 어느 탭이었는지는 주소에 남겨, 걸음을 옮겨 화면이 다시 그려져도
+   보던 자리로 돌아온다. */
+function rtTab(btn) {
+  const key = btn.dataset.rtab;
+  document.querySelectorAll('.rt-tabwrap .pnl-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.rt-pane').forEach(p => p.classList.toggle('active', p.dataset.rtab === key));
+  try { history.replaceState(null, '', location.pathname + '?tab=' + key); } catch (e) {}
+}
+
+(function () {
+  const want = new URLSearchParams(location.search).get('tab');
+  if (!want) return;
+  const btn = document.querySelector('.rt-tabwrap .pnl-tab[data-rtab="' + want + '"]');
+  if (btn) rtTab(btn);
+})();
+</script>
+@endpush

@@ -534,16 +534,13 @@
                 <div class="od-box-value">{{ $order->estimated_delivery?->format('Y-m-d') ?? '-' }}</div>
               </div>
 
-              {{-- 운송장 입력 --}}
+              {{-- 운송장 번호는 창고(위드웍스)가 출고하면서 알려 준다. 손으로 적는 칸을
+                   두었더니 담당자가 적은 번호와 창고가 보낸 번호가 서로 달라, 어느 것이
+                   실제 송장인지 알 수 없었다. 받은 것을 보여 주기만 한다. --}}
               <div class="od-box od-box-tracking">
-                <div class="section-title">운송장 번호</div>
-                <div class="tracking-row">
-                  <input type="text" id="trackingInput" class="form-control"
-                         value="{{ $order->tracking_number }}"
-                         placeholder="운송장 번호 입력">
-                  <button class="btn btn-primary btn-sm" onclick="saveTracking()">
-                    <i class="bx bx-save"></i> 저장
-                  </button>
+                <div class="od-box-label">운송장 번호</div>
+                <div class="od-box-value">
+                  {{ $order->withworks_tracking_no ?: ($order->tracking_number ?: '창고에서 출고하면 들어옵니다') }}
                 </div>
               </div>
             </div>
@@ -1316,17 +1313,6 @@ async function changeStatus(status) {
   }
 }
 
-
-// ── 운송장 저장 ───────────────────────────────────────────
-async function saveTracking() {
-  const val = document.getElementById('trackingInput').value.trim();
-  if (!val) { showToast('운송장 번호를 입력해주세요.', 'warning'); return; }
-
-  const res = await apiRequest(ORDER_URL + '/tracking', 'POST', { tracking_number: val });
-  if (res.success) {
-    showToast('운송장 번호가 저장되었습니다.', 'success');
-  }
-}
 
 // ══════════ 세금계산서 ══════════════════════════════════════
 

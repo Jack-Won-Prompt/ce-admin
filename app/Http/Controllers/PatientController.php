@@ -149,21 +149,23 @@ class PatientController extends Controller
                 // 옛 칸 — 다른 화면이 아직 이 이름으로 읽는다
                 'birth_date'      => $birth,
                 'gender'          => $gender,
-                'mobile'          => $p->mobile ?? '-',
-                'phone2'          => $p->phone ?? '',
+                /* 번호는 보일 때 편다 — 저장된 값은 손대지 않는다. 상담 창ㆍ연동에서
+                   붙임표 없이 들어온 것이 섞여 있어 목록에서 줄마다 꼴이 달랐다. */
+                'mobile'          => \App\Support\PhoneNo::format($p->mobile) ?: '-',
+                'phone2'          => \App\Support\PhoneNo::format($p->phone),
 
                 // ── 연락 ──
                 'contact_status'  => $p->contactStatusLabel(),
                 'contact_channel' => $p->contactChannelLabel(),
                 'email'           => $p->email ?? '',
-                'fax'             => $p->fax ?? '',
+                'fax'             => \App\Support\PhoneNo::format($p->fax),
                 'address'         => $p->full_address,
                 'address_at'      => $addr?->created_at?->format('Y-m-d') ?? '',
 
                 // ── 돈 ──
                 'remitter'        => $p->remitter_name ?? '',
                 'deduction'       => $p->deduction ?? '',
-                'cash_receipt_no' => $p->cash_receipt_no ?? '',
+                'cash_receipt_no' => \App\Support\PhoneNo::format($p->cash_receipt_no),
 
                 // ── 공단ㆍ기초 ──
                 'nhis_reg'        => $p->nhis_reg_status ?? '',
