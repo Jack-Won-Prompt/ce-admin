@@ -920,7 +920,7 @@
 
   /* 보호자 영역의 진행 상태 — 받은 것과 아직 안 받은 것 */
   .gb-state { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px;
-              font-size:11px; font-weight:700; line-height:18px; white-space:nowrap;
+              font-size:11px; font-weight:700; line-height:18px; white-space:nowrap; flex-shrink:0;
               background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); }
   .gb-state.done { background:var(--primary-50); color:var(--primary); border-color:var(--primary-200); }
 
@@ -1619,7 +1619,8 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 전송 완료 배너 --}}
           @php
             $fhDocs    = $lastFaxHistory?->documents ?? [];
-            $fhLabels  = array_map(fn($d) => ['authorization'=>'위임장','prescription'=>'처방전','purchase_history'=>'제품 구매내역','cash_receipt'=>'현금영수증'][$d] ?? $d, $fhDocs);
+            /* 공단에 보내는 서식 이름은 「요양비위임장」이다(별지 제19호의7서식) */
+            $fhLabels  = array_map(fn($d) => ['authorization'=>'요양비위임장','prescription'=>'처방전','purchase_history'=>'제품 구매내역','cash_receipt'=>'현금영수증'][$d] ?? $d, $fhDocs);
             $fhTimeStr = $lastFaxHistory?->created_at?->format('Y-m-d H:i') ?? '';
             $fhFaxNo   = $lastFaxHistory?->fax_no ?? '';
             $fhRecip   = ['nhis'=>'국민건강보험공단','custom'=>'기타'][$lastFaxHistory?->recipient_type ?? ''] ?? ($lastFaxHistory?->recipient_type ?? '');
@@ -1689,7 +1690,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
                      직접 입력·업로드하므로 팩스로 보내지 않는다. --}}
                 <div style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
                   <b style="color:var(--primary);">팩스는 환자 등록·재등록용입니다.</b><br>
-                  등록신청서 · 결과지 · 위임장 · 신분증을 공단 관할지사로 보냅니다.<br>
+                  등록신청서 · 결과지 · 요양비위임장 · 신분증을 공단 관할지사로 보냅니다.<br>
                   <b>미성년자</b>는 등록신청서에 보호자 정보를 함께 적고, <b>보호자 신분증</b>도 넣습니다.<br>
                   청구 자료는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
                 </div>
@@ -2435,17 +2436,21 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 {{-- 라벨에 「성년/미성년」이라 적으면 화면에 두 낱말이 다 보인다. 값 자리에
                      주민등록번호로 셈한 하나만 선다(요청, 2026-08-31). --}}
                 <span class="rx-field-label">연령 구분</span>
-                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:6px;">
+                {{-- 배지 셋이 한 줄에 선다. 접히게 두었더니 이 줄만 두 줄이 되어 옆 칸과
+                     높이가 어긋났다 — 낱말을 줄이고(완료 여부는 빛깔과 ✓ 가 말한다) 접지 않는다. --}}
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:nowrap;overflow:hidden;">
                   <input type="hidden" id="f-birth" />
                   {{-- 미성년이면 이 배지가 보호자 팝오버를 여는 자리다(명세 2장이 이 배지를 가리킨다).
                        미성년이 아니면 나이만 알리는 표시라 누를 것이 없다 — rnRecalc 이 갈라 준다. --}}
+                  {{-- 옆의 상태 배지와 키를 맞춘다 — 한 줄에 서는데 하나만 도드라지면
+                       두 줄처럼 읽힌다(.gb-state 와 같은 pad 1/8 · lh 18). --}}
                   <span id="f-age-badge" onclick="toggleGuardianPop(event)"
-                        style="display:none;flex-shrink:0;font-size:11px;font-weight:700;
-                        padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
+                        style="display:none;flex-shrink:0;font-size:11px;font-weight:700;line-height:18px;
+                        padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid transparent;"></span>
                   {{-- 진행 상태는 팝오버를 닫아 두어도 보여야 한다 — 무엇이 아직 안 왔는지가
                        이 줄에서 읽혀야 열어 볼지 말지를 정한다. 상자 안에 있던 것을 올렸다. --}}
-                  <span id="gbSignState" class="gb-state" style="display:none;">위임장 서명 미완료</span>
-                  <span id="gbIdState"   class="gb-state" style="display:none;">신분증 업로드 미완료</span>
+                  <span id="gbSignState" class="gb-state" style="display:none;" title="위임장 서명 미완료">위임장 서명</span>
+                  <span id="gbIdState"   class="gb-state" style="display:none;" title="신분증 업로드 미완료">신분증</span>
                 </div>
 
                 {{-- ── 미성년자 — 보호자(법정대리인) 팝오버 ────────────────
@@ -10424,9 +10429,13 @@ window.HELP_TOUR_STEPS = [
     const hasSign = !!data.guardian_signature;
     const hasId   = !!data.guardian_id_url;
 
-    sign.textContent = hasSign ? '위임장 서명 완료' : '위임장 서명 미완료';
+    /* 셋이 한 줄에 서야 해서 낱말을 줄였다. 「완료」인지는 빛깔과 ✓ 가 말하고,
+       온전한 뜻은 마우스를 올리면 나온다. */
+    sign.textContent = (hasSign ? '✓ ' : '') + '위임장 서명';
+    sign.title       = hasSign ? '위임장 서명 완료' : '위임장 서명 미완료';
     sign.className   = 'gb-state' + (hasSign ? ' done' : '');
-    idc.textContent  = hasId ? '신분증 업로드 완료' : '신분증 업로드 미완료';
+    idc.textContent  = (hasId ? '✓ ' : '') + '신분증';
+    idc.title        = hasId ? '신분증 업로드 완료' : '신분증 업로드 미완료';
     idc.className    = 'gb-state' + (hasId ? ' done' : '');
   }
 
