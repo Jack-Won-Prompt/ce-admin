@@ -7826,13 +7826,21 @@ window.HELP_TOUR_STEPS = [
     return '';
   }
 
-  /** 시군구 — 광역(특별시ㆍ광역시)은 빼고 마지막 것을 쓴다(「부천시 원미구」면 원미구). */
+  /** 시군구 — 광역(특별시ㆍ광역시)은 빼고 마지막 것을 쓴다(「부천시 원미구」면 원미구).
+
+      한때 두 글자 이상만 읽었다(「[가-힣]{2,10}」). 그래서 「중구ㆍ동구ㆍ서구ㆍ남구ㆍ
+      북구」를 아예 못 읽었는데, 광역시마다 있는 이름이라 「대구 중구 …」 같은 주소는
+      관할을 영영 못 찾았다. 한 글자도 읽되, 줄여 적은 광역 이름(대구ㆍ대전…)이
+      「구」로 끝나 걸리지 않게 따로 거른다. */
+  const BO_WIDE = /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)$/;
+
   function boSigunguOf(addr) {
-    const m = (addr || '').match(/([가-힣]{2,10}(?:시|군|구))(?=\s)/g);
+    const m = (addr || '').match(/([가-힣]{1,10}(?:시|군|구))(?=\s)/g);
     if (!m) return '';
     let picked = '';
     for (const c of m) {
       if (/(특별시|광역시|특별자치시|특별자치도)$/.test(c)) continue;
+      if (BO_WIDE.test(c)) continue;
       picked = c;
     }
     return picked;
@@ -11614,11 +11622,20 @@ async function hospitalSearch() {
       return;
     }
 
+    /* 값은 data 로 실어 두고 누를 때 읽는다. onclick 안에 JSON.stringify 로 넣었더니
+       병원명을 감싼 큰따옴표가 속성의 큰따옴표와 부딪혀 그 자리에서 끊겼다 —
+       누르면 「Unexpected end of input」으로 죽어, 쌓아 둔 병원을 고를 수 없었다. */
     list.innerHTML = rows.map(h => `
-      <div class="hp-row" onclick="hospitalPick(${h.id}, ${JSON.stringify(h.name)}, ${JSON.stringify(h.code || '')})">
+      <div class="hp-row" data-hid="${h.id}" data-hname="${escHtml(h.name)}" data-hcode="${escHtml(h.code || '')}">
         <b>${escHtml(h.name)}</b>
         <span>${h.code ? escHtml(h.code) : '요양기관번호 없음'}${h.department ? ' · ' + escHtml(h.department) : ''}</span>
       </div>`).join('');
+
+    list.querySelectorAll('.hp-row').forEach(row => {
+      row.addEventListener('click', () => {
+        hospitalPick(Number(row.dataset.hid), row.dataset.hname, row.dataset.hcode);
+      });
+    });
   } catch (e) {
     list.innerHTML = '<div class="hp-empty">조회에 실패했습니다.</div>';
   }
