@@ -739,7 +739,65 @@ class SettlementController extends Controller
             $order->refresh();
         }
 
+        /* 카드로 받은 건은 전표도 함께 무른다 — 계산서만 걷고 승인이 살아 있으면
+           환자 카드에는 값이 그대로 남는다. 거래명세서는 손대지 않는다: 물건은
+           나간 채로 있고, 무엇을 얼마에 보냈는지는 돈과 따로 남아야 한다. */
+        [$cardDone, $cardFailed] = $this->cancelCardApproval($order);
+        $done   = array_merge($done, $cardDone);
+        $failed = array_merge($failed, $cardFailed);
+
         return ['done' => $done, 'failed' => $failed];
+    }
+
+    /**
+     * 이 건의 카드 승인을 토스에서 무른다.
+     *
+     * 가상계좌ㆍ무통장입금은 우리가 통장을 보고 적은 것이라 무를 곳이 없다 — 돈은
+     * 담당자가 따로 돌려보낸다. 카드만 승인을 취소할 수 있고, 그래야 전표가 사라진다.
+     *
+     * 이미 취소된 것은 건너뛴다. 실패해도 입금 확인 취소 자체는 되돌리지 않는다 —
+     * 남는 것은 기록과 알림이고, 담당자가 토스 화면에서 마저 무른다.
+     *
+     * @return array{0:array<string>, 1:array<string>}
+     */
+    private function cancelCardApproval(Order $order): array
+    {
+        $pay = \App\Models\TossPayment::where('order_id', $order->id)
+            ->where('method', 'CARD')
+            ->whereIn('status', ['DONE', 'PARTIAL_CANCELED'])
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $pay || ! $pay->payment_key) {
+            return [[], []];
+        }
+
+        try {
+            $res = app(\App\Services\TossPayments\TossClient::class)
+                ->post('/v1/payments/' . $pay->payment_key . '/cancel', [
+                    'cancelReason' => '입금 확인 취소',
+                ]);
+
+            $pay->update([
+                'status'       => $res['status'] ?? 'CANCELED',
+                'raw_response' => $res,
+            ]);
+
+            /* 결제 요청 줄도 함께 무른다 — 「결제완료」로 남으면 다시 보낼 수 없다 */
+            \App\Models\PaymentLink::where('payment_key', $pay->payment_key)
+                ->update(['status' => 'cancelled']);
+
+            activity()->causedBy(Auth::user())->performedOn($order)
+                ->log('카드 승인 취소: ' . number_format((int) $pay->amount) . '원');
+
+            return [['카드전표'], []];
+        } catch (\Throwable $e) {
+            Log::warning('[입금 확인 취소] 카드 승인 취소 실패', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return [[], ['카드 승인은 취소하지 못했습니다(' . $e->getMessage() . ')']];
+        }
     }
 
     public function checkPaymentStatus(Order $order): JsonResponse

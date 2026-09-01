@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Log;
  * 신고 서류가 아니라 물건과 함께 나가는 종이라, 자동 발행 스위치와 상관없이 붙는다.
  *
  * 이 발행은 국세청 실신고다. 그래서 기본은 꺼져 있고(config: billing.auto_issue),
+ * 켜 두어도 정해진 개시일 전에는 내지 않는다(billing.auto_issue_start, 2026-10-01).
  * 켠 뒤에도 다음을 지킨다:
  *   · 이미 발행된 것은 다시 내지 않는다
  *   · 금액이 0 이면 내지 않는다
@@ -46,7 +47,33 @@ class DepositAutoIssue
 {
     public function enabled(): bool
     {
-        return (bool) config('billing.auto_issue', false);
+        return (bool) config('billing.auto_issue', false) && $this->started();
+    }
+
+    /**
+     * 자동 발행을 시작하는 날이 되었는가.
+     *
+     * 스위치와 따로 둔다. 켜 두고 화면을 돌려 보는 동안에도 국세청에는 아무것도 가지
+     * 않아야 하고, 정해진 날이 오면 아무도 손대지 않아도 시작되어야 한다.
+     *
+     * 날이 비어 있으면 보지 않는다 — 스위치만으로 정해진다.
+     */
+    public function started(): bool
+    {
+        $start = config('billing.auto_issue_start');
+
+        if (!$start) {
+            return true;
+        }
+
+        try {
+            return now()->startOfDay()->gte(\Illuminate\Support\Carbon::parse($start)->startOfDay());
+        } catch (\Throwable) {
+            /* 날을 못 읽으면 내지 않는 쪽으로 눕는다 — 실신고다 */
+            Log::warning('[자동 발행] 시작일을 읽지 못했습니다', ['value' => $start]);
+
+            return false;
+        }
     }
 
     /**
@@ -90,8 +117,10 @@ class DepositAutoIssue
                 $out['cash'] = $this->cashReceipt($order, $strategy, $out);
                 $out['tax']  = $this->taxInvoice($order, $strategy, $out);
             }
-        } else {
+        } elseif (!config('billing.auto_issue', false)) {
             $out['skipped'][] = '자동 발행이 꺼져 있음';
+        } else {
+            $out['skipped'][] = '자동 발행 개시일(' . config('billing.auto_issue_start') . ') 전';
         }
 
         /* 거래명세서는 세무 서류가 아니라 물건과 함께 나가는 종이다. 국세청에 신고되는

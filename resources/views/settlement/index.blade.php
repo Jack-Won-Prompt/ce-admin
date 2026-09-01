@@ -1136,6 +1136,8 @@
       const issued = [
         r.tax_issued  ? '세금계산서' + (r.tax_no  ? ` (승인 ${r.tax_no})`  : '') : '',
         r.cash_issued ? '현금영수증' + (r.cash_no ? ` (승인 ${r.cash_no})` : '') : '',
+        /* 카드로 받았으면 승인도 함께 무른다 — 전표가 살아 있으면 카드에 값이 남는다 */
+        r.pay_method_key === 'card' ? '카드전표' : '',
       ].filter(Boolean);
 
       const ok = await ceConfirm(
@@ -1144,7 +1146,8 @@
 
 이 건에 나가 있는 ${issued.join(' 과 ')} 도 함께 취소됩니다.
 ※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 첨부된 증빙 PDF도 함께 삭제됩니다.
-   취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.` : ''),
+   취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.
+※ 거래명세서는 그대로 둡니다 — 물건은 나간 채로 있습니다.` : ''),
         { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
       if (!ok) return;
 
