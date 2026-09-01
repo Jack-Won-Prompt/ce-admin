@@ -198,6 +198,43 @@ class OrderDocSendController extends Controller
             ];
         }
 
-        return $out;
+        return $this->onePerKind($out);
+    }
+
+    /**
+     * 유형마다 한 장만 남긴다.
+     *
+     * 한 서류가 PDF 와 PNG 두 벌로 쌓여 있고, 다시 발행하면 그만큼 더 쌓인다. 그대로
+     * 보내면 받는 사람이 같은 세금계산서를 두세 장 받아 어느 것을 내야 하는지 묻게 된다.
+     *
+     * 남길 것은 PDF 다 — 보험사ㆍ근로복지공단에 그대로 내는 종이다. PDF 가 없으면
+     * 있는 것을 남긴다. 같은 꼴이 여럿이면 마지막에 만든 것이다(다시 발행한 것이 맞다).
+     */
+    private function onePerKind(array $docs): array
+    {
+        $best = [];
+
+        foreach ($docs as $d) {
+            $kind = $d['label'];
+            $isPdf = str_ends_with(mb_strtolower((string) $d['file']), '.pdf');
+
+            if (! isset($best[$kind])) {
+                $best[$kind] = $d + ['_pdf' => $isPdf];
+                continue;
+            }
+
+            $cur = $best[$kind];
+
+            /* PDF 가 아닌 것을 쥐고 있는데 PDF 가 왔으면 바꾼다. 둘 다 PDF(또는 둘 다
+               아니면)면 나중에 만든 것을 남긴다 — 목록이 id 차례라 뒤가 나중이다. */
+            if ((! $cur['_pdf'] && $isPdf) || ($cur['_pdf'] === $isPdf)) {
+                $best[$kind] = $d + ['_pdf' => $isPdf];
+            }
+        }
+
+        return array_values(array_map(
+            fn ($d) => collect($d)->except('_pdf')->all(),
+            $best
+        ));
     }
 }
