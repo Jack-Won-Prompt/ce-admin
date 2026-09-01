@@ -1175,7 +1175,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
             <a id="csignDelegationBtn" href="{{ route('prescriptions.delegationPdfOriginal', $prescription) }}" target="_blank"
                title="요양비 위임장 PDF"
                style="display:none;padding:5px 10px;background:var(--primary);color:#fff;font-weight:700;font-size:11px;line-height:1;white-space:nowrap;border-radius:var(--radius);text-decoration:none;align-items:center;gap:4px;">
-              <i class="fa-solid fa-file-signature"></i> 위임장 PDF
+              <i class="fa-solid fa-file-signature"></i> 요양비위임장 PDF
             </a>
             {{-- 서명이 끝났으면 공단에 위임 등록을 해야 한다. 입력 지원 창을 연다. --}}
             <button id="csignNhisBtn" type="button"
@@ -1619,8 +1619,9 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 전송 완료 배너 --}}
           @php
             $fhDocs    = $lastFaxHistory?->documents ?? [];
-            /* 공단에 보내는 서식 이름은 「요양비위임장」이다(별지 제19호의7서식) */
-            $fhLabels  = array_map(fn($d) => ['authorization'=>'요양비위임장','prescription'=>'처방전','purchase_history'=>'제품 구매내역','cash_receipt'=>'현금영수증'][$d] ?? $d, $fhDocs);
+            /* 「위임장」과 「요양비위임장」은 다른 서류다 — 앞은 우리가 받는 위임 동의서고,
+               뒤는 공단에 내는 별지 제19호의7서식이다. 공단 팩스로 나가는 것은 뒤쪽이다. */
+            $fhLabels  = array_map(fn($d) => ['authorization'=>'위임장','delegation'=>'요양비위임장','prescription'=>'처방전','purchase_history'=>'제품 구매내역','cash_receipt'=>'현금영수증'][$d] ?? $d, $fhDocs);
             $fhTimeStr = $lastFaxHistory?->created_at?->format('Y-m-d H:i') ?? '';
             $fhFaxNo   = $lastFaxHistory?->fax_no ?? '';
             $fhRecip   = ['nhis'=>'국민건강보험공단','custom'=>'기타'][$lastFaxHistory?->recipient_type ?? ''] ?? ($lastFaxHistory?->recipient_type ?? '');
@@ -1937,7 +1938,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
               </span>
               <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--gray-0);border:1px solid var(--gray-200);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">위임장</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('요양비위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">요양비위임장</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('신분증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">신분증</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
@@ -4515,7 +4516,10 @@ function _adtFilter(q) {
 function handleAttachUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  const _labelMap = { '처방전': 'prescription', '위임장': 'delegation', '신분증': 'id_card',
+  /* 「요양비위임장」이 공단에 내는 서식 이름이다(별지 제19호의7서식). 예전에 「위임장」으로
+     골라 둔 건이 있어 그 이름도 같은 곳으로 받아 준다. */
+  const _labelMap = { '처방전': 'prescription', '요양비위임장': 'delegation', '위임장': 'delegation',
+                      '신분증': 'id_card',
                       '등록신청서': 'registration_form', '결과지': 'test_result', '기타': 'other' };
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';
@@ -8938,16 +8942,18 @@ window.HELP_TOUR_STEPS = [
   }
 
   /* ── 공단 신청 파일 ────────────────────────────────────
-     신규 등록ㆍ재등록으로 공단에 내는 것은 넷이다 — 등록신청서 · 결과지 · 위임장 ·
-     신분증. 없는 것을 그냥 빼고 그리면 목록이 짧아질 뿐이라 「고를 게 없네」로 읽고
+     신규 등록ㆍ재등록으로 공단에 내는 것은 넷이다 — 등록신청서 · 결과지 ·
+     요양비위임장 · 신분증. 없는 것을 그냥 빼고 그리면 목록이 짧아질 뿐이라 「고를 게 없네」로 읽고
      그대로 보낸다. 없는 줄도 자리를 지키고 서서 없다고 말하게 한다. */
   const FAX_REQ_DOCS = [
-    { type: 'registration_form', label: '등록신청서' },
-    { type: 'test_result',       label: '결과지'    },
-    { type: 'delegation',        label: '위임장'    },
-    { type: 'id_card',           label: '신분증'    },
+    { type: 'registration_form', label: '등록신청서'   },
+    { type: 'test_result',       label: '결과지'      },
+    /* 공단에 내는 것은 별지 제19호의7서식 「요양비위임장」이다. 우리가 환자에게 받는
+       「위임장(위임 동의서)」과 다른 서류라, 이름이 같으면 무엇이 나갔는지 알 수 없다. */
+    { type: 'delegation',        label: '요양비위임장' },
+    { type: 'id_card',           label: '신분증'      },
   ];
-  /* 위임장은 서명하면 시스템이 만든다(생성 서류). 다만 팩스로 나가는 것은 첨부 파일뿐이라
+  /* 요양비위임장은 서명하면 시스템이 만든다(생성 서류). 다만 팩스로 나가는 것은 첨부 파일뿐이라
      「있다」와 「보낼 수 있다」를 나눠 적는다 — 만들어져 있어도 첨부가 아니면 안 나간다. */
   let faxGenDelegation = {{ $prescription->documents->where('type', 'delegation')->isNotEmpty() ? 'true' : 'false' }};
 
