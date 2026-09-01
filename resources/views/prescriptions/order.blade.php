@@ -7206,7 +7206,13 @@ window.HELP_TOUR_STEPS = [
   function gateConsent() {
     const missing = [];
     if (!PRIVACY_STATE?.agreed)              missing.push('개인정보 수집·이용 동의');
-    if (window.CONSENT_STATUS !== 'agreed')  missing.push('요양비 위임 동의');
+
+    /* 요양비 위임은 공단ㆍ지자체에 청구할 때 그 돈을 우리 계좌로 받으려는 것이다.
+       청구하지 않는 건(처방외ㆍ산재ㆍ자동차보험)은 환자가 보험사에 직접 내므로
+       위임할 것이 없다 — 화면도 그 단추를 감추는데 여기서만 요구해, 감춰진 것을
+       받아 오라며 주문을 막고 있었다. */
+    const agency = document.getElementById('f-claim-agency')?.value ?? '';
+    if (agency !== 'none' && window.CONSENT_STATUS !== 'agreed') missing.push('요양비 위임 동의');
 
     if (!missing.length) return true;
 
