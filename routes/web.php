@@ -288,6 +288,9 @@ Route::middleware(['auth'])->group(function () {
            마쳤다고 누르면 청구 상태를 적는다 — 지자체의 등기 발송 기록과 짝이다. */
         Route::post('/assist/claim/{order}/claimed',
             [\App\Http\Controllers\NhisAssistController::class, 'markClaimed'])->name('assist.markClaimed');
+        /* 목록의 등기 발송 팝오버가 읽는다 — 이미 부친 것이 있는지 열자마자 보여 준다 */
+        Route::get('/assist/claim/{order}/dispatches',
+            [\App\Http\Controllers\NhisAssistController::class, 'localDispatches'])->name('assist.localDispatches');
         Route::get('/assist/local-receipt/{dispatch}',
             [\App\Http\Controllers\NhisAssistController::class, 'localReceipt'])->name('assist.localReceipt');
         /* 청구 자료를 한 묶음으로 뽑는다(요청서 10쪽) — 지자체는 등기로 부치므로

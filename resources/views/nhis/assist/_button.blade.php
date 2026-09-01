@@ -23,10 +23,25 @@ window.nhisAssistBtn = function (orderId, opts) {
   /* 공단은 사이트에 옮겨 적고, 지자체는 서류를 등기로 부친다 — 하는 일이 다르니
      단추 이름도 다르다. 「청구」라 적힌 단추를 지자체 건에서 누르면 공단 서식을
      기대하게 된다(요청서 10쪽). 부친 자취가 있으면 그것을 적어 준다. */
-  const local = opts.agency && opts.agency !== 'nhis';
-  btn.innerHTML = local
-    ? '<i class="fa-solid fa-envelope"></i> ' + (opts.sent ? '등기 영수증' : '등기 발송')
-    : '<i class="fa-solid fa-clipboard-list"></i> 청구';
+  /* 청구처는 셋으로 갈린다 — 공단은 사이트에 옮겨 적고, 지자체는 서류를 등기로
+     부치고, 「해당 없음」은 어디에도 내지 않는다(처방외ㆍ산재ㆍ자동차보험).
+     셋을 뭉뚱그리면 낼 곳도 없는 건에 「등기 발송」이 떠서, 담당자가 눌러 보고
+     빈 화면을 만난다. */
+  const agency = opts.agency || '';
+  const local  = agency === 'local';
+  const none   = agency === 'none';
+
+  btn.innerHTML = none
+    ? '<i class="fa-solid fa-minus"></i> 청구 없음'
+    : local
+      ? '<i class="fa-solid fa-envelope"></i> ' + (opts.sent ? '등기 영수증' : '등기 발송')
+      : '<i class="fa-solid fa-clipboard-list"></i> 청구';
+
+  if (none) {
+    btn.disabled = true;
+    btn.title = '공단에도 지자체에도 내지 않는 건입니다 (처방외ㆍ산재ㆍ자동차보험)';
+    return btn;
+  }
 
   if (!orderId) {
     btn.disabled = true;

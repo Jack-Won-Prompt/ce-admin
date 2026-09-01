@@ -165,6 +165,26 @@ class NhisAssistController extends Controller
         return back()->with('status', '청구 완료로 적었습니다.');
     }
 
+    /**
+     * 그 주문의 등기 발송 자취 — 목록의 팝오버가 읽는다.
+     *
+     * 팝오버는 화면을 옮기지 않고 그 자리에서 적는 자리라, 이미 부친 것이 있는지를
+     * 열자마자 보여 주어야 한다. 없으면 두 번 부치고, 있는 줄 모르면 영수증을 다시 찾는다.
+     */
+    public function localDispatches(Order $order): JsonResponse
+    {
+        $rows = $order->localDispatches()->latest('id')->get()->map(fn ($d) => [
+            'id'            => $d->id,
+            'sent_date'     => $d->sent_date?->format('Y-m-d'),
+            'registered_no' => $d->registered_no,
+            'memo'          => $d->memo,
+            'receipt_url'   => $d->receipt_path ? route('nhis.assist.localReceipt', $d) : null,
+            'receipt_name'  => $d->receipt_name,
+        ]);
+
+        return response()->json(['success' => true, 'data' => $rows]);
+    }
+
     /** 발송 영수증 내려받기 — 저장 경로를 그대로 노출하지 않는다 */
     public function localReceipt(LocalClaimDispatch $dispatch): StreamedResponse
     {
