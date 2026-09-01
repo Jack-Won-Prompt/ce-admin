@@ -79,17 +79,25 @@
 
   @else
     <div class="card">
-      <div style="font-weight:700; margin-bottom:8px;">결제 방법을 골라 주십시오</div>
-      <div class="ways">
-        <label class="way">
-          <input type="radio" name="payway" value="CARD" checked>
-          <span><b>카드</b>신용·체크카드로 지금 결제합니다</span>
-        </label>
-        <label class="way">
-          <input type="radio" name="payway" value="VIRTUAL_ACCOUNT">
-          <span><b>가상계좌</b>계좌를 받아 입금합니다 — 입금이 확인되면 처리됩니다</span>
-        </label>
-      </div>
+      {{-- 가상계좌는 상점에 계약이 있을 때만 내놓는다. 없으면 토스가 결제창을 열지
+           않고 「계약된 결제수단이 아닙니다」로 되돌린다 — 고를 수는 있는데 누르면
+           실패하는 자리를 환자 앞에 두지 않는다. --}}
+      @if(config('toss.virtual_account.selectable'))
+        <div style="font-weight:700; margin-bottom:8px;">결제 방법을 골라 주십시오</div>
+        <div class="ways">
+          <label class="way">
+            <input type="radio" name="payway" value="CARD" checked>
+            <span><b>카드</b>신용·체크카드로 지금 결제합니다</span>
+          </label>
+          <label class="way">
+            <input type="radio" name="payway" value="VIRTUAL_ACCOUNT">
+            <span><b>가상계좌</b>계좌를 받아 입금합니다 — 입금이 확인되면 처리됩니다</span>
+          </label>
+        </div>
+      @else
+        <div style="font-weight:700; margin-bottom:4px;">카드로 결제합니다</div>
+        <p class="sub" style="margin:0;">단추를 누르면 토스페이먼츠 결제창이 열립니다.</p>
+      @endif
       <button class="btn" id="payBtn">{{ number_format($link->amount) }}원 결제</button>
       <p class="note">결제창은 토스페이먼츠에서 열립니다. 카드 정보는 우리 서버에 남지 않습니다.</p>
     </div>

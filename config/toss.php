@@ -65,6 +65,16 @@ return [
         'valid_hours'      => env('TOSS_VA_VALID_HOURS', 72),
         'fallback_bank'    => env('TOSS_VA_FALLBACK_BANK', ''),
         'fallback_account' => env('TOSS_VA_FALLBACK_ACCOUNT', ''),
+
+        /*
+         * 결제 페이지에서 환자가 가상계좌를 고를 수 있는지.
+         *
+         * 상점에 가상계좌 계약이 없으면 토스가 결제창을 열지 않고 되돌린다
+         * (2003 「Toss Payments와 계약된 결제수단이 아닙니다」). 고를 수는 있는데
+         * 누르면 실패하는 자리를 두면, 환자는 우리 잘못으로 읽는다.
+         * 계약이 붙으면 TOSS_VA_SELECTABLE=true 로 연다.
+         */
+        'selectable' => (bool) env('TOSS_VA_SELECTABLE', false),
     ],
 
 ];
