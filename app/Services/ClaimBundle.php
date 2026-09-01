@@ -110,10 +110,24 @@ class ClaimBundle
         $consent   = $doc('consent');
         $tax       = $doc('tax_invoice');
 
+        /* 기초(의료급여) 대상자는 요양비 지급청구서를 함께 낸다(2026-09-01 회신).
+           위임장이 「우리 계좌로 받겠다」는 것이라면 이것은 「얼마를 청구한다」는
+           서류라, 하나가 다른 하나를 대신하지 못한다. 아직 만들어 두지 않았으면
+           여기서 만든다 — 묶음을 뽑는 그때가 내는 때다. */
+        $aidClaim = \App\Support\MedicalAidClaimForm::applies($order)
+            ? ($att('medical_aid_claim') ?: \App\Support\MedicalAidClaimForm::attach($order))
+            : null;
+
         return [
             ['name' => '처방전',
              'path' => $this->pathOf($rxImage?->file_path) ?: $this->pathOf($order->prescription?->image_path),
              'mime' => $rxImage?->file_mime_type],
+
+            /* 기초 대상자에게만 선다 — 아니면 자리 자체를 두지 않는다 */
+            ...(\App\Support\MedicalAidClaimForm::applies($order) ? [[
+                'name' => '요양비 지급청구서(의료급여)',
+                'path' => $this->pathOf($aidClaim?->file_path), 'mime' => 'application/pdf',
+            ]] : []),
 
             ['name' => '개인정보 수집·이용 동의서',
              'path' => $this->pathOf($consent?->file_path), 'mime' => 'application/pdf'],
