@@ -48,7 +48,10 @@ final class MedicalAidClaimForm
             ->latest('id')
             ->first();
 
-        if ($existing) {
+        /* 줄만 보고 넘기지 않는다 — 파일이 실제로 있어야 낼 수 있다. 다른 서버에서
+           만든 줄이 남아 있거나 파일이 지워지면, 줄만 믿다가 청구 묶음에서 영영
+           빠진다(그 사실은 공단이 반려한 뒤에야 드러난다). */
+        if ($existing && $existing->file_path && Storage::disk('public')->exists($existing->file_path)) {
             return $existing;
         }
 

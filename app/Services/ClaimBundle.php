@@ -144,16 +144,26 @@ class ClaimBundle
         ];
     }
 
-    /** 있는 파일만 돌려준다 — 서버에만 있고 여기 없는 건이 흔하다 */
+    /**
+     * 있는 파일만 돌려준다 — 서버에만 있고 여기 없는 건이 흔하다.
+     *
+     * 디스크를 하나만 보면 안 된다. 첨부는 public 에 쌓이지만 동의서ㆍ위임장은
+     * 기본 디스크(private)에 들어간다 — public 만 보다가 공단에 낼 동의서가
+     * 늘 빠진 채로 묶였다.
+     */
     private function pathOf(?string $path): ?string
     {
         if (!$path) {
             return null;
         }
 
-        return Storage::disk('public')->exists($path)
-            ? Storage::disk('public')->path($path)
-            : null;
+        foreach (['public', 'local'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->path($path);
+            }
+        }
+
+        return null;
     }
 
     /** 첫 쪽 — 무엇이 들었고 무엇이 빠졌는가 */
