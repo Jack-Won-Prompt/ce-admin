@@ -232,6 +232,13 @@ class NhisAssistController extends Controller
         $dailyPay = ($buyQty && $days) ? number_format($buyQty / $days, 1, '.', '') : null;
         $payTotal = ($rxTotal !== null && $buyQty) ? min($rxTotal, $buyQty) : null;
 
+        /* 급여가 끝나는 날 — 산 날에서 총처방기간만큼 간다. 첫날을 하루로 세므로
+           하루를 뺀다(30일치를 9월 1일에 사면 9월 30일까지다). 산 날이나 기간을
+           모르면 셈할 것이 없어 빈칸으로 둔다. */
+        $payEnd = ($p?->buy_date && $days > 0)
+            ? \Carbon\Carbon::parse($p->buy_date)->addDays($days - 1)->format('Y-m-d')
+            : null;
+
         // 구입금액과 부담금 합이 어긋난 채로 넣으면 공단이 반려한다. 고치지는 못해도 알려는 준다.
         $amount  = (int) $order->total_amount;
         $shares  = (int) $order->nhis_amount + (int) $order->patient_copay;
@@ -250,14 +257,15 @@ class NhisAssistController extends Controller
             'name'      => ['value' => $patient?->name ?: $p?->patient_name_ocr],
             'branch'    => ['value' => null, 'copy' => false, 'blank' => '공단이 자동 표시',
                             'note' => '입력하지 않습니다'],
-            'temporary' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '체크 기준 미확인',
-                            'note' => '어떤 경우에 체크하는지 확인이 필요합니다 (C-Q-02)'],
+            /* 한시적은 우리 청구에 뜻이 없는 칸이다(2026-09-01 회신) — 묻지 않는다 */
+            'temporary' => ['value' => null, 'copy' => false, 'blank' => '해당 없음'],
             'state'     => ['value' => null, 'copy' => false, 'blank' => '공단이 자동 표시'],
 
             /* 처방정보 */
             'rx_reg_no'    => ['value' => $p?->registration_no ?: null, 'note' => '전자처방전에 한합니다'],
             'rx_issued'    => ['value' => $this->date($p?->issued_date)],
-            'disease_cls'  => ['value' => $p?->disease_class ?: null, 'note' => '공단 목록에서 같은 문구를 고르십시오'],
+            /* 공단 목록의 값과 우리 값이 같다(2026-09-01 회신) — 고르라 하지 않고 그대로 옮긴다 */
+            'disease_cls'  => ['value' => $p?->disease_class ?: null],
             'daily_count'  => ['value' => $this->num($p?->daily_count)],
             'total_days'   => ['value' => $this->num($p?->total_days)],
             'rx_total'     => ['value' => $this->num($rxTotal), 'note' => '1일처방개수 × 총처방기간',
@@ -266,14 +274,16 @@ class NhisAssistController extends Controller
             'doctor_name'  => ['value' => $p?->doctor_name ?: null],
             'hospital'     => ['value' => $p?->hospital_code ?: ($p?->hospital_name ?: null),
                                'note' => ($p?->hospital_code && $p?->hospital_name) ? $p->hospital_name : null],
-            'specialist_no' => ['value' => $p?->specialist_no ?: null],
+            /* 전문의번호는 받아 적지 않는다(2026-09-01 회신) — 빈칸인 까닭을 적어 둔다 */
+            'specialist_no' => ['value' => null, 'copy' => false, 'blank' => '받아 적지 않는 항목'],
             'specialty'    => ['value' => $p?->specialty ?: null, 'note' => '공단 목록에서 같은 문구를 고르십시오'],
             'disease_code' => ['value' => $p?->disease_code ?: null],
 
             /* 구입정보 */
             'buy_date'   => ['value' => $this->date($p?->buy_date)],
-            'use_start'  => ['value' => null, 'copy' => false, 'blank' => '보관하지 않는 항목',
-                             'note' => '처방전을 보고 입력하십시오'],
+            /* 쓰기 시작한 날은 산 날이다. 따로 받아 두는 칸이 없어 구입일을 그대로 쓴다
+               (2026-09-01 회신 「우리 정보에서」). */
+            'use_start'  => ['value' => $this->date($p?->buy_date), 'note' => '구입일과 같습니다'],
             'daily_pay'  => ['value' => $dailyPay,
                              'note' => $dailyPay ? "구입수량 {$buyQty} ÷ 총처방기간 {$days}" : null],
             'pay_total'  => ['value' => $this->num($payTotal),
@@ -282,8 +292,9 @@ class NhisAssistController extends Controller
             'biz_name'   => ['value' => config('popbill.company.corp_name') ?: null, 'fixed' => true],
             'buy_amount' => ['value' => $this->num($order->total_amount), 'warn' => $sumWarn],
             'buy_qty'    => ['value' => $this->num($buyQty ?: null)],
-            'pay_end'    => ['value' => null, 'copy' => false, 'blank' => '보관하지 않는 항목',
-                             'note' => '처방전을 보고 입력하십시오'],
+            /* 급여가 끝나는 날 — 쓰기 시작한 날에서 총처방기간만큼 간다. 첫날을 하루로
+               세므로 하루를 뺀다(30일치를 9월 1일에 사면 9월 30일까지다). */
+            'pay_end'    => ['value' => $payEnd, 'note' => $payEnd ? "구입일 + 총처방기간 {$days}일" : null],
             'pay_days'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
                              'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
             'base_daily' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '고시 기준표 없음',
