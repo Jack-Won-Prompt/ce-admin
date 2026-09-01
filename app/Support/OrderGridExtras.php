@@ -89,6 +89,9 @@ class OrderGridExtras
             'nhis_consent'    => $this->consentLabel($pid),
             // 청구처를 아직 고르지 않은 건은 널가 null 이다 — 바로 물으면 PHP 가 나무란다
             'claim_agency'    => ClaimAgency::LABELS[$o?->prescription?->claim_agency ?? ''] ?? '',
+            /* 청구 단추가 무엇을 세울지 가른다 — 공단은 사이트에 옮겨 적고 지자체는
+               등기로 부친다. 이름표가 아니라 코드가 있어야 화면이 가릴 수 있다. */
+            'agency_code'     => $o?->prescription?->claim_agency ?? '',
             'claim_ready'     => $o === null ? '' : ($o->claim_ready ? '준비' : '미비'),
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
@@ -278,6 +281,7 @@ class OrderGridExtras
             'privacy_consent' => $this->privacyLabel($s->patient_id),
             'nhis_consent'    => $this->consentLabel($s->patient_id),
             'claim_agency'    => '',
+            'agency_code'     => '',
             'claim_ready'     => '',
             'nhis_claim'      => '',
             'tax_invoice'     => '',

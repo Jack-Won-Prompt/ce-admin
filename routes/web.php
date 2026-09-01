@@ -280,6 +280,10 @@ Route::middleware(['auth'])->group(function () {
         // 지자체는 등기로 보낸다. 보냈다는 증거(등기번호·영수증)를 여기 남긴다.
         Route::post('/assist/claim/{order}/local-dispatch',
             [\App\Http\Controllers\NhisAssistController::class, 'storeLocalDispatch'])->name('assist.localDispatch');
+        /* 공단은 도우미 창이 값을 보여 주기만 해서 「냈다」가 어디에도 남지 않았다.
+           마쳤다고 누르면 청구 상태를 적는다 — 지자체의 등기 발송 기록과 짝이다. */
+        Route::post('/assist/claim/{order}/claimed',
+            [\App\Http\Controllers\NhisAssistController::class, 'markClaimed'])->name('assist.markClaimed');
         Route::get('/assist/local-receipt/{dispatch}',
             [\App\Http\Controllers\NhisAssistController::class, 'localReceipt'])->name('assist.localReceipt');
         /* 청구 자료를 한 묶음으로 뽑는다(요청서 10쪽) — 지자체는 등기로 부치므로

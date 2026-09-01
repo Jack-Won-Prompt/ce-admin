@@ -156,6 +156,23 @@
   {{-- 프레임 안에서 열렸을 때는 다시 프레임을 열 이유가 없다 --}}
   <button class="tbtn on" id="splitBtn" onclick="openSplit()">좌우 분할</button>
   <button class="tbtn" onclick="openPortal()">공단 새 창</button>
+
+  {{-- 공단 사이트에서 제출을 마치고 나면 그것을 여기 적는다. 적지 않으면 목록에서는
+       여태 「청구 전」이라, 담당자가 낸 건을 다시 열어 보게 된다(지자체는 등기 발송을
+       적으면서 저절로 남는다 — 그 짝이다). --}}
+  @if(in_array($order->nhis_claim_status, ['submitted', 'approved'], true))
+    <span class="tbtn" style="cursor:default;border-color:var(--success);color:var(--success);">
+      청구함 {{ $order->nhis_submitted_at?->format('Y-m-d') }}
+    </span>
+  @else
+    <form method="POST" action="{{ route('nhis.assist.markClaimed', $order) }}" style="display:inline;">
+      @csrf
+      <button type="submit" class="tbtn"
+              onclick="return confirm('공단에 제출을 마쳤습니까? 청구 상태를 「청구완료」로 적습니다.');">
+        청구 완료로 표시
+      </button>
+    </form>
+  @endif
 </div>
 
 {{-- ───────────────────────── 여기서부터 공단 2221 서식 구조 ───────────────────────── --}}

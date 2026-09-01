@@ -19,8 +19,14 @@ window.nhisAssistBtn = function (orderId, opts) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'nhis-assist-btn';
-  // 지자체 청구도 이 창을 쓴다 — 「공단」이라 부르지 않는다(요청서 10쪽)
-  btn.innerHTML = '<i class="fa-solid fa-clipboard-list"></i> 청구';
+
+  /* 공단은 사이트에 옮겨 적고, 지자체는 서류를 등기로 부친다 — 하는 일이 다르니
+     단추 이름도 다르다. 「청구」라 적힌 단추를 지자체 건에서 누르면 공단 서식을
+     기대하게 된다(요청서 10쪽). 부친 자취가 있으면 그것을 적어 준다. */
+  const local = opts.agency && opts.agency !== 'nhis';
+  btn.innerHTML = local
+    ? '<i class="fa-solid fa-envelope"></i> ' + (opts.sent ? '등기 영수증' : '등기 발송')
+    : '<i class="fa-solid fa-clipboard-list"></i> 청구';
 
   if (!orderId) {
     btn.disabled = true;
@@ -28,7 +34,9 @@ window.nhisAssistBtn = function (orderId, opts) {
     return btn;
   }
 
-  btn.title = '왼쪽에 우리 청구 원본, 오른쪽에 공단 사이트를 나란히 엽니다';
+  btn.title = local
+    ? '등기로 부친 것을 적고, 등기 영수증을 올립니다'
+    : '왼쪽에 우리 청구 원본, 오른쪽에 공단 사이트를 나란히 엽니다';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     // 좌우로 나란히 봐야 하는 창이라 화면을 꽉 채워 연다

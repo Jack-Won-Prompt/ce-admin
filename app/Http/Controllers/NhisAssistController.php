@@ -135,6 +135,36 @@ class NhisAssistController extends Controller
         return back()->with('status', '등기 발송을 기록했습니다.');
     }
 
+    /**
+     * 공단에 옮겨 적기를 마쳤음을 적는다.
+     *
+     * 지자체는 등기를 부치면서 자취가 남는데(storeLocalDispatch), 공단은 도우미 창이
+     * 값을 보여 주기만 해서 「냈다」는 것이 어디에도 남지 않았다. 담당자는 공단
+     * 사이트에서 제출을 마치고도 우리 목록에서는 여태 「청구 전」으로 보이는 건을
+     * 다시 열어 보곤 했다. 마쳤다고 누르면 여기서 적는다.
+     */
+    public function markClaimed(Request $request, Order $order): RedirectResponse
+    {
+        $data = $request->validate([
+            'submitted_at' => 'nullable|date',
+            'memo'         => 'nullable|string|max:500',
+        ]);
+
+        if ($order->nhis_claim_status === 'submitted' || $order->nhis_claim_status === 'approved') {
+            return back()->with('status', '이미 청구한 건입니다.');
+        }
+
+        $order->update([
+            'nhis_claim_status' => 'submitted',
+            'nhis_submitted_at' => $data['submitted_at'] ?: now(),
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('공단 청구 완료로 표시' . ($data['memo'] ? ' — ' . $data['memo'] : ''));
+
+        return back()->with('status', '청구 완료로 적었습니다.');
+    }
+
     /** 발송 영수증 내려받기 — 저장 경로를 그대로 노출하지 않는다 */
     public function localReceipt(LocalClaimDispatch $dispatch): StreamedResponse
     {

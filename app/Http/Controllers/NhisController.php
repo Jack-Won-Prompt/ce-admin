@@ -164,6 +164,12 @@ class NhisController extends Controller
                 'claim_due'  => ($due = self::claimDue($o))?->format('Y-m-d') ?? '',
                 'claim_dday' => self::dday($o, $due),
                 'agency'       => \App\Support\ClaimAgency::LABELS[$o->prescription?->claim_agency] ?? '',
+                /* 청구 칸이 무엇을 세울지 가른다 — 공단은 사이트에 옮겨 적고, 지자체는
+                   등기로 부친다. 두 가지가 같은 단추를 쓰면 지자체 건에서 공단 서식이
+                   열려 엉뚱한 곳에 옮겨 적는다(요청서 10쪽). */
+                'agency_code'  => $o->prescription?->claim_agency ?? '',
+                /* 등기로 부친 자취가 있는가 — 있으면 영수증을 받아 볼 수 있다 */
+                'local_sent'   => $o->localDispatches()->exists(),
                 /* 어느 지사ㆍ어느 부서로 보내는가. 「건강보험공단」만 적혀 있으면 결국
                    건마다 다시 찾아야 한다 — 골라 둔 것이 있으면 그것을 보여 준다. */
                 'office'       => $o->prescription?->billingOffice?->displayName() ?? '',

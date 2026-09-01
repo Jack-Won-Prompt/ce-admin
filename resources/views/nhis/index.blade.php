@@ -449,7 +449,7 @@
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.
         header: '청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
-        renderer: (v, row) => nhisAssistBtn(row.id),
+        renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code, sent: row.local_sent }),
       },
 
       /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽 — 「모든 화면의 항목이
