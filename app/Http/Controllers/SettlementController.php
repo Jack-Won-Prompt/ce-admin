@@ -237,8 +237,11 @@ class SettlementController extends Controller
             ['header' => '이름',      'name' => 'patient',      'width' => 90,  'sortable' => true],
             ['header' => '처방번호',    'name' => 'rx_number',    'width' => 120],
             ['header' => '유형',        'name' => 'acc_type',     'width' => 100, 'align' => 'center', 'sortable' => true],
-            // 한 개 값이라 더하지 않는다 — 다 합쳐 봐야 아무 뜻이 없다
-            ['header' => '주문금액',    'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
+            /* 한 개 값이라 더하지 않는다 — 다 합쳐 봐야 아무 뜻이 없다.
+               이름이 「주문금액」이었다. 정산 담당자는 그것을 이 건의 값으로 읽는데
+               실제로는 한 개 값이라, 121만 원짜리 주문이 2,250원으로 보였다.
+               이 건의 값은 뒤의 「총 금액」ㆍ「본인 부담금」ㆍ「기관 부담금」이 말한다. */
+            ['header' => '단가',        'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
             ['header' => '입금액',      'name' => 'deposit',      'width' => 100, 'align' => 'right'],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
             ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],

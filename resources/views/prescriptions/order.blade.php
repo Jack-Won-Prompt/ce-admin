@@ -10927,11 +10927,33 @@ window.HELP_TOUR_STEPS = [
     if (pop) pop.style.display = 'none';
   }
 
+  /**
+   * 청구전략이 정한 몫 — 얼마짜리 증빙을 내는가.
+   *
+   * 전략은 「무엇을 몇 %」로 적혀 있고(일반이면 세금계산서 90%), 그 %는 이 건의
+   * 전체(본인 + 기관)에 걸린다. 자동 발행이 그렇게 셈하는데(DepositAutoIssue::share)
+   * 손으로 여는 창은 「환자가 낼 돈」으로 열려, 같은 건이 두 길에서 다른 금액으로
+   * 나갔다 — 일반 건이 121,500원짜리 세금계산서로 나갔다(1,093,500 이어야 한다).
+   */
+  function bsAmountFor(kind) {
+    const r = bsCurrent();
+    const pct = r && !r.pending ? Number(r[kind] ?? 0) : 0;
+    if (pct <= 0) return 0;
+
+    const base = items.reduce((s, i) =>
+      s + Number(i.patient_copay || 0) + Number(i.nhis_amount || 0), 0);
+
+    return Math.round(base * pct / 100);
+  }
+
   function openTaxInvoiceModal() {
     const savedSupply = {{ (int)($prescription->order?->tax_invoice_supply ?? 0) }};
     const savedVat    = {{ (int)($prescription->order?->tax_invoice_vat    ?? 0) }};
-    const supply = savedSupply || Math.round(_ORDER_TOTAL / 1.1);
-    const vat    = savedVat    || (_ORDER_TOTAL - Math.round(_ORDER_TOTAL / 1.1));
+    /* 전략이 정한 몫을 먼저 쓴다. 전략이 아직 정해지지 않았으면(확인중ㆍ미선택)
+       예전처럼 이 건의 값으로 연다 — 담당자가 고쳐 적을 수 있다. */
+    const target = bsAmountFor('tax_invoice') || _ORDER_TOTAL;
+    const supply = savedSupply || Math.round(target / 1.1);
+    const vat    = savedVat    || (target - Math.round(target / 1.1));
 
     document.getElementById('ti-type').value     = @json($prescription->order?->tax_invoice_type     ?? 'electronic');
     document.getElementById('ti-biz-name').value = @json($prescription->order?->tax_invoice_biz_name ?? '');
@@ -11133,8 +11155,10 @@ window.HELP_TOUR_STEPS = [
     const idEl = document.getElementById('cr-identifier');
     idEl.value = savedId || panelCrNo || currentMobile || _PATIENT_MOBILE;
     formatCrIdentifier(idEl);
+    /* 세금계산서와 같이 청구전략이 정한 몫으로 연다. 지금은 현금영수증이 나가는
+       전략이 모두 100% 라 본인부담금과 같지만, 비율이 바뀌면 두 길이 갈라진다. */
     const livecopay = items.reduce((s, i) => s + (Number(i.patient_copay) || 0), 0);
-    const crAmtRaw = savedAmt || livecopay || _PATIENT_COPAY || '';
+    const crAmtRaw = savedAmt || bsAmountFor('cash_receipt') || livecopay || _PATIENT_COPAY || '';
     document.getElementById('cr-amount').value = crAmtRaw ? Number(crAmtRaw).toLocaleString('ko-KR') : '';
     if (savedType) {
       const radio = document.querySelector(`input[name="cr-type"][value="${savedType}"]`);
