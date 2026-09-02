@@ -9117,10 +9117,15 @@ window.HELP_TOUR_STEPS = [
      id 가 0 이하인 것은 첨부가 아니다(0 처방전 이미지 · -1 위임 서명 · -2 보호자 신분증). */
   function faxDocRows() {
     const rows = [], used = new Set();
+    /* 공단에 낼 넷이 갖춰졌는지 따지는 것은 공단으로 보낼 때만 뜻이 있다.
+       공단 밖으로 보낼 때 「등록신청서가 없습니다」라 적으면, 애초에 낼 일이 없는
+       서류를 찾으러 가게 된다. */
+    const toNhis = faxRecipientType() === 'nhis';
+
     FAX_REQ_DOCS.forEach(req => {
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
-      if (!hits.length) {
+      if (!hits.length && toNhis) {
         rows.push({ label: req.label, att: null,
                     state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
       }
@@ -9131,7 +9136,7 @@ window.HELP_TOUR_STEPS = [
 
        공단이 아닌 곳으로 보낼 때는 반대다 — 무엇을 보낼지 정해진 것이 없으니
        올려 둔 것을 다 세우고 고르게 한다(요청서 2026-09-02). */
-    if (faxRecipientType() !== 'nhis') {
+    if (!toNhis) {
       ALL_DOCS.filter(d => d.id > 0 && !used.has(d.id))
               .forEach(d => rows.push({ label: d.typeLabel || d.type || '첨부',
                                         att: d, state: 'ok' }));
@@ -9199,17 +9204,21 @@ window.HELP_TOUR_STEPS = [
     const missing = rows.filter(r => r.state === 'missing').map(r => r.label);
     const have    = FAX_REQ_DOCS.length - missing.length;
 
+    /* 「신청 파일 3/4」는 공단에 낼 것을 세는 말이다. 공단 밖으로 보낼 때는 낼
+       서류가 정해져 있지 않아 그 셈이 뜻을 잃는다 — 이름만 바꾸고 셈은 접는다. */
+    const toNhis = faxRecipientType() === 'nhis';
+
     const head = `
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding-top:6px;border-top:1px dashed var(--border);">
         <span style="font-size:10px;font-weight:700;color:var(--text-muted);flex:1;">
-          <i class="fa-solid fa-paperclip"></i> 신청 파일
+          <i class="fa-solid fa-paperclip"></i> ${toNhis ? '신청 파일' : '보낼 서류'}
         </span>
-        <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;
+        ${toNhis ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;
               background:${missing.length ? 'var(--danger-light)' : 'var(--primary-light)'};
-              color:${missing.length ? 'var(--danger)' : 'var(--primary)'};">${have}/${FAX_REQ_DOCS.length}</span>
+              color:${missing.length ? 'var(--danger)' : 'var(--primary)'};">${have}/${FAX_REQ_DOCS.length}</span>` : ''}
       </div>`;
 
-    const note = missing.length
+    const note = (toNhis && missing.length)
       ? `<div style="font-size:10px;color:var(--danger);margin-bottom:4px;line-height:1.5;">
            ${_faxEsc(missing.join(' · '))} 이(가) 아직 등록되지 않았습니다.
          </div>`
@@ -9217,8 +9226,7 @@ window.HELP_TOUR_STEPS = [
 
     box.innerHTML = head + note + rows.map(_faxDocRowHtml).join('');
 
-    /* 올림 칸과 안내는 수신처를 따른다 */
-    const toNhis = faxRecipientType() === 'nhis';
+    /* 올림 칸과 안내는 수신처를 따른다 — toNhis 는 위에서 이미 읽었다 */
     const up = document.getElementById('faxUploadWrap');
     if (up) up.style.display = toNhis ? 'none' : '';
     const n1 = document.getElementById('faxNoteNhis');
