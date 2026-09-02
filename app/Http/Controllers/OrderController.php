@@ -206,10 +206,13 @@ class OrderController extends Controller
             }
         }
 
+        /* 전자서명이 안 되는 환자는 종이로 받아 올린다 — 그것도 받은 것이다
+           (PrivacyConsent::stateFor 이 화면에 세우는 것과 같은 잣대다). */
         $privacy = $prescription->patient_id
-            && \DB::table('privacy_consents')
-                ->where('patient_id', $prescription->patient_id)
-                ->exists();
+            && (\DB::table('privacy_consents')
+                    ->where('patient_id', $prescription->patient_id)
+                    ->exists()
+                || \App\Models\PrivacyConsent::paperFor($prescription->patient_id) !== null);
         if (! $privacy) {
             $missing[] = '개인정보 수집·이용 동의';
         }

@@ -134,6 +134,25 @@ class PrivacyConsent extends Model
     }
 
     /**
+     * 종이로 받아 올려 둔 개인정보 동의서 — 없으면 null.
+     *
+     * 전자서명이 안 되는 환자가 있다. 그때는 인쇄해 서명받아 올린다. 동의는 사람에게
+     * 한 번 받으면 끝이라, 그 사람의 처방전 어느 것에 올렸든 받은 것으로 센다.
+     */
+    public static function paperFor(?int $patientId): ?\App\Models\PrescriptionAttachment
+    {
+        if (!$patientId) {
+            return null;
+        }
+
+        return \App\Models\PrescriptionAttachment::where('doc_type', 'privacy_consent')
+            ->whereIn('prescription_id',
+                \App\Models\Prescription::where('patient_id', $patientId)->select('id'))
+            ->latest('id')
+            ->first();
+    }
+
+    /**
      * 주문 등록 화면의 「개인정보동의」 단추가 읽는 값.
      *
      * 받은 것이 없으면 exists=false 로만 답한다 — 단추는 그대로 「개인정보동의」다.
@@ -143,6 +162,21 @@ class PrivacyConsent extends Model
         $c = static::findFor($patientId, $name, $phone);
 
         if (!$c) {
+            /* 전자서명이 안 되는 환자에게는 종이로 받는다(요청서 2026-09-02).
+               그 종이가 첨부에 올라와 있으면 받은 것이다 — 화면에 「아직」이라
+               적어 두면 담당자가 다시 보내게 되고, 환자는 두 번 서명한다. */
+            if ($paper = static::paperFor($patientId)) {
+                return [
+                    'exists' => true,
+                    'agreed' => true,
+                    'source' => '서면(업로드)',
+                    'at'     => $paper->created_at?->format('Y-m-d H:i'),
+                    'paper'  => true,
+                    'info'   => [],
+                    'items'  => [],
+                ];
+            }
+
             return ['exists' => false, 'agreed' => false];
         }
 

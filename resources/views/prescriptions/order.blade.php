@@ -5894,9 +5894,16 @@ window.HELP_TOUR_STEPS = [
     if (!tag) return;
 
     const bs = bsCurrent();
+
     /* 유형ㆍ자격을 아직 안 골랐으면 아무 말도 하지 않는다 — 「해당 없음」이라 적어
-       두었다가 나중에 공단 건으로 밝혀지면 받지 않은 채로 지나간다. */
-    tag.style.display = (bs && !bs.needs_delegation) ? '' : 'none';
+       두었다가 나중에 공단 건으로 밝혀지면 받지 않은 채로 지나간다.
+
+       이미 보냈거나 받아 둔 건에도 적지 않는다. 「위임동의 완료」 배지 옆에
+       「위임 해당 없음」이 나란히 서면 둘 중 어느 것이 맞는지 알 수 없다 —
+       받은 것은 받은 것이고, 이 글은 아직 안 받은 사람에게 하는 말이다. */
+    const 받아둠 = !!window.CONSENT_STATUS;
+
+    tag.style.display = (bs && !bs.needs_delegation && !받아둠) ? '' : 'none';
   }
 
   /* ── 유형 × 자격 ───────────────────────────────────────────
@@ -10363,6 +10370,8 @@ window.HELP_TOUR_STEPS = [
 
   function _applyConsentBtn(status) {
     window.CONSENT_STATUS = status;
+    /* 받아 두면 「위임 해당 없음」은 물러난다 — 배지와 나란히 서면 서로 어긋난다 */
+    if (typeof renderDelegationNeed === 'function') renderDelegationNeed();
     const bw  = document.getElementById('consentBtnWrap');
     const rb  = document.getElementById('consentResultBadge');
     if (!bw || !rb) return;
@@ -10444,6 +10453,23 @@ window.HELP_TOUR_STEPS = [
           <button class="btn btn-primary btn-sm" id="pvSendConsent">
             <i class="fa-solid fa-paper-plane"></i> 위임동의 발송
           </button>
+        </div>`;
+    }
+
+    /* 종이로 받아 올린 건은 담긴 내용이 없다 — 우리가 읽어 적어 두지 않는다.
+       전자 동의와 같은 틀로 그리면 동의자ㆍ연락처ㆍ항목이 모두 「-」로 서서
+       무엇이 잘못된 것처럼 보인다. 받았다는 것과 언제 올렸는지만 말한다. */
+    if (st.paper) {
+      return `
+        <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.7;">
+          <strong>개인정보 수집·이용 동의서</strong>를 서면으로 받아 두었습니다.<br>
+          <span style="color:var(--text-muted);">올린 때 ${esc(st.at) || '-'}</span>
+        </p>
+        <p style="font-size:11px;color:var(--text-muted);margin:0;line-height:1.6;">
+          적힌 내용은 첨부 문서에서 봅니다 — 서류 관리의 「개인정보 동의서」입니다.
+        </p>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면</button>
         </div>`;
     }
 
