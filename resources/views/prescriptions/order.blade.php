@@ -1051,6 +1051,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
           </button>
         </div>
         <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
+        {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
+             단추는 그대로 두고 받지 않아도 되는 건이라는 것만 옆에 적는다. --}}
+        <span id="consentNotNeeded" style="display:none;align-self:center;font-size:11px;color:var(--text-muted);white-space:nowrap;"
+              title="환자가 보험사ㆍ근로복지공단에 직접 청구하는 건이라 위임이 필요하지 않습니다.">위임 해당 없음</span>
         {{-- 위임동의 팝오버 --}}
         <div id="consentPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
@@ -5500,7 +5504,7 @@ window.HELP_TOUR_STEPS = [
     // 공단 재등록 기한이 임박했는지 다시 본다
     if (typeof syncNhisRenewBadge === 'function') syncNhisRenewBadge();
     // 자격을 골라 둔 사람이면 청구처 추천도 따라온다
-    if (typeof renderBillingStrategy === 'function') renderBillingStrategy();
+    if (typeof renderBillingStrategy === 'function') renderBillingStrategy(); renderDelegationNeed();
 
     /* 위임동의는 처방전에 달리지만 사람에게 묶어 읽는다 — 지난 처방전에서 이미 서명을
        받았다면 이 처방전에서도 「위임동의 완료」로 보여야 한다. */
@@ -5859,6 +5863,23 @@ window.HELP_TOUR_STEPS = [
     hb.classList.toggle('is-pending', !!r.pending);
   }
 
+  /**
+   * 위임동의 자리에 「해당 없음」을 적는다.
+   *
+   * 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구하므로 위임을 받지 않는다. 그래도
+   * 단추는 그대로 둔다 — 환자가 굳이 맡기겠다 하면 받을 수 있고, 막아 두면 왜
+   * 안 눌리는지 물으러 오게 된다. 받지 않아도 되는 건이라는 것만 옆에 적는다.
+   */
+  function renderDelegationNeed() {
+    const tag = document.getElementById('consentNotNeeded');
+    if (!tag) return;
+
+    const bs = bsCurrent();
+    /* 유형ㆍ자격을 아직 안 골랐으면 아무 말도 하지 않는다 — 「해당 없음」이라 적어
+       두었다가 나중에 공단 건으로 밝혀지면 받지 않은 채로 지나간다. */
+    tag.style.display = (bs && !bs.needs_delegation) ? '' : 'none';
+  }
+
   /* ── 유형 × 자격 ───────────────────────────────────────────
      유형은 상담ㆍ환자 정보에, 자격은 병원ㆍ처방 정보에 각자 제자리가 있다. 청구전략은
      따로 저장되는 값이 아니라 그 두 칸의 짝을 부르는 이름이라, 여기서는 읽기만 한다.
@@ -5895,7 +5916,7 @@ window.HELP_TOUR_STEPS = [
     _bsSyncing = true;
     const t = document.getElementById('f-acc-add-type')?.value ?? '';
     const c = document.getElementById('f-benefit-class')?.value ?? '';
-    renderBillingStrategy();
+    renderBillingStrategy(); renderDelegationNeed();
     // 비율이 바뀌었으니 제품 줄의 금액도 함께 다시 선다
     if (typeof recalcAllItems === 'function') recalcAllItems();
     _bsSyncing = false;
@@ -7213,29 +7234,37 @@ window.HELP_TOUR_STEPS = [
     return false;
   }
 
-  /** 두 동의를 모두 받았는가 — 받지 않고 낸 주문은 서류를 만들 수 없다 */
   /**
-   * 동의 둘을 다 받았는가 — 개인정보 수집ㆍ이용, 요양비 위임.
+   * 필요한 동의를 다 받았는가.
    *
-   * 청구처가 「해당 없음」인 건은 위임을 묻지 않게 두었던 적이 있다. 그때는 그
-   * 건에서 위임동의 단추가 사라진 줄 알았는데, 실은 상태 배지로 바뀌어 있었고
-   * 배지 안의 「재발송」으로 그대로 받을 수 있었다 — 막고 있던 것은 청구처가
-   * 아니라 거래처에 연락처가 비어 있던 것이었다.
+   * 개인정보 수집ㆍ이용은 어느 건에나 받는다 — 환자의 정보를 다루는 것은 같다.
    *
-   * 그래서 다시 둘 다 받는다(2026-09-03 지시). 청구하지 않는 건이라도 환자가
-   * 무엇에 동의했는지는 남아 있어야 한다.
+   * 요양비 위임은 우리가 대신 청구하는 건에만 받는다(2026-09-03 확정). 산재ㆍ
+   * 자동차보험ㆍ처방외는 환자가 보험사ㆍ근로복지공단에 직접 내므로 위임할 일이
+   * 없다 — 그 건까지 막으면 받을 수 없는 동의를 기다리며 주문이 서지 못한다.
+   * 누가 내는지는 청구전략 표가 안다(needs_delegation).
+   *
+   * 서버도 같은 잣대로 한 번 더 본다(OrderController::consentBlock) — 이 화면을
+   * 지나지 않고 주문이 서는 길이 따로 있다.
    */
   function gateConsent() {
+    /* 유형ㆍ자격을 아직 안 골랐으면 받는 쪽으로 둔다. 무엇을 낼지 모르는 건을
+       위임 없이 내보냈다가 공단 건으로 밝혀지면 받을 길이 없다. */
+    const bs      = bsCurrent();
+    const needDel = bs ? !!bs.needs_delegation : true;
+
     const missing = [];
-    if (!PRIVACY_STATE?.agreed)              missing.push('개인정보 수집·이용 동의');
-    if (window.CONSENT_STATUS !== 'agreed')  missing.push('요양비 위임 동의');
+    if (!PRIVACY_STATE?.agreed)                        missing.push('개인정보 수집·이용 동의');
+    if (needDel && window.CONSENT_STATUS !== 'agreed') missing.push('요양비 위임 동의');
 
     if (!missing.length) return true;
 
     /* 어디서 받는지 함께 적는다. 「동의를 받으십시오」만으로는 이 화면 어느 단추를
        눌러야 하는지 알 수 없어, 받아 둔 건인지 확인하러 다른 화면을 뒤지게 된다. */
+    const where = needDel ? '「개인정보동의」ㆍ「위임동의」' : '「개인정보동의」';
+
     ceAlert(missing.join(' · ') + ' 이(가) 아직입니다.\n\n'
-          + '화면 위쪽의 「개인정보동의」ㆍ「위임동의」 단추로 받으십시오. '
+          + '화면 위쪽의 ' + where + ' 단추로 받으십시오. '
           + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.',
             { title: '동의가 아직입니다' });
     return false;
@@ -10591,7 +10620,7 @@ window.HELP_TOUR_STEPS = [
     if (!앉힌것.length && !남긴것.length) return;
 
     // 자격이 바뀌면 청구처 추천도 따라 움직인다
-    if (applied['f-benefit-class'] && typeof renderBillingStrategy === 'function') renderBillingStrategy();
+    if (applied['f-benefit-class'] && typeof renderBillingStrategy === 'function') renderBillingStrategy(); renderDelegationNeed();
 
     const 이름 = document.getElementById('f-name')?.value?.trim() || '환자';
     let msg = `「${이름}」 님이 동의서에 적은 ${앉힌것.join('ㆍ')}을(를) 화면에 반영했습니다.`;

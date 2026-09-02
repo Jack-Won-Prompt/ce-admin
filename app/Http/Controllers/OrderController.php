@@ -188,11 +188,22 @@ class OrderController extends Controller
     {
         $missing = [];
 
-        $agreed = $prescription->consents()
-            ->where('status', 'agreed')
-            ->exists();
-        if (! $agreed) {
-            $missing[] = '요양비 위임 동의';
+        /* 위임은 우리가 대신 청구하는 건에만 필요하다(2026-09-03). 산재ㆍ자동차보험ㆍ
+           처방외는 환자가 보험사ㆍ근로복지공단에 직접 내므로 위임할 일이 없다 —
+           그 건까지 막으면 받을 수 없는 동의를 기다리며 주문이 서지 못한다.
+           누가 내는지는 청구전략 표가 안다. */
+        $needsDelegation = \App\Support\BillingStrategy::needsDelegation(
+            $prescription->counsel_acc_add_type,
+            $prescription->benefit_class
+        );
+
+        if ($needsDelegation) {
+            $agreed = $prescription->consents()
+                ->where('status', 'agreed')
+                ->exists();
+            if (! $agreed) {
+                $missing[] = '요양비 위임 동의';
+            }
         }
 
         $privacy = $prescription->patient_id
@@ -203,9 +214,15 @@ class OrderController extends Controller
             $missing[] = '개인정보 수집·이용 동의';
         }
 
-        return $missing
-            ? implode(' · ', $missing) . ' 이(가) 아직입니다. 화면 위쪽의 「개인정보동의」ㆍ「위임동의」 단추로 받은 뒤 진행해 주십시오.'
-            : null;
+        if (! $missing) {
+            return null;
+        }
+
+        $where = $needsDelegation
+            ? '화면 위쪽의 「개인정보동의」ㆍ「위임동의」 단추'
+            : '화면 위쪽의 「개인정보동의」 단추';
+
+        return implode(' · ', $missing) . " 이(가) 아직입니다. {$where}로 받은 뒤 진행해 주십시오.";
     }
 
     public function store(Request $request): \Illuminate\Http\JsonResponse

@@ -90,6 +90,26 @@ class BillingStrategy
         return $r['pending'] ? null : $r['payer_rate'] / 100;
     }
 
+    /**
+     * 요양비 위임 동의를 받아야 하는 건인가(2026-09-03 확정).
+     *
+     * 잣대는 「우리가 대신 청구하는가」다. 기관(공단ㆍ지자체)이 내는 몫이 있는 건은
+     * 우리가 그 기관에 대신 낸다 — 대신 내려면 위임이 있어야 한다. 처방외ㆍ산재ㆍ
+     * 자동차보험은 환자가 보험사ㆍ근로복지공단에 직접 내므로 위임할 일이 없다.
+     *
+     * 그래서 표를 다시 적지 않고 payer_rate 를 읽는다. 자격이 늘어도 이 판정은
+     * 저절로 따라온다 — 누가 내는지만 표에 적으면 된다.
+     *
+     * 유형ㆍ자격이 아직 없으면 받는 쪽으로 둔다. 무엇을 낼지 모르는 건을 위임 없이
+     * 내보냈다가 나중에 공단 건으로 밝혀지면 받을 길이 없다.
+     */
+    public static function needsDelegation(?string $accAddType, ?string $benefitClass): bool
+    {
+        $r = self::resolve($accAddType, $benefitClass);
+
+        return $r['pending'] ? true : $r['payer_rate'] > 0;
+    }
+
     /** 건에 적어 두는 열쇠 — 「유형|자격」. 화면ㆍ표가 쓰는 것과 같다. */
     public static function key(?string $accAddType, ?string $benefitClass): ?string
     {
@@ -133,9 +153,11 @@ class BillingStrategy
     {
         $out = [];
         foreach (self::CLASSES as $b) {
-            $out[self::TYPE_OUT . "|{$b}"] = self::resolve(self::TYPE_OUT, $b);
+            $out[self::TYPE_OUT . "|{$b}"] = self::resolve(self::TYPE_OUT, $b)
+                + ['needs_delegation' => self::needsDelegation(self::TYPE_OUT, $b)];
         }
-        $out[self::TYPE_NONRX . '|'] = self::resolve(self::TYPE_NONRX, null);
+        $out[self::TYPE_NONRX . '|'] = self::resolve(self::TYPE_NONRX, null)
+            + ['needs_delegation' => self::needsDelegation(self::TYPE_NONRX, null)];
 
         return $out;
     }
