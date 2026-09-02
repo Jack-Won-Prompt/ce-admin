@@ -178,6 +178,36 @@ class OrderController extends Controller
     }
 
     // ── 주문 생성 ─────────────────────────────────────────
+    /**
+     * 아직 못 받은 동의가 있으면 그 까닭을 돌려준다 — 다 받았으면 null.
+     *
+     * 위임동의는 처방전마다 받고, 개인정보 동의는 사람에게 한 번 받으면 그것으로
+     * 끝이다 — 보는 자리가 다르다.
+     */
+    private function consentBlock(Prescription $prescription): ?string
+    {
+        $missing = [];
+
+        $agreed = $prescription->consents()
+            ->where('status', 'agreed')
+            ->exists();
+        if (! $agreed) {
+            $missing[] = '요양비 위임 동의';
+        }
+
+        $privacy = $prescription->patient_id
+            && \DB::table('privacy_consents')
+                ->where('patient_id', $prescription->patient_id)
+                ->exists();
+        if (! $privacy) {
+            $missing[] = '개인정보 수집·이용 동의';
+        }
+
+        return $missing
+            ? implode(' · ', $missing) . ' 이(가) 아직입니다. 화면 위쪽의 「개인정보동의」ㆍ「위임동의」 단추로 받은 뒤 진행해 주십시오.'
+            : null;
+    }
+
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -220,6 +250,15 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => '주문할 제품이 없습니다. 제품을 먼저 선택한 뒤 주문을 생성해 주십시오.',
             ], 422);
+        }
+
+        /* 동의 둘을 다 받아야 판다(2026-09-03 지시) — 개인정보 수집ㆍ이용, 요양비 위임.
+
+           화면도 같은 것을 묻지만(gateConsent) 화면만으로는 부족하다. 새로 고치거나
+           다른 길로 이 자리를 부르면 그대로 지나가는데, 동의 없이 나간 주문은
+           나중에 무엇에 기대어 청구했는지 댈 것이 없다. */
+        if ($why = $this->consentBlock($prescription)) {
+            return response()->json(['success' => false, 'message' => $why], 422);
         }
 
         /* 아직 살 때가 아닌 건은 여기서도 막는다(요청서 2쪽, 2026-08-31). 주문이 서는
