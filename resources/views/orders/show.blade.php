@@ -489,6 +489,9 @@
                   <span class="od-prod-value">{{ $item->product_name }}</span>
                 </div>
                 <div class="od-prod-row od-prod-metrics">
+                  <span><span class="od-prod-label">제품코드</span><span class="od-prod-value">{{ $item->product_code ?: '-' }}</span></span>
+                  {{-- 공단 요양기관정보마당은 이 번호로 조회한다 — 청구할 때 다른 표를 열지 않도록 옆에 세운다 --}}
+                  <span><span class="od-prod-label">장비코드</span><span class="od-prod-value">{{ \App\Support\DeviceCode::for($item->product_code) ?? '-' }}</span></span>
                   <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $item->quantity }}</span></span>
                   <span><span class="od-prod-label">단가</span><span class="od-prod-value">{{ number_format($item->insurance_price ?? 0) }}원</span></span>
                   <span><span class="od-prod-label">본인부담</span><span class="od-prod-value">{{ number_format($item->patient_copay ?? 0) }}원</span></span>
@@ -506,6 +509,8 @@
                 </div>
                 <div class="od-prod-row od-prod-metrics">
                   <span><span class="od-prod-label">제품코드</span><span class="od-prod-value">{{ $order->product_code ?? '-' }}</span></span>
+                  {{-- 공단 요양기관정보마당은 이 번호로 조회한다 — 청구할 때 매번 다른 표를 열지 않도록 옆에 세운다 --}}
+                  <span><span class="od-prod-label">장비코드</span><span class="od-prod-value">{{ \App\Support\DeviceCode::for($order->product_code) ?? '-' }}</span></span>
                   <span><span class="od-prod-label">수량</span><span class="od-prod-value">{{ $order->quantity ?? 1 }}개</span></span>
                   <span><span class="od-prod-label">단가</span><span class="od-prod-value">{{ number_format($order->unit_price) }}원</span></span>
                 </div>

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Order;
 use App\Models\PrescriptionAttachment;
+use App\Support\DeviceCode;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\View;
  * 자바스크립트가 그리므로 PDF 로 굳힐 수 없다 — 같은 생김새를 서버가 그리게 옮겼다
  * (resources/views/documents/transaction_statement.blade.php).
  *
- * LOT 과 장비코드는 창고가 아는 값이다. 우리 주문 줄에는 없어 비워 둔다 —
+ * LOT 은 창고가 아는 값이다. 우리 주문 줄에는 없어 비워 둔다 —
  * 지어내지 않는다. 위드웍스에서 받아 올 길이 생기면 그 자리만 채우면 된다.
  */
 final class TransactionStatement
@@ -156,8 +157,9 @@ final class TransactionStatement
         $items = $lines->map(fn ($i) => [
             'spec'       => (string) ($i->product_code ?? ''),
             'name'       => (string) ($i->product_name ?? ''),
-            // 창고가 아는 값이다 — 우리 줄에는 없다
-            'deviceCode' => '',
+            // 공단에 청구할 때 쓰는 번호 — 품번으로 찾는다
+            'deviceCode' => DeviceCode::for($i->product_code) ?? '',
+            // LOT 은 창고가 아는 값이다 — 우리 줄에는 없다
             'lot'        => '',
             'unit'       => 'EA',
             'qty'        => (int) ($i->quantity ?? 0),

@@ -5831,6 +5831,25 @@ window.HELP_TOUR_STEPS = [
      여기에 비율을 다시 적으면 언젠가 두 곳이 어긋난다. */
   const BILLING_STRATEGY = @json(\App\Support\BillingStrategy::table());
 
+  /* ── 장비코드 ──────────────────────────────────────────
+     공단 요양기관정보마당은 우리 품번이 아니라 등록 장비코드로 조회한다. 담당자가
+     매번 별도 표를 열어 찾고 있어, 제품이 서는 자리마다 함께 세운다.
+
+     마흔 줄짜리 표라 화면에 통째로 넘긴다 — 제품을 고를 때마다 서버에 묻지 않는다.
+     정본은 위드웍스이므로 그쪽이 주기 시작하면 그 값이 먼저다(devCodeOf 참고). */
+  const DEVICE_CODES = @json(config('device_codes'));
+
+  /** 품번으로 장비코드를 찾는다. 이미 장비코드면 그대로 돌려준다 — 없으면 null */
+  function devCodeOf(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return null;
+    if (DEVICE_CODES[s]) return DEVICE_CODES[s];
+    /* 위드웍스가 준 값은 이미 장비코드다 — 우리 표에 없어도 그대로 쓴다 */
+    if (/^NBC\d+$/i.test(s)) return s;
+    const m = s.match(/^\d+/);
+    return (m && DEVICE_CODES[m[0]]) || null;
+  }
+
   /* 원내(30)도 원외(10)와 같은 줄이다 — 서버의 BillingStrategy::key 와 같게 모은다.
      이미 30 으로 적힌 건이 있어, 모으지 않으면 그 건만 전략 배지가 빈다. */
   const _bsKey = (t, c) => t === '20' ? '20|' : (t && c ? (t === '30' ? '10' : t) + '|' + c : '');
@@ -10709,7 +10728,9 @@ window.HELP_TOUR_STEPS = [
       return {
         value: code,
         label: it.name ?? '',
-        sub: [it.code, it.spec, it.unit,
+        /* 장비코드를 품번 바로 뒤에 세운다 — 공단에 청구할 때 이 번호로 조회한다.
+           위드웍스가 주면 그 값(it.device)을, 아직 안 주면 우리 표에서 찾는다. */
+        sub: [it.code, devCodeOf(it.device || it.code), it.spec, it.unit,
               it.r_box ? 'R-Box ' + it.r_box : null,
               it.price ? '₩ ' + Number(it.price).toLocaleString() : null]
              .filter(Boolean).join(' · '),

@@ -255,6 +255,9 @@ class ProductController extends Controller
                 'unit'  => (string) ($i['basic_unit']  ?? ''),
                 'r_box' => (string) ($i['r_box']       ?? ''),
                 'stock' => $i['available_qty'] ?? null,
+                /* 공단에 청구할 때 쓰는 번호다 — 우리 품번으로는 조회되지 않는다.
+                   위드웍스가 주면 그 값을, 아직 안 주면 우리 표에서 찾아 채운다. */
+                'device' => \App\Support\DeviceCode::fromItem($i),
             ];
         }
 

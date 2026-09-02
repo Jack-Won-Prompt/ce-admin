@@ -353,7 +353,7 @@
   <div class="rt-bd">
     @foreach($r->items as $it)
       <div class="rt-kv">
-        <span>{{ $it->product_code ?: '—' }}</span>
+        <span>{{ $it->product_code ?: '—' }}@if($d = \App\Support\DeviceCode::for($it->product_code))<em style="font-style:normal;color:var(--text-muted);margin-left:5px;">{{ $d }}</em>@endif</span>
         <span>{{ $it->product_name ?: '—' }}
           · {{ number_format($it->quantity) }}@if($it->ordered_quantity)/{{ number_format($it->ordered_quantity) }}@endif개
           @if($it->copay) · 환불 {{ number_format($it->refundAmount()) }}원 @endif

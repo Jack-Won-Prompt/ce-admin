@@ -793,7 +793,7 @@
           <thead>
             <tr>
               <th>제품명</th>
-              <th>코드</th>
+              <th>코드ㆍ장비코드</th>
               <th style="text-align:right;">수량</th>
               <th style="text-align:right;">소비자가</th>
               <th style="text-align:right;">단가</th>
@@ -804,7 +804,9 @@
             @foreach($order->prescription->items as $item)
             <tr>
               <td style="font-weight:500;">{{ $item->product_name ?? '-' }}</td>
-              <td style="font-family:monospace;font-size:11px;font-weight:500;color:var(--gray-600);">{{ $item->product_code ?? '-' }}</td>
+              <td style="font-family:monospace;font-size:11px;font-weight:500;color:var(--gray-600);">{{ $item->product_code ?? '-' }}
+                @if($d = \App\Support\DeviceCode::for($item->product_code))<br><span style="color:var(--text-muted);font-weight:400;">{{ $d }}</span>@endif
+              </td>
               <td style="text-align:right;">{{ $item->quantity ?? '-' }}</td>
               <td style="text-align:right;">₩{{ number_format($item->product_price ?? 0) }}</td>
               <td style="text-align:right;">₩{{ number_format($item->nhis_amount ?? 0) }}</td>
