@@ -209,8 +209,10 @@
     el: $('rtoItemGrid'),
     height: 'auto', editable: true, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
-      { header: '제품코드', name: 'product_code', width: 120, editable: false },
-      { header: '제품명',   name: 'product_name', width: 260, editable: false },
+      { header: '제품코드', name: 'product_code', width: 100, editable: false },
+      /* 공단 요양기관정보마당은 이 번호로 조회한다 — 되돌린 뒤 다시 청구할 때 쓴다 */
+      { header: '장비코드', name: 'device_code',  width: 130, editable: false },
+      { header: '제품명',   name: 'product_name', width: 240, editable: false },
       { header: '주문수량', name: 'ordered_quantity', width: 90, align: 'right', editor: 'number', editable: false },
       { header: '되돌릴 수량', name: 'quantity', width: 110, align: 'right', editor: 'number' },
       /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.

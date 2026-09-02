@@ -360,6 +360,8 @@ class OrderReturnController extends Controller
                     ? $o->items->map(fn ($i) => [
                         'order_item_id' => $i->id,
                         'product_code' => $i->product_code ?? '',
+                        // 공단에 청구할 때 쓰는 번호 — 되돌린 뒤 다시 청구할 때 필요하다
+                        'device_code'  => \App\Support\DeviceCode::for($i->product_code) ?? '',
                         'product_name' => $i->product_name ?? '',
                         'quantity'     => (int) $i->quantity,
                         'unit_price'   => (int) ($i->insurance_price ?: $i->product_price),
@@ -368,6 +370,7 @@ class OrderReturnController extends Controller
                     : collect([[
                         'order_item_id' => null,
                         'product_code' => $o->product_code ?? '',
+                        'device_code'  => \App\Support\DeviceCode::for($o->product_code) ?? '',
                         'product_name' => $o->product_name ?? '',
                         'quantity'     => (int) $o->quantity,
                         'unit_price'   => (int) $o->unit_price,
