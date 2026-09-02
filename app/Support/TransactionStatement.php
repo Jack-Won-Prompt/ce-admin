@@ -97,6 +97,53 @@ final class TransactionStatement
     }
 
     /** 서식이 쓰는 값 한 벌 — 화면에서도 같은 것을 쓴다. */
+    /**
+     * 명세서에 찍는 날 — 그 건의 증빙이 선 날과 같아야 한다(2026-09-03 확정).
+     *
+     * 여태 만드는 날(now())을 찍었다. 어제 결제된 건을 오늘 뽑으면 오늘 날짜가
+     * 나와, 명세서와 세금계산서ㆍ현금영수증의 날이 어긋났다. 세무 자료끼리 날이
+     * 다르면 어느 것이 맞는지 대조할 길이 없다.
+     *
+     * 잣대는 「돈이 오간 날」이다.
+     *
+     *   본인부담이 있는 건  카드 결제일 → 현금영수증 발행일 → 세금계산서 발행일
+     *                       → 입금 확인일
+     *   본인부담이 0 인 건  주문 확정일
+     *
+     * 카드로 결제한 건은 카드 자료가 현금영수증ㆍ세금계산서를 대신하므로 카드
+     * 결제일이 먼저다. 차상위경감ㆍ기초는 낼 돈이 없어 결제일이란 것이 없다 —
+     * 세금계산서는 공단ㆍ지자체에 청구한 뒤에야 서는데, 명세서는 물건과 함께
+     * 나가야 하므로 그날을 기다릴 수 없다. 그래서 주문이 확정된 날로 찍는다.
+     *
+     * 취소된 증빙은 보지 않는다 — 취소했으면 그 날은 근거가 아니다.
+     */
+    public static function issueDate(Order $order): string
+    {
+        $fmt = fn ($d) => $d ? \Illuminate\Support\Carbon::parse($d)->format('Y-m-d') : null;
+
+        if ((int) $order->patient_copay > 0) {
+            /* 카드 — 결제창에서 승인이 떨어진 날. 여러 번 시도한 건은 마지막 것이다. */
+            $card = \Illuminate\Support\Facades\DB::table('payment_links')
+                ->where('order_id', $order->id)
+                ->whereNull('deleted_at')
+                ->whereNotNull('paid_at')
+                ->orderByDesc('paid_at')
+                ->value('paid_at');
+
+            $d = $fmt($card)
+              ?: (!$order->cash_receipt_cancelled_at ? $fmt($order->cash_receipt_issued_at) : null)
+              ?: (!$order->tax_invoice_cancelled_at  ? $fmt($order->tax_invoice_issued_at)  : null)
+              ?: $fmt($order->deposit_confirmed_at);
+
+            if ($d) {
+                return $d;
+            }
+        }
+
+        /* 확정일 — 창고로 넘어간 날이 있으면 그날이다. 아직 안 넘어갔으면 주문이 선 날. */
+        return $fmt($order->withworks_status_at) ?: $fmt($order->created_at) ?: now()->format('Y-m-d');
+    }
+
     public static function data(Order $order): array
     {
         $rx      = $order->prescription;
@@ -132,7 +179,7 @@ final class TransactionStatement
             'doc' => [
                 'documentNo' => $order->withworks_ship_no ?: ($order->withworks_so_no ?: $order->order_number),
                 'saleNo'     => $order->withworks_so_no ?: '',
-                'issueDate'  => now()->format('Y-m-d'),
+                'issueDate'  => self::issueDate($order),
                 'footNote'   => '',
             ],
             'partyRows' => [
