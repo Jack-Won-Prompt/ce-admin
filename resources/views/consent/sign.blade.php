@@ -47,6 +47,16 @@
       margin-top: 6px;
       line-height: 1.5;
     }
+    /* 보낸 사람 — 환자가 받는 것은 모르는 번호에서 온 링크 하나다. 누가 보냈는지
+       모르면 열지 않거나 되묻는 전화가 온다(요청서 2026-09-02). */
+    .sender-bar {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 16px; background: #F4F7F8; border-bottom: 1px solid #E3EAEC;
+      font-size: 12.5px; color: #4A5B60; line-height: 1.5;
+    }
+    .sender-bar b { color: #0B5C6E; font-weight: 700; }
+    .sender-bar a { color: #0B5C6E; font-weight: 700; text-decoration: none; white-space: nowrap; }
+
     .card-body { padding: 20px; }
 
     /* 타이머 */
@@ -326,6 +336,23 @@
     <h1>건강보험 급여 위임동의</h1>
     <p>아래 내용을 확인하신 후 서명해주세요.</p>
   </div>
+
+  {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳고, 그래서
+       되묻는 전화가 왔다. 옛 건은 보낸 사람이 남아 있지 않아 회사만 적는다. --}}
+  @php($_sender = $consent->sender)
+  <div class="sender-bar">
+    <span>
+      @if($_sender)
+        <b>콜로플라스트 코리아</b> {{ $_sender->name }} 님이 보냈습니다.
+      @else
+        <b>콜로플라스트 코리아</b> 에서 보낸 서명 요청입니다.
+      @endif
+    </span>
+    @if($_tel = config('popbill.company.tel'))
+      <a href="tel:{{ preg_replace('/[^0-9]/', '', $_tel) }}">{{ $_tel }}</a>
+    @endif
+  </div>
+
   <div class="card-body">
 
     {{-- 타이머 --}}

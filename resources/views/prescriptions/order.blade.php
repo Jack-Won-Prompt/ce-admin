@@ -1603,7 +1603,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
       {{-- 팩스 전송 --}}
       <div id="faxTriggerWrap" style="display:{{ $lastFaxHistory ? 'none' : 'block' }};position:relative;">
         <button class="pib-btn" id="btnFaxTrigger" onclick="toggleFaxPopover(event)">
-          <i class="fa-solid fa-fax" style="font-size:12px;"></i> 공단 팩스 발송
+          <i class="fa-solid fa-fax" style="font-size:12px;"></i> 팩스 발송
           <span id="faxSentBadge" style="display:{{ $lastFaxHistory ? 'flex' : 'none' }};position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--primary);border:2px solid var(--bg-card);align-items:center;justify-content:center;">
             <i class="fa-solid fa-check" style="font-size:7px;color:#fff;"></i>
           </span>
@@ -1617,7 +1617,7 @@ $calcDeposit  = $calcCopay + $calcShipping;
           {{-- 헤더 --}}
           <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i class="fa-solid fa-fax" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">공단 팩스 발송</span>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">팩스 발송</span>
             <button onclick="closeFaxPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
           </div>
           {{-- 전송 완료 배너 --}}
@@ -1693,17 +1693,45 @@ $calcDeposit  = $calcCopay + $calcShipping;
               <div style="display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;padding-right:2px;">
                 {{-- 팩스는 환자 등록·재등록(Step1) 전용이다. 청구 자료는 공단 사이트에
                      직접 입력·업로드하므로 팩스로 보내지 않는다. --}}
-                <div style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
-                  <b style="color:var(--primary);">팩스는 환자 등록·재등록용입니다.</b><br>
+                {{-- 안내는 수신처에 따라 달라진다. 공단으로 보내는 것과 그 밖으로
+                     보내는 것은 보내는 서류도 까닭도 다르다. --}}
+                <div id="faxNoteNhis" style="padding:9px 11px;border:1px solid var(--primary-200);border-radius:var(--radius);background:var(--primary-light);font-size:11px;color:var(--text-secondary);line-height:1.65;">
+                  <b style="color:var(--primary);">공단 팩스는 환자 등록·재등록용입니다.</b><br>
                   등록신청서 · 결과지 · 요양비위임장 · 신분증을 공단 관할지사로 보냅니다.<br>
                   <b>미성년자</b>는 등록신청서에 보호자 정보를 함께 적고, <b>보호자 신분증</b>도 넣습니다.<br>
                   청구 자료는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
+                </div>
+                <div id="faxNoteCustom" style="display:none;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:11px;color:var(--text-secondary);line-height:1.65;">
+                  <b>공단 밖으로 보냅니다.</b><br>
+                  산재는 근로복지공단, 자동차보험은 보험사로 갑니다 — 환자가 청한 서류를
+                  고르십시오.<br>
+                  올려 둔 첨부가 모두 서고, 없는 것은 아래에서 바로 올릴 수 있습니다.
                 </div>
 
                 {{-- 신청 파일 · 그 밖의 첨부 — 화면에서 그린다(renderFaxDocs).
                      서버가 한 번 그려 두면 이 창을 열어 둔 채 올리거나 지운 파일이
                      비치지 않는다. 없는 신청 파일은 여기서 「등록 안 됨」으로 적는다. --}}
                 <div id="faxDocList" style="margin-top:6px;"></div>
+
+                {{-- 공단이 아닌 곳으로 보낼 때는 그 자리에서 올릴 수 있게 한다.
+                     산재ㆍ자동차보험 환자가 청하는 서류는 미리 올려 둔 것이 아닐 때가
+                     많은데, 지금은 창을 닫고 문서 카드로 가서 올린 뒤 다시 열어야 했다.
+                     공단으로 보낼 때는 보낼 것이 넷으로 정해져 있어 감춘다. --}}
+                <div id="faxUploadWrap" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+                  <label for="faxUploadInput"
+                         style="display:flex;align-items:center;justify-content:center;gap:6px;padding:7px;
+                                border:1px dashed var(--primary);border-radius:var(--radius);
+                                background:var(--primary-light);color:var(--primary);
+                                font-size:11px;font-weight:700;cursor:pointer;">
+                    <i class="fa-solid fa-arrow-up-from-bracket" style="font-size:11px;"></i>
+                    <span id="faxUploadLabel">보낼 파일 올리기</span>
+                  </label>
+                  <input type="file" id="faxUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic"
+                         multiple style="display:none;" onchange="faxUploadFiles(this)">
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                    올린 파일은 이 처방전의 첨부에도 남습니다 — 무엇을 보냈는지 나중에 확인할 수 있습니다.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -8825,6 +8853,17 @@ window.HELP_TOUR_STEPS = [
     }
   });
 
+  /* 지금 고른 수신처. 공단이면 'nhis', 그 밖이면 'custom'.
+
+     공단으로 보내는 것은 등록ㆍ재등록 서류 넷으로 정해져 있다. 그 밖으로 보낼 때는
+     — 산재ㆍ자동차보험 환자가 근로복지공단이나 보험사에 낼 것을 청할 때 —
+     무엇을 보낼지 정해진 것이 없다(요청서 2026-09-02). 그래서 첨부를 다 세우고,
+     그 자리에서 새로 올릴 수도 있게 한다. */
+  function faxRecipientType() {
+    const nhis = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
+    return (nhis && nhis.style.background.includes('primary-light')) ? 'nhis' : 'custom';
+  }
+
   function selectFaxRecipient(btn) {
     document.querySelectorAll('.fax-recipient-btn').forEach(b => {
       b.style.borderColor = 'var(--border)';
@@ -8856,6 +8895,9 @@ window.HELP_TOUR_STEPS = [
         faxEl.focus();
       }
     }
+
+    /* 수신처가 바뀌면 보낼 수 있는 서류도 바뀐다 */
+    renderFaxDocs();
   }
 
   function onFaxNoInput() {
@@ -9083,8 +9125,18 @@ window.HELP_TOUR_STEPS = [
                     state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
       }
     });
-    /* 신청 파일에 들지 않는 첨부는 세우지 않는다. 팩스로 나가는 것은 등록ㆍ재등록
-       서류 넷뿐인데, 처방전 같은 것이 함께 체크되어 있어 공단에 딸려 갔다. */
+    /* 공단으로 보낼 때는 신청 파일에 들지 않는 첨부를 세우지 않는다. 팩스로 나가는
+       것은 등록ㆍ재등록 서류 넷뿐인데, 처방전 같은 것이 함께 체크되어 있어 공단에
+       딸려 갔다.
+
+       공단이 아닌 곳으로 보낼 때는 반대다 — 무엇을 보낼지 정해진 것이 없으니
+       올려 둔 것을 다 세우고 고르게 한다(요청서 2026-09-02). */
+    if (faxRecipientType() !== 'nhis') {
+      ALL_DOCS.filter(d => d.id > 0 && !used.has(d.id))
+              .forEach(d => rows.push({ label: d.typeLabel || d.type || '첨부',
+                                        att: d, state: 'ok' }));
+    }
+
     return rows;
   }
 
@@ -9164,6 +9216,67 @@ window.HELP_TOUR_STEPS = [
       : '';
 
     box.innerHTML = head + note + rows.map(_faxDocRowHtml).join('');
+
+    /* 올림 칸과 안내는 수신처를 따른다 */
+    const toNhis = faxRecipientType() === 'nhis';
+    const up = document.getElementById('faxUploadWrap');
+    if (up) up.style.display = toNhis ? 'none' : '';
+    const n1 = document.getElementById('faxNoteNhis');
+    const n2 = document.getElementById('faxNoteCustom');
+    if (n1) n1.style.display = toNhis ? '' : 'none';
+    if (n2) n2.style.display = toNhis ? 'none' : '';
+  }
+
+  /**
+   * 팩스 창에서 곧바로 파일을 올린다.
+   *
+   * 올린 것은 이 처방전의 첨부로 남는다 — 보내고 끝내면 무엇을 보냈는지 나중에
+   * 알 길이 없다. 유형은 「기타」로 두고 파일 이름을 그대로 이름 삼는다.
+   *
+   * 여러 장을 한 번에 고를 수 있다. 한 장이 실패해도 나머지는 올린다 — 다 되돌리면
+   * 성공한 것까지 다시 골라야 한다.
+   */
+  async function faxUploadFiles(input) {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) return;
+
+    const label = document.getElementById('faxUploadLabel');
+    const org   = label ? label.textContent : '';
+    let done = 0, failed = [];
+
+    for (const f of files) {
+      if (label) label.textContent = `올리는 중… ${done + 1}/${files.length}`;
+
+      const fd = new FormData();
+      fd.append('file', f);
+      fd.append('doc_type', 'other');
+      fd.append('doc_label', f.name.replace(/\.[^.]+$/, ''));
+
+      try {
+        const res = await fetch(`{{ url('/prescriptions') }}/${RX_NUMBER}/attachments`, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json',
+                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+          body: fd,
+        });
+        const j = await res.json();
+        if (!res.ok || !j.success) { failed.push(f.name); continue; }
+
+        /* 방금 올린 것이 그 자리에서 서고 고를 수 있어야 한다 — 창을 닫았다 열게
+           하면 올린 보람이 없다. 서버가 준 모양 그대로 넣는다. */
+        ALL_DOCS.push({ ...j.attachment, isRx: false });
+        done++;
+      } catch (_) {
+        failed.push(f.name);
+      }
+    }
+
+    if (label) label.textContent = org;
+    renderFaxDocs();
+
+    if (done)          showToast(`${done}건을 올렸습니다 — 아래에서 골라 보내십시오.`, 'success');
+    if (failed.length) showToast(`${failed.join(' · ')} 을(를) 올리지 못했습니다.`, 'danger', 6000);
   }
 
   /* ── 「공단 팩스 발송」 단추가 부른다 ───────────────────

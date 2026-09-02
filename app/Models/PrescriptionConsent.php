@@ -15,6 +15,7 @@ class PrescriptionConsent extends Model
         'patient_mobile',
         'signature_data',
         'status',
+        'sent_by',
         'expires_at',
         'responded_at',
         'pdf_path',
@@ -110,5 +111,11 @@ class PrescriptionConsent extends Model
             return 0;
         }
         return (int) now()->diffInMinutes($this->expires_at, false);
+    }
+
+    /** 보낸 담당자 — 서명 화면에 세운다. 옛 건은 남아 있지 않아 null 이다. */
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sent_by');
     }
 }

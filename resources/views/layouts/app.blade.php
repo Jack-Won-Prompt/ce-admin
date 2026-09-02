@@ -1526,7 +1526,7 @@
         </button>
         <div class="menu-group-items">
         {{-- 차례는 요청서 7쪽이 정한 것이다 — 입금 내역ㆍ현금영수증ㆍ전자세금계산서ㆍ
-             PG 결제ㆍ청구 관리ㆍ정산/회계. 돈이 들어오는 쪽에서 시작해 정산으로 끝난다. --}}
+             PG정산내역ㆍ청구 관리ㆍ정산/회계. 돈이 들어오는 쪽에서 시작해 정산으로 끝난다. --}}
         {{-- 통장에 무엇이 들어왔는가(요청서 5쪽). 정산/회계와 따로 둔다 —
              그쪽은 「얼마를 받아야 하는가」이고 이쪽은 「무엇이 들어왔는가」다. --}}
         @if($vis('deposits'))
@@ -1575,14 +1575,14 @@
         {{-- 「청구처 정보」는 메뉴에 두지 않는다 — 마스터 관리의 「청구처」 탭으로 들였다.
              병원ㆍ기관과 마찬가지로 「어디에 연락하는가」를 적어 두는 자리라,
              찾으러 갈 곳이 둘일 까닭이 없다. --}}
-        {{-- PG 결제 — 토스페이먼츠(요청서 7쪽). 입금 내역과 다른 것을 본다:
+        {{-- PG정산내역 — 토스페이먼츠(요청서 7쪽). 입금 내역과 다른 것을 본다:
              그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. 가상계좌로 받은 돈은
              둘 다에 나타나는데, 어긋나면 그것이 곧 봐야 할 일이다. --}}
         @if($vis('payments'))
         <div class="menu-item {{ request()->routeIs('payments*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="cash" href="{{ route('payments.index') }}" data-title="PG 결제">
+          <a class="menu-link" data-icon="cash" href="{{ route('payments.index') }}" data-title="PG정산내역">
             @dsicon('cash', 'ds-icon menu-icon')
-            <span>PG 결제</span>
+            <span>PG정산내역</span>
           </a>
         </div>
         @endif

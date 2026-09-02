@@ -2275,6 +2275,9 @@ class PrescriptionController extends Controller
             'patient_mobile'     => $mobile,
             'expires_at'         => $expiresAt,
             'status'             => 'pending',
+            /* 서명 화면에 「누가 보냈는가」를 세우려면 남아 있어야 한다 —
+               환자가 받는 것은 모르는 번호에서 온 링크 하나다(요청서 2026-09-02). */
+            'sent_by'            => \Illuminate\Support\Facades\Auth::id(),
             'is_minor'           => $isMinor,
             'patient_birth_date' => $birth?->toDateString(),
             // 검수 화면에서 미리 적어 둔 보호자 정보를 실어 보낸다.

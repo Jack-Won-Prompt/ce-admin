@@ -1,9 +1,9 @@
 {{-- resources/views/payments/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'PG 결제')
-@section('page-title', 'PG 결제')
-@section('breadcrumb', '홈 - PG 결제')
+@section('title', 'PG정산내역')
+@section('page-title', 'PG정산내역')
+@section('breadcrumb', '홈 - PG정산내역')
 
 @section('content')
 
