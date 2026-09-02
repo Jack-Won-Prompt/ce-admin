@@ -10313,8 +10313,14 @@ window.HELP_TOUR_STEPS = [
       agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'위임동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)' },
       declined:{ bg:'var(--danger-light)',  border:'var(--alert-100)', color:'var(--danger)',  icon:'fa-circle-xmark',  text:'동의 거절됨',    action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--danger)',  btnColor:'var(--danger)' },
       pending: { bg:'var(--gray-100)',      border:'var(--gray-300)', color:'var(--gray-700)', icon:'fa-clock',        text:'위임동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--gray-700)',       btnColor:'var(--gray-700)' },
-      {{-- 만료는 시안의 '비활성' 조합(bg #F9FAFC · 글자 #999EA4). 대기중(gray-100)과 바탕이 겹치지 않게 한다 --}}
-      expired: { bg:'var(--gray-50)',       border:'var(--border)', color:'var(--text-muted)', icon:'fa-ban',   text:'위임동의 만료',  action:'openConsentModal(true)',btnLabel:'재발송',   btnBorder:'var(--text-muted)', btnColor:'var(--text-muted)' },
+      /* 만료 — 「지난 일」이 아니라 「다시 보내야 하는 일」이다.
+
+         한때 배지도 단추도 시안의 비활성 조합(bg #F9FAFC · 글자 #999EA4)으로 그렸다.
+         눌리기는 하는데 회색이라 담당자는 막힌 것으로 읽고 「만료라 다시 못 받는다」고
+         물어 왔다 — 링크가 30분만 살아 놓치는 일이 잦은데, 그때마다 멈춰 섰다.
+
+         배지는 흐리게 두어 만료임을 알리되, 단추는 눌러야 할 것으로 세운다. --}}
+      expired: { bg:'var(--gray-50)',       border:'var(--border)', color:'var(--text-muted)', icon:'fa-ban',   text:'위임동의 만료',  action:'openConsentModal(true)',btnLabel:'재발송',   btnBorder:'var(--primary)',    btnColor:'var(--primary)', btnBg:'var(--primary-50)' },
     };
     const cfg = cfgMap[status];
     if (!cfg) return;
@@ -10328,7 +10334,7 @@ window.HELP_TOUR_STEPS = [
     rb.style.borderRadius = 'var(--radius)';
     rb.style.fontSize = '11px';
     rb.style.whiteSpace = 'nowrap';
-    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;">${cfg.btnLabel}</button>`;
+    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:${cfg.btnBg ?? 'none'};border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${cfg.btnLabel}</button>`;
   }
   // 이름 조회로 다른 사람을 고르면 그 사람의 동의 상태로 다시 그린다
   window._applyConsentBtn = _applyConsentBtn;
