@@ -172,6 +172,12 @@
     <div class="rto-sec-hd">
       <span class="step">3</span> 주문 제품
       <span class="hint" id="rtoItemNote">주문을 고르면 그 주문의 제품이 나옵니다</span>
+      {{-- 일부만 되돌리면 남는 금액을 정해야 한다(2026-09-02 유형표의 「조정 필요」).
+           접수한 뒤에야 알면 흐름이 한 단계 늘어난 까닭을 모른 채 멈춰 선다. --}}
+      <span class="hint" id="rtoPartialNote"
+            style="display:none;color:var(--primary);font-weight:600;">
+        부분입니다 — 되돌린 뒤 「금액조정」 단계에서 남는 금액을 적습니다.
+      </span>
     </div>
     <div id="rtoItemGrid"></div>
   </div>
@@ -214,6 +220,8 @@
       { header: '환자부담', name: 'copay',        width: 110, align: 'right', editor: 'number', editable: false },
     ],
     data: [],
+    /* 되돌릴 수량을 고칠 때마다 부분인지 다시 본다 */
+    onChange: () => syncPartialNote(),
   });
   window.__rtoItemGrid = itemGrid;
 
@@ -354,6 +362,7 @@
     itemGrid.setData((r.items ?? []).map(i => ({ ...i, ordered_quantity: i.quantity })));
     $('rtoItemNote').textContent = (r.items?.length ?? 0)
       + '개 품목 · ' + r.order_no + ' — 일부만 되돌리려면 「되돌릴 수량」을 줄이십시오';
+    syncPartialNote();
   }
 
   /* 종류에 따라 물을 것이 다르다. */
@@ -372,11 +381,22 @@
   /* 자격 변경은 되돌려 받을 물건이 없다 — 언제나 일반 환불이다.
      고른 갈래와 사유가 어긋나면 접수한 뒤에 흐름이 엉뚱하게 잡힌다. */
   /* 지금 고른 것이 절차서의 어느 갈래인가 — 모델의 scenario() 와 같은 규칙이다. */
+  /* 한 줄이라도 주문 수량보다 적게 되돌리면 부분이다 — 서버가 세는 것과 같은 잣대다
+     (OrderReturnController::store). 접수하기 전에 그 사실을 알린다. */
+  function syncPartialNote() {
+    const note = $('rtoPartialNote');
+    if (!note) return;
+    const rows = itemGrid.getData() ?? [];
+    const partial = rows.some(i => Number(i.ordered_quantity) > 0
+                                && Number(i.quantity) < Number(i.ordered_quantity));
+    note.style.display = partial ? '' : 'none';
+  }
+
   function scenarioOf() {
     const t = $('rtoType').value;
     const r = $('rtoReason').value;
     if (t === 'exchange') return DEFECTS.includes(r) ? 'exchange_defect' : 'exchange_mind';
-    if (t === 'return')   return 'return_refund';
+    if (t === 'return')   return DEFECTS.includes(r) ? 'return_defect'   : 'return_refund';
     return (r === 'eligibility' || $('rtoSubtype').value === 'refund_only')
       ? 'refund_only' : 'cancel_before_ship';
   }

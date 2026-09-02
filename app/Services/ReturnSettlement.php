@@ -78,8 +78,12 @@ class ReturnSettlement
                     'patient_mobile'  => $order->patient?->mobile,
                     'ho_account_id'   => config('services.demoworks.account_id'),
                     'so_type'         => $soType,
-                    'remark'          => '일반 환불 (자격 변경 등) — ' . $return->receipt_no
-                                       . ' / 원 주문 ' . $order->order_number,
+                    'remark'          => $return->scenarioLabel() . ' — ' . $return->receipt_no
+                                       . ' / 원 주문 ' . $order->order_number
+                                       . ($return->adjust_amount !== null
+                                          ? ' / ' . (\App\Models\OrderReturn::ADJ_DIRECTIONS[$return->adjust_direction] ?? '조정')
+                                            . ' ' . number_format((int) $return->adjust_amount) . '원'
+                                          : ''),
                     'items'           => $items,
                     'qty_unit'        => 'EA',
                     'confirm'         => false,
@@ -131,8 +135,16 @@ class ReturnSettlement
         }
 
         if ($return->is_partial) {
+            /* 얼마로 반영할지를 함께 적는다. 「최종 청구분에 반영합니다」만 남겨 두면
+               청구할 사람이 원 주문과 반품 줄을 놓고 다시 셈해야 했다(2026-09-02). */
+            $adj = $return->adjust_amount !== null
+                ? sprintf(' 조정 금액 %s %s원.',
+                    \App\Models\OrderReturn::ADJ_DIRECTIONS[$return->adjust_direction] ?? '조정',
+                    number_format((int) $return->adjust_amount))
+                : ' 조정 금액이 아직 적히지 않았습니다 — 상세에서 적어 주십시오.';
+
             $note = '부분 취소 — 기관 청구 서류는 최종 청구분에 반영합니다. '
-                  . '이미 발행한 계산서·현금영수증은 자동으로 손대지 않았습니다.';
+                  . '이미 발행한 계산서·현금영수증은 자동으로 손대지 않았습니다.' . $adj;
 
             $return->forceFill(['credit_issued_at' => now(), 'credit_note' => $note])->save();
 

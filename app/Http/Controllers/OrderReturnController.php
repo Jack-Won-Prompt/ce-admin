@@ -463,6 +463,14 @@ class OrderReturnController extends Controller
                 . $orderReturn->approverRole() . ').']);
         }
 
+        /* 조정 금액을 적지 않고 금액조정으로 넘어가면, 얼마로 조정한 것인지 아무 데도
+           남지 않는다. 창고에 세우는 조정 주문의 적요에도 빈칸이 가고, 그 뒤로는
+           원 주문과 반품 줄을 놓고 다시 셈하는 수밖에 없다(2026-09-02 유형표). */
+        if ($to === 'adjusted' && $orderReturn->adjust_amount === null) {
+            return back()->withErrors(['to_status' =>
+                '조정 금액을 먼저 적어 주십시오 — 아래 「금액조정」 칸에 얼마를 돌려주는지(또는 더 받는지) 적고 저장합니다.']);
+        }
+
         DB::transaction(function () use ($orderReturn, $data, $to) {
             OrderReturnLog::create([
                 'order_return_id' => $orderReturn->id,
@@ -528,6 +536,40 @@ class OrderReturnController extends Controller
         }
 
         return back()->with('status', '상태를 옮겼습니다.' . $extra);
+    }
+
+    /**
+     * 부분ㆍ자격 변경 건의 조정 금액을 적는다(2026-09-02 유형표).
+     *
+     * 「조정 필요」라 적힌 셋 — 부분 교환ㆍ부분 반품ㆍ자격 변경 — 은 되돌린 뒤에도
+     * 돈이 남는다. 얼마가 남는지를 여기 적지 않으면 청구할 사람이 원 주문과 반품
+     * 줄을 놓고 다시 셈해야 하고, 그 셈이 사람마다 달라진다.
+     *
+     * 방향도 함께 적는다. 자격 변경은 돌려주기도 하고 더 받기도 한다 — 일반에서
+     * 차상위경감으로 바뀌면 돌려주고, 반대로 바뀌면 더 받는다.
+     */
+    public function adjustAmount(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! $orderReturn->needsAdjust()) {
+            return back()->withErrors(['adjust' => '조정할 것이 없는 건입니다 — 전부를 되돌리는 건은 발행을 통째로 무릅니다.']);
+        }
+
+        $data = $request->validate([
+            'adjust_amount'    => ['required', 'integer', 'min:0', 'max:100000000'],
+            'adjust_direction' => ['required', Rule::in(array_keys(OrderReturn::ADJ_DIRECTIONS))],
+        ]);
+
+        $orderReturn->update($data);
+
+        activity()->causedBy(Auth::user())->performedOn($orderReturn->order)
+            ->log(sprintf('조정 금액 %s %s원 (%s)',
+                OrderReturn::ADJ_DIRECTIONS[$data['adjust_direction']],
+                number_format($data['adjust_amount']),
+                $orderReturn->receipt_no));
+
+        return back()->with('status', sprintf('조정 금액을 적었습니다 — %s %s원.',
+            OrderReturn::ADJ_DIRECTIONS[$data['adjust_direction']],
+            number_format($data['adjust_amount'])));
     }
 
     /**

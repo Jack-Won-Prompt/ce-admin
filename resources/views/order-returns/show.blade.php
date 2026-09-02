@@ -386,11 +386,32 @@
   <div class="rt-bd">
     <div class="rt-kv"><span>발행 처리</span><span>{{ $r->credit_issued_at?->format('Y-m-d H:i') ?? '아직' }}</span></div>
     <div class="rt-kv"><span>내용</span><span>{{ $r->credit_note ?: '—' }}</span></div>
-    @if($r->scenario() === \App\Models\OrderReturn::SC_REFUND_ONLY)
+    @if($r->needsAdjust())
       <div class="rt-kv"><span>금액조정 주문</span><span>
         {{ $r->adjust_so_no ?: '아직' }}
         {{ $r->adjusted_at ? '· ' . $r->adjusted_at->format('Y-m-d H:i') : '' }}
       </span></div>
+
+      {{-- 조정 금액 — 부분 교환ㆍ부분 반품ㆍ자격 변경 셋이 여기 선다(2026-09-02 유형표).
+           적어 두지 않으면 나중에 청구할 사람이 원 주문과 반품 줄을 놓고 다시 셈한다. --}}
+      <form method="POST" action="{{ route('order-returns.adjust-amount', $r) }}"
+            style="display:flex;align-items:center;gap:6px;padding:7px 0 0;border-top:1px dashed var(--border);margin-top:7px;">
+        @csrf
+        <span style="font-size:12px;color:var(--text-muted);flex-shrink:0;width:84px;">조정 금액</span>
+        <select name="adjust_direction" class="form-control" style="width:132px;height:30px;font-size:12px;padding:2px 6px;">
+          @foreach(\App\Models\OrderReturn::ADJ_DIRECTIONS as $k => $v)
+            <option value="{{ $k }}" @selected(($r->adjust_direction ?? 'refund') === $k)>{{ $v }}</option>
+          @endforeach
+        </select>
+        <input type="number" name="adjust_amount" min="0" step="1" class="form-control"
+               style="width:120px;height:30px;font-size:12px;padding:2px 6px;text-align:right;"
+               value="{{ $r->adjust_amount ?? $r->adjustedAmount() }}"
+               placeholder="원">
+        <button type="submit" class="ds-btn ds-btn-sm">저장</button>
+        @if($r->adjust_amount === null)
+          <span style="font-size:11px;color:var(--text-muted);">줄에서 셈한 값입니다 — 확인 후 저장하십시오.</span>
+        @endif
+      </form>
     @endif
   </div>
 </div>

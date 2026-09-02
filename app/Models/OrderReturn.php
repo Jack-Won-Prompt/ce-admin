@@ -36,6 +36,7 @@ class OrderReturn extends Model
         'refund_method', 'refund_bank', 'refund_account', 'refund_holder',
         'refund_amount', 'refunded_at',
         'credit_issued_at', 'credit_note', 'is_partial',
+        'adjust_amount', 'adjust_direction',
         'assigned_user_id', 'created_by',
         // 위드웍스 반품 주문 — 창고가 무엇을 하고 있는지
         'withworks_so_no', 'withworks_so_id', 'withworks_so_type',
@@ -90,10 +91,17 @@ class OrderReturn extends Model
         self::SUB_REFUND_ONLY => '일반 환불 (자격 변경 등)',
     ];
 
-    /** 절차서의 다섯 갈래 */
+    /**
+     * 절차서의 갈래.
+     *
+     * 2026-09-02 자 유형표로 불량 반품을 갈랐다. 여태 반품은 한 갈래라 불량으로
+     * 되돌아온 것도 변심 반품과 같은 길을 갔는데, 불량은 최초 일자로 청구하므로
+     * 입금을 다시 확인하지 않는다 — 교환에서는 이미 갈라 두었던 것이다.
+     */
     public const SC_EXCHANGE_MIND   = 'exchange_mind';
     public const SC_EXCHANGE_DEFECT = 'exchange_defect';
     public const SC_RETURN_REFUND   = 'return_refund';
+    public const SC_RETURN_DEFECT   = 'return_defect';
     public const SC_CANCEL_PRESHIP  = 'cancel_before_ship';
     public const SC_REFUND_ONLY     = 'refund_only';
 
@@ -101,8 +109,9 @@ class OrderReturn extends Model
         self::SC_EXCHANGE_MIND   => '고객 변심 교환',
         self::SC_EXCHANGE_DEFECT => '불량 교환',
         self::SC_RETURN_REFUND   => '반품 및 환불',
+        self::SC_RETURN_DEFECT   => '불량 반품',
         self::SC_CANCEL_PRESHIP  => '출고 전 취소',
-        self::SC_REFUND_ONLY     => '일반 환불',
+        self::SC_REFUND_ONLY     => '자격 변경 (환불ㆍ추가 입금)',
     ];
 
     /**
@@ -122,6 +131,11 @@ class OrderReturn extends Model
             'approved', 'order_confirmed', 'reshipping', 'credited', 'done',
         ],
         self::SC_RETURN_REFUND => [
+            'received', 'collecting', 'inspecting', 'inspected',
+            'approved', 'refunded', 'credited', 'done',
+        ],
+        self::SC_RETURN_DEFECT => [
+            // 불량은 최초 일자 기준으로 청구한다 — 교환 쪽과 같은 까닭이다
             'received', 'collecting', 'inspecting', 'inspected',
             'approved', 'refunded', 'credited', 'done',
         ],
@@ -178,6 +192,7 @@ class OrderReturn extends Model
         self::SC_EXCHANGE_MIND   => 'Consumer Care manager',
         self::SC_EXCHANGE_DEFECT => 'Consumer Operation manager',
         self::SC_RETURN_REFUND   => 'Consumer Care manager',
+        self::SC_RETURN_DEFECT   => 'Consumer Operation manager',
         self::SC_CANCEL_PRESHIP  => 'Consumer Care manager',
         self::SC_REFUND_ONLY     => 'Consumer Care manager',
     ];
@@ -332,7 +347,7 @@ class OrderReturn extends Model
         }
 
         if ($this->type === self::TYPE_RETURN) {
-            return self::SC_RETURN_REFUND;
+            return $this->isDefect() ? self::SC_RETURN_DEFECT : self::SC_RETURN_REFUND;
         }
 
         return $this->subtype === self::SUB_REFUND_ONLY
@@ -356,9 +371,72 @@ class OrderReturn extends Model
         return self::APPROVERS[$this->scenario()] ?? 'Consumer Care manager';
     }
 
+    /** 조정 방향 — 자격 변경은 돌려주기도, 더 받기도 한다 */
+    public const ADJ_REFUND = 'refund';
+    public const ADJ_CHARGE = 'charge';
+
+    public const ADJ_DIRECTIONS = [
+        self::ADJ_REFUND => '환불 (돌려준다)',
+        self::ADJ_CHARGE => '추가 입금 (더 받는다)',
+    ];
+
+    /**
+     * 금액을 조정해야 하는 건인가(2026-09-02 자 유형표).
+     *
+     * 표가 「조정 필요」라 적은 것은 셋이다 — 부분 교환ㆍ부분 반품ㆍ자격 변경.
+     * 전부를 되돌리는 건은 조정이 아니라 취소다(발행을 통째로 무른다). 물건만
+     * 바꿔 주는 온전한 교환은 돈이 그대로라 조정할 것이 없다.
+     */
+    public function needsAdjust(): bool
+    {
+        return $this->scenario() === self::SC_REFUND_ONLY || $this->is_partial;
+    }
+
+    /**
+     * 조정 뒤 남는 금액 — 적어 두지 않았으면 줄에서 셈해 본다.
+     *
+     * 원 주문의 본인부담에서 되돌린 몫을 뺀 값이다. 사람이 적어 둔 값이 있으면
+     * 그것이 정본이다 — 배송비나 위약금이 섞이는 건이 있어 셈이 늘 맞지는 않는다.
+     */
+    public function adjustedAmount(): ?int
+    {
+        if ($this->adjust_amount !== null) {
+            return (int) $this->adjust_amount;
+        }
+
+        $order = $this->order;
+        if (!$order) {
+            return null;
+        }
+
+        /* copay 는 줄 전체 금액이다 — 수량을 다시 곱하면 안 된다. 부분만 되돌린
+           줄은 그 몫만큼만 센다(OrderReturnItem::refundAmount 가 그 셈이다). */
+        $back = (int) $this->items->sum(fn ($i) => $i->refundAmount());
+
+        return max(0, (int) $order->patient_copay - $back);
+    }
+
     public function flow(): array
     {
-        return self::FLOWS[$this->scenario()] ?? [];
+        $flow = self::FLOWS[$this->scenario()] ?? [];
+
+        /* 부분 건에도 금액조정 단계를 끼운다. 표가 「조정 필요」라 적은 것을 단계로
+           두지 않으면, 되돌리고 끝내 버려 남는 금액이 어디에도 정해지지 않는다.
+           자격 변경 흐름에는 처음부터 들어 있다 — 두 번 넣지 않는다. */
+        if ($this->is_partial && !in_array('adjusted', $flow, true)) {
+            /* 돈이 오간 뒤에 조정한다. 반품ㆍ취소는 환불 다음, 교환은 창고에 넘긴
+               다음이다 — 얼마가 남는지는 무엇을 되돌려 받았는지가 정해진 뒤에야
+               안다. 어느 것도 없는 옛 흐름이면 승인 다음에 둔다. */
+            foreach (['refunded', 'order_confirmed', 'approved'] as $anchor) {
+                $at = array_search($anchor, $flow, true);
+                if ($at !== false) {
+                    array_splice($flow, $at + 1, 0, 'adjusted');
+                    break;
+                }
+            }
+        }
+
+        return $flow;
     }
 
     /** 이 건이 다음에 갈 수 있는 곳. 취소는 어디서든 된다. */
@@ -391,7 +469,8 @@ class OrderReturn extends Model
     public function hasDeadlines(): bool
     {
         return in_array($this->scenario(), [
-            self::SC_EXCHANGE_MIND, self::SC_EXCHANGE_DEFECT, self::SC_RETURN_REFUND,
+            self::SC_EXCHANGE_MIND, self::SC_EXCHANGE_DEFECT,
+            self::SC_RETURN_REFUND, self::SC_RETURN_DEFECT,
         ], true);
     }
 
