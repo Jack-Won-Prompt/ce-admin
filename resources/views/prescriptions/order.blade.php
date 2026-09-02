@@ -10319,7 +10319,7 @@ window.HELP_TOUR_STEPS = [
          눌리기는 하는데 회색이라 담당자는 막힌 것으로 읽고 「만료라 다시 못 받는다」고
          물어 왔다 — 링크가 30분만 살아 놓치는 일이 잦은데, 그때마다 멈춰 섰다.
 
-         배지는 흐리게 두어 만료임을 알리되, 단추는 눌러야 할 것으로 세운다. --}}
+         배지는 흐리게 두어 만료임을 알리되, 단추는 눌러야 할 것으로 세운다. */
       expired: { bg:'var(--gray-50)',       border:'var(--border)', color:'var(--text-muted)', icon:'fa-ban',   text:'위임동의 만료',  action:'openConsentModal(true)',btnLabel:'재발송',   btnBorder:'var(--primary)',    btnColor:'var(--primary)', btnBg:'var(--primary-50)' },
     };
     const cfg = cfgMap[status];
