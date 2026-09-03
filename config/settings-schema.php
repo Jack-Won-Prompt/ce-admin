@@ -112,6 +112,13 @@ return [
                            . '링크페이는 토스페이먼츠 승인을 받은 뒤에 고른다 — 승인 전에는 키가 비어 있어 '
                            . '보낼 수 없으므로 무통장입금으로 내려가 보낸다.',
             ],
+            'nhis_fax_on_consent' => [
+                'label'  => '동의 완료에 공단 팩스 발송',
+                'config' => 'order.nhis_fax_on_consent',
+                'type'   => 'bool',
+                'help'   => '동의가 끝나면 등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증을 관할 지사로 보낸다. '
+                          . '하나라도 빠졌으면 보내지 않고 담당자에게 알린다 — 팩스 창에서 손으로 보내면 된다.',
+            ],
             'rx_received_sms_on_first_save' => [
                 'label'  => '첫 저장에 접수 안내 발송',
                 'config' => 'order.rx_received_sms_on_first_save',

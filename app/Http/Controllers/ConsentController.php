@@ -232,6 +232,24 @@ class ConsentController extends Controller
             $consent->loadMissing('prescription');
             if ($consent->prescription) {
                 $this->saveDelegationDocument($consent->prescription);
+
+                /* 동의가 끝났으니 공단에 등록 서류를 보낸다(2026-09-03 지시 ·
+                   시나리오 1.1.x.1). 낼 것이 다 있으면 보내고, 하나라도 빠졌으면
+                   보내는 대신 담당자에게 알린다 — 빠진 채로 나간 팩스는 공단이
+                   되돌려 보내고, 그때는 처음부터 다시 해야 한다.
+
+                   요양비위임장을 방금 만들었으므로 그 뒤라야 한다. 앞에 두면 늘
+                   「위임장이 없다」로 읽힌다.
+
+                   여기서 무슨 일이 있어도 서명은 이미 끝난 것이라 되돌리지 않는다 —
+                   환자 화면에 오류가 뜨면 다시 서명하려 든다. */
+                try {
+                    app(\App\Services\NhisFaxAuto::class)->attempt($consent->prescription->refresh());
+                } catch (\Throwable $e) {
+                    \Log::warning('[공단 팩스 자동] 실패', [
+                        'rx' => $consent->prescription->rx_number, 'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 

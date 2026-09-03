@@ -2689,6 +2689,17 @@ class PrescriptionController extends Controller
         // 파일 경로 수집
         $filePaths = $this->collectFaxFiles($prescription, $request->documents ?? [], $authInfo, $attachmentIds);
 
+        /* 붙일 파일이 하나도 없으면 보내지 않는다.
+           여태 여기서 멈추지 않아, 팝빌을 부르지도 않고 「보냈습니다」로 답했다 —
+           담당자는 나간 줄 알고 기다렸고, 공단에는 아무것도 가지 않았다.
+           서버에 파일이 없는 일이 실제로 있다(발행은 다른 서버에서 한 건이 있다). */
+        if (empty($filePaths)) {
+            return response()->json([
+                'success' => false,
+                'message' => '보낼 파일을 서버에서 찾지 못해 보내지 않았습니다 — 서류 관리에서 파일을 확인해 주십시오.',
+            ], 422);
+        }
+
         // 합본 PDF 저장 + 서류 관리 기록
         $pdfPath    = null;
         $pdfUrl     = null;
