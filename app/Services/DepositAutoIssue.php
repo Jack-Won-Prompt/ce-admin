@@ -82,7 +82,7 @@ class DepositAutoIssue
      */
     public function run(Order $order, string $cause = ''): array
     {
-        $out = ['cash' => null, 'tax' => null, 'statement' => null, 'skipped' => []];
+        $out = ['cash' => null, 'tax' => null, 'statement' => null, 'confirm' => null, 'skipped' => []];
 
         $order->loadMissing(['patient', 'prescription', 'items', 'tossPayment']);
 
@@ -91,19 +91,15 @@ class DepositAutoIssue
             return $out;
         }
 
-        /* 출고 전에는 아무것도 내지 않는다 (요청서 8ㆍ9쪽 「입금 및 출고 되어야」,
-           2026-08-31 회신).
+        /* 돈이 들어온 그때 낸다(2026-09-03 확정 · 테스트 시나리오 3.1.1ㆍ3.2.1).
 
-           예전에는 입금만 보고 냈다. 그러면 물건이 아직 창고에 있는데 국세청 신고가
-           끝나 있고, 그 뒤 주문이 취소되면 취소 신고를 다시 해야 한다.
+           한때는 출고까지 기다렸다. 물건이 아직 창고에 있는데 국세청 신고가 끝나
+           있으면, 그 뒤 주문이 취소될 때 취소 신고를 다시 해야 하기 때문이었다.
 
-           여기서 물러나도 잃는 것은 없다 — 창고가 출고를 알려 올 때 다시 부른다
-           (WithworksSync::apply). */
-        if (!$order->isShipped()) {
-            $out['skipped'][] = '아직 출고 전 — 출고 후 자동 발행됩니다';
-
-            return $out;
-        }
+           이제 입금 시점으로 옮긴다 — 시나리오가 「입금 → 서류 → 창고 확정 → 출고」
+           차례이고, 입금이 확인되면 그 자리에서 확정까지 보내므로 출고 전에 취소될
+           틈이 좁아졌다. 그래도 취소는 있을 수 있고, 그때는 OrderCancellation 이
+           발행을 되돌린다. */
 
         if ($this->enabled()) {
             $rx       = $order->prescription;
@@ -126,6 +122,18 @@ class DepositAutoIssue
         /* 거래명세서는 세무 서류가 아니라 물건과 함께 나가는 종이다. 국세청에 신고되는
            것이 없으니 자동 발행 스위치와 상관없이, 입금이 확인되면 붙인다. */
         $out['statement'] = $this->statement($order, $out);
+
+        /* 창고에 확정을 보낸다(2026-09-03 확정 · 시나리오 3.3). 여태 판매주문은
+           「등록」으로만 서 있어, 돈이 들어와도 담당자가 위드웍스 화면에 들어가
+           손으로 확정을 눌러야 출고가 시작됐다.
+
+           재고가 모자라 확정되지 않아도 여기서 물러나지 않는다 — 돈은 이미 들어왔고
+           발행도 끝났다. 못 했다는 것만 남기고 담당자가 잇는다. */
+        $confirm = app(\App\Services\WithworksConfirm::class)->confirm($order);
+        $out['confirm'] = $confirm['message'];
+        if (! $confirm['ok']) {
+            $out['skipped'][] = $confirm['message'];
+        }
 
         $this->log($order, $cause, $out);
 

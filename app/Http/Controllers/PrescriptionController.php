@@ -384,13 +384,22 @@ class PrescriptionController extends Controller
             return ['sent' => false, 'method' => '', 'message' => '주문이 없어 결제 안내를 보내지 못했습니다.'];
         }
 
-        /* 받을 돈이 없으면 보내지 않는다. 차상위경감ㆍ기초는 본인부담이 0 이라,
-           그대로 두면 환자에게 「0원을 입금해 주십시오」가 나갔다. */
+        /* 주문이 접수됐다는 것을 먼저 알린다(2026-09-03 확정 · 시나리오 2.2).
+
+           한때는 한 통으로 합쳤다 — 「확정을 알리는 일과 돈을 받는 일이 문자 두 통으로
+           갈리면 고객은 두 번 읽고 한 번 헷갈린다」는 까닭이었다. 그러나 받을 돈이
+           없는 건(차상위경감ㆍ기초)은 결제 안내를 보내지 않으므로, 합쳐 두면 그 사람들은
+           주문이 섰다는 것조차 듣지 못했다. 접수는 누구에게나 알린다. */
+        $received = $this->sendOrderReceivedSms($prescription, $order);
+
+        /* 받을 돈이 없으면 결제 안내는 보내지 않는다. 차상위경감ㆍ기초는 본인부담이
+           0 이라, 그대로 두면 환자에게 「0원을 입금해 주십시오」가 나갔다. */
         if ($order->expectedDeposit() <= 0) {
             return [
                 'sent'    => false,
                 'method'  => '',
-                'message' => '본인부담금이 없어 결제 안내를 보내지 않았습니다.',
+                'message' => ($received ? '주문 접수 안내를 보냈습니다. ' : '')
+                           . '본인부담금이 없어 결제 안내는 보내지 않았습니다.',
             ];
         }
 
@@ -438,6 +447,86 @@ class PrescriptionController extends Controller
                 ? "{$label} 안내를 " . ($res['message'] ?? '보냈습니다.')
                 : ($res['message'] ?? '보내지 못했습니다.'),
         ];
+    }
+
+    /**
+     * 주문이 접수됐다는 것을 알린다(2026-09-03 확정 · 시나리오 2.2).
+     *
+     * 결제 안내와 갈라 둔다. 한때는 한 통으로 합쳤으나, 받을 돈이 없는 건(차상위경감ㆍ
+     * 기초)은 결제 안내를 보내지 않으므로 그 사람들은 주문이 섰다는 것조차 듣지
+     * 못했다. 접수는 누구에게나 알린다.
+     *
+     * 두 번 보내지 않는다 — 저장을 다시 눌러도 접수 통지가 또 가면 안 된다.
+     *
+     * 못 보내도 결제 안내를 막지 않는다. 둘은 다른 일이다.
+     */
+    private function sendOrderReceivedSms(Prescription $prescription, \App\Models\Order $order): bool
+    {
+        $source = 'order-received';
+
+        $mobile = preg_replace('/\D/', '',
+            (string) ($prescription->patient?->mobile ?: $prescription->mobile_ocr));
+
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return false;
+        }
+
+        if ($prescription->id && \App\Models\MessageHistory::where('source', $source)
+                ->where('prescription_id', $prescription->id)
+                ->where('success_count', '>', 0)
+                ->exists()) {
+            return false;                                  // 이미 알렸다
+        }
+
+        $name = $prescription->patient?->name ?: ($prescription->patient_name_ocr ?: '고객');
+
+        /* 문구는 메시지 유형(SMS ▸ 주문 확정)에 적어 둔 것을 쓴다 — 담당자가 화면에서
+           고칠 수 있어야 하고, 손으로 보낼 때와 갈리지 않아야 한다. */
+        $body = \App\Models\MessageTemplate::channel('sms')->active()
+            ->where('code', 'order_confirmed')->value('body')
+            ?: "[콜로플라스트] #{고객명}님, 주문이 접수되었습니다.\n주문번호: #{주문번호}\n본인 부담금: #{본인부담금}원";
+
+        /* 받을 돈이 없는 건(차상위경감ㆍ기초)은 부담금 줄을 통째로 뺀다 —
+           「본인 부담금: 0원」은 빠뜨린 것처럼 읽힌다. 담당자가 문구를 고쳐도
+           자리표만 찾으면 되므로 그대로 걸린다. */
+        if ((int) $order->expectedDeposit() <= 0) {
+            $body = implode("\n", array_filter(
+                explode("\n", $body),
+                fn ($line) => ! str_contains($line, '#{본인부담금}'),
+            ));
+        }
+
+        $text = strtr($body, [
+            '#{고객명}'     => $name,
+            '#{주문번호}'   => $order->order_number,
+            '#{본인부담금}' => number_format((int) $order->expectedDeposit()),
+            '#{처방번호}'   => $prescription->rx_number,
+        ]);
+
+        try {
+            $res = app(\App\Services\MessageSender::class)->sendBulk(
+                'sms',
+                [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $prescription->patient_id]],
+                $text,
+                null,
+                ['source' => $source, 'prescription_id' => $prescription->id],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[주문 접수 안내] 보내지 못했다', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        if ($res['success'] ?? false) {
+            activity()->causedBy(Auth::user())->performedOn($order)
+                ->log("주문 접수 안내 발송 → {$mobile}");
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
