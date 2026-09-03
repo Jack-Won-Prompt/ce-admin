@@ -66,7 +66,7 @@ final class VirtualAccountForOrder
                 /* 주문은 살린다. 창고에는 이미 나간 뒤라 되돌리면 더 나쁘다 —
                    못 보냈다는 것만 알리고 정산/회계에서 다시 하게 둔다. */
                 return ['sent' => false, 'reused' => false, 'payment' => null,
-                        'message' => '가상계좌를 발급하지 못했습니다 — 정산/회계에서 다시 시도해 주십시오. (' . $e->getMessage() . ')'];
+                        'message' => $this->why($e)];
             }
         }
 
@@ -81,6 +81,35 @@ final class VirtualAccountForOrder
             'message' => ($reused ? '이미 발급된 계좌를 다시 보냈습니다 — ' : '가상계좌를 발급했습니다 — ')
                        . ($res['message'] ?? ''),
         ];
+    }
+
+    /**
+     * 왜 못 냈는지 사람 말로 옮긴다.
+     *
+     * 토스가 주는 코드를 그대로 띄우면 담당자는 무엇을 해야 하는지 알 수 없다.
+     * 특히 NOT_SUPPORTED_METHOD 는 「우리 쪽에서 고칠 것이 없다」는 뜻이라 —
+     * 토스 상점에 가상계좌가 켜져 있지 않은 것이다 — 정산/회계에서 몇 번을 다시
+     * 눌러도 같은 답이 온다. 그 말을 해 주어야 저쪽에 연락한다.
+     */
+    private function why(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, 'NOT_SUPPORTED_METHOD')) {
+            return '이 상점에 가상계좌가 켜져 있지 않아 발급하지 못했습니다 — '
+                 . '토스페이먼츠 개발자센터에서 이 상점(MID)의 결제수단에 가상계좌를 더해야 합니다. '
+                 . '그때까지는 링크페이로 보내 주십시오.';
+        }
+
+        if (str_contains($msg, 'INVALID_BANK')) {
+            return '가상계좌 은행 설정이 토스가 받지 않는 값입니다 — 설정 › 토스페이먼츠의 은행을 확인해 주십시오.';
+        }
+
+        if (str_contains($msg, 'UNAUTHORIZED') || str_contains($msg, '키가 설정되지')) {
+            return '토스페이먼츠 키가 없거나 맞지 않아 발급하지 못했습니다 — 설정을 확인해 주십시오.';
+        }
+
+        return '가상계좌를 발급하지 못했습니다 — 정산/회계에서 다시 시도해 주십시오. (' . $msg . ')';
     }
 
     /**
