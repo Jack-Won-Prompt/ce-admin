@@ -8529,8 +8529,8 @@ window.HELP_TOUR_STEPS = [
     BtnState.loading(btn, '보내는 중...');
     try {
       const res = await apiRequest(PAY_STORE_URL, 'POST', { method, mobile });
-      showToast(res.message || (res.success ? '보냈습니다.' : '보내지 못했습니다.'),
-                res.success ? 'success' : 'danger', 5000);
+      /* 못 보낸 것은 apiRequest 가 이미 알린다 — 여기서 또 알리면 같은 말이 두 번 뜬다 */
+      if (res.success) showToast(res.message || '보냈습니다.', 'success', 5000);
       loadPaymentLinks();
     } catch (e) {
       showToast('보내지 못했습니다: ' + (e.message || ''), 'danger', 5000);
