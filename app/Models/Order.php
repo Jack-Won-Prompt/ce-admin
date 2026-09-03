@@ -298,19 +298,65 @@ class Order extends Model
     /** 되돌릴 수 있는 주문 상태 — 대기(아직 우리 손 안)와 취소(이미 되돌림)는 뺀다 */
     public const RETURNABLE_STATUSES = self::OPEN_AFTER_CONFIRM;
 
-    public static function generateOrderNumber(): string
+    /**
+     * 주문번호 옆에 붙여 적는 판매번호(2026-09-03 지시).
+     *
+     * 창고와 이야기할 때 쓰는 번호는 우리 주문번호가 아니라 저쪽 판매번호다.
+     * 화면마다 주문번호만 적어 두었더니, 담당자가 창고에 전화할 때마다 주문을
+     * 열어 판매번호를 찾아야 했다.
+     *
+     * 아직 창고에 넘기지 않은 건은 빈 문자열을 돌려준다 — 「· —」 같은 빈 자리를
+     * 세워 두면 무엇이 빠진 것처럼 읽힌다.
+     */
+    public function saleNoSuffix(string $sep = ' · '): string
     {
-        /* 번호 부분만 숫자로 보고 최대를 찾는다.
-           예전에는 order_number 의 문자열 최대값을 잡아 뒤 숫자를 뽑았는데, ORD- 뒤에 숫자가
-           아닌 것이 하나라도 섞이면(ORD-T0815… 같은 임시 번호) 그것이 문자열 최대가 되어
-           숫자 추출이 실패하고 번호가 1 로 되돌아간다. 그러면 이미 있는 번호와 부딪혀 주문이
-           아예 만들어지지 않는다. 자릿수가 넷을 넘어갈 때도 문자열 비교는 틀린 답을 준다. */
+        $so = trim((string) $this->withworks_so_no);
+
+        return $so === '' ? '' : $sep . $so;
+    }
+
+    /** 주문번호 옆에 붙여 적는 판매번호 — 없으면 null */
+    public function saleNo(): ?string
+    {
+        $so = trim((string) $this->withworks_so_no);
+
+        return $so === '' ? null : $so;
+    }
+
+    /** 주문번호 앞머리 — End User Direct */
+    public const NUMBER_PREFIX = 'EUD';
+
+    /**
+     * 주문번호 — EUD + 년월일 + 그날의 차례 다섯 자리(2026-09-03 확정).
+     *
+     *   EUD20260903 00001
+     *   └┬┘└───┬──┘ └─┬─┘
+     *    │     │      그날 몇 번째인가
+     *    │     주문이 선 날
+     *    End User Direct
+     *
+     * 예전에는 ORD-0001 처럼 통째로 이어지는 번호였다. 번호만 보고는 언제 것인지 알 수
+     * 없어, 목록에서 날짜 칸을 함께 봐야 했다.
+     *
+     * 차례는 날마다 처음으로 돌아간다. 그날 것만 세므로 앞선 날의 번호가 몇이든
+     * 상관없고, 지운 건도 함께 세어(withTrashed) 되살렸을 때 부딪히지 않는다.
+     *
+     * 옛 ORD- 번호는 그대로 둔다. 이미 창고ㆍ증빙ㆍ공단 서류에 적혀 나간 번호다.
+     */
+    public static function generateOrderNumber(?\Carbon\CarbonInterface $when = null): string
+    {
+        $day    = ($when ?? now())->format('Ymd');
+        $prefix = self::NUMBER_PREFIX . $day;
+
+        /* 그날 것 가운데 가장 큰 차례를 찾는다. 앞머리가 정확히 맞는 것만 본다 —
+           길이가 다른 옛 번호나 손으로 적은 임시 번호가 섞여도 숫자 뽑기가 틀리지 않는다. */
         $max = (int) static::withTrashed()
-            ->whereRaw("order_number REGEXP '^ORD-[0-9]+$'")
-            ->selectRaw('MAX(CAST(SUBSTRING(order_number, 5) AS UNSIGNED)) AS seq')
+            ->where('order_number', 'like', $prefix . '%')
+            ->whereRaw('CHAR_LENGTH(order_number) = ?', [strlen($prefix) + 5])
+            ->selectRaw('MAX(CAST(SUBSTRING(order_number, ?) AS UNSIGNED)) AS seq', [strlen($prefix) + 1])
             ->value('seq');
 
-        return sprintf('ORD-%04d', $max + 1);
+        return $prefix . sprintf('%05d', $max + 1);
     }
 
     /**

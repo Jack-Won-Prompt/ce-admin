@@ -43,7 +43,7 @@
 
 <div class="bar">
   <b>CE Admin · 공단 요양비 청구</b>
-  <span style="font-size:11px;opacity:.85">{{ $order->order_number }}</span>
+  <span style="font-size:11px;opacity:.85">{{ $order->order_number }}{{ $order->saleNoSuffix() }}</span>
   <span class="warn">왼쪽 칸을 눌러 복사 → 오른쪽 같은 자리에 붙여넣기</span>
   <div class="grow"></div>
   <button class="bbtn" onclick="reloadPortal()">공단 새로고침</button>

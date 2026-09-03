@@ -208,7 +208,7 @@
       &nbsp;·&nbsp;
       {{ $issuedAt?->format('Y-m-d H:i') ?? '-' }}
       @if($order)
-        &nbsp;·&nbsp; 주문 <b>{{ $order->order_number }}</b>
+        &nbsp;·&nbsp; 주문 <b>{{ $order->order_number }}</b>{{ $order->saleNoSuffix(' · 판매 ') }}
       @endif
     </div>
   </div>

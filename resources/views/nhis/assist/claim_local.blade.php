@@ -73,7 +73,7 @@
   <div class="hd">
     <h1>지자체 청구</h1>
     <div class="sub">
-      {{ $order->patient?->name ?? '—' }} · {{ $order->order_number }}@if($prescription) · {{ $prescription->rx_number }}@endif
+      {{ $order->patient?->name ?? '—' }} · {{ $order->order_number }}{{ $order->saleNoSuffix() }}@if($prescription) · {{ $prescription->rx_number }}@endif
     </div>
     <div class="tags">
       <span class="tag">{{ $agencyLabel }}</span>

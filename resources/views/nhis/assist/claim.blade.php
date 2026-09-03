@@ -146,7 +146,8 @@
 {{-- 우리 도구 막대 — 공단 서식이 아니라 우리 것임이 한눈에 보여야 한다 --}}
 <div class="tools">
   <b>CE Admin · 청구 원본</b>
-  <span style="font-size:11px;opacity:.85">{{ $order->order_number }}@if($prescription) · {{ $prescription->rx_number }}@endif</span>
+  {{-- 창고와 이야기할 때 쓰는 번호는 판매번호다 — 주문번호 옆에 함께 적는다(2026-09-03) --}}
+  <span style="font-size:11px;opacity:.85">{{ $order->order_number }}{{ $order->saleNoSuffix() }}@if($prescription) · {{ $prescription->rx_number }}@endif</span>
   <div class="pbar"><div class="pfill" id="pfill"></div></div>
   <span id="ptext" style="font-size:11px">0 / 0</span>
   @if($missing > 0)<span class="miss">값 없음 {{ $missing }}</span>@endif

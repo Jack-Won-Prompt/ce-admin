@@ -31,7 +31,7 @@
   <div class="wrap">
     <div class="hd">
       <h1>{{ $order->patient?->name ?? '고객' }}님 증빙</h1>
-      <p>주문 {{ $order->order_number }}</p>
+      <p>주문 {{ $order->order_number }}{{ $order->saleNoSuffix() }}</p>
     </div>
 
     @if($docs)
