@@ -102,11 +102,22 @@ final class NhisFaxAuto
         return $new || $renew;
     }
 
-    /** 없는 서류의 이름들 — 다 있으면 빈 배열 */
+    /**
+     * 없는 서류의 이름들 — 다 있으면 빈 배열.
+     *
+     * 요양비위임장만 다른 자리에 있다. 서명하면 시스템이 만들어 「생성 서류」에 담고,
+     * 첨부에는 넣지 않는다. 첨부만 보고 세었더니 그것 하나 때문에 늘 「없다」로 읽혀
+     * 자동 팩스가 한 번도 나가지 못했다(2026-09-03 시험 2차에서 드러났다).
+     */
     private function missing(Prescription $prescription): array
     {
         $have = PrescriptionAttachment::where('prescription_id', $prescription->id)
             ->pluck('doc_type')->unique()->all();
+
+        if (\App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
+                ->where('type', 'delegation')->exists()) {
+            $have[] = 'delegation';
+        }
 
         $missing = [];
         foreach (self::REQUIRED as $type => $label) {
@@ -133,9 +144,15 @@ final class NhisFaxAuto
             ->whereIn('doc_type', array_keys(self::REQUIRED))
             ->pluck('id')->all();
 
+        /* 요양비위임장은 첨부가 아니라 생성 서류다 — documents 쪽으로 따로 청한다 */
+        $docs = \App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
+                    ->where('type', 'delegation')->exists()
+            ? ['delegation'] : [];
+
         $request = \Illuminate\Http\Request::create('/', 'POST', [
             'recipient_type' => 'nhis',
             'fax_no'         => $fax,
+            'documents'      => $docs,
             'attachment_ids' => $ids,
         ]);
 

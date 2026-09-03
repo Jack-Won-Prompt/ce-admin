@@ -9142,6 +9142,9 @@ window.HELP_TOUR_STEPS = [
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
       if (!hits.length && toNhis) {
+        /* 요양비위임장은 서명하면 시스템이 만들어 「생성 서류」에 담긴다. 이제 팩스가
+           그쪽에서도 집어 보내므로 「보낼 수 있다」로 센다 — 예전에는 첨부가 아니라
+           못 보낸다고 적었다(2026-09-03 고침). */
         rows.push({ label: req.label, att: null,
                     state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
       }
@@ -9187,7 +9190,7 @@ window.HELP_TOUR_STEPS = [
           <i class="fa-regular fa-file-lines" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:500;color:var(--text-secondary);">${esc(r.label)}</div>
-            <div style="font-size:10px;color:var(--text-muted);">생성 서류에 있음 — 팩스로 보내려면 첨부로 올리십시오</div>
+            <div style="font-size:10px;color:var(--text-muted);">생성 서류에 있음 — 그대로 함께 나갑니다</div>
           </div>
         </div>`;
     }
@@ -9338,15 +9341,11 @@ window.HELP_TOUR_STEPS = [
     const faxNo = document.getElementById('fax-no').value.trim();
     if (!faxNo) { showToast('수신 팩스번호를 입력해주세요.', 'warning'); return; }
 
-    const docMap = {
-      /* 팩스는 환자 등록·재등록 전용이라 생성 서류를 싣지 않는다.
-         등록신청서·결과지·신분증은 첨부(attachment_ids)로 나간다. */
-    };
-    const selected = Object.entries(docMap)
-      .filter(([id]) => document.getElementById(id)?.checked);
-
-    const docs      = selected.map(([, d]) => d.value);
-    const docLabels = selected.map(([, d]) => d.label);
+    /* 등록신청서ㆍ결과지ㆍ신분증은 첨부(attachment_ids)로 나간다.
+       요양비위임장만 첨부가 아니라 생성 서류에 담기므로 따로 청한다 — 서명하면
+       시스템이 만드는 것이라 담당자가 올릴 일이 없다(2026-09-03 고침). */
+    const docs      = faxGenDelegation ? ['delegation'] : [];
+    const docLabels = faxGenDelegation ? ['요양비위임장'] : [];
 
     // 첨부 문서 선택
     const attIds = Array.from(document.querySelectorAll('.fax-att-chk:checked'))
@@ -9354,7 +9353,7 @@ window.HELP_TOUR_STEPS = [
     const attLabels = Array.from(document.querySelectorAll('.fax-att-chk:checked'))
       .map(el => el.closest('label').querySelector('span')?.textContent?.trim() ?? '첨부');
 
-    if (!selected.length && !attIds.length) {
+    if (!docs.length && !attIds.length) {
       showToast('전송할 서류를 하나 이상 선택해주세요.', 'warning'); return;
     }
 

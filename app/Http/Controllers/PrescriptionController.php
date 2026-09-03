@@ -3220,6 +3220,26 @@ class PrescriptionController extends Controller
                     }
                     break;
 
+                case 'delegation':
+                    /* 요양비위임장 — 서명하면 시스템이 만든다(생성 서류). 첨부가 아니라
+                       그쪽에 담기므로 첨부 목록에서는 찾을 수 없었다. 그래서 공단에
+                       보낼 넷 가운데 이것만 늘 「없다」로 읽혀, 자동 팩스가 한 번도
+                       나가지 못했다(2026-09-03 시험 2차 Case 4.1 에서 드러났다). */
+                    $deleg = \App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
+                        ->where('type', 'delegation')
+                        ->latest('id')
+                        ->first();
+
+                    if ($deleg?->file_path) {
+                        foreach (['public', 'local'] as $disk) {
+                            if (Storage::disk($disk)->exists($deleg->file_path)) {
+                                $files[] = Storage::disk($disk)->path($deleg->file_path);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+
                 case 'cash_receipt':
                     // 발행된 건만. 서식 그대로 PDF 로 그려 붙인다 — 팝빌 팩스는 PDF 를 받는다.
                     $order = $prescription->order;
