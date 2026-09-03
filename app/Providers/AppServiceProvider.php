@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
            DB 를 아직 못 쓰는 상황이면 조용히 넘어간다. */
         \App\Support\ServiceSettings::applyToConfig();
 
+        /* 토스는 시험ㆍ운영 키를 두 벌 담아 두고 한 칸으로 고른다. 설정을 읽어 온
+           바로 뒤에 고른 것을 쓰이는 자리에 앉힌다 — 순서가 뒤바뀌면 화면에서 바꾼
+           갈래가 반영되지 않는다. */
+        \App\Support\TossEnvironment::apply();
+
         /* 위드웍스 연동 — 테스트(데모웍스)·운영(위드웍스) 중 어디에 붙을지가 화면 설정에
            있다. 부르는 쪽·받는 쪽이 전부 config 를 보므로 여기서 한 번 올려 둔다.
            설치 직후처럼 표가 아직 없을 수도 있어 조용히 넘어간다. */

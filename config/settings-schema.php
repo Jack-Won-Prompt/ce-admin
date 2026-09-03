@@ -65,15 +65,25 @@ return [
         'label' => '토스페이먼츠',
         'desc'  => '결제 · 가상계좌 발급',
         'fields' => [
-            'client_key' => ['label' => '클라이언트 키', 'config' => 'toss.client_key',
-                             'help'  => '결제창을 여는 데 쓴다. 브라우저에 노출되는 값이다.', 'width' => 3],
-            'secret_key' => ['label' => '시크릿 키',     'config' => 'toss.secret_key', 'type' => 'password',
-                             'help'  => '서버에서 토스 API 를 부를 때 쓴다.', 'width' => 3],
+            /* 두 벌을 다 담아 두고 이 한 칸으로 고른다. 예전에는 키를 갈아 끼웠는데,
+               바꾸는 사람이 「테스트 모드」를 함께 끄는 것을 잊었다. */
+            'env' => ['label' => '사용 환경', 'config' => 'toss.env', 'type' => 'select',
+                      'options' => ['test' => '테스트 (실제 결제 없음)', 'live' => '운영 (실제 결제)'],
+                      'help'  => '고른 쪽의 키로 돈다. 테스트 모드도 이 값이 정한다.', 'width' => 3],
+
+            'test_client_key' => ['label' => '테스트 클라이언트 키', 'config' => 'toss.test.client_key',
+                             'help'  => 'test_ck_ 로 시작한다. 결제창을 여는 데 쓰며 브라우저에 노출된다.', 'width' => 3],
+            'test_secret_key' => ['label' => '테스트 시크릿 키',     'config' => 'toss.test.secret_key', 'type' => 'password',
+                             'help'  => 'test_sk_ 로 시작한다. 서버에서 토스 API 를 부를 때 쓴다.', 'width' => 3],
+
+            'live_client_key' => ['label' => '운영 클라이언트 키', 'config' => 'toss.live.client_key',
+                             'help'  => 'live_ck_ 로 시작한다.', 'width' => 3],
+            'live_secret_key' => ['label' => '운영 시크릿 키',     'config' => 'toss.live.secret_key', 'type' => 'password',
+                             'help'  => 'live_sk_ 로 시작한다. 이 키로 돌면 실제 결제가 일어난다.', 'width' => 3],
+
             'webhook_secret' => ['label' => '웹훅 보안 키', 'config' => 'toss.webhook_secret', 'type' => 'password',
                              'help'  => '서명이 붙은 웹훅을 검증한다. 가상계좌 입금 웹훅은 서명이 없어 이 값이 비어도 입금 처리는 된다.',
                              'width' => 3],
-            'test_mode'  => ['label' => '테스트 모드',   'config' => 'toss.test_mode', 'type' => 'bool',
-                             'help'  => '끄면 실제 결제가 발생한다.'],
             'va_enabled' => ['label' => '가상계좌 발급', 'config' => 'toss.virtual_account_enabled', 'type' => 'bool',
                              'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보낸다.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
