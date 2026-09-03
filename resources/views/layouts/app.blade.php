@@ -3243,6 +3243,13 @@ input#chatFileInput { display: none; }
             <div class="chat-win-title" id="chatWinTitle">-</div>
             <div class="chat-win-members" id="chatWinMembers"></div>
           </div>
+          {{-- 이 방의 첨부를 한 벌로 받는다. 하나씩 누르면 스무 번이다(2026-09-02). --}}
+          <a id="chatZipBtn" href="#" title="이 방의 첨부를 한 벌로 받습니다"
+             style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;
+                    padding:4px 9px;border:1px solid var(--border);border-radius:6px;
+                    font-size:11px;color:var(--text-secondary);text-decoration:none;white-space:nowrap;">
+            <i class="fa-solid fa-file-zipper" style="font-size:11px;"></i> 첨부 모두 받기
+          </a>
         </div>
 
         {{-- CE샵 고객 정보 배너 --}}
@@ -3287,7 +3294,7 @@ input#chatFileInput { display: none; }
           <button class="chat-file-btn" title="파일 첨부" onclick="document.getElementById('chatFileInput').click()">
             <i class="fa-solid fa-paperclip" style="font-size:13px;"></i>
           </button>
-          <input type="file" id="chatFileInput" accept="*/*">
+          <input type="file" id="chatFileInput" accept="*/*" multiple>
           <textarea id="chatInput" rows="1" placeholder="메시지를 입력하세요 (Shift+Enter: 줄바꿈)"></textarea>
           <button class="chat-send-btn" onclick="ChatPanel.send()">
             <i class="fa-solid fa-paper-plane" style="font-size:14px;"></i>
@@ -3659,7 +3666,7 @@ const ChatPanel = (() => {
   let currentRoomId  = null;
   let currentPage    = 1;
   let hasMore        = false;
-  let pasteFile      = null;
+  let pasteFiles     = [];    // 붙일 파일 — 한 장이든 여러 장이든 목록으로 다룬다
   let activeRoomCategory = 'company';
   let subscribedRooms = new Set();
   let replyToId      = null;   // 지금 답글을 달고 있는 원본 메시지
@@ -4006,6 +4013,10 @@ const ChatPanel = (() => {
     document.getElementById('chatWinTitle').textContent   = room;
     document.getElementById('chatWinMembers').textContent = '';
 
+    /* 첨부 묶음은 방마다 다르다 — 방을 옮길 때 함께 옮긴다 */
+    const zip = document.getElementById('chatZipBtn');
+    if (zip) zip.href = `${BASE_URL}/chat/rooms/${roomId}/attachments`;
+
     // CE샵 고객 정보 배너
     const shopBar = document.getElementById('shopCustomerBar');
     const si = cachedRoom.shop_info;
@@ -4211,11 +4222,12 @@ const ChatPanel = (() => {
     if (!currentRoomId) return;
     const input = document.getElementById('chatInput');
     const body  = input.value.trim();
-    if (!body && !pasteFile) return;
+    const files = pasteFiles.slice();
+    if (!body && !files.length) return;
 
     const form = new FormData();
-    if (body)      form.append('body', body);
-    if (pasteFile) form.append('attachment', pasteFile);
+    if (body) form.append('body', body);
+    files.forEach(f => form.append('attachments[]', f, f.name || 'paste.png'));
     if (replyToId) form.append('reply_to_id', replyToId);
 
     input.value = '';
@@ -4237,13 +4249,17 @@ const ChatPanel = (() => {
       showToast('전송 실패: ' + (err.message || err.error || `HTTP ${res.status}`), 'danger');
       return;
     }
-    const msg = await res.json();
-    appendMessage(msg);
+    /* 여러 장을 보내면 서버가 장수만큼 돌려준다 — 한 장이면 예전대로 낱개다 */
+    const out = await res.json();
+    (Array.isArray(out) ? out : [out]).forEach(appendMessage);
     scrollBottom();
 
     // 방 목록 프리뷰 업데이트
     const preview = document.querySelector(`#room-item-${currentRoomId} .chat-room-preview`);
-    if (preview) preview.textContent = body || '📎 ' + (pasteFile?.name || '파일');
+    if (preview) {
+      preview.textContent = body
+        || '📎 ' + (files.length > 1 ? `파일 ${files.length}개` : (files[0]?.name || '파일'));
+    }
   }
 
   // ── 답글 ─────────────────────────────────────────────────────
@@ -4368,26 +4384,45 @@ const ChatPanel = (() => {
     });
   }
 
-  // ── 파일 붙여넣기 처리 ───────────────────────────────────────
-  function handlePaste(file) {
-    pasteFile = file;
-    const preview = document.getElementById('chatPastePreview');
-    preview.classList.add('show');
-    document.getElementById('chatPasteFileName').textContent = file.name || '이미지';
+  // ── 붙일 파일 ────────────────────────────────────────────────
+  /* 한 장이든 여러 장이든 같은 길로 다룬다(2026-09-02 요청서). 붙여넣기는 한 장을
+     주고 파일 고르기는 여러 장을 주므로, 받는 쪽에서 목록으로 모은다.
 
-    if (file.type.startsWith('image/')) {
-      const thumb = document.getElementById('chatPasteThumb');
-      thumb.src = URL.createObjectURL(file);
+     이미 골라 둔 것이 있으면 뒤에 더한다 — 다시 고를 때마다 앞의 것이 사라지면
+     서로 다른 폴더에 있는 파일을 함께 보낼 수 없다. */
+  function handlePaste(fileOrList) {
+    const added = Array.isArray(fileOrList) ? fileOrList : [fileOrList];
+    if (!added.length) return;
+
+    pasteFiles = (pasteFiles || []).concat(added);
+    renderPastePreview();
+  }
+
+  function renderPastePreview() {
+    const preview = document.getElementById('chatPastePreview');
+    const n = pasteFiles.length;
+
+    if (!n) { clearPaste(); return; }
+
+    preview.classList.add('show');
+    document.getElementById('chatPasteFileName').textContent =
+      n === 1 ? (pasteFiles[0].name || '이미지') : `${pasteFiles[0].name || '이미지'} 외 ${n - 1}개`;
+
+    /* 미리보기 그림은 첫 장만 보인다 — 열 장을 늘어놓으면 입력창이 밀려 올라간다 */
+    const first = pasteFiles[0];
+    const thumb = document.getElementById('chatPasteThumb');
+    if (first.type?.startsWith('image/')) {
+      thumb.src = URL.createObjectURL(first);
       thumb.style.display = '';
       document.getElementById('chatPasteFileIcon').style.display = 'none';
     } else {
-      document.getElementById('chatPasteThumb').style.display = 'none';
+      thumb.style.display = 'none';
       document.getElementById('chatPasteFileIcon').style.display = '';
     }
   }
 
   function clearPaste() {
-    pasteFile = null;
+    pasteFiles = [];
     document.getElementById('chatPastePreview').classList.remove('show');
     document.getElementById('chatPasteThumb').src = '';
     document.getElementById('chatFileInput').value = '';
@@ -4592,8 +4627,8 @@ const ChatPanel = (() => {
 
     // 파일 선택
     document.getElementById('chatFileInput').addEventListener('change', (e) => {
-      const file = e.target.files?.[0];
-      if (file) handlePaste(file);
+      const files = Array.from(e.target.files || []);
+      if (files.length) handlePaste(files);
     });
   });
 

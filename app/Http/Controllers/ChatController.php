@@ -230,9 +230,14 @@ class ChatController extends Controller
         $this->authorizeRoom($room);
 
         $request->validate([
-            'body'        => 'nullable|string|max:5000',
-            'attachment'  => 'nullable|file|max:20480', // 20MB
-            'reply_to_id' => 'nullable|integer|exists:chat_messages,id',
+            'body'          => 'nullable|string|max:5000',
+            'attachment'    => 'nullable|file|max:20480', // 20MB
+            // 여러 장을 한 번에 올린다(2026-09-02 요청서). 한 메시지에 한 장이라는
+            // 지금 모양은 그대로 두고, 장수만큼 메시지를 세운다 — 표를 고치지 않아도
+            // 그리는 쪽과 알림이 그대로 돈다.
+            'attachments'   => 'nullable|array|max:20',
+            'attachments.*' => 'file|max:20480',
+            'reply_to_id'   => 'nullable|integer|exists:chat_messages,id',
         ]);
 
         // 답글은 같은 방 안에서만. 다른 방 메시지 id 를 넣어 방을 넘나드는 것을 막는다.
@@ -252,22 +257,54 @@ class ChatController extends Controller
             'reply_to_id'  => $replyToId,
         ];
 
-        if ($request->hasFile('attachment')) {
-            $file  = $request->file('attachment');
-            $path  = $file->store('chat_attachments', 'public');
-            $data += [
-                'attachment_path' => $path,
-                'attachment_name' => $file->getClientOriginalName(),
-                'attachment_mime' => $file->getMimeType(),
-                'attachment_size' => $file->getSize(),
-            ];
-        }
+        /* 올라온 파일을 한 줄로 모은다 — 예전 이름(attachment) 한 장과 새 이름
+           (attachments[]) 여러 장을 함께 받는다. 앱이나 옛 화면이 예전 이름으로
+           보내는 것을 끊지 않는다. */
+        $files = array_values(array_filter(array_merge(
+            $request->hasFile('attachment') ? [$request->file('attachment')] : [],
+            $request->file('attachments') ?? []
+        )));
 
-        if (empty($data['body']) && empty($data['attachment_path'])) {
+        if (empty($data['body']) && ! $files) {
             return response()->json(['error' => '내용을 입력해주세요.'], 422);
         }
 
-        $message = ChatMessage::create($data);
+        /* 첫 장이 글을 싣는다. 뒷장은 글 없이 파일만 — 같은 글이 장수만큼 되풀이되면
+           읽는 사람은 무엇이 새 말인지 가릴 수 없다. */
+        $messages = [];
+
+        foreach ($files ?: [null] as $i => $file) {
+            $row = $data;
+            if ($i > 0) {
+                $row['body'] = null;
+            }
+
+            if ($file) {
+                $path = $file->store('chat_attachments', 'public');
+                $row += [
+                    'attachment_path' => $path,
+                    'attachment_name' => $file->getClientOriginalName(),
+                    'attachment_mime' => $file->getMimeType(),
+                    'attachment_size' => $file->getSize(),
+                ];
+            }
+
+            $messages[] = ChatMessage::create($row);
+        }
+
+        /* 뒷장들은 여기서 마무리한다 — 묶음ㆍ방송ㆍ알림은 아래가 첫 장에 대고 한다.
+           알림을 장수만큼 보내면 받는 사람 화면이 같은 소식으로 도배된다. */
+        foreach (array_slice($messages, 1) as $extra) {
+            ChatMessage::attachToThread($extra);
+
+            try {
+                broadcast(new ChatMessageSent($extra))->toOthers();
+            } catch (\Throwable $e) {
+                \Log::error('[Chat] broadcast 실패', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $message = $messages[0];
 
         // 묶음 정보를 정하고, 답글이면 그 대화 묶음을 통째로 최근 위치로 끌어올린다.
         ChatMessage::attachToThread($message);
@@ -306,7 +343,67 @@ class ChatController extends Controller
 
         $message->load(['user', 'replyTo.user']);
 
+        /* 여러 장을 보냈으면 다 돌려준다. 첫 장만 돌려주면 보낸 사람 화면에 나머지가
+           안 보이고, 새로 고쳐야 나타난다. 한 장이면 예전 그대로 낱개로 돌려준다 —
+           앱이 그 모양을 읽는다. */
+        if (count($messages) > 1) {
+            return response()->json(collect($messages)
+                ->map(fn ($m) => $this->presentMessage($room, $m->load(['user', 'replyTo.user'])))
+                ->all());
+        }
+
         return response()->json($this->presentMessage($room, $message));
+    }
+
+    /**
+     * GET /chat/rooms/{room}/attachments — 그 방의 첨부를 통째로 받는다.
+     *
+     * 여러 장을 주고받는 방에서 하나씩 눌러 받으려면 스무 번을 누른다(2026-09-02
+     * 요청서). 한 벌로 묶어 준다.
+     *
+     * 지워진 메시지의 첨부는 담지 않는다 — 지운 것을 다시 꺼내 주는 셈이다.
+     * 파일이 서버에 없는 줄도 건너뛴다(발행은 다른 서버에서 한 건이 있다).
+     */
+    public function downloadAttachments(ChatRoom $room)
+    {
+        $this->authorizeRoom($room);
+
+        $rows = ChatMessage::where('chat_room_id', $room->id)
+            ->whereNotNull('attachment_path')
+            ->orderBy('id')
+            ->get(['id', 'attachment_path', 'attachment_name', 'created_at']);
+
+        $disk  = Storage::disk('public');
+        $ready = $rows->filter(fn ($m) => $disk->exists($m->attachment_path));
+
+        if ($ready->isEmpty()) {
+            return back()->withErrors(['chat' => '받을 첨부가 없습니다.']);
+        }
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'chat_');
+        $zip     = new \ZipArchive();
+
+        if ($zip->open($zipPath, \ZipArchive::OVERWRITE) !== true) {
+            return back()->withErrors(['chat' => '묶음을 만들지 못했습니다.']);
+        }
+
+        /* 같은 이름이 여럿이면 뒤엣것이 앞엣것을 덮어쓴다 — 메시지 번호를 앞에 붙여
+           가른다. 받은 사람이 언제 온 것인지도 그 번호로 알 수 있다. */
+        foreach ($ready as $m) {
+            $name = sprintf('%05d_%s', $m->id, $m->attachment_name ?: basename($m->attachment_path));
+            $zip->addFile($disk->path($m->attachment_path), $name);
+        }
+
+        $zip->close();
+
+        /* 방 이름이 파일 이름이 된다 — 윈도우가 싫어하는 글자를 밑줄로 바꾼다.
+           이름 없는 방(1:1 대화)은 번호로 부른다. */
+        $name = trim((string) $room->name) ?: ('방' . $room->id);
+        $name = str_replace(['\\', '/', ':', '*', '?', '\"', '<', '>', '|'], '_', $name);
+
+        $file = sprintf('채팅첨부_%s_%s.zip', $name, now()->format('Ymd_His'));
+
+        return response()->download($zipPath, $file)->deleteFileAfterSend(true);
     }
 
     /** POST /chat/rooms/{room}/read — 읽음 처리 */
