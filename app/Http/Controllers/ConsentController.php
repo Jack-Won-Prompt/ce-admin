@@ -1002,7 +1002,12 @@ class ConsentController extends Controller
             $filename = '요양비위임장_' . $consent->patient_name . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
             $path     = 'delegations/' . $prescription->id . '_' . now()->format('YmdHis') . '.pdf';
 
-            Storage::put($path, $pdfData);
+            /* 쓰지 못했으면 여기서 멈춘다. 그냥 지나가면 파일이 없는 서류 줄이 서고,
+               화면에는 요양비위임장이 있는 것으로 보인다 — 공단 팩스가 그 줄을 믿고
+               첨부하려다 그때서야 없는 것을 안다. */
+            if (!Storage::put($path, $pdfData)) {
+                throw new \RuntimeException("요양비위임장 파일을 쓰지 못했습니다 ({$path}).");
+            }
 
             // 기존 위임장 문서 교체 (파일·레코드 정리)
             $olds = PrescriptionDocument::where('prescription_id', $prescription->id)
@@ -1023,7 +1028,9 @@ class ConsentController extends Controller
                 'original_filename' => $filename,
             ]);
         } catch (\Throwable $e) {
-            \Log::warning('요양비위임장 자동첨부 실패: ' . $e->getMessage());
+            /* 위임장이 없으면 공단 청구가 서지 않는다 — 지나가는 일이 아니다 */
+            \Log::error('요양비위임장 자동첨부 실패: ' . $e->getMessage(),
+                ['prescription' => $prescription->id]);
             return null;
         }
     }
