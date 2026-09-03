@@ -292,6 +292,17 @@
                 <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
                 넣는 자리 위에서 <b style="font-weight:500;color:var(--primary-700);">서류 유형</b>을 고르고 파일을 올립니다 — 파일마다 다르면 타일에서 변경합니다.
               </span>
+
+              {{-- 휴대폰으로 찍은 종이는 한쪽이 어둡고 바탕이 잿빛으로 나온다. 그대로
+                   공단에 내면 글씨가 묻힌다(2026-09-02 요청서 · camscanner 처럼).
+                   기본은 꺼 둔다 — 스캐너로 곧게 뜬 파일까지 손대면 오히려 나빠진다.
+                   원본은 지우지 않고 옆에 남는다. --}}
+              <label style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+                            font-size:12px;color:var(--gray-700);cursor:pointer;white-space:nowrap;">
+                <input type="checkbox" name="scan_clean" value="1" style="cursor:pointer;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="font-size:11px;color:var(--primary-700);"></i>
+                사진 보정 <span style="color:var(--gray-500);">(그늘 걷기)</span>
+              </label>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:8px;">

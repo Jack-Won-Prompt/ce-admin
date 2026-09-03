@@ -688,10 +688,18 @@ class PrescriptionController extends Controller
         $created         = [];
         $firstPrescription = null;
 
+        /* 찍어 올린 종이의 그늘을 걷을지(2026-09-02 요청서 · camscanner 처럼).
+           켠 사람만 쓴다 — 스캐너로 곧게 뜬 파일까지 손대면 오히려 나빠진다. */
+        $scanClean = $request->boolean('scan_clean');
+
         foreach ($prescriptionFiles as $file) {
             $subDir   = 'prescriptions/' . now()->format('Y/m');
             $fileName = now()->format('Ymd_His') . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path     = $file->storeAs($subDir, $fileName, 'public');
+
+            if ($scanClean) {
+                \App\Support\ScanClean::applyInPlace('public', $path, $file->getMimeType());
+            }
 
             $prescription = Prescription::create([
                 'rx_number'           => Prescription::generateRxNumber(),
@@ -737,6 +745,11 @@ class PrescriptionController extends Controller
                 $subDir  = 'prescriptions/attachments/' . now()->format('Y/m');
                 $fileName = now()->format('Ymd_His') . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $path    = $file->storeAs($subDir, $fileName, 'public');
+
+                /* 결과지ㆍ등록신청서도 같이 찍어 올린다 — 처방전만 걷을 까닭이 없다 */
+                if ($scanClean) {
+                    \App\Support\ScanClean::applyInPlace('public', $path, $file->getMimeType());
+                }
 
                 PrescriptionAttachment::create([
                     'prescription_id'    => $firstPrescription->id,
