@@ -124,6 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/balance',        [TaxinvoiceController::class, 'balance']);
             Route::get('/url',            [TaxinvoiceController::class, 'url']);
             Route::get('/search',         [TaxinvoiceController::class, 'search']);
+            // 손으로 적는 발행 화면이 주문을 골라 채운다(2026-09-03)
+            Route::get('/order-search',   [TaxinvoiceController::class, 'orderSearch']);
             Route::get('/info',           [TaxinvoiceController::class, 'info']);
             Route::get('/popup-url',      [TaxinvoiceController::class, 'popupUrl']);
             Route::get('/print-url',      [TaxinvoiceController::class, 'printUrl']);

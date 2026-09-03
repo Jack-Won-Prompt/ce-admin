@@ -399,6 +399,60 @@ class TaxinvoiceController extends Controller
     }
 
     /** 즉시발행 */
+    /**
+     * 주문을 찾아 발행에 쓸 값을 한 벌로 돌려준다(2026-09-03).
+     *
+     * 이 화면은 손으로 적는 자리다. 그래서 주문 발행 길과 달리 품목도 장비코드도
+     * 사람이 채워야 했는데, 장비코드를 외우고 있는 사람은 없다 — 다른 표를 열어
+     * 찾아 옮겨 적다가 틀린다.
+     *
+     * 채우는 일은 화면이 한다. 여기서는 무엇을 채울지만 준다.
+     */
+    public function orderSearch(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        $rows = Order::with(['patient', 'prescription.items', 'items'])
+            ->when($q !== '', function ($x) use ($q) {
+                $x->where(function ($y) use ($q) {
+                    $y->where('order_number', 'like', "%{$q}%")
+                      ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$q}%"))
+                      ->orWhere('withworks_so_no', 'like', "%{$q}%");
+                });
+            })
+            ->latest('id')
+            ->limit(30)
+            ->get();
+
+        return response()->json(['data' => $rows->map(function (Order $o) {
+            $rx    = $o->prescription;
+            $st    = BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class);
+            $rate  = (int) ($st['tax_invoice'] ?? 0);
+
+            /* 낼 금액은 청구전략이 정한 몫이다 — 제품값 전부가 아니다. 주문 발행
+               길이 세는 법과 같게 둔다(다르면 같은 건에 두 금액이 생긴다). */
+            $base  = (int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0);
+            $total = (int) round($base * $rate / 100);
+
+            return [
+                'id'          => $o->id,
+                'order_no'    => $o->order_number,
+                'patient'     => $o->patient?->name ?? ($rx?->patient_name_ocr ?? '-'),
+                'strategy'    => $st['label'] ?? '-',
+                'rate'        => $rate,
+                'total'       => $total,
+                'issued'      => $o->tax_invoice_status === 'issued' && ! $o->tax_invoice_cancelled_at,
+                'created'     => $o->created_at?->format('Y-m-d'),
+                // 공급받는자 — 주문에 적어 둔 것이 있으면 그것이 먼저다
+                'biz_no'      => (string) ($o->tax_invoice_biz_no ?: ''),
+                'biz_name'    => (string) ($o->tax_invoice_biz_name ?: ($o->patient?->name ?? '')),
+                'ceo_name'    => (string) ($o->tax_invoice_ceo_name ?: ''),
+                'email'       => (string) ($o->tax_invoice_email ?: ($o->patient?->email ?? '')),
+                'items'       => \App\Support\IssueLines::rowsFor($o),
+            ];
+        })->all()]);
+    }
+
     public function registIssue(Request $request): JsonResponse
     {
         $corpNum = $request->input('corp_num', config('popbill.test.corp_num'));

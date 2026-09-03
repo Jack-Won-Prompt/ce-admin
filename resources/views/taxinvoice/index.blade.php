@@ -518,6 +518,12 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           <button type="button" class="detail-add-btn" onclick="addDetailRow()">
             <i class="bx bx-plus"></i> 품목 추가
           </button>
+          {{-- 손으로 적는 자리라 장비코드까지 사람이 옮겨 적어야 했다. 외우고 있는
+               사람은 없어 다른 표를 열어 찾다가 틀린다 — 주문을 고르면 다 채운다. --}}
+          <button type="button" class="detail-add-btn" onclick="openOrderPick(this)"
+                  style="margin-right:6px;" title="주문을 고르면 품목ㆍ장비코드ㆍ금액ㆍ공급받는자를 채웁니다">
+            <i class="bx bx-package"></i> 주문 불러오기
+          </button>
         </div>
         <div class="detail-wrap">
           <table class="detail-table" id="detail-table">
@@ -525,6 +531,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
               <tr>
                 <th style="width:86px;">월일</th>
                 <th>품목</th>
+                {{-- 공단 요양기관정보마당은 이 번호로 조회한다(2026-09-03) --}}
+                <th style="width:132px;">규격ㆍ장비코드</th>
                 <th style="width:86px;">수량</th>
                 <th style="width:86px;">단가</th>
                 <th style="width:86px;">공급가액</th>
@@ -755,6 +763,7 @@ function addDetailRow() {
   tr.innerHTML = `
     <td><input class="text-left" type="text" placeholder="${mm}" maxlength="4" style="width:100%;"></td>
     <td><input class="text-left" type="text" placeholder="품목명" style="min-width:80px;text-align:left;"></td>
+    <td><input class="text-left" type="text" placeholder="장비코드" style="width:100%;text-align:left;font-family:monospace;font-size:11px;"></td>
     <td><input type="number" min="0" value="1" oninput="calcRow(this)"></td>
     <td><input type="number" min="0" value="0" oninput="calcRow(this)"></td>
     <td><input type="number" min="0" value="0" oninput="calcRow(this)" class="supply-cost"></td>
@@ -765,6 +774,95 @@ function addDetailRow() {
   const inputs = tr.querySelectorAll('input[type=number]');
   inputs[0].addEventListener('input', () => calcRow(inputs[0]));
   inputs[1].addEventListener('input', () => calcRow(inputs[1]));
+}
+
+/* ── 주문 불러오기 ─────────────────────────────────────────
+   손으로 적는 자리라 품목도 장비코드도 사람이 옮겨 적어야 했다. 장비코드를 외우고
+   있는 사람은 없어 다른 표를 열어 찾다가 틀린다.
+
+   고르면 품목 줄ㆍ장비코드ㆍ금액ㆍ공급받는자ㆍ비고를 함께 채운다. 채운 뒤에도
+   고칠 수 있다 — 이 화면의 성질은 그대로다. */
+let _opRows = [];
+
+function openOrderPick(btn) {
+  if (!window._opModal) window._opModal = new GridModal();
+
+  window._opModal.open({
+    title: '주문 불러오기', width: 620, height: 380, mode: 'popover', anchor: btn,
+    onSearch: async (q) => {
+      const res = await fetch(`${TI_BASE}/order-search?q=${encodeURIComponent(q ?? '')}`,
+                              { headers: { 'Accept': 'application/json' } });
+      const j = await res.json();
+      _opRows = j.data ?? [];
+
+      return _opRows.map(r => ({
+        value: String(r.id),
+        label: `${r.order_no} · ${r.patient}`,
+        sub: [r.strategy,
+              r.rate ? `세금계산서 ${r.rate}%` : '세금계산서 없음',
+              r.total ? '₩ ' + Number(r.total).toLocaleString() : null,
+              r.issued ? '이미 발행됨' : null,
+              r.created].filter(Boolean).join(' · '),
+      }));
+    },
+    onConfirm: (id) => applyOrder(_opRows.find(r => String(r.id) === String(id))),
+  });
+}
+
+function applyOrder(o) {
+  if (!o) return;
+
+  if (o.issued && !confirm(`${o.order_no} 은(는) 이미 발행된 건입니다. 그래도 채울까요?`)) return;
+
+  /* 공급받는자 — 주문에 적어 둔 것만 채운다. 비어 있는 칸을 빈 값으로 덮으면
+     담당자가 이미 적어 둔 것이 사라진다. */
+  const put = (id, v) => { if (v) document.getElementById(id).value = v; };
+  put('ee-corp-num',  o.biz_no);
+  put('ee-corp-name', o.biz_name);
+  put('ee-ceo-name',  o.ceo_name);
+  put('ee-email',     o.email);
+  put('remark1',      o.order_no);
+
+  /* 품목은 통째로 갈아 끼운다 — 남겨 두면 앞 주문의 줄과 섞인다 */
+  document.getElementById('detail-tbody').innerHTML = '';
+
+  const items = o.items ?? [];
+  if (!items.length) { addDetailRow(); showToast('그 주문에는 품목이 없습니다.', 'warning'); return; }
+
+  /* 금액은 청구전략이 정한 몫을 품목 값에 따라 나눈다 — 서버가 발행할 때 세는 법과
+     같다. 나머지는 마지막 줄이 떠안아 합이 한 원도 틀리지 않는다. */
+  const total  = Number(o.total) || 0;
+  const weights = items.map(i => Math.max(0, Number(i.amount) || 0));
+  const sumW    = weights.reduce((a, b) => a + b, 0) || items.length;
+  let   left    = total;
+
+  const taxable = document.getElementById('tax-type').value === 'ValueAdded';
+
+  items.forEach((it, i) => {
+    addDetailRow();
+    const tr    = document.getElementById('detail-tbody').lastElementChild;
+    const text  = tr.querySelectorAll('input[type=text]');
+    const nums  = tr.querySelectorAll('input[type=number]');
+
+    const w     = sumW === items.length && !weights.some(Boolean) ? 1 : weights[i];
+    const share = (i === items.length - 1) ? left : Math.round(total * w / sumW);
+    left -= share;
+
+    /* 넘겨받은 몫은 부가세를 품은 값이다 — 공급가와 세액으로 가른다 */
+    const supply = taxable ? Math.round(share / 1.1) : share;
+    const tax    = taxable ? share - supply : 0;
+    const qty    = Math.max(1, Number(it.qty) || 1);
+
+    text[1].value = it.name ?? '';
+    text[2].value = it.device ?? '';
+    nums[0].value = qty;
+    nums[1].value = Math.round(supply / qty);
+    nums[2].value = supply;
+    nums[3].value = tax;
+  });
+
+  recalc();
+  showToast(`${o.order_no} 을(를) 불러왔습니다 — 품목 ${items.length}건.`, 'success');
 }
 
 function removeDetailRow(btn) {
@@ -825,6 +923,7 @@ async function issueInvoice() {
     details.push({
       purchase_dt : text[0]?.value ?? '',
       item_name   : text[1]?.value ?? '',
+      spec        : text[2]?.value ?? '',
       qty         : nums[0].value,
       unit_cost   : nums[1].value,
       supply_cost : nums[2].value,

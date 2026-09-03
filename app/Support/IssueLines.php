@@ -115,6 +115,16 @@ final class IssueLines
     }
 
     /**
+     * 발행에 실을 품목 줄 — 화면이 읽어 채운다(전자세금계산서 손 발행 자리).
+     *
+     * @return array<int, array{name:string, device:string, qty:int, amount:int}>
+     */
+    public static function rowsFor(Order $order): array
+    {
+        return self::rows($order);
+    }
+
+    /**
      * 발행에 실을 품목 줄.
      *
      * 주문 줄이 정본이다. 줄이 없으면 처방 줄로, 그것도 없으면 주문에 적힌 대표
