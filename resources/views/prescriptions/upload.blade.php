@@ -243,13 +243,26 @@
   <div>
     {{-- 모바일 대기 알림 --}}
     @if($mobilePending->isNotEmpty())
-    <div class="mobile-upload-card">
-      <div style="font-size:16px;line-height:16px;color:var(--primary);"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;line-height:21px;">모바일 업로드 대기 {{ $mobilePending->count() }}건</div>
-        <div style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);margin-top:2px;">최근: {{ $mobilePending->first()?->patient_name_ocr ?? '환자' }} — {{ $mobilePending->first()?->created_at->format('H:i') }}</div>
+    {{-- 알리기만 하고 갈 길이 없으면 담당자가 목록을 뒤져 찾아야 한다.
+         여러 건이면 다 세우고, 저마다 그 건으로 곧장 간다. --}}
+    <div class="mobile-upload-card" style="flex-direction:column;align-items:stretch;gap:8px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:16px;line-height:16px;color:var(--primary);"><i class="fa-solid fa-mobile-screen-button"></i></div>
+        <div style="flex:1;font-size:13px;font-weight:700;line-height:21px;">모바일 업로드 대기 {{ $mobilePending->count() }}건</div>
+        <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> 대기</span>
       </div>
-      <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> 대기</span>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        @foreach($mobilePending as $mp)
+          <a href="{{ route('prescriptions.show', $mp) }}"
+             style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--gray-0);
+                    border:1px solid var(--gray-200);border-radius:8px;font-size:12px;
+                    color:var(--text-primary);text-decoration:none;">
+            <i class="fa-solid fa-arrow-right" style="font-size:10px;color:var(--primary);"></i>
+            {{ $mp->patient_name_ocr ?: '이름 없음' }}
+            <span style="color:var(--text-muted);">{{ $mp->created_at->format('H:i') }}</span>
+          </a>
+        @endforeach
+      </div>
     </div>
     @endif
 
