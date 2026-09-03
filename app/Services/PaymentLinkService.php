@@ -96,7 +96,8 @@ class PaymentLinkService
                  . "입금자명을 주문자 이름으로 적어 주시면 확인이 빠릅니다.";
         }
 
-        $what = $link->method === PaymentLink::METHOD_VIRTUAL ? '가상계좌 발급' : '카드 결제';
+        /* 뒤에 「로」가 붙는 자리다 — 「가상계좌 발급로」가 나갔다 */
+        $what = $link->method === PaymentLink::METHOD_VIRTUAL ? '가상계좌' : '카드';
 
         return "[" . $this->company() . "] {$name}님, {$item} 결제 안내입니다.\n"
              . "금액: {$amount}원\n"

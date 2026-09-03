@@ -34,6 +34,25 @@ class PaymentLinkController extends Controller
             return response()->json(['success' => false, 'message' => '결제할 금액이 없습니다.'], 422);
         }
 
+        /* 가상계좌는 주소를 보내는 것이 아니라 계좌를 발급해 적어 보내는 것이라 길이 다르다.
+           여기서 갈라 두지 않으면 담당자가 손으로 보낼 때만 계좌 없이 결제 페이지 주소가
+           나간다 — 주문 연계에서 자동으로 나갈 때와 다른 것이 간다. */
+        if ($data['method'] === PaymentLink::METHOD_VIRTUAL) {
+            $out = app(\App\Services\VirtualAccountForOrder::class)->issueAndNotify($order);
+
+            /* 이력은 PaymentLink 표에 쌓인다(VirtualAccountForOrder::notify).
+               방금 쌓인 줄을 그대로 돌려주어야 팝오버의 이력이 그 자리에서 는다. */
+            $link = $out['sent']
+                ? PaymentLink::where('order_id', $order->id)->latest('id')->first()
+                : null;
+
+            return response()->json([
+                'success' => $out['sent'],
+                'message' => $out['message'],
+                'link'    => $link ? $this->row($link) : null,
+            ], $out['sent'] ? 200 : 422);
+        }
+
         $res = $this->links->issue($order, $data['method'], $data['mobile'] ?? null);
 
         return response()->json([
