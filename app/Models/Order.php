@@ -327,36 +327,54 @@ class Order extends Model
     public const NUMBER_PREFIX = 'EUD';
 
     /**
-     * 주문번호 — EUD + 년월일 + 그날의 차례 다섯 자리(2026-09-03 확정).
+     * 주문번호 — EUD + 년월일 + 시분초 + 그 초의 차례 한 자리(2026-09-03 확정).
      *
-     *   EUD20260903 00001
-     *   └┬┘└───┬──┘ └─┬─┘
-     *    │     │      그날 몇 번째인가
-     *    │     주문이 선 날
+     *   EUD 20260903 161830 1
+     *   └┬┘ └───┬──┘ └──┬─┘ │
+     *    │      │      │    같은 초에 몇 번째인가
+     *    │      │      만든 시각
+     *    │      만든 날
      *    End User Direct
      *
      * 예전에는 ORD-0001 처럼 통째로 이어지는 번호였다. 번호만 보고는 언제 것인지 알 수
      * 없어, 목록에서 날짜 칸을 함께 봐야 했다.
      *
-     * 차례는 날마다 처음으로 돌아간다. 그날 것만 세므로 앞선 날의 번호가 몇이든
-     * 상관없고, 지운 건도 함께 세어(withTrashed) 되살렸을 때 부딪히지 않는다.
+     * **끝 한 자리를 두는 까닭** — 시각만으로는 겹친다. 주문이 서는 자리가 둘인데,
+     * 그 가운데 하나가 「동의 서명이 끝나면 자동으로」다. 환자가 각자 휴대폰에서
+     * 서명하는 일이라 우리가 시각을 조절할 수 없어, 둘이 같은 초에 마치면 번호가
+     * 부딪힌다. order_number 에는 unique 가 걸려 있어 그때 저장이 실패하고 —
+     * 하필 환자 쪽 화면에서 — 서명은 끝났는데 「오류」가 뜬다.
+     *
+     * 지운 건도 함께 센다(withTrashed). 되살렸을 때 부딪히지 않는다.
+     *
+     * 한 초에 아홉 건을 넘으면 다음 초로 넘어가 다시 센다. 그런 일은 없겠지만,
+     * 없다고 여겨 두면 있는 날 주문이 서지 않는다.
      *
      * 옛 ORD- 번호는 그대로 둔다. 이미 창고ㆍ증빙ㆍ공단 서류에 적혀 나간 번호다.
      */
     public static function generateOrderNumber(?\Carbon\CarbonInterface $when = null): string
     {
-        $day    = ($when ?? now())->format('Ymd');
-        $prefix = self::NUMBER_PREFIX . $day;
+        $at = $when ? $when->copy() : now();
 
-        /* 그날 것 가운데 가장 큰 차례를 찾는다. 앞머리가 정확히 맞는 것만 본다 —
-           길이가 다른 옛 번호나 손으로 적은 임시 번호가 섞여도 숫자 뽑기가 틀리지 않는다. */
-        $max = (int) static::withTrashed()
-            ->where('order_number', 'like', $prefix . '%')
-            ->whereRaw('CHAR_LENGTH(order_number) = ?', [strlen($prefix) + 5])
-            ->selectRaw('MAX(CAST(SUBSTRING(order_number, ?) AS UNSIGNED)) AS seq', [strlen($prefix) + 1])
-            ->value('seq');
+        /* 한 초가 다 차면 다음 초로 민다. 60초까지만 밀어 본다 — 그보다 오래 도는
+           것은 무언가 잘못된 것이고, 그때는 끝없이 도는 것보다 멈추는 편이 낫다. */
+        for ($i = 0; $i < 60; $i++) {
+            $prefix = self::NUMBER_PREFIX . $at->format('YmdHis');
 
-        return $prefix . sprintf('%05d', $max + 1);
+            $max = (int) static::withTrashed()
+                ->where('order_number', 'like', $prefix . '%')
+                ->whereRaw('CHAR_LENGTH(order_number) = ?', [strlen($prefix) + 1])
+                ->selectRaw('MAX(CAST(SUBSTRING(order_number, ?) AS UNSIGNED)) AS seq', [strlen($prefix) + 1])
+                ->value('seq');
+
+            if ($max < 9) {
+                return $prefix . ($max + 1);
+            }
+
+            $at = $at->addSecond();
+        }
+
+        throw new \RuntimeException('주문번호를 만들지 못했습니다 — 같은 시각에 너무 많은 주문이 섰습니다.');
     }
 
     /**
