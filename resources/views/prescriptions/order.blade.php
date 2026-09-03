@@ -1520,12 +1520,13 @@ $calcDeposit  = $calcCopay;
             <div>
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">결제 방법</div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="payMethods">
-                {{-- 고를 수 있는 것만 세운다. 가상계좌는 발급 단추를 화면에서 걷은 뒤로
-                     담당자가 해 줄 수 없는데, 고르면 환자에게는 그렇게 약속이 나갔다. --}}
+                {{-- 고를 수 있는 것만 세운다. 가상계좌를 한때 뺐는데, 이제 연계할 때
+                     스스로 발급하므로 되살렸다(2026-09-03). --}}
                 @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
                   @php
-                    $hint = ['card' => '결제 페이지 주소를 보내면 고객이 카드로 결제합니다',
-                             'bank' => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code];
+                    $hint = ['card'    => '결제 페이지 주소를 보내면 고객이 카드로 결제합니다',
+                             'virtual' => '이 주문 전용 계좌를 발급해 문자로 안내합니다',
+                             'bank'    => '콜로플라스트 입금계좌를 문자로 안내합니다'][$code] ?? '';
                   @endphp
                   <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;">
                     <input type="radio" name="pay_method" value="{{ $code }}" style="accent-color:var(--primary);"
@@ -3115,6 +3116,37 @@ $calcDeposit  = $calcCopay;
               </div>
               {{-- 「환급 해당 기관」 칸은 두지 않는다(요청). 값(special_case)은 지우지
                    않았다 — 저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
+              {{-- 어떻게 받을 것인가(2026-09-03 지시). 여태 설정 하나로 정해져 어느
+                   환자든 같은 안내가 나갔는데, 사람마다 내는 방법이 다르다.
+                   주문을 연계하면 여기서 고른 대로 안내가 나간다.
+
+                   기본은 링크페이다. 거래처에 적어 둔 것이 있으면 그것이 먼저다 —
+                   한 번 고르면 그 사람 것으로 남아 매번 다시 고르지 않는다. --}}
+              @php
+                /* 주문에 적힌 것 → 거래처에 적힌 것 → 링크페이 차례로 본다.
+                   옛 건에는 「무통장입금」이 적혀 있는데 그것은 고를 수 있는 것이
+                   아니다 — 고를 수 없는 값이면 기본으로 내려앉힌다. 아무것도 안
+                   잡혀 있으면 담당자는 무엇이 나갈지 모른 채 저장하게 된다. */
+                $_pmSaved = $prescription->order?->pay_method
+                          ?: ($prescription->patient?->pay_method ?: null);
+                if (! array_key_exists($_pmSaved, \App\Models\PaymentLink::SELECTABLE)) {
+                    $_pmSaved = \App\Models\PaymentLink::METHOD_CARD;
+                }
+              @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">결제 방식</span>
+                <div style="flex:1;display:flex;gap:6px;">
+                  @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
+                    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 9px;
+                                  border:1px solid var(--border);border-radius:var(--radius);
+                                  font-size:12px;cursor:pointer;white-space:nowrap;">
+                      <input type="radio" name="f_pay_method" value="{{ $code }}"
+                             style="accent-color:var(--primary);" @checked($_pmSaved === $code)>
+                      <span style="font-weight:600;">{{ $label }}</span>
+                    </label>
+                  @endforeach
+                </div>
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">결제일</span>
                 <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}" style="flex:1;" />
@@ -6673,6 +6705,8 @@ window.HELP_TOUR_STEPS = [
       basic_reeval_due: strOrNull('f-basic-reeval-due'),
       // 시안 148:2827 로 새로 생긴 항목
       pay_date:         strOrNull('f-pay-date'),
+      // 어떻게 받을 것인가 — 주문과 거래처에 함께 적는다(2026-09-03)
+      pay_method:       document.querySelector('input[name="f_pay_method"]:checked')?.value ?? null,
       buy_date:         strOrNull('f-buy-date'),
       // 시안 148:3046 (추가정보 카드)
       inmarket_due:       strOrNull('f-inmarket-due'),

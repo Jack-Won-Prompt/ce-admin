@@ -394,8 +394,21 @@ class PrescriptionController extends Controller
             ];
         }
 
-        $method = $this->confirmPayMethod();
+        $method = $this->confirmPayMethod($order);
         $mobile = $prescription->patient?->mobile ?: $prescription->mobile_ocr;
+
+        /* 가상계좌는 주소를 보내는 것이 아니라 계좌를 발급해 적어 보내는 것이라
+           길이 다르다. 발급하고, 거래처에 적어 두고, 문자로 보낸다(2026-09-03). */
+        if ($method === \App\Models\PaymentLink::METHOD_VIRTUAL) {
+            $out = app(\App\Services\VirtualAccountForOrder::class)->issueAndNotify($order);
+
+            if ($out['sent']) {
+                activity()->causedBy(Auth::user())->performedOn($prescription)
+                    ->log('주문 확정 안내(가상계좌) 발송 → ' . ($order->patient?->mobile ?: '-'));
+            }
+
+            return ['sent' => $out['sent'], 'method' => '가상계좌', 'message' => $out['message']];
+        }
 
         try {
             $res = app(\App\Services\PaymentLinkService::class)->issue($order, $method, $mobile);
@@ -434,15 +447,25 @@ class PrescriptionController extends Controller
      * 승인 전에 골라 두었으면 무통장입금으로 내려간다 — 보내지 못하고 멈추는 것보다
      * 계좌라도 적어 보내는 편이 낫다.
      */
-    private function confirmPayMethod(): string
+    private function confirmPayMethod(?\App\Models\Order $order = null): string
     {
-        $want = config('order.confirm_pay_method', 'bank') === 'card'
-            ? \App\Models\PaymentLink::METHOD_CARD
-            : \App\Models\PaymentLink::METHOD_BANK;
+        /* 주문에 적힌 것이 먼저다(2026-09-03). 여태 설정 하나로 정해져 어느 환자든
+           같은 안내가 나갔는데, 사람마다 내는 방법이 다르다. 적힌 것이 없으면
+           예전처럼 설정을 따른다 — 다른 길로 만든 옛 주문이 갑자기 멈추지 않게. */
+        $want = $order?->pay_method
+            ?: (config('order.confirm_pay_method', 'bank') === 'card'
+                ? \App\Models\PaymentLink::METHOD_CARD
+                : \App\Models\PaymentLink::METHOD_BANK);
 
-        if ($want === \App\Models\PaymentLink::METHOD_CARD
-            && (! config('toss.client_key') || ! config('toss.secret_key'))) {
-            Log::warning('[주문 확정 안내] 링크페이로 설정돼 있으나 토스 키가 없어 무통장입금으로 보낸다');
+        /* 링크페이도 가상계좌도 토스를 거친다 — 키가 없으면 둘 다 못 한다.
+           보내지 못하고 멈추는 것보다 계좌라도 적어 보내는 편이 낫다. */
+        $needsToss = in_array($want, [
+            \App\Models\PaymentLink::METHOD_CARD,
+            \App\Models\PaymentLink::METHOD_VIRTUAL,
+        ], true);
+
+        if ($needsToss && (! config('toss.client_key') || ! config('toss.secret_key'))) {
+            Log::warning('[주문 확정 안내] 토스 키가 없어 무통장입금으로 보낸다', ['want' => $want]);
             return \App\Models\PaymentLink::METHOD_BANK;
         }
 
@@ -1546,6 +1569,8 @@ class PrescriptionController extends Controller
             // 시안 148:2827 로 새로 생긴 항목
             'dealer_type'           => 'nullable|string|max:50',
             'pay_date'              => 'nullable|date',
+            // 어떻게 받을 것인가 — 주문 연계 때 이 값대로 안내가 나간다(2026-09-03)
+            'pay_method'            => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Models\PaymentLink::METHODS))],
             'buy_date'              => 'nullable|date',
             // 시안 148:3046 (추가정보 카드)
             'inmarket_due'          => 'nullable|date',
@@ -1672,6 +1697,12 @@ class PrescriptionController extends Controller
             $prescription->update($rxCols);
         }
 
+        /* 결제 방식은 주문에도 적는다. 연계할 때 안내를 무엇으로 보낼지 그 값이
+           정한다(confirmPayMethod). 아직 주문이 없으면 만들 때 함께 적힌다. */
+        if ($request->filled('pay_method') && $prescription->order) {
+            $prescription->order->update(['pay_method' => $request->input('pay_method')]);
+        }
+
         $promotedPatientFields = array_filter([
             'email'               => $request->input('email'),
             'phone'               => $request->input('mobile2'),
@@ -1693,6 +1724,9 @@ class PrescriptionController extends Controller
             'guardian_relation'   => $request->input('guardian_relation'),
             'guardian_birth_date' => $request->input('guardian_birth'),
             'guardian_phone'      => $request->input('guardian_phone'),
+            /* 어떻게 내는 사람인가(2026-09-03). 한 번 고르면 그 사람 것으로 남아
+               다음 주문의 상세 목록 탭이 그 값으로 열린다. */
+            'pay_method'          => $request->input('pay_method'),
         ], fn ($v) => $v !== null);
 
         /* 「조회」로 고른 사람이 함께 왔으면 그 사람으로 잇는다. 화면에서 고른 것이
