@@ -790,7 +790,8 @@ function openOrderPick(btn) {
   window._opModal.open({
     title: '주문 불러오기', width: 620, height: 380, mode: 'popover', anchor: btn,
     onSearch: async (q) => {
-      const res = await fetch(`${TI_BASE}/order-search?q=${encodeURIComponent(q ?? '')}`,
+      /* 이 호출만 web 쪽이다 — api/popbill 묶음은 토큰으로 돌아 401 이 온다 */
+      const res = await fetch(`${BASE_URL}/taxinvoice/order-search?q=${encodeURIComponent(q ?? '')}`,
                               { headers: { 'Accept': 'application/json' } });
       const j = await res.json();
       _opRows = j.data ?? [];

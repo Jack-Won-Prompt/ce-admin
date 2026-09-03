@@ -276,6 +276,12 @@ Route::middleware(['auth'])->group(function () {
 
     // 전자세금계산서 발행
     Route::get('/taxinvoice', [TaxinvoicePageController::class, 'index'])->name('taxinvoice.index');
+    /* 손으로 적는 발행 화면이 주문을 골라 채운다(2026-09-03).
+       api/popbill 아래 두었더니 401 이었다 — 그 묶음은 토큰으로 돌고, 이 화면은
+       로그인 세션으로 돈다. 세션이 닿는 자리에 둔다. */
+    Route::get('/taxinvoice/order-search',
+        [\App\Http\Controllers\Popbill\TaxinvoiceController::class, 'orderSearch'])
+        ->name('taxinvoice.orderSearch');
 
     // 계산서 발행 관리
 
