@@ -1663,10 +1663,6 @@ class PrescriptionController extends Controller
     // ── OCR 수정 저장 ─────────────────────────────────────
     public function updateOcr(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
-        /* 이 저장이 처방전을 사람에게 처음 붙이는 저장인가 — 아래에서 위임동의를 보낼지
-           가리는 데 쓴다. 붙고 난 뒤에는 몇 번을 저장하든 첫 저장이 아니다. */
-        $hadPatient = (bool) $prescription->patient_id;
-
         $request->validate([
             // 「조회」로 고른 사람. 없으면 서버가 이름으로 찾거나 새로 만든다.
             'patient_id'       => 'nullable|integer|exists:patients,id',
@@ -2021,14 +2017,18 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
 
-        /* 이 저장으로 사람이 처음 붙었으면 처방전 접수를 알리고, 위임동의 서명 SMS 를
-           함께 보낸다(테스트 시나리오 1.1.x). 서명 화면이 개인정보 동의도 함께 받으므로
-           링크 한 통으로 둘이 끝난다.
+        /* 처방전 접수를 알리고, 위임동의 서명 SMS 를 보낸다(테스트 시나리오 1.1.x).
+           서명 화면이 개인정보 동의도 함께 받으므로 링크 한 통으로 둘이 끝난다.
+
+           한때 「이 저장으로 사람이 처음 붙었는가」로 가렸다. 그런데 업로드할 때 이미
+           거래처를 고르므로 사람은 늘 붙어 있었다 — 그 잣대로는 한 번도 나가지 않았다
+           (2026-09-03 시험 2차에서 드러났다). 두 번 보내지 않는 일은 각자 자기
+           자취로 가린다.
 
            보내지 못해도 저장은 이미 끝난 것이라 되돌리지 않는다 — 무슨 일이 있었는지는
            답에 실어 화면이 함께 보여 준다(주문 확정 안내와 같은 방식). */
-        $this->rxReceivedSmsOnFirstSave($prescription, $hadPatient);
-        $consentSms = $this->consentSmsOnFirstSave($prescription, $hadPatient);
+        $this->rxReceivedSmsOnFirstSave($prescription);
+        $consentSms = $this->consentSmsOnFirstSave($prescription);
 
         return response()->json([
             'success'     => true,
@@ -2399,10 +2399,9 @@ class PrescriptionController extends Controller
      *
      * 두 번 보내지 않는다. 못 보내도 저장을 막지 않는다.
      */
-    private function rxReceivedSmsOnFirstSave(Prescription $prescription, bool $hadPatient): bool
+    private function rxReceivedSmsOnFirstSave(Prescription $prescription): bool
     {
         if (! config('order.rx_received_sms_on_first_save')) return false;
-        if ($hadPatient) return false;                       // 첫 저장이 아니다
 
         $prescription->refresh()->loadMissing('patient');
         $patient = $prescription->patient;
@@ -2457,29 +2456,27 @@ class PrescriptionController extends Controller
         return false;
     }
 
-    private function consentSmsOnFirstSave(Prescription $prescription, bool $hadPatient): array
+    private function consentSmsOnFirstSave(Prescription $prescription): array
     {
         $no = fn (?string $why) => ['sent' => false, 'reason' => $why, 'expires_at' => null];
 
         if (!config('order.consent_sms_on_first_save')) return $no(null);   // 꺼 두었으면 말도 하지 않는다
-        if ($hadPatient) return $no(null);                                  // 첫 저장이 아니다
 
         $prescription->refresh()->loadMissing('patient');
         $patient = $prescription->patient;
         if (!$patient) return $no(null);                                    // 아직 사람이 붙지 않았다
 
-        /* 이미 받아 둔 동의가 있으면 다시 받지 않는다. 처방전이 아니라 사람으로 본다 —
-           위임은 사람이 하는 것이고, 화면의 「위임동의 완료」도 그렇게 읽는다. */
-        $hasAgreed = \App\Models\PrescriptionConsent::whereIn(
-                'prescription_id', Prescription::where('patient_id', $patient->id)->select('id'))
-            ->where('status', 'agreed')->exists();
-        if ($hasAgreed) return $no('이미 위임동의를 받은 분입니다.');
+        /* 한 번 물어본 사람에게는 저장할 때마다 다시 보내지 않는다. 처방전이 아니라
+           사람으로 본다 — 위임은 사람이 하는 것이고, 화면의 「위임동의 완료」도
+           그렇게 읽는다.
 
-        // 아직 살아 있는 링크가 있으면 그것을 쓰게 둔다 — 두 통이 가면 어느 것을 여는지 갈린다
-        $alive = \App\Models\PrescriptionConsent::whereIn(
+           만료된 것도 「이미 물어본 것」으로 센다. 링크는 30분만 살아 있어, 그것을
+           빼면 담당자가 칸 하나 고쳐 저장할 때마다 환자에게 새 링크가 나간다.
+           만료된 건을 다시 보내는 것은 배지 안의 「재발송」이 할 일이다. */
+        $asked = \App\Models\PrescriptionConsent::whereIn(
                 'prescription_id', Prescription::where('patient_id', $patient->id)->select('id'))
-            ->where('status', 'pending')->where('expires_at', '>', now())->exists();
-        if ($alive) return $no('보낸 서명 링크가 아직 열려 있습니다.');
+            ->exists();
+        if ($asked) return $no('이미 위임동의를 보낸 분입니다.');
 
         $mobile = preg_replace('/\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));
         if (strlen($mobile) < 9 || strlen($mobile) > 11) {
