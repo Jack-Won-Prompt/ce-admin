@@ -674,6 +674,57 @@ class PrescriptionController extends Controller
         }
     }
 
+    /** 끝 글자에 받침이 있는가 — 은/는, 이/가 를 고르는 데 쓴다 */
+    private static function hasFinalConsonant(string $word): bool
+    {
+        $last = mb_substr(trim($word), -1);
+        $code = mb_ord($last, 'UTF-8');
+
+        if ($code < 0xAC00 || $code > 0xD7A3) {
+            return false;                       // 한글이 아니면 가리지 않는다
+        }
+
+        return (($code - 0xAC00) % 28) !== 0;
+    }
+
+    /**
+     * 유형마다 받을 수 있는 수 (테스트 시나리오 시작 포인트 · 2026-09-03).
+     *
+     *   처방전     1     한 번에 한 건이다. 두 장이면 처방전이 두 건으로 갈라져
+     *                    주문도 둘이 서고, 그 뒤 청구가 어느 쪽인지 흐려진다.
+     *   등록신청서 1     공단에 한 장만 낸다.
+     *   결과지     40    검사지는 여러 장이다. 40 은 위쪽 전체 제한과 같다.
+     *
+     * 적어 두지 않은 유형(신분증ㆍ기타 따위)은 세지 않는다 — 정해진 바가 없다.
+     *
+     * @return string|null 넘었으면 그 말, 아니면 null
+     */
+    private function overDocLimit(array $prescriptionFiles, array $attachmentFiles): ?string
+    {
+        $limits = ['prescription' => 1, 'registration_form' => 1, 'test_result' => 40];
+        $labels = ['prescription' => '처방전', 'registration_form' => '등록신청서', 'test_result' => '결과지'];
+
+        $count = ['prescription' => count($prescriptionFiles)];
+
+        foreach ($attachmentFiles as $a) {
+            $t = $a['doc_type'];
+            $count[$t] = ($count[$t] ?? 0) + 1;
+        }
+
+        foreach ($limits as $type => $max) {
+            $n = $count[$type] ?? 0;
+            if ($n > $max) {
+                /* 「처방전는」이 되지 않게 받침을 본다 */
+                $josa = self::hasFinalConsonant($labels[$type]) ? '은' : '는';
+
+                return "{$labels[$type]}{$josa} 한 번에 {$max}건까지 올릴 수 있습니다 — {$n}건을 고르셨습니다. "
+                     . '타일에서 서류 유형을 확인해 주십시오.';
+            }
+        }
+
+        return null;
+    }
+
     // ── 업로드 페이지 ─────────────────────────────────────
     public function uploadPage(Request $request): View
     {
@@ -795,6 +846,13 @@ class PrescriptionController extends Controller
 
         if (empty($prescriptionFiles)) {
             return back()->with('error', '처방전 파일을 최소 1개 이상 포함해야 합니다.');
+        }
+
+        /* 유형마다 받을 수 있는 수가 정해져 있다(테스트 시나리오 시작 포인트).
+           한 번에 여러 장을 고르다 유형을 잘못 찍으면 처방전이 두 장 올라가고,
+           그러면 처방전이 두 건으로 갈라져 주문도 둘이 된다. */
+        if ($over = $this->overDocLimit($prescriptionFiles, $attachmentFiles)) {
+            return back()->with('error', $over);
         }
 
         $created         = [];
@@ -1953,9 +2011,13 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
 
-        /* 이 저장으로 사람이 처음 붙었으면 위임동의 서명 SMS 를 함께 보낸다.
+        /* 이 저장으로 사람이 처음 붙었으면 처방전 접수를 알리고, 위임동의 서명 SMS 를
+           함께 보낸다(테스트 시나리오 1.1.x). 서명 화면이 개인정보 동의도 함께 받으므로
+           링크 한 통으로 둘이 끝난다.
+
            보내지 못해도 저장은 이미 끝난 것이라 되돌리지 않는다 — 무슨 일이 있었는지는
            답에 실어 화면이 함께 보여 준다(주문 확정 안내와 같은 방식). */
+        $this->rxReceivedSmsOnFirstSave($prescription, $hadPatient);
         $consentSms = $this->consentSmsOnFirstSave($prescription, $hadPatient);
 
         return response()->json([
@@ -2314,6 +2376,77 @@ class PrescriptionController extends Controller
      *
      * @return array{sent: bool, reason: ?string, expires_at: ?string}
      */
+    /**
+     * 처방전이 접수됐다는 것을 알린다(테스트 시나리오 1.1.x · 2026-09-03).
+     *
+     * 담당자가 상세 목록을 처음 저장하는 그 자리가 처방전을 사람에게 붙이는 자리다.
+     * 그때 환자에게는 아무 말도 가지 않았다 — 서류를 보낸 사람은 접수됐는지 몰라
+     * 전화로 물었다.
+     *
+     * 위임동의 링크와는 다른 통이다. 그쪽은 「서명해 주십시오」이고 이것은
+     * 「받았습니다」다. 동의를 이미 받아 둔 사람에게는 링크가 가지 않으므로,
+     * 합쳐 두면 그 사람들은 접수됐다는 것조차 듣지 못한다.
+     *
+     * 두 번 보내지 않는다. 못 보내도 저장을 막지 않는다.
+     */
+    private function rxReceivedSmsOnFirstSave(Prescription $prescription, bool $hadPatient): bool
+    {
+        if (! config('order.rx_received_sms_on_first_save')) return false;
+        if ($hadPatient) return false;                       // 첫 저장이 아니다
+
+        $prescription->refresh()->loadMissing('patient');
+        $patient = $prescription->patient;
+        if (! $patient) return false;                        // 아직 사람이 붙지 않았다
+
+        $source = 'rx-received';
+
+        $mobile = preg_replace('/\\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) return false;
+
+        if (\App\Models\MessageHistory::where('source', $source)
+                ->where('prescription_id', $prescription->id)
+                ->where('success_count', '>', 0)
+                ->exists()) {
+            return false;                                    // 이미 알렸다
+        }
+
+        $name = $patient->name ?: ($prescription->patient_name_ocr ?: '고객');
+
+        $body = \App\Models\MessageTemplate::channel('sms')->active()
+            ->where('code', 'rx_received')->value('body')
+            ?: "[콜로플라스트] #{고객명}님, 처방전이 접수되었습니다.\n처방번호: #{처방번호}";
+
+        $text = strtr($body, [
+            '#{고객명}'   => $name,
+            '#{처방번호}' => $prescription->rx_number,
+        ]);
+
+        try {
+            $res = app(\App\Services\MessageSender::class)->sendBulk(
+                'sms',
+                [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $patient->id]],
+                $text,
+                null,
+                ['source' => $source, 'prescription_id' => $prescription->id],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[처방전 접수 안내] 보내지 못했다', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        if ($res['success'] ?? false) {
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->log("처방전 접수 안내 발송 → {$mobile}");
+
+            return true;
+        }
+
+        return false;
+    }
+
     private function consentSmsOnFirstSave(Prescription $prescription, bool $hadPatient): array
     {
         $no = fn (?string $why) => ['sent' => false, 'reason' => $why, 'expires_at' => null];

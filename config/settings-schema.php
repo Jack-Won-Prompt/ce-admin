@@ -112,6 +112,13 @@ return [
                            . '링크페이는 토스페이먼츠 승인을 받은 뒤에 고른다 — 승인 전에는 키가 비어 있어 '
                            . '보낼 수 없으므로 무통장입금으로 내려가 보낸다.',
             ],
+            'rx_received_sms_on_first_save' => [
+                'label'  => '첫 저장에 접수 안내 발송',
+                'config' => 'order.rx_received_sms_on_first_save',
+                'type'   => 'bool',
+                'help'   => '「처방전이 접수되었습니다」를 보낸다. 위임동의 링크와는 다른 통이다 — '
+                          . '동의를 이미 받아 둔 사람에게는 링크가 가지 않아, 합쳐 두면 접수됐다는 것조차 듣지 못한다.',
+            ],
             'consent_sms_on_first_save' => [
                 'label'  => '첫 저장에 위임동의 발송',
                 'config' => 'order.consent_sms_on_first_save',
