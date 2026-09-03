@@ -197,6 +197,35 @@ class PaymentLinkController extends Controller
         if ($va && $tp->wasRecentlyCreated) {
             app(\App\Services\PaymentLinkService::class)->sendVirtualAccount($link, $va);
         }
+
+        /* 카드로 낸 건은 이 자리에서 다 낸 것이다 — 가상계좌처럼 기다릴 것이 없다.
+           그런데 여태 여기서 아무것도 부르지 않아, 서류도 창고 확정도 돌지 않았다.
+           담당자가 정산/회계에서 「입금확인」을 손으로 눌러야 그때 돌았다
+           (테스트 시나리오 3.1.1ㆍ3.3 · 2026-09-03).
+
+           가상계좌는 여기서 부르지 않는다. 계좌가 나왔을 뿐 돈은 아직 들어오지
+           않았다 — 들어오면 입금 웹훅이 부른다. */
+        if (! $va && $tp->order) {
+            $this->afterPaid($tp->order, '카드 결제');
+        }
+    }
+
+    /**
+     * 돈이 들어온 뒤에 하는 일 — 서류를 내고 창고를 확정한다.
+     *
+     * 실패해도 결제는 이미 끝난 것이라 화면을 막지 않는다. 고객은 냈는데 「오류」를
+     * 보면 다시 내려 든다 — 못 한 일은 로그와 자취에 남고, 담당자가 정산/회계에서
+     * 잇는다.
+     */
+    private function afterPaid(\App\Models\Order $order, string $cause): void
+    {
+        try {
+            app(\App\Services\DepositAutoIssue::class)->run($order->refresh(), $cause);
+        } catch (\Throwable $e) {
+            Log::warning('[결제전송] 결제 뒤 자동 처리 실패', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function row(PaymentLink $l): array
