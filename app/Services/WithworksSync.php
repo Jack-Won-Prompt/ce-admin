@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Log;
  */
 class WithworksSync
 {
-    /** 아직 끝나지 않아 상태가 더 바뀔 주문 */
-    public const OPEN_STATUSES = ['pending', 'confirmed', 'shipping'];
+    /* 아직 끝나지 않아 상태가 더 바뀔 주문 — 배송 완료ㆍ취소만 빼고 다 본다.
+       할당ㆍ피킹ㆍ송장이 상태로 선 뒤(2026-09-03)로는 손으로 적어 두면 그 자리에
+       멈춘 건을 훑지 않는다. */
+    public const OPEN_STATUSES = ['pending', 'confirmed', 'allocated', 'picked', 'invoiced', 'shipping'];
 
     /**
      * 컬럼이 담을 수 있는 길이.

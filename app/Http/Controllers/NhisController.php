@@ -16,7 +16,7 @@ class NhisController extends Controller
     {
         // items.lots — 네 화면이 함께 쓰는 칸에 Lotㆍ유효기간이 선다
         $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
-            ->whereIn('status', ['delivered', 'shipping', 'confirmed'])
+            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->latest();
 
         // NHIS 청구 상태 필터
@@ -191,13 +191,13 @@ class NhisController extends Controller
         $total = $gridData->count();
 
         // 지금 바로 청구할 수 있는 건수 — 상단 카드에 쓴다
-        $readyCount = Order::whereIn('status', ['delivered', 'shipping', 'confirmed'])
+        $readyCount = Order::whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->where('nhis_claim_status', 'pending')
             ->where('claim_ready', true)
             ->count();
 
         // 요약 카운트
-        $counts = Order::whereIn('status', ['delivered', 'shipping', 'confirmed'])
+        $counts = Order::whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->selectRaw('nhis_claim_status, count(*) as cnt')
             ->groupBy('nhis_claim_status')
             ->pluck('cnt', 'nhis_claim_status');

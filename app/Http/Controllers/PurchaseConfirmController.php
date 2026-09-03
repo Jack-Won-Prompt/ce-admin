@@ -105,7 +105,7 @@ class PurchaseConfirmController extends Controller
     private function data(Patient $patient): array
     {
         $orders = Order::where('patient_id', $patient->id)
-            ->whereIn('status', ['shipping', 'delivered'])
+            ->whereIn('status', \App\Models\Order::AFTER_SHIP)
             ->with('prescription')
             ->orderBy('created_at')
             ->get();

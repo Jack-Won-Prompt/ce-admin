@@ -132,7 +132,7 @@ class Order extends Model
     public function isShipped(): bool
     {
         return $this->shipped_at !== null
-            || in_array($this->status, ['shipping', 'delivered'], true);
+            || in_array($this->status, self::AFTER_SHIP, true);
     }
 
     /** 담당자가 손으로 확인한 건인가 — 토스가 아니라 사람이 본 것 */
@@ -233,13 +233,41 @@ class Order extends Model
         'business_expense' => '지출증빙',
     ];
 
+    /**
+     * 주문이 지나는 자리.
+     *
+     * 넷이던 것을 창고가 알려 오는 단계대로 늘렸다(2026-09-03 · 테스트 시나리오 4).
+     * 여태 할당ㆍ피킹ㆍ송장은 사건 기록에만 남고 상태는 「주문 확정」에 멈춰 있었다 —
+     * 담당자는 물건이 어디쯤 왔는지 목록에서 알 수 없어 위드웍스 화면을 따로 열었다.
+     *
+     * 위드웍스가 보내는 사건과 하나씩 짝이 된다(WithworksWebhookController).
+     * 「배송 완료」만 짝이 없다 — 그쪽은 택배사 조회가 없어 배송이 끝난 때를 알지
+     * 못한다(2026-08-15 합의). 사람이 손으로 옮기거나, 저쪽에 그 사건이 생기면 잇는다.
+     */
     public const STATUS_LABELS = [
         'pending'   => ['label' => '주문 대기',  'badge' => 'secondary'],
         'confirmed' => ['label' => '주문 확정',  'badge' => 'primary'],
-        'shipping'  => ['label' => '배송 중',    'badge' => 'info'],
+        'allocated' => ['label' => '재고 할당',  'badge' => 'primary'],
+        'picked'    => ['label' => '피킹 완료',  'badge' => 'primary'],
+        'invoiced'  => ['label' => '송장 출력',  'badge' => 'info'],
+        'shipping'  => ['label' => '출고 완료',  'badge' => 'info'],
         'delivered' => ['label' => '배송 완료',  'badge' => 'success'],
         'cancelled' => ['label' => '취소',        'badge' => 'danger'],
     ];
+
+    /**
+     * 창고로 넘어간 뒤의 자리 — 「확정 이상」을 묻는 곳이 쓴다.
+     *
+     * 청구ㆍ발행ㆍ정산이 모두 이 목록으로 대상을 고른다. 손으로 적어 두었더니
+     * 상태를 늘릴 때마다 여덟 곳을 고쳐야 했고, 한 곳이라도 빠뜨리면 그 건이
+     * 청구 목록에서 조용히 사라진다.
+     */
+    public const OPEN_AFTER_CONFIRM = [
+        'confirmed', 'allocated', 'picked', 'invoiced', 'shipping', 'delivered',
+    ];
+
+    /** 창고에서 물건이 나간 뒤의 자리 */
+    public const AFTER_SHIP = ['shipping', 'delivered'];
 
     public function getStatusLabelAttribute(): string
     {
@@ -268,7 +296,7 @@ class Order extends Model
     }
 
     /** 되돌릴 수 있는 주문 상태 — 대기(아직 우리 손 안)와 취소(이미 되돌림)는 뺀다 */
-    public const RETURNABLE_STATUSES = ['confirmed', 'shipping', 'delivered'];
+    public const RETURNABLE_STATUSES = self::OPEN_AFTER_CONFIRM;
 
     public static function generateOrderNumber(): string
     {

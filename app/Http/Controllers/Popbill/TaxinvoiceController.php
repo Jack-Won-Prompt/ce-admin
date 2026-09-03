@@ -219,7 +219,7 @@ class TaxinvoiceController extends Controller
         $endDT   = \Carbon\Carbon::createFromFormat('Ymd', $endDate)->endOfDay();
 
         $pendingQuery = Order::with(['patient', 'prescription'])
-            ->whereIn('status', ['confirmed', 'shipping', 'delivered']);
+            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM);
 
         BillingStrategy::targets($pendingQuery, 'tax_invoice');
 

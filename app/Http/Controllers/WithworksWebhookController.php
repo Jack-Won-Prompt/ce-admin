@@ -30,12 +30,24 @@ use Illuminate\Support\Facades\Validator;
 class WithworksWebhookController extends Controller
 {
     /**
-     * Withworks 상태 → 우리 주문 상태.
+     * Withworks 사건 → 우리 주문 상태.
      *
-     * 우리 주문 상태는 네 가지뿐이라 그쪽의 세분화된 단계를 그대로 받지 않는다. 할당·피킹은
-     * 우리에게 「아직 출고 전」이라 주문 상태를 바꾸지 않고, 사건 기록에만 남는다.
+     * 여태 할당ㆍ피킹ㆍ송장은 사건 기록에만 남고 주문 상태는 「주문 확정」에 멈춰
+     * 있었다. 담당자는 물건이 어디쯤 왔는지 목록에서 알 수 없어 위드웍스 화면을 따로
+     * 열었다 — 이제 단계대로 옮긴다(2026-09-03 · 테스트 시나리오 4).
+     *
+     * so.created 는 넣지 않는다. 우리가 보내서 선 것이라 알려 올 것이 없고, 받으면
+     * 이미 확정된 건이 「주문 대기」로 되돌아간다.
+     *
+     * so.delivered 는 저쪽이 보내지 않는다 — 택배사 조회가 없어 배송이 끝난 때를
+     * 알지 못한다(2026-08-15 합의). 표에는 남겨 둔다. 사람이 손으로 옮기거나,
+     * 저쪽에 그 사건이 생기면 그대로 걸린다.
      */
     private const ORDER_STATUS = [
+        'so.confirmed' => 'confirmed',
+        'so.allocated' => 'allocated',
+        'so.picked'    => 'picked',
+        'so.invoiced'  => 'invoiced',
         'so.shipped'   => 'shipping',
         'so.delivered' => 'delivered',
         'so.cancelled' => 'cancelled',
@@ -157,14 +169,19 @@ class WithworksWebhookController extends Controller
 
         $sync->apply($order, $data);
 
-        // 출고·배송·취소는 우리 주문 상태도 함께 움직인다
+        // 창고가 알려 온 단계로 우리 주문 상태도 함께 움직인다
         if ($newStatus = self::ORDER_STATUS[$data['event']] ?? null) {
-            $order->update([
-                'status'       => $newStatus,
-                'delivered_at' => $newStatus === 'delivered'
-                    ? ($data['ship']['delivered_at'] ?? $data['occurred_at'] ?? now())
-                    : $order->delivered_at,
-            ]);
+            /* 뒤로 물리지 않는다. 웹훅은 순서가 뒤바뀌어 오거나 다시 오기도 해서,
+               출고까지 간 건에 뒤늦게 「할당」이 닿으면 상태가 거꾸로 간다.
+               취소만은 어디서든 받는다 — 되돌리는 일이라 앞뒤가 없다. */
+            if ($newStatus === 'cancelled' || self::rank($newStatus) > self::rank($order->status)) {
+                $order->update([
+                    'status'       => $newStatus,
+                    'delivered_at' => $newStatus === 'delivered'
+                        ? ($data['ship']['delivered_at'] ?? $data['occurred_at'] ?? now())
+                        : $order->delivered_at,
+                ]);
+            }
         }
 
         /* 출고일자는 창고가 ship.shipped_at 으로 알려 준다(WithworksSync 가 적는다).
@@ -282,6 +299,19 @@ class WithworksWebhookController extends Controller
     }
 
     /**
+     * 단계의 앞뒤 — 큰 것이 나중이다.
+     *
+     * 표에 없는 값은 -1 이라 무엇으로든 옮겨진다(옛 건에 다른 값이 적혀 있을 수 있다).
+     */
+    private static function rank(?string $status): int
+    {
+        $order = array_keys(\App\Models\Order::STATUS_LABELS);
+        $at    = array_search((string) $status, $order, true);
+
+        return $at === false ? -1 : $at;
+    }
+
+    /**
      * 판매 사건을 화면에 알린다.
      *
      * 웹훅은 사람이 보고 있지 않을 때 들어온다. 표에만 남기면 담당자가 목록을 새로
@@ -293,6 +323,7 @@ class WithworksWebhookController extends Controller
     private function announce(array $data, Order $order): void
     {
         $tell = [
+            'so.confirmed' => ['창고가 주문을 확정했습니다', 'info'],
             'so.invoiced'  => ['송장이 붙었습니다',  'info'],
             'so.shipped'   => ['출고되었습니다',      'success'],
             'so.delivered' => ['배송이 끝났습니다',   'success'],

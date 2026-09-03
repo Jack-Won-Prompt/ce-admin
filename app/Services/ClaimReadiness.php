@@ -46,7 +46,7 @@ class ClaimReadiness
            (택배사 조회 연동이 없고 trackings 에 배송상태 컬럼도 없다) 배송완료라는 사건이
            우리에게 오지 않는다. 그것을 기다리면 어떤 주문도 청구에 이르지 못한다.
            손으로 배송완료까지 올린 건도 당연히 통과한다. */
-        if (!in_array($order->status, ['shipping', 'delivered'], true)) {
+        if (!in_array($order->status, \App\Models\Order::AFTER_SHIP, true)) {
             $missing[] = '출고 전';
         }
 

@@ -86,7 +86,7 @@ class SettlementController extends Controller
 
         // ── 가상계좌 현황 ──────────────────────────────────────
         $vaQuery = Order::with(['patient', 'tossPayment'])
-            ->whereIn('status', ['confirmed', 'shipping', 'delivered'])
+            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->where('patient_copay', '>', 0)
             ->latest();
 
@@ -112,7 +112,7 @@ class SettlementController extends Controller
         }
 
         $vaStats = [
-            'total'      => Order::whereIn('status', ['confirmed','shipping','delivered'])->where('patient_copay', '>', 0)->count(),
+            'total'      => Order::whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)->where('patient_copay', '>', 0)->count(),
             'issued'     => TossPayment::count(),
             /* 토스가 확인한 것 + 사람이 확인한 것(토스가 아직 모르는 것만 더한다) */
             'done'       => TossPayment::where('status', 'DONE')->count()
@@ -122,7 +122,7 @@ class SettlementController extends Controller
             'waiting'    => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')
                                 ->whereHas('order', fn($q) => $q->whereNull('deposit_confirmed_at'))
                                 ->count(),
-            'not_issued' => Order::whereIn('status', ['confirmed','shipping','delivered'])
+            'not_issued' => Order::whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
                                 ->where('patient_copay', '>', 0)
                                 ->whereDoesntHave('tossPayment')->count(),
             'pending_amount' => TossPayment::where('status', 'WAITING_FOR_DEPOSIT')

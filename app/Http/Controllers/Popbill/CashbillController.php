@@ -274,7 +274,7 @@ class CashbillController extends Controller
            여기로 모았다. 낸 것만 보이면 「무엇이 남았는가」를 이 화면에서 알 수 없다.
            대상은 청구전략이 현금영수증으로 정한 건뿐이다(처방외ㆍ산재ㆍ자동차보험). */
         $pendingQuery = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
-            ->whereIn('status', ['confirmed', 'shipping', 'delivered']);
+            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM);
 
         BillingStrategy::targets($pendingQuery, 'cash_receipt');
 
