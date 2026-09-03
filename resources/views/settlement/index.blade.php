@@ -1147,7 +1147,7 @@
 ※ 팝빌로 국세청에 취소 신고가 들어가고, 주문에 첨부된 증빙 PDF도 함께 삭제됩니다.
    취소한 증빙은 되살릴 수 없고 다시 발행해야 합니다.
 ※ 거래명세서는 그대로 둡니다 — 물건은 나간 채로 있습니다.` : ''),
-        { title: '입금 확인 취소', confirmText: '취소하기', tone: 'danger' });
+        { title: '입금 확인 취소', confirmText: '취소하기', cancelText: '닫기', tone: 'danger' });
       if (!ok) return;
 
       await vaDepositCall(btn, base, 'DELETE', null, r, rowIndex, 0);

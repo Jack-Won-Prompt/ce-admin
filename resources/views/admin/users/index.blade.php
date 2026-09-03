@@ -333,7 +333,7 @@ async function resendInvitation(id) {
 }
 
 async function cancelInvitation(id) {
-  if (!await ceConfirm('초대를 취소하시겠습니까?', { tone: 'danger', confirmText: '초대 취소' })) return;
+  if (!await ceConfirm('초대를 취소하시겠습니까?', { tone: 'danger', confirmText: '초대 취소', cancelText: '닫기' })) return;
 
   try {
     const res  = await fetch(`${INVITATIONS_URL}/${id}`, {
