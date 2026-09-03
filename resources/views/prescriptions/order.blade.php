@@ -7372,9 +7372,31 @@ window.HELP_TOUR_STEPS = [
     return false;
   }
 
-  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 셋 */
+  /**
+   * 주문한 수량이 처방된 총계를 넘지 않는가.
+   *
+   * 제품을 고르면 수량은 총계로 채워지지만 담당자가 손으로 고칠 수 있다. 넘겨서
+   * 보내면 넘은 만큼은 공단에 청구할 수 없고, 그 사실은 청구 단계에서야 드러난다.
+   * 그때는 이미 물건이 나간 뒤다.
+   */
+  function gateOrderQty() {
+    const total = parseInt(document.getElementById('f-total')?.value || '0', 10);
+    if (!total) return true;   // 총계가 비어 있으면 견줄 것이 없다
+
+    const sum = items.reduce(
+      (a, i) => a + (i.product_name ? (parseInt(i.quantity, 10) || 0) : 0), 0);
+    if (sum <= total) return true;
+
+    ceAlert(
+      `주문 수량 합계 ${sum}개가 처방 총계 ${total}개보다 ${sum - total}개 많습니다.`
+      + '\n\n넘은 만큼은 공단에 청구할 수 없습니다. 수량을 고친 뒤 다시 진행해 주십시오.',
+      { title: '처방 총계를 넘었습니다' });
+    return false;
+  }
+
+  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 넷 */
   function gateOrder() {
-    return gateReviewed() && gateConsent() && gateTotalCount(true);
+    return gateReviewed() && gateConsent() && gateTotalCount(true) && gateOrderQty();
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
