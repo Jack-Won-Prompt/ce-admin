@@ -844,15 +844,25 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* 막는 답은 화면이 부른 방식에 맞춰 돌려준다.
+           업로드 화면은 ajax 로 보내는데 back()->with('error') 만 돌려주었더니,
+           올라가지도 않고 화면에는 아무 말도 뜨지 않았다 — 담당자는 왜 안 되는지
+           모른 채 다시 눌렀다(2026-09-03 시험 2차에서 드러났다). */
+        $refuse = function (string $why) use ($request) {
+            return ($request->expectsJson() || $request->ajax())
+                ? response()->json(['success' => false, 'message' => $why], 422)
+                : back()->with('error', $why);
+        };
+
         if (empty($prescriptionFiles)) {
-            return back()->with('error', '처방전 파일을 최소 1개 이상 포함해야 합니다.');
+            return $refuse('처방전 파일을 최소 1개 이상 포함해야 합니다.');
         }
 
         /* 유형마다 받을 수 있는 수가 정해져 있다(테스트 시나리오 시작 포인트).
            한 번에 여러 장을 고르다 유형을 잘못 찍으면 처방전이 두 장 올라가고,
            그러면 처방전이 두 건으로 갈라져 주문도 둘이 된다. */
         if ($over = $this->overDocLimit($prescriptionFiles, $attachmentFiles)) {
-            return back()->with('error', $over);
+            return $refuse($over);
         }
 
         $created         = [];
