@@ -1519,7 +1519,7 @@
         @endif
 
         {{-- ══ 청구 · 회계 ══ --}}
-        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits', 'payments', 'finance'))
+        @if($vis('nhis', 'invoice', 'settlement', 'taxinvoice', 'cashbill', 'deposits', 'payments'))
         <div class="menu-group" data-menu-group="billing">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>청구ㆍ회계</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1610,17 +1610,26 @@
           </a>
         </div>
         @endif
-        {{-- Finance — 재무가 보는 여섯 목록(요청서 14~19쪽). 담당자가 일하는 화면과
-             다른 것을 묻는다: 그쪽은 「이 건을 어떻게 처리하나」이고 이쪽은 「이 달에
-             얼마가 오갔나」다. 셈이 끝난 것을 보는 자리라 정산/회계 뒤에 둔다. --}}
+        </div></div>
+        @endif
+
+        {{-- ══ Finance ══
+             재무가 보는 여섯 목록(요청서 14~19쪽). 담당자가 일하는 화면과 다른 것을
+             묻는다 — 그쪽은 「이 건을 어떻게 처리하나」이고 이쪽은 「이 달에 얼마가
+             오갔나」다. 청구ㆍ회계 안에 두었더니 그 묶음을 여는 사람과 이 화면을 여는
+             사람이 달라, 재무는 늘 남의 서랍을 뒤져야 했다(2026-09-03 지시). --}}
         @if($vis('finance'))
+        <div class="menu-group" data-menu-group="finance">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>Finance</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
+        </button>
+        <div class="menu-group-items">
         <div class="menu-item {{ request()->routeIs('finance*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="presentation-03" href="{{ route('finance.index') }}" data-title="Finance">
             @dsicon('presentation-03', 'ds-icon menu-icon')
             <span>Finance</span>
           </a>
         </div>
-        @endif
         </div></div>
         @endif
 
