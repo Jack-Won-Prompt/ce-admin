@@ -558,9 +558,8 @@ class OrderController extends Controller
             $supply  = (int) $data['tax_invoice_supply'];
             $vat     = (int) $data['tax_invoice_vat'];
 
-            $svc    = app(TaxinvoiceService::class);
-            $inv    = $svc->newInvoice();
-            $detail = $svc->newDetail();
+            $svc = app(TaxinvoiceService::class);
+            $inv = $svc->newInvoice();
 
             $inv->writeDate          = now()->format('Ymd');
             $inv->chargeDirection    = '정과금';
@@ -586,13 +585,10 @@ class OrderController extends Controller
             $inv->purposeType        = '영수';
             $inv->remark1            = $order->order_number;
 
-            $detail->serialNum  = 1;
-            $detail->itemName   = $order->product_name ?? '처방약';
-            $detail->qty        = '1';
-            $detail->unitCost   = (string) $supply;
-            $detail->supplyCost = (string) $supply;
-            $detail->tax        = (string) $vat;
-            $inv->detailList    = [$detail];
+            /* 품목마다 한 줄로 실고, 규격 칸에 장비코드를 적는다(2026-09-03 확정).
+               여태 대표 제품 하나만 나가 여러 줄인 주문은 무엇을 산 것인지 알 수
+               없었고, 공단에 대조할 때 쓰는 장비코드도 어디에도 없었다. */
+            $inv->detailList = \App\Support\IssueLines::taxDetails($order, $supply, $vat, $svc);
 
             $result    = $svc->registIssue($corpNum, $inv, $userId);
             $invoiceNo = $result->ntsConfirmNum ?? $mgtKey;
@@ -727,7 +723,9 @@ class OrderController extends Controller
             $cb->serviceFee       = '0';
             $cb->identityNum      = $data['cash_receipt_identifier'];
             $cb->customerName     = $order->patient?->name ?? '';
-            $cb->itemName         = $order->product_name ?? '처방약';
+            /* 현금영수증에는 품목 줄이 없다 — 한 칸에 「제품명 (장비코드) 외 2건」으로
+               담는다(2026-09-03 확정). */
+            $cb->itemName         = \App\Support\IssueLines::cashItemName($order);
             $cb->orderNumber      = $order->order_number;
             $cb->email            = $order->patient?->email ?? '';
 
