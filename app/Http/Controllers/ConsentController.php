@@ -165,6 +165,18 @@ class ConsentController extends Controller
             }
         }
 
+        /* 빈 서명은 서명이 아니다. 화면에서도 보지만, 화면을 거치지 않고 들어오는
+           요청이 있고 화면 쪽 잣대가 한 번 새기도 했다 — 여기서 다시 본다. */
+        if ($request->action === 'agreed') {
+            if (!$this->signatureHasInk((string) $request->input('signature'))) {
+                return response()->json(['success' => false, 'message' => '서명이 비어 있습니다.'], 422);
+            }
+            if ($consent->is_minor
+                && !$this->signatureHasInk((string) $request->input('guardian_signature'))) {
+                return response()->json(['success' => false, 'message' => '보호자 서명이 비어 있습니다.'], 422);
+            }
+        }
+
         /* 미성년자는 혼자 위임할 수 없다. 화면에서도 막지만, 화면을 거치지 않고 들어오는
            요청이 있으므로 서버에서 다시 본다. */
         if ($request->action === 'agreed' && $consent->is_minor) {
@@ -555,6 +567,35 @@ class ConsentController extends Controller
         ]);
 
         return view('consent.nice_callback', ['ok' => true, 'name' => $result['name']]);
+    }
+
+    /**
+     * 서명 그림에 획이 하나라도 남아 있는가.
+     *
+     * 투명한 그림이 올라오면 위임장에 아무것도 얹히지 않은 채 공단으로 간다.
+     * GD 가 없거나 그림을 못 읽으면 막지 않는다 — 사람이 그린 것을 우리 사정으로
+     * 되돌리지 않는다.
+     */
+    private function signatureHasInk(string $data): bool
+    {
+        if (trim($data) === '') return false;
+        if (!function_exists('imagecreatefromstring')) return true;
+
+        if (preg_match('#^data:image/\w+;base64,(.+)$#s', $data, $m)) $data = $m[1];
+        $bin = base64_decode($data, true);
+        if ($bin === false || $bin === '') return false;
+
+        $im = @imagecreatefromstring($bin);
+        if (!$im) return true;
+
+        $w = imagesx($im); $h = imagesy($im);
+        for ($y = 0; $y < $h; $y += 2) {
+            for ($x = 0; $x < $w; $x += 2) {
+                if ((imagecolorat($im, $x, $y) >> 24 & 0x7F) < 100) return true;
+            }
+        }
+
+        return false;
     }
 
     /**

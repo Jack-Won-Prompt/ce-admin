@@ -1196,10 +1196,29 @@ window.addEventListener('message', function (e) {
   }
 });
 
+/* 정말로 획이 남아 있는가.
+   hasSig 는 「그린 적이 있다」는 표시일 뿐이다. 그린 뒤에 화면이 다시 그려져
+   캔버스가 비면 표시는 그대로 남고, 아무것도 없는 그림이 위임장에 얹힌다.
+   실제로 그런 위임장이 한 장 만들어졌다 — 보내기 전에 점을 세어 본다. */
+function canvasHasInk(c) {
+  if (!c || !c.width || !c.height) return false;
+  try {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 20) return true;
+  } catch (e) {
+    return true;   // 읽지 못하면 막지 않는다 — 사람이 그린 것을 우리 사정으로 되돌리지 않는다
+  }
+  return false;
+}
+
 /* ── 제출 ─────────────────────────────────────────────── */
 async function submitConsent(action) {
-  if (action === 'agreed' && !hasSig) {
-    ceAlert('서명을 먼저 해주세요.', { tone: 'warning' });
+  if (action === 'agreed' && (!hasSig || !canvasHasInk(canvas))) {
+    ceAlert('서명이 비어 있습니다. 서명란에 다시 서명해 주세요.', { tone: 'warning' });
+    return;
+  }
+  if (action === 'agreed' && IS_MINOR && !canvasHasInk(document.getElementById('gSigCanvas'))) {
+    ceAlert('보호자 서명이 비어 있습니다. 보호자 서명란에 다시 서명해 주세요.', { tone: 'warning' });
     return;
   }
   if (action === 'agreed' && IS_MINOR && !guardianReady()) {
