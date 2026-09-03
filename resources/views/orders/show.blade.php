@@ -345,10 +345,9 @@
     <h2 style="font-size:16px;font-weight:700;line-height:26px;color:var(--gray-1000);">{{ $order->order_number }}</h2>
     {{-- 창고와 이야기할 때 쓰는 번호는 판매번호다 — 옆에 함께 세운다(2026-09-03).
          아직 넘기지 않은 건에는 세우지 않는다 — 빈 자리는 빠뜨린 것처럼 읽힌다. --}}
-    @php($saleNo = $order->saleNo())
-    @if($saleNo)
+    @if($order->saleNo())
       <span style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);
-                   font-family:monospace;">판매 {{ $saleNo }}</span>
+                   font-family:monospace;">판매 {{ $order->saleNo() }}</span>
     @endif
     <span class="badge badge-{{ $meta['badge'] }}">{{ $meta['label'] }}</span>
     @if($order->tracking_number)
