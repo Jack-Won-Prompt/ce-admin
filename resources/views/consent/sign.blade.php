@@ -376,7 +376,13 @@
         <div>
           <div class="verify-title" id="verifyTitle">{{ $verified ? '본인확인 완료' : '📱 휴대폰 본인확인' }}</div>
           <div class="verify-desc" id="verifyDesc">
-            {{ $verified ? '본인확인이 완료되었습니다. 서명해 주세요.' : '서명 전 NICE 휴대폰 본인확인이 필요합니다.' }}
+            {{-- 미성년자는 보호자가 인증한다. 그렇게 말해 두지 않으면 아이 이름으로
+                 인증을 시도하다 막히고, 왜 막혔는지 화면에 없다. --}}
+            {{ $verified
+                ? '본인확인이 완료되었습니다. 서명해 주세요.'
+                : ($consent->is_minor
+                    ? '서명 전 법정대리인(보호자) 휴대폰으로 NICE 본인확인을 해 주세요.'
+                    : '서명 전 NICE 휴대폰 본인확인이 필요합니다.') }}
           </div>
         </div>
         @if($verified)

@@ -177,6 +177,22 @@ class ConsentController extends Controller
             }
         }
 
+        /* 미성년자의 본인확인은 보호자가 한다(matchesPatient 참고). 그때는 이름을
+           견주지 않고 넘겼으니, 인증한 사람과 화면에 적은 보호자가 같은 사람인지
+           여기서 맞춰 본다. 그러지 않으면 아무나 인증하고 아무 이름이나 적을 수 있다.
+           시험용 시뮬레이션은 환자 이름을 그대로 채우므로 가리지 않는다. */
+        if ($request->action === 'agreed' && $consent->is_minor
+            && !config('nice.simulate') && $consent->isIdentityVerified()
+        ) {
+            $norm = fn ($v) => preg_replace('/\s+/', '', (string) $v);
+            if ($norm($consent->nice_name) !== $norm($request->input('guardian_name'))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '본인확인을 한 분과 법정대리인 성명이 다릅니다.',
+                ], 422);
+            }
+        }
+
         // NICE 본인확인 강제: 동의 서명은 본인확인 완료 후에만 허용
         if ($request->action === 'agreed'
             && app(\App\Services\Nice\NiceIdentityService::class)->enforce()
@@ -556,6 +572,18 @@ class ConsentController extends Controller
         $expectedBirth = $this->patientBirthYmd($consent);   // YYYYMMDD or null
 
         $norm = fn ($s) => preg_replace('/\s+/', '', (string) $s);
+
+        /* 미성년자는 본인이 인증하지 못한다 — 휴대폰이 제 이름으로 없고, 위임하는 사람도
+           본인이 아니라 법정대리인이다. 그래서 환자 이름ㆍ생년월일과 견주면 보호자가
+           제대로 인증해도 「환자와 일치하지 않습니다」로 막힌다.
+
+           여기서는 이름이 돌아왔는지만 본다. 인증한 사람이 정말 그 보호자인지는
+           서명할 때 화면에 적은 「법정대리인 성명」과 맞춰 본다. */
+        if ($consent->is_minor) {
+            return $norm($result['name']) === ''
+                ? ['ok' => false, 'message' => '본인확인 결과에 이름이 없습니다.']
+                : ['ok' => true, 'message' => ''];
+        }
 
         if (config('nice.match.require_name', true)) {
             if ($norm($result['name']) === '' || $norm($result['name']) !== $norm($expectedName)) {
