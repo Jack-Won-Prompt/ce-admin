@@ -237,7 +237,6 @@ class PatientController extends Controller
             /* 무엇을 샀는지는 한 칸에 다 들어가지 않는다 — 제품명 칸을 빼고, 대신 그
                주문의 제품 줄을 통째로 실어 둔다. 한 건을 열면 옆 탭에서 펼친다. */
             'items'     => $this->orderItemRows($rx->order),
-            'ship'      => (int) ($rx->order?->shipping_fee ?? 0),
             'total_amt' => (int) ($rx->order?->total_amount ?? 0),
         ])->values();
 
@@ -284,7 +283,7 @@ class PatientController extends Controller
             'unit_price' => $unit,
             'nhis'       => (int) round($order->nhis_amount ?? 0),
             'copay'      => (int) round($order->patient_copay ?? 0),
-            // 제품값 합계다 — 배송비가 붙은 주문 총액과는 다르다
+            // 제품값 합계다 — 주문 총액과는 다르다(옛 건에는 배송비가 섞여 있다)
             'total'      => $unit * $qty,
         ]]);
     }

@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * 되돌리는 사유와 그 사유가 정하는 것들 (요청서 6쪽, 2026-08-31).
  *
- * 사유가 정해지면 세 가지가 함께 정해진다 — 배송비를 누가 무는가, 금액을 조정하는가,
- * 발행 내역에 넣는가. 담당자가 매번 판단하면 사람마다 달라지고, 고객에게 안내한 내용도
- * 갈린다.
+ * 사유가 정해지면 두 가지가 함께 정해진다 — 금액을 조정하는가, 발행 내역에 넣는가.
+ * 담당자가 매번 판단하면 사람마다 달라지고, 고객에게 안내한 내용도 갈린다.
+ *
+ * 배송비 부담도 여기서 정했으나 걷었다. 배송비는 없다(2026-09-03 확정).
  *
  * 코드 안의 배열에서 표로 옮긴 까닭 — 요청서가 사유마다 규칙을 정해 달라 했고, 그것은
  * 앞으로도 바뀔 값이다. 바뀔 때마다 배포하게 두면 결국 아무도 안 고친다.
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 class ReturnReason extends Model
 {
     protected $fillable = [
-        'code', 'label', 'burden', 'adjusts_amount', 'includes_issue', 'sort_order', 'is_active',
+        'code', 'label', 'adjusts_amount', 'includes_issue', 'sort_order', 'is_active',
     ];
 
     protected $casts = [

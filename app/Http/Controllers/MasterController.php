@@ -28,7 +28,7 @@ class MasterController extends Controller
     private const BILLING_OFFICE = 'billing_office';
 
     /* 반품 사유도 그 틀을 쓰지 않는다. 담는 것이 이름ㆍ차례가 아니라 규칙이라
-       (배송비 부담ㆍ금액조정ㆍ발행포함) 한 줄짜리 마스터 항목에 담기지 않는다. */
+       (금액조정ㆍ발행포함) 한 줄짜리 마스터 항목에 담기지 않는다. */
     private const RETURN_REASON = 'return_reason';
 
     public function index(Request $request): View
@@ -209,7 +209,6 @@ class MasterController extends Controller
             'rows'                        => 'required|array',
             'rows.*.code'                 => 'required|string|exists:return_reasons,code',
             'rows.*.label'                => 'required|string|max:60',
-            'rows.*.burden'               => ['nullable', Rule::in(array_keys(\App\Models\OrderReturn::BURDENS))],
             'rows.*.adjusts_amount'       => 'nullable|boolean',
             'rows.*.includes_issue'       => 'nullable|boolean',
             'rows.*.is_active'            => 'nullable|boolean',
@@ -219,7 +218,6 @@ class MasterController extends Controller
         foreach ($data['rows'] as $row) {
             \App\Models\ReturnReason::where('code', $row['code'])->update([
                 'label'          => $row['label'],
-                'burden'         => $row['burden'] ?: null,
                 // 체크를 풀면 아예 오지 않는다 — 없으면 끈 것이다
                 'adjusts_amount' => (bool) ($row['adjusts_amount'] ?? false),
                 'includes_issue' => (bool) ($row['includes_issue'] ?? false),

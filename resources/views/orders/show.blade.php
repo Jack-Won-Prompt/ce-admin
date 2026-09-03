@@ -732,10 +732,6 @@
               <div class="label">본인부담금</div>
               <div class="value">{{ number_format($order->patient_copay) }}원</div>
             </div>
-            <div class="amount-box">
-              <div class="label">배송비</div>
-              <div class="value">{{ number_format($order->shipping_fee) }}원</div>
-            </div>
             <div class="amount-box highlight">
               <div class="label">총 결제금액</div>
               <div class="value">{{ number_format($order->total_amount) }}원</div>
@@ -1112,7 +1108,7 @@
   /* 얼마를 내는가는 청구전략이 정한다 — 자동 발행(DepositAutoIssue)이 쓰는 셈과 같아야
      한다. 예전에는 total_amount(= 본인부담금)를 기본값으로 세워, 같은 주문을 자동으로
      내면 303,750 원이고 손으로 내면 33,750 원이었다.
-     밑돈은 본인부담 + 기관부담이다. total_amount 에는 배송비가 섞인 건이 있다. */
+     밑돈은 본인부담 + 기관부담이다. total_amount 에는 옛 건의 배송비가 섞여 있다. */
   $_tiRx    = $order->prescription;
   $_tiRate  = (int) (\App\Support\BillingStrategy::resolve($_tiRx?->counsel_acc_add_type, $_tiRx?->benefit_class)['tax_invoice'] ?? 0);
   $_tiBase  = (int) ($order->patient_copay ?? 0) + (int) ($order->nhis_amount ?? 0);
@@ -1202,11 +1198,12 @@
 
 {{-- ══════════ 현금영수증 발행 모달 ══════════ --}}
 @php
-  /* 세금계산서와 같은 셈이다 — 청구전략이 정한 몫에 배송비를 더한다(자동 발행과 같다).
+  /* 세금계산서와 같은 셈이다 — 청구전략이 정한 몫이다(자동 발행과 같다).
+     배송비는 없다(2026-09-03 확정) — 더할 것이 없다.
      식별번호는 환자가 적어 둔 현금영수증 번호가 먼저고, 없으면 휴대폰번호다. */
   $_crRate = (int) (\App\Support\BillingStrategy::resolve($_tiRx?->counsel_acc_add_type, $_tiRx?->benefit_class)['cash_receipt'] ?? 0);
   $_crAmt  = $_crRate > 0
-      ? (int) round($_tiBase * $_crRate / 100) + (int) ($order->shipping_fee ?? 0)
+      ? (int) round($_tiBase * $_crRate / 100)
       : (int) $order->total_amount;
   $_crId   = $order->patient?->cash_receipt_no ?: ($order->patient?->mobile ?? '');
   /* 발행 구분도 거래처에 적어 둔 것을 따른다 — 늘 「소득공제」로 열려, 지출증빙으로

@@ -190,7 +190,6 @@ window.HELP_TOUR_STEPS = [
           <th>제품명</th>
           <th>수량</th>
           <th class="amount-cell">본인 부담금</th>
-          <th class="amount-cell">배송비</th>
           <th class="amount-cell">총금액</th>
           <th>배송지</th>
           <th>주문유형</th>
@@ -223,9 +222,6 @@ window.HELP_TOUR_STEPS = [
             <td>{{ $order->quantity ?? 1 }}</td>
             <td class="amount-cell">
               {{ number_format($order->patient_copay) }}원
-            </td>
-            <td class="amount-cell">
-              {{ number_format($order->shipping_fee) }}원
             </td>
             <td class="amount-cell fw-bold">
               {{ number_format($order->total_amount) }}원
@@ -356,7 +352,7 @@ window.HELP_TOUR_STEPS = [
           return el;
         },
       },
-      /* 제품명·수량·환자부담금·배송비·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
+      /* 제품명·수량·환자부담금·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
       { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
@@ -388,9 +384,9 @@ window.HELP_TOUR_STEPS = [
         },
       },
 
-      /* 제품명ㆍ수량ㆍ배송비는 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야
+      /* 제품명ㆍ수량은 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야
          하고, 훑을 때 필요한 것은 누구의 무슨 건이 어디까지 왔는가다 — 무엇을 얼마나
-         보냈는지는 줄을 더블클릭해 상세에서 본다. 배송비는 받지도 않는다.
+         보냈는지는 줄을 더블클릭해 상세에서 본다.
          배송지는 남긴다 — 어디로 가는지는 훑으면서 가리는 값이다. */
       { header: '배송지',   name: 'address',  width: 240 },
 

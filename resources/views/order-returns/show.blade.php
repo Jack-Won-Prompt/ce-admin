@@ -128,7 +128,6 @@
       @endif
     </span></div>
     <div class="rt-kv"><span>상세 사유</span><span>{{ $r->reason_text ?: '—' }}</span></div>
-    <div class="rt-kv"><span>배송비 부담</span><span>{{ \App\Models\OrderReturn::BURDENS[$r->shipping_burden] ?? '—' }}</span></div>
     {{-- 접수 때는 수거 방법을 묻지 않는다 — 예전에 받아 둔 건에만 남아 있으니 있을 때만 --}}
     @if($r->collect_method)
       <div class="rt-kv"><span>수거 방법</span><span>{{ \App\Models\OrderReturn::COLLECT_METHODS[$r->collect_method] ?? $r->collect_method }}</span></div>

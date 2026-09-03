@@ -82,7 +82,6 @@ class OrderApiController extends Controller
                 'product_code'          => $o->product_code,
                 'unit_price'            => $o->unit_price,
                 'nhis_amount'           => $o->nhis_amount,
-                'shipping_fee'          => $o->shipping_fee,
                 'shipping_address'      => $o->shipping_address,
                 'delivered_at'          => $o->delivered_at?->format('Y-m-d H:i'),
                 'nhis_claim_status'     => $o->nhis_claim_status,

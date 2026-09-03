@@ -131,7 +131,7 @@
       { header: '주문번호', name: 'order_no', width: 120, sortable: true },
       { header: '이름',   name: 'patient',  width: 90 },
       { header: '유형',     name: 'type',     width: 60,  align: 'center', sortable: true },
-      // 같은 「교환」이라도 변심과 불량은 배송비도 승인자도 다르다 — 사유를 세운다
+      // 같은 「교환」이라도 변심과 불량은 승인자도 청구 방식도 다르다 — 사유를 세운다
       { header: '사유',     name: 'scenario', width: 110, align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
@@ -159,7 +159,6 @@
         },
       },
       { header: '신청 사유', name: 'reason',   width: 110 },
-      { header: '배송비 부담', name: 'burden',   width: 100, align: 'center' },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
       { header: '담당자',   name: 'assignee', width: 90 },
       // 접수한 사람과 승인한 사람은 다르다 — 절차서가 그렇게 나눈다

@@ -1,5 +1,5 @@
 {{-- ── 반품 사유 ────────────────────────────────────────────
-     요청서 6쪽. 사유가 정해지면 세 가지가 함께 정해진다 — 배송비를 누가 무는가,
+     요청서 6쪽. 사유가 정해지면 두 가지가 함께 정해진다 —
      금액을 조정하는가, 발행 내역에 넣는가. 담당자가 매번 판단하면 사람마다 달라지고
      고객에게 안내한 내용도 갈린다.
 
@@ -19,7 +19,7 @@
 </style>
 
 <div class="rr-note">
-  <b>사유가 정하는 것</b> — 배송비를 누가 무는가 · 금액을 조정하는가 · 발행 내역에 넣는가.<br>
+  <b>사유가 정하는 것</b> — 금액을 조정하는가 · 발행 내역에 넣는가.<br>
   <b>금액조정</b>을 끄면 반품 시 금액조정 주문을 생성하지 않습니다. 제품만 교환하는
   교환은 돈이 그대로라 조정할 것이 없습니다.<br>
   <b>발행포함</b>을 끄면 세금계산서·현금영수증을 취소하지 않습니다. 처음부터 발행에
@@ -35,7 +35,6 @@
           <tr>
             <th style="width:150px;">코드</th>
             <th style="width:170px;">이름</th>
-            <th style="width:150px;">배송비 부담</th>
             <th style="width:100px;" class="mid">금액조정</th>
             <th style="width:100px;" class="mid">발행포함</th>
             <th style="width:80px;"  class="mid">사용</th>
@@ -49,15 +48,6 @@
                   <input type="hidden" name="rows[{{ $loop->index }}][code]" value="{{ $r->code }}"></td>
               <td><input type="text" class="form-control" maxlength="60"
                          name="rows[{{ $loop->index }}][label]" value="{{ $r->label }}"></td>
-              <td>
-                {{-- 비워 두면 사유만으로 정해지지 않아 접수하는 사람이 고른다 --}}
-                <select class="form-control" name="rows[{{ $loop->index }}][burden]">
-                  <option value="" @selected($r->burden === null)>접수 때 고름</option>
-                  @foreach(\App\Models\OrderReturn::BURDENS as $k => $label)
-                    <option value="{{ $k }}" @selected($r->burden === $k)>{{ $label }}</option>
-                  @endforeach
-                </select>
-              </td>
               <td class="mid"><input type="checkbox" name="rows[{{ $loop->index }}][adjusts_amount]"
                                      value="1" @checked($r->adjusts_amount)></td>
               <td class="mid"><input type="checkbox" name="rows[{{ $loop->index }}][includes_issue]"

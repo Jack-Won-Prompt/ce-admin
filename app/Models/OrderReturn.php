@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * 「Unicorn 교환·반품 절차」는 다섯 갈래를 서로 다르게 다룬다.
  *
- *   고객 변심 교환   환자가 보내고 · 환자가 배송비를 물고 · 입금 확인 뒤 다시 나간다
- *   불량 교환        3PL 이 회수하고 · 3PL 이 배송비를 물고 · 샘플 교환 오더로 나간다
+ *   고객 변심 교환   환자가 보내고 · 입금 확인 뒤 다시 나간다
+ *   불량 교환        3PL 이 회수하고 · 샘플 교환 오더로 나간다
  *   반품 및 환불     물건을 받아 보고 결제를 취소한 뒤 마이너스로 발행한다
  *   출고 전 취소     아직 나가지 않았다 — 수거도 검수도 없다
  *   일반 환불        자격 변경 등. 반품 자체가 없고 금액조정 주문 한 줄로 끝난다
@@ -28,7 +28,7 @@ class OrderReturn extends Model
 
     protected $fillable = [
         'receipt_no', 'order_id', 'type', 'subtype', 'status',
-        'reason_code', 'reason_text', 'shipping_burden',
+        'reason_code', 'reason_text',
         'collect_tracking_no', 'arrived_at',
         'inspect_confirmed_by', 'inspect_confirmed_at',
         'approved_by', 'approved_at',
@@ -201,21 +201,20 @@ class OrderReturn extends Model
     public const APPROVAL_STATUSES = ['inspected', 'approved'];
 
     /**
-     * 신청 사유와 배송비 부담 주체 (CR-RTN-07 · Unicorn 절차서).
+     * 신청 사유 — 표가 비었을 때의 대비다.
      *
-     * 사유가 정해지면 누가 무는지도 정해진다. 담당자가 매번 판단하면 사람마다 달라지고,
-     * 고객에게 안내한 내용도 갈린다. 다만 고칠 수는 있게 둔다 — 예외가 늘 있다.
+     * 배송비 부담 주체를 함께 두었으나 걷었다. 배송비는 없다(2026-09-03 확정).
      *
-     * 자격 변경은 물건을 되돌려 받지 않는다 — 일반 환불로 간다.
+     * 자격 변경은 물건을 되돌려 받지 않는다 — 금액조정 한 줄로 끝난다.
      */
     public const REASONS = [
-        'change_mind'   => ['label' => '단순 변심',   'burden' => 'customer'],
-        'size_exchange' => ['label' => '사이즈 교환', 'burden' => 'customer'],
-        'defect'        => ['label' => '상품 불량',   'burden' => 'company'],
-        'wrong_item'    => ['label' => '오배송',      'burden' => 'company'],
-        'delay'         => ['label' => '배송 지연',   'burden' => 'company'],
-        'eligibility'   => ['label' => '자격 변경',   'burden' => null],
-        'other'         => ['label' => '기타',        'burden' => null],
+        'change_mind'   => ['label' => '단순 변심'],
+        'size_exchange' => ['label' => '사이즈 교환'],
+        'defect'        => ['label' => '상품 불량'],
+        'wrong_item'    => ['label' => '오배송'],
+        'delay'         => ['label' => '배송 지연'],
+        'eligibility'   => ['label' => '자격 변경'],
+        'other'         => ['label' => '기타'],
     ];
 
     /** 3PL 이 무는 사유 — 불량 교환으로 갈린다 */
@@ -227,7 +226,7 @@ class OrderReturn extends Model
      * 위의 REASONS 는 표가 비었을 때의 대비로 남긴다. 화면과 검증은 이 메서드를 본다 —
      * 사유를 늘리거나 규칙을 고치는 일이 배포를 기다리지 않아야 한다.
      *
-     * @return array<string, array{label: string, burden: ?string}>
+     * @return array<string, array{label: string}>
      */
     public static function reasons(): array
     {
@@ -238,7 +237,7 @@ class OrderReturn extends Model
         }
 
         return $rows->mapWithKeys(fn ($r) => [
-            $r->code => ['label' => $r->label, 'burden' => $r->burden],
+            $r->code => ['label' => $r->label],
         ])->all();
     }
 
@@ -248,8 +247,6 @@ class OrderReturn extends Model
         return \App\Models\ReturnReason::table()[$code]?->label
             ?? (self::REASONS[$code]['label'] ?? (string) $code);
     }
-
-    public const BURDENS = ['customer' => '고객 부담', 'company' => '판매자 부담'];
 
     public const COLLECT_METHODS = ['courier' => '택배 자동수거', 'self' => '고객 직접발송'];
 
@@ -360,7 +357,7 @@ class OrderReturn extends Model
         return self::SCENARIO_LABELS[$this->scenario()] ?? $this->typeLabel();
     }
 
-    /** 3PL 잘못인가 — 배송비와 승인자와 청구 방식이 여기서 갈린다 */
+    /** 3PL 잘못인가 — 승인자와 청구 방식이 여기서 갈린다 */
     public function isDefect(): bool
     {
         return in_array($this->reason_code, self::DEFECT_REASONS, true);
@@ -396,7 +393,7 @@ class OrderReturn extends Model
      * 조정 뒤 남는 금액 — 적어 두지 않았으면 줄에서 셈해 본다.
      *
      * 원 주문의 본인부담에서 되돌린 몫을 뺀 값이다. 사람이 적어 둔 값이 있으면
-     * 그것이 정본이다 — 배송비나 위약금이 섞이는 건이 있어 셈이 늘 맞지는 않는다.
+     * 그것이 정본이다 — 위약금이 섞이는 건이 있어 셈이 늘 맞지는 않는다.
      */
     public function adjustedAmount(): ?int
     {

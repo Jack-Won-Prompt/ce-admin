@@ -144,9 +144,10 @@ class Order extends Model
     /**
      * 들어와야 하는 금액 — 본인부담금.
      *
-     * 배송비는 세지 않는다(요청서 3쪽, 2026-08-31 회신). 2026-08-24 부터 받지 않기로
-     * 했고, 그 전 스물여섯 건에 3,000원이 적혀 있다. 그것까지 받을 돈으로 세면 이미
-     * 끝난 건이 영영 「3,000원 모자람」으로 남는다.
+     * 배송비는 없다(2026-09-03 확정). 그 전 스물여섯 건에 3,000원이 적혀 있으나
+     * 받을 돈으로 세지 않는다 — 세면 이미 끝난 건이 영영 「3,000원 모자람」으로
+     * 남는다. 적힌 값 자체는 지우지 않는다. 그때 실제로 받은 돈이고, 그 가운데
+     * 열한 건은 그 금액으로 증빙까지 나갔다.
      */
     public function expectedDeposit(): int
     {
@@ -160,7 +161,7 @@ class Order extends Model
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
         'deposit_confirmed_at', 'deposit_confirmed_by', 'deposit_amount', 'deposit_note',
         'pay_method',
-        'shipping_fee', 'total_amount',
+        'total_amount',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
         'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at', 'nhis_reject_stage',
@@ -208,7 +209,6 @@ class Order extends Model
         'unit_price'          => 'float',
         'nhis_amount'         => 'float',
         'patient_copay'       => 'float',
-        'shipping_fee'        => 'float',
         'total_amount'        => 'float',
         'nhis_reimbursement'  => 'float',
         'tax_invoice_supply'  => 'float',

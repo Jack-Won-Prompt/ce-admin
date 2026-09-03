@@ -237,7 +237,7 @@ class TaxinvoiceController extends Controller
                 $rx    = $o->prescription;
                 $rate  = (int) (BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class)['tax_invoice'] ?? 0);
                 /* 밑돈은 본인부담 + 기관부담이다. total_amount 를 쓰면 안 된다 —
-                   그 칸에는 배송비가 섞인 건이 있어 발행 금액이 어긋난다. */
+                   그 칸에는 옛 건의 배송비가 섞여 있어 발행 금액이 어긋난다. */
                 $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100);
                 $supply = (int) round($amount / 1.1);
                 $at     = $o->delivered_at ?? $o->created_at;

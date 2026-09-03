@@ -952,7 +952,6 @@ class PrescriptionController extends Controller
                 'status_label'      => $p->order->status_label,
                 'total_amount'      => $p->order->total_amount,
                 'patient_copay'     => $p->order->patient_copay,
-                'shipping_fee'      => $p->order->shipping_fee,
                 'withworks_so_no'   => $p->order->withworks_so_no,
                 'created_at'        => $p->order->created_at->format('Y-m-d'),
                 // 현금영수증
@@ -2003,7 +2002,7 @@ class PrescriptionController extends Controller
             '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
-            // 배송비는 받을 돈에 넣지 않는다(요청서 3쪽 회신) — 본인부담금 그대로다
+            // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담금 그대로다
             '#{금액}'      => $order ? number_format($order->expectedDeposit()) : '-',
             '#{본인부담금}'=> $order ? number_format($order->patient_copay ?? 0) : '-',
             '#{은행명}'    => $tp?->bank_name ?? '-',

@@ -987,8 +987,8 @@ $calcCopay = $prescription->items->sum(function ($i) use ($itemRate) {
     $qty  = (int)($i->quantity ?? 1);
     return round($base * $qty) - round($base * $itemRate($i) * $qty);
 });
-$calcShipping = (int)($prescription->order?->shipping_fee ?? 0);
-$calcDeposit  = $calcCopay + $calcShipping;
+/* 배송비는 없다(2026-09-03 확정) — 입금받을 돈은 본인부담 그것뿐이다 */
+$calcDeposit  = $calcCopay;
 @endphp
 
   {{-- Patient Info Bar --}}
@@ -1264,10 +1264,6 @@ $calcDeposit  = $calcCopay + $calcShipping;
                     <span style="color:var(--text-muted);">본인부담금</span>
                     <b style="color:var(--primary);">&#8361;{{ number_format($calcCopay) }}</b>
                   </div>
-                  <div style="display:flex;justify-content:space-between;font-size:12px;">
-                    <span style="color:var(--text-muted);">배송비</span>
-                    <b>&#8361;{{ number_format($prescription->order?->shipping_fee ?? 0) }}</b>
-                  </div>
                 </div>
                 <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--primary-600);margin-bottom:12px;">
                   <i class="fa-solid fa-circle-info"></i>
@@ -1388,16 +1384,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span style="color:var(--text-muted);font-weight:500;">본인 부담금</span>
                 <span id="kakaoCopayAmt" style="font-weight:700;">{{ number_format($calcCopay) }}원</span>
               </div>
-              @if($prescription->order->shipping_fee)
-              <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:500;">배송비</span>
-                <span style="font-weight:700;">{{ number_format($prescription->order->shipping_fee) }}원</span>
-              </div>
               <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
-                <span style="color:var(--text-muted);font-weight:500;">합계</span>
+                <span style="color:var(--text-muted);font-weight:500;">입금 금액</span>
                 <span id="kakaoDepositAmt" style="font-weight:700;color:var(--primary);">{{ number_format($calcDeposit) }}원</span>
               </div>
-              @endif
             </div>
             @endif
             <div>
@@ -1476,16 +1466,10 @@ $calcDeposit  = $calcCopay + $calcShipping;
                 <span style="color:var(--text-muted);font-weight:500;">본인 부담금</span>
                 <span id="smsCopayAmt" style="font-weight:700;">{{ number_format($calcCopay) }}원</span>
               </div>
-              @if($prescription->order->shipping_fee)
-              <div style="display:flex;justify-content:space-between;">
-                <span style="color:var(--text-muted);font-weight:500;">배송비</span>
-                <span style="font-weight:700;">{{ number_format($prescription->order->shipping_fee) }}원</span>
-              </div>
               <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
-                <span style="color:var(--text-muted);font-weight:500;">합계</span>
+                <span style="color:var(--text-muted);font-weight:500;">입금 금액</span>
                 <span id="smsDepositAmt" style="font-weight:700;color:var(--primary);">{{ number_format($calcDeposit) }}원</span>
               </div>
-              @endif
             </div>
             @endif
             <div>
@@ -6469,9 +6453,8 @@ window.HELP_TOUR_STEPS = [
     const fmtNhis    = Math.round(totalNhis).toLocaleString('ko-KR');
     const fmtCopay   = Math.round(totalCopay).toLocaleString('ko-KR');
     const el = id => document.getElementById(id);
-    // 배송비는 받지 않는다 — 예전 주문에 적힌 값이 있으면 그것만 따른다
-    const shipping = {{ (int) ($prescription->order?->shipping_fee ?? 0) }};
-    const vaTotal  = Math.round(totalCopay) + shipping;
+    // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담 그것뿐이다
+    const vaTotal  = Math.round(totalCopay);
     if (el('summary-nhis'))  el('summary-nhis').textContent  = '₩ ' + fmtNhis;
     if (el('summary-copay')) el('summary-copay').textContent = '₩ ' + fmtCopay;
     if (el('costNhisAmt'))   el('costNhisAmt').textContent   = '₩ ' + fmtNhis;
@@ -8654,7 +8637,6 @@ window.HELP_TOUR_STEPS = [
     '#{처방번호}':    @json($prescription->rx_number),
     '#{주문번호}':    @json($prescription->order?->order_number ?? '-'),
     '#{본인부담금}':  @json($prescription->order ? number_format($calcCopay) : '-'),
-    '#{배송비}':      @json($prescription->order ? number_format($prescription->order->shipping_fee ?? 0) : '-'),
     '#{금액}':        @json($prescription->order ? number_format($calcDeposit) : '-'),
     '#{운송장번호}':  @json($prescription->order?->tracking_number ?? '-'),
   };
@@ -9645,7 +9627,6 @@ window.HELP_TOUR_STEPS = [
         // ── 가상계좌 내용 SMS 자동 발송 ──────────────────────
         const patientName  = SMS_PLACEHOLDERS['#{고객명}'] ?? '';
         const mobile       = document.getElementById('smsMobile')?.value?.trim() ?? '';
-        const shippingFee  = Number(data.shipping_fee ?? 0);
         const productTotal = items.reduce((s, i) => {
             const base = Number(i.insurance_price ?? i.product_price ?? 0);
             const qty  = Number(i.quantity ?? 1);
@@ -9658,15 +9639,15 @@ window.HELP_TOUR_STEPS = [
             const nhis = Math.round(base * rate * qty);
             return s + Math.round(base * qty) - nhis;
         }, 0);
-        const depositAmt   = copayAmt + shippingFee;      // 입금금액 (본인부담금 + 배송비)
+        const depositAmt   = copayAmt;      // 배송비는 없다(2026-09-03) — 본인부담 그것뿐이다
         const fmtProduct   = productTotal.toLocaleString('ko-KR');
         const fmtCopay     = copayAmt.toLocaleString('ko-KR');
         const fmtDeposit   = depositAmt.toLocaleString('ko-KR');
         let smsMsg;
         if (isDisabled && !bankName && !accountNo) {
-          smsMsg = `[콜로플라스트] ${patientName}님, 주문이 확정되었습니다.\n■ 제품 총 금액: ${fmtProduct}원\n■ 본인부담금: ${fmtCopay}원\n■ 입금금액: ${fmtDeposit}원 (본인부담금 + 배송비)\n입금 계좌는 별도 안내드리겠습니다.`;
+          smsMsg = `[콜로플라스트] ${patientName}님, 주문이 확정되었습니다.\n■ 제품 총 금액: ${fmtProduct}원\n■ 본인부담금: ${fmtCopay}원\n■ 입금금액: ${fmtDeposit}원\n입금 계좌는 별도 안내드리겠습니다.`;
         } else {
-          smsMsg = `[콜로플라스트] ${patientName}님, 가상계좌가 발급되었습니다.\n■ 제품 총 금액: ${fmtProduct}원\n■ 본인부담금: ${fmtCopay}원\n■ 입금금액: ${fmtDeposit}원 (본인부담금 + 배송비)\n■ 은행: ${bankName}\n■ 계좌번호: ${accountNo}\n■ 입금기한: ${dueDate}\n기한 내 입금 부탁드립니다.`;
+          smsMsg = `[콜로플라스트] ${patientName}님, 가상계좌가 발급되었습니다.\n■ 제품 총 금액: ${fmtProduct}원\n■ 본인부담금: ${fmtCopay}원\n■ 입금금액: ${fmtDeposit}원\n■ 은행: ${bankName}\n■ 계좌번호: ${accountNo}\n■ 입금기한: ${dueDate}\n기한 내 입금 부탁드립니다.`;
         }
         if (mobile && smsUrl) {
           fetch(smsUrl, {

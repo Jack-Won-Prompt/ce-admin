@@ -641,12 +641,11 @@
 
       document.getElementById('tab-items-label').textContent = '주문 제품 - ' + label;
       document.getElementById('tab-btn-items').style.display = '';
-      /* 제품값·배송비·총액은 같은 수가 아니다 — 표는 제품값만 적고,
-         배송비와 주문 총액은 이 줄에 적는다. */
+      /* 제품값과 주문 총액은 같은 수가 아니다 — 표는 제품값만 적고,
+         주문 총액은 이 줄에 적는다. */
       const won = (n) => Number(n || 0).toLocaleString() + '원';
       document.getElementById('itemsNote').textContent = items.length
         ? label + ' · ' + items.length + '건'
-          + (row.ship ? ' · 배송비 ' + won(row.ship) : '')
           + (row.total_amt ? ' · 주문 총액 ' + won(row.total_amt) : '')
         : label + ' — 적혀 있는 제품이 없습니다.';
 

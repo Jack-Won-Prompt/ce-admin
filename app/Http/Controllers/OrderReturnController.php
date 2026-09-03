@@ -74,7 +74,6 @@ class OrderReturnController extends Controller
             'return_so' => $r->withworks_so_no ?: ($r->withworks_error ? '실패' : '미전달'),
             'patient'   => $r->order?->patient?->name ?? '-',
             'reason'    => OrderReturn::reasonLabel($r->reason_code),
-            'burden'    => OrderReturn::BURDENS[$r->shipping_burden] ?? '-',
             'refund'    => $r->refund_amount ? number_format($r->refund_amount) : '-',
             'assignee'  => $r->assignee?->name ?? '-',
             'created'   => $r->created_at?->format('Y-m-d') ?? '-',
@@ -194,9 +193,6 @@ class OrderReturnController extends Controller
 
         unset($data['items']);
 
-        // 배송비를 누가 무는지는 사유가 정한다 — 접수 때 따로 묻지 않는다.
-        // 담당자마다 다르게 고르면 같은 사유인데 부담 주체가 갈린다.
-        $data['shipping_burden'] = OrderReturn::reasons()[$data['reason_code']]['burden'] ?? null;
 
         /* 취소인데 갈래를 안 골랐으면 출고 전 취소로 본다 — 지금까지 취소는 그것 하나였다.
            자격 변경은 물건이 없어 언제나 일반 환불이다. */

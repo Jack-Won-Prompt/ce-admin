@@ -42,8 +42,6 @@ class SettlementController extends Controller
             'nhis_amount'   => $base()->sum('nhis_amount'),
             'patient_copay' => $base()->sum('patient_copay'),
             'nhis_reimb'    => $base()->sum('nhis_reimbursement'),
-            // 배송비는 세지 않는다(요청서 3쪽 회신) — 칸도 셈도 걷었다
-            'shipping_fee'  => 0,
         ];
 
         $statusCounts = [
@@ -198,7 +196,7 @@ class SettlementController extends Controller
                 /* 「입금 확인」 단추가 무엇을 할지 가리는 데 쓴다(컬럼 아님) */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
-                // 배송비는 받을 돈으로 세지 않는다(요청서 3쪽 회신)
+                // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담뿐이다
                 'deposit_due'  => $order->expectedDeposit(),
                 'status'       => $sl['label'],
                 'settle'       => $order->settleStatusLabel(),
@@ -298,7 +296,7 @@ class SettlementController extends Controller
                 /* 아래 셋은 컬럼이 아니다 — 「입금 확인」 단추가 무엇을 할지 가린다 */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
-                // 배송비는 받을 돈으로 세지 않는다(요청서 3쪽 회신)
+                // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담뿐이다
                 'deposit_due'  => $order->expectedDeposit(),
             ];
         })->values();
@@ -399,7 +397,6 @@ class SettlementController extends Controller
             'unit_price'      => $order->unit_price,
             'nhis_amount'     => $order->nhis_amount,
             'patient_copay'   => $order->patient_copay,
-            'shipping_fee'    => $order->shipping_fee,
             'total_amount'    => $order->total_amount,
             'nhis_reimb'      => $order->nhis_reimbursement,
             // 배송
@@ -444,11 +441,12 @@ class SettlementController extends Controller
         if ($prescription) {
             $prescription->loadMissing('items');
             $freshCopay    = (float) $prescription->items->sum('patient_copay');
-            $shippingFee   = $order->shipping_fee ?? 3000;
+            /* 배송비는 없다(2026-09-03 확정). 여기에 「없으면 3,000원」이라는 기본값이
+               있어, 배송비를 적지 않은 주문에도 3,000원이 붙어 청구되었다. */
             if ($freshCopay > 0) {
                 $order->update([
                     'patient_copay' => $freshCopay,
-                    'total_amount'  => $freshCopay + $shippingFee,
+                    'total_amount'  => $freshCopay,
                 ]);
                 $order->refresh();
             }
@@ -507,7 +505,6 @@ class SettlementController extends Controller
                 'account_number' => $fallbackAccount,
                 'due_date'       => $dueDate,
                 'amount'         => (int) $order->patient_copay,
-                'shipping_fee'   => (int) ($order->shipping_fee ?? 3000),
             ]);
         }
 
@@ -532,7 +529,6 @@ class SettlementController extends Controller
                 'account_number' => $tp->account_number,
                 'due_date'       => $tp->due_date?->format('Y-m-d H:i'),
                 'amount'         => $tp->amount,
-                'shipping_fee'   => (int) ($order->shipping_fee ?? 3000),
             ]);
         } catch (TossApiException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -550,7 +546,7 @@ class SettlementController extends Controller
      * 계좌이체ㆍ현금으로 들어왔거나, 웹훅이 유실된 건. 그런 건을 영영 「대기중」으로
      * 두지 않으려고 사람이 직접 세운다.
      *
-     * 금액은 청구액(본인부담금 + 배송비)을 그대로 적는다. 다른 값을 보내면 그 값을
+     * 금액은 청구액(본인부담금)을 그대로 적는다 — 배송비는 없다. 다른 값을 보내면 그 값을
      * 적되, 말없이 덮지 않고 기록에 남긴다.
      */
     public function confirmDeposit(Request $request, Order $order): JsonResponse
@@ -605,7 +601,7 @@ class SettlementController extends Controller
      * 「-」로 비어 있고, 담당자가 통장ㆍ단말을 보고 방식을 고르는 순간 그 건은 받은
      * 것이 된다. 방식을 고르는 일과 입금을 세우는 일이 하나다.
      *
-     * 금액은 청구액(본인부담금 + 배송비)을 그대로 적는다.
+     * 금액은 청구액(본인부담금)을 그대로 적는다 — 배송비는 없다.
      */
     public function setPayMethod(Request $request, Order $order): JsonResponse
     {

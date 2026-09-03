@@ -435,8 +435,6 @@
             <div class="avalue">₩{{ number_format($order?->patient_copay ?? 0) }}</div>
           </div>
           <div class="amt-card">
-            <div class="alabel">배송비</div>
-            <div class="avalue">₩{{ number_format($order?->shipping_fee ?? 0) }}</div>
           </div>
         </div>
       </div>

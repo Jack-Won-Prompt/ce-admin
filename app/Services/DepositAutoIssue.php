@@ -166,8 +166,8 @@ class DepositAutoIssue
         }
 
         /* 금액은 비율이 정한다. 제품 금액(본인부담 + 기관부담)에 비율을 곱하고,
-           배송비는 그대로 더한다 — 환자가 실제로 낸 돈이다. */
-        $amount = $this->share($order, (int) $strategy['cash_receipt']) + (int) ($order->shipping_fee ?? 0);
+           배송비는 없다(2026-09-03 확정) — 더할 것이 없다. */
+        $amount = $this->share($order, (int) $strategy['cash_receipt']);
         if ($amount <= 0) {
             $out['skipped'][] = '현금영수증: 금액이 0원';
             return null;

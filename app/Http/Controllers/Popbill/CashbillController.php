@@ -293,10 +293,10 @@ class CashbillController extends Controller
         $pendingList = $pending->map(function (Order $o) use ($pendingExtras) {
             $rx   = $o->prescription;
             $rate = (int) (BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class)['cash_receipt'] ?? 0);
-            /* 제품 금액(본인부담 + 기관부담)에 비율을 곱하고 배송비를 더한다 —
-               자동 발행이 세는 법과 같다. total_amount 에는 배송비가 섞인 건이 있어 쓰지 않는다. */
-            $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100)
-                    + (int) ($o->shipping_fee ?? 0);
+            /* 제품 금액(본인부담 + 기관부담)에 비율을 곱한다 — 자동 발행이 세는 법과
+               같다. 배송비는 없다(2026-09-03 확정). total_amount 에는 옛 건의 배송비가
+               섞여 있어 그 칸은 쓰지 않는다. */
+            $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100);
             $at = $o->delivered_at ?? $o->created_at;
 
             return [

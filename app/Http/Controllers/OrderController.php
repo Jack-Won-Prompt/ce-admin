@@ -101,7 +101,6 @@ class OrderController extends Controller
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
                 'copay'     => (int) $o->patient_copay,
-                'shipping'  => (int) $o->shipping_fee,
                 'total'     => (int) $o->total_amount,
                 'address'   => $o->shipping_address ?? '',
                 'so_type'   => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
@@ -242,7 +241,6 @@ class OrderController extends Controller
             'items.*.patient_copay'   => 'nullable|numeric|min:0',
             'total_nhis'              => 'nullable|numeric|min:0',
             'patient_copay'           => 'nullable|numeric|min:0',
-            'shipping_fee'            => 'nullable|numeric|min:0',
             'shipping_address'        => 'nullable|string|max:200',
             'shipping_address_detail' => 'nullable|string|max:200',
             'shipping_postcode'       => 'nullable|string|max:10',
@@ -298,9 +296,10 @@ class OrderController extends Controller
         // 다중 제품이면 품목명을 note에 기록
         $productNames = $items->pluck('product_name')->implode(', ');
 
-        // 배송비는 받지 않기로 했다(2026-08-24). 보내오면 그 값을 쓰고, 없으면 0 이다.
-        $shippingFee = $request->shipping_fee ?? 0;
-        $totalAmount = $totalCopay + $shippingFee;
+        /* 배송비는 없다(2026-09-03 확정). 예전에는 칸을 남겨 두고 0 으로 두었는데,
+           칸이 있으면 언젠가 값이 들어간다 — 실제로 3,000원이 들어간 건이 스물여섯
+           있었고 그 가운데 열하나는 증빙까지 발행되었다. 칸째로 걷는다. */
+        $totalAmount = $totalCopay;
 
         $attrs = [
             'order_number'     => $existing?->order_number ?? Order::generateOrderNumber(),
@@ -313,7 +312,6 @@ class OrderController extends Controller
             'unit_price'       => $unitPrice,
             'nhis_amount'      => $totalNhis,
             'patient_copay'    => $totalCopay,
-            'shipping_fee'     => $shippingFee,
             'total_amount'     => $totalAmount,
             'shipping_address'   => $request->shipping_address,
             'shipping_recipient' => $request->shipping_recipient,
@@ -397,9 +395,10 @@ class OrderController extends Controller
         $totalNhis  = $request->total_nhis    ?? $items->sum('nhis_amount');
         $unitPrice  = (float)($firstItem['insurance_price'] ?? $firstItem['product_price'] ?? 0);
         $totalQty   = $items->sum('quantity') ?: 1;
-        // 배송비는 받지 않기로 했다(2026-08-24) — 예전 주문에 적힌 값은 그대로 지킨다
-        $shippingFee = $order->shipping_fee ?? 0;
-        $totalAmount = $totalCopay + $shippingFee;
+        /* 배송비는 없다(2026-09-03 확정). 예전 주문에 적힌 값도 여기서는 더하지
+           않는다 — 고치는 김에 총액이 조용히 늘어나면 안 된다. 적힌 값 자체는
+           그대로 둔다(그때 실제로 받은 돈이고, 증빙이 나간 건이 있다). */
+        $totalAmount = $totalCopay;
         $productNames = $items->pluck('product_name')->implode(', ');
 
         $order->update([

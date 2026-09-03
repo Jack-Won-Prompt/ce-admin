@@ -653,7 +653,6 @@
             ${amtRow('단가',        d.unit_price)}
             ${amtRow('청구액', d.nhis_amount,    'var(--primary-600)')}
             ${amtRow('본인부담금', d.patient_copay, 'var(--primary)')}
-            ${amtRow('배송비',      d.shipping_fee)}
             ${amtRow('환급',   d.nhis_reimb,    'var(--primary-600)')}
             <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:700;line-height:21px;">
               <span>총 주문금액</span>

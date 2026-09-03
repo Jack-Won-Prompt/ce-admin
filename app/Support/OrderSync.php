@@ -64,7 +64,8 @@ class OrderSync
             'unit_price'    => (float) ($first?->insurance_price ?? $first?->product_price ?? 0),
             'nhis_amount'   => (float) $items->sum('nhis_amount'),
             'patient_copay' => $copay,
-            'total_amount'  => $copay + (float) ($order?->shipping_fee ?? 0),
+            // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담 그것뿐이다
+            'total_amount'  => $copay,
         ];
 
         if ($order) {
@@ -77,8 +78,6 @@ class OrderSync
                 'order_number'    => Order::generateOrderNumber(),
                 'prescription_id' => $prescription->id,
                 'created_by'      => Auth::id(),
-                // 배송비는 받지 않기로 했다(2026-08-24)
-                'shipping_fee'    => 0,
                 'status'          => 'pending',
                 // 지금 팔 수 있는 유형의 첫째. 「1013」을 박아 두었더니 고를 수 없는 값이
                 // 껍데기에 앉아, 주문 연계 탭이 그것을 되살리지 못했다.

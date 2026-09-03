@@ -96,12 +96,12 @@ class FinanceController extends Controller
 
         /* 총 주문금액은 환자 몫과 기관 몫을 더한 것이다.
            orders.total_amount 를 쓰면 안 된다 — 그 칸은 「환자가 낼 돈」이라
-           본인부담 + 배송비다(OrderController::store 의 $totalCopay + $shippingFee).
-           서른일곱 건 가운데 서른이 그렇게 어긋나 있다. 재무가 매출을 세는 자리에서
-           그 값을 쓰면 기관 몫이 통째로 빠진다. */
+           본인부담뿐이고, 옛 건에는 배송비까지 섞여 있다. 재무가 매출을 세는
+           자리에서 그 값을 쓰면 기관 몫이 통째로 빠진다.
+           배송비는 이제 없다(2026-09-03 확정) — 옛 스물여섯 건에만 남아 있다. */
         $total = $copay + $nhis;
 
-        // 환자에게 청구한 금액 — 배송비가 붙은 그것. 입금과 맞춰 볼 때 이 값이 맞다.
+        // 환자에게 청구한 금액. 입금과 맞춰 볼 때 이 값이 맞다(옛 건은 배송비가 섞여 있다).
         $billed = (int) ($o->total_amount ?: $copay);
 
         // 실제로 들어온 돈 — 담당자가 확인했거나 토스가 확인해 준 것
@@ -126,7 +126,7 @@ class FinanceController extends Controller
             'product'    => $o->product_name ?? '',
             'qty'        => (int) $o->quantity,
             'total'      => $total,
-            // 환자에게 청구한 금액(본인부담 + 배송비) — 입금과 맞춰 볼 때 쓴다
+            // 환자에게 청구한 금액 — 입금과 맞춰 볼 때 쓴다
             'billed'     => $billed,
             'copay'      => $copay,
             'nhis'       => $nhis,
@@ -164,7 +164,7 @@ class FinanceController extends Controller
             // ── 미정산 ────────────────────────────────────
             'received'   => $paid + $agencyPaid,
             /* 아직 못 받은 돈. 환자 몫과 기관 몫을 따로 세어 더한다 — 총액에서 받은
-               것을 빼면 배송비가 섞여 몇백 원씩 어긋난다. */
+               것을 빼면 옛 건의 배송비가 섞여 몇천 원씩 어긋난다. */
             'unpaid'     => max(0, $copay - $paid) + max(0, $nhis - $agencyPaid),
             /* 누가 안 냈는가. 둘 다 안 냈으면 둘 다 적는다 — 하나만 적으면 나머지가
                묻히고, 그 건은 한쪽만 받고 끝난다. */
@@ -277,7 +277,7 @@ class FinanceController extends Controller
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
-                // 환자에게 청구한 금액(본인부담 + 배송비) — 입금과 맞춰 보는 값이다
+                // 환자에게 청구한 금액 — 입금과 맞춰 보는 값이다
                 ['header' => '주문금액',   'name' => 'billed',    'width' => 110] + $money,
                 ['header' => '본인부담액', 'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'paid_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
