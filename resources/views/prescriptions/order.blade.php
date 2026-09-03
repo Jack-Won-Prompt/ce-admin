@@ -1959,6 +1959,7 @@ $calcDeposit  = $calcCopay;
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('신분증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">신분증</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('개인정보 동의서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">개인정보 동의서</div>
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
               </div>
             </div>
@@ -4570,7 +4571,12 @@ function handleAttachUpload(input) {
      골라 둔 건이 있어 그 이름도 같은 곳으로 받아 준다. */
   const _labelMap = { '처방전': 'prescription', '요양비위임장': 'delegation', '위임장': 'delegation',
                       '신분증': 'id_card',
-                      '등록신청서': 'registration_form', '결과지': 'test_result', '기타': 'other' };
+                      '등록신청서': 'registration_form', '결과지': 'test_result',
+                      /* 전자서명이 안 되는 환자에게는 종이로 받는다. 이 유형으로 올라와야
+                         「개인정보동의 완료」로 읽힌다 — other 로 두면 종이로 받아 두고도
+                         화면에는 「아직」이라 서서 환자가 두 번 서명한다. */
+                      '개인정보 동의서': 'privacy_consent', '개인정보동의서': 'privacy_consent',
+                      '기타': 'other' };
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';
   const docLabel  = (docType === 'other' && inputVal !== '기타') ? inputVal : '';
