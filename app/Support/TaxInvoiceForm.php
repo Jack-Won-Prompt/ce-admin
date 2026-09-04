@@ -88,22 +88,56 @@ final class TaxInvoiceForm
             'supplyDigits' => self::digits($supply, count(self::SUPPLY_HEAD)),
             'vatDigits'    => self::digits($vat, count(self::VAT_HEAD)),
 
-            'items' => [[
-                'month'  => (string) (int) $at->format('m'),
-                'day'    => (string) (int) $at->format('d'),
-                'name'   => (string) ($order->product_name ?: '처방약'),
-                'spec'   => '',
-                'qty'    => '1',
-                'price'  => number_format($supply),
-                'supply' => number_format($supply),
-                'vat'    => number_format($vat),
-                'note'   => (string) $order->order_number,
-            ]],
+            'items' => self::items($order, $supply, $vat, $at),
             'rows' => self::ROWS,
         ];
     }
 
     // ──────────────────────────────────────────────────────────
+
+    /**
+     * 품목 줄 — 국세청에 신고한 줄을 그대로 옮겨 그린다.
+     *
+     * 예전에는 이 자리에서 「대표 제품 하나 · 규격 빈칸 · 수량 1」을 지어냈다.
+     * 그런데 팝빌에 나가는 줄은 IssueLines 가 품목마다 만들고 규격 칸에 장비코드를
+     * 적는다. 그래서 신고 내용과 우리가 그려 붙이는 종이가 서로 달랐다 —
+     * 공단 청구 묶음에 이 종이가 들어가므로, 대조하는 쪽에서는 다른 문서로 보인다.
+     *
+     * 서식은 네 줄짜리 종이다. 품목이 그보다 많으면 세 줄을 적고 나머지는
+     * 「외 N건」 한 줄로 합친다 — 합계는 어긋나지 않는다.
+     */
+    private static function items(Order $order, int $supply, int $vat, $at): array
+    {
+        $rows = \App\Support\IssueLines::split($order, $supply, $vat);
+
+        if (count($rows) > self::ROWS) {
+            $head = array_slice($rows, 0, self::ROWS - 1);
+            $tail = array_slice($rows, self::ROWS - 1);
+
+            $head[] = [
+                'name'   => '외 ' . count($tail) . '건',
+                'device' => '',
+                'qty'    => array_sum(array_column($tail, 'qty')),
+                'unit'   => 0,
+                'supply' => array_sum(array_column($tail, 'supply')),
+                'vat'    => array_sum(array_column($tail, 'vat')),
+            ];
+
+            $rows = $head;
+        }
+
+        return array_map(fn (array $r) => [
+            'month'  => (string) (int) $at->format('m'),
+            'day'    => (string) (int) $at->format('d'),
+            'name'   => $r['name'],
+            'spec'   => $r['device'],
+            'qty'    => number_format($r['qty']),
+            'price'  => $r['unit'] ? number_format($r['unit']) : '',
+            'supply' => number_format($r['supply']),
+            'vat'    => number_format($r['vat']),
+            'note'   => (string) $order->order_number,
+        ], $rows);
+    }
 
     /**
      * 네 줄짜리 당사자 칸.

@@ -23,30 +23,55 @@ final class IssueLines
     private const NAME_MAX = 100;
 
     /**
-     * 세금계산서 품목 줄.
-     *
-     * 금액은 담당자가 적은 공급가ㆍ세액을 품목의 값에 따라 나눈다. 품목의 금액을
-     * 그대로 쓰면 안 된다 — 청구전략이 정한 몫(이를테면 90%)만 발행하는 건이 있어
-     * 합이 어긋난다. 나머지는 마지막 줄이 떠안아 합이 정확히 맞는다.
+     * 세금계산서 품목 줄 — 팝빌에 보낼 꼴로.
      *
      * @param  object  $svc  TaxinvoiceService — newDetail() 을 부른다
      * @return array<int, object>
      */
     public static function taxDetails(Order $order, int $supply, int $vat, object $svc): array
     {
+        $out = [];
+
+        foreach (self::split($order, $supply, $vat) as $i => $r) {
+            $d = $svc->newDetail();
+            $d->serialNum  = $i + 1;
+            $d->itemName   = $r['name'];
+            $d->spec       = $r['device'];
+            $d->qty        = (string) $r['qty'];
+            $d->unitCost   = (string) $r['unit'];
+            $d->supplyCost = (string) $r['supply'];
+            $d->tax        = (string) $r['vat'];
+
+            $out[] = $d;
+        }
+
+        return $out;
+    }
+
+    /**
+     * 발행할 품목 줄에 금액을 나눠 담는다 — 신고와 종이가 같은 값을 쓰게 하는 자리.
+     *
+     * 담당자가 적은 공급가ㆍ세액을 품목의 값에 따라 나눈다. 품목의 금액을 그대로
+     * 쓰면 안 된다 — 청구전략이 정한 몫(이를테면 90%)만 발행하는 건이 있어 합이
+     * 어긋난다. 나머지는 마지막 줄이 떠안아 합이 정확히 맞는다.
+     *
+     * 단가는 그 줄의 공급가를 수량으로 나눈 값이다. 예전에는 줄이 하나면 수량을
+     * 그대로 두고 단가 자리에 공급가를 통째로 적었다 — 「수량 180 · 단가 331,364」
+     * 처럼 곱이 맞지 않는 줄이 국세청에 그대로 신고되었다.
+     *
+     * @return array<int, array{name:string, device:string, qty:int, unit:int, supply:int, vat:int, amount:int}>
+     */
+    public static function split(Order $order, int $supply, int $vat): array
+    {
         $rows = self::rows($order);
 
-        if (count($rows) <= 1) {
-            $d = $svc->newDetail();
-            $d->serialNum  = 1;
-            $d->itemName   = $rows[0]['name'] ?? ($order->product_name ?? '처방약');
-            $d->spec       = $rows[0]['device'] ?? '';
-            $d->qty        = (string) ($rows[0]['qty'] ?? 1);
-            $d->unitCost   = (string) $supply;
-            $d->supplyCost = (string) $supply;
-            $d->tax        = (string) $vat;
-
-            return [$d];
+        if (! $rows) {
+            $rows = [[
+                'name'   => (string) ($order->product_name ?: '처방약'),
+                'device' => '',
+                'qty'    => 1,
+                'amount' => 0,
+            ]];
         }
 
         $weights = array_map(fn ($r) => max(0, $r['amount']), $rows);
@@ -58,7 +83,7 @@ final class IssueLines
             $sum     = count($rows);
         }
 
-        $out       = [];
+        $out        = [];
         $leftSupply = $supply;
         $leftVat    = $vat;
         $last       = count($rows) - 1;
@@ -72,16 +97,15 @@ final class IssueLines
 
             $qty = max(1, (int) $r['qty']);
 
-            $d = $svc->newDetail();
-            $d->serialNum  = $i + 1;
-            $d->itemName   = $r['name'];
-            $d->spec       = $r['device'];
-            $d->qty        = (string) $qty;
-            $d->unitCost   = (string) (int) round($s / $qty);
-            $d->supplyCost = (string) $s;
-            $d->tax        = (string) $t;
-
-            $out[] = $d;
+            $out[] = [
+                'name'   => $r['name'],
+                'device' => $r['device'],
+                'qty'    => $qty,
+                'unit'   => (int) round($s / $qty),
+                'supply' => $s,
+                'vat'    => $t,
+                'amount' => $r['amount'],
+            ];
         }
 
         return $out;
