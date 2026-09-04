@@ -133,7 +133,14 @@ class PurchaseConfirmController extends Controller
             'today'      => now()->format('Y년 m월 d일'),
             'supplier'   => [
                 'corp_name' => $company['corp_name'] ?? '',
-                'biz_no'    => config('popbill.test.corp_num') ?? '',
+                /* 하이픈까지 넣어 적는다 — 세금계산서ㆍ카드 매출전표는 101-86-34660 으로
+                   나가는데 여기만 1018634660 이라, 지자체가 대조할 때 다른 번호로 보였다. */
+                'biz_no'    => (function () {
+                    $n = preg_replace('/\D/', '', (string) config('popbill.test.corp_num'));
+                    return strlen($n) === 10
+                        ? substr($n, 0, 3) . '-' . substr($n, 3, 2) . '-' . substr($n, 5)
+                        : $n;
+                })(),
                 'addr'      => $company['addr'] ?? '',
             ],
         ];
