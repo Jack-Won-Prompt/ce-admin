@@ -2660,9 +2660,17 @@ class PrescriptionController extends Controller
                attachment_ids 로는 고를 수 없다 — 여기서 이름을 붙인다. */
             'guardian_id'      => '법정대리인 신분증',
         ];
-        // 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
+        /* 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
+
+           「공단」 자리는 이 건의 관할 청구처를 따른다 — 기초(의료급여) 건은
+           시군구청으로 내는데도 「국민건강보험공단」이라 적혀 남았다.
+           보낸 곳과 적힌 곳이 다르면 나중에 어디로 갔는지 알 수 없다. */
+        $office = $prescription->billingOffice;
+
         $recipientLabels = [
-            'nhis'   => '국민건강보험공단',
+            'nhis'   => ($office && $office->kind === 'local')
+                ? $office->displayName()
+                : '국민건강보험공단',
             'custom' => '기타',
         ];
 

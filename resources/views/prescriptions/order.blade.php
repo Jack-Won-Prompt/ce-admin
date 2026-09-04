@@ -7978,6 +7978,8 @@ window.HELP_TOUR_STEPS = [
         'who'  => trim(($_bo->manager_name ?? '') . ' ' . ($_bo->title ?? '')),
         'tel'  => $_bo->tel,
         'fax'  => $_bo->fax,
+        /* 공단인가 지자체인가 — 팩스 창의 수신처 이름이 이 값을 따른다 */
+        'kind' => $_bo->kind,
     ] : null;
   @endphp
   let RX_BILLING_OFFICE = @json($_boJs);
@@ -8363,7 +8365,7 @@ window.HELP_TOUR_STEPS = [
       RX_BILLING_OFFICE = {
         id: picked.id, name: (picked.office_name || '') + (picked.dept ? ' · ' + picked.dept : ''),
         who: [picked.manager_name, picked.title].filter(Boolean).join(' '),
-        tel: picked.tel, fax: picked.fax,
+        tel: picked.tel, fax: picked.fax, kind: picked.kind,
       };
       faxRecipientFromOffice();
     }
@@ -8845,14 +8847,22 @@ window.HELP_TOUR_STEPS = [
     pop.style.display = opening ? 'block' : 'none';
     if (opening) {
       placeFaxPopover();
+      /* 수신처 이름을 먼저 세운다 — 지자체 건이면 그 구청 이름이 서야
+         아래에서 「공단 지사 검색」을 열지 말지 가릴 수 있다. */
+      faxRecipientFromOffice();
+
       const activeBtn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
-      if (activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
+      /* 지자체로 내는 건에는 공단 지사 목록을 펴지 않는다 — 낼 곳이 아니다 */
+      const 지자체 = RX_BILLING_OFFICE?.kind === 'local';
+      if (!지자체 && activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
         document.getElementById('nhisSearchPanel').style.display = 'block';
         renderNhisOffices('');
+      } else if (지자체) {
+        const panel = document.getElementById('nhisSearchPanel');
+        if (panel) panel.style.display = 'none';
       }
       refreshFaxSentBanner();
       renderFaxDocs();
-      faxRecipientFromOffice();
     }
   }
 
@@ -8862,20 +8872,31 @@ window.HELP_TOUR_STEPS = [
      그것을 그대로 쓴다. 담당자가 다른 곳으로 보내려 하면 그대로 고쳐 쓰면 된다. */
   function faxRecipientFromOffice() {
     const o = RX_BILLING_OFFICE;
-    if (!o || !o.fax) return;
-
-    const faxEl = document.getElementById('fax-no');
-    if (!faxEl) return;
-    // 손으로 이미 적어 둔 것이 있으면 덮지 않는다
-    if (faxEl.value.trim() !== '') return;
-
-    faxEl.value = o.fax;
+    if (!o) return;
 
     const btn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
-    if (btn) {
+    if (!btn) return;
+
+    /* 수신처 이름은 고른 관할 청구처를 따른다.
+       예전에는 「국민건강보험공단」이 화면에 박혀 있었다. 기초(의료급여) 건은
+       시군구청으로 내는데도 그 이름이 그대로 서서, 담당자가 보고 고른 곳과
+       실제로 가는 곳이 어긋날 수 있었다. */
+    const isLocal = o.kind === 'local';
+    const head = btn.querySelector('div > div:first-child');
+    const sub  = btn.querySelector('div > div:last-child');
+
+    if (head) head.textContent = isLocal ? (o.name || '지자체(시군구청)') : '국민건강보험공단';
+    if (sub) {
+      sub.textContent = isLocal
+        ? ['관할 지자체', o.who, o.fax].filter(Boolean).join(' · ')
+        : (o.fax ? [o.name, o.who, o.fax].filter(Boolean).join(' · ') : '공단 · 지사 검색');
+    }
+
+    if (o.fax) {
       btn.dataset.fax = o.fax;
-      const sub = btn.querySelector('div > div:last-child');
-      if (sub) sub.textContent = o.name + (o.who ? ' · ' + o.who : '') + ' · ' + o.fax;
+      const faxEl = document.getElementById('fax-no');
+      // 손으로 이미 적어 둔 것이 있으면 덮지 않는다
+      if (faxEl && faxEl.value.trim() === '') faxEl.value = o.fax;
     }
   }
 
