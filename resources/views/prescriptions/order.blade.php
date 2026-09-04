@@ -8334,18 +8334,31 @@ window.HELP_TOUR_STEPS = [
   };
 
   /** 고른 것을 화면에 세우고 칸에 넣는다 — 저장은 「저장」이 한다. */
-  function boFindPick(id) {
+  function boFindPick(id, fresh = null) {
     const row = [...document.querySelectorAll('#boFindList label')]
       .find(l => l.querySelector('input')?.value === String(id));
     document.getElementById('f-billing-office').value = id;
 
-    const label = document.getElementById('boPickLabel');
-    if (label && row) {
-      label.textContent = row.innerText.replace(/\s*\n\s*/g, ' · ').trim();
-      label.style.color = 'var(--text)';
+    /* 보이는 글씨는 목록의 줄에서 가져온다. 다만 그 줄이 없을 때가 있다 —
+       「등록하기」로 새로 적어 고르면 목록을 다시 훑기 전이라 아직 줄이 없다.
+       예전에는 그때 글씨를 그대로 두어, 숨은 칸에는 값이 들어갔는데 화면에는
+       「아직 고르지 않았습니다」가 남았다. 담당자는 실패로 읽고 다시 고른다.
+       줄이 없으면 방금 고른 것의 값으로 적는다. */
+    const label  = document.getElementById('boPickLabel');
+    const _boRow = fresh || (_boLastRows || []).find(x => String(x.id) === String(id));
+    if (label) {
+      const text = row
+        ? row.innerText.trim().split(/\s+/).join(' · ')
+        : (_boRow
+            ? [_boRow.office_name, _boRow.dept, _boRow.manager_name].filter(Boolean).join(' · ')
+            : '');
+      if (text) {
+        label.textContent = text;
+        label.style.color = 'var(--text)';
+      }
     }
     /* 팩스 창이 이 값을 본다 — 골라 두면 수신처를 손으로 다시 찾지 않는다 */
-    const picked = (_boLastRows || []).find(x => String(x.id) === String(id));
+    const picked = _boRow;
     if (picked) {
       RX_BILLING_OFFICE = {
         id: picked.id, name: (picked.office_name || '') + (picked.dept ? ' · ' + picked.dept : ''),
@@ -8421,7 +8434,10 @@ window.HELP_TOUR_STEPS = [
       boFindNewCancel();
       boOuterHide();                 // 등록했으니 밖의 후보는 더 볼 일이 없다
       await boFindRun();
-      boFindPick(d.row.id);          // 방금 적은 것을 그대로 고른다
+      /* 방금 적은 것을 그대로 고른다. 줄을 함께 넘긴다 —
+         목록을 다시 훑어도 그 줄이 안 잡히는 일이 있어(찾는 읍ㆍ면ㆍ동이 다를 때),
+         넘기지 않으면 숨은 칸만 채워지고 화면 글씨는 「아직 고르지 않았습니다」로 남는다. */
+      boFindPick(d.row.id, d.row);
     } catch (e) {
       say('네트워크 오류가 발생했습니다.', false);
     }
