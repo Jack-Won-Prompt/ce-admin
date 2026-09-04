@@ -129,10 +129,14 @@
             <span style="color:var(--alert-500);">-{{ number_format($shopOrder->discount_amount) }}원</span>
           </div>
           @endif
+          {{-- 배송비는 없다(2026-09-03 확정). 받은 값이 있으면 그 줄만 세운다 —
+               옛 건이 들어와 있을 때 최종 결제금액과 어긋나 보이지 않게 한다. --}}
+          @if($shopOrder->shipping_fee > 0)
           <div class="amount-row">
             <span style="color:var(--text-muted);">배송비</span>
-            <span>{{ $shopOrder->shipping_fee > 0 ? number_format($shopOrder->shipping_fee).'원' : '무료' }}</span>
+            <span>{{ number_format($shopOrder->shipping_fee) }}원</span>
           </div>
+          @endif
           <div class="amount-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
             <span style="font-weight:700;">최종 결제금액</span>
             <span class="amount-total">{{ number_format($shopOrder->total_amount) }}원</span>
