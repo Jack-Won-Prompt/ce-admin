@@ -176,8 +176,23 @@ class WithworksSync
 
         $order->update($update);
 
+        /* Lot 은 두 길로 온다.
+
+             so_show 응답      ship.items  — product_code · lot_no · expiry_date · quantity
+             웹훅(so.picked 등) details     — item_code   · lot_no · expiry_date · qty
+
+           열쇠 이름이 서로 다르다. 여태 앞의 것만 읽어, 웹훅으로 온 Lot 은
+           사건 표에만 남고 주문에는 한 줄도 적히지 않았다(order_item_lots 가 통째로 비었다). */
+        $lotRows = null;
+
         if (isset($result['ship']['items']) && is_array($result['ship']['items'])) {
-            $this->applyLots($order, $result['ship']['items']);
+            $lotRows = $result['ship']['items'];
+        } elseif (isset($result['details']) && is_array($result['details'])) {
+            $lotRows = $result['details'];
+        }
+
+        if ($lotRows) {
+            $this->applyLots($order, $lotRows);
         }
 
         /* 출고로 막 바뀌었으면 환자에게 알린다.
@@ -213,7 +228,8 @@ class WithworksSync
         $byCode = $order->items()->get()->keyBy(fn ($i) => (string) $i->product_code);
 
         foreach ($items as $row) {
-            $code = (string) ($row['product_code'] ?? '');
+            // so_show 는 product_code, 웹훅은 item_code 로 보낸다
+            $code = (string) ($row['product_code'] ?? $row['item_code'] ?? '');
             $lot  = trim((string) ($row['lot_no'] ?? ''));
 
             // Lot 번호가 없으면 적을 것이 없다 — 유효기간만으로는 무엇의 것인지 모른다
@@ -232,7 +248,9 @@ class WithworksSync
                 [
                     'expiry_date' => ($row['expiry_date'] ?? null)
                         ? \Carbon\Carbon::parse($row['expiry_date'])->toDateString() : null,
-                    'quantity'    => isset($row['quantity']) ? (int) $row['quantity'] : null,
+                    // so_show 는 quantity, 웹훅은 qty
+                    'quantity'    => isset($row['quantity']) ? (int) $row['quantity']
+                                   : (isset($row['qty']) ? (int) $row['qty'] : null),
                 ]
             );
         }
