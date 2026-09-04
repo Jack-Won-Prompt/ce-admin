@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\WithworksStatusChanged;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnLog;
@@ -335,11 +334,11 @@ class WithworksWebhookController extends Controller
             return;
         }
 
-        $who  = $order->patient?->name;
-        $body = $order->order_number . ($who ? ' · ' . $who : '')
-            . ($order->withworks_tracking_no ? ' · ' . $order->withworks_tracking_no : '');
-
-        $this->tell('창고 — ' . $what, $body, route('orders.show', $order), $tone, $data['event']);
+        /* 그 주문의 담당자에게 보내고 채팅에도 남긴다(2026-09-04 지시).
+           여태 admin 채널로 전원에게 띄우기만 해, 화면을 보고 있지 않았으면 그대로
+           사라졌다 — 반품 쪽(ReturnNotice)과 같은 틀로 맞춘다.
+           담당자를 못 찾으면 OrderNotice 가 예전처럼 admin 채널로 띄운다. */
+        app(\App\Services\OrderNotice::class)->tellOwner($order, $what, $tone);
     }
 
     /** 반품 사건을 화면에 알린다 */
@@ -361,21 +360,6 @@ class WithworksWebhookController extends Controller
            (2026-08-31 회신). 전원에게 띄우던 것을 걷었다 — 반품은 임자가 있고, 전원의
            화면에 띄우면 정작 할 일이 있는 사람에게서 남의 건에 섞여 묻힌다. */
         app(\App\Services\ReturnNotice::class)->tellTaker($return, $what, $tone);
-    }
-
-    /**
-     * 알림을 띄운다.
-     *
-     * 방송이 실패해도 웹훅은 성공이다 — 알리지 못한 것과 받지 못한 것은 다른 일이다.
-     * 여기서 터지면 그쪽이 같은 사건을 다시 보내고, 우리 표에는 이미 남아 있다.
-     */
-    private function tell(string $title, string $body, string $url, string $tone, string $event): void
-    {
-        try {
-            broadcast(new WithworksStatusChanged($event, $title, $body, $url, $tone));
-        } catch (\Throwable $e) {
-            Log::warning('[Withworks] 알림 방송 실패', ['event' => $event, 'error' => $e->getMessage()]);
-        }
     }
 
     /** 흐름에서 뒤로 가는 것인지 본다 — 취소는 어디서든 갈 수 있다 */
