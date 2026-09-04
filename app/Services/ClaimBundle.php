@@ -107,6 +107,7 @@ class ClaimBundle
 
         $rxImage   = $att('prescription');
         $statement = $att('trade_statement');
+        $cardSlip  = $att('card_sales') ?: \App\Support\CardSalesSlip::attach($order);
         $consent   = $doc('consent');
         $tax       = $doc('tax_invoice');
 
@@ -137,6 +138,14 @@ class ClaimBundle
 
             ['name' => '전자세금계산서',
              'path' => $this->pathOf($tax?->file_path), 'mime' => 'application/pdf'],
+
+            /* 카드로 받은 건만 선다(2026-09-04 확정). 카드 건은 현금영수증을 내지 않아
+               본인부담 몫의 증빙이 이것뿐이다 — 아니면 자리 자체를 두지 않는다.
+               현금영수증은 공단에 내지 않는다(환자에게 가는 증빙이다). */
+            ...($cardSlip ? [[
+                'name' => '카드 매출전표',
+                'path' => $this->pathOf($cardSlip->file_path), 'mime' => 'application/pdf',
+            ]] : []),
 
             /* 구입 확인서는 저장해 두는 서류가 아니라 그때그때 그리는 것이라(거래처의
                누적 내역), 여기서는 담지 않고 첫 쪽에 따로 뽑으라 적는다. */

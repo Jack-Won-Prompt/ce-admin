@@ -7,6 +7,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
+use App\Models\PrescriptionConsent;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -126,7 +127,30 @@ final class NhisFaxAuto
             }
         }
 
+        /* 미성년자는 보호자 신분증도 있어야 한다(2026-09-04 확정). 공단이 그것으로
+           위임한 사람을 가린다. 이것도 첨부가 아니라 동의 기록에 딸려 들어간다. */
+        if ($this->needsGuardianId($prescription) && ! $this->guardianIdPath($prescription)) {
+            $missing[] = '법정대리인 신분증';
+        }
+
         return $missing;
+    }
+
+    /** 이 건이 미성년자의 것인가 — 보호자 신분증을 함께 내야 하는가 */
+    private function needsGuardianId(Prescription $prescription): bool
+    {
+        return PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('is_minor', true)
+            ->exists();
+    }
+
+    /** 받아 둔 보호자 신분증 — 없으면 null */
+    private function guardianIdPath(Prescription $prescription): ?string
+    {
+        return PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->whereNotNull('guardian_id_path')
+            ->latest('id')
+            ->value('guardian_id_path');
     }
 
     /** 어디로 보내는가 — 그 건에 골라 둔 청구처의 팩스 */
@@ -144,10 +168,19 @@ final class NhisFaxAuto
             ->whereIn('doc_type', array_keys(self::REQUIRED))
             ->pluck('id')->all();
 
-        /* 요양비위임장은 첨부가 아니라 생성 서류다 — documents 쪽으로 따로 청한다 */
-        $docs = \App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
-                    ->where('type', 'delegation')->exists()
-            ? ['delegation'] : [];
+        /* 요양비위임장과 법정대리인 신분증은 첨부가 아니라 따로 있는 서류다 —
+           documents 쪽으로 청한다. 위임장은 생성 서류(PrescriptionDocument),
+           보호자 신분증은 동의 기록에 딸린 파일이다. */
+        $docs = [];
+
+        if (\App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
+                ->where('type', 'delegation')->exists()) {
+            $docs[] = 'delegation';
+        }
+
+        if ($this->guardianIdPath($prescription)) {
+            $docs[] = 'guardian_id';
+        }
 
         $request = \Illuminate\Http\Request::create('/', 'POST', [
             'recipient_type' => 'nhis',

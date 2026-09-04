@@ -9,7 +9,7 @@ use App\Support\ClaimAgency;
 /**
  * 청구할 자료가 갖춰졌는지 본다.
  *
- * 공단 청구에는 처방전·현금영수증(또는 카드매출전표)·세금계산서가 있어야 하고, 물건이
+ * 공단 청구에는 처방전·세금계산서·거래명세서가 있어야 하고, 물건이
  * 고객에게 간 뒤여야 한다. 하나라도 빠지면 청구가 반려된다.
  *
  * 판정은 청구 창을 열어도 할 수 있지만, 그러면 목록에서는 전부 똑같아 보여 담당자가 하나씩
@@ -65,9 +65,10 @@ class ClaimReadiness
             $missing[] = '세금계산서';
         }
 
-        if (!$order->cash_receipt_no || $order->cash_receipt_status === 'cancelled') {
-            $missing[] = '현금영수증';
-        }
+        /* 현금영수증은 공단에 내지 않는다(2026-09-04 확정). 본인부담 몫의 증빙이라
+           환자에게 가는 것이고, 공단이 보는 것은 세금계산서다.
+           조건으로 두었더니 본인부담이 0인 건(차상위경감ㆍ기초)은 낼 현금영수증이
+           없어 영영 「청구 준비 안 됨」에 머물렀다. */
 
         // 발행은 했는데 첨부할 서류가 없으면 업로드할 것이 없다
         if ($prescription) {
@@ -76,9 +77,6 @@ class ClaimReadiness
 
             if ($order->tax_invoice_no && !$types->contains('tax_invoice')) {
                 $missing[] = '세금계산서 서류';
-            }
-            if ($order->cash_receipt_no && !$types->contains('cash_receipt')) {
-                $missing[] = '현금영수증 서류';
             }
         }
 

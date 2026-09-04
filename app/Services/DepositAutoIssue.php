@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Models\Order;
 use App\Models\PaymentLink;
 use App\Support\BillingStrategy;
+use App\Support\CardSalesSlip;
 use App\Support\TransactionStatement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -122,6 +123,15 @@ class DepositAutoIssue
         /* 거래명세서는 세무 서류가 아니라 물건과 함께 나가는 종이다. 국세청에 신고되는
            것이 없으니 자동 발행 스위치와 상관없이, 입금이 확인되면 붙인다. */
         $out['statement'] = $this->statement($order, $out);
+
+        /* 카드로 받았으면 매출전표를 붙인다(2026-09-04 확정).
+           카드 건은 현금영수증을 내지 않으므로(위 cashReceipt 참고) 이것이 그 자리의
+           증빙이다. 여태 만드는 곳이 없어 카드 건에는 증빙이 하나도 남지 않았다.
+           토스가 준 승인 내용을 그대로 옮겨 그린다. */
+        $out['card_slip'] = CardSalesSlip::attach($order)?->file_original_name;
+        if (!$out['card_slip'] && CardSalesSlip::applies($order)) {
+            $out['skipped'][] = '카드매출전표: 만들지 못함';
+        }
 
         /* 창고에 확정을 보낸다(2026-09-03 확정 · 시나리오 3.3). 여태 판매주문은
            「등록」으로만 서 있어, 돈이 들어와도 담당자가 위드웍스 화면에 들어가
@@ -292,6 +302,7 @@ class DepositAutoIssue
             $out['cash'] ? "현금영수증 {$out['cash']}" : null,
             $out['tax']  ? "세금계산서 {$out['tax']}"  : null,
             $out['statement'] ? '거래명세서' : null,
+            ($out['card_slip'] ?? null) ? '카드매출전표' : null,
         ]);
 
         activity()->performedOn($order)->log(

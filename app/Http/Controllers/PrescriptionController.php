@@ -3240,6 +3240,26 @@ class PrescriptionController extends Controller
                     }
                     break;
 
+                case 'guardian_id':
+                    /* 법정대리인 신분증 — 미성년자가 서명할 때 보호자가 올린 것이다.
+                       첨부가 아니라 동의 기록에 딸려 들어가(consents/guardian-id/…)
+                       첨부 목록에서는 찾을 수 없다. 공단은 미성년 건에 보호자 신분증을
+                       요구하므로 여기서 따로 꺼내 붙인다(2026-09-04 확정). */
+                    $gc = PrescriptionConsent::where('prescription_id', $prescription->id)
+                        ->whereNotNull('guardian_id_path')
+                        ->latest('id')
+                        ->first();
+
+                    if ($gc?->guardian_id_path) {
+                        foreach (['public', 'local'] as $disk) {
+                            if (Storage::disk($disk)->exists($gc->guardian_id_path)) {
+                                $files[] = Storage::disk($disk)->path($gc->guardian_id_path);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+
                 case 'cash_receipt':
                     // 발행된 건만. 서식 그대로 PDF 로 그려 붙인다 — 팝빌 팩스는 PDF 를 받는다.
                     $order = $prescription->order;
