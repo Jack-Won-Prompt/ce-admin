@@ -1954,13 +1954,26 @@ $calcDeposit  = $calcCopay;
                 <i class="fa-solid fa-chevron-right"></i>
               </span>
               <div id="_adtDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;background:var(--gray-0);border:1px solid var(--gray-200);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10001;">
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('처방전')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">처방전</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('요양비위임장')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">요양비위임장</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('신분증')" style="padding:6px 12px;font-size:12px;cursor:pointer;">신분증</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('등록신청서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">등록신청서</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('결과지')"   style="padding:6px 12px;font-size:12px;cursor:pointer;">결과지</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('개인정보 동의서')" style="padding:6px 12px;font-size:12px;cursor:pointer;">개인정보 동의서</div>
-                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick('기타')"     style="padding:6px 12px;font-size:12px;cursor:pointer;">기타</div>
+                {{-- 갈래는 환경 설정(공통 코드 doc_type)에서 정한다.
+                     예전에는 일곱을 여기 박아 두었다. 그래서 공통 코드에 있는
+                     「등기처리 영수증」ㆍ「의료용품구입확인서」 같은 것은 설정에 서 있어도
+                     이 고르개에 뜨지 않아, 올릴 방법이 아예 없었다.
+                     시스템이 스스로 만드는 것(거래명세서ㆍ세금계산서ㆍ현금영수증ㆍ
+                     카드매출ㆍ요양비 지급청구서)은 손으로 올릴 일이 없어 뺀다. --}}
+                @php
+                    $adtSkip = ['trade_statement', 'tax_invoice', 'cash_receipt',
+                                'card_sales', 'medical_aid_claim'];
+                    $adtOpts = collect(\App\Models\CommonCode::labels('doc_type'))
+                        ->reject(fn ($label, $code) => in_array($code, $adtSkip, true))
+                        ->values();
+                    if ($adtOpts->isEmpty()) {
+                        $adtOpts = collect(\App\Models\PrescriptionAttachment::DOC_TYPE_LABELS)->values();
+                    }
+                @endphp
+                @foreach($adtOpts as $adtLabel)
+                <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick(@js($adtLabel))"
+                     style="padding:6px 12px;font-size:12px;cursor:pointer;">{{ $adtLabel }}</div>
+                @endforeach
               </div>
             </div>
             <button type="button" class="vw-btn-sm vw-btn-add" onclick="document.getElementById('attachUploadInput').click()">
@@ -4567,16 +4580,17 @@ function _adtFilter(q) {
 function handleAttachUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  /* 「요양비위임장」이 공단에 내는 서식 이름이다(별지 제19호의7서식). 예전에 「위임장」으로
-     골라 둔 건이 있어 그 이름도 같은 곳으로 받아 준다. */
-  const _labelMap = { '처방전': 'prescription', '요양비위임장': 'delegation', '위임장': 'delegation',
-                      '신분증': 'id_card',
-                      '등록신청서': 'registration_form', '결과지': 'test_result',
-                      /* 전자서명이 안 되는 환자에게는 종이로 받는다. 이 유형으로 올라와야
-                         「개인정보동의 완료」로 읽힌다 — other 로 두면 종이로 받아 두고도
-                         화면에는 「아직」이라 서서 환자가 두 번 서명한다. */
-                      '개인정보 동의서': 'privacy_consent', '개인정보동의서': 'privacy_consent',
-                      '기타': 'other' };
+  /* 이름 → 갈래. 환경 설정(공통 코드 doc_type)에서 그대로 받아 온다.
+     예전에는 여기에도 일곱을 박아 두어, 고르개에 이름이 서 있어도 되돌릴 코드가
+     없으면 죄다 other 로 저장되었다 — 「등기처리 영수증」으로 골라 올린 것이
+     「기타」로 앉았고, 그 갈래로 찾는 자리에서는 영영 보이지 않았다.
+
+     「요양비위임장」이 공단에 내는 서식 이름이다(별지 제19호의7서식). 예전에
+     「위임장」으로 골라 둔 건이 있어 그 이름도 같은 곳으로 받아 준다. */
+  const _labelMap = Object.assign(
+    @json(collect(\App\Models\CommonCode::labels('doc_type'))->flip()->all()),
+    { '위임장': 'delegation', '개인정보동의서': 'privacy_consent', '기타': 'other' }
+  );
   const inputVal  = (document.getElementById('attachDocTypeSelect').value || '').trim() || '기타';
   const docType   = _labelMap[inputVal] ?? 'other';
   const docLabel  = (docType === 'other' && inputVal !== '기타') ? inputVal : '';
@@ -9156,6 +9170,12 @@ window.HELP_TOUR_STEPS = [
      「있다」와 「보낼 수 있다」를 나눠 적는다 — 만들어져 있어도 첨부가 아니면 안 나간다. */
   let faxGenDelegation = {{ $prescription->documents->where('type', 'delegation')->isNotEmpty() ? 'true' : 'false' }};
 
+  /* 미성년자 건에는 법정대리인 신분증도 공단에 낸다(2026-09-04 확정).
+     이 파일은 첨부가 아니라 개인정보동의에 딸려 들어온다 — 그래서 첨부 목록에는
+     비치지 않았고, 창에는 넷만 서서 「다 갖췄다」로 읽혔다. 따로 세운다. */
+  const faxGuardianId = @json((bool) $prescription->consents
+      ->first(fn ($c) => $c->is_minor && $c->guardian_id_path));
+
   /* 팩스 창에 세울 줄들. ALL_DOCS 가 화면의 정본이라 여기서 읽는다 —
      올리고 지운 것이 창을 닫았다 열지 않아도 그대로 비친다.
      id 가 0 이하인 것은 첨부가 아니다(0 처방전 이미지 · -1 위임 서명 · -2 보호자 신분증). */
@@ -9166,7 +9186,21 @@ window.HELP_TOUR_STEPS = [
        서류를 찾으러 가게 된다. */
     const toNhis = faxRecipientType() === 'nhis';
 
-    FAX_REQ_DOCS.forEach(req => {
+    /* 미성년이면 법정대리인 신분증까지 다섯이다 — 셈도 5분의 몇으로 센다 */
+    const reqDocs = FAX_REQ_DOCS.slice();
+    if (toNhis && faxGuardianId) {
+      reqDocs.push({ type: 'guardian_id', label: '법정대리인 신분증' });
+    }
+
+    reqDocs.forEach(req => {
+      /* 첨부가 아니라 개인정보동의에 딸린 파일이라 ALL_DOCS 에 없다.
+         고를 수 있게 세우고, 고르면 documents 로 함께 청한다. */
+      if (req.type === 'guardian_id') {
+        rows.push({ label: req.label, att: null, state: 'doc', doc: 'guardian_id' });
+
+        return;
+      }
+
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
       if (!hits.length && toNhis) {
@@ -9211,6 +9245,23 @@ window.HELP_TOUR_STEPS = [
         </div>`;
     }
 
+    /* 첨부가 아닌 서류 — 고르면 documents 로 나간다(법정대리인 신분증) */
+    if (r.state === 'doc') {
+      return `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
+                      border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
+          <input type="checkbox" class="fax-doc-chk" value="${esc(r.doc)}" style="accent-color:var(--primary);" checked>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:500;">${esc(r.label)}</span>
+              <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">동의 첨부</span>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);">개인정보동의에 받아 둔 파일이 그대로 나갑니다</div>
+          </div>
+          <i class="fa-regular fa-id-card" style="color:var(--text-muted);font-size:18px;flex-shrink:0;"></i>
+        </label>`;
+    }
+
     if (r.state === 'gen') {
       return `
         <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
@@ -9249,7 +9300,9 @@ window.HELP_TOUR_STEPS = [
 
     const rows    = faxDocRows();
     const missing = rows.filter(r => r.state === 'missing').map(r => r.label);
-    const have    = FAX_REQ_DOCS.length - missing.length;
+    /* 미성년이면 법정대리인 신분증까지 세어 「5분의 5」로 적는다 */
+    const need    = FAX_REQ_DOCS.length + ((faxRecipientType() === 'nhis' && faxGuardianId) ? 1 : 0);
+    const have    = need - missing.length;
 
     /* 「신청 파일 3/4」는 공단에 낼 것을 세는 말이다. 공단 밖으로 보낼 때는 낼
        서류가 정해져 있지 않아 그 셈이 뜻을 잃는다 — 이름만 바꾸고 셈은 접는다. */
@@ -9262,7 +9315,7 @@ window.HELP_TOUR_STEPS = [
         </span>
         ${toNhis ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;
               background:${missing.length ? 'var(--danger-light)' : 'var(--primary-light)'};
-              color:${missing.length ? 'var(--danger)' : 'var(--primary)'};">${have}/${FAX_REQ_DOCS.length}</span>` : ''}
+              color:${missing.length ? 'var(--danger)' : 'var(--primary)'};">${have}/${need}</span>` : ''}
       </div>`;
 
     const note = (toNhis && missing.length)
@@ -9374,6 +9427,12 @@ window.HELP_TOUR_STEPS = [
        시스템이 만드는 것이라 담당자가 올릴 일이 없다(2026-09-03 고침). */
     const docs      = faxGenDelegation ? ['delegation'] : [];
     const docLabels = faxGenDelegation ? ['요양비위임장'] : [];
+
+    /* 첨부가 아닌 서류(법정대리인 신분증)는 documents 로 청한다 */
+    document.querySelectorAll('.fax-doc-chk:checked').forEach(el => {
+      docs.push(el.value);
+      docLabels.push(el.closest('label').querySelector('span')?.textContent?.trim() ?? el.value);
+    });
 
     // 첨부 문서 선택
     const attIds = Array.from(document.querySelectorAll('.fax-att-chk:checked'))

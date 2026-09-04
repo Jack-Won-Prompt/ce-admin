@@ -2641,7 +2641,7 @@ class PrescriptionController extends Controller
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'documents'       => 'nullable|array',
-            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice',
+            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice,guardian_id',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
@@ -2656,6 +2656,9 @@ class PrescriptionController extends Controller
             'prescription'     => '처방전',
             'purchase_history' => '제품 구매내역',
             'cash_receipt'     => '현금영수증',
+            /* 미성년자 건에만 함께 나간다. 첨부가 아니라 개인정보동의에 딸린 파일이라
+               attachment_ids 로는 고를 수 없다 — 여기서 이름을 붙인다. */
+            'guardian_id'      => '법정대리인 신분증',
         ];
         // 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
         $recipientLabels = [
@@ -2928,33 +2931,78 @@ class PrescriptionController extends Controller
             }
         }
 
-        $html = view('prescriptions.fax-pdf', [
-            'prescription'   => $prescription,
-            'patient'        => $patient,
-            'consent'        => $consent,
-            'order'          => $order,
-            'docs'           => $docs,
-            'rxImageDataUri' => $rxImageDataUri,
-        ])->render();
+        $parts = [];
 
-        $dompdf = $this->makeFaxDompdf();
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-        $pdfOutput = $dompdf->output();
+        if ($this->faxBodyHasAnything($docs, $prescription, $rxImageDataUri)) {
+            $html = view('prescriptions.fax-pdf', [
+                'prescription'   => $prescription,
+                'patient'        => $patient,
+                'consent'        => $consent,
+                'order'          => $order,
+                'docs'           => $docs,
+                'rxImageDataUri' => $rxImageDataUri,
+            ])->render();
+
+            $dompdf = $this->makeFaxDompdf();
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            $parts[] = $dompdf->output();
+        }
 
         // 요양비위임장(별지 제19호의7 원본 오버레이) 병합
         if (in_array('delegation', $docs)) {
             $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
             if ($delegBytes) {
-                $pdfOutput = $this->mergePdfBytes([$pdfOutput, $delegBytes]);
+                $parts[] = $delegBytes;
             }
         }
+
+        $pdfOutput = $this->joinFaxParts($parts);
 
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
         $filename = '팩스통합본_' . ($patient?->name ?? '') . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
 
         return [$pdfOutput, $filename];
+    }
+
+    /**
+     * 서식이 그릴 것이 있는가 — fax-pdf.blade 의 갈래와 같은 조건이다.
+     *
+     * 하나도 없으면 그 서식은 백지 한 장을 그린다. 그 백지가 위임장 앞에 붙어
+     * 공단으로 나갔다 — 받는 쪽에는 빈 장으로 시작하는 팩스가 된다.
+     */
+    private function faxBodyHasAnything(
+        array $docs,
+        Prescription $prescription,
+        ?string $rxImageDataUri,
+        array $attachmentDataUris = [],
+        ?array $taxInvoiceForm = null,
+        ?array $cashReceiptForm = null
+    ): bool {
+        return in_array('authorization', $docs, true)
+            || (bool) $rxImageDataUri
+            || (in_array('purchase_history', $docs, true) && $prescription->order)
+            || (bool) $taxInvoiceForm
+            || (bool) $cashReceiptForm
+            || (bool) $attachmentDataUris;
+    }
+
+    /**
+     * 만들어 둔 조각을 한 벌로 잇는다.
+     *
+     * 한 장도 없으면 저장하지 않고 알린다 — 빈 파일을 남기면 화면은 「보냈다」로
+     * 읽고, 담당자는 무엇이 빠졌는지 알 수 없다.
+     *
+     * @param  array<int, string>  $parts
+     */
+    private function joinFaxParts(array $parts): string
+    {
+        if (! $parts) {
+            throw new \RuntimeException('팩스로 보낼 서류가 하나도 없습니다.');
+        }
+
+        return count($parts) === 1 ? $parts[0] : $this->mergePdfBytes($parts);
     }
 
     /** 팩스통합본을 스토리지 저장 + 서류(type=fax) 기록 */
@@ -3055,31 +3103,38 @@ class PrescriptionController extends Controller
             $cashReceiptForm = \App\Support\CashReceiptForm::data($prescription->order);
         }
 
-        $html = view('prescriptions.fax-pdf', [
-            'prescription'       => $prescription,
-            'patient'            => $prescription->patient,
-            'consent'            => $consent,
-            'order'              => $prescription->order,
-            'docs'               => $documents,
-            'rxImageDataUri'     => $rxImageDataUri,
-            'attachmentDataUris' => $attachmentDataUris,
-            'taxInvoiceForm'     => $taxInvoiceForm,
-            'cashReceiptForm'    => $cashReceiptForm,
-        ])->render();
+        $parts = [];
 
-        $dompdf = $this->makeFaxDompdf();
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-        $pdfOutput = $dompdf->output();
+        if ($this->faxBodyHasAnything($documents, $prescription, $rxImageDataUri,
+                                      $attachmentDataUris, $taxInvoiceForm, $cashReceiptForm)) {
+            $html = view('prescriptions.fax-pdf', [
+                'prescription'       => $prescription,
+                'patient'            => $prescription->patient,
+                'consent'            => $consent,
+                'order'              => $prescription->order,
+                'docs'               => $documents,
+                'rxImageDataUri'     => $rxImageDataUri,
+                'attachmentDataUris' => $attachmentDataUris,
+                'taxInvoiceForm'     => $taxInvoiceForm,
+                'cashReceiptForm'    => $cashReceiptForm,
+            ])->render();
+
+            $dompdf = $this->makeFaxDompdf();
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            $parts[] = $dompdf->output();
+        }
 
         // 요양비위임장(별지 제19호의7 원본 오버레이) 병합
         if (in_array('delegation', $documents)) {
             $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
             if ($delegBytes) {
-                $pdfOutput = $this->mergePdfBytes([$pdfOutput, $delegBytes]);
+                $parts[] = $delegBytes;
             }
         }
+
+        $pdfOutput = $this->joinFaxParts($parts);
 
         $patient  = $prescription->patient;
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
