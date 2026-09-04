@@ -7414,9 +7414,30 @@ window.HELP_TOUR_STEPS = [
     return false;
   }
 
-  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 넷 */
+  /**
+   * 받는 주소가 있는가 — 없으면 창고로 보낼 수 없다.
+   *
+   * 주소 없이 보낸 주문은 창고에 「받는 곳이 없는 출고」로 서고, 송장을 낼 때
+   * 그 자리에서 깨진다(3PL 송장출력이 배송지를 조인한다). 그때는 이미 늦다 —
+   * 창고가 손을 댄 뒤에는 주문 수정이 막혀 주소를 나중에 채워 넣을 수도 없다.
+   *
+   * 옆에 「거래처 주소」ㆍ「처방전 주소」 단추가 있으니 그 자리에서 채운다.
+   */
+  function gateShippingAddress() {
+    const addr = document.getElementById('shippingAddr')?.value?.trim() ?? '';
+    if (addr) return true;
+
+    showToast('받는 주소가 없어 창고로 보낼 수 없습니다 — 「거래처 주소」나 '
+            + '「처방전 주소」로 배송지를 먼저 채워 주십시오.', 'warning', 6000);
+
+    document.getElementById('shippingAddr')?.focus();
+    return false;
+  }
+
+  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 다섯 */
   function gateOrder() {
-    return gateReviewed() && gateConsent() && gateTotalCount(true) && gateOrderQty();
+    return gateReviewed() && gateConsent() && gateTotalCount(true)
+        && gateOrderQty() && gateShippingAddress();
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀

@@ -240,6 +240,26 @@ class PrescriptionController extends Controller
             return response()->json(['success' => false, 'message' => $why], 422);
         }
 
+        /* 받는 주소가 없으면 보내지 않는다.
+
+           주소 없이 나간 주문은 창고에 「받는 곳이 없는 출고」로 서고, 송장을 낼 때
+           그 자리에서 깨진다(3PL 송장출력이 배송지를 조인한다). 그때는 이미 늦다 —
+           창고가 손을 댄 뒤에는 저쪽이 주문 수정을 막는다.
+
+           화면에서도 막지만(gateShippingAddress) 여기서도 막는다 — 화면을 거치지
+           않고 부르는 길이 있고, 막지 못하면 되돌릴 수 없는 주문이 선다. */
+        $addrForCheck = $request->shipping_address
+            ?? $prescription->order?->shipping_address
+            ?? $prescription->address_ocr
+            ?? null;
+
+        if (blank($addrForCheck)) {
+            return response()->json([
+                'success' => false,
+                'message' => '받는 주소가 없어 창고로 보낼 수 없습니다 — 배송지를 먼저 채워 주십시오.',
+            ], 422);
+        }
+
         $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
         $token   = config('services.demoworks.token');
 
