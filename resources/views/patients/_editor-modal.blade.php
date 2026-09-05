@@ -325,6 +325,43 @@
     });
   };
 
+  /* 주민등록번호를 적으면 생년월일이 그 자리에서 선다.
+
+     주문 등록 화면은 진작 그렇게 하고 있었는데(rnRecalc) 이 창에는 없었다. 그래서
+     같은 번호를 보고도 사람이 앞 여섯 자리를 손으로 옮겨 적어야 했고, 적지 않으면
+     생년월일이 빈 채로 남았다 — 나이는 성년과 미성년을 가르는 값이라 비어 있으면
+     안 된다. 두 화면이 같은 번호를 보고 다른 일을 할 까닭이 없다.
+
+     사람이 손으로 고쳐 둔 값은 덮지 않는다. 이 수가 채워 둔 값만 다시 적는다. */
+  function peBirthFromRrn() {
+    const rn = document.getElementById('add-resident');
+    const bd = document.getElementById('add-birth');
+    if (!rn || !bd) return;
+
+    const m = String(rn.value ?? '').replace(/\s/g, '').match(/^(\d{2})(\d{2})(\d{2})-?(\d)/);
+    if (!m) return;
+
+    const [, yy, mm, dd, g] = m;
+    const century = { 1:1900, 2:1900, 5:1900, 6:1900,
+                      3:2000, 4:2000, 7:2000, 8:2000,
+                      9:1800, 0:1800 }[+g];
+    if (!century) return;
+
+    const y = century + +yy, mo = +mm, d = +dd;
+    const dt = new Date(y, mo - 1, d);
+    /* 2003-02-29 처럼 없는 날은 Date 가 다음 달로 넘겨 버린다 — 되돌려 확인한다 */
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return;
+
+    const ymd = y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    if (bd.value && bd.value !== bd.dataset.fromRrn) return;   // 사람이 고쳐 둔 값은 그대로
+
+    bd.value = ymd;
+    bd.dataset.fromRrn = ymd;
+    bd.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  document.getElementById('add-resident')?.addEventListener('input', peBirthFromRrn);
+
   /* 이 셋은 창의 onclick 이 부른다 — 인라인 handler 는 전역에서만 이름을 찾으므로
      감싸 둔 함수 안에 두면 「is not defined」로 죽는다. */
   window.openAddModal  = function () { openPatientEditor(); };

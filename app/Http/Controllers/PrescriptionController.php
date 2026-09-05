@@ -749,7 +749,13 @@ class PrescriptionController extends Controller
     public function uploadPage(Request $request): View
     {
         $prescriptions = Prescription::with(['patient', 'assignedUser'])->latest()->limit(5)->get();
-        $managers      = User::where('role', 'manager')->get();
+        /* 담당자로 고를 수 있는 사람 — 처방전 목록 화면과 같은 잣대로 본다.
+
+           여기만 role='manager' 만 보아, 관리자로 등록된 사람은 목록에 서지 않았다.
+           지금 열 사람 가운데 다섯이 관리자다 — 자기 이름을 쳐도 「그런 담당자가
+           없습니다」가 뜨니, 담당자를 비운 채 올리게 된다. 그러면 창고 소식이 갈
+           곳이 없어진다(OrderNotice 는 담당자를 먼저 본다). */
+        $managers      = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();
         // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
         $patientsJson  = self::patientPickerList();
 
