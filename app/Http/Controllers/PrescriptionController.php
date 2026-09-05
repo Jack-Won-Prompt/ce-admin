@@ -248,6 +248,24 @@ class PrescriptionController extends Controller
 
            화면에서도 막지만(gateShippingAddress) 여기서도 막는다 — 화면을 거치지
            않고 부르는 길이 있고, 막지 못하면 되돌릴 수 없는 주문이 선다. */
+        /* 기초(의료급여)면 재평가 대상자와 기한이 있어야 한다.
+
+           기초 수급자는 자격을 주기로 다시 확인받는다. 기한이 없으면 언제 확인받아야
+           하는지 아무도 모르고, 그 사이 자격이 끊기면 공단 청구가 통째로 반려된다 —
+           이미 나간 물건 값은 우리가 떠안는다.
+
+           화면에서도 막지만(gateBasicReeval) 여기서도 막는다. */
+        $pt = $prescription->patient;
+
+        if ($prescription->benefit_class === '기초'
+            && (($pt?->basic_reeval ?? '') !== 'Y' || blank($pt?->basic_reeval_due))) {
+            return response()->json([
+                'success' => false,
+                'message' => '기초(의료급여) 건은 재평가 대상자와 기한을 채워야 창고로 보낼 수 있습니다 — '
+                           . '기한을 놓치면 자격이 끊겨 공단 청구가 반려됩니다.',
+            ], 422);
+        }
+
         $addrForCheck = $request->shipping_address
             ?? $prescription->order?->shipping_address
             ?? $prescription->address_ocr

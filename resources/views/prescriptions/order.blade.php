@@ -7430,6 +7430,60 @@ window.HELP_TOUR_STEPS = [
    * 보내면 넘은 만큼은 공단에 청구할 수 없고, 그 사실은 청구 단계에서야 드러난다.
    * 그때는 이미 물건이 나간 뒤다.
    */
+  /**
+   * 기초(의료급여)면 재평가 대상자를 세운다 — 자격을 고르는 그 자리에서.
+   *
+   * 기초 수급자는 자격을 주기로 다시 확인받아야 하고, **그 기한을 놓치면 급여가 끊긴다.**
+   * 그런데 두 칸이 서로 모르는 채로 있어, 자격을 기초로 바꿔도 재평가는 N 인 채였고
+   * 화면은 아무 말도 하지 않았다. 사람 기억에 맡길 자리가 아니다.
+   *
+   * 사람이 손으로 고쳐 둔 값은 덮지 않는다 — 이 수가 세워 둔 것만 다시 세운다.
+   */
+  function basicReevalFollowBenefit() {
+    const cls = document.getElementById('f-benefit-class')?.value ?? '';
+    const yn  = document.getElementById('f-basic-reeval');
+    const due = document.getElementById('f-basic-reeval-due');
+    if (!yn) return;
+
+    const wantY = (cls === '기초');
+
+    /* 사람이 만진 값은 그대로 둔다 */
+    if (yn.value && yn.value !== yn.dataset.auto) return;
+
+    yn.value = wantY ? 'Y' : (yn.value || 'N');
+    yn.dataset.auto = yn.value;
+    yn.dispatchEvent(new Event('change', { bubbles: true }));
+
+    /* 기초로 세웠는데 기한이 비어 있으면 눈에 띄게 둔다 — 저장 문이 여기서 막는다 */
+    if (due) {
+      due.style.borderColor = (wantY && !due.value.trim()) ? 'var(--alert-500)' : '';
+    }
+  }
+
+  document.getElementById('f-benefit-class')?.addEventListener('change', basicReevalFollowBenefit);
+  document.getElementById('f-basic-reeval-due')?.addEventListener('input', basicReevalFollowBenefit);
+
+  /**
+   * 기초인데 재평가 기한이 비어 있으면 창고로 보내지 않는다.
+   *
+   * 기한이 없으면 언제 다시 확인받아야 하는지 아무도 모른다. 그 사이 자격이 끊기면
+   * 공단 청구가 통째로 반려되고, 이미 나간 물건 값은 우리가 떠안는다.
+   */
+  function gateBasicReeval() {
+    const cls = document.getElementById('f-benefit-class')?.value ?? '';
+    if (cls !== '기초') return true;
+
+    const yn  = document.getElementById('f-basic-reeval')?.value ?? '';
+    const due = document.getElementById('f-basic-reeval-due')?.value?.trim() ?? '';
+
+    if (yn === 'Y' && due) return true;
+
+    showToast('기초(의료급여) 건은 재평가 대상자와 기한을 채워야 창고로 보낼 수 있습니다 — '
+            + '기한을 놓치면 자격이 끊겨 공단 청구가 반려됩니다.', 'warning', 6000);
+    document.getElementById(due ? 'f-basic-reeval' : 'f-basic-reeval-due')?.focus();
+    return false;
+  }
+
   function gateOrderQty() {
     const total = parseInt(document.getElementById('f-total')?.value || '0', 10);
     if (!total) return true;   // 총계가 비어 있으면 견줄 것이 없다
@@ -7468,7 +7522,7 @@ window.HELP_TOUR_STEPS = [
   /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 다섯 */
   function gateOrder() {
     return gateReviewed() && gateConsent() && gateTotalCount(true)
-        && gateOrderQty() && gateShippingAddress();
+        && gateOrderQty() && gateBasicReeval() && gateShippingAddress();
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
