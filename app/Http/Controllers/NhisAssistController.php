@@ -485,8 +485,39 @@ class NhisAssistController extends Controller
             ['name' => '전자세금계산서 (주민등록번호)',
              'url'  => $tax ? route('documents.download', $tax) : null,
              'note' => $tax ? null : ($order->tax_invoice_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
-            ['name' => '의료용품구입확인서 (지자체용)', 'url' => null,
-             'note' => '양식은 받았습니다 — 값을 얹어 만드는 일은 아직입니다'],
+            /* 요양비 지급청구서[별지 제12호] — 기초(의료급여) 건에만 선다.
+
+               만드는 수는 진작 있었는데(MedicalAidClaimForm) 이 목록이 그것을 몰랐다.
+               청구 자료 묶음(ClaimBundle)은 붙이고 있었으니, 등기로 부치는 담당자만
+               이 화면에서 그 서류를 못 찾았다 — 빠뜨린 채 부치면 지자체가 돌려보낸다.
+               아직 만들어 두지 않았으면 여기서 만든다. */
+            ...(\App\Support\MedicalAidClaimForm::applies($order) ? [(function () use ($order, $prescription) {
+                $aid = $prescription
+                    ? \App\Models\PrescriptionAttachment::where('prescription_id', $prescription->id)
+                        ->where('doc_type', 'medical_aid_claim')->latest('id')->first()
+                    : null;
+
+                if (!$aid) {
+                    try { $aid = \App\Support\MedicalAidClaimForm::attach($order); }
+                    catch (\Throwable $e) {
+                        \Log::warning('[지자체 청구] 지급청구서를 만들지 못했다', [
+                            'order' => $order->order_number, 'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                return ['name' => '요양비 지급청구서 [별지 제12호]',
+                        'url'  => $aid ? route('files.prescription-attachment', $aid) : null,
+                        'note' => $aid ? null : '만들지 못했습니다 — 관리자에게 알려 주십시오'];
+            })()] : []),
+
+            /* 의료용품구입확인서 — 만드는 수가 있다(PurchaseConfirmController).
+               「양식은 받았습니다, 만드는 일은 아직입니다」로 박아 두었던 것은 그 수가
+               생기기 전의 말이다. 담당자가 있는 서류를 따로 만들고 있었다. */
+            ['name' => '의료용품구입확인서 (지자체용)',
+             'url'  => $order->patient
+                 ? route('documents.purchaseConfirm', $order->patient) : null,
+             'note' => $order->patient ? null : '거래처가 이어지지 않았습니다'],
         ];
     }
 
