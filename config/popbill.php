@@ -31,6 +31,18 @@ return [
      */
     'issue_simulate'    => env('POPBILL_ISSUE_SIMULATE', false),
 
+    /*
+     * 팩스를 실제로 보내지 않고 로그만 남길지.
+     *
+     * 문자에는 이 열쇠가 있었는데(sms_simulate) 팩스에는 없었다. 그래서 화면을 처음부터
+     * 끝까지 훑어 보는 시험에서 「팩스 발송」을 누르면 팝빌로 진짜 나갔다 — 종이가 나가고
+     * 포인트가 깎인다. 받는 번호를 시험 번호로 돌려 두어도 나가는 것은 나가는 것이다.
+     *
+     * 켜 두면 합본 만들기ㆍ서류 세기ㆍ받는 곳 고르기까지 그대로 하고 마지막 한 걸음만
+     * 막는다. 접수번호 자리에는 SIMFAX- 로 시작하는 번호가 선다.
+     */
+    'fax_simulate'      => env('POPBILL_FAX_SIMULATE', false),
+
     'test' => [
         'corp_num'     => env('POPBILL_TEST_CORP_NUM'),
         'user_id'      => env('POPBILL_TEST_USER_ID'),

@@ -54,6 +54,21 @@ class FaxService extends PopbillBaseService
         ?string $userId = null,
         ?string $requestNum = null
     ): string {
+        /* 시늉 모드 — 마지막 한 걸음만 막는다. 여기까지 온 것은 합본이 만들어졌고
+           받는 곳도 정해졌다는 뜻이라, 시험에서 볼 것은 이미 다 본 뒤다. */
+        if (config('popbill.fax_simulate', false)) {
+            $receipt = 'SIMFAX-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
+            \Illuminate\Support\Facades\Log::info('[Popbill][FAX][시뮬레이션] 발송', [
+                'sender'    => $sender,
+                'receivers' => $receivers,
+                'files'     => array_map('basename', $filePaths),
+                'title'     => $title,
+                'receipt'   => $receipt,
+            ]);
+
+            return $receipt;
+        }
+
         try {
             return $this->api->SendFAX(
                 $corpNum, $sender, $receivers, $filePaths,
