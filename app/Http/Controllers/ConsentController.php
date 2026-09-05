@@ -1049,7 +1049,11 @@ class ConsentController extends Controller
             $mobile   = preg_replace('/[^0-9]/', '', $who?->mobile ?: ($consent->patient_mobile ?? ''));
             $filename = '요양비위임장_' . ($who?->name ?: $consent->patient_name)
                       . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
-            $path     = 'delegations/' . $prescription->id . '_' . now()->format('YmdHis') . '.pdf';
+            /* 이름에 초까지만 넣으면 같은 초에 두 번 그릴 때 이름이 겹친다. 그러면 아래에서
+               「옛 것 지우기」가 **방금 쓴 파일을 지운다** — 줄만 남고 파일이 없어진다.
+               거래처를 고칠 때마다 다시 그리게 한 뒤로는 잇달아 부르는 일이 흔하다. */
+            $path     = 'delegations/' . $prescription->id . '_' . now()->format('YmdHis')
+                      . '_' . \Illuminate\Support\Str::random(6) . '.pdf';
 
             /* 쓰지 못했으면 여기서 멈춘다. 그냥 지나가면 파일이 없는 서류 줄이 서고,
                화면에는 요양비위임장이 있는 것으로 보인다 — 공단 팩스가 그 줄을 믿고
@@ -1062,7 +1066,9 @@ class ConsentController extends Controller
             $olds = PrescriptionDocument::where('prescription_id', $prescription->id)
                 ->where('type', 'delegation')->get();
             foreach ($olds as $old) {
-                if ($old->file_path && Storage::exists($old->file_path)) {
+                /* 방금 쓴 것과 같은 자리면 지우지 않는다 — 이름이 겹쳐도 살아남게 하는
+                   두 번째 문이다. 파일을 잃는 것보다 한 장 더 남는 것이 낫다. */
+                if ($old->file_path && $old->file_path !== $path && Storage::exists($old->file_path)) {
                     Storage::delete($old->file_path);
                 }
                 $old->delete();
