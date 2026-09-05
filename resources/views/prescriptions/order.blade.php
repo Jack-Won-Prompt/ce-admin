@@ -5114,6 +5114,20 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
+  /* 이름표 옆 칸(생년월일ㆍ나이)을 지금 화면의 값으로 다시 적는다.
+     그 칸은 화면을 열 때 서버가 한 번 그려 준다. 그런데 상담이 먼저 열리고 거래처가
+     나중에 맺어지는 자리라, 처음 열 때는 맺어진 사람이 없어 「· 만  세」로 비어 있었고
+     저장한 뒤에도 그대로였다 — 새로 고쳐야만 나이가 보였다. 나이는 성년ㆍ미성년을
+     가르는 값이라 비어 있으면 안 된다. 아래 칸이 이미 셈해 둔 것을 옮겨 적는다. */
+  function hdrSubRefresh() {
+    const sub = document.getElementById('hdrPatientSub');
+    if (!sub) return;
+    const birth = document.getElementById('f-birth')?.value || '';
+    const badge = document.getElementById('f-age-badge')?.textContent || '';
+    const age   = badge.match(/만\s*(\d+)\s*세/);
+    if (birth && age) sub.textContent = birth + ' · 만 ' + age[1] + '세';
+  }
+
   function rnRecalc() {
     const inp   = document.getElementById('f-resident');
     // 아직 치지 않았으면 저장된 마스킹(placeholder)으로 계산한다
@@ -6810,6 +6824,7 @@ window.HELP_TOUR_STEPS = [
                             withworks_so_no: '', so_type: currentSoType, shipping_address: null };
         }
         if (!opts.silent) showToast('저장되었습니다.', 'success');
+        hdrSubRefresh();   // 이름표 옆 생년월일ㆍ나이도 지금 값으로
 
         /* 첫 저장에 위임동의 서명 SMS 가 함께 나갔는지 알린다. 나가지 않은 때에도 까닭을
            적는다 — 조용히 지나가면 담당자는 나간 줄 알고 기다린다.
@@ -7234,6 +7249,7 @@ window.HELP_TOUR_STEPS = [
     // 위쪽 이름표도 같은 이름을 적는다
     const hdr = document.getElementById('hdrPatientName');
     if (hdr && newName) hdr.textContent = newName;
+    hdrSubRefresh();
 
     /* 고쳐 온 값은 마스터의 것이므로 저장할 것이 생긴 것이 아니다 —
        markOcrDirty() 를 부르지 않는다(부르면 화면을 떠날 때마다 붙잡는다). */
