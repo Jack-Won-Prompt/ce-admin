@@ -7447,18 +7447,31 @@ window.HELP_TOUR_STEPS = [
 
     const wantY = (cls === '기초');
 
-    /* 사람이 만진 값은 그대로 둔다 */
-    if (yn.value && yn.value !== yn.dataset.auto) return;
+    /* 기초로 바꾸면 Y 로 세운다.
 
-    yn.value = wantY ? 'Y' : (yn.value || 'N');
-    yn.dataset.auto = yn.value;
-    yn.dispatchEvent(new Event('change', { bubbles: true }));
+       예전에는 「사람이 만진 값은 그대로 둔다」며 `yn.value !== dataset.auto` 이면
+       물러났다. 그런데 `dataset.auto` 는 이 수가 세운 뒤에만 붙는다 — 화면을 열 때
+       거래처에서 실려 온 값(대개 N)에는 없다. 그래서 **첫 번째 자격 변경에서 늘
+       막혔다.** 자격을 기초로 골라도 재평가는 N 인 채였다.
+
+       사람이 만진 것만 지키려면 그 자리를 따로 표시해야 한다 — 아래 onchange 가
+       `dataset.touched` 를 붙인다. */
+    if (wantY && yn.value !== 'Y' && !yn.dataset.touched) {
+        yn.value = 'Y';
+        yn.dataset.auto = 'Y';
+        yn.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
     /* 기초로 세웠는데 기한이 비어 있으면 눈에 띄게 둔다 — 저장 문이 여기서 막는다 */
     if (due) {
       due.style.borderColor = (wantY && !due.value.trim()) ? 'var(--alert-500)' : '';
     }
   }
+
+  /* 사람이 그 칸을 직접 고르면 표를 남긴다 — 그 뒤로는 자격이 바뀌어도 덮지 않는다 */
+  document.getElementById('f-basic-reeval')?.addEventListener('change', function (e) {
+    if (e.isTrusted) this.dataset.touched = '1';
+  });
 
   document.getElementById('f-benefit-class')?.addEventListener('change', basicReevalFollowBenefit);
   document.getElementById('f-basic-reeval-due')?.addEventListener('input', basicReevalFollowBenefit);
