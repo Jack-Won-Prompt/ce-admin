@@ -2690,6 +2690,21 @@ class PrescriptionController extends Controller
     }
 
     // ── 팩스 전송 ─────────────────────────────────────────
+    /**
+     * 왜 공단에 청구하지 않는가 — 사람이 읽을 한 마디.
+     *
+     * 유형이 「처방외」면 자격이 무엇이든 처방외다. 자격만 보고 말하면
+     * 처방외 건에 「일반」이라 적혀 담당자가 왜 막혔는지 알 수 없다.
+     */
+    private function noClaimReason(Prescription $prescription): string
+    {
+        if ((string) $prescription->counsel_acc_add_type === \App\Support\BillingStrategy::TYPE_NONRX) {
+            return '처방외';
+        }
+
+        return $prescription->benefit_class ?: '해당 없음';
+    }
+
     public function sendFax(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -2732,7 +2747,7 @@ class PrescriptionController extends Controller
             && ($prescription->claim_agency ?? null) === \App\Support\ClaimAgency::NONE) {
             return response()->json([
                 'success' => false,
-                'message' => '이 건은 공단에 청구하지 않습니다(' . ($prescription->benefit_class ?: '해당 없음') . ') — '
+                'message' => '이 건은 공단에 청구하지 않습니다(' . $this->noClaimReason($prescription) . ') — '
                            . '공단으로 보낼 수 없습니다. 근로복지공단ㆍ보험사로 보내려면 '
                            . '수신처를 「기타(직접 입력)」로 고르고 번호를 적어 주십시오.',
             ], 422);
