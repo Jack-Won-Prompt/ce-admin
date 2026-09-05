@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/patient.dart';
@@ -23,11 +24,15 @@ class PrescriptionUploadScreen extends ConsumerStatefulWidget {
 
 class _PrescriptionUploadScreenState
     extends ConsumerState<PrescriptionUploadScreen> {
-  File?   _selectedFile;
-  String? _selectedFileName;
-  bool    _uploading      = false;
-  double  _uploadProgress = 0.0;   // 0.0 ~ 1.0 파일 전송 진행률
-  bool    _isSaving       = false;  // true = 올린 뒤 서버가 저장을 마치기를 기다리는 중
+  /* 유형을 고르고 찍어 담기를 되풀이한 뒤, 마지막에 한꺼번에 올린다.
+     한 장씩 올리면 서류가 여럿인 환자는 화면을 여러 번 오가야 했다. */
+  final List<_PendingDoc> _queue = [];
+
+  bool    _uploading    = false;
+  int     _uploadDone   = 0;      // 올라간 건수
+  int     _uploadTotal  = 0;      // 올릴 건수
+  double  _fileProgress = 0.0;    // 지금 보내는 한 건의 전송 진행률
+  bool    _isSaving     = false;  // true = 올린 뒤 서버가 저장을 마치기를 기다리는 중
   String? _resultMsg;
   bool    _success   = false;
   Map<String, dynamic>? _ocrResult;
@@ -47,6 +52,22 @@ class _PrescriptionUploadScreenState
     ('delegation',        '위임장'),
   ];
   String _docType = 'registration_form';
+
+  /* 유형마다 한 번에 올릴 수 있는 수 — 웹 업로드(PrescriptionController::overDocLimit)와
+     같은 규칙이다. 처방전이 두 장이면 처방전이 두 건으로 갈라지고 주문도 둘이 된다. */
+  static const _docLimits = {'prescription': 1, 'registration_form': 1};
+  static const _maxDocs   = 40;   // 웹 업로드의 전체 제한과 같다
+
+  static String _labelOf(String code) =>
+      _docTypes.firstWhere((t) => t.$1 == code, orElse: () => (code, code)).$2;
+
+  /// 「처방전는」이 되지 않게 받침을 본다 — 웹의 hasFinalConsonant 와 같은 셈이다.
+  static String _josa(String word, String withFinal, String without) {
+    if (word.isEmpty) return without;
+    final c = word.codeUnitAt(word.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return without;
+    return (c - 0xAC00) % 28 != 0 ? withFinal : without;
+  }
 
   Future<void> _searchPatient() async {
     final query = _nameCtrl.text.trim();
@@ -86,13 +107,19 @@ class _PrescriptionUploadScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('환자 선택',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('이미 등록된 환자 ${results.length}명',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  const Text('생년월일로 같은 사람인지 확인하고 고르십시오.',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                ],
               ),
             ),
             Flexible(
@@ -106,30 +133,79 @@ class _PrescriptionUploadScreenState
                   return ListTile(
                     title: Text(p.name,
                         style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(p.mobile,
-                        style: const TextStyle(color: AppTheme.textMuted)),
+                    /* 이름만 보이면 동명이인을 가릴 수 없다. 생년월일을 앞에 세우고
+                       연락처를 뒤에 둔다 — 둘 다 없으면 고르지 말라는 뜻이다. */
+                    subtitle: Row(
+                      children: [
+                        Icon(Icons.cake_outlined,
+                            size: 13,
+                            color: p.birthDate == null
+                                ? AppTheme.danger
+                                : AppTheme.textMuted),
+                        const SizedBox(width: 4),
+                        Text(p.birthDate ?? '생년월일 없음',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: p.birthDate == null
+                                    ? AppTheme.danger
+                                    : AppTheme.textPrimary)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(p.mobile,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.textMuted)),
+                        ),
+                      ],
+                    ),
                     onTap: () => Navigator.pop(ctx, p),
                   );
                 },
               ),
+            ),
+            const Divider(height: 1, color: AppTheme.border),
+            /* 같은 이름이 있어도 이 사람이 아닐 수 있다. 여기서 길을 내지 않으면
+               담당자는 남의 이름에 서류를 붙이거나 올리기를 그만둔다. */
+            ListTile(
+              leading: const Icon(Icons.person_add_alt_1_outlined,
+                  color: AppTheme.primary),
+              title: const Text('찾는 사람이 없습니다 — 새로 등록',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppTheme.primary)),
+              onTap: () => Navigator.pop(ctx, _registerInstead),
             ),
             const SizedBox(height: 12),
           ],
         ),
       ),
     );
-    if (picked != null && mounted) {
-      setState(() {
-        _selectedPatient = picked;
-        _nameCtrl.text   = picked.name;
-      });
+
+    if (!mounted || picked == null) return;
+
+    if (identical(picked, _registerInstead)) {
+      await _showRegisterDialog(_nameCtrl.text.trim());
+      return;
     }
+
+    setState(() {
+      _selectedPatient = picked;
+      _nameCtrl.text   = picked.name;
+    });
   }
+
+  /// 시트에서 「새로 등록」을 고른 것을 알리는 표. 값 자체에는 뜻이 없다.
+  static const _registerInstead =
+      PatientOption(id: -1, name: '', mobile: '');
 
   Future<void> _showRegisterDialog(String initialName) async {
     final nameCtrl     = TextEditingController(text: initialName);
     final residentCtrl = TextEditingController();
-    bool  submitting   = false;
+    bool    submitting    = false;
+    String? residentError;
 
     final created = await showDialog<PatientOption>(
       context: context,
@@ -154,7 +230,18 @@ class _PrescriptionUploadScreenState
                 TextField(
                   controller: residentCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '주민번호 (선택)'),
+                  inputFormatters: [_ResidentNoFormatter()],
+                  decoration: InputDecoration(
+                    labelText: '주민등록번호',
+                    hintText: 'XXXXXX-XXXXXXX',
+                    counterText: '',
+                    errorText: residentError,
+                  ),
+                  onChanged: (_) {
+                    if (residentError != null) {
+                      setDialogState(() => residentError = null);
+                    }
+                  },
                 ),
               ],
             ),
@@ -169,13 +256,25 @@ class _PrescriptionUploadScreenState
                     : () async {
                         final name = nameCtrl.text.trim();
                         if (name.isEmpty) return;
+
+                        /* 빈칸은 그대로 둔다(서버도 받지 않아도 된다). 다만 적다 만
+                           번호는 받지 않는다 — 열세 자리를 채워야 공단에 낼 수 있고,
+                           반쪽 번호는 나중에 누가 다시 물어야 한다. */
+                        final rrn = residentCtrl.text.trim();
+                        final digits = rrn.replaceAll(RegExp(r'\D'), '');
+                        if (digits.isNotEmpty && digits.length != 13) {
+                          setDialogState(() =>
+                              residentError = '주민등록번호 13자리를 모두 입력해 주세요.');
+                          return;
+                        }
+
                         setDialogState(() => submitting = true);
                         try {
                           final patient = await ref
                               .read(patientServiceProvider)
                               .create(
                                 name: name,
-                                residentNo: residentCtrl.text.trim(),
+                                residentNo: rrn,
                               );
                           if (ctx.mounted) Navigator.pop(ctx, patient);
                         } catch (e) {
@@ -206,42 +305,74 @@ class _PrescriptionUploadScreenState
   Future<void> _openCamera() async {
     final file = await PrescriptionCameraScreen.show(context);
     if (file == null) return;
-    setState(() {
-      _selectedFile     = file;
-      _selectedFileName = file.path.split('/').last;
-      _resultMsg        = null;
-      _ocrResult        = null;
-    });
+    _addToQueue(file, file.path.split('/').last);
   }
 
   Future<void> _pickImage(ImageSource source) async {
     final picked = await ImagePicker().pickImage(
         source: source, imageQuality: 85, maxWidth: 2048);
     if (picked == null) return;
-    setState(() {
-      _selectedFile     = File(picked.path);
-      _selectedFileName = picked.name;
-      _resultMsg        = null;
-      _ocrResult        = null;
-    });
+    _addToQueue(File(picked.path), picked.name);
   }
 
   Future<void> _pickFile() async {
     await _pickImage(ImageSource.gallery);
   }
 
+  /// 지금 고른 유형으로 목록에 담는다. 담을 수 없으면 까닭을 알린다 —
+  /// 올릴 때가 되어서야 서버에 막히면 찍은 것을 도로 버려야 한다.
+  void _addToQueue(File file, String fileName) {
+    final label = _labelOf(_docType);
+
+    if (_queue.length >= _maxDocs) {
+      _tell('한 번에 $_maxDocs장까지 담을 수 있습니다.');
+      return;
+    }
+
+    final limit = _docLimits[_docType];
+    if (limit != null) {
+      final already = _queue.where((d) => d.docType == _docType).length;
+      if (already >= limit) {
+        _tell('$label${_josa(label, '은', '는')} 한 번에 $limit건까지 올릴 수 있습니다.');
+        return;
+      }
+    }
+
+    setState(() {
+      _queue.add(_PendingDoc(
+        file: file, fileName: fileName, docType: _docType, docLabel: label));
+      _resultMsg = null;
+      _ocrResult = null;
+      _success   = false;
+    });
+  }
+
+  void _removeFromQueue(int index) {
+    setState(() => _queue.removeAt(index));
+  }
+
+  void _tell(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _resetForm() {
     setState(() {
-      _selectedFile     = null;
-      _selectedFileName = null;
-      _resultMsg        = null;
-      _ocrResult        = null;
-      _success          = false;
-      _uploadProgress   = 0.0;
-      _isSaving            = false;
-      // 환자는 그대로 둔다 — 같은 환자 서류를 이어서 여러 건 올리는 경우가 많다
-      _docType          = 'registration_form';
+      _queue.clear();
+      _resultMsg    = null;
+      _ocrResult    = null;
+      _success      = false;
+      _uploadDone   = 0;
+      _uploadTotal  = 0;
+      _fileProgress = 0.0;
+      _isSaving     = false;
+      _docType      = 'registration_form';
+
+      /* 환자도 지운다. 앞사람 이름이 남아 있으면 다음 사람 서류를 그대로 올려
+         엉뚱한 환자에게 붙는다 — 되돌리려면 담당자가 웹에서 손으로 옮겨야 한다. */
+      _selectedPatient = null;
     });
+    _nameCtrl.clear();
     _memoCtrl.clear();
   }
 
@@ -252,67 +383,108 @@ class _PrescriptionUploadScreenState
     super.dispose();
   }
 
-  Future<void> _upload() async {
-    if (_selectedFile == null || _selectedPatient == null) return;
+  Future<void> _uploadAll() async {
+    if (_queue.isEmpty || _selectedPatient == null) return;
+
+    /* 처방전을 맨 앞에 세운다. 서버는 처방전이 아닌 서류를 「이 환자의 가장 최근
+       처방전」에 붙이므로, 첨부가 먼저 가면 오늘 것이 아니라 예전 처방전에 붙는다.
+       그러면 오늘 올린 처방전과 갈라져, 공단 팩스에 첨부가 빠진 채로 나간다. */
+    final ordered = [
+      ..._queue.where((d) => d.docType == 'prescription'),
+      ..._queue.where((d) => d.docType != 'prescription'),
+    ];
+
     setState(() {
-      _uploading      = true;
-      _uploadProgress = 0.0;
-      _isSaving          = false;
-      _resultMsg      = null;
-      _ocrResult      = null;
+      _uploading    = true;
+      _uploadDone   = 0;
+      _uploadTotal  = ordered.length;
+      _fileProgress = 0.0;
+      _isSaving     = false;
+      _resultMsg    = null;
+      _ocrResult    = null;
     });
 
-    try {
-      final dio  = ref.read(dioProvider);
-      final memo = _memoCtrl.text.trim();
-      final form = FormData.fromMap({
-        'prescription_image': await MultipartFile.fromFile(
-          _selectedFile!.path,
-          filename: _selectedFileName,
-        ),
-        'patient_id': _selectedPatient!.id,
-        'doc_type':   _docType,
-        if (memo.isNotEmpty) 'memo': memo,
-      });
+    final dio  = ref.read(dioProvider);
+    final memo = _memoCtrl.text.trim();
+    final sent = <_PendingDoc>[];
+    Map<String, dynamic>? firstResult;
+    String? failure;
 
-      final resp = await dio.post(
-        '/prescriptions/upload',
-        data: form,
-        onSendProgress: (sent, total) {
-          if (total > 0 && mounted) {
-            setState(() {
-              _uploadProgress = sent / total;
-              if (_uploadProgress >= 1.0) _isSaving = true;
-            });
-          }
-        },
-      );
-      final body = resp.data as Map<String, dynamic>;
+    for (final doc in ordered) {
+      try {
+        if (mounted) {
+          setState(() {
+            _fileProgress = 0.0;
+            _isSaving     = false;
+          });
+        }
 
-      setState(() {
-        _success   = true;
-        _resultMsg = body['message'] as String? ?? '업로드 완료';
-        _ocrResult = body['ocr_result'] as Map<String, dynamic>?;
-      });
-      _memoCtrl.clear();
-    } on DioException catch (e) {
-      final body = e.response?.data;
-      setState(() {
-        _success   = false;
-        _resultMsg = (body is Map ? body['message'] : null) ??
-            '업로드 실패: ${e.message}';
-      });
-    } catch (e) {
-      setState(() {
-        _success   = false;
-        _resultMsg = '오류가 발생했습니다: $e';
-      });
-    } finally {
-      setState(() {
-        _uploading = false;
-        _isSaving     = false;
-      });
+        final form = FormData.fromMap({
+          'prescription_image': await MultipartFile.fromFile(
+            doc.file.path,
+            filename: doc.fileName,
+          ),
+          'patient_id': _selectedPatient!.id,
+          'doc_type':   doc.docType,
+          // 메모는 첫 건에만 싣는다 — 건마다 보내면 같은 말이 여러 장에 남는다
+          if (memo.isNotEmpty && sent.isEmpty) 'memo': memo,
+        });
+
+        final resp = await dio.post(
+          '/prescriptions/upload',
+          data: form,
+          onSendProgress: (bytes, total) {
+            if (total > 0 && mounted) {
+              setState(() {
+                _fileProgress = bytes / total;
+                if (_fileProgress >= 1.0) _isSaving = true;
+              });
+            }
+          },
+        );
+
+        sent.add(doc);
+        final body = resp.data;
+        if (body is Map) {
+          firstResult ??= body['ocr_result'] as Map<String, dynamic>?;
+        }
+
+        if (mounted) setState(() => _uploadDone = sent.length);
+
+      } on DioException catch (e) {
+        final body = e.response?.data;
+        failure = (body is Map ? body['message'] as String? : null) ??
+            '${doc.docLabel} 업로드 실패: ${e.message}';
+        break;
+      } catch (e) {
+        failure = '${doc.docLabel} 업로드 중 오류가 발생했습니다: $e';
+        break;
+      }
     }
+
+    if (!mounted) return;
+
+    setState(() {
+      _uploading = false;
+      _isSaving  = false;
+
+      /* 올라간 것은 목록에서 덜어 낸다 — 그대로 두고 다시 누르면 같은 서류가
+         두 번 올라간다. 남은 것은 남겨 두어 이어서 올릴 수 있게 한다. */
+      _queue.removeWhere(sent.contains);
+
+      if (failure == null) {
+        _success   = true;
+        _resultMsg = '${sent.length}건을 등록했습니다.';
+        _ocrResult = firstResult;
+        _memoCtrl.clear();
+      } else {
+        _success   = false;
+        _resultMsg = sent.isEmpty
+            ? failure
+            : '$_uploadTotal건 가운데 ${sent.length}건을 올렸습니다. '
+              '남은 ${_queue.length}건은 그대로 두었습니다 — $failure';
+      }
+    });
   }
 
   @override
@@ -530,13 +702,21 @@ class _PrescriptionUploadScreenState
                   ),
                   const SizedBox(height: 14),
 
-                  // Image pick area
+                  // 찍어 담는 자리
                   _ImagePickArea(
-                    file: _selectedFile,
-                    fileName: _selectedFileName,
+                    docLabel: _labelOf(_docType),
                     onCamera: _openCamera,
                     onGallery: _pickFile,
                   ),
+
+                  // 담아 둔 서류
+                  if (_queue.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _QueueCard(
+                      docs: _queue,
+                      onRemove: _uploading ? null : _removeFromQueue,
+                    ),
+                  ],
                   const SizedBox(height: 14),
 
                   // Memo
@@ -599,20 +779,26 @@ class _PrescriptionUploadScreenState
                     child: _uploading
                         ? _UploadProgressCard(
                             key: const ValueKey('progress'),
-                            progress: _uploadProgress,
+                            done: _uploadDone,
+                            total: _uploadTotal,
+                            fileProgress: _fileProgress,
                             isSaving: _isSaving,
                           )
                         : GradientButton(
                             key: const ValueKey('btn'),
-                            label: _success ? '추가 처방전 업로드' : '처방전 업로드',
+                            label: _success
+                                ? '새로 올리기'
+                                : (_queue.isEmpty
+                                    ? '처방전 업로드'
+                                    : '처방전 업로드 (${_queue.length}건)'),
                             icon: _success
                                 ? Icons.add_photo_alternate_outlined
                                 : Icons.cloud_upload_outlined,
                             onPressed: _success
                                 ? _resetForm
-                                : ((_selectedFile == null || _selectedPatient == null)
+                                : ((_queue.isEmpty || _selectedPatient == null)
                                     ? null
-                                    : _upload),
+                                    : _uploadAll),
                             gradient: AppTheme.secondaryGradient,
                           ),
                   ),
@@ -675,15 +861,141 @@ class _PrescriptionUploadScreenState
   }
 }
 
+/// 담아 둘 서류 한 장 — 파일과 그때 고른 유형을 함께 쥔다.
+/// 유형은 담는 순간에 정해진다. 나중에 드롭다운을 바꿔도 이미 담은 것은 그대로다.
+class _PendingDoc {
+  final File   file;
+  final String fileName;
+  final String docType;
+  final String docLabel;
+
+  const _PendingDoc({
+    required this.file,
+    required this.fileName,
+    required this.docType,
+    required this.docLabel,
+  });
+}
+
+/// 담아 둔 서류 목록 — 무엇을 몇 장 올릴지 올리기 전에 눈으로 본다.
+class _QueueCard extends StatelessWidget {
+  final List<_PendingDoc>   docs;
+  final void Function(int)? onRemove;   // null 이면 올리는 중이라 뺄 수 없다
+
+  const _QueueCard({required this.docs, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: AppTheme.cardDecoration(radius: 16),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('담은 서류',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondary)),
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('${docs.length}건',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < docs.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            _QueueTile(
+              doc: docs[i],
+              onRemove: onRemove == null ? null : () => onRemove!(i),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _QueueTile extends StatelessWidget {
+  final _PendingDoc    doc;
+  final VoidCallback?  onRemove;
+
+  const _QueueTile({required this.doc, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPdf = doc.fileName.toLowerCase().endsWith('.pdf');
+
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: isPdf
+                ? Container(
+                    color: AppTheme.background,
+                    child: const Icon(Icons.picture_as_pdf_outlined,
+                        size: 20, color: AppTheme.textMuted),
+                  )
+                : Image.file(doc.file, fit: BoxFit.cover),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(doc.docLabel,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 2),
+              Text(doc.fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.textMuted)),
+            ],
+          ),
+        ),
+        if (onRemove != null)
+          IconButton(
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded,
+                size: 18, color: AppTheme.textMuted),
+            tooltip: '빼기',
+          ),
+      ],
+    );
+  }
+}
+
+/// 찍거나 골라서 담는 자리. 담은 것은 아래 목록에 쌓이므로 여기서는 미리보기를
+/// 두지 않는다 — 마지막에 담은 한 장만 크게 보이면 몇 장을 담았는지 알 수 없다.
 class _ImagePickArea extends StatelessWidget {
-  final File?   file;
-  final String? fileName;
+  final String       docLabel;
   final VoidCallback onCamera;
   final VoidCallback onGallery;
 
   const _ImagePickArea({
-    required this.file,
-    required this.fileName,
+    required this.docLabel,
     required this.onCamera,
     required this.onGallery,
   });
@@ -691,97 +1003,55 @@ class _ImagePickArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 220,
+      height: 200,
       decoration: BoxDecoration(
-        color: file != null ? Colors.transparent : AppTheme.background,
+        color: AppTheme.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: file != null
-              ? AppTheme.primary.withOpacity(0.4)
-              : AppTheme.border,
-          width: file != null ? 2 : 1,
-        ),
+        border: Border.all(color: AppTheme.border),
       ),
-      child: file != null
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.file(file!, fit: BoxFit.cover),
-                ),
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: onGallery,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xCC000000),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.swap_horiz,
-                              color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text('변경',
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.secondaryGradient,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(Icons.photo_library_outlined,
-                      size: 26, color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                const Text('처방전 이미지를 선택해주세요',
-                    style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _PickButton(
-                      icon: Icons.camera_alt_outlined,
-                      label: '카메라',
-                      onTap: onCamera,
-                      gradient: AppTheme.primaryGradient,
-                    ),
-                    const SizedBox(width: 10),
-                    _PickButton(
-                      icon: Icons.image_outlined,
-                      label: '갤러리',
-                      onTap: onGallery,
-                      gradient: AppTheme.secondaryGradient,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text('JPG · PNG · PDF · HEIC (최대 10MB)',
-                    style: TextStyle(
-                        fontSize: 11, color: AppTheme.textMuted)),
-              ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: AppTheme.secondaryGradient,
+              borderRadius: BorderRadius.circular(18),
             ),
+            child: const Icon(Icons.photo_library_outlined,
+                size: 26, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          Text('$docLabel(으)로 담습니다',
+              style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          const Text('유형을 바꿔 가며 여러 장을 담을 수 있습니다',
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _PickButton(
+                icon: Icons.camera_alt_outlined,
+                label: '카메라',
+                onTap: onCamera,
+                gradient: AppTheme.primaryGradient,
+              ),
+              const SizedBox(width: 10),
+              _PickButton(
+                icon: Icons.image_outlined,
+                label: '갤러리',
+                onTap: onGallery,
+                gradient: AppTheme.secondaryGradient,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -900,11 +1170,15 @@ class _OcrResultCard extends StatelessWidget {
 // ── Upload progress card ────────────────────────────────────────────────────
 
 class _UploadProgressCard extends StatefulWidget {
-  final double progress;
+  final int    done;          // 올라간 건수
+  final int    total;         // 올릴 건수
+  final double fileProgress;  // 지금 보내는 한 건의 전송 진행률
   final bool   isSaving;
   const _UploadProgressCard({
     super.key,
-    required this.progress,
+    required this.done,
+    required this.total,
+    required this.fileProgress,
     required this.isSaving,
   });
 
@@ -945,7 +1219,11 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
   }
 
   Widget _buildUpload() {
-    final pct = (widget.progress * 100).clamp(0, 100).toInt();
+    /* 진행 막대는 건수로 센다 — 「몇 장 가운데 몇 장」이 올리는 사람이 알고 싶은
+       것이다. 지금 보내는 한 건이 얼마나 갔는지는 그 한 칸 안을 채워 보인다. */
+    final total = widget.total == 0 ? 1 : widget.total;
+    final value = (widget.done + widget.fileProgress.clamp(0.0, 1.0)) / total;
+
     return Column(
       children: [
         Row(
@@ -956,14 +1234,14 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
                 Icon(Icons.cloud_upload_outlined,
                     color: AppTheme.primary, size: 18),
                 SizedBox(width: 8),
-                Text('이미지 업로드 중...',
+                Text('서류 업로드 중...',
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textSecondary,
                         fontSize: 14)),
               ],
             ),
-            Text('$pct%',
+            Text('${widget.done} / ${widget.total}건',
                 style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primary,
@@ -974,7 +1252,7 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            value: widget.progress,
+            value: value.clamp(0.0, 1.0),
             minHeight: 8,
             backgroundColor: AppTheme.border,
             valueColor:
@@ -1017,8 +1295,9 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
                       color: AppTheme.primary,
                       fontSize: 16)),
               const SizedBox(height: 4),
-              const Text('처방전을 올리고 있습니다',
-                  style: TextStyle(
+              // 여러 장을 잇달아 올리는 동안 몇 번째인지 잃지 않게 건수를 함께 둔다
+              Text('${widget.done + 1} / ${widget.total}건째를 등록하고 있습니다',
+                  style: const TextStyle(
                       color: AppTheme.textMuted, fontSize: 12)),
             ],
           ),
@@ -1034,6 +1313,27 @@ class _UploadProgressCardState extends State<_UploadProgressCard>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 주민등록번호 입력 — 숫자만 받아 여섯 자리 뒤에 붙임표를 넣고 열세 자리에서 끊는다.
+/// 웹 거래처 등록과 같은 모양(XXXXXX-XXXXXXX)으로 받는다. 붙임표를 사람이 치게
+/// 두면 열네 자리를 넘겨 적거나 아예 빼먹어, 같은 번호가 두 모양으로 쌓인다.
+class _ResidentNoFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final capped = digits.length > 13 ? digits.substring(0, 13) : digits;
+
+    final text = capped.length > 6
+        ? '${capped.substring(0, 6)}-${capped.substring(6)}'
+        : capped;
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

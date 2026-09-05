@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notice_provider.dart';
+import '../providers/prescription_provider.dart';
 import '../services/chat_notification_service.dart';
 import '../theme/app_theme.dart';
 
@@ -160,6 +161,13 @@ class _MainShellState extends ConsumerState<MainShell> {
       index,
       initialLocation: true,
     );
+
+    /* 처방전 탭은 누를 때마다 다시 읽는다. 탭마다 화면이 살아 있어(StatefulShellRoute),
+       업로드를 마치고 넘어와도 목록은 올리기 전 그대로였다 — 방금 올린 것이 보이지
+       않으니 담당자는 올라가지 않은 줄 알았다. */
+    if (index == 0) {
+      ref.read(prescriptionListProvider.notifier).load(refresh: true);
+    }
   }
 }
 
