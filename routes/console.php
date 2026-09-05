@@ -33,3 +33,16 @@ Schedule::command('claim:refresh')->hourly()->withoutOverlapping();
    그물이 있어야 한다 — 무통장으로 들어온 돈과 기관 환급은 아무도 알려 주지 않는다.
    기다리지 않는다. 팝빌이 아직 모으는 중이면 다음 차례가 같은 기간을 다시 읽는다. */
 Schedule::command('bank:sync')->everyThirtyMinutes()->withoutOverlapping();
+
+/* 공단 재등록이 다가온 사람을 담당자에게 알린다 (2026-09-05 지시).
+
+   공단에 신규 등록하면 2년 뒤 다시 등록해야 한다. 기한을 놓치면 자격이 끊기고,
+   그 뒤에 나간 물건은 공단에 청구할 수 없다 — 이미 보낸 값은 우리가 떠안는다.
+   환자는 자기 등록이 언제 끝나는지 모른다.
+
+   기한 계산은 진작 있었다(등록일 + 2년). 없던 것은 그것을 누가 언제 보는가다.
+   기한이 칸에만 적혀 있으면 아무도 보지 않는다.
+
+   아침 아홉 시에 한 번 돈다 — 담당자가 자리에 앉는 때다. 밤에 알려 봐야
+   그때는 아무도 전화를 걸 수 없다. */
+Schedule::command('nhis:renew-notice')->dailyAt('09:00')->withoutOverlapping();
