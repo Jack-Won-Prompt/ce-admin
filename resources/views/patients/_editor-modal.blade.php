@@ -194,17 +194,18 @@
         </div>
         <div class="form-group">
           <label class="form-label">현금영수증</label>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
             {{-- 주문 등록의 같은 칸과 값이 같아야 한다 — 두 화면이 서로 다른 말을 하면 안 된다.
-                 자진발급이면 번호가 정해져 있어 자동으로 채운다. --}}
-            <select class="form-control" id="add-deduction" style="flex:0 0 120px;">
+                 자진발급이면 번호가 정해져 있어 자동으로 채운다.
+                 폭도 같은 잣대로 잡는다 — 번호 칸이 쓸 132px 를 먼저 주고 남는 것을 넘긴다. --}}
+            <select class="form-control" id="add-deduction" style="flex:1 1 96px;min-width:96px;">
               <option value="">선택</option>
               @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
                 <option value="{{ $t }}">{{ $t }}</option>
               @endforeach
             </select>
             <input type="text" class="form-control" id="add-cash-receipt"
-                   placeholder="010-XXXX-XXXX" data-phone style="flex:1;min-width:0;" />
+                   placeholder="010-XXXX-XXXX" data-phone style="flex:1 1 132px;min-width:132px;" />
           </div>
         </div>
       </div>

@@ -431,9 +431,12 @@
               </span>
               {{-- 인라인 display 는 .edit-only{display:none} 을 덮는다 — 보는 중에도 칸이 서 버린다.
                    그래서 .inline 반은 클래스로 준다(위 40~42줄 규칙). --}}
-              <span class="edit-only inline">
+              {{-- 이 줄은 값 칸이 175px 밖에 안 된다. select 120 을 고정으로 잡아 두어
+                     번호 칸에 49px 만 남았고, 열세 자 번호가 31px 안에 들어갈 리 없었다.
+                     번호가 쓸 폭을 먼저 잡고 모자라면 아래로 내려 앉힌다. --}}
+              <span class="edit-only inline" style="flex-wrap:wrap;">
                 <select class="form-control" id="e-deduction" data-orig="{{ $patient->deduction }}"
-                        style="flex:0 0 120px;">
+                        style="flex:1 1 96px;min-width:96px;">
                   <option value="">선택</option>
                   @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
                     <option value="{{ $t }}" @selected($patient->deduction === $t)>{{ $t }}</option>
@@ -441,7 +444,7 @@
                 </select>
                 <input type="text" class="form-control" id="e-cash-receipt" data-phone
                        value="{{ $patient->cash_receipt_no }}" data-orig="{{ $patient->cash_receipt_no }}"
-                       placeholder="010-XXXX-XXXX" style="flex:1;min-width:0;" />
+                       placeholder="010-XXXX-XXXX" style="flex:1 1 132px;min-width:132px;" />
               </span>
             </span>
           </div>

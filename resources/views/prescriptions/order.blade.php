@@ -2634,8 +2634,14 @@ $calcDeposit  = $calcCopay;
                      시안은 라벨 칸을 하나만 주고 첫 칸이 무엇인지는 '선택된 값'으로 알린다.
                      값이 비면 무슨 칸인지 알 수 없으므로, 빈 선택지 문구를 '소득공제 선택'으로 둔다 —
                      이러면 '소득공제' 라는 말이 화면에서 사라지지 않는다. value 는 그대로 빈 값이다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;">
-                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1;min-width:0;">
+                {{-- 두 칸이 폭을 반씩 나눠 가지면 번호가 잘린다.
+                     소득공제는 넉 자면 되고 번호는 「010-0000-0000」 열세 자다. 그런데
+                     select 는 화살표 자리 때문에 저절로 넓어져, 정작 긴 값이 들어가는
+                     번호 칸이 87px 로 좁아졌다 — 값이 4px 넘쳐 끝자리가 잘렸다.
+                     번호 칸이 쓸 폭을 먼저 잡고(132px) 남는 것을 소득공제에 준다.
+                     좁은 화면에서는 아래로 내려 앉힌다 — 겹쳐 잘리는 것보다 낫다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;flex-wrap:wrap;">
+                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1 1 96px;min-width:96px;">
                     <option value="">소득공제 선택</option>
                     <option value="소득공제" @selected(($prescription->patient?->deduction ?? '') == '소득공제')>소득공제</option>
                     <option value="지출증빙" @selected(($prescription->patient?->deduction ?? '') == '지출증빙')>지출증빙</option>
@@ -2645,7 +2651,7 @@ $calcDeposit  = $calcCopay;
                        저장된 값도 화면을 열 때 같은 모양으로 맞춰 그린다. --}}
                   <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호"
                          value="{{ $prescription->patient?->cash_receipt_no ?? '' }}"
-                         placeholder="010-XXXX-XXXX" data-phone style="flex:1;min-width:0;" />
+                         placeholder="010-XXXX-XXXX" data-phone style="flex:1 1 132px;min-width:132px;" />
                 </div>
               </div>
               <div class="rx-field-row rx-row-start">
