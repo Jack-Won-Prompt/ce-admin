@@ -1043,8 +1043,12 @@ class ConsentController extends Controller
 
             $pdfData = $this->buildDelegationOverlayPdf($consent);
 
-            $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-            $filename = '요양비위임장_' . $consent->patient_name . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
+            /* 파일 이름도 종이에 적히는 값과 같아야 한다 — 안은 새 연락처인데 이름은 옛
+               번호이면, 파일만 보고 고른 사람이 옛 것을 보냈다고 여긴다. */
+            $who      = $prescription->patient;
+            $mobile   = preg_replace('/[^0-9]/', '', $who?->mobile ?: ($consent->patient_mobile ?? ''));
+            $filename = '요양비위임장_' . ($who?->name ?: $consent->patient_name)
+                      . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
             $path     = 'delegations/' . $prescription->id . '_' . now()->format('YmdHis') . '.pdf';
 
             /* 쓰지 못했으면 여기서 멈춘다. 그냥 지나가면 파일이 없는 서류 줄이 서고,
@@ -1112,8 +1116,17 @@ class ConsentController extends Controller
             $pdf->Text((float) $f['x'], (float) $f['y'], $t);
         };
 
-        // ① 위임인
-        $put('patient_name', $consent->patient_name ?: $patient?->name);
+        /* ① 위임인 — **지금의 거래처를 먼저 본다** (2026-09-05 지시).
+
+           예전에는 동의 기록에 찍힌 사진(`$consent->patient_name`)을 먼저 썼다. 서명할 때
+           환자가 보고 확인한 값이라 그것이 옳다고 보았기 때문이다. 그런데 이름이나 연락처를
+           잘못 적은 채 서명을 받으면, 거래처를 고쳐도 **위임장 종이에는 틀린 값이 그대로
+           남았다** — 그 종이가 공단 팩스 합본에 실려 나가, 화면과 공단에 보낸 서류가 서로
+           다른 말을 했다.
+
+           이제는 거래처가 바뀌면 **내용을 다시 그리고 서명은 그대로 얹는다.**
+           서명 이미지는 동의 기록의 것을 쓰므로 사람이 그은 획은 바뀌지 않는다. */
+        $put('patient_name', $patient?->name ?: $consent->patient_name);
         // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
         // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
         $rrn = $consent->prescription?->residentNoOcrFor('nhis_claim_form')
@@ -1123,7 +1136,7 @@ class ConsentController extends Controller
             $rrn = $rm[1] . '-' . $rm[2];
         }
         $put('patient_rrn', $rrn);
-        $put('patient_mobile', $consent->patient_mobile ?: $patient?->mobile);
+        $put('patient_mobile', $patient?->mobile ?: $consent->patient_mobile);
 
         /* 미성년자는 혼자 위임할 수 없다. 양식의 '법정대리인 또는 가족' 세 줄을 채운다 —
            성명 / 생년월일 / 가입자와의 관계. 생년월일 줄은 환자가 아니라 대리인의 것이다. */

@@ -468,6 +468,55 @@ class PatientController extends Controller
      *
      * 주소가 가리키는 것은 처방번호다(Prescription::getRouteKeyName 이 rx_number 다).
      */
+    /**
+     * 이 사람의 요양비위임장을 지금 값으로 다시 그린다.
+     *
+     * 이름ㆍ연락처가 그대로면 하지 않는다 — 파일 이름에 날짜가 들어 있어, 고치지도 않은
+     * 것을 다시 그리면 자취만 늘고 무엇이 언제 왜 바뀌었는지 알아보기 어려워진다.
+     *
+     * 서명이 있는 건만 대상이다(saveDelegationDocument 가 그렇게 고른다).
+     * 한 건이 실패해도 나머지는 그린다 — 그 하나 때문에 저장이 통째로 죽으면 안 된다.
+     *
+     * @return int 다시 그린 건수
+     */
+    private function redrawDelegations(Patient $patient, array $before): int
+    {
+        if ($before['name'] === $patient->name && $before['mobile'] === $patient->mobile) {
+            return 0;
+        }
+
+        $rxIds = \App\Models\PrescriptionDocument::where('patient_id', $patient->id)
+            ->where('type', 'delegation')
+            ->pluck('prescription_id')
+            ->unique();
+
+        if ($rxIds->isEmpty()) {
+            return 0;
+        }
+
+        $consent = app(ConsentController::class);
+        $done    = 0;
+
+        foreach (\App\Models\Prescription::whereIn('id', $rxIds)->get() as $rx) {
+            try {
+                if ($consent->saveDelegationDocument($rx)) {
+                    $done++;
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[위임장] 거래처 수정 뒤 다시 그리지 못했다', [
+                    'patient' => $patient->id, 'rx' => $rx->rx_number, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($done) {
+            activity()->causedBy(auth()->user())->performedOn($patient)
+                ->log("거래처 수정에 따라 요양비위임장 {$done}건을 다시 그렸습니다 (서명은 그대로).");
+        }
+
+        return $done;
+    }
+
     public function updateCounsel(
         Request $request,
         Patient $patient,
@@ -628,12 +677,32 @@ class PatientController extends Controller
             unset($data['care_type']);
         }
 
+        $before = ['name' => $patient->name, 'mobile' => $patient->mobile];
+
         $patient->update($data);
 
         activity()->causedBy(auth()->user())->performedOn($patient)
             ->log("{$patient->name} 환자 정보 수정");
 
-        return response()->json(['success' => true, 'message' => '저장되었습니다.']);
+        /* 이름이나 연락처가 바뀌면 요양비위임장을 다시 그린다 (2026-09-05 지시).
+
+           위임장은 서명하는 그 순간에 한 번 그려 파일로 남는다. 그래서 거래처를 고쳐도
+           종이에는 옛 값이 그대로 남았고, 그 종이가 공단 팩스 합본에 실려 나갔다 —
+           화면과 공단에 보낸 서류가 서로 다른 말을 했다.
+
+           **서명은 덮지 않는다.** 동의 기록에 담긴 서명 이미지를 그대로 다시 얹으므로
+           사람이 그은 획은 바뀌지 않고, 글자만 지금 값으로 다시 앉는다.
+
+           서명이 없는 건은 위임장 자체가 없다 — saveDelegationDocument 가 null 을
+           돌려주고 지나간다. */
+        $redrawn = $this->redrawDelegations($patient, $before);
+
+        return response()->json([
+            'success'  => true,
+            'message'  => '저장되었습니다.'
+                        . ($redrawn ? " 요양비위임장 {$redrawn}건을 다시 그렸습니다." : ''),
+            'delegations_redrawn' => $redrawn,
+        ]);
     }
 
     // ── 삭제 (소프트) ─────────────────────────────────────
