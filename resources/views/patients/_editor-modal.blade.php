@@ -198,7 +198,7 @@
             {{-- 주문 등록의 같은 칸과 값이 같아야 한다 — 두 화면이 서로 다른 말을 하면 안 된다.
                  자진발급이면 번호가 정해져 있어 자동으로 채운다.
                  폭도 같은 잣대로 잡는다 — 번호 칸이 쓸 132px 를 먼저 주고 남는 것을 넘긴다. --}}
-            <select class="form-control" id="add-deduction" style="flex:1 1 96px;min-width:96px;">
+            <select class="form-control" id="add-deduction" style="flex:1 1 124px;min-width:124px;">
               <option value="">선택</option>
               @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
                 <option value="{{ $t }}">{{ $t }}</option>

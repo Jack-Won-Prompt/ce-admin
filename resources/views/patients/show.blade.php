@@ -436,7 +436,7 @@
                      번호가 쓸 폭을 먼저 잡고 모자라면 아래로 내려 앉힌다. --}}
               <span class="edit-only inline" style="flex-wrap:wrap;">
                 <select class="form-control" id="e-deduction" data-orig="{{ $patient->deduction }}"
-                        style="flex:1 1 96px;min-width:96px;">
+                        style="flex:1 1 124px;min-width:124px;">
                   <option value="">선택</option>
                   @foreach(\App\Models\Patient::DEDUCTION_TYPES as $t)
                     <option value="{{ $t }}" @selected($patient->deduction === $t)>{{ $t }}</option>

@@ -2638,10 +2638,12 @@ $calcDeposit  = $calcCopay;
                      소득공제는 넉 자면 되고 번호는 「010-0000-0000」 열세 자다. 그런데
                      select 는 화살표 자리 때문에 저절로 넓어져, 정작 긴 값이 들어가는
                      번호 칸이 87px 로 좁아졌다 — 값이 4px 넘쳐 끝자리가 잘렸다.
-                     번호 칸이 쓸 폭을 먼저 잡고(132px) 남는 것을 소득공제에 준다.
+                     번호 칸이 쓸 폭을 먼저 잡고(132px) 소득공제에는 가장 긴 선택지
+                     「소득공제 선택」이 들어갈 124px 를 준다 — 96px 로 두었더니 이번에는
+                     그쪽이 잘렸다(안쪽 38px 에 글자 45px).
                      좁은 화면에서는 아래로 내려 앉힌다 — 겹쳐 잘리는 것보다 낫다. --}}
                 <div style="display:flex;gap:8px;flex:1;min-width:0;flex-wrap:wrap;">
-                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1 1 96px;min-width:96px;">
+                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1 1 124px;min-width:124px;">
                     <option value="">소득공제 선택</option>
                     <option value="소득공제" @selected(($prescription->patient?->deduction ?? '') == '소득공제')>소득공제</option>
                     <option value="지출증빙" @selected(($prescription->patient?->deduction ?? '') == '지출증빙')>지출증빙</option>
