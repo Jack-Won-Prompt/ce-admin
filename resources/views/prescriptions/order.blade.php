@@ -7431,13 +7431,17 @@ window.HELP_TOUR_STEPS = [
    * 그때는 이미 물건이 나간 뒤다.
    */
   /**
-   * 기초(의료급여)면 재평가 대상자를 세운다 — 자격을 고르는 그 자리에서.
+   * 재평가는 **공단 건에만 있다** — 기초(의료급여)에는 없다 (2026-09-05 바로잡음).
    *
-   * 기초 수급자는 자격을 주기로 다시 확인받아야 하고, **그 기한을 놓치면 급여가 끊긴다.**
-   * 그런데 두 칸이 서로 모르는 채로 있어, 자격을 기초로 바꿔도 재평가는 N 인 채였고
-   * 화면은 아무 말도 하지 않았다. 사람 기억에 맡길 자리가 아니다.
+   * 칸 이름이 「기초(의료급여) 재평가 대상자」라 처음에는 거꾸로 읽었다.
+   * 기초로 고르면 Y 로 세우고, 기한이 없으면 창고로 보내지 못하게 막았다 —
+   * **틀렸다.** 기초는 재평가가 없으므로 그 문은 아무 까닭 없이 주문을 막는다.
    *
-   * 사람이 손으로 고쳐 둔 값은 덮지 않는다 — 이 수가 세워 둔 것만 다시 세운다.
+   * 지금은 기초로 고르면 「해당 없음(N)」으로 내려 둔다. 사람이 직접 고른 값은
+   * 그대로 둔다(dataset.touched).
+   *
+   * **공단 건의 재평가 규칙은 아직 정해지지 않았다** — 언제 Y 이고 기한을 무엇으로
+   * 잡는지 확인한 뒤에 세운다. 그때까지 아무것도 막지 않는다.
    */
   function basicReevalFollowBenefit() {
     const cls = document.getElementById('f-benefit-class')?.value ?? '';
@@ -7445,27 +7449,13 @@ window.HELP_TOUR_STEPS = [
     const due = document.getElementById('f-basic-reeval-due');
     if (!yn) return;
 
-    const wantY = (cls === '기초');
-
-    /* 기초로 바꾸면 Y 로 세운다.
-
-       예전에는 「사람이 만진 값은 그대로 둔다」며 `yn.value !== dataset.auto` 이면
-       물러났다. 그런데 `dataset.auto` 는 이 수가 세운 뒤에만 붙는다 — 화면을 열 때
-       거래처에서 실려 온 값(대개 N)에는 없다. 그래서 **첫 번째 자격 변경에서 늘
-       막혔다.** 자격을 기초로 골라도 재평가는 N 인 채였다.
-
-       사람이 만진 것만 지키려면 그 자리를 따로 표시해야 한다 — 아래 onchange 가
-       `dataset.touched` 를 붙인다. */
-    if (wantY && yn.value !== 'Y' && !yn.dataset.touched) {
-        yn.value = 'Y';
-        yn.dataset.auto = 'Y';
-        yn.dispatchEvent(new Event('change', { bubbles: true }));
+    if (cls === '기초' && yn.value !== 'N' && !yn.dataset.touched) {
+      yn.value = 'N';
+      yn.dataset.auto = 'N';
+      yn.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    /* 기초로 세웠는데 기한이 비어 있으면 눈에 띄게 둔다 — 저장 문이 여기서 막는다 */
-    if (due) {
-      due.style.borderColor = (wantY && !due.value.trim()) ? 'var(--alert-500)' : '';
-    }
+    if (due) due.style.borderColor = '';
   }
 
   /* 사람이 그 칸을 직접 고르면 표를 남긴다 — 그 뒤로는 자격이 바뀌어도 덮지 않는다 */
@@ -7474,28 +7464,6 @@ window.HELP_TOUR_STEPS = [
   });
 
   document.getElementById('f-benefit-class')?.addEventListener('change', basicReevalFollowBenefit);
-  document.getElementById('f-basic-reeval-due')?.addEventListener('input', basicReevalFollowBenefit);
-
-  /**
-   * 기초인데 재평가 기한이 비어 있으면 창고로 보내지 않는다.
-   *
-   * 기한이 없으면 언제 다시 확인받아야 하는지 아무도 모른다. 그 사이 자격이 끊기면
-   * 공단 청구가 통째로 반려되고, 이미 나간 물건 값은 우리가 떠안는다.
-   */
-  function gateBasicReeval() {
-    const cls = document.getElementById('f-benefit-class')?.value ?? '';
-    if (cls !== '기초') return true;
-
-    const yn  = document.getElementById('f-basic-reeval')?.value ?? '';
-    const due = document.getElementById('f-basic-reeval-due')?.value?.trim() ?? '';
-
-    if (yn === 'Y' && due) return true;
-
-    showToast('기초(의료급여) 건은 재평가 대상자와 기한을 채워야 창고로 보낼 수 있습니다 — '
-            + '기한을 놓치면 자격이 끊겨 공단 청구가 반려됩니다.', 'warning', 6000);
-    document.getElementById(due ? 'f-basic-reeval' : 'f-basic-reeval-due')?.focus();
-    return false;
-  }
 
   function gateOrderQty() {
     const total = parseInt(document.getElementById('f-total')?.value || '0', 10);
@@ -7535,7 +7503,7 @@ window.HELP_TOUR_STEPS = [
   /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 다섯 */
   function gateOrder() {
     return gateReviewed() && gateConsent() && gateTotalCount(true)
-        && gateOrderQty() && gateBasicReeval() && gateShippingAddress();
+        && gateOrderQty() && gateShippingAddress();
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
