@@ -8941,7 +8941,8 @@ window.HELP_TOUR_STEPS = [
          창을 열지 않고 어디로 가야 하는지 일러 준다. */
       if (RX_BILLING_OFFICE?.kind === 'local') {
         closeFaxPopover();
-        showToast('지자체(시군구청) 건은 팩스가 아니라 **등기**로 보냅니다 — '
+        /* 토스트는 마크다운을 그리지 않는다 — 별표가 글자 그대로 보인다 */
+        showToast('지자체(시군구청) 건은 팩스가 아니라 등기로 보냅니다 — '
                 + '「청구 관리」에서 서류를 뽑아 등기로 부친 뒤 등기번호를 적어 주십시오.',
                   'warning', 7000);
         return;
