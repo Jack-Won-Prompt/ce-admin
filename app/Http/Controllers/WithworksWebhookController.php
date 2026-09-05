@@ -110,6 +110,12 @@ class WithworksWebhookController extends Controller
             /* 창고가 지금 무엇을 하고 있는가 — 도착완료ㆍ검수중ㆍ검수완료ㆍ입고중ㆍ
                입고완료ㆍ출고중ㆍ출고완료(요청서 4쪽). 우리 접수 단계와 다른 것을 잰다. */
             'pl3'             => 'nullable|array',
+            /* 줄마다의 Lot 과 유효기간 — item_code · lot_no · expiry_date · qty.
+
+               규칙에 적지 않으면 validated() 가 통째로 걸러 낸다. 그래서 창고가 Lot 을
+               분명히 실어 보냈는데도 WithworksSync 에는 빈 것이 넘어가, 주문에는 한 줄도
+               적히지 않았다(사건 표의 payload 에는 남아 있어 더 찾기 어려웠다). */
+            'details'         => 'nullable|array',
         ]);
 
         if ($v->fails()) {
