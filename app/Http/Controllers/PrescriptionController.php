@@ -2764,8 +2764,31 @@ class PrescriptionController extends Controller
             Log::warning('[Fax] PDF 저장 실패', ['rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
         }
 
-        $allDocLabels = array_merge($docs, $attachmentLabels);
-        $faxTitle     = "[CE] {$prescription->rx_number} " . implode('·', $allDocLabels);
+        /* 팩스 제목 — 갈래로 묶어 짧게 적는다.
+
+           예전에는 첨부마다 「갈래: 파일이름」을 그대로 이어 붙였다. 결과지가 열여덟
+           장인 건에서는 제목이 천 자를 넘어 `fax_histories.title`(varchar 200)에
+           들어가지 못했고, 팝빌로 팩스를 보낸 뒤 자취를 남기다 죽어 화면에는
+           「Server Error」만 떴다 — 보내기는 보냈는데 남은 것이 없는 셈이다.
+
+           읽는 사람에게 필요한 것은 「무엇을 몇 장 보냈나」다. 파일 이름 열여덟 개가
+           아니다. 갈래마다 한 번만 적고 여러 장이면 장수를 붙인다. */
+        $attachCounts = [];
+        foreach ($attachmentLabels as $label) {
+            $kind = trim(explode(':', $label, 2)[0]);
+            $attachCounts[$kind] = ($attachCounts[$kind] ?? 0) + 1;
+        }
+
+        $allDocLabels = array_merge($docs, array_map(
+            fn ($kind, $n) => $n > 1 ? "{$kind} {$n}장" : $kind,
+            array_keys($attachCounts), $attachCounts
+        ));
+
+        $faxTitle = "[CE] {$prescription->rx_number} " . implode('·', $allDocLabels);
+
+        /* 그래도 넘칠 수 있다 — 갈래가 많으면 길어진다. 칸에 들어갈 만큼만 남긴다.
+           제목이 잘리는 것과 자취가 통째로 사라지는 것은 견줄 일이 아니다. */
+        $faxTitle = mb_substr($faxTitle, 0, 200);
 
         // Popbill 팩스 전송 (설정된 경우)
         $receiptNum = null;
@@ -2802,6 +2825,12 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* 자취 남기기 — 여기서 죽어도 팩스는 이미 나갔다.
+
+           팩스를 보낸 뒤에 적는 자리라, 여기서 예외가 나면 화면에는 500 「Server Error」
+           만 뜬다. 담당자는 안 나간 줄 알고 다시 보내고, 같은 팩스가 두 번 간다.
+           남기지 못한 것과 보내지 못한 것은 다른 일이다 — 못 남겼으면 그렇게 알린다. */
+        try {
         // FaxHistory 기록
         \App\Models\FaxHistory::create([
             'prescription_id' => $prescription->id,
@@ -2819,6 +2848,25 @@ class PrescriptionController extends Controller
             'sent_by'         => auth()->id(),
             'popbill_state'   => $receiptNum ? \App\Models\FaxHistory::STATE_WAIT : \App\Models\FaxHistory::STATE_FAIL,
         ]);
+        } catch (\Throwable $e) {
+            Log::error('[Fax] 보냈으나 자취를 남기지 못했다', [
+                'rx' => $prescription->rx_number, 'receipt' => $receiptNum, 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success'     => true,
+                'message'     => '팩스는 나갔으나 전송 자취를 남기지 못했습니다 — 발송 내역에 서지 않습니다. '
+                               . '다시 보내지 마시고 관리자에게 알려 주십시오.'
+                               . ($receiptNum ? " (접수번호 {$receiptNum})" : ''),
+                'receipt_num' => $receiptNum,
+                'recipient'   => $recipient,
+                'fax_no'      => $request->fax_no,
+                'documents'   => $allDocLabels,
+                'auth_info'   => $authInfo,
+                'pdf_url'     => $pdfUrl,
+                'log_failed'  => true,
+            ]);
+        }
 
         $allDocsForLog = implode(', ', $allDocLabels);
         activity()->causedBy(auth()->user())->performedOn($prescription)
