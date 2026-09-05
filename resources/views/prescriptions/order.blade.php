@@ -8952,6 +8952,20 @@ window.HELP_TOUR_STEPS = [
     const opening = pop.style.display === 'none';
     pop.style.display = opening ? 'block' : 'none';
     if (opening) {
+      /* 지자체(시군구청)로 내는 건은 **팩스로 보내지 않는다** — 등기로 부친다
+         (2026-09-05 지시). 예전에는 창이 그대로 열리고 수신처 이름만 구청으로
+         바뀌었다. 그러면 담당자가 그 자리에서 팩스를 눌러 버린다 — 받는 곳이
+         받지 않는 방법으로 서류가 나가고, 나간 줄 알고 등기를 부치지 않는다.
+
+         창을 열지 않고 어디로 가야 하는지 일러 준다. */
+      if (RX_BILLING_OFFICE?.kind === 'local') {
+        closeFaxPopover();
+        showToast('지자체(시군구청) 건은 팩스가 아니라 **등기**로 보냅니다 — '
+                + '「청구 관리」에서 서류를 뽑아 등기로 부친 뒤 등기번호를 적어 주십시오.',
+                  'warning', 7000);
+        return;
+      }
+
       placeFaxPopover();
       /* 수신처 이름을 먼저 세운다 — 지자체 건이면 그 구청 이름이 서야
          아래에서 「공단 지사 검색」을 열지 말지 가릴 수 있다. */
@@ -9562,6 +9576,12 @@ window.HELP_TOUR_STEPS = [
   });
 
   async function sendFax() {
+    /* 창을 열지 않고 부르는 길이 있다 — 여기서도 막는다 */
+    if (RX_BILLING_OFFICE?.kind === 'local') {
+      showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오.', 'warning', 6000);
+      return;
+    }
+
     const faxNo = document.getElementById('fax-no').value.trim();
     if (!faxNo) { showToast('수신 팩스번호를 입력해주세요.', 'warning'); return; }
 

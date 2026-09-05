@@ -2719,6 +2719,23 @@ class PrescriptionController extends Controller
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
 
+        /* 지자체(시군구청)로 내는 건은 팩스로 보내지 않는다 — 등기로 부친다
+           (2026-09-05 지시).
+
+           받는 곳이 받지 않는 방법으로 서류가 나가면, 나간 줄 알고 등기를 부치지
+           않는다. 그러면 청구가 아예 접수되지 않은 채 기한이 지난다.
+
+           수신처를 「기타(직접 입력)」로 골라 다른 곳에 보내는 것은 막지 않는다 —
+           공단ㆍ지자체가 아닌 곳(보험사 따위)으로 증빙을 보내는 길이 따로 있다. */
+        if ($request->recipient_type === 'nhis'
+            && optional($prescription->billingOffice)->kind === 'local') {
+            return response()->json([
+                'success' => false,
+                'message' => '지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오. '
+                           . '「청구 관리」에서 서류를 뽑아 부친 뒤 등기번호를 적어 주십시오.',
+            ], 422);
+        }
+
         if (empty($request->documents) && empty($request->attachment_ids)) {
             return response()->json(['success' => false, 'message' => '전송할 서류를 하나 이상 선택해주세요.'], 422);
         }
