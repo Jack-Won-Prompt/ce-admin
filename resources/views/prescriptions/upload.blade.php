@@ -1047,6 +1047,10 @@ form.addEventListener('submit', async function (e) {
   document.getElementById('h_assigned_user_id').value = document.getElementById('sideAssignedUser').value;
   document.getElementById('h_admin_note').value        = document.getElementById('sideAdminNote').value;
 
+  /* 앞서 보낸 흔적을 걷는다 — 두 번째 올릴 때 갈래가 겹쳐 쌓이면 파일과 짝이 어긋난다 */
+  form.querySelectorAll('input[name="file_doc_types[]"], input[name="expected_file_count"]')
+      .forEach(el => el.remove());
+
   // 파일을 prescription_images[] 에 담고, file_doc_types[] hidden input 생성
   const dt = new DataTransfer();
   selectedFiles.forEach((item, i) => {
@@ -1059,6 +1063,18 @@ form.addEventListener('submit', async function (e) {
     form.appendChild(hidden);
   });
   fileInput.files = dt.files;
+
+  /* 몇 장을 보내는지 함께 적어 보낸다.
+
+     PHP 는 `max_file_uploads`(기본 20)를 넘는 파일을 **라라벨이 보기 전에 조용히 버린다.**
+     그래서 검사 규칙(`max:40`)에도 걸리지 않고, 스물두 장을 올려도 스무 장만 들어온 채
+     「업로드 완료」가 뜬다 — 결과지 두 장이 어디로 갔는지 아무도 모른다.
+     보낸 수를 서버가 받은 수와 견주면 그때 알 수 있다. */
+  const expected = document.createElement('input');
+  expected.type  = 'hidden';
+  expected.name  = 'expected_file_count';
+  expected.value = String(selectedFiles.length);
+  form.appendChild(expected);
 
   const rxCount = selectedFiles.filter(f => f.docType === 'prescription').length;
   const attCount = selectedFiles.length - rxCount;

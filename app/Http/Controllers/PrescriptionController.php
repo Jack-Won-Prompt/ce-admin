@@ -856,6 +856,35 @@ class PrescriptionController extends Controller
             'patient_id.required' => '환자를 먼저 고르십시오.',
         ]);
 
+        /* 보낸 장수와 받은 장수를 견준다.
+
+           PHP 는 `max_file_uploads`(기본 20)를 넘는 파일을 **라라벨이 보기 전에 조용히
+           버린다.** 위의 `max:40` 은 이미 잘린 배열을 보므로 걸리지 않는다. 그래서
+           결과지 열아홉 장짜리 건을 올리면 두 장이 사라진 채 「업로드 완료」가 떴다 —
+           빠진 것을 아무도 모르고, 공단 팩스에도 그대로 빠진 채 나간다.
+
+           브라우저가 몇 장을 보냈는지 함께 적어 보내므로 여기서 알 수 있다.
+           모자라면 **아무것도 저장하지 않고** 무엇을 고쳐야 하는지 알린다. */
+        $sent     = (int) $request->input('expected_file_count', 0);
+        $received = count($request->file('prescription_images', []));
+
+        if ($sent > 0 && $received < $sent) {
+            $limit = (int) ini_get('max_file_uploads');
+
+            return response()->json([
+                'success' => false,
+                'message' => "보낸 파일 {$sent}장 가운데 {$received}장만 서버에 닿았습니다 — "
+                           . "한 번에 올릴 수 있는 파일이 {$limit}장으로 막혀 있습니다.
+
+"
+                           . '나누어 올리시거나, php.ini 의 max_file_uploads 를 늘려 주십시오. '
+                           . '빠진 채로 저장하면 공단 팩스에도 빠진 채 나가므로 아무것도 저장하지 않았습니다.',
+                'sent'     => $sent,
+                'received' => $received,
+                'limit'    => $limit,
+            ], 422);
+        }
+
         $docTypes = $request->input('file_doc_types', []);
 
         // 처방전 파일과 첨부 파일 분리
