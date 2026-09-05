@@ -8956,16 +8956,56 @@ window.HELP_TOUR_STEPS = [
       const activeBtn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
       /* 지자체로 내는 건에는 공단 지사 목록을 펴지 않는다 — 낼 곳이 아니다 */
       const 지자체 = RX_BILLING_OFFICE?.kind === 'local';
-      if (!지자체 && activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
+      /* 공단에 청구하지 않는 건도 마찬가지다 — 산재ㆍ자동차보험ㆍ처방외.
+         창은 열어 둔다(근로복지공단ㆍ보험사로 보낼 일이 있다) 대신 공단 자리를
+         잠그고 「기타(직접 입력)」로 연다. 열어 두면 담당자가 관할 지사를 골라
+         보내 버린다 — 청구하지도 않을 건의 서류가 공단으로 나간다. */
+      const 공단아님 = faxClaimAgency() === 'none';
+      faxLockNhisRecipient(공단아님);
+
+      if (!지자체 && !공단아님 && activeBtn && activeBtn.style.background.includes('var(--primary-light)')) {
         document.getElementById('nhisSearchPanel').style.display = 'block';
         renderNhisOffices('');
-      } else if (지자체) {
+      } else if (지자체 || 공단아님) {
         const panel = document.getElementById('nhisSearchPanel');
         if (panel) panel.style.display = 'none';
       }
       refreshFaxSentBanner();
       renderFaxDocs();
     }
+  }
+
+  /* 이 건의 청구처 갈래 — 화면에서 방금 고른 값을 먼저 본다.
+     저장 전에 자격을 바꿔도 팩스 창이 곧바로 따라야 한다. */
+  function faxClaimAgency() {
+    return (document.getElementById('f-claim-agency')?.value
+            || @json($prescription->claim_agency ?? '')).trim();
+  }
+
+  /* 공단 수신처를 잠그거나 푼다.
+
+     산재ㆍ자동차보험ㆍ처방외는 요양비 청구가 없다. 그런데도 팩스 창이
+     「국민건강보험공단」을 세우고 지사 목록을 펴 두면, 담당자가 그 자리에서
+     관할 지사를 골라 보낸다 — 청구하지도 않을 건의 처방전ㆍ신분증ㆍ결과지가
+     공단으로 나간다. 한 번 나간 것은 되돌릴 수 없다. */
+  function faxLockNhisRecipient(lock) {
+    const btn = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]');
+    if (!btn) return;
+
+    btn.disabled = !!lock;
+    btn.style.opacity       = lock ? '0.45' : '';
+    btn.style.cursor        = lock ? 'not-allowed' : '';
+    btn.style.pointerEvents = lock ? 'none' : '';
+    btn.title = lock ? '이 건은 공단에 청구하지 않습니다 — 공단으로 보낼 수 없습니다' : '';
+
+    if (!lock) return;
+
+    /* 「기타(직접 입력)」로 옮겨 세운다 — 보낼 길 자체를 막지는 않는다 */
+    const other = document.querySelector('.fax-recipient-btn[data-recipient-type="custom"]');
+    if (other) other.click();
+
+    const sub = btn.querySelector('div > div:last-child');
+    if (sub) sub.textContent = '공단 청구 건이 아닙니다 — 보낼 수 없습니다';
   }
 
   /* 고른 청구처가 있으면 수신처를 미리 세운다.
@@ -9561,6 +9601,16 @@ window.HELP_TOUR_STEPS = [
     /* 창을 열지 않고 부르는 길이 있다 — 여기서도 막는다 */
     if (RX_BILLING_OFFICE?.kind === 'local') {
       showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오.', 'warning', 6000);
+      return;
+    }
+
+    /* 공단에 청구하지 않는 건을 공단으로 보내지 않는다 — 산재ㆍ자동차보험ㆍ처방외.
+       「기타(직접 입력)」로 보내는 것은 막지 않는다. */
+    const 수신처 = document.querySelector('.fax-recipient-btn[data-recipient-type="nhis"]')
+                   ?.style.background.includes('var(--primary-light)');
+    if (수신처 && faxClaimAgency() === 'none') {
+      showToast('이 건은 공단에 청구하지 않습니다 — 공단으로 보낼 수 없습니다. '
+              + '수신처를 「기타(직접 입력)」로 고르십시오.', 'warning', 7000);
       return;
     }
 

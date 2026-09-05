@@ -2718,6 +2718,26 @@ class PrescriptionController extends Controller
             ], 422);
         }
 
+        /* 공단에 청구하지 않는 건은 공단으로 보내지 않는다 (2026-09-05 보탬).
+
+           산재ㆍ자동차보험ㆍ처방외는 요양비 청구 자체가 없다(ClaimAgency::NONE).
+           그런데 팩스 창은 이런 건에서도 「국민건강보험공단」을 수신처로 세우고
+           지사 목록을 펴 두었다 — 담당자가 그 자리에서 관할 지사를 골라 보내면,
+           청구하지도 않을 건의 처방전ㆍ신분증ㆍ결과지가 공단으로 나간다.
+           한 번 나간 것은 되돌릴 수 없다.
+
+           「기타(직접 입력)」로 보내는 길은 열어 둔다 — 근로복지공단ㆍ보험사로
+           증빙을 보내는 일이 실제로 있다(케이스 4.5ㆍ10.5). */
+        if ($request->recipient_type === 'nhis'
+            && ($prescription->claim_agency ?? null) === \App\Support\ClaimAgency::NONE) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 건은 공단에 청구하지 않습니다(' . ($prescription->benefit_class ?: '해당 없음') . ') — '
+                           . '공단으로 보낼 수 없습니다. 근로복지공단ㆍ보험사로 보내려면 '
+                           . '수신처를 「기타(직접 입력)」로 고르고 번호를 적어 주십시오.',
+            ], 422);
+        }
+
         if (empty($request->documents) && empty($request->attachment_ids)) {
             return response()->json(['success' => false, 'message' => '전송할 서류를 하나 이상 선택해주세요.'], 422);
         }
