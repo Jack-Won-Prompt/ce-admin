@@ -4940,11 +4940,14 @@ function renderItemsTable() {
       <th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
+    {{-- 합계 칸에 이름을 붙인다 — 수량을 고치면 calcItem 이 이 셋을 다시 적는다.
+         예전에는 표를 그릴 때 한 번만 찍어, 수량을 180 으로 고쳐도 줄은 405,000 인데
+         합계는 270,000 그대로였다. 담당자가 합계를 읽어 환자에게 말하면 틀린 금액이다. --}}
     <tfoot><tr>
       <th colspan="6" style="text-align:right;background:var(--bg);">합계</th>
-      <th style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
-      <th style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
-      <th style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
+      <th id="itemsFootTotal" style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
+      <th id="itemsFootNhis"  style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
+      <th id="itemsFootCopay" style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
       <th style="background:var(--bg);"></th>
     </tr></tfoot>
   </table>`;
@@ -6535,6 +6538,13 @@ window.HELP_TOUR_STEPS = [
     if (el('smsDepositAmt'))   el('smsDepositAmt').textContent   = fmtDeposit + '원';
     SMS_PLACEHOLDERS['#{본인부담금}'] = fmtCopay;
     SMS_PLACEHOLDERS['#{금액}']       = fmtDeposit;
+
+    /* 주문 제품 표 아래 합계줄. 표를 그릴 때 한 번 찍고 마는 자리였다 —
+       수량을 고치면 그 줄만 바뀌고 합계는 옛 값 그대로 남았다. 여기서 함께 적는다. */
+    const grand = items.reduce((s2, i) => s2 + Number(computeRow(i).total || 0), 0);
+    if (el('itemsFootTotal')) el('itemsFootTotal').textContent = '₩' + Math.round(grand).toLocaleString('ko-KR');
+    if (el('itemsFootNhis'))  el('itemsFootNhis').textContent  = '₩' + fmtNhis;
+    if (el('itemsFootCopay')) el('itemsFootCopay').textContent = '₩' + fmtCopay;
   }
 
   /* ── 주문 정보 요약 ─────────────────────────────────────────
