@@ -6532,6 +6532,11 @@ window.HELP_TOUR_STEPS = [
     if (el('vaTotalAmt'))    el('vaTotalAmt').textContent    = '₩' + vaTotal.toLocaleString('ko-KR');
     if (el('vaCopayAmt'))    el('vaCopayAmt').textContent    = '본인부담 ₩' + Math.round(totalCopay).toLocaleString('ko-KR');
     const fmtDeposit = vaTotal.toLocaleString('ko-KR');
+    /* 결제전송 창의 「결제 금액」. 서버가 그릴 때 주문의 total_amount 를 한 번 찍는데,
+       화면을 열어 둔 채 주문을 만들면 그때는 주문이 없어 0원이었다. 그 창에서 바로
+       링크를 보내는 자리라, 0원을 보고 「금액이 안 잡혔다」고 읽으면 보내지 못한다.
+       옆 칸들(알림톡ㆍ문자)은 이미 여기서 함께 적고 있었다 — 이 칸만 빠져 있었다. */
+    if (el('payAmount'))       el('payAmount').textContent       = fmtCopay + '원';
     if (el('kakaoCopayAmt'))   el('kakaoCopayAmt').textContent   = fmtCopay + '원';
     if (el('kakaoDepositAmt')) el('kakaoDepositAmt').textContent = fmtDeposit + '원';
     if (el('smsCopayAmt'))     el('smsCopayAmt').textContent     = fmtCopay + '원';
