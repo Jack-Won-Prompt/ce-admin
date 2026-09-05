@@ -441,10 +441,14 @@ class ConsentController extends Controller
         }
 
         /* 자격은 처방전에 붙는다. 이미 골라 둔 것이 있으면 담당자의 손을 덮지 않는다.
-           동의서의 「보험」은 산업재해만 자격 칸에 대응하는 값이 있다. */
+
+           지원 자격이 먼저다 — 차상위경감ㆍ기초는 보험이 무엇이든 그것으로 청구한다.
+           지원 자격을 고르지 않았으면 보험에서 읽는다. 산업재해와 자동차보험만
+           자격 칸에 대응하는 값이 있다(보훈은 자격 갈래에 없다). */
         if (! $rx->benefit_class) {
+            $byInsurance = ['산업재해' => '산재', '자동차보험' => '자동차보험'];
             $bc = ['일반' => '일반', '차상위경감대상자' => '차상위경감', '기초생활수급자' => '기초'][$val('support_qualify')]
-                  ?? ($val('insurance') === '산업재해' ? '산재' : null);
+                  ?? ($byInsurance[$val('insurance')] ?? null);
             if ($bc) {
                 $rx->forceFill(['benefit_class' => $bc])->save();
                 $applied['f-benefit-class'] = $bc;

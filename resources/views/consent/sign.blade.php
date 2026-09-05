@@ -474,8 +474,12 @@
         {{-- 카테터 전용 --}}
         <div class="pv-field" data-only="catheter">
           <label>보험 <span class="pv-req">*</span></label>
+          {{-- 주문 등록의 「자격」과 같은 갈래를 보인다.
+               여기에 자동차보험이 빠져 있어, 교통사고 건은 동의서에 「일반」으로 적혀
+               남았다 — 청구전략은 자동차보험(본인 100)으로 도는데 동의 종이만 다른
+               말을 하는 셈이라, 나중에 그 종이로 다투면 우리 쪽이 진다. --}}
           <div class="agree-radios">
-            @foreach(['일반', '보훈', '산업재해'] as $i => $v)
+            @foreach(['일반', '보훈', '산업재해', '자동차보험'] as $i => $v)
               <div><input type="radio" id="pvIns{{ $i }}" name="pv_insurance" value="{{ $v }}" onchange="refreshAgree()"><label for="pvIns{{ $i }}">{{ $v }}</label></div>
             @endforeach
           </div>
