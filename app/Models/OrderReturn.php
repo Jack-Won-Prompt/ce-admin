@@ -577,15 +577,28 @@ class OrderReturn extends Model
     }
 
     /** 접수번호 — 고객에게 알려 주는 번호라 날짜와 순번으로 읽히게 만든다 */
+    /**
+     * 접수번호 — RT + 날짜 + 네 자리.
+     *
+     * 가운데 하이픈을 두지 않는다 (2026-09-06). 주문번호(EUD202609061254261)도,
+     * 창고 번호(S2609060013·RT2609060001)도 붙여 쓴다 — 이 번호만 뜸어 있어
+     * 베껴 옮길 때 끝이 잘리거나 찾을 때 모양이 어긋난다.
+     *
+     * 이미 발급한 RT-…-… 은 그대로 산다 — 번호는 뒤에 바꾸지 않는다.
+     * 그래서 다음 순번을 셀 때 두 꼴을 함께 본다.
+     */
     public static function generateReceiptNo(): string
     {
-        $prefix = 'RT-' . now()->format('Ymd') . '-';
+        $date   = now()->format('Ymd');
+        $prefix = 'RT' . $date;
 
-        $last = static::withTrashed()->where('receipt_no', 'like', $prefix . '%')
-            ->orderByDesc('receipt_no')->value('receipt_no');
+        $last = static::withTrashed()
+            ->where(fn ($q) => $q->where('receipt_no', 'like', $prefix . '%')
+                                 ->orWhere('receipt_no', 'like', 'RT-' . $date . '-%'))
+            ->get(['receipt_no'])
+            ->map(fn ($r) => (int) substr($r->receipt_no, -4))
+            ->max();
 
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
-
-        return $prefix . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        return $prefix . str_pad((string) (($last ?? 0) + 1), 4, '0', STR_PAD_LEFT);
     }
 }
