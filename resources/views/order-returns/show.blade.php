@@ -20,9 +20,12 @@
 <style>
   .rt-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; }
   /* 가로 탭 — 판 아홉을 여섯 묶음으로 세웠다. 탭줄은 전역 .pnl-tabs 를 쓴다. */
-  .rt-tabwrap { padding-bottom:14px; }
-  .rt-pane { display:none; padding:14px 16px 0; }
-  .rt-pane.active { display:block; }
+  .rt-tabwrap { padding-bottom:0; }
+  /* 카드(.ds-grid-card)가 overflow:hidden 이라, 탭 안에 들어간 것이 카드보다
+     길면 아래가 그대로 잘렸다 — 구를 것도 없어 손을 쓸 수가 없었다.
+     카드가 세로 flex 라, 열린 탭이 남는 자리를 받아 스스로 굴리게 둔다. */
+  .rt-pane { display:none; padding:14px 16px; }
+  .rt-pane.active { display:block; flex:1 1 auto; min-height:0; overflow-y:auto; }
   /* 탭 안에서는 카드가 다시 테두리를 두르지 않는다 — 판 안의 판이 되어 겹쳐 보인다 */
   .rt-pane .rt-card { border:none; border-radius:0; margin-bottom:14px; background:transparent; }
   .rt-pane .rt-card:last-child { margin-bottom:0; }
@@ -36,6 +39,12 @@
   .rt-kv:last-child { border-bottom:none; }
   .rt-kv > span:first-child { width:120px; flex-shrink:0; color:var(--text-muted); }
   .rt-kv > span:last-child  { flex:1; font-weight:500; }
+  /* 반품 품목은 「라벨·값」이 아니다 — 왼쪽에 제품코드와 장비코드가 나란히
+     서는데, 120px 라벨 칸에 넣으니 「NBC0121000005」가 반토막 잘렸다.
+     코드는 제 길이를 갖게 두고, 이름·수량이 남는 자리를 받는다. */
+  .rt-item > span:first-child { width:auto; flex:0 0 auto; margin-right:12px;
+                                color:var(--text-primary); font-variant-numeric:tabular-nums; }
+  .rt-item > span:last-child  { text-align:right; }
   /* 환불 처리 자취 — 두 칸으로 세우고, 긴 글은 한 줄을 다 쓴다 */
   .rt-refund { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; }
   .rt-rf { display:flex; flex-direction:column; gap:4px; min-width:0; }
@@ -334,7 +343,7 @@
         </div>
       @endif
     @else
-      <div style="font-size:12px;color:var(--text-muted);margin-top:10px;">더 갈 단계가 없습니다.</div>
+      {{-- 끝까지 온 것은 걸음 띄가 이미 말해 준다 — 한 줄을 더 두면 말이 걹도다 --}}
     @endif
   </div>
 </div>
@@ -351,7 +360,7 @@
   </div>
   <div class="rt-bd">
     @foreach($r->items as $it)
-      <div class="rt-kv">
+      <div class="rt-kv rt-item">
         <span>{{ $it->product_code ?: '—' }}@if($d = \App\Support\DeviceCode::for($it->product_code))<em style="font-style:normal;color:var(--text-muted);margin-left:5px;">{{ $d }}</em>@endif</span>
         <span>{{ $it->product_name ?: '—' }}
           · {{ number_format($it->quantity) }}@if($it->ordered_quantity)/{{ number_format($it->ordered_quantity) }}@endif개
