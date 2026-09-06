@@ -647,9 +647,12 @@ class OrderReturnController extends Controller
            한 번 더 눌러야 하면 잊고 넘어가 결국 돈만 안 맞는다.
            실패해도 단계는 이미 옮겼다 — 왜 안 됐는지를 화면에 띄우고 다시 누르게 둔다. */
         if ($to === 'adjusted') {
+            /* 안 된 까닭을 그대로 보여 준다. 예전에는 「다시 시도해 주십시오」만
+               띄웠는데, 까닭이 창고가 거절한 것이면 몇 번을 눌러도 같은 자리다 —
+               까닭은 상세의 적요에만 적혀 아무도 읽지 않았다(3차 4회 13번). */
             $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
                 ? ' 금액조정 주문을 세웠습니다.'
-                : ' 금액조정 주문을 생성하지 못했습니다 — 상세에서 다시 시도해 주십시오.';
+                : ' 금액조정 주문을 세우지 못했습니다 — ' . ($orderReturn->fresh()->credit_note ?: '까닭을 알 수 없습니다') . '.';
         }
 
         if ($to === 'credited') {

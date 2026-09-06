@@ -74,6 +74,12 @@ class ReturnSettlement
                 ->post("{$baseUrl}/api/v1/ce-admin/so_store", [
                     // 접수번호를 주문번호로 쓴다 — 원 주문과 헷갈리지 않게
                     'ce_order_number' => $return->receipt_no,
+                    /* 처방번호는 창고가 **필수**로 받는다. 여태 보내지 않아
+                       금액조정 주문은 한 번도 세워지지 못하고 「rx number 항목은
+                       필수값입니다」로 거절당했다 — 화면에는 「다시 시도해 주십시오」만
+                       떠서, 몇 번을 눌러도 같은 자리였다(3차 4회 13번). */
+                    'rx_number'       => $order->prescription?->rx_number
+                                         ?? $order->order_number,
                     'patient_name'    => $order->patient?->name ?? '환자',
                     'patient_mobile'  => $order->patient?->mobile,
                     'ho_account_id'   => config('services.demoworks.account_id'),
