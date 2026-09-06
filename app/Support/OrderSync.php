@@ -45,9 +45,33 @@ class OrderSync
         $order = $prescription->order()->first();
 
         /* 이미 창고로 보낸 주문은 손대지 않는다. 보낸 뒤에 고치는 일은 「주문 수정」이
-           창고와 함께 해야 하는 일이라, 여기서 조용히 바꾸면 두 쪽이 어긋난다. */
+           창고와 함께 해야 하는 일이라, 여기서 조용히 바꾸면 두 쪽이 어긋난다.
+
+           **돈은 다르다.** 창고가 아는 것은 품목ㆍ수량ㆍ배송지이고 본인부담ㆍ공단부담은
+           쓰지 않는다 — 그것은 우리 쪽 값이다. 자격이 바뀌면(일반 → 차상위경감)
+           품목은 그대로인 채 누가 얼마를 내는가만 달라지는데, 여기서 통째로 물러서
+           주문에는 옛 셈이 남았다. 정산ㆍ청구는 주문을 보므로, 처방전은 본인부담 0
+           인데 주문은 40,500 을 받을 돈으로 들고 있었다(3차 4회 13번).
+
+           금액만 따라간다. 품목 줄ㆍ제품ㆍ수량은 그대로 둔다. */
         if ($order && $order->withworks_so_no) {
-            return null;
+            $items = $prescription->items;
+            $copay = (float) $items->sum('patient_copay');
+            $nhis  = (float) $items->sum('nhis_amount');
+
+            if ((float) $order->patient_copay !== $copay || (float) $order->nhis_amount !== $nhis) {
+                $order->update([
+                    'nhis_amount'   => $nhis,
+                    'patient_copay' => $copay,
+                    'total_amount'  => $copay,
+                ]);
+
+                activity()->causedBy(Auth::user())->performedOn($order)->log(sprintf(
+                    '자격이 바뀌어 주문 금액을 다시 맞췄습니다 — 본인부담 %s원 · 공단 %s원',
+                    number_format($copay), number_format($nhis)));
+            }
+
+            return $order;
         }
 
         $items = $prescription->items;
