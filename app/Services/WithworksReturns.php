@@ -155,6 +155,10 @@ class WithworksReturns
             'so_no'            => $order->withworks_so_no,
             'return_type'      => self::TYPE_NAMES[$return->type] ?? $return->type,
             'reason'           => $this->reasonText($return),
+            /* 창고의 반품사유 칸(udf6)은 **고르는 값**이다 — 자유 글이 아니다.
+               우리 사유 이름과 창고 코드값을 같은 말로 맞춰 두었으므로(2026-09-06)
+               이름을 그대로 보낸다. 창고에 없는 이름이면 그쪽이 되돌린다. */
+            'reason_code'      => OrderReturn::reasonLabel($return->reason_code),
             'items'            => $items,
         ]);
 
