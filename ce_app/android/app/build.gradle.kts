@@ -1,3 +1,16 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+/* 서명 열쇠는 저장소에 두지 않는다 — android/key.properties 와 .jks 는 .gitignore 가
+   막는다. 잃어버리면 스토어에 올린 앱을 다시 고칠 수 없으므로 따로 보관해야 한다.
+   파일이 없으면(내려받기만 한 PC) 디버그 열쇠로 물러난다 — 그래야 그 자리에서도
+   `flutter run --release` 가 돈다. */
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -32,11 +45,22 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias      = keystoreProperties["keyAlias"] as String?
+            keyPassword   = keystoreProperties["keyPassword"] as String?
+            storePassword = keystoreProperties["storePassword"] as String?
+            storeFile     = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
