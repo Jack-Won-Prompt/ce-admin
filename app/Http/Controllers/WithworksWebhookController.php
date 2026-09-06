@@ -279,6 +279,15 @@ class WithworksWebhookController extends Controller
            같은 말이 다시 와도 덮어쓰는 값이 같아 해가 없다. */
         $note = trim((string) ($data['receiving']['remark'] ?? ''));
 
+        /* 우리가 보낸 말은 받지 않는다. 창고는 반품 입고를 만들 때 반품주문의
+           적요를 그대로 복사하는데, 그 적요는 우리가 보낸 말(`[CE-ADMIN 반품] …`)과
+           우리 진행 상태(`[CE 상태] …`)다. 저쪽에서 떼고 보내도록 고쳤지만
+           (위드웍스 `0173086c6`), 저쪽이 아직 옛 코드로 돌 수도 있다.
+           담당자가 「창고 검수 비고」에서 제 말을 읽는 일만은 없어야 한다. */
+        if (str_starts_with($note, '[CE-ADMIN') || str_starts_with($note, '[CE 상태]')) {
+            $note = '';
+        }
+
         if ($note !== '' && $note !== $return->pl3_note) {
             $return->forceFill([
                 'pl3_note'    => mb_substr($note, 0, 2000),
