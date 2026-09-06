@@ -192,10 +192,17 @@ class PaymentLinkController extends Controller
     {
         $va = $res['virtualAccount'] ?? null;
 
+        /* 한 주문에 한 줄이다 — toss_payments 는 order_id 가 유일하다.
+           그런데 예전에는 결제키로 찾아 올렸다. 가상계좌를 먼저 발급해 둔
+           주문을 고객이 카드로 내면, 같은 주문에 다른 결제키로 한 줄을 더
+           넣으려 해 유일 제약에 걸렸다 — 결제는 끝난 뒤인데 돌아오는 화면이
+           500 으로 죽어, 고객은 돈을 내고도 실패한 줄 알았다.
+
+           주문으로 찾아 올린다. 가장 마지막 결제가 그 주문의 결제다. */
         $tp = TossPayment::updateOrCreate(
-            ['payment_key' => $res['paymentKey'] ?? $link->payment_key],
+            ['order_id' => $link->order_id],
             [
-                'order_id'       => $link->order_id,
+                'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
                 'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
                 'method'         => $va ? 'VIRTUAL_ACCOUNT' : 'CARD',
                 'status'         => $res['status'] ?? 'DONE',
