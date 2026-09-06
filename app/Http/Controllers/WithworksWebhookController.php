@@ -397,11 +397,22 @@ class WithworksWebhookController extends Controller
     /** 흐름에서 뒤로 가는 것인지 본다 — 취소는 어디서든 갈 수 있다 */
     private function canAdvanceTo(OrderReturn $return, string $to): bool
     {
+        /* 끝난 건은 어떤 사건으로도 되살리지 않는다. 창고는 우리보다 늦게 움직인다 —
+           담당자가 검수ㆍ승인ㆍ환불까지 다 마친 뒤에 창고가 실물을 입고하는 일이
+           예사다. 그때 「입고완료」가 닿아 완료된 건이 「검수중」으로 되돌아갔다. */
+        if (in_array($return->status, ['done', 'cancelled'], true)) {
+            return false;
+        }
+
         if ($to === 'cancelled') {
             return true;
         }
 
-        $flow = OrderReturn::FLOWS[$return->type] ?? [];
+        /* FLOWS 의 열쇠는 **시나리오**(교환-변심ㆍ반품-불량 …)다. 여기서는 종류
+           (return·exchange·cancel)로 찾고 있어 늘 빈 배열이 나왔다. 그러면 아래
+           비교가 통째로 참이 되어, 「뒤로 물리지 않는다」가 아무것도 막지 못했다.
+           그 건의 실제 흐름을 쓴다 — 부분 여부까지 반영된 것이다. */
+        $flow = $return->flow();
         $now  = array_search($return->status, $flow, true);
         $next = array_search($to, $flow, true);
 
