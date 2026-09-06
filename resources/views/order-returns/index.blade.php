@@ -177,6 +177,7 @@
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
       { header: '3PL 상태', name: 'pl3',      width: 100, align: 'center', sortable: true },
+      { header: '검수 비고', name: 'pl3_note', width: 90,  align: 'center', sortable: true },
       {
         // 절차서의 기한을 넘긴 건. 묻히면 기한을 둔 뜻이 없다.
         header: '기한', name: 'overdue', width: 110, align: 'center', sortable: true,

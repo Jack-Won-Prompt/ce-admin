@@ -20,6 +20,11 @@
 <style>
   .rt-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:14px; }
   /* 가로 탭 — 판 아홉을 여섯 묶음으로 세웠다. 탭줄은 전역 .pnl-tabs 를 쓴다. */
+  /* 창고가 적어 보낸 말은 다른 줄에 묻히면 안 된다 — 검수 확정을 누르기 전에
+     읽어야 하는 것이라, 바탕을 얹어 눈이 먼저 가게 둔다. */
+  .rt-note { background:var(--bg-subtle,#f6f8fa); border-radius:6px; padding:6px 8px; margin:2px 0; }
+  .rt-note > span:last-child { display:flex; flex-direction:column; gap:2px; }
+  .rt-note-at { font-size:11px; color:var(--text-muted); }
   .rt-tabwrap { padding-bottom:0; }
   /* 카드(.ds-grid-card)가 overflow:hidden 이라, 탭 안에 들어간 것이 카드보다
      길면 아래가 그대로 잘렸다 — 구를 것도 없어 손을 쓸 수가 없었다.
@@ -124,6 +129,16 @@
          창고가 알려 주기 전에는 빈칸이라 아예 세우지 않는다. --}}
     @if($r->pl3_status_label)
       <div class="rt-kv"><span>3PL 상태</span><span>{{ $r->pl3_status_label }}{{ $r->pl3_status_at ? ' · ' . $r->pl3_status_at->format('Y-m-d H:i') : '' }}</span></div>
+    @endif
+    {{-- 창고가 실물을 보고 적은 말(2026-09-06). 검수를 판단하는 근거는 「어느
+         단계인가」가 아니라 「무엇을 보았는가」다. 여태 이 말을 읽으려면 위드웍스
+         화면에 따로 들어가야 했다. 눈에 띄게 둔다 — 검수 확정을 누르기 전에
+         읽어야 하는 것이다. --}}
+    @if($r->pl3_note)
+      <div class="rt-kv rt-note"><span>창고 검수 비고</span><span>
+        <span style="white-space:pre-line;">{{ $r->pl3_note }}</span>
+        @if($r->pl3_note_at)<span class="rt-note-at">{{ $r->pl3_note_at->format('Y-m-d H:i') }}</span>@endif
+      </span></div>
     @endif
     <div class="rt-kv"><span>사유</span><span>{{ $r->scenarioLabel() }}{{ $r->is_partial ? ' · 부분' : '' }}</span></div>
     <div class="rt-kv"><span>신청 사유</span><span>{{ \App\Models\OrderReturn::reasonLabel($r->reason_code) }}

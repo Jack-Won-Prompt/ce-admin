@@ -77,6 +77,9 @@ class OrderReturnController extends Controller
             'status'    => $r->statusLabel(),
             // 창고가 알려 준 그대로다 — 우리가 적는 값이 아니다
             'pl3'       => $r->pl3_status_label ?? '',
+            /* 창고가 실물을 보고 적은 말. 목록에서는 있다·없다만 보이면 된다 —
+               읽는 자리는 상세다. 있는데 아무 표가 없으면 열어 볼 까닭을 모른다. */
+            'pl3_note'  => $r->pl3_note ? '있음' : '',
             'partial'   => $r->is_partial ? '부분' : '전체',
             // 늦은 건은 눈에 띄어야 한다 — 묻히면 절차서의 기한을 둔 뜻이 없다
             'overdue'   => ($o = $r->overdue()) ? "{$o[0]} {$o[1]}일 초과" : '',

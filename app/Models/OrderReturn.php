@@ -43,7 +43,7 @@ class OrderReturn extends Model
         'withworks_status', 'withworks_status_label', 'withworks_sent_at', 'withworks_error',
         'adjust_so_no', 'adjusted_at',
         // 창고가 지금 무엇을 하고 있는가 — 우리 단계(status)와 다른 것을 잰다
-        'pl3_status', 'pl3_status_label', 'pl3_status_at',
+        'pl3_status', 'pl3_status_label', 'pl3_status_at', 'pl3_note', 'pl3_note_at',
         // 환불을 실제로 처리한 자취(요청서 4쪽)
         'card_issuer', 'card_expiry', 'refund_approval_no', 'card_cancelled_at',
         'bank_cancelled_at', 'handling_branch', 'refund_agency',
@@ -54,6 +54,7 @@ class OrderReturn extends Model
         'card_cancelled_at'    => 'datetime',
         'bank_cancelled_at'    => 'datetime',
         'pl3_status_at'        => 'datetime',
+        'pl3_note_at'          => 'datetime',
         'arrived_at'           => 'datetime',
         'inspect_confirmed_at' => 'datetime',
         'approved_at'          => 'datetime',

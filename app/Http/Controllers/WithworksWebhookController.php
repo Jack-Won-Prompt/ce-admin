@@ -270,6 +270,22 @@ class WithworksWebhookController extends Controller
             ])->save();
         }
 
+        /* 창고가 실물을 보고 적은 말(2026-09-06 지시). 담당자가 검수를 판단하는
+           근거는 「어느 단계인가」가 아니라 「무엇을 보았는가」다. 여태 그것을
+           읽으려면 위드웍스 화면에 따로 들어가야 했고, 그래서 대개 읽지 않은 채로
+           검수 확정을 눌렀다.
+
+           고쳐 적으면 다시 온다 — 창고가 비고의 지문으로 사건을 가른다.
+           같은 말이 다시 와도 덮어쓰는 값이 같아 해가 없다. */
+        $note = trim((string) ($data['receiving']['remark'] ?? ''));
+
+        if ($note !== '' && $note !== $return->pl3_note) {
+            $return->forceFill([
+                'pl3_note'    => mb_substr($note, 0, 2000),
+                'pl3_note_at' => \Carbon\Carbon::parse($data['occurred_at'] ?? now()),
+            ])->save();
+        }
+
         /* 실물이 들어온 날. 전에는 사람이 손으로 적었는데, 창고가 알려 주는 것을
            두고 다시 적게 할 까닭이 없다. 이미 적혀 있으면 건드리지 않는다 — 담당자가
            고쳐 둔 것이 창고의 날짜보다 정확할 수 있다. */
@@ -352,6 +368,7 @@ class WithworksWebhookController extends Controller
     {
         $tell = [
             'ro.created'   => ['반품이 창고에 접수되었습니다', 'info'],
+            'ro.inspected' => ['창고가 검수 비고를 적었습니다 — 읽어 보십시오', 'warning'],
             'ro.rcpt_completed' => ['반품 실물이 창고에 들어왔습니다', 'success'],
             'ro.confirmed' => ['반품이 창고에서 확정되었습니다', 'success'],
             'ro.cancelled' => ['반품이 취소되었습니다',        'danger'],
