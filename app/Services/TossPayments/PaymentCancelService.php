@@ -43,9 +43,17 @@ class PaymentCancelService extends TossClient
         }
 
         /* 이미 다 무른 건을 또 부르면 토스가 거절한다. 거절 자체는 안전하지만,
-           담당자에게는 「왜 안 되는지」가 아니라 「이미 됐다」가 맞는 말이다. */
-        if ($payment->status === 'CANCELED') {
-            return ['ok' => true, 'message' => '이미 전액 취소된 결제입니다.', 'status' => 'CANCELED'];
+           담당자에게는 「왜 안 되는지」가 아니라 「이미 됐다」가 맞는 말이다.
+
+           상태만 보면 놓친다. 부분 취소를 두 번 해 전액을 채우면 토스는 상태를
+           PARTIAL_CANCELED 로 둔 채 남은 금액만 0 으로 내린다 — 그때 또 누르면
+           「취소 할 수 없는 금액 입니다」라는 토스 말이 담당자에게 그대로 갔다.
+           남은 금액으로 가린다. */
+        $done = $payment->status === 'CANCELED'
+             || ($payment->cancel_amount !== null && (int) $payment->cancel_amount >= (int) $payment->amount);
+
+        if ($done) {
+            return ['ok' => true, 'message' => '이미 전액 취소된 결제입니다.', 'status' => $payment->status];
         }
 
         $body = ['cancelReason' => mb_substr($reason, 0, 200)];

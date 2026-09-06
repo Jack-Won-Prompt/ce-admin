@@ -199,28 +199,31 @@ class PaymentLinkController extends Controller
            500 으로 죽어, 고객은 돈을 내고도 실패한 줄 알았다.
 
            주문으로 찾아 올린다. 가장 마지막 결제가 그 주문의 결제다. */
-        $tp = TossPayment::updateOrCreate(
-            ['order_id' => $link->order_id],
-            [
-                'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
-                'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
-                'method'         => $va ? 'VIRTUAL_ACCOUNT' : 'CARD',
-                'status'         => $res['status'] ?? 'DONE',
-                'amount'         => (int) ($res['totalAmount'] ?? $link->amount),
-                'bank'           => $va['bankCode']      ?? null,
-                'account_number' => $va['accountNumber'] ?? null,
-                'customer_name'  => $va['customerName']  ?? ($link->order?->patient?->name),
-                'due_date'       => $va['dueDate']       ?? null,
-                'deposited_at'   => $va ? null : now(),
-                'raw_response'   => $res,
-            ],
-        );
+        /* 지운 줄까지 본다. 유일 제약은 소프트 삭제를 가리지 않는다 — 지워 둔
+           가상계좌 줄이 남아 있으면 새로 넣으려다 똑같이 걸린다. 되살려 덮는다. */
+        $tp    = TossPayment::withTrashed()->firstOrNew(['order_id' => $link->order_id]);
+        $isNew = ! $tp->exists;
+
+        $tp->forceFill([
+            'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
+            'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
+            'method'         => $va ? 'VIRTUAL_ACCOUNT' : 'CARD',
+            'status'         => $res['status'] ?? 'DONE',
+            'amount'         => (int) ($res['totalAmount'] ?? $link->amount),
+            'bank'           => $va['bankCode']      ?? null,
+            'account_number' => $va['accountNumber'] ?? null,
+            'customer_name'  => $va['customerName']  ?? ($link->order?->patient?->name),
+            'due_date'       => $va['dueDate']       ?? null,
+            'deposited_at'   => $va ? null : now(),
+            'raw_response'   => $res,
+            'deleted_at'     => null,
+        ])->save();
 
         /* 가상계좌를 고른 사람에게는 계좌를 문자로 한 번 더 적어 보낸다.
            이 화면을 닫으면 계좌를 다시 볼 곳이 우리 쪽에 없어, 담당자에게 전화해
            다시 묻는 일이 잦았다.
            방금 처음 담긴 때만 보낸다 — 이 자리는 새로고침으로 두 번 들어올 수 있다. */
-        if ($va && $tp->wasRecentlyCreated) {
+        if ($va && $isNew) {
             app(\App\Services\PaymentLinkService::class)->sendVirtualAccount($link, $va);
         }
 
