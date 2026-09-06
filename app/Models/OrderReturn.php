@@ -578,7 +578,12 @@ class OrderReturn extends Model
 
     /** 접수번호 — 고객에게 알려 주는 번호라 날짜와 순번으로 읽히게 만든다 */
     /**
-     * 접수번호 — RT + 날짜 + 네 자리.
+     * 접수번호 — RN + 날짜 + 네 자리.
+     *
+     * 접두사는 RN 이다. 창고의 반품주문을 RT2609060001 로 바꾸자 둘 다 RT 로
+     * 시작해 눈으로 갈리지 않았다 — 날짜 자릿수만 달랐다(네 자리·두 자리).
+     * 만드는 곳이 다른 번호는 보기에도 달라야 한다.
+     * CR 은 현금영수증이, TI 는 세금계산서가, RX 는 처방전이 이미 쓴다.
      *
      * 가운데 하이픈을 두지 않는다 (2026-09-06). 주문번호(EUD202609061254261)도,
      * 창고 번호(S2609060013·RT2609060001)도 붙여 쓴다 — 이 번호만 뜸어 있어
@@ -590,10 +595,13 @@ class OrderReturn extends Model
     public static function generateReceiptNo(): string
     {
         $date   = now()->format('Ymd');
-        $prefix = 'RT' . $date;
+        $prefix = 'RN' . $date;
 
+        /* 오늘 발급한 것을 세 꼴 모두 본다 — RN(지금)·RT(잠시 쓴 꼴)·RT-…-…(예전).
+           번호는 뒤에 바꾸지 않으므로 예전 것도 그대로 산다. */
         $last = static::withTrashed()
             ->where(fn ($q) => $q->where('receipt_no', 'like', $prefix . '%')
+                                 ->orWhere('receipt_no', 'like', 'RT' . $date . '%')
                                  ->orWhere('receipt_no', 'like', 'RT-' . $date . '-%'))
             ->get(['receipt_no'])
             ->map(fn ($r) => (int) substr($r->receipt_no, -4))
