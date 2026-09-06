@@ -77,9 +77,9 @@
              onchange="this.form.submit()" style="accent-color:#B54708;margin:0;">
       승인 대기@if($pendingCount) <b>{{ $pendingCount }}</b>@endif
     </label>
-    @if(request('q') || request('status') || request()->boolean('pending'))
-      <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
-    @endif
+    {{-- 늘 세워 둔다 — 거르고 있을 때만 나타나면 단추가 들락날락해
+         옆에 붙은 「검색」이 자리를 옮긴다. 누를 것은 항상 같은 자리에 있어야 한다. --}}
+    <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 접수는 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌고,
          찾다가 없으면 바로 접수하는 흐름과도 맞지 않았다. --}}
