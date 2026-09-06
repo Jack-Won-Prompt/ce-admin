@@ -618,8 +618,14 @@ class OrderReturnController extends Controller
 
             /* 반품·취소가 끝나면 원 주문도 취소된 것이다. 주문 목록에 그대로 살아 있으면
                정산·청구가 그 주문을 계속 셈에 넣는다.
-               부분은 다르다 — 남는 수량이 있어 주문 자체는 살아 있다. */
+               부분은 다르다 — 남는 수량이 있어 주문 자체는 살아 있다.
+
+               자격 변경도 다르다. 물건은 환자에게 그대로 있고 되돌려 받지 않는다 —
+               바뀐 것은 누가 얼마를 내는가뿐이라, 그 주문으로 **다시 청구해야** 한다.
+               취소로 적으면 정산·청구가 셈에서 빼버려 새 자격의 청구가 영영 안 나간다
+               (3차 4회 13번에서 실제로 그렇게 되었다). */
             if ($to === 'refunded' && !$orderReturn->is_partial
+                && $orderReturn->scenario() !== OrderReturn::SC_REFUND_ONLY
                 && in_array($orderReturn->type, [OrderReturn::TYPE_RETURN, OrderReturn::TYPE_CANCEL], true)) {
                 $orderReturn->order?->update(['status' => 'cancelled']);
             }
