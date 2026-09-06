@@ -398,6 +398,14 @@
       <div class="rt-kv"><span>금액조정 주문</span><span>
         {{ $r->adjust_so_no ?: '아직' }}
         {{ $r->adjusted_at ? '· ' . $r->adjusted_at->format('Y-m-d H:i') : '' }}
+        {{-- 창고가 거절하면 여기서 다시 세운다. 예전에는 「상세에서 다시 시도해
+             주십시오」라 말해 놓고 그 단추를 두지 않았다. --}}
+        @if(! $r->adjust_so_no && $r->reached('refunded') && perm('order-returns', 'send'))
+          <form method="POST" action="{{ route('order-returns.retryAdjust', $r) }}" style="display:inline;">
+            @csrf
+            <button type="submit" class="ds-btn ds-btn-sm" style="margin-left:6px;">다시 세우기</button>
+          </form>
+        @endif
       </span></div>
 
       {{-- 조정 금액 — 부분 교환ㆍ부분 반품ㆍ자격 변경 셋이 여기 선다(2026-09-02 유형표).

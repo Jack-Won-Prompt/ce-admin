@@ -739,6 +739,26 @@ class OrderReturnController extends Controller
      *
      * ⚠ 국세청 신고까지 가는 동작이다. 화면에서 한 번 더 묻는다.
      */
+    /**
+     * 금액조정 주문을 다시 세운다.
+     *
+     * 창고가 거절하면 「상세에서 다시 시도해 주십시오」라 말해 놓고, 정작 상세에는
+     * 그 단추가 없었다 — 걸음은 이미 「금액조정」으로 옮겨져 있어 다시 누를 자리도
+     * 없었다. 담당자는 조정 주문 없이 다음으로 넘어갈 수밖에 없었다(3차 4회 13번).
+     */
+    public function retryAdjust(OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! perm('order-returns', 'send')) {
+            return back()->withErrors(['adjust' => '창고로 보낼 권한이 있어야 누를 수 있습니다.']);
+        }
+
+        $ok = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']));
+
+        return $ok
+            ? back()->with('status', '금액조정 주문을 세웠습니다 — ' . ($orderReturn->fresh()->adjust_so_no ?: '창고 번호는 곧 들어옵니다') . '.')
+            : back()->withErrors(['adjust' => $orderReturn->fresh()->credit_note ?: '금액조정 주문을 세우지 못했습니다.']);
+    }
+
     public function issueCredit(OrderReturn $orderReturn): RedirectResponse
     {
         $out = $this->settlement->credit($orderReturn->load(['order', 'items']));

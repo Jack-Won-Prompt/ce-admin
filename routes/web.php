@@ -199,6 +199,7 @@ Route::middleware(['auth'])->group(function () {
         // 창고 검수 결과 받아 오기 · 마이너스 발행 다시 시도
         Route::post('/{orderReturn}/pull-inspection', [\App\Http\Controllers\OrderReturnController::class, 'pullInspection'])->name('pullInspection');
         Route::post('/{orderReturn}/issue-credit',    [\App\Http\Controllers\OrderReturnController::class, 'issueCredit'])->name('issueCredit');
+        Route::post('/{orderReturn}/retry-adjust',    [\App\Http\Controllers\OrderReturnController::class, 'retryAdjust'])->name('retryAdjust');
         // 부분ㆍ자격 변경 건의 조정 금액을 적는다(2026-09-02 유형표)
         Route::post('/{orderReturn}/adjust-amount',   [\App\Http\Controllers\OrderReturnController::class, 'adjustAmount'])->name('adjust-amount');
     });
