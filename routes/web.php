@@ -183,6 +183,8 @@ Route::middleware(['auth'])->group(function () {
         // 환불을 실제로 처리한 자취를 적는다 — 단계는 advance 가 옮긴다
         Route::patch('/{orderReturn}',  [\App\Http\Controllers\OrderReturnController::class, 'update'])->name('update');
         Route::post('/{orderReturn}/advance', [\App\Http\Controllers\OrderReturnController::class, 'advance'])->name('advance');
+        /* 목록에서 골라 한 번에 승인한다 — 승인할 사람은 하루에 여러 건을 본다. */
+        Route::post('/bulk-approve', [\App\Http\Controllers\OrderReturnController::class, 'bulkApprove'])->name('bulkApprove');
         Route::post('/{orderReturn}/resend',  [\App\Http\Controllers\OrderReturnController::class, 'resend'])->name('resend');
         // 어디까지 왔는지 환자에게 알린다 — 접수자가 눌러 보낸다
         Route::post('/{orderReturn}/notify-patient', [\App\Http\Controllers\OrderReturnController::class, 'notifyPatient'])->name('notifyPatient');

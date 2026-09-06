@@ -87,6 +87,20 @@ class OrderReturnController extends Controller
             'patient'   => $r->order?->patient?->name ?? '-',
             'reason'    => OrderReturn::reasonLabel($r->reason_code),
             'refund'    => $r->refund_amount ? number_format($r->refund_amount) : '-',
+            /* 승인 팝오버가 읽는다 — 승인하기 전에 무엇을 승인하는지를 보여 준다.
+               목록의 값은 사람이 읽는 꼴(리 넣은 글)이라, 셀할 수 있는 숫자를 따로 싣는다. */
+            'ap_next'      => (function () use ($r) {
+                $to = collect($r->nextStatuses())->first(fn ($x) => OrderReturn::needsApproval($x));
+                return $to ? (OrderReturn::STATUS_LABELS[$to] ?? $to) : '';
+            })(),
+            'ap_role'      => $r->approverRole(),
+            'ap_order_amt' => (int) ($r->order?->total_amount ?? 0),
+            'ap_copay'     => (int) ($r->order?->patient_copay ?? 0),
+            'ap_adjust'    => $r->needsAdjust() ? (int) ($r->adjust_amount ?? $r->adjustedAmount() ?? 0) : null,
+            'ap_adjust_dir'=> $r->needsAdjust()
+                ? (OrderReturn::ADJ_DIRECTIONS[$r->adjust_direction ?? OrderReturn::ADJ_REFUND] ?? '') : '',
+            'ap_saved'     => $r->adjust_amount !== null,
+
             'assignee'  => $r->assignee?->name ?? '-',
             'created'   => $r->created_at?->format('Y-m-d') ?? '-',
 
@@ -451,6 +465,91 @@ class OrderReturnController extends Controller
         ]);
 
         return view('order-returns.show', ['r' => $orderReturn]);
+    }
+
+    /**
+     * 목록에서 고른 건을 한 번에 승인한다.
+     *
+     * 승인할 사람은 하루에 여러 건을 본다. 한 건씩 열어 진행 단계 탭까지 들어가
+     * 누르게 두면, 스무 건이면 스무 번을 오간다. 목록에서 골라 한 번에 누른다.
+     *
+     * 어느 걸음으로 가는지는 건마다 다르다 — 검수 확정을 기다리는 건도 있고 반품
+     * 승인을 기다리는 건도 있다. 그 건의 다음 걸음 가운데 승인인 것을 찾아 옮긴다.
+     * 기다리지 않는 건이 섞여 들어오면 건너뛰고 몇 건이 그랬는지 말해 준다.
+     */
+    public function bulkApprove(Request $request): RedirectResponse
+    {
+        if (!perm('order-returns', 'approve')) {
+            return back()->withErrors(['bulk' => '승인 권한이 있어야 누를 수 있습니다.']);
+        }
+
+        $data = $request->validate([
+            'ids'    => ['required', 'array', 'min:1'],
+            'ids.*'  => ['integer'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $rows = OrderReturn::whereIn('id', $data['ids'])->get();
+
+        $done = 0;
+        $skipped = [];
+
+        foreach ($rows as $r) {
+            $to = collect($r->nextStatuses())->first(fn ($s) => OrderReturn::needsApproval($s));
+
+            if (!$to) {
+                $skipped[] = $r->receipt_no;
+                continue;
+            }
+
+            $this->applyTransition($r, $to, $data['reason'] ?? null);
+            $done++;
+        }
+
+        $말 = $done . '건을 승인했습니다.';
+        if ($skipped) {
+            $말 .= ' 승인을 기다리지 않는 ' . count($skipped) . '건은 건너뛰었습니다 — '
+                 . implode(', ', array_slice($skipped, 0, 5))
+                 . (count($skipped) > 5 ? ' 외' : '') . '.';
+        }
+
+        return back()->with('status', $말);
+    }
+
+    /**
+     * 걸음 하나를 옮긴다 — 화면에서 누르는 길과 목록에서 한 번에 누르는 길이 함께 쓴다.
+     *
+     * 막는 일(흐름·권한·조정 금액)은 부르는 쪽이 이미 가렸다. 여기서는 옮기고,
+     * 자취를 남기고, 창고와 승인자에게 알린다.
+     */
+    private function applyTransition(OrderReturn $orderReturn, string $to, ?string $reason): void
+    {
+        DB::transaction(function () use ($orderReturn, $to, $reason) {
+            OrderReturnLog::create([
+                'order_return_id' => $orderReturn->id,
+                'from_status'     => $orderReturn->status,
+                'to_status'       => $to,
+                'reason'          => $reason,
+                'created_by'      => Auth::id(),
+            ]);
+
+            $fill = ['status' => $to];
+
+            match ($to) {
+                'inspected' => $fill = $fill + [
+                    'inspect_confirmed_by' => Auth::id(),
+                    'inspect_confirmed_at' => now(),
+                ],
+                'approved'  => $fill = $fill + ['approved_by' => Auth::id(), 'approved_at' => now()],
+                default     => null,
+            };
+
+            $orderReturn->update($fill);
+        });
+
+        $this->withworks->pushStatus($orderReturn);
+
+        app(\App\Services\ReturnNotice::class)->askApproval($orderReturn->fresh());
     }
 
     /**

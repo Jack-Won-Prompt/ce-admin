@@ -81,6 +81,12 @@
          옆에 붙은 「검색」이 자리를 옮긴다. 누를 것은 항상 같은 자리에 있어야 한다. --}}
     <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 승인은 하루에 여러 건을 본다. 한 건씩 열어 진행 단계 탭까지 들어가게
+         두면 스무 건이면 스무 번을 오간다. 목록에서 골라 한 번에 누른다. --}}
+    @perm('order-returns', 'approve')
+      <button type="button" class="ds-btn" style="border-color:#B54708;color:#B54708;font-weight:600;"
+              onclick="rtnAskApprove()">반품 승인</button>
+    @endperm
     {{-- 접수는 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌고,
          찾다가 없으면 바로 접수하는 흐름과도 맞지 않았다. --}}
     <button type="button" class="ds-btn ds-btn-primary" onclick="rtnPanel('new')">
@@ -125,6 +131,32 @@
   </div>
   </div>{{-- /.ds-grid-card --}}
 </div>
+
+{{-- 승인하기 전에 무엇을 승인하는지 보여 준다. 목록의 한 줄만으로는 금액이
+     어떻게 움직이는지 알 수 없어, 승인하고 나서야 상세를 열어 확인하게 된다. --}}
+<div id="rtnApWrap" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.34);"
+     onclick="if(event.target===this) rtnApClose()">
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,92vw);
+              max-height:82vh;display:flex;flex-direction:column;background:var(--bg-card,#fff);
+              border-radius:12px;box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+    <div style="padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;font-weight:700;">반품 승인</span>
+      <span id="rtnApCount" style="font-size:12px;color:var(--text-muted);"></span>
+      <span style="flex:1;"></span>
+      <button type="button" class="ds-btn ds-btn-sm" onclick="rtnApClose()">✕</button>
+    </div>
+    <div id="rtnApBody" style="padding:6px 16px 14px;overflow-y:auto;font-size:13px;"></div>
+    <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button type="button" class="ds-btn" onclick="rtnApClose()">닫기</button>
+      <button type="button" id="rtnApGo" class="ds-btn ds-btn-primary" onclick="rtnApSubmit()">승인하기</button>
+    </div>
+  </div>
+</div>
+
+<form id="rtnApForm" method="POST" action="{{ route('order-returns.bulkApprove') }}" style="display:none;">
+  @csrf
+  <div id="rtnApIds"></div>
+</form>
 
 @endsection
 
@@ -228,6 +260,78 @@
     data: @json($gridData),
   });
   window.__rtnGrid = grid;
+
+  /* ── 반품 승인 ──────────────────────────────────────────────
+     목록에서 고른 줄을 한 번에 승인한다. 누르기 전에 무엇을 승인하는지 보여 준다 —
+     주문 금액과 본인부담, 조정이 붙는 건은 얼마가 움직이는지까지. 승인하고 나서
+     상세를 열어 확인하게 두면 이미 늦다. */
+  const 원 = n => (n || n === 0) ? Number(n).toLocaleString('ko-KR') + '원' : '—';
+
+  window.rtnAskApprove = function () {
+    const rows = grid.getCheckedRows();
+
+    if (!rows.length) {
+      showToast('승인할 건을 목록에서 고르십시오.', 'warning');
+      return;
+    }
+
+    const 될것 = rows.filter(r => r.ap_next);
+    const 안될것 = rows.filter(r => !r.ap_next);
+
+    document.getElementById('rtnApCount').textContent =
+      될것.length + '건' + (안될것.length ? ' · 건너뜀 ' + 안될것.length + '건' : '');
+
+    const 줄 = r => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border-light);">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px;">
+          <b>${r.receipt}</b>
+          <span style="color:var(--text-muted);">${r.patient} · ${r.type} · ${r.scenario}</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:#B54708;font-weight:600;">${r.ap_next} →</span>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 10px;font-size:12px;">
+          <span style="color:var(--text-muted);">주문번호</span><span>${r.order_no}</span>
+          <span style="color:var(--text-muted);">사유</span><span>${r.reason}</span>
+          <span style="color:var(--text-muted);">주문 금액</span><span>${원(r.ap_order_amt)}</span>
+          <span style="color:var(--text-muted);">본인부담</span><span>${원(r.ap_copay)}</span>
+          <span style="color:var(--text-muted);">수량</span><span>${r.qty_returned || '—'} / ${r.qty_ordered || '—'}${r.partial === '부분' ? ' (부분)' : ''}</span>
+          <span style="color:var(--text-muted);">승인 주체</span><span>${r.ap_role || '—'}</span>
+          ${r.ap_adjust === null || r.ap_adjust === undefined ? '' : `
+            <span style="color:var(--text-muted);">조정 금액</span>
+            <span style="grid-column:span 3;">
+              <b>${r.ap_adjust_dir} ${원(r.ap_adjust)}</b>
+              <span style="font-size:11px;color:${r.ap_saved ? 'var(--text-muted)' : '#B54708'};margin-left:6px;">
+                ${r.ap_saved ? '적어 둔 값' : '아직 적지 않았습니다 — 줄에서 셈한 값입니다'}
+              </span>
+            </span>`}
+        </div>
+      </div>`;
+
+    const 건너뜀 = 안될것.length ? `
+      <div style="margin-top:10px;padding:9px 11px;background:var(--bg-muted,#F8FAFC);border-radius:8px;
+                  font-size:12px;color:var(--text-muted);">
+        승인을 기다리지 않는 ${안될것.length}건은 건너뜁니다 —
+        ${안될것.slice(0, 5).map(r => r.receipt + ' (' + r.status + ')').join(', ')}${안될것.length > 5 ? ' 외' : ''}
+      </div>` : '';
+
+    document.getElementById('rtnApBody').innerHTML =
+      (될것.length ? 될것.map(줄).join('') : '<div style="padding:14px 0;color:var(--text-muted);">승인할 건이 없습니다.</div>')
+      + 건너뜀;
+
+    document.getElementById('rtnApGo').disabled = 될것.length === 0;
+    document.getElementById('rtnApIds').innerHTML =
+      될것.map(r => `<input type="hidden" name="ids[]" value="${r.id}">`).join('');
+
+    document.getElementById('rtnApWrap').style.display = 'block';
+  };
+
+  window.rtnApClose  = () => { document.getElementById('rtnApWrap').style.display = 'none'; };
+  window.rtnApSubmit = () => {
+    const b = document.getElementById('rtnApGo');
+    b.disabled = true; b.textContent = '승인 중...';
+    document.getElementById('rtnApForm').submit();
+  };
+
 
   /* 목록 · 상세 · 접수 탭. 접수 탭을 열면 원 주문 찾기에 바로 손이 가도록 커서를 옮긴다. */
   const PANES = { list: 'rtnPaneList', show: 'rtnPaneShow', new: 'rtnPaneNew' };

@@ -155,7 +155,7 @@ class OrderReturn extends Model
         'inspecting'      => '검수중',
         'inspected'       => '검수 확정',
         'confirming'      => '확인요청',
-        'approved'        => '전자 승인',
+        'approved'        => '반품 승인',
         'payment_checked' => '입금 확인',
         'order_confirmed' => '오더 확정',
         'reshipping'      => '재발송',
