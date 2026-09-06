@@ -102,9 +102,12 @@ class ReturnSettlement
                     . ($body['message'] ?? ('HTTP ' . $res->status())));
             }
 
+            /* 지난번에 왜 안 됐는지를 적어 둔 자리를 비운다. 남겨 두면 조정 주문이
+               버젓이 서 있는데도 화면에는 「거절당했습니다」가 함께 보인다. */
             $return->forceFill([
                 'adjust_so_no' => mb_substr((string) ($body['result']['so_no'] ?? ''), 0, 50) ?: null,
                 'adjusted_at'  => now(),
+                'credit_note'  => $return->credit_issued_at ? $return->credit_note : null,
             ])->save();
 
             activity()->causedBy(Auth::user())->performedOn($return->order)
