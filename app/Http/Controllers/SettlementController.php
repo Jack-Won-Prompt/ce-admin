@@ -761,6 +761,11 @@ class SettlementController extends Controller
      */
     private function cancelCardApproval(Order $order): array
     {
+        /* 무르는 일은 PaymentCancelService 한 곳에서 한다. 예전에는 이 자리에서
+           토스를 바로 불러, 취소 누계ㆍ때ㆍ까닭을 표에 남기지 않았고 이미 다 무른
+           건에 또 걸려 토스 말이 담당자에게 그대로 갔다. */
+        $svc = app(\App\Services\TossPayments\PaymentCancelService::class);
+
         $pay = \App\Models\TossPayment::where('order_id', $order->id)
             ->where('method', 'CARD')
             ->whereIn('status', ['DONE', 'PARTIAL_CANCELED'])
@@ -771,32 +776,20 @@ class SettlementController extends Controller
             return [[], []];
         }
 
-        try {
-            $res = app(\App\Services\TossPayments\TossClient::class)
-                ->post('/v1/payments/' . $pay->payment_key . '/cancel', [
-                    'cancelReason' => '입금 확인 취소',
-                ]);
+        $r = $svc->cancel($order, '입금 확인 취소');
 
-            $pay->update([
-                'status'       => $res['status'] ?? 'CANCELED',
-                'raw_response' => $res,
-            ]);
-
-            /* 결제 요청 줄도 함께 무른다 — 「결제완료」로 남으면 다시 보낼 수 없다 */
-            \App\Models\PaymentLink::where('payment_key', $pay->payment_key)
-                ->update(['status' => 'cancelled']);
-
-            activity()->causedBy(Auth::user())->performedOn($order)
-                ->log('카드 승인 취소: ' . number_format((int) $pay->amount) . '원');
-
-            return [['카드전표'], []];
-        } catch (\Throwable $e) {
-            Log::warning('[입금 확인 취소] 카드 승인 취소 실패', [
-                'order' => $order->order_number, 'error' => $e->getMessage(),
-            ]);
-
-            return [[], ['카드 승인은 취소하지 못했습니다(' . $e->getMessage() . ')']];
+        if (! $r['ok']) {
+            return [[], ['카드 승인은 취소하지 못했습니다(' . $r['message'] . ')']];
         }
+
+        /* 결제 요청 줄도 함께 무른다 — 「결제완료」로 남으면 다시 보낼 수 없다 */
+        \App\Models\PaymentLink::where('payment_key', $pay->payment_key)
+            ->update(['status' => 'cancelled']);
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('카드 승인 취소: ' . number_format((int) ($r['canceled'] ?? $pay->amount)) . '원');
+
+        return [['카드전표'], []];
     }
 
     public function checkPaymentStatus(Order $order): JsonResponse
