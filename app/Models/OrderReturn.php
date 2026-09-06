@@ -390,10 +390,16 @@ class OrderReturn extends Model
     }
 
     /**
-     * 조정 뒤 남는 금액 — 적어 두지 않았으면 줄에서 셈해 본다.
+     * 움직일 금액 — 적어 두지 않았으면 줄에서 셈해 본다.
      *
-     * 원 주문의 본인부담에서 되돌린 몫을 뺀 값이다. 사람이 적어 둔 값이 있으면
-     * 그것이 정본이다 — 위약금이 섞이는 건이 있어 셈이 늘 맞지는 않는다.
+     * 이 칸은 방향(환불·추가 입금)과 짝을 이룬다 — 그러므로 돈이 얼마나
+     * 움직이는가여야 한다. 예전에는 「조정 뒤 남는 금액」(본인부담 − 되돌린 몫)을
+     * 셈해 넣었는데 방향은 「환불」로 서 있어, 540개 가운데 200개를 되돌리면
+     * 「환불 76,500원」이 미리 채워졌다 — 돌려줄 돈은 45,000원인데도.
+     * 그대로 저장하면 자취에 틀린 금액이 남는다 (2026-09-06 고침).
+     *
+     * 사람이 적어 둔 값이 있으면 그것이 정본이다 — 위약금이 섞이는 건이 있어
+     * 셈이 늘 맞지는 않는다.
      */
     public function adjustedAmount(): ?int
     {
@@ -401,8 +407,7 @@ class OrderReturn extends Model
             return (int) $this->adjust_amount;
         }
 
-        $order = $this->order;
-        if (!$order) {
+        if (!$this->order) {
             return null;
         }
 
@@ -410,7 +415,7 @@ class OrderReturn extends Model
            줄은 그 몫만큼만 센다(OrderReturnItem::refundAmount 가 그 셈이다). */
         $back = (int) $this->items->sum(fn ($i) => $i->refundAmount());
 
-        return max(0, (int) $order->patient_copay - $back);
+        return max(0, $back);
     }
 
     public function flow(): array
