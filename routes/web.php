@@ -49,6 +49,14 @@ Route::get('/welcome', function () {
     return view('welcome');
 });
 
+/* 스토어 심사와 앱이 여는 문서 세 장. 로그인 뒤에 두면 안 된다 —
+   구글이 심사할 때도, 계정을 지운 사람이 열 때도 로그인할 수 없다. */
+Route::controller(\App\Http\Controllers\LegalController::class)->name('legal.')->group(function () {
+    Route::get('/terms',            'terms')->name('terms');
+    Route::get('/privacy-policy',   'privacy')->name('privacy');
+    Route::get('/account-deletion', 'deletion')->name('deletion');
+});
+
 // 인증 미들웨어로 보호
 Route::middleware(['auth'])->group(function () {
 
