@@ -16,11 +16,14 @@ class TossPayment extends Model
         'order_id', 'payment_key', 'toss_order_id', 'method',
         'status', 'amount', 'bank', 'account_number', 'customer_name',
         'due_date', 'deposited_at', 'raw_response',
+        'canceled_at', 'cancel_amount', 'cancel_reason',
     ];
 
     protected $casts = [
         'due_date'     => 'datetime',
         'deposited_at' => 'datetime',
+        'canceled_at'  => 'datetime',
+        'cancel_amount'=> 'integer',
         'raw_response' => 'array',
         'amount'       => 'integer',
     ];

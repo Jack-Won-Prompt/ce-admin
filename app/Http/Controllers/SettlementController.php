@@ -806,6 +806,22 @@ class SettlementController extends Controller
             return response()->json(['success' => false, 'message' => '발급된 가상계좌가 없습니다.'], 404);
         }
 
+        /* 임의로 세운 계좌는 토스에 없다 — 물어보면 NOT_FOUND_PAYMENT 로 죽는다.
+           시험 상점이 가상계좌를 지원하지 않아 우리가 세운 것이라, 입금도
+           담당자가 손으로 확인한다(정산 화면의 「입금 확인」). */
+        if (\App\Services\TossPayments\VirtualAccountService::isSimulated($tp)) {
+            return response()->json([
+                'success'      => true,
+                'simulated'    => true,
+                'status'       => $tp->status,
+                'status_label' => $tp->status_label,
+                'status_badge' => $tp->status_badge,
+                'deposited_at' => $tp->deposited_at?->format('Y-m-d H:i'),
+                'message'      => '시험으로 임의로 세운 계좌입니다 — 토스에 물어볼 수 없습니다. '
+                                . '입금은 정산 화면의 「입금 확인」으로 세우십시오.',
+            ]);
+        }
+
         try {
             $data = $this->vaService->fetchByPaymentKey($tp->payment_key);
             $tp->refresh();

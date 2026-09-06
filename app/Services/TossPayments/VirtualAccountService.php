@@ -33,6 +33,7 @@ class VirtualAccountService extends TossClient
 
         // 주의: 토스 API는 validHours / dueDate 중 하나만 허용한다.
         // (둘 다 보내면 INVALID_VALID_HOURS_WITH_DUE_DATE_AND_SINGLE 400 발생)
+        try {
         $response = $this->post('/v1/virtual-accounts', [
             'amount'       => $amount,
             'orderId'      => $orderId,
@@ -41,6 +42,24 @@ class VirtualAccountService extends TossClient
             'bank'         => $bank,
             'validHours'   => $validHours,
         ]);
+        } catch (TossApiException $e) {
+            /* 시험 상점이 가상계좌를 열어 두지 않은 일이 있다
+               (NOT_SUPPORTED_METHOD). 그러면 시험이 거기서 막혀 받는 쪽 화면·문자·
+               입금 확인을 한 번도 밟지 못한다.
+
+               **시험 모드에서만** 임의 계좌를 세워 그다음 걸음을 밟게 한다.
+               운영 키에서는 그대로 되돌린다 — 진짜 돈을 받는 계좌를
+               우리가 지어내면 그 돈은 어디로도 가지 않는다. */
+            if (!$this->testMode) {
+                throw $e;
+            }
+
+            Log::warning('[Toss][시험] 가상계좌를 임의로 세움', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return $this->mockVirtualAccount($order, $orderId, $amount, $bank, $dueDate, $e->getMessage());
+        }
 
         return TossPayment::updateOrCreate(
             ['order_id' => $order->id],
@@ -57,6 +76,46 @@ class VirtualAccountService extends TossClient
                 'raw_response'   => $response,
             ]
         );
+    }
+
+    /**
+     * 임의 가상계좌 — 시험 모드 전용.
+     *
+     * 번호는 진짜 계좌와 갈리도록 머리에 9 를 붙인다. 결제키도
+     * SIMVA- 로 뗄어 토스에 물어볼 것과 섞이지 않게 한다 — 섞이면
+     * 입금 확인이 토스로 돌아가 NOT_FOUND_PAYMENT 로 죽는다.
+     */
+    private function mockVirtualAccount(
+        Order $order, string $orderId, int $amount, string $bank, string $dueDate, string $why
+    ): TossPayment {
+        $account = '9' . str_pad((string) random_int(0, 99999999999), 11, '0', STR_PAD_LEFT);
+
+        return TossPayment::updateOrCreate(
+            ['order_id' => $order->id],
+            [
+                'payment_key'    => 'SIMVA-' . now()->format('YmdHis') . '-' . random_int(1000, 9999),
+                'toss_order_id'  => $orderId,
+                'method'         => 'VIRTUAL_ACCOUNT',
+                'status'         => 'WAITING_FOR_DEPOSIT',
+                'amount'         => $amount,
+                'bank'           => $bank,
+                'account_number' => $account,
+                'customer_name'  => $order->patient?->name ?? '환자',
+                'due_date'       => $dueDate,
+                'raw_response'   => [
+                    'simulated' => true,
+                    'reason'    => $why,
+                    'note'      => '시험 상점이 가상계좌를 지원하지 않아 임의로 세운 계좌입니다. '
+                                . '입금 확인은 손으로 합니다.',
+                ],
+            ]
+        );
+    }
+
+    /** 임의로 세운 계좌인가 — 토스에 물어봐야 소용없는 건이다 */
+    public static function isSimulated(?TossPayment $p): bool
+    {
+        return $p && str_starts_with((string) $p->payment_key, 'SIMVA-');
     }
 
     // ─────────────────────────────────────────────────────────────
