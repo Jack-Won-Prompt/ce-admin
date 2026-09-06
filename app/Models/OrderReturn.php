@@ -201,6 +201,44 @@ class OrderReturn extends Model
     public const APPROVAL_STATUSES = ['inspected', 'approved'];
 
     /**
+     * 승인을 기다리는 건이 서 있을 수 있는 걸음들 — 흐름에서 끌어낸다.
+     *
+     * 「승인 대기」는 지금 상태가 승인 단계인 것이 아니라, **다음 걸음이 승인**인
+     * 것이다. 갈래마다 앞걸음이 달라(변심 교환은 검수중, 출고 전 취소는 확인요청,
+     * 자격 변경은 접수) 손으로 적어 두면 갈래가 늘 때 어긋난다.
+     *
+     * 이 목록은 조회를 좁히는 데만 쓴다 — 줄마다 맞는지는 awaitsApproval() 이 가른다.
+     * 「접수」가 여기 드는 것은 자격 변경 때문이라, 상태만으로는 갈라지지 않는다.
+     */
+    public static function awaitingCandidates(): array
+    {
+        $out = [];
+
+        foreach (self::FLOWS as $flow) {
+            foreach ($flow as $i => $status) {
+                $next = $flow[$i + 1] ?? null;
+                if ($next && self::needsApproval($next)) {
+                    $out[] = $status;
+                }
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /** 이 건이 지금 승인을 기다리는가 — 다음 걸음이 승인이면 그렇다 */
+    public function awaitsApproval(): bool
+    {
+        foreach ($this->nextStatuses() as $s) {
+            if (self::needsApproval($s)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * 신청 사유 — 표가 비었을 때의 대비다.
      *
      * 배송비 부담 주체를 함께 두었으나 걷었다. 배송비는 없다(2026-09-03 확정).

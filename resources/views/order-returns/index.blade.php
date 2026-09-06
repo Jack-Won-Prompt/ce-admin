@@ -68,7 +68,16 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    @if(request('q') || request('status'))
+    {{-- 승인할 사람은 「내가 누를 것」을 한 번에 보길 원한다. 상태 거르개만 있을 때는
+         「검수 확정」과 「전자 승인」을 따로 곱라 보아야 했고, 그래도 자격 변경처럼
+         접수 직후가 승인인 건은 어느 묶음에도 들지 않았다. --}}
+    <label class="ds-btn" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+           {{ request()->boolean('pending') ? 'background:#FEF3C7;border-color:#B54708;color:#B54708;font-weight:600;' : '' }}">
+      <input type="checkbox" name="pending" value="1" @checked(request()->boolean('pending'))
+             onchange="this.form.submit()" style="accent-color:#B54708;margin:0;">
+      승인 대기@if($pendingCount) <b>{{ $pendingCount }}</b>@endif
+    </label>
+    @if(request('q') || request('status') || request()->boolean('pending'))
       <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
@@ -89,7 +98,7 @@
   {{-- 목록과 접수를 한 화면에 나란히 둔다. 접수하려고 다른 화면으로 건너가면
        방금 무엇을 보고 있었는지가 끊긴다. --}}
   <div class="pnl-tabs">
-    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건@if($lateCount) · <b style="color:#B54708;">기한 초과 {{ $lateCount }}</b>@endif)</span></button>
+    <button type="button" id="rtnTabList" class="pnl-tab active" onclick="rtnPanel('list')"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ $total }}</b>건@if($pendingCount) · <b style="color:#B54708;">승인 대기 {{ $pendingCount }}</b>@endif@if($lateCount) · <b style="color:#B54708;">기한 초과 {{ $lateCount }}</b>@endif)</span></button>
     {{-- 고른 건은 목록 바로 옆에서 본다. 다른 화면으로 건너가면 어떤 조건으로 찾고
          있었는지가 끊기고, 돌아오려면 다시 찾아야 한다. --}}
     <button type="button" id="rtnTabShow" class="pnl-tab" onclick="rtnPanel('show')">상세내용</button>

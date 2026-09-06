@@ -44,6 +44,12 @@ class OrderReturnController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+        /* 승인 대기 묶음 — 지금 서 있는 걸음의 **다음**이 승인인 건들이다.
+           상태 거르개만 있을 때는 「검수 확정」과 「전자 승인」을 따로 곱라 보아야
+           했다. 승인할 사람은 「내가 누를 것」을 한 번에 보길 원한다. */
+        if ($request->boolean('pending')) {
+            $query->whereIn('status', OrderReturn::awaitingCandidates());
+        }
         if ($request->filled('q')) {
             $kw = $request->q;
             $query->where(fn ($s) => $s
@@ -53,6 +59,12 @@ class OrderReturnController extends Controller
         }
 
         $rows = $query->get();
+
+        /* 걸러내는 것은 줄마다 본다 — 같은 「접수」라도 자격 변경만 다음이
+           승인이고, 나머지는 수거부터다. 상태 이름만으로는 갈라지지 않는다. */
+        if ($request->boolean('pending')) {
+            $rows = $rows->filter(fn (OrderReturn $r) => $r->awaitsApproval())->values();
+        }
 
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('order.patient_id'));
 
@@ -143,11 +155,17 @@ class OrderReturnController extends Controller
         // 늦은 건이 몇 건인지는 목록을 다 훑어야 알 수 있다 — 화면 위에 세어 둔다
         $lateCount = $rows->filter(fn (OrderReturn $r) => $r->overdue() !== null)->count();
 
+        /* 승인을 기다리는 건은 찾는 조건과 상관없이 세어 둔다 — 거르고 있는 중에도
+           쓸 일이 몇 건인지는 보여야 한다. */
+        $pendingCount = OrderReturn::whereIn('status', OrderReturn::awaitingCandidates())
+            ->get()->filter(fn (OrderReturn $r) => $r->awaitsApproval())->count();
+
         return view('order-returns.index', [
             'gridData' => $gridData,
             'total'    => $gridData->count(),
             'counts'   => $counts,
             'lateCount' => $lateCount,
+            'pendingCount' => $pendingCount,
         ]);
     }
 
