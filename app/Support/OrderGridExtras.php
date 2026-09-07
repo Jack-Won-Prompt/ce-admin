@@ -279,8 +279,14 @@ class OrderGridExtras
             'ww_addr_code'  => $m('address_code'),
             /* 배송주소 — 저쪽이 알려 주면 그것을, 아니면 우리가 보낸 그대로 세운다.
                우리가 만들어 보낸 값이라 못 받아도 빈칸일 까닭이 없다. */
-            'ww_address'    => $m('address') ?: trim((string) ($o?->shipping_address ?? '')
-                                 . ' ' . (string) ($o?->shipping_address_detail ?? '')),
+            'ww_address'    => $m('address') ?: (function () use ($o) {
+                                    $a = trim((string) ($o?->shipping_address ?? ''));
+                                    $d = trim((string) ($o?->shipping_address_detail ?? ''));
+
+                                    /* 상세 주소가 이미 앞 주소에 들어 있는 건이 있다 —
+                                       그대로 이으면 같은 말이 두 번 선다. */
+                                    return $d === '' || str_contains($a, $d) ? $a : trim($a . ' ' . $d);
+                                })(),
             'ww_qty_rb'     => $m('qty_rb'),
             'ww_qty_sb'     => $m('qty_sb'),
             'ww_receipt_state' => $m('receipt_status_label'),

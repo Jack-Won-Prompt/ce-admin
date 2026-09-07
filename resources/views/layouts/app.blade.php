@@ -2210,7 +2210,7 @@ document.addEventListener('click', (e) => {
       { header: '총 처방일수',    name: 'rx_days',      width: 100, align: 'right',  sortable: true },
       { header: '총계',           name: 'rx_total',     width: 90,  align: 'right',  sortable: true },
       { header: '처방전종료일',   name: 'rx_end',       width: 120, align: 'center', sortable: true },
-      { header: '전문과목',       name: 'rx_specialty', width: 100, sortable: true },
+      { header: '진료과목명',     name: 'rx_specialty', width: 110, sortable: true },
       { header: '의사면허번호',   name: 'rx_license',   width: 110 },
       { header: '처방 사유',      name: 'rx_reason',    width: 200, sortable: true },
       { header: '주문 담당자',    name: 'rx_order_mgr', width: 100, sortable: true },
