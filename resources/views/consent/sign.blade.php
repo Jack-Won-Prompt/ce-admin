@@ -684,7 +684,7 @@
            그것도 없으면 **거래처에 적혀 있는 보호자**를 세운다 (2026-09-07 · 결함 ㉕) —
            지난번에 서명하며 받아 둔 사람이다. 같은 아이의 두 번째 처방전에서
            보호자를 처음부터 다시 적게 하지 않는다. 서명은 그래도 다시 받는다. --}}
-      @php $g = $consent->prescription?->patient; @endphp
+      @php($g = $consent->prescription?->patient)
       <div class="g-field">
         <label>가입자ㆍ피부양자와의 관계 <span style="color:#ef4444;">*</span></label>
         <select id="gRelation" onchange="refreshAgree()">
