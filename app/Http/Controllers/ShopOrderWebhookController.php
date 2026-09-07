@@ -188,6 +188,9 @@ class ShopOrderWebhookController extends Controller
                 ->post("{$baseUrl}/api/v1/ce-admin/so_store", $payload);
 
             $body = $response->json();
+
+            // 보낸 것을 그대로 이메일로도 남긴다 — 저쪽 화면과 나란히 견주려는 것이다
+            \App\Services\WithworksNotice::sent('CE샵 주문 등록', 'so_store', $payload, $body);
             if ($response->successful() && ($body['success'] ?? false)) {
                 $order->update([
                     'withworks_so_no' => $body['result']['so_no'] ?? null,

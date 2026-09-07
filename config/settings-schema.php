@@ -365,6 +365,12 @@ return [
             'test_receiver_fax' => ['label' => '테스트 받는 팩스', 'config' => 'popbill.test.receiver_fax', 'width' => 1,
                                     'help'  => '「우리에게만」일 때 팩스가 오는 곳. 비어 있으면 발송이 막힌다.'],
 
+            /* 연계가 잘 갔는지는 저쪽 화면에 들어가 눈으로 찾아야 안다. 무엇을 어떤
+               값으로 보냈는지는 로그에만 남고, 로그는 서버에 들어가야 읽는다. */
+            'withworks_email' => ['label' => '위드웍스 연계 확인 이메일', 'config' => 'web.withworks_email', 'width' => 3,
+                                  'help'  => '위드웍스로 주문ㆍ반품을 보낼 때 그 내용을 이 주소로도 보낸다. '
+                                           . '저쪽 화면과 나란히 놓고 견줄 수 있다. 비우면 보내지 않는다.'],
+
             /* 본인확인은 여태 .env 로만 있어, 운영 전환 뒤 되돌렸는지 화면에서 볼 수 없었다. */
             'nice_simulate' => ['label' => '본인확인 시늉(NICE)', 'config' => 'nice.simulate', 'type' => 'bool',
                                 'help'  => '켜면 위임동의 화면의 본인확인이 실제 인증 없이 「확인됨 (테스트)」으로 넘어간다. '

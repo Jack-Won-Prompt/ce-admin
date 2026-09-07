@@ -326,6 +326,13 @@ class WithworksReturns
      * 못 부른 것과 거절당한 것을 가르지 않는다 — 호출한 쪽은 어느 쪽이든 실패로 다루고
      * 사람에게 알린다. 다만 거절 사유는 그대로 실어 준다.
      */
+    /** 이메일 제목에 쓰는 우리 말 — 자리 이름(return_store)만으로는 무슨 일인지 모른다 */
+    private const WHAT = [
+        'return_store'  => '반품 등록',
+        'return_status' => '반품 상태 전달',
+        'so_store'      => '주문 등록',
+    ];
+
     private function call(string $method, string $path, array $payload): ?array
     {
         $baseUrl = rtrim((string) config('services.demoworks.api_url'), '/');
@@ -337,7 +344,15 @@ class WithworksReturns
                 ? $req->get("{$baseUrl}/api/v1/ce-admin/{$path}", $payload)
                 : $req->post("{$baseUrl}/api/v1/ce-admin/{$path}", $payload);
 
-            return $res->json() ?? ['success' => false, 'message' => 'HTTP ' . $res->status()];
+            $out = $res->json() ?? ['success' => false, 'message' => 'HTTP ' . $res->status()];
+
+            /* 보낸 것을 그대로 이메일로도 남긴다 — 저쪽 화면과 나란히 놓고 견주려는
+               것이다. 물어보는 것(get)은 남기지 않는다. 바뀌는 것이 없다. */
+            if ($method !== 'get') {
+                \App\Services\WithworksNotice::sent(self::WHAT[$path] ?? $path, $path, $payload, $out);
+            }
+
+            return $out;
         } catch (\Throwable $e) {
             Log::warning('Withworks 호출 실패', [
                 'path' => $path, 'error' => $e->getMessage(),

@@ -322,6 +322,9 @@ class PrescriptionController extends Controller
 
             $body = $response->json();
 
+            // 보낸 것을 그대로 이메일로도 남긴다 — 저쪽 화면과 나란히 견주려는 것이다
+            \App\Services\WithworksNotice::sent('주문 등록', 'so_store', $payload, $body);
+
             if ($response->successful() && ($body['success'] ?? false)) {
                 $result = $body['result'] ?? [];
                 $soNo   = $result['so_no'] ?? null;
@@ -630,6 +633,8 @@ class PrescriptionController extends Controller
                 ->put("{$baseUrl}/api/v1/ce-admin/so_update", $payload);
 
             $body = $response->json();
+
+            \App\Services\WithworksNotice::sent('주문 수정', 'so_update', $payload, $body);
 
             if ($response->successful() && ($body['success'] ?? false)) {
                 $soNo = $body['result']['so_no'] ?? '-';

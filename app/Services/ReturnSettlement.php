@@ -97,6 +97,10 @@ class ReturnSettlement
 
             $body = $res->json();
 
+            // 보낸 것을 그대로 이메일로도 남긴다
+            \App\Services\WithworksNotice::sent('금액조정 주문 등록', 'so_store',
+                ['ce_order_number' => $return->receipt_no, 'items' => $items], $body);
+
             if (!$res->successful() || !($body['success'] ?? false)) {
                 return $this->note($return, '금액조정 주문 등록을 거절당했습니다: '
                     . ($body['message'] ?? ('HTTP ' . $res->status())));
