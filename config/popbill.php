@@ -76,8 +76,14 @@ return [
          * 걸린다. 서비스별 값을 먼저 보고, 없으면 예전 단일 키로 떨어진다.
          */
         'sender_num'   => env('POPBILL_TEST_SENDER_NUM'),
-        'sms_sender'   => env('POPBILL_SMS_SENDER_NUM', env('POPBILL_TEST_SENDER_NUM')),
-        'fax_sender'   => env('POPBILL_FAX_SENDER_NUM', env('POPBILL_TEST_SENDER_NUM')),
+
+        /* 서비스별 값은 **그 열쇠가 있을 때만** 세운다 (2026-09-07).
+           예전에는 없으면 일반 발신번호를 여기에 미리 구워 넣었는데, 그것은 서버가
+           뜰 때의 .env 값이라 화면(설정 › 서비스 연동 설정 › 팝빌 › 발신 번호)에서
+           고친 값보다 늘 먼저 읽혔다 — 화면에 있는데 아무 일도 하지 않는 칸이었다.
+           비워 두면 아래 쓰는 자리에서 `?:` 로 일반 발신번호로 떨어진다. */
+        'sms_sender'   => env('POPBILL_SMS_SENDER_NUM'),
+        'fax_sender'   => env('POPBILL_FAX_SENDER_NUM'),
         'receiver_fax' => env('POPBILL_TEST_RECEIVER_FAX'),
     ],
 
