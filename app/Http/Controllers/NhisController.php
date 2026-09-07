@@ -181,10 +181,15 @@ class NhisController extends Controller
                    나온 시군구(local_gov)다 — 그것을 보지 않고 지사만 보고 있었더니,
                    기초(의료급여) 건은 관할을 제대로 골라 두어도 늘 「관할 미지정」으로
                    섰다. 등기를 어디로 부칠지가 이 칸이라 그러면 목록을 믿을 수 없다.
-                   (2026-09-07 · 3차 5회 서나윤에서 드러났다) */
-                'office'       => $o->prescription?->claim_agency === \App\Support\ClaimAgency::LOCAL
-                                    ? ($o->prescription?->local_gov ?? '')
-                                    : ($o->prescription?->billingOffice?->displayName() ?? ''),
+                   (2026-09-07 · 3차 5회 서나윤에서 드러났다)
+
+                   지자체도 청구처를 골라 두었으면 그 이름ㆍ부서를 쓴다 — 「서울특별시
+                   중구」보다 「서울특별시 중구청 · 복지정책과 의료급여팀」이 낫다.
+                   아직 고르지 않은 건은 주소에서 나온 시군구라도 적어 둔다. */
+                'office'       => $o->prescription?->billingOffice?->displayName()
+                                    ?: ($o->prescription?->claim_agency === \App\Support\ClaimAgency::LOCAL
+                                        ? ($o->prescription?->local_gov ?? '')
+                                        : ''),
                 'office_tel'   => $o->prescription?->billingOffice?->tel ?? '',
                 'office_fax'   => $o->prescription?->billingOffice?->fax ?? '',
                 'office_who'   => trim(($o->prescription?->billingOffice?->manager_name ?? '')
