@@ -644,6 +644,47 @@ class PatientController extends Controller
         ];
     }
 
+    /**
+     * 주민번호에서 생년월일과 성별을 채운다 (2026-09-07).
+     *
+     * 거래처 등록 창은 화면에서 이 일을 한다(peBirthFromRrn). 그런데 처방자료
+     * 업로드의 조회 팝업에서 ［신규］로 만드는 길은 이름ㆍ주민번호ㆍ전화만 보내,
+     * 생년월일이 빈 채로 남았다.
+     *
+     * 생년월일이 비면 **미성년인지 알 수 없다** — is_minor 가 생년월일로 세므로,
+     * ［신규］로 만든 아이는 성년으로 잡혀 보호자 칸이 서지 않고 위임동의도
+     * 보호자 없이 지나간다.
+     *
+     * 화면마다 같은 셈을 두지 않고 저장하는 자리에서 한 번 채운다 — 어느 길로
+     * 들어와도 같아진다.
+     *
+     * **사람이 적어 둔 값은 덮지 않는다.** 주민번호와 생년월일이 어긋나는 건이
+     * 있는데(외국인ㆍ정정), 그때는 사람이 적은 쪽이 맞다.
+     */
+    private function fillFromResidentNo(array $data): array
+    {
+        $rn = $data['resident_no'] ?? null;
+        if (!$rn) {
+            return $data;
+        }
+
+        if (empty($data['birth_date'])) {
+            $birth = \App\Support\ResidentNo::birthDateFromMasked($rn);
+            if ($birth) {
+                $data['birth_date'] = $birth->toDateString();
+            }
+        }
+
+        if (empty($data['gender'])) {
+            $g = \App\Support\ResidentNo::genderFromMasked($rn);
+            if ($g) {
+                $data['gender'] = $g;
+            }
+        }
+
+        return $data;
+    }
+
     /** 자진발급이면 번호가 정해져 있다 — 담당자가 매번 외워 치지 않게 여기서 채운다 */
     private function fillSelfIssue(array $data): array
     {
@@ -656,7 +697,7 @@ class PatientController extends Controller
 
     public function store(Request $request): \Illuminate\Http\JsonResponse
     {
-        $data = $this->fillSelfIssue($request->validate($this->patientRules()));
+        $data = $this->fillFromResidentNo($this->fillSelfIssue($request->validate($this->patientRules())));
 
         // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
         if (!Patient::hasCareTypeColumn()) {
@@ -678,7 +719,7 @@ class PatientController extends Controller
     // ── 수정 ──────────────────────────────────────────────
     public function update(Request $request, Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $data = $this->fillSelfIssue($request->validate($this->patientRules()));
+        $data = $this->fillFromResidentNo($this->fillSelfIssue($request->validate($this->patientRules())));
 
         // 칸이 없는 서버에서는 사업부를 빼고 저장한다 — 넣으면 질의가 깨진다
         if (!Patient::hasCareTypeColumn()) {
