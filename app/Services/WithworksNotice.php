@@ -51,7 +51,19 @@ class WithworksNotice
 
     // ──────────────────────────────────────────────────────────
 
-    /** 제목에 우리 번호를 넣는다 — 받은 편지함에서 그 번호로 찾는다 */
+    /**
+     * 제목에 우리 번호를 넣는다 — 받은 편지함에서 그 번호로 찾는다.
+     *
+     * **한글은 우리가 먼저 base64 로 감싼다.** 그냥 두면 Symfony 가 Q 인코딩
+     * (=?utf-8?Q?=EC=9C=84…?=)으로 감싸는데, 한글은 한 자에 아홉 자리를 먹어
+     * 75자 한계에 금세 걸린다. 그러면 제목이 여러 조각으로 잘려 이어 붙고,
+     * 국내 웹메일 가운데 그 이어 붙임을 제대로 못 읽는 것이 있어 깨져 보인다.
+     *
+     * base64(B)는 한 자를 네 자리로 담아 조각이 하나로 끝난다. 이미 인코딩된
+     * 글은 통째로 ASCII 라 Symfony 가 다시 손대지 않는다.
+     *
+     * 줄표(—)도 쓰지 않는다. 굳이 없어도 읽히고, 클라이언트마다 다루는 품이 다르다.
+     */
     private static function subject(string $what, array $payload): string
     {
         $no = $payload['ce_order_number']
@@ -59,7 +71,9 @@ class WithworksNotice
             ?? $payload['rx_number']
             ?? '';
 
-        return '[CE Admin] 위드웍스 ' . $what . ($no !== '' ? ' — ' . $no : '');
+        $raw = '[CE Admin] 위드웍스 ' . $what . ($no !== '' ? ' ' . $no : '');
+
+        return mb_encode_mimeheader($raw, 'UTF-8', 'B');
     }
 
     private static function body(string $what, string $endpoint, array $payload, $result): string
