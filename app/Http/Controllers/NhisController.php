@@ -175,8 +175,16 @@ class NhisController extends Controller
                 /* 등기로 부친 자취가 있는가 — 있으면 영수증을 받아 볼 수 있다 */
                 'local_sent'   => $o->localDispatches()->exists(),
                 /* 어느 지사ㆍ어느 부서로 보내는가. 「건강보험공단」만 적혀 있으면 결국
-                   건마다 다시 찾아야 한다 — 골라 둔 것이 있으면 그것을 보여 준다. */
-                'office'       => $o->prescription?->billingOffice?->displayName() ?? '',
+                   건마다 다시 찾아야 한다 — 골라 둔 것이 있으면 그것을 보여 준다.
+
+                   지자체 건은 공단 지사 마스터에 임자가 없다. 관할은 환자 주소지에서
+                   나온 시군구(local_gov)다 — 그것을 보지 않고 지사만 보고 있었더니,
+                   기초(의료급여) 건은 관할을 제대로 골라 두어도 늘 「관할 미지정」으로
+                   섰다. 등기를 어디로 부칠지가 이 칸이라 그러면 목록을 믿을 수 없다.
+                   (2026-09-07 · 3차 5회 서나윤에서 드러났다) */
+                'office'       => $o->prescription?->claim_agency === \App\Support\ClaimAgency::LOCAL
+                                    ? ($o->prescription?->local_gov ?? '')
+                                    : ($o->prescription?->billingOffice?->displayName() ?? ''),
                 'office_tel'   => $o->prescription?->billingOffice?->tel ?? '',
                 'office_fax'   => $o->prescription?->billingOffice?->fax ?? '',
                 'office_who'   => trim(($o->prescription?->billingOffice?->manager_name ?? '')

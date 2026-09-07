@@ -597,10 +597,20 @@
       if (el && data?.[k] != null) el.value = data[k];
     });
 
-    /* 보호자는 생년월일이 날짜 칸이라 앞의 일반 대입이 시각까지 붙은 값을 넣는다.
-       날짜 칸은 `YYYY-MM-DD` 만 받아 통째로 비워지므로 앞 열 자만 잘라 넣는다. */
-    const gb = document.getElementById('add-guardian-birth');
-    if (gb && data?.guardian_birth_date) gb.value = String(data.guardian_birth_date).slice(0, 10);
+    /* 날짜 칸은 시각이 붙은 값을 받지 못한다.
+
+       서버는 birth_date 를 날짜로 다루므로 `1992-03-13T15:00:00.000000Z` 처럼
+       시각과 시간대까지 붙여 보낸다. 앞의 일반 대입이 그것을 그대로 넣으면
+       날짜 칸은 통째로 비고, 달력 widget 이 씌워져 글 칸이 된 자리에서는 그
+       ISO 문자열이 사람 눈에 그대로 보인다 — 게다가 UTC 라 **하루가 앞선다**
+       (1992-03-14 인 사람이 1992-03-13 으로 읽힌다).
+
+       그대로 저장하면 생년월일이 하루 밀리거나 지워진다. 앞 열 자만 잘라 넣는다.
+       보호자 칸에서 먼저 겪은 일인데 본인 칸에는 손을 대지 않고 있었다. */
+    ['add-birth', 'add-guardian-birth'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value) el.value = String(el.value).slice(0, 10);
+    });
 
     /* 미성년인지는 서버가 말해 준다. 창이 생년월일을 보고 스스로 세도록 두었더니
        그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로 읽혔다. */
