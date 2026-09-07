@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\DB;
  * 화면에서 하나씩 등록하면 이백스물여섯 번을 눌러야 하고 그 사이 몇을 빠뜨린다.
  * 엑셀로 한 번 채워 여기에 넣는다.
  *
- *     php artisan billing-offices:seed-local database/data/지자체청구처_씨앗.csv
+ *     php artisan billing-offices:seed-local database/data/local_billing_offices.csv
  *     php artisan billing-offices:seed-local ... --dry     (넣지 않고 세어만 본다)
+ *
+ * 파일 이름은 영문으로 둔다 — 서버에 명령을 흘려 넣을 때 한글 이름은 깨진다.
  *
  * 첫 줄은 머리글이다. 칸 이름은 아래 그대로 쓴다(차례는 상관없다).
  *
