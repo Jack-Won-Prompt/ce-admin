@@ -221,6 +221,37 @@
         </div>
       </div>
 
+      {{-- ── 미성년 보호자 (2026-09-07 · 결함 ㉕) ──────────
+           위임동의에서 받은 보호자가 여기 남지 않아, 다음 처방전에서 다시
+           처음부터 물었다. 칸은 진작 있었는데 채우는 화면이 없었다.
+
+           미성년일 때만 세운다 — 성년 건에 늘 서 있으면 서른세 칸이 서른일곱이
+           되고, 그 넷은 언제나 빈 칸이다. --}}
+      <div id="add-guardian-box" style="display:none;margin-bottom:8px;">
+        <div class="form-grid-2" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label class="form-label">보호자</label>
+            <div style="display:flex;gap:6px;">
+              <select class="form-control" id="add-guardian-relation" style="flex:0 0 108px;">
+                <option value="">관계</option>
+                @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
+                  <option value="{{ $r }}">{{ $r }}</option>
+                @endforeach
+              </select>
+              <input type="text" class="form-control" id="add-guardian-name" placeholder="보호자 성명" style="flex:1;" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">보호자 생년월일 · 연락처</label>
+            <div style="display:flex;gap:6px;">
+              <input type="date" class="form-control" id="add-guardian-birth" style="flex:0 0 148px;" />
+              <input type="text" class="form-control" id="add-guardian-phone"
+                     placeholder="010-XXXX-XXXX" data-phone style="flex:1;" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- ── 공단 · 기초 (요청서 3쪽) ────────────────────── --}}
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
@@ -345,6 +376,34 @@
      안 된다. 두 화면이 같은 번호를 보고 다른 일을 할 까닭이 없다.
 
      사람이 손으로 고쳐 둔 값은 덮지 않는다. 이 수가 채워 둔 값만 다시 적는다. */
+  /* 미성년이면 보호자 칸을 세운다 (2026-09-07 · 결함 ㉕).
+     가르는 잣대는 생년월일이다 — 주민번호는 가려 온 것이라 못 읽을 때가 있고,
+     생년월일은 그 번호에서 이미 채워져 있다. */
+  function peGuardianToggle() {
+    const box = document.getElementById('add-guardian-box');
+    const bd  = document.getElementById('add-birth');
+    if (!box || !bd) return;
+
+    const v = String(bd.value || '').slice(0, 10);
+    let minor = false;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      const b = new Date(v + 'T00:00:00');
+      const now = new Date();
+      let age = now.getFullYear() - b.getFullYear();
+      const m = now.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+      minor = age < 19;
+    }
+
+    /* 이미 적어 둔 보호자가 있으면 성년이 되어도 감추지 않는다 — 감추면 그 값이
+       화면에 없는 채로 저장되어 지워진다(저장은 화면에서 읽는다). */
+    const 적힌것 = ['add-guardian-name','add-guardian-relation','add-guardian-birth','add-guardian-phone']
+      .some(id => (document.getElementById(id)?.value || '').trim() !== '');
+
+    box.style.display = (minor || 적힌것) ? '' : 'none';
+  }
+
   function peBirthFromRrn() {
     const rn = document.getElementById('add-resident');
     const bd = document.getElementById('add-birth');
@@ -373,6 +432,8 @@
   }
 
   document.getElementById('add-resident')?.addEventListener('input', peBirthFromRrn);
+  /* 생년월일이 바뀌면 성년ㆍ미성년도 바뀐다 — 주민번호에서 채워질 때도 여기로 온다 */
+  document.getElementById('add-birth')?.addEventListener('change', peGuardianToggle);
 
   /* 이 셋은 창의 onclick 이 부른다 — 인라인 handler 는 전역에서만 이름을 찾으므로
      감싸 둔 함수 안에 두면 「is not defined」로 죽는다. */
@@ -528,6 +589,13 @@
       if (el && data?.[k] != null) el.value = data[k];
     });
 
+    /* 보호자는 생년월일이 날짜 칸이라 앞의 일반 대입이 시각까지 붙은 값을 넣는다.
+       날짜 칸은 `YYYY-MM-DD` 만 받아 통째로 비워지므로 앞 열 자만 잘라 넣는다. */
+    const gb = document.getElementById('add-guardian-birth');
+    if (gb && data?.guardian_birth_date) gb.value = String(data.guardian_birth_date).slice(0, 10);
+
+    peGuardianToggle();
+
     /* 환자구분은 2026-08-31 에 다섯으로 바뀌었다. 그 전에 SB·SCI 로 적힌 사람은 고르는
        칸에 그 값이 없어, 창을 열자마자 빈칸이 되고 저장하면 지워진다.
        목록에 없는 값이면 한 줄을 붙여 지킨다 — 새로 고르지 않는 한 그대로 남는다. */
@@ -596,6 +664,12 @@
       nhis_agree_end:   val('add-agree-end'),
       basic_reeval:     val('add-basic-reeval'),
       basic_reeval_due: val('add-basic-due'),
+
+      // 미성년 보호자 — 성년이면 칸이 서지 않아 늘 null 이 간다
+      guardian_name:       val('add-guardian-name'),
+      guardian_relation:   val('add-guardian-relation'),
+      guardian_birth_date: val('add-guardian-birth'),
+      guardian_phone:      val('add-guardian-phone'),
     };
 
     const res = _peMode === 'edit'

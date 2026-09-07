@@ -413,6 +413,44 @@
           </div>
           @endif
 
+          {{-- 미성년 보호자 (2026-09-07 · 결함 ㉕) — 위임동의에서 받아 둔 사람.
+               미성년이거나 이미 적어 둔 것이 있을 때만 세운다. --}}
+          @if($patient->is_minor || $patient->guardian_name)
+          <div class="info-row">
+            <span class="info-label">보호자</span>
+            <span class="info-value">
+              <span class="view-only">
+                @if($patient->guardian_name)
+                  {{ $patient->guardian_name }}
+                  @if($patient->guardian_relation) ({{ $patient->guardian_relation }}) @endif
+                  @if($patient->guardian_birth_date) · {{ $patient->guardian_birth_date->format('Y-m-d') }} @endif
+                  @if($patient->guardian_phone) · {{ $patient->guardian_phone }} @endif
+                @else
+                  -
+                @endif
+              </span>
+              <span class="edit-only" style="display:flex;gap:6px;flex-wrap:wrap;">
+                <select class="form-control" id="e-guardian-relation" style="flex:0 0 104px;"
+                        data-orig="{{ $patient->guardian_relation }}">
+                  <option value="">관계</option>
+                  @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
+                    <option value="{{ $r }}" @selected($patient->guardian_relation === $r)>{{ $r }}</option>
+                  @endforeach
+                </select>
+                <input type="text" class="form-control" id="e-guardian-name" style="flex:1 1 110px;"
+                       value="{{ $patient->guardian_name }}" data-orig="{{ $patient->guardian_name }}"
+                       placeholder="보호자 성명" />
+                <input type="date" class="form-control" id="e-guardian-birth" style="flex:0 0 148px;"
+                       value="{{ $patient->guardian_birth_date?->format('Y-m-d') }}"
+                       data-orig="{{ $patient->guardian_birth_date?->format('Y-m-d') }}" />
+                <input type="text" class="form-control" id="e-guardian-phone" style="flex:1 1 130px;"
+                       value="{{ $patient->guardian_phone }}" data-orig="{{ $patient->guardian_phone }}"
+                       placeholder="010-XXXX-XXXX" data-phone />
+              </span>
+            </span>
+          </div>
+          @endif
+
           <div class="info-row">
             <span class="info-label">송금자명</span>
             <span class="info-value">
@@ -820,6 +858,10 @@
       email:            ev('e-email'),
       fax:              ev('e-fax'),
       remitter_name:    ev('e-remitter'),
+      guardian_name:       ev('e-guardian-name'),
+      guardian_relation:   ev('e-guardian-relation'),
+      guardian_birth_date: ev('e-guardian-birth'),
+      guardian_phone:      ev('e-guardian-phone'),
       deduction:        ev('e-deduction'),
       cash_receipt_no:  ev('e-cash-receipt'),
       nhis_reg_status:  ev('e-nhis-reg'),

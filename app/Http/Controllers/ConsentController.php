@@ -237,6 +237,37 @@ class ConsentController extends Controller
 
         $consent->update($payload);
 
+        /* 받아 둔 보호자를 거래처에도 적는다 (2026-09-07 · 결함 ㉕).
+
+           여태 보호자는 이 동의 한 건에만 남았다. 그래서 같은 아이의 다음 처방전에서
+           보호자를 처음부터 다시 물었고, 거래처 관리에서 「이 아이의 보호자가 누구냐」를
+           물으면 답할 자리가 없었다. `patients.guardian_*` 칸은 진작 있었는데
+           채우는 길이 없었을 뿐이다.
+
+           덮어쓰지 않는다 — 담당자가 거래처에서 손으로 고쳐 둔 값이 서명 한 번에
+           동의서의 값으로 되돌아가면 고친 뜻이 없다. **비어 있는 칸만** 채운다. */
+        if ($request->action === 'agreed' && $consent->is_minor) {
+            $consent->loadMissing('prescription.patient');
+            $patient = $consent->prescription?->patient;
+
+            if ($patient) {
+                $채울것 = array_filter([
+                    'guardian_name'       => $payload['guardian_name']       ?? null,
+                    'guardian_relation'   => $payload['guardian_relation']   ?? null,
+                    'guardian_birth_date' => $payload['guardian_birth_date'] ?? null,
+                    'guardian_phone'      => $payload['guardian_phone']      ?? null,
+                ], fn ($v, $k) => $v !== null && $v !== '' && blank($patient->{$k}), ARRAY_FILTER_USE_BOTH);
+
+                if ($채울것) {
+                    $patient->forceFill($채울것)->save();
+                    activity()->performedOn($patient)->log(
+                        '위임동의에서 받은 보호자를 거래처에 적었습니다 ('
+                        . ($payload['guardian_name'] ?? '') . ')'
+                    );
+                }
+            }
+        }
+
         // 동의 완료 시 PDF 자동 생성
         if ($request->action === 'agreed') {
             if ($needPrivacy) {

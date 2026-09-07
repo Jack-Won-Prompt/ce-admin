@@ -680,30 +680,34 @@
         <label>환자 생년월일</label>
         <input type="text" id="gPatientBirth" value="{{ $consent->patient_birth_date?->format('Y-m-d') }}" readonly />
       </div>
-      {{-- 담당자가 검수 화면에서 미리 적어 둔 값이 있으면 채워져 나온다 --}}
+      {{-- 담당자가 검수 화면에서 미리 적어 둔 값이 있으면 채워져 나온다.
+           그것도 없으면 **거래처에 적혀 있는 보호자**를 세운다 (2026-09-07 · 결함 ㉕) —
+           지난번에 서명하며 받아 둔 사람이다. 같은 아이의 두 번째 처방전에서
+           보호자를 처음부터 다시 적게 하지 않는다. 서명은 그래도 다시 받는다. --}}
+      @php $g = $consent->prescription?->patient; @endphp
       <div class="g-field">
         <label>가입자ㆍ피부양자와의 관계 <span style="color:#ef4444;">*</span></label>
         <select id="gRelation" onchange="refreshAgree()">
           <option value="">선택</option>
           @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
-            <option value="{{ $r }}" {{ $consent->guardian_relation === $r ? 'selected' : '' }}>{{ $r }}</option>
+            <option value="{{ $r }}" {{ ($consent->guardian_relation ?: $g?->guardian_relation) === $r ? 'selected' : '' }}>{{ $r }}</option>
           @endforeach
         </select>
       </div>
       <div class="g-field">
         <label>법정대리인 또는 가족 성명 <span style="color:#ef4444;">*</span></label>
         <input type="text" id="gName" maxlength="50" placeholder="법정대리인 또는 가족 성명"
-               value="{{ $consent->guardian_name }}" oninput="refreshAgree()" />
+               value="{{ $consent->guardian_name ?: $g?->guardian_name }}" oninput="refreshAgree()" />
       </div>
       <div class="g-field">
         <label>보호자 전화번호</label>
         <input type="text" id="gPhone" maxlength="20" placeholder="010-XXXX-XXXX"
-               value="{{ $consent->guardian_phone }}" />
+               value="{{ $consent->guardian_phone ?: $g?->guardian_phone }}" />
       </div>
       <div class="g-field">
         <label>법정대리인 또는 가족 생년월일 <span style="color:#ef4444;">*</span></label>
         <input type="text" id="gBirth" maxlength="10" placeholder="YYYY-MM-DD" inputmode="numeric"
-               value="{{ $consent->guardian_birth_date?->format('Y-m-d') }}" oninput="onGuardianBirth(this)" />
+               value="{{ $consent->guardian_birth_date?->format('Y-m-d') ?: $g?->guardian_birth_date?->format('Y-m-d') }}" oninput="onGuardianBirth(this)" />
       </div>
 
       <div class="sig-label" style="margin-top:14px;">

@@ -633,6 +633,14 @@ class PatientController extends Controller
             'basic_reeval'     => 'nullable|string|max:100',
             'basic_reeval_due' => 'nullable|date',
             'new_patient_date' => 'nullable|date',
+
+            /* 미성년 보호자 (2026-09-07 · 결함 ㉕).
+               칸은 진작 있었는데 채우는 화면이 없었다 — 위임동의에서 받아 두고도
+               거래처에는 비어 있어, 다음 처방전에서 보호자를 처음부터 다시 물었다. */
+            'guardian_name'       => 'nullable|string|max:50',
+            'guardian_relation'   => 'nullable|string|max:20',
+            'guardian_birth_date' => 'nullable|date',
+            'guardian_phone'      => 'nullable|string|max:30',
         ];
     }
 
