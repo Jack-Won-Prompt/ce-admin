@@ -232,6 +232,9 @@ class Patient extends Model
 
     protected $casts = [
         'birth_date'       => 'date',
+        /* 보호자 생년월일도 날짜다 (2026-09-07). 칸을 만들며 여기 적는 것을
+           빠뜨려, 화면이 ->format() 을 부르는 자리에서 통째로 500 이 났다. */
+        'guardian_birth_date' => 'date',
         'is_nhis_eligible' => 'boolean',
         'nhis_coverage_rate' => 'float',
         'rrn_retention_basis_at' => 'date',
