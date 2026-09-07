@@ -82,7 +82,13 @@
     el: document.getElementById('financeGrid'),
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
-    columns: COLS,
+    /* 재무가 보는 칸을 먼저 세우고, 그 뒤에 **위드웍스 판매현황과 같은 차례**를 잇는다
+       (2026-09-07 지시). 다른 다섯 목록이 이미 그 묶음을 쓰고 있었는데 Finance 만
+       제 칸만 세우고 있었다 — 저쪽 화면을 보다 이리로 넘어오면 눈이 다시 배워야 했다.
+
+       앞의 칸을 걷지 않는다. 재무는 매출ㆍ입금ㆍ미수를 세는 자리라, 그 값들이
+       맨 앞에 서 있어야 한 눈에 읽힌다. 위드웍스 차례는 그 뒤에서 이어 본다. */
+    columns: [...COLS, ...ceWwCols()],
     data: @json($gridData),
   });
   window.__financeGrid = grid;

@@ -78,7 +78,18 @@ class FinanceController extends Controller
 
         $rows = $query->get();
 
-        $data = $rows->map(fn (Order $o) => $this->orderRow($o))->values();
+        /* 위드웍스 판매현황과 같은 칸을 뒤에 잇는다 (2026-09-07 지시).
+           다른 다섯 목록(주문 관리ㆍ입금 내역ㆍ현금영수증ㆍ청구 관리ㆍ교환반품취소)이
+           이미 그 차례를 쓰고 있었는데 Finance 만 제 칸만 세우고 있었다 — 저쪽 화면을
+           보다 이리로 넘어오면 눈이 다시 배워야 했다.
+
+           동의는 사람에 붙어 줄마다 물으면 쉰 줄에 백을 묻는다. 한 번에 모아 둔다. */
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
+
+        $data = $rows->map(fn (Order $o) => $this->orderRow($o)
+            + $extras->rx($o->prescription, $o->patient)
+            + $extras->ww($o, $o->prescription, $o->patient)
+            + $extras->of($o))->values();
 
         return [$data, $this->columnsFor($tab)];
     }
@@ -192,7 +203,7 @@ class FinanceController extends Controller
     /** 반품환불내역 — 되돌린 건이 원본이라 주문이 아니라 접수에서 센다 */
     private function returns(string $from, string $to, Request $request): array
     {
-        $query = OrderReturn::with(['order.patient', 'items'])
+        $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'order.items', 'items'])
             ->whereBetween(\DB::raw('DATE(created_at)'), [$from, $to])
             ->orderByDesc('created_at')->orderByDesc('id');
 
@@ -204,7 +215,10 @@ class FinanceController extends Controller
                 ->orWhereHas('order.patient', fn ($p) => $p->where('name', 'like', "%{$kw}%")));
         }
 
-        $data = $query->get()->map(fn (OrderReturn $r) => [
+        $rows   = $query->get();
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('order.patient_id'));
+
+        $data = $rows->map(fn (OrderReturn $r) => [
             'order_no'  => $r->order?->order_number ?? '',
             'patient'   => $r->order?->patient?->name ?? '',
             'product'   => $r->items->pluck('product_name')->filter()->implode(', ')
@@ -218,7 +232,14 @@ class FinanceController extends Controller
             'refund'    => (int) $r->refund_amount,
             'state'     => $r->statusLabel(),
             'reason'    => OrderReturn::reasonLabel($r->reason_code),
-        ])->values();
+        ]
+            /* 되돌린 건도 원 주문의 위드웍스 칸을 함께 세운다 — 어느 판매가
+               되돌아온 것인지 그 자리에서 읽힌다. 주문이 없으면 빈 칸이 선다. */
+            + ($r->order
+                ? $extras->rx($r->order->prescription, $r->order->patient)
+                  + $extras->ww($r->order, $r->order->prescription, $r->order->patient)
+                  + $extras->of($r->order)
+                : []))->values();
 
         return [$data, $this->columnsFor('returns')];
     }
