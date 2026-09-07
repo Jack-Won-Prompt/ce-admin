@@ -27,3 +27,6 @@ Thumbs.db
 .playwright-mcp/
 .mcp.json
 
+
+# 엑셀을 열어 두면 생기는 잠금 파일
+~$*

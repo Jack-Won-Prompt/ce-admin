@@ -1,0 +1,582 @@
+# -*- coding: utf-8 -*-
+"""김태오 테스트 시나리오 엑셀 — 대형 프로젝트 QA 시나리오 서식."""
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+OUT = r'e:\xampp\htdocs\ce-admin\테스트\테스트3차\5회\김태오\테스트시나리오_김태오.xlsx'
+
+FONT = '맑은 고딕'
+NAVY   = '1B3A5C'      # 머리글
+SLATE  = '2E5A87'       # 보조 머리글
+MIST   = 'EAF1F8'       # 옅은 띠
+PAPER  = 'F7FAFC'       # 줄무늬
+LINE   = 'C9D6E4'
+GOLD   = 'B8860B'
+RED    = 'B02418'
+
+THIN = Side(style='thin', color=LINE)
+HAIR = Side(style='hair', color=LINE)
+MED  = Side(style='medium', color=NAVY)
+BOX  = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+BOX_T= Border(left=THIN, right=THIN, top=MED,  bottom=THIN)   # TC 첫 줄 — 굵은 윗선
+
+HDR_FILL = PatternFill('solid', fgColor=NAVY)
+SUB_FILL = PatternFill('solid', fgColor=SLATE)
+HDR_FONT = Font(name=FONT, size=9, bold=True, color='FFFFFF')
+GRP_FILL = PatternFill('solid', fgColor=MIST)
+ZEBRA    = PatternFill('solid', fgColor=PAPER)
+TITLE_FONT = Font(name=FONT, size=20, bold=True, color=NAVY)
+BODY = Font(name=FONT, size=9, color='222222')
+BODY_B = Font(name=FONT, size=9, bold=True, color=NAVY)
+SMALL = Font(name=FONT, size=8, color='4A5A6A')
+
+TOP = Alignment(vertical='top', wrap_text=True)
+TOPC = Alignment(vertical='top', horizontal='center', wrap_text=True)
+
+wb = openpyxl.Workbook()
+
+# ══════════════════════════════════════════════════════════════
+# 1) 표지
+# ══════════════════════════════════════════════════════════════
+c = wb.active
+c.title = '표지'
+c.sheet_view.showGridLines = False
+c.column_dimensions['A'].width = 3
+c.column_dimensions['B'].width = 22
+c.column_dimensions['C'].width = 78
+
+# 상단 머리띠
+for col in range(1, 5):
+    cc = c.cell(1, col); cc.fill = PatternFill('solid', fgColor=NAVY)
+c.row_dimensions[1].height = 6
+
+c['B3'] = 'CE Admin 통합 테스트 시나리오'
+c['B3'].font = TITLE_FONT
+c['B4'] = '3차 5회 · 1번 김태오 — 처방전 · 일반(본인 10% / 공단 90%) · 링크페이'
+c['B4'].font = Font(name=FONT, size=11, color=SLATE)
+c['B5'] = 'CASE-01   |   End-to-End 통합 테스트   |   TC-001 ~ TC-019'
+c['B5'].font = Font(name=FONT, size=9, color='7A8899')
+for rr in (3, 4, 5):
+    c.row_dimensions[rr].height = {3: 30, 4: 20, 5: 18}[rr]
+
+meta = [
+    ('문서 ID', 'TS-3-5-01-KTO'),
+    ('테스트 회차', '3차 5회'),
+    ('대상 시스템', 'CE Admin (ceadmin.co.kr) · 위드웍스 WMS (demoworks.co.kr)'),
+    ('테스트 유형', '통합 테스트(End-to-End) — 접수부터 공단 청구 서류 발송까지'),
+    ('대상 CASE', 'CASE-01 처방전 · 일반 자격(본인 10% / 공단 90%) · 링크페이 결제'),
+    ('테스트 데이터', '테스트3차/5회/김태오/ (처방전 1 · 신분증 1 · 등록신청서 1 · 결과지 8)'),
+    ('수행 방식', '100% 브라우저 수동 수행 — DB 직접 조작 금지'),
+    ('사전 승인', '설정 › 서비스 연동 설정 › 테스트 설정이 [테스트 자세]여야 함 (환경설정 시트)'),
+    ('작성일', '2026-09-07'),
+    ('작성자', 'CE Admin 개발팀'),
+    ('총 테스트 케이스', '19건 (TC-001 ~ TC-019)'),
+    ('참조 문서', '테스트/테스트_시나리오_상세.md · 5회/김태오/기록.md'),
+    ('캡처 위치', '5회/김태오/화면/ (37장)'),
+]
+r = 8
+for k, v in meta:
+    c[f'B{r}'] = k
+    c[f'B{r}'].font = BODY_B
+    c[f'B{r}'].fill = GRP_FILL
+    c[f'B{r}'].border = BOX
+    c[f'B{r}'].alignment = TOP
+    c[f'C{r}'] = v
+    c[f'C{r}'].font = BODY
+    c[f'C{r}'].border = BOX
+    c[f'C{r}'].alignment = TOP
+    r += 1
+
+r += 1
+c[f'B{r}'] = '판정 기준'
+c[f'B{r}'].font = Font(name=FONT, size=12, bold=True, color=NAVY)
+c[f'B{r}'].border = Border(bottom=Side(style='medium', color=GOLD))
+c[f'C{r}'].border = Border(bottom=Side(style='medium', color=GOLD))
+r += 1
+for k, v in [
+    ('Pass', '기대 결과가 모두 일치'),
+    ('Fail', '기대 결과와 다름 — 결함번호를 반드시 기재'),
+    ('N/A', '해당 케이스에서 수행 대상이 아님'),
+    ('Blocked', '선행 케이스 실패로 수행 불가'),
+]:
+    c[f'B{r}'] = k
+    c[f'B{r}'].font = Font(name=FONT, size=9, bold=True,
+                           color={'Pass':'1E7B34','Fail':RED,'N/A':'6B7280','Blocked':GOLD}[k])
+    c[f'B{r}'].border = BOX
+    c[f'B{r}'].alignment = TOPC
+    c[f'C{r}'] = v
+    c[f'C{r}'].font = BODY
+    c[f'C{r}'].border = BOX
+    c[f'C{r}'].alignment = TOP
+    r += 1
+
+# ══════════════════════════════════════════════════════════════
+# 2) 환경설정
+# ══════════════════════════════════════════════════════════════
+e = wb.create_sheet('환경설정')
+e.sheet_view.showGridLines = False
+ehdr = ['구분', '설정 항목', '설정 값', '설정 위치', '미설정 시 발생하는 문제']
+for i, h in enumerate(ehdr, 1):
+    cell = e.cell(1, i, h)
+    cell.fill = HDR_FILL; cell.font = HDR_FONT; cell.border = BOX; cell.alignment = TOPC
+for w, col in zip([14, 26, 30, 40, 52], 'ABCDE'):
+    e.column_dimensions[col].width = w
+
+env = [
+    ('화면', '웹 화면', '테스트 (등록된 사람 번호에서 고른다)', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '운영이면 전화번호를 직접 입력 — 오타 시 타인에게 안내 문자 발송'),
+    ('발송', '문자 발송', '우리에게만 (테스트 번호로 돌린다)', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '실제로 두면 거래처에 적힌 번호로 실제 발송됨'),
+    ('발송', '팩스 발송', '우리에게만', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '실제로 두면 공단 지사로 실제 팩스 발송'),
+    ('발송', '테스트 받는 번호', '01057990084', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '비어 있으면 문자 발송이 차단됨'),
+    ('발송', '테스트 받는 팩스', '0504-134-1393', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '비어 있으면 팩스 발송이 차단됨'),
+    ('발송', '발신 번호', '1588-7866', '설정 › 서비스 연동 설정 › 팝빌',
+     '팝빌 미등록 번호면 자동 대체되고 경고만 로그에 남음'),
+    ('인증', '본인확인 시늉(NICE)', '켬', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '끄면 실제 NICE 본인확인 호출 — 휴대폰 인증 필요'),
+    ('증빙', '증빙 발행 시뮬레이션', '켬 (POPBILL_ISSUE_SIMULATE=true)', '서버 .env',
+     '★ 팝빌 운영 계정이라 발행이 곧 국세청 실신고가 됨'),
+    ('결제', '토스 사용 환경', '테스트', '설정 › 서비스 연동 설정 › 토스페이먼츠',
+     '운영이면 실제 결제 발생'),
+    ('연계', '위드웍스 연계 확인 이메일', 'jhw7519@linkthelab.co.kr', '설정 › 서비스 연동 설정 › 테스트 설정',
+     '비우면 연계 내용 메일이 발송되지 않음'),
+    ('선행', '팝빌 파트너 포인트', '잔액 확인 필수', '팝빌 사이트 (LINKTHELAB 파트너 계정)',
+     '★ 연동회원 포인트가 있어도 파트너 포인트가 없으면 문자·팩스 전량 실패'),
+]
+e.row_dimensions[1].height = 26
+for i, row in enumerate(env, 2):
+    for j, v in enumerate(row, 1):
+        cell = e.cell(i, j, v)
+        cell.font = BODY; cell.border = BOX; cell.alignment = TOP
+        if i % 2 == 0:
+            cell.fill = ZEBRA
+        if j == 1:
+            cell.alignment = TOPC; cell.fill = GRP_FILL; cell.font = BODY_B
+        if '★' in str(v):
+            cell.font = Font(name=FONT, size=9, bold=True, color=RED)
+    e.row_dimensions[i].height = 30
+e.freeze_panes = 'A2'
+
+# ══════════════════════════════════════════════════════════════
+# 3) 테스트 시나리오 (본체)
+# ══════════════════════════════════════════════════════════════
+s = wb.create_sheet('테스트시나리오')
+s.sheet_view.showGridLines = False
+
+HEAD = [
+    ('TC ID', 9), ('CASE 명', 26), ('대분류', 12), ('중분류', 14),
+    ('사전 조건', 30), ('화면명 (메뉴 경로)', 34), ('URL', 30),
+    ('STEP', 6), ('수행 절차', 40), ('입력 데이터', 40),
+    ('클릭 대상 (탭/버튼)', 24), ('트리거 / 연결 동작', 52),
+    ('기대 결과', 46), ('캡처 파일', 26),
+    ('실제 결과', 22), ('판정', 8), ('결함번호', 10), ('수행자', 9), ('수행일', 11), ('비고', 20),
+]
+GROUPS = [('케이스 정의', 1, 7), ('수행 절차', 8, 14), ('수행 결과 (테스터 기입)', 15, 20)]
+for name, a, b in GROUPS:
+    s.merge_cells(start_row=1, start_column=a, end_row=1, end_column=b)
+    cell = s.cell(1, a, name)
+    cell.fill = SUB_FILL
+    cell.font = Font(name=FONT, size=10, bold=True, color='FFFFFF')
+    cell.alignment = Alignment(vertical='center', horizontal='center')
+    for col in range(a, b + 1):
+        s.cell(1, col).border = Border(left=THIN, right=THIN, top=THIN, bottom=Side(style='thin', color='FFFFFF'))
+s.row_dimensions[1].height = 22
+
+for i, (h, w) in enumerate(HEAD, 1):
+    cell = s.cell(2, i, h)
+    cell.fill = HDR_FILL; cell.font = HDR_FONT; cell.border = BOX; cell.alignment = TOPC
+    s.column_dimensions[get_column_letter(i)].width = w
+s.row_dimensions[2].height = 32
+s.freeze_panes = 'C3'
+
+CASE = 'CASE-01 처방전·일반(10/90)·링크페이'
+
+# TC ID, 대분류, 중분류, 사전조건, 화면명, URL, [ (STEP, 절차, 입력, 클릭, 트리거, 기대, 캡처) ... ]
+TCS = [
+ ('TC-001','접수','처방자료 업로드 - 환자 조회','테스트 설정이 [테스트 자세]일 것 (환경설정 시트)',
+  '환자ㆍ처방 › 처방자료 업로드','/prescriptions/upload',[
+   (1,'처방자료 업로드 화면을 연다','-','좌측 메뉴 ［처방자료 업로드］',
+    '업무 시작점. 처방전이 접수되면 이 화면에서 시작한다.',
+    '업로드 화면이 열리고 [이름 선택]이 비어 있다','화면/05_처방자료업로드-빈화면.png'),
+   (2,'환자를 조회한다','검색어: 김태오','［조회］',
+    'pkOpen() — 거래처 조회 팝업. 이름 또는 연락처로 검색한다.',
+    '★ 검색 결과 0건 — 신규 환자이므로 미등록 상태 (기등록 환자면 TC-002 생략)',
+    '-'),
+ ]),
+ ('TC-002','접수','조회 팝업에서 거래처 신규 등록','TC-001 결과 0건 (신규 환자)',
+  '처방자료 업로드 › [조회] 팝업','/prescriptions/upload',[
+   (1,'조회 결과가 없을 때 나타나는 [신규] 버튼을 누른다',
+    '이름: (T3-5)김태오\n주민등록번호: 850203-1000001','［신규］',
+    'pkCreate() — 조회 결과가 없을 때만 [신규] 버튼이 노출된다. 조회된 사람이 있으면 숨겨 동일인 중복 등록을 막는다. 등록 전 주민번호 앞자리로 중복 여부를 재확인한다.',
+    '① 거래처가 등록되고 [이름 선택]에 자동 반영\n② 사업부 IC이면 이름 앞에 (E) 자동 부여',
+    '화면/01_거래처관리-목록.png'),
+   (2,'거래처 상세 정보를 보완 입력한다',
+    '사업부: IC (카테터) / 성별: 남 / 환자구분: SB-N\n연락 상태: 정상 / 연락 선호: 업무폰2586 문자\n전화번호1: 관리자·010-5799-0084 (선택)\n전화번호2: 010-8716-0133\nEmail: test-kto@example.com / Fax: 02-0000-0000\n주소: 04524 서울특별시 중구 세종대로 110 / 테스트용 주소(3차 5회 김태오)\n송금자명: 김태오 / 현금영수증: 소득공제·010-5799-0084\n건보등록: 신규 등록 완료 · 2026-09-07',
+    '［거래처 수정］ 또는 환자ㆍ처방 › 거래처 관리',
+    'POST/PUT /patients — ① 주민번호 암호화 저장 + 마스킹값 별도 보관 ② 주민번호 입력 시 생년월일 자동 계산(peBirthFromRrn) ③ 만 19세 미만이면 [보호자] 입력 영역이 자동 노출',
+    '① 생년월일 1985-02-03 자동 입력\n② 만 41세 성년이므로 [보호자] 영역 미노출\n③ 거래처명 (E)(T3-5)김태오',
+    '화면/02_거래처등록-창.png\n화면/03_거래처등록-채움.png\n화면/04_거래처상세.png'),
+ ]),
+ ('TC-003','접수','처방 서류 업로드 및 등록','TC-002 완료 (환자 선택 상태)',
+  '환자ㆍ처방 › 처방자료 업로드','/prescriptions/upload',[
+   (1,'서류 유형을 바꿔가며 파일을 업로드한다',
+    '처방전: 김태오_처방전.jpg (1건)\n신분증: 김태오_신분증_TEST.jpg (1건)\n등록신청서: 김태오_자가도뇨소모성재료_등록신청서_TEST.jpg (1건)\n결과지: 김태오_결과지_01~08_TEST.jpg (8건)',
+    '서류 유형 콤보 → 파일 선택 (유형별 4회 반복)',
+    '파일마다 업로드 시점의 [서류 유형]이 부여된다. 유형은 개별 타일에서 변경 가능.',
+    '총 11건이 유형별로 배치된다 (처방전1·신분증1·등록신청서1·결과지8)',
+    '화면/06_처방자료업로드-11건.png'),
+   (2,'담당자와 메모를 입력하고 등록한다',
+    '담당자: 원동희\n메모: 3차 5회 · 1번 김태오 · 일반 10/90 · 링크페이 · 기준 한 바퀴',
+    '［등록］',
+    'POST /prescriptions — ① 처방전 1장은 처방전 이미지로, 나머지는 첨부문서로 저장 ② 처방번호 RX-YYYYMMDD-NNN 자동 채번(삭제분 포함 채번하여 번호 재사용 방지) ③ 상태=검수 필요 ④ 새 탭으로 주문 등록 화면 오픈',
+    '① RX-20260907-005 채번\n② 새 탭에서 주문 등록 화면이 열림','화면/07_주문등록-열림.png'),
+ ]),
+ ('TC-004','처방','상세 목록 - 상담ㆍ환자 정보','TC-003 완료',
+  '주문ㆍ재구매 › 주문 등록 › [상세 목록] › 상담ㆍ환자 정보','/prescriptions/RX-20260907-005',[
+   (1,'상세 목록 탭 › 상담ㆍ환자 정보에서 환자 항목을 입력한다',
+    '주민등록번호: 850203-1000001\n전화번호1: 관리자 · 01057990084 (선택)\n전화번호2: 정희경 · 01087160133 (선택)\n송금자명: 김태오',
+    '［상세 목록］ 탭 → ［상담ㆍ환자 정보］',
+    '[웹 화면=테스트]이면 전화번호가 콤보박스로 전환된다. 결제 방식도 이 탭에 위치한다(처방전 없이도 구매 가능하므로).',
+    '입력값이 반영되고 전화번호가 콤보박스로 표시된다','화면/08_상세목록-상담환자정보.png'),
+ ]),
+ ('TC-005','처방','병원 조회 (마스터 미등록)','TC-004 진행 중',
+  '상세 목록 › 병원ㆍ처방 정보 › [병원 조회] 팝업','/prescriptions/RX-20260907-005',[
+   (1,'병원 조회 팝업에서 병원명으로 검색한다','검색어: 서울가온','［병원 조회］',
+    'hospitalSearch() — 병원 마스터에서 이름/요양기관기호로 조회',
+    '★ 검색 결과 0건 — 5회 테스트 자료의 가상 병원 8곳은 마스터에 미등록 상태',
+    '화면/09_병원조회-팝업.png'),
+   (2,'요양기관기호로 재검색한다','검색어: 1231013','［검색］',
+    '동일 함수 — 기호 부분일치 조회',
+    '무관한 「연세재활의학과의원(12310131)」만 조회된다','-'),
+ ]),
+ ('TC-006','처방','신규 병원 등록','TC-005 결과 0건',
+  '병원 조회 팝업 › [새 병원 등록]','/prescriptions/RX-20260907-005',[
+   (1,'신규 병원 등록 창을 연다','-','［새 병원 등록］',
+    'hospitalNewOpen() — 병원 신규 등록 입력 영역 노출',
+    '병원명·요양기관기호·진료과목·전화번호·주소 입력칸이 표시된다','화면/10_새병원등록-팝업.png'),
+   (2,'처방전에서 읽은 값으로 병원을 등록한다',
+    '병원명: 서울가온대학교병원\n요양기관 기호: 12310130\n진료과목: 재활의학과\n전화번호: 02-0000-0000\n주소: 서울특별시 광진구 구의동 631-1',
+    '［등록하고 고르기］',
+    'POST /hospitals — ① 병원 마스터에 신규 등록 ② 등록 즉시 해당 병원을 선택하여 병원명·요양병원 코드를 자동 채움',
+    '① 토스트 「서울가온대학교병원 · 12310130」\n② 병원명·요양병원 코드가 자동 입력됨',
+    '화면/11_새병원등록-채움.png\n화면/12_병원채워짐.png'),
+ ]),
+ ('TC-007','처방','상세 목록 - 병원ㆍ처방 정보','TC-006 완료',
+  '상세 목록 › 병원ㆍ처방 정보','/prescriptions/RX-20260907-005',[
+   (1,'처방전 기재값과 시험값을 모두 입력한다',
+    '[처방전 판독값]\n상병코드: Q05.9 / 상병명: 이분척추·신경인성 방광\n1일 처방개수: 6 / 총 처방일수: 90 / 총계: 540\n처방전 발행일: 2026-09-07 / 사용기간: 90일\n진료과목명: 재활의학과 / 담당의사: 김윤진 / 면허번호: 52739\n\n[시험값 — 처방전 미기재]\n진단 확인일: 2026-08-20\n상병 구분: 1 (선천성)\n요류역학검사일: 2026-08-20\n\n[업무 선택값]\n유형: 처방전 / 신구매·재구매: 신구매\n일일 도뇨 횟수: 6 / Five·Six: 06(Six)\n자격: 일반 / 청구처: 건강보험공단\n구입일: 2026-09-07 / 하루 사용 수량: 6\n주문 담당자: 원동희',
+    '［병원ㆍ처방 정보］ 탭',
+    '자격을 [일반]으로 선택하면 청구전략이 본인 10% / 공단 90%로 확정된다',
+    '① 처방전종료일이 발행일+90일 = 2026-12-06 으로 자동 계산\n② 일일 도뇨 횟수 선택지가 1~10, 10 이상으로 표시 (단위 「회」 미표기)',
+    '화면/13_상세목록-병원처방정보.png'),
+ ]),
+ ('TC-008','처방','관할 청구처 지정 및 저장','TC-007 완료',
+  '병원ㆍ처방 정보 › 관할 청구처 [찾기] 팝업','/prescriptions/RX-20260907-005',[
+   (1,'관할 청구처를 조회한다','읍ㆍ면ㆍ동: 소공동\n시ㆍ군ㆍ구: 중구(자동)','［찾기］',
+    'boFindRun() — ① 자사 청구처 마스터 우선 조회 ② 미존재 시 외부(공단·카카오)에 조회하여 후보 제시. ※ 기존 등록건을 선택해야 마스터 중복이 발생하지 않는다',
+    '「공단 중구지사 · 보험급여부」 1건이 조회된다 (기존 등록건)',
+    '화면/14_청구처찾기-팝업.png\n화면/15_청구처찾기-후보.png'),
+   (2,'조회된 청구처를 선택하고 저장한다','청구처: 공단 중구지사','후보 클릭 → ［저장］',
+    'PUT /prescriptions/{rx}/ocr — ① 처방 항목 저장 ② 환자 귀속 항목(Email·전화2·건보등록 등)은 거래처로 승계 ③ 처방전을 환자에 연결 ④ 설정에 따라 접수 안내 문자 및 위임동의 링크 발송',
+    '① 토스트 「저장되었습니다」\n② 관할 청구처에 공단 중구지사가 표시됨',
+    '화면/16_상세목록-저장.png'),
+ ]),
+ ('TC-009','검수','검수 요청','TC-008 완료',
+  '주문 등록 › 상세 목록 상단','/prescriptions/RX-20260907-005',[
+   (1,'검수를 요청한다','-','［검수 요청하기］ → 확인',
+    'POST /prescriptions/{rx}/request-review — ① 상태를 [검수 요청]으로 변경 ② 활동 이력 기록 ③ 검수 승인 권한 보유자 전원에게 알림 + 채팅 발송(「승인 요청」 방). 단, 요청자 본인은 수신 대상에서 제외',
+    '① 상태 = 검수 요청\n② 승인 권한자 9명에게 알림 발송 (전체 10명 − 요청자 1명)',
+    '화면/17_검수요청.png'),
+ ]),
+ ('TC-010','검수','검수 승인','TC-009 완료',
+  '주문 등록 › 상세 목록 상단','/prescriptions/RX-20260907-005',[
+   (1,'검수 승인 팝업에서 메모를 입력하고 승인한다',
+    '검수 메모: 3차 5회 · 1번 김태오 · 서류 11건 확인 · 일반 10/90',
+    '［검수 승인하기］ → 팝업 ［검수 승인하기］',
+    'POST /prescriptions/{rx}/approve — ① 상태를 [검수 완료]로 변경, 검수자·검수일시 기록 ② 요청 담당자에게 승인 결과 회신 알림 ③ 이미 승인된 건은 재승인 차단(검수자·일시 덮어쓰기 방지)',
+    '① 상태 = 검수 완료, 검수자 = 관리자\n② 담당자(원동희)에게 「검수가 승인되었습니다」 회신',
+    '화면/18_검수승인-팝업.png\n화면/19_검수완료.png'),
+ ]),
+ ('TC-011','동의','위임동의 SMS 발송','TC-010 완료 · 문자 발송=우리에게만',
+  '주문 등록 › 상단 [위임동의] 팝오버','/prescriptions/RX-20260907-005',[
+   (1,'위임동의 발송 창에서 수신번호를 확인하고 발송한다',
+    '수신 번호: 010-5799-0084 (거래처 전화번호1 자동 표시)',
+    '［위임동의］ → ［발송］',
+    'POST /prescriptions/{rx}/consent-sms — ① 30분 유효 1회용 토큰으로 동의 레코드 선생성 ② 서명 링크를 SMS 발송 ③ 마스킹 주민번호로 미성년 여부 판정(원문 미조회) ④ 미성년이면 거래처 보호자 정보를 동의 레코드에 선반영 ⑤ 발송 실패 시 생성한 동의 레코드를 삭제',
+    '① 발송 완료 · 팝빌 접수번호 채번\n② [우리에게만] 설정에 의해 01057990084로 우회 발송\n③ 성년이므로 is_minor = 0',
+    '화면/20_위임동의-발송창.png\n화면/21_위임동의-발송결과.png'),
+ ]),
+ ('TC-012','동의','위임동의 서명 (환자 화면)','TC-011 완료 · 30분 이내',
+  '위임동의 서명 페이지 (비로그인 공개 화면)','/consent/{토큰}',[
+   (1,'서명 페이지를 열고 화면 구성을 확인한다','-','SMS 링크 클릭',
+    '토큰으로 동의 레코드를 조회하여 서명 화면을 구성한다. 미성년이면 보호자 입력·서명 영역이 추가로 노출된다.',
+    '① 본인 이름 확인·위임 내용·서명란 1개 표시\n② 성년이므로 보호자 영역 미노출',
+    '화면/22_서명화면.png'),
+   (2,'개인정보 수집·이용 동의를 선택한다',
+    '신청 유형: 일반\n동의 항목: 일반·제3자·마케팅 모두 「동의함」','동의 항목 라디오 선택',
+    'privacyReady() — 신청 유형과 필수 동의 항목이 모두 충족되어야 서명 버튼이 활성화된다',
+    '필수 항목이 모두 선택된다','화면/23_개인정보동의.png'),
+   (3,'휴대폰 본인확인을 수행한다','-','［본인확인］',
+    'startNice() — NICE 본인확인. [본인확인 시늉=켬]이면 실제 호출 없이 통과 처리',
+    '「확인됨 (테스트)」로 표시된다','화면/24_본인확인.png'),
+   (4,'서명 후 동의를 제출한다','서명란에 서명 입력','［동의 서명］',
+    'POST /consent/{토큰} — ① 서명 이미지·동의 항목 저장 ② 위임동의서 PDF 및 요양비위임장(원본 서식 오버레이) 생성하여 첨부문서 등록 ③ 주문 관리에 주문 레코드 생성 ④ 설정 시 공단 등록 서류 팩스 자동 발송',
+    '① 「동의가 완료되었습니다」 표시\n② 주문 EUD202609071734141 생성\n③ 위임동의서·요양비위임장 첨부문서 등록',
+    '화면/22b_서명함.png\n화면/25_동의완료.png'),
+ ]),
+ ('TC-013','주문','주문 제품 등록','TC-012 완료 (검수 승인 + 동의 완료 필수)',
+  '주문 등록 › [주문 제품] 탭','/prescriptions/RX-20260907-005',[
+   (1,'제품 조회 팝업에서 처방 규격에 맞는 제품을 선택한다',
+    '검색어: CH14 Male\n선택: EasiCath Nalaton CH14 Male 40cm - Green',
+    '［주문 제품］ 탭 → 제품명 칸 ⌕ → 제품 선택',
+    '제품 선택 시 제품코드·소비자가가 자동 입력되고, 처방전 총계가 주문 수량으로 자동 반영된다',
+    '① 제품코드 5354 / 수량 540 / 소비자가 1,500\n② 총 금액 810,000 · 기관 부담금 729,000(90%) · 본인 부담금 81,000(10%)',
+    '화면/26_주문제품-빈줄.png\n화면/27_제품조회-팝업.png\n화면/28_주문제품-채움.png'),
+   (2,'주문 제품을 저장한다','-','［저장］',
+    '주문 품목 저장 및 청구전략별 금액 배분. 검수 승인과 동의가 모두 완료되어야 저장 가능하며 미완료 시 차단된다.',
+    '토스트 「저장되었습니다」','화면/29_주문제품-저장.png'),
+ ]),
+ ('TC-014','연계','주문 생성 및 위드웍스 연계','TC-013 완료',
+  '주문 등록 › [주문 제품] 탭 하단','/prescriptions/RX-20260907-005',[
+   (1,'배송 정보를 확인하고 주문을 생성·연계한다',
+    '받는 사람: (E)(T3-5)김태오\n주소: 04524 서울특별시 중구 세종대로 110 / 테스트용 주소(3차 5회 김태오)',
+    '［주문 생성 및 연계］',
+    'POST /prescriptions/{rx}/withworks-order — ① 자사 주문(EUD…) 금액·품목 확정 ② 위드웍스 so_store 호출하여 판매주문(S…) 채번 및 저장 ③ 접수 안내·결제 안내 SMS 2건 발송 ④ 연계 내용을 확인 이메일로 발송 ⑤ 위드웍스가 so.created 웹훅을 회신하여 창고·판매현황 정보가 즉시 반영',
+    '① 창고 판매주문 S2609070004 채번\n② 출고창고 「3PL Main 판매창고」 즉시 표시\n③ 판매현황 항목 16건이 즉시 채워짐',
+    '화면/30_주문생성및연계.png'),
+ ]),
+ ('TC-015','연계','위드웍스 판매주문 확인','TC-014 완료',
+  '[위드웍스] 주문 관리 › 판매 주문','https://www.demoworks.co.kr/salesorder',[
+   (1,'위드웍스에서 판매번호로 조회한다','판매번호: S2609070004','［검색］',
+    '위드웍스 판매주문 조회. CE Admin 주문번호는 etc SoNo 항목으로 연계된다.',
+    '① etc SoNo = EUD202609071734141 (CE 주문번호 일치)\n② 구매 거래처명 = (E)(T3-5)김태오\n③ 출고창고명 = 3PL Main 판매창고\n④ 판매금액 = 810,000\n⑤ 비고 = 업로드 시 입력한 메모 그대로',
+    '화면/31_ww_판매주문-화면.png\n화면/32_ww_판매주문-조회결과.png'),
+ ]),
+ ('TC-016','정산','입금 확인 (담당자 수동)','TC-014 완료',
+  '청구ㆍ회계 › 정산/회계','/settlement',[
+   (1,'해당 주문의 결제수단을 선택하여 입금을 확인한다','결제수단: 링크페이',
+    '결제수단 칸 → 링크페이 선택',
+    'POST /settlement/orders/{order}/pay-method — 결제수단 선택 시점이 곧 입금 확인이다. ① 입금 확인 처리 ② 세금계산서 발행 ③ 거래명세서 생성 ④ 위드웍스 판매주문 확정 ⑤ 청구전략상 대상이 아닌 증빙은 자동 제외',
+    '① 링크페이 · 81,000원 입금 확인\n② 세금계산서 TI20260907000243 발행\n③ 거래명세서 PDF 생성\n④ 위드웍스 S2609070004 확정\n⑤ 현금영수증은 「청구전략에 없음」으로 제외',
+    '화면/33_정산회계-목록.png\n화면/34_입금확인-뒤.png'),
+ ]),
+ ('TC-017','청구','공단 등록 서류 팩스 발송','TC-012 완료 · 팩스 발송=우리에게만',
+  '주문 등록 › 상단 [팩스 발송] 팝오버','/prescriptions/RX-20260907-005',[
+   (1,'수신처와 전송 서류를 확인한다','-','［팩스 발송］',
+    '자격이 [일반]이므로 수신처가 건강보험공단으로 구성되고, 관할 청구처의 팩스번호가 자동 표시된다',
+    '① 수신처 = 국민건강보험공단 · 공단 중구지사 · 보험급여부\n② 수신 팩스번호 = 02-0000-0000\n③ 신청 파일 11건 전체 선택 상태',
+    '화면/35_팩스발송-창.png'),
+   (2,'팩스를 전송한다','-','［팩스 전송］',
+    'POST /prescriptions/{rx}/fax — ① 선택 서류를 표지 포함 단일 PDF로 병합 ② 팝빌로 전송 ③ 접수번호를 발송 이력에 기록. [우리에게만]이면 수신번호만 테스트 팩스로 치환하고 수신처명은 유지한다.',
+    '① 팩스통합본 PDF 생성\n② 로그: 국민건강보험공단 0200000000 → 05041341393 치환\n③ 팝빌 접수번호 채번',
+    '화면/36_팩스발송-결과.png'),
+ ]),
+ ('TC-018','검증','최종 상태 검증','TC-001 ~ TC-017 완료',
+  '주문ㆍ재구매 › 주문 관리 / Finance','/orders · /finance',[
+   (1,'주문·창고·증빙 상태를 최종 확인한다','-','목록 조회',
+    '전 구간 처리 결과 확인',
+    '① 처방전 RX-20260907-005 = 검수 완료\n② 주문 EUD202609071734141 = confirmed\n③ 창고 S2609070004 = 확정\n④ 세금계산서 TI20260907000243 발행\n⑤ 공단 팩스 발송 완료',
+    '-'),
+ ]),
+ ('TC-019','검증','목록 항목 검증 (판매현황 연계)','TC-014 완료',
+  'Finance / 주문 관리','/finance',[
+   (1,'Finance 목록에서 위드웍스 판매현황 항목이 표시되는지 확인한다','조회 기간: 2026-09-01 ~ 2026-09-30','［검색］',
+    'ceWwCols() — Finance·주문 관리·입금 내역·현금영수증·청구 관리·교환/반품/취소 6개 화면이 동일한 위드웍스 판매현황 항목 순서를 공유한다',
+    '① 출고창고·납품창고 항목 표시\n② 유형·구매 거래처·매출 금액·제품그룹 등 판매현황 항목이 값과 함께 표시\n③ 구분(SB/SCI)·주민등록번호(마스킹)·상병코드·횟수는 자사 데이터로 표시',
+    '-'),
+ ]),
+]
+
+row = 3
+tc_i = 0
+for tc, case_grp, mid, pre, screen, url, steps in TCS:
+    start = row
+    tc_i += 1
+    shade = (tc_i % 2 == 0)          # TC 단위로 줄무늬 — 한 케이스가 한 덩어리로 읽힌다
+    for k, (st, act, inp, click, trig, exp, cap) in enumerate(steps):
+        vals = [tc, CASE, case_grp, mid, pre, screen, url, st, act, inp, click, trig, exp, cap, '', '', '', '', '', '']
+        for j, v in enumerate(vals, 1):
+            cell = s.cell(row, j, v)
+            cell.font = BODY
+            cell.border = BOX_T if k == 0 else BOX      # 케이스 첫 줄에 굵은 윗선
+            cell.alignment = TOPC if j in (1, 8, 16, 17, 18, 19) else TOP
+            if shade:
+                cell.fill = ZEBRA
+            if j == 1:
+                cell.font = Font(name=FONT, size=10, bold=True, color=NAVY)
+            elif j == 2:
+                cell.font = Font(name=FONT, size=8, color=SLATE)
+            elif j == 3:
+                cell.font = BODY_B
+            elif j == 8:
+                cell.font = Font(name=FONT, size=10, bold=True, color=SLATE)
+            elif j == 12:
+                cell.font = SMALL                        # 트리거는 작게 — 읽는 차례가 뒤다
+            elif j == 13:
+                cell.font = Font(name=FONT, size=9, color='14532D')   # 기대 결과는 짙은 초록
+            elif j == 14:
+                cell.font = Font(name=FONT, size=8, color='7A8899')
+            elif j in (15, 16, 17, 18, 19, 20):
+                cell.fill = PatternFill('solid', fgColor='FFFDF5')     # 수행자가 적는 칸
+            if '★' in str(v):
+                cell.font = Font(name=FONT, size=9, bold=True, color=RED)
+        row += 1
+    # 병합 (TC 단위로 반복 정보를 묶는다)
+    if row - start > 1:
+        for col in (1, 2, 3, 4, 5, 6, 7):
+            s.merge_cells(start_row=start, start_column=col, end_row=row - 1, end_column=col)
+
+dv = DataValidation(type='list', formula1='"Pass,Fail,N/A,Blocked"', allow_blank=True)
+s.add_data_validation(dv)
+dv.add(f'P3:P{row - 1}')
+
+for i in range(3, row):
+    s.row_dimensions[i].height = 82
+
+# ══════════════════════════════════════════════════════════════
+# 4) 결함 관리
+# ══════════════════════════════════════════════════════════════
+d = wb.create_sheet('결함관리')
+d.sheet_view.showGridLines = False
+dhdr = ['결함번호', '관련 TC ID', '심각도', '결함 유형', '결함 내용', '재현 절차', '기대 결과', '실제 결과',
+        '조치 내용', '상태', '등록일', '조치일', '담당자']
+for i, h in enumerate(dhdr, 1):
+    cell = d.cell(1, i, h)
+    cell.fill = HDR_FILL; cell.font = HDR_FONT; cell.border = BOX; cell.alignment = TOPC
+for w, col in zip([11, 12, 10, 14, 44, 36, 30, 30, 40, 10, 12, 12, 10], 'ABCDEFGHIJKLM'):
+    d.column_dimensions[col].width = w
+d.freeze_panes = 'A2'
+
+defects = [
+ ('OBS-01','TC-005','정보','데이터',
+  '5회 테스트 자료의 가상 병원 8곳이 병원 마스터에 미등록',
+  '병원 조회에서 「서울가온」 검색','조회 결과 표시','조회 결과 0건',
+  '화면의 [새 병원 등록]으로 등록 후 진행 (TC-005). 시스템 결함 아님 — 8명 모두 동일 절차 필요',
+  '확인','2026-09-07','2026-09-07','-'),
+ ('OBS-02','TC-006','정보','환경',
+  'hospitalCreate() 를 콘솔에서 인자 없이 호출 시 오류',
+  '개발자도구에서 hospitalCreate() 직접 호출','정상 등록',
+  'Cannot set properties of undefined (setting disabled)',
+  '해당 함수는 클릭된 버튼 객체를 인자로 받아 비활성화 처리함. 화면 버튼을 직접 클릭해야 함. 실사용에는 영향 없음',
+  '확인','2026-09-07','2026-09-07','-'),
+ ('OBS-03','TC-012','정보','수행',
+  '서명 캔버스가 전체화면 캡처 후 초기화됨',
+  '서명 입력 → 전체화면(fullPage) 캡처 → 동의 서명 클릭',
+  '서명이 유지된 상태로 제출','「서명이 비어 있습니다」로 차단',
+  '서명은 화면에 보이는 상태에서 입력하고, 잉크 유무를 확인한 뒤 제출. 캡처는 제출 전 일반 캡처로 수행',
+  '확인','2026-09-07','2026-09-07','-'),
+]
+d.row_dimensions[1].height = 26
+SEV = {'치명':RED, '중대':RED, '보통':GOLD, '경미':'6B7280', '정보':SLATE}
+for i, r_ in enumerate(defects, 2):
+    for j, v in enumerate(r_, 1):
+        cell = d.cell(i, j, v)
+        cell.font = BODY; cell.border = BOX
+        cell.alignment = TOPC if j in (1, 2, 3, 4, 10, 11, 12, 13) else TOP
+        if i % 2 == 0:
+            cell.fill = ZEBRA
+        if j == 1:
+            cell.font = Font(name=FONT, size=9, bold=True, color=NAVY)
+        if j == 3:
+            cell.font = Font(name=FONT, size=9, bold=True, color=SEV.get(v, '222222'))
+    d.row_dimensions[i].height = 64
+
+# ══════════════════════════════════════════════════════════════
+# 5) 캡처 목록
+# ══════════════════════════════════════════════════════════════
+p = wb.create_sheet('캡처목록')
+p.sheet_view.showGridLines = False
+phdr = ['No', '파일명', '관련 TC', '화면 구분', '화면 설명']
+for i, h in enumerate(phdr, 1):
+    cell = p.cell(1, i, h)
+    cell.fill = HDR_FILL; cell.font = HDR_FONT; cell.border = BOX; cell.alignment = TOPC
+for w, col in zip([6, 34, 12, 12, 56], 'ABCDE'):
+    p.column_dimensions[col].width = w
+p.freeze_panes = 'A2'
+
+caps = [
+ ('00_테스트설정.png','사전','CE Admin','설정 › 서비스 연동 설정 › 테스트 설정 (_계획 폴더)'),
+ ('01_거래처관리-목록.png','TC-002','팝업','거래처 조회 팝업 › [신규] 등록'),
+ ('02_거래처등록-창.png','TC-002','팝업','거래처 등록 창 — 주민번호 입력 직후 생년월일 자동 계산'),
+ ('03_거래처등록-채움.png','TC-002','팝업','거래처 등록 창 — 전 항목 입력 완료'),
+ ('04_거래처상세.png','TC-002','CE Admin','거래처 상세 — (E) 접두 부여 확인'),
+ ('05_처방자료업로드-빈화면.png','TC-001','CE Admin','처방자료 업로드 초기 화면'),
+ ('06_처방자료업로드-11건.png','TC-003','CE Admin','서류 11건 유형별 배치 완료'),
+ ('07_주문등록-열림.png','TC-003','CE Admin','등록 후 새 탭으로 열린 주문 등록 화면'),
+ ('08_상세목록-상담환자정보.png','TC-004','CE Admin','상세 목록 › 상담ㆍ환자 정보'),
+ ('09_병원조회-팝업.png','TC-005','팝업','병원 조회 — 검색 결과 0건'),
+ ('10_새병원등록-팝업.png','TC-006','팝업','새 병원 등록 입력 영역'),
+ ('11_새병원등록-채움.png','TC-006','팝업','새 병원 등록 — 입력 완료'),
+ ('12_병원채워짐.png','TC-006','CE Admin','병원명·요양병원 코드 자동 입력 결과'),
+ ('13_상세목록-병원처방정보.png','TC-007','CE Admin','상세 목록 › 병원ㆍ처방 정보 전 항목'),
+ ('14_청구처찾기-팝업.png','TC-008','팝업','관할 청구처 찾기'),
+ ('15_청구처찾기-후보.png','TC-008','팝업','청구처 조회 결과 — 공단 중구지사'),
+ ('16_상세목록-저장.png','TC-008','CE Admin','상세 목록 저장 완료'),
+ ('17_검수요청.png','TC-009','CE Admin','검수 요청 완료 — 상태 변경'),
+ ('18_검수승인-팝업.png','TC-010','팝업','검수 승인 — 메모 입력'),
+ ('19_검수완료.png','TC-010','CE Admin','검수 완료 상태'),
+ ('20_위임동의-발송창.png','TC-011','팝오버','위임동의 SMS 발송 창 — 수신번호·미리보기'),
+ ('21_위임동의-발송결과.png','TC-011','팝오버','위임동의 발송 결과'),
+ ('22_서명화면.png','TC-012','공개화면','위임동의 서명 페이지 (비로그인)'),
+ ('22b_서명함.png','TC-012','공개화면','서명 입력 완료'),
+ ('23_개인정보동의.png','TC-012','공개화면','개인정보 수집·이용 동의 선택'),
+ ('24_본인확인.png','TC-012','공개화면','NICE 본인확인 — 확인됨(테스트)'),
+ ('25_동의완료.png','TC-012','공개화면','동의 완료 화면'),
+ ('26_주문제품-빈줄.png','TC-013','CE Admin','주문 제품 탭 초기 상태'),
+ ('27_제품조회-팝업.png','TC-013','팝업','제품 조회 — CH14 Male'),
+ ('28_주문제품-채움.png','TC-013','CE Admin','제품 선택 후 금액 자동 배분'),
+ ('29_주문제품-저장.png','TC-013','CE Admin','주문 제품 저장 완료'),
+ ('30_주문생성및연계.png','TC-014','CE Admin','주문 생성 및 위드웍스 연계 결과'),
+ ('31_ww_판매주문-화면.png','TC-015','위드웍스','판매 주문 조회 화면'),
+ ('32_ww_판매주문-조회결과.png','TC-015','위드웍스','판매주문 S2609070004 조회 결과'),
+ ('33_정산회계-목록.png','TC-016','CE Admin','정산/회계 목록'),
+ ('34_입금확인-뒤.png','TC-016','CE Admin','입금 확인 후 상태'),
+ ('35_팩스발송-창.png','TC-017','팝오버','팩스 발송 — 수신처·전송 서류'),
+ ('36_팩스발송-결과.png','TC-017','팝오버','팩스 발송 결과'),
+]
+p.row_dimensions[1].height = 26
+KIND = {'CE Admin':SLATE, '위드웍스':'8B5E00', '팝업':'6B7280', '팝오버':'6B7280',
+        '공개화면':'1E7B34', '사전':GOLD}
+for i, (fn, tc, kind, desc) in enumerate(caps, 2):
+    for j, v in enumerate([i - 1, fn, tc, kind, desc], 1):
+        cell = p.cell(i, j, v)
+        cell.font = BODY; cell.border = BOX
+        cell.alignment = TOPC if j in (1, 3, 4) else TOP
+        if i % 2 == 0:
+            cell.fill = ZEBRA
+        if j == 2:
+            cell.font = Font(name=FONT, size=9, color='222222')
+        if j == 4:
+            cell.font = Font(name=FONT, size=9, bold=True, color=KIND.get(v, '222222'))
+    p.row_dimensions[i].height = 20
+
+# ── 인쇄 설정 ──────────────────────────────────────
+from openpyxl.worksheet.properties import PageSetupProperties
+for sh, cols, titles in [(s, 'A:T', '1:2'), (e, 'A:E', '1:1'), (d, 'A:M', '1:1'), (p, 'A:E', '1:1')]:
+    sh.page_setup.orientation = 'landscape'
+    sh.page_setup.paperSize = sh.PAPERSIZE_A3 if sh is s else sh.PAPERSIZE_A4
+    sh.page_setup.fitToWidth = 1
+    sh.page_setup.fitToHeight = 0
+    sh.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    sh.print_title_rows = titles
+    sh.print_area = None
+    sh.oddFooter.right.text = '&P / &N'
+    sh.oddFooter.left.text = 'CE Admin 통합 테스트 시나리오 · CASE-01 김태오'
+    sh.oddFooter.left.size = 8
+    sh.oddFooter.right.size = 8
+
+# 자동 필터 — 판정으로 걸러 볼 수 있게
+s.auto_filter.ref = f'A2:T{row - 1}'
+
+c.sheet_view.zoomScale = 100
+s.sheet_view.zoomScale = 85
+
+wb.save(OUT)
+print('만듦:', OUT)
+print('시트:', wb.sheetnames)
+print('테스트 케이스 행:', row - 2)
