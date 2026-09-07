@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'router/app_router.dart';
 import 'services/chat_notification_service.dart';
-import 'widgets/update_gate.dart';
+import 'services/update_service.dart';
 
 /// 앱이 완전히 종료된 상태에서 FCM 메시지 수신 핸들러
 /// OS가 자동으로 알림 표시 — 별도 처리 불필요
@@ -34,19 +34,46 @@ void main() async {
   );
 }
 
-class CeAdminApp extends ConsumerWidget {
+class CeAdminApp extends ConsumerStatefulWidget {
   const CeAdminApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CeAdminApp> createState() => _CeAdminAppState();
+}
+
+class _CeAdminAppState extends ConsumerState<CeAdminApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Play 스토어 인앱 업데이트 (강제 + 상시). 앱 시작 시 확인.
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkAndUpdate();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 포그라운드 복귀(resume)마다 새 버전 재확인 → 강제 업데이트 상시 적용
+    if (state == AppLifecycleState.resumed) {
+      UpdateService.checkAndUpdate();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       title: 'CE Admin',
       debugShowCheckedModeBanner: false,
-      /* 판 확인을 앱 전체에 한 번만 얹는다. 화면마다 붙이면 빠뜨린 화면에
-         머무는 사람은 새 판이 나온 줄 모른다. */
-      builder: (context, child) => UpdateGate(child: child ?? const SizedBox()),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1565C0),
