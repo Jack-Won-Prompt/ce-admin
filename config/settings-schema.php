@@ -48,8 +48,6 @@ return [
                              'width' => 3],
             'is_test'    => ['label' => '테스트 모드', 'config' => 'popbill.IsTest', 'type' => 'bool',
                              'help'  => '켜면 팝빌 테스트 서버로 나간다. 실제 발행·발송이 되지 않는다.'],
-            'sms_simulate' => ['label' => '문자 시뮬레이션', 'config' => 'popbill.sms_simulate', 'type' => 'bool',
-                             'help'  => '켜면 문자를 실제로 보내지 않고 보낸 것으로 처리한다.'],
             'ip_restrict' => ['label' => 'IP 제한',    'config' => 'popbill.IPRestrictOnOff', 'type' => 'bool'],
             'use_static_ip' => ['label' => '고정 IP',  'config' => 'popbill.UseStaticIP', 'type' => 'bool'],
             'test_corp_num'     => ['label' => '테스트 사업자번호', 'config' => 'popbill.test.corp_num'],
@@ -57,7 +55,13 @@ return [
             'test_cert_key'     => ['label' => '테스트 인증키',     'config' => 'popbill.test.cert_key', 'type' => 'password'],
             'test_sender_num'   => ['label' => '발신 번호',        'config' => 'popbill.test.sender_num'],
 
-            /* 걷어낸 것 — 테스트 수신 휴대폰ㆍ테스트 수신 팩스 (2026-09-07 지시).
+            /* 걷어낸 것 — 문자 시뮬레이션 (2026-09-07 지시).
+               문자를 실제로 가르는 것은 「테스트 설정」의 문자 발송(실제ㆍ우리에게만ㆍ
+               시늉)이다. 이 스위치가 보던 sms_simulate 는 그 값이 없을 때만 보는 옛
+               열쇠라, 지금은 켜도 문자가 그대로 나갔다 — 아무 일도 하지 않는 설정은
+               거짓말을 한다. 하이팩스를 걷어낸 것과 같은 자리다.
+
+               걷어낸 것 — 테스트 수신 휴대폰ㆍ테스트 수신 팩스 (2026-09-07 지시).
                같은 값을 「테스트 설정」 탭이 이미 들고 있다. 한 값을 두 화면이 각각
                세우면 어느 쪽에서 고쳤는지에 따라 서로 덮고, 고친 사람은 저장이 된
                줄 안다 — 실제로 그 일이 났다. 받는 곳을 정하는 자리는 그 곳을 쓸지
