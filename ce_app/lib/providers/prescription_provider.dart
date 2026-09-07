@@ -1,6 +1,7 @@
 // lib/providers/prescription_provider.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../models/prescription.dart';
 import '../services/prescription_service.dart';
 
@@ -53,8 +54,13 @@ class PrescriptionListState {
 
 class PrescriptionListNotifier extends StateNotifier<PrescriptionListState> {
   final PrescriptionService _service;
+
+  /* 처음 열면 오늘 하루만 본다. 기간을 비워 두면 서버가 올린 것을 모두 내려보내,
+     오래 쓴 담당자일수록 첫 화면이 느리고 오늘 올린 것이 뒤로 밀렸다. */
+  static String get today => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
   PrescriptionListNotifier(this._service)
-      : super(const PrescriptionListState());
+      : super(PrescriptionListState(dateFrom: today, dateTo: today));
 
   Future<void> load({bool refresh = false}) async {
     if (state.isLoading) return;
@@ -93,12 +99,13 @@ class PrescriptionListNotifier extends StateNotifier<PrescriptionListState> {
     load(refresh: true);
   }
 
-  /// 업로드 날짜 기간 선택(웹과 동일) — 둘 다 null 이면 필터 해제
+  /// 업로드 날짜 기간 선택. 둘 다 null 이면 기본값(오늘 하루)으로 되돌린다 —
+  /// 지웠을 때 전체가 나오면 기본값을 둔 뜻이 없다.
   void setDateRange(String? from, String? to) {
+    final reset = from == null && to == null;
     state = state.copyWith(
-      dateFrom: from,
-      dateTo:   to,
-      clearDateRange: from == null && to == null,
+      dateFrom: reset ? today : from,
+      dateTo:   reset ? today : to,
     );
     load(refresh: true);
   }

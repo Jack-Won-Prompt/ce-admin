@@ -44,10 +44,29 @@ class _PrescriptionListScreenState
   @override
   void initState() {
     super.initState();
+
+    /* 기본 기간은 오늘 하루다(PrescriptionListNotifier). 입력칸도 같은 날을 보여
+       주어야 한다 — 목록은 오늘 것만 있는데 칸이 비어 있으면 전체를 본다고 읽는다. */
+    _applyRangeToFields(DateTime.now(), DateTime.now());
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(prescriptionListProvider.notifier).load(refresh: true);
     });
     _scrollCtrl.addListener(_onScroll);
+  }
+
+  /// 지금 고른 기간이 기본값(오늘 하루)인가. 그렇다면 되돌릴 것이 없다.
+  bool get _isDefaultRange {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _dateFromCtrl.text == today && _dateToCtrl.text == today;
+  }
+
+  /// 고른 기간을 화면 입력칸에 옮겨 적는다.
+  void _applyRangeToFields(DateTime start, DateTime end) {
+    final f = DateFormat('yyyy-MM-dd');
+    _selectedRange     = DateTimeRange(start: start, end: end);
+    _dateFromCtrl.text = f.format(start);
+    _dateToCtrl.text   = f.format(end);
   }
 
   void _onScroll() {
@@ -135,22 +154,17 @@ class _PrescriptionListScreenState
     );
     if (end == null || !mounted) return;
 
-    final from = DateFormat('yyyy-MM-dd').format(start);
-    final to   = DateFormat('yyyy-MM-dd').format(end);
-    setState(() {
-      _selectedRange     = DateTimeRange(start: start, end: end);
-      _dateFromCtrl.text = from;
-      _dateToCtrl.text   = to;
-    });
-    ref.read(prescriptionListProvider.notifier).setDateRange(from, to);
+    setState(() => _applyRangeToFields(start, end));
+    ref.read(prescriptionListProvider.notifier).setDateRange(
+          _dateFromCtrl.text,
+          _dateToCtrl.text,
+        );
   }
 
+  /// 기간을 기본값(오늘 하루)으로 되돌린다. 비우지 않는다 — 비워 두면 전체가
+  /// 나와, 기본 기간을 둔 뜻이 사라진다.
   void _clearDateRange() {
-    setState(() {
-      _selectedRange = null;
-      _dateFromCtrl.clear();
-      _dateToCtrl.clear();
-    });
+    setState(() => _applyRangeToFields(DateTime.now(), DateTime.now()));
     ref.read(prescriptionListProvider.notifier).setDateRange(null, null);
   }
 
@@ -340,8 +354,9 @@ class _PrescriptionListScreenState
                                 icon: Icons.event_outlined,
                                 readOnly: true,
                                 onTap: _pickDateRange,
+                                // 오늘로 돌아갈 것이 있을 때만 되돌리기를 보인다
                                 onClear:
-                                    _selectedRange != null ? _clearDateRange : null,
+                                    _isDefaultRange ? null : _clearDateRange,
                               ),
                             ),
                             const SizedBox(width: 8),
