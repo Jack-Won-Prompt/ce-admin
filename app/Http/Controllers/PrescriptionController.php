@@ -2083,9 +2083,22 @@ class PrescriptionController extends Controller
         }
 
         /* 결제 방식은 주문에도 적는다. 연계할 때 안내를 무엇으로 보낼지 그 값이
-           정한다(confirmPayMethod). 아직 주문이 없으면 만들 때 함께 적힌다. */
+           정한다(confirmPayMethod). 아직 주문이 없으면 만들 때 함께 적힌다.
+
+           **받은 뒤에는 건드리지 않는다.** 이 칸은 확정 전에는 「무엇으로 안내할
+           것인가」이지만, 확정 뒤에는 「무엇으로 받았는가」라 사실이다. 그런데 두
+           화면이 같은 칸을 쓴다 — 정산에서는 셋(링크페이ㆍ가상계좌ㆍ무통장입금)을
+           고르고 여기서는 둘(링크페이ㆍ가상계좌)만 고른다. 무통장입금으로 받아 둔
+           건에서 이 화면을 저장하면, 고를 수 없는 값이라 링크페이로 내려앉은 것이
+           그대로 덮여 **받은 방법이 바뀌어 버렸다**(2026-09-07 · 3차 5회 서나윤).
+           받은 돈의 자취를 다른 화면이 고쳐 쓰게 두지 않는다. */
         if ($request->filled('pay_method') && $prescription->order) {
-            $prescription->order->update(['pay_method' => $request->input('pay_method')]);
+            $order = $prescription->order;
+            $받았다 = $order->deposit_confirmed_at !== null || (bool) $order->tossPayment?->is_done;
+
+            if (! $받았다) {
+                $order->update(['pay_method' => $request->input('pay_method')]);
+            }
         }
 
         $promotedPatientFields = array_filter([

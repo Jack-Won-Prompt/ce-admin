@@ -2768,17 +2768,35 @@ $calcDeposit  = $calcCopay;
                    한 번 고르면 그 사람 것으로 남아 매번 다시 고르지 않는다. --}}
               @php
                 /* 주문에 적힌 것 → 거래처에 적힌 것 → 링크페이 차례로 본다.
-                   옛 건에는 「무통장입금」이 적혀 있는데 그것은 고를 수 있는 것이
-                   아니다 — 고를 수 없는 값이면 기본으로 내려앉힌다. 아무것도 안
-                   잡혀 있으면 담당자는 무엇이 나갈지 모른 채 저장하게 된다. */
-                $_pmSaved = $prescription->order?->pay_method
+                   고를 수 없는 값이면 기본으로 내려앉힌다 — 아무것도 안 잡혀 있으면
+                   담당자는 무엇이 나갈지 모른 채 저장하게 된다.
+
+                   **받은 뒤에는 다르다.** 이 칸은 확정 전에는 「무엇으로 안내할
+                   것인가」지만 확정 뒤에는 「무엇으로 받았는가」라 사실이다. 정산에서는
+                   무통장입금까지 셋을 고르는데 여기서는 둘만 고르므로, 무통장입금으로
+                   받은 건이 여기서 링크페이로 보이고 저장하면 그대로 덮였다.
+                   받은 건은 받은 대로 보여 주고 고치지 못하게 둔다. */
+                $_pmOrder = $prescription->order;
+                $_pmDone  = $_pmOrder
+                         && ($_pmOrder->deposit_confirmed_at !== null || (bool) $_pmOrder->tossPayment?->is_done);
+
+                $_pmSaved = $_pmOrder?->pay_method
                           ?: ($prescription->patient?->pay_method ?: null);
-                if (! array_key_exists($_pmSaved, \App\Models\PaymentLink::SELECTABLE)) {
+                if (! $_pmDone && ! array_key_exists($_pmSaved, \App\Models\PaymentLink::SELECTABLE)) {
                     $_pmSaved = \App\Models\PaymentLink::METHOD_CARD;
                 }
               @endphp
               <div class="rx-field-row">
                 <span class="rx-field-label">결제 방식</span>
+                @if($_pmDone)
+                  {{-- 받은 뒤 — 사실이므로 읽기만 한다. 고치려면 정산/회계에서 되돌린다. --}}
+                  <div style="flex:1;display:flex;align-items:center;gap:8px;font-size:12px;">
+                    <span style="font-weight:700;">{{ \App\Models\PaymentLink::METHODS[$_pmSaved] ?? $_pmSaved }}</span>
+                    <span style="color:var(--text-muted);font-size:11px;">
+                      받은 뒤라 여기서는 바꾸지 않습니다 — 정산/회계에서 되돌리십시오
+                    </span>
+                  </div>
+                @else
                 <div style="flex:1;display:flex;gap:6px;">
                   @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
                     <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 9px;
@@ -2790,6 +2808,7 @@ $calcDeposit  = $calcCopay;
                     </label>
                   @endforeach
                 </div>
+                @endif
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">건보등록</span>
