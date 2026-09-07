@@ -405,7 +405,7 @@
       { header: '전화번호', name: 'mobile',   width: 140, sortable: true },
       { header: '처방 건수', name: 'rx_count', width: 90,  sortable: true, align: 'right' },
       { header: '최근 처방', name: 'last_rx',  width: 120, sortable: true },
-      { header: '등록일',   name: 'created',  width: 120, sortable: true },
+      { header: '등록 일시', name: 'created', width: 160, align: 'center', sortable: true },
     ],
     data: @json($gridData),
   });

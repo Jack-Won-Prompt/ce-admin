@@ -47,7 +47,7 @@ class AdminUserController extends Controller
                                 ? '전체 권한 (관리자)'
                                 : ($u->permissionGroup?->name ?? '미지정'),
                 'status'  => $u->is_active ? '활성' : '비활성',
-                'created' => $u->created_at?->format('Y-m-d') ?? '',
+                'created' => $u->created_at?->format('Y-m-d H:i:s') ?? '',
             ];
         })->values();
 

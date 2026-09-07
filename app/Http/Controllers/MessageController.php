@@ -36,7 +36,7 @@ class MessageController extends Controller
             'rx_count' => (int) $p->prescriptions_count,
             'last_rx'  => $p->prescriptions_max_created_at
                             ? substr((string) $p->prescriptions_max_created_at, 0, 10) : '',
-            'created'  => $p->created_at?->format('Y-m-d') ?? '',
+            'created'  => $p->created_at?->format('Y-m-d H:i:s') ?? '',
         ]);
 
         // 번호가 없는 거래처는 보낼 수 없다. 몇 건인지 화면에 알린다.

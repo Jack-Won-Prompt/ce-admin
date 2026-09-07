@@ -25,7 +25,7 @@ class PermissionGroupController extends Controller
             'description' => $g->description ?? '',
             'users'       => $g->users_count,
             'locked'      => $g->isLocked() ? '기본 그룹' : '',
-            'updated'     => $g->updated_at?->format('Y-m-d H:i') ?? '',
+            'updated'     => $g->updated_at?->format('Y-m-d H:i:s') ?? '',
         ])->values();
 
         return view('permission-groups.index', [

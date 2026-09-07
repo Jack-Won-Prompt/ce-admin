@@ -187,7 +187,9 @@ class OrderGridExtras
     public function ww(?Order $o, ?Prescription $p, ?Patient $pt, ?OrderReturn $rt = null): array
     {
         $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
-        $dt = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d H:i') : '';
+        /* 자취는 초까지 적는다(2026-09-07 지시) — 같은 날 두 번 오간 건은
+           분까지로도 가려지지 않는 때가 있다. */
+        $dt = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d H:i:s') : '';
 
         [$lotNo, $expiry] = $this->lotsOf($o);
 
@@ -233,7 +235,13 @@ class OrderGridExtras
             'op_manager'    => $o?->operationUser?->name ?? '',
             'op_closed'     => $o?->closing_checked_at ? $d($o->closing_checked_at) : '',
             'op_note'       => $o?->reference_note ?? '',
+            /* 누가 만들고 누가 마지막으로 고쳤는가. 주문이 있으면 주문 쪽을,
+               아직 없으면 처방전 쪽을 본다 — 일시와 짝이 어긋나면 안 된다. */
+            'ww_created_by' => ($o ? $o->creator?->name : $p?->creator?->name) ?? '',
             'ww_created_at' => $dt($o?->created_at ?? $p?->created_at),
+            /* 주문 표에는 updated_by 칸이 없다 — 주문을 고치는 일은 처방전을 고쳐
+               따라오는 것이라 처방전의 수정자가 곧 그 사람이다. */
+            'ww_updated_by' => $p?->updater?->name ?? '',
             'ww_updated_at' => $dt($o?->updated_at ?? $p?->updated_at),
             /* Lot 과 유효기간 — 창고가 출고를 확정하며 알려 준다(요청서 2쪽).
                「제품 정보가 든 모든 화면」이라 공통 칸에 둔다. 품목이 여럿이면 쉼표로

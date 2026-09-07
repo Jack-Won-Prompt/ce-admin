@@ -247,7 +247,7 @@ window.HELP_TOUR_STEPS = [
       { header: '이름',        name: 'patient',    width: 110, sortable: true },
       { header: '병원',          name: 'hospital',   width: 200 },
       { header: '상태',          name: 'status',     width: 100, align: 'center', sortable: true },
-      { header: '등록일',        name: 'created',    width: 120, align: 'center', sortable: true },
+      { header: '등록 일시',     name: 'created',    width: 160, align: 'center', sortable: true },
     ],
     data: @json($listGrid ?? []),
   });

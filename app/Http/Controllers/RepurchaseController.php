@@ -52,7 +52,7 @@ class RepurchaseController extends Controller
                 'patient'    => $p->patient_name_ocr ?? $p->patient?->name ?? '-',
                 'hospital'   => $p->hospital_name ?? '-',
                 'status'     => $p->status_label,
-                'created'    => $p->created_at?->format('Y-m-d'),
+                'created'    => $p->created_at?->format('Y-m-d H:i:s'),
             ])->values();
         }
         $listTotal = $listGrid->count();

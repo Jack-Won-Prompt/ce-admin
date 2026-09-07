@@ -509,9 +509,9 @@ document.addEventListener('keydown', (e) => {
       // + 정렬 화살표(gap 6 + 10.5) = 162.2 라 110 → 170 으로 넓힌다.
       { header: '신환 Master 등록일', name: 'created',    width: 170, sortable: true },
       // 누가 만들고 누가 마지막으로 고쳤는가 (요청서 2쪽)
-      { header: '등록자',   name: 'creator', width: 90,  align: 'center', sortable: true },
-      { header: '수정자',   name: 'updater', width: 90,  align: 'center', sortable: true },
-      { header: '수정일자', name: 'updated', width: 140, align: 'center', sortable: true },
+      { header: '등록자',    name: 'creator', width: 100, align: 'center', sortable: true },
+      { header: '수정자',    name: 'updater', width: 100, align: 'center', sortable: true },
+      { header: '수정 일시', name: 'updated', width: 160, align: 'center', sortable: true },
     ],
     data: @json($gridData),
   });

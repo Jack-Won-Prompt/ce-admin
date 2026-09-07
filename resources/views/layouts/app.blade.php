@@ -2119,9 +2119,6 @@ document.addEventListener('click', (e) => {
       { header: '신환master 등록일', name: 'ww_new_master', width: 130, align: 'center', sortable: true },
       { header: '소득공제/지출증빙', name: 'ww_deduction', width: 120, align: 'center' },
       { header: '현금영수증번호', name: 'ww_cash_no',   width: 130 },
-      { header: '등록 일시',      name: 'ww_created_at', width: 130, align: 'center', sortable: true },
-      { header: '수정 일시',      name: 'ww_updated_at', width: 130, align: 'center', sortable: true },
-
       /* ── 저쪽이 부르지 않는 우리 칸 ─────────────────────
          동의ㆍ청구ㆍ발행은 우리 절차라 위드웍스 화면에 있을 까닭이 없다. */
       { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
@@ -2170,6 +2167,15 @@ document.addEventListener('click', (e) => {
       { header: '하루 사용 수량', name: 'rx_use_qty',   width: 110, align: 'right',  sortable: true },
       { header: '인마켓 마감일',  name: 'rx_inmarket',  width: 110, align: 'center', sortable: true },
       { header: '마지막 확정 수량', name: 'rx_last_qty', width: 120, align: 'right', sortable: true },
+
+      /* 누가 언제 만들고 고쳤는가는 **맨 끝에 둔다**(2026-09-07 지시).
+         업무를 읽는 눈이 먼저 닿아야 할 자리는 사람ㆍ제품ㆍ돈이지, 자취가 아니다.
+         자취는 따져 볼 때만 찾으므로 끝에 모아 두면 찾기도 쉽다.
+         시ㆍ분ㆍ초까지 적는다 — 같은 날 두 번 오간 건은 날짜만으로 가릴 수 없다. */
+      { header: '등록자',    name: 'ww_created_by', width: 100, sortable: true },
+      { header: '등록 일시', name: 'ww_created_at', width: 160, align: 'center', sortable: true },
+      { header: '수정자',    name: 'ww_updated_by', width: 100, sortable: true },
+      { header: '수정 일시', name: 'ww_updated_at', width: 160, align: 'center', sortable: true },
     ];
   };
 
@@ -3513,8 +3519,9 @@ const SrPanel = (() => {
         { header: '우선',   name: 'priorityLabel', width: 70,  align: 'center', sortable: true },
         { header: '제목',   name: 'title',         width: 260 },
         { header: '대상 화면', name: 'page',       width: 130 },
-        { header: '등록자', name: 'writer',        width: 90,  sortable: true },
-        { header: '등록일', name: 'created',       width: 130, align: 'center', sortable: true },
+        /* 자취는 맨 끝에, 초까지 (2026-09-07 지시) */
+        { header: '등록자',    name: 'writer',  width: 90,  sortable: true },
+        { header: '등록 일시', name: 'created', width: 160, align: 'center', sortable: true },
       ],
       data: [],
     });

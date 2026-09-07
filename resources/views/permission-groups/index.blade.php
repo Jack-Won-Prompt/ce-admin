@@ -189,7 +189,7 @@
       { header: '설명',     name: 'description', width: 320 },
       { header: '소속 인원', name: 'users',      width: 90,  align: 'right', sortable: true },
       { header: '구분',     name: 'locked',      width: 100, align: 'center' },
-      { header: '수정일',   name: 'updated',     width: 140, align: 'center', sortable: true },
+      { header: '수정 일시', name: 'updated',    width: 160, align: 'center', sortable: true },
     ],
     data: @json($gridData),
   });

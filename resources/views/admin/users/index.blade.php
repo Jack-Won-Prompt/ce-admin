@@ -651,7 +651,7 @@ function updateRow(u)     { refreshUsersGrid(); }
       { header: '역할',   name: 'role',    width: 90,  align: 'center', sortable: true },
       { header: '권한 그룹', name: 'group', width: 150, sortable: true },
       { header: '상태',   name: 'status',  width: 80,  align: 'center', sortable: true },
-      { header: '등록일', name: 'created', width: 110, align: 'center', sortable: true },
+      { header: '등록 일시', name: 'created', width: 160, align: 'center', sortable: true },
     ],
     data: USERS_GRID_DATA,
   });

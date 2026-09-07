@@ -183,7 +183,7 @@ class PatientController extends Controller
                 // ── 남긴 사람 ──
                 'creator'         => $p->creator?->name ?? '',
                 'updater'         => $p->updater?->name ?? '',
-                'updated'         => $p->updated_at?->format('Y-m-d H:i') ?? '',
+                'updated'         => $p->updated_at?->format('Y-m-d H:i:s') ?? '',
 
                 // ── 위임 서명 ──
                 'signed'      => $c ? $c->statusLabel() : '',

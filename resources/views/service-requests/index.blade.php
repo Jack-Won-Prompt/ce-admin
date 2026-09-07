@@ -241,9 +241,11 @@
       { header: '우선순위',  name: 'priorityLabel', width: 80,  align: 'center', sortable: true },
       { header: '제목',      name: 'title',         width: 300 },
       { header: '대상 화면', name: 'page',          width: 150 },
-      { header: '등록자',    name: 'writer',        width: 100, sortable: true },
-      { header: '등록일',    name: 'created',       width: 140, align: 'center', sortable: true },
       { header: '답변자',    name: 'answerer',      width: 100 },
+      /* 자취(누가 언제)는 맨 끝에 둔다 — 눈이 먼저 닿아야 할 자리는 업무다.
+         시ㆍ분ㆍ초까지 적는다 (2026-09-07 지시). */
+      { header: '등록자',    name: 'writer',        width: 100, sortable: true },
+      { header: '등록 일시', name: 'created',       width: 160, align: 'center', sortable: true },
     ],
     data: _rows,
   });

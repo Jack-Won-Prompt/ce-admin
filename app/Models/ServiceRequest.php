@@ -77,7 +77,7 @@ class ServiceRequest extends Model
             'answer'      => $this->answer ?? '',
             'answerer'    => $this->answeredBy?->name ?? '',
             'answered_at' => $this->answered_at?->format('Y-m-d H:i') ?? '',
-            'created'     => $this->created_at?->format('Y-m-d H:i') ?? '',
+            'created'     => $this->created_at?->format('Y-m-d H:i:s') ?? '',
         ];
     }
 }
