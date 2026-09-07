@@ -76,9 +76,17 @@ class FaxService extends PopbillBaseService
             ]);
 
             /* 받는 이름은 그대로 둔다 — 표지에 「누구에게 갈 것이었나」가 남아야
-               받아 보고 어느 건인지 안다. */
+               받아 보고 어느 건인지 안다.
+
+               **줄의 꼴을 지킨다.** 팝빌 SDK 에 넘기는 받는 곳은 rcv·rcvnm 을 가진
+               객체(stdClass)다. 배열인 줄로만 알고 아니면 번호 문자열로 갈아 끼웠더니,
+               객체가 통째로 문자열이 되어 저쪽이 「전송 요청의 JSON 구성이 유효하지
+               않습니다(-16010001)」로 되돌려 보냈다 — 「우리에게만」 팩스는 그래서
+               한 번도 나가지 못했다. 온 꼴 그대로 번호만 바꾼다. */
             $receivers = array_map(function ($r) use ($testFax) {
-                if (is_array($r)) { $r['rcv'] = $testFax; return $r; }
+                if (is_array($r))  { $r['rcv'] = $testFax; return $r; }
+                if (is_object($r)) { $r->rcv   = $testFax; return $r; }
+
                 return $testFax;
             }, $receivers);
         }
