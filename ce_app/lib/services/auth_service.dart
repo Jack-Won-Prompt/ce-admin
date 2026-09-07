@@ -1,6 +1,8 @@
 // lib/services/auth_service.dart
 // 인증 서비스 — 로그인 2단계 (OTP) / 로그아웃 / 토큰 관리
 
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,12 +30,47 @@ class AuthService {
   final Dio _dio;
   AuthService(this._dio);
 
+  /// 이 기기를 가리는 값. 없으면 만들어 담아 둔다.
+  ///
+  /// 서버는 이 값으로 토큰 이름을 지어, 같은 계정이라도 기기마다 따로 쥔다.
+  /// 앱을 지웠다 깔면 새 값이 되고, 서버에는 옛 기기의 토큰이 남는다 —
+  /// 그 계정으로 다시 로그인할 때 같은 이름이 아니므로 지워지지 않지만,
+  /// 지워진 앱은 이미 토큰을 잃었으니 쓰이지 않는다.
+  Future<String> _deviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(AppConstants.keyDeviceId);
+    if (saved != null && saved.isNotEmpty) return saved;
+
+    final rnd = Random.secure();
+    final id  = List.generate(16, (_) => rnd.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+
+    await prefs.setString(AppConstants.keyDeviceId, id);
+    return id;
+  }
+
+  /// 아이디·비밀번호로 들어가는 길이 열려 있는가(설정 › 서비스 연동 설정 › 로그인).
+  /// 못 물어보면 열려 있다고 본다 — 잠깐 서버가 안 열렸다고 들어갈 길까지
+  /// 감추면, 정작 쓸 수 있는 사람이 아무것도 못 한다.
+  Future<bool> passwordLoginEnabled() async {
+    try {
+      final res  = await _dio.get('/auth/options');
+      final data = res.data;
+      if (data is Map && data['password_login'] is bool) {
+        return data['password_login'] as bool;
+      }
+    } catch (_) {}
+    return true;
+  }
+
   /// 로그인 — 서버가 직접 토큰을 반환하거나 OTP를 요구하는 두 케이스 처리
   Future<LoginResult> login(String email, String password) async {
     try {
       final res = await _dio.post('/auth/login', data: {
-        'email':    email,
-        'password': password,
+        'email':     email,
+        'password':  password,
+        'device_id': await _deviceId(),
       });
 
       final data = res.data;
@@ -66,6 +103,7 @@ class AuthService {
       final res = await _dio.post('/auth/verify-otp', data: {
         'pending_token': pendingToken,
         'code':          code,
+        'device_id':     await _deviceId(),
       });
       await _persistSession(res.data as Map);
     } on DioException catch (e) {
@@ -116,14 +154,20 @@ class AuthService {
     try {
       await _dio.post('/auth/logout');
     } finally {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.keyAccessToken);
-      await prefs.remove(AppConstants.keyUserId);
-      await prefs.remove(AppConstants.keyUserName);
-      await prefs.remove(AppConstants.keyUserEmail);
-      await prefs.remove(AppConstants.keyPusherKey);
-      await prefs.remove(AppConstants.keyPusherCluster);
+      await clearSession();
     }
+  }
+
+  /// 기기에 담아 둔 것만 비운다. 서버는 부르지 않는다 —
+  /// 서버가 이미 토큰을 버린 뒤(401)라면 불러 봐야 또 거절당한다.
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.keyAccessToken);
+    await prefs.remove(AppConstants.keyUserId);
+    await prefs.remove(AppConstants.keyUserName);
+    await prefs.remove(AppConstants.keyUserEmail);
+    await prefs.remove(AppConstants.keyPusherKey);
+    await prefs.remove(AppConstants.keyPusherCluster);
   }
 
   Future<bool> isLoggedIn() async {

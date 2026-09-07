@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -21,6 +22,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _emailCtrl    = TextEditingController(text: 'hong@ce-admin.co.kr');
   final _passwordCtrl = TextEditingController(text: '12345678');
   bool  _obscure      = true;
+
+  /// 아이디·비밀번호 자리를 보일지. 서버 설정을 받기 전까지는 보인다 —
+  /// 없다가 생기는 것보다 있다가 사라지는 편이 덜 놀랍다.
+  bool _passwordLogin = true;
+
+  /* 아이디·비밀번호 길이 닫혀 있어도 이 자리를 여덟 번 잇달아 누르면 칸이 나온다.
+     SSO 가 말썽일 때 고칠 사람까지 갇히지 않도록 남겨 둔 뒷문이다. 나온다고
+     아무나 들어오는 것은 아니다 — 서버가 관리자만 받는다.
+     두 걸음 사이가 2초를 넘으면 처음부터 다시 센다. 어쩌다 눌린 것까지 세면
+     뜻하지 않게 열린다. */
+  static const _revealTaps = 8;
+  int       _ssoTaps = 0;
+  DateTime? _lastSsoTap;
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -37,6 +51,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         .animate(CurvedAnimation(
             parent: _animCtrl, curve: Curves.easeOutCubic));
     _animCtrl.forward();
+
+    // 서버가 이 길을 닫아 두었는지 물어본다
+    Future(() async {
+      final enabled =
+          await ref.read(authServiceProvider).passwordLoginEnabled();
+      if (mounted && enabled != _passwordLogin) {
+        setState(() => _passwordLogin = enabled);
+      }
+    });
+  }
+
+  /// 뒷문 셈. 여덟 번을 채워 칸을 열었으면 true — 그때는 SSO 안내를 띄우지 않는다.
+  bool _countTapToReveal() {
+    final now  = DateTime.now();
+    final last = _lastSsoTap;
+    _lastSsoTap = now;
+
+    _ssoTaps = (last == null || now.difference(last) > const Duration(seconds: 2))
+        ? 1
+        : _ssoTaps + 1;
+
+    if (_ssoTaps < _revealTaps) return false;
+
+    setState(() {
+      _passwordLogin = true;
+      _ssoTaps       = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('관리자 로그인 칸을 엽니다.')),
+    );
+    return true;
   }
 
   @override
@@ -48,6 +93,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   void _ssoLogin() {
+    if (!_passwordLogin && _countTapToReveal()) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Microsoft SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.'),
@@ -300,6 +347,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         ),
                       ),
 
+                      /* 아이디·비밀번호 길이 닫혀 있으면 구분선부터 로그인
+                         단추까지 통째로 감춘다 — Microsoft 계정만 남는다. */
+                      if (_passwordLogin) ...[
                       const SizedBox(height: 20),
 
                       // ── 구분선 ───────────────────────────────────────────────
@@ -425,6 +475,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                         ),
                       ),
+
+                      ],
 
                       const SizedBox(height: 24),
                     ],

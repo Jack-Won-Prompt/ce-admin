@@ -307,6 +307,13 @@ return [
             // 끈다면 이메일·비밀번호만으로 들어온다. 웹과 앱이 같은 값을 본다.
             'otp_enabled' => ['label' => '문자 인증 사용', 'config' => 'auth.otp_enabled', 'type' => 'bool',
                               'help'  => '켜면 비밀번호 뒤에 문자로 받은 인증번호를 한 번 더 넣어야 한다. 휴대폰 번호가 없는 계정은 로그인할 수 없다.'],
+
+            /* 아이디ㆍ비밀번호 길을 웹과 앱에서 따로 여닫는다. 한쪽만 SSO 로
+               옮겨 가는 동안 다른 쪽은 그대로 써야 하기 때문이다. */
+            'password_web' => ['label' => '웹 — 아이디·비밀번호 사용', 'config' => 'auth.password_login.web', 'type' => 'bool',
+                               'help'  => '끄면 관리자 화면에서 아이디·비밀번호 칸이 사라지고 Microsoft 계정만 남는다. ⚠ SSO 가 아직 동작하지 않으므로 끄면 아무도 들어올 수 없다.'],
+            'password_app' => ['label' => '앱 — 아이디·비밀번호 사용', 'config' => 'auth.password_login.app', 'type' => 'bool',
+                               'help'  => '끄면 모바일 앱에서 아이디·비밀번호 칸이 사라진다. ⚠ 위와 같은 까닭으로, 지금 끄면 앱으로 들어올 수 없다.'],
         ],
     ],
     'mobile' => [

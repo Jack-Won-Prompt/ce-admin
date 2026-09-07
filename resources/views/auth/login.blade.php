@@ -412,6 +412,7 @@
       @endif
 
       {{-- Microsoft SSO Button --}}
+      <div id="ssoArea">
       <a href="{{ route('sso.redirect') }}" class="btn-sso">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21">
           <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
@@ -422,11 +423,15 @@
         Microsoft 계정으로 로그인
       </a>
       <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하세요</p>
+      </div>
 
       {{-- 아이디ㆍ비밀번호 길은 설정으로 여닫는다(설정 › 서비스 연동 설정 › 로그인).
-           끄면 이 아래가 통째로 사라지고 Microsoft 계정만 남는다. 감추는 것만으로는
-           모자라 AuthController::store() 도 같은 값을 보고 요청을 막는다. --}}
-      @if (config('auth.password_login.web', true))
+           끄면 이 자리가 감춰지고 Microsoft 계정만 남는다. 다만 아주 없애지는 않는다 —
+           위 SSO 자리를 여덟 번 잇달아 누르면 다시 나온다. SSO 가 말썽일 때 고칠
+           사람까지 갇히면 안 되기 때문이다. 그때 실제로 들어올 수 있는 것은 관리자
+           뿐이고, 그 가림은 AuthController::store() 가 한다 — 화면을 감추는 것만으로는
+           닫은 것이 아니다. --}}
+      <div id="pwArea" @unless (config('auth.password_login.web', true)) style="display:none" @endunless>
       <div class="auth-divider">임시 로그인</div>
 
       <form method="POST" action="{{ route('login.store') }}">
@@ -483,7 +488,7 @@
           로그인
         </button>
       </form>
-      @endif
+      </div>
 
     </div>
 
@@ -493,6 +498,42 @@
   </div>
 
   <script>
+    /* SSO 자리를 여덟 번 잇달아 누르면 아이디ㆍ비밀번호 칸이 나온다.
+       SSO 가 말썽일 때 고칠 사람까지 갇히지 않도록 남겨 둔 뒷문이다.
+       나온다고 아무나 들어오는 것은 아니다 — 서버가 관리자만 받는다.
+
+       셈은 sessionStorage 에 둔다. 단추가 링크라 누를 때마다 화면이 다시 뜨는데,
+       변수에 담으면 그때마다 0 으로 돌아가 여덟 번을 채울 수 없다.
+       두 걸음 사이가 2초를 넘으면 처음부터 다시 센다 — 어쩌다 눌린 것까지 세면
+       뜻하지 않게 열린다. */
+    @unless (config('auth.password_login.web', true))
+    (function () {
+      const NEEDED = 8, GAP = 2000;
+      const KEY_N = 'pwTapCount', KEY_T = 'pwTapAt', KEY_OPEN = 'pwAreaOpen';
+      const area = document.getElementById('ssoArea');
+      const pw   = document.getElementById('pwArea');
+      if (!area || !pw) return;
+
+      const open = () => { pw.style.display = ''; sessionStorage.setItem(KEY_OPEN, '1'); };
+
+      if (sessionStorage.getItem(KEY_OPEN) === '1') open();
+
+      area.addEventListener('click', function () {
+        const now  = Date.now();
+        const last = parseInt(sessionStorage.getItem(KEY_T) || '0', 10);
+        const n    = (now - last > GAP ? 0 : parseInt(sessionStorage.getItem(KEY_N) || '0', 10)) + 1;
+
+        sessionStorage.setItem(KEY_N, String(n));
+        sessionStorage.setItem(KEY_T, String(now));
+
+        if (n >= NEEDED) {
+          sessionStorage.removeItem(KEY_N);
+          open();
+        }
+      });
+    })();
+    @endunless
+
     function togglePw() {
       const input = document.getElementById('password');
       const icon  = document.getElementById('pwToggleIcon');

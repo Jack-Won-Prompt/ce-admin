@@ -32,14 +32,6 @@ class AuthController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        /* 화면에서 칸을 감추는 것만으로는 모자라다 — 요청을 직접 보내면 그대로
-           들어온다. 길을 닫았으면 서버가 막아야 닫힌 것이다. */
-        if (! config('auth.password_login.web', true)) {
-            return back()->withErrors([
-                'email' => '아이디·비밀번호 로그인은 사용하지 않습니다. Microsoft 계정으로 로그인해 주세요.',
-            ]);
-        }
-
         $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -57,6 +49,22 @@ class AuthController extends Controller
         if (!$user->is_active) {
             return back()
                 ->withErrors(['email' => '비활성화된 계정입니다. 관리자에게 문의하세요.'])
+                ->onlyInput('email');
+        }
+
+        /* 아이디ㆍ비밀번호 길을 닫아 둔 동안에도 관리자는 들어올 수 있어야 한다 —
+           SSO 가 말썽일 때 아무도 못 들어가면 고칠 사람까지 갇힌다. 화면에서는
+           여덟 번 눌러야 칸이 나오고, 들어오는 것은 여기서 가린다.
+           화면을 감추는 것만으로는 닫은 것이 아니다 — 요청은 직접 보낼 수 있다. */
+        if (! config('auth.password_login.web', true) && $user->role !== 'admin') {
+            return back()
+                ->withErrors(['email' => '아이디·비밀번호 로그인은 사용하지 않습니다. Microsoft 계정으로 로그인해 주세요.'])
+                ->onlyInput('email');
+        }
+
+        if (! $user->canEnter('web')) {
+            return back()
+                ->withErrors(['email' => '이 계정은 모바일 앱에서만 쓸 수 있습니다.'])
                 ->onlyInput('email');
         }
 

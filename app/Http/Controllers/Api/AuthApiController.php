@@ -24,17 +24,11 @@ class AuthApiController extends Controller
     //   문자 인증 끔 → {otp_required: false, token, user, pusher}        (200)
     public function login(Request $request): JsonResponse
     {
-        // 화면이 칸을 감춰도 요청은 올 수 있다. 길을 닫았으면 여기서 막는다.
-        if (! config('auth.password_login.app', true)) {
-            return response()->json([
-                'success' => false,
-                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하세요.',
-            ], 403);
-        }
-
         $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
+            'email'     => 'required|email',
+            'password'  => 'required|string',
+            // 기기마다 토큰을 따로 쥔다. 옛 판에서는 오지 않으므로 없어도 받는다.
+            'device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -46,9 +40,25 @@ class AuthApiController extends Controller
             ], 401);
         }
 
+        /* 아이디ㆍ비밀번호 길을 닫아 둔 동안에도 관리자는 들어올 수 있어야 한다 —
+           화면에서는 여덟 번 눌러야 칸이 나오고, 들어오는 것은 여기서 가린다. */
+        if (! config('auth.password_login.app', true) && $user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하세요.',
+            ], 403);
+        }
+
+        if (! $user->canEnter('app')) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 계정은 관리자 화면에서만 쓸 수 있습니다.',
+            ], 403);
+        }
+
         // 문자 인증을 끄면(설정 › 서비스 연동 설정 › 로그인) 비밀번호만으로 들여보낸다
         if (! config('auth.otp_enabled', true)) {
-            return response()->json($this->issueToken($user));
+            return response()->json($this->issueToken($user, $request->input('device_id')));
         }
 
         if (empty($user->phone)) {
@@ -92,6 +102,7 @@ class AuthApiController extends Controller
         $request->validate([
             'pending_token' => 'required|string',
             'code'          => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
+            'device_id'     => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
         $otp = LoginOtpToken::where('pending_token', $request->pending_token)
@@ -134,7 +145,7 @@ class AuthApiController extends Controller
         /** @var User $user */
         $user = $otp->user;
 
-        return response()->json($this->issueToken($user));
+        return response()->json($this->issueToken($user, $request->input('device_id')));
     }
 
     // ── GET /api/auth/options ─────────────────────────────
@@ -237,11 +248,17 @@ class AuthApiController extends Controller
      * 로그인 완료 응답. OTP 를 건너뛴 로그인과 OTP 검증 뒤 로그인이 같은 값을 받는다
      * — 앱이 두 경로를 가려 저장하지 않아도 되게.
      */
-    private function issueToken(User $user): array
+    private function issueToken(User $user, ?string $deviceId = null): array
     {
-        // 기존 모바일 토큰 삭제 후 새 토큰 발급 (단일 기기 로그인)
-        $user->tokens()->where('name', 'mobile-app')->delete();
-        $token = $user->createToken('mobile-app', ['prescription:upload', 'prescription:read'])->plainTextToken;
+        /* 토큰은 기기마다 따로 쥔다. 예전에는 로그인할 때 그 계정의 모바일 토큰을
+           모두 지웠다 — 폰과 태블릿을 함께 쓰면 서로를 계속 밀어냈다.
+           같은 기기에서 다시 로그인하면 그 기기 것만 갈아 끼운다. 그래야 한 기기가
+           로그인을 되풀이해도 토큰이 쌓이지 않는다.
+           기기 값을 보내지 않는 옛 판은 예전 이름을 그대로 쓴다. */
+        $name = $deviceId ? "mobile-app:{$deviceId}" : 'mobile-app';
+
+        $user->tokens()->where('name', $name)->delete();
+        $token = $user->createToken($name, ['prescription:upload', 'prescription:read'])->plainTextToken;
 
         return [
             'success'      => true,
