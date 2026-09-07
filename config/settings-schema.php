@@ -199,25 +199,33 @@ return [
         ],
     ],
 
+    /*
+     * 팩스 관련 여섯 칸을 걷어냈다 (2026-09-07).
+     *
+     * 「팩스 방식」(시뮬레이션ㆍ하이팩스코리아ㆍeFaxㆍ팝빌)과 그에 딸린 주소ㆍ키가
+     * 서 있었는데, **어느 것도 코드가 읽지 않았다.** 공단 팩스를 어느 업체로 보낼지
+     * 정하기 전에 자리만 미리 만들어 둔 것이고, 그 뒤 팝빌로 정해져
+     * App\Services\Popbill\FaxService 가 유일한 길이 되었다.
+     *
+     * 아무 일도 하지 않는 칸은 거짓말을 한다. 「팩스 방식」을 시뮬레이션으로 두고
+     * 안심한 채 시험을 돌리면 공단으로 진짜 팩스가 나간다 — 실제로 그 값이
+     * simulation 인 채로 실전송되어 접수번호가 돌아왔다.
+     *
+     * 팩스를 실제로 가르는 스위치는 「테스트 설정」 탭의 fax_mode 다.
+     *
+     * 「출고 시 자동 청구」도 함께 걷었다 — 읽는 코드가 없다. 청구는 담당자가
+     * 청구 관리에서 손으로 한다.
+     */
     'nhis' => [
         'label' => '건강보험공단',
-        'desc'  => '요양비 청구 기관 정보와 팩스 전송',
+        'desc'  => '요양비 청구 서류에 찍히는 기관 정보 (팩스는 「테스트 설정」 탭에서 가른다)',
         'fields' => [
-            'institution_name' => ['label' => '기관명',       'config' => 'nhis.institution.name'],
-            'institution_code' => ['label' => '요양기관기호', 'config' => 'nhis.institution.code', 'width' => 1],
-            'biz_no'           => ['label' => '사업자번호',   'config' => 'nhis.institution.biz_no', 'width' => 1],
-            'efax_driver'      => ['label' => '팩스 방식',    'config' => 'nhis.efax.driver', 'type' => 'select',
-                                   'options' => ['simulation' => '시뮬레이션(발송 안 함)', 'hifaxkorea' => '하이팩스코리아', 'efax' => 'eFax', 'popbill' => '팝빌'],
-                                   'help'    => '시뮬레이션이면 팩스를 보내지 않고 보낸 것으로 기록한다.'],
-            'efax_sender'      => ['label' => '팩스 발신번호', 'config' => 'nhis.efax.sender_number'],
-            'nhis_fax_number'  => ['label' => '공단 수신 팩스', 'config' => 'nhis.efax.nhis_fax_number'],
-            'hifax_api_url'    => ['label' => '하이팩스 API 주소',  'config' => 'nhis.efax.hifaxkorea.api_url', 'width' => 3],
-            'hifax_api_key'    => ['label' => '하이팩스 API 키',    'config' => 'nhis.efax.hifaxkorea.api_key', 'type' => 'password'],
-            'hifax_api_secret' => ['label' => '하이팩스 API 시크릿', 'config' => 'nhis.efax.hifaxkorea.api_secret', 'type' => 'password'],
-            'efax_api_url'     => ['label' => 'eFax API 주소',   'config' => 'nhis.efax.efax.api_url', 'width' => 3],
-            'efax_account_id'  => ['label' => 'eFax 계정',       'config' => 'nhis.efax.efax.account_id'],
-            'efax_api_key'     => ['label' => 'eFax API 키',     'config' => 'nhis.efax.efax.api_key', 'type' => 'password'],
-            'auto_submit'      => ['label' => '출고 시 자동 청구', 'config' => 'nhis.claim.auto_submit_on_delivery', 'type' => 'bool'],
+            'institution_name' => ['label' => '기관명',       'config' => 'nhis.institution.name',
+                                   'help'  => '요양비위임장ㆍ공단 팩스 표지에 찍힌다.'],
+            'institution_code' => ['label' => '요양기관기호', 'config' => 'nhis.institution.code', 'width' => 1,
+                                   'help'  => '같은 서류에 찍힌다.'],
+            'biz_no'           => ['label' => '사업자번호',   'config' => 'nhis.institution.biz_no', 'width' => 1,
+                                   'help'  => '공단 청구 화면의 예금주 사업자번호로 쓴다.'],
         ],
     ],
 
@@ -325,8 +333,8 @@ return [
      * 운영에서는 그대로 손으로 적는다. 환자 번호는 목록에 있을 까닭이 없다.
      */
     'web' => [
-        'label' => '시험 설정',
-        'desc'  => '시험 중에 무엇이 밖으로 나가고 무엇이 우리 손 안에 머무는가',
+        'label' => '테스트 설정',
+        'desc'  => '테스트 중에 무엇이 밖으로 나가고 무엇이 우리 손 안에 머무는가',
         'fields' => [
             'mode' => ['label' => '웹 화면', 'config' => 'web.mode', 'type' => 'select', 'width' => 1,
                        'options' => ['live' => '운영 (번호를 손으로 적는다)',
@@ -338,28 +346,28 @@ return [
                가운데를 둔다 — 실제로 보내되 우리에게만 온다. */
             'sms_mode' => ['label' => '문자 발송', 'config' => 'popbill.sms_mode', 'type' => 'select', 'width' => 1,
                            'options' => ['live'     => '실제 (적힌 번호로)',
-                                         'redirect' => '우리에게만 (시험 번호로 돌린다)',
+                                         'redirect' => '우리에게만 (테스트 번호로 돌린다)',
                                          'simulate' => '시늉 (보내지 않는다)'],
                            'help'  => '「우리에게만」은 정말 팝빌로 나간다 — 포인트도 깎이고 자취도 남는다. '
-                                    . '다만 받는 곳이 아래 시험 번호로 바뀐다.'],
+                                    . '다만 받는 곳이 아래 테스트 번호로 바뀐다.'],
 
             'fax_mode' => ['label' => '팩스 발송', 'config' => 'popbill.fax_mode', 'type' => 'select', 'width' => 1,
                            'options' => ['live'     => '실제 (관할 지사로)',
-                                         'redirect' => '우리에게만 (시험 팩스로 돌린다)',
+                                         'redirect' => '우리에게만 (테스트 팩스로 돌린다)',
                                          'simulate' => '시늉 (보내지 않는다)'],
-                           'help'  => '여태 이 칸이 없어, 시험할 때마다 기준정보의 팩스번호를 바꿔 두었다. '
+                           'help'  => '여태 이 칸이 없어, 테스트할 때마다 기준정보의 팩스번호를 바꿔 두었다. '
                                     . '되돌리기를 잊으면 운영에서 공단으로 팩스가 안 간다 — 그 일을 없앤다.'],
 
             /* 받는 곳은 팝빌 탭에도 같은 칸이 있다(popbill.test.*). 같은 값을 보므로
                어느 쪽에서 고쳐도 된다 — 시험을 켜는 자리에서 함께 보이는 편이 낫다. */
-            'test_receiver_hp'  => ['label' => '시험 받는 번호', 'config' => 'popbill.test.receiver_hp', 'width' => 1,
+            'test_receiver_hp'  => ['label' => '테스트 받는 번호', 'config' => 'popbill.test.receiver_hp', 'width' => 1,
                                     'help'  => '「우리에게만」일 때 문자가 오는 곳. 비어 있으면 발송이 막힌다.'],
-            'test_receiver_fax' => ['label' => '시험 받는 팩스', 'config' => 'popbill.test.receiver_fax', 'width' => 1,
+            'test_receiver_fax' => ['label' => '테스트 받는 팩스', 'config' => 'popbill.test.receiver_fax', 'width' => 1,
                                     'help'  => '「우리에게만」일 때 팩스가 오는 곳. 비어 있으면 발송이 막힌다.'],
 
             /* 본인확인은 여태 .env 로만 있어, 운영 전환 뒤 되돌렸는지 화면에서 볼 수 없었다. */
             'nice_simulate' => ['label' => '본인확인 시늉(NICE)', 'config' => 'nice.simulate', 'type' => 'bool',
-                                'help'  => '켜면 위임동의 화면의 본인확인이 실제 인증 없이 「확인됨 (시험)」으로 넘어간다. '
+                                'help'  => '켜면 위임동의 화면의 본인확인이 실제 인증 없이 「확인됨 (테스트)」으로 넘어간다. '
                                          . '운영에서는 반드시 꺼 두어야 한다.'],
         ],
     ],

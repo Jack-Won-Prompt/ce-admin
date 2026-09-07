@@ -1,53 +1,42 @@
 <?php
-// config/nhis.php — NHIS 건강보험 청구 및 e-Fax 설정
+// config/nhis.php — 요양비 청구 서류에 찍히는 기관 정보
 
 return [
 
     /*
     |--------------------------------------------------------------------------
-    | NHIS 기관 정보
+    | 우리 기관 정보
     |--------------------------------------------------------------------------
+    |
+    | 요양비위임장ㆍ공단 팩스 표지에 찍히고, 공단 청구 화면의 예금주
+    | 사업자번호로도 쓴다. 설정 › 서비스 연동 설정 › 건강보험공단에서 고친다.
+    |
     */
     'institution' => [
         'name'    => env('NHIS_INSTITUTION_NAME', 'CE (주)대한소변기기'),
         'code'    => env('NHIS_INSTITUTION_CODE', ''),      // 요양기관 기호
-        'biz_no'  => env('NHIS_BIZ_NO', ''),               // 사업자등록번호
+        'biz_no'  => env('NHIS_BIZ_NO', ''),                // 사업자등록번호
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | e-Fax 설정
-    | driver: "simulation" (개발/테스트) | "hifaxkorea" | "efax" | "custom"
+    | 걷어낸 것 — e-Fax 설정 (2026-09-07)
     |--------------------------------------------------------------------------
+    |
+    | 「팩스 방식」(simulation·hifaxkorea·efax·popbill)과 그에 딸린 주소ㆍ키가
+    | 여기 있었는데 **어느 것도 코드가 읽지 않았다.** 공단 팩스를 어느 업체로
+    | 보낼지 정하기 전에 자리만 미리 만들어 둔 것이고, 그 뒤 팝빌로 정해져
+    | App\Services\Popbill\FaxService 가 유일한 길이 되었다.
+    |
+    | 아무 일도 하지 않는 설정은 거짓말을 한다. 「팩스 방식」이 simulation 인
+    | 채로 공단에 진짜 팩스가 나가 접수번호가 돌아왔다 — 담당자가 그 값을 보고
+    | 안심했다면 시험이 그대로 실전송이 되는 자리였다.
+    |
+    | 팩스를 실제로 가르는 스위치는 config/popbill.php 의 fax_mode 다
+    | (설정 › 서비스 연동 설정 › 테스트 설정).
+    |
+    | 청구의 auto_submit_on_delivery·retry·max_retries 도 함께 걷었다.
+    | 읽는 코드가 없다 — 청구는 담당자가 청구 관리에서 손으로 한다.
+    |
     */
-    'efax' => [
-        'driver'         => env('NHIS_EFAX_DRIVER', 'simulation'),
-        'sender_number'  => env('NHIS_EFAX_SENDER', ''),     // 발신 팩스번호
-        'nhis_fax_number'=> env('NHIS_FAX_NUMBER', '02-000-0000'),  // 공단 수신 팩스번호
-
-        // HiFaxKorea API (드라이버: hifaxkorea)
-        'hifaxkorea' => [
-            'api_url'    => env('HIFAX_API_URL', 'https://api.hifaxkorea.com'),
-            'api_key'    => env('HIFAX_API_KEY', ''),
-            'api_secret' => env('HIFAX_API_SECRET', ''),
-        ],
-
-        // 일반 e-Fax API (드라이버: efax)
-        'efax' => [
-            'api_url'    => env('EFAX_API_URL', ''),
-            'account_id' => env('EFAX_ACCOUNT_ID', ''),
-            'api_key'    => env('EFAX_API_KEY', ''),
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | 청구 설정
-    |--------------------------------------------------------------------------
-    */
-    'claim' => [
-        'auto_submit_on_delivery' => env('NHIS_AUTO_SUBMIT', false), // 배송완료 시 자동 청구
-        'retry_failed_after_hours'=> 24,                              // 실패 재시도 대기 시간
-        'max_retries'             => 3,
-    ],
 ];

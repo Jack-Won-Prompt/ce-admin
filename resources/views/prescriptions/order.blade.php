@@ -1400,7 +1400,7 @@ $calcDeposit  = $calcCopay;
                  보던 자리인데, 알림톡은 이제 팝빌로 나간다. --}}
             @if(config('popbill.IsTest'))
             <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:6px 10px;font-size:10px;color:var(--alert-500);">
-              <i class="fa-solid fa-flask"></i> 팝빌 시험 모드 — 실제 미전송
+              <i class="fa-solid fa-flask"></i> 팝빌 테스트 모드 — 실제 미전송
             </div>
             @endif
             <button id="btnKakaoSend" onclick="sendKakaoMsg()"
@@ -2615,7 +2615,7 @@ $calcDeposit  = $calcCopay;
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 1</span>
                 @if (!empty($testPhones))
-                  <select class="form-control" id="f-mobile" style="flex:1;" title="시험 중이라 우리 사람 번호에서 고릅니다">
+                  <select class="form-control" id="f-mobile" style="flex:1;" title="테스트 중이라 우리 사람 번호에서 고릅니다">
                     <option value="">선택</option>
                     @foreach ($testPhones as $u)
                       <option value="{{ $u['phone'] }}" @selected($phoneNow === $u['phone'])>
@@ -2638,7 +2638,7 @@ $calcDeposit  = $calcCopay;
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 2</span>
                 @if (!empty($testPhones))
-                  <select class="form-control" id="f-mobile2" style="flex:1;" title="시험 중이라 우리 사람 번호에서 고릅니다">
+                  <select class="form-control" id="f-mobile2" style="flex:1;" title="테스트 중이라 우리 사람 번호에서 고릅니다">
                     <option value="">선택</option>
                     @foreach ($testPhones as $u)
                       <option value="{{ $u['phone'] }}" @selected($phone2Now === $u['phone'])>

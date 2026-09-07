@@ -1143,7 +1143,7 @@ async function startNice() {
     if (data.simulated) {
       if (nicePopup) nicePopup.close();
       identityVerified = true;
-      if (btn) { btn.textContent = '확인됨 (시험)'; btn.disabled = true; }
+      if (btn) { btn.textContent = '확인됨 (테스트)'; btn.disabled = true; }
       refreshAgree();
       return;
     }

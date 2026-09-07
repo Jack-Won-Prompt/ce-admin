@@ -165,7 +165,7 @@ class MessageService extends PopbillBaseService
 
         if ($test === '') {
             throw new \RuntimeException(
-                '시험 받는 번호가 비어 있습니다 — 설정 › 서비스 연동 설정 › 시험 설정에서 적어 주십시오.'
+                '테스트 받는 번호가 비어 있습니다 — 설정 › 서비스 연동 설정 › 테스트 설정에서 적어 주십시오.'
             );
         }
 
