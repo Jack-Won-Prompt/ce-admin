@@ -28,6 +28,11 @@ class AppConstants {
   static const String keyPusherKey     = 'pusher_key';
   static const String keyPusherCluster = 'pusher_cluster';
 
+  /// 이 기기를 가리는 값. 앱을 처음 켤 때 한 번 만들어 담아 둔다.
+  /// 기기마다 토큰을 따로 두기 위한 것이라, 하드웨어 식별자를 읽지 않는다 —
+  /// 그런 값은 지울 수도 바꿀 수도 없어 개인정보로 다뤄야 한다.
+  static const String keyDeviceId      = 'device_id';
+
   // ── 기타 ─────────────────────────────────────────
   static const String appName = 'CE Admin';
 }

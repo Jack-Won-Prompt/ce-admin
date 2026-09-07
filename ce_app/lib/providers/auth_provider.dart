@@ -97,6 +97,21 @@ class AuthNotifier extends AsyncNotifier<bool> {
     await FcmService.instance.init(ref.read(dioProvider));
   }
 
+  /// 서버가 토큰을 더 이상 받지 않을 때(401). 담아 둔 것을 비우고 끊긴 것으로 둔다.
+  ///
+  /// 이 앱은 한 계정에 한 기기만 허용한다 — 다른 기기에서 로그인하면 이쪽 토큰이
+  /// 지워진다. 그때 앱은 스스로를 로그인 상태로 알고 있어, 화면마다 「불러오지
+  /// 못했습니다」만 뜨고 무엇을 해야 하는지 알 수 없었다.
+  Future<void> sessionExpired() async {
+    if (state.value == false) return;   // 이미 끊긴 줄 알고 있으면 그만둔다
+
+    await ref.read(authServiceProvider).clearSession();
+    ref.read(userNameProvider.notifier).state = '';
+    ref.read(userIdProvider.notifier).state   = null;
+    ref.read(otpPendingProvider.notifier).state = null;
+    state = const AsyncData(false);
+  }
+
   /// OTP 재발송 → 새 pendingToken 반환
   Future<String> resendOtp(String pendingToken) async {
     final newToken = await ref.read(authServiceProvider).resendOtp(pendingToken);

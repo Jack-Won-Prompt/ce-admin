@@ -7,10 +7,15 @@ import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/auth_provider.dart';
+import '../router/app_router.dart';
 import '../utils/constants.dart';
 
 /// Dio 인스턴스 Provider
 final dioProvider = Provider<Dio>((ref) {
+  // 401 이 여러 요청에서 한꺼번에 올 때 로그인 화면으로 여러 번 보내지 않는다
+  var expired = false;
+
   final dio = Dio(BaseOptions(
     baseUrl:        AppConstants.baseUrl,
     connectTimeout: AppConstants.connectTimeout,
@@ -45,7 +50,24 @@ final dioProvider = Provider<Dio>((ref) {
       }
       handler.next(options);
     },
-    onError: (error, handler) {
+    /* 서버가 토큰을 더 이상 받지 않으면(401) 그 자리에서 로그인 화면으로 돌린다.
+       이 앱은 한 계정에 한 기기만 허용해서, 다른 기기에서 로그인하면 이쪽 토큰이
+       지워진다. 그대로 두면 앱은 스스로를 로그인 상태로 알고 화면마다 「불러오지
+       못했습니다」만 띄운다 — 쓰는 사람은 무엇을 해야 할지 알 수 없다. */
+    onError: (error, handler) async {
+      if (error.response?.statusCode == 401 && !expired) {
+        final path = error.requestOptions.path;
+
+        /* 로그인하러 가는 길에서 온 401 은 「비밀번호가 틀렸다」는 뜻이다.
+           그것까지 세션 만료로 보면 로그인 화면을 다시 로그인 화면으로 보낸다. */
+        const loginPaths = ['/auth/login', '/auth/verify-otp', '/auth/resend-otp'];
+        if (!loginPaths.contains(path)) {
+          expired = true;
+          await ref.read(authNotifierProvider.notifier).sessionExpired();
+          ref.read(routerProvider).go('/login');
+          expired = false;
+        }
+      }
       handler.next(error);
     },
   ));
