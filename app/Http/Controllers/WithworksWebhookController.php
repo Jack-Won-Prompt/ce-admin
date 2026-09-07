@@ -116,6 +116,11 @@ class WithworksWebhookController extends Controller
                분명히 실어 보냈는데도 WithworksSync 에는 빈 것이 넘어가, 주문에는 한 줄도
                적히지 않았다(사건 표의 payload 에는 남아 있어 더 찾기 어려웠다). */
             'details'         => 'nullable|array',
+            /* 창고와 판매현황 값 — Lot 과 같은 함정이다. 규칙에 적지 않으면
+               validated() 가 통째로 걷어 내, 저쪽이 분명히 실어 보냈는데도
+               받는 쪽에는 빈 것이 넘어간다(2026-09-07, 실제로 그렇게 됐다). */
+            'warehouse'       => 'nullable|array',
+            'so_meta'         => 'nullable|array',
         ]);
 
         if ($v->fails()) {
