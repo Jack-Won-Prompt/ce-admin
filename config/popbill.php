@@ -43,6 +43,28 @@ return [
      */
     'fax_simulate'      => env('POPBILL_FAX_SIMULATE', false),
 
+    /*
+     * 문자ㆍ팩스를 어디로 보내는가 — 세 갈래 (2026-09-07 지시).
+     *
+     *   live     적힌 곳으로 보낸다
+     *   redirect 적힌 곳을 무시하고 **시험 수신처로 돌린다**
+     *   simulate 아예 보내지 않고 로그만 남긴다
+     *
+     * 여태 시늉이냐 아니냐 둘뿐이었다. 그래서 **정말 나가는지**를 볼 길이 없었다 —
+     * 시늉을 끄면 실제 환자에게 가고, 켜 두면 아무것도 안 나간다. 가운데가 없었다.
+     *
+     * 팩스는 그 없음이 더 나빴다. 시험할 때마다 **기준정보의 팩스번호를 시험용으로
+     * 바꿔 두었는데**, 되돌리기를 잊으면 운영에서 공단으로 팩스가 안 간다. 업무
+     * 자료를 만져 시험하는 일은 이 갈래가 없앤다.
+     *
+     * 예전 열쇠(sms_simulate·fax_simulate)가 켜져 있으면 그것을 따른다 — 서버
+     * 설정을 손대지 않아도 지금 하던 대로 돈다.
+     */
+    'sms_mode' => env('POPBILL_SMS_MODE')
+                  ?: (env('POPBILL_SMS_SIMULATE', env('POPBILL_IS_TEST', true)) ? 'simulate' : 'live'),
+    'fax_mode' => env('POPBILL_FAX_MODE')
+                  ?: (env('POPBILL_FAX_SIMULATE', false) ? 'simulate' : 'live'),
+
     'test' => [
         'corp_num'     => env('POPBILL_TEST_CORP_NUM'),
         'user_id'      => env('POPBILL_TEST_USER_ID'),

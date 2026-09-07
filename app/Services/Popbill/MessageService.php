@@ -151,6 +151,34 @@ class MessageService extends PopbillBaseService
     }
 
     /**
+     * 「우리에게만」일 때 받는 번호를 시험 번호로 갈아 끼운다.
+     *
+     * 원래 가려던 곳은 로그에 남긴다 — 받아 보고 「이게 누구 건이었나」를 알 수
+     * 있어야 시험이 뜻이 있다.
+     *
+     * 시험 번호가 비어 있으면 던진다. 조용히 원래 번호로 보내면 실제 환자에게
+     * 가는데, 그것이야말로 이 갈래를 둔 뜻과 정반대다.
+     */
+    private function testReceiver(string $original, ?string $name = null): string
+    {
+        $test = preg_replace('/\D/', '', (string) config('popbill.test.receiver_hp'));
+
+        if ($test === '') {
+            throw new \RuntimeException(
+                '시험 받는 번호가 비어 있습니다 — 설정 › 서비스 연동 설정 › 시험 설정에서 적어 주십시오.'
+            );
+        }
+
+        \Illuminate\Support\Facades\Log::info('[Popbill][SMS][우리에게만] 받는 곳을 돌린다', [
+            'original' => $original,
+            'name'     => $name,
+            'to'       => $test,
+        ]);
+
+        return $test;
+    }
+
+    /**
      * 기본 설정값으로 단문/장문 자동 발송 (컨트롤러 편의용)
      * 로컬 환경(APP_ENV=local)에서는 실제 API를 호출하지 않고 시뮬레이션.
      */
@@ -158,7 +186,16 @@ class MessageService extends PopbillBaseService
     {
         $toNum = preg_replace('/\D/', '', $to);
 
-        if (config('popbill.sms_simulate', app()->isLocal())) {
+        /* 어디로 보내는가 — 세 갈래 (config/popbill.php 의 sms_mode).
+           **우리에게만**(redirect)이면 받는 번호를 시험 번호로 갈아 끼운다.
+           여태 시늉이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다. */
+        $mode = config('popbill.sms_mode', 'live');
+
+        if ($mode === 'redirect') {
+            $toNum = $this->testReceiver($toNum, $receiverName);
+        }
+
+        if ($mode === 'simulate') {
             $receipt = 'SIM-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
             \Illuminate\Support\Facades\Log::info('[Popbill][SMS][시뮬레이션] 발송', [
                 'to'      => $toNum,
@@ -203,7 +240,18 @@ class MessageService extends PopbillBaseService
      */
     public function sendManyXms(array $messages, string $content, string $subject = ''): string
     {
-        if (config('popbill.sms_simulate', app()->isLocal())) {
+        $mode = config('popbill.sms_mode', 'live');
+
+        if ($mode === 'redirect') {
+            /* 묶음이라도 모두 한 번호로 돌린다 — 같은 사람에게 여러 통이 오지만,
+               「몇 통이 나가는가」도 시험에서 볼 것이다. */
+            $messages = array_map(function ($m) {
+                $m['rcv'] = $this->testReceiver((string) ($m['rcv'] ?? ''), $m['rcvnm'] ?? null);
+                return $m;
+            }, $messages);
+        }
+
+        if ($mode === 'simulate') {
             $receipt = 'SIM-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
             \Illuminate\Support\Facades\Log::info('[Popbill][SMS][시뮬레이션] 묶음 발송', [
                 'count' => count($messages), 'receipt' => $receipt, 'content' => $content,

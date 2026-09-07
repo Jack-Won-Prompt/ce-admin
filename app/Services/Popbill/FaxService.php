@@ -54,9 +54,38 @@ class FaxService extends PopbillBaseService
         ?string $userId = null,
         ?string $requestNum = null
     ): string {
-        /* 시늉 모드 — 마지막 한 걸음만 막는다. 여기까지 온 것은 합본이 만들어졌고
+        /* 어디로 보내는가 — 세 갈래 (config/popbill.php 의 fax_mode).
+
+           **우리에게만**(redirect)이면 받는 곳을 시험 팩스로 갈아 끼운다. 여태
+           이것이 없어, 시험할 때마다 기준정보의 팩스번호를 바꿔 두었다 —
+           되돌리기를 잊으면 운영에서 공단으로 팩스가 안 갔다. */
+        $mode = config('popbill.fax_mode', 'live');
+
+        if ($mode === 'redirect') {
+            $testFax = preg_replace('/\D/', '', (string) config('popbill.test.receiver_fax'));
+
+            if ($testFax === '') {
+                throw new \RuntimeException(
+                    '시험 받는 팩스번호가 비어 있습니다 — 설정 › 서비스 연동 설정 › 시험 설정에서 적어 주십시오.'
+                );
+            }
+
+            \Illuminate\Support\Facades\Log::info('[Popbill][FAX][우리에게만] 받는 곳을 돌린다', [
+                'original' => $receivers,
+                'to'       => $testFax,
+            ]);
+
+            /* 받는 이름은 그대로 둔다 — 표지에 「누구에게 갈 것이었나」가 남아야
+               받아 보고 어느 건인지 안다. */
+            $receivers = array_map(function ($r) use ($testFax) {
+                if (is_array($r)) { $r['rcv'] = $testFax; return $r; }
+                return $testFax;
+            }, $receivers);
+        }
+
+        /* 시늉 — 마지막 한 걸음만 막는다. 여기까지 온 것은 합본이 만들어졌고
            받는 곳도 정해졌다는 뜻이라, 시험에서 볼 것은 이미 다 본 뒤다. */
-        if (config('popbill.fax_simulate', false)) {
+        if ($mode === 'simulate') {
             $receipt = 'SIMFAX-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
             \Illuminate\Support\Facades\Log::info('[Popbill][FAX][시뮬레이션] 발송', [
                 'sender'    => $sender,
