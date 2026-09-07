@@ -376,6 +376,9 @@
      안 된다. 두 화면이 같은 번호를 보고 다른 일을 할 까닭이 없다.
 
      사람이 손으로 고쳐 둔 값은 덮지 않는다. 이 수가 채워 둔 값만 다시 적는다. */
+  /* 서버가 말해 준 미성년 여부. 창을 열 때마다 새로 받는다(peClear 가 지운다). */
+  let _peMinor = null;
+
   /* 미성년이면 보호자 칸을 세운다 (2026-09-07 · 결함 ㉕).
      가르는 잣대는 생년월일이다 — 주민번호는 가려 온 것이라 못 읽을 때가 있고,
      생년월일은 그 번호에서 이미 채워져 있다. */
@@ -385,9 +388,11 @@
     if (!box || !bd) return;
 
     const v = String(bd.value || '').slice(0, 10);
-    let minor = false;
+    /* 서버가 미성년이라 했으면 그대로 따른다 — 새로 등록하는 중이거나 서버가
+       말해 주지 않았을 때만 생년월일로 센다. */
+    let minor = _peMinor === true;
 
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    if (!minor && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
       const b = new Date(v + 'T00:00:00');
       const now = new Date();
       let age = now.getFullYear() - b.getFullYear();
@@ -569,6 +574,9 @@
     document.querySelectorAll('#addModal input, #addModal textarea').forEach(el => { el.value = ''; });
     document.querySelectorAll('#addModal select').forEach(el => { el.selectedIndex = 0; });
     delete document.getElementById('add-resident').dataset.masked;
+    /* 앞사람의 미성년 여부가 남아 있으면 다음 사람에게 보호자 칸이 딸려 선다 */
+    _peMinor = null;
+    peGuardianToggle();
   }
 
   /* 열쇠 이름이 곧 칸 이름이다(add-<열쇠>, 밑줄은 붙임표로) — 짝이 없으면 지나간다 */
@@ -593,6 +601,10 @@
        날짜 칸은 `YYYY-MM-DD` 만 받아 통째로 비워지므로 앞 열 자만 잘라 넣는다. */
     const gb = document.getElementById('add-guardian-birth');
     if (gb && data?.guardian_birth_date) gb.value = String(data.guardian_birth_date).slice(0, 10);
+
+    /* 미성년인지는 서버가 말해 준다. 창이 생년월일을 보고 스스로 세도록 두었더니
+       그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로 읽혔다. */
+    if (data?.is_minor !== undefined && data?.is_minor !== null) _peMinor = !!data.is_minor;
 
     peGuardianToggle();
 

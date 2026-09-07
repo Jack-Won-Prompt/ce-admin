@@ -268,6 +268,24 @@ class Patient extends Model
         return $this->birth_date?->age;
     }
 
+    /**
+     * 미성년인가 (2026-09-07).
+     *
+     * 여태 이 물음에 답하는 자리가 없었다. 위임동의는 처방전의 가려진 주민번호에서
+     * 그때그때 셈했고(PrescriptionController::issueConsent), 거래처 화면에서는
+     * 물을 길이 아예 없어 `$patient->is_minor` 를 적으면 늘 빈 값이 나왔다 —
+     * 그 빈 값으로 「미성년이면 보호자 칸을 세운다」를 걸어 두면 영영 서지 않는다.
+     *
+     * 생년월일로 센다. 주민번호는 암호로 담겨 있어 열지 않는다(P0-1).
+     * 생년월일을 모르면 미성년이라 단정하지 않는다 — 모르는 것과 아닌 것은 다르다.
+     */
+    public function getIsMinorAttribute(): bool
+    {
+        $age = $this->birth_date?->age;
+
+        return $age !== null && $age < (int) config('delegation.minor_age', 19);
+    }
+
     /** 화면·목록·엑셀·팩스 본문에 쓰는 표기. 평문을 만들지 않는다. */
     public function getMaskedResidentNoAttribute(): ?string
     {

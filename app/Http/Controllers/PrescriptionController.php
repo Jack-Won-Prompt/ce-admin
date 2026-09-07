@@ -1475,7 +1475,15 @@ class PrescriptionController extends Controller
                 'nhis_reg_status', 'nhis_reg_date', 'nhis_renew', 'nhis_renew_due',
                 'nhis_agree_start', 'nhis_agree_end',
                 'basic_reeval', 'basic_reeval_due',
-            ]) + ['resident_no' => $patient->resident_no],
+                // 미성년 보호자 (2026-09-07 · 결함 ㉕)
+                'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
+            ]) + [
+                'resident_no' => $patient->resident_no,
+                /* 미성년인지는 **서버가 말한다**. 창이 생년월일을 보고 스스로 세도록
+                   두었더니, 그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로
+                   읽혔다 — 보호자 칸이 영영 서지 않았다. */
+                'is_minor'    => $patient->is_minor,
+            ],
         ]);
     }
 
