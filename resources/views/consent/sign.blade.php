@@ -644,8 +644,16 @@
       <p class="pv-note">* 표시는 필수 입력·동의 항목입니다.</p>
     </div>
     @endif
-    {{-- 서명란 --}}
-    <div class="sig-section">
+    {{-- 서명란 — 미성년이면 세우지 않는다 (2026-09-07 지시).
+
+         요양비위임장에는 서명 자리가 둘이다(위임인ㆍ법정대리인). 그래서 화면도 둘을
+         받았는데, 위임인이 만 여덟 살이면 그 서명도 결국 보호자가 그린다 — 한 사람이
+         두 번 그리고, 그중 하나가 아이 것으로 남는다.
+
+         미성년의 위임은 법정대리인이 한다. 보호자에게 한 번만 받고, 종이의 두 자리에는
+         그 하나를 찍는다(제출할 때 위임인 서명 자리에 같은 그림을 싣는다).
+         서식이 바뀌지 않으므로 공단에 내는 것은 그대로다. --}}
+    <div class="sig-section" @if($consent->is_minor) style="display:none;" @endif>
       <div class="sig-label">
         서명란 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <button class="sig-clear" type="button" onclick="clearSignature()">지우기</button>
@@ -712,6 +720,9 @@
 
       <div class="sig-label" style="margin-top:14px;">
         보호자 서명 <span style="color:#ef4444;font-size:11px;">* 필수</span>
+        <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
+          위임인이 미성년이라 <b>이 서명 하나로 위임장의 위임인ㆍ법정대리인 두 자리를 채웁니다.</b>
+        </div>
         <button class="sig-clear" type="button" onclick="clearGuardianSignature()">지우기</button>
       </div>
       <div class="sig-wrap" id="gSigWrap">
@@ -951,7 +962,8 @@ function refreshAgree() {
     all.checked = items.length > 0 && items.every(i =>
       [...i.querySelectorAll('input[type=radio]')].some(r => r.checked && r.value === '동의함'));
   }
-  const ok = hasSig && (!NICE_ENFORCE || identityVerified) && guardianReady() && privacyReady();
+  const ok = (IS_MINOR || hasSig) && (!NICE_ENFORCE || identityVerified)
+             && guardianReady() && privacyReady();
   document.getElementById('btnAgree').disabled = !ok;
 }
 
@@ -1221,7 +1233,8 @@ function canvasHasInk(c) {
 
 /* ── 제출 ─────────────────────────────────────────────── */
 async function submitConsent(action) {
-  if (action === 'agreed' && (!hasSig || !canvasHasInk(canvas))) {
+  /* 미성년이면 위임인 서명란을 세우지 않는다 — 아래 보호자 서명 하나만 본다 */
+  if (action === 'agreed' && !IS_MINOR && (!hasSig || !canvasHasInk(canvas))) {
     ceAlert('서명이 비어 있습니다. 서명란에 다시 서명해 주세요.', { tone: 'warning' });
     return;
   }
@@ -1245,7 +1258,11 @@ async function submitConsent(action) {
 
   const body = { action };
   if (action === 'agreed') {
-    body.signature = canvas.toDataURL('image/png');
+    /* 미성년이면 보호자 서명 하나를 두 자리에 싣는다 — 종이의 위임인 칸도
+       법정대리인이 그린 것이 맞다. */
+    body.signature = IS_MINOR
+      ? document.getElementById('gSigCanvas').toDataURL('image/png')
+      : canvas.toDataURL('image/png');
     if (PRIVACY_ASK) {
       const t = privacyType();
       const picked = (n) => document.querySelector(`input[name="${n}"]:checked`)?.value ?? '';
