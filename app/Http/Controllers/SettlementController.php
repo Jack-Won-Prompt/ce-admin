@@ -610,10 +610,25 @@ class SettlementController extends Controller
         ]);
 
         if ($order->deposit_confirmed_at || $order->tossPayment?->is_done) {
-            return response()->json(['success' => false, 'message' => '이미 입금이 확인된 주문입니다.'], 422);
+            return response()->json(['success' => false, 'message' => $order->expectedDeposit() <= 0
+                ? '이미 확정된 주문입니다.'
+                : '이미 입금이 확인된 주문입니다.'], 422);
         }
 
         $due = $order->expectedDeposit();
+
+        /* 받을 돈이 없는 건은 「입금 확인」이 아니다 (2026-09-07 지시).
+
+           차상위경감ㆍ기초는 본인부담이 0이라 환자에게 받을 것이 없다 — 결제 안내도
+           나가지 않고 가상계좌도 발급되지 않는다(발급 쪽은 진작 0원을 막고 있었다).
+           그런데 이 자리만 막지 않아 「가상계좌으로 0원 입금 확인했습니다」라고
+           말했다. 받지도 않은 돈을 확인했다고 적는 셈이다.
+
+           하는 일은 그대로 둔다 — 이 걸음이 세금계산서ㆍ거래명세서ㆍ창고 확정을
+           함께 움직이는 자리라, 누르지 않으면 그 건은 나아가지 못한다.
+           **무엇을 한 것인지만 바로 적는다.** 거래명세서에 찍히는 날도 그래서
+           「주문 확정일」이다(시나리오 7.7). */
+        $없는돈 = $due <= 0;
 
         $order->update([
             'pay_method'           => $request->input('method'),
@@ -623,8 +638,11 @@ class SettlementController extends Controller
         ]);
         $order->refresh();
 
-        activity()->causedBy(Auth::user())->performedOn($order)
-            ->log("입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원');
+        activity()->causedBy(Auth::user())->performedOn($order)->log(
+            $없는돈
+                ? '주문 확정(담당자): 본인부담금이 없는 건'
+                : "입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원'
+        );
 
         /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다. 실패해도 입금 확인은
            그대로 둔다 — 들어온 것은 들어온 것이다(기본은 꺼져 있다). */
@@ -637,7 +655,10 @@ class SettlementController extends Controller
             'label'        => $order->payMethodLabel(),
             'amount'       => $due,
             'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
-            'message'      => "{$order->payMethodLabel()}으로 " . number_format($due) . '원 입금 확인했습니다.',
+            'zero_copay'   => $없는돈,
+            'message'      => $없는돈
+                ? '본인부담금이 없는 건입니다 — 주문을 확정했습니다.'
+                : "{$order->payMethodLabel()}으로 " . number_format($due) . '원 입금 확인했습니다.',
         ]);
     }
 
