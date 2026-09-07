@@ -2318,6 +2318,12 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 요청');
 
+        /* 승인할 수 있는 사람들에게 알린다 (2026-09-07 지시).
+           여태 상태만 바꾸고 아무에게도 알리지 않아, 요청한 담당자는 눌러 놓고
+           기다리고 검수자는 목록을 들여다봐야 알았다.
+           알리지 못해도 요청은 이미 됐다 — 안에서 삼킨다. */
+        app(\App\Services\ReviewNotice::class)->askReview($prescription->refresh());
+
         /* 바뀐 상태를 함께 돌려준다 — 화면이 그 자리만 고쳐 세우면 되도록.
            예전에는 새로고침으로 맞췄는데, 적던 자리가 통째로 처음으로 돌아갔다. */
         $prescription->refresh();
@@ -2351,6 +2357,9 @@ class PrescriptionController extends Controller
         ]);
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 승인');
+
+        /* 요청한 담당자에게 되돌려 알린다 — 승인됐는지도 목록을 다시 봐야 알았다 */
+        app(\App\Services\ReviewNotice::class)->tellApproved($prescription->refresh());
 
         // 바뀐 것을 함께 돌려준다 — 화면이 그 자리만 고쳐 세우면 되도록
         $prescription->refresh()->load('reviewer');
