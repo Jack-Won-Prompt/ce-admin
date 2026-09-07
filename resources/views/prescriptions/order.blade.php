@@ -2758,6 +2758,39 @@ $calcDeposit  = $calcCopay;
                          placeholder="010-XXXX-XXXX" data-phone style="flex:1 1 132px;min-width:132px;" />
                 </div>
               </div>
+              {{-- 결제 방식은 사람에게 붙는다 — 병원ㆍ처방 정보에 두었던 것을 이리로
+                   옮겼다(2026-09-07 지시). **처방전 없이도 산다.** 처방외 주문이 그렇고,
+                   처방전을 지운 뒤 다시 올리는 사이도 그렇다. 그런 건에서 병원ㆍ처방
+                   정보는 통째로 빈 판인데, 어떻게 받을지는 그때도 정해야 한다.
+                   돈 이야기인 송금자명ㆍ현금영수증과 나란히 선다.
+
+                   기본은 링크페이다. 거래처에 적어 둔 것이 있으면 그것이 먼저다 —
+                   한 번 고르면 그 사람 것으로 남아 매번 다시 고르지 않는다. --}}
+              @php
+                /* 주문에 적힌 것 → 거래처에 적힌 것 → 링크페이 차례로 본다.
+                   옛 건에는 「무통장입금」이 적혀 있는데 그것은 고를 수 있는 것이
+                   아니다 — 고를 수 없는 값이면 기본으로 내려앉힌다. 아무것도 안
+                   잡혀 있으면 담당자는 무엇이 나갈지 모른 채 저장하게 된다. */
+                $_pmSaved = $prescription->order?->pay_method
+                          ?: ($prescription->patient?->pay_method ?: null);
+                if (! array_key_exists($_pmSaved, \App\Models\PaymentLink::SELECTABLE)) {
+                    $_pmSaved = \App\Models\PaymentLink::METHOD_CARD;
+                }
+              @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">결제 방식</span>
+                <div style="flex:1;display:flex;gap:6px;">
+                  @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
+                    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 9px;
+                                  border:1px solid var(--border);border-radius:var(--radius);
+                                  font-size:12px;cursor:pointer;white-space:nowrap;">
+                      <input type="radio" name="f_pay_method" value="{{ $code }}"
+                             style="accent-color:var(--primary);" @checked($_pmSaved === $code)>
+                      <span style="font-weight:600;">{{ $label }}</span>
+                    </label>
+                  @endforeach
+                </div>
+              </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">건보등록</span>
                 {{-- 「진행중ㆍ완료」 둘로는 신규인지 재등록인지 알 수 없었다. 공단에 내는
@@ -3240,37 +3273,6 @@ $calcDeposit  = $calcCopay;
               </div>
               {{-- 「환급 해당 기관」 칸은 두지 않는다(요청). 값(special_case)은 지우지
                    않았다 — 저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
-              {{-- 어떻게 받을 것인가(2026-09-03 지시). 여태 설정 하나로 정해져 어느
-                   환자든 같은 안내가 나갔는데, 사람마다 내는 방법이 다르다.
-                   주문을 연계하면 여기서 고른 대로 안내가 나간다.
-
-                   기본은 링크페이다. 거래처에 적어 둔 것이 있으면 그것이 먼저다 —
-                   한 번 고르면 그 사람 것으로 남아 매번 다시 고르지 않는다. --}}
-              @php
-                /* 주문에 적힌 것 → 거래처에 적힌 것 → 링크페이 차례로 본다.
-                   옛 건에는 「무통장입금」이 적혀 있는데 그것은 고를 수 있는 것이
-                   아니다 — 고를 수 없는 값이면 기본으로 내려앉힌다. 아무것도 안
-                   잡혀 있으면 담당자는 무엇이 나갈지 모른 채 저장하게 된다. */
-                $_pmSaved = $prescription->order?->pay_method
-                          ?: ($prescription->patient?->pay_method ?: null);
-                if (! array_key_exists($_pmSaved, \App\Models\PaymentLink::SELECTABLE)) {
-                    $_pmSaved = \App\Models\PaymentLink::METHOD_CARD;
-                }
-              @endphp
-              <div class="rx-field-row">
-                <span class="rx-field-label">결제 방식</span>
-                <div style="flex:1;display:flex;gap:6px;">
-                  @foreach(\App\Models\PaymentLink::SELECTABLE as $code => $label)
-                    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 9px;
-                                  border:1px solid var(--border);border-radius:var(--radius);
-                                  font-size:12px;cursor:pointer;white-space:nowrap;">
-                      <input type="radio" name="f_pay_method" value="{{ $code }}"
-                             style="accent-color:var(--primary);" @checked($_pmSaved === $code)>
-                      <span style="font-weight:600;">{{ $label }}</span>
-                    </label>
-                  @endforeach
-                </div>
-              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">결제일</span>
                 <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}" style="flex:1;" />
