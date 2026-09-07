@@ -170,13 +170,13 @@ s.sheet_view.showGridLines = False
 
 HEAD = [
     ('TC ID', 9), ('CASE 명', 26), ('대분류', 12), ('중분류', 14),
-    ('사전 조건', 30), ('화면명 (메뉴 경로)', 34), ('URL', 30),
+    ('사전 조건', 30), ('화면명 (메뉴 경로)', 38),
     ('STEP', 6), ('수행 절차', 40), ('입력 데이터', 40),
     ('클릭 대상 (탭/버튼)', 24), ('트리거 / 연결 동작', 52),
     ('기대 결과', 46), ('캡처 파일', 26),
     ('실제 결과', 22), ('판정', 8), ('결함번호', 10), ('수행자', 9), ('수행일', 11), ('비고', 20),
 ]
-GROUPS = [('케이스 정의', 1, 7), ('수행 절차', 8, 14), ('수행 결과 (테스터 기입)', 15, 20)]
+GROUPS = [('케이스 정의', 1, 6), ('수행 절차', 7, 13), ('수행 결과 (테스터 기입)', 14, 19)]
 for name, a, b in GROUPS:
     s.merge_cells(start_row=1, start_column=a, end_row=1, end_column=b)
     cell = s.cell(1, a, name)
@@ -399,12 +399,15 @@ for tc, case_grp, mid, pre, screen, url, steps in TCS:
     tc_i += 1
     shade = (tc_i % 2 == 0)          # TC 단위로 줄무늬 — 한 케이스가 한 덩어리로 읽힌다
     for k, (st, act, inp, click, trig, exp, cap) in enumerate(steps):
-        vals = [tc, CASE, case_grp, mid, pre, screen, url, st, act, inp, click, trig, exp, cap, '', '', '', '', '', '']
+        # URL 은 세우지 않는다 — 화면명(메뉴 경로)이 있으면 찾아갈 수 있고,
+        # 주소는 사람마다 처방번호가 달라 그대로 따라 칠 수 있는 값이 아니다.
+        vals = [tc, CASE, case_grp, mid, pre, screen, st, act, inp, click, trig, exp, cap,
+                '', '', '', '', '', '']
         for j, v in enumerate(vals, 1):
             cell = s.cell(row, j, v)
             cell.font = BODY
             cell.border = BOX_T if k == 0 else BOX      # 케이스 첫 줄에 굵은 윗선
-            cell.alignment = TOPC if j in (1, 8, 16, 17, 18, 19) else TOP
+            cell.alignment = TOPC if j in (1, 7, 15, 16, 17, 18) else TOP
             if shade:
                 cell.fill = ZEBRA
             if j == 1:
@@ -413,27 +416,27 @@ for tc, case_grp, mid, pre, screen, url, steps in TCS:
                 cell.font = Font(name=FONT, size=8, color=SLATE)
             elif j == 3:
                 cell.font = BODY_B
-            elif j == 8:
+            elif j == 7:
                 cell.font = Font(name=FONT, size=10, bold=True, color=SLATE)
-            elif j == 12:
+            elif j == 11:
                 cell.font = SMALL                        # 트리거는 작게 — 읽는 차례가 뒤다
-            elif j == 13:
+            elif j == 12:
                 cell.font = Font(name=FONT, size=9, color='14532D')   # 기대 결과는 짙은 초록
-            elif j == 14:
+            elif j == 13:
                 cell.font = Font(name=FONT, size=8, color='7A8899')
-            elif j in (15, 16, 17, 18, 19, 20):
+            elif j in (14, 15, 16, 17, 18, 19):
                 cell.fill = PatternFill('solid', fgColor='FFFDF5')     # 수행자가 적는 칸
             if '★' in str(v):
                 cell.font = Font(name=FONT, size=9, bold=True, color=RED)
         row += 1
     # 병합 (TC 단위로 반복 정보를 묶는다)
     if row - start > 1:
-        for col in (1, 2, 3, 4, 5, 6, 7):
+        for col in (1, 2, 3, 4, 5, 6):
             s.merge_cells(start_row=start, start_column=col, end_row=row - 1, end_column=col)
 
 dv = DataValidation(type='list', formula1='"Pass,Fail,N/A,Blocked"', allow_blank=True)
 s.add_data_validation(dv)
-dv.add(f'P3:P{row - 1}')
+dv.add(f'O3:O{row - 1}')
 
 for i in range(3, row):
     s.row_dimensions[i].height = 82
@@ -557,7 +560,7 @@ for i, (fn, tc, kind, desc) in enumerate(caps, 2):
 
 # ── 인쇄 설정 ──────────────────────────────────────
 from openpyxl.worksheet.properties import PageSetupProperties
-for sh, cols, titles in [(s, 'A:T', '1:2'), (e, 'A:E', '1:1'), (d, 'A:M', '1:1'), (p, 'A:E', '1:1')]:
+for sh, cols, titles in [(s, 'A:S', '1:2'), (e, 'A:E', '1:1'), (d, 'A:M', '1:1'), (p, 'A:E', '1:1')]:
     sh.page_setup.orientation = 'landscape'
     sh.page_setup.paperSize = sh.PAPERSIZE_A3 if sh is s else sh.PAPERSIZE_A4
     sh.page_setup.fitToWidth = 1
@@ -571,7 +574,7 @@ for sh, cols, titles in [(s, 'A:T', '1:2'), (e, 'A:E', '1:1'), (d, 'A:M', '1:1')
     sh.oddFooter.right.size = 8
 
 # 자동 필터 — 판정으로 걸러 볼 수 있게
-s.auto_filter.ref = f'A2:T{row - 1}'
+s.auto_filter.ref = f'A2:S{row - 1}'
 
 c.sheet_view.zoomScale = 100
 s.sheet_view.zoomScale = 85
