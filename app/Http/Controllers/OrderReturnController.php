@@ -117,7 +117,10 @@ class OrderReturnController extends Controller
                끌어온다. 같은 값을 두 곳에 적어 두면 언젠가 갈린다. */
             'taker'        => $r->creator?->name ?? '',
             'approver'     => $r->approver?->name ?? '',
-            'approved_at'  => $r->approved_at?->format('Y-m-d') ?? '',
+            /* 승인은 「언제」가 곧 근거다. 날짜만 적어 두면 같은 날 두 번 오간 건을
+               가릴 수 없고, 승인 앞뒤로 무엇이 있었는지도 맞춰 볼 수 없다.
+               시ㆍ분ㆍ초까지 적는다 (2026-09-07 지시). */
+            'approved_at'  => $r->approved_at?->format('Y-m-d H:i:s') ?? '',
             // 몇 개 가운데 몇 개가 되돌아왔는가 — 부분 반품은 이 둘이 갈린다
             'qty_ordered'  => (int) $r->items->sum('ordered_quantity') ?: '',
             'qty_returned' => (int) $r->items->sum('quantity') ?: '',

@@ -205,8 +205,9 @@
       { header: '담당자',   name: 'assignee', width: 90 },
       // 접수한 사람과 승인한 사람은 다르다 — 절차서가 그렇게 나눈다
       { header: '접수자',   name: 'taker',    width: 90 },
-      { header: '승인자',   name: 'approver', width: 90 },
-      { header: '승인일자', name: 'approved_at', width: 100, align: 'center', sortable: true },
+      { header: '반품 승인자', name: 'approver', width: 100 },
+      // 시ㆍ분ㆍ초까지 적는다 — 같은 날 두 번 오간 건은 날짜만으로 가릴 수 없다
+      { header: '반품 승인일', name: 'approved_at', width: 150, align: 'center', sortable: true },
 
       /* ── 무엇이 얼마나 되돌아왔는가 (요청서 4쪽) ────────── */
       { header: '원판매 주문수량', name: 'qty_ordered',  width: 120, align: 'right' },
