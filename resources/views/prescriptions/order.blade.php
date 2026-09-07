@@ -10279,9 +10279,12 @@ window.HELP_TOUR_STEPS = [
       const row = olGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
       if (!row?.url) { showToast('이 주문을 열 수 없습니다. 목록을 새로 고쳐 주십시오.', 'warning'); return; }
 
-      /* 남의 건이면 먼저 말한다. 그대로 들어가 손대면 두 사람이 같은 건을 붙들고,
-         나중에 저장한 쪽이 앞사람이 적은 것을 덮는다. 임자가 없는 건은 여는
-         사람이 곧 임자가 되므로(claim=1) 묻지 않는다. */
+      /* 배정된 담당자가 따로 있으면 먼저 알린다.
+         저장은 화면에 담긴 값을 통째로 쓴다(PrescriptionController::updateOcr). 그 사이
+         누가 고쳤는지 견주지 않으므로, 두 사람이 같은 건을 열어 두고 각자 저장하면
+         나중에 저장한 쪽이 먼저 저장한 쪽의 수정 내용을 지운다 — 먼저 저장한 사람은
+         자기 것이 사라진 줄도 모른다.
+         배정된 담당자가 없는 건은 여는 사람이 담당자가 되므로(claim=1) 묻지 않는다. */
       if (row.manager_id && Number(row.manager_id) !== OL_ME) { olOwnAsk(row); return; }
 
       olGo(row.url);
@@ -10418,8 +10421,9 @@ window.HELP_TOUR_STEPS = [
       </div>
       <div style="margin-top:11px;padding:9px 11px;background:var(--bg-muted,#F8FAFC);border-radius:8px;
                   font-size:12px;color:var(--text-muted);line-height:1.6;">
-        그대로 들어가 손대면 두 사람이 같은 건을 붙듭니다.
-        내가 맡아야 하는 건이면 담당자를 나로 바꾸고 여십시오.
+        담당자가 같은 건을 수정하고 있을 수 있습니다.
+        두 사람이 동시에 수정하면 <b>나중에 저장한 내용이 먼저 저장한 내용을 덮어씁니다.</b><br>
+        확인만 하려면 「변경 없이 확인」, 직접 처리하려면 「담당자 변경」을 누르십시오.
       </div>`;
     document.getElementById('olOwnWrap').style.display = 'block';
   };
