@@ -2228,9 +2228,7 @@ $calcDeposit  = $calcCopay;
               <select id="olAsUser" class="form-control form-select">
                 <option value="">담당자를 고르십시오</option>
                 @foreach($assignables ?? [] as $u)
-                  <option value="{{ $u['id'] }}" @selected($u['id'] === auth()->id())>
-                    {{ $u['name'] }}@if($u['id'] === auth()->id()) (나)@endif
-                  </option>
+                  <option value="{{ $u['id'] }}" @selected($u['id'] === auth()->id())>{{ $u['name'] }}</option>
                 @endforeach
               </select>
             </div>
@@ -2688,9 +2686,11 @@ $calcDeposit  = $calcCopay;
                       </option>
                     @endforeach
                     {{-- 이미 적혀 있던 번호가 목록에 없으면 그대로 남긴다 —
-                         고르는 칸으로 바뀌었다고 앞서 적어 둔 값을 잃어서는 안 된다. --}}
+                         고르는 칸으로 바뀌었다고 앞서 적어 둔 값을 잃어서는 안 된다.
+                         번호만 세운다. 어디서 온 값인지는 덧붙이지 않는다 —
+                         고르는 자리에 설명이 붙으면 그것도 고를 수 있는 것으로 읽힌다. --}}
                     @if ($phoneNow !== '' && !collect($testPhones)->contains('phone', $phoneNow))
-                      <option value="{{ $phoneNow }}" selected>{{ $phoneNow }} (적혀 있던 번호)</option>
+                      <option value="{{ $phoneNow }}" selected>{{ $phoneNow }}</option>
                     @endif
                   </select>
                 @else
@@ -2711,7 +2711,7 @@ $calcDeposit  = $calcCopay;
                       </option>
                     @endforeach
                     @if ($phone2Now !== '' && !collect($testPhones)->contains('phone', $phone2Now))
-                      <option value="{{ $phone2Now }}" selected>{{ $phone2Now }} (적혀 있던 번호)</option>
+                      <option value="{{ $phone2Now }}" selected>{{ $phone2Now }}</option>
                     @endif
                   </select>
                 @else
