@@ -79,7 +79,14 @@ class MessageSender
 
         return [
             'success'       => $ok > 0,
-            'message'       => "{$ok}건 발송" . ($failed ? ', ' . count($failed) . '건 실패' : ''),
+            /* 못 간 까닭을 함께 적는다 (2026-09-07).
+               「0건 발송, 1건 실패」만 돌려주던 것을 고친다 — 담당자는 그 말을 보고
+               번호가 틀렸나 하고 다시 눌렀고, 정작 팝빌이 돌려준 말(「파트너 잔여포인트가
+               부족합니다」)은 서버 로그에만 남아 있었다. 서버에 들어가야 읽는 말은
+               그 자리에서는 없는 말이다. */
+            'message'       => "{$ok}건 발송"
+                               . ($failed ? ', ' . count($failed) . '건 실패' : '')
+                               . ($err ? ' — ' . $err : ''),
             'total'         => count($receivers),
             'success_count' => $ok,
             'fail_count'    => count($failed),
