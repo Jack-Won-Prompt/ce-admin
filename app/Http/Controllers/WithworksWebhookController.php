@@ -174,6 +174,25 @@ class WithworksWebhookController extends Controller
 
         $sync->apply($order, $data);
 
+        /* 창고 이름 — 어디서 내보내고 어디로 들이는가 (2026-09-07 지시).
+           Finance 화면이 판매현황과 같은 칸을 세우는데 창고만 우리가 만들 길이 없어
+           빈 채였다. 저쪽 판매주문에 진작 적혀 있는 값이라 웹훅에 실어 보내게 했다.
+
+           온 사건마다 다시 적는다 — 창고는 바뀌기도 한다. 오지 않은 값은 건드리지
+           않는다(옛 위드웍스는 이 칸을 싣지 않아, 덮으면 적어 둔 것이 지워진다). */
+        $wh = $data['warehouse'] ?? null;
+        if (is_array($wh)) {
+            $name = fn (?array $w) => $w && ($w['name'] ?? null) ? mb_substr($w['name'], 0, 100) : null;
+            $put  = array_filter([
+                'withworks_warehouse'         => $name($wh['ship_from']  ?? null),
+                'withworks_deliver_warehouse' => $name($wh['deliver_to'] ?? null),
+            ], fn ($v) => $v !== null);
+
+            if ($put) {
+                $order->forceFill($put)->save();
+            }
+        }
+
         // 창고가 알려 온 단계로 우리 주문 상태도 함께 움직인다
         if ($newStatus = self::ORDER_STATUS[$data['event']] ?? null) {
             /* 뒤로 물리지 않는다. 웹훅은 순서가 뒤바뀌어 오거나 다시 오기도 해서,

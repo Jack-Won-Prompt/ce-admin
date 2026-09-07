@@ -2079,9 +2079,11 @@ document.addEventListener('click', (e) => {
 
   /* ── 공통 칸 — 위드웍스 판매주문 현황의 차례를 따른다 ──────────────
      저쪽 화면을 보다 우리 목록으로 넘어와도 눈이 다시 배우지 않아야 한다는
-     요청이다(2026-08-31). 저쪽 예순 칸 가운데 창고ㆍERP 고유 스물하나(etc SoNo ㆍ
-     출고창고 ㆍ납품창고 ㆍ확정판매금액 …)는 우리가 만들 수도 받을 수도 없어 세우지
-     않는다 — 그것은 위드웍스 화면에서 본다.
+     요청이다(2026-08-31). 저쪽 예순 칸 가운데 ERP 고유(etc SoNo ㆍ확정판매금액 …)는
+     우리가 만들 수도 받을 수도 없어 세우지 않는다 — 그것은 위드웍스 화면에서 본다.
+
+     **창고는 세운다**(2026-09-07 지시). 처음에는 못 받는 것으로 보고 뺐는데, 저쪽
+     판매주문에 진작 적혀 있는 값이었다 — 웹훅에 실어 보내게 하고 여기 받아 세운다.
 
      저쪽이 부르지 않는 우리 칸(동의ㆍ발행ㆍ상병ㆍ수량 따위)은 걷지 않고 뒤에 잇는다 —
      지난 요청으로 세운 것들이라, 차례를 맞추자고 지우면 그때 한 일이 없던 일이 된다.
@@ -2097,6 +2099,10 @@ document.addEventListener('click', (e) => {
       { header: '출고상태',       name: 'ww_ship_status', width: 110, align: 'center', sortable: true },
       { header: '출고일자',       name: 'ww_ship_date',   width: 100, align: 'center', sortable: true },
       { header: '입고 상태',      name: 'ww_rcpt',      width: 90,  align: 'center' },
+      {{-- 창고 — 예전에는 「우리가 만들 수도 받을 수도 없다」며 빼 두었는데, 저쪽
+           판매주문에 진작 적혀 있는 값이었다. 웹훅에 실어 보내게 했다(2026-09-07). --}}
+      { header: '출고창고',       name: 'ww_wh_from',   width: 120, sortable: true },
+      { header: '납품창고',       name: 'ww_wh_to',     width: 120, sortable: true },
       { header: '배송주소명',     name: 'ww_recipient', width: 100 },
       { header: '배송요청일자',   name: 'ww_due',       width: 110, align: 'center', sortable: true },
       { header: '참조 번호',      name: 'ww_ref_no',    width: 150, sortable: true },

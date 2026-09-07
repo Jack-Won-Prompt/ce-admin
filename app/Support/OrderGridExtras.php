@@ -207,6 +207,11 @@ class OrderGridExtras
                않는다. 그것은 우리가 받아 적은 시각이라 웹훅이 늦으면 날이 어긋난다. */
             'ww_ship_date'   => $d($o?->shipped_at),
             'ww_rcpt'       => $rt?->arrived_at ? '입고완료' : '',
+            /* 창고 — 어디서 내보내고 어디로 들이는가 (2026-09-07 지시).
+               위드웍스 웹훅이 이름을 함께 실어 온다. 아직 연계하지 않았거나 옛
+               위드웍스가 보낸 건은 비어 있다 — 없는 것이 맞다. */
+            'ww_wh_from'    => $o?->withworks_warehouse ?? '',
+            'ww_wh_to'      => $o?->withworks_deliver_warehouse ?? '',
             'ww_recipient'  => $o?->shipping_recipient ?? '',
             'ww_due'        => '',                       // 배송요청일자 — 샘플만 있다(화면에서 채운다)
             'ww_ref_no'     => $p?->rx_number ?? '',     // 참조 번호 — 위드웍스에 udf2 로 보내는 그것
