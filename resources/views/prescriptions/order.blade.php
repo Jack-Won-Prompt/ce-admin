@@ -2180,6 +2180,13 @@ $calcDeposit  = $calcCopay;
             <input type="date" id="ol-nextrepur" class="form-control">
           </div>
           <div class="ol-actions">
+            {{-- 배정은 여러 건을 한 번에 넘기는 일이라 찾는 자리 옆에 둔다 — 골라 놓고
+                 바로 누른다. 한 건씩 열어 넘기면 스무 건이면 스무 번을 오간다. --}}
+            <button type="button" class="btn btn-outline btn-sm"
+                    style="border-color:var(--primary);color:var(--primary);font-weight:600;"
+                    onclick="olAskAssign()">
+              <i class="fa-solid fa-user-tie"></i> 담당자 배정
+            </button>
             <button type="button" class="btn btn-outline btn-sm" onclick="olReset()">초기화</button>
             <button type="button" class="btn btn-primary btn-sm" onclick="olApply()">
               <i class="fa-solid fa-magnifying-glass"></i> 검색
@@ -2200,6 +2207,60 @@ $calcDeposit  = $calcCopay;
              얹혀, 합계줄과 「전체 N건」 띠가 어디에도 붙지 못하고 떠 있었다.
              다른 목록 화면(거래처 관리ㆍ주문 관리)의 아래끝과 같게 맞춘다. --}}
         <div class="card ol-card"><div id="orderListGrid"></div></div>
+
+        {{-- ── 담당자 배정 ────────────────────────────────────────
+             넘기기 전에 무엇을 넘기는지 보여 준다. 목록에서 체크만 하고 바로
+             넘기면 엉뚱한 줄이 딸려 가도 알 길이 없다 — 지금 임자가 누구인지도
+             함께 세운다. 남의 건을 가로채는 것은 배정과 다른 일이라 그렇다. --}}
+        <div id="olAsWrap" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.34);"
+             onclick="if(event.target===this) olAsClose()">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,92vw);
+                      max-height:82vh;display:flex;flex-direction:column;background:var(--bg-card,#fff);
+                      border-radius:12px;box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+            <div style="padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+              <span style="font-size:14px;font-weight:700;">담당자 배정</span>
+              <span id="olAsCount" style="font-size:12px;color:var(--text-muted);"></span>
+              <span style="flex:1;"></span>
+              <button type="button" class="btn btn-outline btn-sm" onclick="olAsClose()">✕</button>
+            </div>
+            <div style="padding:12px 16px 4px;">
+              <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;">담당자</label>
+              <select id="olAsUser" class="form-control form-select">
+                <option value="">담당자를 고르십시오</option>
+                @foreach($assignables ?? [] as $u)
+                  <option value="{{ $u['id'] }}" @selected($u['id'] === auth()->id())>
+                    {{ $u['name'] }}@if($u['id'] === auth()->id()) (나)@endif
+                  </option>
+                @endforeach
+              </select>
+            </div>
+            <div id="olAsBody" style="padding:8px 16px 14px;overflow-y:auto;font-size:13px;"></div>
+            <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="olAsClose()">닫기</button>
+              <button type="button" id="olAsGo" class="btn btn-primary btn-sm" onclick="olAsSubmit()">배정하기</button>
+            </div>
+          </div>
+        </div>
+
+        {{-- ── 이미 임자가 있는 건을 열려 할 때 ───────────────────
+             남의 건에 그대로 들어가 손대면 두 사람이 같은 건을 붙든다. 누구 것인지
+             먼저 말하고, 그래도 내가 맡아야 하면 담당자를 바꾸고 들어간다. --}}
+        <div id="olOwnWrap" style="display:none;position:fixed;inset:0;z-index:1201;background:rgba(15,23,42,.34);"
+             onclick="if(event.target===this) olOwnClose()">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);
+                      background:var(--bg-card,#fff);border-radius:12px;
+                      box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+            <div style="padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+              <i class="fa-solid fa-user-lock" style="color:#B54708;"></i>
+              <span style="font-size:14px;font-weight:700;">이미 다른 담당자가 배정되어 있습니다</span>
+            </div>
+            <div id="olOwnBody" style="padding:14px 16px;font-size:13px;"></div>
+            <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="olOwnClose()">닫기</button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="olOwnChange()">담당자 변경</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {{-- Tab: OCR Edit (상세 목록) --}}
@@ -10166,6 +10227,10 @@ window.HELP_TOUR_STEPS = [
          생겼다. 이 표는 이 판의 마지막 것이라 아래로 밀려날 것이 없다.
          줄이 많으면 표 안에서 굴린다 — 페이지가 아니라. */
       height: 'fit', editable: false, rowNumber: true, toolbar: false,
+      /* 고르는 칸 — 담당자를 한 번에 넘기려면 무엇을 넘길지부터 고를 수 있어야 한다.
+         wwGrid 의 기본값이 곧 이것이지만, 여기서는 없어서는 안 되는 칸이라 적어 둔다 —
+         적지 않으면 나중에 「toolbar 처럼 꺼도 되는 것」으로 보인다. */
+      rowCheckbox: true,
       footer: { total: true, selected: false, modified: false },
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
@@ -10209,13 +10274,159 @@ window.HELP_TOUR_STEPS = [
       if (!cell) return;
       const row = olGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
       if (!row?.url) { showToast('이 주문을 열 수 없습니다. 목록을 새로 고쳐 주십시오.', 'warning'); return; }
-      if (typeof isAnyDirty === 'function' && isAnyDirty()) {
-        showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), row.url);
-        return;
-      }
-      location.href = row.url;
+
+      /* 남의 건이면 먼저 말한다. 그대로 들어가 손대면 두 사람이 같은 건을 붙들고,
+         나중에 저장한 쪽이 앞사람이 적은 것을 덮는다. 임자가 없는 건은 여는
+         사람이 곧 임자가 되므로(claim=1) 묻지 않는다. */
+      if (row.manager_id && Number(row.manager_id) !== OL_ME) { olOwnAsk(row); return; }
+
+      olGo(row.url);
     });
   }
+
+  /* 화면을 떠나기 전에 적다 만 것을 묻는다 — 두 자리에서 같이 쓴다 */
+  function olGo(url) {
+    if (typeof isAnyDirty === 'function' && isAnyDirty()) {
+      showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), url);
+      return;
+    }
+    location.href = url;
+  }
+
+  /* ── 담당자 배정 ──────────────────────────────────────────────
+     목록에서 고른 건을 한 사람에게 한 번에 넘긴다. 담당자는 처방전에 붙지만
+     여기서 고르는 것은 주문 줄이라, 서버로는 주문 번호를 보낸다 —
+     처방전이 아직 없는 주문도 넘길 수 있어야 하기 때문이다. */
+  const OL_ME = @json(auth()->id());
+  let   olAsRows = [];      // 지금 넘기려는 줄
+  let   olAsThen = null;    // 넘긴 뒤 갈 자리 (남의 건을 넘겨받아 여는 길)
+
+  window.olAskAssign = function (rows, then) {
+    olAsRows = rows || (olGrid?.getCheckedRows?.() ?? []);
+    olAsThen = then || null;
+
+    if (!olAsRows.length) {
+      showToast('담당자를 배정할 건을 목록에서 고르십시오.', 'warning');
+      return;
+    }
+
+    document.getElementById('olAsCount').textContent = olAsRows.length + '건';
+
+    const 줄 = r => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border-light);display:flex;
+                  align-items:baseline;gap:8px;">
+        <b>${r.order_no || '—'}</b>
+        <span style="color:var(--text-muted);">${r.rx_number || '처방전 없음'} · ${r.patient || '—'}</span>
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:${r.manager ? '#B54708' : 'var(--text-muted)'};">
+          ${r.manager ? '지금 ' + r.manager : '미배정'}
+        </span>
+      </div>`;
+
+    /* 열 줄까지만 세운다. 그 아래는 수로 적는다 — 백 줄을 다 세우면 담당자 고르는
+       칸과 단추가 화면 밖으로 밀려 무엇을 누를지가 안 보인다. */
+    document.getElementById('olAsBody').innerHTML =
+      olAsRows.slice(0, 10).map(줄).join('')
+      + (olAsRows.length > 10
+          ? `<div style="padding:9px 0;font-size:12px;color:var(--text-muted);">외 ${olAsRows.length - 10}건</div>`
+          : '');
+
+    document.getElementById('olAsWrap').style.display = 'block';
+  };
+
+  window.olAsClose = () => { document.getElementById('olAsWrap').style.display = 'none'; };
+
+  window.olAsSubmit = async function () {
+    const sel = document.getElementById('olAsUser');
+    const uid = sel.value;
+
+    if (!uid) { showToast('담당자를 고르십시오.', 'warning'); sel.focus(); return; }
+
+    const b = document.getElementById('olAsGo');
+    b.disabled = true; b.textContent = '배정 중...';
+
+    try {
+      const res = await fetch(@json(route('prescriptions.assignBulk')), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+        },
+        body: JSON.stringify({
+          assigned_user_id: uid,
+          order_ids: olAsRows.map(r => r.id),
+        }),
+      });
+
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.message || '배정하지 못했습니다.');
+
+      /* 목록을 통째로 다시 부르지 않는다 — 이 화면에는 적다 만 것이 딸려 있어
+         새로 고치면 그것이 사라진다. 바뀐 줄만 고쳐 그린다. */
+      const byId = new Map(j.rows.map(r => [r.order_id, r]));
+      const patch = list => list.forEach(r => {
+        const u = byId.get(r.id);
+        if (!u) return;
+        r.manager = u.manager; r.manager_id = Number(j.user_id);
+        r.rx_number = u.rx_number; r.url = u.url;
+      });
+      /* getData() 는 사본을 준다 — 받은 사본을 고쳐 다시 넣어야 화면이 바뀐다.
+         OL_ROWS 는 거르기가 딛는 바탕이라 함께 고친다(안 그러면 검색 한 번에 되돌아간다). */
+      const cur = olGrid.getData();
+      patch(OL_ROWS);
+      patch(cur);
+      olGrid.setData(cur);
+
+      showToast(
+        j.moved
+          ? `${j.name} 님에게 ${j.moved}건을 배정했습니다.`
+            + (j.same ? ` (이미 ${j.name} 님의 건 ${j.same}건은 그대로)` : '')
+          : `고른 건은 이미 ${j.name} 님의 것입니다.`,
+        j.moved ? 'success' : 'info'
+      );
+
+      olAsClose();
+
+      /* 남의 건을 넘겨받아 들어가려던 길이면 그 자리로 간다 — 다만 내가 맡았을
+         때만이다. 남에게 넘겨 놓고 내가 들어가면 처음 막은 뜻이 없어진다. */
+      if (olAsThen && Number(j.user_id) === OL_ME) olGo(olAsThen);
+      olAsThen = null;
+    } catch (err) {
+      showToast(err.message || '배정하지 못했습니다.', 'danger');
+    } finally {
+      b.disabled = false; b.textContent = '배정하기';
+    }
+  };
+
+  /* ── 남의 건을 열려 할 때 ─────────────────────────────────── */
+  let olOwnRow = null;
+
+  window.olOwnAsk = function (row) {
+    olOwnRow = row;
+    document.getElementById('olOwnBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 12px;">
+        <span style="color:var(--text-muted);">주문번호</span><span><b>${row.order_no || '—'}</b></span>
+        <span style="color:var(--text-muted);">처방번호</span><span>${row.rx_number || '—'}</span>
+        <span style="color:var(--text-muted);">이름</span><span>${row.patient || '—'}</span>
+        <span style="color:var(--text-muted);">담당자</span>
+        <span style="color:#B54708;font-weight:600;">${row.manager || '—'}</span>
+      </div>
+      <div style="margin-top:11px;padding:9px 11px;background:var(--bg-muted,#F8FAFC);border-radius:8px;
+                  font-size:12px;color:var(--text-muted);line-height:1.6;">
+        그대로 들어가 손대면 두 사람이 같은 건을 붙듭니다.
+        내가 맡아야 하는 건이면 담당자를 나로 바꾸고 여십시오.
+      </div>`;
+    document.getElementById('olOwnWrap').style.display = 'block';
+  };
+
+  window.olOwnClose  = () => { document.getElementById('olOwnWrap').style.display = 'none'; };
+  window.olOwnChange = () => {
+    const row = olOwnRow;
+    olOwnClose();
+    /* 바꾸고 나서 그 자리로 이어 간다 — 열려던 걸음이었기 때문이다 */
+    olAskAssign([row], row.url);
+  };
 
   /* 거르기 — 받아 둔 줄을 그 자리에서 좁힌다. 서버로 다시 묻지 않는다. */
   function olApply() {

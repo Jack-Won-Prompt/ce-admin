@@ -32,6 +32,14 @@ class AuthController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        /* 화면에서 칸을 감추는 것만으로는 모자라다 — 요청을 직접 보내면 그대로
+           들어온다. 길을 닫았으면 서버가 막아야 닫힌 것이다. */
+        if (! config('auth.password_login.web', true)) {
+            return back()->withErrors([
+                'email' => '아이디·비밀번호 로그인은 사용하지 않습니다. Microsoft 계정으로 로그인해 주세요.',
+            ]);
+        }
+
         $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required', 'string'],

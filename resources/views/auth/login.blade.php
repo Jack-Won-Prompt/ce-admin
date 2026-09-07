@@ -423,6 +423,10 @@
       </a>
       <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하세요</p>
 
+      {{-- 아이디ㆍ비밀번호 길은 설정으로 여닫는다(설정 › 서비스 연동 설정 › 로그인).
+           끄면 이 아래가 통째로 사라지고 Microsoft 계정만 남는다. 감추는 것만으로는
+           모자라 AuthController::store() 도 같은 값을 보고 요청을 막는다. --}}
+      @if (config('auth.password_login.web', true))
       <div class="auth-divider">임시 로그인</div>
 
       <form method="POST" action="{{ route('login.store') }}">
@@ -479,6 +483,7 @@
           로그인
         </button>
       </form>
+      @endif
 
     </div>
 

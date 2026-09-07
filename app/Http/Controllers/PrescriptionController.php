@@ -1531,10 +1531,19 @@ class PrescriptionController extends Controller
      */
     public function openFromOrder(Order $order): RedirectResponse
     {
-        /* 이미 살아 있는 처방전이 있으면 그리로 보낸다. 목록이 오래된 채로 있을
-           때 이 길로 들어올 수 있다. */
+        return redirect()->route('prescriptions.show', [$this->prescriptionFor($order), 'claim' => 1]);
+    }
+
+    /**
+     * 이 주문의 처방전. 없으면 빈 초안을 하나 세워 잇는다.
+     *
+     * 지워진 처방전을 되살리지는 않는다 — 지운 데는 까닭이 있었을 것이고,
+     * 되살리면 그때 버린 값이 함께 돌아온다.
+     */
+    private function prescriptionFor(Order $order): Prescription
+    {
         if ($order->prescription) {
-            return redirect()->route('prescriptions.show', [$order->prescription, 'claim' => 1]);
+            return $order->prescription;
         }
 
         $draft = Prescription::create([
@@ -1549,11 +1558,89 @@ class PrescriptionController extends Controller
         ]);
 
         $order->forceFill(['prescription_id' => $draft->id])->save();
+        $order->setRelation('prescription', $draft);
 
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log("처방전이 없어 빈 처방전을 세워 이었습니다 ({$draft->rx_number})");
 
-        return redirect()->route('prescriptions.show', [$draft, 'claim' => 1]);
+        return $draft;
+    }
+
+    // ── 담당자 배정 (주문 목록에서 골라 한 번에) ───────────
+    /**
+     * 고른 주문의 담당자를 한 사람으로 정한다 (2026-09-07 지시).
+     *
+     * 여태 담당자는 **여는 사람이 곧 임자**가 되는 길 하나뿐이었다(claim). 그것은
+     * 아무도 맡지 않은 건에는 맞지만, 이미 임자가 있는 건을 남에게 넘길 수는
+     * 없었다 — 자리를 비우거나 일이 몰릴 때 넘길 길이 없었다는 뜻이다.
+     * 화면에서 부르는 곳 없이 서버에만 남아 있던 assignUser 도 그 자취다.
+     *
+     * 한 번에 여러 건을 넘긴다. 스무 건이면 스무 번을 여는 대신 목록에서 고른다.
+     *
+     * 처방전이 없는 주문도 넘길 수 있어야 한다 — 처방전 없이도 사기 때문이다.
+     * 그런 건은 빈 초안을 세워 잇고 그 초안에 담당자를 적는다(담당자는 처방전에
+     * 붙는다). 열었을 때와 같은 걸음이라 새로 생기는 것이 없다.
+     */
+    public function bulkAssign(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'order_ids'        => 'required|array|min:1',
+            'order_ids.*'      => 'integer',
+            'assigned_user_id' => 'required|exists:users,id',
+        ]);
+
+        $to = User::findOrFail($data['assigned_user_id']);
+
+        $orders = Order::with(['prescription.assignedUser', 'prescription.patient', 'patient'])
+            ->whereIn('id', $data['order_ids'])
+            ->get();
+
+        $moved = [];   // 실제로 바뀐 것
+        $same  = 0;    // 이미 그 사람 것이던 건
+
+        foreach ($orders as $order) {
+            $rx = $this->prescriptionFor($order);
+
+            if ((int) $rx->assigned_user_id === (int) $to->id) {
+                $same++;
+                continue;
+            }
+
+            $before = $rx->assignedUser?->name;
+            $rx->forceFill(['assigned_user_id' => $to->id])->save();
+
+            activity()->causedBy(Auth::user())->performedOn($rx)->log(
+                $before
+                    ? "담당자를 {$before} 에서 {$to->name} (으)로 바꿨습니다"
+                    : "담당자로 {$to->name} 을(를) 배정했습니다"
+            );
+
+            $rx->setRelation('order', $order);
+            $moved[] = ['order' => $order, 'rx' => $rx];
+        }
+
+        /* 알림은 배정이 끝난 뒤 한 번이다. 건마다 울리면 받는 쪽이 읽지 않고 지운다.
+           알리지 못해도 배정은 이미 됐다 — 그래서 안에서 삼킨다. */
+        if ($moved) {
+            app(\App\Services\AssignNotice::class)
+                ->tell($to, array_column($moved, 'rx'), Auth::user());
+        }
+
+        return response()->json([
+            'success' => true,
+            'name'    => $to->name,
+            'user_id' => $to->id,
+            'moved'   => count($moved),
+            'same'    => $same,
+            /* 목록을 통째로 다시 부르지 않고 바뀐 줄만 고쳐 그린다 — 이 화면은
+               적다 만 것이 딸린 자리라 새로 고치면 그것이 사라진다. */
+            'rows'    => collect($moved)->map(fn ($m) => [
+                'order_id'  => $m['order']->id,
+                'rx_number' => $m['rx']->rx_number,
+                'manager'   => $to->name,
+                'url'       => route('prescriptions.show', $m['rx']) . '?claim=1',
+            ])->values(),
+        ]);
     }
 
     public function show(Prescription $prescription): View
@@ -1685,6 +1772,15 @@ class PrescriptionController extends Controller
         $orderManagers = \App\Models\User::where('is_active', true)
             ->orderBy('name')->pluck('name')->unique()->values()->all();
 
+        /* 담당자로 넘길 수 있는 사람 — 처방전 업로드 화면과 같은 무리를 쓴다.
+           여기는 이름이 아니라 누구인지가 실려야 해서 번호를 함께 넘긴다. */
+        $assignables = \App\Models\User::where('is_active', true)
+            ->whereIn('role', ['admin', 'manager'])
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+            ->values()->all();
+
         /* 주문 목록 탭 — 이 화면 안에서 다른 건으로 건너뛰는 자리다.
            여기서 하려는 일은 「다음에 손댈 주문을 고르는 것」이라, 아직 확정되지 않은 건만
            세운다(주문 대기). 확정ㆍ배송ㆍ완료된 건은 손댈 차례가 지났고, 그것들을 훑는
@@ -1723,6 +1819,9 @@ class PrescriptionController extends Controller
                 'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
                 // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
                 'manager'   => $rx?->assignedUser?->name ?? '',
+                /* 이름 말고 누구인지도 함께 — 더블클릭한 사람이 임자인지 남인지는
+                   이름으로 견줄 수 없다(같은 이름이 둘일 수 있다). */
+                'manager_id' => $rx?->assigned_user_id,
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
@@ -1780,7 +1879,7 @@ class PrescriptionController extends Controller
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
-            'orderManagers', 'privacyState',
+            'orderManagers', 'assignables', 'privacyState',
             'orderListRows', 'orderListTotal', 'orderListLimit'
         ));
     }

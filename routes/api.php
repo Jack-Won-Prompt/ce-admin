@@ -57,11 +57,8 @@ Route::get('/shop-badge', function () {
 
 // ── 인증 불필요 ───────────────────────────────────────────
 
-/* 앱 판 확인. 로그인 밖에 둔다 — 너무 낡아 로그인조차 막힌 판도 물어볼 수 있어야
-   새 판으로 가라고 알릴 수 있다. */
-Route::get('/app/version', [\App\Http\Controllers\Api\AppVersionApiController::class, 'show']);
-
 Route::prefix('auth')->group(function () {
+    Route::get( '/options',     [AuthApiController::class, 'options']);     // 로그인 화면이 무엇을 보일지
     Route::post('/login',       [AuthApiController::class, 'login']);       // 1단계: 이메일/비밀번호 → OTP 발송
     Route::post('/verify-otp',  [AuthApiController::class, 'verifyOtp']);  // 2단계: OTP 검증 → Bearer 토큰
     Route::post('/resend-otp',  [AuthApiController::class, 'resendOtp']);  // OTP 재발송

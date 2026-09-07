@@ -24,6 +24,14 @@ class AuthApiController extends Controller
     //   문자 인증 끔 → {otp_required: false, token, user, pusher}        (200)
     public function login(Request $request): JsonResponse
     {
+        // 화면이 칸을 감춰도 요청은 올 수 있다. 길을 닫았으면 여기서 막는다.
+        if (! config('auth.password_login.app', true)) {
+            return response()->json([
+                'success' => false,
+                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하세요.',
+            ], 403);
+        }
+
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required|string',
@@ -127,6 +135,19 @@ class AuthApiController extends Controller
         $user = $otp->user;
 
         return response()->json($this->issueToken($user));
+    }
+
+    // ── GET /api/auth/options ─────────────────────────────
+    /**
+     * 로그인 화면이 무엇을 보여 줄지 앱에 알린다. 로그인 밖의 자리다 —
+     * 로그인하기 전에 물어야 하는 값이라서.
+     */
+    public function options(): JsonResponse
+    {
+        return response()->json([
+            'success'        => true,
+            'password_login' => (bool) config('auth.password_login.app', true),
+        ]);
     }
 
     // ── POST /api/auth/resend-otp ─────────────────────────
