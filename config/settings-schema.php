@@ -56,8 +56,12 @@ return [
             'test_user_id'      => ['label' => '테스트 아이디',     'config' => 'popbill.test.user_id'],
             'test_cert_key'     => ['label' => '테스트 인증키',     'config' => 'popbill.test.cert_key', 'type' => 'password'],
             'test_sender_num'   => ['label' => '발신 번호',        'config' => 'popbill.test.sender_num'],
-            'test_receiver_hp'  => ['label' => '테스트 수신 휴대폰', 'config' => 'popbill.test.receiver_hp'],
-            'test_receiver_fax' => ['label' => '테스트 수신 팩스',  'config' => 'popbill.test.receiver_fax'],
+
+            /* 걷어낸 것 — 테스트 수신 휴대폰ㆍ테스트 수신 팩스 (2026-09-07 지시).
+               같은 값을 「테스트 설정」 탭이 이미 들고 있다. 한 값을 두 화면이 각각
+               세우면 어느 쪽에서 고쳤는지에 따라 서로 덮고, 고친 사람은 저장이 된
+               줄 안다 — 실제로 그 일이 났다. 받는 곳을 정하는 자리는 그 곳을 쓸지
+               말지를 정하는 자리(문자·팩스 발송 세 갈래) 옆이어야 한다. */
         ],
     ],
 
@@ -365,8 +369,8 @@ return [
                            'help'  => '여태 이 칸이 없어, 테스트할 때마다 기준정보의 팩스번호를 바꿔 두었다. '
                                     . '되돌리기를 잊으면 운영에서 공단으로 팩스가 안 간다 — 그 일을 없앤다.'],
 
-            /* 받는 곳은 팝빌 탭에도 같은 칸이 있다(popbill.test.*). 같은 값을 보므로
-               어느 쪽에서 고쳐도 된다 — 시험을 켜는 자리에서 함께 보이는 편이 낫다. */
+            /* 받는 곳은 여기 한 곳에서만 고친다. 팝빌 탭에도 같은 칸이 서 있었는데,
+               한 값을 두 화면이 각각 세우니 서로 덮었다(2026-09-07 걷어냄). */
             'test_receiver_hp'  => ['label' => '테스트 받는 번호', 'config' => 'popbill.test.receiver_hp', 'width' => 1,
                                     'help'  => '「우리에게만」일 때 문자가 오는 곳. 비어 있으면 발송이 막힌다.'],
             'test_receiver_fax' => ['label' => '테스트 받는 팩스', 'config' => 'popbill.test.receiver_fax', 'width' => 1,
