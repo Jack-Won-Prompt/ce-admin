@@ -2257,6 +2257,10 @@ $calcDeposit  = $calcCopay;
             <div id="olOwnBody" style="padding:14px 16px;font-size:13px;"></div>
             <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
               <button type="button" class="btn btn-outline btn-sm" onclick="olOwnClose()">닫기</button>
+              {{-- 들여다보기만 하는 길. 임자를 빼앗지 않고 연다 — 팀장이 확인만 하거나
+                   옆에서 물어 온 것을 찾아볼 때가 있다. 그때마다 담당자를 바꾸게 두면
+                   임자 칸이 「마지막으로 열어 본 사람」이 되어 아무것도 말해 주지 않는다. --}}
+              <button type="button" class="btn btn-outline btn-sm" onclick="olOwnPeek()">변경 없이 확인</button>
               <button type="button" class="btn btn-primary btn-sm" onclick="olOwnChange()">담당자 변경</button>
             </div>
           </div>
@@ -10421,6 +10425,15 @@ window.HELP_TOUR_STEPS = [
   };
 
   window.olOwnClose  = () => { document.getElementById('olOwnWrap').style.display = 'none'; };
+
+  /* 임자를 그대로 두고 연다. claim 을 떼고 간다 — 지금은 임자가 있어 claim 이
+     아무 일도 하지 않지만, 그 사이 임자가 풀렸다면(다른 화면에서 배정을 지웠다면)
+     확인만 하러 들어간 사람이 얼떨결에 임자가 된다. */
+  window.olOwnPeek = () => {
+    const row = olOwnRow;
+    olOwnClose();
+    olGo((row.url || '').replace(/[?&]claim=1/, ''));
+  };
   window.olOwnChange = () => {
     const row = olOwnRow;
     olOwnClose();
