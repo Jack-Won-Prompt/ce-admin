@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 적응형 아이콘의 뒤판 색. 아이콘 그림의 바탕과 같은 값이라, 앞판 네모의
+     경계가 보이지 않는다. 아이콘을 바꾸면 이 값도 함께 맞춰야 한다. -->
+<resources>
+    <color name="ic_launcher_background">#030C1E</color>
+</resources>
