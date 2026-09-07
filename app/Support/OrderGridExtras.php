@@ -37,6 +37,9 @@ class OrderGridExtras
      *
      * @param Collection<int, int|null> $patientIds
      */
+    /** 이 사람의 몇 번째 주문인가 — 주문 번호 => 차례 */
+    private array $orderSeq = [];
+
     public static function forPatients(Collection $patientIds): self
     {
         $self = new self();
@@ -47,6 +50,7 @@ class OrderGridExtras
         }
 
         $self->loadPrivacy($ids);
+        $self->loadOrderSeq($ids);
 
         /* 위임동의는 처방전에 달리고 처방전이 사람에 달린다. 사람마다 「가장 최근 하나」를
            본다 — 동의를 받았으면 그것이 사실이고, 없으면 마지막으로 보낸 것이 어떻게
@@ -184,6 +188,28 @@ class OrderGridExtras
      * 사람에 붙는 넷(보호자명ㆍ신환master등록일ㆍ소득공제ㆍ현금영수증번호)은 환자를
      * 따로 받는다. 처방전이 아니라 사람의 것이다.
      */
+    /**
+     * 「횟수」 — 이 사람의 몇 번째 주문인가 (2026-09-07 지시).
+     *
+     * 재구매를 세는 값이라 사람마다 처음부터 센다. 줄마다 물으면 쉰 줄에 쉰 번을
+     * 묻게 되므로 한 번에 세어 둔다.
+     *
+     * 취소된 건도 센다 — 몇 번째로 주문했는가이지 몇 번을 받았는가가 아니다.
+     */
+    private function loadOrderSeq(Collection $ids): void
+    {
+        $rows = Order::whereIn('patient_id', $ids)
+            ->orderBy('patient_id')->orderBy('created_at')->orderBy('id')
+            ->get(['id', 'patient_id']);
+
+        $n = [];
+        foreach ($rows as $r) {
+            $pid = (int) $r->patient_id;
+            $n[$pid] = ($n[$pid] ?? 0) + 1;
+            $this->orderSeq[$r->id] = $n[$pid];
+        }
+    }
+
     public function ww(?Order $o, ?Prescription $p, ?Patient $pt, ?OrderReturn $rt = null): array
     {
         $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
@@ -192,6 +218,11 @@ class OrderGridExtras
         $dt = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d H:i:s') : '';
 
         [$lotNo, $expiry] = $this->lotsOf($o);
+
+        /* 위드웍스가 웹훅으로 알려 준 값 — 없으면 빈 글자. 없는 열쇠를 물어도
+           빈칸이 서지, 줄이 깨지지 않는다. */
+        $meta = (array) ($o?->withworks_meta ?? []);
+        $m    = fn (string $k) => (string) ($meta[$k] ?? '');
 
         return [
             /* 입고 상태 — 반품에만 있다. 창고가 실물을 받았다고 알려 오면(ro.rcpt_completed)
@@ -212,6 +243,72 @@ class OrderGridExtras
                위드웍스가 보낸 건은 비어 있다 — 없는 것이 맞다. */
             'ww_wh_from'    => $o?->withworks_warehouse ?? '',
             'ww_wh_to'      => $o?->withworks_deliver_warehouse ?? '',
+
+            /* ── 판매현황을 그대로 맞춘 칸 (2026-09-07 지시) ────────────
+               저쪽 창고ㆍ제품 마스터에만 있어 우리가 만들 수 없는 값들이다.
+               웹훅이 실어 오는 것을 받아 둔 자리에서 꺼낸다. 아직 오지 않은
+               건은 빈칸이다 — 없는 것이 아니라 못 받은 것이다. */
+            'ww_so_type'    => $m('so_type_label') ?: $m('so_type'),
+            'ww_po_code'    => $m('po_account_code'),
+            'ww_po_name'    => $m('po_account_name'),
+            'ww_so_name'    => $m('so_account_name'),
+            'ww_hosp_code'  => $m('hospital_code'),
+            'ww_hosp_addr'  => $m('hospital_address'),
+            'ww_conf_qty'   => $m('conf_qty'),
+            'ww_unit_price' => $m('unit_price'),
+            'ww_so_amt'     => $m('so_amount'),
+            'ww_item_group' => $m('item_group'),
+            'ww_pick_type'  => $m('pick_type'),
+            'ww_barcode'    => $m('item_barcode'),
+            'ww_grade'      => $m('item_grade'),
+            'ww_std_code'   => $m('std_code'),
+            'ww_desc1'      => $m('description1'),
+            'ww_desc2'      => $m('description2'),
+            'ww_desc3'      => $m('description3'),
+            'ww_desc4'      => $m('description4'),
+            'ww_so_date'    => $m('so_date'),
+            'ww_line_no'    => $m('line_no'),
+            'ww_line_det'   => $m('line_detail_no'),
+            'ww_line_uid'   => $m('line_uid'),
+            'ww_rcpt_date'  => $m('rcpt_confirm_date'),
+            'ww_in_date'    => $m('rcpt_date'),
+            'ww_inv_state'  => $m('invoice_status_label'),
+            'ww_due_chg'    => $m('due_changed'),
+            'ww_po_no'      => $m('po_no'),
+            'ww_po_date'    => $m('po_date'),
+            'ww_addr_code'  => $m('address_code'),
+            /* 배송주소 — 저쪽이 알려 주면 그것을, 아니면 우리가 보낸 그대로 세운다.
+               우리가 만들어 보낸 값이라 못 받아도 빈칸일 까닭이 없다. */
+            'ww_address'    => $m('address') ?: trim((string) ($o?->shipping_address ?? '')
+                                 . ' ' . (string) ($o?->shipping_address_detail ?? '')),
+            'ww_qty_rb'     => $m('qty_rb'),
+            'ww_qty_sb'     => $m('qty_sb'),
+            'ww_receipt_state' => $m('receipt_status_label'),
+            /* 출고번호 — 저쪽의 ship_no 다. 예전부터 「송장 번호」 칸에 이 값을
+               세우고 있었는데, 그 이름은 운송장과 헷갈린다. 제 이름으로도 세운다. */
+            'ww_out_no'     => $m('ship_no') ?: ($o?->withworks_ship_no ?? ''),
+            'ww_sticker'    => $m('sample_sticker'),
+
+            /* ── 우리 자료에서 채우는 것 ─────────────────────────── */
+            // 인마켓 마감일자 월/년 — 마감일에서 뽑는다. 재무가 달로 묶어 보는 값이다.
+            'rx_inmarket_ym' => $p?->inmarket_due
+                                  ? \Carbon\Carbon::parse($p->inmarket_due)->format('Y-m') : '',
+            'pt_sb_sci'      => $pt?->sb_sci ?? '',
+            // 주민등록번호는 가린 것만 세운다 — 목록에 원문을 펼치지 않는다(P0-1)
+            'pt_rrn'         => $p?->resident_no_ocr_masked ?: ($pt?->masked_resident_no ?? ''),
+            'rx_dz_code'     => $p?->disease_code ?? '',
+            'rx_add_type'    => match ((string) ($p?->counsel_acc_add_type ?? '')) {
+                                    '10' => '처방전', '20' => '처방외', default => '',
+                                },
+            // 추가정보 번호 — 저쪽에 참조로 보내는 그 번호다(처방번호)
+            'rx_add_no'      => $p?->rx_number ?? '',
+            'rx_refund_org'  => $p?->special_case ?? '',
+            /* 횟수 — 이 사람의 몇 번째 주문인가. 재구매를 세는 값이라 사람마다 셈한다.
+               forPatients 가 미리 세어 둔다 — 줄마다 물으면 쉰 줄에 쉰 번을 묻는다. */
+            'ord_seq'        => $o ? ($this->orderSeq[$o->id] ?? '') : '',
+            // 반품ㆍ샘플의 쓰임 — 위드웍스에 udf6ㆍudf7 로 보내는 그 값이다
+            'rt_purpose'      => $rt ? \App\Models\OrderReturn::reasonLabel($rt->reason_code) : '',
+            'rt_purpose_note' => $rt?->reason_text ?? '',
             'ww_recipient'  => $o?->shipping_recipient ?? '',
             'ww_due'        => '',                       // 배송요청일자 — 샘플만 있다(화면에서 채운다)
             'ww_ref_no'     => $p?->rx_number ?? '',     // 참조 번호 — 위드웍스에 udf2 로 보내는 그것

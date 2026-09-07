@@ -192,6 +192,8 @@ class Order extends Model
     ];
 
     protected $casts = [
+        // 위드웍스가 알려 준 판매현황 값 — 우리가 만들지 않는 것들(2026-09-07)
+        'withworks_meta'       => 'array',
         'deposit_confirmed_at' => 'datetime',
         'estimated_delivery'        => 'date',
         'delivered_at'              => 'datetime',

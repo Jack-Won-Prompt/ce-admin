@@ -237,7 +237,7 @@ class FinanceController extends Controller
                되돌아온 것인지 그 자리에서 읽힌다. 주문이 없으면 빈 칸이 선다. */
             + ($r->order
                 ? $extras->rx($r->order->prescription, $r->order->patient)
-                  + $extras->ww($r->order, $r->order->prescription, $r->order->patient)
+                  + $extras->ww($r->order, $r->order->prescription, $r->order->patient, $r)
                   + $extras->of($r->order)
                 : []))->values();
 

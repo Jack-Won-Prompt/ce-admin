@@ -193,6 +193,19 @@ class WithworksWebhookController extends Controller
             }
         }
 
+        /* 판매현황의 나머지 값 (2026-09-07 지시) — 제품그룹ㆍ바코드ㆍ등급ㆍ표준코드ㆍ
+           Description ㆍ라인번호ㆍ발주번호ㆍ확정수량 따위. 저쪽 마스터에만 있어
+           우리가 만들 수 없다. 온 것만 덧쓴다 — 오지 않은 열쇠는 지우지 않는다.
+           옛 위드웍스는 이 묶음을 아예 싣지 않으므로 통째로 덮으면 안 된다. */
+        if (is_array($data['so_meta'] ?? null) && $data['so_meta']) {
+            $order->forceFill([
+                'withworks_meta' => array_merge(
+                    (array) ($order->withworks_meta ?? []),
+                    array_filter($data['so_meta'], fn ($v) => $v !== null && $v !== ''),
+                ),
+            ])->save();
+        }
+
         // 창고가 알려 온 단계로 우리 주문 상태도 함께 움직인다
         if ($newStatus = self::ORDER_STATUS[$data['event']] ?? null) {
             /* 뒤로 물리지 않는다. 웹훅은 순서가 뒤바뀌어 오거나 다시 오기도 해서,
