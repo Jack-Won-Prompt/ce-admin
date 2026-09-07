@@ -44,23 +44,48 @@ class BillingOfficeController extends Controller
     }
 
     /**
-     * 관할 찾기 — 읍ㆍ면ㆍ동으로 좁힌다.
+     * 관할 찾기 — 읍ㆍ면ㆍ동으로 좁히고, 없으면 시군구로 본다.
      *
      * 읍면동 이름은 시군구가 달라도 겹친다(중동ㆍ신흥동…). 그래서 시군구를 함께 받으면
      * 그것으로 먼저 가리고, 그렇게 걸러 아무것도 없으면 읍면동만으로 다시 본다 —
      * 시군구를 못 뽑은 주소도 있기 때문이다(도로명 주소).
+     *
+     * **읍면동이 없어도 시군구만 있으면 찾는다.** 지자체(의료급여)는 시ㆍ군ㆍ구청 하나가
+     * 그 안을 통째로 맡으므로 동까지 갈 것이 없다. 여태 읍면동이 없으면 그냥 물러났고,
+     * 주소는 대개 도로명이라 그 자리가 가장 자주 걸렸다 — 우리 표에 있는데도 밖에
+     * 물으러 나갔다. 시군구 전체를 맡는 줄(emd 가 빈 줄)을 먼저 본다.
      */
     public function lookup(Request $request): JsonResponse
     {
         $emd     = trim((string) $request->input('emd'));
         $sigungu = trim((string) $request->input('sigungu'));
 
+        if ($emd === '' && $sigungu === '') {
+            return response()->json(['success' => true, 'rows' => [], 'message' => '읍ㆍ면ㆍ동도 시ㆍ군ㆍ구도 알 수 없습니다.']);
+        }
+
+        $kind = $request->input('kind');
+
+        /* 시군구 전체를 맡는 줄 — 지자체가 이 꼴이다. 읍면동을 몰라도 이것으로 찾는다. */
+        $구전체 = fn () => BillingOffice::with('areas')->active()->kind($kind)
+            ->whereHas('areas', fn ($a) => $a->whereNull('emd')->where('sigungu', $sigungu))
+            ->orderBy('sort_order')->orderBy('id')->get();
+
         if ($emd === '') {
-            return response()->json(['success' => true, 'rows' => [], 'message' => '읍ㆍ면ㆍ동을 알 수 없습니다.']);
+            $rows = $구전체();
+
+            return response()->json([
+                'success'  => true,
+                'emd'      => null,
+                'sigungu'  => $sigungu,
+                'narrowed' => true,
+                'wide'     => true,
+                'rows'     => $rows->map(fn ($o) => $this->payload($o)),
+            ]);
         }
 
         $base = fn () => BillingOffice::with('areas')->active()
-            ->kind($request->input('kind'))
+            ->kind($kind)
             ->whereHas('areas', fn ($a) => $a->where('emd', $emd));
 
         $rows = $sigungu !== ''
@@ -72,11 +97,20 @@ class BillingOfficeController extends Controller
             $rows = $base()->get();
         }
 
+        /* 동으로 못 찾았지만 시군구는 안다 — 그 구 전체를 맡는 곳이 있으면 그것이 답이다.
+           동을 하나하나 쌓아 두지 않아도 되게 하는 자리다. */
+        $wide = false;
+        if ($rows->isEmpty() && $sigungu !== '') {
+            $rows = $구전체();
+            $wide = $rows->isNotEmpty();
+        }
+
         return response()->json([
             'success'  => true,
             'emd'      => $emd,
             'sigungu'  => $sigungu ?: null,
-            'narrowed' => $narrowed,
+            'narrowed' => $narrowed || $wide,
+            'wide'     => $wide,
             'rows'     => $rows->map(fn ($o) => $this->payload($o)),
         ]);
     }
@@ -171,11 +205,15 @@ class BillingOfficeController extends Controller
     }
 
     /**
-     * 관할 읍ㆍ면ㆍ동을 다시 적는다.
+     * 관할을 다시 적는다.
      *
      * 화면에서는 「용강동, 신수동」처럼 쉼표나 줄바꿈으로 여러 개를 적는다.
      * 시도ㆍ시군구는 한 줄에 하나만 받는다 — 한 지사가 두 시군구에 걸치는 일은
      * 드물고, 그런 때는 줄을 나눠 등록하는 편이 헷갈리지 않는다.
+     *
+     * **읍ㆍ면ㆍ동을 비우면 「그 시군구 전체」다.** 공단은 한 지사가 여러 동을 나눠
+     * 맡아 동으로 가려야 하지만, 지자체(의료급여)는 시ㆍ군ㆍ구청 하나가 그 안을 통째로
+     * 맡는다. 그것을 적을 길이 없어 동을 스무 개 넘게 적어 두지 않으면 찾히지 않았다.
      */
     private function syncAreas(BillingOffice $office, Request $request): void
     {
@@ -190,6 +228,21 @@ class BillingOfficeController extends Controller
             ->values();
 
         $office->areas()->delete();
+
+        /* 읍ㆍ면ㆍ동을 하나도 적지 않았는데 시군구는 적었다 — 그 시군구 전체라는 뜻이다.
+           한 줄만 세운다(emd 는 비운다). 시군구조차 없으면 관할이 없는 것이니 두지 않는다. */
+        if ($emds->isEmpty()) {
+            if ($sigungu !== '') {
+                BillingOfficeArea::create([
+                    'billing_office_id' => $office->id,
+                    'sido'              => $sido ?: null,
+                    'sigungu'           => $sigungu,
+                    'emd'               => null,
+                ]);
+            }
+
+            return;
+        }
 
         foreach ($emds as $emd) {
             BillingOfficeArea::create([
@@ -221,8 +274,13 @@ class BillingOfficeController extends Controller
             'display_name' => $o->displayName(),
             'area_sido'    => $o->areas->first()->sido ?? null,
             'area_sigungu' => $o->areas->first()->sigungu ?? null,
-            'areas'        => $o->areas->pluck('emd')->all(),
-            'areas_text'   => $o->areas->pluck('emd')->implode(', '),
+            /* 읍면동을 비운 줄은 「그 시군구 전체」다. 목록에 빈칸으로 두면 관할이
+               없는 것처럼 보이므로 그렇다고 적는다. 창을 다시 열 때도 그 빈 줄이
+               글 칸으로 돌아가면 안 되니 areas 에서는 뺀다. */
+            'areas'        => $o->areas->pluck('emd')->filter()->values()->all(),
+            'areas_text'   => $o->areas->pluck('emd')->filter()->isEmpty()
+                                ? ($o->areas->first()?->sigungu ? '— ' . $o->areas->first()->sigungu . ' 전체' : '')
+                                : $o->areas->pluck('emd')->filter()->implode(', '),
         ];
     }
 }

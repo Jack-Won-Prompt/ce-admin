@@ -14,6 +14,7 @@
 {{-- 모양은 그 자리에 그대로 둔다 — 이 조각은 본문 안에서 그려지므로, 머리의 styles
      자리에 밀어 넣지 않는다(다른 떠 있는 조각들도 같은 방식이다). --}}
 <style>
+  .bo-opt { font-weight:400; color:var(--text-muted); font-size:11px; }
   .bo-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
              padding:12px 16px; border-radius:12px; background:var(--gray-0); }
   .bo-chip { height:31px; border-radius:999px; padding:6px 10px; border:none; cursor:pointer;
@@ -137,11 +138,15 @@
             시군구를 적어 두면 그것으로 먼저 가립니다.</div>
         </div>
         <div class="bo-field full">
-          <label class="ds-field-label">관할 읍ㆍ면ㆍ동</label>
+          <label class="ds-field-label">관할 읍ㆍ면ㆍ동 <span class="bo-opt">(비우면 시군구 전체)</span></label>
           <textarea id="boAreas" class="form-control" rows="2"
                     placeholder="용강동, 신수동, 대흥동 — 쉼표나 줄바꿈으로 나눠 적습니다"></textarea>
-          <div class="bo-hint">주문 화면이 환자 주소에서 읍ㆍ면ㆍ동만 뽑아 여기서 찾습니다.
-            한 번에 다 적을 필요는 없습니다 — 건을 처리하며 하나씩 늘려 가면 됩니다.</div>
+          {{-- 지자체(의료급여)는 시ㆍ군ㆍ구청 하나가 그 안을 통째로 맡는다. 동을 스무 개씩
+               적어 두게 하면 하나만 빠져도 못 찾는다 — 비워 두면 그 구 전체로 읽는다. --}}
+          <div class="bo-hint">주문 화면이 환자 주소에서 읍ㆍ면ㆍ동을 뽑아 여기서 찾습니다.
+            한 번에 다 적을 필요는 없습니다 — 건을 처리하며 하나씩 늘려 가면 됩니다.
+            <b>지자체는 대개 시ㆍ군ㆍ구청 하나가 그 안을 다 맡으므로, 여기를 비우고
+            관할 시군구만 적으면 됩니다.</b></div>
         </div>
         <div class="bo-field full">
           <label class="ds-field-label">비고</label>

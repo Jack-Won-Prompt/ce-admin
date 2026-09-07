@@ -8382,14 +8382,10 @@ window.HELP_TOUR_STEPS = [
     const note    = document.getElementById('boFindNote');
     const list    = document.getElementById('boFindList');
 
-    if (!emd) {
-      /* 도로명 주소에는 읍면동이 없다 — 우리 표는 읍면동으로 쌓여 있어 찾을 수가 없다.
-         예전에는 여기서 멈추고 「공단 지사찾기」를 권했는데, 그것이 정작 가장
-         자주 걸리는 자리였다(주소는 대개 도로명이다). 밖에 물어 본다 —
-         공단은 시ㆍ군ㆍ구로 찾고, 카카오는 도로명 주소에서 행정동을 짚어 준다. */
-      note.innerHTML = '환자 주소에 읍ㆍ면ㆍ동이 없습니다(도로명 주소). 밖에 물어보는 중…';
+    if (!emd && !sigungu) {
+      note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동도 시ㆍ군ㆍ구도 뽑지 못했습니다. 밖에 물어보는 중…';
       list.innerHTML = '';
-      if (sigungu || boPatientAddress()) boOuterRun(); else boOuterHide();
+      if (boPatientAddress()) boOuterRun(); else boOuterHide();
       return;
     }
 
@@ -8397,22 +8393,28 @@ window.HELP_TOUR_STEPS = [
     list.innerHTML   = '';
 
     try {
-      const qs  = new URLSearchParams({ emd });
+      const qs  = new URLSearchParams();
+      if (emd)     qs.set('emd', emd);
       if (sigungu) qs.set('sigungu', sigungu);
       const res = await fetch(BO_LOOKUP_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
       const d   = await res.json();
       const rows = d.rows ?? [];
 
       if (!rows.length) {
-        note.innerHTML = `<b>${_faxEsc(emd)}</b> 로 쌓아 둔 청구처가 없습니다. 밖에 물어보는 중…`;
+        const 어디 = emd || sigungu;
+        note.innerHTML = `<b>${_faxEsc(어디)}</b> 로 쌓아 둔 청구처가 없습니다. 밖에 물어보는 중…`;
         boOuterRun();
         return;
       }
       boOuterHide();
       boFindPlace();     // 줄이 채워져 높이가 달라졌다 — 다시 세운다
 
-      note.innerHTML = `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
-                     + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
+      /* 「그 시군구 전체를 맡는 곳」으로 찾았으면 그렇다고 적는다 — 동을 하나하나
+         쌓아 두지 않아도 되는 자리라, 왜 나왔는지 보이지 않으면 미덥지 않다. */
+      note.innerHTML = d.wide
+        ? `<b>${_faxEsc(sigungu)}</b> 전체를 맡는 청구처 ${rows.length}건`
+        : `<b>${_faxEsc(emd)}</b>${sigungu ? ' · ' + _faxEsc(sigungu) : ''} 로 찾은 ${rows.length}건`
+          + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
 
       _boLastRows = rows;
       const cur = document.getElementById('f-billing-office').value;
