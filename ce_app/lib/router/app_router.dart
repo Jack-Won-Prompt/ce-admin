@@ -1,5 +1,6 @@
 // lib/router/app_router.dart
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -19,8 +20,13 @@ import '../screens/inquiry_create_screen.dart';
 import '../screens/inquiry_detail_screen.dart';
 import '../screens/settings_screen.dart';
 
+/// 어느 화면이 떠 있든 그 위에 창을 띄우려면 뿌리 내비게이터가 필요하다
+/// (판 업데이트 안내가 그렇다).
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) async {
       final authState = ref.read(authNotifierProvider);

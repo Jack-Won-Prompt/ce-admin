@@ -40,6 +40,8 @@ dependencies:
   cached_network_image: ^3.4.1    # 이미지 캐시
   image_picker: ^1.1.2            # 갤러리 이미지 선택
   camera: ^0.11.0+2              # 커스텀 카메라 (프레임 가이드)
+  package_info_plus: ^9.0.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

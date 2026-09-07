@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'router/app_router.dart';
 import 'services/chat_notification_service.dart';
+import 'widgets/update_gate.dart';
 
 /// 앱이 완전히 종료된 상태에서 FCM 메시지 수신 핸들러
 /// OS가 자동으로 알림 표시 — 별도 처리 불필요
@@ -43,6 +44,9 @@ class CeAdminApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'CE Admin',
       debugShowCheckedModeBanner: false,
+      /* 판 확인을 앱 전체에 한 번만 얹는다. 화면마다 붙이면 빠뜨린 화면에
+         머무는 사람은 새 판이 나온 줄 모른다. */
+      builder: (context, child) => UpdateGate(child: child ?? const SizedBox()),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1565C0),
