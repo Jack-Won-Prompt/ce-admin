@@ -133,6 +133,17 @@
           </div>
         </div>
 
+        {{-- 어디로 들어올 수 있는지. 현장에서 서류만 올리는 사람에게 관리자 화면까지
+             열어 둘 까닭이 없고, 사무실에서만 일하는 사람이 앱에 들어갈 까닭도 없다. --}}
+        <div class="form-group">
+          <label class="form-label">사용 창구</label>
+          <select class="form-control form-select" id="fAccess">
+            @foreach(App\Models\User::ACCESS_SCOPES as $code => $label)
+              <option value="{{ $code }}">{{ $label }}</option>
+            @endforeach
+          </select>
+        </div>
+
         <div class="form-group" id="permGroupWrap">
           <label class="form-label">권한 그룹</label>
           <select class="form-control form-select" id="fPermGroup">
@@ -451,6 +462,7 @@ function openModal(userId = null) {
     document.getElementById('fEmail').value = '';
     document.getElementById('fPhone').value = '';
     document.getElementById('fRole').value  = 'manager';
+    document.getElementById('fAccess').value = 'both';
     document.getElementById('fPermGroup').value = '';
     document.getElementById('fPassword').value = '';
     setActive(true);
@@ -460,11 +472,14 @@ function openModal(userId = null) {
     document.getElementById('fEmail').value = u.email;
     document.getElementById('fPhone').value = u.phone;
     document.getElementById('fRole').value  = u.role;
+    document.getElementById('fAccess').value = u.access_scope || 'both';
     document.getElementById('fPermGroup').value = u.permission_group_id ?? '';
     document.getElementById('fPassword').value = '';
     setActive(u.is_active);
     // role 변경 잠금 (자기 자신)
     document.getElementById('fRole').disabled = (userId === ME);
+    // 스스로 「모바일만」으로 바꾸면 그 자리에서 관리자 화면 밖으로 나가떨어진다
+    document.getElementById('fAccess').disabled = (userId === ME);
   }
 
   modal.classList.add('open');
@@ -474,6 +489,7 @@ function openModal(userId = null) {
 function closeModal() {
   document.getElementById('userModal').classList.remove('open');
   document.getElementById('fRole').disabled = false;
+  document.getElementById('fAccess').disabled = false;
 }
 
 // ── 토글 ───────────────────────────────────────────────
@@ -512,6 +528,7 @@ async function submitForm(e) {
     email:     document.getElementById('fEmail').value.trim(),
     phone:     document.getElementById('fPhone').value.replace(/\D/g, ''),
     role:      document.getElementById('fRole').value,
+    access_scope: document.getElementById('fAccess').value,
     permission_group_id: document.getElementById('fPermGroup').value || null,
     is_active: document.getElementById('fIsActive').checked ? 1 : 0,
     password:  document.getElementById('fPassword').value,
@@ -597,6 +614,8 @@ async function deleteUser() {
 }
 
 // ── wwGrid 동기화 (CRUD 후 그리드 갱신) ──────────────────
+const ACCESS_LABELS = @json(App\Models\User::ACCESS_SCOPES);
+
 function userGridRow(u) {
   return {
     id:      u.id,
@@ -604,6 +623,7 @@ function userGridRow(u) {
     email:   u.email,
     phone:   u.phone ? u.phone : '—',
     role:    u.role === 'admin' ? '관리자' : '매니저',
+    access:  ACCESS_LABELS[u.access_scope || 'both'] || '웹 · 모바일',
     // admin 은 그룹과 무관하게 전권
     group:   u.role === 'admin' ? '전체 권한 (관리자)' : (u.group_name || '미지정'),
     status:  u.is_active ? '활성' : '비활성',
@@ -649,6 +669,7 @@ function updateRow(u)     { refreshUsersGrid(); }
       { header: '이메일', name: 'email',   width: 220, sortable: true },
       { header: '휴대폰', name: 'phone',   width: 140 },
       { header: '역할',   name: 'role',    width: 90,  align: 'center', sortable: true },
+      { header: '사용 창구', name: 'access', width: 110, align: 'center', sortable: true },
       { header: '권한 그룹', name: 'group', width: 150, sortable: true },
       { header: '상태',   name: 'status',  width: 80,  align: 'center', sortable: true },
       { header: '등록 일시', name: 'created', width: 160, align: 'center', sortable: true },

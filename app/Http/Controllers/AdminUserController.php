@@ -27,6 +27,7 @@ class AdminUserController extends Controller
                 'email'      => $u->email,
                 'phone'      => $u->phone ?? '',
                 'role'       => $u->role,
+                'access_scope' => $u->access_scope ?: 'both',
                 'permission_group_id' => $u->permission_group_id,
                 'is_active'  => (bool) $u->is_active,
                 'created_at' => $u->created_at?->format('Y-m-d') ?? '',
@@ -42,6 +43,8 @@ class AdminUserController extends Controller
                 'email'   => $u->email,
                 'phone'   => $u->phone ?: '—',
                 'role'    => $u->role === 'admin' ? '관리자' : '매니저',
+                // 어디로 들어올 수 있는지. 칸이 없는 서버에서는 모두 둘 다 쓴다.
+                'access'  => User::ACCESS_SCOPES[$u->access_scope ?: 'both'] ?? '웹 · 모바일',
                 // admin 은 그룹과 무관하게 항상 전권이므로 그렇게 표시한다
                 'group'   => $u->role === 'admin'
                                 ? '전체 권한 (관리자)'
@@ -63,12 +66,18 @@ class AdminUserController extends Controller
             'email'    => ['required', 'email', 'max:200', 'unique:users,email'],
             'phone'    => ['nullable', 'string', 'max:20'],
             'role'     => ['required', Rule::in(['admin', 'manager'])],
+            'access_scope' => ['nullable', Rule::in(array_keys(User::ACCESS_SCOPES))],
             'permission_group_id' => ['nullable', 'exists:permission_groups,id'],
             'is_active'=> ['boolean'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         $data['is_active'] = $request->boolean('is_active', true);
+
+        // 칸이 없는 서버(마이그레이션 전)에서는 빼고 저장한다 — 넣으면 질의가 깨진다
+        if (! User::hasAccessScopeColumn()) {
+            unset($data['access_scope']);
+        }
 
         $user = User::create($data);
 
@@ -82,10 +91,15 @@ class AdminUserController extends Controller
             'email'    => ['required', 'email', 'max:200', Rule::unique('users', 'email')->ignore($user->id)],
             'phone'    => ['nullable', 'string', 'max:20'],
             'role'     => ['required', Rule::in(['admin', 'manager'])],
+            'access_scope' => ['nullable', Rule::in(array_keys(User::ACCESS_SCOPES))],
             'permission_group_id' => ['nullable', 'exists:permission_groups,id'],
             'is_active'=> ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
+
+        if (! User::hasAccessScopeColumn()) {
+            unset($data['access_scope']);
+        }
 
         if (empty($data['password'])) {
             unset($data['password']);
@@ -95,7 +109,9 @@ class AdminUserController extends Controller
 
         // 자기 자신의 role/권한그룹/is_active 변경 방지 (스스로 권한을 낮춰 잠기는 것을 막는다)
         if ($user->id === Auth::id()) {
-            unset($data['role'], $data['permission_group_id'], $data['is_active']);
+            /* 창구도 함께 막는다 — 스스로 「모바일만」으로 바꾸면 그 자리에서
+               관리자 화면 밖으로 나가떨어진다. */
+            unset($data['role'], $data['permission_group_id'], $data['is_active'], $data['access_scope']);
         }
 
         $user->update($data);
@@ -122,6 +138,7 @@ class AdminUserController extends Controller
             'email'      => $user->email,
             'phone'      => $user->phone ?? '',
             'role'       => $user->role,
+            'access_scope' => $user->access_scope ?: 'both',
             'permission_group_id' => $user->permission_group_id,
             'group_name' => $user->role === 'admin'
                                 ? '전체 권한 (관리자)'
