@@ -423,6 +423,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/',                         [OrderController::class, 'index'])->name('index');
         Route::get('/{order}',                  [OrderController::class, 'show'])->name('show');
+        /* 처방전이 없어도 주문 등록 화면을 연다 — 「작업 대기 리스트」 더블클릭이 여기로 온다 */
+        Route::get('/{order}/open',             [PrescriptionController::class, 'openFromOrder'])->name('open');
         Route::post(  '/',         [OrderController::class, 'store'])  ->name('store');
         Route::put(   '/{order}',  [OrderController::class, 'update']) ->name('update');
         Route::delete('/{order}',  [OrderController::class, 'destroy'])->name('destroy');

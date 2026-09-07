@@ -482,6 +482,13 @@
                onclick="return orderOpenRxTab(event, this)">
               <i class="bx bx-file-medical"></i> 주문 보기
             </a>
+          @else
+            {{-- 처방전이 없어도 연다 — 처방전 없이도 사고, 지운 뒤 다시 올리기도 한다.
+                 단추를 감추면 여기서 길이 끊겨 담당자가 되돌아 나가야 했다. --}}
+            <a href="{{ route('orders.open', $order) }}" class="btn btn-outline btn-sm"
+               style="margin-left:auto;">
+              <i class="bx bx-file-medical"></i> 주문 보기
+            </a>
           @endif
         </div>
         <div class="card-body">
@@ -1103,6 +1110,10 @@
     @if($order->prescription)
       <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
          data-rx="{{ $order->prescription->rx_number }}" onclick="return orderOpenRxTab(event, this)">
+        <i class="bx bx-file"></i> 주문 보기
+      </a>
+    @else
+      <a href="{{ route('orders.open', $order) }}" class="btn btn-outline btn-sm">
         <i class="bx bx-file"></i> 주문 보기
       </a>
     @endif

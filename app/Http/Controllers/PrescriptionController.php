@@ -1512,6 +1512,50 @@ class PrescriptionController extends Controller
     }
 
     // ── 주문 연계 페이지 (검수 화면) ──────────────────────
+    /**
+     * 주문으로 이 화면을 연다 — 처방전이 없어도 (2026-09-07 지시).
+     *
+     * 이 화면은 처방전을 열쇠로 선다. 그래서 처방전이 없는 주문은 「작업 대기
+     * 리스트」에서 더블클릭해도 「이어져 있지 않습니다」로 막혔다 — 목록에는
+     * 서 있는데 열 수가 없으니, 담당자에게는 「할 일이 하나 있는데 눌러도
+     * 안 열린다」로 보였다.
+     *
+     * 그런데 **처방전 없이도 산다.** 처방외 주문이 그렇고, 처방전을 잘못 올려
+     * 지운 뒤 다시 올리는 일도 그렇다. 막을 일이 아니라 열어 줄 일이다.
+     *
+     * 빈 처방전을 하나 세워 이 주문에 잇고 그 자리로 보낸다. 담당자는 거기서
+     * 다시 올리거나, 처방 없이 그대로 이어 간다.
+     *
+     * 지워진 처방전을 되살리지는 않는다 — 지운 데는 까닭이 있었을 것이고,
+     * 되살리면 그때 버린 값이 함께 돌아온다.
+     */
+    public function openFromOrder(Order $order): RedirectResponse
+    {
+        /* 이미 살아 있는 처방전이 있으면 그리로 보낸다. 목록이 오래된 채로 있을
+           때 이 길로 들어올 수 있다. */
+        if ($order->prescription) {
+            return redirect()->route('prescriptions.show', [$order->prescription, 'claim' => 1]);
+        }
+
+        $draft = Prescription::create([
+            'rx_number'        => Prescription::generateRxNumber(),
+            'created_by'       => Auth::id(),
+            'status'           => 'pending',
+            'upload_source'    => 'web',
+            'is_blank_draft'   => true,
+            'patient_id'       => $order->patient_id,
+            'patient_name_ocr' => $order->patient?->name,
+            'mobile_ocr'       => $order->patient?->mobile ?: $order->patient?->phone,
+        ]);
+
+        $order->forceFill(['prescription_id' => $draft->id])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log("처방전이 없어 빈 처방전을 세워 이었습니다 ({$draft->rx_number})");
+
+        return redirect()->route('prescriptions.show', [$draft, 'claim' => 1]);
+    }
+
     public function show(Prescription $prescription): View
     {
         /* 주문 목록에서 더블클릭해 들어온 건이다(claim=1).
@@ -1681,8 +1725,15 @@ class PrescriptionController extends Controller
                 'manager'   => $rx?->assignedUser?->name ?? '',
                 'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
-                // 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
-                'url'       => $rx ? route('prescriptions.show', $rx) . '?claim=1' : null,
+                /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
+
+                   처방전이 없는 주문은 주문 번호로 연다 — 처방전 없이도 사고, 잘못 올린
+                   처방전을 지운 뒤 다시 올리기도 한다. 예전에는 여기서 빈 값을 내보내
+                   더블클릭이 「이어져 있지 않습니다」로 막혔는데, 목록에 서 있는 일을
+                   열 수 없게 하는 것은 막을 일이 아니라 열어 줄 일이었다. */
+                'url'       => $rx
+                    ? route('prescriptions.show', $rx) . '?claim=1'
+                    : route('orders.open', $o),
 
                 /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ
                    창고가 지금 무엇을 하고 있는가. */

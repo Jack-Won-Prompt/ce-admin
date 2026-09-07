@@ -10208,7 +10208,7 @@ window.HELP_TOUR_STEPS = [
       const cell = e.target.closest('[data-row-index]');
       if (!cell) return;
       const row = olGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-      if (!row?.url) { showToast('이 주문에는 처방전이 이어져 있지 않습니다.', 'warning'); return; }
+      if (!row?.url) { showToast('이 주문을 열 수 없습니다. 목록을 새로 고쳐 주십시오.', 'warning'); return; }
       if (typeof isAnyDirty === 'function' && isAnyDirty()) {
         showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), row.url);
         return;
