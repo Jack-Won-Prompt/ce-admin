@@ -44,9 +44,19 @@ class WithworksNotice
             /* 본문만 있는 편지다. 서식을 갖춘 화면을 만들 까닭이 없다 — 읽는 사람은
                「무엇을 어떤 값으로 보냈고 이제 무엇을 하나」만 보면 되고,
                그것은 글로 충분하다. */
-            Mail::raw($body, function ($m) use ($to, $what, $payload) {
-                $m->to($to)->subject(static::subject($what, $payload));
+            $subject = static::subject($what, $payload);
+
+            Mail::raw($body, function ($m) use ($to, $subject) {
+                $m->to($to)->subject($subject);
             });
+
+            /* 보냈다는 것도 남긴다 (2026-09-07). 여태 실패만 남겨 두었더니
+               「그 건 메일 갔나요」에 로그로 답할 수 없었다 — 실패가 없는 것은
+               성공했다는 뜻이기도 하고 아예 부르지 않았다는 뜻이기도 하다.
+               본문은 남기지 않는다. 이미 받은 사람의 편지함에 그대로 있다. */
+            Log::info('[위드웍스 연계 알림] 메일 보냄', [
+                'to' => $to, 'what' => $what, 'subject' => $subject,
+            ]);
         } catch (\Throwable $e) {
             Log::warning('[위드웍스 연계 알림] 메일 실패 (업무는 계속 진행)', [
                 'to' => $to, 'what' => $what, 'error' => $e->getMessage(),
