@@ -2607,17 +2607,53 @@ $calcDeposit  = $calcCopay;
                   </div>
                 </div>
               </div>
+              {{-- 시험 중이면 번호를 손으로 적지 않고 **우리 사람 번호에서 고른다**
+                   (설정 › 서비스 연동 설정 › 웹 화면 설정). 손으로 치다 한 자만 틀려도
+                   남의 전화로 안내가 가고, 맞게 쳐도 시험 문자가 실제 환자에게 간다.
+                   운영이면 $testPhones 가 비어 지금처럼 그냥 적는 칸이다. --}}
+              @php $phoneNow = $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? ''; @endphp
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 1</span>
-                <input type="text" class="form-control" id="f-mobile"
-                       value="{{ $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                @if (!empty($testPhones))
+                  <select class="form-control" id="f-mobile" style="flex:1;" title="시험 중이라 우리 사람 번호에서 고릅니다">
+                    <option value="">선택</option>
+                    @foreach ($testPhones as $u)
+                      <option value="{{ $u['phone'] }}" @selected($phoneNow === $u['phone'])>
+                        {{ $u['name'] }} · {{ $u['phone'] }}
+                      </option>
+                    @endforeach
+                    {{-- 이미 적혀 있던 번호가 목록에 없으면 그대로 남긴다 —
+                         고르는 칸으로 바뀌었다고 앞서 적어 둔 값을 잃어서는 안 된다. --}}
+                    @if ($phoneNow !== '' && !collect($testPhones)->contains('phone', $phoneNow))
+                      <option value="{{ $phoneNow }}" selected>{{ $phoneNow }} (적혀 있던 번호)</option>
+                    @endif
+                  </select>
+                @else
+                  <input type="text" class="form-control" id="f-mobile"
+                         value="{{ $phoneNow }}"
+                         placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                @endif
               </div>
+              @php $phone2Now = $prescription->patient?->phone ?? ''; @endphp
               <div class="rx-field-row">
                 <span class="rx-field-label">전화번호 2</span>
-                <input type="text" class="form-control" id="f-mobile2"
-                       value="{{ $prescription->patient?->phone ?? '' }}"
-                       placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                @if (!empty($testPhones))
+                  <select class="form-control" id="f-mobile2" style="flex:1;" title="시험 중이라 우리 사람 번호에서 고릅니다">
+                    <option value="">선택</option>
+                    @foreach ($testPhones as $u)
+                      <option value="{{ $u['phone'] }}" @selected($phone2Now === $u['phone'])>
+                        {{ $u['name'] }} · {{ $u['phone'] }}
+                      </option>
+                    @endforeach
+                    @if ($phone2Now !== '' && !collect($testPhones)->contains('phone', $phone2Now))
+                      <option value="{{ $phone2Now }}" selected>{{ $phone2Now }} (적혀 있던 번호)</option>
+                    @endif
+                  </select>
+                @else
+                  <input type="text" class="form-control" id="f-mobile2"
+                         value="{{ $phone2Now }}"
+                         placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
+                @endif
               </div>
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">송금자명</span>

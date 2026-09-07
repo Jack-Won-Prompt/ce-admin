@@ -145,7 +145,18 @@
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">전화번호1</label>
-          <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
+          {{-- 시험 중이면 우리 사람 번호에서 고른다 — 새로 만든 거래처에 실제
+               환자 번호가 들어가면 그 뒤 모든 문자가 그리로 간다. --}}
+          @if (!empty($testPhones ?? []))
+            <select class="form-control" id="add-mobile" title="시험 중이라 우리 사람 번호에서 고릅니다">
+              <option value="">선택</option>
+              @foreach ($testPhones as $u)
+                <option value="{{ $u['phone'] }}">{{ $u['name'] }} · {{ $u['phone'] }}</option>
+              @endforeach
+            </select>
+          @else
+            <input type="text" class="form-control" id="add-mobile" placeholder="010-XXXX-XXXX" data-phone />
+          @endif
         </div>
         <div class="form-group">
           <label class="form-label">전화번호2</label>

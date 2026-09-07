@@ -1705,8 +1705,22 @@ class PrescriptionController extends Controller
            제품과 배송지를 다 채운 뒤에야 막히는 셈이라, 그 일이 통째로 헛일이 된다. */
         $repurchaseBlock = \App\Support\RepurchaseWindow::block($prescription);
 
+        /* 시험 중이면 전화번호를 손으로 적지 않고 **우리 사람 번호에서 고른다**
+           (2026-09-07 지시). 손으로 치다 한 자만 틀려도 남의 전화로 안내가 가고,
+           맞게 쳐도 시험 문자가 실제 환자에게 간다.
+
+           운영이면 빈 배열이라 화면이 지금처럼 그냥 적는 칸을 세운다. */
+        $testPhones = config('web.mode') === 'test'
+            ? \App\Models\User::whereNotNull('phone')
+                ->where('phone', '!=', '')
+                ->orderBy('name')
+                ->get(['name', 'phone'])
+                ->map(fn ($u) => ['name' => $u->name, 'phone' => $u->phone])
+                ->values()->all()
+            : [];
+
         return view('prescriptions.order', compact(
-            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock',
+            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
