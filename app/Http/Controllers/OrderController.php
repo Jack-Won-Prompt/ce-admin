@@ -174,8 +174,9 @@ class OrderController extends Controller
                 'name'  => $att->file_original_name,
                 'at'    => $att->created_at?->format('Y-m-d') ?? '',
                 /* 실을 수 있는가 — PDF 는 팩스 묶음에 끼우지 못한다 */
+                'auto'  => false,
                 'ok'    => $그림,
-                'why'   => $그림 ? '' : 'PDF 는 팩스 묶음에 실리지 않습니다',
+                'why'   => $그림 ? '' : 'PDF 는 팩스 묶음에 포함되지 않습니다',
             ];
         }
 
@@ -184,8 +185,25 @@ class OrderController extends Controller
         $동의 = \App\Models\PrescriptionConsent::where('prescription_id', $rx->id)
             ->where('status', 'agreed')->exists();
 
+        /* 처방전 그림은 **첨부가 아니라 따로 있다**(prescriptions.image_path).
+           그래서 이 줄이 없으면 처방전을 보낼 길이 아예 없다. 파일이 이미 있는 것이니
+           만드는 서류가 아니라 **파일 이름을 그대로 보인다.** */
+        $rows[] = [
+            'kind'  => 'doc',
+            'code'  => 'prescription',
+            'label' => '처방전',
+            'name'  => $rx->image_path
+                ? ($rx->image_original_name ?: basename($rx->image_path))
+                : '처방전 이미지가 없습니다',
+            'at'    => '',
+            'auto'  => false,
+            'ok'    => (bool) $rx->image_path,
+            'why'   => $rx->image_path ? '' : '처방전 이미지가 없습니다',
+        ];
+
+        /* 보낼 때 그려 넣는 서식들 — 미리 만들어 둔 파일이 없다.
+           **낼 수 있는 것만** 고를 수 있게 한다. 빈 장이 나가면 안 된다. */
         $만드는것 = [
-            ['prescription',     '처방전 이미지', (bool) $rx->image_path,                     '처방전 그림이 없습니다'],
             ['delegation',       '요양비위임장',  $동의,                                       '위임동의 서명이 아직 없습니다'],
             ['authorization',    '위임장',        $동의,                                       '위임동의 서명이 아직 없습니다'],
             ['purchase_history', '제품 구매내역', true,                                        ''],
@@ -198,8 +216,9 @@ class OrderController extends Controller
                 'kind'  => 'doc',
                 'code'  => $code,
                 'label' => $label,
-                'name'  => $있다 ? '보낼 때 만듭니다' : $까닭,
+                'name'  => '',
                 'at'    => '',
+                'auto'  => true,
                 'ok'    => $있다,
                 'why'   => $있다 ? '' : $까닭,
             ];

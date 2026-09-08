@@ -86,6 +86,16 @@ window.HELP_TOUR_STEPS = [
   .att-fax-row.is-off:hover { border-color: var(--border); }
   .att-fax-lb { font-weight: 700; }
   .att-fax-nm { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 미리 만들어 둔 파일이 없는 서식 — 발송할 때 그려 넣는다 */
+  .att-fax-auto {
+    justify-self: start; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+    background: var(--primary-light); color: var(--primary);
+  }
+  .att-fax-why { color: var(--danger); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att-fax-guide {
+    padding: 6px 12px; font-size: 10.5px; color: var(--text-muted);
+    background: var(--bg); border-top: 1px solid var(--border); line-height: 1.5;
+  }
   .att-fax-at { color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
   .att-fax-empty { padding: 18px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
   .att-fax-to { padding: 9px 12px; border-top: 1px solid var(--border); }
@@ -483,7 +493,7 @@ window.HELP_TOUR_STEPS = [
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = String(n);
-    b.title = '첨부를 골라 팩스로 보냅니다';
+    b.title = '첨부파일을 선택하여 팩스로 발송합니다';
     b.style.cssText = 'height:22px;min-width:34px;padding:0 8px;font-size:11px;font-weight:700;'
                     + 'cursor:pointer;border:1px solid var(--primary);border-radius:999px;'
                     + 'background:var(--primary-light);color:var(--primary);line-height:1;';
@@ -505,6 +515,7 @@ window.HELP_TOUR_STEPS = [
           <button type="button" class="att-fax-x" aria-label="닫기">&times;</button></div>
         <div class="att-fax-note" id="attFaxBlocked" style="display:none;"></div>
         <div class="att-fax-bd" id="attFaxList"></div>
+        <div class="att-fax-guide">선택한 서류는 한 묶음 PDF로 만들어 발송합니다.</div>
         <div class="att-fax-to">
           <label>받는 팩스번호</label>
           <input type="text" id="attFaxNo" placeholder="02-0000-0000" autocomplete="off">
@@ -585,21 +596,29 @@ window.HELP_TOUR_STEPS = [
     const no = _attPop.querySelector('#attFaxNo');
     no.value = d.office?.fax || '';
     _attPop.querySelector('#attFaxHint').textContent =
-      d.office?.name ? ('관할 청구처 ' + d.office.name + ' — 다른 곳으로 보내려면 번호를 고쳐 적으십시오.')
-                     : '받는 곳의 팩스번호를 적으십시오.';
+      d.office?.name ? ('관할 청구처 ' + d.office.name + ' — 다른 곳으로 보내려면 번호를 변경하십시오.')
+                     : '받는 곳의 팩스번호를 입력하십시오.';
 
     /* 줄이 채워져 높이가 달라졌다 — 다시 앉힌다 */
     setTimeout(() => { if (_attAnchor) attFaxPlace(_attAnchor); }, 0);
 
+    /* 가운데 칸은 **파일 이름 자리**다. 미리 만들어 둔 파일이 없는 서식은 그 자리에
+       「자동 생성」 딱지를 세우고, 보낼 수 없는 것은 그 사유를 붉게 적는다. */
     list.innerHTML = _attRows.length
-      ? _attRows.map((r, i) => `
+      ? _attRows.map((r, i) => {
+          const 가운데 = r.why
+            ? `<span class="att-fax-why">${dsEsc(r.why)}</span>`
+            : (r.auto ? '<span class="att-fax-auto">자동 생성</span>'
+                      : `<span class="att-fax-nm">${dsEsc(r.name || '')}</span>`);
+          return `
         <label class="att-fax-row${r.ok ? '' : ' is-off'}">
           <input type="checkbox" data-i="${i}" ${r.ok ? '' : 'disabled'}>
           <span class="att-fax-lb">${dsEsc(r.label)}</span>
-          <span class="att-fax-nm">${dsEsc(r.name || '')}</span>
+          ${가운데}
           <span class="att-fax-at">${dsEsc(r.at || '')}</span>
-        </label>`).join('')
-      : '<div class="att-fax-empty">보낼 수 있는 서류가 없습니다.</div>';
+        </label>`;
+        }).join('')
+      : '<div class="att-fax-empty">발송할 수 있는 서류가 없습니다.</div>';
 
     _attPop.querySelector('#attFaxSend').disabled = !!d.blocked;
   }
@@ -612,15 +631,15 @@ window.HELP_TOUR_STEPS = [
   async function attFaxSend() {
     const picked = [..._attPop.querySelectorAll('#attFaxList input[type=checkbox]:checked')]
                      .map(c => _attRows[Number(c.dataset.i)]);
-    if (!picked.length) { showToast('보낼 서류를 하나 이상 고르십시오.', 'warning'); return; }
+    if (!picked.length) { showToast('발송할 서류를 하나 이상 선택하십시오.', 'warning'); return; }
 
     const faxNo = (_attPop.querySelector('#attFaxNo').value || '').trim();
-    if (!/^[0-9-]{7,20}$/.test(faxNo)) { showToast('받는 팩스번호를 바르게 적으십시오.', 'warning'); return; }
+    if (!/^[0-9-]{7,20}$/.test(faxNo)) { showToast('받는 팩스번호를 정확히 입력하십시오.', 'warning'); return; }
 
     /* 팩스는 정말 나간다 — 무엇을 어디로 보내는지 보이고 한 번 묻는다 */
     const 이름들 = picked.map(r => r.label).join(' · ');
-    if (!await ceConfirm(`${faxNo} 로 다음 서류를 보냅니다.\n\n${이름들}`,
-                         { title: '팩스 전송', confirmText: '보냅니다' })) return;
+    if (!await ceConfirm(`${faxNo} 로 다음 서류를 발송합니다.\n\n${이름들}\n\n선택한 서류는 한 묶음 PDF로 만들어 보냅니다.`,
+                         { title: '팩스 전송', confirmText: '발송' })) return;
 
     const btn = _attPop.querySelector('#attFaxSend');
     btn.disabled = true; btn.textContent = '보내는 중…';
