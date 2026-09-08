@@ -127,6 +127,14 @@ return [
                 'help'   => '동의가 끝나면 등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증을 관할 지사로 보낸다. '
                           . '하나라도 빠졌으면 보내지 않고 담당자에게 알린다 — 팩스 창에서 손으로 보내면 된다.',
             ],
+            'nhis_fax_on_id_card' => [
+                'label'  => '신분증이 들어오면 공단 팩스 다시 시도',
+                'config' => 'order.nhis_fax_on_id_card',
+                'type'   => 'bool',
+                'help'   => '위 설정은 동의가 끝나는 그때만 잰다 — 그때 신분증이 없으면 걸리고, 뒤에 '
+                          . '신분증이 들어와도 다시 재지 않았다. 이것을 켜면 신분증 링크로 받거나 첨부로 '
+                          . '올릴 때 한 번 더 잰다. 이미 보낸 건은 다시 보내지 않는다.',
+            ],
             'rx_received_sms_on_first_save' => [
                 'label'  => '첫 저장에 접수 안내 발송',
                 'config' => 'order.rx_received_sms_on_first_save',

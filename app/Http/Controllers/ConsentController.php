@@ -567,6 +567,12 @@ class ConsentController extends Controller
         if ($consent->prescription) {
             activity()->performedOn($consent->prescription)
                 ->log('신분증 접수 → ' . implode('ㆍ', $받은것));
+
+            /* 빠졌던 것이 이것 하나였으면 이제 다 갖춰졌다 — 공단 팩스를 다시 잰다.
+               동의가 끝나는 그 순간에만 재던 것이라, 그때 신분증이 없으면 뒤에 들어와도
+               아무도 다시 재지 않았다(2026-09-09 지시로 설정을 두고 잇는다).
+               아직 빠진 것이 있으면 attempt() 가 그대로 알리고 만다. */
+            \App\Support\NhisFaxRetry::afterIdCard($consent->prescription->refresh());
         }
 
         return response()->json([

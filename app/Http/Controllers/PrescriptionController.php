@@ -1071,6 +1071,13 @@ class PrescriptionController extends Controller
             'uploaded_by'        => Auth::id(),
         ]);
 
+        /* 빠졌던 신분증이 이제 올라왔으면 공단 팩스를 다시 잰다.
+           동의가 끝나는 그 순간에만 재던 것이라, 그때 없던 서류가 뒤에 올라와도
+           아무도 다시 재지 않았다(order.nhis_fax_on_id_card 로 켠다). */
+        if ($att->doc_type === 'id_card') {
+            \App\Support\NhisFaxRetry::afterIdCard($prescription->refresh());
+        }
+
         return response()->json([
             'success' => true,
             'attachment' => [
