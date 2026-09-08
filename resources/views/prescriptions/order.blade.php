@@ -426,7 +426,9 @@
   .rxh-v-before   { justify-content:flex-end; text-align:right; color:var(--text-muted);
                     text-decoration:line-through; }
   .rxh-v-after    { font-weight:600; }
-  .rxh-v-empty    { color:var(--gray-300); font-style:normal; text-decoration:none; }
+  /* 빈 값에는 취소선을 긋지 않는다 — 지울 것이 없던 자리다. 줄은 바깥 칸에서
+     내려오므로 text-decoration:none 으로는 지워지지 않는다. 제 상자를 세워 끊는다. */
+  .rxh-v-empty    { display:inline-block; color:var(--gray-300); text-decoration:none; }
   .rxh-none       { padding:24px; text-align:center; font-size:12px; color:var(--text-muted); }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
   /* 검수 탭은 이제 아코디언만 담는다. 주문 정보는 자기 탭으로 돌아갔다. */
