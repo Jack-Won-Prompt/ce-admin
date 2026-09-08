@@ -591,7 +591,11 @@
                  remitter_name: 'add-remitter', cash_receipt_no: 'add-cash-receipt',
                  nhis_reg_status: 'add-nhis-reg', nhis_reg_date: 'add-nhis-reg-date',
                  nhis_agree_start: 'add-agree-start', nhis_agree_end: 'add-agree-end',
-                 basic_reeval_due: 'add-basic-due', phone: 'add-phone' };
+                 basic_reeval_due: 'add-basic-due', phone: 'add-phone',
+                 /* 보호자 생년월일은 칸 이름이 add-guardian-birth-date 가 아니라
+                    add-guardian-birth 다. 이 줄이 없어 창을 열 때 채워지지 않았고,
+                    그대로 저장하면 적어 둔 보호자 생년월일이 지워졌다. */
+                 guardian_birth_date: 'add-guardian-birth' };
     Object.entries(짝).forEach(([k, id]) => {
       const el = document.getElementById(id);
       if (el && data?.[k] != null) el.value = data[k];
