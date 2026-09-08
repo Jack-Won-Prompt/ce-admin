@@ -338,8 +338,13 @@
 
     _docPop.querySelector('#pcPopTitle').textContent = label;
 
+    // 받기는 예전 그대로 — 표를 붙이지 않은 주소를 쓴다
     const dl = _docPop.querySelector('.pc-pop-ft .is-main');
     dl.href = url;
+
+    /* 보여 주기는 inline 으로 청한다. 서버가 늘 attachment 로 주면 아래 iframe 이
+       그것을 내려받아, 보러 눌렀는데 파일이 쌓인다. */
+    const 볼주소 = url + (url.includes('?') ? '&' : '?') + 'inline=1';
 
     /* PNG 인지 PDF 인지는 주소로 가른다 — 서명은 그림, 나머지는 PDF 다.
        주소에 확장자가 없을 수도 있어 「png」라는 말이 들어 있는지도 함께 본다. */
@@ -347,8 +352,8 @@
     const bd = _docPop.querySelector('.pc-pop-bd');
 
     bd.innerHTML = 그림
-      ? `<img src="${url}" alt="${label}">`
-      : `<iframe src="${url}#toolbar=0" title="${label}"></iframe>`;
+      ? `<img src="${볼주소}" alt="${label}">`
+      : `<iframe src="${볼주소}#toolbar=0" title="${label}"></iframe>`;
 
     _docPop.classList.add('show');
   }

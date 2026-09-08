@@ -800,7 +800,7 @@ class ConsentController extends Controller
 
         return response($dompdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+            'Content-Disposition' => self::놓는법($filename),
         ]);
     }
 
@@ -841,7 +841,7 @@ class ConsentController extends Controller
         return response($bytes, 200, [
             'Content-Type'        => $mime,
             'Content-Length'      => strlen($bytes),
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+            'Content-Disposition' => self::놓는법($filename),
         ]);
     }
 
@@ -884,7 +884,7 @@ class ConsentController extends Controller
 
         return response($dompdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+            'Content-Disposition' => self::놓는법($filename),
         ]);
     }
 
@@ -907,7 +907,7 @@ class ConsentController extends Controller
 
         return response($pdfData, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename*=UTF-8\'\'' . rawurlencode($filename),
+            'Content-Disposition' => self::놓는법($filename),
         ]);
     }
 
@@ -1288,5 +1288,20 @@ class ConsentController extends Controller
         if ($changed) {
             file_put_contents($path, json_encode($fonts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
+    }
+
+    /**
+     * 받게 할 것인가, 보여 줄 것인가.
+     *
+     * 목록에서 단추를 누르면 창으로 먼저 보여 준다(2026-09-08 지시). 그런데 서버가
+     * 늘 attachment 로 주어, 미리보기 창의 iframe 마저 그것을 내려받아 버렸다.
+     * 주소에 ?inline=1 이 붙으면 브라우저가 그 자리에서 열도록 inline 으로 준다.
+     * 창 아래의 「다운로드」는 그 표가 없는 주소를 쓰므로 예전처럼 받는다.
+     */
+    private static function 놓는법(string $filename): string
+    {
+        $어떻게 = request()->boolean('inline') ? 'inline' : 'attachment';
+
+        return $어떻게 . "; filename*=UTF-8''" . rawurlencode($filename);
     }
 }
