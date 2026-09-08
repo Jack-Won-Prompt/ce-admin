@@ -3935,8 +3935,8 @@ HTML;
 
         return response()->json([
             'success'   => true,
-            'message'   => "{$copy->rx_number} 로 베껴 왔습니다"
-                           . ($이은파일 ? " — 파일 {$이은파일}장을 이어 씁니다." : '.'),
+            'message'   => "{$copy->rx_number} 로 복제했습니다"
+                           . ($이은파일 ? " — 첨부파일 {$이은파일}건을 공유합니다." : '.'),
             'rx_number' => $copy->rx_number,
             'url'       => route('prescriptions.show', $copy, absolute: false),
         ]);
