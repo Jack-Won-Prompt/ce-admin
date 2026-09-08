@@ -2328,31 +2328,27 @@ document.addEventListener('click', (e) => {
   }
 
   /* ── 사이드바 메뉴 그룹 — 아코디언 ────────────────────────
-     **한 번에 한 갈래만 열린다.** 헤더를 누르면 그 갈래가 펼쳐지고 나머지는
-     저절로 접힌다. 같은 헤더를 다시 누르면 그 갈래도 접혀 전부 닫힌다.
+     **처음은 다 접혀 있고, 한 번에 한 갈래만 열린다**(2026-09-08 지시).
 
      아홉 갈래에 마흔 줄 남짓이라 모두 펼치면 한 화면에 들지 않아, 아래쪽
-     「설정」을 가려면 늘 스크롤해야 했다. 한 갈래만 열어 두면 전체 갈래가
-     한눈에 서고 지금 있는 자리도 바로 보인다(2026-09-08 지시).
+     「설정」을 가려면 늘 스크롤해야 했다. 다 접어 두면 전체 갈래가 한눈에 선다.
 
-     열려 있는 갈래는 localStorage 에 남아 새로고침·다른 화면에서도 이어진다.
-     현재 화면이 속한 갈래가 있으면 그것이 이긴다 — 어느 자리에 있는지가
-     지난번에 무엇을 열어 두었는지보다 먼저다.
+     여는 것은 사람이 누를 때뿐이다.
+       · 갈래 헤더를 누르면 그 갈래가 펼쳐지고 나머지는 저절로 접힌다.
+         같은 헤더를 다시 누르면 그 갈래도 접혀 전부 닫힌다.
+       · 워크스페이스에서 **열린 화면 탭을 누르면** 그 화면이 속한 갈래가 열리고
+         나머지는 닫힌다.
+
+     기억하지 않는다. 화면을 새로 열면 다시 다 접힌 자리에서 시작한다 —
+     지난번에 열어 둔 것이 지금 하려는 일과 같으리라는 보장이 없다.
 
      접힌 갈래에 알림 건수가 있으면 헤더에 합계를 띄워 놓치지 않게 한다. */
   (function () {
-    const KEY     = 'ce_menu_open_group';
-    const OLD_KEY = 'ce_menu_collapsed_groups';   // 접힌 목록을 담던 옛 열쇠
-
-    function loadOpen() {
-      try { return localStorage.getItem(KEY); } catch (e) { return null; }
-    }
-    function saveOpen(name) {
-      try {
-        if (name) localStorage.setItem(KEY, name); else localStorage.removeItem(KEY);
-        localStorage.removeItem(OLD_KEY);          // 옛 열쇠는 더 쓰지 않는다
-      } catch (e) { /* noop */ }
-    }
+    /* 옛 열쇠 둘은 더 쓰지 않는다 — 남아 있으면 지운다 */
+    try {
+      localStorage.removeItem('ce_menu_open_group');
+      localStorage.removeItem('ce_menu_collapsed_groups');
+    } catch (e) { /* noop */ }
 
     // 그룹 내 알림 배지 합계를 헤더에 반영 (접혔을 때만 CSS 로 노출)
     function syncGroupBadge(group) {
@@ -2384,31 +2380,19 @@ document.addEventListener('click', (e) => {
       const group = btn.closest('.menu-group');
       if (!group) return;
 
-      const name = group.dataset.menuGroup;
-      /* 열려 있던 것을 다시 누르면 닫는다 — 전부 접힌 자리도 쓸 데가 있다 */
+      /* 열려 있던 것을 다시 누르면 닫는다 — 전부 접힌 자리가 처음 자리다 */
       const 닫는다 = !group.classList.contains('is-collapsed');
 
-      openOnly(닫는다 ? null : name);
-      saveOpen(닫는다 ? null : name);
+      openOnly(닫는다 ? null : group.dataset.menuGroup);
     };
 
-    /* 처음 여는 자리 — 지금 있는 갈래가 먼저, 없으면 지난번에 열어 둔 것 */
+    /* 처음 자리 — **다 접는다.** 지금 있는 갈래도 저절로 열지 않는다.
+       어디에 있는지는 헤더 색(has-active)으로 알린다. */
     (function () {
-      let 열갈래 = null;
-
       groups().forEach(function (g) {
-        const hasActive = !!g.querySelector('.menu-item.active');
-        g.classList.toggle('has-active', hasActive);
-        if (hasActive) 열갈래 = g.dataset.menuGroup;
+        g.classList.toggle('has-active', !!g.querySelector('.menu-item.active'));
       });
-
-      if (!열갈래) {
-        const saved = loadOpen();
-        if (saved && groups().some(g => g.dataset.menuGroup === saved)) 열갈래 = saved;
-      }
-
-      openOnly(열갈래);
-      if (열갈래) saveOpen(열갈래);
+      openOnly(null);
     })();
 
     // 동적으로 갱신되는 배지(공지·CE샵 주문)를 헤더 합계에 반영
@@ -2417,8 +2401,9 @@ document.addEventListener('click', (e) => {
     };
 
     /* 워크스페이스는 탭을 바꿀 때 .menu-item.active 를 JS 로 옮긴다.
-       그때 활성 항목이 접힌 갈래에 가려지지 않도록 그 갈래를 연다 —
-       아코디언이므로 나머지는 함께 접힌다. */
+       **열린 화면 탭을 누르면** 그 화면이 속한 갈래가 열리고 나머지는 닫힌다.
+       처음 자리는 다 접힘이지만, 사람이 탭을 눌러 자리를 옮긴 것은 「여기를
+       보겠다」는 뜻이라 그 갈래를 편다. */
     window.syncMenuGroupsActive = function () {
       let 열갈래 = null;
 
@@ -2428,7 +2413,7 @@ document.addEventListener('click', (e) => {
         if (hasActive) 열갈래 = g.dataset.menuGroup;
       });
 
-      if (열갈래) { openOnly(열갈래); saveOpen(열갈래); }
+      openOnly(열갈래);          // 활성 갈래가 없으면 다 접는다
     };
   })();
 
