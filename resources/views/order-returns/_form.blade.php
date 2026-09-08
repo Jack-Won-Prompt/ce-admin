@@ -428,7 +428,7 @@
   /* 그리드는 폼 칸이 아니다 — 보낼 때 숨은 칸으로 옮겨 싣는다.
      되돌릴 수량이 0 인 줄은 빼고, 하나도 남지 않으면 접수를 막는다. */
   $('rtoForm').addEventListener('submit', (e) => {
-    if (!$('rtoOrderId').value) { e.preventDefault(); alert('원 주문을 먼저 선택해 주십시오.'); return; }
+    if (!$('rtoOrderId').value) { e.preventDefault(); ceAlert('원 주문을 먼저 선택해 주십시오.', { tone: 'warning' }); return; }
 
     document.querySelectorAll('.rto-item-field').forEach(el => el.remove());
 
@@ -436,7 +436,7 @@
 
     if (!rows.length) {
       e.preventDefault();
-      alert('반품 수량이 입력되지 않았습니다. 「반품 수량」을 입력해 주십시오.');
+      ceAlert('반품 수량이 입력되지 않았습니다. 「반품 수량」을 입력해 주십시오.', { tone: 'warning' });
       return;
     }
 

@@ -234,7 +234,8 @@
   }
 
   async function closeAll(row) {
-    if (!confirm(`이 입금에 연결된 ${row.closable}건을 마감합니다. 계속할까요?`)) return;
+    if (!await ceConfirm(`이 입금에 연결된 ${row.closable}건을 마감합니다. 진행하시겠습니까?`,
+                         { title: '입금 마감', confirmText: '마감' })) return;
 
     try {
       const res = await fetch(`${BASE}/${row.id}/close`, {

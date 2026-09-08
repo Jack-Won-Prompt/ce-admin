@@ -175,7 +175,7 @@
         btn.disabled = false;
         /* 환자가 스스로 닫은 것은 잘못이 아니다 — 말없이 단추만 되살린다 */
         if (e && e.code === 'USER_CANCEL') return;
-        alert((e && e.message) || '결제를 시작하지 못했습니다.');
+        alert((e && e.message) || '결제를 시작하지 못했습니다.');   // 이 화면은 독립 문서라 ceAlert 이 없다
       }
     });
   })();</script>

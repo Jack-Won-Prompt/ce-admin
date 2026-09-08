@@ -85,7 +85,7 @@ function reloadPortal() {
 function portalToWindow() {
   const w = screen.availWidth, h = screen.availHeight, half = Math.floor(w / 2);
   const win = window.open(PORTAL, 'nhis_portal', `width=${half},height=${h},left=${half},top=0,scrollbars=yes,resizable=yes`);
-  if (!win) { alert('팝업이 막혔습니다 — 이 사이트의 팝업을 허용해 주십시오.'); return; }
+  if (!win) { alert('팝업이 차단되었습니다 — 이 사이트의 팝업을 허용해 주십시오.'); return; }   // 독립 문서라 ceAlert 이 없다
   document.getElementById('right').style.display = 'none';
   document.getElementById('split').style.display = 'none';
   document.getElementById('left').style.width = '100%';
