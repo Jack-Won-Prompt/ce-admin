@@ -29,6 +29,11 @@ class PrescriptionConsent extends Model
         'guardian_signature_data',
         'guardian_id_path',
         'guardian_id_mime',
+        /* 신분증만 따로 받는 링크(kind='id_card'). 위임동의 링크에서 신분증이
+           빠진 채로 끝난 건에, 그 하나만 다시 청한다. 본인 것도 함께 받는다. */
+        'kind',
+        'patient_id_path',
+        'patient_id_mime',
         // NICE 본인확인 결과
         'nice_verified_at',
         'nice_name',

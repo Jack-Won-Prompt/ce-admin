@@ -111,6 +111,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');
         Route::get('/{prescription}/kakao-preview',  [PrescriptionController::class, 'kakaoPreview'])->name('kakaoPreview');
         Route::post('/{prescription}/sms-send',      [PrescriptionController::class, 'sendSms'])->name('smsSend');
+        /* 신분증만 받는 링크 — 위임동의에서 신분증만 빠진 건에 그 하나만 다시 청한다 */
+        Route::post('/{prescription}/id-card-sms',   [PrescriptionController::class, 'sendIdCardSms'])->name('idCardSms');
+
         /* 저장 이력 — 「저장 이력」 탭이 읽어 간다 */
         Route::get( '/{prescription}/history',       [PrescriptionController::class, 'history'])->name('history');
         Route::post('/{prescription}/fax-send',      [PrescriptionController::class, 'sendFax'])->name('faxSend');
@@ -151,6 +154,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/files/prescriptions/attachments/{attachment}', [\App\Http\Controllers\SecureFileController::class, 'attachment'])->name('files.prescription-attachment');
     Route::get('/files/prescriptions/temp/{name}',              [\App\Http\Controllers\SecureFileController::class, 'tempImage'])->name('files.prescription-temp');
     Route::get('/files/consents/{consent}/guardian-id',         [\App\Http\Controllers\SecureFileController::class, 'consentGuardianId'])->name('files.consent-guardian-id');
+    Route::get('/files/consents/{consent}/patient-id',          [\App\Http\Controllers\SecureFileController::class, 'consentPatientId'])->name('files.consent-patient-id');
 
     // 전역 메모 API (레이아웃에서 prescription 컨텍스트 없이 사용)
     Route::patch('/prescriptions/memos/{memo}/pin-global',    [PrescriptionController::class, 'pinMemoGlobal'])->name('prescriptions.memos.pin-global');

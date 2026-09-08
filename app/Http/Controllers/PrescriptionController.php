@@ -1808,6 +1808,26 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* 신분증 링크(kind='id_card')로 받은 본인 신분증.
+
+           위임동의와 다른 줄에 담기므로 위의 $lastConsent 로는 닿지 않는다 —
+           마지막 동의가 신분증 건이 아닐 수 있다. 받아 둔 것 가운데 마지막을 찾는다. */
+        $idCard = $prescription->consents
+            ->sortByDesc('id')
+            ->first(fn ($c) => $c->patient_id_path ?? null);
+
+        if ($idCard) {
+            $signDocs[] = [
+                'id'        => -3,
+                'url'       => route('files.consent-patient-id', $idCard),
+                'type'      => 'patient_id',
+                'typeLabel' => '본인 신분증',
+                'name'      => '신분증 ' . ($idCard->patient_name ?? ''),
+                'isPdf'     => false,
+                'isRx'      => false,
+            ];
+        }
+
         /* 시스템이 만든 서류(위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서…)도
            같은 자리에 세운다. 따로 목록 카드를 두던 것을 걷었다 — 보는 자리가 둘이면
            어느 쪽을 봐야 하는지 매번 헤맸고, 그 카드에서는 확대도 이동도 되지 않았다. */
@@ -2975,6 +2995,97 @@ class PrescriptionController extends Controller
             Log::error('[위임동의] SMS 발송 실패', ['error' => $e->getMessage(), 'rx' => $prescription->id]);
             return response()->json(['success' => false, 'message' => 'SMS 발송 실패: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * 신분증만 받는 링크를 보낸다.
+     *
+     * 위임동의 링크는 서명ㆍ개인정보 동의ㆍ신분증을 한자리에서 받는다. 그런데 신분증만
+     * 빠진 채로 끝나는 건이 있다 — 사진이 흐리거나, 그 자리에 신분증이 없거나.
+     * 서명을 다시 받자고 위임동의를 새로 보낼 수는 없다(받아 둔 서명이 무효가 된다).
+     * 그래서 신분증 하나만 청하는 링크를 따로 둔다(2026-09-09 지시).
+     *
+     * 같은 표를 쓰되 kind 로 갈라 세운다 — 토큰ㆍ만료ㆍ발송 내역이 이미 여기에 있다.
+     * 본인 것과 보호자 것을 둘 다 받는다. 미성년이 아니면 보호자 칸은 세우지 않는다.
+     */
+    public function issueIdCard(Prescription $prescription, string $mobile, string $patientName): \Illuminate\Http\JsonResponse
+    {
+        $token     = \Illuminate\Support\Str::random(24);
+        $expiresAt = now()->addMinutes(30);
+
+        /* 나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
+        $masked  = $prescription->resident_no_ocr_masked ?: $prescription->patient?->masked_resident_no;
+        $birth   = \App\Support\ResidentNo::birthDateFromMasked($masked);
+        $isMinor = $birth ? $birth->age < (int) config('delegation.minor_age', 19) : false;
+
+        $consent = \App\Models\PrescriptionConsent::create([
+            'prescription_id'    => $prescription->id,
+            'kind'               => 'id_card',
+            'token'              => $token,
+            'patient_name'       => $patientName,
+            'patient_mobile'     => $mobile,
+            'expires_at'         => $expiresAt,
+            'status'             => 'pending',
+            'sent_by'            => \Illuminate\Support\Facades\Auth::id(),
+            'is_minor'           => $isMinor,
+            'patient_birth_date' => $birth?->toDateString(),
+            'guardian_name'      => $isMinor ? ($prescription->patient?->guardian_name ?: null) : null,
+        ]);
+
+        $baseUrl = rtrim(config('app.consent_public_url', config('app.url')), '/');
+        // 반드시 https:// 스킴으로 (일부 SMS 앱은 http를 자동 링크 미처리)
+        if (str_starts_with($baseUrl, 'http://')) {
+            $baseUrl = 'https://' . substr($baseUrl, 7);
+        }
+        $url = $baseUrl . '/consent/' . $token;
+
+        $message = "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(30분 유효):\n{$url}";
+
+        try {
+            $res = $this->sender->sendBulk('sms',
+                [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
+                $message, null,
+                ['source' => 'consent', 'prescription_id' => $prescription->id]);
+
+            if (! ($res['success'] ?? false)) {
+                throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
+            }
+
+            activity()->causedBy(auth()->user())->performedOn($prescription)
+                ->log("신분증 제출 SMS 발송 → {$patientName} {$mobile}");
+
+            return response()->json([
+                'success'    => true,
+                'message'    => 'SMS가 발송되었습니다.',
+                'expires_at' => $expiresAt->format('H:i'),
+                'consent_id' => $consent->id,
+            ]);
+        } catch (\Throwable $e) {
+            $consent->delete();
+            Log::error('[신분증] SMS 발송 실패', ['error' => $e->getMessage(), 'rx' => $prescription->id]);
+
+            return response()->json(['success' => false, 'message' => 'SMS 발송 실패: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ── 신분증 SMS 발송 ───────────────────────────────────
+    public function sendIdCardSms(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'mobile' => 'required|string|max:20',
+            'name'   => 'nullable|string|max:50',
+        ]);
+
+        // 오타로 건을 만들고 SMS 를 태우는 일만 막는다(sendConsentSms 와 같은 잣대).
+        $mobile = preg_replace('/\D/', '', $request->mobile);
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return response()->json(['success' => false, 'message' => '수신 번호 형식이 올바르지 않습니다.'], 422);
+        }
+
+        $patientName = trim((string) $request->input('name'))
+            ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
+
+        return $this->issueIdCard($prescription, $mobile, $patientName);
     }
 
     // ── SMS 알림 발송 ──────────────────────────────────────

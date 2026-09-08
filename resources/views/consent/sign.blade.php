@@ -740,10 +740,15 @@
         </div>
       </div>
 
+      {{-- 신분증은 필수 서류이되, 없다고 서명까지 막지는 않는다(2026-09-09 지시).
+           그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있다. 그때 통째로
+           막히면 받아 둘 수 있었던 서명마저 못 받는다. 없이 누르면 한 번 묻고,
+           담당자가 「신분증」 단추로 그 하나만 다시 청한다. --}}
       <div class="sig-label" style="margin-top:14px;display:block;">
         법정대리인 또는 가족 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          주민등록증ㆍ운전면허증 등. 사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)
+          주민등록증ㆍ운전면허증 등. 사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)<br>
+          지금 올리기 어려우시면 그대로 두셔도 됩니다 — 담당자가 다시 연락드립니다.
         </div>
       </div>
       <label class="g-upload" id="gIdDrop">
@@ -890,11 +895,13 @@ function guardianBirthOk() {
   return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d && dt <= new Date();
 }
 
+/* 신분증은 여기서 보지 않는다 — 없어도 서명은 받는다(2026-09-09 지시).
+   submitConsent 가 누를 때 한 번 묻는다. */
 function guardianReady() {
   if (!IS_MINOR) return true;
   const name = (document.getElementById('gName')?.value ?? '').trim();
   const rel  = document.getElementById('gRelation')?.value ?? '';
-  return !!(name && rel && guardianBirthOk() && gHasSig && gIdData);
+  return !!(name && rel && guardianBirthOk() && gHasSig);
 }
 
 /* ── 개인정보 수집·이용 동의 ───────────────────────────── */
@@ -995,7 +1002,6 @@ function whatIsMissing() {
     if (!document.getElementById('gRelation')?.value) 남은.push('가입자ㆍ피부양자와의 관계');
     if (!guardianBirthOk())    남은.push('법정대리인 또는 가족 생년월일');
     if (!gHasSig)              남은.push('보호자 서명');
-    if (!gIdData)              남은.push('법정대리인 또는 가족 신분증');
   } else if (!hasSig) {
     남은.push('본인 서명');
   }
@@ -1313,8 +1319,18 @@ async function submitConsent(action) {
     return;
   }
   if (action === 'agreed' && IS_MINOR && !guardianReady()) {
-    ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명ㆍ신분증을 모두 입력해주세요.', { tone: 'warning' });
+    ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명을 모두 입력해주세요.', { tone: 'warning' });
     return;
+  }
+
+  /* 신분증 없이 누르면 한 번 묻는다. 「필수인데 그냥 넘어갔다」로 남지 않게, 무엇이
+     뒤따르는지 그 자리에서 알린다 — 담당자가 다시 연락할 일이라는 것까지. */
+  if (action === 'agreed' && IS_MINOR && !gIdData) {
+    const 갈까 = await ceConfirm(
+      '신분증은 필수 입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.',
+      { tone: 'warning', confirmText: '저장', cancelText: '취소' },
+    );
+    if (!갈까) return;
   }
   if (action === 'agreed' && !privacyReady()) {
     ceAlert('개인정보 수집·이용의 신청 유형ㆍ필수 입력ㆍ필수 동의 항목을 모두 채워 주세요.', { tone: 'warning' });

@@ -77,6 +77,29 @@ class SecureFileController extends Controller
         ]);
     }
 
+    /**
+     * 본인 신분증.
+     *
+     * 신분증 링크(kind='id_card')로 받은 것이다. 보호자 것과 같은 이유로 공개 디스크에
+     * 두지 않는다 — 이 경로로만 로그인ㆍ권한을 거쳐 나간다.
+     */
+    public function consentPatientId(Request $request, \App\Models\PrescriptionConsent $consent): StreamedResponse
+    {
+        abort_unless($consent->patient_id_path, 404);
+
+        $disk = Storage::disk(config('filesystems.default'));
+        abort_unless($disk->exists($consent->patient_id_path), 404);
+
+        activity()->causedBy(auth()->user())->performedOn($consent)
+            ->log('본인 신분증 열람');
+
+        return $disk->response($consent->patient_id_path, basename($consent->patient_id_path), [
+            'Content-Disposition'    => 'inline; filename="patient-id"',
+            'Cache-Control'          => 'private, max-age=300, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     private function stream(string $path, ?string $originalName = null): StreamedResponse
     {
         $disk = Storage::disk('public');

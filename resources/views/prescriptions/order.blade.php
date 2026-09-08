@@ -1081,6 +1081,63 @@ $calcDeposit  = $calcCopay;
         </div>
       </div>
 
+      {{-- ── 신분증 ────────────────────────────────────────
+           위임동의 링크에서 신분증만 빠진 채로 끝나는 건이 있다. 서명을 다시 받자고
+           위임동의를 새로 보낼 수는 없어(받아 둔 서명이 무효가 된다), 신분증 하나만
+           청하는 링크를 따로 보낸다(2026-09-09 지시).
+           이미 받아 둔 것이 있으면 단추가 「신분증 있음」이라 적는다. --}}
+      <div style="position:relative;">
+        <button class="pib-btn" type="button" id="idCardActionBtn" onclick="toggleIdCardPopover(event)">
+          <i class="fa-solid fa-id-card" style="font-size:11px;"></i>
+          <span id="idCardBtnText">신분증</span>
+        </button>
+        <div id="idCardPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
+          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
+          </div>
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-id-card" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">신분증 제출 요청</span>
+            <button onclick="closeIdCardPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            {{-- 이미 받아 둔 것이 있으면 먼저 적는다 — 있는 줄 모르고 또 보내면
+                 환자는 같은 것을 두 번 올리게 된다. --}}
+            <div id="idCardHaveNotice" style="display:none;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--primary);line-height:1.6;"></div>
+            <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+              환자에게 <strong>신분증 제출</strong> 링크를 SMS로 발송합니다.<br>
+              서명이나 개인정보 동의는 다시 받지 않습니다 — 사진만 올립니다.<br>
+              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+            </p>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
+              <input type="text" class="form-control" id="idCardMobile"
+                     placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
+                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
+                     style="font-size:13px;" oninput="updateIdCardPreview()" />
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">이름</label>
+              <input type="text" class="form-control" id="idCardName" maxlength="50"
+                     placeholder="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자' }}"
+                     value="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '' }}"
+                     style="font-size:13px;" oninput="updateIdCardPreview()" />
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
+              <div id="idCardMsgPreview" style="background:var(--gray-50);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:var(--gray-800);font-family:monospace;"></div>
+            </div>
+            <div id="idCardSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+              <button class="btn btn-outline btn-sm" onclick="closeIdCardPopover()">취소</button>
+              <button class="btn btn-primary btn-sm" id="btnIdCardSend" onclick="sendIdCardSms()">
+                <i class="fa-solid fa-paper-plane"></i> 발송
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- 위임동의 SMS 발송 --}}
       <div style="position:relative;">
         <div id="consentBtnWrap">
@@ -9920,6 +9977,16 @@ window.HELP_TOUR_STEPS = [
   const faxGuardianId = @json((bool) $prescription->consents
       ->first(fn ($c) => $c->is_minor && $c->guardian_id_path));
 
+  /* 링크로 받아 둔 신분증 — 「신분증」 단추가 이름을 「신분증 있음」으로 바꾸는 데 쓴다.
+     첨부에 올려 둔 것은 ALL_DOCS 에서 본다(idCardHave 참고). */
+  window.ID_CARD_GUARDIAN = @json((bool) $prescription->consents->first(fn ($c) => $c->guardian_id_path));
+  window.ID_CARD_PATIENT  = @json((bool) $prescription->consents->first(fn ($c) => $c->patient_id_path ?? null));
+
+  /* 첫 그림이 다 선 뒤에 단추 이름을 맞춘다 — ALL_DOCS 가 채워져 있어야 한다 */
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof syncIdCardHave === 'function') syncIdCardHave();
+  });
+
   /* 팩스 창에 세울 줄들. ALL_DOCS 가 화면의 정본이라 여기서 읽는다 —
      올리고 지운 것이 창을 닫았다 열지 않아도 그대로 비친다.
      id 가 0 이하인 것은 첨부가 아니다(0 처방전 이미지 · -1 위임 서명 · -2 보호자 신분증). */
@@ -11364,6 +11431,126 @@ window.HELP_TOUR_STEPS = [
       pop.style.display = 'none';
     }
   });
+
+  /* ── 신분증 ──────────────────────────────────────────────
+     위임동의와 같은 꼴의 팝오버다. 청하는 것이 사진뿐이라 안이 짧다. */
+  const ID_CARD_SMS_URL = @json(route('prescriptions.idCardSms', $prescription, absolute: false));
+
+  function toggleIdCardPopover(e) {
+    e.stopPropagation();
+    const pop = document.getElementById('idCardPopover');
+    if (!pop) return;
+    if (pop.style.display !== 'none') { pop.style.display = 'none'; return; }
+
+    const box = document.getElementById('idCardSendResult');
+    if (box) box.style.display = 'none';
+    const btn = document.getElementById('btnIdCardSend');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 발송'; }
+
+    syncIdCardHave();
+    updateIdCardPreview();
+    pop.style.display = 'block';
+  }
+
+  function closeIdCardPopover() {
+    const pop = document.getElementById('idCardPopover');
+    if (pop) pop.style.display = 'none';
+  }
+
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('idCardPopover');
+    const btn = document.getElementById('idCardActionBtn');
+    if (pop && pop.style.display !== 'none' && !pop.contains(e.target)
+        && e.target !== btn && !(btn && btn.contains(e.target))) {
+      pop.style.display = 'none';
+    }
+  });
+
+  function updateIdCardPreview() {
+    const nameEl  = document.getElementById('idCardName');
+    const name    = (nameEl?.value ?? '').trim() || (nameEl?.placeholder ?? '').trim() || '환자';
+    const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
+    const el = document.getElementById('idCardMsgPreview');
+    if (el) {
+      el.textContent = `[콜로플라스트] ${name}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(30분 유효):\n${baseUrl}/consent/(링크)`;
+    }
+  }
+
+  /* 이미 받아 둔 신분증이 있는가 — 단추 이름과 팝오버 안내를 함께 맞춘다.
+     첨부에 올려 둔 것(id_card)과 링크로 받은 것(본인ㆍ보호자)을 모두 본다. */
+  function idCardHave() {
+    const 있는것 = [];
+    if (typeof ALL_DOCS !== 'undefined'
+        && ALL_DOCS.some(d => d.id > 0 && d.type === 'id_card')) 있는것.push('첨부');
+    if (window.ID_CARD_PATIENT)  있는것.push('본인');
+    if (window.ID_CARD_GUARDIAN) 있는것.push('보호자');
+
+    return 있는것;
+  }
+
+  function syncIdCardHave() {
+    const 있는것 = idCardHave();
+
+    const txt = document.getElementById('idCardBtnText');
+    if (txt) txt.textContent = 있는것.length ? '신분증 있음' : '신분증';
+
+    const notice = document.getElementById('idCardHaveNotice');
+    if (notice) {
+      notice.style.display = 있는것.length ? 'block' : 'none';
+      notice.innerHTML = 있는것.length
+        ? '<i class="fa-solid fa-circle-check"></i> 이미 받아 둔 신분증이 있습니다 — <b>'
+          + 있는것.join('ㆍ') + '</b>. 다시 청하면 환자가 같은 것을 또 올리게 됩니다.'
+        : '';
+    }
+  }
+
+  async function sendIdCardSms() {
+    const mobile = document.getElementById('idCardMobile').value.trim();
+    if (!mobile) { ceAlert('수신 번호를 입력해주세요.', { tone: 'warning' }); return; }
+    if (mobile.replace(/\D/g, '').length < 9) {
+      ceAlert('수신 번호를 다시 확인해주세요.', { tone: 'warning' }); return;
+    }
+    const name = (document.getElementById('idCardName')?.value ?? '').trim();
+
+    const btn = document.getElementById('btnIdCardSend');
+    btn.disabled  = true;
+    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;"></span> 발송 중...';
+
+    const box = document.getElementById('idCardSendResult');
+    box.style.display = 'block';
+
+    try {
+      const res = await fetch(ID_CARD_SMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+        body: JSON.stringify({ mobile, name }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        box.style.background = 'var(--primary-50)';
+        box.style.color      = 'var(--primary)';
+        box.style.border     = '1px solid var(--primary-200)';
+        box.innerHTML = `<i class="fa-solid fa-circle-check"></i> SMS 발송 완료 — 유효 시간: <b>${data.expires_at}</b>까지`;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> 발송 완료';
+      } else {
+        box.style.background = 'var(--danger-light)';
+        box.style.color      = 'var(--danger)';
+        box.style.border     = '1px solid var(--alert-100)';
+        box.textContent      = data.message ?? '발송 실패';
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
+      }
+    } catch (e) {
+      box.style.background = 'var(--danger-light)';
+      box.style.color      = 'var(--danger)';
+      box.style.border     = '1px solid var(--alert-100)';
+      box.textContent      = '네트워크 오류가 발생했습니다.';
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
+    }
+  }
 
   function toggleConsentPopover(e) {
     e.stopPropagation();

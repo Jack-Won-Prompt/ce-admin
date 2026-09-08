@@ -36,6 +36,12 @@ class ConsentController extends Controller
             return view('consent.expired', compact('consent'));
         }
 
+        /* 신분증만 받는 링크는 신분증 화면으로 간다. 서명도 개인정보 동의도 묻지 않는다 —
+           이 링크가 청하는 것은 사진 한두 장뿐이다(2026-09-09 지시). */
+        if ($consent->kind === 'id_card') {
+            return view('consent.id_card', compact('consent'));
+        }
+
         // 자격증명·정책은 관리자 설정(DB)에서 오며, 서비스 생성 시 config('nice.*')에 반영된다.
         $nice        = app(\App\Services\Nice\NiceIdentityService::class);
         $niceEnabled = $nice->enabled();
@@ -101,6 +107,12 @@ class ConsentController extends Controller
                 'success' => false,
                 'message' => '이미 처리되었거나 만료된 요청입니다.',
             ], 422);
+        }
+
+        /* 신분증만 받는 링크는 여기서 갈라진다. 아래의 서명ㆍ개인정보 동의 잣대를
+           그대로 태우면 서명이 없다고 되돌려 보낸다 — 애초에 서명을 청한 적이 없다. */
+        if ($consent->kind === 'id_card') {
+            return $this->submitIdCard($request, $consent);
         }
 
         $request->validate([
@@ -179,10 +191,17 @@ class ConsentController extends Controller
 
         /* 미성년자는 혼자 위임할 수 없다. 화면에서도 막지만, 화면을 거치지 않고 들어오는
            요청이 있으므로 서버에서 다시 본다. */
+        /* **신분증은 여기서 막지 않는다**(2026-09-09 지시).
+
+           그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있다. 그때 서명까지
+           통째로 막히면 받아 둘 수 있었던 것마저 못 받는다. 화면이 「신분증은 필수입니다.
+           그래도 저장하시겠습니까?」라 묻고, 담당자가 「신분증」 단추로 그 하나만 다시
+           청한다(issueIdCard). 나머지는 그대로 막는다 — 보호자 없이 미성년이 혼자
+           위임할 수는 없다. */
         if ($request->action === 'agreed' && $consent->is_minor) {
             foreach (['guardian_name' => '보호자 성명', 'guardian_relation' => '보호자 관계',
                       'guardian_birth' => '보호자 생년월일',
-                      'guardian_signature' => '보호자 서명', 'guardian_id' => '보호자 신분증'] as $k => $label) {
+                      'guardian_signature' => '보호자 서명'] as $k => $label) {
                 if (!trim((string) $request->input($k))) {
                     return response()->json(['success' => false, 'message' => "{$label}이(가) 필요합니다."], 422);
                 }
@@ -502,6 +521,79 @@ class ConsentController extends Controller
      *
      * @return array{0: ?string, 1: ?string} [경로, mime]
      */
+    /**
+     * 신분증만 받는 링크의 제출.
+     *
+     * 청하는 것이 사진뿐이라 잣대도 하나다 — **한 장은 있어야 한다.** 본인 것이든
+     * 보호자 것이든, 아무것도 없이 「제출」이 되면 담당자는 받은 줄 알고 기다린다.
+     *
+     * 서명도 개인정보 동의도 보지 않는다. 이 링크는 그것을 청한 적이 없다.
+     */
+    private function submitIdCard(Request $request, PrescriptionConsent $consent): JsonResponse
+    {
+        $request->validate([
+            'patient_id'  => 'nullable|string|max:8000000',
+            'guardian_id' => 'nullable|string|max:8000000',
+        ]);
+
+        $payload = ['status' => 'agreed', 'responded_at' => now()];
+
+        [$본인길, $본인꼴] = $this->storeIdImage($consent, (string) $request->input('patient_id'), 'patient-id');
+        if ($본인길) {
+            $payload['patient_id_path'] = $본인길;
+            $payload['patient_id_mime'] = $본인꼴;
+        }
+
+        if ($consent->is_minor) {
+            [$보호자길, $보호자꼴] = $this->storeIdImage($consent, (string) $request->input('guardian_id'), 'guardian-id');
+            if ($보호자길) {
+                $payload['guardian_id_path'] = $보호자길;
+                $payload['guardian_id_mime'] = $보호자꼴;
+            }
+        }
+
+        if (! isset($payload['patient_id_path']) && ! isset($payload['guardian_id_path'])) {
+            return response()->json(['success' => false, 'message' => '신분증 사진을 한 장 이상 올려 주십시오.'], 422);
+        }
+
+        $consent->update($payload);
+
+        $받은것 = array_filter([
+            isset($payload['patient_id_path'])  ? '본인'   : null,
+            isset($payload['guardian_id_path']) ? '보호자' : null,
+        ]);
+
+        $consent->loadMissing('prescription');
+        if ($consent->prescription) {
+            activity()->performedOn($consent->prescription)
+                ->log('신분증 접수 → ' . implode('ㆍ', $받은것));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => '신분증이 제출되었습니다. 감사합니다.',
+        ]);
+    }
+
+    /** 신분증 그림 한 장을 공개되지 않는 디스크에 쓴다 */
+    private function storeIdImage(PrescriptionConsent $consent, string $dataUrl, string $where): array
+    {
+        if (! preg_match('#^data:(image/[\w.+-]+);base64,(.+)$#s', $dataUrl, $m)) {
+            return [null, null];
+        }
+        $bytes = base64_decode($m[2], true);
+        if ($bytes === false || $bytes === '') {
+            return [null, null];
+        }
+
+        $ext  = match ($m[1]) { 'image/png' => 'png', 'image/heic', 'image/heif' => 'heic', default => 'jpg' };
+        $path = 'consents/' . $where . '/' . $consent->id . '_' . \Illuminate\Support\Str::random(16) . '.' . $ext;
+
+        \Illuminate\Support\Facades\Storage::put($path, $bytes);
+
+        return [$path, $m[1]];
+    }
+
     private function storeGuardianId(PrescriptionConsent $consent, string $dataUrl): array
     {
         if (!preg_match('#^data:(image/[\w.+-]+);base64,(.+)$#s', $dataUrl, $m)) {
