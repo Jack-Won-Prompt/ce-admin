@@ -3898,6 +3898,105 @@ HTML;
      * 새 건이 다시 받아야 하는 것만 두고 온다 — 검수 자취ㆍ보낸 때ㆍ상담 번호처럼
      * 그 건에만 속한 자국이다.
      */
+    /**
+     * 저장 이력 — 언제ㆍ누가ㆍ어떤 항목을ㆍ무엇에서 무엇으로.
+     *
+     * 이 처방전과 딸린 주문ㆍ거래처의 변경을 한 표로 모은다. 담당자가 값을 의심할 때
+     * 「누가 언제 그렇게 만들었는가」를 그 자리에서 본다.
+     *
+     * 활동 기록 한 줄에 여러 칸이 함께 담기므로 **칸마다 한 줄로 펼친다** — 표에서
+     * 항목으로 정렬하고 걸러 볼 수 있어야 한다.
+     *
+     * 무엇이 바뀌었는지 남지 않은 지난 줄(모델에 이력을 켜기 전의 것)은 항목 자리에
+     * 그때 남긴 설명을 세운다. 없는 것을 지어내지 않는다.
+     */
+    public function history(Prescription $prescription): JsonResponse
+    {
+        $대상 = [[Prescription::class, $prescription->id]];
+
+        if ($prescription->order) {
+            $대상[] = [\App\Models\Order::class, $prescription->order->id];
+        }
+        if ($prescription->patient_id) {
+            $대상[] = [\App\Models\Patient::class, $prescription->patient_id];
+        }
+
+        $rows = \Spatie\Activitylog\Models\Activity::with('causer')
+            ->where(function ($q) use ($대상) {
+                foreach ($대상 as [$type, $id]) {
+                    $q->orWhere(fn ($w) => $w->where('subject_type', $type)->where('subject_id', $id));
+                }
+            })
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get();
+
+        $어디 = [
+            Prescription::class          => '처방전',
+            \App\Models\Order::class    => '주문',
+            \App\Models\Patient::class  => '거래처',
+        ];
+
+        $보임 = function ($v) {
+            if ($v === null || $v === '') return '';
+            if (is_bool($v))  return $v ? 'Y' : 'N';
+            if (is_array($v)) return json_encode($v, JSON_UNESCAPED_UNICODE);
+
+            return (string) $v;
+        };
+
+        $out = [];
+        $no  = 0;
+
+        foreach ($rows as $a) {
+            $때   = $a->created_at?->format('Y-m-d H:i:s') ?? '';
+            $누가 = $a->causer?->name ?? '시스템';
+            $where = $어디[$a->subject_type] ?? class_basename((string) $a->subject_type);
+
+            $new = (array) ($a->properties['attributes'] ?? []);
+            $old = (array) ($a->properties['old'] ?? []);
+
+            /* 바뀐 칸이 남아 있으면 칸마다 한 줄 */
+            $칸들 = array_keys($new + $old);
+            $칸들 = array_values(array_filter($칸들, fn ($c) => \App\Support\ChangeLog::남기나($c)));
+
+            if ($칸들) {
+                foreach ($칸들 as $칸) {
+                    $전 = $보임($old[$칸] ?? null);
+                    $후 = $보임($new[$칸] ?? null);
+                    if ($전 === $후) continue;   // 값이 같으면 바뀐 것이 아니다
+
+                    $out[] = [
+                        'no'     => ++$no,
+                        'at'     => $때,
+                        'who'    => $누가,
+                        'where'  => $where,
+                        'field'  => \App\Support\ChangeLog::이름($칸),
+                        'before' => $전,
+                        'after'  => $후,
+                        'note'   => $a->description ?? '',
+                    ];
+                }
+
+                continue;
+            }
+
+            /* 바뀐 칸이 남지 않은 줄 — 그때 적어 둔 설명만 세운다 */
+            $out[] = [
+                'no'     => ++$no,
+                'at'     => $때,
+                'who'    => $누가,
+                'where'  => $where,
+                'field'  => '',
+                'before' => '',
+                'after'  => '',
+                'note'   => $a->description ?? '',
+            ];
+        }
+
+        return response()->json(['success' => true, 'rows' => $out]);
+    }
+
     public function duplicate(Request $request, Prescription $prescription): JsonResponse
     {
         $request->validate(['patient_id' => 'nullable|integer|exists:patients,id']);

@@ -2312,6 +2312,11 @@ $calcDeposit  = $calcCopay;
               <button type="button" class="rx-tab" data-pane="rxp-2" onclick="rxTab(this)">
                 <i class="fa-solid fa-hospital"></i> 병원ㆍ처방 정보
               </button>
+              {{-- 저장 이력 — 언제ㆍ누가ㆍ어떤 항목을 무엇에서 무엇으로 바꿨는지.
+                   값이 의심스러울 때 화면을 떠나지 않고 그 자리에서 본다. --}}
+              <button type="button" class="rx-tab" data-pane="rxp-3" onclick="rxTab(this)">
+                <i class="fa-solid fa-clock-rotate-left"></i> 저장 이력
+              </button>
               {{-- 추가정보 탭은 없앴다(요청서 14쪽). 다섯 칸뿐인데 탭을 하나 더 열어야
                    보였고, 그 다섯이 어느 쪽 이야기인지도 갈려 있었다 — 공단 위임동의
                    두 날짜는 상담ㆍ환자 정보로, 하루 사용 수량ㆍ인마켓 마감일ㆍ마지막
@@ -3420,6 +3425,23 @@ $calcDeposit  = $calcCopay;
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
               </div>
             </div></div>{{-- /rx-rows --}}
+          </div>
+
+          {{-- ── 저장 이력 ─────────────────────────────────
+               이 처방전과 딸린 주문ㆍ거래처의 변경을 한 표로 모은다. 처음 열 때 한 번만
+               불러온다 — 탭을 오갈 때마다 다시 부르면 표가 깜빡인다. --}}
+          <div class="rx-acc-body rx-pane" id="rxp-3" style="display:none;">
+            <div class="rx-pane-cap">저장 이력</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:11px;color:var(--text-muted);flex:1;" id="rxHistNote">
+                이 처방전과 딸린 주문ㆍ거래처의 변경을 모두 보여 줍니다.
+              </span>
+              <button type="button" class="ds-btn" style="height:28px;padding:0 10px;font-size:11px;"
+                      onclick="loadRxHistory(true)">
+                <i class="fa-solid fa-rotate-right" style="font-size:10px;"></i> 새로고침
+              </button>
+            </div>
+            <div id="rxHistGrid" style="min-height:220px;"></div>
           </div>
 
         {{-- ── 추가정보 (시안 148:3046) ── --}}
@@ -6349,6 +6371,80 @@ window.HELP_TOUR_STEPS = [
     document.querySelectorAll('#tab-ocr .rx-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('#tab-ocr .rx-pane').forEach(pane => {
       pane.style.display = pane.id === id ? 'block' : 'none';
+    });
+
+    /* 저장 이력은 열 때 한 번만 불러온다 — 탭을 오갈 때마다 다시 부르면 표가 깜빡인다 */
+    if (id === 'rxp-3') loadRxHistory();
+  }
+
+  /* ── 저장 이력 ───────────────────────────────────────────
+     서버가 칸마다 한 줄로 펼쳐 준다. 표는 다른 목록과 같은 wwGrid 를 쓴다 — 정렬ㆍ
+     엑셀 저장이 같은 방식으로 듣는다. */
+  const RX_HISTORY_URL = @json(route('prescriptions.history', $prescription, absolute: false));
+  let _rxHistGrid = null, _rxHistLoaded = false;
+
+  async function loadRxHistory(force = false) {
+    if (_rxHistLoaded && !force) return;
+
+    const box  = document.getElementById('rxHistGrid');
+    const note = document.getElementById('rxHistNote');
+    if (!box) return;
+
+    note.textContent = '불러오는 중…';
+
+    let d;
+    try {
+      const res = await fetch(RX_HISTORY_URL, { headers: { Accept: 'application/json' } });
+      d = await res.json();
+    } catch (e) {
+      note.textContent = '이력을 불러오지 못했습니다.';
+      return;
+    }
+
+    if (!d.success) { note.textContent = d.message || '이력을 불러오지 못했습니다.'; return; }
+
+    _rxHistLoaded = true;
+    const rows = d.rows || [];
+    note.textContent = rows.length
+      ? `이 처방전과 딸린 주문ㆍ거래처의 변경 ${rows.length}건입니다.`
+      : '아직 남은 이력이 없습니다.';
+
+    /* 표는 한 번만 세우고 이후에는 줄만 갈아 끼운다 — 다시 세우면 담당자가
+       조정해 둔 열너비와 정렬이 풀린다. */
+    if (_rxHistGrid) { _rxHistGrid.setData(rows); return; }
+
+    _rxHistGrid = new wwGrid({
+      el: box,
+      /* 읽기만 하는 표다. 고칠 수 없고, 고를 것도 없다 — 체크칸을 두면
+         「이걸 골라서 무엇을 하나」를 묻게 된다. 엑셀 저장은 남겨 둔다. */
+      height: 340, editable: false, rowCheckbox: false, rowNumber: false,
+      footer: { total: true, selected: false, modified: false },
+      emptyText: '아직 남은 이력이 없습니다.',
+      columns: [
+        { header: 'No',      name: 'no',     width: 50,  align: 'center', sortable: true, summary: false },
+        { header: '일시',    name: 'at',     width: 145, sortable: true },
+        { header: '작업자',  name: 'who',    width: 85,  sortable: true },
+        { header: '구분',    name: 'where',  width: 65,  align: 'center', sortable: true },
+        { header: '항목',    name: 'field',  width: 135, sortable: true },
+        /* 바뀌기 전 값은 흐리게 — 지금 값이 아니라는 것이 한눈에 보여야 한다 */
+        { header: '수정 전', name: 'before', width: 190, sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v ?? '';
+            s.style.color = 'var(--text-muted)';
+            if (v) s.style.textDecoration = 'line-through';
+            return s;
+          } },
+        { header: '수정 후', name: 'after',  width: 190, sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v ?? '';
+            if (v) s.style.fontWeight = '600';
+            return s;
+          } },
+        { header: '설명',    name: 'note',   width: 200 },
+      ],
+      data: rows,
     });
   }
 

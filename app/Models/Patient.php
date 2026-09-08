@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Support\ResidentNo;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Patient extends Model
 {
+    use LogsActivity;
+
     use SoftDeletes;
 
     protected $fillable = [
@@ -392,5 +395,28 @@ class Patient extends Model
     public function privacyConsents(): HasMany
     {
         return $this->hasMany(PrivacyConsent::class);
+    }
+
+    /* ── 저장 이력 ──────────────────────────────────────────
+       무엇이 무엇에서 무엇으로 바뀌었는지 남긴다(2026-09-09 지시).
+
+       여태 activity()->log('OCR 필드 수정') 처럼 「고쳤다」는 사실만 남고 무엇이
+       바뀌었는지는 남지 않았다. 나중에 값이 이상하면 누가 언제 그렇게 만들었는지
+       알 길이 없었다.
+
+       **바뀐 칸만** 남긴다(logOnlyDirty). 저장할 때마다 서른 칸이 통째로 쌓이면
+       정작 바뀐 하나를 못 찾는다. 주민등록번호처럼 감춰 둔 값은 아예 남기지 않는다
+       — 암호로 가려 둔 것이 이력 표에 평문으로 쌓이면 안 된다(App\Support\ChangeLog). */
+    public function getActivitylogOptions(): \Spatie\Activitylog\LogOptions
+    {
+        return \Spatie\Activitylog\LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            /* **감출 칸은 properties 에서 아예 뺀다.** dontLogIfAttributesChangedOnly 는
+               그 칸들만 바뀌었을 때 로그를 안 남길 뿐, 값은 그대로 실린다 — 그것으로는
+               주민등록번호 원문이 이력에 쌓이는 것을 못 막는다. */
+            ->logExcept(\App\Support\ChangeLog::감출칸)
+            ->dontSubmitEmptyLogs()
+            ->useLogName('변경');
     }
 }

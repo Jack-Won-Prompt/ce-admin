@@ -111,6 +111,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');
         Route::get('/{prescription}/kakao-preview',  [PrescriptionController::class, 'kakaoPreview'])->name('kakaoPreview');
         Route::post('/{prescription}/sms-send',      [PrescriptionController::class, 'sendSms'])->name('smsSend');
+        /* 저장 이력 — 「저장 이력」 탭이 읽어 간다 */
+        Route::get( '/{prescription}/history',       [PrescriptionController::class, 'history'])->name('history');
         Route::post('/{prescription}/fax-send',      [PrescriptionController::class, 'sendFax'])->name('faxSend');
         Route::get( '/{prescription}/authorization', [PrescriptionController::class, 'authorization'])->name('authorization');
         Route::get( '/{prescription}/fax-pdf',      [PrescriptionController::class, 'downloadFaxPdf'])->name('faxPdf');
