@@ -1083,7 +1083,20 @@ class PrescriptionController extends Controller
             abort(403);
         }
 
-        Storage::disk('public')->delete($attachment->file_path);
+        /* 같은 파일을 가리키는 줄이 또 있으면 **파일은 남긴다.**
+
+           「최종 신규 복제」는 파일을 복사하지 않고 **잇는다** — 같은 file_path 를
+           두 건이 함께 가리킨다. 그때 한쪽에서 첨부를 지우며 디스크 파일까지 지우면
+           원본 건의 그림이 사라진다. 목록에는 줄이 남고 열면 404 가 되어, 나중에 왜
+           없어졌는지 알 길이 없다(2026-09-09 지시). */
+        $함께쓴다 = PrescriptionAttachment::where('file_path', $attachment->file_path)
+            ->where('id', '!=', $attachment->id)
+            ->exists();
+
+        if (! $함께쓴다) {
+            Storage::disk('public')->delete($attachment->file_path);
+        }
+
         $attachment->delete();
 
         return response()->json(['success' => true]);
@@ -3844,26 +3857,38 @@ HTML;
      *
      * 처방전 그림과 첨부 서류도 베끼지 않는다 — 그 종이는 그 건의 것이다.
      */
+    /**
+     * 이 건을 그대로 베껴 새 번호로 세운다.
+     *
+     * **같은 처방전으로 제품을 더 사는 자리**다(2026-09-09 지시). 그래서 거래처 정보도
+     * 처방전 정보도 **날짜까지 그대로** 이어 간다 — 같은 처방전이니 발행일ㆍ진단
+     * 확인일ㆍ요류역학검사일이 달라질 까닭이 없다. 예전에는 날짜를 모두 비웠는데,
+     * 그러면 스무 칸 남짓을 다시 적어야 했다.
+     *
+     * **올려 둔 파일도 함께 이어 간다.** 다만 **복사하지 않고 잇는다** — 새 줄을
+     * 만들되 file_path 는 같은 곳을 가리킨다. 파일은 한 벌이고 두 건이 함께 쓴다.
+     * 지울 때 원본이 사라지지 않게 destroyAttachment 가 함께 쓰는지 보고 지운다.
+     *
+     * 새 건이 다시 받아야 하는 것만 두고 온다 — 검수 자취ㆍ보낸 때ㆍ상담 번호처럼
+     * 그 건에만 속한 자국이다.
+     */
     public function duplicate(Request $request, Prescription $prescription): JsonResponse
     {
         $request->validate(['patient_id' => 'nullable|integer|exists:patients,id']);
 
-        /* 어느 칸이 날짜인지는 표에 물어본다. 칸이 늘 때마다 여기 목록을 고쳐 적는 일을
-           만들지 않으려는 것이다 — 적기를 잊으면 지난 날짜가 조용히 따라온다. */
-        $dateCols = collect(Schema::getColumnListing('prescriptions'))
-            ->filter(fn ($c) => in_array(
-                Schema::getColumnType('prescriptions', $c), ['date', 'datetime', 'timestamp'], true
-            ))->values()->all();
+        /* 그 건에만 속한 자국 — 베끼면 안 되는 자리.
 
-        // 그 건에만 속한 것들 — 베끼면 안 되는 자리
-        $skip = array_merge($dateCols, [
+           날짜는 이제 대부분 따라간다. 남기지 않는 것은 **그 건이 겪은 일의 때**다:
+           검수한 때ㆍ문자를 보낸 때ㆍ상담한 날. 새 건은 그 일을 아직 겪지 않았다. */
+        $skip = [
             'id', 'rx_number', 'status', 'is_blank_draft',
-            'reviewed_by', 'review_memo',
-            'image_path', 'image_original_name', 'image_mime_type', 'image_size',
-            'counsel_no', 'counsel_order_id',
+            'reviewed_by', 'review_memo', 'reviewed_at',
+            'kakao_sent_at', 'sms_sent_at',
+            'counsel_no', 'counsel_order_id', 'counsel_date', 'counsel_re_date',
             'created_by', 'updated_by',
+            'created_at', 'updated_at', 'deleted_at',
             'registration_no', 'serial_no',
-        ]);
+        ];
 
         $attrs = collect($prescription->getAttributes())
             ->except($skip)
@@ -3888,12 +3913,30 @@ HTML;
             );
         }
 
+        /* 올려 둔 파일을 **잇는다** — file_path 는 그대로 두고 줄만 새로 만든다.
+           복사하면 같은 그림이 디스크에 두 벌 쌓이고, 결과지가 열아홉 장인 건이면
+           그만큼 늘어난다. */
+        $이은파일 = 0;
+        foreach ($prescription->attachments()->orderBy('display_order')->orderBy('id')->get() as $att) {
+            PrescriptionAttachment::create(
+                collect($att->getAttributes())
+                    ->except(['id', 'created_at', 'updated_at'])
+                    ->merge([
+                        'prescription_id' => $copy->id,
+                        'uploaded_by'     => Auth::id(),
+                    ])
+                    ->all()
+            );
+            $이은파일++;
+        }
+
         activity()->causedBy(Auth::user())->performedOn($copy)
-            ->log("{$prescription->rx_number} 를 베껴 {$copy->rx_number} 를 만듦");
+            ->log("{$prescription->rx_number} 를 베껴 {$copy->rx_number} 를 만듦 — 파일 {$이은파일}장을 이어 씀");
 
         return response()->json([
             'success'   => true,
-            'message'   => "{$copy->rx_number} 로 베껴 왔습니다. 날짜는 새로 적어 주십시오.",
+            'message'   => "{$copy->rx_number} 로 베껴 왔습니다"
+                           . ($이은파일 ? " — 파일 {$이은파일}장을 이어 씁니다." : '.'),
             'rx_number' => $copy->rx_number,
             'url'       => route('prescriptions.show', $copy, absolute: false),
         ]);

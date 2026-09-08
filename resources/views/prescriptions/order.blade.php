@@ -2118,10 +2118,11 @@ $calcDeposit  = $calcCopay;
                새 건을 시작하는 길은 늘 열려 있어야 한다 — 조건을 붙이지 않는다. --}}
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
                   title="새 처방번호로 새 건을 시작합니다">신규 등록</button>
-          {{-- 같은 사람이 같은 것을 다시 사는 일이 잦다. 보고 있는 건을 그대로 베껴
-               새 번호로 세운다 — 날짜만 비운다(그 건에만 속한 사실이라). --}}
+          {{-- 같은 처방전으로 제품을 더 사는 일이 잦다. 보고 있는 건을 **그대로**
+               베껴 새 번호로 세운다 — 날짜도 올려 둔 파일도 함께 이어 간다.
+               파일은 복사하지 않고 잇는다(같은 파일을 두 건이 함께 쓴다). --}}
           <button type="button" id="btnDuplicate" class="tb-act" onclick="duplicateRx()"
-                  title="현재 건을 복사해 새 번호로 생성합니다 (날짜는 초기화됩니다)">최종 신규 복제</button>
+                  title="지금 건을 그대로 베껴 새 번호로 세웁니다 — 내용ㆍ날짜ㆍ올려 둔 파일까지 이어 갑니다">최종 신규 복제</button>
           {{-- 되돌리기·검수 요청·검수 완료·저장은 시안(148:2639)대로 구획 머리(지금은 탭줄)에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
@@ -7225,8 +7226,12 @@ window.HELP_TOUR_STEPS = [
      날짜는 비운다 — 지난달 날짜로 이번 달 주문을 낼 수는 없다. */
   async function duplicateRx() {
     const ok = await ceConfirm(
-      `${RX_NUMBER} 을 복사해 새 번호로 생성합니다.
-날짜(처방전 발행일 등)는 비우고 갑니다. 계속할까요?`,
+      `${RX_NUMBER} 을 그대로 베껴 새 번호로 세웁니다.
+
+거래처ㆍ처방 내용ㆍ제품 줄ㆍ날짜가 함께 갑니다.
+올려 둔 파일도 이어 씁니다 — 복사하지 않고 같은 파일을 함께 가리킵니다.
+
+검수 자취와 보낸 때는 새 건이 다시 받습니다. 계속할까요?`,
       { tone: 'info', confirmText: '복제', cancelText: '취소' }
     );
     if (!ok) return;
