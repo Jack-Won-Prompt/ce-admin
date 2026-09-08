@@ -255,6 +255,7 @@ window.HELP_TOUR_STEPS = [
       { header: '주민등록번호',  name: 'resident_no', width: 130 },
       { header: '업로드 담당자', name: 'uploader',   width: 110, align: 'center', sortable: true },
       { header: '검수 일자',     name: 'reviewed_at', width: 130, align: 'center', sortable: true },
+      { header: '검수 요청 메모', name: 'review_request_memo', width: 200 },
       { header: '검수 메모',     name: 'review_memo', width: 240 },
       { header: '접수일시',      name: 'created',    width: 130, align: 'center', sortable: true },
     ],

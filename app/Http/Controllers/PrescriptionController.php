@@ -96,6 +96,8 @@ class PrescriptionController extends Controller
                 'uploader'     => $rx->creator?->name ?? '',
                 'reviewed_at'  => $rx->reviewed_at?->format('Y-m-d H:i') ?? '',
                 'review_memo'  => $rx->review_memo ?? '',
+                'review_request_memo' => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
+                                            ? ($rx->review_request_memo ?? '') : ''),
                 'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
             ];
         });
@@ -861,7 +863,7 @@ class PrescriptionController extends Controller
             'patient_id'            => 'required|exists:patients,id',
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
-            'review_memo'           => 'nullable|string|max:1000',
+            'review_request_memo'   => 'nullable|string|max:1000',
         ], [
             'patient_id.required' => '환자를 먼저 선택하십시오.',
         ]);
@@ -2126,14 +2128,16 @@ class PrescriptionController extends Controller
            (2026-09-08 · 3차 5회 문채아).
 
            화면이 그 이름으로 보내 왔을 때만 비운다. 보내지 않은 칸은 그대로 둔다. */
-        /* 검수 메모는 **검수를 요청하기 전에만** 이 화면에서 받는다.
+        /* **검수 요청 메모**는 담당자의 말이다 — 검수를 요청하기 전에만 받는다.
 
-           요청한 뒤로는 검수자의 말이라, 담당자가 상세 목록을 저장할 때마다 덮이면
-           누가 한 말인지 알 수 없어진다. 화면도 그때는 칸을 잠그지만 서버에서도
-           가린다 — 화면만 믿을 수는 없다(2026-09-09 지시). */
-        if ($request->has('review_memo')
-            && in_array($prescription->status, ['pending', 'rejected'], true)) {
-            $rxCols['review_memo'] = $request->input('review_memo');
+           검수자가 남기는 review_memo 와는 다른 칸이다. 여태 한 칸에 셋(요청 메모ㆍ
+           승인 메모ㆍ반려 사유)이 섞여, 나중에 적은 것이 앞의 것을 덮었다
+           (2026-09-09 지시). 화면도 요청 뒤에는 칸을 잠그지만 서버에서도 가린다 —
+           화면만 믿을 수는 없다. */
+        if ($request->has('review_request_memo')
+            && in_array($prescription->status, ['pending', 'rejected'], true)
+            && \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')) {
+            $rxCols['review_request_memo'] = $request->input('review_request_memo');
         }
 
         if ($request->has('benefit_class')) {
@@ -2396,10 +2400,17 @@ class PrescriptionController extends Controller
             ], 422);
         }
 
-        $prescription->update([
-            'status'      => 'review_requested',
-            'review_memo' => $request->memo ?: $prescription->review_memo,
-        ]);
+        /* 요청하며 남긴 말은 **요청 메모** 칸에 담는다 — 검수자의 말과 섞이지 않는다.
+           비워 두면 상세 목록에서 적어 둔 것을 그대로 지킨다. */
+        $요청 = ['status' => 'review_requested'];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')) {
+            $요청['review_request_memo'] = $request->memo ?: $prescription->review_request_memo;
+        } elseif ($request->memo) {
+            $요청['review_memo'] = $request->memo;   // 칸이 없는 서버는 예전대로
+        }
+
+        $prescription->update($요청);
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 요청');
 

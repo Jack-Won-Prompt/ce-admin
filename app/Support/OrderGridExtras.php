@@ -142,7 +142,10 @@ class OrderGridExtras
         $n = fn ($v) => ($v === null || $v === '') ? '' : (string) $v;
 
         return [
+            /* 검수 메모는 **검수자의 말**이다. 담당자가 요청하며 남긴 말은 따로 선다. */
             'rx_memo'        => $p?->review_memo ?? '',
+            'rx_req_memo'    => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
+                                    ? ($p?->review_request_memo ?? '') : ''),
             'rx_acc_type'    => match ((string) ($p?->counsel_acc_add_type ?? '')) {
                                     '10' => '처방전', '20' => '처방외', '30' => '처방전 - 원내',
                                     default => '',

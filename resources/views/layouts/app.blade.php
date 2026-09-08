@@ -2199,6 +2199,7 @@ document.addEventListener('click', (e) => {
       { header: '유효기간',     name: 'expiry',          width: 120, align: 'center', sortable: true },
 
       // 병원ㆍ처방 정보 탭의 나머지 — 저쪽 목록에 없는 것들
+      { header: '검수 요청 메모', name: 'rx_req_memo',  width: 200 },
       { header: '검수 메모',      name: 'rx_memo',      width: 200 },
       { header: '처방 유형',      name: 'rx_acc_type',  width: 100, align: 'center', sortable: true },
       { header: '진단 확인일',    name: 'rx_diag_date', width: 110, align: 'center', sortable: true },
