@@ -2063,7 +2063,7 @@ class PrescriptionController extends Controller
            예전에는 counseling_data JSON 한 칸에 뭉쳐 담았다. 값이 JSON 안에 있으면 인덱스를
            걸 수 없어 검색·정렬이 되지 않아, 전부 각자 컬럼으로 옮겼다.
            환자에 속한 값은 아래에서 환자를 이은 뒤에 쓴다 — 지금은 아직 patient_id 가 없을 수 있다. */
-        $rxCols = array_filter([
+        $rxCols = [
             // 상담
             'counsel_no'           => $request->input('counsel_no'),
             'counsel_date'         => $request->input('counsel_date'),
@@ -2117,17 +2117,33 @@ class PrescriptionController extends Controller
             'daily_use_qty'        => $request->input('daily_use_qty'),
             'diverticulums'        => $request->input('diverticulums'),
             'caregiver_name'       => $request->input('guardian'),
-        ], fn ($v) => $v !== null);
+        ];
 
-        /* **비울 수 있어야 하는 칸은 따로 받는다.**
+        /* **화면이 보내 왔는가**로 가른다 — 값이 비었는가로 가르지 않는다.
 
-           위 거르개는 「화면이 보내지 않은 칸은 건드리지 않는다」는 뜻인데, 라라벨이
-           빈 문자열을 null 로 바꾸므로(ConvertEmptyStringsToNull) **비우려고 보낸 것**도
-           함께 걸린다. 그래서 한 번 들어간 자격은 화면에서 지울 수 없었다 — 유형을
-           처방외로 바꾸고 자격을 「선택」으로 되돌려 저장해도 「일반」이 그대로 남았다
-           (2026-09-08 · 3차 5회 문채아).
+           예전에는 값이 null 인 칸을 모두 걸러 냈다. 「화면이 보내지 않은 칸은
+           건드리지 않는다」는 뜻이었는데, 라라벨이 빈 문자열을 null 로 바꾸므로
+           (ConvertEmptyStringsToNull) **비우려고 보낸 것**도 함께 걸렸다. 그래서
+           한 번 적힌 값은 화면에서 지울 수 없었다 — 자격을 「선택」으로 되돌려도
+           「일반」이 그대로 남았고(2026-09-08 · 3차 5회 문채아), 의사면허번호를
+           지우고 저장해도 예전 번호가 남았다(2026-09-09 · 저장 이력에서 드러남).
 
-           화면이 그 이름으로 보내 왔을 때만 비운다. 보내지 않은 칸은 그대로 둔다. */
+           보내 온 이름으로 가르면 둘 다 바로 선다. 보내지 않은 칸은 여전히
+           손대지 않는다 — 이 자리를 부분 저장으로 쓰는 길들이 그 약속에 기댄다.
+
+           이름이 다른 몇을 따로 적는다. 청구전략은 화면이 보내는 값이 아니라
+           유형 × 자격으로 다시 셈한 값이라, 유형을 보내 왔을 때만 함께 적는다. */
+        $보낸이름 = [
+            'rx_use_period'    => 'rx_period',
+            'caregiver_name'   => 'guardian',
+            'billing_strategy' => 'counsel_acc_add_type',
+        ];
+        $rxCols = array_filter(
+            $rxCols,
+            fn ($v, $칸) => $request->has($보낸이름[$칸] ?? $칸),
+            ARRAY_FILTER_USE_BOTH,
+        );
+
         /* **검수 요청 메모**는 담당자의 말이다 — 검수를 요청하기 전에만 받는다.
 
            검수자가 남기는 review_memo 와는 다른 칸이다. 여태 한 칸에 셋(요청 메모ㆍ
