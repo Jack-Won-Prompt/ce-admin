@@ -2401,10 +2401,14 @@ document.addEventListener('click', (e) => {
     };
 
     /* 워크스페이스는 탭을 바꿀 때 .menu-item.active 를 JS 로 옮긴다.
-       **열린 화면 탭을 누르면** 그 화면이 속한 갈래가 열리고 나머지는 닫힌다.
-       처음 자리는 다 접힘이지만, 사람이 탭을 눌러 자리를 옮긴 것은 「여기를
-       보겠다」는 뜻이라 그 갈래를 편다. */
-    window.syncMenuGroupsActive = function () {
+
+       **열린 화면 탭을 누르면** 그 화면이 속한 갈래가 열리고 나머지는 닫힌다 —
+       사람이 탭을 눌러 자리를 옮긴 것은 「여기를 보겠다」는 뜻이다.
+       그때만 `편다` 로 부른다.
+
+       탭을 되살리며 처음 그릴 때는 부르되 펴지 않는다 — 지금 어느 갈래에
+       있는지는 헤더 색으로 알리고, 갈래는 접힌 채로 둔다. */
+    window.syncMenuGroupsActive = function (편다) {
       let 열갈래 = null;
 
       groups().forEach(function (g) {
@@ -2413,7 +2417,7 @@ document.addEventListener('click', (e) => {
         if (hasActive) 열갈래 = g.dataset.menuGroup;
       });
 
-      openOnly(열갈래);          // 활성 갈래가 없으면 다 접는다
+      if (편다) openOnly(열갈래);   // 활성 갈래가 없으면 다 접는다
     };
   })();
 

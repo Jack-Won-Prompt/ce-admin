@@ -72,7 +72,10 @@
   const esc  = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const stripFrame = u => u.replace(/[?&]frame=1\b/, '').replace(/\?$/, '');
 
-  function render() {
+  /* 갈래를 펴는 것은 **사람이 자리를 옮겼을 때**뿐이다. 처음 되살릴 때는
+     접힌 채로 둔다 — 화면을 새로 열면 다 접힌 자리에서 시작한다는 규칙이
+     워크스페이스에서도 같아야 한다(2026-09-08 지시). */
+  function render(옮겼다) {
     tabsEl.innerHTML = '';
     tabs.forEach(t => {
       const el = document.createElement('div');
@@ -87,7 +90,7 @@
       tabsEl.appendChild(el);
     });
     tabs.forEach(t => { const f = document.getElementById('wsF-' + t.id); if (f) f.style.display = (t.id === active ? 'block' : 'none'); });
-    highlightMenu();
+    highlightMenu(옮겼다);
   }
 
   /* 액자는 그 탭을 볼 때 붙인다.
@@ -110,13 +113,13 @@
     tabs.push(t);
     mount(t);
     active = id;
-    render();
+    render(true);
     save();
   }
   function activate(id) {
     active = id;
     mount(tabs.find(t => t.id === id));
-    render();
+    render(true);
     save();
   }
   function closeTab(id) {
@@ -127,10 +130,10 @@
     tabs.splice(i, 1);
     if (wasActive && tabs.length) active = (tabs[Math.max(0, i - 1)] || tabs[0]).id;
     mount(tabs.find(t => t.id === active));
-    render();
+    render(true);
     save();
   }
-  function highlightMenu() {
+  function highlightMenu(옮겼다) {
     const t = tabs.find(x => x.id === active);
     const cur = t ? stripFrame(base(t.url)) : '';
     document.querySelectorAll('.layout-menu .menu-item').forEach(mi => {
@@ -138,8 +141,8 @@
       const href = a && a.getAttribute('href');
       mi.classList.toggle('active', !!href && cur.endsWith(new URL(href, location.origin).pathname));
     });
-    // 활성 항목이 접힌 메뉴 그룹에 가려지지 않도록 그룹 상태를 다시 맞춘다
-    if (typeof window.syncMenuGroupsActive === 'function') window.syncMenuGroupsActive();
+    /* 지금 어느 갈래에 있는지는 늘 표시하고, **갈래를 펴는 것은 옮겼을 때만** */
+    if (typeof window.syncMenuGroupsActive === 'function') window.syncMenuGroupsActive(!!옮겼다);
   }
 
   /* 프레임 안(각 탭)에서 '새 탭으로 열기' 요청 수신.
