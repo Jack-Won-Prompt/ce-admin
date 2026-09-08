@@ -6587,7 +6587,7 @@ window.HELP_TOUR_STEPS = [
         { header: '바뀐 항목', name: 'summary', width: 320, sortable: true,
           renderer: (v) => {
             const s = document.createElement('span');
-            s.textContent = v || '기록된 항목 없음';
+            s.textContent = v || '내역이 없습니다.';
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
