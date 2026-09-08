@@ -199,6 +199,8 @@ class SettlementController extends Controller
                 // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담뿐이다
                 'deposit_due'  => $order->expectedDeposit(),
                 'status'       => $sl['label'],
+                /* 화면이 「확정까지 갔는가」를 묻는 데 쓴다(컬럼 아님) */
+                'status_key'   => $order->status,
                 'settle'       => $order->settleStatusLabel(),
                 /* 못 받은 채로 닫은 건은 이것이 없으면 나중에 다시 못 들춘다
                    (요청서 12쪽 — 「입금 받지 못할 경우에도 마감 확정해야 하는 경우」) */
@@ -286,6 +288,7 @@ class SettlementController extends Controller
                 'mobile'     => $order->patient?->mobile ?? '-',
                 'copay'      => (int) ($order->patient_copay ?? 0),
                 'status'     => $sl['label'],
+                'status_key' => $order->status,
                 'va_account' => $tp ? trim(($tp->bank_name ?? '') . ' ' . ($tp->account_number ?? '')) : '미발급',
                 'va_status'  => $vaStatus,
                 'due'        => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
@@ -655,6 +658,8 @@ class SettlementController extends Controller
             'label'        => $order->payMethodLabel(),
             'amount'       => $due,
             'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
+            /* 화면이 「확정까지 갔는가」를 다시 셈할 수 있게 함께 준다 */
+            'status_key'   => $order->fresh()->status,
             'zero_copay'   => $없는돈,
             'message'      => $없는돈
                 ? '본인부담금이 없는 건입니다 — 주문을 확정했습니다.'

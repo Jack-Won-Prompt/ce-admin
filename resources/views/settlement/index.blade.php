@@ -974,13 +974,14 @@
 
   /* 바뀐 값을 그 줄에만 입힌다 — 화면을 다시 부르지 않는다.
      칸 둘(결제 방식ㆍ입금확인)과 위쪽 요약 카드가 함께 움직여야 한 화면이 한 말을 한다. */
-  function applyDeposit(row, rowIndex, { done, label, methodKey, amount }) {
+  function applyDeposit(row, rowIndex, { done, label, methodKey, amount, statusKey }) {
     row.deposit_done = done;
     row.deposit_hand = done;
     row.deposit      = done ? Number(amount || 0).toLocaleString() : '-';
     row.deposit_by   = done ? '담당자 확인' : '-';
     row.pay_method     = done ? (label ?? row.pay_method) : '-';
     row.pay_method_key = done ? (methodKey ?? row.pay_method_key) : null;
+    if (done && statusKey) row.status_key = statusKey;
     if ('va_status' in row) row.va_status = done ? '입금완료' : (row.va_account === '미발급' ? '미발급' : '입금대기');
 
     ['pay_method', 'deposit', 'deposit_by', 'va_status'].forEach(name => {
@@ -1008,15 +1009,20 @@
   async function payMethodSet(row, rowIndex, method) {
     payMethodClose();
 
-    /* 이미 **받은** 건에서 같은 값을 다시 고르면 할 일이 없다 — 그때만 넘어간다.
+    /* **끝까지 간 건**에서 같은 값을 다시 고르면 할 일이 없다 — 그때만 넘어간다.
 
        받기 전에는 값이 같아도 넘어가면 안 된다. 이 칸을 고르는 일이 곧 입금 확인이고,
        그 걸음이 세금계산서ㆍ거래명세서ㆍ창고 확정을 함께 움직이기 때문이다.
        그런데 확정 전에도 넘어가고 있었다 — 상세 목록의 결제 방식이 링크페이로 잡혀
        있으면 주문에 그 값이 미리 적히고, 목록에서 링크페이를 골라도 「같은 값」이라
-       아무 일도 하지 않은 채 조용히 돌아갔다. 담당자는 눌렀는데 아무 반응이 없고
-       까닭도 알 수 없다(2026-09-08 · 3차 5회 송예린). */
-    if (row.deposit_done && method === row.pay_method_key) return;
+       아무 일도 하지 않은 채 조용히 돌아갔다(2026-09-08 · 3차 5회 송예린).
+
+       그때는 「받았는가」로 가렸는데 그것도 좁지 않았다. 이 걸음은 입금 기록ㆍ증빙
+       발행ㆍ창고 확정을 차례로 밟는데, 가운데서 한 번 넘어지면 **입금만 남고 주문은
+       대기인 채**가 된다. 그 건에서 같은 값을 다시 고르면 또 넘어가 버려, 남은
+       걸음을 영영 못 밟는다(2026-09-08 · 3차 5회 강도원 — 카드 매출전표가 터졌다).
+       가리는 잣대는 「받았는가」가 아니라 **「확정까지 갔는가」**다. */
+    if (row.deposit_done && method === row.pay_method_key && row.status_key !== 'pending') return;
 
     try {
       const res = await fetch(ORDERS_BASE + '/' + row.id + '/pay-method', {
@@ -1028,7 +1034,7 @@
       const d = await res.json();
       if (!d.success) { showToast(d.message || '바꾸지 못했습니다.', 'danger'); return; }
 
-      applyDeposit(row, rowIndex, { done: true, label: d.label, methodKey: d.method, amount: d.amount });
+      applyDeposit(row, rowIndex, { done: true, label: d.label, methodKey: d.method, amount: d.amount, statusKey: d.status_key });
       showToast(d.message, 'success');
     } catch (e) {
       showToast('오류가 발생했습니다.', 'danger');
