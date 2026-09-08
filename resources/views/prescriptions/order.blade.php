@@ -3493,14 +3493,6 @@ $calcDeposit  = $calcCopay;
                          placeholder="항목ㆍ값ㆍ설명" oninput="rxHistFilter()">
                 </div>
                 <div class="ol-field">
-                  <label class="ds-field-label">일시 (부터)</label>
-                  <input type="date" id="rxh-from" class="form-control" onchange="rxHistFilter()">
-                </div>
-                <div class="ol-field">
-                  <label class="ds-field-label">일시 (까지)</label>
-                  <input type="date" id="rxh-to" class="form-control" onchange="rxHistFilter()">
-                </div>
-                <div class="ol-field">
                   <label class="ds-field-label">작업자</label>
                   <select id="rxh-who" class="form-control form-select" onchange="rxHistFilter()">
                     <option value="">전체</option>
@@ -6522,13 +6514,10 @@ window.HELP_TOUR_STEPS = [
   /* 받아 둔 것을 그 자리에서 좁힌다 — 서버를 다시 부르지 않는다 */
   function rxHistFilter() {
     const v = id => (document.getElementById(id)?.value ?? '').trim();
-    const q = v('rxh-q').toLowerCase(), from = v('rxh-from'), to = v('rxh-to');
+    const q = v('rxh-q').toLowerCase();
     const who = v('rxh-who'), where = v('rxh-where');
 
     _rxHistShown = _rxHistRows.filter(r => {
-      const 날 = (r.at || '').slice(0, 10);
-      if (from  && 날 < from)      return false;
-      if (to    && 날 > to)        return false;
       if (who   && r.who !== who)  return false;
       if (where && r.where !== where) return false;
 
@@ -6555,7 +6544,7 @@ window.HELP_TOUR_STEPS = [
   }
 
   function rxHistReset() {
-    ['rxh-q', 'rxh-from', 'rxh-to', 'rxh-who', 'rxh-where']
+    ['rxh-q', 'rxh-who', 'rxh-where']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     rxHistFilter();
   }
