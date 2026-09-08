@@ -184,7 +184,7 @@
           <div class="smp-f">
             <label>받는 사람 *</label>
             <input type="text" id="smpRecipient" class="form-control" maxlength="100"
-                   placeholder="고객과 같으면 그대로 둡니다">
+                   placeholder="고객과 동일하면 미입력">
           </div>
           <div class="smp-f">
             <label>연락처</label>
@@ -213,7 +213,7 @@
             <label>요청자</label>
             <div style="display:flex;gap:6px;">
               <input type="text" id="smpRequester" class="form-control" readonly
-                     style="background:var(--gray-50);" placeholder="담당자를 고르십시오">
+                     style="background:var(--gray-50);" placeholder="담당자를 선택하십시오">
               <button type="button" class="ds-btn" style="flex-shrink:0;"
                       onclick="smpPickRequester(this)">조회</button>
             </div>
@@ -226,7 +226,7 @@
           <div class="smp-f span2">
             <label>용도</label>
             <input type="text" id="smpPurpose" class="form-control" maxlength="200"
-                   placeholder="무엇에 쓰는 샘플인지 적어 두면 나중에 판단이 쉽습니다">
+                   placeholder="샘플 용도를 입력해 두면 이후 판단에 도움이 됩니다">
           </div>
           <div class="smp-f span4">
             <label>비고</label>
@@ -242,7 +242,7 @@
           <span style="margin-left:auto;display:flex;gap:6px;">
             <span class="ds-grid-hint" id="smpSumNote">0줄 · 0개 · 0원</span>
             <button type="button" class="ds-btn" onclick="smpDelRow()" title="선택한 행 삭제">−</button>
-            <button type="button" class="ds-btn" onclick="smpAddRow()" title="줄을 더한다">+</button>
+            <button type="button" class="ds-btn" onclick="smpAddRow()" title="행 추가">+</button>
           </span>
         </div>
         <div id="smpItemGrid"></div>
@@ -410,7 +410,7 @@
         if (!r) return;
         $('smpPatientId').value = r.id;
         $('smpAccount').value   = r.name;
-        $('smpCustKind').textContent = '환자로 이어 둡니다';
+        $('smpCustKind').textContent = '환자로 연결';
         // 배송지는 고객을 고르면 따라온다 — 옮겨 적게 두면 어긋난다
         if (!$('smpRecipient').value.trim()) $('smpRecipient').value = r.name;
         $('smpMobile').value  = r.mobile  || $('smpMobile').value;

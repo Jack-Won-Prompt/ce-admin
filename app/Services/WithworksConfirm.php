@@ -28,7 +28,7 @@ final class WithworksConfirm
         $soNo = trim((string) $order->withworks_so_no);
 
         if ($soNo === '') {
-            return ['ok' => false, 'message' => '창고에 아직 판매주문이 서지 않아 확정하지 못했습니다.'];
+            return ['ok' => false, 'message' => '창고에 판매주문이 아직 등록되지 않아 확정하지 못했습니다.'];
         }
 
         $baseUrl = rtrim((string) config('services.demoworks.api_url'), '/');
@@ -67,7 +67,7 @@ final class WithworksConfirm
 
         /* 재고가 모자라면 여기로 온다(202). 돈은 이미 들어왔으니 되돌리지 않는다 —
            까닭을 남기고 담당자가 잇는다. */
-        $why = $body['result']['error'] ?? $body['message'] ?? '까닭을 알 수 없습니다';
+        $why = $body['result']['error'] ?? $body['message'] ?? '사유를 알 수 없습니다';
 
         Log::warning('[위드웍스 확정] 확정되지 않았습니다', [
             'order' => $order->order_number, 'so_no' => $soNo,

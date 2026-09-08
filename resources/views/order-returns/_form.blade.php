@@ -110,7 +110,7 @@
              올려다보지 않아도 무엇에 대한 신청인지 알 수 있다. --}}
         <label>주문번호</label>
         <input type="text" id="rtoOrderNo" class="form-control" readonly
-               style="background:var(--gray-50);" placeholder="주문을 고르면 채워집니다">
+               style="background:var(--gray-50);" placeholder="주문을 선택하면 자동 입력됩니다">
       </div>
       <div class="rto-f">
         <label>주문일</label>
@@ -130,7 +130,7 @@
       <div class="rto-f span4">
         <label>상세 사유</label>
         <input type="text" name="reason_text" class="form-control" maxlength="500"
-               placeholder="고객이 말한 내용을 그대로 적어 두면 나중에 판단이 쉽습니다">
+               placeholder="고객이 말한 내용을 그대로 입력해 두면 이후 판단에 도움이 됩니다">
       </div>
     </div>
 
@@ -171,7 +171,7 @@
   <div class="rto-sec">
     <div class="rto-sec-hd">
       <span class="step">3</span> 주문 제품
-      <span class="hint" id="rtoItemNote">주문을 고르면 그 주문의 제품이 나옵니다</span>
+      <span class="hint" id="rtoItemNote">주문을 선택하면 해당 주문의 제품이 표시됩니다</span>
       {{-- 일부만 되돌리면 남는 금액을 정해야 한다(2026-09-02 유형표의 「조정 필요」).
            접수한 뒤에야 알면 흐름이 한 단계 늘어난 까닭을 모른 채 멈춰 선다. --}}
       <span class="hint" id="rtoPartialNote"

@@ -647,7 +647,7 @@
 
     if (!rnRaw) { showToast('주민등록번호는 필수입니다.', 'warning'); rnEl.focus(); return; }
     if (!그대로면 && rnRaw.replace(/\D/g, '').length !== 13) {
-      showToast('주민등록번호 열세 자리를 적어 주십시오.', 'warning');
+      showToast('주민등록번호 13자리를 입력하십시오.', 'warning');
       rnEl.focus();
       return;
     }

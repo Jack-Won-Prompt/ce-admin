@@ -26,7 +26,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
-    <div class="help-item-text"><strong>주문 제품 탭</strong>제품을 고르고 배송 정보를 적어 주문을 만듭니다. Withworks에 자동 연계됩니다.</div>
+    <div class="help-item-text"><strong>주문 제품 탭</strong>제품을 선택하고 배송 정보를 입력하여 주문을 등록합니다. Withworks에 자동 연계됩니다.</div>
   </div>
 </div>
 <div class="help-section">
@@ -2232,7 +2232,7 @@ $calcDeposit  = $calcCopay;
             <div style="padding:12px 16px 4px;">
               <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;">담당자</label>
               <select id="olAsUser" class="form-control form-select">
-                <option value="">담당자를 고르십시오</option>
+                <option value="">담당자를 선택하십시오</option>
                 @foreach($assignables ?? [] as $u)
                   <option value="{{ $u['id'] }}" @selected($u['id'] === auth()->id())>{{ $u['name'] }}</option>
                 @endforeach
@@ -2994,7 +2994,7 @@ $calcDeposit  = $calcCopay;
                 {{-- 고른 병원이 들고 오는 값이다. 손으로 고치면 병원 표와 어긋나
                      같은 병원이 두 번호를 갖는다 — 고치려면 조회 창에서 병원을 고친다. --}}
                 <input type="text" class="form-control" id="f-hospital-code" readonly
-                       value="{{ $prescription->hospital_code ?? '' }}" placeholder="병원을 조회해 고르면 채워집니다"
+                       value="{{ $prescription->hospital_code ?? '' }}" placeholder="병원을 조회하여 선택하면 자동 입력됩니다"
                        style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
@@ -3833,7 +3833,7 @@ $calcDeposit  = $calcCopay;
         <label>병원명 <span style="color:var(--danger)">*</span></label>
         <input type="text" id="hpName" class="form-control" placeholder="예: 서울대학교병원">
         <label>요양기관번호</label>
-        <input type="text" id="hpCode" class="form-control" placeholder="여덟 자리 — 모르면 비워 둡니다"
+        <input type="text" id="hpCode" class="form-control" placeholder="8자리 — 모르면 미입력"
                inputmode="numeric" maxlength="20">
         <label>진료과</label>
         <input type="text" id="hpDept" class="form-control" placeholder="예: 비뇨의학과">
@@ -3844,7 +3844,7 @@ $calcDeposit  = $calcCopay;
       </div>
       <div class="hp-new-acts">
         <button type="button" class="ds-btn" onclick="hospitalNewCancel()">취소</button>
-        <button type="button" class="ds-btn ds-btn-primary" onclick="hospitalCreate(this)">등록하고 고르기</button>
+        <button type="button" class="ds-btn ds-btn-primary" onclick="hospitalCreate(this)">등록 후 선택</button>
       </div>
     </div>
 
@@ -4114,7 +4114,7 @@ $calcDeposit  = $calcCopay;
       <input type="text" id="rxTplAts" class="form-control" maxlength="60" placeholder="예: 025080000001" />
       <div style="font-size:11px;color:var(--alert-500);line-height:1.6;margin-top:4px;">
         팝빌에 등록해 <b>카카오 승인을 받은</b> 코드입니다. 비어 있으면 알림톡은 나가지 않습니다.
-        아래 본문은 <b>승인받은 문구 그대로</b> 적어 주십시오 — 그 글이 그대로 나갑니다.
+        아래 본문은 <b>승인받은 문구 그대로</b> 입력하십시오 — 입력한 내용이 그대로 발송됩니다.
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -5111,7 +5111,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(3)',
     title: '주문 제품 탭',
-    body: '제품을 고르고 배송 정보를 적은 뒤 <b>주문 생성 및 연계</b>를 누릅니다. Withworks 판매주문이 자동 생성됩니다.'
+    body: '제품을 선택하고 배송 정보를 입력한 뒤 <b>주문 생성 및 연계</b>를 누릅니다. Withworks 판매주문이 자동 생성됩니다.'
   },
   {
     selector: '#wwSoCard',
@@ -5523,7 +5523,7 @@ window.HELP_TOUR_STEPS = [
     pkOpen();
     _sameNameFlow = true;   // pkOpen 안의 pkClose 가 걷고 지나가므로 그 뒤에 세운다
 
-    showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 같은 분이면 고르고, 다른 분이면 「신규 저장」을 누르십시오.`,
+    showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 동일인이면 선택하고, 다른 분이면 「신규 저장」을 누르십시오.`,
               'warning', 7000);
   }
 
@@ -5903,7 +5903,7 @@ window.HELP_TOUR_STEPS = [
     /* 이어 둔 사람이 없다 — 처방전만 적어 둔 새 사람이다. 저장하면 그 사람이 만들어지고
        거래처에 오른다. 저장은 담당자가 알아야 할 일이라 묻고 나서 한다. */
     if (!name) {
-      showToast('이름을 먼저 적어 주십시오. 상담은 사람에게 답니다.', 'warning', 5000);
+      showToast('이름을 먼저 입력하십시오. 상담은 거래처 단위로 등록됩니다.', 'warning', 5000);
       return;
     }
 
@@ -6203,7 +6203,7 @@ window.HELP_TOUR_STEPS = [
     const pid = document.getElementById('f-patient-id')?.value;
 
     if (!pid) {
-      showToast('먼저 「조회」로 환자를 고르십시오 — 그 사람의 주소를 불러옵니다.', 'warning');
+      showToast('먼저 「조회」로 환자를 선택하십시오 — 해당 환자의 주소를 불러옵니다.', 'warning');
       return;
     }
 
@@ -7240,13 +7240,13 @@ window.HELP_TOUR_STEPS = [
     if (btn) BtnState.loading(btn, '베끼는 중…');
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/duplicate`, 'POST', {});
-      if (!res.success) { showToast(res.message || '베끼지 못했습니다.', 'danger'); return; }
+      if (!res.success) { showToast(res.message || '복제하지 못했습니다.', 'danger'); return; }
       showToast(res.message, 'success');
       // 고른 그 순간이 답이다 — 떠나도 되느냐고 다시 묻지 않는다
       clearAllDirty();
       location.href = res.url;
     } catch (e) {
-      showToast('베끼지 못했습니다.', 'danger');
+      showToast('복제하지 못했습니다.', 'danger');
     } finally {
       if (btn && btn.isConnected) BtnState.reset(btn);
     }
@@ -7686,7 +7686,7 @@ window.HELP_TOUR_STEPS = [
        「주문 완료」로 넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이
        청구를 건다. 저장은 이미 눌러 뒀을 수 있으니 적어 둔 것은 건드리지 않는다. */
     if (!items.some(i => i.product_name)) {
-      showToast('주문할 제품이 없습니다. 제품 탭에서 제품을 먼저 고르십시오.', 'warning');
+      showToast('주문할 제품이 없습니다. 제품 탭에서 제품을 먼저 선택하십시오.', 'warning');
       return;
     }
 
@@ -8432,7 +8432,7 @@ window.HELP_TOUR_STEPS = [
     const list    = document.getElementById('boFindList');
 
     if (!emd && !sigungu) {
-      note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동도 시ㆍ군ㆍ구도 뽑지 못했습니다. 밖에 물어보는 중…';
+      note.innerHTML = '환자 주소에서 읍ㆍ면ㆍ동과 시ㆍ군ㆍ구를 추출하지 못했습니다. 외부 조회 중…';
       list.innerHTML = '';
       if (boPatientAddress()) boOuterRun(); else boOuterHide();
       return;
@@ -8463,7 +8463,7 @@ window.HELP_TOUR_STEPS = [
 
       if (!rows.length) {
         const 어디 = emd || sigungu;
-        note.innerHTML = `<b>${_faxEsc(어디)}</b> 로 쌓아 둔 청구처가 없습니다. 밖에 물어보는 중…`;
+        note.innerHTML = `<b>${_faxEsc(어디)}</b> 로 등록된 청구처가 없습니다. 외부 조회 중…`;
         boOuterRun();
         return;
       }
@@ -8833,8 +8833,8 @@ window.HELP_TOUR_STEPS = [
 
     const method = document.querySelector('input[name="pay_method"]:checked')?.value;
     const mobile = document.getElementById('payMobile').value.trim();
-    if (!method) { showToast('결제 방법을 고르십시오.', 'warning'); return; }
-    if (!mobile) { showToast('받는 번호를 적어 주십시오.', 'warning'); return; }
+    if (!method) { showToast('결제 방법을 선택하십시오.', 'warning'); return; }
+    if (!mobile) { showToast('수신 번호를 입력하십시오.', 'warning'); return; }
 
     BtnState.loading(btn, '보내는 중...');
     try {
@@ -9753,7 +9753,7 @@ window.HELP_TOUR_STEPS = [
     if (label) label.textContent = org;
     renderFaxDocs();
 
-    if (done)          showToast(`${done}건을 올렸습니다 — 아래에서 골라 보내십시오.`, 'success');
+    if (done)          showToast(`${done}건을 업로드했습니다 — 아래에서 선택하여 발송하십시오.`, 'success');
     if (failed.length) showToast(`${failed.join(' · ')} 을(를) 올리지 못했습니다.`, 'danger', 6000);
   }
 
@@ -10394,7 +10394,7 @@ window.HELP_TOUR_STEPS = [
     olAsThen = then || null;
 
     if (!olAsRows.length) {
-      showToast('담당자를 배정할 건을 목록에서 고르십시오.', 'warning');
+      showToast('담당자를 배정할 건을 목록에서 선택하십시오.', 'warning');
       return;
     }
 
@@ -10428,7 +10428,7 @@ window.HELP_TOUR_STEPS = [
     const sel = document.getElementById('olAsUser');
     const uid = sel.value;
 
-    if (!uid) { showToast('담당자를 고르십시오.', 'warning'); sel.focus(); return; }
+    if (!uid) { showToast('담당자를 선택하십시오.', 'warning'); sel.focus(); return; }
 
     const b = document.getElementById('olAsGo');
     b.disabled = true; b.textContent = '배정 중...';
@@ -12526,7 +12526,7 @@ async function hospitalSearch() {
     const rows = data.data || [];
 
     if (!rows.length) {
-      list.innerHTML = '<div class="hp-empty">찾는 병원이 없습니다 — 아래 「새 병원 등록」으로 만들어 고르십시오.</div>';
+      list.innerHTML = '<div class="hp-empty">검색된 병원이 없습니다 — 아래 「새 병원 등록」으로 등록 후 선택하십시오.</div>';
       return;
     }
 

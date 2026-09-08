@@ -46,7 +46,7 @@
          그 값으로 채워져, 사람은 부서ㆍ팩스만 보태고 누른다. --}}
     <div id="boOuter" style="display:none;flex-direction:column;gap:6px;border-top:1px dashed var(--border);padding-top:10px;">
       <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:11px;font-weight:700;color:var(--gray-700);">밖에 물어 본 것</span>
+        <span style="font-size:11px;font-weight:700;color:var(--gray-700);">외부 조회 결과</span>
         <span id="boOuterNote" style="font-size:11px;color:var(--text-muted);flex:1;"></span>
       </div>
       <div id="boOuterList" style="display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto;"></div>

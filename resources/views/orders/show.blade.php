@@ -1181,7 +1181,7 @@
         <label class="form-label">사업자등록번호 <span>*</span></label>
         <input type="text" id="ti_biz_no" class="form-control" placeholder="000-00-00000"
                oninput="formatBizNo(this)">
-        <div class="amount-hint">개인 건은 비워 둡니다 — 처방전에 적힌 주민등록번호로 발행됩니다.</div>
+        <div class="amount-hint">개인 건은 미입력 — 처방전에 기재된 주민등록번호로 발행됩니다.</div>
       </div>
       <div class="form-group" id="ti_email_group">
         <label class="form-label">이메일 (전자발송)</label>

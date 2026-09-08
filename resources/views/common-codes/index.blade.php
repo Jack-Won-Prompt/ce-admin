@@ -127,7 +127,7 @@
     const rows = grid.getCheckedRows();
     if (!rows.length) { showToast('사용 중지할 행을 선택해 주십시오.', 'warning'); return; }
     const sys = rows.filter(r => r.is_system);
-    if (sys.length) showToast('시스템 코드는 둡니다 — ' + sys.map(r => r.label).join(', '), 'warning', 5000);
+    if (sys.length) showToast('시스템 코드는 삭제할 수 없습니다 — ' + sys.map(r => r.label).join(', '), 'warning', 5000);
     rows.filter(r => r.id && !r.is_system).forEach(r => removed.push(r.id));
     grid.removeCheckedRows();
     ccMark();

@@ -146,7 +146,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <label style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);">설명</label>
-        <input type="text" id="newDesc" maxlength="200" placeholder="이 그룹의 역할을 적어 두세요"
+        <input type="text" id="newDesc" maxlength="200" placeholder="이 그룹의 역할을 입력하십시오"
                style="height:32px;padding:0 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:400;line-height:20px;font-family:inherit;">
       </div>
       <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:12px;line-height:18px;">

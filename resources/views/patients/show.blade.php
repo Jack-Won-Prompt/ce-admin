@@ -734,7 +734,7 @@
      주문 등록의 openAddressSearch() 와 같은 서비스·같은 순서다. */
   function findAddress() {
     if (typeof daum === 'undefined' || !daum.Postcode) {
-      showToast('주소 찾기를 불러오지 못했습니다. 직접 적어 주십시오.', 'warning');
+      showToast('주소 찾기를 불러오지 못했습니다. 직접 입력하십시오.', 'warning');
       return;
     }
     const W = 500, H = 600;

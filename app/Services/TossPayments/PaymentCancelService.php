@@ -35,7 +35,7 @@ class PaymentCancelService extends TossClient
         $payment = $this->paymentOf($order);
 
         if (!$payment) {
-            return ['ok' => false, 'message' => '토스 결제 자취가 없습니다 — 무를 것이 없습니다.'];
+            return ['ok' => false, 'message' => '토스 결제 내역이 없습니다 — 취소할 대상이 없습니다.'];
         }
 
         if (!$payment->payment_key) {

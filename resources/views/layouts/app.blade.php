@@ -3508,7 +3508,7 @@ input#chatFileInput { display: none; }
     </div>
     <div class="sr-field">
       <label>내용 <span style="color:var(--danger);">*</span></label>
-      <textarea id="srContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 적어 주세요."></textarea>
+      <textarea id="srContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></textarea>
     </div>
     <div class="sr-field">
       <label>대상 화면</label>
@@ -3530,7 +3530,7 @@ input#chatFileInput { display: none; }
     @perm('service-requests', 'update')
     <div class="sr-field">
       <label>답변</label>
-      <textarea id="srAnswer" maxlength="5000" placeholder="처리 결과나 안내를 적어 주세요."></textarea>
+      <textarea id="srAnswer" maxlength="5000" placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
     </div>
     <div class="sr-row2">
       <div class="sr-field">

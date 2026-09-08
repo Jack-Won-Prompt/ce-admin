@@ -1183,7 +1183,7 @@
        결제 방식은 이후 절차를 가른다 — 현금영수증은 가상계좌ㆍ무통장입금에만 나가고
        카드결제는 카드매출전표가 증빙이다. 방식이 비어 있으면 그 자리에서 고르게 한다. */
     if (!r.pay_method_key) {
-      showToast('결제 방식을 먼저 고르십시오.', 'warning');
+      showToast('결제 방식을 먼저 선택하십시오.', 'warning');
       const cell = btn.closest('tr')?.querySelector('.pay-cell-btn');
       if (cell) payMethodPick(cell, r, rowIndex);
       return;

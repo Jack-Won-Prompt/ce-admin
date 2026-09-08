@@ -216,7 +216,7 @@
       <form method="POST" action="{{ route('order-returns.notifyPatient', $r) }}" class="rt-go" style="margin-top:10px;">
         @csrf
         <input type="text" name="extra" class="form-control" maxlength="200"
-               placeholder="덧붙일 말 (없으면 비워 둡니다)">
+               placeholder="추가 의견 (없으면 미입력)">
         <button type="submit" class="btn btn-primary"
                 onclick="return confirm('환자에게 실제로 발송됩니다. 계속할까요?');">
           <i class="bx bx-send"></i> 안내 보내기

@@ -658,7 +658,7 @@ class OrderReturnController extends Controller
                까닭은 상세의 적요에만 적혀 아무도 읽지 않았다(3차 4회 13번). */
             $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
                 ? ' 금액조정 주문을 세웠습니다.'
-                : ' 금액조정 주문을 세우지 못했습니다 — ' . ($orderReturn->fresh()->credit_note ?: '까닭을 알 수 없습니다') . '.';
+                : ' 금액조정 주문을 생성하지 못했습니다 — ' . ($orderReturn->fresh()->credit_note ?: '사유를 알 수 없습니다') . '.';
         }
 
         if ($to === 'credited') {

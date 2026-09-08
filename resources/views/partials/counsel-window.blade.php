@@ -79,7 +79,7 @@
       {{-- 「신규 상담」이라고만 적혀 있어, 같은 건에 상담만 더하려던 사람이
            눌렀다가 처방전ㆍ주문이 하나 더 서는 것을 뒤늦게 알았다. --}}
       <button type="button" class="ds-btn" onclick="csNewAsk()"
-              title="이 사람의 새 상담 건을 만듭니다 — 처방전과 주문 줄이 함께 섭니다">새 상담 건</button>
+              title="이 거래처의 새 상담 건을 등록합니다 — 처방전과 주문이 함께 생성됩니다">새 상담 건</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="csPickSelected()">선택</button>
     </div>
 
@@ -141,7 +141,7 @@
           <label>주문번호</label>
           <div style="display:flex;gap:6px;">
             <input type="text" id="csOrderNo" class="form-control" readonly
-                   style="background:var(--gray-50);" placeholder="주문조회에서 선택해 주십시오 (없으면 비워 둡니다)">
+                   style="background:var(--gray-50);" placeholder="주문조회에서 선택하십시오 (없으면 미입력)">
             <button type="button" class="ds-btn" style="flex-shrink:0;"
                     onclick="csPickOrder(this)">주문조회</button>
           </div>
@@ -153,7 +153,7 @@
           {{-- 이 창의 본디 목적이다 — 통화한 내용을 그대로 적는다 --}}
           <label>상담 내용 *</label>
           <textarea id="csContents" class="form-control" rows="8" maxlength="2000"
-                    placeholder="고객이 말한 내용을 그대로 적어 두면 다음 사람이 이어받기 쉽습니다."></textarea>
+                    placeholder="고객이 말한 내용을 그대로 입력해 두면 다음 담당자가 이어받기 쉽습니다."></textarea>
           <span class="cs-hint"><b id="csLen">0</b>/2000자</span>
         </div>
       </div>
@@ -601,7 +601,7 @@
 
   window.csSave = async function (btn) {
     const contents = document.getElementById('csContents').value.trim();
-    if (!contents) { showToast('상담 내용을 적어 주십시오.', 'warning'); return; }
+    if (!contents) { showToast('상담 내용을 입력하십시오.', 'warning'); return; }
 
     BtnState.loading(btn, '저장 중...');
     try {
@@ -627,7 +627,7 @@
       });
       if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
 
-      showToast(`${_csEditing ? '상담을 이어 적었습니다' : '상담을 적어 두었습니다'} (${res.counsel_no})`,
+      showToast(`${_csEditing ? '상담을 추가 기록했습니다' : '상담을 등록했습니다'} (${res.counsel_no})`,
                 'success', 4000);
       _csDirty   = false;
       _csEditing = null;

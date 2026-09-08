@@ -16,7 +16,7 @@
   <div class="help-section-title">상태 탭 설명</div>
   <div class="help-item">
     <div class="help-item-icon warn"><i class="bx bx-error"></i></div>
-    <div class="help-item-text"><strong>검수 필요</strong>담당자가 적어야 하는 처방전입니다. 우선 처리하세요.</div>
+    <div class="help-item-text"><strong>검수 필요</strong>담당자가 입력해야 하는 처방전입니다. 우선 처리하십시오.</div>
   </div>
   {{-- 「OCR 처리중」 안내는 두지 않는다 — OCR 을 쓰지 않는다(담당자 수기 입력) --}}
   <div class="help-item">

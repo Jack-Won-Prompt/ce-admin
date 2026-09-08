@@ -151,7 +151,7 @@ class ConsentController extends Controller
                 : ['name' => '성명', 'phone' => '연락처', 'insurance' => '보험'];
             foreach ($need as $k => $label) {
                 if (trim((string) $request->input($k)) === '') {
-                    return response()->json(['success' => false, 'message' => "개인정보 동의의 「{$label}」을(를) 적어 주세요."], 422);
+                    return response()->json(['success' => false, 'message' => "개인정보 동의의 「{$label}」을(를) 입력해 주십시오."], 422);
                 }
             }
 

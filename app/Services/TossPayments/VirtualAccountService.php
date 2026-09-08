@@ -105,7 +105,7 @@ class VirtualAccountService extends TossClient
                 'raw_response'   => [
                     'simulated' => true,
                     'reason'    => $why,
-                    'note'      => '시험 상점이 가상계좌를 지원하지 않아 임의로 세운 계좌입니다. '
+                    'note'      => '테스트 상점이 가상계좌를 지원하지 않아 임의 생성한 계좌입니다. '
                                 . '입금 확인은 손으로 합니다.',
                 ],
             ]

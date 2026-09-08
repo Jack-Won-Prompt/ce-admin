@@ -148,7 +148,7 @@
       @perm('service-requests', 'update')
       <div class="srx-field">
         <label>답변 내용</label>
-        <textarea id="srxAnswer" maxlength="5000" placeholder="처리 결과나 안내를 적어 주세요."></textarea>
+        <textarea id="srxAnswer" maxlength="5000" placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
       </div>
       <div class="srx-row2">
         <div class="srx-field">
@@ -197,7 +197,7 @@
     </div>
     <div class="srx-field">
       <label>내용 <span style="color:var(--danger);">*</span></label>
-      <textarea id="srxContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 적어 주세요."></textarea>
+      <textarea id="srxContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></textarea>
     </div>
     <div class="srx-field">
       <label>대상 화면</label>

@@ -521,7 +521,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           {{-- 손으로 적는 자리라 장비코드까지 사람이 옮겨 적어야 했다. 외우고 있는
                사람은 없어 다른 표를 열어 찾다가 틀린다 — 주문을 고르면 다 채운다. --}}
           <button type="button" class="detail-add-btn" onclick="openOrderPick(this)"
-                  style="margin-right:6px;" title="주문을 고르면 품목ㆍ장비코드ㆍ금액ㆍ공급받는자를 채웁니다">
+                  style="margin-right:6px;" title="주문을 선택하면 품목ㆍ장비코드ㆍ금액ㆍ공급받는자가 자동 입력됩니다">
             <i class="bx bx-package"></i> 주문 불러오기
           </button>
         </div>

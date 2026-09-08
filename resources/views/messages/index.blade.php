@@ -499,7 +499,7 @@
 
     if (scope === 'selected' && !checked.length) { showToast('보낼 거래처를 체크하세요.', 'warning'); return; }
     if (channel === 'sms'  && !body)             { showToast('본문을 입력하세요.', 'warning'); return; }
-    if (channel === 'alimtalk' && !tplCode)      { showToast('메시지 유형을 고르세요.', 'warning'); return; }
+    if (channel === 'alimtalk' && !tplCode)      { showToast('메시지 유형을 선택하십시오.', 'warning'); return; }
 
     const n = scope === 'all'
       ? {{ $sendable }}

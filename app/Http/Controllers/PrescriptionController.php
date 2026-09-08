@@ -858,7 +858,7 @@ class PrescriptionController extends Controller
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
         ], [
-            'patient_id.required' => '환자를 먼저 고르십시오.',
+            'patient_id.required' => '환자를 먼저 선택하십시오.',
         ]);
 
         /* 보낸 장수와 받은 장수를 견준다.
@@ -3211,7 +3211,7 @@ class PrescriptionController extends Controller
 
             return response()->json([
                 'success'     => true,
-                'message'     => '팩스는 나갔으나 전송 자취를 남기지 못했습니다 — 발송 내역에 서지 않습니다. '
+                'message'     => '팩스는 발송되었으나 전송 이력을 저장하지 못했습니다 — 발송 내역에 표시되지 않습니다. '
                                . '다시 보내지 마시고 관리자에게 알려 주십시오.'
                                . ($receiptNum ? " (접수번호 {$receiptNum})" : ''),
                 'receipt_num' => $receiptNum,
@@ -3931,7 +3931,7 @@ HTML;
         }
 
         activity()->causedBy(Auth::user())->performedOn($copy)
-            ->log("{$prescription->rx_number} 를 베껴 {$copy->rx_number} 를 만듦 — 파일 {$이은파일}장을 이어 씀");
+            ->log("{$prescription->rx_number} 를 복제하여 {$copy->rx_number} 생성 — 첨부파일 {$이은파일}건 공유");
 
         return response()->json([
             'success'   => true,

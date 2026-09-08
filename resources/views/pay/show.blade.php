@@ -73,7 +73,7 @@
         <div class="acc">{{ config('toss.virtual_account.fallback_account') ?: '-' }}</div>
         <div>예금주 {{ config('popbill.company.corp_name') ?: config('app.name') }}</div>
       </div>
-      <p class="note">입금자명을 주문자 이름({{ $order->patient?->name ?? '주문자' }})으로 적어 주시면 확인이 빠릅니다.
+      <p class="note">입금자명을 주문자 이름({{ $order->patient?->name ?? '주문자' }})으로 입력해 주시면 확인이 빠릅니다.
         입금 확인까지 시간이 걸릴 수 있습니다.</p>
     </div>
 
@@ -83,7 +83,7 @@
            않고 「계약된 결제수단이 아닙니다」로 되돌린다 — 고를 수는 있는데 누르면
            실패하는 자리를 환자 앞에 두지 않는다. --}}
       @if(config('toss.virtual_account.selectable'))
-        <div style="font-weight:700; margin-bottom:8px;">결제 방법을 골라 주십시오</div>
+        <div style="font-weight:700; margin-bottom:8px;">결제 방법을 선택하십시오</div>
         <div class="ways">
           <label class="way">
             <input type="radio" name="payway" value="CARD" checked>

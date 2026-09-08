@@ -67,7 +67,7 @@
           <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
             <label class="form-label">연락처</label>
             <input type="text" name="contact" id="iqcContact" class="form-control" maxlength="30"
-                   value="{{ old('contact') }}" placeholder="환자를 고르면 채워집니다">
+                   value="{{ old('contact') }}" placeholder="환자를 선택하면 자동 입력됩니다">
             @error('contact')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
           </div>
         </div>

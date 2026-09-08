@@ -273,7 +273,7 @@
     const rows = grid.getCheckedRows();
 
     if (!rows.length) {
-      showToast('승인할 건을 목록에서 고르십시오.', 'warning');
+      showToast('승인할 건을 목록에서 선택하십시오.', 'warning');
       return;
     }
 

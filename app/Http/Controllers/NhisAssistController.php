@@ -299,7 +299,7 @@ class NhisAssistController extends Controller
                                'note' => ($p?->hospital_code && $p?->hospital_name) ? $p->hospital_name : null],
             /* 전문의번호는 받아 적지 않는다(2026-09-01 회신) — 빈칸인 까닭을 적어 둔다 */
             'specialist_no' => ['value' => null, 'copy' => false, 'blank' => '받아 적지 않는 항목'],
-            'specialty'    => ['value' => $p?->specialty ?: null, 'note' => '공단 목록에서 같은 문구를 고르십시오'],
+            'specialty'    => ['value' => $p?->specialty ?: null, 'note' => '공단 목록에서 동일한 문구를 선택하십시오'],
             'disease_code' => ['value' => $p?->disease_code ?: null],
 
             /* 구입정보 */
@@ -628,7 +628,7 @@ class NhisAssistController extends Controller
                  'value' => $sameAsPatient ? ($patient?->name ?: $prescription->patient_name_ocr) : $consent?->guardian_name],
                 ['label' => '수진자와의 관계',
                  'value' => $sameAsPatient ? '본인' : $consent?->guardian_relation,
-                 'note'  => '공단 목록에서 같은 문구를 고르십시오'],
+                 'note'  => '공단 목록에서 동일한 문구를 선택하십시오'],
                 ['label' => 'SMS 수신동의', 'value' => 'Y', 'fixed' => true],
                 ['label' => '전화번호 (앞)',   'value' => $this->phonePart($phone, 0)],
                 ['label' => '전화번호 (가운데)', 'value' => $this->phonePart($phone, 1)],

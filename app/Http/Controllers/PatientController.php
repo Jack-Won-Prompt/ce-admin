@@ -412,7 +412,7 @@ class PatientController extends Controller
 
         return response()->json([
             'success'    => true,
-            'message'    => '상담을 적어 두었습니다.',
+            'message'    => '상담을 등록했습니다.',
             'counsel_no' => $rx->counsel_no,
         ]);
     }

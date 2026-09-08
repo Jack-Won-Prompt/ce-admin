@@ -1040,7 +1040,7 @@ function showWhyBlocked(ok) {
 /* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
 function findPrivacyZip() {
   if (typeof daum === 'undefined' || !daum.Postcode) {
-    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 적어 주십시오.', { tone: 'warning' });
+    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 입력하십시오.', { tone: 'warning' });
     return;
   }
   new daum.Postcode({
