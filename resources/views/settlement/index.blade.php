@@ -904,14 +904,21 @@
   /* ── 결제 방식 — 고르는 순간이 곧 입금 확인이다 ──────────────
      입금이 확인되기 전에는 「무엇으로 받았는가」를 말할 수 없다. 그래서 칸은 「-」로
      비어 있고, 통장ㆍ단말을 보고 방식을 고르는 순간 그 건은 받은 것이 된다.
-     이미 받은 건은 글자만 선다 — 낸 방식은 지난 일이고, 고치면 기록과 어긋난다. */
+     끝까지 간 건은 글자만 선다 — 낸 방식은 지난 일이고, 고치면 기록과 어긋난다.
+
+     다만 **입금만 남고 주문이 대기인 건**은 다시 고를 수 있게 연다. 이 걸음은 입금
+     기록ㆍ증빙 발행ㆍ창고 확정을 차례로 밟는데, 가운데서 한 번 넘어지면 반쪽으로
+     멈춘다. 그때 칸이 글자로 굳어 버리면 담당자가 남은 걸음을 밟을 길이 없다
+     (2026-09-08 · 3차 5회 강도원). */
   const PAY_METHODS = @json(\App\Models\PaymentLink::METHODS);
 
   function payMethodCell(v, row, rowIndex) {
     const box = document.createElement('div');
     box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
 
-    if (row.deposit_done || !CAN_CONFIRM) {
+    const 반쪽 = row.deposit_done && row.status_key === 'pending';
+
+    if ((row.deposit_done && !반쪽) || !CAN_CONFIRM) {
       box.textContent = v || '-';
       return box;
     }
@@ -920,10 +927,13 @@
     btn.type = 'button';
     btn.className = 'pay-cell-btn';
     btn.style.cssText = 'height:22px;padding:0 8px;font-size:11px;cursor:pointer;line-height:1;'
-                      + 'border:1px dashed var(--gray-300);border-radius:6px;background:transparent;'
-                      + 'color:var(--gray-1000);';
-    btn.textContent = '-';
-    btn.title = '무엇으로 받았는지 고르면 입금 확인됩니다';
+                      + 'border:1px dashed ' + (반쪽 ? 'var(--danger)' : 'var(--gray-300)')
+                      + ';border-radius:6px;background:transparent;'
+                      + 'color:' + (반쪽 ? 'var(--danger)' : 'var(--gray-1000)') + ';';
+    btn.textContent = 반쪽 ? (v || '-') : '-';
+    btn.title = 반쪽
+      ? '입금은 확인됐지만 주문 확정이 남았습니다 — 다시 고르면 이어서 밟습니다'
+      : '무엇으로 받았는지 고르면 입금 확인됩니다';
     btn.onclick = (ev) => { ev.stopPropagation(); payMethodPick(ev.currentTarget, row, rowIndex); };
     box.appendChild(btn);
     return box;
