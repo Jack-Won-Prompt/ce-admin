@@ -231,10 +231,15 @@ class Patient extends Model
     }
 
     protected $casts = [
-        'birth_date'       => 'date',
+        /* 날짜는 날짜로 내보낸다 — `date` 로만 두면 JSON 에 시각과 시간대까지 붙어
+           `2017-04-27T15:00:00.000000Z` 로 나간다. 우리 시간 04-28 00:00 이 UTC 로는
+           전날 15:00 이라, 받는 쪽에서 앞 열 자를 잘라 쓰면 **하루가 앞선다**.
+           날짜 칸이 그것을 그대로 받아 생년월일이 밀렸다
+           (2026-09-07 서나윤 · 09-08 송예린에서 잇달아 드러났다). */
+        'birth_date'       => 'date:Y-m-d',
         /* 보호자 생년월일도 날짜다 (2026-09-07). 칸을 만들며 여기 적는 것을
            빠뜨려, 화면이 ->format() 을 부르는 자리에서 통째로 500 이 났다. */
-        'guardian_birth_date' => 'date',
+        'guardian_birth_date' => 'date:Y-m-d',
         'is_nhis_eligible' => 'boolean',
         'nhis_coverage_rate' => 'float',
         'rrn_retention_basis_at' => 'date',
