@@ -6618,8 +6618,7 @@ window.HELP_TOUR_STEPS = [
 
     const 칸들 = row.fields || [];
     if (!칸들.length) {
-      diff.innerHTML = '<div class="rxh-none">이 저장에는 무엇이 바뀌었는지 남아 있지 않습니다.'
-                     + '<br>항목별 기록은 2026-09-09부터 남습니다.</div>';
+      diff.innerHTML = '<div class="rxh-none">내역이 없습니다.</div>';
     } else {
       const 값 = (v) => v
         ? escHtml(v)
