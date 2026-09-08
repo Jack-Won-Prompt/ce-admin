@@ -2099,6 +2099,28 @@ class PrescriptionController extends Controller
             'caregiver_name'       => $request->input('guardian'),
         ], fn ($v) => $v !== null);
 
+        /* **비울 수 있어야 하는 칸은 따로 받는다.**
+
+           위 거르개는 「화면이 보내지 않은 칸은 건드리지 않는다」는 뜻인데, 라라벨이
+           빈 문자열을 null 로 바꾸므로(ConvertEmptyStringsToNull) **비우려고 보낸 것**도
+           함께 걸린다. 그래서 한 번 들어간 자격은 화면에서 지울 수 없었다 — 유형을
+           처방외로 바꾸고 자격을 「선택」으로 되돌려 저장해도 「일반」이 그대로 남았다
+           (2026-09-08 · 3차 5회 문채아).
+
+           화면이 그 이름으로 보내 왔을 때만 비운다. 보내지 않은 칸은 그대로 둔다. */
+        if ($request->has('benefit_class')) {
+            $rxCols['benefit_class'] = $request->input('benefit_class');
+
+            /* 자격을 비우면 청구전략 열쇠도 다시 셈한다 — 두 값이 어긋나면
+               목록이 「처방외인데 열쇠는 일반」이라는 줄을 세운다. */
+            if (\App\Support\BillingStrategy::hasColumn()) {
+                $rxCols['billing_strategy'] = \App\Support\BillingStrategy::key(
+                    $request->input('counsel_acc_add_type'),
+                    $request->input('benefit_class'),
+                );
+            }
+        }
+
         if ($rxCols) {
             $prescription->update($rxCols);
         }
