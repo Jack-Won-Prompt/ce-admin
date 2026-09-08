@@ -524,8 +524,15 @@ window.HELP_TOUR_STEPS = [
       if (e.key === 'Escape' && back.classList.contains('show')) attFaxClose();
     });
     /* 목록을 굴리면 붙어 있던 자리가 어긋난다 — 그때는 닫는다.
-       따라 움직이게 하면 창이 화면 밖으로 미끄러져 나가는 편이 더 나쁘다. */
-    window.addEventListener('scroll', attFaxClose, true);
+       따라 움직이게 하면 창이 화면 밖으로 미끄러져 나가는 편이 더 나쁘다.
+
+       **창 안을 굴린 것은 그대로 둔다.** 서류가 스물여덟 줄이라 안쪽 목록을
+       굴려 내려가는데, 그때도 닫혀 고를 수가 없었다. */
+    window.addEventListener('scroll', (e) => {
+      const t = e.target;
+      if (t && t.nodeType === 1 && back.contains(t)) return;
+      attFaxClose();
+    }, true);
     window.addEventListener('resize', attFaxClose);
     back.querySelector('#attFaxSend').onclick = attFaxSend;
     return back;
