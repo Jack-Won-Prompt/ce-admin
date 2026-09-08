@@ -55,6 +55,55 @@
     cursor: not-allowed;
   }
   .pc-cellbtn[disabled]:hover { background: var(--gray-50); border-color: var(--gray-200); color: var(--gray-300); }
+
+  /* ── 서류 미리보기 창 ──────────────────────────────────────
+     받기 전에 무엇이 담겼는지 본다. 서명 한 장 보려고 파일이 쌓이지 않게. */
+  .pc-pop-back {
+    position: fixed; inset: 0; z-index: 1080; display: none;
+    align-items: center; justify-content: center; padding: 24px;
+    background: rgba(17, 24, 39, .55);
+  }
+  .pc-pop-back.show { display: flex; }
+  .pc-pop {
+    display: flex; flex-direction: column;
+    width: min(860px, 100%); max-height: 100%;
+    background: var(--bg-card, #fff); border-radius: 12px; overflow: hidden;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .28);
+  }
+  .pc-pop-hd {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; border-bottom: 1px solid var(--border, #e5e7eb);
+    font-size: 14px;
+  }
+  .pc-pop-hd b { flex: 1; min-width: 0; }
+  .pc-pop-x {
+    border: 0; background: none; cursor: pointer;
+    font-size: 22px; line-height: 1; color: var(--text-muted, #6b7280);
+  }
+  .pc-pop-bd {
+    flex: 1; min-height: 320px; overflow: auto;
+    display: flex; align-items: center; justify-content: center;
+    padding: 14px; background: var(--bg, #f7f8fa);
+  }
+  /* 서명은 대개 가로로 길고 옅다 — 흰 바탕에 테두리를 둘러야 잉크가 보인다 */
+  .pc-pop-bd img {
+    max-width: 100%; max-height: 62vh; object-fit: contain;
+    background: #fff; border: 1px solid var(--border, #e5e7eb); border-radius: 8px;
+  }
+  .pc-pop-bd iframe { width: 100%; height: 68vh; border: 0; background: #fff; }
+  .pc-pop-ft {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 12px 16px; border-top: 1px solid var(--border, #e5e7eb);
+  }
+  .pc-pop-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 34px; padding: 0 18px; border-radius: 8px; font-size: 13px;
+    border: 1px solid var(--border, #e5e7eb); background: var(--bg-card, #fff);
+    color: var(--text, #111827); cursor: pointer; text-decoration: none;
+  }
+  .pc-pop-btn.is-main {
+    background: var(--primary, #28798B); border-color: var(--primary, #28798B); color: #fff;
+  }
 </style>
 @endpush
 
@@ -226,18 +275,20 @@
 (function () {
   const CONSENT_BASE = @json(rtrim(config('app.consent_public_url', config('app.url')), '/'));
 
-  /* 셀 안의 버튼 하나. 받을 수 없으면 왜 없는지 title 로 알린다. */
+  /* 셀 안의 버튼 하나. 받을 수 없으면 왜 없는지 title 로 알린다.
+
+     누르면 곧장 받지 않고 **먼저 보여 준다**(2026-09-08 지시). 무엇이 담겼는지
+     보려고 받았다가, 아니면 지우는 일이 잦았다 — 서명 한 장 보려고 파일이 쌓였다.
+     보고 나서 필요하면 그 자리에서 받는다. */
   function cellBtn({ label, icon, cls, url, reason }) {
-    const el = document.createElement(url ? 'a' : 'button');
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'pc-cellbtn' + (cls ? ' ' + cls : '');
     if (url) {
-      el.href = url;
-      el.target = '_blank';
-      el.rel = 'noopener';
       // 서류는 처방전 단위로 발행된다. 같은 처방전에 동의가 여러 건이면 최신 것이 나온다.
-      el.title = label + ' 받기 (해당 처방전의 최신 동의 건)';
+      el.title = label + ' 보기 (해당 처방전의 최신 동의 건)';
+      el.addEventListener('click', () => openDocPreview({ label, url, row: null }));
     } else {
-      el.type = 'button';
       el.disabled = true;
       el.title = reason;
     }
@@ -246,6 +297,60 @@
     el.appendChild(i);
     el.appendChild(document.createTextNode(' ' + label));
     return el;
+  }
+
+  /* ── 서류 미리보기 창 ────────────────────────────────────────
+     그림은 그림으로, PDF 는 PDF 그대로 띄운다. 아래에 닫기와 받기를 둔다.
+     한 번 만들어 두고 다시 쓴다 — 누를 때마다 새로 짓지 않는다. */
+  let _docPop = null;
+
+  function buildDocPreview() {
+    const back = document.createElement('div');
+    back.className = 'pc-pop-back';
+    back.innerHTML = `
+      <div class="pc-pop" role="dialog" aria-modal="true" aria-labelledby="pcPopTitle">
+        <div class="pc-pop-hd">
+          <b id="pcPopTitle"></b>
+          <button type="button" class="pc-pop-x" aria-label="닫기">&times;</button>
+        </div>
+        <div class="pc-pop-bd"></div>
+        <div class="pc-pop-ft">
+          <button type="button" class="pc-pop-btn">닫기</button>
+          <a class="pc-pop-btn is-main" download>다운로드</a>
+        </div>
+      </div>`;
+    document.body.appendChild(back);
+
+    const close = () => { back.classList.remove('show'); back.querySelector('.pc-pop-bd').innerHTML = ''; };
+    back.querySelector('.pc-pop-x').addEventListener('click', close);
+    back.querySelector('.pc-pop-ft .pc-pop-btn').addEventListener('click', close);
+    // 바깥을 눌러도 닫는다 — 창 안을 누른 것은 그대로 둔다
+    back.addEventListener('click', (e) => { if (e.target === back) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && back.classList.contains('show')) close();
+    });
+
+    return back;
+  }
+
+  function openDocPreview({ label, url }) {
+    if (!_docPop) _docPop = buildDocPreview();
+
+    _docPop.querySelector('#pcPopTitle').textContent = label;
+
+    const dl = _docPop.querySelector('.pc-pop-ft .is-main');
+    dl.href = url;
+
+    /* PNG 인지 PDF 인지는 주소로 가른다 — 서명은 그림, 나머지는 PDF 다.
+       주소에 확장자가 없을 수도 있어 「png」라는 말이 들어 있는지도 함께 본다. */
+    const 그림 = /\.png(\?|$)/i.test(url) || /png/i.test(label);
+    const bd = _docPop.querySelector('.pc-pop-bd');
+
+    bd.innerHTML = 그림
+      ? `<img src="${url}" alt="${label}">`
+      : `<iframe src="${url}#toolbar=0" title="${label}"></iframe>`;
+
+    _docPop.classList.add('show');
   }
 
   /* 받을 수 없는 이유 — 상태를 보고 고른다 */
