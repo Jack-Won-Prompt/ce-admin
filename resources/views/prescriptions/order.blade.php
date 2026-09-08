@@ -3526,9 +3526,6 @@ $calcDeposit  = $calcCopay;
                 이 처방전과 딸린 주문ㆍ거래처의 저장을 모두 보여 줍니다.
               </div>
               <div id="rxHistGrid" style="min-height:220px;"></div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-                줄을 누르면 그 저장이 무엇을 바꿨는지 상세 보기에서 견줍니다.
-              </div>
             </div>
 
             {{-- ── 상세 보기 ── --}}
