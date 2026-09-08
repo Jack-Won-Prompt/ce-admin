@@ -12491,10 +12491,24 @@ async function hospitalSearch() {
     /* 값은 data 로 실어 두고 누를 때 읽는다. onclick 안에 JSON.stringify 로 넣었더니
        병원명을 감싼 큰따옴표가 속성의 큰따옴표와 부딪혀 그 자리에서 끊겼다 —
        누르면 「Unexpected end of input」으로 죽어, 쌓아 둔 병원을 고를 수 없었다. */
+    /* 같은 요양기관번호를 쓰는 줄이 둘 이상이면 그렇다고 적는다.
+
+       번호는 병원 하나에 하나여야 하는데 마스터에 겹친 줄이 남아 있다
+       (2026-09-08 송예린 — 31100767 에 「순천향대학교 부속 부천병원」과
+       「순천향대학교 부천병원」이 함께 떴다). 어느 쪽을 골라도 청구가 갈 곳은
+       같지만, 건마다 다른 줄을 고르면 목록이 두 병원처럼 갈린다.
+       고르는 사람이 알아채야 정리가 된다. */
+    const 번호셈 = {};
+    rows.forEach(h => { if (h.code) 번호셈[h.code] = (번호셈[h.code] || 0) + 1; });
+
     list.innerHTML = rows.map(h => `
       <div class="hp-row" data-hid="${h.id}" data-hname="${escHtml(h.name)}" data-hcode="${escHtml(h.code || '')}">
         <b>${escHtml(h.name)}</b>
-        <span>${h.code ? escHtml(h.code) : '요양기관번호 없음'}${h.department ? ' · ' + escHtml(h.department) : ''}</span>
+        <span>${h.code ? escHtml(h.code) : '요양기관번호 없음'}${h.department ? ' · ' + escHtml(h.department) : ''}${
+          h.code && 번호셈[h.code] > 1
+            ? ` <span style="color:var(--warning,#b45309);font-weight:700;">· 같은 번호 ${번호셈[h.code]}줄 — 마스터 정리 필요</span>`
+            : ''
+        }</span>
       </div>`).join('');
 
     list.querySelectorAll('.hp-row').forEach(row => {
