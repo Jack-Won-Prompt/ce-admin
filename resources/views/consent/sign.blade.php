@@ -279,7 +279,12 @@
     .sig-placeholder svg { width: 32px; height: 32px; opacity: .5; }
 
     /* 버튼 */
-    .btn-row {
+    .why-blocked { margin:14px 0 4px; padding:11px 13px; border-radius:10px;
+                 background:#fffbeb; border:1px solid #f0d9ae; color:#92400e; font-size:13px; }
+  .why-blocked b { display:block; margin-bottom:5px; font-size:13px; }
+  .why-blocked ul { margin:0; padding-left:18px; }
+  .why-blocked li { margin:2px 0; }
+  .btn-row {
       display: grid;
       grid-template-columns: 1fr 2fr;
       gap: 10px;
@@ -757,6 +762,14 @@
     </div>
     @endif
 
+    {{-- 무엇이 남았는지 적는다.
+
+         여태 「동의 서명」은 잠긴 채로 아무 말도 하지 않았다. 화면이 길어 아래쪽
+         칸은 스크롤해야 보이는데, 왜 눌리지 않는지 알 수가 없으니 환자는 위아래를
+         훑으며 짚어 봐야 했다(2026-09-08 · 미성년 건에서 법정대리인 신분증이
+         비어 있었다). 남은 것을 그대로 적어 준다. --}}
+    <div id="whyBlocked" class="why-blocked" style="display:none;"></div>
+
     {{-- 버튼 --}}
     <div class="btn-row">
       <button class="btn btn-cancel" type="button" id="btnDecline" onclick="submitConsent('declined')">거절</button>
@@ -965,6 +978,63 @@ function refreshAgree() {
   const ok = (IS_MINOR || hasSig) && (!NICE_ENFORCE || identityVerified)
              && guardianReady() && privacyReady();
   document.getElementById('btnAgree').disabled = !ok;
+  showWhyBlocked(ok);
+}
+
+/* 아직 안 된 것을 그대로 적는다 — 잠긴 단추만 보여 주고 까닭을 감추지 않는다 */
+function whatIsMissing() {
+  const 남은 = [];
+
+  if (NICE_ENFORCE && !identityVerified) {
+    남은.push(IS_MINOR ? '법정대리인(보호자) 휴대폰 본인확인' : '휴대폰 본인확인');
+  }
+
+  if (IS_MINOR) {
+    const name = (document.getElementById('gName')?.value ?? '').trim();
+    if (!name)                 남은.push('법정대리인 또는 가족 성명');
+    if (!document.getElementById('gRelation')?.value) 남은.push('가입자ㆍ피부양자와의 관계');
+    if (!guardianBirthOk())    남은.push('법정대리인 또는 가족 생년월일');
+    if (!gHasSig)              남은.push('보호자 서명');
+    if (!gIdData)              남은.push('법정대리인 또는 가족 신분증');
+  } else if (!hasSig) {
+    남은.push('본인 서명');
+  }
+
+  if (PRIVACY_ASK) {
+    const t = privacyType();
+    if (!t) {
+      남은.push('신청 유형(카테터ㆍ장루)');
+    } else {
+      if (!pvVal('pvName'))  남은.push('신청자 성명');
+      if (!pvVal('pvPhone')) 남은.push('신청자 연락처');
+      if (t === 'stoma') {
+        if (!pvVal('pvBirth')) 남은.push('생년월일');
+        if (agreePicked('agree_general')   !== '동의함') 남은.push('개인정보 수집ㆍ이용 동의');
+        if (agreePicked('agree_sensitive') !== '동의함') 남은.push('민감정보 처리 동의');
+      } else {
+        if (!document.querySelector('input[name="pv_insurance"]:checked')) 남은.push('보험 유형');
+        if (agreePicked('agree_general')     !== '동의함') 남은.push('개인정보 수집ㆍ이용 동의');
+        if (agreePicked('agree_third_party') !== '동의함') 남은.push('제3자 제공 동의');
+      }
+    }
+  }
+
+  return 남은;
+}
+
+function showWhyBlocked(ok) {
+  const box = document.getElementById('whyBlocked');
+  if (!box) return;
+
+  if (ok) { box.style.display = 'none'; return; }
+
+  const 남은 = whatIsMissing();
+  if (!남은.length) { box.style.display = 'none'; return; }
+
+  box.innerHTML = '<b>아직 남았습니다</b><ul>'
+    + 남은.map(t => '<li>' + t + '</li>').join('')
+    + '</ul>';
+  box.style.display = '';
 }
 
 /* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
