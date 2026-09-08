@@ -104,7 +104,9 @@
     framesEl.appendChild(f);
   }
 
-  function openTab(url, title, icon, isHome) {
+  /* 옮겼다=false 면 갈래를 펴지 않는다 — 첫 진입에 홈 탭 하나를 세우는 것은
+     사람이 자리를 옮긴 것이 아니라 그저 처음 자리다. */
+  function openTab(url, title, icon, isHome, 옮겼다) {
     url = toPath(url) || url;      // 메뉴는 절대 주소로 부른다 — 한 꼴로 맞춘다
     const hit = tabs.find(t => base(t.url) === base(url));
     if (hit) { activate(hit.id); return; }
@@ -113,7 +115,7 @@
     tabs.push(t);
     mount(t);
     active = id;
-    render(true);
+    render(옮겼다 !== false);
     save();
   }
   function activate(id) {
@@ -225,7 +227,7 @@
   }
 
   // 되살릴 것이 없으면 대시보드 하나로 시작한다
-  if (!restore()) openTab(HOME.url, HOME.title, HOME.icon, true);
+  if (!restore()) openTab(HOME.url, HOME.title, HOME.icon, true, false);
 })();
 </script>
 @endpush
