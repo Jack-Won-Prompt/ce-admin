@@ -181,7 +181,8 @@ class SettlementController extends Controller
                 // 원내·원외·처방외는 정산에서 나눠 봐야 하는 값이다
                 'acc_type'     => self::ACC_TYPES[$order->prescription?->counsel_acc_add_type] ?? '-',
                 'product'      => $order->product_name ?? '-',
-                'total_amount' => (int) ($order->total_amount ?? 0),
+                // 총 금액은 본인 + 기관 (위 상세와 같은 까닭)
+                'total_amount' => (int) ($order->patient_copay ?? 0) + (int) ($order->nhis_amount ?? 0),
                 'nhis_amount'  => (int) ($order->nhis_amount ?? 0),
                 'unit_price'   => (int) ($order->unit_price ?? 0),
                 'copay'        => (int) ($order->patient_copay ?? 0),
@@ -400,7 +401,10 @@ class SettlementController extends Controller
             'unit_price'      => $order->unit_price,
             'nhis_amount'     => $order->nhis_amount,
             'patient_copay'   => $order->patient_copay,
-            'total_amount'    => $order->total_amount,
+            /* 총 주문금액은 본인 + 기관이다 — orders.total_amount 는 이름과 달리
+               「환자가 낼 돈」이라 그대로 세우면 자격에 따라 어긋난다
+               (2026-09-08 · 3차 5회 신우재). */
+            'total_amount'    => (int) ($order->patient_copay ?? 0) + (int) ($order->nhis_amount ?? 0),
             'nhis_reimb'      => $order->nhis_reimbursement,
             // 배송
             'shipping_address'=> $order->shipping_address ?? '-',

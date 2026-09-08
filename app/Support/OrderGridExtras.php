@@ -104,7 +104,17 @@ class OrderGridExtras
                                     ? (\App\Models\PaymentLink::METHODS[$o->pay_method] ?? $o->pay_method)
                                     : '',
             'deposit_at'      => $o?->deposit_confirmed_at?->format('Y-m-d') ?? '',
-            'total_amount'    => (int) ($o?->total_amount ?? 0),
+            /* **총 금액은 본인 + 기관이다.**
+
+               orders.total_amount 는 이름과 달리 「환자가 낼 돈」이다 — 결제 링크도
+               현금영수증도 그 값을 쓴다(FinanceControllerㆍTaxinvoiceController 주석
+               참고). 그것을 그대로 「총 금액」 칸에 세우니, 본인부담이 100%인 건만
+               우연히 맞고 일반(10/90)은 본인 몫만, 차상위경감ㆍ기초(0%)는 빈 칸이
+               섰다(2026-09-08 · 3차 5회 신우재).
+
+               저장된 값은 건드리지 않는다 — 돈이 오가는 자리가 그 값을 쓴다.
+               표에 세울 때만 두 몫을 더한다. */
+            'total_amount'    => (int) ($o?->patient_copay ?? 0) + (int) ($o?->nhis_amount ?? 0),
             'copay'           => (int) ($o?->patient_copay ?? 0),
             'nhis_amount'     => (int) ($o?->nhis_amount ?? 0),
         ];
