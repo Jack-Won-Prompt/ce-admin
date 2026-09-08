@@ -861,6 +861,7 @@ class PrescriptionController extends Controller
             'patient_id'            => 'required|exists:patients,id',
             'assigned_user_id'      => 'nullable|exists:users,id',
             'admin_note'            => 'nullable|string|max:500',
+            'review_memo'           => 'nullable|string|max:1000',
         ], [
             'patient_id.required' => '환자를 먼저 선택하십시오.',
         ]);
@@ -2125,6 +2126,16 @@ class PrescriptionController extends Controller
            (2026-09-08 · 3차 5회 문채아).
 
            화면이 그 이름으로 보내 왔을 때만 비운다. 보내지 않은 칸은 그대로 둔다. */
+        /* 검수 메모는 **검수를 요청하기 전에만** 이 화면에서 받는다.
+
+           요청한 뒤로는 검수자의 말이라, 담당자가 상세 목록을 저장할 때마다 덮이면
+           누가 한 말인지 알 수 없어진다. 화면도 그때는 칸을 잠그지만 서버에서도
+           가린다 — 화면만 믿을 수는 없다(2026-09-09 지시). */
+        if ($request->has('review_memo')
+            && in_array($prescription->status, ['pending', 'rejected'], true)) {
+            $rxCols['review_memo'] = $request->input('review_memo');
+        }
+
         if ($request->has('benefit_class')) {
             $rxCols['benefit_class'] = $request->input('benefit_class');
 

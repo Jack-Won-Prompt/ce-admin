@@ -2937,9 +2937,6 @@ $calcDeposit  = $calcCopay;
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
                    시안 315:58 Frame 48101490 (361×392). --}}
-              {{-- 검수 메모 — 처방전 목록에서 검수자가 적어 둔 것을 그대로 보여 준다
-                   (요청서 6·12쪽). 여기서 고치지는 않는다 — 적는 자리는 검수 화면이고,
-                   두 곳에서 고치면 어느 것이 검수자의 말인지 알 수 없어진다. --}}
               {{-- 등록 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
                    왼쪽 카드에도 서지만, 처방 내용을 적는 동안 눈에 들어오지 않아
                    이 탭 안에서도 함께 보인다(2026-09-09 지시). 여기서 고치지는 않는다. --}}
@@ -2949,11 +2946,22 @@ $calcDeposit  = $calcCopay;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
                      background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
               </div>
+              {{-- 검수 메모 — **검수를 요청하기 전에는 여기서 적는다**(2026-09-09 지시).
+                   요청한 뒤로는 검수자의 말이 되므로 잠기고, 그때부터는 검수 화면에서만
+                   고친다. 두 자리에서 함께 고치면 어느 것이 검수자의 말인지 알 수 없다. --}}
+              @php $검수전 = in_array($prescription->status, ['pending', 'rejected'], true); @endphp
               <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">검수 메모</span>
+                <textarea id="f-review-memo-input" rows="2" maxlength="1000"
+                          placeholder="검수 요청 시 함께 전달할 내용을 입력하십시오 (선택)"
+                          oninput="markOcrDirty()"
+                          style="flex:1;min-width:0;font-size:12px;line-height:1.6;padding:6px 10px;
+                                 border:1px solid var(--border);border-radius:8px;resize:vertical;
+                                 min-height:44px;{{ $검수전 ? '' : 'display:none;' }}">{{ $prescription->review_memo }}</textarea>
                 <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
+                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;
+                     {{ $검수전 ? 'display:none;' : '' }}">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
               </div>
               {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 자리는 검수 메모 바로
                    다음이다. 이 건이 처방전인지 처방외인지가 아래 병원ㆍ상병ㆍ수량을
@@ -6964,6 +6972,10 @@ window.HELP_TOUR_STEPS = [
       rx_period:        intOrNull('f-rx-period'),
       rx_end_date:      strOrNull('f-rx-end-date'),
       diagnosis_date:   strOrNull('f-diagnosis-date'),
+      /* 검수 메모 — 요청 전에만 화면에서 적을 수 있다. 잠긴 뒤에는 보내지 않는다(서버도 가린다). */
+      review_memo:      (document.getElementById('f-review-memo-input')?.offsetParent
+                          ? (document.getElementById('f-review-memo-input').value.trim() || null)
+                          : undefined),
       // ── 처방 수량·상병 ─────────────────────────────────────
       disease_name:     strOrNull('f-disease'),
       disease_code:     strOrNull('f-disease-code'),
@@ -7142,7 +7154,7 @@ window.HELP_TOUR_STEPS = [
 
   /** 상태 배지를 그 자리에서 고쳐 세운다. 되돌릴 수 없는 걸음은 단추도 잠근다. */
   function setRxStatus(status, label, badge) {
-    if (status) { RX_STATUS = status; applyRxStage(status); syncOrderStageBtn(); }
+    if (status) { RX_STATUS = status; applyRxStage(status); syncOrderStageBtn(); syncReviewMemoBox(); }
     const el = document.getElementById('rxStatusBadge');
     if (el && label) {
       el.textContent = label;
@@ -7210,6 +7222,25 @@ window.HELP_TOUR_STEPS = [
   /* 지금 처방이 어느 상태인가 — 주문 단추가 「지금 할 일」인지 가리는 데 쓴다.
      상태가 바뀌면 setRxStatus 가 여기도 고쳐 둔다. */
   let RX_STATUS = @json($prescription->status);
+
+  /* 검수 메모 칸을 상태에 맞춘다 — 요청 전에는 적을 수 있고, 요청한 뒤로는 읽기만 한다.
+     화면을 다시 부르지 않고 상태만 바꾸는 자리가 있어(검수 요청) 그때도 함께 맞춘다. */
+  function syncReviewMemoBox() {
+    const 입력 = document.getElementById('f-review-memo-input');
+    const 읽기 = document.getElementById('f-review-memo');
+    if (!입력 || !읽기) return;
+
+    const 검수전 = (RX_STATUS === 'pending' || RX_STATUS === 'rejected');
+
+    if (!검수전) {
+      /* 잠그면서 적어 둔 것을 읽기 칸으로 옮긴다 — 방금 적은 말이 사라지면 안 된다 */
+      const 값 = 입력.value.trim();
+      읽기.textContent = 값 || '검수 메모가 없습니다.';
+    }
+
+    입력.style.display = 검수전 ? '' : 'none';
+    읽기.style.display = 검수전 ? 'none' : '';
+  }
 
   /* 「주문 보기」 — 글자는 고정이다. 창고로 보냈으면 지난 걸음(체크), 검수를 마쳤는데
      아직 안 보냈으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다.
