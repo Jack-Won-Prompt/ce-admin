@@ -3945,6 +3945,15 @@ HTML;
             return (string) $v;
         };
 
+        /* 자동으로 남는 줄의 설명은 'created'ㆍ'updated'ㆍ'deleted' 라는 영어 한 낱말이다.
+           표에 그대로 세우면 이 화면에서 이 낱말만 영어라 눈에 걸린다. */
+        $설명 = fn (?string $d) => match ($d) {
+            'created' => '등록',
+            'updated' => '수정',
+            'deleted' => '삭제',
+            default   => (string) $d,
+        };
+
         $out = [];
         $no  = 0;
 
@@ -3974,7 +3983,7 @@ HTML;
                         'field'  => \App\Support\ChangeLog::이름($칸),
                         'before' => $전,
                         'after'  => $후,
-                        'note'   => $a->description ?? '',
+                        'note'   => $설명($a->description),
                     ];
                 }
 
@@ -3990,7 +3999,7 @@ HTML;
                 'field'  => '',
                 'before' => '',
                 'after'  => '',
-                'note'   => $a->description ?? '',
+                'note'   => $설명($a->description),
             ];
         }
 

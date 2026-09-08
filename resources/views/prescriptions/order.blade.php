@@ -6407,7 +6407,7 @@ window.HELP_TOUR_STEPS = [
     const rows = d.rows || [];
     note.textContent = rows.length
       ? `이 처방전과 딸린 주문ㆍ거래처의 변경 ${rows.length}건입니다.`
-      : '아직 남은 이력이 없습니다.';
+      : '아직 이력이 없습니다.';
 
     /* 표는 한 번만 세우고 이후에는 줄만 갈아 끼운다 — 다시 세우면 담당자가
        조정해 둔 열너비와 정렬이 풀린다. */
@@ -6419,7 +6419,7 @@ window.HELP_TOUR_STEPS = [
          「이걸 골라서 무엇을 하나」를 묻게 된다. 엑셀 저장은 남겨 둔다. */
       height: 340, editable: false, rowCheckbox: false, rowNumber: false,
       footer: { total: true, selected: false, modified: false },
-      emptyText: '아직 남은 이력이 없습니다.',
+      emptyText: '아직 이력이 없습니다.',
       columns: [
         { header: 'No',      name: 'no',     width: 50,  align: 'center', sortable: true, summary: false },
         { header: '일시',    name: 'at',     width: 145, sortable: true },
