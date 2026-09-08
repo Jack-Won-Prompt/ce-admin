@@ -293,7 +293,11 @@ class PrescriptionController extends Controller
             'delivery_date'           => $request->delivery_date,
             // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
             'ho_account_id'           => $request->ho_account_id ?? config('services.demoworks.account_id'),
-            'remark'                  => $prescription->admin_note,
+            /* 창고 「비고」 — **창고에 전할 말**이 있으면 그것, 없으면 예전처럼
+               등록자 메모가 나간다. 등록자 메모는 우리가 접수하며 적어 두는 말이라
+               창고에 전할 말과 다르다(2026-09-09 지시). */
+            'remark'                  => $prescription->order?->warehouse_note
+                                          ?: $prescription->admin_note,
             'items'                   => $request->items,
             /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
                넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */

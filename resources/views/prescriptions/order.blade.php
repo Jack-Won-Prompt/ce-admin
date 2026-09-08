@@ -2940,6 +2940,15 @@ $calcDeposit  = $calcCopay;
               {{-- 검수 메모 — 처방전 목록에서 검수자가 적어 둔 것을 그대로 보여 준다
                    (요청서 6·12쪽). 여기서 고치지는 않는다 — 적는 자리는 검수 화면이고,
                    두 곳에서 고치면 어느 것이 검수자의 말인지 알 수 없어진다. --}}
+              {{-- 등록 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
+                   왼쪽 카드에도 서지만, 처방 내용을 적는 동안 눈에 들어오지 않아
+                   이 탭 안에서도 함께 보인다(2026-09-09 지시). 여기서 고치지는 않는다. --}}
+              <div class="rx-field-row rx-row-start rx-w3">
+                <span class="rx-field-label">등록 메모</span>
+                <div id="f-admin-note" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
+                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
+              </div>
               <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">검수 메모</span>
                 <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
@@ -3623,6 +3632,19 @@ $calcDeposit  = $calcCopay;
             </div>
 
             {{-- 주문 생성 / 수정·삭제 버튼 영역 --}}
+            {{-- 창고 전달 메모 — 위드웍스 판매주문의 「비고」로 그대로 나간다.
+                 접수하며 적어 둔 등록자 메모와는 다른 말이라 자리를 따로 둔다. --}}
+            <div class="form-group" style="margin-top:10px;">
+              <label class="form-label" for="warehouseNote">창고 전달 메모</label>
+              <textarea class="form-control" id="warehouseNote" rows="2" maxlength="500"
+                        placeholder="창고에 전달할 내용을 입력하십시오 (선택)"
+                        oninput="markProductDirty()"
+                        style="resize:vertical;min-height:52px;">{{ $prescription->order?->warehouse_note }}</textarea>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                위드웍스 판매주문의 <b>비고</b>로 전달됩니다. 비워 두면 등록자 메모가 전달됩니다.
+              </div>
+            </div>
+
             <div id="orderActionArea" style="margin-top:12px;">
               {{-- 「주문이 있느냐」가 아니라 「창고로 보냈느냐」로 가른다. 저장만 해도
                    주문 줄은 서기 때문이다(주문 관리에 보이도록). 아직 보내지 않은 줄은
@@ -7729,6 +7751,8 @@ window.HELP_TOUR_STEPS = [
       shipping_address:   shippingAddress,
       // 상세주소는 따로도 남긴다 — 붙여 둔 것을 다시 가르다 두 번 붙는 일이 있었다
       shipping_address_detail: shippingDetail || null,
+      // 창고 전달 메모 — 위드웍스 판매주문의 비고로 나간다
+      warehouse_note:     document.getElementById('warehouseNote')?.value?.trim() || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     };
@@ -7985,6 +8009,8 @@ window.HELP_TOUR_STEPS = [
       shipping_postcode:  document.getElementById('shippingPostcode')?.value?.trim() || null,
       shipping_address:   shippingAddress,
       shipping_address_detail: shippingDetail || null,
+      // 창고 전달 메모 — 위드웍스 판매주문의 비고로 나간다
+      warehouse_note:     document.getElementById('warehouseNote')?.value?.trim() || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     });

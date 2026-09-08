@@ -161,7 +161,7 @@ class Order extends Model
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
         'deposit_confirmed_at', 'deposit_confirmed_by', 'deposit_amount', 'deposit_note',
         'pay_method',
-        'total_amount',
+        'total_amount', 'warehouse_note',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
         'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at', 'nhis_reject_stage',
