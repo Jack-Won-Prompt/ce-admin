@@ -2351,7 +2351,11 @@ class PrescriptionController extends Controller
            저장할 때마다 창고로 주문이 날아가서는 안 된다. */
         $order = $this->ensureOrder($prescription);
 
-        activity()->causedBy(Auth::user())->performedOn($prescription)->log('OCR 필드 수정');
+        /* 「OCR 필드 수정」이라 적어 왔다. 이 칸들이 처음에 처방전 그림을 OCR 로 읽어
+           채우던 자리라 그렇게 불렀는데, 지금은 담당자가 손으로 적는다 — 저장 이력에서
+           그 말은 무슨 일이 있었는지 아무것도 알려 주지 않는다.
+           지난 줄에 남은 옛 말은 history() 가 읽을 때 이 말로 옮겨 세운다. */
+        activity()->causedBy(Auth::user())->performedOn($prescription)->log('주문 등록 저장');
 
         /* 처방전 접수를 알리고, 위임동의 서명 SMS 를 보낸다(테스트 시나리오 1.1.x).
            서명 화면이 개인정보 동의도 함께 받으므로 링크 한 통으로 둘이 끝난다.
@@ -3969,6 +3973,10 @@ HTML;
             'created' => '등록',
             'updated' => '수정',
             'deleted' => '삭제',
+            /* 지난 줄에 쌓인 옛 말. 이 칸들이 OCR 로 채워지던 시절의 이름이라
+               읽는 사람에게 아무것도 알려 주지 않는다 — 지금 쓰는 말로 옮겨 세운다.
+               쌓인 것을 고쳐 쓰지는 않는다. 그때 남은 자취는 그대로 둔다. */
+            'OCR 필드 수정' => '주문 등록 저장',
             default   => (string) $d,
         };
 
@@ -4061,7 +4069,7 @@ HTML;
                 /* 그때 적어 둔 말이 있으면 그것을 세운다 — 「수정」보다 「OCR 필드 수정」이
                    무슨 일이었는지 말해 준다. 없으면 자동으로 남은 낱말을 쓴다. */
                 'note'    => $적어둔말
-                                ? implode(' · ', $적어둔말)
+                                ? implode(' · ', array_map($설명, $적어둔말))
                                 : $설명($a->description),
                 'fields'  => $칸들,
             ];
