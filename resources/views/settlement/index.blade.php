@@ -1007,7 +1007,16 @@
 
   async function payMethodSet(row, rowIndex, method) {
     payMethodClose();
-    if (method === row.pay_method_key) return;
+
+    /* 이미 **받은** 건에서 같은 값을 다시 고르면 할 일이 없다 — 그때만 넘어간다.
+
+       받기 전에는 값이 같아도 넘어가면 안 된다. 이 칸을 고르는 일이 곧 입금 확인이고,
+       그 걸음이 세금계산서ㆍ거래명세서ㆍ창고 확정을 함께 움직이기 때문이다.
+       그런데 확정 전에도 넘어가고 있었다 — 상세 목록의 결제 방식이 링크페이로 잡혀
+       있으면 주문에 그 값이 미리 적히고, 목록에서 링크페이를 골라도 「같은 값」이라
+       아무 일도 하지 않은 채 조용히 돌아갔다. 담당자는 눌렀는데 아무 반응이 없고
+       까닭도 알 수 없다(2026-09-08 · 3차 5회 송예린). */
+    if (row.deposit_done && method === row.pay_method_key) return;
 
     try {
       const res = await fetch(ORDERS_BASE + '/' + row.id + '/pay-method', {
