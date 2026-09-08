@@ -2293,13 +2293,14 @@ class PrescriptionController extends Controller
 
            보내지 못해도 저장은 이미 끝난 것이라 되돌리지 않는다 — 무슨 일이 있었는지는
            답에 실어 화면이 함께 보여 준다(주문 확정 안내와 같은 방식). */
-        $this->rxReceivedSmsOnFirstSave($prescription);
+        $rxSms      = $this->rxReceivedSmsOnFirstSave($prescription);
         $consentSms = $this->consentSmsOnFirstSave($prescription);
 
         return response()->json([
             'success'     => true,
             'message'     => '저장되었습니다.',
             'consent_sms' => $consentSms,
+            'rx_sms'      => $rxSms,
             'items'       => $prescription->items->map(fn($item) => [
                 'product_name'    => $item->product_name,
                 'product_code'    => $item->product_code,
@@ -2674,24 +2675,33 @@ class PrescriptionController extends Controller
      *
      * 두 번 보내지 않는다. 못 보내도 저장을 막지 않는다.
      */
-    private function rxReceivedSmsOnFirstSave(Prescription $prescription): bool
+    private function rxReceivedSmsOnFirstSave(Prescription $prescription): array
     {
-        if (! config('order.rx_received_sms_on_first_save')) return false;
+        /* 못 보냈으면 **까닭을 함께 돌려준다**.
+
+           여태 참ㆍ거짓만 돌려주어, 연락처가 비어 못 보낸 것과 이미 보낸 것이
+           화면에서 똑같이 「아무 일도 없음」으로 보였다. 담당자는 나간 줄 알고
+           기다린다(2026-09-08 · 3차 5회 문채아 — 연락처가 비어 있었다). */
+        $no = fn (?string $why) => ['sent' => false, 'reason' => $why];
+
+        if (! config('order.rx_received_sms_on_first_save')) return $no(null);
 
         $prescription->refresh()->loadMissing('patient');
         $patient = $prescription->patient;
-        if (! $patient) return false;                        // 아직 사람이 붙지 않았다
+        if (! $patient) return $no(null);                    // 아직 사람이 붙지 않았다
 
         $source = 'rx-received';
 
         $mobile = preg_replace('/\\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));
-        if (strlen($mobile) < 9 || strlen($mobile) > 11) return false;
+        if (strlen($mobile) < 9 || strlen($mobile) > 11) {
+            return $no('연락처가 없어 접수 안내를 보내지 못했습니다.');
+        }
 
         if (\App\Models\MessageHistory::where('source', $source)
                 ->where('prescription_id', $prescription->id)
                 ->where('success_count', '>', 0)
                 ->exists()) {
-            return false;                                    // 이미 알렸다
+            return $no(null);                                // 이미 알렸다 — 말할 것이 없다
         }
 
         $name = $patient->name ?: ($prescription->patient_name_ocr ?: '고객');
@@ -2718,17 +2728,17 @@ class PrescriptionController extends Controller
                 'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
             ]);
 
-            return false;
+            return $no('접수 안내를 보내지 못했습니다.');
         }
 
         if ($res['success'] ?? false) {
             activity()->causedBy(Auth::user())->performedOn($prescription)
                 ->log("처방전 접수 안내 발송 → {$mobile}");
 
-            return true;
+            return ['sent' => true, 'reason' => null];
         }
 
-        return false;
+        return $no('접수 안내를 보내지 못했습니다.');
     }
 
     private function consentSmsOnFirstSave(Prescription $prescription): array

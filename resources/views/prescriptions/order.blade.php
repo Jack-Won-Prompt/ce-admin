@@ -1053,8 +1053,13 @@ $calcDeposit  = $calcCopay;
         <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
         {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
              단추는 그대로 두고 받지 않아도 되는 건이라는 것만 옆에 적는다. --}}
-        <span id="consentNotNeeded" style="display:none;align-self:center;font-size:11px;color:var(--text-muted);white-space:nowrap;"
-              title="환자가 보험사ㆍ근로복지공단에 직접 청구하는 건이라 위임이 필요하지 않습니다.">위임 해당 없음</span>
+        <span id="consentNotNeeded" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--text-muted);white-space:nowrap;"
+              title="환자가 보험사ㆍ근로복지공단에 직접 청구하는 건이라 급여 위임이 필요하지 않습니다.&#10;다만 개인정보 수집ㆍ이용 동의는 처음 오는 거래처라면 받아야 합니다 — 같은 링크로 함께 받습니다.">
+          <span>위임 해당 없음</span>
+          {{-- 위임이 없다고 개인정보 동의까지 없는 것이 아니다. 「해당 없음」만 보고
+               건너뛰기 쉬워, 무엇이 남았는지 한 줄로 적는다(2026-09-08 · 3차 5회 문채아). --}}
+          <span id="consentPrivacyStill" style="color:var(--warning);font-weight:600;">개인정보 동의는 받습니다</span>
+        </span>
         {{-- 위임동의 팝오버 --}}
         <div id="consentPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
@@ -6131,7 +6136,15 @@ window.HELP_TOUR_STEPS = [
        받은 것은 받은 것이고, 이 글은 아직 안 받은 사람에게 하는 말이다. */
     const 받아둠 = !!window.CONSENT_STATUS;
 
-    tag.style.display = (bs && !bs.needs_delegation && !받아둠) ? '' : 'none';
+    tag.style.display = (bs && !bs.needs_delegation && !받아둠) ? 'inline-flex' : 'none';
+
+    /* 개인정보 동의까지 받아 두었으면 그 줄은 물러난다 — 남은 것만 적는다 */
+    /* PRIVACY_STATE 는 아래쪽에서 let 으로 선다 — 이 함수가 먼저 돌 수 있어
+       typeof 로도 가릴 수 없다(TDZ). 못 읽으면 「아직 안 받았다」로 본다. */
+    let 개인정보받아둠 = false;
+    try { 개인정보받아둠 = !!PRIVACY_STATE?.agreed; } catch (e) {}
+    const still = document.getElementById('consentPrivacyStill');
+    if (still) still.style.display = 개인정보받아둠 ? 'none' : '';
   }
 
   /* ── 유형 × 자격 ───────────────────────────────────────────
@@ -6991,6 +7004,10 @@ window.HELP_TOUR_STEPS = [
         /* 첫 저장에 위임동의 서명 SMS 가 함께 나갔는지 알린다. 나가지 않은 때에도 까닭을
            적는다 — 조용히 지나가면 담당자는 나간 줄 알고 기다린다.
            꺼 두었거나 첫 저장이 아니면 서버가 아무 말도 하지 않는다(reason 이 없다). */
+        /* 접수 안내도 같은 자리에서 말한다. 나간 것은 굳이 알리지 않고(저장 토스트에
+           묻힌다) **못 나간 것만** 적는다 — 조용히 지나가면 담당자는 나간 줄 안다. */
+        if (res.rx_sms?.reason) showToast(res.rx_sms.reason, 'warning');
+
         const cs = res.consent_sms;
         if (cs?.sent) {
           showToast('위임동의 서명 SMS 를 보냈습니다 — ' + (cs.expires_at || '') + '까지 열려 있습니다.', 'success');

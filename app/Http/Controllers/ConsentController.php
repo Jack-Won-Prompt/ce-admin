@@ -476,7 +476,12 @@ class ConsentController extends Controller
            지원 자격이 먼저다 — 차상위경감ㆍ기초는 보험이 무엇이든 그것으로 청구한다.
            지원 자격을 고르지 않았으면 보험에서 읽는다. 산업재해와 자동차보험만
            자격 칸에 대응하는 값이 있다(보훈은 자격 갈래에 없다). */
-        if (! $rx->benefit_class) {
+        /* 처방외는 자격이 없는 갈래다 — 서명 화면에서 고른 보험을 자격 칸에 옮겨
+           적으면 목록에 「처방외인데 자격 일반」이라는 줄이 선다. 그 건은 비워 둔다
+           (2026-09-08 · 3차 5회 문채아). */
+        $처방외 = (string) $rx->counsel_acc_add_type === \App\Support\BillingStrategy::TYPE_NONRX;
+
+        if (! $rx->benefit_class && ! $처방외) {
             $byInsurance = ['산업재해' => '산재', '자동차보험' => '자동차보험'];
             $bc = ['일반' => '일반', '차상위경감대상자' => '차상위경감', '기초생활수급자' => '기초'][$val('support_qualify')]
                   ?? ($byInsurance[$val('insurance')] ?? null);

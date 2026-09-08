@@ -321,8 +321,11 @@ class OrderGridExtras
             /* 유형ㆍ자격을 고르기 전이면 열쇠가 없다. 그때 resolve 는 「고르면 정해집니다」라는
                안내말을 돌려주는데, 그것은 상세 화면에서 쓸 말이지 표의 한 칸에 설
                것이 아니다 — 서른 줄에 긴 문장이 들어서면 오히려 읽힐 것을 덮는다. */
-            'ww_bs_code'    => $bsKey = (\App\Support\BillingStrategy::key(
-                                   $p?->counsel_acc_add_type, $p?->benefit_class) ?? ''),
+            /* 열쇠는 「20|」처럼 파이프로 끝날 수 있다(처방외는 자격이 없다). 대조에
+               쓰는 열쇠는 그대로 두고, **표에 보일 때만** 빈 꼬리를 뗀다 — 파이프로
+               끝나는 칸은 자료로 넘길 때 헷갈린다(2026-09-08 · 3차 5회 문채아). */
+            'ww_bs_code'    => rtrim($bsKey = (\App\Support\BillingStrategy::key(
+                                   $p?->counsel_acc_add_type, $p?->benefit_class) ?? ''), '|'),
             'ww_bs_name'    => $bsKey === '' ? '' : \App\Support\BillingStrategy::resolve(
                                    $p->counsel_acc_add_type, $p->benefit_class)['label'],
             'ww_ship_no'    => $o?->withworks_ship_no ?? '',
