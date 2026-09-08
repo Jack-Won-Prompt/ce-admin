@@ -50,21 +50,23 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
-  /* ── 첨부 · 팩스 팝업 ────────────────────────────────── */
+  /* ── 첨부 · 팩스 팝오버 ───────────────────────────────
+     화면을 덮지 않는다 — 누른 자리 옆에 붙어 뜨고, 뒤의 목록이 그대로 보인다.
+     줄을 훑다가 열고 닫는 자리라 가운데 창은 흐름을 끊는다(2026-09-09 지시). */
   .att-fax-back {
     display: none; position: fixed; inset: 0; z-index: 1400;
-    background: rgba(0,0,0,.42); align-items: center; justify-content: center; padding: 24px;
+    background: transparent;   /* 덮지 않는다 — 바깥을 눌러 닫는 자리로만 쓴다 */
   }
-  .att-fax-back.show { display: flex; }
+  .att-fax-back.show { display: block; }
   .att-fax {
-    width: min(560px, 100%); max-height: min(78vh, 720px);
+    position: fixed; width: 440px; max-height: 460px;
     display: flex; flex-direction: column;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); box-shadow: 0 12px 40px rgba(0,0,0,.22); overflow: hidden;
+    background: var(--bg-card); border: 1px solid var(--primary);
+    border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
   }
   .att-fax-hd {
-    display: flex; align-items: center; gap: 8px; padding: 11px 14px;
-    background: var(--primary); color: #fff; font-size: 13px;
+    display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+    background: var(--primary); color: #fff; font-size: 12px;
   }
   .att-fax-hd b { flex: 1; font-weight: 700; }
   .att-fax-x { background: none; border: none; color: #fff; font-size: 17px; line-height: 1; cursor: pointer; }
@@ -72,11 +74,11 @@ window.HELP_TOUR_STEPS = [
     padding: 9px 14px; font-size: 11px; line-height: 1.6;
     background: var(--danger-light); color: var(--danger); border-bottom: 1px solid var(--border);
   }
-  .att-fax-bd { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .att-fax-bd { flex: 1; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
   .att-fax-row {
-    display: grid; grid-template-columns: 18px 108px 1fr auto; align-items: center; gap: 8px;
-    padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--radius);
-    font-size: 12px; cursor: pointer; background: var(--bg-card);
+    display: grid; grid-template-columns: 16px 92px 1fr auto; align-items: center; gap: 7px;
+    padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 11.5px; cursor: pointer; background: var(--bg-card);
   }
   .att-fax-row:hover { border-color: var(--primary); }
   /* 실리지 않는 것 — 고를 수 없다는 것이 한눈에 보여야 한다 */
@@ -86,7 +88,7 @@ window.HELP_TOUR_STEPS = [
   .att-fax-nm { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .att-fax-at { color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
   .att-fax-empty { padding: 18px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
-  .att-fax-to { padding: 10px 14px; border-top: 1px solid var(--border); }
+  .att-fax-to { padding: 9px 12px; border-top: 1px solid var(--border); }
   .att-fax-to label { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
   .att-fax-to input {
     width: 100%; height: 32px; padding: 0 10px; font-size: 12px;
@@ -94,7 +96,7 @@ window.HELP_TOUR_STEPS = [
   }
   .att-fax-to input:focus { outline: none; border-color: var(--primary); }
   .att-fax-hint { margin-top: 5px; font-size: 10px; color: var(--text-muted); line-height: 1.5; }
-  .att-fax-ft { display: flex; justify-content: flex-end; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); }
+  .att-fax-ft { display: flex; justify-content: flex-end; gap: 6px; padding: 9px 12px; border-top: 1px solid var(--border); }
   .att-fax-btn {
     height: 32px; padding: 0 14px; font-size: 12px; font-weight: 700; cursor: pointer;
     border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--gray-1000);
@@ -469,6 +471,8 @@ window.HELP_TOUR_STEPS = [
        · 실리지 않는 것(PDF 첨부)은 고를 수 없게 하고 까닭을 적는다. */
   const FAX_DOCS_URL = @json(url('/orders'));
 
+  let _attAnchor = null;
+
   function attFaxBtn(row) {
     const n = Number(row.att_count || 0);
     const box = document.createElement('div');
@@ -483,7 +487,7 @@ window.HELP_TOUR_STEPS = [
     b.style.cssText = 'height:22px;min-width:34px;padding:0 8px;font-size:11px;font-weight:700;'
                     + 'cursor:pointer;border:1px solid var(--primary);border-radius:999px;'
                     + 'background:var(--primary-light);color:var(--primary);line-height:1;';
-    b.onclick = (ev) => { ev.stopPropagation(); openAttFax(row); };
+    b.onclick = (ev) => { ev.stopPropagation(); _attAnchor = ev.currentTarget; openAttFax(row); };
     box.appendChild(b);
     return box;
   }
@@ -519,8 +523,30 @@ window.HELP_TOUR_STEPS = [
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && back.classList.contains('show')) attFaxClose();
     });
+    /* 목록을 굴리면 붙어 있던 자리가 어긋난다 — 그때는 닫는다.
+       따라 움직이게 하면 창이 화면 밖으로 미끄러져 나가는 편이 더 나쁘다. */
+    window.addEventListener('scroll', attFaxClose, true);
+    window.addEventListener('resize', attFaxClose);
     back.querySelector('#attFaxSend').onclick = attFaxSend;
     return back;
+  }
+
+  /* 누른 단추 옆에 앉힌다 — 아래가 좁으면 위로, 오른쪽이 좁으면 왼쪽으로 붙인다 */
+  function attFaxPlace(anchor) {
+    const pop = _attPop.querySelector('.att-fax');
+    const r   = anchor.getBoundingClientRect();
+    const gap = 6;
+    const w   = pop.offsetWidth  || 440;
+    const h   = pop.offsetHeight || 460;
+
+    let top  = r.bottom + gap;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - gap);
+
+    let left = r.left;
+    if (left + w > window.innerWidth - 8) left = Math.max(8, window.innerWidth - w - 8);
+
+    pop.style.top  = top  + 'px';
+    pop.style.left = left + 'px';
   }
 
   async function openAttFax(row) {
@@ -531,6 +557,7 @@ window.HELP_TOUR_STEPS = [
     list.innerHTML = '<div class="att-fax-empty">불러오는 중…</div>';
     blk.style.display = 'none';
     _attPop.classList.add('show');
+    if (_attAnchor) attFaxPlace(_attAnchor);
 
     let d;
     try {
@@ -553,6 +580,9 @@ window.HELP_TOUR_STEPS = [
     _attPop.querySelector('#attFaxHint').textContent =
       d.office?.name ? ('관할 청구처 ' + d.office.name + ' — 다른 곳으로 보내려면 번호를 고쳐 적으십시오.')
                      : '받는 곳의 팩스번호를 적으십시오.';
+
+    /* 줄이 채워져 높이가 달라졌다 — 다시 앉힌다 */
+    setTimeout(() => { if (_attAnchor) attFaxPlace(_attAnchor); }, 0);
 
     list.innerHTML = _attRows.length
       ? _attRows.map((r, i) => `
