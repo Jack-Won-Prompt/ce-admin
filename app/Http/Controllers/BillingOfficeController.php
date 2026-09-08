@@ -84,13 +84,25 @@ class BillingOfficeController extends Controller
             return $q;
         };
 
-        /* 시군구 전체를 맡는 줄 — 지자체가 이 꼴이다. 읍면동을 몰라도 이것으로 찾는다. */
-        $구전체 = fn () => BillingOffice::with('areas')->active()->kind($kind)
-            ->whereHas('areas', fn ($a) => $시도로($a->whereNull('emd')->where('sigungu', $sigungu)))
+        /* **읍면동을 모르면 그 시군구의 줄을 모두 본다.**
+
+           도로명 주소에는 읍면동이 없어 시군구만 아는 일이 흔하다. 여태 그때
+           「그 구 전체를 맡는 줄」만 보았는데, 그 꼴로 쌓인 것은 지자체뿐이다 —
+           공단 지사는 관할 읍면동을 적어 두고 쓰므로 한 줄도 걸리지 않아,
+           이미 등록해 둔 지사가 「쌓아 둔 청구처가 없습니다」로 나왔다
+           (2026-09-08 · 3차 5회 신우재).
+
+           구 전체를 맡는 줄이 앞에 서고, 그 뒤에 그 구의 읍면동 줄이 선다. */
+        $시군구전체 = fn () => BillingOffice::with('areas')->active()->kind($kind)
+            ->whereHas('areas', fn ($a) => $시도로($a->where('sigungu', $sigungu)))
+            ->orderByRaw('(SELECT MIN(CASE WHEN emd IS NULL THEN 0 ELSE 1 END)
+                             FROM billing_office_areas
+                            WHERE billing_office_id = billing_offices.id
+                              AND sigungu = ?)', [$sigungu])
             ->orderBy('sort_order')->orderBy('id')->get();
 
         if ($emd === '') {
-            $rows = $구전체();
+            $rows = $시군구전체();
 
             return response()->json([
                 'success'  => true,
@@ -120,7 +132,7 @@ class BillingOfficeController extends Controller
            동을 하나하나 쌓아 두지 않아도 되게 하는 자리다. */
         $wide = false;
         if ($rows->isEmpty() && $sigungu !== '') {
-            $rows = $구전체();
+            $rows = $시군구전체();
             $wide = $rows->isNotEmpty();
         }
 
