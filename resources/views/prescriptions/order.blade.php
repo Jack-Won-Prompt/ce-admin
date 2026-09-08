@@ -5892,6 +5892,25 @@ window.HELP_TOUR_STEPS = [
     badge.title = over ? '건보 재등록 기한이 지났습니다.' : '건보 재등록 기한이 다가옵니다.';
   }
 
+  /* 현금영수증 번호는 **소득공제일 때만** 쓴다(2026-09-09 지시).
+
+     소득공제는 발행받는 사람의 전화번호로 낸다 — 그 자리에서 거래처 전화번호를
+     채워 준다. 지출증빙ㆍ자진발급은 그 번호를 쓰지 않으므로 비운다.
+     비워 두어도 발행은 막히지 않는다 — 발행 쪽이 번호가 없으면 거래처 전화번호로
+     대신한다(DepositAutoIssueㆍCashbillController). */
+  document.getElementById('f-deduction')?.addEventListener('change', function () {
+    const no = document.getElementById('f-cash-receipt');
+    if (!no) return;
+
+    if (this.value !== '소득공제') { no.value = ''; markOcrDirty(); return; }
+
+    /* 전화번호 칸은 화면 설정에 따라 고르는 칸일 수도, 적는 칸일 수도 있다 */
+    const 전화 = [...document.querySelectorAll('#f-mobile')]
+      .map(e => (e.value || '').trim()).find(v => v) || '';
+
+    if (전화) { no.value = 전화; markOcrDirty(); }
+  });
+
   document.getElementById('f-nhis-reg-date')?.addEventListener('change', calcNhisRenewDue);
   document.getElementById('f-nhis-renew-due')?.addEventListener('change', syncNhisRenewBadge);
   document.addEventListener('DOMContentLoaded', syncNhisRenewBadge);

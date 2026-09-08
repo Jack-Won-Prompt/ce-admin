@@ -716,11 +716,31 @@
     }
   };
 
-  /* 자진발급이면 번호가 정해져 있다(010-000-1234). 저장한 뒤에야 채워지면 담당자는
-     비어 있는 줄 알고 손으로 적는다 — 고르는 그 자리에서 채운다. */
+  /* 현금영수증 번호는 **소득공제일 때만** 쓴다(2026-09-09 지시).
+
+     소득공제는 발행받는 사람의 전화번호로 낸다 — 그 자리에서 거래처 전화번호를
+     채워 준다. 지출증빙ㆍ자진발급은 그 번호를 쓰지 않으므로 비운다. 예전에는
+     자진발급을 고르면 국세청이 쓰는 번호(010-000-1234)를 박아 넣었는데, 그 값이
+     소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있었다.
+
+     비워 두어도 발행은 막히지 않는다 — 발행 쪽이 번호가 없으면 거래처 전화번호로
+     대신한다(DepositAutoIssueㆍCashbillController). */
+  function addCashReceiptRule(sel, noId, phoneId) {
+    const no = document.getElementById(noId);
+    if (!no) return;
+
+    if (sel.value !== '소득공제') { no.value = ''; return; }
+
+    /* 전화번호 칸은 화면 설정에 따라 고르는 칸일 수도, 적는 칸일 수도 있다 —
+       어느 쪽이든 지금 값을 그대로 가져온다. */
+    const 전화 = [...document.querySelectorAll('#' + phoneId)]
+      .map(e => (e.value || '').trim()).find(v => v) || '';
+
+    if (전화) no.value = 전화;
+  }
+
   document.getElementById('add-deduction')?.addEventListener('change', function () {
-    const no = document.getElementById('add-cash-receipt');
-    if (this.value === '자진발급' && !no.value.trim()) no.value = '010-000-1234';
+    addCashReceiptRule(this, 'add-cash-receipt', 'add-mobile');
   });
 })();
 </script>
