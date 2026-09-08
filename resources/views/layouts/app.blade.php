@@ -2327,18 +2327,31 @@ document.addEventListener('click', (e) => {
     setTimeout(() => toast.remove(), 300);
   }
 
-  /* ── 사이드바 메뉴 그룹 펼침/접힘 ──────────────────────────
-     헤더를 누르면 그룹이 접히고, 상태는 localStorage 에 저장돼 새로고침·다른
-     화면에서도 유지된다. 현재 화면이 속한 그룹은 항상 펼친 상태로 시작한다.
-     접힌 그룹에 알림 건수가 있으면 헤더에 합계를 띄워 놓치지 않게 한다. */
-  (function () {
-    const KEY = 'ce_menu_collapsed_groups';
+  /* ── 사이드바 메뉴 그룹 — 아코디언 ────────────────────────
+     **한 번에 한 갈래만 열린다.** 헤더를 누르면 그 갈래가 펼쳐지고 나머지는
+     저절로 접힌다. 같은 헤더를 다시 누르면 그 갈래도 접혀 전부 닫힌다.
 
-    function load() {
-      try { return new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) { return new Set(); }
+     아홉 갈래에 마흔 줄 남짓이라 모두 펼치면 한 화면에 들지 않아, 아래쪽
+     「설정」을 가려면 늘 스크롤해야 했다. 한 갈래만 열어 두면 전체 갈래가
+     한눈에 서고 지금 있는 자리도 바로 보인다(2026-09-08 지시).
+
+     열려 있는 갈래는 localStorage 에 남아 새로고침·다른 화면에서도 이어진다.
+     현재 화면이 속한 갈래가 있으면 그것이 이긴다 — 어느 자리에 있는지가
+     지난번에 무엇을 열어 두었는지보다 먼저다.
+
+     접힌 갈래에 알림 건수가 있으면 헤더에 합계를 띄워 놓치지 않게 한다. */
+  (function () {
+    const KEY     = 'ce_menu_open_group';
+    const OLD_KEY = 'ce_menu_collapsed_groups';   // 접힌 목록을 담던 옛 열쇠
+
+    function loadOpen() {
+      try { return localStorage.getItem(KEY); } catch (e) { return null; }
     }
-    function save(set) {
-      try { localStorage.setItem(KEY, JSON.stringify(Array.from(set))); } catch (e) { /* noop */ }
+    function saveOpen(name) {
+      try {
+        if (name) localStorage.setItem(KEY, name); else localStorage.removeItem(KEY);
+        localStorage.removeItem(OLD_KEY);          // 옛 열쇠는 더 쓰지 않는다
+      } catch (e) { /* noop */ }
     }
 
     // 그룹 내 알림 배지 합계를 헤더에 반영 (접혔을 때만 CSS 로 노출)
@@ -2355,44 +2368,67 @@ document.addEventListener('click', (e) => {
       el.style.display = sum > 0 ? '' : 'none';
     }
 
+    function groups() {
+      return Array.from(document.querySelectorAll('.menu-group'));
+    }
+
+    /** 이 갈래만 펼치고 나머지는 접는다. name 이 없으면 모두 접는다. */
+    function openOnly(name) {
+      groups().forEach(function (g) {
+        g.classList.toggle('is-collapsed', g.dataset.menuGroup !== name);
+        syncGroupBadge(g);
+      });
+    }
+
     window.toggleMenuGroup = function (btn) {
       const group = btn.closest('.menu-group');
       if (!group) return;
+
       const name = group.dataset.menuGroup;
-      const set  = load();
-      const collapsed = group.classList.toggle('is-collapsed');
-      if (collapsed) set.add(name); else set.delete(name);
-      save(set);
-      syncGroupBadge(group);
+      /* 열려 있던 것을 다시 누르면 닫는다 — 전부 접힌 자리도 쓸 데가 있다 */
+      const 닫는다 = !group.classList.contains('is-collapsed');
+
+      openOnly(닫는다 ? null : name);
+      saveOpen(닫는다 ? null : name);
     };
 
-    document.querySelectorAll('.menu-group').forEach(function (group) {
-      const hasActive = !!group.querySelector('.menu-item.active');
-      group.classList.toggle('has-active', hasActive);
+    /* 처음 여는 자리 — 지금 있는 갈래가 먼저, 없으면 지난번에 열어 둔 것 */
+    (function () {
+      let 열갈래 = null;
 
-      if (hasActive) {
-        // 현재 화면이 있는 그룹은 펼쳐 두고, 저장된 접힘 상태도 해제한다
-        const set = load();
-        if (set.delete(group.dataset.menuGroup)) save(set);
-      } else if (load().has(group.dataset.menuGroup)) {
-        group.classList.add('is-collapsed');
+      groups().forEach(function (g) {
+        const hasActive = !!g.querySelector('.menu-item.active');
+        g.classList.toggle('has-active', hasActive);
+        if (hasActive) 열갈래 = g.dataset.menuGroup;
+      });
+
+      if (!열갈래) {
+        const saved = loadOpen();
+        if (saved && groups().some(g => g.dataset.menuGroup === saved)) 열갈래 = saved;
       }
-      syncGroupBadge(group);
-    });
+
+      openOnly(열갈래);
+      if (열갈래) saveOpen(열갈래);
+    })();
 
     // 동적으로 갱신되는 배지(공지·CE샵 주문)를 헤더 합계에 반영
     window.refreshMenuGroupBadges = function () {
-      document.querySelectorAll('.menu-group').forEach(syncGroupBadge);
+      groups().forEach(syncGroupBadge);
     };
 
     /* 워크스페이스는 탭을 바꿀 때 .menu-item.active 를 JS 로 옮긴다.
-       그때 활성 항목이 접힌 그룹에 가려지지 않도록 다시 펼쳐 준다. */
+       그때 활성 항목이 접힌 갈래에 가려지지 않도록 그 갈래를 연다 —
+       아코디언이므로 나머지는 함께 접힌다. */
     window.syncMenuGroupsActive = function () {
-      document.querySelectorAll('.menu-group').forEach(function (group) {
-        const hasActive = !!group.querySelector('.menu-item.active');
-        group.classList.toggle('has-active', hasActive);
-        if (hasActive) group.classList.remove('is-collapsed');
+      let 열갈래 = null;
+
+      groups().forEach(function (g) {
+        const hasActive = !!g.querySelector('.menu-item.active');
+        g.classList.toggle('has-active', hasActive);
+        if (hasActive) 열갈래 = g.dataset.menuGroup;
       });
+
+      if (열갈래) { openOnly(열갈래); saveOpen(열갈래); }
     };
   })();
 
