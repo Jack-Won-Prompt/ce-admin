@@ -3972,10 +3972,52 @@ HTML;
             default   => (string) $d,
         };
 
+        /* ── 한 번 저장을 한 줄로 ──────────────────────────────────────
+           한 번 저장하면 줄이 둘 남는다. 하나는 우리가 손으로 적어 온 것
+           (「OCR 필드 수정」처럼 무슨 일이었는지 말하는 줄)이고, 하나는 바뀐 칸을
+           담은 자동 줄이다. 그대로 세우면 저장 한 번이 두 줄로 흩어져, 「저장
+           단위 목록」이라는 말이 무색해진다.
+
+           같은 것을 같은 초에 건드린 줄들을 묶어, 바뀐 칸을 담은 줄에 그때 적어 둔
+           말을 얹는다. 바뀐 칸이 없는 줄들만 있는 묶음(팩스 전송ㆍ접수 안내처럼
+           저장이 아닌 일)은 각자 제 줄로 남는다 — 서로 다른 일이다. */
+        $묶음 = [];
+
+        foreach ($rows as $a) {
+            $열쇠 = $a->subject_type . '#' . $a->subject_id . '@'
+                  . ($a->created_at?->format('Y-m-d H:i:s') ?? '');
+            $묶음[$열쇠][] = $a;
+        }
+
+        $세울줄 = [];
+
+        foreach ($묶음 as $한묶음) {
+            $바뀐것 = array_values(array_filter(
+                $한묶음,
+                fn ($a) => ! empty($a->properties['attributes']) || ! empty($a->properties['old']),
+            ));
+
+            /* 바뀐 칸을 담은 줄이 딱 하나면, 나머지 줄의 말을 그 줄에 얹어 한 줄로 만든다 */
+            if (count($바뀐것) === 1) {
+                $적어둔말 = array_values(array_filter(array_map(
+                    fn ($a) => $a->description,
+                    array_filter($한묶음, fn ($a) => $a !== $바뀐것[0]),
+                )));
+
+                $세울줄[] = [$바뀐것[0], $적어둔말];
+
+                continue;
+            }
+
+            foreach ($한묶음 as $a) {
+                $세울줄[] = [$a, []];
+            }
+        }
+
         $out = [];
         $no  = 0;
 
-        foreach ($rows as $a) {
+        foreach ($세울줄 as [$a, $적어둔말]) {
             $new = (array) ($a->properties['attributes'] ?? []);
             $old = (array) ($a->properties['old'] ?? []);
 
@@ -4016,7 +4058,11 @@ HTML;
                 'where'   => $어디[$a->subject_type] ?? class_basename((string) $a->subject_type),
                 'summary' => $요약,
                 'count'   => count($칸들),
-                'note'    => $설명($a->description),
+                /* 그때 적어 둔 말이 있으면 그것을 세운다 — 「수정」보다 「OCR 필드 수정」이
+                   무슨 일이었는지 말해 준다. 없으면 자동으로 남은 낱말을 쓴다. */
+                'note'    => $적어둔말
+                                ? implode(' · ', $적어둔말)
+                                : $설명($a->description),
                 'fields'  => $칸들,
             ];
         }
