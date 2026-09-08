@@ -1466,7 +1466,9 @@ class PrescriptionController extends Controller
                fill 을 쓰면 안 된다. 그것은 이 화면의 칸(f-…)에 비추려고 고른 것이라
                사업부ㆍ성별ㆍFaxㆍ연락 상태ㆍ송금자명ㆍ메모가 빠져 있다. 빠진 채로
                창을 채우고 저장하면 그 칸들이 빈 값으로 덮여 지워진다. */
-            'account'         => $patient->only([
+            /* array_merge 다. `+` 는 **왼쪽이 이겨서** 아래에 다시 적은 날짜가
+               only() 의 Carbon 에 밀린다 — 고쳐 놓고도 그대로였다. */
+            'account'         => array_merge($patient->only([
                 'name', 'care_type', 'resident_no', 'birth_date', 'gender',
                 'mobile', 'phone', 'email', 'fax', 'sb_sci',
                 'postcode', 'address', 'address_detail', 'note',
@@ -1477,7 +1479,7 @@ class PrescriptionController extends Controller
                 'basic_reeval', 'basic_reeval_due',
                 // 미성년 보호자 (2026-09-07 · 결함 ㉕)
                 'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
-            ]) + [
+            ]), [
                 'resident_no' => $patient->resident_no,
 
                 /* 날짜는 날짜로 내보낸다.
@@ -1502,7 +1504,7 @@ class PrescriptionController extends Controller
                    두었더니, 그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로
                    읽혔다 — 보호자 칸이 영영 서지 않았다. */
                 'is_minor'    => $patient->is_minor,
-            ],
+            ]),
         ]);
     }
 
