@@ -1041,13 +1041,9 @@ class ConsentController extends Controller
                     }
                 }
 
-                // 서명일(년/월/일)은 서명 위에 얹어 가독성 확보
-                $sd = $consent->responded_at ?? now();
-                $pdf->SetTextColor(0, 0, 0);
-                $pdf->SetFont($fontName, '', 7);
-                $pdf->Text(151, 270, $sd->format('Y'));
-                $pdf->Text(167, 270, $sd->format('n'));
-                $pdf->Text(181, 270, $sd->format('j'));
+                /* 서명일은 여기서 찍지 않는다 — 아래 stampFields() 의 sign_date_* 가
+                   같은 날짜를 찍는다. 둘 다 살아 있어 위임장 한 장에 날짜가 두 벌
+                   나왔다(2026-09-08). 자리를 화면에서 고칠 수 있는 쪽만 남긴다. */
             }
         }
 
