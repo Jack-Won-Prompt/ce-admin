@@ -1081,63 +1081,6 @@ $calcDeposit  = $calcCopay;
         </div>
       </div>
 
-      {{-- ── 신분증 ────────────────────────────────────────
-           위임동의 링크에서 신분증만 빠진 채로 끝나는 건이 있다. 서명을 다시 받자고
-           위임동의를 새로 보낼 수는 없어(받아 둔 서명이 무효가 된다), 신분증 하나만
-           청하는 링크를 따로 보낸다(2026-09-09 지시).
-           이미 받아 둔 것이 있으면 단추가 「신분증 있음」이라 적는다. --}}
-      <div style="position:relative;">
-        <button class="pib-btn" type="button" id="idCardActionBtn" onclick="toggleIdCardPopover(event)">
-          <i class="fa-solid fa-id-card" style="font-size:11px;"></i>
-          <span id="idCardBtnText">신분증</span>
-        </button>
-        <div id="idCardPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
-          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
-          </div>
-          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-id-card" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">신분증 제출 요청</span>
-            <button onclick="closeIdCardPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
-          </div>
-          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-            {{-- 이미 받아 둔 것이 있으면 먼저 적는다 — 있는 줄 모르고 또 보내면
-                 환자는 같은 것을 두 번 올리게 된다. --}}
-            <div id="idCardHaveNotice" style="display:none;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--primary);line-height:1.6;"></div>
-            <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
-              환자에게 <strong>신분증 제출</strong> 링크를 SMS로 발송합니다.<br>
-              서명이나 개인정보 동의는 다시 받지 않습니다 — 사진만 올립니다.<br>
-              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
-            </p>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
-              <input type="text" class="form-control" id="idCardMobile"
-                     placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
-                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
-                     style="font-size:13px;" oninput="updateIdCardPreview()" />
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">이름</label>
-              <input type="text" class="form-control" id="idCardName" maxlength="50"
-                     placeholder="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자' }}"
-                     value="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '' }}"
-                     style="font-size:13px;" oninput="updateIdCardPreview()" />
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
-              <div id="idCardMsgPreview" style="background:var(--gray-50);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:var(--gray-800);font-family:monospace;"></div>
-            </div>
-            <div id="idCardSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-              <button class="btn btn-outline btn-sm" onclick="closeIdCardPopover()">취소</button>
-              <button class="btn btn-primary btn-sm" id="btnIdCardSend" onclick="sendIdCardSms()">
-                <i class="fa-solid fa-paper-plane"></i> 발송
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {{-- 위임동의 SMS 발송 --}}
       <div style="position:relative;">
         <div id="consentBtnWrap">
@@ -1295,6 +1238,63 @@ $calcDeposit  = $calcCopay;
               <i class="fa-solid fa-rotate"></i> 설정 반영 재생성
             </button>
             <button class="btn btn-outline btn-sm" style="white-space:nowrap;padding:5px 10px;font-size:11px;" onclick="closeConsentSignPopover()">닫기</button>
+          </div>
+        </div>
+      </div>
+
+      {{-- ── 신분증 ────────────────────────────────────────
+           위임동의 링크에서 신분증만 빠진 채로 끝나는 건이 있다. 서명을 다시 받자고
+           위임동의를 새로 보낼 수는 없어(받아 둔 서명이 무효가 된다), 신분증 하나만
+           청하는 링크를 따로 보낸다(2026-09-09 지시).
+           이미 받아 둔 것이 있으면 단추가 「신분증 있음」이라 적는다. --}}
+      <div style="position:relative;">
+        <button class="pib-btn" type="button" id="idCardActionBtn" onclick="toggleIdCardPopover(event)">
+          <i class="fa-solid fa-id-card" style="font-size:11px;"></i>
+          <span id="idCardBtnText">신분증</span>
+        </button>
+        <div id="idCardPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
+          <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
+            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
+          </div>
+          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-id-card" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
+            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">신분증 제출 요청</span>
+            <button onclick="closeIdCardPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            {{-- 이미 받아 둔 것이 있으면 먼저 적는다 — 있는 줄 모르고 또 보내면
+                 환자는 같은 것을 두 번 올리게 된다. --}}
+            <div id="idCardHaveNotice" style="display:none;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--primary);line-height:1.6;"></div>
+            <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
+              환자에게 <strong>신분증 제출</strong> 링크를 SMS로 발송합니다.<br>
+              서명이나 개인정보 동의는 다시 받지 않습니다 — 사진만 올립니다.<br>
+              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+            </p>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
+              <input type="text" class="form-control" id="idCardMobile"
+                     placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
+                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
+                     style="font-size:13px;" oninput="updateIdCardPreview()" />
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">이름</label>
+              <input type="text" class="form-control" id="idCardName" maxlength="50"
+                     placeholder="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자' }}"
+                     value="{{ $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '' }}"
+                     style="font-size:13px;" oninput="updateIdCardPreview()" />
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">발송 메시지 미리보기</label>
+              <div id="idCardMsgPreview" style="background:var(--gray-50);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:var(--gray-800);font-family:monospace;"></div>
+            </div>
+            <div id="idCardSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+              <button class="btn btn-outline btn-sm" onclick="closeIdCardPopover()">취소</button>
+              <button class="btn btn-primary btn-sm" id="btnIdCardSend" onclick="sendIdCardSms()">
+                <i class="fa-solid fa-paper-plane"></i> 발송
+              </button>
+            </div>
           </div>
         </div>
       </div>
