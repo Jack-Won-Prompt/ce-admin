@@ -161,6 +161,24 @@ class MessageService extends PopbillBaseService
      */
     private function testReceiver(string $original, ?string $name = null): string
     {
+        /* 이미 우리 사람 번호면 그대로 보낸다.
+
+           웹 화면이 「테스트」면 전화번호 칸이 우리 사람 번호를 고르는 칸으로 바뀐다.
+           담당자가 거기서 고른 번호는 이미 안전한데, 여기서 또 「테스트 받는 번호」
+           하나로 몰아 버렸다 — 두 겹으로 돌린 것이다. 그래서 정희경을 골라 두고도
+           문자는 관리자 번호로 갔다. **고른 사람에게 가야 고른 뜻이 있다.**
+
+           밖의 번호(실제 환자)면 그대로 둘 수 없으니 시험 번호로 돌린다 — 그것이
+           이 갈래의 본디 일이다. */
+        if ($original !== '' && self::isOurPhone($original)) {
+            \Illuminate\Support\Facades\Log::info('[Popbill][SMS][우리에게만] 이미 우리 번호라 그대로 보낸다', [
+                'to'   => $original,
+                'name' => $name,
+            ]);
+
+            return $original;
+        }
+
         $test = preg_replace('/\D/', '', (string) config('popbill.test.receiver_hp'));
 
         if ($test === '') {
@@ -176,6 +194,30 @@ class MessageService extends PopbillBaseService
         ]);
 
         return $test;
+    }
+
+    /** 우리 사람의 번호인가 — 화면이 「테스트」일 때 고르게 하는 그 목록이다 */
+    private static function isOurPhone(string $digits): bool
+    {
+        static $ours = null;
+
+        if ($ours === null) {
+            $ours = \App\Models\User::whereNotNull('phone')->where('phone', '!=', '')
+                ->pluck('phone')
+                ->map(fn ($p) => preg_replace('/\D/', '', (string) $p))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            /* 테스트 받는 번호도 우리 번호다 — 사용자로 서 있지 않을 수 있다 */
+            $t = preg_replace('/\D/', '', (string) config('popbill.test.receiver_hp'));
+            if ($t !== '') {
+                $ours[] = $t;
+            }
+        }
+
+        return in_array($digits, $ours, true);
     }
 
     /**
@@ -243,8 +285,8 @@ class MessageService extends PopbillBaseService
         $mode = config('popbill.sms_mode', 'live');
 
         if ($mode === 'redirect') {
-            /* 묶음이라도 모두 한 번호로 돌린다 — 같은 사람에게 여러 통이 오지만,
-               「몇 통이 나가는가」도 시험에서 볼 것이다. */
+            /* 줄마다 따로 본다 — 우리 사람 번호는 그대로 두고, 밖의 번호만 돌린다.
+               그래야 「누구에게 갔는가」가 시험에서도 그대로 보인다. */
             $messages = array_map(function ($m) {
                 $m['rcv'] = $this->testReceiver((string) ($m['rcv'] ?? ''), $m['rcvnm'] ?? null);
                 return $m;
