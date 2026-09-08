@@ -246,6 +246,8 @@ Route::middleware(['auth'])->group(function () {
     // 제품 검색 / 재고 조회 (Demoworks API 프록시)
     /* 공단에도 지자체에도 내지 않는 건(처방외ㆍ산재ㆍ자동차보험)은 환자가 직접 낸다.
        그때 쓸 증빙을 거래처로 보내 준다 — 담당자가 하나씩 내려받아 붙이던 일이다. */
+    /* 목록의 「첨부」 칸이 부른다 — 이 주문으로 팩스에 실을 수 있는 서류 한 벌 */
+    Route::get( '/orders/{order}/fax-docs',  [OrderController::class, 'faxDocs'])->name('orders.faxDocs');
     Route::get( '/orders/{order}/docs',      [\App\Http\Controllers\OrderDocSendController::class, 'list'])->name('orders.docs.list');
     Route::post('/orders/{order}/docs/send', [\App\Http\Controllers\OrderDocSendController::class, 'send'])->name('orders.docs.send');
 

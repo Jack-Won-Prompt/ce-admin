@@ -50,6 +50,58 @@ window.HELP_TOUR_STEPS = [
 
 @push('styles')
 <style>
+  /* ── 첨부 · 팩스 팝업 ────────────────────────────────── */
+  .att-fax-back {
+    display: none; position: fixed; inset: 0; z-index: 1400;
+    background: rgba(0,0,0,.42); align-items: center; justify-content: center; padding: 24px;
+  }
+  .att-fax-back.show { display: flex; }
+  .att-fax {
+    width: min(560px, 100%); max-height: min(78vh, 720px);
+    display: flex; flex-direction: column;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: 0 12px 40px rgba(0,0,0,.22); overflow: hidden;
+  }
+  .att-fax-hd {
+    display: flex; align-items: center; gap: 8px; padding: 11px 14px;
+    background: var(--primary); color: #fff; font-size: 13px;
+  }
+  .att-fax-hd b { flex: 1; font-weight: 700; }
+  .att-fax-x { background: none; border: none; color: #fff; font-size: 17px; line-height: 1; cursor: pointer; }
+  .att-fax-note {
+    padding: 9px 14px; font-size: 11px; line-height: 1.6;
+    background: var(--danger-light); color: var(--danger); border-bottom: 1px solid var(--border);
+  }
+  .att-fax-bd { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .att-fax-row {
+    display: grid; grid-template-columns: 18px 108px 1fr auto; align-items: center; gap: 8px;
+    padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 12px; cursor: pointer; background: var(--bg-card);
+  }
+  .att-fax-row:hover { border-color: var(--primary); }
+  /* 실리지 않는 것 — 고를 수 없다는 것이 한눈에 보여야 한다 */
+  .att-fax-row.is-off { opacity: .55; cursor: not-allowed; background: var(--bg); }
+  .att-fax-row.is-off:hover { border-color: var(--border); }
+  .att-fax-lb { font-weight: 700; }
+  .att-fax-nm { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att-fax-at { color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .att-fax-empty { padding: 18px 0; text-align: center; color: var(--text-muted); font-size: 12px; }
+  .att-fax-to { padding: 10px 14px; border-top: 1px solid var(--border); }
+  .att-fax-to label { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+  .att-fax-to input {
+    width: 100%; height: 32px; padding: 0 10px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--gray-1000);
+  }
+  .att-fax-to input:focus { outline: none; border-color: var(--primary); }
+  .att-fax-hint { margin-top: 5px; font-size: 10px; color: var(--text-muted); line-height: 1.5; }
+  .att-fax-ft { display: flex; justify-content: flex-end; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); }
+  .att-fax-btn {
+    height: 32px; padding: 0 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); color: var(--gray-1000);
+  }
+  .att-fax-btn.is-main { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .att-fax-btn:disabled { opacity: .5; cursor: not-allowed; }
+
   .order-number { font-size: 12px; font-weight: 700; color: var(--primary); letter-spacing: .5px; font-family: monospace; }
   .patient-name-cell { font-weight: 500; }
   .product-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -384,6 +436,15 @@ window.HELP_TOUR_STEPS = [
         },
       },
 
+      {
+        /* 첨부 — 몇 장인지 세우고, 누르면 골라 팩스로 보낸다.
+           여태 건마다 상세로 들어가야 했다. 위드웍스 차례(ceWwCols) 앞에 둔다 —
+           그 뒤는 여섯 화면이 같은 순서로 쓰는 자리라 끼어들면 약속이 흔들린다. */
+        header: '첨부', name: 'att_count', width: 70, align: 'center', sortable: true,
+        exportable: false,
+        renderer: (v, row) => attFaxBtn(row),
+      },
+
       /* 제품명ㆍ수량은 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야
          하고, 훑을 때 필요한 것은 누구의 무슨 건이 어디까지 왔는가다 — 무엇을 얼마나
          보냈는지는 줄을 더블클릭해 상세에서 본다.
@@ -396,6 +457,159 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+
+  /* ── 첨부 칸 · 팩스 팝업 ─────────────────────────────────
+     목록에서 그 건의 서류를 골라 팩스로 보낸다. 보내는 길은 상세의 팩스 창과 같은
+     것을 쓴다(prescriptions.faxSend) — 두 자리가 다른 규칙으로 보내면 나중에 무엇이
+     나갔는지 맞춰 볼 수 없다.
+
+     세 가지를 지킨다.
+       · 지자체 건은 잠근다 — 등기로 부치는 건이라 팩스로 보내면 안 된다.
+       · **보내기 전에 한 번 묻는다** — 목록은 상세보다 누르기 쉽고, 팩스는 정말 나간다.
+       · 실리지 않는 것(PDF 첨부)은 고를 수 없게 하고 까닭을 적는다. */
+  const FAX_DOCS_URL = @json(url('/orders'));
+
+  function attFaxBtn(row) {
+    const n = Number(row.att_count || 0);
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+
+    if (!n) { box.textContent = '-'; return box; }
+
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = String(n);
+    b.title = '첨부를 골라 팩스로 보냅니다';
+    b.style.cssText = 'height:22px;min-width:34px;padding:0 8px;font-size:11px;font-weight:700;'
+                    + 'cursor:pointer;border:1px solid var(--primary);border-radius:999px;'
+                    + 'background:var(--primary-light);color:var(--primary);line-height:1;';
+    b.onclick = (ev) => { ev.stopPropagation(); openAttFax(row); };
+    box.appendChild(b);
+    return box;
+  }
+
+  let _attPop = null, _attRows = [], _attSendUrl = '';
+
+  function attFaxClose() { if (_attPop) { _attPop.classList.remove('show'); } }
+
+  function attFaxBuild() {
+    const back = document.createElement('div');
+    back.className = 'att-fax-back';
+    back.innerHTML = `
+      <div class="att-fax" role="dialog" aria-modal="true">
+        <div class="att-fax-hd"><b id="attFaxTitle">첨부파일</b>
+          <button type="button" class="att-fax-x" aria-label="닫기">&times;</button></div>
+        <div class="att-fax-note" id="attFaxBlocked" style="display:none;"></div>
+        <div class="att-fax-bd" id="attFaxList"></div>
+        <div class="att-fax-to">
+          <label>받는 팩스번호</label>
+          <input type="text" id="attFaxNo" placeholder="02-0000-0000" autocomplete="off">
+          <div class="att-fax-hint" id="attFaxHint"></div>
+        </div>
+        <div class="att-fax-ft">
+          <button type="button" class="att-fax-btn" id="attFaxCancel">닫기</button>
+          <button type="button" class="att-fax-btn is-main" id="attFaxSend">팩스 전송</button>
+        </div>
+      </div>`;
+    document.body.appendChild(back);
+
+    back.querySelector('.att-fax-x').onclick = attFaxClose;
+    back.querySelector('#attFaxCancel').onclick = attFaxClose;
+    back.onclick = (e) => { if (e.target === back) attFaxClose(); };
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && back.classList.contains('show')) attFaxClose();
+    });
+    back.querySelector('#attFaxSend').onclick = attFaxSend;
+    return back;
+  }
+
+  async function openAttFax(row) {
+    if (!_attPop) _attPop = attFaxBuild();
+    const list = _attPop.querySelector('#attFaxList');
+    const blk  = _attPop.querySelector('#attFaxBlocked');
+    _attPop.querySelector('#attFaxTitle').textContent = '첨부파일 · ' + (row.patient || '');
+    list.innerHTML = '<div class="att-fax-empty">불러오는 중…</div>';
+    blk.style.display = 'none';
+    _attPop.classList.add('show');
+
+    let d;
+    try {
+      const res = await fetch(FAX_DOCS_URL + '/' + row.id + '/fax-docs', { headers: { Accept: 'application/json' } });
+      d = await res.json();
+    } catch (e) { d = { success: false, message: '불러오지 못했습니다.' }; }
+
+    if (!d.success) { list.innerHTML = '<div class="att-fax-empty">' + (d.message || '불러오지 못했습니다.') + '</div>'; return; }
+
+    _attRows    = d.rows || [];
+    _attSendUrl = d.send_url || '';
+
+    _attPop.querySelector('#attFaxTitle').textContent =
+      '첨부파일 · ' + (d.patient || '') + (d.rx_number ? ' · ' + d.rx_number : '');
+
+    if (d.blocked) { blk.textContent = d.blocked; blk.style.display = ''; }
+
+    const no = _attPop.querySelector('#attFaxNo');
+    no.value = d.office?.fax || '';
+    _attPop.querySelector('#attFaxHint').textContent =
+      d.office?.name ? ('관할 청구처 ' + d.office.name + ' — 다른 곳으로 보내려면 번호를 고쳐 적으십시오.')
+                     : '받는 곳의 팩스번호를 적으십시오.';
+
+    list.innerHTML = _attRows.length
+      ? _attRows.map((r, i) => `
+        <label class="att-fax-row${r.ok ? '' : ' is-off'}">
+          <input type="checkbox" data-i="${i}" ${r.ok ? '' : 'disabled'}>
+          <span class="att-fax-lb">${dsEsc(r.label)}</span>
+          <span class="att-fax-nm">${dsEsc(r.name || '')}</span>
+          <span class="att-fax-at">${dsEsc(r.at || '')}</span>
+        </label>`).join('')
+      : '<div class="att-fax-empty">보낼 수 있는 서류가 없습니다.</div>';
+
+    _attPop.querySelector('#attFaxSend').disabled = !!d.blocked;
+  }
+
+  function dsEsc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  async function attFaxSend() {
+    const picked = [..._attPop.querySelectorAll('#attFaxList input[type=checkbox]:checked')]
+                     .map(c => _attRows[Number(c.dataset.i)]);
+    if (!picked.length) { showToast('보낼 서류를 하나 이상 고르십시오.', 'warning'); return; }
+
+    const faxNo = (_attPop.querySelector('#attFaxNo').value || '').trim();
+    if (!/^[0-9-]{7,20}$/.test(faxNo)) { showToast('받는 팩스번호를 바르게 적으십시오.', 'warning'); return; }
+
+    /* 팩스는 정말 나간다 — 무엇을 어디로 보내는지 보이고 한 번 묻는다 */
+    const 이름들 = picked.map(r => r.label).join(' · ');
+    if (!await ceConfirm(`${faxNo} 로 다음 서류를 보냅니다.\n\n${이름들}`,
+                         { title: '팩스 전송', confirmText: '보냅니다' })) return;
+
+    const btn = _attPop.querySelector('#attFaxSend');
+    btn.disabled = true; btn.textContent = '보내는 중…';
+
+    try {
+      const res = await fetch(_attSendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+        body: JSON.stringify({
+          recipient_type: 'custom',
+          fax_no:         faxNo,
+          documents:      picked.filter(r => r.kind === 'doc').map(r => r.code),
+          attachment_ids: picked.filter(r => r.kind === 'att').map(r => r.id),
+        }),
+      });
+      const d = await res.json();
+      if (d.success) { showToast(d.message || '팩스를 보냈습니다.', 'success'); attFaxClose(); }
+      else           { showToast(d.message || '보내지 못했습니다.', 'danger'); }
+    } catch (e) {
+      showToast('보내지 못했습니다.', 'danger');
+    } finally {
+      btn.disabled = false; btn.textContent = '팩스 전송';
+    }
+  }
+
   window.__orderGrid = grid;
   window.dsBindSelCount(grid, 'orderSelCount');
 

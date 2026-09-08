@@ -11,6 +11,7 @@ use App\Services\Popbill\MessageService;
 use App\Services\ClaimReadiness;
 use App\Services\Popbill\TaxinvoiceService;
 use App\Services\WithworksSync;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -70,7 +71,14 @@ class OrderController extends Controller
         $orders = $query->get();
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
-        $gridData = $orders->map(function ($o) use ($extras) {
+        /* 첨부가 몇 장인지 — 목록의 「첨부」 칸이 그 수를 세우고, 누르면 골라 팩스로
+           보낸다. 건마다 세면 줄 수만큼 질의가 나가므로 처방전별로 한 번에 센다. */
+        $attCounts = \App\Models\PrescriptionAttachment::selectRaw('prescription_id, count(*) as cnt')
+            ->whereIn('prescription_id', $orders->pluck('prescription_id')->filter()->unique())
+            ->groupBy('prescription_id')
+            ->pluck('cnt', 'prescription_id');
+
+        $gridData = $orders->map(function ($o) use ($extras, $attCounts) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -84,6 +92,9 @@ class OrderController extends Controller
             return [
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
+                /* 첨부 장수 — 0 이면 칸이 「-」로 선다. 처방전이 없는 건은 아예 없다. */
+                'att_count' => (int) ($attCounts[$o->prescription_id] ?? 0),
+                'rx_no'     => $o->prescription?->rx_number ?? '',
                 'deal'      => $deal,
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
                 'deal_state' => $rt ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
@@ -115,6 +126,94 @@ class OrderController extends Controller
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));
+    }
+
+    /**
+     * 이 주문으로 팩스에 실을 수 있는 서류 한 벌.
+     *
+     * 목록의 「첨부」 칸이 부른다. 두 갈래를 한 목록으로 세운다.
+     *
+     *   · **올려 둔 첨부** — 처방전ㆍ신분증ㆍ결과지처럼 쌓인 파일.
+     *   · **만들어 붙이는 서류** — 위임장ㆍ요양비위임장ㆍ제품 구매내역ㆍ세금계산서ㆍ
+     *     현금영수증처럼 보낼 때 그 자리에서 그려 넣는 것(sendFax 의 documents 갈래).
+     *
+     * **팩스 묶음은 dompdf 로 그린다.** 그림은 한 장씩 끼워 넣을 수 있지만 **PDF 는
+     * 끼울 수 없다** — 거래명세서ㆍ카드매출전표가 그 꼴이다. 고를 수는 있게 두되
+     * 「팩스에 실리지 않습니다」라고 적어 둔다. 고르고 보냈는데 빠져 있으면 보낸 줄
+     * 알고 넘어간다.
+     */
+    public function faxDocs(Order $order): JsonResponse
+    {
+        $rx = $order->prescription;
+
+        if (! $rx) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 주문에는 처방전이 붙어 있지 않아 팩스로 보낼 서류가 없습니다.',
+            ], 422);
+        }
+
+        $rx->loadMissing(['billingOffice', 'patient']);
+
+        /* 지자체(시군구청) 건은 팩스로 보내지 않는다 — 등기로 부친다.
+           보낼 때 서버가 어차피 막지만, 여기서 미리 알려야 헛걸음을 하지 않는다. */
+        $office  = $rx->billingOffice;
+        $blocked = ($office && $office->kind === 'local')
+            ? $office->displayName() . ' — 지자체 건은 팩스로 보내지 않습니다. 등기로 부치십시오.'
+            : null;
+
+        $rows = [];
+
+        foreach (\App\Models\PrescriptionAttachment::where('prescription_id', $rx->id)
+                     ->orderBy('display_order')->orderBy('id')->get() as $att) {
+            $그림 = (bool) $att->is_image;
+            $rows[] = [
+                'kind'  => 'att',
+                'id'    => $att->id,
+                'label' => $att->doc_type_label,
+                'name'  => $att->file_original_name,
+                'at'    => $att->created_at?->format('Y-m-d') ?? '',
+                /* 실을 수 있는가 — PDF 는 팩스 묶음에 끼우지 못한다 */
+                'ok'    => $그림,
+                'why'   => $그림 ? '' : 'PDF 는 팩스 묶음에 실리지 않습니다',
+            ];
+        }
+
+        /* 만들어 붙이는 서류 — **낼 수 있는 것만** 세운다.
+           고를 수는 있는데 빈 장이 나가는 일이 없어야 한다. */
+        $동의 = \App\Models\PrescriptionConsent::where('prescription_id', $rx->id)
+            ->where('status', 'agreed')->exists();
+
+        $만드는것 = [
+            ['prescription',     '처방전 이미지', (bool) $rx->image_path,                     '처방전 그림이 없습니다'],
+            ['delegation',       '요양비위임장',  $동의,                                       '위임동의 서명이 아직 없습니다'],
+            ['authorization',    '위임장',        $동의,                                       '위임동의 서명이 아직 없습니다'],
+            ['purchase_history', '제품 구매내역', true,                                        ''],
+            ['tax_invoice',      '세금계산서',    $order->tax_invoice_status === 'issued',     '아직 발행되지 않았습니다'],
+            ['cash_receipt',     '현금영수증',    $order->cash_receipt_status === 'issued',    '아직 발행되지 않았습니다'],
+        ];
+
+        foreach ($만드는것 as [$code, $label, $있다, $까닭]) {
+            $rows[] = [
+                'kind'  => 'doc',
+                'code'  => $code,
+                'label' => $label,
+                'name'  => $있다 ? '보낼 때 만듭니다' : $까닭,
+                'at'    => '',
+                'ok'    => $있다,
+                'why'   => $있다 ? '' : $까닭,
+            ];
+        }
+
+        return response()->json([
+            'success'   => true,
+            'rx_number' => $rx->rx_number,
+            'patient'   => $rx->patient?->name ?? '',
+            'blocked'   => $blocked,
+            'office'    => $office ? ['name' => $office->displayName(), 'fax' => $office->fax ?? ''] : null,
+            'send_url'  => route('prescriptions.faxSend', $rx),
+            'rows'      => $rows,
+        ]);
     }
 
     /**
