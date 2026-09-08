@@ -7323,16 +7323,11 @@ window.HELP_TOUR_STEPS = [
     /* 브라우저 기본 confirm 은 화면과 결이 달라 낯설다 — 디자인 시스템 창을 쓴다.
        검수 요청 메모를 적어 두었으면 무엇이 함께 가는지 보여 준다. */
     const 요청메모 = document.getElementById('f-review-request-memo')?.value?.trim() || '';
-    if (!await ceConfirm(
-          '입력을 마치고 검수를 요청합니다.'
-          + (요청메모 ? '
+    const 물음 = '입력을 마치고 검수를 요청합니다.'
+      + (요청메모 ? '\n\n검수 요청 메모\n' + 요청메모 : '')
+      + '\n\n요청 후에는 검수 요청 메모를 수정할 수 없습니다. 진행하시겠습니까?';
 
-검수 요청 메모
-' + 요청메모 : '')
-          + '
-
-요청 후에는 검수 요청 메모를 수정할 수 없습니다. 진행하시겠습니까?',
-          { title: '검수 요청', confirmText: '검수 요청', tone: 'default' })) return;
+    if (!await ceConfirm(물음, { title: '검수 요청', confirmText: '검수 요청' })) return;
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
       if (res.success) {
