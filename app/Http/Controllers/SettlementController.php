@@ -612,7 +612,18 @@ class SettlementController extends Controller
             'method' => 'required|string|in:' . implode(',', array_keys(\App\Models\PaymentLink::METHODS)),
         ]);
 
-        if ($order->deposit_confirmed_at || $order->tossPayment?->is_done) {
+        $받았다 = $order->deposit_confirmed_at !== null || (bool) $order->tossPayment?->is_done;
+
+        /* 받았는데 주문이 아직 대기라면 **반쪽으로 멈춘 것**이다.
+
+           이 걸음은 입금 기록 → 증빙 발행 → 창고 확정을 차례로 밟는다. 가운데서 한 번
+           넘어지면 입금만 남고 주문은 대기인 채가 된다(2026-09-08 · 3차 5회 강도원 —
+           카드 매출전표를 만들다 터졌다). 그때 여기서 막아 버리면 담당자가 남은 걸음을
+           밟을 길이 없다. 다시 부르면 이어서 밟는다 — 이미 발행된 증빙은 발행 쪽이
+           스스로 건너뛰므로 두 번 신고되지 않는다. */
+        $반쪽 = $받았다 && $order->status === 'pending';
+
+        if ($받았다 && ! $반쪽) {
             return response()->json(['success' => false, 'message' => $order->expectedDeposit() <= 0
                 ? '이미 확정된 주문입니다.'
                 : '이미 입금이 확인된 주문입니다.'], 422);
@@ -633,7 +644,11 @@ class SettlementController extends Controller
            「주문 확정일」이다(시나리오 7.7). */
         $없는돈 = $due <= 0;
 
-        $order->update([
+        /* 반쪽으로 멈춘 건은 입금 자취를 새로 쓰지 않는다 — 이미 있는 것이 맞다.
+           바꿀 수 있는 것은 방식뿐이다. */
+        $order->update($반쪽 ? [
+            'pay_method' => $request->input('method'),
+        ] : [
             'pay_method'           => $request->input('method'),
             'deposit_confirmed_at' => now(),
             'deposit_confirmed_by' => Auth::id(),
@@ -642,9 +657,11 @@ class SettlementController extends Controller
         $order->refresh();
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(
-            $없는돈
-                ? '주문 확정(담당자): 본인부담금이 없는 건'
-                : "입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원'
+            $반쪽
+                ? "남은 걸음 다시 밟기(담당자): {$order->payMethodLabel()} — 입금은 이미 확인됨"
+                : ($없는돈
+                    ? '주문 확정(담당자): 본인부담금이 없는 건'
+                    : "입금 확인(담당자): {$order->payMethodLabel()} " . number_format($due) . '원')
         );
 
         /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다. 실패해도 입금 확인은
@@ -657,13 +674,17 @@ class SettlementController extends Controller
             'method'       => $order->payMethod(),
             'label'        => $order->payMethodLabel(),
             'amount'       => $due,
-            'confirmed_at' => $order->deposit_confirmed_at->format('Y-m-d H:i'),
+            'confirmed_at' => $order->deposit_confirmed_at?->format('Y-m-d H:i'),
             /* 화면이 「확정까지 갔는가」를 다시 셈할 수 있게 함께 준다 */
             'status_key'   => $order->fresh()->status,
             'zero_copay'   => $없는돈,
-            'message'      => $없는돈
-                ? '본인부담금이 없는 건입니다 — 주문을 확정했습니다.'
-                : "{$order->payMethodLabel()}으로 " . number_format($due) . '원 입금 확인했습니다.',
+            'message'      => $반쪽
+                ? '남은 걸음을 다시 밟았습니다 — ' . ($order->fresh()->status === 'pending'
+                    ? '아직 주문 확정까지 가지 못했습니다.'
+                    : '주문을 확정했습니다.')
+                : ($없는돈
+                    ? '본인부담금이 없는 건입니다 — 주문을 확정했습니다.'
+                    : "{$order->payMethodLabel()}으로 " . number_format($due) . '원 입금 확인했습니다.'),
         ]);
     }
 
