@@ -58,7 +58,7 @@ final class ClaimAgency
      * 「서울특별시」같은 온전한 이름만 받으므로, 펴 주지 않으면 관할 지자체가 빈 채로
      * 남는다 — 기초(의료급여)는 지자체에 등기로 청구하므로 그러면 어디로 부칠지 모른다.
      */
-    private static function 시도를편다(string $addr): string
+    public static function 시도를편다(string $addr): string
     {
         $머리 = explode(' ', $addr, 2);
         if (count($머리) === 2 && isset(self::시도줄임[$머리[0]])) {
@@ -75,6 +75,20 @@ final class ClaimAgency
      * 도 아래 시의 구는 행정구라 자치권이 없어 시가 받는다(예: 경기도 성남시 분당구 → 성남시).
      * 세종은 아래에 시군구가 없어 세종시가 받는다.
      */
+    /** 주소 앞머리의 시도 이름 — 온전한 이름으로 편다. 못 읽으면 빈 글. */
+    public static function sidoFromAddress(?string $address): string
+    {
+        $addr = trim((string) $address);
+        if ($addr === '') {
+            return '';
+        }
+
+        $addr = self::시도를편다($addr);
+
+        return preg_match('/^(\S+?(?:특별자치시|특별자치도|특별시|광역시|도))(?:\s|$)/u', $addr, $m)
+            ? $m[1] : '';
+    }
+
     public static function localGovFromAddress(?string $address): ?string
     {
         $addr = trim(preg_replace('/\s+/', ' ', (string) $address));

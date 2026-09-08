@@ -8277,6 +8277,14 @@ window.HELP_TOUR_STEPS = [
     return base.trim();
   }
 
+  /* 지금 자격이 어느 갈래에 내는가 — 모르면 빈 글(가리지 않는다) */
+  function boKindOfBenefit() {
+    const bc = document.getElementById('f-benefit-class')?.value ?? '';
+    if (bc === '기초') return 'local';
+    if (bc === '일반' || bc === '차상위경감') return 'nhis';
+    return '';
+  }
+
   function boFindOpen(e) {
     if (e) e.stopPropagation();
     const pop = document.getElementById('boFindPop');
@@ -8432,6 +8440,18 @@ window.HELP_TOUR_STEPS = [
       const qs  = new URLSearchParams();
       if (emd)     qs.set('emd', emd);
       if (sigungu) qs.set('sigungu', sigungu);
+
+      /* **자격이 정한 갈래만 부른다.** 일반ㆍ차상위경감은 공단 지사에, 기초는
+         지자체 시군구청에 낸다 — 서로 하는 일이 달라 섞이면 잘못 고른다.
+         여태 갈래를 보내지 않아, 자격이 일반인 건에도 지자체만 줄줄이 섰다
+         (2026-09-08 · 3차 5회 신우재). */
+      const 갈래 = boKindOfBenefit();
+      if (갈래) qs.set('kind', 갈래);
+
+      /* 주소도 함께 보낸다 — 서버가 시도를 읽어 「중구」가 여섯 시도에 있는 일을 가린다 */
+      const 주소 = boPatientAddress();
+      if (주소) qs.set('address', 주소);
+
       const res = await fetch(BO_LOOKUP_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
       const d   = await res.json();
       const rows = d.rows ?? [];

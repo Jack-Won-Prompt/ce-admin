@@ -66,9 +66,27 @@ class BillingOfficeController extends Controller
 
         $kind = $request->input('kind');
 
+        /* **시도로도 가린다.**
+
+           「중구」는 서울ㆍ부산ㆍ대구ㆍ인천ㆍ대전ㆍ울산에 다 있다. 시군구 이름만 보고
+           찾으면 여섯 시도의 중구청이 나란히 서서, 담당자가 어느 줄이 이 환자의 것인지
+           가릴 수 없다(2026-09-08 · 3차 5회 신우재).
+
+           주소에서 편 시도 이름으로 좁힌다. 주소를 못 읽었거나 그 시도로 쌓아 둔 것이
+           없으면 가리지 않는다 — 좁히다 아무것도 못 찾는 것보다 낫다. */
+        $sido = \App\Support\ClaimAgency::sidoFromAddress((string) $request->input('address'));
+
+        $시도로 = function ($q) use ($sido) {
+            if ($sido !== '') {
+                $q->where(fn ($w) => $w->where('sido', $sido)->orWhereNull('sido'));
+            }
+
+            return $q;
+        };
+
         /* 시군구 전체를 맡는 줄 — 지자체가 이 꼴이다. 읍면동을 몰라도 이것으로 찾는다. */
         $구전체 = fn () => BillingOffice::with('areas')->active()->kind($kind)
-            ->whereHas('areas', fn ($a) => $a->whereNull('emd')->where('sigungu', $sigungu))
+            ->whereHas('areas', fn ($a) => $시도로($a->whereNull('emd')->where('sigungu', $sigungu)))
             ->orderBy('sort_order')->orderBy('id')->get();
 
         if ($emd === '') {
@@ -78,6 +96,7 @@ class BillingOfficeController extends Controller
                 'success'  => true,
                 'emd'      => null,
                 'sigungu'  => $sigungu,
+                'sido'     => $sido ?: null,
                 'narrowed' => true,
                 'wide'     => true,
                 'rows'     => $rows->map(fn ($o) => $this->payload($o)),
@@ -86,10 +105,10 @@ class BillingOfficeController extends Controller
 
         $base = fn () => BillingOffice::with('areas')->active()
             ->kind($kind)
-            ->whereHas('areas', fn ($a) => $a->where('emd', $emd));
+            ->whereHas('areas', fn ($a) => $시도로($a->where('emd', $emd)));
 
         $rows = $sigungu !== ''
-            ? $base()->whereHas('areas', fn ($a) => $a->where('emd', $emd)->where('sigungu', $sigungu))->get()
+            ? $base()->whereHas('areas', fn ($a) => $시도로($a->where('emd', $emd)->where('sigungu', $sigungu)))->get()
             : collect();
 
         $narrowed = $rows->isNotEmpty();
@@ -109,6 +128,7 @@ class BillingOfficeController extends Controller
             'success'  => true,
             'emd'      => $emd,
             'sigungu'  => $sigungu ?: null,
+            'sido'     => $sido ?: null,
             'narrowed' => $narrowed || $wide,
             'wide'     => $wide,
             'rows'     => $rows->map(fn ($o) => $this->payload($o)),
