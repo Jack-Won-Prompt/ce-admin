@@ -1479,6 +1479,25 @@ class PrescriptionController extends Controller
                 'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
             ]) + [
                 'resident_no' => $patient->resident_no,
+
+                /* 날짜는 날짜로 내보낸다.
+
+                   only() 는 캐스트된 **Carbon 객체를 그대로** 담는다 — 모델의
+                   `date:Y-m-d` 는 toArray()/toJson() 에만 들고 이 길에는 들지 않는다.
+                   그래서 JSON 으로 나갈 때 Carbon 이 제 방식(ISO8601 UTC)으로 찍혀
+                   `2017-04-27T15:00:00.000000Z` 가 된다. 우리 시간 04-28 00:00 이
+                   UTC 로는 전날 15:00 이라, 날짜 칸이 그것을 받아 **하루가 앞섰다**
+                   (2026-09-08 송예린 — 170428 인 아이가 04-27 로 떴다).
+
+                   위의 $d() 가 이미 그 일을 한다. 날짜 칸은 모두 그것을 지나게 한다. */
+                'birth_date'          => $d($patient->birth_date),
+                'guardian_birth_date' => $d($patient->guardian_birth_date),
+                'nhis_reg_date'       => $d($patient->nhis_reg_date),
+                'nhis_renew_due'      => $d($patient->nhis_renew_due),
+                'nhis_agree_start'    => $d($patient->nhis_agree_start),
+                'nhis_agree_end'      => $d($patient->nhis_agree_end),
+                'basic_reeval_due'    => $d($patient->basic_reeval_due),
+
                 /* 미성년인지는 **서버가 말한다**. 창이 생년월일을 보고 스스로 세도록
                    두었더니, 그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로
                    읽혔다 — 보호자 칸이 영영 서지 않았다. */
