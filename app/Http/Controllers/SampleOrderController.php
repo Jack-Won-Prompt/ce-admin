@@ -59,7 +59,7 @@ class SampleOrderController extends Controller
             'address'   => trim(($s->address ?? '') . ' ' . ($s->address_detail ?? '')) ?: '-',
             'qty'       => (int) $s->total_qty,
             'amount'    => (int) $s->total_amount,
-            'so_no'     => $s->withworks_so_no ?: ($s->withworks_error ? '실패' : '미전달'),
+            'so_no'     => $s->withworks_so_no ?: ($s->withworks_error ? '실패' : '해당없음'),
             'order_date'=> $s->order_date?->format('Y-m-d') ?? '',
             'creator'   => $s->creator?->name ?? '-',
 

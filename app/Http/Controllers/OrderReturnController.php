@@ -86,7 +86,7 @@ class OrderReturnController extends Controller
             'order_no'  => $r->order?->order_number ?? '-',
             // 창고와 맞춰 볼 때 쓰는 번호 — 없으면 아직 알리지 못한 것이다
             'origin_so' => $r->order?->withworks_so_no ?: '-',
-            'return_so' => $r->withworks_so_no ?: ($r->withworks_error ? '실패' : '미전달'),
+            'return_so' => $r->withworks_so_no ?: ($r->withworks_error ? '실패' : '해당없음'),
             'patient'   => $r->order?->patient?->name ?? '-',
             'reason'    => OrderReturn::reasonLabel($r->reason_code),
             'refund'    => $r->refund_amount ? number_format($r->refund_amount) : '-',

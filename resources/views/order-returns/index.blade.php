@@ -196,7 +196,9 @@
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
-          if (v === '실패' || v === '미전달') { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          /* 「실패」만 붉게 — 「해당없음」은 아직 보낼 일이 없다는 뜻이라 문제가 아니다 */
+          if (v === '실패')          { el.style.color = '#B54708'; el.style.fontWeight = '700'; }
+          else if (v === '해당없음') { el.style.color = 'var(--gray-400)'; }
           return el;
         },
       },
