@@ -115,7 +115,7 @@ final class CardSalesSlip
             return null;
         }
 
-        $raw  = json_decode((string) $payment->raw_response, true) ?: [];
+        $raw  = self::raw($payment);
         $card = $raw['card'] ?? [];
         $dash = fn ($v) => ($v === null || $v === '') ? '-' : (string) $v;
 
@@ -170,10 +170,29 @@ final class CardSalesSlip
             ->whereNotNull('raw_response')
             ->get()
             ->first(function (TossPayment $p) {
-                $raw = json_decode((string) $p->raw_response, true) ?: [];
-
-                return !empty($raw['card']);
+                return !empty(self::raw($p)['card']);
             });
+    }
+
+    /**
+     * 토스 응답 한 벌.
+     *
+     * TossPayment 모델이 raw_response 를 `array` 로 풀어 준다. 그것을 다시
+     * `(string)` 으로 감싸면 PHP 가 「Array to string conversion」 경고를 내고,
+     * 라라벨은 경고를 예외로 올려 500 이 된다 — 가상계좌를 발급한 건에서
+     * 결제수단을 고를 때 이 길로 들어와 터졌다(3차 5회 강도원).
+     *
+     * 옛 자료가 문자열로 남아 있을 수 있어 두 꼴을 모두 받는다.
+     */
+    private static function raw(TossPayment $p): array
+    {
+        $v = $p->raw_response;
+
+        if (is_array($v)) {
+            return $v;
+        }
+
+        return json_decode((string) $v, true) ?: [];
     }
 
     /** ISO8601 을 사람이 읽는 꼴로 */
