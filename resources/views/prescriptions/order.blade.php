@@ -392,6 +392,42 @@
             white-space:nowrap; cursor:pointer; transition:var(--transition); }
   .tb-act:hover { background:var(--gray-50); }
   .tb-act i    { font-size:12px; }
+  /* ── 저장 이력 ─────────────────────────────────────────
+     안쪽 탭은 판 위 탭(rx-tab)보다 한 단 작게 세운다 — 어느 쪽이 위인지 보여야 한다. */
+  .rxh-tabs { display:flex; gap:4px; margin-bottom:10px; border-bottom:1px solid var(--border); }
+  .rxh-tab  { height:30px; padding:0 14px; border:0; background:none; cursor:pointer;
+              font-size:12px; font-weight:500; color:var(--text-muted);
+              border-bottom:2px solid transparent; }
+  .rxh-tab.active   { color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
+  .rxh-tab:disabled { color:var(--gray-300); cursor:default; }
+
+  /* 어느 저장을 보고 있는지 — 상세의 머리 */
+  .rxh-head { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+              background:var(--gray-0); border:1px solid var(--border); border-radius:12px;
+              padding:12px 16px; margin-bottom:12px; font-size:12px; }
+  .rxh-head b { font-weight:700; }
+  .rxh-head .rxh-head-k { color:var(--text-muted); margin-right:6px; }
+
+  /* 저장 전(왼쪽) · 저장 후(오른쪽). 항목 이름을 가운데 두면 두 값이 같은 줄에서
+     마주 본다 — 무엇이 무엇으로 바뀌었는지 눈이 한 줄만 따라가면 된다. */
+  .rxh-diff       { border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .rxh-row        { display:grid; grid-template-columns:1fr 180px 1fr; align-items:stretch;
+                    border-top:1px solid var(--border); }
+  .rxh-row:first-child { border-top:0; }
+  .rxh-cap        { background:var(--gray-50); font-size:11px; font-weight:700;
+                    color:var(--text-muted); text-align:center; }
+  .rxh-cap > div  { padding:8px 12px; }
+  .rxh-k          { padding:10px 12px; text-align:center; font-size:12px; font-weight:600;
+                    background:var(--gray-0); border-left:1px solid var(--border);
+                    border-right:1px solid var(--border); display:flex; align-items:center;
+                    justify-content:center; }
+  .rxh-v          { padding:10px 14px; font-size:12px; word-break:break-all;
+                    display:flex; align-items:center; }
+  .rxh-v-before   { justify-content:flex-end; text-align:right; color:var(--text-muted);
+                    text-decoration:line-through; }
+  .rxh-v-after    { font-weight:600; }
+  .rxh-v-empty    { color:var(--gray-300); font-style:normal; text-decoration:none; }
+  .rxh-none       { padding:24px; text-align:center; font-size:12px; color:var(--text-muted); }
   .tab-pane { display: none; } .tab-pane.active { display: block; }
   /* 검수 탭은 이제 아코디언만 담는다. 주문 정보는 자기 탭으로 돌아갔다. */
   /* ── 카드 / 테이블 뷰 토글 ── */
@@ -3429,19 +3465,75 @@ $calcDeposit  = $calcCopay;
 
           {{-- ── 저장 이력 ─────────────────────────────────
                이 처방전과 딸린 주문ㆍ거래처의 변경을 한 표로 모은다. 처음 열 때 한 번만
-               불러온다 — 탭을 오갈 때마다 다시 부르면 표가 깜빡인다. --}}
+               불러온다 — 탭을 오갈 때마다 다시 부르면 표가 깜빡인다.
+
+               **저장 한 번이 한 줄이다.** 그 저장이 무엇을 바꿨는지는 줄을 눌러
+               상세 보기에서 저장 전(왼쪽)ㆍ저장 후(오른쪽)로 나란히 견준다. --}}
           <div class="rx-acc-body rx-pane" id="rxp-3" style="display:none;">
             <div class="rx-pane-cap">저장 이력</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <span style="font-size:11px;color:var(--text-muted);flex:1;" id="rxHistNote">
-                이 처방전과 딸린 주문ㆍ거래처의 변경을 모두 보여 줍니다.
-              </span>
-              <button type="button" class="ds-btn" style="height:28px;padding:0 10px;font-size:11px;"
-                      onclick="loadRxHistory(true)">
-                <i class="fa-solid fa-rotate-right" style="font-size:10px;"></i> 새로고침
-              </button>
+
+            {{-- 목록과 상세는 같은 자리를 나눠 쓴다. 상세는 고른 줄이 있어야 열린다 —
+                 아무것도 고르지 않은 채로 열면 빈 판만 보인다. --}}
+            <div class="rxh-tabs">
+              <button type="button" class="rxh-tab active" data-view="list"
+                      onclick="rxHistView('list')">목록</button>
+              <button type="button" class="rxh-tab" data-view="detail" id="rxHistDetailTab"
+                      onclick="rxHistView('detail')" disabled>상세 보기</button>
             </div>
-            <div id="rxHistGrid" style="min-height:220px;"></div>
+
+            {{-- ── 목록 ── --}}
+            <div id="rxHistList">
+              {{-- 찾는 줄. 받아 둔 것을 그 자리에서 좁힌다 — 서버를 다시 부르지 않는다. --}}
+              <div class="ol-filter" style="margin-bottom:10px;">
+                <div class="ol-field ol-field-q">
+                  <label class="ds-field-label">검색어</label>
+                  <input type="text" id="rxh-q" class="form-control"
+                         placeholder="항목ㆍ값ㆍ설명" oninput="rxHistFilter()">
+                </div>
+                <div class="ol-field">
+                  <label class="ds-field-label">일시 (부터)</label>
+                  <input type="date" id="rxh-from" class="form-control" onchange="rxHistFilter()">
+                </div>
+                <div class="ol-field">
+                  <label class="ds-field-label">일시 (까지)</label>
+                  <input type="date" id="rxh-to" class="form-control" onchange="rxHistFilter()">
+                </div>
+                <div class="ol-field">
+                  <label class="ds-field-label">작업자</label>
+                  <select id="rxh-who" class="form-control form-select" onchange="rxHistFilter()">
+                    <option value="">전체</option>
+                  </select>
+                </div>
+                <div class="ol-field">
+                  <label class="ds-field-label">구분</label>
+                  <select id="rxh-where" class="form-control form-select" onchange="rxHistFilter()">
+                    <option value="">전체</option>
+                  </select>
+                </div>
+                <div class="ol-actions">
+                  <button type="button" class="tb-act" onclick="rxHistReset()">
+                    <i class="fa-solid fa-eraser"></i> 초기화
+                  </button>
+                  <button type="button" class="tb-act" onclick="loadRxHistory(true)">
+                    <i class="fa-solid fa-rotate-right"></i> 새로고침
+                  </button>
+                </div>
+              </div>
+
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;" id="rxHistNote">
+                이 처방전과 딸린 주문ㆍ거래처의 저장을 모두 보여 줍니다.
+              </div>
+              <div id="rxHistGrid" style="min-height:220px;"></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+                줄을 누르면 그 저장이 무엇을 바꿨는지 상세 보기에서 견줍니다.
+              </div>
+            </div>
+
+            {{-- ── 상세 보기 ── --}}
+            <div id="rxHistDetail" style="display:none;">
+              <div class="rxh-head" id="rxHistHead"></div>
+              <div class="rxh-diff" id="rxHistDiff"></div>
+            </div>
           </div>
 
         {{-- ── 추가정보 (시안 148:3046) ── --}}
@@ -6378,10 +6470,13 @@ window.HELP_TOUR_STEPS = [
   }
 
   /* ── 저장 이력 ───────────────────────────────────────────
-     서버가 칸마다 한 줄로 펼쳐 준다. 표는 다른 목록과 같은 wwGrid 를 쓴다 — 정렬ㆍ
-     엑셀 저장이 같은 방식으로 듣는다. */
+     저장 한 번이 한 줄이다. 그 저장이 바꾼 칸들은 줄에 매달려 온다 — 줄을 누르면
+     상세 보기가 저장 전(왼쪽)ㆍ저장 후(오른쪽)로 나란히 세운다.
+     표는 다른 목록과 같은 wwGrid 를 쓴다 — 정렬ㆍ엑셀 저장이 같은 방식으로 듣는다. */
   const RX_HISTORY_URL = @json(route('prescriptions.history', $prescription, absolute: false));
   let _rxHistGrid = null, _rxHistLoaded = false;
+  let _rxHistRows = [];     // 서버에서 받아 둔 모든 줄
+  let _rxHistShown = [];    // 지금 표에 선 줄(거른 뒤)
 
   async function loadRxHistory(force = false) {
     if (_rxHistLoaded && !force) return;
@@ -6404,48 +6499,147 @@ window.HELP_TOUR_STEPS = [
     if (!d.success) { note.textContent = d.message || '이력을 불러오지 못했습니다.'; return; }
 
     _rxHistLoaded = true;
-    const rows = d.rows || [];
-    note.textContent = rows.length
-      ? `이 처방전과 딸린 주문ㆍ거래처의 변경 ${rows.length}건입니다.`
-      : '아직 이력이 없습니다.';
+    _rxHistRows = d.rows || [];
+
+    /* 거르는 칸의 선택지는 받아 둔 줄에서 뽑는다 — 없는 값을 고르게 두지 않는다 */
+    const fill = (id, values) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const keep = el.value;
+      el.innerHTML = '<option value="">전체</option>';
+      [...new Set(values.filter(Boolean))].sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        el.appendChild(o);
+      });
+      el.value = keep;
+    };
+    fill('rxh-who',   _rxHistRows.map(r => r.who));
+    fill('rxh-where', _rxHistRows.map(r => r.where));
+
+    rxHistFilter();
+  }
+
+  /* 받아 둔 것을 그 자리에서 좁힌다 — 서버를 다시 부르지 않는다 */
+  function rxHistFilter() {
+    const v = id => (document.getElementById(id)?.value ?? '').trim();
+    const q = v('rxh-q').toLowerCase(), from = v('rxh-from'), to = v('rxh-to');
+    const who = v('rxh-who'), where = v('rxh-where');
+
+    _rxHistShown = _rxHistRows.filter(r => {
+      const 날 = (r.at || '').slice(0, 10);
+      if (from  && 날 < from)      return false;
+      if (to    && 날 > to)        return false;
+      if (who   && r.who !== who)  return false;
+      if (where && r.where !== where) return false;
+
+      if (!q) return true;
+
+      /* 검색어는 매달린 칸까지 뒤진다 — 「12345 로 바꾼 저장이 언제였나」를
+         값으로 찾을 수 있어야 한다. */
+      const 뭉치 = [r.summary, r.note, r.who, r.where,
+                    ...(r.fields || []).flatMap(f => [f.field, f.before, f.after])]
+                   .join(' ').toLowerCase();
+      return 뭉치.includes(q);
+    });
+
+    const note = document.getElementById('rxHistNote');
+    if (note) {
+      note.textContent = _rxHistRows.length === 0
+        ? '아직 이력이 없습니다.'
+        : (_rxHistShown.length === _rxHistRows.length
+            ? `저장 ${_rxHistRows.length}건입니다.`
+            : `저장 ${_rxHistRows.length}건 가운데 ${_rxHistShown.length}건입니다.`);
+    }
+
+    rxHistDraw();
+  }
+
+  function rxHistReset() {
+    ['rxh-q', 'rxh-from', 'rxh-to', 'rxh-who', 'rxh-where']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    rxHistFilter();
+  }
+
+  function rxHistDraw() {
+    const box = document.getElementById('rxHistGrid');
+    if (!box || typeof wwGrid === 'undefined') return;
 
     /* 표는 한 번만 세우고 이후에는 줄만 갈아 끼운다 — 다시 세우면 담당자가
        조정해 둔 열너비와 정렬이 풀린다. */
-    if (_rxHistGrid) { _rxHistGrid.setData(rows); return; }
+    if (_rxHistGrid) { _rxHistGrid.setData(_rxHistShown); return; }
 
     _rxHistGrid = new wwGrid({
       el: box,
       /* 읽기만 하는 표다. 고칠 수 없고, 고를 것도 없다 — 체크칸을 두면
          「이걸 골라서 무엇을 하나」를 묻게 된다. 엑셀 저장은 남겨 둔다. */
-      height: 340, editable: false, rowCheckbox: false, rowNumber: false,
+      height: 300, editable: false, rowCheckbox: false, rowNumber: false,
       footer: { total: true, selected: false, modified: false },
       emptyText: '아직 이력이 없습니다.',
       columns: [
-        { header: 'No',      name: 'no',     width: 50,  align: 'center', sortable: true, summary: false },
-        { header: '일시',    name: 'at',     width: 145, sortable: true },
-        { header: '작업자',  name: 'who',    width: 85,  sortable: true },
-        { header: '구분',    name: 'where',  width: 65,  align: 'center', sortable: true },
-        { header: '항목',    name: 'field',  width: 135, sortable: true },
-        /* 바뀌기 전 값은 흐리게 — 지금 값이 아니라는 것이 한눈에 보여야 한다 */
-        { header: '수정 전', name: 'before', width: 190, sortable: true,
+        { header: 'No',     name: 'no',      width: 50,  align: 'center', sortable: true, summary: false },
+        { header: '일시',   name: 'at',      width: 145, sortable: true },
+        { header: '작업자', name: 'who',     width: 85,  sortable: true },
+        { header: '구분',   name: 'where',   width: 65,  align: 'center', sortable: true },
+        { header: '설명',   name: 'note',    width: 190, sortable: true },
+        { header: '바뀐 항목', name: 'summary', width: 320, sortable: true,
           renderer: (v) => {
             const s = document.createElement('span');
-            s.textContent = v ?? '';
-            s.style.color = 'var(--text-muted)';
-            if (v) s.style.textDecoration = 'line-through';
+            s.textContent = v || '기록된 항목 없음';
+            if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
-        { header: '수정 후', name: 'after',  width: 190, sortable: true,
-          renderer: (v) => {
-            const s = document.createElement('span');
-            s.textContent = v ?? '';
-            if (v) s.style.fontWeight = '600';
-            return s;
-          } },
-        { header: '설명',    name: 'note',   width: 200 },
+        { header: '건수',   name: 'count',   width: 60, align: 'center', sortable: true, summary: false },
       ],
-      data: rows,
+      data: _rxHistShown,
     });
+
+    /* 줄을 누르면 그 저장을 견준다. 더블클릭이 아니라 한 번 누름이다 —
+       이 표는 어디로 떠나지 않고 옆 탭을 채울 뿐이라 되돌릴 것이 없다. */
+    box.addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = _rxHistGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row) rxHistOpen(row);
+    });
+  }
+
+  /* 고른 저장을 저장 전(왼쪽)ㆍ저장 후(오른쪽)로 세운다 */
+  function rxHistOpen(row) {
+    const head = document.getElementById('rxHistHead');
+    const diff = document.getElementById('rxHistDiff');
+    if (!head || !diff) return;
+
+    const 짝 = (k, v) => `<span><span class="rxh-head-k">${k}</span><b>${v || '-'}</b></span>`;
+    head.innerHTML = 짝('일시', row.at) + 짝('작업자', row.who) + 짝('구분', row.where)
+                   + 짝('설명', row.note) + 짝('바뀐 항목', row.count ? row.count + '개' : '없음');
+
+    const 칸들 = row.fields || [];
+    if (!칸들.length) {
+      diff.innerHTML = '<div class="rxh-none">이 저장에는 무엇이 바뀌었는지 남아 있지 않습니다.'
+                     + '<br>항목별 기록은 2026-09-09부터 남습니다.</div>';
+    } else {
+      const 값 = (v) => v
+        ? escHtml(v)
+        : '<span class="rxh-v-empty">(빈 값)</span>';
+      diff.innerHTML =
+        '<div class="rxh-row rxh-cap"><div>저장 전</div><div>항목</div><div>저장 후</div></div>'
+        + 칸들.map(f => `<div class="rxh-row">
+             <div class="rxh-v rxh-v-before">${값(f.before)}</div>
+             <div class="rxh-k">${escHtml(f.field)}</div>
+             <div class="rxh-v rxh-v-after">${값(f.after)}</div>
+           </div>`).join('');
+    }
+
+    document.getElementById('rxHistDetailTab').disabled = false;
+    rxHistView('detail');
+  }
+
+  function rxHistView(which) {
+    document.querySelectorAll('.rxh-tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === which));
+    document.getElementById('rxHistList').style.display   = which === 'list'   ? '' : 'none';
+    document.getElementById('rxHistDetail').style.display = which === 'detail' ? '' : 'none';
   }
 
   // ── 미저장 감지 ────────────────────────────────────────

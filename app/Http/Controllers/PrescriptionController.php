@@ -3915,16 +3915,18 @@ HTML;
      * 그 건에만 속한 자국이다.
      */
     /**
-     * 저장 이력 — 언제ㆍ누가ㆍ어떤 항목을ㆍ무엇에서 무엇으로.
+     * 저장 이력 — 언제ㆍ누가ㆍ무엇을 저장했는가, 그리고 그 저장이 무엇을 바꿨는가.
      *
      * 이 처방전과 딸린 주문ㆍ거래처의 변경을 한 표로 모은다. 담당자가 값을 의심할 때
      * 「누가 언제 그렇게 만들었는가」를 그 자리에서 본다.
      *
-     * 활동 기록 한 줄에 여러 칸이 함께 담기므로 **칸마다 한 줄로 펼친다** — 표에서
-     * 항목으로 정렬하고 걸러 볼 수 있어야 한다.
+     * **저장 한 번이 한 줄이다.** 한 번 저장에 칸 여덟이 바뀌면 목록에는 한 줄로 서고,
+     * 그 여덟은 줄에 매달아 보낸다 — 상세 보기가 저장 전(왼쪽)ㆍ저장 후(오른쪽)로
+     * 나란히 세운다. 예전에는 칸마다 한 줄이라, 한 번 저장이 여덟 줄로 흩어져
+     * 「이 저장이 무엇을 했는가」가 보이지 않았다.
      *
-     * 무엇이 바뀌었는지 남지 않은 지난 줄(모델에 이력을 켜기 전의 것)은 항목 자리에
-     * 그때 남긴 설명을 세운다. 없는 것을 지어내지 않는다.
+     * 무엇이 바뀌었는지 남지 않은 지난 줄(모델에 이력을 켜기 전의 것)도 제 줄로 선다.
+     * 매달린 칸이 없을 뿐이다 — 없는 것을 지어내지 않는다.
      */
     public function history(Prescription $prescription): JsonResponse
     {
@@ -3948,9 +3950,9 @@ HTML;
             ->get();
 
         $어디 = [
-            Prescription::class          => '처방전',
-            \App\Models\Order::class    => '주문',
-            \App\Models\Patient::class  => '거래처',
+            Prescription::class         => '처방전',
+            \App\Models\Order::class   => '주문',
+            \App\Models\Patient::class => '거래처',
         ];
 
         $보임 = function ($v) {
@@ -3974,48 +3976,48 @@ HTML;
         $no  = 0;
 
         foreach ($rows as $a) {
-            $때   = $a->created_at?->format('Y-m-d H:i:s') ?? '';
-            $누가 = $a->causer?->name ?? '시스템';
-            $where = $어디[$a->subject_type] ?? class_basename((string) $a->subject_type);
-
             $new = (array) ($a->properties['attributes'] ?? []);
             $old = (array) ($a->properties['old'] ?? []);
 
-            /* 바뀐 칸이 남아 있으면 칸마다 한 줄 */
-            $칸들 = array_keys($new + $old);
-            $칸들 = array_values(array_filter($칸들, fn ($c) => \App\Support\ChangeLog::남기나($c)));
+            /* 바뀐 칸을 모은다. 값이 같으면 바뀐 것이 아니다 — 저장할 때마다 함께
+               따라오는 칸이 있어, 이것을 거르지 않으면 「바뀐 것 없는 저장」이
+               열 칸 바뀐 것처럼 보인다. */
+            $칸들 = [];
 
-            if ($칸들) {
-                foreach ($칸들 as $칸) {
-                    $전 = $보임($old[$칸] ?? null);
-                    $후 = $보임($new[$칸] ?? null);
-                    if ($전 === $후) continue;   // 값이 같으면 바뀐 것이 아니다
+            foreach (array_keys($new + $old) as $칸) {
+                if (! \App\Support\ChangeLog::남기나($칸)) continue;
 
-                    $out[] = [
-                        'no'     => ++$no,
-                        'at'     => $때,
-                        'who'    => $누가,
-                        'where'  => $where,
-                        'field'  => \App\Support\ChangeLog::이름($칸),
-                        'before' => $전,
-                        'after'  => $후,
-                        'note'   => $설명($a->description),
-                    ];
-                }
+                $전 = $보임($old[$칸] ?? null);
+                $후 = $보임($new[$칸] ?? null);
+                if ($전 === $후) continue;
 
-                continue;
+                $칸들[] = [
+                    'field'  => \App\Support\ChangeLog::이름($칸),
+                    'key'    => $칸,
+                    'before' => $전,
+                    'after'  => $후,
+                ];
             }
 
-            /* 바뀐 칸이 남지 않은 줄 — 그때 적어 둔 설명만 세운다 */
+            /* 목록에서 훑을 때는 무엇이 바뀌었는지 이름만 보면 된다. 셋까지 적고
+               나머지는 수로 접는다 — 여덟 이름을 다 적으면 줄이 옆으로 넘친다. */
+            $이름들 = array_column($칸들, 'field');
+            $요약   = match (true) {
+                count($이름들) === 0 => '',
+                count($이름들) <= 3  => implode(', ', $이름들),
+                default              => implode(', ', array_slice($이름들, 0, 3))
+                                        . ' 외 ' . (count($이름들) - 3),
+            };
+
             $out[] = [
-                'no'     => ++$no,
-                'at'     => $때,
-                'who'    => $누가,
-                'where'  => $where,
-                'field'  => '',
-                'before' => '',
-                'after'  => '',
-                'note'   => $설명($a->description),
+                'no'      => ++$no,
+                'at'      => $a->created_at?->format('Y-m-d H:i:s') ?? '',
+                'who'     => $a->causer?->name ?? '시스템',
+                'where'   => $어디[$a->subject_type] ?? class_basename((string) $a->subject_type),
+                'summary' => $요약,
+                'count'   => count($칸들),
+                'note'    => $설명($a->description),
+                'fields'  => $칸들,
             ];
         }
 
