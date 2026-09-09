@@ -3001,14 +3001,20 @@ $calcDeposit  = $calcCopay;
                 <input type="date" class="form-control" id="f-basic-reeval-due"
                        value="{{ $prescription->patient?->basic_reeval_due ?? '' }}" style="flex:1;" />
               </div>
-              {{-- 누가 만들고 누가 마지막으로 고쳤는가(요청서 9쪽). 거래처관리의 값이라
-                   여기서는 한 줄로 읽기만 한다 — 세 칸으로 벌리면 자리만 먹는다. --}}
+              {{-- 누가 만들고 누가 마지막으로 고쳤는가(요청서 9쪽).
+
+                   **이 건**의 등록자ㆍ수정자다(2026-09-08 확인요청 9쪽 · 2026-09-09 확정).
+                   여태는 거래처(환자 마스터)의 것을 보여 주었다. 그런데 이 화면에서 고치는
+                   것은 대개 처방ㆍ주문 쪽이라 거래처 값은 그대로였고, 담당자에게는
+                   「오늘 고쳤는데 수정자도 날짜도 그대로」로 보였다.
+
+                   거래처를 누가 고쳤는지는 거래처 관리에서 본다 — 그쪽이 그 값의 정본이다. --}}
               <div class="rx-field-row rx-w3 rx-row-start">
                 <span class="rx-field-label">등록자 · 수정자</span>
                 <input type="text" class="form-control" id="f-patient-audit" readonly
-                       value="{{ trim(($prescription->patient?->creator?->name ?? '—')
-                                . ' · ' . ($prescription->patient?->updater?->name ?? '—')
-                                . ' · ' . ($prescription->patient?->updated_at?->format('Y-m-d H:i') ?? '—')) }}"
+                       value="{{ trim(($prescription->creator?->name ?? '—')
+                                . ' · ' . ($prescription->updater?->name ?? '—')
+                                . ' · ' . ($prescription->updated_at?->format('Y-m-d H:i') ?? '—')) }}"
                        style="flex:1;" />
               </div>
               {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
