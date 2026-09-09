@@ -5234,6 +5234,7 @@ function renderItemsTable() {
        코드가 먼저 잘려, 정작 견주려던 것이 보이지 않았다. */
     const displayName = item.product_name ? escHtml(item.product_name) : '';
     const codeShown   = item.product_code ? escHtml(item.product_code) : '';
+    const deviceShown = item.device_code ? escHtml(item.device_code) : '';
     return `<tr class="item-card" data-idx="${idx}">
       {{-- 「선택 삭제」가 볼 체크 칸이다. 칸을 하나 더 세우면 머리ㆍ몸ㆍ바닥의 열 수가
            어긋나므로 번호 칸 안에 함께 둔다. --}}
@@ -5258,6 +5259,7 @@ function renderItemsTable() {
         </div>
         <input type="hidden" class="item-name"  value="${escHtml(item.product_name||'')}" />
         <input type="hidden" class="item-code"  value="${escHtml(item.product_code||'')}" />
+        <input type="hidden" class="item-device" value="${escHtml(item.device_code||'')}" />
         <input type="hidden" class="item-rbox"  value="${escHtml(item.r_box||'')}" />
         <input type="hidden" class="item-stock" value="${escHtml(String(item.stock||''))}" />
         <input type="hidden" class="item-price" value="${escHtml(fmtPrice(item.product_price))}" />
@@ -5270,6 +5272,10 @@ function renderItemsTable() {
       {{-- 제품 코드 — 창고와 주고받는 것은 이 값이다 --}}
       <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
           class="item-code-shown" title="${codeShown}">${codeShown}</td>
+      {{-- 장비코드 — 값이 없으면 「-」로 둔다. 빈칸이면 칸이 비뚤어 보인다. --}}
+      <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                 color:var(--text-secondary);"
+          class="item-device-shown" title="${deviceShown}">${deviceShown || '-'}</td>
       <td>
         {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략(유형 × 자격)이 정한다.
              담긴 값은 지우지 않고 그대로 들고 다닌다(예전 건을 읽는 자리가 있다). --}}
@@ -5311,17 +5317,19 @@ function renderItemsTable() {
     {{-- 칸 아홉과 셀 아홉이 하나씩 맞아야 한다. 안 보이는 칸을 하나 끼워 두면 그 뒤가
          모두 한 자리씩 밀려, 머리와 몸이 어긋나고 오른쪽에 빈 칸 하나가 남는다. --}}
     <colgroup>
-      <col style="width:6%;">
-      <col style="width:19%;">
-      <col style="width:13%;">
-      <col style="width:10%;">
-      <col style="width:6%;">
-      <col style="width:10%;">
-      <col style="width:8%;">
-      <col style="width:8%;">
+      <col style="width:5%;">
+      <col style="width:16%;">
+      <col style="width:11%;">
+      {{-- 장비코드 — 공단에 청구할 때 쓰는 번호(2026-09-08 확인요청 1ㆍ10쪽) --}}
+      <col style="width:12%;">
       <col style="width:9%;">
       <col style="width:6%;">
-      <col style="width:6%;">
+      <col style="width:9%;">
+      <col style="width:7%;">
+      <col style="width:7%;">
+      <col style="width:8%;">
+      <col style="width:5%;">
+      <col style="width:5%;">
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
@@ -5331,6 +5339,9 @@ function renderItemsTable() {
       </th>
       <th>제품명</th>
       <th>제품 코드</th>
+      {{-- 장비코드 — 우리 품번으로는 공단 조회가 되지 않는다. 제품이 들고 오는 값이라
+           고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). --}}
+      <th>장비코드</th>
       <th>급여구분</th>
       <th style="text-align:center;">수량</th>
       {{-- 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가(위드웍스 items.r_box) --}}
@@ -7249,6 +7260,8 @@ window.HELP_TOUR_STEPS = [
     items[idx] = {
       product_name:    card.querySelector('.item-name').value,
       product_code:    card.querySelector('.item-code').value,
+      /* 장비코드도 되살린다 — 여기서 빠뜨리면 수량을 한 번 고치는 것만으로 칸이 빈다 */
+      device_code:     card.querySelector('.item-device')?.value || '',
       r_box:           card.querySelector('.item-rbox')?.value  || '',
       stock:           card.querySelector('.item-stock')?.value || '',
       quantity:        qty,
