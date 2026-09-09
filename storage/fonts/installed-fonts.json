@@ -4,5 +4,11 @@
         "bold": "nanumgothic_normal_2a15e1dbb57528c8748b005bc883ea87",
         "italic": "nanumgothic_normal_2a15e1dbb57528c8748b005bc883ea87",
         "bold_italic": "nanumgothic_normal_2a15e1dbb57528c8748b005bc883ea87"
+    },
+    "pretendard": {
+        "normal": "pretendard_normal_52ba22f470e0113462247898ad0c1a0d",
+        "bold": "pretendard_bold_19a15c6340870a972ff17643f3722580",
+        "italic": "pretendard_normal_52ba22f470e0113462247898ad0c1a0d",
+        "bold_italic": "pretendard_normal_52ba22f470e0113462247898ad0c1a0d"
     }
 }
