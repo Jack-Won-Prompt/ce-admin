@@ -181,9 +181,18 @@ class Patient extends Model
                 return;
             }
 
-            $last = $p->addresses()->first();
+            /* 이미 담겨 있는 주소면 새로 쌓지 않는다.
 
-            if ($last && $last->sameAs($p->postcode, $p->address, $p->address_detail)) {
+               예전에는 **가장 최근 줄**하고만 견줬다. 저절로 쌓이기만 할 때는 그것으로
+               됐지만, 「현재로」로 지난 주소를 다시 세우면(2026-09-09) 최근 줄과 달라
+               같은 주소가 한 줄 더 쌓였다 — 고르는 자리에 같은 것이 둘 서면 어느 것이
+               어느 것인지 알 수 없다. 이제 담긴 것 전부와 견준다. */
+            $이미있나 = $p->addresses()
+                ->where('address', $p->address)
+                ->get()
+                ->contains(fn ($a) => $a->sameAs($p->postcode, $p->address, $p->address_detail));
+
+            if ($이미있나) {
                 return;
             }
 
