@@ -3516,15 +3516,18 @@ $calcDeposit  = $calcCopay;
                 <input type="number" min="0" class="form-control" id="f-daily-use-qty"
                        value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
               </div>
-              <div class="rx-field-row">
-                <span class="rx-field-label">인마켓 마감일</span>
-                <input type="date" class="form-control" id="f-inmarket-due"
-                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
-              </div>
+              {{-- 마지막 확정 수량은 하루 사용 수량 바로 다음이다(2026-09-09 지시).
+                   둘 다 「몇 개인가」를 말하는 칸이라 나란히 놓고 견준다 — 사이에
+                   날짜 칸이 끼어 있으면 눈이 한 번 건너뛰었다가 돌아와야 했다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
+              </div>
+              <div class="rx-field-row">
+                <span class="rx-field-label">인마켓 마감일</span>
+                <input type="date" class="form-control" id="f-inmarket-due"
+                       value="{{ $prescription->inmarket_due ?? '' }}" style="flex:1;" />
               </div>
             </div></div>{{-- /rx-rows --}}
           </div>
