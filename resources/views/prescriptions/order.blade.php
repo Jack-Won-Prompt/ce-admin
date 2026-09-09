@@ -6869,6 +6869,43 @@ window.HELP_TOUR_STEPS = [
     return Math.ceil(Math.max(1, parseInt(item.quantity, 10) || 1) / rb);
   }
 
+  /* 이미 저장된 줄에는 RB 가 없다 — 주문에 굳혀 두지 않고 제품 표에 묻기 때문이다.
+     화면이 서면 한 번 물어 채운다. 못 물어도 그만이다: 박스 자리가 「-」로 남을 뿐,
+     수량ㆍ금액은 아무것도 달라지지 않는다. */
+  let _rboxAsked = false;
+
+  async function fillRbox() {
+    if (_rboxAsked) return;
+    _rboxAsked = true;
+
+    const 없는것 = [...new Set(items.filter(it => !rboxOf(it))
+                                    .map(it => (it.product_code || '').trim())
+                                    .filter(Boolean))];
+    if (!없는것.length) return;
+
+    let res;
+    try {
+      res = await apiRequest('/products/rbox?codes=' + encodeURIComponent(없는것.join(',')), 'GET');
+    } catch (e) { return; }
+    if (!res?.success || !res.map) return;
+
+    let 채웠다 = false;
+    items.forEach(it => {
+      const rb = res.map[(it.product_code || '').trim()];
+      if (rb > 0 && !rboxOf(it)) { it.r_box = String(rb); 채웠다 = true; }
+    });
+
+    if (!채웠다) return;
+
+    /* isTableView 는 다른 함수 안에 사는 이름이라 여기서는 부를 수 없다 —
+       applyProduct 가 쓰는 것과 같은 잣대를 그대로 쓴다. */
+    if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
+      renderItemsTable();
+    } else {
+      renderItems();
+    }
+  }
+
   /** 표에 세울 글 — 「18 BOX」 · 아래 작게 「30개입」 */
   function boxCellHtml(item) {
     const rb = rboxOf(item);
@@ -12286,6 +12323,9 @@ window.HELP_TOUR_STEPS = [
     renderItems();
     recalcAllItems();   // 로드 시 per-item 급여구분 기준으로 금액 재계산
     calcNextRepurchase(); // 다음재구매일 초기 자동 계산
+    /* 이미 저장된 줄에는 RB 가 없다 — 창고에 물어 채운다. 그림이 선 뒤에 하므로
+       느려도 화면이 기다리지 않는다. 못 물으면 박스 자리가 「-」로 남을 뿐이다. */
+    fillRbox();
   });
 
   // ── 세금계산서 / 현금영수증 ───────────────────────────

@@ -212,6 +212,63 @@ class ProductController extends Controller
     }
 
     /**
+     * 품번들의 RB(한 박스에 드는 낱개 수)를 한 번에 돌려준다.
+     *
+     * RB 는 **제품 표에 붙은 값**이지 주문에 붙은 값이 아니다 — 그래서 주문 줄에
+     * 굳혀 두지 않고 여기서 물어 온다. 박스 크기가 바뀌면 예전 주문도 새 값으로
+     * 보이는 것이 옳고, 굳혀 두면 어느 것이 맞는지 알 수 없게 된다.
+     *
+     * 제품을 고를 때는 이미 함께 받으므로(searchOurs) 이 자리는 **이미 저장된 줄**을
+     * 다시 열 때만 쓴다.
+     *
+     * 못 물으면 빈 map 을 돌려준다 — 화면은 박스 자리를 「-」로 둔다. 창고를 못 부른
+     * 것과 RB 가 없는 제품을 화면에서 가릴 까닭이 없다.
+     */
+    public function rbox(Request $request): JsonResponse
+    {
+        $codes = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) $request->get('codes', '')),
+        )));
+
+        if (! $codes) {
+            return response()->json(['success' => true, 'map' => (object) []]);
+        }
+
+        $baseUrl = rtrim((string) config('services.demoworks.api_url'), '/');
+        $token   = config('services.demoworks.token');
+
+        $map = [];
+
+        try {
+            /* 품번 하나로 찾으면 그 하나만 온다. 여러 개를 물어야 하므로 품번마다
+               한 번씩 부른다 — 한 주문에 제품이 스물을 넘는 일은 없다. */
+            foreach (array_slice($codes, 0, 30) as $code) {
+                $res = Http::withToken($token)
+                    ->connectTimeout(5)
+                    ->timeout(10)
+                    ->get("{$baseUrl}/api/v1/ce-admin/items", ['q' => $code, 'limit' => 5]);
+
+                if (! $res->ok() || ! ($res->json('success') ?? false)) {
+                    continue;
+                }
+
+                foreach ($res->json('result') ?? [] as $i) {
+                    if ((string) ($i['item_code'] ?? '') !== $code) {
+                        continue;
+                    }
+                    $map[$code] = (int) ($i['r_box'] ?? 0);
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::info('RB 조회를 하지 못했다', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json(['success' => true, 'map' => (object) $map]);
+    }
+
+    /**
      * 다양한 응답 형태를 단일 배열 형태로 정규화.
      * r_box, 재고(stock) 포함.
      */

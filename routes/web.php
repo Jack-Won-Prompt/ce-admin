@@ -262,6 +262,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get( '/hospitals/search', [\App\Http\Controllers\HospitalController::class, 'search'])->name('hospitals.search');
     Route::post('/hospitals',        [\App\Http\Controllers\HospitalController::class, 'store'])->name('hospitals.store');
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
+    /* 품번들의 RB(박스당 낱개 수) — 이미 저장된 줄의 박스 환산에 쓴다 */
+    Route::get('/products/rbox',  [ProductController::class, 'rbox'])->name('products.rbox');
     Route::get('/products/stock',  [ProductController::class, 'stock'])->name('products.stock');
 
     // 정산/회계
