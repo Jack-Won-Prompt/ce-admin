@@ -712,9 +712,9 @@
           <div class="info-row wide">
             <span class="info-value" style="font-size:12px;color:var(--text-muted);">
               @if($_고쳤나)
-                수정 {{ $patient->updater->name }} · {{ $patient->updated_at->format('Y-m-d H:i') }}
+                수정 : {{ $patient->updater->name }} · {{ $patient->updated_at->format('Y-m-d H:i') }}
               @else
-                등록 {{ $patient->creator?->name ?: '-' }} · {{ $patient->created_at?->format('Y-m-d H:i') ?: '-' }}
+                등록 : {{ $patient->creator?->name ?: '-' }} · {{ $patient->created_at?->format('Y-m-d H:i') ?: '-' }}
               @endif
             </span>
           </div>
