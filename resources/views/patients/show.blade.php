@@ -1042,7 +1042,7 @@
       <div class="am-row">
         <span class="am-full">${r.current ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
         <span class="am-when">${_amEsc(r.at)}${r.by ? ' · ' + _amEsc(r.by) : ''}</span>
-        ${r.current ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">현재로</button>`}
+        ${r.current ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">사용</button>`}
         <button type="button" class="am-mini" onclick="addrEdit(${r.id})">수정</button>
         <button type="button" class="am-mini danger" onclick="addrDelete(${r.id})">삭제</button>
       </div>`).join('');
