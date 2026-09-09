@@ -186,6 +186,8 @@ class Order extends Model
         'withworks_status', 'withworks_status_label', 'withworks_status_at',
         'withworks_ship_no', 'withworks_ship_status', 'withworks_ship_status_label',
         'withworks_tracking_no', 'withworks_ship_at',
+        /* 거래명세서 발행일 — 종이에 찍은 그 날이다. 창고에도 같은 날을 보낸다. */
+        'statement_date',
         // 창고가 알려 주는 진짜 출고일 — withworks_ship_at 은 우리가 적어 둔 시각이다
         'shipped_at',
         // 발행ㆍ청구ㆍ정산을 맡은 사람과 그 자취(요청서 6ㆍ10ㆍ11ㆍ12쪽)
@@ -208,6 +210,7 @@ class Order extends Model
         'cash_receipt_cancelled_at' => 'datetime',
         'withworks_status_at'       => 'datetime',
         'withworks_ship_at'         => 'datetime',
+        'statement_date'            => 'date',
         'shipped_at'                => 'date',
         'closing_checked_at'        => 'datetime',
         'settle_status_at'          => 'datetime',

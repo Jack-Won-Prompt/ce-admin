@@ -43,6 +43,11 @@ final class TransactionStatement
             ->first();
 
         if ($existing) {
+            /* 종이는 이미 있는데 날이 안 남은 건 — 예전에 만든 것이다. 지금 채운다.
+               이미 적힌 날은 건드리지 않는다: 종이에 찍혀 나간 날이 정본이고,
+               지금 다시 셈하면 그 사이에 결제가 취소ㆍ재승인된 건에서 달라진다. */
+            self::stamp($order);
+
             return $existing;
         }
 
@@ -52,6 +57,9 @@ final class TransactionStatement
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('ts_') . '.pdf';
 
             Storage::disk('public')->put($path, $pdf);
+
+            /* 종이에 찍은 날을 주문에도 굳힌다. 창고에 보낼 때 이 값을 쓴다. */
+            self::stamp($order);
 
             return PrescriptionAttachment::create([
                 'prescription_id'    => $order->prescription_id,
@@ -70,6 +78,28 @@ final class TransactionStatement
 
             return null;
         }
+    }
+
+    /**
+     * 명세서에 찍은 날을 주문에 굳힌다.
+     *
+     * 여태 issueDate() 로 셈만 하고 남기지 않았다. 그래서 종이에 찍힌 날과 나중에
+     * 다시 셈한 날이 어긋날 수 있었다 — 결제가 취소되고 다시 잡히면 셈이 달라진다.
+     *
+     * **이미 적힌 날은 건드리지 않는다.** 나간 종이에 찍힌 날이 정본이다.
+     * 칸이 없는 서버에서는 조용히 지나간다.
+     */
+    private static function stamp(Order $order): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('orders', 'statement_date')) {
+            return;
+        }
+
+        if ($order->statement_date) {
+            return;
+        }
+
+        $order->forceFill(['statement_date' => self::issueDate($order)])->save();
     }
 
     /** 서식대로 그려 PDF 바이트로 돌려준다. */

@@ -38,9 +38,22 @@ final class WithworksConfirm
             return ['ok' => false, 'message' => '위드웍스 연동 설정이 없어 확정하지 못했습니다.'];
         }
 
+        /* 거래명세서 발행일을 함께 보낸다(2026-09-09 지시).
+
+           명세서는 입금이 확인되면 그 자리에서 만들어지고(DepositAutoIssue), 확정도
+           같은 자리에서 이어진다 — 그래서 여기 올 때는 날이 이미 굳어 있다. 저쪽
+           판매주문의 statement_date 가 그 자리다.
+
+           아직 날이 없으면 보내지 않는다. 지금 셈해 보낼 수도 있지만, 그러면 종이에
+           찍힌 날과 창고가 아는 날이 갈릴 수 있다 — 없는 것은 없는 대로 둔다. */
+        $보낼것 = ['so_no' => $soNo];
+        if ($order->statement_date) {
+            $보낼것['statement_date'] = $order->statement_date->format('Y-m-d');
+        }
+
         try {
             $res = Http::withToken($token)->timeout(20)->asForm()
-                ->post("{$baseUrl}/api/v1/ce-admin/so_confirm", ['so_no' => $soNo]);
+                ->post("{$baseUrl}/api/v1/ce-admin/so_confirm", $보낼것);
         } catch (\Throwable $e) {
             Log::error('[위드웍스 확정] 부르지 못했습니다', [
                 'order' => $order->order_number, 'so_no' => $soNo, 'error' => $e->getMessage(),
@@ -59,8 +72,12 @@ final class WithworksConfirm
                 $order->update(['status' => 'confirmed']);
             }
 
+            $날 = isset($보낼것['statement_date'])
+                ? " · 거래명세서 발행일 {$보낼것['statement_date']}"
+                : '';
+
             activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("위드웍스 판매주문 확정 {$soNo}");
+                ->log("위드웍스 판매주문 확정 {$soNo}{$날}");
 
             return ['ok' => true, 'message' => "창고 판매주문 {$soNo} 을(를) 확정했습니다."];
         }
