@@ -116,10 +116,15 @@ class SsoWebTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_꺼져_있으면_SSO_길이_열리지_않는다(): void
+    public function test_꺼져_있으면_로그인_화면으로_되돌린다(): void
     {
-        $this->get('/auth/entra/redirect')->assertNotFound();
-        $this->get('/auth/entra/callback')->assertNotFound();
+        /* 404 로 답하지 않는다 — 그러면 「아직 안 켰다」와 「배포가 안 됐다」를
+           가릴 수 없다. 로그인 화면의 단추가 예전부터 하던 말과 같은 말을 한다. */
+        foreach (['/auth/entra/redirect', '/auth/entra/callback'] as $길) {
+            $this->get($길)
+                ->assertRedirect(route('login'))
+                ->assertSessionHasErrors('email');
+        }
     }
 
     public function test_설정이_하나도_없어도_화면이_선다(): void

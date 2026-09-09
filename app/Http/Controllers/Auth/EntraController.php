@@ -19,8 +19,14 @@ use Laravel\Socialite\Facades\Socialite;
  * 지시서 LTL-UNICORN-20260909-02 §4·§5.
  *
  * **기존 로컬 로그인은 그대로 둔다.** 전환 정책이 아직 없어(§0-3), 이 길은 설정에서
- * 켜야만 열린다(sso.web.enabled · 기본 꺼짐). 꺼져 있으면 라우트가 404 로 답한다 —
- * 켜지도 않은 길이 열려 있는 것처럼 보이면 안 된다.
+ * 켜야만 열린다(sso.web.enabled · 기본 꺼짐). 꺼져 있으면 로그인 화면으로 되돌리고
+ * 「준비 중」이라 알린다 — 로그인 화면의 「Microsoft 계정으로 로그인」 단추가 예전부터
+ * 하던 말과 같다.
+ *
+ * 한때 404 로 답했다. 켜지도 않은 길이 열려 있는 것처럼 보이지 않게 한 것인데,
+ * 그러면 **배포가 됐는지도 알 수 없다** — HQ 에 넘길 주소를 확인하러 열어 본 사람은
+ * 「이 길이 아예 없다」로 읽는다(2026-09-09). 감출 것이 없는 자리다: 이 기능이 있다는
+ * 것은 로그인 화면에 이미 드러나 있다.
  *
  * 사람을 가리는 잣대는 **email(UPN)** 이다(§5-2). 등록되지 않은 사람은 들이지 않고
  * 안내만 한다 — 자동으로 만들어 줄지는 아직 정해지지 않았다(sso.web.jit_create).
@@ -30,7 +36,9 @@ class EntraController extends Controller
     /** 인가 요청으로 보낸다 */
     public function redirect(Request $request): RedirectResponse
     {
-        $this->켜졌나();
+        if ($꺼짐 = $this->꺼졌으면()) {
+            return $꺼짐;
+        }
 
         return $this->provider()->redirect();
     }
@@ -42,7 +50,9 @@ class EntraController extends Controller
      */
     public function callback(Request $request): RedirectResponse
     {
-        $this->켜졌나();
+        if ($꺼짐 = $this->꺼졌으면()) {
+            return $꺼짐;
+        }
 
         try {
             $entra = $this->provider()->user();
@@ -156,10 +166,20 @@ class EntraController extends Controller
 
     // ──────────────────────────────────────────────────────
 
-    /** 켜지지 않았으면 이 길은 없는 것이다 */
-    private function 켜졌나(): void
+    /**
+     * 켜지지 않았으면 아무것도 하지 않고 로그인 화면으로 되돌린다.
+     *
+     * 404 로 답하지 않는다 — 그러면 「아직 안 켰다」와 「배포가 안 됐다」를 가릴 수 없다.
+     */
+    private function 꺼졌으면(): ?RedirectResponse
     {
-        abort_unless(SsoSettings::usable(), 404);
+        if (SsoSettings::usable()) {
+            return null;
+        }
+
+        return redirect()->route('login')->withErrors([
+            'email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.',
+        ]);
     }
 
     /**
