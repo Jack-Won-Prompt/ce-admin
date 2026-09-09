@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\ConsentSubmitted;
+use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionConsent;
 use App\Models\PrescriptionDocument;
@@ -747,7 +748,8 @@ class ConsentController extends Controller
         $consent->loadMissing('prescription.patient');
         $patient = $consent->prescription?->patient;
 
-        $expectedName  = $patient?->name ?? $consent->patient_name;
+        /* 본인확인은 (E) 를 뗀 이름으로 견준다 — 통신사가 돌려주는 이름에는 그 표시가 없다 */
+        $expectedName  = $patient?->bare_name ?? Patient::bare($consent->patient_name);
         $expectedBirth = $this->patientBirthYmd($consent);   // YYYYMMDD or null
 
         $norm = fn ($s) => preg_replace('/\s+/', '', (string) $s);
@@ -1262,7 +1264,7 @@ class ConsentController extends Controller
 
            이제는 거래처가 바뀌면 **내용을 다시 그리고 서명은 그대로 얹는다.**
            서명 이미지는 동의 기록의 것을 쓰므로 사람이 그은 획은 바뀌지 않는다. */
-        $put('patient_name', $patient?->name ?: $consent->patient_name);
+        $put('patient_name', $patient?->bare_name ?: Patient::bare($consent->patient_name));
         // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
         // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
         $rrn = $consent->prescription?->residentNoOcrFor('nhis_claim_form')
@@ -1328,7 +1330,7 @@ class ConsentController extends Controller
         /* 서명란의 이름 — 양식에는 「위임인    (서명 또는 인)」 한 줄뿐이라 이름 적을 자리가
            없다. 서명 그림만 남으면 누가 위임했는지 그림으로 읽어야 한다. 그림 왼쪽에
            이름을 적어 둔다. 자리는 설정에서 고친다(다른 칸과 같은 방식). */
-        $put('signature_name', $consent->patient_name ?: $patient?->name);
+        $put('signature_name', Patient::bare($consent->patient_name) ?: $patient?->bare_name);
         if ($consent->is_minor) {
             $put('guardian_sig_name', $consent->guardian_name ?: $patient?->guardian_name);
         }

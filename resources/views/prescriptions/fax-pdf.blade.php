@@ -84,7 +84,7 @@ table.purchase-tbl td.center { text-align:center; }
     <table class="info-tbl">
       <tr>
         <td class="label">성 명</td>
-        <td>{{ $patient->name ?? $prescription->patient_name_ocr ?? '—' }}</td>
+        <td>{{ $patient->bare_name ?? (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '—') }}</td>
         <td class="label">생년월일</td>
         <td>{{ $prescription->masked_resident_no_ocr ? substr(preg_replace('/[^0-9]/','',$prescription->masked_resident_no_ocr),0,6) : '—' }}</td>
       </tr>
@@ -161,7 +161,7 @@ table.purchase-tbl td.center { text-align:center; }
   <div class="section">
     <div class="section-title">④ 위임 내용</div>
     <div class="content-box">
-      본인 <b>{{ $patient->name ?? $prescription->patient_name_ocr ?? '위임인' }}</b>은(는)
+      본인 <b>{{ $patient->bare_name ?? (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '위임인') }}</b>은(는)
       위의 수임인에게 상기 처방전에 의한
       <b>건강보험 요양급여비용의 청구 및 수령에 관한 일체의 권한</b>을 위임합니다.<br><br>
       위임 범위: 건강보험 급여 대상 보조기기(의료기기)의 급여비용 청구, 공단 부담금 수령, 관련 서류 제출 및 기타 청구에 필요한 모든 행위

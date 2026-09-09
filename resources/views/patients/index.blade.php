@@ -44,6 +44,17 @@
   .ds-filter-card .ds-field-range .ce-date-wrap { min-width: 108px; }
   .ds-filter-card .ds-field-range .ce-date-wrap > input[data-ce-date] { padding-left: 8px; }
 
+  /* ── 찾는 자리를 세로로 줄인다 (2026-09-08 확인요청 3쪽) ──
+
+     두 줄짜리 검색 카드가 162 를 먹어 목록이 290 에서야 시작했다. 글자는 그대로
+     두고 여백만 깎는다 — 글자를 줄이면 훑기가 나빠진다. 라벨 21→17, 라벨과 칸
+     사이 8→4, 줄 사이 16→10, 카드 안 여백 12→8, 칸 높이 32→30 으로 34 를 던다. */
+  .ds-filter-card                    { padding: 8px 16px; }
+  .ds-filter-card .ds-filter-fields  { row-gap: 10px; }
+  .ds-filter-card .ds-filter-field   { gap: 4px; }
+  .ds-filter-card .ds-field-label    { line-height: 17px; }
+  .ds-filter-card .form-control      { height: 30px; padding-top: 4px; padding-bottom: 4px; }
+
   /* 단추 묶음은 둘째 줄에 남은 다섯 열을 받아 오른쪽 끝에 선다 */
   .ds-filter-card .ds-filter-fields > .ds-filter-actions { grid-column: span 5; }
   /* 그 「오른쪽 끝」은 카드의 끝이어야 한다. 격자를 시안 폭 1384 로 묶어 두면

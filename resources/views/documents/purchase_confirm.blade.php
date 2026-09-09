@@ -47,7 +47,7 @@
 <div class="sec">2. 공급받는자</div>
 <table class="party">
   <tr>
-    <td class="k">성명</td><td>{{ $patient->name }}</td>
+    <td class="k">성명</td><td>{{ $patient->bare_name }}</td>
     {{-- 가린 채로 적는다. 이 종이는 환자에게 나가지만 우편ㆍ메일로도 도는데,
          뒷자리까지 찍어 두면 그 경로 어디서든 새어 나간다. --}}
     <td class="k">주민등록번호</td><td>{{ $residentNo }}</td>
@@ -98,7 +98,7 @@
 </div>
 <div class="sign">
   {{ $today }}<br>
-  확인자 : {{ $patient->name }} &nbsp;(서명 또는 인)
+  확인자 : {{ $patient->bare_name }} &nbsp;(서명 또는 인)
 </div>
 
 <div class="pageno">— <span class="pagenum"></span> —</div>

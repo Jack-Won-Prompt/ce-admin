@@ -190,7 +190,7 @@ class ClaimBundle
         foreach ([
             '주문번호'  => $order->order_number,
             '처방번호'  => $rx?->rx_number ?? '',
-            '이름'      => $order->patient?->name ?? '',
+            '이름'      => $order->patient?->bare_name ?? '',
             '관할'      => $rx?->billingOffice?->displayName() ?? ($rx?->local_gov ?? ''),
             '뽑은 날'   => now()->format('Y-m-d'),
         ] as $k => $v) {

@@ -51,7 +51,7 @@ final class TransactionStatement
 
         try {
             $pdf  = self::render($order);
-            $name = '거래명세서_' . ($order->patient?->name ?? '') . '_' . $order->order_number . '.pdf';
+            $name = '거래명세서_' . ($order->patient?->bare_name ?? '') . '_' . $order->order_number . '.pdf';
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('ts_') . '.pdf';
 
             Storage::disk('public')->put($path, $pdf);
@@ -216,7 +216,7 @@ final class TransactionStatement
                **공급받는자에는 주민등록번호를 적지 않는다.** 원본에도 그 칸이 없고,
                우리 규칙으로도 종이에 실려 나가서는 안 되는 값이다(P0-1). */
             'recipient' => [
-                'name'    => $patient?->name ?? ($rx->patient_name_ocr ?? ''),
+                'name'    => $patient?->bare_name ?? \App\Models\Patient::bare($rx->patient_name_ocr ?? ''),
                 'address' => self::address($order, $rx),
                 'phone'   => $patient?->mobile ?? ($rx->mobile_ocr ?? ''),
             ],

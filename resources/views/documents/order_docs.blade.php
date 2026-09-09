@@ -30,7 +30,7 @@
 <body>
   <div class="wrap">
     <div class="hd">
-      <h1>{{ $order->patient?->name ?? '고객' }}님 증빙</h1>
+      <h1>{{ $order->patient?->bare_name ?? '고객' }}님 증빙</h1>
       <p>주문 {{ $order->order_number }}{{ $order->saleNoSuffix() }}</p>
     </div>
 

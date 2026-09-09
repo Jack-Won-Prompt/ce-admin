@@ -215,10 +215,23 @@ class Patient extends Model
         return self::$hasCareType ??= \Illuminate\Support\Facades\Schema::hasColumn('patients', 'care_type');
     }
 
-    /** (E) 를 뗀 이름. 찾을 때ㆍ서류에 적을 때 쓴다. */
+    /**
+     * (E) 를 뗀 이름.
+     *
+     * 서류에 적히는 이름에는 (E) 를 두지 않는다(2026-09-08 확인요청 11쪽).
+     * (E) 는 사업부가 IC 라는 우리 쪽 표시일 뿐이고, 공단ㆍ국세청ㆍ환자가 보는
+     * 종이에는 그런 표시가 설 자리가 없다 — 요양비 지급청구 위임장 성명 칸에
+     * 「(E)시에나」가 그대로 찍혀 나갔다.
+     */
     public function getBareNameAttribute(): string
     {
-        return trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $this->name));
+        return self::bare($this->name);
+    }
+
+    /** 거래처 줄 없이 이름만 들고 있을 때 쓴다 (OCR 로 읽은 이름ㆍ동의 기록에 찍힌 이름). */
+    public static function bare(?string $name): string
+    {
+        return trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $name));
     }
 
     /** 화면·서류에 한 줄로 적는 주소 — (우편번호) 도로명 상세 */
