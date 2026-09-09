@@ -387,7 +387,7 @@
       <span class="ds-grid-hint" id="sync-status"></span>
       <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-      <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__faxGrid?.downloadExcel()">엑셀 다운</button>
       <button type="button" class="ds-btn" onclick="faxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
       <button type="button" class="ds-btn btn-sync" id="sync-btn" onclick="syncPending()" title="미완료 건 팝빌 상태 동기화">
         <i class="bx bx-refresh"></i> 상태 동기화

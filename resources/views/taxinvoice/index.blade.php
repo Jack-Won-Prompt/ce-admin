@@ -341,7 +341,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       <div class="ds-filter-actions">
         <button type="button" class="ds-btn ds-btn-primary" onclick="loadHistory(1)">검색</button>
         {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-        <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" onclick="window.__taxGrid?.downloadExcel()">엑셀 다운</button>
         <button type="button" class="ds-btn" onclick="taxRowAction('detail')"><i class="bx bx-show"></i> 선택 상세</button>
         <button type="button" class="ds-btn" onclick="taxRowAction('print')"><i class="bx bx-printer"></i> 선택 인쇄</button>
         <button type="button" class="ds-btn" style="color:var(--danger);" onclick="taxRowAction('cancel')"><i class="bx bx-x"></i> 선택 발행 취소</button>

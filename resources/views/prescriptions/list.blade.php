@@ -182,7 +182,7 @@
       </a>
       @endperm
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-      <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 다운</button>
       <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
     </div>
   </form>
@@ -256,7 +256,7 @@ window.HELP_TOUR_STEPS = [
       { header: '업로드 담당자', name: 'uploader',   width: 110, align: 'center', sortable: true },
       { header: '검수 일자',     name: 'reviewed_at', width: 130, align: 'center', sortable: true },
       { header: '검수 요청 메모', name: 'review_request_memo', width: 200 },
-      { header: '검수 메모',     name: 'review_memo', width: 240 },
+      { header: '참고 사항',     name: 'review_memo', width: 240 },
       { header: '접수일시',      name: 'created',    width: 130, align: 'center', sortable: true },
     ],
     data: @json($gridData),

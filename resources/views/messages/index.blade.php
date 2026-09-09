@@ -218,7 +218,7 @@
   <button type="button" class="ds-btn ds-btn-primary ms-panel-act" data-for="pnlTpl"
           style="margin-left:auto;display:none;" onclick="msTplNew()">유형 추가</button>
   <button type="button" class="ds-btn ms-panel-act" data-for="pnlHist"
-          style="margin-left:auto;display:none;" onclick="window.__msHistGrid?.downloadExcel()">엑셀 저장</button>
+          style="margin-left:auto;display:none;" onclick="window.__msHistGrid?.downloadExcel()">엑셀 다운</button>
 </div>
 
 {{-- ══ 발송 ══ --}}
@@ -245,7 +245,7 @@
       <a href="{{ route('messages.index') }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 --}}
-      <button type="button" class="ds-btn" onclick="window.__msGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__msGrid?.downloadExcel()">엑셀 다운</button>
       <button type="button" class="ds-btn ms-btn-quiet" onclick="msSend('selected')">선택 발송</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="msSend('all')">조건 전체 발송</button>
     </div>

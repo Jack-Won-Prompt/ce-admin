@@ -40,7 +40,7 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    <button type="button" class="ds-btn" onclick="window.__ccGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__ccGrid?.downloadExcel()">엑셀 다운</button>
   </div>
 </form>
 

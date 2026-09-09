@@ -54,7 +54,7 @@
     @endforeach
     <div style="margin-left:auto;padding-right:12px;flex-shrink:0;">
       {{-- 요청서 14쪽 공통확인사항 — 「모든 메뉴는 엑셀 다운로드 가능」 --}}
-      <button type="button" class="ds-btn" onclick="window.__financeGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__financeGrid?.downloadExcel()">엑셀 다운</button>
     </div>
   </div>
   <div id="financeGrid"></div>

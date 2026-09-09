@@ -83,7 +83,7 @@
       <a href="{{ route('inquiries.index') }}" class="ds-btn">초기화</a>
     @endif
     <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-search"></i> 검색</button>
-    <button type="button" class="ds-btn" onclick="window.__inquiryGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__inquiryGrid?.downloadExcel()">엑셀 다운</button>
     <a href="{{ route('inquiries.create') }}" class="btn btn-primary btn-sm">
       <i class="bx bx-pencil"></i> 문의 접수
     </a>

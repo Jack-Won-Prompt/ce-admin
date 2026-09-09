@@ -170,7 +170,7 @@
     <a href="{{ route('privacy-consents.index', request()->only('type')) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-    <button type="button" class="ds-btn" onclick="window.__pcGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__pcGrid?.downloadExcel()">엑셀 다운</button>
     <a href="{{ route('privacy-consents.export', request()->query()) }}" class="ds-btn">
       <i class="bx bx-download"></i> 엑셀(CSV) 다운로드
     </a>

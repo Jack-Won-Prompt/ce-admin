@@ -58,7 +58,7 @@
       <i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 <b>{{ number_format(count($gridData)) }}</b>건)</span>
     </button>
     <div style="margin-left:auto;padding-right:12px;">
-      <button type="button" class="ds-btn" onclick="window.__paymentGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__paymentGrid?.downloadExcel()">엑셀 다운</button>
     </div>
   </div>
   <div id="paymentGrid"></div>

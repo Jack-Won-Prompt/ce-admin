@@ -113,7 +113,7 @@ window.HELP_TOUR_STEPS = [
       <i class="fa-solid fa-magnifying-glass"></i> 검색
     </button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-    <button type="button" class="ds-btn" onclick="window.__userlogsGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__userlogsGrid?.downloadExcel()">엑셀 다운</button>
   </div>
 </form>
 

@@ -855,7 +855,7 @@ class wwGrid {
     if (this.toolbar !== false) {
       this._toolbarEl.innerHTML =
         '<span class="cg-toolbar-sep"></span>' +
-        '<button class="cg-btn cg-btn-excel" data-action="excel">&#9660; 엑셀 저장</button>';
+        '<button class="cg-btn cg-btn-excel" data-action="excel">&#9660; 엑셀 다운</button>';
       this.el.appendChild(this._toolbarEl);
     }
 

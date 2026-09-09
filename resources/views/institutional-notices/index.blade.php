@@ -113,7 +113,7 @@
     <button type="button" class="ds-btn" onclick="institutionalNoticeViewDetail()">
       <i class="bx bx-detail"></i> 선택 상세
     </button>
-    <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 다운</button>
   </div>
 </div>
 

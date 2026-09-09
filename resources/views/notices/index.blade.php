@@ -43,7 +43,7 @@ window.HELP_TOUR_STEPS = [
     <button type="button" class="ds-btn" onclick="noticeViewDetail()">
       <i class="bx bx-detail"></i> 선택 상세
     </button>
-    <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__noticeGrid?.downloadExcel()">엑셀 다운</button>
     @if(Auth::user()->role === 'admin')
     <a href="{{ route('notices.create') }}" class="btn btn-primary btn-sm">
       <i class="bx bx-plus"></i> 공지 등록

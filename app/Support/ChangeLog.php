@@ -46,7 +46,7 @@ final class ChangeLog
         'counsel_call_no'       => '상담 연락처',
         'counsel_acc_add_type'  => '유형',
         'admin_note'            => '등록 메모',
-        'review_memo'           => '검수 메모',
+        'review_memo'           => '참고 사항',
         'review_request_memo'   => '검수 요청 메모',
         'status'                => '상태',
         'reviewed_by'           => '검수자',

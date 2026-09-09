@@ -888,6 +888,8 @@
      예전에는 이 상자가 없어 카드가 뷰어 폭을 그대로 채우고 카드 사이도 붙어 있었다. */
   #viewerCards { display:flex; flex-direction:column; gap:12px;
                  padding:16px; border-top:1px solid var(--gray-200); }
+  /* 문서 목록은 그림 위에 선다 — 여백은 아래 카드 묶음과 같고, 선은 아래쪽에 둔다 */
+  #docStripTop { padding:12px 16px; border-bottom:1px solid var(--gray-200); }
   /* 카드 사이 간격은 gap 12 하나로만 잡는다 (검수 메모 카드의 .mt-3 상쇄) */
   #viewerCards > .mt-3 { margin-top:0; }
 
@@ -2020,34 +2022,10 @@ $calcDeposit  = $calcCopay;
       </div>
 
 
-      {{-- 처방전 뷰어 — 거래처 관리도 같은 것을 쓴다 --}}
-      @include('prescriptions._viewer', ['vwDoc' => [
-        'url'  => $prescription->image_url,
-        'mime' => $prescription->image_mime_type,
-      ]])
-
-      {{-- 이미지 아래 카드들을 한 상자에 담는다 (시안 148:1585) —
-           여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
-      <div id="viewerCards">
-
-      {{-- ── 등록 메모 ─────────────────────────────────
-           처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리). 그림을 보며 읽는
-           말이라 그림 바로 아래에 둔다(2026-09-09 지시). 여기서 고치지는 않는다 —
-           올린 사람이 남긴 말이고, 검수하며 남기는 말은 아래 두 칸이 따로 받는다. --}}
-      <div class="vw-card" id="adminNoteCard">
-        <div class="vw-card-head">
-          <span class="vw-card-title"><i class="fa-solid fa-note-sticky"></i> 등록 메모</span>
-        </div>
-        <div id="f-admin-note"
-             style="padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;
-                    color:{{ $prescription->admin_note ? 'var(--gray-1000)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
-      </div>
-
-      {{-- 위임 서명ㆍ보호자 신분증 카드는 두지 않는다.
-           아래 문서 스트립이 이미 그 둘을 문서로 세운다(「위임 서명」ㆍ「보호자 신분증」).
-           같은 그림을 두 곳에 두었더니 미리보기 자리가 그만큼 길어졌고, 카드 쪽은
-           확대도 이동도 되지 않아 결국 아래에서 다시 열어 보게 됐다. --}}
-
+      {{-- ── 문서 목록은 그림 위에 둔다 (2026-09-08 확인요청 9쪽) ──
+           무엇이 붙어 있는지 먼저 훑고, 그 가운데 하나를 골라 아래 그림에서 본다.
+           그림이 위에 있을 때는 목록을 보려고 늘 굴려 내려가야 했다. --}}
+      <div id="docStripTop">
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
       {{-- 문서가 하나도 없어도 이 카드는 둔다. 신규로 시작한 건은 여기서 처방전ㆍ신분증을
            올리게 되는데, 올릴 것이 없다고 올리는 자리까지 감춰 두면 길이 없다. --}}
@@ -2136,6 +2114,36 @@ $calcDeposit  = $calcCopay;
       </div>
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
+      </div>
+
+      {{-- 처방전 뷰어 — 거래처 관리도 같은 것을 쓴다 --}}
+      @include('prescriptions._viewer', ['vwDoc' => [
+        'url'  => $prescription->image_url,
+        'mime' => $prescription->image_mime_type,
+      ]])
+
+      {{-- 이미지 아래 카드들을 한 상자에 담는다 (시안 148:1585) —
+           여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
+      <div id="viewerCards">
+
+      {{-- ── 등록 메모 ─────────────────────────────────
+           처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리). 그림을 보며 읽는
+           말이라 그림 바로 아래에 둔다(2026-09-09 지시). 여기서 고치지는 않는다 —
+           올린 사람이 남긴 말이고, 검수하며 남기는 말은 아래 두 칸이 따로 받는다. --}}
+      <div class="vw-card" id="adminNoteCard">
+        <div class="vw-card-head">
+          <span class="vw-card-title"><i class="fa-solid fa-note-sticky"></i> 등록 메모</span>
+        </div>
+        <div id="f-admin-note"
+             style="padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;
+                    color:{{ $prescription->admin_note ? 'var(--gray-1000)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
+      </div>
+
+      {{-- 위임 서명ㆍ보호자 신분증 카드는 두지 않는다.
+           아래 문서 스트립이 이미 그 둘을 문서로 세운다(「위임 서명」ㆍ「보호자 신분증」).
+           같은 그림을 두 곳에 두었더니 미리보기 자리가 그만큼 길어졌고, 카드 쪽은
+           확대도 이동도 되지 않아 결국 아래에서 다시 열어 보게 됐다. --}}
+
 
       {{-- 등록자 카드 — 등록·검수·수정을 한 줄씩 (시안 137:653) --}}
       <div class="vw-card rg-card">
@@ -2179,7 +2187,7 @@ $calcDeposit  = $calcCopay;
 
       @if($prescription->review_memo)
       <div class="card mt-3" id="reviewMemoCard">
-        <div class="card-header"><i class="fa-solid fa-note-sticky" style="color:var(--warning);"></i><span class="card-header-title">검수 메모</span></div>
+        <div class="card-header"><i class="fa-solid fa-note-sticky" style="color:var(--warning);"></i><span class="card-header-title">참고 사항</span></div>
         <div class="card-body" style="font-size:12px;color:var(--text-secondary);">{{ $prescription->review_memo }}</div>
       </div>
       @endif
@@ -3079,10 +3087,10 @@ $calcDeposit  = $calcCopay;
               {{-- rx-row-start 를 붙이지 않는다 — 붙이면 새 줄에서 다시 시작한다.
                    여섯 칸 격자라 span 3 짜리 둘이 나란히 한 줄에 선다. --}}
               <div class="rx-field-row rx-w3">
-                <span class="rx-field-label">검수 메모</span>
+                <span class="rx-field-label">참고 사항</span>
                 <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '검수 메모가 없습니다.' }}</div>
+                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '참고 사항이 없습니다.' }}</div>
               </div>
               {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 자리는 검수 메모 바로
                    다음이다. 이 건이 처방전인지 처방외인지가 아래 병원ㆍ상병ㆍ수량을
@@ -3193,7 +3201,7 @@ $calcDeposit  = $calcCopay;
                    고르는 일은 한 건에 한 번뿐인데 자리는 늘 여섯 줄을 먹었다.
                    담기는 값은 그대로다 — 저장은 체크된 것을 읽어 간다. --}}
               <div class="rx-field-row rx-w4" style="position:relative;">
-                <span class="rx-field-label">확인사항</span>
+                <span class="rx-field-label">요류역학검사 결과</span>
                 <div style="display:flex;gap:6px;flex:1;min-width:0;">
                   <input type="text" class="form-control" id="uroSummary" readonly
                          style="flex:1;min-width:0;background:var(--gray-50);cursor:pointer;"
@@ -4177,7 +4185,7 @@ $calcDeposit  = $calcCopay;
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">검수 메모</label>
+        <label class="form-label">참고 사항</label>
         <textarea class="form-control" id="approveMemo" rows="3" placeholder="검수 관련 메모를 입력하세요..."></textarea>
       </div>
     </div>

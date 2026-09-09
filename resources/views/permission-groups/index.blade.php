@@ -90,7 +90,7 @@
     </button>
     <span class="ds-grid-hint">행을 <b>클릭</b>하면 권한 편집 탭이 열립니다.</span>
     <button type="button" class="ds-btn" style="margin-left:auto;" onclick="window.__pgGrid?.downloadExcel()">
-      엑셀 저장
+      엑셀 다운
     </button>
   </div>
   <div style="padding:0 16px 16px;"><div id="pgGrid"></div></div>

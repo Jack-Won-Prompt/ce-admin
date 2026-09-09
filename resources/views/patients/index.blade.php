@@ -295,7 +295,7 @@
          상담내역 칸의 「상담하기」까지 두 걸음 들어가지 않아도 된다. --}}
     <button type="button" class="ds-btn" onclick="ptCounsel()">상담하기</button>
     {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-    <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 저장</button>
+    <button type="button" class="ds-btn" onclick="window.__patientGrid?.downloadExcel()">엑셀 다운</button>
     @perm('patients', 'create')
     <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">거래처 등록</button>
     @endperm

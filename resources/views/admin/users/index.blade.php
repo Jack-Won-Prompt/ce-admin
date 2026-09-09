@@ -36,7 +36,7 @@
           <i class="bx bx-edit"></i> 선택 수정
         </button>
         <span class="ds-panel-hint">행 체크 후 수정</span>
-        <button type="button" class="ds-btn" style="margin-left:auto;" onclick="window.__usersGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" style="margin-left:auto;" onclick="window.__usersGrid?.downloadExcel()">엑셀 다운</button>
       </div>
       <div style="padding:0 16px 16px;"><div id="usersGrid"></div></div>
     </div>
@@ -56,7 +56,7 @@
         <button type="button" class="ds-btn" style="margin-left:auto;" onclick="loadInvitations()" id="refreshBtn" title="새로고침">
           <i class="bx bx-refresh"></i>
         </button>
-        <button type="button" class="ds-btn" onclick="window.__invGrid?.downloadExcel()">엑셀 저장</button>
+        <button type="button" class="ds-btn" onclick="window.__invGrid?.downloadExcel()">엑셀 다운</button>
       </div>
       <div style="padding:0 16px 16px;"><div id="invitationsGrid"></div></div>
     </div>

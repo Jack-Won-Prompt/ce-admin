@@ -70,7 +70,7 @@
           <i class="fa-solid fa-cloud-arrow-down"></i> 지금 가져오기
         </button>
       </form>
-      <button type="button" class="ds-btn" onclick="window.__depositGrid?.downloadExcel()">엑셀 저장</button>
+      <button type="button" class="ds-btn" onclick="window.__depositGrid?.downloadExcel()">엑셀 다운</button>
     </div>
   </div>
   <div id="depositGrid"></div>

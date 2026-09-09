@@ -2213,13 +2213,13 @@ document.addEventListener('click', (e) => {
 
       // 병원ㆍ처방 정보 탭의 나머지 — 저쪽 목록에 없는 것들
       { header: '검수 요청 메모', name: 'rx_req_memo',  width: 200 },
-      { header: '검수 메모',      name: 'rx_memo',      width: 200 },
+      { header: '참고 사항',      name: 'rx_memo',      width: 200 },
       { header: '처방 유형',      name: 'rx_acc_type',  width: 100, align: 'center', sortable: true },
       { header: '진단 확인일',    name: 'rx_diag_date', width: 110, align: 'center', sortable: true },
       { header: '상병 구분',      name: 'rx_dz_grade',  width: 90,  align: 'center', sortable: true },
       { header: '상병 명',        name: 'rx_dz_name',   width: 160, sortable: true },
       { header: '요류역학검사일', name: 'rx_uro_date',  width: 120, align: 'center', sortable: true },
-      { header: '확인사항',       name: 'rx_uro_find',  width: 220 },
+      { header: '요류역학검사 결과', name: 'rx_uro_find', width: 240 },
       { header: '1일 처방 개수',  name: 'rx_daily',     width: 110, align: 'right',  sortable: true },
       { header: '총 처방일수',    name: 'rx_days',      width: 100, align: 'right',  sortable: true },
       { header: '총계',           name: 'rx_total',     width: 90,  align: 'right',  sortable: true },
