@@ -407,6 +407,37 @@ class Patient extends Model
                 'at' => null, 'by' => null, 'origin' => $원본];
     }
 
+    /**
+     * 이 거래처의 급여 종료일 — 가장 최근 건의 것 (2026-09-09 지시).
+     *
+     * 급여 기간은 건마다 선다(결제일 + 총 처방일수). 그런데 「이 사람은 언제까지
+     * 쓰는가」를 물을 때 주문을 하나씩 열어 보게 할 수는 없다 — 재구매 안내도 재등록
+     * 안내도 그 날짜를 보고 건다.
+     *
+     * 값을 따로 담지 않고 가장 최근 건에서 읽는다. 담아 두면 두 곳이 어긋나고, 어느
+     * 쪽이 맞는지 가려낼 길이 없다.
+     *
+     * @return array{date: ?string, rx: ?string}
+     */
+    public function getBenefitEndAttribute(): array
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'benefit_end_date')) {
+            return ['date' => null, 'rx' => null];
+        }
+
+        $rx = $this->prescriptions()
+            ->whereNotNull('benefit_end_date')
+            ->orderByDesc('benefit_end_date')
+            ->first();
+
+        return [
+            'date' => $rx?->benefit_end_date instanceof \DateTimeInterface
+                        ? $rx->benefit_end_date->format('Y-m-d')
+                        : ($rx?->benefit_end_date ?: null),
+            'rx'   => $rx?->rx_number,
+        ];
+    }
+
     public function marketingConsentUpdater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'marketing_consent_by');

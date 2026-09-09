@@ -3510,15 +3510,27 @@ $calcDeposit  = $calcCopay;
                    급여 종료일 = 모든 서류 발행일(＝결제일) ＋ 총 처방일수.
                    돈이 들어오면 서버가 채우고, 결제가 없는 건(기초ㆍ차상위)은 저장할 때
                    적어 둔 구입일에서 센다. --}}
+              {{-- 둘 다 셈으로만 선다 — 손으로 적지 않는다(2026-09-09 지시).
+
+                   사용 개시일은 모든 서류 발행일(＝결제일)이고, 급여 종료일은 거기에 총
+                   처방일수를 더한 날이다. 손으로 고칠 수 있게 두면 셈과 어긋난 날짜가
+                   서류와 청구에 그대로 실린다 — 어느 것이 맞는지 뒤에 가려낼 길이 없다.
+
+                   채우는 때는 돈이 들어올 때다. 결제가 없는 건(기초ㆍ차상위)은 주문
+                   등록에서 저장할 때 적어 둔 구입일에서 센다(App\Support\BenefitDates). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
-                <input type="date" class="form-control" id="f-use-start"
-                       value="{{ $prescription->use_start_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-use-start" readonly
+                       title="결제일(모든 서류 발행일)에서 저절로 섭니다"
+                       value="{{ $prescription->use_start_date ?? '' }}"
+                       style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">급여 종료일 (사용 종료일)</span>
-                <input type="date" class="form-control" id="f-benefit-end"
-                       value="{{ $prescription->benefit_end_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-benefit-end" readonly
+                       title="결제일 + 총 처방일수로 저절로 섭니다"
+                       value="{{ $prescription->benefit_end_date ?? '' }}"
+                       style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
               {{-- 「판매 거래처」 칸은 두지 않는다(요청). 값(dealer_type)은 지우지 않았다 —
                    저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}

@@ -621,6 +621,21 @@
                      value="{{ $patient->nhis_renew_due }}" data-orig="{{ $patient->nhis_renew_due }}" />
             </span>
           </div>
+          {{-- 급여 종료일 — 이 사람이 언제까지 쓰는가(2026-09-09 지시).
+
+               건마다 서는 값이라 여기서 고치지 않는다. 가장 나중 날짜를 가진 건에서
+               읽어 보여 준다 — 담아 두면 두 곳이 어긋나고 어느 쪽이 맞는지 가려낼 길이
+               없다. 재구매 안내도 재등록 안내도 이 날짜를 보고 건다. --}}
+          @php $_be = $patient->benefit_end; @endphp
+          <div class="info-row">
+            <span class="info-label">급여 종료일</span>
+            <span class="info-value">
+              {{ $_be['date'] ?: '-' }}
+              @if($_be['rx'])
+                <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">{{ $_be['rx'] }}</span>
+              @endif
+            </span>
+          </div>
           <div class="info-row w2">
             <span class="info-label">건보위임동의 시작일</span>
             <span class="info-value">
