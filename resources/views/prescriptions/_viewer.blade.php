@@ -390,6 +390,8 @@ function showDoc(doc) {
         const d = ALL_DOCS.find(x => x && x.tuneKey === _tuneKey);
         if (d) { d.bright = b; d.contrast = c; }
       }
+      /* 저장했으면 할 일이 끝났다 — 칸이 계속 떠 있으면 그림을 가린다 */
+      document.getElementById('tunePanel')?.classList.remove('on');
       showToast('밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 이대로 나갑니다.', 'success');
     } catch (e) {
       showToast(e.message || '저장하지 못했습니다.', 'danger');
