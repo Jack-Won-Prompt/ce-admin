@@ -3974,7 +3974,12 @@ class PrescriptionController extends Controller
                     if ($prescription->image_path) {
                         $absPath = Storage::disk('public')->path($prescription->image_path);
                         if (file_exists($absPath)) {
-                            $files[] = $absPath;
+                            $files[] = self::faxFileWithTune(
+                                $absPath,
+                                (int) ($prescription->img_brightness ?? 0),
+                                (int) ($prescription->img_contrast ?? 0),
+                                'rx_' . $prescription->rx_number,
+                            );
                         }
                     }
                     break;
@@ -4071,12 +4076,57 @@ class PrescriptionController extends Controller
             foreach ($attachments as $att) {
                 $absPath = Storage::disk('public')->path($att->file_path);
                 if (file_exists($absPath)) {
-                    $files[] = $absPath;
+                    $files[] = self::faxFileWithTune(
+                        $absPath,
+                        (int) ($att->img_brightness ?? 0),
+                        (int) ($att->img_contrast ?? 0),
+                        'att_' . $att->id,
+                    );
                 }
             }
         }
 
         return array_values(array_filter($files));
+    }
+
+    /**
+     * 팩스로 나갈 파일 한 장 — 맞춰 둔 밝기ㆍ명암을 입혀 굽는다 (2026-09-09 지시).
+     *
+     * 팝빌은 **파일**을 받는다. 그래서 화면에서 아무리 맞춰 두어도 여기서 원본 경로를
+     * 그대로 붙이면 원본이 그대로 나간다 — 실제로 그랬다. 통합본 PDF 에만 값이 들어가
+     * 있었고, 그것은 「무엇을 보냈나」를 남기는 기록일 뿐 나가는 물건이 아니었다.
+     *
+     * 원본 파일은 건드리지 않는다. 임시로 한 장 구워 그 경로를 준다 — 위임장ㆍ구매내역ㆍ
+     * 현금영수증ㆍ세금계산서가 이미 같은 길로 나간다.
+     *
+     * **돌리지는 않는다.** 통합본은 가로로 찍힌 것을 세로로 돌리지만, 팩스로 나가는
+     * 파일은 여태 돌리지 않았다. 밝기만 고치러 왔다가 방향까지 바꿔 놓지 않는다.
+     *
+     * 맞출 것이 없거나(0ㆍ0) GD 가 열지 못하는 것(PDF)은 원본 경로를 그대로 돌려준다.
+     */
+    private static function faxFileWithTune(string $absPath, int $bright, int $contrast, string $이름): string
+    {
+        if ($bright === 0 && $contrast === 0) {
+            return $absPath;
+        }
+
+        $src = @imagecreatefromstring((string) file_get_contents($absPath));
+        if (! $src) {
+            return $absPath;   // PDF 등 — GD 가 열지 못한다
+        }
+
+        self::imageTune($src, $bright, $contrast);
+
+        $dir = storage_path('app/temp');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $tmp = $dir . '/fax_' . preg_replace('/[^A-Za-z0-9_-]/', '', $이름) . '_' . time() . '.jpg';
+        imagejpeg($src, $tmp, 92);
+        imagedestroy($src);
+
+        return is_file($tmp) ? $tmp : $absPath;
     }
 
     private function buildPurchaseHistoryHtml(Prescription $prescription): string
