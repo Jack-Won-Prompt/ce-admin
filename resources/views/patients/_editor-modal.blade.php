@@ -221,7 +221,7 @@
                  (2026-09-08 확인요청 6쪽). 이미 등록한 거래처를 고칠 때만 선다:
                  새로 만드는 중에는 아직 붙일 자리가 없다. --}}
             <button type="button" class="ds-btn" id="peAddrManageBtn" style="flex:0 0 auto;display:none;"
-                    onclick="openAddrManager(_peId)">
+                    onclick="peOpenAddrManager()">
               <i class="fa-solid fa-location-dot"></i> 주소 관리
             </button>
           </div>
@@ -480,6 +480,9 @@
   /* 이 셋은 창의 onclick 이 부른다 — 인라인 handler 는 전역에서만 이름을 찾으므로
      감싸 둔 함수 안에 두면 「is not defined」로 죽는다. */
   window.openAddModal  = function () { openPatientEditor(); };
+  /* 지금 고치고 있는 거래처의 주소를 연다. _peId 는 감싸 둔 함수 안에 있어 인라인
+     onclick 이 보지 못한다 — 그래서 여기서 한 겹 싼다(오늘 두 번째로 걸린 자리다). */
+  window.peOpenAddrManager = function () { window.openAddrManager?.(_peId); };
   window.closeAddModal = function () { document.getElementById('addModal').classList.remove('show'); };
 
   /**
