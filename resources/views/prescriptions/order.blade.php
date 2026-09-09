@@ -3455,19 +3455,36 @@ $calcDeposit  = $calcCopay;
                    환자 주소에서 읍ㆍ면ㆍ동만 뽑아 찾는다(청구처 정보에 쌓아 둔 것). --}}
               <div class="rx-field-row rx-row-start">
                 <span class="rx-field-label">관할 청구처</span>
+                {{-- 건보로 청구하면 지사가, 지자체로 청구하면 시군구가 받는 곳이다.
+                     둘은 함께 서는 일이 없다 — 한 건은 한 곳으로만 간다. 그래서 칸도
+                     하나로 둔다(2026-09-08 확인요청 10쪽). 자격을 고르면 그에 맞는 쪽이
+                     선다(syncLocalGovRow). --}}
+                @php $_isLocal = ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL; @endphp
                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;position:relative;">
-                  <input type="hidden" id="f-billing-office" value="{{ $prescription->billing_office_id ?? '' }}">
-                  <span id="boPickLabel" style="flex:1;min-width:0;font-size:12px;line-height:1.5;
-                        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-                        color:{{ $prescription->billingOffice ? 'var(--text)' : 'var(--text-muted)' }};">
-                    @if($prescription->billingOffice)
-                      {{ $prescription->billingOffice->displayName() }}@if($prescription->billingOffice->manager_name) · {{ $prescription->billingOffice->manager_name }}@endif
-                      @if($prescription->billingOffice->tel) <span style="font-family:monospace;">{{ $prescription->billingOffice->tel }}</span>@endif
-                    @else
-                      아직 고르지 않았습니다
-                    @endif
+                  {{-- 건보 지사 --}}
+                  <span id="boWrap" style="display:{{ $_isLocal ? 'none' : 'flex' }};align-items:center;gap:6px;flex:1;min-width:0;">
+                    <input type="hidden" id="f-billing-office" value="{{ $prescription->billing_office_id ?? '' }}">
+                    <span id="boPickLabel" style="flex:1;min-width:0;font-size:12px;line-height:1.5;
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                          color:{{ $prescription->billingOffice ? 'var(--text)' : 'var(--text-muted)' }};">
+                      @if($prescription->billingOffice)
+                        {{ $prescription->billingOffice->displayName() }}@if($prescription->billingOffice->manager_name) · {{ $prescription->billingOffice->manager_name }}@endif
+                        @if($prescription->billingOffice->tel) <span style="font-family:monospace;">{{ $prescription->billingOffice->tel }}</span>@endif
+                      @else
+                        아직 고르지 않았습니다
+                      @endif
+                    </span>
+                    <button type="button" class="rx-side-btn" onclick="boFindOpen(event)">찾기</button>
                   </span>
-                  <button type="button" class="rx-side-btn" onclick="boFindOpen(event)">찾기</button>
+
+                  {{-- 지자체 — 기초ㆍ차상위는 시군구에 등기로 낸다 --}}
+                  <span id="lgWrap" style="display:{{ $_isLocal ? 'flex' : 'none' }};align-items:center;gap:6px;flex:1;min-width:0;">
+                    <input type="text" class="form-control" id="f-local-gov"
+                           value="{{ $prescription->local_gov ?? '' }}"
+                           placeholder="예: 서울특별시 강남구" style="flex:1;min-width:0;" />
+                    <button type="button" class="rx-side-btn" onclick="fillLocalGovFromAddress()">자동</button>
+                  </span>
+
                   @include('prescriptions._billing_office_pop')
                 </div>
               </div>
@@ -3528,12 +3545,6 @@ $calcDeposit  = $calcCopay;
                     <i class="fa-solid fa-rotate"></i> 자동
                   </button>
                 </div>
-              </div>
-              <div class="rx-field-row" id="row-local-gov" style="{{ ($prescription->claim_agency ?? '') === \App\Support\ClaimAgency::LOCAL ? '' : 'display:none;' }}">
-                <span class="rx-field-label">관할 지자체</span>
-                <input type="text" class="form-control" id="f-local-gov"
-                       value="{{ $prescription->local_gov ?? '' }}"
-                       placeholder="예: 서울특별시 강남구" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">재구매일</span>
@@ -6334,17 +6345,32 @@ window.HELP_TOUR_STEPS = [
 
   function onClaimAgencyChange() {
     const agency = document.getElementById('f-claim-agency')?.value ?? '';
-    const row    = document.getElementById('row-local-gov');
+    /* 한 칸을 둘이 나눠 쓴다 — 건보면 지사, 지자체면 시군구다(2026-09-08 확인요청 10쪽).
+       예전에는 줄이 둘이라, 건보 건에서도 「관할 지자체」 자리가 비어 선 채로 남았다. */
+    const bo     = document.getElementById('boWrap');
+    const lg     = document.getElementById('lgWrap');
     const input  = document.getElementById('f-local-gov');
-    if (!row || !input) return;
+    if (!bo || !lg || !input) return;
 
-    row.style.display = agency === 'local' ? '' : 'none';
+    const 지자체 = agency === 'local';
+    bo.style.display = 지자체 ? 'none' : 'flex';
+    lg.style.display = 지자체 ? 'flex' : 'none';
 
     // 지자체로 바뀌었는데 비어 있으면 주소에서 뽑아 제시한다
-    if (agency === 'local' && !input.value.trim()) {
+    if (지자체 && !input.value.trim()) {
       input.value = localGovFromAddress(document.getElementById('f-address')?.value);
     }
   }
+
+  /* 「자동」 — 주소에서 시군구를 다시 뽑는다. 주소를 나중에 고친 건은 처음 뽑아 둔
+     것이 옛 주소 기준이라 맞지 않는다. */
+  window.fillLocalGovFromAddress = function () {
+    const input = document.getElementById('f-local-gov');
+    const 뽑은것 = localGovFromAddress(document.getElementById('f-address')?.value);
+    if (!뽑은것) { showToast('주소에서 지자체를 찾지 못했습니다.', 'warning'); return; }
+    input.value = 뽑은것;
+    markOcrDirty();
+  };
 
   function suggestClaimAgency() {
     const sel = document.getElementById('f-claim-agency');
