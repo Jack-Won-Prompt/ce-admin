@@ -1077,6 +1077,31 @@ form.addEventListener('submit', async function (e) {
     return;
   }
 
+  /* 처방전이 없어도 올린다. 다만 **한 번 묻는다**(2026-09-09 지시).
+
+     서류만 먼저 들어오는 건이 있어 막지는 않는다. 그래도 처방전을 넣었다고 여기고
+     누른 것일 수 있으니 — 타일의 서류명을 잘못 골랐을 때가 그렇다 — 올리기 전에
+     그 사실을 알린다. */
+  const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
+  if (!hasPrescription) {
+    const 갈까 = await ceConfirm(
+      '처방전이 없습니다. 그래도 올리시겠습니까?
+
+'
+      + '처방전은 주문 등록 화면의 「첨부 문서 추가」에서 나중에 붙일 수 있습니다.
+'
+      + '서류명을 잘못 고른 것이라면 타일 왼쪽 위에서 바꿔 주십시오.',
+      { tone: 'warning', confirmText: '올리기', cancelText: '취소' },
+    );
+
+    if (!갈까) {
+      막는까닭('<b>처방전</b> 없이 올리는 것을 취소했습니다. '
+            + '타일 왼쪽 위에서 서류명을 바꾸거나 처방전을 더 넣어 주십시오.');
+
+      return;
+    }
+  }
+
   까닭지움();
 
   document.getElementById('h_assigned_user_id').value = document.getElementById('sideAssignedUser').value;
