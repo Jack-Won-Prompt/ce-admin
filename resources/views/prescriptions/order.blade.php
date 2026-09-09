@@ -7320,7 +7320,11 @@ window.HELP_TOUR_STEPS = [
     const price    = parsePrice(card.querySelector('.item-price').value);
     const insPrice = parsePrice(card.querySelector('.item-ins-price').value);
     const nhisSel  = card.querySelector('.item-nhis')?.value || 'eligible';
-    const qty      = parseInt(card.querySelector('.item-qty').value)          || 1;
+    /* 비운 채로 두면 0 이다 — 1 로 여기면 적기도 전에 금액이 서고, items 로 되돌릴 때
+       1 이 적혀 저장을 막는 잣대도 그냥 지나간다(2026-09-08 확인요청 10쪽). */
+    const qtyRaw   = card.querySelector('.item-qty').value;
+    const 비었나   = String(qtyRaw ?? '').trim() === '';
+    const qty      = 비었나 ? 0 : (parseInt(qtyRaw) || 0);
     const base     = insPrice > 0 ? insPrice : price;
 
     /* 비율은 청구전략(유형 × 자격)이 정한다 — 제품이 정하는 것이 아니다.
@@ -7361,7 +7365,8 @@ window.HELP_TOUR_STEPS = [
       device_code:     card.querySelector('.item-device')?.value || '',
       r_box:           card.querySelector('.item-rbox')?.value  || '',
       stock:           card.querySelector('.item-stock')?.value || '',
-      quantity:        qty,
+      /* 비운 것은 비운 대로 되돌린다 — 0 을 적어 두면 「0개 주문」으로 읽힌다 */
+      quantity:        비었나 ? '' : qty,
       product_price:   price    || null,
       insurance_price: insPrice || null,
       nhis_status:     nhisSel,
