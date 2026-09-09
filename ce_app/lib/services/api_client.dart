@@ -10,12 +10,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../router/app_router.dart';
 import '../utils/constants.dart';
+import 'api_auth_interceptor.dart';
+import 'sso/sso_authenticator.dart';
+import 'sso/sso_config.dart';
+
+/// SSO 로그인 창구.
+///
+/// 라이브러리(msal_auth · flutter_appauth)가 정해지면 여기만 갈아 끼운다 —
+/// 부르는 쪽은 SsoAuthenticator 모양만 안다. 지금은 붙지 않은 구현체라
+/// isEnabled 가 늘 거짓이고, 앱은 예전처럼 이메일·비밀번호로 로그인한다.
+final ssoAuthenticatorProvider = Provider<SsoAuthenticator>(
+  (ref) => UnavailableSsoAuthenticator(SsoConfig.fromEnvironment()),
+);
 
 /// Dio 인스턴스 Provider
 final dioProvider = Provider<Dio>((ref) {
-  // 401 이 여러 요청에서 한꺼번에 올 때 로그인 화면으로 여러 번 보내지 않는다
-  var expired = false;
-
   final dio = Dio(BaseOptions(
     baseUrl:        AppConstants.baseUrl,
     connectTimeout: AppConstants.connectTimeout,
@@ -40,36 +49,27 @@ final dioProvider = Provider<Dio>((ref) {
     logPrint: (o) => debugPrint('[DIO] $o'),
   ));
 
-  // 인터셉터: 저장된 토큰을 모든 요청 헤더에 자동 첨부
-  dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) async {
+  /* 토큰을 붙이고 401 을 다루는 일은 ApiAuthInterceptor 가 맡는다.
+     여기서 바로 쓰지 않고 따로 둔 것은 시험 때문이다 — Riverpod 도 기기 저장소도
+     없이 401 재시도만 떼어 확인할 수 있어야 한다. */
+  dio.interceptors.add(ApiAuthInterceptor(
+    sso: ref.read(ssoAuthenticatorProvider),
+
+    legacyToken: () async {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.keyAccessToken);
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
-      handler.next(options);
+      return prefs.getString(AppConstants.keyAccessToken);
     },
-    /* 서버가 토큰을 더 이상 받지 않으면(401) 그 자리에서 로그인 화면으로 돌린다.
+
+    /* 서버가 토큰을 더 이상 받지 않으면 그 자리에서 로그인 화면으로 돌린다.
        이 앱은 한 계정에 한 기기만 허용해서, 다른 기기에서 로그인하면 이쪽 토큰이
        지워진다. 그대로 두면 앱은 스스로를 로그인 상태로 알고 화면마다 「불러오지
        못했습니다」만 띄운다 — 쓰는 사람은 무엇을 해야 할지 알 수 없다. */
-    onError: (error, handler) async {
-      if (error.response?.statusCode == 401 && !expired) {
-        final path = error.requestOptions.path;
-
-        /* 로그인하러 가는 길에서 온 401 은 「비밀번호가 틀렸다」는 뜻이다.
-           그것까지 세션 만료로 보면 로그인 화면을 다시 로그인 화면으로 보낸다. */
-        const loginPaths = ['/auth/login', '/auth/verify-otp', '/auth/resend-otp'];
-        if (!loginPaths.contains(path)) {
-          expired = true;
-          await ref.read(authNotifierProvider.notifier).sessionExpired();
-          ref.read(routerProvider).go('/login');
-          expired = false;
-        }
-      }
-      handler.next(error);
+    onSessionExpired: () async {
+      await ref.read(authNotifierProvider.notifier).sessionExpired();
+      ref.read(routerProvider).go('/login');
     },
+
+    retry: (options) => dio.fetch(options),
   ));
 
   return dio;
