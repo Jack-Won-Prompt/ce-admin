@@ -1076,6 +1076,12 @@ form.addEventListener('submit', async function (e) {
   expected.value = String(selectedFiles.length);
   form.appendChild(expected);
 
+  /* 보내는 동안 단추를 잠근다. 예전에는 전역 잣대가 대신 잠갔는데, 그것이
+     값이 모자라 되돌아가는 길에서도 잠가 버려 단추가 굳었다 — 이제 여기서
+     보낼 때만 잠그고 끝나면 반드시 되돌린다(finally). */
+  const submitBtn = document.getElementById('submitBtn');
+  BtnState.loading(submitBtn, '올리는 중...');
+
   const rxCount = selectedFiles.filter(f => f.docType === 'prescription').length;
   const attCount = selectedFiles.length - rxCount;
   let sub = rxCount + '개 처방전';
@@ -1115,6 +1121,9 @@ form.addEventListener('submit', async function (e) {
     setStep(2); setStep(1, 'active');
     form.querySelectorAll('input[name="file_doc_types[]"]').forEach(el => el.remove());
     showToast(err.message || '업로드하지 못했습니다.', 'danger', 6000);
+  } finally {
+    /* 어느 길로 끝나든 단추는 되돌린다 — 굳은 단추는 화면이 멈춘 것으로 보인다 */
+    BtnState.reset(submitBtn);
   }
 });
 

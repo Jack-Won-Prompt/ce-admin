@@ -2304,12 +2304,22 @@ document.addEventListener('click', (e) => {
       btn.innerHTML = `<i class="fa-solid fa-xmark" style="font-size:12px;"></i> ${text}`;
       setTimeout(() => reset(btn), duration);
     }
-    // 폼 submit 버튼 자동 로딩 상태
+    /* 폼 submit 단추를 「처리 중」으로 잠근다.
+
+       **화면이 스스로 막아 세운 제출은 잠그지 않는다.** fetch 로 보내는 자리들은
+       preventDefault() 를 하고 자기 리듬으로 단추를 다루는데, 여기서 먼저 잠가 버리면
+       그 화면이 일찍 되돌아가는 길 — 값이 모자라 안내만 하고 끝내는 길 — 에서 단추가
+       잠긴 채로 굳는다. 처방자료 업로드에서 신분증만 골라 「등록」을 누르면 화면이
+       그대로 멈췄다(2026-09-09).
+
+       그래서 **거품 단계**에서 듣고 막힌 제출은 지나간다. 막히지 않은 제출은 곧 화면을
+       떠나므로 그때만 잠근다 — 잠금을 풀 사람이 없어도 화면이 새로 서기 때문이다. */
     document.addEventListener('DOMContentLoaded', () => {
       document.addEventListener('submit', (e) => {
+        if (e.defaultPrevented) return;
         const submitBtn = e.target.querySelector('[type="submit"]:not([data-no-loading])');
         if (submitBtn) loading(submitBtn);
-      }, true);
+      });
     });
     return { loading, reset, success, error };
   })();
