@@ -76,6 +76,8 @@ final class ChangeLog
         'buy_type'              => '신구매/재구매',
         'buy_date'              => '구입일',
         'pay_date'              => '결제일',
+        'use_start_date'        => '사용 개시일',
+        'benefit_end_date'      => '급여 종료일',
         'inmarket_due'          => '인마켓 마감일',
         // 급여ㆍ청구
         'benefit_class'         => '자격',

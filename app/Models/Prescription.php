@@ -70,6 +70,8 @@ class Prescription extends Model
         'rx_use_period', 'rx_end_date', 'purchase_type',
         'five_program', 'five_110days', 'daily_use_qty', 'order_manager',
         'special_case', 'reason', 'pay_date', 'buy_date', 'next_repurchase',
+        // 이 건의 급여 기간 — 건보위임동의 기간과 다른 값이다(2026-09-09)
+        'use_start_date', 'benefit_end_date',
         'inmarket_due', 'last_confirmed_qty', 'diverticulums',
         'kakao_sent_at', 'sms_sent_at',
     ];

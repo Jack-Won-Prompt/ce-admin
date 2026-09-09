@@ -112,6 +112,10 @@ class TossWebhookController extends Controller
             $tp->update(['status' => 'DONE', 'deposited_at' => now(), 'raw_response' => $res]);
         }
 
+        /* 돈이 들어온 날이 곧 모든 서류 발행일이다 — 거기서 급여 종료일과 다음 재구매
+           가능일을 센다(2026-09-09 확정) */
+        \App\Support\BenefitDates::onPaid($tp->order);
+
         try {
             app(\App\Services\DepositAutoIssue::class)->run($tp->order->refresh(), '토스 결제 웹훅');
         } catch (\Throwable $e) {

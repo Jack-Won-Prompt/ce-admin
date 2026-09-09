@@ -2973,13 +2973,20 @@ $calcDeposit  = $calcCopay;
                         padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
                 </div>
               </div>
+              {{-- 건보위임동의 기간 — 거래처에 붙는 값이다(patients.nhis_agree_*).
+                   시작일을 적으면 종료일이 ＋5년 −1일로 선다. 아래 「급여 종료일」과는
+                   다른 것이다(2026-09-09 확정) — 그쪽은 이 건을 언제까지 쓰는가이고,
+                   이쪽은 공단에 위임한 기간이다. 여태 한 칸을 둘이 나눠 쓰고 있었다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">건보위임동의 시작일</span>
-                <input type="date" class="form-control" id="f-agree-start-2" style="flex:1;" />
+                <input type="date" class="form-control" id="f-nhis-agree-start"
+                       value="{{ $agreeStart }}"
+                       onchange="autoAgreeEnd(this.value)" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">건보위임동의 종료일</span>
-                <input type="date" class="form-control" id="f-agree-end-2" style="flex:1;" />
+                <input type="date" class="form-control" id="f-nhis-agree-end"
+                       value="{{ $agreeEnd }}" style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">기초(의료급여)<br>재평가 대상자</span>
@@ -3039,7 +3046,11 @@ $calcDeposit  = $calcCopay;
               // 합치기 전에는 급여·보험 구획 안에 있던 정의다. 아래 입력과
               // 테이블뷰가 함께 쓰므로 본문 맨 앞으로 옮겼다.
               $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
-              $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null) ?: \Carbon\Carbon::parse($agreeStart)->addMonth()->format('Y-m-d');
+              /* 적어 둔 것이 없으면 시작일 ＋5년 −1일을 보여 준다 — 화면이 뒤에서
+                 세는 잣대(autoAgreeEnd)와 같아야 한다. 여태 한 달을 더하고 있었다. */
+              $위임년 = min(5, max(1, (int) config('delegation.period_years', 5)));
+              $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null)
+                            ?: \Carbon\Carbon::parse($agreeStart)->addYears($위임년)->subDay()->format('Y-m-d');
             @endphp
                         <div class="rx-fit">
             {{-- 요청서 13쪽의 차례 그대로 가로로 읽는다. 세 기둥(.rx-col)에
@@ -3445,26 +3456,35 @@ $calcDeposit  = $calcCopay;
               </div>
               {{-- 「환급 해당 기관」 칸은 두지 않는다(요청). 값(special_case)은 지우지
                    않았다 — 저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
+              {{-- 결제일과 구입일(모든 서류 발행일)은 **늘 같은 날짜**다(2026-09-09 확정).
+                   한쪽을 적으면 다른 쪽이 따라오고, 그 날짜에서 급여 종료일과 다음 재구매
+                   가능일을 센다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">결제일</span>
-                <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}"
+                       onchange="syncPayBuy(this.value)" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구입일 (모든 서류 발행일)</span>
-                <input type="date" class="form-control" id="f-buy-date" value="{{ $prescription->buy_date ?? '' }}" style="flex:1;" />
+                <input type="date" class="form-control" id="f-buy-date" value="{{ $prescription->buy_date ?? '' }}"
+                       onchange="syncPayBuy(this.value)" style="flex:1;" />
               </div>
+              {{-- 사용 개시일ㆍ급여 종료일은 **이 건**의 값이다(2026-09-09 확정).
+                   여태 거래처의 건보위임동의 기간을 빌려 쓰고 있어, 위임 기간을 고치면
+                   급여 기간이 함께 바뀌었다.
+
+                   급여 종료일 = 모든 서류 발행일(＝결제일) ＋ 총 처방일수.
+                   돈이 들어오면 서버가 채우고, 결제가 없는 건(기초ㆍ차상위)은 저장할 때
+                   적어 둔 구입일에서 센다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
-                <input type="date" class="form-control" id="f-nhis-agree-start"
-                       value="{{ $agreeStart }}"
-                       onchange="autoAgreeEnd(this.value)"
-                       style="flex:1;" />
+                <input type="date" class="form-control" id="f-use-start"
+                       value="{{ $prescription->use_start_date ?? '' }}" style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">급여 종료일 (사용 종료일)</span>
-                <input type="date" class="form-control" id="f-nhis-agree-end"
-                       value="{{ $agreeEnd }}"
-                       style="flex:1;" />
+                <input type="date" class="form-control" id="f-benefit-end"
+                       value="{{ $prescription->benefit_end_date ?? '' }}" style="flex:1;" />
               </div>
               {{-- 「판매 거래처」 칸은 두지 않는다(요청). 값(dealer_type)은 지우지 않았다 —
                    저장할 때 보내지 않으니 적어 둔 것이 빈 값으로 덮이지 않는다. --}}
@@ -7338,6 +7358,41 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('f-nhis-agree-end').value = `${yyyy}-${mm}-${dd}`;
   }
 
+  /* 결제일과 구입일(모든 서류 발행일)은 늘 같은 날짜다(2026-09-09 확정).
+     한쪽을 적으면 다른 쪽이 따라오고, 그 자리에서 급여 기간을 다시 센다. */
+  window.syncPayBuy = function (v) {
+    ['f-pay-date', 'f-buy-date'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value !== v) el.value = v;
+    });
+    calcBenefitEnd();
+  };
+
+  /* 급여 종료일ㆍ다음 재구매 가능일 = 모든 서류 발행일 ＋ 총 처방일수.
+     사용 개시일은 그 발행일이다. 서버도 같은 셈을 한다(App\Support\BenefitDates) —
+     화면에서 미리 보여 주는 것뿐이고, 정본은 저장할 때 선다. */
+  window.calcBenefitEnd = function () {
+    const base = document.getElementById('f-buy-date')?.value
+              || document.getElementById('f-pay-date')?.value;
+    const days = parseInt(document.getElementById('f-days')?.value ?? '', 10);
+    if (!base || !Number.isFinite(days) || days < 1) return;
+
+    const d = new Date(base);
+    const fmt = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+
+    const s = document.getElementById('f-use-start');
+    if (s) s.value = fmt(d);
+
+    const end = new Date(base);
+    end.setDate(end.getDate() + days);
+
+    const e = document.getElementById('f-benefit-end');
+    if (e) e.value = fmt(end);
+
+    const n = document.getElementById('f-next-repurchase');
+    if (n) n.value = fmt(end);
+  };
+
   // ── 종료일·다음재구매일 자동계산 ──
   function calcNextRepurchase(showWarn = false) {
     const dateVal   = document.getElementById('f-date')?.value;
@@ -7379,6 +7434,9 @@ window.HELP_TOUR_STEPS = [
 
        두 값 가운데 하나라도 비면 손대지 않는다 — 지우는 도중에 총계를 함께
        날리면 이미 적혀 있던 숫자를 잃는다. */
+    /* 처방일수가 바뀌면 급여 기간도 달라진다 — 총계만 다시 세고 날짜를 두면 어긋난다 */
+    if (typeof calcBenefitEnd === 'function') calcBenefitEnd();
+
     const totalEl = document.getElementById('f-total');
     if (totalEl && daily && days) {
       const n = parseInt(daily, 10) * parseInt(days, 10);
@@ -7491,6 +7549,9 @@ window.HELP_TOUR_STEPS = [
       buy_date:         strOrNull('f-buy-date'),
       // 시안 148:3046 (추가정보 카드)
       inmarket_due:       strOrNull('f-inmarket-due'),
+      // 이 건의 급여 기간 — 건보위임동의 기간과 다른 값이다(2026-09-09)
+      use_start_date:     strOrNull('f-use-start'),
+      benefit_end_date:   strOrNull('f-benefit-end'),
       last_confirmed_qty: strOrNull('f-last-qty'),
       diverticulums:    strOrNull('f-diverticulums'),
       // ── 병원·처방 정보 ────────────────────────────────────
@@ -7906,7 +7967,7 @@ window.HELP_TOUR_STEPS = [
   /* 유형은 병원ㆍ처방 정보로 옮겼으니 여기 없다. 공단 위임동의 두 날짜는 이 구획에
      서 있지만 처방에 붙는 값이라 잠그지 않는다 — 사람의 성질이 아니라 이 건의
      동의가 언제부터 언제까지인가다. */
-  const RX_PATIENT_UNLOCKED = ['f-agree-start-2', 'f-agree-end-2'];
+  const RX_PATIENT_UNLOCKED = ['f-nhis-agree-start', 'f-nhis-agree-end'];
 
   function rxLockPatientFields() {
     const box = document.getElementById('rx-patient-fields');
@@ -10880,15 +10941,8 @@ window.HELP_TOUR_STEPS = [
        'f-five/f-five-2' 와 'f-diagnosis-date/f-diag-confirm-2' 짝은 없앴다 —
        1차 요청서 17쪽이 'Five/Six(110days)'·'진단 확인일'을 한 번씩만 적어,
        그림자 칸을 걷어내고 값을 쥔 칸 하나만 남겼기 때문이다. */
-    [['f-nhis-agree-start', 'f-agree-start-2'], ['f-nhis-agree-end', 'f-agree-end-2']].forEach(([srcId, dupId]) => {
-      const src = document.getElementById(srcId), dup = document.getElementById(dupId);
-      if (!src || !dup) return;
-      dup.value = src.value;
-      src.addEventListener('input',  () => { dup.value = src.value; });
-      src.addEventListener('change', () => { dup.value = src.value; });
-      dup.addEventListener('input',  () => { src.value = dup.value; });
-      dup.addEventListener('change', () => { src.value = dup.value; });
-    });
+    /* 위임동의 두 날짜를 비추던 짝은 없앴다 — 「사용 시작일ㆍ급여 종료일」이 제 칸을
+       갖게 되어(f-use-start · f-benefit-end) 더는 같은 값이 아니다(2026-09-09). */
   });
 
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }

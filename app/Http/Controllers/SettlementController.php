@@ -580,6 +580,10 @@ class SettlementController extends Controller
             'deposit_note'         => $request->input('note'),
         ]);
 
+        /* 돈이 들어온 날이 곧 모든 서류 발행일이다 — 거기서 급여 종료일과 다음 재구매
+           가능일을 센다(2026-09-09 확정) */
+        \App\Support\BenefitDates::onPaid($order);
+
         /* 돈이 걸린 상태 변경이다 — 누가ㆍ얼마를ㆍ무엇을 보고 확인했는지 남긴다.
            청구액과 다르면 그 사실도 함께 적는다. */
         activity()->causedBy(Auth::user())->performedOn($order)
@@ -659,6 +663,11 @@ class SettlementController extends Controller
             'deposit_amount'       => $due,
         ]);
         $order->refresh();
+
+        /* 반쪽으로 멈춘 건은 이미 받은 날이 있다 — 급여 기간을 다시 세지 않는다 */
+        if (! $반쪽) {
+            \App\Support\BenefitDates::onPaid($order);
+        }
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(
             $반쪽

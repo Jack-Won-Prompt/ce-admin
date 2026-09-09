@@ -207,6 +207,11 @@ class VirtualAccountService extends TossClient
            웹훅이 실패로 끝나면 토스가 다시 보내므로, 발행에서 나는 오류가 그 재시도를
            부르지 않게 여기서 삼킨다(자동 발행은 스스로 두 번 내지 않는다). */
         if ($tossPayment->is_done && $tossPayment->order) {
+            /* 돈이 들어온 날이 곧 모든 서류 발행일이다 — 거기서 급여 종료일과 다음 재구매
+               가능일을 센다(2026-09-09 확정). 세무 서류보다 먼저 세운다: 서류에 그 날짜가
+               실린다. */
+            \App\Support\BenefitDates::onPaid($tossPayment->order);
+
             try {
                 app(\App\Services\DepositAutoIssue::class)->run($tossPayment->order, '토스 웹훅');
             } catch (\Throwable $e) {

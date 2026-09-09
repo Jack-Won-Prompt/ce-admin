@@ -2096,6 +2096,8 @@ class PrescriptionController extends Controller
             // 시안 148:2827 로 새로 생긴 항목
             'dealer_type'           => 'nullable|string|max:50',
             'pay_date'              => 'nullable|date',
+            'use_start_date'        => 'nullable|date',
+            'benefit_end_date'      => 'nullable|date',
             // 어떻게 받을 것인가 — 주문 연계 때 이 값대로 안내가 나간다(2026-09-03)
             'pay_method'            => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Models\PaymentLink::METHODS))],
             'buy_date'              => 'nullable|date',
@@ -2211,6 +2213,8 @@ class PrescriptionController extends Controller
             'uro_findings'         => $request->input('uro_findings'),
             'dealer_type'          => $request->input('dealer_type'),
             'pay_date'             => $request->input('pay_date'),
+            'use_start_date'       => $request->input('use_start_date'),
+            'benefit_end_date'     => $request->input('benefit_end_date'),
             'buy_date'             => $request->input('buy_date'),
             'inmarket_due'         => $request->input('inmarket_due'),
             'last_confirmed_qty'   => $request->input('last_confirmed_qty'),
@@ -2379,6 +2383,18 @@ class PrescriptionController extends Controller
             $pt->update([
                 'nhis_renew_due' => \Illuminate\Support\Carbon::parse($pt->nhis_reg_date)->addYears(2)->toDateString(),
             ]);
+        }
+
+        /* 급여 종료일ㆍ다음 재구매 가능일 = 모든 서류 발행일(＝결제일) ＋ 총 처방일수.
+
+           돈이 들어오면 그때 서버가 채운다. 그런데 **결제가 없는 건**(기초ㆍ차상위)은
+           들어올 돈이 없어 그 자리가 오지 않는다 — 그런 건은 담당자가 구입일을 적어
+           저장하는 이 자리가 그때다(2026-09-09 확정).
+
+           이미 받은 건은 손대지 않는다. 받은 날이 정본이고, 나중에 이 화면을 저장할
+           때마다 오늘로 밀리면 급여 기간이 조용히 늘어난다. */
+        if (! $prescription->order?->isDepositConfirmed()) {
+            \App\Support\BenefitDates::apply($prescription);
         }
 
         // ── 아이템 동기화 ────────────────────────────────────────
