@@ -34,10 +34,91 @@ final class ChangeLog
         'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
         /* 마지막으로 발급한 가상계좌 — 토스가 채우는 값이다 */
         'va_bank', 'va_account', 'va_holder', 'va_due_at', 'va_order_id',
+
+        /* ── 사람이 고치는 값이 아닌 것들 (2026-09-09) ──
+           이력은 「누가 무엇을 고쳤나」를 읽는 자리다. 시스템이 채우는 값을 함께
+           세우면 저장 한 번에 열 줄이 쌓여 정작 사람이 고친 하나가 묻힌다. */
+
+        // 파일 자체의 자취 — 올린 파일이 무엇인지는 문서 목록에서 본다
+        'image_path', 'image_original_name', 'image_mime_type', 'image_size',
+        'ocr_raw_data', 'ocr_confidence',
+        // 화면이 쥐고 있는 표시값
+        'is_blank_draft', 'upload_source', 'counsel_order_id', 'latest_fax_log_id',
+        'prescription_id', 'assigned_user_id', 'operation_user_id',
+        'deposit_confirmed_by', 'settle_status_by', 'closing_checked_by',
+        // 위드웍스가 웹훅으로 실어 오는 값 — 우리가 고치는 것이 아니다
+        'withworks_so_id', 'withworks_status', 'withworks_status_label', 'withworks_status_at',
+        'withworks_ship_status', 'withworks_ship_status_label', 'withworks_ship_at',
+        // 보낸 때ㆍ발행한 때 — 그 일을 한 자리에 자취가 따로 남는다
+        'kakao_sent_at', 'sms_sent_at',
+        'tax_invoice_issued_at', 'tax_invoice_cancelled_at',
+        'cash_receipt_issued_at', 'cash_receipt_cancelled_at',
+        'nhis_submitted_at', 'nhis_approved_at', 'settle_status_at', 'closing_checked_at',
     ];
 
     /** 화면에 보일 칸 이름 — 없으면 칸 이름을 그대로 쓴다 */
     public const 이름표 = [
+        /* ── 처방전 (2026-09-09 보탬) ──
+           주문 등록의 「저장 이력」에 칸 이름이 영어 그대로 서던 것들이다.
+           화면에서 부르는 이름과 같게 적는다. */
+        'rx_number'             => '처방번호',
+        'registration_no'       => '등록번호',
+        'serial_no'             => '일련번호',
+        'is_reissue'            => '재발행',
+        'hospital_name'         => '병원명',
+        'specialist_no'         => '전문의 번호',
+        'department'            => '진료과',
+        'usage_period'          => '사용 기간',
+        'nhis_status'           => '급여 구분',
+        'product_price'         => '소비자가',
+        'insurance_price'       => '단가',
+        'counsel_no'            => '상담번호',
+        'counsel_date'          => '상담일',
+        'counsel_type'          => '상담 유형',
+        'counsel_re_date'       => '재상담일',
+        'dealer_type'           => '판매 거래처',
+        'caregiver_name'        => '보호자',
+        'disease_grade'         => '상병 등급',
+        'uro_findings'          => '요류역학검사 결과',
+        'purchase_type'         => '구매 유형',
+        'five_program'          => 'Five 프로그램',
+        'five_110days'          => 'Five/Six(110days)',
+        'order_manager'         => '주문 담당자',
+        'special_case'          => '환급 해당 기관',
+        'reason'                => '사유',
+        'last_confirmed_qty'    => '마지막 확정 수량',
+        'img_brightness'        => '밝기',
+        'img_contrast'          => '명암',
+
+        /* ── 주문 (2026-09-09 보탬) ── */
+        'so_type'               => '판매유형',
+        'deposit_note'          => '입금 메모',
+        'tracking_number'       => '송장번호',
+        'estimated_delivery'    => '배송 예정일',
+        'delivered_at'          => '배송 완료일',
+        'shipped_at'            => '출고일',
+        'statement_date'        => '거래명세서 발행일',
+        'reference_note'        => '창고 전달 메모',
+        'nhis_claim_status'     => '공단 청구 상태',
+        'nhis_reject_stage'     => '공단 반려 단계',
+        'nhis_rejection_reason' => '공단 반려 사유',
+        'nhis_reimbursement'    => '공단 지급액',
+        'settle_status'         => '정산 상태',
+        'settle_reason'         => '정산 사유',
+        'withworks_ship_no'      => '위드웍스 출고번호',
+        'withworks_tracking_no'  => '위드웍스 송장번호',
+        'tax_invoice_no'        => '세금계산서 번호',
+        'tax_invoice_type'      => '세금계산서 유형',
+        'tax_invoice_biz_name'  => '세금계산서 상호',
+        'tax_invoice_ceo_name'  => '세금계산서 대표자',
+        'tax_invoice_biz_no'    => '세금계산서 사업자번호',
+        'tax_invoice_email'     => '세금계산서 이메일',
+        'tax_invoice_supply'    => '세금계산서 공급가액',
+        'tax_invoice_vat'       => '세금계산서 부가세',
+        'cash_receipt_type'     => '현금영수증 용도',
+        'cash_receipt_identifier' => '현금영수증 번호',
+        'cash_receipt_amount'   => '현금영수증 금액',
+
         /* ── 거래처(환자 마스터) ──
            거래처 관리에도 「변경 이력」이 생기면서(2026-09-09) 이 칸들이 이력 표에
            영어 이름 그대로 섰다. 화면에서 부르는 이름과 같게 적는다. */
