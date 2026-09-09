@@ -28,11 +28,32 @@ final class ChangeLog
         'signature_data', 'ocr_raw_text', 'raw_payload', 'raw_response',
         'password', 'remember_token',
         // 시스템이 쥐고 있는 값 — 사람이 고친 것이 아니다
-        'id', 'created_at', 'updated_at', 'deleted_at', 'updated_by',
+        'id', 'created_at', 'updated_at', 'deleted_at', 'updated_by', 'created_by',
+        /* 주민번호를 어떤 근거로 언제까지 쥐고 있는가 — 사람이 고치는 값이 아니라
+           법으로 정해진 자취다. 이력에 세우면 저장할 때마다 네 줄이 쌓인다. */
+        'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
+        /* 마지막으로 발급한 가상계좌 — 토스가 채우는 값이다 */
+        'va_bank', 'va_account', 'va_holder', 'va_due_at', 'va_order_id',
     ];
 
     /** 화면에 보일 칸 이름 — 없으면 칸 이름을 그대로 쓴다 */
     public const 이름표 = [
+        /* ── 거래처(환자 마스터) ──
+           거래처 관리에도 「변경 이력」이 생기면서(2026-09-09) 이 칸들이 이력 표에
+           영어 이름 그대로 섰다. 화면에서 부르는 이름과 같게 적는다. */
+        'nhis_renew'            => '건보 재등록 대상자',
+        'nhis_agree_start'      => '건보위임동의 시작일',
+        'nhis_agree_end'        => '건보위임동의 종료일',
+        'basic_reeval'          => '기초(의료급여) 재평가 대상자',
+        'basic_reeval_due'      => '기초(의료급여) 재평가 기한',
+        'new_patient_date'      => '신환 Master 등록일',
+        'health_insurance_no'   => '건강보험증 번호',
+        'is_nhis_eligible'      => '건보 대상',
+        'nhis_coverage_rate'    => '건보 부담률',
+        'note'                  => '메모',
+        'remitter_name'         => '송금자명',
+        'fax'                   => 'Fax',
+
         // 상담ㆍ환자
         'patient_id'            => '거래처',
         'patient_name_ocr'      => '이름',
