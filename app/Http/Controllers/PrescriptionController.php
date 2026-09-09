@@ -770,10 +770,6 @@ class PrescriptionController extends Controller
         // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
         $patientsJson  = self::patientPickerList();
 
-        $mobilePending = Prescription::where('upload_source', 'mobile')
-            ->whereIn('status', ['pending', 'ocr_processing', 'ocr_done', 'review_needed', 'review_requested'])
-            ->latest()->take(5)->get();
-
         // 화면 상단에 알리는 검수 대기 건수 (시안 128:3171)
         $reviewPending = Prescription::where('status', 'review_needed')->count();
 
@@ -789,7 +785,7 @@ class PrescriptionController extends Controller
                 ->map(fn ($c) => ['code' => $c->code, 'label' => $c->label])->values()->all();
         }
 
-        return view('prescriptions.upload', compact('prescriptions', 'managers', 'mobilePending',
+        return view('prescriptions.upload', compact('prescriptions', 'managers',
                                                     'patientsJson', 'reviewPending', 'docTypes'));
     }
 

@@ -221,7 +221,6 @@
   .history-badge { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; flex-shrink:0; }
 
   /* mobile upload */
-  .mobile-upload-card { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--primary-light); border-radius:12px; margin-bottom:12px; }
 
   /* ── Progress overlay ── */
   /* 막는 까닭 — 단추 바로 위. 사라지지 않는다. */
@@ -249,38 +248,6 @@
 {{-- ── 업로드 레이아웃 ── --}}
 <div class="upload-layout fill-rest">
   <div>
-    {{-- 모바일 대기 알림 --}}
-    @if($mobilePending->isNotEmpty())
-    {{-- 알리기만 하고 갈 길이 없으면 담당자가 목록을 뒤져 찾아야 한다.
-         여러 건이면 다 세우고, 저마다 그 건으로 곧장 간다. --}}
-    <div class="mobile-upload-card" style="flex-direction:column;align-items:stretch;gap:8px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="font-size:16px;line-height:16px;color:var(--primary);"><i class="fa-solid fa-mobile-screen-button"></i></div>
-        <div style="flex:1;font-size:13px;font-weight:700;line-height:21px;">모바일 업로드 대기 {{ $mobilePending->count() }}건</div>
-        <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> 대기</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        @foreach($mobilePending as $mp)
-          {{-- 화면 탭으로 연다. data-ce-tab 이 없으면 iframe 이 그 자리에서 옮겨 가
-               탭 이름은 「처방자료 업로드」로 남는다 — 무엇을 보고 있는지 알 수 없다.
-               오른쪽 「최근 업로드 이력」이 쓰는 이름과 같은 꼴로 맞춘다. --}}
-          <a href="{{ route('prescriptions.show', $mp) }}"
-             data-ce-tab="주문 - {{ $mp->rx_number }}" data-ce-icon="file-edit-02"
-             style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--gray-0);
-                    border:1px solid var(--gray-200);border-radius:8px;font-size:12px;
-                    color:var(--text-primary);text-decoration:none;">
-            <i class="fa-solid fa-arrow-right" style="font-size:10px;color:var(--primary);"></i>
-            {{-- 연결된 환자 이름을 먼저 본다. OCR 로 읽은 이름은 OCR 을 걷어낸 뒤로
-                 늘 비어 있어, 그것만 보면 이름이 있는 건도 「이름 없음」으로 나온다.
-                 옛 자료에는 OCR 이름만 있는 것이 있어 그것도 함께 본다. --}}
-            {{ $mp->patient?->name ?: ($mp->patient_name_ocr ?: '이름 없음') }}
-            <span style="color:var(--text-muted);">{{ $mp->created_at->format('H:i') }}</span>
-          </a>
-        @endforeach
-      </div>
-    </div>
-    @endif
-
     <div class="up-card">
       <div class="up-card-head">
         <div class="up-head-left">
