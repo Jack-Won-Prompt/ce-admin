@@ -155,8 +155,10 @@
         <b>지금 열고 있는 주소를 기준으로 만든 값입니다.</b>
         이 서버는 <code>ceadmin.co.kr</code> 과 <code>www.ceadmin.co.kr</code> 을 둘 다 받지만,
         OIDC 의 Redirect URI 는 <b>문자열이 똑같아야</b> 합니다 — <code>www</code> 하나만 달라도
-        Entra 가 거부합니다. 개발서버는 <code>https://ceadmin.co.kr</code> 로 등록하기로
-        했습니다(2026-09-09). 운영 도메인은 따로 정해진 뒤에 다시 등록합니다.
+        Entra 가 거부합니다. <b>이 서버의 정본은 <code>www</code></b> 이므로
+        <code>https://www.ceadmin.co.kr</code> 로 등록합니다(2026-09-09 확정).
+        <b><code>www</code> 를 붙여 들어와 이 값을 집어 가십시오.</b>
+        운영 도메인은 따로 정해진 뒤에 다시 등록합니다.
       </div>
     </div>
 
