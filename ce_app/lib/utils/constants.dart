@@ -3,10 +3,22 @@
 
 class AppConstants {
   // ── API ──────────────────────────────────────────
-  /// 운영: 공인 도메인 서버
-  static const String baseUrlProd = 'https://www.ceadmin.co.kr/api';
+  /// 개발·검증 서버. 운영 도메인은 아직 정해지지 않았다.
+  static const String baseUrlDev = 'https://www.ceadmin.co.kr/api';
 
-  static const String baseUrl = baseUrlProd;  // ← 환경에 따라 변경
+  /// 앱이 붙을 서버.
+  ///
+  /// 빌드할 때 골라 넣는다. 아무것도 넣지 않으면 개발 서버로 간다 —
+  /// 운영 도메인이 정해지기 전까지 그것이 유일한 서버이기 때문이다.
+  ///
+  ///   flutter build appbundle --release   ///     --dart-define=API_BASE_URL=https://{운영도메인}/api
+  ///
+  /// 예전에는 이 값이 코드에 박혀 있었다. 그러면 스토어에 올린 앱은 서버가
+  /// 바뀌어도 옛 주소를 계속 본다 — 새 판을 올려야만 옮겨진다.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: baseUrlDev,
+  );
 
   /// 파일 저장소 기본 URL (baseUrl에서 /api 제거)
   static String get storageUrl =>
