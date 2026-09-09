@@ -69,6 +69,11 @@
           <div class="vw-tool-group">
             <button type="button" class="vw-tool" onclick="rotateImg()" title="회전"><i class="fa-solid fa-rotate-left"></i></button>
             <button type="button" class="vw-tool" onclick="resetImg()" title="처음으로 복원"><i class="fa-solid fa-arrows-rotate"></i></button>
+            {{-- 밝기ㆍ명암도 그림을 매만지는 일이라 회전ㆍ복원과 한 묶음에 둔다.
+                 묶음을 따로 세웠더니 .vw-tools 의 space-between 이 도구줄 전체를
+                 다시 벌려 놓았다 — 기존 모양이 흐트러졌다(2026-09-09). --}}
+            <button type="button" class="vw-tool" id="tuneToggleBtn" onclick="toggleTune()"
+                    title="밝기ㆍ명암" style="display:none;"><i class="fa-solid fa-circle-half-stroke"></i></button>
           </div>
           {{-- 여러 쪽짜리 서류의 쪽 넘기기 — PDF 를 볼 때만 선다 --}}
           <div class="vw-tool-group" id="pdfPager" style="display:none;">
@@ -80,10 +85,6 @@
             <button type="button" class="vw-tool" onclick="zoomOut()" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
             <span id="zoomLabel" class="vw-zoom">100%</span>
             <button type="button" class="vw-tool" onclick="zoomIn()" title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-          </div>
-          {{-- 맞출 수 있는 문서(우리가 받아 둔 그림)일 때만 선다 --}}
-          <div class="vw-tool-group" id="tuneToggleWrap" style="display:none;">
-            <button type="button" class="vw-tool" onclick="toggleTune()" title="밝기ㆍ명암"><i class="fa-solid fa-circle-half-stroke"></i></button>
           </div>
         </div>
 
@@ -324,7 +325,7 @@ function showDoc(doc) {
     /* 저장할 자리를 아는 화면에서만 세운다 — 거래처 관리처럼 보기만 하는 화면에서는
        맞춰 봐야 남길 곳이 없어 헛일이 된다. */
     const 맞출수있나 = !!_tuneKey && typeof TUNE_SAVE_URL !== 'undefined';
-    const wrap = document.getElementById('tuneToggleWrap');
+    const wrap = document.getElementById('tuneToggleBtn');
     if (wrap) wrap.style.display = 맞출수있나 ? '' : 'none';
     if (!맞출수있나) {
       document.getElementById('tunePanel')?.classList.remove('on');
