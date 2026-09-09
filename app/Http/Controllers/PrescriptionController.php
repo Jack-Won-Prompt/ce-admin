@@ -921,8 +921,19 @@ class PrescriptionController extends Controller
                 : back()->with('error', $why);
         };
 
-        if (empty($prescriptionFiles)) {
-            return $refuse('처방전 파일을 최소 1개 이상 포함해야 합니다.');
+        /* **처방전이 없어도 받는다**(2026-09-09 지시).
+
+           여태는 처방전 한 장을 반드시 청했다. 그런데 신분증ㆍ결과지만 먼저 들어오고
+           처방전은 나중에 오는 건이 있다 — 그때 담당자는 올릴 자리가 없어, 처방전이
+           올 때까지 서류를 손에 들고 기다렸다.
+
+           처방전이 없으면 **그림 없는 처방전 한 건**을 세우고 서류를 거기에 단다.
+           그 건은 검수 필요로 서므로 목록에서 눈에 띄고, 처방전은 주문 등록 화면의
+           첨부 자리에서 나중에 붙인다.
+
+           올린 것이 하나도 없으면 세울 것도 없다 — 그때만 물린다. */
+        if (empty($prescriptionFiles) && empty($attachmentFiles)) {
+            return $refuse('올릴 파일이 없습니다.');
         }
 
         /* 유형마다 받을 수 있는 수가 정해져 있다(테스트 시나리오 시작 포인트).
@@ -983,6 +994,35 @@ class PrescriptionController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($prescription)
                       ->log("{$prescription->rx_number} 업로드 완료 (웹)");
+        }
+
+        /* 처방전 그림이 없는 건 — 서류만 먼저 왔다. 그림 없는 처방전 한 건을 세워
+           서류를 달 자리를 만든다. 그림 칸은 비운다: 없는 것을 지어내지 않는다. */
+        if (! $firstPrescription && ! empty($attachmentFiles)) {
+            $firstPrescription = Prescription::create([
+                'rx_number'        => Prescription::generateRxNumber(),
+                'patient_id'       => $request->patient_id ?: null,
+                'assigned_user_id' => $request->assigned_user_id,
+                'created_by'       => Auth::id(),
+                'admin_note'       => $request->admin_note,
+                'upload_source'    => 'web',
+                'status'           => 'review_needed',
+            ]);
+
+            $firstPrescription->update([
+                'counsel_no'   => Prescription::generateCounselNo(),
+                'counsel_date' => now()->format('Y-m-d'),
+            ]);
+
+            $created[] = $firstPrescription->rx_number;
+
+            $무엇 = collect($attachmentFiles)
+                ->pluck('doc_type')
+                ->map(fn ($t) => PrescriptionAttachment::labelFor($t))
+                ->unique()->implode('ㆍ');
+
+            activity()->causedBy(Auth::user())->performedOn($firstPrescription)
+                ->log("{$firstPrescription->rx_number} 업로드 완료 (웹 · 처방전 없이 {$무엇})");
         }
 
         // 첨부 파일 처리 (첫 번째 처방전에 연결)

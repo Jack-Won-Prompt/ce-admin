@@ -1077,18 +1077,6 @@ form.addEventListener('submit', async function (e) {
     return;
   }
 
-  const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
-  if (!hasPrescription) {
-    막는까닭('<b>처방전</b>이 한 장은 있어야 합니다. '
-          + '지금 담긴 것은 처방전이 아닙니다 — 타일 왼쪽 위에서 서류명을 바꾸거나 '
-          + '처방전을 더 넣어 주십시오.<br>'
-          + '신분증만 따로 보낼 때는 <b>주문 등록 화면의 첨부 추가</b>나 '
-          + '<b>신분증 링크</b>를 쓰십시오.');
-    showToast('처방전 파일을 최소 1개 이상 포함해야 합니다.', 'warning');
-
-    return;
-  }
-
   까닭지움();
 
   document.getElementById('h_assigned_user_id').value = document.getElementById('sideAssignedUser').value;
@@ -1130,8 +1118,10 @@ form.addEventListener('submit', async function (e) {
 
   const rxCount = selectedFiles.filter(f => f.docType === 'prescription').length;
   const attCount = selectedFiles.length - rxCount;
-  let sub = rxCount + '개 처방전';
-  if (attCount > 0) sub += ` + ${attCount}개 첨부 문서`;
+  /* 처방전 없이 서류만 올릴 수도 있다 — 그때 「0개 처방전」이라 적으면
+     무엇을 올리는지 알 수 없다 */
+  let sub = rxCount > 0 ? rxCount + '개 처방전' : '';
+  if (attCount > 0) sub += (sub ? ' + ' : '') + `${attCount}개 첨부 문서`;
   sub += ' 올리는 중...';
   document.getElementById('progressSub').textContent = sub;
   document.getElementById('progressOverlay').classList.add('active');
