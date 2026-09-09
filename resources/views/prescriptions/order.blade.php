@@ -2030,6 +2030,19 @@ $calcDeposit  = $calcCopay;
            여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
       <div id="viewerCards">
 
+      {{-- ── 등록 메모 ─────────────────────────────────
+           처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리). 그림을 보며 읽는
+           말이라 그림 바로 아래에 둔다(2026-09-09 지시). 여기서 고치지는 않는다 —
+           올린 사람이 남긴 말이고, 검수하며 남기는 말은 아래 두 칸이 따로 받는다. --}}
+      <div class="vw-card" id="adminNoteCard">
+        <div class="vw-card-head">
+          <span class="vw-card-title"><i class="fa-solid fa-note-sticky"></i> 등록 메모</span>
+        </div>
+        <div id="f-admin-note"
+             style="padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;
+                    color:{{ $prescription->admin_note ? 'var(--gray-1000)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
+      </div>
+
       {{-- 위임 서명ㆍ보호자 신분증 카드는 두지 않는다.
            아래 문서 스트립이 이미 그 둘을 문서로 세운다(「위임 서명」ㆍ「보호자 신분증」).
            같은 그림을 두 곳에 두었더니 미리보기 자리가 그만큼 길어졌고, 카드 쪽은
@@ -2157,11 +2170,8 @@ $calcDeposit  = $calcCopay;
           @endif
         </div>
 
-        @if($prescription->admin_note)
-        <div style="padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;line-height:1.7;color:var(--gray-1000);white-space:pre-wrap;">
-          <div style="font-size:10px;font-weight:700;color:var(--gray-600);margin-bottom:4px;"><i class="fa-solid fa-note-sticky"></i> 등록자 메모</div>{{ $prescription->admin_note }}
-        </div>
-        @endif
+        {{-- 등록자 메모는 여기 두지 않는다 — 처방전 그림 바로 아래 제 카드로 섰다.
+             같은 말이 한 화면에 둘이면 어느 것이 지금 값인지 묻게 된다. --}}
 
         {{-- OCR 신뢰도는 쓰지 않는다. 숫자가 무엇을 뜻하는지 사람마다 달리 읽었고,
              높든 낮든 하는 일은 같았다 — 어차피 눈으로 보고 고친다. --}}
@@ -3037,15 +3047,10 @@ $calcDeposit  = $calcCopay;
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
                    시안 315:58 Frame 48101490 (361×392). --}}
-              {{-- 등록 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
-                   왼쪽 카드에도 서지만, 처방 내용을 적는 동안 눈에 들어오지 않아
-                   이 탭 안에서도 함께 보인다(2026-09-09 지시). 여기서 고치지는 않는다. --}}
-              <div class="rx-field-row rx-row-start rx-w3">
-                <span class="rx-field-label">등록 메모</span>
-                <div id="f-admin-note" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
-                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
-              </div>
+              {{-- 등록 메모는 여기 두지 않는다(2026-09-09 지시).
+                   처방전 그림 바로 아래로 옮겼다 — 올린 사람이 남긴 말은 그림을 보며
+                   읽는 것이라, 처방 내용을 적는 칸들 사이에 끼워 두면 그 자리에서만
+                   눈에 걸렸다. --}}
               {{-- 메모는 **두 칸**이다(2026-09-09 지시).
 
                    · 검수 요청 메모 — 담당자가 검수를 청하며 남기는 말. 요청 전에만 적는다.
@@ -3071,7 +3076,9 @@ $calcDeposit  = $calcCopay;
                      background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;
                      {{ $검수전 ? 'display:none;' : '' }}">{{ $요청메모 ?: '검수 요청 메모가 없습니다.' }}</div>
               </div>
-              <div class="rx-field-row rx-row-start rx-w3">
+              {{-- rx-row-start 를 붙이지 않는다 — 붙이면 새 줄에서 다시 시작한다.
+                   여섯 칸 격자라 span 3 짜리 둘이 나란히 한 줄에 선다. --}}
+              <div class="rx-field-row rx-w3">
                 <span class="rx-field-label">검수 메모</span>
                 <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
