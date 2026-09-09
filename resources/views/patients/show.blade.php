@@ -803,7 +803,9 @@
       </div>
       <input type="text" class="form-control" id="addrDetail" placeholder="상세 주소" style="margin-top:8px;">
       <div class="am-acts">
-        <button type="button" class="ds-btn" id="addrCancelBtn" style="display:none;" onclick="addrFormReset()">취소</button>
+        {{-- 늘 서 있다. 「수정」을 누른 뒤에만 세워 두었더니, 고치다 말고 새 주소를
+             넣으려는 사람이 빠져나올 길을 찾지 못했다(2026-09-09). --}}
+        <button type="button" class="ds-btn" id="addrCancelBtn" onclick="addrFormReset()">초기화</button>
         <button type="button" class="ds-btn ds-btn-primary" id="addrSaveBtn" onclick="addrSave()">추가</button>
       </div>
     </div>
@@ -1054,7 +1056,6 @@
     ['addrPostcode', 'addrRoad', 'addrDetail'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('addrFormCap').textContent = '주소 추가';
     document.getElementById('addrSaveBtn').textContent = '추가';
-    document.getElementById('addrCancelBtn').style.display = 'none';
   };
 
   window.addrEdit = function (id) {
@@ -1066,7 +1067,6 @@
     document.getElementById('addrDetail').value    = r.detail   || '';
     document.getElementById('addrFormCap').textContent = '주소 수정';
     document.getElementById('addrSaveBtn').textContent = '저장';
-    document.getElementById('addrCancelBtn').style.display = '';
   };
 
   /* 우편번호ㆍ도로명은 찾아서 채운다 — 손으로 적으면 공단에 낼 때 걸린다 */
