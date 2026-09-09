@@ -101,8 +101,27 @@ class Order extends Model
         return $link?->method ?? \App\Models\PaymentLink::METHOD_VIRTUAL;
     }
 
+    /**
+     * 무엇으로 받았나.
+     *
+     * 돈이 들어온 뒤에는 **토스가 알려 준 유형**이 정본이다(2026-09-09 지시).
+     * 「링크페이」는 우리가 무엇으로 안내했는가일 뿐, 환자가 그 창에서 카드를 골랐는지
+     * 간편결제를 골랐는지는 말해 주지 않는다 — 정산에서 되짚을 때 그것이 필요하다.
+     *
+     * 아직 받기 전이거나 토스가 알려 준 것이 없으면 예전처럼 고른 방식을 적는다.
+     */
     public function payMethodLabel(): string
     {
+        $tp = $this->tossPayment;
+
+        /* 승인이 났으면 그 유형이 곧 사실이다. 뒤에 취소ㆍ부분취소가 되어도 「무엇으로
+           받았나」는 달라지지 않는다 — 그래서 is_done 하나로 가리지 않는다. */
+        $받았나 = $tp && ($tp->is_done || ! empty($tp->raw_response['approvedAt']));
+
+        if ($받았나 && ($유형 = $tp->paid_type)) {
+            return $유형;
+        }
+
         return \App\Models\PaymentLink::METHODS[$this->payMethod()] ?? '가상계좌';
     }
 

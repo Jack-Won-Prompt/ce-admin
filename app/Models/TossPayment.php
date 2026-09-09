@@ -74,4 +74,37 @@ class TossPayment extends Model
     {
         return $this->status === 'DONE';
     }
+
+    /**
+     * 토스가 알려 준 **실제** 결제 유형 (2026-09-09 지시).
+     *
+     * 「링크페이」는 우리가 무엇으로 안내했는가일 뿐, 환자가 그 창에서 무엇을 골랐는지는
+     * 아니다. 카드로 냈는지 간편결제로 냈는지는 토스가 답에 실어 보낸다 —
+     * method='간편결제' · easyPay.provider='토스페이' 처럼. 여태 그것을 받아 두고도
+     * 쓰지 않아, 정산 화면에는 무엇으로 받았든 늘 「링크페이」라고만 섰다.
+     *
+     * 「간편결제 · 토스페이」ㆍ「카드 · 신한 신용」처럼 한 줄로 돌려준다.
+     * 알려 준 것이 없으면 null 이다 — 그때는 부르는 쪽이 예전 이름을 쓴다.
+     */
+    public function getPaidTypeAttribute(): ?string
+    {
+        $r  = $this->raw_response ?? [];
+        $무엇 = trim((string) ($r['method'] ?? ''));
+
+        if ($무엇 === '') {
+            return null;
+        }
+
+        /* 어디로 냈는지까지 알면 함께 적는다 — 「간편결제」만으로는 되짚을 때 모자란다 */
+        $덧 = match ($무엇) {
+            '간편결제' => $r['easyPay']['provider'] ?? null,
+            '카드'     => trim(implode(' ', array_filter([
+                              $r['card']['company']  ?? null,   // 신한ㆍ국민 …
+                              $r['card']['cardType'] ?? null,   // 신용ㆍ체크
+                          ]))) ?: null,
+            default    => null,
+        };
+
+        return $덧 ? "{$무엇} · {$덧}" : $무엇;
+    }
 }
