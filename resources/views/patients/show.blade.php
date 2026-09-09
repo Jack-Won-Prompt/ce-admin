@@ -411,6 +411,23 @@
               @endif
             </span>
           </div>
+          {{-- 성별 — 주민번호가 있으면 거기서 저절로 서고, 없으면 여기서 고른다
+               (2026-09-08 확인요청 4쪽).
+
+               예전에는 이 칸을 두지 않았다. 주민번호에 이미 들어 있고 쓰는 곳도 없다는
+               까닭이었는데, 이제 주민번호 없이도 거래처를 만들 수 있게 되어(처방외)
+               그런 사람의 성별을 적어 둘 자리가 없어졌다. --}}
+          <div class="info-row">
+            <span class="info-label">성별</span>
+            <span class="info-value">
+              <span class="view-only">{{ ['male' => '남', 'female' => '여'][$patient->gender] ?? '-' }}</span>
+              <select class="form-control edit-only" id="e-gender" data-orig="{{ $patient->gender }}">
+                <option value="">선택</option>
+                <option value="male"   @selected($patient->gender === 'male')>남</option>
+                <option value="female" @selected($patient->gender === 'female')>여</option>
+              </select>
+            </span>
+          </div>
           <div class="info-row">
             <span class="info-label">환자구분</span>
             <span class="info-value">
@@ -1205,6 +1222,7 @@
                            })(document.getElementById('e-resident')),
       care_type:           document.getElementById('e-care-type').value           || null,
       birth_date:          document.getElementById('e-birth').value               || null,
+      gender:              document.getElementById('e-gender').value              || null,
       main_contact:        document.getElementById('e-main-contact').value || null,
       marketing_consent:   document.getElementById('e-marketing-consent').value || null,
       new_patient_date:    document.getElementById('e-new-patient-date').value || null,

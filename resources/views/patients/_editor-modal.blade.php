@@ -87,9 +87,12 @@
       </div>
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
-          {{-- 처방 서류는 이 번호로 공단에 청구한다. 이름만 적어 두면 결국 누군가
-               다시 열어 채워야 하므로 여기서 받는다. --}}
-          <label class="form-label">주민등록번호 <span>*</span></label>
+          {{-- 처방 서류는 이 번호로 공단에 청구한다. 그래서 대개는 여기서 받는다.
+
+               다만 **필수는 아니다**(2026-09-08 확인요청 4쪽). 처방외로 사 가는 사람은
+               공단에 낼 것이 없어 번호를 물을 까닭이 없다. 여태 막아 두었더니 그런 건은
+               가짜 번호를 적어 넣거나 거래처를 아예 만들지 못했다. --}}
+          <label class="form-label">주민등록번호</label>
           <input type="text" class="form-control" id="add-resident" placeholder="XXXXXX-XXXXXXX" />
         </div>
         <div class="form-group">
@@ -475,6 +478,25 @@
     bd.value = ymd;
     bd.dataset.fromRrn = ymd;
     bd.dispatchEvent(new Event('change', { bubbles: true }));
+
+    peGenderFromRrn(+g);
+  }
+
+  /* 성별은 뒷자리 첫 숫자가 말해 준다 — 홀수면 남, 짝수면 여
+     (1ㆍ3ㆍ5ㆍ7ㆍ9 남 · 2ㆍ4ㆍ6ㆍ8ㆍ0 여. 5~8 은 외국인이고 홀짝은 같다).
+     2026-09-08 확인요청 4쪽.
+
+     사람이 골라 둔 값은 덮지 않는다 — 이 수가 채워 둔 것만 다시 적는다. 번호가 없으면
+     손대지 않으므로 직접 고르는 길은 그대로 열려 있다. */
+  function peGenderFromRrn(뒷첫자리) {
+    const sel = document.getElementById('add-gender');
+    if (!sel) return;
+
+    const 값 = (뒷첫자리 % 2 === 1) ? 'male' : 'female';
+    if (sel.value && sel.value !== sel.dataset.fromRrn) return;
+
+    sel.value = 값;
+    sel.dataset.fromRrn = 값;
   }
 
   document.getElementById('add-resident')?.addEventListener('input', peBirthFromRrn);
@@ -716,8 +738,9 @@
     const 가린것   = rnEl.dataset.masked || '';
     const 그대로면 = 가린것 !== '' && rnRaw === 가린것;
 
-    if (!rnRaw) { showToast('주민등록번호는 필수입니다.', 'warning'); rnEl.focus(); return; }
-    if (!그대로면 && rnRaw.replace(/\D/g, '').length !== 13) {
+    /* 비워 두고 저장할 수 있다(2026-09-08 확인요청 4쪽). 다만 적었으면 열세 자리를
+       다 적어야 한다 — 반쯤 적힌 번호는 공단에 낼 때 걸린다. */
+    if (rnRaw && !그대로면 && rnRaw.replace(/\D/g, '').length !== 13) {
       showToast('주민등록번호 13자리를 입력하십시오.', 'warning');
       rnEl.focus();
       return;
