@@ -135,7 +135,7 @@
       <div class="ds-filter-field">
         <label class="ds-field-label">검색어</label>
         <input type="text" name="search" class="form-control"
-               placeholder="처방번호ㆍ이름ㆍ병원명" value="{{ request('search') }}">
+               placeholder="처방번호ㆍ이름ㆍ병원명ㆍ요양기관코드" value="{{ request('search') }}">
       </div>
       {{-- 두 칸(298)에서는 날짜가 「2026-06-…」로 잘렸다 — 달력 아이콘까지 서야 해서
            한 칸이 150 은 있어야 한다. 세 칸을 준다(이 화면은 아홉 칸 중 여섯만 쓴다). --}}
@@ -242,6 +242,8 @@ window.HELP_TOUR_STEPS = [
       { header: '출처',          name: 'source',     width: 70,  align: 'center', sortable: true },
       { header: '이름',        name: 'patient',    width: 100, sortable: true },
       { header: '병원',          name: 'hospital',   width: 150, sortable: true },
+      // 요양기관코드 — 공단과 맞출 때 쓰는 병원 번호(2026-09-08 확인요청 7쪽)
+      { header: '요양기관코드',  name: 'hosp_code',  width: 120, align: 'center', sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },

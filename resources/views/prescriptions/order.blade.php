@@ -4431,6 +4431,10 @@ $_itemSource = $prescription->items->isNotEmpty()
 $_itemsData = $_itemSource->map(fn($i) => [
     'product_name'    => $i->product_name,
     'product_code'    => $i->product_code,
+    /* 공단에 청구할 때 제품을 가리키는 번호. 우리 품번(28410)으로는 조회되지 않는다
+       — 제품코드가 있는 자리에는 이것도 함께 선다(2026-09-08 확인요청 1ㆍ10쪽).
+       제품을 고를 때 함께 받아 두지만, 예전에 저장된 줄에는 없어 여기서 찾아 채운다. */
+    'device_code'     => (string) (\App\Support\DeviceCode::for($i->product_code) ?? ''),
     'quantity'        => $i->quantity,
     'product_price'   => $i->product_price,
     'insurance_price' => $i->insurance_price,
@@ -6996,6 +7000,7 @@ window.HELP_TOUR_STEPS = [
         _idx:            idx,
         product_name:    it.product_name || '',
         product_code:    it.product_code || '',
+        device_code:     it.device_code || '',
         quantity:        Math.max(1, parseInt(it.quantity, 10) || 1),
         product_price:   Number(String(it.product_price   ?? '').replace(/,/g, '')) || '',
         insurance_price: Number(String(it.insurance_price ?? '').replace(/,/g, '')) || '',
@@ -7038,6 +7043,17 @@ window.HELP_TOUR_STEPS = [
       /* 제품 코드 — 제품을 고르면 따라 들어온다. 여기서 고치지 않는다: 코드는 제품이
          제 것으로 들고 오는 값이라, 손으로 바꾸면 이름과 어긋난 줄이 창고로 간다. */
       { header: '제품 코드',  name: 'product_code',    width: 120, editable: false },
+      /* 장비코드 — 공단에 청구할 때 쓰는 번호다. 제품이 제 것으로 들고 오는 값이라
+         고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). */
+      { header: '장비코드',   name: 'device_code',     width: 140, editable: false,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          if (!v) { el.textContent = '-'; el.style.color = 'var(--gray-300)'; return el; }
+          el.textContent = v;
+          el.style.color = 'var(--text-secondary)';
+
+          return el;
+        } },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
       /* 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가. 제품이 들고 오는 값이라
          고치는 칸이 아니다. */
@@ -7100,7 +7116,7 @@ window.HELP_TOUR_STEPS = [
   }
 
 
-  const emptyItem = () => ({ product_name:'', product_code:'', quantity:DEFAULT_QTY,
+  const emptyItem = () => ({ product_name:'', product_code:'', device_code:'', quantity:DEFAULT_QTY,
                              product_price:'', insurance_price:'', nhis_status:'eligible',
                              nhis_amount:0, patient_copay:0, r_box:'', stock:'' });
 
@@ -12356,6 +12372,8 @@ window.HELP_TOUR_STEPS = [
 
     it.product_name = name;
     it.product_code = code;
+    /* 장비코드도 함께 받아 둔다 — 제품 조회가 이미 실어 보내는데 버리고 있었다 */
+    it.device_code  = p.device ?? '';
     it.r_box        = rbox;
     it.stock        = stock;
     if (price) {

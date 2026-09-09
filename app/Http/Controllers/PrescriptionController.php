@@ -70,6 +70,9 @@ class PrescriptionController extends Controller
                 $q->where('rx_number', 'like', "%{$kw}%")
                   ->orWhere('patient_name_ocr', 'like', "%{$kw}%")
                   ->orWhere('hospital_name', 'like', "%{$kw}%")
+                  /* 요양기관코드(병원코드)로도 찾는다 — 공단과 맞출 때 병원 이름보다
+                     이 번호를 들고 오는 일이 많다(2026-09-08 확인요청 7쪽) */
+                  ->orWhere('hospital_code', 'like', "%{$kw}%")
                   ->orWhereHas('patient', fn($p) => $p->where('name', 'like', "%{$kw}%"));
             });
         }
@@ -84,6 +87,7 @@ class PrescriptionController extends Controller
                 'source'     => $rx->upload_source === 'mobile' ? '모바일' : '웹',
                 'patient'    => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
                 'hospital'   => $rx->hospital_name ?? '-',
+                'hosp_code'  => $rx->hospital_code ?? '',
                 'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
                 'status'     => $rx->status_label,
                 'acc_type'   => $rx->accTypeLabel(),
