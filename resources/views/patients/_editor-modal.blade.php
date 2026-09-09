@@ -217,6 +217,13 @@
             <button type="button" class="ds-btn" onclick="addFindAddress()" style="flex:0 0 auto;">
               <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
             </button>
+            {{-- 주소는 한 벌이 아니다 — 집과 직장을 번갈아 쓰는 사람이 있다
+                 (2026-09-08 확인요청 6쪽). 이미 등록한 거래처를 고칠 때만 선다:
+                 새로 만드는 중에는 아직 붙일 자리가 없다. --}}
+            <button type="button" class="ds-btn" id="peAddrManageBtn" style="flex:0 0 auto;display:none;"
+                    onclick="openAddrManager(_peId)">
+              <i class="fa-solid fa-location-dot"></i> 주소 관리
+            </button>
           </div>
           <input type="text" class="form-control" id="add-address-detail" placeholder="상세 주소" />
         </div>
@@ -348,6 +355,9 @@
   </div>
 </div>
 @push('scripts')
+{{-- 주소 관리 창 — 거래처 상세도 같은 것을 쓴다 --}}
+@include('patients._address-modal')
+
 <script>
 (function () {
   /* 고칠 값을 읽어 오는 자리. 주소를 손으로 적었더니 /patients/115/detail 로 나가
@@ -490,6 +500,10 @@
     peClear();
     document.getElementById('addModalTitle').textContent =
       _peMode === 'edit' ? '거래처 수정' : '거래처 등록';
+
+    /* 새로 만드는 중에는 주소를 관리할 자리가 없다 — 거래처가 아직 없다 */
+    const 주소관리 = document.getElementById('peAddrManageBtn');
+    if (주소관리) 주소관리.style.display = (_peMode === 'edit') ? '' : 'none';
 
     if (_peMode === 'edit') {
       /* 고칠 것을 먼저 읽어 채운다. 빈 창을 띄우고 나중에 채우면, 그 사이에 사람이
