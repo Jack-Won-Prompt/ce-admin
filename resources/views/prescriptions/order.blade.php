@@ -3510,19 +3510,16 @@ $calcDeposit  = $calcCopay;
                 </div>
                 <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
               </div>
-              {{-- 추가정보 탭에서 옮겨 온 세 칸 (요청서 14쪽). 소제목은 두지 않는다 —
-                   하루 몇 개를 쓰는지ㆍ언제까지 마감인지ㆍ마지막에 몇 개로 확정했는지는
-                   위의 처방ㆍ수량 이야기와 이어지는 것이라, 사이에 이름을 하나 세우면
-                   다른 구획처럼 읽혀 오히려 끊긴다. --}}
+              {{-- 추가정보 탭에서 옮겨 온 두 칸 (요청서 14쪽). 소제목은 두지 않는다 —
+                   마지막에 몇 개로 확정했는지ㆍ언제까지 마감인지는 위의 처방ㆍ수량
+                   이야기와 이어지는 것이라, 사이에 이름을 하나 세우면 다른 구획처럼
+                   읽혀 오히려 끊긴다.
+
+                   「하루 사용 수량」은 걷었다(2026-09-08 확인요청 10쪽). 「1일 처방
+                   개수」와 이름만 둘일 뿐 같은 것을 두 번 적고 있었다 — 둘 다 채워진
+                   마흔한 건이 **모두 같은 값**이었고, 총계도 1일 처방 개수로 센다.
+                   칸과 적힌 값은 그대로 둔다: 마흔한 건의 기록이다. --}}
               <div class="rx-field-row rx-row-start">
-                <span class="rx-field-label">하루 사용 수량</span>
-                <input type="number" min="0" class="form-control" id="f-daily-use-qty"
-                       value="{{ $prescription->daily_use_qty ?? '' }}" style="flex:1;" />
-              </div>
-              {{-- 마지막 확정 수량은 하루 사용 수량 바로 다음이다(2026-09-09 지시).
-                   둘 다 「몇 개인가」를 말하는 칸이라 나란히 놓고 견준다 — 사이에
-                   날짜 칸이 끼어 있으면 눈이 한 번 건너뛰었다가 돌아와야 했다. --}}
-              <div class="rx-field-row">
                 <span class="rx-field-label">마지막 확정 수량</span>
                 <input type="number" min="0" class="form-control" id="f-last-qty"
                        value="{{ $prescription->last_confirmed_qty ?? '' }}" style="flex:1;" />
@@ -7489,7 +7486,6 @@ window.HELP_TOUR_STEPS = [
       // 시안 148:3046 (추가정보 카드)
       inmarket_due:       strOrNull('f-inmarket-due'),
       last_confirmed_qty: strOrNull('f-last-qty'),
-      daily_use_qty:      strOrNull('f-daily-use-qty'),
       diverticulums:    strOrNull('f-diverticulums'),
       // ── 병원·처방 정보 ────────────────────────────────────
       hospital_name:    hosp,

@@ -2102,7 +2102,6 @@ class PrescriptionController extends Controller
             // 시안 148:3046 (추가정보 카드)
             'inmarket_due'          => 'nullable|date',
             'last_confirmed_qty'    => 'nullable|integer|min:0',
-            'daily_use_qty'         => 'nullable|integer|min:0',
             'diverticulums'         => 'nullable|string|max:10',
             // 병원·처방 추가
             'hospital_code'         => 'nullable|string|max:50',
@@ -2215,7 +2214,6 @@ class PrescriptionController extends Controller
             'buy_date'             => $request->input('buy_date'),
             'inmarket_due'         => $request->input('inmarket_due'),
             'last_confirmed_qty'   => $request->input('last_confirmed_qty'),
-            'daily_use_qty'        => $request->input('daily_use_qty'),
             'diverticulums'        => $request->input('diverticulums'),
             'caregiver_name'       => $request->input('guardian'),
         ];

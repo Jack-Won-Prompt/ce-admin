@@ -184,7 +184,6 @@ class OrderGridExtras
             'rx_next_repur'  => $d($p?->next_repurchase ?: $p?->repurchase_date),
             'rx_local_gov'   => $p?->local_gov ?? '',
             'rx_repur_date'  => $d($p?->repurchase_date),
-            'rx_use_qty'     => $n($p?->daily_use_qty),
             'rx_inmarket'    => $d($p?->inmarket_due),
             'rx_last_qty'    => $n($p?->last_confirmed_qty),
         ];

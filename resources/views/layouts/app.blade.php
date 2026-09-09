@@ -2237,7 +2237,6 @@ document.addEventListener('click', (e) => {
       { header: '추가정보 등록일', name: 'rx_created',  width: 120, align: 'center', sortable: true },
       { header: '관할 지자체',    name: 'rx_local_gov', width: 140, sortable: true },
       { header: '재구매일',       name: 'rx_repur_date', width: 110, align: 'center', sortable: true },
-      { header: '하루 사용 수량', name: 'rx_use_qty',   width: 110, align: 'right',  sortable: true },
       { header: '인마켓 마감일',  name: 'rx_inmarket',  width: 110, align: 'center', sortable: true },
       { header: '마지막 확정 수량', name: 'rx_last_qty', width: 120, align: 'right', sortable: true },
 
