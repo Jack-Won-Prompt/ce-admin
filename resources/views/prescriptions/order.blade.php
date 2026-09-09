@@ -2973,6 +2973,18 @@ $calcDeposit  = $calcCopay;
                         padding:2px 8px;border-radius:999px;white-space:nowrap;"></span>
                 </div>
               </div>
+              @php
+                /* 건보위임동의 기간 — 이 값을 쓰는 첫 자리가 여기다. 예전에는 병원ㆍ처방
+                   정보 구획 머리에서 정했는데, 위임동의 두 줄이 그보다 위로 오면서
+                   정의보다 먼저 쓰이게 됐다(2026-09-09).
+
+                   적어 둔 것이 없으면 시작일 ＋5년 −1일을 보여 준다 — 화면이 뒤에서
+                   세는 잣대(autoAgreeEnd)와 같아야 한다. 여태 한 달을 더하고 있었다. */
+                $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
+                $위임년     = min(5, max(1, (int) config('delegation.period_years', 5)));
+                $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null)
+                              ?: \Carbon\Carbon::parse($agreeStart)->addYears($위임년)->subDay()->format('Y-m-d');
+              @endphp
               {{-- 건보위임동의 기간 — 거래처에 붙는 값이다(patients.nhis_agree_*).
                    시작일을 적으면 종료일이 ＋5년 −1일로 선다. 아래 「급여 종료일」과는
                    다른 것이다(2026-09-09 확정) — 그쪽은 이 건을 언제까지 쓰는가이고,
@@ -3042,16 +3054,6 @@ $calcDeposit  = $calcCopay;
           <div class="rx-acc-body rx-pane" id="rxp-2" style="display:none;">
             {{-- 테이블뷰에서만 보이는 구획 이름 — 탭줄이 감춰지므로 여기서 갈라 준다 --}}
             <div class="rx-pane-cap">병원ㆍ처방 정보</div>
-            @php
-              // 합치기 전에는 급여·보험 구획 안에 있던 정의다. 아래 입력과
-              // 테이블뷰가 함께 쓰므로 본문 맨 앞으로 옮겼다.
-              $agreeStart = ($prescription->patient?->nhis_agree_start ?? null) ?: now()->format('Y-m-d');
-              /* 적어 둔 것이 없으면 시작일 ＋5년 −1일을 보여 준다 — 화면이 뒤에서
-                 세는 잣대(autoAgreeEnd)와 같아야 한다. 여태 한 달을 더하고 있었다. */
-              $위임년 = min(5, max(1, (int) config('delegation.period_years', 5)));
-              $agreeEnd   = ($prescription->patient?->nhis_agree_end ?? null)
-                            ?: \Carbon\Carbon::parse($agreeStart)->addYears($위임년)->subDay()->format('Y-m-d');
-            @endphp
                         <div class="rx-fit">
             {{-- 요청서 13쪽의 차례 그대로 가로로 읽는다. 세 기둥(.rx-col)에
                  나눠 담으면 첫 기둥을 끝까지 읽고 다음으로 넘어가야 해서,
