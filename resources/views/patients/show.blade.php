@@ -1003,11 +1003,13 @@
       return;
     }
 
-    box.innerHTML = _amRows.map((r, i) => `
+    /* 「현재」는 자리가 아니라 거래처 칸과 같은 줄에 붙는다 — 손으로 넣을 수 있게
+       되면서 맨 윗줄이 곧 현재라는 잣대가 깨졌다(2026-09-09) */
+    box.innerHTML = _amRows.map((r) => `
       <div class="am-row">
-        <span class="am-full">${i === 0 ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
+        <span class="am-full">${r.current ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
         <span class="am-when">${_amEsc(r.at)}${r.by ? ' · ' + _amEsc(r.by) : ''}</span>
-        ${i === 0 ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">현재로</button>`}
+        ${r.current ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">현재로</button>`}
         <button type="button" class="am-mini" onclick="addrEdit(${r.id})">수정</button>
         <button type="button" class="am-mini danger" onclick="addrDelete(${r.id})">삭제</button>
       </div>`).join('');

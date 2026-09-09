@@ -297,6 +297,10 @@ class PatientController extends Controller
      */
     public function addresses(Patient $patient): \Illuminate\Http\JsonResponse
     {
+        /* 어느 줄이 지금 쓰는 주소인가 — 거래처 칸과 견줘 짚는다.
+           예전에는 맨 윗줄(가장 최근에 담긴 것)이 곧 현재였다. 주소가 저절로 쌓이기만
+           할 때는 그것이 맞았지만, 이제 손으로도 넣을 수 있어(2026-09-09) 새로 넣은
+           줄이 곧 현재인 양 「현재」가 붙었다 — 거래처 칸은 그대로인데도. */
         return response()->json([
             'rows' => $patient->addresses->map(fn ($a) => [
                 'id'       => $a->id,
@@ -306,6 +310,7 @@ class PatientController extends Controller
                 'full'     => $a->full,
                 'at'       => $a->created_at?->format('Y-m-d') ?? '',
                 'by'       => $a->creator?->name ?? '',
+                'current'  => $a->sameAs($patient->postcode, $patient->address, $patient->address_detail),
             ])->values(),
         ]);
     }

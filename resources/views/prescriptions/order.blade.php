@@ -6522,10 +6522,10 @@ window.HELP_TOUR_STEPS = [
 
       new GridModal().open({
         title: '거래처 주소 · ' + rows.length + '건', width: 460, height: 320, anchor: btn,
-        items: rows.map((r, i) => ({
+        items: rows.map((r) => ({
           value: r.id,
-          // 맨 윗줄이 거래처의 지금 주소다 — 고르는 사람이 그것을 알아야 한다
-          label: (i === 0 ? '[현재] ' : '') + r.full,
+          // 거래처가 지금 쓰는 주소를 짚어 준다 — 고르는 사람이 그것을 알아야 한다
+          label: (r.current ? '[현재] ' : '') + r.full,
           sub:   r.at + (r.by ? ' · ' + r.by : ''),
         })),
         onConfirm: (v) => {
@@ -6574,10 +6574,10 @@ window.HELP_TOUR_STEPS = [
 
     new GridModal().open({
       title: '거래처 주소 · ' + rows.length + '건', width: 460, height: 320, anchor: btn,
-      items: rows.map((r, i) => ({
+      items: rows.map((r) => ({
         value: r.id,
-        // 맨 윗줄이 지금 쓰는 주소다 — 고르는 사람이 그것을 알아야 한다
-        label: (i === 0 ? '[현재] ' : '') + r.full,
+        // 거래처가 지금 쓰는 주소를 짚어 준다 — 고르는 사람이 그것을 알아야 한다
+        label: (r.current ? '[현재] ' : '') + r.full,
         sub:   r.at + (r.by ? ' · ' + r.by : ''),
       })),
       onConfirm: (v) => {
