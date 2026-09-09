@@ -178,9 +178,11 @@
     }
     /* 그룹 안 항목은 간격 없이 붙는다(Figma) */
     .menu-group-items { display: flex; flex-direction: column; }
-    /* 그룹 헤더 — Figma: Pretendard Medium 11 / lh 1.2 / grayscale-600, 우측 12px chevron */
+    /* 그룹 헤더 — Figma 는 11 이었으나 13 으로 키운다(2026-09-09 지시).
+       메뉴 이름(13)과 나란히 서는 줄이라 둘 사이가 두 단이나 벌어져, 그룹 이름이
+       메뉴보다 작아 눈에 늦게 들어왔다. 우측 12px chevron 은 그대로다. */
     .menu-header {
-      font-size: 11px; font-weight: 500; line-height: 1.2;
+      font-size: 13px; font-weight: 500; line-height: 1.2;
       color: var(--gray-600);
       padding: 0;
       display: flex; align-items: center; justify-content: space-between; gap: 6px;
