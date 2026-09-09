@@ -93,7 +93,7 @@
         <div class="cs-f">
           {{-- 여기서 고치면 환자 정보와 어긋난다 — 거래처관리가 정본이다(요청서 4쪽).
                값은 연 화면에서 실어 준다. 고쳐야 하면 거래처관리에서 고친다. --}}
-          <label>전화번호1</label>
+          <label>환자 전화번호</label>
           <input type="text" id="csCallNo" class="form-control" maxlength="30"
                  readonly style="background:var(--gray-50);cursor:default;"
                  title="거래처관리에서 수정합니다" placeholder="거래처관리에 적힌 번호">

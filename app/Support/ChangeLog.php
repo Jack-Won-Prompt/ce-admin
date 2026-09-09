@@ -111,8 +111,9 @@ final class ChangeLog
         'cash_receipt_status'   => '현금영수증',
         // 거래처
         'name'                  => '이름',
-        'mobile'                => '전화번호 1',
-        'phone'                 => '전화번호 2',
+        'mobile'                => '환자 전화번호',
+        'phone'                 => '보호자 전화번호',
+        'main_contact'          => '주 연락처',
         'email'                 => '이메일',
         'address'               => '주소',
         'address_detail'        => '상세 주소',

@@ -606,6 +606,9 @@ class PatientController extends Controller
             'gender'             => 'nullable|in:male,female',
             'mobile'             => 'nullable|string|max:30',
             'phone'              => 'nullable|string|max:30',
+            /* 주 연락처 — 환자와 보호자 가운데 어느 번호로 먼저 거는가.
+               비어 있으면 정하지 않은 것이다(2026-09-08 확인요청 4쪽). */
+            'main_contact'       => 'nullable|in:mobile,guardian',
             'address'            => 'nullable|string|max:300',
             'postcode'           => 'nullable|string|max:10',
             'address_detail'     => 'nullable|string|max:200',

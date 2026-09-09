@@ -431,8 +431,8 @@ document.addEventListener('keydown', (e) => {
           return b;
         } },
       // 요청서 3쪽 «휴대폰->전화번호1으로 변경 / 전화번호2 추가»
-      { header: '전화번호1',   name: 'mobile',   width: 130 },
-      { header: '전화번호2',   name: 'phone2',   width: 130 },
+      { header: '환자 전화번호',   name: 'mobile',   width: 140 },
+      { header: '보호자 전화번호', name: 'phone2',   width: 140 },
       { header: 'Email',       name: 'email',    width: 180 },
       { header: 'Fax',         name: 'fax',      width: 120 },
       { header: '주소',        name: 'address',  width: 280 },

@@ -6,6 +6,12 @@
 
      부르는 법은 openPatientEditor() 주석에 적어 두었다. --}}
 <style>
+  /* 주 연락처 — 이름 옆에 작게 붙는다. 이 모달은 거래처 관리와 주문 등록
+     두 곳에서 쓰이므로 모양도 여기서 데리고 다닌다. */
+  .mc-pick { display:inline-flex; align-items:center; gap:4px; margin-left:8px;
+             font-size:11px; font-weight:400; color:var(--gray-600); cursor:pointer; }
+  .mc-pick input { cursor:pointer; margin:0; }
+
   /* ── 뜨는 창 ──────────────────────────────────────────────
      가림막을 두지 않는다. 처방전을 보면서 적어야 하는 자리라, 뒤가 가려지면
      읽을 수가 없고 뒤를 누를 수도 없어야 할 까닭이 없다. 머리를 잡아 옮긴다.
@@ -143,8 +149,18 @@
         </div>
       </div>
       <div class="form-grid-2" style="margin-bottom:8px;">
+        {{-- 전화번호1ㆍ2 는 누구의 번호인지 알 수 없는 이름이었다. 상담사는 위에
+             있는 번호부터 걸었고, 미성년이거나 본인이 받지 못하는 건에서는 늘
+             헛걸음이었다. 누구의 번호인지 적고, 어느 쪽으로 먼저 걸지도 적어 둔다
+             (2026-09-08 확인요청 4쪽).
+
+             둘 다 고를 수는 없다 — 「먼저 거는 번호」는 하나여야 뜻이 선다. --}}
         <div class="form-group">
-          <label class="form-label">전화번호1</label>
+          <label class="form-label">
+            환자 전화번호
+            <label class="mc-pick"><input type="checkbox" id="add-main-mobile"
+                   onchange="pickMain('add', 'mobile', this)"> Main contact</label>
+          </label>
           {{-- 시험 중이면 우리 사람 번호에서 고른다 — 새로 만든 거래처에 실제
                환자 번호가 들어가면 그 뒤 모든 문자가 그리로 간다. --}}
           @if (!empty($testPhones ?? []))
@@ -159,7 +175,11 @@
           @endif
         </div>
         <div class="form-group">
-          <label class="form-label">전화번호2</label>
+          <label class="form-label">
+            보호자 전화번호
+            <label class="mc-pick"><input type="checkbox" id="add-main-guardian"
+                   onchange="pickMain('add', 'guardian', this)"> Main contact</label>
+          </label>
           <input type="text" class="form-control" id="add-phone" placeholder="02-XXXX-XXXX" data-phone />
         </div>
       </div>
@@ -572,11 +592,32 @@
   /* 창은 하나를 돌려 쓴다 — 지난번에 적은 것이 남아 있으면 새 사람에 그것이 붙는다 */
   function peClear() {
     document.querySelectorAll('#addModal input, #addModal textarea').forEach(el => { el.value = ''; });
+    /* value 를 비우는 것만으로는 체크가 풀리지 않는다 — 앞사람의 주 연락처가 따라온다 */
+    ['add-main-mobile', 'add-main-guardian'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.checked = false;
+    });
     document.querySelectorAll('#addModal select').forEach(el => { el.selectedIndex = 0; });
     delete document.getElementById('add-resident').dataset.masked;
     /* 앞사람의 미성년 여부가 남아 있으면 다음 사람에게 보호자 칸이 딸려 선다 */
     _peMinor = null;
     peGuardianToggle();
+  }
+
+
+  /* 주 연락처는 하나다 — 한쪽을 고르면 다른 쪽은 저절로 풀린다.
+     체크박스 둘로 두는 것은 지시대로다(2026-09-08 확인요청 4쪽). 라디오였다면
+     한 번 고른 뒤 「정하지 않음」으로 되돌릴 길이 없다 — 다시 눌러 풀 수 있어야 한다. */
+  function pickMain(prefix, which, el) {
+    const 짝 = which === 'mobile' ? 'guardian' : 'mobile';
+    const 다른 = document.getElementById(prefix + '-main-' + 짝);
+    if (el.checked && 다른) 다른.checked = false;
+  }
+
+  /* 고른 것을 서버가 아는 말로 바꾼다 — 아무것도 안 골랐으면 null 이다 */
+  function mainContactOf(prefix) {
+    if (document.getElementById(prefix + '-main-mobile')?.checked)   return 'mobile';
+    if (document.getElementById(prefix + '-main-guardian')?.checked) return 'guardian';
+    return null;
   }
 
   /* 열쇠 이름이 곧 칸 이름이다(add-<열쇠>, 밑줄은 붙임표로) — 짝이 없으면 지나간다 */
@@ -600,6 +641,14 @@
       const el = document.getElementById(id);
       if (el && data?.[k] != null) el.value = data[k];
     });
+
+    /* 주 연락처는 칸 하나에 값 하나가 아니라 체크박스 둘이다 — 위의 대입으로는
+       닿지 않는다. 적혀 있는 쪽만 켠다. */
+    const mc = data?.main_contact ?? null;
+    const mcM = document.getElementById('add-main-mobile');
+    const mcG = document.getElementById('add-main-guardian');
+    if (mcM) mcM.checked = mc === 'mobile';
+    if (mcG) mcG.checked = mc === 'guardian';
 
     /* 날짜 칸은 시각이 붙은 값을 받지 못한다.
 
@@ -679,6 +728,7 @@
       contact_channel: val('add-contact-channel'),
       email:           val('add-email'),
       fax:             val('add-fax'),
+      main_contact:    mainContactOf('add'),
       remitter_name:   val('add-remitter'),
       deduction:       val('add-deduction'),
       cash_receipt_no: val('add-cash-receipt'),

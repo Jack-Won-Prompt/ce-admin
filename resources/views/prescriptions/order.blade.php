@@ -2800,7 +2800,7 @@ $calcDeposit  = $calcCopay;
                    운영이면 $testPhones 가 비어 지금처럼 그냥 적는 칸이다. --}}
               @php $phoneNow = $prescription->mobile_ocr ?? $prescription->patient?->mobile ?? ''; @endphp
               <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 1</span>
+                <span class="rx-field-label">환자 전화번호</span>
                 @if (!empty($testPhones))
                   <select class="form-control" id="f-mobile" style="flex:1;" title="테스트 중이라 우리 사람 번호에서 고릅니다">
                     <option value="">선택</option>
@@ -2825,7 +2825,7 @@ $calcDeposit  = $calcCopay;
               </div>
               @php $phone2Now = $prescription->patient?->phone ?? ''; @endphp
               <div class="rx-field-row">
-                <span class="rx-field-label">전화번호 2</span>
+                <span class="rx-field-label">보호자 전화번호</span>
                 @if (!empty($testPhones))
                   <select class="form-control" id="f-mobile2" style="flex:1;" title="테스트 중이라 우리 사람 번호에서 고릅니다">
                     <option value="">선택</option>
@@ -12151,7 +12151,7 @@ window.HELP_TOUR_STEPS = [
 
     const LABELS = {
       'f-postcode': '우편번호', 'f-address': '주소', 'f-address-detail': '상세주소',
-      'f-email': '이메일', 'f-mobile': '전화번호1', 'f-mobile2': '전화번호2',
+      'f-email': '이메일', 'f-mobile': '환자 전화번호', 'f-mobile2': '보호자 전화번호',
       'f-birth': '생년월일', 'f-benefit-class': '자격',
     };
 

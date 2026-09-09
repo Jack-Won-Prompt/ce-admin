@@ -84,6 +84,13 @@
   .info-value .form-control { width:100%; height:30px; padding:2px 8px; font-size:13px; }
   /* 적는 길이가 정해져 있는 칸은 그만큼만 잡는다 — 남는 자리는 주소가 쓴다 */
   #e-resident, #e-mobile, #e-phone { max-width:148px; }
+  /* 주 연락처 표시 — 이름 옆에 작게 붙는다 */
+  .mc-pick { display:inline-flex; align-items:center; gap:4px; margin-left:8px;
+             font-size:11px; font-weight:400; color:var(--gray-600); cursor:pointer; }
+  .mc-pick input { cursor:pointer; margin:0; }
+  .mc-flag { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:4px;
+             background:var(--primary-light); color:var(--primary); font-size:10px; font-weight:700; }
+
   .info-value textarea.form-control { height:auto; }
   /* 나란히 놓는 칸은 100% 를 물려받으면 서로 밀어낸다 — 제 글자만큼만 잡는다 */
   .info-value .inline .form-control { width:auto; }
@@ -291,17 +298,28 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">전화번호1</span>
+            <span class="info-label">
+              환자 전화번호
+              <label class="mc-pick edit-only"><input type="checkbox" id="e-main-mobile"
+                     onchange="pickMain('e', 'mobile', this)"
+                     @checked($patient->main_contact === 'mobile')> Main contact</label>
+            </span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->mobile ?? '-' }}</span>
+              {{-- 먼저 거는 번호에는 표를 둔다 — 두 번호를 놓고 어느 쪽인지 다시 묻지 않게 --}}
+              <span class="view-only">{{ $patient->mobile ?? '-' }}@if($patient->main_contact === 'mobile')<b class="mc-flag">Main</b>@endif</span>
               <input type="text" class="form-control edit-only" id="e-mobile" data-phone
                      value="{{ $patient->mobile }}" data-orig="{{ $patient->mobile }}" placeholder="010-XXXX-XXXX" />
             </span>
           </div>
           <div class="info-row">
-            <span class="info-label">전화번호2</span>
+            <span class="info-label">
+              보호자 전화번호
+              <label class="mc-pick edit-only"><input type="checkbox" id="e-main-guardian"
+                     onchange="pickMain('e', 'guardian', this)"
+                     @checked($patient->main_contact === 'guardian')> Main contact</label>
+            </span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->phone ?? '-' }}</span>
+              <span class="view-only">{{ $patient->phone ?? '-' }}@if($patient->main_contact === 'guardian')<b class="mc-flag">Main</b>@endif</span>
               <input type="text" class="form-control edit-only" id="e-phone" data-phone
                      value="{{ $patient->phone }}" data-orig="{{ $patient->phone }}" placeholder="02-XXXX-XXXX" />
             </span>
@@ -860,12 +878,29 @@
     const payload = {
       name,
       // 마스킹 그대로면 '변경 없음' — 보낸 값이 없으면 서버가 기존 값을 건드리지 않는다
+  /* 주 연락처는 하나다 — 한쪽을 고르면 다른 쪽은 저절로 풀린다.
+     체크박스 둘로 두는 것은 지시대로다(2026-09-08 확인요청 4쪽). 라디오였다면
+     한 번 고른 뒤 「정하지 않음」으로 되돌릴 길이 없다 — 다시 눌러 풀 수 있어야 한다. */
+  function pickMain(prefix, which, el) {
+    const 짝 = which === 'mobile' ? 'guardian' : 'mobile';
+    const 다른 = document.getElementById(prefix + '-main-' + 짝);
+    if (el.checked && 다른) 다른.checked = false;
+  }
+
+  /* 고른 것을 서버가 아는 말로 바꾼다 — 아무것도 안 골랐으면 null 이다 */
+  function mainContactOf(prefix) {
+    if (document.getElementById(prefix + '-main-mobile')?.checked)   return 'mobile';
+    if (document.getElementById(prefix + '-main-guardian')?.checked) return 'guardian';
+    return null;
+  }
+
       resident_no:         (function (el) {
                              const v = el.value.trim();
                              return (v === '' || v === el.dataset.masked) ? undefined : v;
                            })(document.getElementById('e-resident')),
       care_type:           document.getElementById('e-care-type').value           || null,
       birth_date:          document.getElementById('e-birth').value               || null,
+      main_contact:        mainContactOf('e'),
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,

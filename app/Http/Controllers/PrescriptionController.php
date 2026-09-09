@@ -1520,7 +1520,7 @@ class PrescriptionController extends Controller
                only() 의 Carbon 에 밀린다 — 고쳐 놓고도 그대로였다. */
             'account'         => array_merge($patient->only([
                 'name', 'care_type', 'resident_no', 'birth_date', 'gender',
-                'mobile', 'phone', 'email', 'fax', 'sb_sci',
+                'mobile', 'phone', 'main_contact', 'email', 'fax', 'sb_sci',
                 'postcode', 'address', 'address_detail', 'note',
                 'contact_status', 'contact_channel', 'remitter_name',
                 'deduction', 'cash_receipt_no',

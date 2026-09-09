@@ -24,7 +24,7 @@ class Patient extends Model
         'cash_receipt_no', 'deduction', 'new_patient_date',
         'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
         'care_type', 'name', 'resident_no', 'birth_date', 'gender',
-        'phone', 'mobile', 'address', 'postcode', 'address_detail',
+        'phone', 'mobile', 'main_contact', 'address', 'postcode', 'address_detail',
         'health_insurance_no', 'is_nhis_eligible', 'nhis_coverage_rate', 'note',
         // 주민번호 암호화(P0-1)
         'resident_no_enc', 'resident_no_hash', 'resident_no_masked',

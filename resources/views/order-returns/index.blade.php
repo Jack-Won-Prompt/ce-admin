@@ -255,7 +255,7 @@
 
       /* 누구의 무슨 건인가 — 지금까지는 이름 하나뿐이라 상세를 열어야 알았다 */
       { header: '주민등록번호', name: 'resident_no',  width: 130 },
-      { header: '전화번호1',    name: 'mobile',       width: 130 },
+      { header: '환자 전화번호', name: 'mobile',       width: 140 },
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
