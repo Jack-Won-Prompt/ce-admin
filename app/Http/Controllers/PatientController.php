@@ -310,6 +310,22 @@ class PatientController extends Controller
     }
 
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
+    /**
+     * 이 거래처가 무엇에서 무엇으로 바뀌었는지 (2026-09-08 확인요청 3ㆍ5쪽).
+     *
+     * 수정자ㆍ수정일자는 이미 아래 줄에 서 있었지만 **무엇이** 바뀌었는지는 없었다.
+     * 전화번호를 고쳐도 화면에는 아무 자취가 없어, 담당자는 저장이 됐는지조차 몰랐다.
+     *
+     * 세는 일은 주문 등록의 「저장 이력」과 같은 것을 쓴다(App\Support\SaveHistory).
+     */
+    public function changeLog(Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'rows'    => \App\Support\SaveHistory::rows([[Patient::class, $patient->id]]),
+        ]);
+    }
+
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
         $rx = $patient->prescriptions()

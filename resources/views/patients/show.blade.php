@@ -84,6 +84,40 @@
   .info-value .form-control { width:100%; height:30px; padding:2px 8px; font-size:13px; }
   /* 적는 길이가 정해져 있는 칸은 그만큼만 잡는다 — 남는 자리는 주소가 쓴다 */
   #e-resident, #e-mobile, #e-phone { max-width:148px; }
+
+  /* ── 변경 이력 (2026-09-08 확인요청 3ㆍ5쪽) ──
+     주문 등록의 「저장 이력」과 같은 모양이다 — 두 화면이 다르게 생기면 같은 것을
+     보고 있다는 것을 알아채기 어렵다. */
+  .pl-tabs { display:flex; gap:4px; margin-bottom:10px; border-bottom:1px solid var(--gray-200); }
+  .pl-tab  { height:30px; padding:0 14px; border:0; background:none; cursor:pointer;
+             font-size:12px; font-weight:500; color:var(--text-secondary);
+             border-bottom:2px solid transparent; }
+  .pl-tab.active   { color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
+  .pl-tab:disabled { color:var(--gray-300); cursor:default; }
+
+  .pl-head { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+             padding:10px 14px; margin-bottom:10px; font-size:12px;
+             background:var(--gray-50); border-radius:8px; }
+  .pl-head b { font-weight:700; }
+  .pl-head-k { color:var(--text-muted); margin-right:6px; }
+
+  .pl-diff     { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; }
+  .pl-row      { display:grid; grid-template-columns:1fr 180px 1fr; align-items:stretch;
+                 border-top:1px solid var(--gray-200); }
+  .pl-row:first-child { border-top:0; }
+  .pl-cap      { background:var(--gray-50); font-size:11px; font-weight:700;
+                 color:var(--text-secondary); text-align:center; }
+  .pl-cap > div { padding:8px 12px; }
+  .pl-k        { padding:10px 12px; text-align:center; font-size:12px; font-weight:600;
+                 background:var(--gray-50); color:var(--gray-700);
+                 border-left:1px solid var(--gray-200); border-right:1px solid var(--gray-200); }
+  .pl-v        { padding:10px 14px; font-size:12px; word-break:break-all;
+                 display:flex; align-items:center; }
+  .pl-v-before { justify-content:flex-end; text-align:right; color:var(--text-muted);
+                 text-decoration:line-through; }
+  .pl-v-after  { font-weight:600; }
+  .pl-v-empty  { display:inline-block; color:var(--gray-300); text-decoration:none; }
+  .pl-none     { padding:24px; text-align:center; font-size:12px; color:var(--text-muted); }
   /* 주 연락처 표시 — 이름 옆에 작게 붙는다 */
   .mc-flag { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:4px;
              background:var(--primary-light); color:var(--primary); font-size:10px; font-weight:700; }
@@ -253,6 +287,12 @@
           <button class="tab-btn" id="tab-btn-rx" onclick="switchTab(this,'tab-rx')">
             <i class="fa-solid fa-file-medical"></i> 주문 이력
             <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
+          </button>
+          {{-- 무엇이 무엇으로 바뀌었는지(2026-09-08 확인요청 3ㆍ5쪽). 수정자ㆍ수정일자는
+               아래 줄에 이미 서 있었지만 **무엇이** 바뀌었는지는 없었다 — 전화번호를
+               고쳐도 화면에는 아무 자취가 없어 저장이 됐는지조차 알 수 없었다. --}}
+          <button class="tab-btn" id="tab-btn-log" onclick="switchTab(this,'tab-log')">
+            <i class="fa-solid fa-clock-rotate-left"></i> 변경 이력
           </button>
           {{-- 한 건을 열면 그 주문의 제품 줄이 이 옆 탭에 펼쳐진다. 목록에 제품명 칸을
                두었더니 여러 줄짜리 주문은 첫 줄만 보였다 — 아예 제 자리를 준다. --}}
@@ -634,6 +674,43 @@
           <div id="itemsGrid"></div>
         </div>
 
+        {{-- 변경 이력 — 목록과 상세가 같은 자리를 나눠 쓴다. 주문 등록의 「저장 이력」과
+             같은 모양이고, 세는 일도 같은 것을 쓴다(App\Support\SaveHistory). --}}
+        <div class="tab-pane" id="tab-log">
+          <div class="pl-tabs">
+            <button type="button" class="pl-tab active" data-view="list"
+                    onclick="plView('list')">목록</button>
+            <button type="button" class="pl-tab" data-view="detail" id="plDetailTab"
+                    onclick="plView('detail')" disabled>상세 보기</button>
+          </div>
+
+          <div id="plList">
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+              <div style="flex:1;min-width:180px;">
+                <label class="ds-field-label">검색어</label>
+                <input type="text" id="pl-q" class="form-control"
+                       placeholder="항목ㆍ값ㆍ설명" oninput="plFilter()">
+              </div>
+              <div style="width:150px;">
+                <label class="ds-field-label">작업자</label>
+                <select id="pl-who" class="form-control form-select" onchange="plFilter()">
+                  <option value="">전체</option>
+                </select>
+              </div>
+              <button type="button" class="ds-btn" onclick="plReset()">초기화</button>
+              <button type="button" class="ds-btn" onclick="loadPatientLog(true)">새로고침</button>
+            </div>
+
+            <div class="ds-grid-hint" id="plNote" style="margin-bottom:6px;"></div>
+            <div id="plGrid" style="min-height:220px;"></div>
+          </div>
+
+          <div id="plDetail" style="display:none;">
+            <div class="pl-head" id="plHead"></div>
+            <div class="pl-diff" id="plDiff"></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -814,6 +891,160 @@
        동안에도 떠 있으면 무엇을 누르라는 말인지 알 수 없다. */
     const hint = document.getElementById('rxTabHint');
     if (hint) hint.style.display = (id === 'tab-info') ? 'none' : '';
+
+    /* 변경 이력은 열 때 한 번만 불러온다 — 화면을 세울 때마다 부르면 이 탭을 한 번도
+       보지 않는 사람에게도 질의가 나간다 */
+    if (id === 'tab-log') loadPatientLog();
+  }
+
+
+  /* ── 변경 이력 (2026-09-08 확인요청 3ㆍ5쪽) ─────────────
+     세는 일은 서버가 한다(App\Support\SaveHistory) — 주문 등록의 「저장 이력」과
+     같은 것을 쓴다. 여기서는 받아 세우고, 거르는 것만 그 자리에서 한다. */
+  const PL_URL = @json(route('patients.changeLog', $patient));
+  let _plLoaded = false, _plRows = [], _plShown = [], _plGrid = null;
+
+  const _plEsc = (v) => String(v ?? '').replace(/[&<>"']/g,
+    c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+  async function loadPatientLog(force = false) {
+    if (_plLoaded && !force) return;
+
+    const note = document.getElementById('plNote');
+    if (note) note.textContent = '불러오는 중…';
+
+    let d;
+    try {
+      const res = await fetch(PL_URL, { headers: { Accept: 'application/json' } });
+      d = await res.json();
+    } catch (e) {
+      if (note) note.textContent = '이력을 불러오지 못했습니다.';
+      return;
+    }
+    if (!d.success) { if (note) note.textContent = d.message || '이력을 불러오지 못했습니다.'; return; }
+
+    _plLoaded = true;
+    _plRows = d.rows || [];
+
+    /* 고르는 칸의 선택지는 받아 둔 줄에서 뽑는다 — 없는 값을 고르게 두지 않는다 */
+    const sel = document.getElementById('pl-who');
+    if (sel) {
+      const keep = sel.value;
+      sel.innerHTML = '<option value="">전체</option>';
+      [...new Set(_plRows.map(r => r.who).filter(Boolean))].sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.value = keep;
+    }
+
+    plFilter();
+  }
+
+  function plFilter() {
+    const q   = (document.getElementById('pl-q')?.value ?? '').trim().toLowerCase();
+    const who = (document.getElementById('pl-who')?.value ?? '').trim();
+
+    _plShown = _plRows.filter(r => {
+      if (who && r.who !== who) return false;
+      if (!q) return true;
+      /* 검색어는 매달린 칸까지 뒤진다 — 「그 번호로 바꾼 저장이 언제였나」를 값으로
+         찾을 수 있어야 한다 */
+      return [r.summary, r.note, r.who,
+              ...(r.fields || []).flatMap(f => [f.field, f.before, f.after])]
+             .join(' ').toLowerCase().includes(q);
+    });
+
+    const note = document.getElementById('plNote');
+    if (note) {
+      note.textContent = _plRows.length === 0
+        ? '아직 이력이 없습니다.'
+        : (_plShown.length === _plRows.length
+            ? `변경 ${_plRows.length}건입니다. 줄을 누르면 무엇이 바뀌었는지 견줍니다.`
+            : `변경 ${_plRows.length}건 가운데 ${_plShown.length}건입니다.`);
+    }
+
+    plDraw();
+  }
+
+  function plReset() {
+    ['pl-q', 'pl-who'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    plFilter();
+  }
+
+  function plDraw() {
+    const box = document.getElementById('plGrid');
+    if (!box || typeof wwGrid === 'undefined') return;
+
+    /* 표는 한 번만 세우고 이후에는 줄만 갈아 끼운다 — 다시 세우면 담당자가 조정해 둔
+       열너비와 정렬이 풀린다 */
+    if (_plGrid) { _plGrid.setData(_plShown); return; }
+
+    _plGrid = new wwGrid({
+      el: box, height: 300, editable: false, rowCheckbox: false, rowNumber: false,
+      footer: { total: true, selected: false, modified: false },
+      emptyText: '아직 이력이 없습니다.',
+      columns: [
+        { header: 'No',        name: 'no',      width: 50,  align: 'center', sortable: true, summary: false },
+        { header: '일시',      name: 'at',      width: 145, sortable: true },
+        { header: '작업자',    name: 'who',     width: 90,  sortable: true },
+        { header: '설명',      name: 'note',    width: 140, sortable: true },
+        { header: '바뀐 항목', name: 'summary', width: 340, sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v || '내역이 없습니다.';
+            if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
+            return s;
+          } },
+        { header: '건수',      name: 'count',   width: 60, align: 'center', sortable: true, summary: false },
+      ],
+      data: _plShown,
+    });
+
+    /* 줄을 누르면 그 저장을 견준다. 한 번 누름이다 — 이 표는 어디로 떠나지 않고 옆
+       탭을 채울 뿐이라 되돌릴 것이 없다. */
+    box.addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-row-index]');
+      if (!cell) return;
+      const row = _plGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+      if (row) plOpen(row);
+    });
+  }
+
+  /* 고른 저장을 저장 전(왼쪽)ㆍ저장 후(오른쪽)로 세운다 */
+  function plOpen(row) {
+    const head = document.getElementById('plHead');
+    const diff = document.getElementById('plDiff');
+    if (!head || !diff) return;
+
+    const 짝 = (k, v) => `<span><span class="pl-head-k">${k}</span><b>${_plEsc(v) || '-'}</b></span>`;
+    head.innerHTML = 짝('일시', row.at) + 짝('작업자', row.who) + 짝('설명', row.note)
+                   + 짝('바뀐 항목', row.count ? row.count + '개' : '없음');
+
+    const 칸들 = row.fields || [];
+    if (!칸들.length) {
+      diff.innerHTML = '<div class="pl-none">내역이 없습니다.</div>';
+    } else {
+      const 값 = (v) => v ? _plEsc(v) : '<span class="pl-v-empty">(빈 값)</span>';
+      diff.innerHTML =
+        '<div class="pl-row pl-cap"><div>저장 전</div><div>항목</div><div>저장 후</div></div>'
+        + 칸들.map(f => `<div class="pl-row">
+             <div class="pl-v pl-v-before">${값(f.before)}</div>
+             <div class="pl-k">${_plEsc(f.field)}</div>
+             <div class="pl-v pl-v-after">${값(f.after)}</div>
+           </div>`).join('');
+    }
+
+    document.getElementById('plDetailTab').disabled = false;
+    plView('detail');
+  }
+
+  function plView(which) {
+    document.querySelectorAll('.pl-tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === which));
+    document.getElementById('plList').style.display   = which === 'list'   ? '' : 'none';
+    document.getElementById('plDetail').style.display = which === 'detail' ? '' : 'none';
   }
 
   /* 고치기로 들어가고 나오는 길. 칸을 갈아 끼우지 않고 표시만 바꾼다 —

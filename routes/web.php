@@ -251,6 +251,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
+        // 변경 이력 — 무엇이 무엇으로 바뀌었는지(2026-09-08 확인요청 3ㆍ5쪽)
+        Route::get('/{patient}/change-log', [PatientController::class, 'changeLog'])->name('changeLog');
         // 주소 이력 — 주문 제품 탭의 배송지 고르개가 읽는다
         Route::get('/{patient}/addresses', [PatientController::class, 'addresses'])->name('addresses');
         // 통화 내용을 그 자리에서 적어 둔다(거래처 관리 › 상담내역 › 상담하기)
