@@ -1090,12 +1090,9 @@ form.addEventListener('submit', async function (e) {
       { tone: 'warning', confirmText: '올리기', cancelText: '취소' },
     );
 
-    if (!갈까) {
-      막는까닭('<b>처방전</b> 없이 올리는 것을 취소했습니다. '
-            + '타일 왼쪽 위에서 서류명을 바꾸거나 처방전을 더 넣어 주십시오.');
-
-      return;
-    }
+    /* 취소는 담당자가 고른 것이다 — 잘못을 저지른 것이 아니라서 아무 말도 남기지
+       않는다. 무엇을 해야 하는지는 방금 물음 창이 이미 적어 두었다. */
+    if (!갈까) return;
   }
 
   까닭지움();
