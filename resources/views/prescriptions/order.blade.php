@@ -3247,7 +3247,9 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
-                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->total_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                {{-- 총계는 손으로 적지 않는다 — 1일 개수 × 처방일수로만 선다
+                     (2026-09-08 확인요청 10쪽). 읽기 전용이어도 값은 그대로 저장된다. --}}
+                <input type="number" class="form-control" id="f-total" value="{{ $prescription->total_count ?? $prescription->total_count ?? '' }}" min="1" style="flex:1;background:var(--gray-50);color:var(--text-secondary);" readonly title="1일 처방 개수 × 총 처방일수로 자동 계산됩니다" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">처방전 발행일</span>
@@ -7299,11 +7301,25 @@ window.HELP_TOUR_STEPS = [
   }
 
 
-  // ── 위임동의 시작일 변경 → 종료일 자동 = 시작일 + 1개월 ──
+  /* ── 위임동의 시작일 → 종료일 자동 = 시작일 + N년 - 1일 ──
+
+     여태 한 달을 더했다. 그런데 위임장 PDF 는 5년을 더하고 하루를 뺀다
+     (ConsentController::stampDelegationFields). 그래서 같은 환자가 서류에는
+     2031-09-06, 화면에는 2026-10-07 로 찍혔다 — 어느 쪽을 믿을지 알 수 없었다
+     (2026-09-08 확인요청 2·5쪽).
+
+     기간은 서류 쪽과 같은 설정에서 가져온다(delegation.period_years). 여기에
+     숫자를 박아 두면 기간이 바뀔 때 또 어긋난다.
+
+     하루를 빼는 까닭도 서류 쪽과 같다: 2026-09-07 부터 5년이면 2031-09-06 까지다.
+     빼지 않으면 5년 하고 하루가 되어 공단이 정한 최장 기간을 넘긴다. */
+  const 위임기간_년 = {{ min(5, max(1, (int) config('delegation.period_years', 5))) }};
+
   function autoAgreeEnd(startVal) {
     if (!startVal) return;
     const d = new Date(startVal);
-    d.setMonth(d.getMonth() + 1);
+    d.setFullYear(d.getFullYear() + 위임기간_년);
+    d.setDate(d.getDate() - 1);
     const yyyy = d.getFullYear();
     const mm   = String(d.getMonth() + 1).padStart(2, '0');
     const dd   = String(d.getDate()).padStart(2, '0');
@@ -7320,9 +7336,13 @@ window.HELP_TOUR_STEPS = [
     }
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-    // 종료일 = 처방전발행일 + 처방기간
+    /* 종료일 = 처방전발행일 + 처방기간 - 1.
+
+       하루를 빼지 않으면 기간이 하루 길어진다. 발행일이 첫날로 세어지기 때문이다 —
+       2026-09-09 에 90일을 받으면 마지막 날은 2026-12-07 이지 12-08 이 아니다
+       (2026-09-08 확인요청 10쪽). 위임 기간을 세는 방식과 같다. */
     const endDate = new Date(dateVal);
-    endDate.setDate(endDate.getDate() + periodVal);
+    endDate.setDate(endDate.getDate() + periodVal - 1);
     document.getElementById('f-rx-end-date').value = fmt(endDate);
 
     // 다음재구매일 = 처방전발행일 + 처방기간 + 1
@@ -7339,10 +7359,16 @@ window.HELP_TOUR_STEPS = [
 
     /* 총계는 1일 개수 × 처방일수다. 두 값을 다 적어 두고도 총계를 손으로 다시 적게
        두면 어긋난 채로 저장되고, 그 숫자가 주문 수량ㆍ금액ㆍ청구까지 따라간다.
-       다만 비어 있을 때만 채운다 — 처방전에 다른 총계가 적혀 있는 건이 있어
-       담당자가 고쳐 둔 값을 덮으면 안 된다. */
+
+       예전에는 비어 있을 때만 채웠다 — 담당자가 고쳐 둔 값을 덮지 않으려던 것이다.
+       그런데 그러면 1일 개수나 처방일수를 고쳐도 총계가 옛 값 그대로 남았다
+       (2026-09-08 확인요청 10쪽). 이제 두 값이 다 있으면 늘 다시 센다.
+       칸도 읽기 전용으로 두어 손으로 어긋나게 적을 길을 없앴다.
+
+       두 값 가운데 하나라도 비면 손대지 않는다 — 지우는 도중에 총계를 함께
+       날리면 이미 적혀 있던 숫자를 잃는다. */
     const totalEl = document.getElementById('f-total');
-    if (totalEl && !totalEl.value && daily && days) {
+    if (totalEl && daily && days) {
       const n = parseInt(daily, 10) * parseInt(days, 10);
       if (Number.isFinite(n) && n > 0) totalEl.value = n;
     }
