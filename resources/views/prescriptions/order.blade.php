@@ -5232,6 +5232,8 @@ function renderItemsTable() {
                value="${item.quantity||1}" min="1"
                oninput="calcItem(${idx})" />
       </td>
+      {{-- 낱개를 박스로. 수량을 고치면 calcItem 이 다시 적는다. --}}
+      <td style="text-align:center;white-space:nowrap;" class="item-box">${boxCellHtml(item)}</td>
       {{-- 카드뷰와 같은 돈 칸이다. 표뷰에만 이 둘이 없어, 같은 주문을 보기만 바꿔도
            얼마짜리 제품인지가 사라졌다. --}}
       <td style="text-align:right;white-space:nowrap;" class="item-price-shown">₩ ${priceShown}</td>
@@ -5262,9 +5264,10 @@ function renderItemsTable() {
       <col style="width:10%;">
       <col style="width:6%;">
       <col style="width:10%;">
+      <col style="width:9%;">
+      <col style="width:9%;">
       <col style="width:10%;">
-      <col style="width:10%;">
-      <col style="width:11%;">
+      <col style="width:7%;">
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
@@ -5276,6 +5279,8 @@ function renderItemsTable() {
       <th>제품 코드</th>
       <th>급여구분</th>
       <th style="text-align:center;">수량</th>
+      {{-- 낱개를 박스로 환산한 값. 창고가 세는 것과 같은 식이다(ceil) --}}
+      <th style="text-align:center;">박스</th>
       <th style="text-align:right;">소비자가</th>
       <th style="text-align:right;">총 금액</th>
       <th style="text-align:right;">기관 부담금</th>
@@ -5287,7 +5292,7 @@ function renderItemsTable() {
          예전에는 표를 그릴 때 한 번만 찍어, 수량을 180 으로 고쳐도 줄은 405,000 인데
          합계는 270,000 그대로였다. 담당자가 합계를 읽어 환자에게 말하면 틀린 금액이다. --}}
     <tfoot><tr>
-      <th colspan="6" style="text-align:right;background:var(--bg);">합계</th>
+      <th colspan="7" style="text-align:right;background:var(--bg);">합계</th>
       <th id="itemsFootTotal" style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootNhis"  style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootCopay" style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
@@ -6844,6 +6849,37 @@ window.HELP_TOUR_STEPS = [
   let itemGrid = null;
 
   /** 한 줄의 금액을 셈한다 — 비율은 청구전략이 정한다(없으면 담긴 급여 구분) */
+  /* ── RB(박스) 환산 ───────────────────────────────────────
+     제품마다 한 박스에 낱개가 몇 개 드는지가 정해져 있다(위드웍스 items.r_box).
+     우리는 낱개로 세어 보내고(qty_unit=EA), 창고는 그것을 박스로 나눠
+     cust_request_qty 에 적는다 — ceil(낱개 ÷ RB) 다.
+
+     그 셈을 여기서도 보여 준다. 담당자가 「이 주문이 몇 박스인가」를 창고에 묻거나
+     손으로 나눠 보던 일이라, 나누다 어긋나면 창고와 다른 수를 말하게 된다.
+     **창고와 같은 식으로 센다** — 남는 낱개도 한 박스로 올린다. */
+  function rboxOf(item) {
+    return Math.max(0, parseInt(String(item?.r_box ?? '').replace(/\D/g, ''), 10) || 0);
+  }
+
+  /** 낱개 수량을 박스로 — RB 를 모르면 null(셀 수 없다) */
+  function boxQty(item) {
+    const rb = rboxOf(item);
+    if (rb <= 0) return null;
+
+    return Math.ceil(Math.max(1, parseInt(item.quantity, 10) || 1) / rb);
+  }
+
+  /** 표에 세울 글 — 「18 BOX」 · 아래 작게 「30개입」 */
+  function boxCellHtml(item) {
+    const rb = rboxOf(item);
+    if (rb <= 0) {
+      return '<span style="color:var(--gray-300);">-</span>';
+    }
+
+    return boxQty(item).toLocaleString('ko-KR') + ' BOX'
+         + '<div style="font-size:10px;color:var(--text-muted);">' + rb + '개입</div>';
+  }
+
   function computeRow(item) {
     const ins  = Number(String(item.insurance_price ?? '').replace(/,/g, '')) || 0;
     const cons = Number(String(item.product_price   ?? '').replace(/,/g, '')) || 0;
@@ -6869,6 +6905,10 @@ window.HELP_TOUR_STEPS = [
         quantity:        Math.max(1, parseInt(it.quantity, 10) || 1),
         product_price:   Number(String(it.product_price   ?? '').replace(/,/g, '')) || '',
         insurance_price: Number(String(it.insurance_price ?? '').replace(/,/g, '')) || '',
+        /* 박스는 낱개에서 셈해 낸 값이라 고칠 것이 아니다 — 보여 주기만 한다.
+           RB 를 모르는 제품은 빈칸으로 둔다(0 이라 적으면 「없다」로 읽힌다). */
+        box:             boxQty(it) ?? '',
+        r_box:           rboxOf(it) || '',
         total:           c.total,
         nhis_amount:     c.nhis_amount,
         patient_copay:   c.patient_copay,
@@ -6905,6 +6945,23 @@ window.HELP_TOUR_STEPS = [
          제 것으로 들고 오는 값이라, 손으로 바꾸면 이름과 어긋난 줄이 창고로 간다. */
       { header: '제품 코드',  name: 'product_code',    width: 120, editable: false },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
+      /* 낱개를 박스로 환산한 값. 창고가 세는 것과 같은 식이다(ceil).
+         고치는 칸이 아니다 — 수량을 고치면 따라 바뀐다. */
+      { header: '박스',       name: 'box',             width: 80,  editable: false, align: 'center',
+        summary: false,
+        renderer: (v, row) => {
+          const el = document.createElement('span');
+          if (v === '' || v === null || v === undefined) {
+            el.textContent = '-';
+            el.style.color = 'var(--gray-300)';
+
+            return el;
+          }
+          el.textContent = Number(v).toLocaleString('ko-KR') + ' BOX';
+          if (row?.r_box) el.title = row.r_box + '개입';
+
+          return el;
+        } },
       /* 소비자가는 제품이 들고 오는 값이다. 사람이 고치면 그 줄만 다른 값이 되어
          어느 것이 맞는지 알 수 없다 — 제품을 바꿔 고른다.
          단가 칸은 걷었다(요청서 16쪽). 소비자가와 총 금액 사이에 끼어 셋이 비슷한
@@ -7056,6 +7113,15 @@ window.HELP_TOUR_STEPS = [
     if (totalEl) totalEl.textContent = '₩ ' + Math.round(insBase * qty).toLocaleString('ko-KR');
     const priceEl = card.querySelector('.item-price-shown');
     if (priceEl) priceEl.textContent = '₩ ' + Math.round(price).toLocaleString('ko-KR');
+
+    /* 박스는 수량이 바뀔 때마다 다시 센다 — 줄을 다시 그리지 않으므로 여기서 적는다 */
+    const boxEl = card.querySelector('.item-box');
+    if (boxEl) {
+      boxEl.innerHTML = boxCellHtml({
+        r_box:    card.querySelector('.item-rbox')?.value || '',
+        quantity: qty,
+      });
+    }
 
     // items 배열 동기화
     items[idx] = {
