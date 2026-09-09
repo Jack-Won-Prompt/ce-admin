@@ -270,7 +270,10 @@
                     border:1px solid var(--gray-200);border-radius:8px;font-size:12px;
                     color:var(--text-primary);text-decoration:none;">
             <i class="fa-solid fa-arrow-right" style="font-size:10px;color:var(--primary);"></i>
-            {{ $mp->patient_name_ocr ?: '이름 없음' }}
+            {{-- 연결된 환자 이름을 먼저 본다. OCR 로 읽은 이름은 OCR 을 걷어낸 뒤로
+                 늘 비어 있어, 그것만 보면 이름이 있는 건도 「이름 없음」으로 나온다.
+                 옛 자료에는 OCR 이름만 있는 것이 있어 그것도 함께 본다. --}}
+            {{ $mp->patient?->name ?: ($mp->patient_name_ocr ?: '이름 없음') }}
             <span style="color:var(--text-muted);">{{ $mp->created_at->format('H:i') }}</span>
           </a>
         @endforeach
@@ -456,7 +459,7 @@
           </div>
           <div class="history-body">
             <span class="history-name">{{ $rx->image_original_name ?? $rx->rx_number }}</span>
-            <span class="history-meta">{{ $rx->rx_number }}<i class="history-dot"></i>{{ $rx->patient_name_ocr ?? '-' }}<i class="history-dot"></i>{{ $rx->created_at->format('H:i') }}</span>
+            <span class="history-meta">{{ $rx->rx_number }}<i class="history-dot"></i>{{ $rx->patient?->name ?: ($rx->patient_name_ocr ?: '-') }}<i class="history-dot"></i>{{ $rx->created_at->format('H:i') }}</span>
           </div>
           <span class="history-badge badge-{{ $rx->status_badge }}">{{ $rx->status_label }}</span>
         </div>
