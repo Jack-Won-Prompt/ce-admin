@@ -1826,7 +1826,11 @@ class PrescriptionController extends Controller
             ->first();
 
         /* tuneKey 가 있는 문서만 밝기ㆍ명암을 맞출 수 있다. 우리가 받아 둔 그림이라야
-           고쳐 적을 자리가 있다 — 시스템이 만든 서류나 서명 그림에는 그 자리가 없다. */
+           고쳐 적을 자리가 있다 — 시스템이 만든 서류나 서명 그림에는 그 자리가 없다.
+
+           「PDF 가 아니면」이 아니라 「그림이면」으로 가린다. 형식이 적혀 있지 않은
+           옛 파일이 PDF 가 아니라는 이유로 그림 대접을 받으면, 맞출 수 없는 문서에
+           단추가 서고 GD 가 열지 못해 아무 일도 일어나지 않는다. */
         $attachmentsJson = $prescription->attachments->map(function ($a) {
             return [
                 'id'        => $a->id,
@@ -1836,7 +1840,7 @@ class PrescriptionController extends Controller
                 'name'      => $a->file_original_name,
                 'isPdf'     => $a->is_pdf,
                 'isRx'      => false,
-                'tuneKey'   => $a->is_pdf ? null : 'att:' . $a->id,
+                'tuneKey'   => $a->is_image ? 'att:' . $a->id : null,
                 'bright'    => (int) ($a->img_brightness ?? 0),
                 'contrast'  => (int) ($a->img_contrast ?? 0),
             ];
@@ -1851,7 +1855,7 @@ class PrescriptionController extends Controller
             'name'      => $prescription->rx_number,
             'isPdf'     => str_contains($prescription->image_mime_type ?? '', 'pdf'),
             'isRx'      => true,
-            'tuneKey'   => str_contains($prescription->image_mime_type ?? '', 'pdf') ? null : 'rx',
+            'tuneKey'   => str_starts_with($prescription->image_mime_type ?? '', 'image/') ? 'rx' : null,
             'bright'    => (int) ($prescription->img_brightness ?? 0),
             'contrast'  => (int) ($prescription->img_contrast ?? 0),
         ]] : [];
