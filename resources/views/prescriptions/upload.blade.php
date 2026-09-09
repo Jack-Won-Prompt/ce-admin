@@ -312,13 +312,8 @@
           <div class="up-sec">
             <div class="up-sec-head">
               <span class="up-sec-title">파일 업로드</span>
-              {{-- 시안은 유형 안내를 이 자리에 둔다 (128:784) --}}
-              <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:400;line-height:1.6;color:var(--gray-600);">
-                <i class="fa-regular fa-circle-question" style="font-size:12px;"></i>
-                넣는 자리 위에서 <b style="font-weight:500;color:var(--primary-700);">서류 유형</b>을 선택하고 파일을 업로드합니다 — 파일마다 다르면 타일에서 변경합니다.
-              </span>
-
-              {{-- 사진 보정 칸은 걷었다(2026-09-09 지시). --}}
+              {{-- 유형 안내와 사진 보정 칸은 걷었다(2026-09-09 지시).
+                   고르는 칸이 바로 아래에 있어 안내 없이도 읽힌다. --}}
             </div>
 
             <div style="display:flex;flex-direction:column;gap:8px;">
