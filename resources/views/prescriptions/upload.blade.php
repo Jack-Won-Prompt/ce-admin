@@ -224,6 +224,14 @@
   .mobile-upload-card { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--primary-light); border-radius:12px; margin-bottom:12px; }
 
   /* ── Progress overlay ── */
+  /* 막는 까닭 — 단추 바로 위. 사라지지 않는다. */
+  .up-why { display:flex; align-items:flex-start; gap:6px;
+            background:var(--alert-50); border:1px solid var(--alert-100);
+            color:var(--alert-500); border-radius:8px; padding:10px 14px;
+            font-size:12.5px; line-height:1.6; margin-bottom:12px; }
+  .up-why[hidden] { display:none; }
+  .up-why b { font-weight:700; }
+
   .progress-overlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,.55); align-items:center; justify-content:center; }
   .progress-overlay.active { display:flex; }
   .progress-box { background:var(--gray-0); border-radius:12px; padding:24px; text-align:center; min-width:300px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
@@ -420,6 +428,14 @@
               </div>
             </div>
           </div>
+
+          {{-- 무엇이 막고 있는지 **단추 바로 위에** 적는다.
+
+               토스트는 오른쪽 아래에서 4초만 머문다. 눈은 파일과 등록 단추 쪽에 있어
+               스쳐 지나가고, 담당자는 「눌렀는데 아무 일도 없다」로 읽는다
+               (2026-09-09 · 신분증만 골라 등록을 눌렀을 때). 여기 남겨 두면
+               고칠 때까지 보인다. --}}
+          <div class="up-why" id="upWhy" hidden></div>
 
           {{-- ── 초기화 / 등록 (Figma 128:822) ── --}}
           <div class="up-foot">
@@ -977,6 +993,8 @@ function removeFile(idx) {
 
 function renderFileList() {
   submitBtn.disabled = selectedFiles.length === 0;
+  /* 담긴 것이 바뀌면 앞서 적어 둔 까닭은 낡았다 — 지운다 */
+  까닭지움();
 
   ['rx'].forEach(group => {
     const grid = document.getElementById('grid-' + group);
@@ -1025,24 +1043,53 @@ function resetFiles() {
   setStep(1, 'active'); setStep(2); setStep(3);
 }
 
+/* 막는 까닭을 적는다 — 고칠 때까지 남는다. 토스트도 함께 띄운다:
+   눈이 이미 아래에 있으면 토스트가 먼저 걸리고, 위에 있으면 이 줄이 걸린다. */
+function 막는까닭(msg) {
+  const el = document.getElementById('upWhy');
+  if (!el) return;
+  el.innerHTML = '<span>⚠️</span><span>' + msg + '</span>';
+  el.hidden = false;
+}
+
+function 까닭지움() {
+  const el = document.getElementById('upWhy');
+  if (el) el.hidden = true;
+}
+
 // ── 폼 제출 ─────────────────────────────────────────────
 form.addEventListener('submit', async function (e) {
   e.preventDefault();          // 보내는 일은 아래에서 우리가 한다
 
-  if (selectedFiles.length === 0) return;
+  if (selectedFiles.length === 0) {
+    /* 여태 아무 말 없이 되돌아갔다 — 파일이 없다는 것을 화면이 말해 주지 않았다 */
+    막는까닭('올릴 파일을 먼저 넣어 주십시오.');
+
+    return;
+  }
 
   // 누구의 처방인지 모른 채로는 올리지 않는다 — 나중에 잇는 일이 더 비싸다
   if (!document.getElementById('h_patient_id').value) {
+    막는까닭('<b>이름</b>을 먼저 고르십시오.');
     showToast('환자를 먼저 선택하십시오.', 'warning');
     document.getElementById('patientSearchInput')?.focus();
+
     return;
   }
 
   const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
   if (!hasPrescription) {
+    막는까닭('<b>처방전</b>이 한 장은 있어야 합니다. '
+          + '지금 담긴 것은 처방전이 아닙니다 — 타일 왼쪽 위에서 서류명을 바꾸거나 '
+          + '처방전을 더 넣어 주십시오.<br>'
+          + '신분증만 따로 보낼 때는 <b>주문 등록 화면의 첨부 추가</b>나 '
+          + '<b>신분증 링크</b>를 쓰십시오.');
     showToast('처방전 파일을 최소 1개 이상 포함해야 합니다.', 'warning');
+
     return;
   }
+
+  까닭지움();
 
   document.getElementById('h_assigned_user_id').value = document.getElementById('sideAssignedUser').value;
   document.getElementById('h_admin_note').value        = document.getElementById('sideAdminNote').value;
@@ -1079,7 +1126,6 @@ form.addEventListener('submit', async function (e) {
   /* 보내는 동안 단추를 잠근다. 예전에는 전역 잣대가 대신 잠갔는데, 그것이
      값이 모자라 되돌아가는 길에서도 잠가 버려 단추가 굳었다 — 이제 여기서
      보낼 때만 잠그고 끝나면 반드시 되돌린다(finally). */
-  const submitBtn = document.getElementById('submitBtn');
   BtnState.loading(submitBtn, '올리는 중...');
 
   const rxCount = selectedFiles.filter(f => f.docType === 'prescription').length;
