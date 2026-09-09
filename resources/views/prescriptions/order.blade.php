@@ -5311,7 +5311,7 @@ function renderItemsTable() {
       <td>
         <input type="number" class="form-control item-qty"
                style="font-size:12px;text-align:center;padding:2px 4px;height:32px;width:100%;"
-               value="${item.quantity||1}" min="1"
+               value="${item.quantity ?? ''}" min="1" placeholder="수량"
                oninput="calcItem(${idx})" />
       </td>
       {{-- RB 단위는 제품이 들고 오는 값이라 수량과 함께 바뀌지 않는다 --}}
@@ -6652,7 +6652,12 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 멀티 제품 아이템 상태 ────────────────────────────────
-  const DEFAULT_QTY = 1;
+  /* 새 줄의 수량은 비워 둔다(2026-09-08 확인요청 10쪽).
+
+     예전에는 1 을 넣어 두었고, 제품을 고르면 처방 총계로 덮었다. 그러면 담당자가
+     세어 보지 않은 숫자가 이미 적혀 있게 된다 — 그대로 저장되면 창고로 그 수가 나간다.
+     비워 두면 적어야 보인다. */
+  const DEFAULT_QTY = '';
   let items = @json($_itemsData);
   if (!items.length) {
       items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
@@ -7082,7 +7087,9 @@ window.HELP_TOUR_STEPS = [
     const ins  = Number(String(item.insurance_price ?? '').replace(/,/g, '')) || 0;
     const cons = Number(String(item.product_price   ?? '').replace(/,/g, '')) || 0;
     const base = ins > 0 ? ins : cons;
-    const qty  = Math.max(1, parseInt(item.quantity, 10) || 1);
+    /* 비어 있으면 0 이다 — 1 로 여기면 적지 않은 줄에 값이 서서, 담당자가 적기도
+       전에 금액이 나온다 */
+    const qty  = Math.max(0, parseInt(item.quantity, 10) || 0);
     const rates = bsRates();
     const total = Math.round(base * qty);
     const nhis  = rates
@@ -7101,7 +7108,8 @@ window.HELP_TOUR_STEPS = [
         product_name:    it.product_name || '',
         product_code:    it.product_code || '',
         device_code:     it.device_code || '',
-        quantity:        Math.max(1, parseInt(it.quantity, 10) || 1),
+        /* 비운 채로 두면 비운 대로 보여 준다 — 1 을 채워 넣으면 적은 것처럼 보인다 */
+        quantity:        (String(it.quantity ?? '').trim() === '') ? '' : Math.max(0, parseInt(it.quantity, 10) || 0),
         product_price:   Number(String(it.product_price   ?? '').replace(/,/g, '')) || '',
         insurance_price: Number(String(it.insurance_price ?? '').replace(/,/g, '')) || '',
         /* 박스는 낱개에서 셈해 낸 값이라 고칠 것이 아니다 — 보여 주기만 한다.
@@ -7604,6 +7612,21 @@ window.HELP_TOUR_STEPS = [
        그때그때 items 로 되돌려 놓는다. 여기서는 카드 화면 시절의 DOM(.item-card)을
        읽고 있었는데 그 카드는 표로 바뀌면서 사라졌다. 그래서 무엇을 적어 넣든 늘 빈
        목록이 나갔고, 저장해도 제품이 한 줄도 남지 않았다. */
+    /* 제품은 골랐는데 수량이 비어 있으면 저장하지 않는다(2026-09-08 확인요청 10쪽).
+
+       수량을 비워 두게 바꾸면서 생긴 자리다. 예전처럼 1 로 채워 보내면 담당자가
+       적지 않은 수가 창고로 나간다 — 한 개만 보내 놓고 왜 안 왔느냐는 전화를 받는다. */
+    const 수량빈줄 = items.filter(i => (i.product_name || '').trim()
+                                    && String(i.quantity ?? '').trim() === '');
+    if (수량빈줄.length) {
+      showToast(`수량을 적어 주십시오 — ${수량빈줄[0].product_name}`, 'warning');
+      /* 어느 줄인지 보여 주려면 그 탭이 서 있어야 한다 */
+      const 탭 = document.querySelector('[onclick="switchTab(this,'tab-product')"]');
+      if (탭) switchTab(탭, 'tab-product');
+
+      return false;
+    }
+
     const _num = v => (v === '' || v === null || v === undefined) ? null : Math.round(Number(v));
     const itemsPayload = items
       .filter(i => (i.product_name || '').trim())
@@ -12490,12 +12513,12 @@ window.HELP_TOUR_STEPS = [
       it.insurance_price = price;
     }
 
-    /* 수량은 처방에 적힌 총계를 그대로 따른다 — 제품을 고르는 순간 몇 개를 보낼지는
-       이미 정해져 있다(1일 처방개수 × 총 처방기간). 담당자가 옆 탭의 숫자를 보고
-       옮겨 적던 일이라, 옮기다 어긋나면 수량이 처방과 달라진다.
-       총계가 아직 비어 있으면 손대지 않는다. */
-    const totalQty = parseInt(document.getElementById('f-total')?.value, 10);
-    if (totalQty > 0) it.quantity = totalQty;
+    /* 수량은 채우지 않는다(2026-09-08 확인요청 10쪽).
+
+       예전에는 처방 총계(1일 처방개수 × 총 처방일수)를 그대로 넣었다. 옆 탭의 숫자를
+       옮겨 적는 수고를 덜자는 것이었는데, 담당자가 세어 보지 않은 숫자가 이미 적혀
+       있게 되어 그대로 저장되는 일이 생겼다. 총계는 바로 위 「처방 참고」 줄에 서
+       있으니 보고 적으면 된다. */
     Object.assign(it, computeRow(it));
 
     /* 보고 있는 쪽을 다시 그린다. 카드뷰만 다시 그리고 있어, 표뷰에서 제품을 고르면
