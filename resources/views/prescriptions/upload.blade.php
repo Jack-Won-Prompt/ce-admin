@@ -322,7 +322,7 @@
                             font-size:12px;color:var(--gray-700);cursor:pointer;white-space:nowrap;">
                 <input type="checkbox" name="scan_clean" value="1" style="cursor:pointer;">
                 <i class="fa-solid fa-wand-magic-sparkles" style="font-size:11px;color:var(--primary-700);"></i>
-                사진 보정 <span style="color:var(--gray-500);">(그늘 걷기)</span>
+                사진 보정
               </label>
             </div>
 
