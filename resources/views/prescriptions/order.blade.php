@@ -6984,7 +6984,7 @@ window.HELP_TOUR_STEPS = [
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
       /* 낱개를 박스로 환산한 값. 창고가 세는 것과 같은 식이다(ceil).
          고치는 칸이 아니다 — 수량을 고치면 따라 바뀐다. */
-      { header: '박스',       name: 'box',             width: 80,  editable: false, align: 'center',
+      { header: '박스',       name: 'box',             width: 92,  editable: false, align: 'center',
         summary: false,
         renderer: (v, row) => {
           const el = document.createElement('span');
