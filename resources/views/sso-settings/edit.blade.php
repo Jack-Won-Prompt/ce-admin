@@ -152,7 +152,11 @@
         </div>
       </div>
       <div class="ss-hint" style="margin-top:8px;">
-        이 서버가 만들어 내는 주소입니다. 운영 도메인이 정해지면 그 도메인으로 다시 등록해야 합니다.
+        <b>지금 열고 있는 주소를 기준으로 만든 값입니다.</b>
+        이 서버는 <code>ceadmin.co.kr</code> 과 <code>www.ceadmin.co.kr</code> 을 둘 다 받지만,
+        OIDC 의 Redirect URI 는 <b>문자열이 똑같아야</b> 합니다 — <code>www</code> 하나만 달라도
+        Entra 가 거부합니다. 개발서버는 <code>https://ceadmin.co.kr</code> 로 등록하기로
+        했습니다(2026-09-09). 운영 도메인은 따로 정해진 뒤에 다시 등록합니다.
       </div>
     </div>
 
