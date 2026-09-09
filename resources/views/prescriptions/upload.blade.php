@@ -261,7 +261,11 @@
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         @foreach($mobilePending as $mp)
+          {{-- 화면 탭으로 연다. data-ce-tab 이 없으면 iframe 이 그 자리에서 옮겨 가
+               탭 이름은 「처방자료 업로드」로 남는다 — 무엇을 보고 있는지 알 수 없다.
+               오른쪽 「최근 업로드 이력」이 쓰는 이름과 같은 꼴로 맞춘다. --}}
           <a href="{{ route('prescriptions.show', $mp) }}"
+             data-ce-tab="주문 - {{ $mp->rx_number }}" data-ce-icon="file-edit-02"
              style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--gray-0);
                     border:1px solid var(--gray-200);border-radius:8px;font-size:12px;
                     color:var(--text-primary);text-decoration:none;">
