@@ -134,6 +134,16 @@
           </select>
         </div>
         <div class="form-group">
+          {{-- 비워 두면 개인정보동의서의 값을 그대로 따른다. 여기에 적으면 그것이
+               답이 되고, 누가 언제 고쳤는지 함께 남는다(2026-09-08 확인요청 4쪽). --}}
+          <label class="form-label">마케팅 동의</label>
+          <select class="form-control" id="add-marketing-consent">
+            <option value="">동의서를 따름</option>
+            <option value="동의함">동의함</option>
+            <option value="동의안함">동의안함</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">연락 선호 방식</label>
           <select class="form-control" id="add-contact-channel">
             <option value="">선택</option>
@@ -698,6 +708,7 @@
       email:           val('add-email'),
       fax:             val('add-fax'),
       main_contact:    val('add-main-contact'),
+      marketing_consent: val('add-marketing-consent'),
       remitter_name:   val('add-remitter'),
       deduction:       val('add-deduction'),
       cash_receipt_no: val('add-cash-receipt'),

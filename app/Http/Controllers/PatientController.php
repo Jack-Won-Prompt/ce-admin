@@ -734,6 +734,9 @@ class PatientController extends Controller
             /* 주 연락처 — 환자와 보호자 가운데 어느 번호로 먼저 거는가.
                비어 있으면 정하지 않은 것이다(2026-09-08 확인요청 4쪽). */
             'main_contact'       => 'nullable|in:mobile,guardian',
+            /* 마케팅 동의 — 상담사가 통화로 받아 덧쓴다. 동의서 원본은 건드리지 않는다
+               (2026-09-08 확인요청 4쪽). 빈 값이면 동의서의 값을 그대로 따른다. */
+            'marketing_consent'  => 'nullable|in:동의함,동의안함',
             'address'            => 'nullable|string|max:300',
             'postcode'           => 'nullable|string|max:10',
             'address_detail'     => 'nullable|string|max:200',
@@ -832,6 +835,12 @@ class PatientController extends Controller
             unset($data['care_type']);
         }
 
+        /* 등록하며 마케팅 동의를 적었으면 그때가 곧 들은 때다 */
+        if (($data['marketing_consent'] ?? '') !== '') {
+            $data['marketing_consent_by'] = Auth::id();
+            $data['marketing_consent_at'] = now();
+        }
+
         $patient = Patient::create($data);
 
         activity()->causedBy(auth()->user())->performedOn($patient)
@@ -855,6 +864,15 @@ class PatientController extends Controller
         }
 
         $before = ['name' => $patient->name, 'mobile' => $patient->mobile];
+
+        /* 마케팅 동의를 고쳤으면 누가 언제 고쳤는지 함께 남긴다 (2026-09-08 확인요청 4쪽).
+           뒤에 따져 물을 수 있는 값이라 「누구에게 들었나」가 없으면 쓸 수 없다.
+           값이 그대로면 손대지 않는다 — 다른 칸을 고칠 때마다 시각이 오늘로 밀린다. */
+        if (array_key_exists('marketing_consent', $data)
+            && (string) $data['marketing_consent'] !== (string) $patient->marketing_consent) {
+            $data['marketing_consent_by'] = Auth::id();
+            $data['marketing_consent_at'] = now();
+        }
 
         $patient->update($data);
 

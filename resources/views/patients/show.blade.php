@@ -462,6 +462,39 @@
               </select>
             </span>
           </div>
+          {{-- 마케팅 동의 (2026-09-08 확인요청 4쪽).
+
+               동의는 개인정보동의서에서 받는다. 그런데 「동의 안 함」으로 낸 사람이
+               나중에 통화에서 동의하는 일이 있다. 동의서를 고칠 수는 없다 — 본인이
+               서명해 낸 것이고 무엇에 동의했는지가 그대로 남아 있어야 한다.
+               여기서 덧쓰고, 어디서 온 답인지를 함께 적는다. --}}
+          @php $_mk = $patient->marketing_state; @endphp
+          <div class="info-row">
+            <span class="info-label">마케팅 동의</span>
+            <span class="info-value">
+              <span class="view-only">
+                {{ $_mk['value'] ?: '-' }}
+                @if($_mk['source'])
+                  <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">
+                    {{ $_mk['source'] }}@if($_mk['at']) · {{ $_mk['at'] }}@endif @if($_mk['by'])· {{ $_mk['by'] }}@endif
+                  </span>
+                @endif
+                @if($_mk['source'] === '거래처' && $_mk['origin'] && $_mk['origin'] !== $_mk['value'])
+                  {{-- 동의서에 적힌 것과 다르면 그것도 함께 밝힌다 — 뒤에 따져 물을 수
+                       있는 값이라 「원래 무엇이었나」가 보여야 한다 --}}
+                  <span style="font-size:11px;color:var(--text-muted);">
+                    (개인정보동의: {{ $_mk['origin'] }})
+                  </span>
+                @endif
+              </span>
+              <select class="form-control edit-only" id="e-marketing-consent"
+                      data-orig="{{ $patient->marketing_consent }}">
+                <option value="">동의서를 따름@if($_mk['origin']) ({{ $_mk['origin'] }})@endif</option>
+                <option value="동의함"   @selected($patient->marketing_consent === '동의함')>동의함</option>
+                <option value="동의안함" @selected($patient->marketing_consent === '동의안함')>동의안함</option>
+              </select>
+            </span>
+          </div>
           <div class="info-row">
             <span class="info-label">연락 선호 방식</span>
             <span class="info-value">
@@ -1314,6 +1347,7 @@
       care_type:           document.getElementById('e-care-type').value           || null,
       birth_date:          document.getElementById('e-birth').value               || null,
       main_contact:        document.getElementById('e-main-contact').value || null,
+      marketing_consent:   document.getElementById('e-marketing-consent').value || null,
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,

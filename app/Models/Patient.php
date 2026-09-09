@@ -25,6 +25,8 @@ class Patient extends Model
         'guardian_name', 'guardian_relation', 'guardian_birth_date', 'guardian_phone',
         'care_type', 'name', 'resident_no', 'birth_date', 'gender',
         'phone', 'mobile', 'main_contact', 'address', 'postcode', 'address_detail',
+        // 마케팅 동의 — 상담사가 통화로 받아 덧쓰는 자리(2026-09-09)
+        'marketing_consent', 'marketing_consent_by', 'marketing_consent_at',
         'health_insurance_no', 'is_nhis_eligible', 'nhis_coverage_rate', 'note',
         // 주민번호 암호화(P0-1)
         'resident_no_enc', 'resident_no_hash', 'resident_no_masked',
@@ -270,6 +272,7 @@ class Patient extends Model
         'rrn_retention_basis_at' => 'date',
         'rrn_retention_until'    => 'date',
         'rrn_destroyed_at'       => 'datetime',
+        'marketing_consent_at'   => 'datetime',
         'va_due_at'              => 'datetime',
     ];
 
@@ -370,6 +373,43 @@ class Patient extends Model
     public function addresses(): HasMany
     {
         return $this->hasMany(PatientAddress::class)->orderByDesc('id');
+    }
+
+    /**
+     * 마케팅 동의 — 지금 답은 무엇이고 어디서 온 것인가 (2026-09-08 확인요청 4쪽).
+     *
+     * 동의는 개인정보동의서에서 받는다. 그런데 「동의 안 함」으로 낸 사람이 나중에
+     * 통화에서 동의하는 일이 있다. 동의서를 고칠 수는 없다 — 본인이 서명해 낸 것이고,
+     * 무엇에 동의했는지가 그대로 남아 있어야 한다.
+     *
+     * 그래서 거래처의 값이 **덧쓰는 자리**다. 비어 있으면 동의서가 답이고, 적혀 있으면
+     * 이쪽이 답이다. 어디서 온 답인지도 함께 돌려준다 — 화면이 그것을 밝혀야 담당자가
+     * 「동의서에는 안 함인데 왜 동의로 보이나」를 묻지 않는다.
+     *
+     * @return array{value: ?string, source: ?string, at: ?string, by: ?string, origin: ?string}
+     */
+    public function getMarketingStateAttribute(): array
+    {
+        $동의서 = \App\Models\PrivacyConsent::findFor($this->id, $this->name, $this->mobile ?: $this->phone);
+        $원본   = $동의서?->agree_marketing;
+
+        if (($this->marketing_consent ?? '') !== '') {
+            return [
+                'value'  => $this->marketing_consent,
+                'source' => '거래처',
+                'at'     => $this->marketing_consent_at?->format('Y-m-d H:i'),
+                'by'     => $this->marketingConsentUpdater?->name,
+                'origin' => $원본,
+            ];
+        }
+
+        return ['value' => $원본, 'source' => $원본 ? '개인정보동의' : null,
+                'at' => null, 'by' => null, 'origin' => $원본];
+    }
+
+    public function marketingConsentUpdater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'marketing_consent_by');
     }
 
     public function creator(): BelongsTo

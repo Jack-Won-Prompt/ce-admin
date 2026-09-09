@@ -133,6 +133,7 @@ final class ChangeLog
         'nhis_coverage_rate'    => '건보 부담률',
         'note'                  => '메모',
         'remitter_name'         => '송금자명',
+        'marketing_consent'     => '마케팅 동의',
         'fax'                   => 'Fax',
 
         // 상담ㆍ환자
