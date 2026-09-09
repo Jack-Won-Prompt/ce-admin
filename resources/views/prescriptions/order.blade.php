@@ -7620,8 +7620,11 @@ window.HELP_TOUR_STEPS = [
                                     && String(i.quantity ?? '').trim() === '');
     if (수량빈줄.length) {
       showToast(`수량을 적어 주십시오 — ${수량빈줄[0].product_name}`, 'warning');
-      /* 어느 줄인지 보여 주려면 그 탭이 서 있어야 한다 */
-      const 탭 = document.querySelector('[onclick="switchTab(this,'tab-product')"]');
+      /* 어느 줄인지 보여 주려면 그 탭이 서 있어야 한다.
+         고르는 잣대에 따옴표를 겹치지 않는다 — 겹쳤다가 문자열이 거기서 끊겨
+         화면 전체의 자바스크립트가 죽었다(2026-09-09). */
+      const 탭 = [...document.querySelectorAll('.tab-btn')]
+                   .find(b => (b.getAttribute('onclick') || '').includes('tab-product'));
       if (탭) switchTab(탭, 'tab-product');
 
       return false;
