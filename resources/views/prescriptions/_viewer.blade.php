@@ -37,6 +37,27 @@
   .vw-busy.on { display:flex; }
   .vw-busy i { font-size:15px; animation:vwspin 1s linear infinite; }
   @keyframes vwspin { to { transform:rotate(360deg); } }
+  /* ── 밝기ㆍ명암 (2026-09-09 지시) ──
+     휴대폰으로 찍은 종이는 한쪽이 어둡고 바탕이 잿빛으로 나온다. 그대로 공단에 내면
+     글씨가 묻힌다. 파일은 건드리지 않고 여기서 맞춰 두면 팩스에도 그대로 간다. */
+  .vw-tune { position:absolute; right:8px; bottom:8px; z-index:6;
+             display:none; flex-direction:column; gap:6px; width:186px;
+             padding:10px 12px; border-radius:10px;
+             background:rgba(255,255,255,.96); border:1px solid var(--gray-200);
+             box-shadow:0 4px 16px rgba(0,0,0,.12); }
+  .vw-tune.on { display:flex; }
+  .vw-tune-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--gray-700); }
+  .vw-tune-row > span:first-child { width:28px; flex:none; }
+  .vw-tune-row input[type=range] { flex:1; min-width:0; accent-color:var(--primary); }
+  .vw-tune-row > b { width:30px; flex:none; text-align:right; font-weight:600;
+                     font-variant-numeric:tabular-nums; color:var(--gray-1000); }
+  .vw-tune-acts { display:flex; gap:6px; margin-top:2px; }
+  .vw-tune-acts button { flex:1; padding:5px 0; font-size:11px; border-radius:6px;
+                         border:1px solid var(--gray-200); background:var(--gray-0);
+                         color:var(--gray-1000); cursor:pointer; }
+  .vw-tune-acts button.pri { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .vw-tune-acts button[disabled] { opacity:.45; cursor:default; }
+
   .img-placeholder { text-align: center; color: var(--gray-700); }
   .img-placeholder i { font-size: 56px; margin-bottom: 10px; display: block; opacity: .4; }
   .img-placeholder p { font-size: 13px; opacity: .6; }
@@ -59,6 +80,29 @@
             <button type="button" class="vw-tool" onclick="zoomOut()" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
             <span id="zoomLabel" class="vw-zoom">100%</span>
             <button type="button" class="vw-tool" onclick="zoomIn()" title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+          </div>
+          {{-- 맞출 수 있는 문서(우리가 받아 둔 그림)일 때만 선다 --}}
+          <div class="vw-tool-group" id="tuneToggleWrap" style="display:none;">
+            <button type="button" class="vw-tool" onclick="toggleTune()" title="밝기ㆍ명암"><i class="fa-solid fa-circle-half-stroke"></i></button>
+          </div>
+        </div>
+
+        {{-- 밝기ㆍ명암 — 끄는 즉시 화면에 보이고, 저장을 눌러야 문서에 남는다.
+             파일은 건드리지 않는다. 팩스ㆍ서류를 만들 때 서버가 같은 값을 입힌다. --}}
+        <div class="vw-tune" id="tunePanel">
+          <div class="vw-tune-row">
+            <span>밝기</span>
+            <input type="range" id="tuneBright" min="-100" max="100" step="5" value="0" oninput="onTuneInput()">
+            <b id="tuneBrightVal">0</b>
+          </div>
+          <div class="vw-tune-row">
+            <span>명암</span>
+            <input type="range" id="tuneContrast" min="-100" max="100" step="5" value="0" oninput="onTuneInput()">
+            <b id="tuneContrastVal">0</b>
+          </div>
+          <div class="vw-tune-acts">
+            <button type="button" onclick="tuneReset()">원본</button>
+            <button type="button" class="pri" id="tuneSaveBtn" onclick="tuneSave()">저장</button>
           </div>
         </div>
         <div class="img-viewer-canvas" id="imgCanvas">
@@ -215,6 +259,10 @@ function showDoc(doc) {
 
   if (badge) { badge.textContent = doc.name || ''; badge.style.display = doc.name ? '' : 'none'; }
 
+  /* 밝기ㆍ명암은 문서마다 따로다 — 고른 문서의 값을 싣는다.
+     PDF 와 시스템이 만든 서류에는 맞출 자리가 없다(tuneKey 가 없다). */
+  setViewerTune(doc.tuneKey || null, doc.bright || 0, doc.contrast || 0);
+
   if (doc.isPdf) {
     openPdfInViewer(doc.url);
   } else {
@@ -253,6 +301,102 @@ function showDoc(doc) {
     const img = document.getElementById('prescCanvas');
     if (img) img.style.transform = `translate(${_tx}px,${_ty}px) scale(${zoomLevel/100}) rotate(${rotation}deg)`;
   }
+
+
+  /* ── 밝기ㆍ명암 (2026-09-09 지시) ─────────────────────
+
+     예전 사진 보정은 **올릴 때 파일을 그 자리에서 고쳤다.** 스캐너로 곧게 뜬 것까지
+     나빠졌고, 되돌릴 길이 없어 걷어냈다.
+
+     이번에는 파일에 손대지 않는다. 화면은 CSS filter 로 그 자리에서 보여 주고,
+     저장하면 숫자 둘만 문서에 남는다. 공단 팩스와 서류를 만들 때 서버가 같은 값을
+     GD 로 입힌다 — 그래서 언제든 0 으로 되돌리면 원본이다.
+
+     둘 다 -100 ~ 100, 0 이 원본이다. */
+  let _tuneKey = null;                 // 지금 보고 있는 문서. null 이면 맞출 수 없다
+  let _tuneSaved = { b: 0, c: 0 };     // 문서에 적혀 있는 값 — 저장 단추를 가리는 잣대
+
+  /* 볼 것이 바뀔 때마다 부른다 (showDoc). 첫 화면은 서버가 심어 둔 값으로 선다. */
+  window.setViewerTune = function (key, b, c) {
+    _tuneKey = key || null;
+    _tuneSaved = { b: +b || 0, c: +c || 0 };
+
+    /* 저장할 자리를 아는 화면에서만 세운다 — 거래처 관리처럼 보기만 하는 화면에서는
+       맞춰 봐야 남길 곳이 없어 헛일이 된다. */
+    const 맞출수있나 = !!_tuneKey && typeof TUNE_SAVE_URL !== 'undefined';
+    const wrap = document.getElementById('tuneToggleWrap');
+    if (wrap) wrap.style.display = 맞출수있나 ? '' : 'none';
+    if (!맞출수있나) {
+      document.getElementById('tunePanel')?.classList.remove('on');
+    }
+
+    _tuneSet(_tuneSaved.b, _tuneSaved.c);
+  };
+
+  function _tuneSet(b, c) {
+    const eb = document.getElementById('tuneBright');
+    const ec = document.getElementById('tuneContrast');
+    if (eb) eb.value = b;
+    if (ec) ec.value = c;
+    onTuneInput();
+  }
+
+  /* 슬라이더를 끌 때마다 부른다 — 그림에 그대로 얹는다 */
+  window.onTuneInput = function () {
+    const b = +(document.getElementById('tuneBright')?.value ?? 0);
+    const c = +(document.getElementById('tuneContrast')?.value ?? 0);
+
+    const lb = document.getElementById('tuneBrightVal');
+    const lc = document.getElementById('tuneContrastVal');
+    if (lb) lb.textContent = b;
+    if (lc) lc.textContent = c;
+
+    const img = document.getElementById('prescCanvas');
+    if (img) {
+      img.style.filter = (b || c)
+        ? `brightness(${1 + b / 100}) contrast(${1 + c / 100})`
+        : '';
+    }
+
+    /* 적혀 있는 값과 같으면 저장할 것이 없다 */
+    const btn = document.getElementById('tuneSaveBtn');
+    if (btn) btn.disabled = (b === _tuneSaved.b && c === _tuneSaved.c);
+  };
+
+  window.toggleTune = function () {
+    document.getElementById('tunePanel')?.classList.toggle('on');
+  };
+
+  /* 원본으로 — 아직 저장한 것은 아니다. 저장을 눌러야 문서에서도 지워진다. */
+  window.tuneReset = function () { _tuneSet(0, 0); };
+
+  window.tuneSave = async function () {
+    if (!_tuneKey || typeof TUNE_SAVE_URL === 'undefined') return;
+
+    const b = +(document.getElementById('tuneBright')?.value ?? 0);
+    const c = +(document.getElementById('tuneContrast')?.value ?? 0);
+    const btn = document.getElementById('tuneSaveBtn');
+
+    if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+    try {
+      const res = await apiRequest(TUNE_SAVE_URL, 'POST',
+        { key: _tuneKey, brightness: b, contrast: c });
+      if (!res?.success) throw new Error(res?.message || '저장하지 못했습니다.');
+
+      _tuneSaved = { b, c };
+      /* 목록이 들고 있는 값도 함께 맞춘다 — 다른 문서를 봤다 돌아와도 그대로다 */
+      if (typeof ALL_DOCS !== 'undefined') {
+        const d = ALL_DOCS.find(x => x && x.tuneKey === _tuneKey);
+        if (d) { d.bright = b; d.contrast = c; }
+      }
+      showToast('밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 이대로 나갑니다.', 'success');
+    } catch (e) {
+      showToast(e.message || '저장하지 못했습니다.', 'danger');
+    } finally {
+      if (btn) { btn.textContent = '저장'; }
+      onTuneInput();
+    }
+  };
 
   // 드래그 이벤트 초기화 (DOMContentLoaded 이후 실행)
   document.addEventListener('DOMContentLoaded', function () {

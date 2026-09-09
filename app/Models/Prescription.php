@@ -41,6 +41,8 @@ class Prescription extends Model
         'rx_number', 'patient_id', 'assigned_user_id', 'created_by',
         'image_path', 'image_original_name', 'image_mime_type',
         'image_size', 'upload_source',
+        // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
+        'img_brightness', 'img_contrast',
         // OCR fields
         'registration_no', 'serial_no', 'is_reissue',
         'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',

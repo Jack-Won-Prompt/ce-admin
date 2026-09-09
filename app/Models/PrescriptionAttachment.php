@@ -12,6 +12,8 @@ class PrescriptionAttachment extends Model
         'prescription_id', 'file_path', 'file_original_name', 'file_mime_type',
         'file_size', 'doc_type', 'doc_label', 'ocr_raw_text', 'ocr_confidence',
         'display_order', 'uploaded_by',
+        // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
+        'img_brightness', 'img_contrast',
     ];
 
     /**

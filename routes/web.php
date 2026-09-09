@@ -165,6 +165,8 @@ Route::middleware(['auth'])->group(function () {
         // 첨부 파일 추가 / 삭제
         Route::post('/{prescription}/attachments',                [PrescriptionController::class, 'storeAttachment'])->name('attachments.store');
         Route::delete('/{prescription}/attachments/{attachment}', [PrescriptionController::class, 'destroyAttachment'])->name('attachments.destroy');
+        // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
+        Route::post('/{prescription}/image-tune',                 [PrescriptionController::class, 'saveImageTune'])->name('imageTune');
     });
     // 처방전 이미지·첨부 서류 — 로그인·권한을 확인하고 내보낸다.
     // 예전에는 /storage/prescriptions/... 로 주소만 알면 로그인 없이 열렸다.

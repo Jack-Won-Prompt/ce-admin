@@ -1114,6 +1114,45 @@ class PrescriptionController extends Controller
         ]);
     }
 
+    /**
+     * 문서 한 장의 밝기ㆍ명암을 적어 둔다 (2026-09-09 지시).
+     *
+     * 파일은 건드리지 않는다. 화면은 CSS 로, 공단 팩스와 서류는 GD 로 이 숫자를
+     * 다시 입힌다 — 그래서 언제든 0 으로 되돌리면 원본이다.
+     *
+     * 예전 사진 보정은 올릴 때 파일을 그 자리에서 고쳤다. 스캐너로 곧게 뜬 것까지
+     * 나빠졌고 되돌릴 길이 없어 걷어냈다. 같은 실수를 되풀이하지 않는다.
+     */
+    public function saveImageTune(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'key'        => 'required|string|max:32',
+            'brightness' => 'required|integer|min:-100|max:100',
+            'contrast'   => 'required|integer|min:-100|max:100',
+        ]);
+
+        $값 = ['img_brightness' => $data['brightness'], 'img_contrast' => $data['contrast']];
+
+        if ($data['key'] === 'rx') {
+            $대상 = $prescription;
+            $무엇 = '처방전';
+        } elseif (str_starts_with($data['key'], 'att:')) {
+            /* 남의 처방전에 붙은 문서를 고치지 못하게 한다 — 열쇠는 화면에서 온다 */
+            $대상 = PrescriptionAttachment::where('prescription_id', $prescription->id)
+                ->findOrFail((int) substr($data['key'], 4));
+            $무엇 = $대상->doc_type_label;
+        } else {
+            return response()->json(['success' => false, 'message' => '맞출 수 없는 문서입니다.'], 422);
+        }
+
+        $대상->forceFill($값)->save();
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->log("{$무엇}의 밝기 {$data['brightness']}ㆍ명암 {$data['contrast']} 로 맞췄습니다");
+
+        return response()->json(['success' => true]);
+    }
+
     public function destroyAttachment(Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
     {
         if ($attachment->prescription_id !== $prescription->id) {
@@ -1786,6 +1825,8 @@ class PrescriptionController extends Controller
             ->latest()
             ->first();
 
+        /* tuneKey 가 있는 문서만 밝기ㆍ명암을 맞출 수 있다. 우리가 받아 둔 그림이라야
+           고쳐 적을 자리가 있다 — 시스템이 만든 서류나 서명 그림에는 그 자리가 없다. */
         $attachmentsJson = $prescription->attachments->map(function ($a) {
             return [
                 'id'        => $a->id,
@@ -1795,6 +1836,9 @@ class PrescriptionController extends Controller
                 'name'      => $a->file_original_name,
                 'isPdf'     => $a->is_pdf,
                 'isRx'      => false,
+                'tuneKey'   => $a->is_pdf ? null : 'att:' . $a->id,
+                'bright'    => (int) ($a->img_brightness ?? 0),
+                'contrast'  => (int) ($a->img_contrast ?? 0),
             ];
         })->values()->toArray();
 
@@ -1807,6 +1851,9 @@ class PrescriptionController extends Controller
             'name'      => $prescription->rx_number,
             'isPdf'     => str_contains($prescription->image_mime_type ?? '', 'pdf'),
             'isRx'      => true,
+            'tuneKey'   => str_contains($prescription->image_mime_type ?? '', 'pdf') ? null : 'rx',
+            'bright'    => (int) ($prescription->img_brightness ?? 0),
+            'contrast'  => (int) ($prescription->img_contrast ?? 0),
         ]] : [];
         /* 위임 서명과 보호자 신분증도 문서로 함께 세운다.
            첨부 파일과 같은 자리에 두면 썸네일ㆍ확대ㆍ크게 보기가 그대로 동작한다.
@@ -3552,7 +3599,11 @@ class PrescriptionController extends Controller
         if (in_array('prescription', $docs) && $prescription->image_path) {
             $absPath = Storage::disk('public')->path($prescription->image_path);
             if (file_exists($absPath)) {
-                $rxImageDataUri = $this->rxImageToPortraitDataUri($absPath);
+                $rxImageDataUri = $this->rxImageToPortraitDataUri(
+                    $absPath,
+                    (int) ($prescription->img_brightness ?? 0),
+                    (int) ($prescription->img_contrast ?? 0),
+                );
             }
         }
 
@@ -3687,7 +3738,11 @@ class PrescriptionController extends Controller
         if (in_array('prescription', $documents) && $prescription->image_path) {
             $absPath = Storage::disk('public')->path($prescription->image_path);
             if (file_exists($absPath)) {
-                $rxImageDataUri = $this->rxImageToPortraitDataUri($absPath);
+                $rxImageDataUri = $this->rxImageToPortraitDataUri(
+                    $absPath,
+                    (int) ($prescription->img_brightness ?? 0),
+                    (int) ($prescription->img_contrast ?? 0),
+                );
             }
         }
 
@@ -3705,7 +3760,11 @@ class PrescriptionController extends Controller
                 if (!file_exists($absPath)) continue;
 
                 if ($att->is_image) {
-                    $dataUri = $this->rxImageToPortraitDataUri($absPath);
+                    $dataUri = $this->rxImageToPortraitDataUri(
+                        $absPath,
+                        (int) ($att->img_brightness ?? 0),
+                        (int) ($att->img_contrast ?? 0),
+                    );
                     $attachmentDataUris[] = [
                         'label'   => $att->doc_type_label,
                         'dataUri' => $dataUri,
@@ -3781,7 +3840,16 @@ class PrescriptionController extends Controller
         return [$relativePath, $url];
     }
 
-    private function rxImageToPortraitDataUri(string $absPath): string
+    /**
+     * 팩스ㆍ서류에 넣을 그림 한 장.
+     *
+     * 가로로 찍힌 것은 세로로 돌리고, 화면에서 맞춰 둔 밝기ㆍ명암을 여기서 입힌다.
+     * 파일은 건드리지 않는다 — 원본은 그대로 두고 나가는 그림에만 입힌다(2026-09-09).
+     *
+     * 화면은 CSS filter 로, 여기서는 GD 로 같은 값을 쓴다. 두 셈법이 조금 다르므로
+     * 눈에 같아 보이도록 맞춰 옮긴다(아래 imageTune).
+     */
+    private function rxImageToPortraitDataUri(string $absPath, int $bright = 0, int $contrast = 0): string
     {
         $raw = file_get_contents($absPath);
         $src = @imagecreatefromstring($raw);
@@ -3798,16 +3866,42 @@ class PrescriptionController extends Controller
             // 가로형 → 시계 방향 90° 회전하여 세로형으로
             $rotated = imagerotate($src, -90, 0);
             imagedestroy($src);
-            ob_start();
-            imagejpeg($rotated, null, 92);
-            imagedestroy($rotated);
-            $jpeg = ob_get_clean();
-            return 'data:image/jpeg;base64,' . base64_encode($jpeg);
+            $src = $rotated;
+        } elseif ($bright === 0 && $contrast === 0) {
+            /* 돌릴 것도 입힐 것도 없으면 원본 바이트를 그대로 보낸다 —
+               GD 로 한 번 굽는 것만으로도 글자가 무뎌진다. */
+            imagedestroy($src);
+            $mime = mime_content_type($absPath) ?: 'image/jpeg';
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
         }
 
+        self::imageTune($src, $bright, $contrast);
+
+        ob_start();
+        imagejpeg($src, null, 92);
         imagedestroy($src);
-        $mime = mime_content_type($absPath) ?: 'image/jpeg';
-        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        $jpeg = ob_get_clean();
+
+        return 'data:image/jpeg;base64,' . base64_encode($jpeg);
+    }
+
+    /**
+     * 화면에서 맞춘 값을 GD 로 옮긴다. 둘 다 -100 ~ 100 이고 0 이 원본이다.
+     *
+     * 밝기 — CSS 는 곱셈(brightness(1.2)), GD 는 덧셈(-255~255)이다. 100 을 255 로 편다.
+     * 명암 — GD 의 IMG_FILTER_CONTRAST 는 **부호가 거꾸로**다. 음수가 대비를 키운다.
+     */
+    private static function imageTune(\GdImage $im, int $bright, int $contrast): void
+    {
+        $bright   = max(-100, min(100, $bright));
+        $contrast = max(-100, min(100, $contrast));
+
+        if ($bright !== 0) {
+            imagefilter($im, IMG_FILTER_BRIGHTNESS, (int) round($bright * 2.55));
+        }
+        if ($contrast !== 0) {
+            imagefilter($im, IMG_FILTER_CONTRAST, -$contrast);
+        }
     }
 
     private function makeFaxDompdf(): \Dompdf\Dompdf

@@ -4429,6 +4429,9 @@ $_itemsData = $_itemSource->map(fn($i) => [
 <script>
 // ── 통합 문서 뷰어 ─────────────────────────────────────
 const ALL_DOCS = @json($allDocsJson);
+/* 밝기ㆍ명암을 적어 두는 자리. 뷰어는 여러 화면이 함께 쓰므로 주소를 여기서 심는다 —
+   이 값이 없으면 뷰어는 저장 단추를 부르지 않는다(거래처 관리에서는 보기만 한다). */
+const TUNE_SAVE_URL = @json(route('prescriptions.imageTune', $prescription));
 let currentDocIdx = 0;
 
 /* PDF 를 그림으로 그리는 일꾼(pdf.js) 과, 시스템이 만든 서류를 다시 만드는 주소들.
@@ -4561,6 +4564,8 @@ function openBigViewer() {
     frame.style.display = 'none'; frame.removeAttribute('src');
     img.src = rendered ? PDF_VIEW.blobUrl : url;
     img.style.display = '';
+    /* 맞춰 둔 밝기ㆍ명암은 큰 창에서도 그대로다 — 글씨가 읽히는지 보는 자리가 여기다 */
+    img.style.filter = document.getElementById('prescCanvas')?.style.filter || '';
   }
 
   /* 처음 열 때는 본문 왼쪽 절반. 옮겼던 적이 있으면 그 자리를 그대로 쓴다.
@@ -4865,6 +4870,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const first = ALL_DOCS[0];
   if (first && first.isPdf) showDoc(first);
+  /* 첫 그림은 서버가 그대로 심어 두므로 showDoc 을 지나지 않는다 — 적혀 있는
+     밝기ㆍ명암을 여기서 입힌다. 그러지 않으면 새로고침할 때마다 원본으로 보였다. */
+  else if (first) setViewerTune(first.tuneKey || null, first.bright || 0, first.contrast || 0);
 });
 
 function _closeAttachPopover() {
