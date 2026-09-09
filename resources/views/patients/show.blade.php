@@ -683,14 +683,39 @@
                         data-orig="{{ $patient->note }}" placeholder="특이사항 등">{{ $patient->note }}</textarea>
             </span>
           </div>
-          {{-- 라벨은 두지 않는다. 뒤따르는 글이 「등록 · 수정 · 수정일자 …」로 스스로
-               무엇인지 말하고 있어, 「남긴 사람」은 같은 말을 한 번 더 하는 셈이었다. --}}
+          {{-- 신환 Master 등록일은 담당자가 적는 업무 값이다. 아래 자취 줄에 이어
+               붙여 두었더니 「수정일자 다음에 오는 또 다른 날짜」로 읽혔다 — 성격이
+               다른 값이라 제 칸으로 세운다(2026-09-09 지시). --}}
+          <div class="info-row">
+            <span class="info-label">신환 Master 등록일</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->new_patient_date ?: '-' }}</span>
+              <input type="date" class="form-control edit-only" id="e-new-patient-date"
+                     value="{{ $patient->new_patient_date }}" data-orig="{{ $patient->new_patient_date }}" />
+            </span>
+          </div>
+
+          {{-- 마지막으로 손댄 사람 하나만 적는다(2026-09-09 지시).
+
+               고친 적이 없으면 등록한 사람이 곧 마지막이다 — 그때 「수정 -」을 함께
+               적으면 빈 자리를 읽게 한다. 고친 적이 있으면 등록한 사람은 이 줄에서
+               할 말이 없다: 누가 만들었는지까지 알아야 하면 「변경 이력」 탭이 처음
+               줄부터 다 보여 준다.
+
+               라벨은 두지 않는다 — 뒤따르는 글이 스스로 무엇인지 말한다. --}}
+          @php
+            $_고쳤나 = $patient->updater
+                        && $patient->updated_at
+                        && $patient->created_at
+                        && $patient->updated_at->gt($patient->created_at);
+          @endphp
           <div class="info-row wide">
             <span class="info-value" style="font-size:12px;color:var(--text-muted);">
-              등록 {{ $patient->creator?->name ?: '-' }}
-              · 수정 {{ $patient->updater?->name ?: '-' }}
-              · 수정일자 {{ $patient->updated_at?->format('Y-m-d H:i') }}
-              · 신환 Master 등록일 {{ $patient->new_patient_date ?: '-' }}
+              @if($_고쳤나)
+                수정 {{ $patient->updater->name }} · {{ $patient->updated_at->format('Y-m-d H:i') }}
+              @else
+                등록 {{ $patient->creator?->name ?: '-' }} · {{ $patient->created_at?->format('Y-m-d H:i') ?: '-' }}
+              @endif
             </span>
           </div>
 
@@ -1182,6 +1207,7 @@
       birth_date:          document.getElementById('e-birth').value               || null,
       main_contact:        document.getElementById('e-main-contact').value || null,
       marketing_consent:   document.getElementById('e-marketing-consent').value || null,
+      new_patient_date:    document.getElementById('e-new-patient-date').value || null,
       mobile:              document.getElementById('e-mobile').value.trim()       || null,
       phone:               document.getElementById('e-phone').value.trim()        || null,
       address:             document.getElementById('e-address').value.trim()      || null,

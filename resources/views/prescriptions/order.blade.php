@@ -3043,12 +3043,22 @@ $calcDeposit  = $calcCopay;
                    「오늘 고쳤는데 수정자도 날짜도 그대로」로 보였다.
 
                    거래처를 누가 고쳤는지는 거래처 관리에서 본다 — 그쪽이 그 값의 정본이다. --}}
+              {{-- 마지막으로 손댄 사람 하나만 적는다(2026-09-09 지시). 고친 적이 없으면
+                   등록한 사람이 곧 마지막이다 — 그때 「수정 —」을 함께 적으면 빈 자리를
+                   읽게 한다. 누가 만들었는지까지 알아야 하면 「저장 이력」 탭이 처음
+                   줄부터 다 보여 준다. --}}
+              @php
+                $_rx고쳤나 = $prescription->updater
+                              && $prescription->updated_at
+                              && $prescription->created_at
+                              && $prescription->updated_at->gt($prescription->created_at);
+              @endphp
               <div class="rx-field-row rx-w3 rx-row-start">
-                <span class="rx-field-label">등록자 · 수정자</span>
+                <span class="rx-field-label">{{ $_rx고쳤나 ? '수정자' : '등록자' }}</span>
                 <input type="text" class="form-control" id="f-patient-audit" readonly
-                       value="{{ trim(($prescription->creator?->name ?? '—')
-                                . ' · ' . ($prescription->updater?->name ?? '—')
-                                . ' · ' . ($prescription->updated_at?->format('Y-m-d H:i') ?? '—')) }}"
+                       value="{{ $_rx고쳤나
+                                  ? $prescription->updater->name . ' · ' . $prescription->updated_at->format('Y-m-d H:i')
+                                  : (($prescription->creator?->name ?? '—') . ' · ' . ($prescription->created_at?->format('Y-m-d H:i') ?? '—')) }}"
                        style="flex:1;" />
               </div>
               {{-- 1차 요청서 14·16쪽 «신환 master 등록일 … 환자 정보로 이동», 15쪽 순서의 맨 끝.
