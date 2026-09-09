@@ -5232,6 +5232,9 @@ function renderItemsTable() {
                value="${item.quantity||1}" min="1"
                oninput="calcItem(${idx})" />
       </td>
+      {{-- RB 단위는 제품이 들고 오는 값이라 수량과 함께 바뀌지 않는다 --}}
+      <td style="text-align:center;white-space:nowrap;color:var(--text-secondary);"
+          class="item-rb">${rbCellHtml(item)}</td>
       {{-- 낱개를 박스로. 수량을 고치면 calcItem 이 다시 적는다. --}}
       <td style="text-align:center;white-space:nowrap;" class="item-box">${boxCellHtml(item)}</td>
       {{-- 카드뷰와 같은 돈 칸이다. 표뷰에만 이 둘이 없어, 같은 주문을 보기만 바꿔도
@@ -5264,10 +5267,11 @@ function renderItemsTable() {
       <col style="width:10%;">
       <col style="width:6%;">
       <col style="width:10%;">
+      <col style="width:8%;">
+      <col style="width:8%;">
       <col style="width:9%;">
-      <col style="width:9%;">
-      <col style="width:10%;">
-      <col style="width:7%;">
+      <col style="width:6%;">
+      <col style="width:6%;">
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
@@ -5279,6 +5283,8 @@ function renderItemsTable() {
       <th>제품 코드</th>
       <th>급여구분</th>
       <th style="text-align:center;">수량</th>
+      {{-- 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가(위드웍스 items.r_box) --}}
+      <th style="text-align:center;">RB 단위</th>
       {{-- 낱개를 박스로 환산한 값. 창고가 세는 것과 같은 식이다(ceil) --}}
       <th style="text-align:center;">박스</th>
       <th style="text-align:right;">소비자가</th>
@@ -5292,7 +5298,7 @@ function renderItemsTable() {
          예전에는 표를 그릴 때 한 번만 찍어, 수량을 180 으로 고쳐도 줄은 405,000 인데
          합계는 270,000 그대로였다. 담당자가 합계를 읽어 환자에게 말하면 틀린 금액이다. --}}
     <tfoot><tr>
-      <th colspan="7" style="text-align:right;background:var(--bg);">합계</th>
+      <th colspan="8" style="text-align:right;background:var(--bg);">합계</th>
       <th id="itemsFootTotal" style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootNhis"  style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootCopay" style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
@@ -6906,15 +6912,20 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
-  /** 표에 세울 글 — 「18 BOX」 · 아래 작게 「30개입」 */
+  const 없음칸 = '<span style="color:var(--gray-300);">-</span>';
+
+  /** 표에 세울 글 — 「18 BOX」 */
   function boxCellHtml(item) {
     const rb = rboxOf(item);
-    if (rb <= 0) {
-      return '<span style="color:var(--gray-300);">-</span>';
-    }
 
-    return boxQty(item).toLocaleString('ko-KR') + ' BOX'
-         + '<div style="font-size:10px;color:var(--text-muted);">' + rb + '개입</div>';
+    return rb > 0 ? boxQty(item).toLocaleString('ko-KR') + ' BOX' : 없음칸;
+  }
+
+  /** RB 단위 — 한 박스에 낱개가 몇 개 드는가. 나누는 수 자체를 보여 준다. */
+  function rbCellHtml(item) {
+    const rb = rboxOf(item);
+
+    return rb > 0 ? rb.toLocaleString('ko-KR') + ' EA' : 없음칸;
   }
 
   function computeRow(item) {
@@ -6982,6 +6993,18 @@ window.HELP_TOUR_STEPS = [
          제 것으로 들고 오는 값이라, 손으로 바꾸면 이름과 어긋난 줄이 창고로 간다. */
       { header: '제품 코드',  name: 'product_code',    width: 120, editable: false },
       { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
+      /* 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가. 제품이 들고 오는 값이라
+         고치는 칸이 아니다. */
+      { header: 'RB 단위',    name: 'r_box',           width: 88,  editable: false, align: 'center',
+        summary: false,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          if (!v) { el.textContent = '-'; el.style.color = 'var(--gray-300)'; return el; }
+          el.textContent = Number(v).toLocaleString('ko-KR') + ' EA';
+          el.style.color = 'var(--text-secondary)';
+
+          return el;
+        } },
       /* 낱개를 박스로 환산한 값. 창고가 세는 것과 같은 식이다(ceil).
          고치는 칸이 아니다 — 수량을 고치면 따라 바뀐다. */
       { header: '박스',       name: 'box',             width: 92,  editable: false, align: 'center',
@@ -6995,7 +7018,7 @@ window.HELP_TOUR_STEPS = [
             return el;
           }
           el.textContent = Number(v).toLocaleString('ko-KR') + ' BOX';
-          if (row?.r_box) el.title = row.r_box + '개입';
+          if (row?.r_box) el.title = '한 박스에 ' + row.r_box + '개';
 
           return el;
         } },
@@ -7151,14 +7174,14 @@ window.HELP_TOUR_STEPS = [
     const priceEl = card.querySelector('.item-price-shown');
     if (priceEl) priceEl.textContent = '₩ ' + Math.round(price).toLocaleString('ko-KR');
 
-    /* 박스는 수량이 바뀔 때마다 다시 센다 — 줄을 다시 그리지 않으므로 여기서 적는다 */
+    /* 박스는 수량이 바뀔 때마다 다시 센다 — 줄을 다시 그리지 않으므로 여기서 적는다.
+       RB 단위는 제품이 들고 오는 값이라 수량으로는 바뀌지 않지만, 같은 자리에서
+       함께 적어 둔다 — 두 칸이 다른 때의 값을 보이는 일이 없게. */
+    const 낱 = { r_box: card.querySelector('.item-rbox')?.value || '', quantity: qty };
     const boxEl = card.querySelector('.item-box');
-    if (boxEl) {
-      boxEl.innerHTML = boxCellHtml({
-        r_box:    card.querySelector('.item-rbox')?.value || '',
-        quantity: qty,
-      });
-    }
+    if (boxEl) boxEl.innerHTML = boxCellHtml(낱);
+    const rbEl = card.querySelector('.item-rb');
+    if (rbEl) rbEl.innerHTML = rbCellHtml(낱);
 
     // items 배열 동기화
     items[idx] = {
