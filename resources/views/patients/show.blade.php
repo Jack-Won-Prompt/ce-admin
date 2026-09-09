@@ -625,7 +625,9 @@
             <span class="info-label">건보위임동의 시작일</span>
             <span class="info-value">
               <span class="view-only">{{ $patient->nhis_agree_start ?: '-' }}</span>
+              {{-- 시작일을 적으면 종료일이 ＋5년 −1일로 선다 — 위임장이 세는 잣대와 같다 --}}
               <input type="date" class="form-control edit-only" id="e-agree-start"
+                     onchange="psAutoAgreeEnd(this.value)"
                      value="{{ $patient->nhis_agree_start }}" data-orig="{{ $patient->nhis_agree_start }}" />
             </span>
           </div>
@@ -934,6 +936,20 @@
   /* ── 변경 이력 (2026-09-08 확인요청 3ㆍ5쪽) ─────────────
      세는 일은 서버가 한다(App\Support\SaveHistory) — 주문 등록의 「저장 이력」과
      같은 것을 쓴다. 여기서는 받아 세우고, 거르는 것만 그 자리에서 한다. */
+
+  /* 건보위임동의 종료일 = 시작일 ＋N년 −1일. 요양비 지급청구 위임장이 세는 잣대와
+     같다 — 두 곳이 다르게 세면 같은 환자가 서류와 화면에서 다른 날짜로 찍힌다. */
+  const 위임기간_년 = {{ min(5, max(1, (int) config('delegation.period_years', 5))) }};
+
+  window.psAutoAgreeEnd = function (startVal) {
+    if (!startVal) return;
+    const d = new Date(startVal);
+    d.setFullYear(d.getFullYear() + 위임기간_년);
+    d.setDate(d.getDate() - 1);
+    const 끝 = document.getElementById('e-agree-end');
+    if (!끝) return;
+    끝.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
 
   const PL_URL = @json(route('patients.changeLog', $patient));
   let _plLoaded = false, _plRows = [], _plShown = [], _plGrid = null;

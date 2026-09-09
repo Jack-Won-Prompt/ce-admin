@@ -8084,10 +8084,17 @@ window.HELP_TOUR_STEPS = [
 
      칸마다 readonly 를 박지 않고 한자리에서 건다 — 칸이 스물이 넘어 하나씩 적으면
      새 칸을 늘릴 때마다 빠뜨린다. 유형과 조회ㆍ상담 단추는 뺀다. */
-  /* 유형은 병원ㆍ처방 정보로 옮겼으니 여기 없다. 공단 위임동의 두 날짜는 이 구획에
-     서 있지만 처방에 붙는 값이라 잠그지 않는다 — 사람의 성질이 아니라 이 건의
-     동의가 언제부터 언제까지인가다. */
-  const RX_PATIENT_UNLOCKED = ['f-nhis-agree-start', 'f-nhis-agree-end'];
+  /* 유형은 병원ㆍ처방 정보로 옮겼으니 여기 없다.
+
+     공단 위임동의 두 날짜도 이제 잠근다(2026-09-08 확인요청 9쪽). 「환자 정보는
+     거래처관리에서만 update 하고 연결만」이라는 잣대에 이 둘만 예외였다. 그 예외를
+     둔 까닭은 「이 건의 동의 기간」으로 여겼기 때문인데, 실제로 담기는 곳은 거래처다
+     (patients.nhis_agree_*) — 여기서 고치면 그 사람의 모든 건이 함께 바뀐다.
+     한 값을 두 화면이 각각 고치면 나중 저장이 앞선 것을 덮는다.
+
+     고치는 자리는 「거래처 수정」 창 하나다. 거기서는 시작일을 적으면 종료일이
+     ＋5년 −1일로 저절로 선다. */
+  const RX_PATIENT_UNLOCKED = [];
 
   function rxLockPatientFields() {
     const box = document.getElementById('rx-patient-fields');

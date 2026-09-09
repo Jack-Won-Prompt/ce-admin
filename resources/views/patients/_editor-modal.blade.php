@@ -319,7 +319,11 @@
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">건보위임동의 시작일</label>
-          <input type="date" class="form-control" id="add-agree-start" />
+          {{-- 시작일을 적으면 종료일이 ＋5년 −1일로 선다. 요양비 지급청구 위임장이
+               세는 잣대와 같다(ConsentController) — 두 곳이 다르게 세면 같은 환자가
+               서류와 화면에서 다른 날짜로 찍힌다(2026-09-09). --}}
+          <input type="date" class="form-control" id="add-agree-start"
+                 onchange="peAutoAgreeEnd(this.value)" />
         </div>
         <div class="form-group">
           <label class="form-label">건보위임동의 종료일</label>
@@ -483,6 +487,24 @@
   /* 지금 고치고 있는 거래처의 주소를 연다. _peId 는 감싸 둔 함수 안에 있어 인라인
      onclick 이 보지 못한다 — 그래서 여기서 한 겹 싼다(오늘 두 번째로 걸린 자리다). */
   window.peOpenAddrManager = function () { window.openAddrManager?.(_peId); };
+
+  /* 건보위임동의 종료일 = 시작일 ＋N년 −1일.
+
+     기간은 서류 쪽과 같은 설정에서 온다(delegation.period_years) — 숫자를 박아 두면
+     기간이 바뀔 때 또 어긋난다. 하루를 빼는 까닭도 서류 쪽과 같다: 2026-09-07 부터
+     5년이면 2031-09-06 까지다. 빼지 않으면 5년 하고 하루가 되어 공단이 정한 최장
+     기간을 넘긴다. */
+  const 위임기간_년 = {{ min(5, max(1, (int) config('delegation.period_years', 5))) }};
+
+  window.peAutoAgreeEnd = function (startVal) {
+    if (!startVal) return;
+    const d = new Date(startVal);
+    d.setFullYear(d.getFullYear() + 위임기간_년);
+    d.setDate(d.getDate() - 1);
+    const 끝 = document.getElementById('add-agree-end');
+    if (!끝) return;
+    끝.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
   window.closeAddModal = function () { document.getElementById('addModal').classList.remove('show'); };
 
   /**
