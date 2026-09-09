@@ -16,6 +16,7 @@
         "linkhub/popbill": "^1.14",
         "pusher/pusher-php-server": "^7.2",
         "setasign/fpdi": "^2.6",
+        "socialiteproviders/manager": "^4.9.2",
         "socialiteproviders/microsoft": "^4.10",
         "spatie/laravel-activitylog": "^4.12",
         "symfony/filesystem": "^7.4",
@@ -91,6 +92,9 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.2.23"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
