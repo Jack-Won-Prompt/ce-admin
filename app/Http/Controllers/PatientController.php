@@ -309,6 +309,109 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * 주소를 한 벌 더 등록한다 (2026-09-08 확인요청 6쪽).
+     *
+     * 여태 주소는 거래처 칸이 바뀔 때 저절로 쌓이기만 했다. 그래서 「집과 직장을
+     * 번갈아 쓰는 사람」의 두 주소를 미리 넣어 둘 길이 없었고, 잘못 적힌 한 줄을
+     * 고칠 길도 없었다.
+     */
+    public function storeAddress(Request $request, Patient $patient): \Illuminate\Http\JsonResponse
+    {
+        $data = $this->주소검증($request);
+
+        /* 같은 주소를 두 줄로 쌓지 않는다 — 고르는 자리에서 어느 것이 어느 것인지
+           알 수 없어진다 */
+        $같은것 = $patient->addresses
+            ->first(fn ($a) => $a->sameAs($data['postcode'], $data['address'], $data['address_detail']));
+
+        if ($같은것) {
+            return response()->json(['success' => false, 'message' => '이미 등록된 주소입니다.'], 422);
+        }
+
+        $row = $patient->addresses()->create($data + ['created_by' => Auth::id()]);
+
+        activity()->causedBy(Auth::user())->performedOn($patient)
+            ->log("주소를 등록했습니다 — {$row->full}");
+
+        return response()->json(['success' => true, 'id' => $row->id]);
+    }
+
+    public function updateAddress(Request $request, Patient $patient, \App\Models\PatientAddress $address): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($address->patient_id === $patient->id, 403);
+
+        $전 = $address->full;
+        $address->update($this->주소검증($request));
+
+        /* 지금 쓰는 주소를 고쳤으면 거래처 칸도 따라간다 — 두 자리가 어긋나면
+           서류에 옛 주소가 찍힌다 */
+        if ($patient->addresses()->first()?->id === $address->id) {
+            $patient->forceFill([
+                'postcode'       => $address->postcode,
+                'address'        => $address->address,
+                'address_detail' => $address->address_detail,
+            ])->save();
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($patient)
+            ->log("주소를 고쳤습니다 — {$전} → {$address->fresh()->full}");
+
+        return response()->json(['success' => true]);
+    }
+
+    public function destroyAddress(Patient $patient, \App\Models\PatientAddress $address): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($address->patient_id === $patient->id, 403);
+
+        /* 마지막 한 줄은 지우지 않는다 — 지우면 이 사람의 주소가 아예 없어진다 */
+        if ($patient->addresses()->count() <= 1) {
+            return response()->json(['success' => false, 'message' => '주소가 하나뿐이라 지울 수 없습니다.'], 422);
+        }
+
+        $무엇 = $address->full;
+        $address->delete();
+
+        activity()->causedBy(Auth::user())->performedOn($patient)
+            ->log("주소를 지웠습니다 — {$무엇}");
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * 고른 주소를 이 거래처의 현재 주소로 세운다.
+     *
+     * 거래처 칸의 주소가 정본이다 — 서류ㆍ팩스ㆍ배송지가 모두 그것을 읽는다.
+     * 목록에서는 가장 최근에 담긴 줄이 맨 위에 서므로, 세우면 그 줄이 위로 온다.
+     */
+    public function makePrimaryAddress(Patient $patient, \App\Models\PatientAddress $address): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($address->patient_id === $patient->id, 403);
+
+        $patient->forceFill([
+            'postcode'       => $address->postcode,
+            'address'        => $address->address,
+            'address_detail' => $address->address_detail,
+        ])->save();
+
+        /* 거래처를 저장하면 모델이 주소 한 줄을 새로 쌓는다(같은 것이면 쌓지 않는다).
+           고른 줄을 위로 올리는 것이 뜻이므로, 새로 쌓인 것이 있으면 그것이 곧 이 줄이다. */
+        activity()->causedBy(Auth::user())->performedOn($patient)
+            ->log("현재 주소를 바꿨습니다 — {$address->full}");
+
+        return response()->json(['success' => true]);
+    }
+
+    /** 주소 한 벌을 받는 잣대 — 등록과 수정이 같다 */
+    private function 주소검증(Request $request): array
+    {
+        return $request->validate([
+            'postcode'       => 'nullable|string|max:10',
+            'address'        => 'required|string|max:300',
+            'address_detail' => 'nullable|string|max:200',
+        ]) + ['address_detail' => null, 'postcode' => null];
+    }
+
     /** 환자 이력(처방전·상담·구매) — 목록 화면 우측 상세 탭용 JSON */
     /**
      * 이 거래처가 무엇에서 무엇으로 바뀌었는지 (2026-09-08 확인요청 3ㆍ5쪽).

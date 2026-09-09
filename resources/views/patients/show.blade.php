@@ -85,6 +85,33 @@
   /* 적는 길이가 정해져 있는 칸은 그만큼만 잡는다 — 남는 자리는 주소가 쓴다 */
   #e-resident, #e-mobile, #e-phone { max-width:148px; }
 
+  /* ── 주소 관리 (2026-09-08 확인요청 6쪽) ── */
+  .am-back { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.35);
+             display:flex; align-items:center; justify-content:center; }
+  .am-box  { width:min(620px, calc(100vw - 32px)); max-height:calc(100vh - 80px);
+             display:flex; flex-direction:column;
+             background:var(--gray-0); border-radius:12px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
+  .am-head { display:flex; align-items:center; gap:10px; padding:14px 18px;
+             border-bottom:1px solid var(--gray-200); font-size:14px; }
+  .am-x    { margin-left:auto; border:0; background:none; font-size:22px; line-height:1;
+             color:var(--text-muted); cursor:pointer; }
+  .am-body { flex:1; overflow:auto; padding:8px 18px; min-height:120px; }
+  .am-row  { display:flex; align-items:center; gap:10px; padding:10px 0;
+             border-bottom:1px solid var(--gray-100); font-size:12.5px; }
+  .am-row:last-child { border-bottom:0; }
+  .am-row .am-full { flex:1; min-width:0; }
+  .am-row .am-when { color:var(--text-muted); font-size:11px; white-space:nowrap; }
+  .am-now  { display:inline-block; margin-right:6px; padding:1px 6px; border-radius:4px;
+             background:var(--primary-light); color:var(--primary); font-size:10px; font-weight:700; }
+  .am-mini { border:1px solid var(--gray-200); background:var(--gray-0); border-radius:6px;
+             padding:3px 8px; font-size:11px; cursor:pointer; white-space:nowrap; }
+  .am-mini.danger { border-color:var(--danger); color:var(--danger); }
+  .am-new  { border-top:1px solid var(--gray-200); padding:14px 18px; }
+  .am-new-cap { font-size:12px; font-weight:700; margin-bottom:8px; }
+  .am-line { display:flex; gap:8px; }
+  .am-line .form-control { flex:1; min-width:0; }
+  .am-acts { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
   /* ── 변경 이력 (2026-09-08 확인요청 3ㆍ5쪽) ──
      주문 등록의 「저장 이력」과 같은 모양이다 — 두 화면이 다르게 생기면 같은 것을
      보고 있다는 것을 알아채기 어렵다. */
@@ -366,7 +393,16 @@
           <div class="info-row wide">
             <span class="info-label">주소</span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->full_address ?: '-' }}</span>
+              <span class="view-only">{{ $patient->full_address ?: '-' }}
+                {{-- 주소는 한 벌이 아니다 — 집과 직장을 번갈아 쓰는 사람이 있고,
+                     이사한 뒤에도 지난 주문이 어디로 갔는지 되짚어야 한다
+                     (2026-09-08 확인요청 6쪽). --}}
+                <button type="button" class="btn btn-outline btn-sm" style="margin-left:8px;"
+                        onclick="openAddrManager()">
+                  <i class="fa-solid fa-location-dot"></i> 주소 관리
+                  <span id="addrCount" style="margin-left:4px;color:var(--text-muted);">{{ $patient->addresses->count() }}</span>
+                </button>
+              </span>
               {{-- 주문 등록과 같은 구성이다 — 우편번호·도로명은 찾아서 채우고(손으로 고치지
                    않는다), 상세 주소만 사람이 적는다. --}}
               <span class="edit-only addr-box">
@@ -455,20 +491,8 @@
             </span>
           </div>
 
-          {{-- 주소 이력 — 가장 최근 것이 맨 위다. 이사한 뒤에 지난 주문이 어디로 갔는지
-               되짚으려면 「언제 어디였는지」가 남아 있어야 한다(요청서 3쪽). --}}
-          @if($patient->addresses->count() > 1)
-          <div class="info-row wide">
-            <span class="info-label">지난 주소</span>
-            <span class="info-value" style="font-size:12px;line-height:1.7;">
-              @foreach($patient->addresses->slice(1)->take(5) as $old)
-                <div style="color:var(--text-muted);">
-                  {{ $old->created_at->format('Y-m-d') }} · {{ $old->full }}
-                </div>
-              @endforeach
-            </span>
-          </div>
-          @endif
+          {{-- 「지난 주소」 다섯 줄은 걷었다 — 「주소 관리」 창이 그 일을 한다.
+               거기서는 등록ㆍ수정ㆍ삭제도 되고, 다섯에서 잘리지도 않는다. --}}
 
           {{-- 미성년 보호자 (2026-09-07 · 결함 ㉕) — 위임동의에서 받아 둔 사람.
                미성년이거나 이미 적어 둔 것이 있을 때만 세운다. --}}
@@ -676,6 +700,7 @@
 
         {{-- 변경 이력 — 목록과 상세가 같은 자리를 나눠 쓴다. 주문 등록의 「저장 이력」과
              같은 모양이고, 세는 일도 같은 것을 쓴다(App\Support\SaveHistory). --}}
+        {{-- 주소 관리 창은 탭 밖에 둔다 — 어느 탭에서 열든 같은 자리에 떠야 한다 --}}
         <div class="tab-pane" id="tab-log">
           <div class="pl-tabs">
             <button type="button" class="pl-tab active" data-view="list"
@@ -715,6 +740,41 @@
     </div>
   </div>
 
+</div>
+
+{{-- ── 주소 관리 (2026-09-08 확인요청 6쪽) ──
+     거래처 하나에 주소 여러 벌. 여태 거래처 칸이 바뀔 때 저절로 쌓이기만 하고
+     손볼 길이 없었다 — 집과 직장을 미리 넣어 둘 수도, 잘못 적힌 한 줄을 고칠 수도
+     없었다. --}}
+<div id="addrModal" class="am-back" style="display:none;" onclick="if(event.target===this) closeAddrManager()">
+  <div class="am-box">
+    <div class="am-head">
+      <b>주소 관리</b>
+      <span style="color:var(--text-muted);font-size:12px;">맨 위가 지금 쓰는 주소입니다</span>
+      <button type="button" class="am-x" onclick="closeAddrManager()">&times;</button>
+    </div>
+
+    <div class="am-body" id="addrList"></div>
+
+    {{-- 새로 넣는 자리. 우편번호ㆍ도로명은 찾아서 채우고 상세만 사람이 적는다 —
+         거래처 정보 칸과 같은 방식이다. --}}
+    <div class="am-new">
+      <div class="am-new-cap" id="addrFormCap">주소 추가</div>
+      <input type="hidden" id="addrEditId" value="">
+      <div class="am-line">
+        <input type="text" class="form-control" id="addrPostcode" readonly placeholder="우편번호" style="width:110px;flex:none;">
+        <input type="text" class="form-control" id="addrRoad" readonly placeholder="도로명 주소">
+        <button type="button" class="btn btn-outline btn-sm" onclick="addrFind()">
+          <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
+        </button>
+      </div>
+      <input type="text" class="form-control" id="addrDetail" placeholder="상세 주소" style="margin-top:8px;">
+      <div class="am-acts">
+        <button type="button" class="ds-btn" id="addrCancelBtn" style="display:none;" onclick="addrFormReset()">취소</button>
+        <button type="button" class="ds-btn ds-btn-primary" id="addrSaveBtn" onclick="addrSave()">추가</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 @endsection
@@ -901,6 +961,142 @@
   /* ── 변경 이력 (2026-09-08 확인요청 3ㆍ5쪽) ─────────────
      세는 일은 서버가 한다(App\Support\SaveHistory) — 주문 등록의 「저장 이력」과
      같은 것을 쓴다. 여기서는 받아 세우고, 거르는 것만 그 자리에서 한다. */
+
+  /* ── 주소 관리 (2026-09-08 확인요청 6쪽) ─────────────
+     거래처 하나에 주소 여러 벌. 맨 위가 지금 쓰는 주소이고, 서류ㆍ팩스ㆍ배송지가
+     모두 그것을 읽는다. 여태 거래처 칸이 바뀔 때 저절로 쌓이기만 하고 손볼 길이
+     없었다 — 집과 직장을 미리 넣어 둘 수도, 잘못 적힌 한 줄을 고칠 수도 없었다. */
+  const ADDR_URL = @json(url('patients/' . $patient->id . '/addresses'));
+  let _amRows = [];
+
+  const _amEsc = (v) => String(v ?? '').replace(/[&<>"']/g,
+    c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+  window.openAddrManager = function () {
+    document.getElementById('addrModal').style.display = 'flex';
+    addrFormReset();
+    addrLoad();
+  };
+
+  window.closeAddrManager = function () {
+    document.getElementById('addrModal').style.display = 'none';
+  };
+
+  async function addrLoad() {
+    const box = document.getElementById('addrList');
+    box.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:12px;">불러오는 중…</div>';
+
+    try {
+      const res = await fetch(ADDR_URL, { headers: { Accept: 'application/json' } });
+      const d = await res.json();
+      _amRows = d.rows || [];
+    } catch (e) {
+      box.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:12px;">주소를 불러오지 못했습니다.</div>';
+      return;
+    }
+
+    const cnt = document.getElementById('addrCount');
+    if (cnt) cnt.textContent = _amRows.length;
+
+    if (!_amRows.length) {
+      box.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:12px;">등록된 주소가 없습니다.</div>';
+      return;
+    }
+
+    box.innerHTML = _amRows.map((r, i) => `
+      <div class="am-row">
+        <span class="am-full">${i === 0 ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
+        <span class="am-when">${_amEsc(r.at)}${r.by ? ' · ' + _amEsc(r.by) : ''}</span>
+        ${i === 0 ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">현재로</button>`}
+        <button type="button" class="am-mini" onclick="addrEdit(${r.id})">수정</button>
+        <button type="button" class="am-mini danger" onclick="addrDelete(${r.id})">삭제</button>
+      </div>`).join('');
+  }
+
+  /* 넣는 자리를 비운다 — 고치던 것을 그만둘 때도 여기로 돌아온다 */
+  window.addrFormReset = function () {
+    document.getElementById('addrEditId').value = '';
+    ['addrPostcode', 'addrRoad', 'addrDetail'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('addrFormCap').textContent = '주소 추가';
+    document.getElementById('addrSaveBtn').textContent = '추가';
+    document.getElementById('addrCancelBtn').style.display = 'none';
+  };
+
+  window.addrEdit = function (id) {
+    const r = _amRows.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('addrEditId').value    = id;
+    document.getElementById('addrPostcode').value  = r.postcode || '';
+    document.getElementById('addrRoad').value      = r.address  || '';
+    document.getElementById('addrDetail').value    = r.detail   || '';
+    document.getElementById('addrFormCap').textContent = '주소 수정';
+    document.getElementById('addrSaveBtn').textContent = '저장';
+    document.getElementById('addrCancelBtn').style.display = '';
+  };
+
+  /* 우편번호ㆍ도로명은 찾아서 채운다 — 손으로 적으면 공단에 낼 때 걸린다 */
+  window.addrFind = function () {
+    new daum.Postcode({
+      oncomplete: (data) => {
+        document.getElementById('addrPostcode').value = data.zonecode;
+        document.getElementById('addrRoad').value     = data.roadAddress || data.jibunAddress;
+        document.getElementById('addrDetail').focus();
+      },
+    }).open();
+  };
+
+  window.addrSave = async function () {
+    const id   = document.getElementById('addrEditId').value;
+    const body = {
+      postcode:       document.getElementById('addrPostcode').value.trim() || null,
+      address:        document.getElementById('addrRoad').value.trim(),
+      address_detail: document.getElementById('addrDetail').value.trim() || null,
+    };
+
+    if (!body.address) { showToast('주소를 찾아 채워 주십시오.', 'warning'); return; }
+
+    const btn = document.getElementById('addrSaveBtn');
+    BtnState.loading(btn, '저장 중...');
+    try {
+      const res = await apiRequest(id ? `${ADDR_URL}/${id}` : ADDR_URL, id ? 'PUT' : 'POST', body);
+      if (!res?.success) throw new Error(res?.message || '저장하지 못했습니다.');
+      showToast(id ? '주소를 고쳤습니다.' : '주소를 등록했습니다.', 'success');
+      addrFormReset();
+      await addrLoad();
+    } catch (e) {
+      showToast(e.message || '저장하지 못했습니다.', 'danger');
+    } finally {
+      BtnState.reset(btn);
+    }
+  };
+
+  window.addrDelete = async function (id) {
+    const r = _amRows.find(x => x.id === id);
+    const NL = String.fromCharCode(10);
+    if (!await ceConfirm('이 주소를 지우시겠습니까?' + NL + NL + (r ? r.full : ''),
+                         { tone: 'danger', confirmText: '삭제', cancelText: '취소' })) return;
+    try {
+      const res = await apiRequest(`${ADDR_URL}/${id}`, 'DELETE');
+      if (!res?.success) throw new Error(res?.message || '지우지 못했습니다.');
+      showToast('주소를 지웠습니다.', 'success');
+      await addrLoad();
+    } catch (e) {
+      showToast(e.message || '지우지 못했습니다.', 'danger');
+    }
+  };
+
+  /* 고른 것을 지금 쓰는 주소로 세운다 — 서류ㆍ팩스ㆍ배송지가 모두 이 값을 읽는다 */
+  window.addrPrimary = async function (id) {
+    try {
+      const res = await apiRequest(`${ADDR_URL}/${id}/primary`, 'POST');
+      if (!res?.success) throw new Error(res?.message || '바꾸지 못했습니다.');
+      showToast('현재 주소를 바꿨습니다. 화면을 새로 세웁니다.', 'success');
+      setTimeout(() => location.reload(), 700);
+    } catch (e) {
+      showToast(e.message || '바꾸지 못했습니다.', 'danger');
+    }
+  };
+
   const PL_URL = @json(route('patients.changeLog', $patient));
   let _plLoaded = false, _plRows = [], _plShown = [], _plGrid = null;
 

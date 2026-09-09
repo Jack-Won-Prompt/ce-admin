@@ -2762,6 +2762,11 @@ $calcDeposit  = $calcCopay;
                     <input type="text" class="form-control" id="f-address"
                            value="{{ $prescription->address_ocr ?? $prescription->patient?->address ?? '' }}"
                            placeholder="도로명 주소" readonly style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                    {{-- 거래처에 등록해 둔 주소 가운데 하나를 고른다(2026-09-08 확인요청 6쪽).
+                         같은 사람이 집과 직장을 번갈아 쓰기도 하고, 5월 구매는 A주소ㆍ9월
+                         구매는 B주소인 일이 있다. 새 주소를 넣고 고치는 것은 거래처 관리의
+                         「주소 관리」에서 한다 — 그쪽이 이 값의 정본이다. --}}
+                    <button type="button" class="rx-side-btn" onclick="pickRxAddress(this)">주소 선택</button>
                     <button type="button" class="rx-side-btn" onclick="openAddressSearch('f-postcode','f-address','f-address-detail')">주소 검색</button>
                   </div>
                   {{-- 2줄 — 시안 315:58 Frame 48101497: [상세 주소 149 FILL][배송 주소 동일 96 HUG], 사이 8.
@@ -6490,6 +6495,54 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-acc-add-type')?.addEventListener('change', bsSyncFromSource);
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
   bsSyncFromSource();
+
+  /* 상세 목록의 주소를 거래처에 등록된 것 가운데 하나로 고른다(2026-09-08 확인요청 6쪽).
+     배송지 고르개(pickPatientAddress)와 같은 목록을 쓰되, 앉히는 자리가 다르다 —
+     그쪽은 이 주문의 배송지고 이쪽은 이 건의 주소다. */
+  window.pickRxAddress = function (btn) {
+    const pid = document.getElementById('f-patient-id')?.value;
+
+    if (!pid) {
+      showToast('먼저 「조회」로 거래처를 선택하십시오 — 그 거래처의 주소를 불러옵니다.', 'warning');
+      return;
+    }
+
+    (async () => {
+      const res = await fetch(`{{ url('patients') }}/${pid}/addresses`,
+                              { headers: { Accept: 'application/json' } });
+      const { rows } = await res.json();
+
+      if (!rows?.length) {
+        showToast('등록된 주소가 없습니다 — 거래처 관리의 「주소 관리」에서 먼저 등록해 주십시오.', 'warning');
+        return;
+      }
+
+      const 표 = {};
+      rows.forEach(r => { 표[r.id] = r; });
+
+      new GridModal().open({
+        title: '거래처 주소 · ' + rows.length + '건', width: 460, height: 320, anchor: btn,
+        items: rows.map((r, i) => ({
+          value: r.id,
+          // 맨 윗줄이 거래처의 지금 주소다 — 고르는 사람이 그것을 알아야 한다
+          label: (i === 0 ? '[현재] ' : '') + r.full,
+          sub:   r.at + (r.by ? ' · ' + r.by : ''),
+        })),
+        onConfirm: (v) => {
+          const r = 표[v];
+          if (!r) return;
+          document.getElementById('f-postcode').value       = r.postcode;
+          document.getElementById('f-address').value        = r.address;
+          document.getElementById('f-address-detail').value = r.detail;
+          markOcrDirty();
+          /* 배송지를 이 주소로 따라오게 해 두었으면 함께 옮긴다 — 고른 뜻이
+             배송지까지 가야 할 때가 대부분이다 */
+          if (document.getElementById('sameShipping')?.checked) syncShippingAddress(true);
+          showToast('주소를 바꿨습니다. 저장하면 이 건에 남습니다.', 'success');
+        },
+      });
+    })();
+  };
 
   /* ── 거래처 주소 고르기 ────────────────────────────────
      환자에 쌓인 주소 이력을 팝오버로 보여 주고 고른 것을 배송지에 앉힌다.
