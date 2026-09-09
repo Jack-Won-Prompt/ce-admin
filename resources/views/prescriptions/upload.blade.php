@@ -1057,6 +1057,10 @@ function 까닭지움() {
   if (el) el.hidden = true;
 }
 
+/* 줄바꿈 한 글자. 소스에 직접 적으면 문자열이 거기서 끊겨 화면 전체의
+   자바스크립트가 죽는다 — 실제로 한 번 그랬다(2026-09-09). */
+const NL = String.fromCharCode(10);
+
 // ── 폼 제출 ─────────────────────────────────────────────
 form.addEventListener('submit', async function (e) {
   e.preventDefault();          // 보내는 일은 아래에서 우리가 한다
@@ -1085,11 +1089,8 @@ form.addEventListener('submit', async function (e) {
   const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
   if (!hasPrescription) {
     const 갈까 = await ceConfirm(
-      '처방전이 없습니다. 그래도 올리시겠습니까?
-
-'
-      + '처방전은 주문 등록 화면의 「첨부 문서 추가」에서 나중에 붙일 수 있습니다.
-'
+      '처방전이 없습니다. 그래도 올리시겠습니까?' + NL + NL
+      + '처방전은 주문 등록 화면의 「첨부 문서 추가」에서 나중에 붙일 수 있습니다.' + NL
       + '서류명을 잘못 고른 것이라면 타일 왼쪽 위에서 바꿔 주십시오.',
       { tone: 'warning', confirmText: '올리기', cancelText: '취소' },
     );
