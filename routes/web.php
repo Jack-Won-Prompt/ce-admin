@@ -58,6 +58,24 @@ Route::controller(\App\Http\Controllers\LegalController::class)->name('legal.')-
 });
 
 // 인증 미들웨어로 보호
+/* ── Microsoft Entra ID (OIDC) SSO ────────────────────────────────
+   지시서 LTL-UNICORN-20260909-02 §4. 로그인하기 전에 지나는 길이라 auth 밖에 둔다.
+
+   **설정에서 켜야만 열린다**(기본 꺼짐). 꺼져 있으면 컨트롤러가 404 로 답한다 —
+   켜지도 않은 길이 열려 있는 것처럼 보이면 안 된다.
+
+   response_mode 는 query(GET callback)다. form_post 로 바꾸면 그 길만 CSRF 를
+   비켜 가게 해야 한다(bootstrap/app.php 의 validateCsrfTokens except). */
+Route::prefix('auth/entra')->name('auth.entra.')->group(function () {
+    Route::get( '/redirect',            [\App\Http\Controllers\Auth\EntraController::class, 'redirect'])->name('redirect');
+    Route::get( '/callback',            [\App\Http\Controllers\Auth\EntraController::class, 'callback'])->name('callback');
+    /* IdP 가 iframe 으로 부른다 — 세션이 있든 없든 200 으로 답한다 */
+    Route::get( '/frontchannel-logout', [\App\Http\Controllers\Auth\EntraController::class, 'frontchannelLogout'])
+        ->name('frontchannel-logout')
+        ->withoutMiddleware([\App\Http\Middleware\BreakFrameOnGuest::class]);
+    Route::post('/logout',              [\App\Http\Controllers\Auth\EntraController::class, 'logout'])->name('logout');
+});
+
 Route::middleware(['auth'])->group(function () {
 
     // MDI 워크스페이스(메뉴 클릭 시 화면 내 탭으로 열림)
@@ -489,6 +507,12 @@ Route::middleware(['auth'])->group(function () {
     // 항목 목록은 config/settings-schema.php 가 쥔다.
     Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
     Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
+
+    // SSO 설정 (Entra 자격증명 서버 저장 + 연동 테스트)
+    // 값은 .env 가 아니라 settings 표에 담는다(지시서 §3).
+    Route::get( '/settings/sso',      [\App\Http\Controllers\SsoSettingController::class, 'edit'])->name('sso-settings.edit');
+    Route::put( '/settings/sso',      [\App\Http\Controllers\SsoSettingController::class, 'update'])->name('sso-settings.update');
+    Route::post('/settings/sso/test', [\App\Http\Controllers\SsoSettingController::class, 'test'])->name('sso-settings.test');
 
     // NICE 본인확인 설정 (자격증명 서버 저장 + 연결 테스트)
     Route::get( '/settings/nice',      [\App\Http\Controllers\NiceSettingController::class, 'edit'])->name('nice-settings.edit');

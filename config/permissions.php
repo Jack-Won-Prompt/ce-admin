@@ -296,6 +296,15 @@ return [
             'routes'  => ['ocr-settings'],
             'actions' => ['view', 'update'],
         ],
+        /* SSO 자격증명을 다루는 자리다 — 권한 그룹처럼 관리자만 연다.
+           여기가 열리면 회사 전체 로그인을 남의 테넌트로 돌릴 수 있다. */
+        'sso-settings' => [
+            'label'      => 'SSO 설정',
+            'group'      => 'settings',
+            'routes'     => ['sso-settings'],
+            'actions'    => ['view', 'update'],
+            'admin_only' => true,
+        ],
         'nice-settings' => [
             'label'   => '본인확인 설정',
             'group'   => 'settings',

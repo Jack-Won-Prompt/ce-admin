@@ -220,6 +220,13 @@ class AuthController extends Controller
      */
     public function ssoRedirect(): RedirectResponse
     {
+        /* 설정에서 켜 두었으면 Entra 로 보낸다(지시서 LTL-UNICORN-20260909-02).
+           켜지 않았으면 예전 그대로 「준비 중」이라 답한다 — 로그인 화면의 이 단추는
+           진작부터 서 있었고, 그 자리를 지우지 않는다. */
+        if (\App\Support\SsoSettings::usable()) {
+            return redirect()->route('auth.entra.redirect');
+        }
+
         return back()->withErrors(['email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.']);
     }
 

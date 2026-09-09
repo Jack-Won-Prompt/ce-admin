@@ -1818,6 +1818,17 @@
           </a>
         </div>
         @endif
+        {{-- SSO 설정은 메뉴에 둔다. 본인확인ㆍOCR 설정과 달리 아직 아무도 열어 본 적이
+             없는 새 자리라, 주소를 아는 사람만 갈 수 있게 두면 찾지 못한다.
+             관리자에게만 보인다(permissions.php · admin_only). --}}
+        @if($vis('sso-settings'))
+        <div class="menu-item {{ request()->routeIs('sso-settings*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="user-shield" href="{{ route('sso-settings.edit') }}" data-title="SSO 설정">
+            @dsicon('user-shield', 'ds-icon menu-icon')
+            <span>SSO 설정</span>
+          </a>
+        </div>
+        @endif
 
         {{-- 사용자 로그 메뉴 비활성화 --}}
         {{-- <div class="menu-item {{ request()->routeIs('user-logs*') ? 'active' : '' }}">
