@@ -957,25 +957,77 @@ class PrescriptionController extends Controller
         $created         = [];
         $firstPrescription = null;
 
+        /* 같은 사람의 빈 건이 있으면 새로 세우지 않고 거기에 붙인다
+           (2026-09-10 확인요청 2쪽).
+
+           거래처 관리의 「상담하기」나 처방전 등록 메뉴로 들어오면 그 자리에서 빈
+           처방전이 한 건 선다. 담당자는 이름ㆍ연락처를 적어 두고, 그림은 업로드
+           화면에서 올린다 — 그러면 목록에 두 줄이 남았다. 하나는 그림 없는 줄,
+           하나는 이름 없는 줄. 어느 쪽이 이 건인지 알 수 없고, 주문도 둘로 갈렸다.
+
+           붙일 자리를 좁게 잡는다. 오늘, 내가 세운, 아직 그림도 주문도 없는,
+           같은 사람의 대기 건 하나뿐이다 — 넓게 잡으면 새 처방으로 올린 그림이
+           지난 건에 얹힌다.
+
+           환자를 고르지 않고 올리면 붙일 데가 없다. 그때는 예전처럼 새로 세운다. */
+        $이어쓸초안 = null;
+
+        if ($request->patient_id) {
+            $이어쓸초안 = Prescription::where('patient_id', $request->patient_id)
+                ->where('created_by', Auth::id())
+                ->where('status', 'pending')
+                ->whereNull('image_path')
+                ->whereDate('created_at', today())
+                /* 주문 줄은 처방전마다 저절로 선다(OrderSync::seed) — 있다고 해서
+                   손댄 건은 아니다. 창고로 넘어갔거나 상태가 움직인 건만 뺀다. */
+                ->where(fn ($q) => $q
+                    ->whereDoesntHave('order')
+                    ->orWhereHas('order', fn ($o) => $o
+                        ->where('status', 'pending')
+                        ->where(fn ($w) => $w->whereNull('withworks_so_no')
+                                             ->orWhere('withworks_so_no', ''))))
+                ->latest('id')
+                ->first();
+        }
+
         foreach ($prescriptionFiles as $file) {
             $subDir   = 'prescriptions/' . now()->format('Y/m');
             $fileName = now()->format('Ymd_His') . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path     = $file->storeAs($subDir, $fileName, 'public');
 
-            $prescription = Prescription::create([
-                'rx_number'           => Prescription::generateRxNumber(),
-                'patient_id'          => $request->patient_id ?: null,
-                'assigned_user_id'    => $request->assigned_user_id,
-                'created_by'          => Auth::id(),
-                'admin_note'          => $request->admin_note,
+            $그림칸 = [
                 'image_path'          => $path,
                 'image_original_name' => $file->getClientOriginalName(),
                 'image_mime_type'     => $file->getMimeType(),
                 'image_size'          => $file->getSize(),
-                'upload_source'       => 'web',
                 // OCR 은 쓰지 않는다 — 올리면 곧장 검수 필요로 두고 담당자가 손으로 적는다
                 'status'              => 'review_needed',
-            ]);
+            ];
+
+            $이어씀 = (bool) $이어쓸초안;
+
+            if ($이어쓸초안) {
+                /* 이미 적어 둔 이름ㆍ연락처는 그대로 둔다. 담당자와 메모는 이번에
+                   골라 온 것이 있을 때만 덮는다 — 비운 채로 올렸다고 해서 적어 둔
+                   것을 지울 까닭이 없다. */
+                $prescription = $이어쓸초안;
+                $prescription->update($그림칸 + array_filter([
+                    'assigned_user_id' => $request->assigned_user_id,
+                    'admin_note'       => $request->admin_note,
+                ]) + ['is_blank_draft' => false]);
+
+                // 한 건에만 붙인다. 두 장째부터는 예전처럼 새로 세운다.
+                $이어쓸초안 = null;
+            } else {
+                $prescription = Prescription::create([
+                    'rx_number'        => Prescription::generateRxNumber(),
+                    'patient_id'       => $request->patient_id ?: null,
+                    'assigned_user_id' => $request->assigned_user_id,
+                    'created_by'       => Auth::id(),
+                    'admin_note'       => $request->admin_note,
+                    'upload_source'    => 'web',
+                ] + $그림칸);
+            }
 
             if (!$firstPrescription) {
                 $firstPrescription = $prescription;
@@ -988,33 +1040,46 @@ class PrescriptionController extends Controller
                환자 자동 연결도 OCR 이 읽은 이름에 기대던 것이라 함께 걷었다 —
                올릴 때 환자를 고르면 그 값(patient_id)이 그대로 들어간다. */
 
+            /* 상담번호는 이미 붙어 있으면 그대로 둔다 — 이어 쓰는 초안에는 상담을
+               열 때 매긴 번호가 있고, 여기서 새로 매기면 상담 기록과 어긋난다. */
             $prescription->update([
-                'counsel_no'   => Prescription::generateCounselNo(),
-                'counsel_date' => now()->format('Y-m-d'),
+                'counsel_no'   => $prescription->counsel_no ?: Prescription::generateCounselNo(),
+                'counsel_date' => $prescription->counsel_date ?: now()->format('Y-m-d'),
             ]);
 
             $created[] = $prescription->rx_number;
 
             activity()->causedBy(Auth::user())->performedOn($prescription)
-                      ->log("{$prescription->rx_number} 업로드 완료 (웹)");
+                      ->log("{$prescription->rx_number} 업로드 완료 (웹" . ($이어씀 ? ' · 상담 건에 이어 붙임' : '') . ')');
         }
 
         /* 처방전 그림이 없는 건 — 서류만 먼저 왔다. 그림 없는 처방전 한 건을 세워
            서류를 달 자리를 만든다. 그림 칸은 비운다: 없는 것을 지어내지 않는다. */
         if (! $firstPrescription && ! empty($attachmentFiles)) {
-            $firstPrescription = Prescription::create([
-                'rx_number'        => Prescription::generateRxNumber(),
-                'patient_id'       => $request->patient_id ?: null,
-                'assigned_user_id' => $request->assigned_user_id,
-                'created_by'       => Auth::id(),
-                'admin_note'       => $request->admin_note,
-                'upload_source'    => 'web',
-                'status'           => 'review_needed',
-            ]);
+            /* 여기서도 같은 사람의 빈 건이 있으면 거기에 단다 — 그림이 없을 뿐,
+               두 줄이 생기는 일은 똑같다(2026-09-10 확인요청 2쪽). */
+            if ($이어쓸초안) {
+                $firstPrescription = $이어쓸초안;
+                $firstPrescription->update(['status' => 'review_needed'] + array_filter([
+                    'assigned_user_id' => $request->assigned_user_id,
+                    'admin_note'       => $request->admin_note,
+                ]) + ['is_blank_draft' => false]);
+                $이어쓸초안 = null;
+            } else {
+                $firstPrescription = Prescription::create([
+                    'rx_number'        => Prescription::generateRxNumber(),
+                    'patient_id'       => $request->patient_id ?: null,
+                    'assigned_user_id' => $request->assigned_user_id,
+                    'created_by'       => Auth::id(),
+                    'admin_note'       => $request->admin_note,
+                    'upload_source'    => 'web',
+                    'status'           => 'review_needed',
+                ]);
+            }
 
             $firstPrescription->update([
-                'counsel_no'   => Prescription::generateCounselNo(),
-                'counsel_date' => now()->format('Y-m-d'),
+                'counsel_no'   => $firstPrescription->counsel_no ?: Prescription::generateCounselNo(),
+                'counsel_date' => $firstPrescription->counsel_date ?: now()->format('Y-m-d'),
             ]);
 
             $created[] = $firstPrescription->rx_number;
