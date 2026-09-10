@@ -173,14 +173,8 @@
            (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
       <a href="{{ route('prescriptions.index', request()->only('status')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
-      {{-- 찾는 자리 옆에 둔다. 네비바에 두면 탭 안에서 사라진다.
-           올릴 권한이 없는 사람에게는 보이지 않아야 하므로 @perm 을 그대로 둔다. --}}
-      @perm('prescription-upload', 'create')
-      <a href="{{ route('prescriptions.upload') }}" class="ds-btn ds-btn-primary"
-         data-ce-tab="처방자료 업로드" data-ce-icon="bx-upload">
-        <i class="fa-solid fa-upload"></i> 처방전 업로드
-      </a>
-      @endperm
+      {{-- 「처방전 업로드」 단추는 걷었다 (2026-09-10 지시).
+           올리는 자리는 왼쪽 메뉴의 「처방자료 업로드」다 — 화면과 경로는 그대로다. --}}
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
       <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 다운</button>
       <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
