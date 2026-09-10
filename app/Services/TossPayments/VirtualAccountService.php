@@ -150,6 +150,17 @@ class VirtualAccountService extends TossClient
     private const 입금이벤트 = ['DEPOSIT_CALLBACK', 'VIRTUAL_ACCOUNT_DEPOSIT'];
 
     /**
+     * 지나간 까닭 — 웹훅 로그에 그대로 적는다 (2026-09-10 지시).
+     *
+     * 아무것도 하지 않고 200 으로 답하는 길이 여럿이다(모르는 이벤트ㆍ이어진 결제
+     * 없음ㆍsecret 불일치…). 로그에 「성공」만 남으면 무엇을 건너뛰었는지 알 수 없다.
+     */
+    public ?string $건너뛴까닭 = null;
+
+    /** 남이 두드린 것으로 보이는 까닭 — 이것만은 로그에서 실패로 세운다 */
+    public const 수상함 = 'secret 불일치 — 처리하지 않았습니다';
+
+    /**
      * 입금 웹훅 처리
      *
      * **이름이 둘이다.** 토스 상점관리자의 웹훅 등록 화면에 있는 이름은
@@ -170,6 +181,8 @@ class VirtualAccountService extends TossClient
      */
     public function handleDepositWebhook(array $payload): ?TossPayment
     {
+        $this->건너뛴까닭 = null;
+
         $eventType = $payload['eventType'] ?? '';
 
         /* 본문이 data 로 한 겹 싸여 오기도 하고 그대로 오기도 한다 — 둘 다 받는다 */
@@ -177,6 +190,8 @@ class VirtualAccountService extends TossClient
 
         if (! in_array($eventType, self::입금이벤트, true)) {
             Log::info('[Toss] 웹훅 무시 (이벤트 타입 불일치)', ['type' => $eventType]);
+            $this->건너뛴까닭 = "받지 않는 이벤트입니다 ({$eventType})";
+
             return null;
         }
 
@@ -196,6 +211,8 @@ class VirtualAccountService extends TossClient
             Log::warning('[Toss] 웹훅 매칭 실패 — 이어진 결제가 없다', [
                 'key' => $paymentKey, 'order' => $tossOrderId,
             ]);
+            $this->건너뛴까닭 = '이어진 결제를 찾지 못했습니다 (' . ($tossOrderId ?: $paymentKey ?: '값 없음') . ')';
+
             return null;
         }
 
@@ -209,6 +226,8 @@ class VirtualAccountService extends TossClient
             Log::warning('[Toss] 입금 웹훅 secret 불일치 — 처리하지 않는다', [
                 'order' => $tossOrderId, 'payment_id' => $tossPayment->id,
             ]);
+            $this->건너뛴까닭 = self::수상함;
+
             return null;
         }
 
@@ -223,6 +242,8 @@ class VirtualAccountService extends TossClient
                 'payment_key' => $paymentKey,
                 'error'       => $e->getMessage(),
             ]);
+            $this->건너뛴까닭 = '토스에 다시 묻지 못했습니다 — ' . $e->getMessage();
+
             return null;
         }
 

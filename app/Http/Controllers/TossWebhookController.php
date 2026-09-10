@@ -82,7 +82,17 @@ class TossWebhookController extends Controller
             $tossPayment = $this->vaService->handleDepositWebhook($payload);
 
             $답 = ['ok' => true, 'payment_id' => $tossPayment?->id];
-            WebhookLogger::finish($기록, ok: true, status: 200, response: $답,
+
+            /* 아무것도 하지 않고 지나간 까닭도 로그에 적는다 — 「성공」만 남으면
+               무엇을 건너뛰었는지 알 수 없다. 남이 두드린 것으로 보이는 까닭
+               하나만 실패로 세운다(2026-09-10 지시). */
+            $까닭 = $tossPayment ? null : $this->vaService->건너뛴까닭;
+
+            WebhookLogger::finish($기록,
+                ok: $까닭 !== VirtualAccountService::수상함,
+                status: 200,
+                response: $답,
+                error: $까닭,
                 ref: $tossPayment?->order?->order_number ?? ($payload['data']['orderId'] ?? null));
 
             return response()->json($답);
