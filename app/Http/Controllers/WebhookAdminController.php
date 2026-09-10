@@ -163,7 +163,12 @@ class WebhookAdminController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** 로그 목록 */
+    /**
+     * 로그 목록.
+     *
+     * 웹훅 관리 화면의 옆 탭에 박힐 때는 조각만 돌려준다(레이아웃 없이) — 그 자리에서
+     * 바로 그려 넣는다(2026-09-10 지시). 낱장 주소로도 그대로 열린다.
+     */
     public function logs(Request $request): View
     {
         $from = $request->input('from', now()->subDays(7)->toDateString());
@@ -220,7 +225,10 @@ class WebhookAdminController extends Controller
             'fail' => $rows->where('ok', false)->count(),
         ];
 
-        return view('webhooks.logs', [
+        $조각 = $request->boolean('partial')
+                || $request->header('X-Requested-With') === 'XMLHttpRequest';
+
+        return view($조각 ? 'webhooks._logs' : 'webhooks.logs', [
             'gridData'  => $gridData,
             'counts'    => $counts,
             'from'      => $from,

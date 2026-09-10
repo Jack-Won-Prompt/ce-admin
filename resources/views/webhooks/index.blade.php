@@ -26,7 +26,7 @@
 
 @section('content')
 
-<form method="GET" action="{{ route('webhooks.index') }}" class="ds-filter-card">
+<form method="GET" action="{{ route('webhooks.index') }}" class="ds-filter-card" id="whFilterCard">
   <div class="ds-filter-fields">
     <div class="ds-filter-field">
       <label class="ds-field-label">구분</label>
@@ -55,25 +55,37 @@
   <div class="ds-filter-actions">
     <a href="{{ route('webhooks.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
-    <a href="{{ route('webhooks.logs') }}" class="ds-btn">전송·수신 로그</a>
     <button type="button" class="ds-btn" onclick="window.__whGrid?.downloadExcel()">엑셀 다운</button>
   </div>
 </form>
 
 <div class="ds-grid-section">
   <div class="ds-grid-card">
+    {{-- 로그는 옆 탭이다 (2026-09-10 지시). 낱장으로 넘어가지 않고 이 자리에 박힌다 —
+         정의를 고치다 「그래서 실제로 왔나」를 볼 때 화면을 떠나지 않아도 된다. --}}
     <div class="pnl-tabs">
-      <span class="pnl-tab active"><i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
+      <button type="button" id="whTabList" class="pnl-tab active" onclick="whTab('list')">
+        <i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
         <span class="pnl-tab-cnt">(총 {{ count($gridData) }}건)</span>
-      </span>
-      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+      </button>
+      <button type="button" id="whTabLogs" class="pnl-tab" onclick="whTab('logs')">
+        <i class="fa-solid fa-clock-rotate-left"></i> 전송·수신 로그
+      </button>
+      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;" id="whListTools">
         @perm('webhooks', 'create')
         <button type="button" class="ds-btn ds-btn-primary" onclick="whOpen()">웹훅 등록</button>
         @endperm
       </span>
     </div>
-    <div style="padding:16px;">
+    <div style="padding:16px;" id="whListPanel">
       <div id="whGrid"></div>
+    </div>
+    <div style="padding:16px;display:none;" id="whLogsPanel">
+      <div id="whLogsContent">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12.5px;">
+          불러오는 중…
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -237,6 +249,50 @@
     if (row?.raw) whOpen(row.raw);
   });
 
+  /* ── 탭 ──
+
+     로그는 누를 때 한 번만 불러온다. 화면을 열 때마다 천 줄을 함께 그리면
+     정의만 보러 온 사람에게도 그 값이 든다. */
+  const LOGS_URL = @json(route('webhooks.logs'));
+  let 로그불렀나 = false;
+
+  window.whTab = function (어느것) {
+    const 로그냐 = 어느것 === 'logs';
+
+    document.getElementById('whListPanel').style.display = 로그냐 ? 'none' : '';
+    document.getElementById('whLogsPanel').style.display = 로그냐 ? '' : 'none';
+    document.getElementById('whListTools').style.display = 로그냐 ? 'none' : '';
+    document.getElementById('whFilterCard').style.display = 로그냐 ? 'none' : '';
+    document.getElementById('whTabList').classList.toggle('active', !로그냐);
+    document.getElementById('whTabLogs').classList.toggle('active', 로그냐);
+
+    if (로그냐 && !로그불렀나) {
+      로그불렀나 = true;
+      whLoadLogs('');
+    }
+  };
+
+  /* 조각을 받아 이 자리에 그린다. 붙여 넣은 <script> 는 그대로는 돌지 않아 다시 만든다. */
+  window.whLoadLogs = async function (질의) {
+    const 칸 = document.getElementById('whLogsContent');
+    칸.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12.5px;">불러오는 중…</div>';
+
+    try {
+      const 주소 = LOGS_URL + '?partial=1' + (질의 ? '&' + 질의 : '');
+      const res  = await fetch(주소, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      칸.innerHTML = await res.text();
+      칸.querySelectorAll('script').forEach((옛것) => {
+        const s = document.createElement('script');
+        if (옛것.src) s.src = 옛것.src; else s.textContent = 옛것.textContent;
+        옛것.parentNode.replaceChild(s, 옛것);
+      });
+    } catch (e) {
+      칸.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger);font-size:12.5px;">로그를 불러오지 못했습니다.</div>';
+    }
+  };
+
   /* ── 창 ── */
   const $ = (id) => document.getElementById(id);
 
@@ -367,7 +423,7 @@
 window.HELP_TOUR_STEPS = [
   { selector: '#whGrid', title: '웹훅 목록', body: '밖과 주고받는 알림을 한자리에서 봅니다. 줄을 <b>더블클릭</b>하면 고칠 수 있습니다.' },
   { selector: '.pnl-tabs', title: '웹훅 등록', body: '구분(토스ㆍ팝빌ㆍNICEㆍ위드웍스…)과 방향, 주소, 파라미터를 적어 둡니다.' },
-  { selector: '.ds-filter-actions', title: '전송·수신 로그', body: '실제로 무엇이 오갔는지, 성공했는지, 언제였는지는 로그 화면에서 봅니다.' },
+  { selector: '#whTabLogs', title: '전송·수신 로그', body: '실제로 무엇이 오갔는지, 성공했는지, 언제였는지를 <b>같은 화면 옆 탭</b>에서 봅니다.' },
 ];
 </script>
 @endpush
