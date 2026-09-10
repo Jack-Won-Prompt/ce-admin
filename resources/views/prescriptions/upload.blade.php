@@ -479,7 +479,7 @@
         </div>
         <div class="ds-filter-field span-2">
           <label class="ds-field-label" for="pkPhone">전화번호</label>
-          <input type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
+          <input data-phone type="text" id="pkPhone" class="form-control" placeholder="010-0000-0000" autocomplete="off">
         </div>
         <div class="ds-filter-actions">
           <button type="button" class="ds-btn" onclick="pkReset()">초기화</button>

@@ -1132,7 +1132,7 @@ $calcDeposit  = $calcCopay;
             </p>
             <div>
               <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
-              <input type="text" class="form-control" id="consentMobile"
+              <input data-phone type="text" class="form-control" id="consentMobile"
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
                      style="font-size:13px;" oninput="updateConsentPreview()" />
@@ -1272,7 +1272,7 @@ $calcDeposit  = $calcCopay;
             </p>
             <div>
               <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
-              <input type="text" class="form-control" id="idCardMobile"
+              <input data-phone type="text" class="form-control" id="idCardMobile"
                      placeholder="010-XXXX-XXXX / 02-XXXX-XXXX"
                      value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}"
                      style="font-size:13px;" oninput="updateIdCardPreview()" />
@@ -1763,7 +1763,7 @@ $calcDeposit  = $calcCopay;
               </div>
               <div>
                 <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:5px;">수신 팩스번호</div>
-                <input type="text" id="fax-no" class="form-control" style="font-size:12px;height:32px;"
+                <input data-phone type="text" id="fax-no" class="form-control" style="font-size:12px;height:32px;"
                        placeholder="지사 선택 또는 직접 입력"
                        oninput="onFaxNoInput()">
               </div>
@@ -2742,7 +2742,7 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Fax</span>
-                <input type="text" class="form-control" id="f-fax" readonly
+                <input data-phone type="text" class="form-control" id="f-fax" readonly
                        value="{{ $prescription->patient?->fax }}" style="flex:1;" />
               </div>
               <div class="rx-field-row rx-row-start rx-w4" style="align-items:flex-start;">
@@ -4133,7 +4133,7 @@ $calcDeposit  = $calcCopay;
         <label>진료과</label>
         <input type="text" id="hpDept" class="form-control" placeholder="예: 비뇨의학과">
         <label>전화번호</label>
-        <input type="text" id="hpTel" class="form-control" placeholder="02-0000-0000">
+        <input data-phone type="text" id="hpTel" class="form-control" placeholder="02-0000-0000">
         <label>주소</label>
         <input type="text" id="hpAddr" class="form-control" placeholder="병원 주소">
       </div>

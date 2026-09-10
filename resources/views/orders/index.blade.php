@@ -518,7 +518,7 @@ window.HELP_TOUR_STEPS = [
         <div class="att-fax-guide">선택한 서류는 한 묶음 PDF로 만들어 발송합니다.</div>
         <div class="att-fax-to">
           <label>받는 팩스번호</label>
-          <input type="text" id="attFaxNo" placeholder="02-0000-0000" autocomplete="off">
+          <input data-phone type="text" id="attFaxNo" placeholder="02-0000-0000" autocomplete="off">
           <div class="att-fax-hint" id="attFaxHint"></div>
         </div>
         <div class="att-fax-ft">
