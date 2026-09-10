@@ -143,17 +143,27 @@ class VirtualAccountService extends TossClient
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 웹훅 처리 (VIRTUAL_ACCOUNT_DEPOSIT)
+    // 웹훅 처리 — 가상계좌 입금
     // ─────────────────────────────────────────────────────────────
+
+    /** 가상계좌 입금을 알리는 이벤트 이름 (2026-09-10 확인) */
+    private const 입금이벤트 = ['DEPOSIT_CALLBACK', 'VIRTUAL_ACCOUNT_DEPOSIT'];
 
     /**
      * 입금 웹훅 처리
      *
-     * 토스가 POST로 전송하는 payload 구조:
+     * **이름이 둘이다.** 토스 상점관리자의 웹훅 등록 화면에 있는 이름은
+     * `DEPOSIT_CALLBACK` 이다. 코드는 여태 `VIRTUAL_ACCOUNT_DEPOSIT` 만 받고 있어,
+     * 등록해 두었더라도 오는 족족 버렸을 것이다(2026-09-10 확인). 둘 다 받는다.
+     *
+     * **본문에 paymentKey 가 없다.** DEPOSIT_CALLBACK 은 orderIdㆍstatusㆍsecret 만
+     * 실어 보낸다. 그래서 우리가 매긴 주문 번호(toss_order_id)로 건을 찾고,
+     * 가상계좌를 만들 때 받아 둔 secret 과 맞춰 본다.
+     *
      * {
-     *   "eventType": "VIRTUAL_ACCOUNT_DEPOSIT",
-     *   "createdAt": "2024-01-01T12:00:00+09:00",
-     *   "data": { "paymentKey": "...", "orderId": "...", "status": "DONE", ... }
+     *   "eventType": "DEPOSIT_CALLBACK",
+     *   "createdAt": "2026-09-10T12:00:00+09:00",
+     *   "data": { "orderId": "...", "status": "DONE", "secret": "...", "transactionKey": "..." }
      * }
      *
      * @return TossPayment|null 매칭된 결제 레코드
@@ -161,26 +171,48 @@ class VirtualAccountService extends TossClient
     public function handleDepositWebhook(array $payload): ?TossPayment
     {
         $eventType = $payload['eventType'] ?? '';
-        $data      = $payload['data']      ?? [];
 
-        if ($eventType !== 'VIRTUAL_ACCOUNT_DEPOSIT') {
+        /* 본문이 data 로 한 겹 싸여 오기도 하고 그대로 오기도 한다 — 둘 다 받는다 */
+        $data = $payload['data'] ?? $payload;
+
+        if (! in_array($eventType, self::입금이벤트, true)) {
             Log::info('[Toss] 웹훅 무시 (이벤트 타입 불일치)', ['type' => $eventType]);
             return null;
         }
 
-        $paymentKey = $data['paymentKey'] ?? null;
+        $paymentKey  = $data['paymentKey'] ?? null;
+        $tossOrderId = $data['orderId']    ?? null;
 
-        if (!$paymentKey) {
-            Log::warning('[Toss] 웹훅 paymentKey 없음', $payload);
+        $tossPayment = $paymentKey
+            ? TossPayment::where('payment_key', $paymentKey)->first()
+            : null;
+
+        /* paymentKey 가 없으면 우리가 매긴 주문 번호로 찾는다 — DEPOSIT_CALLBACK 의 길이다 */
+        if (! $tossPayment && $tossOrderId) {
+            $tossPayment = TossPayment::where('toss_order_id', $tossOrderId)->latest('id')->first();
+        }
+
+        if (! $tossPayment) {
+            Log::warning('[Toss] 웹훅 매칭 실패 — 이어진 결제가 없다', [
+                'key' => $paymentKey, 'order' => $tossOrderId,
+            ]);
             return null;
         }
 
-        $tossPayment = TossPayment::where('payment_key', $paymentKey)->first();
+        /* 가상계좌를 만들 때 받아 둔 secret 과 맞춰 본다.
+           틀리면 남이 두드린 것이다 — 그 자리에서 멈춘다. 받아 둔 것이 없는 옛 건은
+           맞춰 볼 것이 없어 지나가되, 아래 재조회가 다시 한 번 걸러 준다. */
+        $받아둔비밀 = $tossPayment->raw_response['secret'] ?? null;
+        $온비밀     = $data['secret'] ?? null;
 
-        if (!$tossPayment) {
-            Log::warning('[Toss] 웹훅 매칭 실패 — paymentKey 없음', ['key' => $paymentKey]);
+        if ($받아둔비밀 && $온비밀 && ! hash_equals((string) $받아둔비밀, (string) $온비밀)) {
+            Log::warning('[Toss] 입금 웹훅 secret 불일치 — 처리하지 않는다', [
+                'order' => $tossOrderId, 'payment_id' => $tossPayment->id,
+            ]);
             return null;
         }
+
+        $paymentKey = $tossPayment->payment_key;
 
         // 보안: 가상계좌 입금 웹훅에는 서명이 없으므로 페이로드의 status 를 신뢰하지 않는다.
         // paymentKey 로 토스 API 를 재조회해 실제 결제 상태로만 갱신한다. (위조 웹훅 방어)
@@ -201,6 +233,17 @@ class VirtualAccountService extends TossClient
             'order_id'    => $tossPayment->order_id,
             'status'      => $verified['status'] ?? null,
         ]);
+
+        /* 입금이 취소된 알림도 온다(status=CANCELED). 되돌리는 일은 담당자의 손을
+           거쳐 돌므로 여기서 건드리지 않되, 조용히 지나가지도 않는다 — 돈이 들어온
+           줄 알고 이미 서류가 나갔을 수 있다. */
+        if (($verified['status'] ?? '') === 'CANCELED') {
+            Log::warning('[Toss] 가상계좌 입금이 취소되었습니다 — 담당자 확인이 필요합니다', [
+                'order_id'    => $tossPayment->order_id,
+                'order_no'    => $tossPayment->order?->order_number,
+                'payment_key' => $paymentKey,
+            ]);
+        }
 
         /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다.
            담당자가 통장을 보고 세운 것과 같은 일이다 — 부르는 곳만 다르다.

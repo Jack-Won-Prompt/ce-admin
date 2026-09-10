@@ -17,7 +17,9 @@ class TossWebhookController extends Controller
      * POST /toss/webhook
      *
      * 토스페이먼츠에서 전송하는 웹훅 이벤트 처리
-     * 지원 이벤트: VIRTUAL_ACCOUNT_DEPOSIT
+     * 받는 이벤트: PAYMENT_STATUS_CHANGED (카드ㆍ간편결제) · DEPOSIT_CALLBACK (가상계좌 입금)
+     *   ㆍ상점관리자 웹훅 등록 화면의 이름이 그 둘이다. 예전 이름
+     *     VIRTUAL_ACCOUNT_DEPOSIT 도 그대로 받는다(2026-09-10).
      *
      * 서명 검증: Toss-Signature 헤더 (HMAC-SHA256)
      * - TOSS_WEBHOOK_SECRET 환경변수가 설정된 경우에만 검증
