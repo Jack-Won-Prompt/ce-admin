@@ -344,7 +344,7 @@
            하셨고(요청서 10쪽), 그때 하나씩 눌러 받게 두면 빠뜨린다. --}}
       <a href="{{ route('nhis.assist.bundle', $order) }}" target="_blank" rel="noopener"
          style="margin-left:8px;color:#1a5fb4;font-weight:600;text-decoration:underline;">
-        한 묶음으로 인쇄
+        일괄 인쇄
       </a>
     </span>
   </div>

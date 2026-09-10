@@ -150,13 +150,13 @@
             @endforeach
           </select>
           <input type="text" class="form-control" id="wh-url" style="flex:1;"
-                 placeholder="받는 자리는 /toss/webhook 처럼, 보내는 자리는 https:// 로">
+                 placeholder="받는 주소는 /toss/webhook 처럼, 보내는 주소는 https:// 로">
         </div>
         <div class="wh-hint" id="wh-url-hint" style="margin-top:5px;"></div>
       </div>
 
       <div class="wh-field">
-        <label>비밀키가 있는 자리</label>
+        <label>비밀키 이름</label>
         <input type="text" class="form-control" id="wh-secret" placeholder="예) TOSS_WEBHOOK_SECRET">
         <div class="wh-hint" style="margin-top:4px;">열쇠 자체는 담지 않습니다. .env 의 이름만 적습니다.</div>
       </div>
@@ -183,7 +183,7 @@
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--primary);">파라미터</span>
-        <span class="wh-hint" style="flex:1;">주고받는 값의 이름표입니다. 점(.)으로 묶음 안쪽을 적습니다 — data.orderId</span>
+        <span class="wh-hint" style="flex:1;">주고받는 값의 이름표입니다. 점(.)으로 하위 항목을 적습니다 — data.orderId</span>
         <button type="button" class="ds-btn" onclick="whAddParam()">＋ 줄 추가</button>
       </div>
       <table class="wh-params">
@@ -242,7 +242,7 @@
       { header: '사용',        name: 'active',     width: 70,  align: 'center', sortable: true },
       { header: '파라미터',    name: 'params',     width: 90,  align: 'right', sortable: true },
       { header: '로그',        name: 'logs',       width: 80,  align: 'right', sortable: true },
-      { header: '비밀키 자리', name: 'secret_env', width: 170 },
+      { header: '비밀키 이름', name: 'secret_env', width: 170 },
       { header: '설명',        name: 'desc',       width: 320 },
     ],
     data: ROWS,
@@ -284,8 +284,8 @@
   window.whDirChanged = function () {
     const 받나 = $('wh-direction').value === 'inbound';
     $('wh-url-hint').innerHTML = 받나
-      ? `받는 자리입니다. 상대에게 알려 줄 주소는 <b>${BASE_URL}</b> + 적은 주소가 됩니다.`
-      : '보내는 자리입니다. https:// 로 시작하는 상대 주소를 적습니다.';
+      ? `받는 주소입니다. 상대에게 알려 줄 주소는 <b>${BASE_URL}</b> + 적은 주소가 됩니다.`
+      : '보내는 주소입니다. https:// 로 시작하는 상대 주소를 입력합니다.';
   };
 
   window.whAddParam = function (p) {
@@ -373,8 +373,8 @@
       params,
     };
 
-    if (!body.name) { 알림('웹훅 명을 적으십시오.', false); return; }
-    if (!body.url)  { 알림('주소를 적으십시오.', false); return; }
+    if (!body.name) { 알림('웹훅 명을 입력하십시오.', false); return; }
+    if (!body.url)  { 알림('주소를 입력하십시오.', false); return; }
 
     BtnState.loading(btn, '저장 중...');
     try {
@@ -406,7 +406,7 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '#whGrid', title: '웹훅 목록', body: '밖과 주고받는 알림을 한자리에서 봅니다. 줄을 <b>더블클릭</b>하면 고칠 수 있습니다.' },
+  { selector: '#whGrid', title: '웹훅 목록', body: '밖과 주고받는 알림을 한 화면에서 봅니다. 줄을 <b>더블클릭</b>하면 고칠 수 있습니다.' },
   { selector: '.pnl-tabs', title: '웹훅 등록', body: '구분(토스ㆍ팝빌ㆍNICEㆍ위드웍스…)과 방향, 주소, 파라미터를 적어 둡니다.' },
   { selector: '#whTabLogs', title: '전송·수신 로그', body: '실제로 무엇이 오갔는지, 성공했는지, 언제였는지를 <b>같은 화면 옆 탭</b>에서 봅니다.' },
 ];

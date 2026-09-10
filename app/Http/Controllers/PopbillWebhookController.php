@@ -46,7 +46,7 @@ class PopbillWebhookController extends Controller
     public function handle(Request $request, string $service): JsonResponse
     {
         if (! in_array($service, self::갈래, true)) {
-            return response()->json(['message' => '모르는 갈래입니다.'], 404);
+            return response()->json(['message' => '모르는 구분입니다.'], 404);
         }
 
         $기록 = WebhookLogger::inbound('popbill', $service, $request);

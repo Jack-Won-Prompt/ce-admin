@@ -176,7 +176,7 @@ class OrderController extends Controller
                 /* 실을 수 있는가 — PDF 는 팩스 묶음에 끼우지 못한다 */
                 'auto'  => false,
                 'ok'    => $그림,
-                'why'   => $그림 ? '' : 'PDF 는 팩스 묶음에 포함되지 않습니다',
+                'why'   => $그림 ? '' : 'PDF 는 팩스 통합본에 포함되지 않습니다',
             ];
         }
 
@@ -398,7 +398,7 @@ class OrderController extends Controller
         if (! trim((string) $prescription->counsel_acc_add_type)) {
             return response()->json([
                 'success' => false,
-                'message' => '유형이 비어 있어 주문을 만들 수 없습니다. 상세 목록의 「유형」을 먼저 고르십시오.',
+                'message' => '유형이 비어 있어 주문을 만들 수 없습니다. 상세 목록의 「유형」을 먼저 선택하십시오.',
             ], 422);
         }
 

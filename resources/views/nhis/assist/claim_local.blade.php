@@ -96,7 +96,7 @@
            반려되어 돌아오고, 그때는 이미 우편 값이 나간 뒤다(요청서 10쪽). --}}
       <a class="lnk" style="margin-left:8px;font-weight:600;"
          href="{{ route('nhis.assist.bundle', $order) }}" target="_blank" rel="noopener">
-        한 묶음으로 인쇄
+        일괄 인쇄
       </a>
     </div>
     @foreach($documents as $d)

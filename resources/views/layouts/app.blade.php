@@ -4448,7 +4448,7 @@ const ChatPanel = (() => {
   }
 
   async function deleteMessage(msgId) {
-    const ok = await ceConfirm('이 메시지를 지웁니다.\n답글이 달려 있으면 자리는 남고 내용만 사라집니다.',
+    const ok = await ceConfirm('이 메시지를 지웁니다.\n답글이 달려 있으면 항목은 남고 내용만 사라집니다.',
       { title: '메시지 삭제', confirmText: '삭제', tone: 'danger' });
     if (!ok) return;
 

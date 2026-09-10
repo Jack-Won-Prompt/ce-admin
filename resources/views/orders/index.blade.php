@@ -515,7 +515,7 @@ window.HELP_TOUR_STEPS = [
           <button type="button" class="att-fax-x" aria-label="닫기">&times;</button></div>
         <div class="att-fax-note" id="attFaxBlocked" style="display:none;"></div>
         <div class="att-fax-bd" id="attFaxList"></div>
-        <div class="att-fax-guide">선택한 서류는 한 묶음 PDF로 만들어 발송합니다.</div>
+        <div class="att-fax-guide">선택한 서류는 하나의 PDF로 합쳐 발송합니다.</div>
         <div class="att-fax-to">
           <label>받는 팩스번호</label>
           <input data-phone type="text" id="attFaxNo" placeholder="02-0000-0000" autocomplete="off">
@@ -638,7 +638,7 @@ window.HELP_TOUR_STEPS = [
 
     /* 팩스는 정말 나간다 — 무엇을 어디로 보내는지 보이고 한 번 묻는다 */
     const 이름들 = picked.map(r => r.label).join(' · ');
-    if (!await ceConfirm(`${faxNo} 로 다음 서류를 발송합니다.\n\n${이름들}\n\n선택한 서류는 한 묶음 PDF로 만들어 보냅니다.`,
+    if (!await ceConfirm(`${faxNo} 로 다음 서류를 발송합니다.\n\n${이름들}\n\n선택한 서류는 하나의 PDF로 합쳐 보냅니다.`,
                          { title: '팩스 전송', confirmText: '발송' })) return;
 
     const btn = _attPop.querySelector('#attFaxSend');

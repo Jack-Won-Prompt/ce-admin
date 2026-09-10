@@ -207,7 +207,7 @@
     try {
       const res = await apiRequest(`${_amUrl}/${id}/primary`, 'POST');
       if (!res?.success) throw new Error(res?.message || '바꾸지 못했습니다.');
-      showToast('현재 주소를 바꿨습니다. 화면을 새로 세웁니다.', 'success');
+      showToast('현재 주소를 변경했습니다. 화면을 새로 고칩니다.', 'success');
       setTimeout(() => location.reload(), 700);
     } catch (e) {
       showToast(e.message || '바꾸지 못했습니다.', 'danger');

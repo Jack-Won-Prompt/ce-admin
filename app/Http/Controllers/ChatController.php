@@ -384,7 +384,7 @@ class ChatController extends Controller
         $zip     = new \ZipArchive();
 
         if ($zip->open($zipPath, \ZipArchive::OVERWRITE) !== true) {
-            return back()->withErrors(['chat' => '묶음을 만들지 못했습니다.']);
+            return back()->withErrors(['chat' => '압축 파일을 만들지 못했습니다.']);
         }
 
         /* 같은 이름이 여럿이면 뒤엣것이 앞엣것을 덮어쓴다 — 메시지 번호를 앞에 붙여

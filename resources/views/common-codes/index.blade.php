@@ -99,7 +99,7 @@
         defaultValue: KIND_OPTS[0]?.value ?? '' },
       { header: '코드',   name: 'code',       width: 180 },
       { header: '이름',   name: 'label',      width: 260 },
-      { header: '차례',   name: 'sort_order', width: 80,  editor: 'number', align: 'right', defaultValue: 0 },
+      { header: '순서',   name: 'sort_order', width: 80,  editor: 'number', align: 'right', defaultValue: 0 },
       { header: '사용',   name: 'is_active',  width: 80,  editor: 'checkbox', align: 'center', defaultValue: true },
       { header: '구분',   name: 'system',     width: 80,  align: 'center', editable: false },
       { header: '메모',   name: 'note',       width: 260 },

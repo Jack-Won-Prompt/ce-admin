@@ -1167,7 +1167,7 @@ function setStep(num, state) {
 window.HELP_TOUR_STEPS = [
   { selector: '#patientSearchInput', title: '이름 선택', body: '이름이나 연락처를 입력하여 선택하거나, 옆의 <b>조회</b>로 창을 열어 전화번호·생년월일까지 확인하고 선택합니다.' },
   { selector: '#grid-rx',  title: '처방 서류', body: '등록신청서·처방전·결과지·신분증을 넣습니다. 타일 왼쪽 위에서 서류명을 고치며, 목록은 <b>환경 설정 ▸ 서류 유형</b>에서 늘릴 수 있습니다.' },
-  { selector: '#submitBtn', title: '등록 버튼', body: '환자를 선택하고 파일을 추가한 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 자리는 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },
+  { selector: '#submitBtn', title: '등록 버튼', body: '환자를 선택하고 파일을 추가한 뒤 누릅니다. 올리고 나면 <b>주문 등록 화면이 새 화면 탭</b>으로 열리고, 이 화면은 그대로 남아 다음 건을 이어 올릴 수 있습니다.' },
 ];
 </script>
 @endpush

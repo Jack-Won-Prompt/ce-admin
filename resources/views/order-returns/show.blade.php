@@ -440,7 +440,7 @@
                placeholder="원">
         <button type="submit" class="ds-btn ds-btn-sm">저장</button>
         @if($r->adjust_amount === null)
-          <span style="font-size:11px;color:var(--text-muted);">줄에서 셈한 값입니다 — 확인 후 저장하십시오.</span>
+          <span style="font-size:11px;color:var(--text-muted);">항목에서 계산한 값입니다 — 확인 후 저장하십시오.</span>
         @endif
       </form>
     @endif

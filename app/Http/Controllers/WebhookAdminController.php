@@ -110,9 +110,9 @@ class WebhookAdminController extends Controller
             'params.*.sample'       => 'nullable|string|max:200',
             'params.*.description'  => 'nullable|string|max:300',
         ], [
-            'provider.required' => '구분을 고르십시오.',
-            'name.required'     => '웹훅 명을 적으십시오.',
-            'url.required'      => '주소를 적으십시오.',
+            'provider.required' => '구분을 선택하십시오.',
+            'name.required'     => '웹훅 명을 입력하십시오.',
+            'url.required'      => '주소를 입력하십시오.',
         ]);
 
         $webhook = DB::transaction(function () use ($data, $request) {

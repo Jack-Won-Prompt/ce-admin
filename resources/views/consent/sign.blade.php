@@ -777,7 +777,7 @@
             @endif
             @if($_d['key'] === App\Support\SignDocs::등록신청서)
               <div class="doc-say">
-                아래 서식의 <strong>② 요양기관 확인란</strong>은 병원에서 적고 확인하는 자리라 비어 있습니다.
+                아래 서식의 <strong>② 요양기관 확인란</strong>은 병원에서 작성ㆍ확인하는 항목이라 비어 있습니다.
               </div>
             @endif
             @php($_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]))
@@ -881,7 +881,7 @@
       <div class="sig-label" style="margin-top:14px;">
         보호자 서명 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          위임인이 미성년이라 <b>이 서명 하나로 위임장의 위임인ㆍ법정대리인 두 자리를 채웁니다.</b>
+          위임인이 미성년이라 <b>이 서명 하나로 위임장의 위임인ㆍ법정대리인 두 서명란을 채웁니다.</b>
         </div>
         <button class="sig-clear" type="button" onclick="clearGuardianSignature()">지우기</button>
       </div>

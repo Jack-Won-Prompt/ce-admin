@@ -254,7 +254,7 @@
             <div class="info-value">{{ $record->sentBy?->name ?? '-' }}</div>
           </div>
           <div class="info-cell">
-            <div class="info-label">보낸 자리</div>
+            <div class="info-label">발송 화면</div>
             <div class="info-value">{{ $record->source ?: '-' }}</div>
           </div>
         </div>

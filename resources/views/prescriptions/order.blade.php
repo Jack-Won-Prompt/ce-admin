@@ -8657,9 +8657,9 @@ window.HELP_TOUR_STEPS = [
 
     if (!type) {
       ceAlert('유형이 비어 있어 주문을 만들 수 없습니다.\n\n'
-            + '상세 목록의 「유형」을 먼저 고르십시오 — 유형과 자격이 청구전략을 정하고, '
+            + '상세 목록의 「유형」을 먼저 선택하십시오 — 유형과 자격이 청구전략을 정하고, '
             + '청구전략이 기관 부담금을 셈합니다.',
-            { title: '유형을 고르십시오', tone: 'warning' });
+            { title: '유형을 선택하십시오', tone: 'warning' });
       상세탭으로('f-acc-add-type');
       return false;
     }

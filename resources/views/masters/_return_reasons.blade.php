@@ -38,7 +38,7 @@
             <th style="width:100px;" class="mid">금액조정</th>
             <th style="width:100px;" class="mid">발행포함</th>
             <th style="width:80px;"  class="mid">사용</th>
-            <th style="width:80px;"  class="mid">차례</th>
+            <th style="width:80px;"  class="mid">순서</th>
           </tr>
         </thead>
         <tbody>
