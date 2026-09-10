@@ -59,6 +59,38 @@ class FaxSyncService
     }
 
     /**
+     * 한 건만 다시 묻는다 — 팝빌이 알려 왔을 때 그 건만 맞춘다 (2026-09-10 지시).
+     *
+     * 알려 온 본문의 상태를 그대로 믿지 않는다. 서명 없는 알림이라 위조할 수 있고,
+     * 이름도 서비스마다 다르다 — 접수번호만 받아 여기서 다시 묻는다.
+     */
+    public function syncOne(FaxHistory $history): bool
+    {
+        try {
+            $arr = $this->svc->getMessages($history->corp_num, $history->receipt_num, null);
+
+            if (empty($arr)) {
+                return false;
+            }
+
+            $history->update([
+                'popbill_state'  => $this->overallState($arr),
+                'popbill_result' => $this->resultCode($arr),
+                'synced_at'      => now(),
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('[Fax] 한 건 결과 동기화 실패', [
+                'receipt_num' => $history->receipt_num,
+                'error'       => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * 수신자가 여럿일 수 있다. 하나라도 보내는 중이면 보내는 중, 모두 성공이어야 성공,
      * 하나라도 실패면 실패로 본다 — 부분 실패를 성공으로 적으면 안 된다.
      */

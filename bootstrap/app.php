@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'nhis/fax-callback',
             'toss/webhook',
+            'popbill/webhook/*',        // 팝빌 전송결과 알림 (2026-09-10)
             'webhooks/shop-order',
             'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
         ]);

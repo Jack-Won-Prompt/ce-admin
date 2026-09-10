@@ -615,7 +615,10 @@ Route::prefix('privacy')->name('privacy.')->group(function () {
     Route::get( '/{type}/done',   [PrivacyConsentController::class, 'done'])->name('done');
 });
 
-// e-Fax 콜백 (팩스 서비스에서 호출 — 인증 불필요)
+/* 팝빌이 두드리는 자리 (2026-09-10 지시) — 인증 불필요, 팝빌 서버가 직접 부른다.
+   갈래는 fax · sms · kakao · taxinvoice · cashbill 다섯이다. */
+Route::post('/popbill/webhook/{service}', [\App\Http\Controllers\PopbillWebhookController::class, 'handle'])
+    ->name('popbill.webhook');
 
 // ── Dev: admin_invitations 테이블 마이그레이션 ──
 Route::get('/dev/migrate-admin-invitations', function () {
