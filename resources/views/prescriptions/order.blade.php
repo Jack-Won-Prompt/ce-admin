@@ -3295,11 +3295,11 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">1일 처방 개수</span>
-                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방일수</span>
-                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" />
+                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
@@ -7827,6 +7827,18 @@ window.HELP_TOUR_STEPS = [
        막는 것은 주문 제품 쪽이다(요청서 12쪽 대 17쪽). */
     gateTotalCount(false);
 
+    /* ── 1일 처방개수ㆍ총 처방일수 상한 (2026-09-10 확인요청 5쪽) ────────
+
+       공단 잣대로는 1일 6개ㆍ90일까지다. 그런데 처방전에 그보다 크게 적혀 오는
+       일이 있고, 그때는 적힌 대로 담아야 한다 — 그래서 막지 않고 한 번 묻는다.
+
+       묻는 자리를 저장 앞에 둔다. 적는 도중에 막아 세우면(칸의 max 로 자르면)
+       담당자가 처방전에 적힌 수를 아예 넣지 못한다.
+
+       「그대로 저장」을 고르면 그대로 나간다. 고르지 않으면 적어 둔 것은 그대로
+       화면에 남는다 — 저장만 멈춘다. */
+    if (!await gate처방상한()) { return false; }
+
     _saving = true;
     let _saved = false;
     const saveBtns = document.querySelectorAll('[onclick="saveOCR()"]');
@@ -8577,6 +8589,38 @@ window.HELP_TOUR_STEPS = [
     ceAlert('1일 처방 개수 / 총 처방일수 / 총계 확인 후 진행 및 저장 바랍니다.\n\n' + msg,
             { title: '수량이 맞지 않습니다' });
     return false;
+  }
+
+  /**
+   * 1일 처방개수ㆍ총 처방일수가 공단 상한을 넘었는가 (2026-09-10 확인요청 5쪽).
+   *
+   * 공단 잣대는 1일 6개ㆍ90일이다. 넘으면 그만큼은 청구가 반려된다.
+   *
+   * **막지는 않는다.** 처방전에 그보다 크게 적혀 오는 일이 있고, 그때는 적힌 대로
+   * 담아야 한다 — 막아 두면 담당자가 처방전과 다른 수를 적어 넣게 된다. 저장 앞에서
+   * 한 번 묻고, 「그대로 저장」을 고르면 그대로 나간다.
+   *
+   * @returns {Promise<boolean>}  저장을 이어 갈 것인가
+   */
+  async function gate처방상한() {
+    const 개수한도 = {{ (int) config('nhis.limits.daily_count', 6) }};
+    const 일수한도 = {{ (int) config('nhis.limits.total_days', 90) }};
+
+    const daily = parseInt(document.getElementById('f-daily')?.value || '0', 10);
+    const days  = parseInt(document.getElementById('f-days')?.value  || '0', 10);
+
+    const 넘은것 = [];
+    if (daily > 개수한도) 넘은것.push(`1일 처방 개수 ${daily}개 (한도 ${개수한도}개)`);
+    if (days  > 일수한도) 넘은것.push(`총 처방일수 ${days}일 (한도 ${일수한도}일)`);
+
+    if (!넘은것.length) return true;
+
+    return await ceConfirm(
+      넘은것.join('\n') + '\n\n'
+      + '공단 기준을 넘었습니다. 넘은 만큼은 청구가 반려될 수 있습니다.\n'
+      + '처방전에 적힌 그대로라면 그대로 저장하십시오.',
+      { title: '처방 한도를 넘었습니다', tone: 'warning',
+        confirmText: '그대로 저장', cancelText: '다시 확인' });
   }
 
   /**

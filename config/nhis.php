@@ -54,5 +54,11 @@ return [
     'limits' => [
         // 하루 한도 — 총 구매 금액 ÷ 총 처방일수
         'daily_amount' => (int) env('NHIS_DAILY_AMOUNT_LIMIT', 9000),
+
+        /* 1일 처방 개수ㆍ총 처방일수의 상한 (2026-09-10 확인요청 5쪽).
+           금액 한도와 달리 막지 않는다 — 처방전에 그렇게 적혀 오는 일이 있고,
+           그때는 적힌 대로 담아야 한다. 저장하기 전에 한 번 묻기만 한다. */
+        'daily_count' => (int) env('NHIS_DAILY_COUNT_LIMIT', 6),
+        'total_days'  => (int) env('NHIS_TOTAL_DAYS_LIMIT', 90),
     ],
 ];
