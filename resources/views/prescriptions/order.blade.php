@@ -8656,9 +8656,7 @@ window.HELP_TOUR_STEPS = [
     const cls  = document.getElementById('f-benefit-class')?.value ?? '';
 
     if (!type) {
-      ceAlert('유형이 비어 있어 주문을 만들 수 없습니다.
-
-'
+      ceAlert('유형이 비어 있어 주문을 만들 수 없습니다.\n\n'
             + '상세 목록의 「유형」을 먼저 고르십시오 — 유형과 자격이 청구전략을 정하고, '
             + '청구전략이 기관 부담금을 셈합니다.',
             { title: '유형을 고르십시오', tone: 'warning' });
@@ -8669,9 +8667,7 @@ window.HELP_TOUR_STEPS = [
     const key = _bsKey(type, cls);
 
     if (!key || !BILLING_STRATEGY[key]) {
-      ceAlert('청구전략이 정해지지 않아 주문을 만들 수 없습니다.
-
-'
+      ceAlert('청구전략이 정해지지 않아 주문을 만들 수 없습니다.\n\n'
             + '상세 목록의 「유형」과 「급여구분」을 확인해 주십시오. '
             + '전략이 없으면 기관이 낼 몫이 0원으로 굳습니다.',
             { title: '청구전략이 없습니다', tone: 'warning' });
