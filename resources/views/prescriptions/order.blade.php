@@ -3528,10 +3528,13 @@ $calcDeposit  = $calcCopay;
 
                      사람이 적는 칸이 아니다. 토스가 승인한 시각이 먼저고, 없으면 가상계좌
                      입금ㆍ담당자 확인 시각이다(Order::paidAt). --}}
-                @php($_결제시각 = $prescription->order?->paidAtLabel('Y-m-d H:i:s'))
+                {{-- 값을 미리 담아 두지 않는다. 이 파일에는 여는 꼴 php 지시자가 여럿이라,
+                     괄호 꼴을 하나 쓰면 블레이드가 여기서부터 다음 닫는 지시자까지를
+                     한 덩이의 PHP 로 삼킨다 — 그 사이 화면이 통째로 사라진다(2026-09-10). --}}
                 <span class="rx-field-label" style="flex:0 0 auto;margin-left:10px;">결제시간</span>
                 <input type="text" class="form-control" id="f-paid-at" readonly
-                       value="{{ $_결제시각 ?: '' }}" placeholder="결제되면 저절로 섭니다"
+                       value="{{ $prescription->order?->paidAtLabel('Y-m-d H:i:s') }}"
+                       placeholder="결제되면 저절로 섭니다"
                        title="토스 승인 시각 · 없으면 가상계좌 입금ㆍ담당자 확인 시각"
                        style="flex:1;background:var(--bg-subtle,#f8fafc);" />
               </div>
@@ -3730,7 +3733,16 @@ $calcDeposit  = $calcCopay;
             </tr>
             <tr>
               <th>주소</th>
-              <td colspan="3" id="tv-address">@php $fullAddrTv = trim(($prescription->address_ocr ?? $prescription->patient?->address ?? '') . ' ' . ($prescription->address_detail ?? '')); @endphp{{ $fullAddrTv ?: '-' }}</td>
+              {{-- 닫는 php 지시자와 에코를 **붙여 쓰지 않는다**. 붙이면 블레이드가 그
+                   덩이를 되돌리지 못해, 화면에 「@__raw_block_32__{{ … }}」가 글자
+                   그대로 찍힌다 — 이 칸의 주소가 여태 그렇게 나왔다(2026-09-10). --}}
+              <td colspan="3" id="tv-address">
+                @php
+                  $fullAddrTv = trim(($prescription->address_ocr ?? $prescription->patient?->address ?? '')
+                                     . ' ' . ($prescription->address_detail ?? ''));
+                @endphp
+                {{ $fullAddrTv ?: '-' }}
+              </td>
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-hospital"></i> 병원 · 처방 정보</td></tr>
             <tr>
