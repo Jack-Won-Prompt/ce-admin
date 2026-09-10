@@ -45,7 +45,7 @@ class WebhookAdminController extends Controller
             'direction'  => $w->direction === 'inbound' ? '받음' : '보냄',
             'url'        => $w->full_url,
             'method'     => $w->http_method,
-            'active'     => $w->is_active ? '사용' : '멈춤',
+            'active'     => $w->is_active ? '사용' : '중지',
             'params'     => $w->params->count(),
             'logs'       => $w->logs_count,
             'secret_env' => $w->secret_env ?: '',

@@ -161,7 +161,7 @@
         <div class="wh-hint" style="margin-top:4px;">열쇠 자체는 담지 않습니다. .env 의 이름만 적습니다.</div>
       </div>
       <div class="wh-field">
-        <label>차례 · 사용</label>
+        <label>순서 · 사용</label>
         <div style="display:flex;gap:10px;align-items:center;">
           <input type="text" class="form-control" id="wh-sort" style="flex:0 0 100px;" placeholder="0">
           <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-700);">
@@ -191,7 +191,7 @@
           <tr>
             <th style="width:90px;">자리</th>
             <th style="width:180px;">이름</th>
-            <th style="width:100px;">갈래</th>
+            <th style="width:100px;">구분</th>
             <th style="width:60px;">필수</th>
             <th style="width:160px;">보기</th>
             <th>설명</th>
