@@ -797,6 +797,16 @@ class wwGrid {
       : null;
     this._savedWidths = this._loadWidths();
 
+    /* 옮겨 둔 칸 차례도 남긴다. 너비만 기억하고 차례는 잊어, 칸을 끌어다 놓고 화면을
+       다시 열면 코드에 적힌 차례로 돌아갔다 — 늘 보는 칸을 앞으로 당겨 둔 사람은 올
+       때마다 다시 끌어야 했다(2026-09-10 지시).
+       열쇠 꼴은 너비와 같다 — 「경로 + 담는 칸의 id」. */
+    this._orderKey = (this.el && this.el.id)
+      ? 'wwgrid.o:' + location.pathname + '#' + this.el.id
+      : null;
+    this._codeOrder = this.columns.map(c => c.name);   // 코드에 적힌 첫 차례
+    this._applySavedOrder();
+
     this._build();
   }
 
@@ -1032,6 +1042,106 @@ class wwGrid {
     }
   }
 
+  /**
+   * 이 칸은 무엇을 담는가 — 이름ㆍ제품ㆍ수량ㆍ금액ㆍ단추 (2026-09-10 지시).
+   *
+   * 칸이 스물이 넘는 목록에서 눈이 가로로 미끄러진다. 갈래마다 옅은 빛을 두면 「여기가
+   * 금액 줄」이라는 것이 한눈에 잡힌다.
+   *
+   * 화면마다 손으로 적게 하지 않는다 — 목록이 서른 곳이 넘어 한 곳만 빠뜨려도 그
+   * 화면만 밋밋해진다. **머리글 이름으로 가린다.** 우리 목록의 머리글은 한글이고
+   * 낱말이 정해져 있어(이름ㆍ제품ㆍ수량ㆍ금액…) 그것으로 충분하다.
+   *
+   * 갈래를 정하지 못하면 아무 빛도 두지 않는다 — 잘못 칠하느니 그대로 두는 편이 낫다.
+   */
+  static _kindOf(header) {
+    const h = String(header ?? '').replace(/\s+/g, '');
+    if (!h) return null;
+
+    /* 「환자 전화번호」처럼 사람을 가리키는 낱말이 붙었어도 담는 것은 번호다 —
+       먼저 걸러 낸다. 그러지 않으면 전화번호 칸이 이름 빛을 쓴다. */
+    if (/(전화|연락처|Fax|팩스|이메일|Email|주소)/i.test(h)) return null;
+
+    if (/(이름|성명|환자|거래처|수령인|담당자|작업자|의사명)/.test(h)) return 'name';
+    if (/(제품|품목|장비코드|제품코드)/.test(h))                      return 'product';
+    if (/(수량|개수|박스|RB단위|잔량|재고)/.test(h))                  return 'qty';
+    if (/(금액|단가|가격|부담금|합계|입금|미수|공급가|부가세|포인트)/.test(h)) return 'money';
+
+    return null;
+  }
+
+  /**
+   * 칸 하나의 갈래 — 적어 둔 것이 먼저고, 없으면 머리글로 가리고, 그래도 모르면
+   * 「단추가 든 칸인가」를 본다.
+   *
+   * 단추는 렌더러가 만들므로 이름만으로는 알 수 없다. 다만 우리 목록에서 단추가 든
+   * 칸은 하나같이 「엑셀로 내보내지 않는 렌더러 칸」이다(상담내역ㆍ구입 확인서…) —
+   * 내보낼 값이 없으니 그렇게 적어 둔 것이고, 그것이 곧 표가 된다.
+   */
+  static _kindOfCol(col) {
+    if (!col) return null;
+    if (col.kind) return col.kind;
+
+    return wwGrid._kindOf(col.header)
+        || ((col.exportable === false && typeof col.renderer === 'function') ? 'action' : null);
+  }
+
+  /* ── 칸 차례 기억 ───────────────────────────
+     너비와 같은 까닭이다. 브라우저가 막아 둔 경우에는 조용히 지나간다. */
+  _loadOrder() {
+    if (!this._orderKey) return null;
+    try {
+      const v = JSON.parse(localStorage.getItem(this._orderKey) || 'null');
+      return Array.isArray(v) && v.length ? v : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  _saveOrder() {
+    if (!this._orderKey) return;
+    try {
+      localStorage.setItem(this._orderKey, JSON.stringify(this.columns.map(c => c.name)));
+    } catch (e) {
+      /* 남기지 못해도 이번 화면에서는 이미 옮겨져 있다 */
+    }
+  }
+
+  /**
+   * 남겨 둔 차례대로 칸을 세운다.
+   *
+   * 남겨 둔 것과 지금 칸이 어긋날 수 있다 — 칸이 늘거나 줄거나 이름이 바뀐다.
+   * 그래서 남겨 둔 차례를 그대로 믿지 않는다. 지금 있는 칸만 그 차례로 앞에 세우고,
+   * 남겨 둔 것에 없는 칸(새로 생긴 칸)은 코드의 차례대로 뒤에 붙인다 — 그러지 않으면
+   * 새 칸이 조용히 사라진다.
+   */
+  _applySavedOrder() {
+    const 남긴것 = this._loadOrder();
+    if (!남긴것) return;
+
+    const 자리  = new Map(남긴것.map((n, i) => [n, i]));
+    const 아는것 = this.columns.filter(c => 자리.has(c.name))
+                               .sort((a, b) => 자리.get(a.name) - 자리.get(b.name));
+    const 새것   = this.columns.filter(c => ! 자리.has(c.name));
+
+    this.columns = [...아는것, ...새것];
+  }
+
+  /** 코드에 적힌 차례로 되돌린다 */
+  resetColumnOrder() {
+    if (this._orderKey) {
+      try { localStorage.removeItem(this._orderKey); } catch (e) { /* 지우지 못해도 그만 */ }
+    }
+    if (!this._codeOrder) return;
+
+    const 자리 = new Map(this._codeOrder.map((n, i) => [n, i]));
+    this.columns.sort((a, b) => (자리.get(a.name) ?? 999) - (자리.get(b.name) ?? 999));
+
+    this._buildColgroup();
+    this._renderHeader();
+    this._renderBody();
+  }
+
   /** 코드에 적힌 너비로 되돌린다 — 머리줄 손잡이를 두 번 누르면 이 자리로 온다 */
   resetColumnWidth(colName) {
     delete this._savedWidths[colName];
@@ -1058,7 +1168,12 @@ class wwGrid {
     if (this.rowNumber)   addCol(60);   // Figma No 컬럼 60px
     this.columns.forEach(c => {
       // 사람이 조정해 둔 것이 있으면 그것이 먼저다 — 코드의 너비는 첫 모습일 뿐이다
-      this._colMap[c.name] = addCol(this._savedWidths[c.name] || c.width || null);
+      const col = addCol(this._savedWidths[c.name] || c.width || null);
+      /* 갈래마다 옅은 빛 — <col> 에 두면 그 칸 전체에 깔린다(2026-09-10 지시).
+         칸에 제 바탕이 있으면 그것이 위에 덮으므로, 고른 줄ㆍ손이 얹힌 줄은 그대로다. */
+      const kind = wwGrid._kindOfCol(c);
+      if (kind) col.className = 'cg-kind-' + kind;
+      this._colMap[c.name] = col;
     });
   }
 
@@ -1081,6 +1196,9 @@ class wwGrid {
     // Figma 시안은 좌측이지만, 컬럼 수가 많은 목록에서 제목이 가운데인 쪽이
     // 열 경계를 읽기 쉽다는 판단이다.
     inner.className = 'cg-th-inner' + (sortable ? ' sortable' : '');
+    /* 머리글에도 같은 갈래를 단다 — 바탕만으로는 어느 갈래인지 이름과 잇기 어렵다 */
+    const kind = wwGrid._kindOfCol(col) || wwGrid._kindOf(label);
+    if (kind) th.classList.add('cg-th-kind', 'cg-th-' + kind);
     inner.innerHTML = `<span>${label}</span><span class="cg-sort-icon"></span>`;
 
     if (col) {
@@ -1860,6 +1978,9 @@ class wwGrid {
         return { ...g, children: indices.map(i => colNames[i]) };
       })
       .filter(Boolean);
+
+    /* 옮긴 차례를 남긴다 — 화면을 다시 열어도 그대로 선다 */
+    this._saveOrder();
 
     this._buildColgroup();
     this._renderHeader();

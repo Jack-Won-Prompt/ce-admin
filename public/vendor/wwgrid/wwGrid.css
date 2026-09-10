@@ -726,3 +726,37 @@
   background: #e08020;
   margin-right: 4px; flex-shrink: 0;
 }
+
+/* ── 항목 갈래마다 옅은 빛 (2026-09-10 지시) ───────────────────────────
+   칸이 스물이 넘는 목록에서 눈이 가로로 미끄러진다. 갈래마다 옅은 빛을 두면
+   「여기가 금액 줄」이라는 것이 한눈에 잡힌다.
+
+   빛은 <col> 에 둔다 — 그 칸 전체에 깔리고, 칸에 제 바탕이 있으면 그것이 위에
+   덮으므로 고른 줄ㆍ손이 얹힌 줄ㆍ고친 줄은 그대로다.
+
+   아주 옅게 둔다. 목록은 자료를 읽는 자리이지 색을 보는 자리가 아니다 —
+   진하게 두면 글씨가 묻힌다. */
+.cg-kind-name    { background: rgba( 40, 121, 139, .045); }  /* 이름   — 강조색 계열 */
+.cg-kind-product { background: rgba(106,  90, 205, .045); }  /* 제품   — 보라 */
+.cg-kind-qty     { background: rgba( 46, 125,  50, .045); }  /* 수량   — 초록 */
+.cg-kind-money   { background: rgba(224, 128,  32, .055); }  /* 금액   — 주황 */
+.cg-kind-action  { background: rgba(120, 120, 120, .045); }  /* 단추   — 회색 */
+
+/* 머리글은 조금 더 또렷하게 — 바탕만으로는 어느 갈래인지 이름과 잇기 어렵다.
+   머리글에는 제 바탕(--cg-header-bg)이 있어 <col> 빛이 가려지므로 여기서 따로 준다. */
+.cg-th-kind            { position: relative; }
+.cg-th-kind::after     { content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+                         height: 2px; }
+.cg-th-name::after     { background: rgba( 40, 121, 139, .55); }
+.cg-th-product::after  { background: rgba(106,  90, 205, .55); }
+.cg-th-qty::after      { background: rgba( 46, 125,  50, .55); }
+.cg-th-money::after    { background: rgba(224, 128,  32, .65); }
+.cg-th-action::after   { background: rgba(120, 120, 120, .45); }
+
+@media (prefers-color-scheme: dark) {
+  .cg-kind-name    { background: rgba( 80, 200, 220, .06); }
+  .cg-kind-product { background: rgba(160, 145, 255, .06); }
+  .cg-kind-qty     { background: rgba(110, 200, 120, .06); }
+  .cg-kind-money   { background: rgba(255, 180,  90, .07); }
+  .cg-kind-action  { background: rgba(180, 180, 180, .06); }
+}
