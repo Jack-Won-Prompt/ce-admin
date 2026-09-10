@@ -25,66 +25,8 @@
 </style>
 @endpush
 
-<form method="GET" action="{{ $_보낼곳 }}" class="ds-filter-card" style="margin-bottom:14px;">
-  {{-- 찾고 나서도 이 탭에 그대로 있어야 한다 --}}
-  <input type="hidden" name="tab" value="logs">
 
-  <div class="ds-filter-fields">
-    <div class="ds-filter-field">
-      <label class="ds-field-label">기간</label>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="date" name="log_from" value="{{ $logFrom }}" class="form-control" style="width:150px;">
-        <span class="ds-field-sep">~</span>
-        <input type="date" name="log_to" value="{{ $logTo }}" class="form-control" style="width:150px;">
-      </div>
-    </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">구분</label>
-      <select name="log_provider" class="form-control form-select">
-        <option value="">전체</option>
-        @foreach(config('webhooks.providers') as $k => $label)
-          <option value="{{ $k }}" @selected($logProvider === $k)>{{ $label }}</option>
-        @endforeach
-      </select>
-    </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">방향</label>
-      <select name="log_direction" class="form-control form-select">
-        <option value="">전체</option>
-        @foreach(config('webhooks.directions') as $k => $label)
-          <option value="{{ $k }}" @selected($logDirection === $k)>{{ $label }}</option>
-        @endforeach
-      </select>
-    </div>
-    <div class="ds-filter-field">
-      <label class="ds-field-label">결과</label>
-      <select name="log_result" class="form-control form-select">
-        <option value="">전체</option>
-        <option value="ok"   @selected($logResult === 'ok')>성공</option>
-        <option value="fail" @selected($logResult === 'fail')>실패</option>
-      </select>
-    </div>
-    <div class="ds-filter-field" style="flex:1;min-width:200px;">
-      <label class="ds-field-label">검색어</label>
-      <input type="text" name="log_search" value="{{ $logSearch }}" class="form-control"
-             placeholder="이벤트 · 주문번호 · 주소 · 본문">
-    </div>
-  </div>
-  <div class="ds-filter-actions">
-    <a href="{{ $_보낼곳 }}?tab=logs" class="ds-btn">초기화</a>
-    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
-    <button type="button" class="ds-btn" onclick="window.__wlGrid?.downloadExcel()">엑셀 다운</button>
-  </div>
-</form>
 
-<div class="wl-head">
-  <span style="font-size:12.5px;font-weight:700;color:var(--gray-700);">오간 기록 (총 {{ $logCounts['all'] }}건)</span>
-  <span class="wl-chip wl-ok">성공 {{ $logCounts['ok'] }}</span>
-  <span class="wl-chip wl-fail">실패 {{ $logCounts['fail'] }}</span>
-  <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">
-    줄을 더블클릭하면 주고받은 값을 그대로 봅니다.
-  </span>
-</div>
 
 <div id="wlGrid"></div>
 

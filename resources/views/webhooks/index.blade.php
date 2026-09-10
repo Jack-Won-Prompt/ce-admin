@@ -60,6 +60,10 @@
   </div>
 </form>
 
+{{-- 로그 거르개 — 위와 같은 자리, 같은 모양. 탭을 바꿔도 얼개가 흔들리지 않는다
+     (2026-09-10 지시). 하나만 보인다. --}}
+@include('webhooks._log-filter', ['보내는곳' => route('webhooks.index')])
+
 <div class="ds-grid-section">
   <div class="ds-grid-card">
     {{-- 로그는 옆 탭이다 (2026-09-10 지시). 낱장으로 넘어가지 않고 이 자리에 박힌다 —
@@ -77,6 +81,12 @@
         @perm('webhooks', 'create')
         <button type="button" class="ds-btn ds-btn-primary" onclick="whOpen()">웹훅 등록</button>
         @endperm
+      </span>
+      {{-- 로그 탭에서는 같은 자리에 성공ㆍ실패가 선다 — 줄이 늘지 않는다 --}}
+      <span style="margin-left:auto;gap:8px;align-items:center;display:{{ $tab === 'logs' ? 'flex' : 'none' }};" id="whLogTools">
+        <span class="wl-chip wl-ok">성공 {{ $logCounts['ok'] }}</span>
+        <span class="wl-chip wl-fail">실패 {{ $logCounts['fail'] }}</span>
+        <button type="button" class="ds-btn" onclick="window.__wlGrid?.downloadExcel()">엑셀 다운</button>
       </span>
     </div>
     <div style="padding:16px;{{ $tab === 'logs' ? 'display:none;' : '' }}" id="whListPanel">
@@ -257,7 +267,9 @@
     document.getElementById('whListPanel').style.display  = 로그냐 ? 'none' : '';
     document.getElementById('whLogsPanel').style.display  = 로그냐 ? '' : 'none';
     document.getElementById('whListTools').style.display  = 로그냐 ? 'none' : 'flex';
-    document.getElementById('whFilterCard').style.display = 로그냐 ? 'none' : '';
+    document.getElementById('whLogTools').style.display   = 로그냐 ? 'flex' : 'none';
+    document.getElementById('whFilterCard').style.display    = 로그냐 ? 'none' : '';
+    document.getElementById('whLogFilterCard').style.display = 로그냐 ? '' : 'none';
     document.getElementById('whTabList').classList.toggle('active', !로그냐);
     document.getElementById('whTabLogs').classList.toggle('active', 로그냐);
 
