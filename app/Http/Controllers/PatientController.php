@@ -102,12 +102,23 @@ class PatientController extends Controller
 
         $consents = $this->latestConsentByPatient();
 
+        /* 마케팅 동의도 목록에서 본다(2026-09-10 지시 · 확인요청 1쪽).
+           거래처에 적어 둔 값이 먼저고, 없으면 개인정보 동의서에서 읽는다 —
+           상세 화면이 보는 것과 같은 차례다. 줄마다 물으면 마흔 줄에 마흔 번이라
+           한 번에 모아 둔다. */
+        $마케팅 = \App\Models\PrivacyConsent::query()
+            ->whereNotNull('patient_id')
+            ->orderByDesc('id')
+            ->get(['patient_id', 'agree_marketing'])
+            ->unique('patient_id')
+            ->keyBy('patient_id');
+
         /* 주소가 언제 바뀌었는지도 함께 보여 준다 — 「이 주소가 언제부터인가」를
            모르면 지난 주문이 어디로 갔는지 되짚을 수 없다. */
         $query->with(['creator:id,name', 'updater:id,name', 'addresses']);
 
         // ── wwGrid 데이터 ──────────────────────────────────
-        $gridData = $query->get()->map(function ($p) use ($consents) {
+        $gridData = $query->get()->map(function ($p) use ($consents, $마케팅) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -162,6 +173,20 @@ class PatientController extends Controller
                 'fax'             => \App\Support\PhoneNo::format($p->fax),
                 'address'         => $p->full_address,
                 'address_at'      => $addr?->created_at?->format('Y-m-d') ?? '',
+
+                /* 마케팅 동의 — 거래처에 적어 둔 값이 동의서 값을 덮는다.
+                   어디서 온 값인지도 함께 적는다: 뒤에 엑셀로 받아 볼 때 「누가 정한
+                   값인가」를 알아야 한다. */
+                'marketing'       => (function () use ($p, $마케팅) {
+                    $적은값 = trim((string) ($p->marketing_consent ?? ''));
+                    if ($적은값 !== '') {
+                        return $적은값 . ' (거래처)';
+                    }
+
+                    $동의서 = trim((string) ($마케팅[$p->id]->agree_marketing ?? ''));
+
+                    return $동의서 !== '' ? $동의서 . ' (동의서)' : '';
+                })(),
 
                 // ── 돈 ──
                 'remitter'        => $p->remitter_name ?? '',

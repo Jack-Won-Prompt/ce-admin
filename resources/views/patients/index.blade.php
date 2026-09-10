@@ -418,6 +418,9 @@ document.addEventListener('keydown', (e) => {
       { header: '나이',        name: 'age',            width: 80,  align: 'center' },
       { header: '연락 상태',   name: 'contact_status', width: 110, align: 'center', sortable: true },
       { header: '연락 선호 방식', name: 'contact_channel', width: 140, align: 'center', sortable: true },
+      /* 마케팅 동의 — 거래처에 적어 둔 값이 먼저고, 없으면 개인정보 동의서에서 읽는다.
+         어디서 온 값인지 괄호로 함께 적는다(2026-09-10 지시 · 확인요청 1쪽). */
+      { header: '마케팅 동의', name: 'marketing', width: 130, align: 'center', sortable: true },
       /* 성별 자리에 상담내역을 둔다. 성별은 훑을 때 쓰는 값이 아니고(필요하면 상세에 있다),
          목록에서 바로 하고 싶은 일은 「이 환자와 무슨 이야기를 했나」를 보는 것이다. */
       { header: '상담내역', name: 'counsel', width: 90, align: 'center', exportable: false,

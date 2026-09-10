@@ -422,11 +422,9 @@
   @php($_sender = $consent->sender)
   <div class="sender-bar">
     <span>
-      @if($_sender)
-        <b>콜로플라스트 코리아</b> {{ $_sender->name }} 님이 보냈습니다.
-      @else
-        <b>콜로플라스트 코리아</b> 에서 보낸 서명 요청입니다.
-      @endif
+      {{-- 담당자 이름은 적지 않는다(2026-09-10 지시). 환자에게는 회사가 보낸 것으로
+           보이면 되고, 누가 보냈는지는 우리 기록(sent_by)에 그대로 남는다. --}}
+      <b>콜로플라스트 코리아</b> 님이 보냈습니다.
     </span>
     @if($_tel = config('popbill.company.tel'))
       <a href="tel:{{ preg_replace('/[^0-9]/', '', $_tel) }}">{{ $_tel }}</a>

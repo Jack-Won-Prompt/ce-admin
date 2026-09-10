@@ -3539,7 +3539,7 @@ $calcDeposit  = $calcCopay;
                 <span class="rx-field-label">결제시간</span>
                 <input type="text" class="form-control" id="f-paid-at" readonly
                        value="{{ $prescription->order?->paidAtLabel('Y-m-d H:i:s') }}"
-                       placeholder="결제되면 자동으로 표시됩니다"
+                       placeholder="결제되면 자동 입력 됩니다"
                        title="토스가 승인한 시각입니다. 없으면 가상계좌 입금ㆍ담당자 확인 시각을 표시합니다."
                        style="flex:1;background:var(--bg-subtle,#f8fafc);" />
               </div>
@@ -8517,12 +8517,10 @@ window.HELP_TOUR_STEPS = [
 
     /* 어디서 받는지 함께 적는다. 「동의를 받으십시오」만으로는 이 화면 어느 단추를
        눌러야 하는지 알 수 없어, 받아 둔 건인지 확인하러 다른 화면을 뒤지게 된다. */
-    const where = needDel ? '「개인정보동의」ㆍ「위임동의」' : '「개인정보동의」';
-
-    ceAlert(missing.join(' · ') + ' 이(가) 아직입니다.\n\n'
-          + '화면 위쪽의 ' + where + ' 단추로 받으십시오. '
+    ceAlert(missing.join(' · ') + ' 완료 되어야 진행 가능 합니다.\n\n'
+          + '화면 위쪽의 「서명 동의」 단추로 받으십시오. '
           + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.',
-            { title: '동의가 아직입니다' });
+            { title: '동의 완료 후 진행 가능합니다' });
     return false;
   }
 
