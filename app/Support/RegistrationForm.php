@@ -107,8 +107,10 @@ final class RegistrationForm
 
         return [
             'name'       => $pt?->bare_name ?: $consent->patient_name,
-            /* 공단에 내는 서식이라 가린 번호로는 접수되지 않는다. 푸는 까닭을 남긴다(P0-1). */
-            'rrn'        => $rx?->resident_no ?: $pt?->residentNoFor('nhis_registration_form'),
+            /* 공단에 내는 법정서식이라 가린 번호로는 접수되지 않는다. 푸는 까닭을
+               남긴다(P0-1) — 사유 코드는 위임장ㆍ청구서와 같은 것을 쓴다
+               (config/rrn.php · 「급여비 지급청구서·위임장 등 법정서식 출력」). */
+            'rrn'        => $rx?->resident_no ?: $pt?->residentNoFor('nhis_claim_form'),
             'tel_home'   => PhoneNo::format($pt?->phone),
             'tel_mobile' => PhoneNo::format($pt?->mobile ?: $consent->patient_mobile),
             /* 등록 결과를 문자로 받겠다 — 환자에게 곧바로 닿는 길이다 */
