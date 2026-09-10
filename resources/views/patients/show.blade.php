@@ -548,7 +548,7 @@
                        value="{{ $patient->guardian_birth_date?->format('Y-m-d') }}"
                        data-orig="{{ $patient->guardian_birth_date?->format('Y-m-d') }}" />
                 <input type="text" class="form-control" id="e-guardian-phone" style="flex:1 1 130px;"
-                       value="{{ $patient->guardian_phone }}" data-orig="{{ $patient->guardian_phone }}"
+                       value="{{ $patient- data-phone >guardian_phone }}" data-orig="{{ $patient->guardian_phone }}"
                        placeholder="010-XXXX-XXXX" data-phone />
               </span>
             </span>

@@ -188,7 +188,7 @@
           </div>
           <div class="smp-f">
             <label>연락처</label>
-            <input type="text" id="smpMobile" class="form-control" maxlength="30" placeholder="010-0000-0000">
+            <input type="text" id="smpMobile" class="form-control" maxlength="30" placeholder="010-0000-0000" data-phone >
           </div>
           <div class="smp-f">
             <label>우편번호</label>
