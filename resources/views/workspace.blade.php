@@ -124,9 +124,35 @@
     render(true);
     save();
   }
-  function closeTab(id) {
+  /**
+   * 탭을 닫기 전에 적다 만 것이 있는지 그 화면에 묻는다
+   * (2026-09-10 확인요청 5쪽).
+   *
+   * 탭을 옮기는 것만으로는 아무것도 잃지 않는다 — 액자는 그대로 살아 있고 적어 둔
+   * 것도 그 자리에 남는다. 잃는 것은 **닫을 때**다. 액자가 사라지면 적다 만 것도
+   * 함께 사라지는데, 여태 아무 말 없이 그렇게 되었다.
+   *
+   * 같은 곳에서 온 문서라 안을 물어볼 수 있다. 못 물어보면 닫는다 — 물어보지
+   * 못했다고 닫지 못하게 하면 닫을 길이 없는 탭이 생긴다.
+   */
+  function 적다만것있나(id) {
+    const f = document.getElementById('wsF-' + id);
+    try { return !!f?.contentWindow?.isAnyDirty?.(); } catch (e) { return false; }
+  }
+
+  async function closeTab(id) {
     const i = tabs.findIndex(t => t.id === id);
     if (i < 0 || tabs[i].home) return;
+
+    if (적다만것있나(id)) {
+      const 이름 = tabs[i].title || '이 화면';
+      const ok = await ceConfirm(
+        `「${이름}」에 저장하지 않은 내용이 있습니다.\n탭을 닫으면 적은 것이 사라집니다.`,
+        { title: '저장하지 않은 내용이 있습니다', tone: 'warning',
+          confirmText: '저장하지 않고 닫기', cancelText: '돌아가서 저장' });
+      if (!ok) { activate(id); return; }     // 고치러 그 탭으로 보내 준다
+    }
+
     const wasActive = active === id;
     const f = document.getElementById('wsF-' + id); if (f) f.remove();
     tabs.splice(i, 1);

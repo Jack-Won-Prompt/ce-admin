@@ -2846,7 +2846,19 @@ $calcDeposit  = $calcCopay;
                     <input type="text" class="form-control" id="f-address-detail"
                            value="{{ $prescription->address_detail ?? $prescription->patient?->address_detail ?? '' }}"
                            placeholder="상세 주소" style="flex:1;min-width:0;" />
-                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
+                    {{-- 「배송 주소 동일」은 화면에서 감춘다 (2026-09-10 확인요청 3쪽).
+
+                         주소를 손보는 자리는 위의 「거래처 수정」 하나여야 한다. 이 자리에
+                         고르는 칸이 하나 더 서 있으면 어디서 고친 값이 실제로 나가는지
+                         담당자가 매번 되짚게 된다.
+
+                         **칸은 남긴다.** 이것은 「이 건의 주소를 배송지로 쓴다」는 표시라,
+                         걷어 내면 주문 제품 탭의 배송지가 늘 빈 채로 열린다 — 그러면
+                         「처방전 주소」를 누르는 것을 잊은 건이 빈 주소로 창고에 나간다
+                         (그 길은 2026-09-10 확인요청 7쪽에서 막아 둔 바로 그 자리다).
+
+                         자동으로 옮겨 담는 일까지 그만두려면 checked 를 떼면 된다. --}}
+                    <label style="display:none;align-items:center;gap:6px;font-size:13px;font-weight:500;line-height:21px;color:var(--primary);white-space:nowrap;cursor:pointer;margin:0;flex-shrink:0;">
                       {{-- 적어 둔 배송지가 이 건의 주소와 다르면 풀어 둔다. 늘 켜 두면
                            주문 제품 탭을 여는 것만으로 따로 적어 둔 배송지가 덮인다. --}}
                       @php
