@@ -12076,12 +12076,12 @@ window.HELP_TOUR_STEPS = [
     if (sendBtn) sendBtn.disabled = false;
 
     if (isResend) {
-      if (titleEl) titleEl.textContent = '위임동의 재발송';
+      if (titleEl) titleEl.textContent = '서명 동의 재발송';
       if (iconEl)  { iconEl.className = 'fa-solid fa-rotate-right'; iconEl.style.color = '#fff'; }
       if (notice)  notice.style.display = 'block';
       if (sendBtn) sendBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 재발송';
     } else {
-      if (titleEl) titleEl.textContent = '위임동의 SMS 발송';
+      if (titleEl) titleEl.textContent = '서명 동의 SMS 발송';
       if (iconEl)  { iconEl.className = 'fa-solid fa-file-signature'; iconEl.style.color = '#fff'; }
       if (notice)  notice.style.display = 'none';
       if (sendBtn) sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 발송';
