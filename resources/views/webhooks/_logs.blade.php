@@ -1,8 +1,17 @@
-{{-- 전송·수신 로그 — 웹훅 관리 화면의 옆 탭에 박히는 조각 (2026-09-10 지시).
+{{-- 전송·수신 로그 — 웹훅 관리 화면의 옆 탭 (2026-09-10 지시).
 
-     낱장으로도 열리고(webhooks/logs) 탭 안에도 박힌다. 그래서 여기에는 레이아웃도
-     @push 도 두지 않는다 — 박아 넣을 때는 그것들이 돌지 않는다. --}}
+     화면 안에서 함께 그린다. 따로 불러오지 않는다 — 화면이 하나면 새로고침ㆍ뒤로
+     가기ㆍ주소 공유가 모두 그대로 돈다.
 
+     거르개 이름은 log_ 로 시작한다. 웹훅 목록 쪽에도 구분ㆍ방향ㆍ검색어가 있어
+     한 주소를 나눠 쓰면 이름이 부딪친다.
+
+     받는 것 — $logRows · $logCounts · $logFrom · $logTo · $logProvider ·
+               $logDirection · $logResult · $logSearch · $보내는곳(폼이 갈 자리) --}}
+
+@php($_보낼곳 = $보내는곳 ?? route('webhooks.index'))
+
+@push('styles')
 <style>
   .wl-body { margin:0; padding:11px 12px; background:var(--gray-50); border:1px solid var(--gray-200);
              border-radius:8px; font-size:11.5px; line-height:1.65; white-space:pre-wrap; word-break:break-all;
@@ -14,60 +23,64 @@
   .wl-fail { background:var(--danger-light); color:var(--danger); }
   .wl-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
 </style>
+@endpush
 
-<form id="wlFilter" onsubmit="return wlSearch(event)" class="ds-filter-card" style="margin-bottom:14px;">
+<form method="GET" action="{{ $_보낼곳 }}" class="ds-filter-card" style="margin-bottom:14px;">
+  {{-- 찾고 나서도 이 탭에 그대로 있어야 한다 --}}
+  <input type="hidden" name="tab" value="logs">
+
   <div class="ds-filter-fields">
     <div class="ds-filter-field">
       <label class="ds-field-label">기간</label>
       <div style="display:flex;align-items:center;gap:6px;">
-        <input type="date" name="from" value="{{ $from }}" class="form-control" style="width:150px;">
+        <input type="date" name="log_from" value="{{ $logFrom }}" class="form-control" style="width:150px;">
         <span class="ds-field-sep">~</span>
-        <input type="date" name="to" value="{{ $to }}" class="form-control" style="width:150px;">
+        <input type="date" name="log_to" value="{{ $logTo }}" class="form-control" style="width:150px;">
       </div>
     </div>
     <div class="ds-filter-field">
       <label class="ds-field-label">구분</label>
-      <select name="provider" class="form-control form-select">
+      <select name="log_provider" class="form-control form-select">
         <option value="">전체</option>
         @foreach(config('webhooks.providers') as $k => $label)
-          <option value="{{ $k }}" @selected($provider === $k)>{{ $label }}</option>
+          <option value="{{ $k }}" @selected($logProvider === $k)>{{ $label }}</option>
         @endforeach
       </select>
     </div>
     <div class="ds-filter-field">
       <label class="ds-field-label">방향</label>
-      <select name="direction" class="form-control form-select">
+      <select name="log_direction" class="form-control form-select">
         <option value="">전체</option>
         @foreach(config('webhooks.directions') as $k => $label)
-          <option value="{{ $k }}" @selected($direction === $k)>{{ $label }}</option>
+          <option value="{{ $k }}" @selected($logDirection === $k)>{{ $label }}</option>
         @endforeach
       </select>
     </div>
     <div class="ds-filter-field">
       <label class="ds-field-label">결과</label>
-      <select name="result" class="form-control form-select">
+      <select name="log_result" class="form-control form-select">
         <option value="">전체</option>
-        <option value="ok"   @selected($result === 'ok')>성공</option>
-        <option value="fail" @selected($result === 'fail')>실패</option>
+        <option value="ok"   @selected($logResult === 'ok')>성공</option>
+        <option value="fail" @selected($logResult === 'fail')>실패</option>
       </select>
     </div>
     <div class="ds-filter-field" style="flex:1;min-width:200px;">
       <label class="ds-field-label">검색어</label>
-      <input type="text" name="search" value="{{ $search }}" class="form-control"
+      <input type="text" name="log_search" value="{{ $logSearch }}" class="form-control"
              placeholder="이벤트 · 주문번호 · 주소 · 본문">
     </div>
   </div>
   <div class="ds-filter-actions">
-    <button type="button" class="ds-btn" onclick="wlReset(this)">초기화</button>
+    <a href="{{ $_보낼곳 }}?tab=logs" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     <button type="button" class="ds-btn" onclick="window.__wlGrid?.downloadExcel()">엑셀 다운</button>
   </div>
 </form>
 
 <div class="wl-head">
-  <span style="font-size:12.5px;font-weight:700;color:var(--gray-700);">오간 기록 (총 {{ $counts['all'] }}건)</span>
-  <span class="wl-chip wl-ok">성공 {{ $counts['ok'] }}</span>
-  <span class="wl-chip wl-fail">실패 {{ $counts['fail'] }}</span>
+  <span style="font-size:12.5px;font-weight:700;color:var(--gray-700);">오간 기록 (총 {{ $logCounts['all'] }}건)</span>
+  <span class="wl-chip wl-ok">성공 {{ $logCounts['ok'] }}</span>
+  <span class="wl-chip wl-fail">실패 {{ $logCounts['fail'] }}</span>
   <span style="margin-left:auto;font-size:11.5px;color:var(--text-muted);">
     줄을 더블클릭하면 주고받은 값을 그대로 봅니다.
   </span>
@@ -75,7 +88,7 @@
 
 <div id="wlGrid"></div>
 
-@if($counts['all'] >= 1000)
+@if($logCounts['all'] >= 1000)
   <div style="margin-top:8px;font-size:11.5px;color:var(--text-muted);">
     최근 1,000건까지만 보여 줍니다. 더 보려면 기간을 좁히십시오.
   </div>
@@ -96,10 +109,11 @@
   <div style="padding:14px;display:flex;flex-direction:column;gap:12px;" id="wlBody"></div>
 </div>
 
+
+@push('scripts')
 <script>
 (function () {
-  const ROWS     = @json($gridData);
-  const LOGS_URL = @json(route('webhooks.logs'));
+  const ROWS = @json($logRows);
 
   /* 성공ㆍ실패는 한눈에 갈려야 한다 — 실패한 줄을 찾으러 오는 화면이다 */
   const 결과칸 = (v) => {
@@ -171,30 +185,6 @@
     document.getElementById('wlBackdrop').style.display = 'none';
     document.getElementById('wlModal').style.display    = 'none';
   };
-
-  /* 탭 안에서 찾을 때는 화면을 통째로 새로 열지 않는다 — 이 칸만 다시 그린다.
-     낱장으로 열렸을 때(탭 바깥)는 예전처럼 주소로 넘어간다. */
-  const 박혀있나 = () => !!document.getElementById('whLogsPanel');
-
-  window.wlSearch = function (e) {
-    e.preventDefault();
-    const q = new URLSearchParams(new FormData(document.getElementById('wlFilter'))).toString();
-
-    if (박혀있나() && window.whLoadLogs) {
-      window.whLoadLogs(q);
-    } else {
-      location.href = LOGS_URL + '?' + q;
-    }
-
-    return false;
-  };
-
-  window.wlReset = function () {
-    if (박혀있나() && window.whLoadLogs) {
-      window.whLoadLogs('');
-    } else {
-      location.href = LOGS_URL;
-    }
-  };
 })();
 </script>
+@endpush

@@ -26,7 +26,8 @@
 
 @section('content')
 
-<form method="GET" action="{{ route('webhooks.index') }}" class="ds-filter-card" id="whFilterCard">
+<form method="GET" action="{{ route('webhooks.index') }}" class="ds-filter-card" id="whFilterCard"
+      style="{{ $tab === 'logs' ? 'display:none;' : '' }}">
   <div class="ds-filter-fields">
     <div class="ds-filter-field">
       <label class="ds-field-label">구분</label>
@@ -64,28 +65,25 @@
     {{-- 로그는 옆 탭이다 (2026-09-10 지시). 낱장으로 넘어가지 않고 이 자리에 박힌다 —
          정의를 고치다 「그래서 실제로 왔나」를 볼 때 화면을 떠나지 않아도 된다. --}}
     <div class="pnl-tabs">
-      <button type="button" id="whTabList" class="pnl-tab active" onclick="whTab('list')">
+      <button type="button" id="whTabList" class="pnl-tab {{ $tab === 'logs' ? '' : 'active' }}" onclick="whTab('list')">
         <i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
         <span class="pnl-tab-cnt">(총 {{ count($gridData) }}건)</span>
       </button>
-      <button type="button" id="whTabLogs" class="pnl-tab" onclick="whTab('logs')">
+      <button type="button" id="whTabLogs" class="pnl-tab {{ $tab === 'logs' ? 'active' : '' }}" onclick="whTab('logs')">
         <i class="fa-solid fa-clock-rotate-left"></i> 전송·수신 로그
+        <span class="pnl-tab-cnt">(총 {{ $logCounts['all'] }}건)</span>
       </button>
-      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;" id="whListTools">
+      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;{{ $tab === 'logs' ? 'display:none;' : '' }}" id="whListTools">
         @perm('webhooks', 'create')
         <button type="button" class="ds-btn ds-btn-primary" onclick="whOpen()">웹훅 등록</button>
         @endperm
       </span>
     </div>
-    <div style="padding:16px;" id="whListPanel">
+    <div style="padding:16px;{{ $tab === 'logs' ? 'display:none;' : '' }}" id="whListPanel">
       <div id="whGrid"></div>
     </div>
-    <div style="padding:16px;display:none;" id="whLogsPanel">
-      <div id="whLogsContent">
-        <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12.5px;">
-          불러오는 중…
-        </div>
-      </div>
+    <div style="padding:16px;{{ $tab === 'logs' ? '' : 'display:none;' }}" id="whLogsPanel">
+      @include('webhooks._logs', ['보내는곳' => route('webhooks.index')])
     </div>
   </div>
 </div>
@@ -251,46 +249,21 @@
 
   /* ── 탭 ──
 
-     로그는 누를 때 한 번만 불러온다. 화면을 열 때마다 천 줄을 함께 그리면
-     정의만 보러 온 사람에게도 그 값이 든다. */
-  const LOGS_URL = @json(route('webhooks.logs'));
-  let 로그불렀나 = false;
-
+     두 칸이 한 화면에 함께 그려져 있다(따로 불러오지 않는다). 여기서는 보이고
+     감추는 것만 한다 — 찾을 때는 폼이 tab=logs 를 달고 가서 이 탭으로 돌아온다. */
   window.whTab = function (어느것) {
     const 로그냐 = 어느것 === 'logs';
 
-    document.getElementById('whListPanel').style.display = 로그냐 ? 'none' : '';
-    document.getElementById('whLogsPanel').style.display = 로그냐 ? '' : 'none';
-    document.getElementById('whListTools').style.display = 로그냐 ? 'none' : '';
+    document.getElementById('whListPanel').style.display  = 로그냐 ? 'none' : '';
+    document.getElementById('whLogsPanel').style.display  = 로그냐 ? '' : 'none';
+    document.getElementById('whListTools').style.display  = 로그냐 ? 'none' : '';
     document.getElementById('whFilterCard').style.display = 로그냐 ? 'none' : '';
     document.getElementById('whTabList').classList.toggle('active', !로그냐);
     document.getElementById('whTabLogs').classList.toggle('active', 로그냐);
 
-    if (로그냐 && !로그불렀나) {
-      로그불렀나 = true;
-      whLoadLogs('');
-    }
-  };
-
-  /* 조각을 받아 이 자리에 그린다. 붙여 넣은 <script> 는 그대로는 돌지 않아 다시 만든다. */
-  window.whLoadLogs = async function (질의) {
-    const 칸 = document.getElementById('whLogsContent');
-    칸.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12.5px;">불러오는 중…</div>';
-
-    try {
-      const 주소 = LOGS_URL + '?partial=1' + (질의 ? '&' + 질의 : '');
-      const res  = await fetch(주소, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-
-      칸.innerHTML = await res.text();
-      칸.querySelectorAll('script').forEach((옛것) => {
-        const s = document.createElement('script');
-        if (옛것.src) s.src = 옛것.src; else s.textContent = 옛것.textContent;
-        옛것.parentNode.replaceChild(s, 옛것);
-      });
-    } catch (e) {
-      칸.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger);font-size:12.5px;">로그를 불러오지 못했습니다.</div>';
-    }
+    /* 감춰진 채로 그려진 표는 높이를 제대로 잡지 못한다 — 보일 때 한 번 다시 재게 한다.
+       wwGrid 는 창 크기가 바뀔 때 그 셈을 다시 하므로 그 길을 빌린다. */
+    window.dispatchEvent(new Event('resize'));
   };
 
   /* ── 창 ── */

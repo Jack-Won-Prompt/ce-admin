@@ -15,7 +15,7 @@
 <div class="ds-grid-section">
   <div class="ds-grid-card">
     <div style="padding:16px;">
-      @include('webhooks._logs')
+      @include('webhooks._logs', ['보내는곳' => route('webhooks.logs')])
     </div>
   </div>
 </div>

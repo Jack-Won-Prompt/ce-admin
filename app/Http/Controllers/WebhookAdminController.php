@@ -72,12 +72,17 @@ class WebhookAdminController extends Controller
             ],
         ])->values();
 
+        /* 로그는 옆 탭이다 — 같은 화면에서 함께 그린다(2026-09-10 지시).
+           따로 불러오지 않는다: 화면이 하나면 새로고침ㆍ뒤로 가기ㆍ주소 공유가 모두
+           그대로 돈다. 거르개 이름은 log_ 로 시작한다 — 목록 쪽 거르개와 한 주소를
+           나눠 쓰기 때문이다. */
         return view('webhooks.index', [
             'gridData'  => $gridData,
             'provider'  => $request->input('provider', ''),
             'direction' => $request->input('direction', ''),
             'search'    => $request->input('search'),
-        ]);
+            'tab'       => $request->input('tab') === 'logs' ? 'logs' : 'list',
+        ] + $this->로그자료($request));
     }
 
     /** 정의 저장 — 새로 세우거나 고친다. 파라미터도 함께 담는다. */
@@ -164,28 +169,38 @@ class WebhookAdminController extends Controller
     }
 
     /**
-     * 로그 목록.
+     * 낱장으로 여는 로그 화면.
      *
-     * 웹훅 관리 화면의 옆 탭에 박힐 때는 조각만 돌려준다(레이아웃 없이) — 그 자리에서
-     * 바로 그려 넣는다(2026-09-10 지시). 낱장 주소로도 그대로 열린다.
+     * 본체는 웹훅 관리 화면의 옆 탭이다 — 여기서는 같은 조각을 레이아웃에 얹기만 한다.
      */
     public function logs(Request $request): View
     {
-        $from = $request->input('from', now()->subDays(7)->toDateString());
-        $to   = $request->input('to',   now()->toDateString());
+        return view('webhooks.logs', $this->로그자료($request));
+    }
+
+    /**
+     * 로그 칸에 담을 것 — 목록 화면과 낱장 화면이 같은 것을 본다 (2026-09-10 지시).
+     *
+     * 거르개 이름은 log_ 로 시작한다. 웹훅 목록 쪽에도 구분ㆍ방향ㆍ검색어가 있어,
+     * 한 주소를 나눠 쓰면 이름이 부딪친다.
+     */
+    private function 로그자료(Request $request): array
+    {
+        $from = $request->input('log_from', now()->subDays(7)->toDateString());
+        $to   = $request->input('log_to',   now()->toDateString());
 
         $q = WebhookLog::with('webhook')
             ->whereBetween(DB::raw('DATE(occurred_at)'), [$from, $to]);
 
-        if ($request->filled('provider'))  $q->where('provider', $request->provider);
-        if ($request->filled('direction')) $q->where('direction', $request->direction);
+        if ($request->filled('log_provider'))  $q->where('provider', $request->log_provider);
+        if ($request->filled('log_direction')) $q->where('direction', $request->log_direction);
 
-        if ($request->filled('result')) {
-            $q->where('ok', $request->result === 'ok');
+        if ($request->filled('log_result')) {
+            $q->where('ok', $request->log_result === 'ok');
         }
 
-        if ($request->filled('search')) {
-            $kw = trim($request->search);
+        if ($request->filled('log_search')) {
+            $kw = trim($request->log_search);
             $q->where(fn ($s) => $s
                 ->where('event_code', 'like', "%{$kw}%")
                 ->orWhere('ref', 'like', "%{$kw}%")
@@ -225,18 +240,15 @@ class WebhookAdminController extends Controller
             'fail' => $rows->where('ok', false)->count(),
         ];
 
-        $조각 = $request->boolean('partial')
-                || $request->header('X-Requested-With') === 'XMLHttpRequest';
-
-        return view($조각 ? 'webhooks._logs' : 'webhooks.logs', [
-            'gridData'  => $gridData,
-            'counts'    => $counts,
-            'from'      => $from,
-            'to'        => $to,
-            'provider'  => $request->input('provider', ''),
-            'direction' => $request->input('direction', ''),
-            'result'    => $request->input('result', ''),
-            'search'    => $request->input('search'),
-        ]);
+        return [
+            'logRows'      => $gridData,
+            'logCounts'    => $counts,
+            'logFrom'      => $from,
+            'logTo'        => $to,
+            'logProvider'  => $request->input('log_provider', ''),
+            'logDirection' => $request->input('log_direction', ''),
+            'logResult'    => $request->input('log_result', ''),
+            'logSearch'    => $request->input('log_search'),
+        ];
     }
 }
