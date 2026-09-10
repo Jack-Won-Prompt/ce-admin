@@ -5791,15 +5791,26 @@ window.HELP_TOUR_STEPS = [
     if (!birth) {
       if (bEl)  bEl.value = '';
       /* 자리는 지킨다(요청서 2쪽 — 성년ㆍ미성년 구분과 나이를 고정으로 보인다).
-         감추면 「아직 안 적었다」와 「성년이다」가 똑같이 빈자리로 보인다. */
+         감추면 「아직 안 적었다」와 「성년이다」가 똑같이 빈자리로 보인다.
+
+         **없는 것과 못 읽는 것을 가른다** (2026-09-10 확인요청 6쪽).
+         여태 둘 다 「주민등록번호 없음」이라 적었다. 그런데 번호가 버젓이 적혀 있는데
+         그렇게 뜨면 화면이 거짓을 말하는 셈이고, 담당자는 무엇이 잘못됐는지 알 수
+         없다 — 실제로는 902123-4012345 처럼 월이 21 인 번호였다(2026-09-10 (E)김사탕).
+         그런 번호는 공단에 그대로 나가면 그 자리에서 반려된다. */
+      const 적힌것 = (inp?.value || '').trim() || (inp?.placeholder || '');
+      const 못읽음 = 적힌것.replace(/\D/g, '').length >= 7;
+
       if (badge) {
-        badge.textContent      = '주민등록번호 없음';
+        badge.textContent      = 못읽음 ? '주민등록번호 확인 필요' : '주민등록번호 없음';
         badge.style.display    = '';
-        badge.style.background = 'var(--gray-100)';
-        badge.style.color      = 'var(--gray-600)';
-        badge.style.border     = '1px solid var(--gray-200)';
+        badge.style.background = 못읽음 ? 'var(--alert-50)'  : 'var(--gray-100)';
+        badge.style.color      = 못읽음 ? 'var(--alert-500)' : 'var(--gray-600)';
+        badge.style.border     = '1px solid ' + (못읽음 ? 'var(--alert-100)' : 'var(--gray-200)');
         badge.style.cursor     = 'default';
-        badge.title            = '';
+        badge.title            = 못읽음
+          ? '적힌 번호로 생년월일을 셀 수 없습니다 — 앞 일곱 자리를 확인하세요.'
+          : '';
         badge.setAttribute('role', 'presentation');
       }
       showStates(false);
@@ -7933,62 +7944,15 @@ window.HELP_TOUR_STEPS = [
       return false;
     }
 
-    /* ── 청구 한도 (2026-09-08 확인요청 10쪽 · 2026-09-10 확정) ──────────
+    /* 청구 한도는 여기서 막지 않는다 (2026-09-10 확인요청 6쪽).
 
-       공단이 정한 잣대다. 넘으면 청구가 반려된다 — 나간 뒤에 알면 서류를 다시
-       만들어야 하므로 여기서 막고 무엇이 넘었는지 알린다.
+       예전에는 넘으면 저장을 통째로 물렸다. 그래서 병원ㆍ상병ㆍ처방 수량을 적어 넣고
+       저장을 눌러도 그 자리에서 되돌아갔고, 화면은 제품 탭으로 옮겨 갔다 — 담당자
+       눈에는 「적은 것이 사라졌다」로 보였다(2026-09-10 (E)김사탕 건).
 
-       셀 수 없으면 막지 않는다. 처방일수나 총계가 아직 비어 있는 건은 「넘었다」고
-       할 근거가 없다 — 적는 도중에 막아 세우면 적을 수가 없다. */
-    const 한도금액 = {{ (int) config('nhis.limits.daily_amount', 9000) }};
-    const 산수량   = items.reduce((t, i) => t + (parseInt(i.quantity, 10) || 0), 0);
-    const 산금액   = items.reduce((t, i) => t + Number(computeRow(i).total || 0), 0);
-    const 처방일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
-    const 총계     = parseInt(document.getElementById('f-total')?.value ?? '', 10);
-    const 돈 = n => Number(n || 0).toLocaleString('ko-KR');
-
-    const 제품탭으로 = () => {
-      const 탭 = [...document.querySelectorAll('.tab-btn')]
-                   .find(b => (b.getAttribute('onclick') || '').includes('tab-product'));
-      if (탭) switchTab(탭, 'tab-product');
-    };
-
-    /* 담겨 있던 값보다 나빠지지 않으면 지나간다. 한도를 넘는 건이 이미 마흔일곱이라,
-       무조건 막으면 한도와 아무 상관 없는 일(주소ㆍ메모)까지 함께 잠긴다. */
-    const 담긴 = @json($_담긴한도);
-    const 담긴하루 = (담긴.days > 0 && 담긴.amount > 0) ? 담긴.amount / 담긴.days : 0;
-
-    if (처방일수 > 0 && 산금액 > 0) {
-      const 하루 = Math.round(산금액 / 처방일수);
-      if (하루 > 한도금액) {
-        const 말 = `하루 한도를 넘었습니다 — ${돈(산금액)}원 ÷ ${처방일수}일 = ${돈(하루)}원 `
-                 + `(한도 ${돈(한도금액)}원).`;
-
-        /* 담겨 있던 것도 이미 넘었고 더 오르지 않았으면 지나간다 — 다만 알린다 */
-        if (담긴하루 > 한도금액 && 하루 <= Math.round(담긴하루)) {
-          showToast(말 + ' 담겨 있던 값 그대로라 저장은 됩니다.', 'warning', 7000);
-        } else {
-          showToast(말 + ' 수량 또는 처방일수를 확인하세요.', 'warning', 7000);
-          제품탭으로();
-
-          return false;
-        }
-      }
-    }
-
-    if (총계 > 0 && 산수량 > 총계) {
-      const 말 = `구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개).`;
-      const 담긴넘음 = 담긴.total > 0 && 담긴.qty > 담긴.total;
-
-      if (담긴넘음 && 산수량 <= 담긴.qty) {
-        showToast(말 + ' 담겨 있던 값 그대로라 저장은 됩니다.', 'warning', 7000);
-      } else {
-        showToast(말 + ' 1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.', 'warning', 7000);
-        제품탭으로();
-
-        return false;
-      }
-    }
+       적어 둔 것은 남아야 한다. 한도를 넘었다는 사실은 알리기만 하고, 실제로 막는
+       자리는 창고로 보내는 걸음이다(gateOrder → gate청구한도(true)). */
+    gate청구한도(false);
 
     const _num = v => (v === '' || v === null || v === undefined) ? null : Math.round(Number(v));
     const itemsPayload = items
@@ -8168,7 +8132,11 @@ window.HELP_TOUR_STEPS = [
 
         const cs = res.consent_sms;
         if (cs?.sent) {
-          showToast('위임동의 서명 SMS 를 보냈습니다 — ' + (cs.expires_at || '') + '까지 열려 있습니다.', 'success');
+          /* 왜 지금 나갔는지를 함께 적는다 (2026-09-10 확인요청 6쪽).
+             「보냈습니다」만 뜨면 저장을 눌렀을 뿐인데 문자가 나갔다고 읽혀, 담당자는
+             무엇을 잘못 눌렀나 되짚게 된다. 아직 서명 전인 건에 처음 한 번만 나간다. */
+          showToast('저장과 함께 위임동의 서명 SMS 가 나갔습니다 — 아직 서명 전인 건에 한 번만 보냅니다. '
+                    + (cs.expires_at || '') + '까지 열려 있습니다.', 'success', 7000);
           /* 보낸 뒤에는 그 단추가 「다시 보내기」가 되어야 한다 — 상태를 다시 읽는다 */
           if (typeof updateConsentStatus === 'function') updateConsentStatus();
         } else if (cs?.reason) {
@@ -8781,6 +8749,81 @@ window.HELP_TOUR_STEPS = [
   }
 
   /**
+   * 청구 한도를 넘었는가 — 하루 금액과 처방 총계 (2026-09-08 확인요청 10쪽).
+   *
+   * 공단이 정한 잣대다. 넘으면 그만큼은 청구가 반려된다.
+   *
+   * **저장은 막지 않는다**(2026-09-10 확인요청 6쪽). 예전에는 넘으면 저장을 통째로
+   * 물렸는데, 그러면 병원ㆍ상병ㆍ처방 수량을 적어 넣고 저장을 눌러도 그 자리에서
+   * 되돌아가 「적은 것이 사라졌다」가 되었다. 적어 둔 것은 남아야 한다.
+   *
+   * 막는 자리는 창고로 보내는 걸음이다 — 나간 뒤에 알면 서류를 다시 만들어야 한다.
+   *
+   * 셀 수 없으면 아무 말도 하지 않는다. 처방일수나 총계가 아직 비어 있는 건은
+   * 「넘었다」고 할 근거가 없다.
+   *
+   * @param {boolean} block  넘었을 때 막을 것인가(창고로 보내기) 알리기만 할 것인가(저장)
+   * @returns {boolean}      이어 가도 되는가
+   */
+  function gate청구한도(block) {
+    const 한도금액 = {{ (int) config('nhis.limits.daily_amount', 9000) }};
+    const 산수량   = items.reduce((t, i) => t + (parseInt(i.quantity, 10) || 0), 0);
+    const 산금액   = items.reduce((t, i) => t + Number(computeRow(i).total || 0), 0);
+    const 처방일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
+    const 총계     = parseInt(document.getElementById('f-total')?.value ?? '', 10);
+    const 돈 = n => Number(n || 0).toLocaleString('ko-KR');
+
+    const 제품탭으로 = () => {
+      const 탭 = [...document.querySelectorAll('.tab-btn')]
+                   .find(b => (b.getAttribute('onclick') || '').includes('tab-product'));
+      if (탭) switchTab(탭, 'tab-product');
+    };
+
+    /* 담겨 있던 값보다 나빠지지 않으면 지나간다. 한도를 넘는 건이 이미 마흔일곱이라,
+       무조건 막으면 한도와 아무 상관 없는 일(주소ㆍ메모)까지 함께 잠긴다. */
+    const 담긴 = @json($_담긴한도);
+    const 담긴하루 = (담긴.days > 0 && 담긴.amount > 0) ? 담긴.amount / 담긴.days : 0;
+
+    let 지날수있나 = true;
+
+    if (처방일수 > 0 && 산금액 > 0) {
+      const 하루 = Math.round(산금액 / 처방일수);
+      if (하루 > 한도금액) {
+        const 말 = `하루 한도를 넘었습니다 — ${돈(산금액)}원 ÷ ${처방일수}일 = ${돈(하루)}원 `
+                 + `(한도 ${돈(한도금액)}원).`;
+
+        /* 담겨 있던 것도 이미 넘었고 더 오르지 않았으면 지나간다 — 다만 알린다 */
+        if (담긴하루 > 한도금액 && 하루 <= Math.round(담긴하루)) {
+          showToast(말 + ' 담겨 있던 값 그대로입니다.', 'warning', 7000);
+        } else if (block) {
+          showToast(말 + ' 수량 또는 처방일수를 확인하세요.', 'warning', 7000);
+          제품탭으로();
+          지날수있나 = false;
+        } else {
+          showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하세요.', 'warning', 7000);
+        }
+      }
+    }
+
+    if (지날수있나 && 총계 > 0 && 산수량 > 총계) {
+      const 말 = `구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개).`;
+      const 담긴넘음 = 담긴.total > 0 && 담긴.qty > 담긴.total;
+
+      if (담긴넘음 && 산수량 <= 담긴.qty) {
+        showToast(말 + ' 담겨 있던 값 그대로입니다.', 'warning', 7000);
+      } else if (block) {
+        showToast(말 + ' 1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.', 'warning', 7000);
+        제품탭으로();
+        지날수있나 = false;
+      } else {
+        showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하세요.', 'warning', 7000);
+      }
+    }
+
+    return 지날수있나;
+  }
+
+  /**
    * 1일 처방개수ㆍ총 처방일수가 공단 상한을 넘었는가 (2026-09-10 확인요청 5쪽).
    *
    * 공단 잣대는 1일 6개ㆍ90일이다. 넘으면 그만큼은 청구가 반려된다.
@@ -8939,7 +8982,7 @@ window.HELP_TOUR_STEPS = [
       창고로 보내는 자리(createOrder)에서만 본다. */
   function gateOrder() {
     return gateReviewed() && gateConsent() && gateTotalCount(true)
-        && gateOrderQty() && gateShippingAddress();
+        && gate청구한도(true) && gateOrderQty() && gateShippingAddress();
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀
@@ -9352,8 +9395,22 @@ window.HELP_TOUR_STEPS = [
   async function saveOrderTab(e) {
     const btn = e.target.closest('button');
 
-    // 저장도 구매의 일부다 — 요청서가 「구매 진행 및 저장」을 한 묶음으로 적는다
-    if (!gateOrder()) return;
+    /* 문을 어디까지 지날 것인가 (2026-09-10 확인요청 6쪽).
+
+       이미 창고로 넘어간 건을 여기서 고치면 그 고침이 곧 창고로 나간다 — 그때는
+       문을 다 지나야 한다.
+
+       아직 안 보낸 건의 저장은 막지 않는다. 여태는 여기서도 문을 다 세워, 한도를
+       넘었거나 수량이 어긋나면 적어 둔 것을 담지 못한 채 되돌아갔다 — 담당자 눈에는
+       「적은 것이 사라졌다」로 보였다. 넘었다는 사실은 알리되 담기는 담는다. */
+    const 창고로가나 = orderExists && existingOrder;
+
+    if (창고로가나) {
+      if (!gateOrder()) return;
+    } else {
+      gateTotalCount(false);
+      gate청구한도(false);
+    }
 
     BtnState.loading(btn, '저장 중...');
 
