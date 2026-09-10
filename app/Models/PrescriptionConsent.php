@@ -66,6 +66,21 @@ class PrescriptionConsent extends Model
     // 직렬화(toArray/toJson) 시 민감식별정보 노출 방지
     protected $hidden = ['nice_ci', 'nice_di'];
 
+    /**
+     * 서명 화면과 서류에 서는 이름 — (E) 를 떼고 내준다 (2026-09-10 지시).
+     *
+     * (E) 는 사업부가 IC 라는 우리 쪽 표시다. 이 줄의 이름은 **환자가 보는 이름**이라
+     * 그 표시가 설 자리가 없다 — 서명 화면 머리, 개인정보 동의서의 성명 칸, 위임장,
+     * 공단 청구 도우미의 수진자 성명이 모두 이 값을 읽는다.
+     *
+     * 담을 때도 떼지만(PrescriptionController), 읽을 때 한 번 더 뗀다 — 그래야 이미
+     * 보내 둔 링크와 지난 기록에도 함께 걸린다. 담긴 값 자체는 손대지 않는다.
+     */
+    public function getPatientNameAttribute($value): ?string
+    {
+        return $value === null ? null : \App\Models\Patient::bare($value);
+    }
+
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);

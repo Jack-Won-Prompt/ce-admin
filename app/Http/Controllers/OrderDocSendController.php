@@ -50,7 +50,8 @@ class OrderDocSendController extends Controller
         }
 
         $order->loadMissing('patient');
-        $name  = $order->patient?->name ?: ($order->prescription?->patient_name_ocr ?: '고객');
+        // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
+        $name  = \App\Models\Patient::bare($order->patient?->name) ?: ($order->prescription?->patient_name_ocr ?: '고객');
         /* 문자에도 유형을 한 번씩만 적는다 — 같은 서류의 PDFㆍPNG 두 벌이 붙는 일이 있다 */
         $names = implode('ㆍ', array_unique(array_column($docs, 'label')));
 

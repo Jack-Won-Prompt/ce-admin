@@ -3006,8 +3006,10 @@ class PrescriptionController extends Controller
 
         // OCR 이름이 틀리거나 비어 있는 경우가 있어 화면에서 고쳐 보낼 수 있다.
         // 보내지 않았거나 비웠으면 처방전에 적힌 이름을 쓴다.
+        /* 환자가 보는 서명 화면에 그대로 서는 이름이다 — (E) 를 뗀다(2026-09-10 지시).
+           화면에서 고쳐 보낸 이름은 사람이 적은 것이라 그대로 둔다. */
         $patientName = trim((string) $request->input('name'))
-            ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
+            ?: (\App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
 
         return $this->issueConsent($prescription, $mobile, $patientName);
     }
@@ -3065,7 +3067,8 @@ class PrescriptionController extends Controller
             return $no(null);                                // 이미 알렸다 — 말할 것이 없다
         }
 
-        $name = $patient->name ?: ($prescription->patient_name_ocr ?: '고객');
+        // 환자가 받는 글이다 — (E) 는 우리 쪽 사업부 표시라 여기 설 자리가 없다(2026-09-10)
+        $name = \App\Models\Patient::bare($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         $body = \App\Models\MessageTemplate::channel('sms')->active()
             ->where('code', 'rx_received')->value('body')
@@ -3145,7 +3148,8 @@ class PrescriptionController extends Controller
             return $no('발송 시간(' . config('order.consent_sms_hours') . ') 밖이라 보내지 않았습니다.');
         }
 
-        $name = $patient->name ?: ($prescription->patient_name_ocr ?: '고객');
+        // 환자가 받는 글이고 서명 화면에 그대로 선다 — (E) 를 뗀다(2026-09-10)
+        $name = \App\Models\Patient::bare($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         try {
             $res = $this->issueConsent($prescription, $mobile, $name)->getData(true);
@@ -3342,8 +3346,9 @@ class PrescriptionController extends Controller
             return response()->json(['success' => false, 'message' => '수신 번호 형식이 올바르지 않습니다.'], 422);
         }
 
+        // 신분증 제출 화면도 환자가 본다 — 같은 잣대다(2026-09-10 지시)
         $patientName = trim((string) $request->input('name'))
-            ?: ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '환자');
+            ?: (\App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
 
         return $this->issueIdCard($prescription, $mobile, $patientName);
     }
@@ -3358,7 +3363,8 @@ class PrescriptionController extends Controller
 
         $mobile      = $request->mobile;
         $message     = $request->message;
-        $patientName = $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '';
+        // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
+        $patientName = \App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '');
 
         try {
             $res = $this->sender->sendBulk('sms',

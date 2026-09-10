@@ -865,7 +865,8 @@ class OrderController extends Controller
             $cb->tax              = (string) $tax;
             $cb->serviceFee       = '0';
             $cb->identityNum      = $data['cash_receipt_identifier'];
-            $cb->customerName     = $order->patient?->name ?? '';
+            // 국세청에 나가는 이름이다 — (E) 를 뗀다(2026-09-10 지시)
+            $cb->customerName     = \App\Models\Patient::bare($order->patient?->name);
             /* 현금영수증에는 품목 줄이 없다 — 한 칸에 「제품명 (장비코드) 외 2건」으로
                담는다(2026-09-03 확정). */
             $cb->itemName         = \App\Support\IssueLines::cashItemName($order);
@@ -912,7 +913,7 @@ class OrderController extends Controller
                 $order->loadMissing('patient');
                 $pdfBytes = $this->buildCashReceiptPdf($order);
                 $mobile   = preg_replace('/[^0-9]/', '', $order->patient?->mobile ?? '');
-                $pdfName  = '현금영수증_' . ($order->patient?->name ?? '') . '_' . $mobile . '_' . $order->order_number . '.pdf';
+                $pdfName  = '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
                 $pdfPath  = 'cash_receipts/' . $order->id . '/' . $pdfName;
                 Storage::put($pdfPath, $pdfBytes);
                 PrescriptionDocument::create([
@@ -931,7 +932,8 @@ class OrderController extends Controller
             $mobile      = $order->patient?->mobile
                         ?? $order->prescription?->mobile_ocr
                         ?? null;
-            $patientName = $order->patient?->name ?? '';
+            // 환자가 받는 안내다 — (E) 를 뗀다(2026-09-10 지시)
+            $patientName = \App\Models\Patient::bare($order->patient?->name);
             if ($mobile) {
                 try {
                     $amountFormatted = number_format((int) $data['cash_receipt_amount']);
@@ -1077,7 +1079,7 @@ class OrderController extends Controller
 
         return $this->inlinePdf(
             \App\Support\CashReceiptForm::render($order),
-            '현금영수증_' . ($order->patient?->name ?? '') . '_' . $order->order_number . '.pdf'
+            '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $order->order_number . '.pdf'
         );
     }
 
@@ -1111,7 +1113,7 @@ class OrderController extends Controller
         }
 
         $mobile    = preg_replace('/[^0-9]/', '', $order->patient?->mobile ?? '');
-        $filename  = '현금영수증_' . ($order->patient?->name ?? '') . '_' . $mobile . '_' . $order->order_number . '.pdf';
+        $filename  = '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
         $pdfOutput = $this->buildCashReceiptPdf($order);
 
         // 스토리지에 저장 + 서류 목록 기록

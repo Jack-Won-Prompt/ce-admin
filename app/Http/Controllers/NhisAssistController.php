@@ -617,7 +617,8 @@ class NhisAssistController extends Controller
                 ['label' => '수진자 주민등록번호 (앞 6자리)', 'value' => $rrnFront],
                 ['label' => '수진자 주민등록번호 (뒤 7자리)', 'value' => $rrnMasked ? '●●●●●●●' : null,
                  'reveal' => true, 'note' => '누르면 그때 열립니다 · 열람 기록이 남습니다'],
-                ['label' => '수진자 성명', 'value' => $consent?->patient_name ?: ($patient?->name ?: $prescription->patient_name_ocr)],
+                // 공단 화면에 그대로 옮겨 적는 값이다 — (E) 를 뗀다(2026-09-10 지시)
+                ['label' => '수진자 성명', 'value' => \App\Models\Patient::bare($consent?->patient_name) ?: (\App\Models\Patient::bare($patient?->name) ?: $prescription->patient_name_ocr)],
                 ['label' => '위임자와 수진자 동일인', 'value' => $sameAsPatient ? 'Y' : 'N', 'copy' => false,
                  'note' => $sameAsPatient ? '성년 — 본인이 위임했습니다' : '미성년 — 법정대리인이 위임했습니다'],
                 ['label' => '위임자 생년월일',
@@ -625,7 +626,7 @@ class NhisAssistController extends Controller
                      ? ($patient?->birth_date?->format('Y-m-d') ?: ResidentNo::birthDateFromMasked($rrnMasked)?->format('Y-m-d'))
                      : $consent?->guardian_birth_date?->format('Y-m-d')],
                 ['label' => '위임자 성명',
-                 'value' => $sameAsPatient ? ($patient?->name ?: $prescription->patient_name_ocr) : $consent?->guardian_name],
+                 'value' => $sameAsPatient ? (\App\Models\Patient::bare($patient?->name) ?: $prescription->patient_name_ocr) : $consent?->guardian_name],
                 ['label' => '수진자와의 관계',
                  'value' => $sameAsPatient ? '본인' : $consent?->guardian_relation,
                  'note'  => '공단 목록에서 동일한 문구를 선택하십시오'],
