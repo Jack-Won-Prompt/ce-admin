@@ -338,17 +338,17 @@
             <span class="info-label">환자 전화번호</span>
             <span class="info-value">
               {{-- 먼저 거는 번호에는 표를 둔다 — 두 번호를 놓고 어느 쪽인지 다시 묻지 않게 --}}
-              <span class="view-only">{{ $patient->mobile ?? '-' }}@if($patient->main_contact === 'mobile')<b class="mc-flag">Main</b>@endif</span>
+              <span class="view-only">{{ \App\Support\PhoneNo::format($patient->mobile) ?: '-' }}@if($patient->main_contact === 'mobile')<b class="mc-flag">Main</b>@endif</span>
               <input type="text" class="form-control edit-only" id="e-mobile" data-phone
-                     value="{{ $patient->mobile }}" data-orig="{{ $patient->mobile }}" placeholder="010-XXXX-XXXX" />
+                     value="{{ \App\Support\PhoneNo::format($patient->mobile) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->mobile) }}" placeholder="010-XXXX-XXXX" />
             </span>
           </div>
           <div class="info-row">
             <span class="info-label">보호자 전화번호</span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->phone ?? '-' }}@if($patient->main_contact === 'guardian')<b class="mc-flag">Main</b>@endif</span>
+              <span class="view-only">{{ \App\Support\PhoneNo::format($patient->phone) ?: '-' }}@if($patient->main_contact === 'guardian')<b class="mc-flag">Main</b>@endif</span>
               <input type="text" class="form-control edit-only" id="e-phone" data-phone
-                     value="{{ $patient->phone }}" data-orig="{{ $patient->phone }}" placeholder="02-XXXX-XXXX" />
+                     value="{{ \App\Support\PhoneNo::format($patient->phone) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->phone) }}" placeholder="02-XXXX-XXXX" />
             </span>
           </div>
           {{-- 먼저 거는 번호는 하나다 — 두 칸에 표를 두는 대신 한 칸에서 고른다 --}}
@@ -508,9 +508,9 @@
           <div class="info-row">
             <span class="info-label">Fax</span>
             <span class="info-value">
-              <span class="view-only">{{ $patient->fax ?: '-' }}</span>
+              <span class="view-only">{{ \App\Support\PhoneNo::format($patient->fax) ?: '-' }}</span>
               <input type="text" class="form-control edit-only" id="e-fax" data-phone
-                     value="{{ $patient->fax }}" data-orig="{{ $patient->fax }}" placeholder="02-XXXX-XXXX" />
+                     value="{{ \App\Support\PhoneNo::format($patient->fax) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->fax) }}" placeholder="02-XXXX-XXXX" />
             </span>
           </div>
 
