@@ -40,9 +40,9 @@ return new class extends Migration
                 }
             });
 
-        $푼것 = $대상->update(['is_blank_draft' => false]);
-
-        \Illuminate\Support\Facades\Log::info('[초안] 딸린 것이 있는 처방전의 빈 초안 표시를 풀었습니다', ['건수' => $푼것]);
+        /* 로그를 남기지 않는다. 하루치 로그 파일을 웹이 먼저 만들면 명령줄이 못 써서,
+           자료는 이미 고쳐 놓고 로그 한 줄 때문에 마이그레이션이 죽었다(2026-09-10). */
+        $대상->update(['is_blank_draft' => false]);
     }
 
     /**

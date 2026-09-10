@@ -70,6 +70,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            /* 무리도 쓸 수 있게 만든다.
+
+               하루치 파일을 먼저 만드는 쪽이 웹(www-data)이면 644 로 생기고, 그 뒤로
+               명령줄(ubuntu)이 같은 파일에 못 쓴다 — 마이그레이션이 로그 한 줄 때문에
+               죽고 기록도 남지 않았다(2026-09-10). 두 쪽 모두 www-data 무리에 든다. */
+            'permission' => 0664,
             'replace_placeholders' => true,
         ],
 
