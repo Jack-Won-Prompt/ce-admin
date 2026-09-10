@@ -6132,8 +6132,16 @@ const Tour = (() => {
 /* 전화번호 자동 포맷 — [data-phone] 속성을 가진 모든 input에 적용 */
 (function () {
   function fmtPhone(raw) {
-    const d = raw.replace(/\D/g, '').slice(0, 11);
+    /* 050X 로 시작하는 안심번호ㆍ인터넷팩스는 앞이 네 자리이고, 열두 자리까지 온다 */
+    const 안심 = /^050\d/.test(raw.replace(/\D/g, ''));
+    const d = raw.replace(/\D/g, '').slice(0, 안심 ? 12 : 11);
     if (!d) return '';
+    if (안심) {
+      if (d.length <= 4) return d;
+      if (d.length <= 7) return d.slice(0, 4) + '-' + d.slice(4);
+      if (d.length <= 11) return d.slice(0, 4) + '-' + d.slice(4, 7) + '-' + d.slice(7);
+      return d.slice(0, 4) + '-' + d.slice(4, 8) + '-' + d.slice(8);
+    }
     if (d.startsWith('02')) {
       if (d.length <= 5) return d.slice(0, 2) + (d.length > 2 ? '-' + d.slice(2) : '');
       if (d.length <= 9) return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
