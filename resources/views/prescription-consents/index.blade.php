@@ -196,7 +196,7 @@
     <div>
       <label class="ds-field-label" style="margin-bottom:4px;display:block;">수신 번호</label>
       <input type="text" class="form-control" id="pcNewMobile" placeholder="010-XXXX-XXXX"
-             oninput="pcNewPreview()" data-phone />
+             oninput="pcNewPreview()" />
     </div>
     <div>
       <label class="ds-field-label" style="margin-bottom:4px;display:block;">이름</label>
@@ -246,7 +246,7 @@
     <div>
       <label class="ds-field-label" style="margin-bottom:4px;display:block;">수신 번호</label>
       <input type="text" class="form-control" id="pcSmsMobile" placeholder="010-XXXX-XXXX"
-             oninput="pcSmsPreview()" data-phone />
+             oninput="pcSmsPreview()" />
     </div>
     <div>
       <label class="ds-field-label" style="margin-bottom:4px;display:block;">이름</label>

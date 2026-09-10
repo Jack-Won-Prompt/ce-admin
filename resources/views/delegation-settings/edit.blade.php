@@ -123,7 +123,7 @@
         <div class="ds-field full"><label>상호</label><input type="text" name="provider_name" value="{{ old('provider_name', $setting->provider_name) }}" placeholder="예: 콜로플라스트코리아(주)"></div>
         <div class="ds-field"><label>사업자등록번호</label><input type="text" name="provider_biz_no" value="{{ old('provider_biz_no', $setting->provider_biz_no) }}" placeholder="000-00-00000"></div>
         <div class="ds-field"><label>대표자</label><input type="text" name="provider_ceo" value="{{ old('provider_ceo', $setting->provider_ceo) }}"></div>
-        <div class="ds-field"><label>전화번호</label><input type="text" name="provider_phone" value="{{ old('provider_phone', $setting- data-phone >provider_phone) }}"></div>
+        <div class="ds-field"><label>전화번호</label><input type="text" name="provider_phone" value="{{ old('provider_phone', $setting->provider_phone) }}"></div>
       </div>
     </div>
 

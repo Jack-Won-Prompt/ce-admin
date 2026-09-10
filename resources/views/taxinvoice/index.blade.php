@@ -456,7 +456,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">전화번호</label>
-            <input id="er-tel" class="form-input" type="text" placeholder="전화번호" data-phone >
+            <input id="er-tel" class="form-input" type="text" placeholder="전화번호">
           </div>
           <div class="form-row">
             <label class="form-label">이메일</label>
