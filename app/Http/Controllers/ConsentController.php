@@ -149,6 +149,7 @@ class ConsentController extends Controller
             'agree_third_sensitive'     => 'nullable|in:동의함,동의하지 않음',
             'agree_marketing'           => 'nullable|in:동의함,동의하지 않음',
             'agree_marketing_sensitive' => 'nullable|in:동의함,동의하지 않음',
+            'agree_ads'                 => 'nullable|in:동의함,동의하지 않음',
         ]);
 
         /* 개인정보 동의 — 화면에서도 막지만 서버에서 다시 본다. 필수 칸ㆍ필수 동의는
@@ -168,9 +169,12 @@ class ConsentController extends Controller
                 }
             }
 
+            /* 카테터는 2026-09-10 부터 다섯 영역을 받는다 — 필수는 넷이다 */
             $must = $type === 'stoma'
                 ? ['agree_general' => '일반정보 수집·이용', 'agree_sensitive' => '민감정보 수집·이용']
-                : ['agree_general' => '일반정보 수집·이용', 'agree_third_party' => '제3자 제공'];
+                : collect(\App\Support\ConsentTerms::카테터필수)
+                    ->mapWithKeys(fn ($칸) => [$칸 => \App\Models\PrivacyConsent::AGREE_LABELS[$칸] ?? $칸])
+                    ->all();
             foreach ($must as $k => $label) {
                 if ($request->input($k) !== '동의함') {
                     return response()->json(['success' => false, 'message' => "「{$label}」 동의가 필요합니다."], 422);
@@ -368,6 +372,7 @@ class ConsentController extends Controller
             'stoma_type', 'stoma_kind',
             'agree_general', 'agree_sensitive', 'agree_third_party',
             'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
+            'agree_ads',
         ];
 
         try {

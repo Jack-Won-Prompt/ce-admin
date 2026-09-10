@@ -174,6 +174,17 @@
     }
     .agree-box.open { display: block; }
 
+    /* 한 항목 아래에서 일반ㆍ민감을 따로 받는 자리, 그리고 제3자 제공 표 (2026-09-10) */
+    .agree-subline { font-size: 12px; font-weight: 700; color: #1f6274; margin-top: 10px; }
+    .agree-ask { font-size: 12.5px; line-height: 1.7; color: #374151; margin-top: 8px; }
+    .agree-table-wrap { overflow-x: auto; margin: 10px 0; -webkit-overflow-scrolling: touch; }
+    .agree-table { border-collapse: collapse; width: 100%; min-width: 560px; white-space: pre-line; }
+    .agree-table th, .agree-table td {
+      border: 1px solid #e5e7eb; padding: 7px 8px; font-size: 11.5px;
+      line-height: 1.6; vertical-align: top; text-align: left;
+    }
+    .agree-table th { background: #f3f6fa; color: #1f6274; font-weight: 800; }
+
     /* 신청자 정보 — 개인정보동의 페이지의 「신청자 정보」 카드와 같은 칸들이다 */
     .pv-card { border: 1px solid #e5e7eb; border-radius: 9px; padding: 13px; margin-bottom: 12px; background: #fff; }
     .pv-sub {
@@ -544,8 +555,24 @@
         <input type="checkbox" id="agreeAll" onclick="checkAllAgree(this)"> 아래 동의 항목에 모두 동의합니다.
       </label>
 
-      {{-- 일반정보 (두 유형 모두 필수) --}}
-      <div class="agree-item">
+      {{-- 카테터 — 다섯 영역 (2026-09-10 지시).
+
+           본문은 App\Support\ConsentTerms 에 한 벌만 둔다. 개인정보동의 페이지와
+           이 화면이 각각 글을 들고 있던 동안 두 곳의 문구가 서로 달랐다.
+
+           라디오 이름이 장루 쪽과 겹치지만, 갈래를 바꾸면 접힌 쪽에 찍힌 답은
+           지우고(onPrivacyType) 읽을 때도 접힌 쪽은 없는 것으로 친다(agreePicked). --}}
+      @include('privacy._agree-items', [
+        'idp'      => 'sg',
+        'chip'     => false,
+        'detail'   => 'agree-detail',
+        'box'      => 'agree-box',
+        'onchange' => 'refreshAgree()',
+        'only'     => 'catheter',
+      ])
+
+      {{-- 일반정보 (장루) --}}
+      <div class="agree-item" data-only="stoma">
         <div class="agree-head"><span class="tag must">필수</span> 일반정보의 수집·이용에 대한 동의</div>
         <div class="agree-radios">
           <div><input type="radio" id="agGy" name="agree_general" value="동의함" onchange="refreshAgree()"><label for="agGy">동의함</label></div>
@@ -560,21 +587,6 @@
 2. 수집·이용 항목 : 성명, 성별, 생년월일, 연락처, 주소, 이메일
 3. 보유 및 이용기간 : 관계 법령에 따라 보존해야 하는 경우가 아닌 한 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
 4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
-      </div>
-
-      {{-- 제3자 제공 — 카테터는 필수, 장루는 선택이다 --}}
-      <div class="agree-item" data-only="catheter">
-        <div class="agree-head"><span class="tag must">필수</span> 개인정보의 제3자 제공에 대한 동의</div>
-        <div class="agree-radios">
-          <div><input type="radio" id="agTy" name="agree_third_party" value="동의함" onchange="refreshAgree()"><label for="agTy">동의함</label></div>
-          <div><input type="radio" id="agTn" name="agree_third_party" value="동의하지 않음" onchange="refreshAgree()"><label for="agTn">동의하지 않음</label></div>
-        </div>
-        <button type="button" class="agree-detail" onclick="toggleAgreeBox(this)">자세히보기 ▼</button>
-        <div class="agree-box">1. 제공받는 자 : 요양비 지원·처방 관련 업무 수행 기관(준요양기관 등)
-2. 이용목적 : 카테터 요양비 지원 신청 및 처리, 배송·상담
-3. 제공항목 : 성명, 연락처, 주소, 보험·지원자격 정보
-4. 보유 및 이용기간 : 제공 목적 달성 시까지
-5. 귀하는 위 제3자 제공을 거부할 수 있습니다. 다만 거부 시 지원 신청 처리가 제한될 수 있습니다.</div>
       </div>
 
       {{-- 민감정보 (장루 필수) --}}
@@ -593,8 +605,8 @@
 4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
       </div>
 
-      {{-- 마케팅 활용 (선택) --}}
-      <div class="agree-item">
+      {{-- 마케팅 활용 (장루 선택) --}}
+      <div class="agree-item" data-only="stoma">
         <div class="agree-head"><span class="tag opt">선택</span> 개인정보의 마케팅 목적 수집·이용 및 광고성 정보 전송 동의</div>
         <div class="agree-radios">
           <div><input type="radio" id="agMy" name="agree_marketing" value="동의함" onchange="refreshAgree()"><label for="agMy">동의함</label></div>
@@ -954,8 +966,21 @@ function pvVal(id) {
 }
 
 /* 유형마다 필수가 다르다 — 개인정보동의 페이지의 그 폼과 같은 것을 본다.
-   카테터 : 성명ㆍ연락처ㆍ보험 + 일반ㆍ제3자 동의
+   카테터 : 성명ㆍ연락처ㆍ보험 + 일반ㆍ민감ㆍ제3자(일반ㆍ민감) 동의 (2026-09-10 지시)
    장루   : 성명ㆍ연락처ㆍ생년월일 + 일반ㆍ민감 동의 */
+const 필수동의 = {
+  catheter: @json(App\Support\ConsentTerms::카테터필수),
+  stoma:    ['agree_general', 'agree_sensitive'],
+};
+
+/* 화면에 적을 이름 — 무엇이 남았는지 말할 때 쓴다 */
+const 동의이름 = {
+  agree_general:         '개인정보 수집ㆍ이용 동의',
+  agree_sensitive:       '민감정보 처리 동의',
+  agree_third_party:     '제3자 제공 동의',
+  agree_third_sensitive: '민감정보 제3자 제공 동의',
+};
+
 function privacyReady() {
   if (!PRIVACY_ASK) return true;
 
@@ -963,14 +988,10 @@ function privacyReady() {
   if (!t) return false;
   if (!pvVal('pvName') || !pvVal('pvPhone')) return false;
 
-  if (t === 'stoma') {
-    return !!pvVal('pvBirth')
-        && agreePicked('agree_general')   === '동의함'
-        && agreePicked('agree_sensitive') === '동의함';
-  }
-  return !!document.querySelector('input[name="pv_insurance"]:checked')
-      && agreePicked('agree_general')     === '동의함'
-      && agreePicked('agree_third_party') === '동의함';
+  if (t === 'stoma' && !pvVal('pvBirth')) return false;
+  if (t === 'catheter' && !document.querySelector('input[name="pv_insurance"]:checked')) return false;
+
+  return (필수동의[t] || []).every(k => agreePicked(k) === '동의함');
 }
 
 function refreshAgree() {
@@ -1015,13 +1036,12 @@ function whatIsMissing() {
       if (!pvVal('pvPhone')) 남은.push('신청자 연락처');
       if (t === 'stoma') {
         if (!pvVal('pvBirth')) 남은.push('생년월일');
-        if (agreePicked('agree_general')   !== '동의함') 남은.push('개인정보 수집ㆍ이용 동의');
-        if (agreePicked('agree_sensitive') !== '동의함') 남은.push('민감정보 처리 동의');
-      } else {
-        if (!document.querySelector('input[name="pv_insurance"]:checked')) 남은.push('보험 유형');
-        if (agreePicked('agree_general')     !== '동의함') 남은.push('개인정보 수집ㆍ이용 동의');
-        if (agreePicked('agree_third_party') !== '동의함') 남은.push('제3자 제공 동의');
+      } else if (!document.querySelector('input[name="pv_insurance"]:checked')) {
+        남은.push('보험 유형');
       }
+      (필수동의[t] || []).forEach(k => {
+        if (agreePicked(k) !== '동의함') 남은.push(동의이름[k] || k);
+      });
     }
   }
 
@@ -1383,10 +1403,8 @@ async function submitConsent(action) {
       const ASKED = t === 'stoma'
         ? ['agree_general', 'agree_sensitive', 'agree_third_party',
            'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive']
-        : ['agree_general', 'agree_third_party', 'agree_marketing'];
-      const REQUIRED = t === 'stoma'
-        ? ['agree_general', 'agree_sensitive']
-        : ['agree_general', 'agree_third_party'];
+        : @json(App\Support\ConsentTerms::카테터칸);
+      const REQUIRED = 필수동의[t] || [];
 
       ASKED.forEach(k => {
         const v = agreePicked(k);

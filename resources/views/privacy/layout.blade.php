@@ -57,6 +57,15 @@
   .detail-box{display:none;margin-top:10px;padding:12px;background:#fff;border:1px dashed var(--line);
     border-radius:8px;font-size:12px;line-height:1.7;color:var(--muted);white-space:pre-line;}
   .detail-box.open{display:block;}
+  /* 한 항목 아래에서 일반ㆍ민감을 따로 받는 자리 (2026-09-10) */
+  .agree-subline{font-size:12px;font-weight:700;color:var(--brand);margin-top:10px;}
+  .agree-ask{font-size:12.5px;line-height:1.7;color:#374151;margin-top:8px;}
+  /* 제3자 제공 표 — 좁은 화면에서는 표만 옆으로 민다 */
+  .agree-table-wrap{overflow-x:auto;margin:10px 0;-webkit-overflow-scrolling:touch;}
+  .agree-table{border-collapse:collapse;width:100%;min-width:560px;white-space:pre-line;}
+  .agree-table th,.agree-table td{border:1px solid var(--line);padding:7px 8px;font-size:11.5px;
+    line-height:1.6;vertical-align:top;text-align:left;}
+  .agree-table th{background:#f3f6fa;color:var(--brand);font-weight:800;}
   .checkall{display:flex;align-items:center;gap:9px;padding:13px;background:#eaf3fd;border:1px solid #cfe4fb;
     border-radius:10px;margin-bottom:14px;font-weight:800;color:var(--brand);font-size:14px;cursor:pointer;}
   .checkall input{width:20px;height:20px;accent-color:var(--accent);}

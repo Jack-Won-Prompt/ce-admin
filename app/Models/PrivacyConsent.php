@@ -4,6 +4,7 @@
 
 namespace App\Models;
 
+use App\Support\ConsentTerms;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -19,6 +20,7 @@ class PrivacyConsent extends Model
         'birth', 'product', 'hospital', 'surgery_date', 'stoma_type', 'stoma_kind',
         'agree_general', 'agree_sensitive', 'agree_third_party',
         'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
+        'agree_ads',
         'extra', 'ip', 'user_agent', 'admin_memo', 'submitted_at',
     ];
 
@@ -65,7 +67,7 @@ class PrivacyConsent extends Model
     {
         $required = $this->type === 'stoma'
             ? ['agree_general', 'agree_sensitive']
-            : ['agree_general', 'agree_third_party'];
+            : $this->카테터잣대(ConsentTerms::카테터필수, ConsentTerms::카테터필수_옛것);
         foreach ($required as $f) {
             if ($this->{$f} !== '동의함') {
                 return false;
@@ -82,7 +84,22 @@ class PrivacyConsent extends Model
         'agree_third_sensitive'     => '민감정보 제3자 제공',
         'agree_marketing'           => '마케팅 활용',
         'agree_marketing_sensitive' => '민감정보 마케팅 활용',
+        'agree_ads'                 => '광고성 정보 전송',
     ];
+
+    /**
+     * 카테터는 2026-09-10 부터 다섯 영역을 받는다.
+     *
+     * 그 전에 받아 둔 건은 세 영역만 물었다. 새 잣대로 보면 물어보지도 않은 것을
+     * 거절한 것처럼 읽히고, 이미 완료였던 동의가 모두 미완료가 된다 — 담긴 건은
+     * 담길 때의 잣대로 본다.
+     */
+    private function 카테터잣대(array $새것, array $옛것): array
+    {
+        $적힌때 = $this->submitted_at ?: $this->created_at;
+
+        return ($적힌때 && $적힌때->lt(ConsentTerms::다섯영역_시작)) ? $옛것 : $새것;
+    }
 
     /**
      * 갈래마다 묻는 항목.
@@ -93,7 +110,7 @@ class PrivacyConsent extends Model
      * 물어보지도 않은 것을 환자가 거절한 것처럼 읽힌다 — 갈래로 걸러 세운다.
      */
     public const TYPE_AGREES = [
-        'catheter' => ['agree_general', 'agree_third_party', 'agree_marketing'],
+        'catheter' => ConsentTerms::카테터칸,
         'stoma'    => ['agree_general', 'agree_sensitive', 'agree_third_party',
                        'agree_third_sensitive', 'agree_marketing', 'agree_marketing_sensitive'],
     ];
@@ -182,7 +199,9 @@ class PrivacyConsent extends Model
 
         /* 이 갈래에서 묻는 것만 세운다. 갈래를 모르는 옛 건은 담긴 것을 그대로 보인다 —
            지우고 말하느니 있는 대로 보여 주는 편이 낫다. */
-        $asked = self::TYPE_AGREES[$c->type] ?? array_keys(self::AGREE_LABELS);
+        $asked = $c->type === 'catheter'
+            ? $c->카테터잣대(ConsentTerms::카테터칸, ConsentTerms::카테터칸_옛것)
+            : (self::TYPE_AGREES[$c->type] ?? array_keys(self::AGREE_LABELS));
 
         $items = [];
         foreach (self::AGREE_LABELS as $field => $label) {

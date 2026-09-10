@@ -458,9 +458,15 @@
         drow('일반 제3자 제공', agree(r.agree_third_party) + OPT) +
         drow('민감 제3자 제공', agree(r.agree_third_sensitive) + OPT);
     } else {
+      /* 카테터는 2026-09-10 부터 다섯 영역을 받는다. 그 전 건은 세 영역만 물었으므로
+         묻지 않은 줄은 세우지 않는다 — 민감정보 동의가 있으면 새 동의서다. */
+      const 다섯영역 = !!r.agree_sensitive;
       consent +=
+        (다섯영역 ? drow('민감정보 수집·이용', agree(r.agree_sensitive) + REQ) : '') +
         drow('제3자 제공', agree(r.agree_third_party) + REQ) +
-        drow('마케팅 수집·이용', agree(r.agree_marketing) + OPT);
+        (다섯영역 ? drow('민감 제3자 제공', agree(r.agree_third_sensitive) + REQ) : '') +
+        drow('마케팅 수집·이용', agree(r.agree_marketing) + OPT) +
+        (다섯영역 ? drow('광고성 정보 전송', agree(r.agree_ads) + OPT) : '');
     }
 
     // 제출 정보

@@ -44,8 +44,13 @@ class PrivacyConsentController extends Controller
         ];
 
         if ($type === 'catheter') {
-            $rules['insurance']         = 'required|string|max:30';
-            $rules['agree_third_party'] = 'required|in:동의함';
+            $rules['insurance'] = 'required|string|max:30';
+
+            /* 카테터는 2026-09-10 부터 기존 동의서와 같은 다섯 영역을 받는다 —
+               필수 넷을 모두 본다(App\Support\ConsentTerms) */
+            foreach (\App\Support\ConsentTerms::카테터필수 as $칸) {
+                $rules[$칸] = 'required|in:동의함';
+            }
         } else { // stoma
             $rules['birth']           = 'required|string|max:20';
             $rules['agree_sensitive'] = 'required|in:동의함';
@@ -54,9 +59,10 @@ class PrivacyConsentController extends Controller
         $data = $request->validate($rules, [
             'name.required'          => '성명을 입력해 주세요.',
             'phone.required'         => '연락처를 입력해 주세요.',
-            'agree_general.in'       => '필수 동의 항목에 동의해 주세요.',
-            'agree_third_party.in'   => '필수 동의 항목에 동의해 주세요.',
-            'agree_sensitive.in'     => '필수 동의 항목에 동의해 주세요.',
+            'agree_general.in'         => '필수 동의 항목에 동의해 주세요.',
+            'agree_third_party.in'     => '필수 동의 항목에 동의해 주세요.',
+            'agree_sensitive.in'       => '필수 동의 항목에 동의해 주세요.',
+            'agree_third_sensitive.in' => '필수 동의 항목에 동의해 주세요.',
             'insurance.required'     => '보험 구분을 선택해 주세요.',
             'birth.required'         => '생년월일을 입력해 주세요.',
         ]);
@@ -68,6 +74,7 @@ class PrivacyConsentController extends Controller
                 'birth', 'product', 'hospital', 'surgery_date', 'stoma_type', 'stoma_kind',
                 'agree_general', 'agree_sensitive', 'agree_third_party',
                 'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
+                'agree_ads',
             ]),
             [
                 'type'         => $type,

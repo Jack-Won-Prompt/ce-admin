@@ -55,6 +55,7 @@ class PrivacyConsentAdminController extends Controller
             'agree_marketing'          => $r->agree_marketing ?: '',
             'agree_marketing_sensitive'=> $r->agree_marketing_sensitive ?: '',
             'agree_third_sensitive'    => $r->agree_third_sensitive ?: '',
+            'agree_ads'                => $r->agree_ads ?: '',
             'submitted_full'           => $r->submitted_at?->format('Y-m-d H:i:s') ?: '',
             'ip'                       => $r->ip ?: '',
             'user_agent'               => $r->user_agent ?: '',
@@ -94,6 +95,7 @@ class PrivacyConsentAdminController extends Controller
             '구분', '유형', '성명', '연락처', '연락처2', '이메일', '우편번호', '기본주소', '상세주소',
             '보험', '지원자격', '생년월일', '사용제품', '수술병원', '수술일자', '장루타입', '장루종류',
             '일반정보동의', '민감정보동의', '제3자제공동의', '마케팅동의', '민감마케팅동의', '민감제3자동의',
+            '광고성정보전송동의',
             '작성일', 'IP', '관리자메모',
         ];
 
@@ -109,6 +111,7 @@ class PrivacyConsentAdminController extends Controller
                     $r->stoma_type, $r->stoma_kind,
                     $r->agree_general, $r->agree_sensitive, $r->agree_third_party,
                     $r->agree_marketing, $r->agree_marketing_sensitive, $r->agree_third_sensitive,
+                    $r->agree_ads,
                     $r->submitted_at?->format('Y-m-d H:i:s'), $r->ip, $r->admin_memo,
                 ]);
             }

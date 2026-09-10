@@ -79,52 +79,17 @@
       <input type="checkbox" onclick="checkAll(this)"> 아래 동의 항목에 모두 동의합니다.
     </label>
 
-    {{-- 1) 일반정보 (필수) --}}
-    <div class="agree-item">
-      <div class="agree-head"><span class="tag must">필수</span> 일반정보의 수집·이용에 대한 동의</div>
-      <div class="agree-radios">
-        <div class="radio-chip"><input type="radio" data-agree="1" id="ag1y" name="agree_general" value="동의함" {{ old('agree_general')==='동의함'?'checked':'' }} required><label for="ag1y">동의함</label></div>
-        <div class="radio-chip"><input type="radio" id="ag1n" name="agree_general" value="동의하지 않음" {{ old('agree_general')==='동의하지 않음'?'checked':'' }}><label for="ag1n">동의하지 않음</label></div>
-      </div>
-      <button type="button" class="detail-toggle" onclick="toggleDetail(this)">자세히보기 ▼</button>
-      <div class="detail-box">1. 수집·이용 목적
-· 환자의 신원 확인 및 정보전달, 샘플 및 제품 배송
-· 제품 관련 문의·불만 처리, 제품 사용법 교육
-· 구매 및 상담 등에 대한 전산관리, 환자 DB 구축
-· 회사에 부과되는 법적·행정적 의무의 이행
-2. 수집·이용 항목 : 성명, 성별, 생년월일, 연락처, 주소, 이메일
-3. 보유 및 이용기간 : 관계 법령에 따라 보존해야 하는 경우가 아닌 한 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
-4. 귀하는 위 수집·이용을 거부할 수 있습니다. 다만 거부 시 위 목적에 따른 회사의 지원이 제한될 수 있습니다.</div>
-    </div>
+    {{-- 다섯 영역 — 본문과 차례는 App\Support\ConsentTerms 한 곳에 있다.
+         예전에는 셋만 받았고 글도 줄여 적은 요약이었다 (2026-09-10 지시). --}}
+    @include('privacy._agree-items', [
+      'idp'       => 'ic',
+      'chip'      => true,
+      'detail'    => 'detail-toggle',
+      'box'       => 'detail-box',
+      'useOld'    => true,
+      'agreeAttr' => 'data-agree="1"',
+    ])
 
-    {{-- 3) 제3자 제공 (필수) --}}
-    <div class="agree-item">
-      <div class="agree-head"><span class="tag must">필수</span> 개인정보의 제3자 제공에 대한 동의</div>
-      <div class="agree-radios">
-        <div class="radio-chip"><input type="radio" data-agree="1" id="ag3y" name="agree_third_party" value="동의함" {{ old('agree_third_party')==='동의함'?'checked':'' }} required><label for="ag3y">동의함</label></div>
-        <div class="radio-chip"><input type="radio" id="ag3n" name="agree_third_party" value="동의하지 않음" {{ old('agree_third_party')==='동의하지 않음'?'checked':'' }}><label for="ag3n">동의하지 않음</label></div>
-      </div>
-      <button type="button" class="detail-toggle" onclick="toggleDetail(this)">자세히보기 ▼</button>
-      <div class="detail-box">1. 제공받는 자 : 요양비 지원·처방 관련 업무 수행 기관(준요양기관 등)
-2. 이용목적 : 카테터 요양비 지원 신청 및 처리, 배송·상담
-3. 제공항목 : 성명, 연락처, 주소, 보험·지원자격 정보
-4. 보유 및 이용기간 : 제공 목적 달성 시까지
-5. 귀하는 위 제3자 제공을 거부할 수 있습니다. 다만 거부 시 지원 신청 처리가 제한될 수 있습니다.</div>
-    </div>
-
-    {{-- 4) 마케팅 (선택) --}}
-    <div class="agree-item">
-      <div class="agree-head"><span class="tag opt">선택</span> 개인정보의 마케팅 목적 수집·이용에 대한 동의</div>
-      <div class="agree-radios">
-        <div class="radio-chip"><input type="radio" data-agree="1" id="ag4y" name="agree_marketing" value="동의함" {{ old('agree_marketing')==='동의함'?'checked':'' }}><label for="ag4y">동의함</label></div>
-        <div class="radio-chip"><input type="radio" id="ag4n" name="agree_marketing" value="동의하지 않음" {{ old('agree_marketing')==='동의하지 않음'?'checked':'' }}><label for="ag4n">동의하지 않음</label></div>
-      </div>
-      <button type="button" class="detail-toggle" onclick="toggleDetail(this)">자세히보기 ▼</button>
-      <div class="detail-box">1. 수집항목 : 성명, 생년월일, 연락처, 이메일
-2. 이용목적 : 뉴스레터, 새로운 제품 소개, 재처방 예정일 안내 등 마케팅 목적의 정보 전달
-3. 보유기간 : 수집일로부터 3년 또는 탈퇴 시까지 중 먼저 도래하는 기간까지
-4. 귀하는 위 선택 항목의 수집·이용을 거부할 수 있으며, 거부 시 뉴스레터·제품 소개 등 정보를 제공받을 수 없습니다.</div>
-    </div>
   </div>
 
   <button type="submit" class="btn btn-primary">동의서 작성 완료</button>
