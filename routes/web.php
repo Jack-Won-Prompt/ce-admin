@@ -124,6 +124,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/request-review', [PrescriptionController::class, 'requestReview'])->name('request-review');
         // 마지막 건을 베껴 새 건으로 — 날짜만 비운다
         Route::post('/{prescription}/duplicate',      [PrescriptionController::class, 'duplicate'])->name('duplicate');
+        // 「파일 검수」 창이 읽는 올린 파일 목록 (2026-09-10 지시)
+        Route::get( '/{prescription}/files',         [PrescriptionController::class, 'files'])->name('files');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
         Route::post('/{prescription}/reject',        [PrescriptionController::class, 'reject'])->name('reject');
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');

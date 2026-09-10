@@ -192,6 +192,38 @@
     </div>
   </div>
 
+{{-- ── 파일 검수 창 (2026-09-10 지시) ────────────────────────────────
+
+     올린 것을 한자리에서 내리읽고, 다 보았으면 그 자리에서 검수를 마친다.
+     여태 검수하려면 주문 등록 화면을 열어 뷰어에서 한 장씩 넘겨야 했다.
+
+     아래 단추 줄은 창에 붙여 둔다 — 그림이 스무 장이어도 「검수 확인」이 늘
+     같은 자리에 있어야 한다. --}}
+<div id="rvBackdrop" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1190;"
+     onclick="rvClose()"></div>
+<div id="rvModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+     width:900px;max-width:96vw;height:88vh;background:var(--bg-card);border:1px solid var(--primary);
+     border-radius:var(--radius-lg);box-shadow:0 12px 40px rgba(0,0,0,.24);z-index:1191;
+     display:none;flex-direction:column;overflow:hidden;">
+
+  <div style="background:var(--primary);padding:11px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <i class="fa-solid fa-file-magnifying-glass" style="color:#fff;font-size:14px;"></i>
+    <span id="rvTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">파일 검수</span>
+    <span id="rvCount" style="font-size:11.5px;color:rgba(255,255,255,.85);"></span>
+    <button onclick="rvClose()" style="border:none;background:none;color:#fff;font-size:17px;line-height:1;cursor:pointer;">&#215;</button>
+  </div>
+
+  {{-- 스크롤은 이 칸에서만 인다 --}}
+  <div id="rvBody" style="flex:1;overflow-y:auto;padding:14px;background:var(--gray-50);"></div>
+
+  <div style="flex-shrink:0;border-top:1px solid var(--gray-300);background:var(--bg-card);
+              padding:11px 14px;display:flex;align-items:center;gap:8px;">
+    <span id="rvNote" style="font-size:12px;color:var(--text-muted);flex:1;"></span>
+    <button type="button" class="ds-btn" onclick="rvClose()">닫기</button>
+    <button type="button" class="ds-btn ds-btn-primary" id="rvApprove" onclick="rvApprove(this)">검수 확인</button>
+  </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -225,6 +257,30 @@ window.HELP_TOUR_STEPS = [
 <script>
 (function () {
   const DETAIL_BASE = @json(url('prescriptions'));
+
+  /* 올린 파일 수 — 없는 건은 빈칸이 아니라 0 으로 적는다. 빈칸은 「모른다」로 읽힌다. */
+  const 파일수칸 = (v) => {
+    const n = Number(v || 0);
+    const s = document.createElement('span');
+    s.textContent = n ? n + '장' : '없음';
+    if (!n) s.style.color = 'var(--text-muted)';
+    return s;
+  };
+
+  /* 「파일 검수」 단추 — 이미 마친 건은 눌러도 다시 승인하지 않는다. */
+  const 검수칸 = (v, row) => {
+    const 마쳤나 = v === 'approved' || v === 'ordered';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ds-btn' + (마쳤나 ? '' : ' ds-btn-primary');
+    b.style.height = '24px';
+    b.style.minWidth = '0';
+    b.style.padding = '0 10px';
+    b.style.fontSize = '11.5px';
+    b.textContent = 마쳤나 ? '검수 완료' : '파일 검수';
+    b.onclick = (e) => { e.stopPropagation(); rvOpen(row.rx_number, row.id); };
+    return b;
+  };
   const grid = new wwGrid({
     el: document.getElementById('rxGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
@@ -240,6 +296,12 @@ window.HELP_TOUR_STEPS = [
       { header: '요양기관코드',  name: 'hosp_code',  width: 120, align: 'center', sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
+      /* 올린 파일과 그것을 보는 단추 (2026-09-10 지시).
+         상태 바로 옆에 둔다 — 「무엇이 올라왔나」와 「검수했나」는 잇대어 읽는 값이다. */
+      { header: '업로드 파일',   name: 'files',      width: 100, align: 'center', sortable: true,
+        renderer: 파일수칸 },
+      { header: '파일 검수',     name: 'review',     width: 110, align: 'center',
+        exportable: false, renderer: 검수칸 },
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
@@ -290,6 +352,104 @@ window.HELP_TOUR_STEPS = [
     if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
     if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
     openReviewTab(c[0].rx_number);
+  };
+
+  /* ── 파일 검수 창 (2026-09-10 지시) ─────────────────────────────
+
+     올린 것을 한자리에서 내리읽고, 다 보았으면 그 자리에서 마친다.
+     여태 검수하려면 주문 등록 화면을 열어 뷰어에서 한 장씩 넘겨야 했다. */
+  /* 주소는 처방번호로 짚는다 — 이 화면의 다른 길과 같다(라우트 열쇠가 rx_number).
+     표의 줄은 id 로 찾는다 — 그 줄만 고쳐 세우려면 번호가 있어야 한다. */
+  let _rv = { rx: null, id: null, 마쳤나: false };
+
+  window.rvOpen = async function (rx, id) {
+    _rv = { rx, id, 마쳤나: false };
+
+    document.getElementById('rvTitle').textContent = '파일 검수';
+    document.getElementById('rvCount').textContent = '';
+    document.getElementById('rvNote').textContent  = '';
+    document.getElementById('rvBody').innerHTML =
+      '<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:12.5px;">불러오는 중…</div>';
+
+    document.getElementById('rvBackdrop').style.display = 'block';
+    document.getElementById('rvModal').style.display    = 'flex';
+
+    try {
+      const res = await fetch(DETAIL_BASE + '/' + encodeURIComponent(rx) + '/files', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+
+      _rv.마쳤나 = d.status === 'approved' || d.status === 'ordered';
+
+      document.getElementById('rvTitle').textContent =
+        (d.patient ? d.patient + ' · ' : '') + d.rx + ' · ' + d.label;
+      document.getElementById('rvCount').textContent = (d.files?.length ?? 0) + '장';
+
+      const 단추 = document.getElementById('rvApprove');
+      단추.disabled    = _rv.마쳤나;
+      단추.textContent = _rv.마쳤나 ? '검수 완료' : '검수 확인';
+      document.getElementById('rvNote').textContent = _rv.마쳤나
+        ? '이미 검수를 마친 처방전입니다.'
+        : '모두 확인하셨으면 「검수 확인」을 누르십시오 — 상태가 검수 완료로 바뀝니다.';
+
+      document.getElementById('rvBody').innerHTML = (d.files ?? []).length
+        ? (d.files ?? []).map(f => `
+            <div style="background:#fff;border:1px solid var(--gray-300);border-radius:10px;
+                        margin-bottom:12px;overflow:hidden;">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 11px;
+                          border-bottom:1px solid var(--gray-200);font-size:12px;">
+                <b style="color:var(--primary);">${_esc(f.label)}</b>
+                <span style="color:var(--text-muted);flex:1;">${_esc(f.name ?? '')}</span>
+                <a href="${_esc(f.url)}" target="_blank" rel="noopener"
+                   style="font-size:11.5px;color:var(--primary);text-decoration:underline;">새 창</a>
+              </div>
+              ${f.isPdf
+                ? `<iframe src="${_esc(f.url)}" style="width:100%;height:560px;border:none;background:#fff;"></iframe>`
+                : `<img src="${_esc(f.url)}" alt="${_esc(f.label)}" loading="lazy"
+                        style="display:block;width:100%;background:var(--gray-100);">`}
+            </div>`).join('')
+        : '<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:12.5px;">올라온 파일이 없습니다.</div>';
+    } catch (e) {
+      document.getElementById('rvBody').innerHTML =
+        '<div style="text-align:center;padding:60px;color:var(--danger);font-size:12.5px;">파일을 불러오지 못했습니다.</div>';
+    }
+  };
+
+  const _esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  window.rvClose = function () {
+    document.getElementById('rvBackdrop').style.display = 'none';
+    document.getElementById('rvModal').style.display    = 'none';
+    document.getElementById('rvBody').innerHTML = '';   // 그림을 물고 있지 않는다
+  };
+
+  window.rvApprove = async function (btn) {
+    if (!_rv.rx || _rv.마쳤나) return;
+
+    BtnState.loading(btn, '처리 중...');
+    try {
+      const res = await apiRequest(DETAIL_BASE + '/' + encodeURIComponent(_rv.rx) + '/approve', 'POST', {});
+      if (!res.success) throw new Error(res.message || '검수를 마치지 못했습니다.');
+
+      showToast('검수 완료로 바꿨습니다.', 'success');
+
+      /* 표의 그 줄만 고쳐 세운다 — 목록을 통째로 다시 읽지 않는다 */
+      const 줄들 = grid.getData();
+      const i = 줄들.findIndex(r => r.id === _rv.id);
+      if (i >= 0) {
+        grid.setValue(i, 'status', res.status_label ?? '검수 완료');
+        grid.setValue(i, 'review', res.status ?? 'approved');
+        grid.setValue(i, 'reviewed_at', res.reviewed_at ?? '');
+      }
+
+      rvClose();
+    } catch (e) {
+      showToast(e.message || '검수를 마치지 못했습니다.', 'danger', 5000);
+    } finally {
+      BtnState.reset(btn);
+    }
   };
 })();
 </script>

@@ -44,7 +44,11 @@ class PrescriptionController extends Controller
     // ── 처방전 목록 ───────────────────────────────────────
     public function index(Request $request): View
     {
-        $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order'])->latest();
+        /* 올린 파일이 몇 장인지 목록에서 바로 보인다 (2026-09-10 지시).
+           줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
+        $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order'])
+            ->withCount('attachments')
+            ->latest();
 
         // '처방전 관리' 로 화면만 열고 아무것도 입력하지 않은 초안은 목록에 띄우지 않는다
         $query->whereNot(fn ($q) => $q->blankDraft());
@@ -103,6 +107,13 @@ class PrescriptionController extends Controller
                 'review_request_memo' => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
                                             ? ($rx->review_request_memo ?? '') : ''),
                 'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
+
+                /* 올린 파일 — 처방전 그림 한 장에 첨부를 더한다(2026-09-10 지시).
+                   생성 서류(위임장 따위)는 우리가 만든 것이라 세지 않는다. */
+                'files'      => $rx->attachments_count + ($rx->image_path ? 1 : 0),
+                /* 「파일 검수」 단추가 설 자리. 값은 상태를 담아 둔다 — 이미 마친 건은
+                   단추가 「검수 완료」로 서고 눌러도 다시 승인하지 않는다. */
+                'review'     => $rx->status,
             ];
         });
         $total = $gridData->count();
@@ -1944,15 +1955,27 @@ class PrescriptionController extends Controller
 
            목록은 wwGrid 가 한 번에 다 받아 그리므로 통째로 넘긴다. 다만 끝없이 늘어날
            표라 최근 것부터 상한을 둔다 — 넘친 만큼은 화면이 말해 준다. */
+        /* **검수를 마친 건만 선다** (2026-09-10 지시).
+
+           검수 전 건이 이 목록에 서면, 다음에 손댈 것을 고르는 자리에서 아직 볼
+           차례가 아닌 것을 고르게 된다 — 골라 들어가도 주문을 낼 수 없다(검수 문에
+           막힌다). 검수를 마친 뒤(approved)와 이미 주문이 나간 뒤(ordered)를 함께
+           본다. 예전 자료의 ocr_done 도 이 화면 다른 자리가 「주문 가능」으로 세는
+           값이라 같이 둔다. */
+        $검수마침 = ['approved', 'ordered', 'ocr_done'];
+
         $orderListLimit = 500;
         $orderListTotal = \App\Models\Order::whereDoesntHave('returns')
-            ->where('status', 'pending')->count();
+            ->where('status', 'pending')
+            ->whereHas('prescription', fn ($q) => $q->whereIn('status', $검수마침))
+            ->count();
         $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
                 'prescription.billingOffice', 'items.lots', 'operationUser',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
+            ->whereHas('prescription', fn ($q) => $q->whereIn('status', $검수마침))
             ->latest('id')
             ->limit($orderListLimit)
             ->get();
@@ -2569,6 +2592,52 @@ class PrescriptionController extends Controller
             'status'       => $prescription->status,
             'status_label' => $prescription->status_label,
             'status_badge' => $prescription->status_badge,
+        ]);
+    }
+
+    /**
+     * 올린 파일 목록 — 처방전 목록의 「파일 검수」 창이 읽는다 (2026-09-10 지시).
+     *
+     * 우리가 만든 서류(위임장ㆍ동의서)는 담지 않는다. 검수는 「환자가 올린 것이
+     * 맞는가」를 보는 일이라, 우리가 만든 것을 함께 세우면 무엇을 봐야 하는지 흐려진다.
+     */
+    public function files(Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $prescription->loadMissing('attachments');
+
+        $목록 = [];
+
+        if ($prescription->image_url) {
+            $목록[] = [
+                'id'    => 0,
+                'name'  => $prescription->rx_number,
+                'label' => '처방전',
+                'url'   => $prescription->image_url,
+                'isPdf' => str_contains($prescription->image_mime_type ?? '', 'pdf'),
+            ];
+        }
+
+        foreach ($prescription->attachments as $a) {
+            if (! $a->file_url) {
+                continue;   // 줄만 남고 파일이 없는 것 — 보여 줄 것이 없다
+            }
+
+            $목록[] = [
+                'id'    => $a->id,
+                'name'  => $a->file_original_name,
+                'label' => $a->doc_type_label,
+                'url'   => $a->file_url,
+                'isPdf' => $a->is_pdf,
+            ];
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'rx'      => $prescription->rx_number,
+            'patient' => $prescription->patient?->name ?: $prescription->patient_name_ocr,
+            'status'  => $prescription->status,
+            'label'   => $prescription->status_label,
+            'files'   => $목록,
         ]);
     }
 
