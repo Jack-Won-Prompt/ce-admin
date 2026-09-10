@@ -32,7 +32,7 @@ class FinanceController extends Controller
         'vat'     => '부가세신고내역',
     ];
 
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
         $tab = array_key_exists($request->get('tab'), self::TABS) ? $request->get('tab') : 'orders';
 
@@ -42,6 +42,19 @@ class FinanceController extends Controller
         [$gridData, $columns] = $tab === 'returns'
             ? $this->returns($from, $to, $request)
             : $this->fromOrders($tab, $from, $to, $request);
+
+        /* 탭을 누를 때는 화면을 통째로 다시 열지 않는다 (2026-09-10 지시).
+           여섯 탭이 묻는 것은 같고(기간ㆍ검색어) 바뀌는 것은 표뿐이라, 값만 주고
+           그 자리에서 표를 다시 그린다 — 화면이 깜빡이지 않는다. */
+        if ($request->boolean('json')) {
+            return response()->json([
+                'tab'     => $tab,
+                'label'   => self::TABS[$tab],
+                'columns' => $columns,
+                'rows'    => $gridData,
+                'count'   => count($gridData),
+            ]);
+        }
 
         return view('finance.index', [
             'tab'      => $tab,
@@ -130,7 +143,7 @@ class FinanceController extends Controller
         return [
             'order_no'   => $o->order_number,
             'order_at'   => $o->created_at?->format('Y-m-d') ?? '',
-            // 환자 ID — 재무가 같은 이름 두 사람을 가릴 때 쓴다
+            // 고객ID — 재무가 같은 이름 두 사람을 가릴 때 쓴다
             'patient_id' => $o->patient_id,
             'patient'    => $o->patient?->name ?? '',
             'code'       => $o->product_code ?? '',
@@ -285,8 +298,8 @@ class FinanceController extends Controller
             'orders' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '환자 ID',    'name' => 'patient_id','width' => 80,  'align' => 'center'],
-                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '고객ID',     'name' => 'patient_id','width' => 80,  'align' => 'center'],
+                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '제품코드',   'name' => 'code',      'width' => 110],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '주문수량',   'name' => 'qty',       'width' => 90] + $money,
@@ -306,7 +319,7 @@ class FinanceController extends Controller
             'patient' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 // 환자에게 청구한 금액 — 입금과 맞춰 보는 값이다
                 ['header' => '주문금액',   'name' => 'billed',    'width' => 110] + $money,
                 ['header' => '본인부담액', 'name' => 'copay',     'width' => 110] + $money,
@@ -325,7 +338,7 @@ class FinanceController extends Controller
             'agency' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '지급기관명', 'name' => 'agency',    'width' => 180, 'sortable' => true],
                 ['header' => '청구금액',   'name' => 'claimed',   'width' => 110] + $money,
                 ['header' => '승인금액',   'name' => 'approved',  'width' => 110] + $money,
@@ -342,7 +355,7 @@ class FinanceController extends Controller
             'unpaid' => [
                 ['header' => '주문번호',     'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',     'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '환자명',       'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '거래처명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '총 주문금액',  'name' => 'total',     'width' => 110] + $money,
                 ['header' => '환자부담금',   'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '공단부담금',   'name' => 'nhis',      'width' => 110] + $money,
@@ -359,7 +372,7 @@ class FinanceController extends Controller
             // 18쪽 — 매출 차감 및 환불 관리
             'returns' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
-                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '반품접수일', 'name' => 'taken_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '반품완료일', 'name' => 'done_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
@@ -378,7 +391,7 @@ class FinanceController extends Controller
                 ['header' => '주문상태',   'name' => 'status',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송일자',   'name' => 'delivered', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '공급가액',   'name' => 'supply',    'width' => 110] + $money,
                 ['header' => '부가세',     'name' => 'vat',       'width' => 100] + $money,

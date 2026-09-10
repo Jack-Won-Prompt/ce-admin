@@ -46,10 +46,16 @@
        가로 넘침을 auto 로 두면 세로도 auto 가 되어 그 1px 이 잘린다.
        여섯이 한 줄에 서므로 넘칠 일이 없고, 좁아지면 접히게 둔다. --}}
   <div class="pnl-tabs" style="flex-wrap:wrap;">
+    {{-- 탭을 눌러도 화면을 다시 열지 않는다 (2026-09-10 지시). 값만 받아 표를 그 자리에서
+         다시 그린다 — 깜빡이지 않고, 고른 기간ㆍ검색어도 그대로다.
+
+         주소는 그대로 남긴다(pushState). 새로고침하거나 링크를 건네도 그 탭이 열린다.
+         스크립트가 죽어도 href 가 살아 있어 예전처럼 넘어간다. --}}
     @foreach(\App\Http\Controllers\FinanceController::TABS as $k => $label)
       <a href="{{ route('finance.index', array_filter(['tab' => $k, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo])) }}"
-         class="pnl-tab {{ $tab === $k ? 'active' : '' }}" style="white-space:nowrap;">
-        {{ $label }}@if($tab === $k)<span class="pnl-tab-cnt">(총 <b>{{ number_format(count($gridData)) }}</b>건)</span>@endif
+         class="pnl-tab {{ $tab === $k ? 'active' : '' }}" style="white-space:nowrap;"
+         data-tab="{{ $k }}" onclick="return finTab(event, '{{ $k }}')">
+        {{ $label }}<span class="pnl-tab-cnt" {{ $tab === $k ? '' : 'hidden' }}>(총 <b>{{ number_format(count($gridData)) }}</b>건)</span>
       </a>
     @endforeach
     <div style="margin-left:auto;padding-right:12px;flex-shrink:0;">
@@ -78,7 +84,8 @@
   const COLS = @json($columns);
   COLS.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
 
-  const grid = new wwGrid({
+  /* 표는 다시 그릴 수 있어야 한다 — 탭마다 칸이 다르므로 값만 갈아 끼울 수 없다 */
+  const 표만들기 = (칸들, 줄들) => new wwGrid({
     el: document.getElementById('financeGrid'),
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
@@ -88,10 +95,68 @@
 
        앞의 칸을 걷지 않는다. 재무는 매출ㆍ입금ㆍ미수를 세는 자리라, 그 값들이
        맨 앞에 서 있어야 한 눈에 읽힌다. 위드웍스 차례는 그 뒤에서 이어 본다. */
-    columns: [...COLS, ...ceWwCols()],
-    data: @json($gridData),
+    columns: [...칸들, ...ceWwCols()],
+    data: 줄들,
   });
-  window.__financeGrid = grid;
+
+  const 돈칸으로 = (칸들) => {
+    칸들.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
+    return 칸들;
+  };
+
+  window.__financeGrid = 표만들기(COLS, @json($gridData));
+
+  /* ── 탭 ──
+
+     화면을 다시 열지 않는다. 값만 받아 표를 새로 그린다 — 탭마다 칸이 달라
+     표를 통째로 다시 세운다. 그 사이 옅게 흐려 두어 바뀌는 중임을 알린다. */
+  let 부르는중 = false;
+
+  window.finTab = function (e, 어느것) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return true;  // 새 탭으로 여는 것은 그대로
+    e.preventDefault();
+
+    if (부르는중) return false;
+    const 그줄 = e.currentTarget;
+    if (그줄.classList.contains('active')) return false;
+
+    부르는중 = true;
+    const 칸 = document.getElementById('financeGrid');
+    칸.style.opacity = '.45';
+
+    const 주소 = new URL(그줄.href, location.origin);
+
+    fetch(주소.toString() + (주소.search ? '&' : '?') + 'json=1',
+          { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(d => {
+        칸.innerHTML = '';
+        window.__financeGrid = 표만들기(돈칸으로(d.columns), d.rows);
+
+        // 걸린 탭과 건수를 옮긴다
+        document.querySelectorAll('.pnl-tabs .pnl-tab[data-tab]').forEach(a => {
+          const 걸림 = a.dataset.tab === d.tab;
+          a.classList.toggle('active', 걸림);
+          const 수 = a.querySelector('.pnl-tab-cnt');
+          if (수) {
+            수.hidden = !걸림;
+            if (걸림) 수.innerHTML = '(총 <b>' + Number(d.count).toLocaleString('ko-KR') + '</b>건)';
+          }
+        });
+
+        // 거르개와 주소도 그 탭의 것으로 — 새로고침하거나 링크를 건네도 같은 자리다
+        const 숨은칸 = document.querySelector('form.ds-filter-card input[name=tab]');
+        if (숨은칸) 숨은칸.value = d.tab;
+        history.pushState({ tab: d.tab }, '', 주소.toString());
+      })
+      .catch(() => { location.href = 그줄.href; })   // 못 받으면 예전처럼 넘어간다
+      .finally(() => { 칸.style.opacity = ''; 부르는중 = false; });
+
+    return false;
+  };
+
+  /* 뒤로 가기로 돌아오면 그 탭이 다시 서야 한다 — 화면을 다시 읽는다 */
+  window.addEventListener('popstate', () => location.reload());
 
   /* 달로 고르기 — 재무가 보는 자리라 대개 한 달치다. 날짜 두 개를 손으로 맞추는
      것보다 단추 하나가 빠르다. */
