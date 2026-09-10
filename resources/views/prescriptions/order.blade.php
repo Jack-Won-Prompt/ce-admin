@@ -2212,6 +2212,23 @@ $calcDeposit  = $calcCopay;
 
     {{-- Col 2: OCR Edit + Order --}}
     <div id="tabsCol">
+      {{-- 테이블뷰를 쓰던 사람에게는 **처음부터** 테이블뷰로 그린다
+           (2026-09-10 확인요청 7쪽).
+
+           여태 이 갈래는 DOMContentLoaded 뒤에야 붙었다. 그래서 화면을 열면 카드뷰가
+           한 번 그려졌다가 테이블뷰로 갈아입었고, 그 사이가 「일시적으로 이상한 화면」
+           으로 보였다 — 표가 좁은 칸으로 무너져 글자만 세로로 쌓인 그 그림이다.
+
+           판 안쪽을 읽기 전에 갈래를 정해야 그 한 번이 없어진다. 그래서 이 자리다 —
+           여는 태그 바로 다음, 안쪽 markup 앞. localStorage 를 못 읽는 창(사생활 보호
+           창 따위)에서는 그냥 카드뷰로 둔다. --}}
+      <script>
+        try {
+          if (localStorage.getItem('rx_tab_view') === 'table') {
+            document.getElementById('tabsCol').classList.add('tab-view-table');
+          }
+        } catch (e) { /* 못 읽으면 카드뷰다 — 알릴 일이 아니다 */ }
+      </script>
       <div id="tabBarOuter"><div id="tabBarInner" class="tab-bar">
         <div class="tab-bar-tabs">
           {{-- 상세 목록 왼쪽에 목록을 둔다 — 이 화면에 들어와서야 「다음에 무엇을 손대나」를
@@ -3948,7 +3965,12 @@ $calcDeposit  = $calcCopay;
                 <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
                 {{-- 줄마다 있던 휴지통 대신 체크해서 지운다 — 여러 줄을 한 번에 지울 수 있다 --}}
                 <button type="button" class="rx-acc-btn" onclick="removeCheckedItems()" title="체크한 줄을 지웁니다"><i class="fa-solid fa-trash"></i> 선택 삭제</button>
-                <button type="button" class="rx-acc-btn rx-acc-btn-fill" onclick="saveOCR()" title="검수 내용을 저장합니다">저장</button>
+                {{-- 여기 있던 「저장」은 걷었다 (2026-09-10 확인요청 7쪽).
+
+                     한 판에 저장이 둘이었다. 이것은 검수 내용만 담고(saveOCR), 판 아래의
+                     저장은 제품 줄과 **배송 정보**까지 담는다(saveOrderTab). 겉으로는 같은
+                     말이라 어느 것을 눌러야 배송지가 남는지 알 수 없었고, 위를 누른 사람은
+                     주소를 잃었다. 아래 것 하나만 둔다 — 그것이 이 판의 모든 것을 담는다. --}}
               </div>
             </div>
           </div>
@@ -4086,12 +4108,15 @@ $calcDeposit  = $calcCopay;
                   <span>{{ $repurchaseBlock }}</span>
                 </div>
               @endif
+              {{-- 걸음은 둘이다 — 저장이 먼저고 연계가 나중이다 (2026-09-10 확인요청 7쪽).
+                   지금 눌러야 하는 쪽에만 색이 든다(syncOrderStepBtns). 막지는 않는다 —
+                   색은 길을 가리키는 것이지 문을 잠그는 것이 아니다. --}}
               <div style="display:flex;gap:8px;">
-                <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                         title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
-                <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+                <button class="btn flex-1" id="btnCreateOrder" onclick="createOrder(event)">
                   <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
                 </button>
               </div>
@@ -5241,6 +5266,8 @@ document.addEventListener('DOMContentLoaded', function () {
     _applyViewerSideBtn(true);
   }
   if (localStorage.getItem('rx_tab_view') === 'table') {
+    /* 갈래는 이미 위에서 붙였다(판 여는 자리의 작은 script) — 여기서는 단추 이름과
+       색만 맞춘다. 값을 옮기는 일은 제품 줄이 그려진 뒤라야 해서 그대로 뒤로 미룬다. */
     _applyTableView(true);
     setTimeout(() => { syncCardToTable(); renderItemsTable(); syncOrderTabToTable(); }, 250);
   }
@@ -6475,6 +6502,9 @@ window.HELP_TOUR_STEPS = [
     if (rec && !rec.value.trim()) {
       rec.value = (document.getElementById('f-name')?.value ?? '').trim().replace(/^\s*\(E\)\s*/, '');
     }
+
+    // 코드가 채운 값은 input 을 일으키지 않는다 — 단추 색을 직접 다시 센다
+    syncOrderStepBtns();
   }
 
   /* ── 청구처 ────────────────────────────────────────────────
@@ -6799,6 +6829,7 @@ window.HELP_TOUR_STEPS = [
         document.getElementById('shippingAddr').value       = r.address;
         document.getElementById('shippingAddrDetail').value = r.detail;
         _orderDirty = true;
+        syncOrderStepBtns();
         showToast('배송지를 바꿨습니다.', 'success');
       },
     });
@@ -6824,6 +6855,7 @@ window.HELP_TOUR_STEPS = [
     const cb = document.getElementById('sameShipping');
     if (cb) cb.checked = false;
 
+    syncOrderStepBtns();
     showToast('처방전 주소를 배송 주소로 가져왔습니다.', 'success');
   }
 
@@ -7033,11 +7065,50 @@ window.HELP_TOUR_STEPS = [
   let _productDirty = false;
   let _orderDirty   = false;
 
-  function markOcrDirty()     { _ocrDirty     = true; }
-  function markProductDirty() { _productDirty = true; }
-  function markOrderDirty()   { _orderDirty   = true; }
-  function clearAllDirty()    { _ocrDirty = false; _productDirty = false; _orderDirty = false; }
+  function markOcrDirty()     { _ocrDirty     = true;  syncOrderStepBtns(); }
+  function markProductDirty() { _productDirty = true;  syncOrderStepBtns(); }
+  function markOrderDirty()   { _orderDirty   = true;  syncOrderStepBtns(); }
+  function clearAllDirty()    { _ocrDirty = false; _productDirty = false; _orderDirty = false; syncOrderStepBtns(); }
   function isAnyDirty()       { return _ocrDirty || _productDirty || _orderDirty; }
+
+  /**
+   * 주문 제품 판 아래 두 단추에 걸음을 입힌다 (2026-09-10 확인요청 7쪽).
+   *
+   * 걸음은 둘이다 — 적고 저장한 다음에 창고로 보낸다. 여태 「주문 생성 및 연계」만
+   * 늘 주색이라, 주소를 적자마자 그 단추부터 누르는 일이 잦았다. 그러면 적어 둔
+   * 배송지가 저장되기 전에 연계가 돌아 창고로 빈 주소가 나갔다.
+   *
+   * 지금 눌러야 하는 쪽에만 색이 든다.
+   *   주소가 아직 없다      → 둘 다 수수하게. 갈 곳이 없다.
+   *   주소는 있고 저장 전   → 「저장」에 색. 먼저 담아야 한다.
+   *   담을 것이 없다        → 「주문 생성 및 연계」에 색. 이제 보낼 차례다.
+   *
+   * **막지는 않는다.** 색은 길을 가리키는 것이지 문을 잠그는 것이 아니다 —
+   * 잠가 두면 우리가 잘못 읽은 그 순간 담당자는 아무것도 못 하게 된다.
+   * 실제로 막는 일은 gateOrder ㆍ gateShippingAddress 와 서버가 한다.
+   */
+  function syncOrderStepBtns() {
+    const 저장  = document.getElementById('btnSaveOrderTab');
+    const 연계  = document.getElementById('btnCreateOrder');
+    if (!저장 && !연계) return;
+
+    const 주소  = (document.getElementById('shippingAddr')?.value ?? '').trim();
+    const 담을것 = isAnyDirty();
+
+    const 색 = (el, 켜나, 말) => {
+      if (!el) return;
+      el.classList.toggle('btn-primary', 켜나);
+      if (말) el.title = 말;
+    };
+
+    색(저장, !!주소 && 담을것,
+       주소 ? '주문 제품과 배송 정보를 저장합니다' : '받는 주소를 먼저 적으십시오');
+    색(연계, !!주소 && !담을것,
+       !주소   ? '받는 주소를 적고 저장한 뒤에 보냅니다'
+       : 담을것 ? '적은 것을 먼저 저장하십시오'
+                : '창고로 보냅니다');
+  }
+  window.syncOrderStepBtns = syncOrderStepBtns;
 
   function _dirtyLabel() {
     const parts = [];
@@ -7063,6 +7134,15 @@ window.HELP_TOUR_STEPS = [
       const el = document.getElementById(id);
       if (el) { el.addEventListener('input', fn); el.addEventListener('change', fn); }
     });
+
+    /* 주소를 「주소 검색」으로 고르면 값만 바뀌고 input 이 나지 않는다 —
+       그 길로 채운 주소도 단추 색에 닿아야 한다(2026-09-10 확인요청 7쪽). */
+    ['shippingAddr', 'shippingAddrDetail', 'shippingRecipient'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener('input', syncOrderStepBtns); el.addEventListener('change', syncOrderStepBtns); }
+    });
+
+    syncOrderStepBtns();
 
     // 페이지 이탈 링크 클릭 가로채기 (사이드바·상단 버튼 등)
     document.addEventListener('click', e => {
@@ -9353,11 +9433,11 @@ window.HELP_TOUR_STEPS = [
     syncOrderStageBtn();          // 「주문 완료」를 「주문 미등록」으로 되돌린다
     document.getElementById('orderActionArea').innerHTML = `
       <div style="display:flex;gap:8px;">
-        <button class="btn" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+        <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                 title="주문 제품과 배송 정보를 저장합니다">
           <i class="fa-solid fa-floppy-disk"></i> 저장
         </button>
-        <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+        <button class="btn flex-1" id="btnCreateOrder" onclick="createOrder(event)">
           <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
         </button>
       </div>`;
