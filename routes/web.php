@@ -517,6 +517,12 @@ Route::middleware(['auth'])->group(function () {
 
     // 외부 서비스 키·설정 (팝빌·토스·알림톡·건보공단·AWS·메일·NICE)
     // 항목 목록은 config/settings-schema.php 가 쥔다.
+    /* 웹훅 관리 — 무엇을 어디로 주고받는지(정의)와 실제로 오간 것(로그) (2026-09-10 지시) */
+    Route::get(   '/settings/webhooks',        [\App\Http\Controllers\WebhookAdminController::class, 'index'])->name('webhooks.index');
+    Route::get(   '/settings/webhooks/logs',   [\App\Http\Controllers\WebhookAdminController::class, 'logs'])->name('webhooks.logs');
+    Route::post(  '/settings/webhooks',        [\App\Http\Controllers\WebhookAdminController::class, 'store'])->name('webhooks.store');
+    Route::delete('/settings/webhooks/{webhook}', [\App\Http\Controllers\WebhookAdminController::class, 'destroy'])->name('webhooks.destroy');
+
     Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
     Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
 

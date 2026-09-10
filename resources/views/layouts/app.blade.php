@@ -1812,6 +1812,14 @@
         {{-- 본인확인 설정은 메뉴에 두지 않는다. 한 번 맞춰 두면 다시 열 일이 드물고,
              설정 묶음이 길어질수록 매일 쓰는 것이 아래로 밀린다.
              화면과 경로는 남아 있어 주소로는 열린다(/settings/nice). --}}
+        @if($vis('webhooks'))
+        <div class="menu-item {{ request()->routeIs('webhooks*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="wrench" href="{{ route('webhooks.index') }}" data-title="웹훅 관리">
+            @dsicon('wrench', 'ds-icon menu-icon')
+            <span>웹훅 관리</span>
+          </a>
+        </div>
+        @endif
         @if($vis('service-settings'))
         <div class="menu-item {{ request()->routeIs('service-settings*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="wrench" href="{{ route('service-settings.index') }}" data-title="서비스 연동 설정">

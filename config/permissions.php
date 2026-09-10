@@ -311,6 +311,16 @@ return [
             'routes'  => ['nice-settings'],
             'actions' => ['view', 'update'],
         ],
+        /* 웹훅 관리 — 밖과 주고받는 알림의 얼개와 그 기록 (2026-09-10 지시).
+           주소ㆍ파라미터를 고치면 저쪽에서 오는 알림이 우리 자리를 못 찾는다.
+           로그에는 오간 값이 담겨 있어 아무나 볼 자리가 아니다. */
+        'webhooks' => [
+            'label'      => '웹훅 관리',
+            'group'      => 'settings',
+            'routes'     => ['webhooks'],
+            'actions'    => ['view', 'create', 'update', 'delete'],
+            'admin_only' => true,
+        ],
         // 외부 서비스 키를 다루는 화면이라 관리자만 연다.
         'service-settings' => [
             'label'      => '서비스 연동 설정',

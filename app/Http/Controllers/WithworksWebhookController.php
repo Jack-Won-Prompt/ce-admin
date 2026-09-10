@@ -8,6 +8,7 @@ use App\Models\OrderReturnLog;
 use App\Models\WithworksEvent;
 use App\Services\ClaimReadiness;
 use App\Services\WithworksSync;
+use App\Support\WebhookLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -72,7 +73,33 @@ class WithworksWebhookController extends Controller
         'ro.cancelled' => 'cancelled',
     ];
 
+    /**
+     * 받는 자리 — 오간 것을 웹훅 관리 표에 남기고 본디 하던 일로 넘긴다 (2026-09-10 지시).
+     *
+     * 몸통에 나가는 길이 여럿이라(이미 처리ㆍ주문 없음ㆍ검증 실패…) 길목마다 적으면
+     * 하나를 빠뜨린다. 들고 나는 자리를 하나로 두고 여기서만 적는다.
+     */
     public function receive(Request $request, WithworksSync $sync, ClaimReadiness $readiness): JsonResponse
+    {
+        $기록 = WebhookLogger::inbound('withworks', $request->input('event'), $request);
+
+        try {
+            $답 = $this->처리($request, $sync, $readiness);
+        } catch (\Throwable $e) {
+            WebhookLogger::finish($기록, ok: false, status: 500, error: $e->getMessage());
+            throw $e;
+        }
+
+        WebhookLogger::finish($기록,
+            ok: $답->getStatusCode() < 400,
+            status: $답->getStatusCode(),
+            response: $답->getData(true),
+            ref: $request->input('ce_order_number') ?: $request->input('so_no'));
+
+        return $답;
+    }
+
+    private function 처리(Request $request, WithworksSync $sync, ClaimReadiness $readiness): JsonResponse
     {
         $secret = config('services.demoworks.webhook_secret');
 

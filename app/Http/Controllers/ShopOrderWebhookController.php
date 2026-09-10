@@ -7,6 +7,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\ShopOrder;
 use App\Models\User;
+use App\Support\WebhookLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -15,7 +16,33 @@ use Illuminate\Support\Facades\Validator;
 
 class ShopOrderWebhookController extends Controller
 {
+    /**
+     * 받는 자리 — 오간 것을 웹훅 관리 표에 남기고 본디 하던 일로 넘긴다 (2026-09-10 지시).
+     *
+     * 몸통에 나가는 길이 여럿이라 길목마다 적으면 하나를 빠뜨린다.
+     * 들고 나는 자리를 하나로 두고 여기서만 적는다.
+     */
     public function receive(Request $request): JsonResponse
+    {
+        $기록 = WebhookLogger::inbound('ce_shop', $request->input('event'), $request);
+
+        try {
+            $답 = $this->처리($request);
+        } catch (\Throwable $e) {
+            WebhookLogger::finish($기록, ok: false, status: 500, error: $e->getMessage());
+            throw $e;
+        }
+
+        WebhookLogger::finish($기록,
+            ok: $답->getStatusCode() < 400,
+            status: $답->getStatusCode(),
+            response: $답->getData(true),
+            ref: $request->input('order_number') ?: $request->input('order_no'));
+
+        return $답;
+    }
+
+    private function 처리(Request $request): JsonResponse
     {
         // 시크릿 검증
         $secret = config('services.ce_shop.webhook_secret');

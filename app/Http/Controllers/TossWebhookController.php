@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\TossPayments\VirtualAccountService;
+use App\Support\WebhookLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -33,6 +34,12 @@ class TossWebhookController extends Controller
         if (config('toss.webhook_secret') && $signature !== ''
             && !$this->vaService->verifyWebhookSignature($rawBody, $signature, $txTime)) {
             Log::warning('[Toss] 웹훅 서명 불일치', ['sig' => substr($signature, 0, 24)]);
+
+            /* 서명이 틀린 것도 남긴다 — 남의 것이 두드리고 있다는 뜻일 수 있다 */
+            WebhookLogger::finish(
+                WebhookLogger::inbound('toss', json_decode($rawBody, true)['eventType'] ?? null, $request, false),
+                ok: false, status: 401, error: '서명 불일치');
+
             return response()->json(['message' => '서명 불일치'], 401);
         }
 
@@ -45,6 +52,12 @@ class TossWebhookController extends Controller
 
         Log::info('[Toss] 웹훅 수신', ['event' => $event]);
 
+        /* 오간 것을 표에도 남긴다 (2026-09-10 지시). 여기서 나는 어떤 오류도
+           본디 하려던 일을 방해하지 않는다 — WebhookLogger 안에서 삼킨다.
+           서명은 위에서 이미 보았다: 헤더가 있고 열쇠가 있으면 맞는 것만 여기 온다. */
+        $기록 = WebhookLogger::inbound('toss', $event, $request,
+            $signature !== '' && config('toss.webhook_secret') ? true : null);
+
         /* 카드 결제는 결제창이 우리 화면으로 돌아오면서 마무리된다. 그런데 고객이
            그 화면을 닫거나 통신이 끊기면 돌아오지 않는다 — 돈은 나갔는데 우리는
            모르는 채로 남는다(테스트 시나리오 3.1).
@@ -53,18 +66,28 @@ class TossWebhookController extends Controller
            두 길이 같은 건을 두 번 마무리해도 탈이 없다 — 발행은 스스로 두 번 내지
            않고, 창고 확정도 이미 확정된 건에는 그렇다고 답한다. */
         if ($event === 'PAYMENT_STATUS_CHANGED') {
-            return $this->paymentStatusChanged($payload);
+            $답 = $this->paymentStatusChanged($payload);
+            WebhookLogger::finish($기록,
+                ok: $답->getStatusCode() < 400,
+                status: $답->getStatusCode(),
+                response: $답->getData(true),
+                ref: $payload['data']['orderId'] ?? null);
+
+            return $답;
         }
 
         try {
             $tossPayment = $this->vaService->handleDepositWebhook($payload);
 
-            return response()->json([
-                'ok'         => true,
-                'payment_id' => $tossPayment?->id,
-            ]);
+            $답 = ['ok' => true, 'payment_id' => $tossPayment?->id];
+            WebhookLogger::finish($기록, ok: true, status: 200, response: $답,
+                ref: $tossPayment?->order?->order_number ?? ($payload['data']['orderId'] ?? null));
+
+            return response()->json($답);
         } catch (\Throwable $e) {
             Log::error('[Toss] 웹훅 처리 오류: ' . $e->getMessage(), ['payload' => $payload]);
+            WebhookLogger::finish($기록, ok: false, status: 500, error: $e->getMessage());
+
             return response()->json(['message' => '처리 오류: ' . $e->getMessage()], 500);
         }
     }
