@@ -482,7 +482,10 @@
 
          **그 건에 해당하는 것만 세운다** — 내지도 않을 서류를 보이면 그것에도
          서명하는 것으로 읽힌다(App\Support\SignDocs 가 가른다). --}}
-    @php $_docs = App\Support\SignDocs::목록($consent, $privacyDone); @endphp
+    {{-- 괄호 꼴로 적는다. 이 파일에는 위쪽에 괄호 꼴 php 지시자가 이미 있는데,
+         아래에서 여는 꼴(php … endphp)을 쓰면 블레이드가 위쪽 지시자부터 여기까지를
+         한 덩이의 PHP 로 삼킨다 — 그 사이의 화면이 통째로 사라진다(2026-09-10). --}}
+    @php($_docs = App\Support\SignDocs::목록($consent, $privacyDone))
 
     <div class="doc-list" id="docList">
       <div class="doc-list-head">문서 목록</div>
@@ -767,7 +770,7 @@
                 아래 서식의 <strong>② 요양기관 확인란</strong>은 병원에서 적고 확인하는 자리라 비어 있습니다.
               </div>
             @endif
-            @php $_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]); @endphp
+            @php($_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]))
             <div class="doc-frame"><iframe data-src="{{ $_url }}" title="{{ $_d['name'] }}"></iframe></div>
             <a class="doc-open" href="{{ $_url }}" target="_blank" rel="noopener">새 창에서 크게 보기</a>
           </div>
