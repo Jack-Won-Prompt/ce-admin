@@ -189,7 +189,7 @@
       <table class="wh-params">
         <thead>
           <tr>
-            <th style="width:90px;">자리</th>
+            <th style="width:90px;">위치</th>
             <th style="width:180px;">이름</th>
             <th style="width:100px;">구분</th>
             <th style="width:60px;">필수</th>

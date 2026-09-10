@@ -31,7 +31,7 @@ return [
         'outbound' => '보냄 (Outbound)',
     ],
 
-    /** 파라미터가 어디에 실리는가 */
+    /** 파라미터가 어디에 실리는가 — 화면의 「위치」 칸이 읽는다 */
     'positions' => [
         'body'   => '본문',
         'header' => '헤더',
@@ -41,12 +41,12 @@ return [
 
     /** 파라미터의 구분 — 화면의 「구분」 칸이 읽는다 */
     'types' => [
-        'string'   => '글',
+        'string'   => '문자',
         'int'      => '정수',
         'decimal'  => '소수',
         'bool'     => '예/아니오',
         'datetime' => '일시',
-        'object'   => '묶음',
+        'object'   => '객체',
         'array'    => '목록',
     ],
 
