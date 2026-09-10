@@ -8634,7 +8634,58 @@ window.HELP_TOUR_STEPS = [
     return false;
   }
 
-  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 다섯 */
+  /**
+   * 유형과 청구전략이 정해졌는가 — 없으면 창고로 보내지 않는다 (2026-09-10 지시).
+   *
+   * 전략(유형 × 자격)이 기관이 낼 몫을 정한다. 정해지지 않은 채로 주문이 서면
+   * 기관 몫이 0원으로 굳고, 그 값 그대로 청구ㆍ발행이 이어진다 — 뒤에 고치려면
+   * 창고가 이미 손댄 주문을 되돌려야 한다.
+   *
+   * 배지(rx-ref-bs)가 읽는 것과 같은 잣대를 쓴다. 두 곳이 갈리면 화면은 「미선택」인데
+   * 주문은 서는 일이 생긴다.
+   */
+  function gateBillingStrategy() {
+    const 상세탭으로 = (칸id) => {
+      const 탭 = [...document.querySelectorAll('.tab-btn')]
+                   .find(b => (b.getAttribute('onclick') || '').includes('tab-ocr'));
+      if (탭) switchTab(탭, 'tab-ocr');
+      setTimeout(() => document.getElementById(칸id)?.focus(), 60);
+    };
+
+    const type = document.getElementById('f-acc-add-type')?.value ?? '';
+    const cls  = document.getElementById('f-benefit-class')?.value ?? '';
+
+    if (!type) {
+      ceAlert('유형이 비어 있어 주문을 만들 수 없습니다.
+
+'
+            + '상세 목록의 「유형」을 먼저 고르십시오 — 유형과 자격이 청구전략을 정하고, '
+            + '청구전략이 기관 부담금을 셈합니다.',
+            { title: '유형을 고르십시오', tone: 'warning' });
+      상세탭으로('f-acc-add-type');
+      return false;
+    }
+
+    const key = _bsKey(type, cls);
+
+    if (!key || !BILLING_STRATEGY[key]) {
+      ceAlert('청구전략이 정해지지 않아 주문을 만들 수 없습니다.
+
+'
+            + '상세 목록의 「유형」과 「급여구분」을 확인해 주십시오. '
+            + '전략이 없으면 기관이 낼 몫이 0원으로 굳습니다.',
+            { title: '청구전략이 없습니다', tone: 'warning' });
+      상세탭으로(cls ? 'f-acc-add-type' : 'f-benefit-class');
+      return false;
+    }
+
+    return true;
+  }
+
+  /** 주문 제품에서 저장ㆍ연계 전에 지나는 문 다섯.
+
+      청구전략은 여기에 넣지 않는다 — 저장까지 막으면 적어 둔 것이 날아간다.
+      창고로 보내는 자리(createOrder)에서만 본다. */
   function gateOrder() {
     return gateReviewed() && gateConsent() && gateTotalCount(true)
         && gateOrderQty() && gateShippingAddress();
@@ -8646,6 +8697,10 @@ window.HELP_TOUR_STEPS = [
 
     // 검수ㆍ동의ㆍ수량 — 셋 다 지나야 창고로 보낼 수 있다(요청서 7ㆍ12ㆍ17쪽)
     if (!gateOrder()) return;
+
+    /* 유형과 청구전략이 없으면 여기서 멈춘다 (2026-09-10 지시).
+       저장은 막지 않는다 — 적어 둔 것은 그대로 남고, 창고로 보내는 일만 멈춘다. */
+    if (!gateBillingStrategy()) return;
 
     /* 제품을 고르지 않았으면 여기서 멈춘다. 그냥 두면 0원짜리 주문이 서고 처방전이
        「주문 완료」로 넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이

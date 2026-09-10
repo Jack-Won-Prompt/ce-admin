@@ -388,6 +388,29 @@ class OrderController extends Controller
             ], 422);
         }
 
+        /* 유형과 청구전략이 정해져야 판다 (2026-09-10 지시).
+
+           전략(유형 × 자격)이 기관이 낼 몫을 정한다. 정해지지 않은 채로 주문이 서면
+           기관 몫이 0원으로 굳고 그 값 그대로 청구ㆍ발행이 이어진다.
+
+           화면도 같은 것을 묻지만(gateBillingStrategy) 화면만으로는 부족하다 —
+           새로 고치거나 다른 길로 이 자리를 부르면 그대로 지나간다. */
+        if (! trim((string) $prescription->counsel_acc_add_type)) {
+            return response()->json([
+                'success' => false,
+                'message' => '유형이 비어 있어 주문을 만들 수 없습니다. 상세 목록의 「유형」을 먼저 고르십시오.',
+            ], 422);
+        }
+
+        if (\App\Support\BillingStrategy::payerRate(
+                $prescription->counsel_acc_add_type, $prescription->benefit_class) === null) {
+            return response()->json([
+                'success' => false,
+                'message' => '청구전략이 정해지지 않아 주문을 만들 수 없습니다. '
+                           . '상세 목록의 「유형」과 「급여구분」을 확인해 주십시오.',
+            ], 422);
+        }
+
         /* 동의 둘을 다 받아야 판다(2026-09-03 지시) — 개인정보 수집ㆍ이용, 요양비 위임.
 
            화면도 같은 것을 묻지만(gateConsent) 화면만으로는 부족하다. 새로 고치거나
