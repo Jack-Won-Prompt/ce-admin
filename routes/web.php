@@ -593,6 +593,8 @@ Route::post('/admin/invite/{token}', [AdminInvitationController::class, 'confirm
 Route::prefix('consent')->name('consent.')->group(function () {
     Route::get( '/{token}', [ConsentController::class, 'show'])->name('show');
     Route::post('/{token}', [ConsentController::class, 'submit'])->name('submit');
+    // 서명하기 전에 그 서류를 그대로 보여 준다 (2026-09-10 「서명 동의」)
+    Route::get( '/{token}/doc/{doc}', [ConsentController::class, 'previewDoc'])->name('doc');
     // NICE 본인확인: 표준창 파라미터 발급(자기 페이지 fetch) / NICE returnurl 콜백(외부)
     Route::post('/{token}/nice/start', [ConsentController::class, 'niceStart'])->name('nice.start');
     Route::match(['get', 'post'], '/{token}/nice/callback', [ConsentController::class, 'niceCallback'])->name('nice.callback');

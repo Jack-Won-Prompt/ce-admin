@@ -36,6 +36,7 @@ class PrescriptionDocument extends Model
         return match ($this->type) {
             'consent'      => '위임동의서',
             'delegation'   => '요양비위임장',
+            'registration' => '등록신청서',
             'fax'          => '팩스통합본',
             'cash_receipt' => '현금영수증',
             'tax_invoice'  => '세금계산서',
@@ -58,6 +59,7 @@ class PrescriptionDocument extends Model
         return match ($this->type) {
             'consent'      => '서명 완료',
             'delegation'   => '서명 완료(자동)',
+            'registration' => '서명 완료(자동)',
             'fax'          => '팩스 전송',
             'cash_receipt' => '현금영수증 발행',
             'tax_invoice'  => '세금계산서 발행',

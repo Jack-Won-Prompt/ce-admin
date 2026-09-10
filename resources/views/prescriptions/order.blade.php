@@ -1060,11 +1060,13 @@ $calcDeposit  = $calcCopay;
         <div class="pib-actions">
 
       {{-- ── 개인정보동의 ──────────────────────────────────
-           위임동의 왼쪽에 나란히 선다. 이 사람의 개인정보 수집·이용 동의를 이미
-           받아 두었으면 「개인정보동의 완료」로 적는다 — 개인정보동의 화면이
-           동의자로 읽는 이름ㆍ연락처가 이 사람과 같은지를 본다. --}}
+           단추는 「서명 동의」 하나로 합쳤다(2026-09-10 지시). 환자가 받는 링크
+           하나에서 개인정보 동의와 위임 서명을 함께 받으므로, 보내는 자리도 하나다.
+
+           이 자리는 팝오버가 설 곳으로 남긴다 — 상태는 「서명 동의」 창 안에서
+           한 줄로 보여 주고, 「보기」를 누르면 이 팝오버가 열린다. --}}
       <div style="position:relative;">
-        <button class="pib-btn" type="button" id="privacyActionBtn" onclick="togglePrivacyPopover(event)">
+        <button class="pib-btn" type="button" id="privacyActionBtn" style="display:none;" onclick="togglePrivacyPopover(event)">
           <i class="fa-solid fa-shield-halved" style="font-size:11px;"></i>
           <span id="privacyBtnText">개인정보동의</span>
         </button>
@@ -1085,7 +1087,7 @@ $calcDeposit  = $calcCopay;
       <div style="position:relative;">
         <div id="consentBtnWrap">
           <button class="pib-btn pib-btn-primary" type="button" id="consentActionBtn" onclick="toggleConsentPopover(event)">
-            <i class="fa-solid fa-file-signature" style="font-size:11px;"></i> 위임동의
+            <i class="fa-solid fa-file-signature" style="font-size:11px;"></i> 서명 동의
           </button>
         </div>
         <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
@@ -1105,7 +1107,7 @@ $calcDeposit  = $calcCopay;
           </div>
           <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
             <i id="consentModalIcon" class="fa-solid fa-file-signature" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-            <span id="consentModalTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">위임동의 SMS 발송</span>
+            <span id="consentModalTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">서명 동의 SMS 발송</span>
             <button onclick="closeConsentPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
@@ -1125,8 +1127,17 @@ $calcDeposit  = $calcCopay;
               <span style="opacity:.85;">.env에서 <code>CONSENT_PUBLIC_URL</code>을 실제 공인 도메인으로 변경하세요.</span>
             </div>
             @endif
+            {{-- 개인정보 동의는 같은 링크에서 함께 받는다. 단추를 합쳤으니 그 상태도
+                 이 창에서 보여 준다 — 자세한 것은 「보기」로 연다(2026-09-10 지시). --}}
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--bg-subtle,#f8fafc);border:1px solid var(--border);border-radius:6px;">
+              <i class="fa-solid fa-shield-halved" style="font-size:12px;color:var(--primary);"></i>
+              <span style="font-size:12px;color:var(--text-secondary);">개인정보 동의</span>
+              <b id="sdPrivacyState" style="font-size:12px;color:var(--text-primary);flex:1;">확인 중</b>
+              <button type="button" class="btn btn-outline btn-sm" onclick="togglePrivacyPopover(event)">보기</button>
+            </div>
+
             <p id="consentModalDesc" style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
-              환자에게 <strong>건강보험 급여 위임동의</strong> 링크를 SMS로 발송합니다.<br>
+              환자에게 <strong>서류 확인 및 전자서명</strong> 링크를 SMS로 발송합니다.<br>
               환자는 로그인 없이 서명 페이지에서 이름 확인 후 서명할 수 있습니다.<br>
               <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
             </p>
@@ -12198,9 +12209,9 @@ window.HELP_TOUR_STEPS = [
     const rb  = document.getElementById('consentResultBadge');
     if (!bw || !rb) return;
     const cfgMap = {
-      agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'위임동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)' },
+      agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'서명 동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)' },
       declined:{ bg:'var(--danger-light)',  border:'var(--alert-100)', color:'var(--danger)',  icon:'fa-circle-xmark',  text:'동의 거절됨',    action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--danger)',  btnColor:'var(--danger)' },
-      pending: { bg:'var(--gray-100)',      border:'var(--gray-300)', color:'var(--gray-700)', icon:'fa-clock',        text:'위임동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--gray-700)',       btnColor:'var(--gray-700)' },
+      pending: { bg:'var(--gray-100)',      border:'var(--gray-300)', color:'var(--gray-700)', icon:'fa-clock',        text:'서명 동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--gray-700)',       btnColor:'var(--gray-700)' },
       /* 만료 — 「지난 일」이 아니라 「다시 보내야 하는 일」이다.
 
          한때 배지도 단추도 시안의 비활성 조합(bg #F9FAFC · 글자 #999EA4)으로 그렸다.
@@ -12240,6 +12251,15 @@ window.HELP_TOUR_STEPS = [
     const btn  = document.getElementById('privacyActionBtn');
     const text = document.getElementById('privacyBtnText');
     if (!btn || !text) return;
+
+    /* 「서명 동의」 창 안의 한 줄도 함께 맞춘다 (2026-09-10 지시) */
+    const line = document.getElementById('sdPrivacyState');
+    if (line) {
+      line.textContent = state.agreed
+        ? ('받음' + (state.at ? ' · ' + state.at : ''))
+        : (state.exists ? '받는 중' : '아직 없음');
+      line.style.color = state.agreed ? 'var(--primary)' : 'var(--warning)';
+    }
 
     if (state.agreed) {
       text.textContent = '개인정보동의 완료';

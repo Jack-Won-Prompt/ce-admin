@@ -174,6 +174,68 @@
     }
     .agree-box.open { display: block; }
 
+    /* ── 문서 목록 (2026-09-10 「서명 동의」) ───────────────── */
+    .doc-list { margin-bottom: 16px; }
+    .doc-list-head {
+      font-size: 13px; font-weight: 800; color: #1f6274; margin-bottom: 8px;
+    }
+    .doc-item {
+      border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+      margin-bottom: 8px; overflow: hidden;
+    }
+    .doc-top {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 13px; border: none; background: #fafafa; cursor: pointer;
+      font-family: inherit; text-align: left;
+    }
+    .doc-item.open .doc-top { background: #eef7f9; }
+    .doc-mark { color: #28798B; font-size: 14px; flex-shrink: 0; }
+    .doc-name { flex: 1; font-size: 13.5px; font-weight: 700; color: #374151; }
+    .doc-more { font-size: 11.5px; font-weight: 700; color: #28798B; flex-shrink: 0; }
+    .doc-note {
+      padding: 0 13px 12px; font-size: 12px; line-height: 1.6; color: #6b7280;
+      background: #fafafa; border-bottom: 1px solid #f1f3f5;
+    }
+    .doc-item.open .doc-note { background: #eef7f9; }
+    .doc-body { display: none; padding: 12px 13px; }
+    .doc-item.open .doc-body { display: block; }
+    .doc-say {
+      font-size: 12.5px; line-height: 1.8; color: #374151;
+      background: #f8fafc; border: 1px solid #eef2f6; border-radius: 8px;
+      padding: 11px 12px; margin-bottom: 10px;
+    }
+    .doc-frame {
+      border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f3f4f6;
+    }
+    .doc-frame iframe { display: block; width: 100%; height: 420px; border: none; }
+    .doc-open {
+      display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700;
+      color: #28798B; text-decoration: underline;
+    }
+    /* 개인정보 동의서는 화면에 그대로 펼쳐진다 — 칸 안에서 덧테두리를 지운다 */
+    .doc-body #privacyBlock { border: none; padding: 0; margin: 0; background: transparent; }
+
+    /* ── 최종 동의 ─────────────────────────────────────────── */
+    .final-agree {
+      border: 1px solid #cfe6ea; border-radius: 10px; background: #f7fbfc;
+      padding: 6px 13px; margin-bottom: 16px;
+    }
+    .fa-row {
+      display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+      padding: 10px 0; font-size: 12.5px; line-height: 1.7; color: #374151;
+    }
+    .fa-row + .fa-row { border-top: 1px solid #e6eff1; }
+    .fa-row input { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; accent-color: #28798B; }
+
+    /* ── 서명 직전 문구 ────────────────────────────────────── */
+    .last-word {
+      border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+      padding: 13px; margin-bottom: 14px;
+      font-size: 12.5px; line-height: 1.8; color: #374151;
+    }
+    .last-word ul { margin: 8px 0 0; padding-left: 18px; }
+    .last-word li { font-weight: 700; color: #1f6274; }
+
     /* 한 항목 아래에서 일반ㆍ민감을 따로 받는 자리, 그리고 제3자 제공 표 (2026-09-10) */
     .agree-subline { font-size: 12px; font-weight: 700; color: #1f6274; margin-top: 10px; }
     .agree-ask { font-size: 12.5px; line-height: 1.7; color: #374151; margin-top: 8px; }
@@ -349,8 +411,10 @@
 <div class="card" id="mainCard">
   <div class="card-header">
     <div class="logo">CE ADMIN</div>
-    <h1>건강보험 급여 위임동의</h1>
-    <p>아래 내용을 확인하신 후 서명해주세요.</p>
+    <h1>서류 확인 및 전자서명</h1>
+    <p>요양비 청구 및 환자 지원 서비스 제공을 위해 아래 서류의 내용을 확인해 주시기 바랍니다.<br>
+       각 문서를 펼쳐 내용을 확인하신 후 전자서명을 진행해 주세요.<br>
+       전자서명 완료 시 본인의 서명이 각 서류의 서명란에 동일하게 적용됩니다.</p>
   </div>
 
   {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳고, 그래서
@@ -410,13 +474,18 @@
     </div>
     @endif
 
-    {{-- 동의 내용 --}}
-    <div class="consent-text">
-      본인 <strong>{{ $consent->patient_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
-      콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
-      <strong>급여 위임청구 동의</strong>를 합니다.<br><br>
-      위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위
-    </div>
+    {{-- ── 문서 목록 (2026-09-10 「서명 동의」) ────────────────────
+
+         여태 위임장 한 장만 놓고 서명을 받았다. 그 서명이 실제로는 청구서에도
+         등록신청서에도 들어가는데, 환자는 무엇에 서명하는지 모른 채 이름만 읽었다.
+         서명이 닿는 서류를 모두 펼쳐 보이고 그 뒤에 한 번 서명하게 한다.
+
+         **그 건에 해당하는 것만 세운다** — 내지도 않을 서류를 보이면 그것에도
+         서명하는 것으로 읽힌다(App\Support\SignDocs 가 가른다). --}}
+    @php $_docs = App\Support\SignDocs::목록($consent, $privacyDone); @endphp
+
+    <div class="doc-list" id="docList">
+      <div class="doc-list-head">문서 목록</div>
 
     {{-- ── 개인정보 수집·이용 동의 ────────────────────────────
          위임만 받고 개인정보 동의는 따로 받으러 다니던 것을 한 화면에서 끝낸다.
@@ -427,7 +496,15 @@
          이미 동의를 받아 둔 사람에게는 이 영역이 아예 서지 않는다. 동의는 사람에게
          한 번 받으면 족하고, 처방전마다 다시 물으면 같은 것을 몇 번씩 읽히게 된다. --}}
     @if(! $privacyDone)
-    <div class="sig-section" id="privacyBlock" style="margin-bottom:18px;">
+      <div class="doc-item" data-doc="privacy">
+        <button type="button" class="doc-top" onclick="toggleDoc(this)">
+          <span class="doc-mark">☑</span>
+          <span class="doc-name">{{ App\Support\SignDocs::이름[App\Support\SignDocs::개인정보] }}</span>
+          <span class="doc-more">펼치기 ▼</span>
+        </button>
+        <div class="doc-note">수집·이용 목적과 항목, 제3자 제공을 확인하고 항목마다 동의합니다.</div>
+        <div class="doc-body">
+    <div class="sig-section" id="privacyBlock">
       <div class="agree-title">개인정보 수집·이용 동의</div>
 
       {{-- 신청 유형 — 이 뒤의 칸과 동의 항목이 유형마다 다르다 --}}
@@ -660,7 +737,60 @@
 
       <p class="pv-note">* 표시는 필수 입력·동의 항목입니다.</p>
     </div>
+        </div>
+      </div>
     @endif
+
+      {{-- 나머지 서류 — 값이 채워진 실제 서식을 그 자리에서 보여 준다.
+           서명란만 비어 있다. 펼칠 때 불러온다 — 열지도 않은 서식을 미리 그리면
+           휴대전화에서 첫 화면이 그만큼 늦다. --}}
+      @foreach($_docs as $_d)
+        @continue($_d['key'] === App\Support\SignDocs::개인정보)
+        <div class="doc-item" data-doc="{{ $_d['key'] }}">
+          <button type="button" class="doc-top" onclick="toggleDoc(this)">
+            <span class="doc-mark">☑</span>
+            <span class="doc-name">{{ $_d['name'] }}</span>
+            <span class="doc-more">펼치기 ▼</span>
+          </button>
+          <div class="doc-note">{{ $_d['note'] }}</div>
+          <div class="doc-body">
+            @if($_d['key'] === App\Support\SignDocs::위임장)
+              <div class="doc-say">
+                본인 <strong>{{ $consent->patient_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
+                콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
+                <strong>급여 위임청구 동의</strong>를 합니다.<br>
+                위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위
+              </div>
+            @endif
+            @if($_d['key'] === App\Support\SignDocs::등록신청서)
+              <div class="doc-say">
+                아래 서식의 <strong>② 요양기관 확인란</strong>은 병원에서 적고 확인하는 자리라 비어 있습니다.
+              </div>
+            @endif
+            @php $_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]); @endphp
+            <div class="doc-frame"><iframe data-src="{{ $_url }}" title="{{ $_d['name'] }}"></iframe></div>
+            <a class="doc-open" href="{{ $_url }}" target="_blank" rel="noopener">새 창에서 크게 보기</a>
+          </div>
+        </div>
+      @endforeach
+    </div>
+
+    {{-- ── 최종 동의 ────────────────────────────────────────────
+         서류를 다 보았다는 것, 서명 하나가 그 서류들에 함께 들어간다는 것,
+         그리고 그 서류를 우리가 청구ㆍ등록에 쓴다는 것 — 셋을 따로 받는다. --}}
+    <div class="final-agree" id="finalAgree">
+      @foreach([
+        '본인은 위 문서들의 내용을 모두 확인하였으며, 해당 내용에 동의합니다.',
+        '본인은 본인인증 후 진행하는 전자서명이 위 문서들의 본인 서명란에 동일하게 적용되는 것에 동의합니다.',
+        '본인은 콜로플라스트 코리아가 본인이 동의한 서류를 요양비 청구, 등록 및 관련 행정업무 처리를 위해 제출·활용하는 것에 동의합니다.',
+      ] as $_n => $_말)
+        <label class="fa-row">
+          <input type="checkbox" class="fa-check" id="fa{{ $_n }}" onchange="refreshAgree()">
+          <span>{{ $_말 }}</span>
+        </label>
+      @endforeach
+    </div>
+
     {{-- 서명란 — 미성년이면 세우지 않는다 (2026-09-07 지시).
 
          요양비위임장에는 서명 자리가 둘이다(위임인ㆍ법정대리인). 그래서 화면도 둘을
@@ -787,10 +917,22 @@
          비어 있었다). 남은 것을 그대로 적어 준다. --}}
     <div id="whyBlocked" class="why-blocked" style="display:none;"></div>
 
+    {{-- 서명 직전 최종 문구 (2026-09-10 「서명 동의」 4쪽) --}}
+    <div class="last-word">
+      본인은 휴대폰 본인인증을 통해 본인임을 확인하였으며, 위 서류의 내용을 충분히 확인하였습니다.
+      본인이 입력한 전자서명은 자필서명과 동일한 효력을 가지며, 아래 서류의 본인 서명란에
+      동일하게 적용됨에 동의합니다.
+      <ul>
+        @foreach($_docs as $_d)
+          <li>{{ $_d['name'] }}</li>
+        @endforeach
+      </ul>
+    </div>
+
     {{-- 버튼 --}}
     <div class="btn-row">
       <button class="btn btn-cancel" type="button" id="btnDecline" onclick="submitConsent('declined')">거절</button>
-      <button class="btn btn-agree"  type="button" id="btnAgree"   onclick="submitConsent('agreed')" disabled>동의 서명</button>
+      <button class="btn btn-agree"  type="button" id="btnAgree"   onclick="submitConsent('agreed')" disabled>전자서명하기</button>
     </div>
 
   </div>
@@ -916,6 +1058,21 @@ function guardianReady() {
   return !!(name && rel && guardianBirthOk() && gHasSig);
 }
 
+/* ── 문서 목록 (2026-09-10 「서명 동의」) ─────────────────
+
+   펼칠 때 서식을 불러온다. 열지도 않은 서식을 미리 그리면 서버가 그만큼 일하고
+   휴대전화에서 첫 화면이 늦다. */
+window.toggleDoc = function (btn) {
+  const item = btn.closest('.doc-item');
+  const 열림 = item.classList.toggle('open');
+  btn.querySelector('.doc-more').textContent = 열림 ? '접기 ▲' : '펼치기 ▼';
+
+  if (열림) {
+    const f = item.querySelector('iframe[data-src]');
+    if (f && !f.src) f.src = f.dataset.src;
+  }
+};
+
 /* ── 개인정보 수집·이용 동의 ───────────────────────────── */
 function toggleAgreeBox(btn) {
   const box = btn.nextElementSibling;
@@ -994,6 +1151,12 @@ function privacyReady() {
   return (필수동의[t] || []).every(k => agreePicked(k) === '동의함');
 }
 
+/* 최종 동의 세 칸 — 하나라도 비면 서명하지 못한다 (2026-09-10 「서명 동의」) */
+function finalAgreed() {
+  const boxes = [...document.querySelectorAll('#finalAgree .fa-check')];
+  return boxes.length > 0 && boxes.every(b => b.checked);
+}
+
 function refreshAgree() {
   // 보이는 항목을 다 「동의함」으로 골라 두었으면 위의 「모두 동의」도 따라 켠다
   const all = document.getElementById('agreeAll');
@@ -1004,7 +1167,7 @@ function refreshAgree() {
       [...i.querySelectorAll('input[type=radio]')].some(r => r.checked && r.value === '동의함'));
   }
   const ok = (IS_MINOR || hasSig) && (!NICE_ENFORCE || identityVerified)
-             && guardianReady() && privacyReady();
+             && guardianReady() && privacyReady() && finalAgreed();
   document.getElementById('btnAgree').disabled = !ok;
   showWhyBlocked(ok);
 }
@@ -1025,6 +1188,10 @@ function whatIsMissing() {
     if (!gHasSig)              남은.push('보호자 서명');
   } else if (!hasSig) {
     남은.push('본인 서명');
+  }
+
+  if (!finalAgreed()) {
+    남은.push('맨 아래 최종 동의 확인');
   }
 
   if (PRIVACY_ASK) {
@@ -1364,6 +1531,11 @@ async function submitConsent(action) {
 
   const body = { action };
   if (action === 'agreed') {
+    /* 최종 동의 세 칸 — 무엇에 동의했는지 그대로 담아 보낸다 (2026-09-10 「서명 동의」) */
+    body.final_agreements = [...document.querySelectorAll('#finalAgree .fa-row')]
+      .filter(r => r.querySelector('.fa-check')?.checked)
+      .map(r => r.querySelector('span')?.textContent.trim());
+
     /* 미성년이면 보호자 서명 하나를 두 자리에 싣는다 — 종이의 위임인 칸도
        법정대리인이 그린 것이 맞다. */
     body.signature = IS_MINOR

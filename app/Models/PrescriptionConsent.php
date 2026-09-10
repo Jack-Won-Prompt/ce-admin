@@ -14,6 +14,8 @@ class PrescriptionConsent extends Model
         'patient_name',
         'patient_mobile',
         'signature_data',
+        // 서명 직전에 읽고 동의한 세 줄 (2026-09-10 「서명 동의」)
+        'final_agreements',
         'status',
         'sent_by',
         'expires_at',
@@ -49,6 +51,7 @@ class PrescriptionConsent extends Model
     ];
 
     protected $casts = [
+        'final_agreements'   => 'array',
         'expires_at'         => 'datetime',
         'responded_at'       => 'datetime',
         'is_minor'           => 'boolean',

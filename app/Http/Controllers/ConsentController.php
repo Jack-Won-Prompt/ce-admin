@@ -97,6 +97,98 @@ class ConsentController extends Controller
     }
 
     /**
+     * 서명한 등록 신청서를 생성 서류로 남긴다 (2026-09-10 「서명 동의」).
+     *
+     * 여기서 무슨 일이 있어도 서명은 이미 끝난 것이라 되돌리지 않는다 — 환자 화면에
+     * 오류가 뜨면 다시 서명하려 든다.
+     */
+    private function saveRegistrationDocument(PrescriptionConsent $consent): ?PrescriptionDocument
+    {
+        try {
+            $rx = $consent->prescription;
+            if (! $rx) {
+                return null;
+            }
+
+            $pdf  = \App\Support\RegistrationForm::render($consent, true);
+            $who  = $rx->patient;
+            $name = '등록신청서_' . ($who?->bare_name ?: $consent->patient_name)
+                  . '_' . now()->format('Ymd') . '.pdf';
+            $path = 'registrations/' . $rx->id . '_' . now()->format('YmdHis')
+                  . '_' . \Illuminate\Support\Str::random(6) . '.pdf';
+
+            if (! Storage::put($path, $pdf)) {
+                throw new \RuntimeException("등록 신청서 파일을 쓰지 못했습니다 ({$path}).");
+            }
+
+            /* 같은 처방전의 옛 것은 걷어낸다 — 방금 쓴 자리는 건드리지 않는다 */
+            foreach (PrescriptionDocument::where('prescription_id', $rx->id)
+                        ->where('type', 'registration')->get() as $old) {
+                if ($old->file_path && $old->file_path !== $path && Storage::exists($old->file_path)) {
+                    Storage::delete($old->file_path);
+                }
+                $old->delete();
+            }
+
+            return PrescriptionDocument::create([
+                'prescription_id'   => $rx->id,
+                'patient_id'        => $rx->patient_id,
+                'created_by'        => Auth::id(),
+                'type'              => 'registration',
+                'file_path'         => $path,
+                'original_filename' => $name,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('[등록 신청서] 자동 생성 실패', [
+                'consent' => $consent->id, 'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * 공개 GET: 서명하기 **전에** 그 서류를 그대로 보여 준다 (2026-09-10 「서명 동의」).
+     *
+     * 서명 한 번이 여러 서류의 서명란에 들어간다. 무엇에 서명하는지 보지 못한 채
+     * 이름만 읽고 서명하던 것을 고친다 — 값이 채워진 실제 서식을 띄우고, 서명란만
+     * 비워 둔다.
+     *
+     * 로그인 없이 여는 자리다. 그래서 **살아 있는 링크**에만 내준다 — 이미 서명했거나
+     * 만료된 토큰으로는 열리지 않는다. 담긴 것은 이 환자 자신의 것이다.
+     */
+    public function previewDoc(string $token, string $doc)
+    {
+        $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
+
+        abort_unless($consent->isPending() && ! $consent->expires_at->isPast(), 410);
+        abort_if($consent->kind === 'id_card', 404);
+        abort_unless(\App\Support\SignDocs::열수있나($consent, $doc), 404);
+
+        $rx = $consent->prescription;
+
+        try {
+            $pdf = match ($doc) {
+                \App\Support\SignDocs::위임장 => $this->buildDelegationOverlayPdf($consent, false),
+                \App\Support\SignDocs::청구서 => \App\Support\MedicalAidClaimForm::render(
+                    $rx?->orders()->latest('id')->first() ?? abort(404)
+                ),
+                \App\Support\SignDocs::등록신청서 => \App\Support\RegistrationForm::render($consent),
+                default => abort(404),
+            };
+        } catch (\Throwable $e) {
+            Log::warning('[서명 동의] 서류를 그리지 못했습니다', ['doc' => $doc, 'error' => $e->getMessage()]);
+            abort(500, '서류를 여는 중 문제가 생겼습니다. 담당자에게 알려 주십시오.');
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . rawurlencode(\App\Support\SignDocs::이름[$doc]) . '.pdf"',
+            /* 내려받아 두고 나중에 여는 자리가 아니다 — 링크가 살아 있는 동안만 본다 */
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
      * 공개 POST: 동의 / 거절 제출
      */
     public function submit(Request $request, string $token): JsonResponse
@@ -182,6 +274,19 @@ class ConsentController extends Controller
             }
         }
 
+        /* 최종 동의 세 칸 (2026-09-10 「서명 동의」).
+
+           서류를 다 보았다는 것, 서명 하나가 그 서류들에 함께 들어간다는 것, 그것을
+           우리가 청구ㆍ등록에 쓴다는 것 — 셋을 받아야 서명이다. 화면에서도 막지만
+           화면을 거치지 않고 들어오는 요청이 있다. */
+        if ($request->action === 'agreed'
+            && count(array_filter((array) $request->input('final_agreements', []))) < 3) {
+            return response()->json([
+                'success' => false,
+                'message' => '맨 아래 최종 동의 항목에 모두 체크해 주십시오.',
+            ], 422);
+        }
+
         /* 빈 서명은 서명이 아니다. 화면에서도 보지만, 화면을 거치지 않고 들어오는
            요청이 있고 화면 쪽 잣대가 한 번 새기도 했다 — 여기서 다시 본다. */
         if ($request->action === 'agreed') {
@@ -246,6 +351,14 @@ class ConsentController extends Controller
             'status'         => $request->action,
             'signature_data' => $request->action === 'agreed' ? $request->input('signature') : null,
             'responded_at'   => now(),
+            /* 무엇에 동의했는지 그 문장 그대로 남긴다 — 나중에 문구를 고쳐도
+               그때 읽은 것은 그때 것이다 (2026-09-10 「서명 동의」) */
+            'final_agreements' => $request->action === 'agreed'
+                ? array_values(array_filter(array_map(
+                    fn ($v) => is_string($v) ? trim($v) : null,
+                    (array) $request->input('final_agreements', [])
+                  )))
+                : null,
         ];
 
         if ($request->action === 'agreed' && $consent->is_minor) {
@@ -315,6 +428,14 @@ class ConsentController extends Controller
             $consent->loadMissing('prescription');
             if ($consent->prescription) {
                 $this->saveDelegationDocument($consent->prescription);
+
+                /* 등록 신청서에도 같은 서명이 들어간다(2026-09-10 「서명 동의」).
+                   서명 화면에 세운 서류만 만든다 — 보여 주지도 않은 서류에 서명을
+                   얹지 않는다. 첨부가 아니라 생성 서류로 둔다: 첨부의 등록신청서
+                   자리는 병원에서 받아 올리는 그 한 장의 자리다. */
+                if (\App\Support\SignDocs::열수있나($consent, \App\Support\SignDocs::등록신청서)) {
+                    $this->saveRegistrationDocument($consent);
+                }
 
                 /* 동의가 끝났으니 공단에 등록 서류를 보낸다(2026-09-03 지시 ·
                    시나리오 1.1.x.1). 낼 것이 다 있으면 보내고, 하나라도 빠졌으면
@@ -1089,8 +1210,11 @@ class ConsentController extends Controller
     /**
      * 원본 위임장 PDF 오버레이 생성 → PDF 바이너리 반환 (다운로드·자동첨부 공용).
      * 현재 DB 위임장 설정을 적용한다.
+     *
+     * $withSignature 를 끄면 서명란을 비운 채로 그린다 — 서명하기 **전에** 환자에게
+     * 무엇에 서명하는지 보여 주는 자리에서 쓴다(2026-09-10 「서명 동의」).
      */
-    private function buildDelegationOverlayPdf(PrescriptionConsent $consent): string
+    private function buildDelegationOverlayPdf(PrescriptionConsent $consent, bool $withSignature = true): string
     {
         \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
 
@@ -1099,14 +1223,17 @@ class ConsentController extends Controller
             throw new \RuntimeException('위임장 원본 양식 파일을 찾을 수 없습니다.');
         }
 
-        // 서명 data URL → 바이너리 PNG
-        $raw = $consent->signature_data;
-        if (preg_match('#^data:image/\w+;base64,(.+)$#s', $raw, $m)) {
-            $raw = $m[1];
-        }
-        $imgData = base64_decode($raw, true);
-        if ($imgData === false) {
-            throw new \RuntimeException('서명 이미지를 해석할 수 없습니다.');
+        $imgData = '';
+        if ($withSignature) {
+            // 서명 data URL → 바이너리 PNG
+            $raw = $consent->signature_data;
+            if (preg_match('#^data:image/\w+;base64,(.+)$#s', $raw, $m)) {
+                $raw = $m[1];
+            }
+            $imgData = base64_decode($raw, true);
+            if ($imgData === false) {
+                throw new \RuntimeException('서명 이미지를 해석할 수 없습니다.');
+            }
         }
 
         $pdf = new \setasign\Fpdi\Tcpdf\Fpdi();
@@ -1135,10 +1262,12 @@ class ConsentController extends Controller
                 $this->stampDelegationFields($pdf, $consent, $fontName);
 
                 // 서명 오버레이 ('@': 원본 이미지 데이터 직접 사용, 알파채널 PNG는 GD로 처리)
-                $pdf->Image('@' . $imgData, $sigX, $sigY, $sigW, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+                if ($withSignature && $imgData !== '') {
+                    $pdf->Image('@' . $imgData, $sigX, $sigY, $sigW, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+                }
 
                 // 미성년자면 법정대리인 서명도 함께 찍는다
-                if ($consent->is_minor && $consent->guardian_signature_data) {
+                if ($withSignature && $consent->is_minor && $consent->guardian_signature_data) {
                     $graw = $consent->guardian_signature_data;
                     if (preg_match('#^data:image/\w+;base64,(.+)$#s', $graw, $gm)) $graw = $gm[1];
                     $gimg = base64_decode($graw, true);
