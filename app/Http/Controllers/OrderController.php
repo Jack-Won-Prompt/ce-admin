@@ -455,7 +455,7 @@ class OrderController extends Controller
             'patient_copay'    => $totalCopay,
             'total_amount'     => $totalAmount,
             'shipping_address'   => $request->shipping_address,
-            'shipping_recipient' => $request->shipping_recipient,
+            'shipping_recipient' => \App\Models\Patient::bare($request->shipping_recipient),
             'estimated_delivery' => now()->addDays(3)->format('Y-m-d'),
             'status'             => 'pending',
             'so_type'            => $request->so_type ?? '1013',
@@ -551,7 +551,7 @@ class OrderController extends Controller
             'patient_copay'    => $totalCopay,
             'total_amount'     => $totalAmount,
             'shipping_address'   => $request->shipping_address   ?? $order->shipping_address,
-            'shipping_recipient' => $request->shipping_recipient ?? $order->shipping_recipient,
+            'shipping_recipient' => \App\Models\Patient::bare($request->shipping_recipient ?? $order->shipping_recipient),
             'so_type'            => $request->so_type            ?? $order->so_type,
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : $order->note,
         ] + self::shippingExtras($request, $order));

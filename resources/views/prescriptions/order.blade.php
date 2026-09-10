@@ -4021,7 +4021,7 @@ $calcDeposit  = $calcCopay;
                   </span>
                   <input type="text" class="form-control" id="shippingRecipient"
                          placeholder="받는 사람 이름"
-                         value="{{ $prescription->order?->shipping_recipient ?? ($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '') }}"
+                         value="{{ \App\Models\Patient::bare($prescription->order?->shipping_recipient ?? $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '') }}"
                          style="flex:1 1 140px;min-width:0;" />
                   <input type="text" class="form-control" id="shippingPostcode" readonly
                          value="{{ $prescription->order?->shipping_postcode ?? '' }}"
