@@ -51,7 +51,26 @@ final class MedicalAidClaimForm
         /* 줄만 보고 넘기지 않는다 — 파일이 실제로 있어야 낼 수 있다. 다른 서버에서
            만든 줄이 남아 있거나 파일이 지워지면, 줄만 믿다가 청구 묶음에서 영영
            빠진다(그 사실은 공단이 반려한 뒤에야 드러난다). */
-        if ($existing && $existing->file_path && Storage::disk('public')->exists($existing->file_path)) {
+        $쓸수있나 = $existing && $existing->file_path
+                 && Storage::disk('public')->exists($existing->file_path);
+
+        /* **서명보다 먼저 만든 것은 다시 그린다** (2026-09-10 확인요청 11쪽).
+
+           서식 아래에 청구인 이름과 「(서명 또는 인)」이 있고, 서명은 환자가 동의를
+           마칠 때 들어간다. 그런데 청구서는 그보다 먼저 만들어지는 일이 잦다 —
+           청구 묶음을 미리 훑거나 서명 화면에서 미리 보여 줄 때다.
+
+           여태는 한 번 만든 것을 그대로 다시 썼다. 그래서 서명 전에 만들어진 건은
+           환자가 서명을 마친 뒤에도 서명란이 빈 채로 남았고, 그 파일이 그대로
+           청구에 나갔다 — 서명 없는 청구서는 그 자리에서 반려된다.
+
+           서명이 파일보다 나중에 들어왔으면 다시 그린다. 옛 파일은 지운다 — 두 벌이
+           남으면 어느 것이 서명본인지 알 수 없다. */
+        if ($쓸수있나 && ($서명때 = self::서명시각($order)) && $서명때->gt($existing->created_at)) {
+            $쓸수있나 = false;
+        }
+
+        if ($쓸수있나) {
             return $existing;
         }
 
@@ -61,6 +80,15 @@ final class MedicalAidClaimForm
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('mac_') . '.pdf';
 
             Storage::disk('public')->put($path, $pdf);
+
+            /* 다시 그린 것이면 옛 줄과 파일을 걷는다 — 두 벌이 남으면 어느 것이
+               서명본인지 알 수 없고, 청구 묶음이 옛것을 집을 수 있다. */
+            if ($existing) {
+                if ($existing->file_path && $existing->file_path !== $path) {
+                    Storage::disk('public')->delete($existing->file_path);
+                }
+                $existing->delete();
+            }
 
             return PrescriptionAttachment::create([
                 'prescription_id'    => $order->prescription_id,
@@ -146,7 +174,10 @@ final class MedicalAidClaimForm
         $copay = (int) round((float) ($order->items->sum('patient_copay') ?? 0));
 
         return [
-            'patient_name'     => $pt?->name ?: $rx?->patient_name_ocr,
+            /* 서류에 적히는 이름에는 (E) 를 두지 않는다 (2026-09-08 확인요청 11쪽).
+               사업부가 IC 라는 우리 쪽 표시일 뿐이고, 관청이 보는 종이에는 설 자리가
+               없다 — 이 서식의 성명ㆍ청구인 두 칸에 그대로 찍혀 나가고 있었다. */
+            'patient_name'     => \App\Models\Patient::bare($pt?->name ?: $rx?->patient_name_ocr),
             'patient_rrn'      => $rx?->resident_no ?: $pt?->residentNoFor('nhis_claim_form'),
             /* 보장기관은 이 건의 관할 지자체다 — 시장ㆍ군수ㆍ구청장에게 내는 서류다 */
             'insurer_name'     => $rx?->billingOffice?->office_name,
@@ -177,9 +208,26 @@ final class MedicalAidClaimForm
             'claim_d'          => $now->format('j'),
             /* 청구인은 환자 본인이다 — 서식의 「관계」 칸에 「본인」이 인쇄되어 있다.
                우리 계좌로 받는 것은 수령 계좌 칸이 정하는 별개의 일이다. */
-            'claimant_name'    => $pt?->name ?: $rx?->patient_name_ocr,
+            'claimant_name'    => \App\Models\Patient::bare($pt?->name ?: $rx?->patient_name_ocr),
             'claimant_phone'   => PhoneNo::format($pt?->mobile),
         ];
+    }
+
+    /**
+     * 이 건의 서명이 언제 들어왔는가 — 없으면 null.
+     *
+     * 서명을 담는 줄이 갱신된 때를 본다. 동의를 마치면 그 줄에 서명이 실리므로,
+     * 그 시각이 곧 「서명이 생긴 때」다.
+     */
+    private static function 서명시각(Order $order): ?Carbon
+    {
+        $때 = PrescriptionConsent::where('prescription_id', $order->prescription_id)
+            ->where('status', 'agreed')
+            ->whereNotNull('signature_data')
+            ->latest('id')
+            ->value('updated_at');
+
+        return $때 ? Carbon::parse($때) : null;
     }
 
     /** 위임동의에서 받아 둔 서명을 그대로 얹는다 — 없으면 비워 둔다 */
