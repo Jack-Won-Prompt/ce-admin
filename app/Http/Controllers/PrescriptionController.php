@@ -522,7 +522,8 @@ class PrescriptionController extends Controller
             return false;                                  // 이미 알렸다
         }
 
-        $name = $prescription->patient?->name ?: ($prescription->patient_name_ocr ?: '고객');
+        // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
+        $name = \App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         /* 문구는 메시지 유형(SMS ▸ 주문 확정)에 적어 둔 것을 쓴다 — 담당자가 화면에서
            고칠 수 있어야 하고, 손으로 보낼 때와 갈리지 않아야 한다. */
