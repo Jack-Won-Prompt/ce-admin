@@ -176,7 +176,9 @@ class ConsentController extends Controller
                 default => abort(404),
             };
         } catch (\Throwable $e) {
-            Log::warning('[서명 동의] 서류를 그리지 못했습니다', ['doc' => $doc, 'error' => $e->getMessage()]);
+            \Log::warning('[서명 동의] 서류를 그리지 못했습니다', [
+                'doc' => $doc, 'error' => $e->getMessage(), 'at' => $e->getFile() . ':' . $e->getLine(),
+            ]);
             abort(500, '서류를 여는 중 문제가 생겼습니다. 담당자에게 알려 주십시오.');
         }
 
