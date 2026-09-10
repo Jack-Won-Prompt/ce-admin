@@ -116,13 +116,20 @@
   letter-spacing: 0.3px;
 }
 
-/* Figma: padding 12 · gap 6. 정렬만 운영 요청에 따라 가운데로 둔다 */
+/* Figma: padding 12 · gap 6. 정렬만 운영 요청에 따라 가운데로 둔다.
+
+   머리글은 **칸 정렬과 무관하게 늘 가운데**다(2026-09-10 지시). 시안은 왼쪽이지만
+   칸이 많은 목록에서는 제목이 가운데인 쪽이 열 경계를 읽기 쉽다 — 값이 오른쪽으로
+   붙는 금액 칸에서도 제목만은 같은 자리에 선다.
+
+   여태 코드 주석에는 「늘 가운데」라 적혀 있었는데 CSS 는 왼쪽이었다. */
 .cg-th-inner {
   display: flex;
   align-items: center;
-  justify-content: flex-start;   /* Figma: 머리글은 셀 왼쪽 + padding 12 */
+  justify-content: center;
   padding: 12px;
   gap: 6px;
+  text-align: center;
 }
 
 .cg-th-inner.sortable { cursor: pointer; }
