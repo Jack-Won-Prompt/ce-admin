@@ -1120,27 +1120,35 @@ class PrescriptionController extends Controller
         /* 화면 안에서 부른 것이면 어디로 갈지는 화면이 정한다 — 올린 자리는 그대로 두고
            주문 등록 화면만 새 화면 탭으로 연다. 곧바로 옮겨 가면 여러 건을 잇달아 올릴 때
            매번 되돌아와야 했다. */
+        /* 올린 뒤에는 **처방전 목록**으로 간다 (2026-09-10 확인요청 4쪽).
+
+           여태는 주문 등록 화면을 바로 열었다. 그런데 올린 자료는 먼저 검수해야 하고,
+           검수는 처방전 목록에서 한다 — 목록의 「파일 검수」로 올린 것을 내리읽고
+           그 자리에서 마친다. 주문 등록으로 곧장 보내면 그 걸음을 건너뛰게 된다.
+
+           방금 올린 건이 첫 줄에 서도록 처방번호로 좁혀 둔다. 여러 건이면 좁히지 않고
+           검수 필요만 걸어 둔다 — 무엇이 올라왔는지 한눈에 본다. */
+        $목록주소 = count($created) === 1
+            ? route('prescriptions.index', ['status' => 'review_needed', 'search' => $created[0]])
+            : route('prescriptions.index', ['status' => 'review_needed']);
+
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success'   => true,
                 'rx_number' => $firstPrescription?->rx_number,
                 'created'   => $created,
-                'url'       => $firstPrescription
-                                 ? route('prescriptions.show', $firstPrescription)
-                                 : route('prescriptions.index'),
+                'url'       => $목록주소,
+                // 그 건을 바로 열어야 할 때 쓰는 자리 — 지금은 목록이 먼저다
+                'rx_url'    => $firstPrescription ? route('prescriptions.show', $firstPrescription) : null,
                 'message'   => count($created) === 1
-                                 ? "{$firstPrescription->rx_number} 업로드 완료"
+                                 ? "{$firstPrescription->rx_number} 업로드 완료 — 처방전 목록에서 검수하십시오."
                                  : count($created) . '개 처방전 업로드 완료: ' . implode(', ', $created),
             ]);
         }
 
-        if (count($created) === 1) {
-            return redirect()->route('prescriptions.show', $firstPrescription)
-                ->with('success', "{$firstPrescription->rx_number} 업로드 완료");
-        }
-
-        return redirect()->route('prescriptions.index')
-            ->with('success', count($created) . '개 처방전 업로드 완료: ' . implode(', ', $created));
+        return redirect()->to($목록주소)->with('success', count($created) === 1
+            ? "{$firstPrescription->rx_number} 업로드 완료 — 처방전 목록에서 검수하십시오."
+            : count($created) . '개 처방전 업로드 완료: ' . implode(', ', $created));
     }
 
     // ── 첨부 파일 삭제 ────────────────────────────────────

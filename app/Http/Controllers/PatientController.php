@@ -460,6 +460,56 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * 같은 전화번호를 쓰는 거래처가 있는가 (2026-09-10 확인요청 1쪽).
+     *
+     * 막지 않는다. 보호자 한 사람이 환자 둘을 맡아 같은 번호로 연락하는 일이 있어,
+     * 겹친다고 해서 잘못된 것이 아니다 — 다만 모르고 두 벌을 만드는 일도 잦아,
+     * 저장하기 전에 「이 번호를 쓰는 사람이 이미 있다」고 알리기만 한다.
+     *
+     * 붙임표를 떼고 견준다. 같은 번호가 010-1234-5678 로도 01012345678 로도
+     * 적혀 있어, 적힌 꼴 그대로 견주면 절반을 놓친다.
+     */
+    public function phoneCheck(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $숫자만 = fn ($v) => preg_replace('/\D/', '', (string) $v);
+
+        $찾을것 = collect([$request->input('mobile'), $request->input('phone')])
+            ->map($숫자만)
+            ->filter(fn ($v) => strlen($v) >= 9)
+            ->unique()
+            ->values();
+
+        if ($찾을것->isEmpty()) {
+            return response()->json(['found' => []]);
+        }
+
+        /* 붙임표ㆍ빈칸ㆍ괄호를 뗀 값으로 견준다. 칸에 색인이 걸리지 않는 견줌이지만
+           거래처는 수백 줄이라 훑어도 된다 — 저장 앞에서 한 번 묻는 자리다. */
+        $민값 = fn (string $칸) => "REPLACE(REPLACE(REPLACE(REPLACE({$칸}, '-', ''), ' ', ''), '(', ''), ')', '')";
+
+        $q = Patient::query()
+            ->when($request->filled('except'), fn ($w) => $w->where('id', '!=', (int) $request->input('except')))
+            ->where(function ($w) use ($찾을것, $민값) {
+                foreach ($찾을것 as $번호) {
+                    $w->orWhereRaw($민값('mobile') . ' = ?', [$번호])
+                      ->orWhereRaw($민값('phone') . ' = ?', [$번호]);
+                }
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name', 'mobile', 'phone']);
+
+        return response()->json([
+            'found' => $q->map(fn (Patient $p) => [
+                'id'     => $p->id,
+                'name'   => $p->name,
+                'mobile' => \App\Support\PhoneNo::format($p->mobile),
+                'phone'  => \App\Support\PhoneNo::format($p->phone),
+            ])->values(),
+        ]);
+    }
+
     public function histories(Patient $patient): \Illuminate\Http\JsonResponse
     {
         $rx = $patient->prescriptions()

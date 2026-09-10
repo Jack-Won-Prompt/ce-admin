@@ -473,10 +473,19 @@
     if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return;
 
     const ymd = y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    if (bd.value && bd.value !== bd.dataset.fromRrn) return;   // 사람이 고쳐 둔 값은 그대로
+
+    /* 사람이 **손으로 적은** 생년월일만 지킨다 (2026-09-10 확인요청 1쪽).
+
+       여태는 지금 적힌 값이 지난번에 이 셈으로 채운 값과 같은지를 보았다. 그래서
+       수정 창처럼 생년월일이 미리 채워져 들어오는 자리에서는 늘 「사람이 고친 값」으로
+       읽혀, 주민번호를 고쳐도 생년월일이 따라오지 않았다. 새 등록 창에서는 비어
+       있으니 따라왔다 — 같은 화면인데 되기도 하고 안 되기도 한 까닭이다.
+
+       이제 손으로 친 자국(byHand)만 본다. 코드가 넣는 값은 input 을 일으키지 않으므로
+       그 자국이 남지 않는다. */
+    if (bd.dataset.byHand) return;
 
     bd.value = ymd;
-    bd.dataset.fromRrn = ymd;
     bd.dispatchEvent(new Event('change', { bubbles: true }));
 
     peGenderFromRrn(+g);
@@ -493,13 +502,17 @@
     if (!sel) return;
 
     const 값 = (뒷첫자리 % 2 === 1) ? 'male' : 'female';
-    if (sel.value && sel.value !== sel.dataset.fromRrn) return;
+    if (sel.dataset.byHand) return;   // 손으로 고른 것만 지킨다
 
     sel.value = 값;
-    sel.dataset.fromRrn = 값;
   }
 
   document.getElementById('add-resident')?.addEventListener('input', peBirthFromRrn);
+
+  /* 손으로 적은 자국을 남긴다 — 코드가 값을 넣을 때는 이 사건이 나지 않으므로,
+     주민번호에서 세운 값과 사람이 적은 값이 여기서 갈린다. */
+  document.getElementById('add-birth')?.addEventListener('input', function () { this.dataset.byHand = '1'; });
+  document.getElementById('add-gender')?.addEventListener('change', function () { this.dataset.byHand = '1'; });
   /* 생년월일이 바뀌면 성년ㆍ미성년도 바뀐다 — 주민번호에서 채워질 때도 여기로 온다 */
   document.getElementById('add-birth')?.addEventListener('change', peGuardianToggle);
 
@@ -662,6 +675,9 @@
     document.querySelectorAll('#addModal input, #addModal textarea').forEach(el => { el.value = ''; });
     document.querySelectorAll('#addModal select').forEach(el => { el.selectedIndex = 0; });
     delete document.getElementById('add-resident').dataset.masked;
+    /* 앞사람 때 남은 「손으로 적었다」 자국을 지운다 — 남겨 두면 다음 사람의
+       주민번호를 적어도 생년월일ㆍ성별이 따라오지 않는다 */
+    ['add-birth', 'add-gender'].forEach(id => { delete document.getElementById(id)?.dataset.byHand; });
     /* 앞사람의 미성년 여부가 남아 있으면 다음 사람에게 보호자 칸이 딸려 선다 */
     _peMinor = null;
     peGuardianToggle();
@@ -705,6 +721,10 @@
       if (el && el.value) el.value = String(el.value).slice(0, 10);
     });
 
+    /* 여기서 넣은 것은 사람이 손으로 적은 값이 아니다 — 자국을 지워, 주민번호를
+       고치면 생년월일ㆍ성별이 그 번호대로 다시 서게 한다(2026-09-10 확인요청 1쪽) */
+    ['add-birth', 'add-gender'].forEach(id => { delete document.getElementById(id)?.dataset.byHand; });
+
     /* 미성년인지는 서버가 말해 준다. 창이 생년월일을 보고 스스로 세도록 두었더니
        그 칸이 아직 채워지기 전이거나 꼴이 달라 늘 성년으로 읽혔다. */
     if (data?.is_minor !== undefined && data?.is_minor !== null) _peMinor = !!data.is_minor;
@@ -722,6 +742,46 @@
       }
       sel.value = 구분;
     }
+  }
+
+  /**
+   * 같은 번호를 쓰는 거래처가 있으면 한 번 묻는다 (2026-09-10 확인요청 1쪽).
+   *
+   * 막지 않는다 — 보호자 한 사람이 환자 둘을 맡아 같은 번호로 연락하는 일이 있다.
+   * 다만 모르고 두 벌을 만드는 일도 잦아, 누구와 겹치는지 이름을 적어 보여 준다.
+   *
+   * 물어보지 못하면(연결이 끊겼거나 서버가 답하지 않으면) 그대로 저장한다.
+   * 알림 하나 때문에 저장을 막을 까닭이 없다.
+   *
+   * @returns {Promise<boolean>}  저장을 이어 갈 것인가
+   */
+  async function ce전화번호겹침확인(mobile, phone, exceptId) {
+    const 물음 = new URLSearchParams();
+    if (mobile) 물음.set('mobile', mobile);
+    if (phone)  물음.set('phone',  phone);
+    if (exceptId) 물음.set('except', exceptId);
+
+    if (!물음.has('mobile') && !물음.has('phone')) return true;
+
+    let 겹친것 = [];
+
+    try {
+      const res = await fetch(`${BASE_URL}/patients/phone-check?` + 물음.toString(),
+                              { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) return true;
+      겹친것 = (await res.json()).found ?? [];
+    } catch (e) {
+      return true;
+    }
+
+    if (!겹친것.length) return true;
+
+    const 목록 = 겹친것.map(p => `· ${p.name} (${p.mobile || p.phone || ''})`).join('\n');
+
+    return await ceConfirm(
+      '동일 전화번호가 있으니 확인 후 저장 바랍니다.\n\n' + 목록,
+      { title: '같은 전화번호가 있습니다', tone: 'warning',
+        confirmText: '확인했습니다 · 저장', cancelText: '다시 보기' });
   }
 
   window.savePatient = async function () {
@@ -745,6 +805,14 @@
       rnEl.focus();
       return;
     }
+
+    /* 같은 번호를 쓰는 거래처가 있으면 한 번 묻는다 — 막지는 않는다 */
+    const 겹침없나 = await ce전화번호겹침확인(
+      document.getElementById('add-mobile').value.trim(),
+      document.getElementById('add-phone').value.trim(),
+      _peMode === 'edit' ? _peId : null);
+
+    if (!겹침없나) return;
 
     const btn = document.getElementById('btn-add-save');
     BtnState.loading(btn, '저장 중...');
@@ -812,27 +880,33 @@
     }
   };
 
-  /* 현금영수증 번호는 **소득공제일 때만** 쓴다(2026-09-09 지시).
+  /* 현금영수증 번호는 고른 갈래마다 다르다 (2026-09-10 확인요청 1쪽).
 
-     소득공제는 발행받는 사람의 전화번호로 낸다 — 그 자리에서 거래처 전화번호를
-     채워 준다. 지출증빙ㆍ자진발급은 그 번호를 쓰지 않으므로 비운다. 예전에는
-     자진발급을 고르면 국세청이 쓰는 번호(010-000-1234)를 박아 넣었는데, 그 값이
-     소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있었다.
+     소득공제 — 발행받는 사람의 전화번호로 낸다. 거래처 전화번호를 그 자리에서 채운다.
+     자진발급 — 번호를 못 받았다는 표시로 국세청이 정한 자리(010-000-1234)를 쓴다.
+     지출증빙 — 사업자번호로 내므로 이 칸을 쓰지 않는다. 비운다.
+
+     고를 때마다 다시 셈한다. 2026-09-09 에 자진발급 자동 채우기를 걷었던 것은
+     그 번호가 소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있어서였다 —
+     이제 갈래를 바꾸면 늘 그 갈래의 값으로 다시 서므로 남을 자리가 없다.
 
      비워 두어도 발행은 막히지 않는다 — 발행 쪽이 번호가 없으면 거래처 전화번호로
      대신한다(DepositAutoIssueㆍCashbillController). */
-  function addCashReceiptRule(sel, noId, phoneId) {
-    const no = document.getElementById(noId);
-    if (!no) return;
-
-    if (sel.value !== '소득공제') { no.value = ''; return; }
+  /** 고른 갈래에 맞는 현금영수증 번호 — 없으면 빈 글자 */
+  function add현금영수증번호(갈래, phoneId) {
+    if (갈래 === '자진발급') return '{{ \App\Models\Patient::SELF_ISSUE_NO }}';
+    if (갈래 !== '소득공제') return '';
 
     /* 전화번호 칸은 화면 설정에 따라 고르는 칸일 수도, 적는 칸일 수도 있다 —
        어느 쪽이든 지금 값을 그대로 가져온다. */
-    const 전화 = [...document.querySelectorAll('#' + phoneId)]
+    return [...document.querySelectorAll('#' + phoneId)]
       .map(e => (e.value || '').trim()).find(v => v) || '';
+  }
 
-    if (전화) no.value = 전화;
+  function addCashReceiptRule(sel, noId, phoneId) {
+    const no = document.getElementById(noId);
+    if (!no) return;
+    no.value = add현금영수증번호(sel.value, phoneId);
   }
 
   document.getElementById('add-deduction')?.addEventListener('change', function () {

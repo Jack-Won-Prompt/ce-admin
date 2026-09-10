@@ -1132,10 +1132,13 @@ form.addEventListener('submit', async function (e) {
     setStep(2, 'done'); setStep(3, 'done');
     showToast(data.message, 'success', 4000);
 
-    /* 주문 등록 화면은 화면 탭으로 연다 — 올린 자리는 그대로 두어 다음 건을 잇달아
-       올릴 수 있다. 워크스페이스 밖에서 열었으면 그 자리에서 옮겨 간다. */
+    /* 올린 뒤에는 **처방전 목록**으로 간다 (2026-09-10 확인요청 4쪽).
+       올린 자료는 먼저 검수해야 하고, 검수는 그 목록의 「파일 검수」에서 한다.
+
+       화면 탭으로 연다 — 올린 자리는 그대로 두어 다음 건을 잇달아 올릴 수 있다.
+       워크스페이스 밖에서 열었으면 그 자리에서 옮겨 간다. */
     if (typeof ceOpenTab === 'function') {
-      ceOpenTab(data.url, '주문 등록 - ' + (data.rx_number || ''), 'file-edit-02');
+      ceOpenTab(data.url, '처방전 목록 - 검수 필요', 'file-02');
       resetFiles();
       form.querySelectorAll('input[name="file_doc_types[]"]').forEach(el => el.remove());
     } else {

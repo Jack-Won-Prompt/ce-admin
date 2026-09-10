@@ -1178,27 +1178,33 @@
      「적었는데 비웠다」와 「안 적었다」가 구별되지 않는다. */
   const ev = (id) => (document.getElementById(id)?.value ?? '').trim() || null;
 
-  /* 현금영수증 번호는 **소득공제일 때만** 쓴다(2026-09-09 지시).
+  /* 현금영수증 번호는 고른 갈래마다 다르다 (2026-09-10 확인요청 1쪽).
 
-     소득공제는 발행받는 사람의 전화번호로 낸다 — 그 자리에서 거래처 전화번호를
-     채워 준다. 지출증빙ㆍ자진발급은 그 번호를 쓰지 않으므로 비운다. 예전에는
-     자진발급을 고르면 국세청이 쓰는 번호(010-000-1234)를 박아 넣었는데, 그 값이
-     소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있었다.
+     소득공제 — 발행받는 사람의 전화번호로 낸다. 거래처 전화번호를 그 자리에서 채운다.
+     자진발급 — 번호를 못 받았다는 표시로 국세청이 정한 자리(010-000-1234)를 쓴다.
+     지출증빙 — 사업자번호로 내므로 이 칸을 쓰지 않는다. 비운다.
+
+     고를 때마다 다시 셈한다. 2026-09-09 에 자진발급 자동 채우기를 걷었던 것은
+     그 번호가 소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있어서였다 —
+     이제 갈래를 바꾸면 늘 그 갈래의 값으로 다시 서므로 남을 자리가 없다.
 
      비워 두어도 발행은 막히지 않는다 — 발행 쪽이 번호가 없으면 거래처 전화번호로
      대신한다(DepositAutoIssueㆍCashbillController). */
-  function psCashReceiptRule(sel, noId, phoneId) {
-    const no = document.getElementById(noId);
-    if (!no) return;
-
-    if (sel.value !== '소득공제') { no.value = ''; return; }
+  /** 고른 갈래에 맞는 현금영수증 번호 — 없으면 빈 글자 */
+  function ps현금영수증번호(갈래, phoneId) {
+    if (갈래 === '자진발급') return '{{ \App\Models\Patient::SELF_ISSUE_NO }}';
+    if (갈래 !== '소득공제') return '';
 
     /* 전화번호 칸은 화면 설정에 따라 고르는 칸일 수도, 적는 칸일 수도 있다 —
        어느 쪽이든 지금 값을 그대로 가져온다. */
-    const 전화 = [...document.querySelectorAll('#' + phoneId)]
+    return [...document.querySelectorAll('#' + phoneId)]
       .map(e => (e.value || '').trim()).find(v => v) || '';
+  }
 
-    if (전화) no.value = 전화;
+  function psCashReceiptRule(sel, noId, phoneId) {
+    const no = document.getElementById(noId);
+    if (!no) return;
+    no.value = ps현금영수증번호(sel.value, phoneId);
   }
 
   document.getElementById('e-deduction')?.addEventListener('change', function () {
@@ -1206,9 +1212,56 @@
   });
 
 
+  /**
+   * 같은 번호를 쓰는 거래처가 있으면 한 번 묻는다 (2026-09-10 확인요청 1쪽).
+   *
+   * 막지 않는다 — 보호자 한 사람이 환자 둘을 맡아 같은 번호로 연락하는 일이 있다.
+   * 다만 모르고 두 벌을 만드는 일도 잦아, 누구와 겹치는지 이름을 적어 보여 준다.
+   *
+   * 물어보지 못하면 그대로 저장한다 — 알림 하나 때문에 저장을 막을 까닭이 없다.
+   *
+   * @returns {Promise<boolean>}  저장을 이어 갈 것인가
+   */
+  async function ps전화번호겹침확인(mobile, phone, exceptId) {
+    const 물음 = new URLSearchParams();
+    if (mobile) 물음.set('mobile', mobile);
+    if (phone)  물음.set('phone',  phone);
+    if (exceptId) 물음.set('except', exceptId);
+
+    if (!물음.has('mobile') && !물음.has('phone')) return true;
+
+    let 겹친것 = [];
+
+    try {
+      const res = await fetch(@json(url('patients/phone-check')) + '?' + 물음.toString(),
+                              { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) return true;
+      겹친것 = (await res.json()).found ?? [];
+    } catch (e) {
+      return true;
+    }
+
+    if (!겹친것.length) return true;
+
+    const 목록 = 겹친것.map(p => `· ${p.name} (${p.mobile || p.phone || ''})`).join('\n');
+
+    return await ceConfirm(
+      '동일 전화번호가 있으니 확인 후 저장 바랍니다.\n\n' + 목록,
+      { title: '같은 전화번호가 있습니다', tone: 'warning',
+        confirmText: '확인했습니다 · 저장', cancelText: '다시 보기' });
+  }
+
   async function savePatient() {
     const name = document.getElementById('e-name').value.trim();
     if (!name) { showToast('이름은 필수입니다.', 'warning'); return; }
+
+    /* 같은 번호를 쓰는 거래처가 있으면 한 번 묻는다 — 막지는 않는다 */
+    if (!await ps전화번호겹침확인(
+          document.getElementById('e-mobile').value.trim(),
+          document.getElementById('e-phone').value.trim(),
+          @json($patient->id))) {
+      return;
+    }
 
     const btn = document.getElementById('btn-save');
     BtnState.loading(btn, '저장 중...');

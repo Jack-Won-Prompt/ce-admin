@@ -252,6 +252,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('patients')->name('patients.')->group(function () {
         Route::get('/',              [PatientController::class, 'index'])->name('index');
         Route::post('/',             [PatientController::class, 'store'])->name('store');
+        /* 같은 번호를 쓰는 거래처가 있는지 — 저장 앞에서 묻는다(2026-09-10 확인요청 1쪽).
+           '/{patient}' 보다 먼저 세워야 'phone-check' 가 거래처 번호로 읽히지 않는다. */
+        Route::get('/phone-check',   [PatientController::class, 'phoneCheck'])->name('phoneCheck');
         Route::get('/{patient}/histories', [PatientController::class, 'histories'])->name('histories');
         // 변경 이력 — 무엇이 무엇으로 바뀌었는지(2026-09-08 확인요청 3ㆍ5쪽)
         Route::get('/{patient}/change-log', [PatientController::class, 'changeLog'])->name('changeLog');

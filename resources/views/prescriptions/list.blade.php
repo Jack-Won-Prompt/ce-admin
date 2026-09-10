@@ -175,6 +175,17 @@
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 「처방전 업로드」 단추는 걷었다 (2026-09-10 지시).
            올리는 자리는 왼쪽 메뉴의 「처방자료 업로드」다 — 화면과 경로는 그대로다. --}}
+      {{-- 「검수할 자료」 — 아직 검수하지 않은 건만 모아 본다 (2026-09-10 확인요청 4쪽).
+
+           올린 자료는 여기서 검수한다. 상태 칸에서 「검수 필요」를 골라도 같은 곳에
+           닿지만, 올리고 곧장 들어오는 걸음이라 한 번에 갈 자리를 둔다.
+           남은 건수를 함께 적는다 — 0 이면 오늘 할 일이 없다는 뜻이다. --}}
+      @php $_검수필요 = (int) ($statusCounts['review_needed'] ?? 0); @endphp
+      <a href="{{ route('prescriptions.index', ['status' => 'review_needed']) }}"
+         class="ds-btn{{ request('status') === 'review_needed' ? ' ds-btn-primary' : '' }}"
+         title="아직 검수하지 않은 처방전만 봅니다">
+        검수할 자료@if($_검수필요 > 0) ({{ $_검수필요 }})@endif
+      </a>
       {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
       <button type="button" class="ds-btn" onclick="window.__rxGrid?.downloadExcel()">엑셀 다운</button>
       <button type="button" class="ds-btn" onclick="prescriptionViewDetail()">선택 상세</button>
