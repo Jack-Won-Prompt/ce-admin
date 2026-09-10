@@ -47,7 +47,20 @@ class BenefitDates
         }
 
         $기준 = $d->toDateString();
-        $종료 = $d->copy()->addDays($days)->toDateString();
+
+        /* 급여 종료일은 **사용 개시일 + 실지급일수 − 1**이다 (2026-09-10 확정).
+
+           공단 화면이 그렇게 센다 — 사용개시일 2026-06-21 · 실지급일수 90 이면
+           급여종료일은 2026-09-18 이다(2026-09-19 가 아니다). 마지막 날도 쓰는 날로
+           세기 때문이다. 하루를 더 적어 두면 그 하루치가 이중으로 청구된다.
+
+           기준은 사용 개시일이다. 적어 둔 것이 있으면 그것을 쓰고, 없으면 결제일이
+           곧 사용 개시일이다 — 공단 화면에서도 구입일과 사용개시일은 다를 수 있다. */
+        $사용개시 = trim((string) ($rx->use_start_date ?? '')) !== ''
+                    ? Carbon::parse($rx->use_start_date)->startOfDay()
+                    : $d->copy();
+
+        $종료 = $사용개시->copy()->addDays($days - 1)->toDateString();
 
         /* Five/Six(110days) 인 건은 다음 재구매 가능일이 스무 날 뒤다
            (2026-09-08 확인요청 10쪽 · 2026-09-09 확정).
@@ -56,14 +69,17 @@ class BenefitDates
            다른 물음이다. 그 프로그램은 한 번에 더 많이 받아 가므로 다음 구매가
            그만큼 늦다. */
         $다음구매 = self::백십일프로그램인가($rx)
-                        ? $d->copy()->addDays($days + 20)->toDateString()
-                        : $종료;
+                        ? $사용개시->copy()->addDays($days + 20)->toDateString()
+                        : $사용개시->copy()->addDays($days)->toDateString();
 
         /* 결제일과 구입일(모든 서류 발행일)은 늘 같은 날짜다(2026-09-09 확정) */
+        /* 사용 개시일은 적혀 있으면 덮지 않는다 (2026-09-10).
+           공단 화면에서 구입일과 사용개시일은 다를 수 있고, 그 날짜에서 급여 기간이
+           선다 — 결제했다고 담당자가 적어 둔 개시일을 지울 까닭이 없다. */
         $rx->forceFill([
             'pay_date'         => $기준,
             'buy_date'         => $기준,
-            'use_start_date'   => $기준,
+            'use_start_date'   => $사용개시->toDateString(),
             'benefit_end_date' => $종료,
             'next_repurchase'  => $다음구매,
         ])->save();

@@ -7580,23 +7580,29 @@ window.HELP_TOUR_STEPS = [
     calcBenefitEnd();
   };
 
-  /* 급여 종료일ㆍ다음 재구매 가능일 = 모든 서류 발행일 ＋ 총 처방일수.
-     사용 개시일은 그 발행일이다. 서버도 같은 셈을 한다(App\Support\BenefitDates) —
-     화면에서 미리 보여 주는 것뿐이고, 정본은 저장할 때 선다. */
+  /* 급여 종료일 = **사용 개시일 ＋ 총 처방일수 − 1** (2026-09-10 확정).
+
+     공단 화면이 그렇게 센다 — 사용개시일 2026-06-21 · 실지급일수 90 이면 급여종료일은
+     2026-09-18 이다. 마지막 날도 쓰는 날로 세기 때문이다.
+
+     다음 재구매 가능일은 그 하루 뒤다(＝개시일 ＋ 일수). 기간이 끝난 다음 날부터 산다.
+     서버도 같은 셈을 한다(App\Support\BenefitDates) — 화면은 미리 보여 줄 뿐이고
+     정본은 저장할 때 선다. */
   window.calcBenefitEnd = function () {
     const base = document.getElementById('f-buy-date')?.value
               || document.getElementById('f-pay-date')?.value;
     const days = parseInt(document.getElementById('f-days')?.value ?? '', 10);
     if (!base || !Number.isFinite(days) || days < 1) return;
 
-    const d = new Date(base);
     const fmt = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
 
+    /* 적어 둔 사용 개시일이 있으면 그것이 기준이다 — 구입일과 다를 수 있다 */
     const s = document.getElementById('f-use-start');
-    if (s) s.value = fmt(d);
+    const 개시 = (s?.value || '').trim() || base;
+    if (s && !s.value) s.value = 개시;
 
-    const end = new Date(base);
-    end.setDate(end.getDate() + days);
+    const end = new Date(개시);
+    end.setDate(end.getDate() + days - 1);
 
     const e = document.getElementById('f-benefit-end');
     if (e) e.value = fmt(end);
@@ -7608,7 +7614,7 @@ window.HELP_TOUR_STEPS = [
        그 칸에 값이 적혀 있으면 그 프로그램으로 본다 — 고르는 칸이 아니라 적는 칸이고,
        적혀 있다는 것 자체가 그 프로그램이라는 뜻이다. 서버도 같은 잣대를 쓴다. */
     const 백십일 = (document.getElementById('f-five')?.value ?? '').trim() !== '';
-    const next = new Date(base);
+    const next = new Date(개시);
     next.setDate(next.getDate() + days + (백십일 ? 20 : 0));
 
     const n = document.getElementById('f-next-repurchase');
