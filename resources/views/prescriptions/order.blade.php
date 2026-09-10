@@ -12126,7 +12126,7 @@ window.HELP_TOUR_STEPS = [
     const name    = (nameEl?.value ?? '').trim() || (nameEl?.placeholder ?? '').trim() || '환자';
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const mockUrl = baseUrl + '/consent/(링크)';
-    const preview = `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n${mockUrl}`;
+    const preview = `[콜로플라스트] ${name}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(30분 유효):\n${mockUrl}`;
     const el = document.getElementById('consentMsgPreview');
     if (el) el.textContent = preview;
   }

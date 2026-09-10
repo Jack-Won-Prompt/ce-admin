@@ -3066,7 +3066,7 @@ class PrescriptionController extends Controller
         $url = $baseUrl . '/consent/' . $token;
 
         // URL이 localhost인 경우 링크가 클릭되지 않을 수 있음 — 운영 서버 URL로 변경 필요
-        $message = "[콜로플라스트] {$patientName}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n{$url}";
+        $message = "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(30분 유효):\n{$url}";
 
         try {
             /* 발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
