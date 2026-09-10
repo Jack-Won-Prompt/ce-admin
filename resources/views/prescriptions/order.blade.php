@@ -3555,25 +3555,29 @@ $calcDeposit  = $calcCopay;
                    급여 종료일 = 모든 서류 발행일(＝결제일) ＋ 총 처방일수.
                    돈이 들어오면 서버가 채우고, 결제가 없는 건(기초ㆍ차상위)은 저장할 때
                    적어 둔 구입일에서 센다. --}}
-              {{-- 둘 다 셈으로만 선다 — 손으로 적지 않는다(2026-09-09 지시).
+              {{-- 사용 시작일은 직접 입력한다(2026-09-10 지시 · 확인요청 5쪽).
 
-                   사용 개시일은 모든 서류 발행일(＝결제일)이고, 급여 종료일은 거기에 총
-                   처방일수를 더한 날이다. 손으로 고칠 수 있게 두면 셈과 어긋난 날짜가
-                   서류와 청구에 그대로 실린다 — 어느 것이 맞는지 뒤에 가려낼 길이 없다.
+                   공단 화면에서도 구입일과 사용개시일은 다를 수 있다 — 구입일 06-19 에
+                   개시일 06-21 인 건이 그렇다. 잠가 두면 늘 결제일과 같아져 그런 건을
+                   맞출 길이 없었다.
 
-                   채우는 때는 돈이 들어올 때다. 결제가 없는 건(기초ㆍ차상위)은 주문
-                   등록에서 저장할 때 적어 둔 구입일에서 센다(App\Support\BenefitDates). --}}
+                   비워 두면 결제일이 곧 개시일이다. 고치면 급여 종료일이 그 자리에서
+                   다시 선다 — 서버도 같은 셈을 한다(App\Support\BenefitDates).
+
+                   급여 종료일은 그대로 잠가 둔다. 셈에서 나오는 값이라 손으로 고치면
+                   개시일ㆍ일수와 어긋난 날짜가 서류와 청구에 실린다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
-                <input type="date" class="form-control" id="f-use-start" readonly
-                       title="결제일(모든 서류 발행일)에서 자동으로 계산됩니다"
+                <input type="date" class="form-control" id="f-use-start"
+                       title="비워 두면 결제일이 개시일이 됩니다. 고치면 급여 종료일이 다시 계산됩니다."
                        value="{{ $prescription->use_start_date ?? '' }}"
-                       style="flex:1;background:var(--gray-50);cursor:default;" />
+                       onchange="onUseStartChanged()"
+                       style="flex:1;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">급여 종료일 (사용 종료일)</span>
                 <input type="date" class="form-control" id="f-benefit-end" readonly
-                       title="결제일 + 총 처방일수로 자동으로 계산됩니다"
+                       title="사용 개시일 + 총 처방일수 − 1 로 자동으로 계산됩니다"
                        value="{{ $prescription->benefit_end_date ?? '' }}"
                        style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
@@ -7619,6 +7623,20 @@ window.HELP_TOUR_STEPS = [
 
     const n = document.getElementById('f-next-repurchase');
     if (n) n.value = fmt(next);
+  };
+
+  /* 사용 개시일을 고치면 급여 종료일이 그 자리에서 다시 선다 (2026-09-10 지시).
+
+     비우면 결제일이 개시일이 된다 — calcBenefitEnd 가 그렇게 채운다. */
+  window.onUseStartChanged = function () {
+    calcBenefitEnd();
+
+    const 개시 = document.getElementById('f-use-start')?.value;
+    const 종료 = document.getElementById('f-benefit-end')?.value;
+
+    if (개시 && 종료) {
+      showToast(`급여 종료일을 ${종료} 로 다시 계산했습니다.`, 'info', 4000);
+    }
   };
 
   // ── 종료일·다음재구매일 자동계산 ──
