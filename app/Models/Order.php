@@ -384,6 +384,18 @@ class Order extends Model
      */
     public function 대기이름(): array
     {
+        /* 아직 아무것도 담기지 않은 줄 (2026-09-10 확인요청 9쪽).
+
+           주문 줄은 처방전이 담길 때 저절로 선다(OrderSync::seed). 제품을 한 줄도
+           고르지 않은 그 줄에 「출고 대기」라 적으면 내보낼 것이 있다는 말이 된다 —
+           대시보드가 검수도 안 끝난 건을 그렇게 보여 주고 있었다. */
+        $담긴것 = trim((string) $this->product_name);
+
+        // 제품 이름 자리에는 아직 고르지 않았다는 뜻으로 「-」가 들어간다(OrderSync::seed)
+        if (($담긴것 === '' || $담긴것 === '-') && (int) ($this->total_amount ?? 0) === 0) {
+            return ['label' => '주문 대기', 'badge' => 'secondary'];
+        }
+
         if ($this->expectedDeposit() > 0 && ! $this->isDepositConfirmed()) {
             return ['label' => '입금 대기', 'badge' => 'warning'];
         }

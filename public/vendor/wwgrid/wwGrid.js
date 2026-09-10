@@ -509,6 +509,36 @@ class CalendarPopup {
 }
 
 /* ══════════════════════════════════════════════════════════
+   숫자 칸 — 화면에도 엑셀에도 숫자로 선다 (2026-09-10 확인요청 10쪽)
+
+   돈과 수량은 오른쪽으로 붙는다. 그 칸의 값이 순수한 수라면 수로 다룬다 —
+   화면에서는 천 단위로 끊어 적고 소수점은 버리며(2,250 이지 2250.00 이 아니다),
+   엑셀에서는 글자가 아니라 수로 나간다. 글자로 나가면 받는 쪽에서 합계도 정렬도
+   되지 않아, 담당자가 엑셀에서 한 칸씩 다시 숫자로 바꾸고 있었다.
+
+   억지로 수로 만들지 않는다. 전화번호나 우편번호처럼 앞자리 0 에 뜻이 있는 값,
+   붙임표가 든 값은 수가 아니다 — 수로 바꾸면 앞의 0 이 날아간다.
+   칸에 excelType: 'text' 를 적어 두면 언제나 글자로 둔다.
+══════════════════════════════════════════════════════════ */
+function cgAsNumber(value, col) {
+  if (value === null || value === undefined || value === '') return null;
+  if (col && col.excelType === 'text') return null;
+
+  const 숫자칸 = col && (col.editor === 'number' || col.excelType === 'number'
+                       || col.align === 'right');
+  if (!숫자칸) return null;
+
+  if (typeof value === 'number') return isFinite(value) ? value : null;
+
+  const t = String(value).trim();
+  if (!/^-?[0-9]+([.][0-9]+)?$/.test(t)) return null;
+  if (/^0[0-9]/.test(t)) return null;      // 앞자리 0 은 뜻이 있는 값이다
+
+  const n = Number(t);
+  return isFinite(n) ? n : null;
+}
+
+/* ══════════════════════════════════════════════════════════
    ExcelExporter — Excel XML (.xls) 다운로드
 ══════════════════════════════════════════════════════════ */
 class ExcelExporter {
@@ -686,9 +716,12 @@ class ExcelExporter {
       let xml = '<Row ss:Height="20">\n';
       cols.forEach(col => {
         const val = row[col.name];
-        if (col.editor === 'number' && val !== '' && val !== null && val !== undefined) {
-          const n = Number(val);
-          if (!isNaN(n)) { xml += `<Cell ss:StyleID="cgN"><Data ss:Type="Number">${n}</Data></Cell>\n`; return; }
+        /* 돈ㆍ수량은 수로 내보낸다 (2026-09-10 확인요청 10쪽).
+           글자로 나가면 받는 쪽에서 합계도 정렬도 되지 않는다. */
+        const 수 = cgAsNumber(val, col);
+        if (수 !== null) {
+          xml += `<Cell ss:StyleID="cgN"><Data ss:Type="Number">${수}</Data></Cell>\n`;
+          return;
         }
         if (col.editor === 'checkbox') { xml += `<Cell><Data ss:Type="String">${val ? '✓' : ''}</Data></Cell>\n`; return; }
         xml += `<Cell><Data ss:Type="String">${this._esc(grid._formatDisplay(val, col))}</Data></Cell>\n`;
@@ -1375,10 +1408,13 @@ class wwGrid {
       if (cached) return cached;
     }
     if (value === null || value === undefined || value === '') return '';
-    if (col.editor === 'number' && value !== '') {
-      const n = Number(value);
-      if (!isNaN(n)) return n.toLocaleString('ko-KR');
-    }
+
+    /* 돈ㆍ수량은 천 단위로 끊어 적고 소수점은 버린다 (2026-09-10 확인요청 10쪽).
+       위드웍스가 주는 값이 2250.00 꼴이라 그대로 보이고 있었다. 원 아래는 우리
+       셈에 없다 — 있는 것처럼 적어 두면 합이 맞지 않는 것으로 읽힌다. */
+    const 수 = cgAsNumber(value, col);
+    if (수 !== null) return Math.round(수).toLocaleString('ko-KR');
+
     return String(value);
   }
 
