@@ -158,7 +158,7 @@
       <div class="wh-field">
         <label>비밀키 이름</label>
         <input type="text" class="form-control" id="wh-secret" placeholder="예) TOSS_WEBHOOK_SECRET">
-        <div class="wh-hint" style="margin-top:4px;">열쇠 자체는 담지 않습니다. .env 의 이름만 적습니다.</div>
+        <div class="wh-hint" style="margin-top:4px;">비밀키 값은 저장하지 않습니다. .env 의 항목 이름만 입력합니다.</div>
       </div>
       <div class="wh-field">
         <label>순서 · 사용</label>
@@ -183,7 +183,7 @@
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:12.5px;font-weight:700;color:var(--primary);">파라미터</span>
-        <span class="wh-hint" style="flex:1;">주고받는 값의 이름표입니다. 점(.)으로 하위 항목을 적습니다 — data.orderId</span>
+        <span class="wh-hint" style="flex:1;">주고받는 값의 이름표입니다. 점(.)으로 하위 항목을 입력합니다 — data.orderId</span>
         <button type="button" class="ds-btn" onclick="whAddParam()">＋ 줄 추가</button>
       </div>
       <table class="wh-params">

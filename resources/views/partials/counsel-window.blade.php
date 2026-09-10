@@ -96,7 +96,7 @@
           <label>환자 전화번호</label>
           <input type="text" id="csCallNo" class="form-control" maxlength="30"
                  readonly style="background:var(--gray-50);cursor:default;"
-                 title="거래처관리에서 수정합니다" placeholder="거래처관리에 적힌 번호">
+                 title="거래처관리에서 수정합니다" placeholder="거래처관리에 등록된 번호">
         </div>
       </div>
 

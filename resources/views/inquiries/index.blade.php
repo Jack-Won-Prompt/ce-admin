@@ -160,7 +160,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#inquiryGrid', title: '환자 문의 목록', body: '환자가 앱에서 등록한 문의와 담당자가 대신 접수한 문의가 함께 표시됩니다. 행을 <b>더블클릭</b>하면 처리 팝업이 열립니다.' },
-  { selector: '.btn-primary', title: '문의 접수', body: '전화로 받은 문의는 <b>문의 접수</b>로 대신 적습니다. 이때 회신방식(앱·문자·전화)을 함께 고릅니다.' },
+  { selector: '.btn-primary', title: '문의 접수', body: '전화로 받은 문의는 <b>문의 접수</b>로 대신 등록합니다. 이때 회신방식(앱·문자·전화)을 함께 선택합니다.' },
 ];
 </script>
 <script>

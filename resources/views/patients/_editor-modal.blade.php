@@ -238,7 +238,7 @@
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">송금자명</label>
-          <input type="text" class="form-control" id="add-remitter" placeholder="입금자명이 다르면 적습니다" />
+          <input type="text" class="form-control" id="add-remitter" placeholder="입금자명이 다르면 입력합니다" />
         </div>
         <div class="form-group">
           <label class="form-label">현금영수증</label>

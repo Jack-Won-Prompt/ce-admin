@@ -364,7 +364,7 @@
                <td class="num" style="font-weight:700;">${head.total_qty.toLocaleString()}</td>
                <td></td>
                <td class="num" style="font-weight:700;">${head.total_amount.toLocaleString()}</td></tr>`
-        : '<tr><td colspan="5" class="smp-none">담긴 제품이 없습니다.</td></tr>';
+        : '<tr><td colspan="5" class="smp-none">추가된 제품이 없습니다.</td></tr>';
 
       $('smpDetailEmpty').style.display = 'none';
       $('smpDetailBody').style.display  = '';

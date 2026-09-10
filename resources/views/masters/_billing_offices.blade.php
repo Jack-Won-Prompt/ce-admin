@@ -140,7 +140,7 @@
         <div class="bo-field full">
           <label class="ds-field-label">관할 읍ㆍ면ㆍ동 <span class="bo-opt">(비우면 시군구 전체)</span></label>
           <textarea id="boAreas" class="form-control" rows="2"
-                    placeholder="용강동, 신수동, 대흥동 — 쉼표나 줄바꿈으로 나눠 적습니다"></textarea>
+                    placeholder="용강동, 신수동, 대흥동 — 쉼표나 줄바꿈으로 구분해 입력합니다"></textarea>
           {{-- 지자체(의료급여)는 시ㆍ군ㆍ구청 하나가 그 안을 통째로 맡는다. 동을 스무 개씩
                적어 두게 하면 하나만 빠져도 못 찾는다 — 비워 두면 그 구 전체로 읽는다. --}}
           <div class="bo-hint">주문 화면이 환자 주소에서 읍ㆍ면ㆍ동을 뽑아 여기서 찾습니다.

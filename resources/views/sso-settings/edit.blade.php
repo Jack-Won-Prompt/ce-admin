@@ -58,7 +58,7 @@
   <div class="ss-note">
     <i class="bx bx-info-circle"></i>
     Microsoft Entra ID(OIDC)로 CE Admin 에 로그인하는 설정입니다.
-    <b>여기 담긴 값은 .env 나 코드에 남지 않습니다</b> — Client Secret 은 암호화해 저장하고
+    <b>여기 저장한 값은 .env 나 코드에 남지 않습니다</b> — Client Secret 은 암호화해 저장하고
     화면에는 뒤 넉 자만 보입니다.
   </div>
 

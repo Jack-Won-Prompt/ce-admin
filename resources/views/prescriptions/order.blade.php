@@ -3539,8 +3539,8 @@ $calcDeposit  = $calcCopay;
                 <span class="rx-field-label">결제시간</span>
                 <input type="text" class="form-control" id="f-paid-at" readonly
                        value="{{ $prescription->order?->paidAtLabel('Y-m-d H:i:s') }}"
-                       placeholder="결제되면 저절로 섭니다"
-                       title="토스가 승인한 시각입니다. 없으면 가상계좌 입금ㆍ담당자 확인 시각을 적습니다."
+                       placeholder="결제되면 자동으로 표시됩니다"
+                       title="토스가 승인한 시각입니다. 없으면 가상계좌 입금ㆍ담당자 확인 시각을 표시합니다."
                        style="flex:1;background:var(--bg-subtle,#f8fafc);" />
               </div>
               <div class="rx-field-row">
@@ -3566,14 +3566,14 @@ $calcDeposit  = $calcCopay;
               <div class="rx-field-row">
                 <span class="rx-field-label">사용 시작일 (사용 개시일)</span>
                 <input type="date" class="form-control" id="f-use-start" readonly
-                       title="결제일(모든 서류 발행일)에서 저절로 섭니다"
+                       title="결제일(모든 서류 발행일)에서 자동으로 계산됩니다"
                        value="{{ $prescription->use_start_date ?? '' }}"
                        style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">급여 종료일 (사용 종료일)</span>
                 <input type="date" class="form-control" id="f-benefit-end" readonly
-                       title="결제일 + 총 처방일수로 저절로 섭니다"
+                       title="결제일 + 총 처방일수로 자동으로 계산됩니다"
                        value="{{ $prescription->benefit_end_date ?? '' }}"
                        style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
@@ -3920,7 +3920,7 @@ $calcDeposit  = $calcCopay;
                        「지금까지 어디였는지」가 고르는 그 자리에 있어야 한다. --}}
                   <button type="button" class="btn btn-sm" id="btnPickAddr" onclick="pickPatientAddress(this)"
                           style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);"
-                          title="거래처관리에 적힌 주소 중에서 고릅니다">
+                          title="거래처관리에 등록된 주소 중에서 선택합니다">
                     <i class="fa-solid fa-address-book"></i> 거래처 주소
                   </button>
                   <button type="button" class="btn btn-sm" onclick="clearShippingAddress()"
@@ -5484,7 +5484,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(1)',
     title: '주문 목록 탭',
-    body: '아직 확정되지 않은 주문이 섭니다. 줄을 더블클릭하면 그 건의 상세 목록으로 가고, 아직 맡은 사람이 없으면 연 사람이 담당자가 됩니다.'
+    body: '아직 확정되지 않은 주문이 표시됩니다. 줄을 더블클릭하면 그 건의 상세 목록으로 가고, 아직 맡은 사람이 없으면 연 사람이 담당자가 됩니다.'
   },
   {
     selector: '.tab-btn:nth-child(2)',
@@ -5499,7 +5499,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '#wwSoCard',
     title: '판매번호',
-    body: '주문을 세우면 이 카드에 위드웍스 판매번호가 섭니다. 이어졌는지를 여기서 봅니다.'
+    body: '주문을 생성하면 이 카드에 위드웍스 판매번호가 표시됩니다. 이어졌는지를 여기서 봅니다.'
   },
   {
     selector: '.tab-btn:nth-child(4)',
@@ -7713,7 +7713,7 @@ window.HELP_TOUR_STEPS = [
     const 수량빈줄 = items.filter(i => (i.product_name || '').trim()
                                     && String(i.quantity ?? '').trim() === '');
     if (수량빈줄.length) {
-      showToast(`수량을 적어 주십시오 — ${수량빈줄[0].product_name}`, 'warning');
+      showToast(`수량을 입력해 주십시오 — ${수량빈줄[0].product_name}`, 'warning');
       /* 어느 줄인지 보여 주려면 그 탭이 서 있어야 한다.
          고르는 잣대에 따옴표를 겹치지 않는다 — 겹쳤다가 문자열이 거기서 끊겨
          화면 전체의 자바스크립트가 죽었다(2026-09-09). */

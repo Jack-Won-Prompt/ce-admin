@@ -23,7 +23,7 @@
       <div class="card-header">
         <i class="bx bx-headphone" style="color:var(--primary);"></i>
         <span class="card-header-title">환자 문의 접수</span>
-        <span class="card-header-sub">전화·유선으로 받은 문의를 대신 적습니다.</span>
+        <span class="card-header-sub">전화·유선으로 받은 문의를 대신 등록합니다.</span>
       </div>
       <div class="card-body fill-rest fill-col" style="display:flex;flex-direction:column;gap:16px;">
 

@@ -561,7 +561,7 @@
               <span class="view-only">{{ $patient->remitter_name ?: '-' }}</span>
               <input type="text" class="form-control edit-only" id="e-remitter"
                      value="{{ $patient->remitter_name }}" data-orig="{{ $patient->remitter_name }}"
-                     placeholder="입금자명이 다르면 적습니다" />
+                     placeholder="입금자명이 다르면 입력합니다" />
             </span>
           </div>
           <div class="info-row">
