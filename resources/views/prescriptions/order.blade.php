@@ -636,6 +636,17 @@
   .rx-tab:hover { color:var(--gray-1000); }
   .rx-tab.active { color:var(--primary); font-weight:700; border-bottom-color:var(--primary); }
   .rx-tabs-acts { display:flex; align-items:center; gap:12px; margin-left:auto; }
+  /* 주문번호ㆍ판매번호 — 탭줄 가운데 (2026-09-10 확인요청 5쪽).
+     탭과 단추 사이에 선다. 좁아지면 단추가 먼저 자리를 잡도록 줄어들 수 있게 둔다. */
+  .rx-tabs-nos { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+  .rx-tabno { display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px;
+              border:1px solid var(--gray-200); border-radius:999px; background:var(--gray-50);
+              font-size:11px; color:var(--text-muted); white-space:nowrap; cursor:pointer; }
+  .rx-tabno b { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--gray-900); font-weight:700; }
+  .rx-tabno:hover { border-color:var(--primary); }
+  .rx-tabno-so b { color:var(--primary); }
+  /* 테이블뷰는 탭줄을 감추고 셋을 한꺼번에 편다 — 번호는 그때도 보여야 한다 */
+  .tab-view-table #tab-ocr .rx-tabs-nos { margin-right:auto; }
   /* 단추는 예전엔 「펼친 카드」에만 보였다. 이제 한 벌뿐이라 늘 보인다. */
   .rx-tabs .rx-acc-btns { display:flex; }
   /* 탭줄이 이미 아래 선을 그었다 */
@@ -2257,7 +2268,7 @@ $calcDeposit  = $calcCopay;
         <div class="ol-filter">
           <div class="ol-field ol-field-q">
             <label class="ds-field-label">검색어</label>
-            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ담당자">
+            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ담당자ㆍ병원명ㆍ요양기관코드">
           </div>
           <div class="ol-field">
             <label class="ds-field-label">등록일 (부터)</label>
@@ -2440,6 +2451,24 @@ $calcDeposit  = $calcCopay;
                    보였고, 그 다섯이 어느 쪽 이야기인지도 갈려 있었다 — 공단 위임동의
                    두 날짜는 상담ㆍ환자 정보로, 하루 사용 수량ㆍ인마켓 마감일ㆍ마지막
                    확정 수량은 병원ㆍ처방 정보로 옮겼다. --}}
+            </div>
+            {{-- 주문번호ㆍ판매번호 — 탭줄 가운데 (2026-09-10 확인요청 5쪽).
+
+                 이 건이 어느 주문이고 창고에서 어느 판매번호를 받았는지는 늘 묻는
+                 값인데, 여태 주문 제품 탭이나 오른쪽 카드까지 가야 보였다. 탭줄은
+                 어느 탭에서나 서 있는 자리라 여기 둔다.
+
+                 아직 없으면 칸을 세우지 않는다 — 「-」 두 개가 늘 서 있으면 무엇이
+                 없는 상태인지 눈에 띄지 않는다. 눌러 베낄 수 있게 해 둔다. --}}
+            <div class="rx-tabs-nos" id="rxTabNos">
+              <span class="rx-tabno" id="rxTabNoOrder"
+                    style="display:{{ $prescription->order?->order_number ? '' : 'none' }};"
+                    title="CE 주문번호 — 누르면 베낍니다"
+                    onclick="rxCopyNo(this)">주문번호 <b>{{ $prescription->order?->order_number }}</b></span>
+              <span class="rx-tabno rx-tabno-so" id="rxTabNoSo"
+                    style="display:{{ $prescription->order?->withworks_so_no ? '' : 'none' }};"
+                    title="위드웍스 판매번호 — 누르면 베낍니다"
+                    onclick="rxCopyNo(this)">판매번호 <b>{{ $prescription->order?->withworks_so_no }}</b></span>
             </div>
             <div class="rx-tabs-acts">
               {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
@@ -2844,6 +2873,23 @@ $calcDeposit  = $calcCopay;
                          placeholder="010-XXXX-XXXX / 02-XXXX-XXXX" data-phone style="flex:1;" />
                 @endif
               </div>
+              {{-- Main contact — 이 사람에게 연락할 때 어느 번호로 거는가
+                   (2026-09-10 확인요청 5쪽).
+
+                   두 번호가 나란히 서 있으면 어느 쪽이 먼저인지 알 수 없다. 거래처
+                   관리에는 진작 있던 칸인데 이 화면에는 없어, 통화하려면 거래처를
+                   따로 열어 봐야 했다. 두 전화번호 바로 아래에 둔다 — 무엇을 고르는
+                   말인지 그 자리에서 읽힌다. --}}
+              @php $_mainContact = (string) ($prescription->patient?->main_contact ?? ''); @endphp
+              <div class="rx-field-row">
+                <span class="rx-field-label">Main contact</span>
+                <select class="form-control" id="f-main-contact" style="flex:1;"
+                        title="연락할 때 먼저 거는 번호입니다">
+                  <option value="">선택</option>
+                  <option value="mobile"   @selected($_mainContact === 'mobile')>환자</option>
+                  <option value="guardian" @selected($_mainContact === 'guardian')>보호자</option>
+                </select>
+              </div>
               @php $phone2Now = $prescription->patient?->phone ?? ''; @endphp
               <div class="rx-field-row">
                 <span class="rx-field-label">보호자 전화번호</span>
@@ -2931,7 +2977,17 @@ $calcDeposit  = $calcCopay;
                     $_pmSaved = \App\Models\PaymentLink::METHOD_CARD;
                 }
               @endphp
-              <div class="rx-field-row">
+              {{-- 결제 방식은 이 판에서 감춘다 (2026-09-10 확인요청 5쪽).
+
+                   무엇으로 받을지는 결제 요청을 보내는 자리에서 그때 고른다 —
+                   오른쪽 결제 창의 「결제 방법」이 그 자리다. 여기에도 두었더니 같은
+                   것을 두 곳에서 고르게 되어, 어느 쪽이 실제로 나가는 값인지 알 수
+                   없었다.
+
+                   **칸은 남긴다.** 걷어 내면 저장할 때 빈 값이 나가 이미 적어 둔
+                   결제 방식이 지워진다 — 보이지 않을 뿐, 값은 그대로 실려 돌아간다.
+                   되살리려면 이 줄의 display:none 만 걷으면 된다. --}}
+              <div class="rx-field-row" style="display:none;">
                 <span class="rx-field-label">결제 방식</span>
                 @if($_pmDone)
                   {{-- 받은 뒤 — 사실이므로 읽기만 한다. 고치려면 정산/회계에서 되돌린다. --}}
@@ -3136,11 +3192,35 @@ $calcDeposit  = $calcCopay;
               </div>
               {{-- rx-row-start 를 붙이지 않는다 — 붙이면 새 줄에서 다시 시작한다.
                    여섯 칸 격자라 span 3 짜리 둘이 나란히 한 줄에 선다. --}}
-              <div class="rx-field-row rx-w3">
+              {{-- 참고 사항 — 적는 칸이다 (2026-09-10 확인요청 5쪽).
+
+                   여태 이 자리는 검수자가 승인ㆍ반려하며 남긴 말(review_memo)을 읽기만
+                   했다. 담당자가 이 건을 두고 남겨 둘 말은 적을 데가 없었고, 검수 요청
+                   메모에 적으면 요청 뒤에 잠겨 더 못 고쳤다.
+
+                   칸을 따로 두었다(reference_note) — 언제든 고칠 수 있고, 승인ㆍ반려에
+                   지워지지 않는다. 검수자가 남긴 말은 아래에 그대로 보여 준다. --}}
+              @php
+                $_참고 = \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'reference_note')
+                    ? $prescription->reference_note : null;
+              @endphp
+              <div class="rx-field-row rx-row-start rx-w3">
                 <span class="rx-field-label">참고 사항</span>
-                <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
-                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;">{{ $prescription->review_memo ?: '참고 사항이 없습니다.' }}</div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
+                  <textarea id="f-reference-note" rows="2" maxlength="2000"
+                            placeholder="이 건에 남겨 둘 내용을 입력하십시오 (선택)"
+                            oninput="markOcrDirty()"
+                            style="font-size:12px;line-height:1.6;padding:6px 10px;
+                                   border:1px solid var(--border);border-radius:8px;resize:vertical;
+                                   min-height:44px;">{{ $_참고 }}</textarea>
+                  @if($prescription->review_memo)
+                    {{-- 검수자가 남긴 말 — 여기서 고치지 않는다. 승인ㆍ반려한 사람의 말이다. --}}
+                    <div id="f-review-memo" style="font-size:11px;line-height:1.6;padding:5px 10px;
+                         border:1px solid var(--border);border-radius:8px;
+                         background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;"
+                         title="검수자가 승인ㆍ반려하며 남긴 말입니다">검수 메모 · {{ $prescription->review_memo }}</div>
+                  @endif
+                </div>
               </div>
               {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 자리는 검수 메모 바로
                    다음이다. 이 건이 처방전인지 처방외인지가 아래 병원ㆍ상병ㆍ수량을
@@ -3497,7 +3577,7 @@ $calcDeposit  = $calcCopay;
                         {{ $prescription->billingOffice->displayName() }}@if($prescription->billingOffice->manager_name) · {{ $prescription->billingOffice->manager_name }}@endif
                         @if($prescription->billingOffice->tel) <span style="font-family:monospace;">{{ $prescription->billingOffice->tel }}</span>@endif
                       @else
-                        아직 고르지 않았습니다
+                        선택하세요
                       @endif
                     </span>
                     <button type="button" class="rx-side-btn" onclick="boFindOpen(event)">찾기</button>
@@ -7892,6 +7972,8 @@ window.HELP_TOUR_STEPS = [
       pay_date:         strOrNull('f-pay-date'),
       // 어떻게 받을 것인가 — 주문과 거래처에 함께 적는다(2026-09-03)
       pay_method:       document.querySelector('input[name="f_pay_method"]:checked')?.value ?? null,
+      // 연락할 때 먼저 거는 번호 — 거래처에 적는다(2026-09-10 확인요청 5쪽)
+      main_contact:     strOrNull('f-main-contact'),
       buy_date:         strOrNull('f-buy-date'),
       // 시안 148:3046 (추가정보 카드)
       inmarket_due:       strOrNull('f-inmarket-due'),
@@ -7919,6 +8001,8 @@ window.HELP_TOUR_STEPS = [
       rx_period:        intOrNull('f-rx-period'),
       rx_end_date:      strOrNull('f-rx-end-date'),
       diagnosis_date:   strOrNull('f-diagnosis-date'),
+      // 참고 사항 — 언제든 고친다. 검수 메모와 다른 칸이다(2026-09-10 확인요청 5쪽)
+      reference_note:   (document.getElementById('f-reference-note')?.value ?? '').trim() || null,
       /* 검수 요청 메모 — 요청 전에만 화면에서 적는다. 잠긴 뒤에는 보내지 않는다(서버도 가린다). */
       review_request_memo: (document.getElementById('f-review-request-memo')?.offsetParent
                              ? (document.getElementById('f-review-request-memo').value.trim() || null)
@@ -8943,8 +9027,36 @@ window.HELP_TOUR_STEPS = [
     }
   }
 
+  /**
+   * 탭줄의 번호 두 개를 다시 적는다 (2026-09-10 확인요청 5쪽).
+   *
+   * 없으면 칸을 걷는다 — 「-」가 늘 서 있으면 무엇이 없는 상태인지 눈에 띄지 않는다.
+   */
+  function rxSetTabNos(orderNum, soNo) {
+    const 세우기 = (id, 이름, 값) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const v = String(값 ?? '').trim();
+      el.style.display = v ? '' : 'none';
+      if (v) el.innerHTML = 이름 + ' <b>' + v.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])) + '</b>';
+    };
+    세우기('rxTabNoOrder', '주문번호', orderNum);
+    세우기('rxTabNoSo',    '판매번호', soNo);
+  }
+
+  /** 번호를 눌러 베낀다 — 위드웍스나 전화로 불러 줄 때 손으로 옮겨 적지 않는다 */
+  window.rxCopyNo = function (el) {
+    const 값 = el?.querySelector('b')?.textContent?.trim();
+    if (!값) return;
+    navigator.clipboard?.writeText(값)
+      .then(() => showToast(값 + ' 을(를) 복사했습니다.', 'success', 2000))
+      .catch(() => {});
+  };
+
   /** Col 3의 Withworks 판매번호 카드 + 워크플로우 실시간 업데이트 */
   function updateWwSoDisplay(orderNum, soNo, soType) {
+    rxSetTabNos(orderNum, soNo);
+
     // ── 환자 정보 바 Withworks 판매번호 표시 ──────────────
     const card    = document.getElementById('wwSoCard');
     const content = document.getElementById('wwSoContent');
@@ -9249,6 +9361,9 @@ window.HELP_TOUR_STEPS = [
           <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
         </button>
       </div>`;
+
+    // 탭줄의 번호도 걷는다 — 주문이 사라졌으므로 가리킬 것이 없다
+    rxSetTabNos('', '');
 
     // 환자 정보 바 Withworks 판매번호 초기화
     const card = document.getElementById('wwSoCard');
@@ -11644,7 +11759,11 @@ window.HELP_TOUR_STEPS = [
 
     const rows = OL_ROWS.filter(r => {
       if (q) {
-        const hay = [r.order_no, r.rx_number, r.patient, r.manager, r.rx_hospital, r.rx_doctor]
+        /* 요양기관코드도 찾는다 (2026-09-10 확인요청 5쪽) — 병원명은 손으로 친
+           자리라 띄어쓰기가 갈리지만 코드는 여덟 자리 하나다. 공단 자료를 보며
+           그 번호로 우리 건을 되짚는 걸음이 있다. */
+        const hay = [r.order_no, r.rx_number, r.patient, r.manager,
+                     r.rx_hospital, r.rx_hosp_code, r.rx_doctor]
                       .join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }

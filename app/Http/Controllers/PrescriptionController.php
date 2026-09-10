@@ -2204,6 +2204,10 @@ class PrescriptionController extends Controller
             'benefit_end_date'      => 'nullable|date',
             // 어떻게 받을 것인가 — 주문 연계 때 이 값대로 안내가 나간다(2026-09-03)
             'pay_method'            => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Models\PaymentLink::METHODS))],
+            // 연락할 때 먼저 거는 번호 — 거래처에 적는다(2026-09-10 확인요청 5쪽)
+            'main_contact'          => 'nullable|in:mobile,guardian',
+            // 참고 사항 — 검수 메모와 다른 칸이다(2026-09-10 확인요청 5쪽)
+            'reference_note'        => 'nullable|string|max:2000',
             'buy_date'              => 'nullable|date',
             // 시안 148:3046 (추가정보 카드)
             'inmarket_due'          => 'nullable|date',
@@ -2363,6 +2367,14 @@ class PrescriptionController extends Controller
             $rxCols['review_request_memo'] = $request->input('review_request_memo');
         }
 
+        /* **참고 사항**은 언제든 고친다 — 검수 요청 뒤에도, 승인 뒤에도.
+           이 건을 두고 오래 남겨 둘 말이라 걸음에 따라 잠그지 않는다.
+           칸이 없는 서버에서는 그냥 지나간다(2026-09-10 확인요청 5쪽). */
+        if ($request->has('reference_note')
+            && \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'reference_note')) {
+            $rxCols['reference_note'] = $request->input('reference_note');
+        }
+
         if ($request->has('benefit_class')) {
             $rxCols['benefit_class'] = $request->input('benefit_class');
 
@@ -2423,6 +2435,9 @@ class PrescriptionController extends Controller
             /* 어떻게 내는 사람인가(2026-09-03). 한 번 고르면 그 사람 것으로 남아
                다음 주문의 상세 목록 탭이 그 값으로 열린다. */
             'pay_method'          => $request->input('pay_method'),
+            /* 연락할 때 먼저 거는 번호 — 거래처 관리에도 있는 칸이다.
+               두 화면이 같은 값을 보아야 통화할 때 헤매지 않는다(2026-09-10 확인요청 5쪽). */
+            'main_contact'        => $request->input('main_contact'),
         ], fn ($v) => $v !== null);
 
         /* 「조회」로 고른 사람이 함께 왔으면 그 사람으로 잇는다. 화면에서 고른 것이

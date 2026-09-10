@@ -479,7 +479,7 @@
               </span>
               <select class="form-control edit-only" id="e-marketing-consent"
                       data-orig="{{ $patient->marketing_consent }}">
-                <option value="">동의서를 따름@if($_mk['origin']) ({{ $_mk['origin'] }})@endif</option>
+                <option value="">따로 정하지 않음 (개인정보 동의서를 따름@if($_mk['origin']) · 지금 {{ $_mk['origin'] }}@endif)</option>
                 <option value="동의함"   @selected($patient->marketing_consent === '동의함')>동의함</option>
                 <option value="동의안함" @selected($patient->marketing_consent === '동의안함')>동의안함</option>
               </select>

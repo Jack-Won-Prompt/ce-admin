@@ -58,6 +58,8 @@ class Prescription extends Model
         'nhis_status', 'product_price', 'insurance_price', 'nhis_amount', 'patient_copay',
         // Review
         'status', 'is_blank_draft', 'reviewed_by', 'reviewed_at', 'review_memo', 'review_request_memo', 'admin_note',
+        // 참고 사항 — 이 건을 두고 오래 남겨 둘 말. 검수 메모와 다른 칸이다(2026-09-10)
+        'reference_note',
         'postcode', 'address_detail', 'repurchase_date',
         // 상담·처방 부가 항목 — 예전에는 counseling_data JSON 이었다. 모두 컬럼으로 옮겼다.
         'counsel_no', 'counsel_date', 'counsel_type', 'counsel_acc_add_type',

@@ -141,7 +141,7 @@
                답이 되고, 누가 언제 고쳤는지 함께 남는다(2026-09-08 확인요청 4쪽). --}}
           <label class="form-label">마케팅 동의</label>
           <select class="form-control" id="add-marketing-consent">
-            <option value="">동의서를 따름</option>
+            <option value="">따로 정하지 않음 (개인정보 동의서를 따름)</option>
             <option value="동의함">동의함</option>
             <option value="동의안함">동의안함</option>
           </select>
