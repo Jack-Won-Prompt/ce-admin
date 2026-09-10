@@ -3528,14 +3528,19 @@ $calcDeposit  = $calcCopay;
 
                      사람이 적는 칸이 아니다. 토스가 승인한 시각이 먼저고, 없으면 가상계좌
                      입금ㆍ담당자 확인 시각이다(Order::paidAt). --}}
-                {{-- 값을 미리 담아 두지 않는다. 이 파일에는 여는 꼴 php 지시자가 여럿이라,
-                     괄호 꼴을 하나 쓰면 블레이드가 여기서부터 다음 닫는 지시자까지를
-                     한 덩이의 PHP 로 삼킨다 — 그 사이 화면이 통째로 사라진다(2026-09-10). --}}
-                <span class="rx-field-label" style="flex:0 0 auto;margin-left:10px;">결제시간</span>
+              </div>
+              {{-- 결제 시각 — 제 칸으로 세운다. 결제일 옆에 끼워 넣으면 세 칸이 한 줄을
+                   나눠 가져 날짜도 시각도 잘려 보인다.
+
+                   사람이 적는 칸이 아니다. 값을 미리 담아 두지도 않는다 — 이 파일에는
+                   여는 꼴 php 지시자가 여럿이라, 괄호 꼴을 하나 쓰면 블레이드가 다음
+                   닫는 지시자까지를 한 덩이로 삼킨다(2026-09-10). --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">결제시간</span>
                 <input type="text" class="form-control" id="f-paid-at" readonly
                        value="{{ $prescription->order?->paidAtLabel('Y-m-d H:i:s') }}"
                        placeholder="결제되면 저절로 섭니다"
-                       title="토스 승인 시각 · 없으면 가상계좌 입금ㆍ담당자 확인 시각"
+                       title="토스가 승인한 시각입니다. 없으면 가상계좌 입금ㆍ담당자 확인 시각을 적습니다."
                        style="flex:1;background:var(--bg-subtle,#f8fafc);" />
               </div>
               <div class="rx-field-row">
