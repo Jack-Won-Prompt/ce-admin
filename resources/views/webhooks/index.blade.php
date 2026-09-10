@@ -73,7 +73,7 @@
         <i class="fa-solid fa-clock-rotate-left"></i> 전송·수신 로그
         <span class="pnl-tab-cnt">(총 {{ $logCounts['all'] }}건)</span>
       </button>
-      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;{{ $tab === 'logs' ? 'display:none;' : '' }}" id="whListTools">
+      <span style="margin-left:auto;gap:6px;align-items:center;display:{{ $tab === 'logs' ? 'none' : 'flex' }};" id="whListTools">
         @perm('webhooks', 'create')
         <button type="button" class="ds-btn ds-btn-primary" onclick="whOpen()">웹훅 등록</button>
         @endperm
@@ -256,7 +256,7 @@
 
     document.getElementById('whListPanel').style.display  = 로그냐 ? 'none' : '';
     document.getElementById('whLogsPanel').style.display  = 로그냐 ? '' : 'none';
-    document.getElementById('whListTools').style.display  = 로그냐 ? 'none' : '';
+    document.getElementById('whListTools').style.display  = 로그냐 ? 'none' : 'flex';
     document.getElementById('whFilterCard').style.display = 로그냐 ? 'none' : '';
     document.getElementById('whTabList').classList.toggle('active', !로그냐);
     document.getElementById('whTabLogs').classList.toggle('active', 로그냐);
