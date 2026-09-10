@@ -7670,6 +7670,45 @@ window.HELP_TOUR_STEPS = [
       return false;
     }
 
+    /* ── 청구 한도 (2026-09-08 확인요청 10쪽 · 2026-09-10 확정) ──────────
+
+       공단이 정한 잣대다. 넘으면 청구가 반려된다 — 나간 뒤에 알면 서류를 다시
+       만들어야 하므로 여기서 막고 무엇이 넘었는지 알린다.
+
+       셀 수 없으면 막지 않는다. 처방일수나 총계가 아직 비어 있는 건은 「넘었다」고
+       할 근거가 없다 — 적는 도중에 막아 세우면 적을 수가 없다. */
+    const 한도금액 = {{ (int) config('nhis.limits.daily_amount', 9000) }};
+    const 산수량   = items.reduce((t, i) => t + (parseInt(i.quantity, 10) || 0), 0);
+    const 산금액   = items.reduce((t, i) => t + Number(computeRow(i).total || 0), 0);
+    const 처방일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
+    const 총계     = parseInt(document.getElementById('f-total')?.value ?? '', 10);
+    const 돈 = n => Number(n || 0).toLocaleString('ko-KR');
+
+    const 제품탭으로 = () => {
+      const 탭 = [...document.querySelectorAll('.tab-btn')]
+                   .find(b => (b.getAttribute('onclick') || '').includes('tab-product'));
+      if (탭) switchTab(탭, 'tab-product');
+    };
+
+    if (처방일수 > 0 && 산금액 > 0) {
+      const 하루 = Math.round(산금액 / 처방일수);
+      if (하루 > 한도금액) {
+        showToast(`하루 한도를 넘었습니다 — ${돈(산금액)}원 ÷ ${처방일수}일 = ${돈(하루)}원 `
+                + `(한도 ${돈(한도금액)}원). 수량이나 처방일수를 다시 보십시오.`, 'warning', 7000);
+        제품탭으로();
+
+        return false;
+      }
+    }
+
+    if (총계 > 0 && 산수량 > 총계) {
+      showToast(`구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개). `
+              + `1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.`, 'warning', 7000);
+      제품탭으로();
+
+      return false;
+    }
+
     const _num = v => (v === '' || v === null || v === undefined) ? null : Math.round(Number(v));
     const itemsPayload = items
       .filter(i => (i.product_name || '').trim())
