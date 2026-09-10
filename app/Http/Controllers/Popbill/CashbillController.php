@@ -85,7 +85,7 @@ class CashbillController extends Controller
         /* 발행 건이 어느 주문의 것인지는 order_id 가 안다(요청서 6쪽). 그 주문을 타고
            가면 네 화면이 함께 쓰는 칸을 여기서도 세울 수 있다 — 처방 유형ㆍ청구전략ㆍ
            자격ㆍ관할 청구처가 그것이다. */
-        $records = $query->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots', 'order.operationUser'])
+        $records = $query->with(['order.patient', 'order.prescription.billingOffice', 'order.items.lots', 'order.operationUser', 'order.tossPayment'])
                          ->forPage($page, $perPage)->get();
 
         $extras = OrderGridExtras::forPatients($records->pluck('order.patient_id'));
@@ -242,7 +242,7 @@ class CashbillController extends Controller
         $start = \Carbon\Carbon::createFromFormat('Ymd', $request->query('start_date'))->startOfDay();
         $end   = \Carbon\Carbon::createFromFormat('Ymd', $request->query('end_date'))->endOfDay();
 
-        $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
+        $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser', 'tossPayment'])
             ->whereIn('cash_receipt_status', ['issued', 'cancelled'])
             ->whereBetween('cash_receipt_issued_at', [$start, $end])
             ->orderByDesc('cash_receipt_issued_at')
@@ -273,7 +273,7 @@ class CashbillController extends Controller
            「계산서 발행」 화면이 하던 일이다 — 2026-09-01 요청으로 그 화면을 없애고
            여기로 모았다. 낸 것만 보이면 「무엇이 남았는가」를 이 화면에서 알 수 없다.
            대상은 청구전략이 현금영수증으로 정한 건뿐이다(처방외ㆍ산재ㆍ자동차보험). */
-        $pendingQuery = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
+        $pendingQuery = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser', 'tossPayment'])
             ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM);
 
         BillingStrategy::targets($pendingQuery, 'cash_receipt');

@@ -3521,6 +3521,19 @@ $calcDeposit  = $calcCopay;
                 <span class="rx-field-label">결제일</span>
                 <input type="date" class="form-control" id="f-pay-date" value="{{ $prescription->pay_date ?? '' }}"
                        onchange="syncPayBuy(this.value)" style="flex:1;" />
+                {{-- 결제 시각 (2026-09-10 지시).
+
+                     날짜만으로는 모자란 자리가 있다 — 같은 날 두 번 오간 건, 마감 시각을
+                     넘겼는지, 환자가 「방금 냈다」고 할 때 그 방금이 언제인지.
+
+                     사람이 적는 칸이 아니다. 토스가 승인한 시각이 먼저고, 없으면 가상계좌
+                     입금ㆍ담당자 확인 시각이다(Order::paidAt). --}}
+                @php($_결제시각 = $prescription->order?->paidAtLabel('Y-m-d H:i:s'))
+                <span class="rx-field-label" style="flex:0 0 auto;margin-left:10px;">결제시간</span>
+                <input type="text" class="form-control" id="f-paid-at" readonly
+                       value="{{ $_결제시각 ?: '' }}" placeholder="결제되면 저절로 섭니다"
+                       title="토스 승인 시각 · 없으면 가상계좌 입금ㆍ담당자 확인 시각"
+                       style="flex:1;background:var(--bg-subtle,#f8fafc);" />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">구입일 (모든 서류 발행일)</span>

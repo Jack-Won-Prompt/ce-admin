@@ -132,6 +132,54 @@ class Order extends Model
     }
 
     /**
+     * **언제** 받았는가 — 날짜만이 아니라 시각까지 (2026-09-10 지시).
+     *
+     * 결제일만으로는 모자란 자리가 있다. 같은 날 두 번 오간 건, 마감 시각을 넘겼는지,
+     * 환자가 「방금 냈다」고 할 때 그 방금이 언제인지 — 모두 시각을 봐야 한다.
+     *
+     * 어디서 오는가, 그 차례
+     *   ① 토스가 승인한 시각(approvedAt) — 카드ㆍ간편결제는 이것이 곧 결제 시각이다
+     *   ② 가상계좌에 돈이 들어온 시각(deposited_at)
+     *   ③ 결제 링크가 받은 시각 — 이미 실어 둔 것이 있을 때만 본다(목록에서 줄마다
+     *      묻지 않는다)
+     *   ④ 담당자가 통장을 보고 확인한 시각(deposit_confirmed_at)
+     */
+    public function paidAt(): ?\Illuminate\Support\Carbon
+    {
+        $tp = $this->tossPayment;
+
+        if ($tp) {
+            $승인 = $tp->raw_response['approvedAt'] ?? null;
+            if ($승인) {
+                try {
+                    return \Illuminate\Support\Carbon::parse($승인);
+                } catch (\Throwable) {
+                    // 토스가 준 글이 날짜로 읽히지 않으면 다음 것을 본다
+                }
+            }
+
+            if ($tp->deposited_at) {
+                return $tp->deposited_at;
+            }
+        }
+
+        if ($this->relationLoaded('paymentLinks')) {
+            $받은것 = $this->paymentLinks->whereNotNull('paid_at')->sortByDesc('paid_at')->first();
+            if ($받은것?->paid_at) {
+                return $받은것->paid_at;
+            }
+        }
+
+        return $this->deposit_confirmed_at;
+    }
+
+    /** 화면에 적는 결제 시각 — 없으면 빈칸이다(「-」를 채우지 않는다) */
+    public function paidAtLabel(string $format = 'Y-m-d H:i'): string
+    {
+        return $this->paidAt()?->format($format) ?? '';
+    }
+
+    /**
      * 입금이 확인되었는가 — 토스가 확인했거나, 담당자가 통장을 보고 확인했거나.
      *
      * 화면은 이 둘을 가르지 않는다. 「돈이 들어왔는가」 하나만 묻기 때문이다.

@@ -15,7 +15,7 @@ class NhisController extends Controller
     public function index(Request $request): View
     {
         // items.lots — 네 화면이 함께 쓰는 칸에 Lotㆍ유효기간이 선다
-        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser'])
+        $query = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser', 'tossPayment'])
             ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->latest();
 

@@ -26,7 +26,7 @@ class OrderController extends Controller
     public function index(Request $request): View
     {
         // items.lots — 출고한 Lot 과 유효기간이 목록에 선다(요청서 2쪽)
-        $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns',
+        $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns', 'tossPayment',
                               'items.lots', 'operationUser'])->latest();
 
         if ($request->filled('status')) {

@@ -100,10 +100,13 @@ class OrderGridExtras
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
             'cash_receipt'    => $this->issueLabel($o?->cash_receipt_status),
-            'pay_method'      => $o?->pay_method
-                                    ? (\App\Models\PaymentLink::METHODS[$o->pay_method] ?? $o->pay_method)
-                                    : '',
+            /* 토스가 알려 준 실제 유형이 있으면 그것이 사실이다 — 「링크페이」는 우리가
+               무엇으로 안내했는가일 뿐이다(2026-09-09 지시). 아직 아무 결제도 없는
+               건은 빈칸으로 둔다. */
+            'pay_method'      => $o && ($o->pay_method || $o->tossPayment) ? $o->payMethodLabel() : '',
             'deposit_at'      => $o?->deposit_confirmed_at?->format('Y-m-d') ?? '',
+            /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
+            'paid_at'         => $o?->paidAtLabel() ?? '',
             /* **총 금액은 본인 + 기관이다.**
 
                orders.total_amount 는 이름과 달리 「환자가 낼 돈」이다 — 결제 링크도
@@ -419,6 +422,7 @@ class OrderGridExtras
             'cash_receipt'    => '',
             'pay_method'      => '',
             'deposit_at'      => '',
+            'paid_at'         => '',
             'total_amount'    => (int) $s->total_amount,
             'copay'           => 0,
             'nhis_amount'     => 0,

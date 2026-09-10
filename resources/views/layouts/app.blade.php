@@ -2265,6 +2265,9 @@ document.addEventListener('click', (e) => {
     return [
       { header: '결제수단',     name: 'pay_method',      width: 100, align: 'center', sortable: true },
       { header: '입금확인',     name: 'deposit_at',      width: 100, align: 'center', sortable: true },
+      /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시).
+         토스가 승인한 시각이 먼저고, 없으면 가상계좌 입금ㆍ담당자 확인 시각이다. */
+      { header: '결제 시각',    name: 'paid_at',         width: 140, align: 'center', sortable: true },
       { header: '총 금액',      name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },
       { header: '본인 부담금',  name: 'copay',           width: 110, align: 'right',  sortable: true, renderer: money },
       { header: '기관 부담금',  name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
