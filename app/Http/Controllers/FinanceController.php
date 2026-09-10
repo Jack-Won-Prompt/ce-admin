@@ -156,9 +156,9 @@ class FinanceController extends Controller
             'nhis'       => $nhis,
             'shipped_at' => $shipped ? \Carbon\Carbon::parse($shipped)->format('Y-m-d') : '',
             'delivered'  => $o->delivered_at?->format('Y-m-d') ?? '',
-            'ship_state' => Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+            'ship_state' => $o->status_label,
             'tracking'   => $o->tracking_number ?: ($o->withworks_tracking_no ?? ''),
-            'status'     => Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+            'status'     => $o->status_label,
             'cancelled'  => $o->status === 'cancelled' ? '취소' : '',
             'cancel_at'  => $o->status === 'cancelled' ? ($o->updated_at?->format('Y-m-d') ?? '') : '',
 

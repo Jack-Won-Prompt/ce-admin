@@ -331,7 +331,7 @@
 @endsection
 
 @php
-  $meta     = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary'];
+  $meta     = ['label'=>$order->status_label,'badge'=>$order->status_badge];
   $steps    = ['pending','confirmed','shipping','delivered'];
   $curIdx   = array_search($order->status, $steps);
 @endphp
@@ -361,7 +361,9 @@
   @if($order->status !== 'cancelled')
   <div class="card od-mb" style="padding:12px 16px;">
     <div class="status-flow">
-      @foreach(['pending'=>'주문 대기','confirmed'=>'주문 확정','shipping'=>'배송중','delivered'=>'배송 완료'] as $s => $lbl)
+      {{-- 첫 단계 이름은 이 건이 무엇을 기다리는지로 갈린다 — 「입금 대기」거나
+           「출고 대기」다(2026-09-10 확인요청 8쪽). 위 딱지와 같은 말이어야 한다. --}}
+      @foreach(['pending'=>$order->대기이름()['label'],'confirmed'=>'주문 확정','shipping'=>'배송중','delivered'=>'배송 완료'] as $s => $lbl)
         @php
           $isDone    = $curIdx !== false && array_search($s,$steps) < $curIdx;
           $isCurrent = $order->status === $s;
@@ -1495,7 +1497,7 @@ function printDoc(type) {
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '.status-flow', title: '주문 진행 상태', body: '주문 대기 → 주문 확정 → 배송 중 → 배송 완료 단계를 시각적으로 보여줍니다.' },
+  { selector: '.status-flow', title: '주문 진행 상태', body: '대기(입금 대기ㆍ출고 대기) → 주문 확정 → 배송 중 → 배송 완료 단계를 보여 줍니다. 본인부담금이 남아 있으면 입금 대기, 0원이거나 이미 들어왔으면 출고 대기입니다.' },
   { selector: '.card:nth-of-type(1)', title: '환자 정보', body: '이 주문과 연결된 환자의 기본 정보를 확인합니다.' },
   { selector: '.card:nth-of-type(2)', title: '제품 정보', body: '주문된 제품 목록, 수량, 단가, 본인부담 금액을 확인합니다.' },
   { selector: '.card:nth-of-type(3)', title: '배송 정보', body: '운송장 번호를 입력하고 배송 상태를 관리합니다. 운송장 번호 입력 후 저장하면 배송 추적이 가능합니다.' },

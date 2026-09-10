@@ -1457,7 +1457,7 @@ class PrescriptionController extends Controller
                 'kind'      => '처방 없음',
                 'product'   => $o->product_name ?: '-',
                 'amount'    => (int) $o->total_amount,
-                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'status'    => $o->status_label,
                 'url'       => route('orders.show', $o, absolute: false),
                 'here'      => false,  // 주문 상세로 보낸다
             ];
@@ -1972,6 +1972,10 @@ class PrescriptionController extends Controller
         $orderListSource = \App\Models\Order::with([
                 'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
                 'prescription.billingOffice', 'items.lots', 'operationUser',
+                /* 진행 상태를 「입금 대기 / 출고 대기」로 갈라 적는다 — 그 판정이
+                   토스 결제를 본다(2026-09-10 확인요청 8쪽). 함께 불러 두지 않으면
+                   줄 수만큼 질의가 나간다. */
+                'tossPayment',
             ])
             ->whereDoesntHave('returns')
             ->where('status', 'pending')
@@ -1999,7 +2003,7 @@ class PrescriptionController extends Controller
                 /* 이름 말고 누구인지도 함께 — 더블클릭한 사람이 임자인지 남인지는
                    이름으로 견줄 수 없다(같은 이름이 둘일 수 있다). */
                 'manager_id' => $rx?->assigned_user_id,
-                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'status'    => $o->status_label,
                 'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
                 /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
 

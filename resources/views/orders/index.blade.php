@@ -28,7 +28,8 @@ window.HELP_TOUR_STEPS = [
 <div class="help-section">
   <div class="help-section-title">주문 상태</div>
   <div class="help-badge-row">
-    <span class="badge badge-secondary">주문 대기</span>
+    <span class="badge badge-warning">입금 대기</span>
+    <span class="badge badge-secondary">출고 대기</span>
     <span class="badge badge-primary">주문 확정</span>
     <span class="badge badge-info">배송 중</span>
     <span class="badge badge-success">배송 완료</span>
@@ -265,7 +266,7 @@ window.HELP_TOUR_STEPS = [
       </thead>
       <tbody>
         @forelse($orders as $order)
-          @php $meta = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary']; @endphp
+          @php $meta = ['label'=>$order->status_label,'badge'=>$order->status_badge]; @endphp
           <tr>
             <td>
               <a href="{{ route('orders.show', $order) }}" class="order-number">

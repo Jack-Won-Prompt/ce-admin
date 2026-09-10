@@ -195,7 +195,7 @@
           <label class="ds-field-label">주문 상태</label>
           <select name="status" class="form-control form-select">
             <option value="">전체 상태</option>
-            <option value="pending"   {{ request('status')==='pending'   ? 'selected':'' }}>주문 대기</option>
+            <option value="pending"   {{ request('status')==='pending'   ? 'selected':'' }}>대기 (입금ㆍ출고)</option>
             <option value="confirmed" {{ request('status')==='confirmed' ? 'selected':'' }}>주문 확정</option>
             <option value="shipping"  {{ request('status')==='shipping'  ? 'selected':'' }}>배송 중</option>
             <option value="delivered" {{ request('status')==='delivered' ? 'selected':'' }}>배송 완료</option>

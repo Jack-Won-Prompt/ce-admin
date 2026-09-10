@@ -115,7 +115,7 @@ class OrderController extends Controller
                 'total'     => (int) $o->total_amount,
                 'address'   => $o->shipping_address ?? '',
                 'so_type'   => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
-                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'status'    => $o->status_label,
                 // 언제 팔았고 언제 되돌아왔는지. 둘 사이가 벌어진 건은 눈에 띄어야 한다.
                 'sold_at'   => $o->created_at->format('Y-m-d'),
                 'deal_at'   => $rt?->created_at?->format('Y-m-d') ?? '',

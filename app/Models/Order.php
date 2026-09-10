@@ -320,7 +320,10 @@ class Order extends Model
      * 못한다(2026-08-15 합의). 사람이 손으로 옮기거나, 저쪽에 그 사건이 생기면 잇는다.
      */
     public const STATUS_LABELS = [
-        'pending'   => ['label' => '주문 대기',  'badge' => 'secondary'],
+        /* 목록에 적히는 이름은 둘로 갈린다 — 본인부담금이 남았으면 「입금 대기」,
+           0원이거나 이미 들어왔으면 「출고 대기」(2026-09-10 확인요청 8쪽).
+           여기 적어 둔 이름은 상태로 거를 때의 이름이다. 대기이름() 을 보라. */
+        'pending'   => ['label' => '대기 (입금ㆍ출고)', 'badge' => 'secondary'],
         'confirmed' => ['label' => '주문 확정',  'badge' => 'primary'],
         'allocated' => ['label' => '재고 할당',  'badge' => 'primary'],
         'picked'    => ['label' => '피킹 완료',  'badge' => 'primary'],
@@ -346,7 +349,46 @@ class Order extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        if ($this->status === 'pending') {
+            return $this->대기이름()['label'];
+        }
+
         return self::STATUS_LABELS[$this->status]['label'] ?? $this->status;
+    }
+
+    /** 목록의 상태 딱지 빛깔 — 이름과 같은 자리에서 나온다 */
+    public function getStatusBadgeAttribute(): string
+    {
+        if ($this->status === 'pending') {
+            return $this->대기이름()['badge'];
+        }
+
+        return self::STATUS_LABELS[$this->status]['badge'] ?? 'secondary';
+    }
+
+    /**
+     * 「주문 대기」를 무엇을 기다리는지로 나눠 적는다 (2026-09-10 확인요청 8쪽).
+     *
+     * 주문을 세우면 상태는 pending 이다. 그런데 담당자가 목록에서 보는 것은
+     * 「주문 대기」 한 마디뿐이라, 이 건이 돈을 기다리는지 물건이 나가기를
+     * 기다리는지 알 수 없었다 — 알려면 건마다 열어 본인부담금을 봐야 했다.
+     *
+     * 본인부담금이 있고 아직 안 들어왔으면 기다리는 것은 돈이다(입금 대기).
+     * 0원이거나 이미 들어왔으면 기다리는 것은 출고다(출고 대기).
+     *
+     * 상태값 자체는 그대로 pending 이다. 거르개ㆍ청구ㆍ정산이 모두 이 값으로
+     * 대상을 고르므로, 새 상태를 만들면 그 건들이 목록에서 조용히 사라진다.
+     * 여기서 바꾸는 것은 화면에 적는 이름뿐이다.
+     *
+     * @return array{label: string, badge: string}
+     */
+    public function 대기이름(): array
+    {
+        if ($this->expectedDeposit() > 0 && ! $this->isDepositConfirmed()) {
+            return ['label' => '입금 대기', 'badge' => 'warning'];
+        }
+
+        return ['label' => '출고 대기', 'badge' => 'secondary'];
     }
 
     /**

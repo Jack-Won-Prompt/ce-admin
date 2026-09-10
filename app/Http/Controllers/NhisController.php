@@ -146,7 +146,7 @@ class NhisController extends Controller
                 'product'      => $o->product_name ?? '',
                 'nhis_amount'  => (int) $o->nhis_amount,
                 'patient_copay'=> (int) $o->patient_copay,
-                'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'status'       => $o->status_label,
                 'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
                 /* 왜 반려됐는가. 칸은 진작 있었는데 목록에 세우지 않아, 반려된 건을

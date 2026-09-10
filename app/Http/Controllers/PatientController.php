@@ -512,7 +512,7 @@ class PatientController extends Controller
             'product'      => $o->product_name ?? '-',
             'qty'          => (int) ($o->quantity ?? 1),
             'amount'       => (int) $o->total_amount,
-            'status'       => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+            'status'       => $o->status_label,
             'date'         => $o->created_at->format('Y-m-d'),
             'url'          => route('orders.show', $o),
         ])->values();
@@ -711,7 +711,7 @@ class PatientController extends Controller
                 'date'      => $o->created_at?->format('Y-m-d') ?? '',
                 'product'   => $o->product_name ?: '-',
                 'amount'    => (int) $o->total_amount,
-                'status'    => \App\Models\Order::STATUS_LABELS[$o->status]['label'] ?? $o->status,
+                'status'    => $o->status_label,
                 // 처방으로 산 것인지 처방 없이 산 것인지 — 고를 때 그것부터 눈에 들어와야 한다
                 'rx_number' => $o->prescription?->rx_number ?: '',
                 'kind'      => $o->prescription_id ? '처방' : '처방 없음',

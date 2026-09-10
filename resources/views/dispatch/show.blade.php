@@ -839,7 +839,7 @@
           </dd>
           <dt>주문 상태</dt>
           <dd>
-            @php $ol = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label'=>$order->status,'badge'=>'secondary']; @endphp
+            @php $ol = ['label'=>$order->status_label,'badge'=>$order->status_badge]; @endphp
             <span class="badge badge-{{ $ol['badge'] }}">{{ $ol['label'] }}</span>
           </dd>
           <dt>주문 총액</dt>

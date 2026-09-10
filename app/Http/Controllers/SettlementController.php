@@ -171,7 +171,7 @@ class SettlementController extends Controller
                 default          => '대기중',
             };
 
-            $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label' => $order->status, 'badge' => 'secondary'];
+            $sl = ['label' => $order->status_label, 'badge' => $order->status_badge];
 
             return [
                 'id'           => $order->id,
@@ -280,7 +280,7 @@ class SettlementController extends Controller
                 default                               => $tp->status_label,
             };
 
-            $sl = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label' => $order->status, 'badge' => 'secondary'];
+            $sl = ['label' => $order->status_label, 'badge' => $order->status_badge];
 
             return [
                 'id'         => $order->id,
@@ -384,7 +384,7 @@ class SettlementController extends Controller
     {
         $order->load(['patient', 'creator', 'tossPayment']);
 
-        $statusLabel = \App\Models\Order::STATUS_LABELS[$order->status] ?? ['label' => $order->status, 'badge' => 'secondary'];
+        $statusLabel = ['label' => $order->status_label, 'badge' => $order->status_badge];
         $nhisMap     = ['pending' => '대기', 'submitted' => '청구완료', 'approved' => '승인', 'rejected' => '반려'];
 
         return response()->json([
