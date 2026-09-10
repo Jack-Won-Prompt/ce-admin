@@ -7718,7 +7718,7 @@ window.HELP_TOUR_STEPS = [
         if (담긴하루 > 한도금액 && 하루 <= Math.round(담긴하루)) {
           showToast(말 + ' 담겨 있던 값 그대로라 저장은 됩니다.', 'warning', 7000);
         } else {
-          showToast(말 + ' 수량이나 처방일수를 다시 보십시오.', 'warning', 7000);
+          showToast(말 + ' 수량 또는 처방일수를 확인하세요.', 'warning', 7000);
           제품탭으로();
 
           return false;
