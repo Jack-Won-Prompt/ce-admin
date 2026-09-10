@@ -368,10 +368,23 @@ function showDoc(doc) {
     document.getElementById('tunePanel')?.classList.toggle('on');
   };
 
-  /* 원본으로 — 아직 저장한 것은 아니다. 저장을 눌러야 문서에서도 지워진다. */
-  window.tuneReset = function () { _tuneSet(0, 0); };
+  /* 원본으로 — 맞춰 둔 것을 지우고 칸을 닫는다 (2026-09-10 지시).
 
-  window.tuneSave = async function () {
+     화면만 원본으로 돌리고 끝내면 다시 열 때 적혀 있던 값이 되살아나고, 팩스ㆍ서류도
+     그대로 나간다 — 눌러 놓고 원본이 아닌 셈이다. 그래서 적혀 있던 값이 있으면
+     그것까지 지운다. 아무것도 적혀 있지 않았으면 칸만 닫는다. */
+  window.tuneReset = async function () {
+    const 지울것있나 = _tuneSaved.b !== 0 || _tuneSaved.c !== 0;
+    _tuneSet(0, 0);
+
+    if (지울것있나) {
+      await tuneSave('원본으로 되돌렸습니다. 팩스와 서류도 원본으로 나갑니다.');
+      return;
+    }
+    document.getElementById('tunePanel')?.classList.remove('on');
+  };
+
+  window.tuneSave = async function (알림말) {
     if (!_tuneKey || typeof TUNE_SAVE_URL === 'undefined') return;
 
     const b = +(document.getElementById('tuneBright')?.value ?? 0);
@@ -392,7 +405,9 @@ function showDoc(doc) {
       }
       /* 저장했으면 할 일이 끝났다 — 칸이 계속 떠 있으면 그림을 가린다 */
       document.getElementById('tunePanel')?.classList.remove('on');
-      showToast('밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 적용됩니다.', 'success');
+      showToast(typeof 알림말 === 'string' && 알림말
+                  ? 알림말
+                  : '밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 적용됩니다.', 'success');
     } catch (e) {
       showToast(e.message || '저장하지 못했습니다.', 'danger');
     } finally {

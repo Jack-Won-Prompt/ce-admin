@@ -4493,6 +4493,19 @@ $_itemsData = $_itemSource->map(fn($i) => [
     'nhis_amount'     => $i->nhis_amount,
     'patient_copay'   => $i->patient_copay,
 ])->values();
+
+/* 담겨 있던 값 — 청구 한도를 견주는 바탕이다(2026-09-10 확정).
+
+   한도를 넘는 건이 이미 마흔일곱이다. 무조건 막으면 그 건들은 주소ㆍ메모 같은
+   다른 칸도 고칠 수 없다 — 한도와 아무 상관 없는 일까지 함께 잠긴다.
+   그래서 **더 나빠지지만 않으면 지나가게** 한다. 넘었다는 것은 그때도 알린다. */
+$_담긴한도 = [
+    'amount' => (int) round($_itemSource->sum(fn ($i) =>
+                    (float) ($i->insurance_price ?: $i->product_price) * (int) $i->quantity)),
+    'qty'    => (int) $_itemSource->sum(fn ($i) => (int) $i->quantity),
+    'days'   => (int) ($prescription->total_days  ?? 0),
+    'total'  => (int) ($prescription->total_count ?? 0),
+];
 @endphp
 
 @push('scripts')
@@ -7690,23 +7703,41 @@ window.HELP_TOUR_STEPS = [
       if (탭) switchTab(탭, 'tab-product');
     };
 
+    /* 담겨 있던 값보다 나빠지지 않으면 지나간다. 한도를 넘는 건이 이미 마흔일곱이라,
+       무조건 막으면 한도와 아무 상관 없는 일(주소ㆍ메모)까지 함께 잠긴다. */
+    const 담긴 = @json($_담긴한도);
+    const 담긴하루 = (담긴.days > 0 && 담긴.amount > 0) ? 담긴.amount / 담긴.days : 0;
+
     if (처방일수 > 0 && 산금액 > 0) {
       const 하루 = Math.round(산금액 / 처방일수);
       if (하루 > 한도금액) {
-        showToast(`하루 한도를 넘었습니다 — ${돈(산금액)}원 ÷ ${처방일수}일 = ${돈(하루)}원 `
-                + `(한도 ${돈(한도금액)}원). 수량이나 처방일수를 다시 보십시오.`, 'warning', 7000);
-        제품탭으로();
+        const 말 = `하루 한도를 넘었습니다 — ${돈(산금액)}원 ÷ ${처방일수}일 = ${돈(하루)}원 `
+                 + `(한도 ${돈(한도금액)}원).`;
 
-        return false;
+        /* 담겨 있던 것도 이미 넘었고 더 오르지 않았으면 지나간다 — 다만 알린다 */
+        if (담긴하루 > 한도금액 && 하루 <= Math.round(담긴하루)) {
+          showToast(말 + ' 담겨 있던 값 그대로라 저장은 됩니다.', 'warning', 7000);
+        } else {
+          showToast(말 + ' 수량이나 처방일수를 다시 보십시오.', 'warning', 7000);
+          제품탭으로();
+
+          return false;
+        }
       }
     }
 
     if (총계 > 0 && 산수량 > 총계) {
-      showToast(`구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개). `
-              + `1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.`, 'warning', 7000);
-      제품탭으로();
+      const 말 = `구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개).`;
+      const 담긴넘음 = 담긴.total > 0 && 담긴.qty > 담긴.total;
 
-      return false;
+      if (담긴넘음 && 산수량 <= 담긴.qty) {
+        showToast(말 + ' 담겨 있던 값 그대로라 저장은 됩니다.', 'warning', 7000);
+      } else {
+        showToast(말 + ' 1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.', 'warning', 7000);
+        제품탭으로();
+
+        return false;
+      }
     }
 
     const _num = v => (v === '' || v === null || v === undefined) ? null : Math.round(Number(v));
