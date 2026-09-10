@@ -49,16 +49,38 @@ class BenefitDates
         $기준 = $d->toDateString();
         $종료 = $d->copy()->addDays($days)->toDateString();
 
+        /* Five/Six(110days) 인 건은 다음 재구매 가능일이 스무 날 뒤다
+           (2026-09-08 확인요청 10쪽 · 2026-09-09 확정).
+
+           급여 종료일은 그대로 둔다 — 언제까지 쓰는가와 언제 다시 살 수 있는가는
+           다른 물음이다. 그 프로그램은 한 번에 더 많이 받아 가므로 다음 구매가
+           그만큼 늦다. */
+        $다음구매 = self::백십일프로그램인가($rx)
+                        ? $d->copy()->addDays($days + 20)->toDateString()
+                        : $종료;
+
         /* 결제일과 구입일(모든 서류 발행일)은 늘 같은 날짜다(2026-09-09 확정) */
         $rx->forceFill([
             'pay_date'         => $기준,
             'buy_date'         => $기준,
             'use_start_date'   => $기준,
             'benefit_end_date' => $종료,
-            'next_repurchase'  => $종료,
+            'next_repurchase'  => $다음구매,
         ])->save();
 
         return true;
+    }
+
+    /**
+     * Five/Six(110days) 인가.
+     *
+     * 그 칸에 값이 적혀 있으면 그 프로그램으로 본다 — 「예ㆍ아니오」를 고르는 칸이
+     * 아니라 값을 적는 칸이고(지금 담긴 일곱 건은 모두 540), 적혀 있다는 것 자체가
+     * 그 프로그램이라는 뜻이다.
+     */
+    private static function 백십일프로그램인가(Prescription $rx): bool
+    {
+        return trim((string) ($rx->five_110days ?? '')) !== '';
     }
 
     /** 돈이 들어온 날로 다시 센다. 날짜를 주지 않으면 오늘이다. */

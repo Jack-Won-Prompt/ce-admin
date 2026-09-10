@@ -3431,7 +3431,10 @@ $calcDeposit  = $calcCopay;
                      브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
                      아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
                 <span class="rx-field-label">Five/Six<br>(110days)</span>
-                <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}" style="flex:1;" />
+                {{-- 값이 적혀 있으면 다음 재구매 가능일이 스무 날 뒤로 선다
+                     (2026-09-08 확인요청 10쪽). 고치면 그 자리에서 다시 센다. --}}
+                <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}"
+                       oninput="calcBenefitEnd()" style="flex:1;" />
               </div>
               {{-- 2열 — 자격 … 사유 11줄. 1차 요청서 17쪽 순서를 따른다
                    (… 요류역학검사일·자격 / 1일 처방개수·총 처방기간·총계 /
@@ -7544,8 +7547,18 @@ window.HELP_TOUR_STEPS = [
     const e = document.getElementById('f-benefit-end');
     if (e) e.value = fmt(end);
 
+    /* Five/Six(110days) 인 건은 다음 구매가 스무 날 뒤다(2026-09-08 확인요청 10쪽).
+       급여 종료일은 그대로 둔다 — 언제까지 쓰는가와 언제 다시 살 수 있는가는 다른
+       물음이다. 그 프로그램은 한 번에 더 많이 받아 가므로 다음 구매가 그만큼 늦다.
+
+       그 칸에 값이 적혀 있으면 그 프로그램으로 본다 — 고르는 칸이 아니라 적는 칸이고,
+       적혀 있다는 것 자체가 그 프로그램이라는 뜻이다. 서버도 같은 잣대를 쓴다. */
+    const 백십일 = (document.getElementById('f-five')?.value ?? '').trim() !== '';
+    const next = new Date(base);
+    next.setDate(next.getDate() + days + (백십일 ? 20 : 0));
+
     const n = document.getElementById('f-next-repurchase');
-    if (n) n.value = fmt(end);
+    if (n) n.value = fmt(next);
   };
 
   // ── 종료일·다음재구매일 자동계산 ──
