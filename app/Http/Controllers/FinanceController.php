@@ -150,11 +150,20 @@ class FinanceController extends Controller
             'cancel_at'  => $o->status === 'cancelled' ? ($o->updated_at?->format('Y-m-d') ?? '') : '',
 
             // ── 환자 결제 ─────────────────────────────────
-            'paid_at'    => $o->deposit_confirmed_at?->format('Y-m-d')
-                            ?? $o->tossPayment?->deposited_at?->format('Y-m-d') ?? '',
+            /* 언제 받았는가 — 한 곳에서 센다(Order::paidAt · 2026-09-10 지시).
+
+               여태 담당자가 확인한 날짜와 가상계좌 입금일만 보아, 토스로 카드ㆍ
+               간편결제를 받은 건은 이 칸이 빈 채로 섰다. 승인 시각이 곧 결제 시각이다.
+
+               날짜와 시각을 따로 담는다 — 「입금일자」는 날짜로 세는 자리라 그대로 두고,
+               시각은 제 칸에서 본다. */
+            'paid_at'    => $o->paidAt()?->format('Y-m-d') ?? '',
+            'paid_time'  => $o->paidAtLabel('Y-m-d H:i:s'),
             'paid'       => $paid,
             'payer'      => $o->patient?->remitter_name ?: ($o->tossPayment?->customer_name ?? ''),
-            'pay_method' => $o->pay_method ? (\App\Models\PaymentLink::METHODS[$o->pay_method] ?? $o->pay_method) : '',
+            /* 토스가 알려 준 실제 유형이 있으면 그것이 사실이다 — 「링크페이」는 우리가
+               무엇으로 안내했는가일 뿐이다(2026-09-09 지시) */
+            'pay_method' => ($o->pay_method || $o->tossPayment) ? $o->payMethodLabel() : '',
             /* PG 사만 적는다. 정산일ㆍ정산금액ㆍ수수료ㆍ회사계좌 입금은 토스 정산을
                받아 와야 아는 값인데 그 연동이 아직 없다 — 모르는 것을 0 으로 적으면
                「수수료가 없다」로 읽힌다. */
@@ -302,6 +311,8 @@ class FinanceController extends Controller
                 ['header' => '주문금액',   'name' => 'billed',    'width' => 110] + $money,
                 ['header' => '본인부담액', 'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'paid_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
+                /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
+                ['header' => '결제 시각',  'name' => 'paid_time', 'width' => 150, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금금액',   'name' => 'paid',      'width' => 110] + $money,
                 ['header' => '입금자명',   'name' => 'payer',     'width' => 100],
                 ['header' => '결제수단',   'name' => 'pay_method','width' => 100, 'align' => 'center', 'sortable' => true],
