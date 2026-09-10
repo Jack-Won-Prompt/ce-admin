@@ -16,6 +16,26 @@ class PrescriptionAttachment extends Model
         'img_brightness', 'img_contrast',
     ];
 
+    protected static function booted(): void
+    {
+        /* 서류가 한 장이라도 붙으면 더는 「빈 초안」이 아니다 (2026-09-09 지시).
+
+           빈 초안 표시는 처방전 줄 자체가 저장될 때만 풀린다. 그런데 앱으로 올린 건은
+           처방전 줄을 만들어 두고 파일만 붙이므로 그 표시가 켜진 채로 남았다.
+           그러면 주문 등록 화면이 「주문 목록」 탭으로 열려, 웹으로 올린 건과 달리
+           상세 목록이 보이지 않았다(2026-09-08 확인요청 10쪽).
+
+           blankDraft 잣대도 이미 「딸린 것이 하나라도 있으면 빈 초안이 아니다」로
+           보고 있다 — 표시만 그 뜻을 따라가지 못했다. */
+        static::created(function (self $a) {
+            $rx = $a->prescription;
+
+            if ($rx && $rx->is_blank_draft) {
+                $rx->forceFill(['is_blank_draft' => false])->saveQuietly();
+            }
+        });
+    }
+
     /**
      * 첨부 서류 종류.
      *
