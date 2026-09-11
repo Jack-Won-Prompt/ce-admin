@@ -6,13 +6,18 @@
 {{-- 시안 513:2572 — 제목 · 부제 / 갈래 둘 / 안내 한 줄, 왼쪽 위에 홈페이지 --}}
 <style>
   .pl-list{display:flex;flex-direction:column;gap:12px;width:440px;max-width:100%;}
-  .pl-row{height:50px;display:flex;align-items:center;gap:12px;padding:0 16px;border:1px solid var(--gray-200);border-radius:12px;background:var(--gray-0);
-    font-size:16px;font-weight:500;line-height:27px;color:var(--gray-1000);transition:border-color .2s,background-color .2s,transform .2s;}
+  .pl-row{min-height:50px;display:flex;align-items:center;gap:12px;padding:8px 16px;border:1px solid var(--gray-200);border-radius:12px;background:var(--gray-0);
+    font-size:16px;font-weight:500;line-height:27px;color:var(--gray-1000);transition:border-color .2s,background-color .2s;}
   .pl-row span{flex:1 1 0;min-width:0;}
-  .pl-row:hover{border-color:var(--primary-500);background:var(--primary-50);}
-  .pl-row:hover .pv-ico{transform:translateX(3px);}
+  @media (hover:hover){
+    .pl-row:hover{border-color:var(--primary-500);background:var(--primary-50);}
+    .pl-row:hover .pv-ico{transform:translateX(3px);}
+  }
+  .pl-row:focus-visible{outline:2px solid var(--primary-500);outline-offset:2px;}
   .pl-row .pv-ico{transition:transform .2s;}
-  @media (max-width:640px){ .pl-list{width:100%;} }
+  /* 홈 버튼(위 60 · 높이 40)이 제목과 겹치지 않게 카드 위아래를 같이 늘린다 — 가운데 맞춤이라 1920 자리는 그대로다 */
+  @media (min-width:641px){ .pv-card{padding-top:116px;padding-bottom:116px;} }
+  @media (max-width:640px){ .pl-list{width:100%;} .pv-card{padding-top:84px;padding-bottom:84px;} }
 </style>
 
 <a class="pv-hbtn pv-hbtn--line pv-hbtn--home" href="{{ route('welcome') }}">

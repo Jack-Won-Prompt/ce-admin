@@ -19,9 +19,9 @@
   </div>
 
   @if($errors->any())
-    <div class="errbox">
+    <div class="errbox" id="errbox" role="alert" tabindex="-1">
       입력 내용을 확인해 주세요.
-      <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+      <ul>@foreach(array_unique($errors->all()) as $e)<li>{{ $e }}</li>@endforeach</ul>
     </div>
   @endif
 
@@ -33,42 +33,43 @@
     <div class="pv-cols">
       <div class="pv-col">
         <div class="pv-field">
-          <label class="pv-label">성명<span class="req">*</span></label>
-          <div class="pv-ctrl"><input type="text" name="name" value="{{ old('name') }}" placeholder="성명" required></div>
+          <label class="pv-label" for="pv-name">성명<span class="req">*</span></label>
+          <div class="pv-ctrl"><input type="text" id="pv-name" name="name" value="{{ old('name') }}" placeholder="성명" autocomplete="name" required @error('name') aria-invalid="true" @enderror></div>
         </div>
         <div class="pv-field">
-          <label class="pv-label">연락처1<span class="req">*</span></label>
-          <div class="pv-ctrl"><input type="tel" name="phone" value="{{ old('phone') }}" placeholder="‘-’없이 숫자만" required></div>
+          <label class="pv-label" for="pv-phone">연락처1<span class="req">*</span></label>
+          <div class="pv-ctrl"><input type="tel" id="pv-phone" name="phone" value="{{ old('phone') }}" placeholder="‘-’없이 숫자만" autocomplete="tel" required @error('phone') aria-invalid="true" @enderror></div>
         </div>
         <div class="pv-field">
-          <label class="pv-label">연락처2<span class="opt">(선택)</span></label>
-          <div class="pv-ctrl"><input type="tel" name="phone2" value="{{ old('phone2') }}" placeholder="보호자 등 추가 연락처"></div>
+          <label class="pv-label" for="pv-phone2">연락처2<span class="opt">(선택)</span></label>
+          <div class="pv-ctrl"><input type="tel" id="pv-phone2" name="phone2" value="{{ old('phone2') }}" placeholder="보호자 등 추가 연락처"></div>
         </div>
         <div class="pv-field">
-          <label class="pv-label">주소<span class="req">*</span></label>
+          <label class="pv-label" for="pv-addr1">주소<span class="req">*</span></label>
           <div class="pv-ctrl">
             <div class="pv-line">
-              <input type="text" name="zip" value="{{ old('zip') }}" placeholder="우편번호" readonly onclick="findZip()">
-              <input type="text" name="addr1" value="{{ old('addr1') }}" placeholder="기본주소">
+              <input type="text" name="zip" value="{{ old('zip') }}" placeholder="우편번호" aria-label="우편번호" readonly onclick="findZip()" @error('zip') aria-invalid="true" @enderror>
+              <input type="text" id="pv-addr1" name="addr1" value="{{ old('addr1') }}" placeholder="기본주소" autocomplete="address-line1" @error('addr1') aria-invalid="true" @enderror>
               <button type="button" class="pv-btn-addr" onclick="findZip()">주소 검색</button>
             </div>
-            <input type="text" name="addr2" value="{{ old('addr2') }}" placeholder="상세 주소">
+            <input type="text" name="addr2" value="{{ old('addr2') }}" placeholder="상세 주소" aria-label="상세 주소" autocomplete="address-line2" @error('addr2') aria-invalid="true" @enderror>
           </div>
         </div>
       </div>
 
       <div class="pv-col">
         <div class="pv-field">
-          <label class="pv-label">이메일<span class="opt">(선택)</span></label>
-          <div class="pv-ctrl"><input type="email" name="email" value="{{ old('email') }}" placeholder="example@email.com"></div>
+          <label class="pv-label" for="pv-email">이메일<span class="opt">(선택)</span></label>
+          <div class="pv-ctrl"><input type="email" id="pv-email" name="email" value="{{ old('email') }}" placeholder="example@email.com" autocomplete="email" @error('email') aria-invalid="true" @enderror></div>
         </div>
         <div class="pv-field">
-          <label class="pv-label">생년월일<span class="req">*</span></label>
-          <div class="pv-ctrl"><input type="date" name="birth" value="{{ old('birth') }}" required></div>
+          <label class="pv-label" for="pv-birth">생년월일<span class="req">*</span></label>
+          <div class="pv-ctrl"><input type="date" id="pv-birth" name="birth" value="{{ old('birth') }}" autocomplete="bday" required @error('birth') aria-invalid="true" @enderror></div>
         </div>
+        {{-- 라디오 줄의 이름표는 가리킬 칸이 하나가 아니라 label 대신 묶음 이름(aria-labelledby)으로 쓴다 --}}
         <div class="pv-field">
-          <label class="pv-label">사용 제품<span class="opt">(선택)</span></label>
-          <div class="radio-group radio-group--2">
+          <span class="pv-label" id="pv-prd-l">사용 제품<span class="opt">(선택)</span></span>
+          <div class="radio-group radio-group--2" role="radiogroup" aria-labelledby="pv-prd-l">
             @foreach(['미오','센슈라','기타','모름'] as $i => $v)
               <div class="radio-chip">
                 <input type="radio" id="prd{{ $i }}" name="product" value="{{ $v }}" {{ old('product')===$v?'checked':'' }}>
@@ -78,21 +79,21 @@
           </div>
         </div>
         <div class="pv-field">
-          <label class="pv-label">수술 병원<span class="opt">(선택)</span></label>
-          <div class="pv-ctrl"><input type="text" name="hospital" value="{{ old('hospital') }}" placeholder="수술 받은 병원명"></div>
+          <label class="pv-label" for="pv-hospital">수술 병원<span class="opt">(선택)</span></label>
+          <div class="pv-ctrl"><input type="text" id="pv-hospital" name="hospital" value="{{ old('hospital') }}" placeholder="수술 받은 병원명"></div>
         </div>
       </div>
 
       <div class="pv-col">
         <div class="pv-field">
-          <label class="pv-label">수술 일자<span class="opt">(선택)</span></label>
-          <div class="pv-ctrl"><input type="date" name="surgery_date" value="{{ old('surgery_date') }}"></div>
+          <label class="pv-label" for="pv-surgery">수술 일자<span class="opt">(선택)</span></label>
+          <div class="pv-ctrl"><input type="date" id="pv-surgery" name="surgery_date" value="{{ old('surgery_date') }}"></div>
         </div>
         {{-- 장루 타입은 두 묶음(stoma_type · stoma_kind)이다. 시안은 한 격자에 이어 그렸다 — 칸만 잇고 묶음은 그대로 둔다 --}}
         <div class="pv-field">
-          <label class="pv-label">장루 타입<span class="opt">(선택)</span></label>
-          <div class="radio-group radio-group--2">
-            <div class="radio-group--pair">
+          <span class="pv-label" id="pv-st-l">장루 타입<span class="opt">(선택)</span></span>
+          <div class="radio-group radio-group--2" role="group" aria-labelledby="pv-st-l">
+            <div class="radio-group--pair" role="radiogroup" aria-label="장루 기간">
               @foreach(['영구 장루','임시 장루','모름'] as $i => $v)
                 <div class="radio-chip">
                   <input type="radio" id="st{{ $i }}" name="stoma_type" value="{{ $v }}" {{ old('stoma_type')===$v?'checked':'' }}>
@@ -100,7 +101,7 @@
                 </div>
               @endforeach
             </div>
-            <div class="radio-group--pair">
+            <div class="radio-group--pair" role="radiogroup" aria-label="장루 종류">
               @foreach(['결장루','회장루','요루'] as $i => $v)
                 <div class="radio-chip">
                   <input type="radio" id="sk{{ $i }}" name="stoma_kind" value="{{ $v }}" {{ old('stoma_kind')===$v?'checked':'' }}>
@@ -216,6 +217,11 @@
   </section>
 
   <p class="pv-note">* 표시는 필수 입력·동의 항목입니다.</p>
+
+  {{-- 칸이 쌓이는 폭(≤1279)에서만 보이는 아래 제출 — 휴대폰에서는 위 버튼이 마지막 질문보다 한참 위다 --}}
+  <button type="submit" class="pv-hbtn pv-hbtn--done pv-submit-end">
+    <span class="pv-ico pv-ico--20" style="--ico:url('{{ asset('images/website/icons/check-20.svg') }}')"></span>동의서 작성 완료
+  </button>
 </form>
 @endsection
 

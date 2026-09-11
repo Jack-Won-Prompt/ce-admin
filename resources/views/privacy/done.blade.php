@@ -1,5 +1,5 @@
 @extends('privacy.layout')
-@section('title', '작성 완료')
+@section('title', trim((\App\Models\PrivacyConsent::TYPE_LABELS[$type] ?? '') . ' 동의서 작성 완료'))
 @section('card-class', 'pv-card--fill')
 
 @section('content')
@@ -12,10 +12,10 @@
 </style>
 
 <div class="pv-head">
-  <span class="pd-mark"><span class="pv-ico" style="--ico:url('{{ asset('images/website/icons/check-16.svg') }}')"></span></span>
+  <span class="pd-mark" aria-hidden="true"><span class="pv-ico" style="--ico:url('{{ asset('images/website/icons/check-20.svg') }}')"></span></span>
   <h1 class="pv-title">작성이 <em>완료되었습니다</em></h1>
   <p class="pd-desc">{{ \App\Models\PrivacyConsent::TYPE_LABELS[$type] ?? '' }} 개인정보 수집·이용 동의서가<br>정상적으로 접수되었습니다. 감사합니다.</p>
 </div>
 
-<a href="{{ route('privacy.landing') }}" class="pv-hbtn pv-hbtn--line" style="position:static">처음으로</a>
+<a href="{{ route('privacy.landing') }}" class="pv-hbtn pv-hbtn--line pv-hbtn--static">처음으로</a>
 @endsection
