@@ -39,9 +39,9 @@ class WithworksWebhookController extends Controller
      * so.created 는 넣지 않는다. 우리가 보내서 선 것이라 알려 올 것이 없고, 받으면
      * 이미 확정된 건이 「주문 대기」로 되돌아간다.
      *
-     * so.delivered 는 저쪽이 보내지 않는다 — 택배사 조회가 없어 배송이 끝난 때를
-     * 알지 못한다(2026-08-15 합의). 표에는 남겨 둔다. 사람이 손으로 옮기거나,
-     * 저쪽에 그 사건이 생기면 그대로 걸린다.
+     * so.delivered 도 넣지 않는다. 저쪽은 택배사 조회가 없어 배송이 끝난 때를
+     * 알지 못한다(2026-08-15 합의). 한 번도 닿은 적이 없어 표에서 걷어냈다
+     * (2026-09-11 지시). 「배송 완료」는 주문 상세의 단추로 사람이 옮긴다.
      */
     private const ORDER_STATUS = [
         'so.confirmed' => 'confirmed',
@@ -49,7 +49,6 @@ class WithworksWebhookController extends Controller
         'so.picked'    => 'picked',
         'so.invoiced'  => 'invoiced',
         'so.shipped'   => 'shipping',
-        'so.delivered' => 'delivered',
         'so.cancelled' => 'cancelled',
     ];
 
@@ -244,12 +243,7 @@ class WithworksWebhookController extends Controller
                출고까지 간 건에 뒤늦게 「할당」이 닿으면 상태가 거꾸로 간다.
                취소만은 어디서든 받는다 — 되돌리는 일이라 앞뒤가 없다. */
             if ($newStatus === 'cancelled' || self::rank($newStatus) > self::rank($order->status)) {
-                $order->update([
-                    'status'       => $newStatus,
-                    'delivered_at' => $newStatus === 'delivered'
-                        ? ($data['ship']['delivered_at'] ?? $data['occurred_at'] ?? now())
-                        : $order->delivered_at,
-                ]);
+                $order->update(['status' => $newStatus]);
             }
         }
 
@@ -420,7 +414,6 @@ class WithworksWebhookController extends Controller
             'so.confirmed' => ['창고가 주문을 확정했습니다', 'info'],
             'so.invoiced'  => ['송장이 붙었습니다',  'info'],
             'so.shipped'   => ['출고되었습니다',      'success'],
-            'so.delivered' => ['배송이 끝났습니다',   'success'],
             'so.cancelled' => ['주문이 취소되었습니다', 'danger'],
         ];
 
