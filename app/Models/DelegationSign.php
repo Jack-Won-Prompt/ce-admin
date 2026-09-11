@@ -22,6 +22,8 @@ class DelegationSign extends Model
 
     protected $fillable = [
         'customer_name', 'phone1', 'phone2',
+        'src_no', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
+        'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
         'token', 'sent_to', 'sent_which', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
         'status',
         'agree_delegation', 'agree_privacy', 'agree_marketing',
@@ -36,6 +38,9 @@ class DelegationSign extends Model
         'expires_at'       => 'datetime',
         'signed_at'        => 'datetime',
         'nice_verified_at' => 'datetime',
+        'next_repurchase_at' => 'date',
+        'last_register_at'   => 'date',
+        'last_confirm_at'    => 'date',
         'agree_delegation' => 'boolean',
         'agree_privacy'    => 'boolean',
         'agree_marketing'  => 'boolean',

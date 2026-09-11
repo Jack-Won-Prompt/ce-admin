@@ -115,9 +115,19 @@ class DelegationSignController extends Controller
             return response()->json(['success' => false, 'message' => '내용이 비어 있습니다.'], 422);
         }
 
-        /* 첫 줄이 머리글이면 건너뛴다 — 「거래처」나 「이름」이 적혀 있으면 머리글로 본다 */
+        /* 쉼표로 나뉜 것과 탭으로 나뉜 것을 둘 다 받는다 (2026-09-11).
+
+           받은 명단(위임 필요 리스트)은 이름이 .csv 인데 속은 탭으로 나뉘어 있었다.
+           엑셀에서 「텍스트(탭 분리)」로 저장하면 그렇게 된다 — 파일 이름만 보고
+           쉼표로 끊으면 한 줄이 통째로 첫 칸에 들어간다. 첫 줄에 무엇이 더 많은지
+           세어 정한다. */
+        $나눔 = substr_count($줄들[0], "\t") > substr_count($줄들[0], ',') ? "\t" : ',';
+
+        /* 머리글이 있으면 칸 차례를 거기서 읽는다. 없으면 이름ㆍ번호1ㆍ번호2 로 본다. */
+        $자리 = null;
         if (preg_match('/거래처|이름|customer/i', $줄들[0])) {
-            array_shift($줄들);
+            $머리 = array_map(fn ($x) => trim($x, " \t\"'"), str_getcsv(array_shift($줄들), $나눔));
+            $자리 = self::칸찾기($머리);
         }
 
         $세움 = 0;
@@ -125,10 +135,18 @@ class DelegationSignController extends Controller
         $잘못 = [];
 
         foreach ($줄들 as $번 => $줄) {
-            $칸 = str_getcsv($줄);
-            $이름 = trim((string) ($칸[0] ?? ''));
-            $번호1 = self::번호만(trim((string) ($칸[1] ?? '')));
-            $번호2 = self::번호만(trim((string) ($칸[2] ?? '')));
+            $칸 = str_getcsv($줄, $나눔);
+            $값 = fn (?int $i) => $i === null ? '' : trim((string) ($칸[$i] ?? ''));
+
+            if ($자리) {
+                $이름  = $값($자리['이름']);
+                $번호1 = self::번호만($값($자리['번호1']));
+                $번호2 = self::번호만($값($자리['번호2']));
+            } else {
+                $이름  = $값(0);
+                $번호1 = self::번호만($값(1));
+                $번호2 = self::번호만($값(2));
+            }
 
             if ($이름 === '') {
                 continue;                                   // 빈 줄은 조용히 지나간다
@@ -154,7 +172,18 @@ class DelegationSignController extends Controller
                 'phone1'        => $번호1 ?: null,
                 'phone2'        => $번호2 ?: null,
                 'status'        => 'pending',
-            ]);
+            ] + ($자리 ? [
+                'src_no'             => ($n = $값($자리['번호'])) !== '' ? (int) $n : null,
+                'dealer_name'        => mb_substr($값($자리['판매처']), 0, 100) ?: null,
+                'next_repurchase_at' => self::날짜($값($자리['다음재구매'])),
+                'last_register_at'   => self::날짜($값($자리['마지막등록'])),
+                'rx_days'            => ($d = $값($자리['처방기간'])) !== '' ? (int) $d : null,
+                'last_confirm_at'    => self::날짜($값($자리['마지막확정'])),
+                'src_status'         => mb_substr($값($자리['상태']), 0, 30) ?: null,
+                'rx_type'            => mb_substr($값($자리['처방여부']), 0, 30) ?: null,
+                'benefit_class'      => mb_substr($값($자리['자격']), 0, 30) ?: null,
+                'last_sale_status'   => mb_substr($값($자리['판매상태']), 0, 30) ?: null,
+            ] : []));
             $세움++;
         }
 
@@ -170,12 +199,71 @@ class DelegationSignController extends Controller
         ]);
     }
 
-    /** 숫자만 남긴다 — 화면에서 다시 꼴을 갖춘다 */
+    /**
+     * 머리글을 보고 어느 칸이 무엇인지 정한다.
+     *
+     * 명단의 칸 차례는 뽑아 주는 사람에 따라 달라진다. 자리를 고정으로 박아 두면
+     * 다음 명단에서 이름 자리에 전화번호가 들어간다 — 머리글을 읽어 맞춘다.
+     */
+    private static function 칸찾기(array $머리): array
+    {
+        $찾 = function (array $말들, bool $뒤에서 = false) use ($머리): ?int {
+            $것 = null;
+            foreach ($머리 as $i => $h) {
+                foreach ($말들 as $말) {
+                    if ($h !== '' && mb_strpos($h, $말) !== false) {
+                        if (! $뒤에서) {
+                            return $i;
+                        }
+                        $것 = $i;
+                    }
+                }
+            }
+
+            return $것;
+        };
+
+        return [
+            /* 서명하는 사람은 「환자거래처」다. 그냥 「거래처명」은 판매처(대리점)이므로
+               환자 쪽을 먼저 찾고, 없을 때만 거래처명을 쓴다. */
+            '이름'       => $찾(['환자거래처', '환자명', '고객명']) ?? $찾(['거래처명', '이름']) ?? 0,
+            '판매처'     => $찾(['환자거래처']) !== null ? $찾(['거래처명']) : null,
+            '번호1'      => $찾(['전화번호1', '전화번호 1', '휴대폰', '전화번호', '연락처']),
+            '번호2'      => $찾(['전화번호2', '전화번호 2']),
+            '번호'       => $찾(['No', 'no', '순번']),
+            '다음재구매' => $찾(['다음재구매']),
+            '마지막등록' => $찾(['마지막 등록', '마지막등록']),
+            '처방기간'   => $찾(['처방기간']),
+            '마지막확정' => $찾(['구매확정']),
+            '상태'       => $찾(['Status']),
+            '처방여부'   => $찾(['처방여부']),
+            '자격'       => $찾(['자격']),
+            '판매상태'   => $찾(['판매상태']),
+        ];
+    }
+
+    /**
+     * 숫자만 남긴다 — 화면에서 다시 꼴을 갖춘다.
+     *
+     * 엑셀이 번호를 수로 읽어 앞의 0 을 떨어뜨린 것을 되살린다 (2026-09-11).
+     * 받은 명단 2,896건 가운데 165건이 「1086047612」처럼 열 자리로 적혀 있었다 —
+     * 그대로 두면 닿지 않는 번호로 나간다.
+     */
     private static function 번호만(string $값): string
     {
         $숫 = preg_replace('/\D/', '', $값);
 
+        if (strlen($숫) === 10 && str_starts_with($숫, '1')) {
+            $숫 = '0' . $숫;
+        }
+
         return (strlen($숫) >= 9 && strlen($숫) <= 11) ? $숫 : '';
+    }
+
+    /** YYYY-MM-DD 만 받는다 — 알아볼 수 없는 것은 비워 둔다 */
+    private static function 날짜(string $값): ?string
+    {
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $값) ? $값 : null;
     }
 
     // ── 발송 팝오버가 묻는 것 ─────────────────────────────
