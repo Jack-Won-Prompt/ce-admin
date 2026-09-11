@@ -60,6 +60,16 @@ class ClientErrorController extends Controller
             return response()->json(['success' => true, 'skipped' => 'resize_observer']);
         }
 
+        /* 「Transition was skipped」 도 같은 갈래다 (2026-09-11).
+
+           주문 등록 화면은 `@view-transition { navigation: auto; }` 로 화면 넘김을
+           브라우저에 맡긴다 — 흰 화면이 끼지 않는다. 앞 넘김이 끝나기 전에 다음으로
+           옮기면 브라우저가 앞것을 접으며 이 말을 낸다. 우리가 부르는 자리가 없어
+           잡을 수도 없고, 빨리 옮길수록 자주 난다. 담지 않는다. */
+        if (str_contains($글월, 'Transition was skipped')) {
+            return response()->json(['success' => true, 'skipped' => 'view_transition']);
+        }
+
         $갈래 = $값['kind'] ?: '브라우저 오류';
         $파일 = (string) ($값['file'] ?? '');
         $줄   = (int) ($값['line'] ?? 0);
