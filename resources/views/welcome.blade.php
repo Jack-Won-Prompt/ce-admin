@@ -42,21 +42,7 @@
   <link rel="preload" href="{{ asset('images/website/intro/hero-illustration.webp') }}" as="image">
   <style>
 @include('partials._design-tokens')
-
-    /* 시안 글꼴 — NEXON Lv2 Gothic OTF 세 굵기(Regular 400 · Medium 500 · Bold 700).
-       Figma 가 쓰는 OTF 판과 같은 파일이다. 판을 올릴 때는 주소의 @0.2.0 을 바꾼다. */
-    @font-face {
-      font-family: 'NEXON Lv2 Gothic OTF'; font-style: normal; font-weight: 400; font-display: swap;
-      src: url('https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic-otf@0.2.0/NEXON_Lv2_Gothic_OTF.woff2') format('woff2');
-    }
-    @font-face {
-      font-family: 'NEXON Lv2 Gothic OTF'; font-style: normal; font-weight: 500; font-display: swap;
-      src: url('https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic-otf@0.2.0/NEXON_Lv2_Gothic_OTF_Medium.woff2') format('woff2');
-    }
-    @font-face {
-      font-family: 'NEXON Lv2 Gothic OTF'; font-style: normal; font-weight: 700; font-display: swap;
-      src: url('https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic-otf@0.2.0/NEXON_Lv2_Gothic_OTF_Bold.woff2') format('woff2');
-    }
+@include('partials._website-font')
 
     :root {
       --wl-font: 'NEXON Lv2 Gothic OTF', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
