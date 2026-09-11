@@ -209,6 +209,20 @@
         header: '위임장 발송', name: 'send', width: 90, align: 'center',
         renderer: (v, row) => 단추('발송', () => dlgSendOpen(row.id), !row.can_send),
       },
+
+      /* ── 보낼지 말지를 가리는 근거 (2026-09-11 지시로 앞으로 옮김) ────────
+         다음 재구매가 가까운 사람부터, 진행중인 건은 뒤로 — 그 판단을 ［발송］
+         바로 옆에서 한다. 오른쪽 끝에 두었더니 볼 때마다 굴려야 했다. */
+      { header: '판매처',          name: 'dealer',     width: 150, sortable: true },
+      { header: '다음재구매가능일', name: 'repurchase', width: 126, align: 'center', sortable: true },
+      { header: '마지막 등록일',    name: 'registered', width: 118, align: 'center', sortable: true },
+      { header: '처방기간',        name: 'rx_days',    width: 80,  align: 'right',  sortable: true },
+      { header: '마지막 구매확정일', name: 'confirmed',  width: 128, align: 'center', sortable: true },
+      { header: '처방여부',        name: 'rx_type',    width: 110, align: 'center', sortable: true },
+      { header: '자격',            name: 'benefit',    width: 74,  align: 'center', sortable: true },
+      { header: '마지막 판매상태',  name: 'sale',       width: 118, align: 'center', sortable: true },
+
+      /* ── 받은 결과 ──────────────────────────────────────────────────── */
       { header: '위임장 서명 여부',     name: 'delegation', width: 118, align: 'center', renderer: 여부 },
       { header: '개인정보동의 서명 여부', name: 'privacy',   width: 138, align: 'center', renderer: 여부 },
       { header: '마케팅 활용 동의 여부', name: 'marketing', width: 138, align: 'center', renderer: 여부 },
@@ -223,18 +237,8 @@
       { header: '위임장 서명 전송 담당자', name: 'sender',    width: 128, align: 'center', sortable: true },
       { header: '상태',                  name: 'status',    width: 84,  align: 'center', sortable: true },
 
-      /* ── 명단에 딸려 온 칸 (2026-09-11 보탬) ──────────────
-         보낼 차례를 정하는 근거다 — 다음 재구매가 가까운 사람부터, 진행중인 건은
-         뒤로. 여태 표에만 있고 화면에는 없어 엑셀을 따로 열어 보아야 했다. */
-      { header: '판매처',          name: 'dealer',     width: 150, sortable: true },
-      { header: '다음재구매가능일', name: 'repurchase', width: 126, align: 'center', sortable: true },
-      { header: '마지막 등록일',    name: 'registered', width: 118, align: 'center', sortable: true },
-      { header: '처방기간',        name: 'rx_days',    width: 80,  align: 'right',  sortable: true },
-      { header: '마지막 구매확정일', name: 'confirmed',  width: 128, align: 'center', sortable: true },
+      /* 명단이 적어 보낸 Status — 지금은 모두 Active 다. 맨 뒤에 둔다. */
       { header: 'Status',          name: 'src_status', width: 80,  align: 'center', sortable: true },
-      { header: '처방여부',        name: 'rx_type',    width: 110, align: 'center', sortable: true },
-      { header: '자격',            name: 'benefit',    width: 74,  align: 'center', sortable: true },
-      { header: '마지막 판매상태',  name: 'sale',       width: 118, align: 'center', sortable: true },
     ],
     data: 줄,
   });
