@@ -47,6 +47,16 @@
   .dlg-warn  { margin-top:14px; padding:9px 12px; border-radius:8px;
                background:var(--danger-light); border:1px solid var(--alert-100);
                color:var(--danger); font-size:12px; font-weight:700; line-height:1.5; }
+
+  /* 쪽 넘김 줄 (2026-09-11) — 부트스트랩 것을 쓰지 못해 이 화면에서 그린다 */
+  .dlg-pager { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+               padding:10px 12px; border-top:1px solid var(--border); }
+  .dlg-pager-info { margin-right:auto; font-size:12px; color:var(--text-muted);
+                    font-variant-numeric:tabular-nums; }
+  .dlg-pg { min-width:34px; padding:0 10px; font-variant-numeric:tabular-nums; }
+  .dlg-pg.is-now { border-color:var(--primary); color:var(--primary);
+                   background:var(--primary-light); font-weight:700; cursor:default; }
+  .dlg-pg.is-off { color:var(--gray-400); background:var(--gray-50); cursor:default; }
 </style>
 @endpush
 
@@ -126,9 +136,52 @@
       </span>
     </span>
   </div>
-  <div id="dlgGrid" style="height:calc(100vh - 380px);"></div>
-  {{-- 한 쪽에 백 줄씩. 삼천 줄을 한 번에 그리면 화면이 한참 멎는다. --}}
-  <div style="padding:10px 12px;border-top:1px solid var(--border);">{{ $쪽->links() }}</div>
+  <div id="dlgGrid" style="height:calc(100vh - 434px);"></div>
+
+  {{-- 한 쪽에 백 줄씩. 삼천 줄을 한 번에 그리면 화면이 한참 멎는다.
+
+       라라벨이 주는 쪽 넘김 그림(부트스트랩 5)은 좁은 화면 것과 넓은 화면 것
+       두 벌을 함께 내보내고 d-sm-flex 로 하나만 세운다. 그런데 공통 레이아웃이
+       부트스트랩 뒤에서 .d-none 을 !important 로 다시 적어 두어, 미디어 쿼리
+       안의 d-sm-flex 가 밀리고 두 벌 모두 숨은 채로 높이 0 이 된다.
+       그래서 쪽 단추는 이 화면의 .ds-btn 으로 직접 그린다. --}}
+  @php
+    $이번쪽 = $쪽->currentPage();
+    $끝쪽   = $쪽->lastPage();
+    /* 가운데를 이번 쪽에 맞추되 다섯 칸을 늘 채운다 — 끝머리에서도 폭이 안 흔들린다 */
+    $첫칸 = max(1, min($이번쪽 - 2, $끝쪽 - 4));
+    $끝칸 = min($끝쪽, $첫칸 + 4);
+  @endphp
+  <div class="dlg-pager">
+    <span class="dlg-pager-info">
+      {{ number_format($쪽->firstItem() ?? 0) }}–{{ number_format($쪽->lastItem() ?? 0) }}
+      / 총 {{ number_format($쪽->total()) }}건
+    </span>
+
+    @if ($쪽->onFirstPage())
+      <span class="ds-btn dlg-pg is-off">처음</span>
+      <span class="ds-btn dlg-pg is-off">이전</span>
+    @else
+      <a class="ds-btn dlg-pg" href="{{ $쪽->url(1) }}">처음</a>
+      <a class="ds-btn dlg-pg" href="{{ $쪽->previousPageUrl() }}">이전</a>
+    @endif
+
+    @for ($ㅉ = $첫칸; $ㅉ <= $끝칸; $ㅉ++)
+      @if ($ㅉ === $이번쪽)
+        <span class="ds-btn dlg-pg is-now">{{ $ㅉ }}</span>
+      @else
+        <a class="ds-btn dlg-pg" href="{{ $쪽->url($ㅉ) }}">{{ $ㅉ }}</a>
+      @endif
+    @endfor
+
+    @if ($쪽->hasMorePages())
+      <a class="ds-btn dlg-pg" href="{{ $쪽->nextPageUrl() }}">다음</a>
+      <a class="ds-btn dlg-pg" href="{{ $쪽->url($끝쪽) }}">마지막</a>
+    @else
+      <span class="ds-btn dlg-pg is-off">다음</span>
+      <span class="ds-btn dlg-pg is-off">마지막</span>
+    @endif
+  </div>
 </div>
 
 {{-- ── 발송 팝오버 ──────────────────────────────────────────
