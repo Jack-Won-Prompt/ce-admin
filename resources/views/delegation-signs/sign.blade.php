@@ -223,7 +223,35 @@ function 캔버스세우기() {
   ctx.strokeStyle = '#111827';
 }
 캔버스세우기();
-window.addEventListener('resize', () => { 캔버스세우기(); 칠함 = false; 다시셈(); });
+
+/* 크기가 바뀌어도 그린 것을 잃지 않는다.
+
+   휴대폰을 돌리거나 주소창이 접히기만 해도 resize 가 온다. 그때 캔버스를 다시
+   세우면 그림이 지워지는데, 화면은 아무 말도 하지 않아 서명한 사람은 지워진 줄
+   모른 채 ［동의］가 다시 잠긴 것만 본다. 그려 둔 것을 옮겨 담는다. */
+let 다시세우기예약 = null;
+window.addEventListener('resize', () => {
+  clearTimeout(다시세우기예약);
+  다시세우기예약 = setTimeout(() => {
+    const 옛것 = 칠함 ? cv.toDataURL('image/png') : null;
+    const 옛폭 = cv.getBoundingClientRect().width;
+
+    캔버스세우기();
+
+    if (!옛것) { 다시셈(); return; }
+
+    const img = new Image();
+    img.onload = () => {
+      /* 가로가 달라졌으면 비율을 지켜 줄여 그린다 — 늘려 그리면 서명이 뭉개진다 */
+      const 새폭 = cv.getBoundingClientRect().width;
+      const 새높 = cv.getBoundingClientRect().height;
+      const 배 = Math.min(새폭 / 옛폭, 1);
+      ctx.drawImage(img, 0, 0, 새폭 * 배, 새높 * 배);
+      다시셈();
+    };
+    img.src = 옛것;
+  }, 150);
+});
 
 function 자리(e) {
   const r = cv.getBoundingClientRect();
