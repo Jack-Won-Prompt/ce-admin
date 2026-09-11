@@ -16,485 +16,227 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CE Admin — 로그인</title>
   <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@kfonts/nexon-lv2-gothic-otf@0.2.0/NEXON_Lv2_Gothic_OTF_Medium.woff2" as="font" type="font/woff2" crossorigin>
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  {{-- 시안: Figma Website › 로그인 (505:9424) — 왼쪽 640 흰 카드, 오른쪽 청록 판에 그림. --}}
   <style>
+@include('partials._design-tokens')
+@include('partials._website-font')
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --primary:       #28798B;
-      --primary-dark:  #0B5C6E;
-      --primary-light: #E9F9FB;
-      --danger:        #EF4444;
-      --text-primary:  #0D1B2A;
-      --text-muted:    #8B95A1;
-      --border:        #E5E9F0;
-      --bg:            #F4F6FA;
-      --radius:        10px;
-      --shadow:        0 1px 3px rgba(13,27,42,.06), 0 1px 2px rgba(13,27,42,.04);
-      --shadow-md:     0 4px 12px rgba(13,27,42,.08), 0 2px 6px rgba(13,27,42,.04);
-    }
-
     html, body { height: 100%; }
-
     body {
-      font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
-                   'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
+      font-family: 'NEXON Lv2 Gothic OTF', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
       min-height: 100vh;
       display: flex;
-      background: var(--bg);
+      padding: 16px;
+      background: var(--primary-500);
+      color: var(--gray-1000);
+      word-break: keep-all;
       -webkit-font-smoothing: antialiased;
     }
-
-    /* ══════════════════════════════════════
-       LEFT PANEL
-    ══════════════════════════════════════ */
-    .auth-left {
-      width: 52%;
-      background: linear-gradient(150deg, #0A1628 0%, #0D1E3A 50%, #0A1A30 100%);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 60px 72px;
-      overflow: hidden;
-      min-height: 100vh;
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap; border: 0;
     }
 
-    /* Decorative gradient blobs */
-    .auth-left::before {
-      content: '';
-      position: absolute; top: -160px; right: -120px;
-      width: 500px; height: 500px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(40,121,139,.18) 0%, transparent 65%);
-      pointer-events: none;
+    /* ── 왼쪽 카드 (505:9453) — 세 덩어리를 60 간격으로 세로 가운데 ── */
+    .lg-card {
+      position: relative; flex: 0 0 640px; width: 640px; min-height: calc(100vh - 32px);
+      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 60px;
+      padding: 0 80px; border-radius: 32px; background: var(--gray-0);
     }
-    .auth-left::after {
-      content: '';
-      position: absolute; bottom: -120px; left: -60px;
-      width: 400px; height: 400px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(40,121,139,.10) 0%, transparent 65%);
-      pointer-events: none;
-    }
+    .lg-head { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+    .lg-head h1 { font-size: 32px; font-weight: 500; line-height: 45px; color: var(--gray-1000); }
+    .lg-head p { font-size: 16px; font-weight: 500; line-height: 27px; color: var(--gray-600); white-space: nowrap; }
 
-    /* Floating rings */
-    .deco-ring {
-      position: absolute; border-radius: 50%; pointer-events: none;
-      border: 1px solid rgba(40,121,139,.15);
-    }
-    .deco-ring-1 { width: 280px; height: 280px; top: 10%; right: 6%; animation: floatY 8s ease-in-out infinite; }
-    .deco-ring-2 { width: 160px; height: 160px; bottom: 18%; right: 22%; animation: floatY 11s ease-in-out infinite reverse; }
-    .deco-ring-3 { width: 80px;  height: 80px;  top: 55%;  right: 4%;  animation: floatY 6s ease-in-out infinite; border-color: rgba(40,121,139,.25); }
-
-    /* Dots */
-    .deco-dot { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(40,121,139,.4); }
-    .deco-dot-1 { width:8px; height:8px; top:25%; right:38%; }
-    .deco-dot-2 { width:5px; height:5px; top:60%; right:45%; animation: pulse 3.5s ease-in-out infinite; }
-    .deco-dot-3 { width:10px;height:10px;top:38%;right:10%; animation: pulse 4.5s ease-in-out infinite .5s; }
-
-    @keyframes floatY {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(-20px); }
-    }
-    @keyframes pulse {
-      0%,100% { opacity: .4; transform: scale(1); }
-      50%     { opacity: 1;  transform: scale(1.3); }
-    }
-
-    /* Brand area */
-    .left-brand {
-      display: flex; align-items: center; gap: 14px;
-      margin-bottom: 52px; position: relative; z-index: 2;
-    }
-    .left-brand-logo {
-      width: 48px; height: 48px; border-radius: 13px;
-      background: var(--primary);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 800; letter-spacing: -1px;
-      box-shadow: 0 8px 24px rgba(40,121,139,.45);
-    }
-    .left-brand-text { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -.4px; }
-    .left-brand-sub  { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
-
-    /* Headline */
-    .left-headline { position: relative; z-index: 2; margin-bottom: 44px; }
-    .left-headline h1 {
-      font-size: 2.5rem; font-weight: 800; line-height: 1.22;
-      color: #fff; letter-spacing: -.6px; margin-bottom: 16px;
-    }
-    .left-headline h1 em {
-      font-style: normal;
-      background: linear-gradient(90deg, #72BCCC, #4898A9, #28798B);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .left-headline p {
-      font-size: 14.5px; color: rgba(255,255,255,.5); line-height: 1.75;
-      max-width: 400px;
-    }
-
-    /* Feature list */
-    .left-features { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 18px; }
-    .left-feature { display: flex; align-items: center; gap: 16px; }
-    .left-feature-icon {
-      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 19px;
-    }
-    .left-feature-icon.blue   { background: rgba(40,121,139,.2);  color: #72BCCC; }
-    .left-feature-icon.cyan   { background: rgba(6,182,212,.15);   color: #67E8F9; }
-    .left-feature-icon.green  { background: rgba(16,185,129,.15);  color: #6EE7B7; }
-    .left-feature-icon.amber  { background: rgba(245,158,11,.15);  color: #FCD34D; }
-    .left-feature-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.9); }
-    .left-feature-desc  { font-size: 11.5px; color: rgba(255,255,255,.38); margin-top: 2px; line-height: 1.5; }
-
-    /* Bottom badges */
-    .left-badges {
-      position: absolute; bottom: 32px; left: 72px;
-      display: flex; gap: 10px; z-index: 2;
-    }
-    .left-badge {
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
-      border-radius: 20px; padding: 5px 12px;
-      font-size: 11.5px; color: rgba(255,255,255,.45);
-    }
-    .left-badge i { font-size: 13px; color: rgba(127,216,228,.7); }
-
-    /* ══════════════════════════════════════
-       RIGHT PANEL
-    ══════════════════════════════════════ */
-    .auth-right {
-      flex: 1;
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      padding: 48px 40px;
-      background: #fff;
-      position: relative; overflow: hidden;
-    }
-
-    .auth-right::before {
-      content: '';
-      position: absolute; top: -100px; right: -100px;
-      width: 300px; height: 300px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(40,121,139,.04) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .auth-right-inner {
-      width: 100%; max-width: 380px;
-      position: relative; z-index: 1;
-    }
-
-    /* Tag */
-    .auth-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--primary-light); border-radius: 20px;
-      padding: 4px 12px; font-size: 11.5px; font-weight: 700;
-      color: var(--primary); margin-bottom: 22px; letter-spacing: .3px;
-    }
-    .auth-tag i { font-size: 13px; }
-
-    .auth-title {
-      font-size: 1.75rem; font-weight: 800;
-      color: var(--text-primary); margin-bottom: 6px; letter-spacing: -.4px;
-    }
-    .auth-subtitle {
-      font-size: 13.5px; color: var(--text-muted);
-      margin-bottom: 30px; line-height: 1.65;
-    }
-
-    /* Error alert */
+    /* 오류 — 시안에 없는 상태. 알림 램프로 칠한다 */
     .alert-error {
-      display: flex; align-items: center; gap: 10px;
-      background: #FEF2F2; border: 1px solid #FECACA;
-      border-left: 3px solid var(--danger);
-      border-radius: 10px; padding: 12px 14px;
-      color: #B91C1C; font-size: 13px; margin-bottom: 22px;
-      animation: shake .35s ease;
-    }
-    @keyframes shake {
-      0%,100% { transform: translateX(0); }
-      20%,60%  { transform: translateX(-4px); }
-      40%,80%  { transform: translateX(4px); }
+      align-self: stretch; margin: -36px 0; display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border: 1px solid var(--alert-100); border-left: 3px solid var(--alert-500);
+      border-radius: 12px; background: var(--alert-50); font-size: 14px; line-height: 1.6; color: var(--gray-900);
     }
 
-    /* Form */
-    .form-group { margin-bottom: 18px; }
-    .form-label {
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 7px;
-    }
-    .form-label a { font-size: 12px; color: var(--primary); font-weight: 500; text-decoration: none; }
-    .form-label a:hover { text-decoration: underline; }
-
-    .input-wrap { position: relative; display: flex; align-items: center; }
-    .input-icon {
-      position: absolute; left: 14px; font-size: 18px;
-      color: var(--text-muted); pointer-events: none; transition: color .2s;
-    }
-    .input-wrap:focus-within .input-icon { color: var(--primary); }
-
-    .form-control {
-      width: 100%; padding: 11px 44px;
-      border: 1.5px solid var(--border); border-radius: var(--radius);
-      font-size: 14px; color: var(--text-primary); background: var(--bg);
-      outline: none; font-family: inherit;
-      transition: border-color .2s, background .2s, box-shadow .2s;
-    }
-    .form-control:focus {
-      border-color: var(--primary); background: #fff;
-      box-shadow: 0 0 0 3px rgba(40,121,139,.1);
-    }
-    .form-control::placeholder { color: #C0C7D0; }
-    .form-error { font-size: 12px; color: var(--danger); margin-top: 5px; }
-
-    /* Password toggle */
-    .pw-toggle {
-      position: absolute; right: 12px;
-      background: none; border: none; color: var(--text-muted);
-      font-size: 18px; cursor: pointer; padding: 4px; line-height: 1;
-      transition: color .18s;
-    }
-    .pw-toggle:hover { color: var(--primary); }
-
-    /* Remember row */
-    .remember-row {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 22px;
-    }
-    .remember-row input[type="checkbox"] {
-      width: 16px; height: 16px;
-      accent-color: var(--primary); cursor: pointer; flex-shrink: 0;
-    }
-    .remember-row label { font-size: 13px; color: #4B5563; cursor: pointer; user-select: none; }
-
-    /* Submit */
-    .btn-login {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 13px;
-      background: var(--primary); color: #fff;
-      border: none; border-radius: var(--radius);
-      font-size: 15px; font-weight: 700; cursor: pointer;
-      font-family: inherit; letter-spacing: -.1px;
-      transition: background .2s, box-shadow .2s, transform .12s;
-      box-shadow: 0 4px 16px rgba(40,121,139,.35);
-    }
-    .btn-login:hover { background: var(--primary-dark); box-shadow: 0 6px 22px rgba(40,121,139,.45); }
-    .btn-login:active { transform: scale(.99); }
-
-    /* Divider */
-    .auth-divider {
-      display: flex; align-items: center; gap: 12px;
-      margin: 22px 0; font-size: 12px; color: var(--text-muted);
-    }
-    .auth-divider::before, .auth-divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
-    }
-
-    /* SSO button */
+    /* Microsoft SSO (505:9457) */
+    .lg-sso { width: 440px; max-width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .btn-sso {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      width: 100%; padding: 11px;
-      background: #fff; border: 1.5px solid var(--border);
-      border-radius: var(--radius); font-size: 14px; font-weight: 600;
-      color: var(--text-primary); cursor: pointer; font-family: inherit;
-      text-decoration: none;
-      transition: border-color .2s, box-shadow .2s, background .2s;
+      width: 100%; height: 50px; display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 0 16px; border: 1px solid var(--gray-200); border-radius: 12px; background: var(--gray-0);
+      font-size: 16px; font-weight: 500; line-height: 27px; color: var(--gray-1000); cursor: pointer;
+      transition: border-color .2s, background-color .2s, box-shadow .2s;
     }
-    .btn-sso:hover {
-      border-color: var(--primary); background: var(--primary-light);
-      box-shadow: 0 2px 10px rgba(40,121,139,.12);
-    }
-    .btn-sso svg { width: 20px; height: 20px; flex-shrink: 0; }
-    .btn-sso-sub { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px; }
+    .btn-sso:hover { border-color: var(--primary-500); background: var(--primary-50); box-shadow: 0 4px 14px rgba(40, 121, 139, .12); }
+    .btn-sso img { width: 20px; height: 20px; flex: none; }
+    .btn-sso-sub { font-size: 14px; font-weight: 400; line-height: 24px; color: var(--gray-500); text-align: center; white-space: nowrap; }
 
-    /* Footer */
-    .auth-right-footer {
-      position: absolute; bottom: 24px; left: 0; right: 0;
-      text-align: center; font-size: 12px; color: var(--text-muted);
+    /* 임시 로그인 (505:9462) — 구분선 · 입력 · 상태 유지 · 단추, 24 간격 */
+    .lg-pw { align-self: stretch; display: flex; flex-direction: column; gap: 24px; }
+    .lg-pw form { display: flex; flex-direction: column; gap: 24px; }
+    .auth-divider { display: flex; align-items: center; gap: 24px; font-size: 14px; font-weight: 400; line-height: 24px; color: var(--gray-700); white-space: nowrap; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1 1 0; height: 1px; background: var(--gray-200); }
+
+    .lg-inputs { display: flex; flex-direction: column; gap: 12px; }
+    .input-wrap { position: relative; }
+    .form-control {
+      width: 100%; height: 50px; padding: 0 16px; border: 1px solid var(--gray-200); border-radius: 12px; background: var(--gray-0);
+      font-size: 16px; font-weight: 400; line-height: 27px; color: var(--gray-1000); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-control::placeholder { color: var(--gray-500); opacity: 1; }
+    .form-control:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(40, 121, 139, .12); }
+    .input-wrap .form-control[type="password"], .input-wrap .form-control.has-toggle { padding-right: 48px; }    .form-error { margin-top: -4px; font-size: 13px; line-height: 1.6; color: var(--alert-500); }
+
+    /* 비밀번호 보기 — 시안에는 없지만 쓰던 기능이라 칸 안 오른쪽에 조용히 둔다 */
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      border: 0; background: none; color: var(--gray-400); font-size: 18px; cursor: pointer; transition: color .2s;
+    }
+    .pw-toggle:hover { color: var(--primary-500); }
+
+    .lg-find { align-self: flex-end; font-size: 14px; font-weight: 400; line-height: 24px; color: var(--primary-700); }
+    .lg-find:hover { text-decoration: underline; }
+
+    /* 로그인 상태 유지 (505:9473) — 22 칸, 청록 1px 테두리, 고르면 청록 체크 */
+    .remember-row { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+      font-size: 16px; font-weight: 500; line-height: 27px; color: var(--primary-500); }
+    .remember-row input { position: absolute; opacity: 0; pointer-events: none; }
+    .lg-check {
+      flex: none; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--primary-500); border-radius: 8px; background: var(--gray-0);
+    }
+    .lg-check::after {
+      content: ''; width: 19.25px; height: 19.25px; opacity: 0; transition: opacity .15s;
+      background: url('{{ asset('images/website/icons/check-login-20.svg') }}') center/contain no-repeat;
+    }
+    .remember-row input:checked + .lg-check::after { opacity: 1; }
+    .remember-row input:focus-visible + .lg-check { box-shadow: 0 0 0 3px rgba(40, 121, 139, .2); }
+
+    .btn-login {
+      width: 100%; height: 50px; display: flex; align-items: center; justify-content: center;
+      padding: 0 16px; border: 0; border-radius: 12px; background: var(--primary-500);
+      font-size: 16px; font-weight: 500; line-height: 27px; color: var(--gray-0); cursor: pointer;
+      transition: background-color .2s, box-shadow .2s;
+    }
+    .btn-login:hover { background: var(--primary-600); box-shadow: 0 8px 22px rgba(11, 92, 110, .28); }
+
+    .auth-footer {
+      position: absolute; left: 0; right: 0; bottom: 24px;
+      text-align: center; font-size: 12px; line-height: 1.6; color: var(--gray-400);
     }
 
-    /* Responsive */
+    /* ── 오른쪽 판 (505:9481) — 그림을 가운데에 ── */
+    .lg-visual { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .lg-visual img { width: 1089.55px; max-width: 100%; height: auto; }
+
+    @media (max-width: 1100px) {
+      .lg-visual img { max-width: calc(100% - 48px); }
+    }
     @media (max-width: 900px) {
-      .auth-left { display: none; }
-      .auth-right { padding: 40px 24px; }
+      body { padding: 12px; }
+      .lg-visual { display: none; }
+      .lg-card { flex: 1 1 auto; width: auto; min-width: 0; padding: 48px 24px 72px; gap: 40px; border-radius: 28px; }
+      .lg-sso { width: 100%; }
+      .alert-error { margin: -24px 0; }
     }
     @media (max-width: 480px) {
-      .auth-right { padding: 32px 20px; }
-      .auth-title { font-size: 1.5rem; }
+      .lg-head h1 { font-size: 26px; }
+      .lg-head p, .btn-sso-sub { white-space: normal; }
     }
   </style>
 </head>
 <body>
 
-  {{-- ══ LEFT PANEL ══ --}}
-  <div class="auth-left">
-    <div class="deco-ring deco-ring-1"></div>
-    <div class="deco-ring deco-ring-2"></div>
-    <div class="deco-ring deco-ring-3"></div>
-    <div class="deco-dot deco-dot-1"></div>
-    <div class="deco-dot deco-dot-2"></div>
-    <div class="deco-dot deco-dot-3"></div>
-
-    {{-- Brand --}}
-    <div class="left-brand">
-      <div class="left-brand-logo">CE</div>
-      <div>
-        <div class="left-brand-text">CE Admin</div>
-        <div class="left-brand-sub">Coloplast Korea</div>
-      </div>
+  {{-- ══ 왼쪽 카드 ══ --}}
+  <main class="lg-card">
+    <div class="lg-head">
+      <h1>로그인</h1>
+      <p>CE Admin에 접속할 계정을 선택하세요.</p>
     </div>
 
-    {{-- Headline --}}
-    <div class="left-headline">
-      <h1>처방전 관리의<br><em>새로운 기준</em></h1>
-      <p>OCR 자동화, 요양비 청구, 실시간 주문 연계까지<br>병원 업무를 하나의 플랫폼에서 처리하세요.</p>
-    </div>
-
-    {{-- Features --}}
-    <div class="left-features">
-      <div class="left-feature">
-        <div class="left-feature-icon blue"><i class="bx bx-scan"></i></div>
-        <div>
-          <div class="left-feature-title">처방전 OCR 자동 인식</div>
-          <div class="left-feature-desc">처방전 이미지를 자동으로 분석하고 데이터를 추출</div>
-        </div>
+    {{-- Error --}}
+    @if ($errors->any())
+      <div class="alert-error">
+        <i class="bx bx-error-circle" style="font-size:20px;flex-shrink:0;color:var(--alert-500);"></i>
+        <span>{{ $errors->first() }}</span>
       </div>
-      <div class="left-feature">
-        <div class="left-feature-icon cyan"><i class="bx bx-plus-medical"></i></div>
-        <div>
-          <div class="left-feature-title">요양비 청구 연동</div>
-          <div class="left-feature-desc">건강보험심사평가원과 실시간 급여 청구 처리</div>
-        </div>
-      </div>
-      <div class="left-feature">
-        <div class="left-feature-icon green"><i class="bx bx-cart-alt"></i></div>
-        <div>
-          <div class="left-feature-title">주문 자동 연계</div>
-          <div class="left-feature-desc">처방 승인 즉시 배송 주문으로 자동 전환</div>
-        </div>
-      </div>
-      <div class="left-feature">
-        <div class="left-feature-icon amber"><i class="bx bx-bar-chart-alt-2"></i></div>
-        <div>
-          <div class="left-feature-title">실시간 통합 대시보드</div>
-          <div class="left-feature-desc">처방·주문·정산 현황을 한눈에 파악</div>
-        </div>
-      </div>
-    </div>
+    @endif
 
-    {{-- Bottom badges --}}
-    <div class="left-badges">
-      <div class="left-badge"><i class="bx bx-shield-quarter"></i> 보안 인증</div>
-      <div class="left-badge"><i class="bx bx-lock-alt"></i> 데이터 암호화</div>
-      <div class="left-badge"><i class="bx bx-time-five"></i> 24/7 운영</div>
-    </div>
-  </div>
-
-  {{-- ══ RIGHT PANEL ══ --}}
-  <div class="auth-right">
-    <div class="auth-right-inner">
-
-      <div class="auth-tag">
-        <i class="bx bx-log-in"></i> 관리자 전용
-      </div>
-
-      <h1 class="auth-title">다시 오셨군요!</h1>
-      <p class="auth-subtitle">CE Admin에 접속할 계정을 선택하세요</p>
-
-      {{-- Error --}}
-      @if ($errors->any())
-        <div class="alert-error">
-          <i class="bx bx-error-circle" style="font-size:20px;flex-shrink:0;"></i>
-          <span>{{ $errors->first() }}</span>
-        </div>
-      @endif
-
-      {{-- Microsoft SSO Button --}}
-      <div id="ssoArea">
+    {{-- Microsoft SSO Button --}}
+    <div id="ssoArea" class="lg-sso">
       <a href="{{ route('sso.redirect') }}" class="btn-sso">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21">
-          <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-          <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-          <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-          <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-        </svg>
+        <img src="{{ asset('images/website/login/ms-logo.png') }}" width="20" height="20" alt="">
         Microsoft 계정으로 로그인
       </a>
-      <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하세요</p>
-      </div>
+      <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하세요.</p>
+    </div>
 
-      {{-- 아이디ㆍ비밀번호 길은 설정으로 여닫는다(설정 › 서비스 연동 설정 › 로그인).
-           끄면 이 자리가 감춰지고 Microsoft 계정만 남는다. 다만 아주 없애지는 않는다 —
-           위 SSO 자리를 여덟 번 잇달아 누르면 다시 나온다. SSO 가 말썽일 때 고칠
-           사람까지 갇히면 안 되기 때문이다. 그때 실제로 들어올 수 있는 것은 관리자
-           뿐이고, 그 가림은 AuthController::store() 가 한다 — 화면을 감추는 것만으로는
-           닫은 것이 아니다. --}}
-      <div id="pwArea" @unless (config('auth.password_login.web', true)) style="display:none" @endunless>
+    {{-- 아이디ㆍ비밀번호 길은 설정으로 여닫는다(설정 › 서비스 연동 설정 › 로그인).
+         끄면 이 자리가 감춰지고 Microsoft 계정만 남는다. 다만 아주 없애지는 않는다 —
+         위 SSO 자리를 여덟 번 잇달아 누르면 다시 나온다. SSO 가 말썽일 때 고칠
+         사람까지 갇히면 안 되기 때문이다. 그때 실제로 들어올 수 있는 것은 관리자
+         뿐이고, 그 가림은 AuthController::store() 가 한다 — 화면을 감추는 것만으로는
+         닫은 것이 아니다. --}}
+    <div id="pwArea" class="lg-pw" @unless (config('auth.password_login.web', true)) style="display:none" @endunless>
       <div class="auth-divider">임시 로그인</div>
 
       <form method="POST" action="{{ route('login.store') }}">
         @csrf
 
-        {{-- Email --}}
-        <div class="form-group">
-          <label class="form-label" for="email">
-            <span>이메일 주소</span>
-          </label>
-          <div class="input-wrap">
-            <i class="bx bx-envelope input-icon"></i>
-            <input type="email" id="email" name="email"
-                   class="form-control"
-                   value="{{ old('email', 'admin@ce-admin.co.kr') }}"
-                   placeholder="admin@example.com"
-                   autofocus>
-          </div>
+        {{-- 시안은 칸 위 이름표 없이 자리표시만 둔다. 이름표는 읽기 도구를 위해 남기고 화면에서만 감춘다. --}}
+        <div class="lg-inputs">
+          <label class="sr-only" for="email">이메일 주소</label>
+          <input type="email" id="email" name="email"
+                 class="form-control"
+                 value="{{ old('email', 'admin@ce-admin.co.kr') }}"
+                 placeholder="이메일 주소 입력"
+                 autofocus>
           @error('email')
             <p class="form-error">{{ $message }}</p>
           @enderror
-        </div>
 
-        {{-- Password --}}
-        <div class="form-group">
-          <label class="form-label" for="password">
-            <span>비밀번호</span>
-            <a href="#">비밀번호 찾기</a>
-          </label>
+          <label class="sr-only" for="password">비밀번호</label>
           <div class="input-wrap">
-            <i class="bx bx-lock-alt input-icon"></i>
             <input type="password" id="password" name="password"
-                   class="form-control"
+                   class="form-control has-toggle"
                    value="12345678"
-                   placeholder="••••••••">
-            <button type="button" class="pw-toggle" onclick="togglePw()">
+                   placeholder="비밀번호 입력">
+            <button type="button" class="pw-toggle" onclick="togglePw()" aria-label="비밀번호 보기">
               <i class="bx bx-show" id="pwToggleIcon"></i>
             </button>
           </div>
           @error('password')
             <p class="form-error">{{ $message }}</p>
           @enderror
+
+          <a class="lg-find" href="#">비밀번호 찾기</a>
         </div>
 
         {{-- Remember --}}
-        <div class="remember-row">
+        <label class="remember-row" for="remember">
           <input type="checkbox" id="remember" name="remember">
-          <label for="remember">로그인 상태 유지</label>
-        </div>
+          <span class="lg-check" aria-hidden="true"></span>
+          로그인 상태 유지
+        </label>
 
         {{-- Submit --}}
-        <button type="submit" class="btn-login">
-          <i class="bx bx-log-in-circle" style="font-size:20px;"></i>
-          로그인
-        </button>
+        <button type="submit" class="btn-login">로그인</button>
       </form>
-      </div>
-
     </div>
 
-    <div class="auth-right-footer">
-      © {{ date('Y') }} Coloplast Korea · CE Admin v2.0
+    {{-- 시안 바닥글과 같은 ⓒ (U+24D2) --}}
+    <div class="auth-footer">
+      ⓒ {{ date('Y') }} Coloplast Korea · CE Admin v2.0
     </div>
+  </main>
+
+  {{-- ══ 오른쪽 판 ══ --}}
+  <div class="lg-visual" aria-hidden="true">
+    <img src="{{ asset('images/website/login/illustration.svg') }}" width="1090" height="800" alt="">
   </div>
 
   <script>
