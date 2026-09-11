@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ErrorLog;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -190,8 +191,21 @@ class ErrorRecorder
         return implode("\n", $줄);
     }
 
+    /**
+     * 어디서 났는가.
+     *
+     * 명령줄에서 난 것은 주소가 없다 — 스케줄러ㆍ큐ㆍ손으로 돌린 명령이 그렇다.
+     * 그런데 `Request::fullUrl()` 은 그때도 APP_URL 을 돌려주어, 화면에서 보면
+     * 누가 그 주소를 열어 터진 것으로 읽힌다 (2026-09-11 확인). 무엇으로 돌렸는지
+     * 적어 둔다 — 되짚을 때 그것부터 알아야 한다.
+     */
     private static function 주소(): ?string
     {
+        if (App::runningInConsole()) {
+            $명령 = self::안전하게(fn () => implode(' ', array_slice((array) ($_SERVER['argv'] ?? []), 0, 6)));
+            return mb_substr('명령줄' . ($명령 ? ' : ' . $명령 : ''), 0, 500);
+        }
+
         return mb_substr((string) self::안전하게(fn () => Request::fullUrl()), 0, 500) ?: null;
     }
 

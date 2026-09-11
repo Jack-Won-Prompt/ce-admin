@@ -51,6 +51,15 @@ class ClientErrorController extends Controller
             return response()->json(['success' => true, 'skipped' => 'extension']);
         }
 
+        /* 「ResizeObserver loop …」 은 브라우저가 자리를 다시 재느라 내는 소리다 (2026-09-11).
+
+           화면이 그려지는 동안 크기가 한 번 더 바뀌면 브라우저가 다음 차례로 미루면서
+           이 말을 낸다. 잘못이 아니라 알림이고, 우리가 고칠 것도 없다. 그런데도 화면을
+           옮길 때마다 쌓여, 하루 만에 담당자 목록의 절반을 차지했다. 담지 않는다. */
+        if (str_starts_with($글월, 'ResizeObserver loop')) {
+            return response()->json(['success' => true, 'skipped' => 'resize_observer']);
+        }
+
         $갈래 = $값['kind'] ?: '브라우저 오류';
         $파일 = (string) ($값['file'] ?? '');
         $줄   = (int) ($값['line'] ?? 0);
