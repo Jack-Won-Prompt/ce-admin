@@ -28,12 +28,12 @@ class ErrorLog extends Model
         'checked_at' => 'datetime',
     ];
 
-    /** 살펴본 자취 — 담당자가 붙이는 딱지 */
+    /** 처리 상태 — 담당자가 붙이는 표시 */
     public const 상태 = [
-        'open'    => '확인 전',
-        'checked' => '확인함',
-        'fixed'   => '고침',
-        'ignored' => '두고 봄',
+        'open'    => '미확인',
+        'checked' => '확인',
+        'fixed'   => '조치 완료',
+        'ignored' => '보류',
     ];
 
     public const 상태색 = [

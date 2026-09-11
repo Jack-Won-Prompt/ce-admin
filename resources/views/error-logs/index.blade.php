@@ -41,9 +41,9 @@
         </div>
       </div>
       <div class="ds-field">
-        <label>갈래</label>
+        <label>오류 유형</label>
         <select name="kind" class="form-control">
-          <option value="">전체 갈래</option>
+          <option value="">전체 유형</option>
           @foreach($갈래들 as $k)
             <option value="{{ $k->kind }}" @selected($kind === $k->kind)>
               {{ $k->kind }} ({{ number_format($k->h) }})
@@ -61,7 +61,7 @@
         </select>
       </div>
       <div class="ds-field">
-        <label>살펴본 상태</label>
+        <label>처리 상태</label>
         <select name="status" class="form-control">
           <option value="">전체 상태</option>
           @foreach($상태표 as $코 => $말)
@@ -72,7 +72,7 @@
       <div class="ds-field" style="flex:1 1 240px;">
         <label>검색어</label>
         <input type="text" name="q" value="{{ $q }}" class="form-control"
-               placeholder="글월ㆍ주소ㆍ파일ㆍ화면 이름ㆍ사람">
+               placeholder="오류 내용ㆍ주소ㆍ파일ㆍ화면 이름ㆍ사용자">
       </div>
       <div class="ds-field ds-field-btns">
         <a href="{{ route('error-logs.index') }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
@@ -90,12 +90,12 @@
         <span class="pnl-tab-cnt">(총 {{ number_format($셈['all']) }}건)</span>
       </span>
       <span style="margin-left:auto;" class="el-sum">
-        <span class="el-chip el-open">확인 전 {{ number_format($셈['open']) }}</span>
-        <span class="el-chip el-fixed">난 횟수 {{ number_format($셈['hit']) }}</span>
+        <span class="el-chip el-open">미확인 {{ number_format($셈['open']) }}</span>
+        <span class="el-chip el-fixed">발생 횟수 {{ number_format($셈['hit']) }}</span>
         <span class="el-chip el-check">서버 오류 {{ number_format($셈['server']) }}</span>
         <button type="button" class="ds-btn" onclick="window.__elGrid?.downloadExcel()">엑셀 다운</button>
         @if((auth()->user()->role ?? '') === 'admin')
-          <button type="button" class="ds-btn" onclick="elPurge()">오래된 것 비우기</button>
+          <button type="button" class="ds-btn" onclick="elPurge()">오래된 기록 삭제</button>
         @endif
       </span>
     </div>
@@ -133,7 +133,7 @@
 
   const 딱지 = (v) => {
     const s = document.createElement('span');
-    const 반 = { '확인 전': 'el-open', '확인함': 'el-check', '고침': 'el-fixed', '두고 봄': 'el-ign' };
+    const 반 = { '미확인': 'el-open', '확인': 'el-check', '조치 완료': 'el-fixed', '보류': 'el-ign' };
     s.className = 'el-chip ' + (반[v] || 'el-ign');
     s.textContent = v;
     return s;
@@ -152,15 +152,15 @@
     height: 'auto', editable: false, rowCheckbox: false, rowNumber: true,
     toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
-      { header: '마지막에 난 때', name: 'at',      width: 160, align: 'center', sortable: true },
-      { header: '갈래',           name: 'kind',    width: 150, sortable: true },
+      { header: '최근 발생 일시', name: 'at',      width: 160, align: 'center', sortable: true },
+      { header: '오류 유형',      name: 'kind',    width: 170, sortable: true },
       { header: '응답코드',       name: 'status',  width: 90,  align: 'center', sortable: true },
-      { header: '까닭',           name: 'message', width: 340, sortable: true },
-      { header: '난 자리',        name: 'where',   width: 280, sortable: true },
+      { header: '오류 내용',      name: 'message', width: 340, sortable: true },
+      { header: '발생 위치',      name: 'where',   width: 280, sortable: true },
       { header: '화면',           name: 'route',   width: 160, sortable: true },
-      { header: '겪은 사람',      name: 'user',    width: 100, align: 'center', sortable: true },
-      { header: '난 횟수',        name: 'hit',     width: 90,  align: 'center', sortable: true, renderer: 횟수칸 },
-      { header: '살펴봄',         name: 'state',   width: 90,  align: 'center', sortable: true, renderer: 딱지 },
+      { header: '사용자',         name: 'user',    width: 100, align: 'center', sortable: true },
+      { header: '발생 횟수',      name: 'hit',     width: 90,  align: 'center', sortable: true, renderer: 횟수칸 },
+      { header: '처리 상태',      name: 'state',   width: 100, align: 'center', sortable: true, renderer: 딱지 },
     ],
     data: ROWS,
   });
@@ -194,22 +194,22 @@
       .map(([k, v]) => `<option value="${k}" ${k === d.state ? 'selected' : ''}>${v}</option>`).join('');
 
     document.getElementById('elBody').innerHTML =
-      토막('까닭', d.message) +
-      토막('난 자리', `${d.file ?? '-'}:${d.line ?? ''}`, true) +
-      토막('예외 갈래', d.exception, true) +
+      토막('오류 내용', d.message) +
+      토막('발생 위치', `${d.file ?? '-'}:${d.line ?? ''}`, true) +
+      토막('예외 클래스', d.exception, true) +
       토막('주소', `${d.method ?? ''} ${d.url ?? '-'}`, true) +
       토막('화면 이름', d.route, true) +
-      토막('겪은 사람 · 자리', `${d.user ?? '-'} · ${d.ip ?? '-'}`, true) +
-      토막('처음 난 때 · 마지막에 난 때 · 난 횟수',
+      토막('사용자 · 접속 IP', `${d.user ?? '-'} · ${d.ip ?? '-'}`, true) +
+      토막('최초 발생 · 최근 발생 · 발생 횟수',
            `${d.first_at ?? '-'} · ${d.last_at ?? '-'} · ${Number(d.hit).toLocaleString('ko-KR')}회`, true) +
-      토막('보낸 값', d.input) +
-      토막('쌓인 자취', d.trace) +
+      토막('요청 값', d.input) +
+      토막('호출 경로', d.trace) +
       `<div style="border-top:1px solid var(--border);padding-top:12px;">
-         <p class="el-label">살펴본 자취</p>
+         <p class="el-label">처리 상태</p>
          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
            <select id="elState" class="form-control" style="width:130px;">${고르개}</select>
            <input type="text" id="elMemo" class="form-control" style="flex:1 1 240px;"
-                  placeholder="남길 말 (선택)" value="${(d.memo ?? '').replace(/"/g, '&quot;')}">
+                  placeholder="처리 메모 (선택)" value="${(d.memo ?? '').replace(/"/g, '&quot;')}">
            <button type="button" class="ds-btn ds-btn-primary" onclick="elMark(${d.id})">저장</button>
          </div>
          ${d.checked ? `<div style="margin-top:6px;font-size:11.5px;color:var(--text-muted);">
@@ -243,7 +243,7 @@
   };
 
   window.elPurge = async function () {
-    if (!confirm('180일보다 오래된 기록을 지웁니다. 되돌릴 수 없습니다.')) return;
+    if (!confirm('180일보다 오래된 기록을 삭제합니다. 되돌릴 수 없습니다.')) return;
     const res = await fetch('/settings/error-logs/purge', {
       method: 'POST',
       headers: {

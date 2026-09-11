@@ -139,7 +139,7 @@ class ErrorLogController extends Controller
         return response()->json([
             'success' => true,
             'state'   => $errorLog->status_label,
-            'message' => '「' . $errorLog->status_label . '」으로 두었습니다.',
+            'message' => '처리 상태를 「' . $errorLog->status_label . '」로 저장했습니다.',
         ]);
     }
 
@@ -152,12 +152,12 @@ class ErrorLogController extends Controller
         $지움 = ErrorLog::where('last_at', '<', now()->subDays($날))->delete();
 
         activity()->causedBy(Auth::user())
-            ->log("오류 기록 비움: {$날}일보다 오래된 {$지움}건");
+            ->log("오류 기록 삭제: {$날}일보다 오래된 {$지움}건");
 
         return response()->json([
             'success' => true,
             'deleted' => $지움,
-            'message' => "{$날}일보다 오래된 {$지움}건을 비웠습니다.",
+            'message' => "{$날}일보다 오래된 {$지움}건을 삭제했습니다.",
         ]);
     }
 }
