@@ -1703,6 +1703,24 @@
         </div></div>
         @endif
 
+        {{-- ══ 운영 데이터 ══
+             기존 업무 흐름과 잇지 않고 따로 모으는 것들 (2026-09-11 지시) --}}
+        @if($vis('delegation-signs'))
+        <div class="menu-group" data-menu-group="opdata">
+        <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
+          <span>운영 데이터</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
+        </button>
+        <div class="menu-group-items">
+        <div class="menu-item {{ request()->routeIs('delegation-signs*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="signature" href="{{ route('delegation-signs.index') }}" data-title="위임장 서명">
+            @dsicon('signature', 'ds-icon menu-icon')
+            <span>위임장 서명</span>
+          </a>
+        </div>
+        </div>
+        </div>
+        @endif
+
         {{-- ══ 지원 ══ --}}
         @if($vis('institutional-notices', 'notices', 'inquiries', 'service-requests'))
         <div class="menu-group" data-menu-group="support">

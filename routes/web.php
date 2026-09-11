@@ -605,6 +605,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/prescription-consents', [\App\Http\Controllers\PrescriptionConsentController::class, 'store'])
         ->name('prescription-consents.store');
 
+    /* 운영 데이터 › 위임장 서명 (2026-09-11 지시).
+
+       기존 처방ㆍ주문ㆍ거래처와 잇지 않는 별도 기능이다. 표 하나와 폴더 하나로
+       닫혀 있어, 운영 서버로는 그 둘만 옮긴다. */
+    Route::prefix('delegation-signs')->name('delegation-signs.')->group(function () {
+        Route::get('/',                 [\App\Http\Controllers\DelegationSignController::class, 'index'])->name('index');
+        Route::post('/import',          [\App\Http\Controllers\DelegationSignController::class, 'import'])->name('import');
+        Route::get('/{delegationSign}', [\App\Http\Controllers\DelegationSignController::class, 'show'])->name('show');
+        Route::post('/{delegationSign}/send',  [\App\Http\Controllers\DelegationSignController::class, 'send'])->name('send');
+        Route::get('/{delegationSign}/image',  [\App\Http\Controllers\DelegationSignController::class, 'image'])->name('image');
+    });
+
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리
     Route::get('/privacy-consents',          [PrivacyConsentAdminController::class, 'index'])->name('privacy-consents.index');
     Route::get('/privacy-consents/export',   [PrivacyConsentAdminController::class, 'export'])->name('privacy-consents.export');
@@ -624,6 +636,18 @@ Route::prefix('consent')->name('consent.')->group(function () {
     // NICE 본인확인: 표준창 파라미터 발급(자기 페이지 fetch) / NICE returnurl 콜백(외부)
     Route::post('/{token}/nice/start', [ConsentController::class, 'niceStart'])->name('nice.start');
     Route::match(['get', 'post'], '/{token}/nice/callback', [ConsentController::class, 'niceCallback'])->name('nice.callback');
+});
+
+/* 운영 데이터 › 위임장 서명 — 공개 페이지 (로그인 불필요 — 문자 링크).
+
+   /consent 와 겉모습은 같되 코드가 따로다. 그쪽은 처방전을 물고 있어 거래처만으로는
+   설 수 없다 (2026-09-11 지시). */
+Route::prefix('delegation')->name('delegation.')->group(function () {
+    Route::get( '/{token}', [\App\Http\Controllers\DelegationSignPublicController::class, 'show'])->name('show');
+    Route::post('/{token}', [\App\Http\Controllers\DelegationSignPublicController::class, 'submit'])->name('submit');
+    Route::post('/{token}/nice/start', [\App\Http\Controllers\DelegationSignPublicController::class, 'niceStart'])->name('nice.start');
+    Route::match(['get', 'post'], '/{token}/nice/callback',
+        [\App\Http\Controllers\DelegationSignPublicController::class, 'niceCallback'])->name('nice.callback');
 });
 
 // 개인정보 수집·이용 동의서 (mcoloplast) 공개 페이지 (로그인 불필요 — 환자 직접 작성)

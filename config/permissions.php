@@ -37,6 +37,7 @@ return [
         'billing'  => '청구 · 회계',
         'docs'     => '서류 · 동의',
         'dispatch' => '발송 · 내역',
+        'opdata'   => '운영 데이터',
         'support'  => '지원',
         'settings' => '설정',
     ],
@@ -51,6 +52,18 @@ return [
     | admin_only : true 면 role=admin 만 접근(그룹 권한과 무관). 권한 관리 화면 잠김 방지용.
     */
     'pages' => [
+
+        /* 운영 데이터 › 위임장 서명 (2026-09-11 지시).
+
+           기존 처방ㆍ주문ㆍ거래처와 잇지 않는 별도 기능이다. 보내는 일은 밖으로
+           나가는 문자라 send 로 따로 통제한다. */
+        'delegation-signs' => [
+            'label'   => '위임장 서명',
+            'group'   => 'opdata',
+            'routes'  => ['delegation-signs'],
+            'actions' => ['view', 'create', 'send'],
+        ],
+
 
         'dashboard' => [
             'label'   => '대시보드',
