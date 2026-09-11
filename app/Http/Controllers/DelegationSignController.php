@@ -40,12 +40,6 @@ class DelegationSignController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('signed')) {
-            $request->signed === 'y'
-                ? $query->whereNotNull('signed_at')
-                : $query->whereNull('signed_at');
-        }
-
         if ($request->filled('sender')) {
             $query->where('sent_by_id', $request->sender);
         }

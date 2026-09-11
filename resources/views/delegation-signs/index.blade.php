@@ -86,14 +86,6 @@
       </select>
     </div>
     <div class="ds-filter-field">
-      <label class="ds-field-label">서명 여부</label>
-      <select name="signed" class="form-control form-select">
-        <option value="">전체</option>
-        <option value="y" @selected(request('signed') === 'y')>서명 완료</option>
-        <option value="n" @selected(request('signed') === 'n')>서명 전</option>
-      </select>
-    </div>
-    <div class="ds-filter-field">
       <label class="ds-field-label">판매처</label>
       <select name="dealer" class="form-control form-select">
         <option value="">전체 판매처</option>
