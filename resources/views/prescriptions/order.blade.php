@@ -12299,6 +12299,14 @@ window.HELP_TOUR_STEPS = [
       }
 
       showToast(out.message, 'success');
+
+      /* 떠나는 동안 나는 소리는 삼킨다 (2026-09-11).
+
+         지운 뒤 목록으로 옮겨가는 잠깐 사이, 이 화면이 걸어 둔 부름들이 이미 없는
+         처방전을 찾다가 실패한다 — 그때마다 「처리 중 오류가 발생했습니다」가 떠서,
+         제대로 지워 놓고도 잘못된 것처럼 보였다. 지운 뒤에 들리는 소리는 더 알릴
+         것이 없다. */
+      window.showToast = () => {};
       setTimeout(() => { location.href = @json(route('prescriptions.index')); }, 900);
     } catch (e) {
       BtnState.reset(btn);
