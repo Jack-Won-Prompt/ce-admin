@@ -588,7 +588,9 @@ class OrderReturnController extends Controller
         /* 조정 금액을 적지 않고 금액조정으로 넘어가면, 얼마로 조정한 것인지 아무 데도
            남지 않는다. 창고에 세우는 조정 주문의 적요에도 빈칸이 가고, 그 뒤로는
            원 주문과 반품 줄을 놓고 다시 셈하는 수밖에 없다(2026-09-02 유형표). */
-        if ($to === 'adjusted' && $orderReturn->adjust_amount === null) {
+        /* 0 원도 적지 않은 것으로 본다 (2026-09-11 고침). 조정 방향은 환불이거나
+           추가 입금인데, 그 금액이 0 이면 어느 쪽도 아니다 — 조정할 것이 없다. */
+        if ($to === 'adjusted' && ! (int) $orderReturn->adjust_amount) {
             return back()->withErrors(['to_status' =>
                 '조정 금액을 먼저 적어 주십시오 — 아래 「금액조정」 칸에 얼마를 돌려주는지(또는 더 받는지) 적고 저장합니다.']);
         }
@@ -685,9 +687,13 @@ class OrderReturnController extends Controller
             return back()->withErrors(['adjust' => '조정할 것이 없는 건입니다 — 전부를 되돌리는 건은 발행을 통째로 무릅니다.']);
         }
 
+        /* 0 원은 받지 않는다 (2026-09-11 고침). 여태 min:0 이라 0 이 저장됐고, 단계를
+           옮기는 자리에서는 「적지 않은 것」과 갈리지 않아 그대로 지나갔다. */
         $data = $request->validate([
-            'adjust_amount'    => ['required', 'integer', 'min:0', 'max:100000000'],
+            'adjust_amount'    => ['required', 'integer', 'min:1', 'max:100000000'],
             'adjust_direction' => ['required', Rule::in(array_keys(OrderReturn::ADJ_DIRECTIONS))],
+        ], [
+            'adjust_amount.min' => '조정 금액은 1원 이상이어야 합니다 — 돌려주거나 더 받을 것이 없으면 이 단계를 밟지 않습니다.',
         ]);
 
         $orderReturn->update($data);

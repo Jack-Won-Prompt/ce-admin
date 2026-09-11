@@ -449,13 +449,24 @@
             <option value="{{ $k }}" @selected(($r->adjust_direction ?? 'refund') === $k)>{{ $v }}</option>
           @endforeach
         </select>
-        <input type="number" name="adjust_amount" min="0" step="1" class="form-control"
+        {{-- 셈이 0 이면 비워 둔다 (2026-09-11 고침).
+
+             되돌린 줄에서 세므로, 물건이 오가지 않는 건(자격 변경)은 늘 0 이 나온다.
+             그 0 을 칸에 적어 두면 「확인 후 저장」이 「그대로 저장」이 되어, 얼마를
+             더 받아야 하는지 정해지지 않은 채 넘어간다. 빈 칸은 적어야 할 것으로
+             보이고, 0 은 정해진 것으로 보인다. --}}
+        @php $미리 = $r->adjust_amount ?? ($r->adjustedAmount() ?: null); @endphp
+        <input type="number" name="adjust_amount" min="1" step="1" class="form-control"
                style="width:120px;height:30px;font-size:12px;padding:2px 6px;text-align:right;"
-               value="{{ $r->adjust_amount ?? $r->adjustedAmount() }}"
+               value="{{ $미리 }}"
                placeholder="원">
         <button type="submit" class="ds-btn ds-btn-sm">저장</button>
         @if($r->adjust_amount === null)
-          <span style="font-size:11px;color:var(--text-muted);">항목에서 계산한 값입니다 — 확인 후 저장하십시오.</span>
+          <span style="font-size:11px;color:var(--text-muted);">
+            {{ $미리 === null
+               ? '되돌린 줄이 없어 셈하지 못합니다 — 얼마를 조정하는지 직접 적으십시오.'
+               : '항목에서 계산한 값입니다 — 확인 후 저장하십시오.' }}
+          </span>
         @endif
       </form>
     @endif
