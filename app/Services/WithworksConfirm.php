@@ -31,6 +31,20 @@ final class WithworksConfirm
             return ['ok' => false, 'message' => '창고에 판매주문이 아직 등록되지 않아 확정하지 못했습니다.'];
         }
 
+        /* 이미 확정된 것은 다시 부르지 않는다 (2026-09-11 확인).
+
+           출고 웹훅이 닿으면 미뤄 둔 발행을 낸다 — 그 자리를 웹훅과 훑기 둘이 부르고,
+           둘 다 끝에서 여기로 온다. 그래서 출고까지 끝난 판매주문에 확정이 두 번 더
+           나갔고, 주문 이력에는 같은 줄이 세 번 쌓였다. 담당자는 그것을 「세 번 발행
+           했나」로 읽는다.
+
+           보낼 것이 없으면 창고를 부르지 않는다. 95 는 확정, 99 는 취소다 — 취소된
+           건에 확정을 다시 밀어 넣지도 않는다. */
+        $이미 = (string) $order->withworks_status;
+        if (in_array($이미, ['95', '99'], true)) {
+            return ['ok' => true, 'message' => '창고 판매주문은 이미 ' . ($order->withworks_status_label ?: $이미) . ' 입니다.'];
+        }
+
         $baseUrl = rtrim((string) config('services.demoworks.api_url'), '/');
         $token   = config('services.demoworks.token');
 
