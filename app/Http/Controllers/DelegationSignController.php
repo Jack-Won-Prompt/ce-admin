@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DelegationSign;
-use App\Services\Popbill\MessageService;
+use App\Services\MessageSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +19,7 @@ use Illuminate\View\View;
  */
 class DelegationSignController extends Controller
 {
-    public function __construct(private MessageService $sender)
+    public function __construct(private readonly MessageSender $sender)
     {
     }
 
