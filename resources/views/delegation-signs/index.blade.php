@@ -189,7 +189,10 @@
     </div>
     <div class="modal-bd">
       <div class="dlg-kv"><span>거래처</span><b id="dlgCustomer"></b></div>
-      <div class="dlg-kv"><span>판매처</span><span id="dlgDealer"></span></div>
+      {{-- 판매처는 늘 콜로플라스트 코리아다 (2026-09-11 지시). 명단의 판매처는
+           하이메드ㆍ(주)서호메디코로 갈리지만, 링크를 받은 사람이 보는 위임 상대는
+           한 곳뿐이다 — 보내기 전 창에도 그 한 곳을 적어 말이 어긋나지 않게 한다. --}}
+      <div class="dlg-kv"><span>판매처</span><span id="dlgDealer">콜로플라스트 코리아(주)</span></div>
       <div class="dlg-kv"><span>받을 번호</span><b id="dlgPhone"></b></div>
 
       <div class="dlg-field">
@@ -339,7 +342,6 @@
 
     지금 = d;
     document.getElementById('dlgCustomer').textContent = d.customer;
-    document.getElementById('dlgDealer').textContent = d.dealer || '—';
     document.getElementById('dlgPhone').textContent = d.phone || '—';
     document.getElementById('dlgName').value = d.customer;
 
