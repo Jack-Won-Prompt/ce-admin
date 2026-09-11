@@ -17,6 +17,7 @@ use App\Services\TossPayments\VirtualAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use App\Events\ChatMessageSent;
 use App\Models\ChatMessage;
@@ -817,28 +818,26 @@ class PrescriptionController extends Controller
      */
     public function create(Request $request): RedirectResponse
     {
-        $draft = Prescription::blankDraftsOf(Auth::id())->latest()->first();
+        /* 한 사람에게 초안은 하나다 (2026-09-11 보탬).
 
-        if ($draft) {
-            /* 아직 아무것도 안 적힌 초안은 다시 쓴다 — 누를 때마다 빈 행이 쌓이면 목록이 지저분해진다.
-               다만 며칠 전 것이라면 번호와 접수일을 오늘 것으로 새로 매긴다. 그대로 두면
-               처방번호에 박힌 날짜가 실제 접수일과 어긋난다(RX-20260807-001 을 8/15 에 접수).
-               빈 초안이라 되돌아볼 내용이 없으므로 접수일을 옮겨도 잃는 것이 없다.
-               saveQuietly — 저장 훅이 '내용이 생겼다'고 보고 초안 표시를 풀어 버린다. */
-            if (!$draft->created_at->isToday()) {
-                $draft->forceFill([
-                    'rx_number'  => Prescription::generateRxNumber(),
-                    'created_at' => now(),
-                ])->saveQuietly();
+           「찾고 → 없으면 만든다」 사이에 틈이 있다. 단추를 겹눌렀거나 탭을 둘 열었거나
+           새로고침이 겹치면 두 요청이 나란히 「없다」를 보고 둘 다 만든다 — 그럴 때마다
+           처방번호가 하나씩 헛되이 나간다. 사람마다 빗장을 걸어 그 틈을 없앤다.
+
+           빗장을 잡지 못해도 일은 이어 간다 — 초안 하나 더 서는 것이 화면이 열리지
+           않는 것보다 낫다. 아래 자가 정리가 그것을 거둔다. */
+        $자물쇠 = Cache::lock('rx-draft:' . Auth::id(), 10);
+        $잡음   = false;
+
+        try {
+            $잡음  = $자물쇠->block(5);
+            $draft = $this->빈초안잡기();
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            $draft = $this->빈초안잡기();
+        } finally {
+            if ($잡음) {
+                $자물쇠->release();
             }
-        } else {
-            $draft = Prescription::create([
-                'rx_number'      => Prescription::generateRxNumber(),
-                'created_by'     => Auth::id(),
-                'status'         => 'pending',
-                'upload_source'  => 'web',
-                'is_blank_draft' => true,
-            ]);
         }
 
         /* 누구의 상담인지 정해 놓고 들어오는 길이 있다(거래처 관리의 「상담하기」).
@@ -872,6 +871,48 @@ class PrescriptionController extends Controller
             'prescription' => $draft->rx_number,
             'popup'        => $request->boolean('popup') ? 1 : null,
         ]));
+    }
+
+    /**
+     * 내 빈 초안을 하나 잡는다 — 있으면 다시 쓰고, 없으면 세운다.
+     *
+     * 빗장 안에서 부른다. 둘 이상 서 있으면 가장 나중 것만 남기고 거둔다 — 빗장이
+     * 서기 전에 쌓인 것과, 빗장을 잡지 못한 요청이 만든 것이 여기서 정리된다.
+     * 빈 초안에는 주문도 첨부도 동의도 없으므로(scopeBlankDraft) 거둬도 잃는 것이 없다.
+     */
+    private function 빈초안잡기(): Prescription
+    {
+        $것들 = Prescription::blankDraftsOf(Auth::id())->latest('id')->get();
+        $draft = $것들->shift();
+
+        foreach ($것들 as $여분) {
+            activity()->causedBy(Auth::user())->performedOn($여분)
+                ->log("빈 초안 정리 ({$여분->rx_number}) — 내 초안은 하나만 둔다");
+            $여분->delete();
+        }
+
+        if (! $draft) {
+            return Prescription::create([
+                'rx_number'      => Prescription::generateRxNumber(),
+                'created_by'     => Auth::id(),
+                'status'         => 'pending',
+                'upload_source'  => 'web',
+                'is_blank_draft' => true,
+            ]);
+        }
+
+        /* 며칠 전 것이라면 번호와 접수일을 오늘 것으로 새로 매긴다. 그대로 두면
+           처방번호에 박힌 날짜가 실제 접수일과 어긋난다(RX-20260807-001 을 8/15 에 접수).
+           빈 초안이라 되돌아볼 내용이 없으므로 접수일을 옮겨도 잃는 것이 없다.
+           saveQuietly — 저장 훅이 '내용이 생겼다'고 보고 초안 표시를 풀어 버린다. */
+        if (! $draft->created_at->isToday()) {
+            $draft->forceFill([
+                'rx_number'  => Prescription::generateRxNumber(),
+                'created_at' => now(),
+            ])->saveQuietly();
+        }
+
+        return $draft;
     }
 
     // ── 웹에서 직접 업로드 ────────────────────────────────
