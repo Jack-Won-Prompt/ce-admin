@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>건강보험 급여 위임동의</title>
+  {{-- 위임이 없는 갈래(처방외ㆍ산재ㆍ자동차보험)는 개인정보 동의만 받는다 --}}
+  <title>{{ ($위임필요 ?? true) ? '건강보험 급여 위임동의' : '개인정보 수집·이용 동의' }}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -1620,7 +1621,7 @@ async function submitConsent(action) {
     if (data.success) {
       clearInterval(timer);
       if (action === 'agreed') {
-        showResult('✅', '동의가 완료되었습니다', '건강보험 급여 위임동의가 정상적으로 접수되었습니다.\n이 창을 닫으셔도 됩니다.', '#12B76A');
+        showResult('✅', '동의가 완료되었습니다', @json(($위임필요 ?? true) ? '건강보험 급여 위임동의가 정상적으로 접수되었습니다.' : '개인정보 수집·이용 동의가 정상적으로 접수되었습니다.') + '\n이 창을 닫으셔도 됩니다.', '#12B76A');
       } else {
         showResult('❌', '거절 처리되었습니다', '위임동의를 거절하셨습니다.\n문의 사항은 담당자에게 연락주세요.', '#6b7280');
       }

@@ -539,6 +539,10 @@ Route::middleware(['auth'])->group(function () {
        오류는 그 화면을 볼 권한이 없는 사람에게도 나기 때문이다(2026-09-11 지시). */
     Route::post('/client-errors', [\App\Http\Controllers\ClientErrorController::class, 'store'])->name('client-errors.store');
 
+    /* 창고로 보내다 막힌 까닭을 남기는 자리 (2026-09-11 지시).
+       주문 화면을 쓰는 사람이면 누구나 부른다 — 오류 기록과 같은 까닭으로 따로 둔다. */
+    Route::post('/orders/blocked', [\App\Http\Controllers\OrderBlockedController::class, 'store'])->name('orders.blocked');
+
     Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
     Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
 

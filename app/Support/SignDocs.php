@@ -50,10 +50,19 @@ final class SignDocs
                 '수집·이용 목적과 항목, 제3자 제공을 확인하고 항목마다 동의합니다.');
         }
 
-        /* 위임장 — 지자체 건에는 위임 절차가 아예 없다(2026-08-31 회신).
-           청구처를 아직 고르지 않은 건은 보여 준다. 이 화면이 본디 그 서류의 자리다. */
+        /* 위임장 — 우리가 대신 청구하는 건에만 보여 준다.
+
+           지자체 건에는 위임 절차가 아예 없고(2026-08-31 회신), 처방외ㆍ산재ㆍ
+           자동차보험은 환자가 보험사ㆍ근로복지공단에 직접 내므로 위임할 일이 없다
+           (2026-09-11 바로잡음). 여태는 청구처만 보아, 처방외 건에도 위임장과
+           등록신청서를 내밀었다 — 받을 수 없는 동의를 청하는 꼴이었다.
+
+           누가 내는지는 청구전략 표가 안다. 주문 화면의 gateConsent 와 같은 잣대다. */
+        $위임필요 = BillingStrategy::needsDelegation(
+            $rx?->counsel_acc_add_type, $rx?->benefit_class
+        );
         $청구처 = $rx?->claim_agency ?: ClaimAgency::fromBenefitClass($rx?->benefit_class);
-        if (! in_array($청구처, [ClaimAgency::LOCAL, ClaimAgency::NONE], true)) {
+        if ($위임필요 && ! in_array($청구처, [ClaimAgency::LOCAL, ClaimAgency::NONE], true)) {
             $목록[] = self::줄(self::위임장, 'pdf',
                 '급여비용을 콜로플라스트 코리아가 대신 청구하고 받는 것에 대한 위임입니다.');
         }
@@ -64,8 +73,11 @@ final class SignDocs
                 '얼마를 청구하는지 적어 시군구청에 내는 서류입니다.');
         }
 
-        /* 등록 신청서 — 공단 등록ㆍ재등록을 진행 중인 건만 */
-        if (in_array((string) ($pt?->nhis_reg_status ?? ''), ['신규 등록 진행중', '재등록 진행중'], true)) {
+        /* 등록 신청서 — 공단 등록ㆍ재등록을 진행 중인 건만.
+           위임이 필요 없는 갈래(처방외ㆍ산재ㆍ자동차보험)는 공단에 낼 일이 없으므로
+           이 서류도 보여 주지 않는다(2026-09-11 바로잡음). */
+        if ($위임필요
+            && in_array((string) ($pt?->nhis_reg_status ?? ''), ['신규 등록 진행중', '재등록 진행중'], true)) {
             $목록[] = self::줄(self::등록신청서, 'pdf',
                 '자가도뇨 소모성 재료 급여 대상자로 등록하기 위해 공단에 내는 서류입니다.');
         }

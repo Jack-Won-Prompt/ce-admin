@@ -8980,9 +8980,36 @@ window.HELP_TOUR_STEPS = [
 
       청구전략은 여기에 넣지 않는다 — 저장까지 막으면 적어 둔 것이 날아간다.
       창고로 보내는 자리(createOrder)에서만 본다. */
+  /**
+   * 막힌 까닭을 담당자에게 남긴다 (2026-09-11 지시).
+   *
+   * 여태는 그 자리 사람에게 창이 하나 뜨고 끝이었다. 창을 닫으면 아무 데도 남지
+   * 않아, 나중에 「왜 안 나갔지」를 되짚을 수 없었다. 이제 주문 이력에 적고
+   * 창고 소식과 같은 방으로 알린다.
+   *
+   * 알리지 못해도 막는 일은 그대로 한다 — 알리는 것이 막는 것을 방해하면 안 된다.
+   */
+  function 막힘알림(문, 까닭) {
+    try {
+      fetch('/orders/blocked', {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+                   'Accept': 'application/json' },
+        body: JSON.stringify({ rx_number: RX_NUMBER, gate: 문, reason: 까닭 }),
+      }).catch(function () { });
+    } catch (e) { }
+  }
+
   function gateOrder() {
-    return gateReviewed() && gateConsent() && gateTotalCount(true)
-        && gate청구한도(true) && gateOrderQty() && gateShippingAddress();
+    /* 어느 문에서 막혔는지 적어 둔다 — 창을 닫아도 자취가 남는다 */
+    if (!gateReviewed())        { 막힘알림('검수',      '검수가 아직 끝나지 않았습니다'); return false; }
+    if (!gateConsent())         { 막힘알림('동의',      '필요한 동의를 아직 받지 못했습니다'); return false; }
+    if (!gateTotalCount(true))  { 막힘알림('총계',      '1일 처방 개수 × 총 처방일수가 총계와 맞지 않습니다'); return false; }
+    if (!gate청구한도(true))     { 막힘알림('청구 한도', '공단 청구 한도를 넘었습니다'); return false; }
+    if (!gateOrderQty())        { 막힘알림('수량',      '주문 수량이 처방된 총계를 넘었습니다'); return false; }
+    if (!gateShippingAddress()) { 막힘알림('배송지',    '받는 주소가 비어 있습니다'); return false; }
+    return true;
   }
   async function createOrder(e) {
     /* 아이콘을 눌러도 단추를 잡는다 — e.target 만 보면 <i> 가 잡혀

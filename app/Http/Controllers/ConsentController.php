@@ -55,8 +55,17 @@ class ConsentController extends Controller
         $privacyDone = $this->privacyAlreadyDone($consent);
         $privacyFill = $privacyDone ? [] : $this->privacyPrefill($consent);
 
+        /* 위임이 필요한 건인가 — 화면 제목과 마침 글이 이것을 보고 갈린다.
+           처방외ㆍ산재ㆍ자동차보험은 위임할 일이 없어 개인정보 동의만 받는다
+           (2026-09-11 바로잡음). */
+        $rx = $consent->prescription;
+        $위임필요 = \App\Support\BillingStrategy::needsDelegation(
+            $rx?->counsel_acc_add_type, $rx?->benefit_class
+        );
+
         return view('consent.sign', compact(
-            'consent', 'niceEnabled', 'niceEnforce', 'verified', 'privacyDone', 'privacyFill'
+            'consent', 'niceEnabled', 'niceEnforce', 'verified', 'privacyDone', 'privacyFill',
+            '위임필요'
         ));
     }
 
