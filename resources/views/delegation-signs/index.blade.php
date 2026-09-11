@@ -15,9 +15,11 @@
 <div class="help-section">
   <div class="help-section-title">밟는 차례</div>
   <div class="help-item"><div class="help-item-text"><strong>① 명단 올리기</strong>
-    거래처명ㆍ전화번호 1ㆍ전화번호 2 세 칸짜리 CSV 를 올립니다(엑셀에서 「CSV」로 저장).</div></div>
+    받은 명단(위임 필요 리스트)을 그대로 올립니다. 첫 줄의 머리글을 읽어 칸을 맞추므로
+    차례가 달라도 됩니다. 쉼표ㆍ탭 어느 쪽으로 나뉘어도 읽고, 한글 인코딩도 가립니다.
+    같은 이름ㆍ같은 번호가 이미 있으면 줄을 새로 세우지 않고 명단 값만 새로 적습니다.</div></div>
   <div class="help-item"><div class="help-item-text"><strong>② 발송</strong>
-    줄의 ［발송］을 누르면 어느 번호로 보낼지 고르는 창이 뜹니다. 문자가 나가고 30분 동안 열립니다.</div></div>
+    줄의 ［발송］을 누르면 보낼 글을 미리 보여 줍니다. 문자가 나가고 30분 동안 열립니다.</div></div>
   <div class="help-item"><div class="help-item-text"><strong>③ 서명</strong>
     환자가 휴대폰 본인확인을 마치고 서류 셋을 읽은 뒤 서명합니다.</div></div>
 </div>
@@ -58,7 +60,16 @@
         <option value="n" @selected(request('signed') === 'n')>아직</option>
       </select>
     </div>
-    <div class="ds-filter-field span-2">
+    <div class="ds-filter-field">
+      <label class="ds-field-label">판매처</label>
+      <select name="dealer" class="form-control form-select">
+        <option value="">전체 판매처</option>
+        @foreach($판매처 as $ㅍ)
+          <option value="{{ $ㅍ }}" @selected(request('dealer') === $ㅍ)>{{ $ㅍ }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
       <label class="ds-field-label">전송 담당자</label>
       <select name="sender" class="form-control form-select">
         <option value="">전체 담당자</option>
@@ -72,7 +83,7 @@
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="거래처명ㆍ전화번호">
+             placeholder="거래처명ㆍ판매처ㆍ전화번호">
     </div>
   </div>
   <div class="ds-filter-actions">
@@ -88,9 +99,17 @@
 
 <div class="ds-grid-card">
   <div class="ds-grid-head">
-    <span class="ds-grid-title">조회 결과(총 {{ count($줄) }}건)</span>
+    <span class="ds-grid-title">
+      조회 결과(총 {{ number_format($쪽->total()) }}건)
+      <span style="color:var(--text-muted);font-weight:400;">
+        · {{ number_format($쪽->firstItem() ?? 0) }}–{{ number_format($쪽->lastItem() ?? 0) }} 보는 중
+        ({{ $쪽->currentPage() }}/{{ $쪽->lastPage() }}쪽)
+      </span>
+    </span>
   </div>
-  <div id="dlgGrid" style="height:calc(100vh - 320px);"></div>
+  <div id="dlgGrid" style="height:calc(100vh - 380px);"></div>
+  {{-- 한 쪽에 백 줄씩. 삼천 줄을 한 번에 그리면 화면이 한참 멎는다. --}}
+  <div style="padding:10px 12px;border-top:1px solid var(--border);">{{ $쪽->links() }}</div>
 </div>
 
 {{-- ── 발송 팝오버 ──────────────────────────────────────────
@@ -105,21 +124,8 @@
     <div class="modal-body">
       <div class="rt-kv"><span>거래처</span><span id="dlgCustomer" style="font-weight:700;"></span></div>
 
-      <div style="margin-top:12px;">
-        <label class="ds-field-label">받을 번호</label>
-        <div id="dlgWhich" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;" id="dlgW1Wrap">
-            <input type="radio" name="dlgWhich" value="phone1" checked>
-            <span style="color:var(--text-muted);width:76px;">전화번호 1</span>
-            <b id="dlgP1">—</b>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;" id="dlgW2Wrap">
-            <input type="radio" name="dlgWhich" value="phone2">
-            <span style="color:var(--text-muted);width:76px;">전화번호 2</span>
-            <b id="dlgP2">—</b>
-          </label>
-        </div>
-      </div>
+      <div class="rt-kv"><span>판매처</span><span id="dlgDealer"></span></div>
+      <div class="rt-kv"><span>받을 번호</span><span id="dlgPhone" style="font-weight:700;"></span></div>
 
       <div style="margin-top:12px;">
         <label class="ds-field-label">이름</label>
@@ -179,26 +185,39 @@
     height: 'fit', editable: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
-      { header: '거래처명',       name: 'customer', width: 130, sortable: true },
-      { header: '전화번호 1',     name: 'phone1',   width: 130 },
-      { header: '전화번호 2',     name: 'phone2',   width: 130 },
+      { header: 'No',            name: 'no',       width: 64,  align: 'right', sortable: true },
+      { header: '거래처명',       name: 'customer', width: 120, sortable: true },
+      { header: '전화번호',       name: 'phone',    width: 130 },
       {
-        header: '위임장 발송', name: 'send', width: 96, align: 'center',
+        header: '위임장 발송', name: 'send', width: 90, align: 'center',
         renderer: (v, row) => 단추('발송', () => dlgSendOpen(row.id), !row.can_send),
       },
-      { header: '위임장 서명 여부',     name: 'delegation', width: 120, align: 'center', renderer: 여부 },
-      { header: '개인정보동의 서명 여부', name: 'privacy',   width: 140, align: 'center', renderer: 여부 },
-      { header: '마케팅 활용 동의 여부', name: 'marketing', width: 140, align: 'center', renderer: 여부 },
+      { header: '위임장 서명 여부',     name: 'delegation', width: 118, align: 'center', renderer: 여부 },
+      { header: '개인정보동의 서명 여부', name: 'privacy',   width: 138, align: 'center', renderer: 여부 },
+      { header: '마케팅 활용 동의 여부', name: 'marketing', width: 138, align: 'center', renderer: 여부 },
       {
-        header: '위임장 서명 이미지 확인', name: 'image', width: 150, align: 'center',
+        header: '위임장 서명 이미지 확인', name: 'image', width: 146, align: 'center',
         renderer: (v, row) => 단추('이미지 보기',
           () => window.open(BASE + '/' + row.id + '/image', 'dlg_sign_' + row.id,
                             'width=620,height=420,scrollbars=yes,resizable=yes'),
           !row.has_sign),
       },
-      { header: '위임장 서명 일자',       name: 'signed_at', width: 130, align: 'center', sortable: true },
-      { header: '위임장 서명 전송 담당자', name: 'sender',    width: 130, align: 'center', sortable: true },
-      { header: '상태',                  name: 'status',    width: 90,  align: 'center', sortable: true },
+      { header: '위임장 서명 일자',       name: 'signed_at', width: 126, align: 'center', sortable: true },
+      { header: '위임장 서명 전송 담당자', name: 'sender',    width: 128, align: 'center', sortable: true },
+      { header: '상태',                  name: 'status',    width: 84,  align: 'center', sortable: true },
+
+      /* ── 명단에 딸려 온 칸 (2026-09-11 보탬) ──────────────
+         보낼 차례를 정하는 근거다 — 다음 재구매가 가까운 사람부터, 진행중인 건은
+         뒤로. 여태 표에만 있고 화면에는 없어 엑셀을 따로 열어 보아야 했다. */
+      { header: '판매처',          name: 'dealer',     width: 150, sortable: true },
+      { header: '다음재구매가능일', name: 'repurchase', width: 126, align: 'center', sortable: true },
+      { header: '마지막 등록일',    name: 'registered', width: 118, align: 'center', sortable: true },
+      { header: '처방기간',        name: 'rx_days',    width: 80,  align: 'right',  sortable: true },
+      { header: '마지막 구매확정일', name: 'confirmed',  width: 128, align: 'center', sortable: true },
+      { header: 'Status',          name: 'src_status', width: 80,  align: 'center', sortable: true },
+      { header: '처방여부',        name: 'rx_type',    width: 110, align: 'center', sortable: true },
+      { header: '자격',            name: 'benefit',    width: 74,  align: 'center', sortable: true },
+      { header: '마지막 판매상태',  name: 'sale',       width: 118, align: 'center', sortable: true },
     ],
     data: 줄,
   });
@@ -241,23 +260,9 @@
 
     지금 = d;
     document.getElementById('dlgCustomer').textContent = d.customer;
+    document.getElementById('dlgDealer').textContent = d.dealer || '—';
+    document.getElementById('dlgPhone').textContent = d.phone || '—';
     document.getElementById('dlgName').value = d.customer;
-    document.getElementById('dlgP1').textContent = d.phone1 || '—';
-    document.getElementById('dlgP2').textContent = d.phone2 || '—';
-
-    /* 비어 있는 번호는 고를 수 없다 — 고르게 두면 「번호가 비었습니다」를
-       눌러 본 뒤에야 안다. */
-    const 세움 = (wrap, 있나) => {
-      const w = document.getElementById(wrap);
-      const r = w.querySelector('input');
-      r.disabled = !있나;
-      w.style.opacity = 있나 ? '1' : '.4';
-      w.style.cursor = 있나 ? 'pointer' : 'not-allowed';
-      return 있나;
-    };
-    const 하나 = 세움('dlgW1Wrap', !!d.raw1);
-    세움('dlgW2Wrap', !!d.raw2);
-    document.querySelector('input[name=dlgWhich][value=' + (하나 ? 'phone1' : 'phone2') + ']').checked = true;
 
     const 경고 = document.getElementById('dlgWarn');
     if (d.signed) {
@@ -269,7 +274,6 @@
 
     미리보기();
     document.getElementById('dlgName').oninput = 미리보기;
-    document.querySelectorAll('input[name=dlgWhich]').forEach(r => r.onchange = 미리보기);
     document.getElementById('dlgSendBack').style.display = 'flex';
   };
 
@@ -290,9 +294,6 @@
   window.dlgSend = async function () {
     if (!지금) return;
     const btn = document.getElementById('dlgSendBtn');
-    const which = document.querySelector('input[name=dlgWhich]:checked')?.value;
-    if (!which) { showToast('보낼 번호를 골라 주십시오.', 'warning'); return; }
-
     BtnState.loading(btn, '보내는 중...');
     try {
       const res = await fetch(BASE + '/' + 지금.id + '/send', {
@@ -302,7 +303,7 @@
           'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ which, name: document.getElementById('dlgName').value.trim() }),
+        body: JSON.stringify({ name: document.getElementById('dlgName').value.trim() }),
       });
       const out = await res.json();
 

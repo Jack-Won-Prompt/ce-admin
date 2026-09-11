@@ -42,6 +42,10 @@ class DelegationSignController extends Controller
             $query->where('sent_by_id', $request->sender);
         }
 
+        if ($request->filled('dealer')) {
+            $query->where('dealer_name', $request->dealer);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -53,16 +57,22 @@ class DelegationSignController extends Controller
             $말 = $request->q;
             $query->where(fn ($s) => $s
                 ->where('customer_name', 'like', "%{$말}%")
-                ->orWhere('phone1', 'like', "%{$말}%")
-                ->orWhere('phone2', 'like', "%{$말}%"));
+                ->orWhere('dealer_name', 'like', "%{$말}%")
+                ->orWhere('phone', 'like', "%{$말}%"));
         }
 
-        $줄 = $query->limit((int) config('delegation_sign.list_limit', 2000))->get()
+        /* 한 쪽에 백 줄씩 (2026-09-11 지시).
+
+           명단이 삼천 줄 가까이 된다. 한 번에 다 그리면 화면이 한참 멎고, 담당자는
+           그 가운데 몇 줄만 본다 — 굴려서 찾는 것보다 걸러서 찾는 것이 빠르다. */
+        $쪽 = $query->paginate(100)->withQueryString();
+
+        $줄 = collect($쪽->items())
             ->map(fn (DelegationSign $d) => [
                 'id'         => $d->id,
+                'no'         => $d->src_no,
                 'customer'   => $d->customer_name,
-                'phone1'     => \App\Support\PhoneNo::format($d->phone1),
-                'phone2'     => \App\Support\PhoneNo::format($d->phone2),
+                'phone'      => \App\Support\PhoneNo::format($d->phone),
                 'status'     => DelegationSign::상태[$d->status] ?? $d->status,
                 'delegation' => $d->동의말('agree_delegation'),
                 'privacy'    => $d->동의말('agree_privacy'),
@@ -70,7 +80,17 @@ class DelegationSignController extends Controller
                 'signed_at'  => $d->signed_at?->format('Y-m-d H:i') ?? '',
                 'sender'     => $d->sent_by_name ?? '',
                 'has_sign'   => (bool) ($d->sign_path || $d->sign_base64),
-                'can_send'   => (bool) ($d->phone1 || $d->phone2),
+                'can_send'   => (bool) $d->phone,
+                /* 명단에 딸려 온 값 — 누구에게 왜 보내는지를 가리는 자리다 */
+                'dealer'     => $d->dealer_name ?? '',
+                'repurchase' => $d->next_repurchase_at?->format('Y-m-d') ?? '',
+                'registered' => $d->last_register_at?->format('Y-m-d') ?? '',
+                'rx_days'    => $d->rx_days,
+                'confirmed'  => $d->last_confirm_at?->format('Y-m-d') ?? '',
+                'src_status' => $d->src_status ?? '',
+                'rx_type'    => $d->rx_type ?? '',
+                'benefit'    => $d->benefit_class ?? '',
+                'sale'       => $d->last_sale_status ?? '',
             ]);
 
         /* 보낸 사람 고르개 — 이 표에 적힌 이름만 세운다. users 를 훑지 않는다. */
@@ -78,7 +98,11 @@ class DelegationSignController extends Controller
             ->select('sent_by_id', 'sent_by_name')->distinct()
             ->orderBy('sent_by_name')->get();
 
-        return view('delegation-signs.index', compact('줄', '보낸이'));
+        /* 판매처 고르개 — 명단이 세 곳뿐이라 고르면 바로 좁혀진다 */
+        $판매처 = DelegationSign::whereNotNull('dealer_name')
+            ->select('dealer_name')->distinct()->orderBy('dealer_name')->pluck('dealer_name');
+
+        return view('delegation-signs.index', compact('줄', '쪽', '보낸이', '판매처'));
     }
 
     // ── 명단 올리기 (CSV) ─────────────────────────────────
@@ -164,27 +188,25 @@ class DelegationSignController extends Controller
             $값 = fn (?int $i) => $i === null ? '' : trim((string) ($칸[$i] ?? ''));
 
             if ($자리) {
-                $이름  = $값($자리['이름']);
-                $번호1 = self::번호만($값($자리['번호1']));
-                $번호2 = self::번호만($값($자리['번호2']));
+                $이름 = $값($자리['이름']);
+                $번호 = self::번호만($값($자리['번호']));
             } else {
-                $이름  = $값(0);
-                $번호1 = self::번호만($값(1));
-                $번호2 = self::번호만($값(2));
+                $이름 = $값(0);
+                $번호 = self::번호만($값(1));
             }
 
             if ($이름 === '') {
                 continue;                                   // 빈 줄은 조용히 지나간다
             }
 
-            if (! $번호1 && ! $번호2) {
-                $잘못[] = ($번 + 1) . '째 줄 — ' . $이름 . ' : 번호가 하나도 없습니다';
+            if (! $번호) {
+                $잘못[] = ($번 + 1) . '째 줄 — ' . $이름 . ' : 전화번호가 없습니다';
                 continue;
             }
 
             /* 명단에 딸려 온 값 — 다시 올리면 이것만 새로 적는다 */
             $명단값 = $자리 ? [
-                'src_no'             => ($n = $값($자리['번호'])) !== '' ? (int) $n : null,
+                'src_no'             => ($n = $값($자리['줄번호'])) !== '' ? (int) $n : null,
                 'dealer_name'        => mb_substr($값($자리['판매처']), 0, 100) ?: null,
                 'next_repurchase_at' => self::날짜($값($자리['다음재구매'])),
                 'last_register_at'   => self::날짜($값($자리['마지막등록'])),
@@ -202,13 +224,11 @@ class DelegationSignController extends Controller
 
                발송ㆍ서명 칸은 건드리지 않는다. 받아 둔 서명은 명단을 다시 올린다고
                사라져서는 안 된다. */
-            $이미 = DelegationSign::where('customer_name', $이름)
-                ->where(fn ($s) => $s->where('phone1', $번호1)->orWhere('phone2', $번호1))
-                ->first();
+            $이미 = DelegationSign::where('customer_name', $이름)->where('phone', $번호)->first();
 
             if ($이미) {
                 if ($명단값) {
-                    $이미->forceFill($명단값 + ['phone2' => $번호2 ?: $이미->phone2])->save();
+                    $이미->forceFill($명단값)->save();
                 }
                 $건너뜀++;
                 continue;
@@ -216,8 +236,7 @@ class DelegationSignController extends Controller
 
             DelegationSign::create([
                 'customer_name' => mb_substr($이름, 0, 100),
-                'phone1'        => $번호1 ?: null,
-                'phone2'        => $번호2 ?: null,
+                'phone'         => $번호,
                 'status'        => 'pending',
             ] + $명단값);
             $세움++;
@@ -324,10 +343,9 @@ class DelegationSignController extends Controller
             'success'  => true,
             'id'       => $delegationSign->id,
             'customer' => $delegationSign->customer_name,
-            'phone1'   => \App\Support\PhoneNo::format($delegationSign->phone1),
-            'phone2'   => \App\Support\PhoneNo::format($delegationSign->phone2),
-            'raw1'     => $delegationSign->phone1,
-            'raw2'     => $delegationSign->phone2,
+            'phone'    => \App\Support\PhoneNo::format($delegationSign->phone),
+            'raw'      => $delegationSign->phone,
+            'dealer'   => $delegationSign->dealer_name,
             'status'   => DelegationSign::상태[$delegationSign->status] ?? $delegationSign->status,
             'signed'   => $delegationSign->status === 'signed',
         ]);
@@ -344,15 +362,14 @@ class DelegationSignController extends Controller
     public function send(Request $request, DelegationSign $delegationSign): JsonResponse
     {
         $값 = $request->validate([
-            'which' => 'required|in:phone1,phone2',
-            'name'  => 'nullable|string|max:100',
+            'name' => 'nullable|string|max:100',
         ]);
 
-        $번호 = preg_replace('/\D/', '', (string) $delegationSign->{$값['which']});
+        $번호 = preg_replace('/\D/', '', (string) $delegationSign->phone);
         if (strlen($번호) < 9 || strlen($번호) > 11) {
             return response()->json([
                 'success' => false,
-                'message' => DelegationSign::번호자리[$값['which']] . ' 가 비었거나 꼴이 맞지 않습니다.',
+                'message' => '전화번호가 비었거나 꼴이 맞지 않습니다.',
             ], 422);
         }
 
@@ -388,7 +405,6 @@ class DelegationSignController extends Controller
         $delegationSign->forceFill([
             'token'        => $토큰,
             'sent_to'      => $번호,
-            'sent_which'   => $값['which'],
             'sent_by_id'   => Auth::id(),
             'sent_by_name' => Auth::user()?->name,
             'sent_at'      => now(),
@@ -397,7 +413,7 @@ class DelegationSignController extends Controller
         ])->save();
 
         activity()->causedBy(Auth::user())->performedOn($delegationSign)
-            ->log("위임장 서명 발송 → {$이름} {$번호} (" . DelegationSign::번호자리[$값['which']] . ')');
+            ->log("위임장 서명 발송 → {$이름} {$번호}");
 
         return response()->json([
             'success'    => true,

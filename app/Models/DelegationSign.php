@@ -21,10 +21,10 @@ class DelegationSign extends Model
     public const 폴더 = 'delegation-signs';
 
     protected $fillable = [
-        'customer_name', 'phone1', 'phone2',
+        'customer_name', 'phone',
         'src_no', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
         'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
-        'token', 'sent_to', 'sent_which', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
+        'token', 'sent_to', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
         'status',
         'agree_delegation', 'agree_privacy', 'agree_marketing',
         'signed_at', 'sign_path', 'sign_filename', 'sign_base64',
@@ -52,8 +52,6 @@ class DelegationSign extends Model
         'signed'   => '서명 완료',
         'declined' => '동의 거절',
     ];
-
-    public const 번호자리 = ['phone1' => '전화번호 1', 'phone2' => '전화번호 2'];
 
     /** 지금 이 링크로 서명할 수 있는가 */
     public function 열려있나(): bool
