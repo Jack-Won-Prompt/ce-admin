@@ -123,10 +123,12 @@
 <div class="ds-grid-card">
   <div class="ds-grid-head">
     <span class="ds-grid-title">
-      조회 결과(총 {{ number_format($쪽->total()) }}건)
+      조회 결과
+      {{-- 「몇째 줄부터 몇째 줄까지 / 모두 몇 줄」 (2026-09-11 지시). 총 건수를
+           괄호로 앞에 또 적으면 한 줄에 같은 수가 두 번 나온다. --}}
       <span style="color:var(--text-muted);font-weight:400;">
-        · {{ number_format($쪽->firstItem() ?? 0) }}–{{ number_format($쪽->lastItem() ?? 0) }} -
-        ({{ $쪽->currentPage() }}/{{ $쪽->lastPage() }}쪽)
+        · {{ number_format($쪽->firstItem() ?? 0) }}–{{ number_format($쪽->lastItem() ?? 0) }}
+        / {{ number_format($쪽->total()) }}
       </span>
     </span>
   </div>
