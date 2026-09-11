@@ -61,7 +61,7 @@ return [
             'label'   => '위임장 서명',
             'group'   => 'opdata',
             'routes'  => ['delegation-signs'],
-            'actions' => ['view', 'create', 'send'],
+            'actions' => ['view', 'create', 'send', 'delete'],
         ],
 
 

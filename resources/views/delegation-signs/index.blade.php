@@ -49,9 +49,13 @@
                color:var(--danger); font-size:12px; font-weight:700; line-height:1.5; }
 
   /* 쪽 넘김 줄 (2026-09-11) — 부트스트랩 것을 쓰지 못해 이 화면에서 그린다 */
-  .dlg-pager { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  /* 단추는 줄 가운데, 건수는 왼쪽 끝 (2026-09-11 지시). 건수를 흐름에서 빼야
+     단추가 줄의 참가운데에 선다 — 함께 두면 건수 폭만큼 오른쪽으로 밀린다. */
+  .dlg-pager { position:relative; display:flex; align-items:center; gap:6px;
+               flex-wrap:wrap; justify-content:center;
                padding:10px 12px; border-top:1px solid var(--border); }
-  .dlg-pager-info { margin-right:auto; font-size:12px; color:var(--text-muted);
+  .dlg-pager-info { position:absolute; left:12px; top:50%; transform:translateY(-50%);
+                    font-size:12px; color:var(--text-muted);
                     font-variant-numeric:tabular-nums; }
   .dlg-pg { min-width:34px; padding:0 10px; font-variant-numeric:tabular-nums; }
   .dlg-pg.is-now { border-color:var(--primary); color:var(--primary);
@@ -85,8 +89,8 @@
       <label class="ds-field-label">서명 여부</label>
       <select name="signed" class="form-control form-select">
         <option value="">전체</option>
-        <option value="y" @selected(request('signed') === 'y')>서명함</option>
-        <option value="n" @selected(request('signed') === 'n')>아직</option>
+        <option value="y" @selected(request('signed') === 'y')>서명 완료</option>
+        <option value="n" @selected(request('signed') === 'n')>서명 전</option>
       </select>
     </div>
     <div class="ds-filter-field">
@@ -118,11 +122,9 @@
   <div class="ds-filter-actions">
     <a href="{{ route('delegation-signs.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
-    @perm('delegation-signs', 'create')
-      <button type="button" class="ds-btn" onclick="document.getElementById('dlgCsv').click()">명단 올리기</button>
-      <input type="file" id="dlgCsv" accept=".csv,text/csv" style="display:none;" onchange="dlgImport(this)">
-    @endperm
-    <button type="button" class="ds-btn" onclick="window.__dlgGrid?.downloadExcel()">엑셀 다운</button>
+    {{-- 엑셀 받기는 보고 있는 백 줄이 아니라 걸러 낸 전부를 내려받는다
+         (2026-09-11 지시). 그래서 화면의 wwGrid 가 아니라 서버로 간다. --}}
+    <a class="ds-btn" href="{{ route('delegation-signs.export', request()->query()) }}" data-no-loading>엑셀 다운</a>
   </div>
 </form>
 
@@ -277,6 +279,11 @@
 
       /* ── 받은 결과 ──────────────────────────────────────────────────── */
       { header: '위임장 서명 여부',     name: 'delegation', width: 118, align: 'center', renderer: 여부 },
+
+      /* 발송 상태는 서명 여부 바로 뒤에 (2026-09-11 지시). 「—」로 비어 있는
+         까닭이 「아직 안 보냈다」인지 「보냈는데 안 했다」인지 옆에서 읽힌다. */
+      { header: '상태',                 name: 'status',     width: 84,  align: 'center', sortable: true },
+
       { header: '개인정보동의 서명 여부', name: 'privacy',   width: 138, align: 'center', renderer: 여부 },
       { header: '마케팅 활용 동의 여부', name: 'marketing', width: 138, align: 'center', renderer: 여부 },
       {
@@ -288,39 +295,45 @@
       },
       { header: '위임장 서명 일자',       name: 'signed_at', width: 126, align: 'center', sortable: true },
       { header: '위임장 서명 전송 담당자', name: 'sender',    width: 128, align: 'center', sortable: true },
-      { header: '상태',                  name: 'status',    width: 84,  align: 'center', sortable: true },
 
       /* 명단이 적어 보낸 Status — 지금은 모두 Active 다. 맨 뒤에 둔다. */
       { header: 'Status',          name: 'src_status', width: 80,  align: 'center', sortable: true },
+@perm('delegation-signs', 'delete')
+
+      /* 잘못 올라온 줄을 걷는 자리 (2026-09-11 지시) */
+      {
+        header: '삭제', name: 'del', width: 70, align: 'center',
+        renderer: (v, row) => 단추('삭제', () => dlgDelete(row.id, row.customer, row.has_sign)),
+      },
+@endperm
     ],
     data: 줄,
   });
   window.__dlgGrid = grid;
 
-  // ── 명단 올리기 ─────────────────────────────────────────
-  window.dlgImport = async function (input) {
-    const f = input.files?.[0];
-    if (!f) return;
-    input.value = '';
+  // ── 줄 삭제 ─────────────────────────────────────────────
+  /* 되돌릴 수 없다. 서명까지 받은 줄이면 그림도 함께 사라진다는 것을 먼저 알린다. */
+  window.dlgDelete = async function (id, 이름, 서명있나) {
+    const 덧말 = 서명있나
+      ? '\n\n이 줄에는 받아 둔 서명이 있습니다. 서명 그림도 함께 지웁니다.'
+      : '';
 
-    const fd = new FormData();
-    fd.append('file', f);
+    if (!await ceConfirm(이름 + ' 줄을 지웁니다.' + 덧말 + '\n\n되돌릴 수 없습니다.',
+                         { title: '줄 삭제', tone: 'danger', confirmText: '삭제' })) return;
 
     try {
-      const res = await fetch(@json(route('delegation-signs.import')), {
-        method: 'POST',
+      const res = await fetch(BASE + '/' + id, {
+        method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content, 'Accept': 'application/json' },
-        body: fd,
       });
       const out = await res.json();
 
-      if (!out.success) { showToast(out.message || '올리지 못했습니다.', 'danger', 6000); return; }
+      if (!res.ok || !out.ok) { showToast(out.말 || '지우지 못했습니다.', 'danger', 6000); return; }
 
-      showToast(out.message, 'success', 6000);
-      if (out.errors?.length) showToast(out.errors.join(' / '), 'warning', 9000);
-      setTimeout(() => location.reload(), 1200);
+      showToast(out.말, 'success', 4000);
+      setTimeout(() => location.reload(), 800);
     } catch (e) {
-      showToast('올리지 못했습니다 — ' + e.message, 'danger', 6000);
+      showToast('지우지 못했습니다 — ' + e.message, 'danger', 6000);
     }
   };
 

@@ -611,10 +611,12 @@ Route::middleware(['auth'])->group(function () {
        닫혀 있어, 운영 서버로는 그 둘만 옮긴다. */
     Route::prefix('delegation-signs')->name('delegation-signs.')->group(function () {
         Route::get('/',                 [\App\Http\Controllers\DelegationSignController::class, 'index'])->name('index');
+        Route::get('/export',           [\App\Http\Controllers\DelegationSignController::class, 'export'])->name('export');
         Route::post('/import',          [\App\Http\Controllers\DelegationSignController::class, 'import'])->name('import');
         Route::get('/{delegationSign}', [\App\Http\Controllers\DelegationSignController::class, 'show'])->name('show');
         Route::post('/{delegationSign}/send',  [\App\Http\Controllers\DelegationSignController::class, 'send'])->name('send');
         Route::get('/{delegationSign}/image',  [\App\Http\Controllers\DelegationSignController::class, 'image'])->name('image');
+        Route::delete('/{delegationSign}',     [\App\Http\Controllers\DelegationSignController::class, 'destroy'])->name('destroy');
     });
 
     // 개인정보 수집·이용 동의 (mcoloplast) — 관리자 조회/관리

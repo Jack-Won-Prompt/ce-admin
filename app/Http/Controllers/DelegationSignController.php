@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\DelegationSign;
 use App\Services\MessageSender;
+use App\Support\PhoneNo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * 운영 데이터 › 위임장 서명 — 담당자 쪽 화면 (2026-09-11 지시).
@@ -23,8 +26,13 @@ class DelegationSignController extends Controller
     {
     }
 
-    // ── 목록 ──────────────────────────────────────────────
-    public function index(Request $request): View
+    /**
+     * 목록과 내보내기가 함께 쓰는 거르개.
+     *
+     * 화면은 백 줄만 보지만 내보내기는 걸러진 전부를 받는다. 두 곳이 같은 조건을
+     * 봐야 「화면에 보이는 것을 받는다」가 어긋나지 않는다.
+     */
+    private function 거른것(Request $request)
     {
         $query = DelegationSign::query()->latest('id');
 
@@ -60,6 +68,14 @@ class DelegationSignController extends Controller
                 ->orWhere('dealer_name', 'like', "%{$말}%")
                 ->orWhere('phone', 'like', "%{$말}%"));
         }
+
+        return $query;
+    }
+
+    // ── 목록 ──────────────────────────────────────────────
+    public function index(Request $request): View
+    {
+        $query = $this->거른것($request);
 
         /* 한 쪽에 백 줄씩 (2026-09-11 지시).
 
@@ -103,6 +119,95 @@ class DelegationSignController extends Controller
             ->select('dealer_name')->distinct()->orderBy('dealer_name')->pluck('dealer_name');
 
         return view('delegation-signs.index', compact('줄', '쪽', '보낸이', '판매처'));
+    }
+
+    // ── 엑셀로 내보내기 ───────────────────────────────────
+    /**
+     * 걸러진 전부를 내려 준다 (2026-09-11 지시).
+     *
+     * 화면의 엑셀 받기는 그려 둔 백 줄만 담았다. 담당자가 받고 싶은 것은 본 쪽이
+     * 아니라 걸러 낸 전체다 — 「김」으로 좁힌 581건이면 581건 모두.
+     *
+     * 삼천 줄을 한꺼번에 메모리에 세우지 않도록 덩어리로 흘려 쓴다.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $query = $this->거른것($request);
+        $파일 = '위임장서명_' . now()->format('Ymd_Hi') . '.csv';
+
+        $머리글 = [
+            'No', '거래처명', '전화번호', '판매처', '다음재구매가능일', '마지막 등록일',
+            '처방기간', '마지막 구매확정일', '처방여부', '자격', '마지막 판매상태',
+            '위임장 서명 여부', '상태', '개인정보동의 서명 여부', '마케팅 활용 동의 여부',
+            '위임장 서명 일자', '위임장 서명 전송 담당자', '발송 번호', '발송 일시',
+            '서명 그림 파일명', 'Status', '등록일',
+        ];
+
+        return response()->streamDownload(function () use ($query, $머리글) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");   // 엑셀이 한글을 깨뜨리지 않게
+            fputcsv($out, $머리글);
+
+            $query->chunk(500, function ($덩어리) use ($out) {
+                foreach ($덩어리 as $d) {
+                    fputcsv($out, [
+                        $d->src_no,
+                        $d->customer_name,
+                        PhoneNo::format($d->phone),
+                        $d->dealer_name,
+                        $d->next_repurchase_at?->format('Y-m-d'),
+                        $d->last_register_at?->format('Y-m-d'),
+                        $d->rx_days,
+                        $d->last_confirm_at?->format('Y-m-d'),
+                        $d->rx_type,
+                        $d->benefit_class,
+                        $d->last_sale_status,
+                        $d->동의말('agree_delegation'),
+                        DelegationSign::상태[$d->status] ?? $d->status,
+                        $d->동의말('agree_privacy'),
+                        $d->동의말('agree_marketing'),
+                        $d->signed_at?->format('Y-m-d H:i'),
+                        $d->sent_by_name,
+                        $d->sent_to ? PhoneNo::format($d->sent_to) : '',
+                        $d->sent_at?->format('Y-m-d H:i'),
+                        $d->sign_filename,
+                        $d->src_status,
+                        $d->created_at?->format('Y-m-d H:i'),
+                    ]);
+                }
+            });
+
+            fclose($out);
+        }, $파일, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    // ── 줄 삭제 ───────────────────────────────────────────
+    /**
+     * 명단에서 한 줄을 지운다 (2026-09-11 지시).
+     *
+     * 잘못 올라온 줄을 화면에서 걷을 길이 없었다. 서명 그림도 함께 지운다 —
+     * 줄이 사라진 뒤 폴더에만 남은 그림은 누구의 것인지 알 수 없다.
+     */
+    public function destroy(DelegationSign $delegationSign): JsonResponse
+    {
+        $이름 = $delegationSign->customer_name;
+
+        if ($delegationSign->sign_path) {
+            Storage::disk('local')->delete($delegationSign->sign_path);
+        }
+
+        activity('delegation-sign')
+            ->performedOn($delegationSign)
+            ->causedBy(Auth::user())
+            ->withProperties([
+                '거래처' => $이름,
+                '상태'   => DelegationSign::상태[$delegationSign->status] ?? $delegationSign->status,
+            ])
+            ->log('위임장 서명 줄 삭제');
+
+        $delegationSign->delete();
+
+        return response()->json(['ok' => true, '말' => $이름 . ' 줄을 지웠습니다.']);
     }
 
     // ── 명단 올리기 (CSV) ─────────────────────────────────
