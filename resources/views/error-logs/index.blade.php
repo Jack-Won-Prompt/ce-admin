@@ -94,7 +94,7 @@
         <span class="el-chip el-fixed">난 횟수 {{ number_format($셈['hit']) }}</span>
         <span class="el-chip el-check">서버 오류 {{ number_format($셈['server']) }}</span>
         <button type="button" class="ds-btn" onclick="window.__elGrid?.downloadExcel()">엑셀 다운</button>
-        @if(auth()->user()?->isAdmin())
+        @if((auth()->user()->role ?? '') === 'admin')
           <button type="button" class="ds-btn" onclick="elPurge()">오래된 것 비우기</button>
         @endif
       </span>
