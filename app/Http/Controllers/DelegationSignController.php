@@ -197,7 +197,7 @@ class DelegationSignController extends Controller
         $이름 = $delegationSign->customer_name;
 
         if ($delegationSign->sign_path) {
-            Storage::disk('local')->delete($delegationSign->sign_path);
+            Storage::disk(DelegationSign::디스크)->delete($delegationSign->sign_path);
         }
 
         activity('delegation-sign')

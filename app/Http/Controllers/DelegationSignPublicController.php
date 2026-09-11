@@ -154,10 +154,14 @@ class DelegationSignPublicController extends Controller
            이름에 때를 넣어 덮어쓰지 않는다 — 다시 보내 새로 서명받아도 옛 그림이
            파일로 남는다. 표는 최신 하나만 가리킨다. */
         $파일명 = $token . '_' . now()->format('YmdHis') . '.png';
-        $경로   = DelegationSign::폴더 . '/' . now()->format('Y/m') . '/' . $파일명;
+        $경로   = now()->format('Y/m') . '/' . $파일명;
 
         try {
-            Storage::disk('local')->put($경로, $그림);
+            /* put 은 못 써도 던지지 않고 false 를 돌려준다(throw=false). 그것을
+               보지 않으면 없는 파일을 가리키는 길이 표에 남는다. */
+            if (! Storage::disk(DelegationSign::디스크)->put($경로, $그림)) {
+                throw new \RuntimeException('put 이 false 를 돌려주었습니다');
+            }
         } catch (\Throwable $e) {
             /* 파일을 못 써도 서명은 잃지 않는다 — 표에 그림이 함께 들어간다 */
             Log::warning('[위임장 서명] 그림 파일을 쓰지 못했습니다', ['id' => $sign->id, 'error' => $e->getMessage()]);

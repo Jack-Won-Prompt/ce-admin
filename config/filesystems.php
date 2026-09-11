@@ -38,6 +38,26 @@ return [
             'report' => false,
         ],
 
+        /* 위임장 서명 그림 (2026-09-11 지시).
+
+           표 하나와 이 폴더만 운영 서버로 옮긴다. 그래서 다른 파일과 섞지 않고
+           제 디스크로 둔다 — 디스크의 뿌리가 곧 옮길 폴더다.
+
+           폴더를 2775 로 세우는 까닭: 라라벨은 private 폴더를 0700 으로 만든다.
+           그러면 폴더를 세운 www-data 말고는 들여다볼 수 없어, 배포 사용자가
+           폴더째 묶지도 옮기지도 못한다(ls 조차 Permission denied 로 막힌다).
+           웹에서 바로 열리는 자리가 아니라 무리가 없다. */
+        'delegation' => [
+            'driver' => 'local',
+            'root'   => storage_path('app/private/delegation-signs'),
+            'throw'  => false,
+            'report' => false,
+            'permissions' => [
+                'file' => ['public' => 0644, 'private' => 0644],
+                'dir'  => ['public' => 02775, 'private' => 02775],
+            ],
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

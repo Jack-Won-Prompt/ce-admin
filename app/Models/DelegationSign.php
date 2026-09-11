@@ -17,8 +17,14 @@ class DelegationSign extends Model
 {
     use HasFactory;
 
-    /** 서명 그림을 두는 곳 — 폴더째 옮긴다. 웹에서 바로 열리지 않는 local 디스크다. */
-    public const 폴더 = 'delegation-signs';
+    /**
+     * 서명 그림을 두는 곳 — 폴더째 옮긴다. 웹에서 바로 열리지 않는다.
+     *
+     * 이 디스크의 뿌리가 곧 storage/app/private/delegation-signs 다. 표에 적는
+     * 길은 그 안에서의 길(2026/09/…png)이라, 폴더를 통째로 옮겨 놓으면 그대로
+     * 이어진다 — 앞에 붙은 자리 이름을 함께 옮겨 적을 일이 없다.
+     */
+    public const 디스크 = 'delegation';
 
     /**
      * 위임을 받는 곳 — 늘 한 곳이다 (2026-09-11 지시).
@@ -82,8 +88,8 @@ class DelegationSign extends Model
      */
     public function 서명그림(): ?string
     {
-        if ($this->sign_path && Storage::disk('local')->exists($this->sign_path)) {
-            return Storage::disk('local')->get($this->sign_path);
+        if ($this->sign_path && Storage::disk(self::디스크)->exists($this->sign_path)) {
+            return Storage::disk(self::디스크)->get($this->sign_path);
         }
 
         if (! $this->sign_base64) {
