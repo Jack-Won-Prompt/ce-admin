@@ -167,6 +167,9 @@ class DelegationSignPublicController extends Controller
         $sign->forceFill([
             'status'           => 'signed',
             'signed_at'        => now(),
+            /* 위임이 끝났으니 판매처는 대리점이 아니라 위임을 받은 곳이다
+               (2026-09-11 지시). 명단이 적어 보낸 이름은 여기서 갈린다. */
+            'dealer_name'      => DelegationSign::위임받는곳,
             'agree_delegation' => true,
             'agree_privacy'    => (bool) ($값['agree_privacy'] ?? false),
             'agree_marketing'  => (bool) ($값['agree_marketing'] ?? false),

@@ -337,7 +337,15 @@ class DelegationSignController extends Controller
 
             if ($이미) {
                 if ($명단값) {
-                    $이미->forceFill($명단값)->save();
+                    /* 서명을 받아 둔 사람의 판매처는 이미 콜로플라스트 코리아로 넘어갔다
+                       (2026-09-11 지시). 명단은 아직 대리점 이름을 들고 오므로, 다시
+                       올릴 때 그 한 칸만 덮지 않는다 — 넘어간 것을 되돌리는 셈이 된다. */
+                    $적을것 = $명단값;
+                    if ($이미->status === 'signed') {
+                        unset($적을것['dealer_name']);
+                    }
+
+                    $이미->forceFill($적을것)->save();
                 }
                 $건너뜀++;
                 continue;

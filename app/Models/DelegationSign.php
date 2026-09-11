@@ -20,6 +20,15 @@ class DelegationSign extends Model
     /** 서명 그림을 두는 곳 — 폴더째 옮긴다. 웹에서 바로 열리지 않는 local 디스크다. */
     public const 폴더 = 'delegation-signs';
 
+    /**
+     * 위임을 받는 곳 — 늘 한 곳이다 (2026-09-11 지시).
+     *
+     * 명단이 적어 보낸 판매처는 하이메드ㆍ(주)서호메디코로 갈리지만, 링크를 받은
+     * 사람이 위임하는 상대는 콜로플라스트 코리아뿐이다. 서명을 받고 나면 그 사람의
+     * 판매처는 여기로 바뀐다 — 위임이 끝난 뒤의 판매처는 대리점이 아니다.
+     */
+    public const 위임받는곳 = '콜로플라스트 코리아(주)';
+
     protected $fillable = [
         'customer_name', 'phone',
         'src_no', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
