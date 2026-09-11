@@ -535,6 +535,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get( '/settings/error-logs/{errorLog}',   [\App\Http\Controllers\ErrorLogController::class, 'show'])->name('error-logs.show');
     Route::post('/settings/error-logs/{errorLog}/mark', [\App\Http\Controllers\ErrorLogController::class, 'mark'])->name('error-logs.mark');
 
+    /* 브라우저에서 난 오류를 받는 자리 — 오류 기록 화면의 권한과 따로 둔다.
+       오류는 그 화면을 볼 권한이 없는 사람에게도 나기 때문이다(2026-09-11 지시). */
+    Route::post('/client-errors', [\App\Http\Controllers\ClientErrorController::class, 'store'])->name('client-errors.store');
+
     Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
     Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
 

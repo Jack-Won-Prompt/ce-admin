@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ErrorLog extends Model
 {
     protected $fillable = [
-        'fingerprint', 'level', 'kind', 'exception', 'http_status',
-        'message', 'file', 'line', 'trace',
+        'fingerprint', 'source', 'level', 'kind', 'exception', 'http_status',
+        'message', 'file', 'line', 'col', 'trace',
         'url', 'http_method', 'route_name', 'ip', 'user_agent',
         'user_id', 'user_name', 'input',
         'hit', 'first_at', 'last_at',
@@ -36,6 +36,12 @@ class ErrorLog extends Model
         'ignored' => '보류',
     ];
 
+    /** 어디서 난 오류인가 */
+    public const 출처 = [
+        'server'  => '서버',
+        'browser' => '브라우저',
+    ];
+
     public const 상태색 = [
         'open'    => 'danger',
         'checked' => 'warning',
@@ -53,6 +59,11 @@ class ErrorLog extends Model
         return $this->belongsTo(User::class, 'checked_by');
     }
 
+    public function getSourceLabelAttribute(): string
+    {
+        return self::출처[$this->source] ?? $this->source;
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::상태[$this->status] ?? $this->status;
@@ -67,9 +78,13 @@ class ErrorLog extends Model
         return $i === false ? $f : substr($f, $i + 9);
     }
 
-    /** 목록에 한 줄로 적을 자리 — 파일:줄 */
+    /** 목록에 한 줄로 적을 자리 — 파일:줄(:열) */
     public function getWhereAttribute(): string
     {
-        return $this->file ? ($this->short_file . ':' . $this->line) : '-';
+        if (! $this->file) {
+            return '-';
+        }
+
+        return $this->short_file . ':' . $this->line . ($this->col ? ':' . $this->col : '');
     }
 }

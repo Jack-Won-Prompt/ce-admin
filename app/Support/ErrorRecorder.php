@@ -131,6 +131,7 @@ class ErrorRecorder
 
         ErrorLog::create([
             'fingerprint' => $열쇠,
+            'source'      => 'server',
             'level'       => $상태 >= 500 ? 'critical' : 'error',
             'kind'        => $갈래,
             'exception'   => $e::class,

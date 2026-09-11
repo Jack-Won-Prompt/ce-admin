@@ -21,6 +21,7 @@ class ErrorLogController extends Controller
         $갈래  = $request->input('kind', '');
         $상태  = $request->input('status', '');
         $코드  = $request->input('http_status', '');
+        $출처  = $request->input('source', '');
         $검색  = trim((string) $request->input('q', ''));
 
         $q = ErrorLog::query()
@@ -34,6 +35,9 @@ class ErrorLogController extends Controller
         }
         if ($코드 !== '') {
             $q->where('http_status', (int) $코드);
+        }
+        if ($출처 !== '') {
+            $q->where('source', $출처);
         }
         if ($검색 !== '') {
             $q->where(function ($w) use ($검색) {
@@ -51,6 +55,7 @@ class ErrorLogController extends Controller
         $rows = $줄들->map(fn (ErrorLog $r) => [
             'id'      => $r->id,
             'at'      => $r->last_at?->format('Y-m-d H:i:s'),
+            'source'  => $r->source_label,
             'kind'    => $r->kind,
             'status'  => $r->http_status,
             'message' => mb_substr((string) $r->message, 0, 160),
@@ -67,7 +72,8 @@ class ErrorLogController extends Controller
             'all'     => (clone $q)->count(),
             'hit'     => (int) (clone $q)->sum('hit'),
             'open'    => (clone $q)->where('status', 'open')->count(),
-            'server'  => (clone $q)->where('http_status', '>=', 500)->count(),
+            'server'  => (clone $q)->where('source', 'server')->count(),
+            'browser' => (clone $q)->where('source', 'browser')->count(),
         ];
 
         /* 갈래 거르개는 쌓인 것에서 뽑는다 — 미리 적어 두면 새 갈래가 안 보인다 */
@@ -85,6 +91,8 @@ class ErrorLogController extends Controller
             'kind'    => $갈래,
             'status'  => $상태,
             'httpStatus' => $코드,
+            'source'  => $출처,
+            '출처표'  => ErrorLog::출처,
             'q'       => $검색,
             '상태표'  => ErrorLog::상태,
         ]);
@@ -96,12 +104,14 @@ class ErrorLogController extends Controller
         return response()->json([
             'id'        => $errorLog->id,
             'kind'      => $errorLog->kind,
+            'source'    => $errorLog->source_label,
             'exception' => $errorLog->exception,
             'status'    => $errorLog->http_status,
             'level'     => $errorLog->level,
             'message'   => $errorLog->message,
             'file'      => $errorLog->short_file,
             'line'      => $errorLog->line,
+            'col'       => $errorLog->col,
             'trace'     => $errorLog->trace,
             'url'       => $errorLog->url,
             'method'    => $errorLog->http_method,

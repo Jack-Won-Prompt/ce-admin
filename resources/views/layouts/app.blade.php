@@ -6184,5 +6184,81 @@ const Tour = (() => {
   window.fmtPhone = fmtPhone;
 })();
 </script>
+
+<script>
+/* 브라우저에서 난 오류를 서버로 보낸다 (2026-09-11 지시).
+
+   화면이 조용히 망가지는 일은 서버 로그에 흔적이 없다 — 단추를 눌렀는데 아무 일도
+   일어나지 않는 그 순간이 JS 오류다. 「눌러도 안 돼요」를 함께 볼 자리가 있어야 한다.
+
+   지키는 것 넷.
+   ① 보내다 난 오류는 보내지 않는다 — 끝없이 돈다.
+   ② 같은 오류는 한 번만 보낸다. 한 화면에서 스무 건까지만 보낸다 —
+      되풀이되는 오류가 초에 수십 번 나는 일이 있다.
+   ③ 쓰는 사람에게 아무것도 띄우지 않는다. 오류가 난 화면에 또 알림을 얹지 않는다.
+   ④ 화면을 떠나는 길이라도 닿게 keepalive 로 보낸다. */
+(function () {
+  const 보낼곳 = '{{ route('client-errors.store') }}';
+  const 토큰   = document.querySelector('meta[name=csrf-token]')?.content;
+  const 본것   = new Set();
+  let   보낸수 = 0;
+  let   보내는중 = false;
+
+  function 보내기(것) {
+    if (보내는중 || 보낸수 >= 20) return;
+
+    const 열쇠 = [것.kind, 것.message, 것.file, 것.line].join('|');
+    if (본것.has(열쇠)) return;
+    본것.add(열쇠);
+    보낸수 += 1;
+
+    보내는중 = true;
+    try {
+      fetch(보낼곳, {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 토큰, 'Accept': 'application/json' },
+        body: JSON.stringify(것),
+      }).catch(function () { /* 보내지 못해도 쓰는 사람은 몰라야 한다 */ })
+        .finally(function () { 보내는중 = false; });
+    } catch (e) {
+      보내는중 = false;
+    }
+  }
+
+  const 화면이름 = @json(request()->route()?->getName());
+
+  window.addEventListener('error', function (e) {
+    /* 그림ㆍ스크립트가 안 불러와졌을 때도 이 자리로 온다. 그것은 오류 글월이 없다 */
+    if (!e || !e.message) return;
+    보내기({
+      kind:    (e.error && e.error.name) ? e.error.name : 'Error',
+      message: String(e.message).slice(0, 2000),
+      file:    String(e.filename || '').slice(0, 300),
+      line:    e.lineno || 0,
+      col:     e.colno || 0,
+      stack:   (e.error && e.error.stack ? String(e.error.stack) : '').slice(0, 20000),
+      url:     location.href.slice(0, 500),
+      route:   화면이름,
+    });
+  });
+
+  /* 약속이 깨졌는데 아무도 받지 않은 것 — fetch 가 실패하는 자리가 대개 여기다 */
+  window.addEventListener('unhandledrejection', function (e) {
+    const r = e && e.reason;
+    if (!r) return;
+    보내기({
+      kind:    (r && r.name) ? r.name : 'UnhandledRejection',
+      message: String((r && r.message) ? r.message : r).slice(0, 2000),
+      file:    '',
+      line:    0,
+      col:     0,
+      stack:   (r && r.stack ? String(r.stack) : '').slice(0, 20000),
+      url:     location.href.slice(0, 500),
+      route:   화면이름,
+    });
+  });
+})();
+</script>
 </body>
 </html>

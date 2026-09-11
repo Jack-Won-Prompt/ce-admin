@@ -41,6 +41,15 @@
         </div>
       </div>
       <div class="ds-field">
+        <label>출처</label>
+        <select name="source" class="form-control">
+          <option value="">전체 출처</option>
+          @foreach($출처표 as $코 => $말)
+            <option value="{{ $코 }}" @selected($source === $코)>{{ $말 }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="ds-field">
         <label>오류 유형</label>
         <select name="kind" class="form-control">
           <option value="">전체 유형</option>
@@ -92,7 +101,8 @@
       <span style="margin-left:auto;" class="el-sum">
         <span class="el-chip el-open">미확인 {{ number_format($셈['open']) }}</span>
         <span class="el-chip el-fixed">발생 횟수 {{ number_format($셈['hit']) }}</span>
-        <span class="el-chip el-check">서버 오류 {{ number_format($셈['server']) }}</span>
+        <span class="el-chip el-check">서버 {{ number_format($셈['server']) }}</span>
+        <span class="el-chip el-ign">브라우저 {{ number_format($셈['browser']) }}</span>
         <button type="button" class="ds-btn" onclick="window.__elGrid?.downloadExcel()">엑셀 다운</button>
         @if((auth()->user()->role ?? '') === 'admin')
           <button type="button" class="ds-btn" onclick="elPurge()">오래된 기록 삭제</button>
@@ -139,6 +149,14 @@
     return s;
   };
 
+  /* 서버에서 난 것과 브라우저에서 난 것은 손대는 자리가 다르다 — 한눈에 갈려야 한다 */
+  const 출처칸 = (v) => {
+    const s = document.createElement('span');
+    s.className = 'el-chip ' + (v === '브라우저' ? 'el-ign' : 'el-check');
+    s.textContent = v;
+    return s;
+  };
+
   /* 자주 난 것은 눈에 띄어야 한다 — 열 번 넘게 난 줄은 붉게 */
   const 횟수칸 = (v) => {
     const s = document.createElement('span');
@@ -153,6 +171,7 @@
     toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '최근 발생 일시', name: 'at',      width: 160, align: 'center', sortable: true },
+      { header: '출처',           name: 'source',  width: 80,  align: 'center', sortable: true, renderer: 출처칸 },
       { header: '오류 유형',      name: 'kind',    width: 170, sortable: true },
       { header: '응답코드',       name: 'status',  width: 90,  align: 'center', sortable: true },
       { header: '오류 내용',      name: 'message', width: 340, sortable: true },
@@ -195,7 +214,8 @@
 
     document.getElementById('elBody').innerHTML =
       토막('오류 내용', d.message) +
-      토막('발생 위치', `${d.file ?? '-'}:${d.line ?? ''}`, true) +
+      토막('발생 위치', `${d.file ?? '-'}:${d.line ?? ''}${d.col ? ':' + d.col : ''}`, true) +
+      토막('출처', d.source, true) +
       토막('예외 클래스', d.exception, true) +
       토막('주소', `${d.method ?? ''} ${d.url ?? '-'}`, true) +
       토막('화면 이름', d.route, true) +
