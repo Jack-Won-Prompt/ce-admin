@@ -846,11 +846,23 @@ class PrescriptionController extends Controller
         if ($request->filled('patient')) {
             $patient = \App\Models\Patient::find($request->patient);
 
-            if ($patient && (!$draft->patient_id || $draft->patient_id === $patient->id)) {
+            if ($patient) {
+                /* 다른 사람으로 들어오면 갈아 끼운다 (2026-09-11 고침).
+
+                   여태는 붙은 환자가 다르면 손대지 않고 지나갔다. 초안에 환자가 붙어도
+                   다시 쓰이지 않던 때에는 그런 초안이 올 일이 없었는데, 이제 빈 초안은
+                   환자가 붙어도 다시 쓰인다 — 그대로 두면 갑의 상담 화면에 을이 떠 있다.
+
+                   빈 초안이라 잃을 것이 없다. 주문ㆍ동의ㆍ서류ㆍ첨부ㆍ메모가 하나라도
+                   있으면 애초에 여기까지 오지 않는다(scopeBlankDraft). */
+                $갈아낌 = $draft->patient_id && $draft->patient_id !== $patient->id;
+
                 $draft->forceFill([
                     'patient_id'       => $patient->id,
-                    'patient_name_ocr' => $draft->patient_name_ocr ?: $patient->name,
-                    'mobile_ocr'       => $draft->mobile_ocr ?: ($patient->mobile ?: $patient->phone),
+                    'patient_name_ocr' => $갈아낌 ? $patient->name
+                                                  : ($draft->patient_name_ocr ?: $patient->name),
+                    'mobile_ocr'       => $갈아낌 ? ($patient->mobile ?: $patient->phone)
+                                                  : ($draft->mobile_ocr ?: ($patient->mobile ?: $patient->phone)),
                 ])->saveQuietly();
             }
         }

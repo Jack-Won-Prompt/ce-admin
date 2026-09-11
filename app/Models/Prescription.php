@@ -281,7 +281,20 @@ class Prescription extends Model
             if (!$rx->is_blank_draft) {
                 return;
             }
-            $changed = array_diff(array_keys($rx->getDirty()), ['is_blank_draft', 'updated_at', 'updated_by']);
+
+            /* 사람이 적은 것만 「내용이 생겼다」로 본다 (2026-09-11 고침).
+
+               거래처의 ［상담하기］로 들어오면 `?patient=` 가 실려 와 초안에 그 환자가
+               붙는다. 사람이 적은 것이 아니라 화면이 대신 붙인 것인데, 여태 이것만으로도
+               초안 표시가 풀렸다. 그러면 다음에 같은 길로 들어올 때 다시 쓸 빈 초안이
+               없어 새 처방번호를 받는다 — 들어올 때마다 빈 껍데기가 하나씩 쌓였다.
+               한 환자에 여섯 사람이 들어오니 3분 만에 일곱 건이 섰고, 그중 자료가
+               올라간 것은 하나뿐이었다.
+
+               환자를 붙이는 것은 초안을 준비하는 일이지 채우는 일이 아니다. 이름ㆍ병원ㆍ
+               처방 내용처럼 사람이 친 값이 들어올 때 풀린다. */
+            $셈안함 = ['is_blank_draft', 'updated_at', 'updated_by', 'patient_id'];
+            $changed = array_diff(array_keys($rx->getDirty()), $셈안함);
             if ($changed) {
                 $rx->is_blank_draft = false;
             }
