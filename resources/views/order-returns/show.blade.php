@@ -65,6 +65,11 @@
   .log-move { width:150px; flex-shrink:0; font-weight:700; }
   .ok-bar { background:var(--primary-light); border:1px solid var(--primary-200); color:var(--primary);
             border-radius:8px; padding:9px 12px; font-size:12px; margin-bottom:14px; font-weight:700; }
+  /* 잘되면 보이고 안 되면 조용했다 — 실패도 같은 자리에 세운다 (2026-09-11 확인) */
+  .no-bar { background:var(--danger-light); border:1px solid var(--alert-100); color:var(--danger);
+            border-radius:8px; padding:9px 12px; font-size:12px; margin-bottom:14px; font-weight:700; }
+  .no-bar p { margin:0; }
+  .no-bar p + p { margin-top:4px; }
 
   /* 진행 단계 — 절차서의 칸 하나가 칩 하나다 */
   .rt-steps { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
@@ -87,6 +92,16 @@
 @section('content')
 
 @if(session('status'))<div class="ok-bar">{{ session('status') }}</div>@endif
+
+{{-- 창고로 보내기ㆍ검수 결과 받기ㆍ마이너스 발행은 저쪽이 거절하면 못 한다. 컨트롤러는
+     그때마다 까닭을 남겨 왔는데(withErrors 열 자리) 이 화면에 그것을 세우는 자리가
+     없었다 — 잘되면 파란 줄이 뜨고 안 되면 아무 일도 없는 것처럼 보였다. 담당자는
+     눌린 것인지 몰라 거듭 눌렀다 (2026-09-11 확인). --}}
+@if($errors->any())
+  <div class="no-bar">
+    @foreach($errors->all() as $말)<p>{{ $말 }}</p>@endforeach
+  </div>
+@endif
 
 {{-- 판이 아홉이라 세로로 늘어놓으면 아래 것을 보려고 계속 굴려야 했다. 붙어 있는
      것끼리 묶어 가로 탭으로 세운다 — 차례는 그대로다. 뒤 판에서 정한 값을 앞 판이
