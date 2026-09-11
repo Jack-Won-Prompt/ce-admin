@@ -33,7 +33,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link"></i></div>
-    <div class="help-item-text"><strong>Withworks 연계</strong>주문 화면에서 처방전을 검수한 뒤 주문 연계 탭에서 Withworks 판매주문을 자동 생성합니다.</div>
+    <div class="help-item-text"><strong>위드웍스 연계</strong>주문 화면에서 처방전을 검수한 뒤 주문 연계 탭에서 위드웍스 판매주문을 자동 생성합니다.</div>
   </div>
 </div>
 @endsection

@@ -187,7 +187,7 @@
     <div class="card">
       <div class="card-header">
         <i class="bx bx-link-alt" style="font-size:16px;color:var(--primary);"></i>
-        <span class="card-header-title">Withworks 연동</span>
+        <span class="card-header-title">위드웍스 연동</span>
         @if($shopOrder->withworks_so_no)
           <a href="{{ rtrim(config('services.demoworks.api_url'), '/') }}" target="_blank"
              class="btn btn-outline btn-sm ms-auto">바로가기</a>
@@ -196,12 +196,12 @@
       <div style="padding:16px;">
         @if($shopOrder->withworks_so_no)
           <div style="margin-bottom:10px;">
-            <div class="info-label">판매번호</div>
+            <div class="info-label">위드웍스 판매번호</div>
             <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $shopOrder->withworks_so_no }}</div>
           </div>
           @if($withworksStatus)
             <div style="margin-bottom:10px;">
-              <div class="info-label">Withworks 상태</div>
+              <div class="info-label">위드웍스 상태</div>
               <div style="margin-top:4px;">
                 @php
                   $wwCls = match(true) {

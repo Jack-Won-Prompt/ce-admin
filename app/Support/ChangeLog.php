@@ -211,7 +211,7 @@ final class ChangeLog
         'shipping_address_detail' => '배송지 상세',
         'shipping_postcode'     => '우편번호',
         'warehouse_note'        => '창고 전달 메모',
-        'withworks_so_no'       => '판매번호',
+        'withworks_so_no'       => '위드웍스 판매번호',
         'tax_invoice_status'    => '세금계산서',
         'cash_receipt_status'   => '현금영수증',
         // 거래처

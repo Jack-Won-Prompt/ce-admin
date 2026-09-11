@@ -375,7 +375,7 @@
             <div class="info-value">{{ $issuedAt?->format('Y-m-d H:i:s') ?? '-' }}</div>
           </div>
           <div class="info-cell">
-            <div class="info-label">판매번호</div>
+            <div class="info-label">위드웍스 판매번호</div>
             <div class="info-value" style="font-family:monospace;">{{ $dispatchNo }}</div>
           </div>
           @if($wwSent)

@@ -25,7 +25,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon"><i class="bx bx-cart-alt"></i></div>
-    <div class="help-item-text"><strong>주문 미등록</strong>검수는 완료됐지만 Withworks 주문이 아직 없는 건입니다.</div>
+    <div class="help-item-text"><strong>주문 미등록</strong>검수는 완료됐지만 위드웍스 주문이 아직 없는 건입니다.</div>
   </div>
 </div>
 <div class="help-section">
@@ -36,7 +36,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link-external"></i></div>
-    <div class="help-item-text"><strong>주문번호ㆍ판매번호</strong>위드웍스 판매번호가 이어진 건은 파란 모노스페이스 글꼴로 보입니다.</div>
+    <div class="help-item-text"><strong>주문번호ㆍ위드웍스 판매번호</strong>위드웍스 판매번호가 이어진 건은 파란 모노스페이스 글꼴로 보입니다.</div>
   </div>
 </div>
 @endsection
@@ -255,7 +255,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '#rxGrid',
     title: '목록 그리드',
-    body: '행을 <b>더블클릭</b>하면 주문 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>판매번호</b> 칸에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
+    body: '행을 <b>더블클릭</b>하면 주문 화면이 <b>새 탭</b>으로 열립니다(목록 탭은 그대로 유지). <b>판매유형</b>과 <b>위드웍스 판매번호</b> 칸에서 주문 연계 상태를 한눈에 확인할 수 있고, 컬럼 헤더를 클릭해 정렬할 수 있습니다.'
   },
   {
     selector: 'button[onclick="prescriptionViewDetail()"]',
@@ -316,9 +316,9 @@ window.HELP_TOUR_STEPS = [
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
-      // 표기는 시안 128:1744 대로 'WithWorks So'. 요청서에 이 낱말이 없어 시안이 기준이다.
-      // name·width·sortable 은 그대로 둔다(엑셀 머리글도 이 header 를 그대로 쓴다).
-      { header: 'WithWorks So',  name: 'so_no',      width: 130, sortable: true },
+      // 시안은 'WithWorks So' 였으나 화면 낱말을 우리말로 맞춘다(2026-09-11 지시).
+      // name 은 그대로 둔다(엑셀 머리글은 이 header 를 그대로 쓴다).
+      { header: '위드웍스 판매번호', name: 'so_no',   width: 150, sortable: true },
       { header: '검수 담당자',   name: 'assignee',   width: 90,  align: 'center', sortable: true },
       // 요청서 6쪽 — 주민등록번호ㆍ업로드 담당자ㆍ검수 일자ㆍ검수 메모
       { header: '주민등록번호',  name: 'resident_no', width: 130 },

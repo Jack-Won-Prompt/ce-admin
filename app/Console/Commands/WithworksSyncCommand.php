@@ -16,14 +16,14 @@ class WithworksSyncCommand extends Command
 {
     protected $signature = 'withworks:sync {--limit=200 : 한 번에 확인할 주문 수}';
 
-    protected $description = 'Withworks 판매주문의 물류 진행 상태를 끌어온다';
+    protected $description = '위드웍스 판매주문의 물류 진행 상태를 끌어온다';
 
     public function handle(WithworksSync $sync): int
     {
         $r = $sync->sweep((int) $this->option('limit'));
 
         if (!$r['configured']) {
-            $this->warn('Withworks API 설정이 없습니다 — 건너뜁니다.');
+            $this->warn('위드웍스 API 설정이 없습니다 — 건너뜁니다.');
 
             return self::SUCCESS;
         }

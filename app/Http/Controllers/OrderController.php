@@ -1157,19 +1157,19 @@ class OrderController extends Controller
     public function fetchWithworksStatus(Order $order): \Illuminate\Http\JsonResponse
     {
         if (!$order->withworks_so_no) {
-            return response()->json(['success' => false, 'message' => 'Withworks 미연동 주문입니다.'], 422);
+            return response()->json(['success' => false, 'message' => '위드웍스 미연동 주문입니다.'], 422);
         }
 
         $sync = app(WithworksSync::class);
 
         if (!$sync->configured()) {
-            return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 API 설정이 없습니다.'], 500);
         }
 
         $result = $sync->pull($order);
 
         if ($result === null) {
-            return response()->json(['success' => false, 'message' => 'Withworks에서 주문 상태를 가져오지 못했습니다.'], 502);
+            return response()->json(['success' => false, 'message' => '위드웍스에서 주문 상태를 가져오지 못했습니다.'], 502);
         }
 
         return response()->json([

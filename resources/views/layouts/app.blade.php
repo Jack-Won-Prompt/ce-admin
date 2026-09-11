@@ -2115,7 +2115,7 @@ document.addEventListener('click', (e) => {
       // ── 위드웍스 차례 ──────────────────────────────────
       { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
       { header: '병원명',         name: 'rx_hospital',  width: 150, sortable: true },
-      { header: '판매번호',       name: 'ww_so_no',       width: 130, sortable: true },
+      { header: '위드웍스 판매번호', name: 'ww_so_no',       width: 150, sortable: true },
       { header: '판매상태',       name: 'ww_sale_status', width: 110, align: 'center', sortable: true },
       { header: '출고상태',       name: 'ww_ship_status', width: 110, align: 'center', sortable: true },
       { header: '출고일자',       name: 'ww_ship_date',   width: 100, align: 'center', sortable: true },

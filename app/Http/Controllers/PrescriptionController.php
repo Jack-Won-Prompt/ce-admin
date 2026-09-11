@@ -281,7 +281,7 @@ class PrescriptionController extends Controller
         $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
-            return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 API 설정이 없습니다.'], 500);
         }
 
         $patient = $prescription->patient;
@@ -361,7 +361,7 @@ class PrescriptionController extends Controller
                 }
 
                 activity()->causedBy(Auth::user())->performedOn($prescription)
-                    ->log("Withworks 판매주문 연계: {$soNo}");
+                    ->log("위드웍스 판매주문 연계: {$soNo}");
 
                 /* 창고에 판매주문이 섰다 — 이제 고객에게 알린다. 여기까지 와야 「확정」이다.
                    보내지 못해도 주문은 이미 선 것이라 되돌리지 않는다. 무슨 일이 있었는지는
@@ -378,7 +378,7 @@ class PrescriptionController extends Controller
                 return response()->json([
                     'success' => true,
                     'so_no'   => $soNo,
-                    'message' => 'Withworks 판매주문이 생성되었습니다.' . ($detail ? ' (' . implode(', ', $detail) . ')' : ''),
+                    'message' => '위드웍스 판매주문이 생성되었습니다.' . ($detail ? ' (' . implode(', ', $detail) . ')' : ''),
                     'patient_account_id' => $result['patient_account_id'] ?? null,
                     'patient_address_id' => $result['patient_address_id'] ?? null,
                     'sms'     => $sms,
@@ -393,11 +393,11 @@ class PrescriptionController extends Controller
                 'payload_keys' => array_keys($payload),
             ]);
 
-            return response()->json(['success' => false, 'message' => "Withworks 연계 실패: {$errMsg}"]);
+            return response()->json(['success' => false, 'message' => "위드웍스 연계 실패: {$errMsg}"]);
 
         } catch (\Throwable $e) {
             Log::error('Withworks API 연결 오류', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Withworks 서버에 연결할 수 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 서버에 연결할 수 없습니다.'], 500);
         }
     }
 
@@ -624,7 +624,7 @@ class PrescriptionController extends Controller
         $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
-            return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 API 설정이 없습니다.'], 500);
         }
 
         $patient = $prescription->patient;
@@ -661,22 +661,22 @@ class PrescriptionController extends Controller
             if ($response->successful() && ($body['success'] ?? false)) {
                 $soNo = $body['result']['so_no'] ?? '-';
                 activity()->causedBy(Auth::user())->performedOn($prescription)
-                    ->log("Withworks 판매주문 수정: {$soNo}");
+                    ->log("위드웍스 판매주문 수정: {$soNo}");
 
                 return response()->json([
                     'success' => true,
                     'so_no'   => $body['result']['so_no'] ?? null,
-                    'message' => 'Withworks 판매주문이 수정되었습니다.',
+                    'message' => '위드웍스 판매주문이 수정되었습니다.',
                 ]);
             }
 
             $errMsg = $body['message'] ?? "HTTP {$response->status()}";
             Log::warning('Withworks SO 수정 실패', ['status' => $response->status(), 'body' => $body]);
-            return response()->json(['success' => false, 'message' => "Withworks 연계 실패: {$errMsg}"]);
+            return response()->json(['success' => false, 'message' => "위드웍스 연계 실패: {$errMsg}"]);
 
         } catch (\Throwable $e) {
             Log::error('Withworks API 연결 오류 (수정)', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Withworks 서버에 연결할 수 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 서버에 연결할 수 없습니다.'], 500);
         }
     }
 
@@ -691,7 +691,7 @@ class PrescriptionController extends Controller
         $token   = config('services.demoworks.token');
 
         if (!$baseUrl || !$token) {
-            return response()->json(['success' => false, 'message' => 'Withworks API 설정이 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 API 설정이 없습니다.'], 500);
         }
 
         try {
@@ -706,18 +706,18 @@ class PrescriptionController extends Controller
 
             if ($response->successful() && ($body['success'] ?? false)) {
                 activity()->causedBy(Auth::user())->performedOn($prescription)
-                    ->log("Withworks 판매주문 삭제: {$request->order_number}");
+                    ->log("위드웍스 판매주문 삭제: {$request->order_number}");
 
-                return response()->json(['success' => true, 'message' => 'Withworks 판매주문이 삭제되었습니다.']);
+                return response()->json(['success' => true, 'message' => '위드웍스 판매주문이 삭제되었습니다.']);
             }
 
             $errMsg = $body['message'] ?? "HTTP {$response->status()}";
             Log::warning('Withworks SO 삭제 실패', ['status' => $response->status(), 'body' => $body]);
-            return response()->json(['success' => false, 'message' => "Withworks 연계 실패: {$errMsg}"]);
+            return response()->json(['success' => false, 'message' => "위드웍스 연계 실패: {$errMsg}"]);
 
         } catch (\Throwable $e) {
             Log::error('Withworks API 연결 오류 (삭제)', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Withworks 서버에 연결할 수 없습니다.'], 500);
+            return response()->json(['success' => false, 'message' => '위드웍스 서버에 연결할 수 없습니다.'], 500);
         }
     }
 

@@ -90,7 +90,7 @@ class DispatchHistoryController extends Controller
             /* 창고는 보낸 것과 받은 것을 함께 센다. 보낸 것은 목록이 읽는 것과 같은
                자리(활동 기록)에서 센다 — 주문 수로 세면 목록보다 적게 나온다. */
             'withworks'       => $inRange(WithworksEvent::query(), 'COALESCE(occurred_at, created_at)')->count()
-                               + $inRange(\Spatie\Activitylog\Models\Activity::where('description', 'like', 'Withworks %'), 'created_at')->count(),
+                               + $inRange(\Spatie\Activitylog\Models\Activity::where(self::창고글()), 'created_at')->count(),
         ];
 
         $types = self::TYPES;
@@ -99,6 +99,25 @@ class DispatchHistoryController extends Controller
     }
 
     /** 타입별 wwGrid 데이터/컬럼 생성 (원본 테이블 셀을 텍스트로 매핑) */
+    /**
+     * 창고로 넘긴 것을 가리는 조건.
+     *
+     * 활동 기록의 글머리로 가린다. 2026-09-11 부터 「위드웍스 …」로 적지만
+     * 그 전에 쌓인 것은 「Withworks …」다 — 둘 다 걸려야 옛 기록이 사라지지 않는다.
+     *
+     * 우리말 쪽은 연계ㆍ수정ㆍ삭제만 집는다. 「위드웍스 판매주문 확정」은 입금을
+     * 받은 뒤의 다른 사건이고, 이 목록은 창고로 넘긴 것만 보여 주는 자리다.
+     */
+    private static function 창고글(): \Closure
+    {
+        return function ($q) {
+            $q->where('description', 'like', 'Withworks 판매주문 %');
+            foreach (['연계', '수정', '삭제'] as $짓) {
+                $q->orWhere('description', 'like', '위드웍스 판매주문 ' . $짓 . '%');
+            }
+        };
+    }
+
     private function buildGrid(string $type, $rows): array
     {
         if ($type === 'message') {
@@ -172,7 +191,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '방향',     'name' => 'way',       'width' => 70,  'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '이름',     'name' => 'patient',   'width' => 90],
-                ['header' => '판매번호', 'name' => 'so_no',     'width' => 130],
+                ['header' => '위드웍스 판매번호', 'name' => 'so_no', 'width' => 150],
                 ['header' => '사건',     'name' => 'event',     'width' => 140, 'sortable' => true],
                 ['header' => '상태',     'name' => 'status',    'width' => 120, 'align' => 'center'],
             ];
@@ -569,7 +588,7 @@ class DispatchHistoryController extends Controller
 
         // ① 우리가 넘긴 것
         $sent = \Spatie\Activitylog\Models\Activity::with('subject')
-            ->where('description', 'like', 'Withworks %')
+            ->where(self::창고글())
             ->whereBetween(DB::raw('DATE(created_at)'), [$from, $to])
             ->latest('id')->limit(500)->get()
             ->map(function ($a) {

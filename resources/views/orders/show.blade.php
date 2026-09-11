@@ -904,12 +904,12 @@
       <div class="card od-mb">
         <div class="card-header">
           <i class="bx bx-link-alt" style="color:var(--primary);"></i>
-          <span class="card-header-title">Withworks 출고 현황</span>
+          <span class="card-header-title">위드웍스 출고 현황</span>
         </div>
         <div class="card-body">
           @if($order->withworks_so_no)
             <div style="margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">판매번호</div>
+              <div style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-700);margin-bottom:4px;">위드웍스 판매번호</div>
               <div style="font-size:13px;font-weight:700;line-height:21px;color:var(--primary);">{{ $order->withworks_so_no }}</div>
             </div>
             @if($withworksStatus)
@@ -988,13 +988,13 @@
               @endif
             @else
               <div style="padding:12px;background:var(--gray-100);border-radius:var(--radius);font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);">
-                <i class="bx bx-info-circle"></i> Withworks 상태를 불러올 수 없습니다.
+                <i class="bx bx-info-circle"></i> 위드웍스 상태를 불러올 수 없습니다.
               </div>
             @endif
           @else
             {{-- 시안 158:171 — 미연동 안내는 상자 없이 본문 가운데, 12px/500 gray-600 (주황은 시안에 없다) --}}
             <div class="ww-empty">
-              <i class="bx bx-time"></i> Withworks 미연동 상태입니다.
+              <i class="bx bx-time"></i> 위드웍스 미연동 상태입니다.
             </div>
           @endif
 
@@ -1524,7 +1524,7 @@ window.HELP_TOUR_STEPS = [
      '메모' → '정보' 로 바뀐 뒤 두 카드가 엉뚱한 탭에 가 있었다. */
   const MAP = {
     '환자 정보': '기본', '제품 정보': '기본', '금액 정보': '기본', '결제 · 입금': '기본',
-    '배송 정보': '배송', 'Withworks 출고 현황': '배송', '상태 변경': '배송',
+    '배송 정보': '배송', '위드웍스 출고 현황': '배송', '상태 변경': '배송',
     '교환 · 반품 · 취소': '배송',
     '건강보험 요양비 청구': '청구', '세금계산서 / 현금영수증': '청구',
     '정보': '정보', '메모': '정보',

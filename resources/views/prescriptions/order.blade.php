@@ -8,7 +8,7 @@
 @section('help-content')
 <div class="help-section">
   <div class="help-section-title">화면 구성</div>
-  <div class="help-tip"><i class="bx bx-info-circle"></i>처방전 이미지 확인 → 제품 선택 → 주문 생성 → Withworks 연계까지 한 화면에서 처리합니다.</div>
+  <div class="help-tip"><i class="bx bx-info-circle"></i>처방전 이미지 확인 → 제품 선택 → 주문 생성 → 위드웍스 연계까지 한 화면에서 처리합니다.</div>
 </div>
 <div class="help-section">
   <div class="help-section-title">탭 안내</div>
@@ -26,7 +26,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon success"><i class="bx bx-cart"></i></div>
-    <div class="help-item-text"><strong>주문 제품 탭</strong>제품을 선택하고 배송 정보를 입력하여 주문을 등록합니다. Withworks에 자동 연계됩니다.</div>
+    <div class="help-item-text"><strong>주문 제품 탭</strong>제품을 선택하고 배송 정보를 입력하여 주문을 등록합니다. 위드웍스에 자동 연계됩니다.</div>
   </div>
 </div>
 <div class="help-section">
@@ -45,11 +45,11 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">4</div>
-    <div class="help-item-text">우측 카드에서 <b>판매번호</b> 확인</div>
+    <div class="help-item-text">우측 카드에서 <b>위드웍스 판매번호</b> 확인</div>
   </div>
 </div>
 <div class="help-section">
-  <div class="help-section-title">Withworks 판매유형</div>
+  <div class="help-section-title">위드웍스 판매유형</div>
   <div class="help-badge-row">
     <span class="badge badge-primary">CE 판매 (1013)</span>
     <span class="badge badge-info">개인판매 (1016)</span>
@@ -2485,7 +2485,7 @@ $calcDeposit  = $calcCopay;
               <span class="rx-tabno rx-tabno-so" id="rxTabNoSo"
                     style="display:{{ $prescription->order?->withworks_so_no ? '' : 'none' }};"
                     title="위드웍스 판매번호 — 누르면 베낍니다"
-                    onclick="rxCopyNo(this)">판매번호 <b>{{ $prescription->order?->withworks_so_no }}</b></span>
+                    onclick="rxCopyNo(this)">위드웍스 판매번호 <b>{{ $prescription->order?->withworks_so_no }}</b></span>
             </div>
             <div class="rx-tabs-acts">
               {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
@@ -4091,7 +4091,7 @@ $calcDeposit  = $calcCopay;
                   <b style="color:var(--primary);">주문 생성 완료</b>
                   <span style="color:var(--text-muted);margin-left:8px;">{{ $prescription->order->order_number }}</span>
                   @if($prescription->order->withworks_so_no)
-                    <span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">판매번호 {{ $prescription->order->withworks_so_no }}</span>
+                    <span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">위드웍스 판매번호 {{ $prescription->order->withworks_so_no }}</span>
                   @endif
                 </div>
               </div>
@@ -4170,7 +4170,7 @@ $calcDeposit  = $calcCopay;
                   @if($prescription->order)
                     {{ $prescription->order->order_number }}
                     @if($prescription->order->withworks_so_no)
-                      <span style="color:var(--primary);font-family:monospace;display:block;">판매번호 {{ $prescription->order->withworks_so_no }}</span>
+                      <span style="color:var(--primary);font-family:monospace;display:block;">위드웍스 판매번호 {{ $prescription->order->withworks_so_no }}</span>
                     @endif
                   @else
                     대기 중
@@ -4229,7 +4229,7 @@ $calcDeposit  = $calcCopay;
                   <td>
                     @if($prescription->order)
                       <span style="font-weight:700;">{{ $prescription->order->order_number }}</span>
-                      @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:6px;font-size:11px;">판매번호 {{ $prescription->order->withworks_so_no }}</span>@endif
+                      @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:6px;font-size:11px;">위드웍스 판매번호 {{ $prescription->order->withworks_so_no }}</span>@endif
                     @else대기 중@endif
                   </td>
                 </tr>
@@ -4370,9 +4370,9 @@ $calcDeposit  = $calcCopay;
       <p style="font-size:13px;margin:0 0 8px;">다음 주문을 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
       <div style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:12px;line-height:2;">
         <div><span style="color:var(--text-muted);">CE 주문번호</span> &nbsp;<b id="deleteOrderNum" style="font-family:monospace;color:var(--danger);">-</b></div>
-        <div><span style="color:var(--text-muted);">판매번호</span> &nbsp;<b id="deleteOrderSoNo" style="font-family:monospace;color:var(--primary);">-</b></div>
+        <div><span style="color:var(--text-muted);">위드웍스 판매번호</span> &nbsp;<b id="deleteOrderSoNo" style="font-family:monospace;color:var(--primary);">-</b></div>
       </div>
-      <p style="font-size:12px;color:var(--warning);margin:10px 0 0;"><i class="fa-solid fa-circle-info"></i> Withworks 판매주문도 함께 삭제됩니다.</p>
+      <p style="font-size:12px;color:var(--warning);margin:10px 0 0;"><i class="fa-solid fa-circle-info"></i> 위드웍스 판매주문도 함께 삭제됩니다.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('deleteOrderModal')">취소</button>
@@ -5619,11 +5619,11 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(3)',
     title: '주문 제품 탭',
-    body: '제품을 선택하고 배송 정보를 입력한 뒤 <b>주문 생성 및 연계</b>를 누릅니다. Withworks 판매주문이 자동 생성됩니다.'
+    body: '제품을 선택하고 배송 정보를 입력한 뒤 <b>주문 생성 및 연계</b>를 누릅니다. 위드웍스 판매주문이 자동 생성됩니다.'
   },
   {
     selector: '#wwSoCard',
-    title: '판매번호',
+    title: '위드웍스 판매번호',
     body: '주문을 생성하면 이 카드에 위드웍스 판매번호가 표시됩니다. 이어졌는지를 여기서 봅니다.'
   },
   {
@@ -9063,7 +9063,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ② Withworks 판매주문 연계
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> Withworks 연계 중...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> 위드웍스 연계 중...';
 
     const wwItems = validItems.map(i => ({
       item_code:  i.product_code || '',
@@ -9093,7 +9093,7 @@ window.HELP_TOUR_STEPS = [
       wwMessage = wwRes.message ?? '';
       smsResult = wwRes.sms ?? null;
     } else {
-      wwMessage = '제품 코드가 없어 Withworks 연계를 건너뜁니다.';
+      wwMessage = '제품 코드가 없어 위드웍스 연계를 건너뜁니다.';
     }
 
     BtnState.reset(btn);
@@ -9128,10 +9128,10 @@ window.HELP_TOUR_STEPS = [
       </div>
       <div style="background:var(--bg);border-radius:var(--radius);padding:14px;text-align:left;font-size:12px;line-height:2.2;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="color:var(--text-muted);">판매번호</span>
+          <span style="color:var(--text-muted);">위드웍스 판매번호</span>
           <span>${wwBadge}</span>
         </div>
-        ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">판매번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
+        ${soNo ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">위드웍스 판매번호</span><b style="color:var(--primary);">${soNo}</b></div>` : ''}
         ${!wwSuccess && wwMessage ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">사유</span><span style="color:var(--warning);font-size:11px;">${wwMessage}</span></div>` : ''}
         ${smsRow}
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">제품 수</span><b>${localPayload.items?.length ?? 0}종</b></div>
@@ -9176,7 +9176,7 @@ window.HELP_TOUR_STEPS = [
       if (v) el.innerHTML = 이름 + ' <b>' + v.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])) + '</b>';
     };
     세우기('rxTabNoOrder', '주문번호', orderNum);
-    세우기('rxTabNoSo',    '판매번호', soNo);
+    세우기('rxTabNoSo',    '위드웍스 판매번호', soNo);
   }
 
   /** 번호를 눌러 베낀다 — 위드웍스나 전화로 불러 줄 때 손으로 옮겨 적지 않는다 */
@@ -9214,7 +9214,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ── 워크플로우 "주문 생성" 스텝 (사이드바 + 이력 탭) ─────────────────
-    const soTimeHtml = `${orderNum}${soNo ? `<span style="color:var(--primary);font-family:monospace;display:block;">판매번호 ${soNo}</span>` : ''}`;
+    const soTimeHtml = `${orderNum}${soNo ? `<span style="color:var(--primary);font-family:monospace;display:block;">위드웍스 판매번호 ${soNo}</span>` : ''}`;
 
     // 사이드바
     const wsIcon = document.getElementById('wsOrderIcon');
@@ -9276,7 +9276,7 @@ window.HELP_TOUR_STEPS = [
         <div>
           <b style="color:var(--primary);">주문 생성 완료</b>
           <span style="color:var(--text-muted);margin-left:8px;">${orderNum}</span>
-          ${soNo ? `<span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">판매번호 ${soNo}</span>` : ''}
+          ${soNo ? `<span style="color:var(--primary);margin-left:6px;font-family:monospace;font-size:11px;">위드웍스 판매번호 ${soNo}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:8px;">
@@ -9342,7 +9342,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ② Withworks 수정
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> Withworks 수정 중...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> 위드웍스 수정 중...';
     const wwItems = validItems.map(i => ({
       item_code:  i.product_code || '',
       qty:        i.quantity     || 1,
@@ -9379,8 +9379,8 @@ window.HELP_TOUR_STEPS = [
     if (!opts.silent) {
       showToast(
         wwSuccess
-          ? '✅ 주문이 수정되었습니다. (Withworks 동기화 완료)'
-          : (wwMessage ? `주문 수정 완료 (Withworks: ${wwMessage})` : '주문 수정 완료 (Withworks 연계 실패)'),
+          ? '✅ 주문이 수정되었습니다. (위드웍스 동기화 완료)'
+          : (wwMessage ? `주문 수정 완료 (위드웍스: ${wwMessage})` : '주문 수정 완료 (위드웍스 연계 실패)'),
         wwSuccess ? 'success' : 'warning'
       );
     }
@@ -9477,7 +9477,7 @@ window.HELP_TOUR_STEPS = [
       wwSuccess = wwRes.success ?? false;
       if (!wwSuccess) {
         BtnState.error(btn, '삭제 실패');
-        showToast('Withworks 삭제 실패: ' + (wwRes.message || ''), 'danger');
+        showToast('위드웍스 삭제 실패: ' + (wwRes.message || ''), 'danger');
         return;
       }
     }
@@ -12094,7 +12094,7 @@ window.HELP_TOUR_STEPS = [
           ${_pcFR('주문상태',   d.order.status_label || d.order.status)}
           ${_pcFR('주문일',     d.order.created_at)}
           ${_pcFR('총 금액',    d.order.total_amount ? Number(d.order.total_amount).toLocaleString('ko-KR')+'원' : null)}
-          ${_pcFR('판매번호', d.order.withworks_so_no)}
+          ${_pcFR('위드웍스 판매번호', d.order.withworks_so_no)}
         </div>
       </div>`;
     }
