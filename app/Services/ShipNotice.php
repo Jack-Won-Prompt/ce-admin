@@ -63,7 +63,8 @@ class ShipNotice
         try {
             $res = $this->sender->sendBulk(
                 'sms',
-                [['rcv' => $mobile, 'rcvnm' => $order->patient?->name ?? '', 'patient_id' => $order->patient_id]],
+                [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::bare($order->patient?->name),
+                  'patient_id' => $order->patient_id]],
                 $text,
                 null,
                 ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id],
@@ -108,7 +109,8 @@ class ShipNotice
      */
     public function compose(Order $order, string $tracking): string
     {
-        $name = $order->patient?->name ?: '고객';
+        /* 거래처가 받는 글이다 — 사업부 접두 (E) 는 떼고 적는다 (2026-09-11 지시) */
+        $name = \App\Models\Patient::bare($order->patient?->name) ?: '고객';
 
         $body = MessageTemplate::channel('sms')->active()
             ->where('code', self::TEMPLATE)->value('body');

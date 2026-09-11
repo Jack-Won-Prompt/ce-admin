@@ -80,7 +80,7 @@ class ReturnSettlement
                        떠서, 몇 번을 눌러도 같은 자리였다(3차 4회 13번). */
                     'rx_number'       => $order->prescription?->rx_number
                                          ?? $order->order_number,
-                    'patient_name'    => $order->patient?->name ?? '환자',
+                    'patient_name'    => \App\Models\Patient::bare($order->patient?->name) ?: '환자',
                     'patient_mobile'  => $order->patient?->mobile,
                     'ho_account_id'   => config('services.demoworks.account_id'),
                     'so_type'         => $soType,
