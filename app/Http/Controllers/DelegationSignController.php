@@ -182,22 +182,8 @@ class DelegationSignController extends Controller
                 continue;
             }
 
-            /* 같은 이름ㆍ같은 번호는 다시 세우지 않는다 */
-            $있나 = DelegationSign::where('customer_name', $이름)
-                ->where(fn ($s) => $s->where('phone1', $번호1)->orWhere('phone2', $번호1))
-                ->exists();
-
-            if ($있나) {
-                $건너뜀++;
-                continue;
-            }
-
-            DelegationSign::create([
-                'customer_name' => mb_substr($이름, 0, 100),
-                'phone1'        => $번호1 ?: null,
-                'phone2'        => $번호2 ?: null,
-                'status'        => 'pending',
-            ] + ($자리 ? [
+            /* 명단에 딸려 온 값 — 다시 올리면 이것만 새로 적는다 */
+            $명단값 = $자리 ? [
                 'src_no'             => ($n = $값($자리['번호'])) !== '' ? (int) $n : null,
                 'dealer_name'        => mb_substr($값($자리['판매처']), 0, 100) ?: null,
                 'next_repurchase_at' => self::날짜($값($자리['다음재구매'])),
@@ -208,17 +194,42 @@ class DelegationSignController extends Controller
                 'rx_type'            => mb_substr($값($자리['처방여부']), 0, 30) ?: null,
                 'benefit_class'      => mb_substr($값($자리['자격']), 0, 30) ?: null,
                 'last_sale_status'   => mb_substr($값($자리['판매상태']), 0, 30) ?: null,
-            ] : []));
+            ] : [];
+
+            /* 같은 이름ㆍ같은 번호가 이미 있으면 새로 세우지 않고 **명단 칸만 새로 적는다**
+               (2026-09-11). 명단은 주마다 새로 뽑혀 온다 — 다음 재구매일이나 판매상태가
+               바뀐 것을 받아 적어야 하는데, 여태 그냥 지나가 옛 값이 남았다.
+
+               발송ㆍ서명 칸은 건드리지 않는다. 받아 둔 서명은 명단을 다시 올린다고
+               사라져서는 안 된다. */
+            $이미 = DelegationSign::where('customer_name', $이름)
+                ->where(fn ($s) => $s->where('phone1', $번호1)->orWhere('phone2', $번호1))
+                ->first();
+
+            if ($이미) {
+                if ($명단값) {
+                    $이미->forceFill($명단값 + ['phone2' => $번호2 ?: $이미->phone2])->save();
+                }
+                $건너뜀++;
+                continue;
+            }
+
+            DelegationSign::create([
+                'customer_name' => mb_substr($이름, 0, 100),
+                'phone1'        => $번호1 ?: null,
+                'phone2'        => $번호2 ?: null,
+                'status'        => 'pending',
+            ] + $명단값);
             $세움++;
         }
 
         activity()->causedBy(Auth::user())
-            ->log("위임장 서명 명단 올림 — 새로 {$세움}건 · 이미 있어 지나감 {$건너뜀}건");
+            ->log("위임장 서명 명단 올림 — 새로 {$세움}건 · 이미 있어 새로 적음 {$건너뜀}건");
 
         return response()->json([
             'success' => true,
             'message' => "새로 {$세움}건을 세웠습니다."
-                       . ($건너뜀 ? " 이미 있어 지나간 것 {$건너뜀}건." : '')
+                       . ($건너뜀 ? " 이미 있던 {$건너뜀}건은 명단 값을 새로 적었습니다." : '')
                        . ($잘못 ? ' 넣지 못한 줄 ' . count($잘못) . '건.' : ''),
             'errors'  => array_slice($잘못, 0, 20),
         ]);
@@ -255,7 +266,9 @@ class DelegationSignController extends Controller
             '판매처'     => $찾(['환자거래처']) !== null ? $찾(['거래처명']) : null,
             '번호1'      => $찾(['전화번호1', '전화번호 1', '휴대폰', '전화번호', '연락처']),
             '번호2'      => $찾(['전화번호2', '전화번호 2']),
-            '번호'       => $찾(['No', 'no', '순번']),
+            /* 줄 번호 칸은 머리글이 비어 있기 일쑤다 — 엑셀이 왼쪽 끝에 붙이는 것이라
+               이름이 없다. 「No」를 못 찾고 첫 칸이 빈 머리글이면 그 자리로 본다. */
+            '번호'       => $찾(['No', 'no', '순번']) ?? (($머리[0] ?? null) === '' ? 0 : null),
             '다음재구매' => $찾(['다음재구매']),
             '마지막등록' => $찾(['마지막 등록', '마지막등록']),
             '처방기간'   => $찾(['처방기간']),
@@ -285,10 +298,23 @@ class DelegationSignController extends Controller
         return (strlen($숫) >= 9 && strlen($숫) <= 11) ? $숫 : '';
     }
 
-    /** YYYY-MM-DD 만 받는다 — 알아볼 수 없는 것은 비워 둔다 */
+    /**
+     * YYYY-MM-DD 만 받는다 — 알아볼 수 없는 것은 비워 둔다.
+     *
+     * 엑셀은 빈 날짜를 「1900-01-00」으로 적는다. 꼴만 보면 맞아 보여 그대로
+     * 담았더니 MySQL 이 1899-12-31 로 바꿔 놓았다 — 비어 있다는 뜻이 「아주 오래
+     * 전」으로 바뀌어, 다음 재구매가 지난 건으로 읽혔다 (2026-09-11 · 205건).
+     * 달과 날이 실제로 있는 날인지 센다.
+     */
     private static function 날짜(string $값): ?string
     {
-        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $값) ? $값 : null;
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $값, $m)) {
+            return null;
+        }
+
+        [, $해, $달, $날] = $m;
+
+        return checkdate((int) $달, (int) $날, (int) $해) && (int) $해 >= 2000 ? $값 : null;
     }
 
     // ── 발송 팝오버가 묻는 것 ─────────────────────────────
