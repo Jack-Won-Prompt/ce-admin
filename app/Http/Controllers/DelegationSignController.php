@@ -104,10 +104,25 @@ class DelegationSignController extends Controller
             return response()->json(['success' => false, 'message' => '파일을 읽지 못했습니다.'], 422);
         }
 
-        /* 엑셀이 앞에 붙이는 BOM 을 떼고, cp949 면 UTF-8 로 옮긴다 */
+        /* 엑셀이 앞에 붙이는 BOM 을 떼고, 한글 윈도우 꼴이면 UTF-8 로 옮긴다.
+
+           mbstring 이 아는 이름이 자리마다 다르다 — 여기 PHP 에는 CP949 가 있는데
+           서버에는 UHC 와 EUC-KR 뿐이다. 없는 이름을 대면 조용히 빈손이 돌아와,
+           머리글을 못 알아보고 줄 번호를 이름으로 읽었다 (2026-09-11).
+           있는 것부터 차례로 짚고, 하나도 없으면 그렇게 말한다. */
         $글 = preg_replace('~^\xEF\xBB\xBF~', '', $글);
         if (! mb_check_encoding($글, 'UTF-8')) {
-            $글 = mb_convert_encoding($글, 'UTF-8', 'CP949');
+            $쓸것 = collect(['UHC', 'CP949', 'EUC-KR'])
+                ->first(fn ($e) => in_array($e, mb_list_encodings(), true));
+
+            if (! $쓸것) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'UTF-8 이 아닌 파일인데 한글 인코딩을 다룰 수 없습니다 — 엑셀에서 「CSV UTF-8」로 저장해 주십시오.',
+                ], 422);
+            }
+
+            $글 = mb_convert_encoding($글, 'UTF-8', $쓸것);
         }
 
         $줄들 = preg_split('/\r\n|\r|\n/', trim($글));
@@ -128,6 +143,13 @@ class DelegationSignController extends Controller
         if (preg_match('/거래처|이름|customer/i', $줄들[0])) {
             $머리 = array_map(fn ($x) => trim($x, " \t\"'"), str_getcsv(array_shift($줄들), $나눔));
             $자리 = self::칸찾기($머리);
+        } elseif (count(str_getcsv($줄들[0], $나눔)) > 3) {
+            /* 칸이 넷 이상인데 머리글을 못 알아봤다. 첫 칸을 이름으로 짐작하면
+               줄 번호를 이름으로 읽어 온 줄이 버려진다 — 짐작하지 않고 말한다. */
+            return response()->json([
+                'success' => false,
+                'message' => '머리글을 알아보지 못했습니다 — 첫 줄에 「환자거래처 명」ㆍ「전화번호」가 적혀 있어야 합니다.',
+            ], 422);
         }
 
         $세움 = 0;
