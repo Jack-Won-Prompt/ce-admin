@@ -182,7 +182,7 @@
 
   const grid = new wwGrid({
     el: document.getElementById('dlgGrid'),
-    height: 'fit', editable: false, rowNumber: true, toolbar: false,
+    height: 'fit', editable: false, rowNumber: false, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: 'No',            name: 'no',       width: 64,  align: 'right', sortable: true },
