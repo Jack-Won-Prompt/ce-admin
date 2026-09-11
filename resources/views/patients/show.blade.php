@@ -1211,6 +1211,48 @@
     psCashReceiptRule(this, 'e-cash-receipt', 'e-mobile');
   });
 
+  /* 주민등록번호를 고치면 생년월일ㆍ성별도 그 자리에서 다시 선다 (2026-09-11 확인).
+
+     등록 창(patients/_editor-modal)에는 진작 있던 셈인데 이 수정 화면에는 없었다.
+     번호를 바로잡아도 생년월일이 옛 값으로 남아, 2084년생 같은 값이 그대로 쌓였다.
+     두 화면이 같은 잣대를 쓰도록 여기에도 둔다.
+
+     사람이 손으로 적은 값은 덮지 않는다 — 코드가 넣는 값은 input 을 일으키지 않으므로
+     그 자국(byHand)으로 둘을 가른다. 미리 채워져 들어온 값에는 자국이 없다. */
+  function ps생년성별from주민() {
+    const rn = document.getElementById('e-resident');
+    const bd = document.getElementById('e-birth');
+    if (!rn || !bd) return;
+
+    const m = String(rn.value ?? '').replace(/\s/g, '').match(/^(\d{2})(\d{2})(\d{2})-?(\d)/);
+    if (!m) return;
+
+    const [, yy, mm, dd, g] = m;
+    const 백년 = { 1: 1900, 2: 1900, 5: 1900, 6: 1900,
+                   3: 2000, 4: 2000, 7: 2000, 8: 2000,
+                   9: 1800, 0: 1800 }[+g];
+    if (!백년) return;
+
+    const y = 백년 + +yy, mo = +mm, d = +dd;
+    const dt = new Date(y, mo - 1, d);
+    /* 2003-02-29 처럼 없는 날은 Date 가 다음 달로 넘긴다 — 되돌려 확인한다 */
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return;
+
+    if (!bd.dataset.byHand) {
+      bd.value = y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      bd.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /* 뒷자리 첫 숫자가 성별을 말해 준다 — 홀수면 남, 짝수면 여
+       (5~8 은 외국인이고 홀짝은 같다) */
+    const sel = document.getElementById('e-gender');
+    if (sel && !sel.dataset.byHand) sel.value = (+g % 2 === 1) ? 'male' : 'female';
+  }
+
+  document.getElementById('e-resident')?.addEventListener('input', ps생년성별from주민);
+  document.getElementById('e-birth')?.addEventListener('input', function () { this.dataset.byHand = '1'; });
+  document.getElementById('e-gender')?.addEventListener('change', function () { this.dataset.byHand = '1'; });
+
 
   /**
    * 같은 번호를 쓰는 거래처가 있으면 한 번 묻는다 (2026-09-10 확인요청 1쪽).
