@@ -125,7 +125,10 @@ class DelegationSignController extends Controller
             $글 = mb_convert_encoding($글, 'UTF-8', $쓸것);
         }
 
-        $줄들 = preg_split('/\r\n|\r|\n/', trim($글));
+        /* 줄바꿈만 턴다. trim() 을 그냥 쓰면 첫 줄 맨 앞의 탭까지 먹어, 빈 머리글
+           칸 하나가 사라지면서 칸이 통째로 한 칸씩 밀린다 — 이름 자리에 줄 번호가
+           들어가 2,896줄이 모두 버려졌다 (2026-09-11). */
+        $줄들 = preg_split('/\r\n|\r|\n/', trim($글, "\r\n"));
         if (! $줄들) {
             return response()->json(['success' => false, 'message' => '내용이 비어 있습니다.'], 422);
         }
