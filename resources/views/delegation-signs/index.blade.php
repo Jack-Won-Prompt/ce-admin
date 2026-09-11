@@ -31,6 +31,25 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+  /* 발송 창의 라벨 줄 — 라벨과 값이 붙어 나오지 않게 (2026-09-11) */
+  .dlg-kv { display:flex; align-items:baseline; gap:10px; padding:6px 0;
+            border-bottom:1px dashed var(--border); font-size:13px; }
+  .dlg-kv:last-of-type { border-bottom:0; }
+  .dlg-kv > span:first-child { width:76px; flex-shrink:0; color:var(--text-muted); font-size:12px; }
+  .dlg-field { margin-top:14px; }
+  .dlg-help  { margin-top:4px; color:var(--text-muted); font-size:11px; }
+  .dlg-pre   { margin:4px 0 0; padding:10px 12px; background:var(--gray-50);
+               border:1px solid var(--border); border-radius:8px; font-size:12px;
+               line-height:1.6; white-space:pre-wrap; word-break:break-all;
+               font-family:inherit; color:var(--text-primary); }
+  .dlg-warn  { margin-top:14px; padding:9px 12px; border-radius:8px;
+               background:var(--danger-light); border:1px solid var(--alert-100);
+               color:var(--danger); font-size:12px; font-weight:700; line-height:1.5; }
+</style>
+@endpush
+
 @section('content')
 
 <form method="GET" action="{{ route('delegation-signs.index') }}" class="ds-filter-card">
@@ -115,39 +134,37 @@
 {{-- ── 발송 팝오버 ──────────────────────────────────────────
      주문 등록의 「서명 동의 SMS 발송」 창과 같은 모양이되 코드는 따로다.
      그쪽은 처방전에 묶여 있어 거래처만으로는 설 수 없다. --}}
-<div id="dlgSendBack" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:420px;">
-    <div class="modal-head">
-      <span>📨 위임장 서명 발송</span>
-      <button type="button" class="modal-x" onclick="dlgSendClose()">×</button>
+<div id="dlgSendBack" class="modal-overlay">
+  <div class="modal-box sm">
+    <div class="modal-hd">
+      <span class="modal-title">위임장 서명 발송</span>
+      <button type="button" class="modal-close" onclick="dlgSendClose()" aria-label="닫기">&times;</button>
     </div>
-    <div class="modal-body">
-      <div class="rt-kv"><span>거래처</span><span id="dlgCustomer" style="font-weight:700;"></span></div>
+    <div class="modal-bd">
+      <div class="dlg-kv"><span>거래처</span><b id="dlgCustomer"></b></div>
+      <div class="dlg-kv"><span>판매처</span><span id="dlgDealer"></span></div>
+      <div class="dlg-kv"><span>받을 번호</span><b id="dlgPhone"></b></div>
 
-      <div class="rt-kv"><span>판매처</span><span id="dlgDealer"></span></div>
-      <div class="rt-kv"><span>받을 번호</span><span id="dlgPhone" style="font-weight:700;"></span></div>
-
-      <div style="margin-top:12px;">
-        <label class="ds-field-label">이름</label>
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgName">이름</label>
         <input type="text" id="dlgName" class="form-control" maxlength="100">
+        <div class="dlg-help">환자가 보는 문자에 그대로 적힙니다.</div>
       </div>
 
-      <div style="margin-top:12px;">
+      <div class="dlg-field">
         <label class="ds-field-label">보낼 글</label>
-        <pre id="dlgPreview" style="margin:4px 0 0;padding:9px 11px;background:var(--gray-50);
-             border:1px solid var(--border);border-radius:8px;font-size:12px;white-space:pre-wrap;"></pre>
+        <pre id="dlgPreview" class="dlg-pre"></pre>
       </div>
 
-      <div id="dlgWarn" style="display:none;margin-top:10px;padding:8px 11px;border-radius:8px;
-           background:var(--danger-light);border:1px solid var(--alert-100);color:var(--danger);
-           font-size:12px;font-weight:700;"></div>
+      <div id="dlgWarn" class="dlg-warn" style="display:none;"></div>
     </div>
-    <div class="modal-foot">
+    <div class="modal-ft">
       <button type="button" class="ds-btn" onclick="dlgSendClose()">취소</button>
       <button type="button" class="ds-btn ds-btn-primary" id="dlgSendBtn" onclick="dlgSend()">발송</button>
     </div>
   </div>
 </div>
+
 @endsection
 
 @push('scripts')
@@ -274,7 +291,7 @@
 
     미리보기();
     document.getElementById('dlgName').oninput = 미리보기;
-    document.getElementById('dlgSendBack').style.display = 'flex';
+    document.getElementById('dlgSendBack').classList.add('open');
   };
 
   function 미리보기() {
@@ -287,7 +304,7 @@
   }
 
   window.dlgSendClose = function () {
-    document.getElementById('dlgSendBack').style.display = 'none';
+    document.getElementById('dlgSendBack').classList.remove('open');
     지금 = null;
   };
 
