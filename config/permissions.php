@@ -321,6 +321,15 @@ return [
             'actions'    => ['view', 'create', 'update', 'delete'],
             'admin_only' => true,
         ],
+        /* 오류 기록 — 서버에서 난 잘못 (2026-09-11 지시).
+           보낸 값과 쌓인 자취가 담겨 있어 아무나 볼 자리가 아니다. */
+        'error-logs' => [
+            'label'      => '오류 기록',
+            'group'      => 'settings',
+            'routes'     => ['error-logs'],
+            'actions'    => ['view', 'update', 'delete'],
+            'admin_only' => true,
+        ],
         // 외부 서비스 키를 다루는 화면이라 관리자만 연다.
         'service-settings' => [
             'label'      => '서비스 연동 설정',

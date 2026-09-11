@@ -1820,6 +1820,14 @@
           </a>
         </div>
         @endif
+        @if($vis('error-logs'))
+        <div class="menu-item {{ request()->routeIs('error-logs*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="wrench" href="{{ route('error-logs.index') }}" data-title="오류 기록">
+            @dsicon('wrench', 'ds-icon menu-icon')
+            <span>오류 기록</span>
+          </a>
+        </div>
+        @endif
         @if($vis('service-settings'))
         <div class="menu-item {{ request()->routeIs('service-settings*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="wrench" href="{{ route('service-settings.index') }}" data-title="서비스 연동 설정">

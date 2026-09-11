@@ -31,6 +31,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias(['admin' => \App\Http\Middleware\AdminOnly::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        /* 서버에서 난 잘못을 표에도 담는다 (2026-09-11 지시).
+           파일 로그는 서버에 들어가야 볼 수 있고 하루가 지나면 갈린다 —
+           담당자가 화면에서 함께 볼 자리가 있어야 「아까 그 오류」를 짚을 수 있다.
+           담다가 터져도 본래 잘못을 덮지 않도록 안에서 모두 감쌌다. */
+        $exceptions->report(function (\Throwable $e) {
+            \App\Support\ErrorRecorder::담기($e);
+        });
+
         // 419 CSRF 토큰 만료 시 로그인 페이지로 리다이렉트
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
             if ($response->getStatusCode() === 419) {

@@ -528,6 +528,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post(  '/settings/webhooks',        [\App\Http\Controllers\WebhookAdminController::class, 'store'])->name('webhooks.store');
     Route::delete('/settings/webhooks/{webhook}', [\App\Http\Controllers\WebhookAdminController::class, 'destroy'])->name('webhooks.destroy');
 
+    /* 오류 기록 — 서버에서 난 잘못을 화면에서 본다 (2026-09-11 지시).
+       purge 를 {errorLog} 보다 먼저 세운다 — 뒤에 두면 「purge」를 id 로 읽는다. */
+    Route::get( '/settings/error-logs',              [\App\Http\Controllers\ErrorLogController::class, 'index'])->name('error-logs.index');
+    Route::post('/settings/error-logs/purge',        [\App\Http\Controllers\ErrorLogController::class, 'purge'])->name('error-logs.purge');
+    Route::get( '/settings/error-logs/{errorLog}',   [\App\Http\Controllers\ErrorLogController::class, 'show'])->name('error-logs.show');
+    Route::post('/settings/error-logs/{errorLog}/mark', [\App\Http\Controllers\ErrorLogController::class, 'mark'])->name('error-logs.mark');
+
     Route::get('/settings/services',          [\App\Http\Controllers\ServiceSettingController::class, 'index'])->name('service-settings.index');
     Route::put('/settings/services/{group}',  [\App\Http\Controllers\ServiceSettingController::class, 'update'])->name('service-settings.update');
 
