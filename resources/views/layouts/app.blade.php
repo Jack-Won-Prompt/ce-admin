@@ -2344,8 +2344,28 @@ document.addEventListener('click', (e) => {
     document.addEventListener('DOMContentLoaded', () => {
       document.addEventListener('submit', (e) => {
         if (e.defaultPrevented) return;
-        const submitBtn = e.target.querySelector('[type="submit"]:not([data-no-loading])');
-        if (submitBtn) loading(submitBtn);
+
+        /* 잠글 것은 **눌린 단추**다 (2026-09-11 고침).
+
+           여태 폼의 첫 submit 단추를 찾아 잠갔다. 단추가 하나뿐인 폼에서는 같은
+           말이지만, 둘 이상인 폼에서는 두 가지가 어긋났다.
+
+           ① 눌리지 않은 단추가 잠긴다. 교환ㆍ반품 상세의 단계 폼에는 ［반품 승인］과
+              ［취소］가 나란히 서는데, 취소를 눌러도 승인이 잠겼다.
+           ② **보낸 값이 통째로 빠진다.** 그 폼은 눌린 단추의 name/value 로 어느
+              단계로 갈지 정하는데(name="to_status"), 제출 도중에 그 단추를 disabled 로
+              만들면 브라우저가 그 값을 싣지 않는다 — 규칙상 잠긴 칸은 제출에서 빠진다.
+              그래서 무엇을 눌러도 「to status 항목은 필수입니다」로 되돌아왔다.
+
+           눌린 단추는 e.submitter 가 알려 준다. 잠그는 일도 한 박자 미룬다 — 폼
+           데이터가 만들어진 뒤라야 값이 빠지지 않는다. */
+        const 눌린것 = e.submitter;
+        const submitBtn =
+          (눌린것 && 눌린것.matches('[type="submit"]:not([data-no-loading])'))
+            ? 눌린것
+            : e.target.querySelector('[type="submit"]:not([data-no-loading])');
+
+        if (submitBtn) setTimeout(() => loading(submitBtn), 0);
       });
     });
     return { loading, reset, success, error };
