@@ -63,10 +63,20 @@ class DelegationSignController extends Controller
 
         if ($request->filled('q')) {
             $말 = $request->q;
-            $query->where(fn ($s) => $s
-                ->where('customer_name', 'like', "%{$말}%")
-                ->orWhere('dealer_name', 'like', "%{$말}%")
-                ->orWhere('phone', 'like', "%{$말}%"));
+
+            /* 번호는 하이픈 없이 담겨 있는데 목록에는 010-3422-7121 로 그려 준다.
+               보이는 대로 긁어 붙이면 한 건도 안 나왔다 — 숫자만 남긴 것으로도 훑는다. */
+            $숫자 = preg_replace('/\D/', '', $말);
+
+            $query->where(function ($s) use ($말, $숫자) {
+                $s->where('customer_name', 'like', "%{$말}%")
+                    ->orWhere('dealer_name', 'like', "%{$말}%")
+                    ->orWhere('phone', 'like', "%{$말}%");
+
+                if ($숫자 !== '' && $숫자 !== $말) {
+                    $s->orWhere('phone', 'like', "%{$숫자}%");
+                }
+            });
         }
 
         return $query;
