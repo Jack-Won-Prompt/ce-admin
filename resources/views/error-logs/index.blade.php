@@ -28,68 +28,67 @@
 </style>
 @endpush
 
-{{-- 거르개 --}}
-<div class="ds-filter-card">
-  <form method="GET" action="{{ route('error-logs.index') }}" class="ds-filter-form">
-    <div class="ds-filter-row">
-      <div class="ds-field">
-        <label>기간</label>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <input type="date" name="from" value="{{ $from }}" class="form-control">
-          <span style="color:var(--text-muted);">~</span>
-          <input type="date" name="to" value="{{ $to }}" class="form-control">
-        </div>
-      </div>
-      <div class="ds-field">
-        <label>출처</label>
-        <select name="source" class="form-control">
-          <option value="">전체 출처</option>
-          @foreach($출처표 as $코 => $말)
-            <option value="{{ $코 }}" @selected($source === $코)>{{ $말 }}</option>
-          @endforeach
-        </select>
-      </div>
-      <div class="ds-field">
-        <label>오류 유형</label>
-        <select name="kind" class="form-control">
-          <option value="">전체 유형</option>
-          @foreach($갈래들 as $k)
-            <option value="{{ $k->kind }}" @selected($kind === $k->kind)>
-              {{ $k->kind }} ({{ number_format($k->h) }})
-            </option>
-          @endforeach
-        </select>
-      </div>
-      <div class="ds-field">
-        <label>응답코드</label>
-        <select name="http_status" class="form-control">
-          <option value="">전체</option>
-          @foreach([500, 419, 429, 403] as $c)
-            <option value="{{ $c }}" @selected((string) $httpStatus === (string) $c)>{{ $c }}</option>
-          @endforeach
-        </select>
-      </div>
-      <div class="ds-field">
-        <label>처리 상태</label>
-        <select name="status" class="form-control">
-          <option value="">전체 상태</option>
-          @foreach($상태표 as $코 => $말)
-            <option value="{{ $코 }}" @selected($status === $코)>{{ $말 }}</option>
-          @endforeach
-        </select>
-      </div>
-      <div class="ds-field" style="flex:1 1 240px;">
-        <label>검색어</label>
-        <input type="text" name="q" value="{{ $q }}" class="form-control"
-               placeholder="오류 내용ㆍ주소ㆍ파일ㆍ화면 이름ㆍ사용자">
-      </div>
-      <div class="ds-field ds-field-btns">
-        <a href="{{ route('error-logs.index') }}" class="ds-btn"><i class="fa-solid fa-rotate-left"></i> 초기화</a>
-        <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+{{-- 거르개 — 한 줄로 세운다. 아홉 열 격자에 기간 2 · 나머지 다섯을 나눠 담는다
+     (2026-09-11 지시). 다른 목록 화면과 같은 얼개(ds-filter-card)를 쓴다. --}}
+<form method="GET" action="{{ route('error-logs.index') }}" class="ds-filter-card">
+  <div class="ds-filter-fields">
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">기간</label>
+      <div class="ds-field-range">
+        <input type="date" name="from" value="{{ $from }}" class="form-control">
+        <span class="ds-field-sep">~</span>
+        <input type="date" name="to" value="{{ $to }}" class="form-control">
       </div>
     </div>
-  </form>
-</div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">출처</label>
+      <select name="source" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach($출처표 as $코 => $말)
+          <option value="{{ $코 }}" @selected($source === $코)>{{ $말 }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">오류 유형</label>
+      <select name="kind" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach($갈래들 as $k)
+          <option value="{{ $k->kind }}" @selected($kind === $k->kind)>
+            {{ $k->kind }} ({{ number_format($k->h) }})
+          </option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">응답코드</label>
+      <select name="http_status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach([500, 419, 429, 403] as $c)
+          <option value="{{ $c }}" @selected((string) $httpStatus === (string) $c)>{{ $c }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">처리 상태</label>
+      <select name="status" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        @foreach($상태표 as $코 => $말)
+          <option value="{{ $코 }}" @selected($status === $코)>{{ $말 }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="ds-filter-field span-2">
+      <label class="ds-field-label">검색어</label>
+      <input type="text" name="q" value="{{ $q }}" class="form-control"
+             placeholder="오류 내용ㆍ주소ㆍ파일ㆍ화면 이름ㆍ사용자">
+    </div>
+  </div>
+  <div class="ds-filter-actions">
+    <a href="{{ route('error-logs.index') }}" class="ds-btn">초기화</a>
+    <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+  </div>
+</form>
 
 <div class="ds-grid-section">
   <div class="ds-grid-card">
