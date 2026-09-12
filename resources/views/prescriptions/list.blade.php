@@ -711,7 +711,11 @@ window.HELP_TOUR_STEPS = [
               brightness: Number(무대.dataset.bright || 0),
               contrast:   Number(무대.dataset.contrast || 0) });
           if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
-          showToast('밝기ㆍ명암을 저장했습니다.', 'success');
+
+          /* 저장했으면 할 일이 끝났다 — 칸이 계속 떠 있으면 그림을 가린다.
+             주문 등록 뷰어도 이렇게 닫는다(_viewer 의 tuneSave). */
+          무대.querySelector('.rv-tune').classList.remove('on');
+          showToast('밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 적용됩니다.', 'success');
         } catch (err) {
           showToast(err.message || '저장하지 못했습니다.', 'danger', 5000);
         } finally {
