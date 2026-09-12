@@ -85,12 +85,30 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',                           [PrescriptionApiController::class, 'index']);
         Route::post('/upload',                    [PrescriptionApiController::class, 'upload']);
         Route::get('/{rx_number}',               [PrescriptionApiController::class, 'show']);
+
+        /* 잘못 올린 자료를 올린 사람이 스스로 지우고 다시 올린다.
+           검수 완료 전까지, 내가 올린 건에 대해서만 된다(Prescription::editableByUploader). */
+        Route::delete('/{rx_number}/image',                [PrescriptionApiController::class, 'destroyImage']);
+        Route::delete('/{rx_number}/attachments/{id}',     [PrescriptionApiController::class, 'destroyAttachment']);
+
+        /* 올린 그림을 앱에서 본다. 웹의 같은 경로는 세션 로그인을 요구해
+           Bearer 토큰으로는 열리지 않는다. */
+        Route::get('/{rx_number}/image',                   [PrescriptionApiController::class, 'image']);
+        Route::get('/{rx_number}/attachments/{id}/file',   [PrescriptionApiController::class, 'attachmentFile']);
     });
 
     // 환자 검색/등록 (처방자료 업로드 시 환자 선택용)
     Route::prefix('patients')->group(function () {
         Route::get('/search', [PatientApiController::class, 'search']);
         Route::post('/',      [PatientApiController::class, 'store']);
+    });
+
+    /* 앱으로 보낸 알림 이력. 푸시는 알림창에서 지우면 사라져,
+       무엇이 왔는지 다시 볼 자리가 필요하다. */
+    Route::prefix('notifications')->group(function () {
+        Route::get( '/',          [\App\Http\Controllers\Api\NotificationApiController::class, 'index']);
+        Route::post('/read-all',  [\App\Http\Controllers\Api\NotificationApiController::class, 'markAllRead']);
+        Route::post('/{id}/read', [\App\Http\Controllers\Api\NotificationApiController::class, 'markRead']);
     });
 
     // 공지사항

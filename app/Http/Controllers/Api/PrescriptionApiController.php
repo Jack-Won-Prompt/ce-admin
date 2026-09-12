@@ -9,6 +9,7 @@ use App\Jobs\ProcessPrescriptionOcr;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -270,15 +271,157 @@ class PrescriptionApiController extends Controller
     }
 
     // ── GET /api/prescriptions/{rx_number} ───────────────
-    /** 처방전 상세 조회 */
+    /**
+     * 처방전 상세.
+     *
+     * 올린 자료를 함께 내려보낸다 — 처방전 그림과 첨부 목록. 예전에는 OCR 항목만
+     * 보내서, 앱에서는 무엇을 올렸는지 볼 수 없었다. 잘못 올린 것을 고치려면
+     * 먼저 무엇이 올라가 있는지 보여야 한다.
+     */
     public function show(string $rxNumber): JsonResponse
     {
-        $prescription = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+        $p = Prescription::with('attachments')->where('rx_number', $rxNumber)->firstOrFail();
 
         return response()->json([
             'success' => true,
-            'data'    => $this->formatOcrResult($prescription),
+            'data'    => $this->formatOcrResult($p) + [
+                // 앱이 Bearer 토큰으로 열 수 있는 주소를 준다(웹 주소는 세션을 요구한다)
+                'image_url'   => $p->image_path
+                                    ? url("/api/prescriptions/{$p->rx_number}/image")
+                                    : null,
+                'image_name'  => $p->image_original_name,
+                // 올린 사람이 지우고 다시 올릴 수 있는 상태인가
+                'editable'    => $p->editableByUploader(auth()->id()),
+                'attachments' => $p->attachments->map(fn (PrescriptionAttachment $a) => [
+                    'id'        => $a->id,
+                    'doc_type'  => $a->doc_type,
+                    'doc_label' => $a->doc_type_label,
+                    'file_name' => $a->file_original_name,
+                    'url'       => url("/api/prescriptions/{$p->rx_number}/attachments/{$a->id}/file"),
+                    'is_pdf'    => $a->is_pdf,
+                ])->values(),
+            ],
         ]);
+    }
+
+    // ── DELETE /api/prescriptions/{rx_number}/image ───────
+    /**
+     * 처방전 그림을 지운다.
+     *
+     * 레코드는 남기고 그림만 비운다. 그러면 같은 환자로 처방전을 다시 올릴 때
+     * uploadAsPrescription() 이 「그림이 비어 있는 자리」를 찾아 이 레코드를 채운다 —
+     * 건이 둘로 갈리지 않고, 먼저 올려 둔 첨부도 그대로 매달려 있다.
+     */
+    public function destroyImage(string $rxNumber): JsonResponse
+    {
+        $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+
+        if (! $p->editableByUploader(auth()->id())) {
+            return $this->refuseEdit($p);
+        }
+
+        if (! $p->image_path) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 지워진 자료입니다.',
+            ], 404);
+        }
+
+        Storage::disk('public')->delete($p->image_path);
+
+        $p->update([
+            'image_path'          => null,
+            'image_original_name' => null,
+            'image_mime_type'     => null,
+            'image_size'          => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => '처방전 그림을 지웠습니다. 다시 올려 주세요.',
+        ]);
+    }
+
+    // ── DELETE /api/prescriptions/{rx_number}/attachments/{id} ──
+    public function destroyAttachment(string $rxNumber, int $id): JsonResponse
+    {
+        $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+
+        if (! $p->editableByUploader(auth()->id())) {
+            return $this->refuseEdit($p);
+        }
+
+        $attachment = $p->attachments()->whereKey($id)->first();
+
+        if (! $attachment) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 지워진 자료입니다.',
+            ], 404);
+        }
+
+        Storage::disk('public')->delete($attachment->file_path);
+        $attachment->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => '지웠습니다. 다시 올려 주세요.',
+        ]);
+    }
+
+    // ── GET /api/prescriptions/{rx_number}/image ──────────
+    /**
+     * 처방전 그림을 앱으로 내려보낸다.
+     *
+     * 웹에도 같은 일을 하는 경로가 있지만(SecureFileController) 그쪽은 세션
+     * 로그인을 요구해 앱의 Bearer 토큰으로는 열리지 않는다. 그 경로의 인증을
+     * 바꾸면 웹에서 그림이 안 보이게 될 수 있어, 앱 몫을 따로 둔다.
+     */
+    public function image(string $rxNumber): StreamedResponse
+    {
+        $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+
+        abort_unless($p->image_path, 404);
+
+        return $this->streamFile($p->image_path, $p->image_original_name);
+    }
+
+    // ── GET /api/prescriptions/{rx_number}/attachments/{id}/file ──
+    public function attachmentFile(string $rxNumber, int $id): StreamedResponse
+    {
+        $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+
+        $attachment = $p->attachments()->whereKey($id)->first();
+        abort_unless($attachment && $attachment->file_path, 404);
+
+        return $this->streamFile($attachment->file_path, $attachment->file_original_name);
+    }
+
+    private function streamFile(string $path, ?string $originalName = null): StreamedResponse
+    {
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($path), 404);
+
+        $name = $originalName ?: basename($path);
+
+        return $disk->response($path, $name, [
+            'Content-Disposition'    => 'inline; filename="' . addslashes($name) . '"',
+            'Cache-Control'          => 'private, max-age=600, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** 고칠 수 없는 까닭을 알린다 — 남의 것인지, 이미 검수를 지난 것인지. */
+    private function refuseEdit(Prescription $p): JsonResponse
+    {
+        $mine = $p->created_by === auth()->id();
+
+        return response()->json([
+            'success' => false,
+            'message' => $mine
+                ? "「{$p->status_label}」 상태에서는 고칠 수 없습니다. 담당자에게 문의하세요."
+                : '내가 올린 자료만 지울 수 있습니다.',
+        ], 403);
     }
 
     // ── 내부: OCR 결과 포맷 ───────────────────────────────

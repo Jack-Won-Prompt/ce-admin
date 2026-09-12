@@ -41,14 +41,25 @@ class PrescriptionDetail {
   final String  status;
   final String  statusLabel;
   final String? imageUrl;
+  final String? imageName;
   final OcrResult ocr;
+
+  /// 이 건에 올린 첨부 서류.
+  final List<PrescriptionFile> attachments;
+
+  /// 올린 사람이 지우고 다시 올릴 수 있는 상태인가.
+  /// 검수 완료 뒤에는 거짓이 되고, 남의 건도 거짓이다.
+  final bool editable;
 
   const PrescriptionDetail({
     required this.rxNumber,
     required this.status,
     required this.statusLabel,
     this.imageUrl,
+    this.imageName,
     required this.ocr,
+    this.attachments = const [],
+    this.editable = false,
   });
 
   factory PrescriptionDetail.fromJson(Map<String, dynamic> j) =>
@@ -57,8 +68,39 @@ class PrescriptionDetail {
         status:        j['status']          as String,
         statusLabel:   j['status_label']    as String,
         imageUrl:      j['image_url']       as String?,
+        imageName:     j['image_name']      as String?,
+        editable:      j['editable']        as bool? ?? false,
+        attachments: ((j['attachments'] as List?) ?? const [])
+            .map((e) => PrescriptionFile.fromJson(
+                Map<String, dynamic>.from(e as Map)))
+            .toList(),
         ocr: OcrResult.fromJson(
             j['ocr_result'] as Map<String, dynamic>? ?? {}),
+      );
+}
+
+/// 이 건에 올라가 있는 서류 한 장.
+class PrescriptionFile {
+  final int    id;
+  final String docLabel;
+  final String fileName;
+  final String url;
+  final bool   isPdf;
+
+  const PrescriptionFile({
+    required this.id,
+    required this.docLabel,
+    required this.fileName,
+    required this.url,
+    required this.isPdf,
+  });
+
+  factory PrescriptionFile.fromJson(Map<String, dynamic> j) => PrescriptionFile(
+        id:       (j['id'] as num).toInt(),
+        docLabel: j['doc_label'] as String? ?? '기타',
+        fileName: j['file_name'] as String? ?? '',
+        url:      j['url'] as String? ?? '',
+        isPdf:    j['is_pdf'] as bool? ?? false,
       );
 }
 

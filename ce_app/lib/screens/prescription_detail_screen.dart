@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/prescription.dart';
 import '../services/prescription_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/constants.dart';
 import '../widgets/common_widgets.dart';
 
 class PrescriptionDetailScreen extends ConsumerStatefulWidget {
@@ -21,11 +23,70 @@ class _PrescriptionDetailScreenState
   PrescriptionDetail? _detail;
   bool   _isLoading = true;
   String? _error;
+  bool   _deleting = false;
+
+  /* 그림을 내려받는 주소도 로그인을 확인한다. Image.network 는 Dio 인터셉터를
+     타지 않아 토큰이 붙지 않으므로, 여기서 직접 붙인다. */
+  Map<String, String> _authHeaders = const {};
 
   @override
   void initState() {
     super.initState();
+    _loadAuthHeaders();
     _load();
+  }
+
+  Future<void> _loadAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyAccessToken);
+    if (token != null && token.isNotEmpty && mounted) {
+      setState(() => _authHeaders = {'Authorization': 'Bearer $token'});
+    }
+  }
+
+  /// 지우기 전에 한 번 묻는다 — 되돌릴 수 없다.
+  Future<void> _confirmDelete({
+    required String what,
+    required Future<String> Function() run,
+  }) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('지우시겠습니까?',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        content: Text('$what을(를) 지웁니다.\n지운 자료는 되돌릴 수 없고, 다시 올려야 합니다.',
+            style: const TextStyle(fontSize: 14, height: 1.6)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('지우기',
+                style: TextStyle(
+                    color: AppTheme.danger, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      final message = await run();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
   }
 
   Future<void> _load() async {
@@ -187,6 +248,7 @@ class _PrescriptionDetailScreenState
                     borderRadius: BorderRadius.circular(16),
                     child: Image.network(
                       d.imageUrl!,
+                      headers: _authHeaders,
                       fit: BoxFit.contain,
                       loadingBuilder: (ctx, child, progress) =>
                           progress == null
@@ -218,6 +280,63 @@ class _PrescriptionDetailScreenState
                           ),
                         ),
                       ),
+                    ),
+                  ),
+                  // 잘못 올렸으면 올린 사람이 스스로 지우고 다시 올린다
+                  if (d.editable) _DeleteRow(
+                    label: '처방전 그림 지우기',
+                    busy: _deleting,
+                    onTap: () => _confirmDelete(
+                      what: '처방전 그림',
+                      run: () => ref
+                          .read(prescriptionServiceProvider)
+                          .deleteImage(d.rxNumber),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // ── 올린 서류 ─────────────────────────────────────────
+                if (d.attachments.isNotEmpty) ...[
+                  _AttachmentsCard(
+                    files: d.attachments,
+                    headers: _authHeaders,
+                    editable: d.editable,
+                    busy: _deleting,
+                    onDelete: (f) => _confirmDelete(
+                      what: f.docLabel,
+                      run: () => ref
+                          .read(prescriptionServiceProvider)
+                          .deleteAttachment(d.rxNumber, f.id),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                /* 검수를 지난 건은 고칠 수 없다. 단추만 감추면 왜 없는지 알 수
+                   없으므로 그 자리에 까닭을 적는다. */
+                if (!d.editable &&
+                    (d.imageUrl != null || d.attachments.isNotEmpty)) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline,
+                            size: 15, color: AppTheme.textMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '「${d.statusLabel}」 상태에서는 자료를 고칠 수 없습니다. 담당자에게 문의하세요.',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textMuted),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -302,6 +421,170 @@ class _PrescriptionDetailScreenState
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 지우기 한 줄. 눌러서 지우는 자리가 그림 바로 아래에 있어야 무엇을 지우는지
+/// 헷갈리지 않는다.
+class _DeleteRow extends StatelessWidget {
+  final String       label;
+  final bool         busy;
+  final VoidCallback onTap;
+
+  const _DeleteRow({
+    required this.label,
+    required this.busy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: busy ? null : onTap,
+        icon: const Icon(Icons.delete_outline, size: 17),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+      ),
+    );
+  }
+}
+
+/// 이 건에 올라가 있는 서류 목록.
+///
+/// 예전에는 앱에서 처방전 그림 한 장만 보였다. 무엇을 올렸는지 알 수 없으니
+/// 잘못 올린 것을 가릴 수도 없었다.
+class _AttachmentsCard extends StatelessWidget {
+  final List<PrescriptionFile>     files;
+  final Map<String, String>        headers;
+  final bool                       editable;
+  final bool                       busy;
+  final void Function(PrescriptionFile) onDelete;
+
+  const _AttachmentsCard({
+    required this.files,
+    required this.headers,
+    required this.editable,
+    required this.busy,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: AppTheme.cardDecoration(radius: 16),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.attach_file_rounded,
+                  size: 16, color: AppTheme.textSecondary),
+              const SizedBox(width: 6),
+              const Text('올린 서류',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondary)),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('${files.length}건',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < files.length; i++) ...[
+            if (i > 0) const Divider(height: 20, color: AppTheme.border),
+            _AttachmentTile(
+              file: files[i],
+              headers: headers,
+              onDelete: editable && !busy ? () => onDelete(files[i]) : null,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachmentTile extends StatelessWidget {
+  final PrescriptionFile    file;
+  final Map<String, String> headers;
+  final VoidCallback?       onDelete;
+
+  const _AttachmentTile({
+    required this.file,
+    required this.headers,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: file.isPdf
+                ? Container(
+                    color: AppTheme.background,
+                    child: const Icon(Icons.picture_as_pdf_outlined,
+                        size: 22, color: AppTheme.textMuted),
+                  )
+                : Image.network(
+                    file.url,
+                    headers: headers,
+                    fit: BoxFit.cover,
+                    errorBuilder: (ctx, _, __) => Container(
+                      color: AppTheme.background,
+                      child: const Icon(Icons.broken_image_outlined,
+                          size: 20, color: AppTheme.textMuted),
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(file.docLabel,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 2),
+              Text(file.fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.textMuted)),
+            ],
+          ),
+        ),
+        if (onDelete != null)
+          IconButton(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline,
+                size: 19, color: AppTheme.danger),
+            tooltip: '지우기',
+          ),
+      ],
     );
   }
 }

@@ -63,6 +63,30 @@ class PrescriptionService {
     final body = res.data as Map<String, dynamic>;
     return PrescriptionDetail.fromJson(body['data'] as Map<String, dynamic>);
   }
+
+  /// 처방전 그림을 지운다.
+  ///
+  /// 레코드는 남고 그림만 비므로, 같은 환자로 처방전을 다시 올리면 이 건이
+  /// 다시 채워진다 — 건이 둘로 갈리지 않는다.
+  Future<String> deleteImage(String rxNumber) =>
+      _delete('/prescriptions/$rxNumber/image');
+
+  Future<String> deleteAttachment(String rxNumber, int id) =>
+      _delete('/prescriptions/$rxNumber/attachments/$id');
+
+  /// 지우고 나서 서버가 건넨 말을 그대로 돌려준다 — 막힌 까닭도 서버가 안다
+  /// (검수를 지났는지, 남의 건인지).
+  Future<String> _delete(String path) async {
+    try {
+      final res = await _dio.delete(path);
+      final body = res.data;
+      return (body is Map ? body['message'] as String? : null) ?? '지웠습니다.';
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      throw Exception((body is Map ? body['message'] as String? : null) ??
+          '지우지 못했습니다. (${e.type.name})');
+    }
+  }
 }
 
 final prescriptionServiceProvider = Provider<PrescriptionService>(
