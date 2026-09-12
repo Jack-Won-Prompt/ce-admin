@@ -22,23 +22,32 @@ class FcmHelper
         string $fcmToken,
         string $senderName,
         string $body,
-        int    $roomId
+        int    $roomId,
+        ?int   $userId = null
     ): bool {
         return self::send($fcmToken, $senderName, $body, [
             'type'    => 'chat',
             'room_id' => (string) $roomId,
-        ]);
+        ], $userId);
     }
 
     /**
      * FCM v1 API로 알림 전송
      */
+    /**
+     * @param ?int $userId 받는 사람. 주면 보낸 자취를 남긴다(FcmNotification).
+     *                     푸시는 알림창에서 지우면 사라져, 남겨 두지 않으면
+     *                     무엇이 왔는지 다시 볼 길이 없다.
+     */
     public static function send(
         string $fcmToken,
         string $title,
         string $body,
-        array  $data = []
+        array  $data = [],
+        ?int   $userId = null
     ): bool {
+        $sent = false;
+
         try {
             $accessToken = self::getAccessToken();
             $projectId   = self::getServiceAccount()['project_id'];
@@ -53,7 +62,12 @@ class FcmHelper
                             'priority'     => 'high',
                             'notification' => [
                                 'channel_id'    => 'chat_messages',
-                                'priority'      => 'max',
+                                /* FCM v1 의 android.notification 에는 priority 가 없다.
+                                   notification_priority 에 PRIORITY_* 를 준다 — 여태
+                                   priority:max 로 보내 400 INVALID_ARGUMENT 로 죄다
+                                   튕겼다("Unknown name \"priority\"", 2026-09-12 확인).
+                                   알림이 한 건도 나가지 않고 있었다. */
+                                'notification_priority' => 'PRIORITY_MAX',
                                 'default_sound' => true,
                             ],
                         ],
@@ -76,14 +90,32 @@ class FcmHelper
                     'body'   => $response->body(),
                     'token'  => substr($fcmToken, 0, 20) . '...',
                 ]);
-                return false;
+            } else {
+                $sent = true;
             }
-
-            return true;
         } catch (\Throwable $e) {
             Log::error('[FCM] 오류', ['error' => $e->getMessage()]);
-            return false;
         }
+
+        /* 보낸 자취를 남긴다. 실패한 것도 남긴다 — 「알림이 안 왔다」고 할 때
+           보내려 했는지조차 모르면 짚을 데가 없다.
+           남기다 잘못되어도 전송 결과를 바꾸지 않는다. */
+        if ($userId !== null) {
+            try {
+                \App\Models\FcmNotification::create([
+                    'user_id' => $userId,
+                    'title'   => $title,
+                    'body'    => $body,
+                    'type'    => $data['type'] ?? null,
+                    'payload' => $data,
+                    'sent'    => $sent,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('[FCM] 이력 기록 실패', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $sent;
     }
 
     // ── 내부 메서드 ──────────────────────────────────────────

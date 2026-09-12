@@ -430,6 +430,9 @@ window.HELP_TOUR_STEPS = [
               <div style="display:flex;align-items:center;gap:8px;padding:8px 11px;
                           border-bottom:1px solid var(--gray-200);font-size:12px;">
                 <b style="color:var(--primary);">${_esc(f.label)}</b>
+                ${f.by ? `<span style="color:var(--text-primary);background:var(--gray-100);
+                          border-radius:4px;padding:1px 6px;font-size:11px;white-space:nowrap;"
+                          title="이 파일을 올린 사람">${_esc(f.by)}</span>` : ''}
                 <span style="color:var(--text-muted);flex:1;">${_esc(f.name ?? '')}</span>
                 <a href="${_esc(f.url)}" target="_blank" rel="noopener"
                    style="font-size:11.5px;color:var(--primary);text-decoration:underline;">새 창</a>

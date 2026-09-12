@@ -2756,7 +2756,7 @@ class PrescriptionController extends Controller
      */
     public function files(Prescription $prescription): \Illuminate\Http\JsonResponse
     {
-        $prescription->loadMissing('attachments');
+        $prescription->loadMissing(['attachments.uploader', 'creator']);
         // 되물은 차례대로 — 새것이 위로
         $prescription->load(['reuploadRequests' => fn ($q) => $q->latest('requested_at')]);
 
@@ -2788,6 +2788,9 @@ class PrescriptionController extends Controller
                 'label' => '처방전',
                 'url'   => $prescription->image_url,
                 'isPdf' => str_contains($prescription->image_mime_type ?? '', 'pdf'),
+                /* 누가 올렸는지 서류 이름 옆에 (2026-09-12 지시). 본 그림은 첨부가
+                   아니어서 올린 이가 따로 없다 — 처방전을 만든 사람이 그 사람이다. */
+                'by'    => $prescription->creator?->name ?? '',
                 'requests' => $적기(0),
             ];
         }
@@ -2803,6 +2806,7 @@ class PrescriptionController extends Controller
                 'label' => $a->doc_type_label,
                 'url'   => $a->file_url,
                 'isPdf' => $a->is_pdf,
+                'by'    => $a->uploader?->name ?? ($prescription->creator?->name ?? ''),
                 'requests' => $적기($a->id),
             ];
         }
