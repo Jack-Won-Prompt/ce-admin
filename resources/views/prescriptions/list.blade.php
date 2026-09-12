@@ -210,8 +210,14 @@
      설 수 있는데, 검수 창은 그림을 여러 장 늘어놓는다 — 그래서 모양만 같이 하고
      자리는 그림마다 따로 잡는다. --}}
 <style>
+  /* 양옆에 여백을 둔다 (2026-09-12 지시).
+
+     그림 위에서 바퀴를 굴리면 그림이 확대ㆍ축소된다. 그림이 카드를 가로로 꽉
+     채우고 있어 창 자체를 굴려 내릴 자리가 없었다 — 어디에 얹어도 그림만 커졌다.
+     좌우를 비워 두면 그 자리에서는 여느 때처럼 창이 굴러간다. */
   .rv-stage { position:relative; height:560px; overflow:hidden; background:var(--gray-100);
-              display:flex; align-items:center; justify-content:center; }
+              display:flex; align-items:center; justify-content:center;
+              margin:0 72px; border-radius:8px; }
   .rv-stage img { display:block; max-width:100%; max-height:100%; object-fit:contain;
                   transform-origin:center center; cursor:grab; user-select:none; }
   .rv-stage img:active { cursor:grabbing; }
