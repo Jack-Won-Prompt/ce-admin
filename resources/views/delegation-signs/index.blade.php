@@ -262,6 +262,10 @@
         renderer: (v, row) => 단추('발송', () => dlgSendOpen(row.id), !row.can_send),
       },
 
+      /* 서명 여부는 ［발송］ 바로 뒤에 (2026-09-12 지시). 보냈는지와 받았는지를
+         한자리에서 본다. */
+      { header: '위임장 서명 여부',     name: 'delegation', width: 118, align: 'center', renderer: 여부 },
+
       /* ── 보낼지 말지를 가리는 근거 (2026-09-11 지시로 앞으로 옮김) ────────
          다음 재구매가 가까운 사람부터, 진행중인 건은 뒤로 — 그 판단을 ［발송］
          바로 옆에서 한다. 오른쪽 끝에 두었더니 볼 때마다 굴려야 했다. */
@@ -275,10 +279,8 @@
       { header: '마지막 판매상태',  name: 'sale',       width: 118, align: 'center', sortable: true },
 
       /* ── 받은 결과 ──────────────────────────────────────────────────── */
-      { header: '위임장 서명 여부',     name: 'delegation', width: 118, align: 'center', renderer: 여부 },
-
-      /* 발송 상태는 서명 여부 바로 뒤에 (2026-09-11 지시). 「—」로 비어 있는
-         까닭이 「아직 안 보냈다」인지 「보냈는데 안 했다」인지 옆에서 읽힌다. */
+      /* 발송 상태 (2026-09-11 지시로 서명 여부 뒤에 두었으나, 2026-09-12 서명
+         여부만 ［발송］ 옆으로 옮기고 이 칸은 제자리에 둔다). */
       { header: '상태',                 name: 'status',     width: 84,  align: 'center', sortable: true },
 
       { header: '개인정보동의 서명 여부', name: 'privacy',   width: 138, align: 'center', renderer: 여부 },
