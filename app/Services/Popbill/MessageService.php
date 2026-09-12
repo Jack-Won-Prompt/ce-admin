@@ -230,7 +230,7 @@ class MessageService extends PopbillBaseService
 
         /* 어디로 보내는가 — 세 갈래 (config/popbill.php 의 sms_mode).
            **우리에게만**(redirect)이면 받는 번호를 시험 번호로 갈아 끼운다.
-           여태 시늉이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다. */
+           여태 시뮬레이션이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다. */
         $mode = config('popbill.sms_mode', 'live');
 
         if ($mode === 'redirect') {

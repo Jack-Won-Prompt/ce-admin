@@ -91,7 +91,7 @@ class FaxService extends PopbillBaseService
             }, $receivers);
         }
 
-        /* 시늉 — 마지막 한 걸음만 막는다. 여기까지 온 것은 합본이 만들어졌고
+        /* 시뮬레이션 — 마지막 한 걸음만 막는다. 여기까지 온 것은 합본이 만들어졌고
            받는 곳도 정해졌다는 뜻이라, 시험에서 볼 것은 이미 다 본 뒤다. */
         if ($mode === 'simulate') {
             $receipt = 'SIMFAX-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
