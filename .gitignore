@@ -65,3 +65,8 @@ Thumbs.db
 /public/_t3_fx.pdf
 /storage/fonts/*.afm.json
 /docs/weekly/img/*.zip
+
+# 루트에 쌓이는 스캔·비교 결과 메모(scan_*, *_diff, words_changed …).
+# 이 저장소는 루트에 .txt 를 하나도 추적하지 않는다. 파일은 두고 git 시야에서만 뺀다 —
+# 작업 폴더가 깨끗해야 AI 작업 지시가 브랜치를 나눠 시작할 수 있다.
+/*.txt
