@@ -237,8 +237,8 @@
   /* 밝기ㆍ명암 — 파일은 건드리지 않는다. 맞춰 둔 값은 공단 팩스에도 그대로 간다. */
   .rv-tune { position:absolute; right:8px; bottom:8px; z-index:6;
              display:none; flex-direction:column; gap:6px; width:186px;
-             /* 위쪽을 더 비운다 — 닫기가 앉을 자리다 */
-             padding:24px 12px 10px; border-radius:10px;
+             /* 위쪽을 더 비운다 — 닫기가 앉을 자리다(× 는 top 4 + 높이 22) */
+             padding:30px 12px 10px; border-radius:10px;
              background:rgba(255,255,255,.96); border:1px solid var(--gray-200);
              box-shadow:0 4px 16px rgba(0,0,0,.12); }
   .rv-tune.on { display:flex; }
