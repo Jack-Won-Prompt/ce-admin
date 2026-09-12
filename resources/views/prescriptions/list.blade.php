@@ -434,8 +434,6 @@ window.HELP_TOUR_STEPS = [
                           border-radius:4px;padding:1px 6px;font-size:11px;white-space:nowrap;"
                           title="이 파일을 올린 사람">${_esc(f.by)}</span>` : ''}
                 <span style="color:var(--text-muted);flex:1;">${_esc(f.name ?? '')}</span>
-                <a href="${_esc(f.url)}" target="_blank" rel="noopener"
-                   style="font-size:11.5px;color:var(--primary);text-decoration:underline;">새 창</a>
                 <button type="button" class="ds-btn" data-rq="open" data-file="${f.id}"
                         style="height:22px;min-width:0;padding:0 9px;font-size:11px;">다시 올리기 요청</button>
               </div>
