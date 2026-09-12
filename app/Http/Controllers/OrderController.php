@@ -339,8 +339,8 @@ class OrderController extends Controller
         }
 
         $where = $needsDelegation
-            ? '화면 위쪽의 「개인정보동의」ㆍ「위임동의」 단추'
-            : '화면 위쪽의 「개인정보동의」 단추';
+            ? '화면 위쪽의 「개인정보동의」ㆍ「위임동의」 버튼'
+            : '화면 위쪽의 「개인정보동의」 버튼';
 
         return implode(' · ', $missing) . " 이(가) 아직입니다. {$where}로 받은 뒤 진행해 주십시오.";
     }

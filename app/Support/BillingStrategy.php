@@ -45,7 +45,7 @@ class BillingStrategy
         }
 
         if ($accAddType === null || $accAddType === '' || $benefitClass === null || $benefitClass === '') {
-            return self::row('유형ㆍ자격을 고르면 청구전략이 정해집니다', 0, '—', 0, null, null, true, '미선택');
+            return self::row('유형ㆍ자격을 선택하면 청구전략이 정해집니다', 0, '—', 0, null, null, true, '미선택');
         }
 
         /* 이름에 원내ㆍ원외를 적지 않는다. 부담 비율과 발행 방식은 둘이 같아서,

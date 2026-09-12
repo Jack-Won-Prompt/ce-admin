@@ -15,7 +15,7 @@ class ClaimReadinessCommand extends Command
 {
     protected $signature = 'claim:refresh {--limit=500 : 한 번에 확인할 주문 수}';
 
-    protected $description = '주문의 공단 청구 준비 상태를 다시 계산한다';
+    protected $description = '주문의 공단 청구 준비 상태를 재계산합니다';
 
     public function handle(ClaimReadiness $svc): int
     {

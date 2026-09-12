@@ -18,7 +18,7 @@ class BankSyncCommand extends Command
 {
     protected $signature = 'bank:sync {--days= : 며칠치를 긁을지} {--wait : 다 모일 때까지 기다린다}';
 
-    protected $description = '팝빌 계좌조회로 통장 거래내역을 받아 온다';
+    protected $description = '팝빌 계좌조회로 통장 거래내역을 수집합니다';
 
     public function handle(BankSync $sync): int
     {

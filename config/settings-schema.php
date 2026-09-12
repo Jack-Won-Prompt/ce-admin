@@ -47,7 +47,7 @@ return [
             'secret_key' => ['label' => '시크릿 키',  'config' => 'popbill.SecretKey', 'type' => 'password',
                              'width' => 3],
             'is_test'    => ['label' => '테스트 모드', 'config' => 'popbill.IsTest', 'type' => 'bool',
-                             'help'  => '켜면 팝빌 테스트 서버로 나간다. 실제 발행·발송이 되지 않는다.'],
+                             'help'  => '켜면 팝빌 테스트 서버로 나갑니다. 실제 발행·발송이 되지 않습니다.'],
             'ip_restrict' => ['label' => 'IP 제한',    'config' => 'popbill.IPRestrictOnOff', 'type' => 'bool'],
             'use_static_ip' => ['label' => '고정 IP',  'config' => 'popbill.UseStaticIP', 'type' => 'bool'],
             'test_corp_num'     => ['label' => '테스트 사업자번호', 'config' => 'popbill.test.corp_num'],
@@ -77,29 +77,29 @@ return [
                바꾸는 사람이 「테스트 모드」를 함께 끄는 것을 잊었다. */
             'env' => ['label' => '사용 환경', 'config' => 'toss.env', 'type' => 'select',
                       'options' => ['test' => '테스트 (실제 결제 없음)', 'live' => '운영 (실제 결제)'],
-                      'help'  => '고른 쪽의 키로 돈다. 테스트 모드도 이 값이 정한다.', 'width' => 3],
+                      'help'  => '고른 쪽의 키로 돕니다. 테스트 모드도 이 값이 정합니다.', 'width' => 3],
 
             'test_client_key' => ['label' => '테스트 클라이언트 키', 'config' => 'toss.test.client_key',
-                             'help'  => 'test_ck_ 로 시작한다. 결제창을 여는 데 쓰며 브라우저에 노출된다.', 'width' => 3],
+                             'help'  => 'test_ck_ 로 시작합니다. 결제창을 여는 데 쓰며 브라우저에 노출됩니다.', 'width' => 3],
             'test_secret_key' => ['label' => '테스트 시크릿 키',     'config' => 'toss.test.secret_key', 'type' => 'password',
-                             'help'  => 'test_sk_ 로 시작한다. 서버에서 토스 API 를 부를 때 쓴다.', 'width' => 3],
+                             'help'  => 'test_sk_ 로 시작합니다. 서버에서 토스 API 를 부를 때 씁니다.', 'width' => 3],
 
             'live_client_key' => ['label' => '운영 클라이언트 키', 'config' => 'toss.live.client_key',
-                             'help'  => 'live_ck_ 로 시작한다.', 'width' => 3],
+                             'help'  => 'live_ck_ 로 시작합니다.', 'width' => 3],
             'live_secret_key' => ['label' => '운영 시크릿 키',     'config' => 'toss.live.secret_key', 'type' => 'password',
-                             'help'  => 'live_sk_ 로 시작한다. 이 키로 돌면 실제 결제가 일어난다.', 'width' => 3],
+                             'help'  => 'live_sk_ 로 시작합니다. 이 키로 돌면 실제 결제가 일어납니다.', 'width' => 3],
 
             'webhook_secret' => ['label' => '웹훅 보안 키', 'config' => 'toss.webhook_secret', 'type' => 'password',
-                             'help'  => '서명이 붙은 웹훅을 검증한다. 가상계좌 입금 웹훅은 서명이 없어 이 값이 비어도 입금 처리는 된다.',
+                             'help'  => '서명이 붙은 웹훅을 검증합니다. 가상계좌 입금 웹훅은 서명이 없어 이 값이 비어도 입금 처리는 됩니다.',
                              'width' => 3],
             'va_enabled' => ['label' => '가상계좌 발급', 'config' => 'toss.virtual_account_enabled', 'type' => 'bool',
-                             'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보낸다.'],
+                             'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보냅니다.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
             'va_valid_hours' => ['label' => '입금 기한(시간)',    'config' => 'toss.virtual_account.valid_hours', 'type' => 'int', 'width' => 1],
             'va_fallback_bank'    => ['label' => '입금계좌 은행',   'config' => 'toss.virtual_account.fallback_bank',
-                                      'help'  => '무통장입금 안내와 가상계좌 대체 안내에 함께 쓴다.'],
+                                      'help'  => '무통장입금 안내와 가상계좌 대체 안내에 함께 씁니다.'],
             'va_fallback_account' => ['label' => '입금계좌 번호', 'config' => 'toss.virtual_account.fallback_account',
-                                      'help'  => '비워 두면 무통장입금 문자에 「담당자에게 문의」로 나간다.'],
+                                      'help'  => '비워 두면 무통장입금 문자에 「담당자에게 문의」로 나갑니다.'],
         ],
     ],
 
@@ -124,14 +124,14 @@ return [
                 'label'  => '동의 완료에 공단 팩스 발송',
                 'config' => 'order.nhis_fax_on_consent',
                 'type'   => 'bool',
-                'help'   => '동의가 끝나면 등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증을 관할 지사로 보낸다. '
-                          . '하나라도 빠졌으면 보내지 않고 담당자에게 알린다 — 팩스 창에서 손으로 보내면 된다.',
+                'help'   => '동의가 끝나면 등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증을 관할 지사로 보냅니다. '
+                          . '하나라도 빠졌으면 발송하지 않고 담당자에게 알립니다 — 팩스 창에서 수동으로 발송할 수 있습니다.',
             ],
             'nhis_fax_on_id_card' => [
                 'label'  => '신분증이 들어오면 공단 팩스 다시 시도',
                 'config' => 'order.nhis_fax_on_id_card',
                 'type'   => 'bool',
-                'help'   => '위 설정은 동의가 끝나는 그때만 잰다 — 그때 신분증이 없으면 걸리고, 뒤에 '
+                'help'   => '위 설정은 동의가 끝나는 그때만 잽니다 — 그때 신분증이 없으면 걸리고, 뒤에 '
                           . '신분증이 들어와도 다시 재지 않았다. 이것을 켜면 신분증 링크로 받거나 첨부로 '
                           . '올릴 때 한 번 더 잰다. 이미 보낸 건은 다시 보내지 않는다.',
             ],
@@ -139,8 +139,8 @@ return [
                 'label'  => '첫 저장에 접수 안내 발송',
                 'config' => 'order.rx_received_sms_on_first_save',
                 'type'   => 'bool',
-                'help'   => '「처방전이 접수되었습니다」를 보낸다. 위임동의 링크와는 다른 통이다 — '
-                          . '동의를 이미 받아 둔 사람에게는 링크가 가지 않아, 합쳐 두면 접수됐다는 것조차 듣지 못한다.',
+                'help'   => '「처방전이 접수되었습니다」를 보냅니다. 위임동의 링크와는 다른 통입니다 — '
+                          . '동의를 이미 받은 거래처에는 링크가 발송되지 않으므로, 합쳐 두면 접수 사실조차 안내되지 않습니다.',
             ],
             'consent_sms_on_first_save' => [
                 'label'  => '첫 저장에 위임동의 발송',
@@ -153,15 +153,15 @@ return [
                 'label'  => '위임동의 발송 시간',
                 'config' => 'order.consent_sms_hours',
                 'width'  => 3,
-                'help'   => '이 시간 밖에 저장하면 보내지 않고 화면에 알린다 — 서명 링크가 30분만 열려, '
+                'help'   => '이 시간 밖에 저장하면 보내지 않고 화면에 알립니다 — 서명 링크가 30분만 열려, '
                           . '밤에 보내면 환자가 아침에 열어 이미 만료다. 예: 09:00-20:00 · 비우면 가리지 않는다.',
             ],
             'ship_notice_on_shipped' => [
                 'label'  => '출고되면 배송 안내 발송',
                 'config' => 'order.ship_notice_on_shipped',
                 'type'   => 'bool',
-                'help'   => '창고가 출고했다고 알려 오면(so.shipped) 운송장 번호를 담아 환자에게 문자를 보낸다. '
-                          . '문구는 메시지 유형 ▸ SMS ▸ 배송 시작 에서 고친다. 한 건에 한 번만 나간다.',
+                'help'   => '창고가 출고했다고 알려 오면(so.shipped) 운송장 번호를 담아 환자에게 문자를 보냅니다. '
+                          . '문구는 메시지 유형 ▸ SMS ▸ 배송 시작 에서 고친다. 한 건에 한 번만 발송합니다.',
             ],
         ],
     ],
@@ -175,14 +175,14 @@ return [
                 'config' => 'returns.inspect_days',
                 'type'   => 'int',
                 'width'  => 1,
-                'help'   => '3PL 창고에 물건이 들어온 날부터 센다. 접수일이 아니다.',
+                'help'   => '3PL 창고에 물건이 들어온 날부터 셉니다. 접수일이 아닙니다.',
             ],
             'ship_days' => [
                 'label'  => '출고·발행 기한 (영업일)',
                 'config' => 'returns.ship_days',
                 'type'   => 'int',
                 'width'  => 1,
-                'help'   => '교환은 재발송까지, 반품은 마이너스 발행까지의 기한이다.',
+                'help'   => '교환은 재발송까지, 반품은 마이너스 발행까지의 기한입니다.',
             ],
             'holidays' => [
                 'label'  => '쉬는 날',
@@ -211,7 +211,7 @@ return [
                                  'type' => 'password', 'width' => 3,
                                  'help' => '관할 청구처 찾기의 행정복지센터 조회에 쓴다(카카오 개발자센터 REST API 키).'],
             'test_mode'    => ['label' => '테스트 모드', 'config' => 'kakao.test_mode', 'type' => 'bool',
-                               'help'  => '켜면 실제로 보내지 않는다.'],
+                               'help'  => '켜면 실제로 보내지 않습니다.'],
         ],
     ],
 
@@ -237,11 +237,11 @@ return [
         'desc'  => '요양비 청구 서류에 찍히는 기관 정보 (팩스는 「테스트 설정」 탭에서 가른다)',
         'fields' => [
             'institution_name' => ['label' => '기관명',       'config' => 'nhis.institution.name',
-                                   'help'  => '요양비위임장ㆍ공단 팩스 표지에 찍힌다.'],
+                                   'help'  => '요양비위임장ㆍ공단 팩스 표지에 찍힙니다.'],
             'institution_code' => ['label' => '요양기관기호', 'config' => 'nhis.institution.code', 'width' => 1,
-                                   'help'  => '같은 서류에 찍힌다.'],
+                                   'help'  => '같은 서류에 찍힙니다.'],
             'biz_no'           => ['label' => '사업자번호',   'config' => 'nhis.institution.biz_no', 'width' => 1,
-                                   'help'  => '공단 청구 화면의 예금주 사업자번호로 쓴다.'],
+                                   'help'  => '공단 청구 화면의 예금주 사업자번호로 씁니다.'],
         ],
     ],
 
@@ -262,7 +262,7 @@ return [
     // 밀려 조용히 무시된다. 그래서 화면만 여기에 얹고 저장은 원래 테이블에 한다.
     'nice' => [
         'label' => '본인확인(NICE)',
-        'desc'  => '위임동의 링크에서 휴대폰 본인확인. 자격증명 3개가 모두 채워져야 켜진다.',
+        'desc'  => '위임동의 링크에서 휴대폰 본인확인. 자격증명 3개가 모두 채워져야 켜집니다.',
         'model' => \App\Models\NiceSetting::class,
         // 이 묶음에는 「연결 테스트」 단추가 선다. 전용 화면(/settings/nice)에만 있던 것을
         // 여기서도 누를 수 있게 한다 — 그 화면은 메뉴에 없어 주소를 알아야 닿는다.
@@ -278,13 +278,13 @@ return [
             'client_secret' => ['label' => '클라이언트 시크릿', 'column' => 'client_secret', 'type' => 'password', 'width' => 3],
             'product_id'    => ['label' => '상품 ID',       'column' => 'product_id'],
             'enforce'       => ['label' => '본인확인 필수', 'column' => 'enforce', 'type' => 'bool',
-                                'help'  => '켜면 본인확인을 마쳐야 서명으로 넘어간다.'],
+                                'help'  => '켜면 본인확인을 마쳐야 서명으로 넘어갑니다.'],
             'match_name'    => ['label' => '이름 일치 확인', 'column' => 'match_name', 'type' => 'bool'],
             'match_birth'   => ['label' => '생년월일 일치 확인', 'column' => 'match_birth', 'type' => 'bool'],
             'api_base'      => ['label' => 'API 주소',      'column' => 'api_base', 'width' => 3,
-                                'help'  => '비워두면 기본값을 쓴다.'],
+                                'help'  => '비워두면 기본값을 씁니다.'],
             'standard_url'  => ['label' => '표준창 주소',   'column' => 'standard_url', 'width' => 3,
-                                'help'  => '비워두면 기본값을 쓴다.'],
+                                'help'  => '비워두면 기본값을 씁니다.'],
         ],
     ],
 
@@ -305,15 +305,15 @@ return [
 
     'ce_shop' => [
         'label' => 'CE샵',
-        'desc'  => 'CE샵에서 넘어오는 주문을 받고, 배지 건수를 물어볼 때 쓴다',
+        'desc'  => 'CE샵에서 넘어오는 주문을 받고, 배지 건수를 물어볼 때 씁니다',
         'fields' => [
             'base_url'       => ['label' => 'CE샵 주소',  'config' => 'services.ce_shop.base_url', 'width' => 3,
                                  'help' => '배지 건수를 물어볼 때 부르는 주소'],
             // 이 값으로 들어오는 주문의 진위를 가린다 — 틀리면 401 로 거절한다
             'webhook_secret' => ['label' => '웹훅 공유 비밀', 'config' => 'services.ce_shop.webhook_secret', 'type' => 'password',
-                                 'help' => 'CE샵 쪽에 같은 값이 들어가야 한다'],
+                                 'help' => 'CE샵 쪽에 같은 값이 들어가야 합니다'],
             'api_enabled'    => ['label' => 'CE샵 조회 사용', 'config' => 'services.ce_shop.api_enabled', 'type' => 'bool',
-                                 'help' => '끄면 배지 건수를 우리 표에서 센다'],
+                                 'help' => '끄면 배지 건수를 우리 표에서 셉니다'],
         ],
     ],
     'login' => [
@@ -322,7 +322,7 @@ return [
         'fields' => [
             // 끈다면 이메일·비밀번호만으로 들어온다. 웹과 앱이 같은 값을 본다.
             'otp_enabled' => ['label' => '문자 인증 사용', 'config' => 'auth.otp_enabled', 'type' => 'bool',
-                              'help'  => '켜면 비밀번호 뒤에 문자로 받은 인증번호를 한 번 더 넣어야 한다. 휴대폰 번호가 없는 계정은 로그인할 수 없다.'],
+                              'help'  => '켜면 비밀번호 뒤에 문자로 받은 인증번호를 한 번 더 넣어야 합니다. 휴대폰 번호가 없는 계정은 로그인할 수 없습니다.'],
 
             /* 아이디ㆍ비밀번호 길을 웹과 앱에서 따로 여닫는다. 한쪽만 SSO 로
                옮겨 가는 동안 다른 쪽은 그대로 써야 하기 때문이다. */
@@ -334,15 +334,15 @@ return [
     ],
     'mobile' => [
         'label' => '모바일 앱',
-        'desc'  => '앱이 스스로 새 판을 확인해 알린다',
+        'desc'  => '앱이 스스로 새 판을 확인해 알립니다',
         'fields' => [
             'latest_version' => ['label' => '최신 판', 'config' => 'mobile.latest_version', 'width' => 1,
-                                 'help'  => '스토어에 올린 판(예: 1.1.0). 이보다 낮은 판에게 새 판이 있다고 알린다. 비우면 알리지 않는다.'],
+                                 'help'  => '스토어에 올린 판(예: 1.1.0). 이보다 낮은 판에게 새 판이 있다고 알립니다. 비우면 알리지 않습니다.'],
             'min_version'    => ['label' => '최소 판', 'config' => 'mobile.min_version', 'width' => 1,
-                                 'help'  => '이 판보다 낮으면 쓸 수 없다 — 넘길 수 없는 안내가 뜬다. 서버와 주고받는 약속이 바뀌었을 때만 올린다.'],
+                                 'help'  => '이 판보다 낮으면 쓸 수 없습니다 — 넘길 수 없는 안내가 뜬다. 서버와 주고받는 약속이 바뀌었을 때만 올린다.'],
             'store_url'      => ['label' => '스토어 주소', 'config' => 'mobile.store_url', 'width' => 3],
             'notice'         => ['label' => '안내 문구', 'config' => 'mobile.notice', 'type' => 'textarea', 'width' => 3,
-                                 'help'  => '새 판에서 무엇이 달라졌는지 한두 줄. 비우면 기본 문구가 나간다.'],
+                                 'help'  => '새 판에서 무엇이 달라졌는지 한두 줄. 비우면 기본 문구가 나갑니다.'],
         ],
     ],
     /**
@@ -371,7 +371,7 @@ return [
                            'options' => ['live'     => '실제 (적힌 번호로)',
                                          'redirect' => '우리에게만 (테스트 번호로 돌린다)',
                                          'simulate' => '시뮬레이션 (발송하지 않음)'],
-                           'help'  => '「우리에게만」은 정말 팝빌로 나간다 — 받는 곳이 선택한 테스트 번호로 바뀐다.'],
+                           'help'  => '「우리에게만」은 정말 팝빌로 나갑니다 — 받는 곳이 선택한 테스트 번호로 바뀝니다.'],
 
             'fax_mode' => ['label' => '팩스 발송', 'config' => 'popbill.fax_mode', 'type' => 'select', 'width' => 1,
                            'options' => ['live'     => '실제 (관할 지사로)',
@@ -383,20 +383,20 @@ return [
             /* 받는 곳은 여기 한 곳에서만 고친다. 팝빌 탭에도 같은 칸이 서 있었는데,
                한 값을 두 화면이 각각 세우니 서로 덮었다(2026-09-07 걷어냄). */
             'test_receiver_hp'  => ['label' => '테스트 받는 번호', 'config' => 'popbill.test.receiver_hp', 'width' => 1,
-                                    'help'  => '「우리에게만」일 때 문자가 오는 곳. 비어 있으면 발송이 막힌다.'],
+                                    'help'  => '「우리에게만」일 때 문자가 오는 곳. 비어 있으면 발송이 막힙니다.'],
             'test_receiver_fax' => ['label' => '테스트 받는 팩스', 'config' => 'popbill.test.receiver_fax', 'width' => 1,
-                                    'help'  => '「우리에게만」일 때 팩스가 오는 곳. 비어 있으면 발송이 막힌다.'],
+                                    'help'  => '「우리에게만」일 때 팩스가 오는 곳. 비어 있으면 발송이 막힙니다.'],
 
             /* 연계가 잘 갔는지는 저쪽 화면에 들어가 눈으로 찾아야 안다. 무엇을 어떤
                값으로 보냈는지는 로그에만 남고, 로그는 서버에 들어가야 읽는다. */
             'withworks_email' => ['label' => '위드웍스 연계 확인 이메일', 'config' => 'web.withworks_email', 'width' => 3,
-                                  'help'  => '위드웍스로 주문ㆍ반품을 보낼 때 그 내용을 이 주소로도 보낸다. '
-                                           . '저쪽 화면과 나란히 놓고 견줄 수 있다. 비우면 보내지 않는다.'],
+                                  'help'  => '위드웍스로 주문ㆍ반품을 보낼 때 그 내용을 이 주소로도 보냅니다. '
+                                           . '상대 화면과 나란히 놓고 대조할 수 있습니다. 비우면 보내지 않는다.'],
 
             /* 본인확인은 여태 .env 로만 있어, 운영 전환 뒤 되돌렸는지 화면에서 볼 수 없었다. */
             'nice_simulate' => ['label' => '본인확인 시뮬레이션(NICE)', 'config' => 'nice.simulate', 'type' => 'bool',
-                                'help'  => '켜면 위임동의 화면의 본인확인이 실제 인증 없이 「확인됨 (테스트)」으로 넘어간다. '
-                                         . '운영에서는 반드시 꺼 두어야 한다.'],
+                                'help'  => '켜면 위임동의 화면의 본인확인이 실제 인증 없이 「확인됨 (테스트)」으로 넘어갑니다. '
+                                         . '운영에서는 반드시 해제해야 합니다.'],
         ],
     ],
 ];

@@ -932,8 +932,8 @@
                       + 'color:' + (반쪽 ? 'var(--danger)' : 'var(--gray-1000)') + ';';
     btn.textContent = 반쪽 ? (v || '-') : '-';
     btn.title = 반쪽
-      ? '입금은 확인됐지만 주문 확정이 남았습니다 — 다시 고르면 이어서 밟습니다'
-      : '무엇으로 받았는지 고르면 입금 확인됩니다';
+      ? '입금은 확인됐지만 주문 확정이 남았습니다 — 다시 선택하면 이어서 진행합니다'
+      : '입금 수단을 선택하면 입금 확인됩니다';
     btn.onclick = (ev) => { ev.stopPropagation(); payMethodPick(ev.currentTarget, row, rowIndex); };
     box.appendChild(btn);
     return box;

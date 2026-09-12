@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 class FaxSyncPendingCommand extends Command
 {
     protected $signature   = 'fax:sync-pending {--corp= : 사업자번호(생략하면 설정값)}';
-    protected $description = '전송 결과가 안 온 팩스를 팝빌에서 조회해 이력에 반영한다';
+    protected $description = '전송 결과가 회신되지 않은 팩스를 팝빌에서 조회하여 이력에 반영합니다';
 
     public function handle(FaxSyncService $sync): int
     {
