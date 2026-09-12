@@ -1299,7 +1299,22 @@ class PrescriptionController extends Controller
         activity()->causedBy(Auth::user())->performedOn($prescription)
             ->log("{$무엇}의 밝기 {$data['brightness']}ㆍ명암 {$data['contrast']} 로 맞췄습니다");
 
-        return response()->json(['success' => true]);
+        /* 이미 만들어 둔 팩스통합본이 있으면 알려 준다 (2026-09-12 지시).
+
+           숫자만 고쳐 두면 화면은 달라 보이는데 만들어 둔 PDF 는 옛 그림 그대로다 —
+           그것을 내려받아 보낸 사람은 맞춘 적이 없는 셈이 된다. 다시 만드는 일은
+           쪽을 펴고 굽느라 시간이 걸리므로, 부르는 쪽이 진행을 보여 줄 수 있게
+           「있다」와 「어디로 부르면 되는가」만 돌려주고 실제 재생성은 따로 부른다. */
+        $통합본있나 = PrescriptionDocument::where('prescription_id', $prescription->id)
+            ->where('type', 'fax')->exists();
+
+        return response()->json([
+            'success'        => true,
+            'has_fax_pdf'    => $통합본있나,
+            'regenerate_url' => $통합본있나
+                ? route('prescriptions.faxRegenerate', $prescription)
+                : null,
+        ]);
     }
 
     public function destroyAttachment(Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse

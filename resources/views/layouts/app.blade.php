@@ -1195,6 +1195,10 @@
     .spinner-border.spinner-border-sm { width: 1rem; height: 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .d-none { display: none !important; }
+
+    /* 진행 창의 도는 표시와 흐르는 띠 (2026-09-12) */
+    @keyframes ce-prog-spin { to { transform: rotate(360deg); } }
+    @keyframes ce-prog-flow { to { background-position: 32px 0; } }
     .position-relative { position: relative; }
     .position-absolute { position: absolute; }
     .col-md-4 { width: 33.333%; }
@@ -2605,6 +2609,73 @@ document.addEventListener('click', (e) => {
 
     /** 확인. Promise<boolean> — 확인 true / 취소·Esc·배경클릭 false. */
     window.ceConfirm = (msg, opts) => open('confirm', msg, opts);
+
+    /**
+     * 진행 창 (2026-09-12 지시).
+     *
+     *   const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
+     *   창.걸음(1, '맞춘 값을 적었습니다');
+     *   창.걸음(2, 'PDF 를 다시 만드는 중…');
+     *   창.닫기();
+     *
+     * 걸음 수를 아는 일에만 쓴다. 몇 걸음 가운데 몇째인지를 그대로 보여 줄 뿐,
+     * 서버가 얼마나 남았는지는 알 수 없으므로 **퍼센트를 지어내지 않는다**.
+     * 마지막 걸음은 끝날 때까지 띠가 흐른다.
+     *
+     * 닫기 단추가 없다 — 누르면 일이 멈추는 줄 알지만 서버는 계속 돈다.
+     */
+    window.ceProgress = function (제목, 걸음수 = 1) {
+      const ov = document.createElement('div');
+      ov.className = 'modal-overlay open';
+      ov.style.zIndex = '20000';
+      ov.innerHTML = `
+        <div class="modal-box sm" role="dialog" aria-modal="true" aria-live="polite">
+          <div class="modal-hd">
+            <i class="fa-solid fa-circle-notch" style="color:var(--primary);font-size:15px;
+               animation:ce-prog-spin 1s linear infinite;"></i>
+            <span class="modal-title">${esc(제목)}</span>
+          </div>
+          <div class="modal-bd" style="padding-top:6px;">
+            <div data-ce-prog-say style="font-size:12.5px;color:var(--text-primary);margin-bottom:10px;">
+              시작하는 중…
+            </div>
+            <div style="height:8px;border-radius:99px;background:var(--gray-200);overflow:hidden;">
+              <div data-ce-prog-bar style="height:100%;width:0;border-radius:99px;
+                   background:var(--primary);transition:width .25s ease;"></div>
+            </div>
+            <div data-ce-prog-cnt style="margin-top:6px;font-size:11px;color:var(--text-muted);
+                 text-align:right;font-variant-numeric:tabular-nums;"></div>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+
+      const 말 = ov.querySelector('[data-ce-prog-say]');
+      const 띠 = ov.querySelector('[data-ce-prog-bar]');
+      const 셈 = ov.querySelector('[data-ce-prog-cnt]');
+
+      return {
+        걸음(번, 글) {
+          말.textContent = 글 || '';
+          셈.textContent = 번 + ' / ' + 걸음수;
+
+          /* 그 걸음을 끝낸 것이 아니라 **하는 중**이다. 앞 걸음까지를 채우고,
+             지금 걸음 몫은 흐르게 둔다 — 다 찼는데 안 끝나면 멎은 것처럼 보인다. */
+          띠.style.width = Math.round(((번 - 1) / 걸음수) * 100) + '%';
+          띠.style.background =
+            'repeating-linear-gradient(45deg, var(--primary) 0 8px, var(--primary-light) 8px 16px)';
+          띠.style.animation = 'ce-prog-flow .9s linear infinite';
+          requestAnimationFrame(() => { 띠.style.width = Math.round((번 / 걸음수) * 100) + '%'; });
+        },
+        마침(글) {
+          말.textContent = 글 || '끝났습니다.';
+          셈.textContent = 걸음수 + ' / ' + 걸음수;
+          띠.style.animation = 'none';
+          띠.style.background = 'var(--primary)';
+          띠.style.width = '100%';
+        },
+        닫기() { ov.remove(); },
+      };
+    };
 
     /**
      * 입력. Promise<string|null> — 저장하면 입력값, 취소·Esc·배경클릭이면 null.

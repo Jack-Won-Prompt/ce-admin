@@ -687,6 +687,28 @@ window.HELP_TOUR_STEPS = [
     _rv그리기(무대);
   });
 
+  /* 맞춘 값을 적고 나서, 만들어 둔 팩스통합본까지 새 값으로 다시 만든다.
+     쪽을 펴고 굽느라 시간이 걸려 진행 창을 세운다 (2026-09-12 지시). */
+  async function _rvPdf다시(res) {
+    if (!res.has_fax_pdf || !res.regenerate_url) return;
+
+    const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
+    try {
+      창.걸음(1, '맞춘 값을 적었습니다.');
+      창.걸음(2, '맞춘 값으로 PDF 를 다시 만드는 중…');
+
+      const out = await apiRequest(res.regenerate_url, 'POST', {});
+      if (!out.success) throw new Error(out.message || '다시 만들지 못했습니다.');
+
+      창.마침('팩스통합본을 다시 만들었습니다.');
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) {
+      showToast('값은 저장했지만 팩스통합본을 다시 만들지 못했습니다 — ' + e.message, 'warning', 7000);
+    } finally {
+      창.닫기();
+    }
+  }
+
   /* 창 안의 단추는 한 자리에서 받는다 — 파일이 스무 장이어도 듣는 이는 하나다 */
   document.getElementById('rvBody').addEventListener('click', async (e) => {
     const 도구 = e.target.closest('[data-rv]');
@@ -731,6 +753,12 @@ window.HELP_TOUR_STEPS = [
           /* 저장했으면 할 일이 끝났다 — 칸이 계속 떠 있으면 그림을 가린다.
              주문 등록 뷰어도 이렇게 닫는다(_viewer 의 tuneSave). */
           무대.querySelector('.rv-tune').classList.remove('on');
+
+          /* 만들어 둔 팩스통합본이 있으면 그것도 새 값으로 다시 만든다
+             (2026-09-12 지시). 숫자만 고쳐 두면 화면은 달라 보이는데 PDF 는 옛
+             그림 그대로다 — 그것을 내려받아 보낸 사람은 맞춘 적이 없는 셈이 된다. */
+          await _rvPdf다시(res);
+
           showToast('밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 적용됩니다.', 'success');
         } catch (err) {
           showToast(err.message || '저장하지 못했습니다.', 'danger', 5000);

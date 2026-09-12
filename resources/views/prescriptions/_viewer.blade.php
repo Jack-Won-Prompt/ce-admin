@@ -399,6 +399,28 @@ function showDoc(doc) {
     document.getElementById('tunePanel')?.classList.remove('on');
   };
 
+  /* 맞춘 값을 적고 나서, 만들어 둔 팩스통합본까지 새 값으로 다시 만든다.
+     쪽을 펴고 굽느라 시간이 걸려 진행 창을 세운다 (2026-09-12 지시). */
+  async function _tunePdf다시(res) {
+    if (!res?.has_fax_pdf || !res?.regenerate_url || typeof ceProgress === 'undefined') return;
+
+    const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
+    try {
+      창.걸음(1, '맞춘 값을 적었습니다.');
+      창.걸음(2, '맞춘 값으로 PDF 를 다시 만드는 중…');
+
+      const out = await apiRequest(res.regenerate_url, 'POST', {});
+      if (!out.success) throw new Error(out.message || '다시 만들지 못했습니다.');
+
+      창.마침('팩스통합본을 다시 만들었습니다.');
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) {
+      showToast('값은 저장했지만 팩스통합본을 다시 만들지 못했습니다 — ' + e.message, 'warning', 7000);
+    } finally {
+      창.닫기();
+    }
+  }
+
   window.tuneSave = async function (알림말) {
     if (!_tuneKey || typeof TUNE_SAVE_URL === 'undefined') return;
 
@@ -420,6 +442,11 @@ function showDoc(doc) {
       }
       /* 저장했으면 할 일이 끝났다 — 칸이 계속 떠 있으면 그림을 가린다 */
       document.getElementById('tunePanel')?.classList.remove('on');
+
+      /* 만들어 둔 팩스통합본이 있으면 그것도 새 값으로 다시 만든다 (2026-09-12 지시).
+         숫자만 고쳐 두면 화면은 달라 보이는데 PDF 는 옛 그림 그대로다. */
+      await _tunePdf다시(res);
+
       showToast(typeof 알림말 === 'string' && 알림말
                   ? 알림말
                   : '밝기ㆍ명암을 저장했습니다. 팩스와 서류에도 적용됩니다.', 'success');
