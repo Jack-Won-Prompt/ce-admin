@@ -9,6 +9,7 @@ import '../providers/chat_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/prescription_provider.dart';
 import '../services/chat_notification_service.dart';
+import '../services/fcm_service.dart';
 import '../theme/app_theme.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -40,6 +41,16 @@ class _MainShellState extends ConsumerState<MainShell> {
           context.push('/chat/$roomId',
               extra: {'name': '채팅', 'type': 'direct'});
         }
+      });
+    };
+
+    /* 「자료를 다시 올려 주십시오」 알림을 누르면 그 처방전으로 간다.
+       처방전 탭으로 옮긴 뒤 여는 까닭은, 닫고 나왔을 때 목록이 남아 있어야
+       이어서 볼 수 있기 때문이다. */
+    FcmService.instance.onPrescriptionTap = (rxNumber) {
+      widget.navigationShell.goBranch(0);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) context.push('/prescriptions/$rxNumber');
       });
     };
   }

@@ -13,6 +13,7 @@ import '../screens/prescription_upload_screen.dart';
 import '../screens/chat_list_screen.dart';
 import '../screens/chat_room_screen.dart';
 import '../screens/notice_list_screen.dart';
+import '../screens/notification_list_screen.dart';
 import '../screens/notice_detail_screen.dart';
 import '../screens/inquiry_list_screen.dart';
 import '../screens/inquiry_create_screen.dart';
@@ -134,6 +135,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+
+      // ── 알림 이력 (셸 밖 — push 방식) ──────────────────────
+      GoRoute(
+        path: '/notifications',
+        builder: (ctx, state) => const NotificationListScreen(),
       ),
 
       // ── 문의하기 (셸 밖 — push 방식) ───────────────────────

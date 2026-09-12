@@ -43,12 +43,32 @@ class FcmService {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleTap);
   }
 
+  /// 알림을 눌러 들어왔을 때 어디로 보낼지.
+  ///
+  /// 갈래(type)와 그 갈래의 키를 보고 정한다. 서버가 보내는 갈래는 지금 둘이다 —
+  /// chat(대화방)과 rx_reupload(다시 올릴 처방전). 모르는 갈래면 아무 곳으로도
+  /// 보내지 않는다. 앱은 그냥 열리고, 알림 이력에서 글은 읽을 수 있다.
   void _handleTap(RemoteMessage message) {
-    final roomId = int.tryParse(message.data['room_id'] ?? '');
-    if (roomId != null) {
-      ChatNotificationService.instance.onTap?.call(roomId);
+    final data = message.data;
+
+    switch (data['type']) {
+      case 'rx_reupload':
+        final rx = data['rx_number'];
+        if (rx != null && rx.isNotEmpty) onPrescriptionTap?.call(rx);
+        break;
+
+      default:
+        /* 갈래가 없던 옛 알림도 room_id 만 있으면 대화방으로 보낸다 —
+           이미 나간 알림을 되돌릴 수 없다. */
+        final roomId = int.tryParse(data['room_id'] ?? '');
+        if (roomId != null) {
+          ChatNotificationService.instance.onTap?.call(roomId);
+        }
     }
   }
+
+  /// 처방전 화면으로 보내 달라는 부름. 화면을 아는 쪽(MainShell)이 채운다.
+  void Function(String rxNumber)? onPrescriptionTap;
 
   Future<void> _sendToken(Dio dio, String token) async {
     try {

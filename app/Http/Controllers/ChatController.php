@@ -334,7 +334,9 @@ class ChatController extends Controller
                         $member->fcm_token,
                         $senderName,
                         $msgBody,
-                        $room->id
+                        $room->id,
+                        // 받는 사람을 함께 넘겨 앱에서 다시 볼 수 있게 남긴다
+                        $member->id
                     );
                 });
         } catch (\Throwable $e) {

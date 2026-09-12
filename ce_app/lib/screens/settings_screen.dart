@@ -134,6 +134,17 @@ class SettingsScreen extends ConsumerWidget {
                           endIndent: 16,
                           color: AppTheme.border),
                       _MenuItem(
+                        icon: Icons.notifications_active_outlined,
+                        iconGradient: AppTheme.secondaryGradient,
+                        title: '알림 이력',
+                        onTap: () => context.push('/notifications'),
+                      ),
+                      const Divider(
+                          height: 1,
+                          indent: 68,
+                          endIndent: 16,
+                          color: AppTheme.border),
+                      _MenuItem(
                         icon: Icons.contact_support_rounded,
                         iconGradient: AppTheme.accentGradient,
                         title: '문의하기',
