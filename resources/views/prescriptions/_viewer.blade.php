@@ -42,10 +42,19 @@
      글씨가 묻힌다. 파일은 건드리지 않고 여기서 맞춰 두면 팩스에도 그대로 간다. */
   .vw-tune { position:absolute; right:8px; bottom:8px; z-index:6;
              display:none; flex-direction:column; gap:6px; width:186px;
-             padding:10px 12px; border-radius:10px;
+             /* 위쪽을 더 비운다 — 닫기가 앉을 자리다(× 는 top 4 에 높이 22) */
+             padding:30px 12px 10px; border-radius:10px;
              background:rgba(255,255,255,.96); border:1px solid var(--gray-200);
              box-shadow:0 4px 16px rgba(0,0,0,.12); }
   .vw-tune.on { display:flex; }
+  /* 맞추다 말고 그냥 닫고 싶을 때 (2026-09-12 지시). 저장하거나 ［원본］을 누르면
+     스스로 닫히지만, 건드려만 보고 덮어 두려면 닫을 자리가 있어야 한다 — 도구 띠의
+     ◐ 까지 손이 화면을 가로질렀다. */
+  .vw-tune-x { position:absolute; top:4px; right:5px; width:22px; height:22px; padding:0;
+               display:flex; align-items:center; justify-content:center;
+               border:none; border-radius:5px; background:none;
+               color:var(--gray-600); font-size:15px; line-height:1; cursor:pointer; }
+  .vw-tune-x:hover { background:var(--gray-100); color:var(--gray-1000); }
   .vw-tune-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--gray-700); }
   .vw-tune-row > span:first-child { width:28px; flex:none; }
   .vw-tune-row input[type=range] { flex:1; min-width:0; accent-color:var(--primary); }
@@ -91,6 +100,7 @@
         {{-- 밝기ㆍ명암 — 끄는 즉시 화면에 보이고, 저장을 눌러야 문서에 남는다.
              파일은 건드리지 않는다. 팩스ㆍ서류를 만들 때 서버가 같은 값을 입힌다. --}}
         <div class="vw-tune" id="tunePanel">
+          <button type="button" class="vw-tune-x" onclick="closeTune()" title="닫기">&#215;</button>
           <div class="vw-tune-row">
             <span>밝기</span>
             <input type="range" id="tuneBright" min="-100" max="100" step="5" value="0" oninput="onTuneInput()">
@@ -366,6 +376,11 @@ function showDoc(doc) {
 
   window.toggleTune = function () {
     document.getElementById('tunePanel')?.classList.toggle('on');
+  };
+
+  /** 칸만 닫는다 — 맞춰 둔 값은 그대로 화면에 남는다 (2026-09-12 지시) */
+  window.closeTune = function () {
+    document.getElementById('tunePanel')?.classList.remove('on');
   };
 
   /* 원본으로 — 맞춰 둔 것을 지우고 칸을 닫는다 (2026-09-10 지시).
