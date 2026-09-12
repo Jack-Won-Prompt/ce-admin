@@ -3912,10 +3912,18 @@ class PrescriptionController extends Controller
             return response()->json(['success' => false, 'message' => '재생성 실패: ' . $e->getMessage()], 500);
         }
 
-        // 기존 팩스통합본 교체
+        /* 기존 팩스통합본 교체.
+
+           파일은 두 디스크에 흩어져 있다 — 보낼 때 만든 것은 public, 다시 만든 것은
+           local(app/private) 이다. 기본 디스크만 보고 지워 왔더니 다른 쪽에 있는
+           파일은 남고 표의 줄만 사라져, 아무도 가리키지 않는 PDF 가 쌓였다.
+           내려받기가 두 디스크를 다 뒤지듯(PrescriptionDocumentController) 여기서도
+           둘 다 본다 (2026-09-12). */
         foreach (PrescriptionDocument::where('prescription_id', $prescription->id)->where('type', 'fax')->get() as $old) {
-            if ($old->file_path && Storage::exists($old->file_path)) {
-                Storage::delete($old->file_path);
+            foreach (['local', 'public'] as $디스크) {
+                if ($old->file_path && Storage::disk($디스크)->exists($old->file_path)) {
+                    Storage::disk($디스크)->delete($old->file_path);
+                }
             }
             $old->delete();
         }
