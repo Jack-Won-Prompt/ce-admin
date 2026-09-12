@@ -4063,20 +4063,39 @@ class PrescriptionController extends Controller
 
         $prescription->load(['patient', 'items', 'order']);
 
+        /* 처방전 본 그림 — PDF 로 올라온 것도 담는다 (2026-09-12 지시).
+
+           여태는 PDF 를 그대로 data URI 로 만들어 <img> 에 넣었다. 그림이 아니니
+           통합본에 빈 자리가 남았다. 쪽마다 펴서 보정을 입힌 그림으로 넣는다. */
         $rxImageDataUri = null;
+        $rx딸림쪽       = [];
+
         if (in_array('prescription', $documents) && $prescription->image_path) {
             $absPath = Storage::disk('public')->path($prescription->image_path);
-            if (file_exists($absPath)) {
-                $rxImageDataUri = $this->rxImageToPortraitDataUri(
-                    $absPath,
-                    (int) ($prescription->img_brightness ?? 0),
-                    (int) ($prescription->img_contrast ?? 0),
-                );
+            $밝기 = (int) ($prescription->img_brightness ?? 0);
+            $명암 = (int) ($prescription->img_contrast ?? 0);
+
+            if (file_exists($absPath) && @getimagesize($absPath) !== false) {
+                $rxImageDataUri = $this->rxImageToPortraitDataUri($absPath, $밝기, $명암);
+            } elseif (file_exists($absPath)) {
+                $쪽들 = self::pdfPageImages($absPath, 'rx_' . $prescription->rx_number);
+
+                foreach ($쪽들 as $번 => $쪽) {
+                    $uri = $this->rxImageToPortraitDataUri($쪽, $밝기, $명암);
+                    @unlink($쪽);
+
+                    if ($번 === 0) {
+                        $rxImageDataUri = $uri;
+                    } else {
+                        // 둘째 쪽부터는 첨부 자리에 이어 붙인다 — 보기 차례는 그대로다
+                        $rx딸림쪽[] = ['label' => '처방전 (' . ($번 + 1) . '쪽)', 'dataUri' => $uri, 'type' => 'image'];
+                    }
+                }
             }
         }
 
-        // 선택된 첨부파일을 base64 data URI로 변환 (이미지만)
-        $attachmentDataUris = [];
+        // 선택된 첨부파일을 base64 data URI로 변환
+        $attachmentDataUris = $rx딸림쪽;
         if (!empty($attachmentIds)) {
             $attachments = PrescriptionAttachment::whereIn('id', $attachmentIds)
                 ->where('prescription_id', $prescription->id)
@@ -4099,8 +4118,29 @@ class PrescriptionController extends Controller
                         'dataUri' => $dataUri,
                         'type'    => 'image',
                     ];
+                    continue;
                 }
-                // PDF 첨부는 dompdf가 외부 PDF를 삽입할 수 없으므로 이미지만 처리
+
+                /* PDF 첨부도 담는다 (2026-09-12 지시).
+
+                   dompdf 는 남의 PDF 를 끼우지 못한다. 그래서 여태 통째로 빠졌다 —
+                   팩스로는 나가는데 「무엇을 보냈나」를 남기는 통합본에는 없었다.
+                   쪽마다 그림으로 펴서, 보정을 입힌 그림으로 넣는다. */
+                $쪽들 = self::pdfPageImages($absPath, 'att_' . $att->id);
+                $여러쪽 = count($쪽들) > 1;
+
+                foreach ($쪽들 as $번 => $쪽) {
+                    $attachmentDataUris[] = [
+                        'label'   => $att->doc_type_label . ($여러쪽 ? ' (' . ($번 + 1) . '쪽)' : ''),
+                        'dataUri' => $this->rxImageToPortraitDataUri(
+                            $쪽,
+                            (int) ($att->img_brightness ?? 0),
+                            (int) ($att->img_contrast ?? 0),
+                        ),
+                        'type'    => 'image',
+                    ];
+                    @unlink($쪽);
+                }
             }
         }
 
@@ -4303,12 +4343,14 @@ class PrescriptionController extends Controller
                     if ($prescription->image_path) {
                         $absPath = Storage::disk('public')->path($prescription->image_path);
                         if (file_exists($absPath)) {
-                            $files[] = self::faxFileWithTune(
+                            foreach (self::faxFilesWithTune(
                                 $absPath,
                                 (int) ($prescription->img_brightness ?? 0),
                                 (int) ($prescription->img_contrast ?? 0),
                                 'rx_' . $prescription->rx_number,
-                            );
+                            ) as $한장) {
+                                $files[] = $한장;
+                            }
                         }
                     }
                     break;
@@ -4405,17 +4447,64 @@ class PrescriptionController extends Controller
             foreach ($attachments as $att) {
                 $absPath = Storage::disk('public')->path($att->file_path);
                 if (file_exists($absPath)) {
-                    $files[] = self::faxFileWithTune(
+                    foreach (self::faxFilesWithTune(
                         $absPath,
                         (int) ($att->img_brightness ?? 0),
                         (int) ($att->img_contrast ?? 0),
                         'att_' . $att->id,
-                    );
+                    ) as $한장) {
+                        $files[] = $한장;
+                    }
                 }
             }
         }
 
         return array_values(array_filter($files));
+    }
+
+    /**
+     * PDF 를 쪽마다 그림 한 장으로 편다 (2026-09-12 지시).
+     *
+     * 밝기ㆍ명암은 GD 로 입히는데 GD 는 PDF 를 열지 못한다. 그래서 여태 PDF 로
+     * 올라온 처방전은 화면에서 아무리 맞춰도 **원본이 그대로 팩스로 나갔다**.
+     * 공단은 팩스로 받아 읽는 쪽이라, 흐린 채로 가면 확인이 어렵다.
+     *
+     * 펴 놓고 나면 그 뒤는 그림과 똑같다 — 보정한 그림으로 PDF 를 만든다.
+     * 순서가 거꾸로면(만들고 나서 손대면) 이미 구워진 쪽을 다시 굽는 셈이 된다.
+     *
+     * 펴지 못하면 빈 배열을 돌려준다 — 부르는 쪽이 원본을 그대로 쓴다.
+     */
+    private static function pdfPageImages(string $absPath, string $이름): array
+    {
+        $펴개 = '/usr/bin/pdftoppm';
+        if (! is_file($펴개)) {
+            return [];
+        }
+
+        $dir = storage_path('app/temp');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $앞 = $dir . '/pdfpg_' . preg_replace('/[^A-Za-z0-9_-]/', '', $이름) . '_' . time() . '_' . mt_rand(1000, 9999);
+
+        /* 200dpi — 팩스가 실제로 싣는 해상도(약 200×100)보다 넉넉하다.
+           더 올리면 파일만 커지고 팩스에서는 달라지지 않는다. */
+        $cmd = escapeshellcmd($펴개) . ' -jpeg -r 200 -jpegopt quality=92 '
+             . escapeshellarg($absPath) . ' ' . escapeshellarg($앞) . ' 2>&1';
+
+        @exec($cmd, $나온말, $끝값);
+
+        if ($끝값 !== 0) {
+            Log::warning('[팩스] PDF 를 펴지 못했습니다', ['파일' => $absPath, '말' => implode(' ', $나온말)]);
+
+            return [];
+        }
+
+        $쪽들 = glob($앞 . '-*.jpg') ?: [];
+        sort($쪽들, SORT_NATURAL);
+
+        return $쪽들;
     }
 
     /**
@@ -4433,6 +4522,37 @@ class PrescriptionController extends Controller
      *
      * 맞출 것이 없거나(0ㆍ0) GD 가 열지 못하는 것(PDF)은 원본 경로를 그대로 돌려준다.
      */
+    /**
+     * 팩스로 나갈 파일들 — PDF 면 쪽마다 한 장이 된다 (2026-09-12 지시).
+     *
+     * 맞출 것이 없으면(0ㆍ0) 원본 하나를 그대로 준다. PDF 라도 그렇다 — 펴서 다시
+     * 굽는 것만으로도 글자가 무뎌지고, 쪽이 여럿이면 팩스 장수만 늘어난다.
+     */
+    private static function faxFilesWithTune(string $absPath, int $bright, int $contrast, string $이름): array
+    {
+        if ($bright === 0 && $contrast === 0) {
+            return [$absPath];
+        }
+
+        /* GD 가 여는 것(그림)은 여태 하던 대로 한 장 */
+        if (@getimagesize($absPath) !== false) {
+            return [self::faxFileWithTune($absPath, $bright, $contrast, $이름)];
+        }
+
+        $쪽들 = self::pdfPageImages($absPath, $이름);
+        if (! $쪽들) {
+            return [$absPath];       // 펴지 못했으면 원본 그대로 — 안 보내는 것보다 낫다
+        }
+
+        $구운것 = [];
+        foreach ($쪽들 as $번 => $쪽) {
+            $구운것[] = self::faxFileWithTune($쪽, $bright, $contrast, $이름 . '_p' . ($번 + 1));
+            @unlink($쪽);            // 편 것은 굽고 나면 쓸 데가 없다
+        }
+
+        return $구운것;
+    }
+
     private static function faxFileWithTune(string $absPath, int $bright, int $contrast, string $이름): string
     {
         if ($bright === 0 && $contrast === 0) {
