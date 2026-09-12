@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 class NhisRenewNoticeCommand extends Command
 {
     protected $signature   = 'nhis:renew-notice {--dry : 알리지 않고 몇 건인지만 센다}';
-    protected $description = '공단 재등록 기한이 2주 안으로 들어온 사람을 담당자에게 알린다';
+    protected $description = '공단 재등록 기한이 2주 이내인 거래처를 담당자에게 안내합니다';
 
     public function handle(NhisRenewNotice $notice): int
     {

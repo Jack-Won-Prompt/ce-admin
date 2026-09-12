@@ -894,7 +894,7 @@ class PrescriptionController extends Controller
 
         foreach ($것들 as $여분) {
             activity()->causedBy(Auth::user())->performedOn($여분)
-                ->log("빈 초안 정리 ({$여분->rx_number}) — 내 초안은 하나만 둔다");
+                ->log("빈 초안 정리 ({$여분->rx_number}) — 담당자별 초안은 하나만 유지합니다");
             $여분->delete();
         }
 

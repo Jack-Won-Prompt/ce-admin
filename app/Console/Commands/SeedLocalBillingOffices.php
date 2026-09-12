@@ -37,7 +37,7 @@ class SeedLocalBillingOffices extends Command
                             {--dry : 넣지 않고 무엇이 될지만 보여 준다}
                             {--force : 이미 있는 줄의 값도 표의 값으로 덮는다}';
 
-    protected $description = '지자체(시군구청) 청구처를 CSV 한 벌로 채운다';
+    protected $description = '지자체(시군구청) 청구처를 CSV 로 일괄 등록합니다';
 
     /** 머리글 이름 → 우리 칸 */
     private const 칸 = [

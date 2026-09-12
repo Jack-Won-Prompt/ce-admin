@@ -186,7 +186,7 @@ class CommonCodeController extends Controller
                 continue;
             }
             if ($code->is_system) {
-                $skipped[] = "{$code->label} — 시스템 코드라 둔다";
+                $skipped[] = "{$code->label} — 시스템 코드이므로 유지합니다";
                 continue;
             }
             /* 지우지 않고 꺼 둔다 — 이미 그 유형으로 올려 둔 서류가 이름을 잃으면 안 된다 */

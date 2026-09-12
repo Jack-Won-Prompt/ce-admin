@@ -140,7 +140,7 @@ class TossWebhookController extends Controller
 
         /* 가상계좌는 여기가 아니라 입금 웹훅이 다룬다 — 승인(DONE)이 곧 입금은 아니다 */
         if ($tp->method === 'VIRTUAL_ACCOUNT') {
-            return response()->json(['ok' => true, 'skipped' => '가상계좌는 입금 웹훅이 다룬다']);
+            return response()->json(['ok' => true, 'skipped' => '가상계좌는 입금 웹훅에서 처리합니다']);
         }
 
         if (! $tp->deposited_at) {
