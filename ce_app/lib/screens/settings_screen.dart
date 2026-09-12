@@ -188,7 +188,7 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'v1.2.0',
+                              'v1.3.0',
                               style: TextStyle(
                                   fontSize: 12, color: AppTheme.textMuted),
                             ),
