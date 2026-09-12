@@ -203,6 +203,50 @@
     </div>
   </div>
 
+{{-- 검수 창 그림 도구 (2026-09-12 지시).
+
+     주문 등록의 뷰어(prescriptions/_viewer)와 같은 도구를 그림마다 붙인다.
+     그쪽 부분틀은 칸 이름이 고정이라(prescCanvasㆍimgCanvas) 한 화면에 하나만
+     설 수 있는데, 검수 창은 그림을 여러 장 늘어놓는다 — 그래서 모양만 같이 하고
+     자리는 그림마다 따로 잡는다. --}}
+<style>
+  .rv-stage { position:relative; height:560px; overflow:hidden; background:var(--gray-100);
+              display:flex; align-items:center; justify-content:center; }
+  .rv-stage img { display:block; max-width:100%; max-height:100%; object-fit:contain;
+                  transform-origin:center center; cursor:grab; user-select:none; }
+  .rv-stage img:active { cursor:grabbing; }
+
+  /* 그림 왼쪽에 반투명 세로 띠 — 그림이 보이는 넓이를 잃지 않는다 */
+  .rv-tools { position:absolute; top:8px; left:8px; bottom:8px; z-index:2;
+              display:flex; flex-direction:column; justify-content:space-between;
+              align-items:center; gap:8px; padding:8px; border-radius:8px;
+              background:rgba(255,255,255,.4); }
+  .rv-tool-group { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .rv-tool { width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+             border-radius:8px; background:var(--gray-0); border:none; padding:0;
+             font-size:13px; color:var(--gray-800); cursor:pointer; transition:var(--transition); }
+  .rv-tool:hover { color:var(--primary); }
+  .rv-zoom { font-size:12px; font-weight:500; line-height:1.2; color:var(--gray-1000); text-align:center; }
+
+  /* 밝기ㆍ명암 — 파일은 건드리지 않는다. 맞춰 둔 값은 공단 팩스에도 그대로 간다. */
+  .rv-tune { position:absolute; right:8px; bottom:8px; z-index:6;
+             display:none; flex-direction:column; gap:6px; width:186px;
+             padding:10px 12px; border-radius:10px;
+             background:rgba(255,255,255,.96); border:1px solid var(--gray-200);
+             box-shadow:0 4px 16px rgba(0,0,0,.12); }
+  .rv-tune.on { display:flex; }
+  .rv-tune-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--gray-700); }
+  .rv-tune-row > span:first-child { width:28px; flex:none; }
+  .rv-tune-row input[type=range] { flex:1; min-width:0; accent-color:var(--primary); }
+  .rv-tune-row > b { width:30px; flex:none; text-align:right; font-weight:600;
+                     font-variant-numeric:tabular-nums; color:var(--gray-1000); }
+  .rv-tune-acts { display:flex; gap:6px; margin-top:2px; }
+  .rv-tune-acts button { flex:1; padding:5px 0; font-size:11px; border-radius:6px;
+                         border:1px solid var(--gray-200); background:var(--gray-0);
+                         color:var(--gray-1000); cursor:pointer; }
+  .rv-tune-acts button.pri { background:var(--primary); border-color:var(--primary); color:#fff; }
+</style>
+
 {{-- ── 파일 검수 창 (2026-09-10 지시) ────────────────────────────────
 
      올린 것을 한자리에서 내리읽고, 다 보았으면 그 자리에서 검수를 마친다.
@@ -443,8 +487,7 @@ window.HELP_TOUR_STEPS = [
 
               ${f.isPdf
                 ? `<iframe src="${_esc(f.url)}" style="width:100%;height:560px;border:none;background:#fff;"></iframe>`
-                : `<img src="${_esc(f.url)}" alt="${_esc(f.label)}" loading="lazy"
-                        style="display:block;width:100%;background:var(--gray-100);">`}
+                : _rv무대(f)}
             </div>`).join('')
         : '<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:12.5px;">올라온 파일이 없습니다.</div>';
     } catch (e) {
@@ -509,8 +552,176 @@ window.HELP_TOUR_STEPS = [
       </div>`;
   }
 
+  /* ── 그림 도구 (2026-09-12 지시) ───────────────────────────────
+
+     회전ㆍ복원ㆍ밝기명암ㆍ확대축소와 바퀴 굴림 확대. 주문 등록 뷰어와 같은
+     것을 그림마다 하나씩 세운다. 값은 무대(.rv-stage)의 dataset 에 담는다 —
+     그림이 스무 장이어도 서로 섞이지 않는다. */
+  function _rv무대(f) {
+    return `
+      <div class="rv-stage" data-rv-stage="${f.id}" data-key="${_esc(f.key ?? '')}"
+           data-zoom="1" data-rot="0" data-tx="0" data-ty="0"
+           data-bright="${Number(f.bright || 0)}" data-contrast="${Number(f.contrast || 0)}">
+        <div class="rv-tools">
+          <div class="rv-tool-group">
+            <button type="button" class="rv-tool" data-rv="rotate" title="회전"><i class="fa-solid fa-rotate-left"></i></button>
+            <button type="button" class="rv-tool" data-rv="reset" title="처음으로 복원"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <button type="button" class="rv-tool" data-rv="tune" title="밝기ㆍ명암"><i class="fa-solid fa-circle-half-stroke"></i></button>
+          </div>
+          <div class="rv-tool-group">
+            <button type="button" class="rv-tool" data-rv="out" title="축소"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+            <span class="rv-zoom" data-rv-zoom>100%</span>
+            <button type="button" class="rv-tool" data-rv="in" title="확대"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+          </div>
+        </div>
+
+        <div class="rv-tune">
+          <div class="rv-tune-row">
+            <span>밝기</span>
+            <input type="range" data-rv-bright min="-100" max="100" step="5" value="${Number(f.bright || 0)}">
+            <b data-rv-bright-val>${Number(f.bright || 0)}</b>
+          </div>
+          <div class="rv-tune-row">
+            <span>명암</span>
+            <input type="range" data-rv-contrast min="-100" max="100" step="5" value="${Number(f.contrast || 0)}">
+            <b data-rv-contrast-val>${Number(f.contrast || 0)}</b>
+          </div>
+          <div class="rv-tune-acts">
+            <button type="button" data-rv="tune-reset">원본</button>
+            <button type="button" class="pri" data-rv="tune-save">저장</button>
+          </div>
+        </div>
+
+        <img src="${_esc(f.url)}" alt="${_esc(f.label)}" loading="lazy" draggable="false">
+      </div>`;
+  }
+
+  /* 담아 둔 값을 그림에 입힌다. 밝기ㆍ명암은 주문 등록과 같은 셈을 쓴다 —
+     -100~100 을 CSS filter 의 배수로 옮긴다. */
+  function _rv그리기(무대) {
+    const img = 무대.querySelector('img');
+    if (!img) return;
+
+    const z = Number(무대.dataset.zoom || 1);
+    const r = Number(무대.dataset.rot || 0);
+    const x = Number(무대.dataset.tx || 0);
+    const y = Number(무대.dataset.ty || 0);
+    const b = Number(무대.dataset.bright || 0);
+    const c = Number(무대.dataset.contrast || 0);
+
+    img.style.transform = `translate(${x}px, ${y}px) rotate(${r}deg) scale(${z})`;
+    img.style.filter    = (b || c)
+      ? `brightness(${1 + b / 100}) contrast(${1 + c / 100})`
+      : '';
+
+    무대.querySelector('[data-rv-zoom]').textContent = Math.round(z * 100) + '%';
+  }
+
+  function _rv배(무대, 배) {
+    const z = Math.min(8, Math.max(0.2, Number(무대.dataset.zoom || 1) * 배));
+    무대.dataset.zoom = z;
+    _rv그리기(무대);
+  }
+
+  /* 바퀴를 굴리면 확대ㆍ축소한다. 창 자체가 굴러 내려가지 않게 막는다 —
+     그림 위에서 굴렸는데 목록이 지나가면 보던 자리를 잃는다. */
+  document.getElementById('rvBody').addEventListener('wheel', (e) => {
+    const 무대 = e.target.closest('.rv-stage');
+    if (!무대) return;
+    e.preventDefault();
+    _rv배(무대, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+  }, { passive: false });
+
+  /* 키워 놓은 그림을 끌어 옮긴다 */
+  (function () {
+    let 잡음 = null, x0 = 0, y0 = 0, tx0 = 0, ty0 = 0;
+
+    document.getElementById('rvBody').addEventListener('mousedown', (e) => {
+      const 무대 = e.target.closest('.rv-stage');
+      if (!무대 || !e.target.matches('img')) return;
+      잡음 = 무대; x0 = e.clientX; y0 = e.clientY;
+      tx0 = Number(무대.dataset.tx || 0); ty0 = Number(무대.dataset.ty || 0);
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!잡음) return;
+      잡음.dataset.tx = tx0 + (e.clientX - x0);
+      잡음.dataset.ty = ty0 + (e.clientY - y0);
+      _rv그리기(잡음);
+    });
+
+    window.addEventListener('mouseup', () => { 잡음 = null; });
+  })();
+
+  /* 밝기ㆍ명암 손잡이 — 끄는 즉시 보이고, 저장을 눌러야 문서에 남는다 */
+  document.getElementById('rvBody').addEventListener('input', (e) => {
+    const 무대 = e.target.closest('.rv-stage');
+    if (!무대) return;
+
+    if (e.target.matches('[data-rv-bright]')) {
+      무대.dataset.bright = e.target.value;
+      무대.querySelector('[data-rv-bright-val]').textContent = e.target.value;
+    } else if (e.target.matches('[data-rv-contrast]')) {
+      무대.dataset.contrast = e.target.value;
+      무대.querySelector('[data-rv-contrast-val]').textContent = e.target.value;
+    } else {
+      return;
+    }
+
+    _rv그리기(무대);
+  });
+
   /* 창 안의 단추는 한 자리에서 받는다 — 파일이 스무 장이어도 듣는 이는 하나다 */
   document.getElementById('rvBody').addEventListener('click', async (e) => {
+    const 도구 = e.target.closest('[data-rv]');
+    if (도구) {
+      const 무대 = 도구.closest('.rv-stage');
+      const 무엇 = 도구.dataset.rv;
+
+      if (무엇 === 'rotate') { 무대.dataset.rot = (Number(무대.dataset.rot || 0) + 90) % 360; _rv그리기(무대); return; }
+      if (무엇 === 'in')     { _rv배(무대, 1.2); return; }
+      if (무엇 === 'out')    { _rv배(무대, 1 / 1.2); return; }
+      if (무엇 === 'tune')   { 무대.querySelector('.rv-tune').classList.toggle('on'); return; }
+
+      if (무엇 === 'reset') {
+        /* 배율ㆍ회전ㆍ위치만 되돌린다. 밝기ㆍ명암은 문서에 적어 둔 값이라
+           여기서 함께 지우면 저장해 둔 것을 잃는다 — 그쪽은 ［원본］이 있다. */
+        Object.assign(무대.dataset, { zoom: 1, rot: 0, tx: 0, ty: 0 });
+        _rv그리기(무대);
+        return;
+      }
+
+      if (무엇 === 'tune-reset') {
+        무대.dataset.bright = 0; 무대.dataset.contrast = 0;
+        무대.querySelector('[data-rv-bright]').value = 0;
+        무대.querySelector('[data-rv-contrast]').value = 0;
+        무대.querySelector('[data-rv-bright-val]').textContent = '0';
+        무대.querySelector('[data-rv-contrast-val]').textContent = '0';
+        _rv그리기(무대);
+        return;
+      }
+
+      if (무엇 === 'tune-save') {
+        BtnState.loading(도구, '저장 중...');
+        try {
+          const res = await apiRequest(
+            DETAIL_BASE + '/' + encodeURIComponent(_rv.rx) + '/image-tune', 'POST',
+            { key: 무대.dataset.key,
+              brightness: Number(무대.dataset.bright || 0),
+              contrast:   Number(무대.dataset.contrast || 0) });
+          if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
+          showToast('밝기ㆍ명암을 저장했습니다.', 'success');
+        } catch (err) {
+          showToast(err.message || '저장하지 못했습니다.', 'danger', 5000);
+        } finally {
+          BtnState.reset(도구);
+        }
+        return;
+      }
+      return;
+    }
+
     const b = e.target.closest('[data-rq]');
     if (!b) return;
 

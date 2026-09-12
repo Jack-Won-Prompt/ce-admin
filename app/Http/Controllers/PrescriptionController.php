@@ -2791,6 +2791,11 @@ class PrescriptionController extends Controller
                 /* 누가 올렸는지 서류 이름 옆에 (2026-09-12 지시). 본 그림은 첨부가
                    아니어서 올린 이가 따로 없다 — 처방전을 만든 사람이 그 사람이다. */
                 'by'    => $prescription->creator?->name ?? '',
+                /* 맞춰 둔 밝기ㆍ명암 — 검수 창도 같은 값으로 열고 같은 자리에 적는다
+                   (2026-09-12 지시). key 는 image-tune 이 쓰는 그 열쇠다. */
+                'key'      => 'rx',
+                'bright'   => (int) ($prescription->img_brightness ?? 0),
+                'contrast' => (int) ($prescription->img_contrast ?? 0),
                 'requests' => $적기(0),
             ];
         }
@@ -2807,6 +2812,9 @@ class PrescriptionController extends Controller
                 'url'   => $a->file_url,
                 'isPdf' => $a->is_pdf,
                 'by'    => $a->uploader?->name ?? ($prescription->creator?->name ?? ''),
+                'key'      => 'att:' . $a->id,
+                'bright'   => (int) ($a->img_brightness ?? 0),
+                'contrast' => (int) ($a->img_contrast ?? 0),
                 'requests' => $적기($a->id),
             ];
         }
