@@ -237,10 +237,18 @@
   /* 밝기ㆍ명암 — 파일은 건드리지 않는다. 맞춰 둔 값은 공단 팩스에도 그대로 간다. */
   .rv-tune { position:absolute; right:8px; bottom:8px; z-index:6;
              display:none; flex-direction:column; gap:6px; width:186px;
-             padding:10px 12px; border-radius:10px;
+             /* 위쪽을 더 비운다 — 닫기가 앉을 자리다 */
+             padding:24px 12px 10px; border-radius:10px;
              background:rgba(255,255,255,.96); border:1px solid var(--gray-200);
              box-shadow:0 4px 16px rgba(0,0,0,.12); }
   .rv-tune.on { display:flex; }
+  /* 맞추다 말고 그냥 닫고 싶을 때 (2026-09-12 지시). 저장하면 스스로 닫히지만,
+     건드려만 보고 덮어 두려면 닫을 자리가 있어야 한다. */
+  .rv-tune-x { position:absolute; top:4px; right:5px; width:22px; height:22px; padding:0;
+               display:flex; align-items:center; justify-content:center;
+               border:none; border-radius:5px; background:none;
+               color:var(--gray-600); font-size:15px; line-height:1; cursor:pointer; }
+  .rv-tune-x:hover { background:var(--gray-100); color:var(--gray-1000); }
   .rv-tune-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--gray-700); }
   .rv-tune-row > span:first-child { width:28px; flex:none; }
   .rv-tune-row input[type=range] { flex:1; min-width:0; accent-color:var(--primary); }
@@ -582,6 +590,7 @@ window.HELP_TOUR_STEPS = [
         </div>
 
         <div class="rv-tune">
+          <button type="button" class="rv-tune-x" data-rv="tune-close" title="닫기">&#215;</button>
           <div class="rv-tune-row">
             <span>밝기</span>
             <input type="range" data-rv-bright min="-100" max="100" step="5" value="${Number(f.bright || 0)}">
@@ -688,7 +697,8 @@ window.HELP_TOUR_STEPS = [
       if (무엇 === 'rotate') { 무대.dataset.rot = (Number(무대.dataset.rot || 0) + 90) % 360; _rv그리기(무대); return; }
       if (무엇 === 'in')     { _rv배(무대, 1.2); return; }
       if (무엇 === 'out')    { _rv배(무대, 1 / 1.2); return; }
-      if (무엇 === 'tune')   { 무대.querySelector('.rv-tune').classList.toggle('on'); return; }
+      if (무엇 === 'tune')       { 무대.querySelector('.rv-tune').classList.toggle('on'); return; }
+      if (무엇 === 'tune-close') { 무대.querySelector('.rv-tune').classList.remove('on'); return; }
 
       if (무엇 === 'reset') {
         /* 배율ㆍ회전ㆍ위치만 되돌린다. 밝기ㆍ명암은 문서에 적어 둔 값이라
