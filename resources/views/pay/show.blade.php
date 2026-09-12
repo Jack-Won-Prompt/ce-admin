@@ -96,7 +96,7 @@
         </div>
       @else
         <div style="font-weight:700; margin-bottom:4px;">카드로 결제합니다</div>
-        <p class="sub" style="margin:0;">단추를 누르면 토스페이먼츠 결제창이 열립니다.</p>
+        <p class="sub" style="margin:0;">버튼을 누르면 토스페이먼츠 결제창이 열립니다.</p>
       @endif
       <button class="btn" id="payBtn">{{ number_format($link->amount) }}원 결제</button>
       <p class="note">결제창은 토스페이먼츠에서 열립니다. 카드 정보는 우리 서버에 남지 않습니다.</p>

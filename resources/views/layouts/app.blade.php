@@ -6125,7 +6125,7 @@ const Tour = (() => {
     {
       selector: '.layout-navbar',
       title: '상단 네비게이션',
-      body: '알림ㆍ채팅ㆍSR 관리 단추가 있습니다.'
+      body: '알림ㆍ채팅ㆍSR 관리 버튼이 있습니다.'
     },
   ];
 
