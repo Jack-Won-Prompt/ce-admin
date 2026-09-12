@@ -49,6 +49,9 @@ class PrescriptionController extends Controller
            줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
         $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order'])
             ->withCount('attachments')
+            /* 아직 안 닫힌 다시 올리기 요청이 몇 건인가 (2026-09-12 지시).
+               줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
+            ->withCount(['reuploadRequests as open_reuploads_count' => fn ($q) => $q->whereNull('resolved_at')])
             ->latest();
 
         // '처방전 관리' 로 화면만 열고 아무것도 입력하지 않은 초안은 목록에 띄우지 않는다
@@ -115,6 +118,10 @@ class PrescriptionController extends Controller
                 /* 「파일 검수」 단추가 설 자리. 값은 상태를 담아 둔다 — 이미 마친 건은
                    단추가 「검수 완료」로 서고 눌러도 다시 승인하지 않는다. */
                 'review'     => $rx->status,
+
+                /* 다시 올리기를 물어 둔 것이 있나 (2026-09-12 지시). 파일 검수
+                   바로 옆에 세운다 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다. */
+                'reupload'   => $rx->open_reuploads_count,
             ];
         });
         $total = $gridData->count();
@@ -2750,6 +2757,27 @@ class PrescriptionController extends Controller
     public function files(Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $prescription->loadMissing('attachments');
+        // 되물은 차례대로 — 새것이 위로
+        $prescription->load(['reuploadRequests' => fn ($q) => $q->latest('requested_at')]);
+
+        /* 다시 올리기 요청을 파일별로 모아 둔다 (2026-09-12 지시).
+
+           짚개는 첨부 id 다. 본 그림은 첨부가 아니어서 0 으로 센다 — 검수 창이
+           파일을 가리킬 때 쓰는 값과 같다. */
+        $요청들 = $prescription->reuploadRequests->groupBy(fn ($r) => (int) ($r->attachment_id ?? 0));
+
+        $적기 = fn ($열쇠) => ($요청들[$열쇠] ?? collect())->map(fn ($r) => [
+            'id'        => $r->id,
+            'reason'    => $r->reason,
+            'label'     => \App\Models\PrescriptionReuploadRequest::사유[$r->reason] ?? $r->reason,
+            'memo'      => $r->memo,
+            'by'        => $r->requested_by_name,
+            'at'        => $r->requested_at?->format('Y-m-d H:i'),
+            'to'        => $r->target_user_name,
+            'sent'      => (bool) $r->fcm_sent,
+            'error'     => $r->fcm_error,
+            'resolved'  => $r->resolved_at?->format('Y-m-d H:i'),
+        ])->values();
 
         $목록 = [];
 
@@ -2760,6 +2788,7 @@ class PrescriptionController extends Controller
                 'label' => '처방전',
                 'url'   => $prescription->image_url,
                 'isPdf' => str_contains($prescription->image_mime_type ?? '', 'pdf'),
+                'requests' => $적기(0),
             ];
         }
 
@@ -2774,6 +2803,7 @@ class PrescriptionController extends Controller
                 'label' => $a->doc_type_label,
                 'url'   => $a->file_url,
                 'isPdf' => $a->is_pdf,
+                'requests' => $적기($a->id),
             ];
         }
 
@@ -2784,6 +2814,50 @@ class PrescriptionController extends Controller
             'status'  => $prescription->status,
             'label'   => $prescription->status_label,
             'files'   => $목록,
+            'reasons' => \App\Models\PrescriptionReuploadRequest::사유,
+        ]);
+    }
+
+    // ── 자료 다시 올리기 요청 ─────────────────────────────
+    /**
+     * 검수 창에서 파일 한 장을 짚어 「이것을 다시」를 남기고 앱으로 알린다
+     * (2026-09-12 지시).
+     *
+     * 그림이 흐려 글씨가 안 읽히거나 처방전 자리에 다른 서류가 올라온 것을
+     * 여태는 전화로 물었다. 올린 사람은 무엇을 다시 올려야 하는지 몰랐다.
+     */
+    public function requestReupload(
+        Request $request,
+        Prescription $prescription,
+        \App\Services\ReuploadRequestService $요청서,
+    ): \Illuminate\Http\JsonResponse {
+        $값 = $request->validate([
+            /* 0 이면 처방전 본 그림. 검수 창이 파일을 가리킬 때 쓰는 값 그대로다. */
+            'file_id' => 'required|integer|min:0',
+            'reason'  => 'required|in:' . implode(',', array_keys(\App\Models\PrescriptionReuploadRequest::사유)),
+            'memo'    => 'nullable|string|max:500',
+        ]);
+
+        $첨부id = (int) $값['file_id'] ?: null;
+
+        if ($첨부id && ! $prescription->attachments()->whereKey($첨부id)->exists()) {
+            return response()->json(['success' => false, 'message' => '이 처방전의 파일이 아닙니다.'], 422);
+        }
+
+        if ($값['reason'] === 'etc' && ! trim((string) ($값['memo'] ?? ''))) {
+            return response()->json(['success' => false, 'message' => '그 밖의 사유를 고르셨으면 내용을 적어 주십시오.'], 422);
+        }
+
+        $요청 = $요청서->걸기($prescription, $첨부id, $값['reason'], $값['memo'] ?? null);
+
+        return response()->json([
+            'success'      => true,
+            'message'      => $요청->fcm_sent
+                ? ($요청->target_user_name . '님 앱으로 알렸습니다.')
+                : ('요청을 남겼습니다 — ' . ($요청->fcm_error ?: '앱 알림은 가지 않았습니다.')),
+            'sent'         => $요청->fcm_sent,
+            'status'       => $prescription->fresh()->status,
+            'status_label' => $prescription->fresh()->status_label,
         ]);
     }
 

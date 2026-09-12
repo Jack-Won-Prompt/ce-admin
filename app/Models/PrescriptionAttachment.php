@@ -33,6 +33,17 @@ class PrescriptionAttachment extends Model
             if ($rx && $rx->is_blank_draft) {
                 $rx->forceFill(['is_blank_draft' => false])->saveQuietly();
             }
+
+            /* 다시 올려 달라고 물었던 서류가 올라왔으면 그 요청을 닫는다
+               (2026-09-12 지시).
+
+               사람이 손으로 닫게 하면 닫히지 않는다 — 올린 사람은 다시 올렸으니
+               끝났다고 여기고, 검수자는 목록에서 「요청 중」이 그대로인 것만 본다.
+               올리는 길이 앱ㆍ웹으로 갈려 있어 붙는 자리 한 곳에서 닫는다. */
+            if ($rx) {
+                app(\App\Services\ReuploadRequestService::class)
+                    ->닫기($rx, $a->doc_type_label, $a->id);
+            }
         });
     }
 

@@ -147,6 +147,30 @@ class Prescription extends Model
         'ordered'          => ['label' => '주문 완료',   'badge' => 'success'],
     ];
 
+    /**
+     * 올린 사람이 아직 자료를 고칠 수 있는 상태.
+     *
+     * 검수 완료(approved)와 그 뒤(ordered)는 막는다 — 담당자가 이미 보고 확정한
+     * 자료가 밑에서 사라지면, 무엇을 보고 승인했는지 알 수 없게 된다.
+     * 반려(rejected)는 열어 둔다. 다시 올려 달라는 뜻이므로 고칠 수 있어야 한다.
+     */
+    public const UPLOADER_EDITABLE_STATUSES = [
+        'pending',
+        'ocr_processing',
+        'ocr_done',
+        'review_needed',
+        'review_requested',
+        'rejected',
+    ];
+
+    /** 이 사람이 이 건의 자료를 지우고 다시 올릴 수 있는가. */
+    public function editableByUploader(?int $userId): bool
+    {
+        return $userId !== null
+            && $this->created_by === $userId
+            && in_array($this->status, self::UPLOADER_EDITABLE_STATUSES, true);
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status]['label'] ?? $this->status;
@@ -198,6 +222,17 @@ class Prescription extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * 자료 다시 올리기 요청 (2026-09-12 지시).
+     *
+     * 여기에 차례를 매기지 않는다. 목록이 withCount 로 세는 자리라, 관계에 붙은
+     * order by 가 세는 질의까지 따라간다. 차례는 꺼내 쓰는 쪽에서 매긴다.
+     */
+    public function reuploadRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PrescriptionReuploadRequest::class);
     }
 
     /** 마지막으로 고친 사람. 기록이 붙기 전 처방전은 비어 있다. */
@@ -266,6 +301,13 @@ class Prescription extends Model
            하려고 부른 자리의 몫이다. */
         static::saved(function (self $p) {
             \App\Support\OrderSync::seed($p);
+
+            /* 처방전 본 그림을 갈아 끼웠으면 그것을 물었던 요청을 닫는다
+               (2026-09-12 지시). 본 그림은 첨부가 아니어서 첨부 쪽 자리가
+               잡아 주지 못한다. */
+            if ($p->wasChanged('image_path') && $p->image_path) {
+                app(\App\Services\ReuploadRequestService::class)->닫기($p, '처방전');
+            }
         });
 
         static::updating(function (self $rx) {

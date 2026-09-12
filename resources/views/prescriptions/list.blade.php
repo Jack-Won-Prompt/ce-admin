@@ -292,6 +292,19 @@ window.HELP_TOUR_STEPS = [
     b.onclick = (e) => { e.stopPropagation(); rvOpen(row.rx_number, row.id); };
     return b;
   };
+  /* 「요청 여부」 — 아직 안 닫힌 다시 올리기 요청이 있나 (2026-09-12 지시).
+     자료가 다시 올라오면 스스로 닫히므로, 여기 숫자가 남아 있다는 것은
+     아직 못 받았다는 뜻이다. */
+  const 요청칸 = (v) => {
+    const n = Number(v || 0);
+    const s = document.createElement('span');
+    s.textContent = n ? '요청 중 (' + n + ')' : '—';
+    s.style.fontSize = '11.5px';
+    if (n) { s.style.color = 'var(--danger)'; s.style.fontWeight = '700'; }
+    else   { s.style.color = 'var(--gray-400)'; }
+    return s;
+  };
+
   const grid = new wwGrid({
     el: document.getElementById('rxGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
@@ -313,6 +326,9 @@ window.HELP_TOUR_STEPS = [
         renderer: 파일수칸 },
       { header: '파일 검수',     name: 'review',     width: 110, align: 'center',
         exportable: false, renderer: 검수칸 },
+      /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
+      { header: '요청 여부',     name: 'reupload',   width: 100, align: 'center',
+        sortable: true, renderer: 요청칸 },
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
@@ -371,7 +387,7 @@ window.HELP_TOUR_STEPS = [
      여태 검수하려면 주문 등록 화면을 열어 뷰어에서 한 장씩 넘겨야 했다. */
   /* 주소는 처방번호로 짚는다 — 이 화면의 다른 길과 같다(라우트 열쇠가 rx_number).
      표의 줄은 id 로 찾는다 — 그 줄만 고쳐 세우려면 번호가 있어야 한다. */
-  let _rv = { rx: null, id: null, 마쳤나: false };
+  let _rv = { rx: null, id: null, 마쳤나: false, 사유: {} };
 
   window.rvOpen = async function (rx, id) {
     _rv = { rx, id, 마쳤나: false };
@@ -405,6 +421,8 @@ window.HELP_TOUR_STEPS = [
         ? '이미 검수를 마친 처방전입니다.'
         : '모두 확인하셨으면 「검수 확인」을 누르십시오 — 상태가 검수 완료로 바뀝니다.';
 
+      _rv.사유 = d.reasons ?? {};
+
       document.getElementById('rvBody').innerHTML = (d.files ?? []).length
         ? (d.files ?? []).map(f => `
             <div style="background:#fff;border:1px solid var(--gray-300);border-radius:10px;
@@ -415,7 +433,13 @@ window.HELP_TOUR_STEPS = [
                 <span style="color:var(--text-muted);flex:1;">${_esc(f.name ?? '')}</span>
                 <a href="${_esc(f.url)}" target="_blank" rel="noopener"
                    style="font-size:11.5px;color:var(--primary);text-decoration:underline;">새 창</a>
+                <button type="button" class="ds-btn" data-rq="open" data-file="${f.id}"
+                        style="height:22px;min-width:0;padding:0 9px;font-size:11px;">다시 올리기 요청</button>
               </div>
+
+              ${_rq요청칸(f)}
+              ${_rq이력(f)}
+
               ${f.isPdf
                 ? `<iframe src="${_esc(f.url)}" style="width:100%;height:560px;border:none;background:#fff;"></iframe>`
                 : `<img src="${_esc(f.url)}" alt="${_esc(f.label)}" loading="lazy"
@@ -429,6 +453,108 @@ window.HELP_TOUR_STEPS = [
   };
 
   const _esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  /* ── 다시 올리기 요청 (2026-09-12 지시) ────────────────────────
+
+     그림이 흐려 글씨가 안 읽히거나 처방전 자리에 다른 서류가 올라와 있을 때,
+     그 파일 하나를 짚어 올린 사람의 앱으로 알린다. 여태는 전화를 걸거나 검수
+     메모에 적어 두는 수밖에 없었고, 올린 사람은 무엇을 다시 올려야 하는지
+     알 길이 없었다. */
+  function _rq요청칸(f) {
+    const 고르개 = Object.entries(_rv.사유 ?? {})
+      .map(([k, v]) => `<option value="${_esc(k)}">${_esc(v)}</option>`).join('');
+
+    return `
+      <div data-rq-box="${f.id}" style="display:none;padding:10px 11px;background:var(--gray-50);
+           border-bottom:1px solid var(--gray-200);">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select data-rq-reason="${f.id}" class="form-control form-select"
+                  style="width:190px;height:28px;font-size:11.5px;padding:0 8px;">${고르개}</select>
+          <input type="text" data-rq-memo="${f.id}" class="form-control" maxlength="500"
+                 placeholder="덧붙일 말 (그 밖의 사유를 고르셨으면 반드시)"
+                 style="flex:1;min-width:200px;height:28px;font-size:11.5px;padding:0 8px;">
+          <button type="button" class="ds-btn ds-btn-primary" data-rq="send" data-file="${f.id}"
+                  style="height:28px;min-width:0;padding:0 11px;font-size:11.5px;">보내기</button>
+          <button type="button" class="ds-btn" data-rq="cancel" data-file="${f.id}"
+                  style="height:28px;min-width:0;padding:0 11px;font-size:11.5px;">취소</button>
+        </div>
+        <div style="margin-top:5px;font-size:11px;color:var(--text-muted);">
+          이 파일을 올린 사람의 앱으로 알립니다. 처방전은 「검수 필요」로 돌아갑니다.
+        </div>
+      </div>`;
+  }
+
+  /* 이력은 지우지 않는다 — 같은 자료를 몇 번 되물었는지가 그대로 남는다 */
+  function _rq이력(f) {
+    const 줄 = f.requests ?? [];
+    if (!줄.length) return '';
+
+    return `
+      <div data-rq-log="${f.id}" style="padding:8px 11px;border-bottom:1px solid var(--gray-200);
+           background:#FFFBEB;font-size:11.5px;line-height:1.7;">
+        ${줄.map(r => `
+          <div style="display:flex;gap:7px;align-items:baseline;">
+            <span style="color:var(--text-muted);white-space:nowrap;">${_esc(r.at)}</span>
+            <b>${_esc(r.label)}</b>
+            <span style="flex:1;color:var(--text-primary);">${_esc(r.memo ?? '')}</span>
+            <span style="color:var(--text-muted);white-space:nowrap;">
+              ${_esc(r.by ?? '')} → ${_esc(r.to ?? '받을 사람 없음')}
+            </span>
+            <span style="white-space:nowrap;font-weight:700;color:${r.resolved ? 'var(--success)' : (r.sent ? 'var(--primary)' : '#B54708')};"
+                  title="${_esc(r.error ?? '')}">
+              ${r.resolved ? '받음 ' + _esc(r.resolved) : (r.sent ? '알림 보냄' : '알림 못 감')}
+            </span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  /* 창 안의 단추는 한 자리에서 받는다 — 파일이 스무 장이어도 듣는 이는 하나다 */
+  document.getElementById('rvBody').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-rq]');
+    if (!b) return;
+
+    const id  = b.dataset.file;
+    const box = document.querySelector(`[data-rq-box="${id}"]`);
+
+    if (b.dataset.rq === 'open')   { box.style.display = 'block'; box.querySelector('select').focus(); return; }
+    if (b.dataset.rq === 'cancel') { box.style.display = 'none'; return; }
+    if (b.dataset.rq !== 'send')   return;
+
+    const 사유 = document.querySelector(`[data-rq-reason="${id}"]`).value;
+    const 메모 = document.querySelector(`[data-rq-memo="${id}"]`).value.trim();
+
+    if (사유 === 'etc' && !메모) {
+      showToast('그 밖의 사유를 고르셨으면 내용을 적어 주십시오.', 'warning');
+      return;
+    }
+
+    BtnState.loading(b, '보내는 중...');
+    try {
+      const res = await apiRequest(
+        DETAIL_BASE + '/' + encodeURIComponent(_rv.rx) + '/reupload-request', 'POST',
+        { file_id: Number(id), reason: 사유, memo: 메모 });
+
+      if (!res.success) throw new Error(res.message || '요청하지 못했습니다.');
+
+      showToast(res.message, res.sent ? 'success' : 'warning', res.sent ? 4000 : 7000);
+
+      /* 표의 그 줄만 고쳐 세운다 — 목록을 통째로 다시 읽지 않는다 */
+      const 줄들 = grid.getData();
+      const i = 줄들.findIndex(r => r.id === _rv.id);
+      if (i >= 0) {
+        grid.setValue(i, 'reupload', Number(줄들[i].reupload || 0) + 1);
+        grid.setValue(i, 'status', res.status_label ?? '검수 필요');
+        grid.setValue(i, 'review', res.status ?? 'review_needed');
+      }
+
+      /* 이력을 다시 읽어 방금 남긴 것을 그 자리에서 보여 준다 */
+      rvOpen(_rv.rx, _rv.id);
+    } catch (err) {
+      showToast(err.message || '요청하지 못했습니다.', 'danger', 5000);
+    } finally {
+      BtnState.reset(b);
+    }
+  });
 
   window.rvClose = function () {
     document.getElementById('rvBackdrop').style.display = 'none';

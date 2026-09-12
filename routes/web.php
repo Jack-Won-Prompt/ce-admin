@@ -127,6 +127,11 @@ Route::middleware(['auth'])->group(function () {
         // 「파일 검수」 창이 읽는 올린 파일 목록 (2026-09-10 지시)
         Route::get( '/{prescription}/files',         [PrescriptionController::class, 'files'])->name('files');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
+
+        /* 검수 창에서 파일 한 장을 짚어 다시 올리기를 요청한다 (2026-09-12 지시).
+           올린 사람의 앱으로 FCM 이 나간다. */
+        Route::post('/{prescription}/reupload-request',
+            [PrescriptionController::class, 'requestReupload'])->name('reuploadRequest');
         Route::post('/{prescription}/reject',        [PrescriptionController::class, 'reject'])->name('reject');
         Route::post('/{prescription}/kakao-send',    [PrescriptionController::class, 'sendKakao'])->name('kakaoSend');
         Route::get('/{prescription}/kakao-preview',  [PrescriptionController::class, 'kakaoPreview'])->name('kakaoPreview');
