@@ -100,7 +100,7 @@
   COLS.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
 
   /* 표는 다시 그릴 수 있어야 한다 — 탭마다 칸이 다르므로 값만 갈아 끼울 수 없다 */
-  const 표만들기 = (칸들, 줄들) => new wwGrid({
+  const 표만들기 = (칸들, 줄들, 위드웍스붙일까 = true) => new wwGrid({
     el: document.getElementById('financeGrid'),
     height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
@@ -109,8 +109,11 @@
        제 칸만 세우고 있었다 — 저쪽 화면을 보다 이리로 넘어오면 눈이 다시 배워야 했다.
 
        앞의 칸을 걷지 않는다. 재무는 매출ㆍ입금ㆍ미수를 세는 자리라, 그 값들이
-       맨 앞에 서 있어야 한 눈에 읽힌다. 위드웍스 차례는 그 뒤에서 이어 본다. */
-    columns: [...칸들, ...ceWwCols()],
+       맨 앞에 서 있어야 한 눈에 읽힌다. 위드웍스 차례는 그 뒤에서 이어 본다.
+
+       PG정산내역만은 잇지 않는다 (2026-09-11 확인요청 6ㆍ7쪽). 그 줄은 토스에서
+       온 정산 자료라 판매주문ㆍ창고 값이 아예 없다 — 이으면 빈 칸 백 개가 따라붙는다. */
+    columns: 위드웍스붙일까 ? [...칸들, ...ceWwCols()] : [...칸들],
     data: 줄들,
   });
 
@@ -119,7 +122,7 @@
     return 칸들;
   };
 
-  window.__financeGrid = 표만들기(COLS, @json($gridData));
+  window.__financeGrid = 표만들기(COLS, @json($gridData), @json($tab !== 'pg'));
 
   /* ── 탭 ──
 
@@ -146,7 +149,7 @@
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(d => {
         칸.innerHTML = '';
-        window.__financeGrid = 표만들기(돈칸으로(d.columns), d.rows);
+        window.__financeGrid = 표만들기(돈칸으로(d.columns), d.rows, d.tab !== 'pg');
 
         // 걸린 탭과 건수를 옮긴다
         document.querySelectorAll('.pnl-tabs .pnl-tab[data-tab]').forEach(a => {
