@@ -551,63 +551,314 @@ function cgAsNumber(value, col) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ExcelExporter — Excel XML (.xls) 다운로드
-══════════════════════════════════════════════════════════ */
-class ExcelExporter {
+   XlsxExporter — Excel 통합문서(.xlsx) 다운로드
 
-  /** XML 특수문자 이스케이프 */
-  static _esc(v) {
-    return String(v ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+   여태는 SpreadsheetML 을 .xls 이름으로 내보냈다. 엑셀이 열기는 열되
+   「형식이 확장자와 다르다」를 물어 왔고, 받는 사람마다 그 창을 한 번씩
+   넘겨야 했다 (2026-09-11 확인요청 1쪽).
+
+   진짜 통합문서는 zip 안에 든 xml 묶음이다. 바깥 라이브러리를 들이지 않고
+   여기서 만든다 — 압축은 하지 않고(Store) 담기만 한다. 표 하나짜리 파일이라
+   줄여 봐야 얼마 되지 않고, 줄이는 코드가 더 길다.
+══════════════════════════════════════════════════════════ */
+class XlsxExporter {
+
+  /* ── 아주 작은 zip (Store) ──────────────────────────────── */
+
+  static _crcTable = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  static _crc32(buf) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < buf.length; i++) c = this._crcTable[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
   }
 
   /**
-   * 엑셀 다운로드
+   * 파일 여럿을 zip 한 덩어리로 담는다.
+   * @param {{name:string, data:Uint8Array}[]} files
+   */
+  static _zip(files) {
+    const enc    = new TextEncoder();
+    const 조각   = [];
+    const 목록   = [];
+    let   offset = 0;
+
+    const u16 = (n) => [n & 0xFF, (n >>> 8) & 0xFF];
+    const u32 = (n) => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+
+    for (const f of files) {
+      const 이름 = enc.encode(f.name);
+      const crc  = this._crc32(f.data);
+
+      /* 로컬 헤더 — 압축 없음(0), 시각은 0 으로 둔다(엑셀이 보지 않는다) */
+      const 머리 = new Uint8Array([
+        0x50, 0x4B, 0x03, 0x04,
+        ...u16(20), ...u16(0), ...u16(0),
+        ...u16(0), ...u16(0),
+        ...u32(crc), ...u32(f.data.length), ...u32(f.data.length),
+        ...u16(이름.length), ...u16(0),
+      ]);
+
+      조각.push(머리, 이름, f.data);
+      목록.push({ name: 이름, crc, size: f.data.length, offset });
+      offset += 머리.length + 이름.length + f.data.length;
+    }
+
+    const 가운데시작 = offset;
+    for (const e of 목록) {
+      const 줄 = new Uint8Array([
+        0x50, 0x4B, 0x01, 0x02,
+        ...u16(20), ...u16(20), ...u16(0), ...u16(0),
+        ...u16(0), ...u16(0),
+        ...u32(e.crc), ...u32(e.size), ...u32(e.size),
+        ...u16(e.name.length), ...u16(0), ...u16(0),
+        ...u16(0), ...u16(0), ...u32(0),
+        ...u32(e.offset),
+      ]);
+      조각.push(줄, e.name);
+      offset += 줄.length + e.name.length;
+    }
+
+    조각.push(new Uint8Array([
+      0x50, 0x4B, 0x05, 0x06,
+      ...u16(0), ...u16(0),
+      ...u16(목록.length), ...u16(목록.length),
+      ...u32(offset - 가운데시작), ...u32(가운데시작),
+      ...u16(0),
+    ]));
+
+    const 모두 = new Uint8Array(조각.reduce((s, c) => s + c.length, 0));
+    let p = 0;
+    for (const c of 조각) { 모두.set(c, p); p += c.length; }
+    return 모두;
+  }
+
+  /* ── xml 조각 ───────────────────────────────────────────── */
+
+  static _esc(v) {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      /* 엑셀은 제어문자가 든 xml 을 「읽을 수 없는 내용」으로 막는다 */
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  }
+
+  /** 0 → A, 26 → AA */
+  static _col(n) {
+    let s = '';
+    for (n += 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+    return s;
+  }
+
+  static _styles(grid) {
+    const t   = grid.theme || {};
+    const 색  = (v, 기본) => (v || 기본).replace('#', '').toUpperCase();
+    const hBg = 색(t.headerBg,      '#F0F3F7');
+    const gBg = 색(t.headerGroupBg, '#D8E3EF');
+    const sBg = 색(t.summaryBg,     '#EEF2F8');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2">
+<font><sz val="10"/><name val="맑은 고딕"/></font>
+<font><b/><sz val="10"/><name val="맑은 고딕"/></font>
+</fonts>
+<fills count="5">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF${hBg}"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF${gBg}"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF${sBg}"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="4">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left/><right style="thin"><color rgb="FFC0C8D0"/></right><top/><bottom style="thin"><color rgb="FFC0C8D0"/></bottom><diagonal/></border>
+<border><left/><right style="thin"><color rgb="FFC0C8D0"/></right><top/><bottom style="medium"><color rgb="FF8898AA"/></bottom><diagonal/></border>
+<border><left/><right style="thin"><color rgb="FFC0C8D0"/></right><top style="medium"><color rgb="FF8898AA"/></top><bottom style="thin"><color rgb="FFC0C8D0"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="6">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="3" fontId="1" fillId="4" borderId="3" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+</cellXfs>
+</styleSheet>`;
+  }
+
+  /* ── 시트 ───────────────────────────────────────────────── */
+
+  static _sheet(grid, cols, data, opts) {
+    const groups = grid.columnGroups || [];
+    const 머리줄 = groups.length ? 2 : 1;
+    const 병합   = [];
+    const 줄들   = [];
+    let   r      = 0;
+
+    const 칸 = (열, 줄, 값, 스타일, 수인가) => {
+      const 자리 = this._col(열) + (줄 + 1);
+      if (수인가) return `<c r="${자리}" s="${스타일}"><v>${값}</v></c>`;
+      const 글 = this._esc(값);
+      return 글 === ''
+        ? `<c r="${자리}" s="${스타일}"/>`
+        : `<c r="${자리}" s="${스타일}" t="inlineStr"><is><t xml:space="preserve">${글}</t></is></c>`;
+    };
+
+    // ── 머리글 ──
+    if (!groups.length) {
+      줄들.push('<row r="1" ht="24" customHeight="1">'
+        + cols.map((c, i) => 칸(i, 0, c.header, 1)).join('') + '</row>');
+      r = 1;
+    } else {
+      const 속함 = (name) => groups.some(g => g.children.includes(name));
+      const 줄1 = [];
+      const 줄2 = [];
+      let i = 0;
+
+      while (i < cols.length) {
+        const col = cols[i];
+        const grp = groups.find(g => g.children[0] === col.name);
+
+        if (grp) {
+          const n = grp.children.length;
+          줄1.push(칸(i, 0, grp.header, 2));
+          if (n > 1) 병합.push(`${this._col(i)}1:${this._col(i + n - 1)}1`);
+          grp.children.forEach((이름, k) => {
+            const c = cols.find(x => x.name === 이름);
+            if (c) 줄2.push(칸(i + k, 1, c.header, 1));
+          });
+          i += n;
+        } else if (속함(col.name)) {
+          i++;
+        } else {
+          줄1.push(칸(i, 0, col.header, 1));
+          줄2.push(칸(i, 1, '', 1));
+          병합.push(`${this._col(i)}1:${this._col(i)}2`);   // 두 줄을 잇는다
+          i++;
+        }
+      }
+
+      줄들.push('<row r="1" ht="24" customHeight="1">' + 줄1.join('') + '</row>');
+      줄들.push('<row r="2" ht="22" customHeight="1">' + 줄2.join('') + '</row>');
+      r = 2;
+    }
+
+    // ── 자료 ──
+    data.forEach((row) => {
+      r++;
+      const 칸들 = cols.map((col, i) => {
+        const val = row[col.name];
+        /* 돈ㆍ수량은 수로 내보낸다 — 글자로 나가면 받는 쪽에서 합계도 정렬도 안 된다 */
+        const 수 = cgAsNumber(val, col);
+        if (수 !== null) return 칸(i, r - 1, 수, 3, true);
+        if (col.editor === 'checkbox') return 칸(i, r - 1, val ? '✓' : '', 0);
+        return 칸(i, r - 1, grid._formatDisplay(val, col), 0);
+      });
+      줄들.push(`<row r="${r}" ht="20" customHeight="1">` + 칸들.join('') + '</row>');
+    });
+
+    // ── 합계 ──
+    if (opts.includeSummary) {
+      r++;
+      let 첫글자리 = true;
+      const 칸들 = cols.map((col, i) => {
+        if (col.editor === 'number' && col.summary !== false) {
+          const 합 = data.reduce((s, x) => { const v = Number(x[col.name]); return s + (isNaN(v) ? 0 : v); }, 0);
+          return 칸(i, r - 1, 합, 5, true);
+        }
+        if (첫글자리) { 첫글자리 = false; return 칸(i, r - 1, '합계', 4); }
+        return 칸(i, r - 1, '', 4);
+      });
+      줄들.push(`<row r="${r}" ht="22" customHeight="1">` + 칸들.join('') + '</row>');
+    }
+
+    /* 너비는 글자 수로 센다 — 화면의 px 를 대충 일곱으로 나눈 값이 눈에 맞는다 */
+    const 너비 = cols.map((c, i) =>
+      `<col min="${i + 1}" max="${i + 1}" width="${Math.max(6, Math.round((c.width || 100) / 7))}" customWidth="1"/>`).join('');
+
+    const 끝자리 = this._col(Math.max(0, cols.length - 1)) + Math.max(1, r);
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<dimension ref="A1:${끝자리}"/>
+<sheetViews><sheetView workbookViewId="0">
+<pane ySplit="${머리줄}" topLeftCell="A${머리줄 + 1}" activePane="bottomLeft" state="frozen"/>
+</sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>${너비}</cols>
+<sheetData>${줄들.join('')}</sheetData>
+${병합.length ? `<mergeCells count="${병합.length}">${병합.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : ''}
+</worksheet>`;
+  }
+
+  /* ── 내보내기 ───────────────────────────────────────────── */
+
+  /**
    * @param {wwGrid} grid
    * @param {object} opts
-   * @param {string}  [opts.filename='grid_export'] - 파일명 (확장자 제외)
-   * @param {string}  [opts.sheetName='Sheet1']     - 워크시트명
-   * @param {boolean} [opts.checkedOnly=false]      - 체크된 행만 출력
-   * @param {boolean} [opts.includeSummary]         - Sum 행 포함 (기본: 포함 — 화면의 합계줄과 맞춘다)
+   * @param {string}  [opts.filename]        - 확장자 뺀 파일명. 안 주면 화면명_년월일시분
+   * @param {string}  [opts.sheetName]       - 시트 이름
+   * @param {boolean} [opts.checkedOnly]     - 체크한 줄만
+   * @param {boolean} [opts.includeSummary]  - 합계줄 (기본: 화면과 같게)
    */
   static download(grid, opts = {}) {
     const cols = grid.columns.filter(c => c.exportable !== false);
-
-    // 데이터 추출 (_rowIndex 제거)
-    const rawData = opts.checkedOnly
+    const data = opts.checkedOnly
       ? grid.getCheckedRows().map(({ _rowIndex, ...r }) => r)
       : grid.getData();
 
-    const sheetName      = opts.sheetName || 'Sheet1';
-    const includeSummary = opts.includeSummary !== undefined
-      ? opts.includeSummary : !!grid.summary;
-    const hasGroups      = grid.columnGroups.length > 0;
+    const 설정 = {
+      includeSummary: opts.includeSummary !== undefined ? opts.includeSummary : !!grid.summary,
+    };
 
-    const xml = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      '<?mso-application progid="Excel.Sheet"?>',
-      '<Workbook',
-      '  xmlns="urn:schemas-microsoft-com:office:spreadsheet"',
-      '  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"',
-      '  xmlns:x="urn:schemas-microsoft-com:office:excel">',
-      this._styles(grid),
-      `<Worksheet ss:Name="${this._esc(sheetName)}">`,
-      '<Table>',
-      this._colWidths(cols),
-      this._headerRows(cols, grid.columnGroups),
-      this._dataRows(cols, rawData, grid),
-      includeSummary ? this._summaryRow(cols, rawData) : '',
-      '</Table>',
-      this._freezePane(hasGroups ? 2 : 1),
-      '</Worksheet>',
-      '</Workbook>',
-    ].join('\n');
+    /* 시트 이름에 쓸 수 없는 글자가 있고, 서른한 자를 넘기면 엑셀이 파일을 막는다 */
+    const 시트 = (opts.sheetName || 'Sheet1').replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Sheet1';
 
-    const blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const a    = Object.assign(document.createElement('a'), {
+    const enc = new TextEncoder();
+    const 넣기 = (name, xml) => ({ name, data: enc.encode(xml) });
+
+    const zip = this._zip([
+      넣기('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`),
+      넣기('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`),
+      넣기('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="${this._esc(시트)}" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`),
+      넣기('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`),
+      넣기('xl/styles.xml', this._styles(grid)),
+      넣기('xl/worksheets/sheet1.xml', this._sheet(grid, cols, data, 설정)),
+    ]);
+
+    const blob = new Blob([zip], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const a = Object.assign(document.createElement('a'), {
       href:     URL.createObjectURL(blob),
-      download: (opts.filename || 'grid_export') + '.xls',
+      download: (opts.filename || this.defaultName()) + '.xlsx',
     });
     document.body.appendChild(a);
     a.click();
@@ -615,159 +866,22 @@ class ExcelExporter {
     URL.revokeObjectURL(a.href);
   }
 
-  /** 셀 스타일 정의 */
-  static _styles(grid) {
-    const t   = grid.theme || {};
-    const hBg = (t.headerBg      || '#F0F3F7').toUpperCase();
-    const gBg = (t.headerGroupBg || '#D8E3EF').toUpperCase();
-    const sBg = (t.summaryBg     || '#EEF2F8').toUpperCase();
+  /**
+   * 파일명 — 화면명_년월일시분 (2026-09-11 확인요청 1쪽).
+   *
+   * 여태 모든 화면이 grid_export.xls 로 떨어져, 받아 둔 파일이 어느 화면의
+   * 언제 것인지 열어 봐야 알았다. 화면 이름은 제목에서 가져온다
+   * (「CE Admin — 처방전 목록」 → 「처방전 목록」).
+   */
+  static defaultName() {
+    const 제목 = (document.title || '').split('—').pop().trim() || '내보내기';
+    const 화면 = 제목.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
 
-    const border = (color = '#C0C8D0', w = 1) =>
-      ['Bottom','Right'].map(p =>
-        `<Border ss:Position="${p}" ss:LineStyle="Continuous" ss:Weight="${w}" ss:Color="${color}"/>`
-      ).join('');
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    const 때 = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
 
-    return `<Styles>
-<Style ss:ID="Default">
-  <Alignment ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10"/>
-  <Borders>${border()}</Borders>
-</Style>
-<Style ss:ID="cgH">
-  <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10" ss:Bold="1"/>
-  <Interior ss:Color="${hBg}" ss:Pattern="Solid"/>
-  <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#8898AA"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C0C8D0"/>
-  </Borders>
-</Style>
-<Style ss:ID="cgGH">
-  <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10" ss:Bold="1"/>
-  <Interior ss:Color="${gBg}" ss:Pattern="Solid"/>
-  <Borders>${border()}</Borders>
-</Style>
-<Style ss:ID="cgN">
-  <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10"/>
-  <Borders>${border('#E4E8ED')}</Borders>
-  <NumberFormat ss:Format="#,##0"/>
-</Style>
-<Style ss:ID="cgS">
-  <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10" ss:Bold="1"/>
-  <Interior ss:Color="${sBg}" ss:Pattern="Solid"/>
-  <Borders>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#8898AA"/>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C0C8D0"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C0C8D0"/>
-  </Borders>
-</Style>
-<Style ss:ID="cgSN">
-  <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-  <Font ss:FontName="맑은 고딕" ss:Size="10" ss:Bold="1"/>
-  <Interior ss:Color="${sBg}" ss:Pattern="Solid"/>
-  <Borders>
-    <Border ss:Position="Top"    ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#8898AA"/>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C0C8D0"/>
-    <Border ss:Position="Right"  ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#C0C8D0"/>
-  </Borders>
-  <NumberFormat ss:Format="#,##0"/>
-</Style>
-</Styles>`;
-  }
-
-  /** 컬럼 너비 */
-  static _colWidths(cols) {
-    return cols.map(c => `<Column ss:Width="${c.width || 100}"/>`).join('\n');
-  }
-
-  /** 헤더 행 (그루핑 지원) */
-  static _headerRows(cols, groups) {
-    if (!groups.length) {
-      return '<Row ss:Height="24">\n'
-        + cols.map(c => `<Cell ss:StyleID="cgH"><Data ss:Type="String">${this._esc(c.header)}</Data></Cell>`).join('\n')
-        + '\n</Row>';
-    }
-
-    const inAnyGroup = name => groups.some(g => g.children.includes(name));
-    let row1 = '<Row ss:Height="24">\n';
-    let row2 = '<Row ss:Height="22">\n';
-    let i = 0;
-
-    while (i < cols.length) {
-      const col = cols[i];
-      const grp = groups.find(g => g.children[0] === col.name);
-
-      if (grp) {
-        const n  = grp.children.length;
-        const ma = n > 1 ? ` ss:MergeAcross="${n - 1}"` : '';
-        row1 += `<Cell ss:StyleID="cgGH"${ma}><Data ss:Type="String">${this._esc(grp.header)}</Data></Cell>\n`;
-        grp.children.forEach(cName => {
-          const c = cols.find(x => x.name === cName);
-          if (c) row2 += `<Cell ss:StyleID="cgH"><Data ss:Type="String">${this._esc(c.header)}</Data></Cell>\n`;
-        });
-        i += n;
-      } else if (inAnyGroup(col.name)) {
-        i++; // 그룹의 첫 번째가 아닌 컬럼 — 이미 처리됨
-      } else {
-        // 독립 컬럼 → rowspan 2
-        row1 += `<Cell ss:StyleID="cgH" ss:MergeDown="1"><Data ss:Type="String">${this._esc(col.header)}</Data></Cell>\n`;
-        i++;
-      }
-    }
-
-    return row1 + '</Row>\n' + row2 + '</Row>';
-  }
-
-  /** 데이터 행 */
-  static _dataRows(cols, data, grid) {
-    if (!data.length) return '';
-    return data.map(row => {
-      let xml = '<Row ss:Height="20">\n';
-      cols.forEach(col => {
-        const val = row[col.name];
-        /* 돈ㆍ수량은 수로 내보낸다 (2026-09-10 확인요청 10쪽).
-           글자로 나가면 받는 쪽에서 합계도 정렬도 되지 않는다. */
-        const 수 = cgAsNumber(val, col);
-        if (수 !== null) {
-          xml += `<Cell ss:StyleID="cgN"><Data ss:Type="Number">${수}</Data></Cell>\n`;
-          return;
-        }
-        if (col.editor === 'checkbox') { xml += `<Cell><Data ss:Type="String">${val ? '✓' : ''}</Data></Cell>\n`; return; }
-        xml += `<Cell><Data ss:Type="String">${this._esc(grid._formatDisplay(val, col))}</Data></Cell>\n`;
-      });
-      return xml + '</Row>';
-    }).join('\n');
-  }
-
-  /** Sum 행 */
-  static _summaryRow(cols, data) {
-    let xml = '<Row ss:Height="22">\n';
-    let firstNonNum = true;
-    cols.forEach(col => {
-      if (col.editor === 'number' && col.summary !== false) {
-        const total = data.reduce((s, r) => { const v = Number(r[col.name]); return s + (isNaN(v) ? 0 : v); }, 0);
-        xml += `<Cell ss:StyleID="cgSN"><Data ss:Type="Number">${total}</Data></Cell>\n`;
-      } else if (firstNonNum) {
-        xml += `<Cell ss:StyleID="cgS"><Data ss:Type="String">합계</Data></Cell>\n`;
-        firstNonNum = false;
-      } else {
-        xml += `<Cell ss:StyleID="cgS"><Data ss:Type="String"></Data></Cell>\n`;
-      }
-    });
-    return xml + '</Row>';
-  }
-
-  /** 헤더 고정 (틀 고정) */
-  static _freezePane(rows) {
-    return `<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
-<FreezePanes/><FrozenNoSplit/>
-<SplitHorizontal>${rows}</SplitHorizontal>
-<TopRowBottomPane>${rows}</TopRowBottomPane>
-<ActivePane>2</ActivePane>
-</WorksheetOptions>`;
+    return `${화면}_${때}`;
   }
 }
 
@@ -2213,7 +2327,7 @@ class wwGrid {
    * @param {boolean} [opts.includeSummary]         - Sum 행 포함 여부
    */
   downloadExcel(opts = {}) {
-    ExcelExporter.download(this, opts);
+    XlsxExporter.download(this, opts);
   }
 
   /** 서버 전송용 JSON 문자열 */
