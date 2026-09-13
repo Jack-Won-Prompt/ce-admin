@@ -124,4 +124,16 @@ return [
         'base_url'       => env('CE_SHOP_BASE_URL', 'http://localhost/ce-shop/public'),
         'api_enabled'    => env('CE_SHOP_API_ENABLED', false),
     ],
+
+    /*
+    |──────────────────────────────────────────────────────
+    | SupportWorks 오류 보고 (App\Support\SupportWorksReporter)
+    |──────────────────────────────────────────────────────
+    | 운영에서 난 예외를 SupportWorks 로 보낸다. 값은 .env 에만 둔다.
+    | 둘 중 하나라도 비어 있으면 보고는 조용히 건너뛴다.
+    */
+    'supportworks' => [
+        'error_url'   => env('SW_ERROR_URL'),
+        'error_token' => env('SW_ERROR_TOKEN'),
+    ],
 ];
