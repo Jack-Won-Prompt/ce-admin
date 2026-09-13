@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Mail\AdminInvitationMail;
 use App\Models\AdminInvitation;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -95,8 +97,13 @@ class AdminInvitationController extends Controller
     {
         $invitation = AdminInvitation::where('token', $token)->first();
 
+        /* 로그인 화면은 $errors 만 보여 준다 — with('error') 로 보내면 안내가 보이지 않는다 */
         if (!$invitation || !$invitation->isPending()) {
-            return redirect()->route('login')->with('error', '유효하지 않거나 만료된 초대 링크입니다.');
+            return $this->toLogin('유효하지 않거나 만료된 초대 링크입니다.');
+        }
+
+        if ($this->alreadyRegistered($invitation)) {
+            return $this->toLogin("이미 등록된 계정입니다 ({$invitation->email}). 로그인해 주십시오.");
         }
 
         return view('admin.invite.accept', compact('invitation'));
@@ -107,7 +114,11 @@ class AdminInvitationController extends Controller
         $invitation = AdminInvitation::where('token', $token)->first();
 
         if (!$invitation || !$invitation->isPending()) {
-            return redirect()->route('login')->with('error', '유효하지 않거나 만료된 초대 링크입니다.');
+            return $this->toLogin('유효하지 않거나 만료된 초대 링크입니다.');
+        }
+
+        if ($this->alreadyRegistered($invitation)) {
+            return $this->toLogin("이미 등록된 계정입니다 ({$invitation->email}). 로그인해 주십시오.");
         }
 
         $data = $request->validate([
@@ -115,19 +126,60 @@ class AdminInvitationController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $user = User::create([
-            'name'      => $data['name'],
-            'email'     => $invitation->email,
-            'password'  => $data['password'],
-            'role'      => $invitation->role,
-            'is_active' => true,
-        ]);
+        /* 사용자 생성과 수락 표시는 함께 되거나 함께 안 되어야 한다 (2026-09-13).
+           둘이 따로 저장되던 때, 사용자만 만들어지고 초대는 대기로 남아 수락 화면이
+           계속 열렸고, 다시 누를 때마다 중복 이메일로 500 이 났다(09-11, 12회). */
+        try {
+            $user = DB::transaction(function () use ($invitation, $data) {
+                $user = User::create([
+                    'name'      => $data['name'],
+                    'email'     => $invitation->email,
+                    'password'  => $data['password'],
+                    'role'      => $invitation->role,
+                    'is_active' => true,
+                ]);
 
-        $invitation->update(['accepted_at' => now()]);
+                $invitation->update(['accepted_at' => now()]);
+
+                return $user;
+            });
+        } catch (UniqueConstraintViolationException) {
+            /* 두 번 연달아 눌러 앞 요청이 먼저 만든 경우 */
+            $this->alreadyRegistered($invitation);
+
+            return $this->toLogin("이미 등록된 계정입니다 ({$invitation->email}). 로그인해 주십시오.");
+        }
 
         Auth::login($user);
 
         return redirect()->route('dashboard')->with('success', '계정이 생성되었습니다. 환영합니다!');
+    }
+
+    /**
+     * 초대받은 이메일이 이미 사용자로 있는가 (2026-09-13).
+     *
+     * 있으면 새로 만들지 않는다 — 만들려 하면 중복 이메일로 500 이 난다.
+     * 앞선 수락이 중간에 끊겼거나 관리자가 직접 등록한 경우다. 초대는 수락으로
+     * 닫아, 목록에서 대기로 남지 않게 한다.
+     */
+    private function alreadyRegistered(AdminInvitation $invitation): bool
+    {
+        $user = User::where('email', $invitation->email)->first();
+
+        if (! $user) {
+            return false;
+        }
+
+        if (! $invitation->accepted_at) {
+            $invitation->update(['accepted_at' => $user->created_at ?? now()]);
+        }
+
+        return true;
+    }
+
+    private function toLogin(string $message): RedirectResponse
+    {
+        return redirect()->route('login')->withErrors(['email' => $message]);
     }
 
     private function formatInvitation(AdminInvitation $inv): array

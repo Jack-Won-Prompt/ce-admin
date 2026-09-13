@@ -21,6 +21,11 @@ class ClientErrorController extends Controller
 {
     public function store(Request $request)
     {
+        /* 로컬 화면에서 난 오류는 운영 표에 담지 않는다 (2026-09-13) — 서버 쪽과 같은 규칙 */
+        if (\App\Support\ErrorRecorder::로컬이면넘기나()) {
+            return response()->json(['success' => true, 'skipped' => 'local']);
+        }
+
         /* 한 사람이 1분에 30건까지. 넘으면 조용히 받아 준 척한다 —
            오류가 난 화면에 또 오류를 띄우면 쓰는 사람만 괴롭다. */
         $열쇠 = 'client-error:' . (Auth::id() ?? $request->ip());

@@ -4,6 +4,18 @@
  * 헤더 그루핑, 수정 추적, 서버 전송용 데이터 추출
  */
 
+/**
+ * 이벤트 대상을 요소로 맞춘다 (2026-09-13).
+ *
+ * 머리글 글자를 드래그로 골라 둔 채 끌면 dragstart 의 대상이 요소가 아니라
+ * 글자 노드(Text)로 온다. 글자 노드에는 closest 가 없어 TypeError 가 났다
+ * (오류 기록 id 24, 환자 목록). 글자 노드면 그 부모 요소로 바꾼다.
+ */
+function wwElOf(t) {
+  if (t instanceof Element) return t;
+  return (t && t.parentElement) || document.createElement('span');
+}
+
 /* ══════════════════════════════════════════════════════════
    GridModal — 팝업 모달
 ══════════════════════════════════════════════════════════ */
@@ -1439,7 +1451,7 @@ class wwGrid {
     // 행 체크박스
     this._tbodyEl.addEventListener('change', e => {
       if (e.target.classList.contains('cg-row-check')) {
-        const tr = e.target.closest('tr');
+        const tr = wwElOf(e.target).closest('tr');
         const ri = parseInt(tr.dataset.rowIndex, 10);
         if (e.target.checked) {
           this._checkedRows.add(ri);
@@ -1461,7 +1473,7 @@ class wwGrid {
 
     // 셀 클릭 → 편집 시작 (이미 편집 중인 셀 재진입 방지)
     this._tbodyEl.addEventListener('click', e => {
-      const inner = e.target.closest('.cg-cell-inner.editable');
+      const inner = wwElOf(e.target).closest('.cg-cell-inner.editable');
       if (!inner) return;
       if (inner.classList.contains('cg-cell-editing')) return;
       const ri     = parseInt(inner.dataset.rowIndex, 10);
@@ -1491,7 +1503,7 @@ class wwGrid {
 
     // 정렬
     this._theadEl.addEventListener('click', e => {
-      const inner = e.target.closest('.cg-th-inner.sortable');
+      const inner = wwElOf(e.target).closest('.cg-th-inner.sortable');
       if (!inner) return;
       const col = inner.dataset.colName;
       if (!col) return;
@@ -1505,7 +1517,7 @@ class wwGrid {
 
     // 컬럼 리사이즈 (colgroup <col> 업데이트)
     this._theadEl.addEventListener('mousedown', e => {
-      const handle = e.target.closest('.cg-resize-handle');
+      const handle = wwElOf(e.target).closest('.cg-resize-handle');
       if (!handle) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1540,7 +1552,7 @@ class wwGrid {
     /* 손잡이를 두 번 누르면 코드에 적힌 너비로 돌아간다 — 잘못 끌어 칸이
        뭉개졌을 때 되돌릴 길이 없으면 화면을 새로 고쳐도 그대로다. */
     this._theadEl.addEventListener('dblclick', e => {
-      const handle = e.target.closest('.cg-resize-handle');
+      const handle = wwElOf(e.target).closest('.cg-resize-handle');
       if (!handle) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1549,7 +1561,7 @@ class wwGrid {
 
     // 컬럼 드래그 순서 변경
     this._theadEl.addEventListener('dragstart', e => {
-      const inner = e.target.closest('.cg-th-inner[data-col-name]');
+      const inner = wwElOf(e.target).closest('.cg-th-inner[data-col-name]');
       if (!inner) { e.preventDefault(); return; }
       this._dragColName = inner.dataset.colName;
       e.dataTransfer.effectAllowed = 'move';
@@ -1560,7 +1572,7 @@ class wwGrid {
 
     this._theadEl.addEventListener('dragover', e => {
       if (!this._dragColName) return;
-      const inner = e.target.closest('.cg-th-inner[data-col-name]');
+      const inner = wwElOf(e.target).closest('.cg-th-inner[data-col-name]');
       if (!inner || inner.dataset.colName === this._dragColName) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
@@ -1573,7 +1585,7 @@ class wwGrid {
 
     this._theadEl.addEventListener('dragleave', e => {
       // relatedTarget이 같은 th-inner 안에 있으면 무시
-      const inner = e.target.closest('.cg-th-inner');
+      const inner = wwElOf(e.target).closest('.cg-th-inner');
       if (inner && !inner.contains(e.relatedTarget)) {
         inner.classList.remove('cg-drop-left', 'cg-drop-right');
       }
@@ -1581,7 +1593,7 @@ class wwGrid {
 
     this._theadEl.addEventListener('drop', e => {
       e.preventDefault();
-      const inner = e.target.closest('.cg-th-inner[data-col-name]');
+      const inner = wwElOf(e.target).closest('.cg-th-inner[data-col-name]');
       if (!inner || !this._dragColName) { this._cleanDrag(); return; }
       const toName = inner.dataset.colName;
       if (toName !== this._dragColName) {

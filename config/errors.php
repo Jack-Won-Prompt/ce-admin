@@ -15,6 +15,12 @@ return [
     /* 같은 자리에서 같은 잘못이 며칠 안에 또 나면 줄을 새로 세우지 않고 셈만 올린다 */
     'merge_days' => 7,
 
+    /* 로컬(APP_ENV=local)에서 난 오류는 담지 않는다 (2026-09-13).
+       로컬 .env 는 운영 DB 에 바로 붙어 있어, 개발 PC 에서 돌린 명령줄 스크립트의
+       오류가 담당자가 보는 목록에 섞였다(09-11~12 사이 9회). 로컬에서 이 기능을
+       시험할 때만 ERROR_LOG_SKIP_LOCAL=false 로 연다. */
+    'skip_local' => (bool) env('ERROR_LOG_SKIP_LOCAL', true),
+
     /* 목록에서 한 번에 보여 줄 최대 줄 수 */
     'list_limit' => 1000,
 

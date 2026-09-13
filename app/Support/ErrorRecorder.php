@@ -55,6 +55,10 @@ class ErrorRecorder
         }
 
         try {
+            if (self::로컬이면넘기나()) {
+                return;
+            }
+
             if (self::넘길까($e)) {
                 return;
             }
@@ -107,7 +111,8 @@ class ErrorRecorder
         $갈래  = class_basename($e);
         $파일  = (string) $e->getFile();
         $줄    = (int) $e->getLine();
-        $열쇠  = hash('sha256', $갈래 . '|' . $파일 . '|' . $줄 . '|' . self::뼈대($e->getMessage()));
+        $글월  = self::글월($e);
+        $열쇠  = hash('sha256', $갈래 . '|' . $파일 . '|' . $줄 . '|' . self::뼈대($글월));
 
         $상태 = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
             ? $e->getStatusCode() : 500;
@@ -137,7 +142,7 @@ class ErrorRecorder
             'kind'        => $갈래,
             'exception'   => $e::class,
             'http_status' => $상태,
-            'message'     => mb_substr((string) $e->getMessage(), 0, 4000),
+            'message'     => mb_substr($글월, 0, 4000),
             'file'        => mb_substr($파일, 0, 300),
             'line'        => $줄,
             'trace'       => mb_substr(self::자취($e), 0, 60000),
@@ -154,6 +159,24 @@ class ErrorRecorder
             'last_at'     => now(),
             'status'      => 'open',
         ]);
+    }
+
+    /**
+     * 담을 글월 (2026-09-13).
+     *
+     * QueryException 의 글월에는 SQL 이 보낸 값까지 채워져 있다. 그대로 담으면
+     * 두 가지가 어긋난다 — 비밀번호 해시ㆍ이름 같은 값이 오류 기록 화면에 드러나고,
+     * 값이 부를 때마다 달라 같은 결함이 여러 줄로 나뉜다(초대 수락 중복 이메일
+     * 12회가 5줄이 되었다). 값 자리를 ? 로 둔 SQL 을 담는다.
+     */
+    private static function 글월(Throwable $e): string
+    {
+        if ($e instanceof \Illuminate\Database\QueryException && $e->getPrevious()) {
+            return $e->getPrevious()->getMessage()
+                . ' (Connection: ' . $e->getConnectionName() . ', SQL: ' . $e->getSql() . ')';
+        }
+
+        return (string) $e->getMessage();
     }
 
     /**
@@ -236,6 +259,16 @@ class ErrorRecorder
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * 로컬에서 난 오류는 담지 않는다 (2026-09-13).
+     * 로컬 .env 가 운영 DB 에 붙어 있어, 개발 PC 의 오류가 담당자 목록에 섞였다.
+     * 브라우저 오류 받는 자리(ClientErrorController)도 이것을 함께 쓴다.
+     */
+    public static function 로컬이면넘기나(): bool
+    {
+        return (bool) config('errors.skip_local', true) && App::environment('local');
     }
 
     /** 표가 아직 없을 때는 담지 않는다 — 마이그레이션 전이거나 DB 가 끊겼을 때 */
