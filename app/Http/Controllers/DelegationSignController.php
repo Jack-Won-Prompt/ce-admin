@@ -94,6 +94,8 @@ class DelegationSignController extends Controller
                 'customer'   => $d->customer_name,
                 'phone'      => \App\Support\PhoneNo::format($d->phone),
                 'status'     => DelegationSign::상태[$d->status] ?? $d->status,
+                /* 상태 칸 색을 고르는 코드 — 표시 글자로 가리면 글자를 고칠 때 색이 빠진다 */
+                'status_code'=> $d->status,
                 'delegation' => $d->동의말('agree_delegation'),
                 'privacy'    => $d->동의말('agree_privacy'),
                 'marketing'  => $d->동의말('agree_marketing'),
