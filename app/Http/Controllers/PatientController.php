@@ -626,7 +626,8 @@ class PatientController extends Controller
      */
     public function counsels(Patient $patient): \Illuminate\Http\JsonResponse
     {
-        $types  = ['1013' => '구매', '1016' => '개인구매', '1020' => '반품', '1030' => '문의', '1050' => '기타'];
+        // 갈래는 모델 한 벌에서 온다 — 세 곳에 따로 적어 두어 서로 달랐다
+        $types  = \App\Models\Prescription::상담유형 + \App\Models\Prescription::상담유형옛;
         $states = ['02' => '등록', '50' => '재상담', '95' => '확정', '99' => '취소'];
 
         $rows = $patient->prescriptions()
@@ -787,6 +788,42 @@ class PatientController extends Controller
             'message'  => $no ? "{$no} 주문에 이었습니다." : '주문 연결을 풀었습니다.',
             'order_no' => $no ?: '',
         ]);
+    }
+
+    /**
+     * 상담내역 목록에서 그 자리 수정 (2026-09-11 확인요청 4쪽).
+     *
+     * 유형을 고르거나 내용을 적으려고 상담 창을 열었다 닫는 일이 잦았다. 목록에서
+     * 바로 고치게 한다.
+     *
+     * 온 것만 고친다 — 상담 창의 저장(updateCounsel)은 날짜와 내용을 반드시
+     * 요구하는데, 여기서는 한 칸만 보내는 것이 보통이다.
+     */
+    public function updateCounselInline(Request $request, \App\Models\Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        if (! $prescription->counsel_no) {
+            abort(404, '상담이 아닙니다.');
+        }
+
+        $data = $request->validate([
+            'counsel_type'     => 'sometimes|nullable|string|max:10',
+            'counsel_contents' => 'sometimes|nullable|string|max:2000',
+        ]);
+
+        if (! $data) {
+            return response()->json(['success' => false, 'message' => '고칠 값이 없습니다.'], 422);
+        }
+
+        $prescription->forceFill(array_merge($data, [
+            'updated_by' => \Illuminate\Support\Facades\Auth::id(),
+        ]))->save();
+
+        $무엇 = array_key_exists('counsel_type', $data) ? '상담 유형' : '상담 내용';
+
+        activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($prescription)
+            ->log("상담내역에서 {$무엇}을 고쳤습니다 ({$prescription->counsel_no})");
+
+        return response()->json(['success' => true, 'message' => $무엇 . '을 저장했습니다.']);
     }
 
     // ── 등록 ──────────────────────────────────────────────

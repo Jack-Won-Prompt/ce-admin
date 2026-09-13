@@ -96,9 +96,9 @@
 <div class="foot">
   위와 같이 의료용품을 구입하였음을 확인합니다.
 </div>
+{{-- 확인자 줄은 걷었다 (2026-09-11 확인요청 3쪽). 날짜만 남긴다. --}}
 <div class="sign">
-  {{ $today }}<br>
-  확인자 : {{ $patient->bare_name }} &nbsp;(서명 또는 인)
+  {{ $today }}
 </div>
 
 <div class="pageno">— <span class="pagenum"></span> —</div>

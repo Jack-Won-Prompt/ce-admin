@@ -219,6 +219,33 @@ class Prescription extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * 상담 유형 — 고를 수 있는 갈래 (2026-09-11 확인요청 4쪽으로 셋 보탬).
+     *
+     * 여태 상담 창ㆍ상담내역 목록ㆍ컨트롤러 세 곳에 따로 적혀 있었고, 한쪽만 늘어
+     * 서로 달랐다(교환ㆍ환불은 창에만, 개인구매는 컨트롤러에만 있었다). 한 자리에 둔다.
+     */
+    public const 상담유형 = [
+        '1013' => '구매',
+        '1020' => '반품',
+        '1021' => '교환',
+        '1022' => '환불',
+        '1030' => '문의',
+        '1031' => '컴플레인',
+        '1032' => '샘플',
+        '1033' => '서류 문의',
+        '1050' => '기타',
+    ];
+
+    /** 이제는 고르지 않지만 이미 담긴 건이 있는 갈래 — 보여 줄 때만 쓴다 */
+    public const 상담유형옛 = ['1016' => '개인구매'];
+
+    /** 코드를 사람이 읽는 말로 */
+    public static function 상담유형말(?string $코드): string
+    {
+        return (self::상담유형 + self::상담유형옛)[(string) $코드] ?? '';
+    }
+
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');

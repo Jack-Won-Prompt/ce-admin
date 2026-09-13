@@ -246,11 +246,13 @@ class OrderReturn extends Model
      *
      * 자격 변경은 물건을 되돌려 받지 않는다 — 금액조정 한 줄로 끝난다.
      */
+    /* 사유 문구는 2026-09-11 확인요청 8쪽에서 받은 문장을 그대로 쓴다.
+       열쇠(change_mind 따위)는 그대로 두어 이미 담긴 건이 값을 잃지 않게 한다. */
     public const REASONS = [
-        'change_mind'   => ['label' => '단순 변심'],
-        'size_exchange' => ['label' => '사이즈 교환'],
-        'defect'        => ['label' => '상품 불량'],
-        'wrong_item'    => ['label' => '오배송'],
+        'change_mind'   => ['label' => '단순 변심:도뇨 중단'],
+        'size_exchange' => ['label' => '제품 교환'],
+        'defect'        => ['label' => '상품 불량:제품'],
+        'wrong_item'    => ['label' => '오배송:제품'],
         'delay'         => ['label' => '배송 지연'],
         'eligibility'   => ['label' => '자격 변경'],
         'other'         => ['label' => '기타'],

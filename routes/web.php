@@ -288,6 +288,8 @@ Route::middleware(['auth'])->group(function () {
 
     // 이어 둔 주문 고치기 — 상담 한 건의 연결만 바꾼다
     Route::patch('/counsels/{prescription}/order', [PatientController::class, 'updateCounselOrder'])->name('counsels.order');
+    /* 상담내역 목록에서 유형ㆍ내용을 그 자리에서 고친다 (2026-09-11 확인요청 4쪽) */
+    Route::patch('/counsels/{prescription}/inline', [PatientController::class, 'updateCounselInline'])->name('counsels.inline');
 
     // 제품 검색 / 재고 조회 (Demoworks API 프록시)
     /* 공단에도 지자체에도 내지 않는 건(처방외ㆍ산재ㆍ자동차보험)은 환자가 직접 낸다.

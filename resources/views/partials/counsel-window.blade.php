@@ -105,17 +105,18 @@
           <label>상담 유형</label>
           <select id="csType" class="form-control form-select">
             <option value="">선택</option>
-            <option value="1013">구매</option>
-            {{-- 개인구매는 뺐다(요청서 4쪽). 되돌리는 일이 반품 하나로 뭉뚱그려져 있어
-                 교환과 환불을 갈랐다 — 셋은 하는 일도 서류도 다르다. --}}
-            <option value="1020">반품</option>
-            <option value="1021">교환</option>
-            <option value="1022">환불</option>
-            <option value="1030">문의</option>
-            <option value="1050">기타</option>
+            {{-- 갈래는 CS_TYPES 한 벌에서 온다 — 상담 창과 상담내역 목록이 함께 쓴다.
+                 두 곳에 따로 적어 두었더니 한쪽만 늘어나는 날이 왔다. --}}
+            @foreach(\App\Models\Prescription::상담유형 as $ㅋ => $ㅁ)
+              <option value="{{ $ㅋ }}">{{ $ㅁ }}</option>
+            @endforeach
           </select>
         </div>
-        <div class="cs-f">
+        {{-- 상담 상태는 화면에서 걷었다 (2026-09-11 확인요청 4쪽).
+             「상담 내용만 적고 바로 저장하고 싶다」는 요청이다. 칸은 감춰 두되 지우지는
+             않는다 — 이미 재상담(50)으로 담긴 건이 있고, 그 값을 잃지 않고 되돌려
+             주어야 한다. 새 상담은 등록(02)으로 저장된다. --}}
+        <div class="cs-f" style="display:none;">
           <label>상담 상태</label>
           <select id="csStatus" class="form-control form-select" onchange="csSyncReDate()">
             <option value="02">등록</option>

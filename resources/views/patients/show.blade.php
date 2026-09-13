@@ -351,6 +351,16 @@
                      value="{{ \App\Support\PhoneNo::format($patient->phone) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->phone) }}" placeholder="02-XXXX-XXXX" />
             </span>
           </div>
+          {{-- 팩스로만 쓰던 칸이 아니다. 이름을 쓰임에 맞추고 전화번호 둘 바로 아래로
+               올린다 (2026-09-11 확인요청 3쪽). --}}
+          <div class="info-row">
+            <span class="info-label">기타전화번호</span>
+            <span class="info-value">
+              <span class="view-only">{{ \App\Support\PhoneNo::format($patient->fax) ?: '-' }}</span>
+              <input type="text" class="form-control edit-only" id="e-fax" data-phone
+                     value="{{ \App\Support\PhoneNo::format($patient->fax) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->fax) }}" placeholder="02-XXXX-XXXX" />
+            </span>
+          </div>
           {{-- 먼저 거는 번호는 하나다 — 두 칸에 표를 두는 대신 한 칸에서 고른다 --}}
           <div class="info-row">
             <span class="info-label">Main contact</span>
@@ -505,14 +515,7 @@
                      value="{{ $patient->email }}" data-orig="{{ $patient->email }}" placeholder="name@example.com" />
             </span>
           </div>
-          <div class="info-row">
-            <span class="info-label">Fax</span>
-            <span class="info-value">
-              <span class="view-only">{{ \App\Support\PhoneNo::format($patient->fax) ?: '-' }}</span>
-              <input type="text" class="form-control edit-only" id="e-fax" data-phone
-                     value="{{ \App\Support\PhoneNo::format($patient->fax) }}" data-orig="{{ \App\Support\PhoneNo::format($patient->fax) }}" placeholder="02-XXXX-XXXX" />
-            </span>
-          </div>
+
 
           {{-- 「지난 주소」 다섯 줄은 걷었다 — 「주소 관리」 창이 그 일을 한다.
                거기서는 등록ㆍ수정ㆍ삭제도 되고, 다섯에서 잘리지도 않는다. --}}

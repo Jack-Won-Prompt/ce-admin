@@ -192,15 +192,18 @@
             <option value="guardian">보호자</option>
           </select>
         </div>
+        {{-- 팩스로만 쓰던 칸이 아니다 — 직장ㆍ자녀 번호처럼 그 밖의 번호를 적어 왔다.
+             이름을 쓰임에 맞추고, 전화번호 둘 바로 아래로 올린다
+             (2026-09-11 확인요청 3쪽). --}}
+        <div class="form-group">
+          <label class="form-label">기타전화번호</label>
+          <input type="text" class="form-control" id="add-fax" placeholder="02-XXXX-XXXX" data-phone />
+        </div>
       </div>
       <div class="form-grid-2" style="margin-bottom:8px;">
         <div class="form-group">
           <label class="form-label">Email</label>
           <input type="email" class="form-control" id="add-email" placeholder="name@example.com" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fax</label>
-          <input type="text" class="form-control" id="add-fax" placeholder="02-XXXX-XXXX" data-phone />
         </div>
       </div>
 

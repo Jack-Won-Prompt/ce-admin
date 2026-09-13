@@ -374,6 +374,10 @@
 {{-- 주문 등록·환자 상세와 같은 카카오(다음) 우편번호 서비스 --}}
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
+/* 상담 유형 한 벌 — 모델에서 온다. 상담 창과 이 목록이 같은 것을 쓴다
+   (2026-09-11 확인요청 4쪽). */
+const CS_TYPES = @json(\App\Models\Prescription::상담유형);
+
 /* 서명ㆍ신분증 보기 — 셀 버튼이 부른다 */
 function ptShowImage(title, url) {
   document.getElementById('ptImgTitle').textContent = title;
@@ -811,7 +815,8 @@ document.addEventListener('keydown', (e) => {
         date:    c.date || '',
         status:  c.status || '',
         re_date: c.re_date || '',
-        type:    c.type || '',
+        type:      CS_TYPES[c.type] || '',
+        type_code: c.type || '',
         call_no: c.call_no || '',
         order_no: c.order_no || '',
         order_url: c.order_url || '',
@@ -869,6 +874,33 @@ document.addEventListener('keydown', (e) => {
                 b.addEventListener('click', (e) => { e.stopPropagation(); pcNote(b, row); });
                 return b;
               } },
+            /* 상담 유형을 그 자리에서 고른다 (2026-09-11 확인요청 4쪽).
+               고르려고 상담 창을 열었다 닫는 일이 잦았다. */
+            { header: '상담 유형', name: 'type_code', width: 116, align: 'center', exportable: false,
+              renderer: (v, row) => {
+                const sel = document.createElement('select');
+                sel.className = 'form-control form-select pc-inline-sel';
+                sel.innerHTML = '<option value="">선택</option>'
+                  + Object.entries(CS_TYPES).map(([k, t]) =>
+                      `<option value="${k}"${String(v) === k ? ' selected' : ''}>${t}</option>`).join('');
+                sel.addEventListener('click', (e) => e.stopPropagation());
+                sel.addEventListener('change', async (e) => {
+                  e.stopPropagation();
+                  const 옛 = String(v ?? '');
+                  try {
+                    const res = await apiRequest(`${BASE_URL}/counsels/${row.counsel_id}/inline`,
+                                                 'PATCH', { counsel_type: sel.value || null });
+                    if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
+                    row.type_code = sel.value;
+                    row.type      = CS_TYPES[sel.value] || '';
+                    showToast(res.message, 'success');
+                  } catch (err) {
+                    sel.value = 옛;                    // 못 담았으면 보이는 것도 되돌린다
+                    showToast(err.message || '저장하지 못했습니다.', 'danger', 5000);
+                  }
+                });
+                return sel;
+              } },
             { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
             /* 이어 둔 주문 — 상담일시 바로 다음이다. 「언제 무슨 건으로 이야기했나」가
                한 눈에 이어져 읽힌다. 번호를 누르면 그 주문을 만든 주문 등록 화면이
@@ -901,9 +933,7 @@ document.addEventListener('keydown', (e) => {
               } },
             { header: '상태',      name: 'status',    width: 80,  sortable: true, align: 'center' },
             { header: '재상담일',  name: 're_date',   width: 100, sortable: true, align: 'center' },
-            /* 「갈래」라고 묶어 두었더니 무엇을 담은 칸인지 이름만으로 서지 않았다.
-               상담 유형과 통화번호는 다른 것이므로 각자 칸을 준다. */
-            { header: '상담 유형', name: 'type',      width: 90,  sortable: true, align: 'center' },
+            /* 상담 유형은 위의 고르개 칸이 맡는다 (2026-09-11 확인요청 4쪽) */
             { header: '통화번호',  name: 'call_no',   width: 130, sortable: true },
             { header: '담당자',    name: 'by',        width: 90,  sortable: true },
             /* 한 줄에 할 수 있는 일은 이 칸에 모은다. 칸마다 단추를 흩어 두면
@@ -987,11 +1017,49 @@ document.addEventListener('keydown', (e) => {
           .filter(Boolean).join(' · ') || '';
         if (meta.textContent) body.appendChild(meta);
 
-        const txt = document.createElement('div');
-        txt.className = 'pc-note-full';
-        // 적힌 그대로 보인다 — 줄바꿈이 뜻을 나르는 때가 많다
-        txt.textContent = row.note || '';
-        body.appendChild(txt);
+        /* 읽기만 하던 자리를 적는 자리로 바꾼다 (2026-09-11 확인요청 4쪽).
+           줄바꿈이 뜻을 나르는 때가 많아 textarea 로 둔다. */
+        const ta = document.createElement('textarea');
+        ta.className = 'form-control';
+        ta.style.cssText = 'width:100%;height:210px;resize:vertical;font-size:12.5px;line-height:1.6;';
+        ta.maxLength = 2000;
+        ta.value = row.note || '';
+        ta.placeholder = '상담 내용을 입력하십시오.';
+        ta.addEventListener('click', (e) => e.stopPropagation());
+        body.appendChild(ta);
+
+        const 줄 = document.createElement('div');
+        줄.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;';
+        const 셈 = document.createElement('span');
+        셈.style.cssText = 'flex:1;font-size:11px;color:var(--text-muted);';
+        const 세기 = () => { 셈.textContent = ta.value.length + '/2000자'; };
+        세기();
+        ta.addEventListener('input', 세기);
+
+        const 저장 = document.createElement('button');
+        저장.type = 'button';
+        저장.className = 'ds-btn ds-btn-primary';
+        저장.textContent = '저장';
+        저장.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          BtnState.loading(저장, '저장 중...');
+          try {
+            const res = await apiRequest(`${BASE_URL}/counsels/${row.counsel_id}/inline`,
+                                         'PATCH', { counsel_contents: ta.value });
+            if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
+            row.note = ta.value;
+            btn.textContent = ta.value.trim() || '-';
+            showToast(res.message, 'success');
+            _pcNoteModal.close?.();
+          } catch (err) {
+            showToast(err.message || '저장하지 못했습니다.', 'danger', 5000);
+          } finally {
+            BtnState.reset(저장);
+          }
+        });
+
+        줄.append(셈, 저장);
+        body.appendChild(줄);
       },
     });
   };
