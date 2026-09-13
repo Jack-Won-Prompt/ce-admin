@@ -39,6 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Support\ErrorRecorder::담기($e);
         });
 
+        $exceptions->report(function (\Throwable $e) {
+            \App\Support\SupportWorksReporter::report($e, request());
+        });
+
         // 419 CSRF 토큰 만료 시 로그인 페이지로 리다이렉트
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
             if ($response->getStatusCode() === 419) {
