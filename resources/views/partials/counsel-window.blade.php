@@ -138,12 +138,17 @@
         <div class="cs-f">
           {{-- 환자는 주문을 여러 번 한다(처방으로도, 처방 없이도) — 어느 건 이야기였는지
                골라서 잇는다. 주문 전 문의처럼 이을 건이 없으면 비워 둔다. --}}
-          <label>주문번호</label>
+          <label>관련 주문번호</label>
           <div style="display:flex;gap:6px;">
             <input type="text" id="csOrderNo" class="form-control" readonly
                    style="background:var(--gray-50);" placeholder="주문조회에서 선택하십시오 (없으면 미입력)">
             <button type="button" class="ds-btn" style="flex-shrink:0;"
                     onclick="csPickOrder(this)">주문조회</button>
+          </div>
+          {{-- 무엇을 가리키는 번호인지 화면에서 바로 읽히게 한다 (2026-09-11 확인요청 3ㆍ4쪽).
+               「어떤 것을 의미하는지 궁금하다」는 물음이 두 장에서 거듭 나왔다. --}}
+          <div class="cs-hint" style="margin-top:4px;">
+            이 상담이 어느 주문에 대한 것인지 연결합니다. 주문 전 문의처럼 연결할 주문이 없으면 비워 둡니다.
           </div>
         </div>
       </div>
