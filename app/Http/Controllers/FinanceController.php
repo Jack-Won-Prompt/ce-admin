@@ -38,12 +38,22 @@ class FinanceController extends Controller
         'pg'      => 'PG정산내역',
     ];
 
-    /** PG정산내역 안의 네 갈래 — 토스 화면의 탭 이름을 그대로 쓴다 */
+    /**
+     * PG정산내역 안의 갈래.
+     *
+     * 맨 앞은 여태 따로 있던 PG정산내역 화면을 그대로 들인 것이다 (2026-09-11 지시).
+     * 나머지 넷은 토스 화면의 탭 이름을 그대로 쓴다 — 그 화면을 보던 사람이 같은
+     * 자리를 찾을 수 있게.
+     *
+     * 「결제내역」과 「정산」은 다른 것이다. 앞은 받았는가를, 뒤는 수수료를 뗀 얼마가
+     * 언제 우리 통장에 들어오는가를 말한다.
+     */
     public const PG_VIEWS = [
-        'summary' => '요약',
-        'detail'  => '건별',
-        'daily'   => '일자별',
-        'method'  => '결제수단별',
+        'payments' => '결제내역',
+        'summary'  => '요약',
+        'detail'   => '건별',
+        'daily'    => '일자별',
+        'method'   => '결제수단별',
     ];
 
     public function index(Request $request): View|\Illuminate\Http\JsonResponse
@@ -310,9 +320,9 @@ class FinanceController extends Controller
     /** 지금 보는 PG 갈래 */
     private function pgView(Request $request): string
     {
-        $v = (string) $request->get('view', 'summary');
+        $v = (string) $request->get('view', 'payments');
 
-        return array_key_exists($v, self::PG_VIEWS) ? $v : 'summary';
+        return array_key_exists($v, self::PG_VIEWS) ? $v : 'payments';
     }
 
     /**
@@ -325,6 +335,11 @@ class FinanceController extends Controller
     private function pgSettlements(string $from, string $to, Request $request): array
     {
         $갈래 = $this->pgView($request);
+
+        if ($갈래 === 'payments') {
+            return $this->pgPayments($from, $to, $request);
+        }
+
         $기준 = $request->get('date_type') === 'paidOutDate' ? 'paidOutDate' : 'soldDate';
 
         $정산 = app(\App\Services\TossPayments\SettlementService::class);
@@ -347,6 +362,47 @@ class FinanceController extends Controller
         return [$자료, $this->columnsFor('pg:' . $갈래)];
     }
 
+    /**
+     * 결제내역 — 여태 따로 있던 PG정산내역 화면을 그대로 들인다 (2026-09-11 지시).
+     *
+     * 가상계좌를 발급하고 입금을 기다리는 자리라, 정산과 함께 보아야 「받았는데
+     * 아직 안 들어온 돈」이 한 화면에서 읽힌다.
+     */
+    private function pgPayments(string $from, string $to, Request $request): array
+    {
+        $질의 = \App\Models\TossPayment::with(['order.patient'])
+            ->whereBetween(\Illuminate\Support\Facades\DB::raw('DATE(created_at)'), [$from, $to])
+            ->orderByDesc('id');
+
+        if ($request->filled('q')) {
+            $말 = $request->get('q');
+            $질의->where(fn ($s) => $s
+                ->where('toss_order_id', 'like', "%{$말}%")
+                ->orWhere('customer_name', 'like', "%{$말}%")
+                ->orWhere('account_number', 'like', "%{$말}%")
+                ->orWhereHas('order', fn ($o) => $o->where('order_number', 'like', "%{$말}%"))
+                ->orWhereHas('order.patient', fn ($p) => $p->where('name', 'like', "%{$말}%")));
+        }
+
+        $자료 = $질의->get()->map(fn (\App\Models\TossPayment $t) => [
+            'issued_at' => $t->created_at?->format('Y-m-d H:i') ?? '',
+            'order_no'  => $t->order?->order_number ?? '',
+            'patient'   => $t->order?->patient?->name ?? '',
+            'method'    => $t->method_label,
+            'status'    => $t->status_label,
+            'amount'    => (int) $t->amount,
+            // 가상계좌로 받은 건만 값이 선다 — 카드는 계좌가 없다
+            'bank'      => $t->bank_name,
+            'account'   => $t->account_number ?? '',
+            'holder'    => $t->customer_name ?? '',
+            'due_date'  => $t->due_date?->format('Y-m-d') ?? '',
+            'paid_at'   => $t->deposited_at?->format('Y-m-d H:i') ?? '',
+            'toss_no'   => $t->toss_order_id ?? '',
+        ])->values()->all();
+
+        return [$자료, $this->columnsFor('pg:payments')];
+    }
+
     private function columnsFor(string $tab): array
     {
         $money = ['align' => 'right', 'editor' => 'number'];
@@ -362,6 +418,21 @@ class FinanceController extends Controller
         ];
 
         return match ($tab) {
+            'pg:payments' => [
+                ['header' => '발급일시',     'name' => 'issued_at', 'width' => 140, 'sortable' => true],
+                ['header' => '주문번호',     'name' => 'order_no',  'width' => 130, 'sortable' => true],
+                ['header' => '이름',         'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '결제수단',     'name' => 'method',    'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '상태',         'name' => 'status',    'width' => 90,  'align' => 'center', 'sortable' => true],
+                ['header' => '금액',         'name' => 'amount',    'width' => 110] + $money,
+                ['header' => '가상계좌은행', 'name' => 'bank',      'width' => 110],
+                ['header' => '가상계좌번호', 'name' => 'account',   'width' => 160],
+                ['header' => '예금주명',     'name' => 'holder',    'width' => 100],
+                ['header' => '입금기한',     'name' => 'due_date',  'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금일시',     'name' => 'paid_at',   'width' => 140, 'sortable' => true],
+                ['header' => '토스 주문번호', 'name' => 'toss_no',  'width' => 180],
+            ],
+
             'pg:summary' => array_merge($pg공통, [
                 ['header' => '입금 정산액', 'name' => '입금정산액', 'width' => 130] + $money,
             ]),

@@ -1584,14 +1584,8 @@
         {{-- PG정산내역 — 토스페이먼츠(요청서 7쪽). 입금 내역과 다른 것을 본다:
              그쪽은 통장에 찍힌 줄이고 이쪽은 PG 를 거친 결제다. 가상계좌로 받은 돈은
              둘 다에 나타나는데, 어긋나면 그것이 곧 봐야 할 일이다. --}}
-        @if($vis('payments'))
-        <div class="menu-item {{ request()->routeIs('payments*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="cash" href="{{ route('payments.index') }}" data-title="PG정산내역">
-            @dsicon('cash', 'ds-icon menu-icon')
-            <span>PG정산내역</span>
-          </a>
-        </div>
-        @endif
+        {{-- PG정산내역은 Finance › PG정산내역 탭으로 들어왔다 (2026-09-11 지시).
+             길(/payments)과 권한은 그대로 둔다 — 주소로 들어오는 옛 링크가 있다. --}}
         @if($vis('nhis'))
         <div class="menu-item {{ request()->routeIs('nhis*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="coin-hand" href="{{ route('nhis.index') }}" data-title="청구 관리">

@@ -74,7 +74,7 @@
          data-view="{{ $v }}" onclick="return finPgView(event, '{{ $v }}')">{{ $이름 }}</a>
     @endforeach
     <span style="margin-left:auto;padding:0 12px;align-self:center;font-size:11px;color:var(--text-muted);">
-      토스페이먼츠에서 받아 옵니다 · 기간은 매출일 기준
+      결제내역은 우리 자료 · 나머지 넷은 토스페이먼츠에서 받아 옵니다
     </span>
   </div>
 
