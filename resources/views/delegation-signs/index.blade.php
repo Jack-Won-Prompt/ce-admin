@@ -61,6 +61,15 @@
   .dlg-pg.is-now { border-color:var(--primary); color:var(--primary);
                    background:var(--primary-light); font-weight:700; cursor:default; }
   .dlg-pg.is-off { color:var(--gray-400); background:var(--gray-50); cursor:default; }
+
+  /* 상태 칸 색 표시 (2026-09-13) — 발송 전ㆍ서명 대기ㆍ서명 완료ㆍ동의 거절을
+     글자만으로 읽지 않고 한눈에 가린다. 오류 기록 화면의 알약 모양과 같은 꼴. */
+  .dlg-st { display:inline-flex; align-items:center; height:22px; padding:0 9px;
+            border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .dlg-st-pending  { background:var(--gray-100);    color:var(--gray-600); }
+  .dlg-st-sent     { background:var(--warning-50);  color:#B54708; }
+  .dlg-st-signed   { background:var(--primary-50);  color:var(--primary); }
+  .dlg-st-declined { background:var(--danger-light); color:var(--danger); }
 </style>
 @endpush
 
@@ -281,7 +290,15 @@
       /* ── 받은 결과 ──────────────────────────────────────────────────── */
       /* 발송 상태 (2026-09-11 지시로 서명 여부 뒤에 두었으나, 2026-09-12 서명
          여부만 ［발송］ 옆으로 옮기고 이 칸은 제자리에 둔다). */
-      { header: '상태',                 name: 'status',     width: 84,  align: 'center', sortable: true },
+      {
+        header: '상태', name: 'status', width: 84, align: 'center', sortable: true,
+        renderer: (v, row) => {
+          const el = document.createElement('span');
+          el.className = 'dlg-st dlg-st-' + (row.status_code || 'pending');
+          el.textContent = v;
+          return el;
+        },
+      },
 
       { header: '개인정보동의 서명 여부', name: 'privacy',   width: 138, align: 'center', renderer: 여부 },
       { header: '마케팅 활용 동의 여부', name: 'marketing', width: 138, align: 'center', renderer: 여부 },
