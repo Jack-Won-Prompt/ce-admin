@@ -127,10 +127,19 @@ class FinanceController extends Controller
            동의는 사람에 붙어 줄마다 물으면 쉰 줄에 백을 묻는다. 한 번에 모아 둔다. */
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
 
-        $data = $rows->map(fn (Order $o) => $this->orderRow($o)
+        $data = $rows->map(fn (Order $o) => ['kind' => '주문', 'reason' => '']
+            + $this->orderRow($o)
             + $extras->rx($o->prescription, $o->patient)
             + $extras->ww($o, $o->prescription, $o->patient)
             + $extras->of($o))->values();
+
+        /* 통합주문내역은 갈래를 가리지 않고 모두 담는다 (2026-09-11 확인요청 8쪽).
+           환자 결제ㆍ정산ㆍ미정산은 주문 줄에서 이미 보이는데 반품환불만 제 탭에
+           따로 서 있었다 — 「이 달에 무슨 일이 있었나」를 한 표에서 보려면 그것도
+           여기 있어야 한다. */
+        if ($tab === 'orders') {
+            $data = $data->concat($this->returnRowsForOrders($from, $to, $request))->values();
+        }
 
         return [$data, $this->columnsFor($tab)];
     }
@@ -251,6 +260,61 @@ class FinanceController extends Controller
     }
 
     /** 반품환불내역 — 되돌린 건이 원본이라 주문이 아니라 접수에서 센다 */
+    /**
+     * 반품환불을 통합주문내역의 줄 꼴로 (2026-09-11 확인요청 8쪽).
+     *
+     * 수량과 금액은 **음수로 적는다**. 되돌린 것이라 더하면 그대로 상계된다 —
+     * 표 아래 합계가 곧 「이 달에 남은 것」이 된다.
+     *
+     * 결제ㆍ청구 칸은 비운다. 반품에는 그 값이 없고, 0 을 적으면 「받지 못했다」로
+     * 읽힌다.
+     */
+    private function returnRowsForOrders(string $from, string $to, Request $request)
+    {
+        $질의 = OrderReturn::with(['order.patient', 'items'])
+            ->whereBetween(\DB::raw('DATE(created_at)'), [$from, $to])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('q')) {
+            $말 = $request->q;
+            $질의->where(fn ($s) => $s
+                ->whereHas('order', fn ($o) => $o->where('order_number', 'like', "%{$말}%"))
+                ->orWhereHas('order.patient', fn ($p) => $p->where('name', 'like', "%{$말}%")));
+        }
+
+        return $질의->get()->map(function (OrderReturn $r) {
+            $수량 = (int) $r->items->sum('quantity');
+            $금액 = (int) $r->items->sum(fn ($i) => (int) $i->quantity * (int) $i->unit_price);
+            $환불 = (int) $r->refund_amount;
+
+            return [
+                'kind'       => '반품환불',
+                'reason'     => OrderReturn::reasonLabel($r->reason_code),
+                'order_no'   => $r->order?->order_number ?? '',
+                'order_at'   => $r->created_at?->format('Y-m-d') ?? '',
+                'patient_id' => $r->order?->patient_id,
+                'patient'    => $r->order?->patient?->name ?? '',
+                'code'       => '',
+                'product'    => $r->items->pluck('product_name')->filter()->implode(', '),
+                // 되돌린 것이므로 음수다
+                'qty'        => -$수량,
+                'total'      => -$금액,
+                'billed'     => -$환불,
+                'copay'      => -$환불,
+                'nhis'       => 0,
+                'shipped_at' => '',
+                'delivered'  => '',
+                'ship_state' => $r->statusLabel(),
+                'tracking'   => '',
+                'status'     => $r->statusLabel(),
+                'cancelled'  => '',
+                'cancel_at'  => '',
+                'paid_at'    => $r->refunded_at?->format('Y-m-d') ?? '',
+                'paid'       => -$환불,
+            ];
+        });
+    }
+
     private function returns(string $from, string $to, Request $request): array
     {
         $query = OrderReturn::with(['order.patient', 'order.prescription.billingOffice', 'order.items', 'items'])
@@ -465,6 +529,10 @@ class FinanceController extends Controller
 
             // 14쪽 — 전체 주문 현황 및 매출 확인
             'orders' => [
+                /* 갈래와 사유 (2026-09-11 확인요청 8쪽). 한 표에 주문과 반품환불이
+                   함께 서므로, 음수만으로 가리지 않고 이름으로도 가른다. */
+                ['header' => '구분',       'name' => 'kind',      'width' => 84,  'align' => 'center', 'sortable' => true],
+                ['header' => '사유',       'name' => 'reason',    'width' => 130, 'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '고객ID',     'name' => 'patient_id','width' => 80,  'align' => 'center'],
