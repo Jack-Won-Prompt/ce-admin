@@ -33,6 +33,17 @@ class FinanceController extends Controller
         'unpaid'  => '미정산내역',
         'returns' => '반품환불내역',
         'vat'     => '부가세신고내역',
+        /* PG정산내역 — 따로 있던 화면을 이 안으로 들인다 (2026-09-11 확인요청 1쪽).
+           안에서 다시 넷으로 갈린다(요약ㆍ건별ㆍ일자별ㆍ결제수단별) — 토스 화면과 같다. */
+        'pg'      => 'PG정산내역',
+    ];
+
+    /** PG정산내역 안의 네 갈래 — 토스 화면의 탭 이름을 그대로 쓴다 */
+    public const PG_VIEWS = [
+        'summary' => '요약',
+        'detail'  => '건별',
+        'daily'   => '일자별',
+        'method'  => '결제수단별',
     ];
 
     public function index(Request $request): View|\Illuminate\Http\JsonResponse
@@ -42,9 +53,11 @@ class FinanceController extends Controller
         $from = $request->get('date_from', today()->startOfMonth()->toDateString());
         $to   = $request->get('date_to',   today()->toDateString());
 
-        [$gridData, $columns] = $tab === 'returns'
-            ? $this->returns($from, $to, $request)
-            : $this->fromOrders($tab, $from, $to, $request);
+        [$gridData, $columns] = match (true) {
+            $tab === 'pg'      => $this->pgSettlements($from, $to, $request),
+            $tab === 'returns' => $this->returns($from, $to, $request),
+            default            => $this->fromOrders($tab, $from, $to, $request),
+        };
 
         /* 탭을 누를 때는 화면을 통째로 다시 열지 않는다 (2026-09-10 지시).
            여섯 탭이 묻는 것은 같고(기간ㆍ검색어) 바뀌는 것은 표뿐이라, 값만 주고
@@ -53,6 +66,7 @@ class FinanceController extends Controller
             return response()->json([
                 'tab'     => $tab,
                 'label'   => self::TABS[$tab],
+                'view'    => $this->pgView($request),
                 'columns' => $columns,
                 'rows'    => $gridData,
                 'count'   => count($gridData),
@@ -61,6 +75,7 @@ class FinanceController extends Controller
 
         return view('finance.index', [
             'tab'      => $tab,
+            'pgView'   => $this->pgView($request),
             'dateFrom' => $from,
             'dateTo'   => $to,
             'gridData' => $gridData,
@@ -292,11 +307,91 @@ class FinanceController extends Controller
      * 값은 한 벌이고 여기서 고르기만 한다 — 탭을 옮길 때마다 같은 값을 다르게 셈하면
      * 여섯이 서로 안 맞는다.
      */
+    /** 지금 보는 PG 갈래 */
+    private function pgView(Request $request): string
+    {
+        $v = (string) $request->get('view', 'summary');
+
+        return array_key_exists($v, self::PG_VIEWS) ? $v : 'summary';
+    }
+
+    /**
+     * PG정산내역 — 토스에서 받아 네 갈래로 보여 준다 (2026-09-11 확인요청 1ㆍ6ㆍ7쪽).
+     *
+     * 저쪽이 주는 것은 건별 한 벌뿐이라, 요약ㆍ일자별ㆍ결제수단별은 그것을 묶어 만든다.
+     * 기간은 다른 탭과 같은 칸을 쓴다 — 묻는 것이 같은데 칸을 따로 두면 번갈아 볼 때
+     * 기간을 두 번 맞춰야 한다.
+     */
+    private function pgSettlements(string $from, string $to, Request $request): array
+    {
+        $갈래 = $this->pgView($request);
+        $기준 = $request->get('date_type') === 'paidOutDate' ? 'paidOutDate' : 'soldDate';
+
+        $정산 = app(\App\Services\TossPayments\SettlementService::class);
+        $줄들 = $정산->가져오기($from, $to, $기준);
+
+        /* 검색어는 건별에서만 뜻이 있다 — 묶어 놓은 줄에는 주문번호가 없다 */
+        if ($갈래 === 'detail' && $request->filled('q')) {
+            $말 = mb_strtolower($request->get('q'));
+            $줄들 = array_values(array_filter($줄들, fn ($s) => str_contains(
+                mb_strtolower(($s['orderId'] ?? '') . ' ' . ($s['method'] ?? '') . ' ' . ($s['mId'] ?? '')), $말)));
+        }
+
+        $자료 = match ($갈래) {
+            'detail' => $정산->건별($줄들),
+            'daily'  => $정산->일자별($줄들),
+            'method' => $정산->결제수단별($줄들),
+            default  => $정산->요약($줄들),
+        };
+
+        return [$자료, $this->columnsFor('pg:' . $갈래)];
+    }
+
     private function columnsFor(string $tab): array
     {
         $money = ['align' => 'right', 'editor' => 'number'];
 
+        /* PG정산내역 — 토스 화면의 칸 이름을 그대로 쓴다 (2026-09-11 확인요청 6ㆍ7쪽).
+           수수료는 공급가와 부가세를 갈라 보여 준다 — 세금계산서와 맞출 때 그 둘이 필요하다. */
+        $pg공통 = [
+            ['header' => '건수',     'name' => '건수',     'width' => 80]  + $money,
+            ['header' => '매출액',   'name' => '매출액',   'width' => 120] + $money,
+            ['header' => 'PG수수료', 'name' => 'PG수수료', 'width' => 110] + $money,
+            ['header' => 'PG부가세', 'name' => 'PG부가세', 'width' => 110] + $money,
+            ['header' => '수수료 합', 'name' => '수수료합', 'width' => 110] + $money,
+        ];
+
         return match ($tab) {
+            'pg:summary' => array_merge($pg공통, [
+                ['header' => '입금 정산액', 'name' => '입금정산액', 'width' => 130] + $money,
+            ]),
+
+            'pg:detail' => [
+                ['header' => '매출일',     'name' => '매출일',   'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '정산액 입금일', 'name' => '입금일', 'width' => 110, 'align' => 'center', 'sortable' => true],
+                ['header' => '승인일시',   'name' => '승인일시', 'width' => 130, 'align' => 'center', 'sortable' => true],
+                ['header' => '결제수단',   'name' => '결제수단', 'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '주문번호',   'name' => '주문번호', 'width' => 190, 'sortable' => true],
+                ['header' => '상점아이디(MID)', 'name' => '상점아이디', 'width' => 130],
+                ['header' => '매출액',     'name' => '매출액',   'width' => 110] + $money,
+                ['header' => 'PG수수료',   'name' => 'PG수수료', 'width' => 100] + $money,
+                ['header' => 'PG부가세',   'name' => 'PG부가세', 'width' => 100] + $money,
+                ['header' => '수수료 합',   'name' => '수수료합', 'width' => 100] + $money,
+                ['header' => '정산액',     'name' => '정산액',   'width' => 110] + $money,
+            ],
+
+            'pg:daily' => array_merge(
+                [['header' => '매출일', 'name' => '매출일', 'width' => 120, 'align' => 'center', 'sortable' => true]],
+                $pg공통,
+                [['header' => '정산액', 'name' => '정산액', 'width' => 130] + $money],
+            ),
+
+            'pg:method' => array_merge(
+                [['header' => '결제수단', 'name' => '결제수단', 'width' => 140, 'align' => 'center', 'sortable' => true]],
+                $pg공통,
+                [['header' => '정산액', 'name' => '정산액', 'width' => 130] + $money],
+            ),
+
             // 14쪽 — 전체 주문 현황 및 매출 확인
             'orders' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],

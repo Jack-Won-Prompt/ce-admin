@@ -63,6 +63,21 @@
       <button type="button" class="ds-btn" onclick="window.__financeGrid?.downloadExcel()">엑셀 다운</button>
     </div>
   </div>
+  {{-- PG정산내역 안의 네 갈래 (2026-09-11 확인요청 6ㆍ7쪽).
+       토스 화면과 같은 차례로 둔다 — 그 화면을 보던 사람이 그대로 찾을 수 있게.
+       PG 탭일 때만 선다. --}}
+  <div id="pgViews" class="pnl-tabs" style="flex-wrap:wrap;background:var(--gray-50);
+       border-top:1px solid var(--border);{{ $tab === 'pg' ? '' : 'display:none;' }}">
+    @foreach(\App\Http\Controllers\FinanceController::PG_VIEWS as $v => $이름)
+      <a href="{{ route('finance.index', array_filter(['tab' => 'pg', 'view' => $v, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo])) }}"
+         class="pnl-tab {{ ($pgView ?? 'summary') === $v ? 'active' : '' }}" style="white-space:nowrap;"
+         data-view="{{ $v }}" onclick="return finPgView(event, '{{ $v }}')">{{ $이름 }}</a>
+    @endforeach
+    <span style="margin-left:auto;padding:0 12px;align-self:center;font-size:11px;color:var(--text-muted);">
+      토스페이먼츠에서 받아 옵니다 · 기간은 매출일 기준
+    </span>
+  </div>
+
   <div id="financeGrid"></div>
 </div>
 
@@ -144,6 +159,14 @@
           }
         });
 
+        /* PG 탭일 때만 갈래 줄이 선다 (2026-09-11 확인요청 6ㆍ7쪽) */
+        const 갈래줄 = document.getElementById('pgViews');
+        if (갈래줄) {
+          갈래줄.style.display = d.tab === 'pg' ? '' : 'none';
+          갈래줄.querySelectorAll('.pnl-tab[data-view]').forEach(a =>
+            a.classList.toggle('active', a.dataset.view === (d.view || 'summary')));
+        }
+
         // 거르개와 주소도 그 탭의 것으로 — 새로고침하거나 링크를 건네도 같은 자리다
         const 숨은칸 = document.querySelector('form.ds-filter-card input[name=tab]');
         if (숨은칸) 숨은칸.value = d.tab;
@@ -154,6 +177,9 @@
 
     return false;
   };
+
+  /* PG 안의 갈래도 탭과 하는 일이 같다 — 같은 길을 탄다 */
+  window.finPgView = function (e, v) { return finTab(e, 'pg:' + v); };
 
   /* 뒤로 가기로 돌아오면 그 탭이 다시 서야 한다 — 화면을 다시 읽는다 */
   window.addEventListener('popstate', () => location.reload());
