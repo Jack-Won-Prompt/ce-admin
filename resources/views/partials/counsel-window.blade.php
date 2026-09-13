@@ -87,8 +87,9 @@
     <div class="cs-body" id="csStep2">
       <div class="cs-row two">
         <div class="cs-f">
+          {{-- 날짜만으로는 같은 날 여러 통화를 가리지 못한다 (2026-09-11 확인요청 4쪽) --}}
           <label>상담일시 *</label>
-          <input type="date" id="csDate" class="form-control">
+          <input type="datetime-local" id="csDate" class="form-control">
         </div>
         <div class="cs-f">
           {{-- 여기서 고치면 환자 정보와 어긋난다 — 거래처관리가 정본이다(요청서 4쪽).
@@ -487,7 +488,7 @@
     _csDirty   = false;
     _csOrder   = c.order_id ? { id: c.order_id, order_no: c.order_no, date: c.order_date || '' } : null;
 
-    document.getElementById('csDate').value     = c.date || new Date().toISOString().slice(0, 10);
+    document.getElementById('csDate').value     = csToLocal(c.date);
     document.getElementById('csCallNo').value   = c.call_no || _csMobile;
     document.getElementById('csType').value     = c.type   || '';
     csSetStatus(c.status || '02');
@@ -529,7 +530,7 @@
     _csDirty   = false;
     _csOrder   = null;
 
-    document.getElementById('csDate').value      = new Date().toISOString().slice(0, 10);
+    document.getElementById('csDate').value      = csNow();
     document.getElementById('csCallNo').value    = _csMobile;
     document.getElementById('csType').value      = '';
     document.getElementById('csStatus').value    = '02';
@@ -578,6 +579,21 @@
   /* 이미 「재상담」으로 담긴 건이 있다. 그 값을 고르는 자리에서 뺐으므로, 그대로
      넣으면 select 가 조용히 빈 값으로 떨어지고 저장하면 상태가 지워진다 —
      없는 값이면 그 건에서만 한 줄을 세워 되돌려 준다. */
+  /* datetime-local 은 「YYYY-MM-DDTHH:mm」만 읽는다. toISOString 은 UTC 라
+     아홉 시간이 어긋나므로 그 자리 시각으로 짓는다 (2026-09-11 확인요청 4쪽). */
+  function csNow(d = new Date()) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+         + `T${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  /* 담긴 값은 'YYYY-MM-DD HH:MM:SS' 이거나 날짜만일 수 있다 — 둘 다 받는다 */
+  function csToLocal(v) {
+    if (!v) return csNow();
+    const t = String(v).trim().replace(' ', 'T');
+    return t.length >= 16 ? t.slice(0, 16) : (t.slice(0, 10) + 'T00:00');
+  }
+
   window.csSetStatus = function (v) {
     const sel = document.getElementById('csStatus');
     if (v && ![...sel.options].some(o => o.value === v)) {
@@ -622,7 +638,7 @@
       const method = _csEditing ? 'PATCH' : 'POST';
 
       const res = await apiRequest(url, method, {
-        counsel_date:     document.getElementById('csDate').value,
+        counsel_date:     (document.getElementById('csDate').value || '').replace('T', ' '),
         counsel_type:     document.getElementById('csType').value || null,
         counsel_status:   document.getElementById('csStatus').value || null,
         counsel_call_no:  document.getElementById('csCallNo').value.trim() || null,

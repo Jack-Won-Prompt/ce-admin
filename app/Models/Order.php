@@ -232,6 +232,8 @@ class Order extends Model
         'deposit_confirmed_at', 'deposit_confirmed_by', 'deposit_amount', 'deposit_note',
         'pay_method',
         'total_amount', 'warehouse_note',
+        // 출고요청일 — 창고로 보내는 delivery_date 가 이 값을 쓴다 (2026-09-11 확인요청 5쪽)
+        'ship_request_date',
         'status', 'so_type', 'shipping_address', 'tracking_number',
         'estimated_delivery', 'delivered_at',
         'nhis_claim_status', 'nhis_submitted_at', 'nhis_approved_at', 'nhis_reject_stage',
@@ -268,6 +270,7 @@ class Order extends Model
         'withworks_meta'       => 'array',
         'deposit_confirmed_at' => 'datetime',
         'estimated_delivery'        => 'date',
+        'ship_request_date'         => 'date',
         'delivered_at'              => 'datetime',
         'nhis_submitted_at'         => 'datetime',
         'nhis_approved_at'          => 'datetime',

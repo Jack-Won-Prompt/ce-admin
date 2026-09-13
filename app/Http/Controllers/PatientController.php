@@ -639,7 +639,9 @@ class PatientController extends Controller
                 'id'           => $p->id,
                 'counsel_no'   => (string) $p->counsel_no,
                 'rx_number'    => (string) $p->rx_number,
-                'date'         => (string) ($p->counsel_date ?: $p->created_at?->format('Y-m-d')),
+                // 시간까지 담게 됐다 (2026-09-11 확인요청 4쪽) — 초는 읽을 일이 없어 뺀다
+                'date'         => (string) ($p->counsel_date?->format('Y-m-d H:i')
+                                            ?: $p->created_at?->format('Y-m-d H:i')),
                 'type'         => (string) ($p->counsel_type ?? ''),
                 'type_label'   => $types[(string) $p->counsel_type] ?? '',
                 'status'       => (string) ($p->counsel_status ?? ''),
@@ -860,6 +862,8 @@ class PatientController extends Controller
             // ── 화면 확정요청 2026-08-27 (2ㆍ3쪽) ──
             'email'           => 'nullable|email|max:190',
             'fax'             => 'nullable|string|max:30',
+            // 관리고객 — 0ㆍ1ㆍ2 (2026-09-11 확인요청 3쪽)
+            'managed_customer' => 'nullable|integer|between:0,2',
             'sb_sci'          => 'nullable|string|max:10',
             'remitter_name'   => 'nullable|string|max:50',
             'contact_channel' => 'nullable|in:' . implode(',', array_keys(\App\Models\Patient::CONTACT_CHANNELS)),

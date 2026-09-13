@@ -507,6 +507,19 @@
               </select>
             </span>
           </div>
+          {{-- 관리고객 — 기타전화번호가 비우고 간 자리 (2026-09-11 확인요청 3쪽) --}}
+          <div class="info-row">
+            <span class="info-label">관리고객</span>
+            <span class="info-value">
+              <span class="view-only">{{ $patient->managed_customer ?? '-' }}</span>
+              <select class="form-control edit-only" id="e-managed-customer">
+                <option value="">선택</option>
+                @foreach([0, 1, 2] as $ㅅ)
+                  <option value="{{ $ㅅ }}" @selected((string) $patient->managed_customer === (string) $ㅅ)>{{ $ㅅ }}</option>
+                @endforeach
+              </select>
+            </span>
+          </div>
           <div class="info-row">
             <span class="info-label">Email</span>
             <span class="info-value">
@@ -1336,6 +1349,7 @@
       contact_channel:  ev('e-contact-channel'),
       email:            ev('e-email'),
       fax:              ev('e-fax'),
+      managed_customer: ev('e-managed-customer') || null,
       remitter_name:    ev('e-remitter'),
       guardian_name:       ev('e-guardian-name'),
       guardian_relation:   ev('e-guardian-relation'),

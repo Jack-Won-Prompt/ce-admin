@@ -205,6 +205,16 @@
           <label class="form-label">Email</label>
           <input type="email" class="form-control" id="add-email" placeholder="name@example.com" />
         </div>
+        {{-- 관리고객 — 기타전화번호가 비우고 간 자리에 세운다 (2026-09-11 확인요청 3쪽) --}}
+        <div class="form-group">
+          <label class="form-label">관리고객</label>
+          <select class="form-control" id="add-managed-customer">
+            <option value="">선택</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </div>
       </div>
 
       {{-- 주소는 주문 등록·환자 상세와 같은 구성이다 — 우편번호·도로명은 찾아서 채우고
@@ -840,6 +850,7 @@
       contact_channel: val('add-contact-channel'),
       email:           val('add-email'),
       fax:             val('add-fax'),
+      managed_customer: val('add-managed-customer') || null,
       main_contact:    val('add-main-contact'),
       marketing_consent: val('add-marketing-consent'),
       remitter_name:   val('add-remitter'),

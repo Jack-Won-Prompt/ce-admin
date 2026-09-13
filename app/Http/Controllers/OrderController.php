@@ -581,7 +581,9 @@ class OrderController extends Controller
         $out = [];
         /* 창고 전달 메모도 이 자리에서 함께 담는다 — 주문 제품 탭의 배송 정보 바로
            아래에 있어 같은 요청으로 온다. 칸이 없는 서버에서는 조용히 건너뛴다. */
-        foreach (['shipping_postcode', 'shipping_address_detail', 'warehouse_note'] as $col) {
+        /* 출고요청일도 같은 자리에서 담는다 — 창고 전달 메모 바로 위에 있어
+           같은 요청으로 온다 (2026-09-11 확인요청 5쪽). */
+        foreach (['shipping_postcode', 'shipping_address_detail', 'warehouse_note', 'ship_request_date'] as $col) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('orders', $col)) {
                 $out[$col] = $request->input($col) ?? $order?->{$col};
             }

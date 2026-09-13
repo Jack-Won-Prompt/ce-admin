@@ -4089,6 +4089,19 @@ $calcDeposit  = $calcCopay;
               </div>
             </div>
 
+            {{-- 출고요청일 (2026-09-11 확인요청 5쪽).
+                 대개 제품을 적는 날에 나가지만, 환자가 날을 짚어 오면 그날로 맞춘다.
+                 창고로는 판매주문의 delivery_date 로 그대로 간다. --}}
+            <div class="form-group" style="margin-top:10px;">
+              <label class="form-label" for="shipRequestDate">출고요청일</label>
+              <input type="date" class="form-control" id="shipRequestDate"
+                     value="{{ $prescription->order?->ship_request_date?->format('Y-m-d') }}"
+                     oninput="markProductDirty()" style="max-width:200px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                비워 두면 <b>오늘</b>로 나갑니다. 환자가 날을 지정한 때만 골라 주십시오.
+              </div>
+            </div>
+
             {{-- 주문 생성 / 수정·삭제 버튼 영역 --}}
             {{-- 창고 전달 메모 — 위드웍스 판매주문의 「비고」로 그대로 나간다.
                  접수하며 적어 둔 등록자 메모와는 다른 말이라 자리를 따로 둔다. --}}
@@ -9096,6 +9109,8 @@ window.HELP_TOUR_STEPS = [
       shipping_address_detail: shippingDetail || null,
       // 창고 전달 메모 — 위드웍스 판매주문의 비고로 나간다
       warehouse_note:     document.getElementById('warehouseNote')?.value?.trim() || null,
+      // 출고요청일 — 창고의 delivery_date 가 이 값을 쓴다 (2026-09-11 확인요청 5쪽)
+      ship_request_date:  document.getElementById('shipRequestDate')?.value || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     };
@@ -9135,7 +9150,10 @@ window.HELP_TOUR_STEPS = [
         shipping_address:        shippingBase || null,
         shipping_address_detail: shippingDetail,
         recipient_name:    shippingRecipient,
-        delivery_date:     res.estimated_delivery || null,
+        /* 적어 둔 출고요청일이 먼저다. 없으면 여태처럼 예상 배송일로 나간다
+           (2026-09-11 확인요청 5쪽). */
+        delivery_date:     document.getElementById('shipRequestDate')?.value
+                             || res.estimated_delivery || null,
         so_type:           currentSoType,
       };
       const wwRes = await apiRequest(`/prescriptions/${RX_NUMBER}/withworks-order`, 'POST', wwPayload);
@@ -9382,6 +9400,8 @@ window.HELP_TOUR_STEPS = [
       shipping_address_detail: shippingDetail || null,
       // 창고 전달 메모 — 위드웍스 판매주문의 비고로 나간다
       warehouse_note:     document.getElementById('warehouseNote')?.value?.trim() || null,
+      // 출고요청일 — 창고의 delivery_date 가 이 값을 쓴다 (2026-09-11 확인요청 5쪽)
+      ship_request_date:  document.getElementById('shipRequestDate')?.value || null,
       shipping_recipient: shippingRecipient,
       so_type:            currentSoType,
     });

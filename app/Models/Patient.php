@@ -33,6 +33,8 @@ class Patient extends Model
         'rrn_purpose', 'rrn_retention_basis_at', 'rrn_retention_until', 'rrn_destroyed_at',
         // 화면 확정요청 2026-08-27 — 거래처관리를 환자 정보의 정본으로
         'remitter_name', 'contact_channel', 'contact_status', 'fax',
+        // 관리고객 — 0ㆍ1ㆍ2 (2026-09-11 확인요청 3쪽)
+        'managed_customer',
         // 어떻게 내는 사람인가 · 마지막으로 발급한 가상계좌(2026-09-03)
         'pay_method', 'va_bank', 'va_account', 'va_holder', 'va_due_at', 'va_order_id',
         'created_by', 'updated_by',

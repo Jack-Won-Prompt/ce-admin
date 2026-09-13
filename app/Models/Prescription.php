@@ -83,6 +83,8 @@ class Prescription extends Model
         'is_blank_draft'  => 'boolean',
         'ocr_raw_data'    => 'array',
         'issued_date'      => 'date',
+        // 상담일시는 시간까지 담는다 (2026-09-11 확인요청 4쪽)
+        'counsel_date'     => 'datetime',
         'kakao_sent_at'   => 'datetime',
         'sms_sent_at'     => 'datetime',
         'repurchase_date'  => 'date',

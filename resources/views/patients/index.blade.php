@@ -901,7 +901,7 @@ document.addEventListener('keydown', (e) => {
                 });
                 return sel;
               } },
-            { header: '상담일시',  name: 'date',      width: 110, sortable: true, align: 'center' },
+            { header: '상담일시',  name: 'date',      width: 132, sortable: true, align: 'center' },
             /* 이어 둔 주문 — 상담일시 바로 다음이다. 「언제 무슨 건으로 이야기했나」가
                한 눈에 이어져 읽힌다. 번호를 누르면 그 주문을 만든 주문 등록 화면이
                탭으로 열리고, 잘못 이었으면 옆 단추로 그 자리에서 다시 고른다. */
