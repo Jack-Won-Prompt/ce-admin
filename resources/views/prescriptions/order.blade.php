@@ -7951,10 +7951,24 @@ window.HELP_TOUR_STEPS = [
     /* 처방일수가 바뀌면 급여 기간도 달라진다 — 총계만 다시 세고 날짜를 두면 어긋난다 */
     if (typeof calcBenefitEnd === 'function') calcBenefitEnd();
 
+    /* 두 값을 그대로 따라간다 (2026-09-14 지시).
+
+       여태는 「두 값이 다 있고 곱이 0보다 클 때만」 고쳤다. 그래서 1일 개수를 지우거나
+       0으로 두면 총계가 **옛 값 그대로** 남았다 — 화면에는 맞지 않는 숫자가 서 있고,
+       그 값이 저장(total_count)되고 주문 수량ㆍ공단 한도를 가리는 기준이 된다.
+
+       이제 셋 중 하나다: 두 값이 다 유효하면 곱, 아니면 빈칸.
+       빈칸으로 두는 것이 옛 숫자를 남겨 두는 것보다 낫다 — 없는 것은 없다고 적어야
+       담당자가 마저 적는다. 두 값이 돌아오면 그 자리에서 다시 선다. */
     const totalEl = document.getElementById('f-total');
-    if (totalEl && daily && days) {
-      const n = parseInt(daily, 10) * parseInt(days, 10);
-      if (Number.isFinite(n) && n > 0) totalEl.value = n;
+    if (totalEl) {
+      const d = parseInt(daily, 10);
+      const y = parseInt(days, 10);
+      const 셀수있나 = Number.isFinite(d) && Number.isFinite(y) && d > 0 && y > 0;
+      const n = 셀수있나 ? d * y : '';
+
+      // 같은 값이면 손대지 않는다 — 커서나 화면이 공연히 흔들리지 않게
+      if (String(totalEl.value) !== String(n)) totalEl.value = n;
     }
 
     const total = totalEl?.value;
