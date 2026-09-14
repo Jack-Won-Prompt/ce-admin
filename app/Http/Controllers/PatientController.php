@@ -525,9 +525,15 @@ class PatientController extends Controller
         ])->values();
 
         /* 상담 한 줄에 담는 것 — 무엇을 했나 · 언제 · 어디까지 왔나 · 무슨 갈래 · 누가.
-           상담 유형·상태는 코드로 저장돼 있어(1013 · 02 …) 그대로 두면 읽을 수 없다. */
-        $counselTypes = ['1013' => '구매', '1016' => '개인구매', '1020' => '반품',
-                         '1030' => '문의', '1050' => '기타'];
+           상담 유형·상태는 코드로 저장돼 있어(1013 · 02 …) 그대로 두면 읽을 수 없다.
+
+           **유형은 코드를 그대로 보내고 이름을 따로 붙인다** (2026-09-14 지시).
+           화면의 상담 유형 고르개는 코드로 고른 것을 표시하는데, 여태 이름을 보내
+           코드 자리에 「구매」가 들어갔다 — 무엇을 골라 두었든 늘 「선택」으로 보였다.
+
+           이름 표도 모델 한 벌에서 가져온다. 여기 따로 적어 둔 표에는 나중에 늘어난
+           교환ㆍ환불ㆍ컴플레인ㆍ샘플ㆍ서류 문의가 빠져 있었다 — 갈래를 세 곳에 적어
+           두어 서로 달랐던 자취다(counsels() 의 주석). */
         $counselStates = ['02' => '등록', '50' => '재상담', '95' => '확정', '99' => '취소'];
 
         $counseling = $rx->filter(fn ($p) => !empty($p->counsel_no))->map(fn ($p) => [
@@ -548,7 +554,8 @@ class PatientController extends Controller
                 : '',
             'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
             'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
-            'type'       => $counselTypes[(string) $p->counsel_type] ?? ($p->counsel_type ?: ''),
+            'type'       => (string) ($p->counsel_type ?? ''),
+            'type_label' => \App\Models\Prescription::상담유형말($p->counsel_type),
             'status'     => $counselStates[(string) $p->counsel_status] ?? ($p->counsel_status ?: ''),
             'call_no'    => $p->counsel_call_no ?: '',
             're_date'    => $p->counsel_re_date ?: '',

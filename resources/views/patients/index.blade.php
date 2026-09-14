@@ -815,7 +815,8 @@ document.addEventListener('keydown', (e) => {
         date:    c.date || '',
         status:  c.status || '',
         re_date: c.re_date || '',
-        type:      CS_TYPES[c.type] || '',
+        /* 서버가 코드를 보내고 이름을 따로 붙인다 — 이름으로 고르개를 맞출 수는 없다 */
+        type:      c.type_label || '',
         type_code: c.type || '',
         call_no: c.call_no || '',
         order_no: c.order_no || '',
@@ -880,9 +881,14 @@ document.addEventListener('keydown', (e) => {
               renderer: (v, row) => {
                 const sel = document.createElement('select');
                 sel.className = 'form-control form-select pc-inline-sel';
-                sel.innerHTML = '<option value="">선택</option>'
+                const 코드 = String(v ?? '');
+                /* 이제는 고르지 않는 갈래(개인구매)가 담긴 건도 있다. 그 코드가 고를 거리에
+                   없으면 빈칸으로 보이므로, 그 줄에 한해 제 이름으로 한 줄 더 세운다. */
+                const 옛것 = 코드 && !CS_TYPES[코드]
+                  ? `<option value="${코드}" selected>${row.type || 코드}</option>` : '';
+                sel.innerHTML = `<option value=""${코드 ? '' : ' selected'}>선택</option>` + 옛것
                   + Object.entries(CS_TYPES).map(([k, t]) =>
-                      `<option value="${k}"${String(v) === k ? ' selected' : ''}>${t}</option>`).join('');
+                      `<option value="${k}"${코드 === k ? ' selected' : ''}>${t}</option>`).join('');
                 sel.addEventListener('click', (e) => e.stopPropagation());
                 sel.addEventListener('change', async (e) => {
                   e.stopPropagation();
@@ -893,6 +899,7 @@ document.addEventListener('keydown', (e) => {
                     if (!res.success) throw new Error(res.message || '저장하지 못했습니다.');
                     row.type_code = sel.value;
                     row.type      = CS_TYPES[sel.value] || '';
+                    v             = sel.value;      // 다시 그릴 때도 고른 것이 남아야 한다
                     showToast(res.message, 'success');
                   } catch (err) {
                     sel.value = 옛;                    // 못 담았으면 보이는 것도 되돌린다
