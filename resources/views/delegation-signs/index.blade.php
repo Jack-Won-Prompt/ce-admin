@@ -168,6 +168,17 @@
     {{-- 엑셀 받기는 보고 있는 백 줄이 아니라 걸러 낸 전부를 내려받는다
          (2026-09-11 지시). 그래서 화면의 wwGrid 가 아니라 서버로 간다. --}}
     <a class="ds-btn" href="{{ route('delegation-signs.export', request()->query()) }}" data-no-loading>엑셀 다운</a>
+
+    {{-- 명단 올리기 (2026-09-15 보탬).
+
+         받는 길(delegation-signs.import)은 진작 있었는데 **누르는 자리가 없었다.**
+         화면 맨 위의 도움말은 「① 명단 올리기」를 적어 두고 있어, 담당자는 있어야 할
+         단추를 찾다 못 찾았다. 그 단추를 세운다. --}}
+    <label class="ds-btn" style="margin:0;cursor:pointer;" title="받은 명단(위임 필요 리스트)을 그대로 올립니다">
+      명단 올리기
+      <input type="file" id="dlgImportFile" accept=".csv,text/csv,text/plain"
+             style="display:none;" onchange="dlgImport(this)">
+    </label>
   </div>
 </form>
 
@@ -765,6 +776,70 @@
     document.getElementById('dlgDirectPreview').textContent =
       글짓기(이름칸().value.trim() || '○○○');
   }
+
+  /* ── 명단 올리기 (2026-09-15 보탬) ────────────────────────────────────
+
+     받는 길은 진작 있었는데 누르는 자리가 없었다. 삼천 줄이 넘는 파일이라 한참
+     걸린다 — 무엇을 하는 중인지 알리고, 끝나면 세운 수ㆍ새로 적은 수ㆍ넣지 못한
+     줄까지 그대로 보여 준다. 조용히 「되었습니다」만 적으면 빠진 줄을 아무도 못 본다. */
+  window.dlgImport = async function (칸) {
+    const 파일 = 칸.files?.[0];
+    if (!파일) return;
+
+    칸.value = '';                       // 같은 파일을 다시 골라도 열리게
+
+    const 갈까 = await ceConfirm(
+      `「${파일.name}」을 올립니다.\n\n`
+      + '같은 이름ㆍ같은 번호가 이미 있으면 줄을 새로 세우지 않고 명단 값만 새로 적습니다.\n'
+      + '받아 둔 서명과 발송 자취는 그대로 둡니다.',
+      { title: '명단 올리기', confirmText: '올립니다', cancelText: '취소' });
+
+    if (!갈까) return;
+
+    const 띠 = document.createElement('div');
+    띠.style.cssText = 'position:fixed;inset:0;background:rgba(17,24,39,.35);z-index:10050;'
+                     + 'display:flex;align-items:center;justify-content:center;';
+    띠.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px 26px;font-size:13px;font-weight:700;">'
+                 + '<i class="fa-solid fa-spinner fa-spin"></i> 명단을 올리는 중입니다 — 삼천 줄이 넘으면 한참 걸립니다</div>';
+    document.body.appendChild(띠);
+
+    try {
+      const 몸 = new FormData();
+      몸.append('file', 파일, 파일.name);
+
+      const res = await fetch('{{ route('delegation-signs.import') }}', {
+        method: 'POST',
+        body: 몸,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+          'X-Requested-With': 'XMLHttpRequest',
+          Accept: 'application/json',
+        },
+      });
+
+      const d = await res.json().catch(() => ({}));
+
+      if (!res.ok || !d.success) {
+        await ceAlert(d.message || `올리지 못했습니다 (HTTP ${res.status}).`,
+                      { title: '명단 올리기', tone: 'danger' });
+        return;
+      }
+
+      /* 넣지 못한 줄은 접어 두지 않고 그대로 보여 준다 — 스무 줄까지 적고 나머지는 센다 */
+      const 빠진것 = Array.isArray(d.errors) ? d.errors : [];
+      const 덧붙임 = 빠진것.length
+        ? '\n\n넣지 못한 줄\n' + 빠진것.slice(0, 20).map(t => '· ' + t).join('\n')
+          + (빠진것.length > 20 ? `\n… 그 밖에 ${빠진것.length - 20}줄` : '')
+        : '';
+
+      await ceAlert(d.message + 덧붙임, { title: '명단 올리기' });
+      location.reload();
+    } catch (e) {
+      await ceAlert('올리는 중에 연결이 끊겼습니다.', { title: '명단 올리기', tone: 'danger' });
+    } finally {
+      띠.remove();
+    }
+  };
 
   window.dlgDirectOpen = function (단추요소) {
     이름칸().value = '';
