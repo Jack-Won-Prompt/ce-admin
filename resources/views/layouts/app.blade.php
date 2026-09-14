@@ -2301,7 +2301,10 @@ document.addEventListener('click', (e) => {
 
     return [
       { header: '결제수단',     name: 'pay_method',      width: 100, align: 'center', sortable: true },
-      { header: '입금확인',     name: 'deposit_at',      width: 100, align: 'center', sortable: true },
+      /* 입금확인 — 받은 날이 적힌다. 전액 기관부담이라 받을 돈이 애초에 없는 건은
+         「본인부담 없음」이라 적는다(2026-09-14 지시) — 빈칸만 보면 입금이 확인된
+         건인데 값이 빠진 것으로 읽힌다. 그 글이 들어가도록 조금 넓혔다. */
+      { header: '입금확인',     name: 'deposit_at',      width: 115, align: 'center', sortable: true },
       /* 입금 금액 — 실제로 받은 돈(2026-09-14 요청). 「받을 금액」과 나란히 보면
          덜 받았는지 한눈에 가린다. 받지 않은 건은 빈칸이다. */
       { header: '입금 금액',    name: 'deposit_amount',  width: 100, align: 'right',  sortable: true, renderer: money },

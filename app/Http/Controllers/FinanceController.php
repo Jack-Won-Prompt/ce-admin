@@ -211,9 +211,9 @@ class FinanceController extends Controller
             'paid_time'  => $o->paidAtLabel('Y-m-d H:i:s'),
             'paid'       => $paid,
             'payer'      => $o->patient?->remitter_name ?: ($o->tossPayment?->customer_name ?? ''),
-            /* 토스가 알려 준 실제 유형이 있으면 그것이 사실이다 — 「링크페이」는 우리가
-               무엇으로 안내했는가일 뿐이다(2026-09-09 지시) */
-            'pay_method' => ($o->pay_method || $o->tossPayment) ? $o->payMethodLabel() : '',
+            /* 결제수단은 OrderGridExtras::of() 가 적는다 — 여기서도 적으면 배열을 더할 때
+               왼쪽이 이겨 이 값이 남고, 열 화면 가운데 이 탭만 잣대가 달라진다
+               (2026-09-14 지시로 「실제로 있었던 일」만 적도록 바뀌었다). */
             /* PG 사만 적는다. 정산일ㆍ정산금액ㆍ수수료ㆍ회사계좌 입금은 토스 정산을
                받아 와야 아는 값인데 그 연동이 아직 없다 — 모르는 것을 0 으로 적으면
                「수수료가 없다」로 읽힌다. */

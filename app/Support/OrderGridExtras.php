@@ -49,6 +49,19 @@ class OrderGridExtras
     /** 이 사람의 몇 번째 주문인가 — 주문 번호 => 차례 */
     private array $orderSeq = [];
 
+    /**
+     * 결제 링크를 실제로 보낸 주문 id (2026-09-14 지시).
+     *
+     * orders.pay_method 는 「무엇으로 안내할 것인가」를 미리 골라 둔 값이라, 상세 목록
+     * 탭을 한 번 저장하기만 해도 card 가 들어간다. 그 값을 그대로 결제수단 칸에 적으면
+     * 결제도 안내도 없었던 건이 「링크페이」로 서고, 그 옆의 입금확인ㆍ입금 금액만
+     * 비어 있어 값이 빠진 것처럼 보인다(작업 대기 33건 중 8건이 그랬다).
+     *
+     * 그래서 결제수단은 셋 중 하나가 있을 때만 적는다 — 실제로 보낸 결제 링크,
+     * 토스 결제줄(카드ㆍ가상계좌 발급 포함), 담당자가 누른 입금확인.
+     */
+    private array $linkSent = [];
+
     public static function forPatients(Collection $patientIds): self
     {
         $self = new self();
@@ -60,6 +73,7 @@ class OrderGridExtras
 
         $self->loadPrivacy($ids);
         $self->loadOrderSeq($ids);
+        $self->loadPaymentLinks($ids);
 
         /* 위임동의는 처방전에 달리고 처방전이 사람에 달린다. 사람마다 「가장 최근 하나」를
            본다 — 동의를 받았으면 그것이 사실이고, 없으면 마지막으로 보낸 것이 어떻게
@@ -114,15 +128,34 @@ class OrderGridExtras
             'cash_receipt'    => $this->issueLabel($o?->cash_receipt_status),
             /* 토스가 알려 준 실제 유형이 있으면 그것이 사실이다 — 「링크페이」는 우리가
                무엇으로 안내했는가일 뿐이다(2026-09-09 지시). 아직 아무 결제도 없는
-               건은 빈칸으로 둔다. */
-            'pay_method'      => $o && ($o->pay_method || $o->tossPayment) ? $o->payMethodLabel() : '',
+               건은 빈칸으로 둔다.
+
+               예전에는 orders.pay_method 에 값이 있으면 적었는데, 그 칸은 상세 목록 탭을
+               한 번 저장하기만 해도 card 가 들어간다 — 안내도 결제도 없었던 건이
+               「링크페이」로 서고, 옆의 입금확인ㆍ입금 금액만 비어 값이 빠진 것처럼
+               보였다(2026-09-14 지시). 실제로 있었던 일 셋만 본다. */
+            'pay_method'      => $o && (
+                                     isset($this->linkSent[$o->id])
+                                     || $o->tossPayment
+                                     || $o->deposit_confirmed_at !== null
+                                 ) ? $o->payMethodLabel() : '',
             /* 입금확인 — 담당자가 통장을 보고 누른 것만 보면 토스로 결제된 건(카드ㆍ
                링크페이ㆍ가상계좌 자동 입금)이 모두 빈칸으로 섰다(2026-09-14 확인요청).
                「돈이 들어왔는가」는 isDepositConfirmed() 하나로 묻는다 — 정산 화면과
                같은 잣대다. 날짜는 담당자 확인일이 먼저, 없으면 토스 결제 시각이다. */
-            'deposit_at'      => $o && $o->isDepositConfirmed()
-                                    ? (($o->deposit_confirmed_at ?? $o->paidAt())?->format('Y-m-d') ?? '입금완료')
-                                    : '',
+            'deposit_at'      => match (true) {
+                                    $o === null              => '',
+                                    $o->isDepositConfirmed() =>
+                                        ($o->deposit_confirmed_at ?? $o->paidAt())?->format('Y-m-d') ?? '입금완료',
+                                    /* 전액 기관부담 건은 받을 돈이 애초에 없다 — 진행 상태도
+                                       「출고 대기」로 서므로, 빈칸만 보면 입금이 확인된 건인데
+                                       값이 빠진 것으로 읽힌다(2026-09-14 지시). 왜 비어 있는지를
+                                       칸에서 바로 읽히게 적는다. 제품도 금액도 아직 없는 빈 줄과
+                                       가르려고 기관 부담금이 있을 때만 적는다. */
+                                    $o->expectedDeposit() === 0 && (int) ($o->nhis_amount ?? 0) > 0
+                                                             => '본인부담 없음',
+                                    default                  => '',
+                                },
             /* 입금 금액 — 실제로 받은 돈 (2026-09-14 요청). 정산 화면과 같은 잣대다.
                담당자가 확인한 건은 그때 적은 금액(없으면 본인부담금), 토스로 받은 건은
                토스가 알려 준 금액이다. 아직 받지 않은 건은 0 — 칸에는 빈칸으로 선다. */
@@ -249,6 +282,26 @@ class OrderGridExtras
             $pid = (int) $r->patient_id;
             $n[$pid] = ($n[$pid] ?? 0) + 1;
             $this->orderSeq[$r->id] = $n[$pid];
+        }
+    }
+
+    /**
+     * 결제 링크를 실제로 보낸 주문을 한 번에 모은다.
+     *
+     * 줄마다 물으면 오백 줄에 오백 번을 묻는다 — 동의를 모으는 것과 같은 방식으로
+     * 한 질의에 끝낸다. 보내려다 만 줄(sent_at 이 없는 것)은 세지 않는다.
+     */
+    private function loadPaymentLinks(Collection $ids): void
+    {
+        $rows = \App\Models\PaymentLink::query()
+            ->join('orders', 'orders.id', '=', 'payment_links.order_id')
+            ->whereIn('orders.patient_id', $ids)
+            ->whereNotNull('payment_links.sent_at')
+            ->distinct()
+            ->pluck('payment_links.order_id');
+
+        foreach ($rows as $oid) {
+            $this->linkSent[(int) $oid] = true;
         }
     }
 

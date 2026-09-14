@@ -1405,6 +1405,10 @@ class PrescriptionController extends Controller
             /* 진행 상태를 「입금 대기 / 출고 대기」로 갈라 적는다 — 그 판정이
                토스 결제를 본다(2026-09-10 확인요청 8쪽). */
             'tossPayment',
+            /* 결제수단을 적을 때 되짚는다 — 주문에 방식을 정해 두지 않은 건은
+               마지막으로 보낸 결제 링크가 답이다(Order::payMethod). 미리 불러 두지
+               않으면 오백 줄에 오백 번을 묻는다. */
+            'paymentLinks',
         ];
     }
 
