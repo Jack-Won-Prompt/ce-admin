@@ -8227,10 +8227,17 @@ window.HELP_TOUR_STEPS = [
         saveBtns.forEach(btn => BtnState.success(btn, '저장 완료'));
         setTimeout(() => saveBtns.forEach(btn => BtnState.reset(btn)), 2500);
         if (res.items && res.items.length) {
+          /* 서버가 돌려주는 줄에는 화면에서만 쓰는 값이 없다 — 갈아 끼우며 되살린다.
+
+             RBㆍ재고는 제품표에 물어 온 것이라 차례로 옮겨 담고, 장비코드는 품번으로
+             다시 찾는다 (2026-09-14 지시). 차례로 옮기면 줄을 지웠다 더한 뒤에 옆줄
+             값이 따라붙는데, 장비코드는 공단 청구에 쓰는 번호라 어긋나면 안 된다.
+             품번에서 다시 찾으면 줄이 어떻게 움직여도 제 값이 온다. */
           items = res.items.map((item, idx) => ({
             ...item,
             r_box: items[idx]?.r_box || '',
             stock: items[idx]?.stock || '',
+            device_code: item.device_code || devCodeOf(item.product_code) || '',
           }));
           renderItems();
           recalcAllItems();

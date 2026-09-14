@@ -2817,6 +2817,12 @@ class PrescriptionController extends Controller
                 'nhis_status'     => $item->nhis_status,
                 'nhis_amount'     => $item->nhis_amount,
                 'patient_copay'   => $item->patient_copay,
+                /* 장비코드도 함께 돌려준다 (2026-09-14 지시).
+                   화면은 저장하고 나면 이 줄들로 표를 통째로 갈아 끼운다. 여기에 없는
+                   값은 그 자리에서 사라지는데, 장비코드는 공단에 청구할 때 쓰는 번호라
+                   빈 채로 두면 다시 찾아 적어야 한다. 품번에서 끌어내므로 담아 둘
+                   칸이 없어도 언제나 같은 값이 선다. */
+                'device_code'     => (string) (\App\Support\DeviceCode::for($item->product_code) ?? ''),
             ])->values(),
             'total_nhis'  => $totalNhis,
             'total_copay' => $totalCopay,
