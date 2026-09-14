@@ -546,8 +546,13 @@ class DelegationSignController extends Controller
             'phone.required' => '전화번호를 적어 주십시오.',
         ]);
 
-        $이름 = trim($값['name']);
+        /* 줄에 적히는 이름도 뗀 것으로 든다 — 서명 화면이 이 이름을 그대로 편다 */
+        $이름 = \App\Models\Patient::bare($값['name']);
         $번호 = preg_replace('/\D/', '', $값['phone']);
+
+        if ($이름 === '') {
+            return response()->json(['success' => false, 'message' => '이름을 적어 주십시오.'], 422);
+        }
 
         if (strlen($번호) < 9 || strlen($번호) > 11) {
             return response()->json([
@@ -687,7 +692,9 @@ class DelegationSignController extends Controller
             ], 422];
         }
 
-        $이름 = trim((string) ($이름 ?? '')) ?: $줄->이름();
+        /* 넘어온 이름에도 (E) 가 붙어 올 수 있다 — 미리 보기 창은 담당자가 친
+           것을 그대로 들고 온다. 나가는 자리에서 한 번에 뗀다 (2026-09-14 지시). */
+        $이름 = \App\Models\Patient::bare($이름) ?: $줄->이름();
         $토큰 = Str::random(24);
         $분   = self::유효분();
         $만료 = now()->addMinutes($분);
