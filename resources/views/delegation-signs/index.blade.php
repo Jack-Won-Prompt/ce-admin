@@ -490,7 +490,8 @@
     /* 어느 쪽 번호로 가는지 함께 적는다 — 보호자로 돌려 둔 줄이 섞여 있다 (2026-09-14) */
     document.getElementById('dlgPhone').textContent =
       d.phone ? d.phone + ' (' + d.contact + ')' : '—';
-    document.getElementById('dlgName').value = d.customer;
+    /* 문자에 들어갈 이름이라 (E) 를 뗀 것을 세운다 (2026-09-14 지시) */
+    document.getElementById('dlgName').value = d.name;
 
     const 경고 = document.getElementById('dlgWarn');
     if (d.signed) {
@@ -512,7 +513,7 @@
   const 글짓기 = (이름) => 문자틀.replace('{이름}', 이름);
 
   function 미리보기() {
-    const 이름 = document.getElementById('dlgName').value.trim() || (지금?.customer ?? '');
+    const 이름 = document.getElementById('dlgName').value.trim() || (지금?.name ?? '');
     document.getElementById('dlgPreview').textContent = 글짓기(이름);
   }
 

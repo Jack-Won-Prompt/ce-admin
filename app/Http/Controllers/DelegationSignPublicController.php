@@ -55,7 +55,7 @@ class DelegationSignPublicController extends Controller
         if (config('nice.simulate')) {
             $sign->forceFill([
                 'nice_verified_at' => now(),
-                'nice_name'        => $sign->customer_name,
+                'nice_name'        => $sign->이름(),
                 'nice_mobile'      => $sign->sent_to,
             ])->save();
 

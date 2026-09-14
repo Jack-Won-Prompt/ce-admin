@@ -76,7 +76,8 @@
       전자서명 하나가 아래 서류의 서명란에 함께 들어갑니다.
     </div>
     <div class="name-box">
-      본인 이름 확인 · <b>{{ $sign->customer_name }}</b><br>
+      {{-- 환자가 보는 자리다 — 사업부 표시 (E) 는 떼고 적는다 (2026-09-14 지시) --}}
+      본인 이름 확인 · <b>{{ $sign->이름() }}</b><br>
       <span style="font-size:12px;color:var(--muted);">위 이름이 본인과 다르면 동의하지 마십시오.</span>
     </div>
   </div>
@@ -116,7 +117,7 @@
       <div class="doc-note">건강보험 급여비용을 회사가 대신 청구ㆍ수령하는 것에 동의합니다.</div>
       <div class="doc-body">
         <div class="doc-say">
-          본인 <strong>{{ $sign->customer_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
+          본인 <strong>{{ $sign->이름() }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
           콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
           <strong>급여 위임청구 동의</strong>를 합니다.<br>
           위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위

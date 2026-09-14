@@ -490,6 +490,8 @@ class DelegationSignController extends Controller
             'success'  => true,
             'id'       => $delegationSign->id,
             'customer' => $delegationSign->customer_name,
+            /* 문자와 서명 화면에 그대로 서는 이름이다 — (E) 를 뗀다 (2026-09-14 지시) */
+            'name'     => $delegationSign->이름(),
             /* 발송 창이 적는 「받을 번호」는 Main contact 가 가리키는 쪽이다 (2026-09-14) */
             'phone'    => ($보낼 = $delegationSign->보낼번호())
                           ? \App\Support\PhoneNo::format($보낼) : '',
@@ -685,7 +687,7 @@ class DelegationSignController extends Controller
             ], 422];
         }
 
-        $이름 = trim((string) ($이름 ?? '')) ?: $줄->customer_name;
+        $이름 = trim((string) ($이름 ?? '')) ?: $줄->이름();
         $토큰 = Str::random(24);
         $분   = self::유효분();
         $만료 = now()->addMinutes($분);
