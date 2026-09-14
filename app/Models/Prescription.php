@@ -407,6 +407,24 @@ class Prescription extends Model
      * 잣대를 좁게 잡는다. 하나라도 붙은 것이 있으면 처방전으로 본다 — 넓게 잡으면
      * 손대는 중인 건이 목록에서 조용히 사라진다.
      */
+    /**
+     * 이 줄이 아직 상담뿐인가 — 주문 줄을 세울지 가릴 때 쓴다 (2026-09-14 지시).
+     *
+     * scopeCounselOnly 와 잣대가 같되 주문 조건만 뺀다. 이것을 부르는 자리
+     * (OrderSync::seed)는 주문이 아직 없을 때만 오기 때문이다.
+     */
+    public function 상담만인가(): bool
+    {
+        return (bool) $this->counsel_no
+            && $this->status === 'pending'
+            && ! $this->image_path
+            && ! $this->hospital_name
+            && ! $this->issued_date
+            && ! $this->attachments()->exists()
+            && ! $this->consents()->exists()
+            && ! $this->documents()->exists();
+    }
+
     public function scopeCounselOnly($query)
     {
         return $query->whereNotNull('counsel_no')
