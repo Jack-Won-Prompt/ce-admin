@@ -48,6 +48,34 @@
                background:var(--danger-light); border:1px solid var(--alert-100);
                color:var(--danger); font-size:12px; font-weight:700; line-height:1.5; }
 
+  /* ── 팝오버 (2026-09-14 지시) ─────────────────────────────────────────
+     여태 이 화면의 창 셋은 공통 모달이었다. 모달은 화면 전체를 45% 어둡게 덮는데,
+     보내기 전에 뒤의 표를 함께 보고 싶은 자리라 그 어둠이 걸리적거렸다.
+
+     껍데기만 바꾼다 — 안쪽 뼈대(.modal-hd/.modal-bd/.modal-ft)는 그대로 두어
+     생김새가 다른 화면의 창과 어긋나지 않게 한다.
+
+     자리는 자바스크립트가 fixed 로 잡는다. 표(.cg-body)에 overflow:auto 가 걸려
+     있어 absolute 로 두면 표 밖으로 나오지 못하고 잘린다. */
+  .dlg-pop { display: none; position: fixed; z-index: 1000; }
+  .dlg-pop.open { display: block; }
+  .dlg-pop > .modal-box {
+    max-width: none; width: 380px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 34px rgba(13,27,42,.20);
+    max-height: calc(100vh - 40px);
+  }
+  /* 어느 줄에서 열린 창인지 꼬리로 가리킨다 — 표에 백 줄이 서 있어 필요하다.
+     꼬리의 가로 자리는 자바스크립트가 --arrow-x 로 넣는다. */
+  .dlg-pop > .modal-box::before {
+    content: ''; position: absolute; left: var(--arrow-x, 24px);
+    width: 12px; height: 12px; background: var(--bg-card);
+    border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+    transform: rotate(45deg);
+  }
+  .dlg-pop.below > .modal-box::before { top: -7px; }
+  .dlg-pop.above > .modal-box::before { bottom: -7px; transform: rotate(225deg); }
+
   /* 쪽 넘김 줄 (2026-09-11) — 부트스트랩 것을 쓰지 못해 이 화면에서 그린다 */
   /* 단추는 줄 가운데, 건수는 왼쪽 끝 (2026-09-11 지시). 건수를 흐름에서 빼야
      단추가 줄의 참가운데에 선다 — 함께 두면 건수 폭만큼 오른쪽으로 밀린다. */
@@ -136,7 +164,7 @@
     {{-- 받는 사람에게 무엇이 가는지는 제 번호로 한 번 받아 보는 것이 가장 확실하다
          (2026-09-14 지시). 명단에 없는 번호로도 보낼 수 있어야 하므로 목록의 줄과
          묶지 않고 필터 줄에 세운다. --}}
-    <button type="button" class="ds-btn" onclick="dlgDirectOpen()">미리 보기</button>
+    <button type="button" id="btnDlgPreview" class="ds-btn" onclick="dlgDirectOpen(this)">미리 보기</button>
     {{-- 엑셀 받기는 보고 있는 백 줄이 아니라 걸러 낸 전부를 내려받는다
          (2026-09-11 지시). 그래서 화면의 wwGrid 가 아니라 서버로 간다. --}}
     <a class="ds-btn" href="{{ route('delegation-signs.export', request()->query()) }}" data-no-loading>엑셀 다운</a>
@@ -206,7 +234,7 @@
 {{-- ── 발송 팝오버 ──────────────────────────────────────────
      주문 등록의 「서명 동의 SMS 발송」 창과 같은 모양이되 코드는 따로다.
      그쪽은 처방전에 묶여 있어 거래처만으로는 설 수 없다. --}}
-<div id="dlgSendBack" class="modal-overlay">
+<div id="dlgSendBack" class="dlg-pop">
   <div class="modal-box sm">
     <div class="modal-hd">
       <span class="modal-title">위임장 서명 발송</span>
@@ -243,7 +271,7 @@
 {{-- ── 연락처 수정 (2026-09-14 지시) ──────────────────────────────────────
      명단에는 보호자 번호가 없다. 환자가 문자를 받지 못하는 것은 담당자가 통화로
      알게 되므로, 그 자리에서 고쳐 바로 다시 보낼 수 있어야 한다. --}}
-<div id="dlgContactBack" class="modal-overlay">
+<div id="dlgContactBack" class="dlg-pop">
   <div class="modal-box sm">
     <div class="modal-hd">
       <span class="modal-title">연락처 수정</span>
@@ -284,7 +312,7 @@
 {{-- ── 미리 보기 — 이름ㆍ번호를 적어 직접 보낸다 (2026-09-14 지시) ──────────
      위 발송 창과 같은 모양이되, 목록의 줄을 받지 않고 두 칸을 직접 받는다.
      받는 사람이 무엇을 보는지 확인하려는 것이라 **정말로 문자가 나간다**. --}}
-<div id="dlgDirectBack" class="modal-overlay">
+<div id="dlgDirectBack" class="dlg-pop">
   <div class="modal-box sm">
     <div class="modal-hd">
       <span class="modal-title">위임장 서명 미리 보기</span>
@@ -351,6 +379,77 @@
     return el;
   };
 
+  /* ── 팝오버 자리잡기 (2026-09-14 지시) ──────────────────────────────────
+     창 셋이 함께 쓴다. 모달이 아니라 누른 단추 옆에 붙으므로, 단추가 움직이면
+     창도 따라가야 한다 — 표를 굴리면 줄이 위아래로 움직인다.
+
+     wwGrid 는 가상 스크롤이 아니라 백 줄이 모두 DOM 에 있다. 굴려도 단추가
+     사라지지 않으므로 따라가게 만들 수 있다. 다만 표 밖으로 나가면 가리킬 것이
+     없어지므로 그때는 닫는다. */
+  const 팝 = (() => {
+    let 창 = null, 기준 = null, 보내는중 = false;
+    const 틈 = 8;
+
+    function 자리() {
+      if (!창 || !기준) return;
+      const r = 기준.getBoundingClientRect();
+
+      /* 단추가 표 밖으로 굴러 나갔으면 닫는다 — 엉뚱한 줄을 가리키게 된다 */
+      if (r.bottom < 0 || r.top > window.innerHeight) { 닫기(); return; }
+
+      const box = 창.querySelector('.modal-box');
+      const w = box.offsetWidth || 380;
+      const h = box.offsetHeight || 300;
+
+      /* 아래에 자리가 없으면 위로 뒤집는다 — 표 아랫줄에서 열면 화면 밖으로 나간다 */
+      const 아래여유 = window.innerHeight - r.bottom - 틈;
+      const 위 = 아래여유 < h && r.top - 틈 > 아래여유;
+      창.classList.toggle('above', 위);
+      창.classList.toggle('below', !위);
+      창.style.top = 위 ? Math.max(틈, r.top - 틈 - h) + 'px' : (r.bottom + 틈) + 'px';
+
+      /* 가로는 단추 가운데에 맞추되 화면을 넘지 않게 당긴다. 꼬리는 그만큼 되민다. */
+      const 가운데 = r.left + r.width / 2;
+      const left = Math.min(Math.max(틈, 가운데 - w / 2), window.innerWidth - w - 틈);
+      창.style.left = left + 'px';
+      box.style.setProperty('--arrow-x', Math.min(Math.max(가운데 - left - 6, 14), w - 26) + 'px');
+    }
+
+    function 열기(id, 단추요소) {
+      닫기();
+      창 = document.getElementById(id);
+      /* 단추를 넘겨받지 못했으면(직접 부른 자리) 필터 줄의 ［미리 보기］에 붙인다 */
+      기준 = 단추요소 || document.getElementById('btnDlgPreview');
+      창.classList.add('open');
+      자리();
+      /* 그린 뒤 실제 높이로 한 번 더 — 처음에는 높이가 0 이라 뒤집기를 잘못 셈한다 */
+      requestAnimationFrame(자리);
+    }
+
+    function 닫기() {
+      if (보내는중) return;            // 보내는 중에는 닫지 않는다
+      document.querySelectorAll('.dlg-pop.open').forEach(e => e.classList.remove('open'));
+      창 = null; 기준 = null;
+    }
+
+    /* 보내는 동안에는 바깥을 눌러도 닫히지 않게 잠근다 — 문자가 나가는 일이라
+       중간에 창이 사라지면 무엇이 어찌 되었는지 알 길이 없다. */
+    const 잠금 = (v) => { 보내는중 = v; };
+
+    window.addEventListener('resize', 자리);
+    window.addEventListener('scroll', 자리, true);   // 표 안쪽 굴림도 받는다
+
+    document.addEventListener('click', (e) => {
+      if (!창) return;
+      if (창.contains(e.target)) return;
+      if (기준 && (기준 === e.target || 기준.contains(e.target))) return;
+      닫기();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') 닫기(); });
+
+    return { 열기, 닫기, 잠금 };
+  })();
+
   const 단추 = (글, 눌림, 잠김) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -360,7 +459,7 @@
     b.style.padding = '0 8px';
     b.style.fontSize = '11px';
     if (잠김) { b.disabled = true; b.style.opacity = '.45'; }
-    else      { b.onclick = (e) => { e.stopPropagation(); 눌림(); }; }
+    else      { b.onclick = (e) => { e.stopPropagation(); 눌림(b); }; }
     return b;
   };
 
@@ -388,11 +487,11 @@
       },
       {
         header: '연락처 수정', name: 'edit', width: 92, align: 'center',
-        renderer: (v, row) => 단추('수정', () => dlgContactOpen(row.id)),
+        renderer: (v, row) => 단추('수정', (b) => dlgContactOpen(row.id, b)),
       },
       {
         header: '위임장 발송', name: 'send', width: 90, align: 'center',
-        renderer: (v, row) => 단추('발송', () => dlgSendOpen(row.id), !row.can_send),
+        renderer: (v, row) => 단추('발송', (b) => dlgSendOpen(row.id, b), !row.can_send),
       },
 
       /* 서명 여부는 ［발송］ 바로 뒤에 (2026-09-12 지시). 보냈는지와 받았는지를
@@ -480,7 +579,7 @@
   // ── 발송 팝오버 ─────────────────────────────────────────
   let 지금 = null;
 
-  window.dlgSendOpen = async function (id) {
+  window.dlgSendOpen = async function (id, 단추요소) {
     const res = await fetch(BASE + '/' + id, { headers: { 'Accept': 'application/json' } });
     const d = await res.json();
     if (!d.success) { showToast('불러오지 못했습니다.', 'danger'); return; }
@@ -503,7 +602,7 @@
 
     미리보기();
     document.getElementById('dlgName').oninput = 미리보기;
-    document.getElementById('dlgSendBack').classList.add('open');
+    팝.열기('dlgSendBack', 단추요소);
   };
 
   /* 보낼 글은 서버가 지은 틀을 쓴다 (2026-09-14).
@@ -520,7 +619,7 @@
   }
 
   window.dlgSendClose = function () {
-    document.getElementById('dlgSendBack').classList.remove('open');
+    팝.닫기();
     지금 = null;
   };
 
@@ -528,6 +627,7 @@
     if (!지금) return;
     const btn = document.getElementById('dlgSendBtn');
     BtnState.loading(btn, '보내는 중...');
+    팝.잠금(true);
     try {
       const res = await fetch(BASE + '/' + 지금.id + '/send', {
         method: 'POST',
@@ -540,12 +640,14 @@
       });
       const out = await res.json();
 
-      if (!out.success) { BtnState.reset(btn); showToast(out.message, 'danger', 6000); return; }
+      if (!out.success) { 팝.잠금(false); BtnState.reset(btn); showToast(out.message, 'danger', 6000); return; }
 
       showToast(out.message + ' ' + out.expires_at + '까지 열려 있습니다.', 'success', 6000);
+      팝.잠금(false);
       dlgSendClose();
       setTimeout(() => location.reload(), 1000);
     } catch (e) {
+      팝.잠금(false);
       BtnState.reset(btn);
       showToast('보내지 못했습니다 — ' + e.message, 'danger', 6000);
     }
@@ -554,7 +656,7 @@
   // ── 연락처 수정 ─────────────────────────────────────────
   let 고칠줄 = null;
 
-  window.dlgContactOpen = async function (id) {
+  window.dlgContactOpen = async function (id, 단추요소) {
     const res = await fetch(BASE + '/' + id, { headers: { 'Accept': 'application/json' } });
     const d = await res.json();
     if (!d.success) { showToast('불러오지 못했습니다.', 'danger'); return; }
@@ -569,11 +671,11 @@
     for (const id2 of ['dlgCtPhone', 'dlgCtGuardian']) {
       document.getElementById(id2).oninput = (e) => { e.target.value = 번호꼴(e.target.value); };
     }
-    document.getElementById('dlgContactBack').classList.add('open');
+    팝.열기('dlgContactBack', 단추요소);
   };
 
   window.dlgContactClose = function () {
-    document.getElementById('dlgContactBack').classList.remove('open');
+    팝.닫기();
     고칠줄 = null;
   };
 
@@ -582,6 +684,7 @@
     const 경고 = document.getElementById('dlgCtWarn');
     const btn = document.getElementById('dlgCtBtn');
     BtnState.loading(btn, '저장하는 중...');
+    팝.잠금(true);
     try {
       const res = await fetch(BASE + '/' + 고칠줄.id + '/contact', {
         method: 'PUT',
@@ -599,6 +702,7 @@
       const out = await res.json();
 
       if (!out.success) {
+        팝.잠금(false);
         BtnState.reset(btn);
         경고.style.display = '';
         경고.textContent = out.message || '저장하지 못했습니다.';
@@ -606,10 +710,12 @@
       }
 
       showToast(out.message, 'success', 5000);
+      팝.잠금(false);
       dlgContactClose();
       /* 고친 번호로 ［발송］이 열려야 한다 — 목록을 다시 그려 잠금을 푼다 */
       setTimeout(() => location.reload(), 800);
     } catch (e) {
+      팝.잠금(false);
       BtnState.reset(btn);
       경고.style.display = '';
       경고.textContent = '저장하지 못했습니다 — ' + e.message;
@@ -635,19 +741,19 @@
       글짓기(이름칸().value.trim() || '○○○');
   }
 
-  window.dlgDirectOpen = function () {
+  window.dlgDirectOpen = function (단추요소) {
     이름칸().value = '';
     번호칸().value = '';
     document.getElementById('dlgDirectWarn').style.display = 'none';
     미리보기2();
     이름칸().oninput = 미리보기2;
     번호칸().oninput = (e) => { e.target.value = 번호꼴(e.target.value); };
-    document.getElementById('dlgDirectBack').classList.add('open');
+    팝.열기('dlgDirectBack', 단추요소);
     이름칸().focus();
   };
 
   window.dlgDirectClose = function () {
-    document.getElementById('dlgDirectBack').classList.remove('open');
+    팝.닫기();
   };
 
   window.dlgDirectSend = async function () {
@@ -664,6 +770,7 @@
 
     const btn = document.getElementById('dlgDirectBtn');
     BtnState.loading(btn, '보내는 중...');
+    팝.잠금(true);
     try {
       const res = await fetch(BASE + '/send-direct', {
         method: 'POST',
@@ -677,15 +784,18 @@
       const out = await res.json();
 
       if (!out.success) {
+        팝.잠금(false);
         BtnState.reset(btn);
         showToast(out.message || '보내지 못했습니다.', 'danger', 6000);
         return;
       }
 
       showToast(out.message + ' ' + out.expires_at + '까지 열려 있습니다.', 'success', 6000);
+      팝.잠금(false);
       dlgDirectClose();
       setTimeout(() => location.reload(), 1000);
     } catch (e) {
+      팝.잠금(false);
       BtnState.reset(btn);
       showToast('보내지 못했습니다 — ' + e.message, 'danger', 6000);
     }
