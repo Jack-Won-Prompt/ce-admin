@@ -5539,10 +5539,6 @@ function renderItemsTable() {
       {{-- 제품 코드 — 창고와 주고받는 것은 이 값이다 --}}
       <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
           class="item-code-shown" title="${codeShown}">${codeShown}</td>
-      {{-- 장비코드 — 값이 없으면 「-」로 둔다. 빈칸이면 칸이 비뚤어 보인다. --}}
-      <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-                 color:var(--text-secondary);"
-          class="item-device-shown" title="${deviceShown}">${deviceShown || '-'}</td>
       <td>
         {{-- 급여 구분은 더 고르지 않는다 — 비율은 청구전략(유형 × 자격)이 정한다.
              담긴 값은 지우지 않고 그대로 들고 다닌다(예전 건을 읽는 자리가 있다). --}}
@@ -5566,6 +5562,10 @@ function renderItemsTable() {
       <td style="text-align:right;white-space:nowrap;" class="item-total-amt">₩ ${totalShown}</td>
       <td style="text-align:right;color:var(--primary);white-space:nowrap;" class="item-nhis-amt">₩ ${nhisAmt}</td>
       <td style="text-align:right;white-space:nowrap;" class="item-copay">₩ ${copay}</td>
+      {{-- 장비코드 — 값이 없으면 「-」로 둔다. 빈칸이면 칸이 비뚤어 보인다. 맨 끝(삭제 단추 앞)에 둔다. --}}
+      <td style="font-family:monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                 color:var(--text-secondary);"
+          class="item-device-shown" title="${deviceShown}">${deviceShown || '-'}</td>
       <td style="text-align:center;">
         <button type="button" class="btn btn-sm"
                 style="padding:0 6px;height:28px;background:none;border:1px solid var(--danger);color:var(--danger);"
@@ -5587,8 +5587,6 @@ function renderItemsTable() {
       <col style="width:5%;">
       <col style="width:16%;">
       <col style="width:11%;">
-      {{-- 장비코드 — 공단에 청구할 때 쓰는 번호(2026-09-08 확인요청 1ㆍ10쪽) --}}
-      <col style="width:12%;">
       <col style="width:9%;">
       <col style="width:6%;">
       <col style="width:9%;">
@@ -5597,6 +5595,8 @@ function renderItemsTable() {
       <col style="width:8%;">
       <col style="width:5%;">
       <col style="width:5%;">
+      {{-- 장비코드 — 공단에 청구할 때 쓰는 번호(2026-09-08 확인요청 1ㆍ10쪽) --}}
+      <col style="width:12%;">
       <col style="width:5%;">
     </colgroup>
     <thead><tr>
@@ -5606,9 +5606,6 @@ function renderItemsTable() {
       </th>
       <th>제품명</th>
       <th>제품 코드</th>
-      {{-- 장비코드 — 우리 품번으로는 공단 조회가 되지 않는다. 제품이 들고 오는 값이라
-           고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). --}}
-      <th>장비코드</th>
       <th>급여구분</th>
       <th style="text-align:center;">수량</th>
       {{-- 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가(위드웍스 items.r_box) --}}
@@ -5619,6 +5616,9 @@ function renderItemsTable() {
       <th style="text-align:right;">총 금액</th>
       <th style="text-align:right;">기관 부담금</th>
       <th style="text-align:right;">본인 부담금</th>
+      {{-- 장비코드 — 우리 품번으로는 공단 조회가 되지 않는다. 제품이 들고 오는 값이라
+           고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). 맨 끝에 둔다(작업지시 #83). --}}
+      <th>장비코드</th>
       <th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -5630,6 +5630,8 @@ function renderItemsTable() {
       <th id="itemsFootTotal" style="text-align:right;background:var(--bg);">₩${grandTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootNhis"  style="text-align:right;color:var(--primary);background:var(--bg);">₩${nhisTotal.toLocaleString('ko-KR')}</th>
       <th id="itemsFootCopay" style="text-align:right;background:var(--bg);">₩${copayTotal.toLocaleString('ko-KR')}</th>
+      {{-- 장비코드ㆍ삭제 칸 아래 --}}
+      <th style="background:var(--bg);"></th>
       <th style="background:var(--bg);"></th>
     </tr></tfoot>
   </table>`;
@@ -7467,18 +7469,7 @@ window.HELP_TOUR_STEPS = [
       /* 제품 코드 — 제품을 고르면 따라 들어온다. 여기서 고치지 않는다: 코드는 제품이
          제 것으로 들고 오는 값이라, 손으로 바꾸면 이름과 어긋난 줄이 창고로 간다. */
       { header: '제품 코드',  name: 'product_code',    width: 120, editable: false },
-      /* 장비코드 — 공단에 청구할 때 쓰는 번호다. 제품이 제 것으로 들고 오는 값이라
-         고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). */
-      { header: '장비코드',   name: 'device_code',     width: 140, editable: false,
-        renderer: (v) => {
-          const el = document.createElement('span');
-          if (!v) { el.textContent = '-'; el.style.color = 'var(--gray-300)'; return el; }
-          el.textContent = v;
-          el.style.color = 'var(--text-secondary)';
-
-          return el;
-        } },
-      { header: '수량',       name: 'quantity',        width: 80,  editor: 'number' },
+      { header: '수량',      name: 'quantity',        width: 80,  editor: 'number' },
       /* 나누는 수 자체 — 한 박스에 낱개가 몇 개 드는가. 제품이 들고 오는 값이라
          고치는 칸이 아니다. */
       { header: 'RB 단위',    name: 'r_box',           width: 88,  editable: false, align: 'center',
@@ -7517,6 +7508,17 @@ window.HELP_TOUR_STEPS = [
       { header: '총 금액',    name: 'total',           width: 120, editor: 'number', editable: false },
       { header: '기관 부담금', name: 'nhis_amount',    width: 120, editor: 'number', editable: false },
       { header: '본인 부담금', name: 'patient_copay',  width: 120, editor: 'number', editable: false },
+      /* 장비코드 — 공단에 청구할 때 쓰는 번호다. 제품이 제 것으로 들고 오는 값이라
+         고치는 칸이 아니다(2026-09-08 확인요청 1ㆍ10쪽). 맨 끝에 둔다(작업지시 #83). */
+      { header: '장비코드',   name: 'device_code',     width: 140, editable: false,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          if (!v) { el.textContent = '-'; el.style.color = 'var(--gray-300)'; return el; }
+          el.textContent = v;
+          el.style.color = 'var(--text-secondary)';
+
+          return el;
+        } },
     ];
 
     if (!itemGrid) {
