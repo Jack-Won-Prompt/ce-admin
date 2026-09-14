@@ -80,12 +80,16 @@ class FinanceController extends Controller
                 'columns' => $columns,
                 'rows'    => $gridData,
                 'count'   => count($gridData),
+                // PG 탭의 결제수단 고르개를 그 자리에서 채운다 — 탭은 화면을 다시 열지 않는다
+                'pay_methods' => $this->pg수단들,
             ]);
         }
 
         return view('finance.index', [
             'tab'      => $tab,
             'pgView'   => $this->pgView($request),
+            // PG 탭의 결제수단 고르개 — 받아 온 줄에 실제로 있는 것만 세운다
+            'pg수단들' => $this->pg수단들,
             'dateFrom' => $from,
             'dateTo'   => $to,
             'gridData' => $gridData,
@@ -409,21 +413,95 @@ class FinanceController extends Controller
         $정산 = app(\App\Services\TossPayments\SettlementService::class);
         $줄들 = $정산->가져오기($from, $to, $기준);
 
-        /* 검색어는 건별에서만 뜻이 있다 — 묶어 놓은 줄에는 주문번호가 없다 */
+        /* 고르개에 세울 결제수단은 **거르기 전** 줄에서 뽑는다 — 걸러 낸 뒤에 뽑으면
+           한 번 고른 순간 나머지 수단이 목록에서 사라져 되돌아갈 길이 없다. */
+        $this->pg수단들 = $정산->수단들($줄들);
+
+        // 토스 화면이 묻는 것 가운데 정산 응답으로 가릴 수 있는 셋 (2026-09-14 확인요청 1쪽)
+        $줄들 = $정산->거르기($줄들, [
+            'method'     => $request->get('pay_method'),
+            'pay_status' => $request->get('pay_status'),
+            'mid'        => $request->get('mid'),
+        ]);
+
+        /* 검색어는 건별에서만 뜻이 있다 — 묶어 놓은 줄에는 주문번호가 없다.
+           우리 주문번호ㆍ이름으로도 찾는다(2026-09-14) — 담당자가 아는 말은 그쪽이다. */
+        $우리것 = $갈래 === 'detail' ? $this->pg우리주문($줄들) : [];
+
         if ($갈래 === 'detail' && $request->filled('q')) {
             $말 = mb_strtolower($request->get('q'));
-            $줄들 = array_values(array_filter($줄들, fn ($s) => str_contains(
-                mb_strtolower(($s['orderId'] ?? '') . ' ' . ($s['method'] ?? '') . ' ' . ($s['mId'] ?? '')), $말)));
+            $줄들 = array_values(array_filter($줄들, function ($s) use ($말, $우리것) {
+                $우리 = $우리것[(string) ($s['orderId'] ?? '')] ?? [];
+                $건초 = ($s['orderId'] ?? '') . ' ' . ($s['method'] ?? '') . ' ' . ($s['mId'] ?? '')
+                      . ' ' . ($s['transactionKey'] ?? '')
+                      . ' ' . ($우리['order_no'] ?? '') . ' ' . ($우리['patient'] ?? '');
+
+                return str_contains(mb_strtolower($건초), $말);
+            }));
         }
 
         $자료 = match ($갈래) {
-            'detail' => $정산->건별($줄들),
+            'detail' => $정산->건별($줄들, $우리것),
             'daily'  => $정산->일자별($줄들),
             'method' => $정산->결제수단별($줄들),
             default  => $정산->요약($줄들),
         };
 
         return [$자료, $this->columnsFor('pg:' . $갈래)];
+    }
+
+    /** 화면이 세울 결제수단 고르개 — pgSettlements 가 채운다 */
+    private array $pg수단들 = [];
+
+    public function pg수단목록(): array
+    {
+        return $this->pg수단들;
+    }
+
+    /**
+     * 정산 줄에 우리 주문을 잇는다 (2026-09-14 확인요청 1쪽).
+     *
+     * 토스는 구매자명도 구매상품도 주지 않는다. 그런데 정산 줄의 orderId 는 우리가
+     * 토스에 보낸 주문 아이디 그대로라, 그것으로 결제 줄을 타고 주문까지 갈 수 있다.
+     * 담당자는 이 표에서 「누구의 무엇인가」를 늘 따로 찾아보고 있었다.
+     *
+     * @return array<string, array{order_no:string, patient:string, product:string}>
+     */
+    private function pg우리주문(array $줄들): array
+    {
+        $아이디 = array_values(array_filter(array_map(
+            fn ($s) => (string) ($s['orderId'] ?? ''), $줄들)));
+
+        if (! $아이디) {
+            return [];
+        }
+
+        $표 = [];
+
+        foreach (\App\Models\TossPayment::with('order.patient')
+                    ->whereIn('toss_order_id', $아이디)->get() as $t) {
+            $표[(string) $t->toss_order_id] = [
+                'order_no' => $t->order?->order_number ?? '',
+                'patient'  => $t->order?->patient?->name ?? ($t->customer_name ?? ''),
+                'product'  => $t->order?->product_name ?? '',
+            ];
+        }
+
+        /* 결제 줄이 없는 건은 결제 링크에서 되짚는다 — 링크로 받은 건은 그쪽에 남는다 */
+        foreach (\App\Models\PaymentLink::with('order.patient')
+                    ->whereIn('toss_order_id', $아이디)->get() as $l) {
+            $키 = (string) $l->toss_order_id;
+            if (isset($표[$키])) {
+                continue;
+            }
+            $표[$키] = [
+                'order_no' => $l->order?->order_number ?? '',
+                'patient'  => $l->order?->patient?->name ?? '',
+                'product'  => $l->order?->product_name ?? '',
+            ];
+        }
+
+        return $표;
     }
 
     /**
@@ -474,7 +552,7 @@ class FinanceController extends Controller
         /* PG정산내역 — 토스 화면의 칸 이름을 그대로 쓴다 (2026-09-11 확인요청 6ㆍ7쪽).
            수수료는 공급가와 부가세를 갈라 보여 준다 — 세금계산서와 맞출 때 그 둘이 필요하다. */
         $pg공통 = [
-            ['header' => '건수',     'name' => '건수',     'width' => 80]  + $money,
+            ['header' => '결제+취소 건수', 'name' => '건수', 'width' => 120] + $money,
             ['header' => '매출액',   'name' => '매출액',   'width' => 120] + $money,
             ['header' => 'PG수수료', 'name' => 'PG수수료', 'width' => 110] + $money,
             ['header' => 'PG부가세', 'name' => 'PG부가세', 'width' => 110] + $money,
@@ -497,22 +575,45 @@ class FinanceController extends Controller
                 ['header' => '토스 주문번호', 'name' => 'toss_no',  'width' => 180],
             ],
 
-            'pg:summary' => array_merge($pg공통, [
-                ['header' => '입금 정산액', 'name' => '입금정산액', 'width' => 130] + $money,
-            ]),
+            /* 요약 — 토스 화면처럼 정산액 입금일로 묶은 표다(2026-09-14 확인요청 1쪽).
+               전체 합은 표 아래 합계줄이 세운다. */
+            'pg:summary' => array_merge(
+                [
+                    ['header' => '정산액 입금일', 'name' => '입금일', 'width' => 120, 'align' => 'center', 'sortable' => true],
+                    ['header' => '매출일',        'name' => '매출일', 'width' => 180, 'align' => 'center', 'sortable' => true],
+                ],
+                $pg공통,
+                [['header' => '당일 정산액', 'name' => '정산액', 'width' => 130] + $money],
+            ),
 
+            /* 건별 — 토스 화면의 차례 그대로다 (2026-09-14 확인요청 1쪽).
+               CE 주문번호ㆍ구매자명ㆍ구매상품 셋은 토스에 없는 우리 값이다. 앞쪽에 둔다 —
+               담당자가 이 표에서 먼저 찾는 것이 「누구 것인가」다. */
             'pg:detail' => [
-                ['header' => '매출일',     'name' => '매출일',   'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '정산액 입금일', 'name' => '입금일', 'width' => 110, 'align' => 'center', 'sortable' => true],
-                ['header' => '승인일시',   'name' => '승인일시', 'width' => 130, 'align' => 'center', 'sortable' => true],
-                ['header' => '결제수단',   'name' => '결제수단', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '주문번호',   'name' => '주문번호', 'width' => 190, 'sortable' => true],
+                ['header' => 'CE 주문번호', 'name' => 'CE주문번호', 'width' => 130, 'sortable' => true],
+                ['header' => '구매자명',   'name' => '구매자명',  'width' => 90,  'sortable' => true],
+                ['header' => '구매상품',   'name' => '구매상품',  'width' => 200],
                 ['header' => '상점아이디(MID)', 'name' => '상점아이디', 'width' => 130],
-                ['header' => '매출액',     'name' => '매출액',   'width' => 110] + $money,
-                ['header' => 'PG수수료',   'name' => 'PG수수료', 'width' => 100] + $money,
-                ['header' => 'PG부가세',   'name' => 'PG부가세', 'width' => 100] + $money,
-                ['header' => '수수료 합',   'name' => '수수료합', 'width' => 100] + $money,
-                ['header' => '정산액',     'name' => '정산액',   'width' => 110] + $money,
+                ['header' => '정산액 입금일', 'name' => '입금일',  'width' => 110, 'align' => 'center', 'sortable' => true],
+                ['header' => '매출일',     'name' => '매출일',    'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '원거래 승인일', 'name' => '승인일시', 'width' => 130, 'align' => 'center', 'sortable' => true],
+                ['header' => '취소일시',   'name' => '취소일시',  'width' => 130, 'align' => 'center', 'sortable' => true],
+                ['header' => '주문번호',   'name' => '주문번호',  'width' => 190, 'sortable' => true],
+                ['header' => '결제수단',   'name' => '결제수단',  'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '결제상태',   'name' => '결제상태',  'width' => 80,  'align' => 'center', 'sortable' => true],
+                ['header' => '결제기관',   'name' => '결제기관',  'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '카드종류',   'name' => '카드종류',  'width' => 100, 'align' => 'center'],
+                ['header' => '할부',       'name' => '할부',      'width' => 80,  'align' => 'center'],
+                ['header' => '결제·취소액', 'name' => '결제취소액', 'width' => 110] + $money,
+                ['header' => 'PG수수료',   'name' => 'PG수수료',  'width' => 100] + $money,
+                ['header' => '공급가액',   'name' => '공급가액',  'width' => 100] + $money,
+                ['header' => '부가세',     'name' => '부가세',    'width' => 90]  + $money,
+                ['header' => '할부수수료', 'name' => '할부수수료', 'width' => 100] + $money,
+                ['header' => '당일 정산액', 'name' => '정산액',    'width' => 110] + $money,
+                ['header' => '카드 매입상태', 'name' => '매입상태', 'width' => 110, 'align' => 'center'],
+                ['header' => '카드 승인번호', 'name' => '카드승인번호', 'width' => 120],
+                ['header' => 'TID',        'name' => 'TID',       'width' => 260],
+                ['header' => '영수증',     'name' => '영수증',    'width' => 90,  'align' => 'center'],
             ],
 
             'pg:daily' => array_merge(
@@ -521,11 +622,20 @@ class FinanceController extends Controller
                 [['header' => '정산액', 'name' => '정산액', 'width' => 130] + $money],
             ),
 
-            'pg:method' => array_merge(
-                [['header' => '결제수단', 'name' => '결제수단', 'width' => 140, 'align' => 'center', 'sortable' => true]],
-                $pg공통,
-                [['header' => '정산액', 'name' => '정산액', 'width' => 130] + $money],
-            ),
+            /* 결제수단별 — 토스 화면이 PG수수료를 넷으로 갈라 적는다 (2026-09-14 확인요청 2쪽) */
+            'pg:method' => [
+                ['header' => '결제수단', 'name' => '결제수단', 'width' => 140, 'align' => 'center', 'sortable' => true],
+                ['header' => '결제+취소 건수', 'name' => '건수', 'width' => 120] + $money,
+                ['header' => '매출액',   'name' => '매출액',   'width' => 120] + $money,
+                ['header' => '수수료 일반',   'name' => '수수료일반',   'width' => 110] + $money,
+                ['header' => '수수료 할부',   'name' => '수수료할부',   'width' => 110] + $money,
+                ['header' => '수수료 포인트', 'name' => '수수료포인트', 'width' => 110] + $money,
+                ['header' => '수수료 기타',   'name' => '수수료기타',   'width' => 110] + $money,
+                ['header' => 'PG수수료', 'name' => 'PG수수료', 'width' => 110] + $money,
+                ['header' => 'PG부가세', 'name' => 'PG부가세', 'width' => 110] + $money,
+                ['header' => 'PG수수료 합', 'name' => '수수료합', 'width' => 120] + $money,
+                ['header' => '당일 정산액', 'name' => '정산액', 'width' => 130] + $money,
+            ],
 
             // 14쪽 — 전체 주문 현황 및 매출 확인
             'orders' => [

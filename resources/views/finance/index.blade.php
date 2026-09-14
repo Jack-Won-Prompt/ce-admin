@@ -26,6 +26,41 @@
         <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control">
       </div>
     </div>
+    {{-- PG정산내역에서만 서는 칸 (2026-09-14 확인요청 1ㆍ2쪽).
+
+         토스 화면이 묻는 것 가운데 **정산 응답으로 가릴 수 있는 것만** 세운다. 정산타입ㆍ
+         정산카테고리ㆍ영중소 등급ㆍ구매자 아이디는 그 응답에 없다 — 없는 값으로 칸을
+         만들어 두면 담당자가 넣어 보고 아무것도 안 걸러지는 것을 겪는다. --}}
+    <div id="pgFilters" style="display:{{ $tab === 'pg' ? 'contents' : 'none' }};">
+      <div class="ds-filter-field">
+        <label class="ds-field-label">조회기준</label>
+        <select name="date_type" class="form-control form-select">
+          <option value="soldDate"    @selected(request('date_type') !== 'paidOutDate')>매출일</option>
+          <option value="paidOutDate" @selected(request('date_type') === 'paidOutDate')>정산액 입금일</option>
+        </select>
+      </div>
+      <div class="ds-filter-field">
+        <label class="ds-field-label">결제수단</label>
+        <select name="pay_method" class="form-control form-select">
+          <option value="">전체</option>
+          @foreach($pg수단들 ?? [] as $수단)
+            <option value="{{ $수단 }}" @selected(request('pay_method') === $수단)>{{ $수단 }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="ds-filter-field">
+        <label class="ds-field-label">결제상태</label>
+        <select name="pay_status" class="form-control form-select">
+          <option value="">전체</option>
+          <option value="완료" @selected(request('pay_status') === '완료')>완료</option>
+          <option value="취소" @selected(request('pay_status') === '취소')>취소</option>
+        </select>
+      </div>
+      <div class="ds-filter-field">
+        <label class="ds-field-label">상점아이디(MID)</label>
+        <input type="text" name="mid" value="{{ request('mid') }}" class="form-control" placeholder="일부만 쳐도 됩니다">
+      </div>
+    </div>
   </div>
   <div class="ds-filter-actions">
     <button type="button" class="ds-btn" onclick="finMonth(0)">이번 달</button>
@@ -69,7 +104,7 @@
   <div id="pgViews" class="pnl-tabs" style="flex-wrap:wrap;background:var(--gray-50);
        border-top:1px solid var(--border);{{ $tab === 'pg' ? '' : 'display:none;' }}">
     @foreach(\App\Http\Controllers\FinanceController::PG_VIEWS as $v => $이름)
-      <a href="{{ route('finance.index', array_filter(['tab' => 'pg', 'view' => $v, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo])) }}"
+      <a href="{{ route('finance.index', array_filter(['tab' => 'pg', 'view' => $v, 'q' => request('q'), 'date_from' => $dateFrom, 'date_to' => $dateTo, 'date_type' => request('date_type'), 'pay_method' => request('pay_method'), 'pay_status' => request('pay_status'), 'mid' => request('mid')])) }}"
          class="pnl-tab {{ ($pgView ?? 'summary') === $v ? 'active' : '' }}" style="white-space:nowrap;"
          data-view="{{ $v }}" onclick="return finPgView(event, '{{ $v }}')">{{ $이름 }}</a>
     @endforeach
@@ -161,6 +196,22 @@
             if (걸림) 수.innerHTML = '(총 <b>' + Number(d.count).toLocaleString('ko-KR') + '</b>건)';
           }
         });
+
+        /* PG 탭일 때만 거르개 넷이 선다 (2026-09-14 확인요청 1쪽).
+           탭은 화면을 다시 열지 않으므로 여기서 함께 여닫는다 — 그러지 않으면 PG 로
+           옮겨 온 담당자에게 조회기준ㆍ결제수단 칸이 보이지 않는다. */
+        const 거르개 = document.getElementById('pgFilters');
+        if (거르개) {
+          거르개.style.display = d.tab === 'pg' ? 'contents' : 'none';
+
+          const 수단칸 = 거르개.querySelector('select[name=pay_method]');
+          if (수단칸 && Array.isArray(d.pay_methods)) {
+            const 고른것 = 수단칸.value;
+            수단칸.innerHTML = '<option value="">전체</option>'
+              + d.pay_methods.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+            수단칸.value = 고른것;
+          }
+        }
 
         /* PG 탭일 때만 갈래 줄이 선다 (2026-09-11 확인요청 6ㆍ7쪽) */
         const 갈래줄 = document.getElementById('pgViews');
