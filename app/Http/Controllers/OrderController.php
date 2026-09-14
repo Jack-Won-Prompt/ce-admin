@@ -29,6 +29,13 @@ class OrderController extends Controller
         $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns', 'tossPayment',
                               'items.lots', 'operationUser'])->latest();
 
+        /* 상담만 적어 둔 건은 세우지 않는다 (2026-09-14 지시).
+
+           상담 한 번에 처방전 한 줄이 서고, 그 줄에 주문 줄이 딸린다. 같은 사람에게
+           상담을 두 번 적으면 여기에도 두 줄이 서서 주문이 갈라진 것으로 보였다.
+           자료를 올려 그 처방전이 제 모습을 갖추면 저절로 다시 선다. */
+        $query->withoutCounselOnly();
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -58,13 +65,16 @@ class OrderController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        $statusCounts = Order::selectRaw('status, count(*) as cnt')->groupBy('status')
+        /* 칩에 붙는 건수도 같은 잣대로 센다 — 목록에 없는 줄을 세면 수가 어긋난다 */
+        $statusCounts = Order::withoutCounselOnly()
+                            ->selectRaw('status, count(*) as cnt')->groupBy('status')
                             ->pluck('cnt', 'status');
 
         // 거래 구분별 건수 — 칩에 붙는다
-        $dealCounts = ['sale' => Order::whereDoesntHave('returns')->count()];
+        $dealCounts = ['sale' => Order::withoutCounselOnly()->whereDoesntHave('returns')->count()];
         foreach (\App\Models\OrderReturn::TYPES as $type => $label) {
-            $dealCounts[$type] = Order::whereHas('returns', fn ($r) => $r->where('type', $type))->count();
+            $dealCounts[$type] = Order::withoutCounselOnly()
+                ->whereHas('returns', fn ($r) => $r->where('type', $type))->count();
         }
 
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)

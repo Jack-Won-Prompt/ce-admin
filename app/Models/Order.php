@@ -385,6 +385,23 @@ class Order extends Model
      *
      * @return array{label: string, badge: string}
      */
+    /**
+     * 상담만 적어 둔 건을 뺀다 (2026-09-14 지시).
+     *
+     * 주문 줄은 처방전이 담길 때 저절로 선다(OrderSync::seed). 상담도 처방전 줄에
+     * 얹혀 살므로 통화 한 번을 적을 때마다 주문 줄이 하나 생긴다 — 같은 사람에게
+     * 상담을 두 번 적으면 주문 목록에도 두 줄이 서서, 한 건을 올렸을 뿐인데
+     * 주문이 갈라진 것으로 보인다.
+     *
+     * 처방전이 없는 주문(처방외 따위)은 그대로 둔다 — 여기서 빼는 것은 **상담만
+     * 적힌 처방전에 붙은** 주문뿐이다. 자료를 올려 그 처방전이 제 모습을 갖추면
+     * 이 잣대에서 저절로 빠져 목록에 선다.
+     */
+    public function scopeWithoutCounselOnly($query)
+    {
+        return $query->whereDoesntHave('prescription', fn ($p) => $p->counselOnly());
+    }
+
     public function 대기이름(): array
     {
         /* 아직 아무것도 담기지 않은 줄 (2026-09-10 확인요청 9쪽).

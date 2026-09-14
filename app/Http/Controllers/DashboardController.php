@@ -19,7 +19,9 @@ class DashboardController extends Controller
             'approved_today' => Prescription::where('status', 'approved')->whereDate('reviewed_at', today())->count(),
             'total_today'    => Prescription::whereDate('created_at', today())->count(),
             'total_month'    => Prescription::whereMonth('created_at', now()->month)->count(),
-            'orders_pending' => Order::where('status', 'pending')->count(),
+            /* 상담만 적어 둔 건은 세지 않는다 — 주문 목록에서 뺐으므로 여기 수도
+               같아야 한다. 어긋나면 「목록엔 없는데 숫자엔 있다」가 된다 (2026-09-14). */
+            'orders_pending' => Order::withoutCounselOnly()->where('status', 'pending')->count(),
             'nhis_pending'        => Order::where('nhis_claim_status', 'pending')->count(),
             'repurchase_today'    => Prescription::whereNotNull('repurchase_date')
                                         ->whereDate('repurchase_date', today())->count(),
