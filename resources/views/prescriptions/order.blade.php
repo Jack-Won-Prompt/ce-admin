@@ -6821,6 +6821,56 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
   bsSyncFromSource();
 
+  /* ── 산재ㆍ자동차보험 재구매 건의 담당 의사명 ─────────────────────────
+     (2026-09-14 확인요청 5쪽)
+
+     처방전 유형이면서 자격이 산재ㆍ자동차보험인 건은, 신구매 때만 서류를 확인하고
+     재구매 때는 서류 없이 진행한다. 서류가 없으니 적을 의사도 없는데 칸은 비어 있어,
+     담당자는 그때마다 「비워 두어도 되나」를 되물었다 — 「해당없음」이라 적어 둔다.
+
+     손으로 적어 둔 이름은 건드리지 않는다. 우리가 채운 값(data-auto)만 우리가 거둔다. */
+  const 의사해당없음 = '해당없음';
+
+  function sync담당의사(초기 = false) {
+    const el = document.getElementById('f-doctor');
+    if (!el) return;
+
+    const 유형 = document.getElementById('f-acc-add-type')?.value ?? '';
+    const 자격 = document.getElementById('f-benefit-class')?.value ?? '';
+    const 구매 = document.getElementById('f-purchase-type')?.value ?? '';
+
+    // 처방전(10)ㆍ처방전-원내(30) 둘 다 처방전 건이다
+    const 해당 = (유형 === '10' || 유형 === '30')
+              && (자격 === '산재' || 자격 === '자동차보험')
+              && 구매 === '재구매';
+
+    if (해당) {
+      if (!el.value.trim()) {
+        el.value = 의사해당없음;
+        el.dataset.auto = '1';
+        if (!초기) markOcrDirty();
+      }
+      return;
+    }
+
+    // 조건이 풀렸는데 우리가 채운 값이 남아 있으면 거둔다
+    if (el.dataset.auto === '1' && el.value === 의사해당없음) {
+      el.value = '';
+      delete el.dataset.auto;
+      if (!초기) markOcrDirty();
+    }
+  }
+
+  // 손으로 고쳐 적으면 그때부터는 사람의 값이다
+  document.getElementById('f-doctor')?.addEventListener('input', function () {
+    if (this.value !== 의사해당없음) delete this.dataset.auto;
+  });
+
+  ['f-acc-add-type', 'f-benefit-class', 'f-purchase-type'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => sync담당의사());
+  });
+  sync담당의사(true);
+
   /* 상세 목록의 주소를 거래처에 등록된 것 가운데 하나로 고른다(2026-09-08 확인요청 6쪽).
      배송지 고르개(pickPatientAddress)와 같은 목록을 쓰되, 앉히는 자리가 다르다 —
      그쪽은 이 주문의 배송지고 이쪽은 이 건의 주소다. */
@@ -7171,6 +7221,18 @@ window.HELP_TOUR_STEPS = [
    * 실제로 막는 일은 gateOrder ㆍ gateShippingAddress 와 서버가 한다.
    */
   function syncOrderStepBtns() {
+    /* 상세 목록 탭의 ［저장］ — 고친 것이 있으면 색이 든다 (2026-09-14 확인요청 5쪽).
+
+       이 단추는 처방 걸음이 「저장」일 때만 채워 두었다(applyRxStage). 그래서 검수를
+       마친 건에서 무엇을 고쳐도 단추가 수수한 채여서, 눌러도 되는 것인지 담당자가
+       망설였다 — 고친 것이 있으면 그 자리에서 저장할 차례다. */
+    /* 걸음 표는 이 함수보다 아래에 선다 — 아직 세워지기 전에 불릴 수 있어 살펴 묻는다 */
+    const 걸음저장 = typeof RX_STAGE_NOW !== 'undefined'
+                   && (RX_STAGE_NOW[RX_STATUS] ?? null) === 'save';
+    document.querySelectorAll('.rx-acc-btn[data-stage="save"]').forEach(b => {
+      b.classList.toggle('rx-acc-btn-fill', 걸음저장 || isAnyDirty());
+    });
+
     const 저장  = document.getElementById('btnSaveOrderTab');
     const 연계  = document.getElementById('btnCreateOrder');
     if (!저장 && !연계) return;
@@ -8040,11 +8102,42 @@ window.HELP_TOUR_STEPS = [
     return ok;
   }
 
+  /* 동의를 아직 못 받았으면 저장할 때 한 번 알린다 (2026-09-14 확인요청 5쪽).
+
+     **막지 않는다.** 상담을 받아 적는 단계에서는 동의가 아직 없는 것이 예사이고,
+     여기서 막으면 적어 둔 것을 담지 못한다. 다만 이 건이 그대로 구매로 넘어가면
+     주문ㆍ연계ㆍ결제가 모두 막히므로(gateConsent), 그 전에 알려 둔다.
+
+     화면을 여는 동안 한 번만 알린다 — 저장할 때마다 같은 말을 내면 읽지 않게 된다. */
+  let _동의알림함 = false;
+
+  async function 동의확인(opts) {
+    if (opts.silent || _동의알림함) return;
+
+    /* 유형ㆍ자격을 아직 안 골랐으면 무엇이 필요한지 알 수 없다 — 그때는 다그치지 않는다.
+       gateConsent 는 주문을 내는 자리라 모르는 건을 위임 필요로 보지만, 여기는 적어
+       두는 자리라 반대로 둔다. */
+    const bs = bsCurrent();
+    const 남은 = [];
+    if (bs && bs.needs_delegation && !window.DELEGATION_SIGNED) 남은.push('요양비 위임 서명');
+    if (!PRIVACY_STATE?.agreed) 남은.push('개인정보 수집·이용 동의');
+    if (!남은.length) return;
+
+    _동의알림함 = true;
+    await ceAlert(
+      '동의 확인 후, 구매 진행 바랍니다.\n\n'
+      + '아직 받지 못한 동의\n' + 남은.map(t => '· ' + t).join('\n') + '\n\n'
+      + '화면 위쪽의 「서명 동의」 버튼으로 받으십시오. '
+      + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.',
+      { title: '동의 확인', tone: 'warning' });
+  }
+
   /* opts.silent: 알림을 내지 않는다(다른 단추가 저장을 대신 부를 때).
      되돌리는 값은 「저장이 됐는가」다 — 부른 쪽이 이어서 할지 멈출지 가린다. */
   async function saveOCR(opts = {}) {
     if (_saving) return false;        // 중복 요청 방지
     if (!await 메모확인(opts)) return false;
+    await 동의확인(opts);
     /* 박스 수량이 어긋나면 담지 않는다 (2026-09-14 지시).
        다른 자리가 이미 알리고 부른 길(silent)에서는 두 번 알리지 않는다 —
        그때는 부른 쪽이 먼저 문을 지나 왔다. */
@@ -8348,6 +8441,8 @@ window.HELP_TOUR_STEPS = [
     if (!items.length) items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
     renderItems();
     calcRenewDate();
+    // 되돌린 값에 맞춰 담당 의사명도 다시 본다 (산재ㆍ자동차보험 재구매 건)
+    sync담당의사(true);
     showToast('저장된 값으로 되돌렸습니다.', 'info');
   }
 
