@@ -550,6 +550,17 @@ class FinanceController extends Controller
                 ['header' => '주문상태',   'name' => 'status',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '취소여부',   'name' => 'cancelled', 'width' => 80,  'align' => 'center', 'sortable' => true],
                 ['header' => '취소일자',   'name' => 'cancel_at', 'width' => 100, 'align' => 'center'],
+                /* 받았는가 — 어떻게ㆍ언제ㆍ얼마 (2026-09-14 지시).
+
+                   줄에는 진작 담겨 있었는데 이 탭만 칸이 없어 보이지 않았다. 다른 아홉
+                   목록은 ceMoneyCols() 로 같은 넷을 세운다 — 이 탭은 칸을 서버에서
+                   받으므로 여기에 적어 둔다.
+
+                   입금일시는 날짜만 적는 「결제일자」와 달리 시각까지 적는다. 같은 날
+                   두 번 오간 건을 가리려면 시각이 있어야 한다. */
+                ['header' => '결제수단',   'name' => 'pay_method', 'width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금일시',   'name' => 'paid_time',  'width' => 140, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금금액',   'name' => 'paid',       'width' => 110] + $money,
             ],
 
             // 15쪽 — 환자 본인부담금 입금 확인
