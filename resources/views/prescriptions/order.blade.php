@@ -1085,30 +1085,6 @@ $calcDeposit  = $calcCopay;
         {{-- 오른쪽 — 액션 버튼 (시안 137:311) --}}
         <div class="pib-actions">
 
-      {{-- ── 빈 건 삭제 ────────────────────────────────────
-           아무것도 올리지 않은 채 번호만 받은 건이 생긴다. 여태 지우는 길은
-           있었는데(destroyEmpty) 누를 자리가 없어, 담당자는 목록에 쌓이는 것을
-           보고만 있었다 (2026-09-11 보탬).
-
-           지울 수 있는 건일 때만 세운다 — 처방전ㆍ첨부ㆍ창고 주문ㆍ입금ㆍ발행ㆍ
-           서명이 하나라도 있으면 보이지 않는다. 서버도 같은 잣대로 다시 막는다. --}}
-      @php
-        $빈건 = ! $prescription->image_path
-                && ! $prescription->attachments()->exists()
-                && ! ($prescription->order?->withworks_so_no)
-                && ! ($prescription->order?->deposit_confirmed_at)
-                && ($prescription->order?->tax_invoice_status  ?? 'not_issued') === 'not_issued'
-                && ($prescription->order?->cash_receipt_status ?? 'not_issued') === 'not_issued'
-                && ! $prescription->consents()->where('status', 'agreed')->exists();
-      @endphp
-      @if($빈건)
-        <button class="pib-btn" type="button" id="btnDeleteEmpty"
-                title="자료가 하나도 없는 건입니다 — 번호와 함께 지웁니다"
-                onclick="deleteEmptyRx(this)">
-          <i class="fa-solid fa-trash-can" style="font-size:11px;"></i> 빈 건 삭제
-        </button>
-      @endif
-
       {{-- ── 개인정보동의 ──────────────────────────────────
            단추는 「서명 동의」 하나로 합쳤다(2026-09-10 지시). 환자가 받는 링크
            하나에서 개인정보 동의와 위임 서명을 함께 받으므로, 보내는 자리도 하나다.
@@ -12572,48 +12548,6 @@ window.HELP_TOUR_STEPS = [
   // ── 위임동의 SMS 발송 ─────────────────────────────────
   const CONSENT_SMS_URL    = @json(route('prescriptions.consentSms', $prescription));
 
-  /* 빈 건 삭제 — 처방번호와 딸린 주문을 함께 지운다 (2026-09-11 보탬).
-     서버가 다시 한 번 막는다. 막히면 그 까닭을 그대로 보여 준다. */
-  const DELETE_EMPTY_URL = @json(route('prescriptions.destroyEmpty', $prescription));
-
-  async function deleteEmptyRx(btn) {
-    const 물음 = '처방번호 @json($prescription->rx_number) 을(를) 지웁니다.\n\n'
-               + '자료가 하나도 올라오지 않은 건입니다. 딸린 주문도 함께 지워집니다.\n'
-               + '되돌릴 수 없습니다. 계속할까요?';
-    if (!confirm(물음)) return;
-
-    BtnState.loading(btn, '지우는 중...');
-    try {
-      const res = await fetch(DELETE_EMPTY_URL, {
-        method: 'DELETE',
-        headers: {
-          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
-          'Accept': 'application/json',
-        },
-      });
-      const out = await res.json();
-
-      if (!out.success) {
-        BtnState.reset(btn);
-        showToast(out.message || '지우지 못했습니다.', 'danger', 6000);
-        return;
-      }
-
-      showToast(out.message, 'success');
-
-      /* 떠나는 동안 나는 소리는 삼킨다 (2026-09-11).
-
-         지운 뒤 목록으로 옮겨가는 잠깐 사이, 이 화면이 걸어 둔 부름들이 이미 없는
-         처방전을 찾다가 실패한다 — 그때마다 「처리 중 오류가 발생했습니다」가 떠서,
-         제대로 지워 놓고도 잘못된 것처럼 보였다. 지운 뒤에 들리는 소리는 더 알릴
-         것이 없다. */
-      window.showToast = () => {};
-      setTimeout(() => { location.href = @json(route('prescriptions.index')); }, 900);
-    } catch (e) {
-      BtnState.reset(btn);
-      showToast('지우지 못했습니다 — ' + e.message, 'danger', 6000);
-    }
-  }
   const CONSENT_STATUS_URL = @json(route('prescriptions.consentStatus', $prescription));
 
   // ── 서명 확인 팝오버 ─────────────────────────────────────
