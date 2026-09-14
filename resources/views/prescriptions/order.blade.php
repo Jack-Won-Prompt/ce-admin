@@ -1664,7 +1664,9 @@ $calcDeposit  = $calcCopay;
           @if($payState['paid'] ?? false)
             <span class="pay-tag pay-tag-paid">결제완료</span>
           @elseif($payState['sent'] ?? false)
-            <span class="pay-tag pay-tag-sent">보냄{{ ($payState['count'] ?? 1) > 1 ? ' ' . $payState['count'] : '' }}</span>
+            {{-- 단추와 이어 읽으면 「결제전송 이력 2」가 된다 (2026-09-14 지시).
+                 몇 번 보냈는지는 늘 적는다 — 한 번이라도 「이력 1」이라야 센 것이 보인다. --}}
+            <span class="pay-tag pay-tag-sent">이력 {{ $payState['count'] ?? 1 }}</span>
           @endif
         </button>
 
@@ -10422,9 +10424,7 @@ window.HELP_TOUR_STEPS = [
 
     const tag = document.createElement('span');
     tag.className = 'pay-tag ' + (PAY_STATE.paid ? 'pay-tag-paid' : 'pay-tag-sent');
-    tag.textContent = PAY_STATE.paid
-      ? '결제완료'
-      : '보냄' + (PAY_STATE.count > 1 ? ' ' + PAY_STATE.count : '');
+    tag.textContent = PAY_STATE.paid ? '결제완료' : '이력 ' + (PAY_STATE.count || 1);
     btn.appendChild(tag);
   }
 
