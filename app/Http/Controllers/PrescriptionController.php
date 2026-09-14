@@ -2125,6 +2125,25 @@ class PrescriptionController extends Controller
         $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator', 'billingOffice']);
         $patients = Patient::orderBy('name')->get();
 
+        /* 어느 주문을 보고 있는가 (2026-09-14 확인요청 4쪽).
+
+           처방전 한 장에 주문이 둘 이상 설 수 있다 — 수량을 나눠 사는 건의 추가 주문이다.
+           그런데 이 화면은 **처방번호로 열린다.** 무엇을 그릴지 정해 주지 않으면 늘 원
+           주문만 보이고 추가 주문은 열 길이 없다.
+
+           ?order= 로 적어 준 것이 있으면 그것을, 없으면 원 주문을 그린다. 화면 곳곳에서
+           쓰는 $prescription->order 를 여기서 갈아 끼우므로, 그 서른 자리를 손대지
+           않고도 고른 주문이 그려진다. */
+        $주문들 = $prescription->orders()->with('tossPayment')->orderBy('id')->get();
+        $보는주문 = null;
+
+        if ($번호 = trim((string) request('order'))) {
+            $보는주문 = $주문들->firstWhere('order_number', $번호);
+        }
+
+        $보는주문 ??= $주문들->first();
+        $prescription->setRelation('order', $보는주문);
+
         // 이전(ID 작은 쪽) / 다음(ID 큰 쪽) — rx_number 반환
         $prevId = Prescription::where('id', '<', $prescription->id)->orderByDesc('id')->value('rx_number');
         $nextId = Prescription::where('id', '>', $prescription->id)->orderBy('id')->value('rx_number');
@@ -2353,14 +2372,99 @@ class PrescriptionController extends Controller
             'count'     => $payLinks->count(),
         ];
 
+        /* 주문 고르개가 쓸 줄들과, 추가 주문이 더 살 수 있는 수량 (2026-09-14 확인요청 4쪽).
+
+           원 주문 총 구매 가능 정보 = 처방 총계. 거기서 이미 주문한 수량을 뺀 것이
+           더 살 수 있는 몫이다. 넘겨 팔면 넘은 만큼은 공단에 청구할 수 없고, 그 사실은
+           청구 단계에서야 드러난다. */
+        $주문줄들 = $주문들->map(fn (\App\Models\Order $o) => [
+            'id'      => $o->id,
+            'number'  => $o->order_number,
+            'kind'    => $o->order_kind,
+            'label'   => $o->isExtra() ? '추가 주문' : '원 주문',
+            'qty'     => (int) $o->items()->sum('quantity') ?: (int) ($o->quantity ?? 0),
+            'so_no'   => $o->withworks_so_no ?? '',
+            'current' => $보는주문 && $o->id === $보는주문->id,
+        ])->values();
+
+        $처방총계 = (int) ($prescription->total_count ?? 0);
+        $이미주문 = (int) $주문줄들->sum('qty');
+        $남은수량 = max(0, $처방총계 - $이미주문);
+
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
+            '주문줄들', '처방총계', '이미주문', '남은수량',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
             'orderManagers', 'assignables', 'privacyState',
             'orderListRows', 'orderListTotal', 'orderListLimit'
         ));
+    }
+
+    /**
+     * 추가 주문을 세운다 (2026-09-14 확인요청 4쪽).
+     *
+     * 처방전 한 장으로 수량을 나눠 사는 건이다. 먼저 일부만 사고 뒤에 나머지를 더 산다.
+     * 처방번호는 그대로라 담당자에게는 여전히 한 건이고, 주문번호만 따로 선다.
+     *
+     * 가져오는 것 — 환자ㆍ판매유형ㆍ배송지는 원 주문과 같게 둔다(2026-09-14 지시).
+     * 같은 사람이 같은 곳으로 받는 것이 예사라, 매번 다시 적게 하면 옮겨 적다 어긋난다.
+     * 제품 줄은 비워 둔다 — 무엇을 더 살지는 이제 고를 일이다.
+     *
+     * 결제ㆍ증빙은 이 주문이 스스로 한다(2026-09-14 지시) — 결제 링크도 세금계산서도
+     * 현금영수증도 따로 나간다. 본인부담금이 따로 셈해지므로 합치면 어느 쪽 금액인지
+     * 가릴 수 없다.
+     */
+    public function createExtraOrder(Prescription $prescription): \Illuminate\Http\RedirectResponse
+    {
+        $원주문 = $prescription->order;
+
+        if (! $원주문) {
+            return back()->with('error', '원 주문이 아직 없습니다 — 먼저 주문을 만든 뒤에 추가 주문을 세웁니다.');
+        }
+
+        /* 처방 총계를 넘겨 팔 수는 없다. 넘은 만큼은 공단에 청구할 수 없고, 그 사실은
+           청구 단계에서야 드러난다. 총계를 아직 안 적은 건은 막지 않는다 — 적기 전에
+           막으면 적을 길이 없다. */
+        $총계 = (int) ($prescription->total_count ?? 0);
+        $이미 = (int) \App\Models\OrderItem::whereIn('order_id', $prescription->orders()->pluck('id'))
+                        ->sum('quantity');
+
+        if ($총계 > 0 && $이미 >= $총계) {
+            return back()->with('error',
+                "처방 총계를 이미 다 주문했습니다 (총계 {$총계}개 · 주문 {$이미}개).");
+        }
+
+        $추가 = \App\Models\Order::create([
+            'order_number'     => \App\Models\Order::generateOrderNumber(),
+            'prescription_id'  => $prescription->id,
+            'patient_id'       => $prescription->patient_id,
+            'parent_order_id'  => $원주문->id,
+            'order_kind'       => \App\Models\Order::KIND_EXTRA,
+            'created_by'       => Auth::id(),
+            'status'           => 'pending',
+            'so_type'          => $원주문->so_type ?: (\App\Models\Order::saleSoTypes()[0] ?? null),
+            // 아직 고른 것이 없다는 뜻 — 제품명은 비울 수 없는 칸이다(OrderSync 와 같은 표시)
+            'product_name'     => '-',
+            'quantity'         => 0,
+            'nhis_amount'      => 0,
+            'patient_copay'    => 0,
+            'total_amount'     => 0,
+            // 배송지는 원 주문과 같게 (2026-09-14 지시)
+            'shipping_postcode'       => $원주문->shipping_postcode,
+            'shipping_address'        => $원주문->shipping_address,
+            'shipping_address_detail' => $원주문->shipping_address_detail,
+            'shipping_recipient'      => $원주문->shipping_recipient,
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($추가)
+            ->log("추가 주문 {$추가->order_number} 생성 (원 주문 {$원주문->order_number} · 처방전 {$prescription->rx_number})");
+
+        return redirect()->route('prescriptions.show', [
+            'prescription' => $prescription->rx_number,
+            'order'        => $추가->order_number,
+        ])->with('success', "추가 주문 {$추가->order_number} 을 세웠습니다. 주문 제품 탭에서 더 살 제품을 고르십시오.");
     }
 
     // ── OCR 수정 저장 ─────────────────────────────────────

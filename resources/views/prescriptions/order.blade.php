@@ -2507,6 +2507,25 @@ $calcDeposit  = $calcCopay;
                     style="display:{{ $prescription->order?->withworks_so_no ? '' : 'none' }};"
                     title="위드웍스 판매번호 — 누르면 베낍니다"
                     onclick="rxCopyNo(this)">위드웍스 판매번호 <b>{{ $prescription->order?->withworks_so_no }}</b></span>
+
+              {{-- 주문 고르개 — 나눠 산 건에만 선다 (2026-09-14 확인요청 4쪽).
+
+                   처방전 한 장에 주문이 둘 이상이면 어느 것을 보고 있는지, 그리고 다른
+                   것으로 어떻게 옮겨 가는지가 화면에 없었다. 주문이 하나뿐인 건에는
+                   세우지 않는다 — 대부분이 그러하고, 고를 것이 하나인 고르개는 자리만
+                   차지한다. --}}
+              @if($주문줄들->count() > 1)
+                <select class="rx-tabno" id="rxOrderPick"
+                        style="border:1px solid var(--primary);color:var(--primary);font-weight:700;cursor:pointer;"
+                        title="이 처방전에 달린 주문 — 골라서 옮겨 갑니다"
+                        onchange="rxGoOrder(this.value)">
+                  @foreach($주문줄들 as $줄)
+                    <option value="{{ $줄['number'] }}" @selected($줄['current'])>
+                      {{ $줄['label'] }} · {{ $줄['number'] }}{{ $줄['qty'] ? ' · ' . number_format($줄['qty']) . '개' : '' }}
+                    </option>
+                  @endforeach
+                </select>
+              @endif
             </div>
             <div class="rx-tabs-acts">
               {{-- 머리 셋에 똑같이 있던 단추를 한 벌로 모았다 --}}
@@ -2550,6 +2569,25 @@ $calcDeposit  = $calcCopay;
                      보냈느냐」다 — syncOrderStageBtn 이 같은 눈으로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
                         title="주문 제품 탭으로 갑니다">주문 보기</button>
+                {{-- 추가 주문 (2026-09-14 확인요청 4쪽).
+
+                     처방전 한 장으로 수량을 나눠 사는 건이다. 먼저 일부만 사고 뒤에
+                     나머지를 더 산다 — 처방번호는 그대로고 주문번호만 따로 선다.
+
+                     원 주문을 보고 있을 때만 세운다. 추가 주문에서 또 추가를 세우면
+                     어디에 딸린 것인지가 갈라진다. 처방 총계를 이미 다 주문한 건에는
+                     세우지 않는다 — 눌러도 서버가 되돌려 보낸다. --}}
+                @if($prescription->order && ! $prescription->order->isExtra()
+                    && ($처방총계 === 0 || $남은수량 > 0))
+                  <form method="POST" action="{{ route('prescriptions.extraOrder', $prescription) }}"
+                        style="display:inline;" onsubmit="return rx추가주문(event)">
+                    @csrf
+                    <button type="submit" class="rx-acc-btn" id="btnExtraOrder"
+                            title="{{ $처방총계 > 0
+                                      ? '처방 총계 ' . number_format($처방총계) . '개 가운데 ' . number_format($남은수량) . '개를 더 살 수 있습니다'
+                                      : '처방 총계를 아직 적지 않았습니다 — 적은 뒤에 남은 수량을 봅니다' }}">추가 주문</button>
+                  </form>
+                @endif
                 {{-- 메모를 여는 길은 여기 남긴다. 환자 정보 머리의 자리는 상담하기에
                      내주었지만(요청서 10쪽), 그 단추가 유일한 길이라 함께 없애면
                      적어 둔 메모를 다시 볼 방법이 사라진다. --}}
@@ -8578,6 +8616,37 @@ window.HELP_TOUR_STEPS = [
                     : '아직 창고로 보내지 않았습니다 — 주문 제품 탭으로 갑니다';
   }
 
+  /* ── 추가 주문 (2026-09-14 확인요청 4쪽) ────────────────────────────── */
+
+  /** 이 처방전에 달린 주문 — 서버가 세워 준 값이다 */
+  const RX_ORDERS   = @json($주문줄들);
+  const RX_TOTAL_QTY = {{ (int) $처방총계 }};   // 처방 총계
+  const RX_ORDERED   = {{ (int) $이미주문 }};   // 이미 주문한 수량(모든 주문의 합)
+  const RX_LEFT_QTY  = {{ (int) $남은수량 }};   // 더 살 수 있는 몫
+
+  /** 다른 주문으로 옮겨 간다 — 적다 만 것이 있으면 먼저 묻는다 */
+  window.rxGoOrder = function (번호) {
+    const 곳 = '{{ route('prescriptions.show', $prescription) }}?order=' + encodeURIComponent(번호);
+    if (!isAnyDirty()) { location.href = 곳; return; }
+    showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), 곳);
+  };
+
+  /** 추가 주문을 세우기 전에 한 번 묻는다 — 주문번호가 하나 더 나가는 일이다 */
+  window.rx추가주문 = function (e) {
+    e.preventDefault();
+    const 폼 = e.target;
+
+    const 말 = RX_TOTAL_QTY > 0
+      ? `처방 총계 ${RX_TOTAL_QTY.toLocaleString()}개 가운데 ${RX_ORDERED.toLocaleString()}개를 주문했습니다.\n`
+        + `남은 ${RX_LEFT_QTY.toLocaleString()}개 안에서 더 살 수 있습니다.\n\n추가 주문을 세우시겠습니까?`
+      : '처방 총계를 아직 적지 않았습니다.\n\n추가 주문을 세우시겠습니까?';
+
+    ceConfirm(말, { title: '추가 주문', confirmText: '세웁니다', cancelText: '취소' })
+      .then(갈까 => { if (갈까) 폼.submit(); });
+
+    return false;
+  };
+
   /** 주문 제품 탭으로 간다 — 배송ㆍ주문 단추가 그 아래 있다.
       적다 만 것이 있으면 switchTab 이 먼저 묻는다. */
   function goOrderTab() {
@@ -9045,11 +9114,24 @@ window.HELP_TOUR_STEPS = [
       }
     }
 
-    if (지날수있나 && 총계 > 0 && 산수량 > 총계) {
-      const 말 = `구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개).`;
+    /* 나눠 산 건은 다른 주문의 수량도 함께 센다 (2026-09-14 확인요청 4쪽).
+
+       처방 총계는 이 주문 하나가 아니라 **이 처방전 전체**에 걸린 잣대다. 먼저 산 몫을
+       빼고 보지 않으면, 추가 주문에서는 남은 몫만 담아도 늘 지나가 버린다 — 둘을 더하면
+       총계를 넘는데도 그렇다. */
+    const 다른주문 = (typeof RX_ORDERS !== 'undefined' ? RX_ORDERS : [])
+                       .filter(o => !o.current)
+                       .reduce((t, o) => t + (parseInt(o.qty, 10) || 0), 0);
+    const 합수량 = 산수량 + 다른주문;
+
+    if (지날수있나 && 총계 > 0 && 합수량 > 총계) {
+      const 말 = 다른주문 > 0
+        ? `구매 수량이 처방을 넘었습니다 — 이 주문 ${돈(산수량)}개 + 다른 주문 ${돈(다른주문)}개 `
+          + `= ${돈(합수량)}개 (처방 총계 ${돈(총계)}개).`
+        : `구매 수량이 처방을 넘었습니다 — ${돈(산수량)}개 (처방 총계 ${돈(총계)}개).`;
       const 담긴넘음 = 담긴.total > 0 && 담긴.qty > 담긴.total;
 
-      if (담긴넘음 && 산수량 <= 담긴.qty) {
+      if (담긴넘음 && 다른주문 === 0 && 산수량 <= 담긴.qty) {
         showToast(말 + ' 담겨 있던 값 그대로입니다.', 'warning', 7000);
       } else if (block) {
         showToast(말 + ' 1일 처방 개수 × 총 처방일수보다 많이 보낼 수 없습니다.', 'warning', 7000);
