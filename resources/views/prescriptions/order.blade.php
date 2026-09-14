@@ -3514,9 +3514,13 @@ $calcDeposit  = $calcCopay;
                 <span class="rx-field-label">주문 담당자</span>
                 {{-- 적어 두는 값은 이름이다. 손으로 치던 칸이라 사람마다 「김선미」ㆍ「선미」로
                      갈렸다 — 고르는 칸으로 바꿔 한 가지로 모은다.
-                     처음 여는 건은 지금 이 화면을 보고 있는 사람으로 선다. --}}
+
+                     **아직 정하지 않은 건은 비워 둔다** (2026-09-14 지시). 여태 화면을
+                     연 사람으로 미리 채웠는데, 그러면 열어 보기만 해도 담당자가 정해진
+                     것처럼 보인다. 저장할 때 그 값이 그대로 담기므로, 남의 건을 잠깐
+                     열어 본 사람이 담당자로 남는 일도 생긴다. 고르는 것은 사람이 한다. --}}
                 @php
-                  $omCur  = ($prescription->order_manager ?? null) ?: auth()->user()->name;
+                  $omCur  = (string) ($prescription->order_manager ?? '');
                   $omList = collect($orderManagers ?? []);
                   // 목록에 없는 이름이 적혀 있으면(그만둔 사람 등) 그 이름도 함께 둔다
                   if ($omCur && !$omList->contains($omCur)) { $omList = $omList->prepend($omCur); }
