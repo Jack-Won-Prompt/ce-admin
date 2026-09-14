@@ -2447,7 +2447,10 @@ class PrescriptionController extends Controller
             'so_type'          => $원주문->so_type ?: (\App\Models\Order::saleSoTypes()[0] ?? null),
             // 아직 고른 것이 없다는 뜻 — 제품명은 비울 수 없는 칸이다(OrderSync 와 같은 표시)
             'product_name'     => '-',
+            'product_code'     => null,
             'quantity'         => 0,
+            // 기본값이 없는 칸이라 비워 두면 표가 거절한다(1364) — 0 으로 세운다
+            'unit_price'       => 0,
             'nhis_amount'      => 0,
             'patient_copay'    => 0,
             'total_amount'     => 0,
