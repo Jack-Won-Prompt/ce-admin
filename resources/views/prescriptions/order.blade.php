@@ -4126,7 +4126,7 @@ $calcDeposit  = $calcCopay;
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
-                <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                         title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
@@ -4154,11 +4154,11 @@ $calcDeposit  = $calcCopay;
                    지금 눌러야 하는 쪽에만 색이 든다(syncOrderStepBtns). 막지는 않는다 —
                    색은 길을 가리키는 것이지 문을 잠그는 것이 아니다. --}}
               <div style="display:flex;gap:8px;">
-                <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+                <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                         title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
-                <button class="btn flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+                <button class="btn btn-outline flex-1" id="btnCreateOrder" onclick="createOrder(event)">
                   <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
                 </button>
               </div>
@@ -7150,9 +7150,13 @@ window.HELP_TOUR_STEPS = [
     const 주소  = (document.getElementById('shippingAddr')?.value ?? '').trim();
     const 담을것 = isAnyDirty();
 
+    /* 지금 눌러야 하는 쪽에만 색이 든다. 다만 **색이 빠진 쪽도 보여야 한다** —
+       맨 .btn 은 배경이 없고 테두리가 transparent 라 글자만 떠 있는 꼴이 된다
+       (2026-09-14 지시). 색을 뺄 때는 테두리 단추로 되돌린다. */
     const 색 = (el, 켜나, 말) => {
       if (!el) return;
       el.classList.toggle('btn-primary', 켜나);
+      el.classList.toggle('btn-outline', !켜나);
       if (말) el.title = 말;
     };
 
@@ -9595,11 +9599,11 @@ window.HELP_TOUR_STEPS = [
     syncOrderStageBtn();          // 「주문 완료」를 「주문 미등록」으로 되돌린다
     document.getElementById('orderActionArea').innerHTML = `
       <div style="display:flex;gap:8px;">
-        <button class="btn" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
+        <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
                 title="주문 제품과 배송 정보를 저장합니다">
           <i class="fa-solid fa-floppy-disk"></i> 저장
         </button>
-        <button class="btn flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+        <button class="btn btn-outline flex-1" id="btnCreateOrder" onclick="createOrder(event)">
           <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
         </button>
       </div>`;
