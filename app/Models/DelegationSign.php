@@ -67,6 +67,9 @@ class DelegationSign extends Model
            주민등록번호는 평문 자리(resident_no)에 넣으면 모델이 암호화해 담는다. */
         'resident_no', 'resident_no_masked', 'birth_date',
         'guardian_name', 'guardian_relation', 'guardian_birth_date',
+        /* 보호자 서명과 신분증 (2026-09-15 지시) — 미성년의 위임은 법정대리인이 한다.
+           칸 이름은 주문 등록 쪽(prescription_consents)과 같게 둔다. */
+        'guardian_signature_data', 'guardian_sign_path', 'guardian_id_path', 'guardian_id_mime',
         'src_no', 'source', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
         'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
         'token', 'sent_to', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',

@@ -119,6 +119,13 @@ class DelegationSignPublicController extends Controller
             'agree_privacy'    => 'nullable|boolean',
             'agree_marketing'  => 'nullable|boolean',
             'signature'        => 'nullable|string|max:500000',
+            /* 보호자(법정대리인) — 미성년일 때만 온다 (2026-09-15 지시) */
+            'guardian_name'       => 'nullable|string|max:50',
+            'guardian_relation'   => 'nullable|string|max:20',
+            'guardian_birth_date' => 'nullable|date_format:Y-m-d',
+            'guardian_phone'      => 'nullable|string|max:20',
+            'guardian_signature'  => 'nullable|string|max:500000',
+            'guardian_id'         => 'nullable|string|max:14000000',
         ]);
 
         /* 동의하지 않음 — 서명도 그림도 남기지 않는다 */
@@ -144,6 +151,86 @@ class DelegationSignPublicController extends Controller
         $그림 = self::그림바이트((string) ($값['signature'] ?? ''));
         if ($그림 === null) {
             return response()->json(['success' => false, 'message' => '서명란에 서명해 주십시오.'], 422);
+        }
+
+        /* ── 보호자(법정대리인) ─────────────────────────────────────────
+
+           만 19세 미만의 위임은 법정대리인이 한다. 주문 등록의 서명 링크는 진작
+           그렇게 받고 있었는데 이 화면에는 그 자리가 없어 본인 서명란 하나만 서
+           있었다 — 미성년에게 그렇게 받은 서명은 위임장으로 쓸 수 없다.
+
+           **미성년 여부는 화면이 아니라 여기서 다시 묻는다.** 화면이 보낸 값을
+           믿으면 그 화면을 거치지 않고 부르는 길에서 그냥 통과한다. */
+        $보호자값 = [];
+
+        if ($sign->미성년인가()) {
+            $빈것 = collect([
+                '가입자ㆍ피부양자와의 관계'   => $값['guardian_relation']   ?? null,
+                '법정대리인 또는 가족 성명'   => $값['guardian_name']       ?? null,
+                '법정대리인 또는 가족 생년월일' => $값['guardian_birth_date'] ?? null,
+            ])->filter(fn ($v) => trim((string) $v) === '')->keys();
+
+            if ($빈것->isNotEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $빈것->implode(' · ') . '을(를) 채워 주십시오.',
+                ], 422);
+            }
+
+            $보호자그림 = self::그림바이트((string) ($값['guardian_signature'] ?? ''));
+
+            if ($보호자그림 === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '보호자 서명란에 서명해 주십시오.',
+                ], 422);
+            }
+
+            $보호자값 = [
+                'guardian_name'           => $값['guardian_name'],
+                'guardian_relation'       => $값['guardian_relation'],
+                'guardian_birth_date'     => $값['guardian_birth_date'],
+                // 번호는 숫자만 담는다 — 명단이 그렇게 담고, 화면이 다시 꼴을 갖춘다
+                'guardian_phone'          => preg_replace('/\D/', '', (string) ($값['guardian_phone'] ?? '')) ?: null,
+                'guardian_signature_data' => $값['guardian_signature'],
+            ];
+
+            /* 보호자 서명 그림도 본인 것과 같은 자리에 둔다 — 파일을 못 써도
+               표의 그림(base64)으로 되살아난다. */
+            $보호자파일 = $token . '_g_' . now()->format('YmdHis') . '.png';
+            $보호자경로 = now()->format('Y/m') . '/' . $보호자파일;
+
+            try {
+                if (! Storage::disk(DelegationSign::디스크)->put($보호자경로, $보호자그림)) {
+                    throw new \RuntimeException('put 이 false 를 돌려주었습니다');
+                }
+                $보호자값['guardian_sign_path'] = $보호자경로;
+            } catch (\Throwable $e) {
+                Log::warning('[위임장 서명] 보호자 서명 그림을 쓰지 못했습니다',
+                             ['id' => $sign->id, 'error' => $e->getMessage()]);
+            }
+
+            /* 신분증은 필수이되, 없다고 서명까지 막지는 않는다 (주문 등록 쪽과 같다).
+               그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있는데, 통째로
+               막으면 받아 둘 수 있었던 서명마저 못 받는다. 화면이 한 번 묻고 넘어온다. */
+            if (($신분증 = (string) ($값['guardian_id'] ?? '')) !== ''
+                && preg_match('~^data:(image/\w+);base64,~', $신분증, $m)) {
+                $바이트 = base64_decode(preg_replace('~^data:image/\w+;base64,~', '', $신분증), true);
+
+                if ($바이트 !== false && strlen($바이트) > 200) {
+                    $신분증경로 = now()->format('Y/m') . '/' . $token . '_id_' . now()->format('YmdHis')
+                                . '.' . (str_contains($m[1], 'png') ? 'png' : 'jpg');
+                    try {
+                        if (Storage::disk(DelegationSign::디스크)->put($신분증경로, $바이트)) {
+                            $보호자값['guardian_id_path'] = $신분증경로;
+                            $보호자값['guardian_id_mime'] = $m[1];
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('[위임장 서명] 보호자 신분증을 쓰지 못했습니다',
+                                     ['id' => $sign->id, 'error' => $e->getMessage()]);
+                    }
+                }
+            }
         }
 
         /* 파일ㆍ파일명ㆍ그림 셋을 함께 남긴다 (2026-09-11 지시).
@@ -182,9 +269,14 @@ class DelegationSignPublicController extends Controller
             'sign_base64'      => $값['signature'],
             'ip'               => $request->ip(),
             'user_agent'       => mb_substr((string) $request->userAgent(), 0, 255),
-        ])->save();
+        ] + $보호자값)->save();
 
-        return response()->json(['success' => true, 'message' => '서명이 정상적으로 접수되었습니다.']);
+        return response()->json([
+            'success' => true,
+            'message' => $보호자값
+                ? '보호자 서명으로 접수했습니다. 이 서명은 위임인과 법정대리인 두 서명란에 함께 들어갑니다.'
+                : '서명이 정상적으로 접수되었습니다.',
+        ]);
     }
 
     /**

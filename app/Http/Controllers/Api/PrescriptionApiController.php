@@ -19,7 +19,10 @@ use Illuminate\Validation\Rule;
 class PrescriptionApiController extends Controller
 {
     /** 모바일 업로드 화면에서 고를 수 있는 서류 유형 — common_codes(doc_type) 코드값과 동일하게 맞춘다 */
-    private const DOC_TYPES = ['registration_form', 'prescription', 'test_result', 'id_card', 'delegation'];
+    /* 위임장(delegation)은 받지 않는다. 주문 등록에서 서명하면 저절로 만들어지므로
+       앱으로 또 올리면 위임장이 두 장이 된다. 앱 목록에서만 빼면 이미 깔린 옛 판은
+       계속 올릴 수 있어, 서버에서도 막는다(웹 업로드 화면과 같은 규칙). */
+    private const DOC_TYPES = ['registration_form', 'prescription', 'test_result', 'id_card'];
 
     // ── POST /api/prescriptions/upload ───────────────────
     /**

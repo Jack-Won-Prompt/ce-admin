@@ -43,6 +43,21 @@
   .verify { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .ok-tag { color:var(--primary); font-weight:800; }
 
+  /* 보호자 칸 — 주문 등록의 서명 화면과 같은 모양 (2026-09-15) */
+  .g-field { margin-top:10px; }
+  .g-field label { display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:4px; }
+  .g-field input, .g-field select {
+    width:100%; height:38px; padding:0 10px; font-size:13px;
+    border:1px solid #C7CDD4; border-radius:8px; background:#fff; box-sizing:border-box;
+  }
+  .g-field input[readonly] { background:#F3F4F6; color:#6B7280; }
+  .g-upload {
+    display:flex; align-items:center; justify-content:center; min-height:96px; cursor:pointer;
+    border:1px dashed #C7CDD4; border-radius:9px; background:#FAFBFC;
+    font-size:13px; color:#6B7280; padding:10px;
+  }
+  canvas#gsig { width:100%; height:180px; border:1px dashed #C7CDD4; border-radius:9px;
+                background:#fff; touch-action:none; }
   canvas#sig { width:100%; height:180px; border:1px dashed #C7CDD4; border-radius:9px;
                background:#fff; touch-action:none; display:block; }
   .sig-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
@@ -173,6 +188,89 @@
     </div>
   </div>
 
+  {{-- ── 보호자(법정대리인) — 미성년일 때만 (2026-09-15 지시) ──────────────
+
+       만 19세 미만의 위임은 법정대리인이 한다. 주문 등록의 서명 링크는 진작 그렇게
+       받고 있었는데(consent/sign) 이 화면에는 그 자리가 없어 **본인 서명란 하나**만
+       서 있었다 — 미성년에게 그렇게 받은 서명은 위임장으로 쓸 수 없다.
+
+       성년ㆍ미성년은 주민등록번호로 가른다. 명단에 주민등록번호가 없으면 세우지
+       않는다 — 「모른다」를 「미성년」으로 보면 성인에게 보호자를 요구하게 된다. --}}
+  @if($sign->미성년인가())
+  <div class="card" id="guardianCard">
+    <div class="sig-head" style="display:block;">
+      <span style="font-weight:700;">보호자(법정대리인) 확인
+        <span style="color:#ef4444;font-size:11px;">* 필수</span></span>
+      <div class="lead" style="margin-top:4px;">
+        위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만인 경우
+        법정대리인(보호자)의 확인이 필요합니다.
+      </div>
+    </div>
+
+    <div class="g-field">
+      <label>위임인 성명</label>
+      <input type="text" value="{{ $sign->이름() }}" readonly>
+    </div>
+    <div class="g-field">
+      <label>위임인 생년월일</label>
+      <input type="text" value="{{ $sign->birth_date?->format('Y-m-d') }}" readonly>
+    </div>
+    <div class="g-field">
+      <label>가입자ㆍ피부양자와의 관계 <span style="color:#ef4444;">*</span></label>
+      <select id="gRelation" onchange="다시셈()">
+        <option value="">선택</option>
+        @foreach(config('delegation.guardian_relations', ['부','모','조부','조모','법정대리인']) as $r)
+          <option value="{{ $r }}" @selected($sign->guardian_relation === $r)>{{ $r }}</option>
+        @endforeach
+      </select>
+    </div>
+    <div class="g-field">
+      <label>법정대리인 또는 가족 성명 <span style="color:#ef4444;">*</span></label>
+      {{-- 명단에 적어 둔 것이 있으면 미리 채운다 — 담당자가 통화로 받아 적어 둔 값이다 --}}
+      <input type="text" id="gName" maxlength="50" placeholder="법정대리인 또는 가족 성명"
+             value="{{ $sign->guardian_name }}" oninput="다시셈()">
+    </div>
+    <div class="g-field">
+      <label>보호자 전화번호</label>
+      <input type="text" id="gPhone" maxlength="20" placeholder="010-XXXX-XXXX"
+             value="{{ $sign->guardian_phone }}">
+    </div>
+    <div class="g-field">
+      <label>법정대리인 또는 가족 생년월일 <span style="color:#ef4444;">*</span></label>
+      <input type="text" id="gBirth" maxlength="10" placeholder="YYYY-MM-DD" inputmode="numeric"
+             value="{{ $sign->guardian_birth_date?->format('Y-m-d') }}" oninput="생년꼴(this)">
+    </div>
+
+    <div class="sig-head" style="margin-top:14px;">
+      <span style="font-weight:700;">보호자 서명
+        <span style="color:#ef4444;font-size:11px;">* 필수</span></span>
+      <button type="button" class="btn" style="height:28px;padding:0 10px;font-size:12px;"
+              onclick="보호자서명지우기()">지우기</button>
+    </div>
+    <div class="lead" style="margin-bottom:6px;">
+      위임인이 미성년자인 경우, 본 전자서명은 위임인과 법정대리인 각각의 서명란에
+      동일하게 적용됩니다.
+    </div>
+    <canvas id="gsig"></canvas>
+
+    <div class="sig-head" style="margin-top:14px;display:block;">
+      <span style="font-weight:700;">법정대리인 또는 가족 신분증
+        <span style="color:#ef4444;font-size:11px;">* 필수</span></span>
+      <div class="lead" style="margin-top:4px;">
+        법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주세요.
+        생년월일 확인이 가능한 신분증만 제출 가능합니다.<br>(JPG, PNG, HEIC 형식, 최대 10MB)
+      </div>
+    </div>
+    <label class="g-upload" id="gIdDrop">
+      <input type="file" id="gIdFile" accept="image/jpeg,image/png,image/heic,image/heif"
+             capture="environment" style="display:none;" onchange="신분증고름(this)">
+      <span id="gIdEmpty">신분증 사진 올리기</span>
+      <img id="gIdPreview" style="display:none;max-width:100%;max-height:220px;border-radius:8px;" alt="">
+    </label>
+    <div id="gIdName" class="lead" style="display:none;margin-top:6px;text-align:center;"></div>
+  </div>
+  @endif
+
   {{-- ── 서명 ────────────────────────────────────────────── --}}
   <div class="card">
     <div class="sig-head">
@@ -285,12 +383,98 @@ function 고른값(이름) {
   return el ? el.value : null;
 }
 
+/* ── 보호자(법정대리인) — 미성년일 때만 (2026-09-15) ───────────────────
+
+   주문 등록의 서명 화면과 같은 방식이다. 서명판만 하나 더 서고, 막는 잣대에
+   보호자 칸이 더해진다. */
+const 미성년 = @json((bool) $sign->미성년인가());
+let gcv = null, gctx = null, g칠함 = false, 신분증 = null;
+
+function 생년꼴(칸) {
+  const d = 칸.value.replace(/\D/g, '').slice(0, 8);
+  칸.value = d.length > 6 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`
+           : d.length > 4 ? `${d.slice(0,4)}-${d.slice(4)}` : d;
+  다시셈();
+}
+
+function 생년바른가() {
+  const v = document.getElementById('gBirth')?.value ?? '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(v);
+  return !isNaN(d) && d < new Date();
+}
+
+function 보호자서명지우기() {
+  if (!gctx) return;
+  gctx.clearRect(0, 0, gcv.width, gcv.height);
+  g칠함 = false;
+  다시셈();
+}
+
+function 신분증고름(칸) {
+  const f = 칸.files?.[0];
+  if (!f) return;
+
+  if (f.size > 10 * 1024 * 1024) {
+    alert('파일이 너무 큽니다. 10MB 이하로 올려주세요.');
+    칸.value = ''; return;
+  }
+
+  const r = new FileReader();
+  r.onload = () => {
+    신분증 = r.result;
+    const im = document.getElementById('gIdPreview');
+    im.src = 신분증; im.style.display = '';
+    document.getElementById('gIdEmpty').style.display = 'none';
+    const 이름 = document.getElementById('gIdName');
+    이름.textContent = f.name; 이름.style.display = '';
+    다시셈();
+  };
+  r.onerror = () => alert('이미지를 읽지 못했습니다. 다른 파일로 시도해주세요.');
+  r.readAsDataURL(f);
+}
+
+if (미성년) {
+  gcv  = document.getElementById('gsig');
+  gctx = gcv.getContext('2d');
+
+  const 맞춤 = () => {
+    const r = gcv.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    gcv.width = r.width * dpr; gcv.height = 180 * dpr;
+    gctx.scale(dpr, dpr);
+    gctx.lineWidth = 2.2; gctx.lineCap = 'round'; gctx.strokeStyle = '#111827';
+  };
+  맞춤();
+  window.addEventListener('resize', () => { 맞춤(); g칠함 = false; 다시셈(); });
+
+  let 그리는중 = false;
+  const 자리 = (e) => {
+    const r = gcv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return [t.clientX - r.left, t.clientY - r.top];
+  };
+  const 시작 = (e) => { e.preventDefault(); 그리는중 = true; const [x,y]=자리(e); gctx.beginPath(); gctx.moveTo(x,y); };
+  const 이동 = (e) => { if(!그리는중) return; e.preventDefault(); const [x,y]=자리(e); gctx.lineTo(x,y); gctx.stroke(); g칠함 = true; };
+  const 멈춤 = () => { if(!그리는중) return; 그리는중 = false; 다시셈(); };
+
+  ['mousedown','touchstart'].forEach(n => gcv.addEventListener(n, 시작, {passive:false}));
+  ['mousemove','touchmove'].forEach(n => gcv.addEventListener(n, 이동, {passive:false}));
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(n => gcv.addEventListener(n, 멈춤));
+}
+
 function 다시셈() {
   const 남은것 = [];
-  if (NICE쓰나 && NICE강제 && !확인됨) 남은것.push('휴대폰 본인확인');
+  if (NICE쓰나 && NICE강제 && !확인됨) 남은것.push(미성년 ? '법정대리인(보호자) 휴대폰 본인확인' : '휴대폰 본인확인');
   if (고른값('agree_delegation') !== '1') 남은것.push('요양비 청구 위임 동의');
   if (고른값('agree_privacy') === null)   남은것.push('개인정보 수집·이용 동의 고르기');
   if (고른값('agree_marketing') === null) 남은것.push('마케팅 활용 동의 고르기');
+  if (미성년) {
+    if (!(document.getElementById('gRelation')?.value)) 남은것.push('가입자ㆍ피부양자와의 관계');
+    if (!(document.getElementById('gName')?.value ?? '').trim()) 남은것.push('법정대리인 또는 가족 성명');
+    if (!생년바른가()) 남은것.push('법정대리인 또는 가족 생년월일');
+    if (!g칠함) 남은것.push('보호자 서명');
+  }
   if (!칠함) 남은것.push('서명');
 
   const btn = document.getElementById('btnAgree');
@@ -356,6 +540,24 @@ async function 보내기(짓) {
     몸.agree_privacy    = 고른값('agree_privacy') === '1';
     몸.agree_marketing  = 고른값('agree_marketing') === '1';
     몸.signature        = cv.toDataURL('image/png');
+
+    if (미성년) {
+      몸.guardian_name       = (document.getElementById('gName').value ?? '').trim();
+      몸.guardian_relation   = document.getElementById('gRelation').value;
+      몸.guardian_birth_date = document.getElementById('gBirth').value;
+      몸.guardian_phone      = (document.getElementById('gPhone').value ?? '').trim();
+      몸.guardian_signature  = gcv.toDataURL('image/png');
+      몸.guardian_id         = 신분증;
+    }
+  }
+
+  /* 신분증이 없어도 서명까지는 받는다 (주문 등록 쪽과 같다).
+     그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있는데, 통째로 막으면
+     받아 둘 수 있었던 서명마저 못 받는다. 없이 누르면 한 번 묻는다. */
+  if (짓 === 'agreed' && 미성년 && !신분증) {
+    if (!confirm('신분증은 필수 입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.')) {
+      btn.disabled = false; 다시셈(); return;
+    }
   }
 
   try {
