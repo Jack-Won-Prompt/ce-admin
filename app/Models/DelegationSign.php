@@ -62,6 +62,11 @@ class DelegationSign extends Model
 
     protected $fillable = [
         'customer_name', 'phone', 'guardian_phone', 'main_contact',
+        /* 명단이 들고 오는 값 (2026-09-15 지시) — 위임은 만 19세 미만이면 법정대리인이
+           대신 한다. 보내기 전에 그것을 알아야 미성년에게 헛걸음하지 않는다.
+           주민등록번호는 평문 자리(resident_no)에 넣으면 모델이 암호화해 담는다. */
+        'resident_no', 'resident_no_masked', 'birth_date',
+        'guardian_name', 'guardian_relation', 'guardian_birth_date',
         'src_no', 'source', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
         'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
         'token', 'sent_to', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
@@ -74,6 +79,10 @@ class DelegationSign extends Model
     ];
 
     protected $casts = [
+        /* 날짜는 형식을 지닌 채 새긴다 — 그냥 date 로 두면 JSON 으로 나갈 때
+           UTC ISO 로 적혀 아홉 시간 어긋난 값이 화면에 선다 (2026-09-14 확인) */
+        'birth_date'          => 'date:Y-m-d',
+        'guardian_birth_date' => 'date:Y-m-d',
         'sent_at'          => 'datetime',
         'expires_at'       => 'datetime',
         'signed_at'        => 'datetime',
@@ -103,6 +112,68 @@ class DelegationSign extends Model
      * 한 번 더 적으면 한쪽만 고칠 때 어긋난다. 표를 참조하는 것이 아니라 글자를
      * 다루는 함수라, 이 기능이 표 하나로 닫힌다는 것과 어긋나지 않는다.
      */
+    /* ── 주민등록번호 (2026-09-15 지시) ──────────────────────────────────
+
+       처방전이 쓰는 것과 같은 자리를 쓴다(App\Support\ResidentNo). 평문을 표에 두지
+       않는다 — 넣을 때 암호화하고, 화면에는 가린 값만 내보낸다.
+
+       가린 값만으로도 생년월일ㆍ성별ㆍ성년 여부를 읽을 수 있다. 뒷자리 첫 숫자가
+       세기를 말해 주기 때문이다. 그래서 이 세 가지를 물을 때는 복호화하지 않는다. */
+    public function setResidentNoAttribute($value): void
+    {
+        $값 = trim((string) $value);
+
+        if ($값 === '') {
+            $this->attributes['resident_no']        = null;
+            $this->attributes['resident_no_masked'] = null;
+
+            return;
+        }
+
+        $this->attributes['resident_no']        = \App\Support\ResidentNo::encrypt($값);
+        $this->attributes['resident_no_masked'] = \App\Support\ResidentNo::mask($값);
+
+        /* 생년월일도 함께 세운다 — 나이와 성년 판정이 이 값을 본다. 명단이 나이를
+           따로 들고 오지만 그것은 뽑은 날의 나이라 해가 바뀌면 어긋난다. */
+        if ($생 = \App\Support\ResidentNo::birthDateFromMasked($this->attributes['resident_no_masked'])) {
+            $this->attributes['birth_date'] = $생->toDateString();
+        }
+    }
+
+    /** 화면에 적는 주민등록번호 — 가린 값이다 */
+    public function 주민번호(): string
+    {
+        return (string) ($this->resident_no_masked ?? '');
+    }
+
+    /** 만 나이 — 생년월일에서 센다. 못 읽으면 null */
+    public function 나이(): ?int
+    {
+        return $this->birth_date?->age;
+    }
+
+    /**
+     * 성년인가 미성년인가 (2026-09-15 지시).
+     *
+     * 주민등록번호로 가른다. 모르면 빈칸으로 둔다 — 「모른다」를 「성년」으로 적어 두면
+     * 미성년에게 보호자 없이 링크가 나가고, 그 링크는 보호자 칸에서 멈춘다.
+     */
+    public function 성년구분(): string
+    {
+        $미성년 = \App\Support\ResidentNo::isMinorByMasked($this->resident_no_masked);
+
+        return match ($미성년) {
+            true    => '미성년',
+            false   => '성년',
+            default => '',
+        };
+    }
+
+    public function 미성년인가(): bool
+    {
+        return \App\Support\ResidentNo::isMinorByMasked($this->resident_no_masked) === true;
+    }
+
     public function 이름(): string
     {
         return Patient::bare($this->customer_name);

@@ -476,6 +476,30 @@
          돌려 보내므로, 어느 쪽으로 보내는지(Main contact)를 두 번호 옆에 세운다. */
       { header: '환자 전화번호',   name: 'phone',    width: 130 },
       { header: '보호자 전화번호', name: 'guardian', width: 134 },
+
+      {{-- 주민등록번호와 성년 구분 (2026-09-15 지시).
+
+           위임은 만 19세 미만이면 법정대리인이 대신 한다. 그런데 명단에는 이름과
+           번호뿐이라 보내기 전에 성년인지 알 수 없었다 — 미성년에게 보낸 링크는
+           보호자 칸을 요구하며 그 자리에서 멈춘다.
+
+           주민등록번호는 **가린 값**만 온다. 성년ㆍ미성년은 그것만으로 갈린다 —
+           뒷자리 첫 숫자가 1800ㆍ1900ㆍ2000년대를 말해 주기 때문이다. --}}
+      { header: '주민등록번호',   name: 'resident', width: 124 },
+      {
+        header: '성년/미성년', name: 'adult', width: 96, align: 'center', sortable: true,
+        renderer: (v) => {
+          if (!v) return '';                       // 주민등록번호가 없으면 빈칸이다
+          const el = document.createElement('span');
+          el.className = 'badge badge-' + (v === '미성년' ? 'warning' : 'secondary');
+          el.textContent = v;
+          return el;
+        },
+      },
+      { header: '나이',           name: 'age',        width: 64,  align: 'right',  sortable: true },
+      { header: '보호자 성명',     name: 'g_name',     width: 100, sortable: true },
+      { header: '관계',           name: 'g_relation', width: 74,  align: 'center', sortable: true },
+      { header: '보호자 생년월일', name: 'g_birth',    width: 118, align: 'center', sortable: true },
       {
         header: 'Main contact', name: 'contact', width: 104, align: 'center',
         renderer: (v, row) => {

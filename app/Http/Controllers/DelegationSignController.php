@@ -103,6 +103,16 @@ class DelegationSignController extends Controller
                 /* 보호자 번호와 어느 쪽으로 보내는지 (2026-09-14 지시).
                    환자가 문자를 받지 못하는 건이 있어 보호자로 돌려 보낸다. */
                 'guardian'   => $d->guardian_phone ? \App\Support\PhoneNo::format($d->guardian_phone) : '',
+                /* 주민등록번호와 성년 구분 (2026-09-15 지시).
+
+                   평문은 내보내지 않는다 — 가린 값만 간다. 성년ㆍ미성년은 그 가린
+                   값만으로 갈린다(뒷자리 첫 숫자가 세기를 말해 준다). */
+                'resident'   => $d->주민번호(),
+                'adult'      => $d->성년구분(),
+                'age'        => $d->나이(),
+                'g_name'     => $d->guardian_name ?? '',
+                'g_relation' => $d->guardian_relation ?? '',
+                'g_birth'    => $d->guardian_birth_date?->format('Y-m-d') ?? '',
                 'contact'    => DelegationSign::연락[$d->main_contact] ?? '환자',
                 'contact_code' => $d->main_contact ?: 'patient',
                 'phone_raw'    => $d->phone ?? '',
@@ -358,6 +368,30 @@ class DelegationSignController extends Controller
                 'last_sale_status'   => mb_substr($값($자리['판매상태']), 0, 30) ?: null,
             ] : [];
 
+            /* 주민등록번호와 보호자 (2026-09-15 지시).
+
+               주민등록번호는 평문 자리에 넣는다 — 모델이 받아 암호화하고, 가린 값과
+               생년월일까지 함께 세운다(DelegationSign::setResidentNoAttribute).
+
+               **빈 값은 적지 않는다.** 명단은 주마다 새로 뽑혀 오는데 어떤 주에는 그
+               칸이 비어 있다. 빈 것으로 덮으면 지난주에 받아 둔 주민등록번호가 사라진다. */
+            $사람값 = [];
+
+            if ($자리) {
+                if (($주민 = $값($자리['주민번호'])) !== '') {
+                    $사람값['resident_no'] = $주민;
+                }
+                if (($g = mb_substr($값($자리['보호자이름']), 0, 50)) !== '') {
+                    $사람값['guardian_name'] = $g;
+                }
+                if (($g = mb_substr($값($자리['관계']), 0, 20)) !== '') {
+                    $사람값['guardian_relation'] = $g;
+                }
+                if ($g = self::날짜($값($자리['보호자생년']))) {
+                    $사람값['guardian_birth_date'] = $g;
+                }
+            }
+
             /* 같은 이름ㆍ같은 번호가 이미 있으면 새로 세우지 않고 **명단 칸만 새로 적는다**
                (2026-09-11). 명단은 주마다 새로 뽑혀 온다 — 다음 재구매일이나 판매상태가
                바뀐 것을 받아 적어야 하는데, 여태 그냥 지나가 옛 값이 남았다.
@@ -378,6 +412,13 @@ class DelegationSignController extends Controller
 
                     $이미->forceFill($적을것)->save();
                 }
+
+                /* 주민등록번호ㆍ보호자는 명단값과 따로 적는다 — forceFill 은 돌림
+                   설정자(setResidentNoAttribute)를 지나치지 않지만, 위의 $적을것 은
+                   명단이 비어 있으면 통째로 건너뛴다. 그 안에 섞어 두면 함께 빠진다. */
+                if ($사람값) {
+                    $이미->fill($사람값)->save();
+                }
                 $건너뜀++;
                 continue;
             }
@@ -386,7 +427,7 @@ class DelegationSignController extends Controller
                 'customer_name' => mb_substr($이름, 0, 100),
                 'phone'         => $번호,
                 'status'        => 'pending',
-            ] + $명단값);
+            ] + $명단값 + $사람값);
             $세움++;
         }
 
@@ -443,6 +484,18 @@ class DelegationSignController extends Controller
             '처방여부'   => $찾(['처방여부']),
             '자격'       => $찾(['자격']),
             '판매상태'   => $찾(['판매상태']),
+            /* 주민등록번호와 보호자 (2026-09-15 지시).
+
+               위임은 만 19세 미만이면 법정대리인이 대신 한다. 그런데 명단에는 이름과
+               번호뿐이라 보내기 전에 성년인지 알 수 없었다 — 미성년에게 보낸 링크는
+               보호자 칸을 요구하며 그 자리에서 멈춘다.
+
+               「보호자생년월일」이 「생년월일」을 품고 있어, 보호자 쪽을 먼저 찾는다. */
+            '주민번호'   => $찾(['주민번호', '주민등록번호']),
+            '나이'       => $찾(['나이']),
+            '보호자이름' => $찾(['보호자성명', '보호자 성명', '보호자명']),
+            '관계'       => $찾(['관계']),
+            '보호자생년' => $찾(['보호자생년월일', '보호자 생년월일']),
         ];
     }
 
