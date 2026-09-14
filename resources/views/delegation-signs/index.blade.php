@@ -114,6 +114,16 @@
         @endforeach
       </select>
     </div>
+    {{-- 명단에서 온 줄과 손으로 보낸 줄을 갈라 본다 (2026-09-14 지시) --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">구분</label>
+      <select name="source" class="form-control form-select">
+        <option value="">전체 구분</option>
+        @foreach(\App\Models\DelegationSign::갈래 as $k => $label)
+          <option value="{{ $k }}" @selected(request('source') === $k)>{{ $label }}</option>
+        @endforeach
+      </select>
+    </div>
     <div class="ds-filter-field span-2">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
@@ -123,6 +133,10 @@
   <div class="ds-filter-actions">
     <a href="{{ route('delegation-signs.index') }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 받는 사람에게 무엇이 가는지는 제 번호로 한 번 받아 보는 것이 가장 확실하다
+         (2026-09-14 지시). 명단에 없는 번호로도 보낼 수 있어야 하므로 목록의 줄과
+         묶지 않고 필터 줄에 세운다. --}}
+    <button type="button" class="ds-btn" onclick="dlgDirectOpen()">미리 보기</button>
     {{-- 엑셀 받기는 보고 있는 백 줄이 아니라 걸러 낸 전부를 내려받는다
          (2026-09-11 지시). 그래서 화면의 wwGrid 가 아니라 서버로 간다. --}}
     <a class="ds-btn" href="{{ route('delegation-signs.export', request()->query()) }}" data-no-loading>엑셀 다운</a>
@@ -222,6 +236,57 @@
     <div class="modal-ft">
       <button type="button" class="ds-btn" onclick="dlgSendClose()">취소</button>
       <button type="button" class="ds-btn ds-btn-primary" id="dlgSendBtn" onclick="dlgSend()">발송</button>
+    </div>
+  </div>
+</div>
+
+{{-- ── 미리 보기 — 이름ㆍ번호를 적어 직접 보낸다 (2026-09-14 지시) ──────────
+     위 발송 창과 같은 모양이되, 목록의 줄을 받지 않고 두 칸을 직접 받는다.
+     받는 사람이 무엇을 보는지 확인하려는 것이라 **정말로 문자가 나간다**. --}}
+<div id="dlgDirectBack" class="modal-overlay">
+  <div class="modal-box sm">
+    <div class="modal-hd">
+      <span class="modal-title">위임장 서명 미리 보기</span>
+      <button type="button" class="modal-close" onclick="dlgDirectClose()" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-bd">
+      <div class="dlg-kv"><span>판매처</span><span>{{ \App\Models\DelegationSign::위임받는곳 }}</span></div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgDirectName">이름</label>
+        <input type="text" id="dlgDirectName" class="form-control" maxlength="100" placeholder="홍길동">
+        <div class="dlg-help">받는 사람이 보는 문자와 서명 화면에 그대로 적힙니다.</div>
+      </div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgDirectPhone">받을 번호</label>
+        <input type="tel" id="dlgDirectPhone" class="form-control" maxlength="20" placeholder="010-0000-0000">
+        <div class="dlg-help">이 번호로 서명 링크가 갑니다. 확인하려면 본인 번호를 적으십시오.</div>
+      </div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label">보낼 글</label>
+        <pre id="dlgDirectPreview" class="dlg-pre"></pre>
+      </div>
+
+      {{-- 명단은 검증된 번호지만 여기는 손으로 친다. 지금 설정이 무엇인지 모르고
+           누르는 것이 가장 위험하므로 화면에 적어 둔다. --}}
+      @php $문자갈래 = config('popbill.sms_mode'); @endphp
+      <div class="dlg-warn" style="display:block;">
+        @if($문자갈래 === 'live')
+          지금 문자 발송이 <b>실제</b>입니다 — 적은 번호로 정말 나갑니다.
+        @elseif($문자갈래 === 'redirect')
+          지금 문자 발송이 <b>우리에게만</b>입니다 — 적은 번호가 아니라 테스트 받는 번호로 옵니다.
+        @else
+          지금 문자 발송이 <b>시뮬레이션</b>입니다 — 문자가 나가지 않습니다.
+        @endif
+      </div>
+
+      <div id="dlgDirectWarn" class="dlg-warn" style="display:none;"></div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="ds-btn" onclick="dlgDirectClose()">취소</button>
+      <button type="button" class="ds-btn ds-btn-primary" id="dlgDirectBtn" onclick="dlgDirectSend()">전송</button>
     </div>
   </div>
 </div>
@@ -379,13 +444,15 @@
     document.getElementById('dlgSendBack').classList.add('open');
   };
 
+  /* 보낼 글은 서버가 지은 틀을 쓴다 (2026-09-14).
+     여기서 같은 글을 따로 적어 두었더니 서버 문구와 따로 놀았고, 「30분」도 글자로
+     박혀 있어 유효시간을 바꾸면 화면만 옛말을 했다. */
+  const 문자틀 = @json($문자틀);
+  const 글짓기 = (이름) => 문자틀.replace('{이름}', 이름);
+
   function 미리보기() {
     const 이름 = document.getElementById('dlgName').value.trim() || (지금?.customer ?? '');
-    document.getElementById('dlgPreview').textContent =
-      '[콜로플라스트] ' + 이름 + '님\n'
-      + '요양비 청구 위임장 전자서명 요청입니다.\n'
-      + '서명 링크(30분 유효):\n'
-      + '(발송할 때 만들어집니다)';
+    document.getElementById('dlgPreview').textContent = 글짓기(이름);
   }
 
   window.dlgSendClose = function () {
@@ -413,6 +480,81 @@
 
       showToast(out.message + ' ' + out.expires_at + '까지 열려 있습니다.', 'success', 6000);
       dlgSendClose();
+      setTimeout(() => location.reload(), 1000);
+    } catch (e) {
+      BtnState.reset(btn);
+      showToast('보내지 못했습니다 — ' + e.message, 'danger', 6000);
+    }
+  };
+
+  // ── 미리 보기 — 이름ㆍ번호를 적어 직접 보낸다 ───────────
+  const 번호칸 = () => document.getElementById('dlgDirectPhone');
+  const 이름칸 = () => document.getElementById('dlgDirectName');
+
+  /* 치는 동안 010-0000-0000 꼴로 세운다 — 목록이 그 꼴로 보여 주므로
+     적을 때도 같은 모양이어야 눈이 헷갈리지 않는다. */
+  function 번호꼴(값) {
+    const n = 값.replace(/\D/g, '').slice(0, 11);
+    if (n.length < 4)  return n;
+    if (n.length < 8)  return n.slice(0, 3) + '-' + n.slice(3);
+    if (n.length < 11) return n.slice(0, 3) + '-' + n.slice(3, 6) + '-' + n.slice(6);
+    return n.slice(0, 3) + '-' + n.slice(3, 7) + '-' + n.slice(7);
+  }
+
+  function 미리보기2() {
+    document.getElementById('dlgDirectPreview').textContent =
+      글짓기(이름칸().value.trim() || '○○○');
+  }
+
+  window.dlgDirectOpen = function () {
+    이름칸().value = '';
+    번호칸().value = '';
+    document.getElementById('dlgDirectWarn').style.display = 'none';
+    미리보기2();
+    이름칸().oninput = 미리보기2;
+    번호칸().oninput = (e) => { e.target.value = 번호꼴(e.target.value); };
+    document.getElementById('dlgDirectBack').classList.add('open');
+    이름칸().focus();
+  };
+
+  window.dlgDirectClose = function () {
+    document.getElementById('dlgDirectBack').classList.remove('open');
+  };
+
+  window.dlgDirectSend = async function () {
+    const 이름 = 이름칸().value.trim();
+    const 번호 = 번호칸().value.replace(/\D/g, '');
+    const 경고 = document.getElementById('dlgDirectWarn');
+
+    if (!이름) { 경고.style.display = ''; 경고.textContent = '이름을 적어 주십시오.'; 이름칸().focus(); return; }
+    if (번호.length < 9 || 번호.length > 11) {
+      경고.style.display = ''; 경고.textContent = '전화번호를 숫자 9~11자리로 적어 주십시오.';
+      번호칸().focus(); return;
+    }
+    경고.style.display = 'none';
+
+    const btn = document.getElementById('dlgDirectBtn');
+    BtnState.loading(btn, '보내는 중...');
+    try {
+      const res = await fetch(BASE + '/send-direct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ name: 이름, phone: 번호 }),
+      });
+      const out = await res.json();
+
+      if (!out.success) {
+        BtnState.reset(btn);
+        showToast(out.message || '보내지 못했습니다.', 'danger', 6000);
+        return;
+      }
+
+      showToast(out.message + ' ' + out.expires_at + '까지 열려 있습니다.', 'success', 6000);
+      dlgDirectClose();
       setTimeout(() => location.reload(), 1000);
     } catch (e) {
       BtnState.reset(btn);

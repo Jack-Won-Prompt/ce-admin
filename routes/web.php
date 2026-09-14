@@ -620,6 +620,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',                 [\App\Http\Controllers\DelegationSignController::class, 'index'])->name('index');
         Route::get('/export',           [\App\Http\Controllers\DelegationSignController::class, 'export'])->name('export');
         Route::post('/import',          [\App\Http\Controllers\DelegationSignController::class, 'import'])->name('import');
+
+        /* 이름ㆍ번호를 직접 적어 보낸다 (2026-09-14 지시).
+           ［/{delegationSign}］보다 **앞에** 두어야 한다 — 뒤에 두면 send-direct 를
+           줄 번호로 읽어 404 가 된다. */
+        Route::post('/send-direct',     [\App\Http\Controllers\DelegationSignController::class, 'sendDirect'])->name('send-direct');
+
         Route::get('/{delegationSign}', [\App\Http\Controllers\DelegationSignController::class, 'show'])->name('show');
         Route::post('/{delegationSign}/send',  [\App\Http\Controllers\DelegationSignController::class, 'send'])->name('send');
         Route::get('/{delegationSign}/image',  [\App\Http\Controllers\DelegationSignController::class, 'image'])->name('image');

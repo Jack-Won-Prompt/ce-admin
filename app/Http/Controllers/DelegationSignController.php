@@ -48,6 +48,11 @@ class DelegationSignController extends Controller
             $query->where('dealer_name', $request->dealer);
         }
 
+        /* 명단에서 온 것과 손으로 보낸 것을 갈라 본다 (2026-09-14 지시) */
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -103,8 +108,13 @@ class DelegationSignController extends Controller
                 'sender'     => $d->sent_by_name ?? '',
                 'has_sign'   => (bool) ($d->sign_path || $d->sign_base64),
                 'can_send'   => (bool) $d->phone,
-                /* 명단에 딸려 온 값 — 누구에게 왜 보내는지를 가리는 자리다 */
-                'dealer'     => $d->dealer_name ?? '',
+                /* 명단에 딸려 온 값 — 누구에게 왜 보내는지를 가리는 자리다.
+                   직접 발송한 줄은 판매처가 없다. 빈칸으로 두면 명단 줄 가운데
+                   섞여 보이지 않으므로 갈래를 그 자리에 적는다. */
+                'dealer'     => $d->source === 'direct'
+                                ? DelegationSign::갈래['direct']
+                                : ($d->dealer_name ?? ''),
+                'source'     => $d->source ?? 'list',
                 'repurchase' => $d->next_repurchase_at?->format('Y-m-d') ?? '',
                 'registered' => $d->last_register_at?->format('Y-m-d') ?? '',
                 'rx_days'    => $d->rx_days,
@@ -124,7 +134,13 @@ class DelegationSignController extends Controller
         $판매처 = DelegationSign::whereNotNull('dealer_name')
             ->select('dealer_name')->distinct()->orderBy('dealer_name')->pluck('dealer_name');
 
-        return view('delegation-signs.index', compact('줄', '쪽', '보낸이', '판매처'));
+        /* 화면이 보여 주는 「보낼 글」은 서버가 짓는다 (2026-09-14).
+           blade 가 같은 글을 따로 적어 두면 한쪽만 고칠 때 어긋난다. */
+        $문자틀 = self::문자글('{이름}', '(발송할 때 만들어집니다)', self::유효분());
+        $유효분 = self::유효분();
+
+        return view('delegation-signs.index',
+            compact('줄', '쪽', '보낸이', '판매처', '문자틀', '유효분'));
     }
 
     // ── 엑셀로 내보내기 ───────────────────────────────────
@@ -483,25 +499,117 @@ class DelegationSignController extends Controller
             'name' => 'nullable|string|max:100',
         ]);
 
-        $번호 = preg_replace('/\D/', '', (string) $delegationSign->phone);
+        [$결과, $코드] = $this->보내기($delegationSign, $값['name'] ?? null);
+
+        return response()->json($결과, $코드);
+    }
+
+    /**
+     * 이름ㆍ번호를 직접 적어 보낸다 (2026-09-14 지시).
+     *
+     * 받는 사람에게 무엇이 가는지는 제 번호로 한 번 받아 보는 것이 가장 확실하다.
+     * 문자 글만 보여 주는 미리보기로는 링크를 눌렀을 때의 화면을 볼 수 없다.
+     *
+     * **명단 줄은 건드리지 않는다.** 링크는 표의 한 줄에 붙으므로 줄이 하나 필요한데,
+     * 이름ㆍ번호가 우연히 같다고 실제 환자의 줄에 얹으면 그 사람에게 앞서 보낸 링크가
+     * 그 자리에서 죽는다 — 확인하려고 한 일이 남의 서명을 막는다.
+     * 그래서 direct 줄 안에서만 찾아 쓰고, 없으면 새로 세운다.
+     */
+    public function sendDirect(Request $request): JsonResponse
+    {
+        $값 = $request->validate([
+            'name'  => 'required|string|max:100',
+            'phone' => 'required|string|max:20',
+        ], [
+            'name.required'  => '이름을 적어 주십시오.',
+            'phone.required' => '전화번호를 적어 주십시오.',
+        ]);
+
+        $이름 = trim($값['name']);
+        $번호 = preg_replace('/\D/', '', $값['phone']);
+
         if (strlen($번호) < 9 || strlen($번호) > 11) {
             return response()->json([
                 'success' => false,
-                'message' => '전화번호가 비었거나 꼴이 맞지 않습니다.',
+                'message' => '전화번호 꼴이 맞지 않습니다 — 숫자 9~11자리로 적어 주십시오.',
             ], 422);
         }
 
-        $이름 = trim((string) ($값['name'] ?? '')) ?: $delegationSign->customer_name;
-        $토큰 = Str::random(24);
-        $만료 = now()->addMinutes((int) config('delegation_sign.link_minutes', 30));
+        $줄 = DelegationSign::where('source', 'direct')
+            ->where('customer_name', $이름)
+            ->where('phone', $번호)
+            ->first();
 
+        if (! $줄) {
+            $줄 = DelegationSign::create([
+                'customer_name' => mb_substr($이름, 0, 100),
+                'phone'         => $번호,
+                'source'        => 'direct',
+                'status'        => 'pending',
+            ]);
+        }
+
+        [$결과, $코드] = $this->보내기($줄, $이름);
+
+        return response()->json($결과 + ['id' => $줄->id], $코드);
+    }
+
+    /** 링크 하나가 열려 있는 동안 */
+    public static function 유효분(): int
+    {
+        return (int) config('delegation_sign.link_minutes', 30);
+    }
+
+    /**
+     * 환자가 받는 문자 — 이 한 곳에서만 짓는다 (2026-09-14).
+     *
+     * 여태 실제로 나가는 글은 여기, 화면이 보여 주는 「보낼 글」은 blade 의 자바스크립트에
+     * 따로 적혀 있었다. 한쪽만 고치면 조용히 어긋나고, 「30분」도 양쪽에 글자로 박혀 있어
+     * 유효시간을 바꾸면 화면이 거짓말을 한다.
+     */
+    public static function 문자글(string $이름, string $링크, int $분): string
+    {
+        return "[콜로플라스트] {$이름}님\n"
+             . "요양비 청구 위임장 전자서명 요청입니다.\n"
+             . "서명 링크({$분}분 유효):\n"
+             . $링크;
+    }
+
+    /** 문자에 담는 주소 */
+    private static function 링크(string $토큰): string
+    {
         $터 = rtrim(config('app.consent_public_url', config('app.url')), '/');
         if (str_starts_with($터, 'http://')) {
             $터 = 'https://' . substr($터, 7);          // 일부 문자 앱이 http 를 링크로 안 만든다
         }
-        $길 = $터 . '/delegation/' . $토큰;
 
-        $글 = "[콜로플라스트] {$이름}님\n요양비 청구 위임장 전자서명 요청입니다.\n서명 링크(30분 유효):\n{$길}";
+        return $터 . '/delegation/' . $토큰;
+    }
+
+    /**
+     * 발송 알맹이 — 목록의 ［발송］과 ［미리 보기］가 같은 것을 쓴다.
+     *
+     * 두 입구가 각자 글을 짓고 각자 토큰을 만들면 「같은 링크가 간다」가 말뿐이 된다.
+     * 여기 하나만 지나가게 해서 문구ㆍ유효시간ㆍ발송 이력이 갈릴 자리를 없앤다.
+     *
+     * @return array{0: array, 1: int}  [돌려줄 값, HTTP 코드]
+     */
+    private function 보내기(DelegationSign $줄, ?string $이름): array
+    {
+        $번호 = preg_replace('/\D/', '', (string) $줄->phone);
+        if (strlen($번호) < 9 || strlen($번호) > 11) {
+            return [[
+                'success' => false,
+                'message' => '전화번호가 비었거나 꼴이 맞지 않습니다.',
+            ], 422];
+        }
+
+        $이름 = trim((string) ($이름 ?? '')) ?: $줄->customer_name;
+        $토큰 = Str::random(24);
+        $분   = self::유효분();
+        $만료 = now()->addMinutes($분);
+        $길   = self::링크($토큰);
+        $글   = self::문자글($이름, $길, $분);
 
         try {
             /* 발송 내역에 쌓이는 길로 보낸다 — 팝빌을 곧바로 부르면 나갔는지 알 수 없다 */
@@ -514,13 +622,13 @@ class DelegationSignController extends Controller
                 throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
             }
         } catch (\Throwable $e) {
-            Log::error('[위임장 서명] 발송 실패', ['id' => $delegationSign->id, 'error' => $e->getMessage()]);
+            Log::error('[위임장 서명] 발송 실패', ['id' => $줄->id, 'error' => $e->getMessage()]);
 
-            return response()->json(['success' => false, 'message' => '발송하지 못했습니다 — ' . $e->getMessage()], 500);
+            return [['success' => false, 'message' => '발송하지 못했습니다 — ' . $e->getMessage()], 500];
         }
 
         /* 보낸 자취만 덮는다. 서명 쪽 칸은 손대지 않는다. */
-        $delegationSign->forceFill([
+        $줄->forceFill([
             'token'        => $토큰,
             'sent_to'      => $번호,
             'sent_by_id'   => Auth::id(),
@@ -530,14 +638,15 @@ class DelegationSignController extends Controller
             'status'       => 'sent',
         ])->save();
 
-        activity()->causedBy(Auth::user())->performedOn($delegationSign)
-            ->log("위임장 서명 발송 → {$이름} {$번호}");
+        activity()->causedBy(Auth::user())->performedOn($줄)
+            ->log("위임장 서명 발송 → {$이름} {$번호}"
+                . ($줄->source === 'direct' ? ' (직접 발송)' : ''));
 
-        return response()->json([
+        return [[
             'success'    => true,
             'message'    => '서명 링크를 보냈습니다.',
             'expires_at' => $만료->format('H:i'),
-        ]);
+        ], 200];
     }
 
     // ── 서명 이미지 보기 ──────────────────────────────────

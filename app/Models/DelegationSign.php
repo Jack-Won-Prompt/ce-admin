@@ -38,9 +38,20 @@ class DelegationSign extends Model
      */
     public const 위임받는곳 = '콜로플라스트 코리아 주식회사';
 
+    /**
+     * 어디서 온 줄인가 (2026-09-14 지시).
+     *
+     * direct 는 담당자가 이름ㆍ번호를 적어 보낸 줄이다. 받는 사람에게 무엇이
+     * 가는지 보려고 제 번호로 보내 본 것이라, 명단의 「보낼 사람」과 섞이면 안 된다.
+     */
+    public const 갈래 = [
+        'list'   => '명단',
+        'direct' => '직접 발송',
+    ];
+
     protected $fillable = [
         'customer_name', 'phone',
-        'src_no', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
+        'src_no', 'source', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
         'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
         'token', 'sent_to', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
         'status',
