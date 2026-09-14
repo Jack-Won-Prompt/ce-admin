@@ -22,11 +22,15 @@ class FcmService {
 
     // Android 13+ 알림 권한은 flutter_local_notifications에서 이미 처리됨
 
-    // FCM 토큰 조회 후 서버 전송
-    final token = await messaging.getToken();
-    if (token != null) {
-      debugPrint('[FCM] 토큰: $token');
-      await _sendToken(dio, token);
+    // iOS는 APNs 토큰이 등록된 뒤에만 FCM 토큰을 요청할 수 있다.
+    // 시뮬레이터처럼 APNs 토큰을 받을 수 없는 환경에서는 건너뛴다.
+    if (defaultTargetPlatform != TargetPlatform.iOS ||
+        await _waitForApnsToken(messaging)) {
+      final token = await messaging.getToken();
+      if (token != null) {
+        debugPrint('[FCM] 토큰: $token');
+        await _sendToken(dio, token);
+      }
     }
 
     // 토큰 갱신 시 서버 업데이트
@@ -41,6 +45,17 @@ class FcmService {
 
     // 앱 백그라운드 상태에서 알림 탭
     FirebaseMessaging.onMessageOpenedApp.listen(_handleTap);
+  }
+
+  Future<bool> _waitForApnsToken(FirebaseMessaging messaging) async {
+    for (var attempt = 0; attempt < 10; attempt++) {
+      if (await messaging.getAPNSToken() != null) return true;
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+
+    debugPrint('[FCM] APNs 토큰을 받지 못해 FCM 토큰 요청을 건너뜁니다.');
+    return false;
   }
 
   /// 알림을 눌러 들어왔을 때 어디로 보낼지.
