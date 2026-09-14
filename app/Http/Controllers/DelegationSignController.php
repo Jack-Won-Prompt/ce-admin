@@ -542,8 +542,8 @@ class DelegationSignController extends Controller
             'name'  => 'required|string|max:100',
             'phone' => 'required|string|max:20',
         ], [
-            'name.required'  => '이름을 적어 주십시오.',
-            'phone.required' => '전화번호를 적어 주십시오.',
+            'name.required'  => '이름을 입력해 주십시오.',
+            'phone.required' => '전화번호를 입력해 주십시오.',
         ]);
 
         /* 줄에 적히는 이름도 뗀 것으로 든다 — 서명 화면이 이 이름을 그대로 편다 */
@@ -551,13 +551,13 @@ class DelegationSignController extends Controller
         $번호 = preg_replace('/\D/', '', $값['phone']);
 
         if ($이름 === '') {
-            return response()->json(['success' => false, 'message' => '이름을 적어 주십시오.'], 422);
+            return response()->json(['success' => false, 'message' => '이름을 입력해 주십시오.'], 422);
         }
 
         if (strlen($번호) < 9 || strlen($번호) > 11) {
             return response()->json([
                 'success' => false,
-                'message' => '전화번호 꼴이 맞지 않습니다 — 숫자 9~11자리로 적어 주십시오.',
+                'message' => '전화번호 형식이 올바르지 않습니다 — 숫자 9~11자리로 입력해 주십시오.',
             ], 422);
         }
 
@@ -605,7 +605,7 @@ class DelegationSignController extends Controller
             if ($n !== null && (strlen($n) < 9 || strlen($n) > 11)) {
                 return response()->json([
                     'success' => false,
-                    'message' => "{$쪽} 전화번호 꼴이 맞지 않습니다 — 숫자 9~11자리로 적어 주십시오.",
+                    'message' => "{$쪽} 전화번호 형식이 올바르지 않습니다 — 숫자 9~11자리로 입력해 주십시오.",
                 ], 422);
             }
         }
@@ -617,7 +617,7 @@ class DelegationSignController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => "Main contact 를 {$쪽}(으)로 두셨는데 {$쪽} 전화번호가 비어 있습니다.",
+                'message' => "Main contact 를 {$쪽}(으)로 설정하셨는데 {$쪽} 전화번호가 비어 있습니다.",
             ], 422);
         }
 
@@ -632,7 +632,7 @@ class DelegationSignController extends Controller
 
         return response()->json([
             'success'  => true,
-            'message'  => '연락처를 고쳤습니다. 이제 발송할 수 있습니다.',
+            'message'  => '연락처를 수정했습니다. 이제 발송할 수 있습니다.',
             'phone'    => $환자 ? PhoneNo::format($환자) : '',
             'guardian' => $보호자 ? PhoneNo::format($보호자) : '',
             'contact'  => DelegationSign::연락[$값['main_contact']],
@@ -688,7 +688,7 @@ class DelegationSignController extends Controller
 
             return [[
                 'success' => false,
-                'message' => "{$쪽} 전화번호가 비었거나 꼴이 맞지 않습니다 — ［수정］에서 채워 주십시오.",
+                'message' => "{$쪽} 전화번호가 없거나 형식이 올바르지 않습니다 — ［수정］에서 입력해 주십시오.",
             ], 422];
         }
 

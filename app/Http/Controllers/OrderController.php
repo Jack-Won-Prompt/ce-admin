@@ -606,8 +606,11 @@ class OrderController extends Controller
     {
         $prescription = $order->prescription;
 
-        // 처방전 상태 복원
-        if ($prescription) {
+        /* 처방전 상태 복원.
+           상담만 기록한 건은 그대로 둔다 (2026-09-14). 그 건은 검수를 받은 적이
+           없으므로 「검수 완료」로 되돌릴 것이 없고, 그렇게 바꾸면 상담 기록이
+           처방전 목록에 다시 나타난다. */
+        if ($prescription && ! $prescription->상담만인가()) {
             $prescription->update(['status' => 'approved']);
         }
 

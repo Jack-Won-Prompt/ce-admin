@@ -297,7 +297,7 @@
             <option value="{{ $k }}">{{ $label }}</option>
           @endforeach
         </select>
-        <div class="dlg-help">여기서 고른 쪽의 번호로 서명 링크가 갑니다.</div>
+        <div class="dlg-help">여기서 선택한 쪽의 번호로 서명 링크가 발송됩니다.</div>
       </div>
 
       <div id="dlgCtWarn" class="dlg-warn" style="display:none;"></div>
@@ -330,7 +330,7 @@
       <div class="dlg-field">
         <label class="ds-field-label" for="dlgDirectPhone">받을 번호</label>
         <input type="tel" id="dlgDirectPhone" class="form-control" maxlength="20" placeholder="010-0000-0000">
-        <div class="dlg-help">이 번호로 서명 링크가 갑니다. 확인하려면 본인 번호를 적으십시오.</div>
+        <div class="dlg-help">이 번호로 서명 링크가 발송됩니다. 확인하려면 본인 번호를 입력하십시오.</div>
       </div>
 
       <div class="dlg-field">
@@ -343,12 +343,12 @@
       @php $문자갈래 = config('popbill.sms_mode'); @endphp
       <div class="dlg-warn" style="display:block;">
         @if($문자갈래 === 'live')
-          지금 문자 발송이 <b>실제</b>입니다 — 적은 번호로 정말 나갑니다.
+          지금 문자 발송이 <b>실제</b>입니다 — 입력한 번호로 실제 발송됩니다.
         @elseif($문자갈래 === 'redirect')
-          문자 발송이 <b>우리에게만</b>이지만, 여기서 적은 번호로는 <b>그대로 나갑니다</b> —
-          손으로 적은 번호라 돌리지 않습니다.
+          문자 발송이 <b>우리에게만</b>이지만, 여기서 입력한 번호로는 <b>그대로 발송됩니다</b> —
+          직접 입력한 번호라 변경하지 않습니다.
         @else
-          지금 문자 발송이 <b>시뮬레이션</b>입니다 — 문자가 나가지 않습니다.
+          지금 문자 발송이 <b>시뮬레이션</b>입니다 — 문자가 발송되지 않습니다.
         @endif
       </div>
 
@@ -762,9 +762,9 @@
     const 번호 = 번호칸().value.replace(/\D/g, '');
     const 경고 = document.getElementById('dlgDirectWarn');
 
-    if (!이름) { 경고.style.display = ''; 경고.textContent = '이름을 적어 주십시오.'; 이름칸().focus(); return; }
+    if (!이름) { 경고.style.display = ''; 경고.textContent = '이름을 입력해 주십시오.'; 이름칸().focus(); return; }
     if (번호.length < 9 || 번호.length > 11) {
-      경고.style.display = ''; 경고.textContent = '전화번호를 숫자 9~11자리로 적어 주십시오.';
+      경고.style.display = ''; 경고.textContent = '전화번호를 숫자 9~11자리로 입력해 주십시오.';
       번호칸().focus(); return;
     }
     경고.style.display = 'none';
