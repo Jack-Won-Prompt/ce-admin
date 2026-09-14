@@ -1651,15 +1651,22 @@ async function submitConsent(action) {
       ceAlert(data.message ?? '오류가 발생했습니다.', { tone: 'danger' });
       btnAgree.disabled = false;
       btnDecline.disabled = false;
-      btnAgree.innerHTML = '동의 서명';
+      btnAgree.innerHTML = '동의 및 제출';
     }
   } catch (e) {
     ceAlert('네트워크 오류가 발생했습니다. 다시 시도해주세요.', { tone: 'danger' });
     btnAgree.disabled = false;
     btnDecline.disabled = false;
-    btnAgree.innerHTML = '동의 서명';
+    btnAgree.innerHTML = '동의 및 제출';
   }
 }
+
+/* 첫 그림에서 한 번 셈한다 (2026-09-14).
+
+   여태는 단추에 disabled 가 박혀 있어 처음부터 잠겨 보였다. 이제 잠그지 않고 색으로만
+   가리므로, 처음에도 한 번 셈해 두지 않으면 다 채운 것처럼 보인다. 개인정보동의를 함께
+   받는 건은 onPrivacyType() 이 불러 주었지만 그렇지 않은 건은 아무도 부르지 않았다. */
+refreshAgree();
 
 function showResult(icon, title, msg, color) {
   document.getElementById('mainCard').style.display = 'none';
