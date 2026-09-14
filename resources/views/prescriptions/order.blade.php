@@ -2076,18 +2076,9 @@ $calcDeposit  = $calcCopay;
            여백 16·간격 12·위쪽 선은 전부 #viewerCards 의 CSS 가 준다. --}}
       <div id="viewerCards">
 
-      {{-- ── 등록 메모 ─────────────────────────────────
-           처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리). 그림을 보며 읽는
-           말이라 그림 바로 아래에 둔다(2026-09-09 지시). 여기서 고치지는 않는다 —
-           올린 사람이 남긴 말이고, 검수하며 남기는 말은 아래 두 칸이 따로 받는다. --}}
-      <div class="vw-card" id="adminNoteCard">
-        <div class="vw-card-head">
-          <span class="vw-card-title"><i class="fa-solid fa-note-sticky"></i> 등록 메모</span>
-        </div>
-        <div id="f-admin-note"
-             style="padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;
-                    color:{{ $prescription->admin_note ? 'var(--gray-1000)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
-      </div>
+      {{-- 등록 메모는 그림 아래에 두지 않는다 (2026-09-14 지시).
+           병원ㆍ처방 정보 탭의 검수 요청 메모 옆으로 옮겼다 — 메모 셋(등록ㆍ검수 요청ㆍ
+           참고)이 한자리에 모여야 무엇이 누구의 말인지 견주며 읽는다. --}}
 
       {{-- ── 통합 문서 스트립 (처방전 + 첨부 파일) ── --}}
       {{-- 문서가 하나도 없어도 이 카드는 둔다. 신규로 시작한 건은 여기서 처방전ㆍ신분증을
@@ -3230,7 +3221,18 @@ $calcDeposit  = $calcCopay;
                 $요청메모 = \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
                     ? $prescription->review_request_memo : null;
               @endphp
+              {{-- 등록 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
+                   여기서 고치지 않는다: 올린 사람이 남긴 말이고, 검수하며 남기는 말은
+                   옆의 두 칸이 따로 받는다 (2026-09-14 지시로 그림 아래에서 옮겨 왔다). --}}
               <div class="rx-field-row rx-row-start rx-w3">
+                <span class="rx-field-label">등록 메모</span>
+                <div id="f-admin-note" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
+                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+                     background:var(--gray-50);white-space:pre-wrap;min-height:32px;
+                     color:{{ $prescription->admin_note ? 'var(--gray-700)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
+              </div>
+              {{-- rx-row-start 를 붙이지 않는다 — 등록 메모와 한 줄에 나란히 선다 --}}
+              <div class="rx-field-row rx-w3">
                 <span class="rx-field-label">검수 요청 메모</span>
                 <textarea id="f-review-request-memo" rows="2" maxlength="1000"
                           placeholder="검수 요청 시 함께 전달할 내용을 입력하십시오 (선택)"
