@@ -3404,11 +3404,11 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">1일 처방 개수</span>
-                <input type="number" class="form-control no-spin" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="text" inputmode="numeric" maxlength="3" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방일수</span>
-                <input type="number" class="form-control no-spin" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="text" inputmode="numeric" maxlength="4" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
@@ -7325,6 +7325,27 @@ window.HELP_TOUR_STEPS = [
   let itemGrid = null;
 
   /** 한 줄의 금액을 셈한다 — 비율은 청구전략이 정한다(없으면 담긴 급여 구분) */
+  /**
+   * 숫자만 남긴다 (2026-09-14 지시).
+   *
+   * type=number 는 글자를 못 치게 막는 듯 보이지만 e·E·＋·－·. 을 받아들이고,
+   * 그렇게 담긴 값은 브라우저가 「못 읽는 값」으로 보아 el.value 가 빈 글자로 온다 —
+   * 적었는데 사라진 것처럼 보인다. 붙여넣기는 아예 거르지 못한다.
+   *
+   * 글자 칸으로 두고 숫자만 남긴다. inputmode=numeric 이라 손전화에서는 숫자판이
+   * 그대로 열린다. 자리를 옮기지 않도록 지운 만큼 커서를 되돌린다.
+   */
+  window.숫자만 = function (el) {
+    const 앞 = el.value;
+    const 뒤 = 앞.replace(/\D/g, '');
+    if (앞 === 뒤) return;
+
+    const 커서   = el.selectionStart ?? 뒤.length;
+    const 지운수 = 앞.slice(0, 커서).replace(/\d/g, '').length;   // 커서 앞에서 걷어낸 글자 수
+    el.value = 뒤;
+    try { el.setSelectionRange(커서 - 지운수, 커서 - 지운수); } catch (e) { }
+  };
+
   /* ── RB(박스) 환산 ───────────────────────────────────────
      제품마다 한 박스에 낱개가 몇 개 드는지가 정해져 있다(위드웍스 items.r_box).
      우리는 낱개로 세어 보내고(qty_unit=EA), 창고는 그것을 박스로 나눠
