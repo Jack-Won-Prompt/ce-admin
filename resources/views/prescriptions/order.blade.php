@@ -3228,38 +3228,20 @@ $calcDeposit  = $calcCopay;
                      background:var(--gray-50);white-space:pre-wrap;min-height:32px;
                      color:{{ $prescription->admin_note ? 'var(--gray-700)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '검수 요청 메모가 없습니다.' }}</div>
               </div>
-              {{-- rx-row-start 를 붙이지 않는다 — 붙이면 새 줄에서 다시 시작한다.
-                   여섯 칸 격자라 span 3 짜리 둘이 나란히 한 줄에 선다. --}}
-              {{-- 참고 사항 — 적는 칸이다 (2026-09-10 확인요청 5쪽).
-
-                   여태 이 자리는 검수자가 승인ㆍ반려하며 남긴 말(review_memo)을 읽기만
-                   했다. 담당자가 이 건을 두고 남겨 둘 말은 적을 데가 없었고, 검수 요청
-                   메모에 적으면 요청 뒤에 잠겨 더 못 고쳤다.
-
-                   칸을 따로 두었다(reference_note) — 언제든 고칠 수 있고, 승인ㆍ반려에
-                   지워지지 않는다. 검수자가 남긴 말은 아래에 그대로 보여 준다. --}}
-              @php
-                $_참고 = \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'reference_note')
-                    ? $prescription->reference_note : null;
-              @endphp
-              <div class="rx-field-row rx-row-start rx-w3">
-                <span class="rx-field-label">참고 사항</span>
-                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
-                  <textarea id="f-reference-note" rows="2" maxlength="2000"
-                            placeholder="이 건에 남겨 둘 내용을 입력하십시오 (선택)"
-                            oninput="markOcrDirty()"
-                            style="font-size:12px;line-height:1.6;padding:6px 10px;
-                                   border:1px solid var(--border);border-radius:8px;resize:vertical;
-                                   min-height:44px;">{{ $_참고 }}</textarea>
-                  @if($prescription->review_memo)
-                    {{-- 검수자가 남긴 말 — 여기서 고치지 않는다. 승인ㆍ반려한 사람의 말이다. --}}
-                    <div id="f-review-memo" style="font-size:11px;line-height:1.6;padding:5px 10px;
-                         border:1px solid var(--border);border-radius:8px;
-                         background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;"
-                         title="검수자가 승인ㆍ반려하며 남긴 말입니다">검수 메모 · {{ $prescription->review_memo }}</div>
-                  @endif
+              {{-- 참고 사항은 걷었다 (2026-09-14 지시). 담긴 값(reference_note)은
+                   지우지 않는다 — 화면에서 내릴 뿐이라 되돌릴 때 그대로 있다.
+                   저장할 때도 그 칸을 보내지 않으므로 서버가 손대지 않는다. --}}
+              @if($prescription->review_memo)
+                {{-- 검수자가 승인ㆍ반려하며 남긴 말 — 여기서 고치지 않는다.
+                     참고 사항 안에 붙어 있던 것을 제 줄로 세운다. --}}
+                <div class="rx-field-row rx-row-start rx-w3">
+                  <span class="rx-field-label">검수 메모</span>
+                  <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
+                       padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+                       background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;"
+                       title="검수자가 승인ㆍ반려하며 남긴 말입니다">{{ $prescription->review_memo }}</div>
                 </div>
-              </div>
+              @endif
               {{-- 유형 — 환자 정보에서 옮겨 왔다(요청서 9·13쪽). 자리는 검수 메모 바로
                    다음이다. 이 건이 처방전인지 처방외인지가 아래 병원ㆍ상병ㆍ수량을
                    어떻게 읽을지를 먼저 정한다 — 그것을 뒤에 두면 다 적고 나서야 갈랐다.
@@ -8118,8 +8100,6 @@ window.HELP_TOUR_STEPS = [
       rx_period:        intOrNull('f-rx-period'),
       rx_end_date:      strOrNull('f-rx-end-date'),
       diagnosis_date:   strOrNull('f-diagnosis-date'),
-      // 참고 사항 — 언제든 고친다. 검수 메모와 다른 칸이다(2026-09-10 확인요청 5쪽)
-      reference_note:   (document.getElementById('f-reference-note')?.value ?? '').trim() || null,
       // ── 처방 수량·상병 ─────────────────────────────────────
       disease_name:     strOrNull('f-disease'),
       disease_code:     strOrNull('f-disease-code'),
