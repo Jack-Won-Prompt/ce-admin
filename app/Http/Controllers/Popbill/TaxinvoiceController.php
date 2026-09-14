@@ -463,7 +463,8 @@ class TaxinvoiceController extends Controller
         $invoice->writeDate       = $request->input('write_date', now()->format('Ymd'));
         $invoice->taxType         = $request->input('tax_type', '과세');
         $invoice->issueType       = $request->input('issue_type', '정발행');
-        $invoice->purposeType     = $request->input('purpose_type', '영수');
+        // 고르지 않았으면 청구다 — 받기 전에 내는 계산서다 (2026-09-14 지시)
+        $invoice->purposeType     = $request->input('purpose_type', \App\Support\TaxInvoiceForm::PURPOSE);
         $invoice->chargeDirection = $request->input('charge_direction', '정과금');
 
         $invoice->invoicerCorpNum     = $request->input('invoicer_corp_num', $corpNum);

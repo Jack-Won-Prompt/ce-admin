@@ -391,9 +391,10 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
           </div>
           <div class="form-row">
             <label class="form-label">영수/청구</label>
+            {{-- 청구가 먼저다 — 받기 전에 내는 계산서다 (2026-09-14 지시) --}}
             <select id="purpose-type" class="form-input">
-              <option value="Receipt">영수</option>
               <option value="Request">청구</option>
+              <option value="Receipt">영수</option>
             </select>
           </div>
           <div class="form-row">

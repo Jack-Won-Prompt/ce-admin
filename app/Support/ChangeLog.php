@@ -109,6 +109,7 @@ final class ChangeLog
         'withworks_tracking_no'  => '위드웍스 송장번호',
         'tax_invoice_no'        => '세금계산서 번호',
         'tax_invoice_type'      => '세금계산서 유형',
+        'tax_invoice_purpose'   => '세금계산서 영수/청구',
         'tax_invoice_biz_name'  => '세금계산서 상호',
         'tax_invoice_ceo_name'  => '세금계산서 대표자',
         'tax_invoice_biz_no'    => '세금계산서 사업자번호',

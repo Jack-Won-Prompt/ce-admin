@@ -242,6 +242,8 @@ class Order extends Model
         'nhis_reimbursement', 'latest_fax_log_id', 'nhis_rejection_reason',
         // 세금계산서
         'tax_invoice_status', 'tax_invoice_no', 'tax_invoice_type',
+        // 영수인가 청구인가 — 신고할 때 정한 값을 적어 두고 종이 서식이 그것을 읽는다
+        'tax_invoice_purpose',
         'tax_invoice_biz_name', 'tax_invoice_ceo_name', 'tax_invoice_biz_no', 'tax_invoice_email',
         'tax_invoice_supply', 'tax_invoice_vat',
         'tax_invoice_issued_at', 'tax_invoice_cancelled_at',

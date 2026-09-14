@@ -744,7 +744,14 @@ class OrderController extends Controller
             $inv->supplyCostTotal    = (string) $supply;
             $inv->taxTotal           = (string) $vat;
             $inv->totalAmount        = (string) ($supply + $vat);
-            $inv->purposeType        = '영수';
+            /* 청구다 — 영수가 아니다 (2026-09-14 지시).
+
+               이 계산서가 다루는 돈은 공단ㆍ지자체에서 받을 기관부담금이고, 발행 시점은
+               그 돈을 받기 전이다. 「영수」는 이미 받았다는 뜻이므로 맞지 않는다.
+
+               여태 영수로 나간 것은 환자에게 받는 본인부담금의 입금확인을 보고 정했기
+               때문인데, 그 둘은 서로 다른 돈이다. */
+            $inv->purposeType        = \App\Support\TaxInvoiceForm::PURPOSE;
             $inv->remark1            = $order->order_number;
 
             /* 품목마다 한 줄로 실고, 규격 칸에 장비코드를 적는다(2026-09-03 확정).
@@ -760,6 +767,10 @@ class OrderController extends Controller
                 'tax_invoice_status'    => 'issued',
                 'tax_invoice_no'        => $invoiceNo,
                 'tax_invoice_type'      => $data['tax_invoice_type'],
+                /* 신고한 값을 그대로 적어 둔다 — 종이 서식이 이것을 읽는다. 되짚어
+                   그리면 나중에 잣대가 바뀔 때 이미 신고된 건의 종이까지 함께
+                   바뀌어, 국세청 기록과 어긋난다. */
+                'tax_invoice_purpose'   => $inv->purposeType,
                 'tax_invoice_biz_name'  => $data['tax_invoice_biz_name'],
                 'tax_invoice_ceo_name'  => $data['tax_invoice_ceo_name'],
                 // 개인 건은 주민번호다. 이 칸은 평문 컬럼이므로 마스킹해서 남긴다 —

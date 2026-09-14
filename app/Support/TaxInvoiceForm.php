@@ -18,6 +18,25 @@ use Illuminate\Support\Facades\View;
  */
 final class TaxInvoiceForm
 {
+    /**
+     * 「이 금액을 [청구] 함」 — 새로 발행하는 계산서가 신고하는 값 (2026-09-14 지시).
+     *
+     * 이 계산서가 다루는 돈은 공단ㆍ지자체에서 받을 기관부담금이고, 발행 시점은 그
+     * 돈을 받기 전이다. 「영수」는 이미 받았다는 뜻이라 맞지 않는다.
+     *
+     * 여태 영수로 나간 것은 주문의 입금확인을 보고 정했기 때문인데, 그 입금은 환자가
+     * 내는 본인부담금이다 — 세금계산서와는 다른 돈이다.
+     */
+    public const PURPOSE = '청구';
+
+    /**
+     * 이 칸이 비어 있는 옛 건에 적는 값.
+     *
+     * 2026-09-14 전에 발행한 건은 팝빌로 「영수」가 나갔다. 종이를 지금 잣대로 다시
+     * 그리면 국세청에 신고된 것과 어긋난다 — 그 건들은 신고된 대로 그린다.
+     */
+    private const PURPOSE_LEGACY = '영수';
+
     /** 한 장에 세우는 품목 줄 수 — 서식이 정한 값이다 */
     private const ROWS = 4;
 
@@ -62,9 +81,12 @@ final class TaxInvoiceForm
 
         $company = config('popbill.company');
 
-        /* 「이 금액을 [영수] 함」 — 발행이 입금 확인 뒤에 이뤄지므로 영수다.
-           팝빌에 보내는 purposeType 도 같은 값이라 종이와 신고가 어긋나지 않는다. */
-        $received = $order->isDepositConfirmed();
+        /* 「이 금액을 [영수/청구] 함」 — 신고할 때 정한 값을 그대로 읽는다.
+           되짚어 그리지 않는다. 여태는 주문의 입금확인을 보고 정했는데, 그 입금은
+           환자가 내는 본인부담금이고 이 계산서가 다루는 돈은 공단ㆍ지자체에서 받을
+           기관부담금이다 — 서로 다른 돈이라 맞을 리가 없었다(2026-09-14 지시). */
+        $purpose  = $order->tax_invoice_purpose ?: self::PURPOSE_LEGACY;
+        $received = $purpose === '영수';
 
         return [
             'doc' => [
@@ -78,7 +100,7 @@ final class TaxInvoiceForm
                 // 영수면 현금 칸에, 청구면 외상미수금 칸에 선다 — 서식이 그렇게 읽힌다
                 'cash'       => $received ? number_format($total) : '',
                 'credit'     => $received ? '' : number_format($total),
-                'purpose'    => $received ? '영수' : '청구',
+                'purpose'    => $purpose,
                 'issuer'     => '팝빌(www.popbill.com)',
             ],
 
