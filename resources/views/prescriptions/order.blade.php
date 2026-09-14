@@ -2309,7 +2309,7 @@ $calcDeposit  = $calcCopay;
         <div class="ol-filter">
           <div class="ol-field ol-field-q">
             <label class="ds-field-label">검색어</label>
-            <input type="text" id="ol-q" class="form-control" placeholder="주문번호ㆍ처방번호ㆍ이름ㆍ담당자ㆍ병원명ㆍ요양기관코드">
+            <input type="text" id="ol-q" class="form-control" placeholder="이름ㆍ주문번호ㆍ처방번호ㆍ병원명ㆍ요양기관코드 — 찾으면 교환ㆍ반품ㆍ취소까지 모두">
           </div>
           <div class="ol-field">
             <label class="ds-field-label">등록일 (부터)</label>
@@ -11793,6 +11793,10 @@ window.HELP_TOUR_STEPS = [
             return s;
           } },
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+        /* 거래 구분 — 이름으로 찾으면 교환ㆍ반품ㆍ취소 건도 함께 선다 (2026-09-14 지시).
+           손대기 전 목록에서는 늘 「판매」라 조용하고, 찾았을 때만 다른 말이 선다. */
+        { header: '거래 구분', name: 'deal',       width: 96,  align: 'center', sortable: true },
+        { header: '되돌림 상태', name: 'deal_state', width: 104, align: 'center', sortable: true },
 
         /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ창고가 지금
            무엇을 하고 있는가. 병원ㆍ처방 이야기는 아래 공통 블록이 한꺼번에 세운다. */
@@ -11923,6 +11927,9 @@ window.HELP_TOUR_STEPS = [
          OL_ROWS 는 거르기가 딛는 바탕이라 함께 고친다(안 그러면 검색 한 번에 되돌아간다). */
       const cur = olGrid.getData();
       patch(OL_ROWS);
+      /* 찾은 줄을 보고 있는 중이면 그쪽도 함께 고친다 — 안 그러면 배정한 담당자가
+         다시 찾을 때까지 보이지 않는다 (2026-09-14) */
+      if (OL_FOUND) patch(OL_FOUND);
       patch(cur);
       olGrid.setData(cur);
 
@@ -11986,10 +11993,52 @@ window.HELP_TOUR_STEPS = [
     olAskAssign([row], row.url);
   };
 
-  /* 거르기 — 받아 둔 줄을 그 자리에서 좁힌다. 서버로 다시 묻지 않는다. */
-  function olApply() {
+  /* 찾은 줄을 담아 둔다 — 찾는 말이 있는 동안에는 이것을 바탕으로 거른다 */
+  let OL_FOUND = null;
+
+  /* 거르기 (2026-09-14 지시로 두 갈래가 되었다).
+
+     **찾는 말이 있으면 서버에 묻는다.** 작업 대기 리스트는 「지금 손댈 차례」만 세우는
+     자리라 교환ㆍ반품ㆍ취소가 붙었거나 이미 창고로 넘어간 건은 빠져 있다. 그런데
+     담당자가 이름을 치는 까닭은 대개 그 반대다 — 「이 사람 건이 지금 어떻게 되어 있나」를
+     보려는 것이고, 되돌린 건이야말로 그때 가장 먼저 찾는 것이다.
+
+     **비어 있으면 받아 둔 줄 안에서 좁힌다.** 손대기 전 목록으로 돌아가는 걸음이라
+     서버에 다시 물을 까닭이 없다. */
+  async function olApply() {
     if (!olGrid) return;
-    const q       = (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
+    const q원문 = (document.getElementById('ol-q')?.value ?? '').trim();
+
+    if (q원문) {
+      const btn = document.querySelector('.ol-actions .btn-primary');
+      if (btn) BtnState.loading(btn, '찾는 중...');
+      try {
+        const res = await fetch(`{{ route('prescriptions.orderList.search') }}?q=` + encodeURIComponent(q원문),
+                                { headers: { 'Accept': 'application/json' } });
+        const out = await res.json();
+        if (!out.success) throw new Error(out.message || '찾지 못했습니다.');
+        OL_FOUND = out.rows || [];
+        if (out.total > out.limit) {
+          showToast(`${out.total}건 가운데 최근 ${out.limit}건`, 'warning', 5000);
+        }
+      } catch (e) {
+        OL_FOUND = null;
+        showToast('찾지 못했습니다 — ' + (e.message || ''), 'danger', 5000);
+        return;
+      } finally {
+        if (btn) BtnState.reset(btn);
+      }
+    } else {
+      OL_FOUND = null;
+    }
+
+    olFilter();
+  }
+
+  /* 받아 둔 줄(또는 찾은 줄)을 나머지 조건으로 좁힌다 */
+  function olFilter() {
+    const 바탕 = OL_FOUND ?? OL_ROWS;
+    const q       = OL_FOUND ? '' : (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
     const from    = document.getElementById('ol-from')?.value ?? '';
     const to      = document.getElementById('ol-to')?.value ?? '';
     const manager = document.getElementById('ol-manager')?.value ?? '';
@@ -12000,7 +12049,7 @@ window.HELP_TOUR_STEPS = [
     const rxend     = document.getElementById('ol-rxend')?.value     ?? '';
     const nextrepur = document.getElementById('ol-nextrepur')?.value ?? '';
 
-    const rows = OL_ROWS.filter(r => {
+    const rows = 바탕.filter(r => {
       if (q) {
         /* 요양기관코드도 찾는다 (2026-09-10 확인요청 5쪽) — 병원명은 손으로 친
            자리라 띄어쓰기가 갈리지만 코드는 여덟 자리 하나다. 공단 자료를 보며
@@ -12038,6 +12087,7 @@ window.HELP_TOUR_STEPS = [
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    OL_FOUND = null;                    // 찾아 둔 것도 버리고 손대기 전 목록으로 돌아간다
     if (olGrid) olGrid.setData(OL_ROWS);
   }
 

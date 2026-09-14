@@ -1370,6 +1370,159 @@ class PrescriptionController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /** 작업 대기 리스트가 한 번에 그리는 줄 수 */
+    private const 작업대기상한 = 500;
+
+    /**
+     * 작업 대기 리스트의 잣대 — 세 가지를 함께 본다.
+     *
+     *   · 되돌린 적이 없는 주문(교환ㆍ반품ㆍ취소가 붙지 않은 것)
+     *   · 주문 상태가 아직 pending 인 것
+     *   · 처방전 검수를 마친 것(approved·ordered·ocr_done)
+     *
+     * 검수 전 건이 서면, 다음에 손댈 것을 고르는 자리에서 아직 볼 차례가 아닌 것을
+     * 고르게 된다 — 골라 들어가도 주문을 낼 수 없다(검수 문에 막힌다).
+     *
+     * @param bool $함께 관계까지 미리 불러올지 — 세기만 할 때는 필요 없다
+     */
+    private function 작업대기질의(bool $함께 = false)
+    {
+        $검수마침 = ['approved', 'ordered', 'ocr_done'];
+
+        $q = \App\Models\Order::whereDoesntHave('returns')
+            ->where('status', 'pending')
+            ->whereHas('prescription', fn ($p) => $p->whereIn('status', $검수마침));
+
+        return $함께 ? $q->with($this->주문줄관계()) : $q;
+    }
+
+    /** 줄 하나를 그리는 데 드는 관계 — 줄마다 물으면 오백 줄에 오백 번을 묻는다 */
+    private function 주문줄관계(): array
+    {
+        return [
+            'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
+            'prescription.billingOffice', 'items.lots', 'operationUser', 'returns',
+            /* 진행 상태를 「입금 대기 / 출고 대기」로 갈라 적는다 — 그 판정이
+               토스 결제를 본다(2026-09-10 확인요청 8쪽). */
+            'tossPayment',
+        ];
+    }
+
+    /**
+     * 주문을 작업 대기 리스트의 줄 꼴로 바꾼다.
+     *
+     * 화면을 열 때와 이름으로 찾을 때가 같은 것을 쓴다 — 두 곳이 따로 그리면
+     * 찾은 결과만 칸이 모자라거나 값이 달라진다.
+     */
+    private function 주문줄들($orders)
+    {
+        /* 동의 두 가지는 사람에 붙는다 — 줄마다 물으면 마흔 줄에 여든을 더 묻는다.
+           목록을 만들기 전에 한 번에 모아 둔다. */
+        $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
+
+        return $orders
+        ->map(function ($o) use ($extras) {
+            $rx = $o->prescription;
+            $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
+
+            return [
+            'id'        => $o->id,
+            'order_no'  => $o->order_number,
+            'rx_number' => $rx?->rx_number ?? '',
+            'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
+            // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
+            'manager'   => $rx?->assignedUser?->name ?? '',
+            /* 이름 말고 누구인지도 함께 — 더블클릭한 사람이 임자인지 남인지는
+               이름으로 견줄 수 없다(같은 이름이 둘일 수 있다). */
+            'manager_id' => $rx?->assigned_user_id,
+            'status'    => $o->status_label,
+            /* 되돌린 적이 있는가 (2026-09-14 지시).
+               이름으로 찾으면 교환ㆍ반품ㆍ취소 건도 함께 서므로 무엇이었는지 가려야
+               한다. 작업 대기 줄은 되돌린 적이 없는 것만 모으므로 늘 「판매」다 —
+               찾은 결과에서만 다른 말이 선다. */
+            'deal'       => ($rt = $o->returns->first())
+                ? \App\Models\OrderReturn::TYPES[$rt->type]
+                    . ($o->returns->count() > 1 ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
+                : '판매',
+            'deal_state' => $rt
+                ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
+            'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
+            /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
+
+               처방전이 없는 주문은 주문 번호로 연다 — 처방전 없이도 사고, 잘못 올린
+               처방전을 지운 뒤 다시 올리기도 한다. 예전에는 여기서 빈 값을 내보내
+               더블클릭이 「이어져 있지 않습니다」로 막혔는데, 목록에 서 있는 일을
+               열 수 없게 하는 것은 막을 일이 아니라 열어 줄 일이었다. */
+            'url'       => $rx
+                ? route('prescriptions.show', $rx) . '?claim=1'
+                : route('orders.open', $o),
+
+            /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ
+               창고가 지금 무엇을 하고 있는가. */
+            'resident_no' => $rx?->resident_no_ocr_masked ?? $o->patient?->masked_resident_no ?? '',
+            // 송금자명 — 돈을 보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다)
+            'remitter'    => $o->patient?->remitter_name ?? '',
+            'creator'     => $rx?->creator?->name ?? '',
+            'updater'     => $rx?->updater?->name ?? '',
+
+            // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
+            ] + $extras->rx($rx, $o->patient)
+              + $extras->ww($o, $rx, $o->patient)
+              + $extras->of($o);
+        })->values();
+    }
+
+    /**
+     * 이름으로 찾으면 그 사람의 **모든 건**을 보여 준다 (2026-09-14 지시).
+     *
+     * 작업 대기 리스트는 「지금 손댈 차례」만 세우는 자리라 교환ㆍ반품ㆍ취소가 붙었거나
+     * 이미 창고로 넘어간 건은 빠진다. 그런데 담당자가 이름을 치는 까닭은 대개 그 반대다 —
+     * 「이 사람 건이 지금 어떻게 되어 있나」를 보려는 것이고, 되돌린 건이야말로 그때 가장
+     * 먼저 찾는 것이다.
+     *
+     * 그래서 찾는 말이 있으면 잣대를 풀고 그 사람의 것을 모두 내준다. 비어 있으면
+     * 화면이 처음 받아 둔 작업 대기 줄로 돌아간다(화면 쪽에서 가린다).
+     */
+    public function orderListSearch(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $말 = trim((string) $request->input('q'));
+
+        if ($말 === '') {
+            return response()->json(['success' => true, 'rows' => [], 'total' => 0]);
+        }
+
+        $숫자 = preg_replace('/\D/', '', $말);
+
+        $질의 = \App\Models\Order::with($this->주문줄관계())
+            ->where(function ($w) use ($말, $숫자) {
+                $w->where('order_number', 'like', "%{$말}%")
+                    ->orWhere('product_name', 'like', "%{$말}%")
+                    ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$말}%"))
+                    ->orWhereHas('prescription', fn ($p) => $p
+                        ->where('rx_number', 'like', "%{$말}%")
+                        ->orWhere('patient_name_ocr', 'like', "%{$말}%")
+                        ->orWhere('hospital_name', 'like', "%{$말}%")
+                        ->orWhere('hospital_code', 'like', "%{$말}%"));
+
+                /* 요양기관코드는 여덟 자리 숫자다 — 손으로 칠 때 하이픈이 섞이면
+                   글자 그대로는 찾히지 않는다 */
+                if ($숫자 !== '' && $숫자 !== $말) {
+                    $w->orWhereHas('prescription', fn ($p) => $p->where('hospital_code', 'like', "%{$숫자}%"));
+                }
+            });
+
+        $총 = (clone $질의)->count();
+        $줄 = $this->주문줄들($질의->latest('id')->limit(self::작업대기상한)->get());
+
+        return response()->json([
+            'success' => true,
+            'rows'    => $줄,
+            'total'   => $총,
+            'limit'   => self::작업대기상한,
+        ]);
+    }
+
+
     /**
      * 상담 이력 1건을 화면(검수 화면 이전상담 모달 · 환자 조회 모달)에서 쓰는 배열로 직렬화.
      * 예전에는 counseling_data JSON 을 그대로 실었다. 지금은 컬럼에서 꺼낸다.
@@ -2142,70 +2295,11 @@ class PrescriptionController extends Controller
            값이라 같이 둔다. */
         $검수마침 = ['approved', 'ordered', 'ocr_done'];
 
-        $orderListLimit = 500;
-        $orderListTotal = \App\Models\Order::whereDoesntHave('returns')
-            ->where('status', 'pending')
-            ->whereHas('prescription', fn ($q) => $q->whereIn('status', $검수마침))
-            ->count();
-        $orderListSource = \App\Models\Order::with([
-                'patient', 'prescription.assignedUser', 'prescription.creator', 'prescription.updater',
-                'prescription.billingOffice', 'items.lots', 'operationUser',
-                /* 진행 상태를 「입금 대기 / 출고 대기」로 갈라 적는다 — 그 판정이
-                   토스 결제를 본다(2026-09-10 확인요청 8쪽). 함께 불러 두지 않으면
-                   줄 수만큼 질의가 나간다. */
-                'tossPayment',
-            ])
-            ->whereDoesntHave('returns')
-            ->where('status', 'pending')
-            ->whereHas('prescription', fn ($q) => $q->whereIn('status', $검수마침))
-            ->latest('id')
-            ->limit($orderListLimit)
-            ->get();
-
-        /* 동의 두 가지는 사람에 붙는다 — 줄마다 물으면 마흔 줄에 여든을 더 묻는다.
-           목록을 만들기 전에 한 번에 모아 둔다. */
-        $extras = \App\Support\OrderGridExtras::forPatients($orderListSource->pluck('patient_id'));
-
-        $orderListRows = $orderListSource
-            ->map(function ($o) use ($extras) {
-                $rx = $o->prescription;
-                $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
-
-                return [
-                'id'        => $o->id,
-                'order_no'  => $o->order_number,
-                'rx_number' => $rx?->rx_number ?? '',
-                'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
-                // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
-                'manager'   => $rx?->assignedUser?->name ?? '',
-                /* 이름 말고 누구인지도 함께 — 더블클릭한 사람이 임자인지 남인지는
-                   이름으로 견줄 수 없다(같은 이름이 둘일 수 있다). */
-                'manager_id' => $rx?->assigned_user_id,
-                'status'    => $o->status_label,
-                'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
-                /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
-
-                   처방전이 없는 주문은 주문 번호로 연다 — 처방전 없이도 사고, 잘못 올린
-                   처방전을 지운 뒤 다시 올리기도 한다. 예전에는 여기서 빈 값을 내보내
-                   더블클릭이 「이어져 있지 않습니다」로 막혔는데, 목록에 서 있는 일을
-                   열 수 없게 하는 것은 막을 일이 아니라 열어 줄 일이었다. */
-                'url'       => $rx
-                    ? route('prescriptions.show', $rx) . '?claim=1'
-                    : route('orders.open', $o),
-
-                /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ
-                   창고가 지금 무엇을 하고 있는가. */
-                'resident_no' => $rx?->resident_no_ocr_masked ?? $o->patient?->masked_resident_no ?? '',
-                // 송금자명 — 돈을 보내는 사람이 환자와 다른 일이 잦다(보호자가 보낸다)
-                'remitter'    => $o->patient?->remitter_name ?? '',
-                'creator'     => $rx?->creator?->name ?? '',
-                'updater'     => $rx?->updater?->name ?? '',
-
-                // 병원ㆍ처방 정보 탭의 칸 + 네 화면이 함께 쓰는 칸
-                ] + $extras->rx($rx, $o->patient)
-                  + $extras->ww($o, $rx, $o->patient)
-                  + $extras->of($o);
-            })->values();
+        $orderListLimit = self::작업대기상한;
+        $orderListTotal = $this->작업대기질의()->count();
+        $orderListRows  = $this->주문줄들(
+            $this->작업대기질의(true)->latest('id')->limit($orderListLimit)->get()
+        );
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,
            환자가 있으면 그 사람으로, 없으면 처방전에 적힌 이름ㆍ휴대폰으로 찾는다. */

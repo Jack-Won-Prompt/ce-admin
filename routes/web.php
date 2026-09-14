@@ -100,6 +100,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/upload',        [PrescriptionController::class, 'uploadPage'])->name('upload');
         Route::post('/',             [PrescriptionController::class, 'store'])->name('store');
         Route::get('/memos/pinned',  [PrescriptionController::class, 'pinnedMemos'])->name('memos.pinned');
+        /* 작업 대기 리스트에서 이름으로 찾기 (2026-09-14 지시) — 찾을 때는 교환ㆍ반품ㆍ
+           취소까지 모두 내준다. 고정 경로라 '/{prescription}' 보다 먼저 세운다. */
+        Route::get('/order-list/search', [PrescriptionController::class, 'orderListSearch'])->name('orderList.search');
         // 검수 화면 '환자 조회' — 이름/연락처 검색 + 선택 환자의 과거 상담이력
         // ('/{prescription}' 보다 먼저 등록해야 고정 경로가 처방번호로 해석되지 않는다)
         // 빈 검수·등록 화면 (메뉴 '처방전 관리') — 초안 1건을 잡아 검수 화면으로 보낸다
