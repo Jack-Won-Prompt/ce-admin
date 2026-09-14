@@ -274,6 +274,19 @@ class PrescriptionController extends Controller
             return response()->json(['success' => false, 'message' => $why], 422);
         }
 
+        /* 위임 서명이 없으면 창고로 보내지 않는다 (2026-09-14 지시).
+
+           여태 이 자리는 동의를 보지 않았다 — 주문 줄은 저장만 해도 서 있으므로
+           (OrderSync) 이 주소를 바로 부르면 서명 없이 창고로 나가고, 연계가 되는
+           순간 결제 안내까지 나갔다. */
+        if ($why = \App\Support\DelegationGate::block($prescription)) {
+            return response()->json([
+                'success' => false,
+                'code'    => \App\Support\DelegationGate::CODE,
+                'message' => $why,
+            ], 422);
+        }
+
         /* 받는 주소가 없으면 보내지 않는다.
 
            주소 없이 나간 주문은 창고에 「받는 곳이 없는 출고」로 서고, 송장을 낼 때
@@ -443,6 +456,12 @@ class PrescriptionController extends Controller
 
         if (! $order) {
             return ['sent' => false, 'method' => '', 'message' => '주문이 없어 결제 안내를 보내지 못했습니다.'];
+        }
+
+        /* 위임 서명이 없으면 접수 안내도 결제 안내도 보내지 않는다 (2026-09-14 지시).
+           연계 앞에서 이미 막지만, 결제 문자는 한 번 나가면 거둘 수 없어 여기서도 본다. */
+        if (\App\Support\DelegationGate::block($prescription)) {
+            return ['sent' => false, 'method' => '', 'message' => '위임 서명이 완료되지 않아 결제 안내를 보내지 않았습니다.'];
         }
 
         /* 주문이 접수됐다는 것을 먼저 알린다(2026-09-03 확정 · 시나리오 2.2).

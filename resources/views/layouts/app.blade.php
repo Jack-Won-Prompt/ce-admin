@@ -2799,7 +2799,8 @@ document.addEventListener('click', (e) => {
         }
         const errMsg = errData.message || errData.error || `서버 오류 (HTTP ${res.status})`;
         showToast(errMsg, 'danger');
-        return { success: false, message: errMsg };
+        // code — 부른 쪽이 거절의 종류를 알아보도록 함께 넘긴다(예: delegation_unsigned)
+        return { success: false, message: errMsg, code: errData.code ?? null };
       }
 
       const json = await res.json();

@@ -34,6 +34,17 @@ class PaymentLinkController extends Controller
             return response()->json(['success' => false, 'message' => '결제할 금액이 없습니다.'], 422);
         }
 
+        /* 위임 서명 없이는 결제 안내를 보내지 않는다 (2026-09-14 지시). 손으로 보내는
+           결제전송도 같다 — 처방이 없는 주문(CE샵 등)은 위임과 무관하므로 지나간다. */
+        if ($order->prescription
+            && ($why = \App\Support\DelegationGate::block($order->prescription))) {
+            return response()->json([
+                'success' => false,
+                'code'    => \App\Support\DelegationGate::CODE,
+                'message' => $why,
+            ], 422);
+        }
+
         /* 가상계좌는 주소를 보내는 것이 아니라 계좌를 발급해 적어 보내는 것이라 길이 다르다.
            여기서 갈라 두지 않으면 담당자가 손으로 보낼 때만 계좌 없이 결제 페이지 주소가
            나간다 — 주문 연계에서 자동으로 나갈 때와 다른 것이 간다. */

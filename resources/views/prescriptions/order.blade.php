@@ -8741,9 +8741,21 @@ window.HELP_TOUR_STEPS = [
     const bs      = bsCurrent();
     const needDel = bs ? !!bs.needs_delegation : true;
 
+    /* 위임은 「이 처방전에 서명이 남았는가」로 본다 (2026-09-14 지시).
+       CONSENT_STATUS 는 배지용이라 지난 처방전의 서명이나 신분증만 받은 줄도
+       「완료」로 읽힌다 — 주문을 낼지는 서버와 같은 잣대(DelegationGate)로 가른다. */
+    if (needDel && !window.DELEGATION_SIGNED) {
+      ceAlert('요양비 위임 서명이 완료되지 않아 진행할 수 없습니다.\n'
+            + '주문 생성, 위드웍스 연계, 결제 안내 발송이 모두 진행되지 않았습니다.\n\n'
+            + '화면 위쪽의 「서명 동의」 버튼으로 위임 서명을 받은 뒤 다시 눌러 주십시오. '
+            + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.'
+            + (PRIVACY_STATE?.agreed ? '' : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'),
+              { title: '위임 서명 후 진행 가능합니다' });
+      return false;
+    }
+
     const missing = [];
-    if (!PRIVACY_STATE?.agreed)                        missing.push('개인정보 수집·이용 동의');
-    if (needDel && window.CONSENT_STATUS !== 'agreed') missing.push('요양비 위임 동의');
+    if (!PRIVACY_STATE?.agreed) missing.push('개인정보 수집·이용 동의');
 
     if (!missing.length) return true;
 
@@ -9124,6 +9136,13 @@ window.HELP_TOUR_STEPS = [
       /* 단추를 되돌린다. 그러지 않으면 「생성 실패」에 붙박여 다시 누를 수 없다 —
          재구매 기한처럼 조건이 바뀌면 다시 눌러야 하는 막힘이 있다. */
       setTimeout(() => BtnState.reset(btn), 2500);
+      /* 위임 서명이 없어 서버가 막았으면 창으로 띄운다 (2026-09-14 지시) —
+         주문ㆍ연계ㆍ결제 안내가 모두 멈췄다는 것을 놓치지 않게. */
+      if (res.code === 'delegation_unsigned') {
+        window.DELEGATION_SIGNED = false;
+        ceAlert(res.message, { title: '위임 서명 후 진행 가능합니다' });
+        return;
+      }
       /* 막는 까닭은 오래 세워 둔다. 금방 사라지면 담당자는 아무 말도 못 본 채로
          「왜 안 되지」만 남는다. */
       showToast(res.message || '주문 생성 실패', 'danger', 8000);
@@ -12744,6 +12763,9 @@ window.HELP_TOUR_STEPS = [
   /* 지금 위임동의가 어디까지 왔는가. 배지를 그리는 함수가 곧 유일한 소식통이라
      여기서 붙잡아 둔다 — 주문을 낼 때 이 값을 본다(요청서 12쪽). */
   window.CONSENT_STATUS = @json($prescription->consents()->latest('id')->value('status'));
+  /* 주문을 낼 수 있는가 — 이 처방전에 위임 서명이 남았는가 (2026-09-14 지시).
+     배지(CONSENT_STATUS)와 따로 쥔다: 배지는 사람을 따라 지난 처방전 것도 보여 준다. */
+  window.DELEGATION_SIGNED = @json(\App\Support\DelegationGate::signed($prescription));
 
   function _applyConsentBtn(status) {
     window.CONSENT_STATUS = status;
@@ -12977,6 +12999,8 @@ window.HELP_TOUR_STEPS = [
       if (typeof window._applyPrivacyBtn === 'function' && data.privacy) {
         window._applyPrivacyBtn(data.privacy);
       }
+      // 주문 앞문이 보는 값 — 배지와 따로 받는다(DelegationGate)
+      if ('delegation_signed' in data) window.DELEGATION_SIGNED = !!data.delegation_signed;
       if (!data.exists) return;
 
       // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
@@ -13013,6 +13037,8 @@ window.HELP_TOUR_STEPS = [
 
     // 버튼 즉시 업데이트 (아코디언 안 현황 자리는 시안 개편 때 없어졌다)
     _applyConsentBtn(data.status);
+    // 서명이 들어왔으면 주문 앞문도 새로 받는다 — 새로고침 없이 바로 주문을 낼 수 있게
+    updateConsentStatus();
 
     // 서명 완료 시 생성 서류(요양비위임장 등) 실시간 반영
     if (data.status === 'agreed') {
