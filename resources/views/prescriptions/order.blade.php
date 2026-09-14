@@ -4064,32 +4064,34 @@ $calcDeposit  = $calcCopay;
                   </button>
                 </div>
 
-                {{-- 둘째 줄 — 도로명 + 상세 --}}
-                <div style="display:flex;gap:6px;">
+                {{-- 둘째 줄 — 도로명 + 상세 + 출고요청일 (2026-09-14 지시).
+                     상세 주소를 조금 줄여 그 옆에 출고요청일을 들였다. 출고요청일은
+                     한 줄을 통째로 쓰기에는 짧은 칸이라 아래가 늘 비어 있었다. --}}
+                <div style="display:flex;gap:6px;align-items:center;">
                   {{-- 적어 둔 배송지가 다시 보여야 한다. 전에는 값 바인딩이 없어, 저장한
                        뒤 화면을 다시 열면 세 칸이 모두 비어 있었다 — 적힌 것이 없는 줄 알고
                        다시 적게 된다. 상세주소 칸이 없는 서버에서는 도로명 한 줄만 되살린다. --}}
                   <input type="text" class="form-control" id="shippingAddr"
                          value="{{ $prescription->order?->shipping_address ?? '' }}"
-                         placeholder="도로명 주소" readonly style="flex:1;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
+                         placeholder="도로명 주소" readonly style="flex:1.4;min-width:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingAddrDetail"
                          value="{{ $prescription->order?->shipping_address_detail ?? '' }}"
-                         placeholder="상세 주소" style="flex:1;" />
+                         placeholder="상세 주소" style="flex:1;min-width:0;" />
+                  {{-- 출고요청일 (2026-09-11 확인요청 5쪽).
+                       대개 제품을 적는 날에 나가지만, 환자가 날을 짚어 오면 그날로 맞춘다.
+                       창고로는 판매주문의 delivery_date 로 그대로 간다. --}}
+                  <label for="shipRequestDate"
+                         style="font-size:12px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;margin:0;">
+                    <i class="fa-solid fa-truck-fast" style="color:var(--primary);width:14px;"></i> 출고요청일
+                  </label>
+                  <input type="date" class="form-control" id="shipRequestDate"
+                         value="{{ $prescription->order?->ship_request_date?->format('Y-m-d') }}"
+                         oninput="markProductDirty()" style="width:150px;flex-shrink:0;">
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);line-height:1.5;">
+                  출고요청일을 비워 두면 <b>오늘</b>로 나갑니다. 환자가 날을 지정한 때만 골라 주십시오.
                 </div>
 
-              </div>
-            </div>
-
-            {{-- 출고요청일 (2026-09-11 확인요청 5쪽).
-                 대개 제품을 적는 날에 나가지만, 환자가 날을 짚어 오면 그날로 맞춘다.
-                 창고로는 판매주문의 delivery_date 로 그대로 간다. --}}
-            <div class="form-group" style="margin-top:10px;">
-              <label class="form-label" for="shipRequestDate">출고요청일</label>
-              <input type="date" class="form-control" id="shipRequestDate"
-                     value="{{ $prescription->order?->ship_request_date?->format('Y-m-d') }}"
-                     oninput="markProductDirty()" style="max-width:200px;">
-              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
-                비워 두면 <b>오늘</b>로 나갑니다. 환자가 날을 지정한 때만 골라 주십시오.
               </div>
             </div>
 
