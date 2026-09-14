@@ -7967,6 +7967,10 @@ window.HELP_TOUR_STEPS = [
   async function saveOCR(opts = {}) {
     if (_saving) return false;        // 중복 요청 방지
     if (!await 메모확인(opts)) return false;
+    /* 박스 수량이 어긋나면 담지 않는다 (2026-09-14 지시).
+       다른 자리가 이미 알리고 부른 길(silent)에서는 두 번 알리지 않는다 —
+       그때는 부른 쪽이 먼저 문을 지나 왔다. */
+    if (!opts.silent && !gate박스수량()) return false;
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
 
@@ -8953,6 +8957,53 @@ window.HELP_TOUR_STEPS = [
 
   document.getElementById('f-benefit-class')?.addEventListener('change', basicReevalFollowBenefit);
 
+  /* 박스로 딱 떨어져야 한다 (2026-09-14 지시).
+
+     우리는 낱개로 세어 보내고(qty_unit=EA) 창고는 그것을 박스로 나눠 받는데,
+     나눌 때 **올린다** — ceil(낱개 ÷ RB). 그래서 나머지가 남으면 우리가 적은 것보다
+     한 박스가 더 나간다.
+
+       RB 30 · 수량 100  →  창고는 4박스(120개)를 잡는다  →  20개가 장부 밖으로 샌다
+
+     우리가 청구ㆍ정산하는 것은 100개인데 실제로는 120개가 나가므로, 재고ㆍ정산ㆍ공단
+     청구가 서로 어긋난다. 낱개를 쪼개 보낼 수 없는 물건이라 창고는 올릴 수밖에 없다.
+
+     **고쳐 주지 않는다.** 수량을 올리거나 내리면 공단 청구액이 소리 없이 달라진다 —
+     그 판단은 사람이 한다. 여기서는 막고 알리기만 한다.
+
+     **줄마다 본다.** 제품마다 RB 가 다르므로 합계로는 가릴 수 없다.
+     RB 를 모르는 줄(제품표에서 못 읽어 온 줄)은 셀 수가 없어 지나간다 — 셈이 없는
+     것을 「틀렸다」고 막으면 담을 길이 없어진다. */
+  function gate박스수량() {
+    const 어긋난것 = items
+      .filter(it => it.product_name)
+      .map(it => {
+        const rb = rboxOf(it);
+        const 수 = parseInt(it.quantity, 10) || 0;
+        if (rb <= 0 || 수 <= 0) return null;          // 셀 수 없으면 지나간다
+        const 나머지 = 수 % rb;
+        return 나머지 === 0 ? null : { 이름: it.product_name, 수, rb, 나머지,
+                                       아래: 수 - 나머지, 위: 수 - 나머지 + rb };
+      })
+      .filter(Boolean);
+
+    if (!어긋난것.length) return true;
+
+    const 줄 = 어긋난것.map(x =>
+      `· ${x.이름}\n`
+      + `    ${x.수}개 ÷ ${x.rb}개(1박스) = ${Math.floor(x.수 / x.rb)}박스 + ${x.나머지}개 남음\n`
+      + `    → ${x.아래}개(${x.아래 / x.rb}박스) 또는 ${x.위}개(${x.위 / x.rb}박스)`
+    ).join('\n\n');
+
+    ceAlert(
+      '박스로 딱 떨어지지 않는 수량이 있습니다.\n\n' + 줄
+      + '\n\n창고는 남는 낱개도 한 박스로 올려 내보냅니다 — 적어 둔 것보다 많이 나가'
+      + '\n재고ㆍ정산ㆍ청구가 어긋납니다.'
+      + '\n\n［주문 제품］ 탭에서 수량을 고친 뒤 다시 진행해 주십시오.',
+      { title: '박스 수량이 맞지 않습니다' });
+    return false;
+  }
+
   function gateOrderQty() {
     const total = parseInt(document.getElementById('f-total')?.value || '0', 10);
     if (!total) return true;   // 총계가 비어 있으면 견줄 것이 없다
@@ -9070,6 +9121,7 @@ window.HELP_TOUR_STEPS = [
     if (!gateTotalCount(true))  { 막힘알림('총계',      '1일 처방 개수 × 총 처방일수가 총계와 맞지 않습니다'); return false; }
     if (!gate청구한도(true))     { 막힘알림('청구 한도', '공단 청구 한도를 넘었습니다'); return false; }
     if (!gateOrderQty())        { 막힘알림('수량',      '주문 수량이 처방된 총계를 넘었습니다'); return false; }
+    if (!gate박스수량())         { 막힘알림('박스 수량', '수량이 박스로 딱 떨어지지 않습니다'); return false; }
     if (!gateShippingAddress()) { 막힘알림('배송지',    '받는 주소가 비어 있습니다'); return false; }
     return true;
   }
@@ -9513,6 +9565,12 @@ window.HELP_TOUR_STEPS = [
     } else {
       gateTotalCount(false);
       gate청구한도(false);
+      /* 박스 수량만은 저장도 막는다 (2026-09-14 지시).
+
+         다른 문들은 「알리되 담기는 담는다」 — 적어 둔 것을 잃지 않게 하려는 것이다.
+         박스는 다르다. 담아 두면 그 수량 그대로 창고로 나가고, 나갈 때는 올림이라
+         적은 것보다 많이 빠진다. 담기 전에 바로잡아야 한다. */
+      if (!gate박스수량()) return;
     }
 
     BtnState.loading(btn, '저장 중...');
