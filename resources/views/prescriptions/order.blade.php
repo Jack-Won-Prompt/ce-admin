@@ -3205,45 +3205,28 @@ $calcDeposit  = $calcCopay;
                    '설명'은 화면에 없는 항목이라 만들지 않았다.
                    '추가정보 등록일'은 요청서에 없지만 개발이 넣은 읽기전용 줄이라 제자리에 둔다.
                    시안 315:58 Frame 48101490 (361×392). --}}
-              {{-- 등록 메모는 여기 두지 않는다(2026-09-09 지시).
-                   처방전 그림 바로 아래로 옮겼다 — 올린 사람이 남긴 말은 그림을 보며
-                   읽는 것이라, 처방 내용을 적는 칸들 사이에 끼워 두면 그 자리에서만
-                   눈에 걸렸다. --}}
-              {{-- 메모는 **두 칸**이다(2026-09-09 지시).
+              {{-- 메모는 **두 칸**이다 (2026-09-14 지시로 셋에서 둘이 되었다).
 
-                   · 검수 요청 메모 — 담당자가 검수를 청하며 남기는 말. 요청 전에만 적는다.
-                   · 검수 메모     — 검수자가 승인ㆍ반려하며 남기는 말. 여기서는 읽기만 한다.
+                   · 검수 요청 메모 — 처방자료를 올리며 적어 둔 말. 여기서는 읽기만 한다.
+                   · 참고 사항     — 이 건에 남겨 둘 말. 언제든 고친다.
 
-                   여태 한 칸에 셋이 섞여, 검수 승인 창을 비운 채 누르면 담당자가 적어 둔
-                   말이 그대로 사라졌다. --}}
-              @php
-                $검수전 = in_array($prescription->status, ['pending', 'rejected'], true);
-                $요청메모 = \Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
-                    ? $prescription->review_request_memo : null;
-              @endphp
-              {{-- 등록 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
-                   여기서 고치지 않는다: 올린 사람이 남긴 말이고, 검수하며 남기는 말은
-                   옆의 두 칸이 따로 받는다 (2026-09-14 지시로 그림 아래에서 옮겨 왔다). --}}
+                   검수자가 승인ㆍ반려하며 남긴 말(검수 메모)은 참고 사항 아래에 붙는다.
+
+                   한때 이 화면에 검수 요청 메모를 따로 적는 칸이 있었다. 올릴 때 이미 같은
+                   뜻으로 적고 있어 두 곳이 되었고, 어느 쪽을 읽어야 하는지 갈렸다. --}}
+              {{-- 검수 요청 메모 — 처방자료를 올리며 적어 둔 말이다(웹ㆍ앱 모두 같은 자리).
+
+                   한때 이 화면에 따로 적는 칸을 두었는데(review_request_memo), 올릴 때
+                   이미 같은 뜻으로 적고 있어 두 곳이 되었다. 올린 사람이 남긴 그 말이
+                   곧 검수를 청하는 말이므로 칸을 하나로 모은다 (2026-09-14 지시).
+
+                   여기서 고치지 않는다 — 올린 자리에서 적는 말이다. --}}
               <div class="rx-field-row rx-row-start rx-w3">
-                <span class="rx-field-label">등록 메모</span>
+                <span class="rx-field-label">검수 요청 메모</span>
                 <div id="f-admin-note" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
                      background:var(--gray-50);white-space:pre-wrap;min-height:32px;
-                     color:{{ $prescription->admin_note ? 'var(--gray-700)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '등록 메모가 없습니다.' }}</div>
-              </div>
-              {{-- rx-row-start 를 붙이지 않는다 — 등록 메모와 한 줄에 나란히 선다 --}}
-              <div class="rx-field-row rx-w3">
-                <span class="rx-field-label">검수 요청 메모</span>
-                <textarea id="f-review-request-memo" rows="2" maxlength="1000"
-                          placeholder="검수 요청 시 함께 전달할 내용을 입력하십시오 (선택)"
-                          oninput="markOcrDirty()"
-                          style="flex:1;min-width:0;font-size:12px;line-height:1.6;padding:6px 10px;
-                                 border:1px solid var(--border);border-radius:8px;resize:vertical;
-                                 min-height:44px;{{ $검수전 ? '' : 'display:none;' }}">{{ $요청메모 }}</textarea>
-                <div id="f-review-request-memo-ro" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
-                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);color:var(--gray-700);white-space:pre-wrap;min-height:32px;
-                     {{ $검수전 ? 'display:none;' : '' }}">{{ $요청메모 ?: '검수 요청 메모가 없습니다.' }}</div>
+                     color:{{ $prescription->admin_note ? 'var(--gray-700)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '검수 요청 메모가 없습니다.' }}</div>
               </div>
               {{-- rx-row-start 를 붙이지 않는다 — 붙이면 새 줄에서 다시 시작한다.
                    여섯 칸 격자라 span 3 짜리 둘이 나란히 한 줄에 선다. --}}
@@ -7939,10 +7922,43 @@ window.HELP_TOUR_STEPS = [
     if (refTotal) refTotal.textContent = total || '-';
   }
 
+  /** 올릴 때 적어 둔 검수 요청 메모 — 없으면 빈 글자 */
+  function 검수요청메모() {
+    const el = document.getElementById('f-admin-note');
+    if (!el) return '';
+    const 값 = el.innerText.trim();
+    return 값 === '등록 메모가 없습니다.' || 값 === '검수 요청 메모가 없습니다.' ? '' : 값;
+  }
+
+  /* 검수 요청 메모를 읽었는지 한 번 묻는다 (2026-09-14 지시).
+
+     올린 사람이 남긴 말은 이 건을 어떻게 다룰지 가르는 말인데, 화면 오른쪽 칸에
+     조용히 적혀 있어 그냥 지나치기 쉬웠다. 저장은 적은 것을 굳히는 걸음이라 그 앞에서
+     한 번 묻는다.
+
+     **화면을 연 동안 한 번만 묻는다.** 저장할 때마다 물으면 읽지 않고 누르는 버릇이
+     든다 — 그러면 묻는 뜻이 없어진다. 적어 둔 말이 없으면 물을 것도 없다. */
+  let _메모확인함 = false;
+
+  async function 메모확인(opts) {
+    if (opts.silent || _메모확인함) return true;
+
+    const 메모 = 검수요청메모();
+    if (!메모) return true;
+
+    const ok = await ceConfirm(
+      '검수 요청 메모를 확인하셨습니까?\n\n' + 메모,
+      { title: '검수 요청 메모', confirmText: '확인했습니다', cancelText: '다시 보기' });
+
+    if (ok) _메모확인함 = true;
+    return ok;
+  }
+
   /* opts.silent: 알림을 내지 않는다(다른 단추가 저장을 대신 부를 때).
      되돌리는 값은 「저장이 됐는가」다 — 부른 쪽이 이어서 할지 멈출지 가린다. */
   async function saveOCR(opts = {}) {
     if (_saving) return false;        // 중복 요청 방지
+    if (!await 메모확인(opts)) return false;
     const name = document.getElementById('f-name').value.trim();
     const hosp = document.getElementById('f-hospital').value.trim();
 
@@ -8104,10 +8120,6 @@ window.HELP_TOUR_STEPS = [
       diagnosis_date:   strOrNull('f-diagnosis-date'),
       // 참고 사항 — 언제든 고친다. 검수 메모와 다른 칸이다(2026-09-10 확인요청 5쪽)
       reference_note:   (document.getElementById('f-reference-note')?.value ?? '').trim() || null,
-      /* 검수 요청 메모 — 요청 전에만 화면에서 적는다. 잠긴 뒤에는 보내지 않는다(서버도 가린다). */
-      review_request_memo: (document.getElementById('f-review-request-memo')?.offsetParent
-                             ? (document.getElementById('f-review-request-memo').value.trim() || null)
-                             : undefined),
       // ── 처방 수량·상병 ─────────────────────────────────────
       disease_name:     strOrNull('f-disease'),
       disease_code:     strOrNull('f-disease-code'),
@@ -8290,7 +8302,7 @@ window.HELP_TOUR_STEPS = [
 
   /** 상태 배지를 그 자리에서 고쳐 세운다. 되돌릴 수 없는 걸음은 단추도 잠근다. */
   function setRxStatus(status, label, badge) {
-    if (status) { RX_STATUS = status; applyRxStage(status); syncOrderStageBtn(); syncReviewMemoBox(); }
+    if (status) { RX_STATUS = status; applyRxStage(status); syncOrderStageBtn(); }
     const el = document.getElementById('rxStatusBadge');
     if (el && label) {
       el.textContent = label;
@@ -8359,25 +8371,6 @@ window.HELP_TOUR_STEPS = [
      상태가 바뀌면 setRxStatus 가 여기도 고쳐 둔다. */
   let RX_STATUS = @json($prescription->status);
 
-  /* 검수 메모 칸을 상태에 맞춘다 — 요청 전에는 적을 수 있고, 요청한 뒤로는 읽기만 한다.
-     화면을 다시 부르지 않고 상태만 바꾸는 자리가 있어(검수 요청) 그때도 함께 맞춘다. */
-  function syncReviewMemoBox() {
-    const 입력 = document.getElementById('f-review-request-memo');
-    const 읽기 = document.getElementById('f-review-request-memo-ro');
-    if (!입력 || !읽기) return;
-
-    const 검수전 = (RX_STATUS === 'pending' || RX_STATUS === 'rejected');
-
-    if (!검수전) {
-      /* 잠그면서 적어 둔 것을 읽기 칸으로 옮긴다 — 방금 적은 말이 사라지면 안 된다 */
-      const 값 = 입력.value.trim();
-      읽기.textContent = 값 || '검수 요청 메모가 없습니다.';
-    }
-
-    입력.style.display = 검수전 ? '' : 'none';
-    읽기.style.display = 검수전 ? 'none' : '';
-  }
-
   /* 「주문 보기」 — 글자는 고정이다. 창고로 보냈으면 지난 걸음(체크), 검수를 마쳤는데
      아직 안 보냈으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다.
      예전에는 글자를 「주문 미등록/주문 완료」로 갈아 끼웠는데, 옆의 두 단추가 눌러서
@@ -8444,10 +8437,10 @@ window.HELP_TOUR_STEPS = [
   async function requestReviewRx() {
     /* 브라우저 기본 confirm 은 화면과 결이 달라 낯설다 — 디자인 시스템 창을 쓴다.
        검수 요청 메모를 적어 두었으면 무엇이 함께 가는지 보여 준다. */
-    const 요청메모 = document.getElementById('f-review-request-memo')?.value?.trim() || '';
+    const 요청메모 = 검수요청메모();
     const 물음 = '입력을 마치고 검수를 요청합니다.'
       + (요청메모 ? '\n\n검수 요청 메모\n' + 요청메모 : '')
-      + '\n\n요청 후에는 검수 요청 메모를 수정할 수 없습니다. 진행하시겠습니까?';
+      + '\n\n진행하시겠습니까?';
 
     if (!await ceConfirm(물음, { title: '검수 요청', confirmText: '검수 요청' })) return;
     try {
