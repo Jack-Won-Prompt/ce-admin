@@ -7337,12 +7337,27 @@ window.HELP_TOUR_STEPS = [
     return Math.max(0, parseInt(String(item?.r_box ?? '').replace(/\D/g, ''), 10) || 0);
   }
 
-  /** 낱개 수량을 박스로 — RB 를 모르면 null(셀 수 없다) */
+  /**
+   * 낱개 수량을 박스로 — RB 를 모르면 null(셀 수 없다).
+   *
+   * **올리지 않고 있는 그대로 센다** (2026-09-14 지시). 창고는 남는 낱개도 한 박스로
+   * 올려 내보내지만, 화면이 그 올린 수를 보여 주면 어긋난 것이 보이지 않는다 —
+   * 97개도 30개들이도 똑같이 「4 BOX」로 섰다.
+   *
+   * 소수 한 자리로 적으므로 3.2 BOX 처럼 남는 것이 그 자리에서 드러난다.
+   * 딱 떨어지지 않는 수량은 저장도 연계도 막으므로(gate박스수량), 실제로 나가는
+   * 건은 언제나 정수다.
+   */
   function boxQty(item) {
     const rb = rboxOf(item);
     if (rb <= 0) return null;
 
-    return Math.ceil(Math.max(1, parseInt(item.quantity, 10) || 1) / rb);
+    return (parseInt(item.quantity, 10) || 0) / rb;
+  }
+
+  /** 박스 수를 적는 꼴 — 소수 한 자리로 고정한다(12 BOX 가 아니라 12.0 BOX) */
+  function boxText(n) {
+    return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' BOX';
   }
 
   /* 이미 저장된 줄에는 RB 가 없다 — 주문에 굳혀 두지 않고 제품 표에 묻기 때문이다.
@@ -7388,7 +7403,7 @@ window.HELP_TOUR_STEPS = [
   function boxCellHtml(item) {
     const rb = rboxOf(item);
 
-    return rb > 0 ? boxQty(item).toLocaleString('ko-KR') + ' BOX' : 없음칸;
+    return rb > 0 ? boxText(boxQty(item)) : 없음칸;
   }
 
   /** RB 단위 — 한 박스에 낱개가 몇 개 드는가. 나누는 수 자체를 보여 준다. */
@@ -7491,7 +7506,7 @@ window.HELP_TOUR_STEPS = [
 
             return el;
           }
-          el.textContent = Number(v).toLocaleString('ko-KR') + ' BOX';
+          el.textContent = boxText(v);
           if (row?.r_box) el.title = '한 박스에 ' + row.r_box + '개';
 
           return el;
@@ -8975,32 +8990,19 @@ window.HELP_TOUR_STEPS = [
      RB 를 모르는 줄(제품표에서 못 읽어 온 줄)은 셀 수가 없어 지나간다 — 셈이 없는
      것을 「틀렸다」고 막으면 담을 길이 없어진다. */
   function gate박스수량() {
-    const 어긋난것 = items
-      .filter(it => it.product_name)
-      .map(it => {
-        const rb = rboxOf(it);
-        const 수 = parseInt(it.quantity, 10) || 0;
-        if (rb <= 0 || 수 <= 0) return null;          // 셀 수 없으면 지나간다
-        const 나머지 = 수 % rb;
-        return 나머지 === 0 ? null : { 이름: it.product_name, 수, rb, 나머지,
-                                       아래: 수 - 나머지, 위: 수 - 나머지 + rb };
-      })
-      .filter(Boolean);
+    const 어긋났나 = items.filter(it => it.product_name).some(it => {
+      const rb = rboxOf(it);
+      const 수 = parseInt(it.quantity, 10) || 0;
+      if (rb <= 0 || 수 <= 0) return false;           // 셀 수 없으면 지나간다
+      return 수 % rb !== 0;
+    });
 
-    if (!어긋난것.length) return true;
+    if (!어긋났나) return true;
 
-    const 줄 = 어긋난것.map(x =>
-      `· ${x.이름}\n`
-      + `    ${x.수}개 ÷ ${x.rb}개(1박스) = ${Math.floor(x.수 / x.rb)}박스 + ${x.나머지}개 남음\n`
-      + `    → ${x.아래}개(${x.아래 / x.rb}박스) 또는 ${x.위}개(${x.위 / x.rb}박스)`
-    ).join('\n\n');
-
-    ceAlert(
-      '박스로 딱 떨어지지 않는 수량이 있습니다.\n\n' + 줄
-      + '\n\n창고는 남는 낱개도 한 박스로 올려 내보냅니다 — 적어 둔 것보다 많이 나가'
-      + '\n재고ㆍ정산ㆍ청구가 어긋납니다.'
-      + '\n\n［주문 제품］ 탭에서 수량을 고친 뒤 다시 진행해 주십시오.',
-      { title: '박스 수량이 맞지 않습니다' });
+    /* 셈을 늘어놓지 않는다 (2026-09-14 지시). 표의 「박스」 칸이 3.2 BOX 처럼
+       소수로 서므로 어느 줄이 얼마나 어긋났는지는 그 자리에서 읽힌다. */
+    ceAlert('박스 단위의 수량이 아닙니다. 「박스」 칸을 보고 수량을 고쳐 주십시오.',
+            { title: '박스 수량이 맞지 않습니다' });
     return false;
   }
 
