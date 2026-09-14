@@ -964,8 +964,13 @@ class ConsentController extends Controller
             $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
         );
 
+        /* 주문을 낼 수 있는가는 가장 최근 줄의 상태가 아니라 이것으로 본다 —
+           신분증만 받은 줄도 `agreed` 가 되기 때문이다(DelegationGate). */
+        $delegationSigned = \App\Support\DelegationGate::signed($prescription);
+
         if (!$latest) {
-            return response()->json(['exists' => false, 'privacy' => $privacy]);
+            return response()->json(['exists' => false, 'privacy' => $privacy,
+                                     'delegation_signed' => $delegationSigned]);
         }
 
         // pending 이면 실시간으로 만료 여부 체크
@@ -976,6 +981,7 @@ class ConsentController extends Controller
         return response()->json([
             'exists'          => true,
             'privacy'         => $privacy,
+            'delegation_signed' => $delegationSigned,
             'status'          => $latest->status,
             'status_label'    => $latest->statusLabel(),
             'responded_at'    => $latest->responded_at?->format('Y-m-d H:i:s'),

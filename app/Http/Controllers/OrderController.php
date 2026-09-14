@@ -319,18 +319,12 @@ class OrderController extends Controller
            처방외는 환자가 보험사ㆍ근로복지공단에 직접 내므로 위임할 일이 없다 —
            그 건까지 막으면 받을 수 없는 동의를 기다리며 주문이 서지 못한다.
            누가 내는지는 청구전략 표가 안다. */
-        $needsDelegation = \App\Support\BillingStrategy::needsDelegation(
-            $prescription->counsel_acc_add_type,
-            $prescription->benefit_class
-        );
+        $needsDelegation = \App\Support\DelegationGate::needed($prescription);
 
-        if ($needsDelegation) {
-            $agreed = $prescription->consents()
-                ->where('status', 'agreed')
-                ->exists();
-            if (! $agreed) {
-                $missing[] = '요양비 위임 동의';
-            }
+        /* 서명이 남은 위임 줄이어야 한다 — 신분증만 받은 줄도 `agreed` 가 되어
+           서명 없이 지나가던 자리다(DelegationGate). */
+        if ($needsDelegation && ! \App\Support\DelegationGate::signed($prescription)) {
+            $missing[] = '요양비 위임 서명';
         }
 
         /* 전자서명이 안 되는 환자는 종이로 받아 올린다 — 그것도 받은 것이다
@@ -426,6 +420,16 @@ class OrderController extends Controller
            화면도 같은 것을 묻지만(gateConsent) 화면만으로는 부족하다. 새로 고치거나
            다른 길로 이 자리를 부르면 그대로 지나가는데, 동의 없이 나간 주문은
            나중에 무엇에 기대어 청구했는지 댈 것이 없다. */
+        /* 위임 서명이 없으면 주문을 만들지 않는다 (2026-09-14 지시). 화면이 알림 창으로
+           띄우도록 표시(code)를 함께 싣는다. */
+        if ($why = \App\Support\DelegationGate::block($prescription)) {
+            return response()->json([
+                'success' => false,
+                'code'    => \App\Support\DelegationGate::CODE,
+                'message' => $why,
+            ], 422);
+        }
+
         if ($why = $this->consentBlock($prescription)) {
             return response()->json(['success' => false, 'message' => $why], 422);
         }
