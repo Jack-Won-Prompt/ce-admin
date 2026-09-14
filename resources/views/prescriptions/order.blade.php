@@ -4517,6 +4517,19 @@ $calcDeposit  = $calcCopay;
     <button onclick="closeCrIssuePopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
   </div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+    {{-- 구매자 명 (2026-09-14 지시).
+
+         이 이름이 국세청으로 그대로 나간다(customerName). 그런데 발행 창에는 유형ㆍ
+         식별번호ㆍ금액뿐이라, 누구 앞으로 끊는지 보지 못한 채 눌러 왔다.
+
+         여기서 고치지 않는다 — 거래처의 이름이다. 다르면 거래처를 먼저 바로잡는다.
+         (E) 는 사업부 표시라 국세청에 나갈 이름에는 두지 않는다. --}}
+    <div>
+      <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">구매자 명</label>
+      <div id="cr-customer" style="font-size:12px;font-weight:700;padding:6px 10px;
+           border:1px solid var(--border);border-radius:8px;background:var(--gray-50);
+           color:{{ $prescription->patient?->name || $prescription->patient_name_ocr ? 'var(--text-primary)' : 'var(--danger)' }};">{{ \App\Models\Patient::bare($prescription->patient?->name ?? $prescription->patient_name_ocr) ?: '거래처를 먼저 이어 주십시오' }}</div>
+    </div>
     <div>
       <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;display:block;">유형</label>
       <div style="display:flex;gap:16px;">
@@ -4587,7 +4600,8 @@ $calcDeposit  = $calcCopay;
           <td id="cr-d-order-no" style="padding:7px 0;font-family:monospace;font-size:11px;"></td>
         </tr>
         <tr>
-          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">이름</th>
+          {{-- 국세청에 나간 그 이름이다 — 「이름」만으로는 누구의 이름인지 흐리다 --}}
+          <th style="padding:7px 0;font-weight:700;color:var(--text-muted);text-align:left;">구매자 명</th>
           <td id="cr-d-patient" style="padding:7px 0;"></td>
         </tr>
       </tbody>
@@ -13568,7 +13582,8 @@ window.HELP_TOUR_STEPS = [
     amount:      {{ (int)($prescription->order?->cash_receipt_amount ?? 0) }},
     issuedAt:    @json($prescription->order?->cash_receipt_issued_at?->format('Y-m-d H:i') ?? ''),
     orderNo:     @json($prescription->order?->order_number ?? ''),
-    patientName: @json($prescription->patient?->name ?? $prescription->patient_name_ocr ?? ''),
+    // 국세청에 나간 이름과 같아야 한다 — (E) 는 사업부 표시다 (2026-09-14)
+    patientName: @json(\App\Models\Patient::bare($prescription->patient?->name ?? $prescription->patient_name_ocr ?? '')),
   };
 
   /* 발행하거나 취소한 뒤에 이 자리를 다시 그린다.
