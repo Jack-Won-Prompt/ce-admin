@@ -33,6 +33,15 @@ class OrderGridExtras
     private array $consent = [];
 
     /**
+     * 사람 id => 마케팅 활용 동의 (2026-09-14 지시).
+     *
+     * 개인정보동의서에 적힌 값이 바탕이고, 거래처에 따로 적어 둔 값이 있으면 그것이
+     * 덧쓴다 — Patient::marketing_state 와 같은 잣대다. 그쪽은 사람마다 한 번씩
+     * 묻는 자리라 목록에서 그대로 쓸 수 없어, 여기서 한 번에 모은다.
+     */
+    private array $marketing = [];
+
+    /**
      * 이 목록에 나오는 사람들의 동의를 한 번에 모아 둔다.
      *
      * @param Collection<int, int|null> $patientIds
@@ -91,6 +100,9 @@ class OrderGridExtras
         return [
             'privacy_consent' => $this->privacyLabel($pid),
             'nhis_consent'    => $this->consentLabel($pid),
+            /* 마케팅 활용 동의 — 안내 문자를 보내도 되는 사람인지 목록에서 바로 읽는다
+               (2026-09-14 지시) */
+            'marketing_consent' => $this->marketingLabel($pid),
             // 청구처를 아직 고르지 않은 건은 널가 null 이다 — 바로 물으면 PHP 가 나무란다
             'claim_agency'    => ClaimAgency::LABELS[$o?->prescription?->claim_agency ?? ''] ?? '',
             /* 청구 단추가 무엇을 세울지 가른다 — 공단은 사이트에 옮겨 적고 지자체는
@@ -458,33 +470,43 @@ class OrderGridExtras
      */
     private function loadPrivacy(Collection $ids): void
     {
-        $people = \App\Models\Patient::whereIn('id', $ids)->get(['id', 'name', 'mobile', 'phone']);
-        $rows   = PrivacyConsent::get(['patient_id', 'name', 'phone']);
+        $people = \App\Models\Patient::whereIn('id', $ids)
+            ->get(['id', 'name', 'mobile', 'phone', 'marketing_consent']);
+        // 마케팅 동의도 같은 걸음에 읽는다 — 이을 잣대가 같아 따로 훑을 까닭이 없다
+        $rows   = PrivacyConsent::get(['patient_id', 'name', 'phone', 'agree_marketing']);
 
         $digits = fn ($v) => preg_replace('/\D/', '', (string) $v);
         $bare   = fn ($v) => trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $v));
 
-        // 이름+번호 => 있음
+        // 이름+번호 => 마케팅 동의 값 (빈 문자열이면 동의서는 있으나 마케팅 칸이 빈 것)
         $byName = [];
         foreach ($rows as $r) {
             if ($r->patient_id) {
                 $this->privacy[(int) $r->patient_id] = true;
+                $this->marketing[(int) $r->patient_id] = (string) $r->agree_marketing;
             }
             $d = $digits($r->phone);
             if ($r->name && $d !== '') {
-                $byName[$bare($r->name) . '|' . $d] = true;
+                $byName[$bare($r->name) . '|' . $d] = (string) $r->agree_marketing;
             }
         }
 
         foreach ($people as $p) {
-            if ($this->privacy[$p->id] ?? false) continue;
-
-            foreach ([$p->mobile, $p->phone] as $tel) {
-                $d = $digits($tel);
-                if ($d !== '' && ($byName[$bare($p->name) . '|' . $d] ?? false)) {
-                    $this->privacy[$p->id] = true;
-                    break;
+            if (! ($this->privacy[$p->id] ?? false)) {
+                foreach ([$p->mobile, $p->phone] as $tel) {
+                    $d = $digits($tel);
+                    if ($d !== '' && isset($byName[$bare($p->name) . '|' . $d])) {
+                        $this->privacy[$p->id]   = true;
+                        $this->marketing[$p->id] = $byName[$bare($p->name) . '|' . $d];
+                        break;
+                    }
                 }
+            }
+
+            /* 거래처에 따로 적어 둔 값이 있으면 그것이 답이다 (Patient::marketing_state).
+               동의서는 받은 그때의 사실이라 고치지 않고, 뒤에 바뀐 뜻은 거래처에 적는다. */
+            if (($p->marketing_consent ?? '') !== '') {
+                $this->marketing[$p->id] = $p->marketing_consent;
             }
         }
     }
@@ -492,6 +514,12 @@ class OrderGridExtras
     private function privacyLabel(?int $pid): string
     {
         return $pid && ($this->privacy[$pid] ?? false) ? '완료' : '';
+    }
+
+    /** 적힌 대로 보여 준다 — 「동의함 / 동의하지 않음」, 아직 받은 것이 없으면 빈칸 */
+    private function marketingLabel(?int $pid): string
+    {
+        return $pid ? (string) ($this->marketing[$pid] ?? '') : '';
     }
 
     private function consentLabel(?int $pid): string

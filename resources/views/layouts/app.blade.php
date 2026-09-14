@@ -2134,7 +2134,9 @@ document.addEventListener('click', (e) => {
      지난 요청으로 세운 것들이라, 차례를 맞추자고 지우면 그때 한 일이 없던 일이 된다.
 
      쓰는 법 — columns: [ …번호ㆍ이름, ...ceMoneyCols(), 날짜, …화면 고유, ...ceWwCols() ] */
-  window.ceWwCols = function () {
+  /* 마케팅 동의는 부르는 쪽이 켠다 — ceWwCols({ marketing: true }) (2026-09-14 지시).
+     열 화면이 함께 쓰는 칸이라 기본으로 켜면 모든 목록이 한 칸씩 넓어진다. */
+  window.ceWwCols = function (opts = {}) {
     return [
       // ── 위드웍스 차례 ──────────────────────────────────
       { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
@@ -2226,6 +2228,9 @@ document.addEventListener('click', (e) => {
       /* ── 저쪽이 부르지 않는 우리 칸 ─────────────────────
          동의ㆍ청구ㆍ발행은 우리 절차라 위드웍스 화면에 있을 까닭이 없다. */
       { header: '개인정보동의', name: 'privacy_consent', width: 110, align: 'center', sortable: true },
+      ...(opts.marketing
+        ? [{ header: '마케팅 동의', name: 'marketing_consent', width: 110, align: 'center', sortable: true }]
+        : []),
       { header: '위임동의',     name: 'nhis_consent',    width: 90,  align: 'center', sortable: true },
       { header: '청구 준비',    name: 'claim_ready',     width: 90,  align: 'center', sortable: true },
       {{-- 지자체 청구도 있어 「공단」이라 부르지 않는다(요청서 10쪽) --}}
