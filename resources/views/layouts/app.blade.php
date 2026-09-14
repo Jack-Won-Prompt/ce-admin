@@ -2156,6 +2156,11 @@ document.addEventListener('click', (e) => {
            채우고, 저쪽 창고ㆍ제품 마스터에만 있는 것은 웹훅이 실어 오는 것을 받아
            세운다(orders.withworks_meta). 아직 오지 않은 건은 비어 있다 —
            없는 것과 못 받은 것을 가르지 않으면 빈칸을 보고 값이 없다고 읽는다. --}}
+      {{-- 주문 구분 — 원 주문인가 추가 주문인가 (2026-09-14 확인요청 4쪽).
+           바로 옆의 「유형」은 위드웍스가 준 판매유형이라 우리가 새 이름을 넣을 수 없다.
+           처방전 한 장으로 나눠 사는 건은 주문번호가 둘이지만 처방번호는 하나다 —
+           목록에서 그 둘을 가리는 자리가 이 칸이다. 원 주문에는 적지 않는다. --}}
+      { header: '주문 구분',      name: 'order_kind',   width: 90,  align: 'center', sortable: true },
       { header: '유형',           name: 'ww_so_type',   width: 110, align: 'center', sortable: true },
       { header: '구매 거래처',    name: 'ww_po_code',   width: 110 },
       { header: '구매 거래처명',  name: 'ww_po_name',   width: 150, sortable: true },

@@ -22,6 +22,12 @@ class Order extends Model
      * 위드웍스 code_list 에 있는 값을 그대로 쓴다. 우리가 만드는 값이 아니라 그쪽이
      * 정하는 것이라, 새 유형이 생기면 여기와 검증 목록을 함께 늘려야 한다.
      */
+    /* 주문 구분 — 원 주문인가 추가 주문인가 (2026-09-14 확인요청 4쪽).
+       위드웍스가 주는 「유형」(so_type)과 다른 값이다. 그쪽은 창고의 판매유형이라
+       우리가 새 이름을 넣을 수 없다. */
+    public const KIND_ORIGIN = 'origin';
+    public const KIND_EXTRA  = 'extra';
+
     public const SO_TYPE_LABELS = [
         '1013' => ['CE 판매',                  'primary'],
         '1016' => ['개인판매',                 'info'],
@@ -226,6 +232,8 @@ class Order extends Model
 
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',
+        // 추가 주문 — 어느 원 주문에 딸렸는가, 어느 쪽인가 (2026-09-14 확인요청 4쪽)
+        'parent_order_id', 'order_kind',
         'product_name', 'product_code', 'quantity',
         'unit_price', 'nhis_amount', 'patient_copay',
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
@@ -540,6 +548,33 @@ class Order extends Model
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);
+    }
+
+    /* ── 추가 주문 (2026-09-14 확인요청 4쪽) ──────────────────────────────
+       처방전 한 장으로 수량을 나눠 사는 일이 있다. 먼저 일부만 사고 뒤에 나머지를
+       더 사는데, 그 나머지가 딸리는 곳이 원 주문이다. 처방번호는 둘이 같다. */
+
+    /** 이 줄이 딸린 원 주문 — 원 주문이면 null */
+    public function parentOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'parent_order_id');
+    }
+
+    /** 이 원 주문에 딸린 추가 주문들 */
+    public function extraOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'parent_order_id');
+    }
+
+    public function isExtra(): bool
+    {
+        return $this->order_kind === self::KIND_EXTRA;
+    }
+
+    /** 목록에 적는 말 — 원 주문에는 적지 않는다. 거의 다 원 주문이라 칸이 어지러워진다. */
+    public function orderKindLabel(): string
+    {
+        return $this->isExtra() ? '추가 주문' : '';
     }
 
     /**

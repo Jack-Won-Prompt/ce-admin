@@ -270,9 +270,28 @@ class Prescription extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    /**
+     * 이 건의 **원 주문**.
+     *
+     * 한 처방전에 주문이 둘 이상 설 수 있게 되면서(추가 주문, 2026-09-14 확인요청 4쪽)
+     * 「그 처방전의 주문」이 하나로 정해지지 않게 됐다. 가장 먼저 선 것이 원 주문이다.
+     *
+     * **이 관계를 쓰는 백열네 자리는 모두 원 주문을 보는 것이 맞다** — 청구ㆍ정산ㆍ
+     * 세금계산서ㆍ교환반품취소는 처방전 한 장을 하나로 다룬다. 모두를 봐야 하는 자리만
+     * orders() 를 쓴다.
+     *
+     * oldestOfMany() 가 아니라 정렬을 얹은 hasOne 이다 — 저쪽은 부질의로 만들어져
+     * order()->create() 같은 길이 막힌다.
+     */
     public function order(): HasOne
     {
-        return $this->hasOne(Order::class);
+        return $this->hasOne(Order::class)->oldest('id');
+    }
+
+    /** 이 건에 달린 주문 모두 — 원 주문과 추가 주문 (2026-09-14 확인요청 4쪽) */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 
     /** 이 건을 보내는 청구처 — 공단 지사 또는 지자체 부서의 담당자 한 줄. */

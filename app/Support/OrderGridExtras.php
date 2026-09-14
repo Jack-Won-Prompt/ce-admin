@@ -122,6 +122,10 @@ class OrderGridExtras
             /* 청구 단추가 무엇을 세울지 가른다 — 공단은 사이트에 옮겨 적고 지자체는
                등기로 부친다. 이름표가 아니라 코드가 있어야 화면이 가릴 수 있다. */
             'agency_code'     => $o?->prescription?->claim_agency ?? '',
+            /* 주문 구분 — 원 주문인가 추가 주문인가 (2026-09-14 확인요청 4쪽).
+               옆의 「유형」 칸은 위드웍스가 준 판매유형이라 우리가 새 이름을 넣을 수 없다.
+               원 주문에는 적지 않는다 — 거의 다 원 주문이라 칸이 어지러워진다. */
+            'order_kind'      => $o?->orderKindLabel() ?? '',
             'claim_ready'     => $o === null ? '' : ($o->claim_ready ? '준비' : '미비'),
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
@@ -496,6 +500,8 @@ class OrderGridExtras
             'nhis_consent'    => $this->consentLabel($s->patient_id),
             'claim_agency'    => '',
             'agency_code'     => '',
+            // 샘플에는 추가 주문이 없다 — 칸은 세워 둬야 줄이 어긋나지 않는다
+            'order_kind'      => '',
             'claim_ready'     => '',
             'nhis_claim'      => '',
             'tax_invoice'     => '',
