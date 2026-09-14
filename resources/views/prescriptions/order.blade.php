@@ -4045,6 +4045,19 @@ $calcDeposit  = $calcCopay;
                           title="거래처관리에 등록된 주소 중에서 선택합니다">
                     <i class="fa-solid fa-address-book"></i> 거래처 주소
                   </button>
+                  {{-- 주소 관리 — 거래처 관리의 그 창을 그대로 연다 (2026-09-14 지시).
+
+                       ［거래처 주소］는 쌓여 있는 것 가운데 **고르는** 자리다. 그런데 이사해서
+                       새 주소를 더해야 하거나, 잘못 담긴 줄을 고쳐야 할 때가 있다 — 그때마다
+                       거래처 관리로 나갔다가 이 화면으로 돌아와야 했다.
+
+                       창은 이미 이 화면에 들어와 있다(patients._editor-modal 이 함께 넣는다).
+                       거래처를 아직 잇지 않은 건은 열 것이 없어 그 창이 알려 준다. --}}
+                  <button type="button" class="btn btn-sm" onclick="openAddrManager(document.getElementById('f-patient-id')?.value)"
+                          style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);"
+                          title="거래처의 주소를 더하거나 고칩니다">
+                    <i class="fa-solid fa-location-dot"></i> 주소 관리
+                  </button>
                   <button type="button" class="btn btn-sm" onclick="clearShippingAddress()"
                           style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);" title="주소 지우기">
                     <i class="fa-solid fa-xmark"></i>
