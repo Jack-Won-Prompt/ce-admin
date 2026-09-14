@@ -64,7 +64,7 @@ final class SignDocs
         $청구처 = $rx?->claim_agency ?: ClaimAgency::fromBenefitClass($rx?->benefit_class);
         if ($위임필요 && ! in_array($청구처, [ClaimAgency::LOCAL, ClaimAgency::NONE], true)) {
             $목록[] = self::줄(self::위임장, 'pdf',
-                '급여비용을 콜로플라스트 코리아가 대신 청구하고 받는 것에 대한 위임입니다.');
+                '요양비 지급 청구 및 수령을 콜로플라스트에 위임하는 내용입니다.');
         }
 
         /* 요양비 지급청구서 — 기초(의료급여) 대상자만 낸다(2026-09-01 회신) */

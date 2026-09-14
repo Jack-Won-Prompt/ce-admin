@@ -381,6 +381,8 @@
     .btn-cancel { background: #f3f4f6; color: #4b5563; }
     .btn-agree  { background: #28798B; color: #fff; box-shadow: 0 4px 12px rgba(40,121,139,.3); }
     .btn-agree:disabled { background: #72BCCC; box-shadow: none; cursor: not-allowed; }
+    /* 아직 덜 채운 상태 — 눌리기는 한다. 누르면 무엇이 남았는지 팝업으로 알린다 */
+    .btn-agree.blocked { background: #72BCCC; box-shadow: none; }
 
     /* 결과 화면 */
     .result-screen {
@@ -413,9 +415,9 @@
   <div class="card-header">
     <div class="logo">CE ADMIN</div>
     <h1>서류 확인 및 전자서명</h1>
-    <p>요양비 청구 및 환자 지원 서비스 제공을 위해 아래 서류의 내용을 확인해 주시기 바랍니다.<br>
-       각 문서를 펼쳐 내용을 확인하신 후 전자서명을 진행해 주세요.<br>
-       전자서명 완료 시 본인의 서명이 각 서류의 서명란에 동일하게 적용됩니다.</p>
+    <p>안녕하세요. 요양비 청구 및 환자 지원 서비스 제공을 위해 아래 서류의 내용을 확인해 주시기 바랍니다.<br>
+       각 문서를 펼쳐 내용을 확인하신 후 전자서명해 주시기 바랍니다.<br>
+       전자서명 완료 시 등록된 서명이 각 서류의 서명란에 동일하게 적용됩니다.</p>
   </div>
 
   {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳고, 그래서
@@ -445,7 +447,7 @@
     <div class="patient-box">
       <div class="label">본인 이름 확인</div>
       <div class="name">{{ $consent->patient_name }}</div>
-      <div class="sub">위 이름이 본인과 다를 경우 동의하지 마세요.</div>
+      <div class="sub">위 이름이 본인과 일치하는지 확인해 주시기 바랍니다.</div>
     </div>
 
     @if($niceEnabled)
@@ -792,9 +794,11 @@
          그리고 그 서류를 우리가 청구ㆍ등록에 쓴다는 것 — 셋을 따로 받는다. --}}
     <div class="final-agree" id="finalAgree">
       @foreach([
-        '본인은 위 문서들의 내용을 모두 확인하였으며, 해당 내용에 동의합니다.',
-        '본인은 본인인증 후 진행하는 전자서명이 위 문서들의 본인 서명란에 동일하게 적용되는 것에 동의합니다.',
-        '본인은 콜로플라스트 코리아가 본인이 동의한 서류를 요양비 청구, 등록 및 관련 행정업무 처리를 위해 제출·활용하는 것에 동의합니다.',
+        /* 「본인 또는 법정대리인은」으로 연다 (2026-09-14 지시) — 미성년 건은 보호자가
+           대신 읽고 고르는 자리라, 「본인은」으로만 적으면 누가 동의하는 것인지 어긋난다. */
+        '본인 또는 법정대리인은 위 문서들의 내용을 모두 확인하였으며, 해당 내용에 동의합니다.',
+        '본인 또는 법정대리인은 본인확인 후 진행하는 전자서명이 위 문서들의 서명란에 동일하게 적용되는 것에 동의합니다.',
+        '본인 또는 법정대리인은 콜로플라스트 코리아가 동의한 서류를 요양비 청구, 등록 및 관련 행정업무 처리를 위해 제출·활용하는 것에 동의합니다.',
       ] as $_n => $_말)
         <label class="fa-row">
           <input type="checkbox" class="fa-check" id="fa{{ $_n }}" onchange="refreshAgree()">
@@ -835,7 +839,7 @@
       <div class="sig-label" style="display:block;margin-bottom:10px;">
         보호자(법정대리인) 확인 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만이라 보호자 확인이 필요합니다.
+          위임인이 만 {{ (int) config('delegation.minor_age', 19) }}세 미만인 경우 법정대리인(보호자)의 확인이 필요합니다.
         </div>
       </div>
 
@@ -880,7 +884,7 @@
       <div class="sig-label" style="margin-top:14px;">
         보호자 서명 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          위임인이 미성년이라 <b>이 서명 하나로 위임장의 위임인ㆍ법정대리인 두 서명란을 채웁니다.</b>
+          위임인이 미성년자인 경우, <b>본 전자서명은 위임인과 법정대리인 각각의 서명란에 동일하게 적용됩니다.</b>
         </div>
         <button class="sig-clear" type="button" onclick="clearGuardianSignature()">지우기</button>
       </div>
@@ -901,8 +905,9 @@
       <div class="sig-label" style="margin-top:14px;display:block;">
         법정대리인 또는 가족 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          주민등록증ㆍ운전면허증 등. 사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)<br>
-          지금 올리기 어려우시면 그대로 두셔도 됩니다 — 담당자가 다시 연락드립니다.
+          법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주세요.
+          생년월일 확인이 가능한 신분증만 제출 가능합니다.<br>
+          (JPG, PNG, HEIC 형식, 최대 10MB)
         </div>
       </div>
       <label class="g-upload" id="gIdDrop">
@@ -929,22 +934,15 @@
          비어 있었다). 남은 것을 그대로 적어 준다. --}}
     <div id="whyBlocked" class="why-blocked" style="display:none;"></div>
 
-    {{-- 서명 직전 최종 문구 (2026-09-10 「서명 동의」 4쪽) --}}
-    <div class="last-word">
-      본인은 휴대폰 본인인증을 통해 본인임을 확인하였으며, 위 서류의 내용을 충분히 확인하였습니다.
-      본인이 입력한 전자서명은 자필서명과 동일한 효력을 가지며, 아래 서류의 본인 서명란에
-      동일하게 적용됨에 동의합니다.
-      <ul>
-        @foreach($_docs as $_d)
-          <li>{{ $_d['name'] }}</li>
-        @endforeach
-      </ul>
-    </div>
+    {{-- 서명 직전 최종 문구는 걷었다 (2026-09-14 지시).
+
+         맨 위 안내와 바로 위 최종 동의 세 줄이 같은 말을 이미 하고 있어, 읽는 사람에게는
+         같은 문장을 세 번째 읽는 자리였다. 서류 이름은 위쪽 서류 목록에 그대로 있다. --}}
 
     {{-- 버튼 --}}
     <div class="btn-row">
-      <button class="btn btn-cancel" type="button" id="btnDecline" onclick="submitConsent('declined')">거절</button>
-      <button class="btn btn-agree"  type="button" id="btnAgree"   onclick="submitConsent('agreed')" disabled>전자서명하기</button>
+      <button class="btn btn-cancel" type="button" id="btnDecline" onclick="submitConsent('declined')">미동의</button>
+      <button class="btn btn-agree"  type="button" id="btnAgree"   onclick="submitConsent('agreed')">동의 및 제출</button>
     </div>
 
   </div>
@@ -1180,7 +1178,15 @@ function refreshAgree() {
   }
   const ok = (IS_MINOR || hasSig) && (!NICE_ENFORCE || identityVerified)
              && guardianReady() && privacyReady() && finalAgreed();
-  document.getElementById('btnAgree').disabled = !ok;
+
+  /* 단추를 잠그지 않는다 (2026-09-14 지시).
+
+     여태는 다 채우기 전까지 「동의 및 제출」이 잠겨 있었다. 눌러도 아무 일이 없으니
+     무엇이 모자란지는 아래 안내 상자를 찾아 읽어야만 알 수 있었는데, 화면이 길어
+     그 상자가 접힌 자리 밖에 있는 때가 많았다. 이제는 눌리고, 모자란 것을 그 자리에서
+     팝업으로 알린다(submitConsent 가 막아 세운다). 눈으로도 가리도록 색만 흐려 둔다. */
+  const 동의단추 = document.getElementById('btnAgree');
+  동의단추.classList.toggle('blocked', !ok);
   showWhyBlocked(ok);
 }
 
@@ -1227,6 +1233,9 @@ function whatIsMissing() {
   return 남은;
 }
 
+/* 안내 상자와 팝업이 같은 말을 쓴다 — 두 곳에 따로 적으면 언젠가 갈린다 */
+const BLOCKED_TITLE = '전자서명을 진행하기 전에 아래 항목을 완료해 주세요.';
+
 function showWhyBlocked(ok) {
   const box = document.getElementById('whyBlocked');
   if (!box) return;
@@ -1236,11 +1245,12 @@ function showWhyBlocked(ok) {
   const 남은 = whatIsMissing();
   if (!남은.length) { box.style.display = 'none'; return; }
 
-  box.innerHTML = '<b>아직 남았습니다</b><ul>'
+  box.innerHTML = '<b>' + BLOCKED_TITLE + '</b><ul>'
     + 남은.map(t => '<li>' + t + '</li>').join('')
     + '</ul>';
   box.style.display = '';
 }
+
 
 /* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
 function findPrivacyZip() {
@@ -1508,6 +1518,18 @@ function canvasHasInk(c) {
 
 /* ── 제출 ─────────────────────────────────────────────── */
 async function submitConsent(action) {
+  /* 덜 채운 채로 눌렀으면 무엇이 남았는지 팝업으로 알린다 (2026-09-14 지시).
+
+     아래 안내 상자에 적히는 것과 같은 목록이다 — 화면이 길어 그 상자를 못 보고
+     지나치는 자리가 있어, 누른 그 자리에서 한 번 더 보여 준다. */
+  if (action === 'agreed') {
+    const 남은 = whatIsMissing();
+    if (남은.length) {
+      ceAlert(BLOCKED_TITLE + '\n\n' + 남은.map(t => '· ' + t).join('\n'), { tone: 'warning' });
+      return;
+    }
+  }
+
   /* 미성년이면 위임인 서명란을 세우지 않는다 — 아래 보호자 서명 하나만 본다 */
   if (action === 'agreed' && !IS_MINOR && (!hasSig || !canvasHasInk(canvas))) {
     ceAlert('서명이 비어 있습니다. 서명란에 다시 서명해 주세요.', { tone: 'warning' });
