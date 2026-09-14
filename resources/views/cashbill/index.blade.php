@@ -269,6 +269,13 @@
         <option value="발행 대기">발행 대기</option>
       </select>
     </div>
+    {{-- 이름 (2026-09-14 지시 · 확인요청 7쪽) — 담당자가 가장 먼저 아는 것은 이름이다.
+         번호는 되물어야 알지만 이름은 통화하면서 그대로 친다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">이름</label>
+      <input type="text" id="f-name" class="form-control" placeholder="이름 일부만 쳐도 됩니다"
+             onkeydown="if(event.key==='Enter') loadHistory(1)">
+    </div>
     {{-- 요청서 6쪽 — 현금영수증은 휴대폰번호와 신분확인번호로 찾는다.
          둘 다 부분검색이다. 앞자리만 기억하는 일이 잦다. --}}
     <div class="ds-filter-field">
@@ -747,13 +754,20 @@ async function loadHistory(page = 1) {
     const hp = digits('f-hp'), idn = digits('f-identity');
     if (hp)  popbillUrl += `&hp=${hp}`;
     if (idn) popbillUrl += `&identity_num=${idn}`;
+
+    /* 이름 (2026-09-14 지시). 두 갈래에 모두 실어 보낸다 — 팝빌에서 받아 온 줄은
+       customer_name 으로, 처방전에서 낸 줄은 name 으로 거른다. 한쪽만 보내면
+       걸러지지 않은 쪽이 그대로 남아 이름이 안 먹는 것으로 보인다. */
+    const 이름 = (document.getElementById('f-name')?.value ?? '').trim();
+    if (이름) popbillUrl += `&customer_name=${encodeURIComponent(이름)}`;
     /* 「발행 대기」는 우리 주문에만 있는 값이라 팝빌에 그대로 보내면 안 된다.
        그때는 팝빌 쪽 결과를 아예 쓰지 않는다. */
     const onlyPending = tradeType === '발행 대기';
     if (tradeType && !onlyPending) popbillUrl += `&trade_type=${encodeURIComponent(tradeType)}`;
 
     // 처방전 현금영수증 (orders 테이블)
-    const orderUrl = `${CB_BASE}/order-receipts?corp_num=${cn}&start_date=${sd}&end_date=${ed}`;
+    let orderUrl = `${CB_BASE}/order-receipts?corp_num=${cn}&start_date=${sd}&end_date=${ed}`;
+    if (이름) orderUrl += `&name=${encodeURIComponent(이름)}`;
 
     const [pbRes, ordRes] = await Promise.all([
       fetch(popbillUrl, { headers: HEADERS }),

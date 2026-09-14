@@ -2858,6 +2858,15 @@ $calcDeposit  = $calcCopay;
                          새 주소는 옆의 「거래처 수정」 → 「주소 관리」에서 넣는다. 한 번
                          넣으면 그 뒤로는 여기서 고르기만 하면 된다. --}}
                     <button type="button" class="rx-side-btn" onclick="pickRxAddress(this)">주소 선택</button>
+                    {{-- 주소 관리 — 주소가 보이는 자리마다 둔다 (2026-09-14 확인요청 6쪽).
+
+                         ［주소 선택］은 쌓여 있는 것 가운데 고르는 자리다. 새 주소를 더하거나
+                         잘못 담긴 줄을 고치려면 여태 「거래처 수정」을 거쳐 들어가야 했는데,
+                         그 두 걸음이 주소를 고르러 온 사람에게는 길이 끊긴 것으로 보였다.
+                         아래 주문 제품 탭의 배송 정보와 같은 창을 연다. --}}
+                    <button type="button" class="rx-side-btn"
+                            onclick="openAddrManager(document.getElementById('f-patient-id')?.value)"
+                            title="거래처의 주소를 더하거나 고칩니다">주소 관리</button>
                   </div>
                   {{-- 2줄 — 시안 315:58 Frame 48101497: [상세 주소 149 FILL][배송 주소 동일 96 HUG], 사이 8.
                        '배송 주소 동일' 묶음은 96 에서 줄지 않으므로, 입력영역이 좁아지면 이 줄이

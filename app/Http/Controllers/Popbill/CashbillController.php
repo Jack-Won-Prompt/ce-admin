@@ -242,9 +242,17 @@ class CashbillController extends Controller
         $start = \Carbon\Carbon::createFromFormat('Ymd', $request->query('start_date'))->startOfDay();
         $end   = \Carbon\Carbon::createFromFormat('Ymd', $request->query('end_date'))->endOfDay();
 
+        /* 이름으로도 찾는다 (2026-09-14 지시 · 확인요청 7쪽).
+
+           팝빌에서 받아 온 줄은 customer_name 으로 거르는 자리가 이미 있었는데
+           (applyFilters), 처방전에서 낸 줄은 그 자리가 없어 이름을 쳐도 함께 남았다 —
+           한 표에 섞여 서는 두 갈래라 한쪽만 걸리면 걸러지지 않은 것으로 보인다. */
+        $이름 = trim((string) $request->query('name'));
+
         $orders = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser', 'tossPayment'])
             ->whereIn('cash_receipt_status', ['issued', 'cancelled'])
             ->whereBetween('cash_receipt_issued_at', [$start, $end])
+            ->when($이름 !== '', fn ($q) => $this->이름거르개($q, $이름))
             ->orderByDesc('cash_receipt_issued_at')
             ->get();
 
@@ -279,6 +287,7 @@ class CashbillController extends Controller
         BillingStrategy::targets($pendingQuery, 'cash_receipt');
 
         $pending = $pendingQuery
+            ->when($이름 !== '', fn ($q) => $this->이름거르개($q, $이름))
             ->where(fn ($q) => $q->whereNull('cash_receipt_status')
                                  ->orWhere('cash_receipt_status', '!=', 'issued'))
             /* 언제 것인가 — 나간 날이 있으면 그 날, 없으면 받은 날이다. */
@@ -323,6 +332,21 @@ class CashbillController extends Controller
         $all = $list->concat($pendingList)->values();
 
         return response()->json(['total' => $all->count(), 'list' => $all]);
+    }
+
+    /**
+     * 이름으로 주문을 거른다 — 거래처에 적힌 이름과 처방전에서 읽은 이름을 함께 본다.
+     *
+     * 거래처가 아직 이어지지 않은 건은 patients 에 줄이 없다. 그때는 처방전의
+     * patient_name_ocr 이 화면에 서므로, 그 값으로도 찾혀야 한다 — 보이는 이름으로
+     * 쳤는데 안 나오면 없는 건으로 읽는다.
+     */
+    private function 이름거르개($query, string $이름)
+    {
+        return $query->where(function ($w) use ($이름) {
+            $w->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$이름}%"))
+              ->orWhereHas('prescription', fn ($p) => $p->where('patient_name_ocr', 'like', "%{$이름}%"));
+        });
     }
 
     // ── private helpers ──────────────────────────────────────────────────────
