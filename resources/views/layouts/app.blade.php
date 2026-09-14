@@ -2398,6 +2398,15 @@ document.addEventListener('click', (e) => {
   // ── Toast 함수 ──────────────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
     const container = document.getElementById('toastContainer');
+
+    /* 한 번에 넉 장을 넘기지 않는다 (2026-09-14 지시).
+
+       한 걸음에 알림이 여럿 겹치는 자리가 있다 — 저장이 알리고, 문자가 알리고,
+       창고가 알린다. 그대로 쌓으면 화면 오른쪽이 알림으로 덮여 정작 지금 할 일이
+       가린다. 넘치는 만큼 가장 오래된 것부터 걷는다 — 새로 온 것이 더 급한 말이다. */
+    const 쌓인것 = container?.querySelectorAll('.toast') ?? [];
+    for (let i = 0; i <= 쌓인것.length - 4; i++) removeToast(쌓인것[i]);
+
     const toast     = document.createElement('div');
     toast.className = `toast ${type}`;
 
@@ -5006,8 +5015,22 @@ const ChatPanel = (() => {
         `${escHtml(data.body)}</a>`
       : `<b>${escHtml(data.title)}</b><br>${escHtml(data.body)}`;
 
-    showToast(msg, data.tone || 'info', 8000);
+    /* 한꺼번에 밀려온 것은 한 장으로 모은다 (2026-09-14 지시).
+
+       창고는 한 주문에 사건을 여럿 보낸다(확정ㆍ할당ㆍ피킹ㆍ송장ㆍ출고). 그것이
+       그대로 토스트가 되어 ［주문 생성 및 연계］ 한 번에 다섯 장이 쌓였다.
+       잠깐 모았다가 여럿이면 한 장에 담아 띄운다 — 하나면 지금처럼 그대로다. */
+    wwQueue.push(msg);
+    clearTimeout(wwTimer);
+    wwTimer = setTimeout(() => {
+      const 것들 = wwQueue.splice(0);
+      showToast(것들.length === 1 ? 것들[0] : 것들.join('<hr style="border:0;border-top:1px solid rgba(255,255,255,.25);margin:7px 0;">'),
+                data.tone || 'info', 8000);
+    }, 700);
   }
+
+  let wwQueue = [];
+  let wwTimer = null;
 
   adminCh.bind('withworks.status', onWithworksStatus);
 

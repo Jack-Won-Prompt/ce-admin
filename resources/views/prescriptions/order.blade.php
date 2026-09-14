@@ -9047,11 +9047,17 @@ window.HELP_TOUR_STEPS = [
    */
   function 막힘알림(문, 까닭) {
     try {
+      /* 내 소켓을 함께 보낸다 — 서버가 toOthers() 로 나를 뺀다 (2026-09-14 지시).
+         화면이 이미 까닭을 알렸는데 방송이 같은 말을 한 번 더 띄우고 있었다. */
+      const 헤더 = { 'Content-Type': 'application/json',
+                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+                     'Accept': 'application/json' };
+      /* let 로 선 것이라 window 에 붙지 않는다 — 이름 그대로 본다 */
+      const 소켓 = (typeof pusherClient !== 'undefined' ? pusherClient : null)?.connection?.socket_id;
+      if (소켓) 헤더['X-Socket-Id'] = 소켓;
+
       fetch('/orders/blocked', {
-        method: 'POST', keepalive: true,
-        headers: { 'Content-Type': 'application/json',
-                   'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
-                   'Accept': 'application/json' },
+        method: 'POST', keepalive: true, headers: 헤더,
         body: JSON.stringify({ rx_number: RX_NUMBER, gate: 문, reason: 까닭 }),
       }).catch(function () { });
     } catch (e) { }

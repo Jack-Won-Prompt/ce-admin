@@ -80,9 +80,17 @@ class OrderNotice
                                string $url, string $tone, Order $order): void
     {
         try {
+            /* 누른 본인에게는 되돌리지 않는다 (2026-09-14 지시).
+
+               ［주문 생성 및 연계］가 막히면 화면이 이미 까닭을 알린다. 그런데 서버가
+               같은 말을 방송해 누른 사람에게 한 번 더 떴다 — 한 번 눌렀는데 알림이
+               둘씩 쌓였다.
+
+               창고 웹훅처럼 사람이 부른 것이 아닌 자리에서는 실어 보낼 소켓이 없어
+               toOthers() 가 아무도 빼지 않는다 — 그때는 지금처럼 모두에게 간다. */
             broadcast(new WithworksStatusChanged(
                 'order.inform', $title, $body, $url, $tone, $userId
-            ));
+            ))->toOthers();
         } catch (\Throwable $e) {
             Log::warning('[주문 알림] 알람 실패', [
                 'order' => $order->order_number, 'user' => $userId, 'error' => $e->getMessage(),
