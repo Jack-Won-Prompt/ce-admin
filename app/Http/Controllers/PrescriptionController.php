@@ -57,6 +57,15 @@ class PrescriptionController extends Controller
         // '처방전 관리' 로 화면만 열고 아무것도 입력하지 않은 초안은 목록에 띄우지 않는다
         $query->whereNot(fn ($q) => $q->blankDraft());
 
+        /* 상담만 적어 둔 건도 띄우지 않는다 (2026-09-14 지시).
+
+           상담 한 건이 처방전 한 줄을 차지하는 구조라, 같은 사람에게 상담을 두 번
+           적으면 목록에 두 줄이 섰다 — 자료를 한 번 올렸을 뿐인데 처방전이 둘로
+           갈라진 것으로 보인다. 자료를 올리면 업로드가 그 줄을 찾아 이어 쓰므로
+           (store 의 이어쓸초안), 아직 이어 쓰지 않은 상담 줄은 처방전이 아니다.
+           거래처 상세의 상담 이력에서는 그대로 보인다. */
+        $query->whereNot(fn ($q) => $q->counselOnly());
+
         if ($request->input('status') === 'no_order') {
             // 주문을 만들 수 있는 것 — 검수가 끝난 것. ocr_done 은 예전 데이터 몫이다.
             $query->whereIn('status', ['approved', 'ocr_done'])

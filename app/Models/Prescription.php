@@ -392,6 +392,41 @@ class Prescription extends Model
                      ->whereDoesntHave('memos');
     }
 
+    /**
+     * 상담만 적어 둔 건 — 처방전 목록에는 세우지 않는다 (2026-09-14 지시).
+     *
+     * 상담은 처방전 줄에 붙어 산다(counsel_* 칸). 통화만 하고 끝나는 상담도 한 줄을
+     * 차지하므로, 한 사람에게 상담을 두 번 적으면 처방전 목록에 두 줄이 선다 —
+     * 담당자에게는 「한 번 올렸는데 처방전이 둘로 갈라진 것」으로 보인다.
+     *
+     * 그 줄들은 아직 처방전이 아니다. 그림도 서류도 없고, 병원ㆍ발행일도 비어 있다.
+     * 나중에 그 사람의 자료를 올리면 업로드가 이 줄을 찾아 이어 쓰고, 그때 비로소
+     * 처방전이 된다(store 의 이어쓸초안). 그러니 목록에서는 감추고 상담 이력에서만
+     * 보이면 된다 — 지우지 않는다. 상담 기록은 그 자체로 남아야 할 자취다.
+     *
+     * 잣대를 좁게 잡는다. 하나라도 붙은 것이 있으면 처방전으로 본다 — 넓게 잡으면
+     * 손대는 중인 건이 목록에서 조용히 사라진다.
+     */
+    public function scopeCounselOnly($query)
+    {
+        return $query->whereNotNull('counsel_no')
+            ->where('status', 'pending')
+            ->whereNull('image_path')
+            ->whereNull('hospital_name')
+            ->whereNull('issued_date')
+            ->whereDoesntHave('attachments')
+            ->whereDoesntHave('consents')
+            ->whereDoesntHave('documents')
+            /* 주문 줄은 상담 건에도 저절로 선다(OrderSync::seed) — 있다고 해서 손댄
+               건은 아니다. 제품이 담겼거나 창고로 넘어간 것만 처방전으로 본다. */
+            ->where(fn ($q) => $q
+                ->whereDoesntHave('order')
+                ->orWhereHas('order', fn ($o) => $o
+                    ->where('status', 'pending')
+                    ->where(fn ($w) => $w->whereNull('withworks_so_no')->orWhere('withworks_so_no', ''))
+                    ->where(fn ($w) => $w->whereNull('product_name')->orWhereIn('product_name', ['', '-']))));
+    }
+
     /** 평문 컬럼이 아직 남아 있는지 (요청당 1회만 확인) */
     public static function hasPlainResidentNoOcrColumn(): bool
     {
