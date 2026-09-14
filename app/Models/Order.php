@@ -28,6 +28,78 @@ class Order extends Model
     public const KIND_ORIGIN = 'origin';
     public const KIND_EXTRA  = 'extra';
 
+    /* ── 주문 취소 요청 (2026-09-14 지시) ────────────────────────────────
+       창고가 할당ㆍ피킹을 되돌리기를 기다리는 동안의 자리다. 며칠이 걸릴 수도 있어,
+       그 사이 이 주문이 「취소를 청해 둔 건」임을 화면이 말해 주어야 한다 — 그러지
+       않으면 다른 담당자가 결제 안내를 보내거나 제품을 고친다. */
+    public const CANCEL_REQUESTED = 'requested';
+    public const CANCEL_DONE      = 'cancelled';
+    public const CANCEL_REJECTED  = 'rejected';
+
+    public const CANCEL_STATE_LABELS = [
+        self::CANCEL_REQUESTED => ['취소 요청', 'warning'],
+        self::CANCEL_DONE      => ['취소됨',    'danger'],
+        self::CANCEL_REJECTED  => ['취소 불가', 'secondary'],
+    ];
+
+    /**
+     * 창고가 어디까지 갔는가 — 정정ㆍ취소가 어느 길로 가는지를 이것이 가른다.
+     *
+     *   none     아직 창고로 넘기지 않았다(판매번호가 없다)
+     *   new      넘겼으나 창고가 손대지 않았다(출고 신규 02)
+     *   working  할당ㆍ피킹ㆍ송장 — 손을 댔다
+     *   shipped  나갔다
+     *
+     * 위드웍스가 알려 주는 출고상태값을 본다. 그 값이 아직 안 왔으면(웹훅이 늦거나
+     * 옛 건) 주문 상태로 갈음한다 — 모르는 것을 「신규」로 보면 고칠 수 없는 건에
+     * 수정 단추가 서고, 눌러야 저쪽 422 를 본다.
+     */
+    public function 창고단계(): string
+    {
+        if (! $this->withworks_so_no) {
+            return 'none';
+        }
+
+        if ($this->isShipped()) {
+            return 'shipped';
+        }
+
+        $출고 = trim((string) $this->withworks_ship_status);
+
+        if ($출고 !== '') {
+            return $출고 === '02' ? 'new' : 'working';
+        }
+
+        // 출고 줄이 아직 없다 — 판매주문만 선 상태다
+        return in_array($this->status, ['pending', 'confirmed'], true) ? 'new' : 'working';
+    }
+
+    /** 제품ㆍ수량ㆍ주소를 이 화면에서 고칠 수 있는가 (2026-09-14 지시) */
+    public function 정정가능한가(): bool
+    {
+        return $this->cancel_state !== self::CANCEL_REQUESTED
+            && in_array($this->창고단계(), ['none', 'new'], true);
+    }
+
+    /** 취소를 청할 수 있는가 — 나간 뒤에는 교환/반품/취소 화면이 할 일이다 */
+    public function 취소가능한가(): bool
+    {
+        return $this->cancel_state === null
+            && $this->창고단계() !== 'shipped'
+            && $this->status !== 'cancelled';
+    }
+
+    /** 청해 두고 기다리는 중인가 — 그 동안 다른 단추를 잠근다 */
+    public function 취소기다리는중인가(): bool
+    {
+        return $this->cancel_state === self::CANCEL_REQUESTED;
+    }
+
+    public function cancelStateLabel(): string
+    {
+        return self::CANCEL_STATE_LABELS[$this->cancel_state ?? ''][0] ?? '';
+    }
+
     public const SO_TYPE_LABELS = [
         '1013' => ['CE 판매',                  'primary'],
         '1016' => ['개인판매',                 'info'],
@@ -234,6 +306,8 @@ class Order extends Model
         'order_number', 'prescription_id', 'patient_id', 'created_by',
         // 추가 주문 — 어느 원 주문에 딸렸는가, 어느 쪽인가 (2026-09-14 확인요청 4쪽)
         'parent_order_id', 'order_kind',
+        // 주문 취소 요청 — 창고가 되돌리기를 기다리는 동안의 자리 (2026-09-14 지시)
+        'cancel_state', 'cancel_requested_at', 'cancel_requested_by', 'cancel_reason', 'cancel_done_at',
         'product_name', 'product_code', 'quantity',
         'unit_price', 'nhis_amount', 'patient_copay',
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
@@ -278,6 +352,8 @@ class Order extends Model
     protected $casts = [
         // 위드웍스가 알려 준 판매현황 값 — 우리가 만들지 않는 것들(2026-09-07)
         'withworks_meta'       => 'array',
+        'cancel_requested_at'  => 'datetime',
+        'cancel_done_at'       => 'datetime',
         'deposit_confirmed_at' => 'datetime',
         'estimated_delivery'        => 'date',
         'ship_request_date'         => 'date',

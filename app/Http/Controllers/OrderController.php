@@ -544,6 +544,20 @@ class OrderController extends Controller
             'delivery_date'           => 'nullable|date',
         ]);
 
+        /* 취소를 청해 둔 건은 고치지 않는다 (2026-09-14 지시).
+
+           창고가 되돌리는 중인데 그 사이에 제품ㆍ수량이 바뀌면, 되돌림이 끝나고 저쪽이
+           자동으로 지우는 것은 「고치기 전 주문」이다 — 두 쪽이 다른 것을 들고 있게 된다. */
+        if ($order->취소기다리는중인가()) {
+            return response()->json([
+                'success' => false,
+                'message' => '취소를 요청해 둔 주문입니다 — 창고가 되돌리는 동안에는 고칠 수 없습니다.',
+            ], 422);
+        }
+
+        // 정정 전 본인부담금 — 바뀌면 결제도 맞춰야 한다(지시 ②)
+        $이전부담 = (int) $order->expectedDeposit();
+
         $items      = collect($request->input('items', []))->filter(fn($i) => !empty($i['product_name']));
         $firstItem  = $items->first() ?? [];
         $totalCopay = $request->patient_copay ?? $items->sum('patient_copay');
@@ -572,12 +586,24 @@ class OrderController extends Controller
 
         activity()->causedBy(Auth::user())
             ->performedOn($order)
-            ->log("{$order->order_number} 주문 수정");
+            ->log("{$order->order_number} 주문 정정");
+
+        /* 금액이 바뀌었으면 결제도 맞춘다 (2026-09-14 지시 ②).
+
+             결제 전  보낸 결제 링크를 해지한다 — 옛 금액짜리 링크가 살아 있으면
+                      환자가 그것으로 내고, 그 돈은 어디에도 맞지 않는다
+             결제 후  줄어든 차액만큼 부분 환불한다
+
+           늘어난 때는 무르지 않는다 — 더 받을 돈은 새 링크로 청한다. */
+        $돈말 = app(\App\Services\OrderCancelService::class)
+                    ->금액맞추기($order->refresh(), $이전부담);
 
         return response()->json([
             'success'      => true,
             'order_number' => $order->order_number,
             'total_amount' => $order->total_amount,
+            // 화면이 그대로 알린다 — 링크를 해지했는지, 차액을 물렀는지
+            'payment_note' => $돈말,
         ]);
     }
 
@@ -1044,6 +1070,48 @@ class OrderController extends Controller
         $this->ensureNanumGothicVariantsRegistered();
 
         return \App\Support\CashReceiptForm::render($order);
+    }
+
+    /**
+     * 이 주문을 지금 정정ㆍ취소할 수 있는가 (2026-09-14 지시).
+     *
+     * 화면이 단추를 세우기 전에 묻는다. 여태는 눌러 보고 위드웍스가 422 로 되돌려
+     * 보내야 알 수 있었다 — 눌러도 되는 단추만 서 있어야 한다.
+     */
+    public function cancelState(Order $order): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success'   => true,
+            'stage'     => $order->창고단계(),
+            'amendable' => $order->정정가능한가(),
+            'cancelable'=> $order->취소가능한가(),
+            'state'     => $order->cancel_state,
+            'label'     => $order->cancelStateLabel(),
+            'reason'    => $order->cancel_reason,
+            'at'        => $order->cancel_requested_at?->format('Y-m-d H:i'),
+        ]);
+    }
+
+    /**
+     * 주문을 취소한다 (2026-09-14 지시).
+     *
+     * 창고가 어디까지 갔느냐로 길이 갈린다 — 출고 신규면 그 자리에서 취소하고,
+     * 할당ㆍ피킹이 걸렸으면 취소를 청해 두고 되돌림을 기다린다. 돈과 증빙도 함께
+     * 되돌린다(지시 ①-가).
+     */
+    public function cancelOrder(Request $request, Order $order,
+                                \App\Services\OrderCancelService $취소): \Illuminate\Http\JsonResponse
+    {
+        $request->validate(['reason' => 'required|string|max:200']);
+
+        $결과 = $취소->취소($order, trim($request->input('reason')));
+
+        return response()->json([
+            'success' => $결과['ok'],
+            'message' => $결과['message'],
+            'state'   => $결과['state'],
+            'label'   => $order->refresh()->cancelStateLabel(),
+        ], $결과['ok'] ? 200 : 422);
     }
 
     // ── 세금계산서 PDF 바이트 생성 (헬퍼) ──────────────────

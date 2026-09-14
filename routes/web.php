@@ -500,6 +500,9 @@ Route::middleware(['auth'])->group(function () {
         // Operation 담당자ㆍ마감 체크ㆍ참고사항 — 상담 담당자와 다른 사람이다
         Route::patch('/{order}/operation',        [OrderController::class, 'operation'])->name('operation');
         Route::post('/{order}/withworks-status',   [OrderController::class, 'fetchWithworksStatus'])->name('fetchWithworksStatus');
+        /* 주문 정정ㆍ취소 (2026-09-14 지시) — 창고가 어디까지 갔느냐가 길을 가른다 */
+        Route::get( '/{order}/cancel-state', [OrderController::class, 'cancelState'])->name('cancelState');
+        Route::post('/{order}/cancel',       [OrderController::class, 'cancelOrder'])->name('cancelOrder');
     });
 
     // 서류 관리

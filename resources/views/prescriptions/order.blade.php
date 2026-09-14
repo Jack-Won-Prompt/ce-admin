@@ -4176,11 +4176,20 @@ $calcDeposit  = $calcCopay;
                         title="주문 제품과 배송 정보를 저장합니다">
                   <i class="fa-solid fa-floppy-disk"></i> 저장
                 </button>
+                {{-- 「주문 정정」이다 — 제품 추가ㆍ제품 변경ㆍ수량 변경이 이 한 번으로 나간다
+                     (2026-09-14 지시). 창고가 이미 손을 댄 건은 저쪽이 422 로 되돌려 보내므로,
+                     눌러도 되는 때만 서게 한다(syncCancelBtns). --}}
                 <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
-                  <i class="fa-solid fa-pen-to-square"></i> 주문 수정
+                  <i class="fa-solid fa-pen-to-square"></i> 주문 정정
                 </button>
-                <button class="btn btn-danger" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
+                {{-- 주문 취소 — 출고가 신규면 그 자리에서 취소하고, 할당ㆍ피킹이 걸렸으면
+                     창고에 취소를 청해 두고 되돌림을 기다린다. 돈과 증빙도 함께 되돌린다. --}}
+                <button class="btn btn-danger" id="btnCancelOrder" onclick="openCancelOrder(event)"
                         style="flex-shrink:0;padding:0 18px;">
+                  <i class="fa-solid fa-ban"></i> 주문 취소
+                </button>
+                <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
+                        style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 세운 건에만 씁니다">
                   <i class="fa-solid fa-trash-can"></i> 삭제
                 </button>
               </div>
@@ -8657,6 +8666,8 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('DOMContentLoaded', () => {
     applyRxStage(RX_STATUS);
     syncOrderStageBtn();
+    // 정정ㆍ취소 단추는 창고 단계를 물어 보고 선다 (2026-09-14 지시)
+    if (typeof syncCancelBtns === 'function') syncCancelBtns();
     // 이미 마친 건이면 여기서 두 단추가 잠긴다(글자ㆍ배지는 서버가 그린 것을 지킨다)
     setRxStatus(RX_STATUS, null, null);
   });
@@ -9683,13 +9694,137 @@ window.HELP_TOUR_STEPS = [
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary flex-1" id="btnUpdateOrder" onclick="updateOrder(event)">
-          <i class="fa-solid fa-pen-to-square"></i> 주문 수정
+          <i class="fa-solid fa-pen-to-square"></i> 주문 정정
         </button>
-        <button class="btn btn-danger" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
+        <button class="btn btn-danger" id="btnCancelOrder" onclick="openCancelOrder(event)"
                 style="flex-shrink:0;padding:0 18px;">
+          <i class="fa-solid fa-ban"></i> 주문 취소
+        </button>
+        <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
+                style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 세운 건에만 씁니다">
           <i class="fa-solid fa-trash-can"></i> 삭제
         </button>
       </div>`;
+  }
+
+  /* ── 주문 정정ㆍ취소 (2026-09-14 지시) ────────────────────────────────
+
+     창고가 어디까지 갔느냐가 길을 가른다. 그 판정은 서버가 한다(Order::창고단계) —
+     화면이 따로 셈하면 두 벌이 갈리고, 갈린 쪽이 「눌러도 안 되는 단추」를 만든다.
+
+     여태는 눌러 보고 위드웍스가 422 로 되돌려 보내야 알 수 있었다. 눌러도 되는
+     단추만 서 있어야 한다. */
+  let _취소상태 = null;
+
+  async function syncCancelBtns() {
+    if (!existingOrder?.id) return;
+
+    const res = await apiRequest(`/orders/${existingOrder.id}/cancel-state`, 'GET');
+    if (!res.success) return;
+
+    _취소상태 = res;
+
+    const 정정 = document.getElementById('btnUpdateOrder');
+    const 취소 = document.getElementById('btnCancelOrder');
+
+    const 단계말 = { none: '아직 창고로 보내지 않았습니다',
+                    new:  '창고가 아직 손대지 않았습니다 — 지금은 고칠 수 있습니다',
+                    working: '창고가 할당ㆍ피킹을 시작했습니다',
+                    shipped: '이미 출고됐습니다' }[res.stage] ?? '';
+
+    if (정정) {
+      정정.disabled = !res.amendable;
+      정정.title = res.amendable
+        ? '제품ㆍ수량ㆍ배송지를 고쳐 창고로 다시 보냅니다'
+        : (res.state === 'requested'
+            ? '취소를 요청해 둔 주문입니다'
+            : 단계말 + ' — 고치려면 먼저 주문을 취소해야 합니다');
+    }
+
+    if (취소) {
+      취소.disabled = !res.cancelable;
+      취소.title = res.cancelable ? '주문을 취소합니다' : (res.label ? res.label : 단계말);
+      if (res.state === 'requested') {
+        취소.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> 취소 요청 중';
+      }
+    }
+  }
+  window.syncCancelBtns = syncCancelBtns;
+
+  /** 취소는 사유를 받는다 — 왜 되돌렸는지가 남지 않으면 다음 달에 아무도 모른다 */
+  async function openCancelOrder(e) {
+    if (!existingOrder?.id) { showToast('주문 정보를 찾을 수 없습니다.', 'danger'); return; }
+
+    const 단계 = _취소상태?.stage ?? '';
+    const 안내 = 단계 === 'working'
+      ? '창고가 이미 할당ㆍ피킹을 시작했습니다.\n취소를 요청해 두면, 창고가 되돌리는 대로 자동으로 취소됩니다.'
+      : '위드웍스 판매주문을 취소하고 출고도 함께 취소합니다.';
+
+    const 돈 = '\n\n받은 결제가 있으면 함께 취소하고, 보낸 결제 링크는 해지합니다.'
+             + '\n세금계산서ㆍ현금영수증이 발행된 건은 따로 무르셔야 합니다.';
+
+    const 사유 = await cePrompt(안내 + 돈 + '\n\n취소 사유를 입력해 주십시오.', {
+      title: '주문 취소', confirmText: '취소합니다', cancelText: '그만두기',
+      placeholder: '예) 환자 요청 · 제품 변경 · 중복 주문',
+    });
+
+    if (!사유) return;
+
+    const btn = e.target.closest('button');
+    BtnState.loading(btn, '취소 중...');
+
+    const res = await apiRequest(`/orders/${existingOrder.id}/cancel`, 'POST', { reason: 사유 });
+
+    BtnState.reset(btn);
+
+    if (!res.success) {
+      ceAlert(res.message || '주문을 취소하지 못했습니다.', { title: '주문 취소', tone: 'danger' });
+      return;
+    }
+
+    ceAlert(res.message, { title: res.state === 'requested' ? '취소 요청' : '취소 완료' });
+    await syncCancelBtns();
+  }
+  window.openCancelOrder = openCancelOrder;
+
+  /* 사유를 받아 오는 작은 창 — ceConfirm 과 같은 모양이되 글 한 줄을 받는다 */
+  function cePrompt(말, opts = {}) {
+    return new Promise(resolve => {
+      const 덮개 = document.createElement('div');
+      덮개.style.cssText = 'position:fixed;inset:0;background:rgba(17,24,39,.45);z-index:10050;'
+                         + 'display:flex;align-items:center;justify-content:center;padding:20px;';
+      덮개.innerHTML = `
+        <div style="background:#fff;border-radius:12px;max-width:460px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+          <div style="padding:16px 18px 10px;font-weight:800;font-size:15px;color:var(--danger);">
+            ${opts.title || '확인'}
+          </div>
+          <div style="padding:0 18px;font-size:13px;line-height:1.75;color:var(--gray-700);white-space:pre-line;">${말}</div>
+          <div style="padding:12px 18px 0;">
+            <input type="text" id="cePromptInput" class="form-control" maxlength="200"
+                   placeholder="${opts.placeholder || ''}" style="width:100%;">
+          </div>
+          <div style="padding:14px 18px 16px;display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="btn btn-outline" data-act="no">${opts.cancelText || '취소'}</button>
+            <button type="button" class="btn btn-danger"  data-act="yes">${opts.confirmText || '확인'}</button>
+          </div>
+        </div>`;
+
+      const 닫기 = (값) => { 덮개.remove(); resolve(값); };
+
+      덮개.addEventListener('click', ev => {
+        const 누른것 = ev.target.closest('[data-act]');
+        if (ev.target === 덮개) return 닫기(null);
+        if (!누른것) return;
+        if (누른것.dataset.act === 'no') return 닫기(null);
+
+        const 값 = 덮개.querySelector('#cePromptInput').value.trim();
+        if (!값) { showToast('사유를 입력해 주십시오.', 'warning'); return; }
+        닫기(값);
+      });
+
+      document.body.appendChild(덮개);
+      덮개.querySelector('#cePromptInput').focus();
+    });
   }
 
   // ── 주문 수정 ─────────────────────────────────────────
@@ -9740,8 +9875,8 @@ window.HELP_TOUR_STEPS = [
     });
 
     if (!localRes.success) {
-      BtnState.error(btn, '수정 실패');
-      showToast(localRes.message || '주문 수정 실패', 'danger');
+      BtnState.error(btn, '정정 실패');
+      showToast(localRes.message || '주문 정정 실패', 'danger');
       return false;
     }
 
@@ -9780,14 +9915,25 @@ window.HELP_TOUR_STEPS = [
     updateWwSoDisplay(existingOrder.order_number, existingOrder.withworks_so_no, currentSoType);
 
     _orderDirty = false;
+
+    /* 정정으로 금액이 바뀌었으면 결제도 함께 맞췄다 (2026-09-14 지시 ②).
+       무엇을 했는지 그대로 알린다 — 링크를 해지했는지, 차액을 물렀는지. */
+    const 돈말 = localRes.payment_note || '';
+
     if (!opts.silent) {
       showToast(
         wwSuccess
-          ? '✅ 주문이 수정되었습니다. (위드웍스 동기화 완료)'
-          : (wwMessage ? `주문 수정 완료 (위드웍스: ${wwMessage})` : '주문 수정 완료 (위드웍스 연계 실패)'),
+          ? '✅ 주문이 정정되었습니다. (위드웍스 동기화 완료)'
+          : (wwMessage ? `주문 정정 완료 (위드웍스: ${wwMessage})` : '주문 정정 완료 (위드웍스 연계 실패)'),
         wwSuccess ? 'success' : 'warning'
       );
+
+      if (돈말) ceAlert(돈말, { title: '결제 금액 변경', tone: 'warning' });
     }
+
+    // 고친 뒤에는 창고 단계가 달라졌을 수 있다 — 단추를 다시 셈한다
+    if (typeof syncCancelBtns === 'function') syncCancelBtns();
+
     return true;
   }
 

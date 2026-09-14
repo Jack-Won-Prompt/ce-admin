@@ -126,6 +126,10 @@ class OrderGridExtras
                옆의 「유형」 칸은 위드웍스가 준 판매유형이라 우리가 새 이름을 넣을 수 없다.
                원 주문에는 적지 않는다 — 거의 다 원 주문이라 칸이 어지러워진다. */
             'order_kind'      => $o?->orderKindLabel() ?? '',
+            /* 취소 상태 — 창고가 되돌리기를 기다리는 동안의 자리 (2026-09-14 지시).
+               며칠이 걸릴 수도 있어, 그 사이 이 주문이 「취소를 청해 둔 건」임을 목록이
+               말해 주어야 한다. 그러지 않으면 다른 담당자가 결제 안내를 보낸다. */
+            'cancel_state'    => $o?->cancelStateLabel() ?? '',
             'claim_ready'     => $o === null ? '' : ($o->claim_ready ? '준비' : '미비'),
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
@@ -500,8 +504,9 @@ class OrderGridExtras
             'nhis_consent'    => $this->consentLabel($s->patient_id),
             'claim_agency'    => '',
             'agency_code'     => '',
-            // 샘플에는 추가 주문이 없다 — 칸은 세워 둬야 줄이 어긋나지 않는다
+            // 샘플에는 추가 주문도 주문 취소도 없다 — 칸은 세워 둬야 줄이 어긋나지 않는다
             'order_kind'      => '',
+            'cancel_state'    => '',
             'claim_ready'     => '',
             'nhis_claim'      => '',
             'tax_invoice'     => '',
