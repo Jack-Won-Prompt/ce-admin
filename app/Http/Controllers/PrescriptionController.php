@@ -2327,8 +2327,30 @@ class PrescriptionController extends Controller
                 ->values()->all()
             : [];
 
+        /* 결제를 이미 보냈는가ㆍ이미 받았는가 (2026-09-14 지시).
+
+           ［결제전송］은 누르면 곧 환자에게 문자가 나가는 단추다. 그런데 결제 안내는
+           주문을 만들 때 저절로도 나가고(웹훅이 창고 확정을 알리면 DepositAutoIssue 가
+           보낸다) 담당자가 손으로도 보낸다 — 이미 나간 줄 모르고 한 번 더 눌러 같은
+           안내가 두 번 가는 일이 있었다. 받은 뒤에 또 보내면 더 나쁘다.
+
+           보낸 자취는 payment_links 에 쌓이고, 받았는지는 그 줄의 paid 와 주문의
+           입금 확인 둘 가운데 하나라도 서면 참이다. */
+        $payLinks  = $prescription->order?->paymentLinks()->latest('id')->get() ?? collect();
+        $payLast   = $payLinks->first();
+        $payState  = [
+            'sent'      => $payLinks->isNotEmpty(),
+            'paid'      => $payLinks->contains('status', 'paid')
+                           || (bool) $prescription->order?->deposit_confirmed_at,
+            'method'    => $payLast ? (\App\Models\PaymentLink::METHODS[$payLast->method] ?? $payLast->method) : '',
+            'status'    => $payLast?->status ?? '',
+            'status_label' => $payLast ? ($payLast->status_label ?? '') : '',
+            'sent_at'   => $payLast?->sent_at?->format('Y-m-d H:i') ?? '',
+            'count'     => $payLinks->count(),
+        ];
+
         return view('prescriptions.order', compact(
-            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones',
+            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',

@@ -825,6 +825,14 @@
   .rx-sec-btns { display:inline-flex; align-items:center; gap:6px; margin-left:auto;
                  flex-wrap:wrap; row-gap:6px; justify-content:flex-end; }
   .rx-sec-btn i { font-size:12px; }
+  /* 결제전송 단추에 붙는 딱지 (2026-09-14 지시) — 이미 보냈는가ㆍ이미 받았는가 */
+  .pay-tag { display:inline-flex; align-items:center; height:16px; margin-left:5px;
+             padding:0 6px; border-radius:999px; font-size:10px; font-weight:700;
+             line-height:1; white-space:nowrap; }
+  .pay-tag-sent { background:var(--warning-50,#FEF3C7); color:#B54708; }
+  .pay-tag-paid { background:var(--primary-50); color:var(--primary); }
+  .pib-btn.is-paid { border-color:var(--primary-200,var(--primary)); }
+
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
   .rx-field-row.full { grid-column:1 / -1; }
   /* 3열이 되면 입력영역이 253 까지 좁아진다. flex 항목의 기본 최소 폭은 '내용 폭'이라
@@ -1645,8 +1653,19 @@ $calcDeposit  = $calcCopay;
       <div id="payTriggerWrap" style="position:relative;">
         {{-- 주문이 없어도 눌리게 둔다. 잠가 두면 눌러도 아무 일이 없어 고장으로 읽힌다 —
              창을 열어 「주문을 먼저 만들라」고 그 자리에서 알려 주는 편이 낫다. --}}
-        <button class="pib-btn" id="btnPayTrigger" onclick="togglePayPopover(event)">
+        {{-- 이미 보냈는지ㆍ이미 받았는지를 단추에 적는다 (2026-09-14 지시).
+
+             결제 안내는 두 길로 나간다 — 창고가 주문을 확정하면 저절로 나가고(웹훅),
+             담당자가 이 단추로도 보낸다. 나간 줄 모르고 한 번 더 누르면 같은 안내가
+             두 번 가고, 받은 뒤에 또 보내면 더 나쁘다. --}}
+        <button class="pib-btn{{ ($payState['paid'] ?? false) ? ' is-paid' : '' }}"
+                id="btnPayTrigger" onclick="togglePayPopover(event)">
           <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
+          @if($payState['paid'] ?? false)
+            <span class="pay-tag pay-tag-paid">결제완료</span>
+          @elseif($payState['sent'] ?? false)
+            <span class="pay-tag pay-tag-sent">보냄{{ ($payState['count'] ?? 1) > 1 ? ' ' . $payState['count'] : '' }}</span>
+          @endif
         </button>
 
         <div id="payPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:420px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:500;">
@@ -10358,9 +10377,51 @@ window.HELP_TOUR_STEPS = [
   /* ── 결제 전송 ─────────────────────────────────────────
      만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러
      둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
+  const PAY_STATE      = @json($payState);
   const PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
   const PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
   const PAY_CANCEL_URL = @json(url('payment-links'));
+
+  /* 창을 열 때 이미 보냈거나 받았다는 것을 한 번 알린다 (2026-09-14 지시).
+
+     단추에 붙인 딱지는 눈에 띄지 않을 수 있다. 보내기 전에 한 번은 말해 두어야
+     같은 안내가 두 번 나가지 않는다. 화면을 연 동안 한 번만 알린다 — 창을 여닫을
+     때마다 뜨면 읽지 않고 지나치게 된다. */
+  let _결제알림함 = false;
+
+  /** 단추의 딱지를 지금 상태로 다시 그린다 */
+  function 딱지다시() {
+    const btn = document.getElementById('btnPayTrigger');
+    if (!btn) return;
+
+    btn.querySelector('.pay-tag')?.remove();
+    btn.classList.toggle('is-paid', !!PAY_STATE?.paid);
+    if (!PAY_STATE?.paid && !PAY_STATE?.sent) return;
+
+    const tag = document.createElement('span');
+    tag.className = 'pay-tag ' + (PAY_STATE.paid ? 'pay-tag-paid' : 'pay-tag-sent');
+    tag.textContent = PAY_STATE.paid
+      ? '결제완료'
+      : '보냄' + (PAY_STATE.count > 1 ? ' ' + PAY_STATE.count : '');
+    btn.appendChild(tag);
+  }
+
+  function 결제상태알림() {
+    if (_결제알림함 || !PAY_STATE) return;
+    if (!PAY_STATE.paid && !PAY_STATE.sent) return;
+
+    _결제알림함 = true;
+    const 꼬리 = [PAY_STATE.method, PAY_STATE.sent_at].filter(Boolean).join(' · ');
+
+    if (PAY_STATE.paid) {
+      showToast('이미 결제가 끝난 건입니다' + (꼬리 ? ' — ' + 꼬리 : '')
+                + '. 다시 보내면 환자에게 안내가 한 번 더 갑니다.', 'warning', 8000);
+    } else {
+      showToast('결제 안내를 이미 보냈습니다' + (꼬리 ? ' — ' + 꼬리 : '')
+                + (PAY_STATE.count > 1 ? ` (${PAY_STATE.count}번)` : '')
+                + '. 아래 이력을 보고 다시 보낼지 정하십시오.', 'warning', 8000);
+    }
+  }
 
   function togglePayPopover(e) {
     e.stopPropagation();
@@ -10373,6 +10434,7 @@ window.HELP_TOUR_STEPS = [
       const mobile = document.getElementById('f-mobile')?.value;
       if (mobile) document.getElementById('payMobile').value = mobile;
       loadPaymentLinks();
+      결제상태알림();
     }
   }
 
@@ -10408,7 +10470,18 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(PAY_STORE_URL, 'POST', { method, mobile });
       /* 못 보낸 것은 apiRequest 가 이미 알린다 — 여기서 또 알리면 같은 말이 두 번 뜬다 */
-      if (res.success) showToast(res.message || '보냈습니다.', 'success', 5000);
+      if (res.success) {
+        showToast(res.message || '보냈습니다.', 'success', 5000);
+        /* 방금 보냈으니 단추의 딱지도 그 자리에서 따라간다 (2026-09-14 지시) —
+           화면을 다시 열어야 바뀌면 두 번 보내는 일을 막지 못한다. */
+        PAY_STATE.sent    = true;
+        PAY_STATE.count   = (PAY_STATE.count || 0) + 1;
+        /* 고른 방법의 이름 — 라디오 옆 글자를 그대로 쓴다 */
+        const 고른것 = document.querySelector('input[name="pay_method"]:checked');
+        PAY_STATE.method = 고른것?.closest('label')?.innerText.trim() || PAY_STATE.method;
+        PAY_STATE.sent_at = new Date().toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+        딱지다시();
+      }
       loadPaymentLinks();
     } catch (e) {
       showToast('보내지 못했습니다: ' + (e.message || ''), 'danger', 5000);
