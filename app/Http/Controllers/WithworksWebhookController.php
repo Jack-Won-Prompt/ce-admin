@@ -245,6 +245,25 @@ class WithworksWebhookController extends Controller
             if ($newStatus === 'cancelled' || self::rank($newStatus) > self::rank($order->status)) {
                 $order->update(['status' => $newStatus]);
             }
+
+            /* 청해 둔 취소가 끝났다 (2026-09-14 지시).
+
+               할당ㆍ피킹이 걸린 건은 그 자리에서 취소할 수 없어 창고에 청해 두고
+               기다린다(cancel_state = requested). 담당자가 할당ㆍ피킹을 되돌리면
+               위드웍스가 스스로 확정취소ㆍ삭제까지 잇고 이 사건을 보내 온다 —
+               그때 「취소 요청 중」을 「취소됨」으로 닫아 준다.
+
+               이 자리가 없으면 화면에는 「취소 요청 중」이 영영 서 있게 된다. */
+            if ($newStatus === 'cancelled'
+                && $order->cancel_state === \App\Models\Order::CANCEL_REQUESTED) {
+                $order->update([
+                    'cancel_state'   => \App\Models\Order::CANCEL_DONE,
+                    'cancel_done_at' => now(),
+                ]);
+
+                activity()->performedOn($order)
+                    ->log("주문 취소 완료 ({$order->order_number}) — 창고가 되돌려 자동 취소되었습니다");
+            }
         }
 
         /* 출고일자는 창고가 ship.shipped_at 으로 알려 준다(WithworksSync 가 적는다).
