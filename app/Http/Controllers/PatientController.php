@@ -552,7 +552,12 @@ class PatientController extends Controller
                     ? route('prescriptions.show', $p->counselOrder->prescription)
                     : route('orders.show', $p->counselOrder))
                 : '',
-            'date'       => $p->counsel_date ?: $p->created_at->format('Y-m-d'),
+            /* 날짜는 사람이 읽는 꼴로 내보낸다 (2026-09-14 지시).
+               counsel_date 는 datetime 으로 새겨져 있어(casts) 그대로 실으면
+               JSON 이 2026-09-14T09:31:00.000000Z 로 적는다 — 화면이 그것을
+               그대로 보여 주었다. 상담 창의 목록과 같은 꼴로 맞춘다. */
+            'date'       => (string) ($p->counsel_date?->format('Y-m-d H:i')
+                                      ?: $p->created_at?->format('Y-m-d H:i')),
             'note'       => $p->counsel_contents ?: ($p->review_memo ?? ''),
             'type'       => (string) ($p->counsel_type ?? ''),
             'type_label' => \App\Models\Prescription::상담유형말($p->counsel_type),

@@ -1386,7 +1386,8 @@ class PrescriptionController extends Controller
 
         return array_filter([
             'counselling_no'     => $p->counsel_no,
-            'counsel_date'       => $p->counsel_date,
+            // datetime 이라 그대로 실으면 2026-09-14T09:31:00.000000Z 로 나간다 (2026-09-14)
+            'counsel_date'       => $p->counsel_date?->format('Y-m-d H:i'),
             'type'               => $p->counsel_type,
             'acc_add_type'       => $p->counsel_acc_add_type,
             'status'             => $p->counsel_status,
