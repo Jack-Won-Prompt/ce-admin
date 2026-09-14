@@ -2330,7 +2330,18 @@ document.addEventListener('click', (e) => {
   const BtnState = (() => {
     function loading(btn, text = '처리 중...') {
       if (!btn) return;
-      btn.dataset.origHtml = btn.innerHTML;
+
+      /* 되돌릴 모습은 **처음 것**만 적어 둔다 (2026-09-14 지시).
+
+         한 걸음이 여러 마디로 나뉜 자리에서는 걸음 중에 글을 갈아 끼우려고 loading 을
+         다시 부른다 — 주문 수정이 「저장 중… → 수정 중… → 위드웍스 수정 중…」으로
+         바뀐다. 그때마다 지금 모습을 원본으로 적어 두면, 두 번째 부름이 **돌아가는
+         물레 모양을 원본으로 삼는다.** 일이 다 끝나고 reset 이 그것을 되돌리므로
+         단추는 「저장 중…」인 채로 영영 돌았다 — 잠기지도 않아 더 헷갈렸다.
+
+         이미 적어 둔 것이 있으면 그대로 둔다. reset 이 지우므로 다음 걸음은 다시
+         제 모습부터 적는다. */
+      if (btn.dataset.origHtml === undefined) btn.dataset.origHtml = btn.innerHTML;
       btn.dataset.loading  = '1';
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> ${text}`;
