@@ -104,7 +104,13 @@ class OrderGridExtras
                무엇으로 안내했는가일 뿐이다(2026-09-09 지시). 아직 아무 결제도 없는
                건은 빈칸으로 둔다. */
             'pay_method'      => $o && ($o->pay_method || $o->tossPayment) ? $o->payMethodLabel() : '',
-            'deposit_at'      => $o?->deposit_confirmed_at?->format('Y-m-d') ?? '',
+            /* 입금확인 — 담당자가 통장을 보고 누른 것만 보면 토스로 결제된 건(카드ㆍ
+               링크페이ㆍ가상계좌 자동 입금)이 모두 빈칸으로 섰다(2026-09-14 확인요청).
+               「돈이 들어왔는가」는 isDepositConfirmed() 하나로 묻는다 — 정산 화면과
+               같은 잣대다. 날짜는 담당자 확인일이 먼저, 없으면 토스 결제 시각이다. */
+            'deposit_at'      => $o && $o->isDepositConfirmed()
+                                    ? (($o->deposit_confirmed_at ?? $o->paidAt())?->format('Y-m-d') ?? '입금완료')
+                                    : '',
             /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
             'paid_at'         => $o?->paidAtLabel() ?? '',
             /* **총 금액은 본인 + 기관이다.**
