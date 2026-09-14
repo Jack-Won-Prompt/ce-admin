@@ -224,17 +224,32 @@ class MessageService extends PopbillBaseService
      * 기본 설정값으로 단문/장문 자동 발송 (컨트롤러 편의용)
      * 로컬 환경(APP_ENV=local)에서는 실제 API를 호출하지 않고 시뮬레이션.
      */
-    public function send(string $to, string $content, ?string $receiverName = null): string
+    public function send(string $to, string $content, ?string $receiverName = null,
+                         bool $적은번호그대로 = false): string
     {
         $toNum = preg_replace('/\D/', '', $to);
 
         /* 어디로 보내는가 — 세 갈래 (config/popbill.php 의 sms_mode).
            **우리에게만**(redirect)이면 받는 번호를 시험 번호로 갈아 끼운다.
-           여태 시뮬레이션이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다. */
+           여태 시뮬레이션이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다.
+
+           다만 **손으로 적어 넣은 번호는 돌리지 않는다**(2026-09-14 지시).
+           그 갈래가 막는 것은 「환자 자료에서 읽어 온 번호로 잘못 나가는 것」이다.
+           담당자가 그 자리에서 제 번호를 쳐 넣은 것은 잘못 나갈 수가 없고, 오히려
+           시험 받는 번호 하나로 몰면 여럿이 함께 시험할 수 없다.
+
+           시뮬레이션은 그대로 따른다 — 그것은 「아무 것도 내보내지 않는다」는
+           빗장이라, 이 자리에서 뚫으면 빗장이 아니게 된다. */
         $mode = config('popbill.sms_mode', 'live');
 
-        if ($mode === 'redirect') {
+        if ($mode === 'redirect' && ! $적은번호그대로) {
             $toNum = $this->testReceiver($toNum, $receiverName);
+        }
+
+        if ($mode === 'redirect' && $적은번호그대로) {
+            \Illuminate\Support\Facades\Log::info('[Popbill][SMS][우리에게만] 손으로 적은 번호라 그대로 보낸다', [
+                'to' => $toNum, 'name' => $receiverName,
+            ]);
         }
 
         if ($mode === 'simulate') {

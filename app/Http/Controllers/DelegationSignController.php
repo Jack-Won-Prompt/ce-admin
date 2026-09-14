@@ -706,7 +706,12 @@ class DelegationSignController extends Controller
             $res = $this->sender->sendBulk('sms',
                 [['rcv' => $번호, 'rcvnm' => $이름]],
                 $글, null,
-                ['source' => 'delegation-sign']);
+                ['source' => 'delegation-sign',
+                 /* 손으로 적어 세운 줄은 「우리에게만」이어도 적은 번호로 그대로 보낸다
+                    (2026-09-14 지시). 시험하는 사람이 여럿이라 시험 받는 번호 하나로
+                    몰면 저마다 제 손전화로 받아 볼 수가 없다. 명단에서 온 줄은 그대로
+                    돌린다 — 그쪽은 실제 환자 번호라 잘못 나가면 안 된다. */
+                 '적은번호그대로' => $줄->source === 'direct']);
 
             if (! ($res['success'] ?? false)) {
                 throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
