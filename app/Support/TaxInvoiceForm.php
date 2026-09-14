@@ -97,9 +97,12 @@ final class TaxInvoiceForm
                 'blankCount' => (string) max(0, count(self::SUPPLY_HEAD) - strlen((string) $supply)),
                 'remark'     => (string) $order->order_number,
                 'total'      => number_format($total),
-                // 영수면 현금 칸에, 청구면 외상미수금 칸에 선다 — 서식이 그렇게 읽힌다
+                // 영수면 현금 칸에 선다
                 'cash'       => $received ? number_format($total) : '',
-                'credit'     => $received ? '' : number_format($total),
+                /* 외상미수금은 비워 둔다 (2026-09-14 지시). 청구 건의 금액을 이 칸에
+                   적으면 받을 돈이 장부에 잡힌 것으로 읽힌다 — 공단 심사가 끝나기
+                   전이라 얼마를 받을지 아직 정해지지 않았다. */
+                'credit'     => '',
                 'purpose'    => $purpose,
                 'issuer'     => '팝빌(www.popbill.com)',
             ],
