@@ -19,8 +19,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey      = GlobalKey<FormState>();
-  final _emailCtrl    = TextEditingController(text: 'hong@ce-admin.co.kr');
-  final _passwordCtrl = TextEditingController(text: '12345678');
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool  _obscure      = true;
 
   /// 아이디·비밀번호 자리를 보일지. 서버 설정을 받기 전까지는 보인다 —

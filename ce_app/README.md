@@ -2,6 +2,11 @@
 
 A new Flutter project.
 
+## Development Environment
+
+- Flutter: 3.47.4 (stable)
+- Dart: 3.13.3
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
