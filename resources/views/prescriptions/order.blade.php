@@ -1742,19 +1742,21 @@ $calcDeposit  = $calcCopay;
       </div>
 
       {{-- 현금영수증 --}}
+      {{-- 발행했든 아니든 단추는 하나다 (2026-09-14 지시).
+
+           여태 발행한 뒤에는 단추가 띠로 바뀌고 그 안의 작은 ［상세］를 눌러야 했다.
+           옆의 다른 단추들과 생김새가 달라 눈에 먼저 걸리고, 정작 발행한 내용을 보려면
+           한 번 더 찾아 눌러야 했다.
+
+           단추는 그대로 두고 「발행완료」 딱지만 붙인다. 누르면 발행한 내용이 바로
+           선다 — 아직이면 발행 창이 열린다. 취소는 그 상세 창 안에 둔다. --}}
       <div id="cashReceiptArea">
-        @if($prescription->order?->cash_receipt_status === 'issued')
-        <div style="display:flex;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-          <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
-          <span style="font-weight:700;color:var(--primary);">현금영수증</span>
-          <button onclick="toggleCrDetailPopover(event)" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:6px;cursor:pointer;margin-left:2px;">상세</button>
-          <button onclick="cancelCashReceipt()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;">취소</button>
-        </div>
-        @else
-        <button class="pib-btn" id="btnCrIssueTrigger" onclick="toggleCrIssuePopover(event)">
+        @php $cr발행 = $prescription->order?->cash_receipt_status === 'issued'; @endphp
+        <button class="pib-btn{{ $cr발행 ? ' is-paid' : '' }}" id="btnCrIssueTrigger"
+                onclick="{{ $cr발행 ? 'toggleCrDetailPopover(event)' : 'toggleCrIssuePopover(event)' }}">
           <i class="fa-solid fa-receipt"></i> 현금영수증
+          @if($cr발행)<span class="pay-tag pay-tag-paid">발행완료</span>@endif
         </button>
-        @endif
       </div>
 
       {{-- 팩스 전송 --}}
@@ -4590,7 +4592,13 @@ $calcDeposit  = $calcCopay;
         </tr>
       </tbody>
     </table>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+    {{-- 취소는 여기 둔다 (2026-09-14 지시) — 발행한 내용을 보고 나서 누르는 일이다.
+         단추 옆에 두었더니 무엇을 취소하는지 보지 않고 누를 수 있었다. --}}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;">
+      <button type="button" class="btn btn-sm" onclick="cancelCashReceipt()"
+              style="background:none;border:1px solid var(--danger);color:var(--danger);">
+        <i class="fa-solid fa-ban"></i> 발행 취소
+      </button>
       @if($prescription->order)
       <a href="{{ route('orders.cashReceiptPdf', $prescription->order) }}"
          download
@@ -13563,26 +13571,23 @@ window.HELP_TOUR_STEPS = [
     patientName: @json($prescription->patient?->name ?? $prescription->patient_name_ocr ?? ''),
   };
 
+  /* 발행하거나 취소한 뒤에 이 자리를 다시 그린다.
+
+     **처음 그린 것과 같은 모양이어야 한다** (2026-09-14 지시). 여태 여기서는 띠로,
+     서버에서는 단추로 그려 같은 건이 화면을 새로 여는지에 따라 다르게 보였다.
+     단추 하나로 두고 발행했으면 딱지만 붙인다 — 누르면 발행한 내용이 바로 선다. */
   function renderCashReceiptArea() {
     const area = document.getElementById('cashReceiptArea');
     if (!area) return;
-    if (_cr.status === 'issued') {
-      area.innerHTML = `
-        <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:8px 10px;font-size:11px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-            <i class="fa-solid fa-circle-check" style="color:var(--primary);"></i>
-            <span style="font-weight:700;color:var(--primary);flex:1;">현금영수증 발행완료</span>
-            <button onclick="toggleCrDetailPopover(event)" style="height:20px;padding:0 7px;font-size:10px;background:none;border:1px solid var(--primary);color:var(--primary);border-radius:4px;cursor:pointer;">상세</button>
-            <button onclick="cancelCashReceipt()" style="height:20px;padding:0 7px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:4px;cursor:pointer;">취소</button>
-          </div>
-          <div style="color:var(--text-muted);">No: ${_cr.no} · ${_cr.issuedAt.substring(0, 10)}</div>
-        </div>`;
-    } else {
-      area.innerHTML = `
-        <button class="btn btn-outline w-full" onclick="toggleCrIssuePopover(event)" style="justify-content:center;">
-          <i class="fa-solid fa-receipt"></i> 현금영수증 발행
-        </button>`;
-    }
+
+    const 발행 = _cr.status === 'issued';
+    area.innerHTML = `
+      <button class="pib-btn${발행 ? ' is-paid' : ''}" id="btnCrIssueTrigger"
+              onclick="${발행 ? 'toggleCrDetailPopover(event)' : 'toggleCrIssuePopover(event)'}"
+              title="${발행 ? '승인번호 ' + escHtml(_cr.no) + ' · ' + escHtml(_cr.issuedAt) : '현금영수증을 발행합니다'}">
+        <i class="fa-solid fa-receipt"></i> 현금영수증
+        ${발행 ? '<span class="pay-tag pay-tag-paid">발행완료</span>' : ''}
+      </button>`;
   }
 
   function toggleCrDetailPopover(e) {
