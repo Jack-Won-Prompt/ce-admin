@@ -55,8 +55,8 @@
      껍데기만 바꾼다 — 안쪽 뼈대(.modal-hd/.modal-bd/.modal-ft)는 그대로 두어
      생김새가 다른 화면의 창과 어긋나지 않게 한다.
 
-     자리는 자바스크립트가 fixed 로 잡는다. 표(.cg-body)에 overflow:auto 가 걸려
-     있어 absolute 로 두면 표 밖으로 나오지 못하고 잘린다. */
+     자리는 자바스크립트가 fixed 로 잡는다. 표의 굴림 자리(.cg-wrap)에 overflow:auto
+     가 걸려 있어 absolute 로 두면 표 밖으로 나오지 못하고 잘린다. */
   .dlg-pop { display: none; position: fixed; z-index: 1000; }
   .dlg-pop.open { display: block; }
   .dlg-pop > .modal-box {
