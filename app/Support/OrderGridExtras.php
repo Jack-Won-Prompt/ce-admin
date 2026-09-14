@@ -111,6 +111,15 @@ class OrderGridExtras
             'deposit_at'      => $o && $o->isDepositConfirmed()
                                     ? (($o->deposit_confirmed_at ?? $o->paidAt())?->format('Y-m-d') ?? '입금완료')
                                     : '',
+            /* 입금 금액 — 실제로 받은 돈 (2026-09-14 요청). 정산 화면과 같은 잣대다.
+               담당자가 확인한 건은 그때 적은 금액(없으면 본인부담금), 토스로 받은 건은
+               토스가 알려 준 금액이다. 아직 받지 않은 건은 0 — 칸에는 빈칸으로 선다. */
+            'deposit_amount'  => match (true) {
+                                    $o === null                        => 0,
+                                    $o->deposit_confirmed_at !== null  => (int) ($o->deposit_amount ?? $o->expectedDeposit()),
+                                    (bool) $o->tossPayment?->is_done   => (int) ($o->tossPayment->amount ?? 0),
+                                    default                            => 0,
+                                },
             /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
             'paid_at'         => $o?->paidAtLabel() ?? '',
             /* **총 금액은 본인 + 기관이다.**
@@ -428,6 +437,7 @@ class OrderGridExtras
             'cash_receipt'    => '',
             'pay_method'      => '',
             'deposit_at'      => '',
+            'deposit_amount'  => 0,
             'paid_at'         => '',
             'total_amount'    => (int) $s->total_amount,
             'copay'           => 0,
