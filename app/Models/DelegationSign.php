@@ -49,8 +49,19 @@ class DelegationSign extends Model
         'direct' => '직접 발송',
     ];
 
+    /**
+     * 링크를 어느 번호로 보내는가 (2026-09-14 지시).
+     *
+     * 환자가 문자를 받지 못하는 건이 있다. 그때 보호자에게 보내되, 어느 쪽으로
+     * 보내는지는 보내기 전에 화면에서 정해 둔다.
+     */
+    public const 연락 = [
+        'patient'  => '환자',
+        'guardian' => '보호자',
+    ];
+
     protected $fillable = [
-        'customer_name', 'phone',
+        'customer_name', 'phone', 'guardian_phone', 'main_contact',
         'src_no', 'source', 'dealer_name', 'next_repurchase_at', 'last_register_at', 'rx_days',
         'last_confirm_at', 'src_status', 'rx_type', 'benefit_class', 'last_sale_status',
         'token', 'sent_to', 'sent_by_id', 'sent_by_name', 'sent_at', 'expires_at',
@@ -81,6 +92,21 @@ class DelegationSign extends Model
         'signed'   => '서명 완료',
         'declined' => '동의 거절',
     ];
+
+    /**
+     * 지금 링크가 갈 번호 — Main contact 가 가리키는 쪽 (2026-09-14 지시).
+     *
+     * 보호자로 정해 두었는데 보호자 번호가 비어 있으면 환자 번호로 보내지 않는다.
+     * 「보호자에게 보내기로 했다」는 뜻을 조용히 뒤집는 셈이라, 차라리 보내지 않고
+     * 화면에서 ［수정］을 눌러 채우게 한다.
+     */
+    public function 보낼번호(): ?string
+    {
+        $번호 = $this->main_contact === 'guardian' ? $this->guardian_phone : $this->phone;
+        $숫자 = preg_replace('/\D/', '', (string) $번호);
+
+        return strlen($숫자) >= 9 && strlen($숫자) <= 11 ? $숫자 : null;
+    }
 
     /** 지금 이 링크로 서명할 수 있는가 */
     public function 열려있나(): bool

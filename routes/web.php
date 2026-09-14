@@ -628,6 +628,10 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/{delegationSign}', [\App\Http\Controllers\DelegationSignController::class, 'show'])->name('show');
         Route::post('/{delegationSign}/send',  [\App\Http\Controllers\DelegationSignController::class, 'send'])->name('send');
+
+        /* 환자ㆍ보호자 번호와 Main contact 를 고친다 (2026-09-14 지시) */
+        Route::put('/{delegationSign}/contact', [\App\Http\Controllers\DelegationSignController::class, 'updateContact'])->name('contact');
+
         Route::get('/{delegationSign}/image',  [\App\Http\Controllers\DelegationSignController::class, 'image'])->name('image');
         Route::delete('/{delegationSign}',     [\App\Http\Controllers\DelegationSignController::class, 'destroy'])->name('destroy');
     });

@@ -240,6 +240,47 @@
   </div>
 </div>
 
+{{-- ── 연락처 수정 (2026-09-14 지시) ──────────────────────────────────────
+     명단에는 보호자 번호가 없다. 환자가 문자를 받지 못하는 것은 담당자가 통화로
+     알게 되므로, 그 자리에서 고쳐 바로 다시 보낼 수 있어야 한다. --}}
+<div id="dlgContactBack" class="modal-overlay">
+  <div class="modal-box sm">
+    <div class="modal-hd">
+      <span class="modal-title">연락처 수정</span>
+      <button type="button" class="modal-close" onclick="dlgContactClose()" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-bd">
+      <div class="dlg-kv"><span>거래처</span><b id="dlgCtCustomer"></b></div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgCtPhone">환자 전화번호</label>
+        <input type="tel" id="dlgCtPhone" class="form-control" maxlength="20" placeholder="010-0000-0000">
+      </div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgCtGuardian">보호자 전화번호</label>
+        <input type="tel" id="dlgCtGuardian" class="form-control" maxlength="20" placeholder="010-0000-0000">
+      </div>
+
+      <div class="dlg-field">
+        <label class="ds-field-label" for="dlgCtMain">Main contact</label>
+        <select id="dlgCtMain" class="form-control form-select">
+          @foreach(\App\Models\DelegationSign::연락 as $k => $label)
+            <option value="{{ $k }}">{{ $label }}</option>
+          @endforeach
+        </select>
+        <div class="dlg-help">여기서 고른 쪽의 번호로 서명 링크가 갑니다.</div>
+      </div>
+
+      <div id="dlgCtWarn" class="dlg-warn" style="display:none;"></div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="ds-btn" onclick="dlgContactClose()">취소</button>
+      <button type="button" class="ds-btn ds-btn-primary" id="dlgCtBtn" onclick="dlgContactSave()">저장</button>
+    </div>
+  </div>
+</div>
+
 {{-- ── 미리 보기 — 이름ㆍ번호를 적어 직접 보낸다 (2026-09-14 지시) ──────────
      위 발송 창과 같은 모양이되, 목록의 줄을 받지 않고 두 칸을 직접 받는다.
      받는 사람이 무엇을 보는지 확인하려는 것이라 **정말로 문자가 나간다**. --}}
@@ -330,7 +371,25 @@
     columns: [
       { header: 'No',            name: 'no',       width: 64,  align: 'right', sortable: true },
       { header: '거래처명',       name: 'customer', width: 120, sortable: true },
-      { header: '전화번호',       name: 'phone',    width: 130 },
+
+      /* 번호가 둘이 되었다 (2026-09-14 지시). 환자가 문자를 받지 못하면 보호자로
+         돌려 보내므로, 어느 쪽으로 보내는지(Main contact)를 두 번호 옆에 세운다. */
+      { header: '환자 전화번호',   name: 'phone',    width: 130 },
+      { header: '보호자 전화번호', name: 'guardian', width: 134 },
+      {
+        header: 'Main contact', name: 'contact', width: 104, align: 'center',
+        renderer: (v, row) => {
+          const el = document.createElement('span');
+          el.textContent = v;
+          /* 보호자로 돌려 둔 줄은 눈에 띄어야 한다 — 기본(환자)이 아니기 때문이다 */
+          if (row.contact_code === 'guardian') { el.style.fontWeight = '700'; el.style.color = 'var(--bs-primary, #3C82C4)'; }
+          return el;
+        },
+      },
+      {
+        header: '연락처 수정', name: 'edit', width: 92, align: 'center',
+        renderer: (v, row) => 단추('수정', () => dlgContactOpen(row.id)),
+      },
       {
         header: '위임장 발송', name: 'send', width: 90, align: 'center',
         renderer: (v, row) => 단추('발송', () => dlgSendOpen(row.id), !row.can_send),
@@ -428,7 +487,9 @@
 
     지금 = d;
     document.getElementById('dlgCustomer').textContent = d.customer;
-    document.getElementById('dlgPhone').textContent = d.phone || '—';
+    /* 어느 쪽 번호로 가는지 함께 적는다 — 보호자로 돌려 둔 줄이 섞여 있다 (2026-09-14) */
+    document.getElementById('dlgPhone').textContent =
+      d.phone ? d.phone + ' (' + d.contact + ')' : '—';
     document.getElementById('dlgName').value = d.customer;
 
     const 경고 = document.getElementById('dlgWarn');
@@ -484,6 +545,71 @@
     } catch (e) {
       BtnState.reset(btn);
       showToast('보내지 못했습니다 — ' + e.message, 'danger', 6000);
+    }
+  };
+
+  // ── 연락처 수정 ─────────────────────────────────────────
+  let 고칠줄 = null;
+
+  window.dlgContactOpen = async function (id) {
+    const res = await fetch(BASE + '/' + id, { headers: { 'Accept': 'application/json' } });
+    const d = await res.json();
+    if (!d.success) { showToast('불러오지 못했습니다.', 'danger'); return; }
+
+    고칠줄 = d;
+    document.getElementById('dlgCtCustomer').textContent = d.customer;
+    document.getElementById('dlgCtPhone').value    = 번호꼴(d.patient_phone || '');
+    document.getElementById('dlgCtGuardian').value = 번호꼴(d.guardian_phone || '');
+    document.getElementById('dlgCtMain').value     = d.main_contact || 'patient';
+    document.getElementById('dlgCtWarn').style.display = 'none';
+
+    for (const id2 of ['dlgCtPhone', 'dlgCtGuardian']) {
+      document.getElementById(id2).oninput = (e) => { e.target.value = 번호꼴(e.target.value); };
+    }
+    document.getElementById('dlgContactBack').classList.add('open');
+  };
+
+  window.dlgContactClose = function () {
+    document.getElementById('dlgContactBack').classList.remove('open');
+    고칠줄 = null;
+  };
+
+  window.dlgContactSave = async function () {
+    if (!고칠줄) return;
+    const 경고 = document.getElementById('dlgCtWarn');
+    const btn = document.getElementById('dlgCtBtn');
+    BtnState.loading(btn, '저장하는 중...');
+    try {
+      const res = await fetch(BASE + '/' + 고칠줄.id + '/contact', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          phone:          document.getElementById('dlgCtPhone').value.replace(/\D/g, ''),
+          guardian_phone: document.getElementById('dlgCtGuardian').value.replace(/\D/g, ''),
+          main_contact:   document.getElementById('dlgCtMain').value,
+        }),
+      });
+      const out = await res.json();
+
+      if (!out.success) {
+        BtnState.reset(btn);
+        경고.style.display = '';
+        경고.textContent = out.message || '저장하지 못했습니다.';
+        return;
+      }
+
+      showToast(out.message, 'success', 5000);
+      dlgContactClose();
+      /* 고친 번호로 ［발송］이 열려야 한다 — 목록을 다시 그려 잠금을 푼다 */
+      setTimeout(() => location.reload(), 800);
+    } catch (e) {
+      BtnState.reset(btn);
+      경고.style.display = '';
+      경고.textContent = '저장하지 못했습니다 — ' + e.message;
     }
   };
 

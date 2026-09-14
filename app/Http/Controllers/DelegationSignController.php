@@ -70,10 +70,12 @@ class DelegationSignController extends Controller
             $query->where(function ($s) use ($말, $숫자) {
                 $s->where('customer_name', 'like', "%{$말}%")
                     ->orWhere('dealer_name', 'like', "%{$말}%")
-                    ->orWhere('phone', 'like', "%{$말}%");
+                    ->orWhere('phone', 'like', "%{$말}%")
+                    ->orWhere('guardian_phone', 'like', "%{$말}%");
 
                 if ($숫자 !== '' && $숫자 !== $말) {
-                    $s->orWhere('phone', 'like', "%{$숫자}%");
+                    $s->orWhere('phone', 'like', "%{$숫자}%")
+                        ->orWhere('guardian_phone', 'like', "%{$숫자}%");
                 }
             });
         }
@@ -98,6 +100,13 @@ class DelegationSignController extends Controller
                 'no'         => $d->src_no,
                 'customer'   => $d->customer_name,
                 'phone'      => \App\Support\PhoneNo::format($d->phone),
+                /* 보호자 번호와 어느 쪽으로 보내는지 (2026-09-14 지시).
+                   환자가 문자를 받지 못하는 건이 있어 보호자로 돌려 보낸다. */
+                'guardian'   => $d->guardian_phone ? \App\Support\PhoneNo::format($d->guardian_phone) : '',
+                'contact'    => DelegationSign::연락[$d->main_contact] ?? '환자',
+                'contact_code' => $d->main_contact ?: 'patient',
+                'phone_raw'    => $d->phone ?? '',
+                'guardian_raw' => $d->guardian_phone ?? '',
                 'status'     => DelegationSign::상태[$d->status] ?? $d->status,
                 /* 상태 칸 색을 고르는 코드 — 표시 글자로 가리면 글자를 고칠 때 색이 빠진다 */
                 'status_code'=> $d->status,
@@ -107,7 +116,9 @@ class DelegationSignController extends Controller
                 'signed_at'  => $d->signed_at?->format('Y-m-d H:i') ?? '',
                 'sender'     => $d->sent_by_name ?? '',
                 'has_sign'   => (bool) ($d->sign_path || $d->sign_base64),
-                'can_send'   => (bool) $d->phone,
+                /* 보낼 수 있는가는 Main contact 가 가리키는 번호로 가린다 —
+                   보호자로 정해 두었는데 그 번호가 비면 보내지 않는다 (2026-09-14) */
+                'can_send'   => $d->보낼번호() !== null,
                 /* 명단에 딸려 온 값 — 누구에게 왜 보내는지를 가리는 자리다.
                    직접 발송한 줄은 판매처가 없다. 빈칸으로 두면 명단 줄 가운데
                    섞여 보이지 않으므로 갈래를 그 자리에 적는다. */
@@ -158,7 +169,7 @@ class DelegationSignController extends Controller
         $파일 = '위임장서명_' . now()->format('Ymd_Hi') . '.csv';
 
         $머리글 = [
-            'No', '거래처명', '전화번호', '판매처', '다음재구매가능일', '마지막 등록일',
+            'No', '거래처명', '환자 전화번호', '보호자 전화번호', 'Main contact', '판매처', '다음재구매가능일', '마지막 등록일',
             '처방기간', '마지막 구매확정일', '처방여부', '자격', '마지막 판매상태',
             '위임장 서명 여부', '상태', '개인정보동의 서명 여부', '마케팅 활용 동의 여부',
             '위임장 서명 일자', '위임장 서명 전송 담당자', '발송 번호', '발송 일시',
@@ -176,6 +187,8 @@ class DelegationSignController extends Controller
                         $d->src_no,
                         $d->customer_name,
                         PhoneNo::format($d->phone),
+                        $d->guardian_phone ? PhoneNo::format($d->guardian_phone) : '',
+                        DelegationSign::연락[$d->main_contact] ?? '환자',
                         $d->dealer_name,
                         $d->next_repurchase_at?->format('Y-m-d'),
                         $d->last_register_at?->format('Y-m-d'),
@@ -477,8 +490,14 @@ class DelegationSignController extends Controller
             'success'  => true,
             'id'       => $delegationSign->id,
             'customer' => $delegationSign->customer_name,
-            'phone'    => \App\Support\PhoneNo::format($delegationSign->phone),
-            'raw'      => $delegationSign->phone,
+            /* 발송 창이 적는 「받을 번호」는 Main contact 가 가리키는 쪽이다 (2026-09-14) */
+            'phone'    => ($보낼 = $delegationSign->보낼번호())
+                          ? \App\Support\PhoneNo::format($보낼) : '',
+            'raw'      => $보낼,
+            'contact'  => DelegationSign::연락[$delegationSign->main_contact] ?? '환자',
+            'patient_phone'  => $delegationSign->phone ?? '',
+            'guardian_phone' => $delegationSign->guardian_phone ?? '',
+            'main_contact'   => $delegationSign->main_contact ?: 'patient',
             'dealer'   => $delegationSign->dealer_name,
             'status'   => DelegationSign::상태[$delegationSign->status] ?? $delegationSign->status,
             'signed'   => $delegationSign->status === 'signed',
@@ -554,6 +573,65 @@ class DelegationSignController extends Controller
         return response()->json($결과 + ['id' => $줄->id], $코드);
     }
 
+    /**
+     * 연락처를 고친다 — 환자 번호ㆍ보호자 번호ㆍMain contact (2026-09-14 지시).
+     *
+     * 명단은 주마다 새로 뽑혀 오지만 그 안에 보호자 번호는 없다. 환자가 문자를
+     * 받지 못하는 것을 담당자가 통화로 알게 되므로, 그 자리에서 고쳐 다시 보낼 수
+     * 있어야 한다 — 명단을 고쳐 다시 올리는 길밖에 없으면 그날 안에 못 보낸다.
+     *
+     * 발송ㆍ서명 칸은 손대지 않는다. 번호를 고쳤다고 받아 둔 서명이 흔들려서는 안 된다.
+     */
+    public function updateContact(Request $request, DelegationSign $delegationSign): JsonResponse
+    {
+        $값 = $request->validate([
+            'phone'          => 'nullable|string|max:20',
+            'guardian_phone' => 'nullable|string|max:20',
+            'main_contact'   => 'required|in:patient,guardian',
+        ]);
+
+        $숫자만 = fn ($v) => ($n = preg_replace('/\D/', '', (string) $v)) === '' ? null : $n;
+        $환자   = $숫자만($값['phone'] ?? null);
+        $보호자 = $숫자만($값['guardian_phone'] ?? null);
+
+        foreach ([['환자', $환자], ['보호자', $보호자]] as [$쪽, $n]) {
+            if ($n !== null && (strlen($n) < 9 || strlen($n) > 11)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "{$쪽} 전화번호 꼴이 맞지 않습니다 — 숫자 9~11자리로 적어 주십시오.",
+                ], 422);
+            }
+        }
+
+        /* 보낼 쪽 번호가 비면 저장해도 보낼 수 없다. 저장한 뒤에야 알게 하지 않는다. */
+        $보낼것 = $값['main_contact'] === 'guardian' ? $보호자 : $환자;
+        if ($보낼것 === null) {
+            $쪽 = DelegationSign::연락[$값['main_contact']];
+
+            return response()->json([
+                'success' => false,
+                'message' => "Main contact 를 {$쪽}(으)로 두셨는데 {$쪽} 전화번호가 비어 있습니다.",
+            ], 422);
+        }
+
+        $delegationSign->forceFill([
+            'phone'          => $환자,
+            'guardian_phone' => $보호자,
+            'main_contact'   => $값['main_contact'],
+        ])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($delegationSign)
+            ->log('위임장 서명 연락처 수정 → ' . DelegationSign::연락[$값['main_contact']] . ' ' . $보낼것);
+
+        return response()->json([
+            'success'  => true,
+            'message'  => '연락처를 고쳤습니다. 이제 발송할 수 있습니다.',
+            'phone'    => $환자 ? PhoneNo::format($환자) : '',
+            'guardian' => $보호자 ? PhoneNo::format($보호자) : '',
+            'contact'  => DelegationSign::연락[$값['main_contact']],
+        ]);
+    }
+
     /** 링크 하나가 열려 있는 동안 */
     public static function 유효분(): int
     {
@@ -596,11 +674,14 @@ class DelegationSignController extends Controller
      */
     private function 보내기(DelegationSign $줄, ?string $이름): array
     {
-        $번호 = preg_replace('/\D/', '', (string) $줄->phone);
-        if (strlen($번호) < 9 || strlen($번호) > 11) {
+        /* 어디로 보낼지는 Main contact 가 정한다 (2026-09-14 지시) */
+        $번호 = $줄->보낼번호();
+        if ($번호 === null) {
+            $쪽 = DelegationSign::연락[$줄->main_contact] ?? '환자';
+
             return [[
                 'success' => false,
-                'message' => '전화번호가 비었거나 꼴이 맞지 않습니다.',
+                'message' => "{$쪽} 전화번호가 비었거나 꼴이 맞지 않습니다 — ［수정］에서 채워 주십시오.",
             ], 422];
         }
 
