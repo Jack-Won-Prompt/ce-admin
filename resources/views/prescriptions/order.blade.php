@@ -675,6 +675,13 @@
      다음 저장 때 한 줄로 뭉개진다(로직 담당 확인 필요). resize:vertical 은 인라인으로
      남아 있어, 여러 줄 값은 사용자가 늘려서 볼 수 있다. */
   .rx-acc-body textarea.form-control { height:32px; min-height:32px; padding:5px 12px; line-height:20px; }
+  /* 숫자 칸의 높임ㆍ줄임 화살표를 없앤다 (2026-09-14 지시).
+     처방전을 보며 손으로 쳐 넣는 값이라 한 칸씩 올리고 내릴 일이 없다. 화살표는 칸
+     오른쪽을 차지해 세 자리 수가 가려지고, 마우스 바퀴가 스치면 값이 조용히 바뀐다.
+     type 은 number 그대로 둔다 — 숫자만 받는 것과 휴대폰 자판은 그대로 쓴다. */
+  .no-spin::-webkit-outer-spin-button,
+  .no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .no-spin { -moz-appearance: textfield; appearance: textfield; }
   /* 구획 — 시안 148:2652: 소제목과 입력 사이 12, 구획끼리 24 */
   /* 구획 안은 3열이다 — 시안 315:58 의 Frame 48101577·48101578·48101512 가
      모두 layoutMode GRID · gridColumnCount 3 · gridColumnGap 24 · gridRowGap 24 다.
@@ -3397,11 +3404,11 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">1일 처방 개수</span>
-                <input type="number" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="number" class="form-control no-spin" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방일수</span>
-                <input type="number" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="number" class="form-control no-spin" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" min="1" style="flex:1;" oninput="syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
