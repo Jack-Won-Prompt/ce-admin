@@ -2424,33 +2424,93 @@ document.addEventListener('click', (e) => {
     return { loading, reset, success, error };
   })();
 
-  // ── Toast 함수 ──────────────────────────────────────────
+  /* ── Toast — 한 처리에 한 장 (2026-09-15 지시) ──────────────────────
+
+     단추 하나를 누르면 알림이 여러 장 떴다. 저장이 알리고, 검증이 알리고,
+     창고 연계가 알린다 — ［주문 정정］ 한 번에 넉 장이 쌓인 자리가 있었다.
+     읽는 사람은 그것이 한 가지 일의 결과인지 여러 일인지 가릴 수 없고, 화면
+     오른쪽이 알림으로 덮여 정작 할 일이 가린다.
+
+     예전에는 「넉 장을 넘기지 않는다」로 막았는데(2026-09-14), 그것은 넘치는 것을
+     걷어 낼 뿐이라 **먼저 온 말이 사라진다**. 한도를 넘었다는 경고가 성공 알림에
+     밀려 없어지는 식이다.
+
+     이제 **묶어서 한 장**으로 낸다. 사람이 무언가를 누른 그 순간부터 다음에
+     누를 때까지를 한 처리로 보고, 그 사이에 오는 알림을 한 장에 줄로 쌓는다.
+     장의 색은 그 가운데 가장 센 갈래를 따른다 — 성공 알림에 경고가 섞이면
+     경고로 선다. 같은 말이 두 번 오면 한 번만 적는다.
+
+     알림을 내는 163 자리는 그대로 둔다. 부르는 쪽은 제 할 말만 하고, 모으는
+     일은 여기서 한다. */
+
+  let _알림묶음 = null;
+
+  /* 사람이 새로 누르면 그때부터 새 처리다. 갈무리 단계에서 잡아 두어야
+     그 누름이 부르는 showToast 보다 먼저 돈다. */
+  ['click', 'submit', 'keydown'].forEach(갈래 =>
+    document.addEventListener(갈래, () => { _알림묶음 = null; }, true));
+
+  /** 갈래의 세기 — 뒤로 갈수록 세다 */
+  const _알림세기 = ['info', 'success', 'warning', 'danger'];
+
   function showToast(msg, type = 'info', duration = 4000) {
     const container = document.getElementById('toastContainer');
-
-    /* 한 번에 넉 장을 넘기지 않는다 (2026-09-14 지시).
-
-       한 걸음에 알림이 여럿 겹치는 자리가 있다 — 저장이 알리고, 문자가 알리고,
-       창고가 알린다. 그대로 쌓으면 화면 오른쪽이 알림으로 덮여 정작 지금 할 일이
-       가린다. 넘치는 만큼 가장 오래된 것부터 걷는다 — 새로 온 것이 더 급한 말이다. */
-    const 쌓인것 = container?.querySelectorAll('.toast') ?? [];
-    for (let i = 0; i <= 쌓인것.length - 4; i++) removeToast(쌓인것[i]);
-
-    const toast     = document.createElement('div');
-    toast.className = `toast ${type}`;
+    if (!container || msg == null || msg === '') return;
 
     const icons = { success: '✅', danger: '❌', warning: '⚠️', info: 'ℹ️' };
-    toast.innerHTML = `<span style="margin-right:6px;">${icons[type] || ''}</span>${msg}`;
 
-    // 닫기 버튼
-    const closeBtn = document.createElement('span');
-    closeBtn.innerHTML = ' &times;';
-    closeBtn.style.cssText = 'margin-left:10px;cursor:pointer;opacity:.7;font-size:16px;';
-    closeBtn.onclick = () => removeToast(toast);
-    toast.appendChild(closeBtn);
+    let 묶음 = _알림묶음;
 
-    container.appendChild(toast);
-    setTimeout(() => removeToast(toast), duration);
+    // 앞서 세운 장이 이미 사라졌으면 새로 세운다
+    if (묶음 && !묶음.el.isConnected) 묶음 = _알림묶음 = null;
+
+    if (!묶음) {
+      /* 누름 없이 저절로 오는 알림(웹훅ㆍ주기 조회)은 묶이지 않고 쌓인다.
+         그런 것까지 화면을 덮지 않도록 넉 장에서 끊는다. */
+      const 쌓인것 = container.querySelectorAll('.toast');
+      for (let i = 0; i <= 쌓인것.length - 4; i++) removeToast(쌓인것[i]);
+
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+
+      const 줄들 = document.createElement('div');
+      줄들.className = 't-msg';
+      el.appendChild(줄들);
+
+      const 닫기 = document.createElement('span');
+      닫기.innerHTML = '&times;';
+      닫기.style.cssText = 'margin-left:10px;cursor:pointer;opacity:.7;font-size:16px;flex-shrink:0;';
+      닫기.onclick = () => { if (_알림묶음 === 묶음) _알림묶음 = null; removeToast(el); };
+      el.appendChild(닫기);
+
+      container.appendChild(el);
+
+      묶음 = _알림묶음 = { el, 줄들, 적은것: new Set(), 갈래: type, 타이머: null };
+    }
+
+    // 같은 말은 한 번만 적는다
+    const 열쇠 = type + '|' + msg;
+    if (묶음.적은것.has(열쇠)) return;
+    묶음.적은것.add(열쇠);
+
+    const 줄 = document.createElement('div');
+    if (묶음.줄들.childElementCount) 줄.style.marginTop = '7px';
+    줄.innerHTML = `<span class="t-icon" style="margin-right:6px;">${icons[type] || ''}</span>${msg}`;
+    묶음.줄들.appendChild(줄);
+
+    // 장의 색은 가장 센 갈래를 따른다
+    if (_알림세기.indexOf(type) > _알림세기.indexOf(묶음.갈래)) {
+      묶음.갈래 = type;
+      묶음.el.className = `toast ${type}`;
+    }
+
+    /* 줄이 더해질 때마다 수명을 다시 센다 — 늦게 온 말도 읽을 틈이 있어야 한다.
+       줄이 늘수록 읽는 데 걸리는 시간도 는다. */
+    clearTimeout(묶음.타이머);
+    묶음.타이머 = setTimeout(() => {
+      if (_알림묶음 === 묶음) _알림묶음 = null;
+      removeToast(묶음.el);
+    }, duration + (묶음.줄들.childElementCount - 1) * 1200);
   }
 
   function removeToast(toast) {
