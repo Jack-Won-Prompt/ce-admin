@@ -144,6 +144,15 @@ class Prescription extends Model
         'ocr_done'         => ['label' => 'OCR 완료',   'badge' => 'info'],
         'review_needed'    => ['label' => '검수 필요',  'badge' => 'danger'],
         'review_requested' => ['label' => '검수 요청',  'badge' => 'warning'],
+        /* 검수자가 「파일 다시 올리기」로 되물은 건 (2026-09-15 지시).
+
+           여태 되돌릴 자리가 review_needed 하나뿐이라, 「아직 아무도 안 본 건」과
+           「보고 나서 되물은 건」이 목록에서 같은 말로 섰다. 검수자에게 앞것은
+           지금 볼 차례이고 뒷것은 답을 기다리는 것이라 성격이 다르다. */
+        'review_hold'      => ['label' => '검수 보류',  'badge' => 'warning'],
+        /* 되물은 자료를 다시 올리고 검수를 청한 건 (2026-09-15 지시).
+           처음 올라온 건의 검수 요청과 섞이면 어느 것이 되돌아온 것인지 모른다. */
+        'review_resent'    => ['label' => '검수 재요청', 'badge' => 'warning'],
         'approved'         => ['label' => '검수 완료',  'badge' => 'success'],
         'rejected'         => ['label' => '반려',        'badge' => 'danger'],
         'ordered'          => ['label' => '주문 완료',   'badge' => 'success'],
@@ -162,6 +171,9 @@ class Prescription extends Model
         'ocr_done',
         'review_needed',
         'review_requested',
+        // 되물은 건과 되돌아온 건 — 자료를 갈아 끼우라고 부른 자리다 (2026-09-15)
+        'review_hold',
+        'review_resent',
         'rejected',
     ];
 

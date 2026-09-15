@@ -66,6 +66,20 @@ class PrescriptionController extends Controller
            거래처 상세의 상담 이력에서는 그대로 보인다. */
         $query->whereNot(fn ($q) => $q->counselOnly());
 
+        /* 주문이 접수된 건은 띄우지 않는다 (2026-09-15 지시).
+
+           처방전 목록은 「아직 검수가 남은 것」을 보는 자리다. 주문이 서고 나면
+           그 건을 보는 자리는 주문 관리이지 여기가 아니다 — 두 목록에 같은 건이
+           서 있으면 어디서 손대야 하는지가 흐려진다.
+
+           상태로 고른 때는 그 잣대를 따른다. 「주문 완료」를 골라 놓고도 안
+           보이면 목록이 고장 난 것으로 읽힌다. 찾는 말이 있을 때도 푼다 —
+           이름을 치는 까닭은 대개 「이 사람 건이 지금 어떻게 되어 있나」라서,
+           주문까지 간 건이야말로 그때 가장 먼저 찾는 것이다. */
+        if (! $request->filled('status') && ! $request->filled('search')) {
+            $query->where('status', '!=', 'ordered');
+        }
+
         if ($request->input('status') === 'no_order') {
             // 주문을 만들 수 있는 것 — 검수가 끝난 것. ocr_done 은 예전 데이터 몫이다.
             $query->whereIn('status', ['approved', 'ocr_done'])
@@ -139,6 +153,9 @@ class PrescriptionController extends Controller
             'all'            => Prescription::count(),
             'review_needed'  => Prescription::where('status', 'review_needed')->count(),
             'review_requested' => Prescription::where('status', 'review_requested')->count(),
+            // 되물은 건과 되돌아온 건 (2026-09-15 지시)
+            'review_hold'    => Prescription::where('status', 'review_hold')->count(),
+            'review_resent'  => Prescription::where('status', 'review_resent')->count(),
             'approved'       => Prescription::where('status', 'approved')->count(),
             'no_order'       => Prescription::whereIn('status', ['approved', 'ocr_done'])->whereDoesntHave('order')->count(),
             'ordered'        => Prescription::where('status', 'ordered')->count(),
@@ -2984,9 +3001,18 @@ class PrescriptionController extends Controller
             ], 422);
         }
 
-        /* 요청하며 남긴 말은 **요청 메모** 칸에 담는다 — 검수자의 말과 섞이지 않는다.
+        /* 되물어서 되돌아온 건은 「검수 재요청」으로 세운다 (2026-09-15 지시).
+
+           처음 올라온 건의 검수 요청과 섞이면, 검수자가 「이것은 한 번 되물었던
+           건」임을 알 수 없다. 되물은 자취(검수 보류였거나 다시 올리기 요청이
+           걸려 있었거나)가 있으면 재요청이다.
+
+           요청하며 남긴 말은 **요청 메모** 칸에 담는다 — 검수자의 말과 섞이지 않는다.
            비워 두면 상세 목록에서 적어 둔 것을 그대로 지킨다. */
-        $요청 = ['status' => 'review_requested'];
+        $되물은적있나 = $prescription->status === 'review_hold'
+            || $prescription->reuploadRequests()->exists();
+
+        $요청 = ['status' => $되물은적있나 ? 'review_resent' : 'review_requested'];
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')) {
             $요청['review_request_memo'] = $request->memo ?: $prescription->review_request_memo;
