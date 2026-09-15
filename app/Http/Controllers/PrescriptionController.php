@@ -449,6 +449,25 @@ class PrescriptionController extends Controller
                    답에 실어 화면이 함께 보여 준다. */
                 $sms = $this->sendOrderConfirmedSms($prescription, $보낸주문);
 
+                /* 받을 돈이 없는 건은 여기서 증빙을 낸다 (2026-09-16 지시).
+
+                   본인부담금이 0원이면 입금 확인이 영영 서지 않아, 출고까지 끝나도
+                   세금계산서와 거래명세서가 만들어지지 않았다. 창고로 보내는 이 자리가
+                   그 건의 「확정」이다.
+
+                   받을 돈이 있는 건은 안에서 스스로 지나간다 — 그 건은 토스 웹훅이
+                   결제를 알릴 때 낸다. 이미 발행된 것도 안에서 거른다. */
+                if ($보낸주문 && (int) $보낸주문->expectedDeposit() === 0) {
+                    try {
+                        app(\App\Services\DepositAutoIssue::class)
+                            ->run($보낸주문->refresh(), '주문 연계(본인부담금 없음)');
+                    } catch (\Throwable $e) {
+                        Log::warning('[주문 연계] 증빙 발행 실패', [
+                            'order' => $보낸주문->order_number, 'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
                 $accountNew  = $result['patient_account_new'] ?? false;
                 $addressNew  = $result['patient_address_new'] ?? false;
 

@@ -87,7 +87,21 @@ class DepositAutoIssue
 
         $order->loadMissing(['patient', 'prescription', 'items', 'tossPayment']);
 
-        if (!$order->isDepositConfirmed()) {
+        /* 받을 돈이 있는 건만 입금을 기다린다 (2026-09-16 지시).
+
+           본인부담금이 0원인 건 — 차상위ㆍ기초ㆍ산재처럼 기관이 전액을 내는 건 —
+           은 환자에게 받을 돈이 없어 입금 확인이 영영 서지 않는다. 그래서 출고까지
+           끝났는데 세금계산서도 거래명세서도 만들어지지 않았다. 공단부담금은
+           멀쩡히 있으므로 낼 것이 없는 건이 아니다.
+
+           기준은 처음부터 이러했다 —
+
+             본인부담금 있음  토스 웹훅으로 결제가 확인되면 낸다
+             본인부담금 없음  주문을 창고로 보내는 그 자리에서 바로 낸다
+
+           부르는 자리는 그대로 두고 이 관문만 푼다. 받을 돈이 없는 건은 어느
+           자리에서 불러도 지나가고, 있는 건은 여태처럼 입금을 기다린다. */
+        if ((int) $order->expectedDeposit() > 0 && ! $order->isDepositConfirmed()) {
             $out['skipped'][] = '입금이 확인되지 않음';
             return $out;
         }

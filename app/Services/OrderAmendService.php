@@ -201,6 +201,22 @@ class OrderAmendService
             $옛번호 ?: '없음', $새번호 ?: '번호 없음'
         ));
 
+        /* 받을 돈이 없는 건은 정정한 금액으로 증빙을 다시 낸다 (2026-09-16 지시).
+
+           본인부담금이 0원인 건은 입금 확인이 없어, 정정으로 기관부담금이 바뀌어도
+           그것을 국세청에 알릴 자리가 없었다. 이미 발행된 것은 안에서 거르므로,
+           바뀐 금액으로 새로 낼 것이 있을 때만 나간다. */
+        if ((int) $order->expectedDeposit() === 0) {
+            try {
+                app(\App\Services\DepositAutoIssue::class)
+                    ->run($order->refresh(), '주문 정정(본인부담금 없음)');
+            } catch (\Throwable $e) {
+                Log::warning('[주문 정정] 증빙 발행 실패', [
+                    'order' => $order->order_number, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return [
             'ok'      => true,
             'so_no'   => $새번호,
