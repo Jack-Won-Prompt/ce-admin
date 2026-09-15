@@ -4072,10 +4072,15 @@ $calcDeposit  = $calcCopay;
                   <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;width:72px;flex-shrink:0;">
                     <i class="fa-solid fa-user" style="color:var(--primary);width:14px;"></i> 받는 사람
                   </span>
+                  {{-- 받는 사람ㆍ상세 주소는 여기서 고치지 않는다 (2026-09-15 지시).
+                       정본은 거래처의 주소록이다 — ［주소 관리］에서 고르거나 고친다.
+                       여기서 손으로 고치면 주소록과 주문이 갈리고, 다음에 같은 사람에게
+                       보낼 때 또 고쳐야 한다. --}}
                   <input type="text" class="form-control" id="shippingRecipient"
-                         placeholder="받는 사람 이름"
+                         placeholder="받는 사람 이름" readonly
                          value="{{ \App\Models\Patient::bare($prescription->order?->shipping_recipient ?? $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '') }}"
-                         style="flex:1 1 140px;min-width:0;" />
+                         title="［주소 관리］에서 고릅니다"
+                         style="flex:1 1 140px;min-width:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingPostcode" readonly
                          value="{{ $prescription->order?->shipping_postcode ?? '' }}"
                          placeholder="우편번호" style="width:96px;flex-shrink:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
@@ -4110,7 +4115,8 @@ $calcDeposit  = $calcCopay;
                          placeholder="도로명 주소" readonly style="flex:1.4;min-width:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingAddrDetail"
                          value="{{ $prescription->order?->shipping_address_detail ?? '' }}"
-                         placeholder="상세 주소" style="flex:1;min-width:0;" />
+                         placeholder="상세 주소" readonly title="［주소 관리］에서 고릅니다"
+                         style="flex:1;min-width:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   {{-- 출고요청일 (2026-09-11 확인요청 5쪽).
                        대개 제품을 적는 날에 나가지만, 환자가 날을 짚어 오면 그날로 맞춘다.
                        창고로는 판매주문의 delivery_date 로 그대로 간다. --}}

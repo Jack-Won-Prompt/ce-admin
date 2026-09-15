@@ -126,6 +126,7 @@
       <div class="am-row">
         <span class="am-full">${r.current ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
         <span class="am-when">${_amEsc(r.at)}${r.by ? ' · ' + _amEsc(r.by) : ''}</span>
+        <button type="button" class="am-mini" onclick="addrPick(${r.id})">선택</button>
         ${r.current ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">사용</button>`}
         <button type="button" class="am-mini" onclick="addrEdit(${r.id})">수정</button>
         <button type="button" class="am-mini danger" onclick="addrDelete(${r.id})">삭제</button>
@@ -203,12 +204,67 @@
   };
 
   /* 고른 것을 지금 쓰는 주소로 세운다 — 서류ㆍ팩스ㆍ배송지가 모두 이 값을 읽는다 */
+  /**
+   * 고른 주소를 지금 보고 있는 화면에 적용한다 (2026-09-15 지시).
+   *
+   * 「사용」과 다르다. 「사용」은 거래처의 **현재 주소**를 바꾸는 일이라 다음에 이
+   * 사람에게 보낼 때도 그 주소가 따라온다. 「선택」은 이 건에만 쓰는 것이다 —
+   * 집으로 한 번 보내고 다음엔 직장으로 보내는 자리가 있다.
+   *
+   * 현재 주소에도 단추를 세운다. 여태 현재 주소에는 「사용」이 없어(이미 현재이므로)
+   * 고를 길이 자체가 없었다 — 주소를 지웠다가 되돌리려면 다른 주소를 거쳐야 했다.
+   *
+   * **화면을 새로 고치지 않는다.** 여태 「사용」이 location.reload() 를 불러, 주소
+   * 하나 고르면 보고 있던 탭이 첫 탭으로 돌아갔다. 적을 것이 남은 채로 돌아가면
+   * 무엇을 하던 중이었는지 다시 찾아야 한다.
+   */
+  window.addrPick = function (id) {
+    const r = _amRows.find(x => x.id === id);
+    if (!r) return;
+
+    /* 어느 화면에서 열었느냐에 따라 채울 칸이 다르다.
+         주문 제품 탭  shipping*      — 이 주문의 배송지
+         상세 목록 탭  f-postcode …   — 거래처의 주소 칸
+       열려 있는 쪽에만 적는다 — 둘 다 있으면 둘 다 맞춘다. */
+    const 적기 = (id, 값) => {
+      const el = document.getElementById(id);
+      if (!el) return false;
+      el.value = 값 ?? '';
+      el.dispatchEvent(new Event('input',  { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    };
+
+    const 주문쪽 = 적기('shippingPostcode', r.postcode)
+                 | 적기('shippingAddr',     r.address)
+                 | 적기('shippingAddrDetail', r.detail);
+
+    const 상세쪽 = 적기('f-postcode',       r.postcode)
+                 | 적기('f-address',        r.address)
+                 | 적기('f-address-detail', r.detail);
+
+    if (!주문쪽 && !상세쪽) {
+      showToast('주소를 적을 칸을 찾지 못했습니다.', 'warning');
+      return;
+    }
+
+    /* 배송지가 바뀌면 연계 단추의 색도 다시 셈한다 — 주소가 생겼으므로 보낼 차례다 */
+    if (typeof syncOrderStepBtns === 'function') syncOrderStepBtns();
+
+    closeAddrManager();
+    showToast('주소를 적용했습니다 — ' + (r.full || ''), 'success');
+  };
+
   window.addrPrimary = async function (id) {
     try {
       const res = await apiRequest(`${_amUrl}/${id}/primary`, 'POST');
       if (!res?.success) throw new Error(res?.message || '바꾸지 못했습니다.');
-      showToast('현재 주소를 변경했습니다. 화면을 새로 고칩니다.', 'success');
-      setTimeout(() => location.reload(), 700);
+      /* 새로 고치지 않는다 (2026-09-15 지시) — 보고 있던 탭이 첫 탭으로 돌아가고
+         적던 것이 날아간다. 목록만 다시 그려 「현재」 표시를 옮기고, 고른 주소를
+         화면에도 함께 적는다. */
+      showToast('현재 주소를 변경했습니다.', 'success');
+      await addrLoad();
+      addrPick(id);
     } catch (e) {
       showToast(e.message || '바꾸지 못했습니다.', 'danger');
     }
