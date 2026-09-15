@@ -6,6 +6,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{-- 시험 자동 승인이 POST 로 부른다 — 이 화면은 독립 문서라 메타가 없었다 --}}
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>결제 — {{ $order->order_number }}</title>
   <script src="https://js.tosspayments.com/v2/standard"></script>
   <style>
@@ -121,6 +123,43 @@
      「등록할 수 있는 결제 수단이 존재하지 않습니다」로 멈춰 섰다 — 그건 카드를 미리
      등록해 두고 쓰는 자리고, 우리는 이 건 하나를 지금 받는 자리다. 결제창(payment)은
      상점 쪽 화면 설정을 타지 않고 카드창을 바로 연다. */
+  /* 시험 환경이면 결제창을 열지 않고 바로 승인한다 (2026-09-16 지시).
+
+     결제창을 끝까지 지나려면 카드사 앱 인증과 보안프로그램 설치를 거쳐야 해서,
+     결제 뒤에 도는 일(세무 서류ㆍ카드매출전표ㆍ창고 확정)을 화면으로 확인할 길이
+     없었다. 서버가 사용 환경을 다시 보므로 운영에서는 이 길이 열리지 않는다. */
+  @if($autoPay ?? false)
+  (function () {
+    const 자리 = document.querySelector('.pay-action') ?? document.body;
+    const 알림 = document.createElement('p');
+    알림.style.cssText = 'margin:10px 0 0;font-size:12px;color:#B54708;font-weight:600;';
+    알림.textContent = '시험 환경입니다 — 결제창 없이 바로 승인합니다…';
+    자리.appendChild(알림);
+
+    fetch(@json(route('pay.simulate', ['token' => $link->token])), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+      },
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          알림.textContent = res.message + ' 잠시 뒤 결과 화면으로 넘어갑니다.';
+          setTimeout(() => { location.href = res.url; }, 900);
+        } else {
+          알림.style.color = '#B42318';
+          알림.textContent = res.message || '시험 승인에 실패했습니다.';
+        }
+      })
+      .catch(() => {
+        알림.style.color = '#B42318';
+        알림.textContent = '시험 승인을 부르지 못했습니다.';
+      });
+  })();
+  @else
   (function () {
     {{-- 토스에 줄 주문 이름은 길이 제한이 있다. 미리 잘라 둔다 —
          @json 은 인자를 flags·depth 로 읽어, 자르는 일을 여기서 하면 어긋난다. --}}
@@ -178,7 +217,8 @@
         alert((e && e.message) || '결제를 시작하지 못했습니다.');   // 이 화면은 독립 문서라 ceAlert 이 없다
       }
     });
-  })();</script>
+  })();
+  @endif</script>
 @endif
 </body>
 </html>

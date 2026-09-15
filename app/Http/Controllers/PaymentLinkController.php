@@ -137,6 +137,94 @@ class PaymentLinkController extends Controller
             'order'     => $link->order,
             'clientKey' => config('toss.client_key'),
             'customerKey' => $this->customerKey($link),
+            /* 시험 환경이면 화면이 스스로 승인을 부른다 (2026-09-16 지시) */
+            'autoPay'   => $this->시험자동결제인가($link),
+        ]);
+    }
+
+    /**
+     * 시험 환경에서 결제 링크를 열면 바로 승인한다 (2026-09-16 지시).
+     *
+     * 결제창을 끝까지 지나려면 카드사 앱 인증과 보안프로그램 설치를 거쳐야 한다 —
+     * 화면을 훑어 보는 시험에서는 그 앞에서 늘 막혔고, 그래서 **결제 뒤에 도는 일**
+     * (세무 서류ㆍ카드매출전표ㆍ창고 확정)을 한 번도 끝까지 보지 못했다.
+     *
+     * 토스가 실제로 승인해 주는 것과 같은 꼴의 결과를 만들어, 카드로 낸 것처럼
+     * 그 뒤 흐름을 그대로 돌린다. 설정에 적어 둔 시험 카드의 번호 끝자리와 카드사가
+     * 매출전표에 실린다.
+     *
+     * **운영에서는 결코 돌지 않는다.** 사용 환경이 test 일 때만이다.
+     */
+    private function 시험자동결제인가(PaymentLink $link): bool
+    {
+        return config('toss.env') === 'test'
+            && $link->status === 'sent'
+            && $link->method === PaymentLink::METHOD_CARD
+            && (int) $link->amount > 0;
+    }
+
+    /**
+     * 시험 승인 — 토스를 부르지 않고 낸 것으로 적는다 (2026-09-16 지시).
+     *
+     * 카드 결제가 끝났을 때 토스가 돌려주는 것과 같은 꼴을 만들어 record() 에 넘긴다.
+     * 그 뒤는 실제 결제와 한 길이다 — 세무 서류, 카드매출전표, 창고 확정까지.
+     */
+    public function 시험승인(Request $request, string $token): \Illuminate\Http\JsonResponse
+    {
+        if (config('toss.env') !== 'test') {
+            return response()->json(['success' => false, 'message' => '시험 환경에서만 됩니다.'], 403);
+        }
+
+        $link = PaymentLink::where('token', $token)->with('order.patient')->firstOrFail();
+
+        if ($link->status !== 'sent') {
+            return response()->json(['success' => false, 'message' => '이미 처리된 결제 링크입니다.'], 422);
+        }
+
+        $카드 = config('toss.test_card');
+        $번호 = (string) ($카드['number'] ?? '');
+        $끝자리 = $번호 !== '' ? substr($번호, -4) : '0000';
+
+        $paymentKey = 'TEST_' . strtoupper(\Illuminate\Support\Str::random(20));
+        $tossOrder  = $link->order?->order_number ?: ('LINK' . $link->id);
+
+        /* 토스가 카드 결제를 끝냈을 때 돌려주는 꼴 그대로 — 매출전표가 읽는 칸을 채운다 */
+        $res = [
+            'paymentKey'  => $paymentKey,
+            'orderId'     => $tossOrder,
+            'status'      => 'DONE',
+            'totalAmount' => (int) $link->amount,
+            'balanceAmount' => (int) $link->amount,
+            'method'      => '카드',
+            'approvedAt'  => now()->toIso8601String(),
+            'requestedAt' => now()->toIso8601String(),
+            'card' => [
+                'company'        => $카드['issuer'] ?: '국민',
+                'number'         => str_repeat('*', max(0, strlen($번호) - 4)) . $끝자리,
+                'installmentPlanMonths' => 0,
+                'isInterestFree' => false,
+                'approveNo'      => str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT),
+                'cardType'       => '신용',
+                'ownerType'      => '개인',
+                'acquireStatus'  => 'READY',
+                'issuerCode'     => '11',
+                'acquirerCode'   => '11',
+            ],
+            'receipt' => ['url' => ''],
+            '_simulated' => true,
+        ];
+
+        $link->update(['payment_key' => $paymentKey, 'toss_order_id' => $tossOrder]);
+        $this->links->markPaid($link, $paymentKey, $tossOrder);
+        $this->record($link->refresh(), $res);
+
+        activity()->performedOn($link->order)
+            ->log('시험 환경 자동 결제 — ' . number_format((int) $link->amount) . '원 (토스를 부르지 않았습니다)');
+
+        return response()->json([
+            'success' => true,
+            'message' => number_format((int) $link->amount) . '원을 시험 승인했습니다.',
+            'url'     => route('pay.done', ['token' => $token]),
         ]);
     }
 

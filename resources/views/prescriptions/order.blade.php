@@ -1112,7 +1112,12 @@ $calcDeposit  = $calcCopay;
       </div>
 
       {{-- 위임동의 SMS 발송 --}}
-      <div style="position:relative;">
+      {{-- 한 줄로 세운다 (2026-09-16 고침).
+
+           바깥이 block 이라 「위임 해당 없음」이 단추 **아래**로 내려가 머리줄이
+           32 에서 50 으로 늘어났다 — 주석은 「옆에 적는다」인데 실제로는 아래에
+           붙어 있었다. 팝오버는 absolute 라 이 배치에 걸리지 않는다. --}}
+      <div style="position:relative;display:inline-flex;align-items:center;gap:6px;">
         <div id="consentBtnWrap">
           <button class="pib-btn pib-btn-primary" type="button" id="consentActionBtn" onclick="toggleConsentPopover(event)">
             <i class="fa-solid fa-file-signature" style="font-size:11px;"></i> 서명 동의

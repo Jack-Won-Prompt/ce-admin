@@ -1331,6 +1331,13 @@ Route::get('/dev/migrate-order-cols', function () {
 Route::get('/pay/{token}',      [\App\Http\Controllers\PaymentLinkController::class, 'show'])->name('pay.show');
 Route::get('/pay/{token}/done', [\App\Http\Controllers\PaymentLinkController::class, 'done'])->name('pay.done');
 
+/* 시험 환경 자동 승인 (2026-09-16 지시). 결제창을 끝까지 지나려면 카드사 앱 인증과
+   보안프로그램 설치를 거쳐야 해, 결제 뒤에 도는 일(세무 서류ㆍ카드매출전표ㆍ창고
+   확정)을 화면으로 확인할 길이 없었다. 컨트롤러가 사용 환경이 test 인지 다시 본다 —
+   운영에서는 이 주소를 불러도 403 이다. */
+Route::post('/pay/{token}/simulate', [\App\Http\Controllers\PaymentLinkController::class, '시험승인'])
+    ->name('pay.simulate');
+
 // 토스페이먼츠 웹훅 (인증 불필요 — 토스 서버에서 직접 호출)
 Route::post('/toss/webhook', [TossWebhookController::class, 'handle'])->name('toss.webhook');
 
