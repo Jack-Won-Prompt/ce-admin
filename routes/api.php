@@ -84,6 +84,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('prescriptions')->group(function () {
         Route::get('/',                           [PrescriptionApiController::class, 'index']);
         Route::post('/upload',                    [PrescriptionApiController::class, 'upload']);
+        // {rx_number} 보다 앞에 둔다 — 뒤에 두면 'doc-types' 가 처방번호로 잡힌다
+        Route::get('/doc-types',                  [PrescriptionApiController::class, 'docTypes']);
         Route::get('/{rx_number}',               [PrescriptionApiController::class, 'show']);
 
         /* 잘못 올린 자료를 올린 사람이 스스로 지우고 다시 올린다.
