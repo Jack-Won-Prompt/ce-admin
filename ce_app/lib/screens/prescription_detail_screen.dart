@@ -1,5 +1,7 @@
 // lib/screens/prescription_detail_screen.dart
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,7 +28,11 @@ class _PrescriptionDetailScreenState
   bool   _isLoading = true;
   String? _error;
   bool   _deleting = false;
-  bool   _adding   = false;
+  /* 상세에서 더할 서류는 바로 올리지 않고 여기 모았다가 아래 단추로 한꺼번에
+     올린다(2026-09-15 지시) — 업로드 탭과 같은 방식이다. */
+  final List<_PendingFile> _pending = [];
+  bool _uploading = false;
+  int  _upDone    = 0;
 
   /* 서류를 더할 때 고르는 유형 — 업로드 화면과 같은 서버 목록이다.
      못 받아 오면 기본 넷으로 버틴다. */
@@ -199,7 +205,7 @@ class _PrescriptionDetailScreenState
                 const Text('서류 추가',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('${d.rxNumber}에 더합니다. 서류 유형을 고르세요.',
+                Text('${d.rxNumber}에 더할 서류 유형을 고르세요. 담아 두었다가 아래 「서류 올리기」로 한꺼번에 올립니다.',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textMuted)),
                 const SizedBox(height: 14),
@@ -270,26 +276,76 @@ class _PrescriptionDetailScreenState
     }
     if (!mounted) return;
 
-    setState(() => _adding = true);
-    try {
-      final message = await ref.read(prescriptionServiceProvider).addFile(
-            d.rxNumber,
-            path: path,
-            fileName: name,
-            docType: docType,
-          );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-    } finally {
-      if (mounted) setState(() => _adding = false);
+    // 처방전ㆍ등록신청서는 한 건에 한 장 — 이미 담아 두었으면 받지 않는다
+    if (_pending.any((p) => p.docType == docType)) {
+      if (docType == 'prescription') {
+        _tell('처방전은 한 장만 올릴 수 있습니다.');
+        return;
+      }
+      if (docType == 'registration_form') {
+        _tell('등록신청서는 한 장만 올릴 수 있습니다.');
+        return;
+      }
     }
+
+    setState(() => _pending.add(_PendingFile(
+          path: path,
+          fileName: name,
+          docType: docType,
+          docLabel: _labelOf(docType),
+        )));
   }
+
+  /// 담아 둔 서류를 이 건에 한꺼번에 올린다. 올라간 것은 목록에서 덜어 내고,
+  /// 도중에 막히면 남은 것은 그대로 두어 다시 누르면 이어서 올린다.
+  Future<void> _uploadPending(PrescriptionDetail d) async {
+    if (_pending.isEmpty || _uploading) return;
+
+    // 처방전을 먼저 — 그 건의 본 그림이 먼저 들어간다
+    final ordered = [
+      ..._pending.where((p) => p.docType == 'prescription'),
+      ..._pending.where((p) => p.docType != 'prescription'),
+    ];
+
+    setState(() {
+      _uploading = true;
+      _upDone    = 0;
+    });
+
+    final sent = <_PendingFile>[];
+    String? failure;
+    for (final p in ordered) {
+      try {
+        await ref.read(prescriptionServiceProvider).addFile(
+              d.rxNumber,
+              path: p.path,
+              fileName: p.fileName,
+              docType: p.docType,
+            );
+        sent.add(p);
+        if (mounted) setState(() => _upDone = sent.length);
+      } catch (e) {
+        failure = '${p.docLabel} — ${e.toString().replaceFirst('Exception: ', '')}';
+        break;
+      }
+    }
+    if (!mounted) return;
+
+    setState(() {
+      _uploading = false;
+      _pending.removeWhere(sent.contains);
+    });
+    _tell(failure == null
+        ? '${sent.length}건을 올렸습니다.'
+        : '${sent.length}건을 올리고 멈췄습니다: $failure. 남은 ${_pending.length}건은 그대로 두었습니다.');
+    await _load();
+  }
+
+  String _labelOf(String code) =>
+      _docTypes.firstWhere((t) => t.$1 == code, orElse: () => (code, code)).$2;
+
+  void _tell(String message) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _load() async {
     setState(() { _isLoading = true; _error = null; });
@@ -360,6 +416,24 @@ class _PrescriptionDetailScreenState
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      // 담아 둔 서류가 있으면 아래에 올리기 단추를 둔다
+      bottomNavigationBar: _pending.isEmpty
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: GradientButton(
+                  label: _uploading
+                      ? '올리는 중 $_upDone / ${_pending.length}건'
+                      : '서류 올리기 (${_pending.length}건)',
+                  icon: Icons.cloud_upload_outlined,
+                  loading: _uploading,
+                  onPressed: _uploading ? null : () => _uploadPending(d),
+                  gradient: AppTheme.secondaryGradient,
+                ),
+              ),
+            ),
       body: CustomScrollView(
         slivers: [
           // ── Header ─────────────────────────────────────────────
@@ -551,11 +625,19 @@ class _PrescriptionDetailScreenState
                   const SizedBox(height: 12),
                 ],
 
-                // ── 서류 추가 — 검수 완료 전까지. 새 건을 만들지 않고 이 건에 더한다
+                // ── 서류 추가 — 검수 완료 전까지. 담아 두었다가 아래 단추로 한꺼번에 올린다
                 if (d.editable) ...[
+                  if (_pending.isNotEmpty) ...[
+                    _PendingCard(
+                      files: _pending,
+                      busy: _uploading,
+                      onRemove: (i) => setState(() => _pending.removeAt(i)),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   _AddDocButton(
-                    adding: _adding,
-                    disabled: _deleting,
+                    adding: false,
+                    disabled: _deleting || _uploading,
                     onTap: () => _addDocument(d),
                   ),
                   const SizedBox(height: 12),
@@ -983,7 +1065,7 @@ class _RequestBanner extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           const Text(
-              '아래 「서류 추가」로 해당 서류를 다시 올리면 요청이 닫힙니다. 잘못 올린 서류는 🗑로 지웁니다.',
+              '아래 「서류 추가」로 담고 「서류 올리기」를 누르면 요청이 닫힙니다. 잘못 올린 서류는 🗑로 지웁니다.',
               style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       ),
@@ -1054,6 +1136,124 @@ class _AddDocButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14)),
         ),
+      ),
+    );
+  }
+}
+
+/// 상세에서 담아 둔, 아직 올리지 않은 서류 한 장.
+class _PendingFile {
+  final String path;
+  final String fileName;
+  final String docType;
+  final String docLabel;
+
+  const _PendingFile({
+    required this.path,
+    required this.fileName,
+    required this.docType,
+    required this.docLabel,
+  });
+}
+
+/// 올릴 서류 목록 — 아래 「서류 올리기」를 누르면 한꺼번에 올라간다.
+class _PendingCard extends StatelessWidget {
+  final List<_PendingFile>      files;
+  final bool                    busy;
+  final void Function(int index) onRemove;
+
+  const _PendingCard({
+    required this.files,
+    required this.busy,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: AppTheme.cardDecoration(radius: 16),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.pending_actions_outlined,
+                  size: 16, color: AppTheme.textSecondary),
+              const SizedBox(width: 6),
+              const Text('올릴 서류',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondary)),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('${files.length}건',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.secondary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text('아래 「서류 올리기」를 누르면 한꺼번에 올라갑니다.',
+              style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const SizedBox(height: 8),
+          for (var i = 0; i < files.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(files[i].path),
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, _, __) => Container(
+                        width: 44,
+                        height: 44,
+                        color: AppTheme.background,
+                        child: const Icon(Icons.description_outlined,
+                            size: 18, color: AppTheme.textMuted),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(files[i].docLabel,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary)),
+                        Text(files[i].fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textMuted)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: busy ? null : () => onRemove(i),
+                    icon: const Icon(Icons.close_rounded,
+                        size: 19, color: AppTheme.textMuted),
+                    tooltip: '빼기',
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
