@@ -2936,8 +2936,17 @@ class PrescriptionController extends Controller
         }
 
         $prescription->load('items');
-        $totalNhis  = $prescription->items->sum('nhis_amount');
-        $totalCopay = $prescription->items->sum('patient_copay');
+        /* 합계도 화면이 보는 주문을 따른다 (2026-09-16).
+
+           추가 주문은 처방 품목을 건드리지 않으므로 처방 품목 합계를 돌려주면
+           화면의 「총 본인 부담금」이 원 주문 금액으로 바뀐다. 보낸 줄로 셈한다. */
+        $totalNhis  = $보는주문?->isExtra()
+            ? (int) collect($items)->sum(fn ($i) => (float) ($i['nhis_amount'] ?? 0))
+            : $prescription->items->sum('nhis_amount');
+
+        $totalCopay = $보는주문?->isExtra()
+            ? (int) collect($items)->sum(fn ($i) => (float) ($i['patient_copay'] ?? 0))
+            : $prescription->items->sum('patient_copay');
 
         /* 저장하면 주문 관리에도 선다. 처방전 그림이 없어도, 제품을 아직 안 골랐어도
            그렇다 — 주문 등록에서 저장한 건은 곧 하나의 거래이고, 그것을 보는 자리가
@@ -2972,7 +2981,14 @@ class PrescriptionController extends Controller
             'message'     => '저장되었습니다.',
             'consent_sms' => $consentSms,
             'rx_sms'      => $rxSms,
-            'items'       => $prescription->items->map(fn($item) => [
+            /* 화면에 돌려줄 줄 — 추가 주문은 그 주문의 품목을 돌려준다 (2026-09-16).
+
+               화면은 저장하고 나면 이 줄들로 표를 통째로 갈아 끼운다. 추가 주문은
+               처방 품목을 건드리지 않으므로(위 아이템 동기화) 처방 품목을 그대로
+               돌려주면 **담당자가 이번에 고른 제품이 그 자리에서 사라지고 원 주문이
+               산 품목이 들어앉는다.** 실제로 30개를 담아 연계했는데 430개가
+               저장됐다. */
+            'items'       => $보는주문?->isExtra() ? [] : $prescription->items->map(fn($item) => [
                 'product_name'    => $item->product_name,
                 'product_code'    => $item->product_code,
                 'quantity'        => $item->quantity,
