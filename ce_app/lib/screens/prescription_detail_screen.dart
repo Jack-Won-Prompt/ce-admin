@@ -730,6 +730,38 @@ class _PrescriptionDetailScreenState
 
                 // ── 서류 추가 — 검수 완료 전까지. 담아 두었다가 아래 단추로 한꺼번에 올린다
                 if (d.editable) ...[
+                  /* 서류를 모두 지운 건 — 같은 번호로 다시 올리는 길을 알린다(2026-09-15 지시).
+                     업로드 탭에서 올리면 새 번호가 생기므로, 여기서 올려야 이 처방전이 된다. */
+                  if (d.imageUrl == null && d.attachments.isEmpty && _pending.isEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.primary.withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded,
+                              size: 18, color: AppTheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '올린 서류가 없습니다. 같은 처방전(${d.rxNumber})으로 다시 올리려면 '
+                              '아래 「서류 추가」를 누르세요.\n업로드 탭에서 올리면 새 처방전 번호가 생깁니다.',
+                              style: const TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.5,
+                                  color: AppTheme.textPrimary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   if (_pending.isNotEmpty) ...[
                     _PendingCard(
                       files: _pending,
