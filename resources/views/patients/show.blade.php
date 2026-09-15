@@ -933,7 +933,7 @@
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
   /* 주소를 손으로 다 적으면 오타가 난다 — 우편번호·도로명은 찾아 넣고 상세만 적는다.
-     주문 등록의 openAddressSearch() 와 같은 서비스·같은 순서다. */
+     거래처 수정 창(patients._editor-modal)과 같은 서비스·같은 순서다. */
   function findAddress() {
     if (typeof daum === 'undefined' || !daum.Postcode) {
       showToast('주소 찾기를 불러오지 못했습니다. 직접 입력하십시오.', 'warning');

@@ -2927,7 +2927,7 @@ $calcDeposit  = $calcCopay;
 
                          **칸은 남긴다.** 이것은 「이 건의 주소를 배송지로 쓴다」는 표시라,
                          걷어 내면 주문 제품 탭의 배송지가 늘 빈 채로 열린다 — 그러면
-                         「처방전 주소」를 누르는 것을 잊은 건이 빈 주소로 창고에 나간다
+                         배송지를 따로 채우는 것을 잊은 건이 빈 주소로 창고에 나간다
                          (그 길은 2026-09-10 확인요청 7쪽에서 막아 둔 바로 그 자리다).
 
                          자동으로 옮겨 담는 일까지 그만두려면 checked 를 떼면 된다. --}}
@@ -4079,28 +4079,11 @@ $calcDeposit  = $calcCopay;
                   <input type="text" class="form-control" id="shippingPostcode" readonly
                          value="{{ $prescription->order?->shipping_postcode ?? '' }}"
                          placeholder="우편번호" style="width:96px;flex-shrink:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
-                  <button type="button" class="btn btn-outline btn-sm" onclick="openAddressSearch('shippingPostcode','shippingAddr','shippingAddrDetail')"
-                          style="white-space:nowrap;flex-shrink:0;">
-                    <i class="fa-solid fa-magnifying-glass"></i> 주소 검색
-                  </button>
-                  <button type="button" class="btn btn-sm" onclick="fillFromPrescriptionAddress()"
-                          style="white-space:nowrap;flex-shrink:0;background:var(--primary-light);border:1px solid var(--primary);color:var(--primary);"
-                          title="상세 목록 탭의 주소를 배송 주소로 가져옵니다">
-                    <i class="fa-solid fa-file-import"></i> 처방전 주소
-                  </button>
-                  {{-- 거래처관리에 쌓인 주소 가운데 고른다(요청서 16쪽). 가장 최근 것이
-                       맨 위다 — 이사한 사람에게 옛 주소로 보내는 일을 막으려면
-                       「지금까지 어디였는지」가 고르는 그 자리에 있어야 한다. --}}
-                  <button type="button" class="btn btn-sm" id="btnPickAddr" onclick="pickPatientAddress(this)"
-                          style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);"
-                          title="거래처관리에 등록된 주소 중에서 선택합니다">
-                    <i class="fa-solid fa-address-book"></i> 거래처 주소
-                  </button>
-                  {{-- 주소 관리 — 거래처 관리의 그 창을 그대로 연다 (2026-09-14 지시).
+                  {{-- 「주소 검색」ㆍ「처방전 주소」ㆍ「거래처 주소」 버튼은 없앴다 (2026-09-15 작업지시 #89).
 
-                       ［거래처 주소］는 쌓여 있는 것 가운데 **고르는** 자리다. 그런데 이사해서
-                       새 주소를 더해야 하거나, 잘못 담긴 줄을 고쳐야 할 때가 있다 — 그때마다
-                       거래처 관리로 나갔다가 이 화면으로 돌아와야 했다.
+                       주소 관리 — 거래처 관리의 그 창을 그대로 연다 (2026-09-14 지시).
+                       이사해서 새 주소를 더해야 하거나, 잘못 담긴 줄을 고쳐야 할 때
+                       거래처 관리로 나갔다가 이 화면으로 돌아오지 않아도 된다.
 
                        창은 이미 이 화면에 들어와 있다(patients._editor-modal 이 함께 넣는다).
                        거래처를 아직 잇지 않은 건은 열 것이 없어 그 창이 알려 준다. --}}
@@ -5790,28 +5773,6 @@ window.HELP_TOUR_STEPS = [
     if (cur && SALE_SO_TYPES.includes(String(cur))) currentSoType = String(cur);
   });
 
-  // ── 주소 검색 (카카오 우편번호 서비스) ───────────────────
-  function openAddressSearch(postcodeId, addressId, detailId) {
-    const W = 500, H = 600;
-    const left = Math.floor((window.screen.width  - W) / 2);
-    const top  = Math.floor((window.screen.height - H) / 2);
-    new daum.Postcode({
-      width:  W,
-      height: H,
-      oncomplete: function(data) {
-        const addr = data.roadAddress || data.jibunAddress;
-        document.getElementById(postcodeId).value = data.zonecode;
-        document.getElementById(addressId).value  = addr;
-        const detailEl = document.getElementById(detailId);
-        if (detailEl) { detailEl.value = ''; detailEl.focus(); }
-        // 처방 주소 검색 후 배송 주소 동일 체크 시 자동 반영
-        if (postcodeId === 'f-postcode' && document.getElementById('sameShipping')?.checked) {
-          syncShippingAddress(true);
-        }
-      }
-    }).open({ left, top });
-  }
-
   function clearShippingAddress() {
     ['shippingPostcode','shippingAddr','shippingAddrDetail','shippingRecipient'].forEach(id => {
       const el = document.getElementById(id);
@@ -6924,8 +6885,7 @@ window.HELP_TOUR_STEPS = [
   sync담당의사(true);
 
   /* 상세 목록의 주소를 거래처에 등록된 것 가운데 하나로 고른다(2026-09-08 확인요청 6쪽).
-     배송지 고르개(pickPatientAddress)와 같은 목록을 쓰되, 앉히는 자리가 다르다 —
-     그쪽은 이 주문의 배송지고 이쪽은 이 건의 주소다. */
+     이 건의 주소에 앉힌다 — 배송지는 「배송 주소 동일」로 이 주소를 따라간다. */
   window.pickRxAddress = function (btn) {
     const pid = document.getElementById('f-patient-id')?.value;
 
@@ -6970,79 +6930,6 @@ window.HELP_TOUR_STEPS = [
       });
     })();
   };
-
-  /* ── 거래처 주소 고르기 ────────────────────────────────
-     환자에 쌓인 주소 이력을 팝오버로 보여 주고 고른 것을 배송지에 앉힌다.
-     환자가 아직 이어지지 않은 건(처방전만 올린 상태)에는 고를 것이 없다. */
-  let _addrRows = {};
-
-  window.pickPatientAddress = function (btn) {
-    const pid = document.getElementById('f-patient-id')?.value;
-
-    if (!pid) {
-      showToast('먼저 「조회」로 환자를 선택하십시오 — 해당 환자의 주소를 불러옵니다.', 'warning');
-      return;
-    }
-
-    /* 먼저 받아 오고 목록째 띄운다. onSearch 로 두면 창이 「무언가 치기」를 기다리는데,
-       고를 것이 서너 줄뿐이라 칠 말이 없다. */
-    (async () => {
-    const res = await fetch(`{{ url('patients') }}/${pid}/addresses`,
-                            { headers: { Accept: 'application/json' } });
-    const { rows } = await res.json();
-
-    if (!rows?.length) {
-      showToast('이 환자에게 등록된 주소가 없습니다 — 거래처관리에서 먼저 등록해 주십시오.', 'warning');
-      return;
-    }
-
-    _addrRows = {};
-    rows.forEach(r => { _addrRows[r.id] = r; });
-
-    new GridModal().open({
-      title: '거래처 주소 · ' + rows.length + '건', width: 460, height: 320, anchor: btn,
-      items: rows.map((r) => ({
-        value: r.id,
-        // 거래처가 지금 쓰는 주소를 짚어 준다 — 고르는 사람이 그것을 알아야 한다
-        label: (r.current ? '[현재] ' : '') + r.full,
-        sub:   r.at + (r.by ? ' · ' + r.by : ''),
-      })),
-      onConfirm: (v) => {
-        const r = _addrRows[v];
-        if (!r) return;
-        document.getElementById('shippingPostcode').value   = r.postcode;
-        document.getElementById('shippingAddr').value       = r.address;
-        document.getElementById('shippingAddrDetail').value = r.detail;
-        _orderDirty = true;
-        syncOrderStepBtns();
-        showToast('배송지를 바꿨습니다.', 'success');
-      },
-    });
-    })();
-  };
-
-  // ── 처방전 주소 ──────────────────────────────────
-  function fillFromPrescriptionAddress() {
-    const postcode = document.getElementById('f-postcode')?.value?.trim() ?? '';
-    const address  = document.getElementById('f-address')?.value?.trim()  ?? '';
-    const detail   = document.getElementById('f-address-detail')?.value?.trim() ?? '';
-
-    if (!address) {
-      showToast('상세 목록 탭에 주소가 입력되어 있지 않습니다.', 'warning');
-      return;
-    }
-
-    document.getElementById('shippingPostcode').value   = postcode;
-    document.getElementById('shippingAddr').value       = address;
-    document.getElementById('shippingAddrDetail').value = detail;
-
-    // 배송 주소 동일 체크박스 해제 (직접 지정한 것이므로)
-    const cb = document.getElementById('sameShipping');
-    if (cb) cb.checked = false;
-
-    syncOrderStepBtns();
-    showToast('처방전 주소를 배송 주소로 가져왔습니다.', 'success');
-  }
 
   // ── 멀티 제품 아이템 상태 ────────────────────────────────
   /* 새 줄의 수량은 비워 둔다(2026-09-08 확인요청 10쪽).
@@ -7336,7 +7223,7 @@ window.HELP_TOUR_STEPS = [
       if (el) { el.addEventListener('input', fn); el.addEventListener('change', fn); }
     });
 
-    /* 주소를 「주소 검색」으로 고르면 값만 바뀌고 input 이 나지 않는다 —
+    /* 배송지를 스크립트로 채우면 값만 바뀌고 input 이 나지 않는다 —
        그 길로 채운 주소도 단추 색에 닿아야 한다(2026-09-10 확인요청 7쪽). */
     ['shippingAddr', 'shippingAddrDetail', 'shippingRecipient'].forEach(id => {
       const el = document.getElementById(id);
@@ -9291,14 +9178,14 @@ window.HELP_TOUR_STEPS = [
    * 그 자리에서 깨진다(3PL 송장출력이 배송지를 조인한다). 그때는 이미 늦다 —
    * 창고가 손을 댄 뒤에는 주문 수정이 막혀 주소를 나중에 채워 넣을 수도 없다.
    *
-   * 옆에 「거래처 주소」ㆍ「처방전 주소」 단추가 있으니 그 자리에서 채운다.
+   * 배송지는 상세 목록 탭의 이 건 주소를 따라온다(배송 주소 동일). 그 주소를 채우게 한다.
    */
   function gateShippingAddress() {
     const addr = document.getElementById('shippingAddr')?.value?.trim() ?? '';
     if (addr) return true;
 
-    showToast('받는 주소가 없어 창고로 보낼 수 없습니다 — 「거래처 주소」나 '
-            + '「처방전 주소」로 배송지를 먼저 채워 주십시오.', 'warning', 6000);
+    showToast('받는 주소가 없어 창고로 보낼 수 없습니다 — 상세 목록 탭에서 '
+            + '이 건의 주소를 먼저 채워 주십시오.', 'warning', 6000);
 
     document.getElementById('shippingAddr')?.focus();
     return false;
