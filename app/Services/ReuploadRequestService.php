@@ -132,7 +132,7 @@ class ReuploadRequestService
         try {
             $보냄 = FcmHelper::send(
                 $받는이->fcm_token,
-                '처방전 자료를 다시 올려 주십시오',
+                '처방전 자료 재업로드 요청',
                 $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(),
                 [
                     /* 앱이 이 값을 보고 해당 처방전 화면으로 간다. 앱이 아직 모르는
