@@ -590,7 +590,9 @@ class OrderReturnController extends Controller
            원 주문과 반품 줄을 놓고 다시 셈하는 수밖에 없다(2026-09-02 유형표). */
         /* 0 원도 적지 않은 것으로 본다 (2026-09-11 고침). 조정 방향은 환불이거나
            추가 입금인데, 그 금액이 0 이면 어느 쪽도 아니다 — 조정할 것이 없다. */
-        if ($to === 'adjusted' && ! (int) $orderReturn->adjust_amount) {
+        /* 조정하지 않는 건(사유가 「금액조정 없음」)은 금액을 묻지 않는다. 물으면
+           넣을 칸도 없는 금액을 요구해 단계가 막힌다 (2026-09-15 시험). */
+        if ($to === 'adjusted' && $orderReturn->needsAdjust() && ! (int) $orderReturn->adjust_amount) {
             return back()->withErrors(['to_status' =>
                 '조정 금액을 먼저 입력해 주십시오 — 아래 「금액조정」 칸에 환불 금액(또는 추가 청구 금액)을 입력하고 저장합니다.']);
         }

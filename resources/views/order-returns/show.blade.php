@@ -407,7 +407,10 @@
 {{-- 마이너스 발행 · 금액조정 ───────────────────────────
      절차서의 마지막 칸이다. 팝빌은 운영으로 붙어 있어 여기서 부르는 취소·발행은
      국세청 신고까지 간다 — 사람이 누를 때만 돈다. --}}
-@if($r->credit_issued_at || $r->credit_note || $r->adjust_so_no || $r->reached('refunded'))
+{{-- needsAdjust() 를 함께 본다 (2026-09-15 시험). 교환 흐름에는 「환불완료」가
+     아예 없어 reached('refunded') 가 늘 거짓이었다 — 부분 교환은 금액조정 단계에
+     이르러도 이 카드가 그려지지 않아, 금액을 넣을 칸 자체가 없었다. --}}
+@if($r->credit_issued_at || $r->credit_note || $r->adjust_so_no || $r->reached('refunded') || $r->needsAdjust())
 <div class="rt-card">
   <div class="rt-hd">
     마이너스 발행

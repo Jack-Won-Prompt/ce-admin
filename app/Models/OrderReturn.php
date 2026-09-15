@@ -427,6 +427,13 @@ class OrderReturn extends Model
      */
     public function needsAdjust(): bool
     {
+        /* 사유 자체가 「금액조정 없음」이면 조정할 것이 없다 (2026-09-15 시험에서
+           드러났다). 부분이라는 것만 보고 단계를 세우면, 제품만 바꿔 주는 부분
+           교환이 금액조정 앞에서 멈춘다 — 넣을 금액이 없는데 금액을 요구한다. */
+        if (! \App\Models\ReturnReason::adjusts($this->reason_code)) {
+            return false;
+        }
+
         return $this->scenario() === self::SC_REFUND_ONLY || $this->is_partial;
     }
 
@@ -466,7 +473,7 @@ class OrderReturn extends Model
         /* 부분 건에도 금액조정 단계를 끼운다. 표가 「조정 필요」라 적은 것을 단계로
            두지 않으면, 되돌리고 끝내 버려 남는 금액이 어디에도 정해지지 않는다.
            자격 변경 흐름에는 처음부터 들어 있다 — 두 번 넣지 않는다. */
-        if ($this->is_partial && !in_array('adjusted', $flow, true)) {
+        if ($this->is_partial && $this->needsAdjust() && !in_array('adjusted', $flow, true)) {
             /* 돈이 오간 뒤에 조정한다. 반품ㆍ취소는 환불 다음, 교환은 창고에 넘긴
                다음이다 — 얼마가 남는지는 무엇을 되돌려 받았는지가 정해진 뒤에야
                안다. 어느 것도 없는 옛 흐름이면 승인 다음에 둔다. */
