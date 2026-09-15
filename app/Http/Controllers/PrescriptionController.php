@@ -422,13 +422,22 @@ class PrescriptionController extends Controller
                 $result = $body['result'] ?? [];
                 $soNo   = $result['so_no'] ?? null;
 
-                // 주문에 Withworks SO번호/ID 기록
-                if ($prescription->order) {
+                /* 판매번호는 **보낸 그 주문**에 적는다 (2026-09-16 고침).
+
+                   여태 $prescription->order 에 적었는데 그것은 언제나 첫 주문이라,
+                   추가 주문을 보낼 때마다 원 주문의 판매번호가 새것으로 덮였다.
+                   추가 주문 자신은 끝내 판매번호를 받지 못해 창고와 이어지지 않았다.
+                   창고로 보낸 주문번호는 위에서 이미 검증했으므로 그것으로 찾는다. */
+                $보낸주문 = $prescription->orders()
+                    ->where('order_number', $request->input('order_number'))->first()
+                    ?? $prescription->order;
+
+                if ($보낸주문) {
                     $updateData = [];
                     if ($soNo)                          $updateData['withworks_so_no'] = $soNo;
                     if ($result['so_id'] ?? null)       $updateData['withworks_so_id'] = $result['so_id'];
                     if (!empty($updateData)) {
-                        try { $prescription->order->update($updateData); } catch (\Throwable) {}
+                        try { $보낸주문->update($updateData); } catch (\Throwable) {}
                     }
                 }
 
@@ -438,7 +447,7 @@ class PrescriptionController extends Controller
                 /* 창고에 판매주문이 섰다 — 이제 고객에게 알린다. 여기까지 와야 「확정」이다.
                    보내지 못해도 주문은 이미 선 것이라 되돌리지 않는다. 무슨 일이 있었는지는
                    답에 실어 화면이 함께 보여 준다. */
-                $sms = $this->sendOrderConfirmedSms($prescription);
+                $sms = $this->sendOrderConfirmedSms($prescription, $보낸주문);
 
                 $accountNew  = $result['patient_account_new'] ?? false;
                 $addressNew  = $result['patient_address_new'] ?? false;
@@ -491,10 +500,17 @@ class PrescriptionController extends Controller
      *
      * @return array{sent: bool, method: string, message: string}
      */
-    private function sendOrderConfirmedSms(Prescription $prescription): array
+    /**
+     * 창고에 판매주문이 선 뒤 고객에게 결제를 안내한다.
+     *
+     * @param Order|null $대상 안내할 주문. 비우면 첫 주문을 본다 — 추가 주문을
+     *                         연계하고도 첫 주문(원 주문)으로 안내가 나가던 것을
+     *                         막는다 (2026-09-16 고침).
+     */
+    private function sendOrderConfirmedSms(Prescription $prescription, ?Order $대상 = null): array
     {
         $prescription->refresh()->loadMissing('patient', 'order');
-        $order = $prescription->order;
+        $order = $대상?->refresh() ?? $prescription->order;
 
         if (! $order) {
             return ['sent' => false, 'method' => '', 'message' => '주문이 없어 결제 안내를 보내지 못했습니다.'];
@@ -707,7 +723,14 @@ class PrescriptionController extends Controller
             'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
-        $order = $prescription->order;
+        /* 화면이 보고 있는 주문을 고친다 (2026-09-16 고침).
+
+           $prescription->order 는 언제나 첫 주문이라, 추가 주문을 정정하면 원 주문이
+           취소되고 새로 등록됐다 — 고치려던 주문은 그대로 남았다. 위에서 검증한
+           order_number 로 찾는다. */
+        $order = $prescription->orders()
+            ->where('order_number', $request->input('order_number'))->first()
+            ?? $prescription->order;
 
         if (! $order) {
             return response()->json(['success' => false, 'message' => '주문을 찾을 수 없습니다.'], 404);
