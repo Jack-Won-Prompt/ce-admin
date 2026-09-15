@@ -32,6 +32,9 @@ class Order extends Model
        창고가 할당ㆍ피킹을 되돌리기를 기다리는 동안의 자리다. 며칠이 걸릴 수도 있어,
        그 사이 이 주문이 「취소를 청해 둔 건」임을 화면이 말해 주어야 한다 — 그러지
        않으면 다른 담당자가 결제 안내를 보내거나 제품을 고친다. */
+    /** 정정을 청해 두고 창고가 되돌리기를 기다리는 중 */
+    public const AMEND_REQUESTED = 'requested';
+
     public const CANCEL_REQUESTED = 'requested';
     public const CANCEL_DONE      = 'cancelled';
     public const CANCEL_REJECTED  = 'rejected';
@@ -74,11 +77,54 @@ class Order extends Model
         return in_array($this->status, ['pending', 'confirmed'], true) ? 'new' : 'working';
     }
 
-    /** 제품ㆍ수량ㆍ주소를 이 화면에서 고칠 수 있는가 (2026-09-14 지시) */
+    /**
+     * 제품ㆍ수량ㆍ주소를 이 화면에서 고칠 수 있는가.
+     *
+     * 나간 뒤에는 못 고친다 — 그때는 교환ㆍ반품이 할 일이다. 그 전이면 창고가
+     * 어디까지 갔든 고칠 수 있다 (2026-09-15 지시).
+     *
+     * 여태 출고 신규(02)까지만 열어 두었다. 정정이 so_update 로 **같은 판매주문을
+     * 제자리에서** 고치는 일이었고, 할당ㆍ피킹이 걸린 상세는 그것을 가리키는 줄이
+     * 있어 저쪽이 지우지 못했기 때문이다. 이제는 취소하고 새로 세우므로 그 벽이
+     * 없다 — 되돌려질 때까지 기다릴 뿐이다.
+     *
+     * 취소나 정정을 이미 청해 둔 건은 잠근다. 창고가 되돌리는 중에 또 손대면
+     * 저쪽이 되돌린 뒤 무엇을 세워야 하는지가 흐려진다.
+     */
     public function 정정가능한가(): bool
     {
         return $this->cancel_state !== self::CANCEL_REQUESTED
-            && in_array($this->창고단계(), ['none', 'new'], true);
+            && $this->amend_state !== self::AMEND_REQUESTED
+            && $this->창고단계() !== 'shipped'
+            && $this->status !== 'cancelled';
+    }
+
+    /** 정정을 청해 두고 기다리는 중인가 — 그 동안 다른 단추를 잠근다 */
+    public function 정정기다리는중인가(): bool
+    {
+        return $this->amend_state === self::AMEND_REQUESTED;
+    }
+
+    /**
+     * 판매번호를 새것으로 갈아탄다 — 옛 번호는 남긴다 (2026-09-15 지시 2).
+     *
+     * 정정할 때마다 번호가 바뀐다. 남겨 두지 않으면 창고 화면에서 옛 번호로 찾아온
+     * 문의에 어느 주문인지 답할 수 없다.
+     */
+    public function 판매번호갈아타기(?string $새번호): void
+    {
+        $옛것 = $this->withworks_so_no;
+
+        if ($옛것 && $옛것 !== $새번호) {
+            $이력 = $this->withworks_so_no_history ?? [];
+            if (! is_array($이력)) {
+                $이력 = [];
+            }
+            $이력[] = ['so_no' => $옛것, 'at' => now()->toDateTimeString()];
+            $this->withworks_so_no_history = $이력;
+        }
+
+        $this->withworks_so_no = $새번호;
     }
 
     /** 취소를 청할 수 있는가 — 나간 뒤에는 교환/반품/취소 화면이 할 일이다 */
@@ -388,6 +434,11 @@ class Order extends Model
         'parent_order_id', 'order_kind',
         // 주문 취소 요청 — 창고가 되돌리기를 기다리는 동안의 자리 (2026-09-14 지시)
         'cancel_state', 'cancel_requested_at', 'cancel_requested_by', 'cancel_reason', 'cancel_done_at',
+        /* 주문 정정 — 창고가 되돌리기를 기다리는 동안의 자리 (2026-09-15 지시).
+           정정은 원 판매주문을 취소하고 새로 세우는 일이라, 할당ㆍ피킹이 걸린 건은
+           되돌려질 때까지 기다린다. 그동안 무엇으로 다시 세울지를 들고 있어야 한다. */
+        'amend_state', 'amend_payload', 'amend_requested_at', 'amend_requested_by', 'amend_note',
+        'withworks_so_no_history',
         'product_name', 'product_code', 'quantity',
         'unit_price', 'nhis_amount', 'patient_copay',
         // 담당자가 눈으로 확인한 입금 — 토스가 알려 주지 못하는 건을 위한 자리
@@ -430,6 +481,10 @@ class Order extends Model
     ];
 
     protected $casts = [
+        // 정정 자리 (2026-09-15 지시)
+        'amend_payload'           => 'array',
+        'withworks_so_no_history' => 'array',
+        'amend_requested_at'      => 'datetime',
         // 위드웍스가 알려 준 판매현황 값 — 우리가 만들지 않는 것들(2026-09-07)
         'withworks_meta'       => 'array',
         'cancel_requested_at'  => 'datetime',

@@ -134,15 +134,47 @@ class OrderCancelService
             return '';
         }
 
-        // ── 결제 전 — 보낸 링크를 해지한다
+        /* ── 결제 전 — 보낸 링크를 해지하고 **바뀐 금액으로 다시 보낸다**
+              (2026-09-15 지시 1).
+
+           여태 해지만 하고 「다시 보내 주십시오」라 알렸다. 그런데 그 말은 토스트로
+           지나가고, 담당자가 정정을 마친 뒤 결제전송을 따로 눌러야 했다 — 잊으면
+           환자는 옛 링크가 죽은 줄도 모른 채 기다린다.
+
+           어느 방법으로 보낼지는 마지막에 보낸 것을 따른다. 처음 보낼 때 담당자가
+           고른 것이고, 금액만 바뀌었을 뿐 방법이 달라질 까닭이 없다. */
         if (! $order->isDepositConfirmed()) {
-            $해지 = PaymentLink::where('order_id', $order->id)
-                ->where('status', 'sent')
+            $살아있던것 = PaymentLink::where('order_id', $order->id)
+                ->where('status', 'sent')->latest('id')->get();
+
+            if ($살아있던것->isEmpty()) {
+                return '';
+            }
+
+            PaymentLink::whereIn('id', $살아있던것->pluck('id'))
                 ->update(['status' => 'cancelled']);
 
-            return $해지
-                ? "금액이 바뀌어 보낸 결제 링크 {$해지}건을 해지했습니다 — 바뀐 금액으로 다시 보내 주십시오."
-                : '';
+            $해지 = $살아있던것->count();
+            $앞것 = $살아있던것->first();
+
+            /* 바뀐 금액으로 다시 보낸다. 못 보내도 해지는 이미 끝났다 —
+               그 사실을 그대로 알려 담당자가 손으로 보내게 한다. */
+            try {
+                $새것 = app(\App\Services\PaymentLinkService::class)
+                            ->issue($order->refresh(), $앞것->method, $앞것->receiver);
+            } catch (\Throwable $e) {
+                Log::warning('[주문 정정] 결제 링크를 다시 보내지 못했습니다', [
+                    'order' => $order->order_number, 'error' => $e->getMessage(),
+                ]);
+                $새것 = ['sent' => false, 'message' => $e->getMessage()];
+            }
+
+            $바뀐금액 = number_format($지금);
+
+            return ($새것['sent'] ?? false)
+                ? "보낸 결제 링크 {$해지}건을 해지하고, 바뀐 금액 {$바뀐금액}원으로 다시 보냈습니다."
+                : "보낸 결제 링크 {$해지}건을 해지했습니다 — 다시 보내지 못했으므로"
+                  . " 「결제전송」으로 직접 보내 주십시오 (" . ($새것['message'] ?? '') . ')';
         }
 
         // ── 결제 후 — 줄어든 만큼만 무른다

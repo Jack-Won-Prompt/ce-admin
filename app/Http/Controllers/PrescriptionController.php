@@ -271,6 +271,65 @@ class PrescriptionController extends Controller
         }
     }
 
+    /**
+     * 창고로 보낼 판매주문 내용 — 등록과 정정이 **같은 것**을 쓴다.
+     *
+     * 두 곳이 따로 만들면 정정한 건만 다른 값으로 창고에 선다. 실제로 청구전략이
+     * 그랬다 — 등록은 셈해 보내고 수정은 25 를 박아 보내, 고치는 순간 전략이
+     * 바뀌었다(2026-09-15 에 한 자리로 모았다).
+     */
+    private function withworksPayload(Request $request, Prescription $prescription): array
+    {
+        $patient = $prescription->patient;
+
+        $shippingAddress = $request->shipping_address
+            ?? $prescription->order?->shipping_address
+            ?? null;
+
+        $shippingAddressDetail = $request->shipping_address_detail
+            ?? $prescription->address_detail
+            ?? null;
+
+        return [
+            'ce_order_number'         => $request->order_number,
+            'rx_number'               => $prescription->rx_number,
+            // 환자 정보 (거래처·배송지 자동 등록용)
+            'patient_name'            => $patient?->name ?? $prescription->patient_name_ocr ?? '환자',
+            'patient_mobile'          => $patient?->mobile ?? null,
+            'patient_zipcode'         => $prescription->postcode ?? null,
+            // 배송지
+            'shipping_address'        => $shippingAddress,
+            'shipping_address_detail' => $shippingAddressDetail,
+            // 기타
+            'delivery_date'           => $request->delivery_date,
+            // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
+            'ho_account_id'           => $request->ho_account_id ?? config('services.demoworks.account_id'),
+            /* 창고 「비고」 — **창고에 전할 말**이 있으면 그것, 없으면 예전처럼
+               등록자 메모가 나간다. 등록자 메모는 우리가 접수하며 적어 두는 말이라
+               창고에 전할 말과 다르다(2026-09-09 지시). */
+            'remark'                  => $prescription->order?->warehouse_note
+                                          ?: $prescription->admin_note,
+            'items'                   => $request->items,
+            /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
+               넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */
+            'so_type'                 => config('services.demoworks.so_type', '5001'),
+            // 받는 사람
+            'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
+            /* 청구전략 — 우리 화면이 정한 것(유형 × 자격)을 위드웍스 코드로 옮겨 보낸다.
+               예전에는 25 가 박혀 있어 어느 건이든 같은 값이 나갔다. 코드표를 아직 받지
+               못해 표의 값은 모두 25 지만, 받으면 config 한 곳만 고치면 된다. */
+            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
+            /* 수량은 낱개로 센다 — 우리 화면의 「수량」은 총계(1일 처방개수 × 총 처방기간)다.
+               밝히지 않으면 저쪽은 RB(박스)로 읽고 r_box 를 곱해, 540개가 5,400개로
+               등록됐다. 고치는 쪽(so_update)은 진작 낱개로 읽고 있어 만들 때와 고칠 때가
+               열 배 어긋나 있었다. */
+            'qty_unit'                => 'EA',
+            /* 확정은 창고에서 한다. 우리는 등록까지만 한다 — 올리자마자 확정되면
+               수량ㆍ배송지를 고칠 자리가 없고, 재고가 그 자리에서 묶인다. */
+            'confirm'                 => false,
+        ];
+    }
+
     public function createWithworksOrder(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -343,44 +402,7 @@ class PrescriptionController extends Controller
             ?? $prescription->address_detail
             ?? null;
 
-        $payload = [
-            'ce_order_number'         => $request->order_number,
-            'rx_number'               => $prescription->rx_number,
-            // 환자 정보 (거래처·배송지 자동 등록용)
-            'patient_name'            => $patient?->name ?? $prescription->patient_name_ocr ?? '환자',
-            'patient_mobile'          => $patient?->mobile ?? null,
-            'patient_zipcode'         => $prescription->postcode ?? null,
-            // 배송지
-            'shipping_address'        => $shippingAddress,
-            'shipping_address_detail' => $shippingAddressDetail,
-            // 기타
-            'delivery_date'           => $request->delivery_date,
-            // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
-            'ho_account_id'           => $request->ho_account_id ?? config('services.demoworks.account_id'),
-            /* 창고 「비고」 — **창고에 전할 말**이 있으면 그것, 없으면 예전처럼
-               등록자 메모가 나간다. 등록자 메모는 우리가 접수하며 적어 두는 말이라
-               창고에 전할 말과 다르다(2026-09-09 지시). */
-            'remark'                  => $prescription->order?->warehouse_note
-                                          ?: $prescription->admin_note,
-            'items'                   => $request->items,
-            /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
-               넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */
-            'so_type'                 => config('services.demoworks.so_type', '5001'),
-            // 받는 사람
-            'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
-            /* 청구전략 — 우리 화면이 정한 것(유형 × 자격)을 위드웍스 코드로 옮겨 보낸다.
-               예전에는 25 가 박혀 있어 어느 건이든 같은 값이 나갔다. 코드표를 아직 받지
-               못해 표의 값은 모두 25 지만, 받으면 config 한 곳만 고치면 된다. */
-            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
-            /* 수량은 낱개로 센다 — 우리 화면의 「수량」은 총계(1일 처방개수 × 총 처방기간)다.
-               밝히지 않으면 저쪽은 RB(박스)로 읽고 r_box 를 곱해, 540개가 5,400개로
-               등록됐다. 고치는 쪽(so_update)은 진작 낱개로 읽고 있어 만들 때와 고칠 때가
-               열 배 어긋나 있었다. */
-            'qty_unit'                => 'EA',
-            /* 확정은 창고에서 한다. 우리는 등록까지만 한다 — 올리자마자 확정되면
-               수량ㆍ배송지를 고칠 자리가 없고, 재고가 그 자리에서 묶인다. */
-            'confirm'                 => false,
-        ];
+        $payload = $this->withworksPayload($request, $prescription);
 
         try {
             $response = Http::withToken($token)
@@ -660,6 +682,15 @@ class PrescriptionController extends Controller
     }
 
     // ── Withworks 판매주문 수정 연계 ──────────────────────
+    /**
+     * 주문 정정 — 원 판매주문을 취소하고 새로 세운다 (2026-09-15 지시).
+     *
+     * 여태 so_update 로 **같은 판매주문을 제자리에서** 고쳤다. 그래서 창고가
+     * 할당ㆍ피킹에 손을 댄 건은 저쪽이 거절했고, 우리 화면도 아예 단추를 잠갔다 —
+     * 담당자는 창고에 전화를 걸어 되돌려 달라 부탁하고 나서야 고칠 수 있었다.
+     *
+     * 이제 창고 단계가 길을 가른다. 몸통은 OrderAmendService 에 있다.
+     */
     public function updateWithworksOrder(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate([
@@ -673,64 +704,33 @@ class PrescriptionController extends Controller
             'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
-        $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
-        $token   = config('services.demoworks.token');
+        $order = $prescription->order;
 
-        if (!$baseUrl || !$token) {
-            return response()->json(['success' => false, 'message' => '위드웍스 API 설정이 없습니다.'], 500);
+        if (! $order) {
+            return response()->json(['success' => false, 'message' => '주문을 찾을 수 없습니다.'], 404);
         }
 
-        $patient = $prescription->patient;
-        $shippingAddress = $request->shipping_address ?? null;
-        $shippingAddressDetail = $request->shipping_address_detail ?? $prescription->address_detail ?? null;
+        /* 새로 세울 내용 — 처음 등록할 때와 **같은 것**을 쓴다. 두 곳이 따로
+           만들면 정정한 건만 다른 값으로 창고에 서게 된다. */
+        $창고내용 = $this->withworksPayload($request, $prescription);
 
-        $payload = [
-            'ce_order_number'         => $request->order_number,
-            'patient_name'            => $patient?->name ?? $prescription->patient_name_ocr ?? '환자',
-            'patient_mobile'          => $patient?->mobile ?? null,
-            'patient_zipcode'         => $prescription->postcode ?? null,
-            'shipping_address'        => $shippingAddress,
-            'shipping_address_detail' => $shippingAddressDetail,
-            'delivery_date'           => $request->delivery_date,
-            'items'                   => $request->items,
-            // 등록과 같은 이유로 수정 때도 End User Direct 로 고정한다
-            'so_type'                 => config('services.demoworks.so_type', '5001'),
-            'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
-            /* 25 는 아무것도 가리키지 않는 줄이었다(데모웍스 account_id 0). 등록과 같은
-               자리에서 셈해 보낸다 — 등록과 수정이 다른 전략으로 나가면 안 된다. */
-            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
-        ];
+        $결과 = app(\App\Services\OrderAmendService::class)
+                    ->정정($order->refresh(), $창고내용, (int) $order->결제기준금액());
 
-        try {
-            $response = Http::withToken($token)
-                ->timeout(15)
-                ->asForm()
-                ->put("{$baseUrl}/api/v1/ce-admin/so_update", $payload);
-
-            $body = $response->json();
-
-            \App\Services\WithworksNotice::sent('주문 수정', 'so_update', $payload, $body);
-
-            if ($response->successful() && ($body['success'] ?? false)) {
-                $soNo = $body['result']['so_no'] ?? '-';
-                activity()->causedBy(Auth::user())->performedOn($prescription)
-                    ->log("위드웍스 판매주문 수정: {$soNo}");
-
-                return response()->json([
-                    'success' => true,
-                    'so_no'   => $body['result']['so_no'] ?? null,
-                    'message' => '위드웍스 판매주문이 수정되었습니다.',
-                ]);
-            }
-
-            $errMsg = $body['message'] ?? "HTTP {$response->status()}";
-            Log::warning('Withworks SO 수정 실패', ['status' => $response->status(), 'body' => $body]);
-            return response()->json(['success' => false, 'message' => "위드웍스 연계 실패: {$errMsg}"]);
-
-        } catch (\Throwable $e) {
-            Log::error('Withworks API 연결 오류 (수정)', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => '위드웍스 서버에 연결할 수 없습니다.'], 500);
+        if (! $결과['ok']) {
+            return response()->json([
+                'success' => false,
+                'message' => $결과['message'],
+                'state'   => $결과['state'],
+            ], 422);
         }
+
+        return response()->json([
+            'success' => true,
+            'so_no'   => $결과['so_no'],
+            'state'   => $결과['state'],
+            'message' => $결과['message'] ?: '위드웍스 판매주문을 다시 세웠습니다.',
+        ]);
     }
 
     // ── Withworks 판매주문 삭제 연계 ──────────────────────

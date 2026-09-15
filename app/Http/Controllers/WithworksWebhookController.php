@@ -264,6 +264,42 @@ class WithworksWebhookController extends Controller
                 activity()->performedOn($order)
                     ->log("주문 취소 완료 ({$order->order_number}) — 창고가 되돌려 자동 취소되었습니다");
             }
+
+            /* 청해 둔 정정이 이제 이어진다 (2026-09-15 지시).
+
+               할당ㆍ피킹이 걸린 건을 정정하면 그 자리에서 갈아 세울 수 없어,
+               창고에 취소를 청해 두고(eud_cancel_yn='Y') 세울 내용을 들고 기다린다
+               (amend_state = requested · amend_payload).
+
+               담당자가 할당ㆍ피킹을 되돌리면 위드웍스가 스스로 취소까지 잇고 이
+               사건을 보내 온다 — 그때가 새로 세울 차례다. 사람이 다시 눌러야 하면
+               잊는다. 잊은 건은 창고에 아무것도 없는 채로 남는다.
+
+               세우다 실패해도 사건 처리는 이어 간다. 실패는 amend_note 에 적히고
+               화면이 그것을 보여 준다 — 여기서 멈추면 저쪽은 우리가 못 받은 줄
+               알고 같은 사건을 다시 보낸다. */
+            if ($newStatus === 'cancelled'
+                && $order->amend_state === \App\Models\Order::AMEND_REQUESTED
+                && is_array($order->amend_payload)) {
+
+                try {
+                    $결과 = app(\App\Services\OrderAmendService::class)
+                                ->갈아세우기($order->refresh(), $order->amend_payload);
+
+                    activity()->performedOn($order)->log($결과['ok']
+                        ? "주문 정정 완료 ({$order->order_number}) — {$결과['message']}"
+                        : "주문 정정 실패 ({$order->order_number}) — {$결과['message']}");
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('[주문 정정] 되돌린 뒤 재등록에서 예외', [
+                        'order' => $order->order_number,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $order->forceFill([
+                        'amend_note' => '재등록 중 오류 — ' . mb_substr($e->getMessage(), 0, 250),
+                    ])->save();
+                }
+            }
         }
 
         /* 출고일자는 창고가 ship.shipped_at 으로 알려 준다(WithworksSync 가 적는다).
