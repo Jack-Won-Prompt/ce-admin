@@ -1640,9 +1640,13 @@ $calcDeposit  = $calcCopay;
           @if($payState['paid'] ?? false)
             <span class="pay-tag pay-tag-paid">결제완료</span>
           @elseif($payState['sent'] ?? false)
-            {{-- 단추와 이어 읽으면 「결제전송 이력 2」가 된다 (2026-09-14 지시).
-                 몇 번 보냈는지는 늘 적는다 — 한 번이라도 「이력 1」이라야 센 것이 보인다. --}}
-            <span class="pay-tag pay-tag-sent">이력 {{ $payState['count'] ?? 1 }}</span>
+            {{-- 「링크 전송완료」라 적는다 (2026-09-15 지시).
+
+                 여태 「이력 2」였다. 그것은 **몇 번 보냈는지**를 말하지 **보냈다는
+                 사실**을 말하지 않는다 — 처음 보는 사람에게는 무슨 숫자인지 모른다.
+                 상태를 그대로 적고, 두 번 이상일 때만 횟수를 덧붙인다. --}}
+            @php $_보낸수 = (int) ($payState['count'] ?? 1); @endphp
+            <span class="pay-tag pay-tag-sent">링크 전송완료{{ $_보낸수 > 1 ? ' · ' . $_보낸수 . '회' : '' }}</span>
           @endif
         </button>
 
@@ -9392,6 +9396,18 @@ window.HELP_TOUR_STEPS = [
       soNo      = wwRes.so_no  ?? null;
       wwMessage = wwRes.message ?? '';
       smsResult = wwRes.sms ?? null;
+
+      /* 연계가 결제 안내까지 보냈으면 단추의 딱지도 그 자리에서 따라간다
+         (2026-09-15 지시). 손으로 보낼 때는 이미 그러고 있었는데(payLinkSend),
+         연계로 저절로 나간 건은 화면을 다시 열어야 「링크 전송완료」가 떴다 —
+         그 사이에 담당자가 결제전송을 눌러 같은 안내를 한 번 더 보냈다. */
+      if (smsResult?.sent) {
+        PAY_STATE.sent    = true;
+        PAY_STATE.count   = (PAY_STATE.count || 0) + 1;
+        PAY_STATE.method  = smsResult.method || PAY_STATE.method;
+        PAY_STATE.sent_at = new Date().toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+        딱지다시();
+      }
     } else {
       wwMessage = '제품 코드가 없어 위드웍스 연계를 건너뜁니다.';
     }
@@ -10617,11 +10633,31 @@ window.HELP_TOUR_STEPS = [
 
     const tag = document.createElement('span');
     tag.className = 'pay-tag ' + (PAY_STATE.paid ? 'pay-tag-paid' : 'pay-tag-sent');
-    tag.textContent = PAY_STATE.paid ? '결제완료' : '이력 ' + (PAY_STATE.count || 1);
+
+    /* 보낸 건은 「링크 전송완료」, 두 번 이상이면 횟수를 덧붙인다 (2026-09-15 지시).
+       결제까지 끝난 건은 「결제완료」 그대로다 — 전송보다 한 걸음 더 간 상태다. */
+    const 보낸수 = Number(PAY_STATE.count || 1);
+    tag.textContent = PAY_STATE.paid
+      ? '결제완료'
+      : '링크 전송완료' + (보낸수 > 1 ? ' · ' + 보낸수 + '회' : '');
+
     btn.appendChild(tag);
   }
 
-  function 결제상태알림() {
+  /**
+   * 단추를 누른 그 순간 상태를 알린다.
+   *
+   * 보내 놓고 아직 받기 전이면 **확인 창**으로 먼저 묻는다 (2026-09-15 지시).
+   * 여태 토스트였는데, 그것은 몇 초 뒤 사라지고 그 사이 팝오버가 이미 열려 있어
+   * 눈이 그쪽으로 간다 — 놓치기 쉬웠다. 확인 창은 한 번 눌러야 지나가므로
+   * 반드시 읽게 된다. 창을 닫은 뒤에 팝오버가 열린다.
+   *
+   * 결제까지 끝난 건은 예전대로 토스트다. 그 건에서 담당자가 팝오버를 여는 까닭은
+   * 대개 「무엇으로 받았나」를 보려는 것이라, 창으로 한 번 더 막아설 자리가 아니다.
+   *
+   * @returns {Promise<void>} 확인 창을 띄운 때는 닫힐 때까지 기다린다
+   */
+  async function 결제상태알림() {
     if (_결제알림함 || !PAY_STATE) return;
     if (!PAY_STATE.paid && !PAY_STATE.sent) return;
 
@@ -10631,26 +10667,43 @@ window.HELP_TOUR_STEPS = [
     if (PAY_STATE.paid) {
       showToast('이미 결제가 끝난 건입니다' + (꼬리 ? ' — ' + 꼬리 : '')
                 + '. 다시 보내면 환자에게 안내가 한 번 더 갑니다.', 'warning', 8000);
-    } else {
-      showToast('결제 안내를 이미 보냈습니다' + (꼬리 ? ' — ' + 꼬리 : '')
-                + (PAY_STATE.count > 1 ? ` (${PAY_STATE.count}번)` : '')
-                + '. 아래 이력을 보고 다시 보낼지 정하십시오.', 'warning', 8000);
+      return;
     }
+
+    const 횟수 = Number(PAY_STATE.count || 1);
+
+    await ceAlert(
+      '결제정보 링크가 발송 되었습니다.'
+      + (꼬리 ? '
+
+' + 꼬리 : '')
+      + (횟수 > 1 ? '
+지금까지 ' + 횟수 + '회 보냈습니다.' : '')
+      + '
+
+아래 이력을 보고 다시 보낼지 정하십시오.',
+      { title: '결제전송', tone: 'info' }
+    );
   }
 
-  function togglePayPopover(e) {
+  async function togglePayPopover(e) {
     e.stopPropagation();
     const pop    = document.getElementById('payPopover');
     const isOpen = pop.style.display !== 'none';
     closeAllPopovers();
-    pop.style.display = isOpen ? 'none' : 'block';
-    if (!isOpen) {
-      placePayPopover();
-      const mobile = document.getElementById('f-mobile')?.value;
-      if (mobile) document.getElementById('payMobile').value = mobile;
-      loadPaymentLinks();
-      결제상태알림();
-    }
+
+    if (isOpen) { pop.style.display = 'none'; return; }
+
+    /* 알림이 먼저다 (2026-09-15 지시) — 확인 창을 닫아야 팝오버가 열린다.
+       열어 놓고 알리면 창이 팝오버를 덮어 뒤가 보이지 않고, 닫는 순간 눈이
+       팝오버로 가면서 무엇을 읽었는지 흐려진다. */
+    await 결제상태알림();
+
+    pop.style.display = 'block';
+    placePayPopover();
+    const mobile = document.getElementById('f-mobile')?.value;
+    if (mobile) document.getElementById('payMobile').value = mobile;
+    loadPaymentLinks();
   }
 
   function closePayPopover() { document.getElementById('payPopover').style.display = 'none'; }
