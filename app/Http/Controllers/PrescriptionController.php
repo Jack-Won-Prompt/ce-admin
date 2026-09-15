@@ -2408,7 +2408,36 @@ class PrescriptionController extends Controller
                 "처방 총계를 이미 다 주문했습니다 (총계 {$총계}개 · 주문 {$이미}개).");
         }
 
-        $추가 = \App\Models\Order::create([
+        /* 원 주문에서 **입력한 값**만 물려받는다 (2026-09-15 지시).
+
+           여태는 배송지 네 칸과 판매유형만 가져왔다. 그래서 담당자는 추가 주문마다
+           청구처ㆍ담당자ㆍ세금계산서 정보를 다시 적어야 했고, 같은 처방전인데도 두
+           주문의 적힌 내용이 어긋나는 일이 있었다.
+
+           **겪은 일은 가져오지 않는다.** 결제ㆍ입금 확인, 위드웍스 판매번호와 출고
+           정보, 세금계산서ㆍ현금영수증 발행 번호, 취소ㆍ정정 상태, 공단 청구, 정산은
+           이 주문이 아직 하지 않은 일이다. 가져오면 새 주문이 이미 결제ㆍ출고ㆍ발행된
+           것처럼 보인다.
+
+           세금계산서ㆍ현금영수증은 **적어 둔 것과 발행한 것**을 갈라 본다. 사업자
+           정보와 발행 구분은 담당자가 적은 값이라 물려받고, 승인번호ㆍ금액ㆍ발행 시각은
+           발행한 자국이라 두고 간다. */
+        $물려받을칸 = [
+            'operation_user_id', 'reference_note', 'so_type',
+            'shipping_postcode', 'shipping_address', 'shipping_address_detail', 'shipping_recipient',
+            // 배송비는 받을 돈으로 세지 않는다(2026-09-03 확정) — fillable 에도 없다
+            'pay_method', 'ship_request_date',
+            'note', 'warehouse_note',
+            'tax_invoice_type', 'tax_invoice_purpose', 'tax_invoice_biz_name',
+            'tax_invoice_ceo_name', 'tax_invoice_biz_no', 'tax_invoice_email',
+            'cash_receipt_type', 'cash_receipt_identifier',
+        ];
+
+        $물려받은것 = collect($원주문->only($물려받을칸))
+            ->filter(fn ($v) => $v !== null && $v !== '')
+            ->all();
+
+        $추가 = \App\Models\Order::create(array_merge($물려받은것, [
             'order_number'     => \App\Models\Order::generateOrderNumber(),
             'prescription_id'  => $prescription->id,
             'patient_id'       => $prescription->patient_id,
@@ -2426,12 +2455,7 @@ class PrescriptionController extends Controller
             'nhis_amount'      => 0,
             'patient_copay'    => 0,
             'total_amount'     => 0,
-            // 배송지는 원 주문과 같게 (2026-09-14 지시)
-            'shipping_postcode'       => $원주문->shipping_postcode,
-            'shipping_address'        => $원주문->shipping_address,
-            'shipping_address_detail' => $원주문->shipping_address_detail,
-            'shipping_recipient'      => $원주문->shipping_recipient,
-        ]);
+        ]));
 
         activity()->causedBy(Auth::user())->performedOn($추가)
             ->log("추가 주문 {$추가->order_number} 생성 (원 주문 {$원주문->order_number} · 처방전 {$prescription->rx_number})");

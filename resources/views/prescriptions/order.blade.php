@@ -2293,11 +2293,30 @@ $calcDeposit  = $calcCopay;
                새 건을 시작하는 길은 늘 열려 있어야 한다 — 조건을 붙이지 않는다. --}}
           <button type="button" id="btnNewEntry" class="tb-act" onclick="resetReviewScreen()"
                   title="새 처방번호로 새 건을 시작합니다">신규 등록</button>
-          {{-- 같은 처방전으로 제품을 더 사는 일이 잦다. 보고 있는 건을 **그대로**
-               베껴 새 번호로 세운다 — 날짜도 올려 둔 파일도 함께 이어 간다.
-               파일은 복사하지 않고 잇는다(같은 파일을 두 건이 함께 쓴다). --}}
-          <button type="button" id="btnDuplicate" class="tb-act" onclick="duplicateRx()"
-                  title="현재 건을 복제하여 새 처방번호로 등록합니다 — 내용 · 날짜 · 첨부파일까지 함께">최종 신규 복제</button>
+          {{-- 추가 주문 (2026-09-15 지시) — 전에는 「최종 신규 복제」였다.
+
+               같은 처방전으로 제품을 더 사는 일이 잦은데, 여태는 그 일을 **새
+               처방번호를 발급해서** 처리했다. 처방전 한 장이 시스템에서 두 건으로
+               갈라지고, 이미 검수를 마친 건인데 검수를 다시 받아야 했다.
+
+               이제 처방번호는 그대로 두고 주문번호만 새로 낸다. 첨부파일과 상세
+               목록은 같은 처방전이므로 저절로 그대로 보인다 — 복제할 것이 없다.
+               원 주문의 입력값을 물려받고 주문 제품만 비운다.
+
+               원 주문을 보고 있을 때만 선다. 추가 주문에서 또 추가를 내면 어디에
+               딸린 것인지가 갈라진다. 처방 총계를 이미 다 주문한 건에는 서지
+               않는다 — 원 주문과 추가 주문의 수량을 합해 본다. --}}
+          @if($prescription->order && ! $prescription->order->isExtra()
+              && ($처방총계 === 0 || $남은수량 > 0))
+            <form method="POST" action="{{ route('prescriptions.extraOrder', $prescription) }}"
+                  style="display:inline;" onsubmit="return rx추가주문(event)">
+              @csrf
+              <button type="submit" id="btnDuplicate" class="tb-act"
+                      title="{{ $처방총계 > 0
+                                ? '같은 처방번호로 주문을 하나 더 냅니다 — 처방 총계 ' . number_format($처방총계) . '개 가운데 ' . number_format($남은수량) . '개가 남았습니다'
+                                : '같은 처방번호로 주문을 하나 더 냅니다 — 처방 총계가 아직 입력되지 않았습니다' }}">추가 주문</button>
+            </form>
+          @endif
           {{-- 되돌리기·검수 요청·검수 완료·저장은 시안(148:2639)대로 구획 머리(지금은 탭줄)에 둔다 --}}
           </div>{{-- /tb-btns --}}
         </div>
@@ -2512,6 +2531,18 @@ $calcDeposit  = $calcCopay;
                     style="display:{{ $prescription->order?->order_number ? '' : 'none' }};"
                     title="CE 주문번호 — 누르면 베낍니다"
                     onclick="rxCopyNo(this)">주문번호 <b>{{ $prescription->order?->order_number }}</b></span>
+              {{-- 어느 주문에서 갈라져 나왔는가 (2026-09-15 지시).
+
+                   추가 주문은 원 주문의 입력값을 물려받는다. 그 원 주문이 무엇이었는지
+                   적어 두지 않으면, 나중에 「이 주문은 어디서 나온 것이냐」에 답할
+                   길이 없다. 원 주문 자신에게는 적지 않는다 — 대부분이 원 주문이라
+                   줄이 어지러워진다. --}}
+              @if($prescription->order?->isExtra() && $prescription->order->parentOrder)
+                <span class="rx-tabno" id="rxTabNoParent"
+                      style="border-color:var(--gray-300);color:var(--gray-700);"
+                      title="이 추가 주문이 물려받은 원 주문 — 누르면 베낍니다"
+                      onclick="rxCopyNo(this)">원 주문 <b>{{ $prescription->order->parentOrder->order_number }}</b></span>
+              @endif
               <span class="rx-tabno rx-tabno-so" id="rxTabNoSo"
                     style="display:{{ $prescription->order?->withworks_so_no ? '' : 'none' }};"
                     title="위드웍스 판매번호 — 누르면 베낍니다"
@@ -2578,25 +2609,9 @@ $calcDeposit  = $calcCopay;
                      보냈느냐」다 — syncOrderStageBtn 이 같은 눈으로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
                         title="주문 제품 탭으로 갑니다">주문 보기</button>
-                {{-- 추가 주문 (2026-09-14 확인요청 4쪽).
-
-                     처방전 한 장으로 수량을 나눠 사는 건이다. 먼저 일부만 사고 뒤에
-                     나머지를 더 산다 — 처방번호는 그대로고 주문번호만 따로 선다.
-
-                     원 주문을 보고 있을 때만 세운다. 추가 주문에서 또 추가를 세우면
-                     어디에 딸린 것인지가 갈라진다. 처방 총계를 이미 다 주문한 건에는
-                     세우지 않는다 — 눌러도 서버가 되돌려 보낸다. --}}
-                @if($prescription->order && ! $prescription->order->isExtra()
-                    && ($처방총계 === 0 || $남은수량 > 0))
-                  <form method="POST" action="{{ route('prescriptions.extraOrder', $prescription) }}"
-                        style="display:inline;" onsubmit="return rx추가주문(event)">
-                    @csrf
-                    <button type="submit" class="rx-acc-btn" id="btnExtraOrder"
-                            title="{{ $처방총계 > 0
-                                      ? '처방 총계 ' . number_format($처방총계) . '개 가운데 ' . number_format($남은수량) . '개를 더 살 수 있습니다'
-                                      : '처방 총계가 아직 입력되지 않았습니다 — 적은 뒤에 남은 수량을 봅니다' }}">추가 주문</button>
-                  </form>
-                @endif
+                {{-- 추가 주문 단추는 탭줄로 옮겼다 (2026-09-15 지시) — 「최종 신규 복제」
+                     자리다. 같은 일을 하는 단추가 두 자리에 서면 어느 쪽을 눌러야
+                     하는지 매번 헤맨다. --}}
                 {{-- 메모를 여는 길은 여기 남긴다. 환자 정보 머리의 자리는 상담하기에
                      내주었지만(요청서 10쪽), 그 단추가 유일한 길이라 함께 없애면
                      적어 둔 메모를 다시 볼 방법이 사라진다. --}}
@@ -8567,38 +8582,6 @@ window.HELP_TOUR_STEPS = [
     // 이미 마친 건이면 여기서 두 단추가 잠긴다(글자ㆍ배지는 서버가 그린 것을 지킨다)
     setRxStatus(RX_STATUS, null, null);
   });
-
-  /* 보고 있는 건을 베껴 새 건으로 간다.
-     같은 사람이 같은 것을 다시 살 때 병원ㆍ상병ㆍ제품ㆍ수량을 다시 적는 것은 옮겨 적는
-     일일 뿐이고, 옮기다 어긋나면 지난번과 다른 주문이 된다.
-     날짜는 비운다 — 지난달 날짜로 이번 달 주문을 낼 수는 없다. */
-  async function duplicateRx() {
-    const ok = await ceConfirm(
-      `${RX_NUMBER} 을(를) 복제하여 새 처방번호로 등록합니다.
-
-거래처 정보 · 처방 정보 · 주문 제품 · 날짜가 그대로 복제됩니다.
-첨부파일은 복사하지 않고 동일 파일을 공유합니다.
-
-검수 이력과 발송 이력은 복제되지 않습니다. 진행하시겠습니까?`,
-      { tone: 'info', confirmText: '복제', cancelText: '취소' }
-    );
-    if (!ok) return;
-
-    const btn = document.getElementById('btnDuplicate');
-    if (btn) BtnState.loading(btn, '베끼는 중…');
-    try {
-      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/duplicate`, 'POST', {});
-      if (!res.success) { showToast(res.message || '복제하지 못했습니다.', 'danger'); return; }
-      showToast(res.message, 'success');
-      // 고른 그 순간이 답이다 — 떠나도 되느냐고 다시 묻지 않는다
-      clearAllDirty();
-      location.href = res.url;
-    } catch (e) {
-      showToast('복제하지 못했습니다.', 'danger');
-    } finally {
-      if (btn && btn.isConnected) BtnState.reset(btn);
-    }
-  }
 
   async function requestReviewRx() {
     /* 브라우저 기본 confirm 은 화면과 결이 달라 낯설다 — 디자인 시스템 창을 쓴다.
