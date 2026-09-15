@@ -143,8 +143,23 @@ class DepositAutoIssue
            증빙이다. 여태 만드는 곳이 없어 카드 건에는 증빙이 하나도 남지 않았다.
            토스가 준 승인 내용을 그대로 옮겨 그린다. */
         $out['card_slip'] = CardSalesSlip::attach($order)?->file_original_name;
-        if (!$out['card_slip'] && CardSalesSlip::applies($order)) {
-            $out['skipped'][] = '카드매출전표: 만들지 못함';
+
+        if (! $out['card_slip']) {
+            /* 왜 못 그렸는지를 남긴다 (2026-09-16 지시).
+
+               여태 applies() 가 참일 때만 적었다. 그래서 **토스 결제 줄이 아예 없는
+               건**은 아무 말 없이 지나갔다 — 담당자는 왜 전표가 없는지 알 수 없었다.
+
+               카드로 적혀 있는데 승인 자취가 없는 건은 링크를 보내 놓고 담당자가 손으로
+               입금을 확인한 건이다. 실제로 카드가 긁히지 않았으므로 그릴 재료가 없다.
+               그 사실을 적어 두면 나중에 그런 건을 찾아낼 수 있다. */
+            $out['skipped'][] = CardSalesSlip::applies($order)
+                ? '카드매출전표: 만들지 못함'
+                : ($order->payMethod() === \App\Models\PaymentLink::METHOD_CARD
+                    ? '카드매출전표: 토스 승인 내역이 없어 그리지 못했습니다(손으로 입금 확인한 건)'
+                    : '');
+
+            $out['skipped'] = array_values(array_filter($out['skipped']));
         }
 
         /* 창고에 확정을 보낸다(2026-09-03 확정 · 시나리오 3.3). 여태 판매주문은
