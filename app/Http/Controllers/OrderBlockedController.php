@@ -47,7 +47,7 @@ class OrderBlockedController extends Controller
         /* 이력은 처방전에 남긴다 — 주문이 아직 없는 자리에서도 막히기 때문이다.
            주문이 있으면 주문에도 같이 적어, 주문 상세에서 바로 보이게 한다. */
         activity()->causedBy(Auth::user())->performedOn($order ?? $rx)
-            ->log("창고 전송 막힘 ({$값['gate']}): {$까닭}");
+            ->log("창고 전송 차단 ({$값['gate']}): {$까닭}");
 
         /* 담당자에게 알린다. 창고 소식과 같은 방에 쌓여 나중에 되짚을 수 있다.
            주문이 아직 없으면 알릴 자리가 없다 — 그때는 이력만 남긴다. */

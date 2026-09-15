@@ -69,7 +69,7 @@ final class TossEnvironment
 
         /* 골라 둔 갈래인데 키가 없으면 소리 없이 다른 키로 돈다 — 알려 둔다 */
         if ($client === '' || $secret === '') {
-            Log::warning('[토스] 고른 갈래의 키가 비어 있어 예전 설정을 그대로 쓴다', [
+            Log::warning('[토스] 선택한 환경의 키가 비어 있어 기존 설정을 사용합니다', [
                 'env'    => $env,
                 'client' => $client !== '',
                 'secret' => $secret !== '',

@@ -9653,7 +9653,7 @@ window.HELP_TOUR_STEPS = [
     const 취소 = document.getElementById('btnCancelOrder');
 
     const 단계말 = { none: '아직 창고로 보내지 않았습니다',
-                    new:  '창고가 아직 손대지 않았습니다 — 지금은 고칠 수 있습니다',
+                    new:  '창고 작업이 아직 시작되지 않았습니다 — 지금은 수정할 수 있습니다',
                     working: '창고가 할당ㆍ피킹을 시작했습니다',
                     shipped: '이미 출고됐습니다' }[res.stage] ?? '';
 

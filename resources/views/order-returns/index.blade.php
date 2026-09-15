@@ -243,7 +243,7 @@
       { header: '무통장결제 취소',   name: 'bank_cancel', width: 120, align: 'center', sortable: true },
 
       /* ── 기한과 적바림 ──────────────────────────────────── */
-      // 입고일에서 셈해 나온다 — 적어 둔 값이 아니라 늘 규칙과 맞는다
+      // 입고일에서 셈해 나온다 — 입력한 값이 아니라 늘 규칙과 맞는다
       { header: '검수 기한',  name: 'due_inspect', width: 100, align: 'center', sortable: true },
       { header: '처리 기한',  name: 'due_final',   width: 100, align: 'center', sortable: true },
       // 적요는 통장에 찍히는 글자, 담당자메모는 우리끼리 보는 글이다
@@ -305,7 +305,7 @@
             <span style="grid-column:span 3;">
               <b>${r.ap_adjust_dir} ${원(r.ap_adjust)}</b>
               <span style="font-size:11px;color:${r.ap_saved ? 'var(--text-muted)' : '#B54708'};margin-left:6px;">
-                ${r.ap_saved ? '적어 둔 값' : '아직 적지 않았습니다 — 줄에서 셈한 값입니다'}
+                ${r.ap_saved ? '입력한 값' : '아직 적지 않았습니다 — 줄에서 셈한 값입니다'}
               </span>
             </span>`}
         </div>

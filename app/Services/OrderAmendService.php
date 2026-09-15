@@ -61,7 +61,7 @@ class OrderAmendService
                 'message' => $order->창고단계() === 'shipped'
                     ? '이미 출고된 주문입니다 — 교환/반품/취소 화면에서 처리해 주십시오.'
                     : ($order->정정기다리는중인가()
-                        ? '이미 정정을 청해 둔 주문입니다 — 창고가 되돌리면 저절로 이어집니다.'
+                        ? '이미 정정을 요청한 주문입니다 — 창고에서 취소하면 자동으로 진행됩니다.'
                         : '정정할 수 있는 주문이 아닙니다.'),
             ];
         }
@@ -92,14 +92,14 @@ class OrderAmendService
             ])->save();
 
             activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("주문 정정 요청 ({$order->order_number}) — 창고가 할당ㆍ피킹을 되돌리면 새 판매주문을 세웁니다");
+                ->log("주문 정정 요청 ({$order->order_number}) — 창고가 할당ㆍ피킹을 취소하면 새 판매주문을 등록합니다");
 
             return [
                 'ok'      => true,
                 'so_no'   => $order->withworks_so_no,
                 'state'   => Order::AMEND_REQUESTED,
-                'message' => '창고에 취소를 요청했습니다 — 할당ㆍ피킹이 되돌려지면 '
-                           . '새 판매주문이 저절로 세워집니다.',
+                'message' => '창고에 취소를 요청했습니다 — 할당ㆍ피킹이 취소되면 '
+                           . '새 판매주문이 자동으로 등록됩니다.',
             ];
         }
 
@@ -197,7 +197,7 @@ class OrderAmendService
         ])->save();
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(sprintf(
-            '주문 정정 — 판매주문을 새로 세웠습니다 (%s → %s)',
+            '주문 정정 — 판매주문을 신규 등록했습니다 (%s → %s)',
             $옛번호 ?: '없음', $새번호 ?: '번호 없음'
         ));
 
@@ -205,7 +205,7 @@ class OrderAmendService
             'ok'      => true,
             'so_no'   => $새번호,
             'state'   => null,
-            'message' => sprintf('새 판매주문 %s 을 세웠습니다%s', $새번호 ?: '', $확정말),
+            'message' => sprintf('새 판매주문 %s 을 등록했습니다%s', $새번호 ?: '', $확정말),
         ];
     }
 
@@ -215,7 +215,7 @@ class OrderAmendService
         $결과 = $this->부르기('post', 'so_cancel_request', [
             'ce_order_number' => $order->order_number,
             'so_no'           => $order->withworks_so_no,
-            'reason'          => '주문 정정 — 제품ㆍ수량이 바뀌어 다시 세웁니다',
+            'reason'          => '주문 정정 — 제품ㆍ수량 변경으로 재등록합니다',
         ]);
 
         if (! $결과['ok'] && $결과['status'] === 404) {

@@ -108,7 +108,7 @@
                  placeholder="{{ $secretMasked ? '저장됨 ' . $secretMasked . ' — 바꿀 때만 입력하십시오' : 'HQ 가 발급한 Client Secret' }}">
           <span class="ss-hint">
             암호화해 담으므로 원문은 화면에 보이지 않습니다. 비워 두고 저장하면
-            <b>담긴 값이 그대로 유지</b>됩니다.
+            <b>기존 값이 그대로 유지</b>됩니다.
           </span>
         </div>
         <div class="ss-field full">

@@ -732,7 +732,7 @@ class PrescriptionController extends Controller
             'success' => true,
             'so_no'   => $결과['so_no'],
             'state'   => $결과['state'],
-            'message' => $결과['message'] ?: '위드웍스 판매주문을 다시 세웠습니다.',
+            'message' => $결과['message'] ?: '위드웍스 판매주문을 재등록했습니다.',
         ]);
     }
 
