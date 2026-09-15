@@ -3075,8 +3075,17 @@ $calcDeposit  = $calcCopay;
                      select 의 padding-right 30px 이 화살표 자리다 — 글자가 쓸 폭은
                      그것을 뺀 나머지다.
                      좁은 화면에서는 아래로 내려 앉힌다 — 겹쳐 잘리는 것보다 낫다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;flex-wrap:wrap;">
-                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:1 1 124px;min-width:124px;">
+                {{-- 한 줄에 세운다 (2026-09-16 지시).
+
+                     최소 폭을 124 + 132 + 사이 8 = 264 로 잡아 두었는데, 이 칸이
+                     실제로 받는 폭은 248 이다 — 16 이 모자라 늘 접혔다. 두 칸이
+                     위아래로 갈라서면 어느 값이 어느 칸인지 라벨 하나로는 알 수 없다.
+
+                     최소 폭을 없애고 비율로 나눈다. 소득공제는 고르개라 긴 말이
+                     들어가도 잘리지 않고(화살표 자리만 지키면 된다), 번호는
+                     「010-0000-0000」 열세 자가 들어갈 만큼 더 받는다. --}}
+                <div style="display:flex;gap:8px;flex:1;min-width:0;">
+                  <select class="form-control" id="f-deduction" title="소득공제" style="flex:0 1 46%;min-width:0;">
                     <option value="">소득공제 선택</option>
                     <option value="소득공제" @selected(($prescription->patient?->deduction ?? '') == '소득공제')>소득공제</option>
                     <option value="지출증빙" @selected(($prescription->patient?->deduction ?? '') == '지출증빙')>지출증빙</option>
@@ -3086,7 +3095,7 @@ $calcDeposit  = $calcCopay;
                        저장된 값도 화면을 열 때 같은 모양으로 맞춰 그린다. --}}
                   <input type="text" class="form-control" id="f-cash-receipt" title="현금영수증 번호"
                          value="{{ $prescription->patient?->cash_receipt_no ?? '' }}"
-                         placeholder="010-XXXX-XXXX" data-phone style="flex:1 1 132px;min-width:132px;" />
+                         placeholder="010-XXXX-XXXX" data-phone style="flex:1 1 54%;min-width:0;" />
                 </div>
               </div>
               {{-- 결제 방식은 사람에게 붙는다 — 병원ㆍ처방 정보에 두었던 것을 이리로
