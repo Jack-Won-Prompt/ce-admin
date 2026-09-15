@@ -5862,26 +5862,19 @@ window.HELP_TOUR_STEPS = [
     판.style.display = '';
 
     if (!_원주문표) {
-      _원주문표 = new wwGrid('#parentItemsGrid', {
-        data: 원주문품목.map((r, i) => ({
-          no: i + 1,
-          product_name: r.product_name,
-          product_code: r.product_code,
-          quantity: r.quantity,
-          unit_price: r.unit_price,
-          nhis_amount: r.nhis_amount,
-          patient_copay: r.patient_copay,
-        })),
+      _원주문표 = new wwGrid({
+        el: document.getElementById('parentItemsGrid'),
+        editable: false, rowCheckbox: false, rowNumber: true,
+        toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
-          { header: 'No',        name: 'no',            width: 40,  align: 'center' },
-          { header: '제품명',     name: 'product_name',  width: 200 },
-          { header: '제품 코드',  name: 'product_code',  width: 90,  align: 'center' },
-          { header: '수량',       name: 'quantity',      width: 60,  align: 'right', format: 'number' },
-          { header: '소비자가',   name: 'unit_price',    width: 80,  align: 'right', format: 'number' },
-          { header: '기관 부담금', name: 'nhis_amount',   width: 90,  align: 'right', format: 'number' },
-          { header: '본인 부담금', name: 'patient_copay', width: 90,  align: 'right', format: 'number' },
+          { header: '제품명',      name: 'product_name',  width: 190 },
+          { header: '제품 코드',    name: 'product_code',  width: 85,  align: 'center' },
+          { header: '수량',        name: 'quantity',      width: 60,  align: 'right' },
+          { header: '소비자가',     name: 'unit_price',    width: 80,  align: 'right' },
+          { header: '기관 부담금',  name: 'nhis_amount',   width: 90,  align: 'right' },
+          { header: '본인 부담금',  name: 'patient_copay', width: 90,  align: 'right' },
         ],
-        height: 200,
+        data: 원주문품목,
       });
     }
 
