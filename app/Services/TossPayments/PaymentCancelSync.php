@@ -38,7 +38,7 @@ class PaymentCancelSync
      * @param  array $저쪽 토스에 재조회한 결제 한 벌 (status·cancels·totalAmount)
      * @return array{changed:bool, message:string}
      */
-    public function 맞추기(TossPayment $결제, array $저쪽, string $까닭 = ''): array
+    public function 맞추기(TossPayment $결제, array $저쪽, string $사유 = ''): array
     {
         $상태 = (string) ($저쪽['status'] ?? '');
 
@@ -68,13 +68,13 @@ class PaymentCancelSync
             return ['changed' => true, 'message' => '이어진 주문이 없습니다.'];
         }
 
-        $말 = $this->주문맞추기($order, $무른것, $전액인가, $까닭);
+        $말 = $this->주문맞추기($order, $무른것, $전액인가, $사유);
 
         return ['changed' => true, 'message' => $말];
     }
 
     /** 주문 쪽 — 받은 표시와 결제 링크를 사실에 맞춘다 */
-    private function 주문맞추기(Order $order, int $무른것, bool $전액인가, string $까닭): string
+    private function 주문맞추기(Order $order, int $무른것, bool $전액인가, string $사유): string
     {
         $말 = [];
 
@@ -115,7 +115,7 @@ class PaymentCancelSync
         $알림 = sprintf('결제가 취소되었습니다 (%s원%s)%s',
             number_format($무른것),
             $전액인가 ? ' · 전액' : ' · 부분',
-            $까닭 ? " — {$까닭}" : '');
+            $사유 ? " — {$사유}" : '');
 
         $전체말 = $알림 . ($말 ? '. ' . implode('. ', $말) . '.' : '.');
 

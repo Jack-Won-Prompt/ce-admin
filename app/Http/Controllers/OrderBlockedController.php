@@ -42,17 +42,17 @@ class OrderBlockedController extends Controller
         }
 
         $order = $rx->order;
-        $까닭  = trim($값['reason']);
+        $사유  = trim($값['reason']);
 
         /* 이력은 처방전에 남긴다 — 주문이 아직 없는 자리에서도 막히기 때문이다.
            주문이 있으면 주문에도 같이 적어, 주문 상세에서 바로 보이게 한다. */
         activity()->causedBy(Auth::user())->performedOn($order ?? $rx)
-            ->log("창고 전송 차단 ({$값['gate']}): {$까닭}");
+            ->log("창고 전송 차단 ({$값['gate']}): {$사유}");
 
         /* 담당자에게 알린다. 창고 소식과 같은 방에 쌓여 나중에 되짚을 수 있다.
            주문이 아직 없으면 알릴 자리가 없다 — 그때는 이력만 남긴다. */
         if ($order) {
-            app(OrderNotice::class)->tellOwner($order, '창고로 보내지 못했습니다 — ' . $까닭, 'warning');
+            app(OrderNotice::class)->tellOwner($order, '창고로 보내지 못했습니다 — ' . $사유, 'warning');
         }
 
         return response()->json(['success' => true]);

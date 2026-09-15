@@ -7922,7 +7922,7 @@ window.HELP_TOUR_STEPS = [
     const ok = await ceConfirm(
       [
         '처방전 없이 새 건을 시작합니다.',
-        '유형은 「처방외」로 서고, 처방전이 있으면 등록한 뒤 첨부문서로 올릴 수 있습니다.',
+        '유형은 「처방외」로 등록되고, 처방전이 있으면 등록한 뒤 첨부문서로 추가할 수 있습니다.',
         '',
         '※ 지금 화면에서 저장하지 않은 내용은 사라집니다.',
         '',
@@ -13899,23 +13899,23 @@ window.HELP_TOUR_STEPS = [
       'f-birth': '생년월일', 'f-benefit-class': '자격',
     };
 
-    const 앉힌것 = [], 남긴것 = [];
+    const 반영한것 = [], 남긴것 = [];
     for (const [id, val] of Object.entries(applied)) {
       const el = document.getElementById(id);
       if (!el) continue;
       if (el === document.activeElement) { 남긴것.push(LABELS[id] ?? id); continue; }
       el.value = val;
       el.classList.add('ce-consent-filled');
-      앉힌것.push(LABELS[id] ?? id);
+      반영한것.push(LABELS[id] ?? id);
     }
-    if (!앉힌것.length && !남긴것.length) return;
+    if (!반영한것.length && !남긴것.length) return;
 
     // 자격이 바뀌면 청구처 추천도 따라 움직인다
     if (applied['f-benefit-class'] && typeof renderBillingStrategy === 'function') renderBillingStrategy(); renderDelegationNeed();
 
     const 이름 = document.getElementById('f-name')?.value?.trim() || '환자';
-    let msg = `「${이름}」 님이 동의서에 적은 ${앉힌것.join('ㆍ')}을(를) 화면에 반영했습니다.`;
-    if (!앉힌것.length) msg = `「${이름}」 님이 동의서에 ${남긴것.join('ㆍ')}을(를) 적었습니다.`;
+    let msg = `「${이름}」 님이 동의서에 적은 ${반영한것.join('ㆍ')}을(를) 화면에 반영했습니다.`;
+    if (!반영한것.length) msg = `「${이름}」 님이 동의서에 ${남긴것.join('ㆍ')}을(를) 적었습니다.`;
     else if (남긴것.length) msg += ` ${남긴것.join('ㆍ')}은(는) 적고 계셔서 그대로 두었습니다.`;
     showToast(msg, 'info');
   }

@@ -213,7 +213,7 @@ class WithworksWebhookController extends Controller
            지금 우리 줄에 적힌 번호가 아니고, 이력에 물러난 것으로 남아 있으면 그
            사건은 지나간 판매주문의 일이다. 사건 자체는 위에서 이미 적어 두었다. */
         if ($order->물러난판매번호인가($data['so_no'] ?? null)) {
-            Log::info('[Withworks] 물러난 판매번호의 사건 — 상태에 반영하지 않습니다', [
+            Log::info('[Withworks] 이전 판매번호의 이벤트 — 상태에 반영하지 않습니다', [
                 'event' => $data['event'],
                 'order' => $order->order_number,
                 'so_no' => $data['so_no'],

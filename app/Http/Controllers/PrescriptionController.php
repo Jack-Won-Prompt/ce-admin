@@ -2056,7 +2056,7 @@ class PrescriptionController extends Controller
         $order->setRelation('prescription', $draft);
 
         activity()->causedBy(Auth::user())->performedOn($order)
-            ->log("처방전이 없어 빈 처방전을 세워 이었습니다 ({$draft->rx_number})");
+            ->log("처방전이 없어 빈 처방전을 생성하여 연결했습니다 ({$draft->rx_number})");
 
         return $draft;
     }
