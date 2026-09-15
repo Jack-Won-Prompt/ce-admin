@@ -263,6 +263,22 @@ class PaymentLinkController extends Controller
         $amount     = (int) $request->query('amount', 0);
         $error      = $request->query('message') ?: $request->query('code');
 
+        /* 이미 낸 건이면 그 사실이 먼저다 (2026-09-16 고침).
+
+           이 자리는 토스가 돌려보낼 때 paymentKey 를 달고 온다. 그것이 없으면
+           여태 무조건 「결제가 완료되지 않았습니다」였다 — 그런데 시험 자동 승인은
+           서버에서 이미 승인을 마치고 이 화면으로 보내므로 달고 올 것이 없다.
+           결제가 끝난 링크에 「실패」가 뜨는 것은 사실과 다르다.
+
+           새로고침으로 다시 들어오는 길도 같다 — 낸 뒤에 화면을 다시 열면 실패로
+           보였다. */
+        if ($link->status === 'paid' && ! $paymentKey) {
+            return view('pay.done', [
+                'link' => $link, 'ok' => true, 'waiting' => false, 'message' => null,
+                'toss' => $link->order?->tossPayment?->raw_response ?? [],
+            ]);
+        }
+
         if (!$paymentKey || !$tossOrder) {
             return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false,
                                      'message' => $error ?: '결제가 완료되지 않았습니다.']);
