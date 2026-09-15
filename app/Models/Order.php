@@ -302,6 +302,48 @@ class Order extends Model
         return (int) ($this->patient_copay ?? 0);
     }
 
+    /**
+     * 결제를 맞출 때의 기준 금액 — **실제로 오간 돈** (2026-09-15).
+     *
+     * 주문 정정으로 금액이 바뀌면 결제도 함께 맞춰야 한다(2026-09-14 지시 ②).
+     * 그때 「바뀌기 전 금액」으로 주문의 patient_copay 를 쓰면 안 된다. 화면은
+     * ［주문 정정］ 한 번에 요청을 셋 보내는데, 첫 요청(주문 등록 저장)이
+     * OrderSync 로 주문 금액을 먼저 맞춰 버리기 때문이다. 그래서 정정이 읽을
+     * 때는 이미 새 금액이라 늘 「바뀌지 않았다」가 되고, 링크 해지도 차액 환불도
+     * 일어나지 않았다 (2026-09-15 시험에서 다섯 번 재현).
+     *
+     * 기준은 돈이어야 한다. 받은 건은 받은 금액, 아직인 건은 보낸 링크의 금액이다.
+     * 그 돈과 새 금액이 다를 때 맞추는 것이 이 일의 뜻이고, 중간에 무엇이 주문
+     * 금액을 건드리든 흔들리지 않는다.
+     *
+     * 어느 쪽도 없으면 주문 금액으로 갈음한다 — 견줄 돈이 없으면 맞출 것도 없다.
+     */
+    public function 결제기준금액(): int
+    {
+        /* 토스로 받은 건 — 부분 취소가 있었으면 그만큼 뺀 것이 지금 우리가 쥔 돈이다 */
+        $결제 = $this->tossPayment;
+
+        if ($결제 && $결제->is_done) {
+            return max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0));
+        }
+
+        /* 담당자가 눈으로 확인한 건 — 적어 둔 금액이 곧 받은 돈이다 */
+        if ($this->deposit_confirmed_at !== null && (int) $this->deposit_amount > 0) {
+            return (int) $this->deposit_amount;
+        }
+
+        /* 아직 받기 전 — 보낸 링크에 적힌 금액이 환자가 낼 것으로 아는 값이다 */
+        $링크 = \App\Models\PaymentLink::where('order_id', $this->id)
+                    ->where('status', 'sent')
+                    ->latest('id')->first();
+
+        if ($링크 && (int) $링크->amount > 0) {
+            return (int) $링크->amount;
+        }
+
+        return $this->expectedDeposit();
+    }
+
     protected $fillable = [
         'order_number', 'prescription_id', 'patient_id', 'created_by',
         // 추가 주문 — 어느 원 주문에 딸렸는가, 어느 쪽인가 (2026-09-14 확인요청 4쪽)

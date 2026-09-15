@@ -121,7 +121,10 @@ class OrderCancelService
      *
      * 늘어난 때는 무르지 않는다 — 더 받을 돈은 새 링크로 청한다.
      *
-     * @param int $이전 정정 전 본인부담금
+     * @param int $이전 정정 전 기준 금액 — **실제로 오간 돈**이다
+     *                  (Order::결제기준금액). 주문의 patient_copay 가 아니다 —
+     *                  정정 직전에 다른 요청이 그 값을 이미 바꿔 놓기 때문이다
+     *                  (2026-09-15 고침).
      */
     public function 금액맞추기(Order $order, int $이전): string
     {

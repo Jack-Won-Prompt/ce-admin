@@ -555,8 +555,15 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // 정정 전 본인부담금 — 바뀌면 결제도 맞춰야 한다(지시 ②)
-        $이전부담 = (int) $order->expectedDeposit();
+        /* 정정 전 금액 — 바뀌면 결제도 맞춰야 한다(2026-09-14 지시 ②).
+
+           주문의 지금 금액을 쓰지 않는다. 화면은 ［주문 정정］ 한 번에 요청을 셋
+           보내는데, 첫 요청(주문 등록 저장)이 OrderSync 로 주문 금액을 먼저 맞춘다.
+           그래서 여기서 주문을 읽으면 이미 새 금액이라 늘 「바뀌지 않았다」가 되어
+           지시 ② 가 통째로 돌지 않았다 (2026-09-15 시험에서 드러났다).
+
+           기준은 **실제로 오간 돈**이다 — Order::결제기준금액() 를 본다. */
+        $이전부담 = (int) $order->결제기준금액();
 
         $items      = collect($request->input('items', []))->filter(fn($i) => !empty($i['product_name']));
         $firstItem  = $items->first() ?? [];
