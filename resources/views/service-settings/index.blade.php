@@ -77,9 +77,11 @@
      윗선 하나를 그어 한 줄(단추 바)로 읽히게 한다. */
   .ss-actions {
     display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap;
-    position: sticky; bottom: 0; z-index: 2;
-    /* 몸통의 아래 안여백(12)까지 덮는다 — 남겨 두면 그 틈으로 칸이 비쳐 지나간다 */
-    margin-bottom: -12px; padding: 12px 0;
+    /* 붙는 자리는 몸통 안쪽(content box) 아래끝이라, 그대로 두면 몸통의 아래
+       안여백 12 만큼 틈이 남아 그리로 칸이 비쳐 지나간다. 그 12 를 아래로 더
+       내려 붙이고, 같은 만큼 제 안여백으로 채워 단추가 바닥에 닿지 않게 한다. */
+    position: sticky; bottom: -12px; z-index: 2;
+    padding: 12px 0 24px;
     background: var(--white, #fff);
     border-top: 1px solid var(--gray-200);
   }
