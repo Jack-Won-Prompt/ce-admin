@@ -3,6 +3,9 @@
 namespace App\Support;
 
 use App\Models\Order;
+use App\Models\PrescriptionAttachment;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -17,6 +20,71 @@ use Illuminate\Support\Facades\View;
  */
 final class CashReceiptForm
 {
+    /** 붙는 종이의 갈래와 이름 (2026-09-16) */
+    private const DOC_TYPE = 'cash_receipt_form';
+    private const LABEL    = '현금영수증';
+    private const PREFIX   = 'crf_';
+
+    /**
+     * 양식을 그려 이 건의 첨부문서로 붙인다 (2026-09-16 지시).
+     *
+     * 팝빌로 실제 신고가 나가지 않는 자리 — 시험 환경, 발행 시뮬레이션, 인증서
+     * 미등록 — 에서도 종이는 있어야 한다. 실제로 발행된 건은 발행 경로가 팝빌이 준
+     * PDF 를 이미 붙이므로, 이 길은 **발행되지 않은 건**에만 쓴다.
+     *
+     * 이미 같은 갈래의 종이가 붙어 있으면 다시 만들지 않는다. 금액이 바뀌어 다시
+     * 그려야 하면 먼저 지운 뒤 부른다.
+     *
+     * @param array $덧댈값 서식이 읽는 칸 가운데 주문에 아직 없는 것
+     *                     (공급가액ㆍ세액 따위). 주문을 고치지 않고 그리기만 한다.
+     */
+    public static function attach(Order $order, array $덧댈값 = []): ?PrescriptionAttachment
+    {
+        if (! $order->prescription_id) {
+            Log::info('[' . self::LABEL . '] 처방이 없는 주문 — 붙이지 않는다',
+                ['order' => $order->order_number]);
+
+            return null;
+        }
+
+        $이미 = PrescriptionAttachment::where('prescription_id', $order->prescription_id)
+            ->where('doc_type', self::DOC_TYPE)
+            ->first();
+
+        if ($이미) {
+            return $이미;
+        }
+
+        try {
+            /* 주문을 고치지 않고 그리기만 한다 — 덧댈 값을 얹은 복제본으로 그린다.
+               실제 발행이 아니므로 승인번호ㆍ발행시각을 주문에 적어서는 안 된다. */
+            $그릴것 = $덧댈값 ? (clone $order)->forceFill($덧댈값) : $order;
+
+            $pdf  = self::render($그릴것);
+            $이름 = self::LABEL . '_' . ($order->patient?->bare_name ?? '')
+                  . '_' . $order->order_number . '.pdf';
+            $길   = 'attachments/' . $order->prescription_id . '/' . uniqid(self::PREFIX) . '.pdf';
+
+            Storage::disk('public')->put($길, $pdf);
+
+            return PrescriptionAttachment::create([
+                'prescription_id'    => $order->prescription_id,
+                'file_path'          => $길,
+                'file_original_name' => $이름,
+                'file_mime_type'     => 'application/pdf',
+                'file_size'          => strlen($pdf),
+                'doc_type'           => self::DOC_TYPE,
+                'doc_label'          => self::LABEL,
+                'display_order'      => 99,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[' . self::LABEL . '] 양식을 만들지 못했다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
     /** 서식대로 그려 PDF 바이트로 돌려준다. */
     public static function render(Order $order): string
     {

@@ -215,11 +215,22 @@ class DepositAutoIssue
             return null;
         }
 
-        return $this->call($order, 'issueCashReceipt', [
+        $번호2 = $this->call($order, 'issueCashReceipt', [
             'cash_receipt_type'       => 'income_deduction',
             'cash_receipt_identifier' => $identifier,
             'cash_receipt_amount'     => $amount,
         ], '현금영수증', $out);
+
+        /* 세금계산서와 같은 까닭 — 신고가 막혀도 종이는 남긴다 (2026-09-16 지시) */
+        if (! $번호2) {
+            \App\Support\CashReceiptForm::attach($order, [
+                'cash_receipt_amount' => $amount,
+            ]);
+
+            $out['skipped'][] = '현금영수증: 양식만 첨부했습니다(신고 안 됨)';
+        }
+
+        return $번호2;
     }
 
     /** 세금계산서 — 청구전략이 정한 비율만큼. 공급받는자는 환자 개인이다. */
@@ -250,7 +261,7 @@ class DepositAutoIssue
 
         $supply = (int) round($amount / 1.1);
 
-        return $this->call($order, 'issueTaxInvoice', [
+        $번호 = $this->call($order, 'issueTaxInvoice', [
             'tax_invoice_type'     => 'electronic',
             'tax_invoice_invoicee' => '개인',
             'tax_invoice_biz_name' => $name,
@@ -261,6 +272,28 @@ class DepositAutoIssue
             'tax_invoice_supply'   => $supply,
             'tax_invoice_vat'      => $amount - $supply,
         ], '세금계산서', $out);
+
+        /* 팝빌로 실제 신고가 나가지 않았어도 종이는 남긴다 (2026-09-16 지시).
+
+           시험 환경ㆍ발행 시뮬레이션ㆍ인증서 미등록처럼 신고가 막히는 자리가 있다.
+           그때 아무것도 붙지 않으면 화면을 처음부터 끝까지 훑어도 「서류가 붙는가」를
+           볼 수 없다. 신고된 승인번호는 없지만 금액과 당사자는 정해져 있으므로,
+           그 값으로 서식을 그려 첨부문서로 둔다.
+
+           실제로 발행된 건은 발행 경로가 팝빌이 준 PDF 를 이미 붙이므로 손대지 않는다. */
+        if (! $번호) {
+            $supply = (int) round($amount / 1.1);
+
+            \App\Support\TaxInvoiceForm::attach($order, [
+                'tax_invoice_supply'  => $supply,
+                'tax_invoice_vat'     => $amount - $supply,
+                'tax_invoice_purpose' => \App\Support\TaxInvoiceForm::PURPOSE,
+            ]);
+
+            $out['skipped'][] = '세금계산서: 양식만 첨부했습니다(신고 안 됨)';
+        }
+
+        return $번호;
     }
 
     /**
