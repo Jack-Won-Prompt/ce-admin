@@ -375,7 +375,14 @@ class _PrescriptionUploadScreenState
   }
 
   void _removeFromQueue(int index) {
-    setState(() => _queue.removeAt(index));
+    setState(() {
+      _queue.removeAt(index);
+
+      /* 도중에 실패해 남겨 둔 것을 모두 빼면 그 업로드는 끝난 것이다(2026-09-15 지시).
+         번호를 쥔 채로 새 서류를 담으면 앞 업로드의 처방전에 붙는다 — 업로드는
+         기존 처방전 번호에 절대 올리지 않는다. 다음에 누르면 새 번호로 연다. */
+      if (_queue.isEmpty) _batchRx = null;
+    });
   }
 
   void _tell(String message) {
