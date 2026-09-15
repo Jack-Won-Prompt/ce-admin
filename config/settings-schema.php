@@ -93,7 +93,10 @@ return [
                              'help'  => '서명이 붙은 웹훅을 검증합니다. 가상계좌 입금 웹훅은 서명이 없어 이 값이 비어도 입금 처리는 됩니다.',
                              'width' => 3],
             'va_enabled' => ['label' => '가상계좌 발급', 'config' => 'toss.virtual_account_enabled', 'type' => 'bool',
-                             'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보냅니다.'],
+                             'help'  => '끄면 토스를 부르지 않고 아래 대체 계좌로 문자만 보냅니다. '
+                                      . '가상계좌로 받은 돈은 왔던 길로 되돌아가지 않아, 주문 정정ㆍ취소로 '
+                                      . '무를 때 돌려줄 계좌(은행ㆍ번호ㆍ예금주)를 따로 받아야 합니다 — '
+                                      . '그 손이 부담이면 여기서 끕니다.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
             'va_valid_hours' => ['label' => '입금 기한(시간)',    'config' => 'toss.virtual_account.valid_hours', 'type' => 'int', 'width' => 1],
             'va_fallback_bank'    => ['label' => '입금계좌 은행',   'config' => 'toss.virtual_account.fallback_bank',
