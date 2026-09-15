@@ -64,6 +64,23 @@ class PrescriptionService {
     return PrescriptionDetail.fromJson(body['data'] as Map<String, dynamic>);
   }
 
+  /// 업로드에서 고를 수 있는 서류 유형 — 웹 업로드 화면과 같은 목록.
+  ///
+  /// 못 받아 오면 null. 부르는 쪽이 기본 목록으로 버틴다 — 목록 때문에 업로드를
+  /// 못 하게 되면 안 된다.
+  Future<List<(String, String)>?> getDocTypes() async {
+    try {
+      final res  = await _dio.get('/prescriptions/doc-types');
+      final list = (res.data as Map)['data'] as List?;
+      if (list == null || list.isEmpty) return null;
+      return list
+          .map((e) => ((e as Map)['code'] as String, e['label'] as String))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 처방전 그림을 지운다.
   ///
   /// 레코드는 남고 그림만 비므로, 같은 환자로 처방전을 다시 올리면 이 건이

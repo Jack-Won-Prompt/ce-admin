@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/patient.dart';
 import '../services/api_client.dart';
 import '../services/patient_service.dart';
+import '../services/prescription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'prescription_camera_screen.dart';
@@ -44,12 +45,17 @@ class _PrescriptionUploadScreenState
   bool           _searchingPatient = false;
 
   // ── 서류 유형 ──────────────────────────────────────────
-  static const _docTypes = [
+  /* 서류 유형은 서버에서 받는다 — 웹 업로드 화면과 같은 목록이다(GET /prescriptions/doc-types).
+     예전에는 여기 박아 두어, 환경 설정에서 유형을 바꿔도 앱만 옛 목록을 보였다.
+     위임장은 서버 목록에서 빠져 있다(주문 등록에서 서명하면 저절로 만들어진다). */
+  List<(String, String)> _docTypes = _fallbackDocTypes;
+
+  /// 서버에서 목록을 못 받았을 때 쓰는 기본 목록. 어느 환경에서도 받는 처방 서류 넷이다.
+  static const _fallbackDocTypes = [
     ('registration_form', '등록신청서'),
     ('prescription',      '처방전'),
     ('test_result',       '결과지'),
     ('id_card',           '신분증'),
-    ('delegation',        '위임장'),
   ];
   String _docType = 'registration_form';
 
@@ -58,8 +64,24 @@ class _PrescriptionUploadScreenState
   static const _docLimits = {'prescription': 1, 'registration_form': 1};
   static const _maxDocs   = 40;   // 웹 업로드의 전체 제한과 같다
 
-  static String _labelOf(String code) =>
+  @override
+  void initState() {
+    super.initState();
+    _loadDocTypes();
+  }
+
+  String _labelOf(String code) =>
       _docTypes.firstWhere((t) => t.$1 == code, orElse: () => (code, code)).$2;
+
+  /// 서버 목록을 받아 온다. 고르고 있던 유형이 새 목록에 없으면 첫 번째로 옮긴다.
+  Future<void> _loadDocTypes() async {
+    final list = await ref.read(prescriptionServiceProvider).getDocTypes();
+    if (!mounted || list == null) return;
+    setState(() {
+      _docTypes = list;
+      if (!list.any((t) => t.$1 == _docType)) _docType = list.first.$1;
+    });
+  }
 
   /// 「처방전는」이 되지 않게 받침을 본다 — 웹의 hasFinalConsonant 와 같은 셈이다.
   static String _josa(String word, String withFinal, String without) {
