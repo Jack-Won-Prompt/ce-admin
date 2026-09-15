@@ -79,7 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       _ssoTaps       = 0;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('관리자 로그인 칸을 엽니다.')),
+      const SnackBar(content: Text('관리자 로그인 입력란을 표시합니다.')),
     );
     return true;
   }

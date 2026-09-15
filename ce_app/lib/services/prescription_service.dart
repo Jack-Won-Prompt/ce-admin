@@ -107,11 +107,11 @@ class PrescriptionService {
       });
       final res  = await _dio.post('/prescriptions/upload', data: form);
       final body = res.data;
-      return (body is Map ? body['message'] as String? : null) ?? '올렸습니다.';
+      return (body is Map ? body['message'] as String? : null) ?? '업로드했습니다.';
     } on DioException catch (e) {
       final body = e.response?.data;
       throw Exception((body is Map ? body['message'] as String? : null) ??
-          '올리지 못했습니다. (${e.type.name})');
+          '업로드하지 못했습니다. (${e.type.name})');
     }
   }
 
@@ -140,11 +140,11 @@ class PrescriptionService {
     try {
       final res = await _dio.delete(path);
       final body = res.data;
-      return (body is Map ? body['message'] as String? : null) ?? '지웠습니다.';
+      return (body is Map ? body['message'] as String? : null) ?? '삭제했습니다.';
     } on DioException catch (e) {
       final body = e.response?.data;
       throw Exception((body is Map ? body['message'] as String? : null) ??
-          '지우지 못했습니다. (${e.type.name})');
+          '삭제하지 못했습니다. (${e.type.name})');
     }
   }
 }

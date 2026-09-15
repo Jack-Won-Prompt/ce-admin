@@ -52,7 +52,7 @@ class AuthApiController extends Controller
         if (! $user->canEnter('app')) {
             return response()->json([
                 'success' => false,
-                'message' => '이 계정은 관리자 화면에서만 쓸 수 있습니다.',
+                'message' => '이 계정은 관리자 화면에서만 사용할 수 있습니다.',
             ], 403);
         }
 

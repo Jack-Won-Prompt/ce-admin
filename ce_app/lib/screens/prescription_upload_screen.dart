@@ -143,7 +143,7 @@ class _PrescriptionUploadScreenState
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
-                  const Text('생년월일로 같은 사람인지 확인하고 고르십시오.',
+                  const Text('생년월일로 동일인 여부를 확인한 뒤 선택하십시오.',
                       style: TextStyle(
                           fontSize: 12, color: AppTheme.textSecondary)),
                 ],
@@ -198,7 +198,7 @@ class _PrescriptionUploadScreenState
             ListTile(
               leading: const Icon(Icons.person_add_alt_1_outlined,
                   color: AppTheme.primary),
-              title: const Text('찾는 사람이 없습니다 — 새로 등록',
+              title: const Text('해당 환자가 없습니다 — 신규 등록',
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
@@ -246,7 +246,7 @@ class _PrescriptionUploadScreenState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('검색된 환자가 없습니다. 새로 등록할까요?',
+                const Text('검색된 환자가 없습니다. 신규 등록하시겠습니까?',
                     style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                 const SizedBox(height: 16),
                 TextField(
@@ -352,7 +352,7 @@ class _PrescriptionUploadScreenState
     final label = _labelOf(_docType);
 
     if (_queue.length >= _maxDocs) {
-      _tell('한 번에 $_maxDocs장까지 담을 수 있습니다.');
+      _tell('한 번에 최대 $_maxDocs건까지 추가할 수 있습니다.');
       return;
     }
 
@@ -360,7 +360,7 @@ class _PrescriptionUploadScreenState
     if (limit != null) {
       final already = _queue.where((d) => d.docType == _docType).length;
       if (already >= limit) {
-        _tell('$label${_josa(label, '은', '는')} 한 번에 $limit건까지 올릴 수 있습니다.');
+        _tell('$label${_josa(label, '은', '는')} 한 번에 $limit건까지 업로드할 수 있습니다.');
         return;
       }
     }
@@ -526,9 +526,9 @@ class _PrescriptionUploadScreenState
       _success   = false;
       _resultMsg = sent.isEmpty
           ? failure
-          : '$_uploadTotal건 가운데 ${sent.length}건을 올렸습니다. '
-            '남은 ${_queue.length}건은 그대로 두었습니다. 다시 누르면 같은 처방전'
-            '($_batchRx)에 이어서 올립니다 — $failure';
+          : '$_uploadTotal건 중 ${sent.length}건을 업로드했습니다. '
+            '남은 ${_queue.length}건은 목록에 유지됩니다. 다시 업로드하면 같은 처방전'
+            '($_batchRx)에 이어서 업로드됩니다 — $failure';
     });
   }
 
@@ -569,7 +569,7 @@ class _PrescriptionUploadScreenState
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.3)),
-                        Text('사진 또는 갤러리에서 선택',
+                        Text('카메라 촬영 또는 갤러리 선택',
                             style: TextStyle(
                                 color: Colors.white60, fontSize: 12)),
                       ],
@@ -661,7 +661,7 @@ class _PrescriptionUploadScreenState
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2, color: Colors.white),
                                       )
-                                    : const Text('찾기',
+                                    : const Text('검색',
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w700,
@@ -933,7 +933,7 @@ class _QueueCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('담은 서류',
+              const Text('추가된 서류',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1019,7 +1019,7 @@ class _QueueTile extends StatelessWidget {
             onPressed: onRemove,
             icon: const Icon(Icons.close_rounded,
                 size: 18, color: AppTheme.textMuted),
-            tooltip: '빼기',
+            tooltip: '제외',
           ),
       ],
     );
@@ -1062,13 +1062,13 @@ class _ImagePickArea extends StatelessWidget {
                 size: 26, color: Colors.white),
           ),
           const SizedBox(height: 12),
-          Text('$docLabel(으)로 담습니다',
+          Text('$docLabel(으)로 추가합니다',
               style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          const Text('유형을 바꿔 가며 여러 장을 담을 수 있습니다',
+          const Text('유형을 변경하며 여러 건을 추가할 수 있습니다',
               style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
           const SizedBox(height: 14),
           Row(

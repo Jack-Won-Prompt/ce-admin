@@ -178,7 +178,7 @@ class PrescriptionApiController extends Controller
         if ($prescription->image_path) {
             return response()->json([
                 'success' => false,
-                'message' => '이 건에는 처방전이 이미 있습니다. 먼저 지우고 올려 주십시오.',
+                'message' => '이 처방전에는 처방전 이미지가 이미 등록되어 있습니다. 먼저 삭제한 뒤 업로드해 주십시오.',
             ], 422);
         }
 
@@ -186,7 +186,7 @@ class PrescriptionApiController extends Controller
 
         return response()->json([
             'success'         => true,
-            'message'         => '처방전을 올렸습니다.',
+            'message'         => '처방전을 업로드했습니다.',
             'prescription_id' => $prescription->rx_number,
             'ocr_result'      => $this->formatOcrResult($prescription),
         ], 201);
@@ -387,7 +387,7 @@ class PrescriptionApiController extends Controller
         }
 
         $request->validate(['memo' => ['nullable', 'string', 'max:500']], [
-            'memo.max' => '남길 말은 500자 이하로 입력해 주십시오.',
+            'memo.max' => '메모는 500자 이하로 입력해 주십시오.',
         ]);
 
         $되물은적있나 = $p->status === 'review_hold' || $p->reuploadRequests()->exists();
@@ -440,7 +440,7 @@ class PrescriptionApiController extends Controller
         if (! $p->image_path) {
             return response()->json([
                 'success' => false,
-                'message' => '이미 지워진 자료입니다.',
+                'message' => '이미 삭제된 자료입니다.',
             ], 404);
         }
 
@@ -455,7 +455,7 @@ class PrescriptionApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '처방전을 지웠습니다. 다시 올려 주세요.',
+            'message' => '처방전을 삭제했습니다. 다시 업로드해 주십시오.',
         ]);
     }
 
@@ -473,7 +473,7 @@ class PrescriptionApiController extends Controller
         if (! $attachment) {
             return response()->json([
                 'success' => false,
-                'message' => '이미 지워진 자료입니다.',
+                'message' => '이미 삭제된 자료입니다.',
             ], 404);
         }
 
@@ -482,7 +482,7 @@ class PrescriptionApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '지웠습니다. 다시 올려 주세요.',
+            'message' => '삭제했습니다. 다시 업로드해 주십시오.',
         ]);
     }
 
@@ -536,8 +536,8 @@ class PrescriptionApiController extends Controller
         return response()->json([
             'success' => false,
             'message' => $mine
-                ? "「{$p->status_label}」 상태에서는 고칠 수 없습니다. 담당자에게 문의하세요."
-                : '내가 올린 처방전만 고칠 수 있습니다.',
+                ? "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하세요."
+                : '본인이 업로드한 처방전만 수정할 수 있습니다.',
         ], 403);
     }
 

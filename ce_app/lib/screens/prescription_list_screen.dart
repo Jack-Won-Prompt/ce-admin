@@ -232,8 +232,8 @@ class _PrescriptionListScreenState
                                 ),
                                 Text(
                                   state.total > 0
-                                      ? '내가 올린 처방전 ${state.total}건'
-                                      : '내가 올린 처방전',
+                                      ? '내가 업로드한 처방전 ${state.total}건'
+                                      : '내가 업로드한 처방전',
                                   style: TextStyle(
                                       color: Colors.white.withOpacity(0.6),
                                       fontSize: 12),

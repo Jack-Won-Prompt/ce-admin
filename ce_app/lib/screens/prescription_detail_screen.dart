@@ -126,9 +126,9 @@ class _PrescriptionDetailScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('지우시겠습니까?',
+        title: const Text('삭제하시겠습니까?',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-        content: Text('$what을(를) 지웁니다.\n지운 자료는 되돌릴 수 없고, 다시 올려야 합니다.',
+        content: Text('$what을(를) 삭제합니다.\n삭제한 자료는 복구할 수 없으며, 다시 업로드해야 합니다.',
             style: const TextStyle(fontSize: 14, height: 1.6)),
         actions: [
           TextButton(
@@ -136,7 +136,7 @@ class _PrescriptionDetailScreenState
               child: const Text('취소')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('지우기',
+            child: const Text('삭제',
                 style: TextStyle(
                     color: AppTheme.danger, fontWeight: FontWeight.w800)),
           ),
@@ -206,7 +206,7 @@ class _PrescriptionDetailScreenState
                 const Text('서류 추가',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('${d.rxNumber}에 더할 서류 유형을 고르세요. 담아 두었다가 아래 「서류 올리기」로 한꺼번에 올립니다.',
+                Text('${d.rxNumber}에 추가할 서류 유형을 선택하세요. 목록에 추가한 뒤 아래 「서류 업로드」로 한 번에 업로드합니다.',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textMuted)),
                 const SizedBox(height: 14),
@@ -225,7 +225,7 @@ class _PrescriptionDetailScreenState
                 if (d.imageUrl != null) ...[
                   const SizedBox(height: 10),
                   const Text(
-                      '처방전은 이미 있습니다. 바꾸려면 먼저 목록에서 처방전을 🗑로 지우세요.',
+                      '처방전이 이미 등록되어 있습니다. 변경하려면 먼저 목록에서 처방전을 삭제(🗑)하세요.',
                       style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
                 const SizedBox(height: 18),
@@ -280,11 +280,11 @@ class _PrescriptionDetailScreenState
     // 처방전ㆍ등록신청서는 한 건에 한 장 — 이미 담아 두었으면 받지 않는다
     if (_pending.any((p) => p.docType == docType)) {
       if (docType == 'prescription') {
-        _tell('처방전은 한 장만 올릴 수 있습니다.');
+        _tell('처방전은 1건만 업로드할 수 있습니다.');
         return;
       }
       if (docType == 'registration_form') {
-        _tell('등록신청서는 한 장만 올릴 수 있습니다.');
+        _tell('등록신청서는 1건만 업로드할 수 있습니다.');
         return;
       }
     }
@@ -337,8 +337,8 @@ class _PrescriptionDetailScreenState
       _pending.removeWhere(sent.contains);
     });
     _tell(failure == null
-        ? '${sent.length}건을 올렸습니다.'
-        : '${sent.length}건을 올리고 멈췄습니다: $failure. 남은 ${_pending.length}건은 그대로 두었습니다.');
+        ? '${sent.length}건을 업로드했습니다.'
+        : '${sent.length}건 업로드 후 중단되었습니다: $failure. 남은 ${_pending.length}건은 목록에 유지됩니다.');
     await _load();
   }
 
@@ -360,8 +360,8 @@ class _PrescriptionDetailScreenState
           children: [
             Text(
               open > 0
-                  ? '아직 다시 올리지 않은 요청이 $open건 있습니다. 그래도 검수를 다시 요청할까요?'
-                  : '다시 올린 서류로 검수를 요청합니다.',
+                  ? '재업로드하지 않은 요청이 $open건 있습니다. 검수를 재요청하시겠습니까?'
+                  : '재업로드한 서류로 검수를 요청합니다.',
               style: TextStyle(
                   fontSize: 14,
                   height: 1.5,
@@ -374,7 +374,7 @@ class _PrescriptionDetailScreenState
               minLines: 1,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: '검수자에게 남길 말 (선택)',
+                labelText: '검수자 전달 메모 (선택)',
                 counterText: '',
               ),
             ),
@@ -500,8 +500,8 @@ class _PrescriptionDetailScreenState
                     if (_pending.isNotEmpty)
                       GradientButton(
                         label: _uploading
-                            ? '올리는 중 $_upDone / ${_pending.length}건'
-                            : '서류 올리기 (${_pending.length}건)',
+                            ? '업로드 중 $_upDone / ${_pending.length}건'
+                            : '서류 업로드 (${_pending.length}건)',
                         icon: Icons.cloud_upload_outlined,
                         loading: _uploading,
                         onPressed: _uploading ? null : () => _uploadPending(d),
@@ -524,7 +524,7 @@ class _PrescriptionDetailScreenState
                               : const Icon(Icons.fact_check_outlined, size: 18),
                           label: Text(
                               _pending.isNotEmpty
-                                  ? '검수 재요청 — 먼저 서류를 올려 주세요'
+                                  ? '검수 재요청 — 먼저 서류를 업로드하세요'
                                   : '검수 재요청',
                               style: const TextStyle(fontWeight: FontWeight.w800)),
                           style: OutlinedButton.styleFrom(
@@ -749,8 +749,8 @@ class _PrescriptionDetailScreenState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '올린 서류가 없습니다. 같은 처방전(${d.rxNumber})으로 다시 올리려면 '
-                              '아래 「서류 추가」를 누르세요.\n업로드 탭에서 올리면 새 처방전 번호가 생깁니다.',
+                              '등록된 서류가 없습니다. 같은 처방전(${d.rxNumber})으로 다시 업로드하려면 '
+                              '아래 「서류 추가」를 선택하세요.\n업로드 탭에서 업로드하면 새 처방전 번호가 생성됩니다.',
                               style: const TextStyle(
                                   fontSize: 12.5,
                                   height: 1.5,
@@ -796,7 +796,7 @@ class _PrescriptionDetailScreenState
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '「${d.statusLabel}」 상태에서는 자료를 고칠 수 없습니다. 담당자에게 문의하세요.',
+                            '「${d.statusLabel}」 상태에서는 자료를 수정할 수 없습니다. 담당자에게 문의하세요.',
                             style: const TextStyle(
                                 fontSize: 12, color: AppTheme.textMuted),
                           ),
@@ -942,7 +942,7 @@ class _AttachmentsCard extends StatelessWidget {
               const Icon(Icons.attach_file_rounded,
                   size: 16, color: AppTheme.textSecondary),
               const SizedBox(width: 6),
-              const Text('올린 서류',
+              const Text('등록 서류',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -969,7 +969,7 @@ class _AttachmentsCard extends StatelessWidget {
           if (hasPrescriptionImage) ...[
             _FileTile(
               label: '처방전',
-              subLabel: '처방전으로 접수된 그림',
+              subLabel: '처방전 이미지',
               selected: viewingId == null,
               thumb: null,
               headers: headers,
@@ -1103,7 +1103,7 @@ class _FileTile extends StatelessWidget {
                             color: AppTheme.danger.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('다시 올려 주세요',
+                          child: const Text('재업로드 요청',
                               style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
@@ -1130,7 +1130,7 @@ class _FileTile extends StatelessWidget {
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline,
                     size: 19, color: AppTheme.danger),
-                tooltip: '지우기',
+                tooltip: '삭제',
               ),
           ],
         ),
@@ -1163,7 +1163,7 @@ class _RequestBanner extends StatelessWidget {
               const Icon(Icons.upload_file_rounded,
                   size: 17, color: AppTheme.danger),
               const SizedBox(width: 6),
-              Text('다시 올려 달라는 요청 ${requests.length}건',
+              Text('재업로드 요청 ${requests.length}건',
                   style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1177,7 +1177,7 @@ class _RequestBanner extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           const Text(
-              '아래 「서류 추가」로 담고 「서류 올리기」를 누르면 요청이 닫힙니다. 잘못 올린 서류는 🗑로 지웁니다.',
+              '아래 「서류 추가」로 추가한 뒤 「서류 업로드」를 선택하면 요청이 완료 처리됩니다. 잘못 등록한 서류는 🗑로 삭제합니다.',
               style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       ),
@@ -1239,7 +1239,7 @@ class _AddDocButton extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.add_a_photo_outlined, size: 18),
-        label: Text(adding ? '올리는 중…' : '서류 추가 (카메라 · 사진 선택)',
+        label: Text(adding ? '업로드 중…' : '서류 추가 (카메라 · 사진 선택)',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppTheme.primary,
@@ -1293,7 +1293,7 @@ class _PendingCard extends StatelessWidget {
               const Icon(Icons.pending_actions_outlined,
                   size: 16, color: AppTheme.textSecondary),
               const SizedBox(width: 6),
-              const Text('올릴 서류',
+              const Text('업로드 대기 서류',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1314,7 +1314,7 @@ class _PendingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          const Text('아래 「서류 올리기」를 누르면 한꺼번에 올라갑니다.',
+          const Text('아래 「서류 업로드」를 선택하면 한 번에 업로드됩니다.',
               style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
           const SizedBox(height: 8),
           for (var i = 0; i < files.length; i++)
@@ -1360,7 +1360,7 @@ class _PendingCard extends StatelessWidget {
                     onPressed: busy ? null : () => onRemove(i),
                     icon: const Icon(Icons.close_rounded,
                         size: 19, color: AppTheme.textMuted),
-                    tooltip: '빼기',
+                    tooltip: '제외',
                   ),
                 ],
               ),
