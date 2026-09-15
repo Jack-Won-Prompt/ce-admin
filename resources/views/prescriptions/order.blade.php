@@ -33,7 +33,7 @@
   <div class="help-section-title">주문 생성 순서</div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">1</div>
-    <div class="help-item-text">상세 목록 탭에서 환자 정보 확인·수정 후 <b>검수 승인하기</b></div>
+    <div class="help-item-text">상세 목록 탭에서 환자 정보 확인·수정 후 <b>입력 검수 승인</b></div>
   </div>
   <div class="help-item">
     <div class="help-item-icon" style="background:var(--primary-light);color:var(--primary);min-width:30px;font-weight:700;font-size:13px;">2</div>
@@ -2592,9 +2592,9 @@ $calcDeposit  = $calcCopay;
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
                      누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
                      resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
-                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력 완료를 통보하고 검수를 요청합니다">검수 요청하기</button>
+                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력한 환자ㆍ병원ㆍ처방 정보의 검수를 요청합니다">입력 검수 요청</button>
                 @perm('prescriptions', 'approve')
-                <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 승인합니다">검수 승인하기</button>
+                <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="입력한 정보를 확인하고 승인합니다">입력 검수 승인</button>
                 @endperm
                 {{-- 검수 다음 걸음은 주문이다. 여기까지 와서 주문을 만들었는지 아닌지는
                      탭을 열어 봐야 알 수 있었다 — 걸음 띠에서 바로 읽게 한다.
@@ -4519,7 +4519,7 @@ $calcDeposit  = $calcCopay;
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('approveModal')">취소</button>
-      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 검수 승인하기</button>
+      <button class="btn btn-primary" id="btnConfirmApprove" onclick="confirmApprove(this)"><i class="fa-solid fa-circle-check"></i> 입력 검수 승인</button>
     </div>
   </div>
 </div>
@@ -5743,7 +5743,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(2)',
     title: '상세 목록 탭',
-    body: '환자·병원·처방 정보를 확인하고 수정합니다. 다 적었으면 <b>검수 요청하기</b>, 검수자는 <b>검수 승인하기</b>를 누릅니다.'
+    body: '환자·병원·처방 정보를 확인하고 수정합니다. 다 적었으면 <b>입력 검수 요청</b>, 검수자는 <b>입력 검수 승인</b>을 누릅니다.'
   },
   {
     selector: '.tab-btn:nth-child(3)',
@@ -8479,8 +8479,8 @@ window.HELP_TOUR_STEPS = [
     if (status === 'review_requested') {
       document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(btn => {
         btn.disabled = true;
-        btn.title = '이미 검수를 요청했습니다';
-        btn.textContent = '검수 요청됨';
+        btn.title = '이미 입력 검수를 요청했습니다';
+        btn.textContent = '입력 검수 요청됨';
       });
     }
 
@@ -8489,10 +8489,10 @@ window.HELP_TOUR_STEPS = [
        검수일시가 덮인다. 열 때도 같은 자리에서 잠근다. */
     if (status === 'approved' || status === 'ordered') {
       document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
-        b.disabled = true; b.textContent = '검수 승인됨'; b.title = '이미 검수를 마쳤습니다';
+        b.disabled = true; b.textContent = '입력 검수 승인됨'; b.title = '이미 입력 검수를 승인했습니다';
       });
       document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => {
-        b.disabled = true; b.title = '이미 검수를 마쳤습니다';
+        b.disabled = true; b.title = '이미 입력 검수를 승인했습니다';
       });
     }
   }
@@ -8503,7 +8503,7 @@ window.HELP_TOUR_STEPS = [
 
     // 다 끝난 건이라 검수로 가는 단추 둘 다 잠근다
     document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
-      b.disabled = true; b.textContent = '검수 승인됨'; b.title = '이미 검수를 마쳤습니다';
+      b.disabled = true; b.textContent = '입력 검수 승인됨'; b.title = '이미 입력 검수를 승인했습니다';
     });
     document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => { b.disabled = true; });
 
@@ -8615,13 +8615,13 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
       if (res.success) {
-        showToast('검수를 요청했습니다.', 'success');
+        showToast('입력 검수를 요청했습니다.', 'success');
         /* 화면을 다시 읽지 않는다. 적던 자리ㆍ연 탭ㆍ스크롤이 통째로 처음으로 돌아가,
            이어서 할 일이 있어도 그 자리를 다시 찾아가야 했다.
            바뀌는 것은 상태 하나뿐이니 그 자리만 고쳐 세운다. */
         setRxStatus(res.status, res.status_label, res.status_badge);
       } else {
-        showToast(res.message || '검수 요청 실패', 'danger');
+        showToast(res.message || '입력 검수 요청 실패', 'danger');
       }
     } catch (e) {
       showToast('오류가 발생했습니다.', 'danger');
@@ -8637,15 +8637,15 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/approve`, 'POST', { memo });
       if (res.success) {
-        BtnState.success(btn, '검수 완료');
-        showToast('검수를 마쳤습니다.', 'success');
+        BtnState.success(btn, '승인 완료');
+        showToast('입력 검수를 승인했습니다.', 'success');
         /* 화면을 다시 읽지 않는다 — 바뀌는 자리만 고쳐 세운다.
            상태 배지ㆍ검수 걸음ㆍ검수자 줄, 그리고 검수를 마치며 만들어지는 서류. */
         setRxApproved(res);
         setTimeout(() => closeModal('approveModal'), 800);
       } else {
         BtnState.error(btn, '실패');
-        showToast(res.message || '검수 완료 실패', 'danger');
+        showToast(res.message || '입력 검수 승인 실패', 'danger');
         setTimeout(() => BtnState.reset(btn), 2500);
       }
     } catch (e) {
