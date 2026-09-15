@@ -47,7 +47,10 @@
      (전에는 .ss-card 가 16 을 따로 갖고, 판이 흰 판이라 안내문·단추 줄에만
      좌우 16 을 덧대고 있었다 — 세 곳에 흩어져 있던 여백을 한 곳으로 모은다).
      카드가 overflow:hidden 이라 긴 판은 이 안에서 스스로 구른다. */
-  .ss-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 16px; gap: 12px; }
+  /* 아래 안여백은 저장 줄이 대신 갖는다 — 몸통이 갖고 있으면 붙박이 저장 줄이
+     그 위에서 멈춰(붙박이는 제 담는 상자 밖으로 나가지 못한다) 12 만큼 틈이 남고,
+     그 틈으로 칸이 비쳐 지나간다. */
+  .ss-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 16px 0; gap: 12px; }
 
   .ss-panel { display: none; flex-direction: column; gap: 12px; }
   .ss-panel.active { display: flex; }
@@ -77,11 +80,9 @@
      윗선 하나를 그어 한 줄(단추 바)로 읽히게 한다. */
   .ss-actions {
     display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap;
-    /* 붙는 자리는 몸통 안쪽(content box) 아래끝이라, 그대로 두면 몸통의 아래
-       안여백 12 만큼 틈이 남아 그리로 칸이 비쳐 지나간다. 그 12 를 아래로 더
-       내려 붙이고, 같은 만큼 제 안여백으로 채워 단추가 바닥에 닿지 않게 한다. */
-    position: sticky; bottom: -12px; z-index: 2;
-    padding: 12px 0 24px;
+    position: sticky; bottom: 0; z-index: 2;
+    /* 몸통에서 넘겨받은 아래 안여백(12)을 여기서 갖는다 */
+    padding: 12px 0;
     background: var(--white, #fff);
     border-top: 1px solid var(--gray-200);
   }
