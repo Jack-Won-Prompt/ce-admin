@@ -504,14 +504,23 @@
      카드마다 전폭 머리띠를 두고 본문을 그 아래로 내린다.
      머리 h44 · pad 8/16 · 좌우 space-between · 아래 1px #E8EAEC (시안 Frame 48101479).
      접기 화살표(chevron 14)는 이 탭 카드를 여닫는 동작이 없어 넣지 않았다. */
+  /* 좁아지면 **두 줄로 깔끔히** 나뉜다 (2026-09-16 고침).
+
+     여태 왼쪽과 오른쪽이 저마다 안에서 접혔다 — 제목 / 배지 / 합계 / 단추가
+     제각기 줄을 차지해 네 줄로 흩어져 보였다. 화면 폭이 1920 이 아니면 늘 그랬고,
+     주문 제품 탭은 왼쪽 그림판이 절반을 가져가 실제로 쓸 폭이 842 뿐이다.
+
+     안에서는 접지 않고(nowrap) 바깥에서만 접는다. 그러면 넓을 때는 한 줄,
+     좁을 때는 「제목ㆍ배지」 / 「합계ㆍ단추」 두 줄로 선다. 배지가 넘치면 그 안에서
+     가로로 구른다 — 잘라 내면 무슨 처방인지 알 수 없다. */
   #tab-product .pt-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
-                               min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
-  /* 배지 묶음은 좁아지면 줄어든다 (2026-09-16 고침).
-     min-width:0 만으로는 모자랐다 — 안쪽 .pt-head-badges 가 제 폭을 고집해
-     합계와 단추를 다음 줄로 밀어냈다. 둘 다 줄어들 수 있게 둔다. */
-  #tab-product .pt-head-left  { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; flex-shrink:1; }
-  #tab-product .pt-head-badges { min-width:0; }
-  #tab-product .pt-head-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+                               min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200);
+                               flex-wrap:wrap; }
+  #tab-product .pt-head-left  { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:nowrap; }
+  #tab-product .pt-head-badges { min-width:0; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  #tab-product .pt-head-badges::-webkit-scrollbar { display:none; }
+  #tab-product .pt-head-right { display:flex; align-items:center; gap:12px; flex-wrap:nowrap;
+                                justify-content:flex-end; margin-left:auto; }
   /* 제목 — 아이콘 20 + 13/700 (시안 Frame 48101480) */
   #tab-product .pt-card-title { display:flex; align-items:center; gap:8px;
                                 font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000); white-space:nowrap; }
