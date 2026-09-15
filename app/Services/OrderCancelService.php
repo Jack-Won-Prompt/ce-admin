@@ -114,12 +114,15 @@ class OrderCancelService
     }
 
     /**
-     * 정정으로 금액이 바뀌었을 때 돈을 맞춘다 (2026-09-14 지시 ②).
+     * 정정으로 금액이 바뀌었을 때 돈을 맞춘다 (2026-09-14 지시 ②ㆍ2026-09-15 고침).
      *
-     *   결제 전  보낸 결제 링크를 해지하고, 바뀐 금액으로 다시 보낼 수 있게 둔다
-     *   결제 후  줄어든 차액만큼 부분 환불한다
+     *   결제 전  보낸 링크를 해지하고 바뀐 금액으로 다시 보낸다
+     *   결제 후  받은 돈을 **통째로 무르고** 바뀐 금액으로 다시 보낸다
      *
-     * 늘어난 때는 무르지 않는다 — 더 받을 돈은 새 링크로 청한다.
+     * 결제 후에 차액만 부분 환불하던 것을 걷어냈다 (2026-09-15 지시). 부분 환불은
+     * 늘어난 때를 담지 못해 「차액은 따로 청구해 주십시오」라는 안내로 끝났고, 그
+     * 안내는 토스트로 지나가 담당자가 잊으면 모자란 채로 남았다. 무르고 다시
+     * 청하면 늘든 줄든 한 가지 길이라 헷갈릴 자리가 없다.
      *
      * @param int $이전 정정 전 기준 금액 — **실제로 오간 돈**이다
      *                  (Order::결제기준금액). 주문의 patient_copay 가 아니다 —
@@ -134,71 +137,101 @@ class OrderCancelService
             return '';
         }
 
-        /* ── 결제 전 — 보낸 링크를 해지하고 **바뀐 금액으로 다시 보낸다**
-              (2026-09-15 지시 1).
-
-           여태 해지만 하고 「다시 보내 주십시오」라 알렸다. 그런데 그 말은 토스트로
+        /* ── 결제 전 — 해지하고 바뀐 금액으로 다시 보낸다 ────────────────
+           여태 해지만 하고 「다시 보내 주십시오」라 알렸다. 그 말은 토스트로
            지나가고, 담당자가 정정을 마친 뒤 결제전송을 따로 눌러야 했다 — 잊으면
-           환자는 옛 링크가 죽은 줄도 모른 채 기다린다.
-
-           어느 방법으로 보낼지는 마지막에 보낸 것을 따른다. 처음 보낼 때 담당자가
-           고른 것이고, 금액만 바뀌었을 뿐 방법이 달라질 까닭이 없다. */
+           환자는 옛 링크가 죽은 줄도 모른 채 기다린다. */
         if (! $order->isDepositConfirmed()) {
-            $살아있던것 = PaymentLink::where('order_id', $order->id)
-                ->where('status', 'sent')->latest('id')->get();
-
-            if ($살아있던것->isEmpty()) {
-                return '';
-            }
-
-            PaymentLink::whereIn('id', $살아있던것->pluck('id'))
-                ->update(['status' => 'cancelled']);
-
-            $해지 = $살아있던것->count();
-            $앞것 = $살아있던것->first();
-
-            /* 바뀐 금액으로 다시 보낸다. 못 보내도 해지는 이미 끝났다 —
-               그 사실을 그대로 알려 담당자가 손으로 보내게 한다. */
-            try {
-                $새것 = app(\App\Services\PaymentLinkService::class)
-                            ->issue($order->refresh(), $앞것->method, $앞것->receiver);
-            } catch (\Throwable $e) {
-                Log::warning('[주문 정정] 결제 링크를 다시 보내지 못했습니다', [
-                    'order' => $order->order_number, 'error' => $e->getMessage(),
-                ]);
-                $새것 = ['sent' => false, 'message' => $e->getMessage()];
-            }
-
-            $바뀐금액 = number_format($지금);
-
-            return ($새것['sent'] ?? false)
-                ? "보낸 결제 링크 {$해지}건을 해지하고, 바뀐 금액 {$바뀐금액}원으로 다시 보냈습니다."
-                : "보낸 결제 링크 {$해지}건을 해지했습니다 — 다시 보내지 못했으므로"
-                  . " 「결제전송」으로 직접 보내 주십시오 (" . ($새것['message'] ?? '') . ')';
+            return $this->링크다시보내기($order, $지금);
         }
 
-        // ── 결제 후 — 줄어든 만큼만 무른다
-        if ($지금 >= $이전) {
-            $늘어난 = number_format($지금 - $이전);
-
-            return "이미 받은 건입니다 — 늘어난 {$늘어난}원은 결제 링크로 별도 청구해 주십시오.";
-        }
-
-        $차액 = $이전 - $지금;
-        $결과 = $this->결제취소->cancel($order, "주문 정정 — 금액 변경 (차액 {$차액}원)", $차액);
+        /* ── 결제 후 — 받은 돈을 통째로 무르고 다시 청한다 (2026-09-15 지시) ── */
+        $결과 = $this->결제취소->cancel($order, sprintf(
+            '주문 정정 — 금액 변경 (%s원 → %s원)', number_format($이전), number_format($지금)
+        ));
 
         if (! ($결과['ok'] ?? false)) {
-            Log::warning('[주문 정정] 부분 환불 실패', [
-                'order' => $order->order_number, 'amount' => $차액, 'message' => $결과['message'] ?? '',
+            Log::warning('[주문 정정] 결제 취소 실패', [
+                'order' => $order->order_number, '이전' => $이전, '지금' => $지금,
+                'message' => $결과['message'] ?? '',
             ]);
 
-            return "차액 " . number_format($차액) . "원을 환불하지 못했습니다 — " . ($결과['message'] ?? '') ;
+            return '받은 돈을 무르지 못했습니다 — ' . ($결과['message'] ?? '')
+                 . ' 결제를 취소한 뒤 바뀐 금액으로 다시 보내 주십시오.';
         }
 
-        activity()->causedBy(Auth::user())->performedOn($order)
-            ->log("주문 정정 부분 환불 ({$order->order_number}) — " . number_format($차액) . '원');
+        /* 손으로 확인해 둔 자취를 지운다. 남겨 두면 무른 뒤에도 「받은 건」으로
+           보여, 바뀐 금액의 링크가 「이미 결제가 끝난 주문」으로 막힌다
+           (PaymentLinkController). */
+        $order->forceFill([
+            'deposit_confirmed_at' => null,
+            'deposit_confirmed_by' => null,
+            'deposit_amount'       => null,
+        ])->save();
 
-        return "차액 " . number_format($차액) . "원을 환불했습니다.";
+        activity()->causedBy(Auth::user())->performedOn($order)->log(sprintf(
+            '주문 정정 결제 취소 (%s) — %s원을 돌려주고 %s원으로 다시 청합니다',
+            $order->order_number, number_format($이전), number_format($지금)
+        ));
+
+        return trim('받은 ' . number_format($이전) . '원을 돌려주었습니다. '
+                  . $this->링크다시보내기($order->refresh(), $지금, true));
+    }
+
+    /**
+     * 살아 있는 결제 링크를 해지하고 바뀐 금액으로 다시 보낸다.
+     *
+     * 어느 방법으로 보낼지는 마지막에 보낸 것을 따른다. 처음 보낼 때 담당자가
+     * 고른 것이고, 금액만 바뀌었을 뿐 방법이 달라질 까닭이 없다.
+     *
+     * @param bool $무를것없어도 살아 있는 링크가 없어도 보낸다. 결제가 끝난 건은
+     *                           링크가 이미 「결제완료」로 닫혀 있어 해지할 것이
+     *                           없지만, 무른 뒤에는 다시 보내야 한다.
+     */
+    private function 링크다시보내기(Order $order, int $지금, bool $무를것없어도 = false): string
+    {
+        $살아있던것 = PaymentLink::where('order_id', $order->id)
+            ->where('status', 'sent')->latest('id')->get();
+
+        if ($살아있던것->isEmpty() && ! $무를것없어도) {
+            return '';
+        }
+
+        if ($살아있던것->isNotEmpty()) {
+            PaymentLink::whereIn('id', $살아있던것->pluck('id'))
+                ->update(['status' => 'cancelled']);
+        }
+
+        $해지 = $살아있던것->count();
+
+        /* 보낼 방법 — 살아 있던 것이 없으면 지난 것 가운데 마지막을 본다 */
+        $본보기 = $살아있던것->first()
+               ?? PaymentLink::where('order_id', $order->id)->latest('id')->first();
+
+        if (! $본보기) {
+            return $해지 ? "보낸 결제 링크 {$해지}건을 해지했습니다." : '';
+        }
+
+        /* 바뀐 금액으로 다시 보낸다. 못 보내도 해지는 이미 끝났다 —
+           그 사실을 그대로 알려 담당자가 손으로 보내게 한다. */
+        try {
+            $새것 = app(\App\Services\PaymentLinkService::class)
+                        ->issue($order->refresh(), $본보기->method, $본보기->receiver);
+        } catch (\Throwable $e) {
+            Log::warning('[주문 정정] 결제 링크를 다시 보내지 못했습니다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+            $새것 = ['sent' => false, 'message' => $e->getMessage()];
+        }
+
+        $앞말   = $해지 ? "보낸 결제 링크 {$해지}건을 해지하고, " : '';
+        $바뀐금액 = number_format($지금);
+
+        return ($새것['sent'] ?? false)
+            ? "{$앞말}바뀐 금액 {$바뀐금액}원으로 다시 보냈습니다."
+            : ($해지 ? "보낸 결제 링크 {$해지}건을 해지했습니다 — " : '')
+              . "바뀐 금액으로 다시 보내지 못했으므로 「결제전송」으로 직접 보내 주십시오 ("
+              . ($새것['message'] ?? '') . ')';
     }
 
     // ── 안쪽 ────────────────────────────────────────────────────────────
