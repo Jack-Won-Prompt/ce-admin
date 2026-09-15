@@ -506,7 +506,11 @@
      접기 화살표(chevron 14)는 이 탭 카드를 여닫는 동작이 없어 넣지 않았다. */
   #tab-product .pt-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
                                min-height:44px; padding:8px 16px; border-bottom:1px solid var(--gray-200); }
-  #tab-product .pt-head-left  { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; }
+  /* 배지 묶음은 좁아지면 줄어든다 (2026-09-16 고침).
+     min-width:0 만으로는 모자랐다 — 안쪽 .pt-head-badges 가 제 폭을 고집해
+     합계와 단추를 다음 줄로 밀어냈다. 둘 다 줄어들 수 있게 둔다. */
+  #tab-product .pt-head-left  { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; flex-shrink:1; }
+  #tab-product .pt-head-badges { min-width:0; }
   #tab-product .pt-head-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
   /* 제목 — 아이콘 20 + 13/700 (시안 Frame 48101480) */
   #tab-product .pt-card-title { display:flex; align-items:center; gap:8px;
@@ -4061,10 +4065,10 @@ $calcDeposit  = $calcCopay;
                    본인 부담금이 앞에 선다(요청서 16쪽) — 고객에게 얼마를 받는지가 이
                    화면에서 가장 먼저 필요한 숫자고, 기관 몫은 그다음에 따라온다. --}}
               <span class="pt-head-total"><i class="fa-solid fa-circle-dollar-to-slot"></i>
-                총 본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
+                본인 부담금: <b id="summary-copay">₩ {{ number_format($calcCopay) }}</b>
               </span>
               <span class="pt-head-total">
-                총 기관 부담금: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
+                기관 부담금: <b id="summary-nhis">₩ {{ number_format($calcNhis) }}</b>
               </span>
               {{-- 버튼 3개 — 시안 Frame 48101503: [되돌리기 69][제품 추가 69][저장 45 주색] h28 · r8 · pad 0/12 · 12/500.
                    되돌리기·저장은 상세 목록 탭줄에 있는 resetToSaved()·saveOCR() 를 그대로 쓴다
@@ -4084,7 +4088,7 @@ $calcDeposit  = $calcCopay;
                   <button type="button" class="rx-acc-btn" id="btnParentItems"
                           onclick="원주문제품보기(event)"
                           title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
-                    <i class="fa-solid fa-clock-rotate-left"></i> 원 주문 제품
+                    <i class="fa-solid fa-clock-rotate-left"></i> 원 주문
                   </button>
                   <div id="parentItemsPop" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:560px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:520;">
                     <div id="parentItemsHead" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;cursor:move;user-select:none;"
