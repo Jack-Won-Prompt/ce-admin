@@ -334,8 +334,14 @@ return [
     ],
     'mobile' => [
         'label' => '모바일 앱',
-        'desc'  => '앱이 스스로 새 판을 확인해 알립니다',
+        'desc'  => '앱의 새 판 안내와 앱 화면 구성',
         'fields' => [
+            /* 하단 채팅 메뉴를 숨길지 (2026-09-15 지시). 「숨기기」로 둔 것은 저장된 값이
+               없을 때 여태처럼 보이게 하려는 것이다 — 「보이기」로 두면 저장 전까지
+               화면에는 꺼짐으로 보이면서 앱에는 보였다. 앱은 GET /api/auth/options 의
+               chat_visible 로 받는다. 대화방과 기록은 서버에 그대로 남는다. */
+            'chat_hidden' => ['label' => '앱 — 하단 채팅 메뉴 숨기기', 'config' => 'mobile.chat_hidden', 'type' => 'bool',
+                              'help'  => '켜면 모바일 앱 하단에서 채팅 메뉴가 사라집니다. 대화 내용은 지워지지 않고, 끄면 그대로 다시 보입니다. 1.3.2 이상 앱에 적용되며, 앱을 다시 열거나 탭을 옮길 때 반영됩니다.'],
             'latest_version' => ['label' => '최신 판', 'config' => 'mobile.latest_version', 'width' => 1,
                                  'help'  => '스토어에 등록한 버전(예: 1.1.0). 이보다 낮은 버전에 새 버전이 있음을 안내합니다. 비우면 안내하지 않습니다.'],
             'min_version'    => ['label' => '최소 판', 'config' => 'mobile.min_version', 'width' => 1,

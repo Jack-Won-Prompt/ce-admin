@@ -150,14 +150,17 @@ class AuthApiController extends Controller
 
     // ── GET /api/auth/options ─────────────────────────────
     /**
-     * 로그인 화면이 무엇을 보여 줄지 앱에 알린다. 로그인 밖의 자리다 —
-     * 로그인하기 전에 물어야 하는 값이라서.
+     * 앱이 무엇을 보여 줄지 알린다. 로그인 밖의 자리다 — 로그인 화면은 로그인하기
+     * 전에 물어야 하므로.
+     *
+     * chat_visible — 하단 채팅 메뉴를 보일지(환경 설정 › 모바일 앱 › 채팅 메뉴 숨기기).
      */
     public function options(): JsonResponse
     {
         return response()->json([
             'success'        => true,
             'password_login' => (bool) config('auth.password_login.app', true),
+            'chat_visible'   => ! (bool) config('mobile.chat_hidden', false),
         ]);
     }
 
