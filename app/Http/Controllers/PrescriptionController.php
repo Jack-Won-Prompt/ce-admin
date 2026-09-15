@@ -826,16 +826,8 @@ class PrescriptionController extends Controller
         $reviewPending = Prescription::where('status', 'review_needed')->count();
 
         /* 서류명은 환경 설정에서 정한다 — 화면에 박아 두면 한 줄 늘리는 데도 배포가 필요했다.
-           이 화면은 처방 서류만 받으므로 청구 갈래(claim)는 보내지 않는다. */
-        $docTypes = [];
-        foreach (['rx', 'etc'] as $kind) {
-            $docTypes[$kind] = \App\Models\CommonCode::options('doc_type', $kind)
-                /* 위임장은 고르는 자리에 두지 않는다 — 주문 등록에서 환자가 서명하면
-                   그때 저절로 만들어져 서류 관리에 들어간다. 여기서 또 올리게 두면
-                   같은 위임장이 두 장이 되고, 어느 것이 서명본인지 알 수 없다. */
-                ->reject(fn ($c) => $c->code === 'delegation')
-                ->map(fn ($c) => ['code' => $c->code, 'label' => $c->label])->values()->all();
-        }
+           앱도 같은 목록을 받는다(GET /api/prescriptions/doc-types). 규칙은 한 자리에 둔다. */
+        $docTypes = \App\Support\UploadDocTypes::grouped();
 
         return view('prescriptions.upload', compact('prescriptions', 'managers',
                                                     'patientsJson', 'reviewPending', 'docTypes'));

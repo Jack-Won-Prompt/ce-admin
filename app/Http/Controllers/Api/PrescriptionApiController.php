@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPrescriptionOcr;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
+use App\Support\UploadDocTypes;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
@@ -19,10 +20,19 @@ use Illuminate\Validation\Rule;
 class PrescriptionApiController extends Controller
 {
     /** 모바일 업로드 화면에서 고를 수 있는 서류 유형 — common_codes(doc_type) 코드값과 동일하게 맞춘다 */
-    /* 위임장(delegation)은 받지 않는다. 주문 등록에서 서명하면 저절로 만들어지므로
-       앱으로 또 올리면 위임장이 두 장이 된다. 앱 목록에서만 빼면 이미 깔린 옛 판은
-       계속 올릴 수 있어, 서버에서도 막는다(웹 업로드 화면과 같은 규칙). */
-    private const DOC_TYPES = ['registration_form', 'prescription', 'test_result', 'id_card'];
+    // ── GET /api/prescriptions/doc-types ───────────────────
+    /**
+     * 업로드에서 고를 수 있는 서류 유형. 웹 업로드 화면과 같은 목록이다(UploadDocTypes).
+     * 앱이 목록을 코드에 박아 두지 않고 여기서 받아 간다 — 환경 설정에서 유형을
+     * 바꾸면 앱도 따라간다.
+     */
+    public function docTypes(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => UploadDocTypes::list(),
+        ]);
+    }
 
     // ── POST /api/prescriptions/upload ───────────────────
     /**
@@ -41,7 +51,8 @@ class PrescriptionApiController extends Controller
                 'max:10240', // 10MB
             ],
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
-            'doc_type'   => ['required', 'string', Rule::in(self::DOC_TYPES)],
+            // 웹 업로드 화면과 같은 목록만 받는다 — 위임장은 거기서 빠진다(UploadDocTypes)
+            'doc_type'   => ['required', 'string', Rule::in(UploadDocTypes::codes())],
             'memo'       => ['nullable', 'string', 'max:500'],
         ], [
             'prescription_image.required' => '처방전 이미지를 첨부해주세요.',

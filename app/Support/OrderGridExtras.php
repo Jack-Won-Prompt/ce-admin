@@ -106,6 +106,28 @@ class OrderGridExtras
         return $self;
     }
 
+    /**
+     * 공단이 통장에 찍는 입금자명 — 「NB + 주민번호 앞 여섯 자리」.
+     *
+     * 2026-09-11 엑셀의 칸 설명이 그대로 규칙이다.
+     *   「NB주민번호 => EX)NB801234 : 건보 경우, NB주민번호앞 6자리로 입금.
+     *     지자체는 정해진거 없이 각각 입금명 다름」
+     *
+     * 가린 값에서 앞 여섯 자리만 읽는다 — 복호화할 까닭이 없다.
+     * 지자체와 청구처가 없는 건은 빈칸이다. 규칙이 없는데 무엇이든 적어 두면
+     * 담당자가 그것과 통장을 맞추려 들고, 안 맞는 까닭도 알 수 없게 된다.
+     */
+    private static function nb주민번호(?string $청구처, ?string $가린것): string
+    {
+        if ($청구처 !== ClaimAgency::NHIS) {
+            return '';
+        }
+
+        $앞여섯 = substr(preg_replace('/\D/', '', (string) $가린것), 0, 6);
+
+        return strlen($앞여섯) === 6 ? 'NB' . $앞여섯 : '';
+    }
+
     /** 주문 한 줄의 공통 칸 — 네 화면이 같은 열쇠를 쓴다 */
     public function of(?Order $o, ?int $patientId = null): array
     {
@@ -405,6 +427,12 @@ class OrderGridExtras
             'pt_sb_sci'      => $pt?->sb_sci ?? '',
             // 주민등록번호는 가린 것만 세운다 — 목록에 원문을 펼치지 않는다(P0-1)
             'pt_rrn'         => $p?->resident_no_ocr_masked ?: ($pt?->masked_resident_no ?? ''),
+            /* NB주민번호 (2026-09-11 엑셀 · 2026-09-15 지시).
+               공단이 통장에 찍는 입금자명이다 — 「NB + 주민번호 앞 여섯 자리」.
+               지자체는 정해진 것이 없어 기관마다 다르므로 빈칸으로 둔다. */
+            'pt_nb_rrn'      => self::nb주민번호(
+                                    $p?->claim_agency,
+                                    $p?->resident_no_ocr_masked ?: ($pt?->masked_resident_no ?? '')),
             'rx_dz_code'     => $p?->disease_code ?? '',
             'rx_add_type'    => match ((string) ($p?->counsel_acc_add_type ?? '')) {
                                     '10' => '처방전', '20' => '처방외', default => '',

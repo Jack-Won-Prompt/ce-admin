@@ -123,6 +123,12 @@ class FinanceController extends Controller
 
         $rows = $query->get();
 
+        /* PG 정산은 환자결제ㆍ미정산 두 탭에서만 쓴다 — 나머지 탭까지 토스를 부르면
+           그만큼 느려지기만 한다 (2026-09-15 지시) */
+        $this->pg정산 = in_array($tab, ['patient', 'unpaid'], true)
+            ? $this->pg정산색인($from, $to, $rows)
+            : [];
+
         /* 위드웍스 판매현황과 같은 칸을 뒤에 잇는다 (2026-09-07 지시).
            다른 다섯 목록(주문 관리ㆍ입금 내역ㆍ현금영수증ㆍ청구 관리ㆍ교환반품취소)이
            이미 그 차례를 쓰고 있었는데 Finance 만 제 칸만 세우고 있었다 — 저쪽 화면을
@@ -215,6 +221,15 @@ class FinanceController extends Controller
             'paid_time'  => $o->paidAtLabel('Y-m-d H:i:s'),
             'paid'       => $paid,
             'payer'      => $o->patient?->remitter_name ?: ($o->tossPayment?->customer_name ?? ''),
+            /* 공단ㆍ지자체가 통장에 찍는 이름 (2026-09-11 엑셀 · 2026-09-15 지시).
+               공단은 「NB + 주민번호 앞 여섯 자리」라는 규칙이 있다. 지자체는 정해진
+               것이 없어 기관마다 다르므로 **지어내지 않고 빈칸으로 둔다.** */
+            'agency_payer' => self::nbPayer($o),
+            /* PG 정산 — 토스가 알려 준 값이다. 이 표를 그릴 때 한 번에 받아 둔다
+               (pgSettleIndex). 정산 줄이 아직 없으면 빈칸이다 — 없는 것과 0 은 다르다. */
+            'pg_fee'       => $this->pg정산[$o->id]['fee']    ?? null,
+            'pg_payout'    => $this->pg정산[$o->id]['payout'] ?? null,
+            'pg_payout_at' => $this->pg정산[$o->id]['date']   ?? '',
             /* 결제수단은 OrderGridExtras::of() 가 적는다 — 여기서도 적으면 배열을 더할 때
                왼쪽이 이겨 이 값이 남고, 열 화면 가운데 이 탭만 잣대가 달라진다
                (2026-09-14 지시로 「실제로 있었던 일」만 적도록 바뀌었다). */
@@ -453,6 +468,9 @@ class FinanceController extends Controller
     /** 화면이 세울 결제수단 고르개 — pgSettlements 가 채운다 */
     private array $pg수단들 = [];
 
+    /** 주문 id => 토스 정산(수수료ㆍ정산액ㆍ정산 입금일). 환자결제ㆍ미정산 탭이 쓴다 */
+    private array $pg정산 = [];
+
     public function pg수단목록(): array
     {
         return $this->pg수단들;
@@ -543,6 +561,96 @@ class FinanceController extends Controller
         ])->values()->all();
 
         return [$자료, $this->columnsFor('pg:payments')];
+    }
+
+    /**
+     * 공단이 통장에 찍는 입금자명 — 「NB + 주민번호 앞 여섯 자리」.
+     *
+     * 2026-09-11 엑셀의 칸 설명이 그대로 규칙이다.
+     *   「NB주민번호 => EX)NB801234 : 건보 경우, NB주민번호앞 6자리로 입금.
+     *     지자체는 정해진거 없이 각각 입금명 다름」
+     *
+     * 지자체는 **빈칸으로 둔다.** 규칙이 없는데 무엇이든 적어 두면 담당자가 그것과
+     * 통장을 맞추려 든다 — 맞을 리가 없고, 안 맞는 까닭도 알 수 없다.
+     */
+    private static function nbPayer(?Order $o): string
+    {
+        if (! $o || ($o->prescription?->claim_agency ?? '') !== \App\Support\ClaimAgency::NHIS) {
+            return '';
+        }
+
+        /* 가린 값에서 앞 여섯 자리만 읽는다 — 복호화할 까닭이 없다 */
+        $가린것 = $o->prescription?->resident_no_ocr_masked
+               ?? \App\Support\ResidentNo::mask($o->patient?->resident_no ?? null);
+
+        $앞여섯 = substr(preg_replace('/\D/', '', (string) $가린것), 0, 6);
+
+        return strlen($앞여섯) === 6 ? 'NB' . $앞여섯 : '';
+    }
+
+    /**
+     * 토스 정산에서 주문마다 수수료ㆍ정산액ㆍ정산 입금일을 끌어온다 (2026-09-15 지시).
+     *
+     * 2026-09-11 엑셀에 이 셋이 있는데 화면에는 없었다. 그때는 토스 정산 연동이
+     * 없어 「받아 와야 아는 값」이라 비워 두었는데, 그 연동이 들어왔다.
+     *
+     * 이어 붙이는 열쇠는 정산 줄의 orderId 다 — 우리가 토스에 보낸 주문 아이디
+     * 그대로라, 결제 줄(TossPaymentㆍPaymentLink)을 타고 주문까지 간다.
+     *
+     * 매출일(soldDate)로 받는다. 정산 입금은 며칠 뒤지만 매출일은 판 날 그대로라,
+     * 화면이 보고 있는 기간과 같은 창으로 물으면 빠지는 줄이 없다.
+     *
+     * @return array<int, array{fee:int, payout:int, date:string}>
+     */
+    private function pg정산색인(string $from, string $to, \Illuminate\Support\Collection $orders): array
+    {
+        if ($orders->isEmpty()) {
+            return [];
+        }
+
+        try {
+            $줄들 = app(\App\Services\TossPayments\SettlementService::class)
+                        ->가져오기(str_replace('-', '', $from), str_replace('-', '', $to), 'soldDate');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[Finance] 토스 정산을 받지 못했습니다',
+                ['error' => $e->getMessage()]);
+
+            return [];
+        }
+
+        if (! $줄들) {
+            return [];
+        }
+
+        /* 토스 주문 아이디 → 우리 주문 id. 두 표를 모두 본다 — 가상계좌는 결제 줄에,
+           링크로 받은 건은 결제 링크에 남는다. */
+        $ids = $orders->pluck('id');
+        $짝  = [];
+
+        foreach (\App\Models\TossPayment::whereIn('order_id', $ids)
+                    ->whereNotNull('toss_order_id')->get(['order_id', 'toss_order_id']) as $t) {
+            $짝[(string) $t->toss_order_id] = (int) $t->order_id;
+        }
+        foreach (\App\Models\PaymentLink::whereIn('order_id', $ids)
+                    ->whereNotNull('toss_order_id')->get(['order_id', 'toss_order_id']) as $l) {
+            $짝[(string) $l->toss_order_id] ??= (int) $l->order_id;
+        }
+
+        $표 = [];
+
+        foreach ($줄들 as $줄) {
+            $oid = $짝[(string) ($줄['orderId'] ?? '')] ?? null;
+            if ($oid === null) {
+                continue;
+            }
+
+            /* 한 주문에 정산 줄이 여럿일 수 있다(부분취소 따위) — 더한다 */
+            $표[$oid]['fee']    = ($표[$oid]['fee']    ?? 0) + (int) ($줄['fee'] ?? 0);
+            $표[$oid]['payout'] = ($표[$oid]['payout'] ?? 0) + (int) ($줄['payOutAmount'] ?? 0);
+            $표[$oid]['date']   = (string) ($줄['paidOutDate'] ?? '');
+        }
+
+        return $표;
     }
 
     private function columnsFor(string $tab): array
@@ -688,7 +796,14 @@ class FinanceController extends Controller
                 ['header' => '입금자명',   'name' => 'payer',     'width' => 100],
                 ['header' => '결제수단',   'name' => 'pay_method','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
+                /* 2026-09-11 엑셀과 맞춘다 (2026-09-15 지시) — 그 파일에 있는데 화면에
+                   없던 넷이다. PG 세 칸은 토스 정산 연동이 없던 동안 비워 두었는데,
+                   그 연동이 들어왔으므로(SettlementService) 이제 실제 값을 적는다. */
+                ['header' => '주문상태',   'name' => 'status',    'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => 'PG사 수수료', 'name' => 'pg_fee',   'width' => 110] + $money,
+                ['header' => 'PG사 정산금액(수수료제외 회사계좌입금금액)', 'name' => 'pg_payout', 'width' => 220] + $money,
+                ['header' => 'PG사 정산일(회사계좌 입금일자)', 'name' => 'pg_payout_at', 'width' => 180, 'align' => 'center', 'sortable' => true],
                 ['header' => 'PG 사',      'name' => 'pg',        'width' => 110, 'align' => 'center'],
             ],
 
@@ -702,6 +817,9 @@ class FinanceController extends Controller
                 ['header' => '승인금액',   'name' => 'approved',  'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'agency_at', 'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금금액',   'name' => 'approved',  'width' => 110] + $money,
+                /* 통장에 찍히는 이름 (2026-09-11 엑셀). 공단은 「NB + 주민번호 앞 여섯
+                   자리」로 넣고, 지자체는 정해진 것이 없어 기관마다 다르다. */
+                ['header' => '입금자명',   'name' => 'agency_payer', 'width' => 120],
                 ['header' => '청구상태',   'name' => 'claim_state','width' => 90, 'align' => 'center', 'sortable' => true],
                 ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '미정산금액', 'name' => 'unpaid',    'width' => 110] + $money,
@@ -724,7 +842,12 @@ class FinanceController extends Controller
                 // 조치상태 — 정산 상태가 그 자리다(요청서 12쪽의 마감ㆍ확정ㆍ반려ㆍ보류ㆍ취소)
                 ['header' => '입금 상태',    'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '사유',        'name' => 'settle_reason', 'width' => 200],
+                // 2026-09-11 엑셀과 맞춘다 (2026-09-15 지시)
+                ['header' => '주문상태',     'name' => 'status',    'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '출고일자',     'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
+                ['header' => 'PG사 수수료', 'name' => 'pg_fee',   'width' => 110] + $money,
+                ['header' => 'PG사 정산금액(수수료제외 회사계좌입금금액)', 'name' => 'pg_payout', 'width' => 220] + $money,
+                ['header' => 'PG사 정산일(회사계좌 입금일자)', 'name' => 'pg_payout_at', 'width' => 180, 'align' => 'center', 'sortable' => true],
             ],
 
             // 18쪽 — 매출 차감 및 환불 관리
