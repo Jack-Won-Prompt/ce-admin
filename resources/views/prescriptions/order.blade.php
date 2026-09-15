@@ -8866,6 +8866,20 @@ window.HELP_TOUR_STEPS = [
   function gateReviewed() {
     if (RX_STATUS === 'approved' || RX_STATUS === 'ordered') return true;
 
+    /* 처방외 건은 검수를 지나지 않는다 (2026-09-15 지시).
+
+       검수는 **올라온 처방전이 제대로 된 것인가**를 보는 일이다. 처방외는 처방전
+       자체가 없는 건이라 볼 것이 없는데, 여태는 이 문에서 함께 막혔다 — 처방전
+       없이 사겠다는 사람을 받을 길이 없었다.
+
+       유형은 상세 목록에서 담당자가 고른다. 처방전(원내ㆍ원외)을 고르면 그때부터는
+       검수를 지나야 한다 — 처방전이 뒤늦게 도착해 유형을 바꾼 건이 그렇다.
+
+       공단에 낼 몫은 이 문이 아니라 청구전략이 가른다(gateBillingStrategy).
+       처방외는 그 표에서 기관 부담이 없는 쪽으로 서므로, 검수를 열어 준다고 해서
+       청구가 새지 않는다. */
+    if ((document.getElementById('f-acc-add-type')?.value ?? '') === '20') return true;
+
     ceAlert('검수 완료 후 구매 진행 및 저장 가능합니다.', { title: '검수가 아직입니다' });
     return false;
   }
