@@ -224,7 +224,7 @@ class _PrescriptionDetailScreenState
                 if (d.imageUrl != null) ...[
                   const SizedBox(height: 10),
                   const Text(
-                      '처방전은 이미 있습니다. 바꾸려면 먼저 「처방전 지우기」를 누르세요.',
+                      '처방전은 이미 있습니다. 바꾸려면 먼저 목록에서 처방전을 🗑로 지우세요.',
                       style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
                 const SizedBox(height: 18),
@@ -588,18 +588,7 @@ class _PrescriptionDetailScreenState
                     ),
                     ),
                   ),
-                  /* 처방전 그림은 아래 목록에 줄이 없어 지울 자리가 여기뿐이다.
-                     첨부는 저마다 목록에서 지운다. */
-                  if (d.editable && _viewingId == null) _DeleteRow(
-                    label: '처방전 지우기',
-                    busy: _deleting,
-                    onTap: () => _confirmDelete(
-                      what: '처방전',
-                      run: () => ref
-                          .read(prescriptionServiceProvider)
-                          .deleteImage(d.rxNumber),
-                    ),
-                  ),
+                  // 처방전도 다른 서류처럼 아래 목록의 🗑로 지운다 (2026-09-15 지시)
                   const SizedBox(height: 12),
                 ],
 
@@ -614,6 +603,13 @@ class _PrescriptionDetailScreenState
                     hasPrescriptionImage: d.imageUrl != null,
                     viewingId: _viewingId,
                     requestFor: d.requestFor,
+                    // 처방전도 지우고 다시 올릴 수 있다 — 문제가 있으면 바꿔야 한다
+                    onDeleteImage: () => _confirmDelete(
+                      what: '처방전',
+                      run: () => ref
+                          .read(prescriptionServiceProvider)
+                          .deleteImage(d.rxNumber),
+                    ),
                     onSelect: (id) => setState(() => _viewingId = id),
                     onDelete: (f) => _confirmDelete(
                       what: f.docLabel,
@@ -755,33 +751,6 @@ class _PrescriptionDetailScreenState
   }
 }
 
-/// 지우기 한 줄. 눌러서 지우는 자리가 그림 바로 아래에 있어야 무엇을 지우는지
-/// 헷갈리지 않는다.
-class _DeleteRow extends StatelessWidget {
-  final String       label;
-  final bool         busy;
-  final VoidCallback onTap;
-
-  const _DeleteRow({
-    required this.label,
-    required this.busy,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton.icon(
-        onPressed: busy ? null : onTap,
-        icon: const Icon(Icons.delete_outline, size: 17),
-        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-        style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-      ),
-    );
-  }
-}
-
 /// 이 건에 올라가 있는 서류 목록.
 ///
 /// 예전에는 앱에서 처방전 그림 한 장만 보였다. 무엇을 올렸는지 알 수 없으니
@@ -805,6 +774,9 @@ class _AttachmentsCard extends StatelessWidget {
   /// 이 서류를 물은 요청을 찾는다. null 을 넘기면 처방전 그림이다.
   final ReuploadRequest? Function(int? attachmentId) requestFor;
 
+  /// 처방전을 지운다. 지운 뒤 「서류 추가」로 다시 올린다.
+  final VoidCallback onDeleteImage;
+
   const _AttachmentsCard({
     required this.files,
     required this.headers,
@@ -815,6 +787,7 @@ class _AttachmentsCard extends StatelessWidget {
     required this.viewingId,
     required this.onSelect,
     required this.requestFor,
+    required this.onDeleteImage,
   });
 
   @override
@@ -853,7 +826,7 @@ class _AttachmentsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 처방전 그림 줄 — 지우기는 위쪽에 있으므로 여기서는 고르기만 한다
+          // 처방전 줄 — 다른 서류처럼 누르면 위에 크게 보이고, 🗑로 지운다
           if (hasPrescriptionImage) ...[
             _FileTile(
               label: '처방전',
@@ -862,7 +835,7 @@ class _AttachmentsCard extends StatelessWidget {
               thumb: null,
               headers: headers,
               onTap: () => onSelect(null),
-              onDelete: null,
+              onDelete: editable && !busy ? onDeleteImage : null,
               request: requestFor(null),
             ),
             const Divider(height: 20, color: AppTheme.border),
