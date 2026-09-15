@@ -1383,14 +1383,22 @@ class PrescriptionController extends Controller
     private const 작업대기상한 = 500;
 
     /**
-     * 작업 대기 리스트의 잣대 — 세 가지를 함께 본다.
+     * 작업 대기 리스트의 잣대 — 네 가지를 함께 본다.
      *
      *   · 되돌린 적이 없는 주문(교환ㆍ반품ㆍ취소가 붙지 않은 것)
      *   · 주문 상태가 아직 pending 인 것
      *   · 처방전 검수를 마친 것(approved·ordered·ocr_done)
+     *   · **아직 창고로 넘기지 않은 것** (2026-09-15 지시)
      *
      * 검수 전 건이 서면, 다음에 손댈 것을 고르는 자리에서 아직 볼 차례가 아닌 것을
      * 고르게 된다 — 골라 들어가도 주문을 낼 수 없다(검수 문에 막힌다).
+     *
+     * 넘긴 건도 마찬가지다. 이 자리는 「검수 승인부터 주문 등록 전까지」를 보는
+     * 곳이고, 주문 등록의 끝은 **위드웍스 연계**다 (2026-09-15 지시).
+     *
+     * 연계 여부를 주문 상태로 갈음할 수 없다. 연계는 판매번호만 적고 상태는
+     * pending 그대로 두기 때문이다(createWithworksOrder 403줄) — 그래서 이미
+     * 창고로 넘어간 건 스물셋이 이 목록에 그대로 서 있었다. 판매번호를 직접 본다.
      *
      * @param bool $함께 관계까지 미리 불러올지 — 세기만 할 때는 필요 없다
      */
@@ -1400,6 +1408,7 @@ class PrescriptionController extends Controller
 
         $q = \App\Models\Order::whereDoesntHave('returns')
             ->where('status', 'pending')
+            ->whereNull('withworks_so_no')
             ->whereHas('prescription', fn ($p) => $p->whereIn('status', $검수마침));
 
         return $함께 ? $q->with($this->주문줄관계()) : $q;
