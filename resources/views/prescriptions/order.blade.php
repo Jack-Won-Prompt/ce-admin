@@ -9421,6 +9421,9 @@ window.HELP_TOUR_STEPS = [
 
     const localPayload = {
       prescription_id:    parseInt(RX_ID),
+      /* 지금 보고 있는 주문 — 추가 주문이면 그 줄을 채워야 한다. 보내지 않으면
+         서버가 첫 주문(원 주문)을 보고 물린다 (2026-09-16 고침). */
+      order_number:       (typeof VIEW_ORDER_NO !== 'undefined' ? VIEW_ORDER_NO : null),
       items:              validItems,
       total_nhis:         totalNhis,
       patient_copay:      totalCopay,

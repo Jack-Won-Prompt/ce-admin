@@ -368,6 +368,8 @@ class OrderController extends Controller
             'shipping_postcode'       => 'nullable|string|max:10',
             'shipping_recipient'      => 'nullable|string|max:100',
             'so_type'                 => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
+            // 화면이 보고 있는 주문 — 추가 주문이면 그 줄을 채운다
+            'order_number'            => 'nullable|string|max:50',
         ]);
 
         $prescription = Prescription::findOrFail($request->prescription_id);
@@ -375,10 +377,25 @@ class OrderController extends Controller
         /* 저장만 해도 주문 줄은 선다(주문 관리에 보이도록 — PrescriptionController::ensureOrder).
            그 줄은 아직 창고로 보내지 않은 빈 껍데기다. 여기서는 그것을 채워 보낸다 —
            「이미 있다」고 물리면 저장을 한 번이라도 한 건은 영영 주문을 낼 수 없다.
-           이미 보낸 주문(SO 가 붙은 것)은 그대로 막는다 — 같은 것을 두 번 보낼 수는 없다. */
-        $existing = $prescription->order()->first();
+           이미 보낸 주문(SO 가 붙은 것)은 그대로 막는다 — 같은 것을 두 번 보낼 수는 없다.
+
+           **어느 주문을 채우느냐는 화면이 정한다** (2026-09-16 고침).
+
+           여태는 처방전의 첫 주문만 보았다. 추가 주문은 제 줄이 이미 서 있는데도
+           첫 주문(원 주문)을 보고 「이미 주문이 생성된 처방전입니다」로 물렸다 —
+           추가 주문을 창고로 보낼 길이 아예 없었다. 화면이 보고 있는 주문번호를
+           함께 보내므로 그것으로 고른다. */
+        $existing = $request->filled('order_number')
+            ? $prescription->orders()->where('order_number', $request->input('order_number'))->first()
+            : $prescription->order()->first();
+
         if ($existing && $existing->withworks_so_no) {
-            return response()->json(['success' => false, 'message' => '이미 주문이 생성된 처방전입니다.'], 409);
+            return response()->json([
+                'success' => false,
+                'message' => $existing->isExtra()
+                    ? '이미 창고로 보낸 추가 주문입니다.'
+                    : '이미 주문이 생성된 처방전입니다.',
+            ], 409);
         }
 
         /* 제품이 없으면 주문을 내지 않는다. 여기서 막지 않으면 처방전이 「주문 완료」로
@@ -477,7 +494,10 @@ class OrderController extends Controller
         ] + self::shippingExtras($request);
 
         if ($existing) {
-            // 껍데기를 채운다 — 번호는 그대로 두어 이미 적어 둔 곳(입금ㆍ영수증)이 어긋나지 않는다
+            /* 껍데기를 채운다 — 번호는 그대로 두어 이미 적어 둔 곳(입금ㆍ영수증)이
+               어긋나지 않는다. 주문 구분과 원 주문도 그대로 둔다(2026-09-16) —
+               $attrs 에 없으므로 update 가 지우지 않지만, 추가 주문이 원 주문으로
+               바뀌면 되짚을 길이 사라지므로 여기 적어 둔다. */
             $existing->update($attrs);
             $existing->items()->delete();
             $order = $existing;
