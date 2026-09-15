@@ -2429,13 +2429,31 @@ class PrescriptionController extends Controller
             'current' => $보는주문 && $o->id === $보는주문->id,
         ])->values();
 
+        /* 추가 주문 화면이 보여 줄 원 주문의 품목 (2026-09-16 지시).
+
+           추가 주문은 제품 칸이 비어서 시작한다 — 이번에 더 살 것을 새로 고르기
+           때문이다. 그런데 담당자는 **원 주문이 무엇을 얼마나 샀는지**를 보고
+           고른다. 탭을 옮겨 다니지 않고 그 자리에서 보게 한다. */
+        $원주문품목 = collect();
+
+        if ($보는주문?->isExtra() && $보는주문->parentOrder) {
+            $원주문품목 = $보는주문->parentOrder->items->map(fn ($i) => [
+                'product_name'  => $i->product_name,
+                'product_code'  => $i->product_code,
+                'quantity'      => (int) $i->quantity,
+                'unit_price'    => (int) ($i->insurance_price ?: $i->product_price),
+                'nhis_amount'   => (int) $i->nhis_amount,
+                'patient_copay' => (int) $i->patient_copay,
+            ])->values();
+        }
+
         $처방총계 = (int) ($prescription->total_count ?? 0);
         $이미주문 = (int) $주문줄들->sum('qty');
         $남은수량 = max(0, $처방총계 - $이미주문);
 
         return view('prescriptions.order', compact(
             'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
-            '주문줄들', '처방총계', '이미주문', '남은수량',
+            '주문줄들', '처방총계', '이미주문', '남은수량', '원주문품목',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',

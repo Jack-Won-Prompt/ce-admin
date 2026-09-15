@@ -4061,6 +4061,39 @@ $calcDeposit  = $calcCopay;
                    되돌리기·저장은 상세 목록 탭줄에 있는 resetToSaved()·saveOCR() 를 그대로 쓴다
                    (둘 다 items 를 읽고 쓴다). 저장 버튼은 onclick 문자열이 정확히 'saveOCR()' 여야
                    saveOCR() 안 querySelectorAll('[onclick="saveOCR()"]') 이 로딩 상태를 함께 건다. --}}
+              {{-- 원 주문 제품 보기 (2026-09-16 지시).
+
+                   추가 주문은 제품 칸이 비어서 시작한다 — 이번에 더 살 것을 새로
+                   고르기 때문이다. 그런데 무엇을 얼마나 더 살지는 **원 주문이 산
+                   것**을 보고 정한다. 탭을 옮겨 다니지 않고 그 자리에서 본다.
+                   추가 주문이 아닌 화면에는 세우지 않는다 — 볼 원 주문이 없다. --}}
+              @if(($원주문품목 ?? collect())->isNotEmpty())
+              <div style="position:relative;display:inline-flex;">
+                <button type="button" class="rx-acc-btn" id="btnParentItems"
+                        onclick="원주문제품보기(event)"
+                        title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
+                  <i class="fa-solid fa-clock-rotate-left"></i> 원 주문 제품
+                </button>
+                <div id="parentItemsPop" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:560px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:520;">
+                  <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size:12px;"></i>
+                    <span style="font-size:13px;font-weight:700;flex:1;">원 주문 제품
+                      <span style="font-weight:500;opacity:.85;">{{ $prescription->order?->parentOrder?->order_number }}</span>
+                    </span>
+                    <button type="button" onclick="원주문제품닫기()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+                  </div>
+                  <div style="padding:10px 12px;">
+                    {{-- 주문 제품 표와 같은 부품(wwGrid)으로 그린다 — 두 표가 달라
+                         보이면 같은 값을 두 번 읽게 된다. --}}
+                    <div id="parentItemsGrid" style="height:210px;"></div>
+                    <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">
+                      읽기만 합니다 — 이번에 더 살 제품은 위의 표에서 고릅니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              @endif
+
               <div class="pt-head-btns">
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
                      누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
@@ -5811,6 +5844,65 @@ window.HELP_TOUR_STEPS = [
   let existingOrder = null;
   let orderExists = false;
   @endif
+
+  /* ── 원 주문 제품 보기 (2026-09-16 지시) ─────────────────────────
+     추가 주문 화면에서 원 주문이 산 제품을 그 자리에서 본다. 주문 제품 표와 같은
+     부품(wwGrid)으로 그려, 두 표가 달라 보이지 않게 한다. 읽기만 한다. */
+  const 원주문품목 = @json($원주문품목 ?? []);
+  let _원주문표 = null;
+
+  function 원주문제품보기(e) {
+    e?.stopPropagation?.();
+
+    const 판 = document.getElementById('parentItemsPop');
+    if (!판) return;
+
+    if (판.style.display !== 'none') { 원주문제품닫기(); return; }
+
+    판.style.display = '';
+
+    if (!_원주문표) {
+      _원주문표 = new wwGrid('#parentItemsGrid', {
+        data: 원주문품목.map((r, i) => ({
+          no: i + 1,
+          product_name: r.product_name,
+          product_code: r.product_code,
+          quantity: r.quantity,
+          unit_price: r.unit_price,
+          nhis_amount: r.nhis_amount,
+          patient_copay: r.patient_copay,
+        })),
+        columns: [
+          { header: 'No',        name: 'no',            width: 40,  align: 'center' },
+          { header: '제품명',     name: 'product_name',  width: 200 },
+          { header: '제품 코드',  name: 'product_code',  width: 90,  align: 'center' },
+          { header: '수량',       name: 'quantity',      width: 60,  align: 'right', format: 'number' },
+          { header: '소비자가',   name: 'unit_price',    width: 80,  align: 'right', format: 'number' },
+          { header: '기관 부담금', name: 'nhis_amount',   width: 90,  align: 'right', format: 'number' },
+          { header: '본인 부담금', name: 'patient_copay', width: 90,  align: 'right', format: 'number' },
+        ],
+        height: 200,
+      });
+    }
+
+    /* 바깥을 누르면 닫는다 — 팝오버가 열린 채로 다른 일을 하면 화면을 가린다 */
+    setTimeout(() => document.addEventListener('click', _원주문바깥, { once: true }), 0);
+  }
+
+  function _원주문바깥(ev) {
+    const 판 = document.getElementById('parentItemsPop');
+    if (!판 || 판.style.display === 'none') return;
+    if (판.contains(ev.target) || ev.target.closest('#btnParentItems')) {
+      document.addEventListener('click', _원주문바깥, { once: true });
+      return;
+    }
+    원주문제품닫기();
+  }
+
+  function 원주문제품닫기() {
+    const 판 = document.getElementById('parentItemsPop');
+    if (판) 판.style.display = 'none';
+  }
 
   /* ── 한 번만 눌러야 하는 일들 ─────────────────────────────────
      주문 생성 및 연계ㆍ주문 정정ㆍ주문 취소는 되돌리기 어려운 일이다 (2026-09-15 지시).
