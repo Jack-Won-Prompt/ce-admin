@@ -47,7 +47,23 @@
   /* 체크박스 칸도 입력칸과 같은 높이여야 라벨 아래 줄이 어긋나지 않는다
      (.form-control 은 5+20+5+테두리 2 = 32 다. 34 면 그 칸만 2 내려앉는다). */
   .ss-check  { display: inline-flex; align-items: center; gap: 8px; height: 32px; font-size: 13px; color: var(--gray-800); cursor: pointer; }
-  .ss-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* 저장 줄은 판 아래에 붙여 둔다 (2026-09-15 지시).
+
+     토스페이먼츠처럼 칸이 열한 개인 탭은 몸통(.ss-body)이 스스로 구르는데, 단추가
+     그 흐름에 같이 있어 끝까지 내려야 보였다 — 값 하나를 고치고 저장하려면 어디까지
+     내려야 하는지 알 수 없었다. 칸이 적은 탭에서는 붙을 일이 없어 지금처럼 칸 바로
+     아래에 선다.
+
+     마지막 칸은 왼쪽 끝인데 단추는 오른쪽 끝이라 허공에 뜬 것으로 보이던 것도,
+     윗선 하나를 그어 한 줄(단추 바)로 읽히게 한다. */
+  .ss-actions {
+    display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap;
+    position: sticky; bottom: 0; z-index: 2;
+    /* 몸통의 아래 안여백(12)까지 덮는다 — 남겨 두면 그 틈으로 칸이 비쳐 지나간다 */
+    margin-bottom: -12px; padding: 12px 0;
+    background: var(--white, #fff);
+    border-top: 1px solid var(--gray-200);
+  }
   /* 시험 결과는 단추 왼쪽에 그대로 적는다 — 토스트로 띄우면 사유가 길어 잘린다 */
   /* 굵기 600 은 시안에 없다(400·500·700 셋뿐) — 500 으로 내린다. 색은 의미색이라 그대로 둔다. */
   .ss-test-out { margin-right: auto; font-size: 12px; font-weight: 500; line-height: 19px; }
