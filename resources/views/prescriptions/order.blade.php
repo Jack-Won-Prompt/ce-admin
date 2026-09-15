@@ -2819,8 +2819,13 @@ $calcDeposit  = $calcCopay;
                     </div>
                     <div class="rx-field-row">
                       <span class="rx-field-label">법정대리인 또는 가족 생년월일</span>
+                      {{-- 날짜만 적는다 (2026-09-15 CASE-52 에서 드러났다).
+                           모델 캐스트 date:Y-m-d 는 **JSON 으로 내보낼 때만** 걸린다.
+                           블레이드가 찍는 것은 Carbon 자체라 「1985-03-12 00:00:00」이
+                           그대로 나왔다 — 칸은 maxlength 10 이라 고칠 수도 없고,
+                           그대로 저장하면 시각이 딸려 들어간다. --}}
                       <input type="text" class="form-control" id="f-guardian-birth" maxlength="10"
-                             value="{{ $prescription->patient?->guardian_birth_date ?? '' }}"
+                             value="{{ $prescription->patient?->guardian_birth_date?->format('Y-m-d') ?? '' }}"
                              placeholder="YYYY-MM-DD" inputmode="numeric" style="flex:1;" />
                     </div>
                     <div class="rx-field-row">
