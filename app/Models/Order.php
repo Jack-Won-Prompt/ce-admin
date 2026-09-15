@@ -113,18 +113,58 @@ class Order extends Model
      */
     public function 판매번호갈아타기(?string $새번호): void
     {
-        $옛것 = $this->withworks_so_no;
-
-        if ($옛것 && $옛것 !== $새번호) {
-            $이력 = $this->withworks_so_no_history ?? [];
-            if (! is_array($이력)) {
-                $이력 = [];
-            }
-            $이력[] = ['so_no' => $옛것, 'at' => now()->toDateTimeString()];
-            $this->withworks_so_no_history = $이력;
-        }
+        $this->옛번호남기기($this->withworks_so_no, $새번호);
 
         $this->withworks_so_no = $새번호;
+    }
+
+    /**
+     * 물러난 판매번호를 이력에 적는다.
+     *
+     * 갈아 세우기는 **취소를 먼저** 부른다. 그 취소에 위드웍스가 so.cancelled 를
+     * 보내는데, 우리 줄에는 아직 옛 번호가 적혀 있으므로 웹훅이 그것을 지금 주문의
+     * 사건으로 알아듣고 상태를 「취소」로 뒤집는다 — 새 판매주문이 멀쩡히 서 있는데
+     * 화면에는 취소된 주문으로 보였다 (2026-09-15 운영 확인).
+     *
+     * 그래서 취소를 부르기 **전에** 옛 번호를 이력에 적어 둔다. 웹훅은 이력에 있는
+     * 번호로 온 사건을 「물러난 번호」로 보고 상태에 반영하지 않는다.
+     */
+    public function 옛번호남기기(?string $옛것, ?string $새번호 = null): void
+    {
+        if (! $옛것 || $옛것 === $새번호) {
+            return;
+        }
+
+        $이력 = $this->withworks_so_no_history ?? [];
+
+        if (! is_array($이력)) {
+            $이력 = [];
+        }
+
+        foreach ($이력 as $줄) {
+            if (($줄['so_no'] ?? null) === $옛것) {
+                return; // 이미 적혀 있다
+            }
+        }
+
+        $이력[] = ['so_no' => $옛것, 'at' => now()->toDateTimeString()];
+        $this->withworks_so_no_history = $이력;
+    }
+
+    /** 물러난 판매번호인가 — 이 번호로 오는 사건은 지금 주문의 일이 아니다 */
+    public function 물러난판매번호인가(?string $so_no): bool
+    {
+        if (! $so_no || $so_no === $this->withworks_so_no) {
+            return false;
+        }
+
+        foreach ((array) ($this->withworks_so_no_history ?? []) as $줄) {
+            if (($줄['so_no'] ?? null) === $so_no) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** 취소를 청할 수 있는가 — 나간 뒤에는 교환/반품/취소 화면이 할 일이다 */

@@ -203,6 +203,26 @@ class WithworksWebhookController extends Controller
             return response()->json(['success' => true, 'message' => 'Order not found — event recorded']);
         }
 
+        /* 물러난 판매번호로 온 사건은 남기기만 한다 (2026-09-15 운영 확인).
+
+           정정은 원 판매주문을 취소하고 새로 세운다. 그 취소에 저쪽이 so.cancelled 를
+           보내는데, 주문번호(ce_order_number)는 그대로라 여기까지 닿는다. 그대로
+           반영하면 **새 판매주문이 멀쩡히 서 있는데 주문은 취소로 뒤집힌다** — 실제로
+           EUD202609111330121 이 status=cancelled 가 되었다.
+
+           지금 우리 줄에 적힌 번호가 아니고, 이력에 물러난 것으로 남아 있으면 그
+           사건은 지나간 판매주문의 일이다. 사건 자체는 위에서 이미 적어 두었다. */
+        if ($order->물러난판매번호인가($data['so_no'] ?? null)) {
+            Log::info('[Withworks] 물러난 판매번호의 사건 — 상태에 반영하지 않습니다', [
+                'event' => $data['event'],
+                'order' => $order->order_number,
+                'so_no' => $data['so_no'],
+                '지금'  => $order->withworks_so_no,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Superseded sale order — event recorded']);
+        }
+
         $sync->apply($order, $data);
 
         /* 창고 이름 — 어디서 내보내고 어디로 들이는가 (2026-09-07 지시).
