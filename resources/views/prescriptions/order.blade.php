@@ -4061,40 +4061,41 @@ $calcDeposit  = $calcCopay;
                    되돌리기·저장은 상세 목록 탭줄에 있는 resetToSaved()·saveOCR() 를 그대로 쓴다
                    (둘 다 items 를 읽고 쓴다). 저장 버튼은 onclick 문자열이 정확히 'saveOCR()' 여야
                    saveOCR() 안 querySelectorAll('[onclick="saveOCR()"]') 이 로딩 상태를 함께 건다. --}}
-              {{-- 원 주문 제품 보기 (2026-09-16 지시).
+              <div class="pt-head-btns" style="position:relative;">
+                {{-- 원 주문 제품 보기 (2026-09-16 지시).
 
-                   추가 주문은 제품 칸이 비어서 시작한다 — 이번에 더 살 것을 새로
-                   고르기 때문이다. 그런데 무엇을 얼마나 더 살지는 **원 주문이 산
-                   것**을 보고 정한다. 탭을 옮겨 다니지 않고 그 자리에서 본다.
-                   추가 주문이 아닌 화면에는 세우지 않는다 — 볼 원 주문이 없다. --}}
-              @if(($원주문품목 ?? collect())->isNotEmpty())
-              <div style="position:relative;display:inline-flex;">
-                <button type="button" class="rx-acc-btn" id="btnParentItems"
-                        onclick="원주문제품보기(event)"
-                        title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
-                  <i class="fa-solid fa-clock-rotate-left"></i> 원 주문 제품
-                </button>
-                <div id="parentItemsPop" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:560px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:520;">
-                  <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size:12px;"></i>
-                    <span style="font-size:13px;font-weight:700;flex:1;">원 주문 제품
-                      <span style="font-weight:500;opacity:.85;">{{ $prescription->order?->parentOrder?->order_number }}</span>
-                    </span>
-                    <button type="button" onclick="원주문제품닫기()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
-                  </div>
-                  <div style="padding:10px 12px;">
-                    {{-- 주문 제품 표와 같은 부품(wwGrid)으로 그린다 — 두 표가 달라
-                         보이면 같은 값을 두 번 읽게 된다. --}}
-                    <div id="parentItemsGrid" style="height:210px;"></div>
-                    <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">
-                      읽기만 합니다 — 이번에 더 살 제품은 위의 표에서 고릅니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              @endif
+                     추가 주문은 제품 칸이 비어서 시작한다 — 이번에 더 살 것을 새로
+                     고르기 때문이다. 그런데 무엇을 얼마나 더 살지는 **원 주문이 산
+                     것**을 보고 정한다. 탭을 옮겨 다니지 않고 그 자리에서 본다.
 
-              <div class="pt-head-btns">
+                     단추 묶음 안에 둔다 — 바깥(.pt-head-right)은 flex-wrap 이라
+                     칸을 하나 더 세우면 머리줄이 통째로 접힌다(2026-09-16 겪음).
+                     추가 주문이 아닌 화면에는 세우지 않는다. --}}
+                @if(($원주문품목 ?? collect())->isNotEmpty())
+                  <button type="button" class="rx-acc-btn" id="btnParentItems"
+                          onclick="원주문제품보기(event)"
+                          title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
+                    <i class="fa-solid fa-clock-rotate-left"></i> 원 주문 제품
+                  </button>
+                  <div id="parentItemsPop" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:560px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:520;">
+                    <div id="parentItemsHead" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;cursor:move;user-select:none;"
+                         title="끌어서 옮길 수 있습니다">
+                      <i class="fa-solid fa-up-down-left-right" style="font-size:11px;opacity:.85;"></i>
+                      <span style="font-size:13px;font-weight:700;flex:1;">원 주문 제품
+                        <span style="font-weight:500;opacity:.85;">{{ $prescription->order?->parentOrder?->order_number }}</span>
+                      </span>
+                      <button type="button" onclick="원주문제품닫기()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
+                    </div>
+                    <div style="padding:10px 12px;">
+                      {{-- 주문 제품 표와 같은 부품(wwGrid)으로 그린다 — 두 표가 달라
+                           보이면 같은 값을 두 번 읽게 된다. --}}
+                      <div id="parentItemsGrid" style="height:210px;"></div>
+                      <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">
+                        읽기만 합니다 — 이번에 더 살 제품은 위의 표에서 고릅니다.
+                      </p>
+                    </div>
+                  </div>
+                @endif
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
                      누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
                      resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
@@ -5878,8 +5879,68 @@ window.HELP_TOUR_STEPS = [
       });
     }
 
+    /* 열 때마다 제자리로 돌려 둔다 — 지난번에 끌어 둔 자리에 그대로 서면
+       단추와 멀리 떨어져 어디서 나왔는지 알기 어렵다. */
+    판.style.position = '';
+    판.style.left = '';
+    판.style.top  = '';
+    판.style.right = '0';
+
+    _끌기붙이기();
+
     /* 바깥을 누르면 닫는다 — 팝오버가 열린 채로 다른 일을 하면 화면을 가린다 */
     setTimeout(() => document.addEventListener('click', _원주문바깥, { once: true }), 0);
+  }
+
+  /* 머리를 잡아 옮긴다 (2026-09-16 지시).
+
+     제자리에 붙어 있으면 아래 표의 같은 칸을 가려, 원 주문과 지금 고르는 것을
+     나란히 볼 수 없었다. 옮기는 동안에는 fixed 로 바꾼다 — absolute 인 채로 옮기면
+     감싸개가 움직일 때 따라 흔들린다. */
+  let _끌기붙었나 = false;
+
+  function _끌기붙이기() {
+    if (_끌기붙었나) return;
+
+    const 머리 = document.getElementById('parentItemsHead');
+    const 판   = document.getElementById('parentItemsPop');
+    if (!머리 || !판) return;
+
+    머리.addEventListener('mousedown', (ev) => {
+      /* 닫기 단추를 누른 것은 끌기가 아니다 */
+      if (ev.target.closest('button')) return;
+
+      ev.preventDefault();
+
+      const r = 판.getBoundingClientRect();
+
+      판.style.position = 'fixed';
+      판.style.left   = r.left + 'px';
+      판.style.top    = r.top + 'px';
+      판.style.right  = 'auto';
+      판.style.margin = '0';
+
+      const 잡은x = ev.clientX - r.left;
+      const 잡은y = ev.clientY - r.top;
+
+      const 움직임 = (m) => {
+        /* 화면 밖으로 완전히 나가지 않게 가둔다 — 나가면 다시 잡을 수 없다 */
+        const x = Math.min(Math.max(0, m.clientX - 잡은x), window.innerWidth  - 60);
+        const y = Math.min(Math.max(0, m.clientY - 잡은y), window.innerHeight - 40);
+        판.style.left = x + 'px';
+        판.style.top  = y + 'px';
+      };
+
+      const 놓음 = () => {
+        document.removeEventListener('mousemove', 움직임);
+        document.removeEventListener('mouseup', 놓음);
+      };
+
+      document.addEventListener('mousemove', 움직임);
+      document.addEventListener('mouseup', 놓음);
+    });
+
+    _끌기붙었나 = true;
   }
 
   function _원주문바깥(ev) {
