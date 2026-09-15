@@ -115,6 +115,22 @@ class PrescriptionService {
     }
   }
 
+  /// 검수를 다시 청한다 — 되물은 서류를 다 올린 뒤(2026-09-15 지시).
+  /// 서버가 준 말을 돌려주고, 막히면 그 사유를 올린다.
+  Future<String> requestReview(String rxNumber, {String? memo}) async {
+    try {
+      final res = await _dio.post('/prescriptions/$rxNumber/request-review',
+          data: {if (memo != null && memo.isNotEmpty) 'memo': memo});
+      final body = res.data;
+      return (body is Map ? body['message'] as String? : null) ??
+          '검수를 다시 요청했습니다.';
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      throw Exception((body is Map ? body['message'] as String? : null) ??
+          '요청하지 못했습니다. (${e.type.name})');
+    }
+  }
+
   Future<String> deleteAttachment(String rxNumber, int id) =>
       _delete('/prescriptions/$rxNumber/attachments/$id');
 

@@ -33,6 +33,7 @@ class _PrescriptionDetailScreenState
   final List<_PendingFile> _pending = [];
   bool _uploading = false;
   int  _upDone    = 0;
+  bool _requesting = false;
 
   /* 서류를 더할 때 고르는 유형 — 업로드 화면과 같은 서버 목록이다.
      못 받아 오면 기본 넷으로 버틴다. */
@@ -341,6 +342,74 @@ class _PrescriptionDetailScreenState
     await _load();
   }
 
+  /// 검수를 다시 청한다(2026-09-15 지시). 아직 다시 올리지 않은 요청이 남아 있으면
+  /// 먼저 알린다 — 빠뜨린 채 청하면 검수자가 또 되물어야 한다.
+  Future<void> _requestReview(PrescriptionDetail d) async {
+    final memoCtrl = TextEditingController();
+    final open     = d.requests.length;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('검수 재요청',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              open > 0
+                  ? '아직 다시 올리지 않은 요청이 $open건 있습니다. 그래도 검수를 다시 요청할까요?'
+                  : '다시 올린 서류로 검수를 요청합니다.',
+              style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: open > 0 ? AppTheme.danger : AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: memoCtrl,
+              maxLength: 500,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: '검수자에게 남길 말 (선택)',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('재요청',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    final memo = memoCtrl.text.trim();
+    if (ok != true || !mounted) return;
+
+    setState(() => _requesting = true);
+    try {
+      final message = await ref
+          .read(prescriptionServiceProvider)
+          .requestReview(d.rxNumber, memo: memo);
+      if (!mounted) return;
+      _tell(message);
+      await _load();
+    } catch (e) {
+      if (mounted) _tell(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _requesting = false);
+    }
+  }
+
   String _labelOf(String code) =>
       _docTypes.firstWhere((t) => t.$1 == code, orElse: () => (code, code)).$2;
 
@@ -416,21 +485,59 @@ class _PrescriptionDetailScreenState
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      // 담아 둔 서류가 있으면 아래에 올리기 단추를 둔다
-      bottomNavigationBar: _pending.isEmpty
+      /* 아래 단추 — 담아 둔 서류가 있으면 「서류 올리기」, 그 아래 「검수 재요청」
+         (2026-09-15 지시). 서류를 다 올린 뒤에 청하도록, 담아 둔 것이 있는 동안에는
+         재요청을 막는다. */
+      bottomNavigationBar: (_pending.isEmpty && !d.canRequestReview)
           ? null
           : SafeArea(
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: GradientButton(
-                  label: _uploading
-                      ? '올리는 중 $_upDone / ${_pending.length}건'
-                      : '서류 올리기 (${_pending.length}건)',
-                  icon: Icons.cloud_upload_outlined,
-                  loading: _uploading,
-                  onPressed: _uploading ? null : () => _uploadPending(d),
-                  gradient: AppTheme.secondaryGradient,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_pending.isNotEmpty)
+                      GradientButton(
+                        label: _uploading
+                            ? '올리는 중 $_upDone / ${_pending.length}건'
+                            : '서류 올리기 (${_pending.length}건)',
+                        icon: Icons.cloud_upload_outlined,
+                        loading: _uploading,
+                        onPressed: _uploading ? null : () => _uploadPending(d),
+                        gradient: AppTheme.secondaryGradient,
+                      ),
+                    if (_pending.isNotEmpty && d.canRequestReview)
+                      const SizedBox(height: 8),
+                    if (d.canRequestReview)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: (_pending.isNotEmpty || _uploading || _requesting)
+                              ? null
+                              : () => _requestReview(d),
+                          icon: _requesting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.fact_check_outlined, size: 18),
+                          label: Text(
+                              _pending.isNotEmpty
+                                  ? '검수 재요청 — 먼저 서류를 올려 주세요'
+                                  : '검수 재요청',
+                              style: const TextStyle(fontWeight: FontWeight.w800)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primary,
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

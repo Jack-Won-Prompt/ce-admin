@@ -54,6 +54,9 @@ class PrescriptionDetail {
   /// 검수자가 다시 올려 달라고 한 것 중 아직 닫히지 않은 것.
   final List<ReuploadRequest> requests;
 
+  /// 「검수 재요청」 단추를 세울지 — 되물은 자취가 있고 아직 요청하지 않은 내 건.
+  final bool canRequestReview;
+
   const PrescriptionDetail({
     required this.rxNumber,
     required this.status,
@@ -64,6 +67,7 @@ class PrescriptionDetail {
     this.attachments = const [],
     this.editable = false,
     this.requests = const [],
+    this.canRequestReview = false,
   });
 
   /// 이 서류를 물은 요청. [attachmentId] 가 null 이면 처방전 그림이다.
@@ -86,6 +90,7 @@ class PrescriptionDetail {
         imageUrl:      j['image_url']       as String?,
         imageName:     j['image_name']      as String?,
         editable:      j['editable']        as bool? ?? false,
+        canRequestReview: j['can_request_review'] as bool? ?? false,
         attachments: ((j['attachments'] as List?) ?? const [])
             .map((e) => PrescriptionFile.fromJson(
                 Map<String, dynamic>.from(e as Map)))
