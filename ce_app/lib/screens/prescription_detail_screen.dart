@@ -72,10 +72,10 @@ class _PrescriptionDetailScreenState
 
   /// 지금 무엇을 보고 있는지. 그림만으로는 유형을 알 수 없다.
   String _viewLabel(PrescriptionDetail d) {
-    if (_viewingId == null) return '처방전 그림';
+    if (_viewingId == null) return '처방전';
 
     final f = d.attachments.where((a) => a.id == _viewingId);
-    return f.isEmpty ? '처방전 그림' : f.first.docLabel;
+    return f.isEmpty ? '처방전' : f.first.docLabel;
   }
 
   /// 눌러서 크게 본다. 손가락으로 늘려 볼 수 있어야 글씨를 읽는다.
@@ -218,7 +218,7 @@ class _PrescriptionDetailScreenState
                 if (d.imageUrl != null) ...[
                   const SizedBox(height: 10),
                   const Text(
-                      '처방전은 이미 있습니다. 바꾸려면 먼저 「처방전 그림 지우기」를 누르세요.',
+                      '처방전은 이미 있습니다. 바꾸려면 먼저 「처방전 지우기」를 누르세요.',
                       style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
                 const SizedBox(height: 18),
@@ -517,10 +517,10 @@ class _PrescriptionDetailScreenState
                   /* 처방전 그림은 아래 목록에 줄이 없어 지울 자리가 여기뿐이다.
                      첨부는 저마다 목록에서 지운다. */
                   if (d.editable && _viewingId == null) _DeleteRow(
-                    label: '처방전 그림 지우기',
+                    label: '처방전 지우기',
                     busy: _deleting,
                     onTap: () => _confirmDelete(
-                      what: '처방전 그림',
+                      what: '처방전',
                       run: () => ref
                           .read(prescriptionServiceProvider)
                           .deleteImage(d.rxNumber),
@@ -774,7 +774,7 @@ class _AttachmentsCard extends StatelessWidget {
           // 처방전 그림 줄 — 지우기는 위쪽에 있으므로 여기서는 고르기만 한다
           if (hasPrescriptionImage) ...[
             _FileTile(
-              label: '처방전 그림',
+              label: '처방전',
               subLabel: '처방전으로 접수된 그림',
               selected: viewingId == null,
               thumb: null,

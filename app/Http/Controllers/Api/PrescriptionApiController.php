@@ -184,7 +184,7 @@ class PrescriptionApiController extends Controller
         if ($prescription->image_path) {
             return response()->json([
                 'success' => false,
-                'message' => '이 건에는 처방전 그림이 이미 있습니다. 먼저 지우고 올려 주십시오.',
+                'message' => '이 건에는 처방전이 이미 있습니다. 먼저 지우고 올려 주십시오.',
             ], 422);
         }
 
@@ -419,7 +419,7 @@ class PrescriptionApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '처방전 그림을 지웠습니다. 다시 올려 주세요.',
+            'message' => '처방전을 지웠습니다. 다시 올려 주세요.',
         ]);
     }
 
