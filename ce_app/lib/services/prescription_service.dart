@@ -83,10 +83,37 @@ class PrescriptionService {
 
   /// 처방전 그림을 지운다.
   ///
-  /// 레코드는 남고 그림만 비므로, 같은 환자로 처방전을 다시 올리면 이 건이
-  /// 다시 채워진다 — 건이 둘로 갈리지 않는다.
+  /// 레코드는 남고 그림만 빈다. 다시 올리는 것은 상세 화면의 「서류 추가」에서
+  /// 이 번호로 올린다 — 업로드 화면에서 올리면 새 건이 된다.
   Future<String> deleteImage(String rxNumber) =>
       _delete('/prescriptions/$rxNumber/image');
+
+  /// 이 건에 서류를 더한다 — 상세 화면에서.
+  ///
+  /// 번호를 정해 보내므로 새 건이 생기지 않는다. 막히면(검수를 지났거나, 처방전
+  /// 그림이 이미 있거나) 서버가 준 사유를 그대로 올린다.
+  Future<String> addFile(
+    String rxNumber, {
+    required String path,
+    required String fileName,
+    required String docType,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'prescription_image':
+            await MultipartFile.fromFile(path, filename: fileName),
+        'rx_number': rxNumber,
+        'doc_type':  docType,
+      });
+      final res  = await _dio.post('/prescriptions/upload', data: form);
+      final body = res.data;
+      return (body is Map ? body['message'] as String? : null) ?? '올렸습니다.';
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      throw Exception((body is Map ? body['message'] as String? : null) ??
+          '올리지 못했습니다. (${e.type.name})');
+    }
+  }
 
   Future<String> deleteAttachment(String rxNumber, int id) =>
       _delete('/prescriptions/$rxNumber/attachments/$id');

@@ -36,6 +36,10 @@ class _PrescriptionUploadScreenState
   bool    _isSaving     = false;  // true = 올린 뒤 서버가 저장을 마치기를 기다리는 중
   String? _resultMsg;
   bool    _success   = false;
+
+  /* 이번 업로드가 연 처방전 번호. 첫 장이 새 번호를 받고, 둘째 장부터 — 그리고
+     도중에 실패해 다시 누를 때도 — 이 번호에 붙인다(2026-09-15 지시). */
+  String? _batchRx;
   Map<String, dynamic>? _ocrResult;
   final _memoCtrl = TextEditingController();
 
@@ -100,7 +104,8 @@ class _PrescriptionUploadScreenState
       return;
     }
     // 이름을 바꿔 다시 찾으면 이전 선택은 무효화한다
-    setState(() { _searchingPatient = true; _selectedPatient = null; });
+    // 환자를 다시 고르면 새 건으로 올린다 — 앞 환자의 번호에 붙으면 안 된다
+    setState(() { _searchingPatient = true; _selectedPatient = null; _batchRx = null; });
     try {
       final results = await ref.read(patientServiceProvider).search(query);
       if (!mounted) return;
@@ -389,6 +394,7 @@ class _PrescriptionUploadScreenState
       _fileProgress = 0.0;
       _isSaving     = false;
       _docType      = 'registration_form';
+      _batchRx      = null;
 
       /* 환자도 지운다. 앞사람 이름이 남아 있으면 다음 사람 서류를 그대로 올려
          엉뚱한 환자에게 붙는다 — 되돌리려면 담당자가 웹에서 손으로 옮겨야 한다. */
@@ -408,9 +414,8 @@ class _PrescriptionUploadScreenState
   Future<void> _uploadAll() async {
     if (_queue.isEmpty || _selectedPatient == null) return;
 
-    /* 처방전을 맨 앞에 세운다. 서버는 처방전이 아닌 서류를 「이 환자의 가장 최근
-       처방전」에 붙이므로, 첨부가 먼저 가면 오늘 것이 아니라 예전 처방전에 붙는다.
-       그러면 오늘 올린 처방전과 갈라져, 공단 팩스에 첨부가 빠진 채로 나간다. */
+    /* 처방전을 맨 앞에 세운다. 첫 장이 새 처방전 번호를 열고 나머지는 그 번호에
+       붙는다 — 처방전이 먼저 들어가야 그 건의 본 그림이 처방전이 된다. */
     final ordered = [
       ..._queue.where((d) => d.docType == 'prescription'),
       ..._queue.where((d) => d.docType != 'prescription'),
@@ -429,7 +434,6 @@ class _PrescriptionUploadScreenState
     final dio  = ref.read(dioProvider);
     final memo = _memoCtrl.text.trim();
     final sent = <_PendingDoc>[];
-    Map<String, dynamic>? firstResult;
     String? failure;
 
     for (final doc in ordered) {
@@ -448,6 +452,9 @@ class _PrescriptionUploadScreenState
           ),
           'patient_id': _selectedPatient!.id,
           'doc_type':   doc.docType,
+          /* 누를 때마다 새 처방전 번호다(2026-09-15 지시). 첫 장이 새 건을 열고,
+             둘째 장부터는 그 번호에 붙인다. 기존 건에 더하는 것은 상세 화면에서 한다. */
+          if (_batchRx == null) 'new_batch': 1 else 'rx_number': _batchRx,
           // 메모는 첫 건에만 싣는다 — 건마다 보내면 같은 말이 여러 장에 남는다
           if (memo.isNotEmpty && sent.isEmpty) 'memo': memo,
         });
@@ -468,7 +475,7 @@ class _PrescriptionUploadScreenState
         sent.add(doc);
         final body = resp.data;
         if (body is Map) {
-          firstResult ??= body['ocr_result'] as Map<String, dynamic>?;
+          _batchRx ??= body['prescription_id'] as String?;
         }
 
         if (mounted) setState(() => _uploadDone = sent.length);
@@ -486,26 +493,35 @@ class _PrescriptionUploadScreenState
 
     if (!mounted) return;
 
+    /* 올라간 것은 목록에서 덜어 낸다 — 그대로 두고 다시 누르면 같은 서류가
+       두 번 올라간다. 남은 것은 남겨 두어 같은 번호로 이어서 올린다. */
     setState(() {
       _uploading = false;
       _isSaving  = false;
-
-      /* 올라간 것은 목록에서 덜어 낸다 — 그대로 두고 다시 누르면 같은 서류가
-         두 번 올라간다. 남은 것은 남겨 두어 이어서 올릴 수 있게 한다. */
       _queue.removeWhere(sent.contains);
+    });
 
-      if (failure == null) {
-        _success   = true;
-        _resultMsg = '${sent.length}건을 등록했습니다.';
-        _ocrResult = firstResult;
-        _memoCtrl.clear();
-      } else {
-        _success   = false;
-        _resultMsg = sent.isEmpty
-            ? failure
-            : '$_uploadTotal건 가운데 ${sent.length}건을 올렸습니다. '
-              '남은 ${_queue.length}건은 그대로 두었습니다 — $failure';
-      }
+    if (failure == null) {
+      /* 다 올라가면 화면을 모두 비운다(2026-09-15 지시) — 이름·환자·서류·메모까지.
+         어느 번호로 들어갔는지는 알림으로 알린다. 확인은 처방전 탭에서 한다. */
+      final rx = _batchRx;
+      _resetForm();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(rx == null
+            ? '${sent.length}건을 등록했습니다.'
+            : '처방전 $rx 에 ${sent.length}건을 등록했습니다.'),
+        duration: const Duration(seconds: 4),
+      ));
+      return;
+    }
+
+    setState(() {
+      _success   = false;
+      _resultMsg = sent.isEmpty
+          ? failure
+          : '$_uploadTotal건 가운데 ${sent.length}건을 올렸습니다. '
+            '남은 ${_queue.length}건은 그대로 두었습니다. 다시 누르면 같은 처방전'
+            '($_batchRx)에 이어서 올립니다 — $failure';
     });
   }
 
@@ -808,19 +824,13 @@ class _PrescriptionUploadScreenState
                           )
                         : GradientButton(
                             key: const ValueKey('btn'),
-                            label: _success
-                                ? '새로 올리기'
-                                : (_queue.isEmpty
-                                    ? '처방전 업로드'
-                                    : '처방전 업로드 (${_queue.length}건)'),
-                            icon: _success
-                                ? Icons.add_photo_alternate_outlined
-                                : Icons.cloud_upload_outlined,
-                            onPressed: _success
-                                ? _resetForm
-                                : ((_queue.isEmpty || _selectedPatient == null)
-                                    ? null
-                                    : _uploadAll),
+                            label: _queue.isEmpty
+                                ? '처방전 업로드'
+                                : '처방전 업로드 (${_queue.length}건)',
+                            icon: Icons.cloud_upload_outlined,
+                            onPressed: (_queue.isEmpty || _selectedPatient == null)
+                                ? null
+                                : _uploadAll,
                             gradient: AppTheme.secondaryGradient,
                           ),
                   ),

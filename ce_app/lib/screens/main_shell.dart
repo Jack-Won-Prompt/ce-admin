@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/prescription_provider.dart';
+import '../services/auth_service.dart';
 import '../services/chat_notification_service.dart';
 import '../services/fcm_service.dart';
 import '../theme/app_theme.dart';
@@ -21,12 +22,25 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
+  /* 하단 채팅 메뉴를 보일지 — 서버 설정(환경 설정 › 모바일 앱)을 따른다(2026-09-15).
+     못 물어보면 보인다. 여태 늘 보였고, 잠깐 서버가 안 열렸다고 메뉴가 사라지면 안 된다. */
+  bool _chatVisible = true;
+
+  Future<void> _loadChatVisible() async {
+    final v = await ref.read(authServiceProvider).chatVisible();
+    if (!mounted || v == _chatVisible) return;
+    setState(() => _chatVisible = v);
+    // 채팅 탭을 보고 있는데 숨겨지면 처방전 탭으로 옮긴다
+    if (!v && widget.navigationShell.currentIndex == 2) _goBranch(0);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatRoomsProvider.notifier).load();
       ref.read(noticeListProvider.notifier).load();
+      _loadChatVisible();
     });
 
     ChatNotificationService.instance.onBackgroundMessage =
@@ -35,6 +49,8 @@ class _MainShellState extends ConsumerState<MainShell> {
     };
 
     ChatNotificationService.instance.onTap = (roomId) {
+      // 채팅 메뉴를 숨겨 두었으면 대화방으로 보내지 않는다 — 돌아올 탭이 없다
+      if (!_chatVisible) return;
       widget.navigationShell.goBranch(2);
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) {
@@ -140,6 +156,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                     label: '업로드',
                     onTap: () => _goBranch(1),
                   ),
+                  if (_chatVisible)
                   _NavItem(
                     index: 2,
                     currentIndex: currentIndex,
@@ -179,6 +196,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (index == 0) {
       ref.read(prescriptionListProvider.notifier).load(refresh: true);
     }
+
+    // 탭을 옮길 때마다 채팅 메뉴 설정을 다시 본다 — 관리자가 바꾸면 곧 반영된다
+    _loadChatVisible();
   }
 }
 

@@ -51,6 +51,9 @@ class PrescriptionDetail {
   /// 검수 완료 뒤에는 거짓이 되고, 남의 건도 거짓이다.
   final bool editable;
 
+  /// 검수자가 다시 올려 달라고 한 것 중 아직 닫히지 않은 것.
+  final List<ReuploadRequest> requests;
+
   const PrescriptionDetail({
     required this.rxNumber,
     required this.status,
@@ -60,7 +63,20 @@ class PrescriptionDetail {
     required this.ocr,
     this.attachments = const [],
     this.editable = false,
+    this.requests = const [],
   });
+
+  /// 이 서류를 물은 요청. [attachmentId] 가 null 이면 처방전 그림이다.
+  ReuploadRequest? requestFor(int? attachmentId) {
+    for (final r in requests) {
+      if (attachmentId == null
+          ? r.isPrescriptionImage
+          : r.attachmentId == attachmentId) {
+        return r;
+      }
+    }
+    return null;
+  }
 
   factory PrescriptionDetail.fromJson(Map<String, dynamic> j) =>
       PrescriptionDetail(
@@ -72,6 +88,11 @@ class PrescriptionDetail {
         editable:      j['editable']        as bool? ?? false,
         attachments: ((j['attachments'] as List?) ?? const [])
             .map((e) => PrescriptionFile.fromJson(
+                Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        // 옛 서버는 이 칸을 보내지 않는다 — 없으면 요청이 없는 것으로 본다
+        requests: ((j['reupload_requests'] as List?) ?? const [])
+            .map((e) => ReuploadRequest.fromJson(
                 Map<String, dynamic>.from(e as Map)))
             .toList(),
         ocr: OcrResult.fromJson(
@@ -101,6 +122,47 @@ class PrescriptionFile {
         fileName: j['file_name'] as String? ?? '',
         url:      j['url'] as String? ?? '',
         isPdf:    j['is_pdf'] as bool? ?? false,
+      );
+}
+
+/// 검수자가 다시 올려 달라고 한 것 — 서류 한 장마다 하나.
+///
+/// 다시 올리면 서버가 저절로 닫고, 닫힌 것은 내려오지 않는다.
+class ReuploadRequest {
+  final int     id;
+
+  /// 무엇을 되물었나. null 이면 처방전 그림이다.
+  final int?    attachmentId;
+  final String  docLabel;
+
+  /// 고른 사유(이미지가 잘 안 보임 · 서류 유형이 다름 · 그 밖의 사유).
+  final String  reason;
+
+  /// 검수자가 적은 비고.
+  final String? memo;
+  final String? requestedBy;
+  final String? requestedAt;
+
+  const ReuploadRequest({
+    required this.id,
+    this.attachmentId,
+    required this.docLabel,
+    required this.reason,
+    this.memo,
+    this.requestedBy,
+    this.requestedAt,
+  });
+
+  bool get isPrescriptionImage => attachmentId == null;
+
+  factory ReuploadRequest.fromJson(Map<String, dynamic> j) => ReuploadRequest(
+        id:           (j['id'] as num).toInt(),
+        attachmentId: (j['attachment_id'] as num?)?.toInt(),
+        docLabel:     j['doc_label']    as String? ?? '처방전',
+        reason:       j['reason']       as String? ?? '',
+        memo:         j['memo']         as String?,
+        requestedBy:  j['requested_by'] as String?,
+        requestedAt:  j['requested_at'] as String?,
       );
 }
 

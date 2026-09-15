@@ -8,6 +8,8 @@ import '../services/prescription_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../widgets/common_widgets.dart';
+import 'package:image_picker/image_picker.dart';
+import 'prescription_camera_screen.dart';
 
 class PrescriptionDetailScreen extends ConsumerStatefulWidget {
   final String rxNumber;
@@ -24,6 +26,17 @@ class _PrescriptionDetailScreenState
   bool   _isLoading = true;
   String? _error;
   bool   _deleting = false;
+  bool   _adding   = false;
+
+  /* 서류를 더할 때 고르는 유형 — 업로드 화면과 같은 서버 목록이다.
+     못 받아 오면 기본 넷으로 버틴다. */
+  List<(String, String)> _docTypes = _fallbackDocTypes;
+  static const _fallbackDocTypes = [
+    ('prescription',      '처방전'),
+    ('registration_form', '등록신청서'),
+    ('test_result',       '결과지'),
+    ('id_card',           '신분증'),
+  ];
 
   /* 상단에 무엇을 보여 줄지. null 이면 처방전 그림이고, 값이 있으면 그 첨부다.
      목록에서 고른 것이 위에 크게 서야 무엇을 올렸는지 확인할 수 있다. */
@@ -38,6 +51,7 @@ class _PrescriptionDetailScreenState
     super.initState();
     _loadAuthHeaders();
     _load();
+    _loadDocTypes();
   }
 
   Future<void> _loadAuthHeaders() async {
@@ -144,6 +158,139 @@ class _PrescriptionDetailScreenState
     }
   }
 
+  Future<void> _loadDocTypes() async {
+    final list = await ref.read(prescriptionServiceProvider).getDocTypes();
+    if (!mounted || list == null) return;
+    setState(() => _docTypes = list);
+  }
+
+  /// 되물은 서류가 있으면 그 유형을 먼저 골라 둔다 — 대개 그것을 올리려고 연다.
+  String? _suggestType(PrescriptionDetail d, List<(String, String)> types) {
+    for (final r in d.requests) {
+      for (final t in types) {
+        if (t.$2 == r.docLabel) return t.$1;
+      }
+    }
+    return types.isEmpty ? null : types.first.$1;
+  }
+
+  /// 이 건에 서류를 더한다 — 유형을 고르고, 찍거나 사진에서 고른다(2026-09-15 지시).
+  ///
+  /// 새 건을 만들지 않고 이 번호로 올린다. 검수 상태와 처방전 중복은 서버가
+  /// 한 번 더 가린다. 되물은 서류를 올리면 그 요청은 서버에서 저절로 닫힌다.
+  Future<void> _addDocument(PrescriptionDetail d) async {
+    // 처방전은 한 건에 한 장 — 그림이 있으면 고를 수 없다(바꾸려면 먼저 지운다)
+    final types = _docTypes
+        .where((t) => t.$1 != 'prescription' || d.imageUrl == null)
+        .toList();
+    String? code = _suggestType(d, types);
+
+    final choice = await showModalBottomSheet<(String, bool)>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('서류 추가',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('${d.rxNumber}에 더합니다. 서류 유형을 고르세요.',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted)),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final t in types)
+                      ChoiceChip(
+                        label: Text(t.$2),
+                        selected: code == t.$1,
+                        onSelected: (_) => setSheet(() => code = t.$1),
+                      ),
+                  ],
+                ),
+                if (d.imageUrl != null) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                      '처방전은 이미 있습니다. 바꾸려면 먼저 「처방전 그림 지우기」를 누르세요.',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                ],
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: code == null
+                            ? null
+                            : () => Navigator.pop(ctx, (code!, true)),
+                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                        label: const Text('카메라'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: code == null
+                            ? null
+                            : () => Navigator.pop(ctx, (code!, false)),
+                        icon: const Icon(Icons.photo_library_outlined, size: 18),
+                        label: const Text('사진 선택'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final (docType, useCamera) = choice;
+
+    String path;
+    String name;
+    if (useCamera) {
+      final f = await PrescriptionCameraScreen.show(context);
+      if (f == null) return;
+      path = f.path;
+      name = f.path.split('/').last;
+    } else {
+      final x = await ImagePicker().pickImage(
+          source: ImageSource.gallery, imageQuality: 85, maxWidth: 2048);
+      if (x == null) return;
+      path = x.path;
+      name = x.name;
+    }
+    if (!mounted) return;
+
+    setState(() => _adding = true);
+    try {
+      final message = await ref.read(prescriptionServiceProvider).addFile(
+            d.rxNumber,
+            path: path,
+            fileName: name,
+            docType: docType,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
   Future<void> _load() async {
     setState(() { _isLoading = true; _error = null; });
     try {
@@ -161,6 +308,10 @@ class _PrescriptionDetailScreenState
     'ocr_processing': AppTheme.warning,
     'ocr_done':       AppTheme.secondary,
     'review_needed':  AppTheme.danger,
+    'review_requested': AppTheme.warning,
+    // 검수자가 되물은 건과, 다시 올려 검수를 청한 건 (2026-09-15)
+    'review_hold':    AppTheme.warning,
+    'review_resent':  AppTheme.warning,
     'approved':       AppTheme.success,
     'rejected':       Color(0xFFB71C1C),
     'ordered':        AppTheme.primary,
@@ -297,6 +448,12 @@ class _PrescriptionDetailScreenState
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // ── 다시 올려 달라는 요청 ─────────────────────────────
+                if (d.requests.isNotEmpty) ...[
+                  _RequestBanner(requests: d.requests),
+                  const SizedBox(height: 12),
+                ],
+
                 // ── 보고 있는 그림 ──────────────────────────────────
                 if (_viewUrl(d) != null) ...[
                   // 무엇을 보고 있는지 적는다 — 그림만으로는 유형을 알 수 없다
@@ -382,6 +539,7 @@ class _PrescriptionDetailScreenState
                     // 처방전 그림도 목록의 한 줄로 세운다 — 되돌아갈 길이 있어야 한다
                     hasPrescriptionImage: d.imageUrl != null,
                     viewingId: _viewingId,
+                    requestFor: d.requestFor,
                     onSelect: (id) => setState(() => _viewingId = id),
                     onDelete: (f) => _confirmDelete(
                       what: f.docLabel,
@@ -389,6 +547,16 @@ class _PrescriptionDetailScreenState
                           .read(prescriptionServiceProvider)
                           .deleteAttachment(d.rxNumber, f.id),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // ── 서류 추가 — 검수 완료 전까지. 새 건을 만들지 않고 이 건에 더한다
+                if (d.editable) ...[
+                  _AddDocButton(
+                    adding: _adding,
+                    disabled: _deleting,
+                    onTap: () => _addDocument(d),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -552,6 +720,9 @@ class _AttachmentsCard extends StatelessWidget {
 
   final void Function(int? id) onSelect;
 
+  /// 이 서류를 물은 요청을 찾는다. null 을 넘기면 처방전 그림이다.
+  final ReuploadRequest? Function(int? attachmentId) requestFor;
+
   const _AttachmentsCard({
     required this.files,
     required this.headers,
@@ -561,6 +732,7 @@ class _AttachmentsCard extends StatelessWidget {
     required this.hasPrescriptionImage,
     required this.viewingId,
     required this.onSelect,
+    required this.requestFor,
   });
 
   @override
@@ -609,6 +781,7 @@ class _AttachmentsCard extends StatelessWidget {
               headers: headers,
               onTap: () => onSelect(null),
               onDelete: null,
+              request: requestFor(null),
             ),
             const Divider(height: 20, color: AppTheme.border),
           ],
@@ -623,6 +796,7 @@ class _AttachmentsCard extends StatelessWidget {
               headers: headers,
               onTap: () => onSelect(files[i].id),
               onDelete: editable && !busy ? () => onDelete(files[i]) : null,
+              request: requestFor(files[i].id),
             ),
           ],
         ],
@@ -648,6 +822,9 @@ class _FileTile extends StatelessWidget {
   final VoidCallback        onTap;
   final VoidCallback?       onDelete;
 
+  /// 이 서류를 다시 올려 달라는 요청. 있으면 줄에 표시하고 사유ㆍ비고를 보인다.
+  final ReuploadRequest?    request;
+
   const _FileTile({
     required this.label,
     required this.subLabel,
@@ -656,6 +833,7 @@ class _FileTile extends StatelessWidget {
     required this.headers,
     required this.onTap,
     required this.onDelete,
+    this.request,
   });
 
   @override
@@ -711,19 +889,45 @@ class _FileTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: selected
-                              ? AppTheme.primary
-                              : AppTheme.textPrimary)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(label,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: selected
+                                    ? AppTheme.primary
+                                    : AppTheme.textPrimary)),
+                      ),
+                      if (request != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('다시 올려 주세요',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.danger)),
+                        ),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(subLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 11, color: AppTheme.textMuted)),
+                  if (request != null) ...[
+                    const SizedBox(height: 4),
+                    _RequestText(request: request!),
+                  ],
                 ],
               ),
             ),
@@ -735,6 +939,120 @@ class _FileTile extends StatelessWidget {
                 tooltip: '지우기',
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 검수자가 다시 올려 달라고 한 것을 모아 보인다. 서류 줄마다에도 표시하지만,
+/// 이미 지운 서류를 물은 것은 줄이 없으므로 여기서 한 번 더 보인다.
+class _RequestBanner extends StatelessWidget {
+  final List<ReuploadRequest> requests;
+  const _RequestBanner({required this.requests});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.danger.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.danger.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.upload_file_rounded,
+                  size: 17, color: AppTheme.danger),
+              const SizedBox(width: 6),
+              Text('다시 올려 달라는 요청 ${requests.length}건',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.danger)),
+            ],
+          ),
+          for (final r in requests)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _RequestText(request: r, showLabel: true),
+            ),
+          const SizedBox(height: 10),
+          const Text(
+              '아래 「서류 추가」로 해당 서류를 다시 올리면 요청이 닫힙니다. 잘못 올린 서류는 🗑로 지웁니다.',
+              style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 요청 한 건 — 무엇을, 왜, 누가 언제.
+class _RequestText extends StatelessWidget {
+  final ReuploadRequest request;
+  final bool showLabel;
+  const _RequestText({required this.request, this.showLabel = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = request;
+    final who = [r.requestedBy, r.requestedAt].whereType<String>().join(' · ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(showLabel ? '${r.docLabel} — ${r.reason}' : r.reason,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.danger)),
+        if (r.memo != null && r.memo!.isNotEmpty)
+          Text('비고: ${r.memo}',
+              style: const TextStyle(
+                  fontSize: 12, color: AppTheme.textPrimary)),
+        if (who.isNotEmpty)
+          Text(who,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+      ],
+    );
+  }
+}
+
+/// 서류 추가 단추 — 이 건에 더한다. 업로드 탭에서 올리면 새 처방전이 된다.
+class _AddDocButton extends StatelessWidget {
+  final bool         adding;
+  final bool         disabled;
+  final VoidCallback onTap;
+
+  const _AddDocButton({
+    required this.adding,
+    required this.disabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: adding || disabled ? null : onTap,
+        icon: adding
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.add_a_photo_outlined, size: 18),
+        label: Text(adding ? '올리는 중…' : '서류 추가 (카메라 · 사진 선택)',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.primary,
+          side: const BorderSide(color: AppTheme.primary),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );

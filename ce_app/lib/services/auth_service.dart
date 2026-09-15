@@ -64,6 +64,19 @@ class AuthService {
     return true;
   }
 
+  /// 하단 채팅 메뉴를 보일지(환경 설정 › 모바일 앱 › 채팅 메뉴 숨기기).
+  /// 못 물어보면 보인다고 본다 — 여태 늘 보였다.
+  Future<bool> chatVisible() async {
+    try {
+      final res  = await _dio.get('/auth/options');
+      final data = res.data;
+      if (data is Map && data['chat_visible'] is bool) {
+        return data['chat_visible'] as bool;
+      }
+    } catch (_) {}
+    return true;
+  }
+
   /// 로그인 — 서버가 직접 토큰을 반환하거나 OTP를 요구하는 두 케이스 처리
   Future<LoginResult> login(String email, String password) async {
     try {
