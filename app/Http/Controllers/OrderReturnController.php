@@ -282,7 +282,7 @@ class OrderReturnController extends Controller
            「금액조정」 단계에서 따로 세운다. */
         if ($return->scenario() === OrderReturn::SC_REFUND_ONLY) {
             return redirect()->route('order-returns.show', $return)->with('status',
-                "접수했습니다. 접수번호 {$return->receipt_no} — 일반 환불이라 창고에는 알리지 않습니다. "
+                "접수했습니다. 접수번호 {$return->receipt_no} — 일반 환불이라 창고에는 전송하지 않습니다. "
                 . '승인·결제취소 뒤 금액조정 주문을 생성합니다.');
         }
 
@@ -442,7 +442,7 @@ class OrderReturnController extends Controller
 
         $orderReturn->update($data);
 
-        return back()->with('success', '환불 정보를 적었습니다.');
+        return back()->with('success', '환불 정보를 저장했습니다.');
     }
 
     /**
@@ -486,7 +486,7 @@ class OrderReturnController extends Controller
     public function bulkApprove(Request $request): RedirectResponse
     {
         if (!perm('order-returns', 'approve')) {
-            return back()->withErrors(['bulk' => '승인 권한이 있어야 누를 수 있습니다.']);
+            return back()->withErrors(['bulk' => '승인 권한이 필요합니다.']);
         }
 
         $data = $request->validate([
@@ -514,7 +514,7 @@ class OrderReturnController extends Controller
 
         $말 = $done . '건을 승인했습니다.';
         if ($skipped) {
-            $말 .= ' 승인을 기다리지 않는 ' . count($skipped) . '건은 건너뛰었습니다 — '
+            $말 .= ' 승인을 기다리지 않는 ' . count($skipped) . '건은 제외했습니다 — '
                  . implode(', ', array_slice($skipped, 0, 5))
                  . (count($skipped) > 5 ? ' 외' : '') . '.';
         }
@@ -574,14 +574,14 @@ class OrderReturnController extends Controller
         $to = $data['to_status'];
 
         if (!in_array($to, $orderReturn->nextStatuses(), true)) {
-            return back()->withErrors(['to_status' => '지금 상태에서 갈 수 없는 단계입니다.']);
+            return back()->withErrors(['to_status' => '현재 상태에서 이동할 수 없는 단계입니다.']);
         }
 
         /* 검수 확정과 전자 승인은 승인 권한이 있어야 누른다. 절차서가 승인자를 따로
            두라고 했는데 아무나 누를 수 있으면 그 줄을 둔 뜻이 없다. */
         if (OrderReturn::needsApproval($to) && !perm('order-returns', 'approve')) {
             return back()->withErrors(['to_status' =>
-                OrderReturn::STATUS_LABELS[$to] . '은(는) 승인 권한이 있어야 누를 수 있습니다 ('
+                OrderReturn::STATUS_LABELS[$to] . '은(는) 승인 권한이 필요합니다 ('
                 . $orderReturn->approverRole() . ').']);
         }
 
@@ -592,7 +592,7 @@ class OrderReturnController extends Controller
            추가 입금인데, 그 금액이 0 이면 어느 쪽도 아니다 — 조정할 것이 없다. */
         if ($to === 'adjusted' && ! (int) $orderReturn->adjust_amount) {
             return back()->withErrors(['to_status' =>
-                '조정 금액을 먼저 적어 주십시오 — 아래 「금액조정」 칸에 얼마를 돌려주는지(또는 더 받는지) 적고 저장합니다.']);
+                '조정 금액을 먼저 입력해 주십시오 — 아래 「금액조정」 칸에 환불 금액(또는 추가 청구 금액)을 입력하고 저장합니다.']);
         }
 
         DB::transaction(function () use ($orderReturn, $data, $to) {
@@ -659,7 +659,7 @@ class OrderReturnController extends Controller
                띄웠는데, 까닭이 창고가 거절한 것이면 몇 번을 눌러도 같은 자리다 —
                까닭은 상세의 적요에만 적혀 아무도 읽지 않았다(3차 4회 13번). */
             $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
-                ? ' 금액조정 주문을 세웠습니다.'
+                ? ' 금액조정 주문을 생성했습니다.'
                 : ' 금액조정 주문을 생성하지 못했습니다 — ' . ($orderReturn->fresh()->credit_note ?: '사유를 알 수 없습니다') . '.';
         }
 
@@ -668,7 +668,7 @@ class OrderReturnController extends Controller
             $extra = ' ' . $out['note'];
         }
 
-        return back()->with('status', '상태를 옮겼습니다.' . $extra);
+        return back()->with('status', '상태를 변경했습니다.' . $extra);
     }
 
     /**
@@ -684,7 +684,7 @@ class OrderReturnController extends Controller
     public function adjustAmount(Request $request, OrderReturn $orderReturn): RedirectResponse
     {
         if (! $orderReturn->needsAdjust()) {
-            return back()->withErrors(['adjust' => '조정할 것이 없는 건입니다 — 전부를 되돌리는 건은 발행을 통째로 무릅니다.']);
+            return back()->withErrors(['adjust' => '조정할 것이 없는 건입니다 — 전량 반품ㆍ취소 건은 발행을 전부 취소합니다.']);
         }
 
         /* 0 원은 받지 않는다 (2026-09-11 고침). 여태 min:0 이라 0 이 저장됐고, 단계를
@@ -704,7 +704,7 @@ class OrderReturnController extends Controller
                 number_format($data['adjust_amount']),
                 $orderReturn->receipt_no));
 
-        return back()->with('status', sprintf('조정 금액을 적었습니다 — %s %s원.',
+        return back()->with('status', sprintf('조정 금액을 저장했습니다 — %s %s원.',
             OrderReturn::ADJ_DIRECTIONS[$data['adjust_direction']],
             number_format($data['adjust_amount'])));
     }
@@ -761,14 +761,14 @@ class OrderReturnController extends Controller
     public function retryAdjust(OrderReturn $orderReturn): RedirectResponse
     {
         if (! perm('order-returns', 'send')) {
-            return back()->withErrors(['adjust' => '창고로 보낼 권한이 있어야 누를 수 있습니다.']);
+            return back()->withErrors(['adjust' => '창고 전송 권한이 필요합니다.']);
         }
 
         $ok = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']));
 
         return $ok
-            ? back()->with('status', '금액조정 주문을 세웠습니다 — ' . ($orderReturn->fresh()->adjust_so_no ?: '창고 번호는 곧 들어옵니다') . '.')
-            : back()->withErrors(['adjust' => $orderReturn->fresh()->credit_note ?: '금액조정 주문을 세우지 못했습니다.']);
+            ? back()->with('status', '금액조정 주문을 생성했습니다 — ' . ($orderReturn->fresh()->adjust_so_no ?: '창고 번호는 곧 들어옵니다') . '.')
+            : back()->withErrors(['adjust' => $orderReturn->fresh()->credit_note ?: '금액조정 주문을 생성하지 못했습니다.']);
     }
 
     public function issueCredit(OrderReturn $orderReturn): RedirectResponse

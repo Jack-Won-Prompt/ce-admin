@@ -386,7 +386,7 @@ class PatientController extends Controller
         }
 
         activity()->causedBy(Auth::user())->performedOn($patient)
-            ->log("주소를 고쳤습니다 — {$전} → {$address->fresh()->full}");
+            ->log("주소를 수정했습니다 — {$전} → {$address->fresh()->full}");
 
         return response()->json(['success' => true]);
     }
@@ -761,7 +761,7 @@ class PatientController extends Controller
 
         return response()->json([
             'success'    => true,
-            'message'    => '상담을 이어 적었습니다.',
+            'message'    => '상담 내용을 추가로 저장했습니다.',
             'counsel_no' => $prescription->counsel_no,
         ]);
     }
@@ -835,7 +835,7 @@ class PatientController extends Controller
         $무엇 = array_key_exists('counsel_type', $data) ? '상담 유형' : '상담 내용';
 
         activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($prescription)
-            ->log("상담내역에서 {$무엇}을 고쳤습니다 ({$prescription->counsel_no})");
+            ->log("상담내역에서 {$무엇}을 수정했습니다 ({$prescription->counsel_no})");
 
         return response()->json(['success' => true, 'message' => $무엇 . '을 저장했습니다.']);
     }

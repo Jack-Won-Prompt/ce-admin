@@ -871,7 +871,7 @@ class SettlementController extends Controller
                 'status_badge' => $tp->status_badge,
                 'deposited_at' => $tp->deposited_at?->format('Y-m-d H:i'),
                 'message'      => '테스트용으로 임의 생성한 계좌입니다 — 토스에 조회할 수 없습니다. '
-                                . '입금은 정산 화면의 「입금 확인」으로 세우십시오.',
+                                . '입금은 정산 화면의 「입금 확인」으로 등록하십시오.',
             ]);
         }
 
@@ -1025,7 +1025,7 @@ class SettlementController extends Controller
             'success' => true,
             /* 「마감으로」와 「반려로」는 받침에 따라 조사가 갈린다. 「상태로」를 붙여
                그 갈림을 없앤다 — 상태가 늘 수도 있는데 그때마다 조사를 따질 수 없다. */
-            'message' => $order->settleStatusLabel() . ' 상태로 옮겼습니다.',
+            'message' => $order->settleStatusLabel() . ' 상태로 변경했습니다.',
             'label'   => $order->settleStatusLabel(),
         ]);
     }

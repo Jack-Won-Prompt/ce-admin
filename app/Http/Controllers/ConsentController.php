@@ -409,7 +409,7 @@ class ConsentController extends Controller
                 if ($채울것) {
                     $patient->forceFill($채울것)->save();
                     activity()->performedOn($patient)->log(
-                        '위임동의에서 받은 보호자를 거래처에 적었습니다 ('
+                        '위임동의에서 받은 보호자를 거래처에 반영했습니다 ('
                         . ($payload['guardian_name'] ?? '') . ')'
                     );
                 }

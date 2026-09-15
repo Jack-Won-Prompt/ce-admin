@@ -64,7 +64,7 @@ window.nhisAssistBtn = function (orderId, opts) {
   }
 
   btn.title = local
-    ? '등기로 부친 것을 적고, 등기 영수증을 올립니다'
+    ? '등기 발송 내역을 입력하고 등기 영수증을 첨부합니다'
     : '왼쪽에 우리 청구 원본, 오른쪽에 공단 사이트를 나란히 엽니다';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();

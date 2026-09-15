@@ -453,7 +453,7 @@ class WithworksWebhookController extends Controller
     {
         $tell = [
             'ro.created'   => ['반품이 창고에 접수되었습니다', 'info'],
-            'ro.inspected' => ['창고가 검수 비고를 적었습니다 — 읽어 보십시오', 'warning'],
+            'ro.inspected' => ['창고가 검수 비고를 등록했습니다 — 확인하십시오', 'warning'],
             'ro.rcpt_completed' => ['반품 실물이 창고에 들어왔습니다', 'success'],
             'ro.confirmed' => ['반품이 창고에서 확정되었습니다', 'success'],
             'ro.cancelled' => ['반품이 취소되었습니다',        'danger'],

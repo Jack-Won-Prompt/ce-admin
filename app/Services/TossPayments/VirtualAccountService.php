@@ -242,7 +242,7 @@ class VirtualAccountService extends TossClient
                 'payment_key' => $paymentKey,
                 'error'       => $e->getMessage(),
             ]);
-            $this->건너뛴까닭 = '토스에 다시 묻지 못했습니다 — ' . $e->getMessage();
+            $this->건너뛴까닭 = '토스에 재조회하지 못했습니다 — ' . $e->getMessage();
 
             return null;
         }

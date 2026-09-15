@@ -406,7 +406,7 @@ function showDoc(doc) {
 
     const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
     try {
-      창.걸음(1, '맞춘 값을 적었습니다.');
+      창.걸음(1, '조정한 값을 저장했습니다.');
       창.걸음(2, '맞춘 값으로 PDF 를 다시 만드는 중…');
 
       const out = await apiRequest(res.regenerate_url, 'POST', {});

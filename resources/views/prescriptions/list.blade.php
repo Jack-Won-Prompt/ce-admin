@@ -529,7 +529,7 @@ window.HELP_TOUR_STEPS = [
           <select data-rq-reason="${f.id}" class="form-control form-select"
                   style="width:190px;height:28px;font-size:11.5px;padding:0 8px;">${고르개}</select>
           <input type="text" data-rq-memo="${f.id}" class="form-control" maxlength="500"
-                 placeholder="덧붙일 말 (그 밖의 사유를 고르셨으면 반드시)"
+                 placeholder="덧붙일 말 (그 밖의 사유를 선택하셨으면 반드시)"
                  style="flex:1;min-width:200px;height:28px;font-size:11.5px;padding:0 8px;">
           <button type="button" class="ds-btn ds-btn-primary" data-rq="send" data-file="${f.id}"
                   style="height:28px;min-width:0;padding:0 11px;font-size:11.5px;">보내기</button>
@@ -694,7 +694,7 @@ window.HELP_TOUR_STEPS = [
 
     const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
     try {
-      창.걸음(1, '맞춘 값을 적었습니다.');
+      창.걸음(1, '조정한 값을 저장했습니다.');
       창.걸음(2, '맞춘 값으로 PDF 를 다시 만드는 중…');
 
       const out = await apiRequest(res.regenerate_url, 'POST', {});
@@ -784,7 +784,7 @@ window.HELP_TOUR_STEPS = [
     const 메모 = document.querySelector(`[data-rq-memo="${id}"]`).value.trim();
 
     if (사유 === 'etc' && !메모) {
-      showToast('그 밖의 사유를 고르셨으면 내용을 적어 주십시오.', 'warning');
+      showToast('그 밖의 사유를 선택하셨으면 내용을 입력해 주십시오.', 'warning');
       return;
     }
 

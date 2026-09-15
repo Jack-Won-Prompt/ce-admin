@@ -2413,7 +2413,7 @@ class PrescriptionController extends Controller
         $원주문 = $prescription->order;
 
         if (! $원주문) {
-            return back()->with('error', '원 주문이 아직 없습니다 — 먼저 주문을 만든 뒤에 추가 주문을 세웁니다.');
+            return back()->with('error', '원 주문이 아직 없습니다 — 먼저 주문을 만든 뒤에 추가 주문을 생성합니다.');
         }
 
         /* 처방 총계를 넘겨 팔 수는 없다. 넘은 만큼은 공단에 청구할 수 없고, 그 사실은
@@ -2459,7 +2459,7 @@ class PrescriptionController extends Controller
         return redirect()->route('prescriptions.show', [
             'prescription' => $prescription->rx_number,
             'order'        => $추가->order_number,
-        ])->with('success', "추가 주문 {$추가->order_number} 을 세웠습니다. 주문 제품 탭에서 더 살 제품을 고르십시오.");
+        ])->with('success', "추가 주문 {$추가->order_number} 을 생성했습니다. 주문 제품 탭에서 더 살 제품을 선택하십시오.");
     }
 
     // ── OCR 수정 저장 ─────────────────────────────────────
@@ -3126,7 +3126,7 @@ class PrescriptionController extends Controller
         }
 
         if ($값['reason'] === 'etc' && ! trim((string) ($값['memo'] ?? ''))) {
-            return response()->json(['success' => false, 'message' => '그 밖의 사유를 고르셨으면 내용을 적어 주십시오.'], 422);
+            return response()->json(['success' => false, 'message' => '그 밖의 사유를 선택하셨으면 내용을 입력해 주십시오.'], 422);
         }
 
         $요청 = $요청서->걸기($prescription, $첨부id, $값['reason'], $값['memo'] ?? null);
@@ -3134,7 +3134,7 @@ class PrescriptionController extends Controller
         return response()->json([
             'success'      => true,
             'message'      => $요청->fcm_sent
-                ? ($요청->target_user_name . '님 앱으로 알렸습니다.')
+                ? ($요청->target_user_name . '님 앱으로 전송했습니다.')
                 : ('요청을 남겼습니다 — ' . ($요청->fcm_error ?: '앱 알림은 가지 않았습니다.')),
             'sent'         => $요청->fcm_sent,
             'status'       => $prescription->fresh()->status,
@@ -3263,7 +3263,7 @@ class PrescriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "「{$tpl->label}」의 본문이 비어 있습니다. "
-                           . '메시지 관리에서 승인받은 알림톡 문구를 적어 주십시오.',
+                           . '메시지 관리에서 승인받은 알림톡 문구를 입력해 주십시오.',
             ], 422);
         }
 
@@ -3836,7 +3836,7 @@ class PrescriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => '지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오. '
-                           . '「청구 관리」에서 서류를 뽑아 부친 뒤 등기번호를 적어 주십시오.',
+                           . '「청구 관리」에서 서류를 출력하여 발송한 뒤 등기번호를 입력해 주십시오.',
             ], 422);
         }
 
@@ -3856,7 +3856,7 @@ class PrescriptionController extends Controller
                 'success' => false,
                 'message' => '이 건은 공단에 청구하지 않습니다(' . $this->noClaimReason($prescription) . ') — '
                            . '공단으로 보낼 수 없습니다. 근로복지공단ㆍ보험사로 보내려면 '
-                           . '수신처를 「기타(직접 입력)」로 고르고 번호를 적어 주십시오.',
+                           . '수신처를 「기타(직접 입력)」를 선택하고 번호를 입력해 주십시오.',
             ], 422);
         }
 
@@ -4037,7 +4037,7 @@ class PrescriptionController extends Controller
             'popbill_state'   => $receiptNum ? \App\Models\FaxHistory::STATE_WAIT : \App\Models\FaxHistory::STATE_FAIL,
         ]);
         } catch (\Throwable $e) {
-            Log::error('[Fax] 보냈으나 자취를 남기지 못했다', [
+            Log::error('[Fax] 보냈으나 이력을 남기지 못했다', [
                 'rx' => $prescription->rx_number, 'receipt' => $receiptNum, 'error' => $e->getMessage(),
             ]);
 

@@ -115,7 +115,7 @@ class ReturnSettlement
             ])->save();
 
             activity()->causedBy(Auth::user())->performedOn($return->order)
-                ->log("금액조정 주문을 세웠습니다 ({$return->receipt_no} · {$return->adjust_so_no})");
+                ->log("금액조정 주문을 생성했습니다 ({$return->receipt_no} · {$return->adjust_so_no})");
 
             return true;
         } catch (\Throwable $e) {
@@ -154,7 +154,7 @@ class ReturnSettlement
                 ? sprintf(' 조정 금액 %s %s원.',
                     \App\Models\OrderReturn::ADJ_DIRECTIONS[$return->adjust_direction] ?? '조정',
                     number_format((int) $return->adjust_amount))
-                : ' 조정 금액이 아직 적히지 않았습니다 — 상세에서 적어 주십시오.';
+                : ' 조정 금액이 아직 입력되지 않았습니다 — 상세 화면에서 입력해 주십시오.';
 
             $note = '부분 취소 — 기관 청구 서류는 최종 청구분에 반영합니다. '
                   . '이미 발행한 계산서·현금영수증은 자동으로 손대지 않았습니다.' . $adj;

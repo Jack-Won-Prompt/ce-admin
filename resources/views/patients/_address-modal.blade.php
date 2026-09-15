@@ -177,7 +177,7 @@
     try {
       const res = await apiRequest(id ? `${_amUrl}/${id}` : _amUrl, id ? 'PUT' : 'POST', body);
       if (!res?.success) throw new Error(res?.message || '저장하지 못했습니다.');
-      showToast(id ? '주소를 고쳤습니다.' : '주소를 등록했습니다.', 'success');
+      showToast(id ? '주소를 수정했습니다.' : '주소를 등록했습니다.', 'success');
       addrFormReset();
       await addrLoad();
     } catch (e) {

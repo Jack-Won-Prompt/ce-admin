@@ -285,7 +285,7 @@ class OrderController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Operation 정보를 적었습니다.');
+        return back()->with('success', 'Operation 정보를 저장했습니다.');
     }
 
     // ── 상세 ──────────────────────────────────────────────
@@ -551,7 +551,7 @@ class OrderController extends Controller
         if ($order->취소기다리는중인가()) {
             return response()->json([
                 'success' => false,
-                'message' => '취소를 요청해 둔 주문입니다 — 창고가 되돌리는 동안에는 고칠 수 없습니다.',
+                'message' => '취소 요청 중인 주문입니다 — 창고에서 처리하는 동안에는 수정할 수 없습니다.',
             ], 422);
         }
 

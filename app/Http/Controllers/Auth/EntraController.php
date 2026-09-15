@@ -261,7 +261,7 @@ class EntraController extends Controller
             ]);
         } catch (\Throwable $e) {
             /* 자취를 못 남겼다고 로그인을 막지는 않는다 */
-            Log::warning('[SSO] 자취를 남기지 못했습니다', ['error' => $e->getMessage()]);
+            Log::warning('[SSO] 이력을 남기지 못했습니다', ['error' => $e->getMessage()]);
         }
     }
 }

@@ -53,7 +53,7 @@ class OrderCancelService
                 'message' => $order->창고단계() === 'shipped'
                     ? '이미 출고된 주문입니다 — 교환/반품/취소 화면에서 처리해 주십시오.'
                     : ($order->취소기다리는중인가()
-                        ? '이미 취소를 요청해 둔 주문입니다.'
+                        ? '이미 취소 요청 중인 주문입니다.'
                         : '취소할 수 있는 주문이 아닙니다.'),
             ];
         }
@@ -146,7 +146,7 @@ class OrderCancelService
         if ($지금 >= $이전) {
             $늘어난 = number_format($지금 - $이전);
 
-            return "이미 받은 건입니다 — 늘어난 {$늘어난}원은 결제 링크로 따로 청해 주십시오.";
+            return "이미 받은 건입니다 — 늘어난 {$늘어난}원은 결제 링크로 별도 청구해 주십시오.";
         }
 
         $차액 = $이전 - $지금;
@@ -157,7 +157,7 @@ class OrderCancelService
                 'order' => $order->order_number, 'amount' => $차액, 'message' => $결과['message'] ?? '',
             ]);
 
-            return "차액 " . number_format($차액) . "원을 무르지 못했습니다 — " . ($결과['message'] ?? '') ;
+            return "차액 " . number_format($차액) . "원을 환불하지 못했습니다 — " . ($결과['message'] ?? '') ;
         }
 
         activity()->causedBy(Auth::user())->performedOn($order)
@@ -177,7 +177,7 @@ class OrderCancelService
             $결과 = $this->결제취소->cancel($order, mb_substr("주문 취소 — {$사유}", 0, 200));
             $말[] = ($결과['ok'] ?? false)
                 ? '결제를 취소했습니다.'
-                : ('결제를 무르지 못했습니다 — ' . ($결과['message'] ?? ''));
+                : ('결제를 취소하지 못했습니다 — ' . ($결과['message'] ?? ''));
         }
 
         /* 아직 받기 전이면 보낸 링크를 해지한다 — 취소한 건의 링크가 살아 있으면
@@ -194,11 +194,11 @@ class OrderCancelService
            그대로 적어 담당자가 손으로 마무리하게 한다 — 조용히 넘기면 취소된 건의
            세금계산서가 살아 남는다. */
         if ($order->tax_invoice_status === 'issued') {
-            $말[] = '세금계산서는 「세금계산서 취소」로 따로 무르셔야 합니다.';
+            $말[] = '세금계산서는 「세금계산서 취소」에서 별도로 취소하셔야 합니다.';
         }
 
         if ($order->cash_receipt_status === 'issued') {
-            $말[] = '현금영수증은 「현금영수증 취소」로 따로 무르셔야 합니다.';
+            $말[] = '현금영수증은 「현금영수증 취소」에서 별도로 취소하셔야 합니다.';
         }
 
         return implode(' ', $말);
@@ -273,7 +273,7 @@ class OrderCancelService
         if ($res->status() === 404) {
             return ['ok' => false, 'message' =>
                 '위드웍스에 취소 요청 주소(so_cancel_request)가 아직 없습니다. '
-                . '창고 담당자에게 직접 연락해 할당ㆍ피킹을 되돌려 달라고 청해 주십시오.'];
+                . '창고 담당자에게 직접 연락해 할당ㆍ피킹을 되돌려 달라고 요청해 주십시오.'];
         }
 
         $몸 = $res->json();

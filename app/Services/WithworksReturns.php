@@ -67,7 +67,7 @@ class WithworksReturns
         /* 부분이면 원 판매주문을 통째로 취소하지 않는다 — 남는 수량은 그대로 나가야 한다.
            수량을 줄이는 것은 Consumer Operation 이 위드웍스에서 직접 한다(절차서). */
         if ($return->is_partial) {
-            return $this->fail($return, '부분 취소라 판매주문을 통째로 취소하지 않았습니다 — '
+            return $this->fail($return, '부분 취소라 판매주문을 전량 취소하지 않았습니다 — '
                 . '위드웍스에서 수량을 줄여 주십시오 (Consumer Operation)');
         }
 

@@ -165,7 +165,7 @@ class NhisAssistController extends Controller
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log('공단 청구 완료로 표시' . ($memo ? ' — ' . $memo : ''));
 
-        return back()->with('status', '청구 완료로 적었습니다.');
+        return back()->with('status', '청구 완료로 변경했습니다.');
     }
 
     /**

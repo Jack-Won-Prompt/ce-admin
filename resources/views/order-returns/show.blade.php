@@ -515,7 +515,7 @@
       </span></div>
     @else
       <div class="rt-kv"><span>전달</span><span style="color:#B54708;font-weight:600;">
-        {{ $r->withworks_error ?: '아직 알리지 못했습니다' }}
+        {{ $r->withworks_error ?: '아직 전송하지 못했습니다' }}
       </span></div>
     @endif
     <div class="rt-kv"><span>전달 시각</span><span>{{ $r->withworks_sent_at?->format('Y-m-d H:i') ?? '—' }}</span></div>

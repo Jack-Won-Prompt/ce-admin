@@ -142,7 +142,7 @@ class CommonCodeController extends Controller
             'removed'             => ['array'],
             'removed.*'           => ['integer', 'exists:common_codes,id'],
         ], [
-            'rows.*.code.regex' => '코드는 영문 소문자·숫자·밑줄만 씁니다 (예: tax_invoice).',
+            'rows.*.code.regex' => '코드는 영문 소문자·숫자·밑줄만 사용합니다 (예: tax_invoice).',
         ]);
 
         $saved = $off = 0;
@@ -224,7 +224,7 @@ class CommonCodeController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'is_active'  => ['boolean'],
         ], [
-            'code.regex'  => '코드는 영문 소문자·숫자·밑줄만 씁니다 (예: tax_invoice).',
+            'code.regex'  => '코드는 영문 소문자·숫자·밑줄만 사용합니다 (예: tax_invoice).',
             'code.unique' => '이미 쓰는 코드입니다.',
         ]);
     }

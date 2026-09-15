@@ -1040,7 +1040,7 @@ form.addEventListener('submit', async function (e) {
 
   // 누구의 처방인지 모른 채로는 올리지 않는다 — 나중에 잇는 일이 더 비싸다
   if (!document.getElementById('h_patient_id').value) {
-    막는까닭('<b>이름</b>을 먼저 고르십시오.');
+    막는까닭('<b>이름</b>을 먼저 선택하십시오.');
     showToast('환자를 먼저 선택하십시오.', 'warning');
     document.getElementById('patientSearchInput')?.focus();
 

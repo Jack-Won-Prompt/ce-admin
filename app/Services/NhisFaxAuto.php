@@ -75,7 +75,7 @@ final class NhisFaxAuto
         if ($missing || ! $fax) {
             $why = $missing
                 ? implode('ㆍ', $missing) . ' 이(가) 아직 없습니다'
-                : '보낼 팩스번호가 없습니다 — 관할 청구처를 먼저 골라 주십시오';
+                : '보낼 팩스번호가 없습니다 — 관할 청구처를 먼저 선택해 주십시오';
 
             $this->tell($prescription, $why);
 

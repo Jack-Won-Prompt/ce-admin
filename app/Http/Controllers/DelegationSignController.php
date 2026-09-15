@@ -436,8 +436,8 @@ class DelegationSignController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "새로 {$세움}건을 세웠습니다."
-                       . ($건너뜀 ? " 이미 있던 {$건너뜀}건은 명단 값을 새로 적었습니다." : '')
+            'message' => "새로 {$세움}건을 생성했습니다."
+                       . ($건너뜀 ? " 이미 있던 {$건너뜀}건은 명단 값을 갱신했습니다." : '')
                        . ($잘못 ? ' 넣지 못한 줄 ' . count($잘못) . '건.' : ''),
             'errors'  => array_slice($잘못, 0, 20),
         ]);

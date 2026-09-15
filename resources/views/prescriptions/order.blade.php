@@ -2552,7 +2552,7 @@ $calcDeposit  = $calcCopay;
                 {{-- 「되돌리기」는 걷어냈다(요청서 11쪽). 무엇이 되돌아가는지 알 수 없어
                      누르기 무서운 단추였고, 저장 전이라면 화면을 다시 열면 그만이다.
                      resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
-                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력을 마쳤음을 알리고 검수를 요청합니다">검수 요청하기</button>
+                <button type="button" class="rx-acc-btn" data-stage="request" onclick="requestReviewRx()" title="입력 완료를 통보하고 검수를 요청합니다">검수 요청하기</button>
                 @perm('prescriptions', 'approve')
                 <button type="button" class="rx-acc-btn" data-stage="approve" onclick="approveRx()" title="검수를 마치고 승인합니다">검수 승인하기</button>
                 @endperm
@@ -2585,7 +2585,7 @@ $calcDeposit  = $calcCopay;
                     <button type="submit" class="rx-acc-btn" id="btnExtraOrder"
                             title="{{ $처방총계 > 0
                                       ? '처방 총계 ' . number_format($처방총계) . '개 가운데 ' . number_format($남은수량) . '개를 더 살 수 있습니다'
-                                      : '처방 총계를 아직 적지 않았습니다 — 적은 뒤에 남은 수량을 봅니다' }}">추가 주문</button>
+                                      : '처방 총계가 아직 입력되지 않았습니다 — 적은 뒤에 남은 수량을 봅니다' }}">추가 주문</button>
                   </form>
                 @endif
                 {{-- 메모를 여는 길은 여기 남긴다. 환자 정보 머리의 자리는 상담하기에
@@ -2747,7 +2747,7 @@ $calcDeposit  = $calcCopay;
                        autocomplete="off" inputmode="numeric"
                        @if($displayRn) data-has-rn="1" @endif
                        placeholder="{{ $displayRn ?: 'XXXXXX-XXXXXXX' }}"
-                       title="「표시」를 누르면 저장된 번호를 봅니다. 새로 입력하면 덮어씁니다."
+                       title="「표시」를 누르면 저장된 번호를 표시합니다. 새로 입력하면 기존 값을 덮어씁니다."
                        style="flex:1;min-width:0;letter-spacing:1px;" oninput="rnRecalc()" />
                 @if($displayRn)
                   <button type="button" class="rx-side-btn" id="f-resident-show" onclick="rnShow(this)"
@@ -4194,7 +4194,7 @@ $calcDeposit  = $calcCopay;
                   <i class="fa-solid fa-ban"></i> 주문 취소
                 </button>
                 <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
-                        style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 세운 건에만 씁니다">
+                        style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
                   <i class="fa-solid fa-trash-can"></i> 삭제
                 </button>
               </div>
@@ -7305,7 +7305,7 @@ window.HELP_TOUR_STEPS = [
     색(저장, !!주소 && 담을것,
        주소 ? '주문 제품과 배송 정보를 저장합니다' : '받는 주소를 먼저 적으십시오');
     색(연계, !!주소 && !담을것,
-       !주소   ? '받는 주소를 적고 저장한 뒤에 보냅니다'
+       !주소   ? '받는 주소를 입력하고 저장한 뒤 발송합니다'
        : 담을것 ? '적은 것을 먼저 저장하십시오'
                 : '창고로 보냅니다');
   }
@@ -8652,10 +8652,10 @@ window.HELP_TOUR_STEPS = [
 
     const 말 = RX_TOTAL_QTY > 0
       ? `처방 총계 ${RX_TOTAL_QTY.toLocaleString()}개 가운데 ${RX_ORDERED.toLocaleString()}개를 주문했습니다.\n`
-        + `남은 ${RX_LEFT_QTY.toLocaleString()}개 안에서 더 살 수 있습니다.\n\n추가 주문을 세우시겠습니까?`
-      : '처방 총계를 아직 적지 않았습니다.\n\n추가 주문을 세우시겠습니까?';
+        + `남은 ${RX_LEFT_QTY.toLocaleString()}개 안에서 더 살 수 있습니다.\n\n추가 주문을 생성하시겠습니까?`
+      : '처방 총계가 아직 입력되지 않았습니다.\n\n추가 주문을 생성하시겠습니까?';
 
-    ceConfirm(말, { title: '추가 주문', confirmText: '세웁니다', cancelText: '취소' })
+    ceConfirm(말, { title: '추가 주문', confirmText: '생성합니다', cancelText: '취소' })
       .then(갈까 => { if (갈까) 폼.submit(); });
 
     return false;
@@ -8828,7 +8828,7 @@ window.HELP_TOUR_STEPS = [
       avoid: '#viewerCol',
       onSaved: async ({ name }) => {
         await rxReloadPatient(pid, name);
-        showToast(`${name} 님의 거래처 정보를 고쳤습니다.`, 'success');
+        showToast(`${name} 님의 거래처 정보를 수정했습니다.`, 'success');
       },
     });
   };
@@ -8979,7 +8979,7 @@ window.HELP_TOUR_STEPS = [
     const old = new Date(d) < limit;
     note.style.display = old ? '' : 'none';
     note.textContent   = old
-      ? '검사일이 3년을 넘었습니다 — 등록 신청서에는 발행일 기준 3년 이내 검사만 씁니다.'
+      ? '검사일이 3년을 넘었습니다 — 등록 신청서에는 발행일 기준 3년 이내 검사만 사용할 수 있습니다.'
       : '';
   };
   uroCheckAge();
@@ -9706,7 +9706,7 @@ window.HELP_TOUR_STEPS = [
           <i class="fa-solid fa-ban"></i> 주문 취소
         </button>
         <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
-                style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 세운 건에만 씁니다">
+                style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
           <i class="fa-solid fa-trash-can"></i> 삭제
         </button>
       </div>`;
@@ -9742,7 +9742,7 @@ window.HELP_TOUR_STEPS = [
       정정.title = res.amendable
         ? '제품ㆍ수량ㆍ배송지를 고쳐 창고로 다시 보냅니다'
         : (res.state === 'requested'
-            ? '취소를 요청해 둔 주문입니다'
+            ? '취소 요청 중인 주문입니다'
             : 단계말 + ' — 고치려면 먼저 주문을 취소해야 합니다');
     }
 
@@ -9762,11 +9762,11 @@ window.HELP_TOUR_STEPS = [
 
     const 단계 = _취소상태?.stage ?? '';
     const 안내 = 단계 === 'working'
-      ? '창고가 이미 할당ㆍ피킹을 시작했습니다.\n취소를 요청해 두면, 창고가 되돌리는 대로 자동으로 취소됩니다.'
+      ? '창고가 이미 할당ㆍ피킹을 시작했습니다.\n취소를 요청해 두면, 창고에서 할당ㆍ피킹을 취소하면 자동으로 취소됩니다.'
       : '위드웍스 판매주문을 취소하고 출고도 함께 취소합니다.';
 
     const 돈 = '\n\n받은 결제가 있으면 함께 취소하고, 보낸 결제 링크는 해지합니다.'
-             + '\n세금계산서ㆍ현금영수증이 발행된 건은 따로 무르셔야 합니다.';
+             + '\n세금계산서ㆍ현금영수증이 발행된 건은 별도로 취소하셔야 합니다.';
 
     const 사유 = await cePrompt(안내 + 돈 + '\n\n취소 사유를 입력해 주십시오.', {
       title: '주문 취소', confirmText: '취소합니다', cancelText: '그만두기',
@@ -10611,7 +10611,7 @@ window.HELP_TOUR_STEPS = [
     };
 
     if (!office) { say('기관명은 반드시 적어야 합니다.', false); return; }
-    if (!emd)    { say('관할 읍ㆍ면ㆍ동을 먼저 적어 주십시오.', false); return; }
+    if (!emd)    { say('관할 읍ㆍ면ㆍ동을 먼저 입력해 주십시오.', false); return; }
 
     try {
       const res = await fetch(BO_STORE_URL, {
@@ -11110,7 +11110,7 @@ window.HELP_TOUR_STEPS = [
         closeFaxPopover();
         /* 토스트는 마크다운을 그리지 않는다 — 별표가 글자 그대로 보인다 */
         showToast('지자체(시군구청) 건은 팩스가 아니라 등기로 보냅니다 — '
-                + '「청구 관리」에서 서류를 뽑아 등기로 부친 뒤 등기번호를 적어 주십시오.',
+                + '「청구 관리」에서 서류를 출력하여 등기 발송한 뒤 등기번호를 입력해 주십시오.',
                   'warning', 7000);
         return;
       }
@@ -11787,7 +11787,7 @@ window.HELP_TOUR_STEPS = [
                    ?.style.background.includes('var(--primary-light)');
     if (수신처 && faxClaimAgency() === 'none') {
       showToast('이 건은 공단에 청구하지 않습니다 — 공단으로 보낼 수 없습니다. '
-              + '수신처를 「기타(직접 입력)」로 고르십시오.', 'warning', 7000);
+              + '수신처를 「기타(직접 입력)」를 선택하십시오.', 'warning', 7000);
       return;
     }
 

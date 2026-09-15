@@ -128,7 +128,7 @@ class PopbillWebhookController extends Controller
 
         $결과 = $this->faxSync->syncOne($건);
 
-        return [$결과, $결과 ? null : '팝빌에 다시 묻지 못했습니다.', $접수];
+        return [$결과, $결과 ? null : '팝빌에 재조회하지 못했습니다.', $접수];
     }
 
     /** 현금영수증 — 문서번호로 그 한 건만 다시 읽는다 */

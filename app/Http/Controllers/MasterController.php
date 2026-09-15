@@ -226,7 +226,7 @@ class MasterController extends Controller
             ]);
         }
 
-        return back()->with('success', '반품 사유를 적었습니다.');
+        return back()->with('success', '반품 사유를 저장했습니다.');
     }
 
 }
