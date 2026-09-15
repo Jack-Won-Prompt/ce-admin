@@ -4751,12 +4751,24 @@ $calcDeposit  = $calcCopay;
 @endpush
 
 @php
-/* 표에 실을 줄. 처방 품목이 정본이지만, 주문만 만들고 처방 품목은 남기지 않던 건이
-   있다 — 그런 건을 열면 주문 제품도 주문 연계 요약도 텅 비어 보였다(주문에는 제품이
-   있는데도). 처방 품목이 비어 있으면 주문 품목을 그대로 싣는다. */
-$_itemSource = $prescription->items->isNotEmpty()
-    ? $prescription->items
-    : ($prescription->order?->items ?? collect());
+/* 표에 실을 줄.
+
+   처방 품목이 정본이지만, 주문만 만들고 처방 품목은 남기지 않던 건이 있다 — 그런
+   건을 열면 주문 제품도 주문 연계 요약도 텅 비어 보였다(주문에는 제품이 있는데도).
+   처방 품목이 비어 있으면 주문 품목을 그대로 싣는다.
+
+   **추가 주문은 그 주문의 품목만 본다** (2026-09-15 지시).
+
+   처방 품목은 처방전 한 장에 딸린 값이라, 같은 처방전의 주문 모두가 같은 줄을
+   본다. 그래서 갓 만든 추가 주문을 열면 원 주문이 산 320개가 그대로 실려 보였다 —
+   그대로 ［주문 생성 및 연계］를 누르면 총계 336개짜리 처방전에 640개가 나간다.
+   추가 주문의 뜻은 「이번에 더 살 것을 새로 고른다」이므로, 제품 칸은 비어서
+   시작해야 한다. */
+$_itemSource = $prescription->order?->isExtra()
+    ? ($prescription->order?->items ?? collect())
+    : ($prescription->items->isNotEmpty()
+        ? $prescription->items
+        : ($prescription->order?->items ?? collect()));
 
 $_itemsData = $_itemSource->map(fn($i) => [
     'product_name'    => $i->product_name,
@@ -6960,6 +6972,10 @@ window.HELP_TOUR_STEPS = [
      세어 보지 않은 숫자가 이미 적혀 있게 된다 — 그대로 저장되면 창고로 그 수가 나간다.
      비워 두면 적어야 보인다. */
   const DEFAULT_QTY = '';
+  /* 지금 화면이 보고 있는 주문번호. 주문 고르개로 옮겨 다니므로 처방전의 첫 주문과
+     다를 수 있다 — 저장할 때 서버에 함께 보내 어느 주문의 일인지 알린다. */
+  const VIEW_ORDER_NO = @json($prescription->order?->order_number);
+
   let items = @json($_itemsData);
   if (!items.length) {
       items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
@@ -8294,6 +8310,10 @@ window.HELP_TOUR_STEPS = [
          칸을 걷었고, 그 값은 거래처 관리의 상담 창이 받는다. 여기서 빈 값을 보내면
          이미 적어 둔 것이 지워진다. 「유형」은 병원ㆍ처방 정보에 남아 있어 그대로 보낸다. */
       counsel_acc_add_type: strOrNull('f-acc-add-type'),
+      /* 지금 보고 있는 주문 (2026-09-15 지시). 추가 주문을 보고 있으면 서버가
+         처방 품목을 건드리지 않는다 — 처방 품목은 처방전 한 장의 값이라, 추가
+         주문에서 덮으면 원 주문이 산 수량이 사라진다. */
+      order_number:     (typeof VIEW_ORDER_NO !== 'undefined' ? VIEW_ORDER_NO : null),
       // ── 제품 ──────────────────────────────────────────────
       items:            itemsPayload,
     };

@@ -2526,6 +2526,8 @@ class PrescriptionController extends Controller
             'counsel_no'            => 'nullable|string|max:50',
             'counsel_date'          => 'nullable|date',
             'counsel_acc_add_type'  => 'nullable|string|max:10',
+            // 화면이 보고 있는 주문 — 추가 주문이면 처방 품목을 덮지 않는다
+            'order_number'          => 'nullable|string|max:50',
             'counsel_status'        => 'nullable|string|max:10',
             'counsel_call_no'       => 'nullable|string|max:30',
             'counsel_re_date'       => 'nullable|date',
@@ -2862,9 +2864,24 @@ class PrescriptionController extends Controller
             \App\Support\BenefitDates::apply($prescription);
         }
 
-        // ── 아이템 동기화 ────────────────────────────────────────
+        /* ── 아이템 동기화 ────────────────────────────────────────
+
+           추가 주문을 보고 있을 때는 처방 품목을 건드리지 않는다 (2026-09-15 지시).
+
+           처방 품목은 처방전 한 장에 딸린 값이고, 화면은 보고 있는 주문의 품목을
+           싣는다. 추가 주문에서 이 자리가 돌면 원 주문이 산 320개가 지워지고 이번에
+           고른 16개로 바뀐다 — 처방전에 무엇을 얼마나 팔았는지가 사라진다.
+
+           추가 주문의 품목은 주문 쪽(OrderController::update)이 적는다. */
         $items = $request->input('items', []);
-        if (!empty($items)) {
+
+        /* 화면이 보고 있는 주문. 관계로 잡은 order 는 언제나 첫 주문이라, 추가 주문을
+           보고 있어도 원 주문으로 읽힌다 — 화면이 보내 준 번호로 가린다. */
+        $보는주문 = $request->filled('order_number')
+            ? $prescription->orders()->where('order_number', $request->input('order_number'))->first()
+            : $prescription->order;
+
+        if (!empty($items) && ! $보는주문?->isExtra()) {
             $prescription->items()->delete();
             foreach ($items as $i => $d) {
                 if (empty($d['product_name'])) continue;
