@@ -4160,10 +4160,6 @@ $calcDeposit  = $calcCopay;
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 배송 정보를 저장합니다">
-                  <i class="fa-solid fa-floppy-disk"></i> 저장
-                </button>
                 {{-- 「주문 정정」이다 — 제품 추가ㆍ제품 변경ㆍ수량 변경이 이 한 번으로 나간다
                      (2026-09-14 지시). 창고가 이미 손을 댄 건은 저쪽이 422 로 되돌려 보내므로,
                      눌러도 되는 때만 서게 한다(syncCancelBtns). --}}
@@ -4197,11 +4193,7 @@ $calcDeposit  = $calcCopay;
                    지금 눌러야 하는 쪽에만 색이 든다(syncOrderStepBtns). 막지는 않는다 —
                    색은 길을 가리키는 것이지 문을 잠그는 것이 아니다. --}}
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                        title="주문 제품과 배송 정보를 저장합니다">
-                  <i class="fa-solid fa-floppy-disk"></i> 저장
-                </button>
-                <button class="btn btn-outline flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+                <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
                   <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
                 </button>
               </div>
@@ -7172,29 +7164,23 @@ window.HELP_TOUR_STEPS = [
       b.classList.toggle('rx-acc-btn-fill', 걸음저장 || isAnyDirty());
     });
 
-    const 저장  = document.getElementById('btnSaveOrderTab');
-    const 연계  = document.getElementById('btnCreateOrder');
-    if (!저장 && !연계) return;
+    /* 걸음이 하나가 되었다 (2026-09-15 지시).
 
-    const 주소  = (document.getElementById('shippingAddr')?.value ?? '').trim();
-    const 담을것 = isAnyDirty();
+       ［저장］을 걷고 ［주문 생성 및 연계］가 저장까지 맡는다. 두 단추를 나란히
+       두었더니 담당자가 저장을 건너뛰고 연계부터 누르는 일이 잦았는데, 연계는
+       어차피 제 안에서 먼저 저장하므로(saveOCR) 두 걸음일 까닭이 없었다.
 
-    /* 지금 눌러야 하는 쪽에만 색이 든다. 다만 **색이 빠진 쪽도 보여야 한다** —
-       맨 .btn 은 배경이 없고 테두리가 transparent 라 글자만 떠 있는 꼴이 된다
-       (2026-09-14 지시). 색을 뺄 때는 테두리 단추로 되돌린다. */
-    const 색 = (el, 켜나, 말) => {
-      if (!el) return;
-      el.classList.toggle('btn-primary', 켜나);
-      el.classList.toggle('btn-outline', !켜나);
-      if (말) el.title = 말;
-    };
+       이제 색으로 가리킬 차례도 하나다 — 주소가 있으면 보낼 수 있다. */
+    const 연계 = document.getElementById('btnCreateOrder');
+    if (!연계) return;
 
-    색(저장, !!주소 && 담을것,
-       주소 ? '주문 제품과 배송 정보를 저장합니다' : '받는 주소를 먼저 적으십시오');
-    색(연계, !!주소 && !담을것,
-       !주소   ? '받는 주소를 입력하고 저장한 뒤 발송합니다'
-       : 담을것 ? '적은 것을 먼저 저장하십시오'
-                : '창고로 보냅니다');
+    const 주소 = (document.getElementById('shippingAddr')?.value ?? '').trim();
+
+    연계.classList.toggle('btn-primary', !!주소);
+    연계.classList.toggle('btn-outline', !주소);
+    연계.title = 주소
+      ? '적은 것을 저장하고 창고로 보냅니다'
+      : '받는 주소를 먼저 입력하십시오';
   }
   window.syncOrderStepBtns = syncOrderStepBtns;
 
@@ -7253,8 +7239,11 @@ window.HELP_TOUR_STEPS = [
      그것은 사람이 단추를 눌러 할 일이고, 제품이 없으면 애초에 만들어지지도 않는다.
      적어 둔 것(제품 줄ㆍ배송 정보)만 담는다. */
   async function _saveOrderForNav() {
-    const btn = document.getElementById('btnSaveOrderTab');
-    if (btn) { await saveOrderTab({ target: btn }); return; }
+    /* ［저장］ 단추는 걷었지만(2026-09-15 지시) 떠나면서 갈무리하는 일은 남는다.
+       주문 제품 탭이 서 있으면 제품 줄과 배송 정보까지, 아니면 처방 쪽만 담는다.
+       단추가 없으므로 잠글 것도 없다 — 조용히 저장한다. */
+    const 주문제품탭 = document.getElementById('orderActionArea');
+    if (주문제품탭) { await saveOrderTab({ target: null, silent: true }); return; }
     await saveOCR({ silent: true });
   }
 
@@ -9835,7 +9824,9 @@ window.HELP_TOUR_STEPS = [
      함께 쓴다 — 주문이 없으면 배송 정보를 둘 자리가 없다(그 자리는 「주문 생성 및
      연계」가 만든다). 그래서 주문이 없을 때는 무엇이 저장됐는지 말로 밝힌다. */
   async function saveOrderTab(e) {
-    const btn = e.target.closest('button');
+    /* 단추 없이도 불린다 — 화면을 떠나면서 갈무리할 때다(_saveOrderForNav).
+       ［저장］ 단추를 걷은 뒤로(2026-09-15 지시) 눌러서 오는 길은 없다. */
+    const btn = e?.target?.closest?.('button') ?? null;
 
     /* 문을 어디까지 지날 것인가 (2026-09-10 확인요청 6쪽).
 
@@ -9950,11 +9941,7 @@ window.HELP_TOUR_STEPS = [
     syncOrderStageBtn();          // 「주문 완료」를 「주문 미등록」으로 되돌린다
     document.getElementById('orderActionArea').innerHTML = `
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" id="btnSaveOrderTab" onclick="saveOrderTab(event)" style="flex-shrink:0;padding:0 18px;"
-                title="주문 제품과 배송 정보를 저장합니다">
-          <i class="fa-solid fa-floppy-disk"></i> 저장
-        </button>
-        <button class="btn btn-outline flex-1" id="btnCreateOrder" onclick="createOrder(event)">
+        <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
           <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
         </button>
       </div>`;
