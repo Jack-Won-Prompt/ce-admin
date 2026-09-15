@@ -10672,18 +10672,12 @@ window.HELP_TOUR_STEPS = [
 
     const 횟수 = Number(PAY_STATE.count || 1);
 
-    await ceAlert(
-      '결제정보 링크가 발송 되었습니다.'
-      + (꼬리 ? '
+    const 줄 = ['결제정보 링크가 발송 되었습니다.'];
+    if (꼬리) 줄.push('', 꼬리);
+    if (횟수 > 1) 줄.push('지금까지 ' + 횟수 + '회 보냈습니다.');
+    줄.push('', '아래 이력을 보고 다시 보낼지 정하십시오.');
 
-' + 꼬리 : '')
-      + (횟수 > 1 ? '
-지금까지 ' + 횟수 + '회 보냈습니다.' : '')
-      + '
-
-아래 이력을 보고 다시 보낼지 정하십시오.',
-      { title: '결제전송', tone: 'info' }
-    );
+    await ceAlert(줄.join(String.fromCharCode(10)), { title: '결제전송', tone: 'info' });
   }
 
   async function togglePayPopover(e) {
