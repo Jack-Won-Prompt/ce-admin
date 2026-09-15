@@ -93,6 +93,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{rx_number}/image',                [PrescriptionApiController::class, 'destroyImage']);
         Route::delete('/{rx_number}/attachments/{id}',     [PrescriptionApiController::class, 'destroyAttachment']);
 
+        // 되물은 서류를 다 올린 뒤 검수를 다시 청한다 (2026-09-15 지시)
+        Route::post('/{rx_number}/request-review',         [PrescriptionApiController::class, 'requestReview']);
+
         /* 올린 그림을 앱에서 본다. 웹의 같은 경로는 세션 로그인을 요구해
            Bearer 토큰으로는 열리지 않는다. */
         Route::get('/{rx_number}/image',                   [PrescriptionApiController::class, 'image']);

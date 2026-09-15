@@ -362,6 +362,11 @@ class PrescriptionApiController extends Controller
                 'image_name'  => $p->image_original_name,
                 // 올린 사람이 지우고 다시 올릴 수 있는 상태인가
                 'editable'    => $p->editableByUploader(auth()->id()),
+                /* 검수 재요청 단추를 세울지 (2026-09-15 지시) — 되물은 자취가 있고
+                   아직 요청하지 않은 내 건. 규칙은 requestReview() 와 같다. */
+                'can_request_review' => $p->editableByUploader(auth()->id())
+                    && ($p->status === 'review_hold' || $p->reuploadRequests()->exists())
+                    && ! in_array($p->status, ['review_requested', 'review_resent'], true),
                 'attachments' => $p->attachments->map(fn (PrescriptionAttachment $a) => [
                     'id'        => $a->id,
                     'doc_type'  => $a->doc_type,
@@ -382,6 +387,58 @@ class PrescriptionApiController extends Controller
                     'requested_at'  => $r->requested_at?->format('Y-m-d H:i'),
                 ])->values(),
             ],
+        ]);
+    }
+
+    // ── POST /api/prescriptions/{rx_number}/request-review ──
+    /**
+     * 앱에서 검수를 다시 청한다 (2026-09-15 지시).
+     *
+     * 되물은 서류를 다시 올린 담당자가 「다 올렸다」고 알리는 자리다. 웹의 검수 요청
+     * (PrescriptionController::requestReview)과 같은 규칙으로 상태를 세운다 — 되물은
+     * 자취(검수 보류였거나 다시 올리기 요청이 걸렸던 적)가 있으면 검수 재요청, 없으면
+     * 검수 요청. 웹과 달리 올린 사람이 고칠 수 있는 제 건이어야 한다.
+     */
+    public function requestReview(Request $request, string $rxNumber): JsonResponse
+    {
+        $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
+
+        if (! $p->editableByUploader(auth()->id())) {
+            return $this->refuseEdit($p);
+        }
+
+        $request->validate(['memo' => ['nullable', 'string', 'max:500']], [
+            'memo.max' => '남길 말은 500자 이하로 입력해 주십시오.',
+        ]);
+
+        $되물은적있나 = $p->status === 'review_hold' || $p->reuploadRequests()->exists();
+
+        $요청 = ['status' => $되물은적있나 ? 'review_resent' : 'review_requested'];
+
+        // 요청하며 남긴 말은 요청 메모 칸에 — 비우면 적어 둔 것을 지킨다(웹과 같게)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')) {
+            $요청['review_request_memo'] = $request->input('memo') ?: $p->review_request_memo;
+        } elseif ($request->filled('memo')) {
+            $요청['review_memo'] = $request->input('memo');
+        }
+
+        $p->update($요청);
+
+        activity()->causedBy(auth()->user())->performedOn($p)
+            ->log($되물은적있나 ? '검수 재요청 (앱)' : '검수 요청 (앱)');
+
+        // 승인할 수 있는 사람들에게 알린다 — 알리지 못해도 요청은 이미 됐다
+        try {
+            app(\App\Services\ReviewNotice::class)->askReview($p->refresh());
+        } catch (\Throwable) {}
+
+        $p->refresh();
+
+        return response()->json([
+            'success'      => true,
+            'message'      => $되물은적있나 ? '검수를 다시 요청했습니다.' : '검수를 요청했습니다.',
+            'status'       => $p->status,
+            'status_label' => $p->status_label,
         ]);
     }
 
@@ -501,7 +558,7 @@ class PrescriptionApiController extends Controller
             'success' => false,
             'message' => $mine
                 ? "「{$p->status_label}」 상태에서는 고칠 수 없습니다. 담당자에게 문의하세요."
-                : '내가 올린 자료만 지울 수 있습니다.',
+                : '내가 올린 처방전만 고칠 수 있습니다.',
         ], 403);
     }
 
