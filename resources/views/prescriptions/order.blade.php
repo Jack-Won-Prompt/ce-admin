@@ -8721,7 +8721,7 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
       if (res.success) {
-        showToast('✅ 검수를 요청했습니다.', 'success');
+        showToast('검수를 요청했습니다.', 'success');
         /* 화면을 다시 읽지 않는다. 적던 자리ㆍ연 탭ㆍ스크롤이 통째로 처음으로 돌아가,
            이어서 할 일이 있어도 그 자리를 다시 찾아가야 했다.
            바뀌는 것은 상태 하나뿐이니 그 자리만 고쳐 세운다. */
@@ -8744,7 +8744,7 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/approve`, 'POST', { memo });
       if (res.success) {
         BtnState.success(btn, '검수 완료');
-        showToast('✅ 검수를 마쳤습니다.', 'success');
+        showToast('검수를 마쳤습니다.', 'success');
         /* 화면을 다시 읽지 않는다 — 바뀌는 자리만 고쳐 세운다.
            상태 배지ㆍ검수 걸음ㆍ검수자 줄, 그리고 검수를 마치며 만들어지는 서류. */
         setRxApproved(res);
@@ -9928,7 +9928,7 @@ window.HELP_TOUR_STEPS = [
     if (!opts.silent) {
       showToast(
         wwSuccess
-          ? '✅ 주문이 정정되었습니다. (위드웍스 동기화 완료)'
+          ? '주문이 정정되었습니다. (위드웍스 동기화 완료)'
           : (wwMessage ? `주문 정정 완료 (위드웍스: ${wwMessage})` : '주문 정정 완료 (위드웍스 연계 실패)'),
         wwSuccess ? 'success' : 'warning'
       );
@@ -10099,7 +10099,7 @@ window.HELP_TOUR_STEPS = [
     if (histTime) histTime.textContent = '대기 중';
     document.getElementById('histOrderStep')?.querySelector('.ws-arrow')?.remove();
 
-    showToast('✅ 주문이 삭제되었습니다.', 'success');
+    showToast('주문이 삭제되었습니다.', 'success');
   }
 
   // ── 공통: 모든 팝오버/팝업 닫기 ───────────────────────
@@ -10968,7 +10968,7 @@ window.HELP_TOUR_STEPS = [
       if (data.success) {
         closeKakaoPopover();
         markKakaoSent();
-        showToast('✅ ' + data.message, 'success');
+        showToast(data.message, 'success');
       } else {
         showToast(data.message || '발송 실패', 'danger');
       }
@@ -11081,7 +11081,7 @@ window.HELP_TOUR_STEPS = [
       if (data.success) {
         closeSmsPopover();
         markSmsSent();
-        showToast('✅ ' + data.message, 'success');
+        showToast(data.message, 'success');
       } else {
         showToast(data.message || 'SMS 발송 실패', 'danger');
       }
@@ -12151,13 +12151,13 @@ window.HELP_TOUR_STEPS = [
             },
             body: JSON.stringify({ mobile, message: smsMsg }),
           }).then(r => r.json()).then(sd => {
-            showToast(sd.success ? (isDisabled ? '✅ SMS 발송 완료 (가상계좌 비활성화)' : '✅ 가상계좌 발급 및 SMS 발송 완료') : `완료 (SMS 실패: ${sd.message})`, sd.success ? 'success' : 'warning');
+            showToast(sd.success ? (isDisabled ? 'SMS 발송 완료 (가상계좌 비활성화)' : '가상계좌 발급 및 SMS 발송 완료') : `완료 (SMS 실패: ${sd.message})`, sd.success ? 'success' : 'warning');
             if (sd.success) { markSmsSent(); }
           }).catch(() => {
             showToast('완료 (SMS 발송 오류)', 'warning');
           });
         } else {
-          showToast(isDisabled ? '✅ 가상계좌 발급 비활성화 — 번호 미입력으로 SMS 미발송' : '✅ 가상계좌가 발급되었습니다.', isDisabled ? 'warning' : 'success');
+          showToast(isDisabled ? '가상계좌 발급 비활성화 — 번호 미입력으로 SMS 미발송' : '가상계좌가 발급되었습니다.', isDisabled ? 'warning' : 'success');
         }
       } else {
         showToast(data.message || '가상계좌 발급 실패', 'danger');
@@ -12186,7 +12186,7 @@ window.HELP_TOUR_STEPS = [
       if (data.success) {
         if (data.status === 'DONE') {
           BtnState.success(btn, '입금 확인');
-          showToast('✅ 입금이 확인되었습니다!', 'success');
+          showToast('입금이 확인되었습니다!', 'success');
           setTimeout(() => location.reload(), 1200);
         } else {
           showToast(`현재 상태: ${data.status_label}`, 'info');
@@ -14108,7 +14108,7 @@ window.HELP_TOUR_STEPS = [
       if (tiWrap) tiWrap.style.display = 'none';
       if (tiRb)   tiRb.style.display   = 'flex';
       setFaxTaxInvoiceState(true, res.tax_invoice_no);
-      showToast(`✅ 세금계산서 발행 완료 (${res.tax_invoice_no})`, 'success');
+      showToast(`세금계산서 발행 완료 (${res.tax_invoice_no})`, 'success');
     } else {
       showToast(res.message || '발행 실패', 'danger');
     }
@@ -14265,7 +14265,7 @@ window.HELP_TOUR_STEPS = [
       renderCashReceiptArea();
       syncFaxCrState(true, res.cash_receipt_no);
       closeCrIssuePopover();
-      showToast(`✅ 현금영수증 발행 완료 (${res.cash_receipt_no})`, 'success');
+      showToast(`현금영수증 발행 완료 (${res.cash_receipt_no})`, 'success');
     }
   }
 

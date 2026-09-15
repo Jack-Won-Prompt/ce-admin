@@ -687,7 +687,7 @@
       if (data.success) {
         BtnState.success(btn, '발급 완료');
         const smsNote = data.sms_sent ? ' · 안내 SMS 발송됨' : ' · ⚠️ SMS 미발송';
-        showToast(`✅ ${data.bank_name} ${data.account_number} 발급 완료${smsNote}`, data.sms_sent ? 'success' : 'warning');
+        showToast(`${data.bank_name} ${data.account_number} 발급 완료${smsNote}`, data.sms_sent ? 'success' : 'warning');
         setTimeout(() => location.reload(), 1400);
       } else {
         showToast(data.message || '발급 실패', 'danger');
