@@ -151,20 +151,28 @@ class Order extends Model
         $this->withworks_so_no_history = $이력;
     }
 
-    /** 물러난 판매번호인가 — 이 번호로 오는 사건은 지금 주문의 일이 아니다 */
+    /**
+     * 물러난 판매번호인가 — 이 번호로 오는 사건은 지금 주문의 일이 아니다.
+     *
+     * 이력에 있느냐로 가리다가 「지금 번호와 다르냐」로 바꿨다 (2026-09-16).
+     *
+     * 이력은 정정으로 갈아탈 때만 쌓인다. 그 밖의 길로 번호가 바뀐 건 — 잘못 붙은
+     * 번호를 손으로 떼어 다시 붙인 건, 창고에 두 번 서서 하나를 취소한 건 — 은
+     * 이력에 없어 가드를 지나갔고, 지나간 취소 사건이 멀쩡한 주문을 취소로 뒤집었다.
+     *
+     * 우리 줄에 적힌 번호가 곧 「지금 창고에 서 있는 판매주문」이다. 그것과 다른
+     * 번호로 오는 사건은 어느 것이든 지나간 판매주문의 일이다.
+     *
+     * 아직 번호를 받지 못한 건은 가리지 않는다 — 판매주문을 세우고 그 답을 적기
+     * 전에 첫 사건이 닿는 일이 있고, 그것까지 걸러 내면 주문이 영영 움직이지 않는다.
+     */
     public function 물러난판매번호인가(?string $so_no): bool
     {
-        if (! $so_no || $so_no === $this->withworks_so_no) {
+        if (! $so_no || ! $this->withworks_so_no) {
             return false;
         }
 
-        foreach ((array) ($this->withworks_so_no_history ?? []) as $줄) {
-            if (($줄['so_no'] ?? null) === $so_no) {
-                return true;
-            }
-        }
-
-        return false;
+        return $so_no !== $this->withworks_so_no;
     }
 
     /** 취소를 청할 수 있는가 — 나간 뒤에는 교환/반품/취소 화면이 할 일이다 */
