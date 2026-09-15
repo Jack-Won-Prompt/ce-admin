@@ -303,6 +303,44 @@ class Order extends Model
     }
 
     /**
+     * 실제로 받은 돈 (2026-09-15).
+     *
+     * 결제기준금액() 과 다르다. 그쪽은 정정으로 금액이 바뀌었는지 견주는 잣대라
+     * 아직 안 받은 건이면 **보낸 링크의 금액**을 내놓는다 — 「환자가 낼 것으로 아는
+     * 값」이다. 여기는 **통장에 들어온 돈**만 센다. 0 원일 수 있다.
+     *
+     * 이 값으로 「다 받았는가」를 가린다. isDepositConfirmed() 만으로는 가릴 수 없다 —
+     * 그것은 「한 번이라도 받았는가」라서, 정정으로 금액이 늘어 차액이 남은 건도
+     * 참이 된다. 그 건은 링크를 더 보낼 수 있어야 한다.
+     */
+    public function 받은금액(): int
+    {
+        $결제 = $this->tossPayment;
+
+        if ($결제 && $결제->is_done) {
+            return max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0));
+        }
+
+        if ($this->deposit_confirmed_at !== null) {
+            /* 담당자가 눈으로 확인한 건. 금액을 적어 두었으면 그것이고, 안 적었으면
+               받을 돈을 다 받은 것으로 본다 — 확인은 그 뜻으로 누르는 단추다. */
+            return (int) $this->deposit_amount > 0
+                ? (int) $this->deposit_amount
+                : $this->expectedDeposit();
+        }
+
+        return 0;
+    }
+
+    /** 받을 돈을 다 받았는가 — 받을 것이 없는 건(전액 기관부담)은 아니다 */
+    public function 다받았나(): bool
+    {
+        $받을것 = $this->expectedDeposit();
+
+        return $받을것 > 0 && $this->받은금액() >= $받을것;
+    }
+
+    /**
      * 결제를 맞출 때의 기준 금액 — **실제로 오간 돈** (2026-09-15).
      *
      * 주문 정정으로 금액이 바뀌면 결제도 함께 맞춰야 한다(2026-09-14 지시 ②).

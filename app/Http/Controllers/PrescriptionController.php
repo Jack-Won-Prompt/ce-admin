@@ -2388,6 +2388,11 @@ class PrescriptionController extends Controller
             'status_label' => $payLast ? ($payLast->status_label ?? '') : '',
             'sent_at'   => $payLast?->sent_at?->format('Y-m-d H:i') ?? '',
             'count'     => $payLinks->count(),
+            /* 받을 돈을 다 받았는가 — 이 값이 서면 더 보내지 못한다 (2026-09-15 지시).
+               paid 와 다르다. paid 는 「한 번이라도 받았는가」라서, 정정으로 금액이
+               늘어 차액이 남은 건도 참이 된다 — 그 건은 더 보낼 수 있어야 한다. */
+            'settled'   => (bool) $prescription->order?->다받았나(),
+            'received'  => (int) ($prescription->order?->받은금액() ?? 0),
         ];
 
         /* 주문 고르개가 쓸 줄들과, 추가 주문이 더 살 수 있는 수량 (2026-09-14 확인요청 4쪽).

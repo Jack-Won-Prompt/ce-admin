@@ -1704,8 +1704,13 @@ $calcDeposit  = $calcCopay;
               </div>
             </div>
 
+            {{-- 다 받은 건은 잠근다 (2026-09-15 지시). 서버도 막지만(PaymentLinkController),
+                 눌러 보고서야 알면 늦다 — 잠근 까닭을 단추에 적어 둔다. --}}
             <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)"
-                    @unless($prescription->order) disabled @endunless>
+                    @if(!$prescription->order || ($payState['settled'] ?? false)) disabled @endif
+                    title="{{ ($payState['settled'] ?? false)
+                              ? '이미 결제가 끝난 주문입니다 — 더 보내면 두 번 낼 수 있습니다'
+                              : '결제 안내를 보냅니다' }}">
               <i class="fa-solid fa-paper-plane"></i> 전송
             </button>
 
@@ -10642,6 +10647,24 @@ window.HELP_TOUR_STEPS = [
       : '링크 전송완료' + (보낸수 > 1 ? ' · ' + 보낸수 + '회' : '');
 
     btn.appendChild(tag);
+    전송단추셈();
+  }
+
+  /**
+   * 「전송」 단추를 지금 상태로 잠그거나 푼다 (2026-09-15 지시).
+   *
+   * 다 받은 건에는 더 보내지 않는다 — 살아 있는 링크로 환자가 한 번 더 내면 같은
+   * 주문에 두 번 결제된다. 서버도 막지만, 눌러 보고서야 알면 늦다.
+   */
+  function 전송단추셈() {
+    const 보내기 = document.getElementById('btnPaySend');
+    if (!보내기) return;
+
+    const 다받음 = !!PAY_STATE?.settled;
+    보내기.disabled = 다받음 || !_ORDER_ID;
+    보내기.title = 다받음
+      ? '이미 결제가 끝난 주문입니다 — 더 보내면 두 번 낼 수 있습니다'
+      : '결제 안내를 보냅니다';
   }
 
   /**
