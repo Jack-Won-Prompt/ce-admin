@@ -55,7 +55,7 @@ class PrescriptionApiController extends Controller
                업로드 화면은 누를 때마다 새 건이고, 그 건의 둘째 장부터는 첫 장이
                받은 번호를 싣는다. 상세 화면에서 서류를 더할 때도 이 번호를 싣는다. */
             'rx_number'  => ['nullable', 'string', 'max:30'],
-            // 새 건을 연다는 표시 — 1.3.2 부터 첫 장에 싣는다. 없으면 옛 판으로 본다
+            // 새 건을 연다는 표시 — 1.3.2 부터 첫 장에 싣는다. 있든 없든 번호가 없으면 새 건이다
             'new_batch'  => ['nullable', 'boolean'],
             'patient_id' => ['required_without:rx_number', 'nullable', 'integer', 'exists:patients,id'],
             // 웹 업로드 화면과 같은 목록만 받는다 — 위임장은 거기서 빠진다(UploadDocTypes)
@@ -106,20 +106,14 @@ class PrescriptionApiController extends Controller
                     : $this->attachTo($target, $file, $docType);
             }
 
-            $patientId = (int) $request->input('patient_id');
+            /* 번호가 없으면 늘 새 처방전 번호다 — 처방전 서류가 없어도 그렇다.
+               기존 처방전에 붙이는 길은 두지 않는다(2026-09-15 지시: 「업로드 시 기존의
+               처방전 번호에 업로드 하는 일은 절대 불가」).
 
-            /* 옛 판(1.3.1 이하)은 번호를 싣지 않고 서류를 한 장씩 따로 보낸다. 그대로
-               새 건을 만들면 한 번에 올린 서류가 장마다 다른 건이 된다. 그래서 새 건
-               표시가 없는 첨부는, 같은 사람이 같은 환자로 방금(10분 안) 만든 건에
-               붙인다 — 옛 판은 처방전을 맨 앞에 보내므로 그 건이 이번 업로드다. */
-            if (! $request->boolean('new_batch') && $docType !== 'prescription') {
-                $recent = $this->legacyBatchTarget($patientId);
-                if ($recent) {
-                    return $this->attachTo($recent, $file, $docType);
-                }
-            }
-
-            return $this->createWith($file, $patientId, $docType, $memo);
+               옛 판(1.3.1 이하)은 번호를 싣지 않고 한 장씩 보내므로 한 번에 올린 서류가
+               장마다 새 번호로 갈린다. 예전에는 같은 사람이 10분 안에 만든 건에 모았는데,
+               그것도 기존 건에 붙이는 일이라 걷었다. 옛 판은 최소 판(1.3.2)으로 막는다. */
+            return $this->createWith($file, (int) $request->input('patient_id'), $docType, $memo);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -208,21 +202,6 @@ class PrescriptionApiController extends Controller
             'message'         => PrescriptionAttachment::labelFor($docType) . ' 파일이 등록되었습니다.',
             'prescription_id' => $prescription->rx_number,
         ], 201);
-    }
-
-    /**
-     * 옛 판이 한 번에 올린 서류가 모일 건 — 같은 사람이 같은 환자로 10분 안에 만든,
-     * 아직 고칠 수 있는 건. 없으면 null(새 건을 만든다).
-     */
-    private function legacyBatchTarget(int $patientId): ?Prescription
-    {
-        return Prescription::where('patient_id', $patientId)
-            ->where('created_by', auth()->id())
-            ->where('created_at', '>=', now()->subMinutes(10))
-            ->whereIn('status', Prescription::UPLOADER_EDITABLE_STATUSES)
-            // 같은 초에 두 건이 서면 created_at 으로는 가릴 수 없다 — 번호가 늦은 것이 방금 것이다
-            ->orderByDesc('id')
-            ->first();
     }
 
     /**
