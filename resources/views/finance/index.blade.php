@@ -134,6 +134,17 @@
   const COLS = @json($columns);
   COLS.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
 
+  /* 감출 머리글 — 탭마다 다르다 (FinanceController::숨길칸, 2026-09-15 지시).
+     2026-09-11 엑셀에서 담당자가 회색으로 칠해 둔 칸들이다.
+
+     칸을 세운 **뒤에** 거른다. 서버가 세우는 앞쪽 칸과 화면이 잇는 위드웍스 묶음
+     양쪽에 걸쳐 있어, 한쪽에서만 덜어 내면 나머지가 그대로 남는다. 위드웍스 묶음은
+     주문 관리를 비롯한 아홉 화면이 함께 쓰므로 거기서 지울 수 없다 — 재무 탭에서만
+     건다. */
+  let 숨길것 = new Set(@json($hidden ?? []));
+
+  const 거르기 = (칸들) => 칸들.filter(c => !숨길것.has(c.header));
+
   /* 표는 다시 그릴 수 있어야 한다 — 탭마다 칸이 다르므로 값만 갈아 끼울 수 없다 */
   const 표만들기 = (칸들, 줄들, 위드웍스붙일까 = true) => new wwGrid({
     el: document.getElementById('financeGrid'),
@@ -148,7 +159,7 @@
 
        PG정산내역만은 잇지 않는다 (2026-09-11 확인요청 6ㆍ7쪽). 그 줄은 토스에서
        온 정산 자료라 판매주문ㆍ창고 값이 아예 없다 — 이으면 빈 칸 백 개가 따라붙는다. */
-    columns: 위드웍스붙일까 ? [...칸들, ...ceWwCols()] : [...칸들],
+    columns: 거르기(위드웍스붙일까 ? [...칸들, ...ceWwCols()] : [...칸들]),
     data: 줄들,
   });
 
@@ -184,6 +195,7 @@
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(d => {
         칸.innerHTML = '';
+        숨길것 = new Set(d.hidden || []);   // 탭마다 감출 칸이 다르다
         window.__financeGrid = 표만들기(돈칸으로(d.columns), d.rows, d.tab !== 'pg');
 
         // 걸린 탭과 건수를 옮긴다
