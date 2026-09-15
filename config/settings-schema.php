@@ -112,6 +112,18 @@ return [
                                       'help'  => '무통장입금 안내와 가상계좌 대체 안내에 함께 씁니다.'],
             'va_fallback_account' => ['label' => '입금계좌 번호', 'config' => 'toss.virtual_account.fallback_account',
                                       'help'  => '비워 두면 무통장입금 문자에 「담당자에게 문의」로 나갑니다.'],
+
+            /* 시험 결제에 쓰는 카드 (2026-09-16 지시).
+
+               결제창을 끝까지 지나 보려면 카드번호가 있어야 하는데, 시험할 때마다 그
+               번호를 어딘가에서 찾아 와야 했다. 여기 두어 화면에서 보고 쓴다.
+               토스 샌드박스에서만 승인되는 번호이고, 운영에서는 쓰이지 않는다. */
+            'test_card_issuer' => ['label' => '시험 카드사', 'config' => 'toss.test_card.issuer',
+                             'help'  => '사용 환경이 「테스트」일 때 결제창에서 고를 카드사입니다.', 'width' => 1],
+            'test_card_number' => ['label' => '시험 카드번호', 'config' => 'toss.test_card.number',
+                             'help'  => '토스 샌드박스에서만 승인되는 번호입니다 — 실제 청구되지 않습니다. '
+                                      . '운영 환경에서는 쓰이지 않습니다.', 'width' => 2],
+            'test_card_cvc'    => ['label' => '시험 카드 CVC', 'config' => 'toss.test_card.cvc', 'width' => 1],
         ],
     ],
 
