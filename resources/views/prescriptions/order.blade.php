@@ -5798,6 +5798,47 @@ window.HELP_TOUR_STEPS = [
   let orderExists = false;
   @endif
 
+  /* ── 한 번만 눌러야 하는 일들 ─────────────────────────────────
+     주문 생성 및 연계ㆍ주문 정정ㆍ주문 취소는 되돌리기 어려운 일이다 (2026-09-15 지시).
+
+       ① 누르면 무엇이 일어나는지 먼저 묻는다
+       ② 일이 도는 동안 다시 누르면 「처리 중입니다」로 막는다
+       ③ 이미 끝난 일을 또 누르면 「이미 …했습니다」로 막는다
+
+     ②가 없으면 겹쳐 누른 만큼 창고에 판매주문이 여러 건 선다. 단추는 BtnState 가
+     잠그지만, 화면이 다시 그려지면 잠금이 풀리고 그 사이 응답이 늦으면 두 번째
+     요청이 그대로 나간다. 화면이 아니라 이 자물쇠가 막는다. */
+  const _도는일 = new Set();
+
+  /**
+   * 확인을 받고, 겹쳐 누르는 것을 막는다.
+   *
+   * @returns {Promise<boolean>} 진행해도 되면 참
+   */
+  async function 확인하고한번만({ 열쇠, 제목, 물음, 확인글, 막을때, 이미 }) {
+    if (_도는일.has(열쇠)) {
+      await ceAlert('처리 중입니다. 잠시 기다려 주십시오.', { title: 제목, tone: 'warning' });
+      return false;
+    }
+
+    if (이미) {
+      await ceAlert(막을때, { title: 제목, tone: 'warning' });
+      return false;
+    }
+
+    return await ceConfirm(물음, { title: 제목, confirmText: 확인글, cancelText: '취소' });
+  }
+
+  /** 일이 끝나면 자물쇠를 푼다 — 실패해도 푼다. 그러지 않으면 다시 시도할 수 없다. */
+  async function 자물쇠걸고(열쇠, 일) {
+    _도는일.add(열쇠);
+    try {
+      return await 일();
+    } finally {
+      _도는일.delete(열쇠);
+    }
+  }
+
   /* 기존 주문에 적힌 유형이 지금 고를 수 있는 목록에 있으면 그것을 이어 쓴다.
      없으면(옛 1013ㆍ5001 로 저장된 주문) 손대지 않는다 — 그 값을 그대로 보내면 서버가
      통째로 거절한다. */
@@ -9306,6 +9347,30 @@ window.HELP_TOUR_STEPS = [
     // 검수ㆍ동의ㆍ수량 — 셋 다 지나야 창고로 보낼 수 있다(요청서 7ㆍ12ㆍ17쪽)
     if (!gateOrder()) return;
 
+    /* 확인을 받고, 겹쳐 누르는 것을 막는다 (2026-09-15 지시).
+       이미 연계된 주문에 또 보내면 창고에 판매주문이 하나 더 선다. */
+    const 담긴수 = items.filter(i => i.product_name)
+                        .reduce((a, i) => a + (parseInt(i.quantity, 10) || 0), 0);
+
+    const 진행 = await 확인하고한번만({
+      열쇠: 'create',
+      제목: '주문 생성 및 연계',
+      이미: orderExists,
+      막을때: `이미 창고로 보낸 주문입니다 (위드웍스 판매번호 ${existingOrder?.withworks_so_no || ''}).
+
+`
+            + '내용을 고치려면 「주문 정정」을, 물리려면 「주문 취소」를 눌러 주십시오.',
+      물음: `주문을 저장하고 위드웍스로 보냅니다.
+
+제품 ${담긴수.toLocaleString()}개가 창고로 전달되며, `
+          + '전달 뒤에는 「주문 정정」으로만 수정할 수 있습니다.
+
+진행하시겠습니까?',
+      확인글: '생성합니다',
+    });
+
+    if (!진행) return;
+
     /* 유형과 청구전략이 없으면 여기서 멈춘다 (2026-09-10 지시).
        저장은 막지 않는다 — 적어 둔 것은 그대로 남고, 창고로 보내는 일만 멈춘다. */
     if (!gateBillingStrategy()) return;
@@ -9680,6 +9745,27 @@ window.HELP_TOUR_STEPS = [
   async function openCancelOrder(e) {
     if (!existingOrder?.id) { showToast('주문 정보를 찾을 수 없습니다.', 'danger'); return; }
 
+    /* 겹쳐 누르는 것을 막는다 (2026-09-15 지시). 사유를 묻는 창이 이미 확인 자리라
+       여기서 또 묻지 않는다 — 두 창을 잇달아 지나게 하면 사유를 적다 말고 확인을
+       한 번 더 눌러야 한다. */
+    if (_도는일.has('cancel')) {
+      await ceAlert('처리 중입니다. 잠시 기다려 주십시오.', { title: '주문 취소', tone: 'warning' });
+      return;
+    }
+
+    if (_취소상태?.state === 'requested') {
+      await ceAlert('이미 취소를 요청한 주문입니다.
+
+창고에서 할당ㆍ피킹을 취소하면 자동으로 취소됩니다.',
+                    { title: '주문 취소', tone: 'warning' });
+      return;
+    }
+
+    if (_취소상태?.state === 'done' || RX_STATUS === 'cancelled') {
+      await ceAlert('이미 취소된 주문입니다.', { title: '주문 취소', tone: 'warning' });
+      return;
+    }
+
     const 단계 = _취소상태?.stage ?? '';
     const 안내 = 단계 === 'working'
       ? '창고가 이미 할당ㆍ피킹을 시작했습니다.\n취소를 요청해 두면, 창고에서 할당ㆍ피킹을 취소하면 자동으로 취소됩니다.'
@@ -9755,6 +9841,33 @@ window.HELP_TOUR_STEPS = [
   // ── 주문 수정 ─────────────────────────────────────────
   async function updateOrder(e, opts = {}) {
     if (!existingOrder) { showToast('주문 정보를 찾을 수 없습니다.', 'danger'); return false; }
+
+    /* 확인을 받고, 겹쳐 누르는 것을 막는다 (2026-09-15 지시).
+
+       정정은 원 판매주문을 취소하고 새로 등록한다 — 겹쳐 누르면 취소와 등록이
+       엇갈려 창고에 남는 판매주문이 어느 것인지 알 수 없게 된다.
+
+       opts.skipSave 로 부르는 자리(다른 흐름이 이어 부르는 길)는 묻지 않는다 —
+       그 자리는 이미 제 확인을 받았다. */
+    if (!opts.skipConfirm) {
+      const 진행 = await 확인하고한번만({
+        열쇠: 'update',
+        제목: '주문 정정',
+        이미: false,
+        막을때: '',
+        물음: '창고의 원 판매주문을 취소하고 바뀐 내용으로 새로 등록합니다.
+
+'
+            + '금액이 바뀌면 결제도 함께 맞춥니다 — 미결제는 링크를 다시 보내고, '
+            + '결제된 건은 전액 취소 후 새 금액으로 다시 청구합니다.
+
+진행하시겠습니까?',
+        확인글: '정정합니다',
+      });
+
+      if (!진행) return false;
+    }
+
     const btn = e.target.closest('button');
     BtnState.loading(btn, '저장 중...');
 
