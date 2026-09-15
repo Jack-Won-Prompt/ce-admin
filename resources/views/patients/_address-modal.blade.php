@@ -42,7 +42,7 @@
   <div class="am-box">
     <div class="am-head">
       <b>주소 관리</b>
-      <span style="color:var(--text-muted);font-size:12px;">맨 위가 지금 쓰는 주소입니다</span>
+      <span style="color:var(--text-muted);font-size:12px;">［선택］을 누르면 지금 보고 있는 화면에 적힙니다</span>
       <button type="button" class="am-x" onclick="closeAddrManager()">&times;</button>
     </div>
 
@@ -127,7 +127,6 @@
         <span class="am-full">${r.current ? '<b class="am-now">현재</b>' : ''}${_amEsc(r.full)}</span>
         <span class="am-when">${_amEsc(r.at)}${r.by ? ' · ' + _amEsc(r.by) : ''}</span>
         <button type="button" class="am-mini" onclick="addrPick(${r.id})">선택</button>
-        ${r.current ? '' : `<button type="button" class="am-mini" onclick="addrPrimary(${r.id})">사용</button>`}
         <button type="button" class="am-mini" onclick="addrEdit(${r.id})">수정</button>
         <button type="button" class="am-mini danger" onclick="addrDelete(${r.id})">삭제</button>
       </div>`).join('');
@@ -207,12 +206,11 @@
   /**
    * 고른 주소를 지금 보고 있는 화면에 적용한다 (2026-09-15 지시).
    *
-   * 「사용」과 다르다. 「사용」은 거래처의 **현재 주소**를 바꾸는 일이라 다음에 이
-   * 사람에게 보낼 때도 그 주소가 따라온다. 「선택」은 이 건에만 쓰는 것이다 —
-   * 집으로 한 번 보내고 다음엔 직장으로 보내는 자리가 있다.
-   *
-   * 현재 주소에도 단추를 세운다. 여태 현재 주소에는 「사용」이 없어(이미 현재이므로)
-   * 고를 길이 자체가 없었다 — 주소를 지웠다가 되돌리려면 다른 주소를 거쳐야 했다.
+   * 이 창이 하는 일은 셋이다 — 고르고(선택), 고치고(수정), 지운다(삭제).
+   * 「사용」은 걷었다 (2026-09-15 지시). 그것은 거래처의 **현재 주소**를 옮기는
+   * 일이라 이 창의 결이 아니었다 — 여기서 바라는 것은 「이 건에 이 주소를 쓴다」
+   * 하나인데, 누르면 다음에 그 사람에게 보낼 때도 따라와 뜻하지 않은 곳이 바뀌었다.
+   * 현재 주소를 옮기는 일은 거래처 수정에서 한다(그쪽이 그 값의 정본이다).
    *
    * **화면을 새로 고치지 않는다.** 여태 「사용」이 location.reload() 를 불러, 주소
    * 하나 고르면 보고 있던 탭이 첫 탭으로 돌아갔다. 적을 것이 남은 채로 돌아가면
@@ -255,20 +253,6 @@
     showToast('주소를 적용했습니다 — ' + (r.full || ''), 'success');
   };
 
-  window.addrPrimary = async function (id) {
-    try {
-      const res = await apiRequest(`${_amUrl}/${id}/primary`, 'POST');
-      if (!res?.success) throw new Error(res?.message || '바꾸지 못했습니다.');
-      /* 새로 고치지 않는다 (2026-09-15 지시) — 보고 있던 탭이 첫 탭으로 돌아가고
-         적던 것이 날아간다. 목록만 다시 그려 「현재」 표시를 옮기고, 고른 주소를
-         화면에도 함께 적는다. */
-      showToast('현재 주소를 변경했습니다.', 'success');
-      await addrLoad();
-      addrPick(id);
-    } catch (e) {
-      showToast(e.message || '바꾸지 못했습니다.', 'danger');
-    }
-  };
 })();
 </script>
 @endpush
