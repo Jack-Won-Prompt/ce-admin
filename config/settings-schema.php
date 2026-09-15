@@ -48,6 +48,15 @@ return [
                              'width' => 3],
             'is_test'    => ['label' => '테스트 모드', 'config' => 'popbill.IsTest', 'type' => 'bool',
                              'help'  => '켜면 팝빌 테스트 서버로 나갑니다. 실제 발행·발송이 되지 않습니다.'],
+            /* 발행 시뮬레이션 — 여태 .env 에만 있었다 (2026-09-16 지시).
+
+               화면을 처음부터 끝까지 훑어 보는 시험에서 발행이 국세청으로 나가면 안 되어
+               둔 열쇠인데, 켜고 끄려면 서버의 .env 를 고쳐야 했다. 시험할 때마다 서버를
+               만지는 일을 없앤다 — 테스트 모드 바로 옆에 둔다. */
+            'issue_simulate' => ['label' => '발행 시뮬레이션', 'config' => 'popbill.issue_simulate', 'type' => 'bool',
+                             'help'  => '켜면 세금계산서·현금영수증의 발행·취소를 팝빌로 보내지 않고 성공으로 처리합니다. '
+                                      . '조회는 그대로 팝빌에 묻습니다. 실제로 발행해 보려면 끄되, '
+                                      . '「테스트 모드」를 함께 켜서 테스트 사업자번호로 나가게 하십시오.'],
             'ip_restrict' => ['label' => 'IP 제한',    'config' => 'popbill.IPRestrictOnOff', 'type' => 'bool'],
             'use_static_ip' => ['label' => '고정 IP',  'config' => 'popbill.UseStaticIP', 'type' => 'bool'],
             'test_corp_num'     => ['label' => '테스트 사업자번호', 'config' => 'popbill.test.corp_num'],
