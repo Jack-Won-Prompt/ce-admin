@@ -830,6 +830,8 @@
              padding:0 6px; border-radius:999px; font-size:10px; font-weight:700;
              line-height:1; white-space:nowrap; }
   .pay-tag-sent { background:var(--warning-50,#FEF3C7); color:#B54708; }
+  /* 결제취소 — 손을 써야 하는 상태라 위험색으로 세운다 (2026-09-16) */
+  .pay-tag-cancelled { background:var(--danger-50,#FEE4E2); color:#B42318; }
   .pay-tag-paid { background:var(--primary-50); color:var(--primary); }
   .pib-btn.is-paid { border-color:var(--primary-200,var(--primary)); }
 
@@ -1637,7 +1639,14 @@ $calcDeposit  = $calcCopay;
         <button class="pib-btn{{ ($payState['paid'] ?? false) ? ' is-paid' : '' }}"
                 id="btnPayTrigger" onclick="togglePayPopover(event)">
           <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
-          @if($payState['paid'] ?? false)
+          @if($payState['cancelled'] ?? false)
+            {{-- 결제가 취소된 건 (2026-09-16 지시).
+
+                 「결제완료」도 「링크 전송완료」도 사실이 아니다 — 보낸 적도 받은
+                 적도 있으나 지금은 돈이 없다. 다시 보내야 한다는 것을 딱지가
+                 그대로 말한다. --}}
+            <span class="pay-tag pay-tag-cancelled">결제취소 · 재전송 필요</span>
+          @elseif($payState['paid'] ?? false)
             <span class="pay-tag pay-tag-paid">결제완료</span>
           @elseif($payState['sent'] ?? false)
             {{-- 「링크 전송완료」라 적는다 (2026-09-15 지시).
@@ -10785,7 +10794,7 @@ window.HELP_TOUR_STEPS = [
 
     btn.querySelector('.pay-tag')?.remove();
     btn.classList.toggle('is-paid', !!PAY_STATE?.paid);
-    if (!PAY_STATE?.paid && !PAY_STATE?.sent) return;
+    if (!PAY_STATE?.paid && !PAY_STATE?.sent && !PAY_STATE?.cancelled) return;
 
     const tag = document.createElement('span');
     tag.className = 'pay-tag ' + (PAY_STATE.paid ? 'pay-tag-paid' : 'pay-tag-sent');
@@ -10796,6 +10805,14 @@ window.HELP_TOUR_STEPS = [
     tag.textContent = PAY_STATE.paid
       ? '결제완료'
       : '링크 전송완료' + (보낸수 > 1 ? ' · ' + 보낸수 + '회' : '');
+
+    /* 취소된 건은 그 사실이 먼저다 (2026-09-16 지시) — 보낸 적도 받은 적도 있으나
+       지금은 돈이 없다. 다시 보내야 한다는 것을 딱지가 그대로 말한다. */
+    if (PAY_STATE?.cancelled) {
+      tag.textContent = '결제취소 · 재전송 필요';
+      tag.className   = 'pay-tag pay-tag-cancelled';
+      btn.classList.remove('is-paid');
+    }
 
     btn.appendChild(tag);
     전송단추셈();

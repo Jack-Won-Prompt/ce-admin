@@ -258,12 +258,11 @@ class VirtualAccountService extends TossClient
         /* 입금이 취소된 알림도 온다(status=CANCELED). 되돌리는 일은 담당자의 손을
            거쳐 돌므로 여기서 건드리지 않되, 조용히 지나가지도 않는다 — 돈이 들어온
            줄 알고 이미 서류가 나갔을 수 있다. */
-        if (($verified['status'] ?? '') === 'CANCELED') {
-            Log::warning('[Toss] 가상계좌 입금이 취소되었습니다 — 담당자 확인이 필요합니다', [
-                'order_id'    => $tossPayment->order_id,
-                'order_no'    => $tossPayment->order?->order_number,
-                'payment_key' => $paymentKey,
-            ]);
+        if (in_array($verified['status'] ?? '', ['CANCELED', 'PARTIAL_CANCELED'], true)) {
+            /* 로그만 남기던 것을 고친다 (2026-09-16 지시). 서버 로그는 아무도 보지
+               않는다 — 결제 줄과 주문을 사실에 맞추고 담당자에게 알린다. */
+            app(PaymentCancelSync::class)
+                ->맞추기($tossPayment, $verified, '가상계좌 입금 취소 웹훅');
         }
 
         /* 돈이 들어왔으면 청구전략이 정한 세무 서류를 낸다.

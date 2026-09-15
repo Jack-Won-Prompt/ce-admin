@@ -2402,6 +2402,16 @@ class PrescriptionController extends Controller
                늘어 차액이 남은 건도 참이 된다 — 그 건은 더 보낼 수 있어야 한다. */
             'settled'   => (bool) $prescription->order?->다받았나(),
             'received'  => (int) ($prescription->order?->받은금액() ?? 0),
+            /* 결제가 취소된 건인가 (2026-09-16 지시).
+
+               토스에서 취소되면 받은 돈이 0이 되고 입금 확인도 거둬진다
+               (PaymentCancelSync). 그러면 paid 는 저절로 거짓이 되는데, 화면에는
+               「보낸 적 있음」만 남아 **왜 다시 보내야 하는지**가 드러나지 않는다.
+               취소됐다는 사실을 따로 적어 딱지가 그것을 말하게 한다. */
+            'cancelled' => in_array(
+                $prescription->order?->tossPayment?->status,
+                ['CANCELED', 'PARTIAL_CANCELED'], true),
+            'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
         ];
 
         /* 주문 고르개가 쓸 줄들과, 추가 주문이 더 살 수 있는 수량 (2026-09-14 확인요청 4쪽).

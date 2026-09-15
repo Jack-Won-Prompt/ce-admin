@@ -126,16 +126,32 @@ class TossWebhookController extends Controller
             return response()->json(['message' => '재조회 실패'], 500);
         }
 
-        /* 다 낸 것만 다룬다. 취소ㆍ부분취소는 우리 쪽 되돌리기(OrderCancellation)가
-           담당자의 손을 거쳐 도는 일이라 여기서 건드리지 않는다. */
-        if (($res['status'] ?? '') !== 'DONE') {
-            return response()->json(['ok' => true, 'status' => $res['status'] ?? null]);
-        }
-
         $tp = \App\Models\TossPayment::where('payment_key', $key)->first();
 
         if (! $tp?->order) {
             return response()->json(['ok' => true, 'skipped' => '이어진 주문 없음']);
+        }
+
+        /* 취소ㆍ부분취소를 받는다 (2026-09-16 지시).
+
+           여태는 DONE 이 아니면 그냥 버렸다. 「되돌리는 일은 담당자의 손을 거쳐
+           돈다」는 뜻이었는데, **담당자에게 알리는 자리가 없었다** — 환자는 돈을
+           돌려받았는데 화면은 「결제완료」라 말하고, 다시 청구할 수도 없었다.
+
+           되돌리는 판단은 여전히 담당자의 몫이다. 여기서는 토스가 준 사실만 옮겨
+           적고 알린다(PaymentCancelSync). */
+        if (in_array($res['status'] ?? '', ['CANCELED', 'PARTIAL_CANCELED'], true)) {
+            $맞춤 = app(\App\Services\TossPayments\PaymentCancelSync::class)
+                        ->맞추기($tp, $res, '카드 결제 취소 웹훅');
+
+            return response()->json([
+                'ok' => true, 'status' => $res['status'], 'synced' => $맞춤['changed'],
+            ]);
+        }
+
+        // 나머지는 다 낸 것만 다룬다
+        if (($res['status'] ?? '') !== 'DONE') {
+            return response()->json(['ok' => true, 'status' => $res['status'] ?? null]);
         }
 
         /* 가상계좌는 여기가 아니라 입금 웹훅이 다룬다 — 승인(DONE)이 곧 입금은 아니다 */
