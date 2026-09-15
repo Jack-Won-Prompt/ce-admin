@@ -7021,7 +7021,18 @@ window.HELP_TOUR_STEPS = [
        받은 것은 받은 것이고, 이 글은 아직 안 받은 사람에게 하는 말이다. */
     const 받아둠 = !!window.CONSENT_STATUS;
 
-    tag.style.display = (bs && !bs.needs_delegation && !받아둠) ? 'inline-flex' : 'none';
+    /* 거래처를 아직 고르지 않았으면 아무 말도 하지 않는다 (2026-09-16 지시).
+
+       이 글은 **이 사람에게** 무엇을 받고 무엇을 받지 않는가를 말한다. 받을 사람이
+       정해지지 않았는데 「개인정보 동의는 받습니다」가 서 있으면, 담당자는 누구에게
+       받으라는 것인지 알 수 없다.
+
+       ［신규 등록］으로 연 빈 건이 그렇다 — 유형 기본값이 처방외라 전략은 곧바로
+       서는데(처방외는 자격을 보지 않는다) 환자는 아직 없다. */
+    const 거래처있나 = (document.getElementById('f-name')?.value ?? '').trim() !== '';
+
+    tag.style.display = (거래처있나 && bs && !bs.needs_delegation && !받아둠)
+        ? 'inline-flex' : 'none';
 
     /* 개인정보 동의까지 받아 두었으면 그 줄은 물러난다 — 남은 것만 적는다 */
     /* PRIVACY_STATE 는 아래쪽에서 let 으로 선다 — 이 함수가 먼저 돌 수 있어
