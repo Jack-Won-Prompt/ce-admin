@@ -2392,7 +2392,19 @@ document.addEventListener('click', (e) => {
       if (btn.dataset.origHtml === undefined) btn.dataset.origHtml = btn.innerHTML;
       btn.dataset.loading  = '1';
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> ${text}`;
+
+      /* 아이콘 한 칸짜리 단추에는 글을 넣지 않는다 (2026-09-16 지시).
+
+         .btn-icon 은 32x32 로 못박힌 칸이다. 거기에 「처리 중...」을 넣으면 글자가
+         칸을 넘어 두 줄로 부서지고 옆 단추까지 밀린다 — 로그아웃 단추에서 드러났다.
+
+         잠그는 뜻은 두 번 눌리지 않게 하는 것이지 글로 알리는 것이 아니다. 좁은
+         단추에서는 물레만 돌린다. 무엇을 하는 중인지는 원래 title 이 말해 준다. */
+      const 좁은단추 = btn.classList.contains('btn-icon');
+
+      btn.innerHTML = 좁은단추
+        ? '<i class="fa-solid fa-spinner fa-spin" style="font-size:14px;"></i>'
+        : `<i class="fa-solid fa-spinner fa-spin" style="font-size:12px;"></i> ${text}`;
     }
     function reset(btn) {
       if (!btn) return;
