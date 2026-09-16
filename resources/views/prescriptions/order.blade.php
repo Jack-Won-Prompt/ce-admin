@@ -3406,6 +3406,25 @@ $calcDeposit  = $calcCopay;
                      background:var(--gray-50);white-space:pre-wrap;min-height:32px;
                      color:{{ $prescription->admin_note ? 'var(--gray-700)' : 'var(--text-muted)' }};">{{ $prescription->admin_note ?: '검수 요청 메모가 없습니다.' }}</div>
               </div>
+              {{-- 입력 검수 승인 메모 — 요청 메모 **옆에** 세운다 (2026-09-16 지시).
+
+                   둘은 한 쌍이다. 요청 메모는 「이것을 봐 달라」는 말이고, 승인 메모는
+                   「보았다, 이렇더라」는 답이다. 위아래로 떨어뜨려 두면 답을 읽으려고
+                   화면을 굴려야 하고, 답이 비어 있는지도 한눈에 안 보인다.
+
+                   요청 메모가 이미 절반 폭(rx-w3)이라 오른쪽 절반이 비어 있었다 —
+                   그 자리다. 줄을 새로 시작하지 않으므로(rx-row-start 없음) 나란히 선다.
+
+                   파일 검수의 「검수 메모」는 아래에 그대로 둔다 — 그것은 올라온 이미지를
+                   본 사람의 말이라 다른 일이다. --}}
+              <div class="rx-field-row rx-w3">
+                <span class="rx-field-label">입력 검수 승인 메모</span>
+                <div id="f-input-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
+                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+                     background:var(--gray-50);white-space:pre-wrap;min-height:32px;
+                     color:{{ $prescription->input_review_memo ? 'var(--gray-700)' : 'var(--text-muted)' }};"
+                     title="입력 검수를 승인한 사람이 남긴 말입니다">{{ $prescription->input_review_memo ?: '아직 입력 검수 승인 메모가 없습니다.' }}</div>
+              </div>
               {{-- 참고 사항은 걷었다 (2026-09-14 지시). 담긴 값(reference_note)은
                    지우지 않는다 — 화면에서 내릴 뿐이라 되돌릴 때 그대로 있다.
                    저장할 때도 그 칸을 보내지 않으므로 서버가 손대지 않는다. --}}
@@ -8810,6 +8829,13 @@ window.HELP_TOUR_STEPS = [
     const 승인들 = document.querySelectorAll('[onclick="approveRx()"]');
 
     const 언제 = (t, 누가) => t ? `${t}${누가 ? ' · ' + 누가 : ''}` : '';
+
+    /* 승인 메모 칸도 함께 고쳐 세운다 — 화면을 다시 읽지 않는다 */
+    const 메모칸 = document.getElementById('f-input-review-memo');
+    if (메모칸) {
+      메모칸.textContent = 상태.memo || '아직 입력 검수 승인 메모가 없습니다.';
+      메모칸.style.color = 상태.memo ? 'var(--gray-700)' : 'var(--text-muted)';
+    }
 
     if (상태.status === 'approved') {
       요청들.forEach(b => { b.disabled = true; b.textContent = '입력 검수 요청';
