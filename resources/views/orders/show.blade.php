@@ -481,6 +481,7 @@
           @if($order->prescription)
             <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
                style="margin-left:auto;" data-rx="{{ $order->prescription->rx_number }}"
+               data-name="{{ $order->patient?->name ?? $order->prescription?->patient_name_ocr ?? '' }}"
                onclick="return orderOpenRxTab(event, this)">
               <i class="bx bx-file-medical"></i> 주문 보기
             </a>
@@ -1111,7 +1112,9 @@
     </a>
     @if($order->prescription)
       <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
-         data-rx="{{ $order->prescription->rx_number }}" onclick="return orderOpenRxTab(event, this)">
+         data-rx="{{ $order->prescription->rx_number }}"
+         data-name="{{ $order->patient?->name ?? $order->prescription?->patient_name_ocr ?? '' }}"
+         onclick="return orderOpenRxTab(event, this)">
         <i class="bx bx-file"></i> 주문 보기
       </a>
     @else
@@ -1307,9 +1310,14 @@ window.orderOpenRxTab = function (ev, el) {
   ev.preventDefault();
   const url = el.getAttribute('href');
   if (!url) return false;
-  const rx = el.dataset.rx ? '주문 - ' + el.dataset.rx : '주문';
+  /* 탭 이름은 목록에서 여는 것과 같은 꼴로 짓는다 (2026-09-16 지시).
+     「주문 - RX-…」로 적으면 번호만 보여, 탭을 여럿 띄워 두었을 때 누구 것인지
+     알 수 없다. 이름이 없으면 처방번호로 떨어진다. */
+  const 이름 = (el.dataset.name || '').trim();
+  const 이름표 = 이름 ? '주문 등록 · ' + 이름
+               : (el.dataset.rx ? '주문 등록 · ' + el.dataset.rx : '주문 등록');
   if (typeof window.ceOpenTab === 'function') {
-    window.ceOpenTab(url, rx, 'file-edit-02');
+    window.ceOpenTab(url, 이름표, 'file-edit-02');
   } else {
     window.open(url, '_blank', 'noopener');
   }
