@@ -568,6 +568,20 @@
   #tab-product .pt-head-total b { font-weight:500; color:inherit; }
   #tab-product .pt-head-btns { display:flex; align-items:center; gap:6px; }
 
+  /* 원 주문 제품 팝오버 — **쉬는 자리는 CSS 에 둔다** (2026-09-16 고침).
+
+     여태 position:absolute 와 top·right·width 를 인라인에 적어 두었다. 그런데 창을
+     열 때 지난번에 끌어 둔 자리를 지우려고 style.position 을 비우는데, 인라인이
+     유일한 출처라 그 순간 absolute 자체가 사라졌다 — 560px 판이 단추 묶음 안으로
+     들어와 머리줄이 75px 에서 507px 로 부풀고, 오른쪽의 본인 부담금ㆍ기관 부담금ㆍ
+     단추 셋이 세로로 쌓였다. 창을 처음 여는 순간부터 그랬다.
+
+     CSS 에 두면 인라인을 비우는 것이 곧 제자리로 돌아오는 일이 된다. */
+  #parentItemsPop { position:absolute; top:calc(100% + 8px); right:0; width:560px;
+                    background:var(--bg-card); border:1px solid var(--border);
+                    border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,.18);
+                    z-index:520; }
+
   /* ── 주문 정보 제품 행 (카드뷰) — 시안 Frame 48101492: 1132×118 ────────────────
      .item-card 는 테이블뷰에서 <tr> 로도 쓰인다. 카드뷰 컨테이너 안으로만 범위를 잡는다. */
   #items-container .item-card { display:flex; align-items:stretch; padding:0; margin-bottom:12px; }
@@ -4136,7 +4150,7 @@ $calcDeposit  = $calcCopay;
                           title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
                     <i class="fa-solid fa-clock-rotate-left"></i> 원 주문
                   </button>
-                  <div id="parentItemsPop" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:560px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:520;">
+                  <div id="parentItemsPop" style="display:none;">
                     <div id="parentItemsHead" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;cursor:move;user-select:none;"
                          title="끌어서 옮길 수 있습니다">
                       <i class="fa-solid fa-up-down-left-right" style="font-size:11px;opacity:.85;"></i>
@@ -5944,9 +5958,10 @@ window.HELP_TOUR_STEPS = [
     /* 열 때마다 제자리로 돌려 둔다 — 지난번에 끌어 둔 자리에 그대로 서면
        단추와 멀리 떨어져 어디서 나왔는지 알기 어렵다. */
     판.style.position = '';
-    판.style.left = '';
-    판.style.top  = '';
-    판.style.right = '0';
+    판.style.left   = '';
+    판.style.top    = '';
+    판.style.right  = '';
+    판.style.margin = '';
 
     _끌기붙이기();
 
