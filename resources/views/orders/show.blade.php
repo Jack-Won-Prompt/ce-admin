@@ -479,7 +479,7 @@
           <i class="bx bx-box" style="color:var(--primary);"></i>
           <span class="card-header-title">제품 정보</span>
           @if($order->prescription)
-            <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
+            <a href="{{ route('prescriptions.show', ['prescription' => $order->prescription, 'order' => $order->order_number]) }}" class="btn btn-outline btn-sm"
                style="margin-left:auto;" data-rx="{{ $order->prescription->rx_number }}"
                data-name="{{ $order->patient?->name ?? $order->prescription?->patient_name_ocr ?? '' }}"
                onclick="return orderOpenRxTab(event, this)">
@@ -1111,7 +1111,7 @@
       <i class="bx bx-list-ul"></i> 목록
     </a>
     @if($order->prescription)
-      <a href="{{ route('prescriptions.show', $order->prescription) }}" class="btn btn-outline btn-sm"
+      <a href="{{ route('prescriptions.show', ['prescription' => $order->prescription, 'order' => $order->order_number]) }}" class="btn btn-outline btn-sm"
          data-rx="{{ $order->prescription->rx_number }}"
          data-name="{{ $order->patient?->name ?? $order->prescription?->patient_name_ocr ?? '' }}"
          onclick="return orderOpenRxTab(event, this)">

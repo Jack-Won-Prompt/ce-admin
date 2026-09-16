@@ -12930,9 +12930,19 @@ window.HELP_TOUR_STEPS = [
     const 이름표 = 이름 ? '주문 등록 · ' + String(이름).trim() : '주문 등록';
     const 액자   = window.self !== window.top;
 
-    /* 지금 보고 있는 건인가 — 주소에 이 화면의 처방번호가 들어 있으면 같은 건이다 */
-    const 같은건 = typeof RX_NUMBER !== 'undefined' && RX_NUMBER
-                 && String(url).indexOf(RX_NUMBER) !== -1;
+    /* 지금 보고 있는 것과 같은 **주문**인가 (2026-09-16 고침).
+
+       처방번호로 견주던 것을 주문번호로 바꾼다. 목록의 한 줄은 주문이고, 한 처방전에
+       원 주문과 추가 주문이 함께 설 수 있다 — 처방번호로 가르면 그 둘을 같은 것으로
+       보아 한 탭에서 덮어썼다.
+
+       주소에 주문번호가 없는 옛 주소는 처방번호로 떨어진다. */
+    const 주소 = String(url);
+    const 같은건 = (typeof VIEW_ORDER_NO !== 'undefined' && VIEW_ORDER_NO
+                   && 주소.indexOf(VIEW_ORDER_NO) !== -1)
+                || (! /[?&]order=/.test(주소)
+                    && typeof RX_NUMBER !== 'undefined' && RX_NUMBER
+                    && 주소.indexOf(RX_NUMBER) !== -1);
 
     if (액자 && !같은건 && typeof ceOpenTab === 'function') {
       /* 새 탭으로 연다. 지금 탭은 그대로 두므로 적다 만 것도 그 자리에 남는다 —

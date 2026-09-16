@@ -1463,8 +1463,15 @@ class PrescriptionController extends Controller
                처방전을 지운 뒤 다시 올리기도 한다. 예전에는 여기서 빈 값을 내보내
                더블클릭이 「이어져 있지 않습니다」로 막혔는데, 목록에 서 있는 일을
                열 수 없게 하는 것은 막을 일이 아니라 열어 줄 일이었다. */
+            /* 목록의 한 줄은 **주문**이다. 처방번호만 넘기면 화면이 그 처방전의 첫
+               주문(원 주문)을 그려, 추가 주문 줄을 더블클릭해도 원 주문이 열렸다 —
+               판매번호ㆍ금액ㆍ제품이 모두 다른 주문 것으로 보였다 (2026-09-16 고침). */
             'url'       => $rx
-                ? route('prescriptions.show', $rx) . '?claim=1'
+                ? route('prescriptions.show', [
+                    'prescription' => $rx,
+                    'order'        => $o->order_number,
+                    'claim'        => 1,
+                  ])
                 : route('orders.open', $o),
 
             /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ
@@ -2005,7 +2012,16 @@ class PrescriptionController extends Controller
      */
     public function openFromOrder(Order $order): RedirectResponse
     {
-        return redirect()->route('prescriptions.show', [$this->prescriptionFor($order), 'claim' => 1]);
+        /* 어느 주문을 보러 왔는지 함께 넘긴다 (2026-09-16 고침).
+
+           화면은 ?order= 가 없으면 그 처방전의 **첫 주문**을 그린다. 그래서 추가 주문의
+           상세에서 들어와도 원 주문이 열렸고, 판매번호ㆍ금액ㆍ제품이 모두 원 주문 것으로
+           보였다 — 담긴 값은 멀쩡한데 화면만 다른 주문을 보여 준 것이다. */
+        return redirect()->route('prescriptions.show', [
+            'prescription' => $this->prescriptionFor($order),
+            'order'        => $order->order_number,
+            'claim'        => 1,
+        ]);
     }
 
     /**
