@@ -12715,7 +12715,7 @@ window.HELP_TOUR_STEPS = [
         /* 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다.
            마케팅 동의는 이 목록에서만 켠다 (2026-09-14 지시) — 안내 문자를 보내도
            되는 사람인지 개인정보동의 옆에서 바로 읽는다. */
-        ...ceWwCols({ marketing: true, orderKind: false }),
+        ...ceWwCols({ marketing: true, orderKind: false, rrn: false }),
       ],
       data: OL_ROWS,
     });

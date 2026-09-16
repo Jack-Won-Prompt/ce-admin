@@ -259,7 +259,7 @@
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
-      ...ceWwCols(),
+      ...ceWwCols({ rrn: false }),
     ],
     data: @json($gridData),
   });

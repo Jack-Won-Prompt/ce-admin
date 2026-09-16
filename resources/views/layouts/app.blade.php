@@ -2219,7 +2219,11 @@ document.addEventListener('click', (e) => {
       {{-- 우리 자료에서 채우는 것 --}}
       { header: '인마켓 마감일자 월/년', name: 'rx_inmarket_ym', width: 130, align: 'center', sortable: true },
       { header: '구분(SB/SCI)',   name: 'pt_sb_sci',    width: 110, align: 'center', sortable: true },
-      { header: '주민등록번호',   name: 'pt_rrn',       width: 130 },
+      {{-- 화면이 제 몫으로 같은 칸을 앞쪽에 두기도 한다(주문 목록ㆍ반품 목록).
+           그때는 rrn:false 로 여기서 끈다 — 두면 「주민등록번호」가 두 칸에 서고,
+           값이 같아 어느 쪽을 봐야 할지 알 수 없다 (2026-09-16 지시). --}}
+      ...(opts.rrn === false ? [] : [
+      { header: '주민등록번호',   name: 'pt_rrn',       width: 130 }]),
       {{-- 공단이 통장에 찍는 입금자명 (2026-09-11 엑셀 · 2026-09-15 지시).
            「NB + 주민번호 앞 여섯 자리」가 규칙이다. 지자체는 정해진 것이 없어
            기관마다 다르므로 빈칸으로 둔다 — 없는 규칙을 지어내면 담당자가 그것과
