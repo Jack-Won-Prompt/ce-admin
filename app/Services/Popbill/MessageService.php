@@ -225,7 +225,7 @@ class MessageService extends PopbillBaseService
      * 로컬 환경(APP_ENV=local)에서는 실제 API를 호출하지 않고 시뮬레이션.
      */
     public function send(string $to, string $content, ?string $receiverName = null,
-                         bool $적은번호그대로 = false): string
+                         bool $업무발송 = false): string
     {
         $toNum = preg_replace('/\D/', '', $to);
 
@@ -233,26 +233,33 @@ class MessageService extends PopbillBaseService
            **우리에게만**(redirect)이면 받는 번호를 시험 번호로 갈아 끼운다.
            여태 시뮬레이션이냐 아니냐 둘뿐이라, 문자가 정말 나가는지 볼 길이 없었다.
 
-           다만 **손으로 적어 넣은 번호는 돌리지 않는다**(2026-09-14 지시).
-           그 갈래가 막는 것은 「환자 자료에서 읽어 온 번호로 잘못 나가는 것」이다.
-           담당자가 그 자리에서 제 번호를 쳐 넣은 것은 잘못 나갈 수가 없고, 오히려
-           시험 받는 번호 하나로 몰면 여럿이 함께 시험할 수 없다.
-
-           시뮬레이션은 그대로 따른다 — 그것은 「아무 것도 내보내지 않는다」는
-           빗장이라, 이 자리에서 뚫으면 빗장이 아니게 된다. */
+           다만 **업무 발송은 이 갈래를 따르지 않는다**($업무발송 · 2026-09-16 지시).
+           이 스위치가 막으려는 것은 「시험하다가 실제 환자에게 잘못 나가는 것」인데,
+           부르는 쪽이 시험이 아니라고 밝힌 자리까지 막으면 업무가 조용히 멈춘다.
+           아래 업무 발송 갈래의 주석에 그 까닭을 적어 두었다. */
         $mode = config('popbill.sms_mode', 'live');
 
-        if ($mode === 'redirect' && ! $적은번호그대로) {
-            $toNum = $this->testReceiver($toNum, $receiverName);
-        }
+        /* 업무 발송은 테스트 스위치를 따르지 않는다 (2026-09-16 지시).
 
-        if ($mode === 'redirect' && $적은번호그대로) {
-            \Illuminate\Support\Facades\Log::info('[Popbill][SMS][우리에게만] 손으로 적은 번호라 그대로 보낸다', [
-                'to' => $toNum, 'name' => $receiverName,
+           위임장 서명 명단은 시험 화면이 아니라 실제 업무다 — 환자 삼천여 명에게
+           서명 링크를 보내는 자리다. 그런데 「문자 발송」이 우리에게만으로 서 있으면
+           그 링크가 전부 시험 번호로 돌아갔고, 화면에는 환자 번호로 「발송 완료」라
+           적혀 아무도 알아채지 못했다 (2026-09-16 운영에서 드러남).
+
+           시뮬레이션도 지나간다. 여태 그것만은 빗장으로 두었는데, 빗장이 업무 발송을
+           함께 막으면 「보냈다는데 아무도 못 받는」 일이 그대로 되돌아온다. 이 깃발은
+           부르는 쪽이 「이것은 시험이 아니다」라고 밝히는 자리이므로 그 뜻을 따른다. */
+        if ($업무발송) {
+            \Illuminate\Support\Facades\Log::info('[Popbill][SMS][업무발송] 테스트 스위치를 따르지 않고 적힌 번호로 보낸다', [
+                'to' => $toNum, 'name' => $receiverName, 'mode' => $mode,
             ]);
         }
 
-        if ($mode === 'simulate') {
+        if ($mode === 'redirect' && ! $업무발송) {
+            $toNum = $this->testReceiver($toNum, $receiverName);
+        }
+
+        if ($mode === 'simulate' && ! $업무발송) {
             $receipt = 'SIM-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
             \Illuminate\Support\Facades\Log::info('[Popbill][SMS][시뮬레이션] 발송', [
                 'to'      => $toNum,

@@ -50,7 +50,7 @@ class MessageSender
             try {
                 $receipts[] = $channel === 'alimtalk'
                     ? $this->sendAlimtalkChunk($chunk, $content, $templateCode, $label ?? '')
-                    : $this->sendSmsChunk($chunk, $content, (bool) ($meta['적은번호그대로'] ?? false));
+                    : $this->sendSmsChunk($chunk, $content, (bool) ($meta['업무발송'] ?? false));
                 $ok += count($chunk);
             } catch (\Throwable $e) {
                 $err = $e->getMessage();
@@ -113,14 +113,15 @@ class MessageSender
     /**
      * 팝빌은 수신자 배열을 그대로 받는다 — 한 번 호출로 묶음 전체가 나간다
      *
-     * $적은번호그대로 는 「우리에게만」이어도 돌리지 말라는 뜻이다 (2026-09-14 지시).
-     * 손으로 쳐 넣은 한 사람에게 보내는 자리에서만 선다 — 묶음에는 쓰지 않는다.
+     * $업무발송 은 「이것은 시험이 아니다」라는 뜻이다 (2026-09-16 지시).
+     * 서면 「우리에게만」도 「시뮬레이션」도 따르지 않고 적힌 번호로 나간다.
+     * 한 사람에게 보내는 자리에서만 선다 — 묶음 경로는 아직 이 깃발을 보지 않는다.
      */
-    private function sendSmsChunk(array $chunk, string $content, bool $적은번호그대로 = false): string
+    private function sendSmsChunk(array $chunk, string $content, bool $업무발송 = false): string
     {
         return count($chunk) === 1
             // 단건은 기존 편의 메서드를 그대로 쓴다
-            ? $this->sms->send($chunk[0]['rcv'], $content, $chunk[0]['rcvnm'] ?? null, $적은번호그대로)
+            ? $this->sms->send($chunk[0]['rcv'], $content, $chunk[0]['rcvnm'] ?? null, $업무발송)
             : $this->sms->sendManyXms($chunk, $content);
     }
 
