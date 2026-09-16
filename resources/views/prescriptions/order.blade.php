@@ -4656,19 +4656,25 @@ $calcDeposit  = $calcCopay;
   <div class="modal-box">
     <div class="modal-header">
       <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:20px;"></i>
-      <span class="modal-title">처방전 검수 승인</span>
+      <span class="modal-title">입력 검수 승인</span>
       <button class="modal-close" onclick="closeModal('approveModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body">
       <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 검수 승인</div>
+        <div style="font-size:13px;font-weight:700;color:var(--primary);">✅ 입력 검수 승인</div>
+        {{-- 파일 검수(처방전 이미지)가 아니라 입력값을 승인하는 자리다 (2026-09-16 지시).
+             창 문구가 「처방전 검수」로 남아 있어 무엇을 승인하는지 갈렸다. --}}
         <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
-          처방전 {{ $prescription->rx_number }}의 검수를 마칩니다.
+          {{ $prescription->rx_number }}에 입력한 환자ㆍ병원ㆍ처방 정보를 확인하고 승인합니다.
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">참고 사항</label>
-        <textarea class="form-control" id="approveMemo" rows="3" placeholder="검수 관련 메모를 입력하세요..."></textarea>
+        <label class="form-label">입력 검수 승인 메모</label>
+        <textarea class="form-control" id="approveMemo" rows="3"
+                  placeholder="확인한 내용을 입력하십시오 (선택)"></textarea>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+          여기에 입력한 내용은 병원ㆍ처방 정보 탭의 「입력 검수 승인 메모」에 표시됩니다.
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -12821,12 +12827,21 @@ window.HELP_TOUR_STEPS = [
          배정된 담당자가 없는 건은 여는 사람이 담당자가 되므로(claim=1) 묻지 않는다. */
       if (row.manager_id && Number(row.manager_id) !== OL_ME) { olOwnAsk(row); return; }
 
-      olGo(row.url);
+      olGo(row.url, row.patient);
     });
   }
 
-  /* 화면을 떠나기 전에 적다 만 것을 묻는다 — 두 자리에서 같이 쓴다 */
-  function olGo(url) {
+  /* 화면을 떠나기 전에 적다 만 것을 묻는다 — 두 자리에서 같이 쓴다.
+   *
+   *  환자명을 함께 받으면 워크스페이스 탭 이름을 「주문 등록 · 이름」으로 바꾼다
+   *  (2026-09-16 지시). 액자는 안에서 화면을 갈아 끼울 뿐이라 탭 이름이 그대로
+   *  「주문 등록」으로 남았고, 탭을 여럿 띄워 두면 어느 것이 누구인지 알 수 없었다.
+   *
+   *  옮겨 가기 **전에** 청한다 — 옮긴 뒤에는 이 코드가 사라진다. */
+  function olGo(url, 이름) {
+    if (이름 && typeof ceRenameTab === 'function') {
+      ceRenameTab('주문 등록 · ' + String(이름).trim());
+    }
     if (typeof isAnyDirty === 'function' && isAnyDirty()) {
       showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), url);
       return;
@@ -12841,6 +12856,7 @@ window.HELP_TOUR_STEPS = [
   const OL_ME = @json(auth()->id());
   let   olAsRows = [];      // 지금 넘기려는 줄
   let   olAsThen = null;    // 넘긴 뒤 갈 자리 (남의 건을 넘겨받아 여는 길)
+  let   olAsName = null;    // 그 건의 환자명 — 탭 이름에 쓴다
 
   window.olAskAssign = function (rows, then) {
     olAsRows = rows || (olGrid?.getCheckedRows?.() ?? []);
@@ -12934,8 +12950,8 @@ window.HELP_TOUR_STEPS = [
 
       /* 남의 건을 넘겨받아 들어가려던 길이면 그 자리로 간다 — 다만 내가 맡았을
          때만이다. 남에게 넘겨 놓고 내가 들어가면 처음 막은 뜻이 없어진다. */
-      if (olAsThen && Number(j.user_id) === OL_ME) olGo(olAsThen);
-      olAsThen = null;
+      if (olAsThen && Number(j.user_id) === OL_ME) olGo(olAsThen, olAsName);
+      olAsThen = null; olAsName = null;
     } catch (err) {
       showToast(err.message || '배정하지 못했습니다.', 'danger');
     } finally {
@@ -12973,12 +12989,13 @@ window.HELP_TOUR_STEPS = [
   window.olOwnPeek = () => {
     const row = olOwnRow;
     olOwnClose();
-    olGo((row.url || '').replace(/[?&]claim=1/, ''));
+    olGo((row.url || '').replace(/[?&]claim=1/, ''), row.patient);
   };
   window.olOwnChange = () => {
     const row = olOwnRow;
     olOwnClose();
     /* 바꾸고 나서 그 자리로 이어 간다 — 열려던 걸음이었기 때문이다 */
+    olAsName = row.patient;
     olAskAssign([row], row.url);
   };
 

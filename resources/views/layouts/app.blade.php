@@ -2121,6 +2121,19 @@ document.addEventListener('click', (e) => {
     return false;
   };
 
+  /* 지금 탭의 이름을 바꿔 달라고 워크스페이스에 청한다 (2026-09-16 지시).
+     액자가 아니면 아무 일도 하지 않는다 — 일반 화면에는 탭이 없다. */
+  window.ceRenameTab = function (title) {
+    if (window.self === window.top || !title) return false;
+    try {
+      window.parent.postMessage(
+        { source: 'ce-workspace', action: 'rename-tab', title: String(title) },
+        window.location.origin
+      );
+      return true;
+    } catch (e) { return false; }
+  };
+
   /* 화면 안에 다른 화면을 액자로 들여둔 자리가 있다(환자 전체 상세·접수 상세).
      그 액자 안에서 「새 탭으로」를 부탁하면 바로 위 화면에게 말이 오는데, 탭을 만드는
      것은 그보다 위의 워크스페이스다. 중간에서 끊기지 않게 그대로 올려 보낸다. */

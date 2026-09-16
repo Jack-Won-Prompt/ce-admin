@@ -190,6 +190,31 @@
     openTab(target.pathname + target.search, String(d.title || '새 탭'), String(d.icon || ''), false);
   });
 
+  /* 액자 안에서 「이 탭 이름을 이렇게 바꿔 달라」고 청한다 (2026-09-16 지시).
+
+     탭 이름은 탭을 만들 때 한 번 정해지고, 그 뒤 액자가 안에서 다른 화면으로 옮겨
+     가도 그대로 남는다. 그래서 주문 등록 탭에서 목록의 한 줄을 열면 화면은 그 사람
+     것으로 바뀌는데 탭에는 여전히 「주문 등록」만 적혀 있었다 — 탭을 여럿 띄워 두면
+     어느 것이 누구인지 가릴 수 없다.
+
+     청하는 쪽이 제 탭을 가리키지 않는다. 보낸 액자가 곧 그 탭이므로 여기서 찾는다 —
+     액자가 남의 탭 이름을 바꾸지 못한다. */
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin) return;
+    const d = e.data;
+    if (!d || d.source !== 'ce-workspace' || d.action !== 'rename-tab') return;
+
+    const 이름 = String(d.title || '').trim();
+    if (!이름) return;
+
+    const t = tabs.find(x => document.getElementById('wsF-' + x.id)?.contentWindow === e.source);
+    if (!t || t.home) return;          // 홈 탭은 이름을 지킨다
+
+    t.title = 이름.slice(0, 40);
+    render(false);                     // 갈래를 펴지 않는다 — 자리를 옮긴 것이 아니다
+    save();
+  });
+
   // 사이드바 메뉴 클릭 → 탭으로 열기(페이지 이동 대신)
   document.addEventListener('click', function (e) {
     const a = e.target.closest('.layout-menu a.menu-link');
