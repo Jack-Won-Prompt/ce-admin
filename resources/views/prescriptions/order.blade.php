@@ -7397,7 +7397,13 @@ window.HELP_TOUR_STEPS = [
 
     let d;
     try {
-      const res = await fetch(RX_HISTORY_URL, { headers: { Accept: 'application/json' } });
+      /* 보고 있는 주문을 함께 넘긴다 — 넘기지 않으면 서버가 첫 주문의 이력을 준다 */
+      const 이력주소 = RX_HISTORY_URL
+                     + (RX_HISTORY_URL.indexOf('?') > -1 ? '&' : '?')
+                     + 'order=' + encodeURIComponent(
+                         (typeof VIEW_ORDER_NO !== 'undefined' ? VIEW_ORDER_NO : '') || '');
+
+      const res = await fetch(이력주소, { headers: { Accept: 'application/json' } });
       d = await res.json();
     } catch (e) {
       note.textContent = '이력을 불러오지 못했습니다.';
@@ -10594,7 +10600,13 @@ window.HELP_TOUR_STEPS = [
       win.document.write('<p style="font-family:sans-serif;font-size:13px;padding:24px;color:#555;">위드웍스로 넘어가는 중…</p>');
     }
 
-    apiRequest(WW_SO_LINK_URL, 'GET')
+    /* 지금 보고 있는 주문을 함께 넘긴다 — 넘기지 않으면 서버가 첫 주문을 본다
+       (2026-09-16 고침). 화면에 적힌 번호와 건너가서 서는 주문이 달랐다. */
+    const 주소 = WW_SO_LINK_URL
+               + (WW_SO_LINK_URL.indexOf('?') > -1 ? '&' : '?')
+               + 'order=' + encodeURIComponent(existingOrder.order_number || '');
+
+    apiRequest(주소, 'GET')
       .then(res => {
         if (!res.success || !res.url) {
           if (win) win.close();

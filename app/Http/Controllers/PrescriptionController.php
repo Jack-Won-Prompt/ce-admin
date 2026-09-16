@@ -241,7 +241,20 @@ class PrescriptionController extends Controller
      */
     public function withworksSoLink(Prescription $prescription): JsonResponse
     {
-        $soNo = $prescription->order?->withworks_so_no;
+        /* 어느 주문의 판매번호인가 (2026-09-16 고침).
+
+           이 주소는 show() 를 거치지 않으므로 $prescription->order 가 늘 **첫 주문**
+           (원 주문)이다. 그래서 추가 주문 화면에서 연동 단추를 눌러도 원 주문의
+           판매번호로 위드웍스가 열렸다 — 화면에는 추가 주문 번호가 적혀 있는데
+           건너가면 다른 주문이 서 있었다.
+
+           화면이 보고 있는 주문 번호를 함께 받아 그것으로 가린다. 넘어오지 않은
+           옛 호출은 여태처럼 첫 주문으로 떨어진다. */
+        $order = ($번호 = trim((string) request('order')))
+            ? $prescription->orders()->where('order_number', $번호)->first()
+            : null;
+
+        $soNo = ($order ?? $prescription->order)?->withworks_so_no;
         if (!$soNo) {
             return response()->json(['success' => false, 'message' => '아직 위드웍스에 연계되지 않은 주문입니다.'], 422);
         }
@@ -5166,8 +5179,16 @@ HTML;
            쓴다 — 컨트롤러 안에 두었더니 두 벌이 될 참이었다). */
         $대상 = [[Prescription::class, $prescription->id]];
 
-        if ($prescription->order) {
-            $대상[] = [\App\Models\Order::class, $prescription->order->id];
+        /* 보고 있는 주문의 이력을 본다 (2026-09-16 고침).
+
+           이 주소도 show() 를 거치지 않아 $prescription->order 가 늘 첫 주문이었다.
+           그래서 추가 주문을 열어 두고 이력 탭을 보면 원 주문의 이력이 나왔다. */
+        $이력주문 = ($번호 = trim((string) request('order')))
+            ? $prescription->orders()->where('order_number', $번호)->first()
+            : null;
+
+        if ($이력주문 ??= $prescription->order) {
+            $대상[] = [\App\Models\Order::class, $이력주문->id];
         }
         if ($prescription->patient_id) {
             $대상[] = [\App\Models\Patient::class, $prescription->patient_id];
