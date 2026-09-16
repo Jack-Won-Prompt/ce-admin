@@ -4150,7 +4150,7 @@ $calcDeposit  = $calcCopay;
                           title="이 추가 주문이 물려받은 원 주문이 산 제품입니다">
                     <i class="fa-solid fa-clock-rotate-left"></i> 원 주문
                   </button>
-                  <div id="parentItemsPop" style="display:none;">
+                  <div id="parentItemsPop" class="cg-detached" style="display:none;">
                     <div id="parentItemsHead" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--primary);color:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;cursor:move;user-select:none;"
                          title="끌어서 옮길 수 있습니다">
                       <i class="fa-solid fa-up-down-left-right" style="font-size:11px;opacity:.85;"></i>

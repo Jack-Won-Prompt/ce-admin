@@ -601,9 +601,19 @@
        카드와 그리드 사이에 display:block 껍데기가 끼면 높이가 거기서 끊긴다
        (#pnlUsers · #pnlList · .ti-grid-pane · .card-body 가 그렇다).
        그리드를 품은 껍데기는 세로 flex 로 높이를 넘긴다 — 곁에 선 것들
-       (.ds-panel-actions · .pg-note 같은)은 제 높이 그대로 남는다. */
-    .ds-grid-card *:has(.cg-root),
-    .card *:has(.cg-root) { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+       (.ds-panel-actions · .pg-note 같은)은 제 높이 그대로 남는다.
+
+       **떠 있는 판(팝오버) 안의 표는 이 사슬에서 뺀다** (2026-09-16 고침).
+
+       주문 제품 머리줄의 「원 주문」 팝오버 안에 표를 하나 두었더니, 그 표가 그려지는
+       순간 위로 이어진 껍데기가 모두 걸렸다 — .pt-head-btns · .pt-head-right ·
+       .pt-card-head 까지 세로 flex 가 되어, 본인 부담금ㆍ기관 부담금ㆍ단추 셋이
+       세로로 쌓이고 머리줄이 75px 에서 507px 로 부풀었다.
+
+       떠 있는 판은 카드 높이를 물려받을 이유가 없다 — 제 높이대로 선다. 그런 판에는
+       cg-detached 를 붙이고, 그것을 품은 껍데기는 사슬에서 뺀다. */
+    .ds-grid-card *:has(.cg-root):not(:has(.cg-detached)),
+    .card *:has(.cg-root):not(:has(.cg-detached)) { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
     .ds-grid-card .cg-root,
     .card .cg-root,
     .page-body > .cg-root { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
