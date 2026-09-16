@@ -56,6 +56,88 @@ class OrderCancellation
         return $out;
     }
 
+    /**
+     * 증빙만 무른다 — 주문 정정에 쓴다 (2026-09-16 지시).
+     *
+     * close() 와 다른 점은 **공단 청구를 건드리지 않는다**는 것이다. 정정은 주문을
+     * 되돌리는 일이 아니라 내용을 고치는 일이라, 청구는 그대로 가고 금액만 바뀐다.
+     *
+     * 여태 정정에서 증빙을 그대로 두었다. 그래서 금액이 바뀌어도 옛 금액의 세금계산서가
+     * 살아 있었고, 다시 결제해도 「이미 발행됨」으로 걸러져 새 금액이 영영 나가지
+     * 않았다 — 받은 돈과 신고한 금액이 어긋난 채 남았다.
+     *
+     * **우리가 만든 서류도 함께 지운다.** 양식ㆍ거래명세서ㆍ카드매출전표는 한 번
+     * 그려 두면 다시 그리지 않으므로(각 attach 의 «이미» 검사), 지우지 않으면 옛
+     * 금액이 적힌 종이가 그대로 남는다. 사람이 올린 파일은 건드리지 않는다.
+     *
+     * @return array{tax: string, cash: string, docs: int, warnings: string[]}
+     */
+    public function 증빙무르기(Order $order, string $why): array
+    {
+        $out = [
+            'tax'      => $this->closeTaxInvoice($order, $why),
+            'cash'     => $this->closeCashReceipt($order, $why),
+            'docs'     => 0,
+            'warnings' => [],
+        ];
+
+        foreach (['tax', 'cash'] as $k) {
+            if (str_starts_with($out[$k], '!')) {
+                $out['warnings'][] = ltrim($out[$k], '!');
+            }
+        }
+
+        $out['docs'] = $this->만든서류지우기($order);
+
+        app(ClaimReadiness::class)->refresh($order->refresh());
+
+        if ($out['warnings']) {
+            activity()->performedOn($order)->log(
+                '정정 후처리에 수동 조치가 필요합니다 — ' . implode(' / ', $out['warnings'])
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * 우리가 만든 서류를 지운다 — 바뀐 금액으로 다시 그리게 한다.
+     *
+     * 사람이 올린 파일(처방전ㆍ신분증ㆍ등록신청서…)은 건드리지 않는다.
+     */
+    private function 만든서류지우기(Order $order): int
+    {
+        if (! $order->prescription_id) {
+            return 0;
+        }
+
+        $지울것 = \App\Models\PrescriptionAttachment::where('prescription_id', $order->prescription_id)
+            ->whereIn('doc_type', array_keys(\App\Models\PrescriptionAttachment::만든서류))
+            ->get();
+
+        foreach ($지울것 as $a) {
+            try {
+                if ($a->file_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($a->file_path);
+                }
+                $a->delete();
+            } catch (\Throwable $e) {
+                Log::warning('[정정] 만든 서류를 지우지 못했다', [
+                    'attachment' => $a->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($지울것->count()) {
+            activity()->performedOn($order)->log(
+                "정정으로 다시 그릴 서류 {$지울것->count()}장을 지웠습니다 — "
+                . $지울것->pluck('doc_label')->filter()->implode(' · ')
+            );
+        }
+
+        return $지울것->count();
+    }
+
     /** 세금계산서 — 발행돼 있으면 취소한다. 없던 거래의 계산서가 남으면 안 된다. */
     private function closeTaxInvoice(Order $order, string $why): string
     {
