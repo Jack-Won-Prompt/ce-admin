@@ -450,7 +450,18 @@
       <div class="sub">위 이름이 본인과 일치하는지 확인해 주시기 바랍니다.</div>
     </div>
 
-    @if($niceEnabled)
+    {{-- 필수가 아니면 세우지 않는다 (2026-09-16 지시).
+
+         여태 자격증명만 등록돼 있으면(niceEnabled) 카드를 세웠다. 그래서 설정에서
+         「본인확인 필수」를 껐는데도 환자 화면에 본인확인이 나타났고, 하지 않아도
+         되는 일을 하라고 보이니 거기서 멈추는 사람이 생겼다.
+
+         이 화면은 설정을 그대로 따른다 — 필수일 때만 세운다. 운영 데이터의 위임장
+         서명은 반대로 설정과 무관하게 늘 받는다(DelegationSignPublicController).
+
+         이미 본인확인을 마친 건은 필수가 아니어도 그대로 보여 준다 — 받아 둔 자취를
+         화면에서 지울 까닭이 없다. --}}
+    @if($niceEnabled && ($niceEnforce || $verified))
     {{-- NICE 휴대폰 본인확인 --}}
     <div class="verify-box {{ $verified ? 'verified' : '' }}" id="verifyBox">
       <div class="verify-row">
