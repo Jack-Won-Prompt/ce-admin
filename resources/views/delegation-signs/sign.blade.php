@@ -282,7 +282,7 @@
 
     <div class="row-btn" style="margin-top:14px;">
       <button type="button" class="btn" id="btnDecline" onclick="보내기('declined')">동의하지 않음</button>
-      <button type="button" class="btn btn-primary" id="btnAgree" onclick="보내기('agreed')" disabled>동의</button>
+      <button type="button" class="btn btn-primary" id="btnAgree" onclick="보내기('agreed')">동의</button>
     </div>
     <div class="lead" id="왜막힘" style="margin-top:8px;"></div>
   </div>
@@ -463,24 +463,85 @@ if (미성년) {
   ['mouseup','mouseleave','touchend','touchcancel'].forEach(n => gcv.addEventListener(n, 멈춤));
 }
 
-function 다시셈() {
-  const 남은것 = [];
-  if (NICE쓰나 && NICE강제 && !확인됨) 남은것.push(미성년 ? '법정대리인(보호자) 휴대폰 본인확인' : '휴대폰 본인확인');
-  if (고른값('agree_delegation') !== '1') 남은것.push('요양비 청구 위임 동의');
-  if (고른값('agree_privacy') === null)   남은것.push('개인정보 수집·이용 동의 고르기');
-  if (고른값('agree_marketing') === null) 남은것.push('마케팅 활용 동의 고르기');
-  if (미성년) {
-    if (!(document.getElementById('gRelation')?.value)) 남은것.push('가입자ㆍ피부양자와의 관계');
-    if (!(document.getElementById('gName')?.value ?? '').trim()) 남은것.push('법정대리인 또는 가족 성명');
-    if (!생년바른가()) 남은것.push('법정대리인 또는 가족 생년월일');
-    if (!g칠함) 남은것.push('보호자 서명');
-  }
-  if (!칠함) 남은것.push('서명');
+/* 아직 채우지 않은 것을 모은다 — 칸까지 함께 들고 있는다.
 
-  const btn = document.getElementById('btnAgree');
-  if (btn) btn.disabled = 남은것.length > 0;
+   여태 이름만 모아 단추 아래 작은 글씨로 적고 단추를 잠갔다. 그런데 보호자 칸은
+   화면 한참 위에 있어, 휴대전화로 열면 그 글씨가 보이지도 않고 단추는 눌리지도
+   않는다 — 무엇을 빠뜨렸는지 알 길이 없었다 (2026-09-16 지시).
+
+   이제 단추는 늘 눌린다. 누르면 빠뜨린 것을 창으로 알리고 그 칸으로 데려간다. */
+function 남은것모으기() {
+  const 남 = [];
+  const 담다 = (말, 칸) => 남.push({ 말, 칸 });
+  const 칸 = (id) => document.getElementById(id);
+
+  if (NICE쓰나 && NICE강제 && !확인됨) {
+    담다(미성년 ? '법정대리인(보호자) 휴대폰 본인확인' : '휴대폰 본인확인', 칸('btnVerify'));
+  }
+  if (고른값('agree_delegation') !== '1') {
+    담다('요양비 청구 위임 동의', document.querySelector('input[name=agree_delegation]'));
+  }
+  if (고른값('agree_privacy') === null) {
+    담다('개인정보 수집·이용 동의 고르기', document.querySelector('input[name=agree_privacy]'));
+  }
+  if (고른값('agree_marketing') === null) {
+    담다('마케팅 활용 동의 고르기', document.querySelector('input[name=agree_marketing]'));
+  }
+  if (미성년) {
+    if (!(칸('gRelation')?.value))              담다('가입자ㆍ피부양자와의 관계', 칸('gRelation'));
+    if (!(칸('gName')?.value ?? '').trim())     담다('법정대리인 또는 가족 성명', 칸('gName'));
+    if (!생년바른가())                          담다('법정대리인 또는 가족 생년월일', 칸('gBirth'));
+    if (!g칠함)                                 담다('보호자 서명', 칸('gsig'));
+  }
+  if (!칠함) 담다('서명', 칸('sig'));
+
+  return 남;
+}
+
+function 다시셈() {
+  const 남은것 = 남은것모으기();
   const 말 = document.getElementById('왜막힘');
-  if (말) 말.textContent = 남은것.length ? '남은 것 — ' + 남은것.join(' · ') : '';
+  if (말) 말.textContent = 남은것.length ? '남은 것 — ' + 남은것.map(n => n.말).join(' · ') : '';
+}
+
+/* 빠뜨린 것을 창으로 알리고, 확인을 누르면 첫 칸으로 데려가 눈에 띄게 한다 */
+function 빠진것알림(남은것) {
+  const 덮개 = document.createElement('div');
+  덮개.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;'
+                     + 'display:flex;align-items:center;justify-content:center;padding:20px;';
+  덮개.innerHTML =
+      '<div style="background:#fff;border-radius:14px;max-width:360px;width:100%;'
+    + 'box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;">'
+    + '<div style="padding:16px 18px 10px;font-size:16px;font-weight:700;color:#111;">'
+    + '아직 채우지 않은 것이 있습니다</div>'
+    + '<div style="padding:0 18px 4px;font-size:13px;color:#555;line-height:1.7;">'
+    + '아래를 채우면 동의를 보낼 수 있습니다.</div>'
+    + '<ul style="margin:10px 18px 4px;padding-left:18px;font-size:14px;color:#111;line-height:1.9;">'
+    + 남은것.map(n => '<li>' + n.말 + '</li>').join('')
+    + '</ul>'
+    + '<div style="padding:12px 18px 16px;text-align:right;">'
+    + '<button type="button" id="빠진것확인" style="height:38px;padding:0 18px;border:0;border-radius:9px;'
+    + 'background:#28798B;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">확인</button>'
+    + '</div></div>';
+
+  const 닫기 = () => {
+    덮개.remove();
+    const 첫칸 = 남은것[0]?.칸;
+    if (! 첫칸) return;
+    첫칸.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    /* 잠깐 테두리를 둘러 어디인지 알려 준다 — 글만으로는 긴 화면에서 못 찾는다 */
+    const 옛윤곽 = 첫칸.style.outline;
+    첫칸.style.outline = '3px solid #ef4444';
+    첫칸.style.outlineOffset = '2px';
+    setTimeout(() => { 첫칸.style.outline = 옛윤곽; }, 2400);
+    if (typeof 첫칸.focus === 'function' && 첫칸.tagName !== 'CANVAS') {
+      setTimeout(() => 첫칸.focus({ preventScroll: true }), 400);
+    }
+  };
+
+  덮개.addEventListener('click', ev => { if (ev.target === 덮개) 닫기(); });
+  document.body.appendChild(덮개);
+  덮개.querySelector('#빠진것확인').addEventListener('click', 닫기);
 }
 다시셈();
 
@@ -529,6 +590,12 @@ window.addEventListener('message', (e) => {
 async function 보내기(짓) {
   const btn = document.getElementById(짓 === 'agreed' ? 'btnAgree' : 'btnDecline');
 
+  /* 동의로 보낼 때만 본다 — 「동의하지 않음」은 채울 것이 없다 */
+  if (짓 === 'agreed') {
+    const 남은것 = 남은것모으기();
+    if (남은것.length) { 빠진것알림(남은것); return; }
+  }
+
   if (짓 === 'declined' && !confirm('동의하지 않음으로 접수합니다. 계속할까요?')) return;
 
   btn.disabled = true;
@@ -556,7 +623,7 @@ async function 보내기(짓) {
      받아 둘 수 있었던 서명마저 못 받는다. 없이 누르면 한 번 묻는다. */
   if (짓 === 'agreed' && 미성년 && !신분증) {
     if (!confirm('신분증은 필수 입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.')) {
-      btn.disabled = false; 다시셈(); return;
+      btn.disabled = false; btn.textContent = '동의'; 다시셈(); return;
     }
   }
 
@@ -572,7 +639,7 @@ async function 보내기(짓) {
     });
     const out = await res.json();
 
-    if (!out.success) { alert(out.message || '보내지 못했습니다.'); btn.disabled = false; 다시셈(); return; }
+    if (!out.success) { alert(out.message || '보내지 못했습니다.'); btn.disabled = false; btn.textContent = '동의'; 다시셈(); return; }
 
     document.querySelector('.wrap').innerHTML =
       '<div class="card done"><div class="big">✅ 접수되었습니다</div>'
@@ -580,6 +647,7 @@ async function 보내기(짓) {
   } catch (e) {
     alert('보내지 못했습니다 — ' + e.message);
     btn.disabled = false;
+    btn.textContent = 짓 === 'agreed' ? '동의' : '동의하지 않음';
     다시셈();
   }
 }
