@@ -7603,8 +7603,36 @@ window.HELP_TOUR_STEPS = [
     연계.title = 주소
       ? '적은 것을 저장하고 창고로 보냅니다'
       : '받는 주소를 먼저 입력하십시오';
+
+    연계단추이름세우기();
   }
   window.syncOrderStepBtns = syncOrderStepBtns;
+
+  /* 추가 주문이면 단추도 그렇게 적는다 (2026-09-16 지시).
+
+     한 처방전에 주문이 여럿 서면 화면은 그중 하나를 보고 있는데, 단추는 늘 「주문
+     생성 및 연계」라 지금 무엇을 만드는지 단추만 봐서는 알 수 없었다. 원 주문을
+     이미 보낸 뒤에 이 단추를 누르는 자리는 거의 추가 주문이다. */
+  function 연계단추이름() {
+    try {
+      const 지금 = (RX_ORDERS || []).find(o => o.current);
+      if (지금 && 지금.label === '추가 주문') { return '추가 주문 생성 및 연계'; }
+    } catch (e) {}
+    return '주문 생성 및 연계';
+  }
+  window.연계단추이름 = 연계단추이름;
+
+  function 연계단추이름세우기() {
+    const b = document.getElementById('btnCreateOrder');
+    if (!b) return;
+    const 글 = 연계단추이름();
+    /* 아이콘은 그대로 두고 글자만 바꾼다 — 단추 안을 통째로 다시 그리면
+       BtnState 가 쥐고 있던 본디 모습이 어긋난다. */
+    const 글칸 = [...b.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    if (글칸) { 글칸.textContent = ' ' + 글; }
+  }
+  window.연계단추이름세우기 = 연계단추이름세우기;
+  document.addEventListener('DOMContentLoaded', 연계단추이름세우기);
 
   function _dirtyLabel() {
     const parts = [];
@@ -9748,7 +9776,7 @@ window.HELP_TOUR_STEPS = [
 
     const 진행 = await 확인하고한번만({
       열쇠: 'create',
-      제목: '주문 생성 및 연계',
+      제목: 연계단추이름(),
       이미: orderExists,
       막을때: 줄이음([
         `이미 창고로 보낸 주문입니다 (위드웍스 판매번호 ${existingOrder?.withworks_so_no || ''}).`,
@@ -10510,7 +10538,7 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('orderActionArea').innerHTML = `
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary flex-1" id="btnCreateOrder" onclick="createOrder(event)">
-          <i class="fa-solid fa-cart-plus"></i> 주문 생성 및 연계
+          <i class="fa-solid fa-cart-plus"></i> ${연계단추이름()}
         </button>
       </div>`;
 
