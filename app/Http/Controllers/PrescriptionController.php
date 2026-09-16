@@ -3294,6 +3294,9 @@ class PrescriptionController extends Controller
                 'url'   => $a->file_url,
                 'isPdf' => $a->is_pdf,
                 'by'    => $a->uploader?->name ?? ($prescription->creator?->name ?? ''),
+                /* 우리가 만든 서류인가 — 파일 창이 표시해 준다 (2026-09-16 지시).
+                   담당자가 「내가 올린 적 없는 파일」을 보고 되묻는 일이 잦았다. */
+                'made'     => $a->우리가만든것인가(),
                 'key'      => 'att:' . $a->id,
                 'bright'   => (int) ($a->img_brightness ?? 0),
                 'contrast' => (int) ($a->img_contrast ?? 0),

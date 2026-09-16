@@ -81,12 +81,30 @@ class OrderController extends Controller
         $orders = $query->get();
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
-        /* 첨부가 몇 장인지 — 목록의 「첨부」 칸이 그 수를 세우고, 누르면 골라 팩스로
-           보낸다. 건마다 세면 줄 수만큼 질의가 나가므로 처방전별로 한 번에 센다. */
+        /* 파일이 몇 장인지 — 목록의 「파일」 칸이 그 수를 세우고, 누르면 골라 팩스로
+           보낸다. 건마다 세면 줄 수만큼 질의가 나가므로 처방전별로 한 번에 센다.
+
+           **올린 것과 만든 것을 함께 센다** (2026-09-16 지시). 거래명세서ㆍ세금계산서처럼
+           우리가 만들어 붙이는 서류도 같은 표에 담기므로 이미 한 수에 들어 있다.
+
+           처방전 그림은 첨부가 아니라 처방전 제 칸에 담기는데, 파일 창은 그것을 첫 줄로
+           보여 준다. 세는 쪽이 빼 버리면 「3장」이라 적힌 줄을 열었더니 넷이 나온다. */
+        $처방번호들 = $orders->pluck('prescription_id')->filter()->unique();
+
         $attCounts = \App\Models\PrescriptionAttachment::selectRaw('prescription_id, count(*) as cnt')
-            ->whereIn('prescription_id', $orders->pluck('prescription_id')->filter()->unique())
+            ->whereIn('prescription_id', $처방번호들)
+            ->whereNotNull('file_path')
             ->groupBy('prescription_id')
             ->pluck('cnt', 'prescription_id');
+
+        /* 처방전 그림이 있는 건 — 한 장으로 더한다 */
+        $그림있는건 = \App\Models\Prescription::whereIn('id', $처방번호들)
+            ->whereNotNull('image_path')
+            ->pluck('id');
+
+        foreach ($그림있는건 as $pid) {
+            $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + 1;
+        }
 
         $gridData = $orders->map(function ($o) use ($extras, $attCounts) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.

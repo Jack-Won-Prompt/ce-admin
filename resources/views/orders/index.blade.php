@@ -450,10 +450,14 @@ window.HELP_TOUR_STEPS = [
       },
 
       {
-        /* 첨부 — 몇 장인지 세우고, 누르면 골라 팩스로 보낸다.
+        /* 파일 — 몇 장인지 세우고, 누르면 골라 팩스로 보낸다.
            여태 건마다 상세로 들어가야 했다. 위드웍스 차례(ceWwCols) 앞에 둔다 —
-           그 뒤는 여섯 화면이 같은 순서로 쓰는 자리라 끼어들면 약속이 흔들린다. */
-        header: '첨부', name: 'att_count', width: 70, align: 'center', sortable: true,
+           그 뒤는 여섯 화면이 같은 순서로 쓰는 자리라 끼어들면 약속이 흔들린다.
+
+           이름이 「첨부」였는데 실제로 세는 것은 **올린 것과 우리가 만든 것 둘 다**다
+           (거래명세서ㆍ세금계산서ㆍ카드매출전표…). 「첨부」라고만 적어 두니 만든 서류는
+           여기 없는 줄 알고 상세로 들어가 다시 찾았다 (2026-09-16 지시). */
+        header: '파일', name: 'att_count', width: 70, align: 'center', sortable: true,
         exportable: false,
         renderer: (v, row) => attFaxBtn(row),
       },
@@ -614,7 +618,7 @@ window.HELP_TOUR_STEPS = [
           return `
         <label class="att-fax-row${r.ok ? '' : ' is-off'}">
           <input type="checkbox" data-i="${i}" ${r.ok ? '' : 'disabled'}>
-          <span class="att-fax-lb">${dsEsc(r.label)}</span>
+          <span class="att-fax-lb">${dsEsc(r.label)}${r.made ? ' <span style="font-size:10px;font-weight:600;color:var(--primary);border:1px solid var(--primary-200);background:var(--primary-50);border-radius:6px;padding:0 4px;margin-left:4px;">생성</span>' : ''}</span>
           ${가운데}
           <span class="att-fax-at">${dsEsc(r.at || '')}</span>
         </label>`;

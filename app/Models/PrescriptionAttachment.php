@@ -53,6 +53,27 @@ class PrescriptionAttachment extends Model
      * 등록신청서·결과지는 공단 환자 등록·재등록(Step1)을 e-Fax 로 보낼 때 쓴다.
      * 병원에서 받아 오는 종이라 시스템이 만들 수 없고 첨부로 받는다.
      */
+    /**
+     * 우리가 만들어 붙이는 서류 (2026-09-16 지시).
+     *
+     * 사람이 올린 것(처방전ㆍ신분증ㆍ등록신청서…)과 한 표에 같이 담긴다. 목록의
+     * 「파일」 칸은 둘을 함께 세고, 파일 창은 어느 쪽인지 표시해 준다 — 담당자가
+     * 「내가 올린 적 없는 파일」을 보고 되묻는 일이 잦았다.
+     */
+    public const 만든서류 = [
+        'trade_statement'   => '거래명세서',
+        'card_sales'        => '카드매출전표',
+        'medical_aid_claim' => '의료급여 청구서',
+        'cash_receipt_form' => '현금영수증',
+        'tax_invoice_form'  => '세금계산서',
+    ];
+
+    /** 이 파일을 우리가 만들었는가 */
+    public function 우리가만든것인가(): bool
+    {
+        return array_key_exists((string) $this->doc_type, self::만든서류);
+    }
+
     public const DOC_TYPE_LABELS = [
         'prescription'      => '처방전',
         'id_card'           => '신분증',
