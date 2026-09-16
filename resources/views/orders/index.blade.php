@@ -395,6 +395,19 @@ window.HELP_TOUR_STEPS = [
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
+      /* 원 주문인가 추가 주문인가 (2026-09-16 지시).
+
+         주문번호 바로 옆이라야 읽힌다 — 한 처방전에 주문이 둘 이상 서면 번호만
+         다르고 나머지가 비슷해, 무엇이 먼저고 무엇이 뒤에 더 산 것인지 가릴 수
+         없었다. 공통 칸(ceWwCols)에도 같은 것이 있어 그쪽은 끈다. */
+      { header: '주문 구분', name: 'order_kind', width: 90, align: 'center', sortable: true,
+        renderer: (v) => {
+          const el = document.createElement('span');
+          el.textContent = v ?? '';
+          if (v === '추가 주문') { el.style.color = 'var(--primary)'; el.style.fontWeight = '700'; }
+          return el;
+        },
+      },
       { header: '이름',     name: 'patient',   width: 90,  sortable: true },
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
@@ -408,8 +421,12 @@ window.HELP_TOUR_STEPS = [
         },
       },
       {
-        // 교환·반품·취소가 어디까지 왔는지. 판매 건은 빈칸이다 — 옆의 '상태'가 그 자리다.
-        header: '등록 상태', name: 'deal_state', width: 90, sortable: true, align: 'center',
+        /* 교환·반품·취소가 어디까지 왔는지. 판매 건은 빈칸이다 — 옆의 '상태'가 그 자리다.
+
+           이름이 「등록 상태」였다 (2026-09-16 바로잡음). 담은 값은 접수ㆍ수거중ㆍ
+           검수중ㆍ환불완료 같은 되돌림의 진행 단계인데, 「등록」이라 적혀 있어 무엇이
+           등록됐다는 뜻으로 읽혔다. 주문 등록 화면의 같은 칸과도 이름이 갈려 있었다. */
+        header: '교환·반품·취소 상태', name: 'deal_state', width: 128, sortable: true, align: 'center',
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
@@ -470,7 +487,7 @@ window.HELP_TOUR_STEPS = [
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
-      ...ceWwCols(),
+      ...ceWwCols({ orderKind: false }),
     ],
     data: @json($gridData),
   });
