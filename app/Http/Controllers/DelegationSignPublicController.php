@@ -36,7 +36,20 @@ class DelegationSignPublicController extends Controller
             'sign'        => $sign,
             '닫힘'        => $닫힘,
             'niceEnabled' => $nice->enabled(),
-            'niceEnforce' => $nice->enforce(),
+            /* 이 화면은 본인확인을 **무조건** 받는다 (2026-09-16 지시).
+
+               운영 데이터의 위임장 서명은 시험 화면이 아니라 업무 화면이다 — 명단
+               삼천여 명에게 보내는 위임 서명이고, 그 서명이 공단에 내는 서류가 된다.
+               테스트 옵션(NICE_ENFORCE)이 꺼져 있다고 본인확인 없이 받아 두면 그
+               서명은 쓸 수 없다.
+
+               주문 등록의 서명 링크(/consent)는 반대다 — 처방전 한 건을 시험하는
+               자리라 테스트 옵션을 그대로 따른다.
+
+               자격증명이 없으면(enabled=false) 강제할 수 없다 — 인증할 길 자체가
+               없어, 막아 두면 서명을 아예 받지 못한다. 그때는 화면이 「미설정」으로
+               선다. */
+            'niceEnforce' => $nice->enabled(),
             'verified'    => (bool) $sign->nice_verified_at,
         ]);
     }
@@ -50,17 +63,14 @@ class DelegationSignPublicController extends Controller
             return response()->json(['success' => false, 'message' => '링크 유효 시간이 지났습니다.'], 410);
         }
 
-        /* 시험 중에는 NICE 에 묻지 않고 통과시킨다(NICE_SIMULATE). 실제 인증에서
-           확인할 것은 그대로 두되, 시험 자리에서 남의 이름으로 인증하지 않는다. */
-        if (config('nice.simulate')) {
-            $sign->forceFill([
-                'nice_verified_at' => now(),
-                'nice_name'        => $sign->이름(),
-                'nice_mobile'      => $sign->sent_to,
-            ])->save();
+        /* 시늉으로 통과시키지 않는다 (2026-09-16 지시).
 
-            return response()->json(['success' => true, 'simulated' => true]);
-        }
+           여태 NICE_SIMULATE 가 켜져 있으면 NICE 에 묻지 않고 확인한 것으로 적었다.
+           그런데 이 화면의 서명은 공단에 내는 서류가 된다 — 시늉으로 확인한 사람의
+           서명이 그대로 실려 나가면 되돌릴 자리가 없다.
+
+           주문 등록의 서명 링크(/consent)는 여태처럼 시늉을 따른다 — 그쪽은 한 건을
+           시험하는 자리다. */
 
         try {
             $out = app(DelegationNiceService::class)->startVerification(
@@ -139,8 +149,16 @@ class DelegationSignPublicController extends Controller
             return response()->json(['success' => true, 'message' => '동의하지 않음으로 접수했습니다.']);
         }
 
-        /* NICE 를 강제하는 설정이면 본인확인 없이는 받지 않는다 */
-        if (app(DelegationNiceService::class)->enforce() && ! $sign->nice_verified_at) {
+        /* 본인확인 없이는 받지 않는다 — 설정을 보지 않는다 (2026-09-16 지시).
+
+           enforce() 는 테스트 옵션(NICE_ENFORCE)을 따른다. 이 화면은 그것과 무관하게
+           무조건 받는다 — 여기서 받은 서명이 공단에 내는 서류가 되기 때문이다.
+           화면에서도 막지만(NICE강제) 여기서도 막는다. 화면을 거치지 않고 이 주소를
+           바로 부르는 길이 있다.
+
+           자격증명이 없으면(enabled=false) 인증할 길 자체가 없으므로 막지 않는다 —
+           막아 두면 서명을 아예 받지 못한다. */
+        if (app(DelegationNiceService::class)->enabled() && ! $sign->nice_verified_at) {
             return response()->json(['success' => false, 'message' => '휴대폰 본인확인을 먼저 해 주십시오.'], 422);
         }
 
