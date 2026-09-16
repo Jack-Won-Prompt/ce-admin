@@ -2189,11 +2189,11 @@ document.addEventListener('click', (e) => {
            orderKind:false 로 여기서 끈다 — 켜 둔 채로 앞에 또 두면 같은 값이
            두 칸에 선다 (2026-09-16 지시). --}}
       ...(opts.orderKind === false ? [] : [
-      { header: '주문 구분',      name: 'order_kind',   width: 90,  align: 'center', sortable: true }]),
+      { header: '원/추가',        name: 'order_kind',   width: 84,  align: 'center', sortable: true }]),
       {{-- 취소 상태 — 창고가 되돌리기를 기다리는 동안 「취소 요청」이 선다
            (2026-09-14 지시). 그 줄에는 결제 안내를 보내서도, 제품을 고쳐서도 안 된다. --}}
       { header: '취소 상태',      name: 'cancel_state', width: 90,  align: 'center', sortable: true },
-      { header: '유형',           name: 'ww_so_type',   width: 110, align: 'center', sortable: true },
+      { header: '위드웍스 유형',   name: 'ww_so_type',   width: 130, align: 'center', sortable: true },
       { header: '구매 거래처',    name: 'ww_po_code',   width: 110 },
       { header: '구매 거래처명',  name: 'ww_po_name',   width: 150, sortable: true },
       { header: '판매 거래처명',  name: 'ww_so_name',   width: 150, sortable: true },

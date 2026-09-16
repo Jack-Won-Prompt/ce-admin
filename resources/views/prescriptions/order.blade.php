@@ -12850,7 +12850,7 @@ window.HELP_TOUR_STEPS = [
            처방번호는 같고 주문번호만 다르다. 무엇이 먼저고 무엇이 뒤에 더 산
            것인지가 그 자리에서 가려져야 한다. 공통 칸에도 같은 것이 있어 그쪽은
            끈다(ceWwCols orderKind:false). */
-        { header: '주문 구분', name: 'order_kind', width: 90, align: 'center', sortable: true,
+        { header: '원/추가', name: 'order_kind', width: 84, align: 'center', sortable: true,
           renderer: (v) => {
             const s = document.createElement('span');
             s.textContent = v || '';
@@ -12867,7 +12867,7 @@ window.HELP_TOUR_STEPS = [
            가려 준다 (2026-09-14 지시). 손대기 전 목록에서는 늘 「판매」라 조용하고,
            찾았을 때만 다른 말이 선다. */
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
-        { header: '거래 구분', name: 'deal',      width: 96,  align: 'center', sortable: true },
+        { header: '주문 구분', name: 'deal',      width: 96,  align: 'center', sortable: true },
         /* 거래 구분과 한 쌍이라 나란히 둔다 (2026-09-16 지시).
 
            거래 구분은 「무엇이었나」(판매ㆍ교환ㆍ반품ㆍ취소)를, 이 칸은 「그것이 어디까지

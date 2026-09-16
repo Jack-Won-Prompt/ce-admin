@@ -400,7 +400,7 @@ window.HELP_TOUR_STEPS = [
          주문번호 바로 옆이라야 읽힌다 — 한 처방전에 주문이 둘 이상 서면 번호만
          다르고 나머지가 비슷해, 무엇이 먼저고 무엇이 뒤에 더 산 것인지 가릴 수
          없었다. 공통 칸(ceWwCols)에도 같은 것이 있어 그쪽은 끈다. */
-      { header: '주문 구분', name: 'order_kind', width: 90, align: 'center', sortable: true,
+      { header: '원/추가', name: 'order_kind', width: 84, align: 'center', sortable: true,
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
@@ -412,7 +412,7 @@ window.HELP_TOUR_STEPS = [
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
         // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.
-        header: '유형', name: 'deal', width: 100, sortable: true, align: 'center',
+        header: '주문 구분', name: 'deal', width: 100, sortable: true, align: 'center',
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
@@ -437,7 +437,7 @@ window.HELP_TOUR_STEPS = [
       /* 제품명·수량·환자부담금·총금액·배송지는 목록에서 뺐다. 한 줄에 열여섯 칸이
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
-      { header: '주문유형',   name: 'so_type',   width: 90,  align: 'center' },
+      { header: '판매유형',   name: 'so_type',   width: 110, align: 'center' },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
       // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
