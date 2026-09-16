@@ -842,7 +842,7 @@ class Order extends Model
      */
     public function orderKindLabel(): string
     {
-        return $this->isExtra() ? '추가 주문' : '신규 주문';
+        return $this->isExtra() ? '추가 주문' : '원 주문';
     }
 
     /**

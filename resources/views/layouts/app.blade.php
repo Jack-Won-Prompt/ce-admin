@@ -2170,8 +2170,13 @@ document.addEventListener('click', (e) => {
       {{-- 주문 구분 — 원 주문인가 추가 주문인가 (2026-09-14 확인요청 4쪽).
            바로 옆의 「유형」은 위드웍스가 준 판매유형이라 우리가 새 이름을 넣을 수 없다.
            처방전 한 장으로 나눠 사는 건은 주문번호가 둘이지만 처방번호는 하나다 —
-           목록에서 그 둘을 가리는 자리가 이 칸이다. 원 주문에는 적지 않는다. --}}
-      { header: '주문 구분',      name: 'order_kind',   width: 90,  align: 'center', sortable: true },
+           목록에서 그 둘을 가리는 자리가 이 칸이다.
+
+           화면에 따라 이 칸을 앞쪽(처방번호 옆)에 따로 세우기도 한다. 그때는
+           orderKind:false 로 여기서 끈다 — 켜 둔 채로 앞에 또 두면 같은 값이
+           두 칸에 선다 (2026-09-16 지시). --}}
+      ...(opts.orderKind === false ? [] : [
+      { header: '주문 구분',      name: 'order_kind',   width: 90,  align: 'center', sortable: true }]),
       {{-- 취소 상태 — 창고가 되돌리기를 기다리는 동안 「취소 요청」이 선다
            (2026-09-14 지시). 그 줄에는 결제 안내를 보내서도, 제품을 고쳐서도 안 된다. --}}
       { header: '취소 상태',      name: 'cancel_state', width: 90,  align: 'center', sortable: true },

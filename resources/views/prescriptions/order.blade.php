@@ -12670,6 +12670,19 @@ window.HELP_TOUR_STEPS = [
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
+        /* 원 주문인가 추가 주문인가 (2026-09-16 지시).
+
+           처방번호 바로 옆이라야 읽힌다 — 처방전 한 장에 주문이 둘 이상 서면
+           처방번호는 같고 주문번호만 다르다. 무엇이 먼저고 무엇이 뒤에 더 산
+           것인지가 그 자리에서 가려져야 한다. 공통 칸에도 같은 것이 있어 그쪽은
+           끈다(ceWwCols orderKind:false). */
+        { header: '주문 구분', name: 'order_kind', width: 90, align: 'center', sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v || '';
+            if (v === '추가 주문') { s.style.color = 'var(--primary)'; s.style.fontWeight = '700'; }
+            return s;
+          } },
         { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
@@ -12702,7 +12715,7 @@ window.HELP_TOUR_STEPS = [
         /* 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다.
            마케팅 동의는 이 목록에서만 켠다 (2026-09-14 지시) — 안내 문자를 보내도
            되는 사람인지 개인정보동의 옆에서 바로 읽는다. */
-        ...ceWwCols({ marketing: true }),
+        ...ceWwCols({ marketing: true, orderKind: false }),
       ],
       data: OL_ROWS,
     });
