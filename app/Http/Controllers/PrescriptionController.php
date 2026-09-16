@@ -281,56 +281,35 @@ class PrescriptionController extends Controller
      * 그랬다 — 등록은 셈해 보내고 수정은 25 를 박아 보내, 고치는 순간 전략이
      * 바뀌었다(2026-09-15 에 한 자리로 모았다).
      */
+    /**
+     * 창고로 보낼 내용.
+     *
+     * 꼴을 만드는 곳은 **한 곳뿐이다**(WithworksLink::창고내용) — 결제전송도 같은
+     * 것을 쓴다 (2026-09-16 지시). 두 곳이 따로 만들면 어느 길로 갔느냐에 따라
+     * 저쪽에 다른 값이 서고, 그 어긋남은 출고 뒤에야 드러난다.
+     *
+     * 화면이 들고 있는 값으로 몇 칸을 덮는다 — 적어 두었지만 아직 저장되지 않은
+     * 값이 있기 때문이다. 널ㆍ빈 글자는 덮지 않는다.
+     */
     private function withworksPayload(Request $request, Prescription $prescription): array
     {
-        $patient = $prescription->patient;
+        $order = $prescription->orders()
+                    ->where('order_number', $request->input('order_number'))->first()
+                 ?? $prescription->order;
 
-        $shippingAddress = $request->shipping_address
-            ?? $prescription->order?->shipping_address
-            ?? null;
+        if (! $order) {
+            abort(404, '주문을 찾을 수 없습니다.');
+        }
 
-        $shippingAddressDetail = $request->shipping_address_detail
-            ?? $prescription->address_detail
-            ?? null;
-
-        return [
-            'ce_order_number'         => $request->order_number,
-            'rx_number'               => $prescription->rx_number,
-            // 환자 정보 (거래처·배송지 자동 등록용)
-            'patient_name'            => $patient?->name ?? $prescription->patient_name_ocr ?? '환자',
-            'patient_mobile'          => $patient?->mobile ?? null,
-            'patient_zipcode'         => $prescription->postcode ?? null,
-            // 배송지
-            'shipping_address'        => $shippingAddress,
-            'shipping_address_detail' => $shippingAddressDetail,
-            // 기타
-            'delivery_date'           => $request->delivery_date,
-            // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
-            'ho_account_id'           => $request->ho_account_id ?? config('services.demoworks.account_id'),
-            /* 창고 「비고」 — **창고에 전할 말**이 있으면 그것, 없으면 예전처럼
-               등록자 메모가 나간다. 등록자 메모는 우리가 접수하며 적어 두는 말이라
-               창고에 전할 말과 다르다(2026-09-09 지시). */
-            'remark'                  => $prescription->order?->warehouse_note
-                                          ?: $prescription->admin_note,
-            'items'                   => $request->items,
-            /* 판매 유형 — 위드웍스와는 End User Direct 로만 주고받는다. 다른 유형으로
-               넘기면 저쪽 콜백 대상에서 빠져 진행 상태를 영영 못 받는다. */
-            'so_type'                 => config('services.demoworks.so_type', '5001'),
-            // 받는 사람
-            'recipient_name'          => $request->recipient_name ?? $prescription->order?->shipping_recipient ?? null,
-            /* 청구전략 — 우리 화면이 정한 것(유형 × 자격)을 위드웍스 코드로 옮겨 보낸다.
-               예전에는 25 가 박혀 있어 어느 건이든 같은 값이 나갔다. 코드표를 아직 받지
-               못해 표의 값은 모두 25 지만, 받으면 config 한 곳만 고치면 된다. */
-            'billing_strategy'        => $this->withworksBillingStrategy($prescription),
-            /* 수량은 낱개로 센다 — 우리 화면의 「수량」은 총계(1일 처방개수 × 총 처방기간)다.
-               밝히지 않으면 저쪽은 RB(박스)로 읽고 r_box 를 곱해, 540개가 5,400개로
-               등록됐다. 고치는 쪽(so_update)은 진작 낱개로 읽고 있어 만들 때와 고칠 때가
-               열 배 어긋나 있었다. */
-            'qty_unit'                => 'EA',
-            /* 확정은 창고에서 한다. 우리는 등록까지만 한다 — 올리자마자 확정되면
-               수량ㆍ배송지를 고칠 자리가 없고, 재고가 그 자리에서 묶인다. */
-            'confirm'                 => false,
-        ];
+        return app(\App\Services\WithworksLink::class)->창고내용($order, [
+            'ce_order_number'         => $request->input('order_number'),
+            'shipping_address'        => $request->input('shipping_address'),
+            'shipping_address_detail' => $request->input('shipping_address_detail'),
+            'delivery_date'           => $request->input('delivery_date'),
+            'recipient_name'          => $request->input('recipient_name'),
+            'ho_account_id'           => $request->input('ho_account_id'),
+            'items'                   => $request->input('items'),
+        ]);
     }
 
     public function createWithworksOrder(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
@@ -5261,22 +5240,8 @@ HTML;
      * 저쪽은 값이 없으면 제 기본값(전자세금계산서 100%)으로 갈아 끼우고, 그것이
      * 우리가 25 를 보내던 시절에 실제로 일어나던 일이다.
      */
-    private function withworksBillingStrategy(Prescription $prescription): ?int
-    {
-        /* 자격을 아직 고르지 않은 건은 열쇠가 null 이다 — 널로 배열을 찾으면 PHP 가
-           나무란다. 빈 글자로 바꾸면 표에 없는 열쇠가 되어 기본값으로 내려간다. */
-        $key = \App\Support\BillingStrategy::key(
-            $prescription->counsel_acc_add_type,
-            $prescription->benefit_class,
-        ) ?? '';
-
-        $mode = config('services.demoworks.mode') === 'production' ? 'production' : 'test';
-        $conf = (array) config("services.withworks_billing_strategy.{$mode}", []);
-
-        $id = ((array) ($conf['map'] ?? []))[$key] ?? $conf['default'] ?? null;
-
-        return $id === null ? null : (int) $id;
-    }
+    /* 청구전략을 위드웍스 코드로 옮기는 일은 WithworksLink 로 옮겼다 (2026-09-16).
+       창고로 보낼 내용을 만드는 곳이 한 곳이라, 그 셈도 그 옆에 있어야 한다. */
 
     // ── SMS 템플릿 목록 ────────────────────────────────────
     /**

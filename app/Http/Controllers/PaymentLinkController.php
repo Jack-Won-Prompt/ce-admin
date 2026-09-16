@@ -67,6 +67,30 @@ class PaymentLinkController extends Controller
             ], 422);
         }
 
+        /* 창고에 아직 서지 않은 주문이면 **먼저 세운다** (2026-09-16 지시).
+
+           결제 안내는 여태 창고 연계를 보지 않았다. 자동으로 나가는 길(주문 생성 및
+           연계)은 so_store 가 성공한 뒤에만 안내를 보내는데, 손으로 누르는 이 자리는
+           그 순서를 건너뛰었다 — 그래서 결제도 끝나고 세금계산서까지 나갔는데 판매번호가
+           없는 주문이 운영에 남았다. 돈은 받았고 물건은 나가지 않는다.
+
+           보낼 수 있는 상태이면 세우고, 모자란 것이 있으면 무엇이 모자란지 적어 막는다.
+           창고에 없는 주문의 값을 환자에게 청할 수는 없다. */
+        if (! $order->withworks_so_no) {
+            $연계 = app(\App\Services\WithworksLink::class)->연계($order);
+
+            if (! $연계['ok']) {
+                return response()->json([
+                    'success' => false,
+                    'code'    => 'withworks_unlinked',
+                    'message' => $연계['message'],
+                    'missing' => $연계['missing'],
+                ], 422);
+            }
+
+            $order->refresh();
+        }
+
         /* 가상계좌는 주소를 보내는 것이 아니라 계좌를 발급해 적어 보내는 것이라 길이 다르다.
            여기서 갈라 두지 않으면 담당자가 손으로 보낼 때만 계좌 없이 결제 페이지 주소가
            나간다 — 주문 연계에서 자동으로 나갈 때와 다른 것이 간다. */
