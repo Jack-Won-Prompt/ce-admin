@@ -12706,6 +12706,17 @@ window.HELP_TOUR_STEPS = [
             if (v === '추가 주문') { s.style.color = 'var(--primary)'; s.style.fontWeight = '700'; }
             return s;
           } },
+        /* 진행 상태ㆍ거래 구분은 주문 구분 오른쪽에 둔다 (2026-09-16 지시).
+
+           앞의 셋(주문번호ㆍ처방번호ㆍ주문 구분)이 「무엇인가」라면 이 둘은 「지금
+           어디까지 왔는가」다. 여태 담당자 뒤에 있어, 목록에서 다음에 손댈 것을
+           고르려면 가로로 한참 밀어야 했다.
+
+           거래 구분은 이름으로 찾으면 교환ㆍ반품ㆍ취소 건도 함께 서므로 무엇이었는지
+           가려 준다 (2026-09-14 지시). 손대기 전 목록에서는 늘 「판매」라 조용하고,
+           찾았을 때만 다른 말이 선다. */
+        { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+        { header: '거래 구분', name: 'deal',      width: 96,  align: 'center', sortable: true },
         { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
@@ -12720,10 +12731,6 @@ window.HELP_TOUR_STEPS = [
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
-        { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
-        /* 거래 구분 — 이름으로 찾으면 교환ㆍ반품ㆍ취소 건도 함께 선다 (2026-09-14 지시).
-           손대기 전 목록에서는 늘 「판매」라 조용하고, 찾았을 때만 다른 말이 선다. */
-        { header: '거래 구분', name: 'deal',       width: 96,  align: 'center', sortable: true },
         { header: '되돌림 상태', name: 'deal_state', width: 104, align: 'center', sortable: true },
 
         /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ창고가 지금
