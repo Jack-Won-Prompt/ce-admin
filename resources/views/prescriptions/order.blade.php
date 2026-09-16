@@ -5930,6 +5930,8 @@ window.HELP_TOUR_STEPS = [
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
   const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 새 처방번호 발급
+  /* 제품도 창고 연계도 없는 빈 건을 지운다 — 서버가 여섯 가지를 다시 보고 가린다 */
+  const EMPTY_DELETE_URL = @json(route('prescriptions.destroyEmpty', $prescription));
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -8107,7 +8109,88 @@ window.HELP_TOUR_STEPS = [
        · 「보고 있는 건은 그대로 남습니다」는 덮어쓰던 시절의 안심이다. 이제 그럴
          일이 없으니 읽을 거리만 늘린다 — 새 건을 시작하는 사람에게 지금 건의
          번호는 필요하지 않다 */
+  /* 지금 화면이 어떤 상태인가 — 신규 등록이 세 갈래로 갈린다 (2026-09-16 지시).
+
+     ① 아무것도 없음   거래처도 첨부도 없다 → **이미 신규다**. 하나 더 만들지 않는다
+     ② 거래처만 있음   제품이 없다         → 이 건을 지우고 새로 시작할지 묻는다
+     ③ 진행 중        제품이 있다         → 여태처럼 묻고 새 건으로 간다
+
+     ①을 막는 까닭 — 빈 건을 열어 두고 신규를 또 누르면 빈 초안이 하나 더 선다.
+     실제로 그렇게 쌓인 스물아홉 건을 지웠다(2026-09-16). 누르는 사람은 새로 시작한
+     줄 알지만 화면은 이미 새 건이라 아무것도 달라지지 않는다. */
+  function 신규상태인가() {
+    const 거래처 = (typeof 거래처골랐나 === 'function') ? 거래처골랐나() : false;
+    const 붙은것 = (typeof ALL_DOCS !== 'undefined' ? ALL_DOCS : []).length > 0;
+
+    return ! 거래처 && ! 붙은것;
+  }
+
+  function 담긴제품수() {
+    try { return items.filter(i => i && i.product_name).length; } catch (e) { return 0; }
+  }
+
   async function resetReviewScreen() {
+    /* ① 이미 신규다 — 하나 더 만들지 않는다 */
+    if (신규상태인가()) {
+      await ceAlert([
+        '지금 화면이 신규 상태입니다.',
+        '',
+        '거래처도 첨부문서도 아직 없습니다 — 이 화면에서 그대로 시작하시면 됩니다.',
+        '거래처는 상담ㆍ환자 정보 탭의 이름 칸에서 「조회」로 고릅니다.',
+      ].join(String.fromCharCode(10)), { title: '신규 등록', tone: 'warning' });
+
+      const 이름칸 = document.getElementById('f-name');
+      if (이름칸) {
+        이름칸.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => 이름칸.focus({ preventScroll: true }), 400);
+      }
+
+      return;
+    }
+
+    /* ② 거래처는 있는데 제품이 없다 — 지우고 갈지 묻는다.
+
+       그대로 두면 이름만 적힌 빈 건이 목록에 남는다. 담당자는 새로 시작했다고 여기고
+       그 건은 아무도 돌아보지 않는다. */
+    if (담긴제품수() === 0) {
+      const 지울까 = await ceConfirm([
+        '지금 건에는 주문 제품이 없습니다.',
+        '',
+        '이 건을 삭제하고 새로 시작하시겠습니까?',
+        '삭제하지 않으면 이름만 적힌 빈 건이 목록에 남습니다.',
+        '',
+        '※ 제품ㆍ창고 연계ㆍ입금ㆍ증빙이 하나라도 있으면 삭제되지 않습니다.',
+      ].join(String.fromCharCode(10)),
+        { title: '신규 등록', tone: 'warning',
+          confirmText: '삭제하고 새로 시작', cancelText: '닫기' });
+
+      if (! 지울까) return;
+
+      try {
+        const res = await apiRequest(EMPTY_DELETE_URL, 'DELETE', {});
+        if (! res.success) {
+          /* 지울 수 없는 건이었다 — 무엇이 걸렸는지 그대로 알리고 멈춘다 */
+          await ceAlert(res.message || '이 건은 삭제할 수 없습니다.',
+                        { title: '삭제하지 못했습니다', tone: 'warning' });
+          return;
+        }
+      } catch (e) {
+        await ceAlert('삭제하지 못했습니다. 잠시 뒤 다시 시도해 주십시오.',
+                      { title: '신규 등록', tone: 'warning' });
+        return;
+      }
+
+      clearAllDirty();
+      location.href = NEW_ENTRY_URL;
+      return;
+    }
+
+    /* ③ 진행 중인 건 — 여태처럼 묻고 새 건으로 간다.
+
+         · 「새 처방전을 등록합니다」는 이제 맞지 않다. 처방전 서류 없이 시작하는
+           자리이고, 유형은 처방외로 선다(create 의 기본값)
+         · 「새 처방번호가 발급되며」는 늘 참이 아니다 — 오늘 만든 빈 초안이 있으면
+           그 번호를 다시 쓴다(빈초안잡기) */
     const ok = await ceConfirm(
       [
         '처방전 없이 새 건을 시작합니다.',
