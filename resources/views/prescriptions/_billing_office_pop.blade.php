@@ -72,13 +72,19 @@
           <label class="ds-field-label">부서</label>
           <input type="text" id="boNewDept" class="form-control" style="height:30px;" placeholder="보험급여부">
         </div>
-        {{-- 관할 읍ㆍ면ㆍ동은 반드시 받는다 — 다음 건을 이 값으로 찾기 때문이다.
-             한때 숨겨 두었다. 환자 주소가 도로명이면 읍면동이 없고 밖에서도 못 짚어
-             주는데, 저장은 그것을 요구해 담당자가 등록 자체를 할 수 없었다. --}}
+        {{-- 필수가 아니다 (2026-09-16 지시).
+
+             다음 건을 이 값으로 찾으므로 적어 두면 좋지만, 환자 주소가 도로명이면
+             읍면동이 없고 밖에서도 짚어 주지 않는다. 요구하면 그런 건은 청구처를
+             등록할 길 자체가 없어진다.
+
+             비워 두면 관할 시군구 전체로 세운다(BillingOfficeController::syncAreas) —
+             지자체는 대개 시ㆍ군ㆍ구청 하나가 그 안을 다 맡으므로 그 편이 맞다. --}}
         <div>
-          <label class="ds-field-label">관할 읍ㆍ면ㆍ동 *</label>
+          <label class="ds-field-label">관할 읍ㆍ면ㆍ동
+            <span style="font-weight:400;color:var(--text-muted);">(비우면 시군구 전체)</span></label>
           <input type="text" id="boNewEmd" class="form-control" style="height:30px;"
-                 placeholder="예: 역삼동">
+                 placeholder="예: 역삼동 — 비워 두어도 됩니다">
         </div>
         {{-- 담당자ㆍ직책ㆍ담당업무는 뺐다(요청서 15쪽). 사람은 자주 바뀌는데 한 번 적어
              두면 그대로 남아, 몇 달 뒤에는 없는 사람 이름이 서류에 실렸다.

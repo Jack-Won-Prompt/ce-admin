@@ -671,6 +671,15 @@
   .rx-acc-btn.is-now:hover { filter:brightness(1.06); }
   /* 아직 차례가 아닌 걸음 — 눌리지만 눈에 먼저 들어오지는 않는다 */
   .rx-acc-btn.is-wait { color:var(--gray-600); }
+  /* 채움이 걸리면 글자도 함께 흰색이어야 한다 (2026-09-16 지시).
+
+     저장 단추는 적은 것이 있으면 주색으로 채워진다(rx-acc-btn-fill). 그런데 지금
+     걸음이 저장이 아니면 is-wait 도 함께 붙는데, 그 규칙이 한 수 더 좁아(0,2,0 대
+     0,1,0) 글자색 싸움에서 이겼다 — 주색 바탕에 회색 글씨가 되어 대비가 1.6:1 로
+     떨어졌다. 「저장」이라고 적혀 있는데 읽히지 않았다.
+
+     채움 쪽을 같은 좁기로 올리고 뒤에 둔다 — 채워졌으면 글자는 흰색이다. */
+  .rx-acc-btn.rx-acc-btn-fill { color:var(--gray-0); }
   .rx-acc-btn:disabled { opacity:.65; cursor:default; }
 
   /* ── 안쪽 가로 탭 (아코디언을 대신한다) ────────────────────
@@ -10936,7 +10945,10 @@ window.HELP_TOUR_STEPS = [
     };
 
     if (!office) { say('기관명은 반드시 적어야 합니다.', false); return; }
-    if (!emd)    { say('관할 읍ㆍ면ㆍ동을 먼저 입력해 주십시오.', false); return; }
+
+    /* 관할 읍ㆍ면ㆍ동은 더 이상 막지 않는다 (2026-09-16 지시).
+       도로명 주소에는 읍면동이 없어 짚을 수 없는 건이 있는데, 요구하면 그런 건은
+       청구처를 등록할 길 자체가 없었다. 비워 두면 서버가 관할 시군구 전체로 세운다. */
 
     try {
       const res = await fetch(BO_STORE_URL, {
