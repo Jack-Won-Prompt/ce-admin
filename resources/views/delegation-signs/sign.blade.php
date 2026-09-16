@@ -487,10 +487,10 @@ function 남은것모으기() {
     담다('요양비 청구 위임 동의', document.querySelector('input[name=agree_delegation]'));
   }
   if (고른값('agree_privacy') === null) {
-    담다('개인정보 수집·이용 동의 고르기', document.querySelector('input[name=agree_privacy]'));
+    담다('개인정보 수집·이용 동의 선택', document.querySelector('input[name=agree_privacy]'));
   }
   if (고른값('agree_marketing') === null) {
-    담다('마케팅 활용 동의 고르기', document.querySelector('input[name=agree_marketing]'));
+    담다('마케팅 활용 동의 선택', document.querySelector('input[name=agree_marketing]'));
   }
   if (미성년) {
     if (!(칸('gRelation')?.value))              담다('가입자ㆍ피부양자와의 관계', 칸('gRelation'));
@@ -498,7 +498,7 @@ function 남은것모으기() {
     if (!생년바른가())                          담다('법정대리인 또는 가족 생년월일', 칸('gBirth'));
     if (!g칠함)                                 담다('보호자 서명', 칸('gsig'));
   }
-  if (!칠함) 담다('서명', 칸('sig'));
+  if (!칠함) 담다('본인 서명', 칸('sig'));
 
   return 남;
 }
@@ -524,7 +524,7 @@ function 짚기(남은것) {
 function 다시셈() {
   const 남은것 = 남은것모으기();
   const 말 = document.getElementById('왜막힘');
-  if (말) 말.textContent = 남은것.length ? '남은 것 — ' + 남은것.map(n => n.말).join(' · ') : '';
+  if (말) 말.textContent = 남은것.length ? '미입력 항목 — ' + 남은것.map(n => n.말).join(' · ') : '';
   짚기(남은것);        // 채우는 대로 붉은 테두리가 하나씩 걷힌다
 }
 
@@ -537,9 +537,9 @@ function 빠진것알림(남은것) {
       '<div style="background:#fff;border-radius:14px;max-width:360px;width:100%;'
     + 'box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;">'
     + '<div style="padding:16px 18px 10px;font-size:16px;font-weight:700;color:#111;">'
-    + '아직 채우지 않은 것이 있습니다</div>'
+    + '입력하지 않은 항목이 있습니다</div>'
     + '<div style="padding:0 18px 4px;font-size:13px;color:#555;line-height:1.7;">'
-    + '아래를 채우면 동의를 보낼 수 있습니다.</div>'
+    + '다음 항목을 입력하셔야 동의를 제출할 수 있습니다.</div>'
     + '<ul style="margin:10px 18px 4px;padding-left:18px;font-size:14px;color:#111;line-height:1.9;">'
     + 남은것.map(n => '<li>' + n.말 + '</li>').join('')
     + '</ul>'
