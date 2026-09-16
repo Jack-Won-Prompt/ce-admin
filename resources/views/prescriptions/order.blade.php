@@ -12879,17 +12879,37 @@ window.HELP_TOUR_STEPS = [
     });
   }
 
-  /* 화면을 떠나기 전에 적다 만 것을 묻는다 — 두 자리에서 같이 쓴다.
+  /* 목록에서 고른 건으로 간다 — 두 자리에서 같이 쓴다.
    *
-   *  환자명을 함께 받으면 워크스페이스 탭 이름을 「주문 등록 · 이름」으로 바꾼다
-   *  (2026-09-16 지시). 액자는 안에서 화면을 갈아 끼울 뿐이라 탭 이름이 그대로
-   *  「주문 등록」으로 남았고, 탭을 여럿 띄워 두면 어느 것이 누구인지 알 수 없었다.
+   *  **다른 건이면 새 탭으로 연다** (2026-09-16 지시).
    *
-   *  옮겨 가기 **전에** 청한다 — 옮긴 뒤에는 이 코드가 사라진다. */
+   *  여태 늘 그 자리에서 옮겨 갔다(location.href). 그래서 목록에서 한 사람을 열어
+   *  보고 이어서 다른 사람을 열면, 먼저 열어 둔 화면이 그 사람 것으로 갈렸다 —
+   *  둘을 견주려고 열어 둔 것인데 하나만 남았다.
+   *
+   *  견주는 잣대는 이름이 아니라 **처방번호**다. 같은 이름이 둘일 수 있고, 그때
+   *  이름으로 가르면 남의 건을 같은 건으로 보아 덮어쓴다.
+   *
+   *  액자 밖(일반 화면)에서는 탭이 없으므로 여태처럼 그 자리에서 옮겨 간다. */
   function olGo(url, 이름) {
-    if (이름 && typeof ceRenameTab === 'function') {
-      ceRenameTab('주문 등록 · ' + String(이름).trim());
+    const 이름표 = 이름 ? '주문 등록 · ' + String(이름).trim() : '주문 등록';
+    const 액자   = window.self !== window.top;
+
+    /* 지금 보고 있는 건인가 — 주소에 이 화면의 처방번호가 들어 있으면 같은 건이다 */
+    const 같은건 = typeof RX_NUMBER !== 'undefined' && RX_NUMBER
+                 && String(url).indexOf(RX_NUMBER) !== -1;
+
+    if (액자 && !같은건 && typeof ceOpenTab === 'function') {
+      /* 새 탭으로 연다. 지금 탭은 그대로 두므로 적다 만 것도 그 자리에 남는다 —
+         떠나는 것이 아니라 하나를 더 여는 일이라 묻지 않는다.
+         이미 열려 있는 건이면 워크스페이스가 그 탭으로 데려간다(주소로 가린다). */
+      ceOpenTab(url, 이름표, '');
+      return;
     }
+
+    /* 같은 건이거나 액자 밖 — 그 자리에서 옮겨 간다. 탭 이름만 맞춰 둔다. */
+    if (이름 && typeof ceRenameTab === 'function') { ceRenameTab(이름표); }
+
     if (typeof isAnyDirty === 'function' && isAnyDirty()) {
       showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), url);
       return;
