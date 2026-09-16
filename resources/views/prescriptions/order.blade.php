@@ -207,7 +207,20 @@
   .info-bar-pinned { position:fixed !important; top:var(--nav-h); left:var(--sidebar-w); right:0; margin:0 !important; z-index:50; border-bottom:1px solid var(--border); }
   body.menu-collapsed .info-bar-pinned { left:64px; }
   /* MDI 워크스페이스 iframe(사이드바·네비 숨김)에서는 전체폭·최상단으로 고정(정보바·탭바 어긋남 방지) */
-  html.is-framed .info-bar-pinned { top:0; left:0; }
+  /* 프레임 안에서는 띄우지 않는다 (2026-09-16 고침).
+
+     띄워 두면 top:0 에 서서 그 자리에 있던 화면 단추 줄(.framed-actions —
+     검수 완료ㆍ목록ㆍ홈)을 덮는다. 단추가 보이지도 눌리지도 않았고, 자리표시자가
+     비울 높이를 재는 셈도 어긋나 화면이 통째로 밀렸다.
+
+     프레임은 이미 작은 창이라 띄워 둘 값어치가 크지 않다 — 본문과 함께 구르게
+     둔다. 바깥 화면(사이드바가 있는 일반 화면)에서는 여태처럼 띄운다. */
+  html.is-framed .info-bar-pinned {
+    position: static !important;
+    margin: 0 0 12px !important;
+    border-bottom: 0;
+  }
+  html.is-framed #patient-info-bar-ph { display: none !important; }
 
   /* ── 환자 정보 바 (시안 137:290) ──
      액션 버튼이 저마다 다른 색으로 채워져 있어 무엇이 더 중요한 동작인지 알기 어려웠다.
@@ -1081,7 +1094,7 @@ $calcDeposit  = $calcCopay;
        CSS 로 처음부터 붙이면 그 사이가 없다. 자리표시자도 함께 세운다 — 정보바가
        흐름에서 빠지므로 그만큼을 비워 두어야 아래가 위로 딸려 올라가지 않는다.
        높이는 JS 가 다시 잰다(글자가 늦게 채워지면 줄이 늘어난다). --}}
-  <div id="patient-info-bar-ph" style="display:block;height:79px;"></div>
+  <div id="patient-info-bar-ph" style="display:block;"></div>
   <div id="patient-info-bar" class="info-bar-pinned"
        style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:12px 16px;z-index:50;">
 
@@ -5508,7 +5521,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const patBar = document.getElementById('patient-info-bar');
       const navVisible = navEl && getComputedStyle(navEl).display !== 'none';
       let bottom = navVisible ? navEl.getBoundingClientRect().bottom : 0;
-      if (patBar && patBar.classList.contains('info-bar-pinned')) {
+      /* 정보바가 **실제로 떠 있을 때만** 그 아래에 붙인다 (2026-09-16 고침).
+         프레임 안에서는 정보바를 흐름에 두므로(position:static) 그 bottom 은
+         구르면 따라 움직인다 — 그것을 기준으로 삼으면 탭줄이 함께 흔들린다. */
+      if (patBar && getComputedStyle(patBar).position === 'fixed') {
         bottom = patBar.getBoundingClientRect().bottom;
       }
       return bottom;   // 정보바와 붙도록 여백 0
@@ -14969,6 +14985,11 @@ window.HELP_TOUR_STEPS = [
     const bar = document.getElementById('patient-info-bar');
     const ph  = document.getElementById('patient-info-bar-ph');
     if (!bar || !ph) return;
+
+    /* 프레임 안에서는 띄우지 않는다 — 화면 단추 줄을 덮기 때문이다(위 CSS).
+       자리표시자도 쓰지 않으므로 여기서 손댈 것이 없다. */
+    if (document.documentElement.classList.contains('is-framed')) return;
+
     ph.style.display = 'block';
     bar.classList.add('info-bar-pinned');           // 상시 고정
     function sync() {
