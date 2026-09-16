@@ -1324,7 +1324,10 @@
     .framed-actions { display: none; }
     html.is-framed .framed-actions:has(> *) {
       display: flex; justify-content: flex-end; align-items: center;
-      gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+      gap: 8px; flex-wrap: wrap;
+      /* 아래 첫 판과 붙여 둔다 (2026-09-16 지시). 여백을 두면 창이 작은 프레임에서
+         단추 줄 하나가 12 를 더 먹어, 정작 볼 것이 그만큼 아래로 내려간다. */
+      margin-bottom: 4px;
     }
   </style>
   {{-- wwGrid 자산은 레이아웃이 단 한 번만 싣는다.
@@ -1988,17 +1991,15 @@
       {{-- Content Wrapper --}}
       <div class="content-wrapper">
 
-        {{-- Flash Messages --}}
-        @if(session('success') || session('error'))
-        <div style="padding: 12px 24px 0; min-width: 0;">
-          @if(session('success'))
-            <div class="alert alert-success"><i class="bx bx-check-circle me-1"></i> {{ session('success') }}</div>
-          @endif
-          @if(session('error'))
-            <div class="alert alert-danger"><i class="bx bx-x-circle me-1"></i> {{ session('error') }}</div>
-          @endif
-        </div>
-        @endif
+        {{-- 알림 띠는 걷었다 (2026-09-16 지시).
+
+             같은 말을 두 곳에서 냈다 — 여기 띠 한 벌, 아래 스크립트가 토스트로 한 벌
+             (showToast(session('success'))). 화면 위쪽에 띠가 한 줄을 차지하니 그만큼
+             본문이 밀렸고, 워크스페이스 탭처럼 창이 작은 자리에서는 안내 띠ㆍ화면 단추
+             줄ㆍ환자 정보바가 세 줄로 쌓여 정작 볼 것이 아래로 내려갔다.
+
+             토스트는 제 스스로 사라지고 자리를 차지하지 않는다. 같은 말이라면 그쪽
+             하나면 된다. --}}
 
         {{-- Page Content --}}
         <main class="page-body">
