@@ -529,6 +529,10 @@
         header: '위임장 발송', name: 'send', width: 90, align: 'center',
         renderer: (v, row) => 단추('발송', (b) => dlgSendOpen(row.id, b), !row.can_send),
       },
+      /* 언제 보냈는가 — 단추 바로 옆이다 (2026-09-16 지시).
+         보냈는지만 알고 언제 보냈는지를 몰라, 답이 없을 때 다시 보낼지 더 기다릴지
+         가릴 수 없었다. 보낸 적이 없으면 빈칸으로 둔다. */
+      { header: '위임장 발송일시', name: 'sent_at', width: 130, align: 'center', sortable: true },
 
       /* 서명 여부는 ［발송］ 바로 뒤에 (2026-09-12 지시). 보냈는지와 받았는지를
          한자리에서 본다. */

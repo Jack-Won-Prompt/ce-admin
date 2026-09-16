@@ -124,8 +124,16 @@ class DelegationSignController extends Controller
                 'privacy'    => $d->동의말('agree_privacy'),
                 'marketing'  => $d->동의말('agree_marketing'),
                 'signed_at'  => $d->signed_at?->format('Y-m-d H:i') ?? '',
+                /* 언제 보냈는가 — 「위임장 발송」 단추 옆에 선다 (2026-09-16 지시).
+                   보냈는지만 알고 언제 보냈는지를 몰라, 답이 없을 때 다시 보낼지
+                   더 기다릴지 가릴 수 없었다. */
+                'sent_at'    => $d->sent_at?->format('Y-m-d H:i') ?? '',
                 'sender'     => $d->sent_by_name ?? '',
-                'has_sign'   => (bool) ($d->sign_path || $d->sign_base64),
+                /* 서명을 마친 줄만 「그림 있음」으로 본다 (2026-09-16 지시).
+                   재발송하면 상태는 서명 대기로 돌아가는데 서명 칸은 남아 있어,
+                   목록이 아직 받지 않은 줄을 받아 둔 것으로 세웠다.
+                   내주는 쪽과 같은 잣대다(DelegationSign::서명그림). */
+                'has_sign'   => $d->status === 'signed' && (bool) ($d->sign_path || $d->sign_base64),
                 /* 보낼 수 있는가는 Main contact 가 가리키는 번호로 가린다 —
                    보호자로 정해 두었는데 그 번호가 비면 보내지 않는다 (2026-09-14) */
                 'can_send'   => $d->보낼번호() !== null,
