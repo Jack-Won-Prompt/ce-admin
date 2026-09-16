@@ -7156,6 +7156,51 @@ window.HELP_TOUR_STEPS = [
      예전에는 주문 제품 탭에 그 둘을 비추는 거울 칸과 전략 고르개를 함께 두었는데,
      같은 것을 세 자리에서 보이고 세 자리에서 고칠 수 있어 어디가 정본인지 흐렸다. */
 
+  /* ── 거래처를 고르기 전에는 단추 줄을 잠근다 (2026-09-16 지시) ─────────
+     탭줄 오른쪽 단추(상담하기ㆍ거래처 수정ㆍ입력 검수 요청ㆍ입력 검수 승인ㆍ
+     주문 보기ㆍ메모ㆍ저장)는 모두 **어느 거래처의 일인가**가 정해져야 뜻이 선다.
+
+     거래처가 없는 채로 누르면 저마다 다른 자리에서 다르게 어긋났다 — 상담 창은
+     빈 사람으로 열리고, 저장은 이름 없는 건을 담고, 메모는 붙일 곳이 없었다.
+     누르는 자리에서 한 번에 막는다.
+
+     단추마다 검사를 붙이지 않고 묶음에 건다 — 나중에 단추가 하나 늘어도 함께 막힌다.
+     내려가는 길(capture)에서 잡아야 단추의 onclick 이 돌기 전에 멈춘다. */
+  function 거래처골랐나() {
+    const 이름 = (document.getElementById('f-name')?.value ?? '').trim();
+    const 번호 = (document.getElementById('f-patient-id')?.value ?? '').trim();
+    return 이름 !== '' || 번호 !== '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.rx-tabs .rx-acc-btns').forEach(묶음 => {
+      묶음.addEventListener('click', (e) => {
+        const 단추 = e.target.closest('button');
+        if (!단추 || 단추.disabled) return;
+        if (거래처골랐나()) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        /* 같은 손짓으로 다른 자리가 반응하지 않게 여기서 끊는다 */
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+        ceAlert('거래처를 먼저 선택해 주십시오.
+
+'
+              + '상담ㆍ환자 정보 탭의 이름 칸에서 「조회」로 거래처를 고르거나, '
+              + '새 거래처이면 「신규 등록」으로 등록하십시오.',
+                { title: '거래처를 선택해 주십시오', tone: 'warning' });
+
+        /* 고를 자리로 데려간다 — 긴 화면에서 어디인지 찾게 두지 않는다 */
+        const 이름칸 = document.getElementById('f-name');
+        if (이름칸) {
+          이름칸.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => 이름칸.focus({ preventScroll: true }), 400);
+        }
+      }, true);
+    });
+  });
+
   /** 지금 고른 청구전략 — 없으면 null */
   function bsCurrent() {
     const t = document.getElementById('f-acc-add-type')?.value ?? '';
