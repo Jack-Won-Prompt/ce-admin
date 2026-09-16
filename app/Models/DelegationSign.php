@@ -214,6 +214,19 @@ class DelegationSign extends Model
      */
     public function 서명그림(): ?string
     {
+        /* 서명을 마친 줄만 그림을 내준다 (2026-09-16 지시).
+
+           재발송하면 상태는 「서명 대기」로 돌아가지만 서명 칸은 그대로 남는다
+           (보내기() 가 보낸 자취만 덮는다). 그래서 목록에 「서명 대기」라고 적힌
+           줄에 지난번 서명 그림이 함께 보였다 — 다시 받아야 하는 건인데 이미 받아
+           둔 것처럼 읽히고, 그 그림이 공단에 내는 서류로 실려 나갈 수 있었다.
+
+           담긴 값은 지우지 않는다. 그때 실제로 받은 서명이라 자취로는 남아야 한다 —
+           내주지 않을 뿐이다. */
+        if ($this->status !== 'signed') {
+            return null;
+        }
+
         if ($this->sign_path && Storage::disk(self::디스크)->exists($this->sign_path)) {
             return Storage::disk(self::디스크)->get($this->sign_path);
         }

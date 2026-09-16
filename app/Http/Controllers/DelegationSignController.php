@@ -777,6 +777,13 @@ class DelegationSignController extends Controller
             return [['success' => false, 'message' => '발송하지 못했습니다 — ' . $e->getMessage()], 500];
         }
 
+        /* 이미 서명을 받아 둔 줄을 다시 보내면 그 사실을 적어 둔다 (2026-09-16 지시).
+
+           서명 칸은 지우지 않는다 — 그때 실제로 받은 서명이라 자취로 남아야 한다.
+           다만 상태가 「서명 대기」로 돌아가므로 그 서명은 더 이상 이 줄의 답이 아니다.
+           목록과 이미지 주소도 그렇게 본다(DelegationSign::서명그림). */
+        $이미받아둠 = $줄->status === 'signed' && $줄->signed_at;
+
         /* 보낸 자취만 덮는다. 서명 쪽 칸은 손대지 않는다. */
         $줄->forceFill([
             'token'        => $토큰,
@@ -790,7 +797,8 @@ class DelegationSignController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($줄)
             ->log("위임장 서명 발송 → {$이름} {$번호}"
-                . ($줄->source === 'direct' ? ' (직접 발송)' : ''));
+                . ($줄->source === 'direct' ? ' (직접 발송)' : '')
+                . ($이미받아둠 ? ' — 이미 받아 둔 서명이 있어 다시 받습니다' : ''));
 
         return [[
             'success'    => true,
