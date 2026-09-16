@@ -12825,6 +12825,12 @@ window.HELP_TOUR_STEPS = [
            찾았을 때만 다른 말이 선다. */
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
         { header: '거래 구분', name: 'deal',      width: 96,  align: 'center', sortable: true },
+        /* 거래 구분과 한 쌍이라 나란히 둔다 (2026-09-16 지시).
+
+           거래 구분은 「무엇이었나」(판매ㆍ교환ㆍ반품ㆍ취소)를, 이 칸은 「그것이 어디까지
+           왔나」(접수ㆍ수거중ㆍ검수중ㆍ환불완료ㆍ완료)를 적는다. 떨어뜨려 두면 「반품」이라
+           적힌 줄을 보고 수거중인지 환불까지 끝났는지 알려고 가로로 한참 밀어야 했다. */
+        { header: '교환·반품·취소 상태', name: 'deal_state', width: 128, align: 'center', sortable: true },
         { header: '이름',      name: 'patient',   width: 90,  sortable: true },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
@@ -12839,7 +12845,6 @@ window.HELP_TOUR_STEPS = [
             if (!v) { s.style.color = 'var(--text-muted)'; s.style.fontSize = '11px'; }
             return s;
           } },
-        { header: '되돌림 상태', name: 'deal_state', width: 104, align: 'center', sortable: true },
 
         /* 이 화면에만 있는 칸 — 누구인가ㆍ누가 돈을 보냈는가ㆍ창고가 지금
            무엇을 하고 있는가. 병원ㆍ처방 이야기는 아래 공통 블록이 한꺼번에 세운다. */
