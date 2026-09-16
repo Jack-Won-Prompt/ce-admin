@@ -8793,28 +8793,52 @@ window.HELP_TOUR_STEPS = [
       el.textContent = label;
       if (badge) el.className = 'badge badge-' + badge;
     }
-    if (status === 'review_requested') {
-      document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(btn => {
-        btn.disabled = true;
-        btn.title = '이미 입력 검수를 요청했습니다';
-        btn.textContent = '입력 검수 요청됨';
-      });
-    }
+    /* 입력 검수 단추는 여기서 잠그지 않는다 (2026-09-16 지시).
 
-    /* 이미 마친 건은 두 단추를 잠근다. 예전에는 승인한 그 순간에만 잠갔더니(setRxApproved),
-       화면을 다시 열면 「검수 승인하기」가 멀쩡히 눌렸다 — 두 번 누르면 검수자와
-       검수일시가 덮인다. 열 때도 같은 자리에서 잠근다. */
-    if (status === 'approved' || status === 'ordered') {
-      document.querySelectorAll('[onclick="approveRx()"]').forEach(b => {
-        b.disabled = true; b.textContent = '입력 검수 승인됨'; b.title = '이미 입력 검수를 승인했습니다';
-      });
-      document.querySelectorAll('[onclick="requestReviewRx()"]').forEach(b => {
-        b.disabled = true; b.title = '이미 입력 검수를 승인했습니다';
-      });
-    }
+       여태 처방전 상태(파일 검수)가 approved 이면 입력 검수 단추 둘을 함께 잠갔다.
+       그래서 파일만 승인해도 「입력 검수 승인됨」으로 보였다 — 입력값은 그 시점에
+       존재하지도 않았는데. 두 검수는 이제 칸이 다르므로 제 상태로만 잠근다
+       (입력검수세우기). */
   }
 
-  /** 검수를 마쳤을 때 — 바뀌는 자리를 하나씩 고쳐 세운다 */
+  /** 입력 검수 단추를 제 상태대로 세운다 — 파일 검수와 무관하다 */
+  function 입력검수세우기(상태) {
+    if (!상태) return;
+    INPUT_REVIEW = 상태;
+
+    const 요청들 = document.querySelectorAll('[onclick="requestReviewRx()"]');
+    const 승인들 = document.querySelectorAll('[onclick="approveRx()"]');
+
+    const 언제 = (t, 누가) => t ? `${t}${누가 ? ' · ' + 누가 : ''}` : '';
+
+    if (상태.status === 'approved') {
+      요청들.forEach(b => { b.disabled = true; b.textContent = '입력 검수 요청';
+        b.title = '이미 입력 검수를 승인했습니다 — ' + 언제(상태.approved_at, 상태.approved_by); });
+      승인들.forEach(b => { b.disabled = true; b.textContent = '입력 검수 승인됨';
+        b.title = '승인 ' + 언제(상태.approved_at, 상태.approved_by); });
+      return;
+    }
+
+    if (상태.status === 'requested') {
+      요청들.forEach(b => { b.disabled = true; b.textContent = '입력 검수 요청됨';
+        b.title = '요청 ' + 언제(상태.requested_at, 상태.requested_by); });
+      승인들.forEach(b => { b.disabled = false; b.textContent = '입력 검수 승인';
+        b.title = '입력한 정보를 확인하고 승인합니다 — 요청 ' + 언제(상태.requested_at, 상태.requested_by); });
+      return;
+    }
+
+    요청들.forEach(b => { b.disabled = false; b.textContent = '입력 검수 요청';
+      b.title = '입력한 환자ㆍ병원ㆍ처방 정보의 검수를 요청합니다'; });
+    승인들.forEach(b => { b.disabled = false; b.textContent = '입력 검수 승인';
+      b.title = '입력한 정보를 확인하고 승인합니다'; });
+  }
+
+  /** 파일 검수를 마쳤을 때 — 바뀌는 자리를 하나씩 고쳐 세운다.
+   *
+   *  이 화면에서는 더 이상 부르지 않는다 (2026-09-16 지시). 여기 두 단추는 입력
+   *  검수만 다루고, 파일 검수 승인은 처방전 목록의 일이 되었다. 파일 검수를 이
+   *  화면으로 되돌릴 때를 위해 남겨 둔다 — 걸음 아이콘과 검수로 만들어지는 서류를
+   *  다시 읽는 자리가 여기에 있다. */
   function setRxApproved(res) {
     setRxStatus(res.status, res.status_label, res.status_badge);
 
@@ -8855,6 +8879,11 @@ window.HELP_TOUR_STEPS = [
   /* 지금 처방이 어느 상태인가 — 주문 단추가 「지금 할 일」인지 가리는 데 쓴다.
      상태가 바뀌면 setRxStatus 가 여기도 고쳐 둔다. */
   let RX_STATUS = @json($prescription->status);
+
+  /* 입력 검수 — 파일 검수(RX_STATUS)와 다른 칸이다 (2026-09-16 지시).
+     파일을 승인해도 이 값은 움직이지 않는다. */
+  let INPUT_REVIEW = @json($입력검수 ?? null);
+  document.addEventListener('DOMContentLoaded', () => 입력검수세우기(INPUT_REVIEW));
 
   /* 「주문 보기」 — 글자는 고정이다. 창고로 보냈으면 지난 걸음(체크), 검수를 마쳤는데
      아직 안 보냈으면 지금 할 걸음(주색), 그 전이면 차례가 아닌 걸음이다.
@@ -8928,15 +8957,15 @@ window.HELP_TOUR_STEPS = [
       + (요청메모 ? '\n\n검수 요청 메모\n' + 요청메모 : '')
       + '\n\n진행하시겠습니까?';
 
-    if (!await ceConfirm(물음, { title: '검수 요청', confirmText: '검수 요청' })) return;
+    if (!await ceConfirm(물음, { title: '입력 검수 요청', confirmText: '검수 요청' })) return;
     try {
-      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/request-review`, 'POST', {});
+      /* 파일 검수(request-review)가 아니라 입력 검수 주소다 (2026-09-16 지시).
+         한 주소를 함께 쓰던 때에는 파일 검수가 끝난 건이 여기서 422 로 막혔다. */
+      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/input-review/request`, 'POST', {});
       if (res.success) {
         showToast('입력 검수를 요청했습니다.', 'success');
-        /* 화면을 다시 읽지 않는다. 적던 자리ㆍ연 탭ㆍ스크롤이 통째로 처음으로 돌아가,
-           이어서 할 일이 있어도 그 자리를 다시 찾아가야 했다.
-           바뀌는 것은 상태 하나뿐이니 그 자리만 고쳐 세운다. */
-        setRxStatus(res.status, res.status_label, res.status_badge);
+        /* 화면을 다시 읽지 않는다 — 바뀌는 것은 입력 검수 상태 하나뿐이다. */
+        입력검수세우기(res.input_review);
       } else {
         showToast(res.message || '입력 검수 요청 실패', 'danger');
       }
@@ -8952,13 +8981,12 @@ window.HELP_TOUR_STEPS = [
     BtnState.loading(btn, '처리 중...');
     const memo = document.getElementById('approveMemo').value;
     try {
-      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/approve`, 'POST', { memo });
+      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/input-review/approve`, 'POST', { memo });
       if (res.success) {
         BtnState.success(btn, '승인 완료');
         showToast('입력 검수를 승인했습니다.', 'success');
-        /* 화면을 다시 읽지 않는다 — 바뀌는 자리만 고쳐 세운다.
-           상태 배지ㆍ검수 걸음ㆍ검수자 줄, 그리고 검수를 마치며 만들어지는 서류. */
-        setRxApproved(res);
+        /* 처방전 상태(파일 검수)는 건드리지 않는다 — 입력 검수 자리만 고쳐 세운다 */
+        입력검수세우기(res.input_review);
         setTimeout(() => closeModal('approveModal'), 800);
       } else {
         BtnState.error(btn, '실패');

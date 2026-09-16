@@ -58,6 +58,11 @@ class Prescription extends Model
         'nhis_status', 'product_price', 'insurance_price', 'nhis_amount', 'patient_copay',
         // Review
         'status', 'is_blank_draft', 'reviewed_by', 'reviewed_at', 'review_memo', 'review_request_memo', 'admin_note',
+        /* 입력 검수 — 파일 검수(위 status·reviewed_*)와 다른 일이다 (2026-09-16 지시).
+           파일 검수는 올라온 이미지를 보고, 입력 검수는 적어 넣은 값을 본다. */
+        'input_review_status', 'input_review_requested_at', 'input_review_requested_by',
+        'input_review_request_memo', 'input_review_approved_at', 'input_review_approved_by',
+        'input_review_memo',
         // 참고 사항 — 이 건을 두고 오래 남겨 둘 말. 검수 메모와 다른 칸이다(2026-09-10)
         'reference_note',
         'postcode', 'address_detail', 'repurchase_date',
@@ -89,6 +94,8 @@ class Prescription extends Model
         'sms_sent_at'     => 'datetime',
         'repurchase_date'  => 'date',
         'reviewed_at'  => 'datetime',
+        'input_review_requested_at' => 'datetime',
+        'input_review_approved_at'  => 'datetime',
         'ocr_confidence' => 'float',
         'product_price'   => 'float',
         'insurance_price' => 'float',
@@ -263,6 +270,56 @@ class Prescription extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /* ── 입력 검수 ─────────────────────────────────────────────
+       파일 검수(status·reviewed_*)와 다른 일이다 (2026-09-16 지시).
+       파일 검수는 올라온 이미지를 보고, 입력 검수는 적어 넣은 값을 본다.
+       한 칸을 함께 쓰던 때에는 파일만 승인해도 입력이 승인된 것으로 보였다. */
+
+    public const INPUT_REVIEW_REQUESTED = 'requested';
+    public const INPUT_REVIEW_APPROVED  = 'approved';
+
+    public const INPUT_REVIEW_LABELS = [
+        self::INPUT_REVIEW_REQUESTED => '입력 검수 요청',
+        self::INPUT_REVIEW_APPROVED  => '입력 검수 승인',
+    ];
+
+    public function inputReviewRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'input_review_requested_by');
+    }
+
+    public function inputReviewApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'input_review_approved_by');
+    }
+
+    public function 입력검수요청했나(): bool
+    {
+        return $this->input_review_status === self::INPUT_REVIEW_REQUESTED;
+    }
+
+    public function 입력검수승인했나(): bool
+    {
+        return $this->input_review_status === self::INPUT_REVIEW_APPROVED;
+    }
+
+    /** 화면이 그대로 쓰는 한 덩이 — 언제ㆍ누가를 함께 넘긴다 */
+    public function 입력검수상태(): array
+    {
+        $this->loadMissing('inputReviewRequester', 'inputReviewApprover');
+
+        return [
+            'status'        => $this->input_review_status,
+            'label'         => self::INPUT_REVIEW_LABELS[$this->input_review_status] ?? '입력 검수 전',
+            'requested_at'  => $this->input_review_requested_at?->format('Y-m-d H:i'),
+            'requested_by'  => $this->inputReviewRequester?->name,
+            'request_memo'  => $this->input_review_request_memo,
+            'approved_at'   => $this->input_review_approved_at?->format('Y-m-d H:i'),
+            'approved_by'   => $this->inputReviewApprover?->name,
+            'memo'          => $this->input_review_memo,
+        ];
     }
 
     /**

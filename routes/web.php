@@ -133,6 +133,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/files',         [PrescriptionController::class, 'files'])->name('files');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
 
+        /* 입력 검수 — 파일 검수(위 request-review·approve)와 다른 일이다 (2026-09-16 지시).
+           그쪽은 올라온 이미지를 보고, 이쪽은 주문 등록에 적어 넣은 값을 본다.
+           한 주소를 함께 쓰던 때에는 파일만 승인해도 입력이 승인된 것으로 보였다. */
+        Route::post('/{prescription}/input-review/request',
+            [PrescriptionController::class, 'requestInputReview'])->name('input-review.request');
+        Route::post('/{prescription}/input-review/approve',
+            [PrescriptionController::class, 'approveInputReview'])->name('input-review.approve');
+
         /* 검수 창에서 파일 한 장을 짚어 다시 올리기를 요청한다 (2026-09-12 지시).
            올린 사람의 앱으로 FCM 이 나간다. */
         Route::post('/{prescription}/reupload-request',

@@ -2345,6 +2345,9 @@ class PrescriptionController extends Controller
            값이라 같이 둔다. */
         $검수마침 = ['approved', 'ordered', 'ocr_done'];
 
+        /* 입력 검수 — 파일 검수와 다른 칸을 본다 (2026-09-16 지시) */
+        $입력검수 = $prescription->입력검수상태();
+
         $orderListLimit = self::작업대기상한;
         $orderListTotal = $this->작업대기질의()->count();
         $orderListRows  = $this->주문줄들(
@@ -2458,7 +2461,8 @@ class PrescriptionController extends Controller
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
             'orderManagers', 'assignables', 'privacyState',
-            'orderListRows', 'orderListTotal', 'orderListLimit'
+            'orderListRows', 'orderListTotal', 'orderListLimit',
+            '입력검수'
         ));
     }
 
@@ -3100,6 +3104,86 @@ class PrescriptionController extends Controller
     /* 담당자가 손으로 다 적었다는 신호다. 여기서 상태만 바꾸고 값은 건드리지 않는다 —
        적는 일은 저장(saveOCR)이 이미 했다. 검수자가 「검수 완료」를 누르기 전까지
        담당자는 계속 고칠 수 있다. */
+    /**
+     * 입력 검수 요청 — 적어 넣은 값을 봐 달라고 청한다 (2026-09-16 지시).
+     *
+     * 파일 검수(requestReview)와 다른 일이다. 그쪽은 올라온 처방전ㆍ서류 이미지를 보고,
+     * 이쪽은 담당자가 상세 목록ㆍ병원 처방 정보에 적어 넣은 값을 본다.
+     *
+     * 한 칸을 함께 쓰던 때에는 파일 검수가 끝난 건(approved)이 여기서 422 로 막혔다 —
+     * 그런데 입력은 파일 검수 **뒤에** 하는 일이라, 정상 흐름에서는 누를 창이 없었다.
+     * 이제 파일 검수 상태를 보지 않는다.
+     */
+    public function requestInputReview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        if ($prescription->입력검수승인했나()) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 입력 검수를 마쳤습니다.',
+            ], 422);
+        }
+
+        $prescription->update([
+            'input_review_status'       => Prescription::INPUT_REVIEW_REQUESTED,
+            'input_review_requested_at' => now(),
+            'input_review_requested_by' => Auth::id(),
+            'input_review_request_memo' => $request->input('memo') ?: $prescription->input_review_request_memo,
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)->log('입력 검수 요청');
+
+        /* 승인할 수 있는 사람들에게 알린다 — 파일 검수와 같은 길을 쓴다.
+           알리지 못해도 요청은 이미 됐다. */
+        try {
+            app(\App\Services\ReviewNotice::class)->askReview($prescription->refresh());
+        } catch (\Throwable $e) {
+            Log::warning('[입력 검수] 요청 알림 실패', ['rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'success'      => true,
+            'message'      => '입력 검수를 요청했습니다.',
+            'input_review' => $prescription->refresh()->입력검수상태(),
+        ]);
+    }
+
+    /**
+     * 입력 검수 승인 — 적어 넣은 값을 확인했다.
+     *
+     * 처방전 상태(status)는 건드리지 않는다. 그것은 파일 검수의 것이다 —
+     * 여기서 함께 옮기면 처방전 목록의 검수 줄이 알 수 없는 까닭으로 움직인다.
+     */
+    public function approveInputReview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        if ($prescription->입력검수승인했나()) {
+            return response()->json([
+                'success' => false,
+                'message' => '이미 입력 검수를 마쳤습니다.',
+            ], 422);
+        }
+
+        $prescription->update([
+            'input_review_status'      => Prescription::INPUT_REVIEW_APPROVED,
+            'input_review_approved_at' => now(),
+            'input_review_approved_by' => Auth::id(),
+            'input_review_memo'        => $request->input('memo'),
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)->log('입력 검수 승인');
+
+        try {
+            app(\App\Services\ReviewNotice::class)->tellApproved($prescription->refresh());
+        } catch (\Throwable $e) {
+            Log::warning('[입력 검수] 승인 알림 실패', ['rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'success'      => true,
+            'message'      => '입력 검수를 승인했습니다.',
+            'input_review' => $prescription->refresh()->입력검수상태(),
+        ]);
+    }
+
     public function requestReview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         if (in_array($prescription->status, ['approved', 'ordered'], true)) {
