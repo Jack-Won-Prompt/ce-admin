@@ -118,7 +118,14 @@ class OrderNotice
 
             ChatMessage::attachToThread($message);
 
-            broadcast(new ChatMessageSent($message));
+            /* 채팅으로는 방송하지 않는다 (2026-09-16 지시).
+
+               바로 위에서 같은 사람에게 알림을 이미 방송했다(broadcast). 채팅까지
+               방송하면 한 가지 일로 토스트가 두 장 뜬다 — 「창고 알림」 한 장과
+               「창고 — …」 한 장이 나란히 섰다.
+
+               채팅에 남기는 뜻은 알리는 것이 아니라 **돌아와서 볼 수 있게 하는 것**
+               이다. 글은 그대로 쌓이므로 채팅 창을 열면 그 자리에 있다. */
         } catch (\Throwable $e) {
             Log::warning('[주문 알림] 채팅 알림 실패', [
                 'order' => $order->order_number, 'user' => $userId, 'error' => $e->getMessage(),

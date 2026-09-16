@@ -52,7 +52,9 @@ class OrderBlockedController extends Controller
         /* 담당자에게 알린다. 창고 소식과 같은 방에 쌓여 나중에 되짚을 수 있다.
            주문이 아직 없으면 알릴 자리가 없다 — 그때는 이력만 남긴다. */
         if ($order) {
-            app(OrderNotice::class)->tellOwner($order, '창고로 보내지 못했습니다 — ' . $사유, 'warning');
+            /* 「창고」를 앞에 붙이는 것은 OrderNotice 가 한다 — 여기서 또 적으면
+               「창고 — 창고로 보내지 못했습니다」가 된다 (2026-09-16 고침). */
+            app(OrderNotice::class)->tellOwner($order, '보내지 못했습니다 — ' . $사유, 'warning');
         }
 
         return response()->json(['success' => true]);

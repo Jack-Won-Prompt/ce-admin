@@ -5127,7 +5127,11 @@ const ChatPanel = (() => {
 
     const msg = data.url
       ? `<b>${escHtml(data.title)}</b><br>` +
-        `<a href="${escHtml(data.url)}" style="color:inherit;text-decoration:underline;">` +
+        /* 색을 물려받지 않고 못박는다 (2026-09-16 지시). 물려받게 두었더니
+           어떤 화면에서는 기본 링크색(짙은 파랑)이 이겨, 검은 알림 바탕에서
+           대비가 2:1 로 떨어져 주문번호가 읽히지 않았다. */
+        `<a href="${escHtml(data.url)}" style="color:#fff;text-decoration:underline;` +
+        `text-underline-offset:2px;font-weight:600;">` +
         `${escHtml(data.body)}</a>`
       : `<b>${escHtml(data.title)}</b><br>${escHtml(data.body)}`;
 
