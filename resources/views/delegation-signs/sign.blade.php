@@ -66,6 +66,11 @@
          font-size:15px; font-weight:700; cursor:pointer; }
   .btn-primary { background:var(--primary); border-color:var(--primary); color:#fff; }
   .btn:disabled { opacity:.45; cursor:not-allowed; }
+  /* 채우지 않은 칸 — 「동의」를 한 번 누른 뒤부터 짚는다 (2026-09-16 지시).
+     처음부터 온통 붉으면 아직 적기도 전에 나무라는 꼴이 된다. */
+  .빠짐 { outline:2px solid #ef4444 !important; outline-offset:2px;
+          border-color:#ef4444 !important; border-radius:8px; }
+  .빠짐-묶음 { outline:2px solid #ef4444 !important; outline-offset:4px; border-radius:8px; }
   .row-btn { display:flex; gap:8px; margin-top:6px; }
   .row-btn .btn { flex:1; }
 
@@ -498,10 +503,29 @@ function 남은것모으기() {
   return 남;
 }
 
+/* 한 번 눌러 본 뒤부터 붉게 짚는다 */
+let 짚을까 = false;
+
+function 짚기(남은것) {
+  document.querySelectorAll('.빠짐, .빠짐-묶음')
+          .forEach(el => el.classList.remove('빠짐', '빠짐-묶음'));
+  if (! 짚을까) return;
+
+  남은것.forEach(n => {
+    const el = n.칸;
+    if (! el) return;
+    /* 라디오 한 알에 테두리를 두르면 점 하나만 붉어져 눈에 안 띈다 — 묶음을 두른다 */
+    const 묶음 = el.type === 'radio' ? el.closest('.card, .g-field, div') : null;
+    if (묶음) { 묶음.classList.add('빠짐-묶음'); }
+    else      { el.classList.add('빠짐'); }
+  });
+}
+
 function 다시셈() {
   const 남은것 = 남은것모으기();
   const 말 = document.getElementById('왜막힘');
   if (말) 말.textContent = 남은것.length ? '남은 것 — ' + 남은것.map(n => n.말).join(' · ') : '';
+  짚기(남은것);        // 채우는 대로 붉은 테두리가 하나씩 걷힌다
 }
 
 /* 빠뜨린 것을 창으로 알리고, 확인을 누르면 첫 칸으로 데려가 눈에 띄게 한다 */
@@ -528,12 +552,9 @@ function 빠진것알림(남은것) {
     덮개.remove();
     const 첫칸 = 남은것[0]?.칸;
     if (! 첫칸) return;
+
+    /* 붉은 테두리는 채울 때까지 남는다(짚기). 여기서는 데려가고 초점만 준다. */
     첫칸.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    /* 잠깐 테두리를 둘러 어디인지 알려 준다 — 글만으로는 긴 화면에서 못 찾는다 */
-    const 옛윤곽 = 첫칸.style.outline;
-    첫칸.style.outline = '3px solid #ef4444';
-    첫칸.style.outlineOffset = '2px';
-    setTimeout(() => { 첫칸.style.outline = 옛윤곽; }, 2400);
     if (typeof 첫칸.focus === 'function' && 첫칸.tagName !== 'CANVAS') {
       setTimeout(() => 첫칸.focus({ preventScroll: true }), 400);
     }
@@ -593,7 +614,12 @@ async function 보내기(짓) {
   /* 동의로 보낼 때만 본다 — 「동의하지 않음」은 채울 것이 없다 */
   if (짓 === 'agreed') {
     const 남은것 = 남은것모으기();
-    if (남은것.length) { 빠진것알림(남은것); return; }
+    if (남은것.length) {
+      짚을까 = true;          // 이제부터 채우지 않은 칸을 붉게 짚는다
+      짚기(남은것);
+      빠진것알림(남은것);
+      return;
+    }
   }
 
   if (짓 === 'declined' && !confirm('동의하지 않음으로 접수합니다. 계속할까요?')) return;
