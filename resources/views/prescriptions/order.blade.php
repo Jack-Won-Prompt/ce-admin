@@ -3624,7 +3624,12 @@ $calcDeposit  = $calcCopay;
                    화면에 적을 자리가 없었다. 공단 청구 도움 화면이 이 값을 쓴다. --}}
               <div class="rx-field-row">
                 <span class="rx-field-label">의사면허번호</span>
-                <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}" placeholder="예: 56553" style="flex:1;" />
+                {{-- 숫자만 받는다 (2026-09-16 지시). 면허번호는 숫자로만 매겨지는데
+                     붙임표나 한글이 섞여 들어오면 공단 서식에 그대로 실려 나간다.
+                     붙여넣기도 oninput 을 지나므로 함께 걸러진다. --}}
+                <input type="text" class="form-control" id="f-license-no" value="{{ $prescription->license_no ?? '' }}"
+                       placeholder="예: 56553" style="flex:1;" inputmode="numeric" maxlength="10"
+                       oninput="숫자만(this)" />
               </div>
               {{-- 사유 (요청서 7쪽 · 위드웍스와 같은 목록).
                    자유롭게 적게 두면 「미입금」과 「입금 안 됨」이 한 표에 섞여 세어지지
