@@ -1071,8 +1071,19 @@ $calcDeposit  = $calcCopay;
 @endphp
 
   {{-- Patient Info Bar --}}
-  <div id="patient-info-bar-ph" style="display:none;"></div>
-  <div id="patient-info-bar" style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:12px 16px;position:relative;z-index:50;">
+  {{-- 고정 표시를 처음부터 붙여 둔다 (2026-09-16 고침).
+
+       여태 JS 가 화면을 다 읽은 뒤에 info-bar-pinned 를 붙였다. 그래서 화면을 새로
+       읽는 동안 — 추가 주문은 폼 전송 뒤 새로고침이라 그 길을 탄다 — 정보바가
+       제자리에 붙지 않은 채 잠깐 보였고, 탭줄이 그 자리를 차지해 **정보바가 통째로
+       사라진 것처럼** 보였다.
+
+       CSS 로 처음부터 붙이면 그 사이가 없다. 자리표시자도 함께 세운다 — 정보바가
+       흐름에서 빠지므로 그만큼을 비워 두어야 아래가 위로 딸려 올라가지 않는다.
+       높이는 JS 가 다시 잰다(글자가 늦게 채워지면 줄이 늘어난다). --}}
+  <div id="patient-info-bar-ph" style="display:block;height:79px;"></div>
+  <div id="patient-info-bar" class="info-bar-pinned"
+       style="background:var(--gray-0);border-radius:12px;display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:12px 16px;z-index:50;">
 
     {{-- 시안 148:1304 — 왼쪽 아바타 54×54(r12 · gray-100), 오른쪽은 두 줄이다.
          장식이라 누를 수 없고 데이터도 쓰지 않는다. --}}
