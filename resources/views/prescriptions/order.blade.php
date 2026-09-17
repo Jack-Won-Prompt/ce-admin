@@ -5501,7 +5501,10 @@ async function openRegOverlay() {
     const d   = await res.json();
     if (!d.success) { showToast(d.message || '열지 못했습니다.', 'danger'); return; }
 
+    /* 자리는 처음 자리 위에 덮여 온다. 빼 둔 칸만 여기서 지운다 —
+       그래야 서식에 칸이 늘어도 예전에 맞춰 둔 자리를 잃지 않는다. */
     regOvFields = d.fields;
+    (d.off || []).forEach(k => { delete regOvFields[k]; });
 
     /* 값은 서버가 아는 것을 그대로 보여 준다. 빈 것은 붉게 세워 둔다 —
        빈 채로 얹으면 그 칸만 비어 공단에 나간다. */

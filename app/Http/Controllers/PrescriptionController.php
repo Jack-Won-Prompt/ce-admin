@@ -1401,11 +1401,23 @@ class PrescriptionController extends Controller
     {
         $this->이첨부인가($prescription, $attachment);
 
+        /* 적어 둔 자리는 **처음 자리 위에 덮는다** (2026-09-17 지시).
+
+           서식에 칸이 늘면(년월일을 더한 것처럼) 예전에 맞춰 둔 건에는 그 칸의 자리가
+           없다. 덮어 읽으면 새 칸은 처음 자리에 서고, 맞춰 둔 칸은 그대로다.
+
+           빼 둔 칸(off)은 따로 적는다 — 자리가 없는 것과 일부러 뺀 것을 가려야
+           예전 자리를 그대로 두고도 뺀 칸이 되살아나지 않는다. */
+        $적어둔 = $attachment->overlay_fields ?: [];
+        $자리   = $적어둔['fields'] ?? $적어둔;              // 옛 꼴(자리만 적힌 것)도 읽는다
+        $off    = $적어둔['off']    ?? [];
+
         return response()->json([
             'success'       => true,
             'source_url'    => route('prescriptions.attachments.overlaySource', [$prescription, $attachment]),
             'values'        => \App\Support\RegistrationOverlay::values($prescription),
-            'fields'        => $attachment->overlay_fields ?: \App\Support\RegistrationOverlay::defaults(),
+            'fields'        => array_merge(\App\Support\RegistrationOverlay::defaults(), $자리),
+            'off'           => array_values((array) $off),
             'applied'       => $attachment->신청인란얹었나(),
             'has_signature' => \App\Support\RegistrationOverlay::signature($prescription) !== null,
         ]);
@@ -1475,12 +1487,18 @@ class PrescriptionController extends Controller
             Storage::disk('public')->delete($attachment->file_path);
         }
 
+        /* 뺀 칸을 적어 둔다 — 다음에 열 때 되살아나지 않게 한다 */
+        $쓸수있는 = array_merge(\App\Support\RegistrationOverlay::글자칸, ['signature']);
+
         $attachment->forceFill([
             'file_path'           => $새경로,
             'file_mime_type'      => $그림['mime'],
             'file_size'           => strlen($그림['bytes']),
             'overlay_source_path' => $원본,
-            'overlay_fields'      => $자리,
+            'overlay_fields'      => [
+                'fields' => $자리,
+                'off'    => array_values(array_diff($쓸수있는, array_keys($자리))),
+            ],
         ])->save();
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
