@@ -2151,7 +2151,11 @@ $calcDeposit  = $calcCopay;
     <div id="viewerInner">
       {{-- 카드 머리 — 이전·다음과 처방번호, 오른쪽에 뷰어 조작 (시안 137:883) --}}
       <div class="vw-head">
-        <div class="vw-nav">
+        {{-- 처방번호와 이전ㆍ다음은 두지 않는다 (2026-09-17 지시).
+             처방번호는 화면 머리(빵부스러기)와 탭줄에 이미 서 있고, 이전ㆍ다음은
+             파일을 보는 자리에서 **건을 통째로 넘겨** 보던 것을 잃게 한다.
+             줄 자체는 남긴다 — 다른 자리(단추 잠그기)가 이 칸을 찾는다. --}}
+        <div class="vw-nav" style="display:none;">
           <button type="button" class="vw-nav-btn" onclick="prevRecord()" title="이전 처방전"><i class="fa-solid fa-chevron-left"></i></button>
           <span class="vw-rx">{{ $prescription->rx_number }}</span>
           <button type="button" class="vw-nav-btn" onclick="nextRecord()" title="다음 처방전"><i class="fa-solid fa-chevron-right"></i></button>
@@ -4928,6 +4932,18 @@ $calcDeposit  = $calcCopay;
     <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);
                 font-size:12px;color:var(--text-muted);flex-wrap:wrap;flex-shrink:0;">
       <span><i class="fa-solid fa-hand-pointer"></i> 칸을 끌어 서식의 자리에 맞추십시오.</span>
+      {{-- 그림 크기 — 서식 한 장을 통째로 창에 맞추면 아래쪽 ③ 신청인란이 너무 작아
+           자리를 맞추기 어렵다(2026-09-17 지시). 크게 키워 놓고 끌 수 있게 한다. --}}
+      <span style="display:inline-flex;align-items:center;gap:4px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(-1)" title="축소">
+          <i class="fa-solid fa-magnifying-glass-minus"></i>
+        </button>
+        <span id="regOvZoomLabel" style="min-width:42px;text-align:center;font-variant-numeric:tabular-nums;">100%</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(1)" title="확대">
+          <i class="fa-solid fa-magnifying-glass-plus"></i>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(0)" title="창에 맞추기">맞춤</button>
+      </span>
       <label style="display:inline-flex;align-items:center;gap:5px;">
         글자 크기
         <input type="range" id="regOvSize" min="6" max="28" step="1" value="12"
@@ -4949,8 +4965,8 @@ $calcDeposit  = $calcCopay;
 
     <div id="regOvStage" style="flex:1;overflow:auto;background:var(--gray-100);padding:16px;text-align:center;">
       <div id="regOvCanvas" style="position:relative;display:inline-block;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18);">
-        {{-- 서식 한 장이 통째로 보여야 아래쪽 ③ 신청인란을 찾아 맞출 수 있다 —
-             창 높이에 맞춘다(스캔은 세로가 길어 제 크기로 두면 아래가 잘린다) --}}
+        {{-- 처음에는 창에 맞춰 띄우고(아래 regOvFit), 곧바로 크게 키워 ③ 신청인란이
+             보이는 자리로 내린다. 크기는 위 확대ㆍ축소 단추가 정한다. --}}
         <img id="regOvImg" alt="등록신청서"
              style="display:block;max-width:100%;max-height:calc(100vh - 190px);" />
         {{-- 끌어 옮기는 칸들. 값은 서버가 아는 것을 그대로 보여 준다 — 여기서 고치지
@@ -5492,7 +5508,7 @@ async function openRegOverlay() {
 
     /* 바탕은 늘 얹기 전의 원본이다 — 얹은 그림 위에 또 얹으면 글자가 겹친다 */
     const img = document.getElementById('regOvImg');
-    img.onload = () => regOvPlace();
+    img.onload = () => { regOvFit(); regOvZoom(2); };
     img.src = `${REG_OV_BASE}/${regOvAtt}/overlay/source?t=${Date.now()}`;
 
     document.getElementById('regOverlayModal').style.display = 'block';
@@ -5503,6 +5519,55 @@ async function openRegOverlay() {
 
 function closeRegOverlay() {
   document.getElementById('regOverlayModal').style.display = 'none';
+}
+
+/* ── 그림 크기 ────────────────────────────────────────────
+   서식 한 장을 창에 맞추면 아래쪽 ③ 신청인란이 손톱만 해 자리를 맞출 수 없다
+   (2026-09-17 지시). 「맞춤」 크기를 1 로 두고 그 곱으로 키운다 —
+   칸의 자리는 그림 크기에 대한 몫이라, 키우면 칸도 함께 따라간다. */
+const REG_OV_ZOOMS = [1, 1.5, 2, 2.75, 3.5];
+let regOvFitW = 0, regOvZoomIdx = 0;
+
+/** 창에 맞춘 크기를 재어 둔다 — 키울 때의 기준이다 */
+function regOvFit() {
+  const img = document.getElementById('regOvImg');
+  img.style.width = '';
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = 'calc(100vh - 190px)';
+  regOvFitW = img.clientWidth;
+}
+
+/**
+ * @param {number} 어디로  -1 축소 · +1 확대 · 0 창에 맞추기 · 2 처음 크기(열 때)
+ */
+function regOvZoom(어디로) {
+  const img = document.getElementById('regOvImg');
+  if (!regOvFitW) regOvFit();
+
+  if (어디로 === 0)      regOvZoomIdx = 0;
+  else if (어디로 === 2) regOvZoomIdx = 2;          // 열 때는 두 배로 — 신청인란이 읽힌다
+  else regOvZoomIdx = Math.min(REG_OV_ZOOMS.length - 1, Math.max(0, regOvZoomIdx + 어디로));
+
+  const 배 = REG_OV_ZOOMS[regOvZoomIdx];
+
+  img.style.maxWidth  = 'none';
+  img.style.maxHeight = 'none';
+  img.style.width     = (regOvFitW * 배) + 'px';
+
+  document.getElementById('regOvZoomLabel').textContent = Math.round(배 * 100) + '%';
+
+  regOvPlace();
+  regOvShowFields();
+}
+
+/** 신청인란이 보이는 자리로 내려 준다 — 키우면 그 칸은 화면 밖에 있다 */
+function regOvShowFields() {
+  const stage = document.getElementById('regOvStage');
+  const chip  = document.querySelector('.reg-ov-chip[data-key="applicant"]');
+  if (!stage || !chip) return;
+
+  stage.scrollTop  = Math.max(0, chip.offsetTop  - stage.clientHeight / 2);
+  stage.scrollLeft = Math.max(0, chip.offsetLeft - stage.clientWidth  / 2);
 }
 
 /** 적어 둔 몫대로 칸을 놓는다 */
