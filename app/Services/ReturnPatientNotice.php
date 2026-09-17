@@ -40,6 +40,13 @@ class ReturnPatientNotice
     public const 환불     = 'return_refunded';
     public const 추가입금 = 'return_extra_payment';
 
+    /** 자리마다 끄고 켜는 설정 — 설정 › 서비스 설정 › 교환·반품 */
+    public const 설정 = [
+        self::접수     => 'returns.notice_on_received',
+        self::환불     => 'returns.notice_on_refunded',
+        self::추가입금 => 'returns.notice_on_extra_payment',
+    ];
+
     public function __construct(private readonly MessageSender $sender) {}
 
     /**
@@ -176,6 +183,12 @@ class ReturnPatientNotice
      */
     public function 자동안내(OrderReturn $return, string $code): string
     {
+        /* 꺼 두었으면 말도 하지 않는다 — 「보내지 못했습니다」는 못 보낸 것이지 안 보낸
+           것이 아니다. 끈 줄 알면서 그 말을 보면 무엇이 잘못됐나 찾게 된다. */
+        if (! config(self::설정[$code] ?? '', true)) {
+            return '';
+        }
+
         try {
             $out = $this->send($return, null, $code);
         } catch (\Throwable $e) {
