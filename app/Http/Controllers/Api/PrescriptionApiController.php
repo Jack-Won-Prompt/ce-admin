@@ -182,7 +182,9 @@ class PrescriptionApiController extends Controller
             ], 422);
         }
 
+        $열린요청 = $this->openRequestIds($prescription);
         $this->storePrescriptionImage($prescription, $file);
+        $this->tellReuploadArrived($prescription, $열린요청);
 
         return response()->json([
             'success'         => true,
@@ -195,13 +197,58 @@ class PrescriptionApiController extends Controller
     /** 정한 건에 서류 한 장을 붙인다. */
     private function attachTo(Prescription $prescription, $file, string $docType): JsonResponse
     {
+        $열린요청 = $this->openRequestIds($prescription);
         $this->storeAttachment($prescription, $file, $docType);
+        $this->tellReuploadArrived($prescription, $열린요청);
 
         return response()->json([
             'success'         => true,
             'message'         => PrescriptionAttachment::labelFor($docType) . ' 파일이 등록되었습니다.',
             'prescription_id' => $prescription->rx_number,
         ], 201);
+    }
+
+    /**
+     * 올리기 전에 열려 있던 재업로드 요청의 id.
+     *
+     * 자료가 붙으면 그 요청은 모델 자리에서 저절로 닫힌다(PrescriptionAttachment::booted,
+     * Prescription::booted). 무엇이 닫혔는지는 올린 뒤에야 알 수 있으므로, 올리기 전에
+     * 열려 있던 것을 적어 둔다.
+     *
+     * @return list<int>
+     */
+    private function openRequestIds(Prescription $prescription): array
+    {
+        return $prescription->reuploadRequests()->whereNull('resolved_at')->pluck('id')->all();
+    }
+
+    /**
+     * 되물었던 자료가 도착했으면 되물은 사람에게 알린다 (2026-09-17 지시).
+     *
+     * 웹에서 자료를 되묻고 나면 검수자는 목록을 다시 열어 봐야 올라왔는지 알았다.
+     * 알리지 못해도 업로드는 이미 끝났다 — 안에서 삼킨다.
+     *
+     * @param list<int> $열린요청
+     */
+    private function tellReuploadArrived(Prescription $prescription, array $열린요청): void
+    {
+        if (! $열린요청) {
+            return;
+        }
+
+        try {
+            $닫힌 = \App\Models\PrescriptionReuploadRequest::whereIn('id', $열린요청)
+                ->whereNotNull('resolved_at')->get();
+
+            if ($닫힌->isNotEmpty()) {
+                app(\App\Services\ReuploadArrivedNotice::class)
+                    ->arrived($prescription->refresh(), $닫힌);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[재업로드] 알림 준비 실패', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
