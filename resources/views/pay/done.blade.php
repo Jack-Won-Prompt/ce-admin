@@ -32,7 +32,7 @@
          환자가 입금하지 않고 창을 닫는다 --}}
     <div class="mark {{ $ok ? 'ok' : 'no' }}">{{ $ok ? ($waiting ? '!' : '✓') : '!' }}</div>
     <h1>@if(!$ok)결제하지 못했습니다@elseif($waiting)계좌가 나왔습니다@else결제가 끝났습니다@endif</h1>
-    <p>@if(!$ok){{ $message ?: '다시 시도하시거나 담당자에게 문의해 주십시오.' }}@elseif($waiting)아래 계좌로 입금해 주셔야 결제가 끝납니다.@else영수증은 문자로 안내드립니다.@endif</p>
+    <p>@if(!$ok){{ $message ?: '다시 시도하시거나 담당자에게 문의해 주십시오.' }}@elseif($waiting)아래 계좌로 입금해 주셔야 결제가 끝납니다.@else결제 내역을 문자로 안내드립니다.@endif</p>
 
     <div class="rows">
       <div class="row"><span class="k">주문번호</span><span class="v">{{ $link->order?->order_number }}</span></div>
