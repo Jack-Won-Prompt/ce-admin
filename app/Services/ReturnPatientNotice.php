@@ -80,7 +80,8 @@ class ReturnPatientNotice
         }
 
         return ($res['success'] ?? false)
-            ? ['sent' => true,  'message' => ($channel === 'alimtalk' ? '알림톡' : '문자') . '을 보냈습니다.']
+            /* 조사를 낱말에 맞춘다 — 「문자을 보냈습니다」로 나갔다 */
+            ? ['sent' => true,  'message' => $channel === 'alimtalk' ? '알림톡을 보냈습니다.' : '문자를 보냈습니다.']
             : ['sent' => false, 'message' => $res['message'] ?? '보내지 못했습니다.'];
     }
 
