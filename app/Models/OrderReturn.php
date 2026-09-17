@@ -486,6 +486,24 @@ class OrderReturn extends Model
             }
         }
 
+        /* 일부만 되돌린 교환에도 발행 단계를 끼운다 (2026-09-17 운영 시험에서 드러남).
+
+           절차서(2026-09-16)의 CASE 「일반(교환 일부 반품)」은 마지막 칸이 「세금계산서
+           및 현금영수증 취소 및 재발행」이다. 그런데 교환 흐름에는 발행 단계가 아예
+           없어, 60개 가운데 20개만 되돌린 교환은 돈이 줄었는데도 계산서를 손대라고
+           말해 주는 자리가 어디에도 없었다 — 담당자는 재발송까지 마치고 끝냈다.
+
+           사유가 「발행 불포함」이면 넣지 않는다. 물건만 바꿔 주는 교환은 처음부터
+           발행에 들지 않아 되돌릴 발행도 없다. */
+        if ($this->is_partial && ! in_array('credited', $flow, true)
+            && \App\Models\ReturnReason::includes($this->reason_code)) {
+            $at = array_search('done', $flow, true);
+
+            if ($at !== false) {
+                array_splice($flow, $at, 0, 'credited');
+            }
+        }
+
         return $flow;
     }
 

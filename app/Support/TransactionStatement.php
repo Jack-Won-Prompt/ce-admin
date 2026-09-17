@@ -128,7 +128,10 @@ final class TransactionStatement
             $pdf = self::render($order);
 
             Storage::disk('public')->put($att->file_path, $pdf);
-            $att->forceFill(['file_size' => strlen($pdf)])->save();
+            /* 손댄 때를 반드시 밀어 준다 — 길이가 같으면 Eloquent 는 바뀐 것이 없다고 보아
+               updated_at 을 그대로 두었다. 그러면 목록의 손댄 시각이 옛 자리에 멈추고,
+               LOT 이 닿았는지 가리는 잣대도 어긋난다 (2026-09-17 운영 시험에서 드러남). */
+            $att->forceFill(['file_size' => strlen($pdf), 'updated_at' => now()])->save();
 
             Log::info('[거래명세서] 교환에 맞춰 다시 그렸다', [
                 'order' => $order->order_number, 'attachment' => $att->id,
@@ -171,7 +174,10 @@ final class TransactionStatement
         try {
             $pdf = self::render($order);
             Storage::disk('public')->put($att->file_path, $pdf);
-            $att->forceFill(['file_size' => strlen($pdf)])->save();
+            /* 손댄 때를 반드시 밀어 준다 — 길이가 같으면 Eloquent 는 바뀐 것이 없다고 보아
+               updated_at 을 그대로 두었다. 그러면 목록의 손댄 시각이 옛 자리에 멈추고,
+               LOT 이 닿았는지 가리는 잣대도 어긋난다 (2026-09-17 운영 시험에서 드러남). */
+            $att->forceFill(['file_size' => strlen($pdf), 'updated_at' => now()])->save();
 
             Log::info('[거래명세서] 출고 LOT 이 닿아 다시 그렸다', [
                 'order' => $order->order_number, 'attachment' => $att->id,

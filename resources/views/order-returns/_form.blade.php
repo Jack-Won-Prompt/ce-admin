@@ -195,6 +195,12 @@
   const NONE_NOTE = '창고에 전달된 주문이 없습니다 — 교환ㆍ반품ㆍ취소는 창고에 넘긴 건만 접수합니다';
   /* 갈래별 단계·승인자는 모델이 정한다. 화면에 두 벌로 적으면 한쪽만 고쳐진다. */
   const DEFECTS   = @json(\App\Models\OrderReturn::DEFECT_REASONS);
+  /* 사유가 「금액조정 없음」이면 부분이라도 금액조정 단계가 서지 않는다
+     (OrderReturn::needsAdjust). 그것을 모르고 「금액조정 단계에서 적습니다」라고
+     안내해, 접수한 사람이 있지도 않은 단계를 찾았다 (2026-09-17 운영 시험). */
+  const ADJUSTS   = @json(collect(\App\Models\OrderReturn::REASONS)->keys()
+                          ->filter(fn ($c) => \App\Models\ReturnReason::adjusts($c))
+                          ->values()->all());
   const PATIENT_URL = @json(route('order-returns.patientSearch'));
 
   const $ = (id) => document.getElementById(id);
@@ -356,6 +362,9 @@
 
     // 환불 금액과 재배송지는 원 주문에서 끌어 온다 — 대개 그대로다
     if (!$('rtoRefundAmount').value) $('rtoRefundAmount').value = r.amount || '';
+    /* 주문을 새로 고르면 「사람이 손댔다」는 표시를 지운다 — 그래야 수량에 따라
+       다시 셈해 준다. */
+    delete $('rtoRefundAmount').dataset.손댐;
 
     // 아직 나가지 않은 주문이면 무엇으로 나가는지 미리 알린다
     $('rtoPreShipWrap').style.display = r.shipped ? 'none' : '';
@@ -391,6 +400,33 @@
     const rows = itemGrid.getData() ?? [];
     const partial = rows.some(i => Number(i.ordered_quantity) > 0
                                 && Number(i.quantity) < Number(i.ordered_quantity));
+
+    /* 되돌리는 몫만큼만 돌려준다 (2026-09-17 운영 시험에서 드러남).
+
+       여태 환불 금액에 원 주문의 본인부담을 통째로 앉혀 두고, 수량을 줄여도
+       그대로 두었다. 60개 가운데 30개만 되돌리는데 13,500원 전액이 서 있어,
+       그대로 접수하면 받은 돈보다 많이 돌려주게 된다. */
+    const 칸 = $('rtoRefundAmount');
+
+    if (칸 && !칸.dataset.손댐) {
+      const 몫 = rows.reduce((s, i) => {
+        const 시킨 = Number(i.ordered_quantity) || 0;
+        const 되돌 = Number(i.quantity) || 0;
+        const 부담 = Number(i.patient_copay ?? i.copay ?? 0) || 0;
+
+        return s + (시킨 > 0 ? Math.round(부담 * 되돌 / 시킨) : 0);
+      }, 0);
+
+      if (몫 > 0) 칸.value = 몫;
+    }
+
+    /* 사유가 금액조정에 들지 않으면 그 단계가 서지 않는다 — 있지도 않은 자리를
+       가리키지 않게 말을 바꾼다. */
+    const 조정 = ADJUSTS.includes($('rtoReason').value);
+
+    note.textContent = 조정
+      ? '부분입니다 — 되돌린 뒤 「금액조정」 단계에서 남는 금액을 적습니다.'
+      : '부분입니다 — 이 사유는 금액조정을 하지 않습니다(물건만 바꿉니다).';
     note.style.display = partial ? '' : 'none';
   }
 
@@ -421,7 +457,9 @@
 
   $('rtoType').addEventListener('change', syncType);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
-  $('rtoReason').addEventListener('change', () => { syncReason(); });
+  $('rtoReason').addEventListener('change', () => { syncReason(); syncPartialNote(); });
+  /* 담당자가 직접 적은 금액은 다시 셈해 덮어쓰지 않는다 */
+  $('rtoRefundAmount').addEventListener('input', function () { this.dataset.손댐 = '1'; });
   ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rtoFind(); } }));
 
