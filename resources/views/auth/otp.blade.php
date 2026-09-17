@@ -323,7 +323,7 @@
         <i class="bx bx-mobile-alt"></i>
       </div>
       <h2>2단계 인증으로<br><em>보안을 강화</em>합니다</h2>
-      <p>계정 보안을 위해 등록된 휴대폰으로 발송된<br>6자리 인증번호를 입력해 주세요.</p>
+      <p>계정 보안을 위해 등록된 휴대폰으로 발송된<br>6자리 인증번호를 입력해 주십시오.</p>
 
       <div class="otp-steps">
         <div class="otp-step">
@@ -332,7 +332,7 @@
         </div>
         <div class="otp-step">
           <div class="otp-step-num">2</div>
-          <div class="otp-step-text">수신한 인증번호를 5분 이내에 입력하세요</div>
+          <div class="otp-step-text">수신한 인증번호를 5분 이내에 입력하십시오</div>
         </div>
         <div class="otp-step">
           <div class="otp-step-num">3</div>
@@ -359,7 +359,7 @@
       <h1 class="auth-title">인증번호 확인</h1>
       <p class="auth-subtitle">
         <strong>{{ $maskedPhone }}</strong> 으로 발송된<br>
-        6자리 인증번호를 입력해 주세요.
+        6자리 인증번호를 입력해 주십시오.
       </p>
 
       {{-- 재발송 성공 알림 --}}

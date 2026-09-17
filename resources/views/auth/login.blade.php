@@ -349,7 +349,7 @@
     {{-- Headline --}}
     <div class="left-headline">
       <h1>처방전 관리의<br><em>새로운 기준</em></h1>
-      <p>OCR 자동화, 요양비 청구, 실시간 주문 연계까지<br>병원 업무를 하나의 플랫폼에서 처리하세요.</p>
+      <p>OCR 자동화, 요양비 청구, 실시간 주문 연계까지<br>병원 업무를 하나의 플랫폼에서 처리하십시오.</p>
     </div>
 
     {{-- Features --}}
@@ -401,7 +401,7 @@
       </div>
 
       <h1 class="auth-title">다시 오셨군요!</h1>
-      <p class="auth-subtitle">CE Admin에 접속할 계정을 선택하세요</p>
+      <p class="auth-subtitle">CE Admin에 접속할 계정을 선택하십시오</p>
 
       {{-- Error --}}
       @if ($errors->any())
@@ -422,7 +422,7 @@
         </svg>
         Microsoft 계정으로 로그인
       </a>
-      <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하세요</p>
+      <p class="btn-sso-sub">Coloplast 임직원은 Microsoft 계정(Entra ID)으로 로그인하십시오</p>
       </div>
 
       {{-- 아이디ㆍ비밀번호 길은 설정으로 여닫는다(설정 › 서비스 연동 설정 › 로그인).

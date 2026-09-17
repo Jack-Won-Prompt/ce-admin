@@ -70,7 +70,7 @@
   <div class="logo">
     <div class="logo-icon"><i class="bx bx-shield-quarter"></i></div>
     <h1>CE Admin</h1>
-    <p>관리자 계정을 설정해주세요</p>
+    <p>관리자 계정을 설정해 주십시오</p>
   </div>
 
   <div class="invite-info">
@@ -119,7 +119,7 @@
       <label class="form-label">비밀번호 확인 <span style="color:var(--danger);">*</span></label>
       <div class="pw-wrap">
         <input type="password" name="password_confirmation" id="pw2" class="form-control"
-               placeholder="비밀번호를 다시 입력하세요" required minlength="8">
+               placeholder="비밀번호를 다시 입력하십시오" required minlength="8">
         <button type="button" class="pw-toggle" onclick="togglePw('pw2','eye2')">
           <i class="bx bx-show" id="eye2"></i>
         </button>

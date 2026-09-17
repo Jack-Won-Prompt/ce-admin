@@ -57,14 +57,14 @@ class PrivacyConsentController extends Controller
         }
 
         $data = $request->validate($rules, [
-            'name.required'          => '성명을 입력해 주세요.',
-            'phone.required'         => '연락처를 입력해 주세요.',
-            'agree_general.in'         => '필수 동의 항목에 동의해 주세요.',
-            'agree_third_party.in'     => '필수 동의 항목에 동의해 주세요.',
-            'agree_sensitive.in'       => '필수 동의 항목에 동의해 주세요.',
-            'agree_third_sensitive.in' => '필수 동의 항목에 동의해 주세요.',
-            'insurance.required'     => '보험 구분을 선택해 주세요.',
-            'birth.required'         => '생년월일을 입력해 주세요.',
+            'name.required'          => '성명을 입력해 주십시오.',
+            'phone.required'         => '연락처를 입력해 주십시오.',
+            'agree_general.in'         => '필수 동의 항목에 동의해 주십시오.',
+            'agree_third_party.in'     => '필수 동의 항목에 동의해 주십시오.',
+            'agree_sensitive.in'       => '필수 동의 항목에 동의해 주십시오.',
+            'agree_third_sensitive.in' => '필수 동의 항목에 동의해 주십시오.',
+            'insurance.required'     => '보험 구분을 선택해 주십시오.',
+            'birth.required'         => '생년월일을 입력해 주십시오.',
         ]);
 
         $consent = PrivacyConsent::create(array_merge(

@@ -297,9 +297,9 @@
   }
 
   window.srxSaveAnswer = async function () {
-    if (!_sel) { showToast('SR 을 먼저 선택하세요.', 'warning'); return; }
+    if (!_sel) { showToast('SR 을 먼저 선택하십시오.', 'warning'); return; }
     const answer = document.getElementById('srxAnswer').value.trim();
-    if (!answer) { ceAlert('답변 내용을 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!answer) { ceAlert('답변 내용을 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srxAnswerBtn');
     btn.disabled = true;
@@ -324,7 +324,7 @@
   window.srxSubmit = async function () {
     const title   = document.getElementById('srxTitle').value.trim();
     const content = document.getElementById('srxContent').value.trim();
-    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srxSubmitBtn');
     btn.disabled = true;
@@ -357,8 +357,8 @@
 
   window.srDeleteSelected = async function () {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('삭제할 SR 을 체크하세요.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    if (!c.length)    { showToast('삭제할 SR 을 체크하십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
     if (!await ceConfirm(`'${c[0].title}' 을 삭제하시겠습니까?`, { tone: 'danger', confirmText: '삭제' })) return;
 
     try {

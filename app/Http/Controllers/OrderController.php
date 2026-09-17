@@ -853,7 +853,7 @@ class OrderController extends Controller
         if ($invoiceeType === '사업자' && strlen($invoiceeNum) !== 10) {
             return response()->json([
                 'success' => false,
-                'message' => '사업자등록번호 10자리를 입력해 주세요.',
+                'message' => '사업자등록번호 10자리를 입력해 주십시오.',
             ], 422);
         }
 

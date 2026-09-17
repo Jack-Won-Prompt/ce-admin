@@ -174,7 +174,7 @@ class OrderAmendService
             ])->save();
 
             return ['ok' => false, 'so_no' => null, 'state' => null,
-                    'message' => '원 판매주문은 취소했으나 새 주문을 세우지 못했습니다 — '
+                    'message' => '원 판매주문은 취소했으나 새 주문을 생성하지 못했습니다 — '
                                . $세움['message'] . ' 창고에 주문이 없는 상태입니다. 다시 연계해 주십시오.'];
         }
 

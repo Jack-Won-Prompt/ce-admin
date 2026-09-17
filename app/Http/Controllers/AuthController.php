@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         if (!$user->is_active) {
             return back()
-                ->withErrors(['email' => '비활성화된 계정입니다. 관리자에게 문의하세요.'])
+                ->withErrors(['email' => '비활성화된 계정입니다. 관리자에게 문의하십시오.'])
                 ->onlyInput('email');
         }
 
@@ -58,7 +58,7 @@ class AuthController extends Controller
            화면을 감추는 것만으로는 닫은 것이 아니다 — 요청은 직접 보낼 수 있다. */
         if (! config('auth.password_login.web', true) && $user->role !== 'admin') {
             return back()
-                ->withErrors(['email' => '아이디·비밀번호 로그인은 사용하지 않습니다. Microsoft 계정으로 로그인해 주세요.'])
+                ->withErrors(['email' => '아이디·비밀번호 로그인은 사용하지 않습니다. Microsoft 계정으로 로그인해 주십시오.'])
                 ->onlyInput('email');
         }
 
@@ -78,7 +78,7 @@ class AuthController extends Controller
 
         if (empty($user->phone)) {
             return back()
-                ->withErrors(['email' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하세요.'])
+                ->withErrors(['email' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하십시오.'])
                 ->onlyInput('email');
         }
 
@@ -145,7 +145,7 @@ class AuthController extends Controller
         if (($pending['attempts'] ?? 0) >= self::OTP_MAX_ATTEMPTS) {
             $request->session()->forget('2fa_pending');
             return redirect()->route('login')
-                ->withErrors(['email' => '인증 시도 횟수를 초과했습니다. 다시 로그인해 주세요.']);
+                ->withErrors(['email' => '인증 시도 횟수를 초과했습니다. 다시 로그인해 주십시오.']);
         }
 
         $otp = LoginOtpToken::where('user_id', $pending['user_id'])
@@ -227,7 +227,7 @@ class AuthController extends Controller
             return redirect()->route('auth.entra.redirect');
         }
 
-        return back()->withErrors(['email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.']);
+        return back()->withErrors(['email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하십시오.']);
     }
 
     /**
@@ -251,7 +251,7 @@ class AuthController extends Controller
         try {
             app(MessageService::class)->send(
                 $user->phone,
-                "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하세요.",
+                "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하십시오.",
                 $user->name,
             );
         } catch (\Throwable $e) {

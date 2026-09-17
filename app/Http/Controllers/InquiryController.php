@@ -338,7 +338,7 @@ class InquiryController extends Controller
         ]);
 
         if (! $request->filled('body') && ! $request->hasFile('attachment')) {
-            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해주세요.'], 422);
+            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해 주십시오.'], 422);
         }
 
         $inquiry = Inquiry::create([
@@ -368,7 +368,7 @@ class InquiryController extends Controller
         ]);
 
         if (! $request->filled('body') && ! $request->hasFile('attachment')) {
-            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해주세요.'], 422);
+            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해 주십시오.'], 422);
         }
 
         // 관리자 답변 → 상태를 answered로 갱신

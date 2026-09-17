@@ -83,7 +83,7 @@
   <div class="card-header">
     <div class="logo">CE ADMIN</div>
     <h1>신분증 제출</h1>
-    <p>건강보험 등록에 필요한 신분증을 올려주세요.</p>
+    <p>건강보험 등록에 필요한 신분증을 올려 주십시오.</p>
   </div>
 
   {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳다.
@@ -103,7 +103,7 @@
   <div class="card-body">
     <div class="who">
       <b>{{ $consent->patient_name }}</b> 님의 건강보험 등록 서류입니다.<br>
-      주민등록증ㆍ운전면허증ㆍ여권 등 사진이 있는 신분증을 올려주세요.
+      주민등록증ㆍ운전면허증ㆍ여권 등 사진이 있는 신분증을 올려 주십시오.
     </div>
 
     {{-- 본인 신분증 --}}
@@ -182,7 +182,7 @@ function pick(input, 자리) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) {
-    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려주세요.', { tone: 'warning' });
+    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.', { tone: 'warning' });
     input.value = ''; return;
   }
 
@@ -209,7 +209,7 @@ function pick(input, 자리) {
       refresh();
     };
     img.onerror = () => {
-      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해주세요.', { tone: 'warning' });
+      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.', { tone: 'warning' });
       input.value = '';
     };
     img.src = reader.result;
@@ -272,7 +272,7 @@ async function submitIdCard() {
     document.getElementById('resultMsg').textContent   =
       '신분증을 받았습니다. 확인 후 담당자가 안내드리겠습니다.';
   } catch (e) {
-    ceAlert('제출하지 못했습니다. 잠시 후 다시 시도해 주세요.', { tone: 'danger' });
+    ceAlert('제출하지 못했습니다. 잠시 후 다시 시도해 주십시오.', { tone: 'danger' });
     btn.disabled = false; btn.textContent = '제출';
   }
 }

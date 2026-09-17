@@ -85,7 +85,7 @@
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
   @if($errors->any())
-    <div class="status-err">입력값을 확인해 주세요: {{ implode(' / ', $errors->all()) }}</div>
+    <div class="status-err">입력값을 확인해 주십시오: {{ implode(' / ', $errors->all()) }}</div>
   @endif
 
   {{-- 앞 아이콘은 전역 .ds-grid-hint::before 가 그린다 — 나머지 설정 화면과 같은 부품 --}}
@@ -134,7 +134,7 @@
         <div class="ns-field full">
           <label>client_secret</label>
           <input type="password" name="client_secret" autocomplete="new-password"
-                 placeholder="{{ $hasSecret ? '저장됨 — 변경할 때만 입력하세요' : 'NICE 발급 client_secret' }}">
+                 placeholder="{{ $hasSecret ? '저장됨 — 변경할 때만 입력하십시오' : 'NICE 발급 client_secret' }}">
           <span class="ns-hint">
             보안상 저장된 값은 화면에 표시하지 않습니다. 비워 두고 저장하면 <b>기존 비밀키가 그대로 유지</b>됩니다.
           </span>
@@ -195,7 +195,7 @@
         {{-- 설명글은 단추와 같은 줄 왼쪽에 둔다 — 남는 자리를 먹어 단추를 오른쪽 끝으로 민다 --}}
         <div class="ns-hint ns-actions-note">
           연결 테스트는 <b>저장된</b> 자격증명으로 기관토큰·암호화토큰 발급까지만 확인합니다.
-          표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 바꿨다면 먼저 저장하세요.
+          표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 바꿨다면 먼저 저장하십시오.
         </div>
         <span id="testResult"></span>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 저장</button>

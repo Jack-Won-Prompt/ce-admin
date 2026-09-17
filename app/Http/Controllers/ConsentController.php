@@ -352,7 +352,7 @@ class ConsentController extends Controller
         ) {
             return response()->json([
                 'success' => false,
-                'message' => '본인확인을 먼저 완료해 주세요.',
+                'message' => '본인확인을 먼저 완료해 주십시오.',
             ], 422);
         }
 

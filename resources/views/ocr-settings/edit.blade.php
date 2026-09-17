@@ -57,7 +57,7 @@
     <div class="status-ok"><i class="bx bx-check-circle"></i> {{ session('status') }}</div>
   @endif
   @if($errors->any())
-    <div class="ocr-warn">입력값을 확인해 주세요: {{ implode(' / ', $errors->all()) }}</div>
+    <div class="ocr-warn">입력값을 확인해 주십시오: {{ implode(' / ', $errors->all()) }}</div>
   @endif
 
   <div class="ds-grid-hint ocr-note">
@@ -70,7 +70,7 @@
     <div class="ocr-warn">
       <i class="bx bx-error-circle"></i> <b>AWS Textract 자격증명이 설정되지 않아 OCR 이 동작하지 않습니다.</b>
       서버 <code>.env</code> 에 <code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code> /
-      <code>AWS_DEFAULT_REGION</code>(현재 <code>{{ $textractRegion }}</code>) 를 채워 주세요.
+      <code>AWS_DEFAULT_REGION</code>(현재 <code>{{ $textractRegion }}</code>) 를 채워 주십시오.
       자격증명이 없으면 처방전 업로드 시 OCR 오류가 발생합니다.
     </div>
   @endif

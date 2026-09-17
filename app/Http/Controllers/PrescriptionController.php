@@ -4287,7 +4287,7 @@ class PrescriptionController extends Controller
         }
 
         if (empty($request->documents) && empty($request->attachment_ids)) {
-            return response()->json(['success' => false, 'message' => '전송할 서류를 하나 이상 선택해주세요.'], 422);
+            return response()->json(['success' => false, 'message' => '전송할 서류를 하나 이상 선택해 주십시오.'], 422);
         }
 
         $docLabels = [

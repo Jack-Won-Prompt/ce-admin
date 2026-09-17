@@ -314,7 +314,7 @@
       <h1 class="hero-title">처방전 관리의<br><em>새로운 기준</em>을 만듭니다</h1>
       <p class="hero-desc">
         OCR 자동화·요양비 청구·실시간 주문 연계·기관 정책 모니터링까지<br>
-        병원 행정 업무를 하나의 플랫폼에서 처리하세요.
+        병원 행정 업무를 하나의 플랫폼에서 처리하십시오.
       </p>
       <div class="hero-actions">
         <a class="btn-primary" href="{{ route('login') }}"><i class="bx bx-log-in-circle"></i> 지금 시작하기</a>
@@ -376,7 +376,7 @@
     <div class="section-inner">
       <div class="section-tag"><i class="bx bx-git-branch"></i> 업무 흐름</div>
       <h2 class="section-title">처방 접수부터 완료까지<br>5단계로 끝납니다</h2>
-      <p class="section-desc">복잡한 의료기기 급여 청구 업무를 표준화된 워크플로우로 처리하세요.</p>
+      <p class="section-desc">복잡한 의료기기 급여 청구 업무를 표준화된 워크플로우로 처리하십시오.</p>
       <div class="workflow-steps">
         <div class="workflow-step">
           <div class="workflow-num">1</div>
@@ -428,8 +428,8 @@
   <section class="cta-section" id="login">
     <div class="cta-box">
       <div class="cta-icon"><i class="bx bx-rocket"></i></div>
-      <h2 class="cta-title">지금 바로 시작하세요</h2>
-      <p class="cta-desc">CE Admin은 Coloplast Korea 임직원 전용 플랫폼입니다.<br>계정이 없으신 경우 IT 관리자에게 문의하세요.</p>
+      <h2 class="cta-title">지금 바로 시작하십시오</h2>
+      <p class="cta-desc">CE Admin은 Coloplast Korea 임직원 전용 플랫폼입니다.<br>계정이 없으신 경우 IT 관리자에게 문의하십시오.</p>
       <a class="btn-primary" href="{{ route('login') }}" style="font-size:16px;padding:15px 40px;display:inline-flex;">
         <i class="bx bx-log-in-circle" style="font-size:20px;"></i> 로그인하기
       </a>

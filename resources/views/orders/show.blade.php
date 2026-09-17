@@ -592,7 +592,7 @@
         <div class="card-body">
           @if(!$taxColExists)
             <div class="alert alert-warning" style="font-size:12px;margin-bottom:0;">
-              DB 마이그레이션 필요 — <code>tax_receipt_SQL.txt</code>를 실행해주세요.
+              DB 마이그레이션 필요 — <code>tax_receipt_SQL.txt</code>를 실행해 주십시오.
             </div>
           @else
 
@@ -1462,8 +1462,8 @@ async function submitCashReceipt() {
   const identifier = document.getElementById('cr_identifier').value.trim();
   const amount     = parseFloat(document.getElementById('cr_amount').value) || 0;
 
-  if (!identifier) { showToast('식별번호(휴대폰/사업자)를 입력해주세요.', 'warning'); return; }
-  if (amount <= 0)  { showToast('금액을 입력해주세요.', 'warning'); return; }
+  if (!identifier) { showToast('식별번호(휴대폰/사업자)를 입력해 주십시오.', 'warning'); return; }
+  if (amount <= 0)  { showToast('금액을 입력해 주십시오.', 'warning'); return; }
 
   const res = await apiRequest(ORDER_URL + '/cash-receipt', 'POST', {
     cash_receipt_type:       type,

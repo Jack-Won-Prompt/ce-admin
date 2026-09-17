@@ -136,7 +136,7 @@ class MessageController extends Controller
         if (count($receivers) > self::MAX_RECIPIENTS) {
             return response()->json([
                 'success' => false,
-                'message' => '한 번에 ' . number_format(self::MAX_RECIPIENTS) . '명까지 보낼 수 있습니다. 조건을 좁혀 주세요. (지금 '
+                'message' => '한 번에 ' . number_format(self::MAX_RECIPIENTS) . '명까지 보낼 수 있습니다. 조건을 좁혀 주십시오. (지금 '
                            . number_format(count($receivers)) . '명)',
             ], 422);
         }

@@ -29,13 +29,13 @@
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">제목 <span>*</span></label>
-          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="공지사항 제목을 입력하세요" required>
+          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="공지사항 제목을 입력하십시오" required>
           @error('title')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">내용 <span>*</span></label>
-          <textarea name="content" class="form-control" rows="14" placeholder="공지사항 내용을 입력하세요" required>{{ old('content') }}</textarea>
+          <textarea name="content" class="form-control" rows="14" placeholder="공지사항 내용을 입력하십시오" required>{{ old('content') }}</textarea>
           @error('content')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
 

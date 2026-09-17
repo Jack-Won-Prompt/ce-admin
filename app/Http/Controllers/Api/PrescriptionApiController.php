@@ -62,14 +62,14 @@ class PrescriptionApiController extends Controller
             'doc_type'   => ['required', 'string', Rule::in(UploadDocTypes::codes())],
             'memo'       => ['nullable', 'string', 'max:500'],
         ], [
-            'prescription_image.required'  => '처방전 이미지를 첨부해주세요.',
+            'prescription_image.required'  => '처방전 이미지를 첨부해 주십시오.',
             'prescription_image.mimes'     => 'JPG, PNG, PDF, HEIC 형식만 지원합니다.',
             'prescription_image.max'       => '파일 크기는 10MB 이하여야 합니다.',
-            'patient_id.required_without'  => '환자를 먼저 선택해주세요.',
+            'patient_id.required_without'  => '환자를 먼저 선택해 주십시오.',
             'patient_id.exists'            => '존재하지 않는 환자입니다.',
-            'doc_type.required'            => '서류 유형을 선택해주세요.',
+            'doc_type.required'            => '서류 유형을 선택해 주십시오.',
             'doc_type.in'                  => '올바른 서류 유형이 아닙니다.',
-            'memo.max'                     => '메모는 500자 이하로 입력해주세요.',
+            'memo.max'                     => '메모는 500자 이하로 입력해 주십시오.',
         ]);
 
         if ($validator->fails()) {
@@ -618,7 +618,7 @@ class PrescriptionApiController extends Controller
         return response()->json([
             'success' => false,
             'message' => $mine
-                ? "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하세요."
+                ? "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하십시오."
                 : '본인이 업로드한 처방전만 수정할 수 있습니다.',
         ], 403);
     }

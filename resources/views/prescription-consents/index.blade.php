@@ -480,9 +480,9 @@
   window.pcSendNew = async function () {
     const mobile = document.getElementById('pcNewMobile').value.trim();
     const name   = document.getElementById('pcNewName').value.trim();
-    if (!name)   { showToast('이름을 입력해주세요.', 'warning'); return; }
+    if (!name)   { showToast('이름을 입력해 주십시오.', 'warning'); return; }
     if (mobile.replace(/\D/g, '').length < 9) {
-      showToast('수신 번호를 다시 확인해주세요.', 'warning'); return;
+      showToast('수신 번호를 다시 확인해 주십시오.', 'warning'); return;
     }
 
     const btn = document.getElementById('pcNewSend');
@@ -580,7 +580,7 @@
     const mobile = document.getElementById('pcSmsMobile').value.trim();
     const name   = document.getElementById('pcSmsName').value.trim();
     if (mobile.replace(/\D/g, '').length < 9) {
-      showToast('수신 번호를 다시 확인해주세요.', 'warning'); return;
+      showToast('수신 번호를 다시 확인해 주십시오.', 'warning'); return;
     }
 
     const btn = document.getElementById('pcSmsSend');

@@ -135,7 +135,7 @@
         <div class="bo-field">
           <label class="ds-field-label">&nbsp;</label>
           <div class="bo-hint">읍ㆍ면ㆍ동 이름은 시군구가 달라도 겹칩니다(중동ㆍ신흥동…).
-            시군구를 적어 두면 그것으로 먼저 가립니다.</div>
+            시군구를 입력해 두면 시군구를 우선 기준으로 구분합니다.</div>
         </div>
         <div class="bo-field full">
           <label class="ds-field-label">관할 읍ㆍ면ㆍ동 <span class="bo-opt">(비우면 시군구 전체)</span></label>

@@ -256,7 +256,7 @@
       <p class="greeting">
         안녕하세요,<br>
         <strong>{{ $inviter->name }}</strong>님으로부터 CE Admin 관리자 시스템 초대를 받으셨습니다.<br>
-        아래 초대 정보를 확인하신 후 버튼을 클릭해 계정을 설정해 주세요.
+        아래 초대 정보를 확인하신 후 버튼을 클릭해 계정을 설정해 주십시오.
       </p>
 
       @if($personalMessage)
@@ -287,7 +287,7 @@
       <p class="footer-brand">CE Admin</p>
       <p class="footer-text">
         이 메일은 CE Admin 시스템에서 자동 발송된 공식 초대 메일입니다.<br>
-        문의 사항은 시스템 관리자에게 연락해 주세요.
+        문의 사항은 시스템 관리자에게 연락해 주십시오.
       </p>
     </div>
 

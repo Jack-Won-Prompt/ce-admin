@@ -597,8 +597,8 @@
   });
   window.cbRowAction = function (action) {
     const c = window.__cbGrid.getCheckedRows();
-    if (!c.length)   { showToast('행을 먼저 체크하세요.', 'warning'); return; }
-    if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
+    if (!c.length)   { showToast('행을 먼저 체크하십시오.', 'warning'); return; }
+    if (c.length > 1){ showToast('한 건만 선택하십시오.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { cbOpenRow(r); return; }
     if (r.status === 'pending') { showToast('아직 발행되지 않은 건입니다 — 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
@@ -690,8 +690,8 @@ async function issueCashbill() {
   const email      = document.getElementById('email').value.trim();
   const hp         = document.getElementById('hp').value.trim();
 
-  if (!mgtKey)    { showToast('관리번호를 입력하세요.', 'danger'); return; }
-  if (!identNum)  { showToast('신분확인번호를 입력하세요.', 'danger'); return; }
+  if (!mgtKey)    { showToast('관리번호를 입력하십시오.', 'danger'); return; }
+  if (!identNum)  { showToast('신분확인번호를 입력하십시오.', 'danger'); return; }
   if (parseInt(totalAmt) <= 0) { showToast('합계금액은 0보다 커야 합니다.', 'danger'); return; }
 
   const btn = document.getElementById('issue-btn');
@@ -905,7 +905,7 @@ async function syncFromPopbill() {
   const ed  = toApiDate(document.getElementById('f-end').value);
   const btn = document.getElementById('sync-btn');
 
-  if (!sd || !ed) { showToast('조회 기간을 먼저 설정하세요.', 'danger'); return; }
+  if (!sd || !ed) { showToast('조회 기간을 먼저 설정하십시오.', 'danger'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> 동기화 중…';
@@ -1185,7 +1185,7 @@ async function openPrint(mgtKey) {
 </html>`;
 
   const w = window.open('', '_blank', 'width=780,height=920,scrollbars=yes');
-  if (!w) { showToast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.', 'danger', 5000); return; }
+  if (!w) { showToast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하십시오.', 'danger', 5000); return; }
   w.document.write(html);
   w.document.close();
   w.focus();
@@ -1220,9 +1220,9 @@ async function confirmRevoke() {
   const orgConfirm= document.getElementById('cancel-org-confirm').value.trim();
   const orgDate   = toApiDate(document.getElementById('cancel-org-date').value);
 
-  if (!mgtKey)     { showToast('취소 관리번호를 입력하세요.', 'danger'); return; }
-  if (!orgConfirm) { showToast('원본 국세청승인번호를 입력하세요.', 'danger'); return; }
-  if (!orgDate)    { showToast('원본 거래일자를 입력하세요.', 'danger'); return; }
+  if (!mgtKey)     { showToast('취소 관리번호를 입력하십시오.', 'danger'); return; }
+  if (!orgConfirm) { showToast('원본 국세청승인번호를 입력하십시오.', 'danger'); return; }
+  if (!orgDate)    { showToast('원본 거래일자를 입력하십시오.', 'danger'); return; }
 
   const btn = document.getElementById('cancel-confirm-btn');
   btn.disabled = true;

@@ -4,7 +4,7 @@
 @section('content')
 <div class="hero">
   <h1>개인정보 수집·이용 동의서</h1>
-  <p>해당하는 항목을 선택해 주세요 · 콜로플라스트 코리아</p>
+  <p>해당하는 항목을 선택해 주십시오 · 콜로플라스트 코리아</p>
 </div>
 
 <div class="container">

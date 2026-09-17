@@ -313,7 +313,7 @@ window.HELP_TOUR_STEPS = [
        .status-tabs 는 마크업에 없어 아무것도 가리키지 못했다. */
     selector: '.ds-filter-field:has(select[name="status"]), select[name="status"]',
     title: '상태 고르기',
-    body: '처방전을 상태별로 필터링합니다. <b>검수 필요</b> 탭을 먼저 확인하여 처리 대기 중인 처방전을 처리하세요.'
+    body: '처방전을 상태별로 필터링합니다. <b>검수 필요</b> 탭을 먼저 확인하여 처리 대기 중인 처방전을 처리하십시오.'
   },
   {
     selector: '.ds-filter-card',
@@ -444,8 +444,8 @@ window.HELP_TOUR_STEPS = [
 
   window.prescriptionViewDetail = function () {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('상세를 볼 행을 체크하세요.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    if (!c.length)    { showToast('상세를 볼 행을 체크하십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
     openReviewTab(c[0].rx_number);
   };
 

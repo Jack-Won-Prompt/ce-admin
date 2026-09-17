@@ -1104,8 +1104,8 @@
   // 한 건만 체크됐는지 검증 후 해당 행 반환 (아니면 경고 후 null)
   function oneChecked() {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('대상 행을 체크하세요.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return null; }
+    if (!c.length)    { showToast('대상 행을 체크하십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return null; }
     return c[0];
   }
 

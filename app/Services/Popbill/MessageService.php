@@ -367,7 +367,7 @@ class MessageService extends PopbillBaseService
             ]);
 
             if (empty($list)) {
-                \Illuminate\Support\Facades\Log::warning('[Popbill][SMS] 등록된 발신번호 없음 — 팝빌 콘솔에서 발신번호를 등록하세요.');
+                \Illuminate\Support\Facades\Log::warning('[Popbill][SMS] 등록된 발신번호 없음 — 팝빌 콘솔에서 발신번호를 등록하십시오.');
                 return $this->senderNum;
             }
 

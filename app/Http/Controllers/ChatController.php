@@ -266,7 +266,7 @@ class ChatController extends Controller
         )));
 
         if (empty($data['body']) && ! $files) {
-            return response()->json(['error' => '내용을 입력해주세요.'], 422);
+            return response()->json(['error' => '내용을 입력해 주십시오.'], 422);
         }
 
         /* 첫 장이 글을 싣는다. 뒷장은 글 없이 파일만 — 같은 글이 장수만큼 되풀이되면

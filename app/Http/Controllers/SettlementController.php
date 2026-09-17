@@ -915,7 +915,7 @@ class SettlementController extends Controller
 
         return $smsSent
             ? response()->json(['success' => true, 'message' => '안내 SMS를 재발송했습니다.'])
-            : response()->json(['success' => false, 'message' => 'SMS 발송에 실패했습니다. 환자 연락처를 확인하세요.'], 422);
+            : response()->json(['success' => false, 'message' => 'SMS 발송에 실패했습니다. 환자 연락처를 확인하십시오.'], 422);
     }
 
     // ─────────────────────────────────────────────────────────────

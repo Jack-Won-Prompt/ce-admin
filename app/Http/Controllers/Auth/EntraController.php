@@ -178,7 +178,7 @@ class EntraController extends Controller
         }
 
         return redirect()->route('login')->withErrors([
-            'email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.',
+            'email' => 'SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하십시오.',
         ]);
     }
 

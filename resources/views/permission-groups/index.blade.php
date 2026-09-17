@@ -150,7 +150,7 @@
                style="height:32px;padding:0 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:400;line-height:20px;font-family:inherit;">
       </div>
       <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:12px;line-height:18px;">
-        만든 뒤 권한 편집 탭에서 페이지별 동작을 지정하세요. 처음에는 아무 권한도 없는 상태로 생성됩니다.
+        만든 뒤 권한 편집 탭에서 페이지별 동작을 지정하십시오. 처음에는 아무 권한도 없는 상태로 생성됩니다.
       </div>
     </div>
     <div class="modal-ft">
@@ -215,8 +215,8 @@
 
   function pickOne(label) {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast(label + '할 그룹을 체크하세요.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 개만 선택하세요.', 'warning'); return null; }
+    if (!c.length)    { showToast(label + '할 그룹을 체크하십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 개만 선택하십시오.', 'warning'); return null; }
     return c[0];
   }
   window.editSelected   = function () { const r = pickOne('편집'); if (r) loadGroup(r.id); };
@@ -243,7 +243,7 @@
 
   window.createGroup = async function () {
     const name = document.getElementById('newName').value.trim();
-    if (!name) { ceAlert('그룹명을 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!name) { ceAlert('그룹명을 입력해 주십시오.', { tone: 'warning' }); return; }
     const btn = document.getElementById('createBtn');
     btn.disabled = true;
     try {
@@ -358,7 +358,7 @@
     if (_cur.locked) { ceAlert('기본 제공 그룹은 수정할 수 없습니다.', { tone: 'warning' }); return; }
 
     const name = document.getElementById('pgName').value.trim();
-    if (!name) { ceAlert('그룹명을 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!name) { ceAlert('그룹명을 입력해 주십시오.', { tone: 'warning' }); return; }
 
     // { 페이지키: [액션, ...] }
     const matrix = {};

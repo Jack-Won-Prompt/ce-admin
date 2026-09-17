@@ -18,7 +18,7 @@ class PatientApiController extends Controller
         if (mb_strlen($q) < 2) {
             return response()->json([
                 'success'  => false,
-                'message'  => '두 글자 이상 입력해주세요.',
+                'message'  => '두 글자 이상 입력해 주십시오.',
                 'patients' => [],
             ]);
         }
@@ -97,7 +97,7 @@ class PatientApiController extends Controller
             'resident_no' => 'nullable|string|max:20',
             'mobile'      => 'nullable|string|max:30',
         ], [
-            'name.required' => '이름을 입력해주세요.',
+            'name.required' => '이름을 입력해 주십시오.',
         ]);
 
         $patient = Patient::create($data);

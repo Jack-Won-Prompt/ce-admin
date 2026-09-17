@@ -234,7 +234,7 @@
   {{-- 구입정보 --}}
   <div class="sec">
     <span class="sec-name">자가도뇨 소모성재료 구입정보</span>
-    <span class="sec-help">※ 입력 시 제품등록은 필수사항입니다. 제품등록 후 저장하세요</span>
+    <span class="sec-help">※ 입력 시 제품등록은 필수사항입니다. 제품등록 후 저장하십시오</span>
     <span class="sec-right">제품등록내역등록</span>
   </div>
   <table class="form">
@@ -444,7 +444,7 @@ async function copyBox(el) {
   copied.add(el.dataset.key);
   sessionStorage.setItem(STORE, JSON.stringify([...copied]));
   progress();
-  toast('복사했습니다 — 공단 화면 같은 자리에 붙여넣으십시오');
+  toast('복사했습니다 — 공단 화면의 해당 항목에 붙여넣으십시오');
 }
 
 function progress() {

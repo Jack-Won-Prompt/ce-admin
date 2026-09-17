@@ -112,7 +112,7 @@ class TossClient
     protected function request(string $method, string $path, array $data = []): array
     {
         if (!$this->isConfigured()) {
-            throw new TossApiException('토스페이먼츠 API 키가 설정되지 않았습니다. .env의 TOSS_SECRET_KEY를 확인하세요.');
+            throw new TossApiException('토스페이먼츠 API 키가 설정되지 않았습니다. .env의 TOSS_SECRET_KEY를 확인하십시오.');
         }
 
         $url       = $this->baseUrl . $path;

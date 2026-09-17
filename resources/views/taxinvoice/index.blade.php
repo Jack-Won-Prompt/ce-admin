@@ -29,7 +29,7 @@
 </div>
 <div class="help-section">
   <div class="help-section-title">유의사항</div>
-  <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-error"></i></div><div class="help-item-text">발행 후 취소하려면 "발행 취소" 버튼을 사용하세요. 국세청 신고 후에는 취소가 제한될 수 있습니다.</div></div>
+  <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-error"></i></div><div class="help-item-text">발행 후 취소하려면 "발행 취소" 버튼을 사용하십시오. 국세청 신고 후에는 취소가 제한될 수 있습니다.</div></div>
   <div class="help-item"><div class="help-item-icon" style="background:var(--danger-light);color:var(--danger);"><i class="bx bx-error"></i></div><div class="help-item-text">테스트 환경에서는 실제 국세청으로 전송되지 않습니다.</div></div>
 </div>
 @endsection
@@ -698,8 +698,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   });
   window.taxRowAction = function (action) {
     const c = window.__taxGrid.getCheckedRows();
-    if (!c.length)   { showToast('행을 먼저 체크하세요.', 'warning'); return; }
-    if (c.length > 1){ showToast('한 건만 선택하세요.', 'warning'); return; }
+    if (!c.length)   { showToast('행을 먼저 체크하십시오.', 'warning'); return; }
+    if (c.length > 1){ showToast('한 건만 선택하십시오.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { taxOpenRow(r); return; }
     if (r.record_type === 'pending') { showToast('아직 발행되지 않은 건입니다 — 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
@@ -912,9 +912,9 @@ async function issueInvoice() {
   const eeCorpNum= document.getElementById('ee-corp-num').value.trim().replace(/\D/g,'');
   const eeName   = document.getElementById('ee-corp-name').value.trim();
 
-  if (!mgtKey)    { showToast('관리번호를 입력하세요.', 'danger'); return; }
-  if (!erCorpNum || !erName) { showToast('공급자 사업자번호와 상호를 입력하세요.', 'danger'); return; }
-  if (!eeCorpNum || !eeName) { showToast('공급받는자 사업자번호와 상호를 입력하세요.', 'danger'); return; }
+  if (!mgtKey)    { showToast('관리번호를 입력하십시오.', 'danger'); return; }
+  if (!erCorpNum || !erName) { showToast('공급자 사업자번호와 상호를 입력하십시오.', 'danger'); return; }
+  if (!eeCorpNum || !eeName) { showToast('공급받는자 사업자번호와 상호를 입력하십시오.', 'danger'); return; }
 
   // 품목 수집
   const details = [];

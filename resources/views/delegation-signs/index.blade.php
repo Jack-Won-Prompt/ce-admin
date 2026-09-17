@@ -16,7 +16,7 @@
   <div class="help-section-title">밟는 차례</div>
   <div class="help-item"><div class="help-item-text"><strong>① 명단 올리기</strong>
     받은 명단(위임 필요 리스트)을 그대로 올립니다. 첫 줄의 머리글을 읽어 칸을 맞추므로
-    차례가 달라도 됩니다. 쉼표ㆍ탭 어느 쪽으로 나뉘어도 읽고, 한글 인코딩도 가립니다.
+    차례가 달라도 됩니다. 쉼표ㆍ탭 어느 쪽으로 구분되어 있어도 읽으며, 한글 인코딩도 자동으로 인식합니다.
     같은 이름ㆍ같은 번호가 이미 있으면 행을 새로 생성하지 않고 명단 값만 갱신합니다.</div></div>
   <div class="help-item"><div class="help-item-text"><strong>② 발송</strong>
     줄의 ［발송］을 누르면 보낼 글을 미리 보여 줍니다. 문자가 나가고 30분 동안 열립니다.</div></div>

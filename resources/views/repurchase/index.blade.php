@@ -458,7 +458,7 @@ function loadDay(cell) {
     `).join('');
   })
   .catch(() => {
-    body.innerHTML = '<div style="padding:16px;color:var(--danger);">불러오기 실패. 다시 시도해주세요.</div>';
+    body.innerHTML = '<div style="padding:16px;color:var(--danger);">불러오기 실패. 다시 시도해 주십시오.</div>';
   });
 }
 

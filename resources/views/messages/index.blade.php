@@ -272,7 +272,7 @@
         <div id="msBodyWrap" class="ms-field">
           <label class="ds-field-label ms-body-label">본문 <span id="msLen" class="ms-count"></span></label>
           <textarea id="msBody" class="form-control ms-textarea" rows="7"
-                    oninput="msUpdateLen()" placeholder="보낼 내용을 입력하세요"></textarea>
+                    oninput="msUpdateLen()" placeholder="보낼 내용을 입력하십시오"></textarea>
           <div class="ms-hint">
             #{고객명} 을 쓰면 받는 분 이름으로 바뀝니다.
           </div>
@@ -347,7 +347,7 @@
       </div>
       <div style="font-size:11px;color:var(--alert-500);line-height:1.6;">
         팝빌에 등록해 <b>카카오 승인을 받은</b> 템플릿 코드입니다. 이 칸이 비어 있으면
-        알림톡은 나가지 않습니다(발송을 누르면 그 자리에서 알려 줍니다).
+        알림톡은 발송되지 않습니다(발송을 누르면 화면에서 안내합니다).
       </div>
     </div>
     <div class="ms-field">
@@ -461,7 +461,7 @@
     const rows = Object.entries(TPL[channel] ?? {});
     if (!rows.length) {
       list.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--gray-500);">'
-        + '등록된 유형이 없습니다. 위 <b>메시지 유형</b> 탭에서 추가하세요.</div>';
+        + '등록된 유형이 없습니다. 위 <b>메시지 유형</b> 탭에서 추가하십시오.</div>';
       return;
     }
     list.innerHTML = rows.map(([code, t]) => `
@@ -497,8 +497,8 @@
     const checked = grid.getCheckedRows();
     const body    = document.getElementById('msBody').value.trim();
 
-    if (scope === 'selected' && !checked.length) { showToast('보낼 거래처를 체크하세요.', 'warning'); return; }
-    if (channel === 'sms'  && !body)             { showToast('본문을 입력하세요.', 'warning'); return; }
+    if (scope === 'selected' && !checked.length) { showToast('보낼 거래처를 체크하십시오.', 'warning'); return; }
+    if (channel === 'sms'  && !body)             { showToast('본문을 입력하십시오.', 'warning'); return; }
     if (channel === 'alimtalk' && !tplCode)      { showToast('메시지 유형을 선택하십시오.', 'warning'); return; }
 
     const n = scope === 'all'

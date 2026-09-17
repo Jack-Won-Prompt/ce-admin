@@ -149,7 +149,7 @@ async function copyRow(btn) {
   mark(row);
   btn.textContent = '복사됨';
   btn.classList.add('done');
-  toast('복사했습니다 — 공단 화면 같은 자리에 붙여넣으십시오');
+  toast('복사했습니다 — 공단 화면의 해당 항목에 붙여넣으십시오');
 }
 
 /* 공단 화면에서 Tab 으로 옮겨 가며 연속 입력할 때 쓴다. 다만 탭 순서가 화면 배치와 다를 수

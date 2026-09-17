@@ -12,7 +12,7 @@
 
   @if($errors->any())
     <div class="errbox">
-      입력 내용을 확인해 주세요.
+      입력 내용을 확인해 주십시오.
       <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
     </div>
   @endif

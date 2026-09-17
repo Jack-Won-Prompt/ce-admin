@@ -78,7 +78,7 @@ class PermissionGroupController extends Controller
         if ($group->isLocked()) {
             return response()->json([
                 'success' => false,
-                'message' => '기본 제공 그룹(전체 권한)은 수정할 수 없습니다. 새 그룹을 만들어 사용하세요.',
+                'message' => '기본 제공 그룹(전체 권한)은 수정할 수 없습니다. 새 그룹을 만들어 사용하십시오.',
             ], 422);
         }
 
@@ -136,7 +136,7 @@ class PermissionGroupController extends Controller
         if ($count > 0) {
             return response()->json([
                 'success' => false,
-                'message' => "이 그룹에 소속된 사용자가 {$count}명 있습니다. 먼저 다른 그룹으로 옮겨 주세요.",
+                'message' => "이 그룹에 소속된 사용자가 {$count}명 있습니다. 먼저 다른 그룹으로 옮겨 주십시오.",
             ], 422);
         }
 

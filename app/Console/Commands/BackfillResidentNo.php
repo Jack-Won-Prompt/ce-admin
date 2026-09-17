@@ -30,7 +30,7 @@ class BackfillResidentNo extends Command
     public function handle(): int
     {
         if (!config('rrn.key') || !config('rrn.pepper')) {
-            $this->error('RRN_ENCRYPTION_KEY / RRN_HASH_PEPPER 가 없습니다. .env 를 먼저 설정하세요.');
+            $this->error('RRN_ENCRYPTION_KEY / RRN_HASH_PEPPER 가 없습니다. .env 를 먼저 설정하십시오.');
 
             return self::FAILURE;
         }
@@ -108,7 +108,7 @@ class BackfillResidentNo extends Command
         }
 
         $this->newLine();
-        $this->info($dry ? '예행 종료 — 변경 없음.' : '이관 완료. rrn:backfill --verify 로 확인하세요.');
+        $this->info($dry ? '예행 종료 — 변경 없음.' : '이관 완료. rrn:backfill --verify 로 확인하십시오.');
 
         return self::SUCCESS;
     }
@@ -211,7 +211,7 @@ class BackfillResidentNo extends Command
             return self::SUCCESS;
         }
 
-        $this->error(sprintf('검증 실패 — 문제 %d건. 암호화 키(RRN_ENCRYPTION_KEY)를 확인하세요.', $fail));
+        $this->error(sprintf('검증 실패 — 문제 %d건. 암호화 키(RRN_ENCRYPTION_KEY)를 확인하십시오.', $fail));
 
         return self::FAILURE;
     }

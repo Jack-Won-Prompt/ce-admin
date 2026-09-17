@@ -80,7 +80,7 @@ class OcrService
     {
         if (!$this->textractUsable($mimeType)) {
             throw new \RuntimeException(
-                'OCR 을 사용할 수 없습니다. AWS Textract 자격증명과 지원 형식(PNG·JPEG)을 확인해 주세요.'
+                'OCR 을 사용할 수 없습니다. AWS Textract 자격증명과 지원 형식(PNG·JPEG)을 확인해 주십시오.'
             );
         }
 

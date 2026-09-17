@@ -88,7 +88,7 @@
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label">초대 메시지 <span style="color:var(--text-muted);font-size:11px;">(선택)</span></label>
         <textarea class="form-control" id="inviteMessage" rows="3"
-          placeholder="함께하게 되어 반갑습니다. 궁금한 점이 있으면 언제든지 연락 주세요."
+          placeholder="함께하게 되어 반갑습니다. 궁금한 점이 있으면 언제든지 연락해 주십시오."
           maxlength="500" style="resize:vertical;min-height:72px;"></textarea>
         <div style="font-size:11px;font-weight:500;line-height:18px;color:var(--text-muted);margin-top:4px;text-align:right;">
           <span id="msgCount">0</span>/500
@@ -392,7 +392,7 @@ async function sendInvite() {
   errEl.style.display  = 'none';
   succEl.style.display = 'none';
 
-  if (!email) { errEl.textContent = '이메일을 입력하세요.'; errEl.style.display = 'block'; return; }
+  if (!email) { errEl.textContent = '이메일을 입력하십시오.'; errEl.style.display = 'block'; return; }
 
   const message = document.getElementById('inviteMessage').value.trim();
 
@@ -409,9 +409,9 @@ async function sendInvite() {
     if (!ct.includes('application/json')) {
       const text = await res.text();
       if (res.status === 419) {
-        errEl.textContent = '세션이 만료되었습니다. 페이지를 새로고침해주세요. (F5)';
+        errEl.textContent = '세션이 만료되었습니다. 페이지를 새로고침해 주십시오. (F5)';
       } else {
-        errEl.textContent = `서버 오류 (${res.status}) — JSON이 아닌 응답입니다. 콘솔을 확인하세요.`;
+        errEl.textContent = `서버 오류 (${res.status}) — JSON이 아닌 응답입니다. 콘솔을 확인하십시오.`;
         console.error('Non-JSON response:', res.status, text.substring(0, 1000));
       }
       errEl.style.display = 'block';
@@ -551,9 +551,9 @@ async function submitForm(e) {
     if (!ct.includes('application/json')) {
       const text = await res.text();
       if (res.status === 419) {
-        errEl.textContent = '세션이 만료되었습니다. 페이지를 새로고침해주세요. (F5)';
+        errEl.textContent = '세션이 만료되었습니다. 페이지를 새로고침해 주십시오. (F5)';
       } else {
-        errEl.textContent = `서버 오류 (${res.status}) — JSON이 아닌 응답입니다. 콘솔을 확인하세요.`;
+        errEl.textContent = `서버 오류 (${res.status}) — JSON이 아닌 응답입니다. 콘솔을 확인하십시오.`;
         console.error('Non-JSON response:', res.status, text.substring(0, 1000));
       }
       errEl.style.display = 'block';
@@ -680,8 +680,8 @@ function updateRow(u)     { refreshUsersGrid(); }
 
   window.usersEditSelected = function () {
     const c = window.__usersGrid.getCheckedRows();
-    if (!c.length)    { showToast('수정할 관리자를 체크하세요.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return; }
+    if (!c.length)    { showToast('수정할 관리자를 체크하십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
     openModal(c[0].id);
   };
 
@@ -743,8 +743,8 @@ function updateRow(u)     { refreshUsersGrid(); }
 
   function invPickSelected(actionLabel) {
     const c = window.__invGrid.getCheckedRows();
-    if (!c.length)    { showToast(actionLabel + '할 초대를 체크하세요.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 건만 선택하세요.', 'warning'); return null; }
+    if (!c.length)    { showToast(actionLabel + '할 초대를 체크하십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return null; }
     if (c[0].accepted) { showToast('수락된 초대는 처리할 수 없습니다.', 'warning'); return null; }
     return c[0];
   }

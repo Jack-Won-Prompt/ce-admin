@@ -437,10 +437,10 @@
   /* ── 서류 등록 ────────────────────────────────────────── */
   window.regSubmit = async function (ev) {
     ev.preventDefault();
-    if (!_regRxId) { showToast('처방전을 먼저 선택하세요.', 'warning'); return false; }
+    if (!_regRxId) { showToast('처방전을 먼저 선택하십시오.', 'warning'); return false; }
 
     const fileEl = document.getElementById('regFile');
-    if (!fileEl.files.length) { ceAlert('등록할 파일을 선택해 주세요.', { tone: 'warning' }); return false; }
+    if (!fileEl.files.length) { ceAlert('등록할 파일을 선택해 주십시오.', { tone: 'warning' }); return false; }
 
     const btn  = document.getElementById('regSubmitBtn');
     const orig = btn.innerHTML;

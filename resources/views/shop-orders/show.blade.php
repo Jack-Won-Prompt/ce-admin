@@ -258,7 +258,7 @@
       </div>
       <div style="padding:16px;">
         <textarea id="adminMemo" class="form-control" rows="4"
-          placeholder="내부 메모를 입력하세요" style="font-size:13px;">{{ $shopOrder->admin_memo }}</textarea>
+          placeholder="내부 메모를 입력하십시오" style="font-size:13px;">{{ $shopOrder->admin_memo }}</textarea>
         <button onclick="saveMemo()" class="btn btn-outline btn-sm" style="margin-top:10px;width:100%;">저장</button>
       </div>
     </div>

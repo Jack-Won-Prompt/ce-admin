@@ -302,7 +302,7 @@
       <div class="form-group">
         <label class="form-label">처리 결과 <span>*</span></label>
         <select id="resultType" class="form-control form-select" onchange="onResultTypeChange()">
-          <option value="">선택하세요</option>
+          <option value="">선택하십시오</option>
           <option value="approved">승인</option>
           <option value="partial">부분 승인</option>
           <option value="rejected">반려</option>
@@ -315,7 +315,7 @@
       <div class="form-group" id="rejectStageGroup" style="display:none;">
         <label class="form-label">재신청 진행</label>
         <select id="rejectStage" class="form-control form-select">
-          <option value="">선택하세요</option>
+          <option value="">선택하십시오</option>
           @foreach(\App\Models\Order::CLAIM_REJECT_STAGES as $k => $label)
             <option value="{{ $k }}">{{ $label }}</option>
           @endforeach
@@ -571,7 +571,7 @@ function onResultTypeChange() {
 async function submitResult() {
   if (!_resultOrderId) return;
   const resultType = document.getElementById('resultType').value;
-  if (!resultType) { showToast('처리 결과를 선택해주세요.', 'warning'); return; }
+  if (!resultType) { showToast('처리 결과를 선택해 주십시오.', 'warning'); return; }
 
   const data = {
     nhis_result:     resultType,

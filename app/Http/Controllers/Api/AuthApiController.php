@@ -45,7 +45,7 @@ class AuthApiController extends Controller
         if (! config('auth.password_login.app', true) && $user->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하세요.',
+                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하십시오.',
             ], 403);
         }
 
@@ -64,7 +64,7 @@ class AuthApiController extends Controller
         if (empty($user->phone)) {
             return response()->json([
                 'success' => false,
-                'message' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하세요.',
+                'message' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하십시오.',
             ], 403);
         }
 
@@ -114,7 +114,7 @@ class AuthApiController extends Controller
         if (!$otp) {
             return response()->json([
                 'success' => false,
-                'message' => '인증 세션이 만료되었습니다. 다시 로그인해 주세요.',
+                'message' => '인증 세션이 만료되었습니다. 다시 로그인해 주십시오.',
             ], 422);
         }
 
@@ -126,7 +126,7 @@ class AuthApiController extends Controller
             $otp->update(['used_at' => now()]);
             return response()->json([
                 'success' => false,
-                'message' => '인증 시도 횟수를 초과했습니다. 다시 로그인해 주세요.',
+                'message' => '인증 시도 횟수를 초과했습니다. 다시 로그인해 주십시오.',
             ], 429);
         }
 
@@ -180,7 +180,7 @@ class AuthApiController extends Controller
         if (!$prevOtp) {
             return response()->json([
                 'success' => false,
-                'message' => '인증 세션이 만료되었습니다. 다시 로그인해 주세요.',
+                'message' => '인증 세션이 만료되었습니다. 다시 로그인해 주십시오.',
             ], 422);
         }
 
@@ -285,7 +285,7 @@ class AuthApiController extends Controller
         try {
             app(MessageService::class)->send(
                 $user->phone,
-                "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하세요.",
+                "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하십시오.",
                 $user->name,
             );
         } catch (\Throwable $e) {

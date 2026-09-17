@@ -2971,7 +2971,7 @@ document.addEventListener('click', (e) => {
       return json;
 
     } catch (networkErr) {
-      const msg = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.';
+      const msg = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해 주십시오.';
       showToast(msg, 'danger');
       console.error('apiRequest error:', networkErr);
       return { success: false, message: msg };
@@ -3636,7 +3636,7 @@ input#chatFileInput { display: none; }
       {{-- 빈 상태 --}}
       <div class="chat-empty" id="chatEmptyState">
         <i class="fa-regular fa-comments"></i>
-        <span style="font-size:13px;">채팅방을 선택하세요</span>
+        <span style="font-size:13px;">채팅방을 선택하십시오</span>
       </div>
 
       {{-- 활성 대화 --}}
@@ -3698,7 +3698,7 @@ input#chatFileInput { display: none; }
             <i class="fa-solid fa-paperclip" style="font-size:13px;"></i>
           </button>
           <input type="file" id="chatFileInput" accept="*/*" multiple>
-          <textarea id="chatInput" rows="1" placeholder="메시지를 입력하세요 (Shift+Enter: 줄바꿈)"></textarea>
+          <textarea id="chatInput" rows="1" placeholder="메시지를 입력하십시오 (Shift+Enter: 줄바꿈)"></textarea>
           <button class="chat-send-btn" onclick="ChatPanel.send()">
             <i class="fa-solid fa-paper-plane" style="font-size:14px;"></i>
           </button>
@@ -3983,7 +3983,7 @@ const SrPanel = (() => {
   async function submit() {
     const title   = document.getElementById('srTitle').value.trim();
     const content = document.getElementById('srContent').value.trim();
-    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srSubmitBtn');
     btn.disabled = true;
@@ -4017,7 +4017,7 @@ const SrPanel = (() => {
   async function saveAnswer() {
     if (!_sel) return;
     const answer = document.getElementById('srAnswer').value.trim();
-    if (!answer) { ceAlert('답변 내용을 입력해 주세요.', { tone: 'warning' }); return; }
+    if (!answer) { ceAlert('답변 내용을 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srAnswerBtn');
     btn.disabled = true;
@@ -4878,9 +4878,9 @@ const ChatPanel = (() => {
     const name    = document.getElementById('chatGroupName').value.trim();
     const checked = [...document.querySelectorAll('#chatUserList input:checked')];
 
-    if (!checked.length) { showToast('대화 상대를 선택하세요.', 'warning'); return; }
-    if (type === 'group' && !name) { showToast('그룹 이름을 입력하세요.', 'warning'); return; }
-    if (type === 'direct' && checked.length > 1) { showToast('1:1 채팅은 상대방을 한 명만 선택하세요.', 'warning'); return; }
+    if (!checked.length) { showToast('대화 상대를 선택하십시오.', 'warning'); return; }
+    if (type === 'group' && !name) { showToast('그룹 이름을 입력하십시오.', 'warning'); return; }
+    if (type === 'direct' && checked.length > 1) { showToast('1:1 채팅은 상대방을 한 명만 선택하십시오.', 'warning'); return; }
 
     const startBtn = document.querySelector('.chat-modal-actions .btn-primary');
     if (startBtn) { startBtn.disabled = true; startBtn.textContent = '생성 중...'; }
@@ -4901,7 +4901,7 @@ const ChatPanel = (() => {
       await loadRooms();
       selectRoom(data.room_id);
     } catch(e) {
-      showToast('오류가 발생했습니다. 다시 시도해주세요.', 'danger');
+      showToast('오류가 발생했습니다. 다시 시도해 주십시오.', 'danger');
     } finally {
       if (startBtn) { startBtn.disabled = false; startBtn.textContent = '시작'; }
     }
@@ -6041,7 +6041,7 @@ const InquiryPanel = (() => {
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">내용</label>
-          <textarea id="inqContent" class="form-control" rows="6" placeholder="문의 내용을 입력하세요... (Ctrl+V로 이미지 붙여넣기 가능)"></textarea>
+          <textarea id="inqContent" class="form-control" rows="6" placeholder="문의 내용을 입력하십시오... (Ctrl+V로 이미지 붙여넣기 가능)"></textarea>
         </div>
 
         <div class="inq-paste-preview" id="inqCreatePastePreview" style="display:none;">
@@ -6140,9 +6140,9 @@ const InquiryPanel = (() => {
     const body        = ((document.getElementById('inqContent') || {}).value || '').trim();
     const includePage = (document.getElementById('inqIncludePage') || {}).checked;
 
-    if (!category) { showToast('분류를 선택해주세요.', 'warning'); return; }
-    if (!title)    { showToast('제목을 입력해주세요.', 'warning'); return; }
-    if (!body && !_pasteFile) { showToast('내용을 입력하거나 파일을 첨부해주세요.', 'warning'); return; }
+    if (!category) { showToast('분류를 선택해 주십시오.', 'warning'); return; }
+    if (!title)    { showToast('제목을 입력해 주십시오.', 'warning'); return; }
+    if (!body && !_pasteFile) { showToast('내용을 입력하거나 파일을 첨부해 주십시오.', 'warning'); return; }
 
     let finalBody = body;
     if (includePage && pageUrl) {
@@ -6170,7 +6170,7 @@ const InquiryPanel = (() => {
     const body   = ta ? ta.value.trim() : '';
     const file   = _pasteFile || (fi && fi.files[0] ? fi.files[0] : null);
 
-    if (!body && !file) { showToast('내용을 입력하거나 파일을 첨부해주세요.', 'warning'); return; }
+    if (!body && !file) { showToast('내용을 입력하거나 파일을 첨부해 주십시오.', 'warning'); return; }
 
     const fd = new FormData();
     if (body) fd.append('body', body);

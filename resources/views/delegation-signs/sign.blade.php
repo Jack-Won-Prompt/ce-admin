@@ -262,7 +262,7 @@
       <span style="font-weight:700;">법정대리인 또는 가족 신분증
         <span style="color:#ef4444;font-size:11px;">* 필수</span></span>
       <div class="lead" style="margin-top:4px;">
-        법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주세요.
+        법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주십시오.
         생년월일 확인이 가능한 신분증만 제출 가능합니다.<br>(JPG, PNG, HEIC 형식, 최대 10MB)
       </div>
     </div>
@@ -421,7 +421,7 @@ function 신분증고름(칸) {
   if (!f) return;
 
   if (f.size > 10 * 1024 * 1024) {
-    alert('파일이 너무 큽니다. 10MB 이하로 올려주세요.');
+    alert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.');
     칸.value = ''; return;
   }
 
@@ -435,7 +435,7 @@ function 신분증고름(칸) {
     이름.textContent = f.name; 이름.style.display = '';
     다시셈();
   };
-  r.onerror = () => alert('이미지를 읽지 못했습니다. 다른 파일로 시도해주세요.');
+  r.onerror = () => alert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.');
   r.readAsDataURL(f);
 }
 

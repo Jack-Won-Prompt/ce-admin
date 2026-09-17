@@ -75,7 +75,7 @@
         @csrf
         <div class="form-group">
           <textarea name="answer" class="form-control" rows="7"
-                    placeholder="답변 내용을 입력하세요..." required>{{ old('answer', $inquiry->answer) }}</textarea>
+                    placeholder="답변 내용을 입력하십시오..." required>{{ old('answer', $inquiry->answer) }}</textarea>
           @error('answer')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
         <div style="display:flex;justify-content:flex-end;">

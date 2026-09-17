@@ -23,7 +23,7 @@ class ProductController extends Controller
         $keyword = trim($request->get('q', ''));
 
         if ($keyword === '') {
-            return response()->json(['success' => false, 'message' => '검색어를 입력해주세요.', 'data' => []]);
+            return response()->json(['success' => false, 'message' => '검색어를 입력해 주십시오.', 'data' => []]);
         }
 
         $baseUrl = rtrim(config('services.demoworks.api_url'), '/');
@@ -83,7 +83,7 @@ class ProductController extends Controller
                 Log::error('Demoworks API 인증 오류', ['error' => $apiErr, 'body' => $body]);
                 return response()->json([
                     'success' => false,
-                    'message' => "Demoworks 인증 실패 ({$apiErr}). 관리자에게 토큰 갱신을 요청하세요.",
+                    'message' => "Demoworks 인증 실패 ({$apiErr}). 관리자에게 토큰 갱신을 요청하십시오.",
                     'data'    => [],
                 ]);
             }

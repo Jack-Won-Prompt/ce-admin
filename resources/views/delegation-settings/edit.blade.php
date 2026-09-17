@@ -93,7 +93,7 @@
   @endif
   @if($errors->any())
     <div class="status-ok" style="background:var(--alert-100);border-color:var(--alert-500);color:var(--alert-500);">
-      입력값을 확인해 주세요: {{ implode(' / ', $errors->all()) }}
+      입력값을 확인해 주십시오: {{ implode(' / ', $errors->all()) }}
     </div>
   @endif
 
@@ -188,7 +188,7 @@
       <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-hint" style="margin-bottom:12px;">
         X는 왼쪽에서, Y는 위에서 잰 거리입니다(A4 = 210 × 297). 값이 비면 기본값을 씁니다.
-        고친 뒤 <b>위임장 PDF</b>를 내려받아 위치를 확인하세요.
+        고친 뒤 <b>위임장 PDF</b>를 내려받아 위치를 확인하십시오.
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">

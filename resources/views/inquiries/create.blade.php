@@ -45,7 +45,7 @@
           <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
             <label class="form-label">분류 <span>*</span></label>
             <select name="category" class="form-control form-select" required>
-              <option value="">분류를 선택하세요</option>
+              <option value="">분류를 선택하십시오</option>
               @foreach(\App\Models\Inquiry::CATEGORIES as $k => $label)
                 <option value="{{ $k }}" @selected(old('category') === $k)>{{ $label }}</option>
               @endforeach
@@ -74,14 +74,14 @@
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">제목 <span>*</span></label>
-          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="문의 제목을 입력하세요" required>
+          <input type="text" name="title" class="form-control" value="{{ old('title') }}" placeholder="문의 제목을 입력하십시오" required>
           @error('title')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
 
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">내용 <span>*</span></label>
           <textarea name="content" class="form-control" rows="12"
-                    placeholder="문의 내용을 자세히 입력해주세요.&#10;&#10;문제가 발생한 상황, 오류 메시지 등을 포함하면 더욱 정확한 답변을 드릴 수 있습니다." required>{{ old('content') }}</textarea>
+                    placeholder="문의 내용을 자세히 입력해 주십시오.&#10;&#10;문제가 발생한 상황, 오류 메시지 등을 포함하면 더욱 정확한 답변을 드릴 수 있습니다." required>{{ old('content') }}</textarea>
           @error('content')<div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
         </div>
 

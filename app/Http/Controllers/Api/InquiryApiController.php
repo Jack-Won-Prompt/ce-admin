@@ -63,7 +63,7 @@ class InquiryApiController extends Controller
         ]);
 
         if (! $request->filled('body') && ! $request->hasFile('attachment')) {
-            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해주세요.'], 422);
+            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해 주십시오.'], 422);
         }
 
         $inquiry = Inquiry::create([
@@ -134,7 +134,7 @@ class InquiryApiController extends Controller
         ]);
 
         if (! $request->filled('body') && ! $request->hasFile('attachment')) {
-            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해주세요.'], 422);
+            return response()->json(['success' => false, 'message' => '내용을 입력하거나 파일을 첨부해 주십시오.'], 422);
         }
 
         // 답변 완료된 경우 상태를 pending으로 반품 (재문의)

@@ -69,7 +69,7 @@ class NiceIdentityService
     public function testConnection(): array
     {
         if (!$this->enabled()) {
-            return ['ok' => false, 'message' => '자격증명(client_id / client_secret)을 모두 입력해 주세요.', 'detail' => ''];
+            return ['ok' => false, 'message' => '자격증명(client_id / client_secret)을 모두 입력해 주십시오.', 'detail' => ''];
         }
 
         try {
@@ -134,7 +134,7 @@ class NiceIdentityService
     {
         $store = Cache::get($this->cacheKey($consent));
         if (!$store) {
-            throw new RuntimeException('본인확인 세션이 만료되었습니다. 다시 시도해 주세요.');
+            throw new RuntimeException('본인확인 세션이 만료되었습니다. 다시 시도해 주십시오.');
         }
         Cache::forget($this->cacheKey($consent));
 

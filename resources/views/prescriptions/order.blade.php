@@ -14,7 +14,7 @@
   <div class="help-section-title">탭 안내</div>
   <div class="help-item">
     <div class="help-item-icon info"><i class="bx bx-image"></i></div>
-    <div class="help-item-text"><strong>처방전 이미지 탭</strong>원본 이미지를 확대/축소하며 확인합니다. OCR 결과와 대조하세요.</div>
+    <div class="help-item-text"><strong>처방전 이미지 탭</strong>원본 이미지를 확대/축소하며 확인합니다. OCR 결과와 대조하십시오.</div>
   </div>
   <div class="help-item">
     <div class="help-item-icon warn"><i class="bx bx-clipboard"></i></div>
@@ -1247,7 +1247,7 @@ $calcDeposit  = $calcCopay;
             <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
               <i class="fa-solid fa-triangle-exclamation"></i>
               <strong>링크 클릭 불가 경고:</strong> CONSENT_PUBLIC_URL이 <code>{{ $consentBase }}</code>로 설정되어 있어 환자 휴대폰에서 링크가 클릭되지 않습니다.<br>
-              <span style="opacity:.85;">.env에서 <code>CONSENT_PUBLIC_URL</code>을 실제 공인 도메인으로 변경하세요.</span>
+              <span style="opacity:.85;">.env에서 <code>CONSENT_PUBLIC_URL</code>을 실제 공인 도메인으로 변경하십시오.</span>
             </div>
             @endif
             {{-- 개인정보 동의는 같은 링크에서 함께 받는다. 단추를 합쳤으니 그 상태도
@@ -1934,7 +1934,7 @@ $calcDeposit  = $calcCopay;
               </div>
               <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:10px;color:var(--text-muted);line-height:1.6;">
                 <i class="fa-solid fa-circle-info" style="margin-right:3px;"></i>
-                공단은 지사를 검색하여 선택하세요. 팩스번호는 직접 수정 가능합니다.
+                공단은 지사를 검색하여 선택하십시오. 팩스번호는 직접 수정 가능합니다.
               </div>
             </div>
             {{-- 오른쪽: 전송 서류 --}}
@@ -2134,7 +2134,7 @@ $calcDeposit  = $calcCopay;
       </div>
       {{-- 새 메모 입력 --}}
       <div style="padding:10px 12px;border-bottom:1px solid var(--border);">
-        <textarea id="memoNewInput" placeholder="새 메모를 입력하세요..." rows="2"
+        <textarea id="memoNewInput" placeholder="새 메모를 입력하십시오..." rows="2"
                   style="width:100%;border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;resize:none;outline:none;"
                   onkeydown="if(event.ctrlKey&&event.key==='Enter')saveMemo()"></textarea>
         <div style="display:flex;justify-content:flex-end;margin-top:4px;">
@@ -3585,7 +3585,7 @@ $calcDeposit  = $calcCopay;
                 <div style="display:flex;gap:6px;flex:1;min-width:0;">
                   <input type="text" class="form-control" id="uroSummary" readonly
                          style="flex:1;min-width:0;background:var(--gray-50);cursor:pointer;"
-                         placeholder="선택하세요." onclick="uroToggle(event)" />
+                         placeholder="선택하십시오." onclick="uroToggle(event)" />
                   <button type="button" class="rx-side-btn" onclick="uroToggle(event)">선택</button>
                 </div>
                 <span id="uroAgeNote" style="display:none;font-size:11px;font-weight:700;color:#B54708;
@@ -3627,11 +3627,11 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">1일 처방 개수</span>
-                <input type="text" inputmode="numeric" maxlength="3" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="text" inputmode="numeric" maxlength="3" class="form-control" id="f-daily" value="{{ $prescription->daily_count ?? $prescription->daily_count ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 하루 {{ (int) config('nhis.limits.daily_count', 6) }}개까지입니다. 초과하여 입력하면 저장 시 한 번 확인합니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방일수</span>
-                <input type="text" inputmode="numeric" maxlength="4" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 넘겨 적으면 저장할 때 한 번 물어봅니다." />
+                <input type="text" inputmode="numeric" maxlength="4" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 초과하여 입력하면 저장 시 한 번 확인합니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
@@ -3836,7 +3836,7 @@ $calcDeposit  = $calcCopay;
                         {{ $prescription->billingOffice->displayName() }}@if($prescription->billingOffice->manager_name) · {{ $prescription->billingOffice->manager_name }}@endif
                         @if($prescription->billingOffice->tel) <span style="font-family:monospace;">{{ $prescription->billingOffice->tel }}</span>@endif
                       @else
-                        선택하세요
+                        선택하십시오
                       @endif
                     </span>
                     <button type="button" class="rx-side-btn" onclick="boFindOpen(event)">찾기</button>
@@ -6431,7 +6431,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-bar',
     title: '처방전 처리 탭',
-    body: '주문 목록 → 상세 목록 → 주문 제품 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하세요.'
+    body: '주문 목록 → 상세 목록 → 주문 제품 → 이력 순서로 진행합니다. 각 탭을 클릭해 이동하십시오.'
   },
   {
     selector: '.tab-btn:nth-child(1)',
@@ -6770,7 +6770,7 @@ window.HELP_TOUR_STEPS = [
         badge.style.border     = '1px solid ' + (못읽음 ? 'var(--alert-100)' : 'var(--gray-200)');
         badge.style.cursor     = 'default';
         badge.title            = 못읽음
-          ? '적힌 번호로 생년월일을 셀 수 없습니다 — 앞 일곱 자리를 확인하세요.'
+          ? '적힌 번호로 생년월일을 셀 수 없습니다 — 앞 일곱 자리를 확인하십시오.'
           : '';
         badge.setAttribute('role', 'presentation');
       }
@@ -8914,7 +8914,7 @@ window.HELP_TOUR_STEPS = [
     const rows = itemRows().filter(r => r.product_name);
     if (!rows.length) {
       summaryGrid = null;
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 제품 탭에서 제품을 먼저 선택해주세요.</div>';
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;">주문 제품 탭에서 제품을 먼저 선택해 주십시오.</div>';
       return;
     }
 
@@ -9049,7 +9049,7 @@ window.HELP_TOUR_STEPS = [
     const dateVal   = document.getElementById('f-date')?.value;
     const periodVal = parseInt(document.getElementById('f-rx-period')?.value ?? '');
     if (!dateVal || !periodVal || periodVal < 1) {
-      if (showWarn) showToast('처방전발행일과 처방기간(일)을 먼저 입력해주세요.', 'warning');
+      if (showWarn) showToast('처방전발행일과 처방기간(일)을 먼저 입력해 주십시오.', 'warning');
       return;
     }
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -10142,11 +10142,11 @@ window.HELP_TOUR_STEPS = [
         if (담긴하루 > 한도금액 && 하루 <= Math.round(담긴하루)) {
           showToast(말 + ' 담겨 있던 값 그대로입니다.', 'warning', 7000);
         } else if (block) {
-          showToast(말 + ' 수량 또는 처방일수를 확인하세요.', 'warning', 7000);
+          showToast(말 + ' 수량 또는 처방일수를 확인하십시오.', 'warning', 7000);
           제품탭으로();
           지날수있나 = false;
         } else {
-          showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하세요.', 'warning', 7000);
+          showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하십시오.', 'warning', 7000);
         }
       }
     }
@@ -10181,7 +10181,7 @@ window.HELP_TOUR_STEPS = [
         제품탭으로();
         지날수있나 = false;
       } else {
-        showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하세요.', 'warning', 7000);
+        showToast(말 + ' 저장은 됩니다 — 창고로 보내기 전에 확인하십시오.', 'warning', 7000);
       }
     }
 
@@ -12172,8 +12172,8 @@ window.HELP_TOUR_STEPS = [
   async function sendKakaoMsg() {
     const tpl    = document.querySelector('input[name=kakao_tpl]:checked')?.value;
     const mobile = document.getElementById('kakaoMobile').value.trim();
-    if (!tpl)    { showToast('메시지 유형을 선택해주세요.', 'warning'); return; }
-    if (!mobile) { showToast('수신 번호를 입력해주세요.', 'warning');  return; }
+    if (!tpl)    { showToast('메시지 유형을 선택해 주십시오.', 'warning'); return; }
+    if (!mobile) { showToast('수신 번호를 입력해 주십시오.', 'warning');  return; }
 
     const btn = document.getElementById('btnKakaoSend');
     BtnState.loading(btn, '발송 중...');
@@ -12286,8 +12286,8 @@ window.HELP_TOUR_STEPS = [
   async function sendSmsMsg() {
     const mobile  = document.getElementById('smsMobile').value.trim();
     const message = document.getElementById('smsMsgBody').value.trim();
-    if (!mobile)  { showToast('수신 번호를 입력해주세요.', 'warning');  return; }
-    if (!message) { showToast('메시지 내용을 입력해주세요.', 'warning'); return; }
+    if (!mobile)  { showToast('수신 번호를 입력해 주십시오.', 'warning');  return; }
+    if (!message) { showToast('메시지 내용을 입력해 주십시오.', 'warning'); return; }
 
     const btn = document.getElementById('btnSmsSend');
     BtnState.loading(btn, '발송 중...');
@@ -13020,7 +13020,7 @@ window.HELP_TOUR_STEPS = [
     }
 
     const faxNo = document.getElementById('fax-no').value.trim();
-    if (!faxNo) { showToast('수신 팩스번호를 입력해주세요.', 'warning'); return; }
+    if (!faxNo) { showToast('수신 팩스번호를 입력해 주십시오.', 'warning'); return; }
 
     /* 등록신청서ㆍ결과지ㆍ신분증은 첨부(attachment_ids)로 나간다.
        요양비위임장만 첨부가 아니라 생성 서류에 담기므로 따로 청한다 — 서명하면
@@ -13041,7 +13041,7 @@ window.HELP_TOUR_STEPS = [
       .map(el => el.closest('label').querySelector('span')?.textContent?.trim() ?? '첨부');
 
     if (!docs.length && !attIds.length) {
-      showToast('전송할 서류를 하나 이상 선택해주세요.', 'warning'); return;
+      showToast('전송할 서류를 하나 이상 선택해 주십시오.', 'warning'); return;
     }
 
     const activeBtn = document.querySelector('.fax-recipient-btn[style*="var(--primary-light)"]');
@@ -14398,9 +14398,9 @@ window.HELP_TOUR_STEPS = [
 
   async function sendIdCardSms() {
     const mobile = document.getElementById('idCardMobile').value.trim();
-    if (!mobile) { ceAlert('수신 번호를 입력해주세요.', { tone: 'warning' }); return; }
+    if (!mobile) { ceAlert('수신 번호를 입력해 주십시오.', { tone: 'warning' }); return; }
     if (mobile.replace(/\D/g, '').length < 9) {
-      ceAlert('수신 번호를 다시 확인해주세요.', { tone: 'warning' }); return;
+      ceAlert('수신 번호를 다시 확인해 주십시오.', { tone: 'warning' }); return;
     }
     const name = (document.getElementById('idCardName')?.value ?? '').trim();
 
@@ -14539,9 +14539,9 @@ window.HELP_TOUR_STEPS = [
 
   async function sendConsentSms() {
     const mobile = document.getElementById('consentMobile').value.trim();
-    if (!mobile) { ceAlert('수신 번호를 입력해주세요.', { tone: 'warning' }); return; }
+    if (!mobile) { ceAlert('수신 번호를 입력해 주십시오.', { tone: 'warning' }); return; }
     if (mobile.replace(/\D/g, '').length < 9) {
-      ceAlert('수신 번호를 다시 확인해주세요.', { tone: 'warning' }); return;
+      ceAlert('수신 번호를 다시 확인해 주십시오.', { tone: 'warning' }); return;
     }
     // 비워 두면 서버가 처방전에 적힌 이름을 쓴다
     const name = (document.getElementById('consentPatientName')?.value ?? '').trim();
@@ -15380,10 +15380,10 @@ window.HELP_TOUR_STEPS = [
     const bizNo    = document.getElementById('ti-biz-no').value.trim();
     const supply   = document.getElementById('ti-supply').value.replace(/,/g, '');
     const vat      = document.getElementById('ti-vat').value.replace(/,/g, '');
-    if (!bizName) { showToast('공급받는자 상호를 입력하세요.', 'danger'); return; }
-    if (!ceoName) { showToast('대표자명을 입력하세요.', 'danger'); return; }
-    if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력하세요.', 'danger'); return; }
-    if (!supply)  { showToast('공급가액을 입력하세요.', 'danger'); return; }
+    if (!bizName) { showToast('공급받는자 상호를 입력하십시오.', 'danger'); return; }
+    if (!ceoName) { showToast('대표자명을 입력하십시오.', 'danger'); return; }
+    if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력하십시오.', 'danger'); return; }
+    if (!supply)  { showToast('공급가액을 입력하십시오.', 'danger'); return; }
 
     BtnState.loading(btn, '발행 중...');
     const res = await apiRequest(`/orders/${_ORDER_ID}/tax-invoice`, 'POST', {
@@ -15537,9 +15537,9 @@ window.HELP_TOUR_STEPS = [
     const identifier = document.getElementById('cr-identifier').value.replace(/\D/g, '');
     const amount     = document.getElementById('cr-amount').value.replace(/,/g, '');
     const type       = document.querySelector('input[name="cr-type"]:checked')?.value;
-    if (!type)       { showToast('유형을 선택하세요.', 'danger'); return; }
-    if (!identifier) { showToast('휴대폰번호 또는 사업자번호를 입력하세요.', 'danger'); return; }
-    if (!amount)     { showToast('금액을 입력하세요.', 'danger'); return; }
+    if (!type)       { showToast('유형을 선택하십시오.', 'danger'); return; }
+    if (!identifier) { showToast('휴대폰번호 또는 사업자번호를 입력하십시오.', 'danger'); return; }
+    if (!amount)     { showToast('금액을 입력하십시오.', 'danger'); return; }
 
     BtnState.loading(btn, '발행 중...');
     const res = await apiRequest(`/orders/${_ORDER_ID}/cash-receipt`, 'POST', {
