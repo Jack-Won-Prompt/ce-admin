@@ -302,7 +302,9 @@ class PrescriptionApiController extends Controller
                 'hospital'       => $p->hospital_name,
                 'disease_name'   => $p->disease_name,
                 'issued_date'    => $p->issued_date?->format('Y-m-d'),
-                'image_url'      => $p->image_url,
+                /* 목록도 앱이 여는 주소로 준다 — 웹 주소(image_url)는 세션을 요구하고,
+                   주소가 그대로면 지우고 다시 올린 그림이 바뀌지 않는다(2026-09-17) */
+                'image_url'      => $this->imageUrl($p),
                 'created_at'     => $p->created_at->format('Y-m-d H:i'),
             ]),
             'meta' => [
@@ -335,9 +337,7 @@ class PrescriptionApiController extends Controller
             'success' => true,
             'data'    => $this->formatOcrResult($p) + [
                 // 앱이 Bearer 토큰으로 열 수 있는 주소를 준다(웹 주소는 세션을 요구한다)
-                'image_url'   => $p->image_path
-                                    ? url("/api/prescriptions/{$p->rx_number}/image")
-                                    : null,
+                'image_url'   => $this->imageUrl($p),
                 'image_name'  => $p->image_original_name,
                 // 올린 사람이 지우고 다시 올릴 수 있는 상태인가
                 'editable'    => $p->editableByUploader(auth()->id()),
@@ -514,6 +514,13 @@ class PrescriptionApiController extends Controller
         return $this->streamFile($attachment->file_path, $attachment->file_original_name);
     }
 
+    /**
+     * 파일을 내보낸다 — 바뀌면 바뀐 것을 준다 (2026-09-17 지시).
+     *
+     * 주소는 처방번호로 만들어져 지우고 다시 올려도 그대로다. 10분짜리 캐시를 붙여
+     * 두어(max-age=600) 앱은 그동안 묻지도 않고 옛 그림을 그렸다 — 다시 올린 사람은
+     * 바뀌지 않았다고 본다. 쓰기 전에 물어보게 하고, 그대로면 304 로 답한다.
+     */
     private function streamFile(string $path, ?string $originalName = null): StreamedResponse
     {
         $disk = Storage::disk('public');
@@ -521,11 +528,39 @@ class PrescriptionApiController extends Controller
 
         $name = $originalName ?: basename($path);
 
-        return $disk->response($path, $name, [
+        $때  = (int) $disk->lastModified($path);
+        $tag = '"' . substr(md5($path . '|' . $때 . '|' . $disk->size($path)), 0, 16) . '"';
+
+        $머리 = [
             'Content-Disposition'    => 'inline; filename="' . addslashes($name) . '"',
-            'Cache-Control'          => 'private, max-age=600, must-revalidate',
+            'Cache-Control'          => 'private, no-cache, must-revalidate',
+            'ETag'                   => $tag,
+            'Last-Modified'          => gmdate('D, d M Y H:i:s', $때) . ' GMT',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        if (($가진것 = request()->headers->get('If-None-Match')) && trim($가진것) === $tag) {
+            return response()->stream(fn () => null, 304, $머리);
+        }
+
+        return $disk->response($path, $name, $머리);
+    }
+
+    /**
+     * 앱에 주는 그림 주소 — 파일이 바뀌면 주소도 바뀐다 (2026-09-17 지시).
+     *
+     * 앱이 주소로 그림을 담아 두면(캐시) 머리글을 고쳐도 다시 묻지 않는다. 주소 끝에
+     * 파일을 가리키는 짧은 표를 붙여, 지우고 다시 올린 그림은 다른 주소가 되게 한다.
+     */
+    private function imageUrl(Prescription $p): ?string
+    {
+        if (! $p->image_path) {
+            return null;
+        }
+
+        $표 = substr(md5($p->image_path . '|' . $p->updated_at?->timestamp), 0, 10);
+
+        return url("/api/prescriptions/{$p->rx_number}/image") . '?v=' . $표;
     }
 
     /** 고칠 수 없는 까닭을 알린다 — 남의 것인지, 이미 검수를 지난 것인지. */

@@ -100,6 +100,18 @@ class SecureFileController extends Controller
         ]);
     }
 
+    /**
+     * 파일을 내보낸다.
+     *
+     * **주소가 같아도 파일이 바뀌면 바뀐 것을 준다** (2026-09-17 지시).
+     *
+     * 처방전 그림의 주소는 처방번호로 만들어지므로, 앱에서 지우고 다시 올려도 주소가
+     * 그대로다. 여태 10분짜리 캐시를 붙여 두어(max-age=600) 브라우저는 그동안 서버에
+     * 묻지도 않고 옛 그림을 그렸다 — 다시 올린 사람은 바뀌지 않았다고 본다.
+     *
+     * 캐시를 끄지는 않는다. no-cache 는 「쓰지 말라」가 아니라 「쓰기 전에 물어보라」는
+     * 뜻이다. 파일이 그대로면 304 로 답하므로 오가는 것은 머리글뿐이다.
+     */
     private function stream(string $path, ?string $originalName = null): StreamedResponse
     {
         $disk = Storage::disk('public');
@@ -107,10 +119,25 @@ class SecureFileController extends Controller
 
         $name = $originalName ?: basename($path);
 
-        return $disk->response($path, $name, [
-            'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
-            'Cache-Control'       => 'private, max-age=600, must-revalidate',
+        /* 파일이 바뀌었는가는 경로ㆍ고친 때ㆍ크기로 가린다 — 내용을 다 읽지 않는다 */
+        $때  = (int) $disk->lastModified($path);
+        $tag = '"' . substr(md5($path . '|' . $때 . '|' . $disk->size($path)), 0, 16) . '"';
+
+        $머리 = [
+            'Content-Disposition'    => 'inline; filename="' . addslashes($name) . '"',
+            'Cache-Control'          => 'private, no-cache, must-revalidate',
+            'ETag'                   => $tag,
+            'Last-Modified'          => gmdate('D, d M Y H:i:s', $때) . ' GMT',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        /* 가진 것이 지금 것과 같으면 본문을 보내지 않는다 */
+        $가진것 = request()->headers->get('If-None-Match');
+
+        if ($가진것 && trim($가진것) === $tag) {
+            return response()->stream(fn () => null, 304, $머리);
+        }
+
+        return $disk->response($path, $name, $머리);
     }
 }

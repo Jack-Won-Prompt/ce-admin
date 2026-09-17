@@ -448,6 +448,31 @@ class ConsentController extends Controller
                     $this->saveRegistrationDocument($consent);
                 }
 
+                /* 요양비 지급청구서에도 같은 서명이 들어간다 (2026-09-17 지시).
+
+                   기초ㆍ차상위경감 건은 서명 화면에 이 서식을 함께 세워 보여 준다.
+                   여태는 청구할 때(ClaimBundle)에야 만들어, 서명을 마친 담당자가
+                   「청구서에 서명이 들어갔는가」를 확인할 자리가 없었다. 위임장ㆍ
+                   등록신청서와 같이 여기서 만들어 둔다.
+
+                   MedicalAidClaimForm::attach 는 이미 있는 것이 서명보다 먼저 만든
+                   것이면 다시 그린다 — 두 번 불려도 겹치지 않는다.
+
+                   여기서 무슨 일이 있어도 서명은 이미 끝난 것이라 되돌리지 않는다. */
+                if (\App\Support\SignDocs::열수있나($consent, \App\Support\SignDocs::청구서)) {
+                    try {
+                        $주문 = $consent->prescription->orders()->latest('id')->first();
+
+                        if ($주문) {
+                            \App\Support\MedicalAidClaimForm::attach($주문);
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::warning('[요양비 지급청구서] 서명 뒤 자동 생성 실패', [
+                            'consent' => $consent->id, 'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
                 /* 동의가 끝났으니 공단에 등록 서류를 보낸다(2026-09-03 지시 ·
                    시나리오 1.1.x.1). 낼 것이 다 있으면 보내고, 하나라도 빠졌으면
                    보내는 대신 담당자에게 알린다 — 빠진 채로 나간 팩스는 공단이

@@ -24,10 +24,18 @@ use Illuminate\Support\Facades\Storage;
  */
 final class MedicalAidClaimForm
 {
-    /** 이 서식을 내는 건인가 — 기초(의료급여) 대상자만이다 */
+    /**
+     * 이 서식을 내는 자격 — 기초(의료급여)와 차상위경감 (2026-09-17 지시).
+     *
+     * 처음에는 기초만 보았다(2026-09-01 회신). 차상위경감도 본인부담이 없고 기관이
+     * 전액을 내므로 같은 청구서를 낸다.
+     */
+    public const 자격 = ['기초', '차상위경감'];
+
+    /** 이 서식을 내는 건인가 */
     public static function applies(Order $order): bool
     {
-        return ($order->prescription?->benefit_class ?? '') === '기초';
+        return in_array(trim((string) ($order->prescription?->benefit_class ?? '')), self::자격, true);
     }
 
     /**

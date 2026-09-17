@@ -146,9 +146,14 @@ class PrescriptionAttachment extends Model
     public function getFileUrlAttribute(): ?string
     {
         // 신분증·위임장이 담긴다. storage 직결 대신 로그인·권한을 거치게 한다.
-        return $this->file_path && $this->exists
-            ? route('files.prescription-attachment', $this)
-            : null;
+        if (! $this->file_path || ! $this->exists) {
+            return null;
+        }
+
+        /* 파일이 바뀌면 주소도 바뀐다 (2026-09-17 지시) — 신청인란을 얹거나 다시
+           올린 그림이 브라우저에 담긴 옛 것으로 그려지지 않게 한다. */
+        return route('files.prescription-attachment', $this)
+             . '?v=' . substr(md5($this->file_path . '|' . $this->updated_at?->timestamp), 0, 10);
     }
 
     /**

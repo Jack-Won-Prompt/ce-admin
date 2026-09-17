@@ -8392,6 +8392,35 @@ window.HELP_TOUR_STEPS = [
     return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' BOX';
   }
 
+  /**
+   * 박스가 딱 떨어지지 않는가 — 소수가 0 보다 큰가 (2026-09-17 지시).
+   *
+   * 제품은 박스 단위로만 나간다. 낱개가 남으면 창고는 남는 만큼을 한 박스로 올려
+   * 내보내므로, 우리가 센 수량과 실제로 나가는 수량이 어긋난다. 저장과 연계를
+   * 막기 전에(gate박스수량) 그 자리에서 눈에 띄어야 한다.
+   *
+   * 소수 한 자리로 보여 주므로 잣대도 그 자리에서 맞춘다 — 30개들이에 1개가 남으면
+   * 0.033 이라 반올림하면 0.0 이지만, 딱 떨어지지 않는 것은 마찬가지다.
+   */
+  function 박스안맞나(n) {
+    if (n === '' || n === null || n === undefined) return false;
+
+    const v = Number(n);
+
+    return Number.isFinite(v) && Math.abs(v - Math.round(v)) > 1e-9;
+  }
+
+  /** 딱 떨어지지 않는 박스에 붙이는 붉은 표시 */
+  function 박스경고입히기(el, n, rb) {
+    if (!박스안맞나(n)) return;
+
+    el.style.color      = 'var(--danger)';
+    el.style.fontWeight = '700';
+    el.title = '박스 단위로 떨어지지 않습니다'
+             + (rb ? ' — 한 박스 ' + rb + '개' : '')
+             + '. 수량을 박스 단위로 맞춰 주십시오.';
+  }
+
   /* 이미 저장된 줄에는 RB 가 없다 — 주문에 굳혀 두지 않고 제품 표에 묻기 때문이다.
      화면이 서면 한 번 물어 채운다. 못 물어도 그만이다: 박스 자리가 「-」로 남을 뿐,
      수량ㆍ금액은 아무것도 달라지지 않는다. */
@@ -8431,11 +8460,18 @@ window.HELP_TOUR_STEPS = [
 
   const 없음칸 = '<span style="color:var(--gray-300);">-</span>';
 
-  /** 표에 세울 글 — 「18 BOX」 */
+  /** 표에 세울 글 — 「18 BOX」. 딱 떨어지지 않으면 붉게 적는다(2026-09-17 지시) */
   function boxCellHtml(item) {
     const rb = rboxOf(item);
 
-    return rb > 0 ? boxText(boxQty(item)) : 없음칸;
+    if (rb <= 0) return 없음칸;
+
+    const n = boxQty(item);
+
+    if (!박스안맞나(n)) return boxText(n);
+
+    return '<span style="color:var(--danger);font-weight:700;" title="박스 단위로 떨어지지 않습니다 — 한 박스 '
+         + rb + '개. 수량을 박스 단위로 맞춰 주십시오.">' + boxText(n) + '</span>';
   }
 
   /** RB 단위 — 한 박스에 낱개가 몇 개 드는가. 나누는 수 자체를 보여 준다. */
@@ -8540,6 +8576,8 @@ window.HELP_TOUR_STEPS = [
           }
           el.textContent = boxText(v);
           if (row?.r_box) el.title = '한 박스에 ' + row.r_box + '개';
+          /* 딱 떨어지지 않으면 붉게 — 그 수량으로는 나갈 수 없다(2026-09-17 지시) */
+          박스경고입히기(el, v, row?.r_box);
 
           return el;
         } },

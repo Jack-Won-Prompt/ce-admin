@@ -214,9 +214,17 @@ class Prescription extends Model
     {
         // 예전에는 storage 로 바로 열려 주소만 알면 로그인 없이 보였다.
         // 로그인·권한을 확인하는 경로로 내보낸다(SecureFileController).
-        return $this->image_path && $this->exists
-            ? route('files.prescription-image', $this)
-            : null;
+        if (! $this->image_path || ! $this->exists) {
+            return null;
+        }
+
+        /* 주소 끝에 파일을 가리키는 짧은 표를 붙인다 (2026-09-17 지시).
+
+           주소는 처방번호로 만들어져, 앱에서 그림을 지우고 다시 올려도 그대로다.
+           그 사이 브라우저가 담아 둔 옛 그림이 그대로 그려져 「바뀌지 않는다」로
+           보였다. 파일이 바뀌면 주소도 바뀌게 한다. */
+        return route('files.prescription-image', $this)
+             . '?v=' . substr(md5($this->image_path . '|' . $this->updated_at?->timestamp), 0, 10);
     }
 
     // ── 라우트 키 ─────────────────────────────────────────
