@@ -280,18 +280,25 @@ class OrderReturnController extends Controller
            반품 주문을 세우면 창고가 오지 않을 물건을 기다리고, 원 주문은 이미 나가 정상
            출고된 건이라 취소할 것도 아니다. 금액조정 주문은 승인·결제취소를 마친 뒤
            「금액조정」 단계에서 따로 세운다. */
+        /* 접수했다는 것을 환자에게 곧바로 알린다 (2026-09-18 지시).
+
+           여태 접수는 우리 화면에만 섰다. 전화로 신청한 환자는 접수번호도, 접수가 되긴
+           됐는지도 알 수 없어 다시 전화를 걸었다. 교환ㆍ반품ㆍ취소 모두 같다. */
+        $안내 = app(\App\Services\ReturnPatientNotice::class)
+            ->자동안내($return->fresh('order.patient'), \App\Services\ReturnPatientNotice::접수);
+
         if ($return->scenario() === OrderReturn::SC_REFUND_ONLY) {
             return redirect()->route('order-returns.show', $return)->with('status',
                 "접수했습니다. 접수번호 {$return->receipt_no} — 일반 환불이라 창고에는 전송하지 않습니다. "
-                . '승인·결제취소 뒤 금액조정 주문을 생성합니다.');
+                . '승인·결제취소 뒤 금액조정 주문을 생성합니다.' . $안내);
         }
 
         $sent = $this->withworks->push($return->load('order.items'));
 
         return redirect()->route('order-returns.show', $return)
-            ->with('status', $sent
+            ->with('status', ($sent
                 ? "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스에 전달했습니다."
-                : "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스 전달은 실패했습니다.");
+                : "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스 전달은 실패했습니다.") . $안내);
     }
 
     /**
@@ -667,6 +674,13 @@ class OrderReturnController extends Controller
            환불 수단을 고치거나 토스 화면에서 마무리하게 둔다. */
         if ($to === 'refunded' && $orderReturn->type !== OrderReturn::TYPE_EXCHANGE) {
             $extra .= $this->돈무르기($orderReturn->fresh('order'));
+
+            /* 돈이 돌아갔다는 것을 환자에게 알린다 (2026-09-18 지시). 카드 취소는
+               카드사를 거쳐 며칠 뒤에 통장에 찍혀, 알리지 않으면 환자는 그동안
+               「환불해 준다더니 안 들어왔다」고 본다. */
+            $extra .= app(\App\Services\ReturnPatientNotice::class)
+                ->자동안내($orderReturn->fresh('order.patient'),
+                          \App\Services\ReturnPatientNotice::환불);
         }
 
         /* 금액조정·마이너스 발행은 단계에 딸린 일이라 여기서 함께 한다. 사람이 단추를
@@ -679,6 +693,17 @@ class OrderReturnController extends Controller
             $extra = $this->settlement->adjust($orderReturn->fresh(['order.patient', 'items']))
                 ? ' 금액조정 주문을 생성했습니다.'
                 : ' 금액조정 주문을 생성하지 못했습니다 — ' . ($orderReturn->fresh()->credit_note ?: '사유를 알 수 없습니다') . '.';
+
+            /* 더 받아야 하는 건이면 환자에게 알린다 (2026-09-18 지시).
+
+               자격이 바뀌어 본인부담이 올라간 건이 여기로 온다. 알리지 않으면 아무도
+               내지 않고, 미수는 다음 달 정산에서야 드러난다.
+               돌려주는 쪽은 환불완료에서 이미 알렸으므로 다시 보내지 않는다. */
+            if ($orderReturn->fresh()->adjust_direction === OrderReturn::ADJ_CHARGE) {
+                $extra .= app(\App\Services\ReturnPatientNotice::class)
+                    ->자동안내($orderReturn->fresh('order.patient'),
+                              \App\Services\ReturnPatientNotice::추가입금);
+            }
         }
 
         if ($to === 'credited') {

@@ -89,7 +89,22 @@ class MessageTemplate extends Model
      */
     public static function seedDefaults(): void
     {
-        if (static::exists()) return;
+        /* 표가 이미 차 있어도 **새로 생긴 유형**은 넣는다 (2026-09-18 지시).
+
+           예전에는 비어 있을 때만 채워, 뒤에 추가한 유형은 이미 쓰고 있는 서버에
+           영영 서지 않았다. 담당자는 화면에서 문구를 고칠 자리조차 없었다.
+           이미 있는 코드는 건드리지 않는다 — 고쳐 둔 문구를 되돌리면 안 된다. */
+        if (static::exists()) {
+            /* 한 번 훑으면 그만이다 — resolve() 가 화면마다 부르므로 요청마다 한 번으로 둔다 */
+            static $훑었나 = false;
+
+            if (! $훑었나) {
+                $훑었나 = true;
+                static::없는것채우기();
+            }
+
+            return;
+        }
 
         $rows = [];
         $i = 0;
@@ -107,6 +122,33 @@ class MessageTemplate extends Model
                        'created_at' => now(), 'updated_at' => now()];
         }
         static::insert($rows);
+    }
+
+    /** 코드마다 견주어 없는 것만 넣는다 */
+    private static function 없는것채우기(): void
+    {
+        $있는것 = static::pluck('code', 'code')->all();
+        $rows   = [];
+        $끝     = (int) static::max('sort_order');
+
+        foreach ([['sms', static::defaultSms()], ['alimtalk', static::defaultAlimtalk()]] as [$channel, $set]) {
+            foreach ($set as $code => $t) {
+                if (isset($있는것[$code])) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'channel' => $channel, 'code' => $code, 'label' => $t['label'],
+                    'description' => $t['desc'], 'body' => $t['text'] ?? null,
+                    'sort_order' => ++$끝, 'is_active' => true,
+                    'created_at' => now(), 'updated_at' => now(),
+                ];
+            }
+        }
+
+        if ($rows) {
+            static::insert($rows);
+        }
     }
 
     public static function defaultSms(): array
@@ -132,6 +174,27 @@ class MessageTemplate extends Model
                 'label' => '배송 시작',
                 'desc'  => '택배 발송 및 운송장 안내',
                 'text'  => "[콜로플라스트] #{고객명}님, 제품이 발송되었습니다.\n주문번호: #{주문번호}\n운송장: #{운송장번호}",
+            ],
+            /* 교환ㆍ반품ㆍ취소가 저절로 보내는 세 자리 (2026-09-18 지시).
+               문구는 ReturnPatientNotice::기본문구() 가 정본이다 — 두 벌로 적으면
+               한쪽만 고쳐진다. */
+            \App\Services\ReturnPatientNotice::접수 => [
+                'label' => '교환·반품·취소 접수',
+                'desc'  => '신청을 접수했음을 환자에게 안내 — 접수할 때 자동 발송',
+                'text'  => \App\Services\ReturnPatientNotice::기본문구()[
+                    \App\Services\ReturnPatientNotice::접수],
+            ],
+            \App\Services\ReturnPatientNotice::환불 => [
+                'label' => '환불 처리 완료',
+                'desc'  => '환불을 처리했음을 안내 — 환불완료 단계에서 자동 발송',
+                'text'  => \App\Services\ReturnPatientNotice::기본문구()[
+                    \App\Services\ReturnPatientNotice::환불],
+            ],
+            \App\Services\ReturnPatientNotice::추가입금 => [
+                'label' => '추가 입금 안내',
+                'desc'  => '더 내실 금액이 있음을 안내 — 금액조정 단계에서 자동 발송',
+                'text'  => \App\Services\ReturnPatientNotice::기본문구()[
+                    \App\Services\ReturnPatientNotice::추가입금],
             ],
             'custom' => [
                 'label' => '직접 입력',
