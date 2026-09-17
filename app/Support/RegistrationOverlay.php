@@ -98,9 +98,11 @@ final class RegistrationOverlay
      * 얹어서 그림 바이트를 돌려준다.
      *
      * @param  array $fields  화면에서 잡은 자리 — 그림 크기에 대한 몫(0~1)
+     * @param  int   $rot     돌린 각도(0ㆍ90ㆍ180ㆍ270 · 시계 방향). 화면이 보여 준
+     *                        그대로 굳힌다 — 자리의 몫도 돌린 뒤 그림을 기준으로 온다.
      * @return array{bytes:string, mime:string, ext:string}
      */
-    public static function compose(PrescriptionAttachment $att, array $fields): array
+    public static function compose(PrescriptionAttachment $att, array $fields, int $rot = 0): array
     {
         $경로 = $att->바탕그림경로();
 
@@ -109,6 +111,7 @@ final class RegistrationOverlay
         }
 
         $바탕 = self::열기(Storage::disk('public')->path($경로));
+        $바탕 = self::돌리기($바탕, $rot);
         $너비 = imagesx($바탕);
         $높이 = imagesy($바탕);
 
@@ -193,6 +196,34 @@ final class RegistrationOverlay
         $y = (int) round($자리['y'] * $높이);
 
         imagecopyresampled($바탕, $서명, $x, $y, 0, 0, $w, $h, imagesx($서명), imagesy($서명));
+    }
+
+    /**
+     * 시계 방향으로 돌린다 (2026-09-17 지시).
+     *
+     * 세워서 찍거나 옆으로 스캔한 서류가 들어온다. 화면에서 바로 세우고, 저장할 때
+     * 그 각도 그대로 굳힌다 — 화면과 나가는 종이가 달라서는 안 된다.
+     *
+     * GD 의 imagerotate 는 **반시계** 방향이라 각도를 뒤집어 넘긴다.
+     */
+    private static function 돌리기($img, int $rot)
+    {
+        $rot = ((int) $rot % 360 + 360) % 360;
+
+        if (! in_array($rot, [90, 180, 270], true)) {
+            return $img;                      // 0 이거나 알 수 없는 각도면 그대로
+        }
+
+        $돌린것 = imagerotate($img, -$rot, imagecolorallocatealpha($img, 0, 0, 0, 127));
+
+        if ($돌린것 === false) {
+            return $img;
+        }
+
+        imagealphablending($돌린것, true);
+        imagesavealpha($돌린것, true);
+
+        return $돌린것;
     }
 
     /** 무엇으로 왔든 GD 그림으로 연다 */

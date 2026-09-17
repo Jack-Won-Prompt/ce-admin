@@ -1411,6 +1411,7 @@ class PrescriptionController extends Controller
         $적어둔 = $attachment->overlay_fields ?: [];
         $자리   = $적어둔['fields'] ?? $적어둔;              // 옛 꼴(자리만 적힌 것)도 읽는다
         $off    = $적어둔['off']    ?? [];
+        $각도   = (int) ($적어둔['rotate'] ?? 0);
 
         return response()->json([
             'success'       => true,
@@ -1418,6 +1419,7 @@ class PrescriptionController extends Controller
             'values'        => \App\Support\RegistrationOverlay::values($prescription),
             'fields'        => array_merge(\App\Support\RegistrationOverlay::defaults(), $자리),
             'off'           => array_values((array) $off),
+            'rotate'        => $각도,
             'applied'       => $attachment->신청인란얹었나(),
             'has_signature' => \App\Support\RegistrationOverlay::signature($prescription) !== null,
         ]);
@@ -1449,6 +1451,8 @@ class PrescriptionController extends Controller
             'fields.*.y'          => 'required|numeric|min:0|max:1',
             'fields.*.w'          => 'nullable|numeric|min:0.01|max:1',
             'fields.*.size'       => 'nullable|numeric|min:0.002|max:0.1',
+            // 화면에서 세워 둔 각도 — 저장할 때 그대로 굳힌다
+            'rotate'              => 'nullable|integer|in:0,90,180,270',
         ]);
 
         /* 아는 이름만 받는다 — 화면에서 온 값이라 그대로 믿지 않는다.
@@ -1461,8 +1465,10 @@ class PrescriptionController extends Controller
             return response()->json(['success' => false, 'message' => '얹을 칸이 없습니다.'], 422);
         }
 
+        $각도 = (int) ($data['rotate'] ?? 0);
+
         try {
-            $그림 = \App\Support\RegistrationOverlay::compose($attachment, $자리);
+            $그림 = \App\Support\RegistrationOverlay::compose($attachment, $자리, $각도);
         } catch (\Throwable $e) {
             Log::warning('[등록신청서 얹기] 그리지 못했습니다', [
                 'attachment' => $attachment->id, 'error' => $e->getMessage(),
@@ -1498,6 +1504,7 @@ class PrescriptionController extends Controller
             'overlay_fields'      => [
                 'fields' => $자리,
                 'off'    => array_values(array_diff($쓸수있는, array_keys($자리))),
+                'rotate' => $각도,
             ],
         ])->save();
 

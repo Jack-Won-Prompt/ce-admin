@@ -4954,6 +4954,16 @@ $calcDeposit  = $calcCopay;
         </button>
         <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(0)" title="창에 맞추기">맞춤</button>
       </span>
+      {{-- 회전 — 옆으로 찍히거나 거꾸로 스캔된 서류를 바로 세운다. 세운 그대로 저장된다. --}}
+      <span style="display:inline-flex;align-items:center;gap:4px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(-90)" title="왼쪽으로 90°">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(90)" title="오른쪽으로 90°">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <span id="regOvRotLabel" style="min-width:32px;text-align:center;font-variant-numeric:tabular-nums;">0°</span>
+      </span>
       <label style="display:inline-flex;align-items:center;gap:5px;">
         글자 크기
         <input type="range" id="regOvSize" min="6" max="28" step="1" value="12"
@@ -5509,6 +5519,7 @@ async function openRegOverlay() {
        그래야 서식에 칸이 늘어도 예전에 맞춰 둔 자리를 잃지 않는다. */
     regOvFields = d.fields;
     (d.off || []).forEach(k => { delete regOvFields[k]; });
+    regOvRot = Number(d.rotate || 0);
 
     /* 값은 서버가 아는 것을 그대로 보여 준다. 빈 것은 붉게 세워 둔다 —
        빈 채로 얹으면 그 칸만 비어 공단에 나간다. */
@@ -5570,19 +5581,64 @@ function closeRegOverlay() {
    (2026-09-17 지시). 「맞춤」 크기를 1 로 두고 그 곱으로 키운다 —
    칸의 자리는 그림 크기에 대한 몫이라, 키우면 칸도 함께 따라간다. */
 const REG_OV_ZOOMS = [1, 1.5, 2, 2.75, 3.5];
-let regOvFitW = 0, regOvZoomIdx = 0;
+let regOvFitW = 0, regOvZoomIdx = 0, regOvRot = 0;
 
-/** 창에 맞춘 크기를 재어 둔다 — 키울 때의 기준이다 */
-function regOvFit() {
+/**
+ * 보이는 네모 — 돌린 뒤의 폭ㆍ높이다 (2026-09-17 지시).
+ *
+ * 90ㆍ270 도로 돌리면 가로세로가 바뀐다. 칸의 자리는 **돌린 뒤 그림**에 대한 몫이라
+ * 여기서 재는 값이 곧 그 기준이다 — 서버도 같은 각도로 돌린 뒤 그 몫으로 얹는다.
+ */
+function regOvBox() {
   const img = document.getElementById('regOvImg');
-  img.style.width = '';
-  img.style.maxWidth = '100%';
-  img.style.maxHeight = 'calc(100vh - 190px)';
-  regOvFitW = img.clientWidth;
+  const w = img.clientWidth, h = img.clientHeight;
+
+  return (regOvRot % 180) ? { W: h, H: w } : { W: w, H: h };
+}
+
+/** 창에 맞춘 크기를 재어 둔다 — 키울 때의 기준이다(돌린 네모가 들어가야 한다) */
+function regOvFit() {
+  const img   = document.getElementById('regOvImg');
+  const stage = document.getElementById('regOvStage');
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+
+  if (!nw || !nh) return;
+
+  const 남는폭  = Math.max(80, stage.clientWidth  - 40);
+  const 남는높이 = Math.max(80, stage.clientHeight - 40);
+  const [bw, bh] = (regOvRot % 180) ? [nh, nw] : [nw, nh];
+
+  regOvFitW = nw * Math.min(남는폭 / bw, 남는높이 / bh);
+}
+
+/** 돌린 각도를 그림과 바탕 네모에 입힌다 */
+function regOvApplyRot() {
+  const img = document.getElementById('regOvImg');
+  const cv  = document.getElementById('regOvCanvas');
+  const b   = regOvBox();
+
+  cv.style.width  = b.W + 'px';
+  cv.style.height = b.H + 'px';
+
+  img.style.position        = 'absolute';
+  img.style.left            = ((b.W - img.clientWidth)  / 2) + 'px';
+  img.style.top             = ((b.H - img.clientHeight) / 2) + 'px';
+  img.style.transformOrigin = 'center center';
+  img.style.transform       = 'rotate(' + regOvRot + 'deg)';
+
+  document.getElementById('regOvRotLabel').textContent = regOvRot + '°';
+}
+
+/** 90도씩 돌린다 — 칸은 제자리(몫)를 지키므로 함께 돈 것처럼 보인다 */
+function regOvTurn(각도) {
+  regOvRot = ((regOvRot + 각도) % 360 + 360) % 360;
+  regOvFit();
+  regOvZoom(9);            // 지금 배율 그대로 다시 그린다
 }
 
 /**
  * @param {number} 어디로  -1 축소 · +1 확대 · 0 창에 맞추기 · 2 처음 크기(열 때)
+ *                         9 지금 배율 그대로 다시 그리기(회전한 뒤)
  */
 function regOvZoom(어디로) {
   const img = document.getElementById('regOvImg');
@@ -5590,7 +5646,7 @@ function regOvZoom(어디로) {
 
   if (어디로 === 0)      regOvZoomIdx = 0;
   else if (어디로 === 2) regOvZoomIdx = 2;          // 열 때는 두 배로 — 신청인란이 읽힌다
-  else regOvZoomIdx = Math.min(REG_OV_ZOOMS.length - 1, Math.max(0, regOvZoomIdx + 어디로));
+  else if (어디로 !== 9) regOvZoomIdx = Math.min(REG_OV_ZOOMS.length - 1, Math.max(0, regOvZoomIdx + 어디로));
 
   const 배 = REG_OV_ZOOMS[regOvZoomIdx];
 
@@ -5600,6 +5656,7 @@ function regOvZoom(어디로) {
 
   document.getElementById('regOvZoomLabel').textContent = Math.round(배 * 100) + '%';
 
+  regOvApplyRot();
   regOvPlace();
   regOvShowFields();
 }
@@ -5616,8 +5673,7 @@ function regOvShowFields() {
 
 /** 적어 둔 몫대로 칸을 놓는다 */
 function regOvPlace() {
-  const img = document.getElementById('regOvImg');
-  const W = img.clientWidth, H = img.clientHeight;
+  const { W, H } = regOvBox();
   if (!W || !H) return;
 
   Object.keys(REG_OV_LABELS).forEach(k => {
@@ -5647,7 +5703,7 @@ function regOvPlace() {
 
 /** 글자 칸의 크기를 함께 바꾼다 — 서식의 한 줄에 나란히 서는 값들이다 */
 function regOvResize(v) {
-  const H = document.getElementById('regOvImg').clientHeight;
+  const H = regOvBox().H;
   const 몫 = Number(v) / 1000;
 
   REG_OV_TEXTS.forEach(k => {
@@ -5684,7 +5740,7 @@ function regOvDrop(key) {
 }
 
 function regOvSigResize(v) {
-  const W = document.getElementById('regOvImg').clientWidth;
+  const W = regOvBox().W;
   const 몫 = Number(v) / 100;
 
   regOvFields.signature = Object.assign({}, regOvFields.signature, { w: 몫 });
@@ -5733,8 +5789,7 @@ function regOvDefaults() {
   document.addEventListener('mouseup', e => {
     if (!집은것) return;
 
-    const img = document.getElementById('regOvImg');
-    const W = img.clientWidth, H = img.clientHeight;
+    const { W, H } = regOvBox();
     const k = 집은것.dataset.key;
 
     /* 그림 밖으로 나가지 않게 가둔다 — 밖에 놓으면 얹을 때 잘려 사라진다 */
@@ -5775,7 +5830,7 @@ async function regOvSave() {
         'Content-Type': 'application/json', 'Accept': 'application/json',
         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
       },
-      body: JSON.stringify({ fields: regOvFields }),
+      body: JSON.stringify({ fields: regOvFields, rotate: regOvRot }),
     });
     const d = await res.json();
 
