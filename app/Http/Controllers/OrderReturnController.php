@@ -670,6 +670,22 @@ class OrderReturnController extends Controller
             $extra = ' ' . $out['note'];
         }
 
+        /* 교환으로 물건이 바뀌면 거래명세서를 다시 그린다 (2026-09-17 지시).
+
+           절차서(2026-09-16 · 일반 교환)의 마지막 칸이 「세금계산서 및 거래명세서
+           업데이트」다. 명세서는 물건과 함께 나가는 종이라, 바뀐 물건이 나가는데 옛
+           품목ㆍLOT 이 적힌 것이 그대로 남으면 받는 사람이 무엇을 받았는지 알 수 없다.
+
+           세금계산서는 여기서 손대지 않는다 — 팝빌이 운영으로 붙어 있어 국세청까지
+           가므로, 사람이 상세 화면에서 눌러 처리한다. */
+        if ($to === 'reshipping' && $orderReturn->order) {
+            $다시 = \App\Support\TransactionStatement::다시그리기($orderReturn->order->fresh());
+
+            $extra .= $다시
+                ? ' 거래명세서를 교환 내용으로 다시 만들었습니다.'
+                : ' 거래명세서를 다시 만들지 못했습니다 — 주문 화면에서 확인해 주십시오.';
+        }
+
         return back()->with('status', '상태를 변경했습니다.' . $extra);
     }
 

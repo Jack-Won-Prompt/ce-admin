@@ -102,6 +102,49 @@ final class TransactionStatement
     }
 
     /**
+     * 종이를 지금 값으로 다시 그린다 (2026-09-17 지시 · 교환 절차).
+     *
+     * 교환으로 물건이 바뀌면 명세서의 품목ㆍLOT 도 바뀐다. 절차서(2026-09-16)의
+     * 「일반(교환) → 세금계산서 및 거래명세서 업데이트」가 그 말이다.
+     *
+     * 첨부 줄과 발행일은 그대로 둔다 — 같은 종이의 같은 판이다. 파일만 덮어쓴다.
+     *
+     * @return bool 다시 그렸으면 참
+     */
+    public static function 다시그리기(Order $order): bool
+    {
+        $att = PrescriptionAttachment::where('prescription_id', $order->prescription_id)
+            ->where('doc_type', 'trade_statement')
+            ->latest('id')
+            ->first();
+
+        if (! $att || ! $att->file_path) {
+            /* 아직 만든 적이 없으면 지금 만든다 — 교환된 내용으로 선다 */
+            return self::attach($order) !== null;
+        }
+
+        try {
+            $order->loadMissing(['patient', 'prescription', 'items.lots']);
+            $pdf = self::render($order);
+
+            Storage::disk('public')->put($att->file_path, $pdf);
+            $att->forceFill(['file_size' => strlen($pdf)])->save();
+
+            Log::info('[거래명세서] 교환에 맞춰 다시 그렸다', [
+                'order' => $order->order_number, 'attachment' => $att->id,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('[거래명세서] 교환 뒤 다시 그리지 못했다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * 출고 LOT 이 닿은 뒤에는 종이를 한 번 더 그린다 (2026-09-17 지시).
      *
      * 위드웍스는 **출고가 확정된 출고건에서** 명세서를 뽑으므로 LOT 칸이 늘 차 있다.
