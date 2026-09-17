@@ -1462,7 +1462,7 @@ class PrescriptionController extends Controller
         ));
 
         if (! $자리) {
-            return response()->json(['success' => false, 'message' => '얹을 칸이 없습니다.'], 422);
+            return response()->json(['success' => false, 'message' => '입력할 항목이 없습니다.'], 422);
         }
 
         $각도 = (int) ($data['rotate'] ?? 0);
@@ -1509,12 +1509,12 @@ class PrescriptionController extends Controller
         ])->save();
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
-            ->log('등록신청서에 신청인란(신청인ㆍ관계ㆍ전화번호ㆍ서명)을 얹었습니다');
+            ->log('등록신청서 신청인란(신청인ㆍ관계ㆍ전화번호ㆍ서명)을 입력했습니다');
 
         return response()->json([
             'success' => true,
             'url'     => $attachment->fresh()->file_url,
-            'message' => '신청인란을 얹었습니다.',
+            'message' => '신청인란을 저장했습니다.',
         ]);
     }
 
@@ -1524,7 +1524,7 @@ class PrescriptionController extends Controller
         $this->이첨부인가($prescription, $attachment);
 
         if (! $attachment->신청인란얹었나()) {
-            return response()->json(['success' => false, 'message' => '아직 얹은 것이 없습니다.'], 422);
+            return response()->json(['success' => false, 'message' => '적용된 신청인란이 없습니다.'], 422);
         }
 
         $얹은것 = $attachment->file_path;
@@ -1544,12 +1544,12 @@ class PrescriptionController extends Controller
         }
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
-            ->log('등록신청서에 얹은 신청인란을 걷고 원본으로 되돌렸습니다');
+            ->log('등록신청서 신청인란을 삭제하고 원본 이미지로 복원했습니다');
 
         return response()->json([
             'success' => true,
             'url'     => $attachment->fresh()->file_url,
-            'message' => '원본으로 되돌렸습니다.',
+            'message' => '원본 이미지로 복원했습니다.',
         ]);
     }
 
@@ -1558,7 +1558,7 @@ class PrescriptionController extends Controller
     {
         abort_if($attachment->prescription_id !== $prescription->id, 403);
         abort_unless($attachment->신청인란얹을수있나(), 422,
-            '등록신청서 그림에만 신청인란을 얹을 수 있습니다.');
+            '등록신청서 이미지 파일에만 신청인란을 입력할 수 있습니다.');
     }
 
     /** 작업 대기 리스트가 한 번에 그리는 줄 수 */

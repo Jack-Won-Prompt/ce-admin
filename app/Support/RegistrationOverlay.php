@@ -107,7 +107,7 @@ final class RegistrationOverlay
         $경로 = $att->바탕그림경로();
 
         if (! $경로 || ! Storage::disk('public')->exists($경로)) {
-            throw new \RuntimeException('바탕이 될 그림을 찾지 못했습니다.');
+            throw new \RuntimeException('원본 이미지를 찾을 수 없습니다.');
         }
 
         $바탕 = self::열기(Storage::disk('public')->path($경로));
@@ -232,7 +232,7 @@ final class RegistrationOverlay
         $img = @imagecreatefromstring((string) file_get_contents($path));
 
         if ($img === false) {
-            throw new \RuntimeException('그림을 열지 못했습니다 — 사진이나 스캔 파일인지 확인해 주십시오.');
+            throw new \RuntimeException('이미지를 열 수 없습니다. 사진 또는 스캔 파일인지 확인하십시오.');
         }
 
         return $img;

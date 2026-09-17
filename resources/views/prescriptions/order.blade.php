@@ -2191,7 +2191,7 @@ $calcDeposit  = $calcCopay;
                위임장처럼 받아 둔 서명과 우리가 아는 값을 그 자리에 얹는다. --}}
           <button type="button" id="btnRegOverlay" class="vw-btn" style="display:none;"
                   onclick="openRegOverlay()"
-                  title="등록신청서 아래쪽 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 얹습니다">
+                  title="등록신청서 하단 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 입력합니다">
             <i class="fa-solid fa-signature" style="margin-right:4px;"></i><span id="btnRegOverlayLabel">신청인란 채우기</span>
           </button>
           <a id="viewerOpenBtn" class="vw-btn vw-btn-icon"
@@ -4941,7 +4941,7 @@ $calcDeposit  = $calcCopay;
 
     <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);
                 font-size:12px;color:var(--text-muted);flex-wrap:wrap;flex-shrink:0;">
-      <span><i class="fa-solid fa-hand-pointer"></i> 칸을 끌어 자리를 맞추고, 빼려면 눌러 고른 뒤 <b>Delete</b> 를 누르십시오.</span>
+      <span><i class="fa-solid fa-hand-pointer"></i> 항목을 드래그하여 위치를 조정합니다. 제외할 항목은 선택 후 <b>Delete</b> 키를 누르십시오.</span>
       {{-- 그림 크기 — 서식 한 장을 통째로 창에 맞추면 아래쪽 ③ 신청인란이 너무 작아
            자리를 맞추기 어렵다(2026-09-17 지시). 크게 키워 놓고 끌 수 있게 한다. --}}
       <span style="display:inline-flex;align-items:center;gap:4px;">
@@ -4952,14 +4952,14 @@ $calcDeposit  = $calcCopay;
         <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(1)" title="확대">
           <i class="fa-solid fa-magnifying-glass-plus"></i>
         </button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(0)" title="창에 맞추기">맞춤</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvZoom(0)" title="화면 크기에 맞춤">화면 맞춤</button>
       </span>
       {{-- 회전 — 옆으로 찍히거나 거꾸로 스캔된 서류를 바로 세운다. 세운 그대로 저장된다. --}}
       <span style="display:inline-flex;align-items:center;gap:4px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(-90)" title="왼쪽으로 90°">
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(-90)" title="왼쪽으로 90도 회전">
           <i class="fa-solid fa-rotate-left"></i>
         </button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(90)" title="오른쪽으로 90°">
+        <button type="button" class="btn btn-outline btn-sm" onclick="regOvTurn(90)" title="오른쪽으로 90도 회전">
           <i class="fa-solid fa-rotate-right"></i>
         </button>
         <span id="regOvRotLabel" style="min-width:32px;text-align:center;font-variant-numeric:tabular-nums;">0°</span>
@@ -4975,9 +4975,9 @@ $calcDeposit  = $calcCopay;
                oninput="regOvSigResize(this.value)" style="width:110px;vertical-align:middle;">
       </label>
       <span style="flex:1;"></span>
-      <button type="button" class="btn btn-outline btn-sm" onclick="regOvDefaults()">처음 자리로</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="regOvDefaults()">초기화</button>
       <button type="button" id="regOvResetBtn" class="btn btn-outline btn-sm" style="display:none;"
-              onclick="regOvReset()">원본으로 되돌리기</button>
+              onclick="regOvReset()">원본 복원</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="regOvSave()">
         <i class="fa-solid fa-check"></i> 위치 저장
       </button>
@@ -5513,7 +5513,7 @@ async function openRegOverlay() {
   try {
     const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, { headers: { 'Accept': 'application/json' } });
     const d   = await res.json();
-    if (!d.success) { showToast(d.message || '열지 못했습니다.', 'danger'); return; }
+    if (!d.success) { showToast(d.message || '열 수 없습니다.', 'danger'); return; }
 
     /* 자리는 처음 자리 위에 덮여 온다. 빼 둔 칸만 여기서 지운다 —
        그래야 서식에 칸이 늘어도 예전에 맞춰 둔 자리를 잃지 않는다. */
@@ -5529,14 +5529,14 @@ async function openRegOverlay() {
     REG_OV_TEXTS.forEach(k => {
       const chip = document.querySelector(`.reg-ov-chip[data-key="${k}"]`);
       const 값   = (d.values[k] || '').trim();
-      chip.querySelector('span').textContent = 값 || ('(' + REG_OV_LABELS[k] + ' 없음)');
+      chip.querySelector('span').textContent = 값 || ('(' + REG_OV_LABELS[k] + ' 정보 없음)');
       chip.classList.toggle('is-empty', !값);
       chip.classList.remove('is-picked');
       /* 뺄 때 쓰는 × — 골라 둔 칸에만 보인다 */
       if (!chip.querySelector('.reg-ov-x')) {
         const x = document.createElement('button');
         x.type = 'button'; x.className = 'reg-ov-x'; x.textContent = '×';
-        x.title = '이 칸은 얹지 않습니다';
+        x.title = '출력에서 제외';
         x.onclick = e => { e.stopPropagation(); regOvDrop(k); };
         chip.appendChild(x);
       }
@@ -5548,7 +5548,7 @@ async function openRegOverlay() {
     if (!sig.querySelector('.reg-ov-x')) {
       const x = document.createElement('button');
       x.type = 'button'; x.className = 'reg-ov-x'; x.textContent = '×';
-      x.title = '이 칸은 얹지 않습니다';
+      x.title = '출력에서 제외';
       x.onclick = e => { e.stopPropagation(); regOvDrop('signature'); };
       sig.appendChild(x);
     }
@@ -5558,7 +5558,7 @@ async function openRegOverlay() {
     }
 
     document.getElementById('regOvNote').textContent = d.has_signature
-      ? '' : '받아 둔 전자서명이 없어 서명은 얹지 않습니다.';
+      ? '' : '등록된 전자서명이 없어 서명은 출력되지 않습니다.';
     document.getElementById('regOvResetBtn').style.display = d.applied ? '' : 'none';
 
     /* 바탕은 늘 얹기 전의 원본이다 — 얹은 그림 위에 또 얹으면 글자가 겹친다 */
@@ -5568,7 +5568,7 @@ async function openRegOverlay() {
 
     document.getElementById('regOverlayModal').style.display = 'block';
   } catch (e) {
-    showToast('신청인란을 열지 못했습니다.', 'danger');
+    showToast('신청인란을 열 수 없습니다.', 'danger');
   }
 }
 
@@ -5736,7 +5736,7 @@ function regOvDrop(key) {
   if (chip) { chip.classList.remove('is-picked'); chip.style.display = 'none'; }
   if (regOvPicked === key) regOvPicked = null;
 
-  showToast(`${REG_OV_LABELS[key]} 칸은 얹지 않습니다 — 되살리려면 ［처음 자리로］를 누르십시오.`, 'info', 5000);
+  showToast(`${REG_OV_LABELS[key]} 항목을 출력에서 제외했습니다. 복원하려면 ［초기화］를 클릭하십시오.`, 'info', 5000);
 }
 
 function regOvSigResize(v) {
@@ -5834,19 +5834,19 @@ async function regOvSave() {
     });
     const d = await res.json();
 
-    if (!d.success) { showToast(d.message || '얹지 못했습니다.', 'danger'); return; }
+    if (!d.success) { showToast(d.message || '저장하지 못했습니다.', 'danger'); return; }
 
     regOvAfter(d.url, true);
     showToast(d.message, 'success');
     closeRegOverlay();
   } catch (e) {
-    showToast('얹지 못했습니다.', 'danger');
+    showToast('저장하지 못했습니다.', 'danger');
   }
 }
 
 async function regOvReset() {
-  if (!await ceConfirm('얹은 신청인란을 걷고 올린 원본으로 되돌립니다. 계속할까요?',
-                       { title: '원본으로 되돌리기' })) return;
+  if (!await ceConfirm('입력한 신청인란을 삭제하고 업로드한 원본 이미지로 복원합니다. 계속하시겠습니까?',
+                       { title: '원본 복원' })) return;
 
   try {
     const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, {
@@ -5855,13 +5855,13 @@ async function regOvReset() {
     });
     const d = await res.json();
 
-    if (!d.success) { showToast(d.message || '되돌리지 못했습니다.', 'danger'); return; }
+    if (!d.success) { showToast(d.message || '복원하지 못했습니다.', 'danger'); return; }
 
     regOvAfter(d.url, false);
     showToast(d.message, 'success');
     closeRegOverlay();
   } catch (e) {
-    showToast('되돌리지 못했습니다.', 'danger');
+    showToast('복원하지 못했습니다.', 'danger');
   }
 }
 
