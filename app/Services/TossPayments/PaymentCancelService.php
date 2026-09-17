@@ -70,10 +70,22 @@ class PaymentCancelService extends TossClient
         if (str_starts_with((string) $payment->payment_key, 'TEST_')) {
             $무른금액 = $amount ?? (int) $payment->amount;
 
+            /* 부분 취소는 그 몫만 쌓는다 (2026-09-18 운영 시험에서 드러남).
+
+               여태 얼마를 무르든 취소 금액에 결제 금액을 통째로 적고 상태도
+               CANCELED 로 닫았다. 810,000원 가운데 300,000원만 돌려준 건이 장부에는
+               전액 취소로 남아, 화면이 알린 금액과 표가 어긋났다. 남은 610,000원은
+               다시 무를 수도 없었다 — 이미 다 무른 것으로 보이기 때문이다.
+
+               실제 토스가 하는 셈과 같게 둔다: 무른 몫을 더해 쌓고, 전액을 채웠을
+               때만 CANCELED 로 닫는다(그 전에는 PARTIAL_CANCELED). */
+            $쌓인금액 = (int) $payment->cancel_amount + $무른금액;
+            $전액     = (int) $payment->amount;
+
             $payment->forceFill([
-                'status'        => 'CANCELED',
+                'status'        => $쌓인금액 >= $전액 ? 'CANCELED' : 'PARTIAL_CANCELED',
                 'canceled_at'   => now(),
-                'cancel_amount' => (int) $payment->amount,
+                'cancel_amount' => min($쌓인금액, $전액),
                 'cancel_reason' => mb_substr($reason, 0, 200),
             ])->save();
 
