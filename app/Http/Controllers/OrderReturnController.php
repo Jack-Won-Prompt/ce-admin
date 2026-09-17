@@ -594,7 +594,7 @@ class OrderReturnController extends Controller
            넣을 칸도 없는 금액을 요구해 단계가 막힌다 (2026-09-15 시험). */
         if ($to === 'adjusted' && $orderReturn->needsAdjust() && ! (int) $orderReturn->adjust_amount) {
             return back()->withErrors(['to_status' =>
-                '조정 금액을 먼저 입력해 주십시오 — 아래 「금액조정」 칸에 환불 금액(또는 추가 청구 금액)을 입력하고 저장합니다.']);
+                '조정 금액을 먼저 입력해 주십시오 — 「발행ㆍ연계」 탭의 「조정 금액」 칸에 환불 금액(또는 추가 청구 금액)을 입력하고 ［저장］을 누르십시오.']);
         }
 
         DB::transaction(function () use ($orderReturn, $data, $to) {
