@@ -282,6 +282,15 @@ class VirtualAccountService extends TossClient
                     'order_id' => $tossPayment->order_id, 'error' => $e->getMessage(),
                 ]);
             }
+
+            /* 입금이 확인됐음을 환자에게 알린다 (2026-09-18 운영 시험) */
+            try {
+                app(\App\Services\PaymentDoneNotice::class)->send($tossPayment->order->refresh());
+            } catch (\Throwable $e) {
+                Log::warning('[Toss] 결제 완료 안내 실패', [
+                    'order_id' => $tossPayment->order_id, 'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $tossPayment;

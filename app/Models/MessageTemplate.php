@@ -175,6 +175,12 @@ class MessageTemplate extends Model
                 'desc'  => '택배 발송 및 운송장 안내',
                 'text'  => "[콜로플라스트] #{고객명}님, 제품이 발송되었습니다.\n주문번호: #{주문번호}\n운송장: #{운송장번호}",
             ],
+            /* 결제가 끝나면 알린다 (2026-09-18 운영 시험에서 드러남) */
+            \App\Services\PaymentDoneNotice::TEMPLATE => [
+                'label' => '결제 완료',
+                'desc'  => '결제가 끝났음을 안내 — 결제 직후 자동 발송',
+                'text'  => \App\Services\PaymentDoneNotice::기본문구(),
+            ],
             /* 교환ㆍ반품ㆍ취소가 저절로 보내는 세 자리 (2026-09-18 지시).
                문구는 ReturnPatientNotice::기본문구() 가 정본이다 — 두 벌로 적으면
                한쪽만 고쳐진다. */

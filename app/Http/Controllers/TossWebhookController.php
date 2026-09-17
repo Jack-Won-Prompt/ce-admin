@@ -177,6 +177,15 @@ class TossWebhookController extends Controller
             ]);
         }
 
+        /* 결제가 끝났음을 환자에게 알린다 (2026-09-18 운영 시험) — 한 건에 한 번이다 */
+        try {
+            app(\App\Services\PaymentDoneNotice::class)->send($tp->order->refresh());
+        } catch (\Throwable $e) {
+            Log::warning('[Toss] 결제 완료 안내 실패', [
+                'order' => $tp->order->order_number, 'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json(['ok' => true, 'order_id' => $tp->order_id]);
     }
 }

@@ -416,6 +416,21 @@ class PaymentLinkController extends Controller
                 'order' => $order->order_number, 'error' => $e->getMessage(),
             ]);
         }
+
+        /* 결제가 끝났음을 환자에게 알린다 (2026-09-18 운영 시험에서 드러남).
+
+           결제 완료 화면은 「영수증은 문자로 안내드립니다」라고 적어 두었는데 그 문자를
+           보내는 자리가 없었다. 환자는 기다리다 담당자에게 전화했다.
+
+           서류를 낸 뒤에 보낸다 — 증빙이 붙기 전에 알리면 담당자가 찾을 때 아직 없다.
+           보내지 못해도 결제는 끝난 것이라 막지 않는다. */
+        try {
+            app(\App\Services\PaymentDoneNotice::class)->send($order->refresh());
+        } catch (\Throwable $e) {
+            Log::warning('[결제전송] 결제 완료 안내 실패', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function row(PaymentLink $l): array

@@ -80,4 +80,12 @@ return [
      */
     'ship_notice_on_shipped' => (bool) env('ORDER_SHIP_NOTICE_ON_SHIPPED', false),
 
+    /*
+     * 결제가 끝나면 환자에게 안내 문자를 보낼 것인가 (2026-09-18 운영 시험).
+     *
+     * 결제 완료 화면이 「영수증은 문자로 안내드립니다」라고 적어 두었으므로 기본은 켜 둔다.
+     * 끄려면 그 화면 문구도 함께 손봐야 한다 — 하지 않을 약속을 화면에 남기면 안 된다.
+     */
+    'payment_done_notice' => (bool) env('ORDER_PAYMENT_DONE_NOTICE', true),
+
 ];
