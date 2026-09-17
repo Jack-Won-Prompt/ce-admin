@@ -4943,7 +4943,7 @@ $calcDeposit  = $calcCopay;
       <button type="button" id="regOvResetBtn" class="btn btn-outline btn-sm" style="display:none;"
               onclick="regOvReset()">원본으로 되돌리기</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="regOvSave()">
-        <i class="fa-solid fa-check"></i> 얹어서 저장
+        <i class="fa-solid fa-check"></i> 위치 저장
       </button>
     </div>
 
