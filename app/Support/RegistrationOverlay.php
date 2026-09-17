@@ -39,7 +39,7 @@ final class RegistrationOverlay
      * (처음에는 위임장 서식을 따라 미성년이면 법정대리인ㆍ그 관계로 적었는데,
      *  이 서류의 신청인란은 그렇게 쓰지 않는다고 바로잡았다.)
      *
-     * @return array{applicant:string, relation:string, tel:string}
+     * @return array<string, string>
      */
     public static function values(Prescription $rx): array
     {
@@ -47,12 +47,22 @@ final class RegistrationOverlay
         $pt      = $rx->patient;
         $consent = self::consent($rx);
 
+        /* 신청한 날 — 서명을 받은 날이 있으면 그날이다. 없으면 오늘.
+           종이에 찍히는 날과 서명한 날이 다르면 어느 것이 맞는지 대조할 길이 없다. */
+        $날 = $consent?->responded_at ?: now();
+
         return [
+            'apply_y'   => $날->format('Y'),
+            'apply_m'   => $날->format('n'),
+            'apply_d'   => $날->format('j'),
             'applicant' => trim((string) ($pt?->bare_name ?: $consent?->patient_name)),
             'relation'  => '본인',
             'tel'       => PhoneNo::format($pt?->mobile ?: $consent?->patient_mobile) ?: '',
         ];
     }
+
+    /** 글자로 얹는 칸들 — 서명만 그림이다 */
+    public const 글자칸 = ['apply_y', 'apply_m', 'apply_d', 'applicant', 'relation', 'tel'];
 
     /** 받아 둔 서명 — 미성년이면 법정대리인의 것이다. 없으면 null */
     public static function signature(Prescription $rx): ?string
@@ -112,9 +122,11 @@ final class RegistrationOverlay
         $기본 = (float) config('registration_form.overlay.size', 0.0107);
 
         $rx = $att->prescription;
-        $값 = $rx ? self::values($rx) : ['applicant' => '', 'relation' => '', 'tel' => ''];
+        $값 = $rx ? self::values($rx) : [];
 
-        foreach (['applicant', 'relation', 'tel'] as $key) {
+        /* **$fields 에 있는 칸만 얹는다.** 화면에서 지운 칸은 여기 오지 않는다 —
+           서식에 이미 적혀 있는 값(병원이 손으로 써 준 것)과 겹치지 않게 하는 길이다. */
+        foreach (self::글자칸 as $key) {
             $자리 = $fields[$key] ?? null;
             $글   = trim((string) ($값[$key] ?? ''));
 

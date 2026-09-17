@@ -1439,9 +1439,11 @@ class PrescriptionController extends Controller
             'fields.*.size'       => 'nullable|numeric|min:0.002|max:0.1',
         ]);
 
-        /* 아는 이름만 받는다 — 화면에서 온 값이라 그대로 믿지 않는다 */
-        $자리 = array_intersect_key($data['fields'],
-            array_flip(['applicant', 'relation', 'tel', 'signature']));
+        /* 아는 이름만 받는다 — 화면에서 온 값이라 그대로 믿지 않는다.
+           화면에서 지운 칸은 아예 오지 않는다(그 칸은 얹지 않는다). */
+        $자리 = array_intersect_key($data['fields'], array_flip(
+            array_merge(\App\Support\RegistrationOverlay::글자칸, ['signature'])
+        ));
 
         if (! $자리) {
             return response()->json(['success' => false, 'message' => '얹을 칸이 없습니다.'], 422);

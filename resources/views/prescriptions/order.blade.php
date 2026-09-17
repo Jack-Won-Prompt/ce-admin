@@ -1056,6 +1056,12 @@
   .reg-ov-chip.is-drag { border-style:solid; background:rgba(115,103,240,.2); }
   .reg-ov-chip.is-empty { border-color:var(--danger); background:rgba(234,84,85,.1); color:var(--danger); }
   .reg-ov-sig img { display:block; height:auto; }
+  /* 골라 둔 칸 — 여기서 Delete 를 누르거나 ×를 누르면 그 칸은 얹지 않는다 */
+  .reg-ov-chip.is-picked { border-style:solid; border-color:var(--danger); background:rgba(234,84,85,.14); }
+  .reg-ov-chip .reg-ov-x { display:none; position:absolute; top:-9px; right:-9px; width:16px; height:16px;
+                           border-radius:999px; border:none; background:var(--danger); color:#fff;
+                           font-size:10px; line-height:16px; text-align:center; cursor:pointer; padding:0; }
+  .reg-ov-chip.is-picked .reg-ov-x { display:block; }
 
   /* 보호자 영역의 진행 상태 — 받은 것과 아직 안 받은 것 */
   .gb-state { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px;
@@ -4931,7 +4937,7 @@ $calcDeposit  = $calcCopay;
 
     <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);
                 font-size:12px;color:var(--text-muted);flex-wrap:wrap;flex-shrink:0;">
-      <span><i class="fa-solid fa-hand-pointer"></i> 칸을 끌어 서식의 자리에 맞추십시오.</span>
+      <span><i class="fa-solid fa-hand-pointer"></i> 칸을 끌어 자리를 맞추고, 빼려면 눌러 고른 뒤 <b>Delete</b> 를 누르십시오.</span>
       {{-- 그림 크기 — 서식 한 장을 통째로 창에 맞추면 아래쪽 ③ 신청인란이 너무 작아
            자리를 맞추기 어렵다(2026-09-17 지시). 크게 키워 놓고 끌 수 있게 한다. --}}
       <span style="display:inline-flex;align-items:center;gap:4px;">
@@ -4970,7 +4976,12 @@ $calcDeposit  = $calcCopay;
         <img id="regOvImg" alt="등록신청서"
              style="display:block;max-width:100%;max-height:calc(100vh - 190px);" />
         {{-- 끌어 옮기는 칸들. 값은 서버가 아는 것을 그대로 보여 준다 — 여기서 고치지
-             않는다(고칠 곳은 거래처ㆍ동의 기록이고, 그 둘이 정본이다). --}}
+             않는다(고칠 곳은 거래처ㆍ동의 기록이고, 그 둘이 정본이다).
+             칸을 누르면 골라지고, 골라진 칸은 ×(또는 Delete)로 뺄 수 있다 —
+             서식에 이미 손으로 적혀 있는 칸에 겹쳐 찍지 않으려는 것이다. --}}
+        <div class="reg-ov-chip" data-key="apply_y"><span></span></div>
+        <div class="reg-ov-chip" data-key="apply_m"><span></span></div>
+        <div class="reg-ov-chip" data-key="apply_d"><span></span></div>
         <div class="reg-ov-chip" data-key="applicant"><span></span></div>
         <div class="reg-ov-chip" data-key="relation"><span></span></div>
         <div class="reg-ov-chip" data-key="tel"><span></span></div>
@@ -5456,8 +5467,13 @@ function switchViewerDoc(el) {
 /* 주소에는 처방번호가 든다 — 처방전은 번호로 찾는다(getRouteKeyName).
    id 를 넣었더니 「No query results」로 떨어졌다. */
 const REG_OV_BASE = @json(url('/prescriptions/' . $prescription->getRouteKey() . '/attachments'));
-const REG_OV_LABELS = { applicant: '신청인', relation: '수진자와의 관계', tel: '전화번호', signature: '서명' };
-let regOvAtt = null, regOvFields = null;
+const REG_OV_LABELS = {
+  apply_y: '신청 연도', apply_m: '신청 월', apply_d: '신청 일',
+  applicant: '신청인', relation: '수진자와의 관계', tel: '전화번호', signature: '서명',
+};
+/** 글자로 얹는 칸 — 서명만 그림이다 (서버의 RegistrationOverlay::글자칸 과 같다) */
+const REG_OV_TEXTS = ['apply_y', 'apply_m', 'apply_d', 'applicant', 'relation', 'tel'];
+let regOvAtt = null, regOvFields = null, regOvValues = {}, regOvHasSig = false, regOvPicked = null;
 
 /** 지금 보고 있는 문서가 등록신청서 그림이면 단추를 세운다 */
 function syncRegOverlayBtn() {
@@ -5470,7 +5486,7 @@ function syncRegOverlayBtn() {
   btn.style.display = 됨 ? '' : 'none';
   if (됨) {
     document.getElementById('btnRegOverlayLabel').textContent =
-      doc.regOverlayApplied ? '신청인란 다시 맞추기' : '신청인란 채우기';
+      doc.regOverlayApplied ? '신청인란 추가' : '신청인란 채우기';
   }
 }
 
@@ -5489,14 +5505,35 @@ async function openRegOverlay() {
 
     /* 값은 서버가 아는 것을 그대로 보여 준다. 빈 것은 붉게 세워 둔다 —
        빈 채로 얹으면 그 칸만 비어 공단에 나간다. */
-    ['applicant', 'relation', 'tel'].forEach(k => {
+    regOvValues = d.values;
+    regOvPicked = null;
+
+    REG_OV_TEXTS.forEach(k => {
       const chip = document.querySelector(`.reg-ov-chip[data-key="${k}"]`);
       const 값   = (d.values[k] || '').trim();
       chip.querySelector('span').textContent = 값 || ('(' + REG_OV_LABELS[k] + ' 없음)');
       chip.classList.toggle('is-empty', !값);
+      chip.classList.remove('is-picked');
+      /* 뺄 때 쓰는 × — 골라 둔 칸에만 보인다 */
+      if (!chip.querySelector('.reg-ov-x')) {
+        const x = document.createElement('button');
+        x.type = 'button'; x.className = 'reg-ov-x'; x.textContent = '×';
+        x.title = '이 칸은 얹지 않습니다';
+        x.onclick = e => { e.stopPropagation(); regOvDrop(k); };
+        chip.appendChild(x);
+      }
     });
 
     const sig = document.querySelector('.reg-ov-chip[data-key="signature"]');
+    regOvHasSig = !!d.has_signature;
+    sig.classList.remove('is-picked');
+    if (!sig.querySelector('.reg-ov-x')) {
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'reg-ov-x'; x.textContent = '×';
+      x.title = '이 칸은 얹지 않습니다';
+      x.onclick = e => { e.stopPropagation(); regOvDrop('signature'); };
+      sig.appendChild(x);
+    }
     sig.style.display = d.has_signature ? '' : 'none';
     if (d.has_signature) {
       sig.querySelector('img').src = @json(route('prescriptions.consentSignature', $prescription));
@@ -5578,8 +5615,13 @@ function regOvPlace() {
 
   Object.keys(REG_OV_LABELS).forEach(k => {
     const chip = document.querySelector(`.reg-ov-chip[data-key="${k}"]`);
-    const pos  = regOvFields[k];
-    if (!chip || !pos) return;
+    if (!chip) return;
+
+    const pos = regOvFields[k];
+
+    /* 뺀 칸은 자리가 없다 — 감춘 채 둔다 */
+    if (!pos) { chip.style.display = 'none'; return; }
+    if (k !== 'signature' || regOvHasSig) chip.style.display = '';
 
     chip.style.left = (pos.x * W) + 'px';
     chip.style.top  = (pos.y * H) + 'px';
@@ -5596,15 +5638,42 @@ function regOvPlace() {
   document.getElementById('regOvSize').value = Math.round(크기 * 1000);
 }
 
-/** 글자 세 칸의 크기를 함께 바꾼다 — 서식의 한 줄에 나란히 서는 값들이다 */
+/** 글자 칸의 크기를 함께 바꾼다 — 서식의 한 줄에 나란히 서는 값들이다 */
 function regOvResize(v) {
   const H = document.getElementById('regOvImg').clientHeight;
   const 몫 = Number(v) / 1000;
 
-  ['applicant', 'relation', 'tel'].forEach(k => {
+  REG_OV_TEXTS.forEach(k => {
+    if (!regOvFields[k]) return;                 // 뺀 칸은 건드리지 않는다
     regOvFields[k] = Object.assign({}, regOvFields[k], { size: 몫 });
     document.querySelector(`.reg-ov-chip[data-key="${k}"]`).style.fontSize = (몫 * H) + 'px';
   });
+}
+
+/* ── 칸 고르기ㆍ빼기 ──────────────────────────────────────
+   (2026-09-17 지시)
+
+   서식에 이미 손으로 적혀 있는 칸이 있다. 거기에 또 얹으면 두 글자가 겹쳐 둘 다
+   읽히지 않는다. 그런 칸은 눌러 고른 뒤 Delete(또는 ×)로 뺀다 — 뺀 칸은 자리를
+   지워 서버로 보내지 않고, 서버는 받은 칸만 얹는다.
+
+   되돌리려면 ［처음 자리로］ — 뺀 칸이 모두 되살아난다. */
+function regOvPick(chip) {
+  document.querySelectorAll('.reg-ov-chip.is-picked').forEach(c => c.classList.remove('is-picked'));
+
+  regOvPicked = chip ? chip.dataset.key : null;
+  if (chip) chip.classList.add('is-picked');
+}
+
+function regOvDrop(key) {
+  if (!key || !regOvFields[key]) return;
+
+  delete regOvFields[key];
+  const chip = document.querySelector(`.reg-ov-chip[data-key="${key}"]`);
+  if (chip) { chip.classList.remove('is-picked'); chip.style.display = 'none'; }
+  if (regOvPicked === key) regOvPicked = null;
+
+  showToast(`${REG_OV_LABELS[key]} 칸은 얹지 않습니다 — 되살리려면 ［처음 자리로］를 누르십시오.`, 'info', 5000);
 }
 
 function regOvSigResize(v) {
@@ -5615,25 +5684,36 @@ function regOvSigResize(v) {
   document.querySelector('.reg-ov-chip[data-key="signature"] img').style.width = (몫 * W) + 'px';
 }
 
+/** 처음 자리로 — **뺀 칸도 모두 되살아난다** (2026-09-17 지시) */
 function regOvDefaults() {
   regOvFields = @json(config('registration_form.overlay.fields'));
+  regOvPick(null);
   regOvPlace();
 }
 
 /* 끌어 옮기기 — 칸 하나를 집어 그림 위 어디로든 옮긴다.
-   놓을 때 그림 크기에 대한 몫으로 고쳐 적는다. */
+   놓을 때 그림 크기에 대한 몫으로 고쳐 적는다.
+   옮기지 않고 그냥 눌렀다 떼면 「고른 것」이 된다 — 그 자리에서 Delete 로 뺀다. */
 (function () {
-  let 집은것 = null, dx = 0, dy = 0;
+  let 집은것 = null, dx = 0, dy = 0, 시작 = null;
+
+  const 창열림 = () => {
+    const m = document.getElementById('regOverlayModal');
+    return m && m.style.display !== 'none';
+  };
 
   document.addEventListener('mousedown', e => {
+    if (!창열림()) return;
+    if (e.target.closest('.reg-ov-x')) return;        // ×는 제 일을 한다
+
     const chip = e.target.closest('.reg-ov-chip');
-    if (!chip || !document.getElementById('regOverlayModal') ||
-        document.getElementById('regOverlayModal').style.display === 'none') return;
+    if (!chip) { regOvPick(null); return; }           // 빈 곳을 누르면 고른 것을 푼다
 
     집은것 = chip;
     chip.classList.add('is-drag');
     dx = e.clientX - chip.offsetLeft;
     dy = e.clientY - chip.offsetTop;
+    시작 = { x: e.clientX, y: e.clientY };
     e.preventDefault();
   });
 
@@ -5643,7 +5723,7 @@ function regOvDefaults() {
     집은것.style.top  = (e.clientY - dy) + 'px';
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', e => {
     if (!집은것) return;
 
     const img = document.getElementById('regOvImg');
@@ -5658,7 +5738,25 @@ function regOvDefaults() {
 
     regOvFields[k] = Object.assign({}, regOvFields[k], { x: x / W, y: y / H });
     집은것.classList.remove('is-drag');
+
+    /* 거의 움직이지 않았으면 옮긴 것이 아니라 고른 것이다 */
+    const 움직임 = Math.abs(e.clientX - 시작.x) + Math.abs(e.clientY - 시작.y);
+    regOvPick(움직임 < 4 ? 집은것 : null);
+
     집은것 = null;
+  });
+
+  /* Delete ㆍ Backspace 로 고른 칸을 뺀다. Esc 는 고른 것을 푼다. */
+  document.addEventListener('keydown', e => {
+    if (!창열림() || !regOvPicked) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      regOvDrop(regOvPicked);
+    } else if (e.key === 'Escape') {
+      regOvPick(null);
+    }
   });
 })();
 
