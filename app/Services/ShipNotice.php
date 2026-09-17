@@ -28,10 +28,15 @@ class ShipNotice
 
     public function __construct(private readonly MessageSender $sender) {}
 
+    /** 운송장을 얼마나 기다리는가 — 그 뒤에는 번호 없이라도 보낸다 */
+    private const 운송장대기분 = 60;
+
     /**
+     * @param bool $force 운송장을 더 기다리지 않는다 (훑기가 쓴다)
+     *
      * @return array{sent: bool, reason: ?string}
      */
-    public function send(Order $order): array
+    public function send(Order $order, bool $force = false): array
     {
         $no = fn (?string $why) => ['sent' => false, 'reason' => $why];
 
@@ -44,7 +49,19 @@ class ShipNotice
         /* 운송장이 없어도 보낸다. 창고가 출고완료로 올리면서 송장을 아직 주지 않은 건이
            있는데(그런 건이 실제로 쌓여 있다), 그때 아무 말도 하지 않으면 환자는 물건이
            오는지조차 모른다. 번호가 없으면 그 줄만 빼고 보낸다. */
-        $tracking = trim((string) ($order->tracking_number ?: $order->withworks_tracking_no));
+        $tracking = self::운송장정리($order->tracking_number ?: $order->withworks_tracking_no);
+
+        /* 다만 잠깐은 기다린다 (2026-09-17 시험에서 드러남).
+
+           운송장은 창고가 출고를 올린 **뒤에** 운송장 엑셀업로드로 들어온다
+           (so.shipped 11:32 → so.invoiced 11:37). 출고 사건에 곧바로 보내면
+           운송장 줄이 늘 빠져, 정상 순서로 일해도 환자는 번호 없는 문자만 받는다.
+
+           운송장이 닿으면 그 사건이 이 자리를 다시 부른다. 끝내 오지 않으면 기다림이
+           끝난 뒤 번호 없이 보낸다 — 늦게라도 알리는 편이 안 알리는 것보다 낫다. */
+        if ($tracking === '' && ! $force && $this->운송장을기다리는중인가($order)) {
+            return $no(null);
+        }
 
         $mobile = preg_replace('/\D/', '', (string) ($order->patient?->mobile ?? ''));
         if (strlen($mobile) < 9 || strlen($mobile) > 11) {
@@ -107,6 +124,44 @@ class ShipNotice
      * 하고, 손으로 보낼 때와 문구가 갈리지 않아야 한다. 유형이 비어 있으면 코드에 둔 말로
      * 대신한다.
      */
+    /**
+     * 운송장 번호로 쓸 수 있는 값만 남긴다 (2026-09-17 시험에서 드러남).
+     *
+     * 창고에서 「-」ㆍ「.」처럼 자리만 채운 값이 올라오는 건이 있다. 그것을 번호로
+     * 알고 그대로 실으면 문자에 「운송장: -」가 나간다 — 환자는 그것으로 조회한다.
+     * 숫자가 섞이지 않은 값은 번호가 아니다.
+     */
+    public static function 운송장정리(?string $값): string
+    {
+        $값 = trim((string) $값);
+
+        if ($값 === '' || preg_match('/\d/', $값) !== 1) {
+            return '';
+        }
+
+        return $값;
+    }
+
+    /**
+     * 아직 운송장을 기다릴 때인가 — 출고 사건이 온 지 얼마 되지 않았는가.
+     *
+     * 출고 시각은 창고 사건에 적힌 것을 본다(withworks_events). 사건이 없으면
+     * 기다릴 근거가 없으므로 기다리지 않는다 — 옛 건이 영영 멈추면 안 된다.
+     */
+    private function 운송장을기다리는중인가(Order $order): bool
+    {
+        $출고 = \App\Models\WithworksEvent::where('order_id', $order->id)
+            ->where('event', 'so.shipped')
+            ->latest('id')
+            ->value('occurred_at');
+
+        if (! $출고) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($출고)->gt(now()->subMinutes(self::운송장대기분));
+    }
+
     public function compose(Order $order, string $tracking): string
     {
         /* 거래처가 받는 글이다 — 사업부 접두 (E) 는 떼고 적는다 (2026-09-11 지시) */

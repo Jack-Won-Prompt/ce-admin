@@ -106,6 +106,25 @@ class DepositAutoIssue
             return $out;
         }
 
+        /* 결제일을 채운다 (2026-09-17 지시).
+
+           여태 결제 시각과 입금 확인일은 채워지는데 결제일 칸만 비어 있었다. 그
+           칸에서 구입일ㆍ사용 개시일ㆍ급여 종료일ㆍ다음 재구매 가능일이 함께
+           서므로, 비어 있으면 그 넷도 서지 않는다 — 담당자가 병원ㆍ처방 정보를
+           저장해 주어야 그때 채워졌다.
+
+           돈이 들어온 날이 결제일이다. 적혀 있으면 덮지 않는다 — 담당자가 고쳐
+           둔 날짜가 정본이고, 부를 때마다 오늘로 밀리면 급여 기간이 조용히 늘어난다. */
+        $rx = $order->prescription;
+
+        if ($rx && trim((string) $rx->pay_date) === '') {
+            $낸날 = $order->deposit_confirmed_at
+                    ?? $order->tossPayment?->deposited_at
+                    ?? now();
+
+            \App\Support\BenefitDates::apply($rx, \Illuminate\Support\Carbon::parse($낸날)->toDateString());
+        }
+
         /* 돈이 들어온 그때 낸다(2026-09-03 확정 · 테스트 시나리오 3.1.1ㆍ3.2.1).
 
            한때는 출고까지 기다렸다. 물건이 아직 창고에 있는데 국세청 신고가 끝나

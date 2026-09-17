@@ -187,6 +187,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{prescription}/attachments/{attachment}', [PrescriptionController::class, 'destroyAttachment'])->name('attachments.destroy');
         // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
         Route::post('/{prescription}/image-tune',                 [PrescriptionController::class, 'saveImageTune'])->name('imageTune');
+        /* 올려 둔 등록신청서 그림에 ③ 신청인란을 얹는다 (2026-09-17 지시).
+           위임장처럼 받아 둔 전자서명과 우리가 아는 값을 그 자리에 얹어 둔다. */
+        Route::get('/{prescription}/attachments/{attachment}/overlay',
+            [PrescriptionController::class, 'registrationOverlay'])->name('attachments.overlay');
+        Route::get('/{prescription}/attachments/{attachment}/overlay/source',
+            [PrescriptionController::class, 'registrationOverlaySource'])->name('attachments.overlaySource');
+        Route::post('/{prescription}/attachments/{attachment}/overlay',
+            [PrescriptionController::class, 'saveRegistrationOverlay'])->name('attachments.overlay.save');
+        Route::delete('/{prescription}/attachments/{attachment}/overlay',
+            [PrescriptionController::class, 'resetRegistrationOverlay'])->name('attachments.overlay.reset');
     });
     // 처방전 이미지·첨부 서류 — 로그인·권한을 확인하고 내보낸다.
     // 예전에는 /storage/prescriptions/... 로 주소만 알면 로그인 없이 열렸다.

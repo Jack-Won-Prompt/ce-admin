@@ -56,6 +56,47 @@ class PaymentCancelService extends TossClient
             return ['ok' => true, 'message' => '이미 전액 취소된 결제입니다.', 'status' => $payment->status];
         }
 
+        /* 시험 환경 자동 결제는 토스에 없다 — 우리 장부에서만 무른다
+           (2026-09-17 시험에서 드러남).
+
+           config('toss.env') === 'test' 인 동안 결제 링크를 열면 토스를 부르지 않고
+           낸 것으로 적는다(PaymentLinkController::시험승인). 그 결제키는 TEST_ 로
+           시작하고 토스에는 없는 번호라, 무르려 하면 [NOT_FOUND_PAYMENT] 존재하지
+           않는 결제 정보 로 거절당했다. 그래서 주문 정정이 「받은 돈을 무르지
+           못했습니다」로 끝나고, 주문은 취소인데 입금 금액은 그대로 남았다.
+
+           돌려줄 돈이 애초에 오간 적이 없으므로 저쪽에 청할 것이 없다. 우리 표만
+           무른 것으로 닫으면 뒤따르는 재청구ㆍ증빙이 실제 결제와 같은 길로 간다. */
+        if (str_starts_with((string) $payment->payment_key, 'TEST_')) {
+            $무른금액 = $amount ?? (int) $payment->amount;
+
+            $payment->forceFill([
+                'status'        => 'CANCELED',
+                'canceled_at'   => now(),
+                'cancel_amount' => (int) $payment->amount,
+                'cancel_reason' => mb_substr($reason, 0, 200),
+            ])->save();
+
+            Log::info('[Toss] 시험 자동 결제를 장부에서만 취소', [
+                'order' => $order->order_number, 'key' => $payment->payment_key,
+                'amount' => $무른금액,
+            ]);
+
+            activity()->performedOn($order)->log(sprintf(
+                '시험 환경 자동 결제 취소 — %s원 (토스를 부르지 않았습니다)',
+                number_format($무른금액)
+            ));
+
+            return [
+                'ok'       => true,
+                'message'  => sprintf('%s원을 돌려주었습니다 (시험 환경 자동 결제라 토스를 부르지 않았습니다).',
+                    number_format($무른금액)),
+                'status'   => 'CANCELED',
+                'canceled' => $무른금액,
+                'payment'  => $payment->fresh(),
+            ];
+        }
+
         $body = ['cancelReason' => mb_substr($reason, 0, 200)];
 
         if ($amount !== null) {
@@ -125,6 +166,24 @@ class PaymentCancelService extends TossClient
 
         if (!$payment?->payment_key) {
             return ['ok' => false, 'message' => '무를 결제가 없습니다.', 'balance' => 0];
+        }
+
+        /* 시험 자동 결제는 토스에 없다 — 물어도 없는 번호라 거절당한다.
+           우리 표에 적힌 것으로 답한다 (cancel() 과 같은 갈래). */
+        if (str_starts_with((string) $payment->payment_key, 'TEST_')) {
+            $총액 = (int) $payment->amount;
+            $무른것 = (int) ($payment->cancel_amount ?? 0);
+
+            return [
+                'ok'       => true,
+                'status'   => $payment->status,
+                'label'    => self::STATUS_LABELS[$payment->status ?? ''][0] ?? ($payment->status ?? ''),
+                'method'   => $payment->method,
+                'total'    => $총액,
+                'canceled' => $무른것,
+                'balance'  => max(0, $총액 - $무른것),
+                'message'  => '시험 환경 자동 결제입니다 — 토스에 청하지 않습니다.',
+            ];
         }
 
         try {

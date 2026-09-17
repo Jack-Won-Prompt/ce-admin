@@ -106,6 +106,22 @@ class OrderController extends Controller
             $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + 1;
         }
 
+        /* 생성 서류도 함께 센다 (2026-09-17 시험에서 드러남).
+
+           요양비위임장ㆍ위임동의서ㆍ팩스통합본은 첨부 표가 아니라 제 표
+           (prescription_documents)에 담긴다. 그것을 빼고 세었더니 목록에는 「7」인데
+           주문 등록의 문서 창에는 아홉이 섰다 — 같은 건을 두 수로 보게 되어
+           담당자가 어느 쪽이 맞는지 되물었다. 문서 창이 보여 주는 것과 같은 것을 센다. */
+        $docCounts = \App\Models\PrescriptionDocument::selectRaw('prescription_id, count(*) as cnt')
+            ->whereIn('prescription_id', $처방번호들)
+            ->whereNotNull('file_path')
+            ->groupBy('prescription_id')
+            ->pluck('cnt', 'prescription_id');
+
+        foreach ($docCounts as $pid => $cnt) {
+            $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + (int) $cnt;
+        }
+
         $gridData = $orders->map(function ($o) use ($extras, $attCounts) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
@@ -652,6 +668,36 @@ class OrderController extends Controller
             'so_type'            => $request->so_type            ?? $order->so_type,
             'note'             => $items->count() > 1 ? "제품 목록: {$productNames}" : $order->note,
         ] + self::shippingExtras($request, $order));
+
+        /* 주문 품목도 함께 고친다 (2026-09-17 시험에서 드러남).
+
+           여태 이 자리는 orders 의 요약 칸만 고치고 order_items 는 그대로 두었다.
+           330개를 300개로 정정해도 품목 줄에는 330 이 남아, 그 줄을 근거로 세는
+           곳이 모두 틀렸다 —
+
+             · 추가 주문의 남은 몫 (PrescriptionController 가 items 합으로 센다)
+               → 남은 수량을 적게 잡아 한 박스도 담지 못했다
+             · 「원 주문 제품」 팝오버가 옛 수량을 보여 주었다
+             · 공단에 내는 구매내역 서류도 이 줄을 근거로 만든다
+
+           신규 등록(store)과 같은 방식으로 다시 쓴다 — 지우고 새로 담는다.
+           보내온 줄이 없으면 건드리지 않는다(배송지만 고치는 정정도 있다). */
+        if ($items->isNotEmpty()) {
+            $order->items()->delete();
+
+            foreach ($items->values() as $i => $item) {
+                $order->items()->create([
+                    'product_name'    => $item['product_name'],
+                    'product_code'    => $item['product_code']    ?? null,
+                    'quantity'        => max(1, (int) ($item['quantity'] ?? 1)),
+                    'product_price'   => $item['product_price']   ?? null,
+                    'insurance_price' => $item['insurance_price'] ?? null,
+                    'nhis_amount'     => $item['nhis_amount']     ?? null,
+                    'patient_copay'   => $item['patient_copay']   ?? null,
+                    'sort_order'      => $i,
+                ]);
+            }
+        }
 
         activity()->causedBy(Auth::user())
             ->performedOn($order)

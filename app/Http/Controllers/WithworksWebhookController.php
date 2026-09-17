@@ -259,10 +259,49 @@ class WithworksWebhookController extends Controller
 
         // 창고가 알려 온 단계로 우리 주문 상태도 함께 움직인다
         if ($newStatus = self::ORDER_STATUS[$data['event']] ?? null) {
+            /* 정정이 갈아 세우는 중이면 그때의 취소는 지나간 판매주문의 일이다
+               (2026-09-17 시험에서 드러남).
+
+               정정은 옛 판매주문을 취소하고 곧바로 새로 세운다. 그 취소 사건이
+               상태를 「취소」로 뒤집으면, 뒤이어 오는 so.created·so.confirmed 도
+               그것을 되돌리지 못한다 — 취소가 맨 끝 단계라 rank 가 가장 높다.
+               출고까지 끝낸 건이 취소로 남아 정정ㆍ취소 단추가 잠기고, 청구 관리와
+               교환/반품/취소 목록에서도 사라졌다. */
+            $갈아세우는중 = $newStatus === 'cancelled' && $order->정정갈아세우는중인가();
+
+            if ($갈아세우는중) {
+                Log::info('[Withworks] 정정이 갈아 세우는 중이라 취소는 상태에 반영하지 않습니다', [
+                    'order' => $order->order_number,
+                    'so_no' => $data['so_no'] ?? null,
+                ]);
+            }
+
             /* 뒤로 물리지 않는다. 웹훅은 순서가 뒤바뀌어 오거나 다시 오기도 해서,
                출고까지 간 건에 뒤늦게 「할당」이 닿으면 상태가 거꾸로 간다.
-               취소만은 어디서든 받는다 — 되돌리는 일이라 앞뒤가 없다. */
-            if ($newStatus === 'cancelled' || self::rank($newStatus) > self::rank($order->status)) {
+               취소만은 어디서든 받는다 — 되돌리는 일이라 앞뒤가 없다.
+
+               다만 취소에서 앞으로 나가는 길은 열어 둔다. 지금 판매번호로 온
+               사건은 살아 있는 판매주문의 일이므로, 취소로 잘못 뒤집힌 건이
+               그 사건으로 제자리를 찾는다. 취소된 판매주문에는 확정ㆍ할당ㆍ출고
+               사건이 오지 않으므로, 이 길이 열려도 진짜 취소는 취소로 남는다. */
+            $지금번호사건 = ($data['so_no'] ?? null) !== null
+                          && $data['so_no'] === $order->withworks_so_no;
+
+            $되살림 = $order->status === 'cancelled'
+                    && $newStatus !== 'cancelled'
+                    && $지금번호사건;
+
+            if ($되살림) {
+                Log::info('[Withworks] 취소로 적힌 주문에 지금 판매번호의 사건이 닿아 상태를 되살립니다', [
+                    'order' => $order->order_number,
+                    'so_no' => $data['so_no'],
+                    'event' => $data['event'],
+                ]);
+            }
+
+            if (! $갈아세우는중
+                && ($newStatus === 'cancelled' || $되살림
+                    || self::rank($newStatus) > self::rank($order->status))) {
                 $order->update(['status' => $newStatus]);
             }
 
@@ -274,7 +313,7 @@ class WithworksWebhookController extends Controller
                그때 「취소 요청 중」을 「취소됨」으로 닫아 준다.
 
                이 자리가 없으면 화면에는 「취소 요청 중」이 영영 서 있게 된다. */
-            if ($newStatus === 'cancelled'
+            if ($newStatus === 'cancelled' && ! $갈아세우는중
                 && $order->cancel_state === \App\Models\Order::CANCEL_REQUESTED) {
                 $order->update([
                     'cancel_state'   => \App\Models\Order::CANCEL_DONE,
@@ -338,9 +377,16 @@ class WithworksWebhookController extends Controller
            관해 우리가 아는 마지막 시점이 여기다.
            보내지 못해도 웹훅은 성공이다 — 알리지 못한 것과 받지 못한 것은 다른 일이다.
            한 건에 한 번만 나가는 것은 ShipNotice 가 발송 이력으로 가린다. */
-        if ($data['event'] === 'so.shipped') {
-            app(\App\Services\ShipNotice::class)->send($order->refresh());
+        /* 운송장이 닿은 자리에서도 부른다 (2026-09-17 시험에서 드러남).
 
+           운송장은 출고 뒤에 들어온다(so.shipped → so.invoiced). 출고 사건에서만
+           부르면 안내에 운송장이 실릴 길이 없다 — ShipNotice 가 잠깐 기다렸다가
+           이 사건에 번호를 실어 보낸다. 이미 보낸 건은 발송 이력으로 걸러진다. */
+        if (in_array($data['event'], ['so.shipped', 'so.invoiced'], true)) {
+            app(\App\Services\ShipNotice::class)->send($order->refresh());
+        }
+
+        if ($data['event'] === 'so.shipped') {
             /* 입금이 먼저 들어온 건은 그때 발행을 미뤄 두었다(요청서 8ㆍ9쪽 —
                「입금 및 출고 되어야」). 이제 출고됐으니 낸다.
 

@@ -31,7 +31,7 @@ final class TransactionStatement
      */
     public static function attach(Order $order): ?PrescriptionAttachment
     {
-        $order->loadMissing(['patient', 'prescription', 'items']);
+        $order->loadMissing(['patient', 'prescription', 'items.lots']);
 
         if (!$order->prescription_id) {
             Log::info('[거래명세서] 처방이 없는 주문 — 첨부하지 않는다', ['order' => $order->order_number]);
@@ -45,6 +45,7 @@ final class TransactionStatement
         if ($existing) {
             /* 종이는 이미 있는데 날이 안 남은 건 — 예전에 만든 것이다. 지금 채운다. */
             self::stamp($order);
+            self::lot받은뒤다시그리기($order, $existing);
 
             return $existing;
         }
@@ -98,6 +99,45 @@ final class TransactionStatement
         }
 
         $order->forceFill(['statement_date' => self::issueDate($order)])->save();
+    }
+
+    /**
+     * 출고 LOT 이 닿은 뒤에는 종이를 한 번 더 그린다 (2026-09-17 지시).
+     *
+     * 위드웍스는 **출고가 확정된 출고건에서** 명세서를 뽑으므로 LOT 칸이 늘 차 있다.
+     * 우리는 입금이 확인될 때 미리 그려 두는데, 그때는 창고가 무엇을 집을지 아직
+     * 모른다 — LOT 칸이 빈 채로 굳었다. 그래서 출고 확정으로 LOT 이 들어오면
+     * 그 자리에서 다시 그린다.
+     *
+     * **첨부 줄과 발행일은 그대로 둔다** — 같은 종이의 같은 판이고, 찍힌 날이 정본이다.
+     * 파일만 덮어쓴다. 한 번 다시 그리면 첨부의 손댄 시각이 LOT 보다 뒤가 되므로
+     * 다시 돌지 않는다.
+     */
+    private static function lot받은뒤다시그리기(Order $order, PrescriptionAttachment $att): void
+    {
+        $order->loadMissing('items.lots');
+
+        $늦게온것 = $order->items
+            ->flatMap(fn ($i) => $i->lots)
+            ->max('updated_at');
+
+        if (! $늦게온것 || ! $att->file_path || $att->updated_at >= $늦게온것) {
+            return;
+        }
+
+        try {
+            $pdf = self::render($order);
+            Storage::disk('public')->put($att->file_path, $pdf);
+            $att->forceFill(['file_size' => strlen($pdf)])->save();
+
+            Log::info('[거래명세서] 출고 LOT 이 닿아 다시 그렸다', [
+                'order' => $order->order_number, 'attachment' => $att->id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[거래명세서] LOT 을 넣어 다시 그리지 못했다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** 서식대로 그려 PDF 바이트로 돌려준다. */
@@ -182,17 +222,24 @@ final class TransactionStatement
            (품목 표가 생기기 전에 만들어진 주문). */
         $lines = $order->items->isNotEmpty() ? $order->items : ($rx?->items ?? collect());
 
-        $items = $lines->map(fn ($i) => [
-            'spec'       => (string) ($i->product_code ?? ''),
-            'name'       => (string) ($i->product_name ?? ''),
-            // 공단에 청구할 때 쓰는 번호 — 품번으로 찾는다
-            'deviceCode' => DeviceCode::for($i->product_code) ?? '',
-            // LOT 은 창고가 아는 값이다 — 우리 줄에는 없다
-            'lot'        => '',
-            'unit'       => 'EA',
-            'qty'        => (int) ($i->quantity ?? 0),
-            'price'      => (int) ($i->insurance_price ?: $i->product_price ?: 0),
-        ])->values()->all();
+        /* 위드웍스와 같이 **같은 제품이라도 LOT 이 다르면 줄을 나눈다**
+           (2026-09-17 지시). 저쪽은 실제로 피킹한 LOT 별 수량으로 나누고,
+           우리는 창고가 출고 확정 때 알려 준 것(order_item_lots)으로 나눈다. */
+        $items = [];
+        foreach ($lines as $i) {
+            $공통 = [
+                'spec'       => (string) ($i->product_code ?? ''),
+                'name'       => (string) ($i->product_name ?? ''),
+                // 공단에 청구할 때 쓰는 번호 — 품번으로 찾는다
+                'deviceCode' => DeviceCode::for($i->product_code) ?? '',
+                'unit'       => 'EA',
+                'price'      => (int) ($i->insurance_price ?: $i->product_price ?: 0),
+            ];
+
+            foreach (self::lot줄나누기($i) as $줄) {
+                $items[] = $공통 + $줄;
+            }
+        }
 
         $totalQty = array_sum(array_column($items, 'qty'));
         $amount   = 0;
@@ -218,16 +265,21 @@ final class TransactionStatement
             'recipient' => [
                 'name'    => $patient?->bare_name ?? \App\Models\Patient::bare($rx->patient_name_ocr ?? ''),
                 'address' => self::address($order, $rx),
-                'phone'   => $patient?->mobile ?? ($rx->mobile_ocr ?? ''),
+                /* 연락처는 가운데를 가린다 — 위드웍스가 찍는 모양과 같다(2026-09-17 지시).
+                   물건에 붙어 나가는 종이라 남의 손을 여러 번 거친다. */
+                'phone'   => self::가린번호($patient?->mobile ?? ($rx->mobile_ocr ?? '')),
             ],
-            /* 사용인감 — 원본이 찍는 그 그림이다. dompdf 는 바깥을 부르지 않으므로
-               (setIsRemoteEnabled(false)) 파일 경로로 준다. */
-            'sealPath' => public_path('images/stamp.png'),
+            /* 사용인감 — 위드웍스가 찍는 그 파일을 그대로 가져왔다(같은 경로에 둔다).
+               dompdf 는 바깥을 부르지 않으므로(setIsRemoteEnabled(false)) 파일 경로로 준다. */
+            'sealPath' => public_path('assets/colo_print/images/stamp.png'),
             'supplier' => [
                 'regNo'   => self::bizNo(),
                 'company' => $company['corp_name'] ?? '',
-                'address' => $company['addr']      ?? '',
-                'phone'   => $company['tel']       ?? '',
+                /* 주소는 위드웍스가 찍는 글과 같아야 한다(2026-09-17 지시).
+                   세금계산서에 쓰는 등기 주소(popbill.company.addr)는 같은 곳을 더 길게
+                   적은 것이라 두 종이의 글이 달랐다. 비워 두면 등기 주소를 쓴다. */
+                'address' => config('popbill.statement_addr') ?: ($company['addr'] ?? ''),
+                'phone'   => self::대표번호($company['tel'] ?? ''),
             ],
             'pages'  => $items ? array_chunk($items, self::ROWS) : [[]],
             'rows'   => self::ROWS,
@@ -250,7 +302,92 @@ final class TransactionStatement
         $addr = trim((string) ($order->shipping_address
             ?: trim(($rx->address_ocr ?? '') . ' ' . ($rx->address_detail ?? ''))));
 
-        return $addr;
+        /* 주소 끝에 괄호로 붙은 연락처를 뗀다 — 위드웍스도 같이 뗀다.
+           배송지 칸에 「… 201호(010-1234-5678)」 꼴로 적어 두는 일이 잦은데,
+           연락처는 아래 칸에 따로 있고 거기서는 가운데를 가린다. 주소에 그대로
+           실리면 가린 뜻이 없어진다. */
+        return trim(preg_replace('/\(\+?\d[\d\-]{7,}\)\s*$/u', '', $addr));
+    }
+
+    /**
+     * 받는 분 연락처 — 가운데를 가린다.
+     *
+     * 위드웍스의 maskPhone 을 그대로 옮겼다. 두 시스템이 같은 종이를 내므로 가리는
+     * 자리도 같아야 한다.
+     */
+    private static function 가린번호(?string $phone): string
+    {
+        $phone = trim((string) $phone);
+
+        if ($phone === '') {
+            return '';
+        }
+
+        if (preg_match('/^(\d{2,3})-(\d{3,4})-(\d{4})$/', $phone, $m)) {
+            return $m[1] . '-' . str_repeat('*', strlen($m[2])) . '-' . $m[3];
+        }
+
+        $digits = preg_replace('/\D/', '', $phone);
+
+        if (strlen($digits) >= 8) {
+            $자리 = strlen($digits) - 8;
+
+            return substr($digits, 0, $자리) . '****' . substr($digits, $자리 + 4);
+        }
+
+        return $phone;
+    }
+
+    /**
+     * 공급자 대표번호 — 여덟 자리는 4-4 로 끊는다(1588-7866).
+     *
+     * 위드웍스는 DB 에 하이픈 없이 적혀 있어 찍을 때 끊는다. 우리 설정값에는 이미
+     * 하이픈이 있으므로 그대로 지나가지만, 설정이 바뀌어도 두 종이가 같도록 둔다.
+     */
+    private static function 대표번호(?string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+
+        return strlen($digits) === 8
+            ? substr($digits, 0, 4) . '-' . substr($digits, 4)
+            : (string) $phone;
+    }
+
+    /**
+     * 한 품목을 LOT 별로 나눈다 — 위드웍스가 찍는 모양과 같다.
+     *
+     * 저쪽은 실제로 피킹한 LOT 별 수량(picks)으로 나눈다. 우리는 창고가 출고 확정 때
+     * 알려 준 것(order_item_lots)이 그 자리다.
+     *
+     * **수량이 딱 맞을 때만 나눈다.** LOT 수량이 오지 않았거나 일부만 온 건을 나누면
+     * 금액 합계가 우리가 받은 돈과 어긋난다 — 그때는 나누지 않고 LOT 번호만 한 칸에
+     * 모아 적는다.
+     *
+     * @return array<int, array{lot:string, qty:int}>
+     */
+    private static function lot줄나누기($item): array
+    {
+        $qty = (int) ($item->quantity ?? 0);
+
+        // 처방 줄로 대신한 건에는 LOT 이 없다
+        $lots = $item instanceof \App\Models\OrderItem
+            ? $item->lots->filter(fn ($l) => trim((string) $l->lot_no) !== '')->values()
+            : collect();
+
+        if ($lots->isEmpty()) {
+            return [['lot' => '', 'qty' => $qty]];
+        }
+
+        $모자람 = $lots->contains(fn ($l) => (int) $l->quantity <= 0);
+
+        if ($모자람 || (int) $lots->sum('quantity') !== $qty) {
+            return [['lot' => $lots->pluck('lot_no')->implode(', '), 'qty' => $qty]];
+        }
+
+        return $lots->map(fn ($l) => [
+            'lot' => (string) $l->lot_no,
+            'qty' => (int) $l->quantity,
+        ])->values()->all();
     }
 
     private static function bizNo(): string

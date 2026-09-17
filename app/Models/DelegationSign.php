@@ -133,6 +133,13 @@ class DelegationSign extends Model
             return;
         }
 
+        /* 가려진 값이 되돌아오면 적어 둔 것을 그대로 둔다 (2026-09-17, 거래처와 같다).
+           화면이 「120315-3******」로 보여 주므로, 손대지 않고 저장하면 그 글이
+           그대로 온다 — 번호로 알고 다시 암호화하면 적어 둔 번호가 별표로 덮인다. */
+        if (str_contains($값, '*')) {
+            return;
+        }
+
         $this->attributes['resident_no']        = \App\Support\ResidentNo::encrypt($값);
         $this->attributes['resident_no_masked'] = \App\Support\ResidentNo::mask($값);
 

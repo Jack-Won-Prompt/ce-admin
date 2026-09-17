@@ -1297,6 +1297,14 @@ class PrescriptionController extends Controller
                 'typeLabel' => $att->doc_type_label,
                 'name'      => $att->file_original_name,
                 'isPdf'     => $att->is_pdf,
+                /* 방금 올린 등록신청서에도 곧바로 신청인란을 얹을 수 있어야 한다 —
+                   이 값이 없으면 화면을 새로 고치기 전에는 단추가 서지 않는다
+                   (2026-09-17 지시) */
+                'tuneKey'           => $att->is_image ? 'att:' . $att->id : null,
+                'bright'            => 0,
+                'contrast'          => 0,
+                'regOverlay'        => $att->신청인란얹을수있나(),
+                'regOverlayApplied' => false,
             ],
         ]);
     }
@@ -1378,6 +1386,152 @@ class PrescriptionController extends Controller
         $attachment->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    // ── 등록신청서 신청인란 얹기 (2026-09-17 지시) ──────────
+    //
+    // 등록신청서는 병원이 ② 요양기관 확인란을 적고 확인해 내주는 종이다. 그 종이를
+    // 찍어 올리면 ③ 신청인란 — 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명 — 은 비어
+    // 있다. 위임장이 하는 일과 같게, 받아 둔 전자서명과 우리가 아는 값을 얹는다.
+    //
+    // 찍은 사진마다 자리가 달라 처음 자리만 세워 주고 담당자가 끌어 맞춘다.
+
+    /** 얹을 것과 자리를 화면에 내준다 */
+    public function registrationOverlay(Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
+    {
+        $this->이첨부인가($prescription, $attachment);
+
+        return response()->json([
+            'success'       => true,
+            'source_url'    => route('prescriptions.attachments.overlaySource', [$prescription, $attachment]),
+            'values'        => \App\Support\RegistrationOverlay::values($prescription),
+            'fields'        => $attachment->overlay_fields ?: \App\Support\RegistrationOverlay::defaults(),
+            'applied'       => $attachment->신청인란얹었나(),
+            'has_signature' => \App\Support\RegistrationOverlay::signature($prescription) !== null,
+        ]);
+    }
+
+    /** 자리를 다시 잡을 때 쓰는 바탕 그림 — 얹기 전의 원본이다 */
+    public function registrationOverlaySource(Prescription $prescription, PrescriptionAttachment $attachment)
+    {
+        $this->이첨부인가($prescription, $attachment);
+
+        $경로 = $attachment->바탕그림경로();
+
+        abort_unless($경로 && Storage::disk('public')->exists($경로), 404);
+
+        return response()->file(Storage::disk('public')->path($경로), [
+            /* 얹고 다시 열 때 옛 그림이 나오지 않게 한다 */
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    /** 잡아 둔 자리대로 얹어 첨부 파일을 갈아 놓는다 */
+    public function saveRegistrationOverlay(Request $request, Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
+    {
+        $this->이첨부인가($prescription, $attachment);
+
+        $data = $request->validate([
+            'fields'              => 'required|array',
+            'fields.*.x'          => 'required|numeric|min:0|max:1',
+            'fields.*.y'          => 'required|numeric|min:0|max:1',
+            'fields.*.w'          => 'nullable|numeric|min:0.01|max:1',
+            'fields.*.size'       => 'nullable|numeric|min:0.002|max:0.1',
+        ]);
+
+        /* 아는 이름만 받는다 — 화면에서 온 값이라 그대로 믿지 않는다 */
+        $자리 = array_intersect_key($data['fields'],
+            array_flip(['applicant', 'relation', 'tel', 'signature']));
+
+        if (! $자리) {
+            return response()->json(['success' => false, 'message' => '얹을 칸이 없습니다.'], 422);
+        }
+
+        try {
+            $그림 = \App\Support\RegistrationOverlay::compose($attachment, $자리);
+        } catch (\Throwable $e) {
+            Log::warning('[등록신청서 얹기] 그리지 못했습니다', [
+                'attachment' => $attachment->id, 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        /* 원본은 처음 얹을 때 한 번만 옮겨 적는다 — 두 번째부터는 이미 적혀 있는
+           그 원본 위에 다시 얹는다(얹은 것 위에 또 얹으면 글자가 겹친다). */
+        $원본 = $attachment->overlay_source_path ?: $attachment->file_path;
+
+        $새경로 = 'attachments/' . $prescription->id . '/'
+                . uniqid('reg_') . '.' . $그림['ext'];
+
+        Storage::disk('public')->put($새경로, $그림['bytes']);
+
+        /* 앞서 얹어 둔 것은 지운다. 원본은 그대로 둔다 — 자리를 다시 잡을 바탕이다. */
+        if ($attachment->신청인란얹었나()
+            && $attachment->file_path
+            && $attachment->file_path !== $원본) {
+            Storage::disk('public')->delete($attachment->file_path);
+        }
+
+        $attachment->forceFill([
+            'file_path'           => $새경로,
+            'file_mime_type'      => $그림['mime'],
+            'file_size'           => strlen($그림['bytes']),
+            'overlay_source_path' => $원본,
+            'overlay_fields'      => $자리,
+        ])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->log('등록신청서에 신청인란(신청인ㆍ관계ㆍ전화번호ㆍ서명)을 얹었습니다');
+
+        return response()->json([
+            'success' => true,
+            'url'     => $attachment->fresh()->file_url,
+            'message' => '신청인란을 얹었습니다.',
+        ]);
+    }
+
+    /** 얹은 것을 걷고 원본으로 되돌린다 */
+    public function resetRegistrationOverlay(Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
+    {
+        $this->이첨부인가($prescription, $attachment);
+
+        if (! $attachment->신청인란얹었나()) {
+            return response()->json(['success' => false, 'message' => '아직 얹은 것이 없습니다.'], 422);
+        }
+
+        $얹은것 = $attachment->file_path;
+        $원본   = $attachment->overlay_source_path;
+
+        $attachment->forceFill([
+            'file_path'           => $원본,
+            'file_size'           => Storage::disk('public')->exists($원본)
+                                     ? Storage::disk('public')->size($원본)
+                                     : $attachment->file_size,
+            'overlay_source_path' => null,
+            /* 자리는 남겨 둔다 — 다시 얹을 때 잡아 둔 그 자리에서 시작한다 */
+        ])->save();
+
+        if ($얹은것 && $얹은것 !== $원본) {
+            Storage::disk('public')->delete($얹은것);
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->log('등록신청서에 얹은 신청인란을 걷고 원본으로 되돌렸습니다');
+
+        return response()->json([
+            'success' => true,
+            'url'     => $attachment->fresh()->file_url,
+            'message' => '원본으로 되돌렸습니다.',
+        ]);
+    }
+
+    /** 이 처방전에 붙은 등록신청서 그림인가 — 아니면 여기서 멈춘다 */
+    private function 이첨부인가(Prescription $prescription, PrescriptionAttachment $attachment): void
+    {
+        abort_if($attachment->prescription_id !== $prescription->id, 403);
+        abort_unless($attachment->신청인란얹을수있나(), 422,
+            '등록신청서 그림에만 신청인란을 얹을 수 있습니다.');
     }
 
     /** 작업 대기 리스트가 한 번에 그리는 줄 수 */
@@ -2247,6 +2401,9 @@ class PrescriptionController extends Controller
                 'tuneKey'   => $a->is_image ? 'att:' . $a->id : null,
                 'bright'    => (int) ($a->img_brightness ?? 0),
                 'contrast'  => (int) ($a->img_contrast ?? 0),
+                /* 등록신청서 그림에는 ③ 신청인란을 얹을 수 있다 (2026-09-17 지시) */
+                'regOverlay'        => $a->신청인란얹을수있나(),
+                'regOverlayApplied' => $a->신청인란얹었나(),
             ];
         })->values()->toArray();
 
@@ -3167,6 +3324,19 @@ class PrescriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => '이미 입력 검수를 마쳤습니다.',
+            ], 422);
+        }
+
+        /* 요청이 있어야 승인한다 (2026-09-17 지시).
+
+           여태 「이미 승인했나」만 보아, 요청이 없는 건에도 승인이 그대로 떨어졌다.
+           그러면 누가 무엇을 검수해 달라 했는지 없이 승인만 남는다 —
+           requested_at 과 requested_by 가 빈 채로 「승인됨」이 되어, 두 사람이
+           맞대어 보는 절차가 한 사람의 단추 한 번으로 줄어든다. */
+        if (! $prescription->입력검수요청했나()) {
+            return response()->json([
+                'success' => false,
+                'message' => '입력 검수 요청이 없습니다 — 먼저 ［입력 검수 요청］을 눌러 주십시오.',
             ], 422);
         }
 

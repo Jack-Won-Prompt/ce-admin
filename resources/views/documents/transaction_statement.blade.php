@@ -15,7 +15,14 @@
        · SVG 바코드 → 검은 칸을 나란히 세워 그린다(막대 하나가 칸 하나)
 
      원본이 지킨 것도 그대로 지킨다 — 품목 열 줄 고정, LOT 이 다르면 줄을 나눔,
-     열한 건부터 장을 나눔. --}}
+     열한 건부터 장을 나눔.
+
+     2026-09-17 지시로 원본과 한 자 한 자 맞췄다 :
+       · 사용인감 — 원본 파일(assets/colo_print/images/stamp.png)을 그대로 가져오고
+         크기ㆍ자리도 원본 값(19.5mm · right:-6mm)으로
+       · 품목ㆍ합계 줄 높이 9.4mm
+       · 합계 금액 글자색 남색 → 검정
+       · 교환ㆍ반품 안내 둘째 줄 「제품 수령일로부터 7일」 → 「결제일로부터 14일」 --}}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -28,11 +35,18 @@
 
   /* 종이 크기는 dompdf 가 A4 로 잡는다. 여기서 210×297 을 다시 못 박으면 여백만큼
      넘쳐 한 장짜리 문서가 네 장으로 벌어진다 — 안쪽 여백만 준다. */
-  .sheet { padding: 13mm 12mm 12mm; position: relative; page-break-after: always; }
+  /* 아래 여백은 6mm 다. 원본(12mm)보다 좁힌 것은 보이는 자리가 아니라 **장을 넘기는
+     잣대**라서다 — 종이에 실제로 남는 아래 여백은 40mm 안팎이고, 여기 적은 값은
+     dompdf 가 「이만큼 남겨야 한다」고 보는 몫일 뿐이다. 12mm 로 두면 품명이 두 줄로
+     접히는 건(가장 긴 품명이 열 줄)이 열한 번째 줄도 없이 둘째 장으로 넘어갔다. */
+  .sheet { padding: 13mm 12mm 6mm; position: relative; page-break-after: always; }
   .sheet.last { page-break-after: auto; }
 
   /* ── 문서 머리 ───────────────────────────── */
-  .doc-head { text-align: center; position: relative; height: 30mm; }
+  /* 머리 판의 높이는 발행일이 설 자리를 정한다. 발행일은 왼쪽 아래에 붙이므로
+     (아래 .issue-date) 판이 낮으면 발행일만 위로 올라가 바코드 번호와 어긋난다 —
+     원본은 그 둘이 같은 줄에 선다. 35.6mm 일 때 둘이 같은 높이(47.6mm)에 놓인다. */
+  .doc-head { text-align: center; position: relative; height: 35.6mm; }
   .doc-title { font-size: 31pt; font-weight: 700; letter-spacing: .28em; text-indent: .28em;
                color: #0b2d5b; line-height: 1.1; margin: 0 0 3mm; }
   /* 원본은 머리 판의 왼쪽 아래에 붙인다 — 바코드 번호와 같은 높이다 */
@@ -80,19 +94,39 @@
   .lbl td    { border: 0; padding: 0; text-align: center; font-size: 9pt;
                font-weight: 700; line-height: 1.35; }
   .party-value { text-align: left; }
-  /* 공급받는자 표는 세 줄이라 세로가 남는다 — 원본처럼 줄 여백을 넓혀 네 줄짜리
-     공급자 표와 높이를 맞춘다. */
-  .party-recipient td { padding-top: 2.9mm; padding-bottom: 2.9mm; }
+  /* 공급받는자(세 줄)와 공급자(네 줄)는 **아래가 같은 줄에서 끝나야 한다** (2026-09-17 지시).
+     원본은 둘을 flex 로 나란히 세워 짧은 쪽이 저절로 늘어난다(align-items:stretch).
+     dompdf 는 flex 도 height:100% 도 쓸 수 없어(둘 다 넣어 보니 장이 넷으로 벌어졌다)
+     줄 여백으로 높이를 맞춘다 — 만든 PDF 에서 두 표를 재어 3.1mm 로 잡았다
+     (공급받는자 41.06mm · 공급자 41.11mm).
 
-  /* 사용인감 — 상호ㆍ주소 칸 위에 겹쳐 찍는다(원본과 같은 자리ㆍ같은 크기) */
-  .seal { position: absolute; right: 4mm; top: 10mm; width: 24mm; height: 24mm; }
-  .seal img { width: 24mm; height: 24mm; }
+     여백은 **바로 아래 칸에만 건다.** 그냥 `td` 로 걸면 이름표 안에 든 낱자 표(.lbl)의
+     칸까지 걸려(순위가 같아 뒤에 적은 이 줄이 이긴다) 한 줄이 17mm 로 부풀었다 —
+     공급받는자 표만 10.8mm 길어져 있었다.
+
+     공급자 쪽은 늘 같은 글(등록번호ㆍ상호ㆍ주소ㆍ대표번호)이라 높이가 정해져 있다.
+     받는 분 주소가 길어 두 줄로 접히면 왼쪽이 그만큼 길어진다 — 원본은 flex 가
+     오른쪽을 늘려 맞추지만 여기서는 맞출 길이 없다. */
+  .party-recipient > tbody > tr > td { padding-top: 3.1mm; padding-bottom: 3.1mm; }
+
+  /* 사용인감 — 상호ㆍ주소 칸 위에 겹쳐 찍는다.
+     원본과 같은 자리ㆍ같은 크기다(right:-6mm · top:10mm · 19.5mm 네모). 오른쪽으로
+     6mm 넘겨 찍는 것은 원본이 그렇다 — 표 바깥으로 반쯤 걸쳐야 도장으로 보인다.
+     그림도 원본이 쓰는 파일을 그대로 가져왔다(여백을 잘라 낸 판이라 같은 네모에서
+     도장이 더 크게 보인다 — 그래서 24mm 가 아니라 19.5mm 다). */
+  .seal { position: absolute; right: -6mm; top: 10mm; width: 19.5mm; height: 19.5mm; }
+  .seal img { width: 19.5mm; height: 19.5mm; }
 
   /* ── 품목 ──────────────────────────────── */
   .items { margin-top: 4mm; }
   /* 줄 높이는 안쪽 여백으로 잡는다. dompdf 에서 height 는 글 높이에 더해져
-     서식이 정한 9.4mm 줄이 14mm 로 부푼다. */
-  .items td { padding: 1mm 2mm; }
+     서식이 정한 9.4mm 줄이 14mm 로 부푼다.
+
+     서식이 정한 줄 높이는 9.4mm 다. 여백 1.8mm 일 때 dompdf 가 그리는 줄 간격이
+     9.42mm 로, 서식과 같다(만들어 낸 PDF 에서 글 놓인 자리를 재어 맞췄다 —
+     dompdf 의 줄 상자는 line-height 로 셈한 값보다 높아 손으로는 맞출 수 없었다).
+     여백을 1mm 로 두었을 때는 줄 간격이 7.6mm 라 원본보다 표가 18mm 짧았다. */
+  .items td { padding: 1.8mm 2mm; }
   .items .c { text-align: center; }
   .items .r { text-align: right; }
   /* 원본과 같은 9pt 다. 긴 품명은 원본에서도 두 줄로 접힌다 — 접히라고 둔 칸이다
@@ -104,12 +138,14 @@
 
   .sum-qty td { background: #fafbfc; font-weight: 700; }
   .sum-amt td { background: #f1f2f4; font-weight: 700; padding: 0; }
+  /* 합계 줄도 품목 줄과 같은 9.4mm 다 — 여백은 위와 같은 값이다 */
   .sum-inner td { border: 0; border-right: 0.4mm solid #5b5b5b; background: #f1f2f4;
-                  font-weight: 700; padding: 1.6mm 2mm; }
+                  font-weight: 700; padding: 1.8mm 2mm; }
   .sum-inner .last { border-right: 0; }
   .sum-inner .c { text-align: center; letter-spacing: .06em; }
   .sum-inner .r { text-align: right; font-size: 9.5pt; }
-  .sum-inner .grand { font-size: 11pt; color: #0b2d5b; }
+  /* 합계 금액은 검정이다 — 원본도 제목만 남색(#0b2d5b)이고 금액은 본문색이다 */
+  .sum-inner .grand { font-size: 11pt; color: #111111; }
 
   /* ── 비고 (교환·반품 안내) ─────────────────── */
   .notice { margin-top: 4mm; }
@@ -273,7 +309,7 @@
         <td class="n-label">교환·반품 안내</td>
         <td>
           <p>- 교환·반품 요청을 하는 제품은 구매한 제품과 <b>동일한 LOT</b>인 경우에만 가능합니다.</p>
-          <p>- 제품 수령일로부터 <b>7일 이내</b>에 신청한 경우에만 가능합니다.</p>
+          <p>- 결제일로부터 <b>14일 이내</b>에 신청한 경우에만 가능합니다.</p>
           <p>- 고객의 단순 변심에 의한 교환 및 반품의 경우, 왕복 배송비는 <b>고객 부담</b>입니다.</p>
           <p>- 소비자의 부주의로 제품이 훼손 또는 파손된 경우, 최소 포장 단위의 수량이 맞지 않는 경우,
              사용 또는 일부 소비로 가치가 감소한 경우에는 교환 및 반품이 <b>불가</b>합니다.</p>

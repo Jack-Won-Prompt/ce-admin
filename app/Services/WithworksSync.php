@@ -295,6 +295,18 @@ class WithworksSync
             }
         }
 
+        /* 운송장을 기다리다 멈춰 선 배송 안내를 마저 보낸다 (2026-09-17).
+
+           출고 사건에 운송장이 아직 없으면 ShipNotice 가 잠깐 기다린다. 운송장이
+           닿으면 그 사건이 보내지만, 끝내 오지 않는 건도 있다 — 그 건이 영영
+           멈춰 있으면 환자는 물건이 오는지조차 모른다. 기다림이 끝났으면 여기서
+           번호 없이 보낸다. 이미 보낸 건은 발송 이력으로 걸러진다. */
+        foreach ($orders as $order) {
+            if (in_array((string) $order->refresh()->withworks_ship_status, self::SHIPPED, true)) {
+                app(ShipNotice::class)->send($order, force: true);
+            }
+        }
+
         return ['configured' => true, 'checked' => $orders->count(), 'updated' => $updated];
     }
 }

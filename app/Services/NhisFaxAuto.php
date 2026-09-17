@@ -55,11 +55,27 @@ final class NhisFaxAuto
         $prescription->loadMissing('patient', 'billingOffice', 'order');
 
         /* 이미 보낸 건은 다시 보내지 않는다. 동의는 다시 받을 수 있고(만료ㆍ재발송),
-           그때마다 같은 서류가 공단에 또 가면 저쪽에서 중복 등록으로 읽는다. */
+           그때마다 같은 서류가 공단에 또 가면 저쪽에서 중복 등록으로 읽는다.
+
+           보낸 자취는 fax_histories 에 남는다 (2026-09-17 시험에서 바로잡음).
+
+           여태 이 자리는 NhisFaxLog 를 보았는데, 그 표는 「공단 청구 발송」 갈래의
+           것이고 팩스 경로는 거기에 아무것도 쓰지 않는다 — 어디에서도
+           NhisFaxLog 를 만들지 않으므로 빗장이 한 번도 걸리지 않았다. 그래서
+           신분증을 잇달아 두 번 붙였더니 같은 팩스가 5초 사이에 두 번 나갔다.
+
+           실패ㆍ취소로 끝난 건은 보낸 것으로 치지 않는다 — 다시 보내야 한다. */
         $order = $prescription->order;
 
-        if ($order && \App\Models\NhisFaxLog::where('order_id', $order->id)
-                ->where('status', '!=', 'failed')->exists()) {
+        $이미보냄 = \App\Models\FaxHistory::where('prescription_id', $prescription->id)
+            ->where('recipient_type', 'nhis')
+            ->whereNotIn('popbill_state', [
+                \App\Models\FaxHistory::STATE_FAIL,
+                \App\Models\FaxHistory::STATE_CANCEL,
+            ])
+            ->exists();
+
+        if ($이미보냄) {
             return $no(null);
         }
 

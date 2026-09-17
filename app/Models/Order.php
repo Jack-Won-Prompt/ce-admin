@@ -35,6 +35,18 @@ class Order extends Model
     /** 정정을 청해 두고 창고가 되돌리기를 기다리는 중 */
     public const AMEND_REQUESTED = 'requested';
 
+    /* 정정이 판매주문을 갈아 세우는 중 (2026-09-17 시험에서 드러남).
+
+       정정은 옛 판매주문을 취소하고 새로 세운다. 그 취소에 위드웍스가 so.cancelled 를
+       보내는데, 그 사건이 닿는 시점에는 우리 줄에 아직 옛 번호가 지금 번호로 적혀
+       있다 — 그래서 물러난판매번호인가() 가 가려내지 못하고 주문이 「취소」로 뒤집혔다.
+       뒤이어 오는 so.created·so.confirmed 도 그것을 되돌리지 못한다(취소가 맨 끝
+       단계라 rank 가 가장 높다). 그 결과 출고까지 끝낸 건이 취소로 남아 정정ㆍ취소
+       단추가 잠기고, 청구 관리와 교환/반품/취소 목록에서도 사라졌다.
+
+       갈아 세우는 동안 이 표를 세워 두면 웹훅이 그 사이의 취소 사건을 건너뛴다. */
+    public const AMEND_SWAPPING = 'swapping';
+
     public const CANCEL_REQUESTED = 'requested';
     public const CANCEL_DONE      = 'cancelled';
     public const CANCEL_REJECTED  = 'rejected';
@@ -94,7 +106,7 @@ class Order extends Model
     public function 정정가능한가(): bool
     {
         return $this->cancel_state !== self::CANCEL_REQUESTED
-            && $this->amend_state !== self::AMEND_REQUESTED
+            && ! $this->정정기다리는중인가()
             && $this->창고단계() !== 'shipped'
             && $this->status !== 'cancelled';
     }
@@ -102,7 +114,13 @@ class Order extends Model
     /** 정정을 청해 두고 기다리는 중인가 — 그 동안 다른 단추를 잠근다 */
     public function 정정기다리는중인가(): bool
     {
-        return $this->amend_state === self::AMEND_REQUESTED;
+        return in_array($this->amend_state, [self::AMEND_REQUESTED, self::AMEND_SWAPPING], true);
+    }
+
+    /** 지금 판매주문을 갈아 세우는 중인가 — 그 사이의 취소 사건은 지나간 것이다 */
+    public function 정정갈아세우는중인가(): bool
+    {
+        return $this->amend_state === self::AMEND_SWAPPING;
     }
 
     /**

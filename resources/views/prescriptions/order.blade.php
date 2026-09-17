@@ -1046,6 +1046,17 @@
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
 
+  /* 등록신청서 신청인란 — 끌어 옮기는 칸 (2026-09-17).
+     얹은 그림과 같아 보여야 자리를 맞출 수 있다. 그래서 글자색ㆍ글꼴은 그대로 두고
+     테두리만 옅게 둘러 끌 수 있다는 것을 알린다. */
+  .reg-ov-chip { position:absolute; cursor:move; user-select:none; white-space:nowrap;
+                 color:#111; line-height:1; padding:1px 2px; border:1px dashed rgba(115,103,240,.85);
+                 background:rgba(115,103,240,.06); }
+  .reg-ov-chip:hover { background:rgba(115,103,240,.16); }
+  .reg-ov-chip.is-drag { border-style:solid; background:rgba(115,103,240,.2); }
+  .reg-ov-chip.is-empty { border-color:var(--danger); background:rgba(234,84,85,.1); color:var(--danger); }
+  .reg-ov-sig img { display:block; height:auto; }
+
   /* 보호자 영역의 진행 상태 — 받은 것과 아직 안 받은 것 */
   .gb-state { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px;
               font-size:11px; font-weight:700; line-height:18px; white-space:nowrap; flex-shrink:0;
@@ -2161,6 +2172,14 @@ $calcDeposit  = $calcCopay;
           <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
                   title="처음으로 되돌리기 (배율·회전·위치)"
                   @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-arrows-rotate"></i></button>
+          {{-- 등록신청서 그림을 보고 있을 때만 선다 (2026-09-17 지시).
+               병원이 ② 요양기관 확인란을 적어 준 종이라 ③ 신청인란은 비어 있다 —
+               위임장처럼 받아 둔 서명과 우리가 아는 값을 그 자리에 얹는다. --}}
+          <button type="button" id="btnRegOverlay" class="vw-btn" style="display:none;"
+                  onclick="openRegOverlay()"
+                  title="등록신청서 아래쪽 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 얹습니다">
+            <i class="fa-solid fa-signature" style="margin-right:4px;"></i><span id="btnRegOverlayLabel">신청인란 채우기</span>
+          </button>
           <a id="viewerOpenBtn" class="vw-btn vw-btn-icon"
              href="{{ $prescription->image_url ?? ($firstDoc['url'] ?? '#') }}" target="_blank" title="원본보기"
              @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
@@ -4398,7 +4417,10 @@ $calcDeposit  = $calcCopay;
           <div class="card-body">
             <div class="workflow-step">
               <div class="ws-icon done"><i class="fa-solid fa-mobile-screen"></i></div>
-              <div><div class="ws-label">모바일/웹 업로드</div><div class="ws-time">{{ $prescription->created_at->format('H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</div></div>
+              {{-- 「iOS 앱」이라 적어 두었는데 안드로이드로 올린 것도 그렇게 보였다
+                   (2026-09-17 시험). upload_source 는 mobile·web 둘뿐이라 기기를
+                   가릴 값이 없다 — 가리지 못하는 것은 적지 않는다. --}}
+              <div><div class="ws-label">모바일/웹 업로드</div><div class="ws-time">{{ $prescription->created_at->format('H:i') }} · {{ $prescription->upload_source === 'mobile' ? '모바일 앱' : '웹' }}</div></div>
               <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
             </div>
             {{-- 「OCR 처리」 걸음은 두지 않는다 — OCR 을 쓰지 않기로 했다(수기 입력).
@@ -4452,7 +4474,7 @@ $calcDeposit  = $calcCopay;
                 <tr>
                   <td><i class="fa-solid fa-mobile-screen" style="color:var(--primary);margin-right:5px;"></i>모바일/웹 업로드</td>
                   <td style="text-align:center;"><i class="fa-solid fa-check" style="color:var(--primary);"></i></td>
-                  <td>{{ $prescription->created_at->format('Y-m-d H:i') }} · {{ $prescription->upload_source === 'mobile' ? 'iOS 앱' : '웹' }}</td>
+                  <td>{{ $prescription->created_at->format('Y-m-d H:i') }} · {{ $prescription->upload_source === 'mobile' ? '모바일 앱' : '웹' }}</td>
                 </tr>
                 {{-- OCR 처리 줄은 두지 않는다(위와 같은 까닭) --}}
                 <tr>
@@ -4880,6 +4902,64 @@ $calcDeposit  = $calcCopay;
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button type="button" class="btn btn-outline btn-sm" onclick="rxTplClose()">취소</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="rxTplSave()">저장</button>
+    </div>
+  </div>
+</div>
+
+{{-- ── 등록신청서 신청인란 채우기 (2026-09-17 지시) ────────────
+     등록신청서는 병원이 ② 요양기관 확인란을 적고 확인해 내주는 종이다. 그 종이를
+     찍어 올리면 아래쪽 ③ 신청인란 — 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명 — 은
+     비어 있다. 위임장이 하는 일과 같게, 받아 둔 전자서명과 우리가 아는 값을 얹는다.
+
+     **자리는 끌어서 맞춘다.** 찍은 사진마다 크기도 기울기도 여백도 달라 정해진
+     자리로는 맞출 수 없다. 처음 자리는 서식을 똑바로 스캔했을 때의 자리로 세워
+     주고, 담당자가 칸 위로 끌어다 놓는다. --}}
+<div id="regOverlayModal" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(17,17,17,.55);">
+  <div style="position:absolute;inset:24px;background:var(--bg-card);border-radius:var(--radius-lg);
+              box-shadow:0 12px 48px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--primary);color:#fff;flex-shrink:0;">
+      <i class="fa-solid fa-signature" style="font-size:15px;"></i>
+      <span style="font-size:13px;font-weight:700;flex:1;">등록신청서 &mdash; 신청인란 채우기</span>
+      <span id="regOvNote" style="font-size:11px;opacity:.9;"></span>
+      <button type="button" onclick="closeRegOverlay()"
+              style="background:none;border:0;color:#fff;font-size:20px;line-height:1;cursor:pointer;">&times;</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);
+                font-size:12px;color:var(--text-muted);flex-wrap:wrap;flex-shrink:0;">
+      <span><i class="fa-solid fa-hand-pointer"></i> 칸을 끌어 서식의 자리에 맞추십시오.</span>
+      <label style="display:inline-flex;align-items:center;gap:5px;">
+        글자 크기
+        <input type="range" id="regOvSize" min="6" max="28" step="1" value="12"
+               oninput="regOvResize(this.value)" style="width:110px;vertical-align:middle;">
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:5px;">
+        서명 크기
+        <input type="range" id="regOvSigW" min="4" max="30" step="1" value="9"
+               oninput="regOvSigResize(this.value)" style="width:110px;vertical-align:middle;">
+      </label>
+      <span style="flex:1;"></span>
+      <button type="button" class="btn btn-outline btn-sm" onclick="regOvDefaults()">처음 자리로</button>
+      <button type="button" id="regOvResetBtn" class="btn btn-outline btn-sm" style="display:none;"
+              onclick="regOvReset()">원본으로 되돌리기</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="regOvSave()">
+        <i class="fa-solid fa-check"></i> 얹어서 저장
+      </button>
+    </div>
+
+    <div id="regOvStage" style="flex:1;overflow:auto;background:var(--gray-100);padding:16px;text-align:center;">
+      <div id="regOvCanvas" style="position:relative;display:inline-block;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18);">
+        {{-- 서식 한 장이 통째로 보여야 아래쪽 ③ 신청인란을 찾아 맞출 수 있다 —
+             창 높이에 맞춘다(스캔은 세로가 길어 제 크기로 두면 아래가 잘린다) --}}
+        <img id="regOvImg" alt="등록신청서"
+             style="display:block;max-width:100%;max-height:calc(100vh - 190px);" />
+        {{-- 끌어 옮기는 칸들. 값은 서버가 아는 것을 그대로 보여 준다 — 여기서 고치지
+             않는다(고칠 곳은 거래처ㆍ동의 기록이고, 그 둘이 정본이다). --}}
+        <div class="reg-ov-chip" data-key="applicant"><span></span></div>
+        <div class="reg-ov-chip" data-key="relation"><span></span></div>
+        <div class="reg-ov-chip" data-key="tel"><span></span></div>
+        <div class="reg-ov-chip reg-ov-sig" data-key="signature"><img alt="서명" /></div>
+      </div>
     </div>
   </div>
 </div>
@@ -5341,10 +5421,240 @@ function switchViewerDoc(el) {
   el.classList.add('active');
 
   showDoc(ALL_DOCS[idx]);
+  syncRegOverlayBtn();
 
   // 크게 보기 창이 떠 있으면 고른 문서를 따라간다
   const bv = document.getElementById('bigViewer');
   if (bv && bv.style.display !== 'none') openBigViewer();
+}
+
+/* ── 등록신청서 신청인란 채우기 ─────────────────────────────
+   (2026-09-17 지시)
+
+   등록신청서는 병원이 ② 요양기관 확인란을 적고 확인해 내주는 종이다. 찍어 올리면
+   아래쪽 ③ 신청인란 — 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명 — 이 비어 있다.
+   위임장이 하는 일과 같게, 받아 둔 전자서명과 우리가 아는 값을 그 자리에 얹는다.
+
+   자리는 그림 크기에 대한 몫(0~1)으로 적는다 — 찍은 사진마다 크기가 달라
+   정해진 자리로는 맞출 수 없다. */
+/* 주소에는 처방번호가 든다 — 처방전은 번호로 찾는다(getRouteKeyName).
+   id 를 넣었더니 「No query results」로 떨어졌다. */
+const REG_OV_BASE = @json(url('/prescriptions/' . $prescription->getRouteKey() . '/attachments'));
+const REG_OV_LABELS = { applicant: '신청인', relation: '수진자와의 관계', tel: '전화번호', signature: '서명' };
+let regOvAtt = null, regOvFields = null;
+
+/** 지금 보고 있는 문서가 등록신청서 그림이면 단추를 세운다 */
+function syncRegOverlayBtn() {
+  const btn = document.getElementById('btnRegOverlay');
+  if (!btn) return;
+
+  const doc = ALL_DOCS[currentDocIdx];
+  const 됨  = !!(doc && doc.regOverlay);
+
+  btn.style.display = 됨 ? '' : 'none';
+  if (됨) {
+    document.getElementById('btnRegOverlayLabel').textContent =
+      doc.regOverlayApplied ? '신청인란 다시 맞추기' : '신청인란 채우기';
+  }
+}
+
+async function openRegOverlay() {
+  const doc = ALL_DOCS[currentDocIdx];
+  if (!doc || !doc.regOverlay) return;
+
+  regOvAtt = doc.id;
+
+  try {
+    const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, { headers: { 'Accept': 'application/json' } });
+    const d   = await res.json();
+    if (!d.success) { showToast(d.message || '열지 못했습니다.', 'danger'); return; }
+
+    regOvFields = d.fields;
+
+    /* 값은 서버가 아는 것을 그대로 보여 준다. 빈 것은 붉게 세워 둔다 —
+       빈 채로 얹으면 그 칸만 비어 공단에 나간다. */
+    ['applicant', 'relation', 'tel'].forEach(k => {
+      const chip = document.querySelector(`.reg-ov-chip[data-key="${k}"]`);
+      const 값   = (d.values[k] || '').trim();
+      chip.querySelector('span').textContent = 값 || ('(' + REG_OV_LABELS[k] + ' 없음)');
+      chip.classList.toggle('is-empty', !값);
+    });
+
+    const sig = document.querySelector('.reg-ov-chip[data-key="signature"]');
+    sig.style.display = d.has_signature ? '' : 'none';
+    if (d.has_signature) {
+      sig.querySelector('img').src = @json(route('prescriptions.consentSignature', $prescription));
+    }
+
+    document.getElementById('regOvNote').textContent = d.has_signature
+      ? '' : '받아 둔 전자서명이 없어 서명은 얹지 않습니다.';
+    document.getElementById('regOvResetBtn').style.display = d.applied ? '' : 'none';
+
+    /* 바탕은 늘 얹기 전의 원본이다 — 얹은 그림 위에 또 얹으면 글자가 겹친다 */
+    const img = document.getElementById('regOvImg');
+    img.onload = () => regOvPlace();
+    img.src = `${REG_OV_BASE}/${regOvAtt}/overlay/source?t=${Date.now()}`;
+
+    document.getElementById('regOverlayModal').style.display = 'block';
+  } catch (e) {
+    showToast('신청인란을 열지 못했습니다.', 'danger');
+  }
+}
+
+function closeRegOverlay() {
+  document.getElementById('regOverlayModal').style.display = 'none';
+}
+
+/** 적어 둔 몫대로 칸을 놓는다 */
+function regOvPlace() {
+  const img = document.getElementById('regOvImg');
+  const W = img.clientWidth, H = img.clientHeight;
+  if (!W || !H) return;
+
+  Object.keys(REG_OV_LABELS).forEach(k => {
+    const chip = document.querySelector(`.reg-ov-chip[data-key="${k}"]`);
+    const pos  = regOvFields[k];
+    if (!chip || !pos) return;
+
+    chip.style.left = (pos.x * W) + 'px';
+    chip.style.top  = (pos.y * H) + 'px';
+
+    if (k === 'signature') {
+      chip.querySelector('img').style.width = ((pos.w || 0.086) * W) + 'px';
+      document.getElementById('regOvSigW').value = Math.round((pos.w || 0.086) * 100);
+    } else {
+      chip.style.fontSize = ((pos.size || {{ config('registration_form.overlay.size') }}) * H) + 'px';
+    }
+  });
+
+  const 크기 = regOvFields.applicant?.size || {{ config('registration_form.overlay.size') }};
+  document.getElementById('regOvSize').value = Math.round(크기 * 1000);
+}
+
+/** 글자 세 칸의 크기를 함께 바꾼다 — 서식의 한 줄에 나란히 서는 값들이다 */
+function regOvResize(v) {
+  const H = document.getElementById('regOvImg').clientHeight;
+  const 몫 = Number(v) / 1000;
+
+  ['applicant', 'relation', 'tel'].forEach(k => {
+    regOvFields[k] = Object.assign({}, regOvFields[k], { size: 몫 });
+    document.querySelector(`.reg-ov-chip[data-key="${k}"]`).style.fontSize = (몫 * H) + 'px';
+  });
+}
+
+function regOvSigResize(v) {
+  const W = document.getElementById('regOvImg').clientWidth;
+  const 몫 = Number(v) / 100;
+
+  regOvFields.signature = Object.assign({}, regOvFields.signature, { w: 몫 });
+  document.querySelector('.reg-ov-chip[data-key="signature"] img').style.width = (몫 * W) + 'px';
+}
+
+function regOvDefaults() {
+  regOvFields = @json(config('registration_form.overlay.fields'));
+  regOvPlace();
+}
+
+/* 끌어 옮기기 — 칸 하나를 집어 그림 위 어디로든 옮긴다.
+   놓을 때 그림 크기에 대한 몫으로 고쳐 적는다. */
+(function () {
+  let 집은것 = null, dx = 0, dy = 0;
+
+  document.addEventListener('mousedown', e => {
+    const chip = e.target.closest('.reg-ov-chip');
+    if (!chip || !document.getElementById('regOverlayModal') ||
+        document.getElementById('regOverlayModal').style.display === 'none') return;
+
+    집은것 = chip;
+    chip.classList.add('is-drag');
+    dx = e.clientX - chip.offsetLeft;
+    dy = e.clientY - chip.offsetTop;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!집은것) return;
+    집은것.style.left = (e.clientX - dx) + 'px';
+    집은것.style.top  = (e.clientY - dy) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!집은것) return;
+
+    const img = document.getElementById('regOvImg');
+    const W = img.clientWidth, H = img.clientHeight;
+    const k = 집은것.dataset.key;
+
+    /* 그림 밖으로 나가지 않게 가둔다 — 밖에 놓으면 얹을 때 잘려 사라진다 */
+    const x = Math.min(Math.max(집은것.offsetLeft, 0), Math.max(W - 10, 0));
+    const y = Math.min(Math.max(집은것.offsetTop,  0), Math.max(H - 10, 0));
+    집은것.style.left = x + 'px';
+    집은것.style.top  = y + 'px';
+
+    regOvFields[k] = Object.assign({}, regOvFields[k], { x: x / W, y: y / H });
+    집은것.classList.remove('is-drag');
+    집은것 = null;
+  });
+})();
+
+async function regOvSave() {
+  try {
+    const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', 'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+      },
+      body: JSON.stringify({ fields: regOvFields }),
+    });
+    const d = await res.json();
+
+    if (!d.success) { showToast(d.message || '얹지 못했습니다.', 'danger'); return; }
+
+    regOvAfter(d.url, true);
+    showToast(d.message, 'success');
+    closeRegOverlay();
+  } catch (e) {
+    showToast('얹지 못했습니다.', 'danger');
+  }
+}
+
+async function regOvReset() {
+  if (!await ceConfirm('얹은 신청인란을 걷고 올린 원본으로 되돌립니다. 계속할까요?',
+                       { title: '원본으로 되돌리기' })) return;
+
+  try {
+    const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+    });
+    const d = await res.json();
+
+    if (!d.success) { showToast(d.message || '되돌리지 못했습니다.', 'danger'); return; }
+
+    regOvAfter(d.url, false);
+    showToast(d.message, 'success');
+    closeRegOverlay();
+  } catch (e) {
+    showToast('되돌리지 못했습니다.', 'danger');
+  }
+}
+
+/** 얹거나 걷은 뒤 — 화면의 그림과 단추 이름을 바꾼다 */
+function regOvAfter(url, applied) {
+  const 새주소 = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const doc = ALL_DOCS.find(d => Number(d.id) === Number(regOvAtt));
+
+  if (doc) {
+    doc.url = 새주소;
+    doc.regOverlayApplied = applied;
+    if (ALL_DOCS[currentDocIdx] === doc) showDoc(doc);
+  }
+
+  const thumb = document.querySelector(`#docStrip .doc-thumb[data-att-id="${regOvAtt}"] .attach-thumb-img`);
+  if (thumb) thumb.src = 새주소;
+
+  syncRegOverlayBtn();
 }
 
 /**
@@ -9017,10 +9327,15 @@ window.HELP_TOUR_STEPS = [
       return;
     }
 
+    /* 아직 요청이 없다 — 승인은 잠근다 (2026-09-17 지시).
+
+       여태 이 자리에서 둘 다 열어 두어, 요청 없이 승인이 그대로 떨어졌다.
+       그러면 누가 무엇을 검수해 달라 했는지가 빈 채로 「승인됨」만 남는다.
+       서버도 같은 기준으로 막는다(PrescriptionController::approveInputReview). */
     요청들.forEach(b => { b.disabled = false; b.textContent = '입력 검수 요청';
       b.title = '입력한 환자ㆍ병원ㆍ처방 정보의 검수를 요청합니다'; });
-    승인들.forEach(b => { b.disabled = false; b.textContent = '입력 검수 승인';
-      b.title = '입력한 정보를 확인하고 승인합니다'; });
+    승인들.forEach(b => { b.disabled = true; b.textContent = '입력 검수 승인';
+      b.title = '입력 검수 요청이 없습니다 — 먼저 ［입력 검수 요청］을 눌러 주십시오.'; });
   }
 
   /** 파일 검수를 마쳤을 때 — 바뀌는 자리를 하나씩 고쳐 세운다.
@@ -11224,6 +11539,33 @@ window.HELP_TOUR_STEPS = [
     });
   }
 
+  /* 거래처가 정해지지 않았으면 보내는 창을 열지 않는다 (2026-09-17 시험에서 드러남).
+
+     문자ㆍ알림톡ㆍ팩스ㆍ가상계좌는 모두 받는 사람이 있어야 뜻이 서는 일인데,
+     거래처가 없는 건에서도 창이 그대로 열렸다. 번호 칸이 빈 채로 열려, 담당자는
+     번호를 손으로 쳐 넣고 보냈다 — 그 기록은 어느 거래처에도 남지 않는다.
+
+     탭줄 단추는 이미 거래처골랐나() 로 막혀 있으나, 그 검사는 묶음(.rx-acc-btns)에
+     걸려 있어 화면 위쪽 툴바에는 닿지 않는다. 또 그 검사는 이름만 쳐 두어도
+     통과시키는데, 보내기는 저장된 거래처 번호가 있어야 기록이 남는다.
+
+     @param {string} 무엇 「알림톡을 보내려면」처럼 뒤에 목적을 붙일 말
+     @returns {boolean} 열어도 되면 참 */
+  function 거래처번호있나(무엇) {
+    if ((document.getElementById('f-patient-id')?.value ?? '').trim() !== '') return true;
+
+    showToast(무엇 + ' 거래처를 먼저 선택해 주십시오. '
+            + '상담ㆍ환자 정보 탭의 이름 칸에서 「조회」로 고르거나 「신규 등록」으로 등록하십시오.',
+              'warning', 6000);
+
+    const 이름칸 = document.getElementById('f-name');
+    if (이름칸) {
+      이름칸.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => 이름칸.focus({ preventScroll: true }), 400);
+    }
+    return false;
+  }
+
   /* ── 상담 창(팝업)의 아래 띠 ────────────────────────────
      거래처 관리의 「상담하기」로 열면 이 화면이 창으로 뜬다. 본 화면 그대로 고치되,
      창을 닫는 자리가 필요하다 — 아래에 저장·닫기를 세운다.
@@ -11499,6 +11841,7 @@ window.HELP_TOUR_STEPS = [
     e.stopPropagation();
     const pop    = document.getElementById('kakaoPopover');
     const isOpen = pop.style.display !== 'none';
+    if (!isOpen && !거래처번호있나('알림톡을 보내려면')) return;
     closeAllPopovers();
     pop.style.display = isOpen ? 'none' : 'block';
     if (!isOpen) {
@@ -11620,6 +11963,7 @@ window.HELP_TOUR_STEPS = [
     e.stopPropagation();
     const pop    = document.getElementById('smsPopover');
     const isOpen = pop.style.display !== 'none';
+    if (!isOpen && !거래처번호있나('문자를 보내려면')) return;
     closeAllPopovers();
     pop.style.display = isOpen ? 'none' : 'block';
     if (!isOpen) {
@@ -11713,6 +12057,7 @@ window.HELP_TOUR_STEPS = [
   // ── 팩스 전송 팝오버 ─────────────────────────────────
   function toggleFaxPopover(e) {
     e.stopPropagation();
+    if (! 거래처번호있나('팩스를 보내려면')) return;
     closeAllPopovers();
     const pop = document.getElementById('faxPopover');
     const opening = pop.style.display === 'none';
@@ -12148,6 +12493,8 @@ window.HELP_TOUR_STEPS = [
   /* 첫 그림이 다 선 뒤에 단추 이름을 맞춘다 — ALL_DOCS 가 채워져 있어야 한다 */
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof syncIdCardHave === 'function') syncIdCardHave();
+    /* 처음 열 때 보고 있는 문서가 등록신청서일 수 있다 — 그때도 단추가 서야 한다 */
+    if (typeof syncRegOverlayBtn === 'function') syncRegOverlayBtn();
   });
 
   /* 팩스 창에 세울 줄들. ALL_DOCS 가 화면의 정본이라 여기서 읽는다 —
@@ -12667,6 +13014,7 @@ window.HELP_TOUR_STEPS = [
     const pop = document.getElementById('vaPopover');
     if (!pop) return;
     if (pop.style.display !== 'none') { pop.style.display = 'none'; return; }
+    if (! 거래처번호있나('가상계좌를 발급하려면')) return;
     closeAllPopovers();
     document.getElementById('vaPopoverConfirm').style.display = 'block';
     document.getElementById('vaPopoverResult').style.display  = 'none';

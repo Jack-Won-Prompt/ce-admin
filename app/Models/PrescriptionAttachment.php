@@ -14,7 +14,36 @@ class PrescriptionAttachment extends Model
         'display_order', 'uploaded_by',
         // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
         'img_brightness', 'img_contrast',
+        // 등록신청서 신청인란을 얹은 자취 (2026-09-17)
+        'overlay_source_path', 'overlay_fields',
     ];
+
+    protected $casts = [
+        'overlay_fields' => 'array',
+    ];
+
+    /**
+     * 신청인란을 얹을 수 있는 서류인가 (2026-09-17 지시).
+     *
+     * 등록신청서 그림만이다. PDF 로 올라온 것은 얹지 않는다 — 우리 GD 로는 PDF 를
+     * 펴지 못한다(이 서버에는 Ghostscript 가 없다).
+     */
+    public function 신청인란얹을수있나(): bool
+    {
+        return $this->doc_type === 'registration_form' && $this->is_image;
+    }
+
+    /** 이미 얹었는가 — 원본을 따로 남겨 두었으면 얹은 것이다 */
+    public function 신청인란얹었나(): bool
+    {
+        return (string) $this->overlay_source_path !== '';
+    }
+
+    /** 자리를 다시 잡을 때 쓰는 바탕 그림 — 얹기 전의 원본이다 */
+    public function 바탕그림경로(): ?string
+    {
+        return $this->overlay_source_path ?: $this->file_path;
+    }
 
     protected static function booted(): void
     {
@@ -95,8 +124,13 @@ class PrescriptionAttachment extends Model
             return '기타';
         }
 
+        /* 우리가 만들어 붙이는 서류도 함께 본다 (2026-09-17 시험에서 드러남).
+
+           여태 사람이 올리는 유형(DOC_TYPE_LABELS)만 보아, 세금계산서ㆍ거래명세서
+           같이 우리가 만든 것은 이름이 없어 죄다 「기타」로 앉았다. 파일 창에서
+           무엇인지 알 수 없었고, 그 이름으로 찾는 자리에서도 보이지 않았다. */
         return \App\Models\CommonCode::labels('doc_type')[$code]
-            ?? (self::DOC_TYPE_LABELS[$code] ?? '기타');
+            ?? (self::DOC_TYPE_LABELS[$code] ?? (self::만든서류[$code] ?? '기타'));
     }
 
     public function prescription(): BelongsTo
