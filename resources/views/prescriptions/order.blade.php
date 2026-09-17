@@ -2171,7 +2171,11 @@ $calcDeposit  = $calcCopay;
              통째로 숨어, 붙어 있는 파일을 열 길이 없었다. --}}
         @php $firstDoc = $allDocsJson[0] ?? null; @endphp
         <div class="vw-acts">
-          <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn" title="뷰어 위치 바꾸기">
+          {{-- 「오른쪽으로」는 두지 않는다 (2026-09-17 지시).
+               줄 자체는 남긴다 — 열 때 적어 둔 자리(localStorage)를 따라 이름을 맞추는
+               자리(_applyViewerSideBtn)가 이 칸을 찾는다. --}}
+          <button type="button" id="btnToggleViewerSide" onclick="toggleViewerSide()" class="vw-btn"
+                  style="display:none;" title="뷰어 위치 바꾸기">
             <span id="btnToggleViewerSideLabel">오른쪽으로</span>
           </button>
           {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다 --}}
