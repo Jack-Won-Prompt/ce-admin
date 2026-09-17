@@ -425,12 +425,37 @@ class OrderReturn extends Model
      * 전부를 되돌리는 건은 조정이 아니라 취소다(발행을 통째로 무른다). 물건만
      * 바꿔 주는 온전한 교환은 돈이 그대로라 조정할 것이 없다.
      */
+    /**
+     * 사유에 달린 「금액조정 없음ㆍ발행 불포함」이 이 건에도 걸리는가
+     * (2026-09-17 운영 시험에서 드러남).
+     *
+     * 그 표시는 **교환**을 두고 만든 것이다 — 물건만 바꿔 주는 교환은 돈이 그대로라
+     * 조정할 것도, 되돌릴 발행도 없다. 반품ㆍ취소는 다르다. 사유가 무엇이든 받은
+     * 돈이 돌아가므로 늘 든다 — 절차서(2026-09-16)의 「불량(반품)」도 마지막 칸이
+     * 「세금계산서 및 현금영수증 취소 및 재발행」이다.
+     *
+     * 여태 교환용 표시를 반품에도 그대로 씌워, 불량 반품이 전액 환불인데도
+     * 「발행 내역에 넣지 않는 사유라 되돌릴 발행이 없습니다」로 끝났다.
+     */
+    public function 조정에드나(): bool
+    {
+        return $this->type !== self::TYPE_EXCHANGE
+            || \App\Models\ReturnReason::adjusts($this->reason_code);
+    }
+
+    /** 되돌릴 발행이 있는가 — 까닭은 위와 같다 */
+    public function 발행에드나(): bool
+    {
+        return $this->type !== self::TYPE_EXCHANGE
+            || \App\Models\ReturnReason::includes($this->reason_code);
+    }
+
     public function needsAdjust(): bool
     {
         /* 사유 자체가 「금액조정 없음」이면 조정할 것이 없다 (2026-09-15 시험에서
            드러났다). 부분이라는 것만 보고 단계를 세우면, 제품만 바꿔 주는 부분
            교환이 금액조정 앞에서 멈춘다 — 넣을 금액이 없는데 금액을 요구한다. */
-        if (! \App\Models\ReturnReason::adjusts($this->reason_code)) {
+        if (! $this->조정에드나()) {
             return false;
         }
 
@@ -496,7 +521,7 @@ class OrderReturn extends Model
            사유가 「발행 불포함」이면 넣지 않는다. 물건만 바꿔 주는 교환은 처음부터
            발행에 들지 않아 되돌릴 발행도 없다. */
         if ($this->is_partial && ! in_array('credited', $flow, true)
-            && \App\Models\ReturnReason::includes($this->reason_code)) {
+            && $this->발행에드나()) {
             $at = array_search('done', $flow, true);
 
             if ($at !== false) {

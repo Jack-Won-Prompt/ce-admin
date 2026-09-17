@@ -43,7 +43,7 @@ class ReturnSettlement
            물건만 바꿔 주는 교환은 돈이 그대로라 조정할 것이 없다 — 그런데도 금액조정
            주문을 세우면 없던 마이너스가 창고와 정산에 남는다.
            까닭을 적어 둔다. 아무 말 없이 지나가면 담당자는 실패한 줄 안다. */
-        if (!\App\Models\ReturnReason::adjusts($return->reason_code)) {
+        if (! $return->조정에드나()) {
             $return->forceFill(['credit_note' => mb_substr(
                 \App\Models\OrderReturn::reasonLabel($return->reason_code)
                 . ' — 금액조정을 하지 않는 사유입니다(마스터 관리 › 반품 사유).', 0, 500)])->save();
@@ -177,7 +177,7 @@ class ReturnSettlement
         /* 사유가 「발행 불포함」이면 되돌릴 발행도 없다(요청서 6쪽 · 사유표가 정한다).
            물건만 바꿔 주는 교환은 돈이 오가지 않아 처음부터 발행에 들지 않았다 —
            그런데도 취소를 부르면 팝빌에서 멀쩡한 건이 취소되고 국세청까지 간다. */
-        if (!\App\Models\ReturnReason::includes($return->reason_code)) {
+        if (! $return->발행에드나()) {
             $note = \App\Models\OrderReturn::reasonLabel($return->reason_code)
                   . ' — 발행 내역에 넣지 않는 사유라 되돌릴 발행이 없습니다'
                   . '(마스터 관리 › 반품 사유).';

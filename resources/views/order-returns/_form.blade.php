@@ -422,7 +422,10 @@
 
     /* 사유가 금액조정에 들지 않으면 그 단계가 서지 않는다 — 있지도 않은 자리를
        가리키지 않게 말을 바꾼다. */
-    const 조정 = ADJUSTS.includes($('rtoReason').value);
+    /* 사유의 「금액조정 없음」은 교환에만 걸린다 — 반품ㆍ취소는 무슨 사유든
+       받은 돈이 돌아가므로 늘 조정에 든다 (OrderReturn::조정에드나). */
+    const 조정 = $('rtoType').value !== 'exchange'
+              || ADJUSTS.includes($('rtoReason').value);
 
     note.textContent = 조정
       ? '부분입니다 — 되돌린 뒤 「금액조정」 단계에서 남는 금액을 적습니다.'
@@ -458,6 +461,7 @@
   $('rtoType').addEventListener('change', syncType);
   $('rtoRefundMethod').addEventListener('change', syncRefundMethod);
   $('rtoReason').addEventListener('change', () => { syncReason(); syncPartialNote(); });
+  $('rtoType').addEventListener('change', () => { syncPartialNote(); });
   /* 담당자가 직접 적은 금액은 다시 셈해 덮어쓰지 않는다 */
   $('rtoRefundAmount').addEventListener('input', function () { this.dataset.손댐 = '1'; });
   ['rtoName', 'rtoBirth', 'rtoPhone', 'rtoNo'].forEach(id =>
