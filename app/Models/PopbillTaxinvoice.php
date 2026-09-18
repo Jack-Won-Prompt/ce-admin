@@ -79,10 +79,15 @@ class PopbillTaxinvoice extends Model
             'invoicee_ceo_name' => $info->invoiceeCEOName  ?? $info->invoiceeCeoName ?? null,
             'supply_cost_total' => $supply = (int) ($info->supplyCostTotal ?? 0),
             'tax_total'         => $tax    = (int) ($info->taxTotal        ?? 0),
-            /* 팝빌이 합계를 늘 주지는 않는다 — 목록 조회에서는 0 으로 온다. 그대로
-               적어 두면 화면의 「합계금액」 칸이 0 원으로 서서, 공급가액과 세액이
-               멀쩡한데 합계만 없는 줄이 된다. 안 주면 우리가 더한다. */
-            'total_amount'      => (int) ($info->totalAmount ?: ($supply + $tax)),
+            /* 팝빌이 합계를 늘 주지는 않는다 — 목록 조회에서는 0 으로 오고, 상세
+               조회(GetInfo)에는 **칸 자체가 없다**. 그대로 적어 두면 화면의
+               「합계금액」 칸이 0 원으로 서서, 공급가액과 세액이 멀쩡한데 합계만
+               없는 줄이 된다. 안 주면 우리가 더한다.
+
+               ?: 로는 막지 못한다 — 없는 속성을 먼저 읽어 그 자리에서 죽는다
+               (2026-09-18 세금계산서 웹훅 첫 알림에서 드러남:
+                Undefined property: TaxinvoiceInfo::$totalAmount). ?? 로 받아 낸다. */
+            'total_amount'      => (int) (($info->totalAmount ?? 0) ?: ($supply + $tax)),
             'nts_confirm_num'   => $info->ntsconfirmNum ?? null,
             'is_final'          => in_array($stateCode, self::FINAL_STATES, true),
             'synced_at'         => now(),
