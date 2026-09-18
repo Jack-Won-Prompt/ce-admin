@@ -7571,30 +7571,47 @@ window.HELP_TOUR_STEPS = [
     markOcrDirty();
   };
 
+  /* 우리가 마지막으로 제시한 청구처 — 담당자가 손으로 고친 것과 가르는 잣대다.
+     처음 여는 순간에는 저장된 값이 곧 우리가 제시했던 값이라고 본다. */
+  let _claimAuto = @json($prescription->claim_agency ?? '');
+
   function suggestClaimAgency() {
     const sel = document.getElementById('f-claim-agency');
-    if (!sel || sel.value) return;                 // 담당자가 이미 골랐으면 두지 않는다
+    if (!sel) return;
 
     /* 처방외는 자격을 고를 것도 없이 우리가 청구하지 않는다 — 환자가 제 돈으로
        사는 건이다. 자격만 보고 있어 처방외를 골라도 청구처가 비어 있었고,
        그러면 주문 관리에서 청구 단추가 어느 갈래인지 정하지 못한다. */
-    if (document.getElementById('f-acc-add-type')?.value === '20') {
-      sel.value = 'none';
-      onClaimAgencyChange();
-      return;
-    }
+    const guess = document.getElementById('f-acc-add-type')?.value === '20'
+      ? 'none'
+      : CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
 
-    const guess = CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
-    if (!guess) return;
+    if (!guess || sel.value === guess) return;
 
-    sel.value = guess;
+    /* **자격을 바꾸면 청구처도 다시 정한다** (2026-09-18 지시).
+
+       여태 비어 있을 때만 채웠다. 그래서 일반으로 골라 「건강보험공단」이 선 뒤에
+       기초로 바꾸면 청구처가 공단에 그대로 남았다 — 지자체에 낼 건이 공단 청구
+       목록에 서고, 서류도 공단 것으로 그려졌다.
+
+       다만 담당자가 자격과 다르게 일부러 고른 것은 덮지 않는다. 지금 값이 우리가
+       마지막으로 제시한 값 그대로일 때만 갈아 끼운다. */
+    if (sel.value && sel.value !== _claimAuto) return;
+
+    sel.value = _claimAuto = guess;
     onClaimAgencyChange();
+    boAutoPick();
   }
 
   document.getElementById('f-benefit-class')?.addEventListener('change', suggestClaimAgency);
   /* 유형(처방전ㆍ처방외)도 청구처를 가른다 — 바뀌면 다시 본다 */
   document.getElementById('f-acc-add-type')?.addEventListener('change', suggestClaimAgency);
-  document.getElementById('f-claim-agency')?.addEventListener('change', onClaimAgencyChange);
+  document.getElementById('f-claim-agency')?.addEventListener('change', () => {
+    /* 사람이 고른 것은 그 값이 곧 정본이다 — 다음 자격 변경이 덮지 않게 적어 둔다 */
+    _claimAuto = document.getElementById('f-claim-agency').value;
+    onClaimAgencyChange();
+    boAutoPick();
+  });
   suggestClaimAgency();
 
   /* ── 청구전략 ──────────────────────────────────────────────
@@ -11344,6 +11361,15 @@ window.HELP_TOUR_STEPS = [
   @endphp
   let RX_BILLING_OFFICE = @json($_boJs);
 
+  /* 여기까지 와야 관할 청구처를 다룰 수 있다. 청구처 제시(suggestClaimAgency)는 이
+     줄보다 먼저 도는데, 그때 RX_BILLING_OFFICE 를 건드리면 아직 서지 않은 이름이라
+     그 자리에서 죽는다 — 표식을 보고 그때는 지나간다.
+
+     여기서 한 번 부르지는 않는다 — 화면을 열기만 해도 값이 들어가면 「고친 것이
+     있습니다」로 서서, 아무것도 안 한 담당자가 저장을 묻는 창을 만난다. 자격을
+     **고를 때** 선다. */
+  window.__boReady = true;
+
   const BO_LOOKUP_URL = @json(route('billing-offices.lookup'));
   const BO_STORE_URL  = @json(route('billing-offices.store'));
   const BO_RESOLVE_URL = @json(route('billing-offices.resolve'));
@@ -11392,6 +11418,78 @@ window.HELP_TOUR_STEPS = [
     if (bc === '기초') return 'local';
     if (bc === '일반' || bc === '차상위경감') return 'nhis';
     return '';
+  }
+
+  /**
+   * 자격이 정해지면 관할 청구처도 세운다 (2026-09-18 지시).
+   *
+   * 지자체(기초)는 주소에서 시군구를 뽑아 이미 채운다(onClaimAgencyChange). 건보는
+   * 그런 자리가 없어 담당자가 「찾기」를 눌러 골라야 했다 — 자격을 골랐으면 어디에
+   * 내는지는 이미 정해진 것인데, 한 걸음이 더 있었다.
+   *
+   * **후보가 하나일 때만 세운다.** 여럿이면 어느 부서인지는 사람이 가려야 한다 —
+   * 한 지사에 보험급여부만 스물두 줄이다. 골라 준 척하고 틀리면 서류가 엉뚱한 곳으로
+   * 간다.
+   *
+   * 이미 골라 둔 것이 있으면 손대지 않되, **갈래가 어긋나면 비운다** — 일반으로
+   * 골라 공단 지사를 세운 뒤 기초로 바꾸면 그 지사가 그대로 남아, 지자체에 낼 건에
+   * 공단 지사가 붙어 있었다.
+   */
+  async function boAutoPick() {
+    if (!window.__boReady) return;                    // 아직 이 자리의 값들이 서기 전이다
+
+    const hidden = document.getElementById('f-billing-office');
+    const 갈래   = boKindOfBenefit();
+
+    if (!hidden || !갈래) return;                     // 자동차보험ㆍ산재ㆍ처방외는 낼 곳이 없다
+    if (갈래 === 'local') return;                     // 지자체는 f-local-gov 가 맡는다
+
+    /* 골라 둔 것이 이 갈래가 아니면 비운다 — 남겨 두면 어긋난 채로 저장된다 */
+    if (hidden.value && RX_BILLING_OFFICE && RX_BILLING_OFFICE.kind &&
+        RX_BILLING_OFFICE.kind !== 갈래) {
+      boAutoClear();
+    }
+
+    if (hidden.value) return;                         // 이미 알맞은 것이 서 있다
+
+    const 주소 = boPatientAddress();
+    const emd     = boEmdOf(주소);
+    const sigungu = boSigunguOf(주소);
+    if (!emd && !sigungu) return;                     // 주소를 아직 모른다
+
+    try {
+      const qs = new URLSearchParams();
+      if (emd)     qs.set('emd', emd);
+      if (sigungu) qs.set('sigungu', sigungu);
+      qs.set('kind', 갈래);
+      if (주소) qs.set('address', 주소);
+
+      const res  = await fetch(BO_LOOKUP_URL + '?' + qs, { headers: { 'Accept': 'application/json' } });
+      const d    = await res.json();
+      const rows = d.rows ?? [];
+
+      /* 하나가 아니면 그냥 둔다. 여럿이면 사람이 고르고, 없으면 「찾기」에서
+         공단 지사찾기로 넘어간다 — 여기서 그 창을 저절로 열지는 않는다. */
+      if (rows.length !== 1) return;
+
+      _boLastRows = rows;
+      boFindPick(rows[0].id, rows[0], true);
+    } catch (e) {
+      /* 못 찾아도 하던 일은 그대로 간다 — 「찾기」로 손수 고르면 된다 */
+      console.warn('[관할 청구처] 자동으로 세우지 못했다', e);
+    }
+  }
+
+  /** 골라 둔 관할 청구처를 비운다 — 갈래가 바뀌어 더는 맞지 않을 때 */
+  function boAutoClear() {
+    const hidden = document.getElementById('f-billing-office');
+    const label  = document.getElementById('boPickLabel');
+    if (hidden) hidden.value = '';
+    if (label) {
+      label.textContent = '선택하십시오';
+      label.style.color = 'var(--text-muted)';
+    }
+    RX_BILLING_OFFICE = null;
   }
 
   function boFindOpen(e) {
@@ -11718,7 +11816,13 @@ window.HELP_TOUR_STEPS = [
   };
 
   /** 고른 것을 화면에 세우고 칸에 넣는다 — 저장은 「저장」이 한다. */
-  function boFindPick(id, fresh = null) {
+  /**
+   * 관할 청구처를 이 건에 세운다.
+   *
+   * @param 자동 자격을 보고 우리가 세운 것인가 — 사람이 고른 것과 알림을 가른다.
+   *             「골랐습니다」는 누르지 않은 사람에게는 무슨 말인지 알 수 없다.
+   */
+  function boFindPick(id, fresh = null, 자동 = false) {
     const row = [...document.querySelectorAll('#boFindList label')]
       .find(l => l.querySelector('input')?.value === String(id));
     document.getElementById('f-billing-office').value = id;
@@ -11754,7 +11858,9 @@ window.HELP_TOUR_STEPS = [
 
     markOcrDirty();
     boFindClose();
-    showToast('관할 청구처를 골랐습니다. 저장하면 이 건에 남습니다.', 'success');
+    showToast(자동
+      ? '자격에 맞는 관할 청구처를 세웠습니다 — 다르면 「찾기」에서 고치십시오.'
+      : '관할 청구처를 골랐습니다. 저장하면 이 건에 남습니다.', 'success');
   }
 
   function boFindNew() {
