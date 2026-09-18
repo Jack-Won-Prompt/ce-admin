@@ -25,11 +25,25 @@ class TossWebhookController extends Controller
      * - TOSS_WEBHOOK_SECRET 환경변수가 설정된 경우에만 검증
      * - 미설정 시 서명 검증 스킵 (개발환경)
      */
-    public function handle(Request $request): \Illuminate\Http\JsonResponse
+    public function handle(Request $request, ?string $key = null): \Illuminate\Http\JsonResponse
     {
         $rawBody   = $request->getContent();
         $signature = $request->header('tosspayments-webhook-signature', '');
         $txTime    = $request->header('tosspayments-webhook-transmission-time', '');
+
+        /* 주소에 박은 열쇠 (2026-09-18 지시).
+
+           서명이 붙는 갈래는 아래에서 서명으로 가르지만, **가상계좌 입금에는 서명이
+           없다** — 실제로 들어오고 있는 것이 그 갈래다. 열쇠는 서명이 없는 갈래까지
+           덮는다. 「열쇠 확인」이 꺼져 있으면 지나간다 — 토스 콘솔의 주소를 바꿀 틈이다. */
+        if (! \App\Support\WebhookKeys::맞나('toss', $request, $key)) {
+            Log::warning('[Toss] 웹훅 열쇠가 맞지 않는다', ['ip' => $request->ip()]);
+            WebhookLogger::finish(
+                WebhookLogger::inbound('toss', json_decode($rawBody, true)['eventType'] ?? null, $request, false),
+                ok: false, status: 401, error: '열쇠 불일치');
+
+            return response()->json(['message' => '열쇠가 맞지 않습니다.'], 401);
+        }
 
         // 서명 검증: 서명 헤더가 포함된 웹훅(payout/seller 등)에 한해, 보안키가 설정된 경우에만 수행.
         // 가상계좌 입금 웹훅은 서명이 없으므로 handleDepositWebhook 의 토스 API 재조회로 검증한다.

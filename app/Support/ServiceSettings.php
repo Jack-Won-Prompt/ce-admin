@@ -66,22 +66,38 @@ class ServiceSettings
 
         $stored = static::storedRows($group);
         foreach ($def['fields'] as $key => $f) {
-            /* 알려 주기만 하는 칸은 담긴 값이 없다 — 설정을 물으면 안 된다 */
-            if (($f['type'] ?? '') === 'info' || empty($f['config'])) {
-                $out[$key] = ['value' => null, 'filled' => true];
+            /* 알려 주기만 하는 칸은 담긴 값이 없다 — 설정을 물으면 안 된다.
+
+               글은 그때그때 짓는다. 설정 파일에 박아 두면 열쇠처럼 DB 에 있는 값을
+               담을 수 없고, 설정 캐시가 옛 값을 붙들어 둔다. */
+            if (($f['type'] ?? '') === 'info') {
+                $out[$key] = ['value' => static::알림글($group, $f), 'filled' => true];
                 continue;
             }
 
             $row   = $stored[$key] ?? null;
             $plain = $row?->plainValue();
-            // DB 에 없으면 지금 돌고 있는 설정값(=.env 기본값)을 보여준다.
-            $eff   = $plain !== null && $plain !== '' ? $plain : config($f['config']);
+
+            /* 딸린 설정값이 없는 칸도 있다 — DB 에만 사는 값(웹훅 열쇠 확인 같은).
+               config(null) 은 설정 묶음 전체를 돌려주므로 물어서는 안 된다. */
+            $eff = $plain !== null && $plain !== ''
+                ? $plain
+                : (empty($f['config']) ? null : config($f['config']));
 
             $out[$key] = static::isSecret($f)
                 ? ['value' => null, 'filled' => trim((string) $eff) !== '']
                 : ['value' => static::castOut($eff, $f), 'filled' => true];
         }
         return $out;
+    }
+
+    /** 알려 주기만 하는 칸에 담을 글 */
+    private static function 알림글(string $group, array $f): ?string
+    {
+        return match ($f['source'] ?? null) {
+            'webhook_urls' => \App\Support\WebhookKeys::주소들($group),
+            default        => $f['text'] ?? null,
+        };
     }
 
     /**

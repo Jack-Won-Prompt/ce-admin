@@ -706,10 +706,19 @@ Route::prefix('privacy')->name('privacy.')->group(function () {
     Route::get( '/{type}/done',   [PrivacyConsentController::class, 'done'])->name('done');
 });
 
-/* 팝빌이 두드리는 자리 (2026-09-10 지시) — 인증 불필요, 팝빌 서버가 직접 부른다.
-   갈래는 fax · sms · kakao · taxinvoice · cashbill 다섯이다. */
+/* 팝빌이 두드리는 자리 (2026-09-10 지시) — 로그인 없이 열린다, 팝빌 서버가 직접 부른다.
+   갈래는 fax · sms · kakao · taxinvoice · cashbill 다섯이다.
+
+   팝빌은 서명을 주지 않는다. 그래서 **주소에 열쇠를 박아** 가른다 (2026-09-18 지시) —
+   보내는 쪽이 서명을 안 줄 때, 등록할 주소를 우리가 정한다는 점을 쓰는 길이다.
+   열쇠 없는 옛 주소도 그대로 둔다. 「열쇠 확인」을 켜기 전까지는 둘 다 받고, 켜면
+   둘 다 열쇠를 본다 — 주소를 바꿔 등록할 틈을 주지 않으면 그 순간 끊긴다. */
+$팝빌갈래 = implode('|', array_keys(\App\Support\WebhookKeys::자리['popbill']));
+
+Route::post('/popbill/webhook/{key}/{service}', [\App\Http\Controllers\PopbillWebhookController::class, 'handle'])
+    ->where('service', $팝빌갈래)->name('popbill.webhook.keyed');
 Route::post('/popbill/webhook/{service}', [\App\Http\Controllers\PopbillWebhookController::class, 'handle'])
-    ->name('popbill.webhook');
+    ->where('service', $팝빌갈래)->name('popbill.webhook');
 
 // ── Dev: admin_invitations 테이블 마이그레이션 ──
 Route::get('/dev/migrate-admin-invitations', function () {
@@ -1359,7 +1368,12 @@ Route::post('/pay/{token}/simulate', [\App\Http\Controllers\PaymentLinkControlle
     ->name('pay.simulate');
 
 // 토스페이먼츠 웹훅 (인증 불필요 — 토스 서버에서 직접 호출)
+/* 토스가 두드리는 자리. 서명이 붙는 갈래는 서명으로 가르지만 가상계좌 입금에는 서명이
+   없어, 여기도 주소에 열쇠를 박을 수 있게 둔다 (2026-09-18 지시). 이미 등록돼 돌고
+   있는 자리라 옛 주소를 그대로 남긴다 — 「열쇠 확인」을 켜기 전에 토스 콘솔의 주소를
+   먼저 바꿔야 한다. */
 Route::post('/toss/webhook', [TossWebhookController::class, 'handle'])->name('toss.webhook');
+Route::post('/toss/webhook/{key}', [TossWebhookController::class, 'handle'])->name('toss.webhook.keyed');
 
 // ── 개발용: FCM 상태 진단 및 테스트 전송 ──────────────────
 Route::get('/dev/fcm-status', function () {

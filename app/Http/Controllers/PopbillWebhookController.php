@@ -43,13 +43,28 @@ class PopbillWebhookController extends Controller
      *
      * 로그인 없이 열린다 — 팝빌 서버가 직접 두드린다.
      */
-    public function handle(Request $request, string $service): JsonResponse
+    public function handle(Request $request, string $service, ?string $key = null): JsonResponse
     {
         if (! in_array($service, self::갈래, true)) {
             return response()->json(['message' => '모르는 구분입니다.'], 404);
         }
 
         $기록 = WebhookLogger::inbound('popbill', $service, $request);
+
+        /* 열쇠가 맞는가 (2026-09-18 지시).
+
+           팝빌은 서명을 주지 않아, 여태 누구나 두드릴 수 있었다. 주소에 박은 열쇠로
+           가른다. 「열쇠 확인」이 꺼져 있으면 그냥 지나간다 — 주소를 바꿔 등록할 틈이다.
+
+           틀린 것은 자취에 남긴다. 남의 것이 두드리고 있다는 뜻일 수 있다. */
+        if (! \App\Support\WebhookKeys::맞나('popbill', $request, $key)) {
+            Log::warning('[팝빌 웹훅] 열쇠가 맞지 않는다', [
+                'service' => $service, 'ip' => $request->ip(),
+            ]);
+            WebhookLogger::finish($기록, ok: false, status: 401, error: '열쇠 불일치');
+
+            return response()->json(['message' => '열쇠가 맞지 않습니다.'], 401);
+        }
 
         /* 팝빌이 무엇을 어떤 이름으로 보내는지는 갈래마다 다르고, JSON 이 아니라 폼으로
            올 수도 있다. 첫 알림이 로그에 그대로 남으므로 그것을 보고 좁혀 나간다. */
