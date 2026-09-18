@@ -916,6 +916,12 @@
   .rx-field-label { display:flex; align-items:center; width:100px; min-height:32px; flex-shrink:0;
                     font-size:13px; font-weight:500; line-height:1.2; color:var(--gray-700);
                     white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
+  /* 앞선 결정 네 줄 — 유형ㆍ신구매/재구매ㆍ자격ㆍ청구처 (2026-09-18 지시).
+
+     이 넷이 정해지면 청구처ㆍ관할 청구처ㆍ청구전략ㆍ발행할 서류가 줄줄이 따라
+     정해진다. 다른 항목과 같은 회색으로 서 있으면 무엇이 앞선 결정인지 보이지 않아,
+     위에서부터 차례로 채우다 뒤늦게 자격을 고치고 앞의 것을 다시 맞추게 된다. */
+  .rx-field-label.rx-key { color:var(--primary, #28798B); font-weight:700; }
   /* '배송 주소 동일' 체크 묶음 — 시안 315:58 Frame 48101499:
      묶음 96×21 · gap 6, 상자 16×16 · r6 · 1px #28798B, 글자 74 · 13/500 · #28798B.
      기본 체크박스는 모서리를 못 깎아 appearance 를 끄고 체크 표시를 직접 그린다. */
@@ -3481,7 +3487,7 @@ $calcDeposit  = $calcCopay;
                    망설였다. 이미 원내로 담긴 건은 그 건에서만 한 줄을 세운다. --}}
               @php $accType = (string) ($prescription->counsel_acc_add_type ?? ''); @endphp
               <div class="rx-field-row">
-                <span class="rx-field-label">유형</span>
+                <span class="rx-field-label rx-key">유형</span>
                 <select class="form-control" id="f-acc-add-type" style="flex:1;">
                   <option value="">선택</option>
                   <option value="10" @selected($accType === '10')>처방전</option>
@@ -3618,7 +3624,7 @@ $calcDeposit  = $calcCopay;
               </div>
 
               <div class="rx-field-row">
-                <span class="rx-field-label">신구매/재구매</span>
+                <span class="rx-field-label rx-key">신구매/재구매</span>
                 <select class="form-control" id="f-purchase-type" style="flex:1;">
                   <option value="">선택</option>
                   <option value="신구매" @selected(($prescription->purchase_type ?? '') == '신구매')>신구매</option>
@@ -3795,7 +3801,7 @@ $calcDeposit  = $calcCopay;
                    청구처ㆍ관할 지자체는 요청서에 없지만 '자격'에 딸린 줄이라 붙여 둔다.
                    시안 315:58 Frame 48101492 (361×392). --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">자격</span>
+                <span class="rx-field-label rx-key">자격</span>
                 <select class="form-control" id="f-benefit-class" style="flex:1;">
                   <option value="">선택</option>
                   <option value="일반"      @selected(($prescription->benefit_class ?? '') == '일반')>일반</option>
@@ -3808,7 +3814,7 @@ $calcDeposit  = $calcCopay;
               {{-- 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다.
                    급여구분을 고르면 따라오되, 확정은 담당자가 한다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">청구처</span>
+                <span class="rx-field-label rx-key">청구처</span>
                 <select class="form-control" id="f-claim-agency" style="flex:1;">
                   <option value="">선택</option>
                   @foreach(\App\Support\ClaimAgency::LABELS as $v => $label)
