@@ -42,12 +42,35 @@ return [
         'label' => '팝빌',
         'desc'  => '현금영수증 · 세금계산서 · 팩스 · 문자 발송',
         'fields' => [
-            'link_id'    => ['label' => '링크아이디', 'config' => 'popbill.LinkID',
-                             'help'  => '팝빌에서 발급한 연동 아이디'],
-            'secret_key' => ['label' => '시크릿 키',  'config' => 'popbill.SecretKey', 'type' => 'password',
-                             'width' => 3],
-            'is_test'    => ['label' => '테스트 모드', 'config' => 'popbill.IsTest', 'type' => 'bool',
-                             'help'  => '켜면 팝빌 테스트 서버로 나갑니다. 실제 발행·발송이 되지 않습니다.'],
+            /* 사용 환경 — 두 벌을 담아 두고 한 칸으로 고른다 (2026-09-18 지시).
+
+               팝빌은 시험 테스트베드와 운영이 서로 다른 계정이다. 여태 「테스트 모드」
+               하나로만 갈랐는데 계정은 한 벌뿐이라, 시험 갈래인데 운영 계정으로 붙었다. */
+            'env' => ['label' => '사용 환경', 'config' => 'popbill.env', 'type' => 'select',
+                      'options' => ['test' => '테스트', 'live' => '운영'],
+                      'help'  => '고른 환경의 계정으로 붙습니다. 「테스트 모드」는 이 값이 정하므로 따로 켜고 끄지 않습니다. '
+                               . '운영으로 두면 세금계산서ㆍ현금영수증 발행이 국세청 신고까지 갑니다.'],
+
+            'test_link_id'    => ['label' => '테스트 링크아이디', 'config' => 'popbill.accounts.test.link_id',
+                                  'help'  => '팝빌 테스트베드(test.popbill.com)에서 발급한 연동 아이디'],
+            'test_secret'     => ['label' => '테스트 시크릿 키',  'config' => 'popbill.accounts.test.secret_key',
+                                  'type' => 'password', 'width' => 3],
+            'test_corp'       => ['label' => '테스트 사업자번호', 'config' => 'popbill.accounts.test.corp_num'],
+            'test_user'       => ['label' => '테스트 아이디',     'config' => 'popbill.accounts.test.user_id'],
+            'test_cert'       => ['label' => '테스트 인증키',     'config' => 'popbill.accounts.test.cert_key', 'type' => 'password'],
+            'test_sender'     => ['label' => '테스트 발신 번호',  'config' => 'popbill.accounts.test.sender_num'],
+            'test_fax'        => ['label' => '테스트 팩스 발신번호', 'config' => 'popbill.accounts.test.fax_sender',
+                                  'help'  => '팝빌에 **팩스 발신번호로 등록된** 번호만 쓸 수 있습니다. 문자 발신번호와 다를 수 있습니다.'],
+
+            'live_link_id'    => ['label' => '운영 링크아이디', 'config' => 'popbill.accounts.live.link_id',
+                                  'help'  => '팝빌 운영(popbill.co.kr)에서 발급한 연동 아이디'],
+            'live_secret'     => ['label' => '운영 시크릿 키',  'config' => 'popbill.accounts.live.secret_key',
+                                  'type' => 'password', 'width' => 3],
+            'live_corp'       => ['label' => '운영 사업자번호', 'config' => 'popbill.accounts.live.corp_num'],
+            'live_user'       => ['label' => '운영 아이디',     'config' => 'popbill.accounts.live.user_id'],
+            'live_cert'       => ['label' => '운영 인증키',     'config' => 'popbill.accounts.live.cert_key', 'type' => 'password'],
+            'live_sender'     => ['label' => '운영 발신 번호',  'config' => 'popbill.accounts.live.sender_num'],
+            'live_fax'        => ['label' => '운영 팩스 발신번호', 'config' => 'popbill.accounts.live.fax_sender'],
             /* 발행 시뮬레이션 — 여태 .env 에만 있었다 (2026-09-16 지시).
 
                화면을 처음부터 끝까지 훑어 보는 시험에서 발행이 국세청으로 나가면 안 되어
@@ -59,10 +82,11 @@ return [
                                       . '「테스트 모드」를 함께 켜서 테스트 사업자번호로 나가게 하십시오.'],
             'ip_restrict' => ['label' => 'IP 제한',    'config' => 'popbill.IPRestrictOnOff', 'type' => 'bool'],
             'use_static_ip' => ['label' => '고정 IP',  'config' => 'popbill.UseStaticIP', 'type' => 'bool'],
-            'test_corp_num'     => ['label' => '테스트 사업자번호', 'config' => 'popbill.test.corp_num'],
-            'test_user_id'      => ['label' => '테스트 아이디',     'config' => 'popbill.test.user_id'],
-            'test_cert_key'     => ['label' => '테스트 인증키',     'config' => 'popbill.test.cert_key', 'type' => 'password'],
-            'test_sender_num'   => ['label' => '발신 번호',        'config' => 'popbill.test.sender_num'],
+            /* 걷어낸 것 — 「테스트 사업자번호ㆍ아이디ㆍ인증키ㆍ발신 번호」 (2026-09-18 지시).
+
+               같은 값을 고르는 자리가 둘이 되면 어느 쪽에서 고쳤는지에 따라 서로 덮는다.
+               이제 위의 테스트ㆍ운영 두 벌이 정본이고, popbill.test.* 는 고른 갈래가
+               앉히는 「지금 쓰는 값」이다(PopbillEnvironment::apply). */
             /* 팩스 발신번호는 문자와 다르다 (2026-09-18 운영 시험에서 드러남).
 
                팝빌은 팩스 발신번호를 따로 등록받는다. 여태 이 칸이 화면에 없어 문자

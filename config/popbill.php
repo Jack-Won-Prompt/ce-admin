@@ -65,6 +65,59 @@ return [
     'fax_mode' => env('POPBILL_FAX_MODE')
                   ?: (env('POPBILL_FAX_SIMULATE', false) ? 'simulate' : 'live'),
 
+    /*
+     * 어느 것으로 도는가 — test(시험) · live(운영) (2026-09-18 지시).
+     *
+     * 여태 IsTest 한 칸으로만 갈랐는데, **계정은 한 벌뿐**이었다. 팝빌은 시험 계정과
+     * 운영 계정이 서로 다른 연동키ㆍ사업자번호ㆍ아이디를 쓰므로, 갈래만 바꾸면
+     * 시험 갈래인데 운영 계정으로 붙는다 — 실제로 그렇게 서 있었고, 시험으로
+     * 보낸 팩스가 운영 팝빌에 남았다.
+     *
+     * 토스와 같은 방식으로 맞춘다. 두 벌을 다 담아 두고 이 한 칸으로 고른다.
+     * 고르는 일은 PopbillEnvironment 한 곳에서 하고, 쓰는 쪽은 예전 그대로
+     * popbill.test.* 를 읽는다 — 그 자리가 백 곳이 넘어 하나씩 고치면 반드시 빠뜨린다.
+     */
+    'env' => env('POPBILL_ENV')
+             ?: (filter_var(env('POPBILL_IS_TEST', true), FILTER_VALIDATE_BOOLEAN) ? 'test' : 'live'),
+
+    /*
+     * 시험 계정 — 팝빌 테스트베드(test.popbill.com).
+     *
+     * 아래 live 와 이름이 같은 칸들은 갈래를 고르면 PopbillEnvironment 가
+     * 쓰이는 자리(popbill.test.*)에 앉힌다. 그래서 이 묶음은 「지금 쓰는 값」이
+     * 아니라 「시험일 때 쓸 값」이다.
+     */
+    'accounts' => [
+        'test' => [
+            'link_id'    => env('POPBILL_TEST_ID',         env('POPBILL_ID')),
+            'secret_key' => env('POPBILL_TEST_SECRET_KEY', env('POPBILL_SECRET_KEY')),
+            'corp_num'   => env('POPBILL_TEST_CORP_NUM'),
+            'user_id'    => env('POPBILL_TEST_USER_ID'),
+            'cert_key'   => env('POPBILL_TEST_CERT_KEY'),
+            'sender_num' => env('POPBILL_TEST_SENDER_NUM'),
+            'sms_sender' => env('POPBILL_TEST_SMS_SENDER_NUM', env('POPBILL_SMS_SENDER_NUM')),
+            'fax_sender' => env('POPBILL_TEST_FAX_SENDER_NUM', env('POPBILL_FAX_SENDER_NUM')),
+        ],
+
+        /* 운영 계정 — 팝빌 운영(popbill.co.kr). 여기서 낸 것은 국세청까지 간다. */
+        'live' => [
+            'link_id'    => env('POPBILL_LIVE_ID',         env('POPBILL_ID')),
+            'secret_key' => env('POPBILL_LIVE_SECRET_KEY', env('POPBILL_SECRET_KEY')),
+            'corp_num'   => env('POPBILL_LIVE_CORP_NUM'),
+            'user_id'    => env('POPBILL_LIVE_USER_ID'),
+            'cert_key'   => env('POPBILL_LIVE_CERT_KEY'),
+            'sender_num' => env('POPBILL_LIVE_SENDER_NUM'),
+            'sms_sender' => env('POPBILL_LIVE_SMS_SENDER_NUM'),
+            'fax_sender' => env('POPBILL_LIVE_FAX_SENDER_NUM'),
+        ],
+    ],
+
+    /*
+     * 지금 쓰이는 값 — 위 두 벌 가운데 고른 것이 여기 들어온다.
+     *
+     * 이름이 test 인 것은 예전부터 그랬기 때문이다. 백 곳이 넘는 자리가 이 이름을
+     * 읽고 있어 그대로 둔다 — 「시험용」이 아니라 「지금 쓰는 값」으로 읽으면 된다.
+     */
     'test' => [
         'corp_num'     => env('POPBILL_TEST_CORP_NUM'),
         'user_id'      => env('POPBILL_TEST_USER_ID'),

@@ -33,6 +33,10 @@ class AppServiceProvider extends ServiceProvider
            갈래가 반영되지 않는다. */
         \App\Support\TossEnvironment::apply();
 
+        /* 팝빌도 같다 — 시험 테스트베드와 운영은 연동키ㆍ사업자번호ㆍ아이디가 서로
+           다른 계정이다. 갈래만 바꾸고 계정을 그대로 두면 「시험」인데 운영에 붙는다. */
+        \App\Support\PopbillEnvironment::apply();
+
         /* 위드웍스 연동 — 테스트(데모웍스)·운영(위드웍스) 중 어디에 붙을지가 화면 설정에
            있다. 부르는 쪽·받는 쪽이 전부 config 를 보므로 여기서 한 번 올려 둔다.
            설치 직후처럼 표가 아직 없을 수도 있어 조용히 넘어간다. */
