@@ -1716,18 +1716,37 @@
 
         {{-- ══ 운영 데이터 ══
              기존 업무 흐름과 잇지 않고 따로 모으는 것들 (2026-09-11 지시) --}}
-        @if($vis('delegation-signs'))
+        @if($vis('delegation-signs', 'ww-prescriptions', 'ww-customers'))
         <div class="menu-group" data-menu-group="opdata">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>운영 데이터</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
+        @if($vis('delegation-signs'))
         <div class="menu-item {{ request()->routeIs('delegation-signs*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="signature" href="{{ route('delegation-signs.index') }}" data-title="위임장 서명">
             @dsicon('signature', 'ds-icon menu-icon')
             <span>위임장 서명</span>
           </a>
         </div>
+        @endif
+        {{-- 위드웍스에서 옮겨 담은 자료 — 보기만 한다 (2026-09-18 지시) --}}
+        @if($vis('ww-prescriptions'))
+        <div class="menu-item {{ request()->routeIs('ww-data.prescriptions') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('ww-data.prescriptions') }}" data-title="처방전 정보">
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
+            <span>처방전 정보</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('ww-customers'))
+        <div class="menu-item {{ request()->routeIs('ww-data.customers') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="user-shield" href="{{ route('ww-data.customers') }}" data-title="고객 정보">
+            @dsicon('user-shield', 'ds-icon menu-icon')
+            <span>고객 정보</span>
+          </a>
+        </div>
+        @endif
         </div>
         </div>
         @endif
@@ -1780,7 +1799,7 @@
         @endif
 
         {{-- ══ 설정 ══ --}}
-        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings'))
+        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'withworks-source'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1842,6 +1861,14 @@
           <a class="menu-link" data-icon="wrench" href="{{ route('error-logs.index') }}" data-title="오류 기록">
             @dsicon('wrench', 'ds-icon menu-icon')
             <span>오류 기록</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('withworks-source'))
+        <div class="menu-item {{ request()->routeIs('withworks-source.*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="wrench" href="{{ route('withworks-source.index') }}" data-title="위드웍스 자료 가져오기">
+            @dsicon('wrench', 'ds-icon menu-icon')
+            <span>위드웍스 자료 가져오기</span>
           </a>
         </div>
         @endif

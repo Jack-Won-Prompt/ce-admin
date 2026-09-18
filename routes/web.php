@@ -563,6 +563,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post(  '/settings/webhooks',        [\App\Http\Controllers\WebhookAdminController::class, 'store'])->name('webhooks.store');
     Route::delete('/settings/webhooks/{webhook}', [\App\Http\Controllers\WebhookAdminController::class, 'destroy'])->name('webhooks.destroy');
 
+    /* 위드웍스 자료 가져오기 — 접속 정보ㆍ마지막 번호ㆍ가져오기 (2026-09-18 지시).
+       저쪽 운영 DB 는 읽기만 한다 — 그 다짐은 WithworksSource 가 연결마다 건다. */
+    Route::get( '/settings/withworks-source',        [\App\Http\Controllers\WithworksSourceController::class, 'index'])->name('withworks-source.index');
+    Route::put( '/settings/withworks-source',        [\App\Http\Controllers\WithworksSourceController::class, 'save'])->name('withworks-source.save');
+    Route::post('/settings/withworks-source/import', [\App\Http\Controllers\WithworksSourceController::class, 'import'])->name('withworks-source.import');
+    Route::get( '/settings/withworks-source/test/{갈래}', [\App\Http\Controllers\WithworksSourceController::class, 'test'])->name('withworks-source.test');
+
     /* 오류 기록 — 서버에서 난 잘못을 화면에서 본다 (2026-09-11 지시).
        purge 를 {errorLog} 보다 먼저 세운다 — 뒤에 두면 「purge」를 id 로 읽는다. */
     Route::get( '/settings/error-logs',              [\App\Http\Controllers\ErrorLogController::class, 'index'])->name('error-logs.index');
@@ -644,6 +651,16 @@ Route::middleware(['auth'])->group(function () {
 
        기존 처방ㆍ주문ㆍ거래처와 잇지 않는 별도 기능이다. 표 하나와 폴더 하나로
        닫혀 있어, 운영 서버로는 그 둘만 옮긴다. */
+    /* 위드웍스에서 옮겨 담은 자료 (2026-09-18 지시).
+
+       우리 표(ww_*)만 본다 — 화면이 저쪽 운영 DB 를 곧바로 두드리지 않는다. 사람이
+       목록을 굴릴 때마다 남의 운영 DB 로 질의가 나가면 안 된다. */
+    Route::prefix('op-data')->name('ww-data.')->group(function () {
+        Route::get('/prescriptions', [\App\Http\Controllers\WithworksDataController::class, 'prescriptions'])->name('prescriptions');
+        Route::get('/customers',     [\App\Http\Controllers\WithworksDataController::class, 'customers'])->name('customers');
+        Route::get('/customers/{고객}/addresses', [\App\Http\Controllers\WithworksDataController::class, 'addresses'])->name('addresses');
+    });
+
     Route::prefix('delegation-signs')->name('delegation-signs.')->group(function () {
         Route::get('/',                 [\App\Http\Controllers\DelegationSignController::class, 'index'])->name('index');
         Route::get('/export',           [\App\Http\Controllers\DelegationSignController::class, 'export'])->name('export');

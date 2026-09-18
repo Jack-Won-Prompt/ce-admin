@@ -63,6 +63,19 @@ return [
             'routes'  => ['delegation-signs'],
             'actions' => ['view', 'create', 'send', 'delete'],
         ],
+        /* 위드웍스에서 옮겨 담은 자료 — 보기만 한다 (2026-09-18 지시) */
+        'ww-prescriptions' => [
+            'label'   => '처방전 정보',
+            'group'   => 'opdata',
+            'routes'  => ['ww-data.prescriptions'],
+            'actions' => ['view'],
+        ],
+        'ww-customers' => [
+            'label'   => '고객 정보',
+            'group'   => 'opdata',
+            'routes'  => ['ww-data.customers', 'ww-data.addresses'],
+            'actions' => ['view'],
+        ],
 
 
         'dashboard' => [
@@ -341,6 +354,14 @@ return [
             'group'      => 'settings',
             'routes'     => ['error-logs'],
             'actions'    => ['view', 'update', 'delete'],
+            'admin_only' => true,
+        ],
+        /* 남의 운영 DB 계정을 다루는 화면이라 관리자만 연다 (2026-09-18 지시) */
+        'withworks-source' => [
+            'label'      => '위드웍스 자료 가져오기',
+            'group'      => 'settings',
+            'routes'     => ['withworks-source'],
+            'actions'    => ['view', 'update'],
             'admin_only' => true,
         ],
         // 외부 서비스 키를 다루는 화면이라 관리자만 연다.
