@@ -64,7 +64,6 @@ final class PopbillEnvironment
             'secret_key' => 'popbill.SecretKey',
             'corp_num'   => 'popbill.test.corp_num',
             'user_id'    => 'popbill.test.user_id',
-            'cert_key'   => 'popbill.test.cert_key',
             'sender_num' => 'popbill.test.sender_num',
             'sms_sender' => 'popbill.test.sms_sender',
             'fax_sender' => 'popbill.test.fax_sender',
@@ -75,7 +74,7 @@ final class PopbillEnvironment
 
             if ($값 !== '') {
                 config([$자리 => $값]);
-            } elseif (in_array($열쇠, ['corp_num', 'user_id', 'cert_key'], true)) {
+            } elseif (in_array($열쇠, ['corp_num', 'user_id'], true)) {
                 $빈것[] = $열쇠;
             }
         }

@@ -51,13 +51,19 @@ return [
                       'help'  => '고른 환경의 계정으로 붙습니다. 「테스트 모드」는 이 값이 정하므로 따로 켜고 끄지 않습니다. '
                                . '운영으로 두면 세금계산서ㆍ현금영수증 발행이 국세청 신고까지 갑니다.'],
 
+            /* 걷어낸 것 — 「인증키」 (2026-09-18 확인).
+
+               팝빌의 API 인증은 파트너의 LinkID + SecretKey 로 끝난다. 연동회원에게
+               따로 주어지는 인증키는 없고, 세금계산서에 쓰는 공동인증서는 팝빌
+               웹사이트에서 회원이 직접 등록하는 것이라 여기 담을 수 없다.
+               실제로 popbill.test.cert_key 는 읽어서 속성에 담아 둘 뿐 어느 API 에도
+               넘기지 않았다 — 아무 일도 하지 않는 칸은 거짓말을 한다. */
             'test_link_id'    => ['label' => '테스트 링크아이디', 'config' => 'popbill.accounts.test.link_id',
                                   'help'  => '팝빌 테스트베드(test.popbill.com)에서 발급한 연동 아이디'],
             'test_secret'     => ['label' => '테스트 시크릿 키',  'config' => 'popbill.accounts.test.secret_key',
                                   'type' => 'password', 'width' => 3],
             'test_corp'       => ['label' => '테스트 사업자번호', 'config' => 'popbill.accounts.test.corp_num'],
             'test_user'       => ['label' => '테스트 아이디',     'config' => 'popbill.accounts.test.user_id'],
-            'test_cert'       => ['label' => '테스트 인증키',     'config' => 'popbill.accounts.test.cert_key', 'type' => 'password'],
             'test_sender'     => ['label' => '테스트 발신 번호',  'config' => 'popbill.accounts.test.sender_num'],
             'test_fax'        => ['label' => '테스트 팩스 발신번호', 'config' => 'popbill.accounts.test.fax_sender',
                                   'help'  => '팝빌에 **팩스 발신번호로 등록된** 번호만 쓸 수 있습니다. 문자 발신번호와 다를 수 있습니다.'],
@@ -68,7 +74,6 @@ return [
                                   'type' => 'password', 'width' => 3],
             'live_corp'       => ['label' => '운영 사업자번호', 'config' => 'popbill.accounts.live.corp_num'],
             'live_user'       => ['label' => '운영 아이디',     'config' => 'popbill.accounts.live.user_id'],
-            'live_cert'       => ['label' => '운영 인증키',     'config' => 'popbill.accounts.live.cert_key', 'type' => 'password'],
             'live_sender'     => ['label' => '운영 발신 번호',  'config' => 'popbill.accounts.live.sender_num'],
             'live_fax'        => ['label' => '운영 팩스 발신번호', 'config' => 'popbill.accounts.live.fax_sender'],
             /* 발행 시뮬레이션 — 여태 .env 에만 있었다 (2026-09-16 지시).

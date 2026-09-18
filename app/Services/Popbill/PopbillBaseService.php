@@ -14,7 +14,6 @@ abstract class PopbillBaseService
     protected bool $useLocalTimeYn;
     protected string $corpNum;
     protected string $userId;
-    protected string $certKey;
     protected string $senderNum;
 
     public function __construct()
@@ -27,7 +26,6 @@ abstract class PopbillBaseService
         $this->useLocalTimeYn  = (bool) config('popbill.UseLocalTimeYN', true);
         $this->corpNum         = config('popbill.test.corp_num', '');
         $this->userId          = config('popbill.test.user_id', '');
-        $this->certKey         = config('popbill.test.cert_key', '');
         // 문자 발송이 이 값을 쓴다. 팩스는 fax_sender 를 따로 본다.
         $this->senderNum       = config('popbill.test.sms_sender') ?: config('popbill.test.sender_num', '');
     }
