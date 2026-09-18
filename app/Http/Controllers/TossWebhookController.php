@@ -25,8 +25,10 @@ class TossWebhookController extends Controller
      * - TOSS_WEBHOOK_SECRET 환경변수가 설정된 경우에만 검증
      * - 미설정 시 서명 검증 스킵 (개발환경)
      */
-    public function handle(Request $request, ?string $key = null): \Illuminate\Http\JsonResponse
+    public function handle(Request $request): \Illuminate\Http\JsonResponse
     {
+        /* 이름으로 꺼낸다 — 주소가 두 꼴이라 차례로 받으면 어긋난다 (2026-09-18) */
+        $key       = $request->route('key');
         $rawBody   = $request->getContent();
         $signature = $request->header('tosspayments-webhook-signature', '');
         $txTime    = $request->header('tosspayments-webhook-transmission-time', '');

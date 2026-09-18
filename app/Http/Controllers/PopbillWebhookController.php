@@ -43,8 +43,14 @@ class PopbillWebhookController extends Controller
      *
      * 로그인 없이 열린다 — 팝빌 서버가 직접 두드린다.
      */
-    public function handle(Request $request, string $service, ?string $key = null): JsonResponse
+    public function handle(Request $request): JsonResponse
     {
+        /* 이름으로 꺼낸다. 라우트 인자는 **차례대로** 들어오는데 주소가 두 꼴이라
+           (열쇠 있는 것ㆍ없는 것) 차례가 갈린다 — 실제로 열쇠가 갈래 자리에 앉아
+           모두 404 였다 (2026-09-18). */
+        $service = (string) $request->route('service');
+        $key     = $request->route('key');
+
         if (! in_array($service, self::갈래, true)) {
             return response()->json(['message' => '모르는 구분입니다.'], 404);
         }
