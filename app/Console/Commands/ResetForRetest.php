@@ -79,6 +79,26 @@ class ResetForRetest extends Command
         'prescription_reupload_requests', 'prescriptions',
         // 환자
         'privacy_consents', 'patient_addresses', 'patients',
+        /* 마스터 — 병원을 지운다 (2026-09-18 지시). 시험하며 쌓은 자료다. */
+        'hospitals',
+    ];
+
+    /**
+     * 표째로 비우지 않고 **고른 줄만** 지우는 자리 (2026-09-18 지시).
+     *
+     * 청구처가 그렇다. 공단 지사는 시험하며 쌓은 것이라 지우고, **지자체(시군구청)는
+     * 남긴다** — 234곳은 요양비를 등기로 받는 곳이라 우리가 시험하며 만든 것이 아니라
+     * 실제 행정 자료에 가깝다.
+     *
+     * 관할(billing_office_areas)은 통째로 남긴다(지시). 그래서 지워진 공단 지사의
+     * 관할 줄은 홀로 남는다 — 외래키가 걸려 있지 않아 막히지도, 따라 지워지지도
+     * 않는다. 목록 조회는 청구처 쪽에서 물으므로 그 줄은 보이지 않고, 공단 지사를
+     * 다시 쌓을 때 옛 id 를 그대로 받지 않으면 이어지지 않는다.
+     *
+     * @var array<string, array<string, mixed>> 표 => [칸 => 값]
+     */
+    private const 골라지울표 = [
+        'billing_offices' => ['kind' => 'nhis'],
     ];
 
     /** 남긴다 — 설정 묶음과 운영 데이터 묶음 */
@@ -86,8 +106,9 @@ class ResetForRetest extends Command
         // 설정 › 관리자ㆍ권한
         'users', 'admin_invitations', 'permission_groups', 'permission_group_pages',
         'personal_access_tokens', 'login_otp_tokens',
-        // 설정 › 마스터 관리
-        'hospitals', 'master_items', 'billing_offices', 'billing_office_areas',
+        /* 설정 › 마스터 관리 — 기관과 관할만 남는다.
+           병원ㆍ청구처는 지울표로 옮겼다 (2026-09-18 지시). */
+        'master_items', 'billing_office_areas',
         // 설정 › 환경ㆍ연동
         'common_codes', 'settings', 'message_templates', 'return_reasons',
         'delegation_settings', 'nice_settings', 'ocr_settings', 'withworks_settings',
@@ -169,7 +190,8 @@ class ResetForRetest extends Command
             [DB::getDatabaseName()]
         ))->pluck('t')->all();
 
-        $가른것 = array_merge(self::지울표, self::남길표, self::건드리지않을표);
+        $가른것 = array_merge(self::지울표, array_keys(self::골라지울표),
+                              self::남길표, self::건드리지않을표);
         $모르는것 = array_diff($있는것, $가른것);
         $없는것   = array_diff($가른것, $있는것);
 
@@ -198,6 +220,15 @@ class ResetForRetest extends Command
         foreach (self::지울표 as $t) {
             if (Schema::hasTable($t)) { $지움[$t] = $this->센다($t); }
         }
+        foreach (self::골라지울표 as $t => $조건) {
+            if (! Schema::hasTable($t)) { continue; }
+
+            $이름 = $t . ' (' . $this->조건말($조건) . ')';
+            $지움[$이름] = $this->센다($t, $조건);
+            /* 남는 쪽도 함께 보여 준다 — 「고른 줄만」은 무엇이 남는지가 더 궁금하다 */
+            $남김[$t . ' (나머지)'] = $this->센다($t) - $지움[$이름];
+        }
+
         foreach (self::남길표 as $t) {
             if (Schema::hasTable($t)) { $남김[$t] = $this->센다($t); }
         }
@@ -205,10 +236,19 @@ class ResetForRetest extends Command
         return ['지움' => $지움, '남김' => $남김];
     }
 
-    private function 센다(string $표): int
+    private function 센다(string $표, array $조건 = []): int
     {
-        try { return (int) DB::table($표)->count(); }
+        try { return (int) DB::table($표)->where($조건)->count(); }
         catch (\Throwable $e) { return -1; }
+    }
+
+    /** 조건을 사람이 읽을 말로 — 「kind=nhis」 */
+    private function 조건말(array $조건): string
+    {
+        return implode(' · ', array_map(
+            fn ($k, $v) => $k . '=' . $v,
+            array_keys($조건), array_values($조건)
+        ));
     }
 
     private function 그려준다(array $건수, bool $이건): void
@@ -265,6 +305,20 @@ class ResetForRetest extends Command
             } catch (\Throwable $e) {
                 /* 막히면 그 자리에서 말한다 — 차례가 틀렸거나 새 외래키가 생긴 것이다.
                    외래키를 꺼서 뚫지 않는다. 뚫으면 고아가 남고 아무도 모른다. */
+                $this->error(sprintf('  X %-34s %s', $표, $e->getMessage()));
+            }
+        }
+
+        foreach (self::골라지울표 as $표 => $조건) {
+            if (! Schema::hasTable($표)) { continue; }
+
+            try {
+                $전 = $this->센다($표, $조건);
+                DB::table($표)->where($조건)->delete();
+                $this->line(sprintf('  v %-34s %8s 줄 (%s · 나머지 %s 줄 남김)',
+                    $표, number_format($전), $this->조건말($조건),
+                    number_format($this->센다($표))));
+            } catch (\Throwable $e) {
                 $this->error(sprintf('  X %-34s %s', $표, $e->getMessage()));
             }
         }
