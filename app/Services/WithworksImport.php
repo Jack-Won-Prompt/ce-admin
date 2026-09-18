@@ -69,11 +69,22 @@ class WithworksImport
         $d = self::대상[$열쇠] ?? throw new \InvalidArgumentException("모르는 갈래입니다 ({$열쇠}).");
 
         $마지막 = $this->마지막번호($열쇠);
-        $칸들   = $this->우리칸($d['우리']);
-        $읽음   = $담음 = 0;
+
+        /* 우리 id 는 우리가 매긴다 — 저쪽 번호는 ww_id 에만 담는다. 여기에 저쪽 id 를
+           넣으면 두 표의 번호가 뒤엉켜 되짚을 수 없다 (2026-09-18 첫 가져오기에서 드러남). */
+        $칸들 = array_values(array_diff(
+            $this->우리칸($d['우리']), ['id', 'ww_id', 'imported_at']
+        ));
+
+        /* MySQL 은 한 질의에 자리표 65,535개까지 받는다. 칸이 여든이 넘는 표를
+           2,000줄씩 넣으면 십육만 개가 되어 「too many placeholders」로 죽는다.
+           칸 수를 보고 묶음을 줄인다 — 넉넉히 절반만 쓴다. */
+        $한묶음 = max(50, min($d['한번에'], intdiv(30000, count($칸들) + 2)));
+
+        $읽음 = $담음 = 0;
 
         do {
-            $줄들 = $this->한묶음($d, $마지막);
+            $줄들 = $this->한묶음($d, $마지막, $한묶음);
 
             if ($줄들->isEmpty()) {
                 break;
@@ -83,7 +94,6 @@ class WithworksImport
                 $줄 = ['ww_id' => $r->id, 'imported_at' => now()];
 
                 foreach ($칸들 as $칸) {
-                    if ($칸 === 'ww_id' || $칸 === 'imported_at') { continue; }
                     /* 저쪽에 없는 칸은 건너뛴다 — 저쪽이 칸을 지워도 여기서 죽지 않는다 */
                     if (property_exists($r, $칸)) { $줄[$칸] = $r->{$칸}; }
                 }
@@ -91,8 +101,12 @@ class WithworksImport
                 return $줄;
             })->all();
 
-            /* 같은 ww_id 가 다시 오면 덮어쓴다 — 번호를 0 으로 되돌려 다시 담을 때다 */
-            DB::table($d['우리'])->upsert($담을것, ['ww_id'], array_keys(reset($담을것)));
+            /* 같은 ww_id 가 다시 오면 덮어쓴다 — 번호를 0 으로 되돌려 다시 담을 때다.
+               고칠 칸은 우리가 정한 목록으로 준다 — 첫 줄의 열쇠를 쓰면 그 줄에만 있는
+               칸이 기준이 되어 뒷줄에서 어긋난다. */
+            DB::table($d['우리'])->upsert(
+                $담을것, ['ww_id'], array_merge($칸들, ['imported_at'])
+            );
 
             $읽음  += $줄들->count();
             $담음  += count($담을것);
@@ -101,7 +115,7 @@ class WithworksImport
             $this->마지막번호저장($열쇠, $마지막);
 
             if ($알림) { $알림($읽음, $마지막); }
-        } while ($줄들->count() >= $d['한번에']);
+        } while ($줄들->count() >= $한묶음);
 
         Log::info('[위드웍스 가져오기] 끝', [
             '갈래' => $열쇠, '읽음' => $읽음, '마지막' => $마지막,
@@ -111,12 +125,12 @@ class WithworksImport
     }
 
     /** 저쪽에서 한 묶음 읽는다 — 번호 뒤부터, 번호 차례로 */
-    private function 한묶음(array $d, int $뒤부터)
+    private function 한묶음(array $d, int $뒤부터, int $크기)
     {
         $q = WithworksSource::연결($d['갈래'])->table($d['원천'])
             ->where('id', '>', $뒤부터)
             ->orderBy('id')
-            ->limit($d['한번에']);
+            ->limit($크기);
 
         foreach ($d['거르개'] ?? [] as $칸 => $값) {
             $q->where($칸, $값);

@@ -49,7 +49,8 @@ class WithworksImportCommand extends Command
                 });
             } catch (\Throwable $e) {
                 $this->newLine();
-                $this->error('  ' . $e->getMessage());
+                /* 질의가 통째로 실린 오류는 수십만 자다 — 앞머리만 보인다 */
+                $this->error('  ' . mb_substr($e->getMessage(), 0, 300));
 
                 return self::FAILURE;
             }
