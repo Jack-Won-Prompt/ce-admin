@@ -7612,7 +7612,14 @@ window.HELP_TOUR_STEPS = [
 
       sel.value = guess;
       onClaimAgencyChange();
-      markOcrDirty();
+
+      /* 사람이 고른 때만 「고친 것이 있다」로 센다 (2026-09-19).
+
+         화면을 여는 그 순간에도 빈 청구처를 채우는데, 그때까지 더럽다고 세면
+         아무것도 손대지 않고 탭만 눌러도 「저장하지 않은 변경사항」이 뜬다.
+         그 창은 배경을 눌러도 닫히지 않아 담당자에게는 화면이 멈춘 것으로 보인다.
+         열 때 채운 값은 다음 저장에 함께 담기므로 잃지 않는다. */
+      if (사람이) markOcrDirty();
 
       if (덮나) {
         showToast(`청구처를 「${옛말}」에서 「${sel.options[sel.selectedIndex]?.text ?? ''}」로 바꿨습니다 — 자격에 따릅니다.`, 'info');
@@ -8367,10 +8374,16 @@ window.HELP_TOUR_STEPS = [
 
     const onCancel  = () => { dlg.style.display = 'none'; cleanup(); };
     const onDiscard = () => { clearAllDirty(); dlg.style.display = 'none'; proceed(); cleanup(); };
+    /* 저장이 안 되면 떠나지 않는다 (2026-09-19). 여태 결과를 보지 않고 옮겨,
+       「박스 수량이 맞지 않습니다」로 거부된 채 탭만 바뀌었다 — 적은 것이 담기지
+       않았는데 담긴 줄 안다. 같은 화면의 「신규 등록」은 이미 이렇게 한다. */
     const onSave    = async () => {
       dlg.style.display = 'none';
       cleanup();
-      if (saveFn) await saveFn();
+      if (saveFn) {
+        const 담겼나 = await saveFn();
+        if (담겼나 === false) return;
+      }
       proceed();
     };
 
@@ -8382,10 +8395,23 @@ window.HELP_TOUR_STEPS = [
     btnDiscard.addEventListener('click', onDiscard, { once: true });
     btnSave.addEventListener('click',    onSave,    { once: true });
 
+    /* 배경을 누르거나 ESC 를 눌러도 닫힌다 (2026-09-19).
+
+       여태 단추 셋 말고는 닫을 길이 없었다. 창을 못 보고 딴 데를 누르면 덮개가
+       화면 전체를 먹어, 담당자에게는 「탭이 안 눌린다」로 보인다. 닫는 것은
+       「취소」와 같다 — 고친 것은 그대로 두고 그 자리에 머문다. */
+    const onBackdrop = (e) => { if (e.target === dlg) onCancel(); };
+    const onEsc = (e) => { if (e.key === 'Escape') onCancel(); };
+
+    dlg.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onEsc);
+
     function cleanup() {
       btnCancel.removeEventListener('click',  onCancel);
       btnDiscard.removeEventListener('click', onDiscard);
       btnSave.removeEventListener('click',    onSave);
+      dlg.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onEsc);
     }
   }
 
