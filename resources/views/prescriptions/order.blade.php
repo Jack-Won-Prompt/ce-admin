@@ -4389,6 +4389,15 @@ $calcDeposit  = $calcCopay;
                         style="flex-shrink:0;padding:0 18px;">
                   <i class="fa-solid fa-ban"></i> 주문 취소
                 </button>
+                {{-- 교환/반품/취소 — 나간 뒤에 할 일이다 (2026-09-18 지시).
+
+                     출고 전에는 정정ㆍ취소로 고치고, 출고 뒤에는 이 자리로 간다. 두 길이
+                     화면에 함께 서 있어야 담당자가 「지금은 어느 쪽인가」를 묻지 않는다.
+                     누르면 교환/반품/취소 화면이 이 주문번호를 들고 새 탭으로 열린다. --}}
+                <button class="btn btn-outline" id="btnReturnOrder" onclick="openOrderReturn(event)"
+                        style="flex-shrink:0;padding:0 14px;" disabled>
+                  <i class="fa-solid fa-right-left"></i> 교환/반품/취소
+                </button>
                 <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
                         style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
                   <i class="fa-solid fa-trash-can"></i> 삭제
@@ -10777,6 +10786,10 @@ window.HELP_TOUR_STEPS = [
                 style="flex-shrink:0;padding:0 18px;">
           <i class="fa-solid fa-ban"></i> 주문 취소
         </button>
+        <button class="btn btn-outline" id="btnReturnOrder" onclick="openOrderReturn(event)"
+                style="flex-shrink:0;padding:0 14px;" disabled>
+          <i class="fa-solid fa-right-left"></i> 교환/반품/취소
+        </button>
         <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
                 style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
           <i class="fa-solid fa-trash-can"></i> 삭제
@@ -10825,7 +10838,38 @@ window.HELP_TOUR_STEPS = [
         취소.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> 취소 요청 중';
       }
     }
+
+    /* 교환/반품/취소는 나간 뒤에만 선다 (2026-09-18 지시).
+
+       출고 전에는 정정ㆍ취소로 고치는 것이 맞고, 그때 이 단추를 눌러 접수하면
+       창고에 오지도 않을 반품 주문이 선다. 출고 완료(shipped)에서만 연다. */
+    const 되돌림 = document.getElementById('btnReturnOrder');
+
+    if (되돌림) {
+      const 나갔나 = res.stage === 'shipped';
+
+      되돌림.disabled = !나갔나;
+      되돌림.title = 나갔나
+        ? '교환/반품/취소 화면을 이 주문번호로 엽니다'
+        : (단계말 + ' — 출고 완료 뒤에 교환ㆍ반품ㆍ취소를 접수합니다');
+    }
   }
+
+  /* 교환/반품/취소 화면을 이 주문번호로 연다 — 받는 쪽이 order_no 를 읽어
+     접수 탭을 펴고 원 주문을 앉힌다(order-returns/index 의 첫 스크립트). */
+  function openOrderReturn(e) {
+    e?.preventDefault();
+
+    const 번호 = existingOrder?.order_number;
+
+    if (!번호) {
+      showToast('주문번호를 찾지 못했습니다.', 'warning');
+      return;
+    }
+
+    window.open('{{ route('order-returns.index') }}?order_no=' + encodeURIComponent(번호), '_blank');
+  }
+  window.openOrderReturn = openOrderReturn;
   window.syncCancelBtns = syncCancelBtns;
 
   /** 취소는 사유를 받는다 — 왜 되돌렸는지가 남지 않으면 다음 달에 아무도 모른다 */
