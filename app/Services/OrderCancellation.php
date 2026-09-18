@@ -128,14 +128,50 @@ class OrderCancellation
             }
         }
 
-        if ($지울것->count()) {
+        /* 팝빌에 낸 증빙의 종이도 함께 지운다 (2026-09-18 운영 시험에서 드러남).
+
+           여태 첨부(PrescriptionAttachment)만 지웠다. 세금계산서ㆍ현금영수증 PDF 는
+           서류함(PrescriptionDocument)에 따로 쌓이는데, 증빙을 물러도 옛 금액의 종이가
+           그대로 남아 담당자가 그것을 환자ㆍ공단에 보낼 수 있었다. 다시 낼 때마다 한
+           장씩 더 쌓이기도 했다 — 한 주문에 같은 이름의 계산서가 석 장 붙어 있었다.
+
+           서류함은 처방전에 매달려 있어 주문 번호 칸이 없다. 파일이 놓인 자리
+           (tax_invoices/{주문}/…)로 이 주문 것만 고른다 — 한 처방에 주문이 여럿이면
+           옆 주문의 증빙까지 지우게 된다. */
+        $증빙 = \App\Models\PrescriptionDocument::where('prescription_id', $order->prescription_id)
+            ->whereIn('type', ['tax_invoice', 'cash_receipt'])
+            ->where(function ($q) use ($order) {
+                $q->where('file_path', 'like', 'tax_invoices/' . $order->id . '/%')
+                  ->orWhere('file_path', 'like', 'cash_receipts/' . $order->id . '/%');
+            })
+            ->get();
+
+        foreach ($증빙 as $d) {
+            try {
+                if ($d->file_path) {
+                    \Illuminate\Support\Facades\Storage::delete($d->file_path);
+                }
+                $d->delete();
+            } catch (\Throwable $e) {
+                Log::warning('[정정] 증빙 서류를 지우지 못했다', [
+                    'document' => $d->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $모두 = $지울것->count() + $증빙->count();
+
+        if ($모두) {
+            $이름 = $지울것->pluck('doc_label')
+                ->merge($증빙->pluck('type')->map(fn ($t) => $t === 'tax_invoice' ? '세금계산서' : '현금영수증'))
+                ->filter()->unique();
+
             activity()->performedOn($order)->log(
-                "정정으로 다시 그릴 서류 {$지울것->count()}장을 지웠습니다 — "
-                . $지울것->pluck('doc_label')->filter()->implode(' · ')
+                "정정으로 다시 그릴 서류 {$모두}장을 지웠습니다 — " . $이름->implode(' · ')
             );
         }
 
-        return $지울것->count();
+        return $모두;
     }
 
     /** 세금계산서 — 발행돼 있으면 취소한다. 없던 거래의 계산서가 남으면 안 된다. */
