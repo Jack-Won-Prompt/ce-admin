@@ -1733,7 +1733,7 @@
         @endif
 
         {{-- ══ 지원 ══ --}}
-        @if($vis('institutional-notices', 'notices', 'inquiries', 'service-requests'))
+        @if($vis('institutional-notices', 'notices', 'service-requests'))
         <div class="menu-group" data-menu-group="support">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>지원</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1756,23 +1756,11 @@
           </a>
         </div>
         @endif
-        @if($vis('inquiries'))
-        <div class="menu-item {{ request()->routeIs('inquiries*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="bubble-chat-edit" href="{{ route('inquiries.index') }}" data-title="환자 문의">
-            @dsicon('bubble-chat-edit', 'ds-icon menu-icon')
-            <span>환자 문의</span>
-            @if(Auth::user()->role === 'admin')
-              @php
-                try { $inquiryPending = \App\Models\Inquiry::where('status', 'pending')->count(); }
-                catch(\Throwable $e) { $inquiryPending = 0; }
-              @endphp
-              @if($inquiryPending > 0)
-                <span class="menu-badge">{{ $inquiryPending }}</span>
-              @endif
-            @endif
-          </a>
-        </div>
-        @endif
+        {{-- 「환자 문의」는 메뉴에 세우지 않는다 (2026-09-18 지시).
+
+             화면ㆍ라우트ㆍ권한은 그대로 두었다 — 앱에서 올라오는 문의는 계속 쌓이고,
+             주소(/inquiries)로 들어가면 열린다. 메뉴에서만 뺀다. 다시 세우려면 이
+             자리에 줄을 되살리고 위 「지원」 묶음 판정에 'inquiries' 를 넣는다. --}}
         @if($vis('service-requests'))
         <div class="menu-item {{ request()->routeIs('sr.*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="dialogue" href="{{ route('sr.index') }}" data-title="SR 관리">
