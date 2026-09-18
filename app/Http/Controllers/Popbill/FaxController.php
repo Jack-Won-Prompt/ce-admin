@@ -62,9 +62,25 @@ class FaxController extends Controller
         $corpNum = $request->input('corp_num', config('popbill.test.corp_num'));
         $userId  = config('popbill.test.user_id');
 
+        /* 확장자를 지켜 넘긴다 (2026-09-18 운영 시험에서 드러남).
+
+           getRealPath() 는 올라온 파일의 임시 자리(/tmp/phpXXXXXX)를 돌려주는데 그
+           이름에는 확장자가 없다. 팝빌은 파일 종류를 이름으로 가리므로
+           「[-16010010] 파일명에 확장자가 존재하지 않습니다」로 거절했다 — 화면은
+           500 만 띄우고 무엇이 잘못됐는지 말해 주지 않았다.
+
+           원래 이름의 확장자를 붙여 한 벌 옮겨 두고 그 자리를 넘긴다. 보낸 뒤에 지운다. */
         $filePaths = [];
+        $치울것   = [];
+
         foreach ($request->file('files') as $file) {
-            $filePaths[] = $file->getRealPath();
+            $확장자 = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+            $자리   = sys_get_temp_dir() . '/fax_' . uniqid() . ($확장자 ? '.' . $확장자 : '');
+
+            copy($file->getRealPath(), $자리);
+
+            $filePaths[] = $자리;
+            $치울것[]    = $자리;
         }
 
         $receivers = [];
@@ -86,6 +102,12 @@ class FaxController extends Controller
             userId:     $userId,
             requestNum: $request->input('request_num'),
         );
+
+        /* 옮겨 둔 것을 치운다 — 보냈든 못 보냈든 남길 까닭이 없다 */
+        foreach ($치울것 as $자리) {
+            @unlink($자리);
+        }
+
 
         // 발송 이력 저장 (접수번호 발급 = API 접수 성공, 초기 state=0 대기)
         try {
