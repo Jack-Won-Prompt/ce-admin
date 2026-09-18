@@ -660,24 +660,20 @@ class OrderReturnController extends Controller
 
         $extra = '';
 
-        /* 환불완료면 돈을 실제로 무른다 (2026-09-17 운영 시험에서 드러남).
+        /* 돈은 여기서 무르지 않는다 (2026-09-18 지시).
 
-           절차서(2026-09-16)의 CASE 「일반(전체 반품)」은 토스 칸이 「취소처리」다.
-           그런데 여태 이 단계는 「환불완료」라 적기만 하고 토스를 부르지 않았다 —
-           화면에는 환불이 끝났다고 서 있는데 카드는 그대로 승인된 채였고, 돈은
-           담당자가 토스 화면에서 따로 무르지 않으면 영영 돌아가지 않았다.
+           한때 환불완료로 옮길 때 토스를 함께 불렀다. 그런데 실제 절차는 그 앞에
+           한 걸음이 더 있다 — 창고가 돌아온 물건을 확인해 검수 결과를 올리고,
+           우리 담당자가 그 내용을 보고 승인한 뒤에야 얼마를 돌려줄지가 정해진다.
+           보지도 않고 먼저 무르면, 검수에서 수량이 깎였을 때 이미 나간 돈을 다시
+           받아야 한다.
 
-           교환은 부르지 않는다 — 물건만 바꾸는 것이라 돈이 그대로다.
-           부분이면 그 몫만 무른다. 토스는 한 결제를 나누어 물 수 있다.
+           그래서 결제 취소ㆍ부분 취소는 상세 화면의 ［결제 취소］로 옮겼다.
+           검수 확정을 마친 건에서만 서고, 담당자가 금액을 보고 누른다.
 
-           실패해도 단계는 이미 옮겼다. 왜 안 됐는지를 화면에 띄우고, 담당자가
-           환불 수단을 고치거나 토스 화면에서 마무리하게 둔다. */
+           환자 안내는 그대로 이 자리에서 보낸다 — 단계가 「환불완료」로 선 것이
+           곧 환불이 끝났다는 뜻이다. */
         if ($to === 'refunded' && $orderReturn->type !== OrderReturn::TYPE_EXCHANGE) {
-            $extra .= $this->돈무르기($orderReturn->fresh('order'));
-
-            /* 돈이 돌아갔다는 것을 환자에게 알린다 (2026-09-18 지시). 카드 취소는
-               카드사를 거쳐 며칠 뒤에 통장에 찍혀, 알리지 않으면 환자는 그동안
-               「환불해 준다더니 안 들어왔다」고 본다. */
             $extra .= app(\App\Services\ReturnPatientNotice::class)
                 ->자동안내($orderReturn->fresh('order.patient'),
                           \App\Services\ReturnPatientNotice::환불);
@@ -795,24 +791,71 @@ class OrderReturnController extends Controller
      * 카드ㆍ가상계좌 어느 쪽이든 PaymentCancelService 한 곳에서 한다. 가상계좌는
      * 돌려줄 계좌를 함께 보내야 하므로 접수 때 적어 둔 은행ㆍ번호ㆍ예금주를 싣는다.
      */
-    private function 돈무르기(OrderReturn $orderReturn): string
+    /**
+     * 받은 돈을 무른다 — 담당자가 직접 누른다 (2026-09-18 지시).
+     *
+     * 단계를 옮길 때 저절로 부르지 않는다. 실제 절차는 창고가 돌아온 물건을 확인해
+     * 검수 결과를 올리고, 우리 담당자가 그 내용을 보고 승인한 뒤에야 얼마를 돌려줄지가
+     * 정해진다. 보지도 않고 먼저 무르면, 검수에서 수량이 깎였을 때 이미 나간 돈을
+     * 다시 받아야 한다.
+     *
+     * 그래서 **검수 확정을 마친 건에서만** 서고, 금액도 담당자가 보고 정한다.
+     * 비워 두면 남은 전액, 적으면 그 몫만 무른다(부분 취소).
+     */
+    public function cancelPayment(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        if (! perm('order-returns', 'send')) {
+            return back()->withErrors(['pay' => '결제 취소 권한이 필요합니다.']);
+        }
+
+        /* 검수를 확정하지 않은 건은 막는다 — 얼마를 돌려줄지가 아직 정해지지 않았다 */
+        if (! $orderReturn->inspect_confirmed_at) {
+            return back()->withErrors(['pay' =>
+                '검수 확정 뒤에 무를 수 있습니다 — 창고 검수 결과를 확인하고 ［검수 확정］을 먼저 눌러 주십시오.']);
+        }
+
+        if ($orderReturn->type === OrderReturn::TYPE_EXCHANGE) {
+            return back()->withErrors(['pay' =>
+                '교환은 물건만 바꾸는 것이라 돌려줄 돈이 없습니다 — 금액이 달라졌으면 금액조정으로 처리합니다.']);
+        }
+
+        $말 = $this->돈무르기($orderReturn->fresh(['order.patient']), $data['amount'] ?? null);
+
+        return str_starts_with($말, '!')
+            ? back()->withErrors(['pay' => ltrim($말, '! ')])
+            : back()->with('status', trim($말));
+    }
+
+    /**
+     * 토스에 무르기를 청한다.
+     *
+     * 카드ㆍ가상계좌 어느 쪽이든 PaymentCancelService 한 곳에서 한다. 가상계좌는
+     * 돌려줄 계좌를 함께 보내야 하므로 접수 때 적어 둔 은행ㆍ번호ㆍ예금주를 싣는다.
+     *
+     * 앞에 「!」가 붙어 돌아오면 못 한 것이다.
+     */
+    private function 돈무르기(OrderReturn $orderReturn, ?int $몫 = null): string
     {
         $order = $orderReturn->order;
 
         if (! $order) {
-            return ' 주문을 찾을 수 없어 결제를 무르지 못했습니다.';
+            return '! 주문을 찾을 수 없어 결제를 무르지 못했습니다.';
         }
 
         /* 계좌로 따로 부쳐 주기로 한 건은 토스가 할 일이 없다 — 사람이 이체한다 */
         if ($orderReturn->refund_method === 'account') {
-            return ' 계좌 환불입니다 — 이체는 담당자가 처리합니다.';
+            return '! 계좌 환불입니다 — 이체는 담당자가 직접 처리하고, 처리한 날짜를 아래 환불 처리 이력에 적어 주십시오.';
         }
 
         $계좌 = null;
 
         if ($orderReturn->refund_method === 'va') {
             if (! $orderReturn->refund_bank || ! $orderReturn->refund_account) {
-                return ' 가상계좌 환불에는 돌려줄 계좌(은행ㆍ번호ㆍ예금주)가 있어야 합니다.';
+                return '! 가상계좌 환불에는 돌려줄 계좌(은행ㆍ번호ㆍ예금주)가 있어야 합니다.';
             }
 
             $계좌 = [
@@ -822,24 +865,28 @@ class OrderReturnController extends Controller
             ];
         }
 
-        /* 부분이면 적어 둔 환불 금액만 무른다. 비어 있으면 남은 전액이다. */
-        $몫 = $orderReturn->is_partial && $orderReturn->refund_amount > 0
+        /* 적어 준 몫이 먼저다. 없으면 접수 때 정한 환불 금액, 그것도 없으면 남은 전액 */
+        $몫 ??= $orderReturn->is_partial && $orderReturn->refund_amount > 0
             ? (int) $orderReturn->refund_amount
             : null;
 
         $결과 = app(\App\Services\TossPayments\PaymentCancelService::class)
             ->cancel($order, $orderReturn->receipt_no . ' ' . $orderReturn->typeLabel(), $몫, $계좌);
 
-        if ($결과['ok']) {
-            $orderReturn->forceFill([
-                $orderReturn->refund_method === 'va' ? 'bank_cancelled_at' : 'card_cancelled_at' => now(),
-            ])->save();
-
-            return ' ' . $결과['message'];
+        if (! ($결과['ok'] ?? false)) {
+            return '! 결제를 무르지 못했습니다 — ' . ($결과['message'] ?? '');
         }
 
-        return ' 결제를 무르지 못했습니다 — ' . $결과['message'];
+        $orderReturn->forceFill([
+            $orderReturn->refund_method === 'va' ? 'bank_cancelled_at' : 'card_cancelled_at' => now(),
+        ])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log("{$orderReturn->receipt_no} 결제 취소 — " . ($결과['message'] ?? ''));
+
+        return $결과['message'] ?? '돌려주었습니다.';
     }
+
 
     public function pullInspection(OrderReturn $orderReturn): RedirectResponse
     {

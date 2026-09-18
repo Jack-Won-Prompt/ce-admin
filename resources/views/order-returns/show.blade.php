@@ -243,6 +243,61 @@
   </div>
 </div>
 <div class="rt-card">
+  {{-- 결제 취소 — 검수 확정 뒤 담당자가 직접 누른다 (2026-09-18 지시).
+
+       단계를 옮길 때 저절로 무르지 않는다. 창고가 돌아온 물건을 확인해 검수 결과를
+       올리고, 담당자가 그 내용을 보고 승인한 뒤에야 얼마를 돌려줄지가 정해진다.
+       보지도 않고 먼저 무르면, 검수에서 수량이 깎였을 때 이미 나간 돈을 다시 받아야
+       한다. --}}
+  @php
+    $무를수있나 = $r->type !== \App\Models\OrderReturn::TYPE_EXCHANGE;
+    $검수됨    = (bool) $r->inspect_confirmed_at;
+    $결제      = $r->order?->tossPayment;
+    $남은돈    = $결제 ? max(0, (int) $결제->amount - (int) $결제->cancel_amount) : 0;
+  @endphp
+  @if($무를수있나)
+    <div class="rt-hd">결제 취소</div>
+    <div class="rt-bd" style="padding:12px 14px;">
+      @if(! $결제)
+        <div style="font-size:12px;color:var(--text-secondary);">
+          토스 결제 내역이 없습니다 — 계좌로 받은 건이면 직접 이체한 뒤 아래 환불 처리 이력에 적어 주십시오.
+        </div>
+      @else
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:8px;">
+          <span>결제 <b>{{ number_format((int) $결제->amount) }}원</b></span>
+          <span style="color:var(--text-muted);">·</span>
+          <span>취소 <b>{{ number_format((int) $결제->cancel_amount) }}원</b></span>
+          <span style="color:var(--text-muted);">·</span>
+          <span>남은 금액 <b style="color:var(--primary);">{{ number_format($남은돈) }}원</b></span>
+          <span style="color:var(--text-muted);">({{ $결제->status }})</span>
+        </div>
+
+        @if(! $검수됨)
+          <div style="font-size:12px;color:var(--alert-500);">
+            검수 확정 뒤에 무를 수 있습니다 — 창고 검수 결과를 확인하고 ［검수 확정］을 먼저 눌러 주십시오.
+          </div>
+        @elseif($남은돈 <= 0)
+          <div style="font-size:12px;color:var(--text-secondary);">이미 전액 취소된 결제입니다.</div>
+        @else
+          <form method="POST" action="{{ route('order-returns.cancelPayment', $r) }}"
+                style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;"
+                onsubmit="return confirm('받은 돈을 실제로 돌려줍니다. 계속할까요?');">
+            @csrf
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:12px;color:var(--gray-700);">취소 금액</label>
+              <input type="number" name="amount" class="form-control" min="1" max="{{ $남은돈 }}"
+                     style="width:160px;" value="{{ (int) ($r->refund_amount ?: $남은돈) }}">
+            </div>
+            <button type="submit" class="btn btn-danger">결제 취소</button>
+            <span style="font-size:11px;color:var(--text-muted);">
+              비우면 남은 전액을 무릅니다. 적으면 그 몫만 무르는 부분 취소입니다.
+            </span>
+          </form>
+        @endif
+      @endif
+    </div>
+  @endif
+
   <div class="rt-hd">환불 처리 이력</div>
   <form method="POST" action="{{ route('order-returns.update', $r) }}" class="rt-refund rt-bd">
     @csrf @method('PATCH')

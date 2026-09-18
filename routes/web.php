@@ -257,6 +257,8 @@ Route::middleware(['auth'])->group(function () {
         // 창고 검수 결과 받아 오기 · 마이너스 발행 다시 시도
         Route::post('/{orderReturn}/pull-inspection', [\App\Http\Controllers\OrderReturnController::class, 'pullInspection'])->name('pullInspection');
         Route::post('/{orderReturn}/issue-credit',    [\App\Http\Controllers\OrderReturnController::class, 'issueCredit'])->name('issueCredit');
+        /* 결제 취소ㆍ부분 취소 — 검수 확정 뒤 담당자가 직접 누른다 (2026-09-18 지시) */
+        Route::post('/{orderReturn}/cancel-payment', [\App\Http\Controllers\OrderReturnController::class, 'cancelPayment'])->name('cancelPayment');
         Route::post('/{orderReturn}/retry-adjust',    [\App\Http\Controllers\OrderReturnController::class, 'retryAdjust'])->name('retryAdjust');
         // 부분ㆍ자격 변경 건의 조정 금액을 적는다(2026-09-02 유형표)
         Route::post('/{orderReturn}/adjust-amount',   [\App\Http\Controllers\OrderReturnController::class, 'adjustAmount'])->name('adjust-amount');
