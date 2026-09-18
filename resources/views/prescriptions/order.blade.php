@@ -7573,9 +7573,21 @@ window.HELP_TOUR_STEPS = [
 
   /* 우리가 마지막으로 제시한 청구처 — 담당자가 손으로 고친 것과 가르는 잣대다.
      처음 여는 순간에는 저장된 값이 곧 우리가 제시했던 값이라고 본다. */
-  let _claimAuto = @json($prescription->claim_agency ?? '');
-
-  function suggestClaimAgency() {
+  /**
+   * 자격이 정한 청구처를 세운다.
+   *
+   * **청구처는 자격이 정한다.** 관할 청구처가 있든 없든 상관없다 — 어디에 내는지는
+   * 자격이 정하고, 그 안에서 어느 지사ㆍ어느 시군구인지가 관할이다. 둘은 딸린 순서지
+   * 서로 막는 사이가 아니다 (2026-09-18 지시).
+   *
+   * @param 사람이 담당자가 자격ㆍ유형을 **고른** 자리인가.
+   *               고른 것이면 이미 든 값도 갈아 끼운다 — 자격을 다시 고르는 것은
+   *               분명한 뜻이고, 그 뜻이 앞선다.
+   *               화면을 여는 자리(false)에서는 비어 있을 때만 채운다. 저장해 둔 값을
+   *               열어 보기만 해도 바꾸면, 아무것도 안 한 담당자가 저장을 묻는 창을
+   *               만나고 일부러 달리 적어 둔 건이 조용히 뒤집힌다.
+   */
+  function suggestClaimAgency(사람이 = false) {
     const sel = document.getElementById('f-claim-agency');
     if (!sel) return;
 
@@ -7586,19 +7598,19 @@ window.HELP_TOUR_STEPS = [
       ? 'none'
       : CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
 
-    /* **자격을 바꾸면 청구처도 다시 정한다** (2026-09-18 지시).
+    if (guess && sel.value !== guess && (! sel.value || 사람이)) {
+      /* 적어 둔 것과 다르게 바꿀 때는 말해 준다 — 고른 것은 자격인데 옆 칸이 함께
+         바뀌면, 알리지 않으면 언제 바뀌었는지 모른 채 지나간다. */
+      const 덮나 = !! sel.value;
+      const 옛말 = sel.options[sel.selectedIndex]?.text ?? '';
 
-       여태 비어 있을 때만 채웠다. 그래서 일반으로 골라 「건강보험공단」이 선 뒤에
-       기초로 바꾸면 청구처가 공단에 그대로 남았다 — 지자체에 낼 건이 공단 청구
-       목록에 서고, 서류도 공단 것으로 그려졌다.
-
-       다만 담당자가 자격과 다르게 일부러 고른 것은 덮지 않는다. 지금 값이 우리가
-       마지막으로 제시한 값 그대로일 때만 갈아 끼운다. */
-    const 바꿀까 = guess && sel.value !== guess && (! sel.value || sel.value === _claimAuto);
-
-    if (바꿀까) {
-      sel.value = _claimAuto = guess;
+      sel.value = guess;
       onClaimAgencyChange();
+      markOcrDirty();
+
+      if (덮나) {
+        showToast(`청구처를 「${옛말}」에서 「${sel.options[sel.selectedIndex]?.text ?? ''}」로 바꿨습니다 — 자격에 따릅니다.`, 'info');
+      }
     }
 
     /* **청구처가 그대로여도 관할은 다시 본다.**
@@ -7609,15 +7621,14 @@ window.HELP_TOUR_STEPS = [
     boAutoPick();
   }
 
-  document.getElementById('f-benefit-class')?.addEventListener('change', suggestClaimAgency);
+  document.getElementById('f-benefit-class')?.addEventListener('change', () => suggestClaimAgency(true));
   /* 유형(처방전ㆍ처방외)도 청구처를 가른다 — 바뀌면 다시 본다 */
-  document.getElementById('f-acc-add-type')?.addEventListener('change', suggestClaimAgency);
+  document.getElementById('f-acc-add-type')?.addEventListener('change', () => suggestClaimAgency(true));
   document.getElementById('f-claim-agency')?.addEventListener('change', () => {
-    /* 사람이 고른 것은 그 값이 곧 정본이다 — 다음 자격 변경이 덮지 않게 적어 둔다 */
-    _claimAuto = document.getElementById('f-claim-agency').value;
     onClaimAgencyChange();
     boAutoPick();
   });
+  /* 열 때는 비어 있는 것만 채운다 */
   suggestClaimAgency();
 
   /* ── 청구전략 ──────────────────────────────────────────────
