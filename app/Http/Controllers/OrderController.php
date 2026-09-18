@@ -860,7 +860,16 @@ class OrderController extends Controller
         try {
             $corpNum = config('popbill.test.corp_num');
             $userId  = config('popbill.test.user_id');
-            $mgtKey  = 'TI' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            /* 문서번호는 한 번 쓰면 다시 못 쓴다 (2026-09-18 운영 시험에서 드러남).
+
+               여태 「TI + 발행일 + 주문번호」로 그때그때 다시 만들었다. 그래서 같은
+               날 취소하고 다시 내면 같은 번호가 되어 팝빌이 「동일한 공급자 문서번호가
+               사용 중입니다」로 거절했다 — 정정으로 금액이 바뀐 건이 새 금액으로
+               영영 나가지 못했다.
+
+               취소한 것이 있으면 뒤에 차례를 붙인다. 낸 번호는 주문에 적어 두어,
+               취소할 때 그때 쓴 번호를 그대로 찾는다. */
+            $mgtKey  = self::세금계산서문서번호($order);
             $supply  = (int) $data['tax_invoice_supply'];
             $vat     = (int) $data['tax_invoice_vat'];
 
@@ -910,6 +919,7 @@ class OrderController extends Controller
             $order->update([
                 'tax_invoice_status'    => 'issued',
                 'tax_invoice_no'        => $invoiceNo,
+                'tax_invoice_mgt_key'   => $mgtKey,
                 'tax_invoice_type'      => $data['tax_invoice_type'],
                 /* 신고한 값을 그대로 적어 둔다 — 종이 서식이 이것을 읽는다. 되짚어
                    그리면 나중에 잣대가 바뀔 때 이미 신고된 건의 종이까지 함께
@@ -977,8 +987,7 @@ class OrderController extends Controller
             $corpNum = config('popbill.test.corp_num');
             $userId  = config('popbill.test.user_id');
             // 발행 시와 동일한 패턴으로 mgtKey 재구성 (TI + Ymd + orderId)
-            $mgtKey  = 'TI' . $order->tax_invoice_issued_at?->format('Ymd')
-                     . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            $mgtKey  = self::세금계산서문서번호($order, 새로: false);
 
             app(TaxinvoiceService::class)->cancelIssue($corpNum, 'SELL', $mgtKey, null, $userId);
 
@@ -1196,6 +1205,40 @@ class OrderController extends Controller
      * 화면이 단추를 세우기 전에 묻는다. 여태는 눌러 보고 위드웍스가 422 로 되돌려
      * 보내야 알 수 있었다 — 눌러도 되는 단추만 서 있어야 한다.
      */
+    /**
+     * 세금계산서 문서번호.
+     *
+     * 팝빌은 한 번 쓴 문서번호를 다시 받지 않는다. 취소한 건을 같은 날 다시 내면
+     * 겹치므로, 취소가 있었으면 뒤에 차례를 붙인다.
+     *
+     * @param bool $새로 true 면 낼 번호를 만들고, false 면 이미 낸 번호를 찾는다
+     */
+    public static function 세금계산서문서번호(Order $order, bool $새로 = true): string
+    {
+        /* 적어 둔 것이 있으면 그것이 정본이다 — 취소는 반드시 이 번호로 불러야 한다 */
+        $적힌것 = trim((string) ($order->tax_invoice_mgt_key ?? ''));
+
+        if ($적힌것 !== '' && ! $새로) {
+            return $적힌것;
+        }
+
+        $바탕 = 'TI' . ($새로 ? now() : ($order->tax_invoice_issued_at ?? now()))->format('Ymd')
+              . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+
+        if (! $새로) {
+            return $바탕;            // 옛 건 — 적어 둔 것이 없으면 예전 방식대로
+        }
+
+        /* 같은 바탕으로 이미 낸 적이 있으면 차례를 붙인다 */
+        if ($적힌것 === '' || ! str_starts_with($적힌것, $바탕)) {
+            return $바탕;
+        }
+
+        $차례 = (int) substr($적힌것, strlen($바탕) + 1);
+
+        return $바탕 . '-' . str_pad((string) ($차례 + 1), 2, '0', STR_PAD_LEFT);
+    }
+
     public function cancelState(Order $order): \Illuminate\Http\JsonResponse
     {
         return response()->json([

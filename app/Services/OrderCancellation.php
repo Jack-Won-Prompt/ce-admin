@@ -146,8 +146,9 @@ class OrderCancellation
         }
 
         try {
-            $mgtKey = 'TI' . $order->tax_invoice_issued_at?->format('Ymd')
-                    . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            /* 낼 때 적어 둔 번호로 부른다 — 다시 만들면 재발행 건에서 어긋난다
+               (2026-09-18 운영 시험에서 드러남) */
+            $mgtKey = \App\Http\Controllers\OrderController::세금계산서문서번호($order, 새로: false);
 
             app(TaxinvoiceService::class)->cancelIssue(
                 config('popbill.test.corp_num'), 'SELL', $mgtKey, null, config('popbill.test.user_id')
