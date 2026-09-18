@@ -70,13 +70,11 @@
     </div>
 
     <div class="wd-sum">
-      찾은 것 <b>{{ number_format($전체) }}</b>명
-      @if ($전체 > 1000) · 아래에는 앞 1,000명만 @endif
-      · 주소 {{ number_format($현황['customer_addresses']['담긴줄']) }}줄
+      담긴 주소 {{ number_format($현황['customer_addresses']['담긴줄']) }}줄
     </div>
   </form>
 
-  @if ($줄->isEmpty())
+  @if ($줄->total() === 0)
     <div class="wd-none">담긴 자료가 없습니다 — 설정 › 위드웍스 자료 가져오기에서 먼저 가져오십시오.</div>
   @else
     <div class="wd-scroll">
@@ -147,6 +145,8 @@
         </tbody>
       </table>
     </div>
+
+    @include('partials._pager', ['쪽' => $줄, '이름' => '명'])
   @endif
 </div>
 @endsection

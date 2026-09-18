@@ -46,7 +46,12 @@ class WithworksDataController extends Controller
         if ($request->filled('부터'))   { $q->whereDate('reg_date', '>=', $request->input('부터')); }
         if ($request->filled('까지'))   { $q->whereDate('reg_date', '<=', $request->input('까지')); }
 
-        $줄 = (clone $q)->orderByDesc('ww_id')->limit(1000)->get();
+        /* 한 쪽 100줄 (2026-09-18 지시). 여태 앞 1,000줄만 보이고 그 뒤는 볼 길이
+           없었다 — 열 만 줄짜리 표에서 천 줄만 보이면 못 본 것과 같다.
+
+           찾는 말을 쪽 주소에 실어 준다. 싣지 않으면 2쪽으로 넘어가는 순간 거르개가
+           풀려 엉뚱한 줄이 선다. */
+        $줄 = (clone $q)->orderByDesc('ww_id')->paginate(100)->withQueryString();
 
         /* 대리점 고르개 — 담긴 자료에서 뽑는다. 저쪽에 묻지 않는다. */
         $대리점 = DB::table('ww_prescription_infos')
@@ -61,7 +66,6 @@ class WithworksDataController extends Controller
 
         return view('withworks-data.prescriptions', [
             '줄'     => $줄,
-            '전체'   => (clone $q)->count(),
             '대리점' => $대리점,
             '짝'     => self::처방전짝,
             '현황'   => $svc->현황()['prescription_infos'],
@@ -77,9 +81,9 @@ class WithworksDataController extends Controller
             'account_code', 'account_name', 'phone_1', 'phone_2', 'resident_no', 'udf10',
         ]);
 
-        $줄 = (clone $q)->orderByDesc('ww_id')->limit(1000)->get();
+        $줄 = (clone $q)->orderByDesc('ww_id')->paginate(100)->withQueryString();
 
-        /* 주소는 한 번에 모아 온다 — 줄마다 물으면 천 줄에 천 번이다 */
+        /* 주소는 한 번에 모아 온다 — 줄마다 물으면 백 번이 한 번이 된다 */
         $주소 = DB::table('ww_customer_addresses')
             ->whereIn('account_id', $줄->pluck('ww_id'))
             ->orderBy('ww_id')
@@ -88,7 +92,6 @@ class WithworksDataController extends Controller
 
         return view('withworks-data.customers', [
             '줄'   => $줄,
-            '전체' => (clone $q)->count(),
             '주소' => $주소,
             '현황' => $svc->현황(),
         ]);

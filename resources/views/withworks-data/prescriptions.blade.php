@@ -84,13 +84,11 @@
     </div>
 
     <div class="wd-sum">
-      찾은 것 <b>{{ number_format($전체) }}</b>줄
-      @if ($전체 > 1000) · 아래에는 앞 1,000줄만 @endif
-      · 담긴 때 {{ $현황['마지막담은때'] ?: '아직 없음' }}
+      담긴 때 {{ $현황['마지막담은때'] ?: '아직 없음' }}
     </div>
   </form>
 
-  @if ($줄->isEmpty())
+  @if ($줄->total() === 0)
     <div class="wd-none">담긴 자료가 없습니다 — 설정 › 위드웍스 자료 가져오기에서 먼저 가져오십시오.</div>
   @else
     <div class="wd-scroll">
@@ -127,6 +125,8 @@
         </tbody>
       </table>
     </div>
+
+    @include('partials._pager', ['쪽' => $줄, '이름' => '줄'])
   @endif
 </div>
 @endsection
