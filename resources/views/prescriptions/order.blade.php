@@ -15325,8 +15325,14 @@ window.HELP_TOUR_STEPS = [
   }
 
   function openTaxInvoiceModal() {
-    const savedSupply = {{ (int)($prescription->order?->tax_invoice_supply ?? 0) }};
-    const savedVat    = {{ (int)($prescription->order?->tax_invoice_vat    ?? 0) }};
+    /* 무른 건은 적혀 있던 금액을 쓰지 않는다 (2026-09-18 운영 시험에서 드러남).
+
+       정정으로 계산서를 물러도 tax_invoice_supply 에는 그때 낸 금액이 그대로
+       남는다. 그것을 먼저 쓰면 발행 화면이 **옛 금액**으로 열려, 정정한 바로
+       다음에 누른 재발행이 바뀐 금액이 아닌 예전 금액으로 나간다. */
+    const 낸것있나    = @json($prescription->order?->tax_invoice_status === 'issued');
+    const savedSupply = 낸것있나 ? {{ (int)($prescription->order?->tax_invoice_supply ?? 0) }} : 0;
+    const savedVat    = 낸것있나 ? {{ (int)($prescription->order?->tax_invoice_vat    ?? 0) }} : 0;
     /* 전략이 정한 몫을 먼저 쓴다. 전략이 아직 정해지지 않았으면(확인중ㆍ미선택)
        예전처럼 이 건의 값으로 연다 — 담당자가 고쳐 적을 수 있다. */
     const target = bsAmountFor('tax_invoice') || _ORDER_TOTAL;
