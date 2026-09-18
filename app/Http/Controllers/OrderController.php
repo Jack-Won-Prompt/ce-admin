@@ -643,10 +643,6 @@ class OrderController extends Controller
            기준은 **실제로 오간 돈**이다 — Order::결제기준금액() 를 본다. */
         $이전부담 = (int) $order->결제기준금액();
 
-        /* 기관부담도 함께 쥐어 둔다 — 본인부담이 0원인 건은 이것이 바뀌어야 증빙을
-           무른다 (2026-09-18 운영 시험에서 드러남). */
-        $이전기관 = (int) ($order->nhis_amount ?? 0);
-
         $items      = collect($request->input('items', []))->filter(fn($i) => !empty($i['product_name']));
         $firstItem  = $items->first() ?? [];
         $totalCopay = $request->patient_copay ?? $items->sum('patient_copay');
@@ -718,7 +714,7 @@ class OrderController extends Controller
            못해 「따로 청구해 주십시오」라는 안내로 끝났고, 그 말은 토스트로 지나가
            담당자가 잊으면 모자란 채로 남았다. */
         $돈말 = app(\App\Services\OrderCancelService::class)
-                    ->금액맞추기($order->refresh(), $이전부담, $이전기관);
+                    ->금액맞추기($order->refresh(), $이전부담);
 
         return response()->json([
             'success'      => true,
