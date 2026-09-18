@@ -7586,8 +7586,6 @@ window.HELP_TOUR_STEPS = [
       ? 'none'
       : CLAIM_BY_BENEFIT[document.getElementById('f-benefit-class')?.value ?? ''];
 
-    if (!guess || sel.value === guess) return;
-
     /* **자격을 바꾸면 청구처도 다시 정한다** (2026-09-18 지시).
 
        여태 비어 있을 때만 채웠다. 그래서 일반으로 골라 「건강보험공단」이 선 뒤에
@@ -7596,10 +7594,18 @@ window.HELP_TOUR_STEPS = [
 
        다만 담당자가 자격과 다르게 일부러 고른 것은 덮지 않는다. 지금 값이 우리가
        마지막으로 제시한 값 그대로일 때만 갈아 끼운다. */
-    if (sel.value && sel.value !== _claimAuto) return;
+    const 바꿀까 = guess && sel.value !== guess && (! sel.value || sel.value === _claimAuto);
 
-    sel.value = _claimAuto = guess;
-    onClaimAgencyChange();
+    if (바꿀까) {
+      sel.value = _claimAuto = guess;
+      onClaimAgencyChange();
+    }
+
+    /* **청구처가 그대로여도 관할은 다시 본다.**
+
+       일반에서 차상위경감으로 바꾸면 둘 다 공단이라 청구처는 같은 값이다. 여태
+       그때 일찍 빠져나가 관할 청구처까지 건너뛰었다 — 자격을 바꿨는데 아무 일도
+       일어나지 않았다 (2026-09-18 지시로 드러남). */
     boAutoPick();
   }
 
@@ -11468,8 +11474,20 @@ window.HELP_TOUR_STEPS = [
       const d    = await res.json();
       const rows = d.rows ?? [];
 
+      if (! rows.length) {
+        showToast(`${emd || sigungu} 로 쌓아 둔 청구처가 없습니다 — 「찾기」에서 등록하십시오.`, 'warning');
+        return;
+      }
+
       /* 하나가 아니면 그냥 둔다. 여럿이면 사람이 고르고, 없으면 「찾기」에서
-         공단 지사찾기로 넘어간다 — 여기서 그 창을 저절로 열지는 않는다. */
+         공단 지사찾기로 넘어간다 — 여기서 그 창을 저절로 열지는 않는다.
+
+         다만 **왜 안 섰는지는 알린다.** 아무 말이 없으면 담당자는 자동 설정이
+         고장 난 줄 안다. */
+      if (rows.length > 1) {
+        showToast(`관할 청구처 후보가 ${rows.length}곳입니다 — 「찾기」에서 고르십시오.`, 'info');
+        return;
+      }
       if (rows.length !== 1) return;
 
       _boLastRows = rows;
