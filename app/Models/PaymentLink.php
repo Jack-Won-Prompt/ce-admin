@@ -103,10 +103,17 @@ class PaymentLink extends Model
         return self::STATUSES[$this->status][1] ?? 'secondary';
     }
 
-    /** 아직 낼 수 있는가 — 기한이 지났으면 결제 페이지를 열어 주지 않는다 */
+    /** 아직 낼 수 있는가 — 기한이 지났으면 결제 페이지를 열어 주지 않는다
+     *
+     * 문자가 못 나간 것(failed)도 열어 둔다 (2026-09-19 지시). 요청은 제대로 섰고
+     * 주소도 살아 있는데 보내는 길 하나가 막혔을 뿐이다. 닫아 두면 담당자가 주소를
+     * 복사해 다른 길로 건네줄 수도 없고, 환자가 눌러도 「지금은 결제할 수 없습니다」만
+     * 뜬다 — 시험에서 발신번호 하나가 미등록이라 결제를 아예 못 받았다.
+     * 정말로 닫는 것은 paidㆍexpiredㆍcancelled 뿐이다.
+     */
     public function getIsOpenAttribute(): bool
     {
-        return $this->status === 'sent'
+        return in_array($this->status, ['sent', 'failed'], true)
             && (!$this->expires_at || $this->expires_at->isFuture());
     }
 

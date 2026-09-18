@@ -181,8 +181,9 @@ class PaymentLinkController extends Controller
      */
     private function 시험자동결제인가(PaymentLink $link): bool
     {
+        /* 문자가 못 나간 건(failed)도 연다 — is_open 이 그 판단을 쥔다 (2026-09-19) */
         return config('toss.env') === 'test'
-            && $link->status === 'sent'
+            && $link->is_open
             && $link->method === PaymentLink::METHOD_CARD
             && (int) $link->amount > 0;
     }
@@ -201,7 +202,7 @@ class PaymentLinkController extends Controller
 
         $link = PaymentLink::where('token', $token)->with('order.patient')->firstOrFail();
 
-        if ($link->status !== 'sent') {
+        if (! $link->is_open) {
             return response()->json(['success' => false, 'message' => '이미 처리된 결제 링크입니다.'], 422);
         }
 
