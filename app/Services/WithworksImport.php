@@ -136,12 +136,24 @@ class WithworksImport
             $q->where($칸, $값);
         }
 
-        /* 주소는 우리 고객 것만 — 저쪽 표에는 다른 대리점 것이 함께 있다 */
+        /* 주소는 우리 고객 것만 — 저쪽 표에는 다른 대리점 것이 함께 있다.
+
+           고객 목록은 **이미 담아 둔 우리 표**에서 가져온다. 저쪽에서 곧바로 물으면
+           고객은 admin, 주소는 warehouse 라 DB 를 건너뛰는 하위 질의가 되어
+           「Table 'warehouse.accounts' doesn't exist」로 막힌다 (2026-09-18 확인).
+
+           그래서 **고객을 먼저 가져와야 주소를 가져올 수 있다.** 차례가 뒤바뀌면
+           한 줄도 걸리지 않으므로 그때는 그렇다고 알린다. */
         if ($d['우리'] === 'ww_customer_addresses') {
-            $q->whereIn('account_id', function ($s) {
-                $s->from('accounts')->select('id')
-                  ->where('top_account_id', 148659)->where('account_type', '30');
-            });
+            $고객 = DB::table('ww_customers')->pluck('ww_id');
+
+            if ($고객->isEmpty()) {
+                throw new \RuntimeException(
+                    '고객 정보를 먼저 가져와야 합니다 — 주소는 고객에 매달려 있습니다.'
+                );
+            }
+
+            $q->whereIn('account_id', $고객);
         }
 
         return collect($q->get());
