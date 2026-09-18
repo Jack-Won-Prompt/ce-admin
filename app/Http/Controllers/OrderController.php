@@ -645,7 +645,7 @@ class OrderController extends Controller
 
         /* 기관부담도 함께 쥐어 둔다 — 본인부담이 0원인 건은 이것이 바뀌어야 증빙을
            무른다 (2026-09-18 운영 시험에서 드러남). */
-        $이전기관 = (int) ($order->insurance_amount ?? 0);
+        $이전기관 = (int) ($order->nhis_amount ?? 0);
 
         $items      = collect($request->input('items', []))->filter(fn($i) => !empty($i['product_name']));
         $firstItem  = $items->first() ?? [];
