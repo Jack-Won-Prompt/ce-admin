@@ -26,7 +26,7 @@ jobs:
             --instance-ids i-033f2098d15e6103c \
             --document-name AWS-RunShellScript \
             --parameters 'commands=[
-              "cd /opt/ce-admin/ce-admin",
+              "cd /opt/ce-admin",
               "git pull origin main"
             ]' \
             --query 'Command.CommandId' \
