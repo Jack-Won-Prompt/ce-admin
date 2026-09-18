@@ -4090,9 +4090,23 @@ class PrescriptionController extends Controller
                 'consent_id' => $consent->id,
             ]);
         } catch (\Throwable $e) {
-            $consent->delete();
-            Log::error('[위임동의] SMS 발송 실패', ['error' => $e->getMessage(), 'rx' => $prescription->id]);
-            return response()->json(['success' => false, 'message' => 'SMS 발송 실패: ' . $e->getMessage()], 500);
+            /* 문자가 못 나가도 **서명 요청은 지우지 않는다** (2026-09-19 지시).
+               여태 여기서 $consent->delete() 를 했다. 그러면 문자 한 번 실패로 링크가
+               통째로 사라져, 담당자가 그 링크를 손으로 건네줄 길조차 없었다 —
+               시험에서 발신번호 하나가 미등록이라 서명을 아예 받지 못했다.
+               줄은 그대로 두고 링크를 함께 돌려준다. 환자는 그 링크로 바로 서명한다. */
+            Log::error('[위임동의] SMS 발송 실패 — 링크는 남긴다', [
+                'error' => $e->getMessage(), 'rx' => $prescription->id, 'consent' => $consent->id,
+            ]);
+
+            return response()->json([
+                'success'    => false,
+                'sent'       => false,
+                'message'    => 'SMS 발송 실패: ' . $e->getMessage(),
+                'url'        => $url,
+                'expires_at' => $expiresAt->format('H:i'),
+                'consent_id' => $consent->id,
+            ], 200);
         }
     }
 

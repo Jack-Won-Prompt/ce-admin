@@ -14722,6 +14722,17 @@ window.HELP_TOUR_STEPS = [
     });
   });
 
+  /* 문자가 못 나갔을 때 그 자리에 뜬 서명 링크를 베낀다. */
+  function copyConsentFallbackUrl() {
+    const el = document.getElementById('consentFallbackUrl');
+    if (!el) return;
+    el.select();
+    el.setSelectionRange(0, 99999);
+    navigator.clipboard?.writeText(el.value)
+      .then(() => showToast('서명 링크를 베꼈습니다.', 'success'))
+      .catch(() => showToast('베끼지 못했습니다 — 칸의 글을 직접 골라 주십시오.', 'warning'));
+  }
+
   async function sendConsentSms() {
     const mobile = document.getElementById('consentMobile').value.trim();
     if (!mobile) { ceAlert('수신 번호를 입력해 주십시오.', { tone: 'warning' }); return; }
@@ -14756,7 +14767,25 @@ window.HELP_TOUR_STEPS = [
         box.style.background = 'var(--danger-light)';
         box.style.color      = 'var(--danger)';
         box.style.border     = '1px solid var(--alert-100)';
-        box.textContent      = data.message ?? '발송 실패';
+
+        /* 문자가 못 나가도 서명 링크는 살아 있다 — 그 자리에 보여 준다.
+           담당자가 전화로 불러 주거나 베껴 보내면 환자는 그대로 서명한다. */
+        if (data.url) {
+          box.innerHTML =
+            `<div style="font-weight:600;margin-bottom:6px;">${data.message ?? '발송 실패'}</div>` +
+            `<div style="font-size:12px;line-height:1.6;">문자는 못 나갔지만 <b>서명 링크는 살아 있습니다</b>` +
+            (data.expires_at ? ` — 유효 시간 <b>${data.expires_at}</b>까지` : '') + `.</div>` +
+            `<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">` +
+            `<input type="text" readonly value="${data.url}" id="consentFallbackUrl"` +
+            ` style="flex:1;min-width:0;font-size:12px;padding:4px 6px;border:1px solid var(--alert-100);border-radius:6px;background:#fff;color:var(--text);">` +
+            `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyConsentFallbackUrl()">복사</button>` +
+            `<a class="btn btn-sm btn-outline-secondary" href="${data.url}" target="_blank" rel="noopener">열기</a>` +
+            `</div>`;
+          updateConsentStatus();
+        } else {
+          box.textContent = data.message ?? '발송 실패';
+        }
+
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 재시도';
       }
