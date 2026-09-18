@@ -7634,8 +7634,17 @@ window.HELP_TOUR_STEPS = [
     onClaimAgencyChange();
     boAutoPick();
   });
-  /* 열 때는 비어 있는 것만 채운다 */
-  suggestClaimAgency();
+  /* 열 때는 비어 있는 것만 채운다.
+
+     **스크립트가 다 돌고 나서 부른다** (2026-09-19). 여기서 곧바로 부르면
+     suggestClaimAgency → markOcrDirty 가 아직 선언되기 전인 `let _ocrDirty` 를
+     건드려 「Cannot access '_ocrDirty' before initialization」로 스크립트가 통째로
+     멈춘다. 그러면 그 뒤에 선언되는 것이 하나도 서지 않아, 탭을 눌러도 switchTab 이
+     같은 오류로 죽는다 — 화면은 「탭이 안 눌린다」로 보인다.
+
+     청구처가 비어 있고 자격이 적혀 있는 건에서만 markOcrDirty 까지 갔기 때문에
+     어떤 건은 멀쩡하고 어떤 건은 먹통이었다. */
+  queueMicrotask(() => suggestClaimAgency());
 
   /* ── 청구전략 ──────────────────────────────────────────────
      표는 서버(App\Support\BillingStrategy)에 한 벌만 있고, 화면은 그것을 받아 비춘다.
@@ -8171,9 +8180,16 @@ window.HELP_TOUR_STEPS = [
        이 단추는 처방 걸음이 「저장」일 때만 채워 두었다(applyRxStage). 그래서 검수를
        마친 건에서 무엇을 고쳐도 단추가 수수한 채여서, 눌러도 되는 것인지 담당자가
        망설였다 — 고친 것이 있으면 그 자리에서 저장할 차례다. */
-    /* 걸음 표는 이 함수보다 아래에 선다 — 아직 세워지기 전에 불릴 수 있어 살펴 묻는다 */
-    const 걸음저장 = typeof RX_STAGE_NOW !== 'undefined'
-                   && (RX_STAGE_NOW[RX_STATUS] ?? null) === 'save';
+    /* 걸음 표는 이 함수보다 아래에 선다 — 아직 세워지기 전에 불릴 수 있어 살펴 묻는다.
+
+       `typeof` 로는 못 막는다 (2026-09-19). const ㆍ let 은 선언 줄을 지나기 전까지
+       「죽은 구역」에 있어, typeof 로 물어보는 것조차 ReferenceError 를 던진다.
+       그 오류가 스크립트를 통째로 멈춰 뒤에 오는 것이 하나도 서지 않았다.
+       물어보는 일 자체를 감싼다. */
+    let 걸음저장 = false;
+    try {
+      걸음저장 = (RX_STAGE_NOW[RX_STATUS] ?? null) === 'save';
+    } catch (e) { /* 아직 서기 전이다 — 곧 다시 불린다 */ }
     document.querySelectorAll('.rx-acc-btn[data-stage="save"]').forEach(b => {
       b.classList.toggle('rx-acc-btn-fill', 걸음저장 || isAnyDirty());
     });
