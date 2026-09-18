@@ -282,6 +282,26 @@
         <option value="n" @selected(request('nhis_consent') === 'n')>없음</option>
       </select>
     </div>
+    {{-- 공단 재등록 임박 (2026-09-18 지시).
+
+         기한을 놓치면 자격이 끊기고, 그 뒤에 나간 물건은 공단에 청구할 수 없다.
+         여태 아침마다 알림을 밀어 넣었는데, 그날 그 자리에 있어야 보이고 놓치면
+         다시 볼 자리가 없었다. 여기서 걸면 언제 열어도 그대로 서 있다.
+         기한이 지난 사람도 함께 걸린다 — 놓친 건이야말로 봐야 한다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">
+        공단 재등록
+        @if(($재등록임박 ?? 0) > 0)
+          <span class="badge bg-label-warning" style="margin-left:4px;">임박 {{ $재등록임박 }}명</span>
+        @endif
+      </label>
+      <select name="renew_within" class="form-control form-select">
+        <option value="">전체</option>
+        @foreach([14 => '2주 이내', 30 => '30일 이내', 90 => '90일 이내'] as $days => $label)
+          <option value="{{ $days }}" @selected((string) request('renew_within') === (string) $days)>{{ $label }}</option>
+        @endforeach
+      </select>
+    </div>
     {{-- 재구매일 — 알약 셋 대신 고르는 칸 하나로 둔다. 알약은 누르는 즉시 화면이
          옮겨 가서, 옆의 다른 조건을 적어 두었어도 그것만으로 다시 찾아 왔다.
          이제 다른 칸과 함께 「검색」으로 걸린다. --}}

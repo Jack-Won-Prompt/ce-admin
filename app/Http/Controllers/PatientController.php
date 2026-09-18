@@ -91,6 +91,26 @@ class PatientController extends Controller
             $query->{$has ? 'whereHas' : 'whereDoesntHave'}('prescriptions', $fn);
         }
 
+        /* 공단 재등록 임박 (2026-09-18 지시).
+
+           공단에 신규 등록하면 2년 뒤 다시 등록해야 한다. 기한을 놓치면 자격이 끊기고,
+           그 뒤에 나간 물건은 공단에 청구할 수 없다 — 이미 보낸 값은 우리가 떠안는다.
+
+           여태 아침마다 담당자에게 알림을 밀어 넣었다. 그 방식은 그날 그 자리에 있어야
+           보이고, 놓치면 다시 볼 자리가 없다. 여기서 거르면 언제 열어도 지금 임박한
+           사람이 그대로 서 있다.
+
+           **기한이 지난 사람도 함께 건다.** 놓친 건이야말로 봐야 한다. 석 달 넘게
+           지난 것은 뺀다 — 그때는 재등록이 아니라 새로 등록하는 일이다. */
+        if ($request->filled('renew_within')) {
+            $days = (int) $request->renew_within;
+            $query->whereNotNull('nhis_renew_due')
+                  ->whereBetween('nhis_renew_due', [
+                      today()->subMonths(3)->toDateString(),
+                      today()->addDays($days)->toDateString(),
+                  ]);
+        }
+
         // 재구매일 기간 필터
         if ($request->filled('repurchase_within')) {
             $days = (int) $request->repurchase_within;
@@ -240,7 +260,18 @@ class PatientController extends Controller
             return response()->json(['rows' => $gridData, 'total' => $total]);
         }
 
-        return view('patients.index', compact('gridData', 'total'));
+        /* 재등록 임박이 몇 명인지 거르개에 적는다 (2026-09-18 지시).
+
+           수가 적혀 있지 않으면 걸러 보기 전에는 있는지조차 모른다 — 그러면 아무도
+           누르지 않고, 알림을 없앤 자리가 그대로 빈다. 지금 걸어 둔 조건과 상관없이
+           전체에서 센다. */
+        $재등록임박 = Patient::whereNotNull('nhis_renew_due')
+            ->whereBetween('nhis_renew_due', [
+                today()->subMonths(3)->toDateString(),
+                today()->addDays(14)->toDateString(),
+            ])->count();
+
+        return view('patients.index', compact('gridData', 'total', '재등록임박'));
     }
 
     // ── 상세/편집 화면 ────────────────────────────────────

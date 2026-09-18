@@ -99,10 +99,50 @@ class ClaimReadiness
     }
 
     /**
-     * 아직 청구하지 않은 주문을 훑는다.
+     * 주문을 건드리지 않는 변화에도 다시 따진다 (2026-09-18 지시).
      *
-     * 발행·배송 같은 사건마다 그 자리에서 다시 따지지만, 놓치는 경로가 있다. 위임 등록일이
-     * 환자 쪽에서 바뀌는 것처럼 주문을 건드리지 않는 변화도 있어서 주기적으로 다시 본다.
+     * 판정에 드는 여섯 가지 가운데 넷은 주문 바깥에 있다 — 처방전 이미지, 청구 기관,
+     * 환자의 공단 위임 등록일, 서류함의 세금계산서. 이것들이 바뀌어도 주문은 그대로라,
+     * 사건마다 부르던 자리(발행ㆍ출고ㆍ취소)가 잡아 주지 못했다.
+     *
+     * 여태는 한 시간마다 훑어서 메웠다. 그 사이에는 목록이 틀린 채로 서 있었고, 실제로
+     * **여섯 건이 「준비완료」로 보이는데 자료가 빠져** 있었다 — 그대로 공단에 내면
+     * 반려된다. 바뀌는 그 자리에서 다시 따지면 훑을 일이 없다.
+     *
+     * 이미 청구한 건은 건드리지 않는다.
+     *
+     * @return int 다시 따진 주문 수
+     */
+    public function 처방전다시보기(?int $prescriptionId): int
+    {
+        return $prescriptionId ? $this->다시보기('prescription_id', $prescriptionId) : 0;
+    }
+
+    /** 환자 쪽이 바뀌었을 때 — 위임 등록일은 거래처 화면에서 들어온다 */
+    public function 환자다시보기(?int $patientId): int
+    {
+        return $patientId ? $this->다시보기('patient_id', $patientId) : 0;
+    }
+
+    private function 다시보기(string $칸, int $값): int
+    {
+        $orders = Order::with(['prescription.patient'])
+            ->where($칸, $값)
+            ->whereIn('nhis_claim_status', ['pending', 'rejected'])
+            ->get();
+
+        foreach ($orders as $order) {
+            $this->refresh($order);
+        }
+
+        return $orders->count();
+    }
+
+    /**
+     * 아직 청구하지 않은 주문을 훑는다 — 손으로 부르는 그물이다.
+     *
+     * 바뀌는 자리마다 다시 따지므로 평소에는 쓸 일이 없다. 자료를 손으로 고쳤거나
+     * 판정 잣대를 바꾼 뒤처럼, 한 번에 맞춰야 할 때 `claim:refresh` 로 부른다.
      */
     public function sweep(int $limit = 500): array
     {

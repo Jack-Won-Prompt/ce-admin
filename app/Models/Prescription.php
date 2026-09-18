@@ -440,6 +440,16 @@ class Prescription extends Model
             if ($p->wasChanged('image_path') && $p->image_path) {
                 app(\App\Services\ReuploadRequestService::class)->닫기($p, '처방전');
             }
+
+            /* 청구 준비 판정을 다시 한다 (2026-09-18 지시).
+
+               판정에는 처방전 그림과 청구 기관이 든다. 둘 다 주문을 건드리지 않고
+               바뀌므로, 발행ㆍ출고에서 부르던 자리가 잡아 주지 못했다 — 그림을 올려도
+               목록은 「처방전 이미지 없음」인 채였고, 지자체 건으로 돌려도 공단 청구
+               대상에 그대로 서 있었다. 여태 한 시간마다 훑어 메웠다. */
+            if ($p->wasChanged('image_path') || $p->wasChanged('claim_agency')) {
+                app(\App\Services\ClaimReadiness::class)->처방전다시보기($p->id);
+            }
         });
 
         static::updating(function (self $rx) {
