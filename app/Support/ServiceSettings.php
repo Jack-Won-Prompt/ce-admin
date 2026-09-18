@@ -66,6 +66,12 @@ class ServiceSettings
 
         $stored = static::storedRows($group);
         foreach ($def['fields'] as $key => $f) {
+            /* 알려 주기만 하는 칸은 담긴 값이 없다 — 설정을 물으면 안 된다 */
+            if (($f['type'] ?? '') === 'info' || empty($f['config'])) {
+                $out[$key] = ['value' => null, 'filled' => true];
+                continue;
+            }
+
             $row   = $stored[$key] ?? null;
             $plain = $row?->plainValue();
             // DB 에 없으면 지금 돌고 있는 설정값(=.env 기본값)을 보여준다.

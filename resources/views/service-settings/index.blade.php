@@ -191,6 +191,13 @@
                     <input type="password" name="{{ $key }}" class="form-control" autocomplete="new-password"
                            placeholder="{{ $state['filled'] ? '설정됨 — 바꿀 때만 입력' : '미설정' }}">
 
+                  @elseif ($type === 'info')
+                    {{-- 고치는 칸이 아니라 알려 주는 칸이다. 그대로 끌어다 붙일 수 있게
+                         읽기 전용 칸에 담는다 — 도움말에 적으면 줄바꿈이 뭉개진다. --}}
+                    <textarea class="form-control" rows="{{ substr_count($f['text'] ?? '', "\n") + 1 }}" readonly
+                              onclick="this.select()"
+                              style="min-height:0;line-height:1.6;background:var(--bs-secondary-bg,#f5f5f5);">{{ $f['text'] ?? '' }}</textarea>
+
                   @elseif ($type === 'textarea')
                     {{-- 여러 줄로 적는 값(쉬는 날 목록 따위) — 한 줄 칸에 넣으면 끝이 안 보인다 --}}
                     <textarea name="{{ $key }}" class="form-control" rows="3"
