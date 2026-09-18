@@ -102,7 +102,7 @@ return [
                 'type'  => 'info',
                 'width' => 3,
                 'text'  => implode("\n", array_map(
-                    fn ($갈래, $이름) => str_pad($이름, 12) . rtrim((string) env('APP_URL'), '/')
+                    fn ($갈래, $이름) => $이름 . ' · ' . rtrim((string) env('APP_URL'), '/')
                                       . '/popbill/webhook/' . $갈래,
                     ['fax', 'sms', 'kakao', 'taxinvoice', 'cashbill'],
                     ['팩스', '문자', '알림톡', '세금계산서', '현금영수증'],
