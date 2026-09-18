@@ -172,10 +172,33 @@ class PopbillWebhookController extends Controller
         return [true, null, $문서];
     }
 
-    /** 세금계산서 — 문서번호로 그 한 건만 다시 읽는다 */
+    /**
+     * 세금계산서 — 문서번호로 그 한 건만 다시 읽는다.
+     *
+     * **팝빌은 문서번호를 `invoicerMgtKey` 로 보낸다** (2026-09-18 첫 알림에서 확인).
+     * 여태 `mgtKey` 만 찾아 「문서번호가 없습니다」로 돌아갔다 — 자리는 열려 있고
+     * 팝빌은 두드렸는데 아무것도 옮겨 적지 못했다. 실제로 온 본문은 이렇다.
+     *
+     *   {"invoicerMgtKey":"TI20260918000305-02", "eventType":"Issue",
+     *    "stateCode":300, "ntsconfirmNum":"…", "itemKey":"026091819370500001"}
+     *
+     * 파는 쪽ㆍ사는 쪽ㆍ수탁이 각각 다른 이름으로 오므로, 어느 이름으로 왔는지가
+     * 곧 문서의 갈래다. `itemKey` 는 팝빌 안쪽 접수번호라 우리 문서번호가 아니다.
+     */
     private function 세금계산서(array $값): array
     {
-        $문서 = $this->꺼내기($값, ['mgtKey', 'mgt_key', 'MgtKey']);
+        /* 이름이 갈래를 말해 준다 — 먼저 잡히는 것을 쓴다 */
+        $이름별 = ['invoicerMgtKey' => 'SELL', 'invoiceeMgtKey' => 'BUY', 'trusteeMgtKey' => 'TRUSTEE'];
+        $갈래   = 'SELL';
+
+        foreach ($이름별 as $이름 => $그갈래) {
+            if ($this->꺼내기($값, [$이름]) !== null) {
+                $갈래 = $그갈래;
+                break;
+            }
+        }
+
+        $문서 = $this->꺼내기($값, [...array_keys($이름별), 'mgtKey', 'mgt_key', 'MgtKey']);
         $사업자 = $this->꺼내기($값, ['corpNum', 'corp_num', 'CorpNum'])
                   ?: config('popbill.test.corp_num');
 
@@ -185,11 +208,31 @@ class PopbillWebhookController extends Controller
 
         $건 = PopbillTaxinvoice::where('mgt_key', $문서)->latest('id')->first();
 
+        /* 우리 표에 줄이 없을 수 있다 (2026-09-18 확인).
+
+           popbill_taxinvoices 는 팝빌 화면에서 조회할 때만 채워진다. **주문 화면에서
+           낸 계산서는 orders 에만 적혀** 그 표에 없고, 그래서 팝빌이 알려 줘도
+           「이어진 세금계산서를 찾지 못했습니다」로 돌아갔다.
+
+           주문에 그 문서번호가 있으면 우리 것이 맞다. 알려 준 김에 줄을 세운다 —
+           한 번 서고 나면 다음 알림부터는 그냥 맞물린다. */
         if (! $건) {
-            return [false, "이어진 세금계산서를 찾지 못했습니다 ({$문서}).", $문서];
+            if (! \App\Models\Order::where('tax_invoice_mgt_key', $문서)->exists()) {
+                return [false, "이어진 세금계산서를 찾지 못했습니다 ({$문서}).", $문서];
+            }
+
+            $정보 = $this->taxinvoice->getInfo((string) $사업자, $갈래, $문서);
+            $자료 = PopbillTaxinvoice::fromPopbillInfo($정보, (string) $사업자, $갈래);
+
+            $건 = PopbillTaxinvoice::updateOrCreate(
+                ['corp_num' => $사업자, 'mgt_key_type' => $갈래, 'mgt_key' => $문서],
+                $자료 + ['synced_at' => now()],
+            );
+
+            return [true, null, $문서];
         }
 
-        $정보 = $this->taxinvoice->getInfo((string) $사업자, $건->mgt_key_type ?: 'SELL', $문서);
+        $정보 = $this->taxinvoice->getInfo((string) $사업자, $건->mgt_key_type ?: $갈래, $문서);
 
         $건->update([
             'state_code'      => (int) ($정보->stateCode ?? $건->state_code),
