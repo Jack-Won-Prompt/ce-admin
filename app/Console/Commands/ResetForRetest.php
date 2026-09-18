@@ -48,8 +48,13 @@ class ResetForRetest extends Command
      * 빠져도 이 목록이 계속 맞다.
      */
     private const 지울표 = [
-        // 기록
-        'user_activity_logs', 'activity_log',
+        /* 기록 — 웹훅ㆍ오류 자취도 함께 지운다 (2026-09-18 지시).
+
+           설정 묶음에 딸린 화면이라 처음에는 남겼는데, 담긴 것은 설정이 아니라
+           **지난 시험의 자취**다. 남겨 두면 새로 시작한 시험의 자취와 섞여, 어느 것이
+           이번 것인지 가리기 어렵다. 웹훅 자체(webhooks)와 그 항목(webhook_params)은
+           설정이므로 그대로 남는다. */
+        'user_activity_logs', 'activity_log', 'webhook_logs', 'error_logs',
         // 채팅ㆍ알림
         'chat_messages', 'chat_room_users', 'chat_rooms', 'fcm_notifications',
         // 지원
@@ -86,8 +91,8 @@ class ResetForRetest extends Command
         // 설정 › 환경ㆍ연동
         'common_codes', 'settings', 'message_templates', 'return_reasons',
         'delegation_settings', 'nice_settings', 'ocr_settings', 'withworks_settings',
-        // 설정 › 웹훅ㆍ오류
-        'webhooks', 'webhook_params', 'webhook_logs', 'error_logs',
+        // 설정 › 웹훅 (자취인 webhook_logs ㆍ error_logs 는 지울표에 있다)
+        'webhooks', 'webhook_params',
         // 운영 데이터 › 위임장 서명
         'delegation_signs',
     ];
