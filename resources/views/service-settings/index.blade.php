@@ -194,10 +194,18 @@
                   @elseif ($type === 'info')
                     {{-- 고치는 칸이 아니라 알려 주는 칸이다. 그대로 끌어다 붙일 수 있게
                          읽기 전용 칸에 담는다 — 도움말에 적으면 줄바꿈이 뭉개진다. --}}
-                    @php $알림 = $state['value'] ?? ($f['text'] ?? ''); @endphp
-                    <textarea class="form-control" rows="{{ substr_count($알림, "\n") + 1 }}" readonly
+                    @php
+                      $알림 = $state['value'] ?? ($f['text'] ?? '');
+                      /* 줄 수만큼 높이를 못 박는다. rows 에 맡기면 칸이 줄어들어 첫 줄이
+                         위로 밀려 나갔다 — 다섯 줄을 적었는데 넷만 보였다. */
+                      $줄수 = max(2, substr_count($알림, "\n") + 1);
+                    @endphp
+                    {{-- 주소가 길다. 접지 않고 옆으로 구르게 두어야 한 줄이 한 자리로 읽힌다. --}}
+                    <textarea class="form-control" rows="{{ $줄수 }}" readonly
                               onclick="this.select()"
-                              style="min-height:0;line-height:1.6;background:var(--bs-secondary-bg,#f5f5f5);">{{ $알림 }}</textarea>
+                              style="height:{{ 22 * $줄수 + 20 }}px;min-height:0;line-height:22px;
+                                     white-space:pre;overflow:auto;
+                                     background:var(--gray-100,#f5f5f5);">{{ $알림 }}</textarea>
 
                   @elseif ($type === 'textarea')
                     {{-- 여러 줄로 적는 값(쉬는 날 목록 따위) — 한 줄 칸에 넣으면 끝이 안 보인다 --}}
@@ -210,7 +218,9 @@
                   @endif
 
                   @if (!empty($f['help']))
-                    <span class="ss-help">{{ $f['help'] }}</span>
+                    {{-- 도움말에 **굵게** 를 적어 온 자리가 여럿인데 별표가 그대로 보였다.
+                         먼저 낱말을 안전하게 감싸고 나서 굵기만 입힌다. --}}
+                    <span class="ss-help">{!! preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', e($f['help'])) !!}</span>
                   @endif
                 </div>
               @endforeach
