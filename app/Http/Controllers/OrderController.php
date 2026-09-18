@@ -1218,15 +1218,19 @@ class OrderController extends Controller
         /* 적어 둔 것이 있으면 그것이 정본이다 — 취소는 반드시 이 번호로 불러야 한다 */
         $적힌것 = trim((string) ($order->tax_invoice_mgt_key ?? ''));
 
-        if ($적힌것 !== '' && ! $새로) {
-            return $적힌것;
+        /* 번호 칸이 생기기 전(2026-09-18)에 낸 건은 적힌 것이 없다. 그때는 「TI + 발행일
+           + 주문」으로 그때그때 만들어 썼으니 같은 규칙으로 되짚으면 실제로 쓴 번호가
+           나온다. 팝빌은 취소한 뒤에도 그 번호를 쥐고 있으므로, 모른 채로 다시 내면
+           같은 번호를 또 만들어 겹친다. */
+        if ($적힌것 === '' && $order->tax_invoice_issued_at) {
+            $적힌것 = 'TI' . $order->tax_invoice_issued_at->format('Ymd')
+                    . str_pad($order->id, 6, '0', STR_PAD_LEFT);
         }
 
-        $바탕 = 'TI' . ($새로 ? now() : ($order->tax_invoice_issued_at ?? now()))->format('Ymd')
-              . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+        $바탕 = 'TI' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
 
         if (! $새로) {
-            return $바탕;            // 옛 건 — 적어 둔 것이 없으면 예전 방식대로
+            return $적힌것 !== '' ? $적힌것 : $바탕;
         }
 
         /* 같은 바탕으로 이미 낸 적이 있으면 차례를 붙인다 */

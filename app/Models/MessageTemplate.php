@@ -196,6 +196,12 @@ class MessageTemplate extends Model
                 'text'  => \App\Services\ReturnPatientNotice::기본문구()[
                     \App\Services\ReturnPatientNotice::환불],
             ],
+            \App\Services\ReturnPatientNotice::환불없음 => [
+                'label' => '환불 처리 완료 (환불 금액 없음)',
+                'desc'  => '본인부담이 0원이라 돌려드릴 금액이 없는 건 — 환불완료 단계에서 자동 발송',
+                'text'  => \App\Services\ReturnPatientNotice::기본문구()[
+                    \App\Services\ReturnPatientNotice::환불없음],
+            ],
             \App\Services\ReturnPatientNotice::추가입금 => [
                 'label' => '추가 입금 안내',
                 'desc'  => '더 내실 금액이 있음을 안내 — 금액조정 단계에서 자동 발송',

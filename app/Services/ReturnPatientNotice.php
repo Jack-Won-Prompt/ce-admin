@@ -38,12 +38,14 @@ class ReturnPatientNotice
      */
     public const 접수     = 'return_received';
     public const 환불     = 'return_refunded';
+    public const 환불없음 = 'return_refunded_none';
     public const 추가입금 = 'return_extra_payment';
 
     /** 자리마다 끄고 켜는 설정 — 설정 › 서비스 설정 › 교환·반품 */
     public const 설정 = [
         self::접수     => 'returns.notice_on_received',
         self::환불     => 'returns.notice_on_refunded',
+        self::환불없음 => 'returns.notice_on_refunded',
         self::추가입금 => 'returns.notice_on_extra_payment',
     ];
 
@@ -135,7 +137,7 @@ class ReturnPatientNotice
             '#{상태}'     => $return->statusLabel(),
             '#{접수번호}' => (string) $return->receipt_no,
             '#{주문번호}' => (string) ($return->order?->order_number ?? ''),
-            '#{환불금액}' => number_format((int) ($return->refund_amount ?? $return->adjust_amount ?? 0)),
+            '#{환불금액}' => number_format(self::환불액($return)),
             '#{조정금액}' => number_format((int) ($return->adjust_amount ?? 0)),
             '#{환불수단}' => OrderReturn::REFUND_METHODS[$return->refund_method] ?? '',
         ]);
@@ -167,11 +169,24 @@ class ReturnPatientNotice
                             . "환불 금액: #{환불금액}원\n"
                             . '카드사 사정에 따라 입금까지 2~3영업일이 걸릴 수 있습니다.',
 
+            /* 돌려드릴 돈이 없는 건 (2026-09-18 운영 시험에서 드러남).
+               차상위경감ㆍ기초처럼 본인부담이 0원인 건은 환불할 금액이 없는데도
+               「환불 금액: 0원」이 그대로 나갔다 — 받는 사람은 처리가 잘못된 줄 안다. */
+            self::환불없음 => "[콜로플라스트] #{고객명}님, #{유형} 처리가 완료되었습니다.\n"
+                            . "접수번호: #{접수번호}\n"
+                            . '고객님께서 부담하신 금액이 없어 환불 대상 금액은 없습니다.',
+
             self::추가입금 => "[콜로플라스트] #{고객명}님, #{유형} 처리 결과 추가로 내실 금액이 있습니다.\n"
                             . "접수번호: #{접수번호}\n"
                             . "추가 금액: #{조정금액}원\n"
                             . '내시는 방법은 담당자가 따로 안내드리겠습니다.',
         ];
+    }
+
+    /** 환자에게 돌려줄 금액 — 어느 말을 보낼지도 이것으로 가른다 */
+    private static function 환불액(OrderReturn $return): int
+    {
+        return (int) ($return->refund_amount ?? $return->adjust_amount ?? 0);
     }
 
     /**
@@ -183,6 +198,12 @@ class ReturnPatientNotice
      */
     public function 자동안내(OrderReturn $return, string $code): string
     {
+        /* 돌려드릴 돈이 없으면 다른 말로 알린다 — 「환불 금액: 0원」은 처리가 잘못된
+           것처럼 읽힌다. 알리지 않고 지나갈 수는 없다, 건이 끝난 것은 맞기 때문이다. */
+        if ($code === self::환불 && self::환불액($return) <= 0) {
+            $code = self::환불없음;
+        }
+
         /* 꺼 두었으면 말도 하지 않는다 — 「보내지 못했습니다」는 못 보낸 것이지 안 보낸
            것이 아니다. 끈 줄 알면서 그 말을 보면 무엇이 잘못됐나 찾게 된다. */
         if (! config(self::설정[$code] ?? '', true)) {
