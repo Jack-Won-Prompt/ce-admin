@@ -1036,6 +1036,18 @@ class ConsentController extends Controller
             'pdf_url'         => ($latest->status === 'agreed' && $latest->pdf_path)
                                   ? route('prescriptions.consentPdf', $prescription)
                                   : null,
+
+            /* 환자에게 보낸 서명 주소를 화면에도 세운다 (2026-09-19 지시).
+
+               문자가 막히는 환자가 있고, 시험 중에는 발신번호가 등록되지 않아 아예
+               나가지 않는다. 그때 담당자가 이 주소를 열어 내용을 눈으로 확인하거나,
+               다른 길(카카오ㆍ전화)로 건네줄 수 있어야 한다.
+
+               아직 열 수 있는 것만 준다 — 이미 서명했거나 기한이 지난 주소를
+               내려 주면 눌러 봐야 「끝난 건」만 뜬다. */
+            'sign_url'        => ($latest->status === 'pending' && $latest->expires_at->isFuture())
+                                  ? url('/consent/' . $latest->token)
+                                  : null,
         ]);
     }
 

@@ -1291,6 +1291,23 @@ $calcDeposit  = $calcCopay;
               <div id="consentMsgPreview" style="background:var(--gray-50);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;white-space:pre-wrap;line-height:1.8;color:var(--gray-800);font-family:monospace;"></div>
             </div>
             <div id="consentSendResult" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:500;"></div>
+
+            {{-- 보낸 서명 주소 (2026-09-19 지시).
+                 문자가 막히는 환자가 있고, 시험 중에는 발신번호가 등록되지 않아 아예
+                 나가지 않는다. 그때 담당자가 여기서 주소를 열어 환자가 보는 화면을
+                 눈으로 확인하거나, 다른 길로 건네줄 수 있어야 한다. --}}
+            <div id="consentLinkRow" style="display:none;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:8px;padding:8px 10px;">
+              <div style="font-size:11px;font-weight:600;color:var(--primary);margin-bottom:5px;">
+                <i class="fa-solid fa-link"></i> 보낸 서명 주소 <span id="consentLinkLeft" style="font-weight:500;color:var(--text-secondary);"></span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input type="text" id="consentLinkUrl" readonly
+                       style="flex:1;min-width:0;font-size:11px;padding:4px 6px;border:1px solid var(--primary-200);border-radius:6px;background:#fff;color:var(--text);" />
+                <button type="button" class="rx-tpl-mini" onclick="copyConsentLink()">복사</button>
+                <a id="consentLinkOpen" class="rx-tpl-mini" href="#" target="_blank" rel="noopener"
+                   style="text-decoration:none;display:inline-flex;align-items:center;">열기</a>
+              </div>
+            </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
               <button class="btn btn-outline btn-sm" onclick="closeConsentPopover()">취소</button>
               <button class="btn btn-primary btn-sm" id="btnConsentSend" onclick="sendConsentSms()">
@@ -12300,6 +12317,8 @@ window.HELP_TOUR_STEPS = [
             ${escHtml(r.status_label)}
           </span>
           ${r.open ? `<button type="button" class="rx-tpl-mini" onclick="copyPayLink('${escHtml(r.url)}')">주소</button>
+                      <a class="rx-tpl-mini" href="${escHtml(r.url)}" target="_blank" rel="noopener"
+                         style="text-decoration:none;display:inline-flex;align-items:center;">열기</a>
                       <button type="button" class="rx-tpl-mini" onclick="cancelPayLink(${r.id})">닫기</button>` : ''}
         </div>`).join('');
     } catch (e) {
@@ -15075,6 +15094,30 @@ window.HELP_TOUR_STEPS = [
     idc.className    = 'gb-state' + (hasId ? ' done' : '');
   }
 
+  /** 보낸 서명 주소를 세운다 — 열 수 없는 주소는 아예 보이지 않는다. */
+  function _applyConsentLink(url, remainingMin) {
+    const row = document.getElementById('consentLinkRow');
+    if (!row) return;
+
+    if (!url) { row.style.display = 'none'; return; }
+
+    document.getElementById('consentLinkUrl').value = url;
+    document.getElementById('consentLinkOpen').href = url;
+    document.getElementById('consentLinkLeft').textContent =
+      (remainingMin > 0) ? `· ${remainingMin}분 남음` : '';
+    row.style.display = '';
+  }
+
+  function copyConsentLink() {
+    const el = document.getElementById('consentLinkUrl');
+    if (!el) return;
+    el.select();
+    el.setSelectionRange(0, 99999);
+    navigator.clipboard?.writeText(el.value)
+      .then(() => showToast('서명 주소를 베꼈습니다.', 'success'))
+      .catch(() => showToast(el.value, 'info', 8000));
+  }
+
   async function updateConsentStatus() {
     try {
       const res  = await fetch(CONSENT_STATUS_URL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content } });
@@ -15099,6 +15142,9 @@ window.HELP_TOUR_STEPS = [
         set('f-guardian-phone',    data.guardian_phone);
       }
       _guardianState(data);
+
+      /* 아직 열 수 있는 서명 주소를 그 자리에 세운다 (2026-09-19 지시) */
+      _applyConsentLink(data.sign_url, data.remaining_min);
 
       // 아코디언 안에 현황을 적던 자리(consentStatusText · consentStatusBadge)는
       // 시안 개편 때 없어졌다. 서명 여부·본인확인은 '서명확인' 버튼이 여는 창에서 본다.
