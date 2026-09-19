@@ -495,9 +495,15 @@ class Order extends Model
             return (int) $this->deposit_amount;
         }
 
-        /* 아직 받기 전 — 보낸 링크에 적힌 금액이 환자가 낼 것으로 아는 값이다 */
+        /* 아직 받기 전 — 보낸 링크에 적힌 금액이 환자가 낼 것으로 아는 값이다.
+
+           문자가 못 나간 것(failed)도 본다 (2026-09-19). 그 링크도 주소는 살아 있어
+           환자가 낼 수 있으므로, 적힌 금액이 곧 「낼 것으로 아는 값」이다. sent 만
+           보다가 이 값을 못 찾으면 아래 expectedDeposit() 으로 떨어지는데, 그것은
+           **정정 뒤 금액**이라 「이전」과 「지금」이 같아져 버린다 — 금액이 바뀌지
+           않은 것으로 보아 링크 해지도 재발송도 건너뛰었다. */
         $링크 = \App\Models\PaymentLink::where('order_id', $this->id)
-                    ->where('status', 'sent')
+                    ->whereIn('status', ['sent', 'failed'])
                     ->latest('id')->first();
 
         if ($링크 && (int) $링크->amount > 0) {
