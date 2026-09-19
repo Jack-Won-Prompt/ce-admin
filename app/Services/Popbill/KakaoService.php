@@ -8,6 +8,9 @@ use Linkhub\Popbill\PopbillKakao;
 
 class KakaoService extends PopbillBaseService
 {
+    /** 이 서비스의 갈래 — 설정에서 알림톡만 따로 테스트ㆍ운영을 고를 수 있다 */
+    protected const SERVICE = 'kakao';
+
     private PopbillKakao $api;
 
     public function __construct()

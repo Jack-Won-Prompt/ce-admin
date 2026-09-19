@@ -62,13 +62,23 @@ class DepositAutoIssue
      * 그래서 팝빌이 시험이면 스위치를 보지 않고 낸다. 운영으로 돌리는 그 순간
      * 두 겹이 다시 살아난다 — 잠금을 푸는 것이 아니라, 잠글 까닭이 없는 동안만 비킨다.
      */
-    public function enabled(): bool
+    public function enabled(string $service = 'taxinvoice'): bool
     {
-        if (! \App\Support\PopbillEnvironment::isLive()) {
+        /* 갈래는 서류마다 따로 본다 (2026-09-19 지시).
+
+           세금계산서는 시험에 두고 현금영수증만 운영으로 올리는 일이 있다. 한 칸으로
+           가리면 둘 가운데 하나가 늘 틀린 잠금 아래 놓인다. */
+        if (! \App\Support\PopbillEnvironment::isLiveFor($service)) {
             return true;
         }
 
         return (bool) config('billing.auto_issue', false) && $this->started();
+    }
+
+    /** 둘 가운데 하나라도 낼 수 있는가 — 전략을 셈할지 가릴 때 쓴다 */
+    private function 낼것이있나(): bool
+    {
+        return $this->enabled('cashbill') || $this->enabled('taxinvoice');
     }
 
     /**
@@ -155,7 +165,7 @@ class DepositAutoIssue
            틈이 좁아졌다. 그래도 취소는 있을 수 있고, 그때는 OrderCancellation 이
            발행을 되돌린다. */
 
-        if ($this->enabled()) {
+        if ($this->낼것이있나()) {
             $rx       = $order->prescription;
             $strategy = BillingStrategy::resolve($rx?->counsel_acc_add_type, $rx?->benefit_class);
 
@@ -164,8 +174,18 @@ class DepositAutoIssue
             if (!empty($strategy['pending'])) {
                 $out['skipped'][] = '청구전략이 정해지지 않음(' . ($strategy['note'] ?: '확인중') . ')';
             } else {
-                $out['cash'] = $this->cashReceipt($order, $strategy, $out);
-                $out['tax']  = $this->taxInvoice($order, $strategy, $out);
+                /* 서류마다 제 갈래의 잠금을 본다 — 하나가 잠겨 있어도 다른 하나는 나간다 */
+                if ($this->enabled('cashbill')) {
+                    $out['cash'] = $this->cashReceipt($order, $strategy, $out);
+                } else {
+                    $out['skipped'][] = '현금영수증: 운영 자동 발행이 잠겨 있음';
+                }
+
+                if ($this->enabled('taxinvoice')) {
+                    $out['tax'] = $this->taxInvoice($order, $strategy, $out);
+                } else {
+                    $out['skipped'][] = '세금계산서: 운영 자동 발행이 잠겨 있음';
+                }
             }
         } elseif (!config('billing.auto_issue', false)) {
             $out['skipped'][] = '자동 발행이 꺼져 있음';

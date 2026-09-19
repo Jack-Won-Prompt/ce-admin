@@ -8,6 +8,9 @@ use Linkhub\Popbill\PopbillException;
 
 class CashbillService extends PopbillBaseService
 {
+    /** 이 서비스의 갈래 — 설정에서 현금영수증만 따로 테스트ㆍ운영을 고를 수 있다 */
+    protected const SERVICE = 'cashbill';
+
     private PopbillCashbill $api;
 
     public function __construct()

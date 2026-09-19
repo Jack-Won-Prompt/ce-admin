@@ -7,6 +7,9 @@ use Linkhub\Popbill\PopbillMessaging;
 
 class MessageService extends PopbillBaseService
 {
+    /** 이 서비스의 갈래 — 설정에서 문자만 따로 테스트ㆍ운영을 고를 수 있다 */
+    protected const SERVICE = 'sms';
+
     private PopbillMessaging $api;
 
     public function __construct()

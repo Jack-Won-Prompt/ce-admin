@@ -28,6 +28,24 @@ final class PopbillEnvironment
         self::LIVE => '운영',
     ];
 
+    /**
+     * 갈래를 따로 고를 수 있는 서비스 (2026-09-19 지시).
+     *
+     * 시험 도중에도 **문자만은 운영으로** 내보내야 할 때가 있다. 문자는 받아 보아야
+     * 글이 맞는지ㆍ링크가 열리는지를 알 수 있는데, 테스트베드 계정에는 승인된
+     * 발신번호가 없어 한 통도 나가지 않는다(-15001014 미등록 발신번호). 그렇다고
+     * 다섯 갈래를 한꺼번에 운영으로 올리면 세금계산서ㆍ현금영수증이 국세청까지 간다.
+     *
+     * 그래서 갈래를 서비스마다 따로 고른다. 비워 두면 위의 한 칸(popbill.env)을 따른다.
+     */
+    public const SERVICES = [
+        'sms'        => '문자',
+        'fax'        => '팩스',
+        'taxinvoice' => '세금계산서',
+        'cashbill'   => '현금영수증',
+        'kakao'      => '알림톡',
+    ];
+
     /** 지금 고른 갈래 */
     public static function current(): string
     {
@@ -42,6 +60,77 @@ final class PopbillEnvironment
     public static function label(): string
     {
         return self::LABELS[self::current()];
+    }
+
+    /**
+     * 이 서비스는 어느 갈래로 도는가.
+     *
+     * 따로 고른 것이 없으면 전체 갈래를 따른다 — 아무것도 손대지 않은 서버는
+     * 예전 그대로 돈다.
+     */
+    public static function for(string $service): string
+    {
+        $고른것 = trim((string) config("popbill.service_env.{$service}", ''));
+
+        return in_array($고른것, [self::TEST, self::LIVE], true) ? $고른것 : self::current();
+    }
+
+    public static function isLiveFor(string $service): bool
+    {
+        return self::for($service) === self::LIVE;
+    }
+
+    public static function labelFor(string $service): string
+    {
+        return self::LABELS[self::for($service)];
+    }
+
+    /**
+     * 이 서비스가 쓸 계정 한 벌.
+     *
+     * 비어 있는 칸은 apply() 가 앉혀 둔 「지금 쓰는 값」(popbill.test.*)으로 떨어진다 —
+     * 두 벌을 다 채우기 전인 서버가 갑자기 계정을 잃고 멈추면 안 된다.
+     */
+    public static function accountFor(string $service): array
+    {
+        $갈래 = self::for($service);
+        $계정 = (array) config("popbill.accounts.{$갈래}", []);
+
+        $집다 = fn (string $열쇠, $기본) => trim((string) ($계정[$열쇠] ?? '')) !== ''
+            ? trim((string) $계정[$열쇠])
+            : $기본;
+
+        return [
+            'env'        => $갈래,
+            'is_test'    => $갈래 === self::TEST,
+            'link_id'    => $집다('link_id',    (string) config('popbill.LinkID', '')),
+            'secret_key' => $집다('secret_key', (string) config('popbill.SecretKey', '')),
+            'corp_num'   => $집다('corp_num',   (string) config('popbill.test.corp_num', '')),
+            'user_id'    => $집다('user_id',    (string) config('popbill.test.user_id', '')),
+            'sender_num' => $집다('sender_num', (string) config('popbill.test.sender_num', '')),
+            'sms_sender' => $집다('sms_sender', (string) (config('popbill.test.sms_sender') ?: '')),
+            'fax_sender' => $집다('fax_sender', (string) (config('popbill.test.fax_sender') ?: '')),
+        ];
+    }
+
+    /**
+     * 전체 갈래와 다르게 고른 서비스들 — 설정 화면과 머리띠가 알린다.
+     *
+     * @return array<string,string> ['sms' => 'live', ...]
+     */
+    public static function overrides(): array
+    {
+        $전체 = self::current();
+        $나온것 = [];
+
+        foreach (array_keys(self::SERVICES) as $서비스) {
+            $갈래 = self::for($서비스);
+            if ($갈래 !== $전체) {
+                $나온것[$서비스] = $갈래;
+            }
+        }
+
+        return $나온것;
     }
 
     /**

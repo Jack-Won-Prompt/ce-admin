@@ -9,6 +9,9 @@ use Linkhub\Popbill\TaxinvoiceDetail;
 
 class TaxinvoiceService extends PopbillBaseService
 {
+    /** 이 서비스의 갈래 — 설정에서 세금계산서만 따로 테스트ㆍ운영을 고를 수 있다 */
+    protected const SERVICE = 'taxinvoice';
+
     private PopbillTaxinvoice $api;
 
     public function __construct()

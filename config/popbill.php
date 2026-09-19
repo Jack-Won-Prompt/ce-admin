@@ -81,6 +81,25 @@ return [
              ?: (filter_var(env('POPBILL_IS_TEST', true), FILTER_VALIDATE_BOOLEAN) ? 'test' : 'live'),
 
     /*
+     * 서비스마다 갈래를 따로 고른다 (2026-09-19 지시).
+     *
+     * 시험 도중에도 **문자만은 운영으로** 보내야 할 때가 있다. 문자는 받아 보아야
+     * 글이 맞는지ㆍ링크가 열리는지 알 수 있는데, 테스트베드 계정에는 승인된 발신번호가
+     * 없어 한 통도 나가지 않는다(-15001014 미등록 발신번호). 그렇다고 위의 한 칸을
+     * 운영으로 올리면 세금계산서ㆍ현금영수증까지 국세청으로 간다.
+     *
+     * 비워 두면 위의 env 를 따른다 — 손대지 않은 서버는 예전 그대로 돈다.
+     * 고르는 일은 PopbillEnvironment 한 곳에서 한다.
+     */
+    'service_env' => [
+        'sms'        => env('POPBILL_ENV_SMS',        ''),
+        'fax'        => env('POPBILL_ENV_FAX',        ''),
+        'taxinvoice' => env('POPBILL_ENV_TAXINVOICE', ''),
+        'cashbill'   => env('POPBILL_ENV_CASHBILL',   ''),
+        'kakao'      => env('POPBILL_ENV_KAKAO',      ''),
+    ],
+
+    /*
      * 시험 계정 — 팝빌 테스트베드(test.popbill.com).
      *
      * 아래 live 와 이름이 같은 칸들은 갈래를 고르면 PopbillEnvironment 가

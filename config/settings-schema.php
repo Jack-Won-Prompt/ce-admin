@@ -51,6 +51,29 @@ return [
                       'help'  => '고른 환경의 계정으로 붙습니다. 「테스트 모드」는 이 값이 정하므로 따로 켜고 끄지 않습니다. '
                                . '운영으로 두면 세금계산서ㆍ현금영수증 발행이 국세청 신고까지 갑니다.'],
 
+            /* 서비스마다 따로 고른다 (2026-09-19 지시).
+
+               시험 도중에도 문자만은 운영으로 보내야 할 때가 있다 — 테스트베드 계정에는
+               승인된 발신번호가 없어 한 통도 나가지 않기 때문이다(-15001014). 그런데 위의
+               한 칸을 운영으로 올리면 세금계산서ㆍ현금영수증까지 국세청으로 간다.
+               「사용 환경 따름」으로 두면 예전 그대로 돈다. */
+            'env_sms' => ['label' => '문자 환경', 'config' => 'popbill.service_env.sms', 'type' => 'select', 'width' => 1,
+                          'options' => ['' => '사용 환경 따름', 'test' => '테스트', 'live' => '운영'],
+                          'help'  => '운영으로 두면 문자만 운영 팝빌로 나갑니다 — 요금이 실제로 나갑니다. '
+                                   . '받는 곳은 「테스트 설정 › 문자 발송」이 따로 정합니다.'],
+            'env_fax' => ['label' => '팩스 환경', 'config' => 'popbill.service_env.fax', 'type' => 'select', 'width' => 1,
+                          'options' => ['' => '사용 환경 따름', 'test' => '테스트', 'live' => '운영'],
+                          'help'  => '운영으로 두면 팩스만 운영 팝빌로 나갑니다 — 종이가 나가고 포인트가 깎입니다.'],
+            'env_taxinvoice' => ['label' => '세금계산서 환경', 'config' => 'popbill.service_env.taxinvoice', 'type' => 'select', 'width' => 1,
+                          'options' => ['' => '사용 환경 따름', 'test' => '테스트', 'live' => '운영'],
+                          'help'  => '**운영은 국세청 실신고입니다.** 시험 중에는 테스트로 두십시오.'],
+            'env_cashbill' => ['label' => '현금영수증 환경', 'config' => 'popbill.service_env.cashbill', 'type' => 'select', 'width' => 1,
+                          'options' => ['' => '사용 환경 따름', 'test' => '테스트', 'live' => '운영'],
+                          'help'  => '**운영은 국세청 실신고입니다.** 시험 중에는 테스트로 두십시오.'],
+            'env_kakao' => ['label' => '알림톡 환경', 'config' => 'popbill.service_env.kakao', 'type' => 'select', 'width' => 1,
+                          'options' => ['' => '사용 환경 따름', 'test' => '테스트', 'live' => '운영'],
+                          'help'  => '운영으로 두면 알림톡만 운영 팝빌로 나갑니다 — 등록된 발신프로필과 템플릿이 있어야 합니다.'],
+
             /* 걷어낸 것 — 「인증키」 (2026-09-18 확인).
 
                팝빌의 API 인증은 파트너의 LinkID + SecretKey 로 끝난다. 연동회원에게
