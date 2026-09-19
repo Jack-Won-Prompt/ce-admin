@@ -301,15 +301,25 @@
       padding: 2px 10px;
       cursor: pointer;
     }
+    /* 서명 칸은 **깨우기 전에는 손짓을 가로채지 않는다** (2026-09-19).
+
+       여태 touch-action:none 에 touchstart 에서 곧바로 preventDefault 를 불러,
+       칸 위를 지나는 모든 손짓이 그림이 되고 화면은 그 구간에서 스크롤되지 않았다.
+       칸이 폭을 거의 다 차지해, 환자는 칸을 지나 아래 단추로 내려갈 길이 없었다 —
+       내리려다 서명이 그어졌다.
+
+       이제 pan-y 로 두어 세로 스크롤은 흘려보내고, 칸을 한 번 누르면(armed)
+       그때부터 그린다. 마우스는 예전 그대로다. */
     .sig-wrap {
       position: relative;
       border: 2px dashed #d1d5db;
       border-radius: 10px;
       overflow: hidden;
-      touch-action: none;
+      touch-action: pan-y;
       background: #fff;
       transition: border-color .2s;
     }
+    .sig-wrap.armed { touch-action: none; }
     .sig-wrap.active { border-color: #28798B; border-style: solid; }
 
     /* ── 보호자(법정대리인) 칸 ── */
@@ -838,7 +848,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
           </svg>
-          <span>이 곳에 서명하십시오</span>
+          <span class="sig-hint">눌러서 서명을 시작하십시오</span>
         </div>
       </div>
     </div>
@@ -905,7 +915,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
           </svg>
-          <span>보호자가 이 곳에 서명하십시오</span>
+          <span class="sig-hint">눌러서 보호자 서명을 시작하십시오</span>
         </div>
       </div>
 
@@ -1025,7 +1035,25 @@ function getPos(e) {
   return { x: src.clientX - rect.left, y: src.clientY - rect.top };
 }
 
+/* 손가락으로는 **깨운 뒤에만** 그린다 (2026-09-19).
+
+   한 번 눌러 깨우고 그 뒤로 그린다. 깨우기 전에는 칸 위를 지나는 손짓이
+   화면 스크롤로 간다 — 칸이 폭을 거의 다 차지해, 그러지 않으면 아래로 내려갈
+   길이 없다. 마우스는 예전 그대로 곧바로 그린다. */
+function 깨우기(wrap, ph, 안내) {
+  if (wrap.classList.contains('armed')) return false;
+  wrap.classList.add('armed');
+  if (ph) {
+    const t = ph.querySelector('.sig-hint') ?? ph;
+    t.textContent = 안내;
+  }
+  return true;
+}
+
 function onStart(e) {
+  /* 손가락이고 아직 깨우기 전이면, 이 손짓은 깨우는 데만 쓴다 */
+  if (e.touches && 깨우기(sigWrap, placeholder, '이제 이 곳에 서명하십시오')) return;
+
   e.preventDefault();
   drawing = true;
   const p = getPos(e);
@@ -1310,6 +1338,9 @@ if (IS_MINOR) {
     return { x: src.clientX - rect.left, y: src.clientY - rect.top };
   };
   const gStart = (e) => {
+    /* 보호자 칸도 같다 — 한 번 눌러 깨운 뒤에 그린다 (2026-09-19) */
+    if (e.touches && 깨우기(gWrap, gPh, '이제 이 곳에 서명하십시오')) return;
+
     e.preventDefault();
     gDrawing = true;
     const p = gPos(e);
@@ -1340,8 +1371,13 @@ function clearGuardianSignature() {
   if (!gCanvas) return;
   gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
   gHasSig = false;
-  document.getElementById('gSigWrap').classList.remove('active');
-  document.getElementById('gSigPlaceholder').style.opacity = '1';
+  const w = document.getElementById('gSigWrap');
+  const p = document.getElementById('gSigPlaceholder');
+  w.classList.remove('active');
+  p.style.opacity = '1';
+  const h = p.querySelector('.sig-hint');
+  if (h) h.textContent = w.classList.contains('armed')
+    ? '이제 이 곳에 서명하십시오' : '눌러서 보호자 서명을 시작하십시오';
   refreshAgree();
 }
 
@@ -1399,6 +1435,10 @@ function clearSignature() {
   hasSig = false;
   placeholder.style.opacity = '1';
   sigWrap.classList.remove('active');
+  /* 깨운 채로 둔다 — 지우는 사람은 곧바로 다시 그린다 */
+  const h = placeholder.querySelector('.sig-hint');
+  if (h) h.textContent = sigWrap.classList.contains('armed')
+    ? '이제 이 곳에 서명하십시오' : '눌러서 서명을 시작하십시오';
   refreshAgree();
 }
 
