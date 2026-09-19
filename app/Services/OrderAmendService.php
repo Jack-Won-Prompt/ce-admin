@@ -179,6 +179,16 @@ class OrderAmendService
         }
 
         $새번호 = $세움['body']['result']['so_no'] ?? null;
+        $새id   = $세움['body']['result']['so_id'] ?? null;
+
+        /* 확정을 부르기 **전에** 새 번호로 갈아탄다 (2026-09-19 시험에서 드러남).
+
+           so_confirm 에 위드웍스가 so.confirmed 를 곧바로 보내는데, 그때 우리 줄에
+           아직 옛 번호가 적혀 있으면 물러난판매번호인가() 가 「지금 번호와 다르다」로
+           보아 그 사건을 건너뛴다. 그래서 창고는 확정인데 우리 화면에는 앞서 받은
+           so.cancelled 가 남긴 「취소」가 그대로 서 있었다. */
+        $order->판매번호갈아타기($새번호, $새id);
+        $order->save();
 
         /* ③ 확정까지 잇는다 (2026-09-15 지시 3).
 
@@ -197,8 +207,7 @@ class OrderAmendService
                 : ' 다만 확정하지 못했습니다 — ' . $확정['message'] . ' 창고 화면에서 확정해 주십시오.';
         }
 
-        /* ④ 우리 줄을 새 번호로 갈아탄다 — 옛 번호는 남긴다 */
-        $order->판매번호갈아타기($새번호);
+        /* ④ 갈아타기는 ③ 앞에서 이미 마쳤다 — 여기서는 정정 표만 내린다 */
         $order->forceFill([
             'amend_state'        => null,
             'amend_payload'      => null,

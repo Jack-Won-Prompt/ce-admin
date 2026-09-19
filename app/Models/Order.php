@@ -129,9 +129,22 @@ class Order extends Model
      * 정정할 때마다 번호가 바뀐다. 남겨 두지 않으면 창고 화면에서 옛 번호로 찾아온
      * 문의에 어느 주문인지 답할 수 없다.
      */
-    public function 판매번호갈아타기(?string $새번호): void
+    /**
+     * @param  int|string|null  $새id  저쪽이 함께 준 so_id — 번호와 짝이라 같이 갈아탄다.
+     *
+     * 여태 번호만 바꾸고 so_id 는 옛것을 그대로 두었다 (2026-09-19 시험에서 드러남).
+     * 번호로 여는 자리는 멀쩡했지만 id 로 여는 자리는 취소된 옛 주문을 가리킨다.
+     */
+    public function 판매번호갈아타기(?string $새번호, $새id = null): void
     {
         $this->옛번호남기기($this->withworks_so_no, $새번호);
+
+        /* 번호가 바뀌면 id 도 함께 간다. id 를 못 받았으면 지운다 — 남겨 두면
+           엉뚱한(이미 취소된) 주문을 가리키고, 비어 있으면 적어도 모른다는 것이
+           드러난다. 새 주문을 못 세워 번호가 null 이 되는 길도 마찬가지다. */
+        if ($this->withworks_so_no !== $새번호) {
+            $this->withworks_so_id = $새번호 ? ($새id ?: null) : null;
+        }
 
         $this->withworks_so_no = $새번호;
     }
