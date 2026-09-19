@@ -83,13 +83,12 @@ class PaymentCancelSync
            부분취소는 거두지 않는다 — 남은 금액이 있으면 그만큼은 받은 것이 맞고,
            모자란 만큼만 다시 청구하면 된다. */
         if ($전액인가 && $order->deposit_confirmed_at) {
-            $order->forceFill([
-                'deposit_confirmed_at' => null,
-                'deposit_confirmed_by' => null,
-                'deposit_amount'       => null,
-            ])->save();
+            /* 지우는 일과 기록은 Order 한 곳에서 한다 — 여기는 여태 기록을 남기지
+               않아, 정산에서 「입금완료」가 사라진 까닭을 이력에서 찾을 수 없었다
+               (2026-09-19 지시). */
+            $order->입금확인취소('토스 결제 취소');
 
-            $말[] = '입금 확인을 거뒀습니다';
+            $말[] = '입금 확인을 취소했습니다';
         }
 
         /* 결제된 링크와 아직 살아 있는 링크를 함께 닫는다 — 취소된 건의 링크로 또

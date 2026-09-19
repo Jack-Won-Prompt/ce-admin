@@ -20,6 +20,9 @@ class PaymentLinkService
     /** 링크를 며칠 열어 둘 것인가 — 지나면 결제 페이지가 열리지 않는다 */
     private const VALID_DAYS = 7;
 
+    /** 결제 안내 알림톡 틀의 코드 — 쓰던 이름이 둘이라 둘 다 찾는다 */
+    private const 알림톡코드 = ['payment_request', 'payment_guide'];
+
     public function __construct(private readonly MessageSender $sender) {}
 
     /**
@@ -51,27 +54,50 @@ class PaymentLinkService
 
         $text = $this->compose($order, $link);
 
-        /* 알림톡 → 문자 순으로 잇는다. 먼저 성공하면 거기서 멈춘다.
-           알림톡은 승인된 템플릿이 있어야 나간다 — 등록해 두지 않았으면 문자로 바로 간다. */
-        $channels = $this->alimtalkTemplate() ? ['alimtalk', 'sms'] : ['sms'];
-        $last = null;
+        /* 메시지 유형에서 켜 둔 채널로 **모두** 보낸다 (2026-09-19 지시).
 
-        foreach ($channels as $channel) {
-            $res = $this->send($channel, $order, $mobile, $text);
+           여태는 알림톡이 성공하면 거기서 멈췄다. 둘 다 켜 두어도 한쪽만 나갔고,
+           알림톡을 읽지 않는 고객은 결제 안내를 받지 못했다. 채널을 고르는 기준은
+           MessageTemplate::보낼채널들 한 곳에 있다. */
+        $보낼것 = \App\Models\MessageTemplate::보낼채널들(self::알림톡코드, 문자는틀없이도: true);
+
+        $보낸채널 = [];
+        $못보낸말 = [];
+
+        foreach ($보낼것 as [$channel, $templateCode]) {
+            $res = $this->send($channel, $order, $mobile, $text, $templateCode);
+
             if ($res['success'] ?? false) {
-                $link->update(['channel' => $channel, 'sent_at' => now(), 'error' => null]);
-
-                return ['link' => $link->refresh(), 'sent' => true, 'channel' => $channel,
-                        // 「문자으로」가 되지 않게 조사를 통째로 쥔다
-                        'message' => ($channel === 'alimtalk' ? '알림톡으로' : '문자로') . ' 보냈습니다.'];
+                $보낸채널[] = $channel;
+            } else {
+                $못보낸말[] = self::채널이름($channel) . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
             }
-            $last = $res['message'] ?? '보내지 못했습니다.';
         }
 
-        $link->update(['status' => 'failed', 'error' => $last ?? null]);
+        if (! $보낸채널) {
+            $link->update(['status' => 'failed', 'error' => implode(' / ', $못보낸말) ?: null]);
 
-        return ['link' => $link->refresh(), 'sent' => false, 'channel' => null,
-                'message' => '보내지 못했습니다. ' . ($last ?? '')];
+            return ['link' => $link->refresh(), 'sent' => false, 'channel' => null,
+                    'message' => '발송하지 못했습니다. ' . implode(' / ', $못보낸말)];
+        }
+
+        /* 링크에는 실제로 나간 채널을 적는다 — 둘 다 나갔으면 둘 다 적는다 */
+        $link->update([
+            'channel' => implode(',', $보낸채널),
+            'sent_at' => now(),
+            'error'   => $못보낸말 ? implode(' / ', $못보낸말) : null,
+        ]);
+
+        $보낸말 = implode('ㆍ', array_map([self::class, '채널이름'], $보낸채널)) . ' 발송했습니다.';
+
+        return ['link' => $link->refresh(), 'sent' => true, 'channel' => $보낸채널[0],
+                'message' => $못보낸말 ? $보낸말 . ' ' . implode(' / ', $못보낸말) : $보낸말];
+    }
+
+    /** 채널 이름 — 화면과 이력에 같은 말로 적는다 */
+    public static function 채널이름(string $channel): string
+    {
+        return ['alimtalk' => '알림톡', 'sms' => '문자'][$channel] ?? $channel;
     }
 
     /** 보낼 말 — 무엇을 얼마나 어디서 내는지, 그 셋이면 된다 */
@@ -136,21 +162,31 @@ class PaymentLinkService
 
         $text = $this->composeVirtualAccount($link, $va);
 
-        $channels = $this->alimtalkTemplate() ? ['alimtalk', 'sms'] : ['sms'];
-        $last = null;
+        /* 결제 안내와 같은 자리다 — 켜 둔 채널로 모두 보낸다 (2026-09-19 지시) */
+        $보낸채널 = [];
+        $못보낸말 = [];
 
-        foreach ($channels as $channel) {
-            $res = $this->send($channel, $order, $mobile, $text);
+        foreach (\App\Models\MessageTemplate::보낼채널들(self::알림톡코드, 문자는틀없이도: true)
+                 as [$channel, $templateCode]) {
+            $res = $this->send($channel, $order, $mobile, $text, $templateCode);
+
             if ($res['success'] ?? false) {
-                return ['sent' => true, 'channel' => $channel, 'message' => '보냈습니다.'];
+                $보낸채널[] = $channel;
+            } else {
+                $못보낸말[] = self::채널이름($channel) . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
             }
-            $last = $res['message'] ?? null;
         }
 
-        Log::warning('[결제전송] 가상계좌 안내를 보내지 못했다',
-                     ['link' => $link->id, 'error' => $last]);
+        if ($보낸채널) {
+            return ['sent' => true, 'channel' => $보낸채널[0],
+                    'message' => implode('ㆍ', array_map([self::class, '채널이름'], $보낸채널)) . ' 발송했습니다.'];
+        }
 
-        return ['sent' => false, 'channel' => null, 'message' => $last ?? '보내지 못했습니다.'];
+        Log::warning('[결제전송] 가상계좌 안내를 발송하지 못했습니다',
+                     ['link' => $link->id, 'error' => implode(' / ', $못보낸말)]);
+
+        return ['sent' => false, 'channel' => null,
+                'message' => implode(' / ', $못보낸말) ?: '발송하지 못했습니다.'];
     }
 
     /** 계좌 안내에 적을 말 — 어디로 얼마를 언제까지, 그 셋이면 된다 */
@@ -197,14 +233,15 @@ class PaymentLinkService
         ]);
     }
 
-    private function send(string $channel, Order $order, string $mobile, string $text): array
+    private function send(string $channel, Order $order, string $mobile, string $text,
+                          ?string $templateCode = null): array
     {
         try {
             return $this->sender->sendBulk(
                 $channel,
                 [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::bare($order->patient?->name), 'patient_id' => $order->patient_id]],
                 $text,
-                $channel === 'alimtalk' ? $this->alimtalkTemplate() : null,
+                $channel === 'alimtalk' ? ($templateCode ?: $this->alimtalkTemplate()) : null,
                 ['source' => 'payment-link', 'prescription_id' => $order->prescription_id],
             );
         } catch (\Throwable $e) {

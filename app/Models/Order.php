@@ -415,6 +415,45 @@ class Order extends Model
     }
 
     /**
+     * 입금 확인을 취소한다 — 지우는 자리는 여기 하나다 (2026-09-19 지시).
+     *
+     * 여태 세 곳이 제각기 지웠다.
+     *
+     *   정산 「입금 확인 취소」  deposit_* 와 pay_method 를 비우고 기록을 남겼다
+     *   주문 정정               deposit_* 만 비우고 「결제 취소」로만 기록했다 —
+     *                           입금 확인이 함께 취소된 사실이 이력에 드러나지 않았다
+     *   토스 취소 동기화        deposit_* 만 비우고 **기록을 남기지 않았다**
+     *
+     * 그래서 정산 화면에서 「입금완료」가 사라진 까닭을 이력에서 찾을 수 없는 건이
+     * 생겼고, 받지 않은 건에 결제수단이 남아 다음 사람이 이미 받은 것으로 읽었다
+     * (EUD202609191059021 — 가상계좌로 보냈는데 링크페이가 남아 현금영수증이
+     * 건너뛰어졌다).
+     *
+     * @param  string $사유 이력에 적을 까닭 — 「담당자 취소」ㆍ「주문 정정」처럼 짧게
+     * @return int    지운 입금 금액 (없었으면 0)
+     */
+    public function 입금확인취소(string $사유): int
+    {
+        $지운금액 = $this->받은금액();
+
+        $this->forceFill([
+            'deposit_confirmed_at' => null,
+            'deposit_confirmed_by' => null,
+            'deposit_amount'       => null,
+            'deposit_note'         => null,
+            /* 결제수단도 함께 비운다 — 받지 않은 건에 「무엇으로 받았다」가 남아
+               있으면 다음 사람이 이미 받은 것으로 읽는다. */
+            'pay_method'           => null,
+        ])->save();
+
+        /* 웹훅으로 들어온 취소에는 사람이 없다 — causedBy 는 그때 null 이면 된다 */
+        activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($this)
+            ->log('입금 확인 취소: ' . number_format($지운금액) . '원 — ' . $사유);
+
+        return $지운금액;
+    }
+
+    /**
      * 들어와야 하는 금액 — 본인부담금.
      *
      * 배송비는 없다(2026-09-03 확정). 그 전 스물여섯 건에 3,000원이 적혀 있으나

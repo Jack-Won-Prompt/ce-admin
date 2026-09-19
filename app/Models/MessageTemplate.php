@@ -24,6 +24,62 @@ class MessageTemplate extends Model
     public function scopeActive($q)                   { return $q->where('is_active', true); }
 
     /**
+     * 이 안내를 어느 채널로 보낼 것인가 — 켜 둔 채널을 **모두** 준다 (2026-09-19 지시).
+     *
+     * 여태는 「알림톡 틀이 있으면 알림톡, 없으면 문자」로 하나만 골랐고, 알림톡이
+     * 성공하면 거기서 멈췄다. 그래서 메시지 유형에서 둘 다 켜 두어도 한쪽만 나갔다.
+     * 게다가 고르는 자리가 둘이었는데 기준이 서로 달랐다 — 반품 안내는 is_active 를
+     * 보았고, 결제 링크는 보지 않아 꺼 둔 알림톡 틀도 그대로 썼다.
+     *
+     * 이제 기준을 여기 하나로 모은다.
+     *
+     *   알림톡  켜져 있고 승인 템플릿 코드(ats_template_code)가 있어야 보낸다
+     *   문자    켜져 있으면 보낸다
+     *
+     * 둘 다 꺼져 있거나 표가 없으면 문자로 떨어진다 — 못 보내는 것보다 낫다.
+     *
+     * @param  string|array $codes        찾을 코드. 결제 안내처럼 옛 이름이 둘인 자리는 배열로 준다
+     * @param  bool         $문자는틀없이도 문자 틀이 없어도 문자를 보낼 것인가.
+     *                                     결제 안내는 본문을 코드에서 만들어(PaymentLinkService::compose)
+     *                                     문자 틀이 아예 없다 — 그런 자리는 참으로 부른다
+     * @return array<int, array{0:string, 1:?string}> [[채널, 알림톡 템플릿 코드], ...]
+     */
+    public static function 보낼채널들(string|array $codes, bool $문자는틀없이도 = false): array
+    {
+        $코드들 = (array) $codes;
+
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('message_templates')) {
+                return [['sms', null]];
+            }
+
+            $채널들 = [];
+
+            $알림톡 = static::channel('alimtalk')->active()
+                ->whereIn('code', $코드들)
+                ->whereNotNull('ats_template_code')
+                ->first();
+
+            if ($알림톡) {
+                $채널들[] = ['alimtalk', $알림톡->code];
+            }
+
+            if ($문자는틀없이도
+                || static::channel('sms')->active()->whereIn('code', $코드들)->exists()) {
+                $채널들[] = ['sms', null];
+            }
+
+            return $채널들 ?: [['sms', null]];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[메시지 유형] 채널을 읽지 못해 문자로 발송합니다', [
+                'codes' => $코드들, 'error' => $e->getMessage(),
+            ]);
+
+            return [['sms', null]];
+        }
+    }
+
+    /**
      * 화면이 쓰던 [코드 => ['label','desc','text']] 모양을 준다.
      *
      * 표가 아직 없으면(마이그레이션 전 배포) 예전 값을 그대로 돌려준다 —

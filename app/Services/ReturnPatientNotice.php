@@ -64,53 +64,56 @@ class ReturnPatientNotice
             return ['sent' => false, 'message' => '환자 연락처가 없어 보내지 못했습니다.'];
         }
 
-        [$channel, $templateCode] = $this->pickChannel($code);
+        /* 메시지 유형에서 켜 둔 채널로 **모두** 보낸다 (2026-09-19 지시).
+           여태는 알림톡이 되면 거기서 멈춰, 둘 다 켜 두어도 한쪽만 나갔다. */
+        $보낸채널 = [];
+        $못보낸말 = [];
 
-        $text = $this->compose($return, $channel, $extra, $code);
+        foreach (MessageTemplate::보낼채널들($code) as [$channel, $templateCode]) {
+            $text = $this->compose($return, $channel, $extra, $code);
 
-        try {
-            $res = $this->sender->sendBulk(
-                $channel,
-                [[
-                    'rcv'        => $mobile,
-                    'rcvnm'      => \App\Models\Patient::bare($return->order?->patient?->name),
-                    'patient_id' => $return->order?->patient_id,
-                ]],
-                $text,
-                $templateCode,
-                ['source' => self::SOURCE, 'prescription_id' => $return->order?->prescription_id],
-            );
-        } catch (\Throwable $e) {
-            Log::warning('[반품] 환자 안내 실패', [
-                'receipt' => $return->receipt_no, 'error' => $e->getMessage(),
-            ]);
+            try {
+                $res = $this->sender->sendBulk(
+                    $channel,
+                    [[
+                        'rcv'        => $mobile,
+                        'rcvnm'      => \App\Models\Patient::bare($return->order?->patient?->name),
+                        'patient_id' => $return->order?->patient_id,
+                    ]],
+                    $text,
+                    $templateCode,
+                    ['source' => self::SOURCE, 'prescription_id' => $return->order?->prescription_id],
+                );
+            } catch (\Throwable $e) {
+                Log::warning('[반품] 환자 안내 발송 실패', [
+                    'receipt' => $return->receipt_no, 'channel' => $channel, 'error' => $e->getMessage(),
+                ]);
 
-            return ['sent' => false, 'message' => '보내지 못했습니다 — ' . $e->getMessage()];
+                $res = ['success' => false, 'message' => $e->getMessage()];
+            }
+
+            if ($res['success'] ?? false) {
+                $보낸채널[] = $channel;
+            } else {
+                $못보낸말[] = \App\Services\PaymentLinkService::채널이름($channel)
+                            . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
+            }
         }
 
-        return ($res['success'] ?? false)
-            /* 조사를 낱말에 맞춘다 — 「문자을 보냈습니다」로 나갔다 */
-            ? ['sent' => true,  'message' => $channel === 'alimtalk' ? '알림톡을 보냈습니다.' : '문자를 보냈습니다.']
-            : ['sent' => false, 'message' => $res['message'] ?? '보내지 못했습니다.'];
+        if (! $보낸채널) {
+            return ['sent' => false, 'message' => implode(' / ', $못보낸말) ?: '발송하지 못했습니다.'];
+        }
+
+        $보낸말 = implode('ㆍ', array_map(
+            [\App\Services\PaymentLinkService::class, '채널이름'], $보낸채널)) . ' 발송했습니다.';
+
+        return ['sent' => true, 'message' => $못보낸말 ? $보낸말 . ' ' . implode(' / ', $못보낸말) : $보낸말];
     }
 
-    /**
-     * 알림톡으로 보낼 수 있으면 알림톡, 아니면 문자.
-     *
-     * 알림톡은 팝빌에 올려 둔 틀이 있어야 나간다. 틀을 아직 안 올렸으면 문자로 보낸다 —
-     * 못 보내는 것보다는 문자로라도 닿는 편이 낫다.
-     *
-     * @return array{0: string, 1: ?string}
-     */
-    private function pickChannel(string $code = self::TEMPLATE): array
-    {
-        $alimtalk = MessageTemplate::channel('alimtalk')->active()
-            ->where('code', $code)
-            ->whereNotNull('ats_template_code')
-            ->first();
+    /* 걷어낸 것 — pickChannel (2026-09-19 지시).
 
-        return $alimtalk ? ['alimtalk', $alimtalk->code] : ['sms', null];
-    }
+       「알림톡이 되면 알림톡, 아니면 문자」로 하나만 고르던 자리다. 이제 켜 둔 채널로
+       모두 보내므로 send() 가 MessageTemplate::보낼채널들 을 그대로 돈다. */
 
     /**
      * 보낼 말.

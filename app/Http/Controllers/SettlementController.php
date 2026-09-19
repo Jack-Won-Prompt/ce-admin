@@ -739,19 +739,9 @@ class SettlementController extends Controller
             return response()->json(['success' => false, 'message' => '담당자가 확인한 입금이 아닙니다.'], 422);
         }
 
-        $was = (int) ($order->deposit_amount ?? 0);
-        $order->update([
-            'deposit_confirmed_at' => null,
-            'deposit_confirmed_by' => null,
-            'deposit_amount'       => null,
-            'deposit_note'         => null,
-            /* 방식도 함께 비운다 — 받지 않은 건에 「무엇으로 받았다」가 남아 있으면
-               다음 사람이 이미 받은 것으로 읽는다. */
-            'pay_method'           => null,
-        ]);
-
-        activity()->causedBy(Auth::user())->performedOn($order)
-            ->log('입금 확인 취소(담당자): ' . number_format($was) . '원');
+        /* 지우는 일은 Order 한 곳에서 한다 — 기록과 비우는 칸이 세 화면에서
+           서로 달랐다(2026-09-19 지시). */
+        $order->입금확인취소('담당자 취소');
 
         $docs = $this->cancelIssuedDocs($order);
 

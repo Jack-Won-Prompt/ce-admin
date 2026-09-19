@@ -212,17 +212,16 @@ class OrderCancelService
                     : ' 결제를 취소한 뒤 바뀐 금액으로 다시 보내 주십시오.');
         }
 
-        /* 손으로 확인해 둔 자취를 지운다. 남겨 두면 무른 뒤에도 「받은 건」으로
+        /* 확인해 둔 입금 기록을 지운다. 남겨 두면 환불한 뒤에도 「받은 건」으로
            보여, 바뀐 금액의 링크가 「이미 결제가 끝난 주문」으로 막힌다
-           (PaymentLinkController). */
-        $order->forceFill([
-            'deposit_confirmed_at' => null,
-            'deposit_confirmed_by' => null,
-            'deposit_amount'       => null,
-        ])->save();
+           (PaymentLinkController). 지우는 일은 Order 한 곳에서 한다 — 세 화면이
+           제각기 지워 기록이 서로 달랐다(2026-09-19 지시). */
+        $order->입금확인취소(sprintf(
+            '주문 정정 — %s원 환불 후 %s원으로 재청구', number_format($이전), number_format($지금)
+        ));
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(sprintf(
-            '주문 정정 결제 취소 (%s) — %s원을 돌려주고 %s원으로 다시 청합니다',
+            '주문 정정 결제 취소 (%s) — %s원을 환불하고 %s원으로 재청구합니다',
             $order->order_number, number_format($이전), number_format($지금)
         ));
 
