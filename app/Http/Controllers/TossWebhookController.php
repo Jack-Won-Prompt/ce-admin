@@ -42,9 +42,9 @@ class TossWebhookController extends Controller
             Log::warning('[Toss] 웹훅 열쇠가 맞지 않는다', ['ip' => $request->ip()]);
             WebhookLogger::finish(
                 WebhookLogger::inbound('toss', json_decode($rawBody, true)['eventType'] ?? null, $request, false),
-                ok: false, status: 401, error: '열쇠 불일치');
+                ok: false, status: 401, error: '인증 키 불일치');
 
-            return response()->json(['message' => '열쇠가 맞지 않습니다.'], 401);
+            return response()->json(['message' => '인증 키가 일치하지 않습니다.'], 401);
         }
 
         // 서명 검증: 서명 헤더가 포함된 웹훅(payout/seller 등)에 한해, 보안키가 설정된 경우에만 수행.

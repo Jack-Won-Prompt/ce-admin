@@ -290,7 +290,7 @@
             </div>
             <button type="submit" class="btn btn-danger">결제 취소</button>
             <span style="font-size:11px;color:var(--text-muted);">
-              비우면 남은 전액을 무릅니다. 적으면 그 몫만 무르는 부분 취소입니다.
+              비우면 남은 전액을 취소합니다. 금액을 입력하면 그 금액만 취소하는 부분 취소입니다.
             </span>
           </form>
         @endif

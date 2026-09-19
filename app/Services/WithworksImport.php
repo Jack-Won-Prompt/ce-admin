@@ -66,7 +66,7 @@ class WithworksImport
      */
     public function 가져오기(string $열쇠, ?callable $알림 = null): array
     {
-        $d = self::대상[$열쇠] ?? throw new \InvalidArgumentException("모르는 갈래입니다 ({$열쇠}).");
+        $d = self::대상[$열쇠] ?? throw new \InvalidArgumentException("알 수 없는 구분입니다 ({$열쇠}).");
 
         $마지막 = $this->마지막번호($열쇠);
 

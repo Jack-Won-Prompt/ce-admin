@@ -27,7 +27,7 @@ class WithworksImportCommand extends Command
 
         foreach ($갈래들 as $열쇠) {
             if (! isset(WithworksImport::대상[$열쇠])) {
-                $this->error("모르는 갈래입니다: {$열쇠}");
+                $this->error("알 수 없는 구분입니다: {$열쇠}");
 
                 return self::FAILURE;
             }

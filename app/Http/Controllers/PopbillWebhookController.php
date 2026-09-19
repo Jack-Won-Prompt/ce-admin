@@ -67,9 +67,9 @@ class PopbillWebhookController extends Controller
             Log::warning('[팝빌 웹훅] 열쇠가 맞지 않는다', [
                 'service' => $service, 'ip' => $request->ip(),
             ]);
-            WebhookLogger::finish($기록, ok: false, status: 401, error: '열쇠 불일치');
+            WebhookLogger::finish($기록, ok: false, status: 401, error: '인증 키 불일치');
 
-            return response()->json(['message' => '열쇠가 맞지 않습니다.'], 401);
+            return response()->json(['message' => '인증 키가 일치하지 않습니다.'], 401);
         }
 
         /* 팝빌이 무엇을 어떤 이름으로 보내는지는 갈래마다 다르고, JSON 이 아니라 폼으로

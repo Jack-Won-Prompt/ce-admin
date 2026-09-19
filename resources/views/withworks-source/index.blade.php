@@ -70,10 +70,10 @@
       <table class="ws-table">
         <thead>
           <tr>
-            <th>갈래</th><th>원천</th><th>우리 표</th>
-            <th style="text-align:right;">담긴 줄</th>
+            <th>구분</th><th>원천</th><th>우리 표</th>
+            <th style="text-align:right;">저장 건수</th>
             <th style="text-align:right;">마지막 번호</th>
-            <th>마지막으로 담은 때</th><th style="width:120px;"></th>
+            <th>최종 반영 일시</th><th style="width:120px;"></th>
           </tr>
         </thead>
         <tbody>
@@ -99,9 +99,9 @@
       </table>
 
       <div class="ws-note">
-        <b>가져오기는 저장한 번호가 아니라 지금 담긴 번호로 돕니다.</b> 번호를 고쳤으면
-        먼저 ［저장］을 누르십시오. 첫 판처럼 열 만 줄을 담을 때는 명령으로 하는 편이
-        낫습니다 — <span style="font-family:monospace;">php artisan withworks:import</span>
+        <b>가져오기는 저장된 번호가 아니라 현재 반영된 번호를 기준으로 실행됩니다.</b> 번호를 수정했다면
+        먼저 ［저장］을 누르십시오. 최초 적재처럼 대량 건을 처리할 때는 명령으로 실행하는 것을
+        권장합니다 — <span style="font-family:monospace;">php artisan withworks:import</span>
       </div>
     </div>
 
