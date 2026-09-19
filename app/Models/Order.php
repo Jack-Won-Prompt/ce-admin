@@ -144,6 +144,23 @@ class Order extends Model
            드러난다. 새 주문을 못 세워 번호가 null 이 되는 길도 마찬가지다. */
         if ($this->withworks_so_no !== $새번호) {
             $this->withworks_so_id = $새번호 ? ($새id ?: null) : null;
+
+            /* 상태ㆍ출고 정보도 함께 비운다 (2026-09-20 시험에서 드러남).
+
+               번호만 갈아타고 상태를 두었더니, 새로 세운 주문(등록·50)에 옛 주문의
+               확정(95)이 그대로 남았다. WithworksConfirm 은 95ㆍ99 면 창고를 부르지
+               않으므로, 재결제가 들어와도 「창고 판매주문은 이미 확정 입니다」로
+               지나가 새 주문이 영영 확정되지 않는다.
+
+               출고 번호ㆍ운송장도 옛 주문의 것이라 함께 지운다 — 남겨 두면 새
+               주문에 옛 운송장이 붙어 배송 안내가 엉뚱한 번호로 나간다. */
+            foreach ([
+                'withworks_status', 'withworks_status_label', 'withworks_status_at',
+                'withworks_ship_no', 'withworks_ship_status', 'withworks_ship_status_label',
+                'withworks_tracking_no', 'withworks_ship_at',
+            ] as $칸) {
+                $this->{$칸} = null;
+            }
         }
 
         $this->withworks_so_no = $새번호;
