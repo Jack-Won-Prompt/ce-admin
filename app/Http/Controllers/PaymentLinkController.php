@@ -155,7 +155,7 @@ class PaymentLinkController extends Controller
 
         $paymentLink->update(['status' => 'cancelled']);
 
-        return response()->json(['success' => true, 'message' => '닫았습니다.', 'link' => $this->row($paymentLink)]);
+        return response()->json(['success' => true, 'message' => '결제 요청을 취소했습니다.', 'link' => $this->row($paymentLink)]);
     }
 
     // ── 환자가 여는 자리 ──────────────────────────────────
@@ -450,6 +450,19 @@ class PaymentLinkController extends Controller
 
     private function row(PaymentLink $l): array
     {
+        /* 결제된 줄에는 **실제로 오간 돈**을 함께 싣는다 (2026-09-19 지시).
+
+           여태 이 자리가 링크 금액과 발송 시각만 내보냈다. 결제가 언제 끝났는지,
+           얼마가 들어왔는지, 뒤에 취소되었는지는 토스 결제 줄에만 있어 화면
+           어디에서도 볼 수 없었다. */
+        $결제 = $l->payment_key
+            ? \App\Models\TossPayment::where('payment_key', $l->payment_key)->first()
+            : $l->order?->tossPayment;
+
+        $받은돈 = $결제 && $결제->is_done
+            ? max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0))
+            : null;
+
         return [
             'id'      => $l->id,
             'method'  => $l->method_label,
@@ -457,7 +470,12 @@ class PaymentLinkController extends Controller
             'status'  => $l->status,
             'status_label' => $l->status_label,
             'tone'    => $l->status_tone,
-            'channel' => ['alimtalk' => '알림톡', 'sms' => '문자'][$l->channel] ?? '-',
+            /* 둘 다 나간 건은 둘 다 적는다 — 링크에 'alimtalk,sms' 로 담긴다 */
+            'channel' => $l->channel
+                ? implode('ㆍ', array_map(
+                    [\App\Services\PaymentLinkService::class, '채널이름'],
+                    array_filter(explode(',', $l->channel))))
+                : '-',
             'receiver' => $l->receiver,
             'sent_at' => $l->sent_at?->format('Y-m-d H:i'),
             'paid_at' => $l->paid_at?->format('Y-m-d H:i'),
@@ -465,6 +483,17 @@ class PaymentLinkController extends Controller
             'creator' => $l->creator?->name,
             'error'   => $l->error,
             'open'    => $l->is_open,
+
+            // ── 결제 내용 — 화면이 그대로 보여 준다 ──────────────────
+            'paid_amount'   => $받은돈,
+            'paid_method'   => $결제?->method_label ?: null,
+            'deposited_at'  => $결제?->deposited_at?->format('Y-m-d H:i'),
+            'cancelled_at'  => $결제?->canceled_at?->format('Y-m-d H:i'),
+            'cancel_amount' => (int) ($결제?->cancel_amount ?? 0) ?: null,
+            'cancel_reason' => $결제?->cancel_reason ?: null,
+            'va_bank'       => $결제?->bank_name ?: null,
+            'va_account'    => $결제?->account_number ?: null,
+            'va_due'        => $결제?->due_date?->format('Y-m-d H:i'),
         ];
     }
 }

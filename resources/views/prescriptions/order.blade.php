@@ -12296,31 +12296,51 @@ window.HELP_TOUR_STEPS = [
     const box = document.getElementById('payHistory');
     if (!box) return;
     if (!PAY_INDEX_URL) {
-      box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">주문을 만들면 이력이 쌓입니다.</div>';
+      box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">주문 생성 후 발송 이력이 표시됩니다.</div>';
       return;
     }
     try {
       const res  = await apiRequest(PAY_INDEX_URL, 'GET');
       const rows = res.rows ?? [];
       if (!rows.length) {
-        box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">보낸 것이 없습니다.</div>';
+        box.innerHTML = '<div style="padding:10px;color:var(--text-muted);text-align:center;">발송 이력이 없습니다.</div>';
         return;
       }
+      /* 결제 내용을 한 줄 더 붙인다 (2026-09-19 지시).
+
+         여태 첫 줄(요청 내용)만 보여 주어, 결제가 언제 끝났는지ㆍ얼마가 들어왔는지ㆍ
+         뒤에 취소되었는지를 이 화면에서 볼 수 없었다. 서버는 그 값을 내려보내는데
+         화면이 쓰지 않았다. */
+      const 결제줄 = r => {
+        const 조각 = [];
+        if (r.paid_at)       조각.push(`결제 ${escHtml(r.paid_at)}`);
+        else if (r.deposited_at) 조각.push(`입금 ${escHtml(r.deposited_at)}`);
+        if (r.paid_amount)   조각.push(`${Number(r.paid_amount).toLocaleString()}원`);
+        if (r.paid_method)   조각.push(escHtml(r.paid_method));
+        if (r.va_bank && r.va_account) 조각.push(`${escHtml(r.va_bank)} ${escHtml(r.va_account)}`);
+        if (r.cancelled_at)  조각.push(`취소 ${escHtml(r.cancelled_at)}`
+                                      + (r.cancel_amount ? ` ${Number(r.cancel_amount).toLocaleString()}원` : '')
+                                      + (r.cancel_reason ? ` (${escHtml(r.cancel_reason)})` : ''));
+        if (!조각.length) return '';
+        return `<div style="padding:0 10px 7px 10px;font-size:10px;color:var(--text-secondary);
+                            border-bottom:1px solid var(--border-light);">${조각.join(' · ')}</div>`;
+      };
+
       box.innerHTML = rows.map(r => `
-        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border-light);">
+        <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;${결제줄(r) ? '' : 'border-bottom:1px solid var(--border-light);'}">
           <span style="font-weight:700;width:56px;flex-shrink:0;">${escHtml(r.method)}</span>
           <span style="width:64px;flex-shrink:0;text-align:right;">${Number(r.amount).toLocaleString()}원</span>
           <span style="flex:1;min-width:0;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            ${escHtml(r.sent_at || '-')} · ${escHtml(r.channel)}${r.error ? ' · ' + escHtml(r.error) : ''}
+            ${escHtml(r.sent_at || '-')} · ${escHtml(r.channel)}${r.receiver ? ' · ' + escHtml(r.receiver) : ''}${r.error ? ' · ' + escHtml(r.error) : ''}
           </span>
           <span style="font-weight:700;color:${r.status === 'paid' ? 'var(--primary)' : (r.status === 'failed' ? 'var(--danger)' : 'var(--gray-700)')};">
             ${escHtml(r.status_label)}
           </span>
-          ${r.open ? `<button type="button" class="rx-tpl-mini" onclick="copyPayLink('${escHtml(r.url)}')">주소</button>
+          ${r.open ? `<button type="button" class="rx-tpl-mini" onclick="copyPayLink('${escHtml(r.url)}')">링크 복사</button>
                       <a class="rx-tpl-mini" href="${escHtml(r.url)}" target="_blank" rel="noopener"
                          style="text-decoration:none;display:inline-flex;align-items:center;">열기</a>
-                      <button type="button" class="rx-tpl-mini" onclick="cancelPayLink(${r.id})">닫기</button>` : ''}
-        </div>`).join('');
+                      <button type="button" class="rx-tpl-mini" onclick="cancelPayLink(${r.id})">취소</button>` : ''}
+        </div>${결제줄(r)}`).join('');
     } catch (e) {
       box.innerHTML = '<div style="padding:10px;color:var(--danger);text-align:center;">이력을 불러오지 못했습니다.</div>';
     }
@@ -12329,19 +12349,19 @@ window.HELP_TOUR_STEPS = [
   /* 문자가 막히는 환자도 있다 — 주소를 복사해 다른 길로 보낼 수 있게 둔다 */
   function copyPayLink(url) {
     navigator.clipboard?.writeText(url)
-      .then(() => showToast('결제 주소를 복사했습니다.', 'success'))
+      .then(() => showToast('결제 링크를 복사했습니다.', 'success'))
       .catch(() => showToast(url, 'info', 8000));
   }
 
   async function cancelPayLink(id) {
-    if (!await ceConfirm('이 결제 요청을 닫습니다. 환자가 주소를 눌러도 열리지 않습니다.',
-                         { tone: 'warning', confirmText: '닫기' })) return;
+    if (!await ceConfirm('결제 요청을 취소합니다. 고객이 링크를 열어도 결제할 수 없습니다.',
+                         { tone: 'warning', confirmText: '취소' })) return;
     try {
       const res = await apiRequest(`${PAY_CANCEL_URL}/${id}/cancel`, 'POST');
-      showToast(res.message || '닫았습니다.', res.success ? 'success' : 'danger');
+      showToast(res.message || '결제 요청을 취소했습니다.', res.success ? 'success' : 'danger');
       loadPaymentLinks();
     } catch (e) {
-      showToast('닫지 못했습니다.', 'danger');
+      showToast('결제 요청을 취소하지 못했습니다.', 'danger');
     }
   }
 

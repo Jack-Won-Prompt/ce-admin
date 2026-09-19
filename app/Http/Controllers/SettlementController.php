@@ -194,6 +194,9 @@ class SettlementController extends Controller
                 'deposit'      => $order->deposit_confirmed_at !== null
                                     ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
                                     : ($tp?->is_done ? number_format($tp->amount ?? 0) : '-'),
+                /* 언제 들어왔는가 — 사람이 확인한 날이 먼저고, 없으면 토스가 알려 준 때다 */
+                'deposited_at' => $order->deposit_confirmed_at?->format('Y-m-d H:i')
+                                    ?? $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
                 /* 「입금 확인」 단추가 무엇을 할지 가리는 데 쓴다(컬럼 아님) */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
@@ -244,6 +247,10 @@ class SettlementController extends Controller
                이 건의 값은 뒤의 「총 금액」ㆍ「본인 부담금」ㆍ「기관 부담금」이 말한다. */
             ['header' => '단가',        'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
             ['header' => '입금액',      'name' => 'deposit',      'width' => 100, 'align' => 'right'],
+            /* 입금 일시 — 여태 이 목록에는 금액만 있었다 (2026-09-19 지시).
+               언제 들어왔는지는 가상계좌 목록에만 있어, 정산 담당자가 두 화면을
+               오가며 맞춰 보아야 했다. */
+            ['header' => '입금일시',    'name' => 'deposited_at', 'width' => 140, 'align' => 'center', 'sortable' => true],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
             ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
@@ -295,6 +302,19 @@ class SettlementController extends Controller
                 'due'        => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
                 'deposited'  => $order->deposit_confirmed_at?->format('Y-m-d H:i')
                                 ?? $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
+                /* 얼마가 들어왔는가 — 이 목록에는 시각만 있고 금액이 없었다
+                   (2026-09-19 지시). 취소된 건은 취소액을 뺀 남은 금액을 적는다. */
+                'deposit_amount' => $order->deposit_confirmed_at !== null
+                    ? number_format((int) ($order->deposit_amount ?? $order->expectedDeposit()))
+                    : ($tp?->is_done
+                        ? number_format(max(0, (int) $tp->amount - (int) ($tp->cancel_amount ?? 0)))
+                        : '-'),
+                /* 취소된 결제 — 언제ㆍ얼마를ㆍ왜 물렸는지 한 칸에 적는다 */
+                'cancelled'  => $tp?->canceled_at
+                    ? $tp->canceled_at->format('Y-m-d H:i')
+                      . ' · ' . number_format((int) ($tp->cancel_amount ?? 0)) . '원'
+                      . ($tp->cancel_reason ? ' · ' . $tp->cancel_reason : '')
+                    : '-',
                 /* 누가 세웠는지 — 사람이 세운 것은 그렇다고 적어 둔다 */
                 'deposit_by' => $order->deposit_confirmed_at ? '담당자 확인' : ($tp?->is_done ? '토스' : '-'),
                 /* 아래 셋은 컬럼이 아니다 — 「입금 확인」 단추가 무엇을 할지 가린다 */
@@ -315,6 +335,9 @@ class SettlementController extends Controller
             ['header' => '입금 상태',     'name' => 'va_status',  'width' => 100, 'align' => 'center', 'sortable' => true],
             ['header' => '만료일시',      'name' => 'due',        'width' => 140, 'align' => 'center'],
             ['header' => '입금확인일',    'name' => 'deposited',  'width' => 140, 'align' => 'center'],
+            /* 금액과 취소 내용 — 여태 이 목록에는 시각만 있었다 (2026-09-19 지시) */
+            ['header' => '입금금액',      'name' => 'deposit_amount', 'width' => 110, 'align' => 'right'],
+            ['header' => '결제 취소',     'name' => 'cancelled',  'width' => 240],
             ['header' => '확인',        'name' => 'deposit_by', 'width' => 90,  'align' => 'center'],
         ];
 
