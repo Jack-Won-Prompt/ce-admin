@@ -4029,8 +4029,15 @@ class PrescriptionController extends Controller
      */
     public function issueConsent(Prescription $prescription, string $mobile, string $patientName): \Illuminate\Http\JsonResponse
     {
+        /* 링크가 열려 있는 동안은 설정이 정한다 (2026-09-19).
+
+           설정(delegation_sign.link_minutes)과 그것을 읽는 자리
+           (DelegationSignController::유효분)가 진작 있었는데, 정작 여기는 30을
+           글자로 박아 두어 설정을 바꿔도 이 길로 나간 링크만 30분이었다.
+           문자에 적는 「○분 유효」도 같은 값을 쓴다 — 따로 적으면 화면이 거짓말을 한다. */
+        $유효분     = \App\Http\Controllers\DelegationSignController::유효분();
         $token       = \Illuminate\Support\Str::random(24);
-        $expiresAt   = now()->addMinutes(30);
+        $expiresAt   = now()->addMinutes($유효분);
 
         /* 미성년자는 혼자 위임할 수 없다. 서명 화면에서 법정대리인의 이름과 서명을 함께 받는다.
            나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
@@ -4066,7 +4073,7 @@ class PrescriptionController extends Controller
         $url = $baseUrl . '/consent/' . $token;
 
         // URL이 localhost인 경우 링크가 클릭되지 않을 수 있음 — 운영 서버 URL로 변경 필요
-        $message = "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(30분 유효):\n{$url}";
+        $message = "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$유효분}분 유효):\n{$url}";
 
         try {
             /* 발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
@@ -4123,8 +4130,10 @@ class PrescriptionController extends Controller
      */
     public function issueIdCard(Prescription $prescription, string $mobile, string $patientName): \Illuminate\Http\JsonResponse
     {
+        /* 신분증만 받는 링크도 같은 설정을 따른다 (2026-09-19) */
+        $유효분   = \App\Http\Controllers\DelegationSignController::유효분();
         $token     = \Illuminate\Support\Str::random(24);
-        $expiresAt = now()->addMinutes(30);
+        $expiresAt = now()->addMinutes($유효분);
 
         /* 나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
         $masked  = $prescription->resident_no_ocr_masked ?: $prescription->patient?->masked_resident_no;
@@ -4152,7 +4161,7 @@ class PrescriptionController extends Controller
         }
         $url = $baseUrl . '/consent/' . $token;
 
-        $message = "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(30분 유효):\n{$url}";
+        $message = "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}";
 
         try {
             $res = $this->sender->sendBulk('sms',

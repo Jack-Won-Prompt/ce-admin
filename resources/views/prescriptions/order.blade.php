@@ -1268,7 +1268,7 @@ $calcDeposit  = $calcCopay;
             <p id="consentModalDesc" style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
               환자에게 <strong>서류 확인 및 전자서명</strong> 링크를 SMS로 발송합니다.<br>
               환자는 로그인 없이 서명 페이지에서 이름 확인 후 서명할 수 있습니다.<br>
-              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 {{ \App\Http\Controllers\DelegationSignController::유효분() }}분간만 유효합니다.</span>
             </p>
             <div>
               <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
@@ -1425,7 +1425,7 @@ $calcDeposit  = $calcCopay;
             <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.6;">
               환자에게 <strong>신분증 제출</strong> 링크를 SMS로 발송합니다.<br>
               서명이나 개인정보 동의는 다시 받지 않습니다 — 사진만 올립니다.<br>
-              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 30분간만 유효합니다.</span>
+              <span style="color:var(--warning);font-weight:700;">링크는 발송 후 {{ \App\Http\Controllers\DelegationSignController::유효분() }}분간만 유효합니다.</span>
             </p>
             <div>
               <label style="font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;display:block;">수신 번호</label>
@@ -14426,6 +14426,10 @@ window.HELP_TOUR_STEPS = [
   @endif
 
   // ── 위임동의 SMS 발송 ─────────────────────────────────
+  /* 링크가 열려 있는 동안 — 설정 한 곳에서 온다. 미리보기 글이 실제로 나가는
+     문자와 어긋나지 않도록 서버가 준 값을 그대로 쓴다 (2026-09-19). */
+  const LINK_MINUTES = @json(\App\Http\Controllers\DelegationSignController::유효분());
+
   const CONSENT_SMS_URL    = @json(route('prescriptions.consentSms', $prescription));
 
   const CONSENT_STATUS_URL = @json(route('prescriptions.consentStatus', $prescription));
@@ -14610,7 +14614,7 @@ window.HELP_TOUR_STEPS = [
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const el = document.getElementById('idCardMsgPreview');
     if (el) {
-      el.textContent = `[콜로플라스트] ${name}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(30분 유효):\n${baseUrl}/consent/(링크)`;
+      el.textContent = `[콜로플라스트] ${name}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(${LINK_MINUTES}분 유효):\n${baseUrl}/consent/(링크)`;
     }
   }
 
@@ -14763,7 +14767,7 @@ window.HELP_TOUR_STEPS = [
     const name    = (nameEl?.value ?? '').trim() || (nameEl?.placeholder ?? '').trim() || '환자';
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const mockUrl = baseUrl + '/consent/(링크)';
-    const preview = `[콜로플라스트] ${name}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(30분 유효):\n${mockUrl}`;
+    const preview = `[콜로플라스트] ${name}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(${LINK_MINUTES}분 유효):\n${mockUrl}`;
     const el = document.getElementById('consentMsgPreview');
     if (el) el.textContent = preview;
   }

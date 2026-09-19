@@ -1004,7 +1004,7 @@ const timer = setInterval(tick, 1000);
 
 function showExpired() {
   clearInterval(timer);
-  showResult('⏰', '링크 만료', '서명 링크의 유효 시간(30분)이 지났습니다.\n담당자에게 재발송을 요청해 주십시오.', '#f59e0b');
+  showResult('⏰', '링크 만료', '서명 링크의 유효 시간({{ \App\Http\Controllers\DelegationSignController::유효분() }}분)이 지났습니다.\n담당자에게 재발송을 요청해 주십시오.', '#f59e0b');
 }
 
 /* ── 서명 패드 ────────────────────────────────────────── */
