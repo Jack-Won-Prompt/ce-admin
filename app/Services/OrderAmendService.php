@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\Log;
  *
  *   none     아직 안 넘겼다 — 창고에 할 말이 없다. 우리 줄만 고친다.
  *   new      출고가 신규다 — 그 자리에서 취소하고 새로 세운다. 기다릴 것이 없다.
- *   working  할당ㆍ피킹이 걸렸다 — eud_cancel_yn='Y' 를 보내 두고 기다린다.
- *            창고가 되돌리는 그 순간 저쪽이 스스로 취소까지 잇고, 우리는 그
- *            웹훅을 받아 재등록한다(WithworksWebhookController).
+ *   working  할당ㆍ피킹이 걸렸다 — eud_cancel_yn='Y' 로 취소를 청하고, **기다리지
+ *            않고** 정정된 판매주문을 곧바로 새로 등록한다(2026-09-20 지시).
+ *            옛 주문의 취소는 창고가 할당을 되돌리는 대로 저쪽이 스스로 잇는다.
  *   shipped  나갔다 — 정정이 아니라 교환ㆍ반품이 할 일이다.
  *
  * **확정은 결제가 확인된 뒤에 한다** (2026-09-19 지시).
@@ -81,7 +81,17 @@ class OrderAmendService
             return ['ok' => true, 'so_no' => null, 'state' => null, 'message' => ''];
         }
 
-        /* ── 할당ㆍ피킹이 걸린 건 — 청해 두고 기다린다 ─────────────── */
+        /* ── 할당ㆍ피킹이 걸린 건 — 취소는 청하고, 새 주문은 곧바로 세운다 ───
+
+           여태는 취소를 청해 두고 **창고가 되돌릴 때까지 기다렸다가** 새 판매주문을
+           세웠다. 그래서 창고가 며칠 손대지 않으면 그동안 우리 쪽에는 정정된 주문이
+           아무 데도 없었다 — 고객에게는 바뀐 금액의 결제 요청이 이미 나간 뒤인데
+           창고에는 옛 주문만 서 있었다.
+
+           둘은 서로를 기다릴 일이 아니다 (2026-09-20 지시). 취소 요청은 요청대로
+           보내고, 정정된 판매주문은 그 자리에서 따로 등록한다. 옛 주문의 취소는
+           창고가 되돌리는 대로 저쪽이 스스로 잇고, 그때 오는 so.cancelled 는 우리
+           줄이 이미 새 번호를 보고 있으므로 물러난판매번호인가() 가 걸러 준다. */
         if ($단계 === 'working') {
             $결과 = $this->취소요청($order);
 
@@ -89,26 +99,17 @@ class OrderAmendService
                 return ['ok' => false, 'so_no' => null, 'state' => null, 'message' => $결과['message']];
             }
 
-            /* 되돌려진 뒤 무엇으로 세울지를 들고 있는다. 지금 화면에 있는 값이
-               정본이다 — 며칠 뒤에 되돌아와도 그때 적은 대로 세워야 한다. */
-            $order->forceFill([
-                'amend_state'        => Order::AMEND_REQUESTED,
-                'amend_payload'      => $창고내용,
-                'amend_requested_at' => now(),
-                'amend_requested_by' => Auth::id(),
-                'amend_note'         => null,
-            ])->save();
+            activity()->causedBy(Auth::user())->performedOn($order)->log(
+                "주문 정정 — 창고에 취소를 요청했습니다 ({$order->withworks_so_no})"
+            );
 
-            activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("주문 정정 요청 ({$order->order_number}) — 창고가 할당ㆍ피킹을 취소하면 새 판매주문을 등록합니다");
+            /* 옛 주문은 아직 살아 있다 — so_cancel 을 부르면 저쪽이 거절한다.
+               취소를 건너뛰고 새 주문만 세운다. */
+            $세운것 = $this->갈아세우기($order, $창고내용, 옛것취소생략: true);
 
-            return [
-                'ok'      => true,
-                'so_no'   => $order->withworks_so_no,
-                'state'   => Order::AMEND_REQUESTED,
-                'message' => '창고에 취소를 요청했습니다 — 할당ㆍ피킹이 취소되면 '
-                           . '새 판매주문이 자동으로 등록됩니다.',
-            ];
+            $세운것['message'] = '창고에 취소를 요청했습니다. ' . $세운것['message'];
+
+            return $세운것;
         }
 
         /* ── 출고가 신규인 건 — 그 자리에서 갈아 세운다 ─────────────── */
@@ -122,7 +123,7 @@ class OrderAmendService
      *
      * @return array{ok:bool, message:string, so_no:?string, state:?string}
      */
-    public function 갈아세우기(Order $order, array $창고내용): array
+    public function 갈아세우기(Order $order, array $창고내용, bool $옛것취소생략 = false): array
     {
         $저쪽 = $this->저쪽();
 
@@ -133,8 +134,17 @@ class OrderAmendService
         $옛번호 = $order->withworks_so_no;
 
         /* ① 원 판매주문을 취소한다. 이미 취소됐으면(웹훅으로 이어 온 길) 저쪽이
-              멱등으로 성공을 돌려준다 — 그 답도 성공으로 받는다. */
-        if ($옛번호) {
+              멱등으로 성공을 돌려준다 — 그 답도 성공으로 받는다.
+
+              할당ㆍ피킹이 걸린 건은 건너뛴다($옛것취소생략). 옛 주문이 아직 살아
+              있어 저쪽이 거절하기 때문이다 — 그 건의 취소는 창고가 할당을 되돌리는
+              대로 저쪽이 스스로 잇는다. 우리는 취소를 청해 두었을 뿐이다. */
+        if ($옛번호 && $옛것취소생략) {
+            /* 취소는 건너뛰되 옛 번호는 이력에 적어 둔다 — 나중에 닿는
+               so.cancelled 가 지금 주문의 사건으로 읽히면 안 된다. */
+            $order->옛번호남기기($옛번호);
+            $order->save();
+        } elseif ($옛번호) {
             /* 취소를 부르기 전에 갈아 세우는 중임을 적어 둔다 (2026-09-17 시험).
 
                저쪽이 보내는 so.cancelled 는 옛 번호를 싣고 오는데, 그 사건이 닿는
@@ -167,23 +177,32 @@ class OrderAmendService
         $세움 = $this->부르기('post', 'so_store', $창고내용);
 
         if (! $세움['ok']) {
-            /* 옛것은 이미 취소됐는데 새것이 서지 않았다. 창고에 아무것도 없는
-               상태이므로 그 사실을 분명히 알린다 — 조용히 넘기면 출고가 사라진
-               줄 아무도 모른다. */
-            Log::error('[주문 정정] 새 판매주문을 세우지 못했습니다', [
+            /* 새 주문이 서지 않았다. 옛 주문을 이미 취소한 길이면 창고에 아무것도
+               없는 상태이므로 그 사실을 분명히 알린다 — 조용히 넘기면 출고가
+               사라진 줄 아무도 모른다. 취소를 청해 두기만 한 길이면 옛 주문은
+               아직 살아 있다. 두 경우의 안내가 달라야 담당자가 다음에 할 일을
+               고르지 않는다. */
+            Log::error('[주문 정정] 새 판매주문을 등록하지 못했습니다', [
                 'order' => $order->order_number, 'old_so_no' => $옛번호,
-                'message' => $세움['message'],
+                '옛것취소생략' => $옛것취소생략, 'message' => $세움['message'],
             ]);
 
-            $order->판매번호갈아타기(null);
+            if (! $옛것취소생략) {
+                $order->판매번호갈아타기(null);
+            }
+
             $order->forceFill([
                 'amend_state' => null,
-                'amend_note'  => '새 판매주문을 세우지 못했습니다 — ' . $세움['message'],
+                'amend_note'  => '새 판매주문을 등록하지 못했습니다 — ' . $세움['message'],
             ])->save();
 
             return ['ok' => false, 'so_no' => null, 'state' => null,
-                    'message' => '원 판매주문은 취소했으나 새 주문을 생성하지 못했습니다 — '
-                               . $세움['message'] . ' 창고에 주문이 없는 상태입니다. 다시 연계해 주십시오.'];
+                    'message' => $옛것취소생략
+                        ? '새 판매주문을 등록하지 못했습니다 — ' . $세움['message']
+                          . ' 원 판매주문(' . $옛번호 . ')은 취소 요청만 보낸 상태로 남아 있습니다.'
+                          . ' 「주문 정정」을 다시 실행해 주십시오.'
+                        : '원 판매주문은 취소했으나 새 주문을 등록하지 못했습니다 — '
+                          . $세움['message'] . ' 창고에 주문이 없는 상태입니다. 다시 연계해 주십시오.'];
         }
 
         $새번호 = $세움['body']['result']['so_no'] ?? null;
