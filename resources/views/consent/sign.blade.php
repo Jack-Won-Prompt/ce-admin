@@ -1050,6 +1050,16 @@ function 깨우기(wrap, ph, 안내) {
   return true;
 }
 
+/* 칸 바깥을 건드리면 다시 잠근다 (2026-09-19).
+
+   서명을 마친 뒤에도 깨어 있으면, 그 칸 위를 지나는 손짓이 또 그림이 되어
+   아래로 내려가지 못한다. 바깥을 한 번 건드리는 것으로 족하다. */
+document.addEventListener('touchstart', (e) => {
+  document.querySelectorAll('.sig-wrap.armed').forEach(w => {
+    if (! w.contains(e.target)) w.classList.remove('armed');
+  });
+}, { passive: true });
+
 function onStart(e) {
   /* 손가락이고 아직 깨우기 전이면, 이 손짓은 깨우는 데만 쓴다 */
   if (e.touches && 깨우기(sigWrap, placeholder, '이제 이 곳에 서명하십시오')) return;
