@@ -286,8 +286,15 @@ class OrderCancelService
      */
     private function 링크다시보내기(Order $order, int $지금, bool $무를것없어도 = false): string
     {
+        /* 아직 낼 수 있는 링크를 모두 거둔다 — sent 와 **failed** 다 (2026-09-19).
+
+           문자가 못 나간 링크(failed)도 주소는 살아 있어 환자가 누르면 낼 수 있다
+           (PaymentLink::is_open). 여태 sent 만 거두어서, 정정으로 금액이 바뀌어도
+           옛 금액의 failed 링크가 그대로 살아 있었다 — 그 링크로 내면 바뀐 금액과
+           어긋난 돈이 들어온다. 게다가 살아 있는 것이 없다고 보아 새 링크도 만들지
+           않아, 정정 뒤에 낼 길이 아예 사라졌다. */
         $살아있던것 = PaymentLink::where('order_id', $order->id)
-            ->where('status', 'sent')->latest('id')->get();
+            ->whereIn('status', ['sent', 'failed'])->latest('id')->get();
 
         if ($살아있던것->isEmpty() && ! $무를것없어도) {
             return '';
@@ -345,9 +352,12 @@ class OrderCancelService
         }
 
         /* 아직 받기 전이면 보낸 링크를 해지한다 — 취소한 건의 링크가 살아 있으면
-           환자가 그 사이에 결제해 버린다. */
+           환자가 그 사이에 결제해 버린다.
+
+           문자가 못 나간 것(failed)도 함께 거둔다 (2026-09-19). 주소는 살아 있어
+           누르면 낼 수 있기 때문이다(PaymentLink::is_open). */
         $해지 = PaymentLink::where('order_id', $order->id)
-            ->where('status', 'sent')
+            ->whereIn('status', ['sent', 'failed'])
             ->update(['status' => 'cancelled']);
 
         if ($해지) {
