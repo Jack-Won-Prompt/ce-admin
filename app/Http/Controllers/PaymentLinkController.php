@@ -463,6 +463,24 @@ class PaymentLinkController extends Controller
             ? max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0))
             : null;
 
+        /* 담당자가 손으로 확인한 입금도 함께 싣는다 (2026-09-19 시험에서 드러남).
+
+           가상계좌ㆍ무통장입금은 토스 승인이 없어 위 값이 비어 있다. 그런 건은 돈이
+           들어왔는데도 이 줄에 금액과 시각이 하나도 뜨지 않았다 — 정작 사람이
+           확인한 건이라 꼭 보여야 하는 자리다. 기록은 주문에 있다.
+
+           이 링크로 받은 건인지는 가릴 수 없으므로(사람이 통장을 보고 누른다) 이
+           주문의 마지막 살아 있는 링크에만 적는다. */
+        $order = $l->order;
+        $손확인 = null;
+
+        if (! $받은돈 && $order?->deposit_confirmed_at && $l->status !== 'cancelled') {
+            $손확인 = [
+                'amount' => (int) ($order->deposit_amount ?? $order->expectedDeposit()),
+                'at'     => $order->deposit_confirmed_at->format('Y-m-d H:i'),
+            ];
+        }
+
         return [
             'id'      => $l->id,
             'method'  => $l->method_label,
@@ -485,9 +503,9 @@ class PaymentLinkController extends Controller
             'open'    => $l->is_open,
 
             // ── 결제 내용 — 화면이 그대로 보여 준다 ──────────────────
-            'paid_amount'   => $받은돈,
-            'paid_method'   => $결제?->method_label ?: null,
-            'deposited_at'  => $결제?->deposited_at?->format('Y-m-d H:i'),
+            'paid_amount'   => $받은돈 ?? $손확인['amount'] ?? null,
+            'paid_method'   => $결제?->method_label ?: ($손확인 ? '담당자 확인' : null),
+            'deposited_at'  => $결제?->deposited_at?->format('Y-m-d H:i') ?? $손확인['at'] ?? null,
             'cancelled_at'  => $결제?->canceled_at?->format('Y-m-d H:i'),
             'cancel_amount' => (int) ($결제?->cancel_amount ?? 0) ?: null,
             'cancel_reason' => $결제?->cancel_reason ?: null,
