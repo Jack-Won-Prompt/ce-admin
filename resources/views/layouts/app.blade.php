@@ -1752,20 +1752,22 @@
         @endif
 
         {{-- ══ 지원 ══ --}}
-        @if($vis('institutional-notices', 'notices', 'service-requests'))
+        {{-- 기관 공지사항은 이 묶음이 설지를 가리는 자리에서도 뺐다 (2026-09-20 지시).
+             남겨 두면 그 하나만 권한이 있는 사람에게 빈 「지원」 묶음이 선다. --}}
+        @if($vis('notices', 'service-requests'))
         <div class="menu-group" data-menu-group="support">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>지원</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
         </button>
         <div class="menu-group-items">
-        @if($vis('institutional-notices'))
-        <div class="menu-item {{ request()->routeIs('institutional-notices*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="police-station" href="{{ route('institutional-notices.index') }}" data-title="기관 공지사항">
-            @dsicon('police-station', 'ds-icon menu-icon')
-            <span>기관 공지사항</span>
-          </a>
-        </div>
-        @endif
+        {{-- 기관 공지사항 — 감춘다 (2026-09-20 지시).
+
+             표(institutional_notices)가 운영에 없다. 만드는 장은 Ran 으로 적혀
+             있는데 실제 표가 없어, 이 메뉴를 열면 그 자리에서 깨진다. 표를 세울지는
+             따로 정하기로 했고, 그때까지 들어갈 길을 막는다.
+
+             화면과 권한 항목만 감춘다 — 길(route)과 코드는 그대로 둔다. 지우면
+             표를 세운 뒤 되살리는 데 더 큰 품이 든다. --}}
         @if($vis('notices'))
         <div class="menu-item {{ request()->routeIs('notices*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="notification-calendar" href="{{ route('notices.index') }}" data-title="공지사항">

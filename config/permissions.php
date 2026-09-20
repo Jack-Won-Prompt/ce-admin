@@ -249,12 +249,18 @@ return [
         ],
 
         // ── 지원 ────────────────────────────────────────────────
-        'institutional-notices' => [
-            'label'   => '기관 공지사항',
-            'group'   => 'support',
-            'routes'  => ['institutional-notices'],
-            'actions' => ['view'],
-        ],
+        /* 걷어낸 것 — 기관 공지사항 (2026-09-20 지시).
+
+           표(institutional_notices)가 운영에 없어 메뉴를 열면 깨진다. 권한 화면에
+           남겨 두면 담당자가 켜 줄 수 있는 자리로 보이므로 함께 뺀다. 표를 세우기로
+           하면 이 묶음을 그대로 되살린다 —
+
+             'institutional-notices' => [
+                 'label'   => '기관 공지사항',
+                 'group'   => 'support',
+                 'routes'  => ['institutional-notices'],
+                 'actions' => ['view'],
+             ], */
         'notices' => [
             'label'   => '공지사항',
             'group'   => 'support',
