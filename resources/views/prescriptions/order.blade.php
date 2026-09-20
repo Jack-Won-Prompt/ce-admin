@@ -15871,9 +15871,10 @@ window.HELP_TOUR_STEPS = [
   }
 
   function openCashReceiptModal(triggerEl) {
-    const savedId   = @json($prescription->order?->cash_receipt_identifier ?? '');
-    const savedAmt  = {{ (int)($prescription->order?->cash_receipt_amount ?? 0) }};
-    const savedType = @json($prescription->order?->cash_receipt_type ?? '');
+    const savedId     = @json($prescription->order?->cash_receipt_identifier ?? '');
+    const savedAmt    = {{ (int)($prescription->order?->cash_receipt_amount ?? 0) }};
+    const savedType   = @json($prescription->order?->cash_receipt_type ?? '');
+    const savedStatus = @json($prescription->order?->cash_receipt_status ?? '');
 
     const panelCrNo     = (document.getElementById('f-cash-receipt')?.value ?? '').trim();
     const currentMobile = (document.getElementById('f-mobile')?.value ?? '').trim();
@@ -15883,7 +15884,14 @@ window.HELP_TOUR_STEPS = [
     /* 세금계산서와 같이 청구전략이 정한 몫으로 연다. 지금은 현금영수증이 나가는
        전략이 모두 100% 라 본인부담금과 같지만, 비율이 바뀌면 두 길이 갈라진다. */
     const livecopay = items.reduce((s, i) => s + (Number(i.patient_copay) || 0), 0);
-    const crAmtRaw = savedAmt || bsAmountFor('cash_receipt') || livecopay || _PATIENT_COPAY || '';
+    /* 취소된 뒤에는 그때 낸 금액을 쓰지 않는다 (2026-09-20 시험에서 드러남).
+
+       주문 정정으로 금액이 바뀌면 옛 현금영수증은 취소되는데, 이 창은 그때 낸
+       금액을 그대로 띄웠다 — 담당자가 그대로 눌러 옛 금액으로 다시 내게 된다.
+       살아 있는 영수증이 있을 때만 그 금액을 쓰고, 그 밖에는 지금 청구전략이
+       정한 몫으로 연다. */
+    const 지금몫 = bsAmountFor('cash_receipt') || livecopay || _PATIENT_COPAY || 0;
+    const crAmtRaw = (savedStatus === 'issued' ? savedAmt : 0) || 지금몫 || '';
     document.getElementById('cr-amount').value = crAmtRaw ? Number(crAmtRaw).toLocaleString('ko-KR') : '';
     if (savedType) {
       const radio = document.querySelector(`input[name="cr-type"][value="${savedType}"]`);
