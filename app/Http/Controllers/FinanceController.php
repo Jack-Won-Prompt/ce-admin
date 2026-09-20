@@ -223,6 +223,18 @@ class FinanceController extends Controller
             'paid_at'    => $o->paidAt()?->format('Y-m-d') ?? '',
             'paid_time'  => $o->paidAtLabel('Y-m-d H:i:s'),
             'paid'       => $paid,
+            /* 입금확인 — 다른 아홉 목록과 같은 잣대다 (2026-09-20 지시).
+
+               「결제 시 모든 화면에서 결제수단, 입금확인, 입금 금액, 결제 시각을
+               필수로 확인」한다. 이 탭에만 입금확인 칸이 없어 넷 가운데 하나가
+               비어 있었다. 잣대는 ceMoneyCols 를 채우는 OrderGridExtras 와 같다 —
+               받았으면 그 날, 받을 돈이 애초에 없으면 「본인부담 없음」이다. */
+            'deposit_at' => match (true) {
+                                $o->isDepositConfirmed() =>
+                                    ($o->deposit_confirmed_at ?? $o->paidAt())?->format('Y-m-d') ?? '입금완료',
+                                $o->expectedDeposit() === 0 && $nhis > 0 => '본인부담 없음',
+                                default                  => '',
+                            },
             'payer'      => $o->patient?->remitter_name ?: ($o->tossPayment?->customer_name ?? ''),
             /* 공단ㆍ지자체가 통장에 찍는 이름 (2026-09-11 엑셀 · 2026-09-15 지시).
                공단은 「NB + 주민번호 앞 여섯 자리」라는 규칙이 있다. 지자체는 정해진
@@ -934,11 +946,16 @@ class FinanceController extends Controller
                    목록은 ceMoneyCols() 로 같은 넷을 세운다 — 이 탭은 칸을 서버에서
                    받으므로 여기에 적어 둔다.
 
-                   입금일시는 날짜만 적는 「결제일자」와 달리 시각까지 적는다. 같은 날
-                   두 번 오간 건을 가리려면 시각이 있어야 한다. */
+                   결제 시각은 날짜만 적는 「결제일자」와 달리 시각까지 적는다. 같은 날
+                   두 번 오간 건을 가리려면 시각이 있어야 한다.
+
+                   칸 이름은 다른 아홉 목록과 똑같이 적는다 (2026-09-20 지시) — 같은
+                   값이 화면마다 다른 이름으로 서면 담당자가 같은 것인지 되묻는다.
+                   여태 「입금일시ㆍ입금금액」이라 적혀 있었고 입금확인은 아예 없었다. */
                 ['header' => '결제수단',   'name' => 'pay_method', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '입금일시',   'name' => 'paid_time',  'width' => 140, 'align' => 'center', 'sortable' => true],
-                ['header' => '입금금액',   'name' => 'paid',       'width' => 110] + $money,
+                ['header' => '입금확인',   'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금 금액',  'name' => 'paid',       'width' => 110] + $money,
+                ['header' => '결제 시각',  'name' => 'paid_time',  'width' => 140, 'align' => 'center', 'sortable' => true],
             ],
 
             // 15쪽 — 환자 본인부담금 입금 확인
@@ -950,9 +967,13 @@ class FinanceController extends Controller
                 ['header' => '주문금액',   'name' => 'billed',    'width' => 110] + $money,
                 ['header' => '본인부담액', 'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'paid_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
+                /* 입금확인 — 다른 목록과 같은 넷을 여기에도 세운다 (2026-09-20 지시).
+                   입금일자와 달리 「받았는가」를 묻는 칸이다 — 본인부담이 0원인 건은
+                   빈칸이 아니라 「본인부담 없음」이라 적힌다. */
+                ['header' => '입금확인',   'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
                 /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
                 ['header' => '결제 시각',  'name' => 'paid_time', 'width' => 150, 'align' => 'center', 'sortable' => true],
-                ['header' => '입금금액',   'name' => 'paid',      'width' => 110] + $money,
+                ['header' => '입금 금액',  'name' => 'paid',      'width' => 110] + $money,
                 ['header' => '입금자명',   'name' => 'payer',     'width' => 100],
                 ['header' => '결제수단',   'name' => 'pay_method','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
