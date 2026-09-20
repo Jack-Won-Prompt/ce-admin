@@ -95,6 +95,21 @@ class OrderAmendService
         if ($단계 === 'working') {
             $결과 = $this->취소요청($order);
 
+            /* 창고가 「아직 손대지 않았다」고 되돌려 주면(409) 그 자리에서 갈아 세운다
+               (2026-09-20 시험에서 드러남).
+
+               창고단계() 는 우리 줄의 status 로 미루어 짐작한다. 그런데 판매번호를
+               갈아탄 직후에는 출고 칸이 비어 있고 status 는 옛 출고가 남긴 값을
+               그대로 들고 있어, 출고가 신규인 새 판매주문이 'working' 으로 읽힌다.
+               그러면 so_cancel_request 를 부르고 창고는 409 로 거절한다 — 정정이
+               결제만 바뀐 채 멈춘다.
+
+               어느 단계인지는 창고가 아는 것이 맞다. 거절이 곧 답이므로 그대로
+               so_cancel → so_store 길로 간다. */
+            if (! $결과['ok'] && (int) ($결과['status'] ?? 0) === 409) {
+                return $this->갈아세우기($order, $창고내용);
+            }
+
             if (! $결과['ok']) {
                 return ['ok' => false, 'so_no' => null, 'state' => null, 'message' => $결과['message']];
             }
