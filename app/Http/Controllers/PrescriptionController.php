@@ -2753,6 +2753,28 @@ class PrescriptionController extends Controller
     // ── OCR 수정 저장 ─────────────────────────────────────
     public function updateOcr(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
+        /* 거래처를 이을 수 없으면 저장하지 않는다 (2026-09-20 지시).
+
+           여태 이름 없이도 저장이 되었고, 그때마다 주문번호가 발급되어 주문 관리에
+           **이름 없는 줄**이 남았다 — 2026-09-20 기준 열세 건 가운데 여섯이 그랬다.
+           주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자라, 누구
+           것인지 모르는 채 먼저 태울 번호가 아니다.
+
+           이을 길은 둘이다 — 「조회」로 고른 사람(patient_id)이 함께 오거나, 이름이
+           적혀 있어 서버가 찾아 잇는다(PatientLink::attach). 둘 다 없으면 막는다.
+           화면도 같은 자리에서 막지만(saveOCR), 화면만 믿지 않는다. */
+        $이을사람있나 = $request->filled('patient_id')
+                     || trim((string) $request->input('patient_name_ocr')) !== ''
+                     || $prescription->patient_id;
+
+        if (! $이을사람있나) {
+            return response()->json([
+                'success' => false,
+                'message' => '거래처를 먼저 선택하십시오. 이름 없이 저장할 수 없습니다.',
+                'field'   => 'patient_name_ocr',
+            ], 422);
+        }
+
         $request->validate([
             // 「조회」로 고른 사람. 없으면 서버가 이름으로 찾거나 새로 만든다.
             'patient_id'       => 'nullable|integer|exists:patients,id',

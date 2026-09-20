@@ -9348,7 +9348,10 @@ window.HELP_TOUR_STEPS = [
        나중에 온다 — 그때마다 「이름, 병원명은 필수 항목입니다」에 막혀 적어 둔 것을
        통째로 잃었다. 병원명은 서버도 nullable 이다. 적을 것은 적히는 대로 남긴다. */
     if (!name) {
-      showToast('이름은 필수 항목입니다.', 'warning');
+      /* 이름이 없으면 거래처를 이을 수 없고, 거래처 없는 주문은 만들지 않는다
+         (2026-09-20 지시). 서버도 같은 자리에서 막는다 — 화면만 믿지 않는다. */
+      showToast('거래처를 먼저 선택하십시오. 이름 없이 저장할 수 없습니다.', 'warning');
+      document.getElementById('f-name')?.focus();
       return false;
     }
 
