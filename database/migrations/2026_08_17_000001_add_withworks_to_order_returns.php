@@ -31,18 +31,28 @@ return new class extends Migration
             $table->index('withworks_so_no');
         });
 
-        Schema::table('withworks_settings', function (Blueprint $table) {
-            // return_so_type 하나로는 셋을 가릴 수 없다. 코드는 그쪽이 정하므로 화면에서 고친다.
-            $table->string('cancel_so_type', 10)->nullable()->after('return_so_type');
-            $table->string('exchange_so_type', 10)->nullable()->after('cancel_so_type');
-        });
+        /* 이 표는 같은 날짜의 다른 장이 만든다 (create_withworks_settings_table).
+           날짜가 같아 파일 이름 순으로 도는데, add_ 가 create_ 보다 앞선다 — 빈 DB 에서는
+           아직 없는 표를 고치려다 멈춘다(2026-09-20 확인). 운영은 덤프로 표가 먼저
+           서 있어 드러나지 않았다. 표가 설 때 그쪽 장이 이 두 칸도 함께 만든다. */
+        if (Schema::hasTable('withworks_settings')) {
+            Schema::table('withworks_settings', function (Blueprint $table) {
+                // return_so_type 하나로는 셋을 가릴 수 없다. 코드는 그쪽이 정하므로 화면에서 고친다.
+                if (! Schema::hasColumn('withworks_settings', 'cancel_so_type')) {
+                    $table->string('cancel_so_type', 10)->nullable()->after('return_so_type');
+                }
+                if (! Schema::hasColumn('withworks_settings', 'exchange_so_type')) {
+                    $table->string('exchange_so_type', 10)->nullable()->after('cancel_so_type');
+                }
+            });
 
-        // 이미 있는 설정 행에 기본값을 채운다 — 비워 두면 되돌림을 보낼 수 없다
-        \DB::table('withworks_settings')->update([
-            'cancel_so_type'   => \DB::raw("COALESCE(cancel_so_type, '5004')"),
-            'return_so_type'   => \DB::raw("COALESCE(NULLIF(return_so_type, '5004'), '5005')"),
-            'exchange_so_type' => \DB::raw("COALESCE(exchange_so_type, '5006')"),
-        ]);
+            // 이미 있는 설정 행에 기본값을 채운다 — 비워 두면 되돌림을 보낼 수 없다
+            \DB::table('withworks_settings')->update([
+                'cancel_so_type'   => \DB::raw("COALESCE(cancel_so_type, '5004')"),
+                'return_so_type'   => \DB::raw("COALESCE(NULLIF(return_so_type, '5004'), '5005')"),
+                'exchange_so_type' => \DB::raw("COALESCE(exchange_so_type, '5006')"),
+            ]);
+        }
     }
 
     public function down(): void

@@ -40,6 +40,11 @@ return new class extends Migration
                한 칸으로 두면 반품을 넘길 때 판매 유형으로 나간다. */
             $table->string('so_type', 20)->default('5001');
             $table->string('return_so_type', 20)->default('5004');
+            /* 같은 날짜의 add_withworks_to_order_returns 가 더하던 두 칸이다 (2026-09-20).
+               날짜가 같아 파일 이름 순으로 도는데 add_ 가 먼저라, 빈 DB 에서는 아직 없는
+               표를 고치려다 멈췄다. 표를 만드는 이 자리에서 함께 만든다. */
+            $table->string('cancel_so_type', 10)->nullable();
+            $table->string('exchange_so_type', 10)->nullable();
 
             $table->timestamps();
         });
