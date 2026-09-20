@@ -542,18 +542,19 @@
     <div class="sig-section" id="privacyBlock">
       <div class="agree-title">개인정보 수집·이용 동의</div>
 
-      {{-- 신청 유형 — 이 뒤의 칸과 동의 항목이 유형마다 다르다 --}}
-      <div class="pv-field">
-        <label>신청 유형 <span class="pv-req">*</span></label>
+      {{-- 신청 유형은 화면에서 걷었다 (2026-09-20 지시).
+
+           이 서명은 자가도뇨 소모성 재료 급여 위임이라 언제나 카테터다. 장루를 고를
+           수 있게 두면 환자가 잘못 골라 묻는 칸과 동의 항목이 통째로 바뀌고, 그대로
+           서명하면 우리가 받아야 할 동의를 받지 못한 건이 된다.
+
+           칸 자체는 남겨 둔다 — 뒤의 화면ㆍ검증이 모두 이 값을 보고 갈리므로 없애면
+           그 자리들을 다 고쳐야 한다. 숨긴 채 카테터로 박아 둔다. --}}
+      <div class="pv-field" style="display:none;">
         <div class="agree-radios">
-          <div><input type="radio" id="pvTypeC" name="privacy_type" value="catheter"
-                      {{-- 아무것도 고르지 않은 채로 서면 「동의 서명」이 열리지 않는데,
-                           까닭이 화면에 적히지 않아 담당자가 멈춰 선다. 이 서명은
-                           자가도뇨 소모성 재료 급여 위임이므로 카테터가 기본이다. --}}
-                      {{ (($privacyFill['type'] ?? '') ?: 'catheter') !== 'stoma' ? 'checked' : '' }}
+          <div><input type="radio" id="pvTypeC" name="privacy_type" value="catheter" checked
                       onchange="onPrivacyType()"><label for="pvTypeC">카테터(자가도뇨)</label></div>
           <div><input type="radio" id="pvTypeS" name="privacy_type" value="stoma"
-                      {{ ($privacyFill['type'] ?? '') === 'stoma' ? 'checked' : '' }}
                       onchange="onPrivacyType()"><label for="pvTypeS">장루</label></div>
         </div>
       </div>
