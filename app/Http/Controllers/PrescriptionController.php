@@ -881,7 +881,18 @@ class PrescriptionController extends Controller
     // ── 업로드 페이지 ─────────────────────────────────────
     public function uploadPage(Request $request): View
     {
-        $prescriptions = Prescription::with(['patient', 'assignedUser'])->latest()->limit(5)->get();
+        /* 빈 초안은 이 패널에도 보이지 않는다 (2026-09-20 시험에서 드러남).
+
+           ［신규 등록］ 화면은 열릴 때 빈 초안을 한 건 잡아 둔다 — 검수 화면이 저장된
+           처방전 한 건 위에서 돌기 때문이다. 처방전 목록은 그 초안을 whereNot(blankDraft)
+           로 감추는데 이 패널만 감추지 않아, 이름도 서류도 없는 줄이 「RX-…-005 · - ·
+           대기 중」으로 떴다. 담당자는 그것을 잘못 올라간 처방전으로 읽는다.
+
+           목록과 같은 잣대를 쓴다 — 한 화면에서 감추고 다른 화면에서 보이면 어느 쪽이
+           맞는지 되묻게 된다. */
+        $prescriptions = Prescription::with(['patient', 'assignedUser'])
+            ->whereNot(fn ($q) => $q->blankDraft())
+            ->latest()->limit(5)->get();
         /* 담당자로 고를 수 있는 사람 — 처방전 목록 화면과 같은 잣대로 본다.
 
            여기만 role='manager' 만 보아, 관리자로 등록된 사람은 목록에 서지 않았다.
