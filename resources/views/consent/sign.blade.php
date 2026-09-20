@@ -542,22 +542,13 @@
     <div class="sig-section" id="privacyBlock">
       <div class="agree-title">개인정보 수집·이용 동의</div>
 
-      {{-- 신청 유형은 화면에서 걷었다 (2026-09-20 지시).
+      {{-- 신청 유형 고르개는 걷었다 (2026-09-20 지시).
 
            이 서명은 자가도뇨 소모성 재료 급여 위임이라 언제나 카테터다. 장루를 고를
            수 있게 두면 환자가 잘못 골라 묻는 칸과 동의 항목이 통째로 바뀌고, 그대로
            서명하면 우리가 받아야 할 동의를 받지 못한 건이 된다.
 
-           칸 자체는 남겨 둔다 — 뒤의 화면ㆍ검증이 모두 이 값을 보고 갈리므로 없애면
-           그 자리들을 다 고쳐야 한다. 숨긴 채 카테터로 박아 둔다. --}}
-      <div class="pv-field" style="display:none;">
-        <div class="agree-radios">
-          <div><input type="radio" id="pvTypeC" name="privacy_type" value="catheter" checked
-                      onchange="onPrivacyType()"><label for="pvTypeC">카테터(자가도뇨)</label></div>
-          <div><input type="radio" id="pvTypeS" name="privacy_type" value="stoma"
-                      onchange="onPrivacyType()"><label for="pvTypeS">장루</label></div>
-        </div>
-      </div>
+           칸도 함께 없앴다. 유형은 privacyType() 이 카테터로 돌려준다. --}}
 
       {{-- 신청자 정보 — 우리가 아는 것은 채워 둔다. 틀린 것만 고치면 된다. --}}
       <div class="pv-card" id="pvInfo">
@@ -795,7 +786,15 @@
                 본인 <strong>{{ $consent->patient_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
                 콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
                 <strong>급여 위임청구 동의</strong>를 합니다.<br>
-                위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위
+                위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위<br>
+                {{-- 서명이 어디에 쓰이는지 위임 대상에 적는다 (2026-09-20 지시).
+
+                     이 전자서명은 위임장에만 쓰이지 않는다. 자가도뇨 소모성 재료
+                     등록신청서(등록증)의 신청인 서명란에도 같은 서명이 들어간다.
+                     어디에 쓰이는지 적어 두지 않으면 위임한 범위를 넘어 쓰는 것이 된다. --}}
+                서명 사용 범위: 본 전자서명은 <strong>요양비 청구 위임장</strong>과
+                <strong>자가도뇨 소모성 재료 등록신청서(등록증)의 신청인 서명란</strong>에
+                동일하게 사용됩니다.
               </div>
             @endif
             @if($_d['key'] === App\Support\SignDocs::등록신청서)
@@ -1143,8 +1142,13 @@ function toggleAgreeBox(btn) {
 /* 이미 동의를 받아 둔 사람이면 이 영역이 화면에 없다 — 그때는 묻지도 보내지도 않는다 */
 const PRIVACY_ASK = !!document.getElementById('privacyBlock');
 
+/* 유형은 늘 카테터다 (2026-09-20 지시로 고르개를 걷었다).
+
+   장루 쪽 칸과 동의 항목은 지우지 않고 그대로 두었다 — data-only="stoma" 가 붙은
+   자리는 onPrivacyType() 이 접어 두므로 화면에 뜨지 않는다. 장루를 다시 받게 되면
+   고르개만 되살리면 된다. */
 function privacyType() {
-  return document.querySelector('input[name="privacy_type"]:checked')?.value ?? '';
+  return 'catheter';
 }
 
 /* 유형을 고르면 그 유형의 칸과 동의 항목만 남긴다.
