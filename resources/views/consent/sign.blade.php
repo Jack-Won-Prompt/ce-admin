@@ -804,7 +804,7 @@
             @endif
             @php($_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]))
             <div class="doc-frame"><iframe data-src="{{ $_url }}" title="{{ $_d['name'] }}"></iframe></div>
-            <a class="doc-open" href="{{ $_url }}" target="_blank" rel="noopener">새 창에서 크게 보기</a>
+            <a class="doc-open" href="{{ $_url }}" target="_blank" rel="noopener">새 창에서 확대</a>
           </div>
         </div>
       @endforeach

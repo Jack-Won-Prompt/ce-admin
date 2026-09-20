@@ -2223,9 +2223,11 @@ $calcDeposit  = $calcCopay;
                   style="display:none;" title="뷰어 위치 바꾸기">
             <span id="btnToggleViewerSideLabel">오른쪽으로</span>
           </button>
-          {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다 --}}
-          <button type="button" id="btnBigViewer" class="vw-btn" onclick="openBigViewer()" title="파일을 큰 창으로 봅니다 (창을 옮길 수 있고, 그동안에도 입력할 수 있습니다)"
-                  @if(!$firstDoc) style="display:none;" @endif>크게 보기</button>
+          {{-- 파일을 크게 보되 화면은 계속 쓸 수 있어야 한다 — 모달이 아니라 떠 있는 창을 연다.
+               이름은 「확대」다 (2026-09-20 지시). 창 안에도 배율을 키우는 ［확대］가 있으므로
+               안내 글에 「별도 창」을 분명히 적어 둘을 가른다. --}}
+          <button type="button" id="btnBigViewer" class="vw-btn" onclick="openBigViewer()" title="파일을 별도 창으로 크게 봅니다 (창을 옮길 수 있고, 그동안에도 입력할 수 있습니다)"
+                  @if(!$firstDoc) style="display:none;" @endif>확대</button>
           {{-- 끌어 옮기고 키운 것을 한 번에 되돌린다. 그림 위 도구에도 같은 것이 있지만
                거기까지 손을 옮겨야 했다 — 크게 보기 옆이 손이 이미 가 있는 자리다. --}}
           <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
