@@ -212,6 +212,36 @@ class WithworksWebhookController extends Controller
 
            지금 우리 줄에 적힌 번호가 아니고, 이력에 물러난 것으로 남아 있으면 그
            사건은 지나간 판매주문의 일이다. 사건 자체는 위에서 이미 적어 두었다. */
+        /* 갈아 세우는 중에 닿는 취소 사건은 옛 판매주문의 것이다
+           (2026-09-20 CASE별 정정 시험에서 드러남).
+
+           정정은 so_cancel 을 부르고 새 번호를 받아 적는다. 그 사이에 닿는
+           so.cancelled 는 **아직 우리 줄에 적힌 번호(옛 번호)** 를 싣고 오므로
+           물러난판매번호인가() 가 「지금 번호와 다르냐」로 가려내지 못한다.
+
+           여태 드러나지 않은 까닭은 뒤이어 확정이 덮어썼기 때문이다 — 본인부담이
+           0원인 건은 정정 직후 DepositAutoIssue 가 95 로 다시 적고, 할당ㆍ피킹이
+           걸린 건은 취소를 청하기만 해 so.cancelled 가 곧바로 오지 않는다.
+           결제 전 주문(산재ㆍ자동차보험ㆍ처방외)은 덮어쓸 것이 없어 99(취소)가
+           그대로 남았고, 새 판매주문이 멀쩡히 선 채로 주문만 취소로 뒤집혔다.
+
+           Order::AMEND_SWAPPING 은 바로 이것을 막으려고 세워 두는 표인데 여기서
+           보지 않고 있었다. */
+        if (($data['event'] ?? null) === 'so.cancelled'
+            && $order->amend_state === \App\Models\Order::AMEND_SWAPPING) {
+
+            $order->취소된번호남기기($data['so_no'] ?? null);
+            $order->save();
+
+            Log::info('[Withworks] 정정으로 갈아 세우는 중의 취소 — 상태에 반영하지 않습니다', [
+                'order' => $order->order_number,
+                'so_no' => $data['so_no'] ?? null,
+                '지금'  => $order->withworks_so_no,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Amend swap in progress — cancel event recorded']);
+        }
+
         if ($order->물러난판매번호인가($data['so_no'] ?? null)) {
             /* 취소 사건이면 이력에 적어 둔다 (2026-09-20 지시).
 
