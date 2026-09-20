@@ -111,7 +111,12 @@ class PrescriptionController extends Controller
             });
         }
 
-        $gridData = $query->get()->map(function (Prescription $rx) {
+        $rows = $query->get();
+
+        /* 결제 칸이 쓰는 값을 한 번에 세어 둔다 — 줄마다 물으면 쉰 줄에 쉰 번을 묻는다 */
+        $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
+
+        $gridData = $rows->map(function (Prescription $rx) use ($extras) {
             $order = $rx->order;
             $soType = $order?->so_type;
 
@@ -129,6 +134,17 @@ class PrescriptionController extends Controller
                 'order_no'   => $order?->order_number ?? '',
                 'so_no'      => $order?->withworks_so_no ?? '',
                 'assignee'   => $rx->assignedUser?->name ?? '미지정',
+
+                /* 결제 네 항목 — 다른 목록과 같은 칸을 여기에도 세운다 (2026-09-20 지시).
+
+                   「결제 시 모든 화면에서 결제수단, 입금확인, 입금 금액, 결제 시각을
+                   필수로 확인」한다. 처방전 목록에만 이 넷이 없어, 접수부터 보는
+                   담당자가 돈이 들어왔는지 알려면 주문 관리로 옮겨 가야 했다.
+
+                   값은 OrderGridExtras 가 적는다 — 「입금확인」의 잣대(담당자 확인이냐
+                   토스냐, 본인부담 0원은 무엇이라 적느냐)가 화면마다 갈리면 같은 건이
+                   목록마다 다르게 보인다. */
+                ...$extras->of($order, $rx->patient_id),
                 // 요청서 6쪽 — 목록에서 바로 견주는 값들
                 'resident_no'  => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
                 'uploader'     => $rx->creator?->name ?? '',

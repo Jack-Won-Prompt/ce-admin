@@ -403,6 +403,15 @@ window.HELP_TOUR_STEPS = [
       // 시안은 'WithWorks So' 였으나 화면 낱말을 우리말로 맞춘다(2026-09-11 지시).
       // name 은 그대로 둔다(엑셀 머리글은 이 header 를 그대로 쓴다).
       { header: '위드웍스 판매번호', name: 'so_no',   width: 150, sortable: true },
+
+      /* 결제 네 항목 — 다른 목록과 같은 칸이다 (2026-09-20 지시).
+
+         「결제 시 모든 화면에서 결제수단, 입금확인, 입금 금액, 결제 시각을 필수로
+         확인」한다. 여기에만 없어서, 접수부터 보는 담당자가 돈이 들어왔는지 알려면
+         주문 관리로 옮겨 가야 했다. 주문번호 바로 뒤에 세운다 — 어느 주문의 돈인지
+         곧바로 읽힌다. */
+      ...ceMoneyCols(),
+
       { header: '검수 담당자',   name: 'assignee',   width: 90,  align: 'center', sortable: true },
       // 요청서 6쪽 — 주민등록번호ㆍ업로드 담당자ㆍ검수 일자ㆍ검수 메모
       { header: '주민등록번호',  name: 'resident_no', width: 130 },
