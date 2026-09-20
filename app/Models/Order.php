@@ -668,7 +668,7 @@ class Order extends Model
         'tax_invoice_supply', 'tax_invoice_vat',
         'tax_invoice_issued_at', 'tax_invoice_cancelled_at',
         // 현금영수증
-        'cash_receipt_status', 'cash_receipt_no', 'cash_receipt_type',
+        'cash_receipt_status', 'cash_receipt_no', 'cash_receipt_mgt_key', 'cash_receipt_type',
         'cash_receipt_identifier', 'cash_receipt_amount',
         'cash_receipt_issued_at', 'cash_receipt_cancelled_at',
         'note',

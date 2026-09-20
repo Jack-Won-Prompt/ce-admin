@@ -1033,7 +1033,9 @@ class OrderController extends Controller
             $amount     = (int) $data['cash_receipt_amount'];
             $supplyCost = (int) round($amount / 1.1);
             $tax        = $amount - $supplyCost;
-            $mgtKey     = 'CR' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            /* 문서번호는 한 번 쓰면 다시 못 쓴다 — 취소한 것이 있으면 차례를 붙인다.
+               낸 번호는 주문에 적어 두어, 취소할 때 그때 쓴 번호를 그대로 찾는다. */
+            $mgtKey     = self::현금영수증문서번호($order);
 
             $svc = app(CashbillService::class);
             $cb  = $svc->newCashbill();
@@ -1063,6 +1065,7 @@ class OrderController extends Controller
             $order->update([
                 'cash_receipt_status'     => 'issued',
                 'cash_receipt_no'         => $receiptNo,
+                'cash_receipt_mgt_key'    => $mgtKey,
                 'cash_receipt_type'       => $data['cash_receipt_type'],
                 'cash_receipt_identifier' => $data['cash_receipt_identifier'],
                 'cash_receipt_amount'     => $data['cash_receipt_amount'],
@@ -1153,7 +1156,9 @@ class OrderController extends Controller
         try {
             $corpNum      = config('popbill.test.corp_num');
             $userId       = config('popbill.test.user_id');
-            $cancelMgtKey = 'CRC' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+            /* 취소 문서번호도 겹치면 안 된다. 그때 쓴 발행 번호에서 만들면 차례까지
+               따라오므로, 정정을 거듭해도 취소마다 다른 번호가 된다. */
+            $cancelMgtKey = 'CRC' . substr(self::현금영수증문서번호($order, 새로: false), 2);
 
             app(CashbillService::class)->revokeRegistIssue(
                 corpNum:      $corpNum,
@@ -1228,6 +1233,43 @@ class OrderController extends Controller
         }
 
         $바탕 = 'TI' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+
+        if (! $새로) {
+            return $적힌것 !== '' ? $적힌것 : $바탕;
+        }
+
+        /* 같은 바탕으로 이미 낸 적이 있으면 차례를 붙인다 */
+        if ($적힌것 === '' || ! str_starts_with($적힌것, $바탕)) {
+            return $바탕;
+        }
+
+        $차례 = (int) substr($적힌것, strlen($바탕) + 1);
+
+        return $바탕 . '-' . str_pad((string) ($차례 + 1), 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * 현금영수증 문서번호 — 세금계산서와 같은 규칙이다 (2026-09-20 시험에서 드러남).
+     *
+     * 「CR + 발행일 + 주문」으로 그때그때 다시 만들면, 같은 날 취소하고 다시 낼 때
+     * 같은 번호가 되어 팝빌이 「동일한 문서번호(MgtKey)의 현금영수증이 존재합니다」로
+     * 거절한다. 정정으로 금액이 바뀐 건이 새 금액으로 나가지 못한다.
+     *
+     * @param  bool  $새로  참이면 다음 차례를 만들고, 거짓이면 그때 쓴 번호를 돌려준다
+     */
+    public static function 현금영수증문서번호(Order $order, bool $새로 = true): string
+    {
+        /* 적어 둔 것이 있으면 그것이 정본이다 — 취소는 반드시 이 번호로 불러야 한다 */
+        $적힌것 = trim((string) ($order->cash_receipt_mgt_key ?? ''));
+
+        /* 번호 칸이 생기기 전(2026-09-20)에 낸 건은 적힌 것이 없다. 그때는 「CR + 발행일
+           + 주문」으로 만들어 썼으니 같은 규칙으로 되짚으면 실제로 쓴 번호가 나온다. */
+        if ($적힌것 === '' && $order->cash_receipt_issued_at) {
+            $적힌것 = 'CR' . $order->cash_receipt_issued_at->format('Ymd')
+                    . str_pad($order->id, 6, '0', STR_PAD_LEFT);
+        }
+
+        $바탕 = 'CR' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT);
 
         if (! $새로) {
             return $적힌것 !== '' ? $적힌것 : $바탕;
