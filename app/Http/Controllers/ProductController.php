@@ -131,7 +131,7 @@ class ProductController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => '창고 서버가 제때 답하지 않았습니다. 잠시 뒤 다시 검색해 주십시오.',
+                'message' => '창고 서버가 응답하지 않았습니다. 잠시 후 다시 검색하십시오.',
                 'data'    => [],
             ]);
         } catch (\Exception $e) {

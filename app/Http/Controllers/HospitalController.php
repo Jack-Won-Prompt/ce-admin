@@ -61,7 +61,7 @@ class HospitalController extends Controller
             return response()->json([
                 'success' => true,
                 'created' => false,
-                'message' => '이미 있는 병원이라 그것으로 골랐습니다.',
+                'message' => '이미 등록된 병원이어서 해당 병원을 선택했습니다.',
                 'data'    => $exists->only(['id', 'name', 'code', 'tel', 'address', 'department']),
             ]);
         }

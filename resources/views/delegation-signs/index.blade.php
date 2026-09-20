@@ -26,8 +26,8 @@
 <div class="help-section">
   <div class="help-section-title">다시 보낼 때</div>
   <div class="help-tip"><i class="bx bx-history"></i>
-    이미 서명을 받은 줄에 다시 보내도 <b>받아 둔 서명은 지우지 않습니다.</b>
-    새 서명이 들어오는 그때 덮습니다 — 보내다 만 건에서 서명이 사라지면 되돌릴 수 없습니다.</div>
+    이미 서명을 받은 행에 다시 발송해도 <b>기존 서명은 삭제되지 않습니다.</b>
+    새 서명이 접수되면 그때 갱신됩니다 — 발송 중인 건에서 서명이 사라지면 복구할 수 없습니다.</div>
 </div>
 @endsection
 
@@ -597,7 +597,7 @@
       ? '\n\n이 줄에는 받아 둔 서명이 있습니다. 서명 그림도 함께 지웁니다.'
       : '';
 
-    if (!await ceConfirm(이름 + ' 줄을 지웁니다.' + 덧말 + '\n\n되돌릴 수 없습니다.',
+    if (!await ceConfirm(이름 + ' 행을 삭제합니다.' + 덧말 + '\n\n복구할 수 없습니다.',
                          { title: '줄 삭제', tone: 'danger', confirmText: '삭제' })) return;
 
     try {
@@ -607,12 +607,12 @@
       });
       const out = await res.json();
 
-      if (!res.ok || !out.ok) { showToast(out.말 || '지우지 못했습니다.', 'danger', 6000); return; }
+      if (!res.ok || !out.ok) { showToast(out.말 || '삭제하지 못했습니다.', 'danger', 6000); return; }
 
       showToast(out.말, 'success', 4000);
       setTimeout(() => location.reload(), 800);
     } catch (e) {
-      showToast('지우지 못했습니다 — ' + e.message, 'danger', 6000);
+      showToast('삭제하지 못했습니다 — ' + e.message, 'danger', 6000);
     }
   };
 
@@ -635,7 +635,7 @@
     const 경고 = document.getElementById('dlgWarn');
     if (d.signed) {
       경고.style.display = '';
-      경고.textContent = '이미 서명을 받은 건입니다. 다시 보내도 받아 둔 서명은 지워지지 않고, 새 서명이 들어오면 그때 바뀝니다.';
+      경고.textContent = '이미 서명을 받은 건입니다. 다시 발송해도 기존 서명은 삭제되지 않으며, 새 서명이 접수되면 그때 갱신됩니다.';
     } else {
       경고.style.display = 'none';
     }
@@ -795,7 +795,7 @@
     const 갈까 = await ceConfirm(
       `「${파일.name}」을 올립니다.\n\n`
       + '같은 이름ㆍ같은 번호가 이미 있으면 행을 새로 생성하지 않고 명단 값만 갱신합니다.\n'
-      + '받아 둔 서명과 발송 이력은 그대로 유지합니다.',
+      + '기존 서명과 발송 이력은 그대로 유지합니다.',
       { title: '명단 올리기', confirmText: '올립니다', cancelText: '취소' });
 
     if (!갈까) return;

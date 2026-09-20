@@ -1030,7 +1030,7 @@ class SettlementController extends Controller
         if ($order->isSettleLocked()) {
             return response()->json([
                 'success' => false,
-                'message' => '확정된 건입니다 — 되돌리려면 관리자에게 요청하십시오.',
+                'message' => '확정된 건입니다 — 취소하려면 관리자에게 요청하십시오.',
             ], 409);
         }
 

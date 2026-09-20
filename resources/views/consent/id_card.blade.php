@@ -110,7 +110,7 @@
     <div class="sec">
       <label class="sec-label">
         본인 신분증
-        <div class="sec-help">사진을 찍거나 파일을 고르세요. (JPGㆍPNGㆍHEIC, 최대 10MB)</div>
+        <div class="sec-help">사진을 촬영하거나 파일을 선택하십시오. (JPGㆍPNGㆍHEIC, 최대 10MB)</div>
       </label>
       <label class="upload" id="pDrop">
         <input type="file" id="pFile" accept="image/jpeg,image/png,image/heic,image/heif"

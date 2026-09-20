@@ -170,7 +170,7 @@
       address_detail: document.getElementById('addrDetail').value.trim() || null,
     };
 
-    if (!body.address) { showToast('주소를 찾아 채워 주십시오.', 'warning'); return; }
+    if (!body.address) { showToast('주소를 검색하여 입력하십시오.', 'warning'); return; }
 
     const btn = document.getElementById('addrSaveBtn');
     BtnState.loading(btn, '저장 중...');
@@ -194,11 +194,11 @@
                          { tone: 'danger', confirmText: '삭제', cancelText: '취소' })) return;
     try {
       const res = await apiRequest(`${_amUrl}/${id}`, 'DELETE');
-      if (!res?.success) throw new Error(res?.message || '지우지 못했습니다.');
-      showToast('주소를 지웠습니다.', 'success');
+      if (!res?.success) throw new Error(res?.message || '삭제하지 못했습니다.');
+      showToast('주소를 삭제했습니다.', 'success');
       await addrLoad();
     } catch (e) {
-      showToast(e.message || '지우지 못했습니다.', 'danger');
+      showToast(e.message || '삭제하지 못했습니다.', 'danger');
     }
   };
 
@@ -242,7 +242,7 @@
                  | 적기('f-address-detail', r.detail);
 
     if (!주문쪽 && !상세쪽) {
-      showToast('주소를 적을 칸을 찾지 못했습니다.', 'warning');
+      showToast('주소를 입력할 항목을 찾지 못했습니다.', 'warning');
       return;
     }
 

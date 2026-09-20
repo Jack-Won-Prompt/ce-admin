@@ -864,7 +864,7 @@
     /* 확정은 되돌릴 수 없다 — 누르기 전에 한 번 묻는다. 그 밖의 상태는 다시 옮길 수
        있으므로 묻지 않는다. */
     if (status === 'confirmed'
-        && !confirm(`${row.order_no} 을(를) 확정합니다. 확정하면 되돌릴 수 없습니다. 계속할까요?`)) {
+        && !confirm(`${row.order_no} 을(를) 확정합니다. 확정 후에는 취소할 수 없습니다. 계속하시겠습니까?`)) {
       sel.value = row.settle_key; return;
     }
 

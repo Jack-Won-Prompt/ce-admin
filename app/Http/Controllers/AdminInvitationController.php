@@ -152,7 +152,7 @@ class AdminInvitationController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('dashboard')->with('success', '계정이 생성되었습니다. 환영합니다!');
+        return redirect()->route('dashboard')->with('success', '계정이 생성되었습니다.');
     }
 
     /**

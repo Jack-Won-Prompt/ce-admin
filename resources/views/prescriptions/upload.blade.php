@@ -781,13 +781,13 @@ window.pkCreate = async function (btn) {
 
   selectPatient(res.id, name);
   pkClose();
-  showToast(`${name} 님을 만들고 골랐습니다. 이제 파일을 올릴 수 있습니다.`, 'success');
+  showToast(`${name} 님을 등록하고 선택했습니다. 이제 파일을 업로드할 수 있습니다.`, 'success');
 };
 
 window.pkPick = function () {
   const i = pkGrid?._pickedIndex;
   const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
-  if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
+  if (!row) { showToast('선택할 행을 클릭하십시오.', 'warning'); return; }
   selectPatient(row.id, row.name);
   pkClose();
 };

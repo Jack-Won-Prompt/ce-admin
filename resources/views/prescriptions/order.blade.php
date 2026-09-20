@@ -1978,10 +1978,10 @@ $calcDeposit  = $calcCopay;
                   청구 자료는 팩스가 아니라 <b>공단 사이트에 직접 업로드</b>합니다.
                 </div>
                 <div id="faxNoteCustom" style="display:none;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:11px;color:var(--text-secondary);line-height:1.65;">
-                  <b>공단 밖으로 보냅니다.</b><br>
-                  산재는 근로복지공단, 자동차보험은 보험사로 갑니다 — 환자가 청한 서류를
+                  <b>공단 외 기관으로 발송합니다.</b><br>
+                  산재는 근로복지공단, 자동차보험은 보험사로 청구합니다 — 환자가 요청한 서류를
                   고르십시오.<br>
-                  올려 둔 첨부가 모두 서고, 없는 것은 아래에서 바로 올릴 수 있습니다.
+                  업로드된 첨부가 모두 표시되며, 없는 서류는 아래에서 바로 업로드할 수 있습니다.
                 </div>
 
                 {{-- 신청 파일 · 그 밖의 첨부 — 화면에서 그린다(renderFaxDocs).
@@ -2005,7 +2005,7 @@ $calcDeposit  = $calcCopay;
                   <input type="file" id="faxUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic"
                          multiple style="display:none;" onchange="faxUploadFiles(this)">
                   <div style="font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
-                    올린 파일은 이 처방전의 첨부에도 남습니다 — 무엇을 보냈는지 나중에 확인할 수 있습니다.
+                    업로드한 파일은 이 처방전의 첨부에도 보관됩니다 — 무엇을 보냈는지 나중에 확인할 수 있습니다.
                   </div>
                 </div>
               </div>
@@ -2055,7 +2055,7 @@ $calcDeposit  = $calcCopay;
       @php $정리대기 = $prescription->order?->정리안된판매주문들() ?? []; @endphp
       @if($정리대기)
       <div id="wwSoPendingCancel"
-           title="창고에서 할당ㆍ피킹을 되돌려야 취소가 끝납니다. 창고 담당자에게 확인해 주십시오."
+           title="창고에서 할당ㆍ피킹을 취소해야 취소가 완료됩니다. 창고 담당자에게 확인해 주십시오."
            style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid var(--warning);border-radius:var(--radius);background:var(--warning-light);font-size:11px;white-space:nowrap;">
         <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning);font-size:10px;flex-shrink:0;"></i>
         <span style="color:var(--gray-800);">취소 대기</span>
@@ -2115,7 +2115,7 @@ $calcDeposit  = $calcCopay;
               <label id="ti-biz-no-label" style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">사업자등록번호 <span style="color:var(--danger);">*</span></label>
               <input type="text" id="ti-biz-no" class="form-control" style="font-size:12px;" placeholder="123-45-67890">
               <div id="ti-biz-no-hint" style="display:none;font-size:11px;color:var(--text-muted);margin-top:4px;">
-                비워 두면 이 처방전에 저장된 환자 주민등록번호로 발행합니다. 번호는 화면에 나오지 않으며 열람 기록이 남습니다.
+                비워 두면 이 처방전에 저장된 환자 주민등록번호로 발행합니다. 번호는 화면에 나오지 않으며 열람 이력이 기록됩니다.
               </div>
             </div>
             <div>
@@ -2231,7 +2231,7 @@ $calcDeposit  = $calcCopay;
           {{-- 끌어 옮기고 키운 것을 한 번에 되돌린다. 그림 위 도구에도 같은 것이 있지만
                거기까지 손을 옮겨야 했다 — 크게 보기 옆이 손이 이미 가 있는 자리다. --}}
           <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
-                  title="처음으로 되돌리기 (배율·회전·위치)"
+                  title="초기화 (배율·회전·위치)"
                   @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-arrows-rotate"></i></button>
           {{-- 옮긴 것 — 등록신청서 신청인 서명 (2026-09-20 지시).
                뷰어 도구줄에 있던 것을 아래 「첨부문서 추가」 옆으로 옮겼다. 서류를
@@ -2780,7 +2780,7 @@ $calcDeposit  = $calcCopay;
                      저장만 해도 주문 줄은 서므로(주문 관리에 보이도록) 그 기준은 「창고로
                      보냈느냐」다 — syncOrderStageBtn 이 같은 눈으로 본다. --}}
                 <button type="button" class="rx-acc-btn" id="btnOrderStage" onclick="goOrderTab()"
-                        title="주문 제품 탭으로 갑니다">주문 보기</button>
+                        title="주문 제품 탭으로 이동합니다">주문 보기</button>
                 {{-- 추가 주문 단추는 탭줄로 옮겼다 (2026-09-15 지시) — 「최종 신규 복제」
                      자리다. 같은 일을 하는 단추가 두 자리에 서면 어느 쪽을 눌러야
                      하는지 매번 헤맨다. --}}
@@ -2947,7 +2947,7 @@ $calcDeposit  = $calcCopay;
                        style="flex:1;min-width:0;letter-spacing:1px;" oninput="rnRecalc()" />
                 @if($displayRn)
                   <button type="button" class="rx-side-btn" id="f-resident-show" onclick="rnShow(this)"
-                          title="저장된 주민등록번호를 봅니다 — 연 기록이 남습니다">
+                          title="저장된 주민등록번호를 조회합니다 — 열람 이력이 기록됩니다">
                     <i class="fa-solid fa-eye"></i> 표시
                   </button>
                 @endif
@@ -3301,7 +3301,7 @@ $calcDeposit  = $calcCopay;
                   <div style="flex:1;display:flex;align-items:center;gap:8px;font-size:12px;">
                     <span style="font-weight:700;">{{ \App\Models\PaymentLink::METHODS[$_pmSaved] ?? $_pmSaved }}</span>
                     <span style="color:var(--text-muted);font-size:11px;">
-                      받은 뒤라 여기서는 바꾸지 않습니다 — 정산/회계에서 되돌리십시오
+                      입금 후에는 여기서 변경할 수 없습니다 — 정산/회계에서 취소하십시오
                     </span>
                   </div>
                 @else
@@ -4361,7 +4361,7 @@ $calcDeposit  = $calcCopay;
                     <i class="fa-solid fa-location-dot"></i> 주소 관리
                   </button>
                   <button type="button" class="btn btn-sm" onclick="clearShippingAddress()"
-                          style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);" title="주소 지우기">
+                          style="white-space:nowrap;flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text-muted);" title="주소 삭제">
                     <i class="fa-solid fa-xmark"></i>
                   </button>
                 </div>
@@ -4451,7 +4451,7 @@ $calcDeposit  = $calcCopay;
                   <i class="fa-solid fa-right-left"></i> 교환/반품/취소
                 </button>
                 <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
-                        style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
+                        style="flex-shrink:0;padding:0 14px;" title="주문 행까지 삭제합니다 — 잘못 생성된 건에만 사용합니다">
                   <i class="fa-solid fa-trash-can"></i> 삭제
                 </button>
               </div>
@@ -4713,7 +4713,7 @@ $calcDeposit  = $calcCopay;
       <button class="modal-close" onclick="closeModal('deleteOrderModal')"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="modal-body" style="padding:20px 24px;">
-      <p style="font-size:13px;margin:0 0 8px;">다음 주문을 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+      <p style="font-size:13px;margin:0 0 8px;">다음 주문을 삭제합니다. 이 작업은 복구할 수 없습니다.</p>
       <div style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:12px;line-height:2;">
         <div><span style="color:var(--text-muted);">CE 주문번호</span> &nbsp;<b id="deleteOrderNum" style="font-family:monospace;color:var(--danger);">-</b></div>
         <div><span style="color:var(--text-muted);">위드웍스 판매번호</span> &nbsp;<b id="deleteOrderSoNo" style="font-family:monospace;color:var(--primary);">-</b></div>
@@ -4794,7 +4794,7 @@ $calcDeposit  = $calcCopay;
     <div class="modal-body">
       <div style="background:var(--alert-50);border:1px solid var(--alert-100);border-radius:var(--radius);padding:14px;">
         <div style="font-size:13px;color:var(--alert-500);font-weight:700;" id="dangerConfirmMsg"></div>
-        <div style="font-size:11px;color:var(--alert-500);margin-top:6px;">이 작업은 되돌릴 수 없습니다.</div>
+        <div style="font-size:11px;color:var(--alert-500);margin-top:6px;">이 작업은 복구할 수 없습니다.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -7012,7 +7012,7 @@ window.HELP_TOUR_STEPS = [
   window.pkPick = function () {
     const i = pkGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
-    if (!row) { showToast('고를 줄을 눌러 주십시오.', 'warning'); return; }
+    if (!row) { showToast('선택할 행을 클릭하십시오.', 'warning'); return; }
     pkTake(row);
   };
 
@@ -7167,7 +7167,7 @@ window.HELP_TOUR_STEPS = [
   window.ocPick = function () {
     const i = ocGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : ocGrid.getData()[i];
-    if (!row) { showToast('고를 건을 눌러 주십시오. 새 건이면 「신규로 진행」입니다.', 'warning', 5000); return; }
+    if (!row) { showToast('선택할 건을 클릭하십시오. 새 건이면 「신규로 진행」입니다.', 'warning', 5000); return; }
     ocGo(row);
   };
 
@@ -7179,7 +7179,7 @@ window.HELP_TOUR_STEPS = [
        않는다. 물어보게 두면 고르고 나서 확인창을 또 지나야 한다(신규 등록도 같다). */
     clearAllDirty();
     if (row.here) {
-      showToast(`${row.rx_number} 로 갑니다.`, 'info');
+      showToast(`${row.rx_number} 로 이동합니다.`, 'info');
       location.href = row.url;
       return;
     }
@@ -7244,7 +7244,7 @@ window.HELP_TOUR_STEPS = [
     } catch (e) {
       // 채우지 못해도 이어 둔 것은 살아 있다 — 담당자가 손으로 적으면 된다
       console.error('[이름 조회] 정보를 가져오지 못했습니다', e);
-      showToast(`「${row.name}」 님으로 이었습니다. 정보는 가져오지 못했습니다.`, 'warning');
+      showToast(`「${row.name}」 님으로 연결했습니다. 정보는 가져오지 못했습니다.`, 'warning');
       return;
     }
 
@@ -7996,7 +7996,7 @@ window.HELP_TOUR_STEPS = [
           /* 배송지를 이 주소로 따라오게 해 두었으면 함께 옮긴다 — 고른 뜻이
              배송지까지 가야 할 때가 대부분이다 */
           if (document.getElementById('sameShipping')?.checked) syncShippingAddress(true);
-          showToast('주소를 바꿨습니다. 저장하면 이 건에 남습니다.', 'success');
+          showToast('주소를 변경했습니다. 저장하면 이 건에 반영됩니다.', 'success');
         },
       });
     })();
@@ -8799,7 +8799,7 @@ window.HELP_TOUR_STEPS = [
       ? picked.map(i => ({ _idx: i }))
       : (itemGrid?.getCheckedRows?.() ?? []);
 
-    if (!checked.length) { showToast('지울 줄을 체크해 주십시오.', 'warning'); return; }
+    if (!checked.length) { showToast('삭제할 행을 선택하십시오.', 'warning'); return; }
     const idxs = new Set(checked.map(r => r._idx));
     items = items.filter((_, i) => !idxs.has(i));
     if (!items.length) items = [emptyItem()];
@@ -9577,7 +9577,7 @@ window.HELP_TOUR_STEPS = [
           /* 왜 지금 나갔는지를 함께 적는다 (2026-09-10 확인요청 6쪽).
              「보냈습니다」만 뜨면 저장을 눌렀을 뿐인데 문자가 나갔다고 읽혀, 담당자는
              무엇을 잘못 눌렀나 되짚게 된다. 아직 서명 전인 건에 처음 한 번만 나간다. */
-          showToast('저장과 함께 위임동의 서명 SMS 가 나갔습니다 — 아직 서명 전인 건에 한 번만 보냅니다. '
+          showToast('저장과 함께 위임동의 서명 SMS를 발송했습니다 — 아직 서명 전인 건에 한 번만 보냅니다. '
                     + (cs.expires_at || '') + '까지 열려 있습니다.', 'success', 7000);
           /* 보낸 뒤에는 그 단추가 「다시 보내기」가 되어야 한다 — 상태를 다시 읽는다 */
           if (typeof updateConsentStatus === 'function') updateConsentStatus();
@@ -9820,7 +9820,7 @@ window.HELP_TOUR_STEPS = [
                     : (RX_STATUS === 'approved' || RX_STATUS === 'ordered') ? 'is-now'
                     : 'is-wait');
     btn.title = has ? '창고로 보낸 주문입니다 — 주문 제품 탭에서 봅니다'
-                    : '아직 창고로 보내지 않았습니다 — 주문 제품 탭으로 갑니다';
+                    : '아직 창고로 보내지 않았습니다 — 주문 제품 탭으로 이동합니다';
   }
 
   /* ── 추가 주문 (2026-09-14 확인요청 4쪽) ────────────────────────────── */
@@ -10022,7 +10022,7 @@ window.HELP_TOUR_STEPS = [
         const nameEl = document.getElementById('f-name');
         if (nameEl) nameEl.value = name;
         rxReloadPatient(id, name);
-        showToast(`${name} 님을 등록하고 이 건에 이었습니다.`, 'success');
+        showToast(`${name} 님을 등록하고 이 건에 연결했습니다.`, 'success');
       },
     });
   };
@@ -10070,7 +10070,7 @@ window.HELP_TOUR_STEPS = [
        markOcrDirty() 를 부르지 않는다(부르면 화면을 떠날 때마다 붙잡는다). */
     /* 남이 다른 화면에서 고쳐 온 것만 알린다. 이 화면의 창에서 고친 것은 부른 쪽이
        한 번 알리므로, 여기서 또 알리면 같은 일로 알림이 겹친다. */
-    if (opts.announce) showToast(`거래처에서 고친 내용을 가져왔습니다 (${n}칸).`, 'info');
+    if (opts.announce) showToast(`거래처에서 수정한 내용을 가져왔습니다 (${n}칸).`, 'info');
   }
 
   try {
@@ -10935,7 +10935,7 @@ window.HELP_TOUR_STEPS = [
           <i class="fa-solid fa-right-left"></i> 교환/반품/취소
         </button>
         <button class="btn btn-outline" id="btnDeleteOrder" onclick="confirmDeleteOrder(event)"
-                style="flex-shrink:0;padding:0 14px;" title="우리 주문 줄까지 지웁니다 — 잘못 생성된 건에만 사용합니다">
+                style="flex-shrink:0;padding:0 14px;" title="주문 행까지 삭제합니다 — 잘못 생성된 건에만 사용합니다">
           <i class="fa-solid fa-trash-can"></i> 삭제
         </button>
       </div>`;
@@ -11460,7 +11460,7 @@ window.HELP_TOUR_STEPS = [
       })
       .catch(() => {
         if (win) win.close();
-        showToast('위드웍스로 넘어가지 못했습니다.', 'danger');
+        showToast('위드웍스로 연계하지 못했습니다.', 'danger');
       });
   }
 
@@ -11596,7 +11596,7 @@ window.HELP_TOUR_STEPS = [
       const rows = d.rows ?? [];
 
       if (! rows.length) {
-        showToast(`${emd || sigungu} 로 쌓아 둔 청구처가 없습니다 — 「찾기」에서 등록하십시오.`, 'warning');
+        showToast(`${emd || sigungu} 로 등록된 청구처가 없습니다 — 「찾기」에서 등록하십시오.`, 'warning');
         return;
       }
 
@@ -11606,7 +11606,7 @@ window.HELP_TOUR_STEPS = [
          다만 **왜 안 섰는지는 알린다.** 아무 말이 없으면 담당자는 자동 설정이
          고장 난 줄 안다. */
       if (rows.length > 1) {
-        showToast(`관할 청구처 후보가 ${rows.length}곳입니다 — 「찾기」에서 고르십시오.`, 'info');
+        showToast(`관할 청구처 후보가 ${rows.length}곳입니다 — 「찾기」에서 선택하십시오.`, 'info');
         return;
       }
       if (rows.length !== 1) return;
@@ -12132,7 +12132,7 @@ window.HELP_TOUR_STEPS = [
     const bar = document.createElement('div');
     bar.id = 'counselPopupBar';
     bar.innerHTML = `
-      <span id="counselPopupNote">적은 내용은 저장을 눌러야 남습니다.</span>
+      <span id="counselPopupNote">입력한 내용은 저장을 눌러야 반영됩니다.</span>
       <button type="button" class="ds-btn" onclick="counselPopupClose()">닫기</button>
       <button type="button" class="ds-btn ds-btn-primary" onclick="counselPopupSave(this)">저장</button>`;
     document.body.appendChild(bar);
@@ -13316,7 +13316,7 @@ window.HELP_TOUR_STEPS = [
   async function sendFax() {
     /* 창을 열지 않고 부르는 길이 있다 — 여기서도 막는다 */
     if (RX_BILLING_OFFICE?.kind === 'local') {
-      showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오.', 'warning', 6000);
+      showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 발송하십시오.', 'warning', 6000);
       return;
     }
 
@@ -13726,7 +13726,7 @@ window.HELP_TOUR_STEPS = [
       if (data.success) {
         if (data.status === 'DONE') {
           BtnState.success(btn, '입금 확인');
-          showToast('입금이 확인되었습니다!', 'success');
+          showToast('입금이 확인되었습니다.', 'success');
           setTimeout(() => location.reload(), 1200);
         } else {
           showToast(`현재 상태: ${data.status_label}`, 'info');
@@ -14859,8 +14859,8 @@ window.HELP_TOUR_STEPS = [
     el.select();
     el.setSelectionRange(0, 99999);
     navigator.clipboard?.writeText(el.value)
-      .then(() => showToast('서명 링크를 베꼈습니다.', 'success'))
-      .catch(() => showToast('베끼지 못했습니다 — 칸의 글을 직접 골라 주십시오.', 'warning'));
+      .then(() => showToast('서명 링크를 복사했습니다.', 'success'))
+      .catch(() => showToast('복사하지 못했습니다 — 항목의 내용을 직접 선택하십시오.', 'warning'));
   }
 
   async function sendConsentSms() {
@@ -15183,7 +15183,7 @@ window.HELP_TOUR_STEPS = [
     el.select();
     el.setSelectionRange(0, 99999);
     navigator.clipboard?.writeText(el.value)
-      .then(() => showToast('서명 주소를 베꼈습니다.', 'success'))
+      .then(() => showToast('서명 주소를 복사했습니다.', 'success'))
       .catch(() => showToast(el.value, 'info', 8000));
   }
 

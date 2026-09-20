@@ -1609,7 +1609,7 @@ async function submitConsent(action) {
      뒤따르는지 그 자리에서 알린다 — 담당자가 다시 연락할 일이라는 것까지. */
   if (action === 'agreed' && IS_MINOR && !gIdData) {
     const 갈까 = await ceConfirm(
-      '신분증은 필수 입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.',
+      '신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.',
       { tone: 'warning', confirmText: '저장', cancelText: '취소' },
     );
     if (!갈까) return;

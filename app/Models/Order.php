@@ -951,7 +951,7 @@ class Order extends Model
             $at = $at->addSecond();
         }
 
-        throw new \RuntimeException('주문번호를 만들지 못했습니다 — 같은 시각에 너무 많은 주문이 섰습니다.');
+        throw new \RuntimeException('주문번호를 만들지 못했습니다 — 같은 시각에 주문이 너무 많이 생성되었습니다.');
     }
 
     /**

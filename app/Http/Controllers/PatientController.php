@@ -428,14 +428,14 @@ class PatientController extends Controller
 
         /* 마지막 한 줄은 지우지 않는다 — 지우면 이 사람의 주소가 아예 없어진다 */
         if ($patient->addresses()->count() <= 1) {
-            return response()->json(['success' => false, 'message' => '주소가 하나뿐이라 지울 수 없습니다.'], 422);
+            return response()->json(['success' => false, 'message' => '주소가 하나뿐이어서 삭제할 수 없습니다.'], 422);
         }
 
         $무엇 = $address->full;
         $address->delete();
 
         activity()->causedBy(Auth::user())->performedOn($patient)
-            ->log("주소를 지웠습니다 — {$무엇}");
+            ->log("주소를 삭제했습니다 — {$무엇}");
 
         return response()->json(['success' => true]);
     }
@@ -459,7 +459,7 @@ class PatientController extends Controller
         /* 거래처를 저장하면 모델이 주소 한 줄을 새로 쌓는다(같은 것이면 쌓지 않는다).
            고른 줄을 위로 올리는 것이 뜻이므로, 새로 쌓인 것이 있으면 그것이 곧 이 줄이다. */
         activity()->causedBy(Auth::user())->performedOn($patient)
-            ->log("현재 주소를 바꿨습니다 — {$address->full}");
+            ->log("현재 주소를 변경했습니다 — {$address->full}");
 
         return response()->json(['success' => true]);
     }
@@ -757,7 +757,7 @@ class PatientController extends Controller
 
         if ($done) {
             activity()->causedBy(auth()->user())->performedOn($patient)
-                ->log("거래처 수정에 따라 요양비위임장 {$done}건을 다시 그렸습니다 (서명은 그대로).");
+                ->log("거래처 수정에 따라 요양비위임장 {$done}건을 재생성했습니다 (서명은 유지).");
         }
 
         return $done;
@@ -788,7 +788,7 @@ class PatientController extends Controller
         ]))->save();
 
         activity()->causedBy(\Illuminate\Support\Facades\Auth::user())->performedOn($prescription)
-            ->log("{$patient->name} 상담 이어 적음 ({$prescription->counsel_no})");
+            ->log("{$patient->name} 상담 추가 기록 ({$prescription->counsel_no})");
 
         return response()->json([
             'success'    => true,
@@ -856,7 +856,7 @@ class PatientController extends Controller
         ]);
 
         if (! $data) {
-            return response()->json(['success' => false, 'message' => '고칠 값이 없습니다.'], 422);
+            return response()->json(['success' => false, 'message' => '수정할 값이 없습니다.'], 422);
         }
 
         $prescription->forceFill(array_merge($data, [

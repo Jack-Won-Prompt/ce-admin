@@ -167,7 +167,7 @@
         <div class="ss-hint ss-actions-note">
           연동 테스트는 <b>저장된 Tenant ID</b> 로 Microsoft 의 OIDC 설정 문서를 읽어
           그 테넌트가 있는지만 봅니다. Client Secret 이 맞는지는 실제로 로그인해 봐야 압니다.
-          값을 바꿨다면 먼저 저장하십시오.
+          값을 변경했다면 먼저 저장하십시오.
         </div>
         <span id="ssoTestOut"></span>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 저장</button>

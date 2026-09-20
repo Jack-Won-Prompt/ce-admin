@@ -252,7 +252,7 @@
         headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
       });
       const d = await res.json();
-      if (d.success) { say('지웠습니다.', true); setTimeout(() => location.reload(), 600); }
+      if (d.success) { say('삭제했습니다.', true); setTimeout(() => location.reload(), 600); }
       else { say(d.message ?? '삭제 실패', false); }
     } catch (e) { say('네트워크 오류가 발생했습니다.', false); }
   };

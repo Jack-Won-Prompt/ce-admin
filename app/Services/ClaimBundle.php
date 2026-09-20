@@ -241,7 +241,7 @@ class ClaimBundle
         $info = @getimagesize($file);
 
         if (!$info) {
-            throw new \RuntimeException('그림을 읽지 못했습니다');
+            throw new \RuntimeException('이미지를 읽지 못했습니다');
         }
 
         $pdf->AddPage('P', [self::W, self::H]);

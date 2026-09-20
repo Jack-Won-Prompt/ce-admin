@@ -482,7 +482,7 @@
     <div class="nd-modal-body">
       <div class="cancel-note">
         <i class="bx bx-error" style="font-size:16px;flex-shrink:0;"></i>
-        <span>취소 현금영수증이 발행됩니다. 취소 후에는 되돌릴 수 없습니다.</span>
+        <span>취소 현금영수증이 발행됩니다. 취소 후에는 복구할 수 없습니다.</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="form-row">
@@ -721,7 +721,7 @@ async function issueCashbill() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message ?? '발행 실패');
 
-    showToast(`현금영수증 발행 완료! 승인번호: ${data.confirmNum ?? '확인중'}`, 'success', 6000);
+    showToast(`현금영수증 발행을 완료했습니다. 승인번호: ${data.confirmNum ?? '확인중'}`, 'success', 6000);
     genMgtKey();
     loadHistory(1);
   } catch(e) {

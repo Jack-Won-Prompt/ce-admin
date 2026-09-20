@@ -16,11 +16,11 @@
 <div class="help-section">
   <div class="help-section-title">마지막 번호</div>
   <div class="help-item"><div class="help-item-text">
-    어디까지 담았는지 적어 두는 값입니다. 다시 가져오면 <b>이 번호 뒤부터만</b> 읽습니다 —
-    저쪽이 운영 중이라 통째로 훑으면 그만큼 남의 DB 에 짐을 지웁니다.</div></div>
+    어디까지 가져왔는지 기록하는 값입니다. 다시 가져오면 <b>이 번호 이후만</b> 읽습니다 —
+    상대 시스템이 운영 중이므로 전체를 조회하면 해당 DB에 부하가 발생합니다.</div></div>
   <div class="help-item"><div class="help-item-text">
-    <b>0 으로 되돌리면 처음부터 다시 읽습니다.</b> 저쪽에서 옛 줄을 고쳤거나 칸을 새로
-    늘렸을 때 씁니다. 이미 담은 줄은 덮어씁니다.</div></div>
+    <b>0으로 설정하면 처음부터 다시 읽습니다.</b> 상대 시스템에서 기존 행을 수정했거나 항목을 새로
+    추가했을 때 사용합니다. 이미 가져온 행은 덮어씁니다.</div></div>
 </div>
 <div class="help-section">
   <div class="help-section-title">차례</div>
@@ -64,7 +64,7 @@
     <div class="ws-card">
       <div class="ws-title">담긴 자료</div>
       <div class="ws-desc">
-        다시 가져오면 마지막 번호 뒤부터만 읽습니다. 0 으로 되돌리면 처음부터 다시 읽습니다.
+        다시 가져오면 마지막 번호 이후만 읽습니다. 0으로 설정하면 처음부터 다시 읽습니다.
       </div>
 
       <table class="ws-table">
@@ -140,7 +140,7 @@
             {{-- 원문을 화면에 내려보내지 않는다. 바꿀 때만 적는다. --}}
             <input type="password" class="form-control" name="{{ $갈래 }}_password"
                    autocomplete="new-password"
-                   placeholder="{{ $계정[$갈래]['password']['filled'] ? '설정됨 — 바꿀 때만 입력' : '미설정' }}">
+                   placeholder="{{ $계정[$갈래]['password']['filled'] ? '설정됨 — 변경할 때만 입력' : '미설정' }}">
           </div>
           <div class="ws-field" style="grid-column: span 3;justify-content:flex-end;">
             <button type="button" class="ds-btn" onclick="wsTest('{{ $갈래 }}', this)">연결 시험</button>
@@ -186,7 +186,7 @@
   }
 
   async function wsImport(열쇠, btn) {
-    if (!confirm('지금 담긴 마지막 번호 뒤부터 가져옵니다. 계속할까요?')) return;
+    if (!confirm('현재 등록된 마지막 번호 이후부터 가져옵니다. 계속하시겠습니까?')) return;
 
     BtnState.loading(btn, '가져오는 중...');
 

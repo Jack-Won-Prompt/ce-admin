@@ -176,7 +176,7 @@
            접수한 뒤에야 알면 흐름이 한 단계 늘어난 까닭을 모른 채 멈춰 선다. --}}
       <span class="hint" id="rtoPartialNote"
             style="display:none;color:var(--primary);font-weight:600;">
-        부분입니다 — 되돌린 뒤 「금액조정」 단계에서 남는 금액을 적습니다.
+        부분입니다 — 취소한 뒤 「금액조정」 단계에서 잔액을 입력합니다.
       </span>
     </div>
     <div id="rtoItemGrid"></div>
@@ -428,7 +428,7 @@
               || ADJUSTS.includes($('rtoReason').value);
 
     note.textContent = 조정
-      ? '부분입니다 — 되돌린 뒤 「금액조정」 단계에서 남는 금액을 적습니다.'
+      ? '부분입니다 — 취소한 뒤 「금액조정」 단계에서 잔액을 입력합니다.'
       : '부분입니다 — 이 사유는 금액조정을 하지 않습니다(물건만 바꿉니다).';
     note.style.display = partial ? '' : 'none';
   }

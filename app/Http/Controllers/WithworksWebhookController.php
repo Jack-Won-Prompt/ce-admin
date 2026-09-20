@@ -331,7 +331,7 @@ class WithworksWebhookController extends Controller
                 ]);
 
                 activity()->performedOn($order)
-                    ->log("주문 취소 완료 ({$order->order_number}) — 창고가 되돌려 자동 취소되었습니다");
+                    ->log("주문 취소 완료 ({$order->order_number}) — 창고 취소가 확인되어 자동 취소되었습니다");
             }
 
             /* 기다리고 있던 옛 정정 건을 마저 잇는다.

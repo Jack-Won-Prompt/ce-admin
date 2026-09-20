@@ -510,7 +510,7 @@
     const what = channel === 'sms' ? '문자' : '알림톡';
     const ok = await ceConfirm(
       `${scope === 'all' ? '조건에 해당하는 전체' : '선택한'} ${n.toLocaleString()}곳에 ${what}를 보냅니다.\n`
-      + '실제로 발송되며 되돌릴 수 없습니다.',
+      + '실제로 발송되며 복구할 수 없습니다.',
       { title: `${what} 발송`, confirmText: '발송', tone: 'danger' }
     );
     if (!ok) return;
@@ -661,7 +661,7 @@
 
   window.msTplDelete = async function () {
     if (!editingId) return;
-    const ok = await ceConfirm('이 메시지 유형을 지웁니다. 되돌릴 수 없습니다.',
+    const ok = await ceConfirm('이 메시지 유형을 지웁니다. 복구할 수 없습니다.',
       { title: '유형 삭제', confirmText: '삭제', tone: 'danger' });
     if (!ok) return;
     try {
@@ -670,7 +670,7 @@
         headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
       });
       const d = await res.json();
-      if (d.success) { _msTplSay('지웠습니다.', true); setTimeout(() => location.reload(), 700); }
+      if (d.success) { _msTplSay('삭제했습니다.', true); setTimeout(() => location.reload(), 700); }
       else           { _msTplSay(d.message ?? '삭제 실패', false); }
     } catch (e) { _msTplSay('네트워크 오류가 발생했습니다.', false); }
   };

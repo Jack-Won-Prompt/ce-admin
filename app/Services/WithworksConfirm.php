@@ -73,7 +73,7 @@ final class WithworksConfirm
                 'order' => $order->order_number, 'so_no' => $soNo, 'error' => $e->getMessage(),
             ]);
 
-            return ['ok' => false, 'message' => '창고를 부르지 못했습니다 — ' . $e->getMessage()];
+            return ['ok' => false, 'message' => '창고 서버를 호출하지 못했습니다 — ' . $e->getMessage()];
         }
 
         $body = $res->json();

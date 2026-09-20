@@ -794,7 +794,7 @@ async function sendFax() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || '전송 실패');
 
-    showToast(`팩스 전송 완료! 접수번호: ${data.receipt_num}`, 'success', 6000);
+    showToast(`팩스 전송을 완료했습니다. 접수번호: ${data.receipt_num}`, 'success', 6000);
     selectedFiles = [];
     renderFileList();
     loadHistory(1);

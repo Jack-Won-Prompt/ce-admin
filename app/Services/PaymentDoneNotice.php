@@ -46,7 +46,7 @@ class PaymentDoneNotice
     public function send(Order $order): array
     {
         if (! config('order.payment_done_notice', true)) {
-            return ['sent' => false, 'message' => '결제 완료 안내가 꺼져 있습니다.'];
+            return ['sent' => false, 'message' => '결제 완료 안내가 비활성 상태입니다.'];
         }
 
         $order->loadMissing('patient', 'prescription', 'tossPayment');

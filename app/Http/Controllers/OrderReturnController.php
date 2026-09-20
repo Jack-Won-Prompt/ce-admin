@@ -312,7 +312,7 @@ class OrderReturnController extends Controller
         $kw = trim((string) $request->q);
 
         if (mb_strlen($kw) < 2) {
-            return response()->json(['rows' => [], 'message' => '두 글자 이상 넣으십시오']);
+            return response()->json(['rows' => [], 'message' => '두 글자 이상 입력하십시오']);
         }
 
         $digits = preg_replace('/[^0-9]/', '', $kw);

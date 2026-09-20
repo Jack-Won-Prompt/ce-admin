@@ -70,7 +70,7 @@ class BankSync
         if (!$this->ready($corpNum, $jobId, $wait)) {
             /* 아직 모으는 중이다. 실패가 아니라 「이번엔 못 읽었다」이므로 다음 차례가
                같은 기간을 다시 걸어 읽는다 — 작업번호를 들고 있을 곳이 없다. */
-            return ['ok' => true, 'saved' => 0, 'message' => '아직 모으는 중입니다 — 잠시 뒤 다시 봅니다.'];
+            return ['ok' => true, 'saved' => 0, 'message' => '수집 중입니다 — 잠시 후 다시 조회하십시오.'];
         }
 
         return $this->readAll($corpNum, $jobId);

@@ -622,7 +622,7 @@ async function 보내기(짓) {
     }
   }
 
-  if (짓 === 'declined' && !confirm('동의하지 않음으로 접수합니다. 계속할까요?')) return;
+  if (짓 === 'declined' && !confirm('동의하지 않음으로 접수합니다. 계속하시겠습니까?')) return;
 
   btn.disabled = true;
   btn.textContent = '보내는 중...';
@@ -648,7 +648,7 @@ async function 보내기(짓) {
      그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있는데, 통째로 막으면
      받아 둘 수 있었던 서명마저 못 받는다. 없이 누르면 한 번 묻는다. */
   if (짓 === 'agreed' && 미성년 && !신분증) {
-    if (!confirm('신분증은 필수 입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.')) {
+    if (!confirm('신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.')) {
       btn.disabled = false; btn.textContent = '동의'; 다시셈(); return;
     }
   }

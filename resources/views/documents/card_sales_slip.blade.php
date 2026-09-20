@@ -63,7 +63,7 @@
 
   @if($doc['receiptUrl'])
   <div class="note">
-    이 전표는 토스페이먼츠 승인 내용을 옮겨 적은 것입니다. 아래 주소에서 원본을 확인할 수 있습니다.<br>
+    이 전표는 토스페이먼츠 승인 내용을 기재한 문서입니다. 아래 주소에서 원본을 확인할 수 있습니다.<br>
     <span class="url">{{ $doc['receiptUrl'] }}</span>
   </div>
   @endif

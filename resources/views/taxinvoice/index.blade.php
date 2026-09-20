@@ -615,7 +615,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     <div class="nd-modal-body">
       <div class="cancel-note">
         <i class="bx bx-error" style="font-size:16px;flex-shrink:0;margin-top:1px;"></i>
-        <span>발행 취소 후에는 되돌릴 수 없습니다. 국세청 신고 완료 후에는 취소가 제한될 수 있습니다.</span>
+        <span>발행 취소 후에는 복구할 수 없습니다. 국세청 신고 완료 후에는 취소가 제한될 수 있습니다.</span>
       </div>
       <div class="form-row" style="margin-bottom:12px;">
         <label class="form-label">관리번호</label>
@@ -814,7 +814,7 @@ function openOrderPick(btn) {
 function applyOrder(o) {
   if (!o) return;
 
-  if (o.issued && !confirm(`${o.order_no} 은(는) 이미 발행된 건입니다. 그래도 채울까요?`)) return;
+  if (o.issued && !confirm(`${o.order_no} 은(는) 이미 발행된 건입니다. 그래도 입력하시겠습니까?`)) return;
 
   /* 공급받는자 — 주문에 적어 둔 것만 채운다. 비어 있는 칸을 빈 값으로 덮으면
      담당자가 이미 적어 둔 것이 사라진다. */
@@ -980,7 +980,7 @@ async function issueInvoice() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message ?? '발행 실패');
 
-    showToast(`세금계산서 발행 완료! 국세청승인번호: ${data.ntsConfirmNum ?? data.confirmNum ?? '확인중'}`, 'success', 7000);
+    showToast(`세금계산서 발행을 완료했습니다. 국세청승인번호: ${data.ntsConfirmNum ?? data.confirmNum ?? '확인중'}`, 'success', 7000);
     genMgtKey();
     loadHistory(1);
   } catch(e) {

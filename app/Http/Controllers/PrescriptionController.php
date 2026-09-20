@@ -374,7 +374,7 @@ class PrescriptionController extends Controller
         if (blank($addrForCheck)) {
             return response()->json([
                 'success' => false,
-                'message' => '받는 주소가 없어 창고로 보낼 수 없습니다 — 배송지를 먼저 채워 주십시오.',
+                'message' => '받는 주소가 없어 창고로 보낼 수 없습니다 — 배송지를 먼저 입력하십시오.',
             ], 422);
         }
 
@@ -1049,7 +1049,7 @@ class PrescriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => "보낸 파일 {$sent}장 가운데 {$received}장만 서버에 닿았습니다 — "
+                'message' => "보낸 파일 {$sent}장 가운데 {$received}장만 서버에 전달되었습니다 — "
                            . "한 번에 올릴 수 있는 파일이 {$limit}장으로 막혀 있습니다.
 
 "
@@ -1343,7 +1343,7 @@ class PrescriptionController extends Controller
         $대상->forceFill($값)->save();
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
-            ->log("{$무엇}의 밝기 {$data['brightness']}ㆍ명암 {$data['contrast']} 로 맞췄습니다");
+            ->log("{$무엇}의 밝기 {$data['brightness']}ㆍ명암 {$data['contrast']} 로 설정했습니다");
 
         /* 이미 만들어 둔 팩스통합본이 있으면 알려 준다 (2026-09-12 지시).
 
@@ -1941,7 +1941,7 @@ class PrescriptionController extends Controller
               ?: $prescription->patient?->residentNoFor('operator_view');
 
         if (!$plain) {
-            return response()->json(['success' => false, 'message' => '적혀 있는 주민등록번호가 없습니다.']);
+            return response()->json(['success' => false, 'message' => '등록된 주민등록번호가 없습니다.']);
         }
 
         // 보기 좋게 끊어 준다 — 저장은 숫자만 한다
@@ -2747,7 +2747,7 @@ class PrescriptionController extends Controller
         return redirect()->route('prescriptions.show', [
             'prescription' => $prescription->rx_number,
             'order'        => $추가->order_number,
-        ])->with('success', "추가 주문 {$추가->order_number} 을 생성했습니다. 주문 제품 탭에서 더 살 제품을 선택하십시오.");
+        ])->with('success', "추가 주문 {$추가->order_number} 을 생성했습니다. 주문 제품 탭에서 추가 구매할 제품을 선택하십시오.");
     }
 
     // ── OCR 수정 저장 ─────────────────────────────────────
@@ -3822,7 +3822,7 @@ class PrescriptionController extends Controller
         if ($blockers) {
             return response()->json([
                 'success' => false,
-                'message' => '지울 수 없습니다 — ' . implode(' · ', $blockers) . '.',
+                'message' => '삭제할 수 없습니다 — ' . implode(' · ', $blockers) . '.',
             ], 422);
         }
 
@@ -3833,7 +3833,7 @@ class PrescriptionController extends Controller
         $order?->delete();
         $prescription->delete();
 
-        return response()->json(['success' => true, 'message' => "{$no} 을(를) 지웠습니다."]);
+        return response()->json(['success' => true, 'message' => "{$no} 을(를) 삭제했습니다."]);
     }
 
     // ── 상담번호 채번 ──────────────────────────────────────
@@ -4306,7 +4306,7 @@ class PrescriptionController extends Controller
             && optional($prescription->billingOffice)->kind === 'local') {
             return response()->json([
                 'success' => false,
-                'message' => '지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 부치십시오. '
+                'message' => '지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 발송하십시오. '
                            . '「청구 관리」에서 서류를 출력하여 발송한 뒤 등기번호를 입력해 주십시오.',
             ], 422);
         }

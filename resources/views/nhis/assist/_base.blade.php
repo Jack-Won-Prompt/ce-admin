@@ -78,7 +78,7 @@
       <div class="hd-sub">@yield('subtitle')</div>
     </div>
     <div class="grow"></div>
-    <button class="btn" onclick="resetAll()">복사 기록 지우기</button>
+    <button class="btn" onclick="resetAll()">복사 기록 삭제</button>
     <button class="btn btn-pri" onclick="window.open(@js($portalUrl),'_blank','noopener')">공단 사이트</button>
   </div>
 
@@ -194,7 +194,7 @@ function resetAll() {
     if (b.textContent === '복사됨') { b.textContent = '복사'; b.classList.remove('done'); }
   });
   progress();
-  toast('복사 기록을 지웠습니다');
+  toast('복사 기록을 삭제했습니다');
 }
 
 // 창을 벗어났다 돌아와도 어디까지 했는지 남아 있어야 한다

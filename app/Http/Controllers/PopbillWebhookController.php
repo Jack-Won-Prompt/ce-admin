@@ -52,7 +52,7 @@ class PopbillWebhookController extends Controller
         $key     = $request->route('key');
 
         if (! in_array($service, self::갈래, true)) {
-            return response()->json(['message' => '모르는 구분입니다.'], 404);
+            return response()->json(['message' => '알 수 없는 구분입니다.'], 404);
         }
 
         $기록 = WebhookLogger::inbound('popbill', $service, $request);

@@ -65,7 +65,7 @@ class PaymentCancelSync
         $order = $결제->order;
 
         if (! $order) {
-            return ['changed' => true, 'message' => '이어진 주문이 없습니다.'];
+            return ['changed' => true, 'message' => '연결된 주문이 없습니다.'];
         }
 
         $말 = $this->주문맞추기($order, $무른것, $전액인가, $사유);

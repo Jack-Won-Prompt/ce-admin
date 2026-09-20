@@ -97,7 +97,7 @@ class CommonCodeController extends Controller
         if ($commonCode->is_system) {
             return response()->json([
                 'success' => false,
-                'message' => '시스템이 쓰는 코드라 지울 수 없습니다. 필요하면 이름만 고치십시오.',
+                'message' => '시스템에서 사용하는 코드로 삭제할 수 없습니다. 필요하면 이름만 수정하십시오.',
             ], 422);
         }
 

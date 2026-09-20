@@ -153,7 +153,7 @@
   @if($missing > 0)<span class="miss">값 없음 {{ $missing }}</span>@endif
   <div class="grow"></div>
   <button class="tbtn" id="fitBtn" onclick="toggleFit()">폭 맞춤 <span id="fitPct"></span></button>
-  <button class="tbtn" onclick="resetAll()">복사 기록 지우기</button>
+  <button class="tbtn" onclick="resetAll()">복사 기록 삭제</button>
   {{-- 프레임 안에서 열렸을 때는 다시 프레임을 열 이유가 없다 --}}
   <button class="tbtn on" id="splitBtn" onclick="openSplit()">좌우 분할</button>
   <button class="tbtn" onclick="openPortal()">공단 새 창</button>
@@ -169,7 +169,7 @@
     <form method="POST" action="{{ route('nhis.assist.markClaimed', $order) }}" style="display:inline;">
       @csrf
       <button type="submit" class="tbtn"
-              onclick="return confirm('공단에 제출을 마쳤습니까? 청구 상태를 「청구완료」로 적습니다.');">
+              onclick="return confirm('공단에 제출을 마쳤습니까? 청구 상태를 「청구완료」로 변경합니다.');">
         청구 완료로 표시
       </button>
     </form>
@@ -459,7 +459,7 @@ function resetAll() {
   sessionStorage.removeItem(STORE);
   document.querySelectorAll('.fld.done').forEach(e => e.classList.remove('done'));
   progress();
-  toast('복사 기록을 지웠습니다');
+  toast('복사 기록을 삭제했습니다');
 }
 
 /* 좌우 프레임으로 전환. 공단 사이트가 프레임을 막지 않아 한 창에 나란히 놓을 수 있다.

@@ -127,7 +127,7 @@ class ConsentController extends Controller
                   . '_' . \Illuminate\Support\Str::random(6) . '.pdf';
 
             if (! Storage::put($path, $pdf)) {
-                throw new \RuntimeException("등록 신청서 파일을 쓰지 못했습니다 ({$path}).");
+                throw new \RuntimeException("등록 신청서 파일을 생성하지 못했습니다 ({$path}).");
             }
 
             /* 같은 처방전의 옛 것은 걷어낸다 — 방금 쓴 자리는 건드리지 않는다 */
@@ -188,7 +188,7 @@ class ConsentController extends Controller
             \Log::warning('[서명 동의] 서류를 그리지 못했습니다', [
                 'doc' => $doc, 'error' => $e->getMessage(), 'at' => $e->getFile() . ':' . $e->getLine(),
             ]);
-            abort(500, '서류를 여는 중 문제가 생겼습니다. 담당자에게 알려 주십시오.');
+            abort(500, '서류를 여는 중 오류가 발생했습니다. 담당자에게 문의하십시오.');
         }
 
         return response($pdf, 200, [
@@ -1379,7 +1379,7 @@ class ConsentController extends Controller
                화면에는 요양비위임장이 있는 것으로 보인다 — 공단 팩스가 그 줄을 믿고
                첨부하려다 그때서야 없는 것을 안다. */
             if (!Storage::put($path, $pdfData)) {
-                throw new \RuntimeException("요양비위임장 파일을 쓰지 못했습니다 ({$path}).");
+                throw new \RuntimeException("요양비위임장 파일을 생성하지 못했습니다 ({$path}).");
             }
 
             // 기존 위임장 문서 교체 (파일·레코드 정리)

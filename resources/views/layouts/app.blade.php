@@ -3769,7 +3769,7 @@ input#chatFileInput { display: none; }
     <i class="bx bx-clipboard" style="font-size:19px;color:var(--primary);"></i>
     <div>
       <div class="sr-header-title">SR 관리</div>
-      <div class="sr-header-sub">화면 개선·오류를 등록하고 답변을 남깁니다</div>
+      <div class="sr-header-sub">화면 개선·오류를 등록하고 답변을 확인합니다</div>
     </div>
     <button class="sr-header-close" onclick="SrPanel.close()">×</button>
   </div>

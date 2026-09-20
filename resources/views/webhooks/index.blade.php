@@ -395,11 +395,11 @@
 
     try {
       const res = await apiRequest(@json(url('settings/webhooks')) + '/' + id, 'DELETE');
-      if (!res.ok) throw new Error(res.message || '지우지 못했습니다.');
-      showToast('지웠습니다.', 'success');
+      if (!res.ok) throw new Error(res.message || '삭제하지 못했습니다.');
+      showToast('삭제했습니다.', 'success');
       setTimeout(() => location.reload(), 600);
     } catch (e) {
-      알림(e.message || '지우지 못했습니다.', false);
+      알림(e.message || '삭제하지 못했습니다.', false);
     }
   };
 })();

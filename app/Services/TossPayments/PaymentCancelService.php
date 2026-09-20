@@ -95,7 +95,7 @@ class PaymentCancelService extends TossClient
             ]);
 
             activity()->performedOn($order)->log(sprintf(
-                '시험 환경 자동 결제 취소 — %s원 (토스를 부르지 않았습니다)',
+                '시험 환경 자동 결제 취소 — %s원 (토스에 요청하지 않았습니다)',
                 number_format($무른금액)
             ));
 
@@ -122,7 +122,7 @@ class PaymentCancelService extends TossClient
            되돌아가지 않기 때문이다. 계좌가 없으면 토스가 거절하므로 미리 막는다. */
         if ($payment->method_is_virtual_account ?? ($payment->method === '가상계좌')) {
             if (!$refundAccount) {
-                return ['ok' => false, 'message' => '가상계좌로 받은 돈은 돌려줄 계좌(은행ㆍ번호ㆍ예금주)가 있어야 무를 수 있습니다.'];
+                return ['ok' => false, 'message' => '가상계좌 입금액은 환불 계좌(은행ㆍ계좌번호ㆍ예금주)가 등록되어 있어야 환불할 수 있습니다.'];
             }
             $body['refundReceiveAccount'] = $refundAccount;
         }
@@ -177,7 +177,7 @@ class PaymentCancelService extends TossClient
         $payment = $this->paymentOf($order);
 
         if (!$payment?->payment_key) {
-            return ['ok' => false, 'message' => '무를 결제가 없습니다.', 'balance' => 0];
+            return ['ok' => false, 'message' => '취소할 결제가 없습니다.', 'balance' => 0];
         }
 
         /* 시험 자동 결제는 토스에 없다 — 물어도 없는 번호라 거절당한다.
@@ -194,7 +194,7 @@ class PaymentCancelService extends TossClient
                 'total'    => $총액,
                 'canceled' => $무른것,
                 'balance'  => max(0, $총액 - $무른것),
-                'message'  => '시험 환경 자동 결제입니다 — 토스에 청하지 않습니다.',
+                'message'  => '시험 환경 자동 결제입니다 — 토스에 요청하지 않습니다.',
             ];
         }
 

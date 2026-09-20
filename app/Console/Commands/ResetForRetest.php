@@ -159,7 +159,7 @@ class ResetForRetest extends Command
         }
 
         if (! $this->option('force')
-            && ! $this->confirm('위 자료를 지웁니다. 되돌릴 수 없습니다. 계속할까요?', false)) {
+            && ! $this->confirm('위 자료를 삭제합니다. 복구할 수 없습니다. 계속하시겠습니까?', false)) {
             $this->info('그만두었습니다.');
 
             return self::SUCCESS;

@@ -256,11 +256,11 @@ class DelegationSignController extends Controller
                 '거래처' => $이름,
                 '상태'   => DelegationSign::상태[$delegationSign->status] ?? $delegationSign->status,
             ])
-            ->log('위임장 서명 줄 삭제');
+            ->log('위임장 서명 행 삭제');
 
         $delegationSign->delete();
 
-        return response()->json(['ok' => true, '말' => $이름 . ' 줄을 지웠습니다.']);
+        return response()->json(['ok' => true, '말' => $이름 . ' 행을 삭제했습니다.']);
     }
 
     // ── 명단 올리기 (CSV) ─────────────────────────────────
@@ -333,7 +333,7 @@ class DelegationSignController extends Controller
                줄 번호를 이름으로 읽어 온 줄이 버려진다 — 짐작하지 않고 말한다. */
             return response()->json([
                 'success' => false,
-                'message' => '머리글을 알아보지 못했습니다 — 첫 줄에 「환자거래처 명」ㆍ「전화번호」가 적혀 있어야 합니다.',
+                'message' => '머리글을 인식하지 못했습니다 — 첫 행에 「환자거래처 명」ㆍ「전화번호」가 있어야 합니다.',
             ], 422);
         }
 
@@ -440,7 +440,7 @@ class DelegationSignController extends Controller
         }
 
         activity()->causedBy(Auth::user())
-            ->log("위임장 서명 명단 올림 — 새로 {$세움}건 · 이미 있어 새로 적음 {$건너뜀}건");
+            ->log("위임장 서명 명단 업로드 — 신규 {$세움}건 · 기존 건 재등록 {$건너뜀}건");
 
         return response()->json([
             'success' => true,
@@ -572,7 +572,7 @@ class DelegationSignController extends Controller
      * 고른 번호로 서명 링크를 보낸다.
      *
      * 서명을 이미 받아 둔 줄에 다시 보내도 **받아 둔 서명은 지우지 않는다**
-     * (2026-09-11 지시). 보내다 만 건에서 서명이 사라지면 되돌릴 수 없다 —
+     * (2026-09-11 지시). 발송 중인 건에서 서명이 사라지면 되돌릴 수 없다 —
      * 새 서명이 들어오는 그때 덮는다.
      */
     public function send(Request $request, DelegationSign $delegationSign): JsonResponse

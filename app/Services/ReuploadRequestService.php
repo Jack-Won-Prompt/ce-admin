@@ -74,7 +74,7 @@ class ReuploadRequestService
                 '받는이' => $받는이?->name ?? '(받을 사람 없음)',
                 '알림'   => $요청->fcm_sent ? '보냄' : ($요청->fcm_error ?: '보내지 못함'),
             ])
-            ->log('자료 다시 올리기 요청');
+            ->log('자료 재업로드 요청');
 
         return $요청;
     }

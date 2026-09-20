@@ -193,7 +193,7 @@ class OrderController extends Controller
         if (! $rx) {
             return response()->json([
                 'success' => false,
-                'message' => '이 주문에는 처방전이 붙어 있지 않아 팩스로 보낼 서류가 없습니다.',
+                'message' => '이 주문에는 처방전이 연결되어 있지 않아 팩스로 보낼 서류가 없습니다.',
             ], 422);
         }
 
@@ -203,7 +203,7 @@ class OrderController extends Controller
            보낼 때 서버가 어차피 막지만, 여기서 미리 알려야 헛걸음을 하지 않는다. */
         $office  = $rx->billingOffice;
         $blocked = ($office && $office->kind === 'local')
-            ? $office->displayName() . ' — 지자체 건은 팩스로 보내지 않습니다. 등기로 부치십시오.'
+            ? $office->displayName() . ' — 지자체 건은 팩스로 보내지 않습니다. 등기로 발송하십시오.'
             : null;
 
         $rows = [];

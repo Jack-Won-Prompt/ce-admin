@@ -148,7 +148,7 @@
       }));
 
     const empty = data.length - rows.length;
-    if (empty > 0) showToast(`코드·이름이 비어 있는 ${empty}줄은 저장하지 않습니다.`, 'warning');
+    if (empty > 0) showToast(`코드·이름이 비어 있는 ${empty}행은 저장하지 않습니다.`, 'warning');
     if (!rows.length && !removed.length) { showToast('저장할 것이 없습니다.', 'warning'); return; }
 
     BtnState.loading(btn, '저장 중...');
@@ -176,7 +176,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '.pnl-tabs', title: '코드 목록', body: '화면에서 선택하는 목록을 여기서 관리합니다. 지금은 <b>서류 유형</b> 하나입니다.' },
-  { selector: '.cc-tools', title: '행 추가·삭제', body: '<b>+</b> 로 행을 추가하고, 행을 선택한 뒤 <b>−</b> 로 사용 중지합니다. 고친 것은 <b>저장</b>을 눌러야 남습니다.' },
+  { selector: '.cc-tools', title: '행 추가·삭제', body: '<b>+</b> 로 행을 추가하고, 행을 선택한 뒤 <b>−</b> 로 사용 중지합니다. 수정한 내용은 <b>저장</b>을 눌러야 반영됩니다.' },
   { selector: '#ccGrid', title: '표에서 수정', body: '항목을 눌러 바로 수정합니다. 시스템 코드는 이름·순서만 변경됩니다.' },
 ];
 </script>

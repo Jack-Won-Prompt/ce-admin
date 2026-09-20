@@ -72,7 +72,7 @@
     </div>
     <div class="modal-body">
       <p style="font-size:13px;font-weight:400;line-height:21px;color:var(--text-muted);margin:0 0 16px;">
-        초대 링크가 담긴 이메일이 발송됩니다. 수신자가 링크를 클릭하면 이름·비밀번호를 설정하고 계정이 활성화됩니다.
+        초대 링크가 포함된 이메일이 발송됩니다. 수신자가 링크를 클릭하면 이름·비밀번호를 설정하고 계정이 활성화됩니다.
       </p>
       <div class="form-group">
         <label class="form-label">초대할 이메일 <span style="color:var(--danger);">*</span></label>

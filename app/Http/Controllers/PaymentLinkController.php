@@ -50,7 +50,7 @@ class PaymentLinkController extends Controller
             return response()->json([
                 'success' => false,
                 'code'    => 'already_paid',
-                'message' => "이미 결제가 끝난 주문입니다 ({$받은것}원). 결제 안내를 더 보내면 "
+                'message' => "이미 결제가 끝난 주문입니다 ({$받은것}원). 결제 안내를 추가로 보내면 "
                            . '환자가 같은 주문에 두 번 낼 수 있습니다. 금액이 늘어 더 받아야 하는 '
                            . '건이면 주문 제품을 먼저 고치십시오 — 그때는 차액만큼 보낼 수 있습니다.',
             ], 422);
@@ -211,7 +211,7 @@ class PaymentLinkController extends Controller
     public function 시험승인(Request $request, string $token): \Illuminate\Http\JsonResponse
     {
         if (config('toss.env') !== 'test') {
-            return response()->json(['success' => false, 'message' => '시험 환경에서만 됩니다.'], 403);
+            return response()->json(['success' => false, 'message' => '시험 환경에서만 사용할 수 있습니다.'], 403);
         }
 
         $link = PaymentLink::where('token', $token)->with('order.patient')->firstOrFail();
@@ -258,7 +258,7 @@ class PaymentLinkController extends Controller
         $this->record($link->refresh(), $res);
 
         activity()->performedOn($link->order)
-            ->log('시험 환경 자동 결제 — ' . number_format((int) $link->amount) . '원 (토스를 부르지 않았습니다)');
+            ->log('시험 환경 자동 결제 — ' . number_format((int) $link->amount) . '원 (토스에 요청하지 않았습니다)');
 
         return response()->json([
             'success' => true,

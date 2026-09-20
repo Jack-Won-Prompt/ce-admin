@@ -167,7 +167,7 @@
     </div>
 
     <div class="cs-foot" id="csFoot2">
-      <span class="cs-hint" id="csNote">적은 내용은 저장을 눌러야 남습니다.</span>
+      <span class="cs-hint" id="csNote">입력한 내용은 저장을 눌러야 반영됩니다.</span>
       {{-- 목록에서 들어왔을 때만 선다 — 곧장 새 상담으로 열린 건은 돌아갈 목록이 없다 --}}
       <button type="button" class="ds-btn" id="csBackBtn" style="display:none;" onclick="csBack()">목록</button>
       <button type="button" class="ds-btn" onclick="csClose()">닫기</button>
@@ -475,7 +475,7 @@
   window.csPickSelected = function () {
     const i = _csGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : _csGrid.getData()[i];
-    if (!row) { showToast('이어 갈 상담을 눌러 주십시오.', 'warning'); return; }
+    if (!row) { showToast('이어서 진행할 상담을 선택하십시오.', 'warning'); return; }
     csPick(row._i);
   };
 
@@ -543,7 +543,7 @@
     document.getElementById('csReDate').value    = '';
     document.getElementById('csContents').value  = '';
     document.getElementById('csLen').textContent = '0';
-    document.getElementById('csNote').textContent = '적은 내용은 저장을 눌러야 남습니다.';
+    document.getElementById('csNote').textContent = '입력한 내용은 저장을 눌러야 반영됩니다.';
     document.getElementById('csBackBtn').style.display = fromList && _csList.length ? '' : 'none';
 
     csShowOrder();

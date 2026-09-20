@@ -36,7 +36,7 @@
   </div>
   <div class="help-item">
     <div class="help-item-icon purple"><i class="bx bx-link-external"></i></div>
-    <div class="help-item-text"><strong>주문번호ㆍ위드웍스 판매번호</strong>위드웍스 판매번호가 이어진 건은 파란 모노스페이스 글꼴로 보입니다.</div>
+    <div class="help-item-text"><strong>주문번호ㆍ위드웍스 판매번호</strong>위드웍스 판매번호가 연결된 건은 파란 고정폭 글꼴로 표시됩니다.</div>
   </div>
 </div>
 @endsection
@@ -840,7 +840,7 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(DETAIL_BASE + '/' + encodeURIComponent(_rv.rx) + '/approve', 'POST', {});
       if (!res.success) throw new Error(res.message || '검수를 마치지 못했습니다.');
 
-      showToast('검수 완료로 바꿨습니다.', 'success');
+      showToast('검수 완료로 변경했습니다.', 'success');
 
       /* 표의 그 줄만 고쳐 세운다 — 목록을 통째로 다시 읽지 않는다 */
       const 줄들 = grid.getData();

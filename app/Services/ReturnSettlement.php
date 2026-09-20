@@ -169,7 +169,7 @@ class ReturnSettlement
             $return->forceFill(['credit_issued_at' => now(), 'credit_note' => $note])->save();
 
             activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("부분 취소 — 최종 청구분 반영으로 남깁니다 ({$return->receipt_no})");
+                ->log("부분 취소 — 최종 청구분에 반영하여 유지합니다 ({$return->receipt_no})");
 
             return ['ok' => true, 'note' => $note];
         }
@@ -185,7 +185,7 @@ class ReturnSettlement
             $return->forceFill(['credit_issued_at' => now(), 'credit_note' => $note])->save();
 
             activity()->causedBy(Auth::user())->performedOn($order)
-                ->log("발행 불포함 사유 — 되돌릴 발행 없음 ({$return->receipt_no})");
+                ->log("발행 불포함 사유 — 취소할 발행 건 없음 ({$return->receipt_no})");
 
             return ['ok' => true, 'note' => $note];
         }

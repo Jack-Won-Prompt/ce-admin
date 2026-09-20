@@ -95,7 +95,7 @@ class EntraController extends Controller
                 'is_active' => true,
             ]);
 
-            activity()->performedOn($user)->log("SSO 첫 로그인으로 사용자를 만들었습니다 ({$email})");
+            activity()->performedOn($user)->log("SSO 첫 로그인으로 사용자를 생성했습니다 ({$email})");
         }
 
         if (property_exists($user, 'is_active') || isset($user->is_active)) {

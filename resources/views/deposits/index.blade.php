@@ -86,7 +86,7 @@
     <div class="modal-body">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">
         지자체가 여러 환자 건을 통으로 보낸 입금입니다. 환자별로 갈라 적으면 각 주문에 걸립니다.
-        원본 줄은 통장이 준 그대로 남습니다.
+        원본 행은 통장 자료 그대로 유지됩니다.
       </div>
       <div class="sp-row sp-head">
         <span>주문번호</span><span>금액</span><span>적요 메모</span><span>담당자메모</span><span></span>

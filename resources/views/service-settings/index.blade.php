@@ -189,7 +189,7 @@
                   @elseif ($secret)
                     {{-- 원문을 화면에 내려보내지 않는다. 바꿀 때만 입력한다. --}}
                     <input type="password" name="{{ $key }}" class="form-control" autocomplete="new-password"
-                           placeholder="{{ $state['filled'] ? '설정됨 — 바꿀 때만 입력' : '미설정' }}">
+                           placeholder="{{ $state['filled'] ? '설정됨 — 변경할 때만 입력' : '미설정' }}">
 
                   @elseif ($type === 'info')
                     {{-- 고치는 칸이 아니라 알려 주는 칸이다. 그대로 끌어다 붙일 수 있게

@@ -121,7 +121,7 @@
         {{-- 안내 문구 --}}
         <div style="padding:12px 14px;background:var(--info-light);border:1px solid var(--primary-accent);border-radius:var(--radius);font-size:12px;color:var(--primary);">
           <i class="bx bx-info-circle" style="margin-right:6px;"></i>
-          여기 적은 「내용」은 환자가 말한 것을 그대로 옮기는 자리입니다. 답변과 조치사항은 목록에서 행을 더블클릭해 적습니다.
+          「내용」에는 환자가 말한 내용을 그대로 입력합니다. 답변과 조치사항은 목록에서 행을 더블클릭해 입력합니다.
         </div>
 
       </div>

@@ -195,7 +195,7 @@
         {{-- 설명글은 단추와 같은 줄 왼쪽에 둔다 — 남는 자리를 먹어 단추를 오른쪽 끝으로 민다 --}}
         <div class="ns-hint ns-actions-note">
           연결 테스트는 <b>저장된</b> 자격증명으로 기관토큰·암호화토큰 발급까지만 확인합니다.
-          표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 바꿨다면 먼저 저장하십시오.
+          표준창을 열지 않으므로 본인확인 건당 요금은 발생하지 않습니다. 값을 변경했다면 먼저 저장하십시오.
         </div>
         <span id="testResult"></span>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 저장</button>
