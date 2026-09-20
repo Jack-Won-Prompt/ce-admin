@@ -213,6 +213,16 @@ class WithworksWebhookController extends Controller
            지금 우리 줄에 적힌 번호가 아니고, 이력에 물러난 것으로 남아 있으면 그
            사건은 지나간 판매주문의 일이다. 사건 자체는 위에서 이미 적어 두었다. */
         if ($order->물러난판매번호인가($data['so_no'] ?? null)) {
+            /* 취소 사건이면 이력에 적어 둔다 (2026-09-20 지시).
+
+               정정으로 물러난 판매주문에 취소를 청해 두면 창고가 되돌릴 때까지
+               창고에 살아 있다. 그 취소가 실제로 끝났다는 것을 적어 두지 않으면
+               담당자는 아직 남아 있는지 정리됐는지 알 수 없었다. */
+            if (($data['event'] ?? null) === 'so.cancelled') {
+                $order->취소된번호남기기($data['so_no']);
+                $order->save();
+            }
+
             Log::info('[Withworks] 이전 판매번호의 이벤트 — 상태에 반영하지 않습니다', [
                 'event' => $data['event'],
                 'order' => $order->order_number,

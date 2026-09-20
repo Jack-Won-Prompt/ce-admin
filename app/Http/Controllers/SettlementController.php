@@ -197,6 +197,9 @@ class SettlementController extends Controller
                 /* 언제 들어왔는가 — 사람이 확인한 날이 먼저고, 없으면 토스가 알려 준 때다 */
                 'deposited_at' => $order->deposit_confirmed_at?->format('Y-m-d H:i')
                                     ?? $tp?->deposited_at?->format('Y-m-d H:i') ?? '-',
+                /* 정정으로 물러났는데 창고에서 아직 취소되지 않은 판매주문 (2026-09-20 지시).
+                   그대로 두면 재고를 잡은 채 남으므로 담당자가 창고에 연락해야 한다. */
+                'so_pending_cancel' => implode(', ', array_column($order->정리안된판매주문들(), 'so_no')) ?: '-',
                 /* 「입금 확인」 단추가 무엇을 할지 가리는 데 쓴다(컬럼 아님) */
                 'deposit_done' => $order->deposit_confirmed_at !== null || (bool) $tp?->is_done,
                 'deposit_hand' => $order->deposit_confirmed_at !== null,
@@ -251,6 +254,8 @@ class SettlementController extends Controller
                언제 들어왔는지는 가상계좌 목록에만 있어, 정산 담당자가 두 화면을
                오가며 맞춰 보아야 했다. */
             ['header' => '입금일시',    'name' => 'deposited_at', 'width' => 140, 'align' => 'center', 'sortable' => true],
+            /* 취소를 청해 두고 창고가 아직 되돌리지 않은 판매주문 (2026-09-20 지시) */
+            ['header' => '취소 대기 판매번호', 'name' => 'so_pending_cancel', 'width' => 180, 'align' => 'center'],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
             ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],

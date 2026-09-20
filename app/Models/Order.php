@@ -200,6 +200,70 @@ class Order extends Model
     }
 
     /**
+     * 물러난 판매번호의 자리에 값을 적는다 — 없으면 줄을 만든다.
+     *
+     * 정정을 거듭하면 취소를 청해 둔 판매주문이 여럿 남는다. 여태 이력에는 번호와
+     * 물러난 시각만 있어, **어느 것이 아직 창고에 살아 있는지** 알 길이 없었다
+     * (2026-09-20 지시). 청한 때와 실제로 취소된 때를 함께 적는다.
+     */
+    private function 이력에적기(?string $so_no, array $적을것): void
+    {
+        if (! $so_no) {
+            return;
+        }
+
+        $이력 = $this->withworks_so_no_history ?? [];
+
+        if (! is_array($이력)) {
+            $이력 = [];
+        }
+
+        foreach ($이력 as $i => $줄) {
+            if (($줄['so_no'] ?? null) === $so_no) {
+                $이력[$i] = $줄 + $적을것;
+                $this->withworks_so_no_history = array_values($이력);
+
+                return;
+            }
+        }
+
+        $이력[] = ['so_no' => $so_no, 'at' => now()->toDateTimeString()] + $적을것;
+        $this->withworks_so_no_history = $이력;
+    }
+
+    /** 이 판매주문에 취소를 청했다 — 창고가 되돌리면 저쪽이 스스로 취소까지 잇는다 */
+    public function 취소청한번호남기기(?string $so_no): void
+    {
+        $this->이력에적기($so_no, ['cancel_requested_at' => now()->toDateTimeString()]);
+    }
+
+    /** 이 판매주문이 실제로 취소됐다 — 물러난 번호로 so.cancelled 가 닿은 때다 */
+    public function 취소된번호남기기(?string $so_no): void
+    {
+        $this->이력에적기($so_no, ['cancelled_at' => now()->toDateTimeString()]);
+    }
+
+    /**
+     * 아직 창고에 남아 있는 물러난 판매주문들.
+     *
+     * 취소를 청했는데 취소 사건이 오지 않은 것 — 창고 담당자가 할당ㆍ피킹을 되돌려야
+     * 정리되는 건이다. 화면이 이것을 보여 주어야 담당자가 창고에 연락할 수 있다.
+     *
+     * @return array<int, array{so_no:string, cancel_requested_at:?string}>
+     */
+    public function 정리안된판매주문들(): array
+    {
+        $이력 = $this->withworks_so_no_history ?? [];
+
+        if (! is_array($이력)) {
+            return [];
+        }
+
+        return array_values(array_filter($이력, fn ($줄) =>
+            ! empty($줄['cancel_requested_at']) && empty($줄['cancelled_at'])));
+    }
+
+    /**
      * 물러난 판매번호인가 — 이 번호로 오는 사건은 지금 주문의 일이 아니다.
      *
      * 이력에 있느냐로 가리다가 「지금 번호와 다르냐」로 바꿨다 (2026-09-16).

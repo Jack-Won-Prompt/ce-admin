@@ -2043,6 +2043,25 @@ $calcDeposit  = $calcCopay;
         @endif
       </div>
 
+      {{-- 취소 대기 판매주문 (2026-09-20 지시).
+
+           정정하면 옛 판매주문에 취소를 청하고 새 주문을 곧바로 등록한다. 옛 주문은
+           창고 담당자가 할당ㆍ피킹을 되돌려야 정리되는데, 그때까지 재고를 잡은 채
+           창고에 남는다. 정정을 거듭하면 여럿이 쌓이므로 화면에 세워 둔다 —
+           담당자가 이것을 보고 창고에 연락한다. --}}
+      @php $정리대기 = $prescription->order?->정리안된판매주문들() ?? []; @endphp
+      @if($정리대기)
+      <div id="wwSoPendingCancel"
+           title="창고에서 할당ㆍ피킹을 되돌려야 취소가 끝납니다. 창고 담당자에게 확인해 주십시오."
+           style="display:flex;align-items:center;height:32px;gap:5px;padding:4px 9px;border:1px solid var(--warning);border-radius:var(--radius);background:var(--warning-light);font-size:11px;white-space:nowrap;">
+        <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning);font-size:10px;flex-shrink:0;"></i>
+        <span style="color:var(--gray-800);">취소 대기</span>
+        <span style="font-family:monospace;font-weight:700;color:var(--gray-800);">
+          {{ implode(', ', array_column($정리대기, 'so_no')) }}
+        </span>
+      </div>
+      @endif
+
       {{-- 세금계산서 --}}
       @if($prescription->order?->tax_invoice_status === 'issued')
       <div id="tiIssuedBadge" style="display:flex;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
@@ -2209,14 +2228,9 @@ $calcDeposit  = $calcCopay;
           <button type="button" id="btnResetView" class="vw-btn vw-btn-icon" onclick="resetImg()"
                   title="처음으로 되돌리기 (배율·회전·위치)"
                   @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-arrows-rotate"></i></button>
-          {{-- 등록신청서 그림을 보고 있을 때만 선다 (2026-09-17 지시).
-               병원이 ② 요양기관 확인란을 적어 준 종이라 ③ 신청인란은 비어 있다 —
-               위임장처럼 받아 둔 서명과 우리가 아는 값을 그 자리에 얹는다. --}}
-          <button type="button" id="btnRegOverlay" class="vw-btn" style="display:none;"
-                  onclick="openRegOverlay()"
-                  title="등록신청서 하단 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 입력합니다">
-            <i class="fa-solid fa-signature" style="margin-right:4px;"></i><span id="btnRegOverlayLabel">신청인란 채우기</span>
-          </button>
+          {{-- 옮긴 것 — 등록신청서 신청인 서명 (2026-09-20 지시).
+               뷰어 도구줄에 있던 것을 아래 「첨부문서 추가」 옆으로 옮겼다. 서류를
+               다루는 단추는 서류를 다루는 자리에 모여 있어야 한다. --}}
           <a id="viewerOpenBtn" class="vw-btn vw-btn-icon"
              href="{{ $prescription->image_url ?? ($firstDoc['url'] ?? '#') }}" target="_blank" title="원본보기"
              @if(!$firstDoc) style="display:none;" @endif><i class="fa-solid fa-expand"></i></a>
@@ -2281,6 +2295,16 @@ $calcDeposit  = $calcCopay;
             </div>
             <button type="button" class="vw-btn-sm vw-btn-add" onclick="document.getElementById('attachUploadInput').click()">
               <i class="fa-solid fa-plus"></i> 첨부문서 추가
+            </button>
+            {{-- 등록신청서 신청인 서명 (2026-09-17 지시 · 2026-09-20 자리 옮김).
+
+                 병원이 ② 요양기관 확인란을 적어 준 종이라 ③ 신청인란은 비어 있다 —
+                 위임장처럼 받아 둔 서명과 우리가 아는 값을 그 자리에 얹는다.
+                 뷰어 도구줄에 있던 것을 서류를 다루는 이 자리로 옮겼다. --}}
+            <button type="button" id="btnRegOverlay" class="vw-btn-sm" style="display:none;"
+                    onclick="openRegOverlay()"
+                    title="등록신청서 하단 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 입력합니다">
+              <i class="fa-solid fa-signature" style="margin-right:4px;"></i><span id="btnRegOverlayLabel">등록신청서 신청인 서명</span>
             </button>
             <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
           </div>
@@ -5531,8 +5555,21 @@ function syncRegOverlayBtn() {
 
   btn.style.display = 됨 ? '' : 'none';
   if (됨) {
-    document.getElementById('btnRegOverlayLabel').textContent =
-      doc.regOverlayApplied ? '신청인란 추가' : '신청인란 채우기';
+    /* 이름은 한 가지로 둔다 (2026-09-20 지시) — 「등록신청서 신청인 서명」.
+       이미 얹은 건인지는 글이 아니라 아이콘으로 가른다. 글이 바뀌면 같은 단추가
+       두 가지로 읽혀, 담당자가 무엇을 누르는지 매번 다시 읽어야 했다. */
+    document.getElementById('btnRegOverlayLabel').textContent = '등록신청서 신청인 서명';
+
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.className = doc.regOverlayApplied
+        ? 'fa-solid fa-circle-check' : 'fa-solid fa-signature';
+      icon.style.marginRight = '4px';
+      icon.style.color = doc.regOverlayApplied ? 'var(--primary)' : '';
+    }
+    btn.title = doc.regOverlayApplied
+      ? '이미 입력된 신청인란을 다시 확인하거나 수정합니다'
+      : '등록신청서 하단 ③ 신청인란에 신청인ㆍ수진자와의 관계ㆍ전화번호ㆍ서명을 입력합니다';
   }
 }
 

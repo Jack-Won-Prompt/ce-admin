@@ -99,6 +99,13 @@ class OrderAmendService
                 return ['ok' => false, 'so_no' => null, 'state' => null, 'message' => $결과['message']];
             }
 
+            /* 청한 사실을 이력에 적는다 (2026-09-20 지시).
+
+               정정을 거듭하면 취소를 청해 둔 판매주문이 여럿 남는데, 여태 이력에는
+               번호만 있어 **어느 것이 아직 창고에 살아 있는지** 알 길이 없었다. */
+            $order->취소청한번호남기기($order->withworks_so_no);
+            $order->save();
+
             activity()->causedBy(Auth::user())->performedOn($order)->log(
                 "주문 정정 — 창고에 취소를 요청했습니다 ({$order->withworks_so_no})"
             );
