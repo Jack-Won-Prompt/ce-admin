@@ -476,8 +476,21 @@ class Prescription extends Model
                올라간 것은 하나뿐이었다.
 
                환자를 붙이는 것은 초안을 준비하는 일이지 채우는 일이 아니다. 이름ㆍ병원ㆍ
-               처방 내용처럼 사람이 친 값이 들어올 때 풀린다. */
-            $셈안함 = ['is_blank_draft', 'updated_at', 'updated_by', 'patient_id'];
+               처방 내용처럼 사람이 친 값이 들어올 때 풀린다.
+
+               유형도 같다 (2026-09-20 시험에서 드러남).
+
+               ［신규 등록］ 화면은 초안을 잡은 뒤 유형을 「처방외」로 채워 저장한다
+               (2026-09-15 지시 — 유형이 비면 검수 문에서 막힌다). 그 저장만으로 초안
+               표시가 풀려, **거래처도 서류도 없는 껍데기가 정식 처방전으로 승격**됐다.
+               목록에서 감추는 잣대(scopeBlankDraft)가 is_blank_draft 를 보므로 그
+               껍데기는 어디서도 걸러지지 않고 「RX-…-005 · - · 대기 중」으로 남았다.
+
+               사람이 고른 유형도 이 자리를 지난다. 그래도 괜찮다 — 유형만 고르고 나간
+               초안은 다시 쓰면 그만이고, 이름ㆍ병원ㆍ처방 내용 가운데 하나라도 치면
+               그때 풀린다. */
+            $셈안함 = ['is_blank_draft', 'updated_at', 'updated_by', 'patient_id',
+                       'counsel_acc_add_type'];
             $changed = array_diff(array_keys($rx->getDirty()), $셈안함);
             if ($changed) {
                 $rx->is_blank_draft = false;
