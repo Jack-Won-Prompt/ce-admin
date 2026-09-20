@@ -992,12 +992,15 @@
      제목 줄은 44 높이에 아래 선 하나, 본문은 카드 안쪽에 따로 여백을 준다. */
   .vw-card { border:1px solid var(--gray-200); border-radius:12px; background:var(--gray-0); }
   /* 머리 44 는 아래 1px 선을 포함한 값이다 (시안 148:1587) — 아래 여백에서 1 을 뺀다 */
+  /* 단추가 셋이 되면 한 줄에 다 서지 못한다 (2026-09-20).
+     「등록신청서 신청인 서명」을 이 자리로 옮기면서 글이 잘렸다 — 넘치면 줄을 바꾼다. */
   .vw-card-head { display:flex; align-items:center; justify-content:space-between; gap:4px;
+                  flex-wrap:wrap; row-gap:6px;
                   min-height:44px; padding:8px 16px 7px; border-bottom:1px solid var(--gray-200); }
   .vw-card-title { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700;
                    line-height:1.6; color:var(--gray-1000); }
   .vw-card-title b { color:var(--primary); font-weight:700; }   /* 개수는 주색 (시안 137:796) */
-  .vw-card-acts { display:flex; align-items:center; gap:6px; }
+  .vw-card-acts { display:flex; align-items:center; gap:6px; flex-wrap:wrap; row-gap:6px; }
   /* 카드 머리에 놓이는 작은 버튼 — 높이 28 (시안 137:798 · 137:802) */
   .vw-btn-sm { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 12px;
                border-radius:8px; background:var(--gray-0); border:1px solid var(--gray-200);
