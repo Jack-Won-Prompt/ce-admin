@@ -358,7 +358,9 @@ class OrderController extends Controller
         /* 서명이 남은 위임 줄이어야 한다 — 신분증만 받은 줄도 `agreed` 가 되어
            서명 없이 지나가던 자리다(DelegationGate). */
         if ($needsDelegation && ! \App\Support\DelegationGate::signed($prescription)) {
-            $missing[] = '요양비 위임 서명';
+            /* 기초(의료급여)는 서명은 받되 위임장이 아니라 지급청구서에 들어간다 —
+               그 건에 「위임 서명」이라 적으면 담당자가 없는 서류를 찾는다. */
+            $missing[] = \App\Support\DelegationGate::서명이름($prescription);
         }
 
         /* 전자서명이 안 되는 환자는 종이로 받아 올린다 — 그것도 받은 것이다
@@ -377,7 +379,7 @@ class OrderController extends Controller
         }
 
         $where = $needsDelegation
-            ? '화면 위쪽의 「개인정보동의」ㆍ「위임동의」 버튼'
+            ? '화면 위쪽의 「개인정보동의」ㆍ「서명 동의」 버튼'
             : '화면 위쪽의 「개인정보동의」 버튼';
 
         return implode(' · ', $missing) . " 이(가) 아직입니다. {$where}로 받은 뒤 진행해 주십시오.";

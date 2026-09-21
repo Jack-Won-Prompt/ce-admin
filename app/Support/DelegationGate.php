@@ -31,6 +31,23 @@ final class DelegationGate
         . '주문 생성, 위드웍스 연계, 결제 안내 발송이 진행되지 않습니다. '
         . '화면 위쪽의 「서명 동의」 버튼으로 위임 서명을 받은 뒤 다시 진행해 주십시오.';
 
+    /* 기초(의료급여)는 서명은 받되 위임장이 아니라 요양비 지급청구서에 들어간다
+       (2026-09-21 확정). 그 건에 「위임 서명」이라 적으면, 담당자는 보여 주지도
+       않는 위임장을 찾는다. */
+    public const MESSAGE_NO_FORM = '서명 동의가 완료되지 않았습니다. '
+        . '주문 생성, 위드웍스 연계, 결제 안내 발송이 진행되지 않습니다. '
+        . '화면 위쪽의 「서명 동의」 버튼으로 서명을 받은 뒤 다시 진행해 주십시오.';
+
+    /** 이 건의 서명을 무엇이라 부를 것인가 — 「요양비 위임 서명」 또는 「서명 동의」 */
+    public static function 서명이름(Prescription $prescription): string
+    {
+        return BillingStrategy::위임장받나(
+            $prescription->counsel_acc_add_type,
+            $prescription->benefit_class,
+            $prescription->claim_agency,
+        ) ? '요양비 위임 서명' : '서명 동의';
+    }
+
     /** 이 건에 위임 서명이 필요한가 */
     public static function needed(Prescription $prescription): bool
     {
@@ -63,6 +80,8 @@ final class DelegationGate
             return null;
         }
 
-        return self::MESSAGE;
+        return self::서명이름($prescription) === '요양비 위임 서명'
+            ? self::MESSAGE
+            : self::MESSAGE_NO_FORM;
     }
 }

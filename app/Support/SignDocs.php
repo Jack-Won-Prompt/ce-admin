@@ -61,8 +61,12 @@ final class SignDocs
         $위임필요 = BillingStrategy::needsDelegation(
             $rx?->counsel_acc_add_type, $rx?->benefit_class
         );
-        $청구처 = $rx?->claim_agency ?: ClaimAgency::fromBenefitClass($rx?->benefit_class);
-        if ($위임필요 && ! in_array($청구처, [ClaimAgency::LOCAL, ClaimAgency::NONE], true)) {
+
+        /* 「위임장을 받는 건인가」는 청구전략 표가 한 곳에서 잰다(2026-09-21) —
+           주문 관문의 안내 문구도 같은 것을 본다. 두 곳이 각자 재면 「위임 서명을
+           받으십시오」라 하고서 위임장은 보여 주지 않는 일이 생긴다. */
+        if (BillingStrategy::위임장받나(
+                $rx?->counsel_acc_add_type, $rx?->benefit_class, $rx?->claim_agency)) {
             $목록[] = self::줄(self::위임장, 'pdf',
                 '요양비 지급 청구 및 수령을 콜로플라스트에 위임하는 내용입니다.');
         }

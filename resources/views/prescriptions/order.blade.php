@@ -9316,7 +9316,9 @@ window.HELP_TOUR_STEPS = [
        두는 자리라 반대로 둔다. */
     const bs = bsCurrent();
     const 남은 = [];
-    if (bs && bs.needs_delegation && !window.DELEGATION_SIGNED) 남은.push('요양비 위임 서명');
+    /* 기초(의료급여)는 위임장이 아니라 지급청구서에 서명한다 — 이름을 갈라 적는다 */
+    if (bs && bs.needs_delegation && !window.DELEGATION_SIGNED)
+      남은.push(bs.needs_delegation_form ? '요양비 위임 서명' : '서명 동의');
     if (!PRIVACY_STATE?.agreed) 남은.push('개인정보 수집·이용 동의');
     if (!남은.length) return;
 
@@ -10193,12 +10195,16 @@ window.HELP_TOUR_STEPS = [
        CONSENT_STATUS 는 배지용이라 지난 처방전의 서명이나 신분증만 받은 줄도
        「완료」로 읽힌다 — 주문을 낼지는 서버와 같은 잣대(DelegationGate)로 가른다. */
     if (needDel && !window.DELEGATION_SIGNED) {
-      ceAlert('요양비 위임 서명이 완료되지 않아 진행할 수 없습니다.\n'
+      /* 위임장을 받는 건이면 그 이름으로, 아니면 「서명 동의」로 부른다 (2026-09-21).
+         기초(의료급여)는 서명은 받되 위임장이 아니라 지급청구서에 들어간다 — 그 건에
+         「위임 서명」이라 적으면 담당자가 보여 주지도 않는 서류를 찾는다. */
+      const 서명이름 = (bs && bs.needs_delegation_form) ? '요양비 위임 서명' : '서명 동의';
+      ceAlert(서명이름 + '이(가) 완료되지 않아 진행할 수 없습니다.\n'
             + '주문 생성, 위드웍스 연계, 결제 안내 발송이 모두 진행되지 않았습니다.\n\n'
-            + '화면 위쪽의 「서명 동의」 버튼으로 위임 서명을 받은 뒤 다시 눌러 주십시오. '
+            + '화면 위쪽의 「서명 동의」 버튼으로 서명을 받은 뒤 다시 눌러 주십시오. '
             + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.'
             + (PRIVACY_STATE?.agreed ? '' : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'),
-              { title: '위임 서명 후 진행 가능합니다' });
+              { title: 서명이름 + ' 후 진행 가능합니다' });
       return false;
     }
 

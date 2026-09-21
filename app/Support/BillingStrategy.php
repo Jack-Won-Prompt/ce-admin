@@ -116,6 +116,29 @@ class BillingStrategy
         return $r['pending'] ? true : $r['payer_rate'] > 0;
     }
 
+    /**
+     * 요양비 위임장(별지 제19호의7)을 받는 건인가 (2026-09-21 확정).
+     *
+     * needsDelegation 과 다르다. 그쪽은 「서명을 받아야 하는가」이고, 이쪽은
+     * 「그 서명이 위임장에 들어가는가」다. 기초(의료급여)는 서명은 받되 위임장이
+     * 아니라 요양비 지급청구서에 들어간다 — 청구처가 시군구청이라 위임 절차가 없다.
+     *
+     * 서명 화면(SignDocs)과 주문 관문의 안내 문구가 이 하나를 함께 본다. 두 곳이
+     * 각자 재면 「위임 서명을 받으십시오」라 하고서 위임장은 보여 주지 않는 일이 생긴다.
+     *
+     * 청구처는 담당자가 고른 값이 있으면 그것이 맞고, 없으면 자격에서 세운다.
+     */
+    public static function 위임장받나(?string $accAddType, ?string $benefitClass, ?string $claimAgency = null): bool
+    {
+        if (! self::needsDelegation($accAddType, $benefitClass)) {
+            return false;
+        }
+
+        $청구처 = $claimAgency ?: ClaimAgency::fromBenefitClass($benefitClass);
+
+        return ! in_array($청구처, [ClaimAgency::LOCAL, ClaimAgency::NONE], true);
+    }
+
     /** 건에 적어 두는 열쇠 — 「유형|자격」. 화면ㆍ표가 쓰는 것과 같다. */
     public static function key(?string $accAddType, ?string $benefitClass): ?string
     {
@@ -160,10 +183,12 @@ class BillingStrategy
         $out = [];
         foreach (self::CLASSES as $b) {
             $out[self::TYPE_OUT . "|{$b}"] = self::resolve(self::TYPE_OUT, $b)
-                + ['needs_delegation' => self::needsDelegation(self::TYPE_OUT, $b)];
+                + ['needs_delegation'      => self::needsDelegation(self::TYPE_OUT, $b),
+                   'needs_delegation_form' => self::위임장받나(self::TYPE_OUT, $b)];
         }
         $out[self::TYPE_NONRX . '|'] = self::resolve(self::TYPE_NONRX, null)
-            + ['needs_delegation' => self::needsDelegation(self::TYPE_NONRX, null)];
+            + ['needs_delegation'      => self::needsDelegation(self::TYPE_NONRX, null),
+               'needs_delegation_form' => self::위임장받나(self::TYPE_NONRX, null)];
 
         return $out;
     }
