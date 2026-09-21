@@ -32,6 +32,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Microsoft 계정 로그인이 끝나면 브라우저가 ceadmin://sso?code=... 로
+             앱을 다시 부른다. 그 주소를 받는 자리다(flutter_web_auth_2).
+             taskAffinity 를 비우는 것은 이 꾸러미가 일러 준 대로다 — 로그인 창이
+             앱과 다른 작업으로 떨어져 나가지 않게 한다. -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ceadmin" />
+            </intent-filter>
+        </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

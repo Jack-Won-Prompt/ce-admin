@@ -72,6 +72,21 @@ class AuthNotifier extends AsyncNotifier<bool> {
     }
   }
 
+  /// Microsoft 계정으로 로그인 — 문자 인증을 거치지 않는다.
+  /// 회사 계정으로 이미 한 번 확인한 사람이므로, 같은 확인을 두 번 시키지 않는다.
+  /// 창을 닫은 것은 오류가 아니라 그만둔 것이라, 상태를 그대로 되돌린다.
+  Future<void> ssoLogin() async {
+    state = const AsyncLoading();
+    try {
+      await ref.read(authServiceProvider).ssoLogin();
+      await _adoptSession();
+    } on SsoCancelled {
+      state = const AsyncData(false);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
   /// 2단계: OTP 검증 → 최종 로그인
   Future<void> verifyOtp(String pendingToken, String code) async {
     state = const AsyncLoading();

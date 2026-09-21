@@ -4,10 +4,15 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import '../utils/constants.dart';
+
+/// 사용자가 로그인 창을 닫았다. 잘못된 것이 아니므로 화면에 오류를 띄우지 않는다.
+class SsoCancelled implements Exception {}
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref.read(dioProvider));
@@ -41,13 +46,17 @@ class AuthService {
     final saved = prefs.getString(AppConstants.keyDeviceId);
     if (saved != null && saved.isNotEmpty) return saved;
 
-    final rnd = Random.secure();
-    final id  = List.generate(16, (_) => rnd.nextInt(256))
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-
+    final id = _randomHex(16);
     await prefs.setString(AppConstants.keyDeviceId, id);
     return id;
+  }
+
+  /// 남이 맞힐 수 없는 값을 만든다 — 기기 표와 SSO 표에 쓴다.
+  String _randomHex(int bytes) {
+    final rnd = Random.secure();
+    return List.generate(bytes, (_) => rnd.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
   }
 
   /// 아이디·비밀번호로 들어가는 길이 열려 있는가(설정 › 서비스 연동 설정 › 로그인).
@@ -75,6 +84,58 @@ class AuthService {
       }
     } catch (_) {}
     return true;
+  }
+
+  /// Microsoft 계정(Entra ID)으로 들어오는 길이 열려 있는가.
+  /// 못 물어보면 닫힌 것으로 본다 — 설정이 덜 찬 서버에서 단추를 누르면
+  /// 브라우저만 열리고 아무 일도 일어나지 않는다.
+  Future<bool> ssoLoginEnabled() async {
+    try {
+      final res  = await _dio.get('/auth/options');
+      final data = res.data;
+      if (data is Map && data['sso_login'] is bool) {
+        return data['sso_login'] as bool;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Microsoft 계정으로 로그인한다 (2026-09-21).
+  ///
+  /// 브라우저로 웹과 똑같은 SSO 로그인을 거친다. 서버는 앱에서 열었다는 것을
+  /// 표(nonce)로 알아보고, 웹 세션 대신 일회용 코드를 앱으로 돌려준다. 그 코드를
+  /// 여기서 앱 토큰으로 바꾼다 — 앱은 Microsoft 쪽 열쇠를 하나도 들고 있지 않다.
+  ///
+  /// 표를 앱이 만들어 보내고 받을 때 맞춰 보므로, 다른 앱이 같은 주소를 가로채
+  /// 코드를 낚아채도 쓸 수 없다.
+  Future<void> ssoLogin() async {
+    final nonce = _randomHex(16);
+    final String callbackUrl;
+
+    try {
+      callbackUrl = await FlutterWebAuth2.authenticate(
+        url: '${AppConstants.storageUrl}/auth/entra/redirect?app=$nonce',
+        callbackUrlScheme: 'ceadmin',
+      );
+    } on PlatformException {
+      throw SsoCancelled();   // 창을 닫았거나 되돌아오지 못했다
+    }
+
+    final code = Uri.parse(callbackUrl).queryParameters['code'] ?? '';
+    if (code.isEmpty) {
+      throw Exception('로그인이 끝나지 않았습니다. 다시 시도해 주십시오.');
+    }
+
+    try {
+      final res = await _dio.post('/auth/sso/exchange', data: {
+        'code':      code,
+        'nonce':     nonce,
+        'device_id': await _deviceId(),
+      });
+      await _persistSession(res.data as Map);
+    } on DioException catch (e) {
+      throw Exception(_extractMessage(e));
+    }
   }
 
   /// 로그인 — 서버가 직접 토큰을 반환하거나 OTP를 요구하는 두 케이스 처리

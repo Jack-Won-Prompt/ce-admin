@@ -27,6 +27,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   /// 없다가 생기는 것보다 있다가 사라지는 편이 덜 놀랍다.
   bool _passwordLogin = true;
 
+  /// Microsoft 계정 길이 열려 있는가. 서버가 알려 주기 전까지는 닫힌 것으로 둔다 —
+  /// 눌러도 되지 않는 단추를 먼저 보이는 것보다 낫다.
+  bool _ssoEnabled = false;
+
   /* 아이디·비밀번호 길이 닫혀 있어도 이 자리를 여덟 번 잇달아 누르면 칸이 나온다.
      SSO 가 말썽일 때 고칠 사람까지 갇히지 않도록 남겨 둔 뒷문이다. 나온다고
      아무나 들어오는 것은 아니다 — 서버가 관리자만 받는다.
@@ -52,13 +56,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             parent: _animCtrl, curve: Curves.easeOutCubic));
     _animCtrl.forward();
 
-    // 서버가 이 길을 닫아 두었는지 물어본다
+    // 서버가 어느 길을 열어 두었는지 물어본다 — 아이디·비밀번호와 Microsoft 계정
     Future(() async {
-      final enabled =
-          await ref.read(authServiceProvider).passwordLoginEnabled();
-      if (mounted && enabled != _passwordLogin) {
-        setState(() => _passwordLogin = enabled);
-      }
+      final svc = ref.read(authServiceProvider);
+      final opts = await Future.wait([
+        svc.passwordLoginEnabled(),
+        svc.ssoLoginEnabled(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _passwordLogin = opts[0];
+        _ssoEnabled    = opts[1];
+      });
     });
   }
 
@@ -92,18 +101,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
-  void _ssoLogin() {
+  /// Microsoft 계정으로 로그인한다. 브라우저에서 회사 계정으로 확인을 마치면
+  /// 앱으로 돌아와 로그인이 끝난다 — 문자 인증은 거치지 않는다.
+  Future<void> _ssoLogin() async {
     if (!_passwordLogin && _countTapToReveal()) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Microsoft SSO 로그인은 현재 준비 중입니다. IT 관리자에게 문의하세요.'),
-        backgroundColor: const Color(0xFF1565C0),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    if (!_ssoEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Microsoft 계정 로그인이 아직 설정되지 않았습니다. IT 관리자에게 문의하십시오.'),
+          backgroundColor: const Color(0xFF1565C0),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
+
+    await ref.read(authNotifierProvider.notifier).ssoLogin();
   }
 
   @override
@@ -295,7 +311,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: _ssoLogin,
+                          onTap: isLoading ? null : _ssoLogin,
                           borderRadius: BorderRadius.circular(18),
                           child: Ink(
                             decoration: BoxDecoration(
