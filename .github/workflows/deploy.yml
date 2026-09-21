@@ -34,4 +34,3 @@ jobs:
             sudo systemctl reload php8.3-fpm
 
             echo "===== DEPLOY COMPLETE ====="
-```
