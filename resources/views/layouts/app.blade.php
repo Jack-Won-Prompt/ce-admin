@@ -1801,7 +1801,7 @@
         @endif
 
         {{-- ══ 설정 ══ --}}
-        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'withworks-source'))
+        @if($vis('admin-users', 'permission-groups', 'masters', 'common-codes', 'delegation-settings', 'medical-aid-claim-settings', 'withworks-source'))
         <div class="menu-group" data-menu-group="settings">
         <button type="button" class="menu-header" onclick="toggleMenuGroup(this)">
           <span>설정</span><span class="menu-group-badge"></span>@dsicon('chevron-group', 'ds-icon menu-caret')
@@ -1842,6 +1842,14 @@
           <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('delegation-settings.edit') }}" data-title="위임장 설정">
             @dsicon('curricullum-vitae', 'ds-icon menu-icon')
             <span>위임장 설정</span>
+          </a>
+        </div>
+        @endif
+        @if($vis('medical-aid-claim-settings'))
+        <div class="menu-item {{ request()->routeIs('medical-aid-claim-settings*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="curricullum-vitae" href="{{ route('medical-aid-claim-settings.edit') }}" data-title="지급청구서 설정">
+            @dsicon('curricullum-vitae', 'ds-icon menu-icon')
+            <span>지급청구서 설정</span>
           </a>
         </div>
         @endif

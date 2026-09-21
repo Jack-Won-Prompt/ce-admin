@@ -322,6 +322,12 @@ return [
             'routes'  => ['delegation-settings'],
             'actions' => ['view', 'update'],
         ],
+        'medical-aid-claim-settings' => [
+            'label'   => '지급청구서 설정',
+            'group'   => 'settings',
+            'routes'  => ['medical-aid-claim-settings'],
+            'actions' => ['view', 'update'],
+        ],
         'ocr-settings' => [
             'label'   => 'OCR 설정',
             'group'   => 'settings',

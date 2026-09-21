@@ -545,6 +545,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/delegation',  [DelegationSettingController::class, 'edit'])->name('delegation-settings.edit');
     Route::put('/settings/delegation',  [DelegationSettingController::class, 'update'])->name('delegation-settings.update');
 
+    /* 요양비 지급청구서[별지 제12호] 글자 자리 — 위임장 설정과 같은 방식이다
+       (2026-09-21 지시). 기초ㆍ차상위경감 건에 만들어지는 서식이다. */
+    Route::get('/settings/medical-aid-claim', [\App\Http\Controllers\MedicalAidClaimSettingController::class, 'edit'])->name('medical-aid-claim-settings.edit');
+    Route::put('/settings/medical-aid-claim', [\App\Http\Controllers\MedicalAidClaimSettingController::class, 'update'])->name('medical-aid-claim-settings.update');
+
     // 처방전 OCR 공급자 설정
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');
 

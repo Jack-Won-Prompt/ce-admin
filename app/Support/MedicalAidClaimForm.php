@@ -130,6 +130,10 @@ final class MedicalAidClaimForm
     {
         $order->loadMissing(['patient', 'prescription.billingOffice', 'items']);
 
+        /* 화면(설정 ▸ 지급청구서 설정)에서 고친 자리를 먼저 얹는다(2026-09-21).
+           담아 둔 것이 없으면 설정 파일 기본값 그대로다. */
+        \App\Models\MedicalAidClaimSetting::applyToConfig();
+
         $cfg      = config('medical_aid_claim');
         $template = resource_path($cfg['template']);
 

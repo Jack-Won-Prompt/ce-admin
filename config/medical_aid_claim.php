@@ -23,40 +23,40 @@ return [
 
     'fields' => [
         // ① 진료받은 사람
-        'patient_name'      => ['x' => 63,  'y' => 52],
-        'patient_rrn'       => ['x' => 145, 'y' => 52],
-        'insurer_name'      => ['x' => 210, 'y' => 52],
+        'patient_name'      => ['label' => '① 진료받은 사람 — 성명', 'x' => 63,  'y' => 52],
+        'patient_rrn'       => ['label' => '① 주민등록번호', 'x' => 145, 'y' => 52],
+        'insurer_name'      => ['label' => '① 보장기관(시군구청)', 'x' => 210, 'y' => 52],
 
         // ② 의료급여기관
-        'hospital_name'     => ['x' => 63,  'y' => 60],
-        'hospital_code'     => ['x' => 150, 'y' => 60],
+        'hospital_name'     => ['label' => '② 의료급여기관 — 이름', 'x' => 63,  'y' => 60],
+        'hospital_code'     => ['label' => '② 의료급여기관 — 기호', 'x' => 150, 'y' => 60],
         // ③ 진료 구분 — 외래에 표시한다(자가도뇨는 통원이다)
-        'visit_outpatient'  => ['x' => 264, 'y' => 60],
+        'visit_outpatient'  => ['label' => '③ 진료 구분 — 외래 표시', 'x' => 264, 'y' => 60],
 
         // ④⑤⑥
-        'issued_date'       => ['x' => 64,  'y' => 68, 'size' => 7],
-        'care_from_y'       => ['x' => 131, 'y' => 68, 'size' => 7],
-        'care_from_m'       => ['x' => 142, 'y' => 68, 'size' => 7],
-        'care_from_d'       => ['x' => 148, 'y' => 68, 'size' => 7],
-        'care_days'         => ['x' => 165, 'y' => 68, 'size' => 7],
-        'disease_name'      => ['x' => 208, 'y' => 68],
-        'disease_code'      => ['x' => 262, 'y' => 68],
+        'issued_date'       => ['label' => '④ 처방전 발행일', 'x' => 64,  'y' => 68, 'size' => 7],
+        'care_from_y'       => ['label' => '⑤ 진료 시작 — 연', 'x' => 131, 'y' => 68, 'size' => 7],
+        'care_from_m'       => ['label' => '⑤ 진료 시작 — 월', 'x' => 142, 'y' => 68, 'size' => 7],
+        'care_from_d'       => ['label' => '⑤ 진료 시작 — 일', 'x' => 148, 'y' => 68, 'size' => 7],
+        'care_days'         => ['label' => '⑤ 진료 일수', 'x' => 165, 'y' => 68, 'size' => 7],
+        'disease_name'      => ['label' => '⑥ 상병명', 'x' => 208, 'y' => 68],
+        'disease_code'      => ['label' => '⑥ 상병기호', 'x' => 262, 'y' => 68],
 
         // ⑩ 자가도뇨 소모성재료
-        'amount_total'      => ['x' => 99,  'y' => 107, 'align' => 'R'],
-        'supply_days'       => ['x' => 224, 'y' => 107, 'align' => 'R'],
-        'supply_count'      => ['x' => 271, 'y' => 107, 'align' => 'R'],
+        'amount_total'      => ['label' => '⑩ 구입 금액', 'x' => 99,  'y' => 107, 'align' => 'R'],
+        'supply_days'       => ['label' => '⑩ 사용 일수', 'x' => 224, 'y' => 107, 'align' => 'R'],
+        'supply_count'      => ['label' => '⑩ 구입 개수', 'x' => 271, 'y' => 107, 'align' => 'R'],
 
         /* 지급의뢰일ㆍ심사결정액ㆍ본인부담액ㆍ지급액은 적지 않는다.
            서식 머리에 「바탕색이 어두운 난은 청구인이 적지 않습니다」라고 적혀 있고,
            그 줄이 그렇다 — 관청이 심사해 채우는 칸이다. */
 
         // 맺음 — 청구인은 환자 본인이다(수령 계좌만 우리 것으로 위임한다)
-        'claim_y'           => ['x' => 222, 'y' => 163],
-        'claim_m'           => ['x' => 241, 'y' => 163],
-        'claim_d'           => ['x' => 252, 'y' => 163],
-        'claimant_name'     => ['x' => 140, 'y' => 171],
-        'claimant_phone'    => ['x' => 232, 'y' => 171],
+        'claim_y'           => ['label' => '청구일 — 연', 'x' => 222, 'y' => 163],
+        'claim_m'           => ['label' => '청구일 — 월', 'x' => 241, 'y' => 163],
+        'claim_d'           => ['label' => '청구일 — 일', 'x' => 252, 'y' => 163],
+        'claimant_name'     => ['label' => '청구인 성명', 'x' => 140, 'y' => 171],
+        'claimant_phone'    => ['label' => '청구인 전화번호', 'x' => 232, 'y' => 171],
     ],
 
     /* 서명 이미지 — 위임동의에서 받아 둔 것을 그대로 얹는다.
