@@ -327,7 +327,7 @@ class NhisAssistController extends Controller
                              'note' => $payTotal !== null ? "처방총계 {$rxTotal} 와 구입수량 {$buyQty} 중 작은 값" : null],
             'biz_no'     => ['value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
             'biz_name'   => ['value' => config('popbill.company.corp_name') ?: null, 'fixed' => true],
-            'buy_amount' => ['value' => $this->num($order->total_amount), 'warn' => $sumWarn],
+            'buy_amount' => ['value' => $this->num($amount), 'warn' => $sumWarn],
             'buy_qty'    => ['value' => $this->num($buyQty ?: null)],
             /* 급여가 끝나는 날 — 쓰기 시작한 날에서 총처방기간만큼 간다. 첫날을 하루로
                세므로 하루를 뺀다(30일치를 9월 1일에 사면 9월 30일까지다). */
