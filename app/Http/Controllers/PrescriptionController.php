@@ -1134,6 +1134,31 @@ class PrescriptionController extends Controller
             return $refuse($over);
         }
 
+        /* 등록신청서는 그림으로만 받는다 (2026-09-21 지시).
+
+           공단에 내는 등록신청서는 병원이 요양기관 확인란을 적어 내준 종이다.
+           우리는 비어 있는 신청인란에 이름과 서명을 얹어 한 장을 완성하는데
+           (RegistrationOverlay), 이 서버에는 Imagick 도 Ghostscript 도 없어
+           **PDF 에는 얹지 못한다**. 그대로 받으면 서명이 빠진 장이 공단으로 간다.
+
+           받아 두고 나중에 막는 대신 올릴 때 돌려보낸다 — 담당자가 그 자리에서
+           다시 찍어 올릴 수 있고, 무엇이 잘못됐는지도 분명하다. */
+        foreach ($attachmentFiles as $a) {
+            if (($a['doc_type'] ?? '') !== 'registration_form') {
+                continue;
+            }
+
+            $ext = strtolower((string) $a['file']->getClientOriginalExtension());
+
+            if ($ext === 'pdf') {
+                return $refuse(
+                    '등록신청서는 이미지로 다시 올려주세요. '
+                    . 'PDF 로 올리면 신청인 이름과 서명을 얹을 수 없어 빈칸인 채로 공단에 나갑니다. '
+                    . '(JPG · PNG · HEIC)'
+                );
+            }
+        }
+
         $created         = [];
         $firstPrescription = null;
 

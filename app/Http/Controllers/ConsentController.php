@@ -106,56 +106,6 @@ class ConsentController extends Controller
     }
 
     /**
-     * 서명한 등록 신청서를 생성 서류로 남긴다 (2026-09-10 「서명 동의」).
-     *
-     * 여기서 무슨 일이 있어도 서명은 이미 끝난 것이라 되돌리지 않는다 — 환자 화면에
-     * 오류가 뜨면 다시 서명하려 든다.
-     */
-    private function saveRegistrationDocument(PrescriptionConsent $consent): ?PrescriptionDocument
-    {
-        try {
-            $rx = $consent->prescription;
-            if (! $rx) {
-                return null;
-            }
-
-            $pdf  = \App\Support\RegistrationForm::render($consent, true);
-            $who  = $rx->patient;
-            $name = '등록신청서_' . ($who?->bare_name ?: $consent->patient_name)
-                  . '_' . now()->format('Ymd') . '.pdf';
-            $path = 'registrations/' . $rx->id . '_' . now()->format('YmdHis')
-                  . '_' . \Illuminate\Support\Str::random(6) . '.pdf';
-
-            if (! Storage::put($path, $pdf)) {
-                throw new \RuntimeException("등록 신청서 파일을 생성하지 못했습니다 ({$path}).");
-            }
-
-            /* 같은 처방전의 옛 것은 걷어낸다 — 방금 쓴 자리는 건드리지 않는다 */
-            foreach (PrescriptionDocument::where('prescription_id', $rx->id)
-                        ->where('type', 'registration')->get() as $old) {
-                if ($old->file_path && $old->file_path !== $path && Storage::exists($old->file_path)) {
-                    Storage::delete($old->file_path);
-                }
-                $old->delete();
-            }
-
-            return PrescriptionDocument::create([
-                'prescription_id'   => $rx->id,
-                'patient_id'        => $rx->patient_id,
-                'created_by'        => Auth::id(),
-                'type'              => 'registration',
-                'file_path'         => $path,
-                'original_filename' => $name,
-            ]);
-        } catch (\Throwable $e) {
-            \Log::warning('[등록 신청서] 자동 생성 실패', [
-                'consent' => $consent->id, 'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
      * 공개 GET: 서명하기 **전에** 그 서류를 그대로 보여 준다 (2026-09-10 「서명 동의」).
      *
      * 서명 한 번이 여러 서류의 서명란에 들어간다. 무엇에 서명하는지 보지 못한 채
@@ -181,7 +131,6 @@ class ConsentController extends Controller
                 \App\Support\SignDocs::청구서 => \App\Support\MedicalAidClaimForm::render(
                     $rx?->orders()->latest('id')->first() ?? abort(404)
                 ),
-                \App\Support\SignDocs::등록신청서 => \App\Support\RegistrationForm::render($consent),
                 default => abort(404),
             };
         } catch (\Throwable $e) {
@@ -456,13 +405,12 @@ class ConsentController extends Controller
                     $this->saveDelegationDocument($consent->prescription);
                 }
 
-                /* 등록 신청서에도 같은 서명이 들어간다(2026-09-10 「서명 동의」).
-                   서명 화면에 세운 서류만 만든다 — 보여 주지도 않은 서류에 서명을
-                   얹지 않는다. 첨부가 아니라 생성 서류로 둔다: 첨부의 등록신청서
-                   자리는 병원에서 받아 올리는 그 한 장의 자리다. */
-                if (\App\Support\SignDocs::열수있나($consent, \App\Support\SignDocs::등록신청서)) {
-                    $this->saveRegistrationDocument($consent);
-                }
+                /* 등록신청서는 여기서 만들지 않는다 (2026-09-21 지시).
+
+                   공단에 내는 등록신청서는 병원이 요양기관 확인란을 적어 내준 종이다.
+                   그것을 찍어 올린 장에 RegistrationOverlay 가 신청인란(이름ㆍ서명)을
+                   얹는다 — 빈 서식을 새로 그리면 병원 확인란이 빈 채로 한 장이 더 생겨,
+                   목록에 같은 이름 둘이 서고 그 가운데 하나는 낼 수 없는 장이 된다. */
 
                 /* 요양비 지급청구서에도 같은 서명이 들어간다 (2026-09-17 지시).
 

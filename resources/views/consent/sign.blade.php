@@ -797,11 +797,6 @@
                 동일하게 사용됩니다.
               </div>
             @endif
-            @if($_d['key'] === App\Support\SignDocs::등록신청서)
-              <div class="doc-say">
-                아래 서식의 <strong>② 요양기관 확인란</strong>은 병원에서 작성ㆍ확인하는 항목이라 비어 있습니다.
-              </div>
-            @endif
             @php($_url = route('consent.doc', ['token' => $consent->token, 'doc' => $_d['key']]))
             <div class="doc-frame"><iframe data-src="{{ $_url }}" title="{{ $_d['name'] }}"></iframe></div>
             <a class="doc-open" href="{{ $_url }}" target="_blank" rel="noopener">새 창에서 확대</a>
