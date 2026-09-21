@@ -338,7 +338,10 @@ class NhisAssistController extends Controller
                              'note' => '공단 고시 기준금액표가 있어야 합니다 (C-Q-05)'],
             'base_calc'  => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
                              'note' => '기준금액(일) × 실지급일수로 추정되나 확인 전입니다'],
-            'copay'      => ['value' => $this->num($order->patient_copay), 'note' => '주문에 저장된 값',
+            /* 본인부담금은 0 원도 값이다(2026-09-21 확인). 차상위경감ㆍ기초는 본인이
+               내는 몫이 없고, 공단 서식에는 그 사실을 0 으로 적는다. 빈칸으로 두면
+               담당자가 무엇을 넣어야 할지 알 수 없고 「값 없음」으로도 세어진다. */
+            'copay'      => ['value' => (string) (int) $order->patient_copay, 'note' => '주문에 저장된 값',
                              'warn' => '공단 자격별 부담 비율표가 아직 없어 자격이 바뀐 건은 다를 수 있습니다'],
             'copay_real' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
                              'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
@@ -491,10 +494,24 @@ class NhisAssistController extends Controller
             ? null
             : ($order->cash_receipt_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다');
 
+        /* 요양비 지급청구서[별지 제12호]는 기초ㆍ차상위경감 건에 만들어 둔다
+           (MedicalAidClaimForm::자격). 여태 지자체 창에만 세워, 차상위경감 건은
+           서류를 들고 있으면서도 공단 창에서 찾을 자리가 없었다(2026-09-21 확인). */
+        $claimForm = \App\Support\MedicalAidClaimForm::applies($order)
+            ? $attached('medical_aid_claim')
+            : null;
+
+        $claimRow = \App\Support\MedicalAidClaimForm::applies($order)
+            ? [['name' => '요양비 지급청구서 [별지 제12호]',
+                'url'  => $claimForm ? route('files.prescription-attachment', $claimForm) : null,
+                'note' => $claimForm ? null : '아직 만들지 못했습니다']]
+            : [];
+
         return [
             ...$first,
             ['name' => '자가도뇨 소모성재료 처방전', 'url' => $rxImage,
              'note' => $rxImage ? null : '처방전 이미지가 없습니다'],
+            ...$claimRow,
             ['name' => '현금영수증 또는 신용카드 매출전표',
              'url'  => $cashUrl, 'note' => $cashNote],
             ['name' => '세금계산서',
