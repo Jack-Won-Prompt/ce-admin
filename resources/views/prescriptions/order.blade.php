@@ -3575,6 +3575,15 @@ $calcDeposit  = $calcCopay;
                        value="{{ $prescription->hospital_code ?? '' }}" placeholder="병원을 조회하여 선택하면 자동 입력됩니다"
                        style="flex:1;background:var(--gray-50);cursor:default;" />
               </div>
+              {{-- 전자처방전의 처방전등록번호 (2026-09-21 지시).
+                   공단 청구 창이 이 값을 그대로 옮겨 적는다 — 여태 적어 넣을 자리가
+                   없어 그 칸이 늘 비었다. 종이 처방전에는 없는 번호라 비워 둘 수 있다. --}}
+              <div class="rx-field-row">
+                <span class="rx-field-label">처방전등록번호</span>
+                <input type="text" class="form-control" id="f-registration-no"
+                       value="{{ $prescription->registration_no ?? '' }}"
+                       placeholder="전자처방전에 한합니다" style="flex:1;min-width:0;" />
+              </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">진단 확인일</span>
                 <input type="date" class="form-control" id="f-diagnosis-date" value="{{ $prescription->diagnosis_date ?? '' }}" style="flex:1;min-width:0;" />
@@ -9487,6 +9496,7 @@ window.HELP_TOUR_STEPS = [
       // ── 병원·처방 정보 ────────────────────────────────────
       hospital_name:    hosp,
       hospital_code:    strOrNull('f-hospital-code'),
+      registration_no:  strOrNull('f-registration-no'),
       doctor_name:      strOrNull('f-doctor'),
       license_no:       strOrNull('f-license-no'),
       // 요청서 12ㆍ13쪽 — 전문과목ㆍ사유를 고르는 자리로 되돌렸다

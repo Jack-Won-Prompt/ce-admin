@@ -2878,6 +2878,9 @@ class PrescriptionController extends Controller
             'diverticulums'         => 'nullable|string|max:10',
             // 병원·처방 추가
             'hospital_code'         => 'nullable|string|max:50',
+            /* 전자처방전의 처방전등록번호 — 공단 청구 창이 그대로 옮겨 적는다
+               (2026-09-21 지시). 종이 처방전에는 없으므로 비어 있을 수 있다. */
+            'registration_no'       => 'nullable|string|max:40',
             'rx_period'             => 'nullable|integer|min:0',
             'rx_end_date'           => 'nullable|date',
             'diagnosis_date'        => 'nullable|date',
@@ -2952,6 +2955,8 @@ class PrescriptionController extends Controller
             // 보내오는 값이 없다. 여기서 덮어쓰면 예전에 적어 둔 것이 지워진다.
             // 병원·처방
             'hospital_code'        => $request->input('hospital_code'),
+            /* 전자처방전의 처방전등록번호 — 공단 청구 창이 그대로 옮겨 적는다 */
+            'registration_no'      => $request->input('registration_no'),
             'license_no'           => $request->input('license_no'),
             'rx_use_period'        => $request->input('rx_period'),
             'rx_end_date'          => $request->input('rx_end_date'),
