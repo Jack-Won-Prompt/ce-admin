@@ -63,6 +63,18 @@ window.nhisAssistBtn = function (orderId, opts) {
     return btn;
   }
 
+  /* 공단 건은 청구 자료가 갖춰진 뒤에만 연다 (2026-09-21 확인요청).
+     여태 이 단추가 청구 자료를 보지 않아, 물건이 나가기도 전에 청구할 수 있었다.
+     막기만 하면 왜 막혔는지 알 수 없으니 모자란 것을 단추에 적어 둔다.
+
+     지자체ㆍ해당 없음은 이 잣대를 쓰지 않는다 — 출고 기준도 내는 서류도 다르고,
+     청구 자료 판정 자체가 「공단에 낼 건이 아님」으로 서기 때문이다. */
+  if (!local && opts.ready === false) {
+    btn.disabled = true;
+    btn.title = '청구 자료가 갖춰지지 않았습니다' + (opts.missing ? ' — ' + opts.missing : '');
+    return btn;
+  }
+
   btn.title = local
     ? '등기 발송 내역을 입력하고 등기 영수증을 첨부합니다'
     : '왼쪽에 우리 청구 원본, 오른쪽에 공단 사이트를 나란히 엽니다';

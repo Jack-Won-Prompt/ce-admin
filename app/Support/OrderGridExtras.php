@@ -153,6 +153,12 @@ class OrderGridExtras
                말해 주어야 한다. 그러지 않으면 다른 담당자가 결제 안내를 보낸다. */
             'cancel_state'    => $o?->cancelStateLabel() ?? '',
             'claim_ready'     => $o === null ? '' : ($o->claim_ready ? '준비' : '미비'),
+            /* 청구 단추가 열리는가 — 출고 전 건에 단추가 열려 있어 물건이 나가기도
+               전에 청구할 수 있었다(2026-09-21 확인요청). 무엇이 모자란지까지
+               함께 넘겨, 눌리지 않는 단추가 그 까닭을 스스로 말하게 한다.
+               청구 관리도 주문 관리도 같은 단추를 쓰므로 여기 한자리에 둔다. */
+            'claim_ready_flag' => (bool) ($o?->claim_ready),
+            'claim_missing'    => $o?->claim_missing ?? '',
             'nhis_claim'      => $this->nhisClaimLabel($o),
             'tax_invoice'     => $this->issueLabel($o?->tax_invoice_status),
             'cash_receipt'    => $this->issueLabel($o?->cash_receipt_status),

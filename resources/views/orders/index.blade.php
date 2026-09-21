@@ -450,6 +450,7 @@ window.HELP_TOUR_STEPS = [
            하는 자리인지 알 수 없어 「청구 진행」으로 적는다. */
         header: '청구 진행', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
         renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code,
+                                                       ready: row.claim_ready_flag, missing: row.claim_missing,
                                                        name: row.patient, mobile: row.send_mobile, email: row.send_email }),
       },
       {

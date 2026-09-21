@@ -156,9 +156,8 @@ class NhisController extends Controller
                 'reject_stage'  => Order::CLAIM_REJECT_STAGES[$o->nhis_reject_stage] ?? '',
                 'result'       => $result,
                 // 주민번호를 갖고 있는지로 가른다 — 없으면 앞선 등록 절차가 남아 있다
-                // 무엇이 빠졌는지까지 보여 준다. 「안 됨」만 알면 다시 열어 봐야 한다.
-                'claim_ready_flag' => (bool) $o->claim_ready,
-                'claim_missing' => $o->claim_missing ?? '',
+                /* claim_ready_flag ㆍ claim_missing 은 OrderGridExtras::of() 가 넣는다 —
+                   주문 관리도 같은 청구 단추를 쓰므로 한자리에 두었다(2026-09-21). */
                 // 공단에 낼 건이 아니면 자료를 따질 것도 없다 — 색을 달리 쓴다
                 'claim_na'     => ($o->prescription?->claim_agency ?? \App\Support\ClaimAgency::NHIS)
                                     !== \App\Support\ClaimAgency::NHIS,
