@@ -438,7 +438,25 @@ class ConsentController extends Controller
             // 요양비위임장(원본 오버레이)도 첨부문서에 자동 추가
             $consent->loadMissing('prescription');
             if ($consent->prescription) {
-                $this->saveDelegationDocument($consent->prescription);
+                /* **위임장을 받는 건에만 만든다**(2026-09-21 확정).
+
+                   여태 이 자리에 아무 조건이 없어, 서명만 있으면 자격을 가리지 않고
+                   위임장을 그렸다 — 산재ㆍ자동차보험ㆍ처방외는 서명 화면에 위임장을
+                   펼쳐 보이지도 않으면서 서명본만 만들어졌다. 보여 주지 않은 서류에
+                   서명을 얹은 셈이다(등록신청서ㆍ지급청구서는 아래에서 이미 가린다).
+
+                   잣대는 「우리가 대신 청구하는가」다 — 일반ㆍ차상위경감ㆍ기초 셋이다.
+                   이미 만들어 둔 위임장을 다시 그리는 길(거래처 수정ㆍ재생성 단추)은
+                   그대로 둔다: 거기는 있는 것을 고쳐 그리는 자리라 자격을 다시 묻지
+                   않는다. */
+                $받는건가 = \App\Support\BillingStrategy::needsDelegation(
+                    $consent->prescription->counsel_acc_add_type,
+                    $consent->prescription->benefit_class
+                );
+
+                if ($받는건가) {
+                    $this->saveDelegationDocument($consent->prescription);
+                }
 
                 /* 등록 신청서에도 같은 서명이 들어간다(2026-09-10 「서명 동의」).
                    서명 화면에 세운 서류만 만든다 — 보여 주지도 않은 서류에 서명을

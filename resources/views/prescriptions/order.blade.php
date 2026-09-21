@@ -13299,7 +13299,16 @@ window.HELP_TOUR_STEPS = [
   /* ── 「공단 팩스 발송」 단추가 부른다 ───────────────────
      신규 등록(신구매)이거나 공단 재등록 대상자면 공단에 등록 서류를 보내야 한다.
      화면 어디에도 그 말이 없어, 보내야 하는 줄 이미 아는 사람만 보냈다.
-     이미 보낸 건은 단추 자리가 「팩스 전송」 배지로 바뀌므로 부를 일이 없다. */
+     이미 보낸 건은 단추 자리가 「팩스 전송」 배지로 바뀌므로 부를 일이 없다.
+
+     **공단에 내는 건만 재촉한다**(2026-09-21 확정). 자동 발송을 걷고 담당자가
+     때를 보아 손으로 보내기로 하면서, 이 표시가 보낼 건을 알리는 유일한 자리가
+     되었다. 여태 신구매ㆍ재등록만 보아 자격을 가리지 않았다 —
+
+       · 산재ㆍ자동차보험ㆍ처방외 — 공단에 낼 일이 아예 없다
+       · 기초 — 청구처가 지자체라 팩스가 아니라 등기로 보낸다
+
+     이 셋까지 재촉하면 담당자는 보내지 않아도 되는 건을 들고 망설인다. */
   function faxNudgeSync() {
     const wrap = document.getElementById('faxTriggerWrap');
     const btn  = document.getElementById('btnFaxTrigger');
@@ -13308,7 +13317,15 @@ window.HELP_TOUR_STEPS = [
     const sent    = wrap.style.display === 'none';
     const isNew   = (document.getElementById('f-purchase-type')?.value || '') === '신구매';
     const isRenew = (document.getElementById('f-nhis-renew')?.value || '').trim() !== '';
-    const need    = !sent && (isNew || isRenew);
+
+    /* 공단에 내는 건인가 — 담당자가 고른 청구처가 있으면 그것이 맞고, 아직
+       고르지 않았으면 청구전략 표가 말하는 내는 쪽으로 본다. */
+    const agency = (document.getElementById('f-claim-agency')?.value || '').trim();
+    const bs     = bsCurrent();
+    const toNhis = agency ? agency === 'nhis'
+                          : !!(bs && bs.payer === '건강보험공단');
+
+    const need = !sent && toNhis && (isNew || isRenew);
 
     btn.classList.toggle('pib-nudge', need);
     btn.title = need
@@ -13320,7 +13337,8 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('DOMContentLoaded', () => {
     renderFaxDocs();
     faxNudgeSync();
-    ['f-purchase-type', 'f-nhis-renew'].forEach(id => {
+    /* 자격ㆍ유형ㆍ청구처가 바뀌면 재촉도 다시 잰다 — 공단에 낼 건인지가 그 셋으로 갈린다 */
+    ['f-purchase-type', 'f-nhis-renew', 'f-claim-agency', 'f-benefit-class', 'f-acc-add-type'].forEach(id => {
       const el = document.getElementById(id);
       el?.addEventListener('change', faxNudgeSync);
       el?.addEventListener('input',  faxNudgeSync);
