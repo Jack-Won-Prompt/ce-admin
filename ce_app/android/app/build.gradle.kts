@@ -45,6 +45,40 @@ android {
         versionName = flutter.versionName
     }
 
+    /* 운영판과 개발판을 따로 찍는다 (2026-09-21 지시).
+
+       소스는 하나다. 갈리는 것은 여기 설정뿐이다 — 개발판은 applicationId 뒤에
+       .dev 가 붙어 다른 앱으로 깔리므로 한 폰에 둘을 같이 두고 오갈 수 있다.
+       이름도 「CE Admin 개발」로 나와 눈으로 구분된다.
+
+       SSO 가 되돌아오는 주소(scheme)도 갈라야 한다. 둘 다 ceadmin:// 을 받으면
+       안드로이드가 누가 받을지 정하지 못해, 엉뚱한 판이 로그인을 가로챈다.
+
+       찍는 법:
+         flutter build appbundle --flavor prod --dart-define=API_BASE_URL=https://{운영}/api
+         flutter build apk       --flavor dev  --dart-define=API_BASE_URL=https://www.ceadmin.co.kr/api \
+                                               --dart-define=SSO_SCHEME=ceadmin-dev
+
+       개발판을 처음 찍기 전에 Firebase 콘솔에서 안드로이드 앱
+       com.coloplast.ceadmin.dev 를 같은 프로젝트에 더하고 google-services.json 을
+       새로 내려받아야 한다. 없으면 빌드가 「No matching client found」로 선다. */
+    flavorDimensions += "server"
+
+    productFlavors {
+        create("prod") {
+            dimension = "server"
+            resValue("string", "app_name", "CE Admin")
+            manifestPlaceholders["ssoScheme"] = "ceadmin"
+        }
+        create("dev") {
+            dimension = "server"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix   = "-dev"
+            resValue("string", "app_name", "CE Admin 개발")
+            manifestPlaceholders["ssoScheme"] = "ceadmin-dev"
+        }
+    }
+
     signingConfigs {
         create("release") {
             keyAlias      = keystoreProperties["keyAlias"] as String?

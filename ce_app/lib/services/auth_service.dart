@@ -114,8 +114,9 @@ class AuthService {
 
     try {
       callbackUrl = await FlutterWebAuth2.authenticate(
-        url: '${AppConstants.storageUrl}/auth/entra/redirect?app=$nonce',
-        callbackUrlScheme: 'ceadmin',
+        url: '${AppConstants.storageUrl}/auth/entra/redirect'
+            '?app=$nonce&cb=${AppConstants.ssoScheme}',
+        callbackUrlScheme: AppConstants.ssoScheme,
       );
     } on PlatformException {
       throw SsoCancelled();   // 창을 닫았거나 되돌아오지 못했다

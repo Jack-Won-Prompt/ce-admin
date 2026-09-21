@@ -24,6 +24,16 @@ class AppConstants {
   static String get storageUrl =>
       baseUrl.endsWith('/api') ? baseUrl.substring(0, baseUrl.length - 4) : baseUrl;
 
+  /// SSO 로그인을 마친 브라우저가 앱을 다시 부를 때 쓰는 주소의 앞머리.
+  ///
+  /// 운영판과 개발판이 한 폰에 같이 깔리므로 판마다 달라야 한다 — 같으면
+  /// 안드로이드가 어느 앱을 부를지 정하지 못한다. 빌드할 때 골라 넣고,
+  /// 안드로이드 쪽 값(build.gradle.kts 의 ssoScheme)과 반드시 같아야 한다.
+  static const String ssoScheme = String.fromEnvironment(
+    'SSO_SCHEME',
+    defaultValue: 'ceadmin',
+  );
+
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
 

@@ -33,11 +33,18 @@ use Laravel\Socialite\Facades\Socialite;
  */
 class EntraController extends Controller
 {
-    /** 앱이 브라우저로 여는 로그인에 붙는 표 — 세션에 담아 두고 콜백에서 가린다 */
+    /** 앱이 브라우저로 여는 로그인에 붙는 표·되돌아갈 주소 — 세션에 담아 콜백에서 가린다 */
     private const APP_SESSION_KEY = 'sso.app_nonce';
 
-    /** 앱으로 되돌아가는 주소의 틀 — 이 앱에만 등록된 주소다(Entra 와 무관) */
-    private const APP_CALLBACK = 'ceadmin://sso';
+    /**
+     * 앱으로 되돌아가는 주소의 앞머리. 여기 적힌 것만 받는다.
+     *
+     * 운영판과 개발판을 한 폰에 같이 두려고 앱을 둘로 찍는데(2026-09-21 지시),
+     * 둘 다 같은 주소를 받으면 안드로이드가 어느 앱을 부를지 정하지 못한다.
+     * 목록에 없는 값은 버리고 운영판 주소로 떨어뜨린다 — 그래야 이 자리가
+     * 아무 데로나 돌려보내는 문이 되지 않는다.
+     */
+    private const APP_SCHEMES = ['ceadmin', 'ceadmin-dev'];
 
     /** 일회용 코드가 사는 시간 — 앱이 곧바로 바꾸므로 짧게 둔다 */
     private const APP_CODE_TTL = 120;
@@ -57,10 +64,16 @@ class EntraController extends Controller
         }
 
         $앱표 = (string) $request->query('app', '');
+        $돌아갈곳 = (string) $request->query('cb', '');
         $request->session()->forget(self::APP_SESSION_KEY);
 
         if ($앱표 !== '' && preg_match('/^[A-Za-z0-9_-]{16,128}$/', $앱표)) {
-            $request->session()->put(self::APP_SESSION_KEY, $앱표);
+            $request->session()->put(self::APP_SESSION_KEY, [
+                'nonce'  => $앱표,
+                'scheme' => in_array($돌아갈곳, self::APP_SCHEMES, true)
+                    ? $돌아갈곳
+                    : self::APP_SCHEMES[0],
+            ]);
         }
 
         return $this->provider()->redirect();
@@ -139,7 +152,13 @@ class EntraController extends Controller
            브라우저에 로그인 상태를 남기지 않고, 앱이 한 번만 쓸 수 있는 코드를
            들려 보낸다 — 앱은 그것을 POST /api/auth/sso/exchange 에서 앱 토큰으로
            바꾼다. 코드는 캐시에 2분만 살고, 한 번 쓰면 사라진다. */
-        if ($앱표 = $request->session()->pull(self::APP_SESSION_KEY)) {
+        if ($앱것 = $request->session()->pull(self::APP_SESSION_KEY)) {
+            $앱표     = is_array($앱것) ? ($앱것['nonce'] ?? '') : (string) $앱것;
+            $돌아갈곳 = is_array($앱것) ? ($앱것['scheme'] ?? '') : '';
+            if (! in_array($돌아갈곳, self::APP_SCHEMES, true)) {
+                $돌아갈곳 = self::APP_SCHEMES[0];
+            }
+
             $코드 = \Illuminate\Support\Str::random(64);
 
             \Illuminate\Support\Facades\Cache::put("sso:app-code:{$코드}", [
@@ -147,9 +166,12 @@ class EntraController extends Controller
                 'nonce'   => $앱표,
             ], self::APP_CODE_TTL);
 
-            $this->남긴다($user, 'sso_login', $email . ' (앱)');
+            /* 개발판으로 들어온 것을 이력에서 가릴 수 있게 적어 둔다 — 같은 서버를
+               운영판과 개발판이 함께 보므로, 안 갈라 두면 섞인다. */
+            $this->남긴다($user, 'sso_login', $email
+                . ($돌아갈곳 === self::APP_SCHEMES[0] ? ' (앱)' : ' (앱·개발판)'));
 
-            return redirect()->away(self::APP_CALLBACK . '?code=' . urlencode($코드));
+            return redirect()->away($돌아갈곳 . '://sso?code=' . urlencode($코드));
         }
 
         Auth::login($user, remember: true);
