@@ -276,8 +276,6 @@ class NhisAssistController extends Controller
             ? '제품 줄 합계 ' . number_format($itemSum) . ' 원과 다릅니다 — 어느 쪽이 맞는지 확인하십시오'
             : null;
 
-        $phone = $this->digits(config('delegation.provider.phone'));
-
         // 카드로 받았으면 토스가 준 승인번호가 있다
         $cardNo = $this->cardApprovalNo($order);
 
@@ -344,23 +342,26 @@ class NhisAssistController extends Controller
             /* 급여가 끝나는 날 — 쓰기 시작한 날에서 총처방기간만큼 간다. 첫날을 하루로
                세므로 하루를 뺀다(30일치를 9월 1일에 사면 9월 30일까지다). */
             'pay_end'    => ['value' => $payEnd, 'note' => $payEnd ? "구입일 + 총처방기간 {$days}일" : null],
-            'pay_days'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
-                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
-            'base_daily' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '고시 기준표 없음',
-                             'note' => '공단 고시 기준금액표가 있어야 합니다 (C-Q-05)'],
-            'base_calc'  => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
-                             'note' => '기준금액(일) × 실지급일수로 추정되나 확인 전입니다'],
+            /* 실지급일수 = 총 처방일수 (2026-09-21 지시).
+               여태 「계산식 미확인」으로 비워 두었는데, 현업이 둘이 같다고 확정했다. */
+            'pay_days'   => ['value' => $this->num($p?->total_days), 'note' => '주문의 총 처방일수와 같습니다'],
+            /* 아래 넷은 셈하는 방법을 아직 받지 못했다 — 「향후 정의」로 둔다
+               (2026-09-21 지시). 값을 지어내지 않고 담당자가 손으로 적는다. */
+            'base_daily' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '손으로 적습니다',
+                             'note' => '셈하는 방법이 정해지면 채웁니다'],
+            'base_calc'  => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '손으로 적습니다',
+                             'note' => '셈하는 방법이 정해지면 채웁니다'],
             /* 본인부담금은 0 원도 값이다(2026-09-21 확인). 차상위경감ㆍ기초는 본인이
                내는 몫이 없고, 공단 서식에는 그 사실을 0 으로 적는다. 빈칸으로 두면
                담당자가 무엇을 넣어야 할지 알 수 없고 「값 없음」으로도 세어진다. */
             'copay'      => ['value' => (string) (int) $order->patient_copay, 'note' => '주문에 저장된 값',
                              'warn' => '공단 자격별 부담 비율표가 아직 없어 자격이 바뀐 건은 다를 수 있습니다'],
-            'copay_real' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
-                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+            'copay_real' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '손으로 적습니다',
+                             'note' => '셈하는 방법이 정해지면 채웁니다'],
             'nhis_pay'   => ['value' => $this->num($order->nhis_amount), 'note' => '주문에 저장된 값',
                              'warn' => '본인부담금과 같은 제약이 있습니다'],
-            'base_amt'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '계산식 미확인',
-                             'note' => '공단 산정 방법 확인 필요 (C-Q-05)'],
+            'base_amt'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '손으로 적습니다',
+                             'note' => '셈하는 방법이 정해지면 채웁니다'],
 
             /* 계좌 정보 */
             'acc_receiver' => ['value' => $account['receiver'] ?? null, 'fixed' => true],
@@ -373,14 +374,17 @@ class NhisAssistController extends Controller
             'acc_protect'  => ['value' => null, 'copy' => false, 'blank' => '체크하지 않습니다', 'fixed' => true],
             'clm_relation' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '선택 문구 미확인',
                                'note' => '공단 선택 목록 확인 필요 (C-Q-06)'],
-            'clm_biz_no'   => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '확인 필요',
-                               'note' => '사업자번호와 같은 값인지 확인 필요 (C-Q-06)'],
-            'clm_name'     => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '확인 필요',
-                               'note' => '업체명과 같은 값인지 확인 필요 (C-Q-06)'],
+            /* 청구인은 우리 회사다 — 사업자번호ㆍ업체명이 그대로 들어간다
+               (2026-09-21 지시). 여태 「확인 필요」로 비워 두었던 자리다. */
+            'clm_biz_no'   => ['value' => $bizNo, 'fixed' => true],
+            'clm_name'     => ['value' => config('delegation.provider.name') ?: null, 'fixed' => true],
             'sms_agree'    => ['value' => 'Y', 'fixed' => true],
-            'sms_no1'      => ['value' => $this->phonePart($phone, 0), 'fixed' => true],
-            'sms_no2'      => ['value' => $this->phonePart($phone, 1), 'fixed' => true],
-            'sms_no3'      => ['value' => $this->phonePart($phone, 2), 'fixed' => true],
+            /* SMS 송신번호는 비워 둔다 (2026-09-21 지시). 환자 정보를 확인한 뒤
+               담당자가 적는 자리라, 우리 대표번호를 미리 넣어 두면 그대로 나간다. */
+            'sms_no1'      => ['value' => null, 'copy' => false, 'blank' => '담당자가 적습니다',
+                               'note' => '환자 정보를 확인한 뒤 넣습니다'],
+            'sms_no2'      => ['value' => null, 'copy' => false, 'blank' => '담당자가 적습니다'],
+            'sms_no3'      => ['value' => null, 'copy' => false, 'blank' => '담당자가 적습니다'],
             /* 카드로 받은 건은 토스 승인번호를 옮겨 적는다(2026-09-21 확인).
                여태 「결제는 전부 가상계좌」라 적어 두고 빈칸으로 두었는데, 카드
                결제가 생긴 뒤로는 사실과 다르다. */
