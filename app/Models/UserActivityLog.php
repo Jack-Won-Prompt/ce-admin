@@ -51,4 +51,49 @@ class UserActivityLog extends Model
     {
         return self::MENU_NAMES[$routeName] ?? $routeName;
     }
+
+    /** url 칸의 길이 — 표와 같은 값을 코드가 쥔다 */
+    public const URL_MAX = 300;
+
+    /** user_agent 칸의 길이 */
+    public const AGENT_MAX = 300;
+
+    /**
+     * 이력에 남길 주소 — **쿼리스트링을 떼고 경로만** 남긴다.
+     *
+     * 두 가지를 한꺼번에 막는다.
+     *
+     * ① 길이. SSO 콜백 주소는 `?code=…` 가 붙어 1,800자를 넘는데 url 칸은 300자다.
+     *    여태 그 줄은 `Data too long` 으로 저장이 죽었고, 기록하는 자리가 모두 오류를
+     *    삼키게 되어 있어 **로그인은 되고 이력만 조용히 사라졌다**(2026-09-21).
+     *
+     * ② 비밀. 그 주소에는 OAuth 인가 코드와 state 가 통째로 들어 있다. 길이를 늘려
+     *    담으면 자격증명 조각이 이력 표에 평문으로 쌓인다. 잘라 넣어도 앞부분은 남는다.
+     *    이력이 알고 싶은 것은 「어느 화면에 왔는가」이지 「무슨 값을 들고 왔는가」가
+     *    아니므로, 물음표 뒤는 아예 버린다.
+     */
+    public static function safeUrl(?string $url): ?string
+    {
+        $url = trim((string) $url);
+
+        if ($url === '') {
+            return null;
+        }
+
+        $물음표 = strpos($url, '?');
+
+        if ($물음표 !== false) {
+            $url = substr($url, 0, $물음표);
+        }
+
+        return mb_substr($url, 0, self::URL_MAX);
+    }
+
+    /** 브라우저 문자열 — 칸 길이에 맞춰 자른다 */
+    public static function safeAgent(?string $agent): ?string
+    {
+        $agent = trim((string) $agent);
+
+        return $agent === '' ? null : mb_substr($agent, 0, self::AGENT_MAX);
+    }
 }

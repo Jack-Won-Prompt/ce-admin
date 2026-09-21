@@ -65,9 +65,11 @@ class AppServiceProvider extends ServiceProvider
                     'type'       => 'login',
                     'menu_name'  => '로그인',
                     'route_name' => 'login',
-                    'url'        => request()->fullUrl(),
+                    /* SSO 로 들어온 로그인도 이 자리를 지난다 — 그때 주소는 인가 코드가
+                       붙은 콜백이라 칸을 넘겼고, 아래 catch 가 삼켜 이력이 사라졌다 */
+                    'url'        => UserActivityLog::safeUrl(request()->fullUrl()),
                     'ip_address' => request()->ip(),
-                    'user_agent' => mb_substr(request()->userAgent() ?? '', 0, 300),
+                    'user_agent' => UserActivityLog::safeAgent(request()->userAgent()),
                 ]);
             } catch (\Throwable) {}
         });

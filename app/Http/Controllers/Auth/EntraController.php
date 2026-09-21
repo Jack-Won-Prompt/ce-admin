@@ -255,9 +255,11 @@ class EntraController extends Controller
                 'reason_text' => $note,
                 'menu_name'   => 'SSO',
                 'route_name'  => request()->route()?->getName(),
-                'url'         => request()->fullUrl(),
+                /* 콜백 주소에는 인가 코드가 붙어 있고 길이도 칸을 넘는다 —
+                   경로만 남긴다(UserActivityLog::safeUrl 의 주석을 본다) */
+                'url'         => UserActivityLog::safeUrl(request()->fullUrl()),
                 'ip_address'  => request()->ip(),
-                'user_agent'  => substr((string) request()->userAgent(), 0, 500),
+                'user_agent'  => UserActivityLog::safeAgent(request()->userAgent()),
             ]);
         } catch (\Throwable $e) {
             /* 자취를 못 남겼다고 로그인을 막지는 않는다 */

@@ -46,9 +46,10 @@ class LogUserActivity
             'type'       => 'page',
             'menu_name'  => UserActivityLog::menuName($routeName),
             'route_name' => $routeName,
-            'url'        => $request->fullUrl(),
+            // 검색어ㆍ토큰이 붙은 주소가 이력에 쌓이지 않도록 경로만 남긴다
+            'url'        => UserActivityLog::safeUrl($request->fullUrl()),
             'ip_address' => $request->ip(),
-            'user_agent' => mb_substr($request->userAgent() ?? '', 0, 300),
+            'user_agent' => UserActivityLog::safeAgent($request->userAgent()),
         ]);
 
         return $response;
