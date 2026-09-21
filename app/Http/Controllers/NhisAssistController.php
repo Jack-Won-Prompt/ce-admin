@@ -262,14 +262,24 @@ class NhisAssistController extends Controller
             ? \Carbon\Carbon::parse($p->buy_date)->addDays($days - 1)->format('Y-m-d')
             : null;
 
-        // 구입금액과 부담금 합이 어긋난 채로 넣으면 공단이 반려한다. 고치지는 못해도 알려는 준다.
-        $amount  = (int) $order->total_amount;
-        $shares  = (int) $order->nhis_amount + (int) $order->patient_copay;
-        $sumWarn = ($amount && $shares && $amount !== $shares)
-            ? '본인부담금 + 공단부담금 = ' . number_format($shares) . ' 원으로 구입금액과 다릅니다 — 어느 쪽이 맞는지 확인하십시오'
+        /* 구입금액은 환자 몫과 기관 몫을 더한 것이다(2026-09-21 확인).
+
+           여태 orders.total_amount 를 그대로 옮겼는데, 그 칸은 「환자가 낼 돈」이라
+           본인부담금만 들어 있다 — 일반(10/90) 건이면 공단 서식의 구입금액 자리에
+           225,000 대신 22,500 이 적혔다. 재무와 세금계산서가 이미 같은 까닭으로
+           그 칸을 쓰지 않는다(FinanceController·TaxinvoiceController 주석 참고). */
+        $amount = (int) $order->nhis_amount + (int) $order->patient_copay;
+
+        // 제품 줄의 합과 어긋나면 어느 쪽이 맞는지 담당자가 봐야 한다
+        $itemSum = (int) $order->items->sum(fn ($i) => (int) $i->quantity * (int) $i->unit_price);
+        $sumWarn = ($amount && $itemSum && $amount !== $itemSum)
+            ? '제품 줄 합계 ' . number_format($itemSum) . ' 원과 다릅니다 — 어느 쪽이 맞는지 확인하십시오'
             : null;
 
         $phone = $this->digits(config('delegation.provider.phone'));
+
+        // 카드로 받았으면 토스가 준 승인번호가 있다
+        $cardNo = $this->cardApprovalNo($order);
 
         return [
             /* 수진자 정보 */
@@ -277,7 +287,9 @@ class NhisAssistController extends Controller
             'rrn_front' => ['value' => $rrnFront],
             'rrn_back'  => ['value' => $rrnMasked ? '●●●●●●●' : null, 'reveal' => (bool) $p,
                             'note' => '누르면 그때 열립니다 · 열람 기록이 남습니다'],
-            'name'      => ['value' => $patient?->name ?: $p?->patient_name_ocr],
+            /* 이름 앞의 「(E)」는 거래처 갈래를 적어 둔 우리 표기다. 공단 서식에
+               옮겨 적을 값이라 떼고 내보낸다(2026-09-21 확인). */
+            'name'      => ['value' => $this->plainName($patient?->name ?: $p?->patient_name_ocr)],
             'branch'    => ['value' => null, 'copy' => false, 'blank' => '공단이 자동 표시',
                             'note' => '입력하지 않습니다'],
             /* 한시적은 우리 청구에 뜻이 없는 칸이다(2026-09-01 회신) — 묻지 않는다 */
@@ -288,7 +300,9 @@ class NhisAssistController extends Controller
             'rx_reg_no'    => ['value' => $p?->registration_no ?: null, 'note' => '전자처방전에 한합니다'],
             'rx_issued'    => ['value' => $this->date($p?->issued_date)],
             /* 공단 목록의 값과 우리 값이 같다(2026-09-01 회신) — 고르라 하지 않고 그대로 옮긴다 */
-            'disease_cls'  => ['value' => $p?->disease_class ?: null],
+            /* 상병 구분은 disease_grade 다(1 · 2-1 · 2-2 · 3). disease_class 는
+               지금 상병명을 담는 칸이라 여기서 읽으면 늘 빈칸이었다(2026-09-21 확인). */
+            'disease_cls'  => ['value' => $p?->disease_grade ?: null],
             'daily_count'  => ['value' => $this->num($p?->daily_count)],
             'total_days'   => ['value' => $this->num($p?->total_days)],
             'rx_total'     => ['value' => $this->num($rxTotal), 'note' => '1일처방개수 × 총처방기간',
@@ -352,9 +366,39 @@ class NhisAssistController extends Controller
             'sms_no1'      => ['value' => $this->phonePart($phone, 0), 'fixed' => true],
             'sms_no2'      => ['value' => $this->phonePart($phone, 1), 'fixed' => true],
             'sms_no3'      => ['value' => $this->phonePart($phone, 2), 'fixed' => true],
-            'card_no'      => ['value' => null, 'copy' => false, 'blank' => '카드 결제 건 없음',
-                               'note' => '결제는 전부 가상계좌라 카드 승인번호가 생기지 않습니다'],
+            /* 카드로 받은 건은 토스 승인번호를 옮겨 적는다(2026-09-21 확인).
+               여태 「결제는 전부 가상계좌」라 적어 두고 빈칸으로 두었는데, 카드
+               결제가 생긴 뒤로는 사실과 다르다. */
+            'card_no'      => $cardNo
+                ? ['value' => $cardNo]
+                : ['value' => null, 'copy' => false, 'blank' => '카드 결제 건 없음',
+                   'note' => '카드로 받은 건에만 승인번호가 생깁니다'],
         ];
+    }
+
+    /** 이름 앞의 거래처 갈래 표기를 뗀다 — 「(E)윤태경」 → 「윤태경」 */
+    private function plainName(?string $name): ?string
+    {
+        $name = trim((string) $name);
+
+        return $name === '' ? null : preg_replace('/^\([A-Za-z]{1,3}\)\s*/u', '', $name);
+    }
+
+    /** 카드로 받은 건의 토스 승인번호 — 없으면 null */
+    private function cardApprovalNo(Order $order): ?string
+    {
+        foreach (\App\Models\TossPayment::where('order_id', $order->id)
+                     ->whereNotNull('raw_response')->latest('id')->get() as $p) {
+            $raw = is_array($p->raw_response)
+                ? $p->raw_response
+                : (json_decode((string) $p->raw_response, true) ?: []);
+
+            if (! empty($raw['card']['approveNo'])) {
+                return (string) $raw['card']['approveNo'];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -427,18 +471,38 @@ class NhisAssistController extends Controller
             ]
             : [];
 
+        /* 카드매출전표와 거래명세서는 발행 서류 표가 아니라 첨부 표에 붙는다
+           (2026-09-21 확인). 여태 발행 서류만 보아, 카드로 받은 건은 매출전표를
+           들고 있으면서도 「발행 내역이 없습니다」로, 거래명세서는 만들어 붙여
+           놓고도 「만드는 기능이 없습니다」로 보였다. */
+        $attached = fn (string $type) => $prescription
+            ? \App\Models\PrescriptionAttachment::where('prescription_id', $prescription->id)
+                ->where('doc_type', $type)->latest('id')->first()
+            : null;
+
+        $cardSlip  = $attached('card_sales');
+        $statement = $attached('trade_statement');
+
+        $cashUrl = $cash
+            ? route('documents.download', $cash)
+            : ($cardSlip ? route('files.prescription-attachment', $cardSlip) : null);
+
+        $cashNote = $cashUrl
+            ? null
+            : ($order->cash_receipt_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다');
+
         return [
             ...$first,
             ['name' => '자가도뇨 소모성재료 처방전', 'url' => $rxImage,
              'note' => $rxImage ? null : '처방전 이미지가 없습니다'],
             ['name' => '현금영수증 또는 신용카드 매출전표',
-             'url'  => $cash ? route('documents.download', $cash) : null,
-             'note' => $cash ? null : ($order->cash_receipt_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
+             'url'  => $cashUrl, 'note' => $cashNote],
             ['name' => '세금계산서',
              'url'  => $tax ? route('documents.download', $tax) : null,
              'note' => $tax ? null : ($order->tax_invoice_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다')],
-            ['name' => '거래명세서', 'url' => null,
-             'note' => '세금계산서·현금영수증으로 품목·수량·금액이 확인되지 않을 때만 필요합니다 — 만드는 기능이 없습니다'],
+            ['name' => '거래명세서',
+             'url'  => $statement ? route('files.prescription-attachment', $statement) : null,
+             'note' => '세금계산서·현금영수증으로 품목·수량·금액이 확인되지 않을 때만 필요합니다'],
         ];
     }
 
