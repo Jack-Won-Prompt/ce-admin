@@ -43,7 +43,7 @@ final class MedicalAidClaimForm
      *
      * @return PrescriptionAttachment|null 만들지 못했으면 null(까닭은 로그에 남는다)
      */
-    public static function attach(Order $order): ?PrescriptionAttachment
+    public static function attach(Order $order, bool $다시그린다 = false): ?PrescriptionAttachment
     {
         $order->loadMissing(['patient', 'prescription', 'items']);
 
@@ -75,6 +75,16 @@ final class MedicalAidClaimForm
            서명이 파일보다 나중에 들어왔으면 다시 그린다. 옛 파일은 지운다 — 두 벌이
            남으면 어느 것이 서명본인지 알 수 없다. */
         if ($쓸수있나 && ($서명때 = self::서명시각($order)) && $서명때->gt($existing->created_at)) {
+            $쓸수있나 = false;
+        }
+
+        /* **금액이 정해진 뒤에는 다시 그린다** (2026-09-21 시험에서 찾음).
+
+           서명은 제품을 담기 전에 받는다. 그래서 서명 뒤에 만들어진 청구서라도
+           그때는 주문 줄이 비어 있어 금액 칸이 모두 0 으로 찍혔다 — 금액이 0 인
+           청구서는 공단ㆍ지자체가 그 자리에서 되돌려 보낸다. 증빙을 낼 때
+           (DepositAutoIssue) 이 자리를 다시 불러 금액이 든 것으로 갈아 준다. */
+        if ($다시그린다) {
             $쓸수있나 = false;
         }
 

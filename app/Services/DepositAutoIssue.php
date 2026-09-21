@@ -203,6 +203,18 @@ class DepositAutoIssue
            토스가 준 승인 내용을 그대로 옮겨 그린다. */
         $out['card_slip'] = CardSalesSlip::attach($order)?->file_original_name;
 
+        /* 요양비 지급청구서는 서명 때 만들어 두는데, 그때는 제품을 담기 전이라
+           금액 칸이 모두 0 이다(2026-09-21 시험에서 찾음). 금액이 정해진 지금
+           다시 그린다 — 기초ㆍ차상위경감 건에만 있는 서식이라 없으면 지나간다. */
+        if (\App\Support\MedicalAidClaimForm::applies($order)) {
+            try {
+                $청구서 = \App\Support\MedicalAidClaimForm::attach($order, 다시그린다: true);
+                $out['medical_aid_claim'] = $청구서?->file_original_name;
+            } catch (\Throwable $e) {
+                $out['skipped'][] = '요양비 지급청구서: 다시 그리지 못했습니다';
+            }
+        }
+
         if (! $out['card_slip']) {
             /* 왜 못 그렸는지를 남긴다 (2026-09-16 지시).
 
