@@ -110,6 +110,22 @@ class NhisController extends Controller
             };
         }
 
+        /* 결제수단 — 카드로 받은 건을 따로 보게 한다 (2026-09-21 확인요청).
+
+           orders.pay_method 는 상세 목록 탭을 한 번 저장하기만 해도 card 가 들어가
+           믿을 수 없다(2026-09-14 확인). 실제로 만든 결제 링크를 본다.
+           「결제 없음」은 링크도 없고 손으로 확인한 입금도 없는 건이다 —
+           본인 부담금이 0 원인 차상위경감ㆍ기초가 여기 선다. */
+        if ($request->filled('pay_method')) {
+            $방법 = (string) $request->pay_method;
+
+            if ($방법 === 'none') {
+                $query->whereDoesntHave('paymentLinks')->whereNull('deposit_confirmed_at');
+            } elseif (isset(\App\Models\PaymentLink::METHODS[$방법])) {
+                $query->whereHas('paymentLinks', fn ($q) => $q->where('method', $방법));
+            }
+        }
+
         // 청구 상태 이름은 모델이 한 벌만 갖는다(Order::CLAIM_STATUS_LABELS)
         $nhisStatusLabels = Order::CLAIM_STATUS_LABELS + [
             'pending'   => '청구 전',

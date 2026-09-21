@@ -181,6 +181,20 @@
         <option value="not_issued" @selected(request('cash_receipt') === 'not_issued')>미발행</option>
       </select>
     </div>
+    {{-- 결제수단 — 카드로 받은 건을 따로 볼 수 있어야 한다(2026-09-21 확인요청).
+         청구 자료를 갖추는 일이 결제수단마다 다르다: 카드는 매출전표가 증빙이고
+         가상계좌ㆍ무통장은 현금영수증이 붙는다. 그런데 이 화면에는 카드로 거르는
+         길이 없어, 카드 건만 모아 보려면 엑셀로 내려받아야 했다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">결제수단</label>
+      <select name="pay_method" class="form-control form-select">
+        <option value="">전체</option>
+        <option value="card"    @selected(request('pay_method') === 'card')>카드</option>
+        <option value="virtual" @selected(request('pay_method') === 'virtual')>가상계좌</option>
+        <option value="bank"    @selected(request('pay_method') === 'bank')>무통장입금</option>
+        <option value="none"    @selected(request('pay_method') === 'none')>결제 없음</option>
+      </select>
+    </div>
     <div class="ds-filter-field">
       {{-- 현금영수증과 나란히 거른다(요청서 11쪽) --}}
       <label class="ds-field-label">전자세금계산서</label>
