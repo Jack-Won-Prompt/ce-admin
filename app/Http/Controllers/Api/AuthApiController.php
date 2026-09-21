@@ -160,8 +160,60 @@ class AuthApiController extends Controller
         return response()->json([
             'success'        => true,
             'password_login' => (bool) config('auth.password_login.app', true),
+            /* SSO 로 들어올 수 있는가 — 켜져 있고 설정이 다 찼을 때만(SsoSettings).
+               앱은 이 값을 보고 「Microsoft 계정으로 로그인」 단추를 세운다. */
+            'sso_login'      => \App\Support\SsoSettings::usable(),
             'chat_visible'   => ! (bool) config('mobile.chat_hidden', false),
         ]);
+    }
+
+    // ── POST /api/auth/sso/exchange ───────────────────────
+    /**
+     * SSO 로그인으로 받은 일회용 코드를 앱 토큰으로 바꾼다 (2026-09-21 지시).
+     *
+     * 앱은 브라우저로 웹 SSO 로그인을 마치고 ceadmin://sso?code=... 로 돌아온다.
+     * 그 코드를 여기서 한 번만 쓸 수 있는 앱 토큰으로 바꾼다 — 코드는 꺼내는 순간
+     * 캐시에서 사라지고, 앱이 만든 표(nonce)가 같아야 받는다. 다른 앱이 코드를
+     * 가로채도 제 표가 아니면 쓸 수 없다.
+     *
+     * 이메일 로그인과 같은 토큰을 낸다(issueToken) — 기기별 토큰 관리도 그대로다.
+     */
+    public function ssoExchange(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code'      => ['required', 'string', 'max:128'],
+            'nonce'     => ['required', 'string', 'max:128'],
+            'device_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
+        ]);
+
+        $열쇠 = 'sso:app-code:' . $request->input('code');
+        $담긴것 = \Illuminate\Support\Facades\Cache::pull($열쇠);
+
+        if (! $담긴것 || ! hash_equals((string) ($담긴것['nonce'] ?? ''), (string) $request->input('nonce'))) {
+            return response()->json([
+                'success' => false,
+                'message' => '로그인 정보가 만료되었습니다. 다시 시도해 주십시오.',
+            ], 422);
+        }
+
+        $user = User::find($담긴것['user_id'] ?? null);
+
+        if (! $user || ! $user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => '사용할 수 없는 계정입니다. 관리자에게 문의하세요.',
+            ], 403);
+        }
+
+        // 웹 전용 계정은 앱에 들이지 않는다 — 이메일 로그인과 같은 잣대다
+        if (! $user->canEnter('app')) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 계정은 관리자 화면에서만 사용할 수 있습니다.',
+            ], 403);
+        }
+
+        return response()->json($this->issueToken($user, $request->input('device_id')));
     }
 
     // ── POST /api/auth/resend-otp ─────────────────────────

@@ -33,11 +33,34 @@ use Laravel\Socialite\Facades\Socialite;
  */
 class EntraController extends Controller
 {
-    /** 인가 요청으로 보낸다 */
+    /** 앱이 브라우저로 여는 로그인에 붙는 표 — 세션에 담아 두고 콜백에서 가린다 */
+    private const APP_SESSION_KEY = 'sso.app_nonce';
+
+    /** 앱으로 되돌아가는 주소의 틀 — 이 앱에만 등록된 주소다(Entra 와 무관) */
+    private const APP_CALLBACK = 'ceadmin://sso';
+
+    /** 일회용 코드가 사는 시간 — 앱이 곧바로 바꾸므로 짧게 둔다 */
+    private const APP_CODE_TTL = 120;
+
+    /**
+     * 인가 요청으로 보낸다.
+     *
+     * 앱에서 열었으면 ?app=<표> 가 실려 온다 (2026-09-21 지시). 그 표를 세션에
+     * 담아 두었다가 콜백에서 가린다 — 앱은 세션 로그인 대신 일회용 코드를 받는다.
+     * Entra 에 보내는 요청은 웹과 똑같다. 그래서 본사에 모바일 리디렉션 주소를
+     * 따로 등록하지 않아도 된다.
+     */
     public function redirect(Request $request): RedirectResponse
     {
         if ($꺼짐 = $this->꺼졌으면()) {
             return $꺼짐;
+        }
+
+        $앱표 = (string) $request->query('app', '');
+        $request->session()->forget(self::APP_SESSION_KEY);
+
+        if ($앱표 !== '' && preg_match('/^[A-Za-z0-9_-]{16,128}$/', $앱표)) {
+            $request->session()->put(self::APP_SESSION_KEY, $앱표);
         }
 
         return $this->provider()->redirect();
@@ -111,6 +134,23 @@ class EntraController extends Controller
            groups claim 은 쓰지 않는다 — 150개가 넘으면 빠지고 온다.
            매핑이 아직 정해지지 않아, 짝이 없으면 지금 역할을 그대로 둔다. */
         $this->역할을맞춘다($user, (array) ($entra->user['roles'] ?? []));
+
+        /* 앱에서 시작한 로그인이면 웹 세션을 만들지 않는다 (2026-09-21 지시).
+           브라우저에 로그인 상태를 남기지 않고, 앱이 한 번만 쓸 수 있는 코드를
+           들려 보낸다 — 앱은 그것을 POST /api/auth/sso/exchange 에서 앱 토큰으로
+           바꾼다. 코드는 캐시에 2분만 살고, 한 번 쓰면 사라진다. */
+        if ($앱표 = $request->session()->pull(self::APP_SESSION_KEY)) {
+            $코드 = \Illuminate\Support\Str::random(64);
+
+            \Illuminate\Support\Facades\Cache::put("sso:app-code:{$코드}", [
+                'user_id' => $user->id,
+                'nonce'   => $앱표,
+            ], self::APP_CODE_TTL);
+
+            $this->남긴다($user, 'sso_login', $email . ' (앱)');
+
+            return redirect()->away(self::APP_CALLBACK . '?code=' . urlencode($코드));
+        }
 
         Auth::login($user, remember: true);
         $request->session()->regenerate();

@@ -62,6 +62,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/login',       [AuthApiController::class, 'login']);       // 1단계: 이메일/비밀번호 → OTP 발송
     Route::post('/verify-otp',  [AuthApiController::class, 'verifyOtp']);  // 2단계: OTP 검증 → Bearer 토큰
     Route::post('/resend-otp',  [AuthApiController::class, 'resendOtp']);  // OTP 재발송
+    // 브라우저로 마친 SSO 로그인을 앱 토큰으로 바꾼다 (2026-09-21 지시)
+    Route::post('/sso/exchange', [AuthApiController::class, 'ssoExchange']);
 });
 
 // ── 인증 필요 (Bearer Token) ──────────────────────────────
