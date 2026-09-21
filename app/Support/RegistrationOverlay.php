@@ -95,6 +95,81 @@ final class RegistrationOverlay
     }
 
     /**
+     * 서명을 받은 그 자리에서 등록신청서에 신청인란을 얹는다 (2026-09-21 지시).
+     *
+     * 여태는 담당자가 주문 화면에서 자리를 잡고 저장해야만 얹혔다. 그러면 서명은
+     * 받아 두었는데 등록신청서는 빈칸인 채로 남아, 공단에 낼 때가 되어서야
+     * 「이거 아직 안 얹었네」를 알게 된다.
+     *
+     * **자리는 담당자가 주문 화면에서 잡아 저장해 둔 것을 쓴다**(2026-09-21 지시).
+     * 잡아 둔 적이 없으면 설정의 기본값으로 얹는다 — 서식이 같은 종이라 자리도
+     * 대개 같고, 어긋나면 담당자가 주문 화면에서 다시 잡아 덮어쓸 수 있다.
+     *
+     * 이미 얹어 둔 장도 **다시 얹는다.** 자리를 먼저 잡아 둔 건은 그때 서명이
+     * 없어 서명란이 비어 있었다. compose 가 늘 원본(overlay_source_path)을 바탕으로
+     * 그리므로 글자가 겹치지 않는다 — 잡아 둔 자리는 그대로 두고 서명만 더해진다.
+     *
+     * 얹지 못해도 서명은 그대로 둔다 — 서명이 끝난 뒤의 일이라 되돌릴 수 없고,
+     * 환자 화면에 오류를 띄울 일도 아니다.
+     *
+     * @return int 얹은 장수
+     */
+    public static function 서명뒤자동으로(Prescription $rx): int
+    {
+        $그린것 = 0;
+
+        foreach ($rx->attachments()->get() as $att) {
+            if (! $att->신청인란얹을수있나()) {
+                continue;
+            }
+
+            /* 담당자가 잡아 둔 자리가 먼저다. 그때 꺼 둔 칸도 그대로 지킨다 —
+               서식에 이미 적혀 있어 일부러 뺀 칸을 서명 한 번에 되살리지 않는다. */
+            $담긴것 = (array) ($att->overlay_fields ?? []);
+            $자리   = (array) ($담긴것['fields'] ?? []) ?: self::defaults();
+            $각도   = (int) ($담긴것['rotate'] ?? 0);
+            $끈칸   = (array) ($담긴것['off'] ?? []);
+
+            try {
+                $그림 = self::compose($att, $자리, $각도);
+            } catch (\Throwable $e) {
+                \Log::warning('[등록신청서 얹기] 서명 뒤 자동으로 그리지 못했습니다', [
+                    'attachment' => $att->id, 'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            $원본   = $att->overlay_source_path ?: $att->file_path;
+            $헌것   = $att->신청인란얹었나() ? $att->file_path : null;
+            $새경로 = 'attachments/' . $rx->id . '/' . uniqid('reg_') . '.' . $그림['ext'];
+
+            Storage::disk('public')->put($새경로, $그림['bytes']);
+
+            $att->forceFill([
+                'file_path'           => $새경로,
+                'file_mime_type'      => $그림['mime'],
+                'file_size'           => strlen($그림['bytes']),
+                'overlay_source_path' => $원본,
+                'overlay_fields'      => ['fields' => $자리, 'off' => $끈칸, 'rotate' => $각도],
+            ])->save();
+
+            /* 앞서 얹어 둔 장은 지운다. 원본은 그대로 둔다 — 자리를 다시 잡을 바탕이다. */
+            if ($헌것 && $헌것 !== $원본 && $헌것 !== $새경로) {
+                Storage::disk('public')->delete($헌것);
+            }
+
+            $그린것++;
+        }
+
+        if ($그린것) {
+            activity()->performedOn($rx)
+                ->log("전자서명을 받아 등록신청서 신청인란을 얹었습니다 ({$그린것}장)");
+        }
+
+        return $그린것;
+    }
+
+    /**
      * 얹어서 그림 바이트를 돌려준다.
      *
      * @param  array $fields  화면에서 잡은 자리 — 그림 크기에 대한 몫(0~1)
