@@ -73,3 +73,6 @@ Thumbs.db
 
 # 위드웍스 운영 DB 자격증명(평문) — 저장소에 올리지 않는다
 /database.php.save
+
+# Firebase 서비스 계정 열쇠 — 서버에만 둔다. 올라가면 알림을 아무나 보낼 수 있다
+/ce_app/fcm/
