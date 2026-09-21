@@ -281,6 +281,18 @@ class NhisAssistController extends Controller
         // 카드로 받았으면 토스가 준 승인번호가 있다
         $cardNo = $this->cardApprovalNo($order);
 
+        /* 사업자등록번호 — 한 회사의 한 번호다(2026-09-21 확인).
+
+           여태 건강보험공단 설정의 칸만 보았는데 그 칸은 비어 있었고, 같은 번호가
+           위임장 설정에는 채워져 있었다(위임장ㆍ지급청구서에 찍히는 그 번호다).
+           공단 서식의 사업자번호와 예금주 사업자번호가 둘 다 빈칸으로 나갔다.
+
+           공단 설정에 따로 적어 둔 것이 있으면 그것이 맞고, 없으면 위임장 설정의
+           번호를 쓴다 — 두 곳에 같은 값을 손으로 적게 하면 언젠가 어긋난다. */
+        $bizNo = $this->digits(
+            config('nhis.institution.biz_no') ?: config('delegation.provider.biz_no')
+        );
+
         return [
             /* 수진자 정보 */
             'kind'      => ['value' => '자가도뇨카테터', 'fixed' => true],
@@ -325,7 +337,7 @@ class NhisAssistController extends Controller
                              'note' => $dailyPay ? "구입수량 {$buyQty} ÷ 총처방기간 {$days}" : null],
             'pay_total'  => ['value' => $this->num($payTotal),
                              'note' => $payTotal !== null ? "처방총계 {$rxTotal} 와 구입수량 {$buyQty} 중 작은 값" : null],
-            'biz_no'     => ['value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
+            'biz_no'     => ['value' => $bizNo, 'fixed' => true],
             'biz_name'   => ['value' => config('popbill.company.corp_name') ?: null, 'fixed' => true],
             'buy_amount' => ['value' => $this->num($amount), 'warn' => $sumWarn],
             'buy_qty'    => ['value' => $this->num($buyQty ?: null)],
@@ -356,7 +368,7 @@ class NhisAssistController extends Controller
             'acc_no'       => ['value' => $this->digits($account['number'] ?? null), 'fixed' => true],
             'acc_relation' => ['value' => '기타', 'fixed' => true,
                                'note' => '수령인이 판매업자이므로 기타를 고릅니다'],
-            'acc_biz_no'   => ['value' => $this->digits(config('nhis.institution.biz_no')), 'fixed' => true],
+            'acc_biz_no'   => ['value' => $bizNo, 'fixed' => true],
             'acc_holder'   => ['value' => $account['holder'] ?? null, 'fixed' => true],
             'acc_protect'  => ['value' => null, 'copy' => false, 'blank' => '체크하지 않습니다', 'fixed' => true],
             'clm_relation' => ['value' => null, 'copy' => false, 'ask' => true, 'blank' => '선택 문구 미확인',
