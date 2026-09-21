@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "195144222084",
+    "project_id": "unicorn-dev-28d0d",
+    "storage_bucket": "unicorn-dev-28d0d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:195144222084:android:b5a83f22d9aee4ce3a89d1",
+        "android_client_info": {
+          "package_name": "com.coloplast.ceadmin.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0ZlC_OvpWiGpbwhuO3mr-oTvBD7tSBL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
