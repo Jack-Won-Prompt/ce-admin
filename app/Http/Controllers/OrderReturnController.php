@@ -884,7 +884,7 @@ class OrderReturnController extends Controller
         activity()->causedBy(Auth::user())->performedOn($order)
             ->log("{$orderReturn->receipt_no} 결제 취소 — " . ($결과['message'] ?? ''));
 
-        return $결과['message'] ?? '돌려주었습니다.';
+        return $결과['message'] ?? '환불 처리했습니다.';
     }
 
 

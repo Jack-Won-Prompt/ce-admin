@@ -94,6 +94,12 @@
       </a>
     @endforeach
     <div style="margin-left:auto;padding-right:12px;flex-shrink:0;">
+      {{-- 칸 설정 (2026-09-22 확인요청 1쪽) — 이 표에서 볼 칸을 고른다.
+           칸이 예순이 넘어 가로로 한참 밀어야 제 칸에 닿았다. 머리줄을 끌면 너비와
+           자리가 바뀌고, 이 창에서는 「본다ㆍ안 본다」를 고른다. 머리줄을 오른쪽으로
+           눌러도 같은 창이 열린다. --}}
+      <button type="button" class="ds-btn" title="이 표에서 볼 칸을 고릅니다"
+              onclick="window.__financeGrid?.openColumnSettings(this)">칸 설정</button>
       {{-- 요청서 14쪽 공통확인사항 — 「모든 메뉴는 엑셀 다운로드 가능」 --}}
       <button type="button" class="ds-btn" onclick="window.__financeGrid?.downloadExcel()">엑셀 다운</button>
     </div>

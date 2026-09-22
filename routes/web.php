@@ -127,8 +127,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/ocr',       [PrescriptionController::class, 'updateOcr'])->name('updateOcr');
         // 담당자가 다 적었다는 신호 
         Route::post('/{prescription}/request-review', [PrescriptionController::class, 'requestReview'])->name('request-review');
-        // 마지막 건을 베껴 새 건으로 — 날짜만 비운다
+        // 그 사람의 새 건 — 환자만 이어 둔 빈 건이다 (copy=1 이면 지난 건을 베낀다)
         Route::post('/{prescription}/duplicate',      [PrescriptionController::class, 'duplicate'])->name('duplicate');
+        // 유형을 고르면 그 자리에서 상세목록에 오더라인을 세운다 (2026-09-22 확인요청 2쪽)
+        Route::post('/{prescription}/order-line',     [PrescriptionController::class, 'createOrderLine'])->name('orderLine');
         // 「파일 검수」 창이 읽는 올린 파일 목록 (2026-09-10 지시)
         Route::get( '/{prescription}/files',         [PrescriptionController::class, 'files'])->name('files');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');
@@ -321,6 +323,9 @@ Route::middleware(['auth'])->group(function () {
        그때 쓸 증빙을 거래처로 보내 준다 — 담당자가 하나씩 내려받아 붙이던 일이다. */
     /* 목록의 「첨부」 칸이 부른다 — 이 주문으로 팩스에 실을 수 있는 서류 한 벌 */
     Route::get( '/orders/{order}/fax-docs',  [OrderController::class, 'faxDocs'])->name('orders.faxDocs');
+    /* 정정하면 무슨 일이 벌어지는가 — 누르기 전에 보여 준다 (2026-09-22 확인요청 3쪽).
+       아무것도 고치지 않는다. */
+    Route::post('/orders/{order}/amend-preview', [OrderController::class, 'amendPreview'])->name('orders.amendPreview');
     Route::get( '/orders/{order}/docs',      [\App\Http\Controllers\OrderDocSendController::class, 'list'])->name('orders.docs.list');
     Route::post('/orders/{order}/docs/send', [\App\Http\Controllers\OrderDocSendController::class, 'send'])->name('orders.docs.send');
 

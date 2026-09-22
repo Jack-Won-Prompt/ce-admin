@@ -773,3 +773,48 @@
   .cg-kind-money   { background: rgba(255, 180,  90, .07); }
   .cg-kind-action  { background: rgba(180, 180, 180, .06); }
 }
+
+/* ── 칸 설정 창 (2026-09-22 확인요청 1쪽 「Grid 조정 팝업 설정」) ──────────────
+   머리줄을 끌면 너비ㆍ차례가 바뀌고, 이 창에서는 「본다ㆍ안 본다」를 고른다.
+   고른 것은 이 브라우저에 남아 다음에 올 때도 그대로 선다.
+
+   body 에 붙는다 — 표 안에 두면 가로 스크롤을 따라 밀려 나간다. */
+.cg-colset {
+  position: absolute; z-index: 10050; width: 268px;
+  background: var(--cg-popup-bg, #fff); color: var(--cg-popup-text, #222);
+  border: 1px solid var(--cg-border, #d6dee8); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  font-size: 13px;
+}
+.cg-colset-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; font-weight: 700;
+  background: var(--cg-header-bg, #f3f6fa);
+  border-bottom: 1px solid var(--cg-border, #d6dee8);
+  border-radius: 8px 8px 0 0;
+}
+.cg-colset-x {
+  margin-left: auto; border: 0; background: none; cursor: pointer;
+  font-size: 18px; line-height: 1; color: inherit; padding: 0 2px;
+}
+/* 칸이 예순이 넘는 표가 있다 — 창이 화면을 넘지 않게 가두고 안에서 굴린다 */
+.cg-colset-body { max-height: 320px; overflow-y: auto; padding: 6px 4px; }
+.cg-colset-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 5px; cursor: pointer;
+}
+.cg-colset-item:hover { background: var(--cg-header-hover-bg, #eef4fb); }
+.cg-colset-item input { cursor: pointer; }
+.cg-colset-item span  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cg-colset-foot {
+  display: flex; gap: 6px; padding: 8px 10px;
+  border-top: 1px solid var(--cg-border, #d6dee8);
+}
+.cg-colset-foot .cg-btn { flex: 1; }
+
+@media (prefers-color-scheme: dark) {
+  .cg-colset { background: #1e242c; color: #e6ecf3; border-color: #39424e; }
+  .cg-colset-head { background: #262e38; border-color: #39424e; }
+  .cg-colset-foot { border-color: #39424e; }
+  .cg-colset-item:hover { background: #2c3541; }
+}

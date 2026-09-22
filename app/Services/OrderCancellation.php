@@ -212,10 +212,25 @@ class OrderCancellation
             return '해당 없음';
         }
 
+        $corpNum = config('popbill.test.corp_num');
+
+        /* 취소 문서번호는 **발행 번호에서 만든다** (2026-09-22 확인요청 2쪽).
+
+           여태 「CRC + 오늘 + 주문id」로 그때그때 지어, 같은 날 같은 주문을 두 번
+           정정하면 같은 번호가 되어 팝빌이 「동일한 문서번호」로 거절했다 — 두 번째
+           취소가 통째로 실패하고 옛 금액의 현금영수증이 살아남았다.
+
+           발행 번호에는 이미 차례가 붙어 있으므로(OrderController::현금영수증문서번호),
+           그것에서 만들면 정정을 거듭해도 취소마다 다른 번호가 된다. 손으로 누르는
+           취소(OrderController::cancelCashReceipt)가 쓰는 규칙과 같다. */
+        $cancelMgtKey = 'CRC' . substr(
+            \App\Http\Controllers\OrderController::현금영수증문서번호($order, 새로: false), 2
+        );
+
         try {
             app(CashbillService::class)->revokeRegistIssue(
-                corpNum:      config('popbill.test.corp_num'),
-                mgtKey:       'CRC' . now()->format('Ymd') . str_pad($order->id, 6, '0', STR_PAD_LEFT),
+                corpNum:      $corpNum,
+                mgtKey:       $cancelMgtKey,
                 orgMgtKey:    $order->cash_receipt_no,
                 orgTradeDate: $order->cash_receipt_issued_at?->format('Ymd') ?? '',
                 userId:       config('popbill.test.user_id'),
@@ -225,6 +240,20 @@ class OrderCancellation
                 'cash_receipt_status'       => 'cancelled',
                 'cash_receipt_cancelled_at' => now(),
             ])->save();
+
+            /* 취소한 줄을 우리 표에 들인다 (2026-09-22 확인요청 2쪽).
+
+               발행은 진작 들이고 있었는데 취소만 빠져 있었다. 그래서 현금영수증 화면은
+               정정한 건을 「정정 후 발행」 한 줄로만 보여 주었다 — 확인요청 2쪽의
+               「초과 금액 1개 라인으로 잘못 보임」이 그것이다. 취소 줄이 들어오면
+               「정정 전 발행 / 취소 / 정정 후 발행」 셋이 선다. */
+            try {
+                app(\App\Services\Popbill\CashbillSyncService::class)->refreshOne($corpNum, $cancelMgtKey);
+            } catch (\Throwable $e) {
+                Log::warning('[주문취소] 현금영수증 취소 후 동기화 실패', [
+                    'order' => $order->id, 'error' => $e->getMessage(),
+                ]);
+            }
 
             activity()->performedOn($order)->log("주문 취소로 현금영수증을 취소했습니다 ({$why})");
 

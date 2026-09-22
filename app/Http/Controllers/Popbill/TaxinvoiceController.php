@@ -218,8 +218,20 @@ class TaxinvoiceController extends Controller
         $startDT = \Carbon\Carbon::createFromFormat('Ymd', $startDate)->startOfDay();
         $endDT   = \Carbon\Carbon::createFromFormat('Ymd', $endDate)->endOfDay();
 
+        /* 이름으로도 거른다 (2026-09-22 확인요청 2쪽).
+
+           발행된 줄은 invoicee_corp_name(공급받는자 상호 = 환자 이름)으로 거르는
+           자리가 이미 있었는데(applyFilters), 아직 안 낸 대기 줄에는 그 자리가 없어
+           이름을 쳐도 함께 남았다 — 한 표에 섞여 서는 두 갈래라 한쪽만 걸리면
+           걸러지지 않은 것으로 보인다. 현금영수증 화면이 이미 같은 짝을 맞춰 두었다. */
+        $이름 = trim((string) $request->query('invoicee_name'));
+
         $pendingQuery = Order::with(['patient', 'prescription', 'tossPayment'])
-            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM);
+            ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
+            ->when($이름 !== '', fn ($q) => $q->where(function ($w) use ($이름) {
+                $w->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$이름}%"))
+                  ->orWhereHas('prescription', fn ($p) => $p->where('patient_name_ocr', 'like', "%{$이름}%"));
+            }));
 
         BillingStrategy::targets($pendingQuery, 'tax_invoice');
 

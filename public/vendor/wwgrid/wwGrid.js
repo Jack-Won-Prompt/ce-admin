@@ -966,6 +966,27 @@ class wwGrid {
     this._codeOrder = this.columns.map(c => c.name);   // 코드에 적힌 첫 차례
     this._applySavedOrder();
 
+    /* 감춰 둔 칸도 남긴다 (2026-09-22 확인요청 1쪽 「Grid 조정 팝업 설정」).
+
+       목록에 칸이 예순이 넘는 화면이 있다. 담당자마다 늘 보는 칸이 다른데 여태는
+       코드가 정한 것만 섰고, 가로로 한참 밀어야 제 칸에 닿았다. 머리줄에서 너비와
+       차례는 이미 손으로 고칠 수 있었으므로(끌기), 남은 하나 — 「이 칸은 안 본다」를
+       여기에 더한다.
+
+       열쇠 꼴은 너비ㆍ차례와 같다 — 「경로 + 담는 칸의 id」. */
+    this._hiddenKey = (this.el && this.el.id)
+      ? 'wwgrid.h:' + location.pathname + '#' + this.el.id
+      : null;
+
+    /* 칸의 온 벌을 따로 들고 있는다. this.columns 는 **보이는 칸**이다 —
+       그리기ㆍ정렬ㆍ엑셀이 모두 그것을 훑으므로, 감춘 칸을 섞어 두면 자리마다
+       다시 걸러야 한다. 되살릴 때 쓸 원본은 여기 있다. */
+    this._allColumns = this.columns.slice();
+    // 코드에 적힌 너비 — 「처음 자리로」가 이 값으로 되돌린다
+    this._allColumns.forEach(c => { if (c._codeWidth === undefined) c._codeWidth = c.width; });
+    this._hidden     = new Set(this._loadHidden());
+    this._applyHidden();
+
     this._build();
   }
 
@@ -1024,6 +1045,9 @@ class wwGrid {
     if (this.toolbar !== false) {
       this._toolbarEl.innerHTML =
         '<span class="cg-toolbar-sep"></span>' +
+        /* 「칸 설정」 — 무엇을 볼지 고른다 (2026-09-22 확인요청 1쪽).
+           머리줄을 끌면 너비ㆍ차례가 바뀌고, 이 창에서는 본다ㆍ안 본다를 고른다. */
+        '<button class="cg-btn" data-action="colset" title="이 표에서 볼 칸을 고릅니다">칸 설정</button>' +
         '<button class="cg-btn cg-btn-excel" data-action="excel">&#9660; 엑셀 다운</button>';
       this.el.appendChild(this._toolbarEl);
     }
@@ -1260,7 +1284,16 @@ class wwGrid {
   _saveOrder() {
     if (!this._orderKey) return;
     try {
-      localStorage.setItem(this._orderKey, JSON.stringify(this.columns.map(c => c.name)));
+      /* 감춰 둔 칸도 함께 적는다. this.columns 는 보이는 칸뿐이라 그것만 남기면
+         감춘 칸이 차례에서 사라지고, 되살렸을 때 코드의 자리로 돌아간다.
+         감춘 것은 뒤에 붙인다 — 보이지 않는 사이에 앞자리를 지킬 까닭이 없고,
+         되살리면 맨 뒤에 서므로 어디로 갔는지 찾기 쉽다. */
+      const 보이는것 = this.columns.map(c => c.name);
+      const 감춘것   = (this._allColumns || [])
+                          .map(c => c.name)
+                          .filter(n => !보이는것.includes(n));
+
+      localStorage.setItem(this._orderKey, JSON.stringify([...보이는것, ...감춘것]));
     } catch (e) {
       /* 남기지 못해도 이번 화면에서는 이미 옮겨져 있다 */
     }
@@ -1284,6 +1317,148 @@ class wwGrid {
     const 새것   = this.columns.filter(c => ! 자리.has(c.name));
 
     this.columns = [...아는것, ...새것];
+  }
+
+  /* ── 감춘 칸 기억 ───────────────────────────
+     너비ㆍ차례와 같은 까닭이다. 브라우저가 막아 둔 경우에는 조용히 지나간다. */
+  _loadHidden() {
+    if (!this._hiddenKey) return [];
+    try {
+      const v = JSON.parse(localStorage.getItem(this._hiddenKey) || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  _saveHidden() {
+    if (!this._hiddenKey) return;
+    try {
+      localStorage.setItem(this._hiddenKey, JSON.stringify([...this._hidden]));
+    } catch (e) {
+      /* 남기지 못해도 이번 화면에서는 이미 감춰져 있다 */
+    }
+  }
+
+  /** 온 벌에서 감춘 것을 덜어 내 보이는 칸을 세운다 */
+  _applyHidden() {
+    this.columns = this._allColumns.filter(c => !this._hidden.has(c.name));
+
+    /* 한 칸도 남지 않으면 표가 아니다 — 그럴 때는 감춘 것을 모두 되살린다.
+       빈 표 앞에서 담당자가 되돌릴 길을 찾지 못하는 것보다 낫다. */
+    if (!this.columns.length) {
+      this._hidden.clear();
+      this.columns = this._allColumns.slice();
+    }
+  }
+
+  /** 칸 하나를 감추거나 되살린다 */
+  toggleColumn(name, show) {
+    const 보일까 = (show === undefined) ? this._hidden.has(name) : !!show;
+
+    if (보일까) { this._hidden.delete(name); } else { this._hidden.add(name); }
+
+    this._applyHidden();
+    this._saveHidden();
+    this._redrawColumns();
+  }
+
+  /** 감춘 칸을 모두 되살리고 차례ㆍ너비도 코드에 적힌 대로 돌린다 */
+  resetColumns() {
+    this._hidden.clear();
+    this._saveHidden();
+
+    if (this._hiddenKey) { try { localStorage.removeItem(this._hiddenKey); } catch (e) {} }
+    if (this._widthKey)  { try { localStorage.removeItem(this._widthKey);  } catch (e) {} }
+
+    this._savedWidths = {};
+    this._allColumns.forEach(c => { if (c._codeWidth !== undefined) c.width = c._codeWidth; });
+
+    this._applyHidden();
+    this.resetColumnOrder();
+  }
+
+  /** 칸이 바뀌었으니 머리줄ㆍ몸통을 다시 그린다 */
+  _redrawColumns() {
+    this._buildColgroup();
+    this._renderHeader();
+    this._renderBody();
+    if (typeof this._renderSummary === 'function') this._renderSummary();
+  }
+
+  /**
+   * 「칸 설정」 창 — 무엇을 볼지 고른다 (2026-09-22 확인요청 1쪽).
+   *
+   * 머리줄에서 끌면 너비와 차례가 바뀌고, 여기서는 「본다ㆍ안 본다」를 고른다.
+   * 고른 것은 이 브라우저에 남아 다음에 올 때도 그대로 선다.
+   */
+  openColumnSettings(anchorEl) {
+    if (this._colPopup) { this._closeColumnSettings(); return; }
+
+    const box = document.createElement('div');
+    box.className = 'cg-colset';
+
+    const 줄 = this._allColumns.map(c => {
+      const 켜짐 = !this._hidden.has(c.name);
+      return '<label class="cg-colset-item">'
+           + '<input type="checkbox" data-col="' + String(c.name).replace(/"/g, '&quot;') + '"'
+           + (켜짐 ? ' checked' : '') + '>'
+           + '<span>' + String(c.header ?? c.name) + '</span>'
+           + '</label>';
+    }).join('');
+
+    box.innerHTML =
+        '<div class="cg-colset-head">칸 설정'
+      + '<button type="button" class="cg-colset-x" data-colset="close">&times;</button></div>'
+      + '<div class="cg-colset-body">' + 줄 + '</div>'
+      + '<div class="cg-colset-foot">'
+      + '<button type="button" class="cg-btn" data-colset="all">모두 보기</button>'
+      + '<button type="button" class="cg-btn" data-colset="reset">처음 자리로</button>'
+      + '</div>';
+
+    document.body.appendChild(box);
+    this._colPopup = box;
+
+    const r = (anchorEl || this.el).getBoundingClientRect();
+    box.style.top  = (window.scrollY + r.bottom + 4) + 'px';
+    box.style.left = (window.scrollX + Math.max(8, Math.min(r.left, window.innerWidth - 280))) + 'px';
+
+    box.addEventListener('change', e => {
+      const cb = e.target.closest('input[data-col]');
+      if (cb) this.toggleColumn(cb.dataset.col, cb.checked);
+    });
+
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-colset]');
+      if (!b) return;
+      if (b.dataset.colset === 'close') { this._closeColumnSettings(); return; }
+
+      if (b.dataset.colset === 'all') {
+        this._hidden.clear();
+        this._applyHidden();
+        this._saveHidden();
+        this._redrawColumns();
+      } else {
+        this.resetColumns();
+      }
+
+      box.querySelectorAll('input[data-col]').forEach(cb => { cb.checked = true; });
+    });
+
+    /* 바깥을 누르면 닫는다 — 창이 열린 채로 표를 만지면 어느 것이 반영됐는지
+       알 수 없다. 이 걸음은 창을 연 그 누름이 끝난 뒤에 건다. */
+    this._colPopupAway = ev => {
+      if (box.contains(ev.target) || (anchorEl && anchorEl.contains(ev.target))) return;
+      this._closeColumnSettings();
+    };
+    setTimeout(() => document.addEventListener('mousedown', this._colPopupAway), 0);
+  }
+
+  _closeColumnSettings() {
+    if (!this._colPopup) return;
+    document.removeEventListener('mousedown', this._colPopupAway);
+    this._colPopup.remove();
+    this._colPopup = null;
   }
 
   /** 코드에 적힌 차례로 되돌린다 */
@@ -1613,6 +1788,7 @@ class wwGrid {
       if (action === 'resetModified') this.resetModified();
       if (action === 'getModified')   this._showModifiedDialog();
       if (action === 'excel')         this.downloadExcel();
+      if (action === 'colset')        this.openColumnSettings(e.target);
     });
 
     // 정렬
@@ -1671,6 +1847,16 @@ class wwGrid {
       e.preventDefault();
       e.stopPropagation();
       this.resetColumnWidth(handle.dataset.colName);
+    });
+
+    /* 머리줄을 오른쪽으로 누르면 「칸 설정」이 열린다 (2026-09-22 확인요청 1쪽).
+
+       툴바 단추만 두면 toolbar:false 로 세운 표(재무ㆍ정산 따위)에서는 열 길이 없다.
+       머리줄은 어느 표에나 있으므로 여기에도 건다 — 화면이 제 단추를 달고 싶으면
+       grid.openColumnSettings(단추) 를 부르면 된다. */
+    this._theadEl.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      this.openColumnSettings(e.target.closest('th') || this._theadEl);
     });
 
     // 컬럼 드래그 순서 변경
@@ -2140,6 +2326,17 @@ class wwGrid {
         return { ...g, children: indices.map(i => colNames[i]) };
       })
       .filter(Boolean);
+
+    /* 온 벌의 차례도 함께 맞춘다 (2026-09-22).
+
+       this.columns 는 **보이는 칸**이다. 감춘 칸을 되살리는 일은 _allColumns 를
+       바탕으로 하므로, 여기서 맞춰 두지 않으면 되살리는 순간 끌어 둔 차례가 통째로
+       코드의 차례로 돌아간다. 감춘 것은 뒤에 붙인다 — 되살리면 맨 뒤에 선다. */
+    if (this._allColumns) {
+      const 보임  = new Set(this.columns.map(c => c.name));
+      const 감춘것 = this._allColumns.filter(c => !보임.has(c.name));
+      this._allColumns = [...this.columns, ...감춘것];
+    }
 
     /* 옮긴 차례를 남긴다 — 화면을 다시 열어도 그대로 선다 */
     this._saveOrder();

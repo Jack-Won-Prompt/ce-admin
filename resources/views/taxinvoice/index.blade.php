@@ -328,6 +328,13 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
             <input type="date" id="f-end" class="form-control">
           </div>
         </div>
+        {{-- 이름 (2026-09-22 확인요청 2쪽) — 담당자가 아는 말은 상호가 아니라 이름이다.
+             공급받는자가 환자 개인이라 세금계산서의 「상호」 칸에 이름이 들어간다. --}}
+        <div class="ds-filter-field">
+          <label class="ds-field-label">이름</label>
+          <input type="text" id="f-name" class="form-control" placeholder="환자 이름"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();loadHistory(1);}">
+        </div>
         <div class="ds-filter-field">
           <label class="ds-field-label">세금종류</label>
           <select id="f-tax-type" class="form-control form-select">
@@ -1002,6 +1009,11 @@ async function loadHistory(page = 1) {
 
   let url = `${TI_BASE}/search?corp_num=${cn}&mgt_key_type=SELL&start_date=${sd}&end_date=${ed}&page=${page}&per_page=15&order=D`;
   if (taxType) url += `&tax_type_code[]=${encodeURIComponent(taxType)}`;
+
+  /* 이름 (2026-09-22 확인요청 2쪽). 발행된 줄은 공급받는자 상호로, 아직 안 낸 대기
+     줄은 거래처ㆍ처방전에 적힌 이름으로 거른다 — 서버가 둘을 같은 열쇠로 받는다. */
+  const 이름 = (document.getElementById('f-name')?.value ?? '').trim();
+  if (이름) url += `&invoicee_name=${encodeURIComponent(이름)}`;
 
   try {
     const res  = await fetch(url, { headers: HEADERS });
