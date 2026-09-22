@@ -3300,13 +3300,19 @@ class PrescriptionController extends Controller
            안 끝난 건과 창고로 넘기지도 못한 건이 주문 관리에 줄로 남았다.
 
            잣대는 유형이다 — 담당자가 「이 건을 주문으로 진행한다」고 밝힌 걸음이다.
-           그 판정은 OrderSync::seed 한 곳에 적어 두고 여기서도 그것을 부른다(ensure 는
-           잣대를 보지 않고 세우므로 이 자리에서는 쓰지 않는다).
+           그 판정은 OrderSync::seed 한 곳에 적어 두었다.
+
+           **줄이 이미 있으면 값을 맞춘다**(2026-09-22 무한 테스트에서 드러남).
+           seed 는 「없으면 세우기만」 하고 있는 줄은 건드리지 않는다. 그래서 세우는
+           잣대만 보고 seed 로 갈아 끼웠더니, 제품과 배송지를 적어 저장해도 주문 줄은
+           빈 채로 남았다 — 제품 「-」, 수량 1, 금액 0원. 값을 맞추는 일은 ensure 의
+           몫이므로 갈래를 나눠 부른다.
 
            여기서는 우리 쪽 주문만 만든다. 위드웍스로 보내는 것은 그 단추가 할 일이다 —
            저장할 때마다 창고로 주문이 날아가서는 안 된다. */
-        $order = \App\Support\OrderSync::seed($prescription->refresh())
-              ?? $prescription->order;
+        $order = $prescription->order()->exists()
+            ? \App\Support\OrderSync::ensure($prescription)
+            : \App\Support\OrderSync::seed($prescription->refresh());
 
         /* 「OCR 필드 수정」이라 적어 왔다. 이 칸들이 처음에 처방전 그림을 OCR 로 읽어
            채우던 자리라 그렇게 불렀는데, 지금은 담당자가 손으로 적는다 — 저장 이력에서
