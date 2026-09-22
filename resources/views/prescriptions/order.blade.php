@@ -7987,8 +7987,14 @@ window.HELP_TOUR_STEPS = [
         return;
       }
 
+      /* 화면이 제 주문을 알아야 한다 — 배송 정보 저장ㆍ정정ㆍ취소가 모두
+         existingOrder.id 로 주소를 만든다. 번호만 담으면 그 자리들이 깨진다. */
       if (res.order_number) {
-        existingOrder = { ...(existingOrder ?? {}), order_number: res.order_number };
+        existingOrder = {
+          ...(existingOrder ?? {}),
+          id:           res.order_id ?? res.row?.id ?? existingOrder?.id ?? null,
+          order_number: res.order_number,
+        };
       }
 
       /* 세운 줄을 상세목록 맨 위에 얹는다. OL_ROWS 는 거르기가 딛는 바탕이라

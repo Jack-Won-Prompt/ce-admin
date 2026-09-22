@@ -5541,12 +5541,18 @@ HTML;
             ]);
         }
 
+        /* 유형을 적어 저장한 그 순간 OrderSync 가 이미 줄을 세웠을 수 있다
+           (Prescription::booted → seed · 2026-09-22 시험에서 드러남). 그때도 방금
+           세운 줄이므로 번호를 돌려준다 — 안 돌려주면 화면이 제 주문을 모른 채
+           남아, 뒤이어 부르는 자리들이 「주문이 없다」로 걸린다. */
         if ($order = $prescription->order()->first()) {
             return response()->json([
-                'success' => true,
-                'seeded'  => false,
-                'message' => '',
-                'row'     => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
+                'success'      => true,
+                'seeded'       => false,
+                'order_id'     => $order->id,
+                'order_number' => $order->order_number,
+                'message'      => '',
+                'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
             ]);
         }
 
@@ -5571,11 +5577,12 @@ HTML;
         );
 
         return response()->json([
-            'success' => true,
-            'seeded'  => true,
+            'success'      => true,
+            'seeded'       => true,
+            'order_id'     => $order->id,
             'order_number' => $order->order_number,
-            'message' => "주문 {$order->order_number} 줄을 세웠습니다.",
-            'row'     => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
+            'message'      => "주문 {$order->order_number} 줄을 세웠습니다.",
+            'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
         ]);
     }
 
