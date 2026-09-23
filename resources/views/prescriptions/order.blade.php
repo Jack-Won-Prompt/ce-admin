@@ -14091,6 +14091,13 @@ window.HELP_TOUR_STEPS = [
     };
     /* 담당자 목록은 고른 갈래를 따른다 — 검수와 주문은 다른 사람일 수 있다 */
     window.olManagerFill = function () {
+      const el = document.getElementById('ol-manager');
+      if (!el) return;
+
+      /* 갈래를 바꿀 때마다 다시 채우므로 **먼저 비운다** — 비우지 않으면 누를
+         때마다 같은 이름이 한 벌씩 쌓인다(네 번 누르면 네 벌). */
+      el.innerHTML = '<option value="">전체</option>';
+
       const 갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
       const 칸  = 갈래 === 'order' ? 'order_manager' : 'review_manager';
       fill('ol-manager', OL_ROWS.map(r => r[칸] || r.manager));
