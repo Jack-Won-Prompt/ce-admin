@@ -296,7 +296,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${widget.maskedPhone}으로\n발송된 6자리 인증번호를 입력하십시오.',
+                              '${widget.maskedPhone}으로\n발송된 6자리 인증번호를 입력해 주십시오.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.55),

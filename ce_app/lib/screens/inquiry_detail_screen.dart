@@ -682,8 +682,8 @@ class _InputBar extends StatelessWidget {
                           fontSize: 14, color: AppTheme.textPrimary),
                       decoration: InputDecoration(
                         hintText: isAnswered
-                            ? '추가 문의 내용을 입력하십시오 (재문의)'
-                            : '내용을 입력하십시오…',
+                            ? '추가 문의 내용을 입력해 주십시오 (재문의)'
+                            : '내용을 입력해 주십시오…',
                         hintStyle: const TextStyle(
                             color: AppTheme.textMuted, fontSize: 13),
                         filled: true,

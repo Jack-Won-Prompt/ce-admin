@@ -318,7 +318,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                       style: const TextStyle(
                           fontSize: 14, color: AppTheme.textPrimary),
                       decoration: InputDecoration(
-                        hintText: '메시지를 입력하십시오',
+                        hintText: '메시지를 입력해 주십시오',
                         hintStyle: const TextStyle(
                             color: AppTheme.textMuted, fontSize: 13),
                         filled: true,

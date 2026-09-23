@@ -45,7 +45,7 @@ class AuthApiController extends Controller
         if (! config('auth.password_login.app', true) && $user->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의하십시오.',
+                'message' => '아이디·비밀번호 로그인은 사용하지 않습니다. 관리자에게 문의해 주십시오.',
             ], 403);
         }
 
@@ -64,7 +64,7 @@ class AuthApiController extends Controller
         if (empty($user->phone)) {
             return response()->json([
                 'success' => false,
-                'message' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하십시오.',
+                'message' => '등록된 휴대폰 번호가 없습니다. 관리자에게 문의해 주십시오.',
             ], 403);
         }
 
@@ -201,7 +201,7 @@ class AuthApiController extends Controller
         if (! $user || ! $user->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => '사용할 수 없는 계정입니다. 관리자에게 문의하십시오.',
+                'message' => '사용할 수 없는 계정입니다. 관리자에게 문의해 주십시오.',
             ], 403);
         }
 

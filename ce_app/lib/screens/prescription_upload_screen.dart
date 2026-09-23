@@ -143,7 +143,7 @@ class _PrescriptionUploadScreenState
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
-                  const Text('생년월일로 동일인 여부를 확인한 뒤 선택하십시오.',
+                  const Text('생년월일로 동일인 여부를 확인한 뒤 선택해 주십시오.',
                       style: TextStyle(
                           fontSize: 12, color: AppTheme.textSecondary)),
                 ],
@@ -786,7 +786,7 @@ class _PrescriptionUploadScreenState
                               fontSize: 14, color: AppTheme.textPrimary),
                           decoration: InputDecoration(
                             hintText:
-                                '담당자에게 전달할 내용을 입력하십시오\n예) 청구 관련 특이사항을 기재해 주십시오',
+                                '담당자에게 전달할 내용을 입력해 주십시오\n예) 청구 관련 특이사항을 기재해 주십시오',
                             hintStyle: const TextStyle(
                                 color: AppTheme.textMuted,
                                 fontSize: 13,

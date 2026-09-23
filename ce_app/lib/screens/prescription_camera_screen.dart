@@ -294,8 +294,8 @@ class _PrescriptionCameraScreenState extends State<PrescriptionCameraScreen>
                         ),
                         child: Text(
                           _docInFrame
-                              ? '서류가 인식되었습니다. 촬영하십시오.'
-                              : '처방전을 화면 안에 맞추십시오',
+                              ? '서류가 인식되었습니다. 촬영해 주십시오.'
+                              : '처방전을 화면 안에 맞춰 주십시오',
                           style: TextStyle(
                             color: frameColor,
                             fontSize: 13,

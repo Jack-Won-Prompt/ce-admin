@@ -209,7 +209,7 @@ class _PrescriptionDetailScreenState
                 const Text('서류 추가',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('${d.rxNumber}에 추가할 서류 유형을 선택하십시오. 목록에 추가한 뒤 아래 「서류 업로드」로 한 번에 업로드합니다.',
+                Text('${d.rxNumber}에 추가할 서류 유형을 선택해 주십시오. 목록에 추가한 뒤 아래 「서류 업로드」로 한 번에 업로드합니다.',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textMuted)),
                 const SizedBox(height: 14),
@@ -228,7 +228,7 @@ class _PrescriptionDetailScreenState
                 if (d.imageUrl != null) ...[
                   const SizedBox(height: 10),
                   const Text(
-                      '처방전이 이미 등록되어 있습니다. 변경하려면 먼저 목록에서 처방전을 삭제(🗑)하십시오.',
+                      '처방전이 이미 등록되어 있습니다. 변경하려면 먼저 목록에서 처방전을 삭제(🗑)해 주십시오.',
                       style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ] else if (!d.isMine) ...[
                   const SizedBox(height: 10),
@@ -533,7 +533,7 @@ class _PrescriptionDetailScreenState
                               : const Icon(Icons.fact_check_outlined, size: 18),
                           label: Text(
                               _pending.isNotEmpty
-                                  ? '검수 재요청 — 먼저 서류를 업로드하십시오'
+                                  ? '검수 재요청 — 먼저 서류를 업로드해 주십시오'
                                   : '검수 재요청',
                               style: const TextStyle(fontWeight: FontWeight.w800)),
                           style: OutlinedButton.styleFrom(
@@ -795,7 +795,7 @@ class _PrescriptionDetailScreenState
                           Expanded(
                             child: Text(
                               '등록된 서류가 없습니다. 같은 처방전(${d.rxNumber})으로 다시 업로드하려면 '
-                              '아래 「서류 추가」를 선택하십시오.\n업로드 탭에서 업로드하면 새 처방전 번호가 생성됩니다.',
+                              '아래 「서류 추가」를 선택해 주십시오.\n업로드 탭에서 업로드하면 새 처방전 번호가 생성됩니다.',
                               style: const TextStyle(
                                   fontSize: 12.5,
                                   height: 1.5,
@@ -841,7 +841,7 @@ class _PrescriptionDetailScreenState
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '「${d.statusLabel}」 상태에서는 자료를 수정할 수 없습니다. 담당자에게 문의하십시오.',
+                            '「${d.statusLabel}」 상태에서는 자료를 수정할 수 없습니다. 담당자에게 문의해 주십시오.',
                             style: const TextStyle(
                                 fontSize: 12, color: AppTheme.textMuted),
                           ),

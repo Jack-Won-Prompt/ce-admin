@@ -109,7 +109,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!_ssoEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Microsoft 계정 로그인이 아직 설정되지 않았습니다. IT 관리자에게 문의하십시오.'),
+          content: const Text('Microsoft 계정 로그인이 아직 설정되지 않았습니다. IT 관리자에게 문의해 주십시오.'),
           backgroundColor: const Color(0xFF1565C0),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -355,7 +355,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                       const SizedBox(height: 8),
                       Text(
-                        '임직원은 Microsoft 계정(Entra ID)으로 로그인하십시오',
+                        '임직원은 Microsoft 계정(Entra ID)으로 로그인해 주십시오',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.45),

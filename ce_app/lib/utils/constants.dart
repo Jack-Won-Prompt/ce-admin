@@ -2,6 +2,7 @@
 // API 기본 설정
 
 class AppConstants {
+
   // ── API ──────────────────────────────────────────
   /// 개발·검증 서버. 운영 도메인은 아직 정해지지 않았다.
   static const String baseUrlDev = 'https://www.ceadmin.co.kr/api';

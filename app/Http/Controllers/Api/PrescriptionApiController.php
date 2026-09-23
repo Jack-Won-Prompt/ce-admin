@@ -762,7 +762,7 @@ class PrescriptionApiController extends Controller
             'success' => false,
             'message' => $까닭 ?: ($고칠수있는상태
                 ? '본인이 등록한 처방전만 수정할 수 있습니다.'
-                : "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하십시오."),
+                : "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의해 주십시오."),
         ], 403);
     }
 
