@@ -2523,9 +2523,35 @@ document.addEventListener('click', (e) => {
   /** 갈래의 세기 — 뒤로 갈수록 세다 */
   const _알림세기 = ['info', 'success', 'warning', 'danger'];
 
+  /* 담당자가 고친 문구를 먼저 본다 (2026-09-23 지시).
+
+     메시지 관리에서 토스트ㆍ팝업 글을 고치면 그 글이 실제로 떠야 한다. 화면마다
+     문구가 코드에 박혀 있으므로 **원문을 열쇠로** 삼는다 — 사전에 그 원문이 있으면
+     고친 말로 바꿔 띄운다. 없으면 코드에 적힌 그대로다.
+
+     사전은 화면이 열릴 때 한 번 받아 둔다(아래 _문구사전받기). 받지 못해도 화면은
+     그대로 돈다 — 알림이 안 뜨는 것보다 옛 글이라도 뜨는 편이 낫다. */
+  window.__문구사전 = window.__문구사전 || { toast: {}, popup: {} };
+
+  /* 사전은 화면이 열릴 때 한 번만 받는다. 고친 것만 담겨 오므로 대개 비어 있고,
+     못 받아도 화면은 그대로 돈다 — 코드에 적힌 글이 뜬다. */
+  document.addEventListener('DOMContentLoaded', () => {
+    fetch(@json(route('messages.screenTexts')), { headers: { 'Accept': 'application/json' } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) window.__문구사전 = d; })
+      .catch(() => {});
+  });
+
+  function 고친문구(채널, 원문) {
+    if (typeof 원문 !== 'string') return 원문;
+    return window.__문구사전?.[채널]?.[원문.trim()] ?? 원문;
+  }
+
   function showToast(msg, type = 'info', duration = 4000) {
     const container = document.getElementById('toastContainer');
     if (!container || msg == null || msg === '') return;
+
+    msg = 고친문구('toast', msg);
 
     const icons = { success: '✅', danger: '❌', warning: '⚠️', info: 'ℹ️' };
 
@@ -2781,11 +2807,11 @@ document.addEventListener('click', (e) => {
       });
     }
 
-    /** 알림. 닫힐 때까지 기다리려면 await. */
-    window.ceAlert = (msg, opts) => open('alert', msg, opts);
+    /** 알림. 닫힐 때까지 기다리려면 await. 담당자가 고친 문구를 먼저 본다. */
+    window.ceAlert = (msg, opts) => open('alert', 고친문구('popup', msg), opts);
 
     /** 확인. Promise<boolean> — 확인 true / 취소·Esc·배경클릭 false. */
-    window.ceConfirm = (msg, opts) => open('confirm', msg, opts);
+    window.ceConfirm = (msg, opts) => open('confirm', 고친문구('popup', msg), opts);
 
     /**
      * 진행 창 (2026-09-12 지시).

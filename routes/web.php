@@ -646,6 +646,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/send', [\App\Http\Controllers\MessageController::class, 'send'])->name('send');
         // 메시지 유형 — 검수 화면 팝오버와 이 화면이 같은 것을 쓴다
         Route::get(   '/templates',             [\App\Http\Controllers\MessageController::class, 'templates'])->name('templates');
+        /* 화면에 뜨는 말의 사전 — 담당자가 고친 토스트ㆍ팝업 글을 띄우기 위해서다 (2026-09-23) */
+        Route::get(   '/screen-texts',          [\App\Http\Controllers\MessageController::class, 'screenTexts'])->name('screenTexts');
         Route::post(  '/templates',             [\App\Http\Controllers\MessageController::class, 'storeTemplate'])->name('templates.store');
         Route::put(   '/templates/{template}',  [\App\Http\Controllers\MessageController::class, 'updateTemplate'])->name('templates.update');
         Route::delete('/templates/{template}',  [\App\Http\Controllers\MessageController::class, 'destroyTemplate'])->name('templates.destroy');

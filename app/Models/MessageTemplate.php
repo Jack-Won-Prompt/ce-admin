@@ -28,7 +28,7 @@ class MessageTemplate extends Model
     public const 고객채널 = ['sms', 'alimtalk'];
 
     protected $fillable = ['channel', 'code', 'ats_template_code', 'label', 'description',
-                           'screen', 'step', 'body', 'variables', 'sort_order', 'is_active'];
+                           'screen', 'step', 'body', 'original', 'variables', 'sort_order', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean', 'sort_order' => 'integer'];
 

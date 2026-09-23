@@ -86,6 +86,8 @@ class CollectMessagesCommand extends Command
                 /* **본문은 건드리지 않는다.** 화면명ㆍ단계ㆍ변수가 비어 있을 때만 채운다 —
                    담당자가 고쳐 둔 말을 코드의 옛 글로 되돌리지 않기 위해서다. */
                 $채울것 = array_filter([
+                    /* 원문이 비어 있으면 채운다 — 이 값이 없으면 화면이 고친 글을 못 찾는다 */
+                    'original'  => $있나->original  ?: $것['body'],
                     'screen'    => $있나->screen    ?: implode(' · ', array_keys($것['screens'])),
                     'step'      => $있나->step      ?: $것['step'],
                     'variables' => $있나->variables ?: $것['variables'],
@@ -104,6 +106,9 @@ class CollectMessagesCommand extends Command
                     'screen'     => implode(' · ', array_keys($것['screens'])),
                     'step'       => $것['step'],
                     'body'       => $것['body'],
+                    /* 코드에 적힌 글 — 화면이 이 값을 열쇠로 고친 글을 찾는다.
+                       body 는 담당자가 고치면 달라지지만 original 은 그대로다. */
+                    'original'   => $것['body'],
                     'variables'  => $것['variables'],
                     'is_active'  => true,
                     'sort_order' => 0,

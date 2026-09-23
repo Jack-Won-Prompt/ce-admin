@@ -169,6 +169,45 @@ class MessageController extends Controller
         return response()->json(['success' => true, 'templates' => $rows]);
     }
 
+    /**
+     * 화면에 뜨는 말의 사전 (2026-09-23 지시).
+     *
+     * 담당자가 메시지 관리에서 토스트ㆍ팝업 글을 고치면 그 글이 실제로 떠야 한다.
+     * 화면마다 문구가 코드에 박혀 있으므로 **원문을 열쇠로** 준다 — 화면은 띄우기
+     * 직전에 사전을 보고, 있으면 고친 말로 바꾼다.
+     *
+     * 고치지 않은 것은 담지 않는다. 원문과 같은 글을 수백 개 실어 보낼 까닭이 없다.
+     */
+    public function screenTexts(): JsonResponse
+    {
+        $사전 = ['toast' => [], 'popup' => []];
+
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('message_templates')) {
+                return response()->json($사전);
+            }
+
+            MessageTemplate::whereIn('channel', ['toast', 'popup'])
+                ->where('is_active', true)
+                ->whereNotNull('original')
+                ->get(['channel', 'original', 'body'])
+                ->each(function ($t) use (&$사전) {
+                    $원문 = trim((string) $t->original);
+                    $고친 = (string) $t->body;
+
+                    /* 고치지 않았으면 담지 않는다 — 사전이 커질수록 화면이 느려진다 */
+                    if ($원문 === '' || $고친 === '' || $원문 === trim($고친)) { return; }
+
+                    $사전[$t->channel][$원문] = $고친;
+                });
+        } catch (\Throwable $e) {
+            /* 사전을 못 만들어도 화면은 돈다 — 코드에 적힌 글이 그대로 뜬다 */
+            \Illuminate\Support\Facades\Log::warning('[메시지] 화면 문구 사전 실패', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json($사전);
+    }
+
     public function storeTemplate(Request $request): JsonResponse
     {
         $data = $this->templateRules($request);
