@@ -9835,9 +9835,9 @@ window.HELP_TOUR_STEPS = [
       if (처방외) {
         b.disabled = true;
         b.title = '처방외는 맞대어 볼 처방자료가 없어 검수하지 않습니다.';
-        b.dataset.처방외 = '1';
-      } else if (b.dataset.처방외) {
-        delete b.dataset.처방외;
+        b.dataset.rxOnlyLock = '1';
+      } else if (b.dataset.rxOnlyLock) {
+        delete b.dataset.rxOnlyLock;
         b.disabled = false;
         b.title = '';
       }
@@ -10046,9 +10046,8 @@ window.HELP_TOUR_STEPS = [
     if (! (document.getElementById('f-purchase-type')?.value || '').trim()) 빠진것.push('신구매/재구매');
 
     if (빠진것.length) {
-      ceAlert(빠진것.join('ㆍ') + '을(를) 먼저 선택해 주십시오.
-
-'
+      ceAlert(빠진것.join('ㆍ') + '을(를) 먼저 선택해 주십시오.'
+            + String.fromCharCode(10, 10)
             + '빨강 별표가 붙은 항목은 입력 검수 승인 전에 채워야 합니다.',
         { title: '필수 항목', tone: 'warning' });
       const 첫칸 = document.getElementById(빠진것[0] === '유형' ? 'f-acc-add-type' : 'f-purchase-type');
