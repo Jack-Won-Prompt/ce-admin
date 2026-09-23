@@ -363,14 +363,25 @@ class OrderController extends Controller
             $missing[] = \App\Support\DelegationGate::서명이름($prescription);
         }
 
-        /* 전자서명이 안 되는 환자는 종이로 받아 올린다 — 그것도 받은 것이다
-           (PrivacyConsent::stateFor 이 화면에 세우는 것과 같은 잣대다). */
-        $privacy = $prescription->patient_id
-            && (\DB::table('privacy_consents')
-                    ->where('patient_id', $prescription->patient_id)
-                    ->exists()
-                || \App\Models\PrivacyConsent::paperFor($prescription->patient_id) !== null);
-        if (! $privacy) {
+        /* 화면과 **같은 잣대**로 묻는다 (2026-09-23 무한 테스트에서 드러남).
+
+           여태 이 자리는 privacy_consents 를 **환자 번호로만** 찾았다. 그런데 그
+           동의서는 밖에서 환자가 직접 적는 폼이라 번호가 비어 있는 것이 대부분이다 —
+           받아 둔 동의가 번호로 이어지지 않으면 「아직」이 된다.
+
+           그래서 목록은 「완료」라 적는데(OrderGridExtras 가 PrivacyConsent::stateFor
+           와 같은 잣대를 쓴다) 주문 연계만 422 로 막혔다. 담당자는 이미 받은 동의를
+           다시 받으러 가고, 환자는 두 번 서명한다.
+
+           판정은 PrivacyConsent::stateFor 한 곳에 있다. 이름ㆍ연락처로도 잇고,
+           전자서명이 안 되는 환자의 종이 동의서(paperFor)도 함께 본다. */
+        $privacy = \App\Models\PrivacyConsent::stateFor(
+            $prescription->patient_id,
+            $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
+            $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
+        );
+
+        if (! ($privacy['agreed'] ?? false)) {
             $missing[] = '개인정보 수집·이용 동의';
         }
 
@@ -379,10 +390,10 @@ class OrderController extends Controller
         }
 
         $where = $needsDelegation
-            ? '화면 위쪽의 「개인정보동의」ㆍ「서명 동의」 버튼'
-            : '화면 위쪽의 「개인정보동의」 버튼';
+            ? '화면 위쪽의 「개인정보동의」ㆍ「서명 동의」'
+            : '화면 위쪽의 「개인정보동의」';
 
-        return implode(' · ', $missing) . " 이(가) 아직입니다. {$where}로 받은 뒤 진행해 주십시오.";
+        return implode(' · ', $missing) . "을(를) 아직 받지 못했습니다. {$where}에서 받은 뒤 진행해 주십시오.";
     }
 
     public function store(Request $request): \Illuminate\Http\JsonResponse
