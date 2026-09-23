@@ -1181,7 +1181,7 @@ class PrescriptionController extends Controller
 
             if ($ext === 'pdf') {
                 return $refuse(
-                    '등록신청서는 이미지로 다시 올려주세요. '
+                    '등록신청서는 이미지 파일로 다시 등록해 주십시오. '
                     . 'PDF 로 올리면 신청인 이름과 서명을 얹을 수 없어 빈칸인 채로 공단에 나갑니다. '
                     . '(JPG · PNG · HEIC)'
                 );

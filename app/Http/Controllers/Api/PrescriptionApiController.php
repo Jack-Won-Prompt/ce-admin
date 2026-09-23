@@ -107,7 +107,7 @@ class PrescriptionApiController extends Controller
                 if ($docType === 'prescription') {
                     if (! $target->editableByUploader(auth()->id())) {
                         return $this->refuseEdit($target, $this->보탤수있나($target)
-                            ? '처방전은 이 건을 올린 사람만 바꿀 수 있습니다. 다른 서류는 보탤 수 있습니다.'
+                            ? '처방전은 해당 처방전을 등록한 담당자만 변경할 수 있습니다. 그 외 서류는 추가할 수 있습니다.'
                             : null);
                     }
 
@@ -478,7 +478,7 @@ class PrescriptionApiController extends Controller
         try {
             activity()->causedBy(auth()->user())
                 ->withProperties(['name' => $이름, 'birth' => $생일, 'hits' => $건들->count()])
-                ->log('처방전 찾기 (앱)');
+                ->log('처방전 조회 (앱)');
         } catch (\Throwable) {}
 
         return response()->json([
@@ -657,7 +657,7 @@ class PrescriptionApiController extends Controller
         if (! $this->내가올린서류인가($attachment, $p)) {
             return response()->json([
                 'success' => false,
-                'message' => '내가 올린 서류만 지울 수 있습니다.',
+                'message' => '본인이 등록한 서류만 삭제할 수 있습니다.',
             ], 403);
         }
 
@@ -761,7 +761,7 @@ class PrescriptionApiController extends Controller
         return response()->json([
             'success' => false,
             'message' => $까닭 ?: ($고칠수있는상태
-                ? '본인이 업로드한 처방전만 수정할 수 있습니다.'
+                ? '본인이 등록한 처방전만 수정할 수 있습니다.'
                 : "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하십시오."),
         ], 403);
     }

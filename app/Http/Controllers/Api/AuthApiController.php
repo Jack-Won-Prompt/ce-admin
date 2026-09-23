@@ -201,7 +201,7 @@ class AuthApiController extends Controller
         if (! $user || ! $user->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => '사용할 수 없는 계정입니다. 관리자에게 문의하세요.',
+                'message' => '사용할 수 없는 계정입니다. 관리자에게 문의하십시오.',
             ], 403);
         }
 

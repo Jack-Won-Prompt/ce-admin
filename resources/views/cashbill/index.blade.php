@@ -1,9 +1,9 @@
 {{-- resources/views/cashbill/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '현금영수증 발행')
+@section('title', '현금/카드영수증')
 {{-- 시안 324:4656 — 제목 '현금영수증', 브레드크럼은 '홈 - 현금영수증' (구분자가 '-' 다) --}}
-@section('page-title', '현금영수증')
+@section('page-title', '현금/카드영수증')
 @section('breadcrumb', '홈 - 현금영수증')
 
 @section('help-title', '현금영수증 도움말')
@@ -769,13 +769,22 @@ async function loadHistory(page = 1) {
     let orderUrl = `${CB_BASE}/order-receipts?corp_num=${cn}&start_date=${sd}&end_date=${ed}`;
     if (이름) orderUrl += `&name=${encodeURIComponent(이름)}`;
 
-    const [pbRes, ordRes] = await Promise.all([
+    /* 카드로 받은 건의 결제 이력 (2026-09-23 지시).
+
+       이 화면은 현금영수증만 세웠다. 본인부담을 카드로 받은 건은 현금영수증이 나가지
+       않고 카드매출전표가 증빙이라 한 줄도 없었다 — 「현금/카드영수증」 한 자리에서
+       둘을 함께 본다. 이력은 결제 링크에서 읽는다(승인ㆍ취소ㆍ재승인이 줄마다 남는다). */
+    const cardUrl = `${CB_BASE}/card-receipts?start_date=${sd}&end_date=${ed}`;
+
+    const [pbRes, ordRes, cardRes] = await Promise.all([
       fetch(popbillUrl, { headers: HEADERS }),
       fetch(orderUrl,   { headers: HEADERS }),
+      fetch(cardUrl,    { headers: HEADERS }),
     ]);
 
-    const pbData  = pbRes.ok  ? await pbRes.json()  : { list: [] };
-    const ordData = ordRes.ok ? await ordRes.json() : { list: [] };
+    const pbData   = pbRes.ok   ? await pbRes.json()   : { list: [] };
+    const ordData  = ordRes.ok  ? await ordRes.json()  : { list: [] };
+    const cardData = cardRes.ok ? await cardRes.json() : { rows: [] };
 
     // 팝빌 행 정규화
     const pbRows = onlyPending ? [] : (pbData.list ?? []).map(r => ({
@@ -807,8 +816,29 @@ async function loadHistory(page = 1) {
       ordRows = ordRows.filter(r => r.tradeType === tradeType);
     }
 
+    /* 카드 줄 — 현금영수증 줄과 같은 칸 이름으로 맞춰야 한 표에서 견준다 */
+    let cardRows = (cardData.rows ?? []).map(r => ({
+      _source:     'card',
+      _sortKey:    r.datetime ?? r.date ?? '',
+      tradeType:   r.status === '취소' ? '취소거래' : '승인거래',
+      tradeUsage:  '카드결제',
+      totalAmount: r.amount,
+      customerName: r.patient,
+      mgtKey:      r.order_no,
+      tradeDT:     r.datetime,
+      issueDT:     r.datetime,
+      ntsresult:   null,
+      confirmNum:  r.payment_key,
+      itemName:    '',
+      ...r,
+    }));
+
+    if (tradeType) {
+      cardRows = cardRows.filter(r => r.tradeType === tradeType);
+    }
+
     // 날짜 내림차순 병합
-    _allRows = [...pbRows, ...ordRows].sort((a, b) =>
+    _allRows = [...pbRows, ...ordRows, ...cardRows].sort((a, b) =>
       (b._sortKey ?? '').localeCompare(a._sortKey ?? '')
     );
 
@@ -844,7 +874,9 @@ function renderHistPage(page) {
 
   const rows = slice.map(r => {
     const tradeDt = ymdt(r.tradeDT ?? r.issueDT ?? '');
-    const ntsTxt  = r._source === 'order' ? '처방전 발행' : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
+    const ntsTxt  = r._source === 'card'  ? '해당 없음'
+                  : r._source === 'order' ? '처방전 발행'
+                  : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
     /* 취소는 금액을 마이너스로 세운다(요청서 6쪽). 팝빌은 취소 건도 양수로 주므로
        여기서 부호를 뒤집는다 — 그래야 합계가 이 기간에 남은 금액이 된다. */
     const isCancel = String(r.tradeType ?? '').includes('취소') || r.status === 'cancelled';
@@ -852,7 +884,9 @@ function renderHistPage(page) {
     const num     = r._source === 'order'
       ? ((r.orderNumber ?? '') + (r.rxNumber ? ' / ' + r.rxNumber : ''))
       : (r.mgtKey ?? '—');
-    const source  = r.status === 'pending' ? '대기' : (r._source === 'order' ? '처방전' : '팝빌');
+    const source  = r.status === 'pending' ? '대기'
+                  : r._source === 'card'  ? '카드'
+                  : r._source === 'order' ? '처방전' : '팝빌';
     // 값에서 「거래」를 뗀다 — 승인ㆍ취소만 남는다(요청서 6쪽)
     const kind  = String(r.tradeType ?? (r.status === 'cancelled' ? '취소' : '승인')).replace('거래', '') || '—';
     const usage = String(r.tradeUsage ?? r.receiptTypeLabel ?? '—').replace('거래', '');

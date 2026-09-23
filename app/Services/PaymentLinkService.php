@@ -115,12 +115,12 @@ class PaymentLinkService
 
             $where = $bank && $account
                 ? "{$bank} {$account} ({$holder})"
-                : '입금 계좌는 담당자에게 문의해 주십시오';
+                : '입금 계좌는 담당자에게 문의해 주시기 바랍니다';
 
             return "[{$holder}] {$name}님, {$item} 결제 안내입니다.\n"
                  . "금액: {$amount}원\n"
                  . "입금: {$where}\n"
-                 . "입금자명을 주문자 이름으로 적어 주시면 확인이 빠릅니다.";
+                 . "입금자명은 주문자 성함과 동일하게 기재해 주시기 바랍니다.";
         }
 
         /* 무엇으로 내는지는 링크를 열면 그 자리에 적혀 있다 (2026-09-10 지시).
@@ -129,9 +129,9 @@ class PaymentLinkService
            보내는 것은 링크 하나이므로 그 하나만 가리킨다. */
         return "[" . $this->company() . "] {$name}님, {$item} 결제 안내입니다.\n"
              . "금액: {$amount}원\n"
-             . "아래 링크로 결제해 주십시오.\n"
+             . "아래 링크에서 결제해 주시기 바랍니다.\n"
              . $link->url . "\n"
-             . "링크는 " . self::VALID_DAYS . "일간 열려 있습니다.";
+             . "링크는 " . self::VALID_DAYS . "일간 유효합니다.";
     }
 
     /**

@@ -116,7 +116,7 @@ class ReuploadRequestService
     private function 알리기(PrescriptionReuploadRequest $요청, Prescription $처방전, ?User $받는이): void
     {
         if (! $받는이) {
-            $요청->update(['fcm_error' => '올린 사람을 찾지 못했습니다.']);
+            $요청->update(['fcm_error' => '등록자를 찾지 못했습니다.']);
 
             return;
         }

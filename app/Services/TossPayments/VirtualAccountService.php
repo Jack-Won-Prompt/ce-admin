@@ -211,7 +211,7 @@ class VirtualAccountService extends TossClient
             Log::warning('[Toss] 웹훅 매칭 실패 — 이어진 결제가 없다', [
                 'key' => $paymentKey, 'order' => $tossOrderId,
             ]);
-            $this->건너뛴까닭 = '이어진 결제를 찾지 못했습니다 (' . ($tossOrderId ?: $paymentKey ?: '값 없음') . ')';
+            $this->건너뛴까닭 = '이어진 결제를 조회하지 못했습니다 (' . ($tossOrderId ?: $paymentKey ?: '값 없음') . ')';
 
             return null;
         }

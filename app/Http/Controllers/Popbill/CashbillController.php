@@ -232,6 +232,50 @@ class CashbillController extends Controller
     /**
      * 처방전 발행 현금영수증 목록 (orders 테이블)
      */
+    /**
+     * 카드로 받은 건의 결제 이력 (2026-09-23 지시).
+     *
+     * 이 화면은 현금영수증만 세웠다. 그런데 본인부담을 카드로 받은 건은 현금영수증이
+     * 나가지 않고 **카드매출전표**가 증빙이라, 그 건들은 이 목록에 한 줄도 없었다 —
+     * 「현금/카드영수증」 한 자리에서 둘을 함께 보려면 카드 쪽도 세워야 한다.
+     *
+     * 이력의 원천은 **결제 링크**다. toss_payments 는 한 주문에 한 줄이라 재결제가
+     * 앞 줄을 덮어써(2026-09-23 확인), 승인 → 취소 → 재승인 세 걸음이 남지 않는다.
+     * 결제 링크는 걸음마다 한 줄이 서고 상태(sent·paid·cancelled·failed)가 그대로
+     * 남으므로, 정정을 거친 건의 이력이 온전히 읽힌다.
+     */
+    public function cardReceipts(Request $request): JsonResponse
+    {
+        $from = $request->query('start_date');
+        $to   = $request->query('end_date');
+
+        $q = \App\Models\PaymentLink::with(['order.patient', 'order.prescription'])
+            ->where('method', 'card');
+
+        if ($from) { $q->whereDate('created_at', '>=', $from); }
+        if ($to)   { $q->whereDate('created_at', '<=', $to); }
+
+        $상태글 = ['sent' => '발송', 'paid' => '승인', 'cancelled' => '취소', 'failed' => '실패'];
+
+        $rows = $q->orderByDesc('id')->limit(500)->get()->map(fn ($l) => [
+            'record_type' => 'card',
+            'id'          => $l->id,
+            'date'        => $l->created_at?->format('Y-m-d'),
+            'datetime'    => ($l->paid_at ?? $l->sent_at ?? $l->created_at)?->format('Y-m-d H:i'),
+            'order_no'    => $l->order?->order_number ?? '',
+            'rx_number'   => $l->order?->prescription?->rx_number ?? '',
+            'patient'     => $l->order?->patient?->name ?? '',
+            /* 취소는 뺀 금액으로 적는다 — 승인과 나란히 놓았을 때 합이 맞아야 읽힌다 */
+            'amount'      => $l->status === 'cancelled' ? -(int) $l->amount : (int) $l->amount,
+            'status'      => $상태글[$l->status] ?? $l->status,
+            'method'      => '카드',
+            'payment_key' => $l->payment_key ?? '',
+            'receiver'    => $l->receiver ?? '',
+        ]);
+
+        return response()->json(['success' => true, 'rows' => $rows]);
+    }
+
     public function orderReceipts(Request $request): JsonResponse
     {
         $request->validate([

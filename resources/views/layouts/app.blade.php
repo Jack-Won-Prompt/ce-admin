@@ -1568,9 +1568,9 @@
         @endif
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금영수증">
+          <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금/카드영수증">
             @dsicon('cash', 'ds-icon menu-icon')
-            <span>현금영수증</span>
+            <span>현금/카드영수증</span>
           </a>
         </div>
         @endif

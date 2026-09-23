@@ -40,7 +40,7 @@ class DocumentAddedNotice
 
         $환자   = $처방전->patient?->name ?: ($처방전->patient_name_ocr ?: $처방전->rx_number);
         $서류이름 = PrescriptionAttachment::labelFor($서류갈래) ?: '서류';
-        $본문   = $환자 . ' · ' . $서류이름 . ' — ' . $보탠이->name . ' 님이 보탰습니다';
+        $본문   = $환자 . ' · ' . $서류이름 . ' — ' . $보탠이->name . ' 님이 추가했습니다';
 
         $this->앱으로($주인, $처방전, $서류이름, $본문);
         $this->화면으로($주인id, $처방전, $본문);
@@ -56,7 +56,7 @@ class DocumentAddedNotice
         try {
             FcmHelper::send(
                 $주인->fcm_token,
-                '처방전에 서류가 보태졌습니다',
+                '처방전에 서류가 추가되었습니다',
                 $본문,
                 [
                     // 앱이 이 값을 보고 그 처방전 화면으로 간다

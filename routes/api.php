@@ -171,6 +171,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/popup-url',      [CashbillController::class, 'popupUrl']);
             Route::get('/print-url',      [CashbillController::class, 'printUrl']);
             Route::get('/order-receipts', [CashbillController::class, 'orderReceipts']);
+            /* 카드로 받은 건의 결제 이력 — 이 화면은 현금ㆍ카드를 함께 본다 (2026-09-23) */
+            Route::get('/card-receipts',  [CashbillController::class, 'cardReceipts']);
             Route::post('/regist-issue',  [CashbillController::class, 'registIssue']);
             Route::post('/revoke',        [CashbillController::class, 'revoke']);
             Route::post('/sync',          [CashbillController::class, 'sync']);
