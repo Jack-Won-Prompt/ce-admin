@@ -819,7 +819,10 @@ async function loadHistory(page = 1) {
     /* 카드 줄 — 현금영수증 줄과 같은 칸 이름으로 맞춰야 한 표에서 견준다 */
     let cardRows = (cardData.rows ?? []).map(r => ({
       _source:     'card',
-      _sortKey:    r.datetime ?? r.date ?? '',
+      /* 정렬키는 다른 줄과 같은 꼴이어야 한다 — 팝빌ㆍ처방전 줄은 20260923160745
+         처럼 숫자만 쓰는데 카드만 '2026-09-23 16:22' 로 두면 문자 비교에서 뒤로
+         밀려, 오늘 결제가 지난달 줄보다 아래에 선다. */
+      _sortKey:    String(r.datetime ?? r.date ?? '').replace(/[^0-9]/g, ''),
       tradeType:   r.status === '취소' ? '취소거래' : '승인거래',
       tradeUsage:  '카드결제',
       totalAmount: r.amount,
