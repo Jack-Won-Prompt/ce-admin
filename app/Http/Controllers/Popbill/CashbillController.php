@@ -246,8 +246,16 @@ class CashbillController extends Controller
      */
     public function cardReceipts(Request $request): JsonResponse
     {
-        $from = $request->query('start_date');
-        $to   = $request->query('end_date');
+        /* 이 화면은 날짜를 팝빌 꼴(Ymd)로 보낸다 — 하이픈이 없다. 그대로 넣으면
+           MySQL 이 날짜로 읽지 못해 한 줄도 나오지 않는다. 두 꼴을 다 받는다. */
+        $날짜 = function (?string $v): ?string {
+            $v = trim((string) $v);
+            if ($v === '') { return null; }
+            return preg_match('/^\d{8}$/', $v) ? substr($v,0,4).'-'.substr($v,4,2).'-'.substr($v,6,2) : $v;
+        };
+
+        $from = $날짜($request->query('start_date'));
+        $to   = $날짜($request->query('end_date'));
 
         $q = \App\Models\PaymentLink::with(['order.patient', 'order.prescription'])
             ->where('method', 'card');
