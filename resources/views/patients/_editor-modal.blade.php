@@ -903,8 +903,11 @@
       ptTell({ action: 'saved', id, name, created: _peMode === 'create' });
 
       /* 부른 쪽이 뒤를 잇는다. 잇는 말이 없으면 예전대로 그 사람의 상세로 간다 —
-         거래처 관리에서 등록했을 때의 걸음이다. */
-      if (_peDone) _peDone({ id, name, created: _peMode === 'create' });
+         거래처 관리에서 등록했을 때의 걸음이다.
+
+         한 박자 미룬다 — 바로 위의 ptTell 이 목록을 다시 읽으며 화면을 고쳐 세우는데,
+         그 사이에 창을 열면 다시 그려지면서 닫힌다 (2026-09-23). */
+      if (_peDone) { const 잇기 = _peDone; setTimeout(() => 잇기({ id, name, created: _peMode === 'create' }), 300); }
       else setTimeout(() => location.href = `${BASE_URL}/patients/${id}`, 800);
     } else {
       BtnState.error(btn, '저장 실패');
