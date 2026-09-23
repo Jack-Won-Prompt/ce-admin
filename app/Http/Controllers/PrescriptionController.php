@@ -69,6 +69,22 @@ class PrescriptionController extends Controller
            번호를 만든다 — 상담 줄은 상담 줄대로 남는다. */
         $query->whereNot(fn ($q) => $q->counselOnly());
 
+        /* 처방외로 시작한 건은 띄우지 않는다 (2026-09-23 지시).
+
+           처방전 목록은 **처방자료를 올린 건**을 보는 자리다. 처방외는 처방전이
+           없이 파는 건이라 올릴 자료가 없고, 그래서 검수할 것도 없다 — 그런데도
+           목록에 서서 「업로드 파일 없음」인 채로 검수를 기다리는 줄처럼 보였다.
+
+           첨부가 하나라도 있으면 띄운다. 처방외로 등록한 뒤 서류를 덧붙이는 일이
+           있는데, 그때는 볼 것이 생긴 것이다.
+
+           상태나 찾는 말을 준 때는 그 잣대를 따른다 — 아래 「주문이 접수된 건」과
+           같은 까닭이다. */
+        if (! $request->filled('status') && ! $request->filled('search')) {
+            $query->whereNot(fn ($q) => $q->where('counsel_acc_add_type', '20')
+                                          ->doesntHave('attachments'));
+        }
+
         /* 주문이 접수된 건은 띄우지 않는다 (2026-09-15 지시).
 
            처방전 목록은 「아직 검수가 남은 것」을 보는 자리다. 주문이 서고 나면
@@ -3455,6 +3471,26 @@ class PrescriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => '입력 검수 요청이 없습니다 — 먼저 ［입력 검수 요청］을 눌러 주십시오.',
+            ], 422);
+        }
+
+        /* 유형과 신구매/재구매는 **승인 전에** 채워져 있어야 한다 (2026-09-23 지시).
+
+           유형이 없으면 주문 줄이 서지 않는다(OrderSync::seed). 그래서 승인은 되었는데
+           주문 목록에는 아무것도 없는 건이 생겼다 — 담당자는 승인을 눌렀으니 다음
+           걸음으로 넘어간 줄 알고, 목록에서 그 건을 찾지 못한다.
+
+           신구매/재구매는 청구와 재구매 주기를 가르는 값이라 나중에 채우면 이미
+           나간 서류를 다시 봐야 한다. 둘 다 이 자리에서 막는다. */
+        $빠진것 = [];
+        if (blank($prescription->counsel_acc_add_type)) { $빠진것[] = '유형'; }
+        if (blank($prescription->purchase_type))        { $빠진것[] = '신구매/재구매'; }
+
+        if ($빠진것) {
+            return response()->json([
+                'success' => false,
+                'message' => implode('ㆍ', $빠진것) . '을(를) 먼저 선택해 주십시오 — '
+                           . '빨강 별표가 붙은 항목은 승인 전에 채워야 합니다.',
             ], 422);
         }
 

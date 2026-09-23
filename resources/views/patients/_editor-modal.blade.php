@@ -531,7 +531,25 @@
 
   /* 이 셋은 창의 onclick 이 부른다 — 인라인 handler 는 전역에서만 이름을 찾으므로
      감싸 둔 함수 안에 두면 「is not defined」로 죽는다. */
-  window.openAddModal  = function () { openPatientEditor(); };
+  /* 거래처 관리의 「거래처 등록」 — 저장하면 **바로 상담 창**을 연다 (2026-09-23 지시).
+
+     여태는 저장 뒤 그 사람의 상세 화면으로 떠났다. 그래서 「신규 등록하고 바로 상담
+     내용을 적으려는데 상담하기가 안 먹는다」는 말이 나왔다 — 목록 화면을 떠났으니
+     그 자리의 단추가 없고, 돌아와 눌러도 새 거래처가 체크돼 있지 않아 「목록에서
+     체크하십시오」로 끝났다.
+
+     등록한 그 사람과 바로 이야기를 시작하는 것이 이 걸음의 본뜻이다. */
+  window.openAddModal = function () {
+    openPatientEditor({
+      onSaved: ({ id, name }) => {
+        if (typeof csOpen === 'function') {
+          csOpen(id, name, document.getElementById('add-mobile')?.value || '');
+        } else {
+          location.href = `${BASE_URL}/patients/${id}`;   // 상담 창이 없는 화면에서는 예전대로
+        }
+      },
+    });
+  };
   /* 지금 고치고 있는 거래처의 주소를 연다. _peId 는 감싸 둔 함수 안에 있어 인라인
      onclick 이 보지 못한다 — 그래서 여기서 한 겹 싼다(오늘 두 번째로 걸린 자리다). */
   window.peOpenAddrManager = function () { window.openAddrManager?.(_peId); };

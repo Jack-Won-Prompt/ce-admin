@@ -7765,6 +7765,9 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-benefit-class')?.addEventListener('change', () => suggestClaimAgency(true));
   /* 유형(처방전ㆍ처방외)도 청구처를 가른다 — 바뀌면 다시 본다 */
   document.getElementById('f-acc-add-type')?.addEventListener('change', () => suggestClaimAgency(true));
+  /* 유형이 바뀌면 검수 단추도 다시 세운다 — 처방외는 검수하지 않는다 (2026-09-23 지시) */
+  document.getElementById('f-acc-add-type')?.addEventListener('change', () => window.검수단추가리기?.());
+  document.addEventListener('DOMContentLoaded', () => window.검수단추가리기?.());
   document.getElementById('f-claim-agency')?.addEventListener('change', () => {
     onClaimAgencyChange();
     boAutoPick();
@@ -9815,6 +9818,33 @@ window.HELP_TOUR_STEPS = [
   }
 
   /** 입력 검수 단추를 제 상태대로 세운다 — 파일 검수와 무관하다 */
+  /**
+   * 처방외는 검수할 것이 없다 (2026-09-23 지시).
+   *
+   * 검수는 **올라온 처방자료가 적어 둔 내용과 맞는지** 보는 일이다. 처방외는
+   * 처방전 없이 파는 건이라 맞대어 볼 자료가 없다 — 그런데도 단추가 살아 있어
+   * 「검수 요청 → 승인」을 밟고 있었고, 그 건이 처방전 목록에도 섰다.
+   *
+   * 유형을 고를 때마다 다시 본다 — 처방전으로 되돌리면 단추도 되살아난다.
+   */
+  window.검수단추가리기 = function () {
+    const 처방외 = (document.getElementById('f-acc-add-type')?.value || '') === '20';
+    const 단추들 = document.querySelectorAll('[onclick="requestReviewRx()"],[onclick="approveRx()"]');
+
+    단추들.forEach(b => {
+      if (처방외) {
+        b.disabled = true;
+        b.title = '처방외는 맞대어 볼 처방자료가 없어 검수하지 않습니다.';
+        b.dataset.처방외 = '1';
+      } else if (b.dataset.처방외) {
+        delete b.dataset.처방외;
+        b.disabled = false;
+        b.title = '';
+      }
+    });
+    return 처방외;
+  };
+
   function 입력검수세우기(상태) {
     if (!상태) return;
     INPUT_REVIEW = 상태;
@@ -10000,7 +10030,35 @@ window.HELP_TOUR_STEPS = [
   }
 
   // ── 검수 완료 (검수자) ─────────────────────────────────
-  function approveRx() { document.getElementById('approveModal').classList.add('show'); }
+  /* 승인 창을 열기 전에 필수 항목부터 본다 (2026-09-23 지시).
+
+     서버도 같은 것을 막지만(approveInputReview), 창을 띄워 메모까지 적게 한 뒤에
+     422 로 돌려보내면 적은 것을 잃는다. 열기 전에 알린다. */
+  function approveRx() {
+    if (window.검수단추가리기 && 검수단추가리기()) {
+      ceAlert('처방외는 맞대어 볼 처방자료가 없어 검수하지 않습니다.',
+        { title: '입력 검수', tone: 'warning' });
+      return;
+    }
+
+    const 빠진것 = [];
+    if (! (document.getElementById('f-acc-add-type')?.value || '').trim()) 빠진것.push('유형');
+    if (! (document.getElementById('f-purchase-type')?.value || '').trim()) 빠진것.push('신구매/재구매');
+
+    if (빠진것.length) {
+      ceAlert(빠진것.join('ㆍ') + '을(를) 먼저 선택해 주십시오.
+
+'
+            + '빨강 별표가 붙은 항목은 입력 검수 승인 전에 채워야 합니다.',
+        { title: '필수 항목', tone: 'warning' });
+      const 첫칸 = document.getElementById(빠진것[0] === '유형' ? 'f-acc-add-type' : 'f-purchase-type');
+      첫칸?.scrollIntoView({ block: 'center' });
+      첫칸?.focus();
+      return;
+    }
+
+    document.getElementById('approveModal').classList.add('show');
+  }
 
   async function confirmApprove(btn) {
     BtnState.loading(btn, '처리 중...');
