@@ -657,7 +657,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
-      { header: '관리번호/처방번호', name: 'mgt',    width: 170 },
+      { header: '주문번호/처방번호', name: 'mgt',    width: 180 },
       { header: '공급받는자/이름', name: 'buyer',  width: 170, sortable: true },
       { header: '공급가액',          name: 'supply', width: 110, editor: 'number' },
       { header: '세액',              name: 'tax',    width: 90,  editor: 'number' },
@@ -669,7 +669,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       { header: '합계금액',   name: 'total',      width: 110, align: 'right', editor: 'number' },
       { header: '발행일시',   name: 'issuedAt',   width: 140, sortable: true },
       { header: '상태일시',   name: 'stateAt',    width: 140, sortable: true },
-      { header: '승인번호',   name: 'ntsNo',      width: 150 },
+      { header: '국세청발행번호', name: 'ntsNo',   width: 180 },
       { header: '공급자',     name: 'seller',     width: 150 },
       { header: '공급자 대표', name: 'sellerCeo', width: 100 },
       { header: '공급받는자 사업자번호', name: 'buyerBizNo', width: 130 },
@@ -1064,8 +1064,18 @@ async function loadHistory(page = 1) {
            건은 한 주문에서 세금계산서가 여럿 나오는데(원 발행ㆍ취소ㆍ재발행), 관리
            번호만 보면 그 셋이 같은 주문의 것인지 알 수 없다. 서버는 이미 주문을 타고
            처방번호를 실어 보내고 있었다 — 화면이 쓰지 않았을 뿐이다. */
+        /* 첫 열은 **우리 번호**(주문번호ㆍ처방번호)다 (2026-09-23 지시).
+
+           전에는 팝빌 관리번호를 적었는데, 그것은 아래 「연동관리번호」 열에 이미
+           있어 같은 값이 두 번 섰다. 정작 「이 계산서가 어느 주문의 것인가」는
+           어디에도 없었다 — 국세청발행번호와도 뒤섞여 읽혔다.
+
+           세 가지를 갈라 세운다:
+             주문번호/처방번호 — 우리 번호
+             연동관리번호     — 팝빌에 올린 번호(TI…)
+             국세청발행번호   — 국세청이 준 번호 */
         date: wDate,
-        mgt: (mgtKey || '—') + (r.rxNumber ? String.fromCharCode(10) + r.rxNumber : ''),
+        mgt: (r.orderNumber || '—') + (r.rxNumber ? String.fromCharCode(10) + r.rxNumber : ''),
         buyer: (r.invoiceeCorpName ?? '—'),
         supply, tax, type: ttTxt, status: sTxt,
 
