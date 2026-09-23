@@ -16,7 +16,7 @@ class PatientService {
       final res = await _dio.get('/patients/search', queryParameters: {'q': query});
       final body = res.data as Map<String, dynamic>;
       if (body['success'] != true) {
-        throw Exception(body['message']?.toString() ?? '검색에 실패했습니다.');
+        throw Exception(body['message']?.toString() ?? '검색하지 못했습니다. 잠시 후 다시 시도해 주십시오.');
       }
       final list = body['patients'] as List;
       return list

@@ -267,8 +267,8 @@ class _PrescriptionListScreenState
                                 ),
                                 Text(
                                   state.total > 0
-                                      ? '내가 업로드한 처방전 ${state.total}건'
-                                      : '내가 업로드한 처방전',
+                                      ? '본인이 등록한 처방전 ${state.total}건'
+                                      : '본인이 등록한 처방전',
                                   style: TextStyle(
                                       color: Colors.white.withOpacity(0.6),
                                       fontSize: 12),
@@ -373,7 +373,7 @@ class _PrescriptionListScreenState
                               child: OutlinedButton.icon(
                                 onPressed: _openLookup,
                                 icon: const Icon(Icons.search, size: 18),
-                                label: const Text('건 찾기',
+                                label: const Text('처방전 조회',
                                     style: TextStyle(fontSize: 13)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppTheme.primary,
@@ -504,7 +504,7 @@ class _PrescriptionListScreenState
             else if (state.items.isEmpty)
               const SliverFillRemaining(
                 child: EmptyWidget(
-                  message: '업로드한 처방전이 없습니다.',
+                  message: '등록한 처방전이 없습니다.',
                   icon: Icons.description_outlined,
                 ),
               )
@@ -874,12 +874,12 @@ class _LookupSheetState extends State<_LookupSheet> {
               ),
             ),
             const SizedBox(height: 14),
-            const Text('처방전 찾기',
+            const Text('처방전 조회',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             const Text(
-              '이름과 생년월일이 모두 맞아야 찾을 수 있습니다. '
-              '다른 사람이 올린 건에도 서류를 보탤 수 있습니다.',
+              '이름과 생년월일이 모두 일치해야 조회됩니다. '
+              '다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.',
               style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
@@ -903,7 +903,7 @@ class _LookupSheetState extends State<_LookupSheet> {
                 prefixIcon: const Icon(Icons.cake_outlined),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.calendar_month_outlined),
-                  tooltip: '달력에서 고르기',
+                  tooltip: '달력에서 선택',
                   onPressed: _pickBirth,
                 ),
                 border: const OutlineInputBorder(),
@@ -940,8 +940,8 @@ class _LookupSheetState extends State<_LookupSheet> {
               const SizedBox(height: 14),
               if (_result!.isEmpty)
                 const Text(
-                  '해당하는 처방전이 없습니다. 이름과 생년월일을 다시 확인해 주십시오. '
-                  '검수를 마친 건은 나오지 않습니다.',
+                  '조회된 처방전이 없습니다. 이름과 생년월일을 다시 확인해 주십시오. '
+                  '검수가 완료된 처방전은 조회되지 않습니다.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 )
               else
@@ -994,8 +994,8 @@ class _LookupSheetState extends State<_LookupSheet> {
                               const SizedBox(height: 2),
                               Text(
                                 p.isMine
-                                    ? '내가 올린 건'
-                                    : '올린 사람: ${p.ownerName ?? '-'}',
+                                    ? '본인이 등록한 처방전'
+                                    : '등록자: ${p.ownerName ?? '-'}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: p.isMine

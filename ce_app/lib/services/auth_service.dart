@@ -262,9 +262,9 @@ class AuthService {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return '서버 응답 시간이 초과되었습니다. 네트워크를 확인해주세요.';
+        return '서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인해 주십시오.';
       case DioExceptionType.connectionError:
-        return '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.\n(${e.error})';
+        return '서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주십시오.\n(${e.error})';
       case DioExceptionType.badResponse:
         return '서버 오류가 발생했습니다. (${e.response?.statusCode})';
       case DioExceptionType.badCertificate:

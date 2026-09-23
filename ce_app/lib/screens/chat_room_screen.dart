@@ -95,7 +95,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('메시지 전송 중 오류가 발생했습니다.')),
+          const SnackBar(content: Text('메시지를 전송하지 못했습니다. 잠시 후 다시 시도해 주십시오.')),
         );
       }
     } finally {
@@ -318,7 +318,7 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                       style: const TextStyle(
                           fontSize: 14, color: AppTheme.textPrimary),
                       decoration: InputDecoration(
-                        hintText: '메시지를 입력하세요',
+                        hintText: '메시지를 입력하십시오',
                         hintStyle: const TextStyle(
                             color: AppTheme.textMuted, fontSize: 13),
                         filled: true,

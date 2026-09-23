@@ -159,7 +159,7 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('등록 실패: $e'),
+          content: Text('등록하지 못했습니다: $e'),
           backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -319,7 +319,7 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
                       style: const TextStyle(
                           color: AppTheme.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: '문의 제목을 입력해주세요',
+                        hintText: '문의 제목을 입력해 주십시오',
                         hintStyle: const TextStyle(
                             color: AppTheme.textMuted, fontSize: 14),
                         filled: true,
@@ -343,7 +343,7 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
                       ),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty)
-                              ? '제목을 입력해주세요.'
+                              ? '제목을 입력해 주십시오.'
                               : null,
                     ),
                   ),
@@ -359,7 +359,7 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
                       style: const TextStyle(
                           color: AppTheme.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: '문의 내용을 자세히 입력해주세요',
+                        hintText: '문의 내용을 자세히 입력해 주십시오',
                         hintStyle: const TextStyle(
                             color: AppTheme.textMuted, fontSize: 14),
                         filled: true,
@@ -383,7 +383,7 @@ class _InquiryCreateScreenState extends ConsumerState<InquiryCreateScreen> {
                       validator: (v) {
                         if ((v == null || v.trim().isEmpty) &&
                             _attachment == null) {
-                          return '내용을 입력하거나 파일을 첨부해주세요.';
+                          return '내용을 입력하거나 파일을 첨부해 주십시오.';
                         }
                         return null;
                       },

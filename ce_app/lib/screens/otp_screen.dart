@@ -96,7 +96,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
   Future<void> _submit() async {
     final code = _enteredCode;
     if (code.length < 6) {
-      _showError('인증번호 6자리를 모두 입력해주세요.');
+      _showError('인증번호 6자리를 모두 입력해 주십시오.');
       return;
     }
     FocusScope.of(context).unfocus();
@@ -139,7 +139,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
         );
       }
     } catch (e) {
-      if (mounted) _showError('재발송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      if (mounted) _showError('인증번호를 다시 보내지 못했습니다. 잠시 후 다시 시도해 주십시오.');
     }
   }
 
@@ -296,7 +296,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${widget.maskedPhone}으로\n발송된 6자리 인증번호를 입력하세요.',
+                              '${widget.maskedPhone}으로\n발송된 6자리 인증번호를 입력하십시오.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.55),
@@ -393,7 +393,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  '인증번호를 받지 못하셨나요? ',
+                                  '인증번호를 받지 못하셨습니까? ',
                                   style: TextStyle(
                                       fontSize: 13,
                                       color:

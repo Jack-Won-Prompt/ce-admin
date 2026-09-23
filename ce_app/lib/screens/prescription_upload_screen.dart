@@ -99,7 +99,7 @@ class _PrescriptionUploadScreenState
     final query = _nameCtrl.text.trim();
     if (query.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이름을 2글자 이상 입력해주세요.')),
+        const SnackBar(content: Text('이름을 두 자 이상 입력해 주십시오.')),
       );
       return;
     }
@@ -117,7 +117,7 @@ class _PrescriptionUploadScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('검색 실패: $e')));
+            .showSnackBar(SnackBar(content: Text('검색하지 못했습니다: $e')));
       }
     } finally {
       if (mounted) setState(() => _searchingPatient = false);
@@ -291,7 +291,7 @@ class _PrescriptionUploadScreenState
                         final digits = rrn.replaceAll(RegExp(r'\D'), '');
                         if (digits.isNotEmpty && digits.length != 13) {
                           setDialogState(() =>
-                              residentError = '주민등록번호 13자리를 모두 입력해 주세요.');
+                              residentError = '주민등록번호 13자리를 모두 입력해 주십시오.');
                           return;
                         }
 
@@ -308,7 +308,7 @@ class _PrescriptionUploadScreenState
                           setDialogState(() => submitting = false);
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(content: Text('등록 실패: $e')),
+                              SnackBar(content: Text('등록하지 못했습니다: $e')),
                             );
                           }
                         }
@@ -490,7 +490,7 @@ class _PrescriptionUploadScreenState
       } on DioException catch (e) {
         final body = e.response?.data;
         failure = (body is Map ? body['message'] as String? : null) ??
-            '${doc.docLabel} 업로드 실패: ${e.message}';
+            '${doc.docLabel}을(를) 업로드하지 못했습니다: ${e.message}';
         break;
       } catch (e) {
         failure = '${doc.docLabel} 업로드 중 오류가 발생했습니다: $e';
@@ -786,7 +786,7 @@ class _PrescriptionUploadScreenState
                               fontSize: 14, color: AppTheme.textPrimary),
                           decoration: InputDecoration(
                             hintText:
-                                '담당자에게 전달할 내용을 입력하세요\n예) 청구 관련 특이사항을 기재해주세요',
+                                '담당자에게 전달할 내용을 입력하십시오\n예) 청구 관련 특이사항을 기재해 주십시오',
                             hintStyle: const TextStyle(
                                 color: AppTheme.textMuted,
                                 fontSize: 13,

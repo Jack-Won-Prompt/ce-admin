@@ -78,7 +78,7 @@ class PrescriptionService {
       final msg = (e.response?.data is Map)
           ? e.response!.data['message']?.toString()
           : null;
-      throw Exception(msg ?? '찾지 못했습니다 (${e.type.name})');
+      throw Exception(msg ?? '조회하지 못했습니다 (${e.type.name})');
     }
   }
 

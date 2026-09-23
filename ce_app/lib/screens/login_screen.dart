@@ -355,7 +355,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                       const SizedBox(height: 8),
                       Text(
-                        '임직원은 Microsoft 계정(Entra ID)으로 로그인하세요',
+                        '임직원은 Microsoft 계정(Entra ID)으로 로그인하십시오',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.45),
@@ -426,7 +426,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         TextInputAction.next,
                                     validator: (v) => v == null ||
                                             v.trim().isEmpty
-                                        ? '이메일을 입력해주세요.'
+                                        ? '이메일을 입력해 주십시오.'
                                         : null,
                                   ),
                                   const SizedBox(height: 12),
@@ -442,7 +442,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     onSubmitted: (_) => _submit(),
                                     validator: (v) => v == null ||
                                             v.isEmpty
-                                        ? '비밀번호를 입력해주세요.'
+                                        ? '비밀번호를 입력해 주십시오.'
                                         : null,
                                   ),
                                   const SizedBox(height: 14),

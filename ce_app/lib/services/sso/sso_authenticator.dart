@@ -36,7 +36,7 @@ class SsoNotAvailable extends SsoException {
 
 /// 조용히 받아 올 수 없다 — 사람이 한 번 로그인해야 한다.
 class SsoInteractiveRequired extends SsoException {
-  const SsoInteractiveRequired([super.message = '다시 로그인해 주세요.']);
+  const SsoInteractiveRequired([super.message = '다시 로그인해 주십시오.']);
 }
 
 /// SSO 로그인 창구.

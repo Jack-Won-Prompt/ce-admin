@@ -202,7 +202,7 @@ class _PrescriptionCameraScreenState extends State<PrescriptionCameraScreen>
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    '카메라 초기화 중...',
+                    '카메라를 준비하고 있습니다.',
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
@@ -294,8 +294,8 @@ class _PrescriptionCameraScreenState extends State<PrescriptionCameraScreen>
                         ),
                         child: Text(
                           _docInFrame
-                              ? '문서가 감지되었습니다. 촬영하세요.'
-                              : '처방전을 프레임 안에 맞추세요',
+                              ? '서류가 인식되었습니다. 촬영하십시오.'
+                              : '처방전을 화면 안에 맞추십시오',
                           style: TextStyle(
                             color: frameColor,
                             fontSize: 13,
