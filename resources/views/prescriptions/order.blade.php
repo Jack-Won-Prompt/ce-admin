@@ -1061,6 +1061,14 @@
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
   .attach-thumb:hover .attach-del-btn { opacity:1; }
 
+  /* 내려받기 (2026-09-24 지시). 지우는 단추와 마주 보게 왼쪽 위에 둔다 —
+     같은 자리에 두면 지우려다 내려받고, 내려받으려다 지운다. */
+  .attach-dl-btn { overflow:hidden; position:absolute; top:4px; left:4px; width:18px; height:18px;
+                   border-radius:999px; background:var(--primary); border:none; color:#fff;
+                   font-size:9px; cursor:pointer; display:flex; align-items:center;
+                   justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
+  .attach-thumb:hover .attach-dl-btn { opacity:1; }
+
   /* 등록신청서 신청인란 — 끌어 옮기는 칸 (2026-09-17).
      얹은 그림과 같아 보여야 자리를 맞출 수 있다. 그래서 글자색ㆍ글꼴은 그대로 두고
      테두리만 옅게 둘러 끌 수 있다는 것을 알린다. */
@@ -2336,6 +2344,10 @@ $calcDeposit  = $calcCopay;
                 <img class="attach-thumb-img" src="{{ $prescription->image_url }}" alt="처방전" loading="lazy" />
               @endif
               <div class="attach-type-badge">처방전</div>
+              <button class="attach-dl-btn" title="내려받기"
+                      onclick="downloadDoc(event, @js($prescription->image_url), @js($prescription->rx_number))">
+                <i class="fa-solid fa-download"></i>
+              </button>
             </div>
           @endif
           {{-- 첨부 파일 --}}
@@ -2348,6 +2360,10 @@ $calcDeposit  = $calcCopay;
                 <img class="attach-thumb-img" src="{{ $att->file_url }}" alt="{{ $att->doc_type_label }}" loading="lazy" />
               @endif
               <div class="attach-type-badge">{{ $att->doc_type_label }}</div>
+              <button class="attach-dl-btn" title="내려받기"
+                      onclick="downloadDoc(event, @js($att->file_url), @js($att->original_name ?: $att->doc_type_label))">
+                <i class="fa-solid fa-download"></i>
+              </button>
               <button class="attach-del-btn" onclick="deleteAttachment(event, {{ $att->id }}, this)" title="삭제">
                 <i class="fa-solid fa-xmark"></i>
               </button>
@@ -6028,10 +6044,16 @@ function renderGenThumbs() {
       ? '<div class="attach-thumb-pdf"><i class="fa-regular fa-file-pdf"></i></div>'
       : '<img class="attach-thumb-img" src="' + _htmlAttr(d.url) + '" alt="' + _htmlAttr(d.typeLabel) + '" loading="lazy">';
 
+    var dl = '<button class="attach-dl-btn" title="내려받기"'
+           + ' onclick="downloadDoc(event, ' + _htmlAttr(JSON.stringify(d.url)) + ','
+           + ' ' + _htmlAttr(JSON.stringify(d.name || d.typeLabel)) + ')">'
+           + '<i class="fa-solid fa-download"></i></button>';
+
     return '<div class="attach-thumb doc-thumb is-gen" data-doc-id="' + d.id + '"'
          + ' onclick="switchViewerDoc(this)" title="' + _htmlAttr(d.name) + '">'
          + face
          + '<div class="attach-type-badge">' + _htmlAttr(d.typeLabel) + '</div>'
+         + dl
          + regen
          + '</div>';
   }).join('');
@@ -6063,6 +6085,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function _closeAttachPopover() {
   document.getElementById('deleteAttachPopover').style.display = 'none';
+}
+
+/**
+ * 그림칸의 서류를 내려받는다 (2026-09-24 지시).
+ *
+ * 여태 첨부를 내려받으려면 뷰어에서 열어 브라우저 메뉴를 써야 했다. 처방전ㆍ첨부ㆍ
+ * 시스템이 만든 서류 어느 것이든 그림칸에서 바로 받는다.
+ *
+ * <a download> 만 걸지 않고 blob 으로 받아 넘긴다 — 파일이 다른 곳(S3 등)에서
+ * 오면 download 속성이 무시되어 새 탭만 열리고 끝난다. 이름도 우리가 정한다.
+ */
+async function downloadDoc(e, url, 이름) {
+  e.stopPropagation();          // 그림칸을 누른 것으로 보지 않는다
+
+  if (!url) { showToast('내려받을 파일이 없습니다.', 'warning'); return; }
+
+  const btn = e.currentTarget;
+  const 본래 = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true; }
+
+  try {
+    const r = await fetch(url, { credentials: 'same-origin' });
+    if (!r.ok) { throw new Error('HTTP ' + r.status); }
+
+    const 덩이 = await r.blob();
+
+    /* 확장자는 주소에서 떼어 온다 — 이름에 없으면 붙인다 */
+    const 꼬리 = (url.split('?')[0].match(/\.([A-Za-z0-9]{1,5})$/) || [, ''])[1];
+    let 파일이름 = (이름 || '서류').replace(/[\\\/:*?"<>|]/g, '_');
+    if (꼬리 && !new RegExp('\\.' + 꼬리 + '$', 'i').test(파일이름)) { 파일이름 += '.' + 꼬리; }
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(덩이);
+    a.download = 파일이름;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+
+    showToast('내려받았습니다 — ' + 파일이름, 'success');
+  } catch (err) {
+    showToast('내려받지 못했습니다. 잠시 뒤 다시 시도해 주십시오.', 'danger');
+  } finally {
+    if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
+  }
 }
 
 function deleteAttachment(e, id, btn) {
@@ -6178,6 +6245,8 @@ function handleAttachUpload(input) {
     thumbEl.setAttribute('onclick', 'switchViewerDoc(this)');
     thumbEl.innerHTML = `${thumbHtml}
       <div class="attach-type-badge">${att.typeLabel}</div>
+      <button class="attach-dl-btn" title="내려받기"
+              onclick="downloadDoc(event, ${JSON.stringify(att.url)}, ${JSON.stringify(att.name || att.typeLabel)})"><i class="fa-solid fa-download"></i></button>
       <button class="attach-del-btn" onclick="deleteAttachment(event,${att.id},this)" title="삭제"><i class="fa-solid fa-xmark"></i></button>`;
     /* 올린 문서는 시스템이 만든 서류 앞에 선다 — 사람이 넣은 것과 기계가 만든 것을
        섞어 놓으면 어느 것이 무엇인지 눈으로 갈라내야 한다 */

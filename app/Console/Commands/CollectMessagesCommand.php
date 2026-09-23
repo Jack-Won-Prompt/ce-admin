@@ -300,6 +300,7 @@ class CollectMessagesCommand extends Command
         'save' => '저장할 때',        'delete' => '삭제할 때',
         'remove' => '삭제할 때',      'cancel' => '취소할 때',
         'issue' => '발행할 때',       'copy' => '복사할 때',
+        'download' => '내려받을 때',
         'sync' => '동기화할 때',      'create' => '등록할 때',
         'add' => '추가할 때',         'load' => '불러올 때',
         'open' => '열 때',            'select' => '선택할 때',
