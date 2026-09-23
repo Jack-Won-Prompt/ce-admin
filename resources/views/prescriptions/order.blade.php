@@ -925,8 +925,9 @@
 
      전에는 청록색 굵은 글씨였는데, 그것은 「앞선 결정」이라는 뜻일 뿐 「반드시
      적어야 한다」로는 읽히지 않았다. 별표는 어느 화면에서나 같은 뜻이다. */
-  .rx-field-label.rx-key { color:var(--danger, #E5484D); font-weight:700; }
-  .rx-field-label.rx-key::after { content:' *'; color:var(--danger, #E5484D); font-weight:700; }
+  /* --danger 는 이 테마에서 주황빛(#F17E64)이라 「빨강」으로 읽히지 않는다 — 값을 박는다 */
+  .rx-field-label.rx-key { color:#D32F2F; font-weight:700; }
+  .rx-field-label.rx-key::after { content:' *'; color:#D32F2F; font-weight:700; }
   /* '배송 주소 동일' 체크 묶음 — 시안 315:58 Frame 48101499:
      묶음 96×21 · gap 6, 상자 16×16 · r6 · 1px #28798B, 글자 74 · 13/500 · #28798B.
      기본 체크박스는 모서리를 못 깎아 appearance 를 끄고 체크 표시를 직접 그린다. */
