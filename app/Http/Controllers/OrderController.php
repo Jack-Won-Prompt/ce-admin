@@ -808,17 +808,61 @@ class OrderController extends Controller
     public function amendPreview(Request $request, Order $order): \Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
-            'items'          => 'nullable|array',
-            'items.*.quantity'      => 'nullable|integer|min:1',
-            'items.*.nhis_amount'   => 'nullable|numeric|min:0',
-            'items.*.patient_copay' => 'nullable|numeric|min:0',
-            'patient_copay'  => 'nullable|numeric|min:0',
-            'total_nhis'     => 'nullable|numeric|min:0',
+            'items'                   => 'nullable|array',
+            'items.*.quantity'        => 'nullable|integer|min:1',
+            'items.*.product_price'   => 'nullable|numeric|min:0',
+            'items.*.insurance_price' => 'nullable|numeric|min:0',
+            'items.*.nhis_status'     => 'nullable|string|max:20',
+            /* 금액도 받기는 한다 — 화면이 보내는 꼴을 막지 않으려는 것뿐이고,
+               셈에는 쓰지 않는다(아래 주석 참고). */
+            'items.*.nhis_amount'     => 'nullable|numeric|min:0',
+            'items.*.patient_copay'   => 'nullable|numeric|min:0',
+            'patient_copay'           => 'nullable|numeric|min:0',
+            'total_nhis'              => 'nullable|numeric|min:0',
         ]);
 
+        /* **화면이 보낸 돈은 셈에 쓰지 않는다** — 미리 본 것과 실제로 한 일이
+           어긋나면 미리보기는 없느니만 못하다.
+
+           화면은 수량을 고칠 때 calcItem 이 items 배열에 금액을 되적으므로 보통은
+           맞는 값이 온다. 다만 그 값은 화면이 들고 있는 청구전략 비율로 셈한 것이라,
+           전략이 바뀐 뒤 화면을 다시 열지 않았거나 배열만 고쳐 보내는 자리가 있으면
+           옛 금액이 실려 온다. 그러면 미리보기는 「금액이 바뀌지 않았다」로 보아
+           증빙ㆍ결제ㆍ안내를 모두 「해당 없음」으로 적는데, 정작 정정하면 환불과
+           재발송이 일어난다.
+
+           저장이 셈하는 것과 **같은 법**으로 여기서도 셈한다 — 수량 × 단가에
+           청구전략(유형 × 자격)이 정한 기관 몫을 덜어 낸다
+           (PrescriptionController::updateOcr 의 품목 저장과 같다). */
+
         $items = collect($data['items'] ?? []);
-        $바뀔금액 = (int) ($data['patient_copay'] ?? $items->sum('patient_copay'));
-        $바뀔기관 = (int) ($data['total_nhis']    ?? $items->sum('nhis_amount'));
+        $rx    = $order->prescription;
+
+        $비율 = \App\Support\BillingStrategy::payerRate(
+                    $rx?->counsel_acc_add_type, $rx?->benefit_class);
+
+        $바뀔금액 = 0;
+        $바뀔기관 = 0;
+
+        foreach ($items as $줄) {
+            $단가 = (float) ($줄['insurance_price'] ?? $줄['product_price'] ?? 0);
+            $수량 = max(1, (int) ($줄['quantity'] ?? 1));
+
+            if ($단가 <= 0) {
+                continue;
+            }
+
+            /* 전략이 아직 없으면 품목에 적힌 급여 구분으로 셈한다 — 저장과 같은 차례다 */
+            $몫 = $비율 ?? match ($줄['nhis_status'] ?? 'eligible') {
+                'eligible' => ($order->patient?->nhis_coverage_rate ?? 90) / 100,
+                'partial'  => 0.50,
+                default    => 0.0,
+            };
+
+            $기관 = round($단가 * $몫 * $수량);
+            $바뀔기관 += (int) $기관;
+            $바뀔금액 += (int) round($단가 * $수량 - $기관);
+        }
 
         /* 정정할 수 없는 건은 미리보기도 내지 않는다 — 보여 주면 누를 수 있는 줄 안다.
            막는 잣대는 실제 정정과 같은 것을 쓴다(Order::정정가능한가). */
