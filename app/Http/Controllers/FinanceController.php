@@ -1087,6 +1087,13 @@ class FinanceController extends Controller
                 ['header' => '입금확인',   'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금 금액',  'name' => 'paid',       'width' => 110] + $money,
                 ['header' => '결제 시각',  'name' => 'paid_time',  'width' => 140, 'align' => 'center', 'sortable' => true],
+                /* 카드로 받은 건의 상세 (2026-09-23 지시) — 여태 「카드」까지만 적혀,
+                   어느 카드로 얼마가 언제 승인됐는지는 주문 화면까지 들어가야 알았다.
+                   카드가 아닌 건은 빈칸이다. */
+                ['header' => '카드사',     'name' => 'card_issuer',      'width' => 100, 'align' => 'center'],
+                ['header' => '카드번호',   'name' => 'card_no',          'width' => 150],
+                ['header' => '카드승인번호','name' => 'card_approve_no', 'width' => 120],
+                ['header' => '할부',       'name' => 'card_installment', 'width' => 80,  'align' => 'center'],
             ],
 
             // 15쪽 — 환자 본인부담금 입금 확인
@@ -1111,6 +1118,13 @@ class FinanceController extends Controller
                 ['header' => '입금 금액',  'name' => 'paid',      'width' => 110] + $money,
                 ['header' => '입금자명',   'name' => 'payer',     'width' => 100],
                 ['header' => '결제수단',   'name' => 'pay_method','width' => 100, 'align' => 'center', 'sortable' => true],
+                /* 카드로 받은 건의 상세 (2026-09-23 지시) — 여태 「카드」까지만 적혀,
+                   어느 카드로 얼마가 언제 승인됐는지는 주문 화면까지 들어가야 알았다.
+                   카드가 아닌 건은 빈칸이다. */
+                ['header' => '카드사',     'name' => 'card_issuer',      'width' => 100, 'align' => 'center'],
+                ['header' => '카드번호',   'name' => 'card_no',          'width' => 150],
+                ['header' => '카드승인번호','name' => 'card_approve_no', 'width' => 120],
+                ['header' => '할부',       'name' => 'card_installment', 'width' => 80,  'align' => 'center'],
                 ['header' => '정산상태',   'name' => 'settle',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 /* 2026-09-11 엑셀과 맞춘다 (2026-09-15 지시) — 그 파일에 있는데 화면에
                    없던 넷이다. PG 세 칸은 토스 정산 연동이 없던 동안 비워 두었는데,

@@ -248,6 +248,21 @@ class OrderGridExtras
                                 },
             /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
             'paid_at'         => $o?->paidAtLabel() ?? '',
+
+            /* 카드로 받은 건의 상세 (2026-09-23 지시).
+
+               Finance 의 여러 목록에 「결제수단 = 카드」까지만 있어, 어느 카드로
+               얼마가 언제 승인됐는지는 주문 화면까지 들어가야 알 수 있었다. 카드
+               매출전표는 목록 자료가 아니라 PDF 첨부라 더 그랬다.
+
+               토스가 돌려준 원문에서 읽는다 — 카드가 아니거나 승인 자취가 없으면
+               빈칸이다(가상계좌ㆍ담당자 확인 입금 건). */
+            'card_issuer'     => $this->카드값($o, 'company'),
+            'card_no'         => $this->카드값($o, 'number'),
+            'card_approve_no' => $this->카드값($o, 'approveNo'),
+            'card_installment'=> ($달 = $this->카드값($o, 'installmentPlanMonths')) !== ''
+                                    ? ((int) $달 === 0 ? '일시불' : $달 . '개월')
+                                    : '',
             /* **총 금액은 본인 + 기관이다.**
 
                orders.total_amount 는 이름과 달리 「환자가 낼 돈」이다 — 결제 링크도
@@ -655,6 +670,10 @@ class OrderGridExtras
             'deposit_at'      => '',
             'deposit_amount'  => 0,
             'paid_at'         => '',
+            'card_issuer'     => '',
+            'card_no'         => '',
+            'card_approve_no' => '',
+            'card_installment'=> '',
             'total_amount'    => (int) $s->total_amount,
             'copay'           => 0,
             'nhis_amount'     => 0,
@@ -831,5 +850,24 @@ class OrderGridExtras
             'pending'   => '대기',
             default     => '',
         };
+    }
+
+    /**
+     * 토스가 돌려준 카드 정보 한 칸 (2026-09-23 지시).
+     *
+     * 카드가 아니거나 승인 자취가 없으면 빈 글자다 — 가상계좌나 담당자 확인 입금
+     * 건이 그렇다. 그런 건에 「일시불」 같은 말이 서면 카드로 받은 것으로 읽힌다.
+     */
+    private function 카드값(?\App\Models\Order $o, string $키): string
+    {
+        $결제 = $o?->tossPayment;
+
+        if (! $결제 || $결제->method === 'VIRTUAL_ACCOUNT') {
+            return '';
+        }
+
+        $카드 = $결제->raw_response['card'] ?? null;
+
+        return is_array($카드) && isset($카드[$키]) ? (string) $카드[$키] : '';
     }
 }
