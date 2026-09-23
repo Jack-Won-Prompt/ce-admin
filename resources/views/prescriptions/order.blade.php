@@ -2522,12 +2522,28 @@ $calcDeposit  = $calcCopay;
             <label class="ds-field-label">등록일 (까지)</label>
             <input type="date" id="ol-to" class="form-control">
           </div>
+          {{-- 담당자는 둘이다 — 검수와 주문 (2026-09-23 지시).
+
+               한 칸에 검수 담당자만 있어 「내가 맡은 주문」을 가릴 수 없었다.
+               어느 담당자를 볼지 먼저 고르고, 그 갈래의 이름 목록에서 고른다.
+               「미배정」은 값이 아니라 값이 없다는 뜻이라 단추로 뺀다. --}}
+          <div class="ol-field">
+            <label class="ds-field-label">담당자 유형</label>
+            <select id="ol-manager-kind" class="form-control form-select" onchange="olManagerKind()">
+              <option value="review">검수 담당자</option>
+              <option value="order">주문 담당자</option>
+            </select>
+          </div>
           <div class="ol-field">
             <label class="ds-field-label">담당자</label>
-            <select id="ol-manager" class="form-control form-select">
-              <option value="">전체</option>
-              <option value="__none__">미배정</option>
-            </select>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="ol-manager" class="form-control form-select" style="flex:1;min-width:0;">
+                <option value="">전체</option>
+              </select>
+              <button type="button" id="ol-unassigned" class="ds-btn" onclick="olToggleUnassigned()"
+                      title="담당자가 아직 없는 건만 봅니다"
+                      style="flex-shrink:0;white-space:nowrap;">미배정</button>
+            </div>
           </div>
           {{-- 요청서 8쪽이 적은 조회키 — 유형ㆍ신구매/재구매ㆍ병원명ㆍ처방전종료일ㆍ
                다음재구매가능일. 선택지는 받아 둔 줄에서 뽑는다(없는 값을 고르게 두지 않는다). --}}
@@ -14073,7 +14089,13 @@ window.HELP_TOUR_STEPS = [
         el.appendChild(o);
       });
     };
-    fill('ol-manager',  OL_ROWS.map(r => r.manager));
+    /* 담당자 목록은 고른 갈래를 따른다 — 검수와 주문은 다른 사람일 수 있다 */
+    window.olManagerFill = function () {
+      const 갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
+      const 칸  = 갈래 === 'order' ? 'order_manager' : 'review_manager';
+      fill('ol-manager', OL_ROWS.map(r => r[칸] || r.manager));
+    };
+    olManagerFill();
     fill('ol-purchase', OL_ROWS.map(r => r.rx_purchase));
     fill('ol-hospital', OL_ROWS.map(r => r.rx_hospital));
 
@@ -14417,6 +14439,32 @@ window.HELP_TOUR_STEPS = [
     olFilter();
   }
 
+  /* 담당자 갈래를 바꾸면 이름 목록도 그 갈래의 것으로 다시 세운다 */
+  window.olManagerKind = function () {
+    window.olManagerFill?.();
+    document.getElementById('ol-manager').value = '';
+    _ol미배정 = false;
+    olUnassignedPaint();
+    olFilter();
+  };
+
+  /* 「미배정」은 값이 아니라 값이 없다는 뜻이라 단추로 켜고 끈다 */
+  let _ol미배정 = false;
+
+  function olUnassignedPaint() {
+    const b = document.getElementById('ol-unassigned');
+    if (!b) return;
+    b.classList.toggle('ds-btn-primary', _ol미배정);
+    b.title = _ol미배정 ? '누르면 전체로 돌아갑니다' : '담당자가 아직 없는 건만 봅니다';
+  }
+
+  window.olToggleUnassigned = function () {
+    _ol미배정 = ! _ol미배정;
+    if (_ol미배정) document.getElementById('ol-manager').value = '';
+    olUnassignedPaint();
+    olFilter();
+  };
+
   /* 받아 둔 줄(또는 찾은 줄)을 나머지 조건으로 좁힌다 */
   function olFilter() {
     const 바탕 = OL_FOUND ?? OL_ROWS;
@@ -14443,9 +14491,11 @@ window.HELP_TOUR_STEPS = [
       }
       if (from && (r.sold_at || '') < from) return false;
       if (to   && (r.sold_at || '') > to)   return false;
-      // 「미배정」은 값이 아니라 값이 없다는 뜻이라 따로 본다
-      if (manager === '__none__' && r.manager) return false;
-      if (manager && manager !== '__none__' && r.manager !== manager) return false;
+      /* 담당자 — 고른 갈래의 칸을 본다. 「미배정」은 단추가 켜져 있을 때다. */
+      const _갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
+      const _이름 = (_갈래 === 'order' ? r.order_manager : r.review_manager) || r.manager || '';
+      if (_ol미배정 && _이름) return false;
+      if (manager && _이름 !== manager) return false;
 
       /* 「처방전」을 고르면 「처방전 - 원내」도 함께 온다 — 둘 다 처방전이다 */
       if (rxtype   && !(r.rx_acc_type || '').startsWith(rxtype)) return false;
@@ -14469,6 +14519,13 @@ window.HELP_TOUR_STEPS = [
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    /* 담당자 갈래와 「미배정」도 함께 푼다 — 화면에 켜진 채로 남으면 초기화가 아니다 */
+    const 갈래 = document.getElementById('ol-manager-kind');
+    if (갈래) 갈래.value = 'review';
+    _ol미배정 = false;
+    olUnassignedPaint();
+    window.olManagerFill?.();
+
     OL_FOUND = null;                    // 찾아 둔 것도 버리고 손대기 전 목록으로 돌아간다
     if (olGrid) olGrid.setData(OL_ROWS);
   }

@@ -1721,6 +1721,13 @@ class PrescriptionController extends Controller
             'patient'   => $o->patient?->name ?? ($rx?->patient_name_ocr ?? ''),
             // 배정 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다
             'manager'   => $rx?->assignedUser?->name ?? '',
+            /* 담당자는 둘이다 (2026-09-23 지시).
+
+               검수 담당자는 서류를 확인해 주문등록으로 넘긴 사람이고, 주문 담당자는
+               그 뒤 주문을 맡아 끌고 가는 사람이다. 여태 한 칸에 검수 담당자만 실어
+               보내, 「내 주문이 어느 것인가」를 이 목록에서 가릴 수 없었다. */
+            'review_manager' => $rx?->assignedUser?->name ?? '',
+            'order_manager'  => $o->operationUser?->name ?? ($rx?->order_manager ?? ''),
             /* 이름 말고 누구인지도 함께 — 더블클릭한 사람이 임자인지 남인지는
                이름으로 견줄 수 없다(같은 이름이 둘일 수 있다). */
             'manager_id' => $rx?->assigned_user_id,
