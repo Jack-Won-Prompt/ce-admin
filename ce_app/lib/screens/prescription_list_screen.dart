@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../models/prescription.dart';
 import '../providers/prescription_provider.dart';
+import '../services/prescription_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -178,6 +179,40 @@ class _PrescriptionListScreenState
     super.dispose();
   }
 
+  /// 이름ㆍ생년월일로 다른 사람이 올린 건을 찾는다 (2026-09-23 지시).
+  ///
+  /// 둘 다 맞아야 나온다 — 이름만으로는 서버가 내주지 않는다. 환자를 둘러보는
+  /// 자리가 아니라, 아는 사람의 건을 확인하러 오는 자리다.
+  Future<void> _openLookup() async {
+    final nameCtrl  = TextEditingController(text: _nameCtrl.text.trim());
+    final birthCtrl = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: _LookupSheet(
+          nameCtrl:  nameCtrl,
+          birthCtrl: birthCtrl,
+          onSearch:  (name, birth) =>
+              ref.read(prescriptionServiceProvider).lookup(name, birth),
+          onPick: (rx) {
+            Navigator.of(sheetCtx).pop();
+            context.push('/prescriptions/$rx');
+          },
+        ),
+      ),
+    );
+
+    nameCtrl.dispose();
+    birthCtrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(prescriptionListProvider);
@@ -319,11 +354,39 @@ class _PrescriptionListScreenState
                       Container(
                         color: Colors.white,
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                        child: _FilterField(
-                          hint: '이름',
-                          controller: _nameCtrl,
-                          icon: Icons.person_search_outlined,
-                          onChanged: _onNameChanged,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _FilterField(
+                                hint: '이름',
+                                controller: _nameCtrl,
+                                icon: Icons.person_search_outlined,
+                                onChanged: _onNameChanged,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            /* 이 목록은 내가 올린 것만 보인다. 다른 사람이 올린 건에
+                               서류를 보태려면 이름ㆍ생년월일로 찾아 들어간다
+                               (2026-09-23 지시). */
+                            SizedBox(
+                              height: 44,
+                              child: OutlinedButton.icon(
+                                onPressed: _openLookup,
+                                icon: const Icon(Icons.search, size: 18),
+                                label: const Text('건 찾기',
+                                    style: TextStyle(fontSize: 13)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primary,
+                                  side: const BorderSide(
+                                      color: AppTheme.primary, width: 1.2),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 12),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -715,3 +778,243 @@ class _InfoChip extends StatelessWidget {
   );
 }
 
+
+/// 이름ㆍ생년월일로 건을 찾는 자리 (2026-09-23 지시).
+///
+/// 찾은 건에는 누가 올렸는지 적어 둔다 — 내 것이 아니면 그 자리에서 알아야
+/// 「왜 지우기가 없지」로 헤매지 않는다.
+class _LookupSheet extends StatefulWidget {
+  final TextEditingController nameCtrl;
+  final TextEditingController birthCtrl;
+  final Future<List<Prescription>> Function(String name, String birth) onSearch;
+  final void Function(String rxNumber) onPick;
+
+  const _LookupSheet({
+    required this.nameCtrl,
+    required this.birthCtrl,
+    required this.onSearch,
+    required this.onPick,
+  });
+
+  @override
+  State<_LookupSheet> createState() => _LookupSheetState();
+}
+
+class _LookupSheetState extends State<_LookupSheet> {
+  bool _busy = false;
+  String? _error;
+  List<Prescription>? _result;
+
+  Future<void> _pickBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 40),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: '생년월일 선택',
+    );
+
+    if (picked != null) {
+      widget.birthCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
+      setState(() {});
+    }
+  }
+
+  Future<void> _search() async {
+    final name  = widget.nameCtrl.text.trim();
+    final birth = widget.birthCtrl.text.trim();
+
+    if (name.isEmpty || birth.isEmpty) {
+      setState(() => _error = '이름과 생년월일을 모두 입력해 주십시오.');
+      return;
+    }
+
+    setState(() {
+      _busy   = true;
+      _error  = null;
+      _result = null;
+    });
+
+    try {
+      final list = await widget.onSearch(name, birth);
+      if (mounted) {
+        setState(() {
+          _result = list;
+          _busy   = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceFirst('Exception: ', '');
+          _busy  = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDDE1E6),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text('처방전 찾기',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Text(
+              '이름과 생년월일이 모두 맞아야 찾을 수 있습니다. '
+              '다른 사람이 올린 건에도 서류를 보탤 수 있습니다.',
+              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: widget.nameCtrl,
+              decoration: const InputDecoration(
+                labelText: '환자 이름',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            /* 손으로 적어도 되고 달력에서 골라도 된다 — 아는 날짜를 적는 편이
+               빠른 사람이 있고, 달력이 편한 사람이 있다. */
+            TextField(
+              controller: widget.birthCtrl,
+              keyboardType: TextInputType.datetime,
+              decoration: InputDecoration(
+                labelText: '생년월일',
+                hintText: 'YYYY-MM-DD',
+                prefixIcon: const Icon(Icons.cake_outlined),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  tooltip: '달력에서 고르기',
+                  onPressed: _pickBirth,
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _busy ? null : _search,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.search),
+                label: Text(_busy ? '찾는 중' : '찾기'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!,
+                  style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+            ],
+            if (_result != null) ...[
+              const SizedBox(height: 14),
+              if (_result!.isEmpty)
+                const Text(
+                  '해당하는 처방전이 없습니다. 이름과 생년월일을 다시 확인해 주십시오. '
+                  '검수를 마친 건은 나오지 않습니다.',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                )
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.4),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _result!.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final p = _result![i];
+                      final summary = [
+                        if (p.patientName != null) p.patientName!,
+                        if (p.birthDate != null) p.birthDate!,
+                        if (p.fileCount != null) '서류 ${p.fileCount}장',
+                      ].join(' · ');
+
+                      return InkWell(
+                        onTap: () => widget.onPick(p.rxNumber),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE3E8EF)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(p.rxNumber,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 15)),
+                                  ),
+                                  Text(p.statusLabel,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(summary,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.textSecondary)),
+                              const SizedBox(height: 2),
+                              Text(
+                                p.isMine
+                                    ? '내가 올린 건'
+                                    : '올린 사람: ${p.ownerName ?? '-'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: p.isMine
+                                      ? AppTheme.primary
+                                      : AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

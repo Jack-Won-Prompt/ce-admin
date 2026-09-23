@@ -11,6 +11,13 @@ class Prescription {
   final String? imageUrl;
   final String  createdAt;
 
+  /// 이름ㆍ생년월일로 찾았을 때만 채워진다 (2026-09-23).
+  /// 목록(내가 올린 것)에서는 비어 있고, 찾기 결과에서는 누구 건인지 알려 준다.
+  final String? birthDate;
+  final String? ownerName;
+  final bool    isMine;
+  final int?    fileCount;
+
   const Prescription({
     required this.rxNumber,
     required this.status,
@@ -21,6 +28,10 @@ class Prescription {
     this.issuedDate,
     this.imageUrl,
     required this.createdAt,
+    this.birthDate,
+    this.ownerName,
+    this.isMine = true,
+    this.fileCount,
   });
 
   factory Prescription.fromJson(Map<String, dynamic> j) => Prescription(
@@ -33,6 +44,11 @@ class Prescription {
         issuedDate:    j['issued_date']    as String?,
         imageUrl:      j['image_url']      as String?,
         createdAt:     j['created_at']     as String,
+        birthDate:     j['birth_date']     as String?,
+        ownerName:     j['owner_name']     as String?,
+        // 목록에는 내 것만 오므로, 알려 주지 않으면 내 것으로 본다
+        isMine:        j['is_mine']        as bool? ?? true,
+        fileCount:     (j['file_count'] as num?)?.toInt(),
       );
 }
 
@@ -47,9 +63,15 @@ class PrescriptionDetail {
   /// 이 건에 올린 첨부 서류.
   final List<PrescriptionFile> attachments;
 
-  /// 올린 사람이 지우고 다시 올릴 수 있는 상태인가.
-  /// 검수 완료 뒤에는 거짓이 되고, 남의 건도 거짓이다.
+  /// 처방전 그림을 지우고 다시 올릴 수 있는가 — 이 건을 올린 사람만 참이다.
   final bool editable;
+
+  /// 서류를 보탤 수 있는가 (2026-09-23). 검수를 마치기 전이면 남의 건에도 참이다.
+  final bool canAdd;
+
+  /// 내가 올린 건인가. 아니면 누가 올렸는지 [ownerName] 에 적힌다.
+  final bool    isMine;
+  final String? ownerName;
 
   /// 검수자가 다시 올려 달라고 한 것 중 아직 닫히지 않은 것.
   final List<ReuploadRequest> requests;
@@ -66,6 +88,9 @@ class PrescriptionDetail {
     required this.ocr,
     this.attachments = const [],
     this.editable = false,
+    this.canAdd = false,
+    this.isMine = true,
+    this.ownerName,
     this.requests = const [],
     this.canRequestReview = false,
   });
@@ -90,6 +115,11 @@ class PrescriptionDetail {
         imageUrl:      j['image_url']       as String?,
         imageName:     j['image_name']      as String?,
         editable:      j['editable']        as bool? ?? false,
+        /* 옛 서버는 can_add 를 보내지 않는다 — 그때는 editable 이 보태기 권한도
+           겸했으므로 그 값으로 본다. */
+        canAdd:        j['can_add']  as bool? ?? (j['editable'] as bool? ?? false),
+        isMine:        j['is_mine']  as bool? ?? true,
+        ownerName:     j['owner_name'] as String?,
         canRequestReview: j['can_request_review'] as bool? ?? false,
         attachments: ((j['attachments'] as List?) ?? const [])
             .map((e) => PrescriptionFile.fromJson(
@@ -113,12 +143,20 @@ class PrescriptionFile {
   final String url;
   final bool   isPdf;
 
+  /// 누가 올렸는지 (2026-09-23). 한 건에 여러 사람이 붙을 수 있게 되며 생겼다.
+  final String? uploader;
+
+  /// 내가 지울 수 있는가 — 내가 올린 서류만 참이다.
+  final bool canDelete;
+
   const PrescriptionFile({
     required this.id,
     required this.docLabel,
     required this.fileName,
     required this.url,
     required this.isPdf,
+    this.uploader,
+    this.canDelete = true,
   });
 
   factory PrescriptionFile.fromJson(Map<String, dynamic> j) => PrescriptionFile(
@@ -127,6 +165,9 @@ class PrescriptionFile {
         fileName: j['file_name'] as String? ?? '',
         url:      j['url'] as String? ?? '',
         isPdf:    j['is_pdf'] as bool? ?? false,
+        uploader: j['uploader'] as String?,
+        // 옛 서버는 이 칸을 보내지 않는다 — 그때는 내 건의 서류만 내려왔다
+        canDelete: j['can_delete'] as bool? ?? true,
       );
 }
 

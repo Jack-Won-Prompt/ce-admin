@@ -57,6 +57,31 @@ class PrescriptionService {
     }
   }
 
+  /// 이름과 생년월일로 건을 찾는다 (2026-09-23).
+  ///
+  /// 목록은 내가 올린 것만 보인다. 어제 다른 사람이 올린 건에 오늘 서류를 보태려면
+  /// 그 건을 찾을 길이 있어야 한다. 서버는 **둘 다 맞은 건만** 내준다 — 이름만으로는
+  /// 내주지 않는다. 검수를 마친 건은 나오지 않는다(보탤 수 없으므로).
+  Future<List<Prescription>> lookup(String name, String birth) async {
+    try {
+      final res = await _dio.get('/prescriptions/lookup', queryParameters: {
+        'name':  name,
+        'birth': birth,
+      });
+
+      final list = (res.data as Map)['data'] as List? ?? const [];
+
+      return list
+          .map((e) => Prescription.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map)
+          ? e.response!.data['message']?.toString()
+          : null;
+      throw Exception(msg ?? '찾지 못했습니다 (${e.type.name})');
+    }
+  }
+
   /// 처방전 상세
   Future<PrescriptionDetail> getDetail(String rxNumber) async {
     final res  = await _dio.get('/prescriptions/$rxNumber');

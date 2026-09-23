@@ -186,9 +186,12 @@ class _PrescriptionDetailScreenState
   /// 새 건을 만들지 않고 이 번호로 올린다. 검수 상태와 처방전 중복은 서버가
   /// 한 번 더 가린다. 되물은 서류를 올리면 그 요청은 서버에서 저절로 닫힌다.
   Future<void> _addDocument(PrescriptionDetail d) async {
-    // 처방전은 한 건에 한 장 — 그림이 있으면 고를 수 없다(바꾸려면 먼저 지운다)
+    /* 처방전은 한 건에 한 장 — 그림이 있으면 고를 수 없다(바꾸려면 먼저 지운다).
+       남이 올린 건에서도 고를 수 없다 (2026-09-23) — 처방전은 그 건을 올린
+       사람만 바꾼다. 고를 수 있게 두면 올린 뒤에야 막혀, 헛걸음이 된다. */
     final types = _docTypes
-        .where((t) => t.$1 != 'prescription' || d.imageUrl == null)
+        .where((t) =>
+            t.$1 != 'prescription' || (d.imageUrl == null && d.isMine))
         .toList();
     String? code = _suggestType(d, types);
 
@@ -227,6 +230,12 @@ class _PrescriptionDetailScreenState
                   const Text(
                       '처방전이 이미 등록되어 있습니다. 변경하려면 먼저 목록에서 처방전을 삭제(🗑)하세요.',
                       style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                ] else if (!d.isMine) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                      '처방전은 ${d.ownerName ?? '올린 사람'} 님만 올릴 수 있습니다. 그 밖의 서류는 보탤 수 있습니다.',
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted)),
                 ],
                 const SizedBox(height: 18),
                 Row(
@@ -704,7 +713,10 @@ class _PrescriptionDetailScreenState
                   _AttachmentsCard(
                     files: d.attachments,
                     headers: _authHeaders,
+                    // 처방전 그림을 지울 수 있는가 — 이 건을 올린 사람만
                     editable: d.editable,
+                    // 서류를 지울 수 있는가 — 내가 올린 서류만(서류마다 canDelete)
+                    canEdit: d.canAdd,
                     busy: _deleting,
                     // 처방전 그림도 목록의 한 줄로 세운다 — 되돌아갈 길이 있어야 한다
                     hasPrescriptionImage: d.imageUrl != null,
@@ -728,8 +740,41 @@ class _PrescriptionDetailScreenState
                   const SizedBox(height: 12),
                 ],
 
+                /* 남이 올린 건임을 그 자리에서 알린다 (2026-09-23 지시).
+                   모르고 들어오면 「왜 지우기가 없지」로 헤맨다. */
+                if (!d.isMine) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.primary.withOpacity(0.22)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.group_outlined,
+                            size: 17, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${d.ownerName ?? '다른 사람'} 님이 올린 처방전입니다. '
+                            '서류를 보탤 수 있고, 내가 올린 서류만 지울 수 있습니다.',
+                            style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.5,
+                                color: AppTheme.textPrimary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 // ── 서류 추가 — 검수 완료 전까지. 담아 두었다가 아래 단추로 한꺼번에 올린다
-                if (d.editable) ...[
+                if (d.canAdd) ...[
                   /* 서류를 모두 지운 건 — 같은 번호로 다시 올리는 길을 알린다(2026-09-15 지시).
                      업로드 탭에서 올리면 새 번호가 생기므로, 여기서 올려야 이 처방전이 된다. */
                   if (d.imageUrl == null && d.attachments.isEmpty && _pending.isEmpty) ...[
@@ -780,7 +825,7 @@ class _PrescriptionDetailScreenState
 
                 /* 검수를 지난 건은 고칠 수 없다. 단추만 감추면 왜 없는지 알 수
                    없으므로 그 자리에 까닭을 적는다. */
-                if (!d.editable &&
+                if (!d.canAdd &&
                     (d.imageUrl != null || d.attachments.isNotEmpty)) ...[
                   Container(
                     width: double.infinity,
@@ -898,6 +943,10 @@ class _AttachmentsCard extends StatelessWidget {
   final List<PrescriptionFile>     files;
   final Map<String, String>        headers;
   final bool                       editable;
+
+  /// 서류를 지울 수 있는 상태인가 (2026-09-23). 실제로 지울 수 있는지는
+  /// 서류마다 다르다 — 내가 올린 것만 지운다(PrescriptionFile.canDelete).
+  final bool                       canEdit;
   final bool                       busy;
   final void Function(PrescriptionFile) onDelete;
 
@@ -920,6 +969,7 @@ class _AttachmentsCard extends StatelessWidget {
     required this.files,
     required this.headers,
     required this.editable,
+    this.canEdit = false,
     required this.busy,
     required this.onDelete,
     required this.hasPrescriptionImage,
@@ -989,7 +1039,10 @@ class _AttachmentsCard extends StatelessWidget {
               thumb: files[i].isPdf ? null : files[i].url,
               headers: headers,
               onTap: () => onSelect(files[i].id),
-              onDelete: editable && !busy ? () => onDelete(files[i]) : null,
+              // 내가 올린 서류만 지운다 (2026-09-23 지시)
+              onDelete: canEdit && files[i].canDelete && !busy
+                  ? () => onDelete(files[i])
+                  : null,
               request: requestFor(files[i].id),
             ),
           ],
