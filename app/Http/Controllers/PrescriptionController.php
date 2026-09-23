@@ -1134,6 +1134,31 @@ class PrescriptionController extends Controller
             return $refuse($over);
         }
 
+        /* 등록신청서는 그림으로만 받는다 (2026-09-21 지시).
+
+           공단에 내는 등록신청서는 병원이 요양기관 확인란을 적어 내준 종이다.
+           우리는 비어 있는 신청인란에 이름과 서명을 얹어 한 장을 완성하는데
+           (RegistrationOverlay), 이 서버에는 Imagick 도 Ghostscript 도 없어
+           **PDF 에는 얹지 못한다**. 그대로 받으면 서명이 빠진 장이 공단으로 간다.
+
+           받아 두고 나중에 막는 대신 올릴 때 돌려보낸다 — 담당자가 그 자리에서
+           다시 찍어 올릴 수 있고, 무엇이 잘못됐는지도 분명하다. */
+        foreach ($attachmentFiles as $a) {
+            if (($a['doc_type'] ?? '') !== 'registration_form') {
+                continue;
+            }
+
+            $ext = strtolower((string) $a['file']->getClientOriginalExtension());
+
+            if ($ext === 'pdf') {
+                return $refuse(
+                    '등록신청서는 이미지로 다시 올려주세요. '
+                    . 'PDF 로 올리면 신청인 이름과 서명을 얹을 수 없어 빈칸인 채로 공단에 나갑니다. '
+                    . '(JPG · PNG · HEIC)'
+                );
+            }
+        }
+
         $created         = [];
         $firstPrescription = null;
 
@@ -3268,14 +3293,26 @@ class PrescriptionController extends Controller
             ? (int) collect($items)->sum(fn ($i) => (float) ($i['patient_copay'] ?? 0))
             : $prescription->items->sum('patient_copay');
 
-        /* 저장하면 주문 관리에도 선다. 처방전 그림이 없어도, 제품을 아직 안 골랐어도
-           그렇다 — 주문 등록에서 저장한 건은 곧 하나의 거래이고, 그것을 보는 자리가
-           주문 관리다. 예전에는 「주문 생성 및 연계」를 눌러야만 줄이 생겨, 상담만
-           받아 적어 둔 건은 어느 목록에도 없이 떠 있었다.
+        /* 유형을 고른 건은 주문 관리에도 선다 (2026-09-22 확인요청 2ㆍ4쪽).
+
+           예전에는 「주문 생성 및 연계」를 눌러야만 줄이 생겨 손대던 건이 어느 목록에도
+           없이 떠 있었고, 그 뒤 한동안은 **저장만 하면** 섰다. 그러자 이번에는 검수도
+           안 끝난 건과 창고로 넘기지도 못한 건이 주문 관리에 줄로 남았다.
+
+           잣대는 유형이다 — 담당자가 「이 건을 주문으로 진행한다」고 밝힌 걸음이다.
+           그 판정은 OrderSync::seed 한 곳에 적어 두었다.
+
+           **줄이 이미 있으면 값을 맞춘다**(2026-09-22 무한 테스트에서 드러남).
+           seed 는 「없으면 세우기만」 하고 있는 줄은 건드리지 않는다. 그래서 세우는
+           잣대만 보고 seed 로 갈아 끼웠더니, 제품과 배송지를 적어 저장해도 주문 줄은
+           빈 채로 남았다 — 제품 「-」, 수량 1, 금액 0원. 값을 맞추는 일은 ensure 의
+           몫이므로 갈래를 나눠 부른다.
 
            여기서는 우리 쪽 주문만 만든다. 위드웍스로 보내는 것은 그 단추가 할 일이다 —
            저장할 때마다 창고로 주문이 날아가서는 안 된다. */
-        $order = $this->ensureOrder($prescription);
+        $order = $prescription->order()->exists()
+            ? \App\Support\OrderSync::ensure($prescription)
+            : \App\Support\OrderSync::seed($prescription->refresh());
 
         /* 「OCR 필드 수정」이라 적어 왔다. 이 칸들이 처음에 처방전 그림을 OCR 로 읽어
            채우던 자리라 그렇게 불렀는데, 지금은 담당자가 손으로 적는다 — 저장 이력에서
@@ -5474,9 +5511,133 @@ HTML;
         ]);
     }
 
+    /**
+     * 유형을 고르면 그 자리에서 주문 줄을 세운다 (2026-09-22 확인요청 2쪽).
+     *
+     * 「신규등록을 누르면 상세목록에 새 오더라인이 생성되어야 한다(예: 처방외 등)」는
+     * 요청이다. 여태 신규등록은 빈 초안만 만들고, 주문번호는 병원ㆍ처방을 적어
+     * 저장할 때에야 났다(OrderSync::seed). 그래서 신규등록을 누른 담당자는 상세목록에
+     * **아무 변화가 없는 화면**을 보고 무엇이 시작됐는지 알 수 없었다.
+     *
+     * 유형을 고르는 것이 「이 건은 처방전인가 처방외인가」를 정하는 걸음이라, 그때
+     * 줄을 세운다. 처방외는 병원도 처방전도 없이 사는 건이라 더 적을 것을 기다릴
+     * 까닭이 없다.
+     *
+     * **거래처가 붙은 뒤에만 세운다** (2026-09-20 지시를 지킨다). 주문번호는
+     * 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자라, 누구 것인지 모르는 채
+     * 먼저 태울 번호가 아니다. 이름이 아직이면 세우지 않고 그 까닭을 돌려준다 —
+     * 이름을 고르고 저장하면 그때 선다.
+     */
+    public function createOrderLine(Request $request, Prescription $prescription): JsonResponse
+    {
+        $request->validate([
+            'counsel_acc_add_type' => ['required', 'string', Rule::in(['10', '20', '30'])],
+        ]);
+
+        $prescription->forceFill([
+            'counsel_acc_add_type' => $request->input('counsel_acc_add_type'),
+            'updated_by'           => Auth::id(),
+        ])->save();
+
+        if (! $prescription->patient_id) {
+            return response()->json([
+                'success' => false,
+                'seeded'  => false,
+                'message' => '거래처를 먼저 선택하십시오 — 이름이 정해진 뒤에 주문번호가 발급됩니다.',
+            ]);
+        }
+
+        /* 유형을 적어 저장한 그 순간 OrderSync 가 이미 줄을 세웠을 수 있다
+           (Prescription::booted → seed · 2026-09-22 시험에서 드러남). 그때도 방금
+           세운 줄이므로 번호를 돌려준다 — 안 돌려주면 화면이 제 주문을 모른 채
+           남아, 뒤이어 부르는 자리들이 「주문이 없다」로 걸린다. */
+        if ($order = $prescription->order()->first()) {
+            return response()->json([
+                'success'      => true,
+                'seeded'       => false,
+                'order_id'     => $order->id,
+                'order_number' => $order->order_number,
+                'message'      => '',
+                'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
+            ]);
+        }
+
+        /* 빈 초안 표를 걷는다 — OrderSync 가 빈 초안에는 줄을 세우지 않는다.
+           유형을 골랐으면 더는 빈 초안이 아니다. */
+        if ($prescription->is_blank_draft) {
+            $prescription->forceFill(['is_blank_draft' => false])->save();
+        }
+
+        $order = \App\Support\OrderSync::ensure($prescription->refresh());
+
+        if (! $order) {
+            return response()->json([
+                'success' => false,
+                'seeded'  => false,
+                'message' => '주문 줄을 세우지 못했습니다.',
+            ]);
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($order)->log(
+            "유형을 골라 주문 줄을 세움: {$order->order_number} ({$prescription->rx_number})"
+        );
+
+        return response()->json([
+            'success'      => true,
+            'seeded'       => true,
+            'order_id'     => $order->id,
+            'order_number' => $order->order_number,
+            'message'      => "주문 {$order->order_number} 줄을 세웠습니다.",
+            'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
+        ]);
+    }
+
+    /**
+     * 그 사람의 새 건을 세운다 — 「신규로 진행」이 부른다.
+     *
+     * **기본은 빈 건이다** (2026-09-22 확인요청 2쪽).
+     *
+     * 여태는 지난 건을 통째로 베꼈다 — 병원ㆍ상병ㆍ제품ㆍ수량ㆍ유형은 물론 올려 둔
+     * 파일까지 이어 두었다. 같은 것을 다시 사는 일이 잦으니 옮겨 적는 수고를 덜자는
+     * 뜻이었는데, 그 바람에 **새 건이 지난 처방의 내용을 그대로 입고 열렸다.**
+     * 담당자는 탭마다 남의 값을 지우고 다시 적어야 했고, 지우다 만 값이 그대로
+     * 남으면 새 처방전과 다른 내용이 창고로 나간다.
+     *
+     * 신규는 신규다 — 그 사람만 이어 두고 나머지는 비운다. 환자 정보(전화ㆍ주소ㆍ
+     * 공단 등록일 따위)는 거래처 마스터에 있어 화면이 스스로 채운다. 유형도 비어
+     * 있으므로 「선택」으로 열린다(확인요청 2쪽).
+     *
+     * 지난 건을 베끼고 싶으면 copy=1 로 부른다 — 예전 동작 그대로다.
+     */
     public function duplicate(Request $request, Prescription $prescription): JsonResponse
     {
-        $request->validate(['patient_id' => 'nullable|integer|exists:patients,id']);
+        $request->validate([
+            'patient_id' => 'nullable|integer|exists:patients,id',
+            'copy'       => 'nullable|boolean',
+        ]);
+
+        $patientId = $request->input('patient_id') ?: $prescription->patient_id;
+
+        if (! $request->boolean('copy')) {
+            $새건 = Prescription::create([
+                'rx_number'     => Prescription::generateRxNumber(),
+                'status'        => 'pending',
+                'upload_source' => 'web',
+                'patient_id'    => $patientId,
+                'created_by'    => Auth::id(),
+                'updated_by'    => Auth::id(),
+            ]);
+
+            activity()->causedBy(Auth::user())->performedOn($새건)
+                ->log("{$새건->rx_number} — 새 건으로 세움 (환자만 이어 둠)");
+
+            return response()->json([
+                'success'   => true,
+                'message'   => "{$새건->rx_number} 로 새 건을 세웠습니다 — 처방 내용은 새로 입력합니다.",
+                'rx_number' => $새건->rx_number,
+                'url'       => route('prescriptions.show', $새건, absolute: false),
+            ]);
+        }
 
         /* 그 건에만 속한 자국 — 베끼면 안 되는 자리.
 

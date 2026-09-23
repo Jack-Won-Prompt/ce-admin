@@ -122,8 +122,14 @@ class FcmHelper
 
     private static function getAccessToken(): string
     {
-        // 액세스 토큰은 1시간 유효 — 58분 캐시
-        return Cache::remember('fcm_access_token', 3480, function () {
+        /* 액세스 토큰은 1시간 유효 — 58분 캐시.
+           자격을 갈아 끼우면 열쇠가 달라지므로, 옛 프로젝트의 토큰을 58분 동안
+           더 쓰는 일이 없도록 자격마다 다른 자리에 담는다. */
+        $자리 = 'fcm_access_token_' . substr(
+            hash('sha256', (string) (self::getServiceAccount()['client_email'] ?? '')), 0, 12
+        );
+
+        return Cache::remember($자리, 3480, function () {
             return self::generateAccessToken();
         });
     }
@@ -161,9 +167,20 @@ class FcmHelper
         return $token;
     }
 
+    /**
+     * 알림을 보낼 때 쓰는 Firebase 자격.
+     *
+     * 시험 동안에는 개발용 프로젝트로 보내고, 운영 전환 때 되돌린다(2026-09-22 지시).
+     * .env 의 FCM_SERVICE_ACCOUNT 한 줄로 갈아 끼운다 — 값은 storage/ 아래 상대 경로다.
+     * 앱은 판(운영·개발)마다 Firebase 프로젝트가 달라, 여기 자격과 짝이 맞지 않으면
+     * 보낸 알림이 조용히 버려진다. 사용자 한 사람이 기기 토큰을 하나만 들고 있어
+     * 나중에 로그인한 판이 그 자리를 가져간다.
+     */
     private static function getServiceAccount(): array
     {
-        $path = storage_path('app/firebase/service-account.json');
+        $path = storage_path(
+            (string) config('services.fcm.service_account', 'app/firebase/service-account.json')
+        );
         if (!file_exists($path)) {
             throw new \RuntimeException(
                 'Firebase 서비스 계정 파일 없음: ' . $path

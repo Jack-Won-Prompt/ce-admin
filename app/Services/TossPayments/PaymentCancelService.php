@@ -101,7 +101,7 @@ class PaymentCancelService extends TossClient
 
             return [
                 'ok'       => true,
-                'message'  => sprintf('%s원을 돌려주었습니다 (시험 환경 자동 결제라 토스를 부르지 않았습니다).',
+                'message'  => sprintf('%s원을 환불 처리했습니다 (시험 환경 자동 결제라 PG를 호출하지 않았습니다).',
                     number_format($무른금액)),
                 'status'   => 'CANCELED',
                 'canceled' => $무른금액,
@@ -158,7 +158,7 @@ class PaymentCancelService extends TossClient
 
         return [
             'ok'       => true,
-            'message'  => sprintf('%s원을 돌려주었습니다 (%s).',
+            'message'  => sprintf('%s원을 환불 처리했습니다 (%s).',
                 number_format($canceled),
                 self::STATUS_LABELS[$res['status'] ?? ''][0] ?? ($res['status'] ?? '')),
             'status'   => $res['status'] ?? null,

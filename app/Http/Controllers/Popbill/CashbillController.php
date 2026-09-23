@@ -256,6 +256,27 @@ class CashbillController extends Controller
             ->orderByDesc('cash_receipt_issued_at')
             ->get();
 
+        /* 우리 표에 이미 들어온 건은 여기서 세우지 않는다 (2026-09-22 확인요청 2쪽).
+
+           이 화면은 두 벌을 합쳐 그린다 — 팝빌에서 받아 둔 cashbill_records 와, 주문에
+           적힌 현금영수증이다. 발행하면 그 자리에서 우리 표로 들이므로(registIssue
+           뒤의 refreshOne) 같은 발행이 두 줄로 섰다.
+
+           그냥 두 줄이면 눈에 띄기라도 하는데, 정정한 건에서는 뜻이 뒤집힌다. 팝빌
+           쪽에는 「정정 전 발행 · 취소 · 정정 후 발행」 세 줄이 제대로 서 있고, 주문
+           쪽은 **마지막 상태 한 줄**만 세운다 — 그 한 줄이 셋 위에 겹쳐 서서, 담당자
+           눈에는 정정 전후가 뒤섞인 채 「초과 금액 1개 라인」으로 읽혔다.
+
+           오간 자취는 우리 표가 온전히 들고 있으므로 그쪽에 맡긴다. 아직 들어오지
+           않은 건(동기화가 실패했거나 옛 건)만 주문에서 세운다 — 그래야 낸 것이
+           화면에서 사라지지 않는다. */
+        $이미들어온것 = \App\Models\CashbillRecord::where('corp_num', $request->query('corp_num', config('popbill.test.corp_num')))
+            ->whereIn('order_number', $orders->pluck('order_number'))
+            ->pluck('order_number')
+            ->flip();
+
+        $orders = $orders->reject(fn (Order $o) => $이미들어온것->has($o->order_number))->values();
+
         // 팝빌 쪽 줄과 같은 칸을 세운다 — 한 표에 섞여 서므로 이름이 갈리면 안 된다
         $extras = OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
@@ -307,6 +328,7 @@ class CashbillController extends Controller
                섞여 있어 그 칸은 쓰지 않는다. */
             $amount = (int) round(((int) ($o->patient_copay ?? 0) + (int) ($o->nhis_amount ?? 0)) * $rate / 100);
             $at = $o->delivered_at ?? $o->created_at;
+            $구분 = $o->patient?->deduction === '지출증빙' ? 'business_expense' : 'income_deduction';
 
             return [
                 'source'           => 'order',
@@ -317,8 +339,11 @@ class CashbillController extends Controller
                 'rxNumber'         => $rx?->rx_number,
                 'patientName'      => $o->patient?->name ?? $rx?->patient_name_ocr ?? '—',
                 'receiptNo'        => null,
-                'receiptTypeKey'   => 'income_deduction',
-                'receiptTypeLabel' => Order::CASH_RECEIPT_TYPE_LABELS['income_deduction'] ?? '소득공제용',
+                /* 발행 구분은 거래처에 적어 둔 것을 따른다 (2026-09-22 확인요청 4쪽) —
+                   자동 발행(DepositAutoIssue::cashReceipt)이 보는 것과 같은 잣대다.
+                   여기만 소득공제로 박아 두면 대기 줄과 실제로 나가는 것이 어긋난다. */
+                'receiptTypeKey'   => $구분,
+                'receiptTypeLabel' => Order::CASH_RECEIPT_TYPE_LABELS[$구분] ?? '소득공제',
                 'identifier'       => $o->patient?->cash_receipt_no ?: $o->patient?->mobile,
                 'amount'           => $amount,
                 'status'           => 'pending',

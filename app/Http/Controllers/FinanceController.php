@@ -140,11 +140,28 @@ class FinanceController extends Controller
            동의는 사람에 붙어 줄마다 물으면 쉰 줄에 백을 묻는다. 한 번에 모아 둔다. */
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
 
-        $data = $rows->map(fn (Order $o) => ['kind' => '주문', 'reason' => '']
+        /* 정정 이력 — 고치기 전 줄과 그것을 무른 줄 (2026-09-22 확인요청 4쪽).
+
+           정정은 주문을 제자리에서 고쳐, 표에는 마지막 내용 한 줄만 섰다. 「원 주문
+           라인 / 취소 라인 / 정정 라인」 셋이 보여야 재무가 얼마가 오갔는지 셀 수
+           있다. 고치기 전 값은 order_amendments 에 남는다. */
+        $정정 = $this->amendRows($rows);
+
+        /* 정정 줄은 제 주문 바로 뒤에 세운다 — 표를 훑을 때 셋이 붙어 있어야 읽힌다.
+           차례는 「정정 후(지금) · 원 주문 · 취소」다. 목록이 최신 먼저라 지금 값이
+           맨 위에 서고, 그 아래로 물러난 것들이 따라온다. */
+        $data = $rows->flatMap(fn (Order $o) => array_merge(
+            [[
+                // 정정한 적이 있으면 이 줄이 「정정 후」다 — 무엇을 보고 있는지 밝힌다
+                'kind'   => isset($정정[$o->id]) ? '정정 후' : '주문',
+                'reason' => '',
+            ]
             + $this->orderRow($o)
             + $extras->rx($o->prescription, $o->patient)
             + $extras->ww($o, $o->prescription, $o->patient)
-            + $extras->of($o))->values();
+            + $extras->of($o)],
+            $정정[$o->id] ?? [],
+        ))->values();
 
         /* 통합주문내역은 갈래를 가리지 않고 모두 담는다 (2026-09-11 확인요청 8쪽).
            환자 결제ㆍ정산ㆍ미정산은 주문 줄에서 이미 보이는데 반품환불만 제 탭에
@@ -196,8 +213,20 @@ class FinanceController extends Controller
             // 고객ID — 재무가 같은 이름 두 사람을 가릴 때 쓴다
             'patient_id' => $o->patient_id,
             'patient'    => $o->patient?->name ?? '',
-            'code'       => $o->product_code ?? '',
-            'product'    => $o->product_name ?? '',
+            /* 제품을 아직 고르지 않은 줄 (2026-09-22 확인요청 1쪽).
+
+               「통합주문내역에 제품코드 추가」라는 요청이었는데, 칸은 진작 서 있었고
+               **값이 비어 있던 것**이었다 — 운영 주문 여든두 건 가운데 스무 건이
+               그랬다(2026-09-22 서버 확인). 그 스물은 모두 품목 줄이 아예 없는 건,
+               곧 담당자가 유형만 고르고 제품은 아직 안 고른 작성 중인 건이다.
+               채울 코드가 없다.
+
+               빈칸으로 두면 「값이 빠졌다」로 읽히고, 재무는 어디서 새어 나갔는지
+               찾는다. 없는 것이 아니라 **아직 고르지 않은 것**이라고 적는다.
+               제품명 자리에 들어 있는 「-」는 OrderSync 가 세워 둔 표시다. */
+            'code'       => ($o->product_code ?? '') !== '' ? $o->product_code : '미선택',
+            'product'    => in_array(trim((string) $o->product_name), ['', '-'], true)
+                                ? '미선택' : $o->product_name,
             'qty'        => (int) $o->quantity,
             'total'      => $total,
             // 환자에게 청구한 금액 — 입금과 맞춰 볼 때 쓴다
@@ -259,6 +288,11 @@ class FinanceController extends Controller
             'claimed'    => $nhis,
             'approved'   => $agencyPaid,
             'agency_at'  => $o->nhis_approved_at?->format('Y-m-d') ?? '',
+            /* 실제로 들어온 돈. 지금은 승인액과 같은 값이다 — 부분 지급을 따로 적어
+               두는 자리가 아직 없다(공단 청구 결과 등록이 승인액 하나만 받는다).
+               그래도 칸은 갈라 둔다. 같은 이름을 두 칸이 쓰면 표가 둘을 한 칸으로
+               본다(위 columnsFor 의 주석 참고). */
+            'agency_paid' => $agencyPaid,
             'claim_state' => $o->claimStatusLabel(),
             // 정산이 어디까지 갔는가(요청서 12쪽) — 마감 → 확정
             'settle'     => $o->settleStatusLabel(),
@@ -303,6 +337,99 @@ class FinanceController extends Controller
      * 결제ㆍ청구 칸은 비운다. 반품에는 그 값이 없고, 0 을 적으면 「받지 못했다」로
      * 읽힌다.
      */
+    /**
+     * 정정 줄 — 주문 하나마다 「원 주문」과 「취소」 두 줄 (2026-09-22 확인요청 4쪽).
+     *
+     * 정정은 주문을 제자리에서 고친다. 그래서 표에는 마지막 내용 한 줄만 섰고,
+     * 재무는 원래 얼마였는지, 얼마가 물러났는지를 볼 수 없었다.
+     *
+     *   원 주문   고치기 전 값 그대로 (+)
+     *   취소      같은 값을 음수로 (−) — 그만큼이 물러났다
+     *   정정 후   주문 자체 (fromOrders 가 세운다)
+     *
+     * 셋을 더하면 지금 금액이 남는다 — 표 아래 합계가 흐트러지지 않는다.
+     *
+     * 거듭 정정한 건은 차례마다 두 줄이 선다. 2차 정정의 「원 주문」은 1차 정정의
+     * 결과이므로, 그렇게 세워야 오간 것이 빠짐없이 남는다.
+     *
+     * 결제ㆍ청구 칸은 비운다. 물러난 줄에는 그 값이 없고, 0 을 적으면 「받지
+     * 못했다」로 읽힌다 — 반품 줄과 같은 규칙이다.
+     *
+     * @param  \Illuminate\Support\Collection<int, Order>  $orders
+     * @return array<int, array<int, array<string,mixed>>>  주문 id => 줄들
+     */
+    private function amendRows($orders): array
+    {
+        if ($orders->isEmpty() || ! \Illuminate\Support\Facades\Schema::hasTable('order_amendments')) {
+            return [];
+        }
+
+        $이력 = \App\Models\OrderAmendment::whereIn('order_id', $orders->pluck('id'))
+            ->orderByDesc('seq')
+            ->get();
+
+        if ($이력->isEmpty()) {
+            return [];
+        }
+
+        $주문 = $orders->keyBy('id');
+        $out  = [];
+
+        foreach ($이력 as $a) {
+            $o    = $주문->get($a->order_id);
+            $금액 = (int) $a->patient_copay + (int) $a->nhis_amount;
+            $날   = $a->amended_at?->format('Y-m-d') ?? '';
+
+            $바탕 = [
+                'reason'     => $a->reason ?? '',
+                'order_no'   => $o?->order_number ?? '',
+                'order_at'   => $o?->created_at?->format('Y-m-d') ?? '',
+                'patient_id' => $o?->patient_id,
+                'patient'    => $o?->patient?->name ?? '',
+                'code'       => $a->product_code ?? '',
+                'product'    => $a->product_name ?? '',
+                'shipped_at' => '',
+                'delivered'  => '',
+                'tracking'   => '',
+                // 어느 판매주문의 줄이었는가 — 창고 화면과 맞춰 보는 자리다
+                'ww_so_no'   => $a->withworks_so_no ?? '',
+            ];
+
+            // 아래에서 위로 쌓으므로 취소를 먼저 넣는다 — 화면에는 원 주문이 먼저 선다
+            $out[$a->order_id][] = $바탕 + [
+                'kind'       => "정정 {$a->seq}차 · 원 주문",
+                'qty'        => (int) $a->quantity,
+                'total'      => $금액,
+                'billed'     => (int) $a->total_amount,
+                'copay'      => (int) $a->patient_copay,
+                'nhis'       => (int) $a->nhis_amount,
+                'ship_state' => '',
+                'status'     => '정정 전',
+                'cancelled'  => '',
+                'cancel_at'  => '',
+                'paid_at'    => '',
+                'paid'       => 0,
+            ];
+
+            $out[$a->order_id][] = $바탕 + [
+                'kind'       => "정정 {$a->seq}차 · 취소",
+                'qty'        => -(int) $a->quantity,
+                'total'      => -$금액,
+                'billed'     => -(int) $a->total_amount,
+                'copay'      => -(int) $a->patient_copay,
+                'nhis'       => -(int) $a->nhis_amount,
+                'ship_state' => '',
+                'status'     => '정정 취소',
+                'cancelled'  => '취소',
+                'cancel_at'  => $날,
+                'paid_at'    => '',
+                'paid'       => 0,
+            ];
+        }
+
+        return $out;
+    }
+
     private function returnRowsForOrders(string $from, string $to, Request $request)
     {
         $질의 = OrderReturn::with(['order.patient', 'items'])
@@ -931,8 +1058,12 @@ class FinanceController extends Controller
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '주문수량',   'name' => 'qty',       'width' => 90] + $money,
                 ['header' => '주문금액',   'name' => 'total',     'width' => 110] + $money,
-                ['header' => '환자부담금(10%)', 'name' => 'copay', 'width' => 130] + $money,
-                ['header' => '공단/지자체 부담금(90%)', 'name' => 'nhis', 'width' => 170] + $money,
+                /* 비율을 이름에 박지 않는다 (2026-09-22 확인요청 1쪽 · 탭 이름과 같은 까닭).
+                   환자 결제 청구용이 아닌 건은 본인부담이 100% 인 경우가 있고, 지자체는
+                   90% 가 아니라 100% 로 들어오는 일이 있다 — 이름이 늘 맞지는 않는다.
+                   탭 이름(self::TABS)에서는 2026-09-11 에 이미 뗐는데 이 칸만 남아 있었다. */
+                ['header' => '환자부담금', 'name' => 'copay', 'width' => 130] + $money,
+                ['header' => '공단/지자체 부담금', 'name' => 'nhis', 'width' => 170] + $money,
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송일자',   'name' => 'delivered', 'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송상태',   'name' => 'ship_state','width' => 90,  'align' => 'center', 'sortable' => true],
@@ -960,6 +1091,10 @@ class FinanceController extends Controller
 
             // 15쪽 — 환자 본인부담금 입금 확인
             'patient' => [
+                /* 갈래 — 정정한 건은 한 주문에 세 줄이 선다 (2026-09-22 확인요청 4쪽).
+                   「정정 후 / 정정 n차 · 원 주문 / 정정 n차 · 취소」다. 이 칸이 없으면
+                   같은 주문번호가 여러 줄 서는 까닭을 화면에서 알 수 없다. */
+                ['header' => '구분',       'name' => 'kind',      'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
@@ -997,7 +1132,14 @@ class FinanceController extends Controller
                 ['header' => '청구금액',   'name' => 'claimed',   'width' => 110] + $money,
                 ['header' => '승인금액',   'name' => 'approved',  'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'agency_at', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '입금금액',   'name' => 'approved',  'width' => 110] + $money,
+                /* 「입금금액」은 제 이름을 갖는다 (2026-09-22 확인요청 1쪽).
+
+                   여태 승인금액과 **같은 name(approved)** 을 쓰고 있었다. 표는 칸을
+                   이름으로 가리므로(wwGrid 의 _colMap ㆍ저장해 둔 너비ㆍ자리 옮기기가
+                   모두 name 열쇠다), 둘이 한 칸으로 읽혔다 — 입금금액 머리를 끌면
+                   승인금액이 늘어나고, 옮겨 둔 자리와 너비도 서로 덮었다.
+                   확인요청 1쪽의 「입금금액 grid 조정 가능하게 필요」가 그것이다. */
+                ['header' => '입금금액',   'name' => 'agency_paid', 'width' => 110] + $money,
                 /* 통장에 찍히는 이름 (2026-09-11 엑셀). 공단은 「NB + 주민번호 앞 여섯
                    자리」로 넣고, 지자체는 정해진 것이 없어 기관마다 다르다. */
                 ['header' => '입금자명',   'name' => 'agency_payer', 'width' => 120],

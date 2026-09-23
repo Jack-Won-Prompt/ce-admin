@@ -306,8 +306,18 @@ class DepositAutoIssue
             return null;
         }
 
+        /* 발행 구분은 **거래처에 적어 둔 것**을 따른다 (2026-09-22 확인요청 4쪽).
+
+           여태 'income_deduction' 이 글자로 박혀 있어, 거래처를 「지출증빙」으로 적어
+           두어도 자동 발행은 늘 소득공제로 나갔다 — 사업자가 받아야 할 증빙이 개인
+           소득공제로 신고되고, 화면에도 지출증빙 정보가 서지 않았다.
+
+           「자진발급」은 번호를 못 받았다는 표시일 뿐 구분은 소득공제다(국세청이 정한
+           자리 010-000-1234 로 낸다). 적힌 것이 없으면 예전대로 소득공제다. */
+        $구분 = ($order->patient?->deduction === '지출증빙') ? 'business_expense' : 'income_deduction';
+
         $번호2 = $this->call($order, 'issueCashReceipt', [
-            'cash_receipt_type'       => 'income_deduction',
+            'cash_receipt_type'       => $구분,
             'cash_receipt_identifier' => $identifier,
             'cash_receipt_amount'     => $amount,
         ], '현금영수증', $out);

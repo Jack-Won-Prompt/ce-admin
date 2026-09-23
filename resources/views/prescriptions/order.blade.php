@@ -7195,13 +7195,19 @@ window.HELP_TOUR_STEPS = [
     window.ceOpenTab(row.url, '주문 - ' + (row.order_no || ''), 'file-edit-02');
   }
 
-  /* 새 건으로 간다.
-     그 사람이 지난번에 산 것과 같은 것을 다시 사는 일이 잦다. 그래서 마지막 건을 그대로
-     베껴 새 번호로 세우고, 날짜만 비운다 — 병원ㆍ상병ㆍ제품ㆍ수량을 다시 옮겨 적지
-     않아도 된다. 벤 건에는 이어 둔 주문이 없으므로 주문은 처음부터 다시 잇는다.
+  /* 새 건으로 간다 — **빈 건**이다 (2026-09-22 확인요청 2쪽).
 
-     지난 건이 하나도 없으면(처음 오는 사람) 베낄 것이 없다 — 그때는 예전처럼 이 빈 건에
-     그 사람을 이어 두고 환자 정보만 채운다. */
+     여태는 그 사람의 마지막 건을 통째로 베껴 새 번호로 세웠다. 같은 것을 다시 사는 일이
+     잦으니 옮겨 적는 수고를 덜자는 뜻이었는데, 그 바람에 새 건이 **지난 처방의 내용을
+     그대로 입고** 열렸다 — 병원ㆍ상병ㆍ유형ㆍ제품ㆍ수량이 모든 탭에 들어차 있었다.
+     담당자는 탭마다 남의 값을 지우고 다시 적어야 했고, 지우다 만 값은 새 처방전과
+     다른 내용으로 창고에 나간다.
+
+     신규는 신규다. 그 사람만 이어 두고 나머지는 비운다 — 환자 정보(전화ㆍ주소ㆍ공단
+     등록일)는 거래처 마스터에 있어 화면이 스스로 채우고, 유형은 「선택」으로 열린다.
+
+     지난 건이 하나도 없으면(처음 오는 사람) 새로 세울 것도 없다 — 그때는 예전처럼 이
+     빈 건에 그 사람을 이어 두고 환자 정보만 채운다. */
   window.ocNew = async function () {
     if (!_ocPerson) return;
 
@@ -7214,7 +7220,7 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/prescriptions/${last.rx_number}/duplicate`, 'POST',
                                    { patient_id: _ocPerson.id });
       if (!res.success) { showToast(res.message || '새 건을 만들지 못했습니다.', 'danger'); return; }
-      showToast(`${last.rx_number} 을 복사했습니다. 날짜와 주문은 새로 지정해 주십시오.`, 'success', 5000);
+      showToast(res.message, 'success', 5000);
       clearAllDirty();
       location.href = res.url;
     } catch (e) {
@@ -7415,7 +7421,13 @@ window.HELP_TOUR_STEPS = [
 
      소득공제 — 발행받는 사람의 전화번호로 낸다. 거래처 전화번호를 그 자리에서 채운다.
      자진발급 — 번호를 못 받았다는 표시로 국세청이 정한 자리(010-000-1234)를 쓴다.
-     지출증빙 — 사업자번호로 내므로 이 칸을 쓰지 않는다. 비운다.
+     지출증빙 — **사업자번호로 낸다.** 이 칸에 사업자번호를 적는다.
+
+     지출증빙은 한동안 이 칸을 비웠다 — 「사업자번호로 내므로 이 칸을 쓰지 않는다」고
+     보았기 때문이다. 그런데 그 사업자번호를 적을 자리가 화면 어디에도 없어, 지출증빙으로
+     고른 건은 **현금영수증 정보가 통째로 보이지 않았다**
+     (2026-09-22 확인요청 4쪽 「화면에 현금영수증 정보 안보임 예)지출증빙 103-23-23345」).
+     비우지 말고 받는다 — 적힌 값이 곧 발행에 쓰는 식별번호다.
 
      고를 때마다 다시 셈한다. 2026-09-09 에 자진발급 자동 채우기를 걷었던 것은
      그 번호가 소득공제로 되돌린 뒤에도 남아 엉뚱한 번호로 발행될 수 있어서였다 —
@@ -7426,6 +7438,16 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-deduction')?.addEventListener('change', function () {
     const no = document.getElementById('f-cash-receipt');
     if (!no) return;
+
+    /* 지출증빙은 담당자가 사업자번호를 적는 자리다 — 우리가 채우지도, 지우지도 않는다.
+       칸의 모양만 사업자번호에 맞춰 바꾼다(전화번호 하이픈이 붙으면 값이 망가진다). */
+    if (this.value === '지출증빙') {
+      cr번호모양(no, true);
+      no.focus();
+      return;
+    }
+
+    cr번호모양(no, false);
 
     let 번호 = '';
 
@@ -7439,6 +7461,29 @@ window.HELP_TOUR_STEPS = [
 
     no.value = 번호;
     markOcrDirty();
+  });
+
+  /* 현금영수증 번호 칸의 모양 — 사업자번호냐 전화번호냐.
+     data-phone 이 붙어 있으면 치는 대로 전화번호 하이픈이 붙어(전역 처리)
+     사업자번호 103-23-23345 가 010-3232-3345 꼴로 망가진다. */
+  function cr번호모양(el, 사업자) {
+    if (사업자) {
+      el.removeAttribute('data-phone');
+      el.placeholder = '000-00-00000 (사업자번호)';
+      el.title = '지출증빙용 — 사업자번호';
+    } else {
+      el.setAttribute('data-phone', '');
+      el.placeholder = '010-XXXX-XXXX';
+      el.title = '현금영수증 번호';
+    }
+  }
+
+  /* 화면을 열 때도 적힌 갈래에 맞춰 세운다 — 지출증빙으로 저장해 둔 건을 다시 열면
+     전화번호 칸으로 서서, 손대지 않아도 하이픈이 다시 붙었다. */
+  document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('f-deduction');
+    const no  = document.getElementById('f-cash-receipt');
+    if (sel && no) cr번호모양(no, sel.value === '지출증빙');
   });
 
   document.getElementById('f-nhis-reg-date')?.addEventListener('change', calcNhisRenewDue);
@@ -7913,6 +7958,61 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-acc-add-type')?.addEventListener('change', bsSyncFromSource);
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
   bsSyncFromSource();
+
+  /* ── 유형을 고르면 상세목록에 오더라인을 세운다 (2026-09-22 확인요청 2쪽) ──
+
+     「신규등록을 누르면 상세목록에서 새로 오더라인이 생성되어야 한다(예: 처방외 등)」는
+     요청이다. 여태 신규등록은 빈 초안만 만들고 주문번호는 병원ㆍ처방을 적어 저장할
+     때에야 났다 — 담당자는 신규등록을 누르고도 상세목록에 아무 변화가 없는 화면을
+     보았다.
+
+     유형을 고르는 것이 「이 건은 처방전인가 처방외인가」를 정하는 걸음이므로 그때
+     세운다. 이미 주문이 선 건은 다시 세우지 않는다 — 유형만 고쳐 둔다.
+
+     거래처가 아직이면 서버가 세우지 않고 그 까닭을 돌려준다(주문번호는 대외
+     식별자라 누구 것인지 모르는 채 태우지 않는다 · 2026-09-20 지시). */
+  let _olSeeding = false;
+
+  document.getElementById('f-acc-add-type')?.addEventListener('change', async (ev) => {
+    const 유형 = ev.target.value;
+    if (!유형 || _olSeeding || existingOrder?.order_number) return;
+
+    _olSeeding = true;
+    try {
+      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/order-line`, 'POST',
+                                   { counsel_acc_add_type: 유형 });
+
+      if (!res.success) {
+        if (res.message) showToast(res.message, 'warning', 6000);
+        return;
+      }
+
+      /* 화면이 제 주문을 알아야 한다 — 배송 정보 저장ㆍ정정ㆍ취소가 모두
+         existingOrder.id 로 주소를 만든다. 번호만 담으면 그 자리들이 깨진다. */
+      if (res.order_number) {
+        existingOrder = {
+          ...(existingOrder ?? {}),
+          id:           res.order_id ?? res.row?.id ?? existingOrder?.id ?? null,
+          order_number: res.order_number,
+        };
+      }
+
+      /* 세운 줄을 상세목록 맨 위에 얹는다. OL_ROWS 는 거르기가 딛는 바탕이라
+         함께 고친다 — 안 그러면 검색 한 번에 되돌아간다. */
+      if (res.row) {
+        const i = OL_ROWS.findIndex(r => r.order_no === res.row.order_no);
+        if (i >= 0) OL_ROWS.splice(i, 1);
+        OL_ROWS.unshift(res.row);
+        if (olGrid) olGrid.setData(OL_ROWS);
+      }
+
+      if (res.seeded && res.message) showToast(res.message, 'success', 5000);
+    } catch (e) {
+      console.error('[오더라인] 세우지 못했습니다', e);
+    } finally {
+      _olSeeding = false;
+    }
+  });
 
   /* ── 산재ㆍ자동차보험 재구매 건의 담당 의사명 ─────────────────────────
      (2026-09-14 확인요청 5쪽)
@@ -11152,19 +11252,51 @@ window.HELP_TOUR_STEPS = [
        opts.skipSave 로 부르는 자리(다른 흐름이 이어 부르는 길)는 묻지 않는다 —
        그 자리는 이미 제 확인을 받았다. */
     if (!opts.skipConfirm) {
+      /* 무슨 일이 벌어지는지 **먼저** 보여 준다 (2026-09-22 확인요청 3쪽).
+
+         여태 이 창에는 「이렇게 됩니다」를 일반론으로 적어 두었고, 실제로 무엇이
+         취소되고 얼마가 환불되는지는 **누른 뒤에야** 알았다. 그때는 이미 증빙이
+         취소되고 환불이 나가고 환자에게 문자가 간 뒤다.
+
+         서버가 아무것도 고치지 않고 미리 셈해 준다(OrderController::amendPreview).
+         실제로 하는 일과 같은 갈림을 같은 차례로 읽으므로, 여기 적힌 그대로 된다. */
+      const 미리 = await (async () => {
+        try {
+          const 줄 = items.filter(i => i.product_name);
+          return await apiRequest(`/orders/${existingOrder.id}/amend-preview`, 'POST', {
+            items:         줄,
+            patient_copay: 줄.reduce((s, i) => s + (i.patient_copay || 0), 0),
+            total_nhis:    줄.reduce((s, i) => s + (i.nhis_amount  || 0), 0),
+          });
+        } catch (e) {
+          return null;   // 못 받아도 정정 자체는 막지 않는다 — 아래 일반 안내로 간다
+        }
+      })();
+
+      /* 처방 총계를 넘으면 여기서 멈춘다 — 누르고 나서 422 로 막히면 무엇이
+         잘못인지 그때야 안다. */
+      if (미리 && 미리.blocked) {
+        ceAlert(미리.message + String.fromCharCode(10, 10)
+                + '수량을 줄이거나 처방 총계를 먼저 고쳐 주십시오.',
+                { title: '정정할 수 없습니다', tone: 'danger' });
+        return false;
+      }
+
       const 진행 = await 확인하고한번만({
         열쇠: 'update',
         제목: '주문 정정',
         이미: false,
         막을때: '',
-        물음: [
-          '창고의 원 판매주문을 취소하고 바뀐 내용으로 새로 등록합니다.',
-          '',
-          '금액이 바뀌면 결제도 함께 맞춥니다 — 미결제는 링크를 다시 보내고, '
-            + '결제된 건은 전액 취소 후 새 금액으로 다시 청구합니다.',
-          '',
-          '진행하시겠습니까?',
-        ].join(String.fromCharCode(10)),
+        물음: (미리 && 미리.preview
+                ? ['정정하면 다음과 같이 처리됩니다.', '', 미리.preview, '', '진행하시겠습니까?']
+                : [
+                    '창고의 원 판매주문을 취소하고 변경된 내용으로 새로 등록합니다.',
+                    '',
+                    '금액이 변경되면 결제도 함께 조정합니다 — 미결제는 결제 요청을 '
+                      + '재발송하고, 결제된 건은 전액 환불 후 변경된 금액으로 재청구합니다.',
+                    '',
+                    '진행하시겠습니까?',
+                  ]).join(String.fromCharCode(10)),
         확인글: '정정합니다',
       });
 
@@ -11229,7 +11361,7 @@ window.HELP_TOUR_STEPS = [
       unit_price: Math.round(i.insurance_price || i.product_price || 0),
     })).filter(i => i.item_code);
 
-    let wwSuccess = false, wwMessage = '';
+    let wwSuccess = false, wwMessage = '', ww새번호 = null;
     if (wwItems.length > 0) {
       const wwRes = await apiRequest(`/prescriptions/${RX_NUMBER}/withworks-order`, 'PUT', {
         order_number:     existingOrder.order_number,
@@ -11242,6 +11374,9 @@ window.HELP_TOUR_STEPS = [
       });
       wwSuccess = wwRes.success ?? false;
       wwMessage = wwRes.message ?? '';
+      /* 정정은 **새 판매주문을 세운다** — 서버가 그 번호를 돌려준다
+         (OrderAmendService::정정 → so_no). 2026-09-22 확인요청 2쪽. */
+      ww새번호 = wwRes.so_no ?? null;
     }
 
     BtnState.reset(btn);
@@ -11252,7 +11387,20 @@ window.HELP_TOUR_STEPS = [
     _ORDER_TOTAL   = localRes.total_amount ?? totalCopay ?? _ORDER_TOTAL;
     _PATIENT_COPAY = totalCopay ?? _PATIENT_COPAY;
 
-    // Col 3 판매번호 카드 업데이트 (수정해도 판매번호는 그대로, 유형만 갱신)
+    /* Col 3 판매번호 카드를 다시 적는다.
+
+       여태 여기는 **화면이 들고 있던 옛 번호**를 그대로 다시 그렸다 — 「수정해도
+       판매번호는 그대로」라고 적혀 있었는데, 정정이 so_update(제자리 수정)에서
+       so_cancel → so_store(새로 세우기)로 바뀐 뒤로는 맞지 않는 말이다
+       (2026-09-15 지시). 그래서 정정하고 나면 화면에는 이미 취소된 옛 번호가
+       서 있었고, 담당자가 새로고침을 눌러야 새 번호가 나타났다
+       (2026-09-22 확인요청 2쪽 「정정하면 위드웍스 판매번호 새로 고침 안 해도
+       자동으로 보여야 함」).
+
+       서버가 돌려준 번호가 있으면 그것이 지금 창고에 서 있는 판매주문이다.
+       못 받았으면(창고에 할 말이 없던 건ㆍ연계 실패) 들고 있던 것을 그대로 둔다. */
+    if (ww새번호) { existingOrder.withworks_so_no = ww새번호; }
+
     updateWwSoDisplay(existingOrder.order_number, existingOrder.withworks_so_no, currentSoType);
 
     _orderDirty = false;

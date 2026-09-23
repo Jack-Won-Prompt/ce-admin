@@ -363,14 +363,25 @@ class OrderController extends Controller
             $missing[] = \App\Support\DelegationGate::서명이름($prescription);
         }
 
-        /* 전자서명이 안 되는 환자는 종이로 받아 올린다 — 그것도 받은 것이다
-           (PrivacyConsent::stateFor 이 화면에 세우는 것과 같은 잣대다). */
-        $privacy = $prescription->patient_id
-            && (\DB::table('privacy_consents')
-                    ->where('patient_id', $prescription->patient_id)
-                    ->exists()
-                || \App\Models\PrivacyConsent::paperFor($prescription->patient_id) !== null);
-        if (! $privacy) {
+        /* 화면과 **같은 잣대**로 묻는다 (2026-09-23 무한 테스트에서 드러남).
+
+           여태 이 자리는 privacy_consents 를 **환자 번호로만** 찾았다. 그런데 그
+           동의서는 밖에서 환자가 직접 적는 폼이라 번호가 비어 있는 것이 대부분이다 —
+           받아 둔 동의가 번호로 이어지지 않으면 「아직」이 된다.
+
+           그래서 목록은 「완료」라 적는데(OrderGridExtras 가 PrivacyConsent::stateFor
+           와 같은 잣대를 쓴다) 주문 연계만 422 로 막혔다. 담당자는 이미 받은 동의를
+           다시 받으러 가고, 환자는 두 번 서명한다.
+
+           판정은 PrivacyConsent::stateFor 한 곳에 있다. 이름ㆍ연락처로도 잇고,
+           전자서명이 안 되는 환자의 종이 동의서(paperFor)도 함께 본다. */
+        $privacy = \App\Models\PrivacyConsent::stateFor(
+            $prescription->patient_id,
+            $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
+            $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
+        );
+
+        if (! ($privacy['agreed'] ?? false)) {
             $missing[] = '개인정보 수집·이용 동의';
         }
 
@@ -379,10 +390,10 @@ class OrderController extends Controller
         }
 
         $where = $needsDelegation
-            ? '화면 위쪽의 「개인정보동의」ㆍ「서명 동의」 버튼'
-            : '화면 위쪽의 「개인정보동의」 버튼';
+            ? '화면 위쪽의 「개인정보동의」ㆍ「서명 동의」'
+            : '화면 위쪽의 「개인정보동의」';
 
-        return implode(' · ', $missing) . " 이(가) 아직입니다. {$where}로 받은 뒤 진행해 주십시오.";
+        return implode(' · ', $missing) . "을(를) 아직 받지 못했습니다. {$where}에서 받은 뒤 진행해 주십시오.";
     }
 
     public function store(Request $request): \Illuminate\Http\JsonResponse
@@ -657,6 +668,69 @@ class OrderController extends Controller
         $totalAmount = $totalCopay;
         $productNames = $items->pluck('product_name')->implode(', ');
 
+        /* 처방 총계를 넘기는 정정은 막는다 (2026-09-22 확인요청 2쪽).
+
+           추가 주문에는 진작 이 관문이 있는데(createExtraOrder) 정정에는 없었다. 그래서
+           150개짜리 처방을 200개로 정정하면 그대로 저장되고, 바로 아래 금액맞추기가
+           **넘은 금액으로 결제 링크를 다시 만들어 환자에게 보냈다** — 확인요청 2쪽의
+           「금액 수량 등 초과인데 환자에게 초과 금액 메시지 잘못 전송」이 그것이다.
+
+           한 번 나간 문자는 거둘 수 없으므로 **돈을 건드리기 전에** 막는다. 넘은 만큼은
+           공단에 청구할 수 없고, 그 사실은 청구 단계에서야 드러난다.
+
+           총계를 아직 안 적은 건은 막지 않는다 — 적기 전에 막으면 적을 길이 없다.
+           같은 처방전의 다른 주문(추가 주문)이 가져간 몫도 함께 센다. */
+        $총계 = (int) ($order->prescription?->total_count ?? 0);
+
+        if ($총계 > 0 && $items->isNotEmpty()) {
+            $남들 = (int) \App\Models\OrderItem::whereIn(
+                    'order_id',
+                    $order->prescription->orders()->where('orders.id', '!=', $order->id)->pluck('orders.id')
+                )->sum('quantity');
+
+            if ($남들 + (int) $totalQty > $총계) {
+                return response()->json([
+                    'success' => false,
+                    'message' => sprintf(
+                        '처방 총계를 넘습니다 — 총계 %d개, 다른 주문 %d개, 이번 정정 %d개(합계 %d개). '
+                        . '수량을 줄이거나 처방 총계를 먼저 고쳐 주십시오.',
+                        $총계, $남들, (int) $totalQty, $남들 + (int) $totalQty
+                    ),
+                ], 422);
+            }
+        }
+
+        /* 고치기 전을 남긴다 (2026-09-22 확인요청 2ㆍ4쪽).
+
+           정정은 주문을 제자리에서 고쳐, 끝나고 나면 어느 화면에도 정정 전 값이
+           없다. 그래서 통합주문내역ㆍ정산내역ㆍ현금영수증 모두 마지막 한 줄만
+           서고, 재무는 「원래 얼마였고 얼마가 물러났나」를 볼 수 없었다.
+
+           **고치기 전에** 뜬다 — 뒤에 뜨면 새 값이 담긴다.
+
+           값이 그대로면 남기지 않는다. 배송지만 고치는 정정이 있고, 화면은 저장을
+           누를 때마다 이 자리로 오므로 그때마다 줄이 쌓이면 이력이 뜻을 잃는다. */
+        /* 무엇이 바뀌었는지도 **주문 행이 아니라 품목 줄**로 견준다. 주문 행의 돈은
+           첫 요청이 이미 새 값으로 맞춰 놓아, 그것과 견주면 자격이 바뀌어 금액만
+           달라지는 정정은 늘 「바뀐 것 없음」이 되어 한 줄도 남지 않는다.
+           뜨는 값과 견주는 값이 같아야 이력이 앞뒤가 맞는다. */
+        $이전 = \App\Models\OrderAmendment::이전값($order);
+
+        $바뀐것 = [];
+        foreach ([
+            '제품코드' => [(string) $이전['product_code'], (string) ($firstItem['product_code'] ?? $이전['product_code'])],
+            '수량'     => [$이전['quantity'],              (int) $totalQty],
+            '단가'     => [$이전['unit_price'],            (int) $unitPrice],
+            '본인부담' => [$이전['patient_copay'],         (int) $totalCopay],
+            '기관부담' => [$이전['nhis_amount'],           (int) $totalNhis],
+        ] as $칸 => [$전, $후]) {
+            if ($전 !== $후) { $바뀐것[] = $칸; }
+        }
+
+        if ($바뀐것) {
+            \App\Models\OrderAmendment::뜨기($order, implode('ㆍ', $바뀐것) . ' 정정');
+        }
+
         $order->update([
             'product_name'     => $firstItem['product_name'] ?? $order->product_name,
             'product_code'     => $firstItem['product_code'] ?? $order->product_code,
@@ -724,6 +798,117 @@ class OrderController extends Controller
             'total_amount' => $order->total_amount,
             // 화면이 그대로 알린다 — 링크를 해지했는지, 차액을 물렀는지
             'payment_note' => $돈말,
+        ]);
+    }
+
+    /**
+     * 정정하면 무슨 일이 벌어지는가 — 미리 보여 준다
+     * (2026-09-22 확인요청 3쪽).
+     *
+     * 아무것도 고치지 않는다. 화면이 ［주문 정정］을 누르기 **전에** 이 자리를 불러
+     * 담당자에게 보여 주고, 확인을 받은 뒤에 진짜 정정을 부른다.
+     *
+     * 셈은 OrderCancelService 가 한다 — 실제로 하는 일과 같은 갈림을 같은 차례로
+     * 읽어야 미리 본 것과 실제로 한 일이 어긋나지 않는다.
+     */
+    public function amendPreview(Request $request, Order $order): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'items'                   => 'nullable|array',
+            'items.*.quantity'        => 'nullable|integer|min:1',
+            'items.*.product_price'   => 'nullable|numeric|min:0',
+            'items.*.insurance_price' => 'nullable|numeric|min:0',
+            'items.*.nhis_status'     => 'nullable|string|max:20',
+            /* 금액도 받기는 한다 — 화면이 보내는 꼴을 막지 않으려는 것뿐이고,
+               셈에는 쓰지 않는다(아래 주석 참고). */
+            'items.*.nhis_amount'     => 'nullable|numeric|min:0',
+            'items.*.patient_copay'   => 'nullable|numeric|min:0',
+            'patient_copay'           => 'nullable|numeric|min:0',
+            'total_nhis'              => 'nullable|numeric|min:0',
+        ]);
+
+        /* **화면이 보낸 돈은 셈에 쓰지 않는다** — 미리 본 것과 실제로 한 일이
+           어긋나면 미리보기는 없느니만 못하다.
+
+           화면은 수량을 고칠 때 calcItem 이 items 배열에 금액을 되적으므로 보통은
+           맞는 값이 온다. 다만 그 값은 화면이 들고 있는 청구전략 비율로 셈한 것이라,
+           전략이 바뀐 뒤 화면을 다시 열지 않았거나 배열만 고쳐 보내는 자리가 있으면
+           옛 금액이 실려 온다. 그러면 미리보기는 「금액이 바뀌지 않았다」로 보아
+           증빙ㆍ결제ㆍ안내를 모두 「해당 없음」으로 적는데, 정작 정정하면 환불과
+           재발송이 일어난다.
+
+           저장이 셈하는 것과 **같은 법**으로 여기서도 셈한다 — 수량 × 단가에
+           청구전략(유형 × 자격)이 정한 기관 몫을 덜어 낸다
+           (PrescriptionController::updateOcr 의 품목 저장과 같다). */
+
+        $items = collect($data['items'] ?? []);
+        $rx    = $order->prescription;
+
+        $비율 = \App\Support\BillingStrategy::payerRate(
+                    $rx?->counsel_acc_add_type, $rx?->benefit_class);
+
+        $바뀔금액 = 0;
+        $바뀔기관 = 0;
+
+        foreach ($items as $줄) {
+            $단가 = (float) ($줄['insurance_price'] ?? $줄['product_price'] ?? 0);
+            $수량 = max(1, (int) ($줄['quantity'] ?? 1));
+
+            if ($단가 <= 0) {
+                continue;
+            }
+
+            /* 전략이 아직 없으면 품목에 적힌 급여 구분으로 셈한다 — 저장과 같은 차례다 */
+            $몫 = $비율 ?? match ($줄['nhis_status'] ?? 'eligible') {
+                'eligible' => ($order->patient?->nhis_coverage_rate ?? 90) / 100,
+                'partial'  => 0.50,
+                default    => 0.0,
+            };
+
+            $기관 = round($단가 * $몫 * $수량);
+            $바뀔기관 += (int) $기관;
+            $바뀔금액 += (int) round($단가 * $수량 - $기관);
+        }
+
+        /* 정정할 수 없는 건은 미리보기도 내지 않는다 — 보여 주면 누를 수 있는 줄 안다.
+           막는 잣대는 실제 정정과 같은 것을 쓴다(Order::정정가능한가). */
+        if (! $order->정정가능한가()) {
+            return response()->json([
+                'success' => false,
+                'message' => $order->창고단계() === 'shipped'
+                    ? '이미 출고된 주문입니다 — 교환/반품/취소 화면에서 처리해 주십시오.'
+                    : ($order->정정기다리는중인가()
+                        ? '이미 정정을 요청한 주문입니다 — 창고에서 취소하면 자동으로 진행됩니다.'
+                        : '정정할 수 있는 주문이 아닙니다.'),
+            ], 422);
+        }
+
+        /* 처방 총계를 넘는지도 미리 알린다 — 누르고 나서 422 로 막히면
+           무엇이 잘못인지 그때야 안다. */
+        $총계 = (int) ($order->prescription?->total_count ?? 0);
+        $넘침 = null;
+
+        if ($총계 > 0 && $items->isNotEmpty()) {
+            $남들 = (int) \App\Models\OrderItem::whereIn(
+                    'order_id',
+                    $order->prescription->orders()->where('orders.id', '!=', $order->id)->pluck('orders.id')
+                )->sum('quantity');
+            $이번 = (int) $items->sum('quantity');
+
+            if ($남들 + $이번 > $총계) {
+                $넘침 = sprintf(
+                    '처방 총계를 넘습니다 — 총계 %d개, 다른 주문 %d개, 이번 정정 %d개(합계 %d개).',
+                    $총계, $남들, $이번, $남들 + $이번
+                );
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'blocked' => $넘침 !== null,
+            'message' => $넘침,
+            'preview' => app(\App\Services\OrderCancelService::class)
+                            ->정정미리보기($order, $바뀔금액, $바뀔기관),
         ]);
     }
 
@@ -1174,6 +1359,18 @@ class OrderController extends Controller
                 'cash_receipt_status'       => 'cancelled',
                 'cash_receipt_cancelled_at' => now(),
             ]);
+
+            /* 취소한 줄도 우리 표에 들인다 (2026-09-22 확인요청 2쪽).
+
+               발행은 진작 refreshOne 으로 들이고 있었는데 취소만 빠져 있었다. 그래서
+               현금영수증 화면에는 **취소 줄이 서지 않았고**, 정정한 건은 「정정 전
+               발행 / 취소 / 정정 후 발행」 셋 가운데 취소가 빠진 채 보였다 —
+               담당자가 팝빌 동기화를 눌러야 그제야 나타났다. */
+            try {
+                app(\App\Services\Popbill\CashbillSyncService::class)->refreshOne($corpNum, $cancelMgtKey);
+            } catch (\Throwable $e) {
+                Log::warning('[CashReceipt] 취소 후 동기화 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
+            }
 
             // 나갔던 종이를 걷는다(세금계산서 취소와 같은 뜻이다)
             $this->dropIssuedDocs($order, 'cash_receipt', 'cash_receipts');

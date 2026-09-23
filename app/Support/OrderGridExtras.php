@@ -29,8 +29,27 @@ class OrderGridExtras
     /** 사람 id => 개인정보동의 있음 */
     private array $privacy = [];
 
+    /**
+     * 병원 표를 한 번에 읽어 둔 것 — ['code' => [번호 => [번호, 주소]], 'name' => [...]].
+     *
+     * 아직 안 읽었으면 null 이다. 병원이 적히지 않은 목록(샘플 따위)에서는
+     * 끝까지 읽지 않는다.
+     */
+    private ?array $hospitals = null;
+
     /** 사람 id => 위임동의 상태(agreed·pending·expired) */
     private array $consent = [];
+
+    /**
+     * 처방전 id => 그 **건에서** 받은 위임동의 상태 (2026-09-22 확인요청 2쪽).
+     *
+     * 동의는 처방전에 달린다. 사람 하나로만 보면 한 건에서 받은 동의가 그 사람의
+     * 모든 주문 줄에 「완료」로 찍혀, 줄마다 따로 받은 것처럼 읽힌다.
+     */
+    private array $consent건 = [];
+
+    /** 사람 id => 「완료」를 실제로 받은 처방번호 — 다른 줄에 어디서 받았는지 적는다 */
+    private array $consent받은건 = [];
 
     /**
      * 사람 id => 마케팅 활용 동의 (2026-09-14 지시).
@@ -82,24 +101,47 @@ class OrderGridExtras
             ->join('prescriptions', 'prescriptions.id', '=', 'prescription_consents.prescription_id')
             ->whereIn('prescriptions.patient_id', $ids)
             ->orderByDesc('prescription_consents.id')
-            ->get(['prescriptions.patient_id', 'prescription_consents.status',
-                   'prescription_consents.expires_at']);
+            ->get(['prescriptions.patient_id', 'prescriptions.id as rx_id',
+                   'prescriptions.rx_number',
+                   'prescription_consents.status', 'prescription_consents.expires_at']);
 
         foreach ($rows as $r) {
             $pid = (int) $r->patient_id;
-
-            // 이미 「동의 완료」를 찾았으면 그것이 이긴다 — 뒤에 보낸 것이 만료돼도 사실은 그대로다
-            if (($self->consent[$pid] ?? null) === 'agreed') {
-                continue;
-            }
+            $rid = (int) $r->rx_id;
 
             $status = $r->status;
             if ($status === 'pending' && $r->expires_at && $r->expires_at->isPast()) {
                 $status = 'expired';
             }
 
+            /* 어느 건에서 받았는가 (2026-09-22 확인요청 2쪽).
+
+               동의는 **처방전에 달린다.** 그런데 목록은 사람 하나로만 보아, 한 건에서
+               받은 동의가 그 사람의 **모든 주문 줄에 「완료」로** 찍혔다 — 담당자
+               눈에는 줄을 만들 때마다 동의를 새로 받은 것으로 보였다.
+               ((E)김말랑 님은 주문이 다섯인데 실제로 받은 동의는 RX-20260921-034
+               하나뿐이었다.)
+
+               건마다 따로 적어 둔다. 줄을 그릴 때 그 줄의 처방전 것을 먼저 보고,
+               없으면 사람 것을 보되 「어느 건에서 받았는지」를 밝힌다. */
+            if (($self->consent건[$rid] ?? null) !== 'agreed') {
+                if (! isset($self->consent건[$rid]) || $status === 'agreed') {
+                    $self->consent건[$rid] = $status;
+                }
+            }
+
+            // 이미 「동의 완료」를 찾았으면 그것이 이긴다 — 뒤에 보낸 것이 만료돼도 사실은 그대로다
+            if (($self->consent[$pid] ?? null) === 'agreed') {
+                continue;
+            }
+
             if (!isset($self->consent[$pid]) || $status === 'agreed') {
                 $self->consent[$pid] = $status;
+
+                // 그 사람이 「완료」를 받은 그 건 — 다른 줄에 어디서 받았는지 적을 때 쓴다
+                if ($status === 'agreed') {
+                    $self->consent받은건[$pid] = (string) $r->rx_number;
+                }
             }
         }
 
@@ -134,8 +176,11 @@ class OrderGridExtras
         $pid = $patientId ?? $o?->patient_id;
 
         return [
+            /* 개인정보동의는 **사람**에 붙는다 — 한 번 받으면 그 사람의 모든 건에 걸친다.
+               그래서 줄마다 「완료」가 서는 것이 맞다(PrivacyConsent 는 처방전을 모른다). */
             'privacy_consent' => $this->privacyLabel($pid),
-            'nhis_consent'    => $this->consentLabel($pid),
+            /* 위임동의는 **건**에 붙는다 (2026-09-22 확인요청 2쪽) — 아래 참고 */
+            'nhis_consent'    => $this->위임동의라벨($o, $pid),
             /* 마케팅 활용 동의 — 안내 문자를 보내도 되는 사람인지 목록에서 바로 읽는다
                (2026-09-14 지시) */
             'marketing_consent' => $this->marketingLabel($pid),
@@ -341,6 +386,60 @@ class OrderGridExtras
         }
     }
 
+    /**
+     * 병원 표에서 요양기관번호와 주소를 꺼낸다 — 한 번만 읽는다.
+     *
+     * 처방전에는 병원 이름과 요양기관번호만 적힌다. 주소는 병원 표에만 있어
+     * (주문 등록의 병원 조회ㆍ등록에서 채운다) 거기서 이어 붙인다.
+     *
+     * 번호로 먼저 찾는다 — 이름은 띄어쓰기만 달라도 어긋나지만 요양기관번호는
+     * 하나뿐이다. 번호가 아직 없는 처방전이 있어 이름으로도 한 번 더 찾는다.
+     *
+     * 표에 없거나 주소를 아직 안 적은 병원은 빈칸이다. 모르는 것을 빈칸으로 두는
+     * 편이 낫다 — 엉뚱한 주소가 서면 그것이 맞는 줄 알고 그리로 보낸다.
+     *
+     * @return array{0:string,1:string} [요양기관번호, 주소]
+     */
+    private function 병원(?Prescription $p): array
+    {
+        $code = trim((string) ($p?->hospital_code ?? ''));
+        $name = trim((string) ($p?->hospital_name ?? ''));
+
+        if ($code === '' && $name === '') {
+            return ['', ''];
+        }
+
+        if ($this->hospitals === null) {
+            $this->hospitals = ['code' => [], 'name' => []];
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('hospitals')) {
+                foreach (\App\Models\Hospital::query()->get(['name', 'code', 'address']) as $h) {
+                    $c = trim((string) $h->code);
+                    $n = trim((string) $h->name);
+                    $a = trim((string) $h->address);
+
+                    // 먼저 적힌 것을 남긴다 — 같은 이름이 둘이면 뒤엣것이 덮지 않게
+                    if ($c !== '' && ! isset($this->hospitals['code'][$c])) {
+                        $this->hospitals['code'][$c] = [$c, $a];
+                    }
+                    if ($n !== '' && ! isset($this->hospitals['name'][$n])) {
+                        $this->hospitals['name'][$n] = [$c, $a];
+                    }
+                }
+            }
+        }
+
+        $hit = ($code !== '' ? ($this->hospitals['code'][$code] ?? null) : null)
+            ?? ($name !== '' ? ($this->hospitals['name'][$name] ?? null) : null);
+
+        /* 번호는 처방전에 적힌 것이 먼저다 — 그 건에 실제로 쓰인 번호다.
+           처방전이 비어 있을 때만 병원 표의 것을 쓴다. */
+        return [
+            $code !== '' ? $code : (string) ($hit[0] ?? ''),
+            (string) ($hit[1] ?? ''),
+        ];
+    }
+
     public function ww(?Order $o, ?Prescription $p, ?Patient $pt, ?OrderReturn $rt = null): array
     {
         $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
@@ -354,6 +453,8 @@ class OrderGridExtras
            빈칸이 서지, 줄이 깨지지 않는다. */
         $meta = (array) ($o?->withworks_meta ?? []);
         $m    = fn (string $k) => (string) ($meta[$k] ?? '');
+
+        [$hospCode, $hospAddr] = $this->병원($p);
 
         return [
             /* 입고 상태 — 반품에만 있다. 창고가 실물을 받았다고 알려 오면(ro.rcpt_completed)
@@ -383,8 +484,13 @@ class OrderGridExtras
             'ww_po_code'    => $m('po_account_code'),
             'ww_po_name'    => $m('po_account_name'),
             'ww_so_name'    => $m('so_account_name'),
-            'ww_hosp_code'  => $m('hospital_code'),
-            'ww_hosp_addr'  => $m('hospital_address'),
+            /* 병원거래처 — **우리 처방전에 적힌 병원**이다 (2026-09-22 확인요청 1쪽).
+               여태는 저쪽 판매주문의 ho_account 를 그대로 적었는데, 그 자리에는
+               콜로플라스트 거래처 하나를 박아 보내고 있다(WithworksLink::창고내용의
+               ho_account_id). 그래서 어느 환자의 어느 병원이든 주소가 우리 사무실
+               (마포대로 86 창강빌딩)로 섰다 — 네 화면 모두에서. */
+            'ww_hosp_code'  => $hospCode,
+            'ww_hosp_addr'  => $hospAddr,
             'ww_conf_qty'   => $m('conf_qty'),
             'ww_unit_price' => $m('unit_price'),
             'ww_so_amt'     => $m('so_amount'),
@@ -620,14 +726,88 @@ class OrderGridExtras
         return $pid ? (string) ($this->marketing[$pid] ?? '') : '';
     }
 
-    private function consentLabel(?int $pid): string
+    /**
+     * 위임동의 — **이 건에서 받았는가** (2026-09-22 확인요청 2쪽).
+     *
+     * 동의는 처방전에 달린다. 여태 목록은 사람 하나로만 보아, 한 건에서 받은 동의가
+     * 그 사람의 모든 주문 줄에 「완료」로 찍혔다 — 담당자 눈에는 **줄을 만들 때마다
+     * 동의를 새로 받은 것**으로 보였다. 운영 자료에서 (E)김말랑 님은 주문이 다섯인데
+     * 실제로 받은 동의는 RX-20260921-034 하나뿐이었다(2026-09-22 서버 확인).
+     *
+     * 이 줄의 처방전에서 받은 것이 있으면 그것을 적는다. 없으면 그 사람이 **다른
+     * 건에서** 받은 것을 밝혀 적는다 — 빈칸으로 두면 「아직 안 받았다」로 읽혀
+     * 담당자가 같은 사람에게 동의를 또 보낸다.
+     *
+     * 줄에 처방전이 없으면(처방 없이 선 주문ㆍ샘플) 예전대로 사람 것을 본다.
+     */
+    private function 위임동의라벨(?Order $o, ?int $pid): string
     {
-        return match ($pid ? ($this->consent[$pid] ?? null) : null) {
+        $rid = $o?->prescription_id ? (int) $o->prescription_id : null;
+
+        /* 받을 것이 없는 건은 「해당 없음」이다 (2026-09-22 확인요청 4쪽).
+
+           처방외ㆍ산재ㆍ자동차보험은 환자가 제 돈으로 사고 직접 청구하므로 위임할
+           것이 없다 — 관문(DelegationGate::needed)도 진작 지나보내고 있다. 그런데
+           목록 칸만 빈칸이라 담당자에게는 **아직 안 받은 건**으로 보였고, 운영에서
+           처방외 마흔두 건 가운데 서른여섯이 그렇게 서 있었다(2026-09-22 서버 확인).
+
+           빈칸은 「아직」이고 「해당 없음」은 「할 일이 없다」다. 둘은 다른 말이다. */
+        if (($rx = $o?->prescription) && ! \App\Support\DelegationGate::needed($rx)) {
+            /* 그래도 받아 둔 서명이 있으면 그것이 사실이다 — 자격을 뒤늦게 고쳐
+               위임이 필요 없어진 건에도 서명은 남아 있다. */
+            return ($rid !== null && ($this->consent건[$rid] ?? null) === 'agreed') ? '완료' : '해당 없음';
+        }
+
+        // 이 건에서 받은 것이 있으면 그것이 답이다
+        if ($rid !== null && isset($this->consent건[$rid])) {
+            $이건것 = $this->라벨로($this->consent건[$rid]);
+
+            /* 같은 건에 줄이 둘 이상이면(추가 주문) 동의는 원 주문에서 한 번 받은
+               것이다 — 줄마다 「완료」가 서면 줄마다 따로 받은 것처럼 읽힌다. */
+            return ($이건것 === '완료' && $o?->isExtra()) ? '원 주문에서 받음' : $이건것;
+        }
+
+        $사람것 = $this->consentLabel($pid);
+
+        /* 이 건에 동의 줄이 아예 없다 — 이 건으로는 보낸 적도 받은 적도 없다.
+
+           그 사람이 **다른 건에서** 「완료」를 받아 두었으면 그것만 밝혀 적는다.
+           위임은 건마다 받지만, 받아 둔 것이 있다는 사실은 담당자가 알아야 한다 —
+           빈칸으로 두면 「아직 안 받았다」로 읽혀 같은 사람에게 또 보낸다.
+
+           「대기」ㆍ「만료」는 옮겨 적지 않는다 (2026-09-22 시험에서 드러남).
+           그것은 **다른 건에 보낸 링크**의 상태다. 이 건에 적으면 보낸 적 없는 건이
+           「보내 두고 기다리는 중」으로 서고, 담당자는 오지 않을 답을 기다린다.
+           이 건에는 아직 아무것도 없으므로 빈칸이 맞다. */
+        if ($rid !== null) {
+            if ($사람것 !== '완료') {
+                return '';
+            }
+
+            $어디 = $this->consent받은건[$pid] ?? '';
+
+            return $어디 === '' ? '다른 건에서 받음' : "{$어디} 에서 받음";
+        }
+
+        /* 처방전이 없는 줄(샘플ㆍ처방 없이 선 주문)은 건으로 가릴 것이 없다 —
+           예전대로 그 사람의 상태를 그대로 적는다. */
+        return $사람것;
+    }
+
+    /** 담긴 상태를 화면 말로 */
+    private function 라벨로(?string $status): string
+    {
+        return match ($status) {
             'agreed'  => '완료',
             'pending' => '대기',
             'expired' => '만료',
             default   => '',
         };
+    }
+
+    private function consentLabel(?int $pid): string
+    {
+        return $this->라벨로($pid ? ($this->consent[$pid] ?? null) : null);
     }
 
     /** 발행 여부 — 세금계산서ㆍ현금영수증이 같은 말을 쓴다 */

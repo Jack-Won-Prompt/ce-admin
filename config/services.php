@@ -136,4 +136,16 @@ return [
         'error_url'   => env('SW_ERROR_URL'),
         'error_token' => env('SW_ERROR_TOKEN'),
     ],
+
+    /*
+    |──────────────────────────────────────────────────────
+    | 앱 알림(FCM) 자격 — App\Helpers\FcmHelper
+    |──────────────────────────────────────────────────────
+    | storage/ 아래 상대 경로. 앱은 판마다 Firebase 프로젝트가 달라, 서버가 드는
+    | 자격이 그 판과 짝이 맞아야 알림이 닿는다. 시험 동안에는 개발용으로 두고
+    | 운영 전환 때 되돌린다 — .env 의 FCM_SERVICE_ACCOUNT 한 줄이다.
+    */
+    'fcm' => [
+        'service_account' => env('FCM_SERVICE_ACCOUNT', 'app/firebase/service-account.json'),
+    ],
 ];
