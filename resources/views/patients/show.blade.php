@@ -1084,7 +1084,7 @@
       note.textContent = _plRows.length === 0
         ? '아직 이력이 없습니다.'
         : (_plShown.length === _plRows.length
-            ? `변경 ${_plRows.length}건입니다. 줄을 누르면 무엇이 바뀌었는지 견줍니다.`
+            ? `변경 ${_plRows.length}건입니다. 행을 클릭하면 변경 내용을 비교할 수 있습니다.`
             : `변경 ${_plRows.length}건 가운데 ${_plShown.length}건입니다.`);
     }
 

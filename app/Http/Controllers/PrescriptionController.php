@@ -5574,12 +5574,12 @@ HTML;
             return response()->json([
                 'success' => false,
                 'seeded'  => false,
-                'message' => '주문 줄을 세우지 못했습니다.',
+                'message' => '주문을 생성하지 못했습니다.',
             ]);
         }
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(
-            "유형을 골라 주문 줄을 세움: {$order->order_number} ({$prescription->rx_number})"
+            "처방유형 선택으로 주문 생성: {$order->order_number} ({$prescription->rx_number})"
         );
 
         return response()->json([
@@ -5587,7 +5587,7 @@ HTML;
             'seeded'       => true,
             'order_id'     => $order->id,
             'order_number' => $order->order_number,
-            'message'      => "주문 {$order->order_number} 줄을 세웠습니다.",
+            'message'      => "주문 {$order->order_number} 을(를) 생성했습니다.",
             'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
         ]);
     }
@@ -5629,11 +5629,11 @@ HTML;
             ]);
 
             activity()->causedBy(Auth::user())->performedOn($새건)
-                ->log("{$새건->rx_number} — 새 건으로 세움 (환자만 이어 둠)");
+                ->log("{$새건->rx_number} — 신규 등록 (거래처 정보만 승계)");
 
             return response()->json([
                 'success'   => true,
-                'message'   => "{$새건->rx_number} 로 새 건을 세웠습니다 — 처방 내용은 새로 입력합니다.",
+                'message'   => "{$새건->rx_number} (으)로 신규 등록했습니다 — 처방 내용은 새로 입력하십시오.",
                 'rx_number' => $새건->rx_number,
                 'url'       => route('prescriptions.show', $새건, absolute: false),
             ]);

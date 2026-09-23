@@ -220,7 +220,7 @@
       { header: '장비코드', name: 'device_code',  width: 130, editable: false },
       { header: '제품명',   name: 'product_name', width: 240, editable: false },
       { header: '주문수량', name: 'ordered_quantity', width: 90, align: 'right', editor: 'number', editable: false },
-      { header: '되돌릴 수량', name: 'quantity', width: 110, align: 'right', editor: 'number' },
+      { header: '반품 수량', name: 'quantity', width: 110, align: 'right', editor: 'number' },
       /* 돈은 자릿점을 찍어 보여 준다 — 12000 과 120000 을 눈으로 가리기 어렵다.
          다른 목록 화면과 같은 방식이다(editor: 'number' → ko-KR 자릿점). */
       { header: '단가',     name: 'unit_price',   width: 110, align: 'right', editor: 'number',
@@ -372,7 +372,7 @@
     /* 처음에는 다 되돌리는 것으로 앉힌다 — 대개 그렇고, 부분이면 수량만 줄이면 된다. */
     itemGrid.setData((r.items ?? []).map(i => ({ ...i, ordered_quantity: i.quantity })));
     $('rtoItemNote').textContent = (r.items?.length ?? 0)
-      + '개 품목 · ' + r.order_no + ' — 일부만 되돌리려면 「되돌릴 수량」을 줄이십시오';
+      + '개 품목 · ' + r.order_no + ' — 일부만 되돌리려면 「반품 수량」을 줄이십시오';
     syncPartialNote();
   }
 

@@ -98,7 +98,7 @@
             @php
               /* 앞에 세울 칸 — 나머지는 그 뒤에 이름 차례로 선다 */
               $앞 = ['ww_id' => '위드웍스 번호', 'add_no' => '부가번호', 'reg_date' => '등록일',
-                     'type' => '갈래', 'status' => '상태', 'descr' => '내용'];
+                     'type' => '구분', 'status' => '상태', 'descr' => '내용'];
               $뺄것 = ['id', 'imported_at'];
               $모든칸 = array_keys((array) $줄->first());
               $뒤 = array_values(array_diff($모든칸, array_keys($앞), $뺄것));

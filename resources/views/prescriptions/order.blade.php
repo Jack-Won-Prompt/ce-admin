@@ -4301,7 +4301,7 @@ $calcDeposit  = $calcCopay;
                      resetToSaved() 는 남겨 둔다 — 다른 자리에서 부른다. --}}
                 <button type="button" class="rx-acc-btn" onclick="addItem()"><i class="fa-solid fa-plus"></i> 제품 추가</button>
                 {{-- 줄마다 있던 휴지통 대신 체크해서 지운다 — 여러 줄을 한 번에 지울 수 있다 --}}
-                <button type="button" class="rx-acc-btn" onclick="removeCheckedItems()" title="체크한 줄을 지웁니다"><i class="fa-solid fa-trash"></i> 선택 삭제</button>
+                <button type="button" class="rx-acc-btn" onclick="removeCheckedItems()" title="선택한 항목을 삭제합니다"><i class="fa-solid fa-trash"></i> 선택 삭제</button>
                 {{-- 여기 있던 「저장」은 걷었다 (2026-09-10 확인요청 7쪽).
 
                      한 판에 저장이 둘이었다. 이것은 검수 내용만 담고(saveOCR), 판 아래의
@@ -6519,7 +6519,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(1)',
     title: '주문 목록 탭',
-    body: '아직 확정되지 않은 주문이 표시됩니다. 줄을 더블클릭하면 그 건의 상세 목록으로 가고, 아직 맡은 사람이 없으면 연 사람이 담당자가 됩니다.'
+    body: '아직 확정되지 않은 주문이 표시됩니다. 행을 더블클릭하면 해당 건의 상세 목록으로 이동하며, 담당자가 지정되지 않은 건은 연 사용자가 담당자로 지정됩니다.'
   },
   {
     selector: '.tab-btn:nth-child(2)',
@@ -7904,7 +7904,7 @@ window.HELP_TOUR_STEPS = [
         ceAlert([
           '거래처를 먼저 선택해 주십시오.',
           '',
-          '상담ㆍ환자 정보 탭의 이름 칸에서 「조회」로 거래처를 고르거나, '
+          '상담ㆍ환자 정보 탭의 이름 항목에서 「조회」로 거래처를 선택하거나, '
             + '새 거래처이면 「신규 등록」으로 등록하십시오.',
         ].join(String.fromCharCode(10)),
                 { title: '거래처를 선택해 주십시오', tone: 'warning' });
@@ -8008,7 +8008,7 @@ window.HELP_TOUR_STEPS = [
 
       if (res.seeded && res.message) showToast(res.message, 'success', 5000);
     } catch (e) {
-      console.error('[오더라인] 세우지 못했습니다', e);
+      console.error('[오더라인] 생성 실패', e);
     } finally {
       _olSeeding = false;
     }
@@ -10182,7 +10182,7 @@ window.HELP_TOUR_STEPS = [
        markOcrDirty() 를 부르지 않는다(부르면 화면을 떠날 때마다 붙잡는다). */
     /* 남이 다른 화면에서 고쳐 온 것만 알린다. 이 화면의 창에서 고친 것은 부른 쪽이
        한 번 알리므로, 여기서 또 알리면 같은 일로 알림이 겹친다. */
-    if (opts.announce) showToast(`거래처에서 수정한 내용을 가져왔습니다 (${n}칸).`, 'info');
+    if (opts.announce) showToast(`거래처에서 수정한 내용을 반영했습니다 (${n}개 항목).`, 'info');
   }
 
   try {
@@ -10560,7 +10560,7 @@ window.HELP_TOUR_STEPS = [
 
     /* 셈을 늘어놓지 않는다 (2026-09-14 지시). 표의 「박스」 칸이 3.2 BOX 처럼
        소수로 서므로 어느 줄이 얼마나 어긋났는지는 그 자리에서 읽힌다. */
-    ceAlert('박스 단위의 수량이 아닙니다. 「박스」 칸을 보고 수량을 고쳐 주십시오.',
+    ceAlert('박스 단위의 수량이 아닙니다. 「박스」 항목을 확인하고 수량을 수정해 주십시오.',
             { title: '박스 수량이 맞지 않습니다' });
     return false;
   }
@@ -10710,7 +10710,7 @@ window.HELP_TOUR_STEPS = [
       막을때: 줄이음([
         `이미 창고로 보낸 주문입니다 (위드웍스 판매번호 ${existingOrder?.withworks_so_no || ''}).`,
         '',
-        '내용을 고치려면 「주문 정정」을, 물리려면 「주문 취소」를 눌러 주십시오.',
+        '내용을 수정하려면 「주문 정정」을, 취소하려면 「주문 취소」를 눌러 주십시오.',
       ]),
       물음: 줄이음([
         '주문을 저장하고 위드웍스로 보냅니다.',
@@ -11277,7 +11277,7 @@ window.HELP_TOUR_STEPS = [
          잘못인지 그때야 안다. */
       if (미리 && 미리.blocked) {
         ceAlert(미리.message + String.fromCharCode(10, 10)
-                + '수량을 줄이거나 처방 총계를 먼저 고쳐 주십시오.',
+                + '수량을 줄이거나 처방 총계를 먼저 수정해 주십시오.',
                 { title: '정정할 수 없습니다', tone: 'danger' });
         return false;
       }
@@ -11425,7 +11425,7 @@ window.HELP_TOUR_STEPS = [
       if (!wwSuccess) {
         ceAlert(
           (wwMessage || '위드웍스에 연계하지 못했습니다.')
-          + '\n\n결제와 증빙은 새 금액으로 정정되었으나, 창고의 판매주문은 옛 내용 그대로입니다.'
+          + '\n\n결제와 증빙은 변경된 금액으로 정정되었으나, 창고의 판매주문은 종전 내용 그대로입니다.'
           + ' 「주문 정정」을 다시 실행해 주십시오.',
           { title: '위드웍스 연계 실패', tone: 'danger' }
         );
@@ -11793,7 +11793,7 @@ window.HELP_TOUR_STEPS = [
       boFindPick(rows[0].id, rows[0], true);
     } catch (e) {
       /* 못 찾아도 하던 일은 그대로 간다 — 「찾기」로 손수 고르면 된다 */
-      console.warn('[관할 청구처] 자동으로 세우지 못했다', e);
+      console.warn('[관할 청구처] 자동 설정 실패', e);
     }
   }
 
@@ -12176,7 +12176,7 @@ window.HELP_TOUR_STEPS = [
     markOcrDirty();
     boFindClose();
     showToast(자동
-      ? '자격에 맞는 관할 청구처를 세웠습니다 — 다르면 「찾기」에서 고치십시오.'
+      ? '자격에 맞는 관할 청구처를 설정했습니다 — 다를 경우 「찾기」에서 수정하십시오.'
       : '관할 청구처를 골랐습니다. 저장하면 이 건에 남습니다.', 'success');
   }
 
@@ -12285,7 +12285,7 @@ window.HELP_TOUR_STEPS = [
     if ((document.getElementById('f-patient-id')?.value ?? '').trim() !== '') return true;
 
     showToast(무엇 + ' 거래처를 먼저 선택해 주십시오. '
-            + '상담ㆍ환자 정보 탭의 이름 칸에서 「조회」로 고르거나 「신규 등록」으로 등록하십시오.',
+            + '상담ㆍ환자 정보 탭의 이름 항목에서 「조회」로 선택하거나 「신규 등록」으로 등록하십시오.',
               'warning', 6000);
 
     const 이름칸 = document.getElementById('f-name');

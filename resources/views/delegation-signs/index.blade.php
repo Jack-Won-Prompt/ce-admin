@@ -804,7 +804,7 @@
     띠.style.cssText = 'position:fixed;inset:0;background:rgba(17,24,39,.35);z-index:10050;'
                      + 'display:flex;align-items:center;justify-content:center;';
     띠.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px 26px;font-size:13px;font-weight:700;">'
-                 + '<i class="fa-solid fa-spinner fa-spin"></i> 명단을 올리는 중입니다 — 삼천 줄이 넘으면 한참 걸립니다</div>';
+                 + '<i class="fa-solid fa-spinner fa-spin"></i> 명단을 업로드하는 중입니다 — 3,000행이 넘으면 시간이 걸립니다</div>';
     document.body.appendChild(띠);
 
     try {

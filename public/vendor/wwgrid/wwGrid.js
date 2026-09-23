@@ -1047,7 +1047,7 @@ class wwGrid {
         '<span class="cg-toolbar-sep"></span>' +
         /* 「칸 설정」 — 무엇을 볼지 고른다 (2026-09-22 확인요청 1쪽).
            머리줄을 끌면 너비ㆍ차례가 바뀌고, 이 창에서는 본다ㆍ안 본다를 고른다. */
-        '<button class="cg-btn" data-action="colset" title="이 표에서 볼 칸을 고릅니다">칸 설정</button>' +
+        '<button class="cg-btn" data-action="colset" title="표에 표시할 항목을 선택합니다">항목 설정</button>' +
         '<button class="cg-btn cg-btn-excel" data-action="excel">&#9660; 엑셀 다운</button>';
       this.el.appendChild(this._toolbarEl);
     }
@@ -1408,12 +1408,12 @@ class wwGrid {
     }).join('');
 
     box.innerHTML =
-        '<div class="cg-colset-head">칸 설정'
+        '<div class="cg-colset-head">항목 설정'
       + '<button type="button" class="cg-colset-x" data-colset="close">&times;</button></div>'
       + '<div class="cg-colset-body">' + 줄 + '</div>'
       + '<div class="cg-colset-foot">'
-      + '<button type="button" class="cg-btn" data-colset="all">모두 보기</button>'
-      + '<button type="button" class="cg-btn" data-colset="reset">처음 자리로</button>'
+      + '<button type="button" class="cg-btn" data-colset="all">전체 표시</button>'
+      + '<button type="button" class="cg-btn" data-colset="reset">기본값 복원</button>'
       + '</div>';
 
     document.body.appendChild(box);

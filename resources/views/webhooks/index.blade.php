@@ -406,7 +406,7 @@
 </script>
 <script>
 window.HELP_TOUR_STEPS = [
-  { selector: '#whGrid', title: '웹훅 목록', body: '밖과 주고받는 알림을 한 화면에서 봅니다. 줄을 <b>더블클릭</b>하면 고칠 수 있습니다.' },
+  { selector: '#whGrid', title: '웹훅 목록', body: '외부와 주고받는 알림을 한 화면에서 확인합니다. 행을 <b>더블클릭</b>하면 수정할 수 있습니다.' },
   { selector: '.pnl-tabs', title: '웹훅 등록', body: '구분(토스ㆍ팝빌ㆍNICEㆍ위드웍스…)과 방향, 주소, 파라미터를 적어 둡니다.' },
   { selector: '#whTabLogs', title: '전송·수신 로그', body: '실제로 무엇이 오갔는지, 성공했는지, 언제였는지를 <b>같은 화면 옆 탭</b>에서 봅니다.' },
 ];

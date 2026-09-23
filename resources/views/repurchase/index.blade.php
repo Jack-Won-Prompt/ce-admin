@@ -226,7 +226,7 @@
 <script>
 window.HELP_TOUR_STEPS = [
   { selector: '#ymTrigger', title: '월 선택', body: '조회할 연월을 선택합니다. 클릭하면 년/월 선택 팝업이 열립니다.' },
-  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜 칸에 재구매 가능 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 오른쪽에 펼쳐집니다.' },
+  { selector: '#calGrid', title: '재구매 캘린더', body: '각 날짜에 재구매 가능 환자 수가 표시됩니다. 숫자가 있는 날짜를 클릭하면 해당일 대상자 목록이 캘린더 오른쪽에 펼쳐집니다.' },
   { selector: '.cal-cell:not(.cal-empty)', title: '날짜 셀 클릭', body: '숫자가 표시된 날짜를 클릭하면 재구매 대상 환자 목록이 나타납니다. 목록에서 카카오 알림톡 또는 SMS를 바로 발송할 수 있습니다.' },
 ];
 </script>
