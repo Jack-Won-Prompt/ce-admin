@@ -47,7 +47,7 @@ class PrescriptionController extends Controller
     {
         /* 올린 파일이 몇 장인지 목록에서 바로 보인다 (2026-09-10 지시).
            줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
-        $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order'])
+        $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order', 'attachments:id,prescription_id,doc_type'])
             ->withCount('attachments')
             /* 아직 안 닫힌 다시 올리기 요청이 몇 건인가 (2026-09-12 지시).
                줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
@@ -150,6 +150,19 @@ class PrescriptionController extends Controller
                 'order_no'   => $order?->order_number ?? '',
                 'so_no'      => $order?->withworks_so_no ?? '',
                 'assignee'   => $rx->assignedUser?->name ?? '미지정',
+
+                /* 서류별로 무엇이 올라왔는가 (2026-09-23 지시).
+
+                   여태 「업로드 파일 5장」처럼 장수만 적어, 처방전은 왔는데 등록신청서가
+                   아직인지를 알려면 검수 창을 열어 보아야 했다. 서류가 나뉘어 오는 일이
+                   잦은데(픽업 업체가 오늘 결과지를, 내일 처방전을) 그 사이에 무엇이
+                   비었는지가 목록에서 보이지 않았다.
+
+                   세 가지만 적는다 — 처방전ㆍ등록신청서ㆍ결과지. 나머지(신분증ㆍ동의서)는
+                   검수의 잣대가 아니다. */
+                'doc_rx'    => $rx->attachments->contains('doc_type', 'prescription')      ? 'O' : '—',
+                'doc_reg'   => $rx->attachments->contains('doc_type', 'registration_form') ? 'O' : '—',
+                'doc_test'  => $rx->attachments->contains('doc_type', 'test_result')       ? 'O' : '—',
 
                 /* 결제 네 항목 — 다른 목록과 같은 칸을 여기에도 세운다 (2026-09-20 지시).
 

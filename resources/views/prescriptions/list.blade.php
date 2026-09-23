@@ -346,6 +346,15 @@ window.HELP_TOUR_STEPS = [
     return s;
   };
 
+  /* 서류가 왔으면 초록 O, 아니면 흐린 줄표 — 훑을 때 빈 자리가 먼저 눈에 든다 */
+  const 서류칸 = (v) => {
+    const s = document.createElement('span');
+    s.textContent = v || '—';
+    s.style.fontWeight = '700';
+    s.style.color = v === 'O' ? 'var(--success, #2E7D32)' : 'var(--gray-300)';
+    return s;
+  };
+
   /* 「주문등록 이동」 단추 — 이미 마친 건은 눌러도 다시 보내지 않는다 (2026-09-23 지시).
 
      이 단추가 하는 일은 서류를 확인하고 **그 건을 주문등록으로 넘기는 것**이다.
@@ -396,6 +405,11 @@ window.HELP_TOUR_STEPS = [
          상태 바로 옆에 둔다 — 「무엇이 올라왔나」와 「검수했나」는 잇대어 읽는 값이다. */
       { header: '업로드 파일',   name: 'files',      width: 100, align: 'center', sortable: true,
         renderer: 파일수칸 },
+      /* 서류별로 무엇이 왔는가 (2026-09-23 지시) — 「업로드 파일」 바로 옆에 둔다.
+         장수만으로는 무엇이 비었는지 알 수 없어 검수 창을 열어 보아야 했다. */
+      { header: '처방전',     name: 'doc_rx',   width: 76, align: 'center', renderer: 서류칸 },
+      { header: '등록신청서', name: 'doc_reg',  width: 92, align: 'center', renderer: 서류칸 },
+      { header: '결과지',     name: 'doc_test', width: 76, align: 'center', renderer: 서류칸 },
       { header: '주문등록 이동',  name: 'review',     width: 120, align: 'center',
         exportable: false, renderer: 검수칸 },
       /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
