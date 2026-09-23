@@ -323,7 +323,9 @@
   </div>
   <div class="ds-grid-section">
     <div class="ds-grid-card">
-      <div id="msTplGrid" style="min-height:420px;"></div>
+      {{-- 높이는 wwGrid 가 뷰포트에 맞춰 잡는다. 여기서 min-height 를 박으면
+           창이 낮을 때 그 값이 이겨 화면이 다시 구른다. --}}
+      <div id="msTplGrid"></div>
     </div>
   </div>
 </div>
@@ -619,7 +621,11 @@
       msTplGrid = new wwGrid({
         el: document.getElementById('msTplGrid'),
         data: 줄,
-        height: 'auto',
+        /* 굴림은 표 안에서만 (2026-09-23 지시).
+           'auto' 는 줄 수만큼 늘어나 삼백 줄이면 화면이 통째로 굴렀다. 'fit' 은
+           뷰포트 아래까지 채우고 넘치는 줄은 표 안에서 굴린다 — 이 화면의 다른
+           두 표(보낼 거래처ㆍ발송 이력)와 같은 방식이다. */
+        height: 'fit',
         rowNumber: true,
         toolbar: true,
         columns: [
