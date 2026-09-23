@@ -35,8 +35,12 @@ class ClaimReadiness
             return [
                 'ready'      => false,
                 /* 청구처 이름만 적으면 「지자체(시군구청)가 빠졌다」로 읽힌다.
-                   빠진 항목이 아니라 **공단 건이 아니라는 뜻**임을 문구로 밝힌다. */
-                'missing'    => [(ClaimAgency::LABELS[$agency] ?? $agency) . ' 청구 건 — 공단 청구 대상 아님'],
+                   빠진 항목이 아니라 **공단 건이 아니라는 뜻**임을 문구로 밝힌다.
+                   청구처가 아예 없는 건(산재ㆍ자동차보험ㆍ처방외)은 전액 본인부담이라
+                   「해당 없음 청구 건」이라 적으면 말이 되지 않는다 — 따로 적는다. */
+                'missing'    => [$agency === ClaimAgency::NONE
+                    ? '기관 청구 대상 아님 — 전액 본인부담'
+                    : (ClaimAgency::LABELS[$agency] ?? $agency) . ' 청구 건 — 공단 청구 대상 아님'],
                 'applicable' => false,
             ];
         }
