@@ -590,12 +590,33 @@
      줄을 더블클릭하면 고치는 창이 뜬다. */
   let msTplCh = 'sms';
   let msTplGrid = null;
+  let msTplDbl  = false;   // 더블클릭은 상자에 한 번만 건다
 
   window.msTplChannel = function (btn) {
     document.querySelectorAll('.ms-tplch').forEach(b => b.classList.toggle('active', b === btn));
     msTplCh = btn.dataset.ch;
     msTplPaint();
   };
+
+  /* 사람이 이름을 붙인 채널 — 여기서는 「이름」이 본문과 다른 뜻을 가진다
+     (「결제 완료」ㆍ「창고 진행 알림 — 제목」처럼). 팝업ㆍ토스트는 화면에서 긁어와
+     이름이 본문 앞 40자라, 같은 글이 두 칸에 나란히 서고 본문 읽을 자리만 좁아진다.
+     그래서 그 두 채널에서는 이름 칸을 빼고 그 너비를 본문에 준다 (2026-09-23 지시). */
+  const 이름있는채널 = ['sms', 'alimtalk', 'fcm', 'pusher'];
+
+  function msTplCols(채널) {
+    const 이름붙임 = 이름있는채널.includes(채널);
+
+    return [
+      { header: '화면',   name: 'screen',    width: 150 },
+      { header: '단계',   name: 'step',      width: 200 },
+      ...(이름붙임 ? [{ header: '이름', name: 'label', width: 200 }] : []),
+      { header: '본문',   name: 'body',      width: 이름붙임 ? 420 : 620 },
+      { header: '변수',   name: 'variables', width: 200 },
+      { header: '코드',   name: 'code',      width: 170 },
+      { header: '사용',   name: 'active',    width: 90, align: 'center' },
+    ];
+  }
 
   window.msTplPaint = function () {
     const 찾는말 = (document.getElementById('msTplFind')?.value ?? '').trim().toLowerCase();
@@ -617,6 +638,15 @@
 
     document.getElementById('msTplCount').textContent = 줄.length + '건';
 
+    /* wwGrid 에는 칸을 갈아 끼우는 통로가 없다. 짜임이 달라질 때만 다시 세운다 —
+       같은 짜임끼리 오갈 때는 줄만 갈아 끼워 헛일을 하지 않는다. */
+    const 이번짜임 = 이름있는채널.includes(msTplCh) ? '이름있음' : '이름없음';
+
+    if (msTplGrid && msTplGrid.__짜임 !== 이번짜임) {
+      document.getElementById('msTplGrid').innerHTML = '';
+      msTplGrid = null;
+    }
+
     if (! msTplGrid) {
       msTplGrid = new wwGrid({
         el: document.getElementById('msTplGrid'),
@@ -628,19 +658,22 @@
         height: 'fit',
         rowNumber: true,
         toolbar: true,
-        columns: [
-          { header: '화면',   name: 'screen',    width: 150 },
-          { header: '단계',   name: 'step',      width: 190 },
-          { header: '이름',   name: 'label',     width: 200 },
-          { header: '본문',   name: 'body',      width: 420 },
-          { header: '변수',   name: 'variables', width: 200 },
-          { header: '코드',   name: 'code',      width: 170 },
-          { header: '사용',   name: 'active',    width: 90, align: 'center' },
-        ],
+        columns: msTplCols(msTplCh),
       });
 
-      /* 줄 더블클릭 → 고치는 창. wwGrid 에는 줄 더블클릭 통로가 없어 다른 목록과
-         같은 방식으로 상자에 건다(처방전 목록ㆍ거래처 관리와 같다). */
+      msTplGrid.__짜임 = 이번짜임;
+    } else {
+      msTplGrid.setData(줄);
+    }
+
+    /* 줄 더블클릭 → 고치는 창. wwGrid 에는 줄 더블클릭 통로가 없어 다른 목록과
+       같은 방식으로 상자에 건다(처방전 목록ㆍ거래처 관리와 같다).
+
+       표를 다시 세워도 상자는 그대로라 **한 번만** 건다 — 다시 세울 때마다 걸면
+       한 번 누른 것이 두 번 세 번으로 불어난다. */
+    if (! msTplDbl) {
+      msTplDbl = true;
+
       document.getElementById('msTplGrid').addEventListener('dblclick', (e) => {
         const 칸 = e.target.closest('[data-row-index]');
         if (! 칸) return;
@@ -652,8 +685,6 @@
         window.getSelection()?.removeAllRanges();   // 더블클릭 글자 선택 해제
         msTplEditBy(원본);
       });
-    } else {
-      msTplGrid.setData(줄);
     }
   };
 
