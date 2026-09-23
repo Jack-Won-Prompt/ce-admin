@@ -22,7 +22,9 @@ class AdminInvitationMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '[CE Admin] 관리자 시스템 초대');
+        /* 제목은 메시지 관리에서 고친다 (2026-09-23 지시) */
+        return new Envelope(subject: \App\Models\MessageTemplate::문구(
+            'admin_invitation_subject', [], '[CE Admin] 관리자 시스템 초대', 'email'));
     }
 
     public function content(): Content

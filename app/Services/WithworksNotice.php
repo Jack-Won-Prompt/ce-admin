@@ -82,7 +82,12 @@ class WithworksNotice
             ?? $payload['rx_number']
             ?? '';
 
-        return '[CE Admin] 위드웍스 ' . $what . ($no !== '' ? ' ' . $no : '');
+        /* 제목은 메시지 관리에서 고친다 (2026-09-23 지시).
+           번호는 없을 수 있어 앞의 빈칸째로 넘긴다 */
+        return \App\Models\MessageTemplate::문구('withworks_notice_subject', [
+            '#{내용}'   => $what,
+            '#{번호줄}' => $no !== '' ? ' ' . $no : '',
+        ], '[CE Admin] 위드웍스 ' . $what . ($no !== '' ? ' ' . $no : ''), 'email');
     }
 
     /**

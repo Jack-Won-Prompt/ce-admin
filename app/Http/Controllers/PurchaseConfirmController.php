@@ -67,8 +67,13 @@ class PurchaseConfirmController extends Controller
             }
 
             try {
+                /* 제목은 메시지 관리에서 고친다 (2026-09-23 지시).
+                   본문은 문자와 같은 글을 쓴다 — 위에서 이미 표를 거쳤다. */
+                $제목 = \App\Models\MessageTemplate::문구('purchase_confirm_email_subject',
+                    ['#{고객명}' => $patient->name], '의료용품 구입 확인서', 'email');
+
                 \Illuminate\Support\Facades\Mail::raw($text, fn ($m) => $m
-                    ->to($patient->email)->subject('의료용품 구입 확인서'));
+                    ->to($patient->email)->subject($제목));
             } catch (\Throwable $e) {
                 return back()->withErrors(['send' => '메일을 보내지 못했습니다 — ' . $e->getMessage()]);
             }

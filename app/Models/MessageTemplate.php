@@ -22,6 +22,7 @@ class MessageTemplate extends Model
         'alimtalk' => '카카오 알림톡',
         'fcm'      => '앱 푸시 알림(FCM)',
         'pusher'   => '실시간 알림(Pusher)',
+        'email'    => '전자우편',
         'popup'    => '팝업 알림',
         'toast'    => '토스트 알림',
     ];

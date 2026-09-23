@@ -303,6 +303,7 @@
 
        문자ㆍ알림톡   고객 휴대전화로 나간다
        앱 푸시(FCM)   담당자 휴대전화 앱으로 뜬다
+       전자우편       거래처ㆍ담당자 메일함으로 간다
        실시간(Pusher) 관리자 화면을 열어 둔 담당자에게 곧바로 뜬다
        팝업ㆍ토스트   지금 보고 있는 화면에 뜬다
 
@@ -315,6 +316,7 @@
     <button type="button" class="ds-chip ms-tplch"        data-ch="alimtalk" onclick="msTplChannel(this)">알림톡</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="fcm"      onclick="msTplChannel(this)">앱 푸시(FCM)</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="pusher"   onclick="msTplChannel(this)">실시간 알림(Pusher)</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="email"    onclick="msTplChannel(this)">전자우편</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="popup"    onclick="msTplChannel(this)">팝업 알림</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="toast"    onclick="msTplChannel(this)">토스트 알림</button>
     <input type="text" id="msTplFind" class="form-control" placeholder="화면ㆍ단계ㆍ본문으로 찾기"
@@ -357,6 +359,7 @@
         <option value="alimtalk">카카오 알림톡</option>
         <option value="fcm">앱 푸시 알림(FCM)</option>
         <option value="pusher">실시간 알림(Pusher)</option>
+        <option value="email">전자우편</option>
         <option value="popup">팝업 알림</option>
         <option value="toast">토스트 알림</option>
       </select>
@@ -602,7 +605,7 @@
      (「결제 완료」ㆍ「창고 진행 알림 — 제목」처럼). 팝업ㆍ토스트는 화면에서 긁어와
      이름이 본문 앞 40자라, 같은 글이 두 칸에 나란히 서고 본문 읽을 자리만 좁아진다.
      그래서 그 두 채널에서는 이름 칸을 빼고 그 너비를 본문에 준다 (2026-09-23 지시). */
-  const 이름있는채널 = ['sms', 'alimtalk', 'fcm', 'pusher'];
+  const 이름있는채널 = ['sms', 'alimtalk', 'fcm', 'pusher', 'email'];
 
   function msTplCols(채널) {
     const 이름붙임 = 이름있는채널.includes(채널);

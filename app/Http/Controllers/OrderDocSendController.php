@@ -79,11 +79,22 @@ class OrderDocSendController extends Controller
                있어 「세금계산서ㆍ세금계산서」로 읽혔다 — 붙는 파일은 그대로 다 보낸다. */
             $names   = implode('ㆍ', array_unique(array_column($ready, 'label')));
 
+            /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */
+            $값 = [
+                '#{고객명}'   => $name,
+                '#{주문번호}' => (string) $order->order_number,
+                '#{서류명}'   => $names,
+            ];
+
+            $제목 = \App\Models\MessageTemplate::문구('order_doc_send_email_subject', $값,
+                "[콜로플라스트] 주문 {$order->order_number} 증빙", 'email');
+
             try {
                 Mail::raw(
-                    "{$name}님, 주문 {$order->order_number} 의 증빙을 보내 드립니다.\n\n{$names}\n\n콜로플라스트 코리아",
-                    function ($m) use ($to, $order, $ready) {
-                        $m->to($to)->subject("[콜로플라스트] 주문 {$order->order_number} 증빙");
+                    \App\Models\MessageTemplate::문구('order_doc_send_email', $값,
+                        "{$name}님, 주문 {$order->order_number} 의 증빙을 보내 드립니다.\n\n{$names}\n\n콜로플라스트 코리아", 'email'),
+                    function ($m) use ($to, $ready, $제목) {
+                        $m->to($to)->subject($제목);
                         foreach ($ready as $d) {
                             $m->attach(Storage::path($d['path']), ['as' => $d['file']]);
                         }
