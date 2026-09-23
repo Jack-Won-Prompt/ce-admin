@@ -1656,9 +1656,20 @@ class PrescriptionController extends Controller
     {
         $검수마침 = ['approved', 'ordered', 'ocr_done'];
 
+        /* 잣대는 **「주문등록 이동」을 했는가** 하나다 (2026-09-23 확정).
+
+           여태 세 가지를 더 걸었다 — 아직 pending 인 것, 창고로 넘기지 않은 것,
+           반품이 붙지 않은 것. 그래서 주문을 확정하거나 창고로 넘기는 순간 그 건이
+           목록에서 사라졌고, 「방금 내가 처리한 건이 어디 갔나」를 다른 화면에서
+           찾아야 했다. 사유를 취소로 바꿔도 마찬가지였다 — 취소한 건을 이 자리에서
+           확인할 수 없었다.
+
+           이제 처방전 목록에서 「주문등록 이동」을 누른 건은 그 뒤 어떻게 되든 이
+           목록에 남는다. 진행 상태ㆍ취소 상태는 저마다 칸이 있어 거기서 읽는다.
+
+           반품이 붙은 건만은 그대로 뺀다 — 그것은 교환/반품/취소 화면이 맡는 일이고,
+           한 건이 두 자리에서 서로 다른 진행을 보이면 어느 쪽이 참인지 흐려진다. */
         $q = \App\Models\Order::whereDoesntHave('returns')
-            ->where('status', 'pending')
-            ->whereNull('withworks_so_no')
             ->whereHas('prescription', fn ($p) => $p->whereIn('status', $검수마침));
 
         return $함께 ? $q->with($this->주문줄관계()) : $q;
@@ -3336,6 +3347,32 @@ class PrescriptionController extends Controller
            지난 줄에 남은 옛 말은 history() 가 읽을 때 이 말로 옮겨 세운다. */
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('주문 등록 저장');
 
+        /* 사유를 「취소-…」로 바꾸면 그 주문을 실제로 취소한다 (2026-09-23 지시).
+
+           여태 사유는 적어 두기만 하는 칸이었다. 담당자는 「취소-단순변심」을 고르고
+           저장하면 그 건이 닫힌 줄 알았는데, 주문은 그대로 살아 창고로도 가고 결제
+           요청도 나갔다. 적어 둔 것과 실제가 갈렸다.
+
+           취소 갈래는 OrderReason::CANCELLED 가 안다 — 위드웍스와 맞춘 목록이라
+           여기서 다시 세지 않는다.
+
+           이미 취소했거나 취소를 청해 둔 건은 다시 부르지 않는다. 출고된 건도
+           건드리지 않는다 — 그것은 교환/반품/취소가 할 일이고, 서비스가 스스로
+           막지만 여기서 먼저 가려 쓸데없는 실패 기록을 남기지 않는다. */
+        $취소사유 = (string) $prescription->reason;
+
+        if ($order
+            && in_array($취소사유, \App\Support\OrderReason::CANCELLED, true)
+            && $order->취소가능한가()) {
+
+            $결과 = app(\App\Services\OrderCancelService::class)->취소($order, $취소사유);
+
+            if ($결과['ok'] ?? false) {
+                /* 앱으로 올린 담당자에게 알린다 — 그 사람은 이 화면을 보지 않는다 */
+                $this->취소알림보내기($prescription, $order, $취소사유);
+            }
+        }
+
         /* 처방전 접수를 알리고, 위임동의 서명 SMS 를 보낸다(테스트 시나리오 1.1.x).
            서명 화면이 개인정보 동의도 함께 받으므로 링크 한 통으로 둘이 끝난다.
 
@@ -3391,6 +3428,46 @@ class PrescriptionController extends Controller
             'order_created' => $order?->order_number ?? $prescription->order?->order_number,
             'order_id'      => $order?->id ?? $prescription->order?->id,
         ]);
+    }
+
+    /**
+     * 처방전을 올린 담당자에게 「취소되었다」를 앱으로 알린다 (2026-09-23 지시).
+     *
+     * 앱으로 올린 사람은 이 화면을 보지 않는다. 올려 둔 건이 취소된 것을 모르고
+     * 기다리거나, 같은 건을 다시 올린다.
+     *
+     * 토큰이 없으면 조용히 지나간다 — 알림이 안 나갔다고 저장이 되돌아가서는 안 된다.
+     * 자기가 취소한 것은 자기에게 알리지 않는다.
+     */
+    private function 취소알림보내기(Prescription $prescription, \App\Models\Order $order, string $사유): void
+    {
+        try {
+            $올린이 = $prescription->creator;
+
+            if (! $올린이 || $올린이->id === Auth::id() || blank($올린이->fcm_token)) {
+                return;
+            }
+
+            \App\Helpers\FcmHelper::send(
+                $올린이->fcm_token,
+                '처방전 등록이 취소되었습니다',
+                sprintf('%s · %s — %s',
+                    $prescription->rx_number,
+                    $prescription->patient?->name ?? '이름 없음',
+                    $사유),
+                [
+                    'type'      => 'prescription_cancelled',
+                    'rx_number' => (string) $prescription->rx_number,
+                    'order_no'  => (string) $order->order_number,
+                    'reason'    => $사유,
+                ],
+                $올린이->id,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[주문 취소] 앱 알림 실패', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** 이 처방전의 주문 줄을 세워 둔다 — 몸통은 App\Support\OrderSync 다. */

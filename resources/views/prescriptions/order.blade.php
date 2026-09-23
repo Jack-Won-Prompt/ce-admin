@@ -2576,7 +2576,7 @@ $calcDeposit  = $calcCopay;
         {{-- 목록의 이름. 무엇을 하는 자리인지는 이름 하나로 족하다 — 규칙을 세 줄로
              적어 두었더니 표보다 안내가 먼저 눈에 들었다. 넘친 건수만 뒤에 붙인다. --}}
         <div class="section-title" style="margin:8px 0;">
-          <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> 작업 대기 리스트
+          <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> 주문 목록
           @if($orderListTotal > $orderListLimit)
             <span style="font-size:11px;font-weight:500;color:var(--text-muted);margin-left:6px;">
               {{ number_format($orderListTotal) }}건 가운데 최근 {{ number_format($orderListLimit) }}건
