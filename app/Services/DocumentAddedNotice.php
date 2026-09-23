@@ -27,15 +27,15 @@ class DocumentAddedNotice
 {
     public function 알린다(Prescription $처방전, string $서류갈래, ?User $보탠이): void
     {
-        $주인id = (int) $처방전->created_by;
+        $등록자id = (int) $처방전->created_by;
 
-        if (! $주인id || ! $보탠이 || $주인id === (int) $보탠이->id) {
+        if (! $등록자id || ! $보탠이 || $등록자id === (int) $보탠이->id) {
             return;
         }
 
-        $주인 = User::find($주인id);
+        $등록자 = User::find($등록자id);
 
-        if (! $주인 || ! $주인->is_active) {
+        if (! $등록자 || ! $등록자->is_active) {
             return;
         }
 
@@ -43,14 +43,14 @@ class DocumentAddedNotice
         $서류이름 = PrescriptionAttachment::labelFor($서류갈래) ?: '서류';
         $본문   = $환자 . ' · ' . $서류이름 . ' — ' . $보탠이->name . ' 님이 추가했습니다';
 
-        $this->앱으로($주인, $처방전, $서류이름, $본문);
-        $this->화면으로($주인id, $처방전, $본문);
+        $this->앱으로($등록자, $처방전, $서류이름, $본문);
+        $this->화면으로($등록자id, $처방전, $본문);
     }
 
-    /** 앱 알림 — 앱으로 일하는 사람이 바로 본다 */
-    private function 앱으로(User $주인, Prescription $처방전, string $서류이름, string $본문): void
+    /** 앱 알림 — 앱으로 일하는 담당자가 바로 본다 */
+    private function 앱으로(User $등록자, Prescription $처방전, string $서류이름, string $본문): void
     {
-        if (! $주인->fcm_token) {
+        if (! $등록자->fcm_token) {
             return;
         }
 
@@ -62,7 +62,7 @@ class DocumentAddedNotice
                    '#{내용}'     => $본문];
 
             FcmHelper::send(
-                $주인->fcm_token,
+                $등록자->fcm_token,
                 MessageTemplate::문구('rx_document_added_title', $값,
                     '처방전에 서류가 추가되었습니다', 'fcm'),
                 MessageTemplate::문구('rx_document_added', $값, $본문, 'fcm'),
@@ -73,17 +73,18 @@ class DocumentAddedNotice
                     'rx_number'       => $처방전->rx_number,
                     'doc_label'       => $서류이름,
                 ],
-                $주인->id,
+                $등록자->id,
             );
         } catch (\Throwable $e) {
             Log::warning('[서류 보탬] 앱 알림 실패', [
-                'rx' => $처방전->rx_number, 'user' => $주인->id, 'error' => $e->getMessage(),
+                'rx' => $처방전->rx_number, 'user' => $등록자->id, 'error' => $e->getMessage(),
             ]);
         }
     }
 
-    /** 웹 화면 알림 — 관리자 화면을 열어 둔 사람에게 토스트로 뜬다 */
-    private function 화면으로(int $주인id, Prescription $처방전, string $본문): void
+    /** 웹 화면 알림 — 그 처방전을 등록한 담당자가 화면을 열어 두었으면 뜬다.
+        모두에게 뿌리지 않는다 — 받을 사람은 등록자 한 사람이다. */
+    private function 화면으로(int $등록자id, Prescription $처방전, string $본문): void
     {
         try {
             $값 = ['#{처방번호}' => (string) $처방전->rx_number, '#{내용}' => $본문];
@@ -92,11 +93,11 @@ class DocumentAddedNotice
                 'rx.document.added',
                 MessageTemplate::문구('rx_document_added_pusher_title', $값, '서류 추가', 'pusher'),
                 MessageTemplate::문구('rx_document_added_pusher', $값, $본문, 'pusher'),
-                route('prescriptions.show', $처방전), 'info', $주인id
+                route('prescriptions.show', $처방전), 'info', $등록자id
             ));
         } catch (\Throwable $e) {
             Log::warning('[서류 보탬] 화면 알림 실패', [
-                'rx' => $처방전->rx_number, 'user' => $주인id, 'error' => $e->getMessage(),
+                'rx' => $처방전->rx_number, 'user' => $등록자id, 'error' => $e->getMessage(),
             ]);
         }
     }
