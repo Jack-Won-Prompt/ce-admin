@@ -921,7 +921,12 @@
      이 넷이 정해지면 청구처ㆍ관할 청구처ㆍ청구전략ㆍ발행할 서류가 줄줄이 따라
      정해진다. 다른 항목과 같은 회색으로 서 있으면 무엇이 앞선 결정인지 보이지 않아,
      위에서부터 차례로 채우다 뒤늦게 자격을 고치고 앞의 것을 다시 맞추게 된다. */
-  .rx-field-label.rx-key { color:var(--primary, #28798B); font-weight:700; }
+  /* 필수 항목은 **빨강 별표**로 세운다 (2026-09-23 지시).
+
+     전에는 청록색 굵은 글씨였는데, 그것은 「앞선 결정」이라는 뜻일 뿐 「반드시
+     적어야 한다」로는 읽히지 않았다. 별표는 어느 화면에서나 같은 뜻이다. */
+  .rx-field-label.rx-key { color:var(--danger, #E5484D); font-weight:700; }
+  .rx-field-label.rx-key::after { content:' *'; color:var(--danger, #E5484D); font-weight:700; }
   /* '배송 주소 동일' 체크 묶음 — 시안 315:58 Frame 48101499:
      묶음 96×21 · gap 6, 상자 16×16 · r6 · 1px #28798B, 글자 74 · 13/500 · #28798B.
      기본 체크박스는 모서리를 못 깎아 appearance 를 끄고 체크 표시를 직접 그린다. */
@@ -4010,7 +4015,16 @@ $calcDeposit  = $calcCopay;
                 </div>
               </div>
               <div class="rx-field-row">
-                <span class="rx-field-label">재구매일</span>
+                {{-- 이름을 「다음 재구매 가능일 (발행일 기준)」으로 세운다 (2026-09-23 지시).
+
+                     같은 뜻의 칸이 둘이라 헷갈리던 자리다. 위의 「다음 재구매 가능일」은
+                     담당자가 정하는 값이고(고칠 수 있다), 이 줄은 처방전 발행일과 처방
+                     기간으로 **자동 산출한** 값이다. 이름이 그냥 「재구매일」이어서 어느
+                     것이 무엇인지 읽히지 않았다.
+
+                     값이 비어 있으면 처방전 발행일이 아직 없는 것이다 — 오른쪽 칸의
+                     안내 글이 그것을 적는다. --}}
+                <span class="rx-field-label">다음 재구매 가능일<br><small style="font-weight:400;color:var(--text-muted);">(발행일 기준)</small></span>
                 {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
                      [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
                      왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
@@ -8961,61 +8975,38 @@ window.HELP_TOUR_STEPS = [
     try { return items.filter(i => i && i.product_name).length; } catch (e) { return 0; }
   }
 
+  /**
+   * 「신규 등록」 — **새 탭**으로 새 건을 연다 (2026-09-23 지시).
+   *
+   * 여태는 이 화면을 그대로 두고 새 건으로 옮겨 갔다. 그래서 보던 건을 저장할지
+   * 버릴지 매번 물어야 했고(「신규 등록 버튼 누를 때 계속 팝업 뜸」), 확인창을 닫고
+   * 나면 보던 건이 사라져 다시 찾아 들어가야 했다.
+   *
+   * 새 탭으로 열면 보던 건은 그 자리에 그대로 있다 — 저장할지 버릴지 물을 까닭이
+   * 없어 확인창을 걷었다.
+   *
+   * 다만 지금 건이 **빈 초안**이면(거래처도 첨부도 없다) 지우고 간다. 새 탭을 열어도
+   * 이 건은 빈 채로 목록에 남아, 그렇게 모인 것을 전에 스물아홉 건 지운 적이 있다.
+   */
   async function resetReviewScreen() {
-    /* ① 거래처도 첨부도 없다 — 지금 이 빈 건을 지우고 새로 시작한다.
+    const 빈건 = 신규상태인가();
 
-       화면은 이미 새 건처럼 보이지만 처방전 줄은 실제로 서 있다. 그대로 두고 또
-       누르면 빈 초안이 하나씩 쌓인다 — 그렇게 모인 스물아홉 건을 오늘 지웠다.
-       지우고 시작하면 남는 것이 없다. */
-    if (신규상태인가()) {
-      const ok = await ceConfirm([
-        '지금 건에는 거래처도 첨부문서도 없습니다.',
-        '',
-        '이 건을 삭제하고 새로 시작하시겠습니까?',
-        '삭제하지 않고 그대로 두면 빈 건이 목록에 남습니다.',
-      ].join(String.fromCharCode(10)),
-        { title: '신규 등록', tone: 'warning',
-          confirmText: '삭제하고 새로 시작', cancelText: '닫기' });
+    /* 창을 먼저 연다 — 지우는 동안 기다리게 하면 브라우저가 팝업으로 보고 막는다 */
+    const 새창 = window.open(NEW_ENTRY_URL, '_blank');
 
-      if (! ok) return;
-      if (! await 빈건지우기()) return;
-
-      clearAllDirty();
-      location.href = NEW_ENTRY_URL;
+    if (! 새창) {
+      await ceAlert('새 탭이 열리지 않았습니다 — 브라우저의 팝업 차단을 풀어 주십시오.',
+                    { title: '신규 등록', tone: 'warning' });
       return;
     }
 
-    /* ②③ 적어 둔 것이 있다 — **저장하고** 새로 시작한다.
-
-       여태 「저장하지 않은 내용은 사라집니다」라 알리고 버렸다. 그런데 여기까지
-       적어 둔 사람은 그것을 버리려고 신규를 누르는 것이 아니다 — 이 건은 이 건대로
-       두고 다음 건을 시작하려는 것이다. 버리게 두면 적은 것을 다시 적는다. */
-    const 제품있나 = 담긴제품수() > 0;
-
-    const ok = await ceConfirm([
-      '지금 건을 저장하고 새 건을 시작합니다.',
-      제품있나 ? '' : '지금 건에는 주문 제품이 없습니다 — 그대로 목록에 남습니다.',
-      '',
-      '새 건은 처방전 없이 시작하며, 유형은 「처방외」로 등록됩니다.',
-      '처방전이 있으면 등록한 뒤 첨부문서로 추가할 수 있습니다.',
-    ].filter(Boolean).join(String.fromCharCode(10)),
-      { title: '신규 등록', tone: 'warning',
-        confirmText: '새로 시작', cancelText: '닫기' });
-
-    if (! ok) return;
-
-    /* 저장이 안 되면 떠나지 않는다 — 적은 것을 잃는 것이 가장 나쁘다 */
-    if (typeof saveOCR === 'function') {
-      const 담겼나 = await saveOCR({ silent: true });
-      if (담겼나 === false) {
-        await ceAlert('저장하지 못해 새 건을 시작하지 않았습니다. 적은 내용을 확인해 주십시오.',
-                      { title: '신규 등록', tone: 'warning' });
-        return;
-      }
-    }
+    if (! 빈건) return;          // 적어 둔 것이 있는 건은 그대로 둔다
 
     clearAllDirty();
-    location.href = NEW_ENTRY_URL;
+    if (await 빈건지우기()) {
+      /* 지운 건을 그대로 보고 있을 수는 없다 — 목록으로 물러선다 */
+      location.href = @json(route('prescriptions.index'));
+    }
   }
 
   /** 빈 건을 지운다 — 서버가 여섯 가지를 다시 보고 가린다 */
