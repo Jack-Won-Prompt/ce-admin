@@ -34,7 +34,9 @@ class ClaimReadiness
             // 「자료가 모자라다」와 「공단에 낼 건이 아니다」는 다르다. 목록에서 구분돼야 한다.
             return [
                 'ready'      => false,
-                'missing'    => [ClaimAgency::LABELS[$agency] ?? $agency . ' 청구 건'],
+                /* 청구처 이름만 적으면 「지자체(시군구청)가 빠졌다」로 읽힌다.
+                   빠진 항목이 아니라 **공단 건이 아니라는 뜻**임을 문구로 밝힌다. */
+                'missing'    => [(ClaimAgency::LABELS[$agency] ?? $agency) . ' 청구 건 — 공단 청구 대상 아님'],
                 'applicable' => false,
             ];
         }
