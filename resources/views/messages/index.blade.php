@@ -622,12 +622,20 @@
           { header: '코드',   name: 'code',      width: 170 },
           { header: '사용',   name: 'active',    width: 90, align: 'center' },
         ],
-        onDblClick: ({ rowKey }) => {
-          const 줄들 = msTplGrid.getData();
-          const 그줄 = 줄들[rowKey] ?? 줄들.find(r => r.rowKey === rowKey);
-          const 원본 = manageRows.find(t => t.id === (그줄?.id));
-          if (원본) msTplEditBy(원본);
-        },
+      });
+
+      /* 줄 더블클릭 → 고치는 창. wwGrid 에는 줄 더블클릭 통로가 없어 다른 목록과
+         같은 방식으로 상자에 건다(처방전 목록ㆍ거래처 관리와 같다). */
+      document.getElementById('msTplGrid').addEventListener('dblclick', (e) => {
+        const 칸 = e.target.closest('[data-row-index]');
+        if (! 칸) return;
+
+        const 그줄 = msTplGrid.getData()[parseInt(칸.dataset.rowIndex, 10)];
+        const 원본 = manageRows.find(t => t.id === 그줄?.id);
+        if (! 원본) return;
+
+        window.getSelection()?.removeAllRanges();   // 더블클릭 글자 선택 해제
+        msTplEditBy(원본);
       });
     } else {
       msTplGrid.setData(줄);
