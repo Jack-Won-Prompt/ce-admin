@@ -298,11 +298,25 @@
   </div>
 </div>
 
-{{-- ══ 메시지 유형 ══ --}}
+{{-- ══ 메시지 유형 ══
+     채널마다 목록을 따로 세운다 (2026-09-23 지시). 문자ㆍ알림톡은 고객에게 나가고
+     팝업ㆍ토스트는 담당자에게 뜨는데, 한 목록에 섞어 두면 300건이 한 표에 쌓여
+     무엇을 고치려던 것인지 잃는다.
+
+     줄을 **더블클릭**하면 고치는 창이 뜬다. --}}
 <div id="pnlTpl" class="ms-panel">
+  <div class="ds-chips" style="margin-bottom:10px;">
+    <button type="button" class="ds-chip ms-tplch active" data-ch="sms"      onclick="msTplChannel(this)">문자(SMS)</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="alimtalk" onclick="msTplChannel(this)">알림톡</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="popup"    onclick="msTplChannel(this)">팝업 알림</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="toast"    onclick="msTplChannel(this)">토스트 알림</button>
+    <input type="text" id="msTplFind" class="form-control" placeholder="화면ㆍ단계ㆍ본문으로 찾기"
+           style="width:260px;margin-left:12px;" oninput="msTplPaint()">
+    <span id="msTplCount" style="margin-left:8px;font-size:12px;color:var(--gray-500);"></span>
+  </div>
   <div class="ds-grid-section">
     <div class="ds-grid-card">
-      <div id="msTplManage"></div>
+      <div id="msTplGrid" style="min-height:420px;"></div>
     </div>
   </div>
 </div>
@@ -332,6 +346,8 @@
       <select id="msTplChannel" class="form-control form-select">
         <option value="sms">문자(SMS)</option>
         <option value="alimtalk">카카오 알림톡</option>
+        <option value="popup">팝업 알림</option>
+        <option value="toast">토스트 알림</option>
       </select>
     </div>
     <div class="ms-field">
@@ -358,12 +374,27 @@
       <label class="ds-field-label">설명</label>
       <input type="text" id="msTplDesc" class="form-control" maxlength="200" placeholder="언제 쓰는 유형인지" />
     </div>
+    {{-- 어느 화면의 어느 걸음인가 (2026-09-23 지시) — 코드만으로는 이 글이 언제
+         나가는지 알 수 없어, 고치기 전에 무엇을 고치는지 가늠할 수 없었다. --}}
+    <div class="ms-field">
+      <label class="ds-field-label">화면</label>
+      <input type="text" id="msTplScreen" class="form-control" maxlength="500" placeholder="주문 등록" />
+    </div>
+    <div class="ms-field">
+      <label class="ds-field-label">단계</label>
+      <input type="text" id="msTplStep" class="form-control" maxlength="120" placeholder="주문 연계 직후" />
+    </div>
     <div class="ms-field">
       <label class="ds-field-label">본문</label>
       <textarea id="msTplBody" class="form-control ms-textarea" rows="6"></textarea>
       <div class="ms-hint">
         #{고객명} #{처방번호} #{주문번호} #{본인부담금} #{금액} #{운송장번호} 를 쓸 수 있습니다.
       </div>
+    </div>
+    <div class="ms-field">
+      <label class="ds-field-label">변수</label>
+      <input type="text" id="msTplVars" class="form-control" maxlength="300" placeholder="#{고객명}, #{주문번호}" />
+      <div class="ms-hint">이 문구가 쓰는 변수입니다. 본문을 고치면 「본문에서 읽기」로 다시 채울 수 있습니다.</div>
     </div>
     <label class="ms-check">
       <input type="checkbox" id="msTplActive" checked /> 사용
@@ -544,31 +575,73 @@
   };
 
   // ── 메시지 유형 관리 ──────────────────────────────────
+  /* 목록은 wwGrid 로 세운다 (2026-09-23 지시) — 카드 3열로는 300건을 훑을 수 없다.
+     줄을 더블클릭하면 고치는 창이 뜬다. */
+  let msTplCh = 'sms';
+  let msTplGrid = null;
+
+  window.msTplChannel = function (btn) {
+    document.querySelectorAll('.ms-tplch').forEach(b => b.classList.toggle('active', b === btn));
+    msTplCh = btn.dataset.ch;
+    msTplPaint();
+  };
+
+  window.msTplPaint = function () {
+    const 찾는말 = (document.getElementById('msTplFind')?.value ?? '').trim().toLowerCase();
+
+    const 줄 = manageRows
+      .filter(t => t.channel === msTplCh)
+      .filter(t => ! 찾는말 || [t.screen, t.step, t.body, t.label, t.code]
+                                 .join(' ').toLowerCase().includes(찾는말))
+      .map(t => ({
+        id:        t.id,
+        screen:    t.screen ?? '',
+        step:      t.step ?? '',
+        label:     t.label ?? '',
+        body:      String(t.body ?? '').replace(/\s+/g, ' '),
+        variables: t.variables ?? '',
+        code:      t.code ?? '',
+        active:    t.is_active ? '사용' : '사용 안 함',
+      }));
+
+    document.getElementById('msTplCount').textContent = 줄.length + '건';
+
+    if (! msTplGrid) {
+      msTplGrid = new wwGrid({
+        el: document.getElementById('msTplGrid'),
+        data: 줄,
+        height: 'auto',
+        rowNumber: true,
+        toolbar: true,
+        columns: [
+          { header: '화면',   name: 'screen',    width: 150 },
+          { header: '단계',   name: 'step',      width: 190 },
+          { header: '이름',   name: 'label',     width: 200 },
+          { header: '본문',   name: 'body',      width: 420 },
+          { header: '변수',   name: 'variables', width: 200 },
+          { header: '코드',   name: 'code',      width: 170 },
+          { header: '사용',   name: 'active',    width: 90, align: 'center' },
+        ],
+        onDblClick: ({ rowKey }) => {
+          const 줄들 = msTplGrid.getData();
+          const 그줄 = 줄들[rowKey] ?? 줄들.find(r => r.rowKey === rowKey);
+          const 원본 = manageRows.find(t => t.id === (그줄?.id));
+          if (원본) msTplEditBy(원본);
+        },
+      });
+    } else {
+      msTplGrid.setData(줄);
+    }
+  };
+
   async function msTplLoad() {
-    const box = document.getElementById('msTplManage');
-    box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--gray-500);">불러오는 중...</div>';
     try {
       const res = await fetch(TPL_URL, { headers: { 'Accept': 'application/json' } });
       const d   = await res.json();
       manageRows = d.templates ?? [];
-      if (!manageRows.length) { box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--gray-500);">등록된 유형이 없습니다.</div>'; return; }
-      box.innerHTML = manageRows.map((t, i) => `
-        <div class="ms-tpl" style="cursor:default;">
-          <div style="min-width:0;flex:1;">
-            <div class="ms-tpl-name">
-              ${esc(t.label)}
-              <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:6px;
-                    background:var(--gray-100);color:var(--gray-600);">${t.channel === 'sms' ? '문자' : '알림톡'}</span>
-              <span style="font-family:monospace;font-size:11px;color:var(--gray-500);margin-left:4px;">${esc(t.code)}</span>
-              ${t.is_active ? '' : '<span style="font-size:10px;color:var(--alert-500);margin-left:6px;">사용 안 함</span>'}
-            </div>
-            <div class="ms-tpl-desc">${esc(t.description ?? '')}</div>
-            ${t.body ? `<div class="ms-tpl-desc" style="white-space:pre-wrap;margin-top:4px;color:var(--gray-600);">${esc(String(t.body).slice(0, 120))}</div>` : ''}
-          </div>
-          <div class="ms-tpl-edit"><button type="button" class="ms-mini" onclick="msTplEdit(${i})">수정</button></div>
-        </div>`).join('');
+      msTplPaint();
     } catch (e) {
-      box.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--alert-500);">불러오지 못했습니다.</div>';
+      showToast('메시지 유형을 불러오지 못했습니다.', 'danger');
     }
   }
 
@@ -578,15 +651,26 @@
     editingId = null;
     document.getElementById('msTplTitle').textContent = '메시지 유형 추가';
     document.getElementById('msTplChannel').value = channel;
-    ['msTplCode', 'msTplAts', 'msTplLabel', 'msTplDesc', 'msTplBody'].forEach(id => document.getElementById(id).value = '');
+    ['msTplCode', 'msTplAts', 'msTplLabel', 'msTplDesc', 'msTplBody',
+     'msTplScreen', 'msTplStep', 'msTplVars'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
     document.getElementById('msTplActive').checked = true;
     document.getElementById('msTplDelete').style.display = 'none';
     _msTplOpen();
   };
 
+  /* 더블클릭은 줄 자체를 넘긴다 — 그리드가 걸러 그린 뒤라 차례(index)는 어긋난다 */
+  window.msTplEditBy = function (t) {
+    if (!t) return;
+    msTplFill(t);
+  };
+
   window.msTplEdit = function (i) {
     const t = manageRows[i];
     if (!t) return;
+    msTplFill(t);
+  };
+
+  function msTplFill(t) {
     editingId = t.id;
     document.getElementById('msTplTitle').textContent = '메시지 유형 수정';
     document.getElementById('msTplChannel').value = t.channel;
@@ -595,6 +679,9 @@
     document.getElementById('msTplLabel').value   = t.label;
     document.getElementById('msTplDesc').value    = t.description ?? '';
     document.getElementById('msTplBody').value    = t.body ?? '';
+    document.getElementById('msTplScreen').value  = t.screen ?? '';
+    document.getElementById('msTplStep').value    = t.step ?? '';
+    document.getElementById('msTplVars').value    = t.variables ?? '';
     document.getElementById('msTplActive').checked = !!t.is_active;
     document.getElementById('msTplDelete').style.display = '';
     _msTplOpen();
@@ -636,9 +723,22 @@
       label:       document.getElementById('msTplLabel').value.trim(),
       description: document.getElementById('msTplDesc').value.trim(),
       body:        document.getElementById('msTplBody').value,
+      screen:      document.getElementById('msTplScreen').value.trim(),
+      step:        document.getElementById('msTplStep').value.trim(),
+      variables:   document.getElementById('msTplVars').value.trim(),
       is_active:   document.getElementById('msTplActive').checked,
     };
     if (!body.code || !body.label) { _msTplSay('코드와 이름은 반드시 입력해야 합니다.', false); return; }
+
+    /* **본문이 빈 채로는 저장하지 않는다** (2026-09-23).
+
+       이 표의 본문은 코드가 아니라 여기에만 있다. 실수로 비워 저장하면 그 문구는
+       어디에도 남지 않는다 — 실제로 열한 건이 한꺼번에 사라진 적이 있다.
+       일부러 쓰지 않으려면 「사용」을 끄는 자리가 따로 있다. */
+    if (! String(body.body ?? '').trim()) {
+      _msTplSay('본문을 비운 채로는 저장할 수 없습니다 — 쓰지 않으려면 「사용」을 꺼 주십시오.', false);
+      return;
+    }
 
     const url    = editingId ? `{{ url('/messages/templates') }}/${editingId}` : `{{ route('messages.templates.store') }}`;
     const method = editingId ? 'PUT' : 'POST';

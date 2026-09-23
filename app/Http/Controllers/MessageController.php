@@ -210,11 +210,20 @@ class MessageController extends Controller
     private function templateRules(Request $request): array
     {
         $data = $request->validate([
-            'channel'     => 'required|in:sms,alimtalk',
+            /* 팝업ㆍ토스트도 이 표에서 고친다 (2026-09-23 지시) */
+            'channel'     => 'required|in:' . implode(',', array_keys(MessageTemplate::CHANNELS)),
             'code'        => 'required|string|max:60|regex:/^[A-Za-z0-9_\-]+$/',
             'label'       => 'required|string|max:100',
             'description' => 'nullable|string|max:200',
-            'body'        => 'nullable|string|max:2000',
+            /* **본문을 비운 채로는 저장하지 않는다** (2026-09-23).
+
+               이 표의 본문은 코드가 아니라 여기에만 있다. 비워 저장하면 그 문구는
+               어디에도 남지 않는다 — 실제로 열한 건이 한꺼번에 사라진 적이 있다.
+               쓰지 않으려면 is_active 를 끄는 자리가 따로 있다. */
+            'body'        => 'required|string|max:2000',
+            'screen'      => 'nullable|string|max:500',
+            'step'        => 'nullable|string|max:120',
+            'variables'   => 'nullable|string|max:300',
             'is_active'   => 'boolean',
             /* 팝빌에 등록ㆍ승인된 알림톡 템플릿 코드. 알림톡은 이 코드로만 나간다.
                문자에는 쓰이지 않는다. */

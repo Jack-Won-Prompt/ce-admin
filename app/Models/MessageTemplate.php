@@ -13,10 +13,22 @@ use Illuminate\Database\Eloquent\Model;
  */
 class MessageTemplate extends Model
 {
-    public const CHANNELS = ['sms' => '문자(SMS)', 'alimtalk' => '카카오 알림톡'];
+    /* 화면에 뜨는 말도 담당자가 고칠 수 있어야 한다 (2026-09-23 지시).
+
+       문자ㆍ알림톡은 고객에게 나가고, 팝업ㆍ토스트는 담당자에게 뜬다. 나가는 곳은
+       다르지만 「적어 둔 말이 그대로 쓰인다」는 점은 같아 한 표에서 다룬다. */
+    public const CHANNELS = [
+        'sms'      => '문자(SMS)',
+        'alimtalk' => '카카오 알림톡',
+        'popup'    => '팝업 알림',
+        'toast'    => '토스트 알림',
+    ];
+
+    /** 고객에게 나가는 채널 — 이쪽만 발송 이력이 남는다 */
+    public const 고객채널 = ['sms', 'alimtalk'];
 
     protected $fillable = ['channel', 'code', 'ats_template_code', 'label', 'description',
-                           'body', 'sort_order', 'is_active'];
+                           'screen', 'step', 'body', 'variables', 'sort_order', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean', 'sort_order' => 'integer'];
 
