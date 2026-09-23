@@ -337,7 +337,12 @@ class AuthApiController extends Controller
         try {
             app(MessageService::class)->send(
                 $user->phone,
-                "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하십시오.",
+                /* 문구는 메시지 관리 화면에서 고친다 (2026-09-23 지시) — 웹 로그인
+                   (AuthController::sendOtpSms)과 같은 틀을 쓴다. 틀이 없거나 비면
+                   아래 글이 그대로 나간다. */
+                \App\Models\MessageTemplate::문구('login_otp',
+                    ['#{인증번호}' => $code],
+                    "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하십시오."),
                 $user->name,
             );
         } catch (\Throwable $e) {
