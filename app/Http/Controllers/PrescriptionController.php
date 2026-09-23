@@ -1669,8 +1669,14 @@ class PrescriptionController extends Controller
 
            반품이 붙은 건만은 그대로 뺀다 — 그것은 교환/반품/취소 화면이 맡는 일이고,
            한 건이 두 자리에서 서로 다른 진행을 보이면 어느 쪽이 참인지 흐려진다. */
+        /* 처방외는 「주문등록 이동」을 누를 길이 없다 — 처방자료가 없어 처방전 목록에
+           서지 않기 때문이다. 유형을 고르는 순간 주문 줄이 이미 선다. 그러니 이동
+           여부를 묻지 않고 바로 세운다 (2026-09-23 지시: 「주문등록에서 신규등록으로
+           입력되는 모든 라인이 주문 목록에 다 보여야 함」). */
         $q = \App\Models\Order::whereDoesntHave('returns')
-            ->whereHas('prescription', fn ($p) => $p->whereIn('status', $검수마침));
+            ->whereHas('prescription', fn ($p) => $p
+                ->where(fn ($w) => $w->whereIn('status', $검수마침)
+                                     ->orWhere('counsel_acc_add_type', '20')));
 
         return $함께 ? $q->with($this->주문줄관계()) : $q;
     }
