@@ -60,6 +60,15 @@
 <body>
 @yield('body')
 <div class="toast" id="toast"></div>
+
+{{-- 확인ㆍ알림 창 (2026-09-24).
+
+     이 판은 layouts.app 을 쓰지 않아 ceConfirm 이 없었다. 그런데 화면은
+     `onclick="return ceConfirmClick(this, '…')"` 를 쓴다 — 함수가 없으면 그 자리가
+     ReferenceError 로 죽고, **브라우저는 기본 동작을 막지 않아 폼이 그대로 나간다.**
+     묻지도 않고 청구 상태가 바뀌었다(2026-09-24 시험에서 드러남). --}}
+@include('partials.dialog', ['문구화면' => '공단 지원'])
+
 @stack('scripts')
 </body>
 </html>

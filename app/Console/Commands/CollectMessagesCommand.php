@@ -41,6 +41,8 @@ class CollectMessagesCommand extends Command
         /* 좁은 것을 먼저 둔다 — str_contains 로 견주므로 먼저 걸리는 것이 이긴다.
            서명 판은 거래처가 로그인 없이 여는 화면이라 따로 가린다. */
         'delegation-signs/sign' => '위임장 서명(고객)',
+        'pay/show'              => '결제(고객)',
+        'nhis/assist'           => '공단 지원',
         'delegation-signs'      => '위임 서명',
         'webhooks/index'        => '웹훅 관리',
         'orders/show'           => '주문 상세',
@@ -62,7 +64,6 @@ class CollectMessagesCommand extends Command
         'error-logs'            => '오류 기록',
         'masters/_billing'      => '청구처 관리',
         'masters/index'         => '기준정보 관리',
-        'nhis/assist'           => '공단 지원',
         'nhis/index'            => '공단 관리',
         'prescription-consents' => '처방 동의',
         'privacy-consents'      => '개인정보 동의',
