@@ -7,6 +7,7 @@ use App\Events\WithworksStatusChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Prescription;
+use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -50,7 +51,7 @@ class ReviewNotice
 
         $this->push($ids, self::ROOM_NAME, '검수 요청', $rx,
             '검수 승인을 기다립니다' . ($rx->assignedUser?->name ? ' · ' . $rx->assignedUser->name : ''),
-            'warning');
+            'warning', 'review_ask');
     }
 
     /** 검수가 끝났다 — 요청한 담당자에게 */
@@ -64,7 +65,7 @@ class ReviewNotice
 
         $this->push([(int) $userId], self::ROOM_NAME, '검수 승인', $rx,
             '검수가 승인되었습니다' . (Auth::user()?->name ? ' · ' . Auth::user()->name : ''),
-            'success');
+            'success', 'review_approved');
     }
 
     // ──────────────────────────────────────────────────────────
@@ -78,7 +79,8 @@ class ReviewNotice
      * @param list<int> $userIds
      */
     private function push(array $userIds, string $roomName, string $title,
-                          Prescription $rx, string $what, string $tone): void
+                          Prescription $rx, string $what, string $tone,
+                          string $코드 = 'review_inform'): void
     {
         $who  = $rx->patient?->name ?: ($rx->patient_name_ocr ?: '');
         $body = $rx->rx_number . ($who ? ' · ' . $who : '') . ' — ' . $what;
@@ -88,6 +90,16 @@ class ReviewNotice
            읽고 본문에서 떼어 낸다(ChatController::stripScreenTag) — 그렇게 적으면 본문이
            통째로 사라지고 그 글이 보낸 사람 이름 자리에 선다. */
         $line = trim($roomName . ' · ' . $body);
+
+        /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
+           채팅에 남기는 줄($line)은 그대로 둔다 — 알림과 자취는 쓰임이 다르다. */
+        $값 = ['#{처방번호}' => (string) $rx->rx_number,
+               '#{고객명}'   => $who,
+               '#{내용}'     => $what,
+               '#{고객명줄}' => $who ? ' · ' . $who : ''];
+
+        $title = MessageTemplate::문구($코드 . '_title', $값, $title, 'pusher');
+        $body  = MessageTemplate::문구($코드, $값, $body, 'pusher');
 
         foreach ($userIds as $userId) {
             try {

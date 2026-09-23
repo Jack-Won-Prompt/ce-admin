@@ -1310,10 +1310,14 @@ class OrderController extends Controller
             if ($mobile) {
                 try {
                     $amountFormatted = number_format((int) $data['cash_receipt_amount']);
-                    $smsContent = "[콜로플라스트] {$patientName}님 현금영수증이 발행되었습니다.\n"
-                                . "- 유형: {$typeLabel}\n"
-                                . "- 금액: {$amountFormatted}원\n"
-                                . "- 승인번호: {$receiptNo}";
+                    /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+                    $smsContent = \App\Models\MessageTemplate::문구('cash_receipt_issued', [
+                        '#{고객명}'   => $patientName,
+                        '#{발행유형}' => $typeLabel,
+                        '#{금액}'     => $amountFormatted,
+                        '#{승인번호}' => $receiptNo,
+                    ], "[콜로플라스트] {$patientName}님 현금영수증이 발행되었습니다.\n"
+                     . "- 유형: {$typeLabel}\n- 금액: {$amountFormatted}원\n- 승인번호: {$receiptNo}");
                     app(MessageService::class)->send($mobile, $smsContent, $patientName);
                 } catch (\Throwable $e) {
                     Log::warning('[CashReceipt] SMS 발송 실패', ['order' => $order->id, 'error' => $e->getMessage()]);

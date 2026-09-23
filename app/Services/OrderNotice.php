@@ -7,6 +7,7 @@ use App\Events\WithworksStatusChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Order;
+use App\Models\MessageTemplate;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -42,19 +43,31 @@ class OrderNotice
             . ($order->patient?->name ? ' · ' . $order->patient->name : '')
             . ($order->withworks_tracking_no ? ' · ' . $order->withworks_tracking_no : '');
 
-        $title = '창고 — ' . $what;
+        /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
+           채팅에 남기는 줄은 그대로 둔다 — 알림과 자취는 쓰임이 다르다. */
+        $값 = ['#{주문번호}'   => (string) $order->order_number,
+               '#{고객명}'     => (string) ($order->patient?->name ?? ''),
+               '#{운송장번호}' => (string) ($order->withworks_tracking_no ?? ''),
+               '#{내용}'       => $what,
+               /* 없을 수 있는 값은 앞의 가운뎃점째로 넘긴다 — 빈 값이 ' · ' 만
+                  남기고 사라지는 일을 막는다 */
+               '#{고객명줄}'   => $order->patient?->name ? ' · ' . $order->patient->name : '',
+               '#{운송장줄}'   => $order->withworks_tracking_no ? ' · ' . $order->withworks_tracking_no : ''];
+
+        $title    = MessageTemplate::문구('order_inform_title', $값, '창고 — ' . $what, 'pusher');
+        $알림본문 = MessageTemplate::문구('order_inform', $값, $body, 'pusher');
         $url   = route('orders.show', $order);
         $userId = $this->ownerId($order);
 
         /* 담당자를 모르면 예전 자리로 — 모두가 보는 채널에 띄우기만 한다.
            채팅은 남길 곳이 없다(사람마다 하나인 방이라 임자가 있어야 한다). */
         if (! $userId) {
-            $this->broadcast(null, $title, $body, $url, $tone, $order);
+            $this->broadcast(null, $title, $알림본문, $url, $tone, $order);
 
             return;
         }
 
-        $this->broadcast($userId, $title, $body, $url, $tone, $order);
+        $this->broadcast($userId, $title, $알림본문, $url, $tone, $order);
         $this->leaveInChat($userId, $order, $what, $body);
     }
 

@@ -7,6 +7,7 @@ use App\Events\WithworksStatusChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Patient;
+use App\Models\MessageTemplate;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -87,14 +88,23 @@ class NhisRenewNotice
             ? '기한이 ' . abs($left) . '일 지났습니다'
             : ($left === 0 ? '오늘이 기한입니다' : $left . '일 남았습니다');
 
-        $title = '공단 재등록 — ' . $when;
-        $body  = $patient->name . ' · 기한 ' . $due->format('Y-m-d')
-               . ($patient->mobile ? ' · ' . $patient->mobile : '');
+        /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $body = $patient->name . ' · 기한 ' . $due->format('Y-m-d')
+              . ($patient->mobile ? ' · ' . $patient->mobile : '');
+
+        $값 = ['#{고객명}' => (string) $patient->name,
+               '#{기한}'   => $due->format('Y-m-d'),
+               '#{연락처}' => (string) ($patient->mobile ?? ''),
+               '#{남은}'   => $when,
+               '#{연락처줄}' => $patient->mobile ? ' · ' . $patient->mobile : ''];
+
+        $title    = MessageTemplate::문구('nhis_renew_title', $값, '공단 재등록 — ' . $when, 'pusher');
+        $알림본문 = MessageTemplate::문구('nhis_renew', $값, $body, 'pusher');
 
         $userId = $this->ownerId($patient);
         $url    = route('patients.show', $patient);
 
-        $this->broadcast($userId, $title, $body, $url, $left < 0 ? 'danger' : 'warning', $patient);
+        $this->broadcast($userId, $title, $알림본문, $url, $left < 0 ? 'danger' : 'warning', $patient);
 
         if ($userId) {
             $this->leaveInChat($userId, $patient, $when, $body);

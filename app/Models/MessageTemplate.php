@@ -20,6 +20,8 @@ class MessageTemplate extends Model
     public const CHANNELS = [
         'sms'      => '문자(SMS)',
         'alimtalk' => '카카오 알림톡',
+        'fcm'      => '앱 푸시 알림(FCM)',
+        'pusher'   => '실시간 알림(Pusher)',
         'popup'    => '팝업 알림',
         'toast'    => '토스트 알림',
     ];
@@ -292,5 +294,38 @@ class MessageTemplate extends Model
             'shipping_start' => ['label' => '배송 시작 안내',     'desc' => '운송장 번호 포함 배송 출발 안내'],
             'delivery_done'  => ['label' => '배송 완료 안내',     'desc' => '배송 완료 및 복약 안내'],
         ];
+    }
+
+    /**
+     * 등록된 문자 본문을 읽어 변수를 채운다 (2026-09-23 지시).
+     *
+     * 「고치면 고친 말이 나가야 한다」가 이번 지시다. 그런데 코드에 문구가 박힌
+     * 자리는 표를 보지 않아, 화면에서 고쳐도 옛 글이 그대로 나갔다.
+     *
+     * 표에 없거나 꺼 두었으면 $기본 을 쓴다 — 못 보내는 것보다 낫다.
+     *
+     * @param  string $코드  틀 코드 (예: login_otp)
+     * @param  array  $값들  ['#{고객명}' => '홍길동', …]
+     * @param  string $기본  표에 없을 때 쓸 글
+     */
+    public static function 문구(string $코드, array $값들 = [], string $기본 = '', string $채널 = 'sms'): string
+    {
+        $글 = $기본;
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('message_templates')) {
+                $담긴것 = static::channel($채널)->active()->where('code', $코드)->value('body');
+
+                /* 비어 있으면 쓰지 않는다 — 빈 문자를 보내면 받는 쪽에는 아무 말도
+                   없는 글이 간다. 표가 비는 사고가 실제로 있었다(2026-09-23). */
+                if (filled($담긴것)) { $글 = (string) $담긴것; }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[메시지] 틀을 읽지 못했습니다', [
+                'code' => $코드, 'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $값들 ? strtr($글, $값들) : $글;
     }
 }

@@ -6,6 +6,7 @@ use App\Helpers\FcmHelper;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
 use App\Models\PrescriptionReuploadRequest;
+use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -130,10 +131,16 @@ class ReuploadRequestService
         $환자 = $처방전->patient?->name ?: $처방전->patient_name_ocr ?: $처방전->rx_number;
 
         try {
+            /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */
+            $값 = ['#{고객명}' => $환자, '#{서류명}' => (string) $요청->doc_label,
+                   '#{사유}'   => $요청->사유말()];
+
             $보냄 = FcmHelper::send(
                 $받는이->fcm_token,
-                '처방전 자료 재업로드 요청',
-                $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(),
+                MessageTemplate::문구('rx_reupload_request_title', $값,
+                    '처방전 자료 재업로드 요청', 'fcm'),
+                MessageTemplate::문구('rx_reupload_request', $값,
+                    $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(), 'fcm'),
                 [
                     /* 앱이 이 값을 보고 해당 처방전 화면으로 간다. 앱이 아직 모르는
                        갈래여도 알림 자체는 뜬다 — 글만으로도 무엇을 다시 올릴지 안다. */

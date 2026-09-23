@@ -3474,13 +3474,20 @@ class PrescriptionController extends Controller
                 return;
             }
 
+            $이름 = $prescription->patient?->name ?? '이름 없음';
+            $값   = ['#{처방번호}' => (string) $prescription->rx_number,
+                     '#{고객명}'   => $이름,
+                     '#{사유}'     => $사유,
+                     '#{주문번호}' => (string) $order->order_number];
+
+            /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
+               아래 data 는 앱이 어느 화면으로 갈지 가리는 값이라 건드리지 않는다. */
             \App\Helpers\FcmHelper::send(
                 $올린이->fcm_token,
-                '처방전 등록이 취소되었습니다',
-                sprintf('%s · %s — %s',
-                    $prescription->rx_number,
-                    $prescription->patient?->name ?? '이름 없음',
-                    $사유),
+                \App\Models\MessageTemplate::문구('prescription_cancelled_title', $값,
+                    '처방전 등록이 취소되었습니다', 'fcm'),
+                \App\Models\MessageTemplate::문구('prescription_cancelled', $값,
+                    sprintf('%s · %s — %s', $prescription->rx_number, $이름, $사유), 'fcm'),
                 [
                     'type'      => 'prescription_cancelled',
                     'rx_number' => (string) $prescription->rx_number,
@@ -4303,7 +4310,10 @@ class PrescriptionController extends Controller
         $url = $baseUrl . '/consent/' . $token;
 
         // URL이 localhost인 경우 링크가 클릭되지 않을 수 있음 — 운영 서버 URL로 변경 필요
-        $message = "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$유효분}분 유효):\n{$url}";
+        /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $message = \App\Models\MessageTemplate::문구('consent_sign', [
+            '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
+        ], "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$유효분}분 유효):\n{$url}");
 
         try {
             /* 발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
@@ -4391,7 +4401,10 @@ class PrescriptionController extends Controller
         }
         $url = $baseUrl . '/consent/' . $token;
 
-        $message = "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}";
+        /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $message = \App\Models\MessageTemplate::문구('id_card_request', [
+            '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
+        ], "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}");
 
         try {
             $res = $this->sender->sendBulk('sms',

@@ -115,9 +115,12 @@ class OrderDocSendController extends Controller
             ['order' => $order->id]
         );
 
-        $text = "[콜로플라스트] {$name}님, 주문 {$order->order_number} 의 증빙입니다.\n"
-              . $names . "\n" . $link . "\n"
-              . self::LINK_DAYS . '일 뒤에는 열리지 않습니다.';
+        /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $text = \App\Models\MessageTemplate::문구('order_doc_send', [
+            '#{고객명}' => $name, '#{주문번호}' => $order->order_number,
+            '#{서류명}' => $names, '#{링크}' => $link, '#{유효일}' => self::LINK_DAYS,
+        ], "[콜로플라스트] {$name}님, 주문 {$order->order_number} 의 증빙입니다.\n"
+         . $names . "\n" . $link . "\n" . self::LINK_DAYS . '일 뒤에는 열리지 않습니다.');
 
         $res = $sender->sendBulk('sms',
             [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $order->patient_id]],

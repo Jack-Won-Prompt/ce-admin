@@ -715,10 +715,12 @@ class DelegationSignController extends Controller
      */
     public static function 문자글(string $이름, string $링크, int $분): string
     {
-        return "[콜로플라스트] {$이름}님\n"
-             . "요양비 청구 위임장 전자서명 요청입니다.\n"
-             . "서명 링크({$분}분 유효):\n"
-             . $링크;
+        /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        return \App\Models\MessageTemplate::문구('delegation_sign', [
+            '#{고객명}' => $이름, '#{유효분}' => $분, '#{링크}' => $링크,
+        ], "[콜로플라스트] {$이름}님\n"
+         . "요양비 청구 위임장 전자서명 요청입니다.\n"
+         . "서명 링크({$분}분 유효):\n" . $링크);
     }
 
     /** 문자에 담는 주소 */

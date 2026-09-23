@@ -8,6 +8,7 @@ use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Prescription;
 use App\Models\PrescriptionReuploadRequest;
+use App\Models\MessageTemplate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -54,8 +55,18 @@ class ReuploadArrivedNotice
 
         foreach ($받는이들 as $userId) {
             try {
+                /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */
+                $값 = ['#{처방번호}' => (string) $rx->rx_number,
+                       '#{고객명}'   => $who,
+                       '#{서류명}'   => (string) ($서류 ?: '자료'),
+                       '#{내용}'     => $body,
+                       '#{고객명줄}' => $who ? ' · ' . $who : ''];
+
                 broadcast(new WithworksStatusChanged(
-                    'reupload.arrived', '자료 재업로드', $body, $url, 'success', $userId
+                    'reupload.arrived',
+                    MessageTemplate::문구('reupload_arrived_title', $값, '자료 재업로드', 'pusher'),
+                    MessageTemplate::문구('reupload_arrived', $값, $body, 'pusher'),
+                    $url, 'success', $userId
                 ));
             } catch (\Throwable $e) {
                 Log::warning('[재업로드] 알람 실패', ['user' => $userId, 'error' => $e->getMessage()]);

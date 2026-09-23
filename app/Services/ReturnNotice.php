@@ -7,6 +7,7 @@ use App\Events\WithworksStatusChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\OrderReturn;
+use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -50,7 +51,8 @@ class ReturnNotice
             return;
         }
 
-        $this->push([$userId], self::ROOM_NAME, '창고 — ' . $what, $return, $what, $tone);
+        $this->push([$userId], self::ROOM_NAME, '창고 — ' . $what, $return, $what, $tone,
+            'return_warehouse');
     }
 
     /**
@@ -84,7 +86,8 @@ class ReturnNotice
         $what = (OrderReturn::STATUS_LABELS[$next] ?? $next) . '을 기다립니다'
             . ' · ' . $return->approverRole();
 
-        $this->push($ids, self::APPROVAL_ROOM, '승인 요청', $return, $what, 'warning');
+        $this->push($ids, self::APPROVAL_ROOM, '승인 요청', $return, $what, 'warning',
+            'return_approval');
     }
 
     /**
@@ -93,7 +96,8 @@ class ReturnNotice
      * @param list<int> $userIds
      */
     private function push(array $userIds, string $roomName, string $title,
-                          OrderReturn $return, string $what, string $tone): void
+                          OrderReturn $return, string $what, string $tone,
+                          string $코드 = 'return_inform'): void
     {
         /* 대괄호로 시작하지 않는다. 채팅은 줄머리의 [○○] 를 「어느 화면에서 보냈는가」로
            읽고 본문에서 떼어 낸다(ChatController::stripScreenTag) — 그렇게 적으면 본문이
@@ -110,6 +114,18 @@ class ReturnNotice
         $body = $return->receipt_no . ' · ' . $return->typeLabel()
             . ($return->order?->patient?->name ? ' · ' . $return->order->patient->name : '')
             . ' — ' . $what;
+
+        /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
+           채팅에 남기는 줄($line)은 그대로 둔다 — 알림과 자취는 쓰임이 다르다. */
+        $값 = ['#{접수번호}' => (string) $return->receipt_no,
+               '#{유형}'     => $return->typeLabel(),
+               '#{고객명}'   => (string) ($return->order?->patient?->name ?? ''),
+               '#{내용}'     => $what,
+               '#{고객명줄}' => $return->order?->patient?->name
+                                  ? ' · ' . $return->order->patient->name : ''];
+
+        $title = MessageTemplate::문구($코드 . '_title', $값, $title, 'pusher');
+        $body  = MessageTemplate::문구($코드, $값, $body, 'pusher');
 
         foreach ($userIds as $userId) {
             try {

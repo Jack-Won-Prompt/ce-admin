@@ -987,18 +987,28 @@ class SettlementController extends Controller
 
         try {
             $amountFmt = number_format($amount);
+            $계좌     = trim("{$bankName} {$accountNumber}");
+            /* 기한은 없을 수도 있다 — 줄째로 넣고 빼야 문구에 빈 줄이 남지 않는다 */
+            $기한줄 = $dueDate ? "\n- 입금기한: {$dueDate}" : '';
+
             $lines = [
                 "[콜로플라스트] {$patientName}님 본인부담금 입금 안내입니다.",
                 "- 주문번호: {$order->order_number}",
-                "- 입금계좌: " . trim("{$bankName} {$accountNumber}"),
-                "- 입금금액: {$amountFmt}원",
+                "- 입금계좌: {$계좌}",
+                "- 입금금액: {$amountFmt}원" . $기한줄,
+                "기한 내 미입금 시 주문이 취소될 수 있습니다.",
             ];
-            if ($dueDate) {
-                $lines[] = "- 입금기한: {$dueDate}";
-            }
-            $lines[] = "기한 내 미입금 시 주문이 취소될 수 있습니다.";
 
-            app(MessageService::class)->send($mobile, implode("\n", $lines), $patientName);
+            /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+            $글 = \App\Models\MessageTemplate::문구('deposit_guide', [
+                '#{고객명}'     => $patientName,
+                '#{주문번호}'   => (string) $order->order_number,
+                '#{입금계좌}'   => $계좌,
+                '#{입금금액}'   => $amountFmt,
+                '#{입금기한줄}' => $기한줄,
+            ], implode("\n", $lines));
+
+            app(MessageService::class)->send($mobile, $글, $patientName);
 
             activity()->causedBy(auth()->user())->performedOn($order)
                 ->log("가상계좌 안내 SMS 발송: {$mobile}");

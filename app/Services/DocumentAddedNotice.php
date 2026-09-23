@@ -6,6 +6,7 @@ use App\Events\WithworksStatusChanged;
 use App\Helpers\FcmHelper;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
+use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -54,10 +55,17 @@ class DocumentAddedNotice
         }
 
         try {
+            /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
+               아래 data 는 앱이 갈 화면을 가리는 값이라 건드리지 않는다. */
+            $값 = ['#{처방번호}' => (string) $처방전->rx_number,
+                   '#{서류명}'   => $서류이름,
+                   '#{내용}'     => $본문];
+
             FcmHelper::send(
                 $주인->fcm_token,
-                '처방전에 서류가 추가되었습니다',
-                $본문,
+                MessageTemplate::문구('rx_document_added_title', $값,
+                    '처방전에 서류가 추가되었습니다', 'fcm'),
+                MessageTemplate::문구('rx_document_added', $값, $본문, 'fcm'),
                 [
                     // 앱이 이 값을 보고 그 처방전 화면으로 간다
                     'type'            => 'rx_added',
@@ -78,8 +86,12 @@ class DocumentAddedNotice
     private function 화면으로(int $주인id, Prescription $처방전, string $본문): void
     {
         try {
+            $값 = ['#{처방번호}' => (string) $처방전->rx_number, '#{내용}' => $본문];
+
             broadcast(new WithworksStatusChanged(
-                'rx.document.added', '서류 보탬', $본문,
+                'rx.document.added',
+                MessageTemplate::문구('rx_document_added_pusher_title', $값, '서류 추가', 'pusher'),
+                MessageTemplate::문구('rx_document_added_pusher', $값, $본문, 'pusher'),
                 route('prescriptions.show', $처방전), 'info', $주인id
             ));
         } catch (\Throwable $e) {

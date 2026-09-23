@@ -7,6 +7,7 @@ use App\Events\WithworksStatusChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\Prescription;
+use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -48,8 +49,19 @@ class AssignNotice
         $label = $first->rx_number
             . (($name = $first->patient?->name ?? $first->patient_name_ocr) ? ' · ' . $name : '');
         $body  = $n > 1 ? $label . ' 외 ' . ($n - 1) . '건' : $label;
-        $title = '담당 배정 — ' . $n . '건'
-            . ($by ? ' (' . $by->name . ')' : '');
+            /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $값 = ['#{건수}'     => $n,
+               '#{배정자}'   => (string) ($by?->name ?? ''),
+               '#{처방번호}' => (string) $first->rx_number,
+               '#{고객명}'   => (string) ($first->patient?->name ?? $first->patient_name_ocr ?? ''),
+               /* 없을 수 있는 값은 앞의 가운뎃점째로 넘긴다 */
+               '#{고객명줄}' => ($nm = $first->patient?->name ?? $first->patient_name_ocr) ? ' · ' . $nm : '',
+               '#{나머지}'   => $n > 1 ? ' 외 ' . ($n - 1) . '건' : '',
+               '#{배정자줄}' => $by ? ' (' . $by->name . ')' : ''];
+
+        $title = MessageTemplate::문구('assign_inform_title', $값,
+            '담당 배정 — ' . $n . '건' . ($by ? ' (' . $by->name . ')' : ''), 'pusher');
+        $알림본문 = MessageTemplate::문구('assign_inform', $값, $body, 'pusher');
 
         /* 한 건이면 그 자리로 바로 간다. 여러 건이면 갈 자리가 하나가 아니라
            주문 등록 화면의 목록으로 보낸다 — 거기서 고른다. */
@@ -59,7 +71,7 @@ class AssignNotice
 
         try {
             broadcast(new WithworksStatusChanged(
-                'assign.inform', $title, $body, $url, 'info', $to->id
+                'assign.inform', $title, $알림본문, $url, 'info', $to->id
             ));
         } catch (\Throwable $e) {
             Log::warning('[담당 배정] 알람 실패', ['user' => $to->id, 'error' => $e->getMessage()]);

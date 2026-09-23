@@ -55,9 +55,11 @@ class PurchaseConfirmController extends Controller
             ['patient' => $patient->id]
         );
 
-        $text = "[콜로플라스트] {$patient->name}님, 요청하신 의료용품 구입 확인서입니다.\n"
-              . $link . "\n"
-              . self::LINK_DAYS . '일 뒤에는 열리지 않습니다.';
+        /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $text = \App\Models\MessageTemplate::문구('purchase_confirm', [
+            '#{고객명}' => $patient->name, '#{링크}' => $link, '#{유효일}' => self::LINK_DAYS,
+        ], "[콜로플라스트] {$patient->name}님, 요청하신 의료용품 구입 확인서입니다.\n"
+         . $link . "\n" . self::LINK_DAYS . '일 뒤에는 열리지 않습니다.');
 
         if ($data['channel'] === 'email') {
             if (blank($patient->email)) {

@@ -20,7 +20,8 @@ use Illuminate\Console\Command;
  */
 class CollectMessagesCommand extends Command
 {
-    protected $signature = 'messages:collect {--dry : 무엇이 등록될지 보기만 한다}';
+    protected $signature = 'messages:collect {--dry : 무엇이 등록될지 보기만 한다}
+                                             {--refresh : 화면명ㆍ단계ㆍ변수를 다시 읽어 덮는다(본문은 그대로)}';
     protected $description = '화면의 토스트ㆍ팝업 문구를 메시지 유형 표에 등록한다';
 
     /** 파일 경로에서 화면 이름을 읽는다 */
@@ -39,6 +40,35 @@ class CollectMessagesCommand extends Command
         'messages/index'        => '메시지 관리',
         'delegation-signs'      => '위임 서명',
         'webhooks/index'        => '웹훅 관리',
+        'orders/show'           => '주문 상세',
+        'orders/index'          => '주문 관리',
+        'consent/sign'          => '전자서명(고객)',
+        'consent/id_card'       => '신분증 제출(고객)',
+        'fax/index'             => '팩스 발송',
+        'admin/users'           => '사용자 관리',
+        'permission-groups'     => '권한 그룹',
+        'service-requests'      => '서비스 요청',
+        'sample-orders'         => '샘플 주문',
+        'shop-orders'           => '쇼핑몰 주문',
+        'institutional-notices' => '기관 공지사항',
+        'common-codes'          => '공통 코드',
+        'inquiries'             => '문의 관리',
+        'notices/index'         => '공지사항',
+        'documents/index'       => '서류 보관함',
+        'deposits/index'        => '입금 관리',
+        'error-logs'            => '오류 기록',
+        'masters/_billing'      => '청구처 관리',
+        'masters/index'         => '기준정보 관리',
+        'nhis/assist'           => '공단 지원',
+        'nhis/index'            => '공단 관리',
+        'prescription-consents' => '처방 동의',
+        'privacy-consents'      => '개인정보 동의',
+        'privacy/layout'        => '개인정보 동의(고객)',
+        'partials/counsel'      => '상담 창',
+        'patients/_editor'      => '거래처 관리 — 고치는 창',
+        'patients/_address'     => '거래처 관리 — 주소 창',
+        'prescriptions/_viewer' => '처방자료 보기',
+        'layouts/app'           => '공통(모든 화면)',
     ];
 
     public function handle(): int
@@ -85,12 +115,18 @@ class CollectMessagesCommand extends Command
             if ($있나) {
                 /* **본문은 건드리지 않는다.** 화면명ㆍ단계ㆍ변수가 비어 있을 때만 채운다 —
                    담당자가 고쳐 둔 말을 코드의 옛 글로 되돌리지 않기 위해서다. */
+                /* --refresh 는 화면명ㆍ단계ㆍ변수만 다시 읽는다. 화면 이름을
+                   고쳐 적은 뒤 이미 등록된 줄에도 그 이름이 서게 하는 자리다.
+                   **본문과 원문은 여기서도 건드리지 않는다.** */
+                $덮기 = (bool) $this->option('refresh');
+
                 $채울것 = array_filter([
                     /* 원문이 비어 있으면 채운다 — 이 값이 없으면 화면이 고친 글을 못 찾는다 */
-                    'original'  => $있나->original  ?: $것['body'],
-                    'screen'    => $있나->screen    ?: implode(' · ', array_keys($것['screens'])),
-                    'step'      => $있나->step      ?: $것['step'],
-                    'variables' => $있나->variables ?: $것['variables'],
+                    'original'  => $있나->original ?: $것['body'],
+                    'screen'    => $덮기 ? implode(' · ', array_keys($것['screens']))
+                                         : ($있나->screen ?: implode(' · ', array_keys($것['screens']))),
+                    'step'      => $덮기 ? $것['step']      : ($있나->step      ?: $것['step']),
+                    'variables' => $덮기 ? $것['variables'] : ($있나->variables ?: $것['variables']),
                 ], fn ($v) => $v !== '' && $v !== null);
 
                 if ($채울것) { $있나->update($채울것); }
@@ -173,24 +209,52 @@ class CollectMessagesCommand extends Command
         ];
 
         foreach ($잣대 as $채널 => $정규) {
-            if (! preg_match_all($정규, $글, $m)) { continue; }
+            if (! preg_match_all($정규, $글, $m, PREG_OFFSET_CAPTURE)) { continue; }
 
-            foreach ($m[1] as $본문) {
+            foreach ($m[1] as [$본문, $자리]) {
                 /* 코드 조각이 섞인 글은 거른다 */
                 if (str_contains($본문, '${') || str_contains($본문, '" +') || str_contains($본문, "' +")) {
                     continue;
                 }
 
-                $본문 = str_replace(["\'", '\n'], ["'", "\n"], $본문);
+                $본문 = str_replace(["\\'", '\\n'], ["'", "\\n"], $본문);
 
                 /* 한글이 없는 글은 개발용이다 — 담당자가 고칠 말이 아니다 */
                 if (! preg_match('/[가-힣]/u', $본문)) { continue; }
 
-                $나온것[] = [$채널, $본문, ''];
+                $나온것[] = [$채널, $본문, $this->단계($글, $자리)];
             }
         }
 
         return $나온것;
+    }
+
+    /**
+     * 이 말이 어느 단계에서 뜨는가 (2026-09-23 지시).
+     *
+     * 「전송하는 단계를 모두 등록」하라는 지시다. 화면 글은 함수 안에서 뜨므로,
+     * 글이 적힌 자리에서 위로 올라가며 가장 가까운 함수 선언을 찾는다. 그 이름이
+     * 단추 이름과 이어져 있어(예: ptCounsel → 상담하기) 담당자가 어느 자리인지 안다.
+     *
+     * 함수 밖(화면을 처음 그릴 때 바로 뜨는 글)이면 빈 값이다 — 없는 단계를
+     * 지어내지 않는다.
+     */
+    private function 단계(string $글, int $자리): string
+    {
+        $앞 = substr($글, 0, $자리);
+
+        /* function 이름( · const 이름 = ( · 이름: function( · window.이름 = function( */
+        $잣대 = '/(?:function\\s+([A-Za-z_$가-힣][\\w$가-힣]*)|(?:const|let|var)\\s+([A-Za-z_$가-힣][\\w$가-힣]*)\\s*=\\s*(?:async\\s*)?\\(|([A-Za-z_$가-힣][\\w$가-힣]*)\\s*:\\s*(?:async\\s*)?function)/u';
+
+        if (! preg_match_all($잣대, $앞, $m)) { return ''; }
+
+        /* 가장 가까운 것 — 뒤에서부터 이름이 있는 것을 고른다 */
+        for ($i = count($m[0]) - 1; $i >= 0; $i--) {
+            $이름 = $m[1][$i] ?: ($m[2][$i] ?: $m[3][$i]);
+            if ($이름 !== '') { return $이름 . '()'; }
+        }
+
+        return '';
     }
 
     /** 본문으로 코드를 만든다 — 같은 말은 늘 같은 코드가 된다 */

@@ -299,15 +299,22 @@
 </div>
 
 {{-- ══ 메시지 유형 ══
-     채널마다 목록을 따로 세운다 (2026-09-23 지시). 문자ㆍ알림톡은 고객에게 나가고
-     팝업ㆍ토스트는 담당자에게 뜨는데, 한 목록에 섞어 두면 300건이 한 표에 쌓여
-     무엇을 고치려던 것인지 잃는다.
+     채널마다 목록을 따로 세운다 (2026-09-23 지시).
+
+       문자ㆍ알림톡   고객 휴대전화로 나간다
+       앱 푸시(FCM)   담당자 휴대전화 앱으로 뜬다
+       실시간(Pusher) 관리자 화면을 열어 둔 담당자에게 곧바로 뜬다
+       팝업ㆍ토스트   지금 보고 있는 화면에 뜬다
+
+     한 목록에 섞어 두면 300건이 한 표에 쌓여 무엇을 고치려던 것인지 잃는다.
 
      줄을 **더블클릭**하면 고치는 창이 뜬다. --}}
 <div id="pnlTpl" class="ms-panel">
   <div class="ds-chips" style="margin-bottom:10px;">
     <button type="button" class="ds-chip ms-tplch active" data-ch="sms"      onclick="msTplChannel(this)">문자(SMS)</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="alimtalk" onclick="msTplChannel(this)">알림톡</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="fcm"      onclick="msTplChannel(this)">앱 푸시(FCM)</button>
+    <button type="button" class="ds-chip ms-tplch"        data-ch="pusher"   onclick="msTplChannel(this)">실시간 알림(Pusher)</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="popup"    onclick="msTplChannel(this)">팝업 알림</button>
     <button type="button" class="ds-chip ms-tplch"        data-ch="toast"    onclick="msTplChannel(this)">토스트 알림</button>
     <input type="text" id="msTplFind" class="form-control" placeholder="화면ㆍ단계ㆍ본문으로 찾기"
@@ -346,6 +353,8 @@
       <select id="msTplChannel" class="form-control form-select">
         <option value="sms">문자(SMS)</option>
         <option value="alimtalk">카카오 알림톡</option>
+        <option value="fcm">앱 푸시 알림(FCM)</option>
+        <option value="pusher">실시간 알림(Pusher)</option>
         <option value="popup">팝업 알림</option>
         <option value="toast">토스트 알림</option>
       </select>
