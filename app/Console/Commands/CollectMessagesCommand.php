@@ -134,6 +134,10 @@ class CollectMessagesCommand extends Command
                 continue;
             }
 
+            if ($볼것만) {
+                $this->line('  새로: [' . $것['channel'] . '] ' . str_replace(PHP_EOL, ' / ', $것['body']));
+            }
+
             if (! $볼것만) {
                 MessageTemplate::create([
                     'channel'    => $것['channel'],
@@ -217,7 +221,15 @@ class CollectMessagesCommand extends Command
                     continue;
                 }
 
-                $본문 = str_replace(["\\'", '\\n'], ["'", "\\n"], $본문);
+                $본문 = str_replace(["\\'", '\\n'], ["'", chr(10)], $본문);
+
+                /* 줄바꿈은 **chr(10) 하나**로 담는다. 두 가지로 데었다 (2026-09-23).
+
+                     "\\n"   역슬래시와 n 두 글자가 그대로 들어간다
+                     PHP_EOL  윈도에서는 CRLF 라, 리눅스에서 담긴 줄과 글이 달라진다
+
+                   본문이 한 글자라도 다르면 코드(sha1)가 달라져 같은 말이 두 줄로
+                   선다. 화면이 띄우는 글과도 달라 고친 말이 뜨지 않는다. */
 
                 /* 한글이 없는 글은 개발용이다 — 담당자가 고칠 말이 아니다 */
                 if (! preg_match('/[가-힣]/u', $본문)) { continue; }
