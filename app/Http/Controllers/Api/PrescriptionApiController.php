@@ -96,14 +96,29 @@ class PrescriptionApiController extends Controller
                     ], 404);
                 }
 
-                // 올린 사람이 고칠 수 있는 건이어야 한다 — 검수를 지났거나 남의 건이면 막는다
-                if (! $target->editableByUploader(auth()->id())) {
+                /* 처방전 그림은 건을 만든 사람만 갈아 끼운다. 그 밖의 서류는 검수를
+                   마치기 전이면 **앱을 쓰는 사람 누구나** 보탤 수 있다 (2026-09-23 지시).
+
+                   어제 한 사람이 처방전을 올리고 오늘 다른 사람이 등록신청서를 보태는
+                   일이 실제로 잦다. 여태는 「본인이 업로드한 처방전만」이라 그 길이
+                   막혀 있었다. 지우는 것은 열지 않는다 — 내가 올린 서류만 지운다
+                   (destroyAttachment). 남의 자료가 말없이 사라지면 검수자가 무엇을
+                   보고 승인했는지 알 수 없게 된다. */
+                if ($docType === 'prescription') {
+                    if (! $target->editableByUploader(auth()->id())) {
+                        return $this->refuseEdit($target, $this->보탤수있나($target)
+                            ? '처방전은 이 건을 올린 사람만 바꿀 수 있습니다. 다른 서류는 보탤 수 있습니다.'
+                            : null);
+                    }
+
+                    return $this->fillPrescriptionImage($target, $file);
+                }
+
+                if (! $this->보탤수있나($target)) {
                     return $this->refuseEdit($target);
                 }
 
-                return $docType === 'prescription'
-                    ? $this->fillPrescriptionImage($target, $file)
-                    : $this->attachTo($target, $file, $docType);
+                return $this->attachTo($target, $file, $docType);
             }
 
             /* 번호가 없으면 늘 새 처방전 번호다 — 처방전 서류가 없어도 그렇다.
@@ -200,6 +215,7 @@ class PrescriptionApiController extends Controller
         $열린요청 = $this->openRequestIds($prescription);
         $this->storeAttachment($prescription, $file, $docType);
         $this->tellReuploadArrived($prescription, $열린요청);
+        $this->tellOwner($prescription, $docType);
 
         return response()->json([
             'success'         => true,
@@ -386,20 +402,29 @@ class PrescriptionApiController extends Controller
                 // 앱이 Bearer 토큰으로 열 수 있는 주소를 준다(웹 주소는 세션을 요구한다)
                 'image_url'   => $this->imageUrl($p),
                 'image_name'  => $p->image_original_name,
-                // 올린 사람이 지우고 다시 올릴 수 있는 상태인가
+                // 올린 사람이 지우고 다시 올릴 수 있는 상태인가(처방전 그림 기준)
                 'editable'    => $p->editableByUploader(auth()->id()),
+                /* 남이 올린 건에도 서류를 보탤 수 있다 (2026-09-23 지시).
+                   앱은 이 값으로 「서류 추가」를 세우고, 지우기(🗑)는 서류마다
+                   can_delete 로 가린다. */
+                'can_add'     => $this->보탤수있나($p),
+                'is_mine'     => $p->created_by === auth()->id(),
+                'owner_name'  => $p->creator?->name,
                 /* 검수 재요청 단추를 세울지 (2026-09-15 지시) — 되물은 자취가 있고
                    아직 요청하지 않은 내 건. 규칙은 requestReview() 와 같다. */
                 'can_request_review' => $p->editableByUploader(auth()->id())
                     && ($p->status === 'review_hold' || $p->reuploadRequests()->exists())
                     && ! in_array($p->status, ['review_requested', 'review_resent'], true),
                 'attachments' => $p->attachments->map(fn (PrescriptionAttachment $a) => [
-                    'id'        => $a->id,
-                    'doc_type'  => $a->doc_type,
-                    'doc_label' => $a->doc_type_label,
-                    'file_name' => $a->file_original_name,
-                    'url'       => url("/api/prescriptions/{$p->rx_number}/attachments/{$a->id}/file"),
-                    'is_pdf'    => $a->is_pdf,
+                    'id'         => $a->id,
+                    'doc_type'   => $a->doc_type,
+                    'doc_label'  => $a->doc_type_label,
+                    'file_name'  => $a->file_original_name,
+                    'url'        => url("/api/prescriptions/{$p->rx_number}/attachments/{$a->id}/file"),
+                    'is_pdf'     => $a->is_pdf,
+                    // 누가 올렸는지, 내가 지울 수 있는지 (2026-09-23 지시)
+                    'uploader'   => $a->uploader?->name,
+                    'can_delete' => $this->보탤수있나($p) && $this->내가올린서류인가($a, $p),
                 ])->values(),
                 /* 검수자가 다시 올려 달라고 한 것 — 앱이 서류마다 표시하고 사유ㆍ비고를
                    보인다(2026-09-15 지시). 다시 올리면 저절로 닫혀 여기서 빠진다. */
@@ -416,6 +441,105 @@ class PrescriptionApiController extends Controller
         ]);
     }
 
+    // ── GET /api/prescriptions/lookup ─────────────────────
+    /**
+     * 이름과 생년월일이 **둘 다** 맞는 건을 찾는다 (2026-09-23 지시).
+     *
+     * 목록(index)은 내가 올린 것만 보인다. 어제 다른 사람이 올린 건에 오늘 서류를
+     * 보태려면 그 건을 찾을 길이 있어야 한다. 그렇다고 목록을 통째로 열면 앱을 쓰는
+     * 사람 누구나 환자를 훑게 되므로, 이름만으로는 내주지 않는다 — 생년월일까지 맞은
+     * 건만 내준다. 아는 사람을 확인하러 오는 길이지, 환자를 둘러보는 길이 아니다.
+     *
+     * 검수를 마친 건은 아예 내주지 않는다. 보탤 수 없는 건을 보여 줄 까닭이 없다.
+     * 누가 무엇을 찾아봤는지는 이력에 남긴다.
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name'  => ['required', 'string', 'max:50'],
+            'birth' => ['required', 'date_format:Y-m-d'],
+        ], [
+            'name.required'     => '환자 이름을 입력해 주십시오.',
+            'birth.required'    => '생년월일을 입력해 주십시오.',
+            'birth.date_format' => '생년월일은 YYYY-MM-DD 로 입력해 주십시오.',
+        ]);
+
+        $이름 = trim($request->input('name'));
+        $생일 = $request->input('birth');
+
+        $건들 = Prescription::with(['patient', 'creator'])
+            ->whereIn('status', Prescription::UPLOADER_EDITABLE_STATUSES)
+            ->whereHas('patient', fn ($q) => $q->where('name', $이름)->whereDate('birth_date', $생일))
+            ->latest()
+            ->take(20)
+            ->get();
+
+        try {
+            activity()->causedBy(auth()->user())
+                ->withProperties(['name' => $이름, 'birth' => $생일, 'hits' => $건들->count()])
+                ->log('처방전 찾기 (앱)');
+        } catch (\Throwable) {}
+
+        return response()->json([
+            'success' => true,
+            'data'    => $건들->map(fn (Prescription $p) => [
+                'rx_number'    => $p->rx_number,
+                'status'       => $p->status,
+                'status_label' => $p->status_label,
+                'patient_name' => $p->patient?->name ?? $p->patient_name_ocr,
+                'birth_date'   => $p->patient?->birth_date?->format('Y-m-d'),
+                'hospital'     => $p->hospital_name,
+                'disease_name' => $p->disease_name,
+                'file_count'   => $p->attachments()->count() + ($p->image_path ? 1 : 0),
+                'owner_name'   => $p->creator?->name,
+                'is_mine'      => $p->created_by === auth()->id(),
+                'created_at'   => $p->created_at->format('Y-m-d H:i'),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * 이 건에 서류를 보탤 수 있는가 (2026-09-23 지시).
+     *
+     * 건을 누가 만들었는지는 보지 않는다 — 검수를 마치기 전이면 앱을 쓰는 사람
+     * 누구나 보탠다. 지우는 것은 이것과 별개다(내가올린서류인가).
+     */
+    private function 보탤수있나(Prescription $p): bool
+    {
+        return in_array($p->status, Prescription::UPLOADER_EDITABLE_STATUSES, true);
+    }
+
+    /**
+     * 이 서류를 내가 올렸는가.
+     *
+     * 올린 사람을 적어 두기 전(2026-08 이전)에 붙은 자료는 uploaded_by 가 비어 있다.
+     * 그런 것은 건을 만든 사람의 것으로 본다 — 그때는 건 주인만 올릴 수 있었다.
+     */
+    private function 내가올린서류인가(PrescriptionAttachment $a, Prescription $p): bool
+    {
+        $올린이 = $a->uploaded_by ? (int) $a->uploaded_by : (int) $p->created_by;
+
+        return $올린이 === (int) auth()->id();
+    }
+
+    /**
+     * 남의 건에 서류를 보탰으면 건 주인에게 알린다 (2026-09-23 지시).
+     *
+     * 내 건에 남이 무엇을 보탰는지 모르면, 검수를 청할 때 무엇이 올라와 있는지
+     * 다시 열어 봐야 한다. 알리지 못해도 업로드는 이미 끝났다 — 안에서 삼킨다.
+     */
+    private function tellOwner(Prescription $prescription, string $docType): void
+    {
+        try {
+            app(\App\Services\DocumentAddedNotice::class)
+                ->알린다($prescription->refresh(), $docType, auth()->user());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[서류 보탬] 알림 실패', [
+                'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     // ── POST /api/prescriptions/{rx_number}/request-review ──
     /**
      * 앱에서 검수를 다시 청한다 (2026-09-15 지시).
@@ -429,7 +553,10 @@ class PrescriptionApiController extends Controller
     {
         $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
 
-        if (! $p->editableByUploader(auth()->id())) {
+        /* 서류를 보탠 사람이 그대로 검수를 청할 수 있어야 한다 (2026-09-23 지시).
+           보태기만 되고 청하는 것은 건 주인만 할 수 있으면, 보탠 사람은 「다 올렸다」고
+           따로 말을 전해야 한다. 검수를 마치기 전이면 누구나 청한다. */
+        if (! $this->보탤수있나($p)) {
             return $this->refuseEdit($p);
         }
 
@@ -511,7 +638,7 @@ class PrescriptionApiController extends Controller
     {
         $p = Prescription::where('rx_number', $rxNumber)->firstOrFail();
 
-        if (! $p->editableByUploader(auth()->id())) {
+        if (! $this->보탤수있나($p)) {
             return $this->refuseEdit($p);
         }
 
@@ -522,6 +649,15 @@ class PrescriptionApiController extends Controller
                 'success' => false,
                 'message' => '이미 삭제된 자료입니다.',
             ], 404);
+        }
+
+        /* 지우는 것은 올린 사람만 (2026-09-23 지시). 남이 올린 자료가 말없이
+           사라지면, 검수자가 무엇을 보고 승인했는지 알 수 없게 된다. */
+        if (! $this->내가올린서류인가($attachment, $p)) {
+            return response()->json([
+                'success' => false,
+                'message' => '내가 올린 서류만 지울 수 있습니다.',
+            ], 403);
         }
 
         Storage::disk('public')->delete($attachment->file_path);
@@ -610,16 +746,22 @@ class PrescriptionApiController extends Controller
         return url("/api/prescriptions/{$p->rx_number}/image") . '?v=' . $표;
     }
 
-    /** 고칠 수 없는 까닭을 알린다 — 남의 것인지, 이미 검수를 지난 것인지. */
-    private function refuseEdit(Prescription $p): JsonResponse
+    /**
+     * 고칠 수 없는 까닭을 알린다 — 이미 검수를 지났는지, 남의 것인지.
+     *
+     * 상태부터 본다. 남의 건에도 서류를 보탤 수 있게 된 뒤로(2026-09-23), 검수를
+     * 마친 건을 남이 건드렸을 때 「본인이 올린 것만」이라고 답하면 까닭이 어긋난다 —
+     * 제 건이어도 그 상태에서는 못 고친다.
+     */
+    private function refuseEdit(Prescription $p, ?string $까닭 = null): JsonResponse
     {
-        $mine = $p->created_by === auth()->id();
+        $고칠수있는상태 = in_array($p->status, Prescription::UPLOADER_EDITABLE_STATUSES, true);
 
         return response()->json([
             'success' => false,
-            'message' => $mine
-                ? "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하십시오."
-                : '본인이 업로드한 처방전만 수정할 수 있습니다.',
+            'message' => $까닭 ?: ($고칠수있는상태
+                ? '본인이 업로드한 처방전만 수정할 수 있습니다.'
+                : "「{$p->status_label}」 상태에서는 수정할 수 없습니다. 담당자에게 문의하십시오."),
         ], 403);
     }
 

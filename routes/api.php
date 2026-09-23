@@ -88,6 +88,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/upload',                    [PrescriptionApiController::class, 'upload']);
         // {rx_number} 보다 앞에 둔다 — 뒤에 두면 'doc-types' 가 처방번호로 잡힌다
         Route::get('/doc-types',                  [PrescriptionApiController::class, 'docTypes']);
+        /* 이름+생년월일이 둘 다 맞는 건 찾기 — 남이 올린 건에 서류를 보태려고
+           그 건을 찾는 자리다 (2026-09-23 지시). 고정 경로라 {rx_number} 앞에 둔다. */
+        Route::get('/lookup',                     [PrescriptionApiController::class, 'lookup']);
         Route::get('/{rx_number}',               [PrescriptionApiController::class, 'show']);
 
         /* 잘못 올린 자료를 올린 사람이 스스로 지우고 다시 올린다.
