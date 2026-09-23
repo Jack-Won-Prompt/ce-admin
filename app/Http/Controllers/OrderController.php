@@ -710,13 +710,19 @@ class OrderController extends Controller
 
            값이 그대로면 남기지 않는다. 배송지만 고치는 정정이 있고, 화면은 저장을
            누를 때마다 이 자리로 오므로 그때마다 줄이 쌓이면 이력이 뜻을 잃는다. */
+        /* 무엇이 바뀌었는지도 **주문 행이 아니라 품목 줄**로 견준다. 주문 행의 돈은
+           첫 요청이 이미 새 값으로 맞춰 놓아, 그것과 견주면 자격이 바뀌어 금액만
+           달라지는 정정은 늘 「바뀐 것 없음」이 되어 한 줄도 남지 않는다.
+           뜨는 값과 견주는 값이 같아야 이력이 앞뒤가 맞는다. */
+        $이전 = \App\Models\OrderAmendment::이전값($order);
+
         $바뀐것 = [];
         foreach ([
-            '제품코드' => [(string) $order->product_code, (string) ($firstItem['product_code'] ?? $order->product_code)],
-            '수량'     => [(int) $order->quantity,        (int) $totalQty],
-            '단가'     => [(int) $order->unit_price,      (int) $unitPrice],
-            '본인부담' => [(int) $order->patient_copay,   (int) $totalCopay],
-            '기관부담' => [(int) $order->nhis_amount,     (int) $totalNhis],
+            '제품코드' => [(string) $이전['product_code'], (string) ($firstItem['product_code'] ?? $이전['product_code'])],
+            '수량'     => [$이전['quantity'],              (int) $totalQty],
+            '단가'     => [$이전['unit_price'],            (int) $unitPrice],
+            '본인부담' => [$이전['patient_copay'],         (int) $totalCopay],
+            '기관부담' => [$이전['nhis_amount'],           (int) $totalNhis],
         ] as $칸 => [$전, $후]) {
             if ($전 !== $후) { $바뀐것[] = $칸; }
         }
