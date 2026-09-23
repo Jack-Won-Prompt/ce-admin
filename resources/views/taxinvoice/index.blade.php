@@ -705,8 +705,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
   });
   window.taxRowAction = function (action) {
     const c = window.__taxGrid.getCheckedRows();
-    if (!c.length)   { showToast('행을 먼저 체크하십시오.', 'warning'); return; }
-    if (c.length > 1){ showToast('한 건만 선택하십시오.', 'warning'); return; }
+    if (!c.length)   { showToast('행을 먼저 선택해 주십시오.', 'warning'); return; }
+    if (c.length > 1){ showToast('한 건만 선택해 주십시오.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { taxOpenRow(r); return; }
     if (r.record_type === 'pending') { showToast('아직 발행되지 않은 건입니다 — 인쇄ㆍ취소 대상이 아닙니다.', 'warning'); return; }
@@ -919,9 +919,9 @@ async function issueInvoice() {
   const eeCorpNum= document.getElementById('ee-corp-num').value.trim().replace(/\D/g,'');
   const eeName   = document.getElementById('ee-corp-name').value.trim();
 
-  if (!mgtKey)    { showToast('관리번호를 입력하십시오.', 'danger'); return; }
-  if (!erCorpNum || !erName) { showToast('공급자 사업자번호와 상호를 입력하십시오.', 'danger'); return; }
-  if (!eeCorpNum || !eeName) { showToast('공급받는자 사업자번호와 상호를 입력하십시오.', 'danger'); return; }
+  if (!mgtKey)    { showToast('관리번호를 입력해 주십시오.', 'danger'); return; }
+  if (!erCorpNum || !erName) { showToast('공급자 사업자번호와 상호를 입력해 주십시오.', 'danger'); return; }
+  if (!eeCorpNum || !eeName) { showToast('공급받는자 사업자번호와 상호를 입력해 주십시오.', 'danger'); return; }
 
   // 품목 수집
   const details = [];
@@ -991,7 +991,7 @@ async function issueInvoice() {
     genMgtKey();
     loadHistory(1);
   } catch(e) {
-    showToast('발행 실패: ' + e.message, 'danger', 8000);
+    showToast('발행하지 못했습니다: ' + e.message, 'danger', 8000);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bx bx-check-circle"></i> 세금계산서 즉시발행';
@@ -1101,7 +1101,7 @@ async function loadHistory(page = 1) {
     renderPager(data.total ?? 0, page, 15);
   } catch(e) {
     window.__taxGrid && window.__taxGrid.setData([]);
-    showToast('조회 실패: ' + e.message, 'error');
+    showToast('조회하지 못했습니다: ' + e.message, 'error');
   }
 }
 
@@ -1329,7 +1329,7 @@ async function openPrint(mgtKeyType, mgtKey) {
     win.document.close();
     win.addEventListener('load', () => { win.focus(); win.print(); });
   } catch(e) {
-    showToast('인쇄 실패: ' + e.message, 'danger');
+    showToast('인쇄하지 못했습니다: ' + e.message, 'danger');
   }
 }
 
@@ -1538,7 +1538,7 @@ async function confirmCancel() {
     showToast('세금계산서 발행이 취소되었습니다.', 'success', 5000);
     loadHistory(histPage);
   } catch(e) {
-    showToast('취소 실패: ' + e.message, 'danger', 7000);
+    showToast('취소하지 못했습니다: ' + e.message, 'danger', 7000);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bx bx-x-circle"></i> 발행 취소 확정';

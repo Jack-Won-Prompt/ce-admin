@@ -471,8 +471,8 @@ window.HELP_TOUR_STEPS = [
 
   window.prescriptionViewDetail = function () {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('상세를 볼 행을 체크하십시오.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
+    if (!c.length)    { showToast('상세를 볼 행을 선택해 주십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return; }
     openReviewTab(c[0].rx_number);
   };
 
@@ -740,7 +740,7 @@ window.HELP_TOUR_STEPS = [
       창.마침('팩스통합본을 다시 만들었습니다.');
       await new Promise(r => setTimeout(r, 500));
     } catch (e) {
-      showToast('값은 저장했지만 팩스통합본을 다시 만들지 못했습니다 — ' + e.message, 'warning', 7000);
+      showToast('설정값은 저장했지만 팩스통합본을 다시 생성하지 못했습니다 — ' + e.message, 'warning', 7000);
     } finally {
       창.닫기();
     }

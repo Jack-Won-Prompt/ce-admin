@@ -261,8 +261,8 @@
 
   window.institutionalNoticeViewDetail = function () {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('상세를 볼 공지를 체크하십시오.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
+    if (!c.length)    { showToast('상세를 볼 공지를 선택해 주십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return; }
     openDetail(c[0].id);
   };
 
@@ -343,7 +343,7 @@
         loading.classList.add('d-none');
         grid.setData([]);
         empty.classList.remove('d-none');
-        showToast('오류: ' + err.message, 'error');
+        showToast('오류가 발생했습니다: ' + err.message, 'error');
       });
   }
 
@@ -391,7 +391,7 @@
       .catch(err => {
         document.getElementById('modalContentLoading').classList.add('d-none');
         document.getElementById('modalContent').classList.remove('d-none');
-        document.getElementById('modalContentText').textContent = '오류: ' + err.message;
+        document.getElementById('modalContentText').textContent = '오류가 발생했습니다: ' + err.message;
       });
   }
 

@@ -701,7 +701,7 @@
 
   // 가상계좌 안내 SMS 재발송
   async function resendVaSms(orderId, btn) {
-    if (!await ceConfirm('환자에게 가상계좌 안내 SMS를 재발송하시겠습니까?', { confirmText: '재발송' })) return;
+    if (!await ceConfirm('거래처에 가상계좌 안내 SMS를 재발송하시겠습니까?', { confirmText: '재발송' })) return;
     BtnState.loading(btn, '발송 중...');
     try {
       const res = await fetch(btn.dataset.url, {
@@ -1104,8 +1104,8 @@
   // 한 건만 체크됐는지 검증 후 해당 행 반환 (아니면 경고 후 null)
   function oneChecked() {
     const c = grid.getCheckedRows();
-    if (!c.length)    { showToast('대상 행을 체크하십시오.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return null; }
+    if (!c.length)    { showToast('대상 행을 선택해 주십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return null; }
     return c[0];
   }
 
@@ -1183,7 +1183,7 @@
        결제 방식은 이후 절차를 가른다 — 현금영수증은 가상계좌ㆍ무통장입금에만 나가고
        카드결제는 카드매출전표가 증빙이다. 방식이 비어 있으면 그 자리에서 고르게 한다. */
     if (!r.pay_method_key) {
-      showToast('결제 방식을 먼저 선택하십시오.', 'warning');
+      showToast('결제 방식을 먼저 선택해 주십시오.', 'warning');
       const cell = btn.closest('tr')?.querySelector('.pay-cell-btn');
       if (cell) payMethodPick(cell, r, rowIndex);
       return;

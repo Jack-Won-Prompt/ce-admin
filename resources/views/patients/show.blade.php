@@ -936,7 +936,7 @@
      거래처 수정 창(patients._editor-modal)과 같은 서비스·같은 순서다. */
   function findAddress() {
     if (typeof daum === 'undefined' || !daum.Postcode) {
-      showToast('주소 찾기를 불러오지 못했습니다. 직접 입력하십시오.', 'warning');
+      showToast('주소 찾기를 불러오지 못했습니다. 직접 입력해 주십시오.', 'warning');
       return;
     }
     const W = 500, H = 600;
@@ -1304,7 +1304,7 @@
     const 목록 = 겹친것.map(p => `· ${p.name} (${p.mobile || p.phone || ''})`).join('\n');
 
     return await ceConfirm(
-      '동일 전화번호가 있으니 확인 후 저장 바랍니다.\n\n' + 목록,
+      '동일한 전화번호가 있습니다. 확인한 뒤 저장해 주십시오.' + 목록,
       { title: '같은 전화번호가 있습니다', tone: 'warning',
         confirmText: '확인했습니다 · 저장', cancelText: '다시 보기' });
   }

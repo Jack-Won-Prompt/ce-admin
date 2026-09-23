@@ -216,7 +216,7 @@
   function pickOne(label) {
     const c = grid.getCheckedRows();
     if (!c.length)    { showToast(label + '할 그룹을 체크하십시오.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 개만 선택하십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 개만 선택해 주십시오.', 'warning'); return null; }
     return c[0];
   }
   window.editSelected   = function () { const r = pickOne('편집'); if (r) loadGroup(r.id); };

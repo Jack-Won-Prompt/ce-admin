@@ -342,7 +342,7 @@ class AuthApiController extends Controller
                    아래 글이 그대로 나간다. */
                 \App\Models\MessageTemplate::문구('login_otp',
                     ['#{인증번호}' => $code],
-                    "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력하십시오."),
+                    "[콜로플라스트] 로그인 인증번호: {$code}\n5분 내 입력해 주십시오."),
                 $user->name,
             );
         } catch (\Throwable $e) {

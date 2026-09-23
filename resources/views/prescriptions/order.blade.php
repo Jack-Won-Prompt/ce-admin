@@ -6110,7 +6110,7 @@ function deleteAttachment(e, id, btn) {
           renderFaxDocs();
           showToast('첨부 파일이 삭제되었습니다.', 'success');
         }
-      }).catch(() => showToast('삭제 실패', 'danger'));
+      }).catch(() => showToast('삭제하지 못했습니다.', 'danger'));
     };
   }
 
@@ -6162,7 +6162,7 @@ function handleAttachUpload(input) {
   fetch('{{ route('prescriptions.attachments.store', $prescription) }}', {
     method: 'POST', body: fd,
   }).then(r => r.json()).then(d => {
-    if (!d.success) { showToast(d.message || '업로드 실패', 'danger'); return; }
+    if (!d.success) { showToast(d.message || '업로드하지 못했습니다.', 'danger'); return; }
     const att = d.attachment;
     const genAt = ALL_DOCS.findIndex(x => x.isGenerated);
     ALL_DOCS.splice(genAt < 0 ? ALL_DOCS.length : genAt, 0, att);
@@ -6188,7 +6188,7 @@ function handleAttachUpload(input) {
     renderFaxDocs();
     switchViewerDoc(thumbEl);
     showToast('첨부 문서가 추가되었습니다.', 'success');
-  }).catch(() => showToast('업로드 실패', 'danger'));
+  }).catch(() => showToast('업로드하지 못했습니다.', 'danger'));
 }
 
 // ── 뷰어 위치 전환 (좌 ↔ 우) ────────────────────────────
@@ -7052,7 +7052,7 @@ window.HELP_TOUR_STEPS = [
   window.pkPick = function () {
     const i = pkGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
-    if (!row) { showToast('선택할 행을 클릭하십시오.', 'warning'); return; }
+    if (!row) { showToast('선택할 행을 클릭해 주십시오.', 'warning'); return; }
     pkTake(row);
   };
 
@@ -7207,7 +7207,7 @@ window.HELP_TOUR_STEPS = [
   window.ocPick = function () {
     const i = ocGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : ocGrid.getData()[i];
-    if (!row) { showToast('선택할 건을 클릭하십시오. 새 건이면 「신규로 진행」입니다.', 'warning', 5000); return; }
+    if (!row) { showToast('선택할 건을 클릭해 주십시오. 새 건이면 「신규로 진행」입니다.', 'warning', 5000); return; }
     ocGo(row);
   };
 
@@ -7250,12 +7250,12 @@ window.HELP_TOUR_STEPS = [
     try {
       const res = await apiRequest(`/prescriptions/${last.rx_number}/duplicate`, 'POST',
                                    { patient_id: _ocPerson.id });
-      if (!res.success) { showToast(res.message || '새 건을 만들지 못했습니다.', 'danger'); return; }
+      if (!res.success) { showToast(res.message || '새 건을 등록하지 못했습니다.', 'danger'); return; }
       showToast(res.message, 'success', 5000);
       clearAllDirty();
       location.href = res.url;
     } catch (e) {
-      showToast('새 건을 만들지 못했습니다.', 'danger');
+      showToast('새 건을 등록하지 못했습니다.', 'danger');
     }
   };
 
@@ -7572,7 +7572,7 @@ window.HELP_TOUR_STEPS = [
     /* 이어 둔 사람이 없다 — 처방전만 적어 둔 새 사람이다. 저장하면 그 사람이 만들어지고
        거래처에 오른다. 저장은 담당자가 알아야 할 일이라 묻고 나서 한다. */
     if (!name) {
-      showToast('이름을 먼저 입력하십시오. 상담은 거래처 단위로 등록됩니다.', 'warning', 5000);
+      showToast('이름을 먼저 입력해 주십시오. 상담은 거래처 단위로 등록됩니다.', 'warning', 5000);
       return;
     }
 
@@ -7589,7 +7589,7 @@ window.HELP_TOUR_STEPS = [
 
     // 저장이 끝나면 서버가 알려 준 사람 id 가 들어와 있다
     const id = document.getElementById('f-patient-id')?.value;
-    if (!id) { showToast('저장은 되었으나 환자 연결에 실패했습니다.', 'danger', 5000); return; }
+    if (!id) { showToast('저장은 되었으나 거래처 연결에 실패했습니다.', 'danger', 5000); return; }
 
     window.csOpen(parseInt(id, 10), document.getElementById('f-name')?.value?.trim() || name, tel);
   }
@@ -8104,7 +8104,7 @@ window.HELP_TOUR_STEPS = [
     const pid = document.getElementById('f-patient-id')?.value;
 
     if (!pid) {
-      showToast('먼저 「조회」로 거래처를 선택하십시오 — 그 거래처의 주소를 불러옵니다.', 'warning');
+      showToast('먼저 「조회」로 거래처를 선택해 주십시오 — 그 거래처의 주소를 불러옵니다.', 'warning');
       return;
     }
 
@@ -8942,7 +8942,7 @@ window.HELP_TOUR_STEPS = [
       ? picked.map(i => ({ _idx: i }))
       : (itemGrid?.getCheckedRows?.() ?? []);
 
-    if (!checked.length) { showToast('삭제할 행을 선택하십시오.', 'warning'); return; }
+    if (!checked.length) { showToast('삭제할 행을 선택해 주십시오.', 'warning'); return; }
     const idxs = new Set(checked.map(r => r._idx));
     items = items.filter((_, i) => !idxs.has(i));
     if (!items.length) items = [emptyItem()];
@@ -9015,7 +9015,7 @@ window.HELP_TOUR_STEPS = [
     const 새창 = window.open(NEW_ENTRY_URL, '_blank');
 
     if (! 새창) {
-      await ceAlert('새 탭이 열리지 않았습니다 — 브라우저의 팝업 차단을 풀어 주십시오.',
+      await ceAlert('새 탭이 열리지 않았습니다 — 브라우저의 팝업 차단을 해제해 주십시오.',
                     { title: '신규 등록', tone: 'warning' });
       return;
     }
@@ -9319,7 +9319,7 @@ window.HELP_TOUR_STEPS = [
     const dateVal   = document.getElementById('f-date')?.value;
     const periodVal = parseInt(document.getElementById('f-rx-period')?.value ?? '');
     if (!dateVal || !periodVal || periodVal < 1) {
-      if (showWarn) showToast('처방전발행일과 처방기간(일)을 먼저 입력해 주십시오.', 'warning');
+      if (showWarn) showToast('처방전 발행일과 처방기간(일)을 먼저 입력해 주십시오.', 'warning');
       return;
     }
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -9412,7 +9412,7 @@ window.HELP_TOUR_STEPS = [
     if (!메모) return true;
 
     const ok = await ceConfirm(
-      '검수 요청 메모를 확인하셨습니까?\n\n' + 메모,
+      '검수 요청 메모를 확인하셨습니까?' + 메모,
       { title: '검수 요청 메모', confirmText: '확인했습니다', cancelText: '다시 보기' });
 
     if (ok) _메모확인함 = true;
@@ -9444,7 +9444,7 @@ window.HELP_TOUR_STEPS = [
 
     _동의알림함 = true;
     await ceAlert(
-      '동의 확인 후, 구매 진행 바랍니다.\n\n'
+      '동의를 확인한 뒤 구매를 진행해 주십시오.'
       + '아직 받지 못한 동의\n' + 남은.map(t => '· ' + t).join('\n') + '\n\n'
       + '화면 위쪽의 「서명 동의」 버튼으로 받으십시오. '
       + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.',
@@ -9472,7 +9472,7 @@ window.HELP_TOUR_STEPS = [
     if (!name) {
       /* 이름이 없으면 거래처를 이을 수 없고, 거래처 없는 주문은 만들지 않는다
          (2026-09-20 지시). 서버도 같은 자리에서 막는다 — 화면만 믿지 않는다. */
-      showToast('거래처를 먼저 선택하십시오. 이름 없이 저장할 수 없습니다.', 'warning');
+      showToast('거래처를 먼저 선택해 주십시오. 이름 없이 저장할 수 없습니다.', 'warning');
       document.getElementById('f-name')?.focus();
       return false;
     }
@@ -9850,7 +9850,7 @@ window.HELP_TOUR_STEPS = [
     단추들.forEach(b => {
       if (처방외) {
         b.disabled = true;
-        b.title = '처방외는 맞대어 볼 처방자료가 없어 검수하지 않습니다.';
+        b.title = '처방외는 대조할 처방자료가 없어 검수하지 않습니다.';
         b.dataset.rxOnlyLock = '1';
       } else if (b.dataset.rxOnlyLock) {
         delete b.dataset.rxOnlyLock;
@@ -10060,7 +10060,7 @@ window.HELP_TOUR_STEPS = [
      422 로 돌려보내면 적은 것을 잃는다. 열기 전에 알린다. */
   function approveRx() {
     if (window.검수단추가리기 && 검수단추가리기()) {
-      ceAlert('처방외는 맞대어 볼 처방자료가 없어 검수하지 않습니다.',
+      ceAlert('처방외는 대조할 처방자료가 없어 검수하지 않습니다.',
         { title: '입력 검수', tone: 'warning' });
       return;
     }
@@ -10351,7 +10351,7 @@ window.HELP_TOUR_STEPS = [
        청구가 새지 않는다. */
     if ((document.getElementById('f-acc-add-type')?.value ?? '') === '20') return true;
 
-    ceAlert('검수 완료 후 구매 진행 및 저장 가능합니다.', { title: '검수가 아직입니다' });
+    ceAlert('검수를 완료해야 구매를 진행하고 저장할 수 있습니다.', { title: '검수가 아직입니다' });
     return false;
   }
 
@@ -10431,7 +10431,7 @@ window.HELP_TOUR_STEPS = [
       return true;
     }
 
-    ceAlert('1일 처방 개수 / 총 처방일수 / 총계 확인 후 진행 및 저장 바랍니다.\n\n' + msg,
+    ceAlert('1일 처방 개수ㆍ총 처방일수ㆍ총계를 확인한 뒤 진행하고 저장해 주십시오.' + msg,
             { title: '수량이 맞지 않습니다' });
     return false;
   }
@@ -10695,7 +10695,7 @@ window.HELP_TOUR_STEPS = [
     const cls  = document.getElementById('f-benefit-class')?.value ?? '';
 
     if (!type) {
-      ceAlert('유형이 비어 있어 주문을 만들 수 없습니다.\n\n'
+      ceAlert('유형이 비어 있어 주문을 생성할 수 없습니다.'
             + '상세 목록의 「유형」을 먼저 선택하십시오 — 유형과 자격이 청구전략을 정하고, '
             + '청구전략이 기관 부담금을 셈합니다.',
             { title: '유형을 선택하십시오', tone: 'warning' });
@@ -10706,7 +10706,7 @@ window.HELP_TOUR_STEPS = [
     const key = _bsKey(type, cls);
 
     if (!key || !BILLING_STRATEGY[key]) {
-      ceAlert('청구전략이 정해지지 않아 주문을 만들 수 없습니다.\n\n'
+      ceAlert('청구전략이 정해지지 않아 주문을 생성할 수 없습니다.'
             + '상세 목록의 「유형」과 「급여구분」을 확인해 주십시오. '
             + '전략이 없으면 기관이 낼 몫이 0원으로 굳습니다.',
             { title: '청구전략이 없습니다', tone: 'warning' });
@@ -10805,7 +10805,7 @@ window.HELP_TOUR_STEPS = [
        「주문 완료」로 넘어가는데 실제로 판 것은 없다 — 그 상태를 보고 다음 사람이
        청구를 건다. 저장은 이미 눌러 뒀을 수 있으니 적어 둔 것은 건드리지 않는다. */
     if (!items.some(i => i.product_name)) {
-      showToast('주문할 제품이 없습니다. 제품 탭에서 제품을 먼저 선택하십시오.', 'warning');
+      showToast('주문할 제품이 없습니다. 제품 탭에서 제품을 먼저 선택해 주십시오.', 'warning');
       return;
     }
 
@@ -11610,8 +11610,8 @@ window.HELP_TOUR_STEPS = [
       });
       wwSuccess = wwRes.success ?? false;
       if (!wwSuccess) {
-        BtnState.error(btn, '삭제 실패');
-        showToast('위드웍스 삭제 실패: ' + (wwRes.message || ''), 'danger');
+        BtnState.error(btn, '삭제하지 못했습니다.');
+        showToast('위드웍스에서 삭제하지 못했습니다: ' + (wwRes.message || ''), 'danger');
         return;
       }
     }
@@ -12405,7 +12405,7 @@ window.HELP_TOUR_STEPS = [
 
     window.counselPopupClose = async function () {
       if (isAnyDirty()) {
-        const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
+        const ok = await ceConfirm('입력한 내용을 저장하고 닫으시겠습니까?\n저장하지 않으면 입력한 내용이 사라집니다.',
                                    { tone: 'warning', confirmText: '저장 및 닫기', cancelText: '그냥 닫기' });
         if (ok) {
           await counselPopupSave();
@@ -12557,12 +12557,12 @@ window.HELP_TOUR_STEPS = [
   window.addEventListener('resize', placePayPopover);
 
   async function sendPaymentLink(btn) {
-    if (!PAY_STORE_URL) { showToast('주문을 먼저 만들어 주십시오.', 'warning'); return; }
+    if (!PAY_STORE_URL) { showToast('주문을 먼저 생성해 주십시오.', 'warning'); return; }
 
     const method = document.querySelector('input[name="pay_method"]:checked')?.value;
     const mobile = document.getElementById('payMobile').value.trim();
-    if (!method) { showToast('결제 방법을 선택하십시오.', 'warning'); return; }
-    if (!mobile) { showToast('수신 번호를 입력하십시오.', 'warning'); return; }
+    if (!method) { showToast('결제 방법을 선택해 주십시오.', 'warning'); return; }
+    if (!mobile) { showToast('수신 번호를 입력해 주십시오.', 'warning'); return; }
 
     BtnState.loading(btn, '보내는 중...');
     try {
@@ -13585,7 +13585,7 @@ window.HELP_TOUR_STEPS = [
   async function sendFax() {
     /* 창을 열지 않고 부르는 길이 있다 — 여기서도 막는다 */
     if (RX_BILLING_OFFICE?.kind === 'local') {
-      showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 발송하십시오.', 'warning', 6000);
+      showToast('지자체(시군구청) 건은 팩스로 보내지 않습니다 — 등기로 발송해 주십시오.', 'warning', 6000);
       return;
     }
 
@@ -13963,7 +13963,7 @@ window.HELP_TOUR_STEPS = [
             showToast(sd.success ? (isDisabled ? 'SMS 발송 완료 (가상계좌 비활성화)' : '가상계좌 발급 및 SMS 발송 완료') : `완료 (SMS 실패: ${sd.message})`, sd.success ? 'success' : 'warning');
             if (sd.success) { markSmsSent(); }
           }).catch(() => {
-            showToast('완료 (SMS 발송 오류)', 'warning');
+            showToast('가상계좌를 발급했습니다. (안내 문자 발송 실패)', 'warning');
           });
         } else {
           showToast(isDisabled ? '가상계좌 발급 비활성화 — 번호 미입력으로 SMS 미발송' : '가상계좌가 발급되었습니다.', isDisabled ? 'warning' : 'success');
@@ -14268,7 +14268,7 @@ window.HELP_TOUR_STEPS = [
     olAsThen = then || null;
 
     if (!olAsRows.length) {
-      showToast('담당자를 배정할 건을 목록에서 선택하십시오.', 'warning');
+      showToast('담당자를 배정할 건을 목록에서 선택해 주십시오.', 'warning');
       return;
     }
 
@@ -14302,7 +14302,7 @@ window.HELP_TOUR_STEPS = [
     const sel = document.getElementById('olAsUser');
     const uid = sel.value;
 
-    if (!uid) { showToast('담당자를 선택하십시오.', 'warning'); sel.focus(); return; }
+    if (!uid) { showToast('담당자를 선택해 주십시오.', 'warning'); sel.focus(); return; }
 
     const b = document.getElementById('olAsGo');
     b.disabled = true; b.textContent = '배정 중...';
@@ -14898,7 +14898,7 @@ window.HELP_TOUR_STEPS = [
 
   // 현재 위임장 설정으로 요양비위임장 재생성 → 첨부문서 갱신
   async function regenerateDelegation(btn) {
-    if (!await ceConfirm('현재 위임장 설정(기관·계좌·서명위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영할까요?',
+    if (!await ceConfirm('현재 위임장 설정(기관·계좌·서명 위치)으로 요양비위임장을 다시 생성해 첨부문서에 반영하시겠습니까?',
                          { confirmText: '재생성' })) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
@@ -14924,7 +14924,7 @@ window.HELP_TOUR_STEPS = [
 
   // 팩스통합본 재생성 (현재 데이터로, 요양비위임장 포함)
   async function regenerateFax(btn) {
-    if (!await ceConfirm('현재 데이터로 팩스통합본을 다시 생성할까요? (요양비위임장 포함)',
+    if (!await ceConfirm('현재 데이터로 팩스통합본을 다시 생성하시겠습니까? (요양비위임장 포함)',
                          { confirmText: '재생성' })) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
@@ -15177,7 +15177,7 @@ window.HELP_TOUR_STEPS = [
     el.setSelectionRange(0, 99999);
     navigator.clipboard?.writeText(el.value)
       .then(() => showToast('서명 링크를 복사했습니다.', 'success'))
-      .catch(() => showToast('복사하지 못했습니다 — 항목의 내용을 직접 선택하십시오.', 'warning'));
+      .catch(() => showToast('복사하지 못했습니다 — 항목의 내용을 직접 선택해 주십시오.', 'warning'));
   }
 
   async function sendConsentSms() {
@@ -16066,7 +16066,7 @@ window.HELP_TOUR_STEPS = [
   }
 
   async function submitTaxInvoice() {
-    if (!_ORDER_ID) { showToast('주문 생성 후 발행 가능합니다.', 'danger'); return; }
+    if (!_ORDER_ID) { showToast('주문을 생성한 뒤에 발행할 수 있습니다.', 'danger'); return; }
     const btn      = document.getElementById('btnSubmitTaxInvoice');
     const invoicee = document.getElementById('ti-invoicee').value;
     const bizName  = document.getElementById('ti-biz-name').value.trim();
@@ -16074,10 +16074,10 @@ window.HELP_TOUR_STEPS = [
     const bizNo    = document.getElementById('ti-biz-no').value.trim();
     const supply   = document.getElementById('ti-supply').value.replace(/,/g, '');
     const vat      = document.getElementById('ti-vat').value.replace(/,/g, '');
-    if (!bizName) { showToast('공급받는자 상호를 입력하십시오.', 'danger'); return; }
-    if (!ceoName) { showToast('대표자명을 입력하십시오.', 'danger'); return; }
-    if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력하십시오.', 'danger'); return; }
-    if (!supply)  { showToast('공급가액을 입력하십시오.', 'danger'); return; }
+    if (!bizName) { showToast('공급받는자 상호를 입력해 주십시오.', 'danger'); return; }
+    if (!ceoName) { showToast('대표자명을 입력해 주십시오.', 'danger'); return; }
+    if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력해 주십시오.', 'danger'); return; }
+    if (!supply)  { showToast('공급가액을 입력해 주십시오.', 'danger'); return; }
 
     BtnState.loading(btn, '발행 중...');
     const res = await apiRequest(`/orders/${_ORDER_ID}/tax-invoice`, 'POST', {
@@ -16239,9 +16239,9 @@ window.HELP_TOUR_STEPS = [
     const identifier = document.getElementById('cr-identifier').value.replace(/\D/g, '');
     const amount     = document.getElementById('cr-amount').value.replace(/,/g, '');
     const type       = document.querySelector('input[name="cr-type"]:checked')?.value;
-    if (!type)       { showToast('유형을 선택하십시오.', 'danger'); return; }
-    if (!identifier) { showToast('휴대폰번호 또는 사업자번호를 입력하십시오.', 'danger'); return; }
-    if (!amount)     { showToast('금액을 입력하십시오.', 'danger'); return; }
+    if (!type)       { showToast('유형을 선택해 주십시오.', 'danger'); return; }
+    if (!identifier) { showToast('휴대전화번호 또는 사업자번호를 입력해 주십시오.', 'danger'); return; }
+    if (!amount)     { showToast('금액을 입력해 주십시오.', 'danger'); return; }
 
     BtnState.loading(btn, '발행 중...');
     const res = await apiRequest(`/orders/${_ORDER_ID}/cash-receipt`, 'POST', {
@@ -16423,7 +16423,7 @@ window.HELP_TOUR_STEPS = [
       ta.value = '';
       _updateBadge();
       renderMemoList();
-    } catch { showToast('메모 저장 실패', 'danger'); }
+    } catch { showToast('메모를 저장하지 못했습니다.', 'danger'); }
   }
 
   // ── 메모 내용 수정 ────────────────────────────────────────
@@ -16440,7 +16440,7 @@ window.HELP_TOUR_STEPS = [
       // 화면에 고정된 메모도 동기화
       const floatEl = document.getElementById(`pinned-memo-${id}`);
       if (floatEl) { const ta = floatEl.querySelector('.pinned-memo-ta'); if (ta) ta.value = content; }
-    } catch { showToast('메모 수정 실패', 'danger'); }
+    } catch { showToast('메모를 수정하지 못했습니다.', 'danger'); }
   }
 
   // ── 메모 삭제 ────────────────────────────────────────────
@@ -16456,7 +16456,7 @@ window.HELP_TOUR_STEPS = [
       renderMemoList();
       // 고정 위젯도 제거
       document.getElementById(`pinned-memo-${id}`)?.remove();
-    } catch { showToast('메모 삭제 실패', 'danger'); }
+    } catch { showToast('메모를 삭제하지 못했습니다.', 'danger'); }
   }
 
   // ── 고정 토글 ────────────────────────────────────────────
@@ -16485,7 +16485,7 @@ window.HELP_TOUR_STEPS = [
       } else {
         document.getElementById(`pinned-memo-${id}`)?.remove();
       }
-    } catch { showToast('고정 변경 실패', 'danger'); }
+    } catch { showToast('고정 설정을 변경하지 못했습니다.', 'danger'); }
   }
 
   // ── 드래그로 화면에 끌어오기 ────────────────────────────

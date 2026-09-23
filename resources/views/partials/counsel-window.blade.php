@@ -355,7 +355,7 @@
    */
   window.csOpen = async function (id, name, mobile) {
     const p = id ? { id, name } : (typeof pcActive === 'function' ? pcActive() : null);
-    if (!p) { showToast('먼저 환자를 선택해 주십시오.', 'warning'); return; }
+    if (!p) { showToast('먼저 거래처를 선택해 주십시오.', 'warning'); return; }
 
     _csPatient = p;
     _csDirty   = false;
@@ -475,7 +475,7 @@
   window.csPickSelected = function () {
     const i = _csGrid?._pickedIndex;
     const row = (i === null || i === undefined) ? null : _csGrid.getData()[i];
-    if (!row) { showToast('이어서 진행할 상담을 선택하십시오.', 'warning'); return; }
+    if (!row) { showToast('이어서 진행할 상담을 선택해 주십시오.', 'warning'); return; }
     csPick(row._i);
   };
 
@@ -521,7 +521,7 @@
      새 상담을 여는 것을 실제보다 큰일로 여기고 망설인다. */
   window.csNewAsk = async function () {
     const ok = await ceConfirm(
-      '이 사람의 새 상담 건을 만듭니다.\n'
+      '이 거래처의 새 상담 건을 등록합니다.'
       + '상담은 이 상담 이력에만 남습니다 — 처방전 목록과 주문 목록에는 생성되지 않습니다.\n'
       + '나중에 이 사람의 자료를 업로드하면 이 상담 건에 연결되어 처방전이 됩니다.\n\n'
       + '같은 건에 이어서 작성하려면 목록에서 해당 상담을 선택하십시오.',
@@ -555,7 +555,7 @@
   /** 목록으로 돌아간다 — 적다 만 것이 있으면 물어본다 */
   window.csBack = async function () {
     if (_csDirty) {
-      const ok = await ceConfirm('적던 내용이 사라집니다. 목록으로 돌아갈까요?',
+      const ok = await ceConfirm('입력한 내용이 사라집니다. 목록으로 돌아가시겠습니까?',
                                  { tone: 'warning', confirmText: '돌아가기', cancelText: '계속 적기' });
       if (!ok) return;
     }
@@ -619,7 +619,7 @@
 
   window.csClose = async function () {
     if (_csDirty) {
-      const ok = await ceConfirm('적은 내용을 저장하고 닫을까요?\n저장하지 않으면 적은 것이 사라집니다.',
+      const ok = await ceConfirm('입력한 내용을 저장하고 닫으시겠습니까?\n저장하지 않으면 입력한 내용이 사라집니다.',
                                  { tone: 'warning', confirmText: '저장 및 닫기', cancelText: '그냥 닫기' });
       if (ok) { await csSave(document.getElementById('csSaveBtn')); return; }
     }
@@ -629,7 +629,7 @@
 
   window.csSave = async function (btn) {
     const contents = document.getElementById('csContents').value.trim();
-    if (!contents) { showToast('상담 내용을 입력하십시오.', 'warning'); return; }
+    if (!contents) { showToast('상담 내용을 입력해 주십시오.', 'warning'); return; }
 
     BtnState.loading(btn, '저장 중...');
     try {

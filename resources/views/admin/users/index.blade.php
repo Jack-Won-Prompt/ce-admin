@@ -339,7 +339,7 @@ async function resendInvitation(id) {
     showToast('재발송되었습니다.', 'success');
     loadInvitations();
   } catch {
-    showToast('서버 오류', 'error');
+    showToast('서버 오류가 발생했습니다.', 'error');
   }
 }
 
@@ -356,7 +356,7 @@ async function cancelInvitation(id) {
     showToast('초대가 취소되었습니다.', 'success');
     loadInvitations();
   } catch {
-    showToast('서버 오류', 'error');
+    showToast('서버 오류가 발생했습니다.', 'error');
   }
 }
 
@@ -429,7 +429,7 @@ async function sendInvite() {
       setTimeout(closeInviteModal, 2000);
     }
   } catch (err) {
-    errEl.textContent = '오류: ' + (err.message || String(err));
+    errEl.textContent = '오류가 발생했습니다: ' + (err.message || String(err));
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
@@ -580,7 +580,7 @@ async function submitForm(e) {
     closeModal();
     showToast(isNew ? '관리자가 추가되었습니다.' : '저장되었습니다.', 'success');
   } catch (err) {
-    errEl.textContent = '오류: ' + (err.message || String(err));
+    errEl.textContent = '오류가 발생했습니다: ' + (err.message || String(err));
     errEl.style.display = 'block';
     console.error('submitForm error:', err);
   } finally {
@@ -593,7 +593,7 @@ async function submitForm(e) {
 async function deleteUser() {
   const userId = document.getElementById('formUserId').value;
   if (!userId) return;
-  if (!await ceConfirm('정말 삭제하시겠습니까?', { tone: 'danger', confirmText: '삭제' })) return;
+  if (!await ceConfirm('삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.', { tone: 'danger', confirmText: '삭제' })) return;
 
   try {
     const res = await fetch(`${USERS_BASE_URL}/${userId}`, {
@@ -601,7 +601,7 @@ async function deleteUser() {
       headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
     });
     const data = await res.json();
-    if (!data.success) { ceAlert(data.message || '삭제 실패', { tone: 'danger' }); return; }
+    if (!data.success) { ceAlert(data.message || '삭제하지 못했습니다.', { tone: 'danger' }); return; }
 
     delete usersMap[userId];
     refreshUsersGrid();
@@ -609,7 +609,7 @@ async function deleteUser() {
     closeModal();
     showToast('삭제되었습니다.', 'success');
   } catch {
-    ceAlert('서버 오류', { tone: 'danger' });
+    ceAlert('서버 오류가 발생했습니다.', { tone: 'danger' });
   }
 }
 
@@ -680,8 +680,8 @@ function updateRow(u)     { refreshUsersGrid(); }
 
   window.usersEditSelected = function () {
     const c = window.__usersGrid.getCheckedRows();
-    if (!c.length)    { showToast('수정할 관리자를 체크하십시오.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
+    if (!c.length)    { showToast('수정할 관리자를 선택해 주십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return; }
     openModal(c[0].id);
   };
 
@@ -744,7 +744,7 @@ function updateRow(u)     { refreshUsersGrid(); }
   function invPickSelected(actionLabel) {
     const c = window.__invGrid.getCheckedRows();
     if (!c.length)    { showToast(actionLabel + '할 초대를 체크하십시오.', 'warning'); return null; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return null; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return null; }
     if (c[0].accepted) { showToast('수락된 초대는 처리할 수 없습니다.', 'warning'); return null; }
     return c[0];
   }

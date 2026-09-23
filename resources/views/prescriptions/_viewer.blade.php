@@ -415,7 +415,7 @@ function showDoc(doc) {
       창.마침('팩스통합본을 다시 만들었습니다.');
       await new Promise(r => setTimeout(r, 500));
     } catch (e) {
-      showToast('값은 저장했지만 팩스통합본을 다시 만들지 못했습니다 — ' + e.message, 'warning', 7000);
+      showToast('설정값은 저장했지만 팩스통합본을 다시 생성하지 못했습니다 — ' + e.message, 'warning', 7000);
     } finally {
       창.닫기();
     }

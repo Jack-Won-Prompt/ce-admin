@@ -3998,7 +3998,7 @@ const SrPanel = (() => {
         badge.textContent = open;
         badge.style.display = open > 0 ? '' : 'none';
       }
-    } catch (e) { showToast('SR 목록을 불러오지 못했습니다.', 'danger'); }
+    } catch (e) { showToast('서비스 요청 목록을 불러오지 못했습니다.', 'danger'); }
   }
 
   function selectRow(id) {
@@ -4701,7 +4701,7 @@ const ChatPanel = (() => {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      showToast('전송 실패: ' + (err.message || err.error || `HTTP ${res.status}`), 'danger');
+      showToast('전송하지 못했습니다: ' + (err.message || err.error || `HTTP ${res.status}`), 'danger');
       return;
     }
     /* 여러 장을 보내면 서버가 장수만큼 돌려준다 — 한 장이면 예전대로 낱개다 */
@@ -4770,7 +4770,7 @@ const ChatPanel = (() => {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      showToast('수정 실패: ' + (err.message || `HTTP ${res.status}`), 'danger');
+      showToast('수정하지 못했습니다: ' + (err.message || `HTTP ${res.status}`), 'danger');
       return;
     }
     const data = await res.json();
@@ -4778,7 +4778,7 @@ const ChatPanel = (() => {
   }
 
   async function deleteMessage(msgId) {
-    const ok = await ceConfirm('이 메시지를 지웁니다.\n답글이 달려 있으면 항목은 남고 내용만 사라집니다.',
+    const ok = await ceConfirm('이 메시지를 삭제합니다.\n답글이 달려 있으면 항목은 남고 내용만 사라집니다.',
       { title: '메시지 삭제', confirmText: '삭제', tone: 'danger' });
     if (!ok) return;
 
@@ -4788,7 +4788,7 @@ const ChatPanel = (() => {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      showToast('삭제 실패: ' + (err.message || `HTTP ${res.status}`), 'danger');
+      showToast('삭제하지 못했습니다: ' + (err.message || `HTTP ${res.status}`), 'danger');
       return;
     }
     applyDeleted(msgId);
@@ -4929,9 +4929,9 @@ const ChatPanel = (() => {
     const name    = document.getElementById('chatGroupName').value.trim();
     const checked = [...document.querySelectorAll('#chatUserList input:checked')];
 
-    if (!checked.length) { showToast('대화 상대를 선택하십시오.', 'warning'); return; }
-    if (type === 'group' && !name) { showToast('그룹 이름을 입력하십시오.', 'warning'); return; }
-    if (type === 'direct' && checked.length > 1) { showToast('1:1 채팅은 상대방을 한 명만 선택하십시오.', 'warning'); return; }
+    if (!checked.length) { showToast('대화 상대를 선택해 주십시오.', 'warning'); return; }
+    if (type === 'group' && !name) { showToast('그룹 이름을 입력해 주십시오.', 'warning'); return; }
+    if (type === 'direct' && checked.length > 1) { showToast('1:1 채팅은 상대방을 한 명만 선택해 주십시오.', 'warning'); return; }
 
     const startBtn = document.querySelector('.chat-modal-actions .btn-primary');
     if (startBtn) { startBtn.disabled = true; startBtn.textContent = '생성 중...'; }
@@ -6363,7 +6363,7 @@ const Tour = (() => {
   }
 
   function start() {
-    if (!_steps.length) { showToast('이 페이지의 투어가 없습니다.', 'info'); return; }
+    if (!_steps.length) { showToast('이 화면에는 안내 투어가 없습니다.', 'info'); return; }
     _idx = 0;
     document.getElementById('tourOverlay').classList.add('active');
     _buildDots();

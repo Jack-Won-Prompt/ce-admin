@@ -170,7 +170,7 @@
       address_detail: document.getElementById('addrDetail').value.trim() || null,
     };
 
-    if (!body.address) { showToast('주소를 검색하여 입력하십시오.', 'warning'); return; }
+    if (!body.address) { showToast('주소를 검색하여 입력해 주십시오.', 'warning'); return; }
 
     const btn = document.getElementById('addrSaveBtn');
     BtnState.loading(btn, '저장 중...');
@@ -190,7 +190,7 @@
   window.addrDelete = async function (id) {
     const r = _amRows.find(x => x.id === id);
     const NL = String.fromCharCode(10);
-    if (!await ceConfirm('이 주소를 지우시겠습니까?' + NL + NL + (r ? r.full : ''),
+    if (!await ceConfirm('이 주소를 삭제하시겠습니까?' + NL + NL + (r ? r.full : ''),
                          { tone: 'danger', confirmText: '삭제', cancelText: '취소' })) return;
     try {
       const res = await apiRequest(`${_amUrl}/${id}`, 'DELETE');

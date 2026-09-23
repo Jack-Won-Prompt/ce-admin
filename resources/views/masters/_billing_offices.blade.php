@@ -321,7 +321,7 @@ async function boSave() {
 
 async function boDelete() {
   if (!boEditId) return;
-  const ok = await ceConfirm('이 청구처를 지웁니다. 관할로 등록된 읍ㆍ면ㆍ동도 함께 삭제됩니다.',
+  const ok = await ceConfirm('이 청구처를 삭제합니다. 관할로 등록된 읍ㆍ면ㆍ동도 함께 삭제됩니다.',
     { title: '청구처 삭제', confirmText: '삭제', tone: 'danger' });
   if (!ok) return;
 
@@ -331,7 +331,7 @@ async function boDelete() {
   });
   const d = await res.json();
   if (d.success) { boClose(); boLoad(); showToast('삭제했습니다.', 'success'); }
-  else boSay(d.message ?? '삭제 실패', false);
+  else boSay(d.message ?? '삭제하지 못했습니다.', false);
 }
 
 document.addEventListener('DOMContentLoaded', boLoad);

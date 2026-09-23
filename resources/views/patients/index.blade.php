@@ -598,8 +598,8 @@ document.addEventListener('keydown', (e) => {
      새로 시작한다. 두 화면이 같은 창을 쓰므로 물어보는 것이 어디서나 같다. */
   window.ptCounsel = function () {
     const rows = grid.getCheckedRows?.() ?? [];
-    if (!rows.length)    { showToast('상담할 거래처를 목록에서 체크하십시오.', 'warning'); return; }
-    if (rows.length > 1) { showToast('한 사람만 선택하십시오. 상담은 거래처 단위로 등록됩니다.', 'warning'); return; }
+    if (!rows.length)    { showToast('상담할 거래처를 목록에서 선택해 주십시오.', 'warning'); return; }
+    if (rows.length > 1) { showToast('거래처 한 곳만 선택해 주십시오. 상담은 거래처 단위로 등록됩니다.', 'warning'); return; }
 
     const r = rows[0];
     csOpen(r.id, r.name, r.mobile);
@@ -1051,7 +1051,7 @@ document.addEventListener('keydown', (e) => {
         ta.style.cssText = 'width:100%;height:210px;resize:vertical;font-size:12.5px;line-height:1.6;';
         ta.maxLength = 2000;
         ta.value = row.note || '';
-        ta.placeholder = '상담 내용을 입력하십시오.';
+        ta.placeholder = '상담 내용을 입력해 주십시오.';
         ta.addEventListener('click', (e) => e.stopPropagation());
         body.appendChild(ta);
 

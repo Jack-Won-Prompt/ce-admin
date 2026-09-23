@@ -654,10 +654,10 @@ window.HELP_TOUR_STEPS = [
   async function attFaxSend() {
     const picked = [..._attPop.querySelectorAll('#attFaxList input[type=checkbox]:checked')]
                      .map(c => _attRows[Number(c.dataset.i)]);
-    if (!picked.length) { showToast('발송할 서류를 하나 이상 선택하십시오.', 'warning'); return; }
+    if (!picked.length) { showToast('발송할 서류를 하나 이상 선택해 주십시오.', 'warning'); return; }
 
     const faxNo = (_attPop.querySelector('#attFaxNo').value || '').trim();
-    if (!/^[0-9-]{7,20}$/.test(faxNo)) { showToast('받는 팩스번호를 정확히 입력하십시오.', 'warning'); return; }
+    if (!/^[0-9-]{7,20}$/.test(faxNo)) { showToast('받는 팩스번호를 정확히 입력해 주십시오.', 'warning'); return; }
 
     /* 팩스는 정말 나간다 — 무엇을 어디로 보내는지 보이고 한 번 묻는다 */
     const 이름들 = picked.map(r => r.label).join(' · ');

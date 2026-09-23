@@ -1304,7 +1304,7 @@ function showWhyBlocked(ok) {
 /* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
 function findPrivacyZip() {
   if (typeof daum === 'undefined' || !daum.Postcode) {
-    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 입력하십시오.', { tone: 'warning' });
+    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 입력해 주십시오.', { tone: 'warning' });
     return;
   }
   new daum.Postcode({
@@ -1609,7 +1609,7 @@ async function submitConsent(action) {
      뒤따르는지 그 자리에서 알린다 — 담당자가 다시 연락할 일이라는 것까지. */
   if (action === 'agreed' && IS_MINOR && !gIdData) {
     const 갈까 = await ceConfirm(
-      '신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴수 있습니다.',
+      '신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴 수 있습니다.',
       { tone: 'warning', confirmText: '저장', cancelText: '취소' },
     );
     if (!갈까) return;

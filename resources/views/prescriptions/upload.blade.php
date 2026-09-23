@@ -742,9 +742,9 @@ window.pkCreate = async function (btn) {
   const name   = nameEl.value.trim();
   const rn     = rnEl.value.replace(/\D/g, '');
 
-  if (!name) { showToast('이름을 입력하십시오.', 'warning'); nameEl.focus(); return; }
+  if (!name) { showToast('이름을 입력해 주십시오.', 'warning'); nameEl.focus(); return; }
   if (rn.length !== 13) {
-    showToast('주민등록번호 13자리를 입력하십시오.', 'warning');
+    showToast('주민등록번호 13자리를 입력해 주십시오.', 'warning');
     rnEl.focus();
     return;
   }
@@ -787,7 +787,7 @@ window.pkCreate = async function (btn) {
 window.pkPick = function () {
   const i = pkGrid?._pickedIndex;
   const row = (i === null || i === undefined) ? null : pkGrid.getData()[i];
-  if (!row) { showToast('선택할 행을 클릭하십시오.', 'warning'); return; }
+  if (!row) { showToast('선택할 행을 클릭해 주십시오.', 'warning'); return; }
   selectPatient(row.id, row.name);
   pkClose();
 };
@@ -1041,7 +1041,7 @@ form.addEventListener('submit', async function (e) {
   // 누구의 처방인지 모른 채로는 올리지 않는다 — 나중에 잇는 일이 더 비싸다
   if (!document.getElementById('h_patient_id').value) {
     막는까닭('<b>이름</b>을 먼저 선택하십시오.');
-    showToast('환자를 먼저 선택하십시오.', 'warning');
+    showToast('거래처를 먼저 선택해 주십시오.', 'warning');
     document.getElementById('patientSearchInput')?.focus();
 
     return;
@@ -1055,7 +1055,7 @@ form.addEventListener('submit', async function (e) {
   const hasPrescription = selectedFiles.some(f => f.docType === 'prescription');
   if (!hasPrescription) {
     const 갈까 = await ceConfirm(
-      '처방전이 없습니다. 그래도 올리시겠습니까?' + NL + NL
+      '처방전이 없습니다. 그래도 업로드하시겠습니까?' + NL + NL
       + '처방전은 주문 등록 화면의 「첨부 문서 추가」에서 나중에 붙일 수 있습니다.' + NL
       + '서류명을 잘못 고른 것이라면 각 파일 왼쪽 위에서 바꿔 주십시오.',
       { tone: 'warning', confirmText: '올리기', cancelText: '취소' },

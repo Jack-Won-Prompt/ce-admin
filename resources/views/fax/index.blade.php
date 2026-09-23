@@ -601,8 +601,8 @@
   });
   window.faxRowAction = function (action) {
     const c = window.__faxGrid.getCheckedRows();
-    if (!c.length)    { showToast('행을 먼저 체크하십시오.', 'warning'); return; }
-    if (c.length > 1) { showToast('한 건만 선택하십시오.', 'warning'); return; }
+    if (!c.length)    { showToast('행을 먼저 선택해 주십시오.', 'warning'); return; }
+    if (c.length > 1) { showToast('한 건만 선택해 주십시오.', 'warning'); return; }
     const r = c[0];
     if (action === 'detail') { faxOpenRow(r); return; }
   };
@@ -752,8 +752,8 @@ async function sendFax() {
   const title      = document.getElementById('fax-title').value.trim();
 
   // 유효성 검사
-  if (!sender) { showToast('발신번호를 선택하십시오.', 'danger'); return; }
-  if (selectedFiles.length === 0) { showToast('전송할 파일을 첨부하십시오.', 'danger'); return; }
+  if (!sender) { showToast('발신번호를 선택해 주십시오.', 'danger'); return; }
+  if (selectedFiles.length === 0) { showToast('전송할 파일을 첨부해 주십시오.', 'danger'); return; }
 
   const receivers = [];
   document.querySelectorAll('#receivers-box .receiver-row').forEach(row => {
@@ -761,7 +761,7 @@ async function sendFax() {
     const name = row.querySelector('.rcv-name').value.trim();
     if (num) receivers.push({ rcv: num, rcvnm: name });
   });
-  if (receivers.length === 0) { showToast('수신 팩스번호를 입력하십시오.', 'danger'); return; }
+  if (receivers.length === 0) { showToast('수신 팩스번호를 입력해 주십시오.', 'danger'); return; }
 
   const fd = new FormData();
   fd.append('corp_num', corpNum);
@@ -777,7 +777,7 @@ async function sendFax() {
   const reserveChk = document.getElementById('reserve-chk').checked;
   if (reserveChk) {
     const dt = document.getElementById('reserve-dt').value;
-    if (!dt) { showToast('예약 일시를 입력하십시오.', 'danger'); return; }
+    if (!dt) { showToast('예약 일시를 입력해 주십시오.', 'danger'); return; }
     fd.append('reserve_dt', dt.replace(/[-T:]/g,'').slice(0,14));
   }
 
@@ -801,7 +801,7 @@ async function sendFax() {
         // 30초 후 자동 동기화 (전송 결과 반영)
     setTimeout(() => syncPending(), 30000);
   } catch(e) {
-    showToast('전송 실패: ' + e.message, 'danger', 6000);
+    showToast('전송하지 못했습니다: ' + e.message, 'danger', 6000);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bx bx-send"></i> 팩스 전송';
@@ -860,7 +860,7 @@ async function loadHistory(page = 1) {
     renderPager(data.total ?? 0, page, 15);
   } catch(e) {
     window.__faxGrid && window.__faxGrid.setData([]);
-    showToast('조회 실패: ' + e.message, 'error');
+    showToast('조회하지 못했습니다: ' + e.message, 'error');
   }
 }
 
@@ -888,7 +888,7 @@ async function syncPending() {
     loadHistory(histPage);
   } catch(e) {
     info.textContent = '동기화 실패';
-    showToast('동기화 실패: ' + e.message, 'danger');
+    showToast('동기화하지 못했습니다: ' + e.message, 'danger');
   } finally {
     btn.disabled = false;
     btn.classList.remove('syncing');

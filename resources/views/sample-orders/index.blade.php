@@ -565,10 +565,10 @@
         unit_price:   Math.max(0, Number(r.unit_price) || 0),
       }));
 
-    if (!items.length)                 { ceAlert('제품을 추가하십시오.', { tone: 'warning' }); return; }
-    if (!$('smpAccount').value.trim())   { ceAlert('고객을 입력하십시오.', { tone: 'warning' }); return; }
+    if (!items.length)                 { ceAlert('제품을 추가해 주십시오.', { tone: 'warning' }); return; }
+    if (!$('smpAccount').value.trim())   { ceAlert('고객을 입력해 주십시오.', { tone: 'warning' }); return; }
     if (!$('smpRecipient').value.trim()) { $('smpRecipient').value = $('smpAccount').value.trim(); }
-    if (!$('smpAddress').value.trim())   { ceAlert('주소를 입력하십시오.', { tone: 'warning' }); return; }
+    if (!$('smpAddress').value.trim())   { ceAlert('주소를 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = e.target.querySelector('button[type=submit]');
     btn.disabled = true;

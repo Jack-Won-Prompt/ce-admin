@@ -243,7 +243,7 @@
 
   window.msDelete = async function () {
     if (!editingId) return;
-    const ok = await ceConfirm('이 항목을 지웁니다.\n지난 자료가 가리키던 이름은 그대로 남습니다.',
+    const ok = await ceConfirm('이 항목을 삭제합니다.\n기존 자료에 표시된 이름은 그대로 유지됩니다.',
       { title: LABEL + ' 삭제', confirmText: '삭제', tone: 'danger' });
     if (!ok) return;
     try {
@@ -253,7 +253,7 @@
       });
       const d = await res.json();
       if (d.success) { say('삭제했습니다.', true); setTimeout(() => location.reload(), 600); }
-      else { say(d.message ?? '삭제 실패', false); }
+      else { say(d.message ?? '삭제하지 못했습니다.', false); }
     } catch (e) { say('네트워크 오류가 발생했습니다.', false); }
   };
 

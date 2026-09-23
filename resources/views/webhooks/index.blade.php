@@ -374,7 +374,7 @@
     };
 
     if (!body.name) { 알림('웹훅 명을 입력하십시오.', false); return; }
-    if (!body.url)  { 알림('주소를 입력하십시오.', false); return; }
+    if (!body.url)  { 알림('주소를 입력해 주십시오.', false); return; }
 
     BtnState.loading(btn, '저장 중...');
     try {
@@ -391,7 +391,7 @@
   window.whDelete = async function () {
     const id = $('wh-id').value;
     if (!id) return;
-    if (!await ceConfirm('이 웹훅 정의를 지웁니다. 오간 로그는 그대로 남습니다.', { tone: 'danger' })) return;
+    if (!await ceConfirm('이 웹훅 정의를 삭제합니다. 송수신 기록은 그대로 유지됩니다.', { tone: 'danger' })) return;
 
     try {
       const res = await apiRequest(@json(url('settings/webhooks')) + '/' + id, 'DELETE');

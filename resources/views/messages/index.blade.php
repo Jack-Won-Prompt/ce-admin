@@ -537,9 +537,9 @@
     const checked = grid.getCheckedRows();
     const body    = document.getElementById('msBody').value.trim();
 
-    if (scope === 'selected' && !checked.length) { showToast('보낼 거래처를 체크하십시오.', 'warning'); return; }
-    if (channel === 'sms'  && !body)             { showToast('본문을 입력하십시오.', 'warning'); return; }
-    if (channel === 'alimtalk' && !tplCode)      { showToast('메시지 유형을 선택하십시오.', 'warning'); return; }
+    if (scope === 'selected' && !checked.length) { showToast('보낼 거래처를 선택해 주십시오.', 'warning'); return; }
+    if (channel === 'sms'  && !body)             { showToast('본문을 입력해 주십시오.', 'warning'); return; }
+    if (channel === 'alimtalk' && !tplCode)      { showToast('메시지 유형을 선택해 주십시오.', 'warning'); return; }
 
     const n = scope === 'all'
       ? {{ $sendable }}
@@ -778,7 +778,7 @@
 
   window.msTplDelete = async function () {
     if (!editingId) return;
-    const ok = await ceConfirm('이 메시지 유형을 지웁니다. 복구할 수 없습니다.',
+    const ok = await ceConfirm('이 메시지 유형을 삭제합니다. 복구할 수 없습니다.',
       { title: '유형 삭제', confirmText: '삭제', tone: 'danger' });
     if (!ok) return;
     try {
@@ -788,7 +788,7 @@
       });
       const d = await res.json();
       if (d.success) { _msTplSay('삭제했습니다.', true); setTimeout(() => location.reload(), 700); }
-      else           { _msTplSay(d.message ?? '삭제 실패', false); }
+      else           { _msTplSay(d.message ?? '삭제하지 못했습니다.', false); }
     } catch (e) { _msTplSay('네트워크 오류가 발생했습니다.', false); }
   };
 
