@@ -10666,7 +10666,7 @@ window.HELP_TOUR_STEPS = [
     const addr = document.getElementById('shippingAddr')?.value?.trim() ?? '';
     if (addr) return true;
 
-    showToast('받는 주소가 없어 창고로 보낼 수 없습니다 — 상세 목록 탭에서 '
+    showToast('배송 주소가 없어 창고로 보낼 수 없습니다 — 상세 목록 탭에서 '
             + '이 건의 주소를 먼저 채워 주십시오.', 'warning', 6000);
 
     document.getElementById('shippingAddr')?.focus();

@@ -96,7 +96,9 @@ class CollectMessagesCommand extends Command
                     'channel'   => $채널,
                     'body'      => $본문,
                     'screens'   => [$화면 => true],
-                    'step'      => $단계,
+                    /* 단계는 우리말 동작으로, 코드 이름은 설명 칸으로 (2026-09-23 지시) */
+                    'step'      => $this->단계말($단계),
+                    'desc'      => $단계 !== '' ? '화면 코드: ' . $단계 : '',
                     'variables' => $this->변수들($본문),
                 ];
             }
@@ -122,12 +124,17 @@ class CollectMessagesCommand extends Command
 
                 $채울것 = array_filter([
                     /* 원문이 비어 있으면 채운다 — 이 값이 없으면 화면이 고친 글을 못 찾는다 */
-                    'original'  => $있나->original ?: $것['body'],
-                    'screen'    => $덮기 ? implode(' · ', array_keys($것['screens']))
-                                         : ($있나->screen ?: implode(' · ', array_keys($것['screens']))),
-                    'step'      => $덮기 ? $것['step']      : ($있나->step      ?: $것['step']),
-                    'variables' => $덮기 ? $것['variables'] : ($있나->variables ?: $것['variables']),
+                    'original'    => $있나->original ?: $것['body'],
+                    'screen'      => $덮기 ? implode(' · ', array_keys($것['screens']))
+                                           : ($있나->screen ?: implode(' · ', array_keys($것['screens']))),
+                    'step'        => $덮기 ? $것['step']      : ($있나->step      ?: $것['step']),
+                    'description' => $덮기 ? $것['desc']      : ($있나->description ?: $것['desc']),
+                    'variables'   => $덮기 ? $것['variables'] : ($있나->variables ?: $것['variables']),
                 ], fn ($v) => $v !== '' && $v !== null);
+
+                /* --refresh 로 동작을 읽어 내지 못한 자리는 **비운다**.
+                   옛 코드 이름이 단계 칸에 남아 있으면 안 고친 것과 같다. */
+                if ($덮기 && $것['step'] === '') { $있나->forceFill(['step' => null])->save(); }
 
                 if ($채울것) { $있나->update($채울것); }
                 $그대로++;
@@ -143,8 +150,9 @@ class CollectMessagesCommand extends Command
                     'channel'    => $것['channel'],
                     'code'       => $코드,
                     'label'      => mb_substr(trim(preg_replace('/\s+/u', ' ', $것['body'])), 0, 40),
-                    'screen'     => implode(' · ', array_keys($것['screens'])),
-                    'step'       => $것['step'],
+                    'screen'      => implode(' · ', array_keys($것['screens'])),
+                    'step'        => $것['step'],
+                    'description' => $것['desc'],
                     'body'       => $것['body'],
                     /* 코드에 적힌 글 — 화면이 이 값을 열쇠로 고친 글을 찾는다.
                        body 는 담당자가 고치면 달라지지만 original 은 그대로다. */
@@ -264,6 +272,72 @@ class CollectMessagesCommand extends Command
         for ($i = count($m[0]) - 1; $i >= 0; $i--) {
             $이름 = $m[1][$i] ?: ($m[2][$i] ?: $m[3][$i]);
             if ($이름 !== '') { return $이름 . '()'; }
+        }
+
+        return '';
+    }
+
+    /**
+     * 함수 이름에서 **무엇을 하는 자리인지**를 우리말로 읽어 낸다 (2026-09-23 지시).
+     *
+     * 단계 칸에 `saveOrderTab()` 처럼 코드 이름이 그대로 섰다. 담당자가 보는
+     * 자리에 코드 이름을 두지 않는다 — 대신 이름에 담긴 **동작**만 읽어 적는다.
+     *
+     * 지어내지 않는다. 읽어 낼 동작이 없으면 빈 값을 돌려주고, 코드 이름은
+     * 설명 칸(description)으로 옮겨 자취를 남긴다.
+     */
+    private const 동작 = [
+        'resend' => '다시 보낼 때',   'regenerate' => '다시 만들 때',
+        'send' => '보낼 때',          'submit' => '제출할 때',
+        'save' => '저장할 때',        'delete' => '삭제할 때',
+        'remove' => '삭제할 때',      'cancel' => '취소할 때',
+        'issue' => '발행할 때',       'copy' => '복사할 때',
+        'sync' => '동기화할 때',      'create' => '등록할 때',
+        'add' => '추가할 때',         'load' => '불러올 때',
+        'open' => '열 때',            'select' => '선택할 때',
+        'pick' => '선택할 때',        'picked' => '선택할 때',
+        'find' => '찾을 때',          'search' => '찾을 때',
+        'update' => '수정할 때',      'edit' => '수정할 때',
+        'confirm' => '확인할 때',     'check' => '확인할 때',
+        'approve' => '승인할 때',     'reset' => '되돌릴 때',
+        'render' => '화면에 그릴 때', 'change' => '바꿀 때',
+        'toggle' => '바꿀 때',        'request' => '요청할 때',
+        'execute' => '실행할 때',     'print' => '인쇄할 때',
+        'calc' => '계산할 때',        'gate' => '저장 전에 검사할 때',
+        'deposit' => '입금 처리할 때','show' => '볼 때',
+        'revoke' => '취소할 때',      'invite' => '초대할 때',
+        'start' => '시작할 때',       'prev' => '앞 건으로 옮길 때',
+        'next' => '뒤 건으로 옮길 때',
+        /* 우리말로 지은 함수 — 뜻이 또렷한 것만 적는다 */
+        '닫기' => '닫을 때',          '적기' => '입력할 때',
+        '알림' => '알릴 때',          '동의확인' => '동의를 확인할 때',
+        '메모확인' => '메모를 확인할 때',
+        '미리보기' => '미리 볼 때',
+        '빈건지우기' => '빈 건을 삭제할 때',
+        '상세탭으로' => '상세 탭으로 넘어갈 때',
+        '결제상태알림' => '결제 상태를 알릴 때',
+        '확인하고한번만' => '확인하고 실행할 때',
+        '전화번호겹침확인' => '전화번호가 겹치는지 볼 때',
+        /* 이름만으로는 안 보이지만 그 자리에서 뜨는 말이 또렷한 것 */
+        '까닭지움' => '업로드할 때',  '같은건' => '담당자를 배정할 때',
+        '해당' => '주소를 불러올 때', 'q원문' => '찾을 때',
+    ];
+
+    private function 단계말(string $함수): string
+    {
+        $이름 = rtrim($함수, '()');
+        if ($이름 === '') { return ''; }
+
+        /* 긴 낱말부터 견준다 — send 가 resend 를 가로채지 않게 */
+        $낱말들 = array_keys(self::동작);
+        usort($낱말들, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+
+        $작은것 = mb_strtolower($이름);
+
+        foreach ($낱말들 as $낱말) {
+            if (str_contains($작은것, mb_strtolower($낱말))) {
+                return self::동작[$낱말];
+            }
         }
 
         return '';
