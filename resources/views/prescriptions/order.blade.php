@@ -6111,8 +6111,12 @@ async function downloadDoc(e, url, 이름) {
 
     const 덩이 = await r.blob();
 
-    /* 확장자는 주소에서 떼어 온다 — 이름에 없으면 붙인다 */
-    const 꼬리 = (url.split('?')[0].match(/\.([A-Za-z0-9]{1,5})$/) || [, ''])[1];
+    /* 확장자는 주소에서 떼어 오고, 없으면 받은 것의 갈래(MIME)로 정한다.
+       첨부 주소는 `/files/…/1780` 처럼 번호로 끝나 주소에 확장자가 없다. */
+    const MIME꼬리 = { 'image/jpeg':'jpg', 'image/png':'png', 'image/gif':'gif',
+                      'image/webp':'webp', 'image/heic':'heic', 'application/pdf':'pdf' };
+    const 꼬리 = (url.split('?')[0].match(/\.([A-Za-z0-9]{1,5})$/) || [, ''])[1]
+              || MIME꼬리[(덩이.type || '').split(';')[0].toLowerCase()] || '';
     let 파일이름 = (이름 || '서류').replace(/[\\\/:*?"<>|]/g, '_');
     if (꼬리 && !new RegExp('\\.' + 꼬리 + '$', 'i').test(파일이름)) { 파일이름 += '.' + 꼬리; }
 
