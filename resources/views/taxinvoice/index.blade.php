@@ -818,10 +818,13 @@ function openOrderPick(btn) {
   });
 }
 
-function applyOrder(o) {
+async function applyOrder(o) {
   if (!o) return;
 
-  if (o.issued && !confirm(`${o.order_no} 은(는) 이미 발행된 건입니다. 그래도 입력하시겠습니까?`)) return;
+  /* 주문번호는 창 이름으로 올린다 — 본문이 따옴표 글이어야 메시지 관리에서 고칠 수 있다 */
+  if (o.issued
+      && !await ceConfirm('이미 발행된 건입니다. 그래도 입력하시겠습니까?',
+                          { title: o.order_no, tone: 'warning' })) return;
 
   /* 공급받는자 — 주문에 적어 둔 것만 채운다. 비어 있는 칸을 빈 값으로 덮으면
      담당자가 이미 적어 둔 것이 사라진다. */

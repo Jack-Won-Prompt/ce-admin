@@ -233,7 +233,7 @@
         <input type="text" name="extra" class="form-control" maxlength="200"
                placeholder="추가 의견 (없으면 미입력)">
         <button type="submit" class="btn btn-primary"
-                onclick="return confirm('환자에게 실제로 발송됩니다. 계속하시겠습니까?');">
+                onclick="return ceConfirmClick(this, '거래처에 실제로 발송됩니다. 계속하시겠습니까?');">
           <i class="bx bx-send"></i> 안내 보내기
         </button>
       </form>
@@ -281,7 +281,7 @@
         @else
           <form method="POST" action="{{ route('order-returns.cancelPayment', $r) }}"
                 style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;"
-                onsubmit="return confirm('입금액을 실제로 환불합니다. 계속하시겠습니까?');">
+                onsubmit="return ceConfirmSubmit(this, '입금액을 실제로 환불합니다. 계속하시겠습니까?', { tone: 'danger' });">
             @csrf
             <div style="display:flex;flex-direction:column;gap:4px;">
               <label style="font-size:12px;color:var(--gray-700);">취소 금액</label>
@@ -415,7 +415,7 @@
                   class="ds-btn {{ $st === 'cancelled' ? '' : 'ds-btn-primary' }}"
                   @disabled($locked)
                   @if(in_array($st, ['credited', 'adjusted'], true))
-                    onclick="return confirm('세금계산서·현금영수증이 실제로 처리됩니다. 계속하시겠습니까?');"
+                    onclick="return ceConfirmClick(this, '세금계산서·현금영수증이 실제로 처리됩니다. 계속하시겠습니까?');"
                   @endif>
             {{ \App\Models\OrderReturn::STATUS_LABELS[$st] ?? $st }}@if($locked) 🔒 @endif
           </button>
@@ -473,7 +473,7 @@
       <form method="POST" action="{{ route('order-returns.issueCredit', $r) }}" style="margin-left:auto;">
         @csrf
         <button type="submit" class="ds-btn ds-btn-sm"
-                onclick="return confirm('세금계산서·현금영수증을 실제로 처리합니다. 계속하시겠습니까?');">
+                onclick="return ceConfirmClick(this, '세금계산서·현금영수증을 실제로 처리합니다. 계속하시겠습니까?');">
           다시 시도
         </button>
       </form>

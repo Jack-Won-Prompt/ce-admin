@@ -180,32 +180,9 @@ class MessageController extends Controller
      */
     public function screenTexts(): JsonResponse
     {
-        $사전 = ['toast' => [], 'popup' => []];
-
-        try {
-            if (! \Illuminate\Support\Facades\Schema::hasTable('message_templates')) {
-                return response()->json($사전);
-            }
-
-            MessageTemplate::whereIn('channel', ['toast', 'popup'])
-                ->where('is_active', true)
-                ->whereNotNull('original')
-                ->get(['channel', 'original', 'body'])
-                ->each(function ($t) use (&$사전) {
-                    $원문 = trim((string) $t->original);
-                    $고친 = (string) $t->body;
-
-                    /* 고치지 않았으면 담지 않는다 — 사전이 커질수록 화면이 느려진다 */
-                    if ($원문 === '' || $고친 === '' || $원문 === trim($고친)) { return; }
-
-                    $사전[$t->channel][$원문] = $고친;
-                });
-        } catch (\Throwable $e) {
-            /* 사전을 못 만들어도 화면은 돈다 — 코드에 적힌 글이 그대로 뜬다 */
-            \Illuminate\Support\Facades\Log::warning('[메시지] 화면 문구 사전 실패', ['error' => $e->getMessage()]);
-        }
-
-        return response()->json($사전);
+        /* 몸통은 MessageTemplate::화면사전() 하나다 — 두 벌로 적으면 한쪽만 고쳐진다.
+           담당자 화면은 좁히지 않는다(모든 화면의 글을 쓴다). */
+        return response()->json(MessageTemplate::화면사전());
     }
 
     public function storeTemplate(Request $request): JsonResponse

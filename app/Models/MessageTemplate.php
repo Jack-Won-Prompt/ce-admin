@@ -308,6 +308,56 @@ class MessageTemplate extends Model
      * @param  array  $값들  ['#{고객명}' => '홍길동', …]
      * @param  string $기본  표에 없을 때 쓸 글
      */
+    /**
+     * 화면에 뜨는 말의 사전 — 담당자가 고친 것만 준다 (2026-09-23 지시).
+     *
+     * 팝업ㆍ토스트는 글이 코드에 박혀 있어 코드를 열쇠로 쓸 수 없다. 코드에 적힌
+     * 원문(original)을 열쇠로 하고, 화면이 띄우기 직전에 고친 말로 바꾼다.
+     *
+     * **고치지 않은 것은 담지 않는다.** 원문과 같은 글을 수백 개 실어 보낼 까닭이 없다.
+     *
+     * @param  list<string>|null $화면들 이 화면들의 글만. null 이면 모두.
+     *                                   로그인 없이 열리는 화면(서명ㆍ동의)에서는
+     *                                   **반드시 좁혀 부른다** — 담당자끼리 쓰는 말이
+     *                                   거래처 화면으로 새어 나가면 안 된다.
+     * @return array{toast: array<string,string>, popup: array<string,string>}
+     */
+    public static function 화면사전(?array $화면들 = null): array
+    {
+        $사전 = ['toast' => [], 'popup' => []];
+
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('message_templates')) {
+                return $사전;
+            }
+
+            static::whereIn('channel', ['toast', 'popup'])
+                ->where('is_active', true)
+                ->whereNotNull('original')
+                ->when($화면들, fn ($q) => $q->where(function ($w) use ($화면들) {
+                    foreach ($화면들 as $하나) { $w->orWhere('screen', 'like', '%' . $하나 . '%'); }
+                }))
+                ->get(['channel', 'original', 'body'])
+                ->each(function ($t) use (&$사전) {
+                    /* **getAttribute 로 읽는다.** 이 메서드는 모델 **안**이라
+                       `$t->original` 이 Eloquent 가 쥔 protected $original(원래 값
+                       배열)에 곧바로 닿는다 — 칸 값이 아니라 배열이 나와 열쇠가
+                       'Array' 가 된다. 컨트롤러에서는 __get 을 타서 멀쩡했다. */
+                    $원문 = trim((string) $t->getAttribute('original'));
+                    $고친 = (string) $t->getAttribute('body');
+
+                    if ($원문 === '' || $고친 === '' || $원문 === trim($고친)) { return; }
+
+                    $사전[$t->channel][$원문] = $고친;
+                });
+        } catch (\Throwable $e) {
+            /* 사전을 못 만들어도 화면은 돈다 — 코드에 적힌 글이 그대로 뜬다 */
+            \Illuminate\Support\Facades\Log::warning('[메시지] 화면 문구 사전 실패', ['error' => $e->getMessage()]);
+        }
+
+        return $사전;
+    }
+
     public static function 문구(string $코드, array $값들 = [], string $기본 = '', string $채널 = 'sms'): string
     {
         $글 = $기본;

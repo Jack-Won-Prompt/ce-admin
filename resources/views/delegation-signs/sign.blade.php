@@ -421,7 +421,7 @@ function 신분증고름(칸) {
   if (!f) return;
 
   if (f.size > 10 * 1024 * 1024) {
-    alert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.');
+    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.', { tone: 'warning' });
     칸.value = ''; return;
   }
 
@@ -435,7 +435,7 @@ function 신분증고름(칸) {
     이름.textContent = f.name; 이름.style.display = '';
     다시셈();
   };
-  r.onerror = () => alert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.');
+  r.onerror = () => ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.', { tone: 'warning' });
   r.readAsDataURL(f);
 }
 
@@ -579,7 +579,7 @@ async function 본인확인() {
     });
     const out = await res.json();
 
-    if (!out.success) { alert(out.message || '본인확인을 시작하지 못했습니다.'); btn.disabled = false; btn.textContent = '본인확인'; return; }
+    if (!out.success) { ceAlert(out.message || '본인확인을 시작하지 못했습니다.', { tone: 'danger' }); btn.disabled = false; btn.textContent = '본인확인'; return; }
 
     if (out.simulated) { 인증됨(); return; }
 
@@ -588,7 +588,7 @@ async function 본인확인() {
     btn.disabled = false;
     btn.textContent = '본인확인';
   } catch (e) {
-    alert('본인확인을 시작하지 못했습니다 — ' + e.message);
+    ceAlert('본인확인을 시작하지 못했습니다 — ' + e.message, { tone: 'danger' });
     btn.disabled = false;
     btn.textContent = '본인확인';
   }
@@ -622,7 +622,7 @@ async function 보내기(짓) {
     }
   }
 
-  if (짓 === 'declined' && !confirm('동의하지 않음으로 접수합니다. 계속하시겠습니까?')) return;
+  if (짓 === 'declined' && !await ceConfirm('동의하지 않음으로 접수합니다. 계속하시겠습니까?')) return;
 
   btn.disabled = true;
   btn.textContent = '보내는 중...';
@@ -648,7 +648,7 @@ async function 보내기(짓) {
      그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있는데, 통째로 막으면
      받아 둘 수 있었던 서명마저 못 받는다. 없이 누르면 한 번 묻는다. */
   if (짓 === 'agreed' && 미성년 && !신분증) {
-    if (!confirm('신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴 수 있습니다.')) {
+    if (!await ceConfirm('신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴 수 있습니다.')) {
       btn.disabled = false; btn.textContent = '동의'; 다시셈(); return;
     }
   }
@@ -665,18 +665,23 @@ async function 보내기(짓) {
     });
     const out = await res.json();
 
-    if (!out.success) { alert(out.message || '보내지 못했습니다.'); btn.disabled = false; btn.textContent = '동의'; 다시셈(); return; }
+    if (!out.success) { ceAlert(out.message || '보내지 못했습니다.', { tone: 'danger' }); btn.disabled = false; btn.textContent = '동의'; 다시셈(); return; }
 
     document.querySelector('.wrap').innerHTML =
       '<div class="card done"><div class="big">✅ 접수되었습니다</div>'
       + '<div class="lead">' + out.message + ' 이 창을 닫으셔도 됩니다.</div></div>';
   } catch (e) {
-    alert('보내지 못했습니다 — ' + e.message);
+    ceAlert('보내지 못했습니다 — ' + e.message, { tone: 'danger' });
     btn.disabled = false;
     btn.textContent = 짓 === 'agreed' ? '동의' : '동의하지 않음';
     다시셈();
   }
 }
 </script>
+
+{{-- 브라우저 기본 alert()ㆍconfirm() 대신 디자인 시스템 창을 쓴다 (2026-09-23 지시).
+     문구화면을 집어 주어야 메시지 관리에서 고친 글이 이 판에 실린다 — 집어 주지 않으면
+     아무것도 싣지 않는다(담당자끼리 쓰는 말이 거래처 화면으로 새면 안 된다). --}}
+@include('partials.dialog', ['문구화면' => '위임장 서명(고객)'])
 </body>
 </html>

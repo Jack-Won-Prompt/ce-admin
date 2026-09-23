@@ -262,7 +262,7 @@
   };
 
   window.elPurge = async function () {
-    if (!confirm('180일보다 오래된 기록을 삭제합니다. 복구할 수 없습니다.')) return;
+    if (!await ceConfirm('180일보다 오래된 기록을 삭제합니다. 복구할 수 없습니다.', { tone: 'danger' })) return;
     const res = await fetch('/settings/error-logs/purge', {
       method: 'POST',
       headers: {

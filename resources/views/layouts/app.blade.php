@@ -2946,6 +2946,24 @@ document.addEventListener('click', (e) => {
       ceConfirm(msg, opts).then(ok => { if (ok) form.submit(); });
       return false;
     };
+
+    /**
+     * 인라인 onclick 용 헬퍼: onclick="return ceConfirmClick(this, '메시지')"
+     *
+     * 폼 안의 보내기 단추에 쓴다. requestSubmit(단추) 로 되보내 **어느 단추를
+     * 눌렀는지(name·value)** 를 잃지 않는다 — form.submit() 은 그것을 버려,
+     * 「승인ㆍ취소」처럼 단추마다 값이 다른 자리에서 엉뚱한 일이 일어난다.
+     * 되보낼 때 단추의 onclick 은 다시 불리지 않으므로 맴돌지 않는다.
+     */
+    window.ceConfirmClick = function (el, msg, opts) {
+      ceConfirm(msg, opts).then(ok => {
+        if (!ok) return;
+        const f = el.form || el.closest('form');
+        if (!f) return;
+        if (f.requestSubmit) { f.requestSubmit(el.name ? el : undefined); } else { f.submit(); }
+      });
+      return false;
+    };
   })();
 
   /* ── 전화번호에 붙임표를 놓는다 ─────────────────────────

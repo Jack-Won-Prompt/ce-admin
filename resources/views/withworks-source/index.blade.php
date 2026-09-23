@@ -186,7 +186,7 @@
   }
 
   async function wsImport(열쇠, btn) {
-    if (!confirm('현재 등록된 마지막 번호 이후부터 가져옵니다. 계속하시겠습니까?')) return;
+    if (!await ceConfirm('현재 등록된 마지막 번호 이후부터 가져옵니다. 계속하시겠습니까?')) return;
 
     BtnState.loading(btn, '가져오는 중...');
 

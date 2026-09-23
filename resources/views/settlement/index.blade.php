@@ -863,8 +863,10 @@
   async function settleMove(row, status, sel) {
     /* 확정은 되돌릴 수 없다 — 누르기 전에 한 번 묻는다. 그 밖의 상태는 다시 옮길 수
        있으므로 묻지 않는다. */
+    /* 주문번호는 창 이름으로 올린다 — 본문이 따옴표 글이어야 메시지 관리에서 고칠 수 있다 */
     if (status === 'confirmed'
-        && !confirm(`${row.order_no} 을(를) 확정합니다. 확정 후에는 취소할 수 없습니다. 계속하시겠습니까?`)) {
+        && !await ceConfirm('확정 후에는 취소할 수 없습니다. 계속하시겠습니까?',
+                            { title: row.order_no + ' 확정', tone: 'danger' })) {
       sel.value = row.settle_key; return;
     }
 

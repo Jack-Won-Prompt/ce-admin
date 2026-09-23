@@ -38,6 +38,9 @@ class CollectMessagesCommand extends Command
         'order-returns'         => '교환ㆍ반품ㆍ취소',
         'repurchase/index'      => '재구매 관리',
         'messages/index'        => '메시지 관리',
+        /* 좁은 것을 먼저 둔다 — str_contains 로 견주므로 먼저 걸리는 것이 이긴다.
+           서명 판은 거래처가 로그인 없이 여는 화면이라 따로 가린다. */
+        'delegation-signs/sign' => '위임장 서명(고객)',
         'delegation-signs'      => '위임 서명',
         'webhooks/index'        => '웹훅 관리',
         'orders/show'           => '주문 상세',
@@ -215,12 +218,16 @@ class CollectMessagesCommand extends Command
     {
         $나온것 = [];
 
+        /* 글이 첫 인자인 것과, 판(form·단추)을 먼저 받는 도우미를 함께 본다.
+           ceConfirmClick(this, '…')ㆍceConfirmSubmit(this, '…') 은 인라인
+           onclickㆍonsubmit 에서 쓰는 꼴이라 글이 두 번째에 온다 (2026-09-23). */
         $잣대 = [
-            'toast' => "/showToast\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u",
-            'popup' => "/ce(?:Alert|Confirm)\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u",
+            ['toast', "/showToast\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
+            ['popup', "/ce(?:Alert|Confirm)\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
+            ['popup', "/ceConfirm(?:Click|Submit)\\(\\s*[^,]{1,60},\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
         ];
 
-        foreach ($잣대 as $채널 => $정규) {
+        foreach ($잣대 as [$채널, $정규]) {
             if (! preg_match_all($정규, $글, $m, PREG_OFFSET_CAPTURE)) { continue; }
 
             foreach ($m[1] as [$본문, $자리]) {

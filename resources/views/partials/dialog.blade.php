@@ -105,10 +105,47 @@
     });
   }
 
-  window.ceAlert   = function (msg, opts) { return open('alert', msg, opts); };
-  window.ceConfirm = function (msg, opts) { return open('confirm', msg, opts); };
+  /* 담당자가 메시지 관리에서 고친 글을 먼저 본다 (2026-09-23 지시).
+
+     이 조각은 로그인 없이 열리는 화면에도 실린다 — 사전을 내려받을 길이 없으므로
+     서버가 판을 그릴 때 실어 준다. **부르는 쪽이 화면을 집어 준 것만** 담는다.
+     담당자끼리 쓰는 말이 거래처 화면으로 새어 나가면 안 된다. */
+  var 사전 = @json(
+      isset($문구화면)
+          ? \App\Models\MessageTemplate::화면사전((array) $문구화면)
+          : ['toast' => [], 'popup' => []]
+  );
+
+  function 고친문구(채널, 원문) {
+    if (typeof 원문 !== 'string') return 원문;
+    var 있는것 = 사전[채널] || {};
+    var 찾은것 = 있는것[원문.trim()];
+    return 찾은것 === undefined ? 원문 : 찾은것;
+  }
+
+  window.ceAlert   = function (msg, opts) { return open('alert',   고친문구('popup', msg), opts); };
+  window.ceConfirm = function (msg, opts) { return open('confirm', 고친문구('popup', msg), opts); };
+
+  /** 인라인 onsubmit 용: onsubmit="return ceConfirmSubmit(this, '메시지')" */
   window.ceConfirmSubmit = function (form, msg, opts) {
     window.ceConfirm(msg, opts).then(function (ok) { if (ok) form.submit(); });
+    return false;
+  };
+
+  /**
+   * 인라인 onclick 용: onclick="return ceConfirmClick(this, '메시지')"
+   *
+   * 폼 안의 보내기 단추에 쓴다. requestSubmit(단추) 로 되보내 **어느 단추를
+   * 눌렀는지(name·value)** 를 잃지 않는다 — form.submit() 은 그것을 버린다.
+   * 되보낼 때 단추의 onclick 은 다시 불리지 않으므로 맴돌지 않는다.
+   */
+  window.ceConfirmClick = function (el, msg, opts) {
+    window.ceConfirm(msg, opts).then(function (ok) {
+      if (!ok) return;
+      var f = el.form || (el.closest && el.closest('form'));
+      if (!f) return;
+      if (f.requestSubmit) { f.requestSubmit(el.name ? el : undefined); } else { f.submit(); }
+    });
     return false;
   };
 })();

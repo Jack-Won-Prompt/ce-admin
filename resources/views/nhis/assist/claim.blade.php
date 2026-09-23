@@ -169,7 +169,7 @@
     <form method="POST" action="{{ route('nhis.assist.markClaimed', $order) }}" style="display:inline;">
       @csrf
       <button type="submit" class="tbtn"
-              onclick="return confirm('공단에 제출을 마쳤습니까? 청구 상태를 「청구완료」로 변경합니다.');">
+              onclick="return ceConfirmClick(this, '공단에 제출을 마쳤습니까? 청구 상태를 「청구완료」로 변경합니다.');">
         청구 완료로 표시
       </button>
     </form>
