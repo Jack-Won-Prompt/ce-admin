@@ -411,8 +411,9 @@ class PrescriptionApiController extends Controller
                 'is_mine'     => $p->created_by === auth()->id(),
                 'owner_name'  => $p->creator?->name,
                 /* 검수 재요청 단추를 세울지 (2026-09-15 지시) — 되물은 자취가 있고
-                   아직 요청하지 않은 내 건. 규칙은 requestReview() 와 같다. */
-                'can_request_review' => $p->editableByUploader(auth()->id())
+                   아직 요청하지 않은 건. 규칙은 requestReview() 와 같다.
+                   남의 건에서도 선다 (2026-09-23) — 서류를 보탠 사람이 그대로 청한다. */
+                'can_request_review' => $this->보탤수있나($p)
                     && ($p->status === 'review_hold' || $p->reuploadRequests()->exists())
                     && ! in_array($p->status, ['review_requested', 'review_resent'], true),
                 'attachments' => $p->attachments->map(fn (PrescriptionAttachment $a) => [
