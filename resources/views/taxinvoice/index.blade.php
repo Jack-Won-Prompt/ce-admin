@@ -1040,7 +1040,11 @@ async function loadHistory(page = 1) {
       if (r.record_type === 'pending') {
         return {
           ...r,
-          date: wDate, mgt: (r.order_number ?? '—'), buyer: (r.invoiceeCorpName ?? '—'),
+          /* 발행 대기는 아직 관리번호가 없다 — 주문번호를 적고 처방번호를 잇는다.
+             발행된 줄과 같은 꼴이라야 한 열에서 견주어 읽을 수 있다. */
+          date: wDate,
+          mgt: (r.order_number ?? '—') + (r.rx_number ? String.fromCharCode(10) + r.rx_number : ''),
+          buyer: (r.invoiceeCorpName ?? '—'),
           supply, tax, type: '—', status: '발행 대기',
           record_type: 'pending', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
         };
@@ -1054,7 +1058,15 @@ async function loadHistory(page = 1) {
            적으면 그것이 이긴다 — 화면이 다듬은 값이 원본보다 뒤에 와야 한다. */
         ...r,
 
-        date: wDate, mgt: (mgtKey || '—'), buyer: (r.invoiceeCorpName ?? '—'),
+        /* 관리번호 **아래에 처방번호**를 함께 적는다 (2026-09-23 지시).
+
+           열 이름은 「관리번호/처방번호」인데 관리번호만 적고 있었다. 정정을 거친
+           건은 한 주문에서 세금계산서가 여럿 나오는데(원 발행ㆍ취소ㆍ재발행), 관리
+           번호만 보면 그 셋이 같은 주문의 것인지 알 수 없다. 서버는 이미 주문을 타고
+           처방번호를 실어 보내고 있었다 — 화면이 쓰지 않았을 뿐이다. */
+        date: wDate,
+        mgt: (mgtKey || '—') + (r.rxNumber ? String.fromCharCode(10) + r.rxNumber : ''),
+        buyer: (r.invoiceeCorpName ?? '—'),
         supply, tax, type: ttTxt, status: sTxt,
 
         // 팝빌이 주는 나머지 (요청서 6쪽)
