@@ -380,6 +380,19 @@ class PaymentLinkController extends Controller
         $tp    = TossPayment::withTrashed()->firstOrNew(['order_id' => $link->order_id]);
         $isNew = ! $tp->exists;
 
+        /* 앞 결제의 취소 자취를 지울 것인가 — **결제키가 달라졌을 때만** 지운다.
+
+           한 주문에 한 줄이라, 정정으로 환불한 뒤 새 금액을 다시 받으면 같은 줄을
+           덮어 쓴다. 그런데 취소액만 남겨 두어 Order::결제기준금액() 이
+           「받은 돈 − 취소액」을 0 으로 읽었다. 목록은 결제완료라는데 정정
+           미리보기는 「입금 전이라 환불할 금액이 없습니다」로 갈려, 그대로 정정하면
+           **실제로 받은 돈을 돌려주지 않는다**
+           (2026-09-23 무한 테스트 CASE 6 에서 드러남).
+
+           같은 결제키로 이 자리에 다시 들어오는 일이 있다(돌아오는 화면 새로고침).
+           그때까지 지우면 부분취소한 금액이 없던 일이 되므로, 키가 같으면 둔다. */
+        $새결제 = ($res['paymentKey'] ?? $link->payment_key) !== $tp->payment_key;
+
         $tp->forceFill([
             'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
             'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
@@ -393,7 +406,11 @@ class PaymentLinkController extends Controller
             'deposited_at'   => $va ? null : now(),
             'raw_response'   => $res,
             'deleted_at'     => null,
-        ])->save();
+        ] + ($새결제 ? [
+            'cancel_amount'  => 0,
+            'cancel_reason'  => null,
+            'canceled_at'    => null,
+        ] : []))->save();
 
         /* 가상계좌를 고른 사람에게는 계좌를 문자로 한 번 더 적어 보낸다.
            이 화면을 닫으면 계좌를 다시 볼 곳이 우리 쪽에 없어, 담당자에게 전화해
