@@ -645,6 +645,11 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 
 @push('scripts')
 <script>
+  /* 세금계산서 상태 글은 모델의 정본 표를 그대로 쓴다 (2026-09-24).
+     화면에 따로 적어 두었더니 팝빌 공식과 어긋난 채 굳었다. */
+  const TI_STATE = @json(\App\Models\PopbillTaxinvoice::STATE_LABELS);
+</script>
+<script>
 // 발행 내역 wwGrid (조회 결과를 setData로 주입)
 (function () {
   const el = document.getElementById('taxHistGrid');
@@ -1053,7 +1058,7 @@ async function loadHistory(page = 1) {
         };
       }
       const sc = parseInt(r.stateCode ?? 0);
-      const sTxt = { 100:'임시저장', 200:'발행완료', 220:'발행완료', 300:'국세청대기', 400:'국세청완료', 500:'취소', 600:'국세청취소' }[sc] ?? String(sc);
+      const sTxt = TI_STATE[sc] ?? ('상태 ' + sc);
       const ttTxt = { ValueAdded:'과세', ZeroTax:'영세', FreeTax:'면세' }[r.taxType] ?? '—';
       const mgtKey = r.invoicerMgtKey ?? r.invoiceeMgtKey ?? r.trusteeMgtKey ?? '';
       return {
@@ -1135,7 +1140,7 @@ async function openDetail(mgtKeyType, mgtKey) {
 
     const sc   = parseInt(r.stateCode ?? 0);
     const sCls = sc >= 500 ? 'cancel' : (sc >= 400 ? 'nts' : (sc >= 200 ? 'issued' : 'draft'));
-    const sTxt = { 100:'임시저장', 200:'발행완료', 220:'발행완료', 300:'국세청대기', 400:'국세청완료', 500:'취소', 600:'국세청취소' }[sc] ?? String(sc);
+    const sTxt = TI_STATE[sc] ?? ('상태 ' + sc);
     const writeDate  = (r.writeDate ?? '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
     const issueDate  = (r.issueDT  ?? '').replace(/(\d{4})(\d{2})(\d{2}).*/, '$1-$2-$3') || writeDate;
     const supplyNum  = parseInt(r.supplyCostTotal ?? 0);
