@@ -3475,7 +3475,7 @@ class PrescriptionController extends Controller
         try {
             $올린이 = $prescription->creator;
 
-            if (! $올린이 || $올린이->id === Auth::id() || blank($올린이->fcm_token)) {
+            if (! $올린이 || $올린이->id === Auth::id()) {
                 return;
             }
 
@@ -3487,20 +3487,25 @@ class PrescriptionController extends Controller
 
             /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
                아래 data 는 앱이 어느 화면으로 갈지 가리는 값이라 건드리지 않는다. */
-            \App\Helpers\FcmHelper::send(
-                $올린이->fcm_token,
-                \App\Models\MessageTemplate::문구('prescription_cancelled_title', $값,
-                    '처방전 등록이 취소되었습니다', 'fcm'),
-                \App\Models\MessageTemplate::문구('prescription_cancelled', $값,
-                    sprintf('%s · %s — %s', $prescription->rx_number, $이름, $사유), 'fcm'),
-                [
-                    'type'      => 'prescription_cancelled',
-                    'rx_number' => (string) $prescription->rx_number,
-                    'order_no'  => (string) $order->order_number,
-                    'reason'    => $사유,
-                ],
-                $올린이->id,
-            );
+            $제목 = \App\Models\MessageTemplate::문구('prescription_cancelled_title', $값,
+                        '처방전 등록이 취소되었습니다', 'fcm');
+            $글   = \App\Models\MessageTemplate::문구('prescription_cancelled', $값,
+                        sprintf('%s · %s — %s', $prescription->rx_number, $이름, $사유), 'fcm');
+            $실은것 = [
+                'type'      => 'prescription_cancelled',
+                'rx_number' => (string) $prescription->rx_number,
+                'order_no'  => (string) $order->order_number,
+                'reason'    => $사유,
+            ];
+
+            /* 모바일 웹은 기기 토큰이 없다 — 그때도 이력은 남긴다 (2026-09-25) */
+            if (blank($올린이->fcm_token)) {
+                \App\Helpers\FcmHelper::이력만남긴다($올린이->id, $제목, $글, $실은것);
+
+                return;
+            }
+
+            \App\Helpers\FcmHelper::send($올린이->fcm_token, $제목, $글, $실은것, $올린이->id);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('[주문 취소] 앱 알림 실패', [
                 'rx' => $prescription->rx_number, 'error' => $e->getMessage(),

@@ -122,12 +122,6 @@ class ReuploadRequestService
             return;
         }
 
-        if (! $받는이->fcm_token) {
-            $요청->update(['fcm_error' => '앱 알림 토큰이 없습니다(앱 로그인 필요).']);
-
-            return;
-        }
-
         $환자 = $처방전->patient?->name ?: $처방전->patient_name_ocr ?: $처방전->rx_number;
 
         try {
@@ -135,23 +129,37 @@ class ReuploadRequestService
             $값 = ['#{고객명}' => $환자, '#{서류명}' => (string) $요청->doc_label,
                    '#{사유}'   => $요청->사유말()];
 
+            $제목 = MessageTemplate::문구('rx_reupload_request_title', $값,
+                        '처방전 자료 재업로드 요청', 'fcm');
+            $본문 = MessageTemplate::문구('rx_reupload_request', $값,
+                        $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(), 'fcm');
+            $실은것 = [
+                /* 앱이 이 값을 보고 해당 처방전 화면으로 간다. 앱이 아직 모르는
+                   갈래여도 알림 자체는 뜬다 — 글만으로도 무엇을 다시 올릴지 안다. */
+                'type'            => 'rx_reupload',
+                'request_id'      => $요청->id,
+                'prescription_id' => $처방전->id,
+                'rx_number'       => $처방전->rx_number,
+                'attachment_id'   => $요청->attachment_id ?? '',
+                'doc_label'       => $요청->doc_label,
+                'reason'          => $요청->reason,
+            ];
+
+            /* 기기 토큰이 없는 사람이 있다 — 모바일 **웹**으로 쓰면 브라우저라
+               토큰이 아예 없다. 그때도 이력은 남긴다. 남기지 않으면 무엇을 다시
+               올려 달라고 했는지 볼 자리가 통째로 없다 (2026-09-25 무한테스트). */
+            if (! $받는이->fcm_token) {
+                FcmHelper::이력만남긴다($받는이->id, $제목, $본문, $실은것);
+                $요청->update(['fcm_error' => '앱 알림 토큰이 없습니다 — 알림 이력에만 남겼습니다.']);
+
+                return;
+            }
+
             $보냄 = FcmHelper::send(
                 $받는이->fcm_token,
-                MessageTemplate::문구('rx_reupload_request_title', $값,
-                    '처방전 자료 재업로드 요청', 'fcm'),
-                MessageTemplate::문구('rx_reupload_request', $값,
-                    $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(), 'fcm'),
-                [
-                    /* 앱이 이 값을 보고 해당 처방전 화면으로 간다. 앱이 아직 모르는
-                       갈래여도 알림 자체는 뜬다 — 글만으로도 무엇을 다시 올릴지 안다. */
-                    'type'            => 'rx_reupload',
-                    'request_id'      => $요청->id,
-                    'prescription_id' => $처방전->id,
-                    'rx_number'       => $처방전->rx_number,
-                    'attachment_id'   => $요청->attachment_id ?? '',
-                    'doc_label'       => $요청->doc_label,
-                    'reason'          => $요청->reason,
-                ],
+                $제목,
+                $본문,
+                $실은것,
                 $받는이->id,
             );
 

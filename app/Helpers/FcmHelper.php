@@ -118,6 +118,36 @@ class FcmHelper
         return $sent;
     }
 
+    /**
+     * 보내지 못한 알림을 이력에만 남긴다 (2026-09-25).
+     *
+     * 기기 토큰이 없는 사람이 있다 — 모바일 **웹**으로 쓰는 사람은 브라우저라
+     * 토큰이 아예 없다. 여태 그런 사람에게는 보내기를 건너뛰면서 이력도 남기지
+     * 않아, 「무엇을 다시 올려 달라고 했는지」를 볼 자리가 통째로 없었다.
+     *
+     * 이력에 남기면 앱과 모바일 웹의 「알림 이력」에 뜨고, 닿지 못했다는 것도
+     * 그 자리에 적힌다(sent=false).
+     */
+    public static function 이력만남긴다(
+        int    $userId,
+        string $title,
+        string $body,
+        array  $data = []
+    ): void {
+        try {
+            \App\Models\FcmNotification::create([
+                'user_id' => $userId,
+                'title'   => $title,
+                'body'    => $body,
+                'type'    => $data['type'] ?? null,
+                'payload' => $data,
+                'sent'    => false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[FCM] 이력 기록 실패', ['error' => $e->getMessage()]);
+        }
+    }
+
     // ── 내부 메서드 ──────────────────────────────────────────
 
     private static function getAccessToken(): string

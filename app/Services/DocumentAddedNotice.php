@@ -50,10 +50,6 @@ class DocumentAddedNotice
     /** 앱 알림 — 앱으로 일하는 담당자가 바로 본다 */
     private function 앱으로(User $등록자, Prescription $처방전, string $서류이름, string $본문): void
     {
-        if (! $등록자->fcm_token) {
-            return;
-        }
-
         try {
             /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시).
                아래 data 는 앱이 갈 화면을 가리는 값이라 건드리지 않는다. */
@@ -61,20 +57,27 @@ class DocumentAddedNotice
                    '#{서류명}'   => $서류이름,
                    '#{내용}'     => $본문];
 
-            FcmHelper::send(
-                $등록자->fcm_token,
-                MessageTemplate::문구('rx_document_added_title', $값,
-                    '처방전에 서류가 추가되었습니다', 'fcm'),
-                MessageTemplate::문구('rx_document_added', $값, $본문, 'fcm'),
-                [
-                    // 앱이 이 값을 보고 그 처방전 화면으로 간다
-                    'type'            => 'rx_added',
-                    'prescription_id' => $처방전->id,
-                    'rx_number'       => $처방전->rx_number,
-                    'doc_label'       => $서류이름,
-                ],
-                $등록자->id,
-            );
+            $제목 = MessageTemplate::문구('rx_document_added_title', $값,
+                        '처방전에 서류가 추가되었습니다', 'fcm');
+            $글   = MessageTemplate::문구('rx_document_added', $값, $본문, 'fcm');
+            $실은것 = [
+                // 앱이 이 값을 보고 그 처방전 화면으로 간다
+                'type'            => 'rx_added',
+                'prescription_id' => $처방전->id,
+                'rx_number'       => $처방전->rx_number,
+                'doc_label'       => $서류이름,
+            ];
+
+            /* 모바일 **웹**으로 쓰면 브라우저라 기기 토큰이 없다. 그때도 이력은
+               남긴다 — 남기지 않으면 서류가 보태졌다는 것을 볼 자리가 없다
+               (2026-09-25 무한테스트). */
+            if (! $등록자->fcm_token) {
+                FcmHelper::이력만남긴다($등록자->id, $제목, $글, $실은것);
+
+                return;
+            }
+
+            FcmHelper::send($등록자->fcm_token, $제목, $글, $실은것, $등록자->id);
         } catch (\Throwable $e) {
             Log::warning('[서류 보탬] 앱 알림 실패', [
                 'rx' => $처방전->rx_number, 'user' => $등록자->id, 'error' => $e->getMessage(),
