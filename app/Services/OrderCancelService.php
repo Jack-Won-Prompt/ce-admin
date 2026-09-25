@@ -106,6 +106,26 @@ class OrderCancelService
                 ? "주문 취소 ({$order->order_number}) — {$사유}"
                 : "주문 취소 요청 ({$order->order_number}) — {$사유}");
 
+        /* ── ④ 환자에게 알린다 (2026-09-25 지시) ──────────────────
+
+           창고를 물리고 돈을 돌려주고 증빙까지 취소했는데, 정작 **고객에게 가는
+           안내만 없었다**. 돈은 며칠 뒤 카드사를 거쳐 돌아오므로 그 사이 고객은
+           아무 말도 듣지 못한 채 기다린다.
+
+           아직 창고가 되돌리는 중인 건(요청 상태)은 알리지 않는다 — 취소가 끝난
+           것이 아니라서, 알렸다가 되돌아오면 두 번 말을 바꾸게 된다.
+
+           못 보내도 취소를 되돌리지 않는다 — 이미 다 물린 뒤다. */
+        if ($끝났나) {
+            try {
+                app(\App\Services\OrderCancelNotice::class)->send($order->refresh());
+            } catch (\Throwable $e) {
+                Log::warning('[주문 취소] 안내 실패', [
+                    'order' => $order->order_number, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return [
             'ok'      => true,
             'state'   => $order->cancel_state,

@@ -51,12 +51,24 @@ class PaymentDoneNotice
 
         $order->loadMissing('patient', 'prescription', 'tossPayment');
 
-        /* 이미 알린 건은 지나간다 — 웹훅이 두 번 와도 문자는 한 번이다 */
-        if (MessageHistory::where('source', self::SOURCE)
-                ->where('prescription_id', $order->prescription_id)
-                ->where('content', 'like', '%' . $order->order_number . '%')
-                ->where('success_count', '>', 0)
-                ->exists()) {
+        /* 이미 알린 건은 지나간다 — 웹훅이 두 번 와도 문자는 한 번이다.
+
+           다만 **이번 결제보다 앞서 보낸 것은 지나간 일**이다 (2026-09-25 무한테스트).
+           정정하면 같은 주문번호로 다시 받는데, 주문번호만 견주던 탓에 재결제 완료
+           안내가 통째로 막혔다 — 고객은 67,500원을 실제로 냈는데 확인 문자를 못
+           받았다. 이번 승인 시각 뒤에 보낸 것이 있을 때만 「이미 알렸다」로 본다. */
+        $이번결제 = $order->paidAt();
+
+        $알린것 = MessageHistory::where('source', self::SOURCE)
+            ->where('prescription_id', $order->prescription_id)
+            ->where('content', 'like', '%' . $order->order_number . '%')
+            ->where('success_count', '>', 0);
+
+        if ($이번결제) {
+            $알린것->where('created_at', '>=', $이번결제);
+        }
+
+        if ($알린것->exists()) {
             return ['sent' => false, 'message' => '이미 안내한 건입니다.'];
         }
 

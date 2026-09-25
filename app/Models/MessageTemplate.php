@@ -252,6 +252,12 @@ class MessageTemplate extends Model
                 'desc'  => '결제가 끝났음을 안내 — 결제 직후 자동 발송',
                 'text'  => \App\Services\PaymentDoneNotice::기본문구(),
             ],
+            /* 주문을 취소하면 알린다 (2026-09-25 지시) */
+            \App\Services\OrderCancelNotice::TEMPLATE => [
+                'label' => '주문 취소',
+                'desc'  => '주문이 취소되었음을 안내 — 취소할 때 자동 발송',
+                'text'  => \App\Services\OrderCancelNotice::기본문구(),
+            ],
             /* 교환ㆍ반품ㆍ취소가 저절로 보내는 세 자리 (2026-09-18 지시).
                문구는 ReturnPatientNotice::기본문구() 가 정본이다 — 두 벌로 적으면
                한쪽만 고쳐진다. */
