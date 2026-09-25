@@ -99,7 +99,7 @@ class PaymentDoneNotice
                 'sms',
                 [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $order->patient_id]],
                 $text,
-                null,
+                self::TEMPLATE,
                 ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id],
             );
         } catch (\Throwable $e) {

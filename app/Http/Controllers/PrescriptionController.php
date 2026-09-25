@@ -708,7 +708,7 @@ class PrescriptionController extends Controller
                 'sms',
                 [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $prescription->patient_id]],
                 $text,
-                null,
+                'order_confirmed',
                 ['source' => $source, 'prescription_id' => $prescription->id],
             );
         } catch (\Throwable $e) {
@@ -4185,7 +4185,7 @@ class PrescriptionController extends Controller
                 'sms',
                 [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $patient->id]],
                 $text,
-                null,
+                'rx_received',
                 ['source' => $source, 'prescription_id' => $prescription->id],
             );
         } catch (\Throwable $e) {
@@ -4349,7 +4349,7 @@ class PrescriptionController extends Controller
                「발송ㆍ내역」에는 아무것도 남지 않아, 나갔는지 담당자가 알 길이 없었다. */
             $res = $this->sender->sendBulk('sms',
                 [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
-                $message, null,
+                $message, 'consent_sign',
                 ['source' => 'consent', 'prescription_id' => $prescription->id]);
 
             if (! ($res['success'] ?? false)) {
@@ -4438,7 +4438,7 @@ class PrescriptionController extends Controller
         try {
             $res = $this->sender->sendBulk('sms',
                 [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
-                $message, null,
+                $message, 'id_card_request',
                 ['source' => 'consent', 'prescription_id' => $prescription->id]);
 
             if (! ($res['success'] ?? false)) {
@@ -4499,7 +4499,7 @@ class PrescriptionController extends Controller
         try {
             $res = $this->sender->sendBulk('sms',
                 [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
-                $message, null,
+                $message, 'custom',
                 ['source' => 'prescription', 'prescription_id' => $prescription->id]);
 
             if (! ($res['success'] ?? false)) {

@@ -768,7 +768,7 @@ class DelegationSignController extends Controller
             /* 발송 내역에 쌓이는 길로 보낸다 — 팝빌을 곧바로 부르면 나갔는지 알 수 없다 */
             $res = $this->sender->sendBulk('sms',
                 [['rcv' => $번호, 'rcvnm' => $이름]],
-                $글, null,
+                $글, 'delegation_sign',
                 ['source' => 'delegation-sign',
                  /* 이 화면은 시험 화면이 아니라 업무 화면이다 (2026-09-16 지시).
 

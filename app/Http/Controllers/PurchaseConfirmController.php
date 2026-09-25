@@ -89,7 +89,7 @@ class PurchaseConfirmController extends Controller
 
         $res = $sender->sendBulk('sms',
             [['rcv' => $mobile, 'rcvnm' => $patient->name, 'patient_id' => $patient->id]],
-            $text, null, ['source' => 'purchase-confirm']);
+            $text, 'purchase_confirm', ['source' => 'purchase-confirm']);
 
         return ($res['success'] ?? false)
             ? back()->with('success', '문자를 보냈습니다.')

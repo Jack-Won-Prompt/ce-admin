@@ -135,7 +135,7 @@ class OrderDocSendController extends Controller
 
         $res = $sender->sendBulk('sms',
             [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $order->patient_id]],
-            $text, null, ['source' => 'order-docs']);
+            $text, 'order_doc_send', ['source' => 'order-docs']);
 
         if ($res['success'] ?? false) {
             activity()->causedBy(Auth::user())->performedOn($order)
