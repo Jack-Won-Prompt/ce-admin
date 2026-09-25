@@ -4583,6 +4583,32 @@ $calcDeposit  = $calcCopay;
                 <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @endif
             </div>
+            {{-- 결제 걸음 (2026-09-25 지시).
+
+                 여태 업로드 → 검수 → 주문 생성 → 청구 넷뿐이라, 돈을 이미 받은 건도
+                 마지막 줄이 「청구 대기 중」으로 끝났다. 목록 화면에는 결제수단ㆍ입금
+                 확인ㆍ금액ㆍ시각이 다 나오는데 이력만 비어 있어, 여기만 보는 사람에게는
+                 아직 못 받은 것처럼 읽혔다.
+
+                 값은 이미 있는 것을 그대로 읽는다 — 새로 세는 자리를 만들지 않는다.
+                 변수를 두지 않고 그때그때 묻는다(이 파일의 다른 걸음들과 같은 꼴). --}}
+            <div class="workflow-step">
+              <div class="ws-icon {{ $prescription->order && $prescription->order->isDepositConfirmed() ? 'done' : 'pending' }}"><i class="fa-solid fa-won-sign"></i></div>
+              <div>
+                <div class="ws-label">결제 완료</div>
+                <div class="ws-time">
+                  @if($prescription->order && $prescription->order->isDepositConfirmed())
+                    {{ $prescription->order->paidAtLabel('H:i') }} · {{ $prescription->order->payMethodLabel() }}
+                    <span style="color:var(--primary);font-weight:700;display:block;">&#8361;{{ number_format($prescription->order->받은금액()) }}</span>
+                  @else
+                    대기 중
+                  @endif
+                </div>
+              </div>
+              @if($prescription->order && $prescription->order->isDepositConfirmed())
+                <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
+              @endif
+            </div>
             <div class="workflow-step">
               <div class="ws-icon {{ $prescription->order?->nhis_claim_status === 'approved' ? 'done' : 'pending' }}"><i class="fa-solid fa-hospital"></i></div>
               <div><div class="ws-label">청구</div><div class="ws-time">{{ $prescription->order?->nhis_reimbursement ? '환급: ₩'.number_format($prescription->order->nhis_reimbursement) : '대기 중' }}</div></div>
@@ -4632,6 +4658,22 @@ $calcDeposit  = $calcCopay;
                     @if($prescription->order)
                       <span style="font-weight:700;">{{ $prescription->order->order_number }}</span>
                       @if($prescription->order->withworks_so_no)<span style="color:var(--primary);font-family:monospace;margin-left:6px;font-size:11px;">위드웍스 판매번호 {{ $prescription->order->withworks_so_no }}</span>@endif
+                    @else대기 중@endif
+                  </td>
+                </tr>
+                <tr>
+                  <td><i class="fa-solid fa-won-sign" style="color:var(--primary);margin-right:5px;"></i>결제 완료</td>
+                  <td style="text-align:center;">
+                    @if($prescription->order && $prescription->order->isDepositConfirmed())
+                      <i class="fa-solid fa-check" style="color:var(--primary);"></i>
+                    @else
+                      <i class="fa-solid fa-clock" style="color:var(--text-muted);"></i>
+                    @endif
+                  </td>
+                  <td>
+                    @if($prescription->order && $prescription->order->isDepositConfirmed())
+                      {{ $prescription->order->paidAtLabel() }} · {{ $prescription->order->payMethodLabel() }}
+                      <span style="color:var(--primary);font-weight:700;margin-left:6px;">&#8361;{{ number_format($prescription->order->받은금액()) }}</span>
                     @else대기 중@endif
                   </td>
                 </tr>
@@ -6643,7 +6685,7 @@ window.HELP_TOUR_STEPS = [
   {
     selector: '.tab-btn:nth-child(4)',
     title: '이력 탭',
-    body: '처방전의 전체 처리 이력을 확인합니다. 업로드 → 검수 → 주문 생성 단계가 순서대로 표시됩니다.'
+    body: '처방전의 전체 처리 이력을 확인합니다. 업로드 → 검수 → 주문 생성 → 결제 → 청구 단계가 순서대로 표시됩니다.'
   },
 ];
 </script>
