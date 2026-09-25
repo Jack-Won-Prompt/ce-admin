@@ -354,6 +354,50 @@ class PrescriptionController extends Controller
      * 화면이 들고 있는 값으로 몇 칸을 덮는다 — 적어 두었지만 아직 저장되지 않은
      * 값이 있기 때문이다. 널ㆍ빈 글자는 덮지 않는다.
      */
+    /**
+     * 정정할 것이 있는가 — 없으면 까닭을 돌려준다 (2026-09-25 지시).
+     *
+     * 품목(코드ㆍ수량ㆍ단가)과 배송지ㆍ받는 사람ㆍ출고요청일을 견준다. 이 여섯이
+     * 모두 그대로면 창고에 할 말이 없다.
+     */
+    private function 정정할것이없나(Order $order, Request $request): ?string
+    {
+        $셈 = static function (array $줄들): array {
+            $열 = [];
+            foreach ($줄들 as $줄) {
+                $코드 = (string) ($줄['item_code'] ?? $줄['product_code'] ?? '');
+                $열[] = $코드 . '|' . (int) ($줄['qty'] ?? $줄['quantity'] ?? 0)
+                        . '|' . (int) round((float) ($줄['unit_price'] ?? $줄['product_price'] ?? 0));
+            }
+            sort($열);
+
+            return $열;
+        };
+
+        $지금 = $셈($order->items->map(fn ($i) => [
+            'product_code'  => $i->product_code,
+            'quantity'      => $i->quantity,
+            'product_price' => $i->product_price,
+        ])->all());
+
+        $바꿀것 = $셈((array) $request->input('items', []));
+
+        if ($지금 !== $바꿀것) {
+            return null;
+        }
+
+        $같나 = static fn ($a, $b) => trim((string) $a) === trim((string) $b);
+
+        if (! $같나($order->shipping_address,        $request->input('shipping_address'))
+            || ! $같나($order->shipping_address_detail, $request->input('shipping_address_detail'))
+            || ! $같나($order->shipping_recipient,      $request->input('recipient_name'))
+            || ! $같나($order->ship_request_date?->format('Y-m-d'), $request->input('delivery_date'))) {
+            return null;
+        }
+
+        return '바뀐 것이 없어 정정하지 않았습니다 — 제품ㆍ수량ㆍ배송지를 먼저 고쳐 주십시오.';
+    }
+
     private function withworksPayload(Request $request, Prescription $prescription): array
     {
         $order = $prescription->orders()
@@ -795,6 +839,31 @@ class PrescriptionController extends Controller
 
         if (! $order) {
             return response()->json(['success' => false, 'message' => '주문을 찾을 수 없습니다.'], 404);
+        }
+
+        /* ① 재결제를 기다리는 중이면 다시 걸지 않는다 (2026-09-25 지시).
+
+           정정으로 금액이 바뀌면 기존 결제를 물리고 새 링크를 보낸다. 고객이 아직
+           내지 않았는데 또 정정을 걸면 창고 판매주문이 다시 갈리고 링크도 또 나가,
+           고객에게는 낼 곳이 둘이 되고 창고에는 죽은 주문이 쌓인다. */
+        if ($order->재결제기다리는중인가()) {
+            return response()->json([
+                'success' => false,
+                'message' => '주문 정정이 진행중에 있습니다 — 고객이 재결제를 마친 뒤에 다시 정정해 주십시오.',
+                'state'   => 'amend_awaiting_payment',
+            ], 422);
+        }
+
+        /* ② 바뀐 것이 없으면 정정하지 않는다 (2026-09-25 지시).
+
+           여태는 아무것도 고치지 않고 눌러도 창고 판매주문을 취소하고 다시 세웠다.
+           누를 때마다 번호가 갈려, 창고에는 쓸데없는 취소ㆍ재등록만 쌓였다. */
+        if ($이유 = $this->정정할것이없나($order, $request)) {
+            return response()->json([
+                'success' => false,
+                'message' => $이유,
+                'state'   => 'amend_no_change',
+            ], 422);
         }
 
         /* 새로 세울 내용 — 처음 등록할 때와 **같은 것**을 쓴다. 두 곳이 따로

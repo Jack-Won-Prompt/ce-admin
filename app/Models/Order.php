@@ -117,6 +117,27 @@ class Order extends Model
         return in_array($this->amend_state, [self::AMEND_REQUESTED, self::AMEND_SWAPPING], true);
     }
 
+    /**
+     * 정정해 놓고 **고객의 재결제를 기다리는 중**인가 (2026-09-25 지시).
+     *
+     * 정정으로 금액이 바뀌면 기존 결제를 물리고 새 결제 링크를 보낸다. 그 사이에
+     * 또 정정을 걸면 창고 판매주문이 다시 갈리고 링크도 또 나가, 고객에게는 낼
+     * 곳이 둘이 되고 창고에는 죽은 주문이 쌓인다.
+     *
+     * 아직 받지 않은 링크가 살아 있으면 그 사이로 본다 — 「보냈다」고 적혔고
+     * 받은 때가 비어 있으며 아직 기한이 남은 것.
+     */
+    public function 재결제기다리는중인가(): bool
+    {
+        return $this->paymentLinks()
+            ->whereNull('paid_at')
+            ->whereIn('status', ['sent', 'pending'])
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->exists();
+    }
+
     /** 지금 판매주문을 갈아 세우는 중인가 — 그 사이의 취소 사건은 지나간 것이다 */
     public function 정정갈아세우는중인가(): bool
     {
