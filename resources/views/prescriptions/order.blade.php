@@ -6716,7 +6716,22 @@ window.HELP_TOUR_STEPS = [
   // ── 기존 주문 상태 ───────────────────────────────────
   @if($prescription->order)
   @php
-  $_orderData = ['id' => $prescription->order->id, 'order_number' => $prescription->order->order_number, 'withworks_so_no' => $prescription->order->withworks_so_no ?? '', 'so_type' => $prescription->order->so_type ?? \App\Models\Order::saleSoTypes()[0], 'shipping_address' => $prescription->order->shipping_address ?? ''];
+  /* 정정할 때 「바뀐 것이 있는가」를 가리려면 **고치기 전 값**이 화면에 있어야 한다
+     (2026-09-25). 품목과 받는 사람을 함께 싣는다 — 없으면 늘 「바뀌었다」로 읽혀
+     빈 정정이 그냥 지나간다. */
+  $_orderData = [
+      'id'                 => $prescription->order->id,
+      'order_number'       => $prescription->order->order_number,
+      'withworks_so_no'    => $prescription->order->withworks_so_no ?? '',
+      'so_type'            => $prescription->order->so_type ?? \App\Models\Order::saleSoTypes()[0],
+      'shipping_address'   => $prescription->order->shipping_address ?? '',
+      'shipping_recipient' => $prescription->order->shipping_recipient ?? '',
+      'items'              => $prescription->order->items->map(fn ($i) => [
+          'product_code'    => (string) $i->product_code,
+          'quantity'        => (int) $i->quantity,
+          'insurance_price' => (int) ($i->insurance_price ?: $i->product_price),
+      ])->values()->all(),
+  ];
   @endphp
   let existingOrder = @json($_orderData);
   /* 줄이 있느냐가 아니라 보냈느냐다 — 저장만 해도 줄은 선다(주문 관리에 보이도록).
@@ -11598,6 +11613,13 @@ window.HELP_TOUR_STEPS = [
 
     existingOrder.so_type         = currentSoType;
     existingOrder.shipping_address = shippingAddress;
+    /* 고치기 전 값도 새것으로 갈아 둔다 — 안 갈면 다음 정정에서 또 「바뀌었다」로 읽힌다 */
+    existingOrder.shipping_recipient = shippingRecipient;
+    existingOrder.items = validItems.map(i => ({
+      product_code:    i.product_code || '',
+      quantity:        i.quantity || 0,
+      insurance_price: Math.round(i.insurance_price || i.product_price || 0),
+    }));
     // 수정된 금액 동기화
     _ORDER_TOTAL   = localRes.total_amount ?? totalCopay ?? _ORDER_TOTAL;
     _PATIENT_COPAY = totalCopay ?? _PATIENT_COPAY;
