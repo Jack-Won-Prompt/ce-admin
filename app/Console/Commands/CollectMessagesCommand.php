@@ -45,6 +45,23 @@ class CollectMessagesCommand extends Command
         'nhis/assist'           => '공단 지원',
         'delegation-signs'      => '위임 서명',
         'webhooks/index'        => '웹훅 관리',
+        /* 모바일 웹 — 앱과 같은 화면이라 이름 앞에 「모바일」을 붙여 가른다 */
+        'mobile/prescriptions'  => '모바일 · 처방전 목록',
+        'mobile/prescription'   => '모바일 · 처방전 상세',
+        'mobile/upload'         => '모바일 · 처방자료 업로드',
+        'mobile/chat-room'      => '모바일 · 채팅방',
+        'mobile/chat'           => '모바일 · 채팅',
+        'mobile/settings'       => '모바일 · 설정',
+        'mobile/orders'         => '모바일 · 주문 목록',
+        'mobile/notifications'  => '모바일 · 알림 이력',
+        'mobile/notices'        => '모바일 · 공지사항',
+        'mobile/notice'         => '모바일 · 공지 상세',
+        'mobile/inquiry-create' => '모바일 · 문의 등록',
+        'mobile/inquiries'      => '모바일 · 문의 목록',
+        'mobile/inquiry'        => '모바일 · 문의 상세',
+        'mobile/login'          => '모바일 · 로그인',
+        'mobile/otp'            => '모바일 · SMS 인증',
+        'layouts/mobile'        => '모바일 · 공통',
         'orders/show'           => '주문 상세',
         'orders/index'          => '주문 관리',
         'consent/sign'          => '전자서명(고객)',
@@ -226,6 +243,8 @@ class CollectMessagesCommand extends Command
             ['toast', "/showToast\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
             ['popup', "/ce(?:Alert|Confirm)\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
             ['popup', "/ceConfirm(?:Click|Submit)\\(\\s*[^,]{1,60},\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
+            /* 모바일 웹(H5)의 알림 — 앱의 SnackBar 자리 (2026-09-25 지시) */
+            ['toast', "/mTell\\(\\s*'((?:[^'\\\\]|\\\\.){4,300})'/u"],
         ];
 
         foreach ($잣대 as [$채널, $정규]) {

@@ -16,6 +16,20 @@ use Illuminate\View\View;
  */
 class MobileWebController extends Controller
 {
+    /**
+     * 모바일 로그인 — 앱의 login_screen.
+     *
+     * 무엇을 보일지는 서버가 정한다(앱의 /auth/options 와 같은 잣대) — 화면에서
+     * 가리는 것만으로는 닫은 것이 아니다.
+     */
+    public function login(): View
+    {
+        return view('mobile.login', [
+            'sso'      => \App\Support\SsoSettings::usable(),
+            'password' => (bool) config('auth.password_login.web', true),
+        ]);
+    }
+
     /** 처방전 목록 — 앱의 prescription_list_screen */
     public function prescriptions(): View
     {

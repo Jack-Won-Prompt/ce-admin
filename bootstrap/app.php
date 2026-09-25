@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->statefulApi();  // Sanctum Bearer 토큰 인증
+
+        /* 모바일 웹에서 세션이 끊기면 모바일 로그인으로 보낸다 (2026-09-25 지시).
+           관리자 로그인 화면은 폰에서 읽기 어렵고, 앱을 쓰던 사람에게는 낯선 자리다. */
+        $middleware->redirectGuestsTo(fn ($request) =>
+            $request->is('m', 'm/*') ? route('m.login') : route('login'));
         $middleware->validateCsrfTokens(except: [
             'nhis/fax-callback',
             'toss/webhook',

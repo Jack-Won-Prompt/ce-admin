@@ -1477,6 +1477,10 @@ Route::get('/docs/purchase-confirm/{patient}',
 | 판만 여기서 그리고, 자료는 화면이 앱과 똑같은 /api/* 를 부른다.
 | 조회를 여기서 따로 짜면 그 순간부터 앱과 어긋나기 시작한다.
 */
+/* 모바일 로그인은 손님도 열 수 있어야 한다 — 앱의 login_screen 자리 */
+Route::get('/m/login', [\App\Http\Controllers\MobileWebController::class, 'login'])
+    ->middleware('guest')->name('m.login');
+
 Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
     $c = \App\Http\Controllers\MobileWebController::class;
 

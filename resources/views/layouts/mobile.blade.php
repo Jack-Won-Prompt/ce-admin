@@ -171,9 +171,26 @@
 <div class="m-sheet-back" id="mSheetBack" onclick="mSheetClose()"></div>
 
 <script>
-  /* ── 앱의 SnackBar 자리 ───────────────────────────── */
+  /* ── 앱의 SnackBar 자리 ─────────────────────────────
+
+     담당자가 메시지 관리에서 고친 글이 여기에도 떠야 한다 (2026-09-25 지시).
+     관리자 화면의 showToast 와 같은 방식이다 — 코드에 적힌 원문을 열쇠로
+     사전을 보고, 있으면 고친 말로 바꾼다. 고친 것만 사전에 담긴다. */
+  window.__문구사전 = window.__문구사전 || { toast: {}, popup: {} };
+
+  fetch(@json(route('messages.screenTexts')), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => { if (d) window.__문구사전 = d; })
+    .catch(() => {});
+
+  function 고친문구(채널, 원문) {
+    if (typeof 원문 !== 'string') return 원문;
+    return window.__문구사전?.[채널]?.[원문.trim()] ?? 원문;
+  }
+
   let _mToastTimer = null;
   function mTell(글, 갈래) {
+    글 = 고친문구('toast', 글);
     const el = document.getElementById('mToast');
     el.textContent = 글;
     el.className = 'm-toast on ' + (갈래 || '');

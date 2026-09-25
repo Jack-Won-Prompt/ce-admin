@@ -27,6 +27,32 @@ class AuthController extends Controller
     }
 
     /**
+     * 이 로그인이 모바일 웹에서 시작했는가 (2026-09-25 지시).
+     *
+     * 시작할 때 한 번 적어 두고, OTP 를 거쳐 끝날 때까지 그 표를 본다 —
+     * 중간 화면마다 값을 실어 나르면 한 곳만 빠뜨려도 관리자 화면으로 떨어진다.
+     */
+    private function 모바일인가(Request $request): bool
+    {
+        if ($request->input('from') === 'm') {
+            $request->session()->put('login_from', 'm');
+
+            return true;
+        }
+
+        return $request->session()->get('login_from') === 'm';
+    }
+
+    /** 로그인이 끝나면 어디로 — 모바일에서 왔으면 모바일로 */
+    private function 끝난뒤(Request $request): string
+    {
+        $모바일 = $this->모바일인가($request);
+        $request->session()->forget('login_from');
+
+        return $모바일 ? route('m.home') : route('workspace');
+    }
+
+    /**
      * 1단계: 이메일/비밀번호 검증 후 OTP 발송
      * POST /login
      */
@@ -73,7 +99,7 @@ class AuthController extends Controller
             Auth::loginUsingId($user->id, $request->boolean('remember'));
             $request->session()->regenerate();
             $this->dispatchCrawlIfNeeded();
-            return redirect()->intended(route('workspace'));
+            return redirect()->intended($this->끝난뒤($request));
         }
 
         if (empty($user->phone)) {
@@ -120,8 +146,12 @@ class AuthController extends Controller
         /** @var User $user */
         $user = User::find($request->session()->get('2fa_pending.user_id'));
 
-        return view('auth.otp', [
-            'maskedPhone' => $this->maskPhone($user->phone ?? ''),
+        /* 모바일에서 시작했으면 앱과 같은 모양의 OTP 판을 낸다 (2026-09-25 지시) */
+        $판 = $this->모바일인가($request) ? 'mobile.otp' : 'auth.otp';
+
+        return view($판, [
+            'maskedPhone'     => $this->maskPhone($user->phone ?? ''),
+            'resendCooldown'  => 0,
         ]);
     }
 
@@ -173,7 +203,7 @@ class AuthController extends Controller
 
         $this->dispatchCrawlIfNeeded();
 
-        return redirect()->intended(route('workspace'));
+        return redirect()->intended($this->끝난뒤($request));
     }
 
     /**
