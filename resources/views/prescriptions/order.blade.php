@@ -4611,6 +4611,30 @@ $calcDeposit  = $calcCopay;
                 <i class="fa-solid fa-check ws-arrow" style="color:var(--primary);"></i>
               @endif
             </div>
+            {{-- 취소 걸음 — 취소된 건에만 선다 (2026-09-25 무한테스트 3회차).
+
+                 취소하면 받은 돈이 물리므로 isDepositConfirmed() 가 다시 거짓이 된다.
+                 그래서 자취가 「결제 완료 — 대기 중」으로 되돌아가고, 취소되었다는
+                 사실은 어디에도 없었다 — 이 자취만 보는 사람은 아직 돈을 기다리는
+                 주문으로 읽어 결제 안내를 또 보낸다. --}}
+            @if($prescription->order && $prescription->order->status === 'cancelled')
+            <div class="workflow-step">
+              <div class="ws-icon" style="background:var(--danger);color:#fff;"><i class="fa-solid fa-ban"></i></div>
+              <div>
+                <div class="ws-label">주문 취소</div>
+                <div class="ws-time">
+                  {{ $prescription->order->cancel_done_at?->format('H:i') ?? $prescription->order->cancel_requested_at?->format('H:i') ?? '' }}
+                  @if($prescription->order->cancel_reason)
+                    · {{ \Illuminate\Support\Str::limit($prescription->order->cancel_reason, 22) }}
+                  @endif
+                  @if((int) ($prescription->order->tossPayment?->cancel_amount ?? 0) > 0)
+                    <span style="color:var(--danger);font-weight:700;display:block;">&#8361;{{ number_format((int) $prescription->order->tossPayment->cancel_amount) }} 환불</span>
+                  @endif
+                </div>
+              </div>
+              <i class="fa-solid fa-xmark ws-arrow" style="color:var(--danger);"></i>
+            </div>
+            @endif
             <div class="workflow-step">
               <div class="ws-icon {{ $prescription->order?->nhis_claim_status === 'approved' ? 'done' : 'pending' }}"><i class="fa-solid fa-hospital"></i></div>
               <div><div class="ws-label">청구</div><div class="ws-time">{{ $prescription->order?->nhis_reimbursement ? '환급: ₩'.number_format($prescription->order->nhis_reimbursement) : '대기 중' }}</div></div>
@@ -4679,6 +4703,21 @@ $calcDeposit  = $calcCopay;
                     @else대기 중@endif
                   </td>
                 </tr>
+                @if($prescription->order && $prescription->order->status === 'cancelled')
+                <tr>
+                  <td><i class="fa-solid fa-ban" style="color:var(--danger);margin-right:5px;"></i>주문 취소</td>
+                  <td style="text-align:center;"><i class="fa-solid fa-xmark" style="color:var(--danger);"></i></td>
+                  <td>
+                    {{ $prescription->order->cancel_done_at?->format('Y-m-d H:i') ?? $prescription->order->cancel_requested_at?->format('Y-m-d H:i') ?? '' }}
+                    @if($prescription->order->cancel_reason)
+                      · {{ \Illuminate\Support\Str::limit($prescription->order->cancel_reason, 30) }}
+                    @endif
+                    @if((int) ($prescription->order->tossPayment?->cancel_amount ?? 0) > 0)
+                      <span style="color:var(--danger);font-weight:700;margin-left:6px;">&#8361;{{ number_format((int) $prescription->order->tossPayment->cancel_amount) }} 환불</span>
+                    @endif
+                  </td>
+                </tr>
+                @endif
                 <tr>
                   <td><i class="fa-solid fa-hospital" style="color:var(--primary);margin-right:5px;"></i>청구</td>
                   <td style="text-align:center;">
