@@ -1,21 +1,22 @@
 {{-- 처방전 목록 — 앱의 prescription_list_screen 을 그대로 옮긴다 (2026-09-25 지시).
 
-     앱에 있는 것: 상태 거르개 다섯ㆍ이름 찾기ㆍ날짜 범위ㆍ「처방전 조회」(이름+생년월일로
-     남이 올린 건 찾기)ㆍ끝까지 내리면 더 불러오기. 하나도 빠뜨리지 않는다. --}}
+     2026-09-25 1:1 정합성 검증으로 고친 것:
+       · 기간 기본값을 오늘 하루로 둔다(앱의 PrescriptionListNotifier 와 같다)
+       · 되돌리기(×)는 비우지 않고 오늘 하루로 되돌린다. 기본값이면 보이지 않는다
+       · 고를 수 있는 날은 2년 전부터 오늘까지
+       · 카드는 앱의 _PrescriptionCard 와 같은 다섯 줄(상태 타일·번호·상태칩 /
+         환자·의료기관 / 상병명 / 구분선 / 발급일·등록일시)
+       · 조회 결과는 목록 카드가 아니라 앱의 조회 카드(등록자를 적는다)
+       · 한 쪽 15건, 이름 디바운스 400ms, 끝에서 200px 앞서 더 부른다
+       · 알림 종은 두지 않는다 — 앱은 설정 ▸ 알림 이력으로 간다 --}}
 @extends('layouts.mobile')
 
 @section('title', '내 처방전')
 @section('subtitle', '본인이 등록한 처방전')
-{{-- 건수는 불러온 뒤 화면이 채운다 — 앱은 「본인이 등록한 처방전 N건」으로 적는다 --}}
-
-@section('head-actions')
-  <button class="m-head-btn" onclick="location.assign('{{ route('m.notifications') }}')" aria-label="알림">
-    <i class="bx bx-bell"></i>
-  </button>
-@endsection
+{{-- 건수는 불러온 뒤 화면이 채운다 — 앱은 건수가 있을 때만 「N건」을 붙인다 --}}
 
 @section('body')
-  {{-- 상태 거르개 — 앱과 같은 다섯 --}}
+  {{-- 상태 거르개 — 앱과 같은 여섯 --}}
   <div class="m-chips" id="rxChips">
     <button class="m-chip on" data-s=""                 onclick="rxStatus(this)">전체</button>
     <button class="m-chip"    data-s="review_needed"    onclick="rxStatus(this)">검수 필요</button>
@@ -29,24 +30,31 @@
   <div style="display:flex; gap:8px; margin-bottom:10px;">
     <input class="m-input" id="rxName" placeholder="이름" style="flex:1;"
            oninput="rxNameChanged()" autocomplete="off">
-    <button class="m-btn ghost" style="width:auto; padding:0 14px; white-space:nowrap;"
+    <button class="m-btn ghost" style="width:auto; padding:0 12px; white-space:nowrap;
+                   border-color:var(--m-primary); color:var(--m-primary);"
             onclick="lookupOpen()">
       <i class="bx bx-search"></i> 처방전 조회
     </button>
   </div>
 
-  {{-- 날짜 범위 --}}
-  <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
-    <input class="m-input" id="rxFrom" type="date" style="flex:1;" onchange="rxLoad(true)">
+  {{-- 업로드 날짜 범위 — 기본은 오늘 하루 --}}
+  <div style="display:flex; gap:6px; align-items:center; margin-bottom:12px;">
+    <input class="m-input" id="rxFrom" type="date" style="flex:1; min-width:0;" onchange="rxDateChanged()">
     <span style="color:var(--m-mute); font-size:13px;">~</span>
-    <input class="m-input" id="rxTo"   type="date" style="flex:1;" onchange="rxLoad(true)">
-    <button class="m-head-btn" style="background:var(--m-primary); flex:0 0 38px;"
-            onclick="rxClearDates()" aria-label="날짜 지우기"><i class="bx bx-x"></i></button>
+    <div style="flex:1; min-width:0; position:relative;">
+      <input class="m-input" id="rxTo" type="date" style="width:100%;" onchange="rxDateChanged()">
+      <button id="rxClear" onclick="rxResetDates()" aria-label="기간 되돌리기"
+              style="display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%);
+                     width:26px; height:26px; border:0; background:transparent; color:var(--m-mute);
+                     font-size:17px; line-height:1; cursor:pointer;">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
   </div>
 
   <div id="rxList"></div>
-  <div id="rxMore" style="display:none; padding:8px 0 24px;">
-    <button class="m-btn ghost" onclick="rxLoad(false)">더 보기</button>
+  <div id="rxMore" style="display:none; padding:14px 0 24px; text-align:center;">
+    <div class="m-spin"></div>
   </div>
 @endsection
 
@@ -55,7 +63,7 @@
 <div class="m-sheet" id="lookupSheet">
   <div class="m-grab"></div>
   <h2>처방전 조회</h2>
-  <p class="desc">이름과 생년월일이 모두 일치해야 조회됩니다.<br>다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.</p>
+  <p class="desc">이름과 생년월일이 모두 일치해야 조회됩니다. 다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.</p>
 
   <div class="m-field">
     <label class="m-label" for="lkName">환자 이름</label>
@@ -63,15 +71,91 @@
   </div>
   <div class="m-field">
     <label class="m-label" for="lkBirth">생년월일</label>
-    <input class="m-input" id="lkBirth" type="date">
+    <input class="m-input" id="lkBirth" type="date" max="{{ now()->toDateString() }}">
   </div>
 
-  <button class="m-btn" id="lkBtn" onclick="lookupGo()"><i class="bx bx-search"></i> 찾기</button>
+  <button class="m-btn" id="lkBtn" onclick="lookupGo()"><i class="bx bx-search"></i> <span id="lkBtnTxt">찾기</span></button>
   <div id="lkResult" style="margin-top:14px;"></div>
 </div>
 
+<style>
+  /* 앱의 _PrescriptionCard 와 같은 짜임 */
+  .rx-card { background:#fff; border:1px solid var(--m-line); border-radius:16px;
+             padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .rx-top  { display:flex; align-items:center; gap:12px; }
+  .rx-ico  { width:40px; height:40px; border-radius:12px; display:flex;
+             align-items:center; justify-content:center; font-size:20px; flex:0 0 40px; }
+  .rx-no   { flex:1; font-size:14px; font-weight:800; color:#0D1B3E; min-width:0;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rx-badge{ padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;
+             white-space:nowrap; }
+  .rx-rows { margin-top:12px; display:flex; flex-direction:column; gap:6px; }
+  .rx-line { display:flex; gap:12px; align-items:center; }
+  .rx-chip { display:flex; align-items:center; gap:5px; font-size:12.5px; color:#546E7A;
+             min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rx-chip i { font-size:14px; color:#90A4AE; flex:0 0 auto; }
+  .rx-div  { height:1px; background:#E0E6F0; border:0; margin:10px 0; }
+  .rx-foot { display:flex; align-items:center; gap:4px; font-size:11px; color:#90A4AE; }
+  .rx-foot .sp { flex:1; }
+  /* 조회 결과 카드 — 앱의 _LookupSheet 결과와 같다 */
+  .lk-card { border:1px solid #E3E8EF; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .lk-top  { display:flex; align-items:center; gap:8px; }
+  .lk-top b { flex:1; font-size:15px; font-weight:700; }
+  .lk-top span { font-size:12px; color:#546E7A; }
+  .lk-sum  { margin-top:4px; font-size:13px; color:#546E7A; }
+  .lk-who  { margin-top:2px; font-size:12px; font-weight:600; }
+</style>
+
 <script>
+  /* 앱과 같은 상태 빛깔ㆍ그림 (AppTheme) */
+  const RX_COLOR = {
+    pending:'#9E9E9E', ocr_processing:'#F57C00', ocr_done:'#0288D1',
+    review_needed:'#C62828', approved:'#2E7D32', rejected:'#B71C1C', ordered:'#1565C0',
+  };
+  const RX_ICON = {
+    pending:'bx-hourglass', ocr_processing:'bx-magic-wand', ocr_done:'bx-check-circle',
+    review_needed:'bx-error', approved:'bxs-badge-check', rejected:'bx-x-circle',
+    ordered:'bx-shopping-bag',
+  };
+
+  /* 앱은 기기 날짜를 쓴다 — 서버 날짜가 아니라 보는 사람의 오늘이다 */
+  function 오늘() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function 두해전() {
+    const d = new Date();
+    return (d.getFullYear() - 2) + '-01-01';
+  }
+
   let rxPage = 1, rxLast = 1, rxBusy = false, rxStatusVal = '', rxNameTimer = null;
+
+  const 부터칸 = document.getElementById('rxFrom');
+  const 까지칸 = document.getElementById('rxTo');
+
+  /* 고를 수 있는 날은 2년 전부터 오늘까지 — 앱의 firstDate/lastDate */
+  부터칸.min = 까지칸.min = 두해전();
+  부터칸.max = 까지칸.max = 오늘();
+  부터칸.value = 까지칸.value = 오늘();
+
+  function 기본기간인가() {
+    return 부터칸.value === 오늘() && 까지칸.value === 오늘();
+  }
+
+  /* 되돌리기는 되돌릴 것이 있을 때만 보인다 — 앱의 onClear 잣대 */
+  function 되돌리기보이기() {
+    document.getElementById('rxClear').style.display = 기본기간인가() ? 'none' : 'block';
+  }
+
+  function rxDateChanged() { 되돌리기보이기(); rxLoad(true); }
+
+  /* 비우지 않는다 — 비우면 전체가 나와, 기본 기간을 둔 뜻이 사라진다 */
+  function rxResetDates() {
+    부터칸.value = 까지칸.value = 오늘();
+    되돌리기보이기();
+    rxLoad(true);
+  }
 
   function rxStatus(btn) {
     document.querySelectorAll('#rxChips .m-chip').forEach(b => b.classList.toggle('on', b === btn));
@@ -79,38 +163,38 @@
     rxLoad(true);
   }
 
-  /* 이름은 치는 대로 찾지 않는다 — 한 글자마다 서버를 부르면 목록이 깜빡인다 */
+  /* 이름은 치는 대로 찾지 않는다 — 앱과 같은 400ms */
   function rxNameChanged() {
     clearTimeout(rxNameTimer);
-    rxNameTimer = setTimeout(() => rxLoad(true), 420);
+    rxNameTimer = setTimeout(() => rxLoad(true), 400);
   }
 
-  function rxClearDates() {
-    document.getElementById('rxFrom').value = '';
-    document.getElementById('rxTo').value   = '';
-    rxLoad(true);
-  }
-
+  /* 목록 카드 — 앱의 _PrescriptionCard */
   function rxCard(p) {
-    const 뱃지 = { review_needed:['need','검수 필요'], review_requested:['req','검수 요청'],
-                   approved:['done','검수 완료'], rejected:['need','반려'] }[p.status] || ['gray', p.status_label || p.status];
-    const 서류 = (p.attachment_count ?? p.attachments_count ?? 0);
+    const 빛 = RX_COLOR[p.status] || '#9E9E9E';
+    const 그림 = RX_ICON[p.status] || 'bx-circle';
+    const 상병 = p.disease_name
+      ? `<div class="rx-line"><span class="rx-chip"><i class="bx bx-plus-medical"></i>${mEsc(p.disease_name)}</span></div>`
+      : '';
+    const 발급 = p.issued_date
+      ? `<i class="bx bx-calendar"></i><span>발급 ${mEsc(p.issued_date)}</span>`
+      : '';
     return `
-      <div class="m-card tap" onclick="location.assign('/m/prescriptions/${encodeURIComponent(p.rx_number)}')">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-          <b style="font-size:15.5px; letter-spacing:-.2px;">${mEsc(p.rx_number)}</b>
-          <span style="flex:1"></span>
-          <span class="m-badge ${뱃지[0]}">${mEsc(뱃지[1])}</span>
+      <div class="rx-card tap" onclick="location.assign('/m/prescriptions/${encodeURIComponent(p.rx_number)}')">
+        <div class="rx-top">
+          <div class="rx-ico" style="background:${빛}1A; color:${빛};"><i class="bx ${그림}"></i></div>
+          <b class="rx-no">${mEsc(p.rx_number)}</b>
+          <span class="rx-badge" style="background:${빛}1A; color:${빛}; border:1px solid ${빛}4D;">${mEsc(p.status_label || p.status)}</span>
         </div>
-        <div style="font-size:13.5px; color:var(--m-sub);">
-          ${mEsc(p.patient_name || p.patient?.name || '이름 없음')}
-          ${p.birth_date ? ' · ' + mEsc(p.birth_date) : ''}
-          ${서류 ? ' · 서류 ' + 서류 + '장' : ''}
+        <div class="rx-rows">
+          <div class="rx-line">
+            <span class="rx-chip"><i class="bx bx-user"></i>${mEsc(p.patient_name || '-')}</span>
+            <span class="rx-chip" style="flex:1;"><i class="bx bx-building-house"></i>${mEsc(p.hospital || '-')}</span>
+          </div>
+          ${상병}
         </div>
-        <div style="font-size:12px; color:var(--m-mute); margin-top:4px;">
-          ${mEsc(p.created_at ? mWhen(p.created_at) : '')}
-          ${p.creator_name ? ' · 등록자 ' + mEsc(p.creator_name) : ''}
-        </div>
+        <hr class="rx-div">
+        <div class="rx-foot">${발급}<span class="sp"></span><span>${mEsc(p.created_at || '')}</span></div>
       </div>`;
   }
 
@@ -119,38 +203,45 @@
     rxBusy = true;
     if (처음) { rxPage = 1; document.getElementById('rxList').innerHTML = '<div class="m-spin"></div>'; }
 
-    const q = new URLSearchParams({ page: rxPage, per_page: 20 });
+    /* 앱은 한 쪽에 15건을 받는다 */
+    const q = new URLSearchParams({ page: rxPage, per_page: 15 });
     if (rxStatusVal) q.set('status', rxStatusVal);
     const 이름 = document.getElementById('rxName').value.trim();
-    const 부터 = document.getElementById('rxFrom').value;
-    const 까지 = document.getElementById('rxTo').value;
     if (이름) q.set('search', 이름);
-    if (부터) q.set('date_from', 부터);
-    if (까지) q.set('date_to', 까지);
+    if (부터칸.value) q.set('date_from', 부터칸.value);
+    if (까지칸.value) q.set('date_to', 까지칸.value);
 
     try {
       const d = await mApi('/prescriptions?' + q.toString());
       const 줄 = d.data || [];
       rxLast = d.meta?.last_page ?? 1;
 
-      /* 앱과 같이 머리글에 건수를 적는다 */
-      const 총 = d.meta?.total;
+      /* 앱과 같이 머리글에 건수를 적는다 — 없으면 건수를 붙이지 않는다 */
+      const 총 = d.meta?.total ?? 0;
       const 밑글 = document.querySelector('.m-head .sub');
-      if (밑글 && 총 != null) 밑글.textContent = `본인이 등록한 처방전 ${총}건`;
+      if (밑글) 밑글.textContent = 총 > 0 ? `본인이 등록한 처방전 ${총}건` : '본인이 등록한 처방전';
 
       const 통 = document.getElementById('rxList');
       const html = 줄.map(rxCard).join('');
       if (처음) {
-        통.innerHTML = html || `<div class="m-empty"><i class="bx bx-file"></i>등록한 처방전이 없습니다.</div>`;
+        통.innerHTML = html ||
+          `<div class="m-empty"><i class="bx bx-file"></i>등록한 처방전이 없습니다.</div>`;
       } else {
         통.insertAdjacentHTML('beforeend', html);
       }
-      document.getElementById('rxMore').style.display = (rxPage < rxLast) ? '' : 'none';
       rxPage++;
+      document.getElementById('rxMore').style.display = (rxPage <= rxLast) ? '' : 'none';
     } catch (e) {
-      document.getElementById('rxList').innerHTML =
-        `<div class="m-empty"><i class="bx bx-error"></i>${mEsc(e.message)}</div>`;
-      mTell(e.message, 'bad');
+      /* 앱과 같은 오류 자리 — 무엇이 잘못됐는지 적고 다시 시도를 준다 */
+      document.getElementById('rxList').innerHTML = `
+        <div class="m-empty" style="color:var(--m-danger);">
+          <i class="bx bx-error-circle"></i>
+          <div style="color:var(--m-mute); font-weight:600;">데이터를 불러오지 못했습니다.</div>
+          <div style="font-size:11px; color:var(--m-danger); margin-top:6px;">${mEsc(e.message)}</div>
+          <button class="m-btn" style="width:auto; margin:14px auto 0; padding:9px 20px;"
+                  onclick="rxLoad(true)">다시 시도</button>
+        </div>`;
+      document.getElementById('rxMore').style.display = 'none';
     } finally { rxBusy = false; }
   }
 
@@ -161,39 +252,59 @@
     mSheetOpen('lookupSheet');
   }
 
+  /* 조회 결과는 목록 카드와 다르다 — 누가 올렸는지가 여기서는 가장 중요하다 */
+  function lkCard(p) {
+    const 요약 = [p.patient_name, p.birth_date, p.file_count != null ? `서류 ${p.file_count}장` : null]
+      .filter(Boolean).map(mEsc).join(' · ');
+    const 내것 = (p.is_mine !== false);
+    return `
+      <div class="lk-card tap" onclick="location.assign('/m/prescriptions/${encodeURIComponent(p.rx_number)}')">
+        <div class="lk-top"><b>${mEsc(p.rx_number)}</b><span>${mEsc(p.status_label || p.status)}</span></div>
+        <div class="lk-sum">${요약}</div>
+        <div class="lk-who" style="color:${내것 ? 'var(--m-primary)' : '#546E7A'};">
+          ${내것 ? '본인이 등록한 처방전' : '등록자: ' + mEsc(p.owner_name || '-')}
+        </div>
+      </div>`;
+  }
+
   async function lookupGo() {
     const 이름 = document.getElementById('lkName').value.trim();
     const 생일 = document.getElementById('lkBirth').value;
     const 통   = document.getElementById('lkResult');
 
     if (!이름 || !생일) {
-      통.innerHTML = `<div style="color:var(--m-danger); font-size:13.5px;">이름과 생년월일을 모두 입력해 주십시오.</div>`;
+      통.innerHTML = `<div style="color:var(--m-danger); font-size:13px;">이름과 생년월일을 모두 입력해 주십시오.</div>`;
       return;
     }
 
     const 단추 = document.getElementById('lkBtn');
     단추.disabled = true;
+    document.getElementById('lkBtnTxt').textContent = '찾는 중';
     통.innerHTML = '<div class="m-spin"></div>';
 
     try {
       const d = await mApi('/prescriptions/lookup?' + new URLSearchParams({ name: 이름, birth: 생일 }));
       const 줄 = d.data || [];
       통.innerHTML = 줄.length
-        ? 줄.map(rxCard).join('')
-        : `<div style="color:var(--m-sub); font-size:13.5px; line-height:1.6;">
-             조회된 처방전이 없습니다. 이름과 생년월일을 다시 확인해 주십시오.<br>
+        ? 줄.map(lkCard).join('')
+        : `<div style="color:#546E7A; font-size:13px; line-height:1.6;">
+             조회된 처방전이 없습니다. 이름과 생년월일을 다시 확인해 주십시오.
              검수가 완료된 처방전은 조회되지 않습니다.</div>`;
     } catch (e) {
-      통.innerHTML = `<div style="color:var(--m-danger); font-size:13.5px;">${mEsc(e.message)}</div>`;
-    } finally { 단추.disabled = false; }
+      통.innerHTML = `<div style="color:var(--m-danger); font-size:13px;">${mEsc(e.message)}</div>`;
+    } finally {
+      단추.disabled = false;
+      document.getElementById('lkBtnTxt').textContent = '찾기';
+    }
   }
 
-  /* 끝까지 내리면 더 부른다 — 앱의 _onScroll */
+  /* 끝까지 내리면 더 부른다 — 앱의 _onScroll (200px 앞서) */
   window.addEventListener('scroll', () => {
     if (rxBusy || rxPage > rxLast) return;
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 240) rxLoad(false);
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) rxLoad(false);
   });
 
+  되돌리기보이기();
   rxLoad(true);
 </script>
 @endpush

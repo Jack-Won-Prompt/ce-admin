@@ -136,6 +136,20 @@
     .m-sheet.on { transform:translateY(0); }
     .m-sheet h2 { margin:0 0 4px; font-size:18px; font-weight:800; }
     .m-sheet .desc { margin:0 0 16px; font-size:13.5px; color:var(--m-sub); line-height:1.5; }
+
+    /* 물어보는 자리 — 앱의 AlertDialog 와 같은 모양 */
+    .m-dlg-back { position:fixed; inset:0; z-index:90; background:rgba(15,23,42,.45);
+                  display:flex; align-items:center; justify-content:center; padding:28px; }
+    .m-dlg { background:#fff; border-radius:20px; padding:22px 20px 12px; width:100%;
+             max-width:340px; box-shadow:0 18px 50px rgba(11,40,80,.28); }
+    .m-dlg h3 { margin:0 0 10px; font-size:18px; font-weight:800; }
+    .m-dlg p  { margin:0 0 6px; font-size:14px; color:var(--m-sub); line-height:1.6; white-space:pre-line; }
+    .m-dlg-act { display:flex; justify-content:flex-end; gap:6px; padding-top:8px; }
+    .m-dlg-act button { background:none; border:0; padding:10px 14px; border-radius:10px;
+                        font-size:14.5px; font-family:inherit; cursor:pointer; }
+    .m-dlg-act .no  { color:var(--m-sub); }
+    .m-dlg-act .yes { color:var(--m-danger); font-weight:700; }
+    .m-dlg-act button:active { background:#F2F4F7; }
     .m-grab { width:38px; height:4px; border-radius:99px; background:#D6DAE0; margin:0 auto 14px; }
   </style>
   @stack('styles')
@@ -207,6 +221,49 @@
     el.className = 'm-toast on ' + (갈래 || '');
     clearTimeout(_mToastTimer);
     _mToastTimer = setTimeout(() => { el.className = 'm-toast ' + (갈래 || ''); }, 2600);
+  }
+
+  /* ── 물어보는 자리 — 앱의 showConfirmDialog ──────────
+
+     앱은 가운데 뜨는 네모에 제목ㆍ본문ㆍ「취소」ㆍ확인을 둔다. 여기도 같게 둔다.
+     문구는 메시지 관리에서 고친 것이 있으면 그것으로 바꾼다(팝업 채널). */
+  function mConfirm(제목, 본문, 확인라벨) {
+    본문 = 고친문구('popup', 본문);
+    return new Promise(자 => {
+      const 막 = document.createElement('div');
+      막.className = 'm-dlg-back';
+      막.innerHTML = `
+        <div class="m-dlg" role="dialog" aria-modal="true">
+          <h3></h3>
+          <p></p>
+          <div class="m-dlg-act">
+            <button type="button" class="no">취소</button>
+            <button type="button" class="yes"></button>
+          </div>
+        </div>`;
+      막.querySelector('h3').textContent = 제목 || '확인';
+      막.querySelector('p').textContent  = 본문 || '';
+      막.querySelector('.yes').textContent = 확인라벨 || '확인';
+
+      const 닫기 = 답 => { 막.remove(); 자(답); };
+      막.querySelector('.no').onclick  = () => 닫기(false);
+      막.querySelector('.yes').onclick = () => 닫기(true);
+      막.onclick = e => { if (e.target === 막) 닫기(false); };
+      document.body.appendChild(막);
+      막.querySelector('.yes').focus();
+    });
+  }
+
+  /* 폼 단추에 그대로 붙인다 — 누른 단추의 이름ㆍ값을 잃지 않고 다시 보낸다 */
+  function mConfirmClick(el, 본문, 옵션) {
+    옵션 = 옵션 || {};
+    mConfirm(옵션.title, 본문, 옵션.ok).then(예 => {
+      if (!예) return;
+      const f = el.form || el.closest('form');
+      if (f) { f.requestSubmit ? f.requestSubmit(el) : f.submit(); }
+      else if (옵션.then) 옵션.then();
+    });
+    return false;
   }
 
   /* ── 아래에서 올라오는 판 ─────────────────────────── */

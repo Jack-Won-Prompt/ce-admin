@@ -1,112 +1,213 @@
 {{-- 채팅 목록 — 앱의 chat_list_screen (2026-09-25 지시).
-     1:1ㆍ그룹 갈래, 안 읽은 수, 새 채팅 시작. --}}
+
+     2026-09-25 1:1 정합성 검증으로 고친 것:
+       · 열쇠를 바로잡았다 — latest_body ㆍ latest_time ㆍ unread
+         (last_message / last_message_at / unread_count 는 없다. 미리보기ㆍ시각ㆍ
+          안 읽은 수가 한 번도 나오지 않았다)
+       · 앱에 없는 회사ㆍ고객 거르개를 걷었다 — 앱은 방을 모두 한 줄로 본다
+       · 대화 상대는 /chat/rooms 가 함께 준다. /chat/users 는 없는 길이었다
+       · 방을 만들면 답은 room_id 다 — 그 방으로 바로 들어간다
+       · 새 채팅은 1:1ㆍ그룹을 고르고, 그룹일 때만 이름을 받는다.
+         1:1 에서는 한 사람만 골린다
+       · 동그라미에 이름 첫 글자, 그룹이면 앞에 무리 그림 --}}
 @extends('layouts.mobile')
 
 @section('title', '채팅')
+@section('subtitle', '0개의 대화방')
 
 @section('head-actions')
-  <button class="m-head-btn" onclick="새채팅()" aria-label="새 채팅"><i class="bx bx-plus"></i></button>
+  <button class="m-head-btn" onclick="chNew()" aria-label="새 채팅"><i class="bx bx-edit"></i></button>
 @endsection
 
 @section('body')
-  <div class="m-chips">
-    <button class="m-chip on" data-c="company"  onclick="chCat(this)">회사</button>
-    <button class="m-chip"    data-c="customer" onclick="chCat(this)">고객</button>
-  </div>
   <div id="chList"><div class="m-spin"></div></div>
 @endsection
 
 @push('scripts')
 <div class="m-sheet" id="newChat">
   <div class="m-grab"></div>
-  <h2>새 채팅 시작</h2>
-  <p class="desc">대화 상대를 고르십시오. 여러 명을 고르면 그룹 채팅이 됩니다.</p>
-  <div class="m-field">
-    <label class="m-label" for="ncName">그룹 이름 (여러 명일 때)</label>
+  <h2>새 채팅</h2>
+
+  <div style="display:flex; gap:8px; margin-bottom:14px;">
+    <button class="ch-type on" data-t="direct" onclick="chType(this)">1:1 채팅</button>
+    <button class="ch-type"    data-t="group"  onclick="chType(this)">그룹 채팅</button>
+  </div>
+
+  <div class="m-field" id="ncNameBox" style="display:none;">
+    <label class="m-label" for="ncName">그룹 이름</label>
     <input class="m-input" id="ncName" placeholder="그룹 이름" autocomplete="off">
   </div>
-  <div id="ncPeople" style="max-height:40vh; overflow-y:auto;"></div>
-  <button class="m-btn" onclick="채팅만들기()" style="margin-top:12px;">시작</button>
+
+  <div class="m-label" style="margin-bottom:8px;">대화 상대</div>
+  <div id="ncPeople" style="max-height:200px; overflow-y:auto;"></div>
+
+  <button class="m-btn" id="ncGo" onclick="chCreate()" style="margin-top:14px;" disabled>
+    <i class="bx bx-message-rounded"></i> <span id="ncGoTxt">채팅 시작</span>
+  </button>
 </div>
 
+<style>
+  .ch-type { flex:1; padding:10px; border-radius:20px; border:1px solid var(--m-line);
+             background:#F5F7FA; color:var(--m-sub); font-size:13.5px; font-weight:600;
+             font-family:inherit; cursor:pointer; }
+  .ch-type.on { background:linear-gradient(135deg,#1565C0,#0288D1); border-color:transparent;
+                color:#fff; font-weight:700; box-shadow:0 3px 8px rgba(21,101,192,.3); }
+  .ch-row { display:flex; align-items:center; gap:12px; padding:13px; background:#fff;
+            border:1px solid #E0E6F0; border-radius:16px; margin-bottom:10px;
+            box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .ch-av  { width:48px; height:48px; border-radius:16px; flex:0 0 48px; color:#fff;
+            font-size:19px; font-weight:800;
+            display:flex; align-items:center; justify-content:center; }
+  .ch-ti  { display:flex; align-items:center; gap:5px; min-width:0; }
+  .ch-ti b{ font-size:14.5px; font-weight:700; color:#0D1B3E; overflow:hidden;
+            text-overflow:ellipsis; white-space:nowrap; }
+  .ch-ti i{ font-size:13px; color:#90A4AE; flex:0 0 auto; }
+  .ch-last{ font-size:13px; color:#546E7A; margin-top:3px; overflow:hidden;
+            text-overflow:ellipsis; white-space:nowrap; }
+  .ch-rt  { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto; }
+  .ch-when{ font-size:11px; color:#90A4AE; }
+  .ch-un  { background:var(--m-danger); color:#fff; font-size:11px; font-weight:700;
+            padding:3px 7px; border-radius:999px; }
+  .nc-p   { display:flex; align-items:center; gap:10px; padding:9px 2px;
+            border-top:1px solid var(--m-line); }
+</style>
+
 <script>
-  let 갈래 = 'company', 방들 = [], 사람들 = [], 고른사람 = new Set();
+  let ch방들 = [], ch사람들 = [], ch갈래 = 'direct';
+  const ch고른 = new Set();
 
-  function chCat(btn) {
-    document.querySelectorAll('.m-chips .m-chip').forEach(b => b.classList.toggle('on', b === btn));
-    갈래 = btn.dataset.c;
-    그리기();
+  function chAvatar(r) {
+    const 첫자 = (r.name || '?').trim().charAt(0).toUpperCase() || '?';
+    const 무리 = r.type === 'group';
+    return `<div class="ch-av" style="background:${무리
+        ? 'linear-gradient(135deg,#26C6DA,#4DD0E1)'
+        : 'linear-gradient(135deg,#0288D1,#26C6DA)'};">${mEsc(첫자)}</div>`;
   }
 
-  function 그리기() {
-    const 줄 = 방들.filter(r => (r.category || 'company') === 갈래);
-    document.getElementById('chList').innerHTML = 줄.length ? 줄.map(r => `
-      <div class="m-card tap" style="display:flex; align-items:center; gap:12px; padding:13px;"
-           onclick="location.assign('/m/chat/${r.id}')">
-        <div style="width:44px; height:44px; border-radius:14px; background:var(--m-primary-l);
-                    display:flex; align-items:center; justify-content:center; flex:0 0 44px;">
-          <i class="bx ${r.type === 'group' ? 'bx-group' : 'bx-user'}"
-             style="font-size:22px; color:var(--m-primary);"></i>
-        </div>
+  function chRow(r) {
+    return `
+      <div class="ch-row tap" onclick="location.assign('/m/chat/${r.id}')">
+        ${chAvatar(r)}
         <div style="flex:1; min-width:0;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <b style="font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${mEsc(r.name || '대화')}</b>
-            <span style="flex:1"></span>
-            <span style="font-size:11.5px; color:var(--m-mute);">${mEsc(mWhen(r.last_message_at))}</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-            <span style="flex:1; font-size:13px; color:var(--m-sub); overflow:hidden;
-                         text-overflow:ellipsis; white-space:nowrap;">${mEsc(r.last_message || '')}</span>
-            ${r.unread_count ? `<span class="m-badge need">${r.unread_count}</span>` : ''}
-          </div>
+          <div class="ch-ti">${r.type === 'group' ? '<i class="bx bx-group"></i>' : ''}<b>${mEsc(r.name || '대화')}</b></div>
+          ${r.latest_body ? `<div class="ch-last">${mEsc(r.latest_body)}</div>` : ''}
         </div>
-      </div>`).join('')
-      : `<div class="m-empty"><i class="bx bx-message-rounded"></i>대화가 없습니다.</div>`;
+        <div class="ch-rt">
+          ${r.latest_time ? `<span class="ch-when">${mEsc(r.latest_time)}</span>` : ''}
+          ${r.unread > 0 ? `<span class="ch-un">${r.unread}</span>` : ''}
+        </div>
+      </div>`;
   }
 
-  async function 불러오기() {
+  function chDraw() {
+    const 밑글 = document.querySelector('.m-head .sub');
+    if (밑글) 밑글.textContent = `${ch방들.length}개의 대화방`;
+
+    document.getElementById('chList').innerHTML = ch방들.length
+      ? ch방들.map(chRow).join('')
+      : `<div class="m-empty">
+           <i class="bx bx-message-rounded"></i>대화가 없습니다.
+           <div style="margin-top:16px;">
+             <button class="m-btn" style="width:auto; margin:0 auto; padding:12px 20px;" onclick="chNew()">
+               <i class="bx bx-plus"></i> 새 채팅 시작
+             </button>
+           </div>
+         </div>`;
+  }
+
+  async function chLoad() {
     try {
       const d = await mApi('/chat/rooms');
-      방들 = d.rooms || d.data || [];
-      그리기();
+      ch방들   = d.rooms || [];
+      ch사람들 = d.users || [];
+      chDraw();
     } catch (e) {
-      document.getElementById('chList').innerHTML = `<div class="m-empty"><i class="bx bx-error"></i>${mEsc(e.message)}</div>`;
+      document.getElementById('chList').innerHTML =
+        `<div class="m-empty" style="color:var(--m-danger);"><i class="bx bx-error-circle"></i>${mEsc(e.message)}</div>`;
     }
   }
 
-  async function 새채팅() {
-    고른사람.clear();
-    document.getElementById('ncPeople').innerHTML = '<div class="m-spin"></div>';
+  /* ── 새 채팅 ─────────────────────────────────────── */
+  function chNew() {
+    ch고른.clear();
+    ch갈래 = 'direct';
+    document.querySelectorAll('.ch-type').forEach(b => b.classList.toggle('on', b.dataset.t === 'direct'));
+    document.getElementById('ncNameBox').style.display = 'none';
+    document.getElementById('ncName').value = '';
+    chPeople();
+    chGo();
     mSheetOpen('newChat');
-    try {
-      const d = await mApi('/chat/users');
-      사람들 = d.users || d.data || [];
-    } catch (e) { 사람들 = []; }
-    document.getElementById('ncPeople').innerHTML = 사람들.length ? 사람들.map(u => `
-      <label style="display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--m-line);">
-        <input type="checkbox" value="${u.id}" onchange="사람고르기(this)" style="width:20px; height:20px;">
-        <div style="flex:1;"><b style="font-size:14px;">${mEsc(u.name)}</b>
-          <div style="font-size:12px; color:var(--m-sub);">${mEsc(u.email || '')}</div></div>
-      </label>`).join('')
+  }
+
+  function chType(btn) {
+    document.querySelectorAll('.ch-type').forEach(b => b.classList.toggle('on', b === btn));
+    ch갈래 = btn.dataset.t;
+    document.getElementById('ncNameBox').style.display = (ch갈래 === 'group') ? '' : 'none';
+    /* 1:1 로 돌아오면 여럿 고른 것을 한 사람으로 줄인다 */
+    if (ch갈래 === 'direct' && ch고른.size > 1) {
+      const 첫 = [...ch고른][0];
+      ch고른.clear();
+      ch고른.add(첫);
+      chPeople();
+    }
+    chGo();
+  }
+
+  function chPeople() {
+    document.getElementById('ncPeople').innerHTML = ch사람들.length
+      ? ch사람들.map(u => `
+        <label class="nc-p">
+          <input type="checkbox" value="${u.id}" ${ch고른.has(u.id) ? 'checked' : ''}
+                 onchange="chTick(this)" style="width:19px; height:19px; accent-color:var(--m-primary);">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13.5px; font-weight:600;">${mEsc(u.name)}</div>
+            <div style="font-size:11.5px; color:var(--m-mute);">${mEsc(u.role || '')}</div>
+          </div>
+        </label>`).join('')
       : `<div style="padding:14px 0; color:var(--m-mute); font-size:13.5px;">고를 수 있는 사람이 없습니다.</div>`;
   }
 
-  function 사람고르기(el) { el.checked ? 고른사람.add(+el.value) : 고른사람.delete(+el.value); }
-
-  async function 채팅만들기() {
-    const ids = [...고른사람];
-    if (!ids.length) { mTell('대화 상대를 선택해 주십시오.', 'warn'); return; }
-    const 이름 = document.getElementById('ncName').value.trim();
-    if (ids.length > 1 && !이름) { mTell('그룹 이름을 입력해 주십시오.', 'warn'); return; }
-    try {
-      const d = await mApi('/chat/rooms', { method: 'POST',
-        body: { user_ids: ids, type: ids.length > 1 ? 'group' : 'direct', name: 이름 || null, category: 갈래 } });
-      mSheetClose();
-      const id = d.room?.id ?? d.id;
-      if (id) location.assign('/m/chat/' + id); else 불러오기();
-    } catch (e) { mTell(e.message, 'bad'); }
+  function chTick(el) {
+    const id = Number(el.value);
+    if (el.checked) {
+      /* 1:1 은 한 사람만 — 앱과 같다 */
+      if (ch갈래 === 'direct') ch고른.clear();
+      ch고른.add(id);
+      if (ch갈래 === 'direct') chPeople();
+    } else {
+      ch고른.delete(id);
+    }
+    chGo();
   }
 
-  불러오기();
+  function chGo() {
+    document.getElementById('ncGo').disabled = (ch고른.size === 0);
+  }
+
+  async function chCreate() {
+    if (!ch고른.size) return;
+    const 이름 = document.getElementById('ncName').value.trim();
+    if (ch갈래 === 'group' && !이름) return;
+
+    const 단추 = document.getElementById('ncGo');
+    단추.disabled = true;
+    document.getElementById('ncGoTxt').textContent = '만드는 중…';
+
+    try {
+      const d = await mApi('/chat/rooms', {
+        method: 'POST',
+        body: { type: ch갈래, user_ids: [...ch고른], name: ch갈래 === 'group' ? 이름 : null },
+      });
+      mSheetClose();
+      if (d.room_id) location.assign('/m/chat/' + d.room_id); else chLoad();
+    } catch (e) {
+      mTell(e.message, 'bad');
+    } finally {
+      단추.disabled = false;
+      document.getElementById('ncGoTxt').textContent = '채팅 시작';
+    }
+  }
+
+  chLoad();
 </script>
 @endpush
