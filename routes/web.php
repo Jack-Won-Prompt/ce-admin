@@ -1470,5 +1470,31 @@ Route::get('/docs/purchase-confirm/{patient}',
     [\App\Http\Controllers\PurchaseConfirmController::class, 'open'])
     ->middleware('signed')->name('documents.purchaseConfirm.open');
 
+/*
+|--------------------------------------------------------------------------
+| 모바일 웹(H5) — 앱과 같은 화면을 웹으로 낸다 (2026-09-25 지시)
+|--------------------------------------------------------------------------
+| 판만 여기서 그리고, 자료는 화면이 앱과 똑같은 /api/* 를 부른다.
+| 조회를 여기서 따로 짜면 그 순간부터 앱과 어긋나기 시작한다.
+*/
+Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
+    $c = \App\Http\Controllers\MobileWebController::class;
+
+    Route::get('/',                      [$c, 'prescriptions'])->name('home');
+    Route::get('/prescriptions',         [$c, 'prescriptions'])->name('prescriptions');
+    Route::get('/prescriptions/{rx_number}', [$c, 'prescription'])->name('prescription');
+    Route::get('/upload',                [$c, 'upload'])->name('upload');
+    Route::get('/chat',                  [$c, 'chat'])->name('chat');
+    Route::get('/chat/{room}',           [$c, 'chatRoom'])->name('chat.room');
+    Route::get('/settings',              [$c, 'settings'])->name('settings');
+    Route::get('/orders',                [$c, 'orders'])->name('orders');
+    Route::get('/notifications',         [$c, 'notifications'])->name('notifications');
+    Route::get('/notices',               [$c, 'notices'])->name('notices');
+    Route::get('/notices/{id}',          [$c, 'notice'])->name('notice');
+    Route::get('/inquiries',             [$c, 'inquiries'])->name('inquiries');
+    Route::get('/inquiries/create',      [$c, 'inquiryCreate'])->name('inquiry.create');
+    Route::get('/inquiries/{id}',        [$c, 'inquiry'])->name('inquiry');
+});
+
 // Laravel Breeze/Fortify 인증 라우트 (별도 설치 필요)
 require __DIR__ . '/auth.php';
