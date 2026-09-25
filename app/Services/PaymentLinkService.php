@@ -108,6 +108,15 @@ class PaymentLinkService
         $amount = number_format($link->amount);
         $item   = $order->product_name ?: '주문';
 
+        /* 정정으로 다시 내는 건이면 **먼저 물린 돈을 한 줄로 알린다** (2026-09-25 지시).
+
+           여태는 새 금액의 링크만 갔다. 고객은 81,000원을 냈는데 67,500원 링크를 또
+           받으니, 앞서 낸 돈이 어떻게 되었는지 알 길이 없어 두 번 내는 줄 알았다. */
+        $물린것 = $order->tossPayment;
+        $취소줄 = ($물린것 && (int) $물린것->cancel_amount > 0)
+            ? '기존 결제 ' . number_format((int) $물린것->cancel_amount) . '원은 취소되었습니다.' . chr(10)
+            : '';
+
         if ($link->method === PaymentLink::METHOD_BANK) {
             $bank    = config('toss.virtual_account.fallback_bank');
             $account = config('toss.virtual_account.fallback_account');
@@ -118,6 +127,7 @@ class PaymentLinkService
                 : '입금 계좌는 담당자에게 문의해 주시기 바랍니다';
 
             return "[{$holder}] {$name}님, {$item} 결제 안내입니다.\n"
+                 . $취소줄
                  . "금액: {$amount}원\n"
                  . "입금: {$where}\n"
                  . "입금자명은 주문자 성함과 동일하게 기재해 주시기 바랍니다.";
@@ -128,6 +138,7 @@ class PaymentLinkService
            같은 틀을 써서 「가상계좌로 결제」라는 어색한 말이 나갔다.
            보내는 것은 링크 하나이므로 그 하나만 가리킨다. */
         return "[" . $this->company() . "] {$name}님, {$item} 결제 안내입니다.\n"
+             . $취소줄
              . "금액: {$amount}원\n"
              . "아래 링크에서 결제해 주시기 바랍니다.\n"
              . $link->url . "\n"
