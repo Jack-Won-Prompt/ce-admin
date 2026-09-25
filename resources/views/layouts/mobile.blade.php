@@ -29,7 +29,9 @@
       --m-safe-b:env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    html, body { margin:0; padding:0; }
+    html, body { margin:0; padding:0; width:100%; overflow-x:hidden; }
+    /* 날짜 칸이 제 너비를 고집해 가로로 삐져나온다 — 좁은 폰에서 7px 가 넘쳤다 */
+    input[type=date] { min-width:0; }
     body {
       font-family:'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
       background:var(--m-bg); color:var(--m-text); font-size:15px; line-height:1.55;
