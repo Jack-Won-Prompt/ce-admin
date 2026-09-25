@@ -23,6 +23,21 @@ class PaymentLinkService
     /** 결제 안내 알림톡 틀의 코드 — 쓰던 이름이 둘이라 둘 다 찾는다 */
     private const 알림톡코드 = ['payment_request', 'payment_guide'];
 
+    /* 문자 본문도 메시지 관리에서 고친다 (2026-09-25 무한테스트에서 드러남).
+
+       여태 결제 안내 문자는 본문이 이 파일에 박혀 있었다. 담당자는 메시지 관리에서
+       고칠 수 없었고, 발송 이력의 「유형」 칸도 빈칸으로 남아 무슨 문자였는지 본문을
+       읽어야 알 수 있었다. 세 갈래를 각자 유형으로 세운다. */
+    public const 유형_링크     = 'payment_link_guide';
+    public const 유형_계좌     = 'payment_bank_guide';
+    public const 유형_가상계좌 = 'payment_va_guide';
+
+    /** 이 링크가 어느 유형으로 나가는가 */
+    public static function 문자유형(PaymentLink $link): string
+    {
+        return $link->method === PaymentLink::METHOD_BANK ? self::유형_계좌 : self::유형_링크;
+    }
+
     public function __construct(private readonly MessageSender $sender) {}
 
     /**
@@ -65,7 +80,8 @@ class PaymentLinkService
         $못보낸말 = [];
 
         foreach ($보낼것 as [$channel, $templateCode]) {
-            $res = $this->send($channel, $order, $mobile, $text, $templateCode);
+            $res = $this->send($channel, $order, $mobile, $text,
+                $channel === 'sms' ? self::문자유형($link) : $templateCode);
 
             if ($res['success'] ?? false) {
                 $보낸채널[] = $channel;
@@ -126,23 +142,30 @@ class PaymentLinkService
                 ? "{$bank} {$account} ({$holder})"
                 : '입금 계좌는 담당자에게 문의해 주시기 바랍니다';
 
-            return "[{$holder}] {$name}님, {$item} 결제 안내입니다.\n"
-                 . $취소줄
-                 . "금액: {$amount}원\n"
-                 . "입금: {$where}\n"
-                 . "입금자명은 주문자 성함과 동일하게 기재해 주시기 바랍니다.";
+            return \App\Models\MessageTemplate::문구(self::유형_계좌, [
+                '#{회사}' => $holder, '#{고객명}' => $name, '#{제품}' => $item,
+                '#{취소줄}' => $취소줄, '#{금액}' => $amount, '#{입금처}' => $where,
+            ], '[' . $holder . '] ' . $name . '님, ' . $item . ' 결제 안내입니다.' . chr(10)
+             . $취소줄
+             . '금액: ' . $amount . '원' . chr(10)
+             . '입금: ' . $where . chr(10)
+             . '입금자명은 주문자 성함과 동일하게 기재해 주시기 바랍니다.');
         }
 
         /* 무엇으로 내는지는 링크를 열면 그 자리에 적혀 있다 (2026-09-10 지시).
            예전에는 「아래 주소에서 카드로 결제해 주십시오」라 적었는데, 가상계좌도
            같은 틀을 써서 「가상계좌로 결제」라는 어색한 말이 나갔다.
            보내는 것은 링크 하나이므로 그 하나만 가리킨다. */
-        return "[" . $this->company() . "] {$name}님, {$item} 결제 안내입니다.\n"
-             . $취소줄
-             . "금액: {$amount}원\n"
-             . "아래 링크에서 결제해 주시기 바랍니다.\n"
-             . $link->url . "\n"
-             . "링크는 " . self::VALID_DAYS . "일간 유효합니다.";
+        return \App\Models\MessageTemplate::문구(self::유형_링크, [
+            '#{회사}' => $this->company(), '#{고객명}' => $name, '#{제품}' => $item,
+            '#{취소줄}' => $취소줄, '#{금액}' => $amount, '#{링크}' => $link->url,
+            '#{유효일}' => (string) self::VALID_DAYS,
+        ], '[' . $this->company() . '] ' . $name . '님, ' . $item . ' 결제 안내입니다.' . chr(10)
+         . $취소줄
+         . '금액: ' . $amount . '원' . chr(10)
+         . '아래 링크에서 결제해 주시기 바랍니다.' . chr(10)
+         . $link->url . chr(10)
+         . '링크는 ' . self::VALID_DAYS . '일간 유효합니다.');
     }
 
     /**
@@ -179,7 +202,8 @@ class PaymentLinkService
 
         foreach (\App\Models\MessageTemplate::보낼채널들(self::알림톡코드, 문자는틀없이도: true)
                  as [$channel, $templateCode]) {
-            $res = $this->send($channel, $order, $mobile, $text, $templateCode);
+            $res = $this->send($channel, $order, $mobile, $text,
+                $channel === 'sms' ? self::유형_가상계좌 : $templateCode);
 
             if ($res['success'] ?? false) {
                 $보낸채널[] = $channel;
@@ -224,13 +248,21 @@ class PaymentLinkService
         $lines[] = '금액 ' . $amount . '원';
 
         /* 기한이 지나면 그 계좌로 넣어도 들어가지 않는다 — 반드시 적는다 */
+        $기한 = '';
         if (!empty($va['dueDate'])) {
             try {
-                $lines[] = '입금 기한 ' . \Illuminate\Support\Carbon::parse($va['dueDate'])->format('Y-m-d H:i');
+                $기한 = '입금 기한 ' . \Illuminate\Support\Carbon::parse($va['dueDate'])->format('Y-m-d H:i');
+                $lines[] = $기한;
             } catch (\Throwable) { /* 꼴이 뜻밖이면 적지 않는다 */ }
         }
 
-        return implode("\n", $lines);
+        return \App\Models\MessageTemplate::문구(self::유형_가상계좌, [
+            '#{회사}' => $this->company(), '#{고객명}' => $name,
+            '#{계좌}' => trim($bank . ' ' . $va['accountNumber']),
+            '#{예금주줄}' => $holder !== '' ? '예금주 ' . $holder . chr(10) : '',
+            '#{금액}' => $amount,
+            '#{기한줄}' => $기한 !== '' ? chr(10) . $기한 : '',
+        ], implode(chr(10), $lines));
     }
 
     /** 낸 것으로 표시한다 — 토스가 확인해 준 뒤에만 부른다 */
@@ -252,7 +284,7 @@ class PaymentLinkService
                 $channel,
                 [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::bare($order->patient?->name), 'patient_id' => $order->patient_id]],
                 $text,
-                $channel === 'alimtalk' ? ($templateCode ?: $this->alimtalkTemplate()) : null,
+                $channel === 'alimtalk' ? ($templateCode ?: $this->alimtalkTemplate()) : $templateCode,
                 ['source' => 'payment-link', 'prescription_id' => $order->prescription_id],
             );
         } catch (\Throwable $e) {
