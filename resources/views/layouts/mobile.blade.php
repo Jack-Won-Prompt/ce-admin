@@ -337,6 +337,75 @@
                   : `${d.getFullYear()}-${두자리(d.getMonth() + 1)}-${두자리(d.getDate())}`;
   }
 </script>
+
+{{-- ── 실시간 알림(Pusher) — 앱의 ChatNotificationService 를 그대로 옮긴다
+       (2026-09-25 지시: 「12초마다 다시 읽기 절대 안됨, 웹도 Pusher」).
+
+     앱이 하는 것과 같다:
+       · 로그인하면 내 방을 모두 구독한다(private-chat.{방번호})
+       · message.sent 가 오면 내가 보낸 것은 버린다
+       · 보고 있는 방이면 그 자리에 붙이고, 아니면 알림을 띄운다
+     앱은 기기 알림창을 쓰고, 웹은 같은 자리에 토스트를 띄운다 — 브라우저에는
+     앱 같은 알림창이 없다.
+
+     채널 인증은 웹 세션으로 통한다. 앱은 Bearer 로 /api/broadcasting/auth 를
+     쓰지만, 인증하는 잣대(그 방 사람인가)는 routes/channels.php 로 같다. --}}
+@if (config('broadcasting.connections.pusher.key'))
+<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+<script>
+  window.mPusher        = null;   /* Pusher 이음 */
+  window.mChatRoom      = null;   /* 지금 보고 있는 방 — 채팅방 화면이 적는다 */
+  window.mMe            = null;   /* 내 번호 — 내가 보낸 것을 버리는 데 쓴다 */
+  const m구독한방 = new Set();
+
+  (function 실시간() {
+    try {
+      window.mPusher = new Pusher(@json(config('broadcasting.connections.pusher.key')), {
+        cluster: @json(config('broadcasting.connections.pusher.options.cluster', 'ap3')),
+        authEndpoint: '/broadcasting/auth',
+        auth: { headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '' } },
+      });
+    } catch (e) { return; }
+
+    /* 방 하나를 구독한다 — 두 번 구독하지 않는다 */
+    window.mChatSubscribe = function (방번호) {
+      if (!window.mPusher || m구독한방.has(방번호)) return;
+      m구독한방.add(방번호);
+
+      const ch = window.mPusher.subscribe('private-chat.' + 방번호);
+
+      ch.bind('message.sent', 글 => {
+        /* 내가 보낸 것은 이미 그려 두었다 */
+        if (window.mMe != null && 글.user_id === window.mMe) return;
+
+        /* 화면들이 받아 갈 수 있게 알린다 */
+        window.dispatchEvent(new CustomEvent('m:chat', { detail: { room: 방번호, msg: 글 } }));
+
+        if (Number(방번호) === Number(window.mChatRoom)) return;   /* 보고 있는 방은 화면이 알아서 한다 */
+
+        let 미리 = 글.body || '';
+        if (!미리 && 글.attachment_name) 미리 = '📎 ' + 글.attachment_name;
+        if (!미리 && 글.is_image)        미리 = '🖼️ 이미지';
+        mTell(`${글.user_name || '알림'} — ${미리 || '새 메시지'}`);
+      });
+
+      /* 고치거나 지운 것 — 보고 있는 방만 다시 그린다 */
+      ch.bind('message.changed', 바뀜 => {
+        window.dispatchEvent(new CustomEvent('m:chat-changed', { detail: { room: 방번호, data: 바뀜 } }));
+      });
+    };
+
+    /* 내 방을 모두 구독한다 — 앱의 _fetchAndSubscribeAll */
+    mApi('/auth/me')
+      .then(d => { window.mMe = (d.user || d.data || {}).id ?? null; })
+      .catch(() => {})
+      .then(() => mApi('/chat/rooms'))
+      .then(d => (d.rooms || []).forEach(r => window.mChatSubscribe(r.id)))
+      .catch(() => {});
+  })();
+</script>
+@endif
+
 @stack('scripts')
 </body>
 </html>

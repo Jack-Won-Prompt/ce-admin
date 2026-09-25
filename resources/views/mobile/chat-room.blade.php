@@ -13,7 +13,8 @@
        · 머리글에 방 이름과 첫 글자 동그라미, 새로 고침
        · 고른 파일은 보내기 전에 보이고 지울 수 있다 (앱의 _pendingFile)
 
-     앱은 Pusher 로 새 글을 받는다. 모바일 웹은 12초마다 다시 읽어 같은 자리를 채운다. --}}
+     새 글은 **Pusher 로 받는다** — 앱과 같은 private-chat.{방번호} 채널이다
+     (2026-09-25 지시: 「12초마다 다시 읽기 절대 안됨, 웹도 Pusher」). --}}
 @extends('layouts.mobile')
 
 @section('title', '채팅')
@@ -153,8 +154,7 @@
         cm다음 = 쪽 + 1;
         cmDraw(false);
       } else {
-        /* 새로 읽었을 때 줄 수가 같으면 다시 그리지 않는다 — 12초마다 화면이
-           튀면 글을 읽던 자리를 잃는다 */
+        /* 줄 수와 마지막 글이 같으면 다시 그리지 않는다 — 읽던 자리를 잃지 않게 */
         const 그대로 = cm글.length === 새것.length &&
                        cm글.length > 0 && cm글[cm글.length - 1].id === 새것[새것.length - 1].id;
         cm글 = 새것;
@@ -212,10 +212,36 @@
 
   /* 내 번호를 먼저 알아야 내 말풍선을 가린다 */
   mApi('/auth/me')
-    .then(d => { cm나 = (d.user || d.data || {}).id ?? null; })
+    .then(d => { cm나 = (d.user || d.data || {}).id ?? null; window.mMe = cm나; })
     .catch(() => {})
     .then(() => cmLoad(1, true));
 
-  setInterval(() => { if (!document.hidden) cmLoad(1, false); }, 12000);
+  /* ── 실시간 — 앱의 activeRoomId ㆍ onActiveRoomMessage 와 같다 ──
+     다시 읽지 않는다. 온 글만 그 자리에 붙인다. */
+  window.mChatRoom = ROOM;
+  if (window.mChatSubscribe) window.mChatSubscribe(Number(ROOM));
+
+  window.addEventListener('m:chat', e => {
+    if (Number(e.detail.room) !== Number(ROOM)) return;
+    const 글 = e.detail.msg;
+    if (cm글.some(m => m.id === 글.id)) return;      /* 같은 글을 두 번 붙이지 않는다 */
+    cm글.push(글);
+    cmDraw(true);
+    mApi(`/chat/rooms/${ROOM}/read`, { method: 'POST' }).catch(() => {});
+  });
+
+  /* 상대가 고치거나 지운 것 — 그 줄만 바로잡는다 */
+  window.addEventListener('m:chat-changed', e => {
+    if (Number(e.detail.room) !== Number(ROOM)) return;
+    const d = e.detail.data || {};
+    const m = cm글.find(x => x.id === d.id);
+    if (!m) return;
+    if (d.action === 'deleted') { m.is_deleted = true; m.body = null; m.attachment_path = null; }
+    else if (d.action === 'edited') { m.body = d.body; }
+    cmDraw(false);
+  });
+
+  /* 이 방을 떠나면 「보고 있는 방」 표시를 지운다 */
+  window.addEventListener('pagehide', () => { window.mChatRoom = null; });
 </script>
 @endpush

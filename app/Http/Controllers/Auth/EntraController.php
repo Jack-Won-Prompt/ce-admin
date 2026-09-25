@@ -206,18 +206,9 @@ class EntraController extends Controller
     {
         $user = Auth::user();
 
-        /* 어느 문으로 들어왔는지 세션이 지워지기 전에 집어 둔다 (2026-09-25).
-           모바일 웹에서 나가면 모바일 로그인으로 돌아가야 한다 — 앱이 제 로그인
-           화면으로 돌아가는 것과 같다. */
-        $모바일 = $request->session()->get('login_from') === 'm'
-                || $request->is('m', 'm/*')
-                || str_contains((string) $request->headers->get('referer'), '/m/');
-
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        $돌아갈곳 = $모바일 ? route('m.login') : route('login');
 
         if ($user) {
             $this->남긴다($user, 'sso_logout', 'RP-initiated');
@@ -226,12 +217,12 @@ class EntraController extends Controller
         $tenant = SsoSettings::all()['tenant_id'] ?? null;
 
         if (! $tenant) {
-            return redirect()->to($돌아갈곳);
+            return redirect()->route('login');
         }
 
-        /* 여기만은 $돌아갈곳 을 쓰지 않는다 — post_logout_redirect_uri 는 Entra 앱
-           등록에 적어 둔 주소라야 받아 준다. /m/login 을 등록하기 전까지는
-           등록된 주소로 돌려보낸다(2026-09-25). */
+        /* 모바일 웹에서 나가도 여기로 온다 — 로그아웃은 웹과 같게 둔다
+           (2026-09-25 지시). post_logout_redirect_uri 도 Entra 앱 등록에 적어 둔
+           이 주소라야 받아 준다. */
         return redirect()->away(
             "https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/logout"
             . '?post_logout_redirect_uri=' . urlencode(route('login'))

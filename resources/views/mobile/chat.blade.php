@@ -209,5 +209,9 @@
   }
 
   chLoad();
+
+  /* 새 글이 오면 목록을 다시 읽는다 — 앱이 목록을 새로 고치는 자리와 같다.
+     되풀이해 읽지 않는다. Pusher 가 알려 줄 때만 읽는다. */
+  window.addEventListener('m:chat', () => chLoad());
 </script>
 @endpush
