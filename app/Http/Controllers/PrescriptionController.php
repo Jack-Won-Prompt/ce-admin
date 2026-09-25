@@ -160,7 +160,12 @@ class PrescriptionController extends Controller
 
                    세 가지만 적는다 — 처방전ㆍ등록신청서ㆍ결과지. 나머지(신분증ㆍ동의서)는
                    검수의 잣대가 아니다. */
-                'doc_rx'    => $rx->attachments->contains('doc_type', 'prescription')      ? 'O' : '—',
+                /* 처방전은 **본 그림**으로도 들어온다 — 그 건에 처방전 그림이 아직 없으면
+                   첫 장이 image_path 로 앉고 첨부가 서지 않는다(PrescriptionApiController::upload).
+                   첨부만 보던 탓에 처방전이 멀쩡히 올라온 건까지 「—」로 나왔다
+                   (2026-09-25 무한테스트에서 잡음 — 최근 200건 가운데 82건). */
+                'doc_rx'    => ($rx->image_path || $rx->attachments->contains('doc_type', 'prescription'))
+                                                                                           ? 'O' : '—',
                 'doc_reg'   => $rx->attachments->contains('doc_type', 'registration_form') ? 'O' : '—',
                 'doc_test'  => $rx->attachments->contains('doc_type', 'test_result')       ? 'O' : '—',
 
