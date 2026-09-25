@@ -41,15 +41,12 @@
   <div style="display:flex; gap:6px; align-items:center; margin-bottom:12px;">
     <input class="m-input" id="rxFrom" type="date" style="flex:1; min-width:0;" onchange="rxDateChanged()">
     <span style="color:var(--m-mute); font-size:13px;">~</span>
-    <div style="flex:1; min-width:0; position:relative;">
-      <input class="m-input" id="rxTo" type="date" style="width:100%;" onchange="rxDateChanged()">
-      <button id="rxClear" onclick="rxResetDates()" aria-label="기간 되돌리기"
-              style="display:none; position:absolute; right:4px; top:50%; transform:translateY(-50%);
-                     width:26px; height:26px; border:0; background:transparent; color:var(--m-mute);
-                     font-size:17px; line-height:1; cursor:pointer;">
-        <i class="bx bx-x"></i>
-      </button>
-    </div>
+    <input class="m-input" id="rxTo" type="date" style="flex:1; min-width:0;" onchange="rxDateChanged()">
+    {{-- 되돌리기는 칸 밖에 둔다 — 칸 안에 두면 달력 그림과 겹친다 --}}
+    <button class="m-head-btn" id="rxClear" onclick="rxResetDates()" aria-label="기간 되돌리기"
+            style="display:none; background:var(--m-primary-l); color:var(--m-primary); flex:0 0 38px;">
+      <i class="bx bx-x"></i>
+    </button>
   </div>
 
   <div id="rxList"></div>
@@ -145,7 +142,7 @@
 
   /* 되돌리기는 되돌릴 것이 있을 때만 보인다 — 앱의 onClear 잣대 */
   function 되돌리기보이기() {
-    document.getElementById('rxClear').style.display = 기본기간인가() ? 'none' : 'block';
+    document.getElementById('rxClear').style.display = 기본기간인가() ? 'none' : 'inline-flex';
   }
 
   function rxDateChanged() { 되돌리기보이기(); rxLoad(true); }

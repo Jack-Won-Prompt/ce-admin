@@ -62,7 +62,7 @@
       <b style="font-size:14px; font-weight:700;">Coloplast CE Admin</b>
       {{-- 앱은 스스로의 판을 적는다. 모바일 웹은 늘 서버와 같은 판이므로,
            환경 설정 ▸ 모바일 앱 ▸ 최신 판을 적는다. --}}
-      <div style="font-size:12px; color:var(--m-mute); margin-top:2px;">v{{ ltrim((string) config('mobile.latest_version', '1.3.2'), 'vV') }}</div>
+      <div style="font-size:12px; color:var(--m-mute); margin-top:2px;">v{{ ltrim(trim((string) config('mobile.latest_version')) ?: '1.3.2', 'vV') }}</div>
     </div>
   </div>
 

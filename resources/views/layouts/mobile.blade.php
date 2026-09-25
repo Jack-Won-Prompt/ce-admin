@@ -102,8 +102,10 @@
     .m-input:focus, .m-select:focus, .m-textarea:focus { outline:2px solid var(--m-primary-l); border-color:var(--m-primary); }
     .m-textarea { min-height:110px; resize:vertical; }
 
+    /* 그림과 글이 한 줄로 서게 한다 — 폭을 auto 로 둔 단추에서 두 줄로 갈라졌다 */
     .m-btn { width:100%; padding:14px; border:0; border-radius:12px; background:var(--m-primary);
-             color:#fff; font-size:15.5px; font-weight:700; cursor:pointer; }
+             color:#fff; font-size:15.5px; font-weight:700; cursor:pointer; font-family:inherit;
+             display:inline-flex; align-items:center; justify-content:center; gap:8px; }
     .m-btn:active { background:var(--m-primary-d); }
     .m-btn[disabled] { background:#C4CBD4; }
     .m-btn.ghost { background:#fff; color:var(--m-primary); border:1px solid var(--m-primary); }
