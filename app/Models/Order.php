@@ -116,6 +116,44 @@ class Order extends Model
     {
         return in_array($this->amend_state, [self::AMEND_REQUESTED, self::AMEND_SWAPPING], true);
     }
+    /**
+     * 배송지의 **기본주소만** — 뒤에 붙은 상세주소를 뗀다.
+     *
+     * shipping_address 에는 기본주소와 상세주소를 합쳐 담는다. 주문 목록ㆍ증빙에서
+     * 한 줄로 읽히는 것이 낫고, 그것이 여태의 규칙이다. 그런데 **둘을 따로 받는
+     * 쪽**이 둘 있다:
+     *
+     *   · 창고(위드웍스) — 기본 + 상세 + 전화를 스스로 합친다
+     *   · 주문 화면의 「도로명 주소」 칸 — 되살린 값에 상세를 다시 이어 붙여 보낸다
+     *
+     * 합친 것을 그 자리에 넘기면 상세가 두 번 붙는다. 화면 쪽은 **정정할 때마다
+     * 한 벌씩 늘어났다** — 「…테헤란로 152 강남파이낸스센터 17층 강남파이낸스센터
+     * 17층」 (2026-09-25 무한테스트 3회차에서 드러남).
+     *
+     * 떼고 남는 것이 없으면 — 상세만 적힌 주문이다 — 합친 것을 그대로 준다.
+     * 주소가 사라지면 물건이 어디로도 가지 못한다.
+     */
+    public function 기본주소(): ?string
+    {
+        $전체 = trim((string) $this->shipping_address);
+
+        if ($전체 === '') {
+            return null;
+        }
+
+        $상세 = trim((string) $this->shipping_address_detail);
+
+        if ($상세 !== '' && str_ends_with($전체, $상세)) {
+            $기본 = rtrim(mb_substr($전체, 0, mb_strlen($전체) - mb_strlen($상세)));
+
+            if ($기본 !== '') {
+                return $기본;
+            }
+        }
+
+        return $전체;
+    }
+
 
     /**
      * 정정해 놓고 **고객의 재결제를 기다리는 중**인가 (2026-09-25 지시).

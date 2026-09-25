@@ -4429,8 +4429,10 @@ $calcDeposit  = $calcCopay;
                   {{-- 적어 둔 배송지가 다시 보여야 한다. 전에는 값 바인딩이 없어, 저장한
                        뒤 화면을 다시 열면 세 칸이 모두 비어 있었다 — 적힌 것이 없는 줄 알고
                        다시 적게 된다. 상세주소 칸이 없는 서버에서는 도로명 한 줄만 되살린다. --}}
+                  {{-- 기본주소만 되살린다 — 합친 것을 넣으면 정정할 때 상세가 한 벌씩
+                       늘어난다 (Order::기본주소, 2026-09-25 무한테스트 3회차) --}}
                   <input type="text" class="form-control" id="shippingAddr"
-                         value="{{ $prescription->order?->shipping_address ?? '' }}"
+                         value="{{ $prescription->order?->기본주소() ?? '' }}"
                          placeholder="도로명 주소" readonly style="flex:1.4;min-width:0;background:var(--bg-secondary,var(--gray-50));cursor:default;" />
                   <input type="text" class="form-control" id="shippingAddrDetail"
                          value="{{ $prescription->order?->shipping_address_detail ?? '' }}"
