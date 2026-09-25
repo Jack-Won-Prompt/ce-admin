@@ -11026,6 +11026,7 @@ window.HELP_TOUR_STEPS = [
       wwSuccess = wwRes.success ?? false;
       soNo      = wwRes.so_no  ?? null;
       wwMessage = wwRes.message ?? '';
+      ww상태    = wwRes.state ?? null;
       smsResult = wwRes.sms ?? null;
 
       /* 연계가 결제 안내까지 보냈으면 단추의 딱지도 그 자리에서 따라간다
@@ -11549,7 +11550,7 @@ window.HELP_TOUR_STEPS = [
       unit_price: Math.round(i.insurance_price || i.product_price || 0),
     })).filter(i => i.item_code);
 
-    let wwSuccess = false, wwMessage = '', ww새번호 = null;
+    let wwSuccess = false, wwMessage = '', ww새번호 = null, ww상태 = null;
     if (wwItems.length > 0) {
       const wwRes = await apiRequest(`/prescriptions/${RX_NUMBER}/withworks-order`, 'PUT', {
         order_number:     existingOrder.order_number,
@@ -11598,6 +11599,19 @@ window.HELP_TOUR_STEPS = [
     const 돈말 = localRes.payment_note || '';
 
     if (!opts.silent) {
+      /* 서버가 「할 일이 없다」고 돌려보낸 것은 **연계 실패가 아니다** (2026-09-25).
+
+         바뀐 것이 없거나(amend_no_change) 재결제를 기다리는 중이면
+         (amend_awaiting_payment) 서버는 아무것도 손대지 않고 그대로 물러난다.
+         그런데 이 자리는 그것을 「연계 실패」로 읽어, 결제도 증빙도 그대로인데
+         「변경된 금액으로 정정되었다」고 알렸다 — 사실과 다른 말이라 헤매게 된다. */
+      if (ww상태 === 'amend_no_change' || ww상태 === 'amend_awaiting_payment') {
+        ceAlert(wwMessage, { title: '주문 정정', tone: 'warning' });
+        BtnState.reset(btn);
+
+        return;
+      }
+
       showToast(
         wwSuccess
           ? '주문이 정정되었습니다. (위드웍스 동기화 완료)'
