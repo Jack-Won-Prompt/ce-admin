@@ -11520,6 +11520,32 @@ window.HELP_TOUR_STEPS = [
 
     const shippingRecipient = document.getElementById('shippingRecipient')?.value?.trim() || null;
 
+    /* 바뀐 것이 없으면 여기서 멈춘다 (2026-09-25 지시).
+
+       여태는 아무것도 고치지 않고 「주문 정정」을 눌러도 창고 판매주문을 취소하고
+       다시 세웠다. 누를 때마다 번호가 갈려 창고에는 쓸데없는 취소ㆍ재등록만 쌓였다.
+
+       **이 자리에서 가린다.** 서버에서 가리려 했더니, 화면이 로컬 저장을 먼저 하고
+       창고로 보내는 차례 탓에 그때는 둘이 늘 같아, 진짜 정정까지 창고 연계만 조용히
+       건너뛰었다 — 결제는 바뀌고 창고에는 옛 수량이 남는 가장 위험한 어긋남이다.
+       고치기 전 값을 아는 것은 화면뿐이다. */
+    const 지금품목 = validItems.map(i => `${i.product_code || ''}|${i.quantity || 0}|`
+                        + Math.round(i.insurance_price || i.product_price || 0)).sort().join(',');
+    const 옛품목   = (existingOrder.items || []).map(i => `${i.product_code || ''}|${i.quantity || 0}|`
+                        + Math.round(i.insurance_price || i.product_price || 0)).sort().join(',');
+
+    const 납작 = v => String(v ?? '').replace(/\s+/g, '');
+    const 주소그대로 = 납작(shippingAddress) === 납작(existingOrder.shipping_address)
+                      && 납작(shippingRecipient) === 납작(existingOrder.shipping_recipient);
+
+    if (옛품목 && 지금품목 === 옛품목 && 주소그대로) {
+      BtnState.reset(btn);
+      ceAlert('바뀐 것이 없어 정정하지 않았습니다 — 제품ㆍ수량ㆍ배송지를 먼저 고쳐 주십시오.',
+              { title: '주문 정정', tone: 'warning' });
+
+      return false;
+    }
+
     // ① 로컬 주문 수정
     const localRes = await apiRequest(`/orders/${existingOrder.id}`, 'PUT', {
       items:              validItems,

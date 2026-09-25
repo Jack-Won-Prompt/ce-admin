@@ -354,72 +354,6 @@ class PrescriptionController extends Controller
      * 화면이 들고 있는 값으로 몇 칸을 덮는다 — 적어 두었지만 아직 저장되지 않은
      * 값이 있기 때문이다. 널ㆍ빈 글자는 덮지 않는다.
      */
-    /**
-     * 정정할 것이 있는가 — 없으면 까닭을 돌려준다 (2026-09-25 지시).
-     *
-     * 품목(코드ㆍ수량ㆍ단가)과 배송지ㆍ받는 사람ㆍ출고요청일을 견준다. 이 여섯이
-     * 모두 그대로면 창고에 할 말이 없다.
-     */
-    private function 정정할것이없나(Order $order, Request $request): ?string
-    {
-        $셈 = static function (array $줄들): array {
-            $열 = [];
-            foreach ($줄들 as $줄) {
-                $코드 = (string) ($줄['item_code'] ?? $줄['product_code'] ?? '');
-                $열[] = $코드 . '|' . (int) ($줄['qty'] ?? $줄['quantity'] ?? 0)
-                        . '|' . (int) round((float) ($줄['unit_price'] ?? $줄['product_price'] ?? 0));
-            }
-            sort($열);
-
-            return $열;
-        };
-
-        $지금 = $셈($order->items->map(fn ($i) => [
-            'product_code'  => $i->product_code,
-            'quantity'      => $i->quantity,
-            'product_price' => $i->product_price,
-        ])->all());
-
-        $바꿀것 = $셈((array) $request->input('items', []));
-
-        if ($지금 !== $바꿀것) {
-            return null;
-        }
-
-        /* 배송지는 **납작하게 눌러** 견준다.
-
-           우리 줄에는 기본과 상세가 합쳐 담기는데(「…테헤란로 152 강남파이낸스센터
-           10층」), 화면은 위드웍스가 스스로 합치도록 둘을 나눠 보낸다. 그대로 견주면
-           늘 다르다고 읽혀 빈 정정이 그냥 지나갔다 — 2026-09-25 시험에서 드러났다.
-           공백을 지우고, 한쪽이 다른 쪽을 품으면 같은 곳으로 본다. */
-        $납작 = static fn ($s) => preg_replace('/\s+/u', '', (string) $s);
-
-        $지금주소 = $납작($order->shipping_address . $order->shipping_address_detail);
-        $올주소   = $납작($request->input('shipping_address') . $request->input('shipping_address_detail'));
-
-        $주소같나 = $지금주소 === $올주소
-            || ($지금주소 !== '' && $올주소 !== ''
-                && (str_contains($지금주소, $올주소) || str_contains($올주소, $지금주소)));
-
-        if (! $주소같나) {
-            return null;
-        }
-
-        $같나 = static fn ($a, $b) => trim((string) $a) === trim((string) $b);
-
-        if (! $같나($order->shipping_recipient, $request->input('recipient_name'))) {
-            return null;
-        }
-
-        /* 출고요청일은 화면이 보낼 때만 견준다 — 안 보내는 자리가 있다 */
-        if ($request->filled('delivery_date')
-            && ! $같나($order->ship_request_date?->format('Y-m-d'), $request->input('delivery_date'))) {
-            return null;
-        }
-
-        return '바뀐 것이 없어 정정하지 않았습니다 — 제품ㆍ수량ㆍ배송지를 먼저 고쳐 주십시오.';
-    }
-
     private function withworksPayload(Request $request, Prescription $prescription): array
     {
         $order = $prescription->orders()
@@ -876,17 +810,15 @@ class PrescriptionController extends Controller
             ], 422);
         }
 
-        /* ② 바뀐 것이 없으면 정정하지 않는다 (2026-09-25 지시).
+        /* ② 빈 정정 막음은 **화면에서** 한다 (2026-09-25).
 
-           여태는 아무것도 고치지 않고 눌러도 창고 판매주문을 취소하고 다시 세웠다.
-           누를 때마다 번호가 갈려, 창고에는 쓸데없는 취소ㆍ재등록만 쌓였다. */
-        if ($이유 = $this->정정할것이없나($order, $request)) {
-            return response()->json([
-                'success' => false,
-                'message' => $이유,
-                'state'   => 'amend_no_change',
-            ], 422);
-        }
+           여기서 「DB 품목 vs 보내온 품목」으로 가렸더니 정상 정정까지 막혔다.
+           화면은 정정할 때 **로컬 저장을 먼저** 하고 그 뒤에 창고로 보내므로, 이
+           자리에 왔을 때는 둘이 늘 같다. 그래서 수량을 360 → 300 으로 바꾼 진짜
+           정정에서도 창고 연계만 조용히 건너뛰었다 — 결제와 증빙은 바뀌고 창고에는
+           옛 수량이 남는, 가장 위험한 어긋남이다.
+
+           바뀐 것이 있는지는 **고치기 전 값을 아는 화면**이 가린다. */
 
         /* 새로 세울 내용 — 처음 등록할 때와 **같은 것**을 쓴다. 두 곳이 따로
            만들면 정정한 건만 다른 값으로 창고에 서게 된다. */
