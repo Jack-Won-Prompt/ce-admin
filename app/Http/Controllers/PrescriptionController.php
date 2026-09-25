@@ -386,12 +386,34 @@ class PrescriptionController extends Controller
             return null;
         }
 
+        /* 배송지는 **납작하게 눌러** 견준다.
+
+           우리 줄에는 기본과 상세가 합쳐 담기는데(「…테헤란로 152 강남파이낸스센터
+           10층」), 화면은 위드웍스가 스스로 합치도록 둘을 나눠 보낸다. 그대로 견주면
+           늘 다르다고 읽혀 빈 정정이 그냥 지나갔다 — 2026-09-25 시험에서 드러났다.
+           공백을 지우고, 한쪽이 다른 쪽을 품으면 같은 곳으로 본다. */
+        $납작 = static fn ($s) => preg_replace('/\s+/u', '', (string) $s);
+
+        $지금주소 = $납작($order->shipping_address . $order->shipping_address_detail);
+        $올주소   = $납작($request->input('shipping_address') . $request->input('shipping_address_detail'));
+
+        $주소같나 = $지금주소 === $올주소
+            || ($지금주소 !== '' && $올주소 !== ''
+                && (str_contains($지금주소, $올주소) || str_contains($올주소, $지금주소)));
+
+        if (! $주소같나) {
+            return null;
+        }
+
         $같나 = static fn ($a, $b) => trim((string) $a) === trim((string) $b);
 
-        if (! $같나($order->shipping_address,        $request->input('shipping_address'))
-            || ! $같나($order->shipping_address_detail, $request->input('shipping_address_detail'))
-            || ! $같나($order->shipping_recipient,      $request->input('recipient_name'))
-            || ! $같나($order->ship_request_date?->format('Y-m-d'), $request->input('delivery_date'))) {
+        if (! $같나($order->shipping_recipient, $request->input('recipient_name'))) {
+            return null;
+        }
+
+        /* 출고요청일은 화면이 보낼 때만 견준다 — 안 보내는 자리가 있다 */
+        if ($request->filled('delivery_date')
+            && ! $같나($order->ship_request_date?->format('Y-m-d'), $request->input('delivery_date'))) {
             return null;
         }
 
