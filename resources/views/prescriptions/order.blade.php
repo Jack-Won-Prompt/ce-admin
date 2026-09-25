@@ -6726,6 +6726,9 @@ window.HELP_TOUR_STEPS = [
       'so_type'            => $prescription->order->so_type ?? \App\Models\Order::saleSoTypes()[0],
       'shipping_address'   => $prescription->order->shipping_address ?? '',
       'shipping_recipient' => $prescription->order->shipping_recipient ?? '',
+      /* 정정으로 보낸 재결제를 아직 못 받았는가 — 그 사이에 또 정정하면 고객에게
+         낼 곳이 둘이 되고 창고에는 죽은 주문이 쌓인다 (2026-09-25 지시 1=가). */
+      'awaiting_payment'   => $prescription->order->재결제기다리는중인가(),
       'items'              => $prescription->order->items->map(fn ($i) => [
           'product_code'    => (string) $i->product_code,
           'quantity'        => (int) $i->quantity,
@@ -11544,6 +11547,19 @@ window.HELP_TOUR_STEPS = [
        창고로 보내는 차례 탓에 그때는 둘이 늘 같아, 진짜 정정까지 창고 연계만 조용히
        건너뛰었다 — 결제는 바뀌고 창고에는 옛 수량이 남는 가장 위험한 어긋남이다.
        고치기 전 값을 아는 것은 화면뿐이다. */
+    /* 재결제를 기다리는 중이면 정정을 걸지 않는다 (2026-09-25 지시 1=가).
+
+       **첫 걸음을 떼기 전에** 막는다 — 로컬 저장이 먼저 돌면 결제가 또 물리고
+       링크가 또 나간다. 서버에서 막으면 이미 늦다(그때는 정상 정정의 둘째 걸음도
+       함께 막힌다). */
+    if (existingOrder?.awaiting_payment) {
+      BtnState.reset(btn);
+      ceAlert('주문 정정이 진행중에 있습니다 — 고객이 재결제를 마친 뒤에 다시 정정해 주십시오.',
+              { title: '주문 정정', tone: 'warning' });
+
+      return false;
+    }
+
     const 지금품목 = validItems.map(i => `${i.product_code || ''}|${i.quantity || 0}|`
                         + Math.round(i.insurance_price || i.product_price || 0)).sort().join(',');
     const 옛품목   = (existingOrder.items || []).map(i => `${i.product_code || ''}|${i.quantity || 0}|`
@@ -11615,6 +11631,8 @@ window.HELP_TOUR_STEPS = [
     existingOrder.shipping_address = shippingAddress;
     /* 고치기 전 값도 새것으로 갈아 둔다 — 안 갈면 다음 정정에서 또 「바뀌었다」로 읽힌다 */
     existingOrder.shipping_recipient = shippingRecipient;
+    /* 정정을 걸었으면 그 뒤로는 재결제를 기다리는 중이다 */
+    existingOrder.awaiting_payment = true;
     existingOrder.items = validItems.map(i => ({
       product_code:    i.product_code || '',
       quantity:        i.quantity || 0,
