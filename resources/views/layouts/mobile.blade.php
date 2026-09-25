@@ -69,7 +69,7 @@
       position:fixed; left:0; right:0; bottom:0; z-index:45;
       height:calc(var(--m-tab) + var(--m-safe-b)); padding-bottom:var(--m-safe-b);
       background:#fff; border-top:1px solid var(--m-line);
-      display:grid; grid-template-columns:repeat(4, 1fr);
+      display:grid; grid-template-columns:repeat(var(--m-tab-n, 4), 1fr);
     }
     .m-tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
              color:var(--m-mute); font-size:11px; font-weight:600; }
@@ -153,6 +153,12 @@
     @hasSection('subtitle')<span class="sub">@yield('subtitle')</span>@endif
   </h1>
   @yield('head-actions')
+  {{-- 앱의 UserNameBadge — 머리글 오른쪽에 이름 칩 --}}
+  <span id="mWho" style="display:none; align-items:center; gap:4px; padding:5px 10px;
+        border-radius:20px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
+        font-size:12.5px; font-weight:600; white-space:nowrap;">
+    <i class="bx bx-user" style="font-size:13px; opacity:.8;"></i><span id="mWhoName"></span>
+  </span>
 </header>
 
 <main class="m-body">@yield('body')</main>
@@ -160,10 +166,15 @@
 @php
   $탭 = $탭 ?? '';
 @endphp
-<nav class="m-tabs">
+{{-- 채팅 탭은 서버 설정(환경 설정 ▸ 모바일 앱)을 따른다 — 앱의 _chatVisible 과 같은
+     잣대다. 못 물어보면 보인다: 여태 늘 보였고, 잠깐 서버가 안 열렸다고 메뉴가
+     사라지면 안 된다. --}}
+<nav class="m-tabs" id="mTabs" data-chat="{{ $채팅보임 ?? true ? '1' : '0' }}">
   <a class="m-tab {{ $탭 === 'rx' ? 'on' : '' }}"      href="{{ route('m.prescriptions') }}"><i class="bx bx-file"></i>처방전</a>
   <a class="m-tab {{ $탭 === 'upload' ? 'on' : '' }}"  href="{{ route('m.upload') }}"><i class="bx bx-upload"></i>업로드</a>
-  <a class="m-tab {{ $탭 === 'chat' ? 'on' : '' }}"    href="{{ route('m.chat') }}"><i class="bx bx-message-rounded"></i>채팅</a>
+  @if ($채팅보임 ?? true)
+    <a class="m-tab {{ $탭 === 'chat' ? 'on' : '' }}"  href="{{ route('m.chat') }}"><i class="bx bx-message-rounded"></i>채팅</a>
+  @endif
   <a class="m-tab {{ $탭 === 'settings' ? 'on' : '' }}" href="{{ route('m.settings') }}"><i class="bx bx-cog"></i>설정</a>
 </nav>
 
@@ -240,6 +251,20 @@
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+
+  /* 머리글의 이름 칩 — 앱의 UserNameBadge. 이름이 없으면 내보이지 않는다. */
+  mApi('/auth/me').then(d => {
+    const 이름 = (d.user || d.data || {}).name || '';
+    if (!이름) return;
+    document.getElementById('mWhoName').textContent = 이름;
+    document.getElementById('mWho').style.display = 'inline-flex';
+  }).catch(() => {});
+
+  /* 탭 수에 맞춰 칸을 나눈다 */
+  (() => {
+    const n = document.querySelectorAll('.m-tabs .m-tab').length || 4;
+    document.documentElement.style.setProperty('--m-tab-n', n);
+  })();
 
   /* 날짜를 짧게 — 오늘이면 시각만 */
   function mWhen(v) {

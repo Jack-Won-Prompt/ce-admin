@@ -30,81 +30,95 @@ class MobileWebController extends Controller
         ]);
     }
 
+    /**
+     * 채팅 탭을 보일지 — 앱의 _chatVisible 과 같은 잣대 (2026-09-25 정합성 검증).
+     *
+     * 서버 설정(환경 설정 ▸ 모바일 앱)을 따른다. 못 읽으면 보인다 — 여태 늘 보였고,
+     * 잠깐 설정을 못 읽었다고 메뉴가 사라지면 안 된다.
+     */
+    private function 채팅보임(): bool
+    {
+        /* 앱이 /auth/options 로 받는 값과 **같은 자리**를 본다
+           (AuthApiController::options → mobile.chat_hidden). 두 곳에서 따로 읽으면
+           설정 하나를 바꿔도 한쪽만 달라진다. */
+        return ! (bool) config('mobile.chat_hidden', false);
+    }
+
     /** 처방전 목록 — 앱의 prescription_list_screen */
     public function prescriptions(): View
     {
-        return view('mobile.prescriptions', ['탭' => 'rx']);
+        return view('mobile.prescriptions', ['탭' => 'rx', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 처방전 상세 — 앱의 prescription_detail_screen */
     public function prescription(string $rx_number): View
     {
-        return view('mobile.prescription', ['탭' => 'rx', 'rxNumber' => $rx_number]);
+        return view('mobile.prescription', ['탭' => 'rx', 'rxNumber' => $rx_number, '채팅보임' => $this->채팅보임()]);
     }
 
     /** 처방자료 업로드 — 앱의 prescription_upload_screen */
     public function upload(): View
     {
-        return view('mobile.upload', ['탭' => 'upload']);
+        return view('mobile.upload', ['탭' => 'upload', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 채팅 목록 — 앱의 chat_list_screen */
     public function chat(): View
     {
-        return view('mobile.chat', ['탭' => 'chat']);
+        return view('mobile.chat', ['탭' => 'chat', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 채팅방 — 앱의 chat_room_screen */
     public function chatRoom(int $room): View
     {
-        return view('mobile.chat-room', ['탭' => 'chat', 'roomId' => $room]);
+        return view('mobile.chat-room', ['탭' => 'chat', 'roomId' => $room, '채팅보임' => $this->채팅보임()]);
     }
 
     /** 설정 — 앱의 settings_screen */
     public function settings(): View
     {
-        return view('mobile.settings', ['탭' => 'settings']);
+        return view('mobile.settings', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 주문 목록 — 앱의 order_list_screen */
     public function orders(): View
     {
-        return view('mobile.orders', ['탭' => 'settings']);
+        return view('mobile.orders', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 알림 이력 — 앱의 notification_list_screen */
     public function notifications(): View
     {
-        return view('mobile.notifications', ['탭' => 'settings']);
+        return view('mobile.notifications', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 공지사항 — 앱의 notice_list_screen */
     public function notices(): View
     {
-        return view('mobile.notices', ['탭' => 'settings']);
+        return view('mobile.notices', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 공지 상세 — 앱의 notice_detail_screen */
     public function notice(int $id): View
     {
-        return view('mobile.notice', ['탭' => 'settings', 'noticeId' => $id]);
+        return view('mobile.notice', ['탭' => 'settings', 'noticeId' => $id, '채팅보임' => $this->채팅보임()]);
     }
 
     /** 문의 목록 — 앱의 inquiry_list_screen */
     public function inquiries(): View
     {
-        return view('mobile.inquiries', ['탭' => 'settings']);
+        return view('mobile.inquiries', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 문의 등록 — 앱의 inquiry_create_screen */
     public function inquiryCreate(): View
     {
-        return view('mobile.inquiry-create', ['탭' => 'settings']);
+        return view('mobile.inquiry-create', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
     /** 문의 상세 — 앱의 inquiry_detail_screen */
     public function inquiry(int $id): View
     {
-        return view('mobile.inquiry', ['탭' => 'settings', 'inquiryId' => $id]);
+        return view('mobile.inquiry', ['탭' => 'settings', 'inquiryId' => $id, '채팅보임' => $this->채팅보임()]);
     }
 }

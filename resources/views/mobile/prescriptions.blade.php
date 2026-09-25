@@ -6,6 +6,7 @@
 
 @section('title', '내 처방전')
 @section('subtitle', '본인이 등록한 처방전')
+{{-- 건수는 불러온 뒤 화면이 채운다 — 앱은 「본인이 등록한 처방전 N건」으로 적는다 --}}
 
 @section('head-actions')
   <button class="m-head-btn" onclick="location.assign('{{ route('m.notifications') }}')" aria-label="알림">
@@ -21,6 +22,7 @@
     <button class="m-chip"    data-s="review_requested" onclick="rxStatus(this)">검수 요청</button>
     <button class="m-chip"    data-s="approved"         onclick="rxStatus(this)">검수 완료</button>
     <button class="m-chip"    data-s="rejected"         onclick="rxStatus(this)">반려</button>
+    <button class="m-chip"    data-s="ordered"          onclick="rxStatus(this)">주문 완료</button>
   </div>
 
   {{-- 이름 찾기 + 「처방전 조회」 (남이 올린 건) --}}
@@ -130,6 +132,11 @@
       const d = await mApi('/prescriptions?' + q.toString());
       const 줄 = d.data || [];
       rxLast = d.meta?.last_page ?? 1;
+
+      /* 앱과 같이 머리글에 건수를 적는다 */
+      const 총 = d.meta?.total;
+      const 밑글 = document.querySelector('.m-head .sub');
+      if (밑글 && 총 != null) 밑글.textContent = `본인이 등록한 처방전 ${총}건`;
 
       const 통 = document.getElementById('rxList');
       const html = 줄.map(rxCard).join('');
