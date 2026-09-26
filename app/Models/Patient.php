@@ -382,17 +382,40 @@ class Patient extends Model
      */
     public function getAgeAttribute(): ?int
     {
-        if ($this->birth_date) {
-            return $this->birth_date->age;
+        return self::나이세기($this->birth_date ?: $this->생년월일());
+    }
+
+    /**
+     * 만 나이 — 셀 수 없으면 null (2026-09-26 CASE 1 시험에서 찾음).
+     *
+     * **앞날의 생년월일은 나이가 아니다.** 주민번호를 잘못 적으면(이를테면 1992년생인데
+     * 뒷자리를 3 으로 적으면) 2092년생이 되고, 그대로 세면 「만 -65세」가 나온다.
+     * 그 음수는 화면에 그대로 보였고, 19보다 작으니 **미성년으로도 읽혔다** —
+     * 보호자 신분증을 요구하는 자리까지 번진다.
+     *
+     * 모르는 것과 아닌 것은 다르다. 셀 수 없으면 null 을 돌려주고, 부르는 쪽이
+     * 「모른다」로 다룬다.
+     */
+    public static function 나이세기($생일): ?int
+    {
+        if (! $생일) {
+            return null;
         }
 
-        $생일 = $this->생년월일();
-
         try {
-            return $생일 ? \Illuminate\Support\Carbon::parse($생일)->age : null;
+            $날 = $생일 instanceof \DateTimeInterface
+                ? \Illuminate\Support\Carbon::instance($생일)
+                : \Illuminate\Support\Carbon::parse($생일);
         } catch (\Throwable) {
             return null;
         }
+
+        // 앞날이면 셀 수 없다
+        if ($날->isFuture()) {
+            return null;
+        }
+
+        return $날->age;
     }
 
     /**
@@ -408,7 +431,10 @@ class Patient extends Model
      */
     public function getIsMinorAttribute(): bool
     {
-        $age = $this->birth_date?->age;
+        /* 나이를 셀 수 없으면 미성년이라 단정하지 않는다. 앞날의 생년월일도
+           셀 수 없는 쪽에 둔다 — 2092년생이 미성년으로 읽히면 안 된다
+           (2026-09-26 CASE 1 시험에서 찾음). */
+        $age = self::나이세기($this->birth_date);
 
         return $age !== null && $age < (int) config('delegation.minor_age', 19);
     }
