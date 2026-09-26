@@ -31,6 +31,8 @@ class _PrescriptionListScreenState
     ('',                 '전체'),
     ('review_needed',    '검수 필요'),
     ('review_requested', '검수 요청'),
+    // 다시 올려 달라고 해 둔 건 — 걸러 볼 자리가 없었다 (2026-09-26 지시)
+    ('review_hold',      '검수 보류'),
     ('approved',         '검수 완료'),
     ('rejected',       '반려'),
     ('ordered',        '주문 완료'),
@@ -558,6 +560,11 @@ class _PrescriptionCard extends StatelessWidget {
     'ocr_processing': AppTheme.warning,
     'ocr_done':       AppTheme.secondary,
     'review_needed':  AppTheme.danger,
+    /* 빠져 있던 셋 — 회색 빈 동그라미로 떨어져 「다시 올려 달라」는 건과 아직 손대지
+       않은 건이 한 모양으로 보였다 (2026-09-26 지시) */
+    'review_requested': AppTheme.warning,
+    'review_hold':      Color(0xFFEF6C00),
+    'review_resent':    AppTheme.warning,
     'approved':       AppTheme.success,
     'rejected':       Color(0xFFB71C1C),
     'ordered':        AppTheme.primary,
@@ -568,6 +575,9 @@ class _PrescriptionCard extends StatelessWidget {
     'ocr_processing': Icons.auto_fix_high_rounded,
     'ocr_done':       Icons.check_circle_outline_rounded,
     'review_needed':  Icons.warning_amber_rounded,
+    'review_requested': Icons.schedule_rounded,
+    'review_hold':      Icons.upload_rounded,
+    'review_resent':    Icons.schedule_rounded,
     'approved':       Icons.verified_rounded,
     'rejected':       Icons.cancel_outlined,
     'ordered':        Icons.shopping_bag_outlined,
@@ -609,6 +619,37 @@ class _PrescriptionCard extends StatelessWidget {
                           color: AppTheme.textPrimary),
                     ),
                   ),
+                  /* 다시 올려 달라는 것이 남아 있으면 목록에서 바로 보인다
+                     (2026-09-26 지시). 상태 배지만으로는 「검수 보류」라 적힐 뿐
+                     몇 건을 다시 올려야 하는지 알 수 없었다. */
+                  if (prescription.reuploadOpen > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFFCC80)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.upload_rounded,
+                              size: 13, color: Color(0xFFE65100)),
+                          const SizedBox(width: 3),
+                          Text(
+                            '다시 올릴 서류 ${prescription.reuploadOpen}건',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFE65100),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),

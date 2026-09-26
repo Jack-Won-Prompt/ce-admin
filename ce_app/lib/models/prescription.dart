@@ -18,6 +18,10 @@ class Prescription {
   final bool    isMine;
   final int?    fileCount;
 
+  /// 아직 다시 올리지 않은 재업로드 요청 수 (2026-09-26 지시).
+  /// 목록에서 바로 보이게 하려는 값이다 — 여태는 상세로 들어가야 알 수 있었다.
+  final int     reuploadOpen;
+
   const Prescription({
     required this.rxNumber,
     required this.status,
@@ -32,6 +36,7 @@ class Prescription {
     this.ownerName,
     this.isMine = true,
     this.fileCount,
+    this.reuploadOpen = 0,
   });
 
   factory Prescription.fromJson(Map<String, dynamic> j) => Prescription(
@@ -49,6 +54,7 @@ class Prescription {
         // 목록에는 내 것만 오므로, 알려 주지 않으면 내 것으로 본다
         isMine:        j['is_mine']        as bool? ?? true,
         fileCount:     (j['file_count'] as num?)?.toInt(),
+        reuploadOpen:  (j['reupload_open'] as num?)?.toInt() ?? 0,
       );
 }
 

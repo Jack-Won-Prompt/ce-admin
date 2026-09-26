@@ -353,6 +353,11 @@ class PrescriptionApiController extends Controller
             $query->whereBetween(DB::raw('DATE(created_at)'), [$dateFrom, $dateTo]);
         }
 
+        /* 아직 닫히지 않은 재업로드 요청 수 — 목록에서 바로 보이게 한다
+           (2026-09-26 지시). 여태 목록 카드에는 이 표시가 없어, 무엇을 다시 올려야
+           하는지 알려면 건마다 상세로 들어가야 했다. */
+        $query->withCount(['reuploadRequests as reupload_open' => fn ($q) => $q->whereNull('resolved_at')]);
+
         $prescriptions = $query->paginate(15);
 
         return response()->json([
@@ -369,6 +374,8 @@ class PrescriptionApiController extends Controller
                    주소가 그대로면 지우고 다시 올린 그림이 바뀌지 않는다(2026-09-17) */
                 'image_url'      => $this->imageUrl($p),
                 'created_at'     => $p->created_at->format('Y-m-d H:i'),
+                // 다시 올려야 할 서류가 몇 건 남았는가 — 0 이면 표시하지 않는다
+                'reupload_open'  => (int) ($p->reupload_open ?? 0),
             ]),
             'meta' => [
                 'current_page' => $prescriptions->currentPage(),

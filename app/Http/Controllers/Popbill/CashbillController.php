@@ -353,7 +353,8 @@ class CashbillController extends Controller
         /* ── 발행 대기 ──────────────────────────────────────────────
            「계산서 발행」 화면이 하던 일이다 — 2026-09-01 요청으로 그 화면을 없애고
            여기로 모았다. 낸 것만 보이면 「무엇이 남았는가」를 이 화면에서 알 수 없다.
-           대상은 청구전략이 현금영수증으로 정한 건뿐이다(처방외ㆍ산재ㆍ자동차보험). */
+           대상은 청구전략이 현금영수증으로 정한 건이다 — 처방외ㆍ산재ㆍ자동차보험은
+           본인이 전액을 내고, 처방전ㆍ일반도 본인부담 10%가 현금영수증으로 간다. */
         $pendingQuery = Order::with(['patient', 'prescription.billingOffice', 'items.lots', 'operationUser', 'tossPayment'])
             ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM);
 
@@ -363,6 +364,18 @@ class CashbillController extends Controller
             ->when($이름 !== '', fn ($q) => $this->이름거르개($q, $이름))
             ->where(fn ($q) => $q->whereNull('cash_receipt_status')
                                  ->orWhere('cash_receipt_status', '!=', 'issued'))
+            /* 카드로 받은 건은 대기에 세우지 않는다 (2026-09-26 지시).
+
+               현금영수증은 **가상계좌ㆍ무통장입금일 때만** 낸다 — 카드는 카드사가
+               국세청에 신고하고, 우리 증빙은 카드매출전표다(DepositAutoIssue 주석).
+               자동 발행은 그 갈래를 옳게 지나가는데 **이 대기 목록만 결제수단을 보지
+               않아** 카드 건이 「발행 대기」로 서 있었다. 담당자가 그 줄을 눌러 발행하면
+               카드전표와 현금영수증이 겹쳐 **국세청에 두 번 신고**된다.
+
+               토스 승인이 남아 있는 건을 카드로 본다. 결제수단 칸(pay_method)은 「무엇으로
+               안내할 것인가」이기도 해서 받기 전에도 「링크페이」로 적혀 있다 — 그것만
+               보고 빼면 아직 받지 않은 건까지 대기에서 사라진다. */
+            ->whereDoesntHave('tossPayment', fn ($q) => $q->where('status', 'DONE'))
             /* 언제 것인가 — 나간 날이 있으면 그 날, 없으면 받은 날이다. */
             ->where(fn ($q) => $q->whereBetween('delivered_at', [$start, $end])
                                  ->orWhere(fn ($x) => $x->whereNull('delivered_at')

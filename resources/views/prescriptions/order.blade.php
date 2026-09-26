@@ -11612,8 +11612,28 @@ window.HELP_TOUR_STEPS = [
 
     if (옛품목 && 지금품목 === 옛품목 && 주소그대로) {
       BtnState.reset(btn);
-      ceAlert('바뀐 것이 없어 정정하지 않았습니다 — 제품ㆍ수량ㆍ배송지를 먼저 고쳐 주십시오.',
-              { title: '주문 정정', tone: 'warning' });
+      /* 정정은 막되 「거래명세서만 다시 내기」는 열어 둔다 (2026-09-26 지시).
+
+         바뀐 것이 없는데 정정을 태우면 창고 판매주문이 헛되이 갈린다 — 그것이 막는
+         까닭이다. 그러나 담당자가 이 단추를 누르는 뜻이 「거래명세서를 다시 뽑고
+         싶다」일 때가 있다(종이를 잃었거나 발행일을 새로 찍을 때). 막고 끝내면 그
+         일을 할 자리가 아예 없어, 없는 변경을 억지로 만들어 정정을 태우게 된다. */
+      const 다시낼까 = await ceConfirm(
+        '바뀐 것이 없어 정정하지 않았습니다.' + String.fromCharCode(10, 10)
+        + '제품ㆍ수량ㆍ배송지를 고치지 않은 채로는 결제ㆍ증빙ㆍ창고를 건드리지 않습니다.'
+        + String.fromCharCode(10, 10)
+        + '거래명세서만 다시 내시겠습니까?',
+        { title: '주문 정정', confirmText: '거래명세서만 다시 내기', cancelText: '닫기' });
+
+      if (다시낼까) {
+        try {
+          const r = await apiRequest(`/orders/${existingOrder.id}/restatement`, 'POST', {});
+          showToast(r.message || (r.success ? '거래명세서를 다시 냈습니다.' : '만들지 못했습니다.'),
+                    r.success ? 'success' : 'danger');
+        } catch (e) {
+          showToast('거래명세서를 다시 내지 못했습니다.', 'danger');
+        }
+      }
 
       return false;
     }
@@ -15512,7 +15532,13 @@ window.HELP_TOUR_STEPS = [
      여기서 붙잡아 둔다 — 주문을 낼 때 이 값을 본다(요청서 12쪽). */
   window.CONSENT_STATUS = @json($prescription->consents()->latest('id')->value('status'));
   /* 주문을 낼 수 있는가 — 이 처방전에 위임 서명이 남았는가 (2026-09-14 지시).
-     배지(CONSENT_STATUS)와 따로 쥔다: 배지는 사람을 따라 지난 처방전 것도 보여 준다. */
+
+     배지(CONSENT_STATUS)와 따로 쥔다. **둘 다 이 처방전 것이다** — 위임 서명은
+     처방전마다 받는다(공단에 내는 서류가 처방전 단위다). 그래서 지난 처방전에서
+     서명한 사람이라도 새 건에서는 단추가 「서명 동의」로 서고 다시 받아야 한다.
+     배지는 상태(pending·agreed·declined)를, 이 값은 「서명이 실제로 남았는가」를
+     본다 — 신분증만 받은 줄도 agreed 가 되므로 그 둘을 갈라야 한다
+     (DelegationGate::signed · 2026-09-26 주석 바로잡음). */
   window.DELEGATION_SIGNED = @json(\App\Support\DelegationGate::signed($prescription));
 
   function _applyConsentBtn(status) {

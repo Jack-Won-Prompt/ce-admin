@@ -65,6 +65,20 @@ final class WithworksConfirm
             $보낼것['statement_date'] = $order->statement_date->format('Y-m-d');
         }
 
+        /* 결제가 끝난 날도 함께 보낸다 (2026-09-26 지시).
+
+           여태 보낸 것은 거래명세서 발행일 하나였다. 그 날은 입금이 확인되는 자리에서
+           굳으므로 결제일과 사실상 같지만, **이름이 다르고 시각이 없다** — 창고에서
+           「언제 받은 돈인가」를 물으면 답할 값이 저쪽에 없었다.
+
+           저쪽이 아직 그 칸을 만들지 않았어도 보내는 것은 해롭지 않다(검증에 없는
+           키는 그대로 지나간다). 칸이 서면 그때부터 채워진다. */
+        $받은때 = $order->paidAt();
+        if ($받은때) {
+            $보낼것['paid_date'] = $받은때->format('Y-m-d');
+            $보낼것['paid_at']   = $받은때->format('Y-m-d H:i:s');
+        }
+
         try {
             $res = Http::withToken($token)->timeout(20)->asForm()
                 ->post("{$baseUrl}/api/v1/ce-admin/so_confirm", $보낼것);

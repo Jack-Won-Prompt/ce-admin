@@ -817,6 +817,52 @@ class OrderController extends Controller
             'payment_note' => $돈말,
         ]);
     }
+    /**
+     * 거래명세서만 다시 낸다 (2026-09-26 지시).
+     *
+     * 바뀐 것이 없는 정정은 화면이 막는다 — 창고 판매주문을 헛되이 취소하고 새로
+     * 세우기 때문이다(2026-09-25 에 그 해를 보았다). 그런데 「거래명세서를 다시
+     * 내고 싶다」는 일은 그것과 다른 일이다: 종이를 다시 뽑거나 발행일을 새로
+     * 찍는 자리다.
+     *
+     * **그 하나만 한다.** 결제ㆍ세금계산서ㆍ현금영수증ㆍ창고는 건드리지 않는다 —
+     * 손대면 그것이 곧 정정이고, 막아 둔 문을 뒷길로 지나는 셈이 된다.
+     */
+    public function restatement(Order $order): \Illuminate\Http\JsonResponse
+    {
+        if (! $order->prescription_id) {
+            return response()->json([
+                'success' => false,
+                'message' => '처방전이 없는 주문에는 거래명세서를 만들지 않습니다.',
+            ], 422);
+        }
+
+        /* 받은 돈이 없으면 낼 것이 없다 — 빈 장이 나가면 그것이 더 나쁘다 */
+        if (! $order->isDepositConfirmed() && (int) $order->expectedDeposit() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => '결제가 확인되지 않아 거래명세서를 낼 수 없습니다.',
+            ], 422);
+        }
+
+        $됐나 = \App\Support\TransactionStatement::다시그리기($order->fresh());
+
+        if (! $됐나) {
+            return response()->json([
+                'success' => false,
+                'message' => '거래명세서를 만들지 못했습니다.',
+            ], 500);
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($order)
+            ->log('거래명세서를 다시 냈습니다 (정정 없이)');
+
+        return response()->json([
+            'success' => true,
+            'message' => '거래명세서를 다시 냈습니다. 결제ㆍ증빙ㆍ창고는 그대로입니다.',
+        ]);
+    }
+
 
     /**
      * 정정하면 무슨 일이 벌어지는가 — 미리 보여 준다

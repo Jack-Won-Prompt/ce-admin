@@ -16,11 +16,13 @@
 {{-- 건수는 불러온 뒤 화면이 채운다 — 앱은 건수가 있을 때만 「N건」을 붙인다 --}}
 
 @section('body')
-  {{-- 상태 거르개 — 앱과 같은 여섯 --}}
+  {{-- 상태 거르개 — 「검수 보류」를 더해 일곱 (2026-09-26 지시) --}}
   <div class="m-chips" id="rxChips">
     <button class="m-chip on" data-s=""                 onclick="rxStatus(this)">전체</button>
     <button class="m-chip"    data-s="review_needed"    onclick="rxStatus(this)">검수 필요</button>
     <button class="m-chip"    data-s="review_requested" onclick="rxStatus(this)">검수 요청</button>
+    {{-- 다시 올려 달라고 해 둔 건 — 걸러 볼 자리가 없었다 (2026-09-26 지시) --}}
+    <button class="m-chip"    data-s="review_hold"      onclick="rxStatus(this)">검수 보류</button>
     <button class="m-chip"    data-s="approved"         onclick="rxStatus(this)">검수 완료</button>
     <button class="m-chip"    data-s="rejected"         onclick="rxStatus(this)">반려</button>
     <button class="m-chip"    data-s="ordered"          onclick="rxStatus(this)">주문 완료</button>
@@ -86,6 +88,11 @@
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rx-badge{ padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;
              white-space:nowrap; }
+  /* 다시 올릴 서류가 남은 건 — 상태 배지 앞에 세운다 (2026-09-26 지시) */
+  .rx-redo{ display:inline-flex; align-items:center; gap:3px; padding:4px 9px;
+            border-radius:20px; font-size:11px; font-weight:800; white-space:nowrap;
+            background:#FFF3E0; color:#E65100; border:1px solid #FFCC80; }
+  .rx-redo i{ font-size:13px; }
   .rx-rows { margin-top:12px; display:flex; flex-direction:column; gap:6px; }
   .rx-line { display:flex; gap:12px; align-items:center; }
   .rx-chip { display:flex; align-items:center; gap:5px; font-size:12.5px; color:#546E7A;
@@ -105,13 +112,18 @@
 
 <script>
   /* 앱과 같은 상태 빛깔ㆍ그림 (AppTheme) */
+  /* 검수 보류ㆍ검수 요청ㆍ검수 재요청이 빠져 있었다 (2026-09-26 지시).
+     빠진 상태는 회색 빈 동그라미로 떨어져, 다시 올려 달라는 건과 아직 손대지 않은
+     건이 한 모양으로 보였다. */
   const RX_COLOR = {
     pending:'#9E9E9E', ocr_processing:'#F57C00', ocr_done:'#0288D1',
-    review_needed:'#C62828', approved:'#2E7D32', rejected:'#B71C1C', ordered:'#1565C0',
+    review_needed:'#C62828', review_requested:'#F57C00', review_hold:'#EF6C00',
+    review_resent:'#F57C00', approved:'#2E7D32', rejected:'#B71C1C', ordered:'#1565C0',
   };
   const RX_ICON = {
     pending:'bx-hourglass', ocr_processing:'bx-magic-wand', ocr_done:'bx-check-circle',
-    review_needed:'bx-error', approved:'bxs-badge-check', rejected:'bx-x-circle',
+    review_needed:'bx-error', review_requested:'bx-time-five', review_hold:'bx-upload',
+    review_resent:'bx-time-five', approved:'bxs-badge-check', rejected:'bx-x-circle',
     ordered:'bx-shopping-bag',
   };
 
@@ -176,11 +188,17 @@
     const 발급 = p.issued_date
       ? `<i class="bx bx-calendar"></i><span>발급 ${mEsc(p.issued_date)}</span>`
       : '';
+    /* 다시 올려 달라는 것이 남아 있으면 목록에서 바로 보인다 (2026-09-26 지시).
+       상태 배지만으로는 「검수 보류」라 적힐 뿐 몇 건을 다시 올려야 하는지 모른다. */
+    const 되물음 = (p.reupload_open > 0)
+      ? `<span class="rx-redo"><i class="bx bx-upload"></i>다시 올릴 서류 ${p.reupload_open}건</span>`
+      : '';
     return `
       <div class="rx-card tap" onclick="location.assign('/m/prescriptions/${encodeURIComponent(p.rx_number)}')">
         <div class="rx-top">
           <div class="rx-ico" style="background:${빛}1A; color:${빛};"><i class="bx ${그림}"></i></div>
           <b class="rx-no">${mEsc(p.rx_number)}</b>
+          ${되물음}
           <span class="rx-badge" style="background:${빛}1A; color:${빛}; border:1px solid ${빛}4D;">${mEsc(p.status_label || p.status)}</span>
         </div>
         <div class="rx-rows">

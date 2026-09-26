@@ -326,6 +326,12 @@ Route::middleware(['auth'])->group(function () {
     /* 정정하면 무슨 일이 벌어지는가 — 누르기 전에 보여 준다 (2026-09-22 확인요청 3쪽).
        아무것도 고치지 않는다. */
     Route::post('/orders/{order}/amend-preview', [OrderController::class, 'amendPreview'])->name('orders.amendPreview');
+    /* 거래명세서만 다시 낸다 (2026-09-26 지시).
+
+       바뀐 것이 없는 정정은 막는다 — 창고 판매주문을 헛되이 갈아 치우기 때문이다.
+       그런데 「거래명세서를 새로 내고 싶다」는 일은 따로 있다(발행일을 다시 찍거나
+       종이를 다시 뽑을 때). 그 일만 하는 자리를 둔다 — 결제ㆍ증빙ㆍ창고는 건드리지 않는다. */
+    Route::post('/orders/{order}/restatement', [OrderController::class, 'restatement'])->name('orders.restatement');
     Route::get( '/orders/{order}/docs',      [\App\Http\Controllers\OrderDocSendController::class, 'list'])->name('orders.docs.list');
     Route::post('/orders/{order}/docs/send', [\App\Http\Controllers\OrderDocSendController::class, 'send'])->name('orders.docs.send');
 
