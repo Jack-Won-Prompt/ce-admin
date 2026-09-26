@@ -1237,36 +1237,31 @@ $calcDeposit  = $calcCopay;
           </button>
         </div>
         <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
-        {{-- 지난 건에 서명이 있으면 그 사실을 적어 둔다 (2026-09-26 확인사항 5번).
+        {{-- 지난 서명을 다시 쓰는 건이면 그 사실을 적어 둔다 (2026-09-26 지시).
 
-             위임 서명은 **처방전마다** 받는다 — 공단에 내는 서류가 처방전 단위이고,
-             DelegationGate::signed() 도 이 건의 동의만 본다. 그래서 지난달에 서명한
-             사람이라도 새 건에서는 단추가 「서명 동의」로 선다.
+             서명은 한 번 받으면 위임기간(기본 5년) 안에서 다시 쓴다. 위임장은 공단에
+             한 장 등록하고 그 기간 동안 그 한 장이 정본이기 때문이다.
 
-             그것이 맞는데, 담당자 눈에는 「이 사람은 지난달에 했는데 또?」로 보인다.
-             지난 서명을 찾아 적어 두면 그 물음이 화면에서 끝난다 — 적지 않으면 옛
-             건을 뒤져 보고 나서야 알 수 있다. --}}
+             그래서 이 건에 서명을 다시 받지 않아도 주문이 선다. 다만 화면에 아무 말이
+             없으면 담당자는 「서명을 안 받았는데 왜 지나가지?」로 읽는다. 어느 건의
+             서명을 쓰는지, 언제까지 쓸 수 있는지 한 줄로 적는다.
+
+             여태 이 자리에 「이 건은 따로 받습니다」라고 적혀 있었다 — 서명이 처방전
+             단위라는 잘못된 판단이었다. 함께 바로잡는다. --}}
         @php
-            $_지난서명 = null;
-            if (\App\Support\DelegationGate::needed($prescription)
-                && ! \App\Support\DelegationGate::signed($prescription)
-                && $prescription->patient_id) {
-                $_지난서명 = \App\Models\PrescriptionConsent::query()
-                    ->whereHas('prescription', fn ($q) => $q->where('patient_id', $prescription->patient_id)
-                                                            ->where('id', '!=', $prescription->id))
-                    ->where('status', 'agreed')
-                    ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'id_card'))
-                    ->whereNotNull('signature_data')->where('signature_data', '!=', '')
-                    ->with('prescription:id,rx_number')
-                    ->latest('responded_at')
-                    ->first();
-            }
+            $_지난서명 = \App\Support\DelegationGate::needed($prescription)
+                && ! \App\Support\DelegationGate::이건서명($prescription)
+                    ? \App\Support\DelegationGate::지난서명($prescription)
+                    : null;
+            $_서명만료 = $_지난서명
+                ? \App\Support\DelegationGate::유효기간($_지난서명, $prescription->patient)
+                : null;
         @endphp
         @if($_지난서명)
-          <span style="align-self:center;display:inline-flex;flex-direction:column;gap:1px;font-size:11px;color:var(--text-muted);white-space:nowrap;"
-                title="위임 서명은 처방전마다 받습니다 — 공단에 내는 서류가 처방전 단위이기 때문입니다.&#10;지난 건의 서명은 이 건에 쓸 수 없습니다.">
-            <span>지난 건에 서명 있음</span>
-            <span style="font-size:10px;">{{ $_지난서명->prescription?->rx_number }} · {{ $_지난서명->responded_at?->format('Y-m-d') }} — 이 건은 따로 받습니다</span>
+          <span style="align-self:center;display:inline-flex;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
+                title="서명은 한 번 받으면 위임기간(최장 5년) 안에서 다시 사용합니다.&#10;위임장은 공단에 한 번 등록하고 그 기간 동안 그 한 장을 사용합니다.&#10;기간이 지나면 다시 받아야 합니다.">
+            <span style="font-weight:600;">지난 서명을 사용합니다</span>
+            <span style="font-size:10px;color:var(--text-muted);">{{ $_지난서명->prescription?->rx_number }} · {{ $_지난서명->responded_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif</span>
           </span>
         @endif
         {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
@@ -10580,9 +10575,10 @@ window.HELP_TOUR_STEPS = [
     const bs      = bsCurrent();
     const needDel = bs ? !!bs.needs_delegation : true;
 
-    /* 위임은 「이 처방전에 서명이 남았는가」로 본다 (2026-09-14 지시).
-       CONSENT_STATUS 는 배지용이라 지난 처방전의 서명이나 신분증만 받은 줄도
-       「완료」로 읽힌다 — 주문을 낼지는 서버와 같은 잣대(DelegationGate)로 가른다. */
+    /* 위임은 「쓸 수 있는 서명이 있는가」로 본다 (2026-09-14 지시).
+       CONSENT_STATUS 는 배지용이라 신분증만 받은 줄도 「완료」로 읽힌다 —
+       주문을 낼지는 서버와 같은 잣대(DelegationGate)로 가른다. 지난 서명을
+       위임기간 안에서 다시 쓰는 건도 그 잣대가 지나보낸다(2026-09-26 지시). */
     if (needDel && !window.DELEGATION_SIGNED) {
       /* 위임장을 받는 건이면 그 이름으로, 아니면 「서명 동의」로 부른다 (2026-09-21).
          기초(의료급여)는 서명은 받되 위임장이 아니라 지급청구서에 들어간다 — 그 건에
@@ -15563,14 +15559,18 @@ window.HELP_TOUR_STEPS = [
   /* 지금 위임동의가 어디까지 왔는가. 배지를 그리는 함수가 곧 유일한 소식통이라
      여기서 붙잡아 둔다 — 주문을 낼 때 이 값을 본다(요청서 12쪽). */
   window.CONSENT_STATUS = @json($prescription->consents()->latest('id')->value('status'));
-  /* 주문을 낼 수 있는가 — 이 처방전에 위임 서명이 남았는가 (2026-09-14 지시).
+  /* 주문을 낼 수 있는가 — 쓸 수 있는 위임 서명이 있는가 (2026-09-14 지시).
 
-     배지(CONSENT_STATUS)와 따로 쥔다. **둘 다 이 처방전 것이다** — 위임 서명은
-     처방전마다 받는다(공단에 내는 서류가 처방전 단위다). 그래서 지난 처방전에서
-     서명한 사람이라도 새 건에서는 단추가 「서명 동의」로 서고 다시 받아야 한다.
-     배지는 상태(pending·agreed·declined)를, 이 값은 「서명이 실제로 남았는가」를
-     본다 — 신분증만 받은 줄도 agreed 가 되므로 그 둘을 갈라야 한다
-     (DelegationGate::signed · 2026-09-26 주석 바로잡음). */
+     배지(CONSENT_STATUS)와 따로 쥔다. 배지는 **이 처방전의** 마지막 동의 상태
+     (pending·agreed·declined)를 보이고, 이 값은 「쓸 수 있는 서명이 있는가」를 본다.
+     둘이 갈리는 데는 까닭이 둘 있다:
+
+       · 신분증만 받은 줄(kind = id_card)도 agreed 가 된다 — 서명이 아니다
+       · **서명은 한 번 받으면 위임기간(기본 5년) 안에서 다시 쓴다**
+         (2026-09-26 지시). 그래서 이 처방전에 동의 줄이 없어도 지난 서명이
+         살아 있으면 주문이 선다 — 배지는 비어 있고 이 값은 참이다.
+
+     잣대는 서버와 같은 한 곳에 있다(DelegationGate::signed). */
   window.DELEGATION_SIGNED = @json(\App\Support\DelegationGate::signed($prescription));
 
   function _applyConsentBtn(status) {

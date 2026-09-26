@@ -131,8 +131,7 @@ final class NhisFaxAuto
         $have = PrescriptionAttachment::where('prescription_id', $prescription->id)
             ->pluck('doc_type')->unique()->all();
 
-        if (\App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
-                ->where('type', 'delegation')->exists()) {
+        if ($this->delegationDoc($prescription)) {
             $have[] = 'delegation';
         }
 
@@ -152,21 +151,50 @@ final class NhisFaxAuto
         return $missing;
     }
 
-    /** 이 건이 미성년자의 것인가 — 보호자 신분증을 함께 내야 하는가 */
+    /**
+     * 이 건이 미성년자의 것인가 — 보호자 신분증을 함께 내야 하는가.
+     *
+     * 지난 서명을 다시 쓰는 건(2026-09-26 지시)에는 이 처방전에 동의 줄이 없다.
+     * 그래서 미성년 여부도, 신분증 파일도 그 서명 기록에서 가져온다 — 잣대는
+     * DelegationGate 한 곳에 있다.
+     */
     private function needsGuardianId(Prescription $prescription): bool
     {
-        return PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('is_minor', true)
-            ->exists();
+        return \App\Support\DelegationGate::미성년인가($prescription);
     }
 
     /** 받아 둔 보호자 신분증 — 없으면 null */
     private function guardianIdPath(Prescription $prescription): ?string
     {
-        return PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->whereNotNull('guardian_id_path')
+        return \App\Support\DelegationGate::보호자신분증($prescription);
+    }
+
+    /**
+     * 이 건에 낼 요양비위임장 파일 — 없으면 null.
+     *
+     * 위임장은 서명할 때 그 처방전에 만들어 둔다. 지난 서명을 다시 쓰는 건에는
+     * 그 파일이 없으므로, 같은 사람의 것을 쓴다 — 공단에 등록한 위임장은 한 장이고
+     * 위임기간(기본 5년) 안에서는 그 한 장이 정본이다.
+     */
+    private function delegationDoc(Prescription $prescription): ?\App\Models\PrescriptionDocument
+    {
+        $doc = \App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
+            ->where('type', 'delegation')
             ->latest('id')
-            ->value('guardian_id_path');
+            ->first();
+
+        if ($doc || ! $prescription->patient_id) {
+            return $doc;
+        }
+
+        if (! \App\Support\DelegationGate::지난서명($prescription)) {
+            return null;
+        }
+
+        return \App\Models\PrescriptionDocument::where('patient_id', $prescription->patient_id)
+            ->where('type', 'delegation')
+            ->latest('id')
+            ->first();
     }
 
     /** 어디로 보내는가 — 그 건에 골라 둔 청구처의 팩스 */
@@ -189,8 +217,7 @@ final class NhisFaxAuto
            보호자 신분증은 동의 기록에 딸린 파일이다. */
         $docs = [];
 
-        if (\App\Models\PrescriptionDocument::where('prescription_id', $prescription->id)
-                ->where('type', 'delegation')->exists()) {
+        if ($this->delegationDoc($prescription)) {
             $docs[] = 'delegation';
         }
 

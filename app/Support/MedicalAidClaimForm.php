@@ -243,23 +243,32 @@ final class MedicalAidClaimForm
      */
     private static function 서명시각(Order $order): ?Carbon
     {
-        $때 = PrescriptionConsent::where('prescription_id', $order->prescription_id)
-            ->where('status', 'agreed')
-            ->whereNotNull('signature_data')
-            ->latest('id')
-            ->value('updated_at');
+        $때 = self::쓸동의($order)?->updated_at;
 
         return $때 ? Carbon::parse($때) : null;
+    }
+
+    /**
+     * 이 건에 쓸 서명 기록 — 없으면 null.
+     *
+     * **이 처방전의 것만 찾지 않는다** (2026-09-26 지시). 서명은 한 번 받으면
+     * 위임기간(기본 5년) 안에서 다시 쓴다. 문(DelegationGate)이 지난 서명으로
+     * 지나보내는데 이 서식이 이 건의 동의만 찾으면, 서명란이 빈 청구서가 나가
+     * 그 자리에서 반려된다. 잣대는 한 곳에 둔다.
+     */
+    private static function 쓸동의(Order $order): ?PrescriptionConsent
+    {
+        $rx = $order->prescription ?: ($order->prescription_id
+            ? \App\Models\Prescription::find($order->prescription_id)
+            : null);
+
+        return $rx ? \App\Support\DelegationGate::쓸서명($rx) : null;
     }
 
     /** 위임동의에서 받아 둔 서명을 그대로 얹는다 — 없으면 비워 둔다 */
     private static function signature(\setasign\Fpdi\Tcpdf\Fpdi $pdf, Order $order, array $cfg): void
     {
-        $sig = PrescriptionConsent::where('prescription_id', $order->prescription_id)
-            ->where('status', 'agreed')
-            ->whereNotNull('signature_data')
-            ->latest('id')
-            ->value('signature_data');
+        $sig = self::쓸동의($order)?->signature_data;
 
         if (! $sig) {
             return;

@@ -230,8 +230,10 @@ class OrderController extends Controller
 
         /* 만들어 붙이는 서류 — **낼 수 있는 것만** 세운다.
            고를 수는 있는데 빈 장이 나가는 일이 없어야 한다. */
-        $동의 = \App\Models\PrescriptionConsent::where('prescription_id', $rx->id)
-            ->where('status', 'agreed')->exists();
+        /* 서명을 받았는가는 한 곳에서 본다 (2026-09-26 지시).
+           여태 이 자리는 이 처방전의 동의 줄만 세어, 지난 서명을 다시 쓰는 건에서
+           위임장을 고를 수 없었다. 신분증만 받은 줄을 서명으로 세던 것도 함께 바뀐다. */
+        $동의 = \App\Support\DelegationGate::signed($rx);
 
         /* 처방전 그림은 **첨부가 아니라 따로 있다**(prescriptions.image_path).
            그래서 이 줄이 없으면 처방전을 보낼 길이 아예 없다. 파일이 이미 있는 것이니

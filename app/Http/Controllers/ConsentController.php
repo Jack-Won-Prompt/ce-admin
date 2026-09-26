@@ -1068,11 +1068,13 @@ class ConsentController extends Controller
      */
     public function downloadSignature(Prescription $prescription)
     {
-        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('status', 'agreed')
-            ->whereNotNull('signature_data')
-            ->latest()
-            ->firstOrFail();
+        /* 지난 서명을 다시 쓰는 건에는 이 처방전에 서명 줄이 없다 (2026-09-26 지시).
+           그때는 다시 쓰는 그 서명을 내려 준다 — 화면이 서명 그림을 보여 주는 길이다. */
+        $consent = \App\Support\DelegationGate::쓸서명($prescription);
+
+        if (! $consent) {
+            abort(404, '받아 둔 서명이 없습니다.');
+        }
 
         $raw  = (string) $consent->signature_data;
         $mime = 'image/png';

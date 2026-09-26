@@ -2580,7 +2580,11 @@ class PrescriptionController extends Controller
            첨부 파일과 같은 자리에 두면 썸네일ㆍ확대ㆍ크게 보기가 그대로 동작한다.
            둘 다 본문으로 내려보내지 않고 권한을 거치는 주소만 준다. */
         $signDocs = [];
-        $lastConsent = $prescription->consents()->where('status', 'agreed')->latest()->first();
+        /* 지난 서명을 다시 쓰는 건에는 이 처방전에 동의 줄이 없다 (2026-09-26 지시).
+           그때도 서명 그림과 보호자 신분증은 보여야 한다 — 담당자가 「서명이 없다」로
+           읽으면 이미 받은 서명을 또 받으러 간다. */
+        $lastConsent = \App\Support\DelegationGate::쓸서명($prescription)
+            ?: $prescription->consents()->where('status', 'agreed')->latest()->first();
         if ($lastConsent) {
             if ($lastConsent->signature_data) {
                 $signDocs[] = [
@@ -4627,10 +4631,12 @@ class PrescriptionController extends Controller
         // 위임장 포함 여부 + 서명 상태 확인
         $authInfo = null;
         if (in_array('authorization', $request->documents ?? [])) {
-            $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-                ->where('status', 'agreed')
-                ->latest()
-                ->first();
+            // 지난 서명을 다시 쓰는 건도 서명본으로 그린다 (2026-09-26 지시)
+            $consent = \App\Support\DelegationGate::쓸서명($prescription)
+                ?: PrescriptionConsent::where('prescription_id', $prescription->id)
+                    ->where('status', 'agreed')
+                    ->latest()
+                    ->first();
 
             $authInfo = [
                 'has_signature'   => (bool) $consent?->signature_data,
@@ -4798,10 +4804,12 @@ class PrescriptionController extends Controller
     // ── 위임장 미리보기 ───────────────────────────────────
     public function authorization(Prescription $prescription): View
     {
-        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('status', 'agreed')
-            ->latest()
-            ->first();
+        // 지난 서명을 다시 쓰는 건도 서명본으로 그린다 (2026-09-26 지시)
+        $consent = \App\Support\DelegationGate::쓸서명($prescription)
+            ?: PrescriptionConsent::where('prescription_id', $prescription->id)
+                ->where('status', 'agreed')
+                ->latest()
+                ->first();
 
         $patient = $prescription->patient;
 
@@ -5378,6 +5386,17 @@ class PrescriptionController extends Controller
                         ->latest('id')
                         ->first();
 
+                    /* 지난 서명을 다시 쓰는 건에는 이 처방전에 위임장이 없다
+                       (2026-09-26 지시). 공단에 등록한 위임장은 한 장이고 위임기간
+                       안에서는 그 한 장이 정본이므로 같은 사람의 것을 붙인다. */
+                    if (! $deleg && $prescription->patient_id
+                        && \App\Support\DelegationGate::지난서명($prescription)) {
+                        $deleg = \App\Models\PrescriptionDocument::where('patient_id', $prescription->patient_id)
+                            ->where('type', 'delegation')
+                            ->latest('id')
+                            ->first();
+                    }
+
                     if ($deleg?->file_path) {
                         foreach (['public', 'local'] as $disk) {
                             if (Storage::disk($disk)->exists($deleg->file_path)) {
@@ -5393,15 +5412,14 @@ class PrescriptionController extends Controller
                        첨부가 아니라 동의 기록에 딸려 들어가(consents/guardian-id/…)
                        첨부 목록에서는 찾을 수 없다. 공단은 미성년 건에 보호자 신분증을
                        요구하므로 여기서 따로 꺼내 붙인다(2026-09-04 확정). */
-                    $gc = PrescriptionConsent::where('prescription_id', $prescription->id)
-                        ->whereNotNull('guardian_id_path')
-                        ->latest('id')
-                        ->first();
+                    /* 지난 서명을 다시 쓰는 건이면 그 서명을 받을 때 함께 올린
+                       신분증을 쓴다 (2026-09-26 지시) — 잣대는 DelegationGate 에 있다. */
+                    $gpath = \App\Support\DelegationGate::보호자신분증($prescription);
 
-                    if ($gc?->guardian_id_path) {
+                    if ($gpath) {
                         foreach (['public', 'local'] as $disk) {
-                            if (Storage::disk($disk)->exists($gc->guardian_id_path)) {
-                                $files[] = Storage::disk($disk)->path($gc->guardian_id_path);
+                            if (Storage::disk($disk)->exists($gpath)) {
+                                $files[] = Storage::disk($disk)->path($gpath);
                                 break;
                             }
                         }
