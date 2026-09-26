@@ -1248,17 +1248,25 @@ $calcDeposit  = $calcCopay;
 
              여태 이 자리에 「이 건은 따로 받습니다」라고 적혀 있었다 — 서명이 처방전
              단위라는 잘못된 판단이었다. 함께 바로잡는다. --}}
+        {{-- **여닫는 일은 화면이 한다** (2026-09-26 CASE 6 시험에서 찾음).
+
+             여기서 「위임이 필요한가」를 서버가 가리고 있었다. 그런데 화면을 열 때
+             유형이 비어 있으면 그 물음의 답이 「필요하다」라서(모르는 건은 받는 쪽으로
+             둔다), 처방외를 고른 뒤에도 이 안내가 남아 바로 옆 「위임 해당 없음」과
+             서로 어긋났다.
+
+             이제 서버는 **쓸 수 있는 지난 서명이 있는가**만 가리고, 보일지 말지는
+             옆 배지와 같은 잣대(renderDelegationNeed)로 화면이 정한다. --}}
         @php
-            $_지난서명 = \App\Support\DelegationGate::needed($prescription)
-                && ! \App\Support\DelegationGate::이건서명($prescription)
-                    ? \App\Support\DelegationGate::지난서명($prescription)
-                    : null;
+            $_지난서명 = ! \App\Support\DelegationGate::이건서명($prescription)
+                ? \App\Support\DelegationGate::지난서명($prescription)
+                : null;
             $_서명만료 = $_지난서명
                 ? \App\Support\DelegationGate::유효기간($_지난서명, $prescription->patient)
                 : null;
         @endphp
         @if($_지난서명)
-          <span style="align-self:center;display:inline-flex;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
+          <span id="prevSignNote" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
                 title="서명은 한 번 받으면 위임기간(최장 5년) 안에서 다시 사용합니다.&#10;위임장은 공단에 한 번 등록하고 그 기간 동안 그 한 장을 사용합니다.&#10;기간이 지나면 다시 받아야 합니다.">
             <span style="font-weight:600;">지난 서명을 사용합니다</span>
             <span style="font-size:10px;color:var(--text-muted);">{{ $_지난서명->prescription?->rx_number }} · {{ $_지난서명->responded_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif</span>
@@ -8099,6 +8107,20 @@ window.HELP_TOUR_STEPS = [
     try { 개인정보받아둠 = !!PRIVACY_STATE?.agreed; } catch (e) {}
     const still = document.getElementById('consentPrivacyStill');
     if (still) still.style.display = 개인정보받아둠 ? 'none' : '';
+
+    /* 「지난 서명을 사용합니다」도 같은 잣대로 여닫는다 (2026-09-26 CASE 6 시험).
+
+       서버가 그릴 때는 유형이 비어 있어 「위임이 필요하다」로 보이고, 그 뒤 처방외를
+       고르면 위임은 해당 없어진다. 두 안내를 각자 가리게 두었더니 처방외 건에서
+       「지난 서명을 사용합니다」와 「위임 해당 없음」이 나란히 서서 서로 어긋났다.
+
+       이 건에 서명을 직접 받았으면(agreed) 지난 서명을 쓸 일이 없으므로 물러난다. */
+    const 지난안내 = document.getElementById('prevSignNote');
+    if (지난안내) {
+      const 보일까 = 거래처있나 && bs && bs.needs_delegation
+                  && window.CONSENT_STATUS !== 'agreed';
+      지난안내.style.display = 보일까 ? 'inline-flex' : 'none';
+    }
   }
 
   /* ── 유형 × 자격 ───────────────────────────────────────────
