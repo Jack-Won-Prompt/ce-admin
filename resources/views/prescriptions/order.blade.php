@@ -1190,7 +1190,15 @@ $calcDeposit  = $calcCopay;
           </span>
           <span class="pib-chip" id="hdrPatientSub">
             @if($prescription->patient)
-              {{ $prescription->patient->birth_date?->format('Y-m-d') }} · 만 {{ $prescription->patient->age }}세
+              {{-- 생년월일은 가려진 주민번호에서도 센다 (2026-09-26 CASE 1 시험).
+                   birth_date 만 보던 때는 그 칸이 빈 거래처에서 「· 만 세」로 빈 채
+                   나와, 사람이 고장으로 읽었다. 둘 다 모르면 「생년월일 모름」이라 적는다. --}}
+              @php
+                  $_생일 = $prescription->patient->생년월일();
+                  $_나이 = $prescription->patient->age;
+                  $_조각 = array_filter([$_생일, $_나이 !== null ? '만 ' . $_나이 . '세' : null]);
+              @endphp
+              {{ $_조각 ? implode(' · ', $_조각) : '생년월일 모름' }}
             @else
               {{ $prescription->masked_resident_no_ocr ?? '-' }}
             @endif

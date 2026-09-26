@@ -368,9 +368,31 @@ class Patient extends Model
     }
 
 
+    /**
+     * 만 나이 — 화면에 보이는 값이다 (2026-09-26 CASE 1 시험에서 고침).
+     *
+     * 여태 `birth_date` 만 보았다. 그 칸이 비고 가려진 주민번호만 있는 거래처는
+     * 주문 화면 이름 옆이 「· 만 세」로 빈 채 나왔다 — 사람이 보면 고장으로 읽는다.
+     *
+     * 생년월일은 가려진 주민번호에서도 셀 수 있다(생년월일()). 그 셈은 처방전 조회와
+     * 모바일 검색이 이미 쓰는 것이라 새로 만드는 잣대가 아니다.
+     *
+     * **미성년 판단은 여기를 쓰지 않는다** — `is_minor` 는 `birth_date` 를 곧바로 보고,
+     * 모르면 미성년이라 단정하지 않는다(2026-09-07 결정). 그 결정은 그대로 둔다.
+     */
     public function getAgeAttribute(): ?int
     {
-        return $this->birth_date?->age;
+        if ($this->birth_date) {
+            return $this->birth_date->age;
+        }
+
+        $생일 = $this->생년월일();
+
+        try {
+            return $생일 ? \Illuminate\Support\Carbon::parse($생일)->age : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
