@@ -1832,11 +1832,12 @@ $calcDeposit  = $calcCopay;
           </div>
 
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-            @unless($prescription->order)
-              <div style="padding:10px 12px;background:var(--alert-50);border:1px solid var(--alert-200);border-radius:var(--radius);font-size:12px;color:#B54708;">
-                아직 주문이 없습니다. <b>주문 제품</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
-              </div>
-            @endunless
+            {{-- 이 안내는 화면을 열 때의 상태다. 주문을 만들면 걷어야 한다
+                 (2026-09-26 CASE 6 시험에서 찾음) — 여태 id 가 없어 걷지 못했고,
+                 주문을 만든 뒤에도 「아직 주문이 없습니다」가 남아 담당자가 멈췄다. --}}
+            <div id="payNoOrderNote" style="padding:10px 12px;background:var(--alert-50);border:1px solid var(--alert-200);border-radius:var(--radius);font-size:12px;color:#B54708;@if($prescription->order)display:none;@endif">
+              아직 주문이 없습니다. <b>주문 제품</b> 탭에서 주문을 만든 뒤에 보낼 수 있습니다.
+            </div>
             <div style="display:flex;justify-content:space-between;font-size:12px;">
               <span style="color:var(--text-muted);">결제 금액</span>
               <b id="payAmount" style="color:var(--primary);">{{ number_format($prescription->order?->total_amount ?? 0) }}원</b>
@@ -11203,6 +11204,15 @@ window.HELP_TOUR_STEPS = [
       switchToEditDeleteButtons(res.order_number, soNo);
       updateWwSoDisplay(res.order_number, soNo, currentSoType);
       injectVaButton(res.order_id);
+      /* 결제 전송 창을 이 주문에 맞춘다 (2026-09-26 CASE 6 시험에서 찾음).
+         여태 화면을 열 때의 상태 그대로여서, 주문을 만든 뒤에 이 창을 열면
+         「아직 주문이 없습니다」가 붉게 남고 전송 이력도 늘 비어 있었다. */
+      const 없다안내 = document.getElementById('payNoOrderNote');
+      if (없다안내) 없다안내.style.display = 'none';
+      if (res.order_id) {
+        PAY_INDEX_URL = PAY_INDEX_URL_FORM.replace('__ID__', res.order_id);
+        if (typeof loadPaymentLinks === 'function') loadPaymentLinks();
+      }
     }
   }
 
@@ -12738,7 +12748,10 @@ window.HELP_TOUR_STEPS = [
      둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
   const PAY_STATE      = @json($payState);
   const PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
-  const PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
+  /* 주문이 생기면 채운다 — const 로 두어 화면을 열 때의 null 이 그대로 굳었고,
+     주문을 만든 뒤에도 전송 이력이 늘 비어 보였다 (2026-09-26 CASE 6 시험에서 찾음). */
+  let PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
+  const PAY_INDEX_URL_FORM = @json(route('payment-links.index', ['order' => '__ID__']));
   const PAY_CANCEL_URL = @json(url('payment-links'));
 
   /* 창을 열 때 이미 보냈거나 받았다는 것을 한 번 알린다 (2026-09-14 지시).
