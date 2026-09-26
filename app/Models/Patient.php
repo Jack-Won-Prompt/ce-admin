@@ -324,6 +324,49 @@ class Patient extends Model
             $this->attributes['rrn_purpose'] = 'nhis_claim_form';
         }
     }
+    /**
+     * 생년월일 — 적혀 있으면 그것, 없으면 주민번호에서 푼다 (2026-09-26 지시).
+     *
+     * 모바일ㆍ앱에서 새로 등록한 환자는 주민번호만 암호로 들어가고 birth_date 칸은
+     * 비어 있다(setResidentNoAttribute 가 풀지 않는다). 그런데 환자 고르는 판과
+     * 처방전 조회는 생년월일로 사람을 가린다 — 화면에는 푼 값이 보이는데 그 값으로
+     * 찾으면 한 건도 안 나왔다. 규칙을 한 곳에 두고 세 자리가 이것을 읽는다.
+     *
+     * 있지도 않은 날은 내보내지 않는다 — 「1800-00-00」을 보여 주면 그것을 생년월일로
+     * 읽고 같은 사람이라 여긴다. 차라리 비어 있는 편이 낫다.
+     */
+    public function 생년월일(): ?string
+    {
+        if ($this->birth_date) {
+            return $this->birth_date->format('Y-m-d');
+        }
+
+        $masked = $this->masked_resident_no;
+
+        if (! $masked || ! preg_match('/^(\d{2})(\d{2})(\d{2})-([0-9])/', $masked, $m)) {
+            return null;
+        }
+
+        $century = match ($m[4]) {
+            '1', '2', '5', '6' => '19',
+            '3', '4', '7', '8' => '20',
+            '9', '0'           => '18',
+            default            => null,
+        };
+
+        if (! $century) {
+            return null;
+        }
+
+        $year = (int) "{$century}{$m[1]}";
+
+        if (! checkdate((int) $m[2], (int) $m[3], $year)) {
+            return null;
+        }
+
+        return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
+    }
+
 
     public function getAgeAttribute(): ?int
     {

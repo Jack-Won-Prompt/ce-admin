@@ -51,41 +51,13 @@ class PatientApiController extends Controller
     /**
      * 화면에 보일 생년월일.
      *
-     * 생년월일 칸이 비어 있는 자료가 많다 — 주민번호만 받아 둔 거래처가 그렇다.
-     * 그때는 가려 둔 주민번호 앞자리에서 짚는다. 뒷자리 첫 숫자가 어느 백 년인지를
-     * 말해 준다(1ㆍ2ㆍ5ㆍ6 은 1900년대, 3ㆍ4ㆍ7ㆍ8 은 2000년대, 9ㆍ0 은 1800년대).
-     * 원문을 풀지 않는다 — 가린 값만 읽는다.
+     * 규칙은 Patient::생년월일() 한 곳에 있다 (2026-09-26 옮김). 처방전 조회도
+     * 같은 값으로 사람을 가려야 해서 모았다 — 두 벌로 두면 한쪽만 고쳐지고,
+     * 실제로 그렇게 되어 조회가 한 건도 찾지 못했다.
      */
     private function birthOf(Patient $p): ?string
     {
-        if ($p->birth_date) {
-            return $p->birth_date->format('Y-m-d');
-        }
-
-        $masked = $p->masked_resident_no;
-        if (! $masked || ! preg_match('/^(\d{2})(\d{2})(\d{2})-([0-9])/', $masked, $m)) {
-            return null;
-        }
-
-        $century = match ($m[4]) {
-            '1', '2', '5', '6' => '19',
-            '3', '4', '7', '8' => '20',
-            '9', '0'           => '18',
-            default            => null,
-        };
-
-        if (! $century) {
-            return null;
-        }
-
-        /* 있지도 않은 날짜는 내보내지 않는다 — 「1800-00-00」을 보여 주면 담당자가
-           그걸 생년월일로 읽고 같은 사람이라 여긴다. 차라리 비어 있는 편이 낫다. */
-        $year = (int) "{$century}{$m[1]}";
-        if (! checkdate((int) $m[2], (int) $m[3], $year)) {
-            return null;
-        }
-
-        return sprintf('%04d-%02d-%02d', $year, (int) $m[2], (int) $m[3]);
+        return $p->생년월일();
     }
 
     // ── POST /api/patients ────────────────────────────────

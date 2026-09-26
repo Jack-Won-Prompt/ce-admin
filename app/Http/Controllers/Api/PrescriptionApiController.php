@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 use App\Events\PrescriptionUploaded;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessPrescriptionOcr;
+use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionAttachment;
 use App\Support\UploadDocTypes;
@@ -475,12 +476,36 @@ class PrescriptionApiController extends Controller
         $이름 = trim($request->input('name'));
         $생일 = $request->input('birth');
 
-        $건들 = Prescription::with(['patient', 'creator'])
+        /* 이름과 생년월일을 **무르게** 견준다 (2026-09-26 지시).
+
+           여태 `where('name', $이름)` + `whereDate('birth_date', $생일)` 이었다. 둘 다
+           막혔다:
+
+             · 이름 — 주문 등록을 거치면 「(E)강태민」이 된다(End User 표시). 사람은
+               「강태민」이라 치므로 정확히 일치로는 한 건도 안 나왔다.
+             · 생년월일 — 모바일ㆍ앱에서 등록한 환자는 birth_date 칸이 비어 있다.
+               화면에는 주민번호에서 푼 값(1976-03-15)이 보이는데, 그 값으로 찾으면
+               DB 의 빈 칸과 견주어 0건이었다.
+
+           그래서 **모바일에서 등록한 건은 처방전 조회로 아예 찾을 수 없었다** — 남이
+           올린 건에 서류를 보태는 길이 통째로 막혀 있었다.
+
+           이름으로 후보를 먼저 좁히고(붙임표ㆍ(E)ㆍ빈칸을 뗀 뒤 견준다), 생년월일은
+           Patient::생년월일() 이 푼 값으로 가린다. 후보는 이름으로 이미 좁아 몇 건뿐이다. */
+        $납작 = fn (?string $v) => preg_replace('/\s+/u', '', (string) Patient::bare($v));
+        $찾는이름 = $납작($이름);
+
+        $후보 = Prescription::with(['patient', 'creator'])
             ->whereIn('status', Prescription::UPLOADER_EDITABLE_STATUSES)
-            ->whereHas('patient', fn ($q) => $q->where('name', $이름)->whereDate('birth_date', $생일))
+            ->whereHas('patient', fn ($q) => $q->where('name', 'like', '%' . $찾는이름 . '%'))
             ->latest()
-            ->take(20)
+            ->take(200)
             ->get();
+
+        $건들 = $후보->filter(function (Prescription $p) use ($납작, $찾는이름, $생일) {
+            return $납작($p->patient?->name) === $찾는이름
+                && $p->patient?->생년월일() === $생일;
+        })->take(20)->values();
 
         try {
             activity()->causedBy(auth()->user())
@@ -495,7 +520,7 @@ class PrescriptionApiController extends Controller
                 'status'       => $p->status,
                 'status_label' => $p->status_label,
                 'patient_name' => $p->patient?->name ?? $p->patient_name_ocr,
-                'birth_date'   => $p->patient?->birth_date?->format('Y-m-d'),
+                'birth_date'   => $p->patient?->생년월일(),
                 'hospital'     => $p->hospital_name,
                 'disease_name' => $p->disease_name,
                 'file_count'   => $p->attachments()->count() + ($p->image_path ? 1 : 0),
