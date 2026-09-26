@@ -77,7 +77,7 @@ window.HELP_TOUR_STEPS = [
   }
   .att-fax-bd { flex: 1; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
   .att-fax-row {
-    display: grid; grid-template-columns: 16px 92px 1fr auto; align-items: center; gap: 7px;
+    display: grid; grid-template-columns: 16px 92px 1fr auto auto; align-items: center; gap: 7px;
     padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius);
     font-size: 11.5px; cursor: pointer; background: var(--bg-card);
   }
@@ -87,6 +87,37 @@ window.HELP_TOUR_STEPS = [
   .att-fax-row.is-off:hover { border-color: var(--border); }
   .att-fax-lb { font-weight: 700; }
   .att-fax-nm { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* 줄 아래의 미리보기 (2026-09-26 지시).
+
+     팩스는 되돌릴 수 없다. 이름만 보고 골라 엉뚱한 장을 보낸 뒤에는 「보낸 것을
+     돌려받을 수」가 없다 — 무엇을 보내는지 눈으로 보고 고르게 한다.
+
+     한 줄에 한 칸씩 접어 둔다. 스무 장이 한꺼번에 펼쳐지면 목록이 아니라 앨범이
+     되고, 그림을 다 받아 오느라 창이 늦게 뜬다. */
+  .att-fax-item { display: flex; flex-direction: column; gap: 4px; }
+  .att-fax-pv {
+    display: none; margin: 0 8px 4px; padding: 6px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--bg);
+  }
+  .att-fax-item.is-open .att-fax-pv { display: block; }
+  .att-fax-pv img {
+    display: block; max-width: 100%; max-height: 300px; margin: 0 auto;
+    border-radius: 4px; background: #fff;
+  }
+  .att-fax-pv-none { font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px 0; }
+  .att-fax-pv-open {
+    display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700;
+    color: var(--primary); text-decoration: underline;
+  }
+  /* 미리보기를 여닫는 단추 — 고르기(체크)와 헷갈리지 않게 칸을 따로 둔다 */
+  .att-fax-eye {
+    justify-self: end; border: 1px solid var(--border); background: var(--bg-card);
+    border-radius: 6px; padding: 1px 7px; font-size: 10.5px; font-weight: 700;
+    color: var(--text-muted); cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .att-fax-eye:hover { border-color: var(--primary); color: var(--primary); }
+  .att-fax-eye[disabled] { opacity: .45; cursor: default; }
   /* 미리 만들어 둔 파일이 없는 서식 — 발송할 때 그려 넣는다 */
   .att-fax-auto {
     justify-self: start; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
@@ -633,15 +664,48 @@ window.HELP_TOUR_STEPS = [
             ? `<span class="att-fax-why">${dsEsc(r.why)}</span>`
             : (r.auto ? '<span class="att-fax-auto">자동 생성</span>'
                       : `<span class="att-fax-nm">${dsEsc(r.name || '')}</span>`);
+          /* 미리보기 단추 — 볼 파일이 있는 줄에만 세운다. 없는 줄은 왜 없는지를
+             단추 자리에 적어 둔다(「보낼 때 그림」) — 빈 자리는 고장으로 읽힌다. */
+          const 눈 = r.preview
+            ? `<button type="button" class="att-fax-eye" data-pv="${i}">미리보기</button>`
+            : `<button type="button" class="att-fax-eye" disabled title="${r.auto ? '보낼 때 그려 넣는 서식이라 미리 볼 파일이 없습니다' : '볼 파일이 없습니다'}">${r.auto ? '보낼 때 그림' : '—'}</button>`;
           return `
+      <div class="att-fax-item" data-item="${i}">
         <label class="att-fax-row${r.ok ? '' : ' is-off'}">
           <input type="checkbox" data-i="${i}" ${r.ok ? '' : 'disabled'}>
           <span class="att-fax-lb">${dsEsc(r.label)}${r.made ? ' <span style="font-size:10px;font-weight:600;color:var(--primary);border:1px solid var(--primary-200);background:var(--primary-50);border-radius:6px;padding:0 4px;margin-left:4px;">생성</span>' : ''}</span>
           ${가운데}
           <span class="att-fax-at">${dsEsc(r.at || '')}</span>
-        </label>`;
+          ${눈}
+        </label>
+        <div class="att-fax-pv" data-pvbox="${i}"></div>
+      </div>`;
         }).join('')
       : '<div class="att-fax-empty">발송할 수 있는 서류가 없습니다.</div>';
+
+    /* 미리보기는 **누를 때** 받아 온다 — 창을 열 때 스무 장을 함께 받으면 늦다.
+       한 번 받은 것은 그대로 두어 다시 열 때 기다리지 않는다. */
+    list.querySelectorAll('.att-fax-eye[data-pv]').forEach(단추 => {
+      단추.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();          // 줄 전체가 label 이라 체크가 함께 눌린다
+        const i   = Number(단추.dataset.pv);
+        const 줄  = list.querySelector(`[data-item="${i}"]`);
+        const 칸  = list.querySelector(`[data-pvbox="${i}"]`);
+        const r   = _attRows[i];
+        const 열림 = 줄.classList.toggle('is-open');
+        단추.textContent = 열림 ? '닫기' : '미리보기';
+        if (!열림 || 칸.dataset.done) return;
+
+        칸.dataset.done = '1';
+        칸.innerHTML = r.preview_kind === 'image'
+          ? `<img src="${dsEsc(r.preview)}" alt="${dsEsc(r.label)} 미리보기"
+                  onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'att-fax-pv-none',textContent:'그림을 불러오지 못했습니다.'}))">`
+          : `<div class="att-fax-pv-none">PDF 는 이 자리에 펼치지 않습니다 — 새 창에서 확인하십시오.</div>`;
+        칸.insertAdjacentHTML('beforeend',
+          `<a class="att-fax-pv-open" href="${dsEsc(r.preview)}" target="_blank" rel="noopener">새 창에서 크게 보기</a>`);
+      };
+    });
 
     _attPop.querySelector('#attFaxSend').disabled = !!d.blocked;
   }

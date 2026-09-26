@@ -221,6 +221,10 @@ class OrderController extends Controller
                 'auto'  => false,
                 'ok'    => $그림,
                 'why'   => $그림 ? '' : 'PDF 는 팩스 통합본에 포함되지 않습니다',
+                /* 무엇을 보내는지 눈으로 확인한다 (2026-09-26 지시).
+                   팩스는 되돌릴 수 없다 — 이름만 보고 고르면 엉뚱한 장이 나간다. */
+                'preview'      => route('files.prescription-attachment', $att),
+                'preview_kind' => $그림 ? 'image' : 'pdf',
             ];
         }
 
@@ -243,6 +247,8 @@ class OrderController extends Controller
             'auto'  => false,
             'ok'    => (bool) $rx->image_path,
             'why'   => $rx->image_path ? '' : '처방전 이미지가 없습니다',
+            'preview'      => $rx->image_path ? route('files.prescription-image', $rx) : null,
+            'preview_kind' => $rx->image_path ? 'image' : null,
         ];
 
         /* 보낼 때 그려 넣는 서식들 — 미리 만들어 둔 파일이 없다.
@@ -255,7 +261,16 @@ class OrderController extends Controller
             ['cash_receipt',     '현금영수증',    $order->cash_receipt_status === 'issued',    '아직 발행되지 않았습니다'],
         ];
 
+        /* 이미 발행한 증빙은 미리 볼 길이 있다 — 그 주소를 함께 준다.
+           나머지(위임장ㆍ구매내역)는 보낼 때 그리는 것이라 미리 볼 파일이 없다. */
+        $미리볼것 = [
+            'tax_invoice' => fn () => route('orders.taxInvoicePreview', $order),
+            'cash_receipt' => fn () => route('orders.cashReceiptPreview', $order),
+        ];
+
         foreach ($만드는것 as [$code, $label, $있다, $까닭]) {
+            $길 = ($있다 && isset($미리볼것[$code])) ? ($미리볼것[$code])() : null;
+
             $rows[] = [
                 'kind'  => 'doc',
                 'code'  => $code,
@@ -265,6 +280,8 @@ class OrderController extends Controller
                 'auto'  => true,
                 'ok'    => $있다,
                 'why'   => $있다 ? '' : $까닭,
+                'preview'      => $길,
+                'preview_kind' => $길 ? 'pdf' : null,
             ];
         }
 
