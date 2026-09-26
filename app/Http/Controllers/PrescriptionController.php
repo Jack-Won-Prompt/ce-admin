@@ -3232,7 +3232,22 @@ class PrescriptionController extends Controller
             if ($request->filled('patient_name_ocr')) $patientUpdates['name']        = $request->patient_name_ocr;
             if ($request->filled('resident_no_ocr'))  $patientUpdates['resident_no'] = $request->resident_no_ocr;
             if ($request->filled('mobile_ocr'))       $patientUpdates['mobile']      = $request->mobile_ocr;
-            if ($request->filled('address_ocr'))      $patientUpdates['address']     = $request->address_ocr;
+            /* 주소는 세 칸이 한 덩어리다 (2026-09-26 시험에서 찾음).
+
+               여태 도로명만 거래처에 옮겨 적었다. 그래서 주소를 골라 저장해도 거래처에는
+               우편번호와 상세주소가 남지 않았고, 두 가지 일이 뒤따랐다.
+
+                 · 거래처 관리ㆍ서류가 반쪽 주소를 보인다 — 다음 건에서 또 골라야 한다
+                 · 주소 이력(Patient::saved)이 도로명만 바뀐 것을 보고, 우편번호와
+                   상세주소가 빈 줄을 하나 더 쌓는다
+
+               셋을 함께 옮긴다. 상세주소는 빈 값도 그대로 쓴다 — 상세주소가 없는
+               주소로 바꾸었는데 옛 층ㆍ호가 남으면 물건이 엉뚱한 곳으로 간다. */
+            if ($request->filled('address_ocr')) {
+                $patientUpdates['address']        = $request->address_ocr;
+                $patientUpdates['postcode']       = $request->input('postcode');
+                $patientUpdates['address_detail'] = $request->input('address_detail');
+            }
 
             /* 생년월일·성별은 주민번호 앞 7자리에서 나온다(P0-1 — 원문을 열지 않는다).
                담당자가 따로 입력하는 칸이 아니라서, 채워 두지 않으면 거래처 관리 그리드의
