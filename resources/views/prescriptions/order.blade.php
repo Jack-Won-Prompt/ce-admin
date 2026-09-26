@@ -1237,6 +1237,38 @@ $calcDeposit  = $calcCopay;
           </button>
         </div>
         <div id="consentResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;"></div>
+        {{-- 지난 건에 서명이 있으면 그 사실을 적어 둔다 (2026-09-26 확인사항 5번).
+
+             위임 서명은 **처방전마다** 받는다 — 공단에 내는 서류가 처방전 단위이고,
+             DelegationGate::signed() 도 이 건의 동의만 본다. 그래서 지난달에 서명한
+             사람이라도 새 건에서는 단추가 「서명 동의」로 선다.
+
+             그것이 맞는데, 담당자 눈에는 「이 사람은 지난달에 했는데 또?」로 보인다.
+             지난 서명을 찾아 적어 두면 그 물음이 화면에서 끝난다 — 적지 않으면 옛
+             건을 뒤져 보고 나서야 알 수 있다. --}}
+        @php
+            $_지난서명 = null;
+            if (\App\Support\DelegationGate::needed($prescription)
+                && ! \App\Support\DelegationGate::signed($prescription)
+                && $prescription->patient_id) {
+                $_지난서명 = \App\Models\PrescriptionConsent::query()
+                    ->whereHas('prescription', fn ($q) => $q->where('patient_id', $prescription->patient_id)
+                                                            ->where('id', '!=', $prescription->id))
+                    ->where('status', 'agreed')
+                    ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'id_card'))
+                    ->whereNotNull('signature_data')->where('signature_data', '!=', '')
+                    ->with('prescription:id,rx_number')
+                    ->latest('responded_at')
+                    ->first();
+            }
+        @endphp
+        @if($_지난서명)
+          <span style="align-self:center;display:inline-flex;flex-direction:column;gap:1px;font-size:11px;color:var(--text-muted);white-space:nowrap;"
+                title="위임 서명은 처방전마다 받습니다 — 공단에 내는 서류가 처방전 단위이기 때문입니다.&#10;지난 건의 서명은 이 건에 쓸 수 없습니다.">
+            <span>지난 건에 서명 있음</span>
+            <span style="font-size:10px;">{{ $_지난서명->prescription?->rx_number }} · {{ $_지난서명->responded_at?->format('Y-m-d') }} — 이 건은 따로 받습니다</span>
+          </span>
+        @endif
         {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
              단추는 그대로 두고 받지 않아도 되는 건이라는 것만 옆에 적는다. --}}
         <span id="consentNotNeeded" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--text-muted);white-space:nowrap;"
