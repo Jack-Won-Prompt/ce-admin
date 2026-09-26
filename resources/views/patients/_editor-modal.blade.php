@@ -810,7 +810,8 @@
     const 목록 = 겹친것.map(p => `· ${p.name} (${p.mobile || p.phone || ''})`).join('\n');
 
     return await ceConfirm(
-      '동일한 전화번호가 있습니다. 확인한 뒤 저장해 주십시오.' + 목록,
+      /* 줄을 띄우지 않으면 첫 사람이 문장에 붙어 「…주십시오.· 홍길동」 으로 나온다 */
+      '동일한 전화번호가 있습니다. 확인한 뒤 저장해 주십시오.' + String.fromCharCode(10, 10) + 목록,
       { title: '같은 전화번호가 있습니다', tone: 'warning',
         confirmText: '확인했습니다 · 저장', cancelText: '다시 보기' });
   }
