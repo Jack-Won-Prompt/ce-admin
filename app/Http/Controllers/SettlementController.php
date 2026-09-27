@@ -158,7 +158,12 @@ class SettlementController extends Controller
            붙어, 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 모아 둔다. */
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
-        $data = $orders->map(function ($order) use ($nhisMap, $extras) {
+        /* 정정으로 물러난 줄 — 「원 주문 / 취소」를 지금 값 아래에 편다
+           (2026-09-27 지시 · 확인사항 20). 정산은 얼마가 오갔는지를 세는 자리라,
+           제자리에서 고쳐진 한 줄만 보면 받은 돈과 무른 돈이 서로 지워진다. */
+        $정정 = \App\Support\OrderAmendLines::모으기($orders);
+
+        $data = $orders->flatMap(function ($order) use ($nhisMap, $extras, $정정) {
             $tp = $order->tossPayment;
 
             /* 토스가 확인했든 담당자가 통장을 보고 확인했든 「들어왔다」는 하나다.
@@ -173,7 +178,7 @@ class SettlementController extends Controller
 
             $sl = ['label' => $order->status_label, 'badge' => $order->status_badge];
 
-            return [
+            $줄 = [
                 'id'           => $order->id,
                 'order_no'     => $order->order_number,
                 'patient'      => $order->patient?->name ?? '-',
@@ -237,6 +242,59 @@ class SettlementController extends Controller
             ] + $extras->rx($order->prescription, $order->patient)
               + $extras->ww($order, $order->prescription, $order->patient)
               + $extras->of($order);
+
+            $폄 = [$줄];
+
+            /* 물러난 줄에는 **id 를 싣지 않는다** — 마감 확정ㆍ입금 확인 같은 단추가
+               지난 금액에 걸리면 안 된다. 단추가 읽는 값(deposit_done·settle_key 따위)도
+               비워 둔다.
+
+               증빙 번호는 그때 낸 것을 적되 **보기 주소는 달지 않는다**(tax_url·cash_url
+               null) — 그 계산서는 이미 물러났고, 지금 파일은 새로 낸 것이다.
+               번호만 있으면 어느 것이 물러났는지 가릴 수 있다. */
+            foreach ($정정->get($order->id, collect()) as $a) {
+                $금액 = (int) $a->patient_copay + (int) $a->nhis_amount;
+
+                $물러난값 = [
+                    'id'            => null,
+                    'product'       => $a->product_name ?? '-',
+                    'unit_price'    => (int) $a->unit_price,
+                    'va_state'      => '-',
+                    'pay_method'    => '-',
+                    'deposit'       => '-',
+                    'deposited_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '-',
+                    'deposit_done'  => false,
+                    'deposit_hand'  => false,
+                    'deposit_due'   => 0,
+                    'so_pending_cancel' => '-',
+                    'settle'        => '-',
+                    'settle_key'    => '',
+                    'settle_reason' => $a->reason ?? '',
+                    'tax_issued'    => false,
+                    'tax_no'        => (string) ($a->tax_invoice_no ?? ''),
+                    'tax_url'       => null,
+                    'cash_issued'   => false,
+                    'cash_no'       => (string) ($a->cash_receipt_no ?? ''),
+                    'cash_url'      => null,
+                    'ww_so_no'      => $a->withworks_so_no ?? '',
+                ];
+
+                $폄[] = ['status'       => \App\Support\OrderAmendLines::원주문말($a),
+                         'status_key'   => '',
+                         'total_amount' => $금액,
+                         'nhis_amount'  => (int) $a->nhis_amount,
+                         'copay'        => (int) $a->patient_copay]
+                      + $물러난값 + $줄;
+
+                $폄[] = ['status'       => \App\Support\OrderAmendLines::취소말($a),
+                         'status_key'   => '',
+                         'total_amount' => -$금액,
+                         'nhis_amount'  => -(int) $a->nhis_amount,
+                         'copay'        => -(int) $a->patient_copay]
+                      + $물러난값 + $줄;
+            }
+
+            return $폄;
         })->values();
 
         $columns = [

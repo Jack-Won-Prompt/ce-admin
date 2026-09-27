@@ -140,8 +140,13 @@ class NhisController extends Controller
         $rows   = $query->get();
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
 
+        /* 정정으로 물러난 줄 — 「원 주문 / 취소」를 지금 값 아래에 편다
+           (2026-09-27 지시 · 확인사항 20). 정정은 주문을 제자리에서 고쳐 한 줄만
+           서므로, 그것만으로는 공단에 얼마를 청구했다가 얼마로 바꿨는지 알 수 없다. */
+        $정정 = \App\Support\OrderAmendLines::모으기($rows);
+
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
-        $gridData = $rows->map(function ($o) use ($nhisStatusLabels, $extras) {
+        $gridData = $rows->flatMap(function ($o) use ($nhisStatusLabels, $extras, $정정) {
             // 승인/거부 결과 텍스트
             if ($o->nhis_claim_status === 'approved') {
                 $result = number_format((int) $o->nhis_reimbursement) . '원';
@@ -151,7 +156,7 @@ class NhisController extends Controller
                 $result = '-';
             }
 
-            return [
+            $줄 = [
                 'id'           => $o->id,
                 'order_no'     => $o->order_number ?? '',
                 'patient'      => $o->patient?->name ?? '',
@@ -214,6 +219,42 @@ class NhisController extends Controller
             ] + $extras->rx($o->prescription, $o->patient)
               + $extras->ww($o, $o->prescription, $o->patient)
               + $extras->of($o);
+
+            $폄 = [$줄];
+
+            /* 물러난 줄에는 **id 를 싣지 않는다.** 겹쳐 누르면 이미 지난 금액으로
+               청구가 나간다 — 화면의 두 번 누르기(dblclick)도 `row.id` 가 없으면
+               그냥 지나간다. 청구 단추ㆍ상세도 같은 값을 본다.
+
+               증빙 번호는 그때 낸 것을 그대로 적는다(확인사항 20 「증빙도 확인
+               가능한지」) — 어느 계산서가 물러난 것인지 이 줄에서 바로 읽힌다. */
+            foreach ($정정->get($o->id, collect()) as $a) {
+                $물러난값 = [
+                    'id'            => null,
+                    'product'       => $a->product_name ?? '',
+                    'submitted_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '',
+                    'claim_due'     => '',
+                    'claim_dday'    => '',
+                    'reject_reason' => $a->reason ?? '',
+                    'reject_stage'  => '',
+                    'result'        => '-',
+                    'tax_no'        => (string) ($a->tax_invoice_no ?? ''),
+                    'cash_no'       => (string) ($a->cash_receipt_no ?? ''),
+                    'ww_so_no'      => $a->withworks_so_no ?? '',
+                ];
+
+                $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::원주문말($a),
+                         'nhis_amount'   => (int) $a->nhis_amount,
+                         'patient_copay' => (int) $a->patient_copay]
+                      + $물러난값 + $줄;
+
+                $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::취소말($a),
+                         'nhis_amount'   => -(int) $a->nhis_amount,
+                         'patient_copay' => -(int) $a->patient_copay]
+                      + $물러난값 + $줄;
+            }
+
+            return $폄;
         })->values();
 
         $total = $gridData->count();
