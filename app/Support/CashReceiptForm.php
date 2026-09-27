@@ -130,7 +130,8 @@ final class CashReceiptForm
                 'sentAt'      => '-',
                 'approvalNo'  => (string) ($order->cash_receipt_no ?? ''),
 
-                'buyer'       => (string) ($order->patient?->name ?? ''),
+                /* 환자에게 주는 증빙이다 — 「(E)」를 뗀다 (2026-09-27 지시) */
+                'buyer'       => \App\Models\Patient::bare($order->patient?->name),
                 'orderNo'     => (string) $order->order_number,
                 'productName' => (string) ($order->product_name ?: ''),
 

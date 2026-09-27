@@ -94,7 +94,7 @@ final class MedicalAidClaimForm
 
         try {
             $pdf  = self::render($order);
-            $name = '요양비지급청구서_' . ($order->patient?->name ?? '') . '_' . $order->order_number . '.pdf';
+            $name = '요양비지급청구서_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $order->order_number . '.pdf';
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('mac_') . '.pdf';
 
             Storage::disk('public')->put($path, $pdf);

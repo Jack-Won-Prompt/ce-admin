@@ -83,7 +83,7 @@ final class CardSalesSlip
                 return null;
             }
 
-            $name = '카드매출전표_' . ($order->patient?->name ?? '') . '_' . $order->order_number . '.pdf';
+            $name = '카드매출전표_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $order->order_number . '.pdf';
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('cs_') . '.pdf';
 
             \Illuminate\Support\Facades\Storage::disk('public')->put($path, $pdf);
@@ -139,7 +139,8 @@ final class CardSalesSlip
                 'install'    => $months > 0 ? $months . '개월' : '일시불',
                 'cardType'   => $dash($card['cardType'] ?? null),
 
-                'buyer'       => (string) ($order->patient?->name ?? ''),
+                /* 환자에게 주는 증빙이다 — 「(E)」를 뗀다 (2026-09-27 지시) */
+                'buyer'       => \App\Models\Patient::bare($order->patient?->name),
                 'orderNo'     => (string) $order->order_number,
                 'productName' => (string) ($order->product_name ?: ''),
 

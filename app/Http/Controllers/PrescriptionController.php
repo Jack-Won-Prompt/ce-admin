@@ -3517,7 +3517,10 @@ class PrescriptionController extends Controller
                 return;
             }
 
-            $이름 = $prescription->patient?->name ?? '이름 없음';
+            /* 「(E)」는 어디에도 내지 않는다 (2026-09-27 지시). 이 알림은 담당자에게
+               가는 안쪽 글이지만, 자리마다 다르게 두면 어디가 안이고 어디가 밖인지를
+               매번 다시 가려야 한다 — 한 가지로 맞춘다. */
+            $이름 = \App\Models\Patient::bare($prescription->patient?->name) ?: '이름 없음';
             $값   = ['#{처방번호}' => (string) $prescription->rx_number,
                      '#{고객명}'   => $이름,
                      '#{사유}'     => $사유,

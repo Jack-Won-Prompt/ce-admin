@@ -361,7 +361,9 @@ class NhisController extends Controller
             "  사업자번호  : {$inst['biz_no']}",
             '',
             '■ 환자 정보',
-            "  환자명      : {$patient?->name}",
+            /* 공단 사이트에 옮겨 적는 글이다 — 「(E)」를 뗀다 (2026-09-27 지시).
+               그대로 복사해 붙이는 자리라, 붙은 채로 나가면 공단 자료에 남는다. */
+            '  환자명      : ' . (\App\Models\Patient::bare($patient?->name) ?: ''),
             "  주민번호    : {$patient?->masked_resident_no}",
             "  건강보험번호: {$patient?->health_insurance_no}",
             '',
