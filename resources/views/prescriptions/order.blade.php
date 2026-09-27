@@ -1098,6 +1098,17 @@
                  color:var(--gray-600); cursor:pointer; }
   .rx-tpl-mini:hover { border-color:var(--primary); color:var(--primary); }
 
+  /* ── 팝오버가 화면 밖으로 자라지 않게 (2026-09-27 지시) ──────────
+     SMSㆍ알림톡 창은 메시지 유형을 모두 늘어놓는다. 문구를 message_templates 에
+     더할수록 창이 길어져, 열 몇 가지가 되자 창 끝이 화면 아래로 넘어갔다 —
+     수신 번호와 발송 단추를 보려면 **화면 전체를 굴려야** 했고, 굴리면 창이 붙어
+     있는 단추도 함께 올라가 자리를 잃는다.
+
+     머리(제목줄)는 붙여 두고 몸만 구르게 한다. 유형 목록은 따로 한 번 더 가둔다 —
+     목록이 몸을 다 차지하면 아래 칸들이 또 밀려난다. */
+  .pib-pop-body { max-height: calc(100vh - 210px); overflow-y: auto; overscroll-behavior: contain; }
+  .pib-tpl-list { max-height: 210px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+
   /* ── 크게 보기 창 ────────────────────────────────────────
      덮개가 없다. 이 창 밖은 그대로 눌리고 입력된다.
      z-index 900 — 모달(1000 이상)보다 아래라 모달이 뜨면 그 밑으로 들어간다. */
@@ -1657,7 +1668,7 @@ $calcDeposit  = $calcCopay;
             @endif
             <button onclick="closeKakaoPopover()" style="background:none;border:none;cursor:pointer;color:#191919;font-size:15px;line-height:1;">×</button>
           </div>
-          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+          <div class="pib-pop-body" style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
                 <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">메시지 유형 선택</div>
@@ -1665,7 +1676,7 @@ $calcDeposit  = $calcCopay;
                 <button type="button" class="rx-tpl-mini" onclick="rxTplNew('alimtalk')">+ 추가</button>
                 @endperm
               </div>
-              <div style="display:flex;flex-direction:column;gap:4px;" id="kakaoTemplateList">
+              <div class="pib-tpl-list" style="display:flex;flex-direction:column;gap:4px;" id="kakaoTemplateList">
                 @foreach($kakaoTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
                        class="kakao-tpl-item" data-code="{{ $code }}"
@@ -1743,7 +1754,7 @@ $calcDeposit  = $calcCopay;
             <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">SMS 알림 발송</span>
             <button onclick="closeSmsPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:15px;line-height:1;">×</button>
           </div>
-          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+          <div class="pib-pop-body" style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div>
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
                 <div style="font-size:11px;font-weight:500;color:var(--text-muted);flex:1;">메시지 유형 선택</div>
@@ -1751,7 +1762,7 @@ $calcDeposit  = $calcCopay;
                 <button type="button" class="rx-tpl-mini" onclick="rxTplNew('sms')">+ 추가</button>
                 @endperm
               </div>
-              <div style="display:flex;flex-direction:column;gap:4px;" id="smsTemplateList">
+              <div class="pib-tpl-list" style="display:flex;flex-direction:column;gap:4px;" id="smsTemplateList">
                 @foreach($smsTemplates as $code => $tpl)
                 <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:12px;transition:var(--transition);"
                        class="sms-tpl-item" data-code="{{ $code }}" data-text="{{ addslashes($tpl['text']) }}"
