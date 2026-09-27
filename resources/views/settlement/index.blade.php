@@ -831,6 +831,11 @@
       () => openProofModal(row, 'tax'),  '발행된 세금계산서가 없습니다'));
     box.appendChild(proofBtn('현금영수증', !!row.cash_issued,
       () => openProofModal(row, 'cash'), '발행된 현금영수증이 없습니다'));
+    /* 카드매출전표 — 카드로 받은 건의 증빙이다 (2026-09-27 확인요청 9쪽).
+       세금계산서ㆍ현금영수증은 팝업으로 펼치지만 전표는 PDF 파일이라 새 탭으로 연다. */
+    box.appendChild(proofBtn('카드매출전표', !!row.card_issued,
+      () => window.open(row.card_url, '_blank', 'noopener'),
+      '카드로 받은 건이 아니거나 전표가 아직 없습니다'));
     return box;
   }
 

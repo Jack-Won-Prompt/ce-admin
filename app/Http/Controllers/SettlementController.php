@@ -171,7 +171,21 @@ class SettlementController extends Controller
            제자리에서 고쳐진 한 줄만 보면 받은 돈과 무른 돈이 서로 지워진다. */
         $정정 = \App\Support\OrderAmendLines::모으기($orders);
 
-        $data = $orders->flatMap(function ($order) use ($nhisMap, $extras, $정정) {
+        /* 카드매출전표 — 카드로 받은 건의 증빙이다 (2026-09-27 확인요청 9쪽).
+
+           증빙 칸에 세금계산서와 현금영수증만 서 있었다. 카드 건은 현금영수증이
+           나가지 않으므로(카드매출전표가 그 자리다) 두 단추가 모두 흐린 채였고,
+           담당자는 「증빙이 하나도 없다」로 읽었다.
+
+           전표는 첨부(PrescriptionAttachment)에 담긴다. 줄마다 물으면 서른 줄에
+           서른 번이라 한 번에 모은다 — 정정 줄과 같은 방식이다. */
+        $전표 = \App\Models\PrescriptionAttachment::query()
+            ->whereIn('prescription_id', $orders->pluck('prescription_id')->filter()->unique())
+            ->where('doc_type', 'card_sales')
+            ->get()
+            ->keyBy('prescription_id');
+
+        $data = $orders->flatMap(function ($order) use ($nhisMap, $extras, $정정, $전표) {
             $tp = $order->tossPayment;
 
             /* 토스가 확인했든 담당자가 통장을 보고 확인했든 「들어왔다」는 하나다.
@@ -237,6 +251,12 @@ class SettlementController extends Controller
                 'cash_no'      => (string) ($order->cash_receipt_no ?? ''),
                 'cash_url'     => $order->cash_receipt_status === 'issued'
                                     ? route('orders.cashReceiptPreview', $order) : null,
+                /* 카드매출전표 — 카드 건의 증빙 (2026-09-27 확인요청 9쪽) */
+                'card_issued'  => (bool) ($전표[$order->prescription_id] ?? null),
+                'card_no'      => (string) ($order->tossPayment?->raw_response['card']['approveNo'] ?? ''),
+                'card_url'     => ($것 = $전표[$order->prescription_id] ?? null)
+                                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($것->file_path)
+                                    : null,
                 'nhis_claim'   => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
                 'created'      => $order->created_at?->format('Y-m-d') ?? '-',
                 // 상세 팝오버 URL (컬럼 아님 — 외부 버튼에서 사용)
@@ -287,6 +307,10 @@ class SettlementController extends Controller
                     'cash_issued'   => false,
                     'cash_no'       => (string) ($a->cash_receipt_no ?? ''),
                     'cash_url'      => null,
+                    /* 물러난 줄에는 전표를 달지 않는다 — 지금 파일은 새로 그린 것이다 */
+                    'card_issued'   => false,
+                    'card_no'       => '',
+                    'card_url'      => null,
                     'ww_so_no'      => $a->withworks_so_no ?? '',
                 ];
 
@@ -326,7 +350,9 @@ class SettlementController extends Controller
             /* 취소를 청해 두고 창고가 아직 되돌리지 않은 판매주문 (2026-09-20 지시) */
             ['header' => '취소 대기 판매번호', 'name' => 'so_pending_cancel', 'width' => 180, 'align' => 'center'],
             // 발행된 세금계산서ㆍ현금영수증을 그 자리에서 펼쳐 보는 단추 자리
-            ['header' => '증빙',        'name' => 'proof',        'width' => 176, 'align' => 'center'],
+            /* 단추가 셋으로 늘었다 — 세금계산서ㆍ현금영수증ㆍ카드매출전표
+               (2026-09-27 확인요청 9쪽). 너비를 넓히지 않으면 전표가 잘린다. */
+            ['header' => '증빙',        'name' => 'proof',        'width' => 268, 'align' => 'center'],
             ['header' => '주문상태',    'name' => 'status',       'width' => 90,  'align' => 'center', 'sortable' => true],
             // 정산이 어디까지 갔는가(요청서 12쪽) — 마감 → 확정
             ['header' => '정산상태',    'name' => 'settle',       'width' => 90,  'align' => 'center', 'sortable' => true],

@@ -710,6 +710,84 @@
             @endif
           </div>
 
+          @php
+            /* 카드 결제 — 카드로 받은 건은 현금영수증이 나가지 않고 **카드매출전표**가
+               증빙이다(2026-09-04 확정). 그런데 이 자리에는 세금계산서와 현금영수증만
+               서 있어, 카드로 받은 건은 「현금영수증 미발행」만 보이고 무엇이 증빙인지
+               알 수 없었다 (2026-09-27 확인요청 7쪽).
+
+               전표는 거래명세서와 같은 자리(PrescriptionAttachment)에 담긴다. */
+            $카드 = $order->tossPayment;
+            $카드결제 = $카드 && $카드->is_done
+                        && in_array((string) $카드->method, ['CARD', '카드'], true);
+            $전표 = $order->prescription_id
+                ? \App\Models\PrescriptionAttachment::where('prescription_id', $order->prescription_id)
+                    ->where('doc_type', 'card_sales')->first()
+                : null;
+            $카드정보 = $카드?->raw_response['card'] ?? [];
+          @endphp
+
+          @if($카드결제 || $전표)
+          <hr class="od-receipt-sep">
+
+          {{-- ── 카드 결제 ── --}}
+          <div class="od-receipt-group">
+            <div class="od-box od-receipt">
+              <div class="od-receipt-title">
+                <i class="bx bx-credit-card"></i> 카드 결제
+              </div>
+              <span class="badge badge-{{ $카드?->status === 'CANCELED' ? 'danger' : 'primary' }}">
+                {{ $카드?->status === 'CANCELED' ? '취소' : '승인' }}
+              </span>
+            </div>
+
+            @if($카드)
+              <div class="receipt-row">
+                <span class="receipt-label">카드사</span>
+                <span class="receipt-value">{{ $카드정보['company'] ?? '-' }}</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">카드번호</span>
+                <span class="receipt-value">{{ $카드정보['number'] ?? '-' }}</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">승인번호</span>
+                <span class="receipt-value receipt-issued">{{ $카드정보['approveNo'] ?? '-' }}</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">금액</span>
+                <span class="receipt-value">{{ number_format((int) $카드->amount) }}원</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">승인일시</span>
+                <span class="receipt-value">{{ $카드->approved_at?->format('Y-m-d H:i') ?? $카드->created_at?->format('Y-m-d H:i') }}</span>
+              </div>
+              @if((int) ($카드->cancel_amount ?? 0) > 0)
+              <div class="receipt-row">
+                <span class="receipt-label">환불</span>
+                <span class="receipt-value receipt-cancelled">
+                  {{ number_format((int) $카드->cancel_amount) }}원
+                  @if($카드->canceled_at) · {{ $카드->canceled_at->format('Y-m-d H:i') }} @endif
+                </span>
+              </div>
+              @endif
+            @endif
+
+            @if($전표)
+              <div style="margin-top:10px;">
+                <a class="btn btn-outline btn-sm" target="_blank"
+                   href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($전표->file_path) }}">
+                  <i class="bx bx-printer"></i> 카드매출전표
+                </a>
+              </div>
+            @else
+              <div style="font-size:12px;font-weight:500;line-height:19px;color:var(--gray-600);padding:6px 0;">
+                카드매출전표가 아직 만들어지지 않았습니다 — 입금이 확인되면 만들어집니다.
+              </div>
+            @endif
+          </div>
+          @endif
+
           @endif {{-- taxColExists --}}
         </div>
       </div>
