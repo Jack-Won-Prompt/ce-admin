@@ -1047,3 +1047,74 @@ toss         3건   ← 가상계좌 입금 콜백 셋 (모두 오늘)
 
 **팝빌ㆍ위드웍스 웹훅은 실물로 계속 닿고 있다.** 토스는 가상계좌 입금 때만 오므로
 건수가 적다 — 카드 승인이 한 번 끝나면 `PAYMENT_STATUS_CHANGED` 가 더해진다.
+
+## 4. 입금 콜백을 재생했다 — 그리고 **시스템이 올바르게 거절했다** ✅
+
+토스 상점관리자를 열 수 없어, 토스가 발급 때 내려준 **진짜 secret** 으로 입금 콜백을
+그대로 재생했다.
+
+```
+raw_response.secret = ps_DnyRpQWGrNW6xeYNL9l78Kwv1M9E
+raw_response.virtualAccount.customerName = 권유나        ← (E) 없다
+
+POST /toss/webhook/{열쇠}
+{"createdAt":"2026-09-27T14:35:00.000000",
+ "secret":"ps_DnyRpQWGrNW6xeYNL9l78Kwv1M9E",
+ "orderId":"op2oefdyltcie6daa0ryci044j4zedf7nb1qksix-0y9c40ra",
+ "status":"DONE","transactionKey":"txrd_r2_scenario_20260927"}
+
+→ 200 {"ok":true,"payment_id":79}
+```
+
+웹훅은 받아들여졌고 secret 도 맞았다(`webhook_logs #1756 ok=1 ref=EUD202609271421351`).
+**그런데 뒤가 한 걸음도 돌지 않았다** — 증빙도, 창고 확정도, 아무것도.
+
+까닭이 로그에 그대로 있다.
+
+```
+[16:03:07] [Toss] 웹훅 수신 {"event":"UNKNOWN"}
+[16:03:07] [Toss][GET] /v1/payments/tlink20260927143013N6zH7      ← 토스에 되물었다
+[16:03:07] [Toss] 입금 웹훅 처리 완료 (API 재검증)
+           {"payment_key":"tlink20260927143013N6zH7","status":"WAITING_FOR_DEPOSIT"}
+```
+
+**내가 본문에 `DONE` 이라 적어 보냈는데도, 시스템은 그것을 믿지 않고 토스에 다시
+물었다. 토스가 「아직 입금 안 됐다」고 답하자 그대로 멈춰 섰다.**
+
+이것이 `VirtualAccountService` 주석이 말한 바로 그 잣대다 — 「본문을 믿고 세우는 것이
+아니다: secret 을 맞춰 보고 토스에 다시 물어 확인한다.」 **결함이 아니라 방어가
+작동한 것이다.** 웹훅 본문만 흉내 내어 돈을 받은 것처럼 꾸밀 수 없다.
+
+같은 날 12:32 의 자취와 견주면 잣대가 양쪽으로 다 선다는 것이 보인다.
+
+```
+12:32  …status":"DONE"              → 증빙 발행 · 창고 확정까지 진행
+16:03  …status":"WAITING_FOR_DEPOSIT" → 아무것도 하지 않음
+```
+
+지금 상태:
+
+```
+toss_payments  WAITING_FOR_DEPOSIT · is_done=false · deposited_at=NULL
+orders         status=pending · statement_date=NULL · 증빙 없음
+withworks      S2609270012 · 상태 02(등록) — 확정 아님. 돈이 안 왔으니 맞다
+```
+
+**그러므로 2회차의 나머지(증빙ㆍ확정ㆍ정정)를 마치려면 토스에서 실제 입금이 한 번
+있어야 한다.** 흉내로는 지날 수 없게 막혀 있다 — 그것이 옳다.
+
+### 2회차에서 확인된 것 정리
+
+| | 결과 |
+| --- | --- |
+| 카드 자동승인 끄기 | ✅ `TOSS_TEST_AUTOPAY=false` · 결제창이 실제로 열린다 |
+| 토스 결제창 | ✅ 상품명ㆍ금액ㆍ「실제 결제가 안되는 테스트입니다」 배지가 토스에서 내려온다 |
+| 카드 승인 끝까지 | 🟠 사람이 카드사ㆍ토스 앱으로 인증해야 한다 (자동으로는 불가) |
+| 카드 웹훅 처리기 | ✅ `PAYMENT_STATUS_CHANGED` 를 받고 paymentKey 로 토스에 되묻는다 (코드 준비됨) |
+| 카드/가상계좌 고르개 | ✅ 화면에 서고 실제로 갈래가 갈린다 |
+| 가상계좌 발급 | ✅ **토스 실 연동** — paymentKey `tlink20260927143013N6zH7`, 계좌 X8011978197775 |
+| 입금 웹훅 수신ㆍ검증 | ✅ 받고, secret 맞추고, 토스에 되묻는다 |
+| 위조 방어 | ✅ 본문에 DONE 이라 적어도 토스가 아니라면 움직이지 않는다 |
+| (E) 제거 | ✅ 결제 화면ㆍ토스 입금자명ㆍ토스 customerName 모두 「권유나」 |
+| 팝빌 웹훅 | ✅ 801건 — 오늘도 닿는다 |
+| 위드웍스 웹훅 | ✅ 490건 — so.created / so.confirmed |
