@@ -82,11 +82,21 @@ final class TransactionStatement
     /**
      * 명세서에 찍은 날을 주문에 굳힌다.
      *
-     * 여태 issueDate() 로 셈만 하고 남기지 않았다. 그래서 종이에 찍힌 날과 나중에
-     * 다시 셈한 날이 어긋날 수 있었다 — 결제가 취소되고 다시 잡히면 셈이 달라진다.
+     * **결제 완료일 = 거래명세서 출력일** (2026-09-27 지시).
      *
-     * **이미 적힌 날은 건드리지 않는다.** 나간 종이에 찍힌 날이 정본이다.
-     * 칸이 없는 서버에서는 조용히 지나간다.
+     * 이 날은 판매주문을 확정할 때 창고로 나가는 값이기도 하다
+     * (`WithworksConfirm` 이 `statement_date` 로 보낸다). 저쪽에는 「결제 완료일」
+     * 칸이 따로 없고, 이 날을 그 자리로 쓰기로 정했다 — 그러니 **두 날이 반드시
+     * 같아야 한다.**
+     *
+     * 여태는 한 번 적힌 날을 다시 쓰지 않았다(「나간 종이에 찍힌 날이 정본이다」).
+     * 그런데 주문을 정정해 돈이 바뀌면 결제를 다시 받고 종이도 다시 뽑는데,
+     * 날만 첫 발행일에 멈춰 창고로 어제 날짜가 나갔다 — 2026-09-27 시험에서
+     * 종이는 09-27 에 다시 그려졌는데 보내는 값은 09-26 이었다.
+     *
+     * 그래서 **늘 issueDate() 를 따른다.** 그 셈이 곧 결제 완료일이고, 결제가
+     * 그대로면 값도 그대로라 헛되이 흔들리지 않는다. 칸이 없는 서버에서는
+     * 조용히 지나간다.
      */
     private static function stamp(Order $order): void
     {
@@ -94,11 +104,14 @@ final class TransactionStatement
             return;
         }
 
-        if ($order->statement_date) {
+        $날 = self::issueDate($order);
+
+        /* 같으면 손대지 않는다 — updated_at 만 흔들고 남는 것이 없다 */
+        if ($order->statement_date && $order->statement_date->format('Y-m-d') === $날) {
             return;
         }
 
-        $order->forceFill(['statement_date' => self::issueDate($order)])->save();
+        $order->forceFill(['statement_date' => $날])->save();
     }
 
     /**
@@ -107,7 +120,12 @@ final class TransactionStatement
      * 교환으로 물건이 바뀌면 명세서의 품목ㆍLOT 도 바뀐다. 절차서(2026-09-16)의
      * 「일반(교환) → 세금계산서 및 거래명세서 업데이트」가 그 말이다.
      *
-     * 첨부 줄과 발행일은 그대로 둔다 — 같은 종이의 같은 판이다. 파일만 덮어쓴다.
+     * 첨부 줄은 그대로 둔다 — 같은 종이의 같은 판이다. 파일만 덮어쓴다.
+     *
+     * 발행일은 **다시 찍는다** (2026-09-27 지시 「결제 완료일 = 거래명세서 출력일」).
+     * 정정으로 돈이 바뀌면 결제를 다시 받고 종이도 다시 그리는데, 날만 첫 발행일에
+     * 멈추면 창고로 어제 날짜가 나간다. `stamp()` 는 결제가 그대로면 값도 그대로
+     * 두므로, 교환처럼 돈이 안 바뀐 건은 날이 움직이지 않는다.
      *
      * @return bool 다시 그렸으면 참
      */
@@ -132,6 +150,9 @@ final class TransactionStatement
                updated_at 을 그대로 두었다. 그러면 목록의 손댄 시각이 옛 자리에 멈추고,
                LOT 이 닿았는지 가리는 잣대도 어긋난다 (2026-09-17 운영 시험에서 드러남). */
             $att->forceFill(['file_size' => strlen($pdf), 'updated_at' => now()])->save();
+
+            /* 종이에 찍힌 날을 주문에도 다시 굳힌다 — 창고로 나가는 값이 이것이다 */
+            self::stamp($order);
 
             Log::info('[거래명세서] 교환에 맞춰 다시 그렸다', [
                 'order' => $order->order_number, 'attachment' => $att->id,
