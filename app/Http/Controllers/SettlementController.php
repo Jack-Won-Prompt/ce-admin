@@ -29,7 +29,15 @@ class SettlementController extends Controller
 
     public function index(Request $request): View
     {
-        $tab      = $request->get('tab', 'settlement');
+        /* 모르는 갈래는 정산 현황으로 돌린다 (2026-09-27 지시).
+
+           화면은 @if($tab==='settlement') @elseif($tab==='virtual_account') 둘로만
+           갈린다. 그래서 주소에 없는 값이 실리면(옛 즐겨찾기, 손으로 고친 주소)
+           어느 쪽도 그려지지 않아 본문이 통째로 빈다 — 화면이 죽은 것처럼 보인다. */
+        $tab = in_array($request->get('tab'), ['settlement', 'virtual_account'], true)
+                    ? $request->get('tab')
+                    : 'settlement';
+
         $dateFrom = $request->get('date_from', now()->startOfMonth()->format('Y-m-d'));
         $dateTo   = $request->get('date_to',   now()->format('Y-m-d'));
 

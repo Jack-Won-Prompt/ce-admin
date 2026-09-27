@@ -6806,9 +6806,7 @@ window.HELP_TOUR_STEPS = [
 <script>
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
-  const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 새 처방번호 발급
-  /* 제품도 창고 연계도 없는 빈 건을 지운다 — 서버가 여섯 가지를 다시 보고 가린다 */
-  const EMPTY_DELETE_URL = @json(route('prescriptions.destroyEmpty', $prescription));
+  const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 빈 초안을 잡는다
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -9243,83 +9241,37 @@ window.HELP_TOUR_STEPS = [
      덮어써졌다. 지금은 빈 초안을 따로 잡아 그 화면으로 옮겨 가므로 보던 건은
      손대지 않는다.
 
-     묻는 말도 그에 맞춘다 (2026-09-16 지시).
+     유형은 처방외로 선다(create 의 기본값). 처방번호는 늘 새로 나지는 않는다 —
+     오늘 만든 빈 초안이 있으면 그 번호를 다시 쓴다(빈초안잡기).
 
-       · 「새 처방전을 등록합니다」는 이제 맞지 않다. 처방전 서류 없이 시작하는
-         자리이고, 유형은 처방외로 선다(create 의 기본값)
-       · 「새 처방번호가 발급되며」는 늘 참이 아니다 — 오늘 만든 빈 초안이 있으면
-         그 번호를 다시 쓴다(빈초안잡기)
-       · 「보고 있는 건은 그대로 남습니다」는 덮어쓰던 시절의 안심이다. 이제 그럴
-         일이 없으니 읽을 거리만 늘린다 — 새 건을 시작하는 사람에게 지금 건의
-         번호는 필요하지 않다 */
-  /* 지금 화면이 어떤 상태인가 — 신규 등록이 세 갈래로 갈린다 (2026-09-16 지시).
-
-     ① 아무것도 없음   거래처도 첨부도 없다 → **이미 신규다**. 하나 더 만들지 않는다
-     ② 거래처만 있음   제품이 없다         → 이 건을 지우고 새로 시작할지 묻는다
-     ③ 진행 중        제품이 있다         → 여태처럼 묻고 새 건으로 간다
-
-     ①을 막는 까닭 — 빈 건을 열어 두고 신규를 또 누르면 빈 초안이 하나 더 선다.
-     실제로 그렇게 쌓인 스물아홉 건을 지웠다(2026-09-16). 누르는 사람은 새로 시작한
-     줄 알지만 화면은 이미 새 건이라 아무것도 달라지지 않는다. */
-  function 신규상태인가() {
-    const 거래처 = (typeof 거래처골랐나 === 'function') ? 거래처골랐나() : false;
-    const 붙은것 = (typeof ALL_DOCS !== 'undefined' ? ALL_DOCS : []).length > 0;
-
-    return ! 거래처 && ! 붙은것;
-  }
-
-  function 담긴제품수() {
-    try { return items.filter(i => i && i.product_name).length; } catch (e) { return 0; }
-  }
+     화면이 어떤 상태인지 여기서 가리지 않는다 (2026-09-27 지시). 빈 초안이면
+     서버가 그 건을 다시 쓰고, 적어 둔 것이 있으면 그 건은 그대로 남는다 —
+     양쪽 다 이 탭에서 옮겨 가면 그만이라 갈래를 둘 까닭이 없다. */
 
   /**
-   * 「신규 등록」 — **새 탭**으로 새 건을 연다 (2026-09-23 지시).
+   * 「신규 등록」 — **지금 탭**에서 새 건을 연다 (2026-09-27 지시).
    *
-   * 여태는 이 화면을 그대로 두고 새 건으로 옮겨 갔다. 그래서 보던 건을 저장할지
-   * 버릴지 매번 물어야 했고(「신규 등록 버튼 누를 때 계속 팝업 뜸」), 확인창을 닫고
-   * 나면 보던 건이 사라져 다시 찾아 들어가야 했다.
+   * 한동안 새 탭으로 열었다(2026-09-23). 그런데 그 길에 404 가 있었다.
    *
-   * 새 탭으로 열면 보던 건은 그 자리에 그대로 있다 — 저장할지 버릴지 물을 까닭이
-   * 없어 확인창을 걷었다.
+   *   지금 건이 빈 초안이면 새 탭을 띄운 뒤 이 건을 지웠는데, 서버의 빈초안잡기는
+   *   「내 빈 초안이 있으면 다시 쓴다」라서 새 탭이 잡는 것이 **바로 그 건**이었다.
+   *   새 탭이 그 번호로 들어가는 사이 이 탭이 같은 번호를 지워, 새 탭에는
+   *   「Not Found」가 떴다. 재현도 같았다 — RX-20260927-015 을 열고 신규 등록을
+   *   누르면 새 탭 제목이 그대로 Not Found 였다.
    *
-   * 다만 지금 건이 **빈 초안**이면(거래처도 첨부도 없다) 지우고 간다. 새 탭을 열어도
-   * 이 건은 빈 채로 목록에 남아, 그렇게 모인 것을 전에 스물아홉 건 지운 적이 있다.
+   * 지금 탭에서 열면 지우고 말 것이 없다. 빈 초안이면 서버가 그 건을 다시 쓰므로
+   * 초안이 쌓이지도 않는다 — 스물아홉 건을 지웠던 그 일은 빈초안잡기가 막는다.
+   *
+   * 적어 둔 것이 있으면 떠나기 전에 묻는다. 화면 어디서든 링크를 누를 때 뜨는 그
+   * 창을 그대로 쓴다 — 신규 등록만 따로 묻는 말을 두지 않는다.
    */
-  async function resetReviewScreen() {
-    const 빈건 = 신규상태인가();
-
-    /* 창을 먼저 연다 — 지우는 동안 기다리게 하면 브라우저가 팝업으로 보고 막는다 */
-    const 새창 = window.open(NEW_ENTRY_URL, '_blank');
-
-    if (! 새창) {
-      await ceAlert('새 탭이 열리지 않았습니다 — 브라우저의 팝업 차단을 해제해 주십시오.',
-                    { title: '신규 등록', tone: 'warning' });
+  function resetReviewScreen() {
+    if (isAnyDirty()) {
+      showUnsavedDlg(null, null, _dirtyLabel(), _activeSaveFn(), NEW_ENTRY_URL);
       return;
     }
 
-    if (! 빈건) return;          // 적어 둔 것이 있는 건은 그대로 둔다
-
-    clearAllDirty();
-    if (await 빈건지우기()) {
-      /* 지운 건을 그대로 보고 있을 수는 없다 — 목록으로 물러선다 */
-      location.href = @json(route('prescriptions.index'));
-    }
-  }
-
-  /** 빈 건을 지운다 — 서버가 여섯 가지를 다시 보고 가린다 */
-  async function 빈건지우기() {
-    try {
-      const res = await apiRequest(EMPTY_DELETE_URL, 'DELETE', {});
-      if (res.success) return true;
-
-      await ceAlert(res.message || '이 건은 삭제할 수 없습니다.',
-                    { title: '삭제하지 못했습니다', tone: 'warning' });
-      return false;
-    } catch (e) {
-      await ceAlert('삭제하지 못했습니다. 잠시 뒤 다시 시도해 주십시오.',
-                    { title: '신규 등록', tone: 'warning' });
-      return false;
-    }
+    location.href = NEW_ENTRY_URL;
   }
 
   /* ── 전체 아이템 재계산 (각 아이템의 개별 급여 구분 사용) ── */
