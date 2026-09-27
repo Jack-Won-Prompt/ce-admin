@@ -196,7 +196,9 @@ class PaymentLinkController extends Controller
     private function 시험자동결제인가(PaymentLink $link): bool
     {
         /* 문자가 못 나간 건(failed)도 연다 — is_open 이 그 판단을 쥔다 (2026-09-19) */
+        /* 끌 수 있다 (2026-09-27 지시) — 꺼 두면 결제창이 열려 토스를 실제로 탄다 */
         return config('toss.env') === 'test'
+            && config('toss.test_autopay')
             && $link->is_open
             && $link->method === PaymentLink::METHOD_CARD
             && (int) $link->amount > 0;
