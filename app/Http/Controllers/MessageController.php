@@ -123,7 +123,9 @@ class MessageController extends Controller
         $receivers = $patients
             ->map(fn (Patient $p) => [
                 'rcv'        => $p->mobile ?? $p->phone,
-                'rcvnm'      => $p->name,
+                /* 「(E)」는 우리끼리 쓰는 표시다 — 문자 수신자명으로 나가지 않게 뗀다
+                   (2026-09-27 지시) */
+                'rcvnm'      => $p->bare_name,
                 'patient_id' => $p->id,
             ])
             ->filter(fn ($r) => preg_replace('/\D/', '', (string) $r['rcv']) !== '')

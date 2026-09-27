@@ -88,7 +88,8 @@ class PurchaseConfirmController extends Controller
         }
 
         $res = $sender->sendBulk('sms',
-            [['rcv' => $mobile, 'rcvnm' => $patient->name, 'patient_id' => $patient->id]],
+            /* 「(E)」는 우리끼리 쓰는 표시다 — 문자 수신자명으로 나가지 않게 뗀다 (2026-09-27 지시) */
+            [['rcv' => $mobile, 'rcvnm' => $patient->bare_name, 'patient_id' => $patient->id]],
             $text, 'purchase_confirm', ['source' => 'purchase-confirm']);
 
         return ($res['success'] ?? false)

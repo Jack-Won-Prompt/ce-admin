@@ -44,7 +44,8 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>{{ $order->patient?->name ?? '고객' }}님, 결제 안내입니다</h1>
+    {{-- 「(E)」는 우리끼리 쓰는 표시다 — 환자가 보는 자리에는 내지 않는다 (2026-09-27 지시) --}}
+    <h1>{{ \App\Models\Patient::bare($order->patient?->name) ?: '고객' }}님, 결제 안내입니다</h1>
     <p class="sub">{{ config('popbill.company.corp_name') ?: config('app.name') }}</p>
 
     <div class="row"><span class="k">주문번호</span><span class="v">{{ $order->order_number }}</span></div>
@@ -75,7 +76,7 @@
         <div class="acc">{{ config('toss.virtual_account.fallback_account') ?: '-' }}</div>
         <div>예금주 {{ config('popbill.company.corp_name') ?: config('app.name') }}</div>
       </div>
-      <p class="note">입금자명을 주문자 이름({{ $order->patient?->name ?? '주문자' }})으로 입력해 주시면 확인이 빠릅니다.
+      <p class="note">입금자명을 주문자 이름({{ \App\Models\Patient::bare($order->patient?->name) ?: '주문자' }})으로 입력해 주시면 확인이 빠릅니다.
         입금 확인까지 시간이 걸릴 수 있습니다.</p>
     </div>
 
@@ -112,7 +113,8 @@
      무엇을 사는지 모르는 채로 카드를 꺼내게 된다. 빈 것으로 치고 주문번호를 적는다. */
   $rawName      = trim((string) $order->product_name, " 	-");
   $orderName    = mb_strimwidth($rawName !== '' ? $rawName : '주문 ' . $order->order_number, 0, 90, '…');
-  $customerName = $order->patient?->name ?? '';
+  /* 토스 결제창에 실리는 이름이다 — 「(E)」를 떼고 보낸다 (2026-09-27 지시) */
+  $customerName = \App\Models\Patient::bare($order->patient?->name);
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —

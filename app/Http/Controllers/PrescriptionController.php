@@ -3950,7 +3950,10 @@ class PrescriptionController extends Controller
         }
 
         $params = [
-            '#{고객명}'    => $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '고객',
+            /* 「(E)」는 우리끼리 쓰는 표시다 — 알림톡 본문과 수신자명(rcvnm)에 그대로
+               실려 환자에게 갔다 (2026-09-27 지시로 고침) */
+            '#{고객명}'    => \App\Models\Patient::bare($prescription->patient?->name)
+                              ?: (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '고객'),
             '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
@@ -4035,7 +4038,9 @@ class PrescriptionController extends Controller
         });
 
         $params = [
-            '#{고객명}'    => $prescription->patient?->name ?? $prescription->patient_name_ocr ?? '고객',
+            /* 「(E)」는 우리끼리 쓰는 표시다 — 환자에게 가는 글에 내지 않는다 (2026-09-27 지시) */
+            '#{고객명}'    => \App\Models\Patient::bare($prescription->patient?->name)
+                              ?: (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '고객'),
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
             '#{본인부담금}'=> $itemCopay ? number_format($itemCopay) : '-',

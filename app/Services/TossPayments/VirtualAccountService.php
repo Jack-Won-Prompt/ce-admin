@@ -38,7 +38,11 @@ class VirtualAccountService extends TossClient
             'amount'       => $amount,
             'orderId'      => $orderId,
             'orderName'    => ($order->product_name ?? '처방조제') . ' 본인부담금',
-            'customerName' => $order->patient?->name ?? '환자',
+            /* 「(E)」는 우리끼리 쓰는 표시다 — 바깥으로 내보내지 않는다 (2026-09-27 지시).
+               이 값이 곧 **가상계좌 예금주**다. 환자가 입금할 때 은행 화면에서 보는
+               이름이라, (E) 가 붙으면 제 이름이 아닌 것으로 읽혀 입금을 망설인다.
+               실제로 09-20ㆍ09-23ㆍ09-27 세 건이 「(E)…」로 나갔다. */
+            'customerName' => \App\Models\Patient::bare($order->patient?->name) ?: '환자',
             'bank'         => $bank,
             'validHours'   => $validHours,
         ]);
@@ -100,7 +104,8 @@ class VirtualAccountService extends TossClient
                 'amount'         => $amount,
                 'bank'           => $bank,
                 'account_number' => $account,
-                'customer_name'  => $order->patient?->name ?? '환자',
+                /* 임의로 세운 줄도 예금주는 바깥에 보일 이름으로 적는다 — (E) 를 뗀다 */
+                'customer_name'  => \App\Models\Patient::bare($order->patient?->name) ?: '환자',
                 'due_date'       => $dueDate,
                 'raw_response'   => [
                     'simulated' => true,
