@@ -193,7 +193,24 @@ class VirtualAccountService extends TossClient
         /* 본문이 data 로 한 겹 싸여 오기도 하고 그대로 오기도 한다 — 둘 다 받는다 */
         $data = $payload['data'] ?? $payload;
 
-        if (! in_array($eventType, self::입금이벤트, true)) {
+        /* **이름표가 없는 입금 콜백도 받는다** (2026-09-27 운영에서 드러남).
+
+           토스의 가상계좌 입금 콜백은 이름표(eventType) 없이 납작하게 온다.
+
+               {"createdAt":…, "secret":…, "orderId":"CE-EUD…", "status":"DONE",
+                "transactionKey":"txrd_…"}
+
+           여태 이름표만 보고 갈라, 실제 입금이 두 번 닿았는데 둘 다 「받지 않는
+           이벤트입니다 ()」로 지나갔다. 돈은 들어왔는데 우리는 몰랐다.
+
+           이름표가 없으면 **생김새로 가린다** — 주문번호와 상태가 있으면 입금 콜백이다.
+           본문을 믿고 세우는 것이 아니다: 아래에서 secret 을 맞춰 보고 토스에 다시
+           물어 확인하므로, 넓게 받아도 거짓이 심기지 않는다. */
+        $입금꼴 = $eventType === ''
+               && isset($data['orderId'])
+               && (isset($data['status']) || isset($data['secret']));
+
+        if (! in_array($eventType, self::입금이벤트, true) && ! $입금꼴) {
             Log::info('[Toss] 웹훅 무시 (이벤트 타입 불일치)', ['type' => $eventType]);
             $this->건너뛴까닭 = "받지 않는 이벤트입니다 ({$eventType})";
 
