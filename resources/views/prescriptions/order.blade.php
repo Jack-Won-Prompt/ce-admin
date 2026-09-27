@@ -4572,8 +4572,16 @@ $calcDeposit  = $calcCopay;
               {{-- 주문 없음: 저장 + 생성 버튼 --}}
               @if($repurchaseBlock ?? null)
                 {{-- 재구매 가능일이 아직 멀다(요청서 2쪽). 단추는 그대로 두고 까닭만 세운다 —
-                     서버가 다시 막으므로 여기서 감추면 왜 안 되는지가 사라진다. --}}
-                <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;
+                     서버가 다시 막으므로 여기서 감추면 왜 안 되는지가 사라진다.
+
+                     다만 **처방외로 바꾸면 물러난다** (2026-09-27 지시 — 「유형이
+                     처방외이면 재구매 가능일 2주 이상과 상관 없이 구매 가능」).
+                     재구매 주기는 공단이 급여로 대주는 건에 붙는 잣대이고, 처방외는
+                     제 돈으로 사는 것이라 청구가 없다 — 서버도 그렇게 지나간다
+                     (RepurchaseWindow::block). 이 띠는 화면을 처음 그릴 때 박히므로,
+                     유형을 바꿔 저장해도 붉은 채로 남아 「못 하는 일」로 읽혔다. --}}
+                <div id="repurchaseBlockNote"
+                     style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;
                             border:1px solid var(--alert-100);background:var(--alert-50);border-radius:8px;
                             font-size:12px;line-height:1.6;color:var(--alert-500);font-weight:600;">
                   <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
@@ -8013,6 +8021,23 @@ window.HELP_TOUR_STEPS = [
   /* 유형이 바뀌면 검수 단추도 다시 세운다 — 처방외는 검수하지 않는다 (2026-09-23 지시) */
   document.getElementById('f-acc-add-type')?.addEventListener('change', () => window.검수단추가리기?.());
   document.addEventListener('DOMContentLoaded', () => window.검수단추가리기?.());
+
+  /* 재구매 띠는 유형을 따라간다 (2026-09-27 지시 — 「유형이 처방외이면 재구매
+     가능일 2주 이상과 상관 없이 구매 가능」).
+
+     띠는 화면을 처음 그릴 때 서버가 박아 둔 것이다. 유형을 처방외로 바꿔 저장해도
+     다시 그려지지 않아 붉은 채로 남았고, 담당자는 「못 하는 일」로 읽었다 — 서버는
+     지나가는데(RepurchaseWindow::block 이 처방외면 곧바로 null) 화면만 막는 시늉을
+     했다. 처방전으로 되돌리면 띠도 돌아온다. */
+  function 재구매띠가리기() {
+    const 띠 = document.getElementById('repurchaseBlockNote');
+    if (! 띠) return;                                   // 애초에 막힐 일이 없던 건
+    const 처방외 = document.getElementById('f-acc-add-type')?.value === '20';
+    띠.style.display = 처방외 ? 'none' : 'flex';
+  }
+  window.재구매띠가리기 = 재구매띠가리기;
+  document.getElementById('f-acc-add-type')?.addEventListener('change', 재구매띠가리기);
+  document.addEventListener('DOMContentLoaded', 재구매띠가리기);
   document.getElementById('f-claim-agency')?.addEventListener('change', () => {
     onClaimAgencyChange();
     boAutoPick();
