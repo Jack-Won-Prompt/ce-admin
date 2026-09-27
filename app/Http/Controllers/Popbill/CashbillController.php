@@ -11,6 +11,7 @@ use App\Services\Popbill\CashbillService;
 use App\Services\Popbill\CashbillSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CashbillController extends Controller
 {
@@ -113,7 +114,33 @@ class CashbillController extends Controller
 
         // DB에 없거나 비최종 상태이면 팝빌에서 전체 동기화
         if (!$rec || !$rec->isFinal()) {
-            $rec = $this->syncSvc->refreshOne($corpNum, $mgtKey);
+            /* 없는 문서번호를 물으면 팝빌이 던진다 — 그대로 두면 화면에 「Server Error」만
+               붉게 남아 무엇이 없다는 것인지 알 수 없다 (2026-09-27 운영에서 드러남).
+
+               실제로 그 일이 났다: 이 화면은 팝빌 현금영수증ㆍ주문ㆍ카드 세 갈래를 한 표에
+               모으는데, 카드 줄은 문서번호 자리에 **주문번호**를 담는다(표를 가르는 열쇠일
+               뿐이다). 그 줄에서 상세를 열면 주문번호를 문서번호로 물어 「없다」가 돌아왔다.
+
+               까닭을 적어 404 로 돌려준다. 화면은 이제 카드 줄에서 이 자리를 부르지 않지만,
+               옛 화면이나 손으로 부른 자리도 같은 말을 들어야 한다. */
+            try {
+                $rec = $this->syncSvc->refreshOne($corpNum, $mgtKey);
+            } catch (\Throwable $e) {
+                Log::info('[현금영수증] 상세를 찾지 못했다', [
+                    'mgt_key' => $mgtKey, 'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => "현금영수증을 찾지 못했습니다 (문서번호 {$mgtKey}). "
+                               . '카드로 받은 건이면 증빙은 카드매출전표이며 주문 화면에 있습니다.',
+                ], 404);
+            }
+        }
+
+        if (! $rec) {
+            return response()->json([
+                'message' => "현금영수증을 찾지 못했습니다 (문서번호 {$mgtKey}).",
+            ], 404);
         }
 
         return response()->json($this->toDetailItem($rec));

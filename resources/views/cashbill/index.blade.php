@@ -586,6 +586,18 @@
       // 워크스페이스 새 탭으로 (밖이면 브라우저 새 탭으로 폴백)
       ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rxNumber),
                 '주문 - ' + (r.rxNumber || '신규'), 'file-edit-02');
+    } else if (r._source === 'card') {
+      /* 카드 줄에는 현금영수증이 없다 (2026-09-27 운영에서 드러남).
+         이 줄의 mgtKey 자리에는 **주문번호**가 들어 있다 — 표를 가르는 열쇠일 뿐
+         문서번호가 아니다. 그것을 팝빌에 물으면 「그런 현금영수증이 없다」고
+         답하고, 상세 창에는 「Server Error」만 붉게 남았다.
+         카드는 카드매출전표가 증빙이다. 그 전표가 붙어 있는 주문으로 보낸다. */
+      if (r.rxNumber) {
+        ceOpenTab(BASE_URL + '/prescriptions/' + encodeURIComponent(r.rxNumber),
+                  '주문 - ' + r.rxNumber, 'file-edit-02');
+      } else {
+        showToast('카드로 받은 건입니다 — 증빙은 카드매출전표이며 주문 화면에 있습니다.', 'info', 5000);
+      }
     } else {
       openDetail(r.mgtKey);
     }
