@@ -1109,6 +1109,15 @@
   .pib-pop-body { max-height: calc(100vh - 210px); overflow-y: auto; overscroll-behavior: contain; }
   .pib-tpl-list { max-height: 210px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 
+  /* 가상계좌 번호 — 눌러서 복사 (2026-09-27 지시).
+     글자처럼 보이되 누를 수 있다는 것이 드러나야 한다: 점선 밑줄과 복사 그림. */
+  .rx-va-copy { border:0; background:none; padding:0 2px; font:inherit; color:var(--primary);
+                font-weight:700; cursor:pointer; letter-spacing:.2px;
+                border-bottom:1px dashed var(--primary); border-radius:0; }
+  .rx-va-copy i { margin-left:4px; font-size:9px; opacity:.7; }
+  .rx-va-copy:hover { background:rgba(40,121,139,.08); }
+  .rx-va-copy.is-copied { color:var(--success,#2E7D32); border-bottom-color:transparent; }
+
   /* ── 크게 보기 창 ────────────────────────────────────────
      덮개가 없다. 이 창 밖은 그대로 눌리고 입력된다.
      z-index 900 — 모달(1000 이상)보다 아래라 모달이 뜨면 그 밑으로 들어간다. */
@@ -13015,7 +13024,17 @@ window.HELP_TOUR_STEPS = [
         else if (r.deposited_at) 조각.push(`입금 ${escHtml(r.deposited_at)}`);
         if (r.paid_amount)   조각.push(`${Number(r.paid_amount).toLocaleString()}원`);
         if (r.paid_method)   조각.push(escHtml(r.paid_method));
-        if (r.va_bank && r.va_account) 조각.push(`${escHtml(r.va_bank)} ${escHtml(r.va_account)}`);
+        /* 계좌번호는 **눌러서 복사**한다 (2026-09-27 지시).
+           은행ㆍ계좌가 한 덩이로 적혀 있어, 계좌번호만 쓰려면 끌어서 골라야 했다 —
+           글자가 작고 옆의 은행 이름이 함께 잡혀 늘 한 번에 되지 않는다. 계좌번호만
+           단추로 세워 한 번에 집는다. 은행 이름은 그대로 곁에 둔다 — 어느 은행인지
+           모르면 번호만 있어도 쓸 수 없다. */
+        if (r.va_bank && r.va_account) {
+          조각.push(`${escHtml(r.va_bank)} <button type="button" class="rx-va-copy"`
+                  + ` onclick="copyVaAccount(this, '${escHtml(r.va_account)}')"`
+                  + ` title="계좌번호를 복사합니다">${escHtml(r.va_account)}`
+                  + `<i class="fa-regular fa-copy"></i></button>`);
+        }
         if (r.cancelled_at)  조각.push(`취소 ${escHtml(r.cancelled_at)}`
                                       + (r.cancel_amount ? ` ${Number(r.cancel_amount).toLocaleString()}원` : '')
                                       + (r.cancel_reason ? ` (${escHtml(r.cancel_reason)})` : ''));
@@ -13049,6 +13068,27 @@ window.HELP_TOUR_STEPS = [
     navigator.clipboard?.writeText(url)
       .then(() => showToast('결제 링크를 복사했습니다.', 'success'))
       .catch(() => showToast(url, 'info', 8000));
+  }
+
+  /* 가상계좌 번호만 집어 복사한다 (2026-09-27 지시).
+
+     복사되면 그 자리에서 「복사됨」으로 잠깐 바뀐다 — 토스트만으로는 어느 줄을
+     복사했는지 알 수 없다(한 주문에 계좌가 여럿 설 수 있다).
+
+     클립보드가 막힌 자리(비보안 연결ㆍ권한 거부)에서는 번호를 토스트로 길게 띄운다.
+     그러면 적어도 눈으로 읽어 옮길 수 있다. */
+  function copyVaAccount(btn, account) {
+    const 되돌리기 = () => { btn.innerHTML = 옛글; btn.classList.remove('is-copied'); };
+    const 옛글 = btn.innerHTML;
+
+    navigator.clipboard?.writeText(account)
+      .then(() => {
+        btn.innerHTML = '복사됨 <i class="fa-solid fa-check"></i>';
+        btn.classList.add('is-copied');
+        showToast('계좌번호를 복사했습니다 — ' + account, 'success');
+        setTimeout(되돌리기, 1500);
+      })
+      .catch(() => showToast(account, 'info', 8000));
   }
 
   async function cancelPayLink(id) {
