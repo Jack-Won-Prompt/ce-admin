@@ -331,6 +331,22 @@ class PrescriptionApiController extends Controller
             ->with('patient')
             ->latest();
 
+        /* 웹 목록과 **같은 것을 감춘다** (2026-09-27 확인요청 1쪽).
+
+           웹(PrescriptionController::index)은 빈 초안과 상담만 적힌 줄을 목록에서
+           뺀다 — 아직 처방전이라 부를 것이 없기 때문이다(2026-09-14 지시). 그런데
+           여기는 그 잣대를 받지 않아, 같은 사람의 같은 자료가 **앱에는 두 줄, 웹에는
+           한 줄**로 보였다.
+
+           실제로 그렇게 어긋났다: RX-20260927-004 는 거래처만 붙고 그림ㆍ첨부ㆍ주문이
+           하나도 없어 웹에서는 감춰졌는데, 앱 목록에는 「대기 중」으로 서 있었다.
+           올린 사람은 자료가 사라진 줄 안다.
+
+           올린 자료가 있는 건은 이 잣대에 걸리지 않는다 — 그림이 있으면 상담만 적힌
+           줄이 아니고, 첨부가 있으면 빈 초안이 아니다. 앱으로 올린 것은 그대로 보인다. */
+        $query->whereNot(fn ($q) => $q->blankDraft())
+              ->whereNot(fn ($q) => $q->counselOnly());
+
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }

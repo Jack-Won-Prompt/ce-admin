@@ -2428,9 +2428,14 @@ $calcDeposit  = $calcCopay;
                       onclick="downloadDoc(event, @js($att->file_url), @js($att->original_name ?: $att->doc_type_label))">
                 <i class="fa-solid fa-download"></i>
               </button>
+              {{-- 지울 수 있는 사람에게만 보인다 (2026-09-27 확인요청 2쪽).
+                   서버도 같은 잣대로 한 번 더 본다(destroyAttachment) — 화면만
+                   믿지 않는다. --}}
+              @perm('prescriptions', 'delete')
               <button class="attach-del-btn" onclick="deleteAttachment(event, {{ $att->id }}, this)" title="삭제">
                 <i class="fa-solid fa-xmark"></i>
               </button>
+              @endperm
             </div>
           @endforeach
           {{-- 시스템이 만든 서류 — 위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서 등.
@@ -6406,7 +6411,7 @@ function handleAttachUpload(input) {
       <div class="attach-type-badge">${att.typeLabel}</div>
       <button class="attach-dl-btn" title="내려받기"
               onclick="downloadDoc(event, ${JSON.stringify(att.url)}, ${JSON.stringify(att.name || att.typeLabel)})"><i class="fa-solid fa-download"></i></button>
-      <button class="attach-del-btn" onclick="deleteAttachment(event,${att.id},this)" title="삭제"><i class="fa-solid fa-xmark"></i></button>`;
+      ${CAN_DELETE_DOC ? `<button class="attach-del-btn" onclick="deleteAttachment(event,${att.id},this)" title="삭제"><i class="fa-solid fa-xmark"></i></button>` : ''}`;
     /* 올린 문서는 시스템이 만든 서류 앞에 선다 — 사람이 넣은 것과 기계가 만든 것을
        섞어 놓으면 어느 것이 무엇인지 눈으로 갈라내야 한다 */
     const genSlot = document.getElementById('genThumbs');
@@ -6807,6 +6812,9 @@ window.HELP_TOUR_STEPS = [
   const RX_ID     = {{ $prescription->id }};          // 정수 id (payload용)
   const RX_NUMBER = @json($prescription->rx_number); // 라우트 경로용
   const NEW_ENTRY_URL = @json(route('prescriptions.create')); // 신규 등록 — 빈 초안을 잡는다
+  /* 서류를 지울 수 있는 사람인가 (2026-09-27 확인요청 2쪽).
+     화면이 다시 그리는 타일에도 같은 잣대를 건다 — 서버도 한 번 더 본다. */
+  const CAN_DELETE_DOC = @json(auth()->user()?->canDo('prescriptions', 'delete') ?? false);
   const VA_ISSUE_URL_TPL = '/settlement/orders/__ID__/virtual-account';
   const SMS_SEND_URL = @json(route('prescriptions.smsSend', $prescription));
 
@@ -11271,6 +11279,30 @@ window.HELP_TOUR_STEPS = [
   function updateWwSoDisplay(orderNum, soNo, soType) {
     rxSetTabNos(orderNum, soNo);
 
+    /* ── 아래 「주문 생성 완료」 띠도 함께 고친다 (2026-09-27 확인요청 6쪽) ──
+
+       이 띠는 서버가 화면을 그릴 때 한 번 적고(orderExistsInfo), 주문을 만들 때
+       switchToEditDeleteButtons 가 다시 적는다. 그런데 **정정에서는 아무도 다시
+       적지 않았다** — 머리띠만 새 번호로 갈리고 이 띠에는 이미 취소된 옛 번호가
+       그대로 남았다. 한 화면에서 판매번호가 둘로 보여, 어느 것이 창고에 서 있는
+       번호인지 알 수 없었다(S2609270013 옆에 S2609270010).
+
+       번호를 고치는 자리가 여기 하나이므로 여기서 함께 고친다. 띠가 없는 화면
+       (아직 주문을 만들기 전)에서는 조용히 지나간다. */
+    (function 아래띠도() {
+      const 띠 = document.getElementById('orderExistsInfo')
+              || document.querySelector('#orderActionArea > div:first-child');
+      if (! 띠) return;
+
+      const 번호칸 = 띠.querySelectorAll('span');
+      if (번호칸.length >= 1) 번호칸[0].textContent = orderNum || '';
+
+      if (번호칸.length >= 2) {
+        번호칸[1].textContent = soNo ? ('위드웍스 판매번호 ' + soNo) : '';
+        번호칸[1].style.display = soNo ? '' : 'none';
+      }
+    })();
+
     // ── 환자 정보 바 Withworks 판매번호 표시 ──────────────
     const card    = document.getElementById('wwSoCard');
     const content = document.getElementById('wwSoContent');
@@ -11349,8 +11381,10 @@ window.HELP_TOUR_STEPS = [
   function switchToEditDeleteButtons(orderNum, soNo) {
     const area = document.getElementById('orderActionArea');
     if (!area) return;
+    /* id 를 그대로 단다 — 정정이 이 띠의 번호를 고쳐 쓴다(updateWwSoDisplay).
+       서버가 그린 띠와 같은 이름이라야 한 자리에서 고칠 수 있다. */
     area.innerHTML = `
-      <div style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
+      <div id="orderExistsInfo" style="background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;">
         <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:15px;"></i>
         <div>
           <b style="color:var(--primary);">주문 생성 완료</b>

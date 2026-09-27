@@ -1474,6 +1474,30 @@ class PrescriptionController extends Controller
             abort(403);
         }
 
+        /* 지우는 것은 권한이 있는 사람만 (2026-09-27 확인요청 2쪽).
+
+           여태 이 자리는 「이 처방전의 첨부가 맞는가」만 보았다. 로그인만 했으면
+           남이 올린 서류도 지울 수 있었고, 지운 자취는 파일과 함께 사라진다 —
+           공단에 낼 서류가 없어졌는데 언제 누가 지웠는지 알 길이 없었다.
+
+           잣대는 이미 있는 것을 쓴다(prescriptions.delete). 새 이름을 만들면
+           권한 화면에 칸이 하나 더 늘고, 그 칸을 아무도 켜 주지 않아 아무도 못
+           지우는 일이 생긴다. */
+        if (! auth()->user()?->canDo('prescriptions', 'delete')) {
+            return response()->json([
+                'success' => false,
+                'message' => '서류를 삭제할 권한이 없습니다 — 권한 그룹에서 「주문 · 처방전 목록」의 삭제를 켜야 합니다.',
+            ], 403);
+        }
+
+        /* 누가 무엇을 지웠는지 남긴다 — 파일은 사라져도 자취는 남아야 한다 */
+        activity()->causedBy(auth()->user())->performedOn($prescription)
+            ->withProperties([
+                '서류'   => $attachment->doc_type_label ?? $attachment->doc_type,
+                '파일명' => $attachment->file_original_name,
+            ])
+            ->log('첨부 서류 삭제');
+
         /* 같은 파일을 가리키는 줄이 또 있으면 **파일은 남긴다.**
 
            「최종 신규 복제」는 파일을 복사하지 않고 **잇는다** — 같은 file_path 를
