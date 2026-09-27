@@ -236,7 +236,13 @@ class PaymentLinkService
         $code = $va['bankCode'] ?? $va['bank'] ?? '';
         $bank = \App\Services\TossPayments\TossClient::BANK_NAMES[$code] ?? ($code ?: '');
 
-        $holder = trim((string) ($va['customerName'] ?? ''));
+        /* 예금주도 「(E)」를 뗀다 (2026-09-27 지시).
+
+           고객명은 진작 떼고 있었는데 **예금주는 토스에 적힌 값을 그대로 썼다.**
+           그 값이 곧 우리가 토스에 보낸 이름이라, 보내는 쪽을 고치기 전에 발급된
+           계좌는 「(E)오지혜」로 남아 있다 — 문자에도 그대로 실렸다.
+           여기서 한 번 더 떼면 옛 계좌를 다시 안내할 때도 깨끗하게 나간다. */
+        $holder = \App\Models\Patient::bare(trim((string) ($va['customerName'] ?? '')));
 
         $lines = [
             '[' . $this->company() . '] ' . $name . '님, 입금하실 계좌입니다.',
