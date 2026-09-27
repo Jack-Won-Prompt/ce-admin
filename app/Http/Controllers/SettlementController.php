@@ -257,6 +257,9 @@ class SettlementController extends Controller
 
                 $물러난값 = [
                     'id'            => null,
+                    /* 화면이 이 줄에는 단추를 세우지 않게 한다 — 입금 확인ㆍ마감
+                       확정ㆍ결제수단 고르기는 모두 지금 값에만 걸려야 한다. */
+                    'amend_line'    => true,
                     'product'       => $a->product_name ?? '-',
                     'unit_price'    => (int) $a->unit_price,
                     'va_state'      => '-',

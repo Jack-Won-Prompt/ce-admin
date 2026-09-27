@@ -769,6 +769,11 @@
     amount.textContent = (v === undefined || v === null || v === '') ? '-' : v;
     box.appendChild(amount);
 
+    /* 정정으로 물러난 줄에는 단추를 세우지 않는다 (2026-09-27).
+       그 줄은 「그때 이랬다」를 보이는 자리다 — 지난 금액에 입금을 세우면
+       받은 돈이 두 번 선다. */
+    if (row.amend_line) return box;
+
     if (row.deposit_done && !row.deposit_hand) {
       const tag = document.createElement('span');
       tag.textContent = '토스';
@@ -843,6 +848,8 @@
     tag.textContent = v || '';
     tag.style.cssText = 'font-weight:700;font-size:12px;color:' + (SETTLE_TONE[row.settle_key] || 'var(--text-secondary)');
 
+    /* 물러난 줄은 고를 것이 없다 — 마감은 지금 값에만 선다 (2026-09-27) */
+    if (row.amend_line)               { wrap.appendChild(tag); return wrap; }
     if (row.settle_key === 'confirmed') { wrap.appendChild(tag); return wrap; }
 
     const sel = document.createElement('select');
@@ -920,7 +927,8 @@
 
     const 반쪽 = row.deposit_done && row.status_key === 'pending';
 
-    if ((row.deposit_done && !반쪽) || !CAN_CONFIRM) {
+    /* 물러난 줄에서 결제수단을 고르면 그것이 곧 입금 확인이다 — 열지 않는다 */
+    if (row.amend_line || (row.deposit_done && !반쪽) || !CAN_CONFIRM) {
       box.textContent = v || '-';
       return box;
     }

@@ -231,6 +231,8 @@ class NhisController extends Controller
             foreach ($정정->get($o->id, collect()) as $a) {
                 $물러난값 = [
                     'id'            => null,
+                    /* 화면이 이 줄에는 청구 단추를 세우지 않게 한다 */
+                    'amend_line'    => true,
                     'product'       => $a->product_name ?? '',
                     'submitted_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '',
                     'claim_due'     => '',

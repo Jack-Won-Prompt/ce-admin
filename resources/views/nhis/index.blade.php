@@ -465,7 +465,11 @@
       {
         // 공단 사이트에 옮겨 적는 것을 돕는 창. 값을 늘어놓고 항목마다 복사 버튼을 준다.
         header: '청구', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
-        renderer: (v, row) => nhisAssistBtn(row.id, { agency: row.agency_code, sent: row.local_sent,
+        /* 정정으로 물러난 줄에는 단추를 세우지 않는다 (2026-09-27). 그 줄은
+           「그때 이랬다」를 보이는 자리라, 지난 금액으로 청구가 나가면 안 된다. */
+        renderer: (v, row) => row.amend_line
+          ? document.createTextNode('')
+          : nhisAssistBtn(row.id, { agency: row.agency_code, sent: row.local_sent,
                                                        ready: row.claim_ready_flag, missing: row.claim_missing,
                                                        name: row.patient, mobile: row.send_mobile, email: row.send_email }),
       },
