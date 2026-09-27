@@ -233,6 +233,11 @@ class NhisController extends Controller
                     'id'            => null,
                     /* 화면이 이 줄에는 청구 단추를 세우지 않게 한다 */
                     'amend_line'    => true,
+                    /* 받은 돈과 창고 매출은 **지금 줄의 것**이다 — 물러난 줄에
+                       그대로 실으면 같은 돈이 세 번 적힌 것처럼 보인다.
+                       비워 둔다(money 렌더러가 0 을 빈칸으로 그린다). */
+                    'deposit_amount' => 0,
+                    'ww_so_amt'      => '',
                     'product'       => $a->product_name ?? '',
                     'submitted_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '',
                     'claim_due'     => '',
@@ -245,14 +250,27 @@ class NhisController extends Controller
                     'ww_so_no'      => $a->withworks_so_no ?? '',
                 ];
 
+                /* 본인 부담금은 **`copay`** 로 싣는다 (2026-09-27 시나리오 시험에서 찾음).
+
+                   여기 `patient_copay` 만 적어 두었는데, 화면의 「본인 부담금」 칸이
+                   읽는 이름은 `copay` 다(OrderGridExtras::of). 그래서 물러난 두 줄에
+                   **지금 값**이 그대로 실려, 원 주문과 취소가 서로 지워지지 않았다 —
+                   기관 부담금은 맞는데 본인 부담금만 세 줄이 같은 수였다.
+
+                   두 이름을 다 싣는다. 이 표를 읽는 자리가 청구 화면 하나가 아니고,
+                   한쪽만 맞춰 두면 다음에 또 갈린다. */
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::원주문말($a),
                          'nhis_amount'   => (int) $a->nhis_amount,
-                         'patient_copay' => (int) $a->patient_copay]
+                         'copay'         => (int) $a->patient_copay,
+                         'patient_copay' => (int) $a->patient_copay,
+                         'total_amount'  => (int) $a->patient_copay + (int) $a->nhis_amount]
                       + $물러난값 + $줄;
 
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::취소말($a),
                          'nhis_amount'   => -(int) $a->nhis_amount,
-                         'patient_copay' => -(int) $a->patient_copay]
+                         'copay'         => -(int) $a->patient_copay,
+                         'patient_copay' => -(int) $a->patient_copay,
+                         'total_amount'  => -((int) $a->patient_copay + (int) $a->nhis_amount)]
                       + $물러난값 + $줄;
             }
 
