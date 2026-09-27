@@ -11251,6 +11251,9 @@ window.HELP_TOUR_STEPS = [
       const 없다안내 = document.getElementById('payNoOrderNote');
       if (없다안내) 없다안내.style.display = 'none';
       if (res.order_id) {
+        /* 보내기와 이력 둘 다 채운다 — 하나만 채우면 이력은 보이는데 전송이
+           안 되어, 담당자가 무엇이 잘못됐는지 알 길이 없다 (2026-09-27). */
+        PAY_STORE_URL = PAY_STORE_URL_FORM.replace('__ID__', res.order_id);
         PAY_INDEX_URL = PAY_INDEX_URL_FORM.replace('__ID__', res.order_id);
         if (typeof loadPaymentLinks === 'function') loadPaymentLinks();
       }
@@ -12788,9 +12791,13 @@ window.HELP_TOUR_STEPS = [
      만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러
      둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
   const PAY_STATE      = @json($payState);
-  const PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
-  /* 주문이 생기면 채운다 — const 로 두어 화면을 열 때의 null 이 그대로 굳었고,
-     주문을 만든 뒤에도 전송 이력이 늘 비어 보였다 (2026-09-26 CASE 6 시험에서 찾음). */
+  /* 주문이 생기면 둘 다 채운다 — const 로 두면 화면을 열 때의 null 이 그대로 굳는다.
+     이력(index)은 2026-09-26 에 고쳤는데 **보내기(store)는 남아 있었다.** 그래서
+     주문을 만든 그 화면에서 결제전송의 「전송」을 누르면 아무 일도 일어나지 않고
+     「주문을 먼저 생성해 주십시오」만 떴다 — 방금 만들었는데 그렇게 말한다.
+     새로고침하면 되었으므로 눈에 잘 띄지 않았다 (2026-09-27 가상계좌 시험에서 찾음). */
+  let PAY_STORE_URL  = @json($prescription->order ? route('payment-links.store', $prescription->order) : null);
+  const PAY_STORE_URL_FORM = @json(route('payment-links.store', ['order' => '__ID__']));
   let PAY_INDEX_URL  = @json($prescription->order ? route('payment-links.index', $prescription->order) : null);
   const PAY_INDEX_URL_FORM = @json(route('payment-links.index', ['order' => '__ID__']));
   const PAY_CANCEL_URL = @json(url('payment-links'));
