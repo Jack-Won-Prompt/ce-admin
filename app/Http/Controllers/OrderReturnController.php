@@ -118,8 +118,13 @@ class OrderReturnController extends Controller
                탭을 찾아야 그제야 알았다. 검수 차례에도 단추를 세운다. */
             'sign_btn'        => $r->final_signed_at ? 'view'
                 : (($r->inspect_confirmed_at && $r->needsFinalSign()) ? 'sign'
+                /* 다음 걸음이 「검수 확정」이면 검수할 차례다 (2026-09-29 6회차).
+
+                   여태 창고 웹훅이 온 건에만 단추를 세웠다. 담당자가 손으로 단계를
+                   옮긴 건(창고 연동이 꺼져 있거나 저쪽이 아직 안 보낸 건)은 검수중인데도
+                   목록에 결재로 갈 길이 없었다. */
                 : ((! $r->inspect_confirmed_at
-                    && ($r->warehouse_inspect_requested_at || $r->inspect_result)) ? 'inspect' : '')),
+                    && in_array('inspected', $r->nextStatuses(), true)) ? 'inspect' : '')),
             /* 증빙을 다시 낸 자취 (2026-09-28 지시). 금액이 바뀐 건에만 선다 —
                금액 변경이 없으면 증빙은 손대지 않는 것이 규칙이다. */
             'docs_reissued'   => $r->docs_reissued_at?->format('Y-m-d H:i') ?? '',
