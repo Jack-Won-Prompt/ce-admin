@@ -5155,16 +5155,19 @@ class PrescriptionController extends Controller
 
         $묶음 = count($조각) === 1 ? $조각[0] : $this->mergePdfBytes($조각);
 
-        $이름 = '서류묶음_' . (\App\Models\Patient::bare($prescription->patient?->name) ?: '무명')
-              . '_' . $prescription->rx_number . '.pdf';
+        $이름 = self::서류받을이름($prescription, 'pdf');
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
             ->withProperties(['담은 서류' => implode('ㆍ', $담은것)])
             ->log('서류 묶음 내려받기 (' . count($조각) . '건)');
 
+        /* 이름은 두 가지로 적는다 — filename* 이 한글을 담은 쪽이고, filename 은
+           그것을 못 읽는 옛 프로그램을 위한 자리다. 한 가지만 적고 거기에 %EC…
+           를 넣어 두면, 브라우저에 따라 그 퍼센트 글자가 그대로 파일 이름이 된다. */
         return response($묶음, 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . rawurlencode($이름) . '"',
+            'Content-Disposition' => 'attachment; filename="' . $prescription->rx_number . '.pdf"'
+                                   . "; filename*=utf-8''" . rawurlencode($이름),
         ]);
     }
 
@@ -5260,8 +5263,7 @@ class PrescriptionController extends Controller
             ], 404);
         }
 
-        $이름 = '서류묶음_' . (\App\Models\Patient::bare($prescription->patient?->name) ?: '무명')
-              . '_' . $prescription->rx_number . '.zip';
+        $이름 = self::서류받을이름($prescription, 'zip');
 
         activity()->causedBy(Auth::user())->performedOn($prescription)
             ->withProperties(['담은 서류' => implode('ㆍ', $담은것)])
@@ -5270,6 +5272,28 @@ class PrescriptionController extends Controller
         return response()->download($임시, $이름, [
             'Content-Type' => 'application/zip',
         ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * 내려받을 서류 묶음의 이름 — 고객명＋오늘 날짜 (2026-09-28 지시).
+     *
+     * 담당자가 받아 두는 자리는 내려받기 폴더 하나다. 거기서 「누구 것인지, 언제
+     * 받은 것인지」가 이름에서 바로 읽혀야 한다. 처방번호를 적어 두었더니 폴더에서는
+     * 어느 것이 오늘 받은 그 환자 것인지 하나씩 열어 봐야 했다.
+     *
+     * 이름에 「(E)」는 붙이지 않는다 — 우리가 안에서 쓰는 표시지 고객 이름이 아니다.
+     * 파일 이름에 쓸 수 없는 글자(\ / : * ? " < > |)는 밑줄로 바꾼다. 윈도에서
+     * 그런 이름은 저장 자체가 막힌다.
+     *
+     * 한 사람의 서류를 같은 날 두 번 받으면 이름이 겹치는데, 그때는 브라우저가
+     * 「(1)」을 붙여 준다 — 그 편이 이름을 길게 늘이는 것보다 읽기 좋다.
+     */
+    private static function 서류받을이름(Prescription $prescription, string $확장): string
+    {
+        $이름 = \App\Models\Patient::bare($prescription->patient?->name) ?: '무명';
+        $이름 = preg_replace('/[\\\/:*?"<>|]+/u', '_', $이름) ?? '무명';
+
+        return trim($이름) . '_' . now()->format('Ymd') . '.' . $확장;
     }
 
     /**

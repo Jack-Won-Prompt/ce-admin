@@ -6291,6 +6291,30 @@ function _closeAttachPopover() {
  * <a download> 만 걸지 않고 blob 으로 받아 넘긴다 — 파일이 다른 곳(S3 등)에서
  * 오면 download 속성이 무시되어 새 탭만 열리고 끝난다. 이름도 우리가 정한다.
  */
+/* 서버가 적어 보낸 파일 이름을 읽는다 (2026-09-28 지시).
+
+   이름은 서버가 짓는다(고객명＋오늘 날짜). 화면에서도 한 번 더 지으면 두 곳이
+   조용히 어긋난다 — 한쪽만 고친 날 받은 파일이 옛 이름으로 떨어진다.
+
+   Content-Disposition 에는 두 가지가 실려 온다. filename* 이 한글을 담은 쪽이고
+   filename 은 그것을 못 읽는 옛 프로그램을 위한 자리다. 앞의 것을 먼저 본다.
+   둘 다 못 읽으면 넘겨받은 이름으로 물러난다. */
+function 받을이름(res, 물러날이름) {
+  const cd = res.headers.get('content-disposition') || '';
+
+  const 별 = cd.match(/filename\*=\s*utf-8''([^;]+)/i);
+  if (별) {
+    try { return decodeURIComponent(별[1].trim()); } catch (_) { /* 못 읽으면 아래로 */ }
+  }
+
+  /* 「=」까지 붙여 본다 — 그러지 않으면 filename* 만 온 응답에서 이 쪽이
+     「*=utf-8''…」를 이름으로 집는다 */
+  const 보통 = cd.match(/filename=\s*"?([^";]+)"?/i);
+  if (보통 && 보통[1].trim()) return 보통[1].trim();
+
+  return 물러날이름;
+}
+
 /* 이 건의 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽).
 
    묶는 일은 서버가 한다 — 그림을 PDF 한 쪽으로 감싸고 FPDI 로 잇는 자리가
@@ -6317,7 +6341,7 @@ async function downloadDocsMerged(e) {
     const 주소 = URL.createObjectURL(덩이);
     const a = document.createElement('a');
     a.href = 주소;
-    a.download = `서류묶음_${RX_NUMBER}.pdf`;
+    a.download = 받을이름(r, `${RX_NUMBER}.pdf`);
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -6357,7 +6381,7 @@ async function downloadDocsZip(e) {
     const 주소 = URL.createObjectURL(덩이);
     const a = document.createElement('a');
     a.href = 주소;
-    a.download = `서류묶음_${RX_NUMBER}.zip`;
+    a.download = 받을이름(r, `${RX_NUMBER}.zip`);
     document.body.appendChild(a);
     a.click();
     a.remove();
